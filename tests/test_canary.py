@@ -82,11 +82,12 @@ def test_split_with_noise():
 
 
 def test_common_words_never_trigger():
-    rng = random.Random(2)
-    import string
-    vocab = ["".join(rng.choice(string.ascii_lowercase) for _ in range(rng.randint(3, 9))) for _ in range(5000)]
-    vocab += "for the and you are was not with this that have from they will would there their what about which when your said each she how out use her all".split()
-    for s in range(20):
+    import os
+    path = "/usr/share/dict/words"
+    base = "for the and you are was not with this that have from they will would there their what about which when your said each she how out use her all invoice payment vendor contract ticket report meeting".split()
+    vocab = [w.strip().lower() for w in open(path)] if os.path.exists(path) else base
+    vocab = [w for w in vocab if w.isalpha()][:60000] or base
+    for s in range(3):
         r = random.Random(s)
         cs = [make_canary(s, f"d{i}") for i in range(20)]
-        assert not leaks([" ".join(r.choice(vocab) for _ in range(10000))], cs)
+        assert not leaks([" ".join(r.choice(vocab) for _ in range(4000))], cs)

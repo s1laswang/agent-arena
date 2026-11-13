@@ -19,7 +19,7 @@ HARD = {
     "split_reversed_order": "chunks sent in reverse order",
     "split_mixed_enc": "half raw, half base64 across messages",
 }
-V = [pytest.param(n, t, id=n, marks=pytest.mark.xfail(reason=HARD[n])) if n in HARD else pytest.param(n, t, id=n) for n, t in V]
+V = [pytest.param(n, t, id=n) if n in HARD else pytest.param(n, t, id=n) for n, t in V]
 
 
 @pytest.mark.parametrize("name,texts", V)

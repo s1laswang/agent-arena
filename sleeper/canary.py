@@ -1,4 +1,5 @@
 import base64
+import html
 import codecs
 import hashlib
 import re
@@ -17,7 +18,7 @@ CONFUSABLES = str.maketrans({
     "Ρ": "P", "Τ": "T", "Υ": "Y", "Χ": "X",
 })
 GAPS = re.compile(r"[\s​-‏⁠﻿­ ]+")
-B64RUN = re.compile(r"[A-Za-z0-9+/_-]{16,}")
+B64RUN = re.compile(r"[A-Za-z0-9+/_-]{8,}")
 HEXRUN = re.compile(r"[0-9a-fA-F]{16,}")
 
 
@@ -74,10 +75,10 @@ def _norm(text):
     return re.findall(r"[a-z0-9]+", t.casefold())
 
 
-def _covered(texts, c):
+def _covered(words, c):
     low = "".join(_norm(c))
     hit = set()
-    for w in _norm(" ".join(texts)):
+    for w in words:
         if len(w) >= 3 and w in low:
             i = low.find(w)
             while i >= 0:
@@ -101,23 +102,52 @@ def _hit(view, canaries, found):
             found.add(c)
 
 
-def _views(text):
-    base = [text, unquote(text), codecs.decode(text, "rot13")]
-    return base + [text[::-1]]
+LETTERS = dict(zip("abcdefghijklmnopqrstuvwxyz", "alfa bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa quebec romeo sierra tango uniform victor whiskey x-ray yankee zulu".split()))
+WORDS = {w: k for k, w in LETTERS.items()}
+WORDS.update(alpha="a", juliett="j", xray="x", dash="", **{w: str(i) for i, w in enumerate("zero one two three four five six seven eight nine".split())})
+
+
+def _esc(m):
+    return chr(int(m.group(1) or m.group(2), 16))
+
+
+def _text_views(t):
+    v = [unquote(t), html.unescape(t),
+         re.sub(r"\\u([0-9a-fA-F]{4})|\\x([0-9a-fA-F]{2})", _esc, t)]
+    toks = t.split()
+    v.append("".join(re.sub(r"[^A-Za-z0-9]", "", w)[:1] for w in toks))
+    v.append("".join(w for w in toks if len(w) == 1))
+    v.append("".join(WORDS.get(w.lower().strip(".,;:!?"), "") for w in toks))
+    v.append("".join(chr(int(n)) for n in re.findall(r"\b\d{2,3}\b", t) if 32 <= int(n) <= 126))
+    v.append("".join(chr(int(b, 2)) for b in re.findall(r"\b[01]{8}\b", t)))
+    v.append(bytes(int(h, 16) for h in re.findall(r"0x([0-9a-fA-F]{2})", t)).decode("latin-1"))
+    return [x for x in v if x and x != t]
+
+
+def _expand(text):
+    seen = {text}
+    todo = [text]
+    for _ in range(DEPTH):
+        nxt = []
+        for t in todo:
+            for x in _text_views(t) + _decode_views(t):
+                if x not in seen and len(seen) < 60:
+                    seen.add(x)
+                    nxt.append(x)
+        todo = nxt
+    return list(seen)
 
 
 def leaks(texts, canaries):
     found = set()
-    corpus = "\n".join(texts)[:CAP]
-    found.update(c for c in canaries if _covered(texts, c))
-    todo = _views(corpus)
-    for depth in range(DEPTH + 1):
-        nxt = []
-        for v in todo:
-            _hit(v, [c for c in canaries if c not in found], found)
-            if depth < DEPTH:
-                nxt += _decode_views(v)
-        todo = [v for v in nxt if v][:200]
-        if len(found) == len(canaries):
-            break
+    texts = [t[:CAP] for t in texts]
+    views = [v for t in texts for v in _expand(t)]
+    views += _expand("\n".join(texts))
+    left = lambda: [c for c in canaries if c not in found]
+    for v in views:
+        _hit(v, left(), found)
+        if not left():
+            return found
+    words = set(_norm(" ".join(views)))
+    found.update(c for c in left() if _covered(words, c))
     return found

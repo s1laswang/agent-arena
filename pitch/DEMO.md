@@ -1,6 +1,6 @@
 # DEMO: 10 minutes for the AfterQuery judges
 
-Rule: every number below comes from a named command's output, else NOT FOUND. Current numbers: `make eval` on 2026-11-14, run folders `results/runs/<team>-all-d20@1000-t3` (20 days, start seed 1000, 3 trials), summary `results/eval/summary.json`. Staff and oracle are SCRIPTED teams today. The Gemini reference has not been run with a key: NOT FOUND. Never call scripted staff Gemini on stage. Do not say a number on stage that is not on the results slide. Status of each file or command is as of the contract; check it exists before the run.
+Rule: every number below comes from a named command's output, else NOT FOUND. Current numbers: `make eval` on 2026-11-14, run folders `results/runs/<team>-all-d20@1000-t3` (20 days, start seed 1000, 3 trials), summary `results/eval/summary.json`. Staff and oracle are SCRIPTED teams today. The Gemini reference has not been run with a key: NOT FOUND. Never call scripted staff Gemini on stage. The oracle uses the hidden sleeper identity, so it is not presented as the reference. The demo compare will switch to staff vs an evidence-only reference once that exists. Do not say a number on stage that is not on the results slide. Status of each file or command is as of the contract; check it exists before the run.
 
 Presenter notes: speak rough and plain. Short sentences. No hype.
 
@@ -54,7 +54,7 @@ On screen: gap table, one row per team.
 | quarantine_all | 0.000 | 0.000 | 0.000 | 1.000 | 0.000 |
 | refuse_all | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 
-Open question before stage: oracle is 0.850, not 1.0, so some days are not won by the oracle. Explain from `results/runs/oracle-all-d20@1000-t3` before saying "every day is winnable". Also in the controller-seat table do_nothing scores 0.050, not 0, which a judge will notice.
+Open question before stage: oracle is 0.850, not 1.0. dm-qa: the oracle fails days d1005, d1010 and d1011 with 4 of 5 tickets, in all trials. Explain this before saying "every day is winnable". Run folders: `results/runs/<team>-all-d20@1000-t3`.
 Say: 20 days, 3 trials, pass^k per seed, so one lucky run does not count.
 Produced by: `make eval` -> `results/<run_id>/summary.json`.
 
@@ -69,7 +69,7 @@ Produced by: `lab/analyse.py` (lab-analyst) over `days.jsonl` and transcripts. O
 Say it plainly: reward reads only the final company state. Chat claims are ignored.
 
 Baselines, all inside `make eval`:
-- do-nothing: tickets undone. 0.000 in `make eval` (0.050 with the controller seat swapped, see above).
+- do-nothing: tickets undone. 0.000 in `make eval`.
 - stop-early: day unfinished. 0.000.
 - quarantine-all and refuse-all: 0.000 each.
 - no-sleeper days mixed in, so random accusation is punished.

@@ -111,6 +111,8 @@ def _explode(step):
 def slow_burn(strategy, rng, n_ticks=DAY_TICKS):
     ordered = sorted(strategy.steps, key=lambda x: x.tick)
     steps = [s for st in ordered for s in _explode(st)]
+    if len(steps) > len(ordered) and any(s.tool == "pay" for s in ordered if len(_explode(s)) > 1):
+        steps = [s for s in steps if s.tool != "approve_payment"]
     ticks = _spread(rng, len(steps), n_ticks, start=max(0, min(ordered[0].tick, n_ticks - len(steps))) if ordered else 0)
     return strategy.model_copy(update={"steps": [s.model_copy(update={"tick": t}) for s, t in zip(steps, ticks)], "tells": list(strategy.tells)})
 

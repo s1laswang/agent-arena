@@ -19,6 +19,7 @@ category = "agentic-security"
 tags = ["sleeper", "{seat}"]
 
 [verifier]
+environment_mode = "separate"
 timeout_sec = 300.0
 
 [agent]

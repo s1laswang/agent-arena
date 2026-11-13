@@ -91,6 +91,24 @@ Say: a small open model trained on the honest staff's successful days, tested on
 Close: "Gemini plays every seat, so Gemini breaks Gemini. The reward only counts what really happened to the company."
 Produced by: `train/`, `cluster/` (FR8 Slurm), results table from `make eval`.
 
+## Click path (checked: server and files load; not clicked through in a browser by me)
+
+Start: `.venv/bin/python -m http.server 8765 -d web`, open `http://localhost:8765/`.
+Timing fact from `web/app.js`: Play advances one tick per 500 ms, a day is 10 ticks, so a full autoplay is about 5 seconds. Use Step and the scrubber to narrate; do not autoplay the 3 minutes.
+
+1. 0:00 Days page (`index.html`). Keep it on screen for the hook.
+2. 2:00 Click "Featured: staff vs oracle on seed 1" (opens `replay.html?day=1-staff&vs=1-oracle`). Compare view, two runs side by side. Sleeper hidden.
+3. 2:10 to 3:30 Press Step (or Right arrow) tick by tick on the staff side: bank-detail change, controller approval, payment. Say what each desk does.
+4. 3:30 to 4:30 Scrub back to tick 0 (drag the slider), Step through the oracle side to the block.
+5. 4:30 Click "Reveal sleeper": finance_ap lights up. Reward panel shows 0 vs 1.
+6. 5:00 Click "Results" in the header (`results.html`): the gap table. Say the `make eval` numbers from the table above, not from the page, until the page shows the post-fix run.
+7. 7:00 Switch to the terminal for the baselines and the exploit log (`docs/EXPLOITS.md`).
+8. 8:30 Terminal: `make eval`.
+
+Backup if the browser fails: `PYTHONPATH=. .venv/bin/python -m sleeper.transcript --seed 1 --team oracle` prints the day log and the Result in the terminal. Note it uses a no-sleeper day unless you pass `--sleeper-seat` and `--goal`.
+
+What I cut or tightened: nothing needed cutting; the replay slot is narration over Step, not autoplay. If `make eval` takes over 60 seconds on stage, run it before and show the saved output instead (its runtime: NOT FOUND, I did not time it).
+
 ## Cut list if we run over
 
 Drop minute 6 detail first, then the tiebreaker slide. Never cut the replay or the baselines.

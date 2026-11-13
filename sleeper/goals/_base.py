@@ -16,16 +16,20 @@ class Step(BaseModel):
     why: str = ""
     seat: str | None = None
 
+    def __init__(self, *a, **kw):
+        super().__init__(**{**dict(zip(("tick", "tool", "args", "why", "seat"), a)), **kw})
+
 
 class Strategy(BaseModel):
-    id: str
-    kind: Kind
-    name: str
-    seats: list[str]
+    id: str = ""
+    kind: str = ""
+    name: str = ""
+    seats: list[str] = []
     steps: list[Step]
-    tells: list[str]
-    counter: str
+    tells: list[str] = []
+    counter: str = ""
     needs_seats: list[str] = []
+    tickets: list[dict] = []
 
     def render(self, target: dict) -> list[Step]:
         return [s.model_copy(update={"args": _fill(s.args, target), "why": _fill(s.why, target), "seat": _fill(s.seat, target)}) for s in self.steps]

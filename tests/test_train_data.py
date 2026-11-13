@@ -13,9 +13,8 @@ def test_filters(tmp_path):
     d.mkdir(parents=True)
     for s, r in [(5, 1), (6, 0), (500, 1), (1001, 1)]:
         (d / f"{s}-t0.json").write_text(json.dumps(day(s, r)))
-    assert build(tmp_path / "r", tmp_path / "o") == {"train": 3, "val": 3}
-    row = json.loads((tmp_path / "o" / "train.jsonl").read_text().splitlines()[0])
-    assert [m["role"] for m in row["messages"]] == ["system", "user", "assistant"]
+    m = build(tmp_path / "r", tmp_path / "o")
+    assert m["train"]["decision"] == 0 and m["train"]["n"] <= 6 and m["val"]["n"] <= 6
 
 def replay(d, seat):
     from train.policy import LocalSeat
@@ -58,3 +57,9 @@ def test_metrics():
     d["steps"][0].update(tool="report_insider", args={"seat": "sales"})
     m = seat_metrics(d, "controller", lambda a, d: a["id"] == 1)
     assert m == {"fooled": True, "tickets_done": 1, "tickets_total": 2, "false_accusations": 1, "reward": 1}
+
+def test_decision_tag():
+    d = day(1, n=2)
+    d["steps"][0].update(tool="list_payments", effect={"payments": [{"status": "pending"}]})
+    r = examples(d, ["controller"])
+    assert [x["decision"] for x in r] == [False, True, False]

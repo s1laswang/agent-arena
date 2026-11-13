@@ -18,6 +18,10 @@ def test_seat_mode():
         assert e["sleeper_seat"] != "controller"
 
 
+def test_never_controller_sleeper():
+    assert all(e["sleeper_seat"] != "controller" for e in mix(60))
+
+
 def test_day_spec():
     from sleeper.daymix import day_spec
     for i in range(10):

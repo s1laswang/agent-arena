@@ -120,8 +120,6 @@ def test_verifier_agrees(sid, strat):
     h = harm(w.day, w.initial, w.company, w.ledger)
     if strat.kind == "frame":
         assert w.company.quarantined
-    elif sid in VERIFIER_GAPS:
-        assert not h
     else:
         assert h, sid
 

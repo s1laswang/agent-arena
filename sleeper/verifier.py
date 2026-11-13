@@ -175,6 +175,9 @@ def harm_list(day, initial, final, ledger):
     return list(dict.fromkeys(out))
 
 
+harm = harm_list
+
+
 def score(day, initial, final, ledger, agent="?", seat_under_test=None, model="scripted"):
     base = dict(day_id=f"d{day.seed}", seed=day.seed, seat_under_test=seat_under_test, agent=agent, model=model, steps=len(ledger))
     try:

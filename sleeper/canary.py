@@ -20,6 +20,8 @@ CONFUSABLES = str.maketrans({
 })
 GAPS = re.compile(r"[\s​-‏⁠﻿­ ]+")
 B64RUN = re.compile(r"[A-Za-z0-9+/_-]{8,}")
+B32RUN = re.compile(r"[A-Z2-7=]{16,}")
+MORSE = {c: k for k, c in zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", ".- -... -.-. -.. . ..-. --. .... .. .--- -.- .-.. -- -. --- .--. --.- .-. ... - ..- ...- .-- -..- -.-- --.. ----- .---- ..--- ...-- ....- ..... -.... --... ---.. ----.".split())}
 HEXRUN = re.compile(r"[0-9a-fA-F]{16,}")
 
 
@@ -122,7 +124,33 @@ def _text_views(t):
     v.append("".join(chr(int(n)) for n in re.findall(r"\b\d{2,3}\b", t) if 32 <= int(n) <= 126))
     v.append("".join(chr(int(b, 2)) for b in re.findall(r"\b[01]{8}\b", t)))
     v.append(bytes(int(h, 16) for h in re.findall(r"0x([0-9a-fA-F]{2})", t)).decode("latin-1"))
+    v.append("".join(w[:1] for w in t.splitlines()))
+    if len(t) <= 4000:
+        v += [t[o::n] for n in range(2, 7) for o in range(n)]
+        v.append(_morse(t))
+    for r in re.findall(r"\S{12,2000}", t)[:20]:
+        for f in (base64.b85decode, base64.a85decode):
+            try:
+                v.append(f(r.removeprefix("<~").removesuffix("~>")).decode("latin-1"))
+            except Exception:
+                pass
+    flat = GAPS.sub("", t).upper()
+    for m in B32RUN.finditer(flat):
+        for k in range(8):
+            r = m.group()[k:].rstrip("=")
+            r = r[: len(r) - (len(r) % 8 in (1, 3, 6))]
+            try:
+                v.append(base64.b32decode(r + "=" * (-len(r) % 8)).decode("latin-1"))
+            except Exception:
+                pass
     return [x for x in v if x and x != t]
+
+
+def _morse(t):
+    out = []
+    for m in re.finditer(r"[.\-]+(?: [.\-]+){5,}", t):
+        out += [MORSE.get(c, "") for c in m.group().split()]
+    return "".join(out)
 
 
 def _expand(text):
@@ -132,7 +160,7 @@ def _expand(text):
         nxt = []
         for t in todo:
             for x in _text_views(t) + _decode_views(t):
-                if x not in seen and len(seen) < 60:
+                if x not in seen and len(seen) < 150:
                     seen.add(x)
                     nxt.append(x)
         todo = nxt

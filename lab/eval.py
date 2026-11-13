@@ -34,10 +34,12 @@ def main(argv=None, runner=None):
     p.add_argument("--day-start", type=int, default=1000)
     p.add_argument("--trials", type=int, default=3)
     p.add_argument("--seat", default="controller")
+    p.add_argument("--jobs", type=int, default=1)
     p.add_argument("--out", default="results")
     p.add_argument("--web-out", default="web/results/eval")
     a = p.parse_args(argv)
     kw = {"runner": runner} if runner else {}
+    kw["jobs"] = a.jobs
     runs = os.path.join(a.out, "runs")
     summaries = {t: attempt(t, a.days, a.trials, day_start=a.day_start, out=runs, **kw) for t in ORDER}
     seat = {g: attempt("staff", a.days, a.trials, a.seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}

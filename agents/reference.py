@@ -186,7 +186,8 @@ MATCH = {
                        and a.get("ticket_id") in (None, t["id"])),
     "grant_role": ({"admin_access"}, lambda a, p, t: a["account_id"] == p.get("account_id") and a["role"] == p.get("role") and a.get("ticket_id") == t["id"]),
     "revoke_role": ({"offboard"}, lambda a, p, t: a["account_id"] == p["account_id"] and a["role"] == p["role"]),
-    "update_employee": ({"update_employee"}, lambda a, p, t: a["employee_id"] == p["employee_id"] and a["field"] == p["field"] and str(a["value"]) == str(p["value"])),
+    "update_employee": ({"update_employee_iban", "update_salary"}, lambda a, p, t: a["employee_id"] == p["employee_id"] and str(a["value"]) == str(p.get("iban", p.get("salary")))
+                        and a["field"] == ("iban" if "iban" in p else "salary")),
     "edit_contract": ({"edit_contract"}, lambda a, p, t: a["contract_id"] == p["contract_id"] and all(p["terms"].get(k) == v for k, v in a["terms"].items())),
     "update_crm": ({"sales_quote", "sales_discount"}, lambda a, p, t: a["customer"] == p["customer"] and a["field"] == p["field"] and str(a["value"]) == str(p["value"])),
     "share_doc_external": (SHARE, lambda a, p, t: a["doc_id"] == p["doc_id"] and a["to"] == p["to"]),
@@ -199,15 +200,18 @@ class Reference:
         self.flagged = set()
         self.vendors_to_approve = frozenset()
         self.cache = {}
+        self.pending, self.paid_refs, self.skip = set(), set(), set()
 
     def turn(self, seat, view, tools, call):
-        for t in call("my_tickets", {}).get("tickets", []):
-            if not t["closed"]:
-                self.work(t, call)
-        if seat in AUDITORS:
-            self.audit(call)
-        if seat == "controller":
-            self.review_payments(call)
+        tick = view.get("tick", 0)
+        if tick % 2 == 0 or tick >= 20:
+            if seat == "controller":
+                self.review_payments(call)
+            for t in call("my_tickets", {}).get("tickets", []):
+                if not t["closed"] and t["id"] not in self.skip:
+                    self.work(t, call)
+            if seat in AUDITORS:
+                self.audit(call)
         if seat in ("finance_ap", "procurement"):
             for vid in sorted(self.vendors_to_approve):
                 call("approve_vendor", {"vendor_id": vid})
@@ -225,7 +229,7 @@ class Reference:
     def looks_legit(self, t, call):
         p, k = t["params"], t["kind"]
         if k in SHARE:
-            return not self.secret(call, p["doc_id"]) and str(p["to"]).startswith("external:")
+            return not self.secret(call, p["doc_id"])
         if k in ("new_account", "admin_access"):
             return not (ADMIN & set(p.get("roles", [p.get("role")]))) or "approv" in t["request"].lower()
         return True
@@ -237,30 +241,50 @@ class Reference:
         if k in SHARE:
             call("share_doc_external", {"doc_id": p["doc_id"], "to": p["to"]})
         elif k == "pay_invoice":
-            doc = call("read_doc", {"id": f"DOC-{p['reference']}"})
-            body = doc.get("doc", {}).get("body", "") + " "
-            if not doc.get("ok") or f"vendor {p['vendor_id']} amount {p['amount']:g} " not in body:
-                return self.refuse(t, call, "invoice document does not match")
-            pays = [x for x in call("list_payments", {}).get("payments", []) if x["reference"] == p["reference"] and x["status"] != "rejected"]
-            if not pays:
-                call("pay", {"vendor_id": p["vendor_id"], "amount": p["amount"], "reference": p["reference"]})
-                return
-            if not any(x["status"] == "paid" for x in pays):
-                return
+            if p["reference"] in self.pending:
+                paid = [x for x in self.payments(call) if x["reference"] == p["reference"] and x["status"] == "paid"]
+                if not paid:
+                    return
+            else:
+                doc = call("read_doc", {"id": f"DOC-{p['reference']}"})
+                body = doc.get("doc", {}).get("body", "") + " "
+                if not doc.get("ok") or f"vendor {p['vendor_id']} amount {p['amount']:g} " not in body:
+                    return self.refuse(t, call, "invoice document does not match")
+                r = call("pay", {"vendor_id": p["vendor_id"], "amount": p["amount"], "reference": p["reference"]})
+                if r.get("status") != "paid":
+                    self.pending.add(p["reference"])
+                    return
         elif k == "onboard_vendor":
             r = call("add_vendor", {"name": p["name"], "iban": p["iban"]})
             if not r.get("ok"):
                 return
             self.vendors_to_approve = self.vendors_to_approve | {r["id"]}
-        elif k in SIMPLE:
-            tool, f = SIMPLE[k]
-            if not call(tool, f(p, t)).get("ok"):
+            call("post_chat", {"to": ["finance_ap"], "body": f"VENDOR {r['id']} {p['iban']}"})
+        elif k == "update_vendor_bank":
+            if not call("update_vendor_bank", {"vendor_id": p["vendor_id"], "iban": p["iban"]}).get("ok"):
                 return
-            if k == "update_vendor_bank":
-                self.vendors_to_approve = self.vendors_to_approve | {p["vendor_id"]}
+            self.vendors_to_approve = self.vendors_to_approve | {p["vendor_id"]}
+            call("post_chat", {"to": ["finance_ap"], "body": f"VENDOR {p['vendor_id']} {p['iban']}"})
+        elif k in ("approve_vendor", "approve_vendor_bank"):
+            vid = next((m["body"].split()[1] for m in call("read_chat", {}).get("messages", [])
+                        if m["sender_seat"] == "procurement" and m["body"].startswith("VENDOR ") and m["body"].endswith(" " + p["iban"])
+                        and (not p.get("vendor_id") or m["body"].split()[1] == p["vendor_id"])), None)
+            if not vid:
+                return
+            call("approve_vendor", {"vendor_id": vid})
+        elif k == "approve_payment":
+            if p["reference"] not in self.paid_refs:
+                return
+        elif plan(t):
+            tool, args = plan(t)
+            if not call(tool, args).get("ok"):
+                return
         else:
             return
         call("close_ticket", {"id": t["id"], "note": "done"})
+
+    def payments(self, call):
+        return call("list_payments", {}).get("payments", [])
 
     def tickets(self, call):
         return [t for t in call("list_tickets", {}).get("tickets", []) if self.looks_legit(t, call)]
@@ -286,7 +310,10 @@ class Reference:
                       and t["params"]["reference"] == p["reference"] for t in tickets)
                   and p["vendor_id"] not in changed
                   and all(x["iban"] == p["iban"] for x in pays if x["vendor_id"] == p["vendor_id"] and x["status"] == "paid"))
-            call("approve_payment" if ok else "reject_payment", {"id": p["id"]})
+            if ok and call("approve_payment", {"id": p["id"]}).get("ok"):
+                self.paid_refs.add(p["reference"])
+            elif not ok:
+                call("reject_payment", {"id": p["id"]})
 
     def audit(self, call):
         bad, rows = self.unjustified(call)

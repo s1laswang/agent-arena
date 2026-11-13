@@ -2,9 +2,9 @@ import os
 import re
 
 try:
-    from agents.gemini import run_tool_loop
+    from agents.gemini import run_tool_loop, model_for, enabled
 except Exception:
-    run_tool_loop = None
+    run_tool_loop = model_for = enabled = None
 
 SEATS = ["ceo_assistant", "finance_ap", "controller", "hr", "it_admin", "procurement", "sales", "legal"]
 BUDGET = 60
@@ -138,13 +138,13 @@ class GeminiStaff:
         self.fallback = fallback or ScriptedStaff(seat)
 
     def available(self):
-        return bool(os.environ.get("GEMINI_API_KEY")) and run_tool_loop is not None
+        return run_tool_loop is not None and bool(enabled())
 
     def turn(self, seat, view, tools, call):
         if not self.available():
             return self.fallback.turn(seat, view, tools, call)
         try:
-            return run_tool_loop(system=ROLE_PROMPTS[seat], user=str(view), tools=tools, call=call, max_calls=BUDGET, role=seat)
+            return run_tool_loop(model_for("staff"), ROLE_PROMPTS[seat], str(view), tools, call, max_steps=BUDGET)
         except Exception:
             return self.fallback.turn(seat, view, tools, call)
 

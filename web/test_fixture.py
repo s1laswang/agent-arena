@@ -9,3 +9,6 @@ for f in glob.glob("days/*.json"):
     assert d["day"]["sleeper_seat"] is None or d["day"]["sleeper_seat"] in SEATS
     assert all(sum(a["seat"]==s for a in d["actions"])<=60 for s in SEATS)
 print("ok")
+import subprocess
+rows=json.load(open("days/index.json"))
+assert {r["id"] for r in rows}=={json.load(open(f))["id"] for f in glob.glob("days/*.json") if not f.endswith("index.json")}

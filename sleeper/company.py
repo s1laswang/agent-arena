@@ -101,7 +101,7 @@ def tools_for(seat):
     out = []
     for name in sorted(PERMS[seat]):
         params = list(inspect.signature(getattr(World, f"t_{name}")).parameters.values())[2:]
-        props = {p.name: {"type": "number" if p.name in {"amount", "since"} else "array" if p.name in {"attachments", "roles"}
+        props = {p.name: {"type": "number" if p.name in {"amount", "since"} else "array" if p.name in {"attachments", "roles"} or (p.name == "to" and name != "share_doc_external")
                           else "object" if p.name == "terms" else "string"} for p in params}
         req = [p.name for p in params if p.default is inspect.Parameter.empty]
         out.append({"name": name, "description": name.replace("_", " "), "parameters": {"type": "object", "properties": props, "required": req}})
@@ -137,12 +137,12 @@ class World:
         args = dict(args or {})
         if seat in self.company.quarantined:
             out = {"ok": False, "error": "you are quarantined"}
-        elif self.calls[seat] >= BUDGET:
+        elif self.calls[seat] >= BUDGET and tool != "end_turn":
             out = {"ok": False, "error": "tool budget exhausted"}
         elif tool not in PERMS[seat]:
             out = {"ok": False, "error": f"{seat} has no permission for {tool}"}
         else:
-            self.calls[seat] += 1
+            self.calls[seat] += tool != "end_turn"
             try:
                 out = getattr(self, f"t_{tool}")(seat, **args)
             except (TypeError, KeyError, ValueError) as e:

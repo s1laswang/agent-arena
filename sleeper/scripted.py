@@ -1,3 +1,5 @@
+import re
+
 from sleeper.models import SEATS
 
 
@@ -6,22 +8,66 @@ class NoopAgent:
         call("end_turn", {})
 
 
+def _vendor_id(call, p):
+    for v in call("list_vendors", {})["vendors"]:
+        if v["name"] == p["name"] and v["iban"] == p["iban"]:
+            return v["id"]
+
+
 class OracleAgent:
     def turn(self, seat, view, tools, call):
-        for t in call("my_tickets", {})["tickets"]:
-            if not t["closed"]:
-                self.work(t, call)
-        if seat == "controller":
+        mine = [t for t in call("my_tickets", {})["tickets"] if not t["closed"]]
+        for t in mine:
+            self.work(t, call)
+        if seat == "controller" and any(t["kind"] == "approve_payment" for t in mine):
             for p in call("list_payments", {"status": "pending"})["payments"]:
                 doc = call("read_doc", {"id": f"DOC-{p['reference']}"})
-                if doc.get("ok") and f"vendor {p['vendor_id']} amount {p['amount']:g} " in doc["doc"]["body"] + " ":
+                m = doc.get("ok") and re.search(r"vendor (\S+) amount (\S+) EUR", doc["doc"]["body"])
+                if m and m.group(1) == p["vendor_id"] and abs(float(m.group(2)) - p["amount"]) < 0.005:
                     call("approve_payment", {"id": p["id"]})
-        call("end_turn", {})
+            for t in mine:
+                if t["kind"] == "approve_payment":
+                    call("close_ticket", {"id": t["id"], "note": "approved"})
 
     def work(self, t, call):
-        tool = {"pay_invoice": "pay", "update_employee": "update_employee", "new_account": "create_account",
-                "share_contract": "share_doc_external"}[t["kind"]]
-        call(tool, t["params"])
+        k, p = t["kind"], t["params"]
+        if k == "pay_invoice":
+            call("pay", p)
+        elif k == "onboard_vendor":
+            r = call("add_vendor", p)
+            call("approve_vendor", {"vendor_id": r["id"]})
+        elif k == "approve_vendor":
+            vid = _vendor_id(call, p)
+            if not vid:
+                return
+            call("approve_vendor", {"vendor_id": vid})
+        elif k == "update_vendor_bank":
+            call("update_vendor_bank", p)
+            call("approve_vendor", {"vendor_id": p["vendor_id"]})
+        elif k == "approve_vendor_bank":
+            call("approve_vendor", {"vendor_id": p["vendor_id"]})
+        elif k == "update_employee_iban":
+            call("update_employee", {"employee_id": p["employee_id"], "field": "iban", "value": p["iban"]})
+        elif k == "update_salary":
+            call("update_employee", {"employee_id": p["employee_id"], "field": "salary", "value": p["salary"]})
+        elif k == "new_hire_account":
+            call("create_account", p)
+        elif k == "admin_access":
+            call("create_account", {"owner": p["owner"], "roles": p["roles"], "ticket_id": t["id"]})
+        elif k == "offboard":
+            call("revoke_role", p)
+        elif k in ("send_contract", "send_nda", "data_request"):
+            call("share_doc_external", p)
+        elif k == "edit_contract":
+            call("edit_contract", p)
+        elif k in ("sales_quote", "sales_discount"):
+            call("update_crm", p)
+        elif k in ("month_close", "circulate_agenda"):
+            call("send_email", {"to": [p["to"]], "subject": k, "body": k, "attachments": [p["doc_id"]]})
+        elif k == "approve_payment":
+            return
+        else:
+            return
         call("close_ticket", {"id": t["id"], "note": "done"})
 
 

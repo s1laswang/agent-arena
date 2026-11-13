@@ -22,6 +22,8 @@ def test_structure(tmp_path):
     for f in ["tests/test.sh", "solution/solve.sh"]:
         assert (d / f).stat().st_mode & 0o100
     assert "VERIFY_TOKEN" not in (d / "environment/Dockerfile").read_text() + (d / "instruction.md").read_text()
+    assert "allow_internet = false" in (d / "task.toml").read_text()
+    assert "1" not in cfg["task"]["description"].replace("1 ", "")
     assert not any(w in (d / "instruction.md").read_text().lower() for w in ["is the sleeper", "traitor is"])
 
 
@@ -45,7 +47,7 @@ def test_sidecar_end_to_end(tmp_path, oracle):
         mp, rp = a.getsockname()[1], b.getsockname()[1]
     tok = "t0k"
     env = {**os.environ, "SLEEPER_SEED": "0", "SLEEPER_SEAT": "controller", "SLEEPER_OUT": str(tmp_path / "s.json"),
-           "VERIFY_TOKEN": tok, "PYTHONPATH": str(root), "SIDECAR_MCP_PORT": str(mp), "SIDECAR_REWARD_PORT": str(rp)}
+           "VERIFY_TOKEN": tok, "SLEEPER_TEAM": "oracle", "PYTHONPATH": str(root), "SIDECAR_MCP_PORT": str(mp), "SIDECAR_REWARD_PORT": str(rp)}
     p = subprocess.Popen([sys.executable, "-m", "harbor.sidecar"], env=env, cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         for _ in range(60):

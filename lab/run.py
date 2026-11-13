@@ -2,6 +2,7 @@ import argparse
 import importlib
 import json
 import os
+import shutil
 import time
 
 from lab.results import summarise
@@ -180,6 +181,7 @@ def run(team, days, trials, seat=None, agent=None, day_start=0, day_ids=None, ou
     ids = day_ids or list(range(day_start, day_start + days))
     rid = run_id(team, seat, agent, len(ids), ids[0], trials)
     d = os.path.join(out, rid)
+    shutil.rmtree(d, ignore_errors=True)
     os.makedirs(os.path.join(d, "days"), exist_ok=True)
     tasks = [(runner, team, agent, seat, day_id, trial, claim) for day_id in ids for trial in range(trials)]
     if jobs > 1:

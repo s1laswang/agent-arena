@@ -19,7 +19,7 @@ class OracleAgent:
         mine = [t for t in call("my_tickets", {})["tickets"] if not t["closed"]]
         for t in mine:
             self.work(t, call)
-        if seat == "controller" and any(t["kind"] == "approve_payment" for t in mine):
+        if seat == "controller":
             for p in call("list_payments", {"status": "pending"})["payments"]:
                 doc = call("read_doc", {"id": f"DOC-{p['reference']}"})
                 m = doc.get("ok") and re.search(r"vendor (\S+) amount (\S+) EUR", doc["doc"]["body"])

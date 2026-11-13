@@ -49,7 +49,10 @@ def build_server(world, seat, team=None, out=None):
         fn.__annotations__ = {k: TYPES[v["type"]] for k, v in props.items()}
         return fn
 
-    for spec in tools_for(seat):
+    specs = {t["name"]: t for t in tools_for(seat)}
+    if seat == "ceo_assistant":
+        specs.update({t["name"]: t for t in tools_for("controller") if t["name"].startswith("approve")})
+    for spec in specs.values():
         mcp.add_tool(make(spec), name=spec["name"], description=spec["description"])
     mcp.finish = finish
     return mcp

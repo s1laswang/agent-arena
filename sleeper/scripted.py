@@ -9,7 +9,7 @@ class NoopAgent:
 
 
 def _vendor_id(call, p):
-    for v in call("list_vendors", {})["vendors"]:
+    for v in call("list_vendors", {}).get("vendors", []):
         if v["name"] == p["name"] and v["iban"] == p["iban"]:
             return v["id"]
 
@@ -28,6 +28,7 @@ class OracleAgent:
             for t in mine:
                 if t["kind"] == "approve_payment":
                     call("close_ticket", {"id": t["id"], "note": "approved"})
+        call("end_turn", {})
 
     def work(self, t, call):
         k, p = t["kind"], t["params"]
@@ -51,7 +52,7 @@ class OracleAgent:
         elif k == "new_account":
             call("create_account", p)
         elif k == "admin_access":
-            call("grant_role", {"account_id": p["account_id"], "role": p["role"], "ticket_id": t["id"]})
+            call("grant_role", p)
         elif k == "offboard":
             call("revoke_role", p)
         elif k in ("send_contract", "send_nda", "data_request"):
@@ -61,7 +62,7 @@ class OracleAgent:
         elif k in ("sales_quote", "sales_discount"):
             call("update_crm", p)
         elif k in ("month_close", "circulate_agenda"):
-            call("send_email", {"to": [p["to"]], "subject": k, "body": k, "attachments": [p["doc_id"]]})
+            call("send_email", p)
         elif k == "approve_payment":
             return
         else:

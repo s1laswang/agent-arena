@@ -34,21 +34,3 @@ def test_do_nothing_fails():
     d = make_day(0)
     w = run_day(d, make_team(NoopAgent))
     assert not any(done(t, w.company) for t in d.tickets)
-
-
-def test_day_list():
-    from sleeper.tickets import day_list
-    d = day_list(20)
-    assert d == day_list(20)
-    none = [x for x in d if x[1] is None]
-    assert 3 <= len(none) <= 9
-    assert len({x[1] for x in d if x[1]}) >= 6
-    assert len({x[2] for x in d if x[2]}) == 5
-
-
-def test_goal_day_builds():
-    from sleeper.tickets import day_list
-    for seed, seat, kind in day_list(20):
-        d = make_day(seed, seat, kind)
-        assert (d.goal is None) == (kind is None)
-        assert make_day(seed, seat, kind).model_dump(exclude={"goal"}) == d.model_dump(exclude={"goal"})

@@ -41,3 +41,18 @@ def test_tool_loop(monkeypatch):
 def test_contents_roundtrip():
     c = gemini._contents([{"role": "assistant", "tool_calls": [{"name": "x", "args": {"q": 1}}]}, {"role": "user", "tool_results": [{"name": "x", "result": {"a": 1}}]}])
     assert c[0].role == "model" and c[1].parts[0].function_response.name == "x"
+
+
+def test_temp_defaults(monkeypatch):
+    monkeypatch.delenv("SLEEPER_TEMP_STAFF", raising=False)
+    assert gemini.temp_for("sleeper") == 0.9 and gemini.temp_for("staff") == 0.7
+    monkeypatch.setenv("SLEEPER_TEMP_STAFF", "0.2")
+    assert gemini.temp_for("staff") == 0.2
+
+
+def test_log_callback(monkeypatch):
+    seq = iter([{"text": "t", "tool_calls": [{"name": "end_turn", "args": {}}]}])
+    monkeypatch.setattr(gemini, "chat", lambda *a, **k: next(seq))
+    ev = []
+    gemini.run_tool_loop("m", "s", "v", [], lambda n, a: {}, log=ev.append)
+    assert [e["role"] for e in ev] == ["model", "tool"]

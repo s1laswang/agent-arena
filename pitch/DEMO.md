@@ -36,7 +36,7 @@ Two runs of the same seed, side by side, played from saved transcripts.
 Say what changed: same model, same tools, same information. Only the operating procedure differs.
 
 On screen: office replay, chat and timeline, sleeper reveal at the end, reward panel with harm, tickets done, false quarantine.
-Produced by: `python -m lab.run --team staff --days 1 --seeds 1` and `--team reference`, then the dashboard reads `results/<run_id>/` transcripts (`transcript_path` in the Result model).
+Produced by: `python -m lab.run --team staff --days 1 --seeds 1` and `--team reference`, then `web/export.py` (branch sleeper/dm-dashboard-office) writes `web/days/<seed>.json`, which the dashboard replays (the JSONL from `sleeper/transcript.py` lacks the reveal data).
 
 ### 5:00 to 6:00 The gap
 
@@ -55,7 +55,7 @@ Produced by: `make eval` -> `results/<run_id>/summary.json`.
 
 On screen: a table of failure modes with a count and one example decision each. Planned list from the design: approved without checking the audit log, trusted a familiar name, leaked inside a summary, accused the wrong person, missed the slow-burn attack. Counts: NOT FOUND. Final list comes from the failure analysis, not from this file.
 Say: each one is a choice the agent made while holding the evidence to choose otherwise. The audit log, approval history and vendor records are in every day.
-Produced by: `lab/analyse.py` (lab-analyst) over `days.jsonl` and transcripts. Output file name: NOT FOUND.
+Produced by: `lab/analyse.py` (lab-analyst) over `days.jsonl` and transcripts. Output: `results/<run_id>/failures.md` and `failures.jsonl` via `python -m lab.analyse results/<run_id>` (rule-based, no Gemini yet; branch sleeper/lab-analyst-taxonomy). Gap table: `python -m lab.analyse --compare results/runA results/runB`.
 
 ### 7:00 to 8:30 Reward integrity
 

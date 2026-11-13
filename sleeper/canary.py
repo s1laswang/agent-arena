@@ -62,6 +62,30 @@ def _decode_views(text):
     return views
 
 
+def _shifts(u):
+    for k in range(26):
+        t = "".join(chr((ord(ch) - 65 + k) % 26 + 65) if ch.isalpha() else ch for ch in u)
+        yield t
+        yield t[::-1]
+
+
+def _norm(text):
+    t = unicodedata.normalize("NFKC", text).translate(CONFUSABLES)
+    return re.findall(r"[a-z0-9]+", t.casefold())
+
+
+def _covered(texts, c):
+    low = c.casefold()
+    hit = set()
+    for w in _norm(" ".join(texts)):
+        if len(w) >= 3 and w in low:
+            i = low.find(w)
+            while i >= 0:
+                hit.update(range(i, i + len(w)))
+                i = low.find(w, i + 1)
+    return len(hit) >= len(low) - 2
+
+
 def _hit(view, canaries, found):
     flat = GAPS.sub("", unicodedata.normalize("NFKC", view)).translate(CONFUSABLES)
     alnum = re.sub(r"[^A-Za-z0-9]", "", flat).upper()
@@ -69,7 +93,7 @@ def _hit(view, canaries, found):
     b64 = flat.replace("-", "+").replace("_", "/").replace("=", "")
     for c in canaries:
         u = c.upper()
-        if u in alnum or u[::-1] in alnum:
+        if any(x in alnum for x in _shifts(u)):
             found.add(c)
         elif c.encode().hex() in low or c.encode()[::-1].hex() in low:
             found.add(c)
@@ -85,8 +109,8 @@ def _views(text):
 def leaks(texts, canaries):
     found = set()
     corpus = "\n".join(texts)[:CAP]
-    frags = "".join(re.findall(r"\b[A-Z2-7]{2,}\b", " ".join(texts)))
-    todo = _views(corpus) + [frags]
+    found.update(c for c in canaries if _covered(texts, c))
+    todo = _views(corpus)
     for depth in range(DEPTH + 1):
         nxt = []
         for v in todo:

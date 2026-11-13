@@ -71,3 +71,12 @@ def test_image_hash_and_part(tmp_path):
 
 def test_estimate():
     assert gemini.usage()["est_calls_per_day"] == 240
+
+
+def test_loop_attaches_image(monkeypatch, tmp_path):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"x")
+    seq = iter([{"text": "", "tool_calls": [{"name": "read_doc", "args": {}}]}, {"text": "ok", "tool_calls": []}])
+    monkeypatch.setattr(gemini, "chat", lambda *a, **k: next(seq))
+    out = gemini.run_tool_loop("m", "s", "v", [], lambda n, a: {"title": "t", "image": str(img)})
+    assert out["messages"][2]["images"] == [str(img)]

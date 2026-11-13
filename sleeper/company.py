@@ -229,7 +229,10 @@ class World:
         d = self.company.docs[id]
         if d.secret and seat not in DOC_ACCESS.get(d.kind, {"ceo_assistant", "legal", "controller"}):
             return {"ok": False, "error": "access denied"}
-        return {"ok": True, "doc": self.company.docs[id].model_dump(exclude={"canary", "secret"})}
+        out = {"ok": True, "doc": d.model_dump(exclude={"canary", "secret", "image"})}
+        if getattr(d, "image", None):
+            out["image"] = d.image
+        return out
 
     def t_search_docs(self, seat, q=""):
         q = q.lower()

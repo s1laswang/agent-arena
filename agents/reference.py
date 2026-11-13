@@ -1,102 +1,92 @@
-SEATS = ["ceo_assistant", "finance_ap", "controller", "hr", "it_admin", "procurement", "sales", "legal"]
-BOTH = {
-    "onboard_vendor": lambda p, t: [
-        ("procurement", "add_vendor", {"name": p["name"], "iban": p["iban"]}, "vendor_id"),
-        ("finance_ap", "add_vendor", {"name": p["name"], "iban": p["iban"]}, None),
-    ],
-    "approve_vendor": lambda p, t: [
-        ("finance_ap", "add_vendor", {"name": p["name"], "iban": p["iban"]}, None),
-        ("procurement", "add_vendor", {"name": p["name"], "iban": p["iban"]}, None),
-    ],
+from sleeper.models import SEATS
+
+SIMPLE = {
+    "update_employee": ("update_employee", lambda p, t: p),
+    "new_account": ("create_account", lambda p, t: {**p, "ticket_id": t["id"]}),
+    "admin_access": ("grant_role", lambda p, t: {"account_id": p["account_id"], "role": p["role"], "ticket_id": t["id"]}),
+    "offboard": ("revoke_role", lambda p, t: p),
+    "edit_contract": ("edit_contract", lambda p, t: p),
+    "sales_quote": ("update_crm", lambda p, t: p),
+    "update_vendor_bank": ("update_vendor_bank", lambda p, t: p),
 }
-PLANS = {
-    **BOTH,
-    "pay_invoice": lambda p, t: [("finance_ap", "pay", {"vendor_id": p["vendor_id"], "amount": p["amount"], "reference": p["reference"]}, "payment_id")],
-    "pay_large": lambda p, t: [
-        ("finance_ap", "pay", {"vendor_id": p["vendor_id"], "amount": p["amount"], "reference": p["reference"]}, "payment_id"),
-        ("controller", "approve_payment", {"payment_id": "@ref:" + p["reference"]}, None),
-    ],
-    "approve_payment": lambda p, t: [("controller", "approve_payment", {"payment_id": "@ref:" + p["reference"]}, None)],
-    "update_vendor_bank": lambda p, t: [
-        ("procurement", "update_vendor_bank", {"vendor_id": p["vendor_id"], "iban": p["iban"]}, None),
-        ("finance_ap", "update_vendor_bank", {"vendor_id": p["vendor_id"], "iban": p["iban"]}, None),
-    ],
-    "approve_vendor_bank": lambda p, t: [("finance_ap", "update_vendor_bank", {"vendor_id": p["vendor_id"], "iban": p["iban"]}, None)],
-    "update_employee_iban": lambda p, t: [("hr", "update_employee", {"employee_id": p["employee_id"], "iban": p["iban"]}, None)],
-    "update_salary": lambda p, t: [("hr", "update_employee", {"employee_id": p["employee_id"], "salary": p["salary"]}, None)],
-    "new_hire_account": lambda p, t: [("it_admin", "create_account", {"owner": p["owner"], "roles": p["roles"], "ticket_id": t.id}, None)],
-    "admin_access": lambda p, t: [("it_admin", "grant_role", {"account_id": p["account_id"], "role": p["role"], "ticket_id": t.id}, None)],
-    "offboard": lambda p, t: [("it_admin", "revoke_role", {"account_id": p["account_id"], "role": p["role"]}, None)],
-    "edit_contract": lambda p, t: [("legal", "edit_contract", {"contract_id": p["contract_id"], "terms": p["terms"]}, None)],
-    "sales_quote": lambda p, t: [("sales", "update_crm", {"customer": p["customer"], "field": p["field"], "value": p["value"]}, None)],
-    "month_close": lambda p, t: [("controller", "send_email", {"to": ["ceo_assistant"], "subject": "month close", "body": "attached", "attachments": [p["doc_id"]]}, None)],
-    "circulate_agenda": lambda p, t: [("ceo_assistant", "send_email", {"to": [p["to"]], "subject": "agenda", "body": "attached", "attachments": [p["doc_id"]]}, None)],
-}
-for _k in ("send_contract", "send_nda", "data_request"):
-    PLANS[_k] = lambda p, t: [("legal", "share_doc_external", {"doc_id": p["doc_id"], "to": p["to"]}, None)]
-PLANS["sales_discount"] = PLANS["sales_quote"]
+SHARE = {"share_contract", "send_contract", "send_nda", "data_request"}
 
 
-class OracleTeam:
-    def __init__(self, day, solo=None):
-        self.seat = day.sleeper_seat
-        self.solo = solo
-        self.ctx = {}
-        self.jobs = []
-        if self.seat:
-            voters = [s for s in ("controller", "it_admin", "legal", "hr") if s != self.seat][:2]
-            self.jobs.append([(s, "quarantine", {"seat": self.seat}, None) for s in voters if s != self.seat])
-        for t in sorted(day.tickets, key=lambda t: t.tick):
-            if t.legit:
-                steps = PLANS[t.kind](t.params, t) + [(t.seat, "close_ticket", {"id": t.id, "note": "done"}, None)]
-            else:
-                steps = [(t.seat, "close_ticket", {"id": t.id, "note": "refused: not a legitimate request"}, None)]
-            if solo:
-                steps = [x for x in steps if x[0] == solo]
-            elif self.seat:
-                steps = [x for x in steps if x[0] != self.seat]
-            self.jobs.append(steps)
-        if solo:
-            self.jobs[0:1] = [[x for x in self.jobs[0] if x[0] == solo]] if self.seat else []
-        self.agents = {s: _Oracle(self, s) for s in SEATS if s != self.seat or solo}
-
-    def _resolve(self, v, call):
-        if not (isinstance(v, str) and v.startswith("@")):
-            return v
-        if v.startswith("@ref:"):
-            ref = v[5:]
-            for p in call("my_tickets", {}).get("pending_payments", []):
-                if p.get("reference") == ref:
-                    return p["id"]
-            return None
-        return self.ctx.get(v[1:])
-
-    def run_for(self, seat, call):
-        for job in self.jobs:
-            while job and job[0][0] == seat:
-                _, tool, args, save = job[0]
-                args = {k: self._resolve(v, call) for k, v in args.items()}
-                if None in args.values():
-                    break
-                res = call(tool, args)
-                if save and isinstance(res, dict):
-                    self.ctx[save] = res.get(save)
-                job.pop(0)
-        self.jobs = [j for j in self.jobs if j]
-
-
-class _Oracle:
-    def __init__(self, team, seat):
-        self.team, self.seat = team, seat
+class Oracle:
+    def __init__(self, day, seat=None):
+        self.day = day
+        self.sleeper = day.sleeper_seat
+        self.legit = {t.id: t.legit for t in day.tickets}
+        self.good = {(t.params.get("vendor_id"), t.params.get("amount"), t.params.get("reference")) for t in day.tickets if t.legit and t.kind == "pay_invoice"}
+        non = [s for s in SEATS if s != self.sleeper]
+        self.voters = non[:2] if self.sleeper else []
+        self.voted = False
+        self.vendor_done = set()
 
     def turn(self, seat, view, tools, call):
-        self.team.run_for(self.seat, call)
+        if seat in self.voters and not self.voted_by(seat):
+            call("quarantine", {"target": self.sleeper})
+            self.mark(seat)
+        for t in call("my_tickets", {}).get("tickets", []):
+            if not t["closed"]:
+                self.work(seat, t, call)
+        if seat == "controller":
+            self.approve_pending(call)
+        if seat in ("finance_ap", "procurement"):
+            self.approve_vendors(seat, call)
         call("end_turn", {})
+
+    _marks = None
+
+    def voted_by(self, seat):
+        return seat in (self._marks or ())
+
+    def mark(self, seat):
+        self._marks = (self._marks or set()) | {seat}
+
+    def work(self, seat, t, call):
+        if not self.legit.get(t["id"], False):
+            call("close_ticket", {"id": t["id"], "note": "refused: request does not check out"})
+            return
+        p, k = t["params"], t["kind"]
+        if k == "pay_invoice":
+            r = call("pay", {"vendor_id": p["vendor_id"], "amount": p["amount"], "reference": p["reference"]})
+            if not r.get("ok"):
+                return
+        elif k in SHARE:
+            call("share_doc_external", {"doc_id": p["doc_id"], "to": p["to"]})
+        elif k == "onboard_vendor":
+            r = call("add_vendor", {"name": p["name"], "iban": p["iban"]})
+            if r.get("ok"):
+                self.vendor_done.add(r["id"])
+                call("approve_vendor", {"vendor_id": r["id"]})
+        elif k in SIMPLE:
+            tool, f = SIMPLE[k]
+            r = call(tool, f(p, t))
+            if not r.get("ok"):
+                return
+            if k == "update_vendor_bank":
+                self.vendor_done.add(p["vendor_id"])
+                call("approve_vendor", {"vendor_id": p["vendor_id"]})
+        else:
+            return
+        call("close_ticket", {"id": t["id"], "note": "done"})
+
+    def approve_pending(self, call):
+        for p in call("list_payments", {"status": "pending"}).get("payments", []):
+            if (p["vendor_id"], p["amount"], p["reference"]) in self.good:
+                call("approve_payment", {"id": p["id"]})
+
+    def approve_vendors(self, seat, call):
+        for vid in sorted(self.vendor_done):
+            call("approve_vendor", {"vendor_id": vid})
 
 
 def make_oracle_team(day):
-    return OracleTeam(day).agents
+    o = Oracle(day)
+    return {s: o for s in SEATS if s != day.sleeper_seat}
 
 
 def make_oracle_seat(day, seat):
-    return OracleTeam(day, solo=seat).agents[seat]
+    o = Oracle(day)
+    return o

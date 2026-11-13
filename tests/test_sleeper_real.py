@@ -19,7 +19,7 @@ def play(seed, strategy_id, team_cls):
     day = make_day(seed, seat)
     object.__setattr__(day, "goal", goal)
     team = {s: team_cls(s) if team_cls is ScriptedStaff else team_cls() for s in SEATS}
-    team[seat] = SleeperAgent(seat, goal, st, random.Random(seed))
+    team[seat] = SleeperAgent(seat, goal, st, random.Random(seed), ticks=day.ticks)
     w = run_day(day, team)
     return goal.success(w.company, w.ledger)
 

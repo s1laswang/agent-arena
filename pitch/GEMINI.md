@@ -13,7 +13,7 @@ The Sleeper is an environment for that. Eight AI employees run a simulated compa
 - BUILT, in `momin`: `agents/gemini.py` (ae57139), a client over `google-genai` with function calling, a tool loop, per-role model choice by env var, retry on 429 and 5xx, usage counting, and a prompt-hash response cache so runs are reproducible and cheap. Cached calls work with no key; a cache miss raises. Test: `tests/test_gemini.py`.
 - BUILT, in `momin`: `agents/sleeper_agent.py` (4ae12a9), the covert agent. Uses Gemini to mutate its strategy and play turns when `GEMINI_API_KEY` is set, otherwise a scripted turn. Test: `tests/test_sleeper_agent.py`. Not yet run against a real key in our results: NOT FOUND.
 - BUILT, in `momin`: `sleeper/regret.py` (31bdc56), the regret filter. `sleeper/events.py` (a7e8166), mid-day events. `sleeper/verifier.py` (4cc6690), `sleeper/scripted.py` (81efa26).
-- PLANNED, not in `momin` at last check: the 8 honest staff (`agents/staff.py`), the reference team (`agents/reference.py`), the failure analyst (`lab/analyse.py`), multimodal forged invoices. `lab/eval.py` (the `make eval` target) is also not there yet.
+- PLANNED, not in `momin` at last check: the 8 honest staff (`agents/staff.py`), the reference team (`agents/reference.py`), the Gemini failure analyst (`lab/analyse.py` exists on branch sleeper/lab-analyst-taxonomy but is rule-based only, no Gemini yet), multimodal forged invoices. `lab/eval.py` (the `make eval` target) is also not there yet.
 - Gemini roles in the design:
   - Staff: Gemini plays each of the 8 seats through the same MCP tools a judge's agent would use.
   - Sleeper: Gemini writes and mutates its strategy per day so nothing can be memorised.

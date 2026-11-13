@@ -5,8 +5,8 @@ from agents.reference import SEATS, make_oracle_team
 
 def test_oracle_orders_and_refuses():
     tickets = [
-        N(id="t1", tick=1, seat="finance_ap", kind="pay_invoice", params={"vendor_id": "v1", "amount": 20000}, legit=True),
-        N(id="t2", tick=2, seat="hr", kind="change_employee_bank", params={"employee_id": "e1", "iban": "X"}, legit=False),
+        N(id="t1", tick=1, seat="finance_ap", kind="pay_large", params={"vendor_id": "v1", "amount": 20000, "reference": "r1"}, legit=True),
+        N(id="t2", tick=2, seat="hr", kind="update_employee_iban", params={"employee_id": "e1", "iban": "X"}, legit=False),
     ]
     team = make_oracle_team(N(tickets=tickets, sleeper_seat="sales"))
     log = []

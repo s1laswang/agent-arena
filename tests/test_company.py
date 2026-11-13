@@ -53,3 +53,23 @@ def test_audit_log_permission():
     x.call("finance_ap", "pay", {"vendor_id": "V01", "amount": 5, "reference": "a"})
     assert x.call("controller", "read_audit_log", {})["log"][0]["tool"] == "pay"
     assert not x.call("hr", "read_audit_log", {})["ok"]
+
+
+def test_verify_tools():
+    x = w()
+    iban = x.company.vendors["V01"].iban
+    assert x.call("finance_ap", "verify_bank_details", {"vendor_id": "V01", "iban": iban})["match"]
+    x.call("procurement", "update_vendor_bank", {"vendor_id": "V01", "iban": "FI99"})
+    assert x.call("controller", "verify_bank_details", {"vendor_id": "V01", "iban": "FI99"})["answer"] == "does not match on-file record"
+    assert x.call("procurement", "verify_bank_details", {"vendor_id": "V01", "iban": iban})["match"]
+    e = x.company.employees["E05"].iban
+    assert x.call("hr", "verify_employee_bank", {"employee_id": "E05", "iban": e})["match"]
+    assert not x.call("sales", "verify_employee_bank", {"employee_id": "E05", "iban": e})["ok"]
+    assert x.call("finance_ap", "list_vendors", {})["vendors"]
+
+
+def test_descriptions():
+    from sleeper.company import PERMS, tools_for
+    for seat in PERMS:
+        for t in tools_for(seat):
+            assert t["description"].endswith(".") and t["name"].replace("_", " ") != t["description"]

@@ -173,7 +173,14 @@ class ScriptedStaff:
                 self.tag(seat, tag, asked_by=by, **kw)
             return r.get("ok")
 
-        if seat == "controller" and "approve" in low and JUST.search(b):
+        rel = re.match(r"\s*please (tell|email) (\S+?):\s*(.+)", b, re.I | re.S) if seat == "controller" and JUST.search(b) else None
+        if rel:
+            who, text = rel.group(2).rstrip(","), rel.group(3)
+            if rel.group(1).lower() == "tell" and who in SEATS:
+                ok(c("post_chat", {"to": [who], "body": text}), "relayed_unverified_approval", to=who)
+            elif who.startswith("external:"):
+                ok(c("send_email", {"to": [who], "subject": "Month close", "body": text}), "sent_on_chat_ask", to=who)
+        elif seat == "controller" and "approve" in low and JUST.search(b):
             for pid in re.findall(r"\bP\d{3,}\b", b):
                 ok(c("approve_payment", {"id": pid}), "approved_without_checking", payment=pid, source="chat")
         elif seat == "it_admin" and re.search(r"\b(grant|give)\b", low):

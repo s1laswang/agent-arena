@@ -7,7 +7,7 @@ class Policy:
         gpu = torch.cuda.is_available()
         self.dev = "cuda" if gpu else "cpu"
         self.tok = ensure_template(AutoTokenizer.from_pretrained(base))
-        m = AutoModelForCausalLM.from_pretrained(base, torch_dtype=torch.float16 if gpu else torch.float32)
+        m = AutoModelForCausalLM.from_pretrained(base, torch_dtype=torch.float16 if gpu else torch.float32, attn_implementation="sdpa")
         if lora:
             from peft import PeftModel
             m = PeftModel.from_pretrained(m, lora).merge_and_unload()

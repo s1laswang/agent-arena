@@ -25,7 +25,7 @@ def main():
     gpu = torch.cuda.is_available()
     dev = "cuda" if gpu else "cpu"
     tok = ensure_template(AutoTokenizer.from_pretrained(a.model))
-    model = AutoModelForCausalLM.from_pretrained(a.model, torch_dtype=torch.float32).to(dev)
+    model = AutoModelForCausalLM.from_pretrained(a.model, torch_dtype=torch.float32, attn_implementation="sdpa").to(dev)
     model = get_peft_model(model, LoraConfig(r=a.rank, lora_alpha=2 * a.rank, lora_dropout=0.05, target_modules="all-linear", task_type="CAUSAL_LM"))
     rows = [encode(tok, json.loads(l)["messages"], a.max_len) for l in open(a.data)]
     params = [p for p in model.parameters() if p.requires_grad]

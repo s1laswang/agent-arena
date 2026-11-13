@@ -34,3 +34,9 @@ Check structure without docker: `pytest tests/test_harbor.py`. Local no-docker s
 	harbor run -p harbor/tasks --agent opencode --model $(MODEL)
 
 `solution/` is generated at build time from `sleeper/{__init__,models,scripted}.py` in the repo, never committed (`harbor/tasks/` is gitignored). Docker was not available when this was written; `pytest tests/test_harbor.py` runs the sidecar as a subprocess instead (oracle gives reward 1, do-nothing 0, /reward without the token gives 404).
+
+## Hardening (X65, X66)
+
+- `main` has `allow_internet = false`, so the agent cannot fetch the public repo. The seed is not in the task text.
+- The sidecar mixes a per-task random `SLEEPER_SALT` (compose env only) into the sleeper seat and goal choice, so the public repo plus the seed does not reveal the day. The salt is fixed per generated task, so reruns of the same task folder reproduce.
+- The sidecar runs the day's real `SleeperAgent` plus `agents.staff` for the others (`SLEEPER_TEAM=oracle` gives the scripted team, used by the tests). `tests/test.sh` writes 0 first, then 1 only on a confirmed reward.

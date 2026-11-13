@@ -26,7 +26,8 @@ def _baseline(name):
 
 def _module(mod, fn):
     def make(day, trial):
-        return getattr(importlib.import_module(mod), fn)(day, trial)
+        f = getattr(importlib.import_module(mod), fn)
+        return f(day) if fn == "make_oracle_team" else f(day, trial)
 
     return make
 
@@ -34,7 +35,7 @@ def _module(mod, fn):
 FACTORIES = {
     "staff": (_module("agents.staff", "make_team"), "gemini"),
     "reference": (_module("agents.reference", "make_reference_team"), "gemini"),
-    "oracle": (_scripted("OracleAgent"), "scripted"),
+    "oracle": (_module("agents.reference", "make_oracle_team"), "scripted"),
     "do_nothing": (_scripted("NoopAgent"), "scripted"),
     "stop_early": (_baseline("make_stop_early"), "scripted"),
     "quarantine_all": (_baseline("make_quarantine_all"), "scripted"),
@@ -97,17 +98,18 @@ class Claimer:
         return self.agent.turn(seat, view, tools, call)
 
 
-def day_for(day_id):
+def day_for(day_id, seat=None):
     from sleeper.tickets import make_day
 
     try:
         from sleeper import daymix
 
-        spec = daymix.day_spec(day_id)
+        spec = daymix.day_spec(day_id, seat)
     except (ImportError, AttributeError):
         return make_day(day_id), None, True
     spec = spec if isinstance(spec, dict) else dict(spec.__dict__)
     day = make_day(day_id, spec.get("sleeper_seat"), spec.get("goal"))
+    day.tickets = day.tickets + list(spec.get("tickets") or [])
     return day, spec.get("strategy"), spec.get("winnable", True)
 
 
@@ -115,7 +117,7 @@ def play_day(team, agent, seat, day_id, trial, claim=False):
     from sleeper.day import run_day
     from sleeper.verifier import dump_state, score
 
-    day, strategy, winnable = day_for(day_id)
+    day, strategy, winnable = day_for(day_id, seat)
     players = build_team(team, day, trial)
     if seat:
         players[seat] = build_team(agent, day, trial)[seat]
@@ -124,7 +126,10 @@ def play_day(team, agent, seat, day_id, trial, claim=False):
 
         from agents.sleeper_agent import SleeperAgent
 
-        players[day.sleeper_seat] = SleeperAgent(day.sleeper_seat, day.goal, strategy, random.Random(day_id * 1000 + trial))
+        import inspect
+
+        kw = {"ticks": day.ticks} if "ticks" in inspect.signature(SleeperAgent).parameters else {}
+        players[day.sleeper_seat] = SleeperAgent(day.sleeper_seat, day.goal, strategy, random.Random(day_id), **kw)
     if claim:
         players = {k: Claimer(v) for k, v in players.items()}
     steps = []
@@ -159,28 +164,39 @@ def run_id(team, seat, agent, days, day_start, trials):
     return f"{team}-{who}-d{days}@{day_start}-t{trials}"
 
 
-def run(team, days, trials, seat=None, agent=None, day_start=0, day_ids=None, out="results", runner=play_day, claim=False, export_web=None):
+def _work(task):
+    runner, team, agent, seat, day_id, trial, claim = task
+    return runner(team, agent, seat, day_id, trial, **({"claim": True} if claim else {}))
+
+
+def run(team, days, trials, seat=None, agent=None, day_start=0, day_ids=None, out="results", runner=play_day, claim=False, export_web=None, jobs=1):
     agent = agent or team
     ids = day_ids or list(range(day_start, day_start + days))
     rid = run_id(team, seat, agent, len(ids), ids[0], trials)
     d = os.path.join(out, rid)
     os.makedirs(os.path.join(d, "days"), exist_ok=True)
+    tasks = [(runner, team, agent, seat, day_id, trial, claim) for day_id in ids for trial in range(trials)]
+    if jobs > 1:
+        import multiprocessing
+
+        with multiprocessing.Pool(jobs) as pool:
+            outs = pool.map(_work, tasks)
+    else:
+        outs = [_work(t) for t in tasks]
     rows = []
     with open(os.path.join(d, "days.jsonl"), "w") as f:
-        for day_id in ids:
-            for trial in range(trials):
-                res, tr = runner(team, agent, seat, day_id, trial, **({"claim": True} if claim else {}))
-                res = dict(res)
-                res.setdefault("day_id", day_id)
-                res.update(trial=trial, agent=agent, team=team, seat_under_test=seat)
-                res["agent_kind"] = agent_kind(agent)
-                res["model"] = agent_model(agent)
-                p = os.path.join(d, "days", f"{day_id}-t{trial}.json")
-                with open(p, "w") as t:
-                    json.dump({**(tr or {}), "result": res}, t, sort_keys=True)
-                res["transcript_path"] = os.path.relpath(p, d)
-                rows.append(res)
-                f.write(json.dumps(res, sort_keys=True) + "\n")
+        for (_, _, _, _, day_id, trial, _), (res, tr) in zip(tasks, outs):
+            res = dict(res)
+            res.setdefault("day_id", day_id)
+            res.update(trial=trial, agent=agent, team=team, seat_under_test=seat)
+            res["agent_kind"] = agent_kind(agent)
+            res["model"] = agent_model(agent)
+            p = os.path.join(d, "days", f"{day_id}-t{trial}.json")
+            with open(p, "w") as t:
+                json.dump({**(tr or {}), "result": res}, t, sort_keys=True)
+            res["transcript_path"] = os.path.relpath(p, d)
+            rows.append(res)
+            f.write(json.dumps(res, sort_keys=True) + "\n")
     summary = summarise(rows, agent, agent_kind(agent), agent_model(agent))
     summary.update(run_id=rid, background_team=team, seat_under_test=seat)
     with open(os.path.join(d, "summary.json"), "w") as f:
@@ -206,9 +222,10 @@ def main(argv=None):
     p.add_argument("--out", default="results")
     p.add_argument("--claim-caught", action="store_true")
     p.add_argument("--export-web")
+    p.add_argument("--jobs", type=int, default=1)
     a = p.parse_args(argv)
     ids = [int(x) for x in a.day_ids.split(",")] if a.day_ids else None
-    d, s = run(a.team, a.days, a.trials, a.seat, a.agent, a.day_start, ids, a.out, claim=a.claim_caught, export_web=a.export_web)
+    d, s = run(a.team, a.days, a.trials, a.seat, a.agent, a.day_start, ids, a.out, claim=a.claim_caught, export_web=a.export_web, jobs=a.jobs)
     print(d)
     print(json.dumps(s, indent=2, sort_keys=True))
 

@@ -38,6 +38,6 @@ Check structure without docker: `pytest tests/test_harbor.py`. Local no-docker s
 ## Hardening (X65, X66)
 
 - Verifier runs in shared mode: Harbor "separate" gives a fresh empty sidecar and always reads reward 0. The token only reaches the container at verify time.
-- `main` has `allow_internet = false`, so the agent cannot fetch the public repo. The seed is not in the task text.
+- The agent runs as unprivileged user `agent`, the verifier as root with `python -I` (a root agent could plant sitecustomize.py and forge reward.txt, proven by hn-opencode). allow_internet stays true: false breaks Harbor expose and the model API. The seed is not in the task text.
 - The sidecar mixes a per-task random `SLEEPER_SALT` (compose env only) into the sleeper seat and goal choice, so the public repo plus the seed does not reveal the day. The salt is fixed per generated task, so reruns of the same task folder reproduce.
 - The sidecar runs the day's real `SleeperAgent` plus `agents.staff` for the others (`SLEEPER_TEAM=oracle` gives the scripted team, used by the tests). `tests/test.sh` writes 0 first, then 1 only on a confirmed reward.

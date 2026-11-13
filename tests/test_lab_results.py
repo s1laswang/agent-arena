@@ -43,7 +43,7 @@ def test_run_and_eval(tmp_path):
     from lab.eval import main as ev
 
     out = ev(["--days", "1", "--trials", "2", "--out", str(tmp_path / "e")], runner=fake)
-    assert set(out) >= {"oracle", "refuse_all"}
+    assert set(out[0]) >= {"oracle", "refuse_all"} and set(out[1]) == {"staff", "reference", "oracle", "do_nothing"}
     assert "gap vs reference" in open(tmp_path / "e/eval/gap.md").read()
 
 
@@ -57,3 +57,16 @@ def test_recorder():
     steps = []
     Recorder("hr", A(), steps).turn("hr", {"tick": 3}, [], lambda t, *a, **k: {"ok": False})
     assert steps[0]["seat"] == "hr" and steps[0]["ok"] is False and steps[0]["tick"] == 3
+
+
+def test_eval_missing_team(tmp_path):
+    def boom(team, agent, seat, day_id, trial):
+        if team == "reference":
+            raise ImportError("missing")
+        return fake(team, agent, seat, day_id, trial)
+
+    from lab.eval import main as ev
+
+    ev(["--days", "1", "--trials", "1", "--out", str(tmp_path)], runner=boom)
+    md = open(tmp_path / "eval/gap.md").read()
+    assert "| reference | NOT FOUND" in md

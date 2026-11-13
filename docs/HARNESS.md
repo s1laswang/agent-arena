@@ -31,3 +31,7 @@ Proven: render, config parse, MCP client round trip against a stub server. NOT y
 ## Seat mode loop
 
 `harbor/opencode/seatmode.py` `SeatSession(day, seat, team)`: `call(tool, args)` goes to `World.call` for the tested seat; `end_turn` runs the other 7 seats in-process (`sleeper.day.play_round(skip=seat)`) and advances the tick; `result()` scores with `sleeper.verifier.score`. env-mcp's server should wrap `SeatSession.call`. Test: `tests/test_seatmode.py` (oracle seat with oracle team = reward 1, noop seat = 0).
+
+## Harbor end to end (verified 2026-11-14, Harbor 0.25.0, Docker via OrbStack)
+
+`harbor run -p harbor/tasks/sleeper-s0-controller -a oracle` runs solution/solve.sh against the sidecar and gets reward 1.0 (steps 182, 5/5 tickets) with `verifier.environment_mode = "shared"`. With `"separate"` the same run gets reward 0: Harbor verifies in a fresh environment, so a new sidecar with an empty world answers /reward (steps 0). Keep the verifier shared; the token in tests/test.sh is only uploaded at verify time.

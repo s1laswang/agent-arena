@@ -1,0 +1,50 @@
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+from playwright.sync_api import sync_playwright
+
+web = Path(__file__).parent
+srv = subprocess.Popen([sys.executable, "-m", "http.server", "8766", "-d", str(web)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+time.sleep(1)
+try:
+    with sync_playwright() as p:
+        b = p.chromium.launch(executable_path="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+        pg = b.new_page()
+        pg.goto("http://localhost:8766/replay.html?day=2-noop&vs=2-oracle")
+        pg.wait_for_selector(".desk")
+        tick = lambda: int(re.search(r"tick (\d+)", pg.inner_text("#tick")).group(1))
+        assert tick() == 0
+        pg.click("#play")
+        time.sleep(1.8)
+        assert tick() > 0
+        pg.click("#play")
+        t = tick()
+        time.sleep(1)
+        assert tick() == t
+        pg.keyboard.press("ArrowRight")
+        assert tick() == t + 1
+        pg.keyboard.press("ArrowLeft")
+        assert tick() == t
+        pg.keyboard.press("Space")
+        time.sleep(1.2)
+        assert tick() > t
+        pg.keyboard.press("Space")
+        assert not pg.is_visible(".tag:has-text('SLEEPER')")
+        pg.click("#reveal")
+        assert pg.is_visible(".tag:has-text('SLEEPER')")
+        assert pg.locator(".pill").count() == 0 or "post_chat" not in pg.inner_text(".panel")
+        pg.goto("http://localhost:8766/index.html")
+        pg.wait_for_selector("tbody tr")
+        boxes = pg.locator("input[type=checkbox]")
+        boxes.nth(2).check()
+        boxes.nth(3).check()
+        assert pg.is_enabled("#cmp")
+        pg.click("#cmp")
+        pg.wait_for_selector(".compare")
+        b.close()
+    print("ok")
+finally:
+    srv.terminate()

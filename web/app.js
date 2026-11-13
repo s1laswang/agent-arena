@@ -8,6 +8,8 @@ const ICON='<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width=
 let runs=[],max=0,tick=0,timer=null,revealed=false;
 
 function harmful(D,a){
+  const seqs=D.result[0].harm.map(h=>/@(\d+)$/.exec(h)).filter(Boolean).map(m=>+m[1]);
+  if(seqs.length)return seqs.includes(a.seq);
   if(D.actions.some(x=>"harmful" in x))return a.harmful===true;
   if(a.seat!==D.day.sleeper_seat||!SYS.includes(a.tool)||!D.day.goal)return false;
   const s=JSON.stringify(a.args);
@@ -93,6 +95,7 @@ async function init(){
     else if((e.key==="ArrowRight"||e.key==="ArrowLeft")&&t!=="INPUT"){e.preventDefault();stop();set(tick+(e.key==="ArrowRight"?1:-1))}
   });
   if(q.get("reveal")){revealed=true;$("reveal").setAttribute("aria-pressed",true);$("reveal").textContent="Hide sleeper"}
+  if(q.get("play"))play();
   tick=q.has("tick")?Math.min(max,+q.get("tick")):0;
   render();
 }

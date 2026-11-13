@@ -39,7 +39,7 @@ def test_run_and_eval(tmp_path):
     assert s1 == s2 and s1["deterministic"] is False and s1["agent_kind"] == "scripted"
     rows = load_days(d1 + "/days.jsonl")
     assert len(rows) == 6 and rows[0]["day_id"] == 1000
-    assert json.load(open(rows[0]["transcript_path"]))["result"]["day_id"] == 1000
+    assert json.load(open(d1 + "/" + rows[0]["transcript_path"]))["result"]["day_id"] == 1000
     from lab.eval import main as ev
 
     out = ev(["--days", "1", "--trials", "2", "--out", str(tmp_path / "e")], runner=fake)

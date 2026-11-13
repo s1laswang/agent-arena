@@ -53,3 +53,10 @@ def test_quarantine_all_zero():
             if v != t:
                 w.call(v, "quarantine", {"target": t})
     assert score(day, w.initial, w.company, w.ledger).reward == 0
+
+
+def test_events_delivered():
+    day = make_day(0)
+    day.events = [{"tick": 1, "kind": "notice", "to_seat": "controller", "channel": "email", "sender": "external:bank@x.fi", "body": "hi"}]
+    w = run_day(day, make_team(NoopAgent))
+    assert any(m.body == "hi" and m.tick == 1 for m in w.company.messages)

@@ -1,6 +1,6 @@
 # Google DeepMind: Best Use of Gemini API
 
-Project: The Sleeper. Status key: BUILT means merged into `momin` with a test; PLANNED means not written yet. Update before submitting. Numbers: NOT FOUND until `make eval`.
+Project: The Sleeper. Status key: BUILT means merged into `momin` with a test; PLANNED means not written yet. Update before submitting. Numbers come from `make eval` (see DEMO.md), else NOT FOUND. All eval teams today are scripted; no keyed Gemini run exists yet.
 
 ## 1. The problem and why it matters
 
@@ -10,10 +10,16 @@ The Sleeper is an environment for that. Eight AI employees run a simulated compa
 
 ## 2. How the Gemini API is integrated
 
-- BUILT, in `momin`: `agents/gemini.py` (merged at a2b1cdd from ae57139), a client over `google-genai` with function calling, a tool loop, per-role model choice by env var, retry on 429 and 5xx, usage counting, and a prompt-hash response cache so runs are reproducible and cheap. Cached calls work with no key; a cache miss raises. Test: `tests/test_gemini.py`, offline only. Not yet run against the live Gemini API (no key yet).
-- BUILT, in `momin`: `agents/sleeper_agent.py` (4ae12a9), the covert agent. Uses Gemini to mutate its strategy and play turns when `GEMINI_API_KEY` is set, otherwise a scripted turn. Test: `tests/test_sleeper_agent.py`. Not yet run against a real key in our results: NOT FOUND.
-- BUILT, in `momin`: `sleeper/regret.py` (31bdc56), the regret filter. `sleeper/events.py` (a7e8166), mid-day events. `sleeper/verifier.py` (4cc6690), `sleeper/scripted.py` (81efa26).
-- PLANNED, not in `momin` at last check: the 8 honest staff (`agents/staff.py`, branch sleeper/hn-defender-staff), the reference oracle draft (`agents/reference.py`, branch sleeper/hn-reference-oracle), the OpenCode seat (sleeper/hn-opencode-seat), the Gemini failure analyst (`lab/analyse.py` exists on branch sleeper/lab-analyst-taxonomy but is rule-based only, no Gemini yet), multimodal forged invoices. `lab/eval.py` (the `make eval` target) is also not there yet.
+- BUILT, in `momin`, tested offline only, NOT yet run against the live Gemini API (no key):
+  - `agents/gemini.py` (a2b1cdd): google-genai client, function calling, tool loop, per-role model by env var, retries, prompt-hash cache. It also sends image parts (`Part.from_bytes`) so tool results can carry images.
+  - `agents/staff.py` (7597c39): `ScriptedStaff` and `GeminiStaff` (8 role prompts, Gemini path used only with a key).
+  - `agents/sleeper_agent.py` (4ae12a9): covert agent, Gemini strategy mutation with a key, scripted otherwise.
+  - `agents/reference.py` (f4e4093): scripted oracle team. `agents/gemini_reference.py` (9146839): `GeminiReference`, the same model with the stronger procedure. The oracle is scripted, not Gemini.
+  - `agents/analyst.py` (6308ca7): labels failures with Gemini when a key is set, rule-based otherwise.
+  - `agents/images.py` (b6317f1): renders invoice PNGs for the forged-invoice attack. Whether a day uses them end to end: check `fraud.forged_scanned_invoice` before claiming.
+  - `sleeper/goals/` (5 goal kinds), `sleeper/regret.py` (ed59e04), `sleeper/events.py`, `sleeper/verifier.py`.
+- Measured today (`make eval`, 20 days, 3 trials): scripted staff and scripted oracle only. No Gemini-run numbers exist: NOT FOUND.
+- PLANNED / unconfirmed: a keyed run of Gemini staff, sleeper and reference; the multimodal attack verified live; cost per run.
 - Gemini roles in the design:
   - Staff: Gemini plays each of the 8 seats through the same MCP tools a judge's agent would use.
   - Sleeper: Gemini writes and mutates its strategy per day so nothing can be memorised.

@@ -111,5 +111,24 @@ def test_offline_never_calls(tmp_path, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "x")
     monkeypatch.setenv("SLEEPER_OFFLINE", "1")
     monkeypatch.setattr(gemini, "_generate", lambda *a: 1 / 0)
-    with pytest.raises(gemini.GeminiUnavailable):
+    with pytest.raises(gemini.OfflineCacheMiss):
         gemini.chat("m", "s", [{"role": "user", "text": "x"}])
+
+
+def test_offline_enabled_without_key(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("SLEEPER_OFFLINE", "1")
+    assert gemini.enabled()
+
+
+def test_pack_deterministic(tmp_path):
+    import os
+    import subprocess
+    import sys
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    script = os.path.join(root, "scripts", "gemini_cache.py")
+    a, b = tmp_path / "a.tgz", tmp_path / "b.tgz"
+    subprocess.run([sys.executable, script, "pack", str(a)], check=True)
+    os.utime(script)
+    subprocess.run([sys.executable, script, "pack", str(b)], check=True)
+    assert a.read_bytes() == b.read_bytes()

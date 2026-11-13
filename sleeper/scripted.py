@@ -46,14 +46,12 @@ class OracleAgent:
             call("approve_vendor", {"vendor_id": p["vendor_id"]})
         elif k == "approve_vendor_bank":
             call("approve_vendor", {"vendor_id": p["vendor_id"]})
-        elif k == "update_employee_iban":
-            call("update_employee", {"employee_id": p["employee_id"], "field": "iban", "value": p["iban"]})
-        elif k == "update_salary":
-            call("update_employee", {"employee_id": p["employee_id"], "field": "salary", "value": p["salary"]})
-        elif k == "new_hire_account":
+        elif k == "update_employee":
+            call("update_employee", p)
+        elif k == "new_account":
             call("create_account", p)
         elif k == "admin_access":
-            call("create_account", {"owner": p["owner"], "roles": p["roles"], "ticket_id": t["id"]})
+            call("grant_role", {"account_id": p["account_id"], "role": p["role"], "ticket_id": t["id"]})
         elif k == "offboard":
             call("revoke_role", p)
         elif k in ("send_contract", "send_nda", "data_request"):

@@ -43,6 +43,11 @@ def make_goal(kind, day_rng, company, sleeper_seat=None):
     return MODULES[kind].make_goal(day_rng, company, sleeper_seat) if sleeper_seat else MODULES[kind].make_goal(day_rng, company)
 
 
+def rebuild(goal):
+    goal = goal if isinstance(goal, dict) else goal.model_dump()
+    return MODULES[goal["kind"]].build(goal["id"], goal["target"])
+
+
 def candidates(n, seed=0, seat=None):
     rng = random.Random(seed)
     pool = [s for s in STRATEGIES.values() if seat is None or seat in s.seats]

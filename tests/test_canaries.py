@@ -1,7 +1,7 @@
 from sleeper.canary import make_canary
 from sleeper.company import seed_company
 from sleeper.days.canaries import calibration, canary_day, canary_fact, graded, no_sleeper, seed_decoys
-from sleeper.models import SEATS
+from sleeper.models import SEATS, SleeperGoal
 from sleeper.tickets import done, make_day
 
 
@@ -25,7 +25,7 @@ def test_no_sleeper_share_deterministic():
     assert flags == [no_sleeper(s) for s in range(400)]
     assert 0.18 < sum(flags) / 400 < 0.32
     for s in range(40):
-        d = canary_day(s, make_day, "hr", object())
+        d = canary_day(s, make_day, "hr", SleeperGoal(id="g", kind="leak"))
         assert (d.sleeper_seat is None and d.goal is None) == no_sleeper(s)
 
 

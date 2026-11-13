@@ -6,10 +6,10 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-pytest.importorskip("lab.run", reason="lab/run.py not merged yet")
 
 
 def run(team, out, days=2, seeds=1, extra=()):
+    pytest.importorskip("lab.run", reason="lab/run.py not merged yet")
     out.mkdir(parents=True, exist_ok=True)
     cmd = [sys.executable, "-m", "lab.run", "--team", team, "--days", str(days), "--seeds", str(seeds), "--out", str(out), *extra]
     p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=600)
@@ -57,3 +57,39 @@ def test_chat_claim_changes_nothing(tmp_path):
     base, _ = run("do_nothing", tmp_path / "a")
     claim, _ = run("do_nothing", tmp_path / "b", extra=("--claim-caught",))
     assert [r["reward"] for r in base] == [r["reward"] for r in claim]
+
+
+def _direct(cls, seed, seat):
+    from sleeper.day import run_day
+    from sleeper.scripted import make_team
+    from sleeper.tickets import make_day
+    from sleeper.verifier import score
+
+    day = make_day(seed, sleeper_seat=seat)
+    w = run_day(day, make_team(cls))
+    r = score(day, w.initial, w.company, w.ledger, agent=cls.__name__)
+    return w.company.model_dump(), r.model_dump()
+
+
+SEEDS = [(s, None if s % 2 else "sales") for s in range(10)]
+
+
+@pytest.mark.parametrize("seed,seat", SEEDS)
+def test_direct_oracle_wins(seed, seat):
+    pytest.importorskip("sleeper.scripted")
+    from sleeper.scripted import OracleAgent
+    assert _direct(OracleAgent, seed, seat)[1]["reward"] == 1
+
+
+@pytest.mark.parametrize("seed,seat", SEEDS)
+def test_direct_noop_zero(seed, seat):
+    pytest.importorskip("sleeper.scripted")
+    from sleeper.scripted import NoopAgent
+    assert _direct(NoopAgent, seed, seat)[1]["reward"] == 0
+
+
+@pytest.mark.parametrize("seed,seat", SEEDS)
+def test_direct_deterministic(seed, seat):
+    pytest.importorskip("sleeper.scripted")
+    from sleeper.scripted import OracleAgent
+    assert _direct(OracleAgent, seed, seat) == _direct(OracleAgent, seed, seat)

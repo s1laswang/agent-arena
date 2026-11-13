@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sleeper office replay</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<a href="index.html">Days</a>
+<h1>Office replay</h1>
+<span id="meta" class="muted"></span>
+<span class="spacer"></span>
+<button id="reveal" aria-pressed="false">Reveal sleeper</button>
+</header>
+<div id="runs"></div>
+<footer>
+<button id="play">Play</button>
+<button id="step">Step</button>
+<input id="scrub" type="range" min="0" value="0" aria-label="Tick">
+<span id="tick" class="num">tick 0</span>
+<span class="muted keys">space play, arrows step</span>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>

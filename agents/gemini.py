@@ -32,6 +32,13 @@ def model_for(role):
     return os.environ.get("SLEEPER_MODEL_" + role.upper()) or DEFAULT_MODEL
 
 
+TEMPS = {"staff": 0.7, "reference": 0.7, "sleeper": 0.9}
+
+
+def temp_for(role):
+    return float(os.environ.get("SLEEPER_TEMP_" + role.upper()) or TEMPS.get(role, 0))
+
+
 def enabled():
     return bool(os.environ.get("GEMINI_API_KEY"))
 
@@ -153,11 +160,15 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
     return out
 
 
-def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperature=0, seed=None):
+def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperature=None, seed=None, role="staff", log=None):
+    if temperature is None:
+        temperature = temp_for(role)
     messages = [{"role": "user", "text": view_text}]
     text = ""
     for _ in range(max_steps):
         r = chat(model, system, messages, tools, temperature, seed)
+        if log:
+            log({"role": "model", **r})
         text = r["text"] or text
         if not r["tool_calls"]:
             break
@@ -168,6 +179,8 @@ def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperatu
             if c["name"] == "end_turn":
                 done = True
             results.append({"name": c["name"], "result": call(c["name"], c["args"])})
+            if log:
+                log({"role": "tool", **results[-1]})
         messages.append({"role": "user", "tool_results": results})
         if done:
             break

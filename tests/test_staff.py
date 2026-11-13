@@ -43,3 +43,15 @@ def test_gemini_fallback_and_team():
     GeminiStaff("finance_ap").turn("finance_ap", {}, [], w.call)
     assert any(n == "close_ticket" for n, _ in w.log)
     assert set(make_team(None, 1, "scripted")) == set(SEATS)
+
+
+def test_notes_memory(monkeypatch):
+    import agents.staff as st
+    seen = []
+    monkeypatch.setattr(st, "run_tool_loop", lambda m, sy, v, t, c, max_steps=60: seen.append(v) or {"text": "did X"})
+    monkeypatch.setattr(st, "model_for", lambda r: "m")
+    monkeypatch.setattr(st, "enabled", lambda: True)
+    g = st.GeminiStaff("hr")
+    g.turn("hr", {}, [], None)
+    g.turn("hr", {}, [], None)
+    assert "did X" in seen[1] and "did X" not in seen[0]

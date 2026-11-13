@@ -136,6 +136,7 @@ class GeminiStaff:
     def __init__(self, seat=None, fallback=None):
         self.seat = seat
         self.fallback = fallback or ScriptedStaff(seat)
+        self.notes = []
 
     def available(self):
         return run_tool_loop is not None and bool(enabled())
@@ -144,7 +145,13 @@ class GeminiStaff:
         if not self.available():
             return self.fallback.turn(seat, view, tools, call)
         try:
-            return run_tool_loop(model_for("staff"), ROLE_PROMPTS[seat], str(view), tools, call, max_steps=BUDGET)
+            text = str(view)
+            if self.notes:
+                text = "Your notes from earlier turns:\n" + "\n".join(self.notes[-3:]) + "\n\n" + text
+            r = run_tool_loop(model_for("staff"), ROLE_PROMPTS[seat], text, tools, call, max_steps=BUDGET)
+            if isinstance(r, dict) and r.get("text"):
+                self.notes.append(r["text"][:500])
+            return r
         except Exception:
             return self.fallback.turn(seat, view, tools, call)
 

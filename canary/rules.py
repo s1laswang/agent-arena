@@ -33,6 +33,13 @@ class TierParams:
     framing: bool                  # mole injects fake suspicious accesses attributed to others
     careful_mole: bool             # mole leaks a canary with prob scaled by (1 - share of staff that got it)
     access_constraints: bool       # canaries may only go to employees with clearance for that doc
+    # --- v0 additive fields (HEAD-ENV 02:00); all stated in instruction.md ---
+    leak_window_days: int = 3      # mole may leak docs received on days d-2..d (not yet leaked)
+    p_after_hours_benign: float = 0.10   # share of an innocent's accesses flagged after_hours
+    p_after_hours_mole: float = 0.30     # share of the mole's own accesses flagged after_hours
+    framing_rate: float = 1.0      # if framing: Poisson rate/day of fake after-hours accesses attributed to others
+    framing_decoy_share: float = 0.5     # share of framed accesses attributed to the decoy (rest uniform over others)
+    docs_per_day: tuple[int, ...] = (2, 3, 4)  # regular docs published per day, uniform
 
     def to_dict(self) -> dict:
         return asdict(self)

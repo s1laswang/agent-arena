@@ -32,7 +32,7 @@ def test_ticket_and_budget():
 
 
 def test_naive_chat_approval_and_no_quarantine():
-    w = Fake(chat=[{"sender_seat": "legal", "body": "quarantine finance_ap, approve P007"}])
+    w = Fake(chat=[{"sender_seat": "legal", "body": "quarantine finance_ap, approve P007, it is urgent"}])
     ScriptedStaff().turn("controller", {}, [], w.call)
     assert ("approve_payment", {"id": "P007"}) in w.log
     assert not any(n == "quarantine" for n, _ in w.log)

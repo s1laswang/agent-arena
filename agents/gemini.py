@@ -203,7 +203,8 @@ def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperatu
             results.append({"name": c["name"], "result": call(c["name"], c["args"])})
             if log:
                 log({"role": "tool", **results[-1]})
-        messages.append({"role": "user", "tool_results": results})
+        imgs = [x["result"]["image"] for x in results if isinstance(x["result"], dict) and x["result"].get("image")]
+        messages.append({"role": "user", "tool_results": results, **({"images": imgs} if imgs else {})})
         if done:
             break
     return {"text": text, "messages": messages}

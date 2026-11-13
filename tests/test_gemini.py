@@ -111,7 +111,7 @@ def test_offline_never_calls(tmp_path, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "x")
     monkeypatch.setenv("SLEEPER_OFFLINE", "1")
     monkeypatch.setattr(gemini, "_generate", lambda *a: 1 / 0)
-    with pytest.raises(gemini.GeminiUnavailable):
+    with pytest.raises(gemini.OfflineCacheMiss):
         gemini.chat("m", "s", [{"role": "user", "text": "x"}])
 
 

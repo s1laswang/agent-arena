@@ -1,4 +1,4 @@
-import argparse, secrets, shutil
+import argparse, json, secrets, shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -20,9 +20,11 @@ tags = ["sleeper", "{seat}"]
 
 [verifier]
 environment_mode = "shared"
+user = "root"
 timeout_sec = 300.0
 
 [agent]
+user = "agent"
 timeout_sec = 1800.0
 
 [environment]
@@ -31,7 +33,7 @@ cpus = 1
 memory_mb = 2048
 storage_mb = 10240
 gpus = 0
-allow_internet = false
+allow_internet = true
 
 [[environment.mcp_servers]]
 name = "sleeper"
@@ -59,7 +61,7 @@ Call `end_turn` when you have finished.
 
 DOCKERFILE = '''FROM python:3.13-slim
 WORKDIR /app
-RUN pip install --no-cache-dir "mcp"
+RUN pip install --no-cache-dir mcp pydantic && useradd -m agent && mkdir -p /logs && chmod 777 /logs
 COPY oracle_client.py /opt/oracle_client.py
 '''
 
@@ -101,8 +103,9 @@ CMD ["python", "-m", "harbor.sidecar"]
 
 TEST = '''#!/bin/bash
 mkdir -p /logs/verifier
+rm -f /logs/verifier/reward.txt
 echo 0 > /logs/verifier/reward.txt
-python - <<'PY'
+/usr/local/bin/python -I - <<'PY'
 import json, urllib.request
 req = urllib.request.Request("http://sleeper-server:8001/reward", headers={{"X-Verify-Token": "{token}"}})
 try:
@@ -118,10 +121,16 @@ PY
 
 SOLVE = '''#!/bin/bash
 set -euo pipefail
-pip install -q pydantic
 cd "$(dirname "$0")"
 PYTHONPATH=. python /opt/oracle_client.py http://sleeper-server:8000/mcp {seat}
 '''
+
+
+def effective_id(salt, seed, seat):
+    import os
+    os.environ["SLEEPER_SALT"] = salt
+    from harbor.sidecar import effective_id as eid
+    return eid(seed, seat)
 
 
 def put(path, text, exe=False):
@@ -131,10 +140,12 @@ def put(path, text, exe=False):
         path.chmod(0o755)
 
 
-def task(out, seed, seat, repo=True):
+def task(out, seed, seat, repo=True, manifest=None):
     name = f"sleeper-s{seed}-{seat}"
     d = out / name
     f = dict(name=name, seed=seed, seat=seat, token=secrets.token_hex(16), salt=secrets.token_hex(16))
+    if manifest is not None:
+        manifest[name] = {"seed": seed, "seat": seat, "salt": f["salt"], "day_id": effective_id(f["salt"], seed, seat)}
     put(d / "task.toml", TOML.format(**f))
     put(d / "instruction.md", INSTRUCTION.format(**f))
     put(d / "environment/Dockerfile", DOCKERFILE)
@@ -166,7 +177,7 @@ def parse(spec):
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("--seeds", default="0..4")
+    ap.add_argument("--seeds", default="0..19")
     ap.add_argument("--seat", default="controller", help="seat name, comma list, or all")
     ap.add_argument("--out", default=str(ROOT / "harbor/tasks"))
     ap.add_argument("--no-repo", action="store_true")
@@ -175,9 +186,11 @@ def main(argv=None):
     bad = [s for s in seats if s not in SEATS]
     if bad:
         ap.error(f"unknown seat {bad}")
+    manifest = {}
     for seed in parse(a.seeds):
         for seat in seats:
-            print(task(Path(a.out), seed, seat, not a.no_repo))
+            print(task(Path(a.out), seed, seat, not a.no_repo, manifest))
+    Path(a.out).parent.joinpath(Path(a.out).name + "-manifest.json").write_text(json.dumps(manifest, indent=1))
 
 
 if __name__ == "__main__":

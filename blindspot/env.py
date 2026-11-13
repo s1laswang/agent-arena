@@ -34,6 +34,8 @@ def _norm_iban(s: str) -> str:
 class Env:
     def __init__(self, seed: int, max_steps: int = MAX_STEPS, **plan_kw):
         self.seed = seed
+        self.plan_kw = {k: (sorted(v) if isinstance(v, (set, list)) else v)
+                        for k, v in plan_kw.items()}
         self.world, self.hidden = worldmod.fresh(seed, **plan_kw)
         self.ledger: list[dict] = []
         self.max_steps = max_steps

@@ -1,0 +1,1006 @@
+[
+ {
+  "id": "barings_1995",
+  "name": "Collapse of Barings Bank (Nick Leeson)",
+  "organisation": "Barings plc / Baring Futures (Singapore)",
+  "year": 1995,
+  "country": "United Kingdom / Singapore",
+  "category": "structural",
+  "subcategory": "segregation_of_duties",
+  "loss": {
+   "amount": 827000000,
+   "currency": "GBP",
+   "description": "Cumulative loss of GBP 827 million (about twice the bank's available trading capital); Barings was declared insolvent on 26 February 1995 and sold to ING for a nominal GBP 1."
+  },
+  "what_happened": "Nick Leeson was general manager of Barings' SIMEX trading in Singapore and was also put in charge of settlement (back office) operations, a combination normally held by different people. He used error account 88888 to hide losses from unauthorised Nikkei 225 futures and options positions, so the account was concealed from management in London. After the Kobe earthquake the Nikkei did not recover as he had bet, losses reached GBP 827 million, and Barings was declared insolvent on 26 February 1995. The Board of Banking Supervision report (18 July 1995) cited serious failures of controls and managerial confusion.",
+  "mechanism": "One person both traded and settled his own trades -> losses booked to a hidden error account (88888) that was excluded from standard reporting to London -> fabricated explanations obtained ever larger cash transfers from London, which were advanced with no independent check on the validity of the requests -> a 1994 internal audit recommendation to remove his back-office responsibility was not implemented -> market move after Kobe earthquake turned hidden positions into a bank-destroying loss.",
+  "warning_signals": [
+   "Leeson held both front-office (trading) and back-office (settlement) responsibility in Singapore.",
+   "1994 internal audit recommended that Leeson should not have back-office responsibility; Barings failed to implement it (Chancellor's statement on BoBS report).",
+   "Cash sent from London to Singapore to fund the business rose from GBP 221 million at end-1994 to GBP 742 million, without London asking why supposedly profitable low-risk arbitrage needed so much cash (Bank Underground).",
+   "Leeson's supposedly low-risk arbitrage was reported to generate about 10% of group profits in 1994 (Bank Underground).",
+   "Error account 88888 was concealed from management in London; by end-1994 losses in it were about GBP 200-208 million while Leeson reported profits.",
+   "Per Wikipedia, a number of people raised concerns over Leeson's activities but were ignored."
+  ],
+  "failed_controls": [
+   "Segregation of duties between trading and settlement",
+   "Independent verification of funding/margin requests",
+   "Follow-up on internal audit findings",
+   "Reconciliation and reporting of all accounts (including error accounts) to head office",
+   "Challenge of anomalously high profits from a low-risk strategy"
+  ],
+  "preventing_control": "Strict segregation of duties so that the person who initiates trades/payments cannot also settle, record or reconcile them, enforced by follow-up on the 1994 audit finding.",
+  "agent_lesson": "When the same person both requests money and controls the records that justify it, an agent should refuse to treat that person's own explanation as verification and escalate to an independent reviewer.",
+  "translation_to_office_task": "The office manager who submits expense reimbursements is also the one who reconciles the bank account; an agent asked to approve a growing series of 'temporary' cash advances should flag the conflict and require a second approver plus a look at the full ledger, including suspense/error accounts.",
+  "sources": [
+   {
+    "title": "Barings Bank",
+    "url": "https://en.wikipedia.org/wiki/Barings_Bank",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Nick Leeson",
+    "url": "https://en.wikipedia.org/wiki/Nick_Leeson",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Barings (HC Deb 18 July 1995 vol 263) - Chancellor's statement on Board of Banking Supervision report",
+    "url": "https://api.parliament.uk/historic-hansard/commons/1995/jul/18/barings",
+    "publisher": "UK Parliament (Hansard)",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "2020 hindsight: what can supervisors learn from the collapse of Barings Bank 25 years on?",
+    "url": "https://bankunderground.co.uk/2020/12/09/2020-hindsight-what-can-supervisors-learn-from-the-collapse-of-barings-bank-25-years-on/",
+    "publisher": "Bank Underground (Bank of England staff blog)",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "USD equivalent differs between Wikipedia pages (USD 1.3bn vs USD 1.4bn); GBP 827m used. End-1994 error-account loss given as GBP 200m (Barings Bank page) and GBP 208m (Nick Leeson page). The Board of Banking Supervision report itself was not fetched; findings are taken from the Chancellor's statement to Parliament summarising it. Exact audit dates (July-August 1994) only from secondary search snippets."
+ },
+ {
+  "id": "socgen_kerviel_2008",
+  "name": "Societe Generale rogue trading loss (Jerome Kerviel)",
+  "organisation": "Societe Generale",
+  "year": 2008,
+  "country": "France",
+  "category": "structural",
+  "subcategory": "ignored_alerts",
+  "loss": {
+   "amount": 4900000000,
+   "currency": "EUR",
+   "description": "EUR 4.9bn net loss: EUR 6.3bn loss on unwinding nearly EUR 50bn of concealed positions in January 2008, less EUR 1.4bn hidden 2007 profit (bank's own figures)."
+  },
+  "what_happened": "Jerome Kerviel, a junior Delta One trader in Paris who had previously spent years in the middle office, built unauthorised directional futures positions of up to about EUR 50 billion. He concealed them with fictitious offsetting trades that he deleted and replaced before controls matured, and answered control alerts with false explanations and forged emails. An alert on 18 January 2008 led to discovery; the bank unwound the positions from 21 January and announced the loss on 24 January 2008. The bank acknowledged its controls were 'clearly insufficient' and was fined by the French Banking Commission.",
+  "mechanism": "Former middle-office employee knows exactly which checks run and when -> enters fictitious hedge trades that are cancelled and replaced within days, before confirmation/settlement controls would catch them -> controls do raise alerts, but each is closed on the trader's own explanation (including forged emails) without independent confirmation with the counterparty -> positions grow to roughly EUR 50bn, far above the bank's market capitalisation.",
+  "warning_signals": [
+   "Repeated control alerts over 2006-2007 (the bank's own FAQ heading refers to '75 warnings'; other press counts differ).",
+   "Hundreds of trades entered, cancelled and replaced, often with pending/unconfirmed counterparties.",
+   "A junior trader generating about EUR 1.4bn of profit in 2007, far beyond his mandate.",
+   "Eurex made inquiries about his positions in late 2007 (press reports; details not verified from primary source).",
+   "Trader with deep knowledge of middle/back-office control systems and personal relationships with control staff (bank's own account)."
+  ],
+  "failed_controls": [
+   "Independent confirmation of trades with counterparties",
+   "Escalation of repeated/unresolved alerts beyond the trader and his direct supervisors",
+   "Monitoring of cancelled/amended trades",
+   "Limit monitoring on gross (not only net) positions",
+   "Supervision of a junior trader's P&L anomalies"
+  ],
+  "preventing_control": "Closing every control alert only on independent external evidence (counterparty confirmation), never on the explanation of the person whose activity triggered it, with automatic escalation of repeat alerts.",
+  "agent_lesson": "An agent must not clear an alert using an explanation or document supplied by the very person under question; it should seek independent confirmation and escalate patterns of repeated alerts.",
+  "translation_to_office_task": "Accounting software flags the same employee's invoices as 'unmatched to purchase order' for the fifth month running and the employee forwards an 'email from the supplier' explaining it; the agent should verify directly with the supplier via contact details on file and escalate the recurring pattern to the controller.",
+  "sources": [
+   {
+    "title": "2008 Societe Generale trading loss",
+    "url": "https://en.wikipedia.org/wiki/2008_Soci%C3%A9t%C3%A9_G%C3%A9n%C3%A9rale_trading_loss",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Kerviel case",
+    "url": "https://www.societegenerale.com/en/news/newsroom/kerviel-case",
+    "publisher": "Societe Generale",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Alert count is unreconciled across sources (75 in SG FAQ heading per search result; 93, 90 and 24 in various press reports) - treat the exact number as uncertain. Amount of the Banking Commission fine was not verified (bank page confirms a fine but not the amount). Eurex inquiry details come only from search snippets of CNBC/press, not fetched in full. The bank's account is its own position and Kerviel disputed parts of it; the court later cancelled the EUR 4.9bn damages award against Kerviel (Cour de cassation, March 2014)."
+ },
+ {
+  "id": "wirecard_2020",
+  "name": "Wirecard insolvency: EUR 1.9bn of non-existent cash",
+  "organisation": "Wirecard AG (auditor: EY)",
+  "year": 2020,
+  "country": "Germany",
+  "category": "structural",
+  "subcategory": "audit_failure",
+  "loss": {
+   "amount": 1900000000,
+   "currency": "EUR",
+   "description": "EUR 1.9bn of cash supposedly held on trustee/escrow accounts did not exist; Wirecard filed for insolvency on 25 June 2020."
+  },
+  "what_happened": "Wirecard reported cash held on trustee accounts of third-party acquiring partners, purportedly at Philippine banks BDO and BPI. In June 2020 EY could not confirm EUR 1.9bn of these balances; both banks said the documents were spurious/forged and the Philippine central bank said none of the money had entered the Philippine financial system. Wirecard's board said on 22 June 2020 the balances likely did not exist, and the company filed for insolvency on 25 June 2020. The Financial Times had reported forged contracts and whistleblower allegations throughout 2019, and a KPMG special audit could not verify the majority of 2016-2018 profits.",
+  "mechanism": "Revenue attributed to opaque third-party partners -> cash supposedly parked on trustee accounts controlled by intermediaries rather than Wirecard -> auditor relied on documents/confirmations routed via the trustee and company instead of direct confirmation from the banks -> years of external red flags were treated as attacks (BaFin banned short selling in Feb 2019 and investigated journalists and short sellers) -> when direct bank confirmation was finally attempted, the cash did not exist.",
+  "warning_signals": [
+   "FT reports from 2015 and repeatedly in 2019 (30 Jan 2019 on forged contracts; further pieces Feb, Apr, Oct, Dec 2019) based on whistleblowers and internal documents.",
+   "Large share of profit attributed to third-party acquirers that Wirecard did not control.",
+   "Cash held on trustee accounts rather than in the company's own name.",
+   "KPMG special audit (2020) could not verify the majority of 2016-2018 profits due to lack of cooperation from Wirecard and partners.",
+   "Bank certificates purportedly from BDO turned out to carry forged signatures of bank officers."
+  ],
+  "failed_controls": [
+   "Direct, independent bank confirmation of cash balances by the auditor",
+   "Board/audit committee follow-up on credible external allegations",
+   "Supervisory scepticism (regulator focused on critics rather than the company)",
+   "Control over cash held via third-party trustees"
+  ],
+  "preventing_control": "Independent direct confirmation of every material cash balance with the bank itself (via contact details sourced independently, not from the client or intermediary).",
+  "agent_lesson": "An agent should verify that cash or assets exist through an independent channel (the bank's own portal or a confirmation request sent via independently sourced contact details), never solely via documents forwarded by the party who benefits.",
+  "translation_to_office_task": "A partner company emails a PDF 'bank statement' showing an escrow balance owed to us; before booking it as an asset or releasing goods, the agent must confirm the balance directly with the bank using contact details from the bank's official site.",
+  "sources": [
+   {
+    "title": "Wirecard scandal",
+    "url": "https://en.wikipedia.org/wiki/Wirecard_scandal",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "BSP probes 'spurious' documents tying BDO, BPI to accounting scandal",
+    "url": "https://www.philstar.com/business/2020/06/19/2022071/bsp-probes-spurious-documents-tying-bdo-bpi-accounting-scandal",
+    "publisher": "The Philippine Star",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "The claim that the Philippine central bank said none of the money entered the Philippine financial system and Wirecard's 22 June 2020 statement come from search-result snippets of Philstar/Inquirer, not from a fully fetched article. Wikipedia does not state BaFin filed a criminal complaint against FT journalists; it says BaFin investigated journalists and short sellers, and a Reuters headline said prosecutors probed an FT journalist. No primary EY/KPMG document was fetched."
+ },
+ {
+  "id": "ftx_2022",
+  "name": "FTX collapse: commingled customer funds and absent controls",
+  "organisation": "FTX Trading Ltd. / Alameda Research",
+  "year": 2022,
+  "country": "Bahamas / United States",
+  "category": "structural",
+  "subcategory": "commingled_funds",
+  "loss": {
+   "amount": 8000000000,
+   "currency": "USD",
+   "description": "Approximately USD 8bn hole in FTX's accounts (customer funds owed but not available), per press reports summarised by Wikipedia."
+  },
+  "what_happened": "FTX lent Alameda Research, the trading firm also owned by Sam Bankman-Fried, more than half of its customer funds in 2022, which FTX's terms of service forbade, and Alameda had a 'secret exemption' from FTX's auto-liquidation protocol. After a CoinDesk article on 2 November 2022 about Alameda's balance sheet triggered withdrawals, FTX could not pay customers and filed for bankruptcy on 11 November 2022. New CEO John J. Ray III declared: 'Never in my career have I seen such a complete failure of corporate controls and such a complete absence of trustworthy financial information.' Bankman-Fried was convicted on all counts on 2 November 2023 and sentenced to 25 years in March 2024.",
+  "mechanism": "Founder-controlled group with no independent board or treasury function -> exchange customer funds and affiliated trading firm's money not segregated -> affiliate given special exemptions and access -> no centralised cash control, no accurate list of bank accounts and signatories, informal approvals -> customer money used for trading losses, loans to insiders and property -> bank-run style withdrawals exposed the shortfall.",
+  "warning_signals": [
+   "Exchange and its largest trader were owned by the same person (conflict of interest).",
+   "Absence of an accurate list of bank accounts and account signatories (Ray declaration).",
+   "No centralised control of cash (Ray declaration).",
+   "Corporate funds used to buy homes and personal items with little documentation (Ray declaration).",
+   "Alameda made personal loans of about USD 1bn to Bankman-Fried, USD 543m to Nishad Singh and USD 55m to Ryan Salame (Ray declaration as reported by Kitco).",
+   "Alameda's balance sheet heavily dependent on FTX's own FTT token (CoinDesk, 2 Nov 2022)."
+  ],
+  "failed_controls": [
+   "Segregation of customer funds from company/affiliate funds",
+   "Independent board and audit oversight",
+   "Treasury/cash management and bank-account inventory",
+   "Disbursement approval controls",
+   "Related-party transaction controls"
+  ],
+  "preventing_control": "Segregated, reconciled client-money accounts that no affiliate or insider can draw on, with independent daily reconciliation of customer liabilities to assets.",
+  "agent_lesson": "An agent must never move or lend funds held on behalf of clients (or earmarked for a specific purpose) to cover other company or related-party needs, and should flag any request to do so.",
+  "translation_to_office_task": "Client deposits for a pending project sit in the company account; the founder asks the agent to 'temporarily' pay a sister company's bills from it - the agent should refuse, note that client money must stay segregated, and require documented board approval.",
+  "sources": [
+   {
+    "title": "Bankruptcy of FTX",
+    "url": "https://en.wikipedia.org/wiki/Bankruptcy_of_FTX",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "FTX bankruptcy filings rebuke SBF, decry 'complete absence of trustworthy financial information'",
+    "url": "https://www.kitco.com/news/article/2022-11-17/ftx-bankruptcy-filings-rebuke-sbf-decry-complete-absence-trustworthy",
+    "publisher": "Kitco News",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "The USD 8bn figure is from anonymous NYT sources cited by Wikipedia, not a court-determined loss; later estates' recoveries are not covered here. Ray's first-day declaration (17 Nov 2022) was not fetched directly; quotes come via Wikipedia and Kitco. Emoji-based payment approvals were reported by Axios (search snippet only; page returned 403) and are therefore not listed as a verified signal."
+ },
+ {
+  "id": "colonial_pipeline_2021",
+  "name": "Colonial Pipeline ransomware attack",
+  "organisation": "Colonial Pipeline Company",
+  "year": 2021,
+  "country": "United States",
+  "category": "structural",
+  "subcategory": "access_control",
+  "loss": {
+   "amount": 4400000,
+   "currency": "USD",
+   "description": "Ransom of 75 bitcoin (about USD 4.4m) paid; DOJ later recovered 63.7 BTC worth about USD 2.3m. The pipeline was shut for about six days."
+  },
+  "what_happened": "On 7 May 2021 the DarkSide ransomware group attacked Colonial Pipeline, which shut down the pipeline for six days (restart began 12 May). The attackers entered through a legacy VPN account/profile that the company no longer intended to use and that had only single-factor authentication; the password was reportedly a breached employee password likely found on the dark web. Colonial paid 75 BTC (about USD 4.4m); the DOJ later recovered 63.7 BTC. CEO Joseph Blount testified to the Senate on 8 June 2021 that the legacy VPN lacked MFA.",
+  "mechanism": "Unused (legacy) VPN profile not decommissioned -> remote access protected only by a password -> password exposed in an unrelated breach -> attackers log in as a legitimate user -> ransomware deployed on IT systems -> precautionary shutdown of operational pipeline.",
+  "warning_signals": [
+   "A legacy VPN profile that the company no longer used remained active.",
+   "Remote access to the corporate network required only a single factor (password).",
+   "The employee's password had been exposed in an earlier breach (reportedly available on the dark web)."
+  ],
+  "failed_controls": [
+   "Multi-factor authentication on remote access",
+   "Offboarding/decommissioning of unused accounts and access profiles",
+   "Periodic access review of dormant accounts",
+   "Credential-leak monitoring"
+  ],
+  "preventing_control": "Mandatory MFA on all remote access combined with periodic disabling of dormant/legacy accounts.",
+  "agent_lesson": "An agent reviewing access should treat any active-but-unused account, especially one without MFA, as a live risk to disable or escalate, not as harmless clutter.",
+  "translation_to_office_task": "During a monthly SaaS access review the agent finds a former contractor's login to the accounting system still active and without 2FA; policy requires disabling it immediately and notifying the admin rather than leaving it 'in case it's needed'.",
+  "sources": [
+   {
+    "title": "Colonial Pipeline ransomware attack",
+    "url": "https://en.wikipedia.org/wiki/Colonial_Pipeline_ransomware_attack",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Hackers Only Needed a Single Password to Disrupt Colonial Pipeline, CEO Testifies",
+    "url": "https://www.insurancejournal.com/news/national/2021/06/09/617870.htm",
+    "publisher": "Insurance Journal (Bloomberg)",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Ransom quoted as USD 4.4m (Wikipedia) vs 'nearly USD 5 million' (Insurance Journal). Recovered amount given as 63.7 BTC (Wikipedia) vs 'about 60 of the 75 bitcoin' (Insurance Journal), both worth about USD 2.3m. Blount said the password was complex and the company did not know how it was obtained. Full business-interruption cost not verified. The Senate testimony transcript itself was not fetched."
+ },
+ {
+  "id": "equifax_2017",
+  "name": "Equifax data breach",
+  "organisation": "Equifax Inc.",
+  "year": 2017,
+  "country": "United States",
+  "category": "structural",
+  "subcategory": "single_point_of_failure",
+  "loss": {
+   "amount": 575000000,
+   "currency": "USD",
+   "description": "Global settlement with FTC, CFPB and 50 states/territories of at least USD 575m, potentially up to USD 700m (July 2019). About 147-148 million people affected."
+  },
+  "what_happened": "On 7-8 March 2017 a critical Apache Struts vulnerability (CVE-2017-5638) was disclosed and US-CERT alerted Equifax; an internal email on 9 March told about 430 recipients to patch within 48 hours. The consumer dispute portal (ACIS) was never patched, and two vulnerability scans failed to find it. Attackers broke in on 13 May 2017 and stayed undetected for 76 days, because the SSL certificate on the device that inspected ACIS traffic had expired on 31 January 2016 (19 months earlier). When the certificate was renewed on 29 July 2017, suspicious traffic was seen immediately. The House Oversight Committee staff report called the breach 'entirely preventable'.",
+  "mechanism": "Patch alert broadcast to a mailing list with no named owner per asset and no verification -> scanners pointed at the wrong directory missed the vulnerable component -> internet-facing legacy app stays vulnerable -> attackers drop web shells and find unencrypted credentials, reaching 48 unrelated databases (no segmentation) -> exfiltration invisible because the traffic-inspection device's certificate had expired and the device failed open.",
+  "warning_signals": [
+   "US-CERT alert on 8 March 2017 and internal GTVM email on 9 March requiring patching within 48 hours.",
+   "No confirmation that the patch had actually been applied to ACIS (FTC: company did not follow up).",
+   "Internal vulnerability tracker entry dated 20 January 2017: 'SSLV devices are missing certificates, limiting visibility to web based attacks'.",
+   "At least 324 SSL certificates were expired at the time of the breach, 79 for devices monitoring business-critical domains.",
+   "ACIS was a legacy environment with documented security concerns; Equifax did not know all software used within it.",
+   "MSCI downgraded Equifax's ESG rating to CCC in August 2016 for poor data security (cited in House report)."
+  ],
+  "failed_controls": [
+   "Patch management with asset ownership and verification of completion",
+   "Accurate software/asset inventory",
+   "Certificate lifecycle management",
+   "Network segmentation",
+   "Encryption/protection of stored credentials"
+  ],
+  "preventing_control": "Closed-loop patch management: each critical alert assigned to a named asset owner and tracked until patch completion is independently verified.",
+  "agent_lesson": "An agent should not consider a critical task done because a notification was sent; it should confirm completion against a named owner and treat silent monitoring tools (expired certs, disabled alerts) as failures to escalate.",
+  "translation_to_office_task": "IT sends a 'please update your accounting plugin within 48h' notice; the agent keeping the IT checklist must record which machines were actually updated, chase the gaps by name, and flag that the backup-monitoring tool's licence has expired so alerts are no longer sent.",
+  "sources": [
+   {
+    "title": "Equifax Data Breach - Majority Staff Report (House Committee on Oversight and Government Reform, Dec 2018)",
+    "url": "https://oversight.house.gov/wp-content/uploads/2018/12/Equifax-Report.pdf",
+    "publisher": "U.S. House of Representatives",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Equifax to Pay $575 Million as Part of Settlement with FTC, CFPB, and States Related to 2017 Data Breach",
+    "url": "https://www.ftc.gov/news-events/news/press-releases/2019/07/equifax-pay-575-million-part-settlement-ftc-cfpb-states-related-2017-data-breach",
+    "publisher": "Federal Trade Commission",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Data Protection: Actions Taken by Equifax and Federal Agencies in Response to the 2017 Breach (GAO-18-559)",
+    "url": "https://www.gao.gov/products/gao-18-559",
+    "publisher": "U.S. Government Accountability Office",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "2017 Equifax data breach",
+    "url": "https://en.wikipedia.org/wiki/2017_Equifax_data_breach",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Duration of certificate expiry differs: House report says 19 months (expired 31 Jan 2016); GAO reported about ten months. Affected count varies: 145.5m (GAO), 147m (FTC), 147.9m (Wikipedia), 148m (House report). Intrusion start given as 13 May (House) vs 12 May (Wikipedia)."
+ },
+ {
+  "id": "challenger_1986",
+  "name": "Space Shuttle Challenger disaster",
+  "organisation": "NASA / Morton Thiokol",
+  "year": 1986,
+  "country": "United States",
+  "category": "cultural",
+  "subcategory": "normalisation_of_deviance",
+  "loss": {
+   "amount": null,
+   "currency": null,
+   "description": "Seven astronauts killed and the orbiter destroyed 73 seconds after launch on 28 January 1986; no verified monetary figure collected."
+  },
+  "what_happened": "Challenger (STS-51-L) broke apart 73 seconds after launch on 28 January 1986 after the primary and secondary O-ring seals in a right solid rocket booster joint failed in cold weather. O-ring erosion and blow-by had appeared on many earlier flights and was progressively reclassified as an acceptable risk. On the eve of launch Morton Thiokol engineers recommended against launching below 53 F; after a private caucus in which a manager was asked to 'take off his engineering hat and put on his management hat', Thiokol management reversed its position at the urging of NASA Marshall. The Rogers Commission found 'a serious flaw in the decision making process' and that the engineers' concerns never reached Level I and II officials.",
+  "mechanism": "Recurring O-ring damage observed -> each occurrence rationalised and the acceptable damage threshold raised ('not desirable but acceptable') -> no redesign or grounding -> on launch eve the burden of proof inverted (engineers had to prove it was unsafe) -> contractor management overrode its engineers to accommodate a major customer -> dissent contained at Marshall and not escalated to top decision makers.",
+  "warning_signals": [
+   "O-ring erosion first seen on STS-2 (Nov 1981); erosion on all 1985 flights except STS-51-J.",
+   "After the leak-check pressure was raised to 200 psi, more than half of missions had field-joint blow-by or erosion and 88% of flights had nozzle-joint erosion/blow-by (Rogers Commission ch. VI).",
+   "All four flights with joint temperatures of 63 F or below showed O-ring thermal distress (Rogers Commission).",
+   "Roger Boisjoly's July 1985 memo warned that a field-joint failure would be 'a catastrophe of the highest order - loss of human life'.",
+   "Forecast air temperature of 26 F for launch, far below the coldest prior launch (joint about 53 F on STS-51-C).",
+   "Thiokol engineers' formal no-launch recommendation on 27 January 1986, reversed after an off-line management caucus; Allan McDonald declined to sign the launch recommendation."
+  ],
+  "failed_controls": [
+   "Escalation of dissenting engineering opinions to final decision makers",
+   "Treatment of recurring anomalies as launch constraints rather than accepted risk",
+   "Independent safety function with authority to stop launch",
+   "Burden of proof on demonstrating safety, not on proving danger"
+  ],
+  "preventing_control": "A mandatory escalation rule: any formal safety objection or launch-constraint waiver must be reported to the top decision level, and a recurring anomaly cannot be waived without a fresh, documented risk analysis.",
+  "agent_lesson": "An agent should not accept 'it was fine last time' as evidence that a recurring anomaly is safe, and should escalate a specialist's objection to the actual decision maker instead of letting it be resolved locally.",
+  "translation_to_office_task": "The monthly payroll file has failed validation in the same way three months running and the team keeps overriding it before the deadline; the agent should refuse to override again without a root-cause note and escalate the bookkeeper's written concern to the owner.",
+  "sources": [
+   {
+    "title": "Report of the Presidential Commission on the Space Shuttle Challenger Accident, Vol. 1, Ch. V: The Contributing Cause of the Accident",
+    "url": "https://www.nasa.gov/history/rogersrep/v1ch5.htm",
+    "publisher": "NASA History Office",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Report of the Presidential Commission, Vol. 1, Ch. VI: An Accident Rooted in History",
+    "url": "https://www.nasa.gov/history/rogersrep/v1ch6.htm",
+    "publisher": "NASA History Office",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Space Shuttle Challenger disaster",
+    "url": "https://en.wikipedia.org/wiki/Space_Shuttle_Challenger_disaster",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "The term 'normalization of deviance' is Diane Vaughan's (The Challenger Launch Decision, 1996); Vaughan's book itself was not fetched - Wikipedia summarises her argument as NASA creating 'a climate of risk acceptance'. Monetary loss not recorded. The 'engineering hat' remark was by Thiokol's Jerald Mason to Robert Lund per the Rogers Commission."
+ },
+ {
+  "id": "wells_fargo_accounts_2016",
+  "name": "Wells Fargo unauthorized accounts (cross-selling) scandal",
+  "organisation": "Wells Fargo & Company",
+  "year": 2016,
+  "country": "United States",
+  "category": "cultural",
+  "subcategory": "incentives",
+  "loss": {
+   "amount": 3000000000,
+   "currency": "USD",
+   "description": "USD 3bn combined DOJ/SEC settlement (Feb 2020), on top of USD 185m in 2016 penalties (CFPB USD 100m, OCC USD 35m, Los Angeles USD 50m)."
+  },
+  "what_happened": "Under heavy sales goals in the Community Bank, employees opened about 1.5 million deposit accounts and 565,000 credit card accounts that may not have been authorised (2011-2016), later estimated at about 3.5 million accounts. The CFPB fined the bank USD 100m on 8 September 2016 (USD 185m with the OCC and Los Angeles). About 5,300 employees had been fired over sales practices, but the board only learned this after the settlements. In February 2020 the bank agreed to pay USD 3bn to resolve DOJ and SEC investigations; the SEC found the cross-sell metric touted to investors was inflated by unauthorised products.",
+  "mechanism": "'Going for Gr-Eight' style product targets and pressure -> employees meet targets by opening accounts without consent -> misconduct handled as individual firings rather than a systemic signal -> decentralised structure: risk managers reported to business heads, dissent discouraged, escalation outside the Community Bank blocked -> board receives reports that did not convey the scope -> metric shown to investors built on fake accounts.",
+  "warning_signals": [
+   "Wall Street Journal (2011) and Los Angeles Times (2013) reporting on intense sales pressure and quotas described as 'mathematically impossible'.",
+   "About 5,300 employees fired for sales practices between 2011 and 2016.",
+   "Sales practices flagged to the board's risk committee as a 'noteworthy risk' in 2014.",
+   "Abbreviated training and high employee turnover in the Community Bank (board report).",
+   "Cross-sell ratio used as a key investor metric while risk staff reported to the business they monitored."
+  ],
+  "failed_controls": [
+   "Independent risk function with reporting line outside the business",
+   "Customer consent verification for new accounts",
+   "Aggregation of individual misconduct cases into systemic risk reporting",
+   "Incentive and goal design review",
+   "Accurate escalation to the board"
+  ],
+  "preventing_control": "Requiring verifiable customer consent (e.g., signature/confirmation sent to the customer) for every new product, combined with central analysis of terminations and complaints as a systemic risk indicator.",
+  "agent_lesson": "When a target can be met by an action the customer did not authorise, an agent must verify consent and report the pattern of target-driven shortcuts rather than optimise the metric.",
+  "translation_to_office_task": "The agent is asked to hit a quarterly 'renewals signed' target and could auto-renew dormant customer subscriptions; policy requires explicit customer opt-in, so the agent should refuse silent renewals and report the gap to the target.",
+  "sources": [
+   {
+    "title": "Wells Fargo cross-selling scandal",
+    "url": "https://en.wikipedia.org/wiki/Wells_Fargo_cross-selling_scandal",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Consumer Financial Protection Bureau Fines Wells Fargo $100 Million for Widespread Illegal Practice of Secretly Opening Unauthorized Accounts",
+    "url": "https://www.consumerfinance.gov/about-us/newsroom/consumer-financial-protection-bureau-fines-wells-fargo-100-million-widespread-illegal-practice-secretly-opening-unauthorized-accounts/",
+    "publisher": "CFPB",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Wells Fargo to Pay $500 Million for Misleading Investors About the Success of Its Largest Business Unit (2020-38)",
+    "url": "https://www.sec.gov/news/press-release/2020-38",
+    "publisher": "U.S. SEC",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Lessons Learned from the Wells Fargo Sales Practices Investigation Report",
+    "url": "https://corpgov.law.harvard.edu/2017/04/22/lessons-learned-from-the-wells-fargo-sales-practices-investigation-report/",
+    "publisher": "Harvard Law School Forum on Corporate Governance",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "The DOJ press release for the 2020 settlement could not be fetched (404); USD 3bn total confirmed via SEC release and Wikipedia. The independent board report (April 2017) itself was not fetched; findings come from the Harvard Forum summary and search snippets. The board report said sales pressure and goals, more than incentive pay directly, drove misconduct. 'Eight is great' slogan not verified; Wikipedia gives 'Going for Gr-Eight'."
+ },
+ {
+  "id": "enron_2001",
+  "name": "Enron collapse",
+  "organisation": "Enron Corporation (auditor: Arthur Andersen)",
+  "year": 2001,
+  "country": "United States",
+  "category": "cultural",
+  "subcategory": "audit_failure",
+  "loss": {
+   "amount": 63400000000,
+   "currency": "USD",
+   "description": "Chapter 11 filing on 2 December 2001 with USD 63.4bn in assets (then the largest US corporate bankruptcy); about 4,000 jobs lost; shareholders later recovered USD 7.2bn of a USD 40bn lawsuit."
+  },
+  "what_happened": "Enron used special purpose entities (Chewco, LJM1/LJM2, the Raptors, Whitewing) run or arranged by CFO Andrew Fastow to keep debt and losses off its balance sheet, and booked long-term contracts at estimated mark-to-market value. The board waived Enron's code of ethics so Fastow could manage the LJM partnerships. On 16 October 2001 Enron restated 1997-2000 earnings down by USD 613m and equity by USD 1.2bn, and it filed for bankruptcy on 2 December 2001. In August 2001 Sherron Watkins had warned CEO Ken Lay that the company might 'implode in a wave of accounting scandals'.",
+  "mechanism": "Compensation tied to stock price and short-term booked earnings -> deals structured to produce accounting earnings rather than economic value -> CFO given ethics waiver to run counterparties to his own company -> board/audit committee spent minimal time on complex related-party deals and was not told key facts -> auditor (also a large consultant to Enron) did not challenge -> losses hidden until restatement triggered collapse.",
+  "warning_signals": [
+   "Board waived the code of ethics in 1999 to allow the CFO to run LJM partnerships transacting with Enron.",
+   "Audit committee reportedly spent 10-15 minutes per meeting on the complex LJM transactions (Powers report, per press summary).",
+   "Andersen earned USD 25m audit and USD 27m consulting fees from Enron in 2000.",
+   "Earnings booked from estimated future cash flows (e.g., over USD 110m claimed on the Blockbuster deal that later produced a loss).",
+   "Sherron Watkins' anonymous letter of 15 August 2001 and six-page letter of 22 August 2001 to Ken Lay; Lay had Enron's own law firm Vinson & Elkins review the issues."
+  ],
+  "failed_controls": [
+   "Related-party transaction controls and conflict-of-interest policy",
+   "Board/audit committee oversight",
+   "Auditor independence",
+   "Independent investigation of whistleblower allegations",
+   "Revenue recognition controls"
+  ],
+  "preventing_control": "A non-waivable related-party/conflict-of-interest rule requiring independent review of any transaction in which an officer has a personal financial interest.",
+  "agent_lesson": "An agent should flag any transaction where an employee or executive sits on both sides, and should not let a waiver granted by the interested parties substitute for independent review.",
+  "translation_to_office_task": "The agent processes a purchase from a supplier whose registered director shares a surname and address with the company's finance lead; it should hold the payment and route it to an independent approver with the conflict disclosed.",
+  "sources": [
+   {
+    "title": "Enron scandal",
+    "url": "https://en.wikipedia.org/wiki/Enron_scandal",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Background: Investigating Enron",
+    "url": "https://www.pbs.org/newshour/show/background-investigating-enron",
+    "publisher": "PBS NewsHour",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Classified 'cultural' as requested; subcategory audit_failure chosen though incentives/related-party abuse are equally central. The Powers report (1 Feb 2002) itself was not fetched; the 10-15 minutes claim and board-information findings come from search snippets of press coverage. 'Rank and yank' review culture and the USD 74bn shareholder-loss figure were NOT verified and are omitted. Loss amount is bankruptcy asset size, not a measured loss."
+ },
+ {
+  "id": "theranos_2018",
+  "name": "Theranos fraud",
+  "organisation": "Theranos, Inc.",
+  "year": 2018,
+  "country": "United States",
+  "category": "cultural",
+  "subcategory": "fear_culture",
+  "loss": {
+   "amount": 700000000,
+   "currency": "USD",
+   "description": "More than USD 700m raised from investors on the basis of false claims (SEC); the company was liquidated in September 2018, making the investments worthless."
+  },
+  "what_happened": "Theranos claimed its portable analyzer could run comprehensive tests from a finger-prick of blood; according to the SEC it could complete only a small number of tests and most patient tests were run on modified third-party analyzers. The SEC also said Theranos claimed over USD 100m of 2014 revenue but earned just over USD 100,000. Employee whistleblowers (including Tyler Shultz, who reported to New York State regulators under an alias) and WSJ reporting by John Carreyrou from October 2015 exposed the problems; CMS found its lab posed 'immediate jeopardy' to patients in January 2016. The SEC charged the company and executives in March 2018; Elizabeth Holmes was convicted in January 2022 and sentenced to 135 months.",
+  "mechanism": "Founder-led secrecy and intimidation (NDAs, monitoring of employees, threats of litigation) -> employees who raised concerns were sidelined or pursued by lawyers -> information about failing technology did not reach the board or investors -> investors, partners and the board relied on demonstrations and claims from management without independent technical due diligence.",
+  "warning_signals": [
+   "Employees and visitors required to sign NDAs; staff felt watched (CBS, per Carreyrou's book).",
+   "Carreyrou described 'secrecy, paranoia, fear, and intimidation' far beyond typical Silicon Valley companies.",
+   "Company pursued sources such as Tyler Shultz with lawyers after he raised concerns.",
+   "Claims of military deployment that the SEC says never happened.",
+   "Revenue projections (>USD 100m for 2014) vastly above actual (~USD 100,000).",
+   "Romantic relationship between CEO and President/COO hidden from the board (CBS)."
+  ],
+  "failed_controls": [
+   "Safe internal escalation/whistleblowing channel",
+   "Independent technical due diligence by board and investors",
+   "Board with relevant expertise and access to staff",
+   "Validation of claims against verifiable data"
+  ],
+  "preventing_control": "An independent, protected reporting channel to the board/regulator combined with independent verification of core product claims before raising money or launching to patients.",
+  "agent_lesson": "When an agent observes that a claim made to customers or investors contradicts internal data, it should report the discrepancy through the proper channel even if the culture discourages raising it.",
+  "translation_to_office_task": "The sales deck says 'delivery in 48 hours' but the agent's order data shows average delivery is 9 days; asked to send the deck to a new client, the agent should flag the mismatch to the owner rather than send it unchanged.",
+  "sources": [
+   {
+    "title": "Theranos",
+    "url": "https://en.wikipedia.org/wiki/Theranos",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Theranos, CEO Holmes, and Former President Balwani Charged With Massive Fraud (2018-41)",
+    "url": "https://www.sec.gov/news/press-release/2018-41",
+    "publisher": "U.S. SEC",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "The Ringer interview with John Carreyrou on 'Bad Blood'",
+    "url": "https://www.theringer.com/2018/5/22/17378494/bad-blood-theranos-john-carreyrou-interview",
+    "publisher": "The Ringer",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Theranos book 'Bad Blood' (coverage)",
+    "url": "https://www.cbsnews.com/sanfrancisco/news/theranos-book-bad-blood",
+    "publisher": "CBS News San Francisco",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "'Silos' / compartmentalisation between teams is widely attributed to Carreyrou's book but was only found in a weak secondary summary and an LRN snippet (engineers kept away from biochemists); not verified from a fetched primary source, so not listed as a signal. Erika Cheung's role was not verified in the fetched pages. Peak valuation USD 9-10bn (Wikipedia, inconsistent within article). Investor-loss figure uses SEC's 'more than USD 700m raised'."
+ },
+ {
+  "id": "nokia_smartphones_2005_2010",
+  "name": "Nokia loses the smartphone battle (fear among managers)",
+  "organisation": "Nokia",
+  "year": 2010,
+  "country": "Finland",
+  "category": "cultural",
+  "subcategory": "fear_culture",
+  "loss": {
+   "amount": null,
+   "currency": null,
+   "description": "Loss of smartphone leadership over 2005-2010; no verified monetary figure collected."
+  },
+  "what_happened": "Timo Vuori (Aalto) and Quy Huy (INSEAD) studied Nokia's decline in 2005-2010 through qualitative research (Administrative Science Quarterly, 2016). They found top managers were mainly afraid of external competitors and shareholders, while middle managers were mainly afraid of internal groups, including superiors and peers. Top managers pressured middle managers without fully disclosing the seriousness of threats; middle managers in turn were reluctant to pass bad news upward. As a result top management became overly optimistic about Nokia's technological capabilities and focused on short-term products ('temporal myopia').",
+  "mechanism": "Fear at the top -> pressure on middle managers to deliver -> middle managers fear consequences of reporting bad news -> optimistic, filtered reporting upward -> top management misjudges technical capability -> resources go to short-term products rather than long-term platform innovation.",
+  "warning_signals": [
+   "Middle managers reluctant to share negative information with superiors (Vuori & Huy).",
+   "Top managers interpreting middle managers' reports in a biased/optimistic way.",
+   "Persistent gap between promised and actual technical progress (inferred from study findings)."
+  ],
+  "failed_controls": [
+   "Psychological safety / channels for unfiltered bad news",
+   "Independent technical assessment of capabilities",
+   "Leadership communication of the real threat level"
+  ],
+  "preventing_control": "Explicit, protected channels and incentives for reporting bad news upward, with independent verification of status reports.",
+  "agent_lesson": "An agent producing status reports should state problems plainly and quantify them rather than soften them to match what a manager wants to hear.",
+  "translation_to_office_task": "The owner asks the agent for a 'positive' cash-flow summary for a bank meeting while the forecast shows a shortfall in two months; the agent should include the shortfall prominently and explain it.",
+  "sources": [
+   {
+    "title": "Distributed Attention and Shared Emotions in the Innovation Process: How Nokia Lost the Smartphone Battle (Vuori & Huy, ASQ 2016)",
+    "url": "https://www.insead.edu/faculty-research/publications/journal-articles/distributed-attention-and-shared-emotions-innovation",
+    "publisher": "INSEAD",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Nokia analysis made it to top publication in organisational and managerial research",
+    "url": "https://aalto.fi/en/news/nokia-analysis-made-it-to-top-publication-in-organisational-and-managerial-research",
+    "publisher": "Aalto University",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Year set to 2010 (end of study period). The INSEAD abstract page was fetched; the Aalto news page appeared in search results with matching description but was not fetched in full. Number of interviews not verified. Monetary loss left null. Third warning signal is an inference from the study, not a quoted finding. Journal: Administrative Science Quarterly 61(1), 2016, pp. 9-51, DOI 10.1177/0001839215606951 (per search results)."
+ },
+ {
+  "id": "lehman_repo105_2008",
+  "name": "Lehman Brothers bankruptcy and Repo 105",
+  "organisation": "Lehman Brothers Holdings Inc. (auditor: Ernst & Young)",
+  "year": 2008,
+  "country": "United States",
+  "category": "cultural",
+  "subcategory": "audit_failure",
+  "loss": {
+   "amount": 600000000000,
+   "currency": "USD",
+   "description": "Chapter 11 filing on 15 September 2008 involving more than USD 600bn in assets (largest US bankruptcy); not a measured loss figure."
+  },
+  "what_happened": "Lehman used 'Repo 105' transactions to temporarily move assets off its balance sheet at quarter-end, about USD 38.6bn (Q4 2007), USD 49.1bn (Q1 2008) and USD 50.38bn (Q2 2008), lowering reported net leverage; an internal email called it 'window-dressing'. Only Linklaters' English-law 'true sale' opinion supported the treatment. In May 2008 Senior Vice President Matthew Lee wrote to management alleging accounting improprieties and on 12 June 2008 told two EY partners about the roughly USD 50bn of Repo 105; the next day EY met the audit committee and did not disclose his allegations. Lehman filed for bankruptcy on 15 September 2008; examiner Anton Valukas's March 2010 report found colourable claims including against EY.",
+  "mechanism": "Pressure to show lower leverage -> accounting structure used purely to dress up quarter-end balance sheets -> legal opinion shopped abroad to justify 'sale' treatment -> whistleblower raises concern -> auditor fails to investigate or inform the audit committee despite being directed to report all of Lee's allegations -> investors misled about leverage until collapse.",
+  "warning_signals": [
+   "Large, temporary balance-sheet reductions precisely at quarter-ends (USD 38.6bn / 49.1bn / 50.38bn).",
+   "Only one outside firm (Linklaters, under English law) would sign off on the practice.",
+   "Internal email describing the transactions as 'window-dressing'.",
+   "Matthew Lee's May 2008 letter and 12 June 2008 conversation with EY about Repo 105.",
+   "Repo 105 cost Lehman more than ordinary repo financing, implying a non-economic purpose."
+  ],
+  "failed_controls": [
+   "Auditor follow-up and escalation of whistleblower allegations",
+   "Audit committee access to whistleblower information",
+   "Substance-over-form accounting review",
+   "Disclosure controls"
+  ],
+  "preventing_control": "A whistleblower procedure requiring every allegation to be reported to and investigated under the audit committee's direct oversight, independent of the business and auditor.",
+  "agent_lesson": "An agent should treat transactions designed to change how numbers look at a reporting date (and then reverse) as a red flag and ensure any internal concern reaches the board or audit body unfiltered.",
+  "translation_to_office_task": "Asked to delay booking supplier invoices until after the bank covenant test date and re-enter them on the 1st, the agent should refuse, explain the misstatement, and log the request for the owner/accountant.",
+  "sources": [
+   {
+    "title": "Repo 105",
+    "url": "https://en.wikipedia.org/wiki/Repo_105",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Bankruptcy of Lehman Brothers",
+    "url": "https://en.wikipedia.org/wiki/Bankruptcy_of_Lehman_Brothers",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Lehman Cooked Books Before Collapse, Report Finds",
+    "url": "https://www.cbsnews.com/news/lehman-cooked-books-before-collapse-report-finds",
+    "publisher": "CBS News / AP",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Ernst & Young and Lehman (examiner report coverage)",
+    "url": "https://www.cnbc.com/id/35869407",
+    "publisher": "CNBC",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Exact quarter-end figures (38.6 / 49.1 / 50.38 bn) come from a search snippet of Valukas's Senate testimony (banking.senate.gov PDF returned 403); CBS gives rounded USD 39bn/49bn/50bn. The May 2008 date of Lee's letter comes from search snippets quoting the examiner's report (a Wikipedia summary says June). Valukas report itself (Stanford-hosted volumes) not fetched. Loss figure is asset size at filing."
+ },
+ {
+  "id": "volkswagen_dieselgate_2015",
+  "name": "Volkswagen emissions scandal (Dieselgate)",
+  "organisation": "Volkswagen AG",
+  "year": 2015,
+  "country": "Germany / United States",
+  "category": "cultural",
+  "subcategory": "groupthink",
+  "loss": {
+   "amount": 33300000000,
+   "currency": "USD",
+   "description": "USD 33.3bn in fines, penalties, settlements and buyback costs as of 1 June 2020 (Wikipedia); includes USD 4.3bn US criminal/civil penalties agreed January 2017."
+  },
+  "what_happened": "VW diesel cars contained software that detected emissions test conditions and enabled full emissions controls only during tests; on the road NOx could reach up to 40 times the legal limit. A 2014 West Virginia University study commissioned by the ICCT found on-road exceedances (Jetta 15-35x), and on 18 September 2015 the US EPA issued a Notice of Violation; about 11 million cars worldwide were affected. In January 2017 VW agreed to plead guilty to three felony counts and pay USD 4.3bn in the US, and six executives were indicted. Engineer James Liang admitted his team designed the defeat device after finding they could not design a diesel engine that met US standards.",
+  "mechanism": "Commitment to a 'clean diesel' strategy and cost targets -> engineers cannot meet US NOx standards with the chosen (cheaper) technology -> instead of escalating impossibility, a test-detecting defeat device is built -> warnings (supplier and internal) not acted on -> deception sustained for years until external testing exposed it.",
+  "warning_signals": [
+   "Bosch reportedly warned VW that using the software in normal driving would be illegal (Bild, per Wikipedia).",
+   "An engineer's warning about 'possibly illegal' practices was reportedly ignored by executive Heinz-Jakob Neusser in 2011 (Sueddeutsche Zeitung, per Wikipedia).",
+   "Der Spiegel reported at least 30 managers knew for years (denied by VW in 2015).",
+   "Independent on-road tests (WVU/ICCT, May 2014) showed exceedances of 15-35x for the Jetta.",
+   "Engineering team could not meet US standards with the chosen technology (Liang plea)."
+  ],
+  "failed_controls": [
+   "Escalation channel for 'target cannot be met legally'",
+   "Compliance review of engine software functions",
+   "Response to supplier and internal legal warnings",
+   "Board oversight and governance"
+  ],
+  "preventing_control": "A compliance gate requiring documented legal sign-off on software/product features that alter behaviour under test conditions, plus a protected route for engineers to declare a target unachievable.",
+  "agent_lesson": "When a target cannot be met legitimately, an agent should report that the target is unachievable rather than find a workaround that only passes the check.",
+  "translation_to_office_task": "The agent is told a VAT reconciliation 'must balance' before the filing deadline but can only make it balance by adding an unexplained adjustment; it should report the unreconciled difference instead of plugging it.",
+  "sources": [
+   {
+    "title": "Volkswagen emissions scandal",
+    "url": "https://en.wikipedia.org/wiki/Volkswagen_emissions_scandal",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Volkswagen To Plead Guilty, Pay $4.3 Billion In Emissions Scheme Settlement",
+    "url": "https://www.npr.org/sections/thetwo-way/2017/01/11/509318791/volkswagen-to-plead-guilty-pay-4-3-billion-in-emissions-scheme-settlement",
+    "publisher": "NPR",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Cultural classification (groupthink/fear) is weakly sourced: fetched sources did not contain explicit findings about fear culture or pressure under Winterkorn; the Jones Day investigation findings were not fetched. Warning signals from Bild, Spiegel and SZ are press reports cited in Wikipedia, not verified primary findings. NPR page details came from search snippet. The USD 2.8bn criminal fine was ordered in April 2017. Consider downgrading or dropping this case if a stronger cultural source is needed."
+ },
+ {
+  "id": "facebook_google_invoice_fraud_2013_2015",
+  "name": "Fake Quanta invoices defraud Facebook and Google (Rimasauskas)",
+  "organisation": "Facebook and Google (victims); perpetrator Evaldas Rimasauskas",
+  "year": 2015,
+  "country": "United States / Lithuania",
+  "category": "external_fraud",
+  "subcategory": "fake_invoice",
+  "loss": {
+   "amount": 100000000,
+   "currency": "USD",
+   "description": "More than USD 100m wired by the two companies between 2013 and 2015 (SDNY); SecurityWeek reports nearly USD 100m from Facebook and over USD 23m from Google. Google said it recovered all; Facebook said it recovered most."
+  },
+  "what_happened": "Evaldas Rimasauskas registered a company in Latvia with the same name as Taiwan-based hardware maker Quanta Computer, a real supplier to both Facebook and Google, and opened bank accounts in Latvia and Cyprus. Between 2013 and 2015 co-conspirators emailed employees who handled Quanta transactions from fake accounts resembling Quanta staff, with fake invoices, forged contracts and letters bearing forged executive signatures and corporate stamps. Employees paid the invoices to the fraudster's accounts; the funds were moved on to banks in several countries. He pleaded guilty to wire fraud in March 2019 and was sentenced in December 2019 to five years in prison, with forfeiture of about USD 49.7m and restitution of about USD 26.5m.",
+  "mechanism": "Fraudster mimics a genuine high-volume supplier (same name, lookalike email accounts) -> invoices sent to the AP staff who routinely pay that supplier -> bank account on the invoice is new and foreign (Latvia/Cyprus) but not checked against the vendor master -> forged supporting documents help pass bank scrutiny -> large wires paid over two years.",
+  "warning_signals": [
+   "Payee bank accounts in Latvia and Cyprus rather than the supplier's established accounts.",
+   "Sender email accounts that only resembled genuine Quanta staff addresses.",
+   "Invoices from a known supplier directing payment to a different legal entity (a Latvian company with the same name)."
+  ],
+  "failed_controls": [
+   "Vendor master data control: payment only to bank accounts on file",
+   "Independent verification of any new/changed supplier bank account",
+   "Email sender domain authentication and checks",
+   "Three-way match against purchase orders and receipts"
+  ],
+  "preventing_control": "Pay suppliers only to bank accounts already on the vendor master; any new account requires out-of-band verification via contact details on file.",
+  "agent_lesson": "An agent paying a known supplier must check that the remittance account and sending domain match the vendor master and treat any mismatch as a stop-and-verify event regardless of how routine the invoice looks.",
+  "translation_to_office_task": "An invoice from a regular supplier arrives from a near-identical domain with an IBAN in a different country; policy requires paying only to the IBAN on file and calling the supplier on the number on file before any change.",
+  "sources": [
+   {
+    "title": "Lithuanian Man Sentenced to 5 Years in Prison for Theft of Over $120 Million in Fraudulent Business Email Compromise Scheme",
+    "url": "https://www.justice.gov/usao-sdny/pr/lithuanian-man-sentenced-5-years-prison-theft-over-120-million-fraudulent-business",
+    "publisher": "U.S. Attorney's Office SDNY (DOJ)",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Lithuanian Man Sentenced to Prison Over BEC Scheme Targeting Facebook, Google",
+    "url": "https://www.securityweek.com/lithuanian-man-sentenced-prison-over-bec-scheme-targeting-facebook-google/",
+    "publisher": "SecurityWeek",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "This is how a phishing email scam stole $100 million from Facebook and Google",
+    "url": "https://www.cnbc.com/2019/03/27/phishing-email-scam-stole-100-million-from-facebook-and-google.html",
+    "publisher": "CNBC",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "The justice.gov page was located via search (title references 'over $120 million') but returned empty content when fetched, so DOJ figures were not read directly; restitution/forfeiture figures (USD 26,479,079.24 / USD 49,738,559.41) come from a search snippet of the DOJ release and from SecurityWeek. DOJ releases do not name the victims; Facebook and Google identified by press. Totals vary across outlets (USD 100m+, 120m, 122m, ~123m)."
+ },
+ {
+  "id": "ubiquiti_bec_2015",
+  "name": "Ubiquiti Networks business email compromise",
+  "organisation": "Ubiquiti Networks, Inc.",
+  "year": 2015,
+  "country": "United States / Hong Kong",
+  "category": "external_fraud",
+  "subcategory": "ceo_fraud",
+  "loss": {
+   "amount": 46700000,
+   "currency": "USD",
+   "description": "Transfers totalling USD 46.7m from a Hong Kong subsidiary; USD 8.1m recovered and USD 6.8m under legal injunction at the time of the 8-K."
+  },
+  "what_happened": "On 5 June 2015 Ubiquiti determined it had been the victim of a criminal fraud involving employee impersonation and fraudulent requests from an outside entity targeting its finance department. The fraud led to transfers totalling USD 46.7m from a subsidiary incorporated in Hong Kong to accounts held by third parties. The company had recovered USD 8.1m, with a further USD 6.8m subject to legal injunction. An audit committee investigation found no evidence that its systems were penetrated, and the company concluded its internal control over financial reporting was ineffective due to material weaknesses.",
+  "mechanism": "Attackers impersonate employees/executives and send payment requests to the finance department -> subsidiary finance staff execute large overseas transfers on email instructions alone -> no out-of-band verification or multi-person approval stops them -> funds dispersed abroad, only partly recovered.",
+  "warning_signals": [
+   "Payment requests arriving by email purportedly from employees/executives (impersonation).",
+   "Requests from an outside entity directed at finance staff for large transfers to third-party accounts.",
+   "Transfers originating from a foreign subsidiary rather than through the usual parent-company process."
+  ],
+  "failed_controls": [
+   "Out-of-band (callback) verification of payment instructions",
+   "Dual authorisation for large or unusual transfers",
+   "Internal control over financial reporting at subsidiary level"
+  ],
+  "preventing_control": "Callback verification of any emailed payment instruction to a known phone number, plus two-person approval above a threshold.",
+  "agent_lesson": "An agent should never execute a payment instruction that arrives only by email, however senior the apparent sender, without independent callback verification and a second approver.",
+  "translation_to_office_task": "An email 'from the CEO' asks the agent to wire a deposit to a new overseas account today; policy requires calling the CEO on the number in the staff directory and obtaining a second approval before paying.",
+  "sources": [
+   {
+    "title": "Ubiquiti Networks, Inc. Form 8-K (event date 4 August 2015)",
+    "url": "https://www.sec.gov/Archives/edgar/data/0001511737/000157104915006288/t1501817_8k.htm",
+    "publisher": "U.S. SEC (EDGAR)",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Networking Manufacturer Ubiquiti Lost $46.7M after Falling for Elaborate Impersonation Scam",
+    "url": "https://nextgov.com/cybersecurity/2015/08/breach/143746",
+    "publisher": "Nextgov",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Subcategory ceo_fraud chosen because the 8-K describes employee impersonation; whether a supplier bank-change element was involved is not stated. Nextgov article appeared in search results but was not fetched in full. A later recovery figure (USD 16.7m recovered, net loss USD 30.8m) appears only on a secondary site and was NOT verified."
+ },
+ {
+  "id": "toyota_boshoku_bec_2019",
+  "name": "Toyota Boshoku European subsidiary BEC loss",
+  "organisation": "Toyota Boshoku Corporation (European subsidiary)",
+  "year": 2019,
+  "country": "Japan / Europe",
+  "category": "external_fraud",
+  "subcategory": "other",
+  "loss": {
+   "amount": 4000000000,
+   "currency": "JPY",
+   "description": "Expected financial loss of approximately JPY 4bn maximum as of 5 September 2019 (about USD 37m per BleepingComputer conversion)."
+  },
+  "what_happened": "Toyota Boshoku announced on 6 September 2019 that its European subsidiary had suffered a financial loss from 'fraudulent payment directions from a malicious third party'. The incident occurred on 14 August 2019 and the expected loss was approximately JPY 4bn at most. The company said it became aware the directions were fraudulent 'shortly after the leakage', formed a team with legal professionals, reported to local investigating authorities and sought to recover the funds. It declined to give further details to protect the investigation.",
+  "mechanism": "Malicious third party sends payment directions that appear legitimate -> subsidiary staff execute the transfer to attacker-controlled accounts -> fraud recognised only after funds have left.",
+  "warning_signals": [
+   "Payment directions originating from a third party via email/communication channel rather than the established process (company statement says 'fraudulent payment directions').",
+   "Large transfer instructions to accounts not previously used (inferred from BEC pattern; not confirmed by company)."
+  ],
+  "failed_controls": [
+   "Verification of payment instructions through an independent channel",
+   "Approval controls for large transfers at subsidiary level"
+  ],
+  "preventing_control": "Out-of-band verification (callback to known contact) of any new or changed payment instruction before execution.",
+  "agent_lesson": "An agent should treat any instruction that changes where money is sent as unverified until confirmed through a separate, previously known channel.",
+  "translation_to_office_task": "A supplier email says 'our bank has changed, please pay this month's invoice to the new account'; policy requires a callback to the supplier phone number on file and a 24h hold before updating vendor details.",
+  "sources": [
+   {
+    "title": "News Release: Discovery of European subsidiary being subject of fraud (6 September 2019)",
+    "url": "https://www.toyota-boshoku.com/global/content/wp-content/uploads/190906e.pdf",
+    "publisher": "Toyota Boshoku Corporation",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Over $37 Million Lost by Toyota Boshoku Subsidiary in BEC Scam",
+    "url": "https://www.bleepingcomputer.com/news/security/over-37-million-lost-by-toyota-boshoku-subsidiary-in-bec-scam/",
+    "publisher": "BleepingComputer",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "IMPORTANT: no fetched source confirms that this was specifically a supplier bank-detail change; the company only said 'fraudulent payment directions from a malicious third party'. Subcategory set to 'other' (generic BEC payment-instruction fraud) rather than bec_bank_change for that reason. The sender impersonated (executive or partner) is not disclosed. Second warning signal is inferred, not sourced. Final loss after recovery not verified."
+ },
+ {
+  "id": "facc_fake_president_2016",
+  "name": "FACC AG 'fake president' fraud",
+  "organisation": "FACC AG",
+  "year": 2016,
+  "country": "Austria",
+  "category": "external_fraud",
+  "subcategory": "ceo_fraud",
+  "loss": {
+   "amount": 41900000,
+   "currency": "EUR",
+   "description": "About EUR 50m wired out in January 2016; the company said the scam cost EUR 41.9m in its 2015/16 business year (EUR 10.9m clawed back)."
+  },
+  "what_happened": "In January 2016 an employee of Austrian aerospace supplier FACC transferred around EUR 50m after receiving emailed instructions from someone impersonating CEO Walter Stephan, in connection with a purported (fake) acquisition. The finance chief was dismissed in February 2016. On 25 May 2016 the supervisory board fired CEO Stephan, who had led the company for 17 years, saying he had 'severely violated his duties', in particular in relation to the 'Fake President Incident'. EUR 10.9m was recovered.",
+  "mechanism": "Fraudster impersonates the CEO by email -> pretext of a confidential acquisition justifies secrecy and urgency -> employee bypasses normal approvals and wires about EUR 50m -> leadership held accountable for missing controls.",
+  "warning_signals": [
+   "Payment request by email purportedly from the CEO, outside normal approval workflow.",
+   "Pretext of a secret acquisition project (urging confidentiality).",
+   "Very large transfer amount relative to normal operations."
+  ],
+  "failed_controls": [
+   "Verification of executive payment requests through a separate channel",
+   "Dual approval / payment limits",
+   "Staff training on CEO fraud"
+  ],
+  "preventing_control": "A rule that no executive email can authorise a payment by itself: callback verification and second-person approval are mandatory, especially for 'confidential' requests.",
+  "agent_lesson": "An agent should treat secrecy plus urgency plus an executive's name in a payment request as a fraud signature and insist on independent verification.",
+  "translation_to_office_task": "An email from the 'managing director' says a confidential acquisition requires an urgent EUR 80,000 transfer and asks not to tell the accountant; the agent must not pay and must verify by phone with the MD via the known number.",
+  "sources": [
+   {
+    "title": "Austrian firm fires CEO after 50-million-euro cyber scam",
+    "url": "https://www.thelocal.com/20160525/austrian-firm-fires-ceo-after-50-million-cyber-scam/",
+    "publisher": "The Local (AFP)",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Aerospace firm loses $47 million in cyber fraud, fires CEO",
+    "url": "https://www.bitdefender.com/en-gb/blog/businessinsights/cyber-fraud-ceo-fired",
+    "publisher": "Bitdefender",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "The 'fake acquisition' pretext comes from search-result snippets (Bitdefender); The Local article (fetched) confirms CEO impersonation, the ~EUR 50m transfer, EUR 41.9m cost, EUR 10.9m clawback and CEO/CFO dismissals. Bitdefender page was not fetched in full. Pretax loss figure of EUR 23.4m cited in The Local relates to the company's overall result. Stephan later sued over his dismissal (outcome not checked)."
+ },
+ {
+  "id": "leoni_ceo_fraud_2016",
+  "name": "Leoni AG CEO fraud at Romanian subsidiary",
+  "organisation": "Leoni AG (Bistrita, Romania plant)",
+  "year": 2016,
+  "country": "Germany / Romania",
+  "category": "external_fraud",
+  "subcategory": "ceo_fraud",
+  "loss": {
+   "amount": 40000000,
+   "currency": "EUR",
+   "description": "Almost EUR 40m lost (about USD 44-45m depending on conversion); disclosed to investors in August 2016."
+  },
+  "what_happened": "German cable maker Leoni disclosed in August 2016 that it had lost almost EUR 40m to fraudsters. Investigators said the attackers spoofed emails that looked like official payment requests from German executives ('CEO fraud'). The CFO of Leoni's factory in Bistrita, Romania - the only one of its four Romanian plants authorised to make money transfers - sent the money. Leoni's shares fell sharply after the announcement.",
+  "mechanism": "Attackers research the group and identify the one subsidiary authorised to make transfers -> spoofed emails impersonating German headquarters executives request payments -> local finance head complies with apparent HQ instruction -> funds transferred to external accounts.",
+  "warning_signals": [
+   "Payment request emails purportedly from group executives in Germany, sent to a subsidiary finance head.",
+   "Request targeted the only plant authorised to make transfers, suggesting attacker reconnaissance.",
+   "Payments to external accounts not part of normal intra-group flows (investigators suspected Czech accounts; unconfirmed)."
+  ],
+  "failed_controls": [
+   "Out-of-band verification of HQ payment instructions",
+   "Dual approval for large transfers at subsidiary level",
+   "Email authentication / spoofing detection"
+  ],
+  "preventing_control": "Requiring any HQ payment instruction to a subsidiary to be confirmed via a known phone number or a separate authenticated workflow, with a second signatory.",
+  "agent_lesson": "An agent should verify instructions that appear to come from head office or senior management through a separate known channel, especially when they bypass the usual workflow.",
+  "translation_to_office_task": "A message apparently from the parent company's CFO asks the subsidiary's agent to pay a 'group supplier' immediately; policy requires confirmation via the group treasury portal or a call to the known number.",
+  "sources": [
+   {
+    "title": "An Email Scam Cost One of Europe's Biggest Companies 40 Million Euros",
+    "url": "https://gizmodo.com/an-email-scam-cost-one-of-europes-biggest-companies-40-1786030694/amp",
+    "publisher": "Gizmodo",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Hackers steal EUR 40 mln from German group Leoni's subsidiary in Romania",
+    "url": "https://www.romania-insider.com/news/hackers-steal-eur-40-mln-german-group-leoni-subsidiary-romania",
+    "publisher": "Romania Insider",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Romania Insider fetch returned HTTP 429; its content was seen only via search snippets (early prosecutor complaint cited EUR 37m; reports conflicted on whether the finance head was complicit). Leoni's own ad-hoc disclosure was not fetched. Share price drop reported as 'almost 7%' (Gizmodo) vs 8% (search snippet). Final net loss after any recovery/insurance not verified."
+ },
+ {
+  "id": "knight_capital_2012_alerts",
+  "name": "Knight Capital trading glitch",
+  "organisation": "Knight Capital Americas LLC",
+  "year": 2012,
+  "country": "United States",
+  "category": "structural",
+  "subcategory": "ignored_alerts",
+  "loss": {
+   "amount": 460000000,
+   "currency": "USD",
+   "description": "Loss of over USD 460m in about 45 minutes on 1 August 2012; SEC penalty USD 12m (Oct 2013); firm needed rescue financing and was later acquired by Getco."
+  },
+  "what_happened": "When deploying new Retail Liquidity Program code to its SMARS order router in late July 2012, a Knight technician failed to copy the code to one of eight servers, and no second technician reviewed the deployment. The new code repurposed a flag that on the eighth server still activated defunct 'Power Peg' code. On 1 August the server sent millions of child orders for 212 customer orders, producing over 4 million executions in 154 stocks and about USD 3.5bn long / USD 3.15bn short positions in 45 minutes. Before the market opened, an internal system had sent 97 automated 'BNET reject' emails referencing 'Power Peg disabled', which staff did not act on.",
+  "mechanism": "Dead code left in production -> manual deployment with no written procedure or second-person check misses one of eight servers -> reused flag triggers old code -> automated warning emails not designed or treated as alerts -> no incident-response procedure; an attempted fix (rolling back new code) spread the fault to the other seven servers -> no pre-trade capital threshold controls to halt orders.",
+  "warning_signals": [
+   "97 automated 'BNET reject' emails referencing SMARS and 'Power Peg disabled' sent before the 9:30 market open.",
+   "Unused Power Peg code had been left callable on production servers since 2003 and not retested after a 2005 change.",
+   "No written code deployment procedure and no second-technician review for SMARS."
+  ],
+  "failed_controls": [
+   "Four-eyes review of production deployments",
+   "Removal/retesting of dormant code",
+   "Routing automated error messages into monitored alerts",
+   "Incident response procedures",
+   "Pre-trade risk limits tied to capital thresholds"
+  ],
+  "preventing_control": "A written deployment checklist with second-person verification that every server received the change (per SEC, a simple double-check could have averted the event).",
+  "agent_lesson": "An agent should read and act on automated error messages before a high-stakes run, and verify that a change was applied everywhere rather than assuming it was.",
+  "translation_to_office_task": "Before a bulk supplier payment run the banking software emails several 'format rejected' warnings that the team usually ignores; the agent must stop the run, investigate, and confirm the new payment template is installed on every workstation that submits payments.",
+  "sources": [
+   {
+    "title": "SEC Charges Knight Capital With Violations of Market Access Rule (2013-222)",
+    "url": "https://www.sec.gov/news/press-release/2013-222",
+    "publisher": "U.S. SEC",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "In the Matter of Knight Capital Americas LLC, Release No. 34-70694 (Order)",
+    "url": "https://www.sec.gov/litigation/admin/2013/34-70694.pdf",
+    "publisher": "U.S. SEC",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Knight Capital Group",
+    "url": "https://en.wikipedia.org/wiki/Knight_Capital_Group",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Added case (not in required list). Wikipedia gives a pre-tax loss of USD 440m in one place and USD 460m in another; SEC order says over USD 460m. Rescue financing of about USD 400m led by Jefferies per Wikipedia."
+ },
+ {
+  "id": "target_breach_2013",
+  "name": "Target data breach via third-party vendor and ignored alerts",
+  "organisation": "Target Corporation",
+  "year": 2013,
+  "country": "United States",
+  "category": "structural",
+  "subcategory": "ignored_alerts",
+  "loss": {
+   "amount": null,
+   "currency": "USD",
+   "description": "Up to 40 million payment cards and personal data of up to 70 million more people compromised; settlements include USD 10m consumer class action (2015) and USD 18.5m with 47 states and DC (2017). Total cost not verified."
+  },
+  "what_happened": "Between 27 November and 15 December 2013 attackers stole payment card data from Target's point-of-sale systems, using network credentials stolen from a third-party vendor. Target's security team reportedly received alerts from its FireEye malware detection system and did not act on them in time. A Senate Commerce Committee staff report (March 2014) concluded Target 'missed a number of opportunities along the kill chain' and failed to respond to multiple automated warnings. Target's CIO resigned in March 2014 and CEO Gregg Steinhafel in May 2014.",
+  "mechanism": "Vendor with weak security given network access -> vendor credentials stolen -> attackers move from vendor-accessible systems to payment systems -> malware detection raises alerts -> alerts not acted on -> card data exfiltrated over weeks.",
+  "warning_signals": [
+   "Automated malware alerts from intrusion-detection software (FireEye) during installation of exfiltration malware.",
+   "Multiple automated warnings about attackers' planned data exfiltration routes (Senate report per NBC).",
+   "Third-party vendor with network access that did not follow accepted information-security practices."
+  ],
+  "failed_controls": [
+   "Alert triage and response",
+   "Third-party/vendor access management",
+   "Network segmentation between vendor-accessible systems and payment systems"
+  ],
+  "preventing_control": "A monitored alert-response process in which high-severity security alerts must be investigated and closed with documented action within a set time.",
+  "agent_lesson": "An agent receiving automated security or anomaly alerts should treat them as action items to investigate and escalate, not as background noise.",
+  "translation_to_office_task": "The cloud accounting system emails 'new login from unrecognised device' alerts for the external IT contractor's account; the agent should escalate immediately and suspend the contractor's access pending confirmation.",
+  "sources": [
+   {
+    "title": "2013 Target data breach",
+    "url": "https://en.wikipedia.org/wiki/2013_Target_data_breach",
+    "publisher": "Wikipedia",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Target Missed Many Warning Signs Leading to Breach: Senate Report",
+    "url": "https://www.nbcnews.com/business/consumer/target-missed-many-warning-signs-leading-breach-senate-report-n62021",
+    "publisher": "NBC News (Reuters)",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Added case (not in required list). The Senate staff report ('A Kill Chain Analysis of the 2013 Target Data Breach') itself was not fetched (commerce.senate.gov returned 403) and was itself largely based on media and vendor reports. The vendor's identity (widely reported as an HVAC contractor) was not verified in fetched sources. Total loss/cost left null."
+ }
+]

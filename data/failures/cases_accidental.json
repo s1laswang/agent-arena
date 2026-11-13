@@ -1,0 +1,498 @@
+[
+  {
+    "id": "knight_capital_2012",
+    "name": "Knight Capital SMARS runaway orders (Power Peg)",
+    "organisation": "Knight Capital Americas LLC",
+    "year": 2012,
+    "country": "United States",
+    "category": "accidental",
+    "subcategory": "bad_deploy",
+    "loss": {
+      "amount": 460000000,
+      "currency": "USD",
+      "description": "SEC order: Knight 'realized a $460 million loss' on unwanted positions from about 45 minutes of erroneous trading on 1 Aug 2012. Separate $12 million SEC civil penalty. Wikipedia also cites a $440m pre-tax figure."
+    },
+    "what_happened": "Knight deployed new Retail Liquidity Program (RLP) code to its SMARS order router in stages from 27 July 2012. A technician did not copy the new code to one of the eight SMARS servers, and nobody noticed. On 1 August 2012, RLP orders carrying a repurposed flag reached the eighth server and triggered old, unused 'Power Peg' code. For 212 incoming parent orders SMARS sent millions of child orders, giving over 4 million executions in 154 stocks for more than 397 million shares in about 45 minutes. Knight ended up with about $3.5bn net long and $3.15bn net short and lost $460m.",
+    "mechanism": "Dead Power Peg code was left on production servers. Its cumulative-quantity tracking had been moved in 2005 without retesting it. The new RLP code reused the flag that used to activate Power Peg. A manual deployment missed 1 of 8 servers, with no second-person review and no written procedure. Orders on that server activated Power Peg, which kept sending child orders without counting fills. During incident response, the new code was uninstalled from the 7 correct servers, so they too began running Power Peg.",
+    "warning_signals": [
+      "From about 8:01 a.m. ET, before the 9:30 open, an internal system sent 97 automated 'BNET reject' emails to Knight staff that referenced SMARS and said 'Power Peg disabled'. They were not designed as alerts and were generally not read.",
+      "Deployment covered only 7 of 8 servers, and no reconciliation of server versions was done.",
+      "Retired Power Peg code was still present and callable in production.",
+      "The '33 Account' (which had a $2 million gross position limit) began accumulating an unusually large position that morning, but it was not linked to automated firm-wide capital thresholds that would block further orders."
+    ],
+    "failed_controls": [
+      "No second-technician review of code deployment and no written deployment procedures for SMARS",
+      "No check that all servers were running the same code after deployment",
+      "Dead code not removed, and a flag repurposed while the old code path was still live",
+      "No retesting of legacy code after it was changed in 2005",
+      "Automated error emails not treated as alerts",
+      "No automated pre-trade controls that stopped orders once position or capital limits were exceeded",
+      "No written incident-response procedures; the rollback made the problem worse"
+    ],
+    "preventing_control": "An automated post-deployment check that every production server runs the same, intended code version (plus removing dead code instead of reusing its flag).",
+    "agent_lesson": "After any change applied to several systems or records, check that it actually reached every target, and treat unexpected system error messages as stop signals rather than noise.",
+    "translation_to_office_task": "A supplier price update has been applied to 7 of 8 regional price lists, and the agent must notice that one list still has the old prices before invoices go out, even though automated 'price mismatch' warning emails are sitting unread in the inbox.",
+    "sources": [
+      {"title": "In the Matter of Knight Capital Americas LLC, Release No. 34-70694 (Order Instituting Administrative and Cease-and-Desist Proceedings)", "url": "https://www.sec.gov/litigation/admin/2013/34-70694.pdf", "publisher": "U.S. Securities and Exchange Commission", "accessed": "2026-11-14"},
+      {"title": "Knight Capital Group", "url": "https://en.wikipedia.org/wiki/Knight_Capital_Group", "publisher": "Wikipedia", "accessed": "2026-11-14"}
+    ],
+    "notes": "Loss figure taken from the SEC order ($460m). Wikipedia quotes both $440m pre-tax and $460m. The SEC order is dated 16 October 2013."
+  },
+  {
+    "id": "citibank_revlon_2020",
+    "name": "Citibank's mistaken ~$900M Revlon loan wire",
+    "organisation": "Citibank N.A. (as administrative agent for Revlon's 2016 Term Loan)",
+    "year": 2020,
+    "country": "United States",
+    "category": "accidental",
+    "subcategory": "ui_confusion",
+    "loss": {
+      "amount": 894000000,
+      "currency": "USD",
+      "description": "About $894m of Citibank's own money was wired as loan principal by mistake, alongside about $7.8m of intended interest. This is the exposure, not a final realized loss. Lenders holding about $504m refused to return it. The district court let them keep it (Feb 2021); the Second Circuit reversed on 8 Sep 2022 and held Citi entitled to the funds."
+    },
+    "what_happened": "On 11 August 2020 Citibank, as administrative agent, meant to pay about $7.8m of interest to Revlon's lenders. Instead it wired almost $900m of its own money, equal to the full principal plus interest owed. The transaction went through Citibank's 'six-eye' process: a Wipro maker, a Wipro checker and a Citibank senior manager approver. Lenders with more than $500m declined to return the funds, which led to litigation. Judge Furman ruled for the lenders in February 2021, and the Second Circuit reversed in September 2022.",
+    "mechanism": "In Oracle Flexcube, any payment is released as a wire by default unless suppressed. Citibank's Fund Sighting Manual said FRONT, FUND and PRINCIPAL all had to be set to the internal wash account. All three reviewers wrongly believed that setting only PRINCIPAL was enough, so the maker ticked only PRINCIPAL. The checker and approver signed off by email ('Looks good, please proceed. Principal is going to wash.'). A warning popup ('Account used is Wire Account and Funds will be sent out of the bank. Do you want to continue?') did not show the amount, and the checker clicked YES.",
+    "warning_signals": [
+      "The Fund Sighting Manual explicitly required all three fields (FRONT, FUND, PRINCIPAL) to be set to the wash account; only one was set.",
+      "A 'stop sign' popup warned that funds would be sent out of the bank. The intended transfer was internal for the principal.",
+      "Back-up screenshots sent at 6:53 p.m. showed both $7.8m interest and $894m principal under 'Amount Paid'. The maker misread this as an internal posting.",
+      "The amount leaving the bank (~$900m) was more than 100 times the interest payment that was actually due (~$7.8m)."
+    ],
+    "failed_controls": [
+      "Six-eye (maker/checker/approver) review relied on a shared wrong belief and checked the narrative ('principal to wash'), not the actual amount leaving the bank",
+      "Counter-intuitive UI default (pay out unless every field is overridden)",
+      "Warning dialog did not show the amount to be sent",
+      "No hard check comparing outgoing wire total with the expected payment (the interest due)"
+    ],
+    "preventing_control": "Before release, compare the total outgoing cash amount with the expected payment amount (e.g. the interest invoice) and block any large variance.",
+    "agent_lesson": "Before approving a payment, check the actual amount that will leave the account against the source document. Do not rely on the description, a colleague's approval note or a warning that leaves out the amount.",
+    "translation_to_office_task": "An approval ticket says 'pay interest only, principal to internal account', but the payment preview shows the total being sent externally is the principal plus interest; the agent must catch that the outgoing total does not match the interest invoice.",
+    "sources": [
+      {"title": "In re Citibank August 11, 2020 Wire Transfers, No. 20-cv-6539 (JMF), Opinion and Order (S.D.N.Y. Feb. 16, 2021)", "url": "https://www.newyorkfed.org/medialibrary/Microsites/fmlg/files/2021/20cv6539-citibank-opinion", "publisher": "U.S. District Court S.D.N.Y. (hosted by Federal Reserve Bank of New York FMLG)", "accessed": "2026-11-14"},
+      {"title": "Second Circuit Reverses Ruling: $500 Million Wire Transfer Paying Off Revlon Loan Must Be Returned", "url": "https://www.loeb.com/en/insights/publications/2022/10/second-circuit-reverses-ruling-500-million-wire-transfer-paying-off-revlon-loan-returned", "publisher": "Loeb & Loeb LLP", "accessed": "2026-11-14"}
+    ],
+    "notes": "Second Circuit outcome (8 Sep 2022, reversal) is taken from a law-firm summary, not the appellate opinion itself. The $504,169,401.45 figure for unreturned funds comes from a footnote in the district court opinion. The final net financial loss to Citi after the appeal was not verified."
+  },
+  {
+    "id": "samsung_securities_2018",
+    "name": "Samsung Securities 'ghost shares' dividend error",
+    "organisation": "Samsung Securities Co., Ltd.",
+    "year": 2018,
+    "country": "South Korea",
+    "category": "accidental",
+    "subcategory": "unit_mismatch",
+    "loss": {
+      "amount": 112600000000000,
+      "currency": "KRW",
+      "description": "Nominal value (about 112.6 trillion won per Wikipedia) of about 2.8 billion non-existent shares credited by mistake. This is not a realized loss. The regulatory fine was 144 million won. The firm got a six-month ban on new clients, the stock fell 11% within a day, and the firm was later held liable for investor damages."
+    },
+    "what_happened": "In April 2018, Samsung Securities meant to pay a 1,000-won-per-share cash dividend to about 2,000 employees in its stock ownership plan. Instead it credited 1,000 shares per share held, about 2.8 billion shares, while the company had only about 89 million shares outstanding. Sixteen employees sold a combined 5.01 million of these phantom shares before the error was contained, even though advisories about the mistake had been sent. Regulators banned the firm from taking new clients for six months, suspended the CEO for three months (he then resigned) and fined it 144 million won.",
+    "mechanism": "During dividend processing an employee entered 'shares' where 'won' was intended, so the units were wrong. The system issued shares without checking them against the company's issued share count. The FSS said the firm skipped the standard issuance process of first reporting to the Korea Securities Depository, and had no preventive measures against such errors.",
+    "warning_signals": [
+      "The credited quantity (about 2.8 billion shares) was about 30 times the company's market cap in value and far more than the about 89 million shares outstanding.",
+      "The output unit (shares) differed from the type of corporate action (a cash dividend in won).",
+      "Advisories about the mistake were sent to employees, yet some still sold."
+    ],
+    "failed_controls": [
+      "No validation that newly credited shares could not exceed issued share capital",
+      "No maker-checker review of the dividend entry's unit and size",
+      "Standard issuance process (reporting to Korea Securities Depository) bypassed",
+      "No quick block on selling the credited shares"
+    ],
+    "preventing_control": "A hard validation that a dividend booking's unit matches the declared corporate action (cash vs. shares), and that no booking can create more shares than are issued.",
+    "agent_lesson": "Check that the unit of an amount (currency vs. quantity, thousands vs. units) matches what the instruction intends, and sanity-check totals against known caps before posting.",
+    "translation_to_office_task": "A bonus run asks to pay '1,000' per employee and the payroll template field is in units of 'gift-card vouchers' rather than EUR; the agent must notice the unit mismatch and the absurd resulting total before submitting.",
+    "sources": [
+      {"title": "Samsung Securities ordered to partially halt operations for 6 months over fat-finger scandal", "url": "https://www.koreatimes.co.kr/economy/20180726/samsung-securities-ordered-to-partially-halt-operations-for-6-months-over-fat-finger-scandal", "publisher": "The Korea Times", "accessed": "2026-11-14"},
+      {"title": "Samsung Securities CEO resigns over blunder", "url": "https://www.koreajoongangdaily.com/business/samsung-securities-ceo-resigns-over-blunder/10435625", "publisher": "Korea JoongAng Daily", "accessed": "2026-11-14"},
+      {"title": "Samsung Securities", "url": "https://en.wikipedia.org/wiki/Samsung_Securities", "publisher": "Wikipedia", "accessed": "2026-11-14"}
+    ],
+    "notes": "Exact date given as 8 April 2018 by Wikipedia; other sources say 'April 2018'. Value figures vary slightly (112 vs 112.6 trillion won). JoongAng Daily says 22 employees tried to sell 12.08m shares and 16 sold about 5m. The time taken to block the shares was not verified. Later damages litigation (National Pension Service, ~1.8-1.9bn won) appeared only in search snippets and was not fetched, so it is excluded."
+  },
+  {
+    "id": "mizuho_jcom_2005",
+    "name": "Mizuho Securities J-Com fat-finger sell order",
+    "organisation": "Mizuho Securities Co., Ltd.",
+    "year": 2005,
+    "country": "Japan",
+    "category": "accidental",
+    "subcategory": "fat_finger",
+    "loss": {
+      "amount": 40700000000,
+      "currency": "JPY",
+      "description": "About ¥40.7bn loss (Wikipedia). The initial estimate on the day was at least ¥27bn (~$225m). Mizuho later sued the Tokyo Stock Exchange and was awarded about ¥10.7bn (Tokyo District Court, 4 Dec 2009)."
+    },
+    "what_happened": "On 8 December 2005, a Mizuho Securities trader meant to sell 1 share of newly listed J-Com at ¥610,000 but entered a sell order for 610,000 shares at ¥1. The order was about 41 times J-Com's outstanding shares, yet the Tokyo Stock Exchange processed it. Mizuho tried to cancel several times, but a TSE system problem stopped the cancellation. Mizuho lost about ¥40.7bn, sued the TSE and recovered part of the loss; the TSE president resigned.",
+    "mechanism": "The trader swapped the price and quantity fields. Neither Mizuho's order system nor the exchange rejected an order larger than the entire share count, and the cancel instruction failed because of an exchange system fault.",
+    "warning_signals": [
+      "The order quantity (610,000) was about 41 times the shares outstanding (about 14,000 per phys.org).",
+      "The price of ¥1 was absurd next to the ¥610,000 price the trader intended for a single share."
+    ],
+    "failed_controls": [
+      "No pre-trade check of order size against shares outstanding or normal order size",
+      "No price-reasonableness check against last or reference price",
+      "Exchange order cancellation function failed",
+      "Mizuho's own system 'failed to spot the mistake' (phys.org)"
+    ],
+    "preventing_control": "Pre-submission limits that reject orders whose quantity exceeds a sane fraction of shares outstanding or whose price deviates sharply from the reference price.",
+    "agent_lesson": "When a field's value is the same number that belongs in a neighbouring field, or a value is wildly out of range, stop and confirm before submitting.",
+    "translation_to_office_task": "A purchase order form has quantity 4,990 and unit price 1 for an item the supplier quote lists as quantity 1 at 4,990; the agent must spot the swapped fields before sending the PO.",
+    "sources": [
+      {"title": "Botched stock trade costs Japan firm $225M", "url": "https://www.nbcnews.com/news/amp/wbna10394551", "publisher": "NBC News / Associated Press", "accessed": "2026-11-14"},
+      {"title": "Wrong order slams Mizuho's finances", "url": "https://phys.org/news/2005-12-wrong-slams-mizuho.html", "publisher": "phys.org (AP)", "accessed": "2026-11-14"},
+      {"title": "Mizuho Securities", "url": "https://en.wikipedia.org/wiki/Mizuho_Securities", "publisher": "Wikipedia", "accessed": "2026-11-14"}
+    ],
+    "notes": "phys.org states the intended price as 'about 61,000 yen', while NBC/AP says 610,000 yen; 610,000 is the widely reported figure and is used here. The number of cancel attempts varies by source (NBC says three). No official TSE or FSA primary document was fetched. Reports that the trader ignored a system warning were not verified and are not included."
+  },
+  {
+    "id": "jpmorgan_london_whale_2012",
+    "name": "JPMorgan 'London Whale' CIO losses and VaR spreadsheet error",
+    "organisation": "JPMorgan Chase & Co. (Chief Investment Office)",
+    "year": 2012,
+    "country": "United Kingdom / United States",
+    "category": "accidental",
+    "subcategory": "spreadsheet_error",
+    "loss": {
+      "amount": 6200000000,
+      "currency": "USD",
+      "description": "Losses of at least $6.2bn on the CIO Synthetic Credit Portfolio. JPMorgan later paid about $920m to US and UK authorities (including £137.6m to the UK)."
+    },
+    "what_happened": "In 2012, traders in the London office of JPMorgan's Chief Investment Office built up large synthetic credit derivative positions that lost at least $6.2bn. In January 2012, while the CIO was breaching risk limits, a new Value-at-Risk model was approved and introduced; it roughly halved the reported VaR. The model ran on Excel spreadsheets that had to be filled in by hand, by copying and pasting data. A formula error understated volatility. After the errors were found, the CIO went back to the old model and VaR nearly doubled.",
+    "mechanism": "The new VaR model ran on manual spreadsheets. As quoted from the task force report, after subtracting the old rate from the new rate 'the spreadsheet divided by their sum instead of their average, as the modeler had intended', which 'likely had the effect of muting volatility by a factor of two and of lowering the VaR'. The Model Review Group had noted that the VaR computation was 'done off spreadsheets using a manual process' and was 'error prone, and not easily scalable', but approved the model with only limited backtesting. Lower VaR let risk-limit breaches disappear on paper.",
+    "warning_signals": [
+      "The new model cut the CIO's VaR by about 50% overnight, as it arrived while limits were being breached (Senate hearing).",
+      "The Model Review Group's own draft review flagged the manual, error-prone spreadsheet process.",
+      "A spreadsheet error caused the VaR for 10 April not to reflect that day's roughly $400m loss; it was treated as a one-off (secondary sources quoting the task force report).",
+      "The modeler was doing nightly manual data entry, often late into the night."
+    ],
+    "failed_controls": [
+      "Model approval with limited backtesting",
+      "Production risk model run on manual copy-paste spreadsheets without automation or independent recalculation",
+      "Model change accepted although it conveniently cleared limit breaches",
+      "Known operational errors not funded or fixed"
+    ],
+    "preventing_control": "Independent recalculation and backtesting of any new risk model, especially one that sharply lowers a breached metric, before it replaces the old one.",
+    "agent_lesson": "Be most sceptical when a new calculation or template makes a problem disappear; recompute key figures independently and check formulas (sum vs. average, ranges) before relying on them.",
+    "translation_to_office_task": "A revised cash-flow template suddenly shows the company back within its overdraft covenant; the agent must notice a formula divides by a SUM where an AVERAGE was meant before the report goes to the bank.",
+    "sources": [
+      {"title": "2012 JPMorgan Chase trading loss", "url": "https://en.wikipedia.org/wiki/2012_JPMorgan_Chase_trading_loss", "publisher": "Wikipedia", "accessed": "2026-11-14"},
+      {"title": "JPMorgan Chase Whale Trades: A Case History of Derivatives Risks and Abuses, Hearing, S. Hrg. 113-96, Vol. 1 (March 15, 2013)", "url": "https://www.govinfo.gov/content/pkg/CHRG-113shrg80222/html/CHRG-113shrg80222.htm", "publisher": "U.S. Senate Permanent Subcommittee on Investigations (GovInfo)", "accessed": "2026-11-14"},
+      {"title": "The Importance of Excel", "url": "https://baselinescenario.com/2013/02/09/the-importance-of-excel/", "publisher": "The Baseline Scenario (James Kwak)", "accessed": "2026-11-14"},
+      {"title": "DERIVATIVES: JPM report unveils VaR errors", "url": "https://www.ifre.com/story/1744757/derivatives-jpm-report-unveils-var-errors", "publisher": "IFR", "accessed": "2026-11-14"}
+    ],
+    "notes": "The 'sum instead of average' and 'copying and pasting' wording comes from the JPMorgan Management Task Force Report (16 Jan 2013), Appendix, but the report PDF could not be fetched (403); the quotes are taken from the Baseline Scenario blog's quotation of it. The Senate hearing record confirms manual spreadsheets with 'calculation and formula errors' and the roughly 50% VaR drop. Per IFR: VaR averaged $67m in Q1 2012 under the new model and $129m after reverting. The trading loss was not caused mainly by the spreadsheet error: the error hid risk, and the positions themselves caused the loss. Fines total from Wikipedia."
+  },
+  {
+    "id": "reinhart_rogoff_2010",
+    "name": "Reinhart-Rogoff 'Growth in a Time of Debt' Excel range error",
+    "organisation": "Carmen Reinhart & Kenneth Rogoff (Harvard); paper used by policymakers",
+    "year": 2010,
+    "country": "United States",
+    "category": "accidental",
+    "subcategory": "spreadsheet_error",
+    "loss": {
+      "amount": null,
+      "currency": null,
+      "description": "No direct financial loss. The impact was reputational and on policy debate: the result was cited in austerity arguments (e.g. the Paul Ryan 'Path to Prosperity' budget, EU Commissioner Olli Rehn, UK Chancellor George Osborne)."
+    },
+    "what_happened": "Reinhart and Rogoff's 2010 paper reported that countries with public debt above 90% of GDP had average real growth of -0.1%. In April 2013, Herndon, Ash and Pollin (UMass Amherst) got the authors' working spreadsheet and found a coding error that left out five countries (Australia, Austria, Belgium, Canada, Denmark). They also found selective exclusion of data and unconventional weighting. With these corrected, average growth above 90% debt was 2.2%, not -0.1%. Reinhart and Rogoff acknowledged the coding error.",
+    "mechanism": "An averaging formula in the working spreadsheet covered rows 30 to 44 instead of rows 30 to 49, so the countries in the alphabetically last rows were silently dropped. On its own this error accounted for about -0.3 percentage points; most of the gap came from excluded country-years and the weighting choice.",
+    "warning_signals": [
+      "The underlying working spreadsheet was not published; HAP could not reproduce the results from the public data until they got it.",
+      "The excluded countries were alphabetically adjacent, a classic sign of a truncated range."
+    ],
+    "failed_controls": [
+      "No independent replication before publication (AER Papers and Proceedings issue, not peer reviewed)",
+      "No check that the formula range covered every data row",
+      "Data and code not shared publicly"
+    ],
+    "preventing_control": "A row-count check that every summary covers all input rows (e.g. COUNT of included rows equals the number of countries), plus independent replication.",
+    "agent_lesson": "When summarising a table, check that each aggregate covers all rows (counts match) before reporting a headline number.",
+    "translation_to_office_task": "A quarterly sales summary averages B2:B44 while the data runs to B49; the agent must notice the last five regions are missing before sending the board pack.",
+    "sources": [
+      {"title": "Does High Public Debt Consistently Stifle Economic Growth? A Critique of Reinhart and Rogoff (PERI Working Paper 322)", "url": "https://peri.umass.edu/images/WP322.pdf", "publisher": "Political Economy Research Institute, UMass Amherst", "accessed": "2026-11-14"},
+      {"title": "Growth in a Time of Debt", "url": "https://en.wikipedia.org/wiki/Growth_in_a_Time_of_Debt", "publisher": "Wikipedia", "accessed": "2026-11-14"}
+    ],
+    "notes": "The headline -0.1% vs 2.2% gap combines three issues; the pure Excel range error is responsible for about -0.3pp (per HAP). Reinhart and Rogoff disputed the weighting critique. The 2010 paper's year is used for 'year'; the error was found in 2013."
+  },
+  {
+    "id": "nasa_mars_climate_orbiter_1999",
+    "name": "Mars Climate Orbiter lost to pound-seconds vs newton-seconds mismatch",
+    "organisation": "NASA / Jet Propulsion Laboratory / Lockheed Martin Astronautics",
+    "year": 1999,
+    "country": "United States",
+    "category": "accidental",
+    "subcategory": "unit_mismatch",
+    "loss": {
+      "amount": 327600000,
+      "currency": "USD",
+      "description": "Total mission cost per NASA figures cited by Wikipedia: spacecraft development $193.1m, mission operations $42.8m, launch $91.7m."
+    },
+    "what_happened": "Mars Climate Orbiter launched on 11 December 1998. It was lost on 23 September 1999 during Mars orbit insertion, when it passed far too close to Mars. Ground software called SM_FORCES wrote thruster impulse data in English units (pound-force seconds). The Software Interface Specification required metric units (newton-seconds), and navigation assumed metric. Trajectory effects were underestimated by a factor of 4.45. Post-event estimates put the actual periapsis at 57 km against a planned 226 km, with 80 km considered the minimum survivable.",
+    "mechanism": "A unit mismatch at a software interface: SM_FORCES output lbf-s into the AMD file, the navigation team's software read it as N-s, small-force velocity changes were underestimated, and the orbit determination drifted. The SIS that defined the units was not followed, and the discrepancy was never traced to its root cause before insertion.",
+    "warning_signals": [
+      "Through spring and summer 1999, working-level staff had concerns about discrepancies between navigation solutions; residuals were noted 'but only informally reported'.",
+      "Within about a week of starting to use the AMD files in April 1999, it was apparent they indicated underestimated trajectory perturbations.",
+      "Doppler-only solutions consistently showed a flight path closer to the planet; these discrepancies were not resolved.",
+      "Between TCM-4 and orbit insertion, the predicted periapsis fell from 226 km to 150-170 km, then to as low as 110 km about an hour before insertion.",
+      "An optional Trajectory Correction Maneuver-5 was discussed but not carried out (Wikipedia)."
+    ],
+    "failed_controls": [
+      "Interface specification (units) not enforced or verified on delivered files",
+      "No end-to-end verification of ground software outputs against spec",
+      "Anomalies reported informally and not escalated or resolved",
+      "Systems engineering and checks and balances did not catch the error (NASA statement)"
+    ],
+    "preventing_control": "An automated interface-contract check that validates units and magnitudes of data passed between teams' software against the specification.",
+    "agent_lesson": "When combining data from another team or system, confirm units and currency explicitly, and escalate persistent unexplained discrepancies instead of tolerating them.",
+    "translation_to_office_task": "A subsidiary's expense export is in SEK while the group consolidation sheet assumes EUR; the agent must notice the roughly 10x discrepancy before the figures go into the monthly close.",
+    "sources": [
+      {"title": "Mars Climate Orbiter Mishap Investigation Board Phase I Report (November 10, 1999)", "url": "https://llis.nasa.gov/llis_lib/pdf/1009464main1_0641-mr.pdf", "publisher": "NASA", "accessed": "2026-11-14"},
+      {"title": "Mars Climate Orbiter", "url": "https://en.wikipedia.org/wiki/Mars_Climate_Orbiter", "publisher": "Wikipedia", "accessed": "2026-11-14"}
+    ],
+    "notes": "The cost total ($327.6m) comes from Wikipedia citing NASA, not the MIB report. The detail that navigators' concerns were dismissed for not filling out a form comes from Wikipedia; the MIB report itself says the concerns were 'only informally reported'."
+  },
+  {
+    "id": "boeing_737max_mcas_2018",
+    "name": "Boeing 737 MAX MCAS single-sensor design and nondisclosure",
+    "organisation": "The Boeing Company (with FAA oversight)",
+    "year": 2018,
+    "country": "United States (crashes in Indonesia and Ethiopia)",
+    "category": "accidental",
+    "subcategory": "single_point_of_failure",
+    "loss": {
+      "amount": 20000000000,
+      "currency": "USD",
+      "description": "About US$20bn of direct costs (fines, compensation, legal fees) per Wikipedia, plus over $60bn of indirect costs. 346 people died. The January 2021 DOJ deferred prosecution agreement totalled over $2.5bn ($243.6m criminal penalty, $1.77bn to airline customers, $500m victims' fund)."
+    },
+    "what_happened": "MCAS, a flight control law on the 737 MAX that pushes the nose down in certain conditions, took input from a single angle-of-attack (AoA) sensor. In both Lion Air 610 (29 Oct 2018, 189 dead) and Ethiopian Airlines 302 (10 Mar 2019, 157 dead), a faulty AoA reading activated MCAS repeatedly. MCAS was not described in pilot manuals, and the AoA Disagree alert was inoperable on more than 80% of the fleet because it was tied to an optional indicator. The MAX was grounded worldwide from March 2019; the FAA grounding lasted until 18 November 2020.",
+    "mechanism": "A safety-critical automated action depended on one sensor with no cross-check. Design assumed pilots would react to uncommanded activation within four seconds, although a 2012 Boeing simulator test pilot took more than 10 seconds and called the condition 'catastrophic'. Information about MCAS's expanded operating range was withheld from the FAA's Aircraft Evaluation Group, so manuals and training omitted it, and pilots could not diagnose it quickly.",
+    "warning_signals": [
+      "In 2015 a Boeing Authorized Representative asked whether MCAS was 'vulnerable to single AOA sensor failures'.",
+      "In November 2012 a Boeing test pilot took more than 10 seconds to respond to uncommanded MCAS activation in a simulator and found it 'catastrophic'.",
+      "In November 2017 Boeing found the AoA Disagree alert inoperable on most aircraft but did not tell customers until after the Lion Air crash.",
+      "Boeing engineers raised safety concerns about MCAS being tied to a single AoA sensor (House report)."
+    ],
+    "failed_controls": [
+      "No redundancy or cross-check for a safety-critical automated input",
+      "Optimistic human-response assumption not revised after contrary test evidence",
+      "Material system information not disclosed to regulator, airlines and pilots",
+      "Internal concerns not escalated or acted on",
+      "Inoperable alert shipped without notification"
+    ],
+    "preventing_control": "Requiring automated actions with large impact to use two independent inputs and stop when they disagree (as later mandated: MCAS now reads both AoA sensors).",
+    "agent_lesson": "Do not let one unverified data source trigger an irreversible automated action; require corroboration and flag any undocumented automation to the people who rely on it.",
+    "translation_to_office_task": "An auto-pay rule releases supplier payments whenever a single bank-feed field says 'invoice approved'; the agent must notice the field is stale or wrong and require the second confirmation (approval log) before paying.",
+    "sources": [
+      {"title": "Final Committee Report: The Design, Development & Certification of the Boeing 737 MAX (September 2020)", "url": "https://democrats-transportation.house.gov/imo/media/doc/final_boeing_737_max_report.pdf", "publisher": "U.S. House Committee on Transportation and Infrastructure (majority staff)", "accessed": "2026-11-14"},
+      {"title": "Boeing to Pay $2.5 Billion to Resolve Fraud Charge Related to MAX 737 Airplanes", "url": "https://nbcdfw.com/news/business/boeing-to-pay-2-5-billion-to-resolve-fraud-charge-related-to-max-737-airplanes/2522518", "publisher": "NBC DFW (reporting DOJ announcement of 7 Jan 2021)", "accessed": "2026-11-14"},
+      {"title": "Boeing 737 MAX groundings", "url": "https://en.wikipedia.org/wiki/Boeing_737_MAX_groundings", "publisher": "Wikipedia", "accessed": "2026-11-14"},
+      {"title": "Maneuvering Characteristics Augmentation System", "url": "https://en.wikipedia.org/wiki/Maneuvering_Characteristics_Augmentation_System", "publisher": "Wikipedia", "accessed": "2026-11-14"}
+    ],
+    "notes": "Borderline 'accidental': the single-sensor design and response-time assumption were engineering misjudgments, but DOJ charged Boeing with conspiracy to defraud the FAA, because two technical pilots deceived the FAA AEG about MCAS. So the nondisclosure part was not an honest mistake. Use this case as a design and single-point-of-failure lesson and do not present the concealment as innocent. The DOJ press release itself could not be fetched (empty response); amounts are from NBC DFW's report of it. The House report is a majority-staff report; Republican members dissented. Cost figures are Wikipedia estimates. Indonesian KNKT and Ethiopian investigation reports were not fetched."
+  },
+  {
+    "id": "phe_covid_excel_2020",
+    "name": "Public Health England lost Covid-19 cases due to legacy Excel XLS file limit",
+    "organisation": "Public Health England (PHE) / NHS Test and Trace",
+    "year": 2020,
+    "country": "United Kingdom",
+    "category": "accidental",
+    "subcategory": "spreadsheet_error",
+    "loss": {
+      "amount": null,
+      "currency": null,
+      "description": "No monetary figure. 15,841 positive cases (25 Sep - 2 Oct 2020) were left out of reported daily figures and their referral to contact tracing was delayed."
+    },
+    "what_happened": "Between 25 September and 2 October 2020, 15,841 positive Covid-19 test results in England were left out of daily reported figures, and their contacts were not traced on time. PHE described it as a technical fault: some files of positive results were larger than the maximum size the loading system could accept. Press reporting found that the lab CSV data was being loaded into legacy .XLS Excel files, which are limited to 65,536 rows. Because each result used several rows, each file held only about 1,400 cases. The problem was found overnight on 2 October, and all outstanding cases were passed to contact tracing by 1am on 3 October.",
+    "mechanism": "An automated pipeline put incoming CSV lab results into a legacy XLS format. Rows beyond the format limit were silently dropped on import, with no error and no reconciliation of record counts between input and output.",
+    "warning_signals": [
+      "Rising case volumes were approaching the fixed row capacity of the template.",
+      "Imported row counts would have been exactly at the format ceiling (65,536 rows).",
+      "Record counts received from labs did not match counts loaded into dashboards and contact tracing."
+    ],
+    "failed_controls": [
+      "No input-vs-output record count reconciliation",
+      "Silent truncation instead of a hard failure",
+      "Use of a legacy file format with a known capacity limit in a critical pipeline",
+      "No capacity testing as volumes grew"
+    ],
+    "preventing_control": "An automated reconciliation that the number of records loaded equals the number received, failing loudly on any mismatch.",
+    "agent_lesson": "After importing or copying data, compare record counts (and totals) between source and destination, and treat a count that sits exactly at a round limit as a red flag.",
+    "translation_to_office_task": "A bank-statement CSV with 70,000 transactions is imported into a template that stops at 65,536 rows; the agent must notice the missing transactions before reconciling the month.",
+    "sources": [
+      {"title": "PHE statement on delayed reporting of COVID-19 cases", "url": "https://www.gov.uk/government/news/phe-statement-on-delayed-reporting-of-covid-19-cases", "publisher": "Public Health England (GOV.UK)", "accessed": "2026-11-14"},
+      {"title": "What a Hancock-up: Excel spreadsheet blunder blamed after England under-reports 16,000 COVID-19 cases", "url": "https://www.theregister.com/2020/10/05/excel_england_coronavirus_contact_error/", "publisher": "The Register", "accessed": "2026-11-14"}
+    ],
+    "notes": "The official statement only says 'file size' and does not mention Excel or XLS; the XLS row-limit explanation comes from press reporting (originally the BBC, via The Register). The BBC and Guardian pages could not be fetched directly. Wikipedia's 'List of spreadsheet mistakes' describes it as a 'one million-row limit', which conflicts with the 65,536 XLS limit reported elsewhere."
+  },
+  {
+    "id": "citigroup_london_fat_finger_2022",
+    "name": "Citigroup Global Markets $444bn erroneous equity basket",
+    "organisation": "Citigroup Global Markets Limited (CGML), London Delta 1 desk",
+    "year": 2022,
+    "country": "United Kingdom",
+    "category": "accidental",
+    "subcategory": "fat_finger",
+    "loss": {
+      "amount": 61646200,
+      "currency": "GBP",
+      "description": "Combined UK regulatory fines announced 22 May 2024: FCA £27,766,200 (after 30% discount from £39,666,000) and PRA £33,880,000. Trading P&L impact from the US$1.4bn executed was not disclosed in the sources fetched."
+    },
+    "what_happened": "On 2 May 2022, a CGML trader meant to sell a basket of equities worth US$58m but loaded a basket with a notional of US$444bn across 349 stocks in multiple European markets. Hard blocks stopped part of it, but about US$189bn was routed to a VWAP algorithm. US$1.4bn of sell orders executed across European exchanges before the trader cancelled the rest at 09:10. Several European indices dropped sharply for a few minutes.",
+    "mechanism": "The trader typed the basket's value into the unit-quantity field instead of the notional-value field. A 'Trade Limit Warning' popup listed 711 warnings, but only the first 18 lines showed without scrolling, and the trader overrode all soft warnings. A final confirmation showed a total of about US$196bn and the trader clicked OK. There was no basket-level hard block in the EMEA system, the real-time monitoring desk had just taken over cover and did not escalate 284 information alerts, and post-trade monitoring filtered out all but eight alerts.",
+    "warning_signals": [
+      "711 warning messages in a single popup (only 18 visible without scrolling).",
+      "Final Trade Confirmation showed a total of about US$196bn against an intended US$58m.",
+      "284 information alerts and order-suspension alerts were raised during execution.",
+      "Four CitiSmart controls suspended 242 orders worth US$163bn while orders were executing."
+    ],
+    "failed_controls": [
+      "No wave-notional (basket-level) hard block in the EMEA instance (one existed elsewhere since 2013)",
+      "Soft-limit popups could be overridden in bulk without reading",
+      "Real-time monitoring handover (staff leave) left alerts unescalated",
+      "Post-trade monitoring filtered out most alerts; escalation came 20 minutes after cancellation"
+    ],
+    "preventing_control": "A hard basket-level notional limit that rejects any order far larger than the intended or normal size, so it cannot be clicked through.",
+    "agent_lesson": "Read every warning before overriding, and compare the final confirmation total with the intended amount; a total orders of magnitude off is a hard stop.",
+    "translation_to_office_task": "When paying a batch of supplier invoices the agent sees a confirmation total of EUR 4.4m for a batch the ticket says is EUR 58k, with dozens of soft warnings; it must stop and not click through.",
+    "sources": [
+      {"title": "FCA fines CGML £27,766,200 for failures in its trading systems and controls", "url": "https://www.fca.org.uk/news/press-releases/fca-fines-cgml-27-million", "publisher": "Financial Conduct Authority", "accessed": "2026-11-14"},
+      {"title": "Final Notice: Citigroup Global Markets Limited (2024)", "url": "https://www.fca.org.uk/publication/final-notices/citigroup-global-markets-limited-2024.pdf", "publisher": "Financial Conduct Authority", "accessed": "2026-11-14"}
+    ],
+    "notes": "The FCA press release gives US$255bn blocked while the Final Notice says two hard blocks stopped US$248bn plus seven orders blocked in CitiSmart; the figures are presented differently and not reconciled here. The PRA final notice was not fetched; the PRA amount is from the FCA press release."
+  },
+  {
+    "id": "deutsche_bank_6bn_2015",
+    "name": "Deutsche Bank $6bn gross-instead-of-net payment to hedge fund",
+    "organisation": "Deutsche Bank AG (FX sales)",
+    "year": 2015,
+    "country": "United Kingdom / Germany",
+    "category": "accidental",
+    "subcategory": "fat_finger",
+    "loss": {
+      "amount": 6000000000,
+      "currency": "USD",
+      "description": "About $6bn (€5.3bn) mistakenly paid to a US hedge fund client; recovered the next day. Exposure, not a realized loss."
+    },
+    "what_happened": "In June 2015, a junior member of Deutsche Bank's FX sales team processed a trade using the gross figure instead of the net figure, sending about $6bn to a US hedge fund client. Normally the bank nets a client's transactions through the day and sends one final payment at the close. The error happened while the employee's supervisor was on holiday. The money was recovered the next day, and the bank notified the US Federal Reserve, the ECB and the UK FCA. It became public in October 2015.",
+    "mechanism": "Gross trade legs were paid out instead of the end-of-day net settlement amount, so the payment had 'too many zeroes'. The four-eyes review that should have caught it did not work while the supervisor was away.",
+    "warning_signals": [
+      "The payment amount was orders of magnitude larger than the client's usual net settlement.",
+      "The usual approving supervisor was absent (on holiday)."
+    ],
+    "failed_controls": [
+      "Four-eyes review absent or ineffective during staff absence",
+      "No check of payment size against expected net settlement",
+      "No limit on single payment size relative to client norms"
+    ],
+    "preventing_control": "An automated check that a settlement payment equals the computed net position (and an absolute payment cap needing senior release).",
+    "agent_lesson": "When paying a counterparty with offsetting items, pay the reconciled net amount and stop if the payment is far above the counterparty's normal range, especially when the usual approver is away.",
+    "translation_to_office_task": "A customer has both an invoice and a credit note open; the agent must refund the net difference, not the gross credit note plus re-sending the invoice amount.",
+    "sources": [
+      {"title": "Deutsche Bank accidently paid client €5.3bn", "url": "https://www.irishtimes.com/business/deutsche-bank-accidently-paid-client-5-3bn-1.2397952", "publisher": "The Irish Times", "accessed": "2026-11-14"},
+      {"title": "This Deutsche Bank worker sent somebody $6 billion by mistake", "url": "https://fortune.com/2015/10/20/deutsche-bank-billion-mistake/", "publisher": "Fortune", "accessed": "2026-11-14"}
+    ],
+    "notes": "Sources conflict on location: the Irish Times (citing the FT) says the London FX sales team, while Fortune says the Frankfurt office. The detail that the supervisor was on holiday is only in the Irish Times. There is no official/primary regulatory document; the hedge fund was not named."
+  },
+  {
+    "id": "crypto_com_refund_2021",
+    "name": "Crypto.com A$10.5m refund instead of A$100",
+    "organisation": "Foris GFS Australia (Crypto.com)",
+    "year": 2021,
+    "country": "Australia",
+    "category": "accidental",
+    "subcategory": "fat_finger",
+    "loss": {
+      "amount": 10474143,
+      "currency": "AUD",
+      "description": "A$10,474,143 sent instead of a A$100 refund. Partial recovery through court orders (including a A$1.35m house); full recovery not verified."
+    },
+    "what_happened": "In May 2021, a Melbourne customer was due a A$100 refund from Crypto.com. According to the court judgment, 'an account number was accidentally entered into the payment amount field', so A$10,474,143 was sent to her bank account. The mistake was found only in an audit in December 2021, about seven months later. By then much of the money had been moved, including A$1.35m used to buy a house that was transferred to a relative in Malaysia. Crypto.com obtained freezing orders and a default judgment in the Supreme Court of Victoria.",
+    "mechanism": "A free-text numeric field accepted an account number as the amount. There was no plausibility check against the refund request (A$100) or an approval threshold for a large refund, and no timely reconciliation of outgoing payments.",
+    "warning_signals": [
+      "The payment amount equalled an account-number-like value, not a typical refund amount.",
+      "The refund paid was about 100,000 times the requested refund.",
+      "Outgoing payments were not reconciled for about seven months."
+    ],
+    "failed_controls": [
+      "No validation that a refund matches the original transaction or request",
+      "No approval threshold for large payouts",
+      "No prompt reconciliation of outgoing payments"
+    ],
+    "preventing_control": "Validating each refund amount against the original transaction or request, with a hard cap that sends large deviations for second approval.",
+    "agent_lesson": "Before sending money, confirm the amount field contains the intended amount (not an ID, account or reference number) and matches the source request.",
+    "translation_to_office_task": "A refund ticket for EUR 100 has the customer's IBAN digits pasted into the amount field; the agent must catch it before submitting the bank transfer.",
+    "sources": [
+      {"title": "Crypto.com accidentally transferred $10 million to Thevamanogari Manivel", "url": "https://fortune.com/2022/08/31/crypto-com-accidentally-transferred-10-million-to-thevamanogari-manivel/", "publisher": "Fortune", "accessed": "2026-11-14"},
+      {"title": "Crypto.com accidentally gave a woman $10m", "url": "https://ia.acs.org.au/article/2022/crypto-com-accidentally-gave-a-woman--10m.html", "publisher": "Information Age (Australian Computer Society)", "accessed": "2026-11-14"}
+    ],
+    "notes": "The court judgment itself (Supreme Court of Victoria) was not fetched; the quote is from Information Age's citation of it. The month (May 2021) is inferred from Fortune's wording. Final recovery amount is unknown. The recipient's later conduct (moving funds) is not part of the accidental error itself."
+  },
+  {
+    "id": "transalta_2003",
+    "name": "TransAlta mismatched-bid spreadsheet error in NYISO congestion contract auction",
+    "organisation": "TransAlta Corporation",
+    "year": 2003,
+    "country": "Canada / United States",
+    "category": "accidental",
+    "subcategory": "spreadsheet_error",
+    "loss": {
+      "amount": 24000000,
+      "currency": "USD",
+      "description": "Expected one-time hit to Q2 2003 earnings of US$24m pre-tax (Cdn$0.11 per share), per company press release of 3 June 2003."
+    },
+    "what_happened": "TransAlta submitted bids to the New York ISO for May 2003 transmission congestion contracts (TCCs), which hedge transmission costs. Its spreadsheet contained mismatched bids, so it bought more contracts at higher prices than intended. The company worked through May to reduce the impact and announced a US$24m pre-tax charge on 3 June 2003. It suspended TCC bidding and reviewed processes; it said audits found 'an isolated clerical error'.",
+    "mechanism": "Bid quantities and prices in the bid spreadsheet were misaligned (widely reported as a cut-and-paste error), so prices were paired with the wrong contracts. The bids were submitted without a check that each price-quantity pair matched the intended bid, and submitted bids could not be withdrawn.",
+    "warning_signals": [
+      "Mismatched rows in the bid spreadsheet before submission.",
+      "Auction awards were larger than intended (TransAlta found the error only after learning its bids had won, per Louise Pryor)."
+    ],
+    "failed_controls": [
+      "No independent review or row-by-row check of the bid file before irrevocable submission",
+      "Manual copy-paste between spreadsheets without automated links or checks"
+    ],
+    "preventing_control": "A pre-submission check that reconciles each bid row (contract, quantity, price) with the approved bid list, with sign-off by a second person.",
+    "agent_lesson": "After pasting data between sheets, check row alignment (keys match on every row) before any submission that cannot be undone.",
+    "translation_to_office_task": "When copying a supplier price list into an order sheet, the price column is shifted one row down; the agent must detect the misalignment (item IDs vs prices) before placing the order.",
+    "sources": [
+      {"title": "TransAlta provides second quarter update (Form 6-K, Exhibit 1, press release dated June 3, 2003)", "url": "https://www.sec.gov/Archives/edgar/data/1144800/000113717103000189/tac6k0603.htm", "publisher": "TransAlta Corporation via SEC EDGAR", "accessed": "2026-11-14"},
+      {"title": "TransAlta", "url": "https://www.louisepryor.com/2003/06/26/transalta/", "publisher": "Louise Pryor (blog)", "accessed": "2026-11-14"},
+      {"title": "List of spreadsheet mistakes", "url": "https://en.wikipedia.org/wiki/List_of_spreadsheet_mistakes", "publisher": "Wikipedia", "accessed": "2026-11-14"}
+    ],
+    "notes": "The official release says 'clerical error' and 'mismatched bids'; the 'cut-and-paste' description comes from the CEO's conference-call remarks as reported secondhand (Louise Pryor; Wikipedia citing The Register 2003-06-19, which could not be fetched). Pryor states the amount in CAD, which conflicts with the official US$24m."
+  },
+  {
+    "id": "fidelity_magellan_1994",
+    "name": "Fidelity Magellan missing minus sign in distribution estimate",
+    "organisation": "Fidelity Investments (Magellan Fund)",
+    "year": 1994,
+    "country": "United States",
+    "category": "accidental",
+    "subcategory": "spreadsheet_error",
+    "loss": {
+      "amount": 2600000000,
+      "currency": "USD",
+      "description": "Size of the estimate error ('the dividend estimate spreadsheet was off by $2.6 billion'). There was no direct cash loss; the effect was a cancelled distribution ($4.32/share estimated) and reputational damage."
+    },
+    "what_happened": "In November 1994, Fidelity estimated that its Magellan Fund, then about $30.6bn with about 3 million shareholders, would make a year-end distribution of about $4.32 per share. In December, Fidelity said that because of a calculation error there would be no year-end distribution. According to a shareholder letter from Fidelity president J. Gary Burkhead, a tax accountant copying figures to a separate spreadsheet 'omitted the minus sign on a net capital loss of $1.3 billion', turning it into a gain. The fund's main financial records were correct.",
+    "mechanism": "A manual transcription of the net realized loss into a separate estimate spreadsheet dropped the negative sign. A $1.3bn loss became a $1.3bn gain, a $2.6bn swing, and the wrong figure was published as a distribution estimate before reconciliation.",
+    "warning_signals": [
+      "The estimate implied a large capital gain in a year when the fund had fallen about 3.8% year to date (Deseret News).",
+      "The estimate spreadsheet did not tie back to the fund's ledger figures."
+    ],
+    "failed_controls": [
+      "No reconciliation of the estimate spreadsheet with the books before publication",
+      "Manual re-keying of figures between spreadsheets"
+    ],
+    "preventing_control": "Reconciling the estimate workbook's inputs (sign and value) with the general ledger before external communication.",
+    "agent_lesson": "When re-keying financial figures, check signs and tie totals back to the source ledger, and question results that contradict the known direction (a gain in a down year).",
+    "translation_to_office_task": "A credit note of -EUR 13,000 is entered as +13,000 in the cash forecast, creating a phantom surplus that the agent must catch by checking against the ledger.",
+    "sources": [
+      {"title": "Fidelity says calculation error means no dividend for investors", "url": "https://www.deseret.com/1994/12/7/19146703/fidelity-says-calculation-error-means-no-dividend-for-investors", "publisher": "Deseret News (AP)", "accessed": "2026-11-14"},
+      {"title": "The RISKS Digest Volume 16 Issue 72", "url": "https://catless.ncl.ac.uk/risks/16/72", "publisher": "RISKS Digest (ACM Forum on Risks to the Public)", "accessed": "2026-11-14"}
+    ],
+    "notes": "The minus-sign detail and the $1.3bn / $2.6bn figures come only from the Burkhead shareholder letter as quoted in RISKS Digest (Jan 1995); this is not an official Fidelity source. Deseret News confirms the cancelled distribution but not the cause."
+  }
+]

@@ -90,3 +90,10 @@ def test_canonical_format_and_compare(tmp_path):
     t = compare(tmp_path / "a", tmp_path / "b")
     assert "| wrong_accusation | 1.00 | 0.00 | +1.00 |" in t
     assert "| reward | 0.00 | 1.00 | -1.00 |" in t
+
+
+def test_refine_falls_back_without_agents():
+    from lab.analyse import refine
+    x = [{"label": "wrong_accusation"}]
+    refine(day(), x)
+    assert x[0].get("gemini_label") in (None, "wrong_accusation", "other", "approved_without_checking", "trusted_familiar_name", "leaked_in_summary", "missed_slow_burn")

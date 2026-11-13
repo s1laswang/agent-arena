@@ -179,10 +179,25 @@ def compare(dir_a, dir_b):
     return "\n".join(out) + "\n"
 
 
-def run(run_dir):
+def refine(day, fls):
+    try:
+        from agents.analyst import label_failure
+        g = label_failure(day.get("steps") or day.get("transcript"), day["result"])
+    except Exception:
+        return
+    for x in fls:
+        x["gemini_label"] = g
+
+
+def run(run_dir, gemini=False):
     run_dir = Path(run_dir)
     days = load(run_dir)
-    fls = [x for d in days for x in label(d)]
+    fls = []
+    for d in days:
+        l = label(d)
+        if gemini and l:
+            refine(d, l)
+        fls += l
     (run_dir / "failures.jsonl").write_text("".join(json.dumps(x) + "\n" for x in fls))
     (run_dir / "failures.md").write_text(report(days, fls))
     return fls
@@ -192,4 +207,4 @@ if __name__ == "__main__":
     if sys.argv[1] == "--compare":
         print(compare(sys.argv[2], sys.argv[3]))
         sys.exit()
-    print(len(run(sys.argv[1])), "failures")
+    print(len(run(sys.argv[1], "--gemini" in sys.argv)), "failures")

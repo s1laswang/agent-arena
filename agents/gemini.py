@@ -47,8 +47,15 @@ def usage():
     u = dict(_usage)
     pin = float(os.environ.get("SLEEPER_PRICE_IN_PER_M", 0) or 0)
     pout = float(os.environ.get("SLEEPER_PRICE_OUT_PER_M", 0) or 0)
+    u["est_calls_per_day"] = estimate_calls(
+        int(os.environ.get("SLEEPER_SEATS", 8)), int(os.environ.get("SLEEPER_ROUNDS", 3)), int(os.environ.get("SLEEPER_STEPS", 10))
+    )
     u["cost"] = (u["in_tokens"] * pin + u["out_tokens"] * pout) / 1e6
     return u
+
+
+def estimate_calls(seats=8, rounds=3, steps=10):
+    return seats * rounds * steps
 
 
 def reset_usage():
@@ -69,6 +76,19 @@ def to_declarations(tools):
     ]
 
 
+def _mime(path):
+    return {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(Path(path).suffix.lower(), "image/png")
+
+
+def _hashed(messages):
+    out = []
+    for m in messages:
+        if m.get("images"):
+            m = {**m, "images": [hashlib.sha256(Path(i).read_bytes()).hexdigest() for i in m["images"]]}
+        out.append(m)
+    return out
+
+
 def _contents(messages):
     from google.genai import types
 
@@ -77,6 +97,8 @@ def _contents(messages):
         parts = []
         if m.get("text"):
             parts.append(types.Part(text=m["text"]))
+        for img in m.get("images") or []:
+            parts.append(types.Part.from_bytes(data=Path(img).read_bytes(), mime_type=_mime(img)))
         for c in m.get("tool_calls") or []:
             parts.append(types.Part.from_function_call(name=c["name"], args=c.get("args") or {}))
         for r in m.get("tool_results") or []:
@@ -87,7 +109,7 @@ def _contents(messages):
 
 
 def cache_key(model, system, messages, tools, temperature, seed):
-    blob = json.dumps([model, system, messages, tools, temperature, seed], sort_keys=True, default=str)
+    blob = json.dumps([model, system, _hashed(messages), tools, temperature, seed], sort_keys=True, default=str)
     return hashlib.sha256(blob.encode()).hexdigest()
 
 

@@ -56,3 +56,18 @@ def test_log_callback(monkeypatch):
     ev = []
     gemini.run_tool_loop("m", "s", "v", [], lambda n, a: {}, log=ev.append)
     assert [e["role"] for e in ev] == ["model", "tool"]
+
+
+def test_image_hash_and_part(tmp_path):
+    a = tmp_path / "a.png"
+    a.write_bytes(b"\x89PNGone")
+    k1 = gemini.cache_key("m", "s", [{"role": "user", "images": [str(a)]}], None, 0, 0)
+    a.write_bytes(b"\x89PNGtwo")
+    k2 = gemini.cache_key("m", "s", [{"role": "user", "images": [str(a)]}], None, 0, 0)
+    assert k1 != k2
+    c = gemini._contents([{"role": "user", "text": "x", "images": [str(a)]}])
+    assert c[0].parts[1].inline_data.mime_type == "image/png"
+
+
+def test_estimate():
+    assert gemini.usage()["est_calls_per_day"] == 240

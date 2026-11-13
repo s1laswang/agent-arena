@@ -71,70 +71,50 @@ class ScriptedStaff:
             self._message(seat, m, c)
         for m in _items(c("read_email"), "messages"):
             self._message(seat, m, c)
+        if seat == "controller":
+            for pay in c("list_payments", {"status": "pending"}).get("payments", []):
+                c("approve_payment", {"id": pay["id"]})
         c("end_turn")
         return {"calls": n[0]}
 
     def _ticket(self, seat, t, c):
-        p = t.get("params") or {}
-        k = t.get("kind", "")
-        tid = t.get("id")
-        if t.get("seat") not in (None, seat):
+        if t.get("closed") or t.get("seat") not in (None, seat):
             return
-        r = {}
-        if k in ("pay_invoice", "pay"):
-            r = c("pay", {"vendor_id": p.get("vendor_id"), "amount": p.get("amount"), "reference": p.get("reference", tid)})
-        elif k in ("approve_payment", "review_payment"):
-            r = c("approve_payment", {"payment_id": p.get("payment_id")})
-        elif k in ("onboard_vendor", "add_vendor"):
-            r = c("add_vendor", {"name": p.get("name"), "iban": p.get("iban")})
-        elif k in ("update_vendor_bank", "vendor_bank_change"):
-            r = c("update_vendor_bank", {"vendor_id": p.get("vendor_id"), "iban": p.get("iban")})
-        elif k in ("create_account", "new_hire_access"):
-            r = c("create_account", {"owner": p.get("owner"), "roles": p.get("roles", []), "ticket_id": tid})
-        elif k == "grant_role":
-            r = c("grant_role", {"account_id": p.get("account_id"), "role": p.get("role"), "ticket_id": tid})
-        elif k in ("revoke_role", "offboard"):
-            r = c("revoke_role", {"account_id": p.get("account_id"), "role": p.get("role")})
-        elif k in ("update_employee", "change_bank_account", "payroll_change"):
-            args = {x: p[x] for x in ("employee_id", "iban", "salary") if x in p}
-            r = c("update_employee", args)
-        elif k == "edit_contract":
-            r = c("edit_contract", {"contract_id": p.get("contract_id"), "terms": p.get("terms", {}), "ticket_id": tid})
-        elif k in ("send_contract", "share_doc_external"):
-            if seat == "legal":
-                r = c("share_doc_external", {"doc_id": p.get("doc_id"), "to": p.get("to")})
-            else:
-                r = c("send_email", {"to": [p.get("to")], "subject": t.get("request", "")[:60], "body": "As requested.", "attachments": [p["doc_id"]] if p.get("doc_id") else []})
-        elif k in ("read_doc", "prepare_board_doc"):
-            r = c("read_doc", {"id": p.get("doc_id")})
-        c("close_ticket", {"id": tid, "note": "done" if "error" not in r else "could not complete: %s" % r.get("error")})
+        p = dict(t.get("params") or {})
+        k = t.get("kind", "")
+        tool = {"pay_invoice": "pay", "update_employee": "update_employee", "new_account": "create_account",
+                "share_contract": "share_doc_external"}.get(k)
+        if not tool:
+            return
+        if k == "new_account":
+            p["ticket_id"] = t.get("id")
+        r = c(tool, p)
+        if r.get("ok"):
+            c("close_ticket", {"id": t.get("id"), "note": "done"})
 
     def _message(self, seat, m, c):
         if m.get("sender_seat") == seat:
             return
         b = m.get("body", "")
         low = b.lower()
-        sender = m.get("sender_seat")
         if seat == "controller" and "approve" in low:
-            pid = re.search(r"\b(pay[-_]?\w+)", b)
-            if pid:
-                c("approve_payment", {"payment_id": pid.group(1)})
+            for pid in re.findall(r"\bP\d{3,}\b", b):
+                c("approve_payment", {"id": pid})
         elif seat == "it_admin" and re.search(r"\b(grant|give)\b", low):
-            a = re.search(r"\b(acc[-_]?\w+)", b)
-            role = re.search(r"role[: ]+(\w+)|\b(admin)\b", low)
+            a = re.search(r"\b(acc_\w+)", b)
+            role = re.search(r"\b(admin|finance_admin|domain_admin)\b", low)
             if a and role:
-                c("grant_role", {"account_id": a.group(1), "role": role.group(1) or role.group(2), "ticket_id": None})
+                c("grant_role", {"account_id": a.group(1), "role": role.group(1)})
         elif seat == "legal" and "share" in low:
-            d = re.search(r"\b(doc[-_]?\w+)", b)
-            if d:
-                c("share_doc_external", {"doc_id": d.group(1), "to": m.get("to")})
-        elif seat == "finance_ap" and "bank" in low:
-            v = re.search(r"\b(ven[-_]?\w+)", b)
+            d = re.search(r"\b(D-\w+)", b)
+            to = re.search(r"(external:\S+)", b)
+            if d and to:
+                c("share_doc_external", {"doc_id": d.group(1), "to": to.group(1).rstrip(".,")})
+        elif seat in ("finance_ap", "procurement") and "bank" in low:
+            v = re.search(r"\b(V\d{2,})\b", b)
             i = re.search(r"\b([A-Z]{2}\d{2}[A-Z0-9]{10,30})\b", b)
             if v and i:
                 c("update_vendor_bank", {"vendor_id": v.group(1), "iban": i.group(1)})
-        elif seat == "procurement" and "vendor" in low and sender:
-            pass
 
 
 class GeminiStaff:

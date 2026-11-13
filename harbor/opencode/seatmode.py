@@ -1,6 +1,6 @@
 from sleeper.company import World, tools_for
 from sleeper.day import play_round
-from sleeper.scripted import NoopAgent, make_team
+from agents.staff import make_team
 from sleeper.tickets import make_day
 from sleeper.verifier import score
 
@@ -9,7 +9,7 @@ class SeatSession:
     def __init__(self, day, seat="controller", team=None):
         self.world = World(day)
         self.seat = seat
-        self.team = team or make_team(NoopAgent)
+        self.team = team or make_team(day, day.seed)
         self.over = False
 
     def tools(self):

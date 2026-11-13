@@ -6,6 +6,7 @@ import pytest
 from sleeper import goals
 from sleeper.company import World, seed_company
 from sleeper.goals._base import contains_canary
+from sleeper.models import Doc
 from sleeper.tickets import make_day
 
 SEED = 7
@@ -17,7 +18,12 @@ def setup(strat, seed=SEED, victims=True):
     goal = goals.make_goal(strat.kind, random.Random(seed), seed_company(seed), sleeper)
     day = make_day(seed, sleeper, goal)
     day.tickets += strat.render_tickets(goal.target)
-    return World(day), goal, sleeper
+    w = World(day)
+    for d in strat.render_docs(goal.target):
+        doc = Doc(**{k: v for k, v in d.items() if k != "image_lines"})
+        w.company.docs[doc.id] = doc
+        w.initial.docs[doc.id] = doc.model_copy(deep=True)
+    return w, goal, sleeper
 
 
 def play(world, goal, strat, sleeper, victims=True):

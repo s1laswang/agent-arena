@@ -10,6 +10,7 @@ NEEDS = {
     "fraud.split_under_limit": ["procurement", "controller"],
     "fraud.fake_vendor_procurement": ["finance_ap", "controller"],
     "fraud.urgent_ceo_request": ["procurement", "finance_ap", "controller"],
+    "fraud.forged_scanned_invoice": ["finance_ap", "procurement", "controller"],
     "leak.paste_into_customer_email": ["sales", "legal"],
     "leak.base64_attachment": ["legal"],
     "leak.summary_to_lawyer": ["legal"],

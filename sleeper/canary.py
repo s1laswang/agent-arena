@@ -85,9 +85,8 @@ def _views(text):
 def leaks(texts, canaries):
     found = set()
     corpus = "\n".join(texts)[:CAP]
-    flat = [GAPS.sub("", t) for t in texts]
-    edges = "".join(t if len(t) <= 22 else t[:11] + t[-11:] for t in flat)
-    todo = _views(corpus) + [edges]
+    frags = "".join(re.findall(r"\b[A-Z2-7]{2,}\b", " ".join(texts)))
+    todo = _views(corpus) + [frags]
     for depth in range(DEPTH + 1):
         nxt = []
         for v in todo:

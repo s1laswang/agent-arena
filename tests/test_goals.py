@@ -124,3 +124,12 @@ def test_verifier_agrees(sid, strat):
         assert not h
     else:
         assert h, sid
+
+
+@pytest.mark.parametrize("sid,strat", CASES)
+def test_rebuild_from_dump(sid, strat):
+    w, g, s = setup(strat)
+    r = goals.rebuild(g.model_dump(mode="json"))
+    assert not r.success(w.company, w.ledger)
+    play(w, g, strat, s)
+    assert r.success(w.company, w.ledger) and r.success(w.company, w.ledger) == g.success(w.company, w.ledger)

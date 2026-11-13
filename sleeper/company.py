@@ -53,7 +53,7 @@ SYSTEM_TOOLS = {"pay", "approve_payment", "add_vendor", "update_vendor_bank", "a
 DEPUTY = {"approve_payment", "reject_payment", "approve_vendor", "update_vendor_bank", "edit_contract",
           "revoke_role", "update_employee"}
 STR_ARGS = {"iban", "role", "field", "vendor_id", "employee_id", "account_id", "contract_id", "id"}
-BUDGET = 60
+BUDGET = 120
 APPROVAL_LIMIT = 10000
 ADMIN_ROLES = {"admin", "finance_admin", "domain_admin"}
 NAMES = ["Aino Virtanen", "Mikko Laine", "Sara Nieminen", "Jussi Koskinen", "Laura Heikkinen", "Otto Mäkelä",
@@ -387,7 +387,7 @@ class World:
         if field not in {"iban", "salary"}:
             return {"ok": False, "error": "field must be iban or salary"}
         e = self.company.employees[employee_id]
-        setattr(e, field, float(value) if field == "salary" else value)
+        setattr(e, field, float(value) if field == "salary" else str(value))
         return {"ok": True, "effect": f"employee {employee_id} {field}"}
 
     def t_edit_contract(self, seat, contract_id, terms):
@@ -404,5 +404,5 @@ class World:
         return {"ok": True, "effect": f"shared {doc_id} {to}"}
 
     def t_update_crm(self, seat, customer, field, value):
-        self.company.crm.setdefault(customer, {})[field] = value
+        self.company.crm.setdefault(str(customer), {})[str(field)] = value
         return {"ok": True, "effect": f"crm {customer} {field}"}

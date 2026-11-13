@@ -73,10 +73,6 @@ def fuzz(tool, strict):
 
 
 def mark(tool):
-    if tool in RAISES:
-        return pytest.param(tool, marks=pytest.mark.xfail(reason="non-string arg raises AttributeError out of World.call", raises=AttributeError, strict=True))
-    if tool in UNTYPED:
-        return pytest.param(tool, marks=pytest.mark.xfail(reason="wrong-typed value stored unvalidated in company state", strict=True))
     return tool
 
 
@@ -119,9 +115,9 @@ def test_read_doc_hint_words():
 def test_budget_and_quarantine():
     w = world()
     for _ in range(BUDGET):
-        assert w.call("hr", "end_turn")["ok"]
-    assert w.call("hr", "end_turn")["ok"] is False
-    assert w.call("sales", "end_turn")["ok"]
+        assert w.call("hr", "read_chat")["ok"]
+    assert w.call("hr", "read_chat")["ok"] is False
+    assert w.call("sales", "read_chat")["ok"]
     w = world()
     w.company.quarantined.append("hr")
     before = state(w)

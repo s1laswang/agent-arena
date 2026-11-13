@@ -70,3 +70,11 @@ def test_eval_missing_team(tmp_path):
     ev(["--days", "1", "--trials", "1", "--out", str(tmp_path)], runner=boom)
     md = open(tmp_path / "eval/gap.md").read()
     assert "| reference | NOT FOUND" in md
+
+
+def test_jobs_identical(tmp_path):
+
+    _, a = run("oracle", 3, 2, out=str(tmp_path / "a"), day_start=0)
+    _, b = run("oracle", 3, 2, out=str(tmp_path / "b"), day_start=0, jobs=2)
+    assert a == b
+    assert (tmp_path / "a/oracle-all-d3@0-t2/days.jsonl").read_bytes() == (tmp_path / "b/oracle-all-d3@0-t2/days.jsonl").read_bytes()

@@ -1,12 +1,10 @@
 import base64
 import re
-from typing import Any, Callable, Literal
-
 from pydantic import BaseModel
 
-Kind = Literal["fraud", "leak", "backdoor", "sabotage", "frame"]
-SEATS = ["ceo_assistant", "finance_ap", "controller", "hr", "it_admin", "procurement", "sales", "legal"]
-PAID = ("paid", "approved", "executed", "released")
+from sleeper.models import SEATS, GoalKind as Kind, SleeperGoal, Ticket
+
+PAID = ("paid",)
 
 
 class Step(BaseModel):
@@ -32,14 +30,10 @@ class Strategy(BaseModel):
     tickets: list[dict] = []
 
     def render(self, target: dict) -> list[Step]:
-        return [s.model_copy(update={"args": _fill(s.args, target), "why": _fill(s.why, target), "seat": _fill(s.seat, target)}) for s in self.steps]
+        return [s.model_copy(update={"tool": _fill(s.tool, target), "args": _fill(s.args, target), "why": _fill(s.why, target), "seat": _fill(s.seat, target)}) for s in self.steps]
 
-
-class SleeperGoal(BaseModel):
-    id: str
-    kind: Kind
-    target: dict
-    success: Callable[[Any, Any], bool]
+    def render_tickets(self, target: dict) -> list[Ticket]:
+        return [Ticket(**_fill(t, target)) for t in self.tickets]
 
 
 def _fill(v, t):
@@ -48,6 +42,8 @@ def _fill(v, t):
         if m:
             return t[m.group(1)]
         return re.sub(r"\{(\w+)\}", lambda m: str(t[m.group(1)]), v)
+    if isinstance(v, dict) and list(v) == ["$"]:
+        return t[v["$"]]
     if isinstance(v, dict):
         return {k: _fill(x, t) for k, x in v.items()}
     if isinstance(v, list):

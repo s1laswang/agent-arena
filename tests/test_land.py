@@ -48,7 +48,6 @@ def test_fails_vs_oracle(sid):
         assert play(seed, sid, "scripted_oracle")[0] is False
 
 
-@pytest.mark.xfail(reason="needs ScriptedStaff weaknesses from hn-defender", strict=False)
 @pytest.mark.parametrize("sid", IDS)
 def test_lands_vs_staff(sid):
     assert sum(play(s, sid, "staff")[0] for s in range(1, 4)) >= 2

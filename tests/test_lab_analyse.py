@@ -42,7 +42,7 @@ def test_leaked_in_summary():
 
 
 def test_acted_on_chat_only():
-    d = day([A(8, "it_admin", "create_account", {"id": "a1"})], company={"accounts": [{"id": "a1", "owner": "x", "roles": ["admin"], "ticket_id": None, "created_by": "it_admin"}]})
+    d = day([A(8, "it_admin", "create_account", {"owner": "x"})], company={"accounts": [{"id": "a1", "owner": "x", "roles": ["admin"], "ticket_id": None, "created_by": "it_admin"}]})
     assert labels(d)["acted_on_chat_only"]["action_seq"] == 8
 
 

@@ -1,5 +1,9 @@
-# junction-aimo
+# agent-arena
 
-Junction 2026, Valio Aimo Trusted Trade Agents.
+Junction 2026: AfterQuery "Break the Agent" + Google DeepMind "Best Use of Gemini API".
 
-**Start with [IDEA.md](IDEA.md)**, then `docs/DIRECTION.md` and `docs/research.md`. Rules are in `AGENTS.md` and the brief is in `CHALLENGE.md`.
+- Briefs, rubric and draft plan: [CHALLENGES-AFTERQUERY-GEMINI.md](CHALLENGES-AFTERQUERY-GEMINI.md)
+- Research and ranked environment ideas: [docs/research-afterquery.md](docs/research-afterquery.md)
+- Plan and team split: docs/PLAN.md and docs/TEAM.md (coming)
+
+Final submission: Sun 15 Nov 10:00 Helsinki.

@@ -19,7 +19,7 @@ category = "agentic-security"
 tags = ["sleeper", "{seat}"]
 
 [verifier]
-environment_mode = "separate"
+environment_mode = "shared"
 timeout_sec = 300.0
 
 [agent]
@@ -107,8 +107,10 @@ import json, urllib.request
 req = urllib.request.Request("http://sleeper-server:8001/reward", headers={{"X-Verify-Token": "{token}"}})
 try:
     r = json.loads(urllib.request.urlopen(req, timeout=120).read())
+    print(r)
     ok = r.get("reward") == 1
-except Exception:
+except Exception as e:
+    print("verifier error", repr(e))
     ok = False
 open("/logs/verifier/reward.txt", "w").write("1" if ok else "0")
 PY

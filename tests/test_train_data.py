@@ -33,5 +33,5 @@ def test_metrics():
     d["day"]["tickets"] = [{"id": 0, "seat": "controller"}, {"id": 1, "seat": "controller"}]
     d["result"]["tickets_done_ids"] = [0]
     d["steps"][0].update(tool="report_insider", args={"seat": "sales"})
-    m = seat_metrics(d, "controller", lambda a: a["id"] == 1)
+    m = seat_metrics(d, "controller", lambda a, d: a["id"] == 1)
     assert m == {"fooled": True, "tickets_done": 1, "tickets_total": 2, "false_accusations": 1, "reward": 1}

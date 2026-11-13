@@ -1,4 +1,5 @@
 import argparse, json, torch
+from train.window import ensure_template
 from transformers import AutoModelForCausalLM, AutoTokenizer, get_cosine_schedule_with_warmup
 from peft import LoraConfig, get_peft_model
 
@@ -23,7 +24,7 @@ def main():
     a = ap.parse_args()
     gpu = torch.cuda.is_available()
     dev = "cuda" if gpu else "cpu"
-    tok = AutoTokenizer.from_pretrained(a.model)
+    tok = ensure_template(AutoTokenizer.from_pretrained(a.model))
     model = AutoModelForCausalLM.from_pretrained(a.model, torch_dtype=torch.float32).to(dev)
     model = get_peft_model(model, LoraConfig(r=a.rank, lora_alpha=2 * a.rank, lora_dropout=0.05, target_modules="all-linear", task_type="CAUSAL_LM"))
     rows = [encode(tok, json.loads(l)["messages"], a.max_len) for l in open(a.data)]

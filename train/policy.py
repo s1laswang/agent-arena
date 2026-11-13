@@ -1,12 +1,12 @@
 import json, re, torch
-from train.window import prompt
+from train.window import prompt, ensure_template
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class Policy:
     def __init__(self, base="Qwen/Qwen2.5-0.5B-Instruct", lora=None, max_new=256):
         gpu = torch.cuda.is_available()
         self.dev = "cuda" if gpu else "cpu"
-        self.tok = AutoTokenizer.from_pretrained(base)
+        self.tok = ensure_template(AutoTokenizer.from_pretrained(base))
         m = AutoModelForCausalLM.from_pretrained(base, torch_dtype=torch.float16 if gpu else torch.float32)
         if lora:
             from peft import PeftModel

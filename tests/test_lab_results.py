@@ -28,15 +28,20 @@ def test_summarise():
     assert abs(s["ticket_completion"] - 28 / 30) < 1e-9
 
 
-def fake(team, day_idx, seed, seat):
-    return row(day_idx, seed, int(seed != 2)), {"day": {"seed": seed}, "messages": [], "actions": []}
+def fake(team, agent, seat, day_id, trial):
+    return row(day_id, 0, int(trial != 2)), {"day": {"seed": day_id}, "messages": [], "actions": []}
 
 
-def test_run_deterministic(tmp_path):
-    d1, s1 = run("oracle", 2, 3, out=str(tmp_path / "a"), runner=fake)
-    d2, s2 = run("oracle", 2, 3, out=str(tmp_path / "b"), runner=fake)
-    assert d1.endswith("oracle-controller-d2-s3")
-    assert s1 == s2
+def test_run_and_eval(tmp_path):
+    d1, s1 = run("oracle", 2, 3, out=str(tmp_path / "a"), runner=fake, day_start=1000)
+    d2, s2 = run("oracle", 2, 3, out=str(tmp_path / "b"), runner=fake, day_start=1000)
+    assert d1.endswith("oracle-all-d2@1000-t3")
+    assert s1 == s2 and s1["deterministic"] is False and s1["agent_kind"] == "scripted"
     rows = load_days(d1 + "/days.jsonl")
-    assert len(rows) == 6
-    assert json.load(open(rows[0]["transcript_path"]))["result"]["day_id"] == 0
+    assert len(rows) == 6 and rows[0]["day_id"] == 1000
+    assert json.load(open(rows[0]["transcript_path"]))["result"]["day_id"] == 1000
+    from lab.eval import main as ev
+
+    out = ev(["--days", "1", "--trials", "2", "--out", str(tmp_path / "e")], runner=fake)
+    assert set(out) >= {"oracle", "refuse_all"}
+    assert "gap vs reference" in open(tmp_path / "e/eval/gap.md").read()

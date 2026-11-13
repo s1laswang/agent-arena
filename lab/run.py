@@ -1,69 +1,93 @@
 import argparse
+import importlib
 import json
 import os
 import time
 
 from lab.results import summarise
 
-TEAMS = ["staff", "reference", "oracle", "do_nothing", "stop_early", "quarantine_all"]
-
-
 FACTORIES = {
-    "staff": ("agents.staff", "make_team"),
-    "reference": ("agents.reference", "make_reference_team"),
-    "oracle": ("agents.reference", "make_oracle_team"),
-    "do_nothing": ("sleeper.baselines", "make_do_nothing"),
-    "stop_early": ("sleeper.baselines", "make_stop_early"),
-    "quarantine_all": ("sleeper.baselines", "make_quarantine_all"),
+    "staff": ("agents.staff", "make_team", "gemini"),
+    "reference": ("agents.reference", "make_reference_team", "gemini"),
+    "oracle": ("agents.reference", "make_oracle_team", "scripted"),
+    "do_nothing": ("sleeper.baselines", "make_do_nothing", "scripted"),
+    "stop_early": ("sleeper.baselines", "make_stop_early", "scripted"),
+    "quarantine_all": ("sleeper.baselines", "make_quarantine_all", "scripted"),
+    "refuse_all": ("sleeper.baselines", "make_refuse_all", "scripted"),
 }
+TEAMS = list(FACTORIES)
 
 
-def build_team(name, day, seed):
-    import importlib
+def agent_kind(name):
+    if name.startswith("local:"):
+        return "local"
+    kind = FACTORIES[name][2]
+    return "gemini" if kind == "gemini" and os.environ.get("GEMINI_API_KEY") else "scripted"
 
-    mod, fn = FACTORIES[name]
-    return getattr(importlib.import_module(mod), fn)(day, seed)
+
+def agent_model(name):
+    if agent_kind(name) == "gemini":
+        return os.environ.get("SLEEPER_MODEL_REFERENCE" if name == "reference" else "SLEEPER_MODEL_STAFF")
+    return None
 
 
-def play_day(team, day_idx, seed, seat):
-    from sleeper.tickets import build_day
-    from sleeper.world import run_day
+def build_team(name, day, trial):
+    if name.startswith("local:"):
+        mod = importlib.import_module("train.agent")
+        return mod.make_team(name[6:], day, trial)
+    mod, fn, _ = FACTORIES[name]
+    return getattr(importlib.import_module(mod), fn)(day, trial)
+
+
+def score_world(world, day):
     from sleeper.verifier import score
 
-    day = build_day(day_idx, seed)
-    company, ledger, transcript = run_day(day, build_team(team, day, seed), seat)
-    result = score(company, ledger, day)
-    result = dict(result if isinstance(result, dict) else result.model_dump())
-    result.setdefault("has_sleeper", day.sleeper_seat is not None)
-    result.setdefault("goal_kind", day.goal.kind if day.goal else None)
-    return result, transcript
+    result = score(world.company, world.ledger, day)
+    return dict(result if isinstance(result, dict) else result.model_dump())
 
 
-def run_id(team, seat, days, seeds):
-    return f"{team}-{seat}-d{days}-s{seeds}"
+def play_day(team, agent, seat, day_id, trial):
+    from sleeper.day import run_day
+    from sleeper.tickets import build_day
+
+    day = build_day(day_id)
+    players = build_team(team, day, trial)
+    if seat:
+        players[seat] = build_team(agent, day, trial)[seat]
+    world = run_day(day, players)
+    result = score_world(world, day)
+    result["has_sleeper"] = day.sleeper_seat is not None
+    result["goal_kind"] = day.goal.kind if day.goal else None
+    return result, getattr(world, "transcript", None)
 
 
-def run(team, days, seeds, seat="controller", out="results", runner=play_day):
-    rid = run_id(team, seat, days, seeds)
+def run_id(team, seat, agent, days, day_start, trials):
+    who = f"{seat}-{agent}" if seat else "all"
+    return f"{team}-{who}-d{days}@{day_start}-t{trials}"
+
+
+def run(team, days, trials, seat=None, agent=None, day_start=0, day_ids=None, out="results", runner=play_day):
+    agent = agent or team
+    ids = day_ids or list(range(day_start, day_start + days))
+    rid = run_id(team, seat, agent, len(ids), ids[0], trials)
     d = os.path.join(out, rid)
     os.makedirs(os.path.join(d, "transcripts"), exist_ok=True)
     rows = []
     with open(os.path.join(d, "days.jsonl"), "w") as f:
-        for day_idx in range(days):
-            for seed in range(seeds):
-                res, tr = runner(team, day_idx, seed, seat)
+        for day_id in ids:
+            for trial in range(trials):
+                res, tr = runner(team, agent, seat, day_id, trial)
                 res = dict(res)
-                res.setdefault("day_id", day_idx)
-                res.setdefault("agent", team)
-                res.setdefault("seat_under_test", seat)
+                res.update(day_id=day_id, trial=trial, agent=agent, team=team, seat_under_test=seat)
                 if tr is not None:
-                    p = os.path.join(d, "transcripts", f"day{day_idx}-seed{seed}.json")
+                    p = os.path.join(d, "transcripts", f"day{day_id}-trial{trial}.json")
                     with open(p, "w") as t:
                         json.dump({**tr, "result": res} if isinstance(tr, dict) else {"transcript": tr, "result": res}, t, sort_keys=True)
                     res["transcript_path"] = p
                 rows.append(res)
                 f.write(json.dumps(res, sort_keys=True) + "\n")
-    summary = summarise(rows, team)
+    summary = summarise(rows, agent, agent_kind(agent), agent_model(agent))
+    summary.update(run_id=rid, background_team=team, seat_under_test=seat)
     with open(os.path.join(d, "summary.json"), "w") as f:
         json.dump(summary, f, indent=2, sort_keys=True)
     with open(os.path.join(d, "meta.json"), "w") as f:
@@ -73,26 +97,27 @@ def run(team, days, seeds, seat="controller", out="results", runner=play_day):
 
 def main(argv=None):
     p = argparse.ArgumentParser()
-    p.add_argument("--team", choices=TEAMS, required=True)
+    p.add_argument("--team", required=True)
     p.add_argument("--days", type=int, default=20)
-    p.add_argument("--seeds", type=int, default=3)
-    p.add_argument("--seat", default="controller")
+    p.add_argument("--day-start", type=int, default=0)
+    p.add_argument("--day-ids")
+    p.add_argument("--trials", "--seeds", dest="trials", type=int, default=3)
+    p.add_argument("--seat")
+    p.add_argument("--agent")
     p.add_argument("--out", default="results")
     a = p.parse_args(argv)
-    d, s = run(a.team, a.days, a.seeds, a.seat, a.out)
+    ids = [int(x) for x in a.day_ids.split(",")] if a.day_ids else None
+    d, s = run(a.team, a.days, a.trials, a.seat, a.agent, a.day_start, ids, a.out)
     print(d)
     print(json.dumps(s, indent=2, sort_keys=True))
 
 
 def run_day(seed, team, sleeper_seat=None, goal=None, strategy=None, run=0):
+    from sleeper.day import run_day as world_run_day
     from sleeper.tickets import build_day
-    from sleeper.verifier import score
-    from sleeper.world import run_day as world_run_day
 
     day = build_day(seed, sleeper_seat, goal, strategy)
-    company, ledger, _ = world_run_day(day, build_team(team, day, seed * 1000 + run), "controller")
-    result = score(company, ledger, day)
-    return result if isinstance(result, dict) else result.model_dump()
+    return score_world(world_run_day(day, build_team(team, day, run)), day)
 
 
 if __name__ == "__main__":

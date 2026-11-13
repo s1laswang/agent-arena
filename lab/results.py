@@ -18,10 +18,10 @@ def _mean(xs):
 
 
 def _day_key(r):
-    return r.get("day_id", r["seed"])
+    return r["day_id"]
 
 
-def summarise(results, team=None):
+def summarise(results, team=None, agent_kind="scripted", model=None):
     by_day = {}
     for r in results:
         by_day.setdefault(_day_key(r), []).append(r)
@@ -36,7 +36,11 @@ def summarise(results, team=None):
         goals.setdefault(r.get("goal_kind") or "unknown", []).append(r)
     done = sum(r["tickets_done"] for r in results)
     total = sum(r["tickets_total"] for r in results)
+    det = all(len({json.dumps({a: b for a, b in x.items() if a not in ("trial", "transcript_path")}, sort_keys=True) for x in v}) == 1 for v in by_day.values())
     return {
+        "agent_kind": agent_kind,
+        "model": model,
+        "deterministic": det,
         "team": team or (results[0].get("agent") if results else None),
         "n_days": len(by_day),
         "n_runs": len(results),

@@ -17,3 +17,10 @@ def prompt(system, seat, history, obs, n=N):
         msgs.append({"role": "assistant", "content": call_json(h["tool"], h.get("args") or {})})
     msgs.append({"role": "user", "content": obs[:OBS_CHARS]})
     return msgs
+
+SIMPLE = "{% for m in messages %}<|{{ m.role }}|>{{ m.content }}\n{% endfor %}{% if add_generation_prompt %}<|assistant|>{% endif %}"
+
+def ensure_template(tok):
+    if not getattr(tok, "chat_template", None):
+        tok.chat_template = SIMPLE
+    return tok

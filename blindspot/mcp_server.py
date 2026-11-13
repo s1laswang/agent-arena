@@ -135,8 +135,10 @@ def main(argv=None):
     ap.add_argument("--transport", default="stdio", choices=["stdio", "streamable-http", "sse"])
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=8000)
+    ap.add_argument("--difficulty", default=os.environ.get("BLINDSPOT_DIFFICULTY", "standard"),
+                    choices=["standard", "hard"])
     a = ap.parse_args(argv)
-    env = Env(a.seed)
+    env = Env(a.seed, **({} if a.difficulty == "standard" else {"difficulty": a.difficulty}))
     dump(env, a.state_out)
     srv = build(env, a.state_out)
     if a.transport == "stdio":

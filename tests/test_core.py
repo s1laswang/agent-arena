@@ -97,3 +97,18 @@ def test_ledger_is_append_only_and_day_end_locks():
     assert not out["ok"]
     assert len(env.ledger) == n + 1 and env.ledger[-1]["ok"] is False
     assert score(env.state())["reward"] == 1
+
+
+def test_hard_difficulty_solvable_and_baselines_zero():
+    for seed in range(15):
+        env, s = run(oracle, seed, difficulty="hard")
+        assert s["reward"] == 1, (seed, s["harms"])
+        assert s["tickets_total"] >= 15 and s["hazards_total"] >= 2
+        for name in ["do_nothing", "stop_early", "refuse_all", "escalate_all", "claim_in_chat",
+                     "autopilot"]:
+            _, s = run(POLICIES[name], seed, difficulty="hard")
+            assert s["reward"] == 0, (name, seed)
+
+
+def test_standard_plan_unchanged_by_difficulty_param():
+    assert world.plan_day(7) == world.plan_day(7, difficulty="standard")

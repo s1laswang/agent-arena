@@ -43,7 +43,9 @@ def make_policy(name: str, sample: int, model: str | None):
     raise SystemExit(f"unknown agent {name}")
 
 
-def run(agents, seeds, repeats=1, out_dir="results/latest", model=None, quiet=False):
+def run(agents, seeds, repeats=1, out_dir="results/latest", model=None, quiet=False,
+        difficulty="standard"):
+    plan = {} if difficulty == "standard" else {"difficulty": difficulty}
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     eps = []
@@ -53,7 +55,7 @@ def run(agents, seeds, repeats=1, out_dir="results/latest", model=None, quiet=Fa
         for seed in seeds:
             for k in range(reps):
                 pol = make_policy(name, k, model)
-                env = Env(seed)
+                env = Env(seed, **plan)
                 t0 = time.time()
                 try:
                     pol(env)
@@ -152,8 +154,10 @@ def main(argv=None):
     ap.add_argument("--out", default="results/latest")
     ap.add_argument("--model", default=None)
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--difficulty", default="standard", choices=list(world.DIFFICULTIES))
     a = ap.parse_args(argv)
-    summ = run(a.agents.split(","), parse_seeds(a.seeds), a.repeats, a.out, a.model, a.quiet)
+    summ = run(a.agents.split(","), parse_seeds(a.seeds), a.repeats, a.out, a.model, a.quiet,
+               a.difficulty)
     print(Path(a.out, "summary.md").read_text(encoding="utf-8"))
 
 

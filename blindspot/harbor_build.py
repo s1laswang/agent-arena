@@ -78,6 +78,7 @@ COMPOSE = '''services:
       context: ./runtime-server
     environment:
       - BLINDSPOT_SEED={seed}
+      - BLINDSPOT_DIFFICULTY={difficulty}
       - BLINDSPOT_STATE_OUT=/srv/state.json
       - VERIFY_TOKEN={token}
     expose:
@@ -131,10 +132,10 @@ def put(path: Path, text: str, exe=False):
         path.chmod(0o755)
 
 
-def task(out: Path, seed: int):
-    name = f"blindspot-s{seed:03d}"
+def task(out: Path, seed: int, difficulty: str = "standard"):
+    name = f"blindspot-s{seed:03d}" + ("" if difficulty == "standard" else f"-{difficulty}")
     d = out / name
-    f = dict(name=name, seed=seed, token=secrets.token_hex(16))
+    f = dict(name=name, seed=seed, token=secrets.token_hex(16), difficulty=difficulty)
     put(d / "task.toml", TOML.format(**f))
     put(d / "instruction.md", INSTRUCTION)
     put(d / "environment/Dockerfile", DOCKERFILE)
@@ -154,11 +155,12 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", default="0-19")
     ap.add_argument("--out", default="harbor/tasks")
+    ap.add_argument("--difficulty", default="standard", choices=["standard", "hard"])
     a = ap.parse_args(argv)
     out = ROOT / a.out
     shutil.rmtree(out, ignore_errors=True)
     for s in parse_seeds(a.seeds):
-        task(out, s)
+        task(out, s, a.difficulty)
     print(f"wrote {len(parse_seeds(a.seeds))} tasks to {out}")
 
 

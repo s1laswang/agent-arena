@@ -864,9 +864,21 @@ FAMILY_FN = {
 }
 
 
+DIFFICULTIES = ("standard", "hard")
+
+
 def plan_day(seed: int, n_families: int | None = None, n_hazards: int | None = None,
-             families: list[str] | None = None, hazards: list[str] | None = None):
-    rng = random.Random(f"plan:{seed}")
+             families: list[str] | None = None, hazards: list[str] | None = None,
+             difficulty: str = "standard"):
+    """standard: 6-8 families, 0-3 hazards. hard: every family in one day (~16 tickets),
+    2-5 hazards, so the agent must keep checking on a long, mostly clean queue."""
+    if difficulty not in DIFFICULTIES:
+        raise ValueError(f"difficulty must be one of {DIFFICULTIES}")
+    rng = random.Random(f"plan:{seed}" if difficulty == "standard" else f"plan:{difficulty}:{seed}")
+    if difficulty == "hard" and families is None:
+        families = [f for f in FAMILIES if f != "ap_report"] + ["ap_report"]
+        if n_hazards is None:
+            n_hazards = rng.randint(2, 5)
     if families is None:
         n = n_families or rng.randint(6, 8)
         pool = [f for f in FAMILIES if f != "ap_report"]

@@ -50,6 +50,26 @@ def test_ui():
             assert pg.is_enabled("#cmp")
             pg.click("#cmp")
             pg.wait_for_selector(".compare")
+            pg.goto("http://localhost:8766/results.html")
+            pg.wait_for_selector("tbody tr")
+            assert pg.locator("tbody tr").count() >= 1
+            assert "FIXTURE" in pg.inner_text("#flag") or pg.inner_text("#flag") == ""
+            pg.goto("http://localhost:8766/replay.html")
+            pg.wait_for_selector(".compare .desk")
+            assert pg.locator(".run").count() == 2
+            venv = web.parent / ".venv" / "bin" / "python"
+            if venv.exists():
+                live = subprocess.Popen([str(venv), str(web / "export.py"), "--seeds", "2", "--teams", "oracle", "--live"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                try:
+                    time.sleep(2.5)
+                    pg.goto("http://localhost:8766/replay.html?day=live")
+                    pg.wait_for_selector(".desk")
+                    a = tick()
+                    time.sleep(3)
+                    assert tick() > a
+                finally:
+                    live.terminate()
+                    (web / "days" / "live.json").unlink(missing_ok=True)
             b.close()
         print("ok")
     finally:

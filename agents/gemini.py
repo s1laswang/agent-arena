@@ -15,6 +15,10 @@ class GeminiUnavailable(Exception):
     pass
 
 
+class OfflineCacheMiss(Exception):
+    pass
+
+
 def _load_env():
     for p in (Path.home() / "arena-agents" / ".env", ROOT / ".env"):
         if p.is_file():
@@ -40,7 +44,7 @@ def temp_for(role):
 
 
 def enabled():
-    return bool(os.environ.get("GEMINI_API_KEY"))
+    return bool(os.environ.get("GEMINI_API_KEY")) or os.environ.get("SLEEPER_OFFLINE") == "1"
 
 
 def usage():
@@ -163,6 +167,8 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
     if path.is_file():
         _usage["cache_hits"] += 1
         return json.loads(path.read_text())
+    if os.environ.get("SLEEPER_OFFLINE") == "1":
+        raise OfflineCacheMiss("SLEEPER_OFFLINE=1 and no cached response for this prompt")
     if not enabled():
         raise GeminiUnavailable("no GEMINI_API_KEY and no cached response")
     cap = int(os.environ.get("SLEEPER_MAX_CALLS", 0) or 0)
@@ -182,7 +188,7 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
     return out
 
 
-def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperature=None, seed=None, role="staff", log=None):
+def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperature=None, seed=None, role="staff", log=None, guard=None):
     if temperature is None:
         temperature = temp_for(role)
     messages = [{"role": "user", "text": view_text}]
@@ -200,7 +206,8 @@ def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperatu
         for c in r["tool_calls"]:
             if c["name"] == "end_turn":
                 done = True
-            results.append({"name": c["name"], "result": call(c["name"], c["args"])})
+            blocked = guard(c["name"], c["args"]) if guard else None
+            results.append({"name": c["name"], "result": blocked if blocked is not None else call(c["name"], c["args"])})
             if log:
                 log({"role": "tool", **results[-1]})
         imgs = [x["result"]["image"] for x in results if isinstance(x["result"], dict) and x["result"].get("image")]

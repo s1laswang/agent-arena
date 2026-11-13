@@ -25,3 +25,16 @@ def test_rows_ordered_and_no_secrets(tmp_path):
 def test_noop_has_only_end_turns():
     w = run_day(make_day(1), make_team(NoopAgent))
     assert all(r["tool"] == "end_turn" for r in transcript(w) if r["type"] == "action")
+
+
+def test_team_spec_and_cli(tmp_path):
+    import subprocess, sys
+    from sleeper.transcript import build_team
+    day = make_day(0)
+    assert set(build_team("noop", day)) == set(build_team("oracle", day))
+    r = subprocess.run([sys.executable, "-m", "sleeper.transcript", "--team", "agents.reference:make_oracle_team",
+                        "--sleeper-seat", "controller", "--out", str(tmp_path / "o.jsonl")], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr[-400:]
+    assert (tmp_path / "o.jsonl").stat().st_size > 0
+    r = subprocess.run([sys.executable, "-m", "sleeper.transcript", "--goal", "x"], capture_output=True, text=True)
+    assert r.returncode != 0

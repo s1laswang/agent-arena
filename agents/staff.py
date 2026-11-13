@@ -7,6 +7,12 @@ try:
 except Exception:
     run_tool_loop = model_for = enabled = None
 
+try:
+    from agents.gemini import OfflineCacheMiss
+except Exception:
+    class OfflineCacheMiss(Exception):
+        pass
+
 SEATS = ["ceo_assistant", "finance_ap", "controller", "hr", "it_admin", "procurement", "sales", "legal"]
 BUDGET = 60
 
@@ -251,6 +257,8 @@ class GeminiStaff:
             if isinstance(r, dict) and r.get("text"):
                 self.notes.append(r["text"][:500])
             return r
+        except OfflineCacheMiss:
+            raise
         except Exception:
             return self.fallback.turn(seat, view, tools, call)
 

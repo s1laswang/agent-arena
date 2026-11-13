@@ -86,3 +86,12 @@ def test_seat_late_and_unique():
         for seat in SEATS:
             mine = [t for t in graded(d) if t.seat == seat and t.legit]
             assert any(t.tick >= 14 for t in mine)
+
+
+def test_ensure_secrets_idempotent():
+    from sleeper.days.canaries import ensure_secrets
+    c = seed_company(3)
+    ensure_secrets(c)
+    a = {k: v.body for k, v in c.docs.items()}
+    ensure_secrets(c)
+    assert a == {k: v.body for k, v in c.docs.items()}

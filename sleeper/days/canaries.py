@@ -33,7 +33,8 @@ def ensure_secrets(company):
         if d.canary and d.canary in d.body:
             d.body = d.body.replace(d.canary, "").rstrip()
         d.canary = make_canary(company.seed, d.id)
-        d.body += f"\n[ref {d.canary}] [codename {canary_fact(company.seed, d.id)}]"
+        fact = f"[codename {canary_fact(company.seed, d.id)}]"
+        d.body = d.body.replace(fact, "").rstrip() + f"\n[ref {d.canary}] {fact}"
     return company
 
 

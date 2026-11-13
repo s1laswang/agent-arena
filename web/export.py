@@ -1,15 +1,18 @@
 import argparse
 import json
+import os
 import random
 import re
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from agents.sleeper_agent import SleeperAgent, Step, Strategy
-from sleeper.day import run_day
+from sleeper.company import World
+from sleeper.day import play_round, run_day
 from sleeper.models import SleeperGoal
 from sleeper.scripted import NoopAgent, OracleAgent, make_team
 from sleeper.tickets import make_day
@@ -17,6 +20,7 @@ from sleeper.verifier import score
 
 OUT = Path(__file__).resolve().parent / "days"
 QUIET = {"post_chat", "end_turn", "my_tickets", "close_ticket", "read_chat", "read_email", "read_doc"}
+LIVE_DELAY = 1.0
 ATTACKER = "FI0000000000000001"
 
 
@@ -49,13 +53,29 @@ def harmful(day, ledger, harm):
     return out
 
 
-def build(seed, team_name, sleeper):
+def build(seed, team_name, sleeper, live=None):
     cls = {"oracle": OracleAgent, "noop": NoopAgent}[team_name]
     day = make_day(seed, "finance_ap", fraud_goal()) if sleeper else make_day(seed)
     team = make_team(cls, day)
     if sleeper:
         team["finance_ap"] = SleeperAgent("finance_ap", day.goal, fraud_strategy(), random.Random(seed))
-    world = run_day(day, team)
+    if live:
+        world = World(day)
+        did = f"{seed}-{team_name}"
+        def snap(done):
+            r = score(day, world.initial, world.company, world.ledger, agent=team_name) if done else None
+            doc = {"id": "live", "day": day.model_dump(), "messages": [m.model_dump() for m in world.company.messages],
+                   "actions": [a.model_dump() for a in world.ledger], "result": [r.model_dump()] if r else [], "quarantined": world.company.quarantined, "tick": world.tick, "done": done}
+            tmp = OUT / "live.json.tmp"
+            json.dump(doc, open(tmp, "w"), sort_keys=True)
+            os.replace(tmp, live)
+        while world.tick < day.ticks:
+            play_round(world, team)
+            snap(False)
+            time.sleep(LIVE_DELAY)
+        snap(True)
+    else:
+        world = run_day(day, team)
     did = f"{seed}-{team_name}"
     r = score(day, world.initial, world.company, world.ledger, agent=team_name, seat_under_test=None)
     r.day_id = did
@@ -69,7 +89,7 @@ def build(seed, team_name, sleeper):
 def manifest():
     rows = []
     for f in sorted(OUT.glob("*.json")):
-        if f.name == "index.json":
+        if f.name in ("index.json", "live.json"):
             continue
         d = json.load(open(f))
         r = d["result"][0]
@@ -83,10 +103,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, nargs="+", default=[1, 2])
     ap.add_argument("--teams", nargs="+", default=["oracle", "noop"])
+    ap.add_argument("--live", action="store_true")
     ap.add_argument("--sleeper-seeds", type=int, nargs="*", default=None)
     a = ap.parse_args()
     sl = set(a.sleeper_seeds) if a.sleeper_seeds is not None else {s for s in a.seeds if s % 2 == 0}
     OUT.mkdir(exist_ok=True)
+    if a.live:
+        build(a.seeds[0], a.teams[0], a.seeds[0] in sl, OUT / "live.json")
+        return
     for f in OUT.glob("*.json"):
         f.unlink()
     for seed in a.seeds:

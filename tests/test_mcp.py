@@ -76,3 +76,7 @@ def test_http_smoke():
 
     run(go())
     assert world.tick == 2
+
+
+def test_ceo_has_deputy_tools():
+    assert "approve_payment" in names("ceo_assistant")

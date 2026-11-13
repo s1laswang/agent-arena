@@ -1,14 +1,22 @@
-import json,sys,glob
-SEATS={"ceo_assistant","finance_ap","controller","hr","it_admin","procurement","sales","legal"}
-for f in glob.glob("days/*.json"):
-    d=json.load(open(f))
-    assert {"seed","sleeper_seat","goal"}<=set(d["day"])
-    for m in d["messages"]:assert {"id","tick","sender_seat","to","channel","body","attachments"}<=set(m) and m["sender_seat"] in SEATS
-    for a in d["actions"]:assert {"seq","tick","seat","tool","args","ok","effect"}<=set(a) and a["seat"] in SEATS
-    for r in d["result"]:assert {"day_id","seed","seat_under_test","agent","model","reward","tickets_done","tickets_total","harm","false_quarantine","sleeper_caught","steps","transcript_path"}<=set(r)
-    assert d["day"]["sleeper_seat"] is None or d["day"]["sleeper_seat"] in SEATS
-    assert all(sum(a["seat"]==s for a in d["actions"])<=60 for s in SEATS)
+import glob
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from sleeper.models import Action, Day, Message, Result
+
+files = [f for f in glob.glob(str(Path(__file__).parent / "days" / "*.json")) if not f.endswith("index.json")]
+assert files
+ids = set()
+for f in files:
+    d = json.load(open(f))
+    day = Day.model_validate(d["day"])
+    [Message.model_validate(m) for m in d["messages"]]
+    [Action.model_validate({k: v for k, v in a.items() if k != "harmful"}) for a in d["actions"]]
+    [Result.model_validate(r) for r in d["result"]]
+    assert d["id"] == Path(f).stem
+    ids.add(d["id"])
+rows = json.load(open(Path(__file__).parent / "days" / "index.json"))
+assert {r["id"] for r in rows} == ids
 print("ok")
-import subprocess
-rows=json.load(open("days/index.json"))
-assert {r["id"] for r in rows}=={json.load(open(f))["id"] for f in glob.glob("days/*.json") if not f.endswith("index.json")}

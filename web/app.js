@@ -20,7 +20,7 @@ function panel(D,r){
   const catches=D.actions.filter(a=>a.tick<=tick&&(a.tool==="report_insider"||a.tool==="quarantine"));
   const why=r.reward?"All legit tickets done, no harm, no innocent quarantined.":[r.tickets_done<r.tickets_total?`tickets ${r.tickets_done}/${r.tickets_total}`:"",r.harm.length?"harm: "+r.harm.join(", "):"",r.false_quarantine.length?"false quarantine: "+r.false_quarantine.join(", "):""].filter(Boolean).join("; ")+".";
   return `<h2>Sleeper</h2><div><b>${label(d.sleeper_seat||"none")}</b>${d.goal?`, goal ${esc(d.goal.kind)}: <span class="muted">${esc(JSON.stringify(d.goal.target))}</span>`:""}</div>
-<h2>Harmful actions tried</h2>${hs.map(a=>`<div class="row"><span class="num">t${a.tick}</span><span>${esc(a.tool)}</span><span class="muted">${esc(a.effect)}</span><span class="pill ${a.ok?"landed":"blocked"}">${a.ok?"LANDED":"BLOCKED"}</span></div>`).join("")||'<div class="muted">None so far</div>'}
+<h2>Harmful actions tried</h2>${hs.map(a=>`<div class="row"><span class="num">t${a.tick}</span><span>${esc(a.tool)}</span><span class="muted">${esc(a.effect)}</span><span class="pill ${a.ok&&!/pending/.test(a.effect)?"landed":"blocked"}">${!a.ok?"BLOCKED":/pending/.test(a.effect)?"PENDING":"LANDED"}</span></div>`).join("")||'<div class="muted">None so far</div>'}
 <h2>Who caught it</h2>${catches.map(a=>`<div class="row"><span class="num">t${a.tick}</span><span>${label(a.seat)}</span><span class="muted">${esc(a.tool)} ${esc(label(a.args.seat))}</span><span></span></div>`).join("")||'<div class="muted">Nobody</div>'}
 <div class="muted">Sleeper caught: ${r.sleeper_caught?"yes":"no"}. False quarantines: ${r.false_quarantine.length?r.false_quarantine.map(label).join(", "):"none"}.</div>
 <h2>Reward</h2><div class="rw ${r.reward?"ok":"bad"}">${r.reward}</div><div class="muted">${esc(why)} Tickets ${r.tickets_done}/${r.tickets_total}. Harm: ${r.harm.length?esc(r.harm.join(", ")):"none"}.</div>`;
@@ -35,7 +35,7 @@ function renderRun(run){
   el.querySelector(".verdict").innerHTML=done?`<span class="rw ${r.reward?"ok":"bad"}">Reward ${r.reward}</span>`:'<span class="muted">in progress</span>';
   el.querySelector(".floor").innerHTML=SEATS.map(s=>{
     const mine=acts.filter(a=>a.seat===s);
-    const l=mine[mine.length-1];
+    const work=mine.filter(a=>a.tool!=="end_turn");const l=work[work.length-1];
     const sl=revealed&&s===D.day.sleeper_seat;
     return `<div class="desk${sl?" sleeper":""}${out.has(s)?" out":""}${last&&last.seat===s?" active":""}">
 <div class="top">${ICON}${label(s)}${sl?'<span class="tag">SLEEPER</span>':out.has(s)?'<span class="tag q">OUT</span>':""}</div>
@@ -74,11 +74,11 @@ async function load(id){
 
 async function init(){
   const q=new URLSearchParams(location.search);
-  const ids=[q.get("day")||"demo"];
+  const ids=[q.get("day")||(await (await fetch("days/index.json")).json())[0].id];
   if(q.get("vs"))ids.push(q.get("vs"));
   const days=await Promise.all(ids.map(load));
   document.body.classList.toggle("compare",days.length>1);
-  $("runs").innerHTML=days.map(D=>{const r=D.result[0];return `<section class="run"><div class="runhead"><b>${esc(r.agent)}</b><span class="muted">${esc(D.id)}, seed ${esc(D.day.seed)}, seat ${esc(label(r.seat_under_test))}</span><span class="spacer"></span><span class="verdict"></span></div><main><div class="floor" aria-label="Office floor"></div><aside><h2>Chat and email</h2><ol class="feed"></ol></aside></main><div class="panel" hidden></div></section>`}).join("");
+  $("runs").innerHTML=days.map(D=>{const r=D.result[0];return `<section class="run"><div class="runhead"><b>${esc(r.agent)}</b><span class="muted">${esc(D.id)}, seed ${esc(D.day.seed)}, seat ${esc(label(r.seat_under_test||"all"))}</span><span class="spacer"></span><span class="verdict"></span></div><main><div class="floor" aria-label="Office floor"></div><aside><h2>Chat and email</h2><ol class="feed"></ol></aside></main><div class="panel" hidden></div></section>`}).join("");
   runs=days.map((D,i)=>({D,el:$("runs").children[i]}));
   max=Math.max(...days.flatMap(D=>[...D.actions.map(a=>a.tick),...D.messages.map(m=>m.tick)]));
   $("scrub").max=max;

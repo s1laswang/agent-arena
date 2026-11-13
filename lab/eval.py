@@ -35,6 +35,7 @@ def main(argv=None, runner=None):
     p.add_argument("--trials", type=int, default=3)
     p.add_argument("--seat", default="controller")
     p.add_argument("--out", default="results")
+    p.add_argument("--web-out", default="web/results/eval")
     a = p.parse_args(argv)
     kw = {"runner": runner} if runner else {}
     runs = os.path.join(a.out, "runs")
@@ -47,6 +48,14 @@ def main(argv=None, runner=None):
     md = "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat)
     with open(os.path.join(d, "gap.md"), "w") as f:
         f.write(md)
+    if a.web_out:
+        os.makedirs(a.web_out, exist_ok=True)
+        flat = {t: v for t, v in summaries.items() if v}
+        flat.update({f"{a.seat}:{g}": v for g, v in seat.items() if v})
+        with open(os.path.join(a.web_out, "summary.json"), "w") as f:
+            json.dump(flat, f, indent=2, sort_keys=True)
+        with open(os.path.join(a.web_out, "gap.md"), "w") as f:
+            f.write(md)
     print(md)
     return summaries, seat
 

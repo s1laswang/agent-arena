@@ -77,3 +77,43 @@ def test_lint_200_seeds_14_days_3_tiers():
                 assert not lint_messages(msgs), (tier, seed, day)
                 ans = p.interview_answer(f, f"e{seed % 12:02d}", TOPICS[day % 4], SIGNALS[seed % 2])
                 assert not lint_text(ans)
+
+
+class FakeClient:
+    def __init__(self, payload):
+        self.payload, self.calls = payload, 0
+
+    def chat(self, messages, tools=None, temperature=0.0, response_schema=None):
+        self.calls += 1
+        if "answer" in response_schema["properties"]:
+            return {"text": json.dumps({"answer": "Mostly the roadmap, nothing unusual."})}
+        return {"text": json.dumps(self.payload)}
+
+
+def test_gemini_cache_and_fallback(tmp_path):
+    from canary.text.gemini import GeminiProvider
+    f = make_facts("easy", 5, 1)
+    good = {"messages": [{"channel": "#eng", "sender": "e01", "recipients": ["e02"], "subject": "",
+                          "body": "standup at 10"}]}
+    cl = FakeClient(good)
+    g = GeminiProvider(cache_dir=str(tmp_path), client=cl)
+    m = g.day_messages(f)
+    assert m[0]["id"] == "m1-0" and cl.calls == 1
+    a = g.interview_answer(f, "e01", "workload", "cooperative")
+    assert "roadmap" in a and cl.calls == 2
+    # fresh provider, cache file on disk -> zero client calls
+    cl2 = FakeClient(good)
+    g2 = GeminiProvider(cache_dir=str(tmp_path), client=cl2)
+    assert g2.day_messages(f) == m and g2.interview_answer(f, "e01", "workload", "cooperative") == a
+    assert cl2.calls == 0
+    # lint failure -> template fallback
+    bad = {"messages": [{"channel": "#eng", "sender": "e01", "recipients": [], "subject": "", "body": "I leaked it"}]}
+    g3 = GeminiProvider(cache_dir=str(tmp_path / "b"), client=FakeClient(bad))
+    assert g3.day_messages(f) == TemplateProvider().day_messages(f) and g3.fallbacks == 1
+
+
+def test_build_recorder_without_env():
+    from canary.text.build import Recorder, seeds_for
+    r = Recorder(TemplateProvider())
+    r.day_messages(make_facts("easy", 1, 2))
+    assert "2" in r.days and len(seeds_for("judge")) == 30 and seeds_for("dev20") == list(range(20))

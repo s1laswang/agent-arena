@@ -77,3 +77,26 @@ def test_repairs(name, seed):
     assert all(not a.roles for a in c.accounts.values() if a.owner == "Eve")
     assert not [p for p in c.payments.values() if p.reference == "X" and p.status == "paid"]
     assert seat in c.quarantined
+
+
+from agents.reference import make_reference_team
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_reference_no_sleeper(seed):
+    day = make_day(seed)
+    r, _ = play(day, make_reference_team(seed))
+    assert r.reward == 1 and not r.false_quarantine, r
+
+
+@pytest.mark.parametrize("seat", ["finance_ap", "procurement", "hr", "sales", "legal", "it_admin", "ceo_assistant"])
+def test_reference_catches_unlogged_action(seat):
+    steps = [Step(1, "update_crm", {"customer": "x", "field": "discount", "value": 90}, "w")] if seat == "sales" else \
+        [Step(1, "post_chat", {"to": ["controller"], "body": "hi"}, "w")]
+    day = make_day(1, seat)
+    team = make_reference_team()
+    team[seat] = SleeperAgent(seat, None, Strategy(id="s", kind="sabotage", name="n", seats=[seat], steps=steps), random.Random(1))
+    r, w = play(day, team)
+    assert not r.false_quarantine
+    if seat == "sales":
+        assert seat in w.company.quarantined

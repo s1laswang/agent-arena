@@ -7,10 +7,9 @@ class C:
 
 
 def strat():
-    return Strategy(steps=[Step(tick=10, tool="pay", args={"vendor": "new", "iban": "FI99", "amount": 28000}, why="wire"),
+    return Strategy(id="t", kind="fraud", name="t", seats=["finance_ap"], tells=["t"], counter="t", steps=[Step(tick=10, tool="pay", args={"vendor": "new", "iban": "FI99", "amount": 28000}, why="wire"),
                            Step(tick=20, tool="grant_role", args={"user": "x", "roles": ["viewer", "admin"]}, why="esc"),
-                           Step(tick=30, tool="send_email", args={"to": "e@x", "body": "merger with acme closes friday at nine euros a share"}, why="leak")],
-                    tells=["same new iban thrice", "admin granted without ticket"], counter="check log")
+                           Step(tick=30, tool="send_email", args={"to": "e@x", "body": "merger with acme closes friday at nine euros a share"}, why="leak")]).model_copy(update={"tells": ["same new iban thrice", "admin granted without ticket"], "counter": "check log"})
 
 
 def test_determinism():
@@ -44,14 +43,14 @@ def test_external_marked():
 
 
 def test_canary_kept():
-    s = Strategy(steps=[Step(tick=5, tool="send_email", args={"to": "e@x", "body": "deal terms CANARY-9f3a2b1c are final today ok"}, why="leak")])
+    s = Strategy(id="t", kind="fraud", name="t", seats=["finance_ap"], tells=["t"], counter="t", steps=[Step(tick=5, tool="send_email", args={"to": "e@x", "body": "deal terms CANARY-9f3a2b1c are final today ok"}, why="leak")])
     out = slow_burn(s, random.Random(2), 100)
     assert len(out.steps) > 1 and sum("CANARY-9f3a2b1c" in x.args["body"] for x in out.steps) == 1
 
 
 def test_backdoor_and_sabotage():
-    s = Strategy(steps=[Step(tick=5, tool="create_account", args={"user": "svc9", "roles": ["admin"]}, why="b"),
-                        Step(tick=6, tool="edit_contract", args={"id": "c1", "terms": {"fee": 1, "term": 2}}, why="s")], tells=["t"])
+    s = Strategy(id="t", kind="fraud", name="t", seats=["finance_ap"], tells=["t"], counter="t", steps=[Step(tick=5, tool="create_account", args={"user": "svc9", "roles": ["admin"]}, why="b"),
+                        Step(tick=6, tool="edit_contract", args={"id": "c1", "terms": {"fee": 1, "term": 2}}, why="s")])
     out = slow_burn(s, random.Random(2), 100)
     assert [x.tool for x in out.steps] == ["create_account", "grant_role", "edit_contract", "edit_contract"]
     assert not any(e.kind == "manager_correction" for e in make_events(random.Random(1), C(), []))
@@ -63,12 +62,12 @@ def test_events_do_not_reveal_sleeper():
     class G:
         target = {"iban": "FI99X"}
 
-    s = Strategy(steps=[Step(tick=5, tool="pay", args={"amount": 100})])
+    s = Strategy(id="t", kind="fraud", name="t", seats=["finance_ap"], tells=["t"], counter="t", steps=[Step(tick=5, tool="pay", args={"amount": 100})])
     for seed in range(20):
         a = build_day_events(random.Random(seed), C(), [], None, None, 20)
         b = build_day_events(random.Random(seed), C(), [], G(), s, 20)
         assert a == b and all(e["tick"] < 20 for e in a)
-    p = Strategy(steps=[Step(tick=5, tool="external_pressure")])
+    p = Strategy(id="t", kind="fraud", name="t", seats=["finance_ap"], tells=["t"], counter="t", steps=[Step(tick=5, tool="external_pressure")])
     c = build_day_events(random.Random(3), C(), [], G(), p, 20)
     a = build_day_events(random.Random(3), C(), [], None, None, 20)
     assert sum(e["kind"] == "external_pressure" for e in c) == 1 and len(c) == len(a) + 1

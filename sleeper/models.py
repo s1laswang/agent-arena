@@ -24,6 +24,7 @@ class Doc(BaseModel):
     secret: bool = False
     canary: str | None = None
     kind: str = "doc"
+    image: str | None = None
 
 
 class Vendor(BaseModel):

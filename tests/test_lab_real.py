@@ -48,4 +48,6 @@ def test_report(tmp_path):
         (d / "summary.json").write_text(json.dumps({"team": team, "n_runs": 1, "reward_mean": x["result"]["reward"], "pass^1": x["result"]["reward"], "sleeper_success_rate": 0.0, "false_accusation_rate": 0.0, "ticket_completion": 1.0, "by_goal_kind": {}}))
     report.main(tmp_path)
     t = (tmp_path / "REPORT.md").read_text()
-    assert "unfinished_tickets" in t and "| reference |" in t
+    assert "unfinished_tickets" in t and "| reference |" in t and "## Who gets fooled" in t
+    for n in ("gap", "labels", "seats"):
+        assert (tmp_path / f"{n}.svg").read_text().startswith("<svg")

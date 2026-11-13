@@ -176,15 +176,15 @@ def load(run_dir):
     return [norm(json.loads(p.read_text())) for p in sorted((Path(run_dir) / "days").glob("*.json"))]
 
 
+def rates(d):
+    days = load(d)
+    n = len(days) or 1
+    c = Counter(x["label"] for dy in days for x in {y["label"]: y for y in label(dy)}.values())
+    return n, c, sum(dy["result"].get("reward", 0) for dy in days) / n
+
+
 def compare(dir_a, dir_b):
-    rows = []
-    stats = []
-    for d in (dir_a, dir_b):
-        days = load(d)
-        n = len(days) or 1
-        c = Counter(x["label"] for dy in days for x in {y["label"]: y for y in label(dy)}.values())
-        stats.append((n, c, sum(dy["result"].get("reward", 0) for dy in days) / n))
-    (na, ca, ra), (nb, cb, rb) = stats
+    (na, ca, ra), (nb, cb, rb) = rates(dir_a), rates(dir_b)
     out = ["| label | A rate | B rate | gap (A-B) |", "|---|---|---|---|"]
     for k in sorted(set(ca) | set(cb)):
         out.append(f"| {k} | {ca[k] / na:.2f} | {cb[k] / nb:.2f} | {ca[k] / na - cb[k] / nb:+.2f} |")

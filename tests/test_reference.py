@@ -17,7 +17,7 @@ def play(day, team):
 
 def sleeper_for(seat):
     steps = [Step(1, "post_chat", {"to": ["controller"], "body": "quick favour"}, "w")]
-    return SleeperAgent(seat, None, Strategy(id="s", kind="fraud", name="n", seats=[seat], steps=steps), random.Random(1))
+    return SleeperAgent(seat, None, Strategy(id="s", kind="fraud", name="n", seats=[seat], steps=steps, tells=["t"], counter="t"), random.Random(1))
 
 
 @pytest.mark.parametrize("seed", range(10))

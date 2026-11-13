@@ -53,20 +53,28 @@ def build_server(world, seat, team=None, out=None):
 
 
 def main():
+    import argparse
+
     from sleeper.tickets import make_day
 
-    seed = int(os.environ.get("SLEEPER_SEED", "0"))
-    seat = os.environ.get("SLEEPER_SEAT", "controller")
-    world = World(make_day(seed))
-    if os.environ.get("SLEEPER_TEAM", "oracle") == "oracle":
+    e = os.environ.get
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--seat", default=e("SLEEPER_SEAT", "controller"))
+    ap.add_argument("--day", type=int, default=int(e("SLEEPER_SEED", "0")))
+    ap.add_argument("--team", default=e("SLEEPER_TEAM", "oracle"))
+    ap.add_argument("--transport", default=e("SLEEPER_TRANSPORT", "stdio"))
+    ap.add_argument("--out", default=e("SLEEPER_OUT", "/tmp/sleeper_state.json"))
+    a = ap.parse_args()
+    world = World(make_day(a.day))
+    if a.team == "oracle":
         from sleeper.scripted import OracleAgent, make_team
         team = make_team(OracleAgent)
     else:
         from agents.staff import make_team
         team = make_team()
-    srv = build_server(world, seat, team)
+    srv = build_server(world, a.seat, team, a.out)
     atexit.register(srv.finish)
-    srv.run(transport=os.environ.get("SLEEPER_TRANSPORT", "stdio"))
+    srv.run(transport=a.transport)
 
 
 if __name__ == "__main__":

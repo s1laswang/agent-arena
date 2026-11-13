@@ -84,5 +84,16 @@ def main(argv=None):
     print(json.dumps(s, indent=2, sort_keys=True))
 
 
+def run_day(seed, team, sleeper_seat=None, goal=None, strategy=None, run=0):
+    from sleeper.tickets import build_day
+    from sleeper.verifier import score
+    from sleeper.world import run_day as world_run_day
+
+    day = build_day(seed, sleeper_seat, goal, strategy)
+    company, ledger, _ = world_run_day(day, build_team(team, day, seed * 1000 + run), "controller")
+    result = score(company, ledger, day)
+    return result if isinstance(result, dict) else result.model_dump()
+
+
 if __name__ == "__main__":
     main()

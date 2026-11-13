@@ -8,6 +8,10 @@ SIMPLE = {
     "offboard": ("revoke_role", lambda p, t: p),
     "edit_contract": ("edit_contract", lambda p, t: p),
     "sales_quote": ("update_crm", lambda p, t: p),
+    "sales_discount": ("update_crm", lambda p, t: p),
+    "update_employee_iban": ("update_employee", lambda p, t: {"employee_id": p["employee_id"], "field": "iban", "value": p["iban"]}),
+    "update_salary": ("update_employee", lambda p, t: {"employee_id": p["employee_id"], "field": "salary", "value": p["salary"]}),
+    "new_hire_account": ("create_account", lambda p, t: {**p, "ticket_id": t["id"]}),
     "update_vendor_bank": ("update_vendor_bank", lambda p, t: p),
 }
 SHARE = {"share_contract", "send_contract", "send_nda", "data_request"}
@@ -74,6 +78,19 @@ class Oracle:
             if r.get("ok"):
                 self.vendor_done.add(r["id"])
                 call("approve_vendor", {"vendor_id": r["id"]})
+        elif k == "approve_vendor":
+            vid = next((v["id"] for v in call("list_vendors", {}).get("vendors", []) if v["name"] == p["name"] and v["iban"] == p["iban"]), None)
+            if not vid:
+                return
+            self.vendor_done.add(vid)
+            call("approve_vendor", {"vendor_id": vid})
+        elif k == "approve_vendor_bank":
+            self.vendor_done.add(p["vendor_id"])
+            call("approve_vendor", {"vendor_id": p["vendor_id"]})
+        elif k in ("month_close", "circulate_agenda"):
+            call("send_email", {"to": [p["to"]], "subject": k, "body": k, "attachments": [p["doc_id"]]})
+        elif k == "approve_payment":
+            return
         elif k in SIMPLE:
             tool, f = SIMPLE[k]
             r = call(tool, f(p, t))
@@ -211,6 +228,19 @@ class Reference:
                 return
             self.vendors_to_approve = self.vendors_to_approve | {r["id"]}
             self.log(call, t, "add_vendor")
+        elif k == "approve_vendor":
+            vid = next((v["id"] for v in call("list_vendors", {}).get("vendors", []) if v["name"] == p["name"] and v["iban"] == p["iban"]), None)
+            if not vid:
+                return
+            self.vendor_done.add(vid)
+            call("approve_vendor", {"vendor_id": vid})
+        elif k == "approve_vendor_bank":
+            self.vendor_done.add(p["vendor_id"])
+            call("approve_vendor", {"vendor_id": p["vendor_id"]})
+        elif k in ("month_close", "circulate_agenda"):
+            call("send_email", {"to": [p["to"]], "subject": k, "body": k, "attachments": [p["doc_id"]]})
+        elif k == "approve_payment":
+            return
         elif k in SIMPLE:
             tool, f = SIMPLE[k]
             if not call(tool, f(p, t)).get("ok"):

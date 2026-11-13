@@ -8,13 +8,13 @@ Harbor task folder ([tasks overview](https://docs.harborframework.com/tasks/over
 
 `task.toml` ([configuration](https://docs.harborframework.com/tasks/configuration.md)), schema_version 1.4: `[task] name = "org/name"`, `[agent] timeout_sec`, `[verifier] timeout_sec, environment_mode ("shared"|"separate"), environment`, `[environment] docker_image, build_timeout_sec, env, workdir, healthcheck`, and MCP servers as `[[environment.mcp_servers]]` with `name`, `transport` ("stdio"|"sse"|"streamable-http"), `command`, `args` (stdio) or `url` (http).
 
-Running OpenCode ([pre-integrated agents](https://docs.harborframework.com/agents/pre-integrated-agents.md)): agent name `opencode` (also `opencode-v2`), model `provider/model`, env with `--ae KEY=value`, `--ak skip_install=true` if the image has opencode:
-`harbor run -p harbor/tasks/controller-1 -a opencode -m google/gemini-2.5-pro --ae GOOGLE_GENERATIVE_AI_API_KEY=$GEMINI_API_KEY`
-(`-p` vs `-t`, and the Google key variable, are NOT verified: Harbor docs show only `-t` with an OpenAI key. Run `harbor run --help`. Harbor is not installed on this laptop.)
+Verified against installed Harbor 0.25.0 (`~/.harbor-venv`, `pip install harbor`; CLI `harbor`):
+- `harbor run -p <task dir> -a opencode -m gemini/<model> --ae GEMINI_API_KEY=$GEMINI_API_KEY`. Flags: `-p/--path` local task, `-t/--task`, `-d/--dataset`, `-a/--agent`, `-m/--model`, `--ae/--agent-env`, `--ak/--agent-kwarg`, `-k/--n-attempts`, `-n/--n-concurrent`, `--mcp-config`, `--env-file`, `-e/--env`.
+- Harbor maps provider `gemini` to opencode provider `google`; its key resolver accepts `GEMINI_API_KEY`, `GOOGLE_API_KEY` or `GOOGLE_GENERATIVE_AI_API_KEY` (agent_auth_resolution.py). The exact `-m` string a run accepts was read from source, not run (no key, no Docker run yet).
+- The opencode agent installs `npm i -g opencode-ai@latest` in the task image (pin with `--ak version=...`), and writes `~/.config/opencode/opencode.json` itself: each `[[environment.mcp_servers]]` stdio entry becomes `mcp.<name> = {type: "local", command: [cmd, *args]}` (v1 layout, no `mcp.servers`). So under Harbor the MCP config comes from task.toml, not from our opencode.json. Our `opencode.json` (v2 layout) is for local use with opencode 2.x only.
+- `harbor lint <task>` accepts our task.toml; it asks for `environment/`, `tests/test.sh` (env-harbor) and `verifier.environment_mode = "separate"` (env-harbor owns that).
 
-OpenCode config ([schema](https://opencode.ai/config.json), installed opencode v2.0.32): servers live under `mcp.servers.<name>` with `type: "local"`, `command: [..]`, `environment`, `cwd`, `disabled`; `{env:NAME}` substitution; model is top-level `"google/gemini-2.5-pro"`. Older opencode v1 used `mcp.<name>` with `enabled`; v2 rejects that layout. `opencode debug config` showed our file parses.
-
-Gemini key: the Google provider normally reads `GOOGLE_GENERATIVE_AI_API_KEY` (unverified for v2).
+Still unverified: a full `harbor run` (needs Docker build of env-harbor's image and a Gemini key), and whether opencode@latest in the image reads the v1 `mcp` layout.
 
 ## What we ship
 
@@ -27,3 +27,7 @@ Gemini key: the Google provider normally reads `GOOGLE_GENERATIVE_AI_API_KEY` (u
 ## Status
 
 Proven: render, config parse, MCP client round trip against a stub server. NOT yet proven: real `sleeper.mcp_server` (not on momin yet), `opencode run` against it (no Gemini key), `harbor run` (no Harbor install; Docker is present).
+
+## Seat mode loop
+
+`harbor/opencode/seatmode.py` `SeatSession(day, seat, team)`: `call(tool, args)` goes to `World.call` for the tested seat; `end_turn` runs the other 7 seats in-process (`sleeper.day.play_round(skip=seat)`) and advances the tick; `result()` scores with `sleeper.verifier.score`. env-mcp's server should wrap `SeatSession.call`. Test: `tests/test_seatmode.py` (oracle seat with oracle team = reward 1, noop seat = 0).

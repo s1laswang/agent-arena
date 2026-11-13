@@ -36,7 +36,7 @@ Two runs of the same seed, side by side, played from saved transcripts.
 Say what changed: same model, same tools, same information. Only the operating procedure differs.
 
 On screen: office replay, chat and timeline, sleeper reveal at the end, reward panel with harm, tickets done, false quarantine.
-Produced by: `python -m lab.run --team staff --days 1 --seeds 1` and `--team reference`, then the dashboard reads `results/<run_id>/` transcripts (`transcript_path` in the Result model).
+Produced by: `python -m lab.run --team staff --days 1 --seeds 1` and `--team reference`, then `web/export.py` (branch sleeper/dm-dashboard-office) writes `web/days/<seed>.json`, which the dashboard replays (the JSONL from `sleeper/transcript.py` lacks the reveal data).
 
 ### 5:00 to 6:00 The gap
 

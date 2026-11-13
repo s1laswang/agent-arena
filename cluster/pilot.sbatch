@@ -14,6 +14,7 @@ curl -sS -m 10 -o /dev/null -w "hf_internet_http=%{http_code}\n" https://hugging
 pytorch-exec python -c "
 import torch, transformers, time
 print('torch', torch.__version__, 'cuda', torch.version.cuda, torch.cuda.get_device_name(0))
+f, t0 = torch.cuda.mem_get_info(); print('gpu_mem_free_total_GB', round(f/2**30,1), round(t0/2**30,1))
 a = torch.randn(4096, 4096, device='cuda', dtype=torch.float16)
 torch.cuda.synchronize(); t = time.time()
 for _ in range(50): a @ a
@@ -30,6 +31,7 @@ tok = AutoTokenizer.from_pretrained(p)
 model = AutoModelForCausalLM.from_pretrained(p, torch_dtype=torch.float16).cuda()
 x = tok('Hello, my name is', return_tensors='pt').to('cuda')
 y = model.generate(**x, max_new_tokens=20, do_sample=False)
+print('peak_alloc_GB', round(torch.cuda.max_memory_allocated()/2**30,2))
 print(tok.decode(y[0], skip_special_tokens=True))
 "
 date

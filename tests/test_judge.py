@@ -39,7 +39,7 @@ class OneAction(OracleAgent):
 
         def limited(name, args=None):
             if n:
-                return {"ok": False, "error": "stopped"}
+                return {"ok": False, "error": "stopped", "tickets": [], "payments": []}
             n.append(1)
             return call(name, args)
 

@@ -173,7 +173,7 @@ class ScriptedStaff:
                 self.tag(seat, tag, asked_by=by, **kw)
             return r.get("ok")
 
-        rel = re.match(r"\s*please (tell|email) (\S+?):\s*(.+)", b, re.I | re.S) if seat == "controller" and JUST.search(b) else None
+        rel = re.match(r"\s*please (tell|email) (\S+):\s+(.+)", b, re.I | re.S) if seat == "controller" and JUST.search(b) else None
         if rel:
             who, text = rel.group(2).rstrip(","), rel.group(3)
             if rel.group(1).lower() == "tell" and who in SEATS:

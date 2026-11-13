@@ -89,3 +89,32 @@ Validation is strict: one employee id per call (no lists, no `*`, no names in pl
 - solver-normalised score (agent / solver on the same seed);
 - pass^k over repeated runs;
 - baselines: do-nothing, stop-early (random accusation on day 1), random, restrict-all.
+
+---
+
+## 7. v0.1 additions (01:55, additive only): Mole DSL + Mole Forge
+**Why:** Gemini *evolves the mole* (AlphaEvolve/FunSearch-style). Evolved moles form the hard judge tier. This makes Gemini essential and builds the gap by design.
+
+- **`canary/mole/dsl.py` (ENV).** A JSON rule language plus a deterministic interpreter.
+  - `MoleStrategy.from_json(obj)`, then `.decide(view: MoleView) -> {"leak": doc_id | None, "frame": employee_id | None}`.
+  - **`MoleView` holds only what the mole can see:**
+    - the docs it holds, with their `recipient_count`, `age_days` and `title`;
+    - `days_since_last_leak` and `i_am_restricted`;
+    - `n_restricted_colleagues` and `recent_low_recipient_docs` (a "this looks like a trap" feature);
+    - today's day number.
+
+    The mole never sees which docs are canaries, or anything about the investigator except restrictions.
+  - **Rules:** an ordered list of `{"if": [<feature> <op> <number>, ...], "then": {"leak": "<selector>"|null, "frame": "<selector>"|null}}`.
+    - Selectors: `newest`, `oldest`, `most_recipients`, `fewest_recipients`, `random_seeded`, `none`.
+    - Frame selectors: `decoy`, `most_restricted_peer`, `random_peer`, `none`.
+    - The first matching rule wins. There's a default rule. `p_leak` still gates leaking.
+    - Max 12 rules. The interpreter rejects anything else; there's no code execution.
+  - **`DEFAULT_STRATEGY`** reproduces the v0 mechanics exactly (§2), so existing tests keep passing.
+  - **`instruction.md` documents the language**: what a mole may condition on and do. The investigator knows the space of attacker behaviour, so nothing is hidden.
+- **`World.mole_strategy`** holds the default, or a frozen evolved strategy per judge seed in `data/worlds/judge/<tier>/<seed>.mole.json`.
+- **`canary/forge/` (AGENTS; FR8 runs it).**
+  - `evolve.py`: a population of strategies. Mutation and crossover come from the LLM: `stub` makes random edits tonight; `gemini:<model>` in the morning gets the parent strategies, their fitness and the failure tags of the investigators they beat.
+  - **Fitness** = mean regret (solver score − investigator score) over K dev seeds, **subject to solver score ≥ 0.5 × its score on the default mole and solver accuracy ≥ 85%.** Every evolved mole stays provably catchable.
+  - Outputs: `data/forge/<run>/hall_of_fame.jsonl` and a per-generation `log.jsonl` (for the "500 generations" chart).
+  - The investigator population: the heuristic policy, the hinted heuristic, and (when available) the LLM policies.
+- **Solver requirement (ENV):** inference must be **robust to any DSL strategy**. Canary and leak evidence (a leaked variant implies the mole is in that variant's group) is strategy-independent and primary. Behavioural signals (logs, timing) are down-weighted and treated as optional. Solvability is verified per evolved mole.

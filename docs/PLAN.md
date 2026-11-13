@@ -52,7 +52,16 @@ Fairness checks:
 | Text gives the answer away | Providers never see the mole; lint + text-only probe |
 | Spam tools | Daily action cap + global cap of 300 |
 
+## Mole Forge: Gemini evolves the mole (v2)
+AlphaEvolve/FunSearch-style:
+- **What evolves:** Gemini writes mole strategies in a safe JSON rule language: what to leak, when to go quiet, whom to frame, using only what a mole can observe.
+- **Fitness:** an evolution loop on FR8 keeps strategies that maximise **regret** (solver score − frontier investigator score), **subject to our solver still catching the mole**.
+- **Judge set:** the hall of fame becomes the frozen hard tier.
+
+Pitch: *"Gemini evolved hundreds of generations of moles; the hardest ones our reference still catches form the benchmark. Frontier agents fail exactly where Gemini learned to hide."* The rule language is documented in the instructions, so the attacker's possible behaviour is fully known. Spec: CONTRACT §7.
+
 ## Gemini's role (essential, not decorative)
+0. **Mole Forge:** evolves the adversary (above). This is the core of the hard tier.
 1. **World builder:** Gemini writes the company: personas, chatter, documents, interview answers. Without it there's no company to investigate.
 2. **Mole (arena mode):** a Gemini mole decides what to leak, when to go quiet and whom to frame. This is the Gemini mole vs investigator clash on FR8.
 3. **Scenario designer:** PAIRED-style. Gemini proposes harder scenarios, kept only if our solver cracks them and the investigator fails them, so every hard case is provably solvable.

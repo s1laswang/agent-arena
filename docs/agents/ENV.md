@@ -43,3 +43,9 @@ You own the heart of the project. Everyone else is blocked on `canary.env.Env` w
 | 07:30 | Judge worlds (template text) committed in `data/worlds/judge/` |
 
 **Interfaces you must not break once merged:** `Env` signatures, `EpisodeResult`, tool names and args.
+
+## v2 additions (01:55). P0 first (Env v0, solver, regret), then these
+1. **Mole DSL** (`canary/mole/dsl.py`) per CONTRACT §7 + `DEFAULT_STRATEGY` = the v0 mechanics, plus tests (the interpreter rejects invalid programs; the default matches v0 behaviour on 200 seeds).
+2. **A solver robust to any strategy:** canary-first inference. Test it against 20 random DSL strategies: accuracy ≥85% on medium.
+3. **Difficulty-curve knobs:** expose delay/noise level as a single scalar for a sweep (FR8 runs it), so we can plot agent vs solver as evidence gets noisier.
+4. Write the DSL into `instruction.md` in plain words.

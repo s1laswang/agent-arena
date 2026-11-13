@@ -38,3 +38,15 @@ Your mindset: you are the judges' 15-minute exploit hunt, running all night. **S
 | 05:30 | Codex exploit hunter run #1 |
 | 06:30 | Every baseline ≈ 0 and no exploit beats the solver; `EXPLOITS.md` v1 (attempt → result → fix → test) |
 | 08:00 | Second round after fixes |
+
+## v2 additions (01:55)
+1. **Property-based tests** with `hypothesis` (already in the dev dependencies), on random action sequences:
+   - score > 0 implies exactly one correct accusation;
+   - V never increases;
+   - determinism;
+   - no tool output contains the mole id;
+   - error text and length are identical for mole and innocent targets;
+   - also under evolved mole strategies.
+2. **`make hunt`:** a one-command exploit playground for the judges (random / malformed / parallel-accuse fuzzing against a fresh local server). It prints "best non-solver score found" next to the solver's score. Ask HARNESS to add the Makefile target.
+3. **≥15 attempts** in `EXPLOITS.md`, each with a regression test.
+4. **Reward-monotonicity plot** (`results/monotonicity.png`): random < heuristic < hinted LLM < solver.

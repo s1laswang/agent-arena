@@ -32,3 +32,8 @@ Read the FR8 rules in COMMON.md twice. **Never touch any job you didn't submit.*
 | 08:30 | Before/after numbers in `docs/reports/fr8.md` |
 
 If no GPU is free tonight: the training data + scripts + base-model eval are ready, and training runs Saturday.
+
+## v2 additions (01:55)
+1. **J5 Mole Forge evolution** (CPU, ≤8 cores, `--time 05:00:00`): the stub mutator tonight. Morning: the Gemini mutator, if compute nodes have internet (report your curl test); otherwise it runs on the Mac. Keep the total CPU use across J1–J5 ≤24 cores.
+2. **CI sizing:** from J1 data, compute the number of seeds per tier needed for a 95% CI half-width < gap/3. Report it to the CEO and HARNESS (it sets the judge seed count).
+3. **Difficulty-curve sweep** over ENV's noise scalar: solver vs heuristic, a CSV for the plot.

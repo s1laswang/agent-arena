@@ -42,3 +42,10 @@ You own craft (15 points) and the most dangerous integrity hole: **the agent rea
 | 05:30 | Harbor task runs locally, isolation check passes |
 | 07:00 | `make reproduce` from a fresh clone |
 | 08:00 | README v1 |
+
+## v2 additions (01:55)
+1. **GitHub Actions** `.github/workflows/ci.yml`: uv, `make test && make reproduce` on push to justSilas, plus a README badge.
+2. **Fresh-clone reproduce** checked hourly (`git clone` into /tmp → `make setup && make reproduce`).
+3. The README gets the expected numbers with confidence intervals, plus real-world grounding: the canary trap (Tom Clancy's term), MI5's "barium meal", and Tesla's 2018 leak hunt using subtly different emails. Verify the citations before writing them.
+4. Add Makefile targets `hunt` (INTEGRITY) and `forge` (AGENTS).
+5. Saturday: a replay viewer (company chat, canary splits, leak feed, a live chart of each suspect's probability, agent vs solver).

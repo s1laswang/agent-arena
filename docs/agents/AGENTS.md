@@ -43,3 +43,15 @@ You produce the two numbers the whole pitch hangs on: **how far the frontier age
 | 05:30 | OpenCode-over-MCP episode |
 | 06:30 | Full frontier runs |
 | 07:30 | `gap.md` with failure modes; Gemini roles all pass with the stub |
+
+## v2 additions (01:55). P0 first (llm layer, frontier gap), then these
+1. **Mole Forge** (`canary/forge/evolve.py`) per CONTRACT §7.
+   - **Tonight:** the `stub` mutator, investigators = heuristic + hinted heuristic (+ the solver as the constraint). **Morning:** a `gemini:<model>` mutator, investigators += OpenAI/Gemini LLM policies.
+   - Hand a CPU-only runner to FR8 (job J5).
+   - The hall of fame becomes the hard-tier judge moles, frozen by ENV.
+2. **Hint ablations:** an `LLMPolicy` with `hint=<failure_tag>` that adds one sentence per failure mode to the system prompt. Run them on medium: each hint must lower its tag's rate and raise the score. These go in `docs/reports/gap.md`.
+3. **`pitch/GEMINI.md`:** answer the Gemini brief's 4 questions:
+   - the problem and why it matters;
+   - how Gemini is integrated: 6 roles (Forge, world builder, designer, exploit hunter, analyst, arena mole);
+   - what's innovative: LLM-driven adversary evolution with a solver-verified solvability constraint;
+   - why Gemini is essential: no company, no evolved moles, no hard tier without it.

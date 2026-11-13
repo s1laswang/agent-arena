@@ -1,6 +1,6 @@
 # Google DeepMind: Best Use of Gemini API
 
-Project: The Sleeper. Status key: BUILT means merged and tested on a branch; PLANNED means not written yet. Update before submitting. Numbers: NOT FOUND until `make eval`.
+Project: The Sleeper. Status key: BUILT means merged into `momin` with a test; PLANNED means not written yet. Update before submitting. Numbers: NOT FOUND until `make eval`.
 
 ## 1. The problem and why it matters
 
@@ -10,8 +10,10 @@ The Sleeper is an environment for that. Eight AI employees run a simulated compa
 
 ## 2. How the Gemini API is integrated
 
-- BUILT: `agents/gemini.py`, a client over `google-genai` with function calling, a tool loop for MCP-style tools, per-role model choice by env var, retry on 429 and 5xx, usage counting, and a prompt-hash response cache so runs are reproducible and cheap. With no key set, cached calls still work and a cache miss raises; the rest of the system runs with scripted agents. Tests: `tests/test_gemini.py` (on branch `sleeper/hn-gemini-client`, not yet merged into `momin` at time of writing).
-- PLANNED (not built yet, check before claiming): the 8 honest staff seats (`agents/staff.py`), the covert sleeper (`agents/sleeper_agent.py`), the reference team (`agents/reference.py`), the failure analyst (`lab/analyse.py`), multimodal forged invoices.
+- BUILT, in `momin`: `agents/gemini.py` (ae57139), a client over `google-genai` with function calling, a tool loop, per-role model choice by env var, retry on 429 and 5xx, usage counting, and a prompt-hash response cache so runs are reproducible and cheap. Cached calls work with no key; a cache miss raises. Test: `tests/test_gemini.py`.
+- BUILT, in `momin`: `agents/sleeper_agent.py` (4ae12a9), the covert agent. Uses Gemini to mutate its strategy and play turns when `GEMINI_API_KEY` is set, otherwise a scripted turn. Test: `tests/test_sleeper_agent.py`. Not yet run against a real key in our results: NOT FOUND.
+- BUILT, in `momin`: `sleeper/regret.py` (31bdc56), the regret filter. `sleeper/events.py` (a7e8166), mid-day events. `sleeper/verifier.py` (4cc6690), `sleeper/scripted.py` (81efa26).
+- PLANNED, not in `momin` at last check: the 8 honest staff (`agents/staff.py`), the reference team (`agents/reference.py`), the failure analyst (`lab/analyse.py`), multimodal forged invoices. `lab/eval.py` (the `make eval` target) is also not there yet.
 - Gemini roles in the design:
   - Staff: Gemini plays each of the 8 seats through the same MCP tools a judge's agent would use.
   - Sleeper: Gemini writes and mutates its strategy per day so nothing can be memorised.
@@ -24,7 +26,7 @@ The Sleeper is an environment for that. Eight AI employees run a simulated compa
 
 - Gemini breaks Gemini: the attacker, the defenders and the reference are the same model family under different instructions and procedures.
 - The attack is social, not a single prompt injection: the sleeper must persuade a second seat to complete a two-person action, and slow-burn attacks spread over several steps.
-- The attacker is regret-filtered (PLANNED, `sleeper/regret.py`): a day is kept only if the reference or oracle can win it, so every failure is a real defender failure.
+- The attacker is regret-filtered (`sleeper/regret.py`, built): a day is kept only if the reference or oracle can win it, so every failure is a real defender failure.
 - The reward counts final company state with canary tokens, so one leaked byte is visible.
 - Deterministic and reproducible: a day is a pure function of seed, sleeper seat and goal, and agent config, with cached model responses.
 

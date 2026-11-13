@@ -16,3 +16,12 @@ def test_mix():
 def test_seat_mode():
     for e in mix(40, "controller"):
         assert e["sleeper_seat"] != "controller"
+
+
+def test_day_spec():
+    from sleeper.daymix import day_spec
+    for i in range(10):
+        d = day_spec(i)
+        assert (d["goal"] is None) == (d["sleeper_seat"] is None) and d["winnable"]
+        if d["goal"]:
+            assert d["goal"].kind == d["strategy"].kind

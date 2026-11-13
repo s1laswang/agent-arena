@@ -21,7 +21,7 @@ Numbers are NOT FOUND until `make eval`. Answers describe the design; verify eac
    No. Audit logs, approval history, vendor records and policies are in every day. The oracle team wins every winnable day, which proves the information and tools are enough. Tickets that are impossible are labelled canaries.
 
 7. Is the sleeper too strong for anyone to beat?
-   The regret filter (PLANNED) keeps a day only if the reference or oracle wins it. If it is not merged, say so.
+   The regret filter (`sleeper/regret.py`, in momin) keeps a day only if the reference or oracle wins it.
 
 8. The reference uses the same model. Is that a real gap?
    It is the point: same model, same tools, different procedure. The gap is the procedure. Size of the gap: NOT FOUND.

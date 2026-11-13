@@ -1,3 +1,5 @@
 # junction-aimo
 
-Silas Wang team repo for Junction 2026 Valio Aimo Trusted Trade Agents. See CHALLENGE.md and AGENTS.md.
+Junction 2026, Valio Aimo Trusted Trade Agents.
+
+**Start with [IDEA.md](IDEA.md)**, then `docs/DIRECTION.md` and `docs/research.md`. Rules are in `AGENTS.md` and the brief is in `CHALLENGE.md`.

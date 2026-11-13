@@ -9,12 +9,12 @@ def export(run_dir, out):
     for p in sorted(glob.glob(os.path.join(run_dir, "days", "*.json"))):
         d = json.load(open(p))
         r = d["result"]
-        team = r.get("team") or r["agent"]
-        i = f"{team}-{r['day_id']}-t{r['trial']}"
-        day = dict(d["day"])
-        day["seed"] = r["day_id"]
+        i = f"{r.get('team') or r['agent']}-{r['seed']}-t{r['trial']}"
+        bad = set(d.get("harmful", []))
+        r = {**r, "transcript_path": f"web/days/{i}.json"}
+        doc = {"id": i, "day": d["day"], "messages": d["messages"], "actions": [{**a, "harmful": a["seq"] in bad} for a in d["ledger"]], "result": [r], "quarantined": d["company"]["quarantined"]}
         with open(os.path.join(out, i + ".json"), "w") as f:
-            json.dump({"id": i, "day": day, "messages": d["messages"], "actions": d["ledger"], "result": [r]}, f)
+            json.dump(doc, f)
 
 
 if __name__ == "__main__":

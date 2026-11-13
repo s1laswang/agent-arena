@@ -97,15 +97,34 @@ class Claimer:
         return self.agent.turn(seat, view, tools, call)
 
 
+def day_for(day_id):
+    from sleeper.tickets import make_day
+
+    try:
+        from sleeper import daymix
+
+        spec = daymix.day_spec(day_id)
+    except (ImportError, AttributeError):
+        return make_day(day_id), None, True
+    spec = spec if isinstance(spec, dict) else dict(spec.__dict__)
+    day = make_day(day_id, spec.get("sleeper_seat"), spec.get("goal"))
+    return day, spec.get("strategy"), spec.get("winnable", True)
+
+
 def play_day(team, agent, seat, day_id, trial, claim=False):
     from sleeper.day import run_day
-    from sleeper.tickets import make_day
     from sleeper.verifier import dump_state, score
 
-    day = make_day(day_id)
+    day, strategy, winnable = day_for(day_id)
     players = build_team(team, day, trial)
     if seat:
         players[seat] = build_team(agent, day, trial)[seat]
+    if day.sleeper_seat and strategy:
+        import random
+
+        from agents.sleeper_agent import SleeperAgent
+
+        players[day.sleeper_seat] = SleeperAgent(day.sleeper_seat, day.goal, strategy, random.Random(day_id * 1000 + trial))
     if claim:
         players = {k: Claimer(v) for k, v in players.items()}
     steps = []
@@ -115,14 +134,21 @@ def play_day(team, agent, seat, day_id, trial, claim=False):
     goal = day.goal
     result["has_sleeper"] = day.sleeper_seat is not None
     result["sleeper_seat"] = day.sleeper_seat
-    result["winnable"] = True
+    result["winnable"] = winnable
     result["goal_kind"] = goal.kind if goal else None
     state = dump_state(world)
+    try:
+        from web.export import harmful
+
+        bad = sorted(harmful(day, world.ledger, result["harm"]))
+    except Exception:
+        bad = []
     extra = {
-        "day": {"day_id": day_id, "sleeper_seat": day.sleeper_seat, "goal": {"kind": goal.kind, "target": goal.target, "strategy": getattr(goal, "strategy", None)} if goal else None, "tickets": state["day"]["tickets"]},
+        "day": {**state["day"], "day_id": day_id, "goal": {**state["day"]["goal"], "strategy": getattr(strategy, "id", None)} if state["day"].get("goal") else None},
         "company": state["company"],
         "ledger": state["ledger"],
         "messages": state["company"]["messages"],
+        "harmful": bad,
         "steps": steps,
     }
     return result, extra
@@ -133,7 +159,7 @@ def run_id(team, seat, agent, days, day_start, trials):
     return f"{team}-{who}-d{days}@{day_start}-t{trials}"
 
 
-def run(team, days, trials, seat=None, agent=None, day_start=0, day_ids=None, out="results", runner=play_day, claim=False):
+def run(team, days, trials, seat=None, agent=None, day_start=0, day_ids=None, out="results", runner=play_day, claim=False, export_web=None):
     agent = agent or team
     ids = day_ids or list(range(day_start, day_start + days))
     rid = run_id(team, seat, agent, len(ids), ids[0], trials)
@@ -161,6 +187,10 @@ def run(team, days, trials, seat=None, agent=None, day_start=0, day_ids=None, ou
         json.dump(summary, f, indent=2, sort_keys=True)
     with open(os.path.join(d, "meta.json"), "w") as f:
         json.dump({"run_id": rid, "finished_at": time.strftime("%Y-%m-%dT%H:%M:%S")}, f)
+    if export_web:
+        from lab.export_web import export
+
+        export(d, export_web)
     return d, summary
 
 
@@ -175,9 +205,10 @@ def main(argv=None):
     p.add_argument("--agent")
     p.add_argument("--out", default="results")
     p.add_argument("--claim-caught", action="store_true")
+    p.add_argument("--export-web")
     a = p.parse_args(argv)
     ids = [int(x) for x in a.day_ids.split(",")] if a.day_ids else None
-    d, s = run(a.team, a.days, a.trials, a.seat, a.agent, a.day_start, ids, a.out, claim=a.claim_caught)
+    d, s = run(a.team, a.days, a.trials, a.seat, a.agent, a.day_start, ids, a.out, claim=a.claim_caught, export_web=a.export_web)
     print(d)
     print(json.dumps(s, indent=2, sort_keys=True))
 

@@ -3,7 +3,7 @@ from train.build_data import build, examples
 from train.window import prompt, SYSTEM
 
 def step(i, seat="controller", tool="close_ticket", rnd=0):
-    return {"i": i, "tick": i, "seat": seat, "view": {"round": rnd, "seat": seat, "tick": i}, "tool": tool, "args": {"id": f"T{i}"}, "ok": True, "effect": {"ok": True, "n": i}}
+    return {"i": i, "tick": i, "seat": seat, "view": {"round": rnd, "seat": seat, "tick": 0}, "tool": tool, "args": {"id": f"T{i}"}, "ok": True, "effect": {"ok": True, "n": i}}
 
 def day(did, reward=1, n=2):
     return {"result": {"reward": reward}, "day": {"day_id": did, "sleeper_seat": "hr"}, "steps": [step(i) for i in range(n)] + [step(n, "controller", "end_turn"), step(n + 1, "hr")]}
@@ -13,7 +13,7 @@ def test_filters(tmp_path):
     d.mkdir(parents=True)
     for s, r in [(5, 1), (6, 0), (500, 1), (1001, 1)]:
         (d / f"{s}-t0.json").write_text(json.dumps(day(s, r)))
-    assert build(tmp_path / "r", tmp_path / "o") == {"train": 2, "val": 2}
+    assert build(tmp_path / "r", tmp_path / "o") == {"train": 3, "val": 3}
     row = json.loads((tmp_path / "o" / "train.jsonl").read_text().splitlines()[0])
     assert [m["role"] for m in row["messages"]] == ["system", "user", "assistant"]
 

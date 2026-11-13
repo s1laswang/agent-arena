@@ -4,9 +4,9 @@
   "mcp": {
     "servers": {
       "sleeper": {
-        "type": "local",
-        "command": ["python", "-m", "sleeper.mcp_server", "--seat", "{env:SLEEPER_SEAT}", "--day", "{env:SLEEPER_DAY}"],
-        "environment": {"SLEEPER_SEAT": "{env:SLEEPER_SEAT}", "SLEEPER_DAY": "{env:SLEEPER_DAY}"}
+        "type": "remote",
+        "url": "http://sleeper-server:8000/mcp",
+        "oauth": false
       }
     }
   }

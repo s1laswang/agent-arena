@@ -29,7 +29,7 @@ def test_summarise():
 
 
 def fake(team, agent, seat, day_id, trial):
-    return row(day_id, 0, int(trial != 2)), {"day": {"seed": day_id}, "messages": [], "actions": []}
+    return row(day_id, 0, int(trial != 2)), {"day": {"day_id": day_id}, "company": {}, "ledger": [], "messages": [], "steps": []}
 
 
 def test_run_and_eval(tmp_path):
@@ -45,3 +45,15 @@ def test_run_and_eval(tmp_path):
     out = ev(["--days", "1", "--trials", "2", "--out", str(tmp_path / "e")], runner=fake)
     assert set(out) >= {"oracle", "refuse_all"}
     assert "gap vs reference" in open(tmp_path / "e/eval/gap.md").read()
+
+
+def test_recorder():
+    from lab.run import Recorder
+
+    class A:
+        def turn(self, seat, view, tools, call):
+            call("read_chat")
+
+    steps = []
+    Recorder("hr", A(), steps).turn("hr", {"tick": 3}, [], lambda t, *a, **k: {"ok": False})
+    assert steps[0]["seat"] == "hr" and steps[0]["ok"] is False and steps[0]["tick"] == 3

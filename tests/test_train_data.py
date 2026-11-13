@@ -17,3 +17,15 @@ def test_filters(tmp_path):
     assert [m["role"] for m in row["messages"]] == ["system", "user", "assistant"]
     assert json.loads(row["messages"][2]["content"])["tool"] == "close_ticket"
     assert len(examples(day(1))) == 1
+
+def test_window_matches_inference():
+    from train.build_data import system_for
+    from train.window import prompt
+    steps = [{"seat": "controller", "obs": f"o{i}", "tool": "read_chat", "args": {}} for i in range(10)]
+    d = {"seed": 1, "reward": 1, "steps": steps}
+    rows = examples(d)
+    assert len(rows) == 10
+    for i, r in enumerate(rows):
+        want = prompt(system_for(steps[i]), "controller", steps[:i], steps[i]["obs"])
+        assert r["messages"][:-1] == want
+    assert len(rows[9]["messages"]) == 2 + 2 * 6 + 1

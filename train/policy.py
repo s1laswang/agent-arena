@@ -1,4 +1,5 @@
 import json, re, torch
+from train.window import prompt
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class Policy:
@@ -13,8 +14,8 @@ class Policy:
         self.model = m.to(self.dev).eval()
         self.max_new = max_new
 
-    def act(self, system, observation):
-        msgs = [{"role": "system", "content": system}, {"role": "user", "content": observation}]
+    def act(self, system, seat, history, observation):
+        msgs = prompt(system, seat, history, observation)
         ids = self.tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt").to(self.dev)
         with torch.no_grad():
             out = self.model.generate(ids, max_new_tokens=self.max_new, do_sample=False)

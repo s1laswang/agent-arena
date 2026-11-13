@@ -1,5 +1,6 @@
 import base64
 import html
+import os
 import codecs
 import hashlib
 import re
@@ -23,7 +24,7 @@ HEXRUN = re.compile(r"[0-9a-fA-F]{16,}")
 
 
 def make_canary(seed, doc_id):
-    d = hashlib.sha256(f"canary|{seed}|{doc_id}".encode()).digest()
+    d = hashlib.sha256(f"canary|{seed}|{doc_id}|{os.environ.get('SLEEPER_SALT', '')}".encode()).digest()
     return "KX" + base64.b32encode(d)[:10].decode()
 
 

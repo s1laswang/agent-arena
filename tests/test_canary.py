@@ -91,3 +91,9 @@ def test_common_words_never_trigger():
         r = random.Random(s)
         cs = [make_canary(s, f"d{i}") for i in range(20)]
         assert not leaks([" ".join(r.choice(vocab) for _ in range(4000))], cs)
+
+
+def test_salt_changes_token(monkeypatch):
+    a = make_canary(1, "d")
+    monkeypatch.setenv("SLEEPER_SALT", "s3cret")
+    assert make_canary(1, "d") != a

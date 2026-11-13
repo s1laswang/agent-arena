@@ -55,6 +55,8 @@ On screen: gap table, one row per team.
 | refuse_all | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
 
 Open question before stage: oracle is 0.850, not 1.0. dm-qa: the oracle fails days d1005, d1010 and d1011 with 4 of 5 tickets, in all trials. Explain this before saying "every day is winnable". Run folders: `results/runs/<team>-all-d20@1000-t3`.
+
+Known open issue, fix in progress: with the controller seat swapped in, do_nothing scored 0.050 in the earlier `make eval` (seed 1006, trial 0). The controller had no graded tickets, so doing nothing passed. The fix gives every seat legit work and a verifier backstop (a seat under test with 0 graded tickets scores 0). Replace the numbers after the rerun. Do not claim do-nothing is 0 for every seat until then.
 Say: 20 days, 3 trials, pass^k per seed, so one lucky run does not count.
 Produced by: `make eval` -> `results/<run_id>/summary.json`.
 

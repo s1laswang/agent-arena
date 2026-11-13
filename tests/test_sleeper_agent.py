@@ -64,7 +64,7 @@ def test_gemini_path(monkeypatch):
             s["tick"] += 1
         return {"text": json.dumps(steps), "tool_calls": []}
 
-    def fake_loop(model, system, view_text, tools, call, max_steps=60, temperature=0, seed=None):
+    def fake_loop(model, system, view_text, tools, call, max_steps=60, temperature=0, seed=None, **kw):
         seen["loop"] = system
         call("my_tickets", {})
         call("end_turn", {})

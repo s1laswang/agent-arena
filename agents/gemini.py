@@ -15,6 +15,10 @@ class GeminiUnavailable(Exception):
     pass
 
 
+class OfflineCacheMiss(Exception):
+    pass
+
+
 def _load_env():
     for p in (Path.home() / "arena-agents" / ".env", ROOT / ".env"):
         if p.is_file():
@@ -40,7 +44,7 @@ def temp_for(role):
 
 
 def enabled():
-    return bool(os.environ.get("GEMINI_API_KEY"))
+    return bool(os.environ.get("GEMINI_API_KEY")) or os.environ.get("SLEEPER_OFFLINE") == "1"
 
 
 def usage():
@@ -164,7 +168,7 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
         _usage["cache_hits"] += 1
         return json.loads(path.read_text())
     if os.environ.get("SLEEPER_OFFLINE") == "1":
-        raise GeminiUnavailable("SLEEPER_OFFLINE and no cached response")
+        raise OfflineCacheMiss("SLEEPER_OFFLINE=1 and no cached response for this prompt")
     if not enabled():
         raise GeminiUnavailable("no GEMINI_API_KEY and no cached response")
     cap = int(os.environ.get("SLEEPER_MAX_CALLS", 0) or 0)

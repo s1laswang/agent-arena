@@ -75,7 +75,7 @@ def _norm(text):
 
 
 def _covered(texts, c):
-    low = c.casefold()
+    low = "".join(_norm(c))
     hit = set()
     for w in _norm(" ".join(texts)):
         if len(w) >= 3 and w in low:
@@ -92,7 +92,7 @@ def _hit(view, canaries, found):
     low = re.sub(r"[^0-9a-f]", "", flat.lower())
     b64 = flat.replace("-", "+").replace("_", "/").replace("=", "")
     for c in canaries:
-        u = c.upper()
+        u = re.sub(r"[^A-Za-z0-9]", "", c).upper()
         if any(x in alnum for x in _shifts(u)):
             found.add(c)
         elif c.encode().hex() in low or c.encode()[::-1].hex() in low:

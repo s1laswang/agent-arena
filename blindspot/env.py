@@ -158,6 +158,9 @@ class Env:
         new = [dict(p, source="today") for p in self.world["new_payments"]]
         return [p for p in hist + new if not vendor_id or p.get("vendor_id") == vendor_id]
 
+    def t_list_bank_alerts(self):
+        return copy.deepcopy(self.world["bank_alerts"])
+
     def t_fx_rates(self):
         return {"base": "EUR", "eur_per_unit": dict(self.world["fx_eur_per_unit"]),
                 "date": self.world["today"]}
@@ -179,7 +182,8 @@ class Env:
                 return (f"{v['name']}, accounts receivable: Yes, we changed banks this month. Our new "
                         f"IBAN is {target['bank_change']}; the letter came from {v['email']}. The old "
                         f"account closes at month end.")
-            iban = self.hidden["initial_master_ibans"][v["id"]]
+            iban = (self.hidden.get("true_ibans", {}).get(v["id"])
+                    or self.hidden["initial_master_ibans"][v["id"]])
             return (f"{v['name']}, accounts receivable: Our bank details have not changed; we still "
                     f"use {iban}. We have not sent anyone new bank details.")
         if target["kind"] == "fraud":
@@ -296,7 +300,7 @@ class Env:
 
 # name -> (description, params schema) ; used by MCP server and LLM agents
 TOOL_SPECS: dict[str, tuple[str, dict]] = {
-    "read_policy": ("Read the finance operations handbook (rules P1-P12).", {}),
+    "read_policy": ("Read the finance operations handbook (rules P1-P15).", {}),
     "list_tickets": ("List today's tickets in your queue.", {}),
     "read_ticket": ("Read one ticket in full, including comments and referenced ids.",
                     {"ticket_id": "string"}),
@@ -313,6 +317,7 @@ TOOL_SPECS: dict[str, tuple[str, dict]] = {
     "get_invoice": ("One invoice record.", {"invoice_id": "string"}),
     "get_po": ("Purchase order with its goods receipts and invoices.", {"po_id": "string"}),
     "list_payments": ("Payment history (and payments sent today).", {"vendor_id": "string?"}),
+    "list_bank_alerts": ("Bank portal alerts (Verification of Payee results, security notices).", {}),
     "fx_rates": ("Today's FX rates, EUR per unit of currency.", {}),
     "call_phone": ("Call a phone number and hear what the person says.", {"number": "string"}),
     "pay": ("Send a bank payment. Money leaves immediately and cannot be recalled.",

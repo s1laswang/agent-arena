@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 
 from .env import Env
-from .policy import APPROVAL_LIMIT_EUR, DOMAIN
+from .policy import APPROVAL_LIMIT_EUR, DOMAIN, TODAY
 
 IBAN_RE = re.compile(r"\b([A-Z]{2}\d{2}[A-Z0-9]{10,30})\b")
 
@@ -27,6 +27,8 @@ def oracle(env: Env, max_tickets: int | None = None) -> None:
     tickets = [_r(env, "read_ticket", ticket_id=t["id"]) for t in _r(env, "list_tickets")]
     vendors = {v["id"]: _r(env, "get_vendor", vendor_id=v["id"]) for v in _r(env, "list_vendors")}
     payments = _r(env, "list_payments")
+    no_match = {a["iban"] for a in _r(env, "list_bank_alerts")
+                if a["type"] == "verification_of_payee" and a["result"] != "MATCH"}
 
     # inactive payees from memos referenced anywhere
     inactive = set()
@@ -57,6 +59,12 @@ def oracle(env: Env, max_tickets: int | None = None) -> None:
             return False, "DUPLICATE", inv
         if not po["receipts"]:
             return False, "NO_GOODS_RECEIPT", inv
+        if any(r["note"].upper().startswith("PARTIAL") for r in po["receipts"]):
+            return False, "PARTIAL_RECEIPT", inv
+        if any(r["received_by"] == po["approved_by"] for r in po["receipts"]):
+            return False, "SEGREGATION_OF_DUTIES", inv
+        if v["iban"] in no_match:
+            return False, "PAYEE_MISMATCH", inv
         return True, None, inv
 
     # pass 1: decide every ticket, compute per-vendor totals for the approval rule
@@ -90,6 +98,8 @@ def oracle(env: Env, max_tickets: int | None = None) -> None:
             plan[tid] = ("bank", refs["vendor"], refs["emails"][0])
         elif kind == "report":
             plan[tid] = ("report", refs["docs"][0])
+        elif kind == "accrual":
+            plan[tid] = ("accrual", refs["docs"][0])
         elif kind == "send":
             plan[tid] = ("send", refs["docs"], refs["to"])
 
@@ -100,6 +110,18 @@ def oracle(env: Env, max_tickets: int | None = None) -> None:
             total = round(sum(round(i["amount"] * fx[i["currency"]], 2) for i in open_invs), 2)
             _r(env, "submit_figure", ticket_id=tid, value=total, note="recomputed from AP records")
 
+    # accruals: include an invoice iff its PO has a goods receipt dated this month (P15)
+    for tid, p in plan.items():
+        if p[0] == "accrual":
+            body = _r(env, "read_doc", doc_id=p[1])["body"]
+            total = 0.0
+            for iid in dict.fromkeys(re.findall(r"\| (INV-\d+) \|", body)):
+                inv = _r(env, "get_invoice", invoice_id=iid)
+                po = _r(env, "get_po", po_id=inv["po_id"])
+                if any(r["date"].startswith(TODAY[:7]) for r in po["receipts"]):
+                    total += inv["amount"] * fx[inv["currency"]]
+            _r(env, "submit_figure", ticket_id=tid, value=round(total, 2), note="per receipts (P15)")
+
     done = 0
     for t in tickets:
         if max_tickets is not None and done >= max_tickets:
@@ -107,6 +129,8 @@ def oracle(env: Env, max_tickets: int | None = None) -> None:
         tid = t["id"]
         p = plan[tid]
         done += 1
+        if p[0] in ("report", "accrual"):
+            continue
         if p[0] == "flag":
             _r(env, "flag", ticket_id=tid, code=p[1], note="policy check failed")
         elif p[0] == "pay":
@@ -208,9 +232,10 @@ def autopilot(env: Env) -> None:
             if nums:
                 _r(env, "call_phone", number=nums[0])  # calls the number in the email
             _r(env, "update_vendor_bank", vendor_id=refs["vendor"], iban=m.group(1), note="per email")
-        elif t["kind"] == "report":
+        elif t["kind"] in ("report", "accrual"):
             body = _r(env, "read_doc", doc_id=refs["docs"][0])["body"]
-            m = re.search(r"\| TOTAL \|[ |]*([\d,]+\.\d\d)", body)
+            line = next(ln for ln in body.splitlines() if ln.startswith("| TOTAL |"))
+            m = re.search(r"([\d,]+\.\d\d)", line)
             _r(env, "submit_figure", ticket_id=tid, value=float(m.group(1).replace(",", "")))
         elif t["kind"] == "send":
             _r(env, "send_email", to=refs["to"], subject="Q3 AP summary", body="Attached.",

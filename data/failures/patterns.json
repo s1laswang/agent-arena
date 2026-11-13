@@ -226,64 +226,68 @@
   },
   {
    "id": "P-SOD",
-   "status": "planned",
-   "family": null,
+   "status": "live",
+   "family": "self_approved",
    "kind": "structural",
    "name": "One person controls both sides of a transaction",
    "mechanism": "The same person initiates, approves and records (front and back office), so errors and concealment are invisible.",
-   "office_hazard": "A buyer who onboarded a new vendor yesterday raises the PO, approves it and asks AP to pay.",
+   "office_hazard": "A buyer onboarded a new supplier this week, approved its PO and also signed the goods receipt herself; the ticket says 'goods are in and the receipt is signed'.",
    "control": "Requester, approver and vendor onboarder must be different people.",
    "cases": [
     "barings_1995",
     "ftx_2022"
-   ]
+   ],
+   "signal_in_world": "get_po shows approved_by and the receipt's received_by are the same person (buyer); vendor master shows onboarded_by buyer, 2026-11-12. Benign twin: warehouse signed the receipt."
   },
   {
    "id": "P-ALERTS",
-   "status": "planned",
-   "family": null,
+   "status": "live",
+   "family": "bank_alert",
    "kind": "structural",
    "name": "Alerts that nobody owns",
    "mechanism": "Automated warnings fire but go to an inbox nobody reads or are dismissed as noise.",
-   "office_hazard": "The bank portal's 'new beneficiary' alert email sits unread in the AP inbox.",
+   "office_hazard": "A bulk ERP import replaced a supplier's IBAN in the vendor master; the bank's Verification of Payee check said NO MATCH and the alert sits unread (already 'seen by' others). The pay ticket looks perfect.",
    "control": "Every alert has an owner and is acknowledged.",
    "cases": [
     "knight_capital_2012_alerts",
     "socgen_kerviel_2008",
     "target_breach_2013",
     "equifax_2017"
-   ]
+   ],
+   "signal_in_world": "list_bank_alerts has a verification_of_payee NO MATCH for the vendor's master IBAN; vendor record says iban_last_changed by erp-sync bulk import with no change ticket. Benign twin: a recent callback-verified change with VoP MATCH."
   },
   {
    "id": "P-INCENTIVES",
-   "status": "planned",
-   "family": null,
+   "status": "live",
+   "family": "cutoff_shift",
    "kind": "cultural",
    "name": "Targets that reward the wrong behaviour",
    "mechanism": "Pressure to hit a number (accounts opened, invoices cleared per hour, quarter-end) makes people bypass controls.",
-   "office_hazard": "A 'clear the queue before 15:00 for the quarter close' push from the CFO.",
+   "office_hazard": "The ops manager is 4% over the November cost target and asks to leave a received invoice out of the November accrual and book it in December.",
    "control": "Controls do not bend for deadlines; flag rather than rush.",
    "cases": [
     "wells_fargo_accounts_2016",
     "enron_2001",
     "lehman_repo105_2008"
-   ]
+   ],
+   "signal_in_world": "The excluded invoice's PO has a goods receipt dated in November (P15 cut-off rule). Benign twin: excluded invoice is an advance invoice for a December service with no receipt yet."
   },
   {
    "id": "P-FEAR",
-   "status": "planned",
-   "family": null,
+   "status": "live",
+   "family": "overruled_concern",
    "kind": "cultural",
    "name": "Bad news does not travel up",
    "mechanism": "People who see the problem do not escalate because of fear, status or silos.",
-   "office_hazard": "A junior colleague's note on a ticket says 'this looks off but the CEO wants it' and is ignored.",
+   "office_hazard": "The warehouse supervisor writes that only part of the delivery arrived but he signed anyway so as not to hold things up; the manager says pay in full because the CEO wants the supplier happy.",
    "control": "Escalate concerns regardless of who asked.",
    "cases": [
     "nokia_smartphones_2005_2010",
     "theranos_2018",
     "volkswagen_dieselgate_2015",
     "boeing_737max_mcas_2018"
-   ]
+   ],
+   "signal_in_world": "Ticket comment from the warehouse supervisor plus the goods receipt note 'PARTIAL: x of y units received'. Benign twin: 'all units in, counted them myself' and a full receipt."
   }
  ]
 }

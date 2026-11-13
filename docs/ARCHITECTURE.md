@@ -38,7 +38,7 @@ A day is a pure function of `(seed, sleeper_seat or none, sleeper_goal or none, 
 | Training | `train/` | branch | Small model fine-tune data and SFT. |
 | Cluster | `cluster/` | branch | Slurm scripts for FR8. |
 | Dashboard | `web/` | built | Replays one day from `web/days/*.json`. |
-| Sgoals library | `sleeper/goals/` | planned | Sleeper goal kinds and strategies. |
+| Goals library | `sleeper/goals/` | planned | Sleeper goal kinds and strategies. |
 
 ## Reading a result
 

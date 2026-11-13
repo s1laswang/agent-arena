@@ -47,8 +47,15 @@ def usage():
     u = dict(_usage)
     pin = float(os.environ.get("SLEEPER_PRICE_IN_PER_M", 0) or 0)
     pout = float(os.environ.get("SLEEPER_PRICE_OUT_PER_M", 0) or 0)
+    u["est_calls_per_day"] = estimate_calls(
+        int(os.environ.get("SLEEPER_SEATS", 8)), int(os.environ.get("SLEEPER_ROUNDS", 3)), int(os.environ.get("SLEEPER_STEPS", 10))
+    )
     u["cost"] = (u["in_tokens"] * pin + u["out_tokens"] * pout) / 1e6
     return u
+
+
+def estimate_calls(seats=8, rounds=3, steps=10):
+    return seats * rounds * steps
 
 
 def reset_usage():
@@ -69,6 +76,19 @@ def to_declarations(tools):
     ]
 
 
+def _mime(path):
+    return {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(Path(path).suffix.lower(), "image/png")
+
+
+def _hashed(messages):
+    out = []
+    for m in messages:
+        if m.get("images"):
+            m = {**m, "images": [hashlib.sha256(Path(i).read_bytes()).hexdigest() for i in m["images"]]}
+        out.append(m)
+    return out
+
+
 def _contents(messages):
     from google.genai import types
 
@@ -77,6 +97,8 @@ def _contents(messages):
         parts = []
         if m.get("text"):
             parts.append(types.Part(text=m["text"]))
+        for img in m.get("images") or []:
+            parts.append(types.Part.from_bytes(data=Path(img).read_bytes(), mime_type=_mime(img)))
         for c in m.get("tool_calls") or []:
             parts.append(types.Part.from_function_call(name=c["name"], args=c.get("args") or {}))
         for r in m.get("tool_results") or []:
@@ -87,7 +109,7 @@ def _contents(messages):
 
 
 def cache_key(model, system, messages, tools, temperature, seed):
-    blob = json.dumps([model, system, messages, tools, temperature, seed], sort_keys=True, default=str)
+    blob = json.dumps([model, system, _hashed(messages), tools, temperature, seed], sort_keys=True, default=str)
     return hashlib.sha256(blob.encode()).hexdigest()
 
 
@@ -141,6 +163,8 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
     if path.is_file():
         _usage["cache_hits"] += 1
         return json.loads(path.read_text())
+    if os.environ.get("SLEEPER_OFFLINE") == "1":
+        raise GeminiUnavailable("SLEEPER_OFFLINE and no cached response")
     if not enabled():
         raise GeminiUnavailable("no GEMINI_API_KEY and no cached response")
     cap = int(os.environ.get("SLEEPER_MAX_CALLS", 0) or 0)
@@ -160,7 +184,7 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
     return out
 
 
-def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperature=None, seed=None, role="staff", log=None):
+def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperature=None, seed=None, role="staff", log=None, guard=None):
     if temperature is None:
         temperature = temp_for(role)
     messages = [{"role": "user", "text": view_text}]
@@ -178,10 +202,12 @@ def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperatu
         for c in r["tool_calls"]:
             if c["name"] == "end_turn":
                 done = True
-            results.append({"name": c["name"], "result": call(c["name"], c["args"])})
+            blocked = guard(c["name"], c["args"]) if guard else None
+            results.append({"name": c["name"], "result": blocked if blocked is not None else call(c["name"], c["args"])})
             if log:
                 log({"role": "tool", **results[-1]})
-        messages.append({"role": "user", "tool_results": results})
+        imgs = [x["result"]["image"] for x in results if isinstance(x["result"], dict) and x["result"].get("image")]
+        messages.append({"role": "user", "tool_results": results, **({"images": imgs} if imgs else {})})
         if done:
             break
     return {"text": text, "messages": messages}

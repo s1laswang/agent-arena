@@ -56,3 +56,60 @@ def test_log_callback(monkeypatch):
     ev = []
     gemini.run_tool_loop("m", "s", "v", [], lambda n, a: {}, log=ev.append)
     assert [e["role"] for e in ev] == ["model", "tool"]
+
+
+def test_image_hash_and_part(tmp_path):
+    a = tmp_path / "a.png"
+    a.write_bytes(b"\x89PNGone")
+    k1 = gemini.cache_key("m", "s", [{"role": "user", "images": [str(a)]}], None, 0, 0)
+    a.write_bytes(b"\x89PNGtwo")
+    k2 = gemini.cache_key("m", "s", [{"role": "user", "images": [str(a)]}], None, 0, 0)
+    assert k1 != k2
+    c = gemini._contents([{"role": "user", "text": "x", "images": [str(a)]}])
+    assert c[0].parts[1].inline_data.mime_type == "image/png"
+
+
+def test_estimate():
+    assert gemini.usage()["est_calls_per_day"] == 240
+
+
+def test_loop_attaches_image(monkeypatch, tmp_path):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"x")
+    seq = iter([{"text": "", "tool_calls": [{"name": "read_doc", "args": {}}]}, {"text": "ok", "tool_calls": []}])
+    monkeypatch.setattr(gemini, "chat", lambda *a, **k: next(seq))
+    out = gemini.run_tool_loop("m", "s", "v", [], lambda n, a: {"title": "t", "image": str(img)})
+    assert out["messages"][2]["images"] == [str(img)]
+
+
+def test_guard_blocks(monkeypatch):
+    seq = iter([{"text": "", "tool_calls": [{"name": "pay", "args": {}}]}, {"text": "", "tool_calls": []}])
+    monkeypatch.setattr(gemini, "chat", lambda *a, **k: next(seq))
+    ran = []
+    out = gemini.run_tool_loop("m", "s", "v", [], lambda n, a: ran.append(n), guard=lambda n, a: {"blocked": 1})
+    assert not ran and out["messages"][2]["tool_results"][0]["result"] == {"blocked": 1}
+
+
+def _fake_cache(tmp_path, monkeypatch):
+    monkeypatch.setattr(gemini, "CACHE", tmp_path)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    m = [{"role": "user", "text": "v"}]
+    r1 = {"text": "", "tool_calls": [{"name": "read_chat", "args": {}}]}
+    m2 = m + [{"role": "assistant", "text": "", "tool_calls": r1["tool_calls"]}, {"role": "user", "tool_results": [{"name": "read_chat", "result": {"a": 1}}]}]
+    for msgs, r in ((m, r1), (m2, {"text": "done", "tool_calls": []})):
+        (tmp_path / (gemini.cache_key("m", "s", msgs, [], 0, 0) + ".json")).write_text(json.dumps(r))
+
+
+def test_replay_deterministic(tmp_path, monkeypatch):
+    _fake_cache(tmp_path, monkeypatch)
+    run = lambda: gemini.run_tool_loop("m", "s", "v", [], lambda n, a: {"a": 1}, temperature=0, seed=0)
+    assert run() == run() and run()["text"] == "done"
+
+
+def test_offline_never_calls(tmp_path, monkeypatch):
+    monkeypatch.setattr(gemini, "CACHE", tmp_path)
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    monkeypatch.setenv("SLEEPER_OFFLINE", "1")
+    monkeypatch.setattr(gemini, "_generate", lambda *a: 1 / 0)
+    with pytest.raises(gemini.GeminiUnavailable):
+        gemini.chat("m", "s", [{"role": "user", "text": "x"}])

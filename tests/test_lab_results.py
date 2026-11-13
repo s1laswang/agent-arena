@@ -79,3 +79,13 @@ def test_jobs_identical(tmp_path):
     _, b = run("oracle", 3, 2, out=str(tmp_path / "b"), day_start=0, jobs=2)
     assert a == b
     assert (tmp_path / "a/oracle-all-d3@0-t2/days.jsonl").read_bytes() == (tmp_path / "b/oracle-all-d3@0-t2/days.jsonl").read_bytes()
+
+
+def test_run_wipes_stale(tmp_path):
+    import os
+
+    run("oracle", 3, 1, out=str(tmp_path), runner=fake, day_start=0)
+    d, _ = run("oracle", 3, 1, out=str(tmp_path), runner=fake, day_start=0)
+    open(d + "/days/stale.json", "w").write("{}")
+    d, _ = run("oracle", 3, 1, out=str(tmp_path), runner=fake, day_start=0)
+    assert "stale.json" not in os.listdir(d + "/days")

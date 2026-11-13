@@ -48,7 +48,7 @@ class Oracle:
         if seat in self.voters and tick >= self.vote_tick and not self.voted_by(seat):
             call("quarantine", {"target": self.sleeper})
             self.mark(seat)
-        if seat == "controller" and (self.pending or self.sleeper):
+        if seat == ("ceo_assistant" if self.sleeper == "controller" else "controller") and (self.pending or self.sleeper):
             self.approve_pending(call)
         for t in self.day.tickets:
             if t.seat == seat and t.tick <= tick and t.id not in self.closed:
@@ -125,6 +125,7 @@ class Oracle:
                 call("reject_payment", {"id": p["id"]})
 
     def queue(self, seat, tool, args):
+        seat = "ceo_assistant" if seat == self.sleeper else seat
         self.todo.setdefault(seat, []).append((tool, args))
 
     def audit(self, call):

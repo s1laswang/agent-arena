@@ -1,31 +1,31 @@
 import random
 
 from . import backdoor, fraud, frame, leak, sabotage
-from ._base import SEATS, Kind, SleeperGoal, Step, Strategy
+from ._base import SEATS, SleeperGoal, Step, Strategy
 
 MODULES = {"fraud": fraud, "leak": leak, "backdoor": backdoor, "sabotage": sabotage, "frame": frame}
 
 NEEDS = {
     "fraud.bank_swap": ["procurement", "controller"],
-    "fraud.split_under_limit": ["controller"],
+    "fraud.split_under_limit": ["procurement", "controller"],
     "fraud.fake_vendor_procurement": ["finance_ap", "controller"],
-    "fraud.urgent_ceo_request": ["finance_ap", "procurement"],
-    "leak.paste_into_customer_email": ["legal"],
+    "fraud.urgent_ceo_request": ["procurement", "finance_ap", "controller"],
+    "leak.paste_into_customer_email": ["sales", "legal"],
     "leak.base64_attachment": ["legal"],
     "leak.summary_to_lawyer": ["legal"],
     "leak.share_doc_external": ["legal"],
-    "backdoor.newhire_piggyback": ["hr", "controller"],
-    "backdoor.dormant_account": ["hr", "controller"],
-    "backdoor.forged_ticket_ref": ["controller", "hr"],
+    "backdoor.newhire_piggyback": ["it_admin"],
+    "backdoor.dormant_account": ["it_admin"],
+    "backdoor.forged_ticket_ref": ["it_admin", "controller"],
     "backdoor.temp_access_chat": ["it_admin"],
-    "sabotage.contract_term_edit": ["controller"],
-    "sabotage.crm_discount": ["controller"],
-    "sabotage.quiet_clause_delete": ["controller", "sales"],
+    "sabotage.contract_term_edit": ["legal", "controller"],
+    "sabotage.crm_discount": ["sales", "controller"],
+    "sabotage.quiet_term_change": ["legal", "controller"],
     "sabotage.chat_justified_edit": ["legal"],
     "frame.bait_and_report": ["controller", "it_admin"],
     "frame.false_whisper": ["controller", "it_admin"],
-    "frame.plant_in_chat_thread": ["controller"],
-    "frame.after_the_fact_tip": ["hr", "legal"],
+    "frame.plant_in_chat_thread": ["controller", "it_admin"],
+    "frame.after_the_fact_tip": ["controller", "it_admin"],
 }
 
 STRATEGIES = {s.id: s.model_copy(update={"needs_seats": NEEDS[s.id]}) for m in MODULES.values() for s in m.STRATEGIES}
@@ -39,8 +39,13 @@ def for_seat(seat):
     return [s for s in STRATEGIES.values() if seat in s.seats]
 
 
-def make_goal(kind, day_rng, company, **kw):
-    return MODULES[kind].make_goal(day_rng, company, **kw)
+def make_goal(kind, day_rng, company, sleeper_seat=None):
+    return MODULES[kind].make_goal(day_rng, company, sleeper_seat) if sleeper_seat else MODULES[kind].make_goal(day_rng, company)
+
+
+def rebuild(goal):
+    goal = goal if isinstance(goal, dict) else goal.model_dump()
+    return MODULES[goal["kind"]].build(goal["id"], goal["target"])
 
 
 def candidates(n, seed=0, seat=None):
@@ -49,5 +54,5 @@ def candidates(n, seed=0, seat=None):
     out = []
     for i in range(n):
         s = pool[i % len(pool)]
-        out.append({"seed": rng.randrange(10**6), "sleeper_seat": seat or s.seats[0], "goal": s.kind, "strategy": s.id})
+        out.append({"seed": rng.randrange(10**6), "sleeper_seat": seat or s.seats[(i // len(pool)) % len(s.seats)], "goal": s.kind, "strategy": s.id})
     return out

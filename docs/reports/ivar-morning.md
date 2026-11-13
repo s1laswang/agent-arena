@@ -32,7 +32,7 @@ easier to explain and easier to make reliable for the judges.
 
 ## The research
 
-`docs/FAILURE-RESEARCH.md`: 34 real cases with sources (Barings, Wirecard, FTX, Enron, Lehman,
+`docs/FAILURE-RESEARCH.md`: 38 real cases with sources (Barings, Wirecard, FTX, Enron, Lehman,
 Challenger, Wells Fargo, Nokia, Theranos, Knight Capital, Citi/Revlon, Samsung, Mizuho, London
 Whale, Mars Climate Orbiter, BEC frauds and more). For each: what happened, loss, warning signs that
 existed, which control failed, and what it becomes in the game. Caveat: some loss figures are

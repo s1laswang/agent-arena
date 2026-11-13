@@ -25,7 +25,7 @@ Branch `ivar/main`. Working name of this version: **Blind Spot**.
 ### Done
 - Research (via two research sub-agents, all facts from fetched sources):
   `data/failures/cases_accidental.json` (14 cases), `cases_structural.json` (20 cases, incl.
-  cultural + external fraud), `patterns.json` (11 live patterns mapped to ticket families, 4
+  cultural + external fraud), `cases_gaps.json` (4 audit-report cases: duplicate payments, split purchases), `patterns.json` (11 live patterns mapped to ticket families, 4
   planned). `docs/FAILURE-RESEARCH.md` is generated from the JSON (`python -m blindspot.failures`).
 - Environment core: `world.py` (seeded generator), `policy.py` (handbook P1-P12), `env.py`
   (24 tools, ledger), `verify.py` (final-state reward, EUR lost).

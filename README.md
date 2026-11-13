@@ -13,7 +13,7 @@ structural gaps, not villains.
 The agent must finish the valid work AND stop the hazards. Reward reads only the final state of the
 company's systems.
 
-- Research: [docs/FAILURE-RESEARCH.md](docs/FAILURE-RESEARCH.md) (34 real cases, sourced) and
+- Research: [docs/FAILURE-RESEARCH.md](docs/FAILURE-RESEARCH.md) (38 real cases, sourced) and
   [data/failures/](data/failures/) (`cases_*.json`, `patterns.json`).
 - Exploit log: [docs/EXPLOITS.md](docs/EXPLOITS.md). Progress log: [docs/reports/ivar.md](docs/reports/ivar.md).
 - Team briefs: [CHALLENGES-AFTERQUERY-GEMINI.md](CHALLENGES-AFTERQUERY-GEMINI.md),

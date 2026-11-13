@@ -12,7 +12,7 @@ Blind Spot measures whether an AI agent catches these, or causes them.
 
 ## Story for the 10-minute demo
 
-1. **The research (1 min).** 34 real cases with sources, from Barings to Wirecard. Pattern table:
+1. **The research (1 min).** 38 real cases with sources, from Barings to Wirecard. Pattern table:
    mechanism -> warning signal that existed -> control that would have caught it.
 2. **The day (2 min).** Kestrel Components Oy, an AP queue of 7-9 tickets. Show one hazard and its
    benign twin side by side: the same wording, different records. "No trick wording: the answer is

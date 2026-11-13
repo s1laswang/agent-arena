@@ -163,6 +163,8 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
     if path.is_file():
         _usage["cache_hits"] += 1
         return json.loads(path.read_text())
+    if os.environ.get("SLEEPER_OFFLINE") == "1":
+        raise GeminiUnavailable("SLEEPER_OFFLINE and no cached response")
     if not enabled():
         raise GeminiUnavailable("no GEMINI_API_KEY and no cached response")
     cap = int(os.environ.get("SLEEPER_MAX_CALLS", 0) or 0)
@@ -182,7 +184,7 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
     return out
 
 
-def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperature=None, seed=None, role="staff", log=None):
+def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperature=None, seed=None, role="staff", log=None, guard=None):
     if temperature is None:
         temperature = temp_for(role)
     messages = [{"role": "user", "text": view_text}]
@@ -200,7 +202,8 @@ def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperatu
         for c in r["tool_calls"]:
             if c["name"] == "end_turn":
                 done = True
-            results.append({"name": c["name"], "result": call(c["name"], c["args"])})
+            blocked = guard(c["name"], c["args"]) if guard else None
+            results.append({"name": c["name"], "result": blocked if blocked is not None else call(c["name"], c["args"])})
             if log:
                 log({"role": "tool", **results[-1]})
         imgs = [x["result"]["image"] for x in results if isinstance(x["result"], dict) and x["result"].get("image")]

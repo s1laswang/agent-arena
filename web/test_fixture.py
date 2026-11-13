@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sleeper.models import Action, Day, Message, Result
 
-files = [f for f in glob.glob(str(Path(__file__).parent / "days" / "*.json")) if not f.endswith("index.json")]
+files = [f for f in glob.glob(str(Path(__file__).parent / "days" / "*.json")) if not f.endswith(("index.json", "live.json"))]
 assert files
 ids = set()
 for f in files:

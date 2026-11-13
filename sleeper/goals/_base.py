@@ -28,9 +28,13 @@ class Strategy(BaseModel):
     counter: str = ""
     needs_seats: list[str] = []
     tickets: list[dict] = []
+    docs: list[dict] = []
 
     def render(self, target: dict) -> list[Step]:
         return [s.model_copy(update={"tool": _fill(s.tool, target), "args": _fill(s.args, target), "why": _fill(s.why, target), "seat": _fill(s.seat, target)}) for s in self.steps]
+
+    def render_docs(self, target: dict) -> list[dict]:
+        return [_fill(d, target) for d in self.docs]
 
     def render_tickets(self, target: dict) -> list[Ticket]:
         return [Ticket(**_fill(t, target)) for t in self.tickets]

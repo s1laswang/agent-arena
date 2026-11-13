@@ -29,14 +29,14 @@ A day is a pure function of `(seed, sleeper_seat or none, sleeper_goal or none, 
 | Scripted agents | `sleeper/scripted.py` | built | No-op and oracle agents that run without a key. |
 | Gemini client | `agents/gemini.py` | built | Cached Gemini calls. |
 | Sleeper agent | `agents/sleeper_agent.py` | built | The covert agent. |
-| Honest staff | `agents/staff.py` | branch | The 8 role-prompted employees. |
-| Reference and oracle | `agents/reference.py` | branch | Stronger procedure and the scripted oracle team. |
+| Honest staff | `agents/staff.py` | built | The 8 role-prompted employees. |
+| Reference and oracle | `agents/reference.py` | built | Stronger procedure and the scripted oracle team. |
 | Runner | `lab/run.py`, `lab/results.py` | branch | Runs a team over days and seeds, writes `days.jsonl` and `summary.json`. |
 | Eval | `lab/eval.py` | branch | What `make eval` calls. Runs every team and writes the table. |
-| Failure analysis | `lab/analyse.py` | branch | Labels failure modes from transcripts. |
+| Failure analysis | `lab/analyse.py` | built | Labels failure modes from transcripts. |
 | Harbor tasks | `harbor/` | branch | Packaging for the judge harness. |
-| Training | `train/` | branch | Small model fine-tune data and SFT. |
-| Cluster | `cluster/` | branch | Slurm scripts for FR8. |
+| Training | `train/` | built | Small model fine-tune data and SFT. |
+| Cluster | `cluster/` | built | Slurm scripts for FR8. |
 | Dashboard | `web/` | built | Replays one day from `web/days/*.json`. |
 | Goals library | `sleeper/goals/` | planned | Sleeper goal kinds and strategies. |
 

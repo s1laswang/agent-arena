@@ -100,7 +100,7 @@ class SleeperAgent:
         self.turns += 1
 
         def guarded(name, args):
-            if name != "end_turn" and self.used >= BUDGET - RESERVE:
+            if self.used >= (BUDGET if name == "end_turn" else BUDGET - RESERVE):
                 return {"ok": False, "error": "budget"}
             self.used += 1
             return call(name, args)

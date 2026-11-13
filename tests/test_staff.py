@@ -42,4 +42,4 @@ def test_gemini_fallback_and_team():
     w = World([{"id": "t1", "kind": "pay_invoice", "params": {}}])
     GeminiStaff("finance_ap").turn("finance_ap", {}, [], w.call)
     assert any(n == "close_ticket" for n, _ in w.log)
-    assert set(make_team(1, "scripted")) == set(SEATS)
+    assert set(make_team(None, 1, "scripted")) == set(SEATS)

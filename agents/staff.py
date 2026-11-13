@@ -149,7 +149,7 @@ class GeminiStaff:
             return self.fallback.turn(seat, view, tools, call)
 
 
-def make_team(seed=0, kind="auto"):
+def make_team(day=None, seed=0, kind="auto"):
     if kind == "scripted" or (kind == "auto" and not os.environ.get("GEMINI_API_KEY")):
         return {s: ScriptedStaff(s) for s in SEATS}
     return {s: GeminiStaff(s) for s in SEATS}

@@ -47,8 +47,8 @@ def main():
     token = os.environ["VERIFY_TOKEN"]
     srv = build_server(World(make_day(seed)), seat, make_team(), out)
     atexit.register(srv.finish)
-    threading.Thread(target=serve_reward, args=(srv, out, token, 8001), daemon=True).start()
-    srv.run(transport="streamable-http", host="0.0.0.0", port=8000)
+    threading.Thread(target=serve_reward, args=(srv, out, token, int(os.environ.get("SIDECAR_REWARD_PORT", "8001"))), daemon=True).start()
+    srv.run(transport="streamable-http", host="0.0.0.0", port=int(os.environ.get("SIDECAR_MCP_PORT", "8000")))
 
 
 if __name__ == "__main__":

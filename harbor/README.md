@@ -25,3 +25,12 @@ Known limits for rw-exploit: the agent can open :8000 directly with any MCP clie
 Oracle: `solution/solve.sh` runs `harbor/oracle_client.py`, an MCP client playing the seat with `sleeper.scripted.OracleAgent` through the real tools until the day ends.
 
 Check structure without docker: `pytest tests/test_harbor.py`. Local no-docker smoke: run `python -m harbor.sidecar` with SLEEPER_SEED, SLEEPER_SEAT, SLEEPER_OUT, VERIFY_TOKEN set, then `python harbor/oracle_client.py http://localhost:8000/mcp controller`, then curl :8001/reward with the token header (seed 0 controller gives reward 1).
+
+## Makefile target text (for lead-env)
+
+    harbor:
+	python -m harbor.build --seeds 0..19 --seat controller
+	harbor run -p harbor/tasks --agent oracle
+	harbor run -p harbor/tasks --agent opencode --model $(MODEL)
+
+`solution/` is generated at build time from `sleeper/{__init__,models,scripted}.py` in the repo, never committed (`harbor/tasks/` is gitignored). Docker was not available when this was written; `pytest tests/test_harbor.py` runs the sidecar as a subprocess instead (oracle gives reward 1, do-nothing 0, /reward without the token gives 404).

@@ -1,4 +1,3 @@
-import os
 import zlib
 
 from agents import gemini
@@ -21,7 +20,7 @@ class GeminiReference:
         self.log = []
 
     def turn(self, seat, view, tools, call):
-        if not (gemini.enabled() or os.environ.get("SLEEPER_OFFLINE") == "1"):
+        if not gemini.enabled():
             return self.fallback.turn(seat, view, tools, call)
         try:
             return gemini.run_tool_loop(gemini.model_for("reference"), ROLE_PROMPTS[seat] + PROCEDURE, str(view), tools, call,

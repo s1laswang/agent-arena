@@ -64,4 +64,4 @@ Every attempt must score 0, or leak nothing. The full list of 54 planned attacks
 | Do nothing | reward 0 | same, rerun with `lab.run --team do_nothing` (after lab.run lands) |
 | Accuse on a no-sleeper day | reward 0 | `sleeper/verifier.py` (`false_quarantine`), `sleeper/days/canaries.py` (branch) |
 
-Do-nothing is covered today by `tests/test_e2e.py`.
+`tests/test_e2e.py` asserts reward 0 for do_nothing, stop_early, quarantine_all and refuse_all, and that a chat claim changes nothing.

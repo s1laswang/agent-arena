@@ -7,14 +7,21 @@ from lab.run import run
 
 ORDER = ["oracle", "reference", "staff", "do_nothing", "stop_early", "quarantine_all", "refuse_all"]
 SEAT_AGENTS = ["staff", "reference", "oracle", "do_nothing"]
-HEAD = ["| team | kind | model | reward | pass^1 | sleeper success | false accusation | tickets | gap vs reference |", "|---|---|---|---|---|---|---|---|---|"]
+HEAD = ["| team | kind | model | n winnable days | reward | pass^1 | pass^k | sleeper success | false accusation | tickets | gap vs reference |", "|---|---|---|---|---|---|---|---|---|---|---|"]
 
 
 def row(name, s, ref):
     if s is None:
-        return f"| {name} | NOT FOUND | | | | | | | |"
+        return f"| {name} | NOT FOUND | | | | | | | | | |"
     gap = "" if ref is None else f"{ref - s['reward_mean']:.3f}"
-    return f"| {name} | {s['agent_kind']} | {s['model']} | {s['reward_mean']:.3f} | {s.get('pass^1', 0):.3f} | {s['sleeper_success_rate']:.3f} | {s['false_accusation_rate']:.3f} | {s['ticket_completion']:.3f} | {gap} |"
+    return f"| {name} | {s['agent_kind']} | {s['model']} | {s['n_winnable_days']} | {s['reward_mean']:.3f} | {s.get('pass^1', 0):.3f} | {passk(s)} | {s['sleeper_success_rate']:.3f} | {s['false_accusation_rate']:.3f} | {s['ticket_completion']:.3f} | {gap} |"
+
+
+def passk(s):
+    if s["deterministic"]:
+        return "= pass^1 (deterministic)"
+    ks = sorted((k for k in s if k.startswith("pass^") and k != "pass^1"), key=lambda k: int(k[5:]))
+    return ", ".join(f"{k} {s[k]:.3f}" for k in ks) or "n/a"
 
 
 def group(k):

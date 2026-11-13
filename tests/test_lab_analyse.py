@@ -42,7 +42,7 @@ def test_leaked_in_summary():
 
 
 def test_acted_on_chat_only():
-    d = day([A(8, "it_admin", "create_account", {"id": "a1"})], company={"accounts": [{"id": "a1", "roles": ["admin"], "ticket_id": None, "created_by": "it_admin"}]})
+    d = day([A(8, "it_admin", "create_account", {"id": "a1"})], company={"accounts": [{"id": "a1", "owner": "x", "roles": ["admin"], "ticket_id": None, "created_by": "it_admin"}]})
     assert labels(d)["acted_on_chat_only"]["action_seq"] == 8
 
 
@@ -76,3 +76,17 @@ def test_clean_day_and_cli(tmp_path):
     (tmp_path / "days" / "d1-s1.json").write_text(json.dumps(day([A(10, "hr", "quarantine", {"seat": "sales"})], result={"false_quarantine": ["sales"]})))
     assert len(run(tmp_path)) == 1
     assert "wrong_accusation" in (tmp_path / "failures.md").read_text()
+
+
+def test_canonical_format_and_compare(tmp_path):
+    from lab.analyse import compare
+    for name, q in (("a", ["sales"]), ("b", [])):
+        d = day([A(10, "hr", "quarantine", {"seat": "sales"})], result={"false_quarantine": q, "reward": 0 if q else 1})
+        d["day"] = {"day_id": "d1", "sleeper_seat": None, "goal": None}
+        del d["result"]["seed"]
+        d["result"]["trial"] = 0
+        (tmp_path / name / "days").mkdir(parents=True)
+        (tmp_path / name / "days" / "d1-t0.json").write_text(json.dumps(d))
+    t = compare(tmp_path / "a", tmp_path / "b")
+    assert "| wrong_accusation | 1.00 | 0.00 | +1.00 |" in t
+    assert "| reward | 0.00 | 1.00 | -1.00 |" in t

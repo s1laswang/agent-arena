@@ -139,6 +139,7 @@ class GeminiStaff:
         self.seed = zlib.crc32(("%s:%s" % (seed, seat)).encode())
         self.fallback = fallback or ScriptedStaff(seat)
         self.notes = []
+        self.log = []
 
     def available(self):
         return run_tool_loop is not None and bool(enabled())
@@ -150,7 +151,7 @@ class GeminiStaff:
             text = str(view)
             if self.notes:
                 text = "Your notes from earlier turns:\n" + "\n".join(self.notes[-3:]) + "\n\n" + text
-            r = run_tool_loop(model_for("staff"), ROLE_PROMPTS[seat], text, tools, call, max_steps=BUDGET, temperature=float(os.environ.get("SLEEPER_TEMP_STAFF", "0.7")), seed=self.seed)
+            r = run_tool_loop(model_for("staff"), ROLE_PROMPTS[seat], text, tools, call, max_steps=BUDGET, temperature=float(os.environ.get("SLEEPER_TEMP_STAFF", "0.7")), seed=self.seed, log=self.log.append)
             if isinstance(r, dict) and r.get("text"):
                 self.notes.append(r["text"][:500])
             return r

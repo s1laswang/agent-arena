@@ -13,7 +13,7 @@ def summary(history):
 def prompt(system, seat, history, obs, n=N):
     msgs = [{"role": "system", "content": f"{system}\nYou are the {seat} seat. {summary(history)}"}]
     for h in history[-n:]:
-        msgs.append({"role": "user", "content": h["obs"][:OBS_CHARS]})
-        msgs.append({"role": "assistant", "content": call_json(h["tool"], h.get("args", {}))})
+        msgs.append({"role": "user", "content": h["view"][:OBS_CHARS]})
+        msgs.append({"role": "assistant", "content": call_json(h["tool"], h.get("args") or {})})
     msgs.append({"role": "user", "content": obs[:OBS_CHARS]})
     return msgs

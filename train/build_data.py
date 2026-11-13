@@ -8,15 +8,15 @@ def system_for(step):
     return step.get("system") or f"You work at a company. Use one tool per turn and reply with a JSON tool call."
 
 def examples(day):
-    if day.get("reward") != 1:
+    if day["result"]["reward"] != 1:
         return []
-    bad = day.get("sleeper_seat")
+    bad = day["day"]["sleeper_seat"]
     out, hist = [], {}
-    for s in day.get("steps", []):
-        if s["seat"] == bad or "tool" not in s:
+    for s in day["steps"]:
+        if s["seat"] == bad:
             continue
         h = hist.setdefault(s["seat"], [])
-        msgs = prompt(system_for(s), s["seat"], h, s["obs"])
+        msgs = prompt(system_for(s), s["seat"], h, s["view"])
         msgs.append({"role": "assistant", "content": call_json(s["tool"], s.get("args", {}))})
         out.append({"messages": msgs})
         h.append(s)
@@ -27,9 +27,9 @@ def split_of(seed):
 
 def build(results_dir, out_dir):
     buckets = {"train": [], "val": []}
-    for p in sorted(Path(results_dir).glob("days/*.json")):
+    for p in sorted(Path(results_dir).glob("days/*-t*.json")):
         day = json.loads(p.read_text())
-        k = split_of(day.get("day_id", day.get("seed")))
+        k = split_of(day["day"]["day_id"])
         if k:
             buckets[k] += examples(day)
     out = Path(out_dir)

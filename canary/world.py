@@ -4,11 +4,16 @@ Nothing in here may be passed to a tool result except the public fields the Env 
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
+import os
 import random
+import warnings
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any
 
-from .rules import TierParams
+from .rules import HELDOUT_SEEDS, JUDGE_SEEDS, TierParams
 
 FIRST = ["Aino", "Mikko", "Laura", "Jussi", "Sanna", "Teemu", "Elina", "Ville", "Noora", "Antti",
          "Hanna", "Petri", "Kaisa", "Olli", "Riikka", "Tuomas", "Maria", "Janne", "Emma", "Lauri",
@@ -50,6 +55,7 @@ class World:
     decoy: str | None
     # pregenerated regular docs per day (raw recipients, before restriction filtering)
     planned_docs: dict[int, list[dict[str, Any]]] = field(default_factory=dict)
+    world_seed: int = 0
     mole_strategy: Any = None   # None = default v0 behaviour (Mole DSL plugs in later)
 
     @property
@@ -57,12 +63,31 @@ class World:
         return [e.id for e in self.employees]
 
 
+def _key(seed: int) -> bytes:
+    if seed not in JUDGE_SEEDS and seed not in HELDOUT_SEEDS:
+        return b"public"
+    env = os.environ.get("CANARY_WORLD_SECRET")
+    if env:
+        return env.encode()
+    salt = Path(__file__).resolve().parent.parent / "data" / "worlds" / "judge" / "SALT"
+    if salt.exists():
+        return salt.read_bytes()
+    warnings.warn("CANARY_WORLD_SECRET not set and no SALT file; judge worlds use the public key")
+    return b"public"
+
+
+def world_seed(tier: str, seed: int) -> int:
+    """Contract v0.2: HMAC-derived world seed (secret key for judge/held-out seeds)."""
+    return int.from_bytes(hmac.new(_key(seed), f"{tier}:{seed}".encode(), hashlib.sha256).digest()[:8], "big")
+
+
 def _title(rng: random.Random, dept: str) -> str:
     return rng.choice(TITLE_TPL).format(q=rng.choice(["Q1", "Q2", "Q3", "Q4"]), d=dept, p=rng.choice(PROJECTS))
 
 
 def generate_world(tier: str, seed: int, p: TierParams) -> World:
-    rng = random.Random(f"{tier}:{seed}")
+    ws = world_seed(tier, seed)
+    rng = random.Random(ws)
     n = p.n_employees
     depts = DEPTS[: 5 if tier == "hard" else 4]
     company = rng.choice(COMPANIES)
@@ -96,4 +121,6 @@ def generate_world(tier: str, seed: int, p: TierParams) -> World:
                 doc["min_clearance"] = rng.randint(1, 3)
             docs.append(doc)
         planned[day] = docs
-    return World(tier, seed, p, company, emps, depts, mole, decoy, planned)
+    w = World(tier, seed, p, company, emps, depts, mole, decoy, planned)
+    w.world_seed = ws
+    return w

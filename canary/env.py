@@ -17,6 +17,8 @@ from .world import generate_world
 
 TOPICS = ("recent_documents", "contacts_outside", "workload", "access_needs")
 BAD = "invalid arguments"
+# Contract v0.2: every error string is one of these fixed constants (never depends on the target).
+ERRORS = frozenset({BAD, "unknown tool", "daily action limit; call advance_day", "canary limit for today reached", "episode over"})
 
 _EMP = {"type": "string", "description": "one employee id, e.g. e07"}
 _DAY = {"type": "integer", "minimum": 1}
@@ -49,12 +51,8 @@ def _poisson(rng: random.Random, lam: float) -> int:
 
 
 def _default_provider():
-    try:
-        from .text.template import TemplateProvider  # type: ignore
-        return TemplateProvider()
-    except ImportError:
-        from .text.minimal import MinimalProvider
-        return MinimalProvider()
+    from .text.template import TemplateProvider
+    return TemplateProvider()
 
 
 class Env:
@@ -65,7 +63,7 @@ class Env:
         self._world = generate_world(tier, seed, self.p)
         if mole_strategy is not None:
             self._world.mole_strategy = mole_strategy
-        self._dyn = random.Random(f"{tier}:{seed}:dyn")
+        self._dyn = random.Random(self._world.world_seed ^ 1)
         self.provider = text_provider if text_provider is not None else _default_provider()
         self._ids = self._world.ids
         self._idset = set(self._ids)
@@ -176,7 +174,7 @@ class Env:
     def _facts(self, d: int) -> PublicDayFacts:
         w = self._world
         return PublicDayFacts(
-            tier=self.tier, seed=self.seed, day=d, company=w.company,
+            tier=self.tier, seed=w.world_seed, day=d, company=w.company,
             employees=tuple(EmployeeFacts(e.id, e.name, e.dept, e.role, e.clearance) for e in w.employees),
             docs=tuple({"doc_id": x["doc_id"], "title": x["title"], "day": x["day"], "recipients": list(x["recipients"])}
                        for x in self.docs if x["day"] == d),
@@ -278,7 +276,7 @@ class Env:
         if topic not in TOPICS:
             return ToolResult(False, {}, BAD)
         p_ev = self.p.p_evasive_innocent * (self.p.interview_lr if emp == self._world.mole else 1.0)
-        r = random.Random(f"{self.tier}:{self.seed}:iv:{emp}:{topic}:{self.day}")
+        r = random.Random(f"{self._world.world_seed}:iv:{emp}:{topic}:{self.day}")
         signal = "evasive" if r.random() < p_ev else "cooperative"
         text = self.provider.interview_answer(self._facts(self.day), emp, topic, signal)
         return ToolResult(True, {"employee": emp, "topic": topic, "answer": text})

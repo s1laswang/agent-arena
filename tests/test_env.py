@@ -146,3 +146,42 @@ def test_performance():
     dt = time.time() - t0
     print(f"1000 random episodes: {dt:.2f}s")
     assert dt < 30
+
+
+def test_judge_secret_changes_world(monkeypatch):
+    from canary.world import generate_world
+    from canary.rules import TIERS as T
+    monkeypatch.delenv("CANARY_WORLD_SECRET", raising=False)
+    import canary.world as w
+    monkeypatch.setattr(w, "_key", lambda s: b"public")
+    pub = generate_world("hard", 900_000, T["hard"])
+    monkeypatch.undo()
+    monkeypatch.setenv("CANARY_WORLD_SECRET", "s3cret")
+    sec = generate_world("hard", 900_000, T["hard"])
+    assert pub.world_seed != sec.world_seed
+    assert (pub.mole, pub.planned_docs) != (sec.mole, sec.planned_docs)
+
+
+def test_accuse_payload_parity():
+    payloads = set()
+    for e in [f"e{i:02d}" for i in range(12)]:
+        env = Env("easy", 9)
+        r = env.call("accuse", {"employee": e})
+        payloads.add(json.dumps({"ok": r.ok, "error": r.error, "keys": sorted(r.data), "over": r.data["episode_over"]}))
+    assert len(payloads) == 1
+
+
+def test_error_parity_and_no_seed():
+    from canary.env import ERRORS
+    errs = set()
+    for seed in range(30):
+        env = Env("medium", seed)
+        random_policy(env, random.Random(seed))
+        for s in env.history:
+            if s.result["error"] is not None:
+                errs.add(s.result["error"])
+            assert str(env._world.world_seed) not in json.dumps(s.result)
+        for e in env._world.ids:
+            r = Env("medium", seed).call("restrict_access", {"employee": e + "x"})
+            errs.add(r.error)
+    assert errs <= ERRORS

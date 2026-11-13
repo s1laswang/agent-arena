@@ -34,3 +34,17 @@ def test_do_nothing_fails():
     d = make_day(0)
     w = run_day(d, make_team(NoopAgent))
     assert not any(done(t, w.company) for t in d.tickets)
+
+
+def test_noop_seat_fails_its_own_tickets():
+    from sleeper.day import run_day
+    from sleeper.scripted import NoopAgent, OracleAgent, make_team
+    from sleeper.tickets import done
+    for s in range(3):
+        d = make_day(s)
+        for seat in SEATS:
+            assert sum(t.seat == seat for t in d.tickets) >= 3
+            team = make_team(OracleAgent)
+            team[seat] = NoopAgent()
+            w = run_day(d, team)
+            assert any(not done(t, w.company) for t in d.tickets if t.seat == seat), (s, seat)

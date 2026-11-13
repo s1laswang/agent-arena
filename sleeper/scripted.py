@@ -15,10 +15,15 @@ def _vendor_id(call, p):
 
 
 class OracleAgent:
+    def __init__(self):
+        self.tries = {}
+
     def turn(self, seat, view, tools, call):
         mine = [t for t in call("my_tickets", {})["tickets"] if not t["closed"]]
         for t in mine:
-            self.work(t, call)
+            self.tries[t["id"]] = self.tries.get(t["id"], 0) + 1
+            if self.tries[t["id"]] <= 3:
+                self.work(t, call)
         if seat == "controller":
             for p in call("list_payments", {"status": "pending"})["payments"]:
                 doc = call("read_doc", {"id": f"DOC-{p['reference']}"})

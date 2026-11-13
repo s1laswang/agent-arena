@@ -7,12 +7,28 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from sleeper.company import World
 from sleeper.mcp_server import build_server
-from sleeper.tickets import make_day
 
 
-def make_team():
-    from sleeper.scripted import OracleAgent, make_team as mk
-    return mk(OracleAgent)
+def effective_id(seed, seat):
+    import hashlib
+    from lab.run import day_for
+    salt = os.environ.get("SLEEPER_SALT", "")
+    k = int(hashlib.sha256(f"{salt}:{seed}".encode()).hexdigest(), 16) % 100000 if salt else seed
+    while day_for(k)[0].sleeper_seat == seat:
+        k += 1
+    return k
+
+
+def make_world_and_team(seed, seat):
+    import random
+    from lab.run import build_team, day_for
+    day_id = effective_id(seed, seat)
+    day, strategy, _ = day_for(day_id)
+    team = build_team(os.environ.get("SLEEPER_TEAM", "staff"), day, 0)
+    if day.sleeper_seat and strategy:
+        from agents.sleeper_agent import SleeperAgent
+        team[day.sleeper_seat] = SleeperAgent(day.sleeper_seat, day.goal, strategy, random.Random(day_id * 1000))
+    return day_id, World(day), team
 
 
 def reward(srv, out):
@@ -45,10 +61,11 @@ def main():
     seat = os.environ["SLEEPER_SEAT"]
     out = os.environ.get("SLEEPER_OUT", "/srv/state.json")
     token = os.environ["VERIFY_TOKEN"]
-    srv = build_server(World(make_day(seed)), seat, make_team(), out)
+    _, world, team = make_world_and_team(seed, seat)
+    srv = build_server(world, seat, team, out)
     atexit.register(srv.finish)
-    threading.Thread(target=serve_reward, args=(srv, out, token, 8001), daemon=True).start()
-    srv.run(transport="streamable-http", host="0.0.0.0", port=8000)
+    threading.Thread(target=serve_reward, args=(srv, out, token, int(os.environ.get("SIDECAR_REWARD_PORT", "8001"))), daemon=True).start()
+    srv.run(transport="streamable-http", host="0.0.0.0", port=int(os.environ.get("SIDECAR_MCP_PORT", "8000")))
 
 
 if __name__ == "__main__":

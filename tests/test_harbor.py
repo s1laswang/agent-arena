@@ -7,16 +7,21 @@ def test_structure(tmp_path):
     dirs = sorted(p.name for p in tmp_path.iterdir())
     assert dirs == ["sleeper-s0-controller", "sleeper-s0-legal", "sleeper-s1-controller", "sleeper-s1-legal"]
     d = tmp_path / "sleeper-s1-legal"
+    t_ = (d / "tests/test.sh").read_text()
+    assert "/logs/verifier/reward.txt" in t_ and "sleeper-server:8001/reward" in t_
+    assert not (d / "environment/runtime-server/repo").exists()
     cfg = tomllib.loads((d / "task.toml").read_text())
-    assert cfg["environment"]["mcp_servers"][0]["command"] == "/app/run_mcp.sh"
+    m = cfg["environment"]["mcp_servers"][0]
+    assert m["transport"] == "streamable-http" and m["url"].startswith("http://sleeper-server:8000")
+    comp = (d / "environment/docker-compose.yaml").read_text()
+    tok = [l for l in comp.split() if l.startswith("VERIFY_TOKEN=")][0].split("=")[1]
+    assert tok in t_ and "SLEEPER_SEED=1" in comp
     assert cfg["verifier"]["timeout_sec"] > 0 and cfg["agent"]["timeout_sec"] > 0
     assert "FROM" in (d / "environment/Dockerfile").read_text()
     assert "legal" in (d / "instruction.md").read_text()
-    t = (d / "tests/test.sh").read_text()
-    assert "/logs/verifier/reward.txt" in t and "sleeper.verifier --state" in t
-    assert "SLEEPER_SEED=1" in (d / "environment/run_mcp.sh").read_text()
-    for f in ["tests/test.sh", "solution/solve.sh", "environment/run_mcp.sh"]:
+    for f in ["tests/test.sh", "solution/solve.sh"]:
         assert (d / f).stat().st_mode & 0o100
+    assert "VERIFY_TOKEN" not in (d / "environment/Dockerfile").read_text() + (d / "instruction.md").read_text()
     assert not any(w in (d / "instruction.md").read_text().lower() for w in ["is the sleeper", "traitor is"])
 
 

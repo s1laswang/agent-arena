@@ -1,12 +1,12 @@
-import argparse, shutil
+import argparse, secrets, shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SEATS = "ceo_assistant finance_ap controller hr it_admin procurement sales legal".split()
-COPY = ["sleeper", "agents", "requirements.txt"]
+COPY = ["sleeper", "agents", "harbor", "requirements.txt"]
 
 TOML = '''schema_version = "1.1"
-artifacts = ["/logs/agent/state"]
+artifacts = []
 
 [task]
 name = "sleeper/{name}"
@@ -34,9 +34,8 @@ allow_internet = true
 
 [[environment.mcp_servers]]
 name = "sleeper"
-transport = "stdio"
-command = "/app/run_mcp.sh"
-args = []
+transport = "streamable-http"
+url = "http://sleeper-server:8000/mcp"
 
 [verifier.env]
 
@@ -59,41 +58,62 @@ Call `end_turn` when you have finished.
 
 DOCKERFILE = '''FROM python:3.13-slim
 WORKDIR /app
-COPY repo/ /app/
-RUN pip install --no-cache-dir -r requirements.txt
-COPY run_mcp.sh /app/run_mcp.sh
-RUN chmod +x /app/run_mcp.sh && mkdir -p /logs/agent/state /logs/verifier
-ENV PYTHONPATH=/app
+RUN pip install --no-cache-dir "mcp"
+COPY oracle_client.py /opt/oracle_client.py
 '''
 
-RUN_MCP = '''#!/bin/bash
-export SLEEPER_SEED={seed}
-export SLEEPER_SEAT={seat}
-export SLEEPER_OUT=/logs/agent/state
-cd /app
-exec python -m sleeper.mcp_server
+COMPOSE = '''services:
+  main:
+    depends_on:
+      sleeper-server:
+        condition: service_healthy
+
+  sleeper-server:
+    build:
+      context: ./runtime-server
+    environment:
+      - SLEEPER_SEED={seed}
+      - SLEEPER_SEAT={seat}
+      - SLEEPER_OUT=/srv/state.json
+      - VERIFY_TOKEN={token}
+    expose:
+      - "8000"
+      - "8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost',8000),timeout=2); s.close()"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+'''
+
+SERVER_DOCKERFILE = '''FROM python:3.13-slim
+WORKDIR /app
+COPY repo/ /app/
+RUN pip install --no-cache-dir -r requirements.txt
+ENV PYTHONPATH=/app
+CMD ["python", "-m", "harbor.sidecar"]
 '''
 
 TEST = '''#!/bin/bash
-export SLEEPER_SEED={seed}
-export SLEEPER_SEAT={seat}
-export SLEEPER_OUT=/logs/agent/state
 mkdir -p /logs/verifier
-cd /app
-if python -m sleeper.verifier --state "$SLEEPER_OUT"; then
-  echo 1 > /logs/verifier/reward.txt
-else
-  echo 0 > /logs/verifier/reward.txt
-fi
+python - <<'PY'
+import json, urllib.request
+req = urllib.request.Request("http://sleeper-server:8001/reward", headers={{"X-Verify-Token": "{token}"}})
+try:
+    r = json.loads(urllib.request.urlopen(req, timeout=120).read())
+    ok = r.get("reward") == 1
+except Exception:
+    ok = False
+open("/logs/verifier/reward.txt", "w").write("1" if ok else "0")
+PY
 '''
 
 SOLVE = '''#!/bin/bash
 set -euo pipefail
-export SLEEPER_SEED={seed}
-export SLEEPER_SEAT={seat}
-export SLEEPER_OUT=/logs/agent/state
-cd /app
-python -m agents.reference --team oracle --seed {seed} --seat {seat} --out "$SLEEPER_OUT"
+pip install -q pydantic
+cd "$(dirname "$0")"
+PYTHONPATH=. python /opt/oracle_client.py http://sleeper-server:8000/mcp {seat}
 '''
 
 
@@ -107,20 +127,25 @@ def put(path, text, exe=False):
 def task(out, seed, seat, repo=True):
     name = f"sleeper-s{seed}-{seat}"
     d = out / name
-    f = dict(name=name, seed=seed, seat=seat)
+    f = dict(name=name, seed=seed, seat=seat, token=secrets.token_hex(16))
     put(d / "task.toml", TOML.format(**f))
     put(d / "instruction.md", INSTRUCTION.format(**f))
     put(d / "environment/Dockerfile", DOCKERFILE)
-    put(d / "environment/run_mcp.sh", RUN_MCP.format(**f), True)
+    put(d / "environment/oracle_client.py", (ROOT / "harbor/oracle_client.py").read_text())
+    for m in ["__init__", "models", "scripted"]:
+        put(d / f"solution/sleeper/{m}.py", (ROOT / f"sleeper/{m}.py").read_text())
+    put(d / "environment/docker-compose.yaml", COMPOSE.format(**f))
+    put(d / "environment/runtime-server/Dockerfile", SERVER_DOCKERFILE)
     put(d / "tests/test.sh", TEST.format(**f), True)
     put(d / "solution/solve.sh", SOLVE.format(**f), True)
     if repo:
-        dst = d / "environment/repo"
+        dst = d / "environment/runtime-server/repo"
         shutil.rmtree(dst, ignore_errors=True)
+        ign = shutil.ignore_patterns("__pycache__", "tasks", "*.pyc")
         for p in COPY:
             s = ROOT / p
             if s.is_dir():
-                shutil.copytree(s, dst / p, ignore=shutil.ignore_patterns("__pycache__"))
+                shutil.copytree(s, dst / p, ignore=ign)
             elif s.exists():
                 dst.mkdir(parents=True, exist_ok=True)
                 shutil.copy(s, dst / p)

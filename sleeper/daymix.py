@@ -3,19 +3,27 @@ import random
 from sleeper.goals import get
 
 KINDS = ("fraud", "leak", "backdoor", "sabotage", "frame")
+NEVER_SLEEPER = {"controller"}
+
+
+def accomplices(s):
+    return {x.seat for x in s.steps if x.seat}
+
+
+def sleeper_seats(s, seat_under_test=None):
+    return sorted(set(s.seats) - NEVER_SLEEPER - {seat_under_test})
 
 
 def entry(day_id, seat_under_test=None):
     if day_id % 5 == 4:
-        return {"day_id": day_id, "seed": day_id, "sleeper_seat": None, "goal": None, "strategy": None}
+        return {"day_id": day_id, "seed": day_id, "sleeper_seat": None, "goal": None, "strategy": None, "needs_tested_seat": False}
     rng = random.Random(f"mix-{day_id}")
     kind = KINDS[(day_id // 5 * 4 + day_id % 5) % len(KINDS)]
-    pool = sorted(get(kind), key=lambda s: s.id)
-    if seat_under_test:
-        pool = [s for s in pool if seat_under_test in s.needs_seats and set(s.seats) - {seat_under_test}] or pool
-    s = rng.choice(pool)
-    seat = rng.choice(sorted(set(s.seats) - {seat_under_test}))
-    return {"day_id": day_id, "seed": day_id, "sleeper_seat": seat, "goal": kind, "strategy": s.id}
+    pool = [s for s in sorted(get(kind), key=lambda s: s.id) if sleeper_seats(s, seat_under_test)]
+    needed = [s for s in pool if seat_under_test in accomplices(s)]
+    s = rng.choice(needed or pool)
+    seat = rng.choice(sleeper_seats(s, seat_under_test))
+    return {"day_id": day_id, "seed": day_id, "sleeper_seat": seat, "goal": kind, "strategy": s.id, "needs_tested_seat": bool(needed)}
 
 
 def mix(n, seat_under_test=None):

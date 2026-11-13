@@ -55,3 +55,20 @@ def test_backdoor_and_sabotage():
     out = slow_burn(s, random.Random(2), 100)
     assert [x.tool for x in out.steps] == ["create_account", "grant_role", "edit_contract", "edit_contract"]
     assert not any(e.kind == "manager_correction" for e in make_events(random.Random(1), C(), []))
+
+
+def test_events_do_not_reveal_sleeper():
+    from sleeper.events import build_day_events
+
+    class G:
+        target = {"iban": "FI99X"}
+
+    s = Strategy(steps=[Step(tick=5, tool="pay", args={"amount": 100})])
+    for seed in range(20):
+        a = build_day_events(random.Random(seed), C(), [], None, None, 20)
+        b = build_day_events(random.Random(seed), C(), [], G(), s, 20)
+        assert a == b and all(e["tick"] < 20 for e in a)
+    p = Strategy(steps=[Step(tick=5, tool="external_pressure")])
+    c = build_day_events(random.Random(3), C(), [], G(), p, 20)
+    a = build_day_events(random.Random(3), C(), [], None, None, 20)
+    assert sum(e["kind"] == "external_pressure" for e in c) == 1 and len(c) == len(a) + 1

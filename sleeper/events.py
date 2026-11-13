@@ -117,3 +117,12 @@ def slow_burn(strategy, rng, n_ticks=DAY_TICKS):
     steps = [s for st in strategy.steps for s in _explode(st)]
     ticks = _spread(rng, len(steps), n_ticks, start=min(s.tick for s in strategy.steps) if strategy.steps else 0)
     return strategy.model_copy(update={"steps": [s.model_copy(update={"tick": t}) for s, t in zip(steps, ticks)], "tells": list(strategy.tells)})
+
+
+def build_day_events(rng, company, tickets, goal=None, strategy=None, n_ticks=DAY_TICKS):
+    ev = make_events(rng, company, tickets, n_ticks)
+    pressure_rng = random.Random(rng.random())
+    uses = strategy is not None and goal is not None and (getattr(strategy, "pressure", False) or any(s.tool == "external_pressure" for s in strategy.steps))
+    if uses:
+        ev.append(external_pressure(pressure_rng, goal.target, n_ticks=n_ticks))
+    return [e.model_dump() for e in sorted(ev, key=lambda e: (e.tick, e.kind))]

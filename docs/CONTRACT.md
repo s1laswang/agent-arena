@@ -1,0 +1,91 @@
+# CONTRACT v0: Canary (catch the mole)
+
+This is what lets five departments build in parallel. Code-level truth is in `canary/rules.py` and `canary/types.py`, and the `Env` signatures are in `canary/env.py`.
+- **Changing a signature or a mechanic:** the ENV head decides. Bump the version here and add a line to `docs/reports/CEO.md`.
+- **Tuning numbers in `rules.py`:** allowed. Note it in your report.
+
+## 1. The game, in one paragraph
+A fictional company (tiers: easy 12 / medium 20 / hard 30 employees) has exactly one **mole** who leaks sensitive documents to a rival. Each leak costs company value V, which starts at 1.0. The agent is the head of security. It can:
+- read access logs and messages;
+- interview staff;
+- plant **canary documents** (different variants to different groups);
+- watch the **leak feed**, where leaked docs surface after a delay carrying their variant tag;
+- restrict an employee's access (costs value per day).
+
+It must **accuse exactly one employee, exactly once.** Score = V at the moment of accusation if correct, otherwise 0. The episode lasts at most 14 days. Doing nothing scores 0.
+
+## 2. Mechanics (the env and the solver MUST implement the identical model)
+- **World(tier, seed):** generated deterministically.
+  - Employees `e00..eNN` have a synthetic name, a department (4–5 departments) and a role. In the hard tier they also have a clearance level.
+  - The mole is uniform among non-decoy employees.
+  - In medium and hard, the decoy is one innocent employee who writes angry messages.
+- **Documents:** each day 2–4 regular sensitive docs are published to recipient lists (department-wide or cross-department). Every doc has `doc_id`, `title`, `day`, `recipients`.
+- **Day loop.** `advance_day` closes day d:
+  1. **Leak.** If the mole has ≥1 *leakable* doc (received in the last 3 days, not yet leaked), then with probability `p_leak` it leaks one. The choice is uniform over leakable docs. Exception, when `careful_mole` is set: a canary doc's weight is multiplied by (1 − share of staff who received *any* variant of it).
+  2. **Delay.** The leak surfaces in the feed on day d + δ, with δ ~ Uniform(`delay_choices`).
+  3. **Value.** V −= `leak_damage` at leak time. `status` shows the true V.
+  4. **Restriction cost.** Each restricted employee costs `restrict_cost_per_day`. A restricted employee receives no new docs and cannot be given canaries; it can still leak docs it already holds.
+  5. **Access logs.** Each employee accesses sensitive docs it holds at Poisson rate `log_rate_benign`; the mole at `log_rate_mole`.
+     - A fraction of accesses are flagged `after_hours`. The mole's after-hours rate is higher.
+     - With `framing`, the mole injects after-hours accesses attributed to other employees, preferring the decoy.
+     - **Every rate is stated in `instruction.md`.**
+  6. **Text.** The day's messages are rendered by the TextProvider from public facts only.
+- **Canaries.** `plant_canary(doc_title, assignment={employee_id: variant_label})`:
+  - at most `max_variants` distinct labels;
+  - at most `canaries_per_day` per day;
+  - costs `canary_cost`;
+  - with `access_constraints`, recipients must have clearance.
+
+  A canary is a new doc delivered today. Recipients are exactly the keys of `assignment`. When a canary leaks, the feed shows its variant label.
+- **Interviews.** `interview(employee, topic)` returns text rendered from a signal: `evasive` with probability `p_evasive_innocent × (interview_lr if mole else 1)`, otherwise `cooperative`.
+- **Caps.**
+  - Investigative tools (`types.INVESTIGATIVE_TOOLS`) are limited to `actions_per_day` per day. After that they return `ok=False, error="daily action limit; call advance_day"`.
+  - `status`, `list_*`, `advance_day` and `accuse` don't use daily slots.
+  - Every call counts toward `tool_call_cap` (300). Reaching it ends the episode with score 0.
+- **End of episode.**
+  - `accuse` ends it: score = V if correct, else 0.
+  - Passing day `n_days` without an accusation ends it with score 0.
+  - After the end, every call returns `ok=False` and changes nothing.
+
+## 3. Tools (MCP mirrors `Env.tools_spec()` 1:1)
+| Tool | Args | Returns |
+|---|---|---|
+| `status` | none | day, V, actions_left_today, tool_calls_left, restricted[], canaries_planted[] |
+| `list_employees` | none | [{id, name, dept, role, clearance?}] |
+| `list_documents` | `day_from?`, `day_to?` | [{doc_id, title, day, recipients[], is_canary, variants?}] |
+| `read_access_logs` | `day_from`, `day_to`, `employee?` | [{day, employee, doc_id, after_hours}] |
+| `search_messages` | `query`, `day_from?`, `day_to?` | [{id, day, channel, sender, subject, snippet}] (max 20) |
+| `read_message` | `id` | full message |
+| `interview` | `employee`, `topic ∈ {recent_documents, contacts_outside, workload, access_needs}` | answer text |
+| `plant_canary` | `doc_title`, `assignment{employee: variant}` | canary_id |
+| `check_leak_feed` | none | [{surfaced_day, doc_id, title, variant?}] |
+| `restrict_access` / `unrestrict_access` | `employee` | ok |
+| `advance_day` | none | new day summary |
+| `accuse` | `employee` | final: {accused, episode_over: true}. **Correctness is NOT revealed to the agent.** |
+
+Validation is strict: one employee id per call (no lists, no `*`, no names in place of ids), integers in range, and unknown args rejected.
+
+## 4. Reward and integrity
+- The reward is computed from the server-side ledger only and never from agent text.
+- The MCP server process owns the Env. The grader reads `GET /ledger?token=…` (not an MCP tool) and writes `/logs/verifier/reward.txt`.
+- The truth (the mole id, the seed→world mapping for judge seeds) never enters the agent's container or filesystem.
+- Seeds:
+  - dev: 0–9,999
+  - judge: 900,000–900,029 per tier (frozen; text committed in `data/worlds/judge/`)
+  - train: 100,000–199,999
+  - held-out: 800,000–800,199
+
+## 5. Shared artifacts
+- **Episodes:** `data/runs/<run_id>/episodes.jsonl`, one `types.EpisodeResult` per line. `run_id = <agent>-<tier>-<YYYYmmdd-HHMM>`.
+- **Run metadata:** `data/runs/<run_id>/meta.json` holds agent, model, provider, git sha and seeds.
+- **Regret:** `canary.solver.regret.attribute(episode) -> list[{t, action, regret, tags[]}]`.
+- **Policies:** each implements `types.Policy`. Runner: `canary.eval.run_episode(env, policy) -> EpisodeResult`.
+- **LLM clients:** `canary.llm.get_client(spec)`. Text: `canary.text` TextProvider (no mole identity in its input).
+
+## 6. Reporting metrics (every table uses these)
+- mean score ± 95% CI over seeds;
+- accuracy (correct accusation rate);
+- mean day of accusation;
+- solver-normalised score (agent / solver on the same seed);
+- pass^k over repeated runs;
+- baselines: do-nothing, stop-early (random accusation on day 1), random, restrict-all.

@@ -5,10 +5,12 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const label=s=>s.replace("_"," ");
 const ICON='<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="8" rx="1"/><path d="M5 14h6M8 11v3"/></svg>';
+const res=D=>D.result[0]||{agent:"live",seat_under_test:null,reward:0,tickets_done:0,tickets_total:0,harm:[],false_quarantine:[],sleeper_caught:false};
+const dayMax=D=>Math.max(D.tick||0,...D.actions.map(a=>a.tick),...D.messages.map(m=>m.tick));
 let runs=[],max=0,tick=0,timer=null,revealed=false;
 
 function harmful(D,a){
-  const seqs=D.result[0].harm.map(h=>/@(\d+)$/.exec(h)).filter(Boolean).map(m=>+m[1]);
+  const seqs=res(D).harm.map(h=>/@(\d+)$/.exec(h)).filter(Boolean).map(m=>+m[1]);
   if(seqs.length)return seqs.includes(a.seq);
   if(D.actions.some(x=>"harmful" in x))return a.harmful===true;
   if(a.seat!==D.day.sleeper_seat||!SYS.includes(a.tool)||!D.day.goal)return false;
@@ -29,11 +31,11 @@ function panel(D,r){
 }
 
 function renderRun(run){
-  const D=run.D,r=D.result[0],el=run.el;
+  const D=run.D,r=res(D),el=run.el;
   const acts=D.actions.filter(a=>a.tick<=tick);
   const out=new Set(acts.filter(a=>a.tool==="quarantine"&&/quarantined/.test(a.effect)).map(a=>a.args.seat));
   const last=acts.length?acts[acts.length-1]:null;
-  const done=tick>=max;
+  const done=tick>=max&&D.result.length>0;
   el.querySelector(".verdict").innerHTML=done?`<span class="rw ${r.reward?"ok":"bad"}">Reward ${r.reward}</span>`:'<span class="muted">in progress</span>';
   el.querySelector(".floor").innerHTML=SEATS.map(s=>{
     const mine=acts.filter(a=>a.seat===s);
@@ -49,7 +51,7 @@ function renderRun(run){
     const ext=m.to.some(t=>t.startsWith("external:"));
     return `<li class="${ext?"ext":""}"><div class="h"><span class="num">t${m.tick}</span> ${label(m.sender_seat)} to ${m.to.map(t=>esc(label(t))).join(", ")} <span class="ch">${m.channel}</span></div>${esc(m.body)}</li>`}).join("")||'<li class="muted">No messages yet</li>';
   const p=el.querySelector(".panel");
-  p.hidden=!(done||revealed);
+  p.hidden=!(done||(revealed&&D.result.length));
   if(!p.hidden)p.innerHTML=panel(D,r);
 }
 
@@ -80,9 +82,9 @@ async function init(){
   if(q.get("vs"))ids.push(q.get("vs"));
   const days=await Promise.all(ids.map(load));
   document.body.classList.toggle("compare",days.length>1);
-  $("runs").innerHTML=days.map(D=>{const r=D.result[0];return `<section class="run"><div class="runhead"><b>${esc(r.agent)}</b><span class="muted">${esc(D.id)}, seed ${esc(D.day.seed)}, seat ${esc(label(r.seat_under_test||"all"))}</span><span class="spacer"></span><span class="verdict"></span></div><main><div class="floor" aria-label="Office floor"></div><aside><h2>Chat and email</h2><ol class="feed"></ol></aside></main><div class="panel" hidden></div></section>`}).join("");
+  $("runs").innerHTML=days.map(D=>{const r=res(D);return `<section class="run"><div class="runhead"><b>${esc(r.agent)}</b><span class="muted">${esc(D.id)}, seed ${esc(D.day.seed)}, seat ${esc(label(r.seat_under_test||"all"))}</span><span class="spacer"></span><span class="verdict"></span></div><main><div class="floor" aria-label="Office floor"></div><aside><h2>Chat and email</h2><ol class="feed"></ol></aside></main><div class="panel" hidden></div></section>`}).join("");
   runs=days.map((D,i)=>({D,el:$("runs").children[i]}));
-  max=Math.max(...days.flatMap(D=>[...D.actions.map(a=>a.tick),...D.messages.map(m=>m.tick)]));
+  max=Math.max(...days.map(dayMax));
   $("scrub").max=max;
   $("meta").textContent=days.length>1?`compare, seed ${days[0].day.seed}`:"";
   $("play").onclick=play;
@@ -96,7 +98,24 @@ async function init(){
   });
   if(q.get("reveal")){revealed=true;$("reveal").setAttribute("aria-pressed",true);$("reveal").textContent="Hide sleeper"}
   if(q.get("play"))play();
-  tick=q.has("tick")?Math.min(max,+q.get("tick")):0;
+  tick=q.has("tick")?Math.min(max,+q.get("tick")):ids.includes("live")?max:0;
   render();
+  if(ids.includes("live"))follow(ids);
+}
+
+function follow(ids){
+  const iv=setInterval(async()=>{
+    try{
+      const D=await load("live");
+      const i=ids.indexOf("live");
+      const following=tick>=max;
+      runs[i].D=D;
+      max=Math.max(...runs.map(r=>dayMax(r.D)));
+      $("scrub").max=max;
+      if(following)tick=max;
+      render();
+      if(D.result.length)clearInterval(iv);
+    }catch(e){}
+  },1000);
 }
 init();

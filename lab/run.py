@@ -27,7 +27,13 @@ def _baseline(name):
 def _module(mod, fn):
     def make(day, trial):
         f = getattr(importlib.import_module(mod), fn)
-        return f(day) if fn == "make_oracle_team" else f(day, trial)
+        if fn == "make_oracle_team":
+            return f(day)
+        if fn == "make_reference_team":
+            import inspect
+
+            return f(day, seed=trial) if "day" in inspect.signature(f).parameters else f(seed=trial)
+        return f(day, trial)
 
     return make
 

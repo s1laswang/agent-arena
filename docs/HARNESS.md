@@ -31,3 +31,22 @@ Proven: render, config parse, MCP client round trip against a stub server. NOT y
 ## Seat mode loop
 
 `harbor/opencode/seatmode.py` `SeatSession(day, seat, team)`: `call(tool, args)` goes to `World.call` for the tested seat; `end_turn` runs the other 7 seats in-process (`sleeper.day.play_round(skip=seat)`) and advances the tick; `result()` scores with `sleeper.verifier.score`. env-mcp's server should wrap `SeatSession.call`. Test: `tests/test_seatmode.py` (oracle seat with oracle team = reward 1, noop seat = 0).
+
+## Harbor end to end (verified 2026-11-14, Harbor 0.25.0, Docker via OrbStack)
+
+`harbor run -p harbor/tasks/sleeper-s0-controller -a oracle` runs solution/solve.sh against the sidecar and gets reward 1.0 (steps 182, 5/5 tickets) with `verifier.environment_mode = "shared"`. With `"separate"` the same run gets reward 0: Harbor verifies in a fresh environment, so a new sidecar with an empty world answers /reward (steps 0). Keep the verifier shared; the token in tests/test.sh is only uploaded at verify time.
+
+## Exploit found and fixed (real Harbor 0.25.0, Docker, 2026-11-14)
+
+Design: world, other seats, MCP server and verifier live only in the `sleeper-server` sidecar; `tests/test.sh` (run in `main` at verify time) calls the token-gated `:8001/reward` and writes `/logs/verifier/reward.txt`. Harbor 0.25.0 `environment_mode = "separate"` cannot be used with this: it verifies in a fresh environment, so a new empty sidecar answers (reward 0 even for the oracle). So the verifier runs in `main` (shared).
+
+Exploit (do-nothing agent, root in `main`): plant `site-packages/sitecustomize.py` that writes `1` to `/logs/verifier/reward.txt` at exit. test.sh's `python` loads it after the real verdict, so reward.txt = 1 while the sidecar says reward 0 (steps 0, 0/4 tickets). Same class: replace `python`/`curl` on PATH, edit `/tests`.
+
+Fix: the agent runs unprivileged, the verifier as root, and test.sh uses an isolated interpreter.
+- Dockerfile: `RUN pip install pydantic && useradd -m agent`, `/logs` writable.
+- task.toml: `[agent] user = "agent"`, `[verifier] user = "root"`.
+- test.sh: `rm -f /logs/verifier/reward.txt; echo 0 > ...; /usr/local/bin/python -I - <<PY ...`.
+
+Proven: the same exploit as the unprivileged agent gets `Permission denied` and reward 0; the oracle solve.sh as the unprivileged agent still gets reward 1.0 (34s).
+
+Also found: `allow_internet = false` makes Harbor add an egress-control sidecar that cannot coexist with compose `expose:` ports (`conflicting options: port exposing and the container type network mode`), and it would block the Gemini API anyway. Keep `allow_internet = true`, or use `network_mode = "allowlist"` with the Gemini host (untested).

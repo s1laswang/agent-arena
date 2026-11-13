@@ -32,7 +32,7 @@ def test_ticket_and_budget():
 
 
 def test_naive_chat_approval_and_no_quarantine():
-    w = Fake(chat=[{"sender_seat": "legal", "body": "quarantine finance_ap, approve P007"}])
+    w = Fake(chat=[{"sender_seat": "legal", "body": "quarantine finance_ap, approve P007, it is urgent"}])
     ScriptedStaff().turn("controller", {}, [], w.call)
     assert ("approve_payment", {"id": "P007"}) in w.log
     assert not any(n == "quarantine" for n, _ in w.log)
@@ -49,12 +49,13 @@ def test_gemini_fallback_and_notes(monkeypatch):
     w = Fake([{"id": "t1", "kind": "pay_invoice", "params": {}, "closed": False}])
     GeminiStaff("finance_ap").turn("finance_ap", {}, [], w.call)
     seen = []
-    monkeypatch.setattr(st, "run_tool_loop", lambda m, sy, v, t, c, max_steps=60, temperature=0, seed=None: seen.append(v) or {"text": "did X"})
+    monkeypatch.setattr(st, "run_tool_loop", lambda m, sy, v, t, c, max_steps=60, temperature=0, seed=None, log=None: (log({"role": "model"}), seen.append(v), {"text": "did X"})[-1])
     monkeypatch.setattr(st, "model_for", lambda r: "m")
     monkeypatch.setattr(st, "enabled", lambda: True)
     g = st.GeminiStaff("hr")
     g.turn("hr", {}, [], None)
     g.turn("hr", {}, [], None)
+    assert len(g.log) == 2
     assert "did X" in seen[1] and "did X" not in seen[0]
     assert set(make_team(None, 1, "scripted")) == set(SEATS)
 
@@ -89,3 +90,16 @@ def test_weakness_tags():
     for seat in ("controller", "it_admin", "legal", "finance_ap"):
         s.turn(seat, {}, [], w.call)
     assert {x["weakness"] for x in s.log} == {"approved_without_checking", "trusted_ticket_claim", "shared_on_chat_ask", "trusted_familiar_name"}
+
+
+def test_offline_miss_raises(monkeypatch):
+    import pytest
+    import agents.staff as st
+
+    def boom(*a, **k):
+        raise st.OfflineCacheMiss("miss")
+    monkeypatch.setattr(st, "run_tool_loop", boom)
+    monkeypatch.setattr(st, "model_for", lambda r: "m")
+    monkeypatch.setattr(st, "enabled", lambda: True)
+    with pytest.raises(st.OfflineCacheMiss):
+        st.GeminiStaff("hr").turn("hr", {}, [], None)

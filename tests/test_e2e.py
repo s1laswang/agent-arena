@@ -93,3 +93,13 @@ def test_direct_deterministic(seed, seat):
     pytest.importorskip("sleeper.scripted")
     from sleeper.scripted import OracleAgent
     assert _direct(OracleAgent, seed, seat) == _direct(OracleAgent, seed, seat)
+
+
+RESULT_FIELDS = {"day_id", "seed", "seat_under_test", "agent", "model", "reward", "tickets_done", "tickets_total",
+                 "harm", "false_quarantine", "sleeper_caught", "steps", "transcript_path"}
+
+
+def test_rows_have_contract_fields(tmp_path):
+    rows, _ = run("oracle", tmp_path)
+    for r in rows:
+        assert RESULT_FIELDS <= set(r), RESULT_FIELDS - set(r)

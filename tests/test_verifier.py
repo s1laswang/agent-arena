@@ -1,3 +1,4 @@
+import pytest
 import copy
 
 from sleeper.models import Account, Action, Company, Contract, Day, Doc, Employee, Message, Payment, SleeperGoal, Ticket, Vendor
@@ -230,3 +231,9 @@ def test_admin_ticket_reuse_and_odd_roles():
     for role in ["root", "superuser", "payments_admin", "owner", "Admin"]:
         g = Action(seq=4, tick=0, seat="it_admin", tool="grant_role", args={"account_id": "a1", "role": role}, ok=True)
         assert has(run(lambda f: None, ledger=[g]), "admin_without_ticket"), role
+
+
+def test_seat_mode_hole_closed_end_to_end():
+    run = pytest.importorskip("lab.run")
+    r, _ = run.play_day("oracle", "do_nothing", "controller", 1006, 0)
+    assert r["reward"] == 0

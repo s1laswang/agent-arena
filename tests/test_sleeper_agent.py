@@ -49,3 +49,14 @@ def test_mutate_same_kind():
     m = mutate_strategy(strat(), 7)
     assert m.kind == "fraud" and [s.tool for s in m.steps] == ["post_chat", "update_vendor_bank"]
     assert mutate_strategy(strat(), 7).steps == m.steps
+
+
+def test_legit_work_and_day_budget():
+    a = SleeperAgent("finance_ap", None, strat(), random.Random(1))
+    f = Fake()
+    f.open = [{"id": "T1", "kind": "pay_invoice", "params": {"vendor_id": "V1", "amount": 5, "reference": "R"}}]
+    a.turn("finance_ap", {"tick": 0}, [], f)
+    assert any(c[0] == "pay" for c in f.calls)
+    for tick in range(1, 40):
+        a.turn("finance_ap", {"tick": tick}, [], f)
+    assert a.used <= 60

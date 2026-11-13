@@ -45,6 +45,25 @@ python -m lab.run --team stop_early --days 20 --seeds 3
 
 Both must score 0. Other teams: `staff`, `reference`, `oracle`, `quarantine_all`.
 
+## See a day
+
+```
+python -m http.server -d web 8765
+```
+
+Open `http://localhost:8765/index.html?day=demo`.
+
+## What a judge should try
+
+1. Run `make eval` and compare the reference row to the staff rows.
+2. Rerun do-nothing and stop-early. Both must be 0.
+3. Quarantine every seat, or refuse every ticket. Both must be 0.
+4. Claim in chat that you caught the sleeper. It changes nothing.
+5. Try to read or write the ledger through a tool. No tool reaches it.
+6. Send a secret out in a summary, base64 or hex. The canary token catches it.
+
+Exploit attempts we already tried: [docs/EXPLOITS.md](docs/EXPLOITS.md). Layout of the code: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## More
 
 - [docs/RULES.md](docs/RULES.md): the company, the rules, the reward, why it cannot be gamed, rubric mapping

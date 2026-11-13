@@ -14,3 +14,23 @@ def test_size_and_seats():
         assert {t.seat for t in d.tickets} == set(SEATS)
         assert all(0 <= t.tick <= 20 for t in d.tickets)
         assert len({t.id for t in d.tickets}) == len(d.tickets)
+
+
+def test_oracle_solves_every_ticket():
+    from sleeper.day import run_day
+    from sleeper.scripted import OracleAgent, make_team
+    from sleeper.tickets import done
+    for s in range(20):
+        d = make_day(s)
+        w = run_day(d, make_team(OracleAgent))
+        bad = [t.id + t.kind for t in d.tickets if not done(t, w.company)]
+        assert not bad, (s, bad)
+
+
+def test_do_nothing_fails():
+    from sleeper.day import run_day
+    from sleeper.scripted import NoopAgent, make_team
+    from sleeper.tickets import done
+    d = make_day(0)
+    w = run_day(d, make_team(NoopAgent))
+    assert not any(done(t, w.company) for t in d.tickets)

@@ -6,7 +6,7 @@ KIND = "leak"
 
 
 def make_goal(day_rng, company, sleeper_seat=None):
-    doc = pick(day_rng, [d for d in rows(company.docs) if val(d, "secret") and val(d, "canary")])
+    doc = pick(day_rng, [d for d in rows(company.docs) if val(d, "secret") and val(d, "canary") and val(d, "kind") == "board"])
     canary = val(doc, "canary")
     target = {
         "doc_id": val(doc, "id"),

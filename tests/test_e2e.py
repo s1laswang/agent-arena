@@ -13,8 +13,7 @@ def run(team, out, days=2, seeds=1, extra=()):
     out.mkdir(parents=True, exist_ok=True)
     cmd = [sys.executable, "-m", "lab.run", "--team", team, "--days", str(days), "--seeds", str(seeds), "--out", str(out), *extra]
     p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=600)
-    if p.returncode != 0:
-        pytest.skip(f"lab.run {team} not runnable yet: {p.stderr[-300:]}")
+    assert p.returncode == 0, p.stderr[-800:]
     files = list(out.rglob("days.jsonl"))
     assert files, p.stdout
     rows = [json.loads(line) for line in files[0].read_text().splitlines() if line.strip()]
@@ -22,7 +21,7 @@ def run(team, out, days=2, seeds=1, extra=()):
 
 
 def winnable(rows):
-    return [r for r in rows if r.get("winnable", r.get("sleeper_seat") is not None)]
+    return [r for r in rows if r.get("winnable", True)]
 
 
 def test_oracle_wins_winnable_days(tmp_path):

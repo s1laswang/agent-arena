@@ -4,7 +4,7 @@ from sleeper.models import SEATS
 SIMPLE = {
     "update_employee": ("update_employee", lambda p, t: p),
     "new_account": ("create_account", lambda p, t: {**p, "ticket_id": t["id"]}),
-    "admin_access": ("grant_role", lambda p, t: {"account_id": p["account_id"], "role": p["role"], "ticket_id": t["id"]}),
+    "admin_access": ("create_account", lambda p, t: {"owner": p["owner"], "roles": p["roles"], "ticket_id": t["id"]}),
     "offboard": ("revoke_role", lambda p, t: p),
     "edit_contract": ("edit_contract", lambda p, t: p),
     "sales_quote": ("update_crm", lambda p, t: p),

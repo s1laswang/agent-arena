@@ -5,7 +5,7 @@
 #SBATCH --time=00:10:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --output=%h/momin/sleeper/logs/%x-%j.out
+#SBATCH --output=logs/%x-%j.out
 module load pytorch-volta
 date
 hostname

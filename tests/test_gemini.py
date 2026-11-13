@@ -41,3 +41,42 @@ def test_tool_loop(monkeypatch):
 def test_contents_roundtrip():
     c = gemini._contents([{"role": "assistant", "tool_calls": [{"name": "x", "args": {"q": 1}}]}, {"role": "user", "tool_results": [{"name": "x", "result": {"a": 1}}]}])
     assert c[0].role == "model" and c[1].parts[0].function_response.name == "x"
+
+
+def test_temp_defaults(monkeypatch):
+    monkeypatch.delenv("SLEEPER_TEMP_STAFF", raising=False)
+    assert gemini.temp_for("sleeper") == 0.9 and gemini.temp_for("staff") == 0.7
+    monkeypatch.setenv("SLEEPER_TEMP_STAFF", "0.2")
+    assert gemini.temp_for("staff") == 0.2
+
+
+def test_log_callback(monkeypatch):
+    seq = iter([{"text": "t", "tool_calls": [{"name": "end_turn", "args": {}}]}])
+    monkeypatch.setattr(gemini, "chat", lambda *a, **k: next(seq))
+    ev = []
+    gemini.run_tool_loop("m", "s", "v", [], lambda n, a: {}, log=ev.append)
+    assert [e["role"] for e in ev] == ["model", "tool"]
+
+
+def test_image_hash_and_part(tmp_path):
+    a = tmp_path / "a.png"
+    a.write_bytes(b"\x89PNGone")
+    k1 = gemini.cache_key("m", "s", [{"role": "user", "images": [str(a)]}], None, 0, 0)
+    a.write_bytes(b"\x89PNGtwo")
+    k2 = gemini.cache_key("m", "s", [{"role": "user", "images": [str(a)]}], None, 0, 0)
+    assert k1 != k2
+    c = gemini._contents([{"role": "user", "text": "x", "images": [str(a)]}])
+    assert c[0].parts[1].inline_data.mime_type == "image/png"
+
+
+def test_estimate():
+    assert gemini.usage()["est_calls_per_day"] == 240
+
+
+def test_loop_attaches_image(monkeypatch, tmp_path):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"x")
+    seq = iter([{"text": "", "tool_calls": [{"name": "read_doc", "args": {}}]}, {"text": "ok", "tool_calls": []}])
+    monkeypatch.setattr(gemini, "chat", lambda *a, **k: next(seq))
+    out = gemini.run_tool_loop("m", "s", "v", [], lambda n, a: {"title": "t", "image": str(img)})
+    assert out["messages"][2]["images"] == [str(img)]

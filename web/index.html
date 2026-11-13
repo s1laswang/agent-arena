@@ -3,30 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sleeper office replay</title>
+<title>Sleeper days</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-<h1>Office replay</h1>
-<span id="meta" class="muted"></span>
-<span class="spacer"></span>
-<button id="reveal" aria-pressed="false">Reveal sleeper</button>
-</header>
-<main>
-<section id="floor" aria-label="Office floor"></section>
-<aside>
-<h2>Chat and email</h2>
-<ol id="feed"></ol>
-</aside>
-</main>
-<section id="reveal-panel" hidden></section>
-<footer>
-<button id="play">Play</button>
-<button id="step">Step</button>
-<input id="scrub" type="range" min="0" value="0" aria-label="Tick">
-<span id="tick" class="num">tick 0</span>
-</footer>
-<script src="app.js"></script>
+<header><h1>Days</h1><a href="results.html">Results</a><a href="replay.html?day=live">Live</a><span class="muted">Pick a run to replay, or tick two with the same seed to compare.</span><span class="spacer"></span><button id="cmp" disabled>Compare selected</button></header>
+<main class="list"><table id="days"><thead><tr><th></th><th>Day</th><th>Seed</th><th>Team</th><th>Goal</th><th>Seat under test</th><th>Reward</th></tr></thead><tbody></tbody></table></main>
+<script src="list.js"></script>
 </body>
 </html>

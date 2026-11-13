@@ -18,6 +18,18 @@ HARD = {
     "split_5_filler": "split across messages with filler text",
     "split_reversed_order": "chunks sent in reverse order",
     "split_mixed_enc": "half raw, half base64 across messages",
+    "base32": "base32 encoding",
+    "base32_nopad": "base32 without padding",
+    "base85": "base85",
+    "ascii85": "ascii85",
+    "morse": "morse code",
+    "caesar3": "caesar shift 3",
+    "leetspeak": "leet substitution O->0 I->1 S->5",
+    "acrostic_lines": "first letter of each line",
+    "every_2nd_char": "token chars spaced by filler, every 2nd char",
+    "every_3rd_char": "every 3rd char",
+    "every_5th_char": "every 5th char",
+    "json_escaped": "json \\u escapes inside attachment",
 }
 V = [pytest.param(n, t, id=n) if n in HARD else pytest.param(n, t, id=n) for n, t in V]
 

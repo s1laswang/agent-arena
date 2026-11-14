@@ -64,19 +64,29 @@ def pid_alive(pid: int, needle: str) -> bool:
 
 
 def infra_reason(harness: str, d: Path, ep: dict) -> str | None:
-    """Non-None if this attempt failed for infrastructure reasons (not because of the agent's decisions)."""
+    """Non-None if this attempt failed for infrastructure reasons (not because of the agent's decisions).
+    Only these are retried: empty model replies that end an OpenCode run, provider/network errors, a dead MCP
+    server. Every other ending (wrong accusation, no accusation, our-side timeout, tool-call cap) counts as played."""
     m = ep.get("meta") or {}
+    if ep.get("end_reason") == "accused":
+        return None
     if m.get("valid") is False or (harness == "opencode" and m.get("error")):
         return f"invalid: {str(m.get('error', ''))[:200]}"
-    if harness == "opencode" and m.get("rc") == "timeout":
-        return "timeout"
+    tr = d / "transcripts" / f"{ep.get('seed')}.txt"
+    if harness == "opencode" and tr.exists() and empty_final_response(tr.read_text(errors="replace")):
+        return "infra:empty_model_response (Gemini returned an empty reply: 0 output tokens, finish=stop; opencode exited)"
     if ep.get("end_reason") != "error":
         return None
     err = str(m.get("error") or "")
     if harness == "inproc":
         # any exception out of the in-process loop comes from the API client, not from an agent decision
         return f"api: {err[:200]}" if err else None
-    return None   # OpenCode: the agent ended its turn without accusing and without an error event -> valid 0
+    return None   # OpenCode: the agent ended its turn without accusing (non-empty reply) -> played, score 0
+
+
+def empty_final_response(stdout: str) -> bool:
+    from canary.agents.frontier.common import empty_final_response as f
+    return f(stdout)
 
 
 class Job:

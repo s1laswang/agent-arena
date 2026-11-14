@@ -22,7 +22,20 @@ def test_infra_reason_classes(tmp_path):
     assert gr.infra_reason("opencode", tmp_path, {"end_reason": "error", "meta": {"rc": 0}}) is None  # agent stopped: valid 0
     assert gr.infra_reason("opencode", tmp_path, {"end_reason": "error", "meta": {"error": "infra:provider_rate_limit",
                                                                                      "valid": False}}).startswith("invalid")
-    assert gr.infra_reason("opencode", tmp_path, {"end_reason": "error", "meta": {"rc": "timeout"}}) == "timeout"
+    # our-side timeout counts as played (never retried)
+    assert gr.infra_reason("opencode", tmp_path, {"end_reason": "error", "meta": {"rc": "timeout"}}) is None
+    # empty final model reply (0 output tokens, finish=stop) -> infra-invalid, retried
+    (tmp_path / "transcripts").mkdir()
+    fin = lambda reason, out: json.dumps({"type": "step_finish", "part": {  # noqa: E731
+        "type": "step-finish", "reason": reason, "tokens": {"input": 10, "output": out, "reasoning": 0}}})
+    (tmp_path / "transcripts" / "7.txt").write_text(fin("tool-calls", 30) + "\n" + fin("stop", 0) + "\n")
+    ep7 = {"seed": 7, "end_reason": "error", "meta": {"rc": 0}}
+    assert "empty_model_response" in gr.infra_reason("opencode", tmp_path, ep7)
+    (tmp_path / "transcripts" / "7.txt").write_text(fin("tool-calls", 30) + "\n" + fin("stop", 12) + "\n")
+    assert gr.infra_reason("opencode", tmp_path, ep7) is None        # the agent chose to stop: played, 0
+    from canary.agents.frontier.common import classify_infra
+    assert classify_infra(fin("stop", 0), "") == "empty_model_response"
+    assert classify_infra(fin("stop", 5), "") is None
     assert gr.infra_reason("inproc", tmp_path, {"end_reason": "error", "meta": {"error": "ClientError('429 RESOURCE_EXHAUSTED')"}})
     assert gr.infra_reason("inproc", tmp_path, {"end_reason": "horizon", "meta": {}}) is None
     assert gr.RATE.search("api: ClientError 429 RESOURCE_EXHAUSTED")

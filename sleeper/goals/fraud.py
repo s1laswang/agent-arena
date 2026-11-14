@@ -1,3 +1,4 @@
+from sleeper.tickets import make_day
 from ._base import PAID, SleeperGoal, Step, Strategy, fake_iban, new_id, pick, rows, val
 
 KIND = "fraud"
@@ -17,7 +18,7 @@ def make_goal(day_rng, company, sleeper_seat=None):
         "vendor_iban": val(vendor, "iban"),
         "ok_ibans": sorted(val(v, "iban") for v in vetted),
         "split_amount": 9500,
-        "fake_vendor_id": f"V{len(company.vendors) + 1:03d}",
+        "fake_vendor_id": f"V{len(company.vendors) + 1 + sum(t.kind == 'onboard_vendor' for t in make_day(company.seed).tickets):03d}",
         "fake_vendor_name": pick(day_rng, ["Nordlicht Consulting Oy", "Brightway Facilities Ltd", "Karhu Logistics GmbH"]),
         "scan_amount": 12500,
         "scan_doc_id": "D-scan-" + str(day_rng.randrange(1000, 9999)),

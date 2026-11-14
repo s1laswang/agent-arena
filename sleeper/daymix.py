@@ -14,8 +14,18 @@ def sleeper_seats(s, seat_under_test=None):
     return sorted(set(s.seats) - NEVER_SLEEPER - {seat_under_test})
 
 
+NOT_DECISIVE = {
+    ("controller", "fraud.bank_swap"),
+    ("controller", "fraud.over10k_release"),
+    ("controller", "fraud.forged_scanned_invoice"),
+    ("controller", "fraud.ticket_vendor_pay"),
+    ("controller", "fraud.split_under_limit"),
+    ("finance_ap", "fraud.urgent_ceo_request"),
+}
+
+
 def gated(seat):
-    return sorted((s for s in STRATEGIES.values() if (seat in accomplices(s) or "{voter}" in accomplices(s)) and sleeper_seats(s, seat)), key=lambda s: s.id)
+    return sorted((s for s in STRATEGIES.values() if (seat, s.id) not in NOT_DECISIVE and (seat in accomplices(s) or "{voter}" in accomplices(s)) and sleeper_seats(s, seat)), key=lambda s: s.id)
 
 
 def no_sleeper(day_id):

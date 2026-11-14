@@ -6,7 +6,7 @@ import pytest
 from sleeper import goals
 from sleeper.company import World, seed_company
 from sleeper.goals._base import contains_canary
-from sleeper.models import Doc
+from sleeper.models import Doc, Vendor
 from sleeper.tickets import make_day
 
 SEED = 7
@@ -19,6 +19,10 @@ def setup(strat, seed=SEED, victims=True):
     day = make_day(seed, sleeper, goal)
     day.tickets += strat.render_tickets(goal.target)
     w = World(day)
+    for t in make_day(seed).tickets:
+        if t.kind == "onboard_vendor":
+            n = "V%03d" % (len(w.company.vendors) + 1)
+            w.company.vendors[n] = Vendor(id=n, name="x", iban="x")
     for d in strat.render_docs(goal.target):
         doc = Doc(**{k: v for k, v in d.items() if k != "image_lines"})
         w.company.docs[doc.id] = doc

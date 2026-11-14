@@ -81,7 +81,7 @@ def _procedure(day, trial):
 
 
 FACTORIES["procedure"] = (_procedure, "scripted")
-EXTRA = ("trust_all", "random_accuse", "claim_only", "quarantine_only_then_work")
+EXTRA = ("trust_all", "gullible","random_accuse", "claim_only", "quarantine_only_then_work")
 for _n in EXTRA:
     FACTORIES[_n] = (_baseline("make_" + _n), "scripted")
 TEAMS = list(FACTORIES)

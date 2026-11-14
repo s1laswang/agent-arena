@@ -432,13 +432,24 @@ def build_index(res: Path) -> list[dict]:
             parts.append(f"vs {inv}: score {s['gemini_mole_mean_score']:+.2f} with the Gemini mole vs "
                          f"{s['default_mole_mean_score']:+.2f} with the default mole (paired {s['paired_diff_mean']:+.2f}), "
                          f"caught {s['gemini_mole_caught']}/{s['n']} vs {s.get('default_mole_caught', '?')}/{s['n']}{leaks}")
-        rows.append({"role": "Adaptive mole (arena)", "key": "mole",
+        seeds = sorted(M["seeds"])
+        span = (f"{seeds[0]}\u2013{seeds[-1]}" if seeds == list(range(seeds[0], seeds[-1] + 1)) and len(seeds) > 1
+                else ", ".join(map(str, seeds)))
+        rows.append({"role": "Adaptive mole (arena mode, not the judged env)", "key": "mole",
                      "run": "results/gemini/roles/mole/ (episodes.jsonl per-day decisions, summary.json, meta.json, ledger.jsonl)",
                      "model": M["model"], "thinking": str(M.get("thinking_level")), "commit": _commit(M),
-                     "generated_at": M["finished_at"], "n": f"{len(M['seeds'])} dev seeds x {len(M['investigators'])} investigators ({M['tier']})",
+                     "generated_at": M["finished_at"],
+                     "n": f"n={len(seeds)}: {M['tier']} dev seeds {span}, x {len(M['investigators'])} investigators",
+                     "caveats": MOLE_CAVEATS,
                      "headline": "; ".join(parts)})
     return rows
 
+
+MOLE_CAVEATS = [
+    "Leak damage is flat per leak whatever the distribution, so broad leaking is fully rewarded in our env (a simplification).",
+    "The judged v1.4 tasks use the scripted moles.",
+    "Per-recipient watermarking is the real-world answer and a v2 mechanic, not built.",
+]
 
 ROLES_MD = """# Canary Lab: one real Gemini run per role
 
@@ -467,6 +478,9 @@ How the two new runs were made (`canary/gemini/roles.py`, every call through `ca
 - **Adaptive mole**: gemini-4-carbon plays the mole day by day (`canary.agents.mole_arena.LLMMole`, arena mode, never the
   judge path) against the reference solver and the heuristic on medium, respecting the env's p_leak gate; the same seeds
   are replayed with the default mole for a paired comparison. Investigator score: lower = the mole did better.
+
+Adaptive-mole caveats (arena mode, not the judged env):
+{mole_caveats}
 """
 
 
@@ -476,7 +490,7 @@ def run_index(a) -> int:
     (res / "roles").mkdir(parents=True, exist_ok=True)
     (res / "roles" / "index.json").write_text(json.dumps({"generated_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
                                                           "roles": rows}, indent=1) + "\n")
-    md = ROLES_MD.format(when=dt.datetime.now().astimezone().strftime("%a %d %b %H:%M %Z"), rows="\n".join(
+    md = ROLES_MD.format(mole_caveats="\n".join(f"{i}. {c}" for i, c in enumerate(MOLE_CAVEATS, 1)), when=dt.datetime.now().astimezone().strftime("%a %d %b %H:%M %Z"), rows="\n".join(
         f"| {r['role']} | `{r['run']}` | {r['model']} ({r['thinking']}) | `{r['commit']}` | {r['n']} | {r['headline']} |" for r in rows))
     Path(a.md).write_text(md)
     print(md)

@@ -28,6 +28,7 @@ const state = {
   leaksCount: 0,
   checkedLeaksToday: false,
   seenLeakDocIds: new Set(),
+  docTitles: {},
   employees: [], // populated ONLY after player triggers list_employees
   userTags: {}, // client-side notes: { [empId]: "suspect" | "cleared" | "unsure" }
   canaryAssignments: {}, // { [empId]: "A" | "B" | "C" }
@@ -292,6 +293,7 @@ function startGame(customSeed = null) {
   state.leaksCount = 0;
   state.checkedLeaksToday = false;
   state.seenLeakDocIds.clear();
+  state.docTitles = {};
   state.employees = [];
   state.userTags = {};
   state.canaryAssignments = {};
@@ -390,6 +392,11 @@ function syncStateFromData(tool, args, data) {
     const items = data.items || [];
     state.leaksCount = items.length;
     state.checkedLeaksToday = true;
+    for (const item of items) {
+      if (item.doc_id && item.title) {
+        state.docTitles[item.doc_id] = item.title;
+      }
+    }
   }
 
   if (tool === "list_employees") {
@@ -417,6 +424,9 @@ function syncStateFromData(tool, args, data) {
 
   if (tool === "plant_canary") {
     const cid = data.canary_id || `c${state.day}`;
+    if (args.doc_title) {
+      state.docTitles[cid] = args.doc_title;
+    }
     state.canaryHistory.push({
       id: cid,
       day: state.day,
@@ -791,7 +801,14 @@ function addEvidenceCard(tool, args, res) {
       </div>
     `;
   } else if (tool === "read_access_logs") {
-    const logs = res.data.logs || [];
+    let logs = res.data.logs || [];
+    if (typeof logs === "string") {
+      logs = logs.trim().split("\n").filter(Boolean).map(line => {
+        const p = line.split("\t");
+        return { day: parseInt(p[0], 10), employee: p[1], doc_id: p[2], after_hours: p[3] === "true" || p[3] === "1" };
+      });
+    }
+
     if (!logs.length) {
       bodyContent = `<p class="muted">No access log entries recorded for this filter window.</p>`;
     } else {
@@ -801,16 +818,21 @@ function addEvidenceCard(tool, args, res) {
         </div>
         <table class="log-table">
           <thead>
-            <tr><th>Day</th><th>Staff</th><th>Document</th><th>Access Time</th></tr>
+            <tr><th>Day</th><th>Staff</th><th>Document</th><th>Time</th></tr>
           </thead>
           <tbody>
       `;
       for (const log of logs.slice(-12)) {
+        const title = state.docTitles[log.doc_id];
+        const isLeaked = state.seenLeakDocIds.has(log.doc_id);
+        const docLabel = title ? `${log.doc_id} ("${title}")` : log.doc_id;
+        const leakedBadge = isLeaked ? ` <span class="chip" style="color:var(--err); border-color:var(--err); font-size:9px; padding:0 3px;">LEAKED</span>` : "";
+
         html += `
           <tr>
             <td>Day ${log.day}</td>
             <td><strong style="color:var(--accent);">${getEmployeeDisplayName(log.employee)}</strong></td>
-            <td>${log.doc_id}</td>
+            <td><span class="mono">${docLabel}</span>${leakedBadge}</td>
             <td>${log.after-hours ? '<span class="after-hours-tag">AFTER-HOURS</span>' : '<span class="muted">normal</span>'}</td>
           </tr>
         `;
@@ -819,7 +841,7 @@ function addEvidenceCard(tool, args, res) {
       if (logs.length > 12) html += `<div class="muted font-small" style="margin-top:4px;">Showing last 12 of ${logs.length} entries.</div>`;
       html += `
         <div class="muted font-small" style="margin-top:6px; color:var(--warn);">
-          Warning: The mole frames innocent colleagues by fabricating after-hours logs.
+          Note: Mole frames colleagues by fabricating after-hours logs.
         </div>
       `;
       bodyContent = html;

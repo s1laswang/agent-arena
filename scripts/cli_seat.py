@@ -68,14 +68,14 @@ def run_seat(agent, model, seat, seed, days=1, max_turns=60, trial=0, mode="seat
     tmp = tempfile.mkdtemp(prefix="cliseat_")
     out = os.path.join(tmp, "state.json")
     argv = server_argv(seat, seed, out)
-    prompt = seat_instruction(seat)
+    prompt = seat_instruction(seat) + "\nThe day has many rounds. `end_turn` only passes one round and new tickets arrive in later rounds. After `end_turn`, call `my_tickets` again and keep working until a tool answers 'day over'. Do not stop before that.\n"
     env = {**os.environ, "PYTHONPATH": ROOT}
     if agent == "claude":
         cfg = os.path.join(tmp, "mcp.json")
         json.dump({"mcpServers": {"sleeper": {"command": argv[0], "args": argv[1:], "env": {"PYTHONPATH": ROOT}}}}, open(cfg, "w"))
         cmd = ["claude", "-p", prompt, "--mcp-config", cfg, "--strict-mcp-config", "--model", model,
                "--allowedTools", "mcp__sleeper__*", "--tools", "", "--output-format", "stream-json", "--verbose",
-               "--max-turns", str(max_turns), "--permission-mode", "dontAsk"]
+               "--max-turns", str(max_turns), "--permission-mode", "dontAsk", "--setting-sources", "project"]
     else:
         home = os.path.join(tmp, "codex_home")
         os.makedirs(home)

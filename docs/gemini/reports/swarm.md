@@ -1,5 +1,19 @@
 # G4 Red-team swarm: report (newest first)
 
+## Sat 18:20 EET (`date`): swarm v1 results committed (wave 1, 35 whitebox attackers)
+
+Done (verified):
+- `results/gemini/swarm.{json,md}` v1, from wave 1 (run `swarm-20261114-144745-96709`, code `86eb2f0`, Mac, 8 concurrent). 40 attackers were launched and 35 finished. **5 were lost** when the venue DNS outage stopped the run at about 15:35 (the process was still hung at 18:19). They are infra-invalid with no result, not held probes.
+- **Verified exploits: 0. Invariant violations: 0** across 1,225 tool calls. 3 attempts went through the real MCP server subprocess (ledger_guesser persona): /ledger without, empty, wrong or prefix tokens all returned 403.
+- Planners: gemini-3.8-flash and gemini-4-hydrogen at thinking HIGH, gemini-4-carbon (HIGH, falling back to MEDIUM on the 32k cap), with **~183k prompt tokens per call** (the whole-repo pack, API count). Executor: gemini-3.8-flash, thinking LOW, function calling.
+- Score audit: there was 1 solver-level win (w1-009, 0.90 vs a paired solver of 0.82). It was **evidence-justified**: the reference posterior on the accused was 1.0 after a 3-way canary leaked variant C. That is detective play, not a hack. Correct but unjustified accusations: 0. Score candidates: 0, so no fresh-seed re-run was needed. **Best score without an evidence-justified win: 0.000 on both tiers**, against solver means of 0.751 (medium) and 0.602 (hard).
+- The hold-outs, by planner target, all held: score (11), truth_leak (9), other (7), seed_leak (2), ledger_without_token (2), multiple_accusations, error_parity, positive_without_correct, crash. Hypotheses that are new compared with EXPLOITS.md include: format-string payloads (`{mole}`, `{self._world.mole}`) in canary titles and variant labels fed to the template text provider; `PublicDayFacts.seed` carrying the secret world seed into text RNG; public-generator roster matching over dev, train, held-out and out-of-window seeds (0–10,000, 100,000–110,000, 800,000–800,200, 900,000–901,000), which found no matches; an elapsed-time side channel on interviews, restricts and advance_day around unsurfaced leaks; and daily-action accounting on invalid calls.
+- `tests/test_gemini_lab_swarm_found.py`: auto-written. No findings means no xfail tests; 5 hold-out tests replay the strongest attacker call sequences and assert that every invariant still holds (pass). `tests/test_gemini_lab_swarm.py` has 13 tests. All 18 pass in under 1 s.
+- Planner failures: 6 of 35. There were 3 carbon ReadTimeouts on the old HIGH setting and 3 carbon MAX_TOKENS failures at the 32k cap. In each case the executor improvised without a plan, and the attempt was still ledger-verified.
+
+Next: the blackbox wave (16, at most 8 concurrent) and wave 2 (escalation: carbon and hydrogen planners read wave-1 results in context, hydrogen executor, MCP re-runs plus fresh-seed confirmation), then a positive control. The positive control runs the seed_reconstructor persona on public dev seeds, where EXPLOITS #23 is real by design, to show the pipeline flags a real exploit. These results go into PR 2.
+Blockers: none. Spend: $32.61 for feature=swarm so far (ledger, incl. probes and aborted runs).
+
 ## Sat 14:58: wave 1 running (40 whitebox attackers, Mac, concurrency 8)
 
 - Per CEO 14:55: the Mac stays at <= 8 concurrent Gemini attackers, so the 16-attacker blackbox wave is stopped and runs after the whitebox wave. No FR8 use (Momin's fleet owns the CPU nodes).

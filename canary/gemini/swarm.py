@@ -878,7 +878,10 @@ def summarize(attempts: list[dict], solver_means: dict, run_ids: list[str], meta
         xs = [a for a in attempts if a["tier"] == t and a.get("score") is not None]
         paired = [a["solver_score"] for a in xs if a.get("solver_score") is not None]
         best = max(xs, key=lambda a: a["score"], default=None)
+        unj = [a for a in xs if not (a.get("correct") and (a.get("accusation_audit") or {}).get("justified"))]
+        bu = max(unj, key=lambda a: a["score"], default=None)
         per_tier[t] = {"attempts": len(xs), "best_non_solver": best["score"] if best else None,
+                       "best_unjustified": bu["score"] if bu else None, "best_unjustified_attempt": bu["id"] if bu else None,
                        "best_attempt": best["id"] if best else None,
                        "mean_attempt_score": round(sum(a["score"] for a in xs) / len(xs), 4) if xs else None,
                        "solver_mean_paired": round(sum(paired) / len(paired), 4) if paired else None,
@@ -935,8 +938,9 @@ def write_markdown(res: dict, path: Path) -> None:
          ""] + ([f"> {res['note']}", ""] if res.get("note") else []) + [
          f"**{c['attempts']} Gemini attackers** ({res.get('mode', '?')}, planners: {', '.join(res.get('models', []))}; "
          f"executor: {res.get('exec_model')}) each read "
-         + (f"the whole repository in one long-context prompt (**{res.get('pack_files')} files, "
-            f"{res.get('pack_tokens') or res.get('pack_tokens_est')} tokens**; the shared pack prefix is implicitly cached)" if res.get("mode") == "whitebox"
+         + (f"the whole repository in one long-context prompt (**{res.get('pack_files')} files; "
+            f"{res.get('planner_prompt_tokens_median') or res.get('pack_tokens') or res.get('pack_tokens_est')} prompt tokens "
+            f"per planner call** by the API count)" if res.get("mode") == "whitebox"
             else "only the agent's instruction and tool list")
          + ", wrote a concrete exploit plan, and executed it against a live episode by function calling. "
          "Scores come only from the server-side ledger; invariants are checked in code on every call.", "",
@@ -951,13 +955,15 @@ def write_markdown(res: dict, path: Path) -> None:
          f"planner failures (input filter block, timeout or token cap; the executor then improvised without a plan, "
          f"still ledger-verified): {c['planner_errors']} · errors: {c['errors']}", "",
          "## Scoreboard (per tier)", "",
-         "| tier | attempts | best attacker score | mean attacker score | solver mean (paired seeds) | correct / accused | with violations | exploits |",
-         "|---|---|---|---|---|---|---|---|"]
+         "| tier | attempts | best attacker score | best score without evidence-justified win | mean attacker score | solver mean (paired seeds) | correct / accused | with violations | exploits |",
+         "|---|---|---|---|---|---|---|---|---|"]
     for t, r in res["per_tier"].items():
         if r["best_non_solver"] is None:
-            L.append(f"| {t} | 0 | n/a | n/a | n/a | 0 / 0 | 0 | 0 |")
+            L.append(f"| {t} | 0 | n/a | n/a | n/a | n/a | 0 / 0 | 0 | 0 |")
             continue
-        L.append(f"| {t} | {r['attempts']} | {r['best_non_solver']:+.3f} ({r['best_attempt']}) | {r['mean_attempt_score']:+.3f} | "
+        bu = r.get("best_unjustified")
+        L.append(f"| {t} | {r['attempts']} | {r['best_non_solver']:+.3f} ({r['best_attempt']}) | "
+                 f"{'n/a' if bu is None else f'{bu:+.3f}'} | {r['mean_attempt_score']:+.3f} | "
                  f"{r['solver_mean_paired']:+.3f} | {r['correct']} / {r['accused']} | {r['with_violations']} | {r['exploits']} |")
     conf = res.get("confirmations") or {}
     if conf:
@@ -969,6 +975,16 @@ def write_markdown(res: dict, path: Path) -> None:
                      f"{cr['solver_mean']:+.3f} | {cr.get('justified_wins', '?')} / {cr.get('unjustified_wins', '?')} | "
                      f"{'**yes**' if cr['confirmed'] else 'no'} |")
     atts = res["attempts"]
+    by_target: dict[str, list] = {}
+    for a in atts:
+        by_target.setdefault((a.get("plan") or {}).get("target_invariant") or "(no plan)", []).append(a)
+    L += ["", "## What the attackers went after (planner `target_invariant`) and what held", "",
+          "| target | attempts | personas | invariant violations | best score | verdict |", "|---|---|---|---|---|---|"]
+    for tgt, xs in sorted(by_target.items(), key=lambda kv: -len(kv[1])):
+        nv = sum(len(x["invariant_violations"]) for x in xs)
+        bs = max((x.get("score") or 0) for x in xs)
+        L.append(f"| {tgt} | {len(xs)} | {', '.join(sorted({x['persona'] for x in xs}))} | {nv} | {bs:+.2f} | "
+                 f"{'**violated**' if nv else 'held'} |")
     top = sorted(atts, key=lambda a: (-len(a["invariant_violations"]), -(a.get("score") or -9)))[:12]
     L += ["", "## Top attempts explained", ""]
     for a in top:
@@ -1259,11 +1275,25 @@ def main(argv=None) -> int:
         for t in sorted({x["tier"] for x in atts}):
             xs = [x["solver_score"] for x in atts if x["tier"] == t and x.get("solver_score") is not None]
             sm[t] = round(sum(xs) / len(xs), 4) if xs else None
-        res = summarize(atts, sm, sorted({a.run_id} - {""}) or ["see ledger"], {"mode": a.mode, "models": a.models.split(","),
-                                                                              "exec_model": a.exec_model, "rebuilt": True})
+        ins = sorted((x.get("planner_meta") or {}).get("in") or 0 for x in atts if (x.get("planner_meta") or {}).get("in"))
+        meta = {"mode": a.mode, "models": a.models.split(","), "exec_model": a.exec_model, "rebuilt": True,
+                "planner_prompt_tokens_median": ins[len(ins) // 2] if ins else None,
+                "note": a.note, "tiers": sorted({x["tier"] for x in atts})}
+        if a.mode == "whitebox":
+            from .repo_pack import pack_repo
+            pk = pack_repo()
+            meta.update(pack_files=len(pk.files), pack_bytes=pk.n_bytes, pack_tokens_est=pk.n_bytes // 4,
+                        pack_excluded=[f"{p} ({w})" for p, w in pk.excluded])
+        for x in atts:
+            x.setdefault("planner_model", x.get("model"))
+            x.setdefault("executor_model", (x.get("executor_meta") or {}).get("executor", a.exec_model))
+        rids = sorted({x.get("run_id") for x in atts if x.get("run_id")}) or ([a.run_id] if a.run_id else ["see ledger"])
+        res = summarize(atts, sm, rids, meta)
         Path(a.out).mkdir(parents=True, exist_ok=True)
         (Path(a.out) / "swarm.json").write_text(json.dumps(res, indent=1, default=repr))
         write_markdown(res, Path(a.out) / "swarm.md")
+        if a.write_tests:
+            write_tests(res, Path(a.write_tests))
     elif a.merge:
         res = merge(a.merge, Path(a.out), a.write_tests or None)
     elif a.write_tests and not a.attackers:

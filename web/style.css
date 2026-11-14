@@ -81,3 +81,12 @@ ol.feed .ch{margin-left:6px}
 .run{min-width:0}
 .run main,.run .floor,.moments,.run aside{min-width:0}
 .panel,.moments li{overflow-wrap:anywhere}
+#strip{padding:6px 16px 0;background:var(--panel);border-top:1px solid var(--line);margin-top:auto}
+#strip+footer{margin-top:0;border-top:0}
+.track{display:flex;align-items:center;gap:10px;font-size:12px}
+.track .muted{width:90px}
+.track .line{position:relative;flex:1;height:14px}
+.track .line:before{content:"";position:absolute;left:0;right:0;top:6px;height:1px;background:var(--line)}
+.track i{position:absolute;top:2px;width:9px;height:9px;margin-left:-4px;border-radius:50%;background:var(--ok)}
+.track i.bad{background:var(--bad)}
+.track b{position:absolute;top:0;width:2px;height:14px;margin-left:-1px;background:var(--accent)}

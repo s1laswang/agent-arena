@@ -1,5 +1,60 @@
 # G3 Failure Atlas: report (newest first)
 
+## Sat 18:27 (EET, `date`): atlas v1 committed
+
+**Done (verified)**
+- **atlas v1 results committed**: `results/gemini/atlas.{json,md}`, 8 charts (292 KB), `results/gemini/atlas_cache/`
+  (1.1 MB: response cache plus corpus snapshot). Commit e4c68e4.
+- **Discovery came from Gemini, not the fallback**: gemini-3.8-flash read the whole corpus in one sitting from an
+  explicit context cache: 153 episodes, 9 cohorts, 792,862 tokens by count_tokens, 797,920 tokens cached. 13 further
+  structured questions ran against the same cache: 11 label chunks, the cohort comparison and the solver
+  counterfactuals. 3.99M input tokens were served from cache.
+- **Failure modes, by share of all solver regret** (computed in code):
+  - premature accusation on a sub-threshold posterior: 61%, 50 episodes;
+  - narrow, uninformative canaries: 15%, 74 episodes;
+  - costly early restriction: 9%;
+  - accusing a decoy or framed innocent: 2%;
+  - budget waste: 0%;
+  - other: 3%.
+  The labelled steps cover 90% of all regret (404 steps at regret >= 0.01).
+- **Cross-family comparison** (by code; different rule versions, so not pooled):
+  - Premature accusation is the top regret source for almost every cohort.
+  - Grok (v1.2) loses most to restrictions (46%).
+  - gemini-4-carbon inproc (v1.4) has the lowest premature share (41%), but 23% of its regret comes from one framed
+    innocent (h6). That accusation was evidence-backed (bad luck).
+  - Gemini's own reading: carbon runs about 50 interviews per episode and uses 3-variant canaries; GPT and Grok
+    lean on restrictions and on accusing below 0.6. Gemini states the version caveat itself.
+- **Verification**: 461/470 Gemini quotes verbatim (98.1%), 449 at the named step (95.5%); 9 dropped and listed in
+  atlas.json.
+- **Multimodal**: 8/8 divergence steps match the code's step. Honest caveat: the excerpt shown with the chart
+  includes the per-step REGRET, so this agreement is partly given away. For v2, hide regret in the excerpt.
+- **Embeddings**: 84 agent-rationale snippets, k=6, clusters named by Gemini. Purity vs the taxonomy labels 0.64
+  (NMI 0.37).
+- **Keyless replay**: `python -m canary.gemini.atlas --replay --charts 8 --embed` makes 0 live calls, uses 25
+  recorded responses and rebuilds the same atlas.
+- **Validation sheet** pushed: `docs/gemini/validation.md`, 30 claims (10 mode evidence, 12 step labels,
+  5 counterfactuals, 3 localisations), plus `docs/gemini/validation_context.md` with the steps around each claim. For
+  Ivar.
+- **Fixes along the way**:
+  - All generate calls stream. A non-streamed carbon call over 793k tokens was cut after 527 s.
+  - max_output_tokens is set at the model ceiling. Discovery truncated at 32k after 31k thinking tokens.
+  - Invalid structured output is never recorded for replay.
+  - New cached questions think at "medium". Default thinking took 63k thinking tokens and ~8 min per question.
+  - One SDK client, created under a lock (a racing second client was being closed).
+  - Embeddings use one Content per text. gemini-embedding-2 merged a list of strings into ONE vector.
+  - A failed discovery exits without writing atlas.json.
+
+**Not in v1**
+- Batch API labels: the batch job I cancelled was built on the fallback taxonomy.
+- The carbon cross-check: 2 of 3 shards were truncated at default thinking, and the retry hit the client bug.
+  Both are fixed in code and run in v2.
+
+**Spend**: $9.54 across 157 atlas ledger calls, including every failed attempt; 21.8M of 27.0M input tokens were
+cached.
+
+**Next**: v2 with the ladder episodes (thinking-level question), the Batch API labels and the carbon cross-check.
+**Blockers**: none.
+
 ## Sat 14:47 (EET, `date`)
 
 **Done**

@@ -38,7 +38,14 @@ class OracleAgent:
                     call("close_ticket", {"id": t["id"], "note": "approved"})
         call("end_turn", {})
 
+    def fill(self, t, call):
+        from sleeper.events import fill_hidden
+        return fill_hidden(t, call)
+
     def work(self, t, call):
+        t = self.fill(t, call)
+        if set(t.get("hidden", [])) - set(t["params"]):
+            return
         k, p = t["kind"], t["params"]
         if "requested_by" in p:
             return

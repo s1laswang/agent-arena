@@ -240,6 +240,10 @@ class Reference:
         return True
 
     def work(self, t, call):
+        from sleeper.events import fill_hidden
+        t = fill_hidden(t, call)
+        if set(t.get("hidden", [])) - set(t["params"]):
+            return
         p, k = t["params"], t["kind"]
         if not self.looks_legit(t, call):
             return self.refuse(t, call, "request does not check out")

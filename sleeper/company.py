@@ -266,7 +266,7 @@ class World:
         return {"ok": True, "id": self._msg(seat, to, "email", body, subject, attachments).id, "effect": "email"}
 
     def t_my_tickets(self, seat):
-        return {"ok": True, "tickets": [{"id": t.id, "tick": t.tick, "kind": t.kind, "request": t.request, "params": t.params,
+        return {"ok": True, "tickets": [{"id": t.id, "tick": t.tick, "kind": t.kind, "request": t.request, "params": {k: v for k, v in t.params.items() if k not in t.hidden}, "hidden": t.hidden,
                                          "closed": t.id in self.company.closed_tickets}
                                         for t in self.day.tickets if t.seat == seat and t.tick <= self.tick]}
 
@@ -366,7 +366,7 @@ class World:
 
     def t_list_tickets(self, seat):
         return {"ok": True, "tickets": [{"id": t.id, "tick": t.tick, "seat": t.seat, "kind": t.kind, "request": t.request,
-                                         "params": t.params, "closed": t.id in self.company.closed_tickets}
+                                         "params": {k: v for k, v in t.params.items() if k not in t.hidden}, "hidden": t.hidden, "closed": t.id in self.company.closed_tickets}
                                         for t in self.day.tickets if t.tick <= self.tick]}
 
     def t_add_vendor(self, seat, name, iban):

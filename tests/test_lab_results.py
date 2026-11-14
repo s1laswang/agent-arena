@@ -44,7 +44,7 @@ def test_run_and_eval(tmp_path):
 
     out = ev(["--days", "1", "--trials", "2", "--out", str(tmp_path / "e"), "--web-out", str(tmp_path / "w")], runner=fake)
     assert "oracle" in json.load(open(tmp_path / "w/summary.json"))
-    assert set(out[0]) >= {"oracle", "refuse_all"} and set(out[1]) == {"staff", "reference", "oracle", "do_nothing"}
+    assert set(out[0]) >= {"oracle", "refuse_all"} and {k.split(" ")[0] for k in out[1]} == {"staff", "reference", "oracle", "do_nothing"}
     assert "gap vs reference" in open(tmp_path / "e/eval/gap.md").read()
 
 

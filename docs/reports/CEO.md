@@ -215,3 +215,9 @@
 - Silas: no Gemini spend limit; remove the OpenAI API. OPENAI_API_KEY blanked in every .env (shared checkout + all worktrees). Codex CLI has its own API key in ~/.codex (not touched; we will not run it).
 - Gemini key verified (one gemini-3.8-flash call OK). Available models include gemini-4-carbon/argon/hydrogen and gemini-3.8-flash. The canary.llm default gemini-2.5-flash returns 404 (being fixed).
 - Launched: (1) v1.4 env engineer (branch justSilas-v14): hard 21 days, 2 canaries/day, 3 variants, higher leak damage (maybe n=40), solver plans multiple canaries/day, Mac calibration, freeze v1.4, hunt + reproduce + README. (2) Gemini measurement engineer (branch justSilas-gemini): strongest Gemini model, OpenCode+Gemini over MCP (judges shape) + in-process, v1.3 paired seeds 0-9 now, v1.4 when frozen.
+
+## 12:09 v1.4 merged (8f87ed1)
+- Hard: 40 staff, 21 days, 2 canaries/day x 3 variants, leak 0.05, cap 420. Fresh seeds 5000-5799: solver .779/.633/.556 (hard acc 94.9%); hard solver - grok_tactics +.195 (target .2 missed by .005); solver - heuristic +.534. make hunt: 0; make test 527.
+- Caveat: v1.4 NARROWS the gap to grok_tactics vs v1.3 on the same seeds (+.233 -> +.195); the bet is that LLM bookkeeping fails. Only the Gemini/frontier measurement decides.
+- CEO decisions: no fingerprint 0.9 tweak to chase the .2 target (wait for the frontier data); re-evolve hard_forge against v1.4 later with the Gemini mutator; medium unchanged.
+- repro_spread.py bug fixed (it had pooled replayed runs into the solver/heuristic cells); the v1.4 README table is clean.

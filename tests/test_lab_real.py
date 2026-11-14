@@ -121,3 +121,20 @@ def test_fuzz_baselines_every_loss_labeled_no_win_labeled(monkeypatch):
             d = play(name, i)
             ls = analyse.label(d)
             assert (d["result"]["reward"] == 0) == bool(ls), (name, i, ls)
+
+
+def test_counterfactual_flips_one_seat_fix(tmp_path):
+    import pytest
+    from lab import counterfactual
+    for i in range(1000, 1020):
+        d = play("staff", i)
+        if d["result"]["reward"] == 0 and {x["label"] for x in analyse.label(d)} & {"created_account_without_ticket", "edited_contract_on_chat_request"}:
+            break
+    else:
+        pytest.skip("staff lost no such day")
+    d["result"]["day_id"] = i
+    (tmp_path / "days").mkdir()
+    (tmp_path / "days" / f"{i}-t0.json").write_text(json.dumps(d))
+    c = counterfactual.counterfactual(tmp_path)
+    assert c["losses"] == 1 and c["fixed"] == 1
+    assert "100%" in counterfactual.table(c)

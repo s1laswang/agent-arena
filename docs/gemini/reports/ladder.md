@@ -2,6 +2,43 @@
 
 Branch `gemini-ladder`. Newest entry first.
 
+## Sat 14:50: M1 met; projection; keyless record/replay of a ladder episode works
+
+**Done (verified how)**
+- **Smoke grid and more.** 60 valid episodes so far: every flash model at every level has seeds 0–1 on medium
+  and hard. 0 infra failures and 0 API errors in 2,837 ledgered calls. `results/gemini/ladder.{md,json}` and the
+  4 figures are committed as v0 (partial).
+- **Record/replay showcase, proven on one cell.** I ran G1's gateway (`origin/gemini-gateway`, copied read-only
+  to a scratch dir) on the Mac with `--record`, then ran the ladder cell gemini-3.1-flash-lite / high / medium /
+  seed 0 through it: 70 calls, 280 KB of gzip. I replayed it with `--replay`, no key on either side
+  (`GEMINI_API_KEY=` empty, gateway `--key-file /dev/null`). The episode reproduced exactly: 70/70 identical
+  tool calls and results, score −1.0, 1 s wall. A scan of the recordings found no key and no token. Stored in
+  `~/agent-arena-data/gemini/ladder/showcase/`. The other showcase cells (one per model, high, medium seed 0)
+  will be recorded once the flash grid frees Mac slots.
+- `ladder.py` now identifies the machine by `uuid.getnode()`: the Mac's hostname flips between
+  "Silass-MacBook-Pro" and "Mac" with the network. Cells are claimed when a worker takes them, so extra processes
+  can join the same output dir without running a cell twice.
+- `canary/gemini/clash.py` (stretch): Gemini detective × Gemini mole in arena mode, both sides ledgered, with a
+  stub test. It has not been run on the API yet.
+
+**Projection for the full grid (400 Gemini episodes + imported carbon-default)**
+
+| block | episodes | measured / estimated per episode | $ | episode-hours |
+|---|---|---|---|---|
+| flash: flash-lite (4 levels), 3.5-flash (4), 3.8-flash (3) × 2 tiers × 10 seeds | 220 | $0.05–0.6, 0.5–10 min (measured) | ≈ 70 | ≈ 18 |
+| gemini-4-hydrogen (low, medium, high, xhigh) × 2 × 10 | 80 | ≈ $1, ≈ 25 min (est.) | ≈ 80 | ≈ 32 |
+| gemini-4-argon (low, medium, high) × 2 × 10 | 60 | ≈ $1.8, ≈ 60 min (calls 22–38 s, measured) | ≈ 110 | ≈ 60 |
+| gemini-4-carbon (low, high) × 2 × 10 | 40 | ≈ $2, ≈ 65 min (calls 23–41 s, measured) | ≈ 80 | ≈ 45 |
+| showcase recordings + clash matrix (45 detective episodes) | ~50 | | ≈ 30 | ≈ 15 |
+| **total** | | | **≈ $370 (< $800, so 10 seeds kept for gemini-4)** | ≈ 170 |
+
+Time: the Mac runs 16 episodes at once (8 flash + 8 gemini-4, carbon ≤ 4), I/O-bound at ~0% CPU. Flash
+finishes ≈ 17:00, and its 8 slots then go to gemini-4. At 16 slots the gemini-4 block finishes ≈ 01:00–03:00.
+Cells are ordered seed-pair-major (seeds 0–1 for every model and level, then 2–3, ...), so a cut at 01:30 still
+leaves ≥ 6 seeds per gemini-4 cell. FR8 through the gateway would add capacity: ssh to FR8 works again from this
+Mac (14:31; G1's report still says it is blocked), but the gateway is not deployed there yet. **Ask (CEO):** the
+FR8 gateway or permission to go above 16 on the Mac (I/O-bound) would finish 10 seeds well before 01:30.
+
 ## Sat 14:30: ladder + report + tests done; grid running on the Mac
 
 **Done (verified how)**

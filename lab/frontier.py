@@ -51,14 +51,16 @@ def run_frontier(agent, model, seat, days, trials, out="results/frontier", max_t
                 run_seat = run_seat or default_runner()
                 s = time.time()
                 try:
-                    r = dict(run_seat(agent, model, seat, day, 1, {"max_turns": max_turns, "max_seconds": max_seconds}))
+                    r = dict(run_seat(agent, model, seat, day, 1, {"max_turns": max_turns, "max_seconds": max_seconds, "trial": trial}))
                 except Exception as e:
                     r = {"error": f"{type(e).__name__}: {e}"}
-                r.update(mode="live", seconds=round(time.time() - s, 1))
+                r.setdefault("mode", "live")
+                r["seconds"] = round(time.time() - s, 1)
                 live += 1
                 if "error" not in r:
                     json.dump({**r, "mode": "live"}, open(p, "w"), indent=2, sort_keys=True)
-            r.update(trial=trial, day=day, seat=seat, model=model, agent=agent)
+            for k, v in dict(trial=trial, day=day, seat=seat, model=model, agent=agent).items():
+                r.setdefault(k, v)
             rows.append(r)
     ok = [r for r in rows if "error" not in r]
     cli = sh({"claude": "claude", "codex": "codex"}.get(agent, "true"), "--version")

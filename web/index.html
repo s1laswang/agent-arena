@@ -7,8 +7,10 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header><h1>Days</h1><a href="results.html">Results</a><a href="replay.html?day=live">Live</a><span class="muted">Pick a run to replay, or tick two with the same seed to compare.</span><span class="spacer"></span><button id="cmp" disabled>Compare selected</button></header>
-<main class="list"><p id="featured"></p><table id="days"><thead><tr><th></th><th>Day</th><th>Seed</th><th>Team</th><th>Goal</th><th>Seat under test</th><th>Reward</th></tr></thead><tbody></tbody></table></main>
+<header><h1>Sleeper</h1><span id="src" class="muted"></span><span id="flag"></span><a href="replay.html?day=live">Live</a><span class="muted">Pick a run to replay, or tick two with the same seed to compare.</span><span class="spacer"></span><button id="cmp" disabled>Compare selected</button></header>
+<main class="list"><h2>Multi-model gap (real agents vs reference)</h2><table id="gap"><thead></thead><tbody></tbody></table><section id="seatwrap" hidden></section><h2>Days</h2><p id="featured"></p><table id="days"><thead><tr><th></th><th>Day</th><th>Seed</th><th>Team</th><th>Goal</th><th>Seat under test</th><th>Reward</th></tr></thead><tbody></tbody></table></main>
+<script src="prov.js"></script>
+<script src="results.js"></script>
 <script src="list.js"></script>
 </body>
 </html>

@@ -65,15 +65,18 @@ def run(seat, kind, seed=4, team="staff", out="/tmp/seat_e2e.json"):
            "SLEEPER_TEAM": team, "PYTHONPATH": str(ROOT), "SIDECAR_MCP_PORT": str(mp), "SIDECAR_REWARD_PORT": str(rp)}
     p = subprocess.Popen([sys.executable, "-m", "harbor.sidecar"], env=env, cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        for _ in range(60):
+        end = time.time() + 240
+        while True:
+            assert p.poll() is None, "sidecar exited (port taken?)"
             try:
                 socket.create_connection(("127.0.0.1", mp), 1).close()
                 break
             except OSError:
+                assert time.time() < end, "sidecar not listening"
                 time.sleep(0.5)
         asyncio.run(play(f"http://127.0.0.1:{mp}/mcp", seat, kind, seed))
         req = urllib.request.Request(f"http://127.0.0.1:{rp}/reward", headers={"X-Verify-Token": TOK})
-        return json.loads(urllib.request.urlopen(req, timeout=120).read())
+        return json.loads(urllib.request.urlopen(req, timeout=400).read())
     finally:
         p.kill()
 

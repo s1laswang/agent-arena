@@ -61,6 +61,8 @@ VENDOR_IDS = {"nordic paper": "V01", "baltic freight": "V02", "kide cloud": "V03
 
 
 class ScriptedStaff:
+    listen = True
+
     def __init__(self, seat=None):
         self.seat = seat
         self.log = []
@@ -86,10 +88,10 @@ class ScriptedStaff:
 
         tick = view.get("tick", 0) if isinstance(view, dict) else 0
         mine = []
-        if tick % 3 == 0:
+        if self.listen and tick % 3 == 0:
             for m in _items(c("read_chat"), "messages"):
                 self._once(seat, m, c)
-        if tick % 6 == 0:
+        if self.listen and tick % 6 == 0:
             for m in _items(c("read_email"), "messages"):
                 self._once(seat, m, c)
         for m in [w for w in self.waiting if w[0] == seat and w[2] in self.confirmed]:

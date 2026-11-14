@@ -602,6 +602,11 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
         ac_md = ac_table_md(anticheat, replay, harbor)
         (out / "exploits.md").write_text(ac_md, encoding="utf-8")
     header["seconds"] = time.time() - t0
+    ac_bad: list[str] = []
+    if anticheat is not None:   # computed even when quiet: eval --reproduce exits 1 on any of these
+        ac_bad = [f"{r['tier']}/{r['probe']}" for r in anticheat["rows"] if r["blocked"] is False]
+        ac_bad += [f"replay:{r['file']}" for r in anticheat.get("replay") or [] if r["replay_consistent"] is False]
+        ac_bad += [f"harbor:{r['trial']}" for r in anticheat.get("harbor") or [] if r["consistent"] is False]
     if not quiet:
         print(md)
         if ac_md:
@@ -618,10 +623,9 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
                   "the team refreshes them with --update-committed)")
         print(f"total {header['seconds']:.1f} s")
         if anticheat is not None:   # last line on purpose: a probe that gets through must not scroll away
-            bad = [f"{r['tier']}/{r['probe']}" for r in anticheat["rows"] if r["blocked"] is False]
-            bad += [f"replay:{r['file']}" for r in anticheat.get("replay") or [] if r["replay_consistent"] is False]
-            bad += [f"harbor:{r['trial']}" for r in anticheat.get("harbor") or [] if r["consistent"] is False]
-            print("ANTI-CHEAT: every probe blocked, every replayable episode and Harbor trial consistent" if not bad else
-                  f"ANTI-CHEAT FAILURE: {len(bad)} not blocked / inconsistent: {', '.join(bad[:12])}")
-    return {"rows": rows, "header": header, "markdown": md, "anticheat": anticheat, "chart_skipped": skip,
+            print("ANTI-CHEAT: every probe blocked, every replayable episode and Harbor trial consistent" if not ac_bad
+                  else f"ANTI-CHEAT FAILURE: {len(ac_bad)} not blocked / inconsistent: {', '.join(ac_bad[:12])} "
+                       "(exit code 1)")
+    return {"rows": rows, "header": header, "markdown": md, "anticheat": anticheat,
+            "anticheat_ok": None if anticheat is None else not ac_bad, "chart_skipped": skip,
             "committed_files": files, "results_dir": out}

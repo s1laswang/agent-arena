@@ -1,0 +1,229 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "soc_access_vision_hard",
+  "model_id": "gemini-4-carbon",
+  "commit": "933f518381c9435fdef6f76c40bf64c5b78f7e42",
+  "timestamp": "2026-11-14T13:47:50+00:00",
+  "tier": "hard",
+  "tiers_version": "v1.4",
+  "n_worlds": 3,
+  "n_images_read_by_model": 3,
+  "metrics": {
+    "top1_mole_hits": 3,
+    "top1_mole_accuracy": 1.0,
+    "top3_mole_hits": 3,
+    "top3_mole_hit_rate": 1.0,
+    "top1_decoy_hits": 3,
+    "top1_decoy_accuracy": 1.0,
+    "decoy_identified_hits": 3,
+    "decoy_identified_rate": 1.0,
+    "avoided_framing_trap_hits": 3,
+    "avoided_framing_trap_rate": 1.0,
+    "naive_baseline_mole_hits": 0,
+    "naive_after_hours_baseline_mole_accuracy": 0.0,
+    "naive_baseline_decoy_traps": 3,
+    "naive_after_hours_baseline_decoy_trap_rate": 1.0
+  },
+  "usage": {
+    "calls": 3,
+    "in": 6453,
+    "out": 1497,
+    "thinking": 6248,
+    "cached": 0,
+    "cost_usd": 0.090356,
+    "latency_s": 120.092
+  },
+  "worlds": [
+    {
+      "seed": 0,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "raster_sha256": "1a04d5c5097df2ff97d45d69f770ad01969b2d6a71096d42cb321e66c1a4704b",
+      "raster_bytes": 286793,
+      "raster_size": [
+        2180,
+        1660
+      ],
+      "observable_summary": {
+        "n_employees": 40,
+        "closed_day": 20,
+        "total_access_events": 800,
+        "total_after_hours_events": 98,
+        "n_canaries_planted": 38,
+        "n_surfaced_canary_leaks": 6,
+        "n_surfaced_regular_leaks": 7,
+        "canary_narrowed_candidates": [
+          "e38"
+        ],
+        "naive_most_after_hours_id": "e14"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e38",
+          "e39",
+          "e21"
+        ],
+        "suspected_decoy_ids": [
+          "e14",
+          "e17",
+          "e27"
+        ],
+        "confidence": 0.999,
+        "canary_leak_summary": "Six planted canaries surfaced: c1-2 (=C!), c5 (=B!), c10 (=A!), c11 (=A!), c12 (=A!), and c16-2 (=A!). Only three employees held all six surfaced canaries (H6/6): e38 matched all 6/6 variants ([C], [B], [A], [A], [A], [A]), e39 matched 3/6 ([C], [B], ~B, [A], ~C, ~B), and e21 matched 2/6 (~A, [B], [A], ~B, ~B, ~C); all other 37 employees lacked two or more surfaced canaries (H0/6 to H4/6) and are 100% cleared.",
+        "visual_reasoning": "Panel B isolates e38, e39, and e21 as the sole H6/6 holders of all six surfaced canaries, with e38 achieving an exact 6/6 green variant match (~54,872x higher canary likelihood than runner-up e39 at 3/6). Panel A and Panel C corroborate e38 (SAL) as the true mole: e38 shows a characteristic ~27% after-hours rate (3/11) and strong regular-leak correlation (L1 D6/7 across six of seven leaked docs), whereas e39 (0/10 after-hours, L0 D0/7) and e21 (1/10 after-hours, L0 D1/7) lack corroborating activity. Conversely, Panel A's largest red after-hours spike belongs to e14 (15/33 after-hours), who held zero surfaced canaries in Panel B (0/6 H0/6) and is the primary framed decoy, alongside smaller scattered framing spikes on cleared staff like e17 (6/29, H0/6) and e27 (6/25, H1/6)."
+      },
+      "ground_truth": {
+        "true_mole": "e38",
+        "true_decoy": "e14"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true
+      },
+      "usage": {
+        "in": 2151,
+        "out": 508,
+        "thinking": 1921,
+        "cached": 0,
+        "cost_usd": 0.028592,
+        "latency_s": 34.876
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/hard_seed_0.png"
+    },
+    {
+      "seed": 1,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "raster_sha256": "9eccb991e57302879a00a5f5cc63750a91e4a780bb5751dc8ebc413ccae9d848",
+      "raster_bytes": 288623,
+      "raster_size": [
+        2180,
+        1660
+      ],
+      "observable_summary": {
+        "n_employees": 40,
+        "closed_day": 20,
+        "total_access_events": 895,
+        "total_after_hours_events": 124,
+        "n_canaries_planted": 38,
+        "n_surfaced_canary_leaks": 5,
+        "n_surfaced_regular_leaks": 4,
+        "canary_narrowed_candidates": [
+          "e33"
+        ],
+        "naive_most_after_hours_id": "e11"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e33",
+          "e22"
+        ],
+        "suspected_decoy_ids": [
+          "e11",
+          "e36",
+          "e21",
+          "e09",
+          "e37"
+        ],
+        "confidence": 0.99,
+        "canary_leak_summary": "Five canary traps surfaced in Panel B: c5-2 (=B!), c10 (=C!), c13 (=C!), c16 (=B!), and c17 (=A!). Only five employees held all five surfaced canaries (H5/5): e33 matched ALL 5/5 ([B], [C], [C], [B], [A]), e22 matched 4/5 (mismatch ~A on c16), e21 and e24 matched 2/5, and e20 matched 1/5; all other 35 staff had H0/5, H1/5, or H3/5 and are 100% cleared.",
+        "visual_reasoning": "In Panel A, e11 (RES) exhibits an extreme red after-hours spike of 14/34 logs/total, yet Panel B shows 0/5 H0/5 crossed-out canary tiles and Panel C shows L0 D0/4, identifying e11 as the primary framed decoy alongside secondary framing spikes on cleared staff like e36 (8/27, H1/5), e09 (6/25, H0/5), and e37 (6/29, H1/5). By contrast, e33 (LEG) is the sole employee matching ALL 5/5 surfaced canary variants in Panel B (~38x stronger canary odds than runner-up e22 at 4/5 H5/5), corroborated in Panel C by full department exposure and direct log access to surfaced regular leaks (L1 D4/4 for e33 in LEG versus L0 D1/4 for e22 in FIN) and an unframed 2/16 after-hours profile in Panel A."
+      },
+      "ground_truth": {
+        "true_mole": "e33",
+        "true_decoy": "e11"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true
+      },
+      "usage": {
+        "in": 2151,
+        "out": 452,
+        "thinking": 2613,
+        "cached": 0,
+        "cost_usd": 0.034952,
+        "latency_s": 52.058
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/hard_seed_1.png"
+    },
+    {
+      "seed": 2,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "raster_sha256": "6f1916210013247a5666dc9d70560e292ccd6023f02d97e85a34c02363b5b996",
+      "raster_bytes": 292748,
+      "raster_size": [
+        2180,
+        1660
+      ],
+      "observable_summary": {
+        "n_employees": 40,
+        "closed_day": 20,
+        "total_access_events": 841,
+        "total_after_hours_events": 151,
+        "n_canaries_planted": 38,
+        "n_surfaced_canary_leaks": 5,
+        "n_surfaced_regular_leaks": 6,
+        "canary_narrowed_candidates": [
+          "e25"
+        ],
+        "naive_most_after_hours_id": "e31"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e25",
+          "e27",
+          "e26",
+          "e36",
+          "e24"
+        ],
+        "suspected_decoy_ids": [
+          "e31",
+          "e05",
+          "e12",
+          "e33",
+          "e13"
+        ],
+        "confidence": 0.98,
+        "canary_leak_summary": "Five surfaced canaries leaked: c2-2 (=C!), c4-2 (=C!), c8 (=B!), c11 (=B!), and c13 (=B!). Only five employees held all five surfaced canaries (H5/5): e25 leads at 4/5 variant matches ([C], ~A, [B], [B], [B]), while e24, e26, e27, and e36 trail at 3/5 H5/5; all other 35 staff are 100% cleared with H0/5, H2/5, or H4/5.",
+        "visual_reasoning": "Panel A shows an extreme red after-hours spike on e31 (21/41 logs, 51% after-hours), but Panel B clears e31 completely (0/5 H2/5 with crossed-out non-held cells on c8, c11, and c13), exposing e31 as the primary framed decoy alongside minor scattered framing on e05 (9/25), e12 (7/27), e33 (7/28), and e13 (7/30). Among the five un-cleared H5/5 holders in Panel B, e25 stands alone at 4/5 variant matches (~38x odds advantage per match over the four 3/5 H5/5 runners-up, with only a single 5% noisy flip ~A on c4-2) and is strongly corroborated by mole-consistent Panel A after-hours activity (10/21, ~1.05 logs/day) and Panel C regular-leak correlation (L3 D6/6 with direct opens on d1-3, d6-1, and d5-1 plus full FIN department exposure)."
+      },
+      "ground_truth": {
+        "true_mole": "e25",
+        "true_decoy": "e31"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true
+      },
+      "usage": {
+        "in": 2151,
+        "out": 537,
+        "thinking": 1714,
+        "cached": 0,
+        "cost_usd": 0.026812,
+        "latency_s": 33.158
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/hard_seed_2.png"
+    }
+  ]
+}

@@ -22,6 +22,12 @@ def render_md(r: dict) -> str:
     loc = r.get("localisation") or {}
     lab = r.get("labels") or {}
     out = ["# Canary Failure Atlas", "",
+           "> **v1 was not blind.** An independent review found this atlas partly circular: the packed corpus showed "
+           "Gemini the code's own per-step `REGRET` values and `canary/analysis/tags.py` labels, the solver's beliefs "
+           "(`top=`, `mole:`), and the true mole and total regret in each episode header. So \"Gemini named the failure "
+           "modes\" is partly Gemini reading our labels back, and the verbatim rate counts code-generated step lines. "
+           "The blind re-run (Gemini sees only what the agents saw, did and said; recovery scored in code) is in "
+           "[atlas_blind.md](atlas_blind.md).", "",
            f"*Gemini read every trajectory our agents produced and explained why they fail. Generated "
            f"{r['generated_at']} at `{r.get('git_sha', '')}`.*", "",
            "## At a glance", "",
@@ -96,9 +102,23 @@ def render_md(r: dict) -> str:
             out += [f"- **{co['cohort']}**: {co['behaviour']}"]
             out += ["  " + _q(q) for q in co["quotes"][:1]]
         out.append("")
+    tt = r.get("thinking_table") or []
+    if tt or r.get("thinking"):
+        out += ["## Does more thinking help? (Gemini Ladder episodes)", ""]
+    if tt:
+        out += ["Computed in code from the ladder episodes in the corpus (small n per level: read as direction, not "
+                "as a measured effect; G2's ladder report has the full grid with CIs).", "",
+                "| model | thinking | episodes | mean score | accuracy | mean regret | canary regret/ep | "
+                "mean P(accused) | top modes (share of regret) |", "|---|---|---|---|---|---|---|---|---|"]
+        for x in tt:
+            top = ", ".join(f"{k} {_pct(v)}" for k, v in list(x["mode_share"].items())[:2]) or "-"
+            out.append(f"| {x['model']} | {x['thinking']} | {x['episodes']} | {x['score_mean']:.3f} | "
+                       f"{_pct(x['accuracy'])} | {x['regret_mean']:.3f} | {x['canary_regret_per_episode']:.3f} | "
+                       f"{x['p_accused_mean']} | {top} |")
+        out.append("")
     if r.get("thinking"):
         t = r["thinking"]
-        out += ["## Does more thinking help?", "", t["summary"], ""]
+        out += ["**Gemini's reading:** " + t["summary"], ""]
         for f in t["findings"]:
             out += [f"- **{f['model']}**: {f['effect']} Reduced: {', '.join(f['modes_reduced']) or '-'}; "
                     f"unchanged: {', '.join(f['modes_unchanged']) or '-'}."]

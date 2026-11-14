@@ -1,0 +1,53 @@
+{
+ "role": "worldtext",
+ "model": "gemini-4-carbon",
+ "provider_settings": {
+  "thinking_level": "model default (not sent; gemini-4-carbon: medium)",
+  "include_thoughts": true,
+  "temperature": "not sent (API default 1.0)",
+  "thought_signature_replay": true,
+  "api": "generateContent"
+ },
+ "thinking_level": "model default (not sent; gemini-4-carbon: medium)",
+ "git_sha": "6e2ba558800b27df0944cf3f1d592a865f4a0b41",
+ "git_branch": "gemini-dashboard",
+ "git_dirty": true,
+ "run_id": "roles-worldtext-20261114-185649",
+ "started_at": "2026-11-14T18:56:49+02:00",
+ "finished_at": "2026-11-14T19:03:46+02:00",
+ "host": "Silass-MacBook-Pro",
+ "ledger": {
+  "run_id": "roles-worldtext-20261114-185649",
+  "calls": 12,
+  "errors": 0,
+  "by_model": {
+   "gemini-4-carbon": 6,
+   "gemini-3.8-flash": 6
+  },
+  "in": 32937,
+  "out": 10888,
+  "thinking": 21779,
+  "cached": 0,
+  "cost_usd_list": 0.2458,
+  "latency_s_mean": 34.65
+ },
+ "tier": "medium",
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5
+ ],
+ "probe_model": "gemini-3.8-flash",
+ "outputs": [
+  "worlds/<tier>/<seed>.worldtext.json (Gemini world text)",
+  "worlds/<tier>/<seed>.text.json (rendered days)",
+  "lint_probe.json",
+  "ledger.jsonl"
+ ],
+ "code_commit": "ddbdd1a",
+ "code_commit_note": "launched from a tree based on 6e2ba55 with canary/gemini/roles.py not yet committed; ddbdd1a commits that code plus summary-only changes (lint/tone split, canary-leak count) that were applied to these outputs without new Gemini calls",
+ "layer": "demo/research layer (v1.5 candidate): NOT part of the judged environment (v1.4) and does not change the score; dev seeds only"
+}

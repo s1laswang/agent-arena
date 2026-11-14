@@ -44,7 +44,7 @@ import sys
 import threading
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import uuid
 from pathlib import Path
 from typing import Any, Callable
 
@@ -58,6 +58,7 @@ _MODEL_COST = {"gemini-4-carbon": 6, "gemini-4-argon": 5, "gemini-4-hydrogen": 4
 _LEVEL_COST = {"xhigh": 6, "high": 5, "default": 4, "medium": 3, "low": 2, "minimal": 1}
 _TIER_COST = {"hard": 2, "medium": 1, "easy": 0}
 HOST = socket.gethostname().split(".")[0]
+MACHINE = f"{uuid.getnode():012x}"   # stable per machine (macOS hostnames change with the network)
 
 
 # --------------------------------------------------------------------------- grid
@@ -174,16 +175,44 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
+def _is_ladder_pid(pid: int) -> bool:
+    try:
+        import subprocess
+        cmd = subprocess.run(["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True,
+                             timeout=5).stdout
+    except Exception:  # noqa: BLE001
+        return False
+    return "canary.gemini.ladder" in cmd
+
+
 def in_flight_elsewhere(out: Path, c: Cell) -> bool:
-    """True if another live process on this host holds the cell (shards on other hosts are disjoint)."""
+    """True if another live ladder process on this machine holds the cell (shards on other hosts are disjoint)."""
     f = c.dir(out) / "RUNNING.json"
     if not f.exists():
         return False
     try:
         r = json.loads(f.read_text())
-    except (json.JSONDecodeError, OSError):
+        pid = int(r.get("pid", -1))
+    except (json.JSONDecodeError, OSError, ValueError):
         return False
-    return r.get("host") == HOST and int(r.get("pid", -1)) != os.getpid() and _pid_alive(int(r["pid"]))
+    if pid == os.getpid() and r.get("machine", MACHINE) == MACHINE:
+        return False
+    if r.get("machine"):
+        return r["machine"] == MACHINE and _pid_alive(pid)
+    return _pid_alive(pid) and (r.get("host") == HOST or _is_ladder_pid(pid))
+
+
+def _running_marker() -> str:
+    return json.dumps({"host": HOST, "machine": MACHINE, "pid": os.getpid(), "started": time.time()})
+
+
+def _claim(out: Path, c: Cell) -> None:
+    """Write RUNNING.json at take time so a second process on this machine skips the cell (run_cell rewrites it)."""
+    d = c.dir(out)
+    if d.exists() and not is_done(out, c):
+        shutil.rmtree(d)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "RUNNING.json").write_text(_running_marker())
 
 
 _INFRA = re.compile(r"ClientError|ServerError|APIError|RESOURCE_EXHAUSTED|UNAVAILABLE|INTERNAL|\b5\d\d\b|\b429\b|"
@@ -223,6 +252,10 @@ class TallyClient:
         r = self.inner.chat(messages, **kw)
         dt = time.time() - t0
         um = getattr(r.raw, "usage_metadata", None) if getattr(r, "raw", None) is not None else None
+        mv = getattr(r.raw, "model_version", None) if getattr(r, "raw", None) is not None else None
+        if isinstance(mv, str):  # what the API says it served (gemini-3.5-flash -> gemini-3.6-flash)
+            self.tally.setdefault("model_versions", {})
+            self.tally["model_versions"][mv] = self.tally["model_versions"].get(mv, 0) + 1
 
         def n(a):
             v = getattr(um, a, 0) if um is not None else 0
@@ -244,21 +277,24 @@ class TallyClient:
 
 
 def _sdk_client():
-    """genai.Client for this process: through the FR8 gateway when GEMINI_GATEWAY_URL is set (no key on the
-    compute node), else None (GeminiClient builds the direct client from .env)."""
+    """Gateway fallback for branches without G1's canary.gemini.sdk (where lab_client is not gateway-aware yet):
+    a genai.Client on GEMINI_GATEWAY_URL when it is set, else None (GeminiClient builds the direct client)."""
+    try:
+        import canary.gemini.sdk  # noqa: F401  (G1: lab_client already passes a gateway-aware sdk_client)
+        return None
+    except ImportError:
+        pass
     url = os.environ.get("GEMINI_GATEWAY_URL")
     if not url:
         return None
     from google import genai
     from google.genai import types
     timeout_ms = int(float(os.environ.get("CANARY_GEMINI_TIMEOUT_S", "600")) * 1000)
-    try:
-        from canary.gemini.gateway import gateway_http_options  # G1's helper, when merged
-        opts = dict(gateway_http_options() or {})
-    except Exception:  # noqa: BLE001
-        opts = {"base_url": url}
-    opts.setdefault("timeout", timeout_ms)
-    return genai.Client(api_key=os.environ.get("GEMINI_API_KEY") or "gateway", http_options=types.HttpOptions(**opts))
+    tok = os.environ.get("GEMINI_GATEWAY_TOKEN") or ""
+    tf = os.path.expanduser(os.environ.get("GEMINI_GATEWAY_TOKEN_FILE") or "~/agent-arena-gemini/.gateway_token")
+    if not tok and os.path.exists(tf):
+        tok = next((ln.split()[-1] for ln in open(tf).read().splitlines() if ln.strip() and not ln.startswith("#")), "")
+    return genai.Client(api_key=tok or "gateway", http_options=types.HttpOptions(base_url=url, timeout=timeout_ms))
 
 
 def default_client_factory(c: Cell, run_id: str, meta: dict):
@@ -270,6 +306,44 @@ def default_client_factory(c: Cell, run_id: str, meta: dict):
     if sdk is not None:
         kw["sdk_client"] = sdk
     return lab_client(f"gemini:{c.model}", feature=FEATURE, run_id=run_id, meta=meta, **kw)
+
+
+# Files whose content decides what an episode is (env, rules, harness, Gemini client). Their sha256 is recorded per
+# cell, so a cell's code is pinned even if HEAD moves while a long run is in flight.
+CODE_FILES = ("canary/env.py", "canary/rules.py", "canary/world.py", "canary/types.py", "canary/eval.py",
+              "canary/mole/dsl.py", "canary/agents/llm_policy.py", "canary/agents/play.py", "canary/agents/loop.py",
+              "canary/agents/runlog.py", "canary/llm/base.py", "canary/llm/gemini_backend.py")
+# not included: canary/gemini/{ladder,ledger,sdk}.py (scheduling, labels, usage logging, gateway routing)
+
+
+def code_fingerprint() -> str:
+    import hashlib
+    root = Path(__file__).resolve().parents[2]
+    h = hashlib.sha256()
+    for f in CODE_FILES:
+        p = root / f
+        h.update(f.encode() + b"\0" + (p.read_bytes() if p.exists() else b"<missing>") + b"\0")
+    return h.hexdigest()[:16]
+
+
+def provenance() -> dict:
+    """Launch-time provenance (computed once per process): commit, dirty flag, tiers version, code fingerprint."""
+    global _PROV
+    if _PROV is None:
+        import subprocess
+        from canary.rules import TIERS_VERSION
+        root = Path(__file__).resolve().parents[2]
+        try:
+            dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", *CODE_FILES], capture_output=True,
+                                        text=True, cwd=root, timeout=10).stdout.strip())
+        except Exception:  # noqa: BLE001
+            dirty = None
+        _PROV = {"tiers_version": TIERS_VERSION, "launch_git_sha": _git_sha(), "launch_code_dirty": dirty,
+                 "code_fingerprint": code_fingerprint(), "launched_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+    return _PROV
+
+
+_PROV: dict | None = None
 
 
 def _git_sha() -> str:
@@ -299,7 +373,7 @@ def run_cell(out: Path, c: Cell, ladder_run: str, client_factory: Callable | Non
         shutil.rmtree(d)
     d.mkdir(parents=True)
     t0 = time.time()
-    (d / "RUNNING.json").write_text(json.dumps({"host": HOST, "pid": os.getpid(), "started": t0}))
+    (d / "RUNNING.json").write_text(_running_marker())
     run_id = f"ladder:{ladder_run}:{c.key}"
     meta = {"ladder_run": ladder_run, "model": c.model, "level": c.level, "tier": c.tier, "seed": c.seed}
     client = None
@@ -313,7 +387,8 @@ def run_cell(out: Path, c: Cell, ladder_run: str, client_factory: Callable | Non
     tally = dict(client.tally) if client is not None else {}
     eps = read_eps(d)
     ep = eps[-1] if eps else None
-    label = {**meta, "thinking_level": c.level, "label": f"{c.model} @ thinking={c.level}", "run_id": run_id,
+    label = {**meta, **provenance(), "thinking_level": c.level, "label": f"{c.model} @ thinking={c.level}",
+             "run_id": run_id,
              "wall_s": round(wall, 1), "tokens": tally, "attempt": attempts(out, c) + 1, "host": HOST,
              "gateway": bool(os.environ.get("GEMINI_GATEWAY_URL"))}
     if ep is not None:  # label the episode REAL: model + thinking level (agent field kept as play.py wrote it)
@@ -321,7 +396,8 @@ def run_cell(out: Path, c: Cell, ladder_run: str, client_factory: Callable | Non
         (d / "episodes.jsonl").write_text(json.dumps(ep, default=str) + "\n")
         mf = d / "meta.json"
         m = json.loads(mf.read_text()) if mf.exists() else {}
-        m.update({"thinking_level": c.level, "label": label["label"], "feature": FEATURE, "ladder_run": ladder_run,
+        m.update({**provenance(), "model_id": c.model, "thinking_level": c.level, "label": label["label"],
+                  "feature": FEATURE, "ladder_run": ladder_run,
                   "run_id": run_id, "tokens": tally, "wall_s": round(wall, 1), "host": HOST,
                   "seed_key": "public (dev seed)", "smoke": False})
         mf.write_text(json.dumps(m, indent=1, default=str))
@@ -350,6 +426,45 @@ def run_cell(out: Path, c: Cell, ladder_run: str, client_factory: Callable | Non
 
 
 _LOCK = threading.Lock()
+
+
+# --------------------------------------------------------------------------- provenance backfill
+def backfill_provenance(out: Path, sha_for: list[tuple[str, str]], log=print) -> int:
+    """Cells written by a process launched before provenance() existed lack tiers_version/launch sha. Fill them from
+    `sha_for` ([(model prefix, launch sha)], longest prefix wins), only if the env/harness/client code at that sha
+    is byte-identical to the code now (same code_fingerprint at that commit), and mark them provenance_backfilled."""
+    import subprocess
+    root = Path(__file__).resolve().parents[2]
+    from canary.rules import TIERS_VERSION
+    fp_now = code_fingerprint()
+    ok_sha: dict[str, bool] = {}
+    n = 0
+    for f in sorted(Path(out).glob("*/*/*/*/meta.json")):
+        m = json.loads(f.read_text())
+        if (m.get("tiers_version") and not m.get("provenance_backfilled")) or not m.get("thinking_level"):
+            continue
+        model = f.parent.relative_to(out).parts[0]
+        sha = lookup(sha_for, model)
+        if not sha:
+            continue
+        if sha not in ok_sha:
+            diff = subprocess.run(["git", "diff", "--quiet", sha, "--", *CODE_FILES], cwd=root).returncode
+            ok_sha[sha] = diff == 0
+            log(f"backfill: code at {sha} {'==' if ok_sha[sha] else '!='} current code ({fp_now})")
+        if not ok_sha[sha]:
+            continue
+        prov = {"tiers_version": TIERS_VERSION, "launch_git_sha": sha, "launch_code_dirty": False,
+                "code_fingerprint": fp_now, "provenance_backfilled": True}
+        m.update({**prov, "model_id": model})
+        f.write_text(json.dumps(m, indent=1, default=str))
+        ef = f.parent / "episodes.jsonl"
+        eps = read_eps(f.parent)
+        for e in eps:
+            e.setdefault("meta", {}).setdefault("ladder", {}).update(prov)
+        ef.write_text("".join(json.dumps(e, default=str) + "\n" for e in eps))
+        n += 1
+    log(f"backfill: {n} cells")
+    return n
 
 
 # --------------------------------------------------------------------------- probe
@@ -387,49 +502,78 @@ def probe(models: list[str], levels: list[str], out: Path, log=print) -> list[di
 def run_grid(out: Path, cells: list[Cell], concurrency: int = 4, max_episodes: int | None = None,
              max_attempts: int = 4, model_caps: dict[str, int] | None = None, ladder_run: str | None = None,
              client_factory: Callable | None = None, play_argv_extra: list[str] | None = None,
-             log: Callable[[str], None] = print) -> dict:
+             log: Callable[[str], None] = print, retry_delay: float = 30.0) -> dict:
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     ladder_run = ladder_run or out.name
-    os.environ.setdefault("CANARY_LLM_MAX_RETRIES", "12")
-    if not os.environ.get("CANARY_GEMINI_LEDGER"):
-        os.environ["CANARY_GEMINI_LEDGER"] = str(out / "_ledger" / f"{HOST}-{os.getpid()}.jsonl")
     todo = [c for c in cells if not is_done(out, c) and not in_flight_elsewhere(out, c)
             and attempts(out, c) < max_attempts]
     skipped = len(cells) - len(todo)
     if max_episodes is not None:
         todo = todo[:max_episodes]
-    log(f"START ladder_run={ladder_run} cells={len(cells)} done/skipped={skipped} todo={len(todo)} "
+    pv = provenance()
+    log(f"START {pv['tiers_version']} sha={pv['launch_git_sha'][:10]} code={pv['code_fingerprint']} ladder_run={ladder_run} cells={len(cells)} done/skipped={skipped} todo={len(todo)} "
         f"concurrency={concurrency} host={HOST} pid={os.getpid()}")
-    caps = {m: threading.Semaphore(k) for m, k in (model_caps or {}).items()}
-    pending: list[Cell] = list(todo)
+    caps = dict(model_caps or {})
+    busy: dict[str, int] = {m: 0 for m in caps}
+    pending: list[tuple[float, Cell]] = [(0.0, c) for c in todo]   # (not before, cell)
     rows: list[dict] = []
+    active = [0]
+    cv = threading.Condition()
 
-    def work(c: Cell) -> dict:
-        sem = next((s for m, s in caps.items() if c.model.startswith(m)), None)
-        if sem:
-            sem.acquire()
-        try:
-            for _ in range(max_attempts):
-                try:
-                    row = run_cell(out, c, ladder_run, client_factory, play_argv_extra, log)
-                except Exception as e:  # noqa: BLE001  (bug in our own code: log, never kill the pool)
-                    log(f"CRASH {c.key}: {type(e).__name__}: {e}\n{traceback.format_exc()[-800:]}")
-                    return {"cell": c.key, "crash": str(e)}
-                if not row.get("infra_invalid") or attempts(out, c) >= max_attempts:
-                    return row
-                time.sleep(min(300, 30 * attempts(out, c)))  # let a rate limit / outage pass
-            return row
-        finally:
-            if sem:
-                sem.release()
+    def cap_of(c: Cell) -> str | None:
+        return next((m for m in sorted(caps, key=len, reverse=True) if c.model.startswith(m)), None)
 
-    with ThreadPoolExecutor(max_workers=max(1, concurrency)) as ex:
-        futs = []
-        for c in pending:
-            futs.append(ex.submit(work, c))
-        for f in as_completed(futs):
-            rows.append(f.result())
+    def take() -> Cell | None:
+        """Next runnable cell in grid order whose model cap has room (a capped model never blocks a thread)."""
+        with cv:
+            while True:
+                if not pending:
+                    return None
+                now = time.time()
+                for i, (nb, c) in enumerate(pending):
+                    k = cap_of(c)
+                    if nb <= now and (k is None or busy[k] < caps[k]):
+                        pending.pop(i)
+                        if is_done(out, c) or in_flight_elsewhere(out, c):  # another process on this host got it
+                            break
+                        _claim(out, c)
+                        if k is not None:
+                            busy[k] += 1
+                        active[0] += 1
+                        return c
+                else:
+                    future = [nb - now for nb, _ in pending if nb > now]
+                    cv.wait(timeout=min([5.0, *future]))  # woken early by give_back()
+
+    def give_back(c: Cell, row: dict) -> None:
+        with cv:
+            k = cap_of(c)
+            if k is not None:
+                busy[k] -= 1
+            active[0] -= 1
+            rows.append(row)
+            if row.get("infra_invalid") and attempts(out, c) < max_attempts:
+                pending.append((time.time() + min(300, retry_delay * attempts(out, c)), c))  # let a rate limit pass
+            cv.notify_all()
+
+    def worker() -> None:
+        while True:
+            c = take()
+            if c is None:
+                return
+            try:
+                row = run_cell(out, c, ladder_run, client_factory, play_argv_extra, log)
+            except Exception as e:  # noqa: BLE001  (bug in our own code: log, never kill the pool)
+                log(f"CRASH {c.key}: {type(e).__name__}: {e}\n{traceback.format_exc()[-800:]}")
+                row = {"cell": c.key, "crash": str(e)}
+            give_back(c, row)
+
+    threads = [threading.Thread(target=worker, daemon=True) for _ in range(max(1, concurrency))]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
     done = sum(1 for c in cells if is_done(out, c))
     log(f"ALL DONE: {done}/{len(cells)} cells finished in {out}")
     return {"cells": len(cells), "done": done, "ran": len(rows), "rows": rows}
@@ -455,6 +599,8 @@ def main(argv=None) -> int:
     ap.add_argument("--max-attempts", type=int, default=4)
     ap.add_argument("--run-name", default=None, help="ladder_run label in the ledger (default: OUT's name)")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--backfill-sha", action="append", default=[],
+                    help="fill provenance of cells from older processes: 'gemini-3=<sha>;gemini-4=<sha>'")
     ap.add_argument("--probe", action="store_true", help="one tiny call per (model, level); writes OUT/_probe.json")
     a = ap.parse_args(argv)
     out = Path(os.path.expanduser(a.out))
@@ -464,6 +610,9 @@ def main(argv=None) -> int:
     def log(msg: str) -> None:
         print(time.strftime("%H:%M:%S"), msg, flush=True)
 
+    if a.backfill_sha:
+        backfill_provenance(out, parse_overrides(a.backfill_sha), log)
+        return 0
     if a.probe:
         os.environ.setdefault("CANARY_GEMINI_LEDGER", str(out / "_ledger" / f"{HOST}-{os.getpid()}.jsonl"))
         probe(models, levels, out, log)
@@ -477,6 +626,8 @@ def main(argv=None) -> int:
             print(("done " if is_done(out, c) else "todo ") + c.key)
         log(f"DRY: {len(cells)} cells ({n_done} done) in shard {a.shard or '0/1'}")
         return 0
+    os.environ.setdefault("CANARY_LLM_MAX_RETRIES", "12")  # transport retries (as scripts/gemini_runner.py)
+    os.environ.setdefault("CANARY_GEMINI_LEDGER", str(out / "_ledger" / f"{HOST}-{os.getpid()}.jsonl"))
     run_grid(out, cells, a.concurrency, a.max_episodes, a.max_attempts, caps, a.run_name, log=log)
     return 0
 

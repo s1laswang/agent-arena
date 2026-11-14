@@ -159,6 +159,16 @@ def _gw(upstream, tmp_path, **kw):
     return GW(**base)
 
 
+def _stats(g, n=1, timeout=5.0):
+    """Stats lines are written just after the response is sent: wait for at least n."""
+    t = time.time() + timeout
+    while True:
+        lines = g.gw.stats_path.read_text().splitlines() if g.gw.stats_path.exists() else []
+        if len(lines) >= n or time.time() > t:
+            return [json.loads(x) for x in lines]
+        time.sleep(0.02)
+
+
 def _gen(url, key=TOKEN, model="gemini-3.1-flash-lite", body=None, via="header"):
     body = body or {"contents": [{"role": "user", "parts": [{"text": "hi"}]}]}
     path = f"/v1beta/models/{model}:generateContent"
@@ -192,7 +202,7 @@ def test_key_swap_header_and_query(upstream, tmp_path):
             blob = json.dumps(s["headers"]) + s["path"] + s["body"].decode()
             assert TOKEN not in blob and OTHER not in blob
             assert "key=" not in s["path"]
-        stats = [json.loads(x) for x in g.gw.stats_path.read_text().splitlines()]
+        stats = _stats(g, 2)
         assert {s["client"] for s in stats} == {"lab", "meta"}
         assert all(s["model"] == "gemini-3.1-flash-lite" and s["op"] == "generateContent" for s in stats)
     finally:
@@ -247,7 +257,7 @@ def test_concurrency_cap_and_queueing(upstream, tmp_path):
             rs = list(ex.map(lambda i: _gen(g.url, body={"contents": [{"parts": [{"text": str(i)}]}]}), range(6)))
         assert all(r.status_code == 200 for r in rs)
         assert upstream.max_active <= 2
-        stats = [json.loads(x) for x in g.gw.stats_path.read_text().splitlines()]
+        stats = _stats(g, 6)
         assert max(s["queued_s"] for s in stats) >= 0.1
     finally:
         g.close()
@@ -270,7 +280,7 @@ def test_retries_429_with_backoff(upstream, tmp_path):
     g = _gw(upstream, tmp_path)
     try:
         assert _gen(g.url).status_code == 200
-        stats = [json.loads(x) for x in g.gw.stats_path.read_text().splitlines()]
+        stats = _stats(g, 1)
         assert stats[-1]["retries"] == 2 and stats[-1]["status"] == 200
     finally:
         g.close()
@@ -303,6 +313,7 @@ def test_stats_have_no_secrets_or_bodies(upstream, tmp_path):
     try:
         _gen(g.url, body={"contents": [{"parts": [{"text": "SECRET-PROMPT"}]}]})
         _gen(g.url, key="bad-bad-bad-bad-bad-bad")
+        _stats(g, 2)
         text = g.gw.stats_path.read_text()
         assert REAL not in text and TOKEN not in text and "SECRET-PROMPT" not in text and "bad-bad" not in text
         assert {"ts", "model", "method", "status", "latency_s", "queued_s", "bytes_in", "bytes_out",
@@ -382,3 +393,117 @@ def test_committed_showcase_replays_keyless(tmp_path):
                        cwd=root, env=env, capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, r.stderr[-2000:]
     assert "REPLAY OK" in r.stdout
+
+
+def test_tcprelay_forwards_to_gateway(upstream, tmp_path):
+    """ssh -R fallback piece: a byte relay in front of the gateway keeps auth end to end."""
+    from canary.gemini.tcprelay import serve
+    g = _gw(upstream, tmp_path)
+    port = _free_port()
+    gport = int(g.url.rsplit(":", 1)[1])
+    th = threading.Thread(target=lambda: asyncio.run(serve(("127.0.0.1", port), ("127.0.0.1", gport), 0.002)),
+                          daemon=True)
+    th.start()
+    try:
+        url = f"http://127.0.0.1:{port}"
+        for _ in range(50):
+            try:
+                httpx.get(url + "/healthz", timeout=1)
+                break
+            except httpx.TransportError:
+                time.sleep(0.05)
+        assert _gen(url).status_code == 200
+        assert _gen(url, key=None).status_code == 401
+    finally:
+        g.close()
+
+
+def test_adaptive_limit_halves_on_429_and_regrows():
+    from canary.gemini.gateway import AdaptiveLimit
+
+    async def go():
+        lim = AdaptiveLimit(8, grow_after=2, cooldown_s=0.0)
+        await lim.throttled()
+        assert lim.limit == 4
+        await lim.throttled()
+        await lim.throttled()
+        await lim.throttled()
+        assert lim.limit == 1
+        for _ in range(4):
+            await lim.succeeded()
+        assert lim.limit == 3
+        await lim.acquire()
+        await lim.acquire()
+        await lim.acquire()
+        waiter = asyncio.create_task(lim.acquire())
+        await asyncio.sleep(0.01)
+        assert not waiter.done()  # at the limit: queued
+        await lim.release()
+        await asyncio.wait_for(waiter, 1)
+    asyncio.run(go())
+
+
+def test_429_shrinks_model_limit(upstream, tmp_path):
+    upstream.fail_first = 1
+    g = _gw(upstream, tmp_path, max_concurrency=8)
+    try:
+        assert _gen(g.url, model="gemini-4-carbon").status_code == 200
+        lim = httpx.get(g.url + "/healthz").json()["model_limits"]["gemini-4-carbon"]
+        assert lim[0] == 4 and lim[1] == 8
+    finally:
+        g.close()
+
+
+def test_genai_client_pins_v1beta_direct_and_gateway(upstream, tmp_path, monkeypatch):
+    """google-genai 3.x defaults to v1 (caches.create 404s there): both paths must hit /v1beta."""
+    pytest.importorskip("google.genai")
+    from canary.gemini.sdk import gateway_http_options, genai_client
+    g = _gw(upstream, tmp_path)
+    try:
+        monkeypatch.setenv("GEMINI_GATEWAY_URL", g.url)
+        monkeypatch.setenv("GEMINI_GATEWAY_TOKEN", TOKEN)
+        assert gateway_http_options()["api_version"] == "v1beta"
+        c = genai_client()
+        c.models.generate_content(model="gemini-3.1-flash-lite", contents="hi")
+        assert upstream.seen[-1]["path"].startswith("/v1beta/models/gemini-3.1-flash-lite:generateContent")
+        # direct path: same HttpOptions api_version (no network: inspect the client's options)
+        monkeypatch.delenv("GEMINI_GATEWAY_URL")
+        monkeypatch.setenv("GEMINI_API_KEY", "dummy-key-for-test")
+        c = genai_client()
+        assert c._api_client._http_options.api_version == "v1beta"
+    finally:
+        g.close()
+
+
+def test_replay_tag_separates_identical_requests(upstream, tmp_path):
+    """Two episodes sending the same first request get their own recordings; the tag never goes upstream."""
+    store = tmp_path / "replay"
+    g = _gw(upstream, tmp_path, mode="record", store_dir=store)
+    try:
+        for tag in ("ep-a", "ep-b"):
+            r = httpx.post(g.url + "/v1beta/models/m:generateContent", json={"contents": []},
+                           headers={"x-goog-api-key": TOKEN, "x-canary-replay-tag": tag}, timeout=10)
+            assert r.status_code == 200
+    finally:
+        g.close()
+    assert len(list(store.rglob("*.json.gz"))) == 2
+    assert all(".1." not in p.name for p in store.rglob("*.json.gz"))
+    assert all("x-canary-replay-tag" not in {k.lower() for k in s["headers"]} for s in upstream.seen)
+    assert request_key("POST", "/p", [], b"{}", "a") != request_key("POST", "/p", [], b"{}", "b") \
+        != request_key("POST", "/p", [], b"{}")
+
+
+def test_committed_ladder_replays_keyless(tmp_path):
+    """The committed ladder recording (4 episodes, recorded at concurrency 4) reproduces step for step."""
+    pytest.importorskip("google.genai")
+    import subprocess
+    import sys
+    root = Path(__file__).resolve().parents[1]
+    if not (root / "results/gemini/replay-ladder/manifest.json").exists() or \
+            not (root / "canary/gemini/ladder.py").exists():
+        pytest.skip("no committed ladder recording")
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GEMINI_")}
+    env["GEMINI_API_KEY"] = ""
+    r = subprocess.run([sys.executable, "-m", "canary.gemini.lab_replay", "--only", "ladder"], cwd=root, env=env,
+                       capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0 and "REPLAY OK" in r.stdout, (r.stdout + r.stderr)[-2000:]

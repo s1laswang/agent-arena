@@ -9,6 +9,13 @@ These files live in `docs/gemini/` (not `docs/PLAN.md`) so they never conflict w
 2. **Merge path (agreed with the Arena CEO, 15:00):** PR 1 (code plus first results) by **Sat 19:30**, PR 2 (results and docs only) by Sun 01:30. ~~Original proposal: at 05:00 Sunday I open a PR from `gemini-track` into `justSilas`. It is additive: a new package `canary/gemini/`, new `docs/gemini/`, new tests and new Makefile targets, with no edits to env, reward or reproduce. The AfterQuery CEO merges it into `main`.~~
 3. **Which project is the Gemini entry?** I chose **Canary** (agent-arena), see below. Override only if you strongly prefer another.
 
+4. **Momin's fleet (FLEET-CONTEXT.md, 14:45).** The fleet's `gemini` team (in `~/momin/fleet`, paused at 14:33) has our goal on our repo. **Proposed split, needs your OK to give the fleet instructions:**
+   - **Fleet gemini team:** one **labelled real run per existing role** with gemini-4-carbon, covering Mole Forge, world builder, scenario designer, arena mole, hunter and analyst v0 (`pitch/GEMINI.md` roles). Each run records the model id and commit.
+   - **Canary Lab (us):** ladder, Failure Atlas, red-team swarm, gateway and dashboard (already built and tested on `gemini-track`). We also own the submission write-up, the evidence pack and the video assets. We do not rebuild the six roles.
+   - **Shared:** the fleet logs Gemini usage in our ledger schema (`canary/gemini/ledger.py`: `{ts, feature, model, kind, in, out, thinking, cached, latency_s, cost_usd, ok, ...}`), so the dashboard and the submission count all Gemini work.
+   - I will not touch `~/momin/fleet`, `fr8/*`, `momin` or `sleeper/*`. I read them only.
+5. **How do the fleet's compute-node jobs reach Gemini?** Our compute-node test returned no internet. If the fleet already has a proxy, our ladder and swarm use the same route, and our gateway stays local and only does record/replay.
+
 ## Decision: the Gemini entry is Canary, extended into "Canary Lab"
 
 Candidates compared:
@@ -81,6 +88,11 @@ Already on `justSilas` (the AfterQuery team owns these, and we credit them in th
 - The gemini-4-carbon **default-thinking** headline (n≥30 per tier) belongs to their measurement engineer (`justSilas-gemini`). Our ladder covers the other models and explicit thinking levels, reuses their runners, and runs paired with the solver on the same v1.4 dev seeds.
 - The atlas and the swarm are ours. Exploits go to the Arena CEO immediately, with a ledger-verified repro.
 - The gateway runs only when FR8 actually needs Gemini. It is token-gated, keeps the key out of world-readable files and command lines, and has a hard stop.
+
+## Fleet coordination (added 14:55 after FLEET-CONTEXT.md)
+- **`sleeper/*` and `momin`** are "The Sleeper", a different environment with its own analyst (`agents/analyst.py`), exploiter (`redteam/gemini_exploiter.py`) and dashboard. Under docs/IDEAS.md its best parts are folded into Canary. Our Canary Lab modules target Canary and don't duplicate it. The submission credits both. If Sleeper parts merge into Canary with Gemini runs, our ladder, atlas and dashboard can read those runs.
+- **The fleet `gemini` team** has the same goal and the same repo. Proposed split: see Questions for Silas #4. Until Silas answers, I build no new Canary Lab modules. Remaining effort goes to evidence (labelled real runs with model id and commit), the write-up and the showcase, per FLEET-CONTEXT §3.
+- **FR8 CPU** is shared with up to 160 fleet agents. Our Canary Lab jobs stay small: ladder and swarm are API-bound and can run from the Mac at ≤16 concurrent.
 
 ## Risks
 

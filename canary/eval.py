@@ -45,6 +45,8 @@ def run_episode(env, policy, max_iters: int = MAX_ITERS) -> EpisodeResult:
     if not env.done:
         res.end_reason = "error"
         res.meta["error"] = error or f"no episode end after {max_iters} iterations"
+        if error:  # the policy crashed (e.g. an LLM API error): not a played episode, never a silent 0
+            res.meta["valid"] = False
     return res
 
 

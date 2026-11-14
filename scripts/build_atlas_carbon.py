@@ -30,7 +30,7 @@ from canary.solver.regret import attribute
 
 FRONTIER_FAMILIES = ("codex-gpt-5.5", "gpt-5.5", "grok", "opencode-gpt-5.6-sol", "gemini")
 DEFAULT_RUNS = Path("data/runs/committed")
-DEFAULT_OUT = Path("results/gemini")
+DEFAULT_OUT = Path("results/gemini_roles/failure_analyst/atlas-carbon")
 DEFAULT_LLM = "gemini:gemini-4-carbon"
 DEFAULT_RUN_ID = "atlas-carbon-v1"
 DEFAULT_SAMPLE_SIZE = 30
@@ -950,19 +950,23 @@ def deterministic_quotes_for_mode(
     return quotes
 
 
-def resolve_mode_chart(out_dir: Path, mode_id: str) -> str:
-    rel = MODE_SPECS[mode_id].get("chart_rel") or ""
-    if not rel:
-        return ""
-    out_resolved = out_dir.resolve()
-    cand = (out_resolved / rel).resolve()
-    try:
-        cand.relative_to(out_resolved.parent)
-    except ValueError:
-        return ""
-    if cand.is_file() and cand.stat().st_size <= 400_000:
-        return rel
-    return ""
+def resolve_mode_chart(out_dir: Path, mode_id: str, regret_share: float = 0.0, episodes: int = 0) -> str:
+    charts_dir = out_dir / "charts"
+    charts_dir.mkdir(parents=True, exist_ok=True)
+    bar_w = max(8, min(280, int(round(280.0 * max(0.0, min(1.0, regret_share))))))
+    pct = f"{regret_share * 100.0:.1f}%"
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 90">'
+        '<rect width="320" height="90" fill="#0f172a"/>'
+        f'<text x="14" y="26" fill="#f8fafc" font-family="monospace" font-size="13">{clean_text(mode_id)}</text>'
+        '<rect x="14" y="40" width="280" height="16" rx="4" fill="#1e293b"/>'
+        f'<rect x="14" y="40" width="{bar_w}" height="16" rx="4" fill="#38bdf8"/>'
+        f'<text x="14" y="76" fill="#94a3b8" font-family="monospace" font-size="11">regret_share={pct} episodes={episodes}</text>'
+        "</svg>\n"
+    )
+    rel = f"charts/{mode_id}.svg"
+    (out_dir / rel).write_text(svg, encoding="utf-8")
+    return rel
 
 
 def build_synthesis_prompt(
@@ -1310,7 +1314,7 @@ def build_atlas(
                 "regret_sum": m_stat["regret_sum"],
                 "episodes": m_stat["episodes"],
                 "quotes": quotes,
-                "chart": resolve_mode_chart(out_path, mid),
+                "chart": resolve_mode_chart(out_path, mid, float(m_stat["regret_share"]), int(m_stat["episodes"])),
             }
         )
 
@@ -1394,6 +1398,32 @@ def build_atlas(
     out_path.mkdir(parents=True, exist_ok=True)
     (out_path / "atlas.json").write_text(atlas_json_text, encoding="utf-8")
     (out_path / "atlas.md").write_text(atlas_md, encoding="utf-8")
+    meta_payload = redact(
+        clean_obj(
+            {
+                "role": "failure_analyst",
+                "subrole": "failure_atlas_carbon",
+                "model_id": atlas_payload["model"],
+                "commit": atlas_payload["git_sha"],
+                "timestamp": atlas_payload["generated_at"],
+                "stub": bool(atlas_payload["synthetic"]),
+                "source": atlas_payload["source"],
+                "n_episodes_packed": corpus_summary["n_episodes"],
+                "verified_quotes_pct": atlas_payload["quote_verification"]["pct"],
+                "agreement_rate": atlas_payload["agreement"]["rate"],
+                "usage": {
+                    "in": prompt_tokens,
+                    "out": out_tokens,
+                    "thinking": thinking_tokens,
+                    "cached": cached_tokens,
+                    "cost_usd": cost_usd,
+                    "calls": len(session.calls),
+                },
+            }
+        )
+    )
+    meta_json_text = clean_text(json.dumps(meta_payload, indent=2, ensure_ascii=True)) + "\n"
+    (out_path / "meta.json").write_text(meta_json_text, encoding="utf-8")
     return atlas_payload
 
 

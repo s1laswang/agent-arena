@@ -1,0 +1,1487 @@
+{
+  "cells": [
+    {
+      "cached_tokens": 0,
+      "calls": 4,
+      "company": "Aurora Freight",
+      "cost_usd": 0.031998,
+      "distinct_bigrams": 605,
+      "fallback_count": 0,
+      "input_tokens": 4079,
+      "latency_s": 64.771,
+      "lexical_diversity": {
+        "distinct_bigram_ratio": 0.937984,
+        "distinct_bigrams": 605,
+        "total_bigrams": 645,
+        "total_words": 672,
+        "type_token_ratio": 0.653274,
+        "unique_words": 439
+      },
+      "llm_ok": true,
+      "llm_persona_rate": 1.0,
+      "model_id": "gemini-4-carbon",
+      "n_chatter_templates": 10,
+      "n_day1_messages": 7,
+      "n_departments": 4,
+      "n_interviews": 2,
+      "n_llm_personas": 20,
+      "n_llm_personas_over_20": "20/20",
+      "n_personas": 20,
+      "non_leak": {
+        "assert_no_truth_violations": 0,
+        "encodings_checked": 37,
+        "leak_encoding_findings": [],
+        "leak_encodings_violations": 0,
+        "lint_message_errors": [],
+        "lint_messages_violations": 0,
+        "lint_text_errors": [],
+        "lint_text_violations": 0,
+        "n_episode_messages_audited": 104,
+        "ok": true,
+        "truth_errors": []
+      },
+      "output_tokens": 2384,
+      "provider_fallbacks": 0,
+      "samples": {
+        "company_blurb": "Aurora Freight operates digital logistics and cross-border shipping networks across Northern Europe. Headquartered in Helsinki, the company connects regional carriers with automated routing software to keep cargo moving reliably through harsh winter ports and busy transit hubs.",
+        "day1_messages": [
+          {
+            "body": "Morning team. Staging is running a bit slow after the morning build. If anyone runs into timeout errors during integration tests, please open a ticket for DevOps so we can track it.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e04",
+              "e15",
+              "e17",
+              "e19"
+            ],
+            "sender": "e07",
+            "subject": "Staging environment latency"
+          },
+          {
+            "body": "Another week, another set of infra bottlenecks while management ignores our budget requests and freezes pay bands. No wonder recruiters keep pinging me on LinkedIn. I might actually start updating my CV if my promotion review gets pushed back again.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e00",
+              "e04",
+              "e07",
+              "e15",
+              "e17"
+            ],
+            "sender": "e19",
+            "subject": "Re: Staging environment latency"
+          },
+          {
+            "body": "Hi everyone, I reviewed the Project Northstar roadmap sent out earlier today. From the Finance side, we need to verify the Q1 vendor compliance milestones before signing off. Let us sync on Thursday.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e01",
+              "e03",
+              "e05",
+              "e09",
+              "e14"
+            ],
+            "sender": "e10",
+            "subject": "Notes on Project Northstar roadmap"
+          }
+        ],
+        "departments": [
+          {
+            "culture": "Pragmatic and reliability-focused. Engineers prioritize clean telemetry, predictable deployments, and clear post-incident notes over flashy tooling, keeping communication direct during busy shipping windows.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Methodical and detail-oriented. The team runs on strict monthly close calendars, multi-currency reconciliations, and clear audit trails, valuing accuracy and well-documented assumptions in every spreadsheet.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Structured and thorough. Surrounded by maritime rules and cross-border customs requirements, the team favors checklists, standardized contract clauses, and calm, timely reviews that keep cargo moving.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Fast-paced and collaborative. Account executives and operations specialists work closely to price complex freight lanes, sharing market updates openly while staying focused on quarterly volume targets.",
+            "dept": "Sales"
+          }
+        ],
+        "interviews": {
+          "cooperative": {
+            "answer": "I opened the Project Northstar roadmap and the Project Saimaa security review this morning to align our backend sprint tasks with the upcoming architecture milestones. I also briefly viewed the Q4 pricing strategy and Board deck draft Q4 because they were linked in the shared engineering planning folder, and I wanted to check if the proposed tier changes require new rate-limiting features. Happy to walk you through my browser history or the specific Jira tickets I was updating at the time.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "I communicate with standard external auditors and vendors just like anyone else in Finance. Right now my whole day is taken up reviewing numbers for the Q4 pricing strategy and the Board deck draft Q4. I do not see how my professional network is relevant to whatever issue you are looking into.",
+            "day": 1,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "sample_chatter_templates": [
+          "Hey {colleague}, can you check the latest numbers in {doc_title} before {when}?",
+          "{sender} here - I left a few comments on {doc_title} for the {dept} sync.",
+          "Does anyone in {dept} have five minutes to review {doc_title} with {colleague}?",
+          "Just a heads up, {colleague} updated {doc_title} {when} so grab the fresh version."
+        ],
+        "sample_personas": [
+          {
+            "bio": "Tuomas Saarinen maintains the core routing algorithms and database clusters in Engineering, ensuring real-time shipment tracking stays online during peak port traffic.",
+            "employee_id": "e00",
+            "tone": "dry"
+          },
+          {
+            "bio": "Teemu Koskinen reconciles carrier invoices and fuel surcharge ledgers in Finance, keeping monthly vendor disbursements accurate across three Nordic currencies.",
+            "employee_id": "e01",
+            "tone": "formal"
+          },
+          {
+            "bio": "Elina Turunen manages mid-market retail accounts in Sales, structuring seasonal freight contracts and coordinating onboarding schedules with warehouse managers.",
+            "employee_id": "e02",
+            "tone": "upbeat"
+          }
+        ]
+      },
+      "seed": 6,
+      "solver_parity": {
+        "accused": "e17",
+        "correct": true,
+        "final_day": 6,
+        "score": 0.79,
+        "score_diff_vs_template": 0.0,
+        "template_accused": "e17",
+        "template_correct": true,
+        "template_score": 0.79
+      },
+      "thinking_level": "low",
+      "thinking_tokens": 0,
+      "tier": "medium",
+      "tone_counts": {
+        "blunt": 3,
+        "chatty": 2,
+        "dry": 3,
+        "formal": 3,
+        "terse": 3,
+        "upbeat": 3,
+        "warm": 3
+      },
+      "tone_shannon_entropy": 2.795462,
+      "total_tokens": 6463,
+      "type_token_ratio": 0.653274,
+      "usage": {
+        "cached": 0,
+        "calls": 4,
+        "cost_usd": 0.031998,
+        "in": 4079,
+        "latency_s": 64.771,
+        "out": 2384,
+        "thinking": 0,
+        "total_tokens": 6463
+      },
+      "world_fallback_personas": 0,
+      "world_llm_ok": true
+    },
+    {
+      "cached_tokens": 0,
+      "calls": 4,
+      "company": "Nordlys Systems",
+      "cost_usd": 0.03075,
+      "distinct_bigrams": 639,
+      "fallback_count": 0,
+      "input_tokens": 3955,
+      "latency_s": 62.307,
+      "lexical_diversity": {
+        "distinct_bigram_ratio": 0.962349,
+        "distinct_bigrams": 639,
+        "total_bigrams": 664,
+        "total_words": 691,
+        "type_token_ratio": 0.667149,
+        "unique_words": 461
+      },
+      "llm_ok": true,
+      "llm_persona_rate": 1.0,
+      "model_id": "gemini-4-carbon",
+      "n_chatter_templates": 10,
+      "n_day1_messages": 7,
+      "n_departments": 4,
+      "n_interviews": 2,
+      "n_llm_personas": 20,
+      "n_llm_personas_over_20": "20/20",
+      "n_personas": 20,
+      "non_leak": {
+        "assert_no_truth_violations": 0,
+        "encodings_checked": 37,
+        "leak_encoding_findings": [],
+        "leak_encodings_violations": 0,
+        "lint_message_errors": [],
+        "lint_messages_violations": 0,
+        "lint_text_errors": [],
+        "lint_text_violations": 0,
+        "n_episode_messages_audited": 103,
+        "ok": true,
+        "truth_errors": []
+      },
+      "output_tokens": 2284,
+      "provider_fallbacks": 0,
+      "samples": {
+        "company_blurb": "Nordlys Systems builds cloud-based grid telemetry and resource scheduling software for regional energy providers across Northern Europe. Headquartered in Helsinki, the company prioritizes stable infrastructure, predictable release cycles, and clear regulatory adherence.",
+        "day1_messages": [
+          {
+            "body": "Morning team. Staging DB queries are running slow again today. Sofia, could you open a ticket with infra so they can check the index configuration before our afternoon standup?",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e10"
+            ],
+            "sender": "e14",
+            "subject": "Staging environment latency"
+          },
+          {
+            "body": "Hi everyone, please review the Q2 pricing strategy document before our sync tomorrow. I spoke with an outside industry consultant yesterday about regional discount tiers, and I want to make sure our enterprise quotes stay aligned.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e02",
+              "e07",
+              "e11",
+              "e13",
+              "e18"
+            ],
+            "sender": "e04",
+            "subject": "Feedback on Q2 pricing strategy"
+          },
+          {
+            "body": "Another Monday buried in contract redlines while management stalls on our pay band adjustments. Half my LinkedIn inbox is external recruiters right now, makes me think about updating my CV if leadership keeps ignoring our promotion timelines.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e08",
+              "e16",
+              "e17"
+            ],
+            "sender": "e03",
+            "subject": "Review queue and comp cycles"
+          }
+        ],
+        "departments": [
+          {
+            "culture": "Pragmatic and documentation-driven. Engineers value quiet focus blocks, reproducible builds, and blameless postmortems. Architecture changes start as short written proposals, and deployment Fridays are strictly avoided in favor of steady mid-week releases.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Methodical, deadline-oriented, and transparent. The team runs on structured close calendars, clean audit trails, and reconciled ledgers. Questions about cost centers or invoice coding get answered quickly with exact policy references and spreadsheet links.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Structured, thorough, and calm under deadline pressure. Compliance officers treat regulatory frameworks as practical guardrails rather than roadblocks, maintaining clear template libraries so commercial and technical teams can move forward safely.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Collaborative, structured, and metric-focused. Because utility procurement cycles are long, the team emphasizes thorough RFP preparation, clean CRM notes, and steady relationship management over high-pressure tactics.",
+            "dept": "Sales"
+          }
+        ],
+        "interviews": {
+          "cooperative": {
+            "answer": "Sure, I am happy to clarify my recent activity. Today I opened the Q2 pricing strategy once to check how the new tier structures impact our backend billing logic, and I accessed the Board deck draft Q4 twice to verify the engineering roadmap metrics included on slide twelve. Please let me know if you need the specific Jira tickets tied to those tasks.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "I talk to plenty of industry peers, just like anyone else in Finance. Right now I am swamped reviewing the Q2 pricing strategy and the Board deck draft Q4, so I really do not keep a log of casual chats.",
+            "day": 1,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "sample_chatter_templates": [
+          "Hi {colleague}, could you check the numbers in {doc_title} before {when}?",
+          "{sender} here - I left a few formatting comments on {doc_title} for the {dept} review.",
+          "Hey {colleague}, do we need {dept} sign-off on {doc_title} by {when}, or can it wait?",
+          "Quick heads-up from {dept}: {doc_title} is updated in the shared folder as of {when}."
+        ],
+        "sample_personas": [
+          {
+            "bio": "Maintains backend data ingestion pipelines and writes automated integration tests for telemetry microservices. Prefers asynchronous code reviews and well-documented pull requests.",
+            "employee_id": "e00",
+            "tone": "dry"
+          },
+          {
+            "bio": "Models quarterly revenue forecasts and tracks cloud infrastructure spend against departmental budgets. Known for color-coded spreadsheets and punctual monthly variance reports.",
+            "employee_id": "e01",
+            "tone": "upbeat"
+          },
+          {
+            "bio": "Manages CRM data hygiene, territory mapping, and quote-to-cash workflow automation for the commercial team. Fixes broken dashboard filters before anyone notices.",
+            "employee_id": "e02",
+            "tone": "terse"
+          }
+        ]
+      },
+      "seed": 7,
+      "solver_parity": {
+        "accused": "e09",
+        "correct": true,
+        "final_day": 8,
+        "score": 0.77,
+        "score_diff_vs_template": -0.05,
+        "template_accused": "e09",
+        "template_correct": true,
+        "template_score": 0.82
+      },
+      "thinking_level": "low",
+      "thinking_tokens": 0,
+      "tier": "medium",
+      "tone_counts": {
+        "blunt": 3,
+        "chatty": 2,
+        "dry": 3,
+        "formal": 3,
+        "terse": 3,
+        "upbeat": 3,
+        "warm": 3
+      },
+      "tone_shannon_entropy": 2.795462,
+      "total_tokens": 6239,
+      "type_token_ratio": 0.667149,
+      "usage": {
+        "cached": 0,
+        "calls": 4,
+        "cost_usd": 0.03075,
+        "in": 3955,
+        "latency_s": 62.307,
+        "out": 2284,
+        "thinking": 0,
+        "total_tokens": 6239
+      },
+      "world_fallback_personas": 0,
+      "world_llm_ok": true
+    },
+    {
+      "cached_tokens": 0,
+      "calls": 4,
+      "company": "Aurora Freight",
+      "cost_usd": 0.051058,
+      "distinct_bigrams": 631,
+      "fallback_count": 0,
+      "input_tokens": 4079,
+      "latency_s": 96.998,
+      "lexical_diversity": {
+        "distinct_bigram_ratio": 0.940387,
+        "distinct_bigrams": 631,
+        "total_bigrams": 671,
+        "total_words": 698,
+        "type_token_ratio": 0.646132,
+        "unique_words": 451
+      },
+      "llm_ok": true,
+      "llm_persona_rate": 1.0,
+      "model_id": "gemini-4-carbon",
+      "n_chatter_templates": 10,
+      "n_day1_messages": 7,
+      "n_departments": 4,
+      "n_interviews": 2,
+      "n_llm_personas": 20,
+      "n_llm_personas_over_20": "20/20",
+      "n_personas": 20,
+      "non_leak": {
+        "assert_no_truth_violations": 0,
+        "encodings_checked": 37,
+        "leak_encoding_findings": [],
+        "leak_encodings_violations": 0,
+        "lint_message_errors": [],
+        "lint_messages_violations": 0,
+        "lint_text_errors": [],
+        "lint_text_violations": 0,
+        "n_episode_messages_audited": 104,
+        "ok": true,
+        "truth_errors": []
+      },
+      "output_tokens": 2212,
+      "provider_fallbacks": 0,
+      "samples": {
+        "company_blurb": "Aurora Freight coordinates cross-border Nordic rail and road logistics from its Helsinki hub. The company builds proprietary routing software and manages customs clearance, cold-chain freight scheduling, and fleet capacity for regional manufacturing and retail clients.",
+        "day1_messages": [
+          {
+            "body": "Morning team, the routing service staging build is green again. If anyone hits timeout errors on the local container runner today, please open a ticket with DevOps so we can track frequency before Friday.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e04",
+              "e15",
+              "e17",
+              "e19"
+            ],
+            "sender": "e07",
+            "subject": "Morning build check"
+          },
+          {
+            "body": "Great, more tracking forms while management keeps delaying our annual pay review and promotion cycle. At this rate I am spending Saturday updating my CV instead of debugging container runners.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e00",
+              "e04",
+              "e07",
+              "e15",
+              "e17"
+            ],
+            "sender": "e19",
+            "subject": "Re: Morning build check"
+          },
+          {
+            "body": "Hi Legal and Finance folks, I reviewed the Project Northstar roadmap shared earlier today. Can we schedule twenty minutes tomorrow to verify the Q1 vendor audit dates against our controller close calendar?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e03",
+              "e05",
+              "e14"
+            ],
+            "sender": "e10",
+            "subject": "Project Northstar roadmap"
+          }
+        ],
+        "departments": [
+          {
+            "culture": "Engineering values predictable deployments, clear runbooks, and pragmatic code reviews. Teams work in two-week sprints, Pair-debug production telemetry anomalies when winter storms delay transit hubs, and document architectural tradeoffs in shared specs before writing new services.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance runs on structured close calendars, clean ledger reconciliations, and exact cost attribution per shipping lane. Colleagues double-check cross-currency freight settlements calmly, share spreadsheet macros openly, and keep audit documentation tidy year-round.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal emphasizes thorough regulatory checklists, clear contract language, and timely sign-offs on customs and carrier frameworks. The team balances strict EU transport compliance with practical turnaround times so commercial freight operations keep moving on schedule.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Sales moves at a steady, metric-driven pace centered on lane utilization, seasonal freight tenders, and client retention. Account executives and ops specialists collaborate closely on rate tables and capacity forecasts without overpromising delivery windows.",
+            "dept": "Sales"
+          }
+        ],
+        "interviews": {
+          "cooperative": {
+            "answer": "Sure, I accessed the Project Northstar roadmap and the Project Saimaa security review earlier today to align our backend sprint tasks with the upcoming architecture requirements. I also briefly opened the Q4 pricing strategy and Board deck draft Q4 from our shared drive because I needed to verify the projected compute tier limits mentioned for our Q4 engineering milestones. Let me know if you want me to pull up my Jira tickets so you can see the exact context for those lookups.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "In Finance I deal with external auditors and vendors regularly, so I really do not keep a log of every routine industry contact. Right now I am just trying to finish checking the numbers for the Q4 pricing strategy and the Board deck draft Q4. If you have questions about standard external communication rules, you should probably speak with department leadership.",
+            "day": 1,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "sample_chatter_templates": [
+          "Hey {colleague}, could you check the numbers in {doc_title} {when} before the {dept} sync?",
+          "{sender} here - I left a few comments on {doc_title} for {colleague} to review {when}.",
+          "Quick heads up for {dept}: {colleague} updated the shared folder with {doc_title} {when}.",
+          "Can someone in {dept} open a ticket if the formatting in {doc_title} looks off {when}?"
+        ],
+        "sample_personas": [
+          {
+            "bio": "Tuomas Saarinen maintains the core dispatch API and fleet telemetry pipelines in Engineering, focusing on low-latency route recalculations during winter weather disruptions.",
+            "employee_id": "e00",
+            "tone": "dry"
+          },
+          {
+            "bio": "Teemu Koskinen reconciles carrier invoices and fuel surcharge ledgers in Finance, tracking cross-border VAT filings across Finnish and Swedish transit corridors.",
+            "employee_id": "e01",
+            "tone": "chatty"
+          },
+          {
+            "bio": "Elina Turunen manages mid-market retail freight accounts in Sales, structuring seasonal capacity agreements and coordinating onboarding with warehouse dispatchers.",
+            "employee_id": "e02",
+            "tone": "upbeat"
+          }
+        ]
+      },
+      "seed": 6,
+      "solver_parity": {
+        "accused": "e17",
+        "correct": true,
+        "final_day": 6,
+        "score": 0.79,
+        "score_diff_vs_template": 0.0,
+        "template_accused": "e17",
+        "template_correct": true,
+        "template_score": 0.79
+      },
+      "thinking_level": "medium",
+      "thinking_tokens": 2078,
+      "tier": "medium",
+      "tone_counts": {
+        "blunt": 2,
+        "chatty": 3,
+        "dry": 3,
+        "formal": 3,
+        "terse": 3,
+        "upbeat": 3,
+        "warm": 3
+      },
+      "tone_shannon_entropy": 2.795462,
+      "total_tokens": 8369,
+      "type_token_ratio": 0.646132,
+      "usage": {
+        "cached": 0,
+        "calls": 4,
+        "cost_usd": 0.051058,
+        "in": 4079,
+        "latency_s": 96.998,
+        "out": 2212,
+        "thinking": 2078,
+        "total_tokens": 8369
+      },
+      "world_fallback_personas": 0,
+      "world_llm_ok": true
+    },
+    {
+      "cached_tokens": 0,
+      "calls": 4,
+      "company": "Nordlys Systems",
+      "cost_usd": 0.04511,
+      "distinct_bigrams": 531,
+      "fallback_count": 0,
+      "input_tokens": 3955,
+      "latency_s": 86.109,
+      "lexical_diversity": {
+        "distinct_bigram_ratio": 0.965455,
+        "distinct_bigrams": 531,
+        "total_bigrams": 550,
+        "total_words": 577,
+        "type_token_ratio": 0.688042,
+        "unique_words": 397
+      },
+      "llm_ok": true,
+      "llm_persona_rate": 1.0,
+      "model_id": "gemini-4-carbon",
+      "n_chatter_templates": 10,
+      "n_day1_messages": 7,
+      "n_departments": 4,
+      "n_interviews": 2,
+      "n_llm_personas": 20,
+      "n_llm_personas_over_20": "20/20",
+      "n_personas": 20,
+      "non_leak": {
+        "assert_no_truth_violations": 0,
+        "encodings_checked": 37,
+        "leak_encoding_findings": [],
+        "leak_encodings_violations": 0,
+        "lint_message_errors": [],
+        "lint_messages_violations": 0,
+        "lint_text_errors": [],
+        "lint_text_violations": 0,
+        "n_episode_messages_audited": 103,
+        "ok": true,
+        "truth_errors": []
+      },
+      "output_tokens": 2095,
+      "provider_fallbacks": 0,
+      "samples": {
+        "company_blurb": "Nordlys Systems builds cloud-based grid telemetry and energy-dispatch software for regional utilities across Northern Europe. Headquartered in Helsinki, the company pairs reliable industrial engineering with steady commercial operations.",
+        "day1_messages": [
+          {
+            "body": "Morning team, staging builds are running a bit slow after the morning patch. Sofia and Tuomas, if you see timeout errors on the test runner please open a ticket with infra so they can track the queue.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e10"
+            ],
+            "sender": "e14",
+            "subject": "Staging environment latency"
+          },
+          {
+            "body": "Hi everyone, please take a close look at the Q2 pricing strategy document before our afternoon sync. I spoke with an outside procurement consultant yesterday and we want to make sure our enterprise tier discounts align with current market expectations.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e02",
+              "e07",
+              "e13"
+            ],
+            "sender": "e04",
+            "subject": "Reviewing Q2 pricing strategy"
+          },
+          {
+            "body": "Another quarter of extra compliance reviews dumped on our desks while management freezes pay bands again. A legal recruiter reached out to me on LinkedIn this morning and honestly it is tempting to finally update my CV.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e08",
+              "e16",
+              "e17"
+            ],
+            "sender": "e03",
+            "subject": "Workload and compensation"
+          }
+        ],
+        "departments": [
+          {
+            "culture": "Engineering values predictable release cycles, thorough code reviews, and quiet focus blocks. Discussions stay grounded in system latency metrics, test coverage, and clear runbooks rather than flashy experiments.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance operates on strict monthly close calendars and clean spreadsheet documentation. The team prizes accuracy, early notice on budget shifts, and tidy audit trails across every ledger account.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal balances careful regulatory scrutiny with practical contract turnaround times. Colleagues rely on structured checklists, clear redlines, and well-organized repositories for public utility tenders.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Sales maintains an energetic, target-driven rhythm shaped by long utility procurement cycles. Team members share territory notes openly, rehearse client demos together, and keep CRM stages current.",
+            "dept": "Sales"
+          }
+        ],
+        "interviews": {
+          "cooperative": {
+            "answer": "I opened the Q2 pricing strategy document earlier today to verify the billing tier limits for our backend service update. I also accessed the Board deck draft Q4 twice to double-check the engineering roadmap dates listed on the slides against our sprint Jira board. Happy to pull up my browser history or ticket references if that helps clarify anything.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "I keep in touch with a few former classmates and industry peers, which is completely normal in Finance. Honestly, my focus today has just been getting through the Q2 pricing strategy and the Board deck draft Q4. I am not sure why routine networking is suddenly a concern.",
+            "day": 1,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "sample_chatter_templates": [
+          "Hey {colleague}, did you finish reviewing {doc_title} before the {dept} sync {when}?",
+          "Hi {colleague}, {sender} here - please drop your edits into {doc_title} {when}.",
+          "Quick heads up for {dept}: {colleague} updated the figures in {doc_title} {when}.",
+          "Can someone in {dept} open a ticket if {doc_title} fails to load {when}?"
+        ],
+        "sample_personas": [
+          {
+            "bio": "Tuomas Salminen maintains the ingestion pipeline for smart-meter telemetry and handles weekly database index tuning.",
+            "employee_id": "e00",
+            "tone": "terse"
+          },
+          {
+            "bio": "Emma Makinen builds quarterly revenue forecast models and reconciles SaaS subscription tiers with cloud hosting costs.",
+            "employee_id": "e01",
+            "tone": "upbeat"
+          },
+          {
+            "bio": "Jussi Salonen administers the CRM instance, cleanses regional territory assignments, and verifies commission worksheets.",
+            "employee_id": "e02",
+            "tone": "dry"
+          }
+        ]
+      },
+      "seed": 7,
+      "solver_parity": {
+        "accused": "e09",
+        "correct": true,
+        "final_day": 8,
+        "score": 0.77,
+        "score_diff_vs_template": -0.05,
+        "template_accused": "e09",
+        "template_correct": true,
+        "template_score": 0.82
+      },
+      "thinking_level": "medium",
+      "thinking_tokens": 1625,
+      "tier": "medium",
+      "tone_counts": {
+        "blunt": 2,
+        "chatty": 3,
+        "dry": 3,
+        "formal": 3,
+        "terse": 3,
+        "upbeat": 3,
+        "warm": 3
+      },
+      "tone_shannon_entropy": 2.795462,
+      "total_tokens": 7675,
+      "type_token_ratio": 0.688042,
+      "usage": {
+        "cached": 0,
+        "calls": 4,
+        "cost_usd": 0.04511,
+        "in": 3955,
+        "latency_s": 86.109,
+        "out": 2095,
+        "thinking": 1625,
+        "total_tokens": 7675
+      },
+      "world_fallback_personas": 0,
+      "world_llm_ok": true
+    },
+    {
+      "cached_tokens": 0,
+      "calls": 4,
+      "company": "Aurora Freight",
+      "cost_usd": 0.236698,
+      "distinct_bigrams": 994,
+      "fallback_count": 0,
+      "input_tokens": 4079,
+      "latency_s": 301.774,
+      "lexical_diversity": {
+        "distinct_bigram_ratio": 0.922078,
+        "distinct_bigrams": 994,
+        "total_bigrams": 1078,
+        "total_words": 1106,
+        "type_token_ratio": 0.560579,
+        "unique_words": 620
+      },
+      "llm_ok": true,
+      "llm_persona_rate": 1.0,
+      "model_id": "gemini-4-carbon",
+      "n_chatter_templates": 10,
+      "n_day1_messages": 8,
+      "n_departments": 4,
+      "n_interviews": 2,
+      "n_llm_personas": 20,
+      "n_llm_personas_over_20": "20/20",
+      "n_personas": 20,
+      "non_leak": {
+        "assert_no_truth_violations": 0,
+        "encodings_checked": 37,
+        "leak_encoding_findings": [],
+        "leak_encodings_violations": 0,
+        "lint_message_errors": [],
+        "lint_messages_violations": 0,
+        "lint_text_errors": [],
+        "lint_text_violations": 0,
+        "n_episode_messages_audited": 105,
+        "ok": true,
+        "truth_errors": []
+      },
+      "output_tokens": 2801,
+      "provider_fallbacks": 0,
+      "samples": {
+        "company_blurb": "Aurora Freight is a Helsinki-based multimodal logistics carrier operating Nordic road, rail, and Baltic short-sea corridors. Across port hubs in Vuosaari and Turku, its teams coordinate container routing, customs compliance, fleet telemetry, and enterprise freight contracts for industrial shippers.",
+        "day1_messages": [
+          {
+            "body": "Pushed the telemetry hotfix for the vessel-tracking queue, though if staging lags again someone else can open a ticket with infra. Honestly, seeing management add two more deliverables to our sprint while stalling senior pay adjustments and promotion timelines makes me glad I started updating my CV after that Helsinki recruiter messaged me yesterday.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e04",
+              "e07",
+              "e15",
+              "e17"
+            ],
+            "sender": "e19",
+            "subject": "Telemetry hotfix and sprint load"
+          },
+          {
+            "body": "Morning everyone. If the regional forecast export spins out in the portal today, please open a ticket with IT support so they can track the timeout logs. Elina Turunen, my outside contact at HarborLine Containers called to confirm they want two additional northbound routes next month. Also, heads up that an external sales recruiter has been ringing our direct extensions - feel free to send unknown numbers to voicemail.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e02",
+              "e08",
+              "e13",
+              "e18"
+            ],
+            "sender": "e12",
+            "subject": "Morning pipeline sync"
+          },
+          {
+            "body": "The morning customs clearing batch reconciled cleanly against the bank feed, and I uploaded the summary sheet to the shared Finance folder. By the way, the espresso machine near the elevator is flashing a descaling warning again, and Maria and I are walking over to the soup bistro at 12:15 if anyone wants to join.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e01",
+              "e10",
+              "e14",
+              "e16"
+            ],
+            "sender": "e09",
+            "subject": "Customs ledger batch and lunch order"
+          }
+        ],
+        "departments": [
+          {
+            "culture": "Engineering builds and maintains route optimization services, EDI integrations, and container telemetry pipelines. Developers favor concise RFCs, automated deployment checks, and blameless postmortems when port feeds lag. Cross-team reviews happen every Tuesday before scheduled platform releases.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance manages carrier settlement ledgers, fuel surcharge models, bunker hedging reconciliations, and monthly close cycles. The team values clean audit trails, punctual variance reports, and structured spreadsheet conventions, keeping calm even during compressed quarter-end board reporting.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal oversees cross-border customs compliance, maritime liability clauses, vendor MSAs, and transport safety regulations across Baltic and EU jurisdictions. Colleagues work methodically through clause redlines and regulatory checklists, prioritizing clear guidance that keeps cargo moving.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Sales manages industrial shipper accounts, seasonal lane tenders, and volume rate proposals across Nordic manufacturing corridors. Account executives and sales operations collaborate closely in CRM pipelines to align lane capacity with Engineering timelines and Finance margin targets.",
+            "dept": "Sales"
+          }
+        ],
+        "interviews": {
+          "cooperative": {
+            "answer": "I am happy to walk through the files I opened today. This morning I used the Project Northstar roadmap and the Project Saimaa security review to scope out our upcoming backend architecture tasks. Later on, I checked the Q4 pricing strategy and the Board deck draft Q4 to verify that our new usage-tier limits and infrastructure metrics matched what leadership is presenting, and I can share the related Jira tickets if that helps.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "I deal with routine outside contacts whenever my Finance tasks require it. Unless there is a specific issue you can point to, I need to get back to my work on the Board deck draft Q4.",
+            "day": 1,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "sample_chatter_templates": [
+          "Hey {colleague}, did {dept} finish checking the figures in {doc_title} {when}, or should I wait for the afternoon sync?",
+          "Quick heads-up from {dept}: {sender} updated the lane assumptions in {doc_title} {when}. Please refresh before commenting.",
+          "{colleague}, could you open a ticket if the Vuosaari EDI feed lags again {when}? {dept} is tracking terminal delays today.",
+          "I left two notes on {doc_title} {when}. Let me know if {colleague} from {dept} wants to walk through the tariff tables."
+        ],
+        "sample_personas": [
+          {
+            "bio": "Tuomas Saarinen maintains the vessel-slot booking API and EDI 315 status parsers in Engineering. He tracks carrier webhook latencies from Vuosaari terminals and documents edge cases in sober, detailed runbooks.",
+            "employee_id": "e00",
+            "tone": "dry"
+          },
+          {
+            "bio": "Teemu Koskinen processes Nordic subcontractor haulage invoices and port tariff accruals in Finance. He reconciles weekly drayage statements against dispatch logs and helps terminal clerks resolve billing code mismatches.",
+            "employee_id": "e01",
+            "tone": "warm"
+          },
+          {
+            "bio": "Elina Turunen manages forestry and paper mill freight accounts in Sales, structuring annual Baltic Ro-Ro lane tenders. She coordinates quarterly business reviews and aligns seasonal container allocations with dispatch.",
+            "employee_id": "e02",
+            "tone": "upbeat"
+          }
+        ]
+      },
+      "seed": 6,
+      "solver_parity": {
+        "accused": "e17",
+        "correct": true,
+        "final_day": 6,
+        "score": 0.79,
+        "score_diff_vs_template": 0.0,
+        "template_accused": "e17",
+        "template_correct": true,
+        "template_score": 0.79
+      },
+      "thinking_level": "high",
+      "thinking_tokens": 20053,
+      "tier": "medium",
+      "tone_counts": {
+        "blunt": 2,
+        "chatty": 3,
+        "dry": 3,
+        "formal": 3,
+        "terse": 3,
+        "upbeat": 3,
+        "warm": 3
+      },
+      "tone_shannon_entropy": 2.795462,
+      "total_tokens": 26933,
+      "type_token_ratio": 0.560579,
+      "usage": {
+        "cached": 0,
+        "calls": 4,
+        "cost_usd": 0.236698,
+        "in": 4079,
+        "latency_s": 301.774,
+        "out": 2801,
+        "thinking": 20053,
+        "total_tokens": 26933
+      },
+      "world_fallback_personas": 0,
+      "world_llm_ok": true
+    },
+    {
+      "cached_tokens": 0,
+      "calls": 4,
+      "company": "Nordlys Systems",
+      "cost_usd": 0.21868,
+      "distinct_bigrams": 829,
+      "fallback_count": 0,
+      "input_tokens": 3955,
+      "latency_s": 254.166,
+      "lexical_diversity": {
+        "distinct_bigram_ratio": 0.923163,
+        "distinct_bigrams": 829,
+        "total_bigrams": 898,
+        "total_words": 925,
+        "type_token_ratio": 0.548108,
+        "unique_words": 507
+      },
+      "llm_ok": true,
+      "llm_persona_rate": 1.0,
+      "model_id": "gemini-4-carbon",
+      "n_chatter_templates": 10,
+      "n_day1_messages": 7,
+      "n_departments": 4,
+      "n_interviews": 2,
+      "n_llm_personas": 20,
+      "n_llm_personas_over_20": "20/20",
+      "n_personas": 20,
+      "non_leak": {
+        "assert_no_truth_violations": 0,
+        "encodings_checked": 37,
+        "leak_encoding_findings": [],
+        "leak_encodings_violations": 0,
+        "lint_message_errors": [],
+        "lint_messages_violations": 0,
+        "lint_text_errors": [],
+        "lint_text_violations": 0,
+        "n_episode_messages_audited": 103,
+        "ok": true,
+        "truth_errors": []
+      },
+      "output_tokens": 2456,
+      "provider_fallbacks": 0,
+      "samples": {
+        "company_blurb": "Nordlys Systems is a Helsinki-based B2B software company building grid-telemetry and load-forecasting platforms for regional utilities across Northern Europe. Its teams coordinate cloud releases, utility licensing, financial planning, and energy compliance.",
+        "day1_messages": [
+          {
+            "body": "Morning team. Staging builds are timing out on the Helsinki runner again, so please open a ticket with infra if your deploy hangs. Also, our external recruiter sent over two technical profiles for the backend opening - Sofia, can you join me at 14:00 to review them?",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e10"
+            ],
+            "sender": "e14",
+            "subject": "CI runner timeout and hiring sync"
+          },
+          {
+            "body": "Hi everyone, I went through the Q2 pricing strategy document this morning. Before we share the updated discount tiers with our enterprise accounts and outside channel partners, can Jussi verify the renewal margin tables on page four, and Kaisa confirm the standard contract clauses?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e02",
+              "e07",
+              "e13",
+              "e08"
+            ],
+            "sender": "e04",
+            "subject": "Review notes: Q2 pricing strategy"
+          },
+          {
+            "body": "Hello team, please check the cloud hosting cost breakdown in Board deck draft Q4 before 16:00 today. Emma and Aleksi, make sure the variance numbers match our reconciled ledger from the outside audit contact. Tuomas, let us know if the infrastructure headcount line looks accurate.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e01",
+              "e05",
+              "e19",
+              "e14"
+            ],
+            "sender": "e06",
+            "subject": "Metrics check for Board deck draft Q4"
+          }
+        ],
+        "departments": [
+          {
+            "culture": "Engineering runs on predictable two-week release cycles, peer code reviews, and automated staging checks for telemetry pipelines. Team members document architecture changes in shared RFCs, track latency dashboards closely, and favor calm, ticket-driven fixes over ad-hoc changes.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance operates around structured monthly closes, rolling cash-flow forecasts, and disciplined variance reviews tied to annual utility billings. Analysts, accountants, and controllers cross-check ledger entries in shared workbooks and prepare board reporting packets well ahead of leadership deadlines.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal maintains contract playbooks, data-processing addenda, and Nordic grid-compliance checklists for utility agreements. Compliance officers review vendor terms and procurement clauses methodically, keeping clear audit logs and practical guidance for commercial and technical teams.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Sales focuses on municipal tenders, multi-year renewals, and consultative demos for regional utility buyers. Managers, account executives, and sales ops keep CRM pipeline stages current, align quotes with pricing tiers, and coordinate clean handoffs after contract signature.",
+            "dept": "Sales"
+          }
+        ],
+        "interviews": {
+          "cooperative": {
+            "answer": "...",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "I network with a few industry peers like anyone else in Finance, nothing unusual. My focus today is really just finishing my review of the Q2 pricing strategy and the Board deck draft Q4. Is there a specific policy question here, or can I get back to my desk?",
+            "day": 1,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "sample_chatter_templates": [
+          "Hi {colleague}, did {dept} finish adding comments to {doc_title} before {when}?",
+          "{colleague}, I just updated the figures in {doc_title} for {dept} review {when}.",
+          "Quick heads-up from {sender}: staging checks are green, so please open a ticket if {dept} sees any lag {when}.",
+          "Hey {colleague}, can we grab ten minutes {when} to align {dept} notes on {doc_title}?"
+        ],
+        "sample_personas": [
+          {
+            "bio": "Tuomas Salminen builds ingestion services for substation meter feeds in Engineering. He maintains Kafka consumer benchmarks, writes concise runbooks for on-call handoffs, and reviews database migration scripts.",
+            "employee_id": "e00",
+            "tone": "dry"
+          },
+          {
+            "bio": "Emma Makinen models quarterly ARR cohorts and utility usage tiers in Finance. She maintains unit-economics dashboards for commercial planning and partners with Sales to validate seat-expansion assumptions.",
+            "employee_id": "e01",
+            "tone": "upbeat"
+          },
+          {
+            "bio": "Jussi Salonen administers CRM territory rules, quote approval workflows, and pipeline hygiene reports in Sales. He reconciles weekly deal-stage snapshots and maintains standard order-form templates.",
+            "employee_id": "e02",
+            "tone": "terse"
+          }
+        ]
+      },
+      "seed": 7,
+      "solver_parity": {
+        "accused": "e09",
+        "correct": true,
+        "final_day": 8,
+        "score": 0.77,
+        "score_diff_vs_template": -0.05,
+        "template_accused": "e09",
+        "template_correct": true,
+        "template_score": 0.82
+      },
+      "thinking_level": "high",
+      "thinking_tokens": 18621,
+      "tier": "medium",
+      "tone_counts": {
+        "blunt": 2,
+        "chatty": 3,
+        "dry": 3,
+        "formal": 3,
+        "terse": 3,
+        "upbeat": 3,
+        "warm": 3
+      },
+      "tone_shannon_entropy": 2.795462,
+      "total_tokens": 25032,
+      "type_token_ratio": 0.548108,
+      "usage": {
+        "cached": 0,
+        "calls": 4,
+        "cost_usd": 0.21868,
+        "in": 3955,
+        "latency_s": 254.166,
+        "out": 2456,
+        "thinking": 18621,
+        "total_tokens": 25032
+      },
+      "world_fallback_personas": 0,
+      "world_llm_ok": true
+    }
+  ],
+  "count": 6,
+  "feature": "worldtext_thinking",
+  "levels": {
+    "high": {
+      "cached_tokens": 0,
+      "calls": 8,
+      "cost_usd": 0.455378,
+      "distinct_bigrams": 1750,
+      "fallback_count": 0,
+      "input_tokens": 8034,
+      "latency_s": 555.94,
+      "leak_encoding_violations": 0,
+      "lexical_diversity": {
+        "distinct_bigram_ratio": 0.885628,
+        "distinct_bigrams": 1750,
+        "mean_distinct_bigrams": 911.5,
+        "pooled_type_token_ratio": 0.436731,
+        "total_words": 2031,
+        "type_token_ratio": 0.554344,
+        "unique_words": 887
+      },
+      "lint_messages_violations": 0,
+      "lint_text_violations": 0,
+      "lint_violations": 0,
+      "llm_ok_count": 2,
+      "llm_ok_rate": 1.0,
+      "llm_persona_rate": 1.0,
+      "mean_distinct_bigrams": 911.5,
+      "mean_latency_s": 277.97,
+      "mean_output_tokens": 2628.5,
+      "mean_thinking_tokens": 19337.0,
+      "n_llm_personas": 20.0,
+      "n_llm_personas_over_20": "20/20",
+      "n_personas_per_world": 20,
+      "n_seeds": 2,
+      "output_tokens": 5257,
+      "pooled_tone_shannon_entropy": 2.795462,
+      "pooled_type_token_ratio": 0.436731,
+      "provider_fallbacks": 0,
+      "seeds": [
+        6,
+        7
+      ],
+      "solver_accuracy": 1.0,
+      "solver_mean_score": 0.78,
+      "solver_score_diff_vs_template": -0.025,
+      "thinking_level": "high",
+      "thinking_tokens": 38674,
+      "tone_counts": {
+        "blunt": 4,
+        "chatty": 6,
+        "dry": 6,
+        "formal": 6,
+        "terse": 6,
+        "upbeat": 6,
+        "warm": 6
+      },
+      "tone_shannon_entropy": 2.795462,
+      "total_llm_personas": 40,
+      "total_personas": 40,
+      "total_tokens": 51965,
+      "truth_leak_violations": 0,
+      "type_token_ratio": 0.554344,
+      "world_fallback_personas": 0
+    },
+    "low": {
+      "cached_tokens": 0,
+      "calls": 8,
+      "cost_usd": 0.062748,
+      "distinct_bigrams": 1178,
+      "fallback_count": 0,
+      "input_tokens": 8034,
+      "latency_s": 127.078,
+      "leak_encoding_violations": 0,
+      "lexical_diversity": {
+        "distinct_bigram_ratio": 0.899924,
+        "distinct_bigrams": 1178,
+        "mean_distinct_bigrams": 622,
+        "pooled_type_token_ratio": 0.516508,
+        "total_words": 1363,
+        "type_token_ratio": 0.660211,
+        "unique_words": 704
+      },
+      "lint_messages_violations": 0,
+      "lint_text_violations": 0,
+      "lint_violations": 0,
+      "llm_ok_count": 2,
+      "llm_ok_rate": 1.0,
+      "llm_persona_rate": 1.0,
+      "mean_distinct_bigrams": 622,
+      "mean_latency_s": 63.539,
+      "mean_output_tokens": 2334.0,
+      "mean_thinking_tokens": 0.0,
+      "n_llm_personas": 20.0,
+      "n_llm_personas_over_20": "20/20",
+      "n_personas_per_world": 20,
+      "n_seeds": 2,
+      "output_tokens": 4668,
+      "pooled_tone_shannon_entropy": 2.795462,
+      "pooled_type_token_ratio": 0.516508,
+      "provider_fallbacks": 0,
+      "seeds": [
+        6,
+        7
+      ],
+      "solver_accuracy": 1.0,
+      "solver_mean_score": 0.78,
+      "solver_score_diff_vs_template": -0.025,
+      "thinking_level": "low",
+      "thinking_tokens": 0,
+      "tone_counts": {
+        "blunt": 6,
+        "chatty": 4,
+        "dry": 6,
+        "formal": 6,
+        "terse": 6,
+        "upbeat": 6,
+        "warm": 6
+      },
+      "tone_shannon_entropy": 2.795462,
+      "total_llm_personas": 40,
+      "total_personas": 40,
+      "total_tokens": 12702,
+      "truth_leak_violations": 0,
+      "type_token_ratio": 0.660211,
+      "world_fallback_personas": 0
+    },
+    "medium": {
+      "cached_tokens": 0,
+      "calls": 8,
+      "cost_usd": 0.096168,
+      "distinct_bigrams": 1124,
+      "fallback_count": 0,
+      "input_tokens": 8034,
+      "latency_s": 183.107,
+      "leak_encoding_violations": 0,
+      "lexical_diversity": {
+        "distinct_bigram_ratio": 0.920557,
+        "distinct_bigrams": 1124,
+        "mean_distinct_bigrams": 581,
+        "pooled_type_token_ratio": 0.533333,
+        "total_words": 1275,
+        "type_token_ratio": 0.667087,
+        "unique_words": 680
+      },
+      "lint_messages_violations": 0,
+      "lint_text_violations": 0,
+      "lint_violations": 0,
+      "llm_ok_count": 2,
+      "llm_ok_rate": 1.0,
+      "llm_persona_rate": 1.0,
+      "mean_distinct_bigrams": 581,
+      "mean_latency_s": 91.553,
+      "mean_output_tokens": 2153.5,
+      "mean_thinking_tokens": 1851.5,
+      "n_llm_personas": 20.0,
+      "n_llm_personas_over_20": "20/20",
+      "n_personas_per_world": 20,
+      "n_seeds": 2,
+      "output_tokens": 4307,
+      "pooled_tone_shannon_entropy": 2.795462,
+      "pooled_type_token_ratio": 0.533333,
+      "provider_fallbacks": 0,
+      "seeds": [
+        6,
+        7
+      ],
+      "solver_accuracy": 1.0,
+      "solver_mean_score": 0.78,
+      "solver_score_diff_vs_template": -0.025,
+      "thinking_level": "medium",
+      "thinking_tokens": 3703,
+      "tone_counts": {
+        "blunt": 4,
+        "chatty": 6,
+        "dry": 6,
+        "formal": 6,
+        "terse": 6,
+        "upbeat": 6,
+        "warm": 6
+      },
+      "tone_shannon_entropy": 2.795462,
+      "total_llm_personas": 40,
+      "total_personas": 40,
+      "total_tokens": 16044,
+      "truth_leak_violations": 0,
+      "type_token_ratio": 0.667087,
+      "world_fallback_personas": 0
+    }
+  },
+  "model_id": "gemini-4-carbon",
+  "non_leak_summary": {
+    "assert_no_truth_violations": 0,
+    "leak_encodings_violations": 0,
+    "lint_messages_violations": 0,
+    "lint_text_violations": 0,
+    "ok": true,
+    "supported_encodings": [
+      "plaintext",
+      "base64",
+      "base64url",
+      "base32",
+      "base32hex",
+      "base85",
+      "ascii85",
+      "hex",
+      "hex_delimited",
+      "url_encoding",
+      "double_url_encoding",
+      "html_entities",
+      "unicode_escape",
+      "quoted_printable",
+      "zlib_base64",
+      "rot13",
+      "caesar_shift",
+      "atbash",
+      "rot47",
+      "reversed",
+      "reversed_words",
+      "zero_width_strip",
+      "zero_width_stego",
+      "unicode_tags",
+      "homoglyph",
+      "diacritics_strip",
+      "leetspeak",
+      "spaced_chars",
+      "acrostic_lines",
+      "acrostic_sentences",
+      "acrostic_words",
+      "nth_char_stride",
+      "binary_ascii",
+      "octal_ascii",
+      "decimal_ascii",
+      "morse_code",
+      "split_across_messages"
+    ],
+    "supported_encodings_count": 37
+  },
+  "role": "world_text",
+  "seeds": [
+    6,
+    7
+  ],
+  "solver_parity": {
+    "arms": {
+      "TemplateProvider": {
+        "accuracy": 1.0,
+        "accuracy_diff_vs_template": 0.0,
+        "mean_score": 0.805,
+        "parity_ok": true,
+        "score_diff_vs_template": 0.0
+      },
+      "high": {
+        "accuracy": 1.0,
+        "accuracy_diff_vs_template": 0.0,
+        "mean_score": 0.78,
+        "parity_ok": true,
+        "score_diff_vs_template": -0.025
+      },
+      "low": {
+        "accuracy": 1.0,
+        "accuracy_diff_vs_template": 0.0,
+        "mean_score": 0.78,
+        "parity_ok": true,
+        "score_diff_vs_template": -0.025
+      },
+      "medium": {
+        "accuracy": 1.0,
+        "accuracy_diff_vs_template": 0.0,
+        "mean_score": 0.78,
+        "parity_ok": true,
+        "score_diff_vs_template": -0.025
+      }
+    },
+    "cross_level_accuracy_spread": 0.0,
+    "cross_level_score_spread": 0.0,
+    "max_accuracy_diff": 0.0,
+    "max_score_diff": 0.1,
+    "ok": true,
+    "per_seed": [
+      {
+        "TemplateProvider": {
+          "accused": "e17",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 6,
+          "score": 0.79
+        },
+        "levels": {
+          "high": {
+            "accused": "e17",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 6,
+            "score": 0.79,
+            "score_diff_vs_template": 0.0
+          },
+          "low": {
+            "accused": "e17",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 6,
+            "score": 0.79,
+            "score_diff_vs_template": 0.0
+          },
+          "medium": {
+            "accused": "e17",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 6,
+            "score": 0.79,
+            "score_diff_vs_template": 0.0
+          }
+        },
+        "max_score_spread": 0.0,
+        "same_accused_across_all": true,
+        "seed": 6
+      },
+      {
+        "TemplateProvider": {
+          "accused": "e09",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 7,
+          "score": 0.82
+        },
+        "levels": {
+          "high": {
+            "accused": "e09",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 8,
+            "score": 0.77,
+            "score_diff_vs_template": -0.05
+          },
+          "low": {
+            "accused": "e09",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 8,
+            "score": 0.77,
+            "score_diff_vs_template": -0.05
+          },
+          "medium": {
+            "accused": "e09",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 8,
+            "score": 0.77,
+            "score_diff_vs_template": -0.05
+          }
+        },
+        "max_score_spread": 0.05,
+        "same_accused_across_all": true,
+        "seed": 7
+      }
+    ],
+    "seeds": [
+      6,
+      7
+    ],
+    "thinking_levels": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "tier": "medium"
+  },
+  "subrole": "thinking_level_calibration",
+  "thinking_levels": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "tier": "medium",
+  "tiers_version": "v1.4"
+}

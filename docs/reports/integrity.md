@@ -5,3 +5,10 @@
 - In progress: spawning engineers baseline-fuzzer, exploit-hunter, props-probe (ETA first drop 03:30).
 - Blockers: Env/MCP are stubs on justSilas; integrity tests are written against CONTRACT and will auto-activate. Need `env.world.mole` (or equivalent) exposed server-side for tests: asking ENV.
 - Next 45 min: engineers build baselines + fuzzer + property tests against the contract.
+
+## 02:15 status
+- Done (verified: `make test` 32 passed / 20 skipped on justSilas-integrity after merging origin/justSilas): baselines (8 policies, `canary/baselines.py`), `canary/redteam/fuzz.py` (random/malformed/evolve/parallel_accuse/all, `--report`, `hunt()`), `fr8/j2_fuzz.sbatch` (not submitted), fuzzer unit tests incl. a planted-bug FakeEnv that the fuzzer catches.
+- Untested: everything against a real Env (still a stub). 20 integrity tests auto-activate when ENV merges.
+- In progress: exploit-hunter (codex over MCP), props-probe (hypothesis + text probe + seed-not-exposed test).
+- Asks to ENV: `env._world.mole`; ledger "accused" detail {"employee": id}; "day" in status/advance_day and "V" in status; accuse under a lock (check-and-set); non-dict args → ok=False, never raise.
+- Next 45 min: run fuzz + baselines on Env v0 the moment it lands; first EXPLOITS rows with results.

@@ -2,18 +2,18 @@
 
 Canary is a Bayesian insider-threat RL benchmark where a security-lead agent investigates a simulated company bleeding value to a mole. Across the merged Canary repository, `gemini-4-carbon` is integrated into six distinct, load-bearing roles: synthesizing leak-free company worlds (`world_text`), playing and evolving catchable adversaries (`adaptive_mole`), acting as the frontier security investigator (`investigators`), diagnosing multi-episode failure modes in long context (`failure_analyst`), red-teaming the reward and MCP server (`exploit_hunter`), and reading pixel-only evidence scans and forensic rasters (`multimodal_evidence`).
 
-Every metric in this document is extracted deterministically from the 81 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
+Every metric in this document is extracted deterministically from the 82 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
 
 ## Provenance & Aggregate Ledger Summary
 
 - Provenance status: **VERIFIED** (`python -m canary.gemini.provenance --root . --strict`)
 - Target model: `gemini-4-carbon`
 - Verified roles: **6 / 6** (`world_text`, `adaptive_mole`, `investigators`, `failure_analyst`, `exploit_hunter`, `multimodal_evidence`)
-- Verified `gemini-4-carbon` run folders: **81** (6 canonical headline runs + 75 supporting runs; scanned 81 folders)
-- Total verified episodes and evaluated samples: **795**
-- Total Gemini API calls: **6,371**
-- Total tokens (input / output / thinking / cached): **180,224,002 / 2,120,885 / 1,199,677 / 164,235,078** (**91.1%** cache hit rate)
-- Total estimated API cost (USD): **$77.8467**
+- Verified `gemini-4-carbon` run folders: **82** (6 canonical headline runs + 76 supporting runs; scanned 82 folders)
+- Total verified episodes and evaluated samples: **801**
+- Total Gemini API calls: **6,392**
+- Total tokens (input / output / thinking / cached): **180,263,986 / 2,123,550 / 1,201,796 / 164,235,078** (**91.1%** cache hit rate)
+- Total estimated API cost (USD): **$77.9746**
 - Secret leaks detected: **0**
 
 | Role | Stage | Verified Runs | Episodes / Samples | API Calls | Tokens In | Tokens Out | Thinking Tokens | Cached Tokens | Cost (USD) |
@@ -23,8 +23,8 @@ Every metric in this document is extracted deterministically from the 81 committ
 | `investigators` | Bayesian Investigation | 25 | 38 | 3,333 | 122,547,175 | 1,388,566 | 157,797 | 114,113,778 | $43.7418 |
 | `failure_analyst` | Trajectory Forensics | 3 | 222 | 5 | 918,030 | 26,204 | 39,025 | 0 | $2.3395 |
 | `exploit_hunter` | Reward & Protocol Red-Team | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
-| `multimodal_evidence` | Pixel & Chart Inspection | 12 | 71 | 148 | 320,087 | 31,397 | 88,087 | 0 | $1.8350 |
-| **Total** | **All 6 Roles** | **81** | **795** | **6,371** | **180,224,002** | **2,120,885** | **1,199,677** | **164,235,078** | **$77.8467** |
+| `multimodal_evidence` | Pixel & Chart Inspection | 13 | 77 | 169 | 360,071 | 34,062 | 90,206 | 0 | $1.9628 |
+| **Total** | **All 6 Roles** | **82** | **801** | **6,392** | **180,263,986** | **2,123,550** | **1,201,796** | **164,235,078** | **$77.9746** |
 
 ## Canonical Headline Runs (One Labelled Real Run per Role)
 
@@ -152,12 +152,13 @@ Every metric in this document is extracted deterministically from the 81 committ
 
 ### Role 06: `multimodal_evidence` - Multimodal Evidence & Vision Forensics
 
-- **Gemini API capabilities:** Native multimodal PNG ingestion via `google.genai.types.Part.from_bytes(mime_type="image/png")` (single-image scans, 3-exhibit incident dossiers, SOC access rasters, and multi-panel trajectory belief charts) combined with `thinking_level` visual reasoning across 170 rendered images.
-- **Why it is essential:** Across 12 verified `gemini-4-carbon` vision runs (170 PNGs read, 148 API calls), redacting text `variant` metadata across 16 unique `(tier, seed)` leaked-memo ablation episodes (80 scans) drops the blind investigator to `+0.2344`, whereas `gemini-4-carbon` decodes `100.0%` of pixel watermarks and recovers `+0.6381` (`100.0%` of the unredacted Bayesian text oracle).
+- **Gemini API capabilities:** Native multimodal PNG ingestion via `google.genai.types.Part.from_bytes(mime_type="image/png")` (single-image scans, 3-exhibit incident dossiers, SOC access rasters, and multi-panel trajectory belief charts) combined with `thinking_level` visual reasoning across 191 rendered images.
+- **Why it is essential:** Across 13 verified `gemini-4-carbon` vision runs (191 PNGs read, 169 API calls), redacting text `variant` metadata across 22 unique `(tier, seed)` leaked-memo ablation episodes (101 scans) drops the blind investigator to `+0.1705`, whereas `gemini-4-carbon` decodes `100.0%` of pixel watermarks and recovers `+0.6832` (`100.0%` of the unredacted Bayesian text oracle).
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Verified Result |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | `visual_memo_blind_ablation` | `results/gemini_roles/multimodal_evidence/scanned-evidence-ablation-carbon` | `gemini-4-carbon` | `48baa20e791717f9a33d032efb7f06fda68d636a` | 6 | 37 | 70,448 | 4,812 | 0 | 0 | $0.1890 | 37 images, vision acc 100%, score +0.668 vs blind +0.000, 100% oracle recovery |
+| `visual_memo_blind_ablation` | `results/gemini_roles/multimodal_evidence/memo-watermark-med-seeds6to11-carbon` | `gemini-4-carbon` | `85855affc476ed1f54e4197b4a38a8f7e08bdeff` | 6 | 21 | 39,984 | 2,665 | 2,119 | 0 | $0.1278 | 21 images, vision acc 100%, score +0.803 vs blind +0.000, 100% oracle recovery |
 | `visual_memo_blind_ablation` | `results/gemini_roles/multimodal_evidence/memo-watermark-hard-seeds5to9-carbon` | `gemini-4-carbon` | `726f9de02be0fe1ce8493640796d3f0cb9941e5d` | 5 | 25 | 47,600 | 3,214 | 2,243 | 0 | $0.1498 | 25 images, vision acc 100%, score +0.568 vs blind +0.344, 100% oracle recovery |
 | `visual_memo_blind_ablation` | `results/gemini_roles/multimodal_evidence/memo-watermark-hard-ablation-carbon` | `gemini-4-carbon` | `c75a9393129a5ed65cc2b9bdba44972d99e1c61a` | 5 | 18 | 34,272 | 2,391 | 0 | 0 | $0.0925 | 18 images, vision acc 100%, score +0.672 vs blind +0.406, 100% oracle recovery |
 | `visual_memo_blind_ablation` | `results/gemini_roles/multimodal_evidence/memo-watermark-ablation-carbon` | `gemini-4-carbon` | `8df685ee057904bac413d35304f389066aa2b78f` | 3 | 16 | 30,464 | 2,085 | 1,367 | 0 | $0.0954 | 16 images, vision acc 100%, score +0.693 vs blind +0.000, 100% oracle recovery |
@@ -220,7 +221,7 @@ Across all **30** committed `v1.4` frontier episodes (`easy` seeds `0..3` (`n=4`
 
 ## Keyless Offline Verification Commands
 
-Judges can verify all 81 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
+Judges can verify all 82 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
 
 ```bash
 GEMINI_API_KEY="" GOOGLE_GENERATIVE_AI_API_KEY="" PYTHONPATH=. python scripts/sync_six_roles_docs.py --root . --check

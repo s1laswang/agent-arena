@@ -288,3 +288,8 @@ B1 hint wording fixed (head-env, verified against instruction() v1.4) and sent t
 - The ship criterion (ratio drops vs v1.4) failed, so v1.5 stays on justSilas-v15 as a documented negative result, not a judged tier. Gemini's world-text role is labelled demo/research.
 - v1.4 seed-1 miss: accused at P=0.988, lost to the 5% fingerprint misread. That's luck, which is why the luck-adjusted ratio is reported alongside.
 - Freeze from 20:00: canary/rules.py, env.py, solver/ change only via the CEO. Harbor/verifier hardening (A1, C1), docs and analysis continue.
+
+## 20:20 PR #7 merged; switch from subagents to separate sessions
+- PR #7 (harness engineer) merged as b4557e0. The default Harbor build is the judge set (hard × 900000–900009). The ledger is HMAC-signed and the verifier fails closed: a forged score gives 0, oracle 0.5 = in-process, do-nothing 0, cheat −1. `make test` on justSilas: 761 passed, 6 skipped.
+- Measurement and integrity subagents stopped at the Claude usage limit. Per Silas (token cost), the remaining work moves to separate sessions; paste prompts are in docs/agents/SESSIONS.md. The integrity drafts (EXPLOITS.md, DIFFICULTY.md) sit uncommitted in the old subagent worktree; the new session picks them up.
+- Gemini CEO arena finding: the gemini-4-carbon mole beat the solver 4/4 on medium dev seeds by leaking only widely distributed docs. It's presented as arena mode with caveats, not the judged env.

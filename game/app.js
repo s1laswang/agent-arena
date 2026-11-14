@@ -440,6 +440,18 @@ function refreshHUD() {
     nextBtn.title = `All actions spent. Advance to Day ${state.day + 1} [N]`;
   }
 
+  // Leak check button indicator
+  const leakBtn = $("checkLeaksFeedBtn");
+  if (leakBtn) {
+    if (state.checkedLeaksToday) {
+      leakBtn.textContent = "Checked Today";
+      leakBtn.title = "Already checked today. Leaks only surface when advancing days.";
+    } else {
+      leakBtn.textContent = "Check Leaks (1 action)";
+      leakBtn.title = "Check rival wire for newly surfaced leaks (costs 1 action)";
+    }
+  }
+
   updateGuidance();
 }
 
@@ -1421,7 +1433,13 @@ function setupGlobalEventListeners() {
   // Office & Dossier buttons
   $("surveyOfficeBtn").addEventListener("click", () => executeTool("list_employees", {}));
   $("surveyOfficeActionBtn").addEventListener("click", () => executeTool("list_employees", {}));
-  $("checkLeaksFeedBtn").addEventListener("click", () => executeTool("check_leak_feed", {}));
+  $("checkLeaksFeedBtn").addEventListener("click", () => {
+    if (state.checkedLeaksToday) {
+      const ok = confirm("Already checked today. In this benchmark, leaks only surface when advancing to a new day. Spend 1 action to re-check anyway?");
+      if (!ok) return;
+    }
+    executeTool("check_leak_feed", {});
+  });
 
   $("closeDossierBtn").addEventListener("click", () => {
     $("empDossierCard").hidden = true;

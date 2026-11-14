@@ -44,6 +44,7 @@ import sys
 import threading
 import time
 import traceback
+import uuid
 from pathlib import Path
 from typing import Any, Callable
 
@@ -57,6 +58,7 @@ _MODEL_COST = {"gemini-4-carbon": 6, "gemini-4-argon": 5, "gemini-4-hydrogen": 4
 _LEVEL_COST = {"xhigh": 6, "high": 5, "default": 4, "medium": 3, "low": 2, "minimal": 1}
 _TIER_COST = {"hard": 2, "medium": 1, "easy": 0}
 HOST = socket.gethostname().split(".")[0]
+MACHINE = f"{uuid.getnode():012x}"   # stable per machine (macOS hostnames change with the network)
 
 
 # --------------------------------------------------------------------------- grid
@@ -173,25 +175,44 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
-def _claim(out: Path, c: Cell) -> None:
-    """Write RUNNING.json at take time so a second process on this host skips the cell (run_cell rewrites it)."""
-    d = c.dir(out)
-    if d.exists() and not is_done(out, c):
-        shutil.rmtree(d)
-    d.mkdir(parents=True, exist_ok=True)
-    (d / "RUNNING.json").write_text(json.dumps({"host": HOST, "pid": os.getpid(), "started": time.time()}))
+def _is_ladder_pid(pid: int) -> bool:
+    try:
+        import subprocess
+        cmd = subprocess.run(["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True,
+                             timeout=5).stdout
+    except Exception:  # noqa: BLE001
+        return False
+    return "canary.gemini.ladder" in cmd
 
 
 def in_flight_elsewhere(out: Path, c: Cell) -> bool:
-    """True if another live process on this host holds the cell (shards on other hosts are disjoint)."""
+    """True if another live ladder process on this machine holds the cell (shards on other hosts are disjoint)."""
     f = c.dir(out) / "RUNNING.json"
     if not f.exists():
         return False
     try:
         r = json.loads(f.read_text())
-    except (json.JSONDecodeError, OSError):
+        pid = int(r.get("pid", -1))
+    except (json.JSONDecodeError, OSError, ValueError):
         return False
-    return r.get("host") == HOST and int(r.get("pid", -1)) != os.getpid() and _pid_alive(int(r["pid"]))
+    if pid == os.getpid() and r.get("machine", MACHINE) == MACHINE:
+        return False
+    if r.get("machine"):
+        return r["machine"] == MACHINE and _pid_alive(pid)
+    return _pid_alive(pid) and (r.get("host") == HOST or _is_ladder_pid(pid))
+
+
+def _running_marker() -> str:
+    return json.dumps({"host": HOST, "machine": MACHINE, "pid": os.getpid(), "started": time.time()})
+
+
+def _claim(out: Path, c: Cell) -> None:
+    """Write RUNNING.json at take time so a second process on this machine skips the cell (run_cell rewrites it)."""
+    d = c.dir(out)
+    if d.exists() and not is_done(out, c):
+        shutil.rmtree(d)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "RUNNING.json").write_text(_running_marker())
 
 
 _INFRA = re.compile(r"ClientError|ServerError|APIError|RESOURCE_EXHAUSTED|UNAVAILABLE|INTERNAL|\b5\d\d\b|\b429\b|"
@@ -310,7 +331,7 @@ def run_cell(out: Path, c: Cell, ladder_run: str, client_factory: Callable | Non
         shutil.rmtree(d)
     d.mkdir(parents=True)
     t0 = time.time()
-    (d / "RUNNING.json").write_text(json.dumps({"host": HOST, "pid": os.getpid(), "started": t0}))
+    (d / "RUNNING.json").write_text(_running_marker())
     run_id = f"ladder:{ladder_run}:{c.key}"
     meta = {"ladder_run": ladder_run, "model": c.model, "level": c.level, "tier": c.tier, "seed": c.seed}
     client = None

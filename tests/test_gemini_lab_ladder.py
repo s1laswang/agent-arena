@@ -163,7 +163,8 @@ def test_second_process_skips_cells_held_by_a_live_process(tmp_path, monkeypatch
     cells = ladder.expand_grid(["gemini-3.8-flash"], ["low"], ["medium"], [0, 1])
     held = cells[0].dir(tmp_path / "out")
     held.mkdir(parents=True)
-    (held / "RUNNING.json").write_text(json.dumps({"host": ladder.HOST, "pid": os.getppid()}))  # a live pid
+    (held / "RUNNING.json").write_text(json.dumps({"host": "other-name", "machine": ladder.MACHINE,
+                                                    "pid": os.getppid()}))  # a live pid on this machine
     r = ladder.run_grid(tmp_path / "out", cells, concurrency=2, client_factory=stub_factory(accuse_script),
                         log=lambda m: None)
     assert r["ran"] == 1 and not ladder.is_done(tmp_path / "out", cells[0]) and ladder.is_done(tmp_path / "out", cells[1])

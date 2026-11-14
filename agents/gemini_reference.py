@@ -18,14 +18,17 @@ class GeminiReference:
         self.seed = zlib.crc32(("%s:%s" % (seed, seat)).encode())
         self.fallback = Reference(seat)
         self.log = []
+        self.agent_kind = "gemini" if gemini.enabled() else "scripted"
 
     def turn(self, seat, view, tools, call):
         if not gemini.enabled():
+            self.agent_kind = "scripted"
             return self.fallback.turn(seat, view, tools, call)
         try:
             return gemini.run_tool_loop(gemini.model_for("reference"), ROLE_PROMPTS[seat] + PROCEDURE, str(view), tools, call,
                                         max_steps=BUDGET, role="reference", seed=self.seed, log=self.log.append, guard=make_guard(call))
         except gemini.GeminiUnavailable:
+            self.agent_kind = "scripted"
             return self.fallback.turn(seat, view, tools, call)
 
 

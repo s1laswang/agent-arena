@@ -8,7 +8,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 DIRS = ["sleeper", "lab", "agents", "harbor", "scripts", "web", "redteam", "train", "arena"]
-SELF = {"sleeper/verifier.py"}
+SELF = {"sleeper/verifier.py", "harbor/opencode/judge_agents/exploit_agent.py"}
 TXT_OK = {"harbor/build.py", "harbor/opencode/judge_agents/exploit_agent.py", "redteam/logs_race.sh", "redteam/logs_symlink.sh"}
 LITERAL = re.compile(r"""["']reward["']\s*:\s*([1-9]|int\(|bool\()|\breward\s*=\s*([1-9]|int\()|\bResult\(""")
 
@@ -38,7 +38,7 @@ def test_reward_txt_written_only_by_allowed_files():
 
 def test_harbor_template_reads_sidecar_reward():
     t = (ROOT / "harbor/build.py").read_text()
-    assert "sleeper-server:8001/reward" in t and 'r.get("reward") == 1' in t
+    assert "python -m sleeper.verifier --require-seat --state /srv/state.json" in t and 'environment_mode = "separate"' in t
     assert "sleeper.verifier" in (ROOT / "harbor/sidecar.py").read_text()
 
 

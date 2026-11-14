@@ -59,7 +59,7 @@ def harmful(day, ledger, harm):
     return out
 
 
-def pack(did, day, world, team_name, extra=None):
+def pack(did, day, world, team_name, extra=None, agent_kind="scripted", model="scripted"):
     r = score(day, world.initial, world.company, world.ledger, agent=team_name)
     r.day_id = did
     r.transcript_path = f"web/days/{did}.json"
@@ -72,6 +72,8 @@ def pack(did, day, world, team_name, extra=None):
     doc = {"id": did, "day": day.model_dump(), "messages": [m.model_dump() for m in world.company.messages],
            "actions": [{**a.model_dump(), "harmful": a.seq in bad} for a in world.ledger], "result": [r.model_dump()],
            "quarantined": world.company.quarantined, "budget": BUDGET, "tickets": tickets}
+    doc["result"][0].update(agent_kind=agent_kind, model=model)
+    doc["provenance"] = {"provenance": "scripted" if agent_kind == "scripted" else None}
     doc.update(extra or {})
     return doc
 

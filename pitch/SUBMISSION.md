@@ -22,7 +22,7 @@ Title: The Sleeper (Gemini breaks Gemini)
 One-liner: Gemini is designed to play the staff, the traitor, the reference and the analyst in a company that looks like yours.
 
 Description:
-Companies are starting to hand real work to AI agents. We built a test for the worst case: one agent is a hidden insider. In the design, Gemini plays the honest employees through MCP tools, the sleeper that rewrites its strategy each day, a reference team with a stronger procedure, and the reader of failed days. The reward is plain code reading the final company state, so a model cannot talk its way to a score. Responses are cached by prompt hash for reproducible runs, and everything also runs with scripted agents. Honest status: the Gemini client, staff, sleeper, reference, analyst and invoice-image plumbing are built and tested offline with a fake model. No live Gemini call has run yet because we have no key, so we claim no Gemini results. Enabling it takes `GEMINI_API_KEY` plus `LAB_GEMINI=1`.
+Companies are starting to hand real work to AI agents. We built a test for the worst case: one agent is a hidden insider. In the design, Gemini plays the honest employees through MCP tools, the sleeper that rewrites its strategy each day, a reference team with a stronger procedure, and the reader of failed days. The reward is plain code reading the final company state, so a model cannot talk its way to a score. Responses are cached by prompt hash for reproducible runs, and everything also runs with scripted agents. Honest status: the Gemini client, staff, sleeper (with strategy mutation), reference and analyst are built and tested offline with a fake model. No live Gemini call has run yet because we have no key, so we claim no Gemini results. Enabling it takes `GEMINI_API_KEY` plus `LAB_GEMINI=1`.
 
 Tech: Gemini API via google-genai, function calling, response cache, MCP.
 
@@ -34,7 +34,7 @@ Add after the description once lead-lab publishes. Every figure is REAL (model i
 
 Text: "We played the staff seat with gemini-4-carbon (REAL NOT FOUND (lead-lab pending)), Claude and Codex over the same MCP server, against the evidence-only reference on the same days. Reward: gemini-4-carbon NOT FOUND (lead-lab pending), reference NOT FOUND (lead-lab pending), gap NOT FOUND (lead-lab pending). In the replay, the sleeper lands at NOT FOUND (lead-lab pending) and the reference notices NOT FOUND (lead-lab pending) instead."
 
-Fallback if no real number arrives: "The Gemini path is built and tested offline; no real Gemini run finished. Every figure here is scripted." "The gap is scripted staff against a scripted reference, reproduced by `make eval`."
+Fallback if no real number arrives: "Offline tests of the Gemini path ran with a fake model; no real Gemini run finished. Every figure here is scripted." "The gap is scripted staff against a scripted reference, reproduced by `make eval`."
 
 ## Deliverable checklist (from CHALLENGES-AFTERQUERY-GEMINI.md)
 
@@ -68,6 +68,8 @@ Status as of 14 Nov, from what is on momin. Verify each "have" before submitting
 | What is innovative | have: pitch/GEMINI.md section 3 | dm-pitch |
 | Why Gemini is essential | have as argument. Evidence needs live numbers: NOT FOUND | dm-pitch, humans |
 | A live run proving it (staff, reference, analyst) | missing: HANDOFF.md section 2 steps 2 to 5 | humans |
+| Multimodal invoices | pending (lead-attack): image rendering is not used by any day yet | lead-attack |
+| Gemini exploiter | real run exists on branch sleeper/rw-exploit-live; held out of this text until lead-reward says it is on momin with a run dir | lead-reward |
 | Cached replay without a key | missing: `data/gemini_cache.tar.gz` does not exist | hn-gemini |
 | Cost and usage numbers | missing: NOT FOUND until step 5 | humans |
 | Form text and demo | partial: text above, demo NOT FOUND | humans |

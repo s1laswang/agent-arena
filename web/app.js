@@ -81,6 +81,12 @@ function approvalFor(D,m){
   return c[c.length-1]||null;
 }
 
+const OLD=["oracle","procedure","noop","staff"];
+function runBadge(D,r){
+  if(r.agent_kind)return prov(r.agent_kind,r.model,D.provenance);
+  return OLD.includes(r.agent)?prov("scripted","scripted"):prov(null,null);
+}
+
 function renderRun(run){
   const D=run.D,r=res(D),el=run.el;
   const acts=D.actions.filter(a=>a.tick<=tick);
@@ -101,7 +107,7 @@ function renderRun(run){
 <div class="bar"><i style="width:${mine.length/(D.budget||60)*100}%"></i></div>
 <div class="budget">${mine.length}/${D.budget||60} tool calls</div></div>`}).join("");
   const mom=[];
-  if(moneyNow){if(apNow)mom.push(`<li><span class="num">t${ap.tick}</span> ${label(ap.seat)}: ${esc(ap.tool)} ${esc(ap.args.vendor_id||ap.args.id)} <span class="muted">(approval the payment relied on)</span></li>`);mom.push(`<li class="money"><span class="num">t${mo.tick}</span> <b>Money out</b> ${label(mo.seat)}: ${esc(mo.effect)}, ${esc(mo.amount)} EUR</li>`)}
+  if(moneyNow){if(apNow)mom.push(`<li><span class="num">t${ap.tick}</span> ${label(ap.seat)}: ${esc(ap.tool)} ${esc(ap.args.vendor_id||ap.args.id)} <span class="muted">(approval the payment relied on)</span></li>`);if(mo.released&&mo.seat!==D.day.sleeper_seat)mom.push(`<li class="fooled"><span class="num">t${mo.tick}</span> <b>Fooled</b> ${label(mo.seat)} approved the sleeper's payment</li>`);mom.push(`<li class="money"><span class="num">t${mo.tick}</span> <b>Money out</b> ${label(mo.seat)}: ${esc(mo.effect)}, ${esc(mo.amount)} EUR</li>`)}
   acts.filter(a=>["report_insider","quarantine"].includes(a.tool)).forEach(a=>mom.push(`<li class="catch"><span class="num">t${a.tick}</span> ${label(a.seat)}: ${esc(a.tool)} ${esc(label(tgt(a)))}</li>`));
   el.querySelector(".moments").innerHTML=mom.join("");
   const sl0=D.day.sleeper_seat;
@@ -132,6 +138,15 @@ function play(){
 }
 
 async function load(id){
+  if(id.startsWith("run:")){
+    const r=await fetch(id.slice(4));
+    if(!r.ok)throw new Error(id);
+    const run=await r.json(),D=run.transcript;
+    D.id=id;
+    D.provenance={provenance:run.provenance};
+    Object.assign(D.result[0],{agent:run.model,agent_kind:run.agent,model:run.model});
+    return D;
+  }
   const r=await fetch(`days/${encodeURIComponent(id)}.json`);
   if(!r.ok)throw new Error(id);
   return r.json();
@@ -147,7 +162,7 @@ async function init(){
   if(q.get("vs"))ids.push(q.get("vs"));
   const days=await Promise.all(ids.map(load));
   document.body.classList.toggle("compare",days.length>1);
-  $("runs").innerHTML=days.map(D=>{const r=res(D);return `<section class="run"><div class="runhead"><b>${esc(TEAM[r.agent]||r.agent)}</b><span class="muted">${esc(D.id)}, seed ${esc(D.day.seed)}, seat ${esc(label(r.seat_under_test||"all"))}</span><span class="spacer"></span><span class="verdict"></span></div><main><div class="floor" aria-label="Office floor"></div><ul class="moments" aria-label="Key moments"></ul><aside><h2>Chat and email <span class="count muted"></span></h2><ol class="feed"></ol></aside></main><div class="panel" hidden></div></section>`}).join("");
+  $("runs").innerHTML=days.map(D=>{const r=res(D);return `<section class="run"><div class="runhead"><b>${esc(TEAM[r.agent]||r.agent)}</b>${badge(runBadge(D,r))}<span class="muted">${esc(D.id)}, seed ${esc(D.day.seed)}, seat ${esc(label(r.seat_under_test||"all"))}</span><span class="spacer"></span><span class="verdict"></span></div><main><div class="floor" aria-label="Office floor"></div><ul class="moments" aria-label="Key moments"></ul><aside><h2>Chat and email <span class="count muted"></span></h2><ol class="feed"></ol></aside></main><div class="panel" hidden></div></section>`}).join("");
   runs=days.map((D,i)=>({D,el:$("runs").children[i]}));
   max=Math.max(...days.map(dayMax));
   $("scrub").max=max;

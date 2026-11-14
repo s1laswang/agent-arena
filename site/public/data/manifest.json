@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "howToAdd": "Copy a committed episodes.jsonl to public/data/runs/committed/<agent>/episodes.jsonl and list it in runs. The deck prefers role=frontier over role=stand-in for the right-hand seat. See site/README.md.",
+  "committedLayout": {
+    "repoGlob": "data/runs/committed/**/episodes.jsonl",
+    "sitePath": "data/runs/committed/<agent>/episodes.jsonl",
+    "example": "data/runs/committed/gpt-5.5/episodes.jsonl"
+  },
+  "sample": {
+    "command": "uv run --python 3.12 python -m canary.eval --agent solver --tier medium --seeds 3",
+    "heuristicCommand": "uv run --python 3.12 python -m canary.eval --agent heuristic --tier medium --seeds 3",
+    "seeds": [0, 1, 2],
+    "note": "Dev seeds use the public world key, so these files are deterministic. They are a 3-seed sample, not the 40-seed judge table."
+  },
+  "pairing": {
+    "leftRole": "reference",
+    "rightPrefer": "frontier",
+    "rightFallback": "stand-in"
+  },
+  "runs": [
+    {
+      "id": "solver-medium",
+      "agent": "solver",
+      "tier": "medium",
+      "role": "reference",
+      "label": "Reference solver",
+      "file": "data/runs/solver/medium/episodes.jsonl",
+      "optional": false,
+      "note": "Bundled sample. Episodes may include other tiers later; the deck groups by each line's tier field."
+    },
+    {
+      "id": "heuristic-medium",
+      "agent": "heuristic",
+      "tier": "medium",
+      "role": "stand-in",
+      "standInFor": "gpt-5.5",
+      "label": "Heuristic",
+      "file": "data/runs/heuristic/medium/episodes.jsonl",
+      "optional": false,
+      "note": "Stand-in for the frontier seat until a gpt-5.5 file loads."
+    },
+    {
+      "id": "gpt-5.5",
+      "agent": "gpt-5.5",
+      "tier": "medium",
+      "role": "frontier",
+      "label": "gpt-5.5",
+      "file": "data/runs/committed/gpt-5.5/episodes.jsonl",
+      "optional": true,
+      "note": "Absent until the committed run is copied here. When the file parses, it replaces the heuristic on the right."
+    }
+  ]
+}

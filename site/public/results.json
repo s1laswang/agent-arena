@@ -1,0 +1,50 @@
+{
+  "todo": true,
+  "title": "The gap",
+  "scale": { "min": -1, "max": 1 },
+  "disclaimer": "TODO. Placeholder figures, not a measurement from this build. Solver and baseline bars copy the README expected means so the chart has a shape. Replace this file with the official judge table. Frontier bars are pending until gpt-5.5 runs are committed.",
+  "tiers": [
+    {
+      "tier": "easy",
+      "kicker": "Sanity",
+      "headline": false,
+      "bars": [
+        { "id": "solver", "label": "Reference", "agent": "solver", "score": 0.78, "todo": true },
+        { "id": "frontier", "label": "Frontier", "agent": "gpt-5.5", "score": null, "todo": true, "pending": true },
+        { "id": "heuristic", "label": "Heuristic", "agent": "heuristic", "score": 0.65, "todo": true },
+        { "id": "logs_only", "label": "Logs only", "agent": "logs_only", "score": -0.47, "todo": true },
+        { "id": "random", "label": "Random", "agent": "random", "score": -0.69, "todo": true },
+        { "id": "stop_early", "label": "Stop early", "agent": "stop_early", "score": -0.85, "todo": true },
+        { "id": "do_nothing", "label": "Do nothing", "agent": "do_nothing", "score": 0, "todo": true }
+      ]
+    },
+    {
+      "tier": "medium",
+      "kicker": "Headline",
+      "headline": true,
+      "bars": [
+        { "id": "solver", "label": "Reference", "agent": "solver", "score": 0.63, "todo": true },
+        { "id": "frontier", "label": "Frontier", "agent": "gpt-5.5", "score": null, "todo": true, "pending": true },
+        { "id": "heuristic", "label": "Heuristic", "agent": "heuristic", "score": -0.03, "todo": true },
+        { "id": "logs_only", "label": "Logs only", "agent": "logs_only", "score": -0.98, "todo": true },
+        { "id": "random", "label": "Random", "agent": "random", "score": -0.66, "todo": true },
+        { "id": "stop_early", "label": "Stop early", "agent": "stop_early", "score": -0.89, "todo": true },
+        { "id": "do_nothing", "label": "Do nothing", "agent": "do_nothing", "score": 0, "todo": true }
+      ]
+    },
+    {
+      "tier": "hard",
+      "kicker": "Headline",
+      "headline": false,
+      "bars": [
+        { "id": "solver", "label": "Reference", "agent": "solver", "score": 0.62, "todo": true },
+        { "id": "frontier", "label": "Frontier", "agent": "gpt-5.5", "score": null, "todo": true, "pending": true },
+        { "id": "heuristic", "label": "Heuristic", "agent": "heuristic", "score": -0.21, "todo": true },
+        { "id": "logs_only", "label": "Logs only", "agent": "logs_only", "score": -1, "todo": true },
+        { "id": "random", "label": "Random", "agent": "random", "score": -0.81, "todo": true },
+        { "id": "stop_early", "label": "Stop early", "agent": "stop_early", "score": -0.95, "todo": true },
+        { "id": "do_nothing", "label": "Do nothing", "agent": "do_nothing", "score": 0, "todo": true }
+      ]
+    }
+  ]
+}

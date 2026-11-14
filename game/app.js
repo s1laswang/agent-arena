@@ -677,6 +677,7 @@ function updateDossierView(empId) {
   $("dosName").textContent = emp.name;
   $("dosRole").textContent = emp.role || "Member";
   $("dosDeptBadge").textContent = emp.dept || "Staff";
+  if ($("msgQueryInput")) $("msgQueryInput").value = emp.id;
 
   const isLocked = state.restricted.has(emp.id);
   $("dosRestrictedBadge").hidden = !isLocked;
@@ -1539,8 +1540,16 @@ function setupGlobalEventListeners() {
   });
 
   $("dosMessagesBtn").addEventListener("click", () => {
-    if (!state.selectedEmpId) return;
-    executeTool("search_messages", { query: state.selectedEmpId, day_from: 1, day_to: state.day });
+    const inputVal = $("msgQueryInput") ? $("msgQueryInput").value.trim() : "";
+    const q = inputVal || state.selectedEmpId || "e00";
+    executeTool("search_messages", { query: q, day_from: 1, day_to: state.day });
+  });
+
+  $("msgQueryInput")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      $("dosMessagesBtn")?.click();
+    }
   });
 
   $("dosRestrictBtn").addEventListener("click", () => {

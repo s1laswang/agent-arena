@@ -212,11 +212,14 @@
             <details class="more-actions" style="margin-top: 8px;">
               <summary class="muted font-small" style="cursor: pointer;">More actions (chat search, permissions)</summary>
               <div class="dossier-actions-grid" style="margin-top: 8px;">
-                <div class="action-item">
-                  <span class="font-small muted">Internal Chat Search:</span>
-                  <button type="button" id="dosMessagesBtn" class="btn-secondary btn-full">Search Messages</button>
+                <div class="action-item" style="grid-column: 1 / -1;">
+                  <label for="msgQueryInput" class="font-small muted">Search Staff Messages:</label>
+                  <div class="action-inline-row">
+                    <input type="text" id="msgQueryInput" placeholder="Keyword or ID (e.g. leak, e00)..." style="flex:1; font-size:12px;">
+                    <button type="button" id="dosMessagesBtn" class="btn-secondary">Search</button>
+                  </div>
                 </div>
-                <div class="action-item">
+                <div class="action-item" style="grid-column: 1 / -1;">
                   <span class="font-small muted">Access Permissions:</span>
                   <button type="button" id="dosRestrictBtn" class="btn-secondary btn-full">Restrict Access</button>
                 </div>

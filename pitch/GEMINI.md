@@ -26,5 +26,6 @@ difficulty gap gets built by design, not by luck.
 and therefore no hard tier. The judge tier is literally Gemini's output, frozen and solver-verified.
 Long context makes the analyst possible: one call over dozens of full trajectories.
 
-**Honest status (Sat 03:00):** every Gemini path runs and is tested tonight on the deterministic `stub`
-backend (no API key yet). Tomorrow only the key changes; outputs, quality and the numbers then come from real Gemini.
+**Status (Sat 14 Nov, 18:23):** the Gemini paths have run against the live Gemini API. Every call is ledgered:
+11,180 calls, $88.72 at list price (`results/gemini/dashboard.html`). Results: `results/gemini/ladder.md`, `atlas.md`,
+`swarm.md`; write-up: `docs/gemini/SUBMISSION.md`. The deterministic `stub` client remains for keyless tests.

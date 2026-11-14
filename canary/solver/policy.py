@@ -7,6 +7,8 @@ Daily loop:
 """
 from __future__ import annotations
 
+import re
+
 import math
 from typing import Any
 
@@ -40,6 +42,9 @@ def tier_from_instruction(instruction: str) -> str | None:
         if f"tier: {t}" in low or f"tier={t}" in low or f"\"{t}\" tier" in low:
             return t
     return None
+
+
+_SOCIAL_RE = re.compile(r"^(rumour|unverified accusation|grudge): (e\d+)$")
 
 
 class SolverPolicy:
@@ -183,6 +188,11 @@ class SolverPolicy:
                     continue
                 self.seen_msgs.add(m.get("id"))
                 snd = m.get("sender")
+                sm = _SOCIAL_RE.match(str(m.get("subject") or ""))
+                if sm:   # v1.5-candidate rumour/authority/grudge: modelled exactly in belief.social_loglik
+                    kind = {"rumour": "rumour", "unverified accusation": "authority", "grudge": "grudge"}[sm.group(1)]
+                    o.social.append((kind, snd, sm.group(2)))
+                    continue
                 if snd in o.employees or not o.employees:
                     self.anger[snd] = self.anger.get(snd, 0) + 1
             self.queries_done.add(q)

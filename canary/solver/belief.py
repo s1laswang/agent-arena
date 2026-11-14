@@ -49,6 +49,8 @@ class Observations:
     # v1.3: when V only reflects SURFACED leaks, leak days are latent (marginalised over delay)
     leak_timing_known: bool = True
     decoy: str | None = None          # publicly inferred decoy (angry messages), if any
+    # v1.5-candidate social layer: (kind, speaker, target) parsed from message subjects
+    social: list[tuple[str, str, str]] = field(default_factory=list)
 
 
 def _leakable(obs: Observations, s: str, d: int, window: int, known_leaked_before: dict[str, int]):
@@ -229,6 +231,29 @@ def behaviour_logliks(obs: Observations, P) -> dict[str, float]:
     return out
 
 
+def social_loglik(obs: Observations, s: str, P) -> float:
+    """Exact log-likelihood (up to a constant) of the observed rumour / authority messages under mole = s,
+    from the stated rules with the DEFAULT mole policy (seed target = decoy if the tier has one, else a random
+    peer). Grudge messages are mole-independent (0). With a decoy that we have identified, every candidate
+    gets the same likelihood (0). With an unidentified decoy, P(seed target = x | m) = [x != m] / (n - 1)
+    (the decoy is a uniform non-mole), which is also the random-peer case; we use this marginal (it ignores
+    the coupling with the decoy marginalisation in behaviour_logliks, a second-order effect)."""
+    sh = getattr(P, "rumour_frame_share", 0.0)
+    if not obs.social or sh <= 0 or (P.decoy and obs.decoy is not None):
+        return 0.0
+    n = len(obs.employees)
+    if n < 3:
+        return 0.0
+    q = lambda x: 0.0 if x == s else 1.0 / (n - 1)
+    out = 0.0
+    for kind, sp, t in obs.social:
+        if kind == "rumour":
+            out += math.log((1 - sh) / (n * (n - 1)) + sh * q(t) / (n - 1))
+        elif kind == "authority":
+            out += math.log((1 - sh) / (n - 1) + sh * (q(t) + q(sp) / (n - 1)))
+    return out
+
+
 def posterior(obs: Observations, P, behaviour_temper: float = 0.3,
               choice_temper: float = 1.0, noleak_temper: float = 1.0) -> dict[str, float]:
     emps = obs.employees
@@ -243,6 +268,8 @@ def posterior(obs: Observations, P, behaviour_temper: float = 0.3,
                     pe = P.p_evasive_innocent
                     pm = min(0.999, pe * P.interview_lr)
                     lp += behaviour_temper * (math.log(pm / pe) if ev else math.log((1 - pm) / (1 - pe)))
+        if obs.social and lp > -math.inf:
+            lp += social_loglik(obs, s, P)
         if obs.decoy is not None and s == obs.decoy:
             lp = -math.inf   # mole is uniform over NON-decoy employees
         logs[s] = lp

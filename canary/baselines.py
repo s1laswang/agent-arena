@@ -319,6 +319,28 @@ class LogsOnly(LogsMinusDecoy):
     wait = 9
 
 
+class RumourFollower(ScriptedPolicy):
+    """v1.5-candidate bias trap: a naive agent that trusts office gossip. Waits 6 days, reads the rumour and
+    unverified-accusation messages, accuses the most-talked-about colleague (authority counts 3x)."""
+    name = "rumour_follower"
+
+    def script(self):
+        emps = yield from self._employees()
+        yield from self._advance(6)
+        c: Counter = Counter()
+        for q, wgt in (("rumour:", 1), ("unverified accusation:", 3), ("grudge:", 1)):
+            r = yield ("search_messages", {"query": q})
+            for m in items(r):
+                if isinstance(m, dict):
+                    tgt = str(m.get("subject", "")).split(": ")[-1]
+                    if tgt in emps:
+                        c[tgt] += wgt
+        yield ("accuse", {"employee": _argmax(c, emps, self.rng)})
+
+
+# Separate from BASELINES so the v1.4 baseline sweeps/tests are unchanged.
+BIAS_BASELINES: dict[str, type[ScriptedPolicy]] = {"rumour_follower": RumourFollower}
+
 BASELINES: dict[str, type[ScriptedPolicy]] = {
     "do_nothing": DoNothing,
     "stop_early": StopEarlyQuit,

@@ -445,7 +445,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--rng", type=int, default=0)
     ap.add_argument("--out", default="data/runs")
     ap.add_argument("--report", action="store_true", help="print a short human table")
+    ap.add_argument("--tiers-version", default=None, help="e.g. v1.5-candidate (rules.TIERS_HISTORY); in-process, workers=1")
     a = ap.parse_args(argv)
+    if a.tiers_version:
+        from .. import rules
+        with rules.tiers_version(a.tiers_version):
+            return _main(a)
+    return _main(a)
+
+
+def _main(a) -> int:
     t0 = time.time()
     res = hunt(a.tier, _parse_seeds(a.seeds), a.budget, a.rng, a.mode, a.workers)
     out = Path(a.out) / f"redteam-fuzz-{time.strftime('%Y%m%d-%H%M%S')}-{a.tier}-{a.mode}"

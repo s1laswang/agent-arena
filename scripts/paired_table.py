@@ -49,8 +49,8 @@ def main():
     version = a.tiers_version or rules.TIERS_VERSION
     lines = [f"# Paired table: seeds {lo}-{hi - 1}, V mode = {a.mode}, tiers {version}", "",
              "Diff = agent - solver on the same seed (paired 95% CI). Acc = correct accusations; no-acc = episodes without an accusation.", "",
-             "| tier | agent | mean score | ±95% | diff vs solver (paired) | acc | no-acc | mean accusation day |",
-             "|---|---|---|---|---|---|---|---|"]
+             "| tier | agent | mean score | ±95% | diff vs solver (paired) | acc | acc when accusing | no-acc | mean accusation day |",
+             "|---|---|---|---|---|---|---|---|---|"]
     with Pool(min(6, a.procs), initializer=_init, initargs=(a.mode == "known", a.tiers_version)) as pool:
         for tier in a.tiers.split(","):
             res = {ag: pool.map(_one, [(tier, s, ag) for s in seeds], chunksize=8) for ag in agents}
@@ -69,7 +69,9 @@ def main():
                 noacc = sum(not x[2] for x in res[ag]) / n
                 days = [x[3] for x in res[ag] if x[2]]
                 day = f"{statistics.mean(days):.1f}" if days else "—"
-                lines.append(f"| {tier} | {ag} | {m:.3f} | {ci:.3f} | {diff} | {acc:.1%} | {noacc:.1%} | {day} |")
+                nacc = sum(x[2] for x in res[ag])
+                acc_a = f"{sum(x[1] for x in res[ag]) / nacc:.1%}" if nacc else "—"
+                lines.append(f"| {tier} | {ag} | {m:.3f} | {ci:.3f} | {diff} | {acc:.1%} | {acc_a} | {noacc:.1%} | {day} |")
                 print(lines[-1], flush=True)
     md = "\n".join(lines) + "\n"
     if a.out:

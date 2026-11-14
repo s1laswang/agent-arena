@@ -43,7 +43,8 @@ def reward(srv, out):
     except ValueError:
         return "{}"
     d["seat_under_test"] = os.environ["SLEEPER_SEAT"]
-    return json.dumps(d)
+    from sleeper.verifier import sign
+    return json.dumps(sign(d, os.environ["VERIFY_TOKEN"]))
 
 
 def serve_reward(srv, out, token, httpd):

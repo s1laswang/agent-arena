@@ -4,10 +4,11 @@
 CEO estimate: gap 22/30, difficulty 26/30, integrity 24/25, craft 14/15 ≈ 86. On top of that the tiebreaker is currently a loss (the small model scores −0.15 against the base's 0.00) and the Gemini prize is about 7/10. A true 100 isn't something we control: the judges' 3 agent runs have variance. The realistic target is **93–96, with nothing a judge can knock down in 15 minutes**. Every action below is ranked by points per hour and has to land before its slot. Feature freeze for rules/env/solver: 20:00 (Gate B).
 
 ## Where the points are lost (honest diagnosis)
-1. **Gap (−8). The gap is real but noisy, and it lives only on hard.**
-   - gemini-4-carbon on hard: 59% [11, 99] of the solver, n=26.
-   - gemini-4-carbon on medium: 108% (no gap).
-   - Codex hard v1.3: 106%.
+1. **Gap. A v1.4 frontier gap is not established.** Do not tell judges one is.
+   - In-process bake-off, rules v1.4, paired seeds, n=10 per tier (21:26): gemini-4-carbon matches or beats the solver. Medium solver +0.734±0.050 vs carbon +0.680±0.085. Hard solver +0.433±0.324 vs carbon +0.509±0.136. Smaller Gemini models sat below the solver.
+   - The tiebreaker's notes gain is the generic hint (notes minus hint −0.039±0.204).
+   - Codex hard v1.3: 106% of the solver. That is an earlier tier, not a v1.4 gap.
+   - Earlier carbon ratios (59% n=26, ladder 66% [5%, 117%] n=10) are not this bake-off. The 59% episodes were not committed. The 66% interval includes parity.
    - One lucky gamble at P=0.45 scores the same as a correct inference, so a judge rerun of 3 runs could land near parity.
    - The rubric says the gap must be "consistent" and "reproducible across repeated runs". We haven't shown repeated runs of the judge path.
 2. **Difficulty (−4). We have the failure story (premature accusation, never abstaining, ignoring delays) but no causal proof.** Nothing yet shows the info was sufficient and the decision was the failure. Gallery tags are incomplete, and there's no human baseline.

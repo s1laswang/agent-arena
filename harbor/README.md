@@ -9,7 +9,8 @@ uv tool install harbor                       # Harbor CLI (tested: 0.26.0); need
 python harbor/build.py                       # THE JUDGE SET -> harbor/dataset/canary-hard-9000{00..09}/ (10 hard tasks)
 harbor run -p harbor/dataset -a oracle -n 4                               # reference solver over MCP
 harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=do_nothing -n 4  # do-nothing baseline (expect 0)
-harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early baseline (expect about -1)
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early baseline: stops without accusing (expect exactly 0)
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=guess_day1 -n 4  # day-1 random accusation (expect about -1)
 harbor run -p harbor/dataset -a opencode -m openai/<model> -n 4           # the agent (needs OPENAI_API_KEY)
 python harbor/build.py --tiers medium --seeds 900000                 # just one task
 python harbor/build.py --tiers easy,medium,hard --seeds judge        # everything: 3 tiers x all 40 judge seeds
@@ -185,9 +186,9 @@ Harbor 0.26.0 on colima (2 CPU / 3 GB), Saturday 14 Nov. Every log and output is
 |---|---:|---:|---|
 | oracle (reference solver over MCP) | **0.78** | **0.66** | equal to the in-process solver on the same build: 0.78 / 0.66 |
 | `ORACLE_POLICY=do_nothing` | 0.0 | 0.0 | 0 |
-| `ORACLE_POLICY=stop_early` | −1.0 | −1.0 | about −1 |
+| `ORACLE_POLICY=stop_early` | −1.0 | −1.0 | that build accused on day 1 |
 
-Jobs: `results/harbor/{oracle,do_nothing,stop_early}/`. There were 0 exceptions, about 1.5 min per 2-trial job.
+Jobs: `results/harbor/{oracle,do_nothing,stop_early}/`. There were 0 exceptions, about 1.5 min per 2-trial job. Those `stop_early` rewards are the day-1 accusation this build actually played. That script is now `guess_day1`. Current `stop_early` stops without accusing and scores exactly 0 in-process. This Harbor job was not re-run (no Docker on the integration machine).
 
 **Isolation, checked inside the agent container (`main`).** `solve.sh` runs `check_isolation.sh` before it plays (`agent/isolation.txt` in every oracle trial). Result on both tiers: `ISOLATION OK: 11 checks passed, 0 findings`.
 - No secret, truth or world files; no canary source, and `import canary` fails; no `CANARY_*` variables.
@@ -204,9 +205,9 @@ Jobs: `results/harbor/{oracle,do_nothing,stop_early}/`. There were 0 exceptions,
 | hard 900000 | 0.60 | 0.50 | −0.10 | correct, day 14, 158 calls |
 | hard 900001 | 0.67 | 0.62 | −0.05 | correct, day 8, 85 calls |
 | hard 900002 | 0.71 | 0.46 | −0.25 | correct, day 13, 154 calls |
-| **mean** | **0.757** | **0.503** | **−0.253** | below the solver on all 6 tasks |
+| **mean** | **0.757** | **0.503** | **−0.253** | lower on these 6 tasks; not a v1.4 gap |
 
-Jobs: `results/harbor/g-oracle/` and `results/harbor/g-gemini-try2/` (medium 900000) plus `results/harbor/g-gemini-rest/` (the other 5). Every score is the server-side ledger's (`verifier/ledger.json`), and each trial keeps the agent's full OpenCode transcript (`agent/opencode.txt`). Harbor reports `NonZeroAgentExitCodeError` on most Gemini trials because OpenCode exits non-zero after the game has already ended. The ledgers show completed episodes, so the scores are real. This is a small sample (6 tasks, one run each): read it as a judge-path demonstration, not as the benchmark's gap estimate.
+Jobs: `results/harbor/g-oracle/` and `results/harbor/g-gemini-try2/` (medium 900000) plus `results/harbor/g-gemini-rest/` (the other 5). Every score is the server-side ledger's (`verifier/ledger.json`), and each trial keeps the agent's full OpenCode transcript (`agent/opencode.txt`). Harbor reports `NonZeroAgentExitCodeError` on most Gemini trials because OpenCode exits non-zero after the game has already ended. The ledgers show completed episodes, so the scores are real. This is a small sample (6 tasks, one run each). It is not a v1.4 frontier gap. The later in-process bake-off (rules v1.4, paired seeds, n=10 per tier, 21:26) has gemini-4-carbon matching or beating the solver: medium +0.680±0.085 vs solver +0.734±0.050, hard +0.509±0.136 vs solver +0.433±0.324. Gap not established.
 
 ```bash
 # the working command; the key must reach OpenCode as GOOGLE_GENERATIVE_AI_API_KEY

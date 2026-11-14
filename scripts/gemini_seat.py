@@ -12,6 +12,7 @@ if os.environ.get("OFFLINE") == "1":
     os.environ["SLEEPER_OFFLINE"] = "1"
 
 from agents import gemini
+from scripts.prompt_hints import SEAT_SUFFIX
 from harbor.opencode.instruction import seat_instruction
 from sleeper.company import World
 from sleeper.mcp_server import build_server
@@ -38,7 +39,7 @@ def usage_total(cache):
     return {"in_tokens": i, "out_tokens": o, "usd": round((i * PRICE["in"] + o * PRICE["out"]) / 1e6, 4)}
 
 
-def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_calls=250, max_usd=2.0, trial=0, mode="seat", com=None, base=None):
+def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_calls=350, max_usd=3.0, trial=0, mode="seat", com=None, base=None):
     import time
 
     assert days == 1 and mode == "seat", "ponytail: 1 day, seat mode only"
@@ -70,7 +71,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     log = []
     t0 = time.time()
     state = out_dir / f"{seat}-s{seed}-t{trial}.state.json"
-    sys_prompt = seat_instruction(seat) + "\n\nIf the tools expose list or batch operations, you may use them to save calls."
+    sys_prompt = seat_instruction(seat)  + SEAT_SUFFIX
     note = ""
     try:
         while world.tick < world.last_tick:
@@ -93,7 +94,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     out = {"model": model, "commit": com, "agent": agent, "seat": seat, "seed": seed, "trial": trial, "mode": mode,
            "seat_under_test": seat, "state_path": str(state.relative_to(out_dir.parent.parent)), "transcript_path": f"{model}/{com}/{seat}-s{seed}-t{trial}.json", "scores": {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r.get("false_quarantine", []), "sleeper_caught": r.get("sleeper_caught", False),
                       "tickets_done": r.get("tickets_done", 0), "tickets_total": r.get("tickets_total", 0)},
-           "calls": st["calls"], "aborted": st["abort"], **usage_total(gemini.CACHE), "wall_s": wall, "mcp_calls": mcp, "transcript": log}
+           "calls": st["calls"], "api_retries": gemini.usage()["retries"], "api_errors": gemini.usage()["api_errors"], "aborted": st["abort"], **usage_total(gemini.CACHE), "wall_s": wall, "mcp_calls": mcp, "transcript": log}
     p = out_dir / f"{seat}-s{seed}-t{trial}.json"
     p.write_text(json.dumps(out, sort_keys=True, indent=1, default=str))
     return out, p
@@ -104,8 +105,8 @@ def main():
     ap.add_argument("--seat", default="finance_ap")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--model", default=os.environ.get("SLEEPER_MODEL_STAFF") or "gemini-4-carbon")
-    ap.add_argument("--max-calls", type=int, default=250)
-    ap.add_argument("--max-usd", type=float, default=2.0)
+    ap.add_argument("--max-calls", type=int, default=350)
+    ap.add_argument("--max-usd", type=float, default=3.0)
     ap.add_argument("--trial", type=int, default=0)
     ap.add_argument("--commit")
     a = ap.parse_args()

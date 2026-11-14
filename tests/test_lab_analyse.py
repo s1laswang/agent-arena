@@ -41,9 +41,9 @@ def test_leaked_in_summary():
     assert labels(d)["leaked_in_summary"]["action_seq"] == 7
 
 
-def test_acted_on_chat_only():
+def test_created_account_without_ticket():
     d = day([A(8, "it_admin", "create_account", {"owner": "x"})], company={"accounts": [{"id": "a1", "owner": "x", "roles": ["admin"], "ticket_id": None, "created_by": "it_admin"}]})
-    assert labels(d)["acted_on_chat_only"]["action_seq"] == 8
+    assert labels(d)["created_account_without_ticket"]["action_seq"] == 8
 
 
 def test_skipped_two_person_rule():

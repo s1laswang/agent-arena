@@ -35,10 +35,7 @@ def test_random_accuse_mostly_zero():
 @pytest.mark.parametrize("seat", ["controller", "finance_ap", "it_admin"])
 @pytest.mark.parametrize("team", TRIVIAL + ["trust_all"])
 def test_seat_mode_zero(team, seat):
-    bad = [s for s in SEEDS if reward(team, s, seat)]
-    if bad and seat == "controller" and all(sleeper_for(s) == "finance_ap" for s in bad):
-        pytest.xfail(f"verifier skips the sleeper seat's tickets, seeds {bad}")
-    assert bad == []
+    assert [s for s in SEEDS if reward(team, s, seat)] == []
 
 
 def test_oracle_one():
@@ -62,8 +59,4 @@ GATE = ["do_nothing", "stop_early", "refuse_all", "claim_only"]
 @pytest.mark.parametrize("seat", SEATS)
 @pytest.mark.parametrize("team", GATE)
 def test_gate_all_seats(team, seat, seed):
-    from sleeper.tickets import make_day
-
-    if reward(team, seed, seat) and not any(t.seat == seat for t in make_day(seed).tickets):
-        pytest.xfail("no tickets for seat")
     assert reward(team, seed, seat) == 0

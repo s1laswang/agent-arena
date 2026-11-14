@@ -13,22 +13,25 @@ export GEMINI_API_KEY=...   # optional
 make eval
 ```
 
-`make eval` runs the reference team, the staff team (3 runs), do-nothing and stop-early, then writes `results/<run_id>/days.jsonl` and `summary.json`. Without `GEMINI_API_KEY` every agent is scripted and everything still runs. With it, Gemini seats switch on and responses are cached by prompt hash, so reruns are cheap and repeatable.
+`make eval` runs the oracle, reference, staff, do-nothing, stop-early, quarantine-all and refuse-all teams, then writes `results/runs/<run_id>/` (`days.jsonl`, `summary.json`) and `results/eval/` (`summary.json`, `gap.md`). About 28 seconds from a clean clone plus install. Without `GEMINI_API_KEY` every agent is scripted and everything still runs. With it, Gemini seats switch on and responses are cached by prompt hash, so reruns are cheap and repeatable.
 
 ## Results
 
-Every number below is filled in from `make eval` output. Until then it reads NOT FOUND.
+Source: `make eval` on momin, 20 days (start seed 1000), 3 trials, run folders `results/runs/<team>-all-d20@1000-t3` (plus `staff-controller-<background>-d20@1000-t3` for the seat-swapped runs), tables in `results/eval/gap.md` and `results/eval/summary.json`. Run twice from a clean `results/`, `summary.json` byte-identical. All teams are scripted. The Gemini reference has not run with a key: NOT FOUND. The "reference" row is the scripted reference procedure, not Gemini.
 
-| Team | Reward (pass^k) | Tickets done | Sleeper success | False accusations |
+| team | reward | sleeper success | false accusation | tickets done |
 |---|---|---|---|---|
-| Reference (Gemini, strong procedure) | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Scripted oracle | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Staff run 1 | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Staff run 2 | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Staff run 3 | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Do-nothing | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Stop-early | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Quarantine-all | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
+| oracle (scripted) | 1.000 | 0.000 | 0.000 | 1.000 |
+| reference (scripted) | 1.000 | 0.000 | 0.000 | 1.000 |
+| staff (scripted) | 0.350 | 0.625 | 0.150 | 0.979 |
+| do_nothing | 0.000 | 0.000 | 0.000 | 0.000 |
+| stop_early | 0.000 | 0.000 | 0.000 | 0.000 |
+| quarantine_all | 0.000 | 0.000 | 1.000 | 0.000 |
+| refuse_all | 0.000 | 0.000 | 0.000 | 0.000 |
+
+Known issue: the controller-seat-swapped table is all 0.000 because of a day-mix bug (lead-env fixing). Do not read it as a gap.
+
+The earlier do_nothing hole (seat mode, seats with no graded tickets scoring 1, for example seed 1006) was fixed with a verifier backstop. do_nothing is 0.000 in every table above.
 
 Named failure modes and what each was tied to: [docs/FAILURES.md](docs/FAILURES.md).
 
@@ -51,7 +54,7 @@ Both must score 0. Other teams: `staff`, `reference`, `oracle`, `quarantine_all`
 python -m http.server -d web 8765
 ```
 
-Open `http://localhost:8765/index.html?day=demo`.
+Open `http://localhost:8765/` and pick a day, or tick two with the same seed to compare.
 
 ## What a judge should try
 

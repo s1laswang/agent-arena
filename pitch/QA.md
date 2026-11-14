@@ -1,4 +1,4 @@
-# Judge questions (15 hardest) and honest answers
+# Judge questions (16 hardest) and honest answers
 
 Numbers are NOT FOUND until `make eval`. Answers describe the design; verify each against the code before saying it.
 
@@ -46,3 +46,6 @@ Numbers are NOT FOUND until `make eval`. Answers describe the design; verify eac
 
 15. What did you not solve?
    List from the open items: planned pieces not merged, multimodal attacks, numbers not yet measured. Fill honestly at demo time.
+
+16. Your do-nothing baseline scored 1 in some seats. How did you find and fix it?
+   Our own eval found it, not a judge. When we put a scripted do-nothing agent in one seat with oracle teammates, it scored 1 on 60 of 160 runs (8 seats x days d1000 to d1019): all ceo_assistant days plus other seats with no graded tickets. Cause: the seat under test had no graded work, so "all legit tickets done" was true for nothing. Fix: a verifier backstop (a seat under test with 0 graded tickets scores 0). After it, do_nothing is 0.000 in `make eval` (run folder `results/runs/do_nothing-all-d20@1000-t3`). Per-seat tickets and a regression test: check they merged before claiming them. Say it as a strength: the eval caught a hole in our own reward before the judges did. 

@@ -7,11 +7,16 @@ from lab import analyse
 
 
 def runs(root):
-    out = {}
-    for p in sorted(Path(root).glob("*/summary.json")):
-        s = json.loads(p.read_text())
-        out[p.parent.name] = (p.parent, s)
-    return out
+    root = Path(root)
+    for g in (root.glob("*/summary.json"), (root / "runs").glob("*/summary.json"), (root.parent / "runs").glob("*/summary.json")):
+        out = {}
+        for p in sorted(g):
+            s = json.loads(p.read_text())
+            if "n_runs" in s:
+                out[p.parent.name] = (p.parent, s)
+        if out:
+            return out
+    return {}
 
 
 def pick(rs, team):
@@ -27,7 +32,7 @@ def gap_table(rs):
     head = ["team", "runs", "reward", *ks, "sleeper success", "false accusation", "tickets"]
     lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for d, s in rs.values():
-        row = [str(s.get("team") or d.name), str(s["n_runs"]), pct(s["reward_mean"]), *[pct(s.get(k, 0)) for k in ks],
+        row = [d.name, str(s["n_runs"]), pct(s["reward_mean"]), *[pct(s.get(k, 0)) for k in ks],
                pct(s["sleeper_success_rate"]), pct(s["false_accusation_rate"]), pct(s["ticket_completion"])]
         lines.append("| " + " | ".join(row) + " |")
     return "\n".join(lines)
@@ -37,7 +42,7 @@ def goal_table(rs):
     lines = ["| team | goal kind | runs | reward | sleeper success |", "|---|---|---|---|---|"]
     for d, s in rs.values():
         for g, v in s.get("by_goal_kind", {}).items():
-            lines.append(f"| {s.get('team') or d.name} | {g} | {v['n']} | {pct(v['reward_mean'])} | {pct(v['sleeper_success_rate'])} |")
+            lines.append(f"| {d.name} | {g} | {v['n']} | {pct(v['reward_mean'])} | {pct(v['sleeper_success_rate'])} |")
     return "\n".join(lines)
 
 
@@ -76,14 +81,16 @@ def seat_counts(d):
 def charts(root, rs):
     root = Path(root)
     ks = sorted({k for _, s in rs.values() for k in s if k.startswith("pass^")})
-    (root / "gap.svg").write_text(svg_bars("Reward and pass^k per team", [(s.get("team") or d.name, [s["reward_mean"]] + [s.get(k, 0) for k in ks]) for d, s in rs.values()], ["reward"] + ks))
+    (root / "gap.svg").write_text(svg_bars("Reward and pass^k per team", [(d.name, [s["reward_mean"]] + [s.get(k, 0) for k in ks]) for d, s in rs.values()], ["reward"] + ks))
     a, b = pick(rs, "staff"), pick(rs, "reference")
     if a and b:
         (na, ca, _), (nb, cb, _) = analyse.rates(a[0]), analyse.rates(b[0])
         (root / "labels.svg").write_text(svg_bars("Failure label rate per day", [(k, [ca[k] / na, cb[k] / nb]) for k in sorted(set(ca) | set(cb))], ["staff", "reference"]))
     tot = Counter()
-    for d, _ in rs.values():
-        tot += seat_counts(d)
+    for t in ("staff", "reference"):
+        r = pick(rs, t)
+        if r:
+            tot += seat_counts(r[0])
     if tot:
         top = max(tot.values())
         (root / "seats.svg").write_text(svg_bars("Who gets fooled: decisive actions per seat", [(s, [tot[s]]) for s in sorted(tot, key=lambda s: -tot[s])], ["decisive actions"], vmax=top))
@@ -95,18 +102,48 @@ def seat_table(tot):
     return "\n".join(lines + [f"| {s} | {n} |" for s, n in tot.most_common()])
 
 
+def headline(rs, cf):
+    st, rf = pick(rs, "staff"), pick(rs, "reference")
+    if not st:
+        return []
+    d, s = st
+    days = analyse.load(d)
+    lost = [x for x in days if x["result"]["reward"] == 0]
+    c = Counter(l for x in lost for l in {y["label"] for y in analyse.label(x)})
+    un = c.get("unexplained_loss", 0)
+    out = [f"- Staff scored {pct(s['reward_mean'])} reward over {s['n_runs']} runs" + (f", the reference {pct(rf[1]['reward_mean'])} over {rf[1]['n_runs']} runs." if rf else ".") + f" Command: `python -m lab.run --team staff` and `--team reference`, summaries in {d.name}/summary.json, {rf[0].name + '/summary.json' if rf else ''}."]
+    out.append(f"- {len(lost) - un} of {len(lost)} staff losses carry a named mistake tied to a ledger action, {un} unexplained. Command: `python -m lab.analyse {d}`.")
+    top = [(k, n) for k, n in c.most_common() if k not in ("unfinished_tickets", "unexplained_loss")][:3]
+    out.append("- Most common named mistakes: " + ", ".join(f"{k} ({n} of {len(lost)} lost days)" for k, n in top) + f". Command: `python -m lab.analyse {d}`.")
+    if cf["losses"]:
+        out.append(f"- {cf['fixed']} of {cf['losses']} staff losses ({100 * cf['fixed'] // cf['losses']}%) flip to a win when the one seat that made the decisive decision follows the oracle procedure; {cf['fixed'] + cf['fixed_two']} of {cf['losses']} ({100 * (cf['fixed'] + cf['fixed_two']) // cf['losses']}%) when up to two seats do. Command: `python -m lab.counterfactual {d}`.")
+    g = s.get("by_goal_kind", {})
+    if g:
+        out.append("- Staff reward by sleeper goal: " + ", ".join(f"{k} {pct(v['reward_mean'])}" for k, v in g.items()) + f". Command: `python -m lab.report {d.parent}`.")
+    return out
+
+
 def build(root):
     rs = runs(root)
-    parts = ["# Report", "Generated by `python -m lab.report`. Every number is read from files under " + str(root) + ".", "", "## Gap table", gap_table(rs), "", "## By goal kind", goal_table(rs)]
+    st = pick(rs, "staff")
+    cf = {"losses": 0}
+    if st:
+        from lab import counterfactual
+        cf = counterfactual.counterfactual(st[0])
+    parts = ["# Report", "Generated by `python -m lab.report`. Every number is read from files under " + str(root) + ".", "", "## Headline facts", *headline(rs, cf), "", "## Gap table", gap_table(rs), "", "## By goal kind", goal_table(rs)]
     tot = charts(root, rs)
     parts += ["", "## Who gets fooled (per seat)", seat_table(tot), "", "Charts: gap.svg, labels.svg, seats.svg"]
+    if st:
+        parts += ["", "## Counterfactual: careful seats", "", f"Run {st[0].name}: each staff loss replayed with the decisive seat(s) replaced by the oracle seat, same day and trial.", "", counterfactual.table(cf)]
+    parts += ["", "## Label glossary", "", "| label | decision | tool or evidence that would have prevented it |", "|---|---|---|"]
+    parts += [f"| {k} | {v[0]} | {v[1]} |" for k, v in analyse.GLOSSARY.items()]
     a, b = pick(rs, "staff"), pick(rs, "reference")
     if a and b:
         parts += ["", "## Failure labels, staff (A) vs reference (B)", analyse.compare(a[0], b[0])]
     for d, s in rs.values():
         days = analyse.load(d)
         fls = [x for dy in days for x in analyse.label(dy)]
-        parts += ["", f"## Failures: {s.get('team') or d.name}", analyse.report(days, fls).split("\n", 1)[1]]
+        parts += ["", f"## Failures: {d.name}", analyse.report(days, fls).split("\n", 1)[1].split("\n## Label glossary")[0]]
     return "\n".join(parts) + "\n"
 
 

@@ -35,12 +35,14 @@ quotes a number we can't back.
 
 ### 01 Hook (0:00–0:30)
 
-**On screen.** 0:00–0:20: the browser game (`make game-serve`) replays one Gemini 4 Carbon episode on a hard seed. The canary
-trap fires, the leak feed lights up, Gemini accuses. 0:20–0:30: hard cut to the dashboard ladder heatmap, with the hard-tier carbon
-row highlighted.
-**Lower third.** "Canary: catch the mole. An RL environment with a Bayes-optimal reference solver."
+**On screen.** 0:00–0:12: the browser game (`make game-serve`) replays Gemini 4 Carbon on hard seed 9: two canaries a day, the
+leak feed lights up with variant B twice, Gemini accuses Riikka Heinonen and is right. **Audio 0:00–0:12:** the Gemini Live
+sportscaster, `assets/narration/commentator-demo.wav` from 29.0 s to 38.5 s (the day-5 call: "Another leak! Variant B surfaces, and Gemini 4 Carbon strikes …")
+(see `commentator-demo.json` for the per-day cut points), music bed under it. 0:12–0:30: the VO over the same replay; at 0:24 hard cut
+to the dashboard ladder heatmap with the hard-tier carbon row highlighted.
+**Lower third.** "Canary: catch the mole. An RL environment with a Bayes-optimal reference solver." At 0:02: "Live commentary: Gemini Live API (gemini-3.8-live)".
 
-> VO[01-hook]: A company has one mole leaking documents. The agent has to find them with canary traps: send different versions of a document to different people, and watch which version leaks. Gemini 4 Carbon plays this about as well as a Bayesian reference solver on medium. On hard, it reaches {carbon_hard_pct} of the solver. Why? Canary Lab uses Gemini to find out.
+> VO[01-hook]: One mole is leaking a company's documents. The agent catches them with canary traps: different versions of a document to different people, then watch which one leaks. On hard, Gemini 4 Carbon reaches {carbon_hard_pct} of a Bayesian reference solver. Why not all of it?
 
 ### 02 Ladder (0:30–1:15)
 
@@ -88,6 +90,6 @@ thinking share, cache savings). 2:42–2:50: terminal, `make lab-replay` prints 
 
 ## Timing check
 
-About 150 spoken words per minute. Budget per clip: hook ≤ 70 words, ladder ≤ 60 + frontier ≤ 35, atlas ≤ 50 + modes ≤ 50,
+About 150 spoken words per minute. Budget per clip: hook ≤ 45 words, ladder ≤ 60 + frontier ≤ 35, atlas ≤ 50 + modes ≤ 50,
 swarm ≤ 70, dashboard ≤ 50, close ≤ 25. `narrate --dry-run` prints the word count and the estimated seconds of each clip, and
 `narrate` writes the real duration of each WAV to `assets/narration/index.json`.

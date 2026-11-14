@@ -26,10 +26,29 @@ from train.render import parse_tool_call, render_messages, to_openai_tools
 BASE = os.path.expanduser("~/agent-arena-data/models/Qwen2.5-1.5B-Instruct")
 
 
+def common_prefix(a: list[int], b: list[int]) -> int:
+    n = min(len(a), len(b))
+    i = 0
+    while i < n and a[i] == b[i]:
+        i += 1
+    return i
+
+
 class HFPolicy:
-    def __init__(self, model, tokenizer, name: str, max_ctx: int = 4096, max_new: int = 160):
+    """Greedy HF policy with prefix/KV reuse across turns.
+
+    Every turn the FULL prompt is rendered and tokenised (cheap, CPU), then compared with the
+    token ids the KV cache already covers: the cache is cropped to the longest common prefix
+    and only the remaining ids are encoded. Correctness therefore never depends on chat-template
+    boundary reasoning: reused ids are verified equal to a full re-encode, token by token.
+    Context truncation is sticky (drops whole (assistant, tool) pairs only when needed), so
+    the prefix stays stable between drops.
+    """
+
+    def __init__(self, model, tokenizer, name: str, max_ctx: int = 4096, max_new: int = 96,
+                 kv_reuse: bool = True):
         self.model, self.tok, self.name = model, tokenizer, name
-        self.max_ctx, self.max_new = max_ctx, max_new
+        self.max_ctx, self.max_new, self.kv_reuse = max_ctx, max_new, kv_reuse
         self.invalid = 0
         self.calls = 0
 
@@ -39,27 +58,52 @@ class HFPolicy:
         self.instruction = instruction
         self.invalid = 0
         self.calls = 0
+        self.drop = 0            # (assistant, tool) pairs dropped from the front (sticky)
+        self.cache = None        # DynamicCache
+        self.cache_ids: list[int] = []
+        self.encoded = 0         # tokens actually run through prefill (stats)
+        self.reused = 0
+
+    def _ids(self, msgs):
+        ids = self.tok.apply_chat_template(msgs, tools=self.tools, tokenize=True,
+                                           add_generation_prompt=True)
+        if hasattr(ids, "keys"):
+            ids = ids["input_ids"]
+        return list(ids)
 
     def _prompt_ids(self, history):
         msgs = render_messages(self.instruction, history)
+        drop = getattr(self, "drop", 0)
         while True:
-            ids = self.tok.apply_chat_template(msgs, tools=self.tools, tokenize=True,
-                                               add_generation_prompt=True)
-            if hasattr(ids, "keys"):
-                ids = ids["input_ids"]
-            if len(ids) <= self.max_ctx - self.max_new or len(msgs) <= 4:
+            cut = msgs[:2] + msgs[2 + 2 * drop:]
+            ids = self._ids(cut)
+            if len(ids) <= self.max_ctx - self.max_new or len(cut) <= 4:
+                self.drop = drop
                 return ids
-            msgs = msgs[:2] + msgs[2 + 2 * max(1, (len(msgs) - 2) // 8):]
+            drop += max(1, (len(msgs) - 2) // 16)
 
     def generate_text(self, history) -> str:
         import torch
         ids = self._prompt_ids(history)
+        keep = common_prefix(self.cache_ids, ids) if (self.kv_reuse and self.cache is not None) else 0
+        keep = min(keep, len(ids) - 1)  # always feed >= 1 new token
+        if keep > 0:
+            self.cache.crop(keep)
+        else:
+            from transformers import DynamicCache
+            self.cache = DynamicCache() if self.kv_reuse else None
+        self.reused += keep
+        self.encoded += len(ids) - keep
         x = torch.tensor([ids], device=self.model.device)
         with torch.no_grad():
             out = self.model.generate(input_ids=x, attention_mask=torch.ones_like(x),
+                                      past_key_values=self.cache, use_cache=True,
                                       max_new_tokens=self.max_new, do_sample=False,
                                       pad_token_id=self.tok.pad_token_id or self.tok.eos_token_id)
-        return self.tok.decode(out[0, len(ids):], skip_special_tokens=False)
+        seq = out[0].tolist()
+        if self.kv_reuse:
+            self.cache_ids = seq[:self.cache.get_seq_length()]
+        return self.tok.decode(seq[len(ids):], skip_special_tokens=False)
 
     def act(self, history):
         self.calls += 1
@@ -85,6 +129,24 @@ def load_mlx(spec: str, adapter: str | None):
     return model, tok, "mlx:" + spec.split("/")[-1] + ("+lora" if adapter else "")
 
 
+def run_capped(env, policy, max_calls: int):
+    """canary.eval.run_episode with at most max_calls policy actions (0 = no cap).
+    An episode stopped by the cap gets end_reason='eval_cap' (score stays the Env's: 0)."""
+    try:
+        from canary.eval import run_episode as _run
+    except ImportError:
+        _run = None
+    if _run is None:
+        return run_episode(env, policy)
+    if max_calls <= 0:
+        return _run(env, policy)
+    ep = _run(env, policy, max_iters=max_calls)
+    if ep.end_reason == "error" and str(ep.meta.get("error", "")).startswith("no episode end"):
+        ep.end_reason = "eval_cap"
+        ep.meta.pop("error", None)
+    return ep
+
+
 def mean_ci(xs: list[float]) -> tuple[float, float]:
     n = len(xs)
     if n == 0:
@@ -107,6 +169,8 @@ def summarize(eps: list[dict]) -> dict:
             "accuracy": round(sum(e["correct"] for e in sub) / max(len(sub), 1), 4),
             "mean_final_day": round(sum(e["final_day"] for e in sub) / max(len(sub), 1), 2),
             "end_reasons": dict(Counter(e["end_reason"] for e in sub)),
+            "eval_cap_rate": round(sum(e["end_reason"] == "eval_cap" for e in sub)
+                                   / max(len(sub), 1), 4),
             "invalid_call_rate": round(sum(e["meta"].get("invalid_calls", 0) for e in sub)
                                        / max(sum(len(e["steps"]) for e in sub), 1), 4),
             "regret_tags": dict(tags.most_common(10)),
@@ -159,6 +223,10 @@ def main(argv=None):
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--max-ctx", type=int, default=4096)
     ap.add_argument("--max-minutes", type=float, default=0, help="stop starting new episodes")
+    ap.add_argument("--max-calls", type=int, default=120,
+                    help="per-episode tool-call budget; hitting it ends with end_reason=eval_cap")
+    ap.add_argument("--max-new-tokens", type=int, default=96)
+    ap.add_argument("--no-kv-reuse", action="store_true")
     ap.add_argument("--backend", choices=["hf", "mlx"], default="hf")
     ap.add_argument("--adapter", default=None, help="mlx: LoRA adapter dir")
     ap.add_argument("--fake", action="store_true", help="FakeEnv + FakeSolver (no model)")
@@ -201,10 +269,16 @@ def main(argv=None):
                 else:
                     from canary.env import Env
                     env = Env(tier=tier, seed=seed)
-                    pol = Pol(model, tok, name, max_ctx=a.max_ctx)
-                ep = run_episode(env, pol)
+                    pol = Pol(model, tok, name, max_ctx=a.max_ctx, max_new=a.max_new_tokens)
+                    pol.kv_reuse = a.backend == "hf" and not a.no_kv_reuse
+                t_ep = time.time()
+                ep = run_capped(env, pol, a.max_calls)
                 ep.meta = dict(ep.meta or {})
                 ep.meta["invalid_calls"] = getattr(pol, "invalid", 0)
+                ep.meta["eval_seconds"] = round(time.time() - t_ep, 1)
+                if getattr(pol, "encoded", None) is not None:
+                    ep.meta["prefill_tokens"] = pol.encoded
+                    ep.meta["reused_tokens"] = pol.reused
                 tags = regret_tags(ep)
                 if tags is not None:
                     ep.meta["regret_tags"] = tags

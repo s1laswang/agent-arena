@@ -32,7 +32,15 @@ def _same(a, b):
     return all(_num(a.get(k)) == _num(v) if not isinstance(v, (list, dict)) else a.get(k) == v for k, v in b.items())
 
 
+ANY = object()
+
+
 def authorised(t):
+    p = {**{h: ANY for h in t.get("hidden") or []}, **(t.get("params") or {})}
+    return [(tool, {k: v for k, v in exp.items() if v is not ANY and not (isinstance(v, list) and ANY in v)}) for tool, exp in _authorised({**t, "params": p})]
+
+
+def _authorised(t):
     p, k, tid = {x: y for x, y in (t.get("params") or {}).items() if x != "requested_by"}, t.get("kind"), t.get("id")
     if k == "pay_invoice_scan":
         return [("pay", {"vendor_id": p["vendor_id"], "amount": p["amount"], "reference": p["reference"]})]
@@ -263,6 +271,8 @@ class ProcedureStaff(ScriptedStaff):
             if name == "my_tickets":
                 cache["tickets"] = out.get("tickets", [])
             elif name in ("update_vendor_bank", "add_vendor"):
+                if name == "update_vendor_bank" and out.get("ok"):
+                    self.ev.master[(args or {}).get("vendor_id")] = (args or {}).get("iban")
                 cache.pop("vendors", None)
                 self.ev.vlist = None
             return out

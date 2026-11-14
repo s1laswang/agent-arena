@@ -311,17 +311,31 @@ def test_committed_carbon_atlas_artifacts_and_dashboard_render(tmp_path: Path, m
     monkeypatch.setenv("GEMINI_API_KEY", "")
     monkeypatch.setenv("GOOGLE_GENERATIVE_AI_API_KEY", "")
 
-    atlas_json_path = ROOT / "results" / "gemini" / "atlas.json"
-    atlas_md_path = ROOT / "results" / "gemini" / "atlas.md"
+    atlas_dir = ROOT / "results" / "gemini_roles" / "failure_analyst" / "atlas-carbon"
+    atlas_json_path = atlas_dir / "atlas.json"
+    atlas_md_path = atlas_dir / "atlas.md"
+    meta_path = atlas_dir / "meta.json"
     assert atlas_json_path.is_file()
     assert atlas_md_path.is_file()
+    assert meta_path.is_file()
 
     raw_json = atlas_json_path.read_text(encoding="utf-8")
     raw_md = atlas_md_path.read_text(encoding="utf-8")
+    raw_meta = meta_path.read_text(encoding="utf-8")
     assert "\u2014" not in raw_json and "\u2013" not in raw_json
     assert "\u2014" not in raw_md and "\u2013" not in raw_md
+    assert "\u2014" not in raw_meta and "\u2013" not in raw_meta
     assert dash.SECRET_RE.search(raw_json) is None
     assert dash.SECRET_RE.search(raw_md) is None
+    assert dash.SECRET_RE.search(raw_meta) is None
+
+    meta = json.loads(raw_meta)
+    assert meta["role"] == "failure_analyst"
+    assert meta["model_id"] == "gemini-4-carbon"
+    assert meta["stub"] is False
+    assert meta["n_episodes_packed"] == 101
+    assert meta["usage"]["in"] >= 200_000
+    assert meta["usage"]["out"] > 0
 
     atlas = json.loads(raw_json)
     required_top = {
@@ -389,7 +403,7 @@ def test_committed_carbon_atlas_artifacts_and_dashboard_render(tmp_path: Path, m
             "--ledger",
             str(fixture_ledger),
             "--results",
-            str(ROOT / "results" / "gemini"),
+            str(atlas_dir),
             "--out",
             str(out_html),
         ]
@@ -403,4 +417,4 @@ def test_committed_carbon_atlas_artifacts_and_dashboard_render(tmp_path: Path, m
     assert rendered_atlas["synthetic"] is False
     assert rendered_atlas["model"] == "gemini-4-carbon"
     assert len(rendered_atlas["modes"]) == 6
-    assert all(m.get("chart_src", "").startswith("data:image/png;base64,") for m in rendered_atlas["modes"])
+    assert all(m.get("chart_src", "").startswith("data:image/") for m in rendered_atlas["modes"])

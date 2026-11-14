@@ -137,6 +137,7 @@ class Result(BaseModel):
     agent_kind: str = ""
     trial: int = 0
     model: str = "scripted"
+    verifier_commit: str = ""
     reward: Literal[0, 1]
     tickets_done: int
     tickets_total: int

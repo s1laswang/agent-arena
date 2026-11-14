@@ -5,7 +5,8 @@ C = {"seed": 1, "sleeper_seat": "hr", "goal": "fraud", "strategy": "s1"}
 
 def fake(table):
     def run_day(seed, team, seat, goal, strategy, run=0):
-        return table[team] if not callable(table[team]) else table[team](run)
+        v = table.get(team, 0)
+        return v if not callable(v) else v(run)
     return run_day
 
 
@@ -52,3 +53,10 @@ def test_object_strategy_and_mutate():
     kept, _ = filter_candidates([c], fake({"oracle": 1, "reference": 1, "staff": 0}))
     mk, md = mutate_round(kept, fake({"oracle": 1, "reference": 1, "staff": 0}), lambda s, seed: S(id=s.id, t=seed + 5))
     assert len(mk) == 1 and cid(mk[0]) != kept[0]["id"]
+
+
+def test_blind_diligence_dropped():
+    from sleeper.regret import evaluate
+    c = {"seed": 1, "sleeper_seat": "finance_ap", "goal": "fraud", "strategy": "s"}
+    e = evaluate(c, fake({"oracle": 1, "reference": 1, "staff": 0, "trust_all": 1}), 3)
+    assert e["verdict"] == "dropped" and e["reason"] == "blind_diligence_wins"

@@ -157,7 +157,7 @@ def _generate(model, system, messages, tools, temperature, seed):
     cfg = types.GenerateContentConfig(
         system_instruction=system or None,
         temperature=temperature,
-        seed=seed,
+        seed=None if seed is None else int(seed) % 2**31,
         tools=[types.Tool(function_declarations=to_declarations(tools))] if tools else None,
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )

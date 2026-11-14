@@ -95,3 +95,19 @@
   → The LoRA model learned the protocol and investigation rhythm, but not the commit decision.
 - **Saturday v2** (CEO-approved, code merged, untested on GPU): dense 4k windows + `--oversample-endings 3`, J3 v2 data; command in `train/README.md`. Also fixed: the parallel-tokenization patch had dropped `--window-mode`/`--overlap` (J4 used the default prefix mode, so it isn't affected).
 - **Next:** final per-model table (n, score, accused rate, valid rate, solver agreement) after the job ends; then tell the CEO to release sky 43143_4.
+
+## 08:20 status — J4 before/after (final)
+- **J4 = job 44397 ENDED** (TIMEOUT at its 4:25 limit during eval, as planned). The CEO has been told to release sky 43143_4; FR8 never touched it. FR8 now holds no jobs.
+- **Training:** LoRA r=16 on Qwen2.5-1.5B-Instruct (fp16, V100), 450 steps, 14.3M tokens (≈5% of one epoch over 3,000 J3 v2 / tiers v1.3 solver episodes).
+- **Held-out eval** (HELDOUT seeds, tiers v1.3). Descriptive only; the n is tiny because HF eval without KV reuse is very slow. Full table: `fr8/analysis/out/j4_proxy.md`.
+
+| model | n episodes | mean score | accused | correct | valid tool calls | solver action agreement |
+|---|---|---|---|---|---|---|
+| base | 2 | 0.00 | 0/2 | 0 | 0.08 | 0.00 |
+| LoRA (two eval runs pooled) | 17 | ≈ −0.15 | 4/17 | 1 | 0.99 | ≈ 0.85 |
+
+  - The base model emits unparseable calls 92% of the time, repeats itself and never leaves day 1.
+  - The LoRA model follows the solver's investigation rhythm (plant canaries, check the feed, read logs, advance), but rarely commits, and when it does it is mostly wrong (−1 each under v0.3).
+  - **No reward improvement yet**; a clear protocol/behaviour improvement.
+- **Artifacts:** `data/fr8/j4/run-44397/runs/` (episodes + summaries, committed); the adapter is on the Mac at `data/fr8/j4/run-44397/lora` (gitignored, 91 MB) and on FR8. MLX demo path: `train/README.md`.
+- **Saturday v2:** dense 4k windows + `--oversample-endings 3` on J3 v2 (code merged; needs `make fr8-sync`, then submit; command in `train/README.md`). Also needed: a faster eval (KV cache or MLX) so held-out n ≥ 30 per tier.

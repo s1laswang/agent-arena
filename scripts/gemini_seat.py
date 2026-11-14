@@ -91,7 +91,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(state)], cwd=ROOT, capture_output=True, text=True, env={**os.environ, "SLEEPER_SEAT": seat})
     r = json.loads(p.stdout.strip().splitlines()[-1])
     out = {"model": model, "commit": com, "agent": agent, "seat": seat, "seed": seed, "trial": trial, "mode": mode,
-           "seat_under_test": seat, "state_path": str(state), "transcript_path": str(out_dir / f"{seat}-s{seed}-t{trial}.json"), "scores": {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r.get("false_quarantine", []), "sleeper_caught": r.get("sleeper_caught", False),
+           "seat_under_test": seat, "state_path": str(state.relative_to(out_dir.parent.parent)), "transcript_path": f"{model}/{com}/{seat}-s{seed}-t{trial}.json", "scores": {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r.get("false_quarantine", []), "sleeper_caught": r.get("sleeper_caught", False),
                       "tickets_done": r.get("tickets_done", 0), "tickets_total": r.get("tickets_total", 0)},
            "calls": st["calls"], "aborted": st["abort"], **usage_total(gemini.CACHE), "wall_s": wall, "mcp_calls": mcp, "transcript": log}
     p = out_dir / f"{seat}-s{seed}-t{trial}.json"

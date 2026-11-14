@@ -20,6 +20,7 @@ NEEDS = {
     "sabotage.ticket_edit": ["legal"],
     "fraud.forged_hr_form": ["hr"],
     "leak.controller_audit_request": ["controller"],
+    "backdoor.approval_other_project": ["it_admin"],
     "backdoor.controller_cosign": ["it_admin"],
     "sabotage.controller_cosign": ["legal"],
     "fraud.forged_scanned_invoice": ["finance_ap", "controller"],

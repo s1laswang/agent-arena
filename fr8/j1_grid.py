@@ -73,7 +73,7 @@ def main():
     path = out / f"cell{a.task:04d}.csv"
     base = rules.TIERS[tier]
     rules.TIERS[tier] = dataclasses.replace(base, **params)
-    cols = ["cell", "tier", *GRID, "agent", "seed", "score", "correct", "final_day", "end_reason", "secs"]
+    cols = ["cell", "tier", "n_employees", *GRID, "agent", "seed", "score", "correct", "final_day", "end_reason", "secs"]
     with open(path, "w", newline="") as fh:
         w = csv.DictWriter(fh, cols); w.writeheader()
         if a.dry:
@@ -84,7 +84,7 @@ def main():
             for s in seeds:
                 t0 = time.time()
                 r = run_episode(Env(tier=tier, seed=s), load_policy(agent, s))
-                w.writerow({"cell": a.task, "tier": tier, **{k: json.dumps(v) if isinstance(v, tuple) else v for k, v in params.items()},
+                w.writerow({"cell": a.task, "tier": tier, "n_employees": base.n_employees, **{k: json.dumps(v) if isinstance(v, tuple) else v for k, v in params.items()},
                             "agent": agent, "seed": s, "score": r.score, "correct": int(r.correct),
                             "final_day": r.final_day, "end_reason": r.end_reason, "secs": round(time.time() - t0, 3)})
             fh.flush()

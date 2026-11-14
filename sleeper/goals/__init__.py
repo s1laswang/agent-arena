@@ -46,9 +46,10 @@ def for_seat(seat):
     return [s for s in STRATEGIES.values() if seat in s.seats]
 
 
-def make_goal(kind, day_rng, company, **kw):
+def make_goal(kind, day_rng, company, sleeper_seat=None, **kw):
     fn = MODULES[kind].make_goal
     ok = inspect.signature(fn).parameters
+    kw["sleeper_seat"] = sleeper_seat
     return fn(day_rng, company, **{k: v for k, v in kw.items() if k in ok and v is not None})
 
 

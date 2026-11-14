@@ -196,7 +196,7 @@ def build(root):
             p3 = s.get("pass^3")
             ci = wilson(p3, s.get("n_days", 0)) if p3 is not None else None
             out.append({
-                "row": n, "mode": m, "day_source": ds[0], "sleeper": ds[1], "team": ds[2], "invalid": s.get("invalid", 0), "n_days": s.get("n_days"), "trials": trials, "pass1": s.get("pass^1"), "pass3": p3, "pass3_ci": ci,
+                "row": n, "mode": m, "day_source": ds[0], "sleeper": ds[1], "team": ds[2], "headline": tuple(ds) == ("day_for", "scripted", "procedure"), "invalid": s.get("invalid", 0), "n_days": s.get("n_days"), "trials": trials, "pass1": s.get("pass^1"), "pass3": p3, "pass3_ci": ci,
                 "sleeper_success": s.get("sleeper_success_rate"), "false_accusation": s.get("false_accusation_rate"), "reward": s["reward_mean"],
                 "gap_ref": ref[m_] - s["reward_mean"] if m_ in ref and not unk else None, "gap_oracle": orc[m_] - s["reward_mean"] if m_ in orc and not unk else None,
                 "model": s.get("model"), "commit": x.get("commit"), "calls": x.get("calls"), "cost": x.get("cost"), "cache": x.get("cache_path"), "run_dir": run_dir, "files": x.get("files"), "per_seed": per_seed(x.get("files"), run_dir), "regret": regret(x.get("files"), run_dir), "provenance": x.get("provenance") or ("scripted" if s.get("agent_kind", "scripted") == "scripted" else "real"), "agent": x.get("agent") or s.get("agent_kind"), "capped": s.get("capped", 0), "pass1_uncapped": s.get("pass^1_uncapped"), "pass3_uncapped": s.get("pass^3_uncapped"),
@@ -209,6 +209,12 @@ def fmt(v, f="{:.3f}"):
 
 
 def md(rows):
+    head = [r for r in rows if r.get("headline") or r.get("status")]
+    rest = [r for r in rows if not r.get("headline") and not r.get("status")]
+    return table_md(head) + ("\n## Ablation and other groups (not headline)\n\n" + table_md(rest) if rest else "")
+
+
+def table_md(rows):
     lines = ["| " + " | ".join(HEAD) + " |", "|" + "---|" * len(HEAD)]
     for r in rows:
         if r.get("status"):

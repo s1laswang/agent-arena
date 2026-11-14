@@ -173,6 +173,15 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
+def _claim(out: Path, c: Cell) -> None:
+    """Write RUNNING.json at take time so a second process on this host skips the cell (run_cell rewrites it)."""
+    d = c.dir(out)
+    if d.exists() and not is_done(out, c):
+        shutil.rmtree(d)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "RUNNING.json").write_text(json.dumps({"host": HOST, "pid": os.getpid(), "started": time.time()}))
+
+
 def in_flight_elsewhere(out: Path, c: Cell) -> bool:
     """True if another live process on this host holds the cell (shards on other hosts are disjoint)."""
     f = c.dir(out) / "RUNNING.json"
@@ -421,12 +430,16 @@ def run_grid(out: Path, cells: list[Cell], concurrency: int = 4, max_episodes: i
                     k = cap_of(c)
                     if nb <= now and (k is None or busy[k] < caps[k]):
                         pending.pop(i)
+                        if is_done(out, c) or in_flight_elsewhere(out, c):  # another process on this host got it
+                            break
+                        _claim(out, c)
                         if k is not None:
                             busy[k] += 1
                         active[0] += 1
                         return c
-                future = [nb - now for nb, _ in pending if nb > now]
-                cv.wait(timeout=min([5.0, *future]))  # woken early by give_back()
+                else:
+                    future = [nb - now for nb, _ in pending if nb > now]
+                    cv.wait(timeout=min([5.0, *future]))  # woken early by give_back()
 
     def give_back(c: Cell, row: dict) -> None:
         with cv:

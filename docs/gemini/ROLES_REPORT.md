@@ -7,13 +7,13 @@ Every number below is extracted programmatically from committed run files with z
 
 - Provenance status: **VERIFIED**
 - Target model: `gemini-4-carbon`
-- Repository HEAD at build: `08889f0b`
+- Repository HEAD at build: `f7ff98f7`
 - Verified roles: **6 / 6** (missing: none)
-- Verified `gemini-4-carbon` run folders: **80** (6 canonical headline + 74 supporting; scanned 80 folders)
-- Total verified episodes / samples: **783**
-- Total Gemini API calls: **6,359**
-- Total tokens (in / out / thinking / cached): **180,196,414 / 2,116,889 / 1,191,518 / 164,235,078**
-- Total estimated API cost (USD): **$77.6700**
+- Verified `gemini-4-carbon` run folders: **81** (6 canonical headline + 75 supporting; scanned 81 folders)
+- Total verified episodes / samples: **795**
+- Total Gemini API calls: **6,371**
+- Total tokens (in / out / thinking / cached): **180,224,002 / 2,120,885 / 1,199,677 / 164,235,078**
+- Total estimated API cost (USD): **$77.8467**
 - Secret leaks detected: **0**
 
 ## 1. Canonical Headline Runs (One Labelled Real Run per Role)
@@ -146,15 +146,16 @@ Every number below is extracted programmatically from committed run files with z
 ### 06. `multimodal_evidence` - Multimodal Evidence & Vision Forensics (VERIFIED)
 
 - Stage: Pixel & Chart Inspection
-- Verified `gemini-4-carbon` runs: **11** (count: 59, calls: 136, in: 292,499, out: 27,401, thinking: 79,928, cached: 0, cost: $1.6583)
+- Verified `gemini-4-carbon` runs: **12** (count: 71, calls: 148, in: 320,087, out: 31,397, thinking: 88,087, cached: 0, cost: $1.8350)
 - Canonical headline run: `results/gemini_roles/multimodal_evidence/scanned-evidence-ablation-carbon` (`visual_memo_blind_ablation`, commit `48baa20e791717f9a33d032efb7f06fda68d636a`, count=6, calls=37, cost=$0.1890) - 37 images, vision acc 100%, score +0.668 vs blind +0.000, 100% oracle recovery
-- Supporting verified runs: **10**
+- Supporting verified runs: **11**
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Headline Metric |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | `visual_memo_blind_ablation` | `results/gemini_roles/multimodal_evidence/memo-watermark-hard-seeds5to9-carbon` | `gemini-4-carbon` | `726f9de02be0fe1ce8493640796d3f0cb9941e5d` | 5 | 25 | 47,600 | 3,214 | 2,243 | 0 | $0.1498 | 25 images, vision acc 100%, score +0.568 vs blind +0.344, 100% oracle recovery |
 | `visual_memo_blind_ablation` | `results/gemini_roles/multimodal_evidence/memo-watermark-hard-ablation-carbon` | `gemini-4-carbon` | `c75a9393129a5ed65cc2b9bdba44972d99e1c61a` | 5 | 18 | 34,272 | 2,391 | 0 | 0 | $0.0925 | 18 images, vision acc 100%, score +0.672 vs blind +0.406, 100% oracle recovery |
 | `visual_memo_blind_ablation` | `results/gemini_roles/multimodal_evidence/memo-watermark-ablation-carbon` | `gemini-4-carbon` | `8df685ee057904bac413d35304f389066aa2b78f` | 3 | 16 | 30,464 | 2,085 | 1,367 | 0 | $0.0954 | 16 images, vision acc 100%, score +0.693 vs blind +0.000, 100% oracle recovery |
+| `carbon_v14_trajectory_forensics` | `results/gemini_roles/multimodal_evidence/carbon-trajectory-forensics-v14-expanded` | `gemini-4-carbon` | `c89f0fc1edbd01af0fef76a42231feab5b2f165f` | 12 | 12 | 27,588 | 3,996 | 8,159 | 0 | $0.1767 | 12 charts, threshold acc 100%, exact day 100% |
 | `soc_access_vision_v14_sweep` | `results/gemini_roles/multimodal_evidence/access-heatmap-v14-sweep-carbon` | `gemini-4-carbon` | `b40e5c8ddd303039e7fb605ec50b4005a174a064` | 10 | 10 | 20,760 | 4,181 | 18,283 | 0 | $0.2662 | 10 images (5 medium + 5 hard), mole acc 90% vs naive 0%, decoy acc 100%, Brier 0.0390 |
 | `carbon_v14_trajectory_forensics` | `results/gemini_roles/multimodal_evidence/carbon-trajectory-forensics` | `gemini-4-carbon` | `44b700f1b8d03f46eb90bc99142f4ffc221563cf` | 7 | 7 | 16,093 | 2,340 | 5,041 | 0 | $0.1060 | 7 charts, threshold acc 100%, exact day 100% |
 | `multi_image_incident_dossier` | `results/gemini_roles/multimodal_evidence/multi-image-dossier-v14-expanded-carbon` | `gemini-4-carbon` | `1c51dca7ea613e96cc60623613a3b1e25057fee7` | 6 | 6 | 27,059 | 2,511 | 30,480 | 0 | $0.3840 | 18 images, top-1 mole acc 83%, decoy acc 100% |
@@ -239,8 +240,8 @@ In-game leaked-memo pixel watermark ablation: text `variant` fields are redacted
 | `investigators` | 25 | 38 | 3,333 | 122,547,175 | 1,388,566 | 157,797 | 114,113,778 | $43.7418 |
 | `failure_analyst` | 3 | 222 | 5 | 918,030 | 26,204 | 39,025 | 0 | $2.3395 |
 | `exploit_hunter` | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
-| `multimodal_evidence` | 11 | 59 | 136 | 292,499 | 27,401 | 79,928 | 0 | $1.6583 |
-| **total** | **80** | **783** | **6,359** | **180,196,414** | **2,116,889** | **1,191,518** | **164,235,078** | **$77.6700** |
+| `multimodal_evidence` | 12 | 71 | 148 | 320,087 | 31,397 | 88,087 | 0 | $1.8350 |
+| **total** | **81** | **795** | **6,371** | **180,224,002** | **2,120,885** | **1,199,677** | **164,235,078** | **$77.8467** |
 
 ## 6. Keyless Offline Verification
 

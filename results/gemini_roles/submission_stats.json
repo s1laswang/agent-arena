@@ -1,10 +1,10 @@
 {
   "target_model": "gemini-4-carbon",
-  "git_head": "08889f0b",
+  "git_head": "f7ff98f7",
   "provenance": {
     "verified": true,
-    "scanned_runs": 80,
-    "verified_runs": 80,
+    "scanned_runs": 81,
+    "verified_runs": 81,
     "secret_leaks_count": 0
   },
   "totals": {
@@ -29,17 +29,17 @@
     "n_roles_required": 6,
     "n_roles_verified": 6,
     "all_roles_verified": true,
-    "n_verified_carbon_runs": 80,
+    "n_verified_carbon_runs": 81,
     "n_canonical_runs": 6,
-    "n_supporting_runs": 74,
-    "count": 783,
-    "calls": 6359,
-    "tokens_in": 180196414,
-    "tokens_out": 2116889,
-    "thinking_tokens": 1191518,
+    "n_supporting_runs": 75,
+    "count": 795,
+    "calls": 6371,
+    "tokens_in": 180224002,
+    "tokens_out": 2120885,
+    "thinking_tokens": 1199677,
     "cached_tokens": 164235078,
-    "total_tokens": 183504821,
-    "cost_usd": 77.670017
+    "total_tokens": 183544564,
+    "cost_usd": 77.846743
   },
   "roles": {
     "world_text": {
@@ -2213,7 +2213,7 @@
       "title": "Multimodal Evidence & Vision Forensics",
       "stage": "Pixel & Chart Inspection",
       "verified": true,
-      "n_verified_runs": 11,
+      "n_verified_runs": 12,
       "canonical_run": {
         "role": "multimodal_evidence",
         "subrole": "visual_memo_blind_ablation",
@@ -2274,6 +2274,21 @@
           "cached_tokens": 0,
           "cost_usd": 0.095448,
           "headline_metric": "16 images, vision acc 100%, score +0.693 vs blind +0.000, 100% oracle recovery"
+        },
+        {
+          "role": "multimodal_evidence",
+          "subrole": "carbon_v14_trajectory_forensics",
+          "run_folder": "results/gemini_roles/multimodal_evidence/carbon-trajectory-forensics-v14-expanded",
+          "model_id": "gemini-4-carbon",
+          "commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+          "count": 12,
+          "calls": 12,
+          "tokens_in": 27588,
+          "tokens_out": 3996,
+          "thinking_tokens": 8159,
+          "cached_tokens": 0,
+          "cost_usd": 0.176726,
+          "headline_metric": "12 charts, threshold acc 100%, exact day 100%"
         },
         {
           "role": "multimodal_evidence",
@@ -2444,6 +2459,21 @@
         },
         {
           "role": "multimodal_evidence",
+          "subrole": "carbon_v14_trajectory_forensics",
+          "run_folder": "results/gemini_roles/multimodal_evidence/carbon-trajectory-forensics-v14-expanded",
+          "model_id": "gemini-4-carbon",
+          "commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+          "count": 12,
+          "calls": 12,
+          "tokens_in": 27588,
+          "tokens_out": 3996,
+          "thinking_tokens": 8159,
+          "cached_tokens": 0,
+          "cost_usd": 0.176726,
+          "headline_metric": "12 charts, threshold acc 100%, exact day 100%"
+        },
+        {
+          "role": "multimodal_evidence",
           "subrole": "soc_access_vision_v14_sweep",
           "run_folder": "results/gemini_roles/multimodal_evidence/access-heatmap-v14-sweep-carbon",
           "model_id": "gemini-4-carbon",
@@ -2548,13 +2578,13 @@
           "headline_metric": "3 images (medium), top-1 mole acc 100%, decoy acc 100% (naive 0%)"
         }
       ],
-      "count": 59,
-      "calls": 136,
-      "tokens_in": 292499,
-      "tokens_out": 27401,
-      "thinking_tokens": 79928,
+      "count": 71,
+      "calls": 148,
+      "tokens_in": 320087,
+      "tokens_out": 31397,
+      "thinking_tokens": 88087,
       "cached_tokens": 0,
-      "cost_usd": 1.658288
+      "cost_usd": 1.835014
     }
   },
   "paired_solver_comparison": {

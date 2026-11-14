@@ -1,31 +1,11 @@
 # Canary × Gemini
 
-**1. The problem.** AI agents are being put in charge of security work: triage, insider-risk, incident
-response. Nobody can measure whether they actually reason under uncertainty or just pattern-match.
-Canary is an RL environment where an agent is head of security at a simulated company and must catch
-the one mole leaking documents (canary traps, logs, interviews), while company value bleeds out.
-A Bayesian reference solver sets the bar. A v1.4 frontier gap is not established. On an in-process bake-off (rules v1.4, paired seeds, n=10 per tier, 21:26) gemini-4-carbon matches or beats the solver: medium solver +0.734±0.050 vs carbon +0.680±0.085; hard solver +0.433±0.324 vs carbon +0.509±0.136. Smaller Gemini models sat below the solver. The tiebreaker's notes gain is the generic hint (notes minus hint −0.039±0.204), not a weight update and not evidence the model learned the task.
+The Gemini write-up is **[docs/gemini/SUBMISSION.md](../docs/gemini/SUBMISSION.md)**. This page is a short pointer to it, so the two can never disagree.
 
-**2. How Gemini is integrated: six roles, all behind one `canary.llm` client with structured output**
-(`response_schema` + pydantic validation + deterministic fallback on every call):
-| Role | What Gemini does |
-|---|---|
-| **Mole Forge** | Evolves mole strategies in a JSON rule DSL (AlphaEvolve-style mutation/crossover) against our investigators. |
-| **World builder** | Writes the company from public facts only: personas, department culture, chat templates (`canary/agents/world_builder.py`). |
-| **Scenario designer** | PAIRED-style: proposes mole strategies + tier knobs; kept only if the solver scores ≥ X **and** the agent scores ≤ Y (`designer.py`). |
-| **Exploit hunter** | Red-teams the reward and tools for loopholes before judges do. |
-| **Analyst** | Uses long context to read N full episodes + regret tags at once; returns clustered failure modes with verbatim, verified quotes (`analyst.py`). |
-| **Arena mole** | Plays the mole live, day by day: what to leak, when to go quiet, whom to frame (`mole_arena.py`, `make clash`). |
+- **Ladder:** Gemini's `thinking_level` is the only factor that changes, across 357 episodes paired with the Bayesian solver on the same worlds ([results/gemini/ladder.md](../results/gemini/ladder.md)).
+- **Red team:** 100 ledger-verified Gemini attacks: 91 attackers over 4 waves (75 whitebox with the whole repo in context, 16 blackbox) plus 9 re-runs through the real MCP server, with 0 verified exploits. In a positive control, the same pipeline caught a deliberately reopened exploit 4 times out of 4. That validates the detector; the attackers had a tool that runs the public generator ([results/gemini/swarm.md](../results/gemini/swarm.md)).
+- **Analyst:** blind, Gemini recovers 3 of 5 code-defined failure modes and names 2 new ones ([atlas_blind.md](../results/gemini/atlas_blind.md)). It also organises and explains the failures the code attributes. The [Failure Gallery](../docs/reports/failure_gallery.md) is an exact decomposition done in code; Gemini only names and explains its categories. Atlas v1 was not blind; see the honesty notes in the write-up.
+- **Arena mole:** playing the mole in arena mode, gemini-4-carbon found the canary trap's blind spot (arena mode: adaptive Gemini mole, not the judged environment; n=4).
+- **Usage:** 24,855 Gemini calls are logged ([results/gemini/dashboard.html](../results/gemini/dashboard.html)).
 
-**3. What's innovative.** The adversary evolves under an LLM, but with a *solvability constraint*:
-every evolved or designed mole is verified to remain catchable by the reference solver. So hardness comes
-from the agent's reasoning failures, never from impossible or unfair scenarios. That is how the
-difficulty gap gets built by design, not by luck.
-
-**4. Why Gemini is essential.** Without it there is no company (no personas or text), no evolved moles,
-and therefore no hard tier. The judge tier is literally Gemini's output, frozen and solver-verified.
-Long context makes the analyst possible: one call over dozens of full trajectories.
-
-**Status (Sat 14 Nov, 18:23):** the Gemini paths have run against the live Gemini API. Every call is ledgered:
-11,180 calls, $88.72 at list price (`results/gemini/dashboard.html`). Results: `results/gemini/ladder.md`, `atlas.md`,
-`swarm.md`; write-up: `docs/gemini/SUBMISSION.md`. The deterministic `stub` client remains for keyless tests.
+The earlier Mole Forge, world-builder and scenario-designer roles have no measured results in this submission and are not claimed.

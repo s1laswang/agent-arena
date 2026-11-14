@@ -240,3 +240,12 @@
 - FR8 WS4 jobs: 44410 train (running), 44411 base eval (running), 44412 v2 eval (afterok). v2 eval ~22:00.
 - AGENTS WS3: grpo_mole.py matches the FR8 CLI (CPU stub OK, GPU untested); the light RL mole is at iter 76/80 (min regret ~0.26, solver acc 0.83); hard_rl track built, not yet in reproduce. Priority after: hint ablations > Forge-with-Gemini.
 - HARNESS session ended; INTEGRITY owns colima for the cheat run (2 GB, Mac memory ~4.9 GB free).
+
+## 15:24 interim gemini-4-carbon v1.4 (CEO-computed; engineer hit the Claude usage limit until 19:00, its drivers keep running)
+- Computed from staging (copied to /tmp; not committed), paired with the solver on the same seeds:
+  - **HARD, OpenCode (judges shape), n=26: 0.288 vs solver 0.485 -> 59% [11, 99]; luck-adjusted 67% [44, 88]**; acc 0.81; mean P(accused) at accusation 0.87.
+  - Alternative (empty replies counted as 0): 52% [14, 84].
+  - In-process hard n=10: 66% [5, 117].
+  - gemini-3.5-flash hard n=10: 84% [57, 116].
+  - MEDIUM OpenCode n=29: 108% [98, 123], no gap (as expected; medium is unchanged since v1.3).
+- => the v1.4 hard gap holds in the judges harness with a CI excluding parity. Headline candidate.

@@ -5,7 +5,7 @@ TIER ?= all
 SEEDS ?= dev20
 UV := uv run --python 3.12 --extra dev --extra llm --extra plot
 
-.PHONY: play setup test eval reproduce worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 fr8-pull mcp
+.PHONY: play setup test eval reproduce reproduce-update worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 fr8-pull mcp
 
 setup:            ## install deps (needs uv: curl -LsSf https://astral.sh/uv/install.sh | sh)
 	@command -v uv >/dev/null 2>&1 || { echo "make setup: uv not found. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh  (then open a new shell)"; exit 127; }
@@ -17,8 +17,11 @@ test:             ## unit + integrity tests (must be green before merging into j
 eval:             ## [HARNESS] make eval AGENT=solver|baselines|openai:<model>|gemini:<model> PROVIDER=template|gemini TIER=easy|medium|hard|all
 	$(UV) python -m canary.eval --agent $(AGENT) --provider $(PROVIDER) --tier $(TIER) --seeds $(SEEDS)
 
-reproduce:        ## [HARNESS] judge table on the frozen judge seeds (no keys): results/judge_table.md + gap_chart.png. REPRO_FAST=1 = 5 seeds/tier
+reproduce:        ## [HARNESS] judge table on the frozen judge seeds (no keys) -> results/latest/ (gitignored; committed results/ untouched). REPRO_FAST=1 = 5 seeds/tier
 	$(UV) python -m canary.eval --reproduce
+
+reproduce-update: ## [HARNESS] team only: rerun reproduce and overwrite the committed results/judge_table.md, judge_episodes.jsonl, gap_chart.png
+	$(UV) python -m canary.eval --reproduce --update-committed
 
 mcp:              ## [HARNESS] run the MCP env server (streamable HTTP)
 	$(UV) python -m canary.mcp_server

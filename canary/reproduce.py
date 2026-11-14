@@ -1,11 +1,15 @@
 """`make reproduce`: the judge table on the frozen judge seeds, no API keys needed. Owner: HARNESS.
 
-    python -m canary.eval --reproduce [--repro-seeds N] [--results-dir results]
+    python -m canary.eval --reproduce [--repro-seeds N] [--results-dir DIR | --update-committed]
 
 Runs the reference solver and the baselines in-process on JUDGE_SEEDS for every tier, replays any
 committed frontier-agent episodes from data/runs/committed/**/episodes.jsonl, then writes
-results/judge_table.md, results/judge_episodes.jsonl and results/gap_chart.png (needs matplotlib,
-the `plot` extra; skipped with a note if missing) and prints the table.
+judge_table.md, judge_episodes.jsonl and gap_chart.png (needs matplotlib, the `plot` extra; skipped
+with a note if missing) and prints the table.
+
+Output goes to results/latest/ (gitignored) by default, so a judge's clone stays clean and the
+committed results/*.md|png|jsonl stay untouched. `--update-committed` writes to results/ instead
+(team use only, to refresh the committed copies).
 
 Seeds per tier: --repro-seeds N > env REPRO_SEEDS=N > env REPRO_FAST=1 (5 seeds) > all JUDGE_SEEDS.
 
@@ -45,6 +49,17 @@ AGENT_NOTES = {
 FAST_SEEDS = 5
 EPISODE_TIMEOUT_S = 60.0   # per-episode guard (env REPRO_EPISODE_TIMEOUT); a timed-out episode scores 0 and is reported
 COMMITTED_GLOB = "data/runs/committed/**/episodes.jsonl"
+DEFAULT_RESULTS_DIR = "results/latest"  # gitignored; what `make reproduce` writes by default
+COMMITTED_RESULTS_DIR = "results"       # the committed copies; only --update-committed writes here
+
+
+def results_dir_for(update_committed: bool = False, results_dir: str | Path | None = None) -> str | Path:
+    """CLI resolution: an explicit --results-dir wins, then --update-committed, else results/latest/."""
+    if results_dir is not None and update_committed:
+        raise ValueError("use either --results-dir or --update-committed, not both")
+    if results_dir is not None:
+        return results_dir
+    return COMMITTED_RESULTS_DIR if update_committed else DEFAULT_RESULTS_DIR
 
 
 @dataclass
@@ -328,7 +343,7 @@ def exact_match_text(mode: str, generated: bool, fingerprint: str = "") -> str:
                 "    CANARY_WORLD_SECRET=<any string> make reproduce   # same string -> identical judge_episodes.jsonl\n"
                 "(the secret behind the team's Harbor worlds stays private: it would reveal the judge-world moles).")
     return (f"Exact reproduction: judge-world secret mode = {mode} (fingerprint {fingerprint}). Rerunning with the\n"
-            "same secret gives identical per-episode results (results/judge_episodes.jsonl) and the same table.")
+            "same secret gives identical per-episode results (judge_episodes.jsonl) and the same table.")
 
 
 def gap_chart(rows: list[Row], path: Path) -> str | None:
@@ -338,7 +353,7 @@ def gap_chart(rows: list[Row], path: Path) -> str | None:
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError:
-        return "matplotlib not installed (uv sync --extra plot); skipped results/gap_chart.png"
+        return "matplotlib not installed (uv sync --extra plot); skipped gap_chart.png"
     tiers = [t for t in TIER_ORDER if any(r.tier == t and not r.pending for r in rows)]
     colors = {"reference": "#2a78d6", "reported": "#eb6834", "baseline": "#9a9893"}
     fig, axes = plt.subplots(1, len(tiers), figsize=(4.6 * len(tiers), 3.9), sharey=False, squeeze=False)
@@ -372,7 +387,7 @@ def gap_chart(rows: list[Row], path: Path) -> str | None:
     return None
 
 
-def reproduce(n_seeds: int | None = None, results_dir: str | Path = "results",
+def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESULTS_DIR,
               tiers: Iterable[str] = TIER_ORDER, root: Path = ROOT, quiet: bool = False) -> dict[str, Any]:
     from .eval import git_sha
     t0 = time.time()
@@ -414,6 +429,9 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = "results",
         print(exact_match_text(mode, generated, fingerprint))
         print(f"\nwrote {out / 'judge_table.md'}, {out / 'judge_episodes.jsonl'}"
               + (f"\nNOTE: {skip}" if skip else f", {out / 'gap_chart.png'}"))
+        if out.resolve() == (root / DEFAULT_RESULTS_DIR).resolve():
+            print(f"(the committed copies in {COMMITTED_RESULTS_DIR}/ are untouched; "
+                  "the team refreshes them with --update-committed)")
         print(f"total {header['seconds']:.1f} s")
     return {"rows": rows, "header": header, "markdown": md, "chart_skipped": skip,
             "committed_files": files, "results_dir": out}

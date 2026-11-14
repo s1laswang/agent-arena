@@ -23,9 +23,22 @@ _COMMON = {
     "log_rate_mole": [1.0, 1.15, 1.3],
     "p_after_hours_mole": [0.15, 0.30],
 }
-TIER_GRID = {  # medium + hard first (priority), 144 cells each; easy 18
-    "medium": {**_COMMON, "delay_choices": [(1, 2), (1, 2, 3)], "careful_mole": [False, True], "framing_rate": [0.5, 1.5]},
-    "hard": {**_COMMON, "delay_choices": [(1, 2, 3), (2, 3)], "careful_mole": [False, True], "framing_rate": [0.5, 1.5]},
+# v0.4 regrid (CEO 02:15): fingerprint_accuracy + leak_damage axes on medium/hard, actions_per_day fixed 5.
+# Weaker v0.3 axes fixed at their first-pass winners (data/fr8/j1/recommend.json): careful_mole=True,
+# framing_rate=1.5, delay medium (1,2,3) / hard (2,3); recipients and log ratio cut to 2 levels.
+_V04 = {
+    "fingerprint_accuracy": [1.0, 0.9, 0.85, 0.8, 0.75],
+    "leak_damage": [0.04, 0.06, 0.08],
+    "p_single_dept_recipients": [1.0, 0.0],
+    "log_rate_mole": [1.0, 1.15],
+    "p_after_hours_mole": [0.15, 0.30],
+    "careful_mole": [True],
+    "framing_rate": [1.5],
+    "actions_per_day": [5],
+}
+TIER_GRID = {  # 120 medium, 120 hard, 18 easy = 258 cells
+    "medium": {**_V04, "delay_choices": [(1, 2, 3)]},
+    "hard": {**_V04, "delay_choices": [(2, 3)]},
     "easy": dict(_COMMON),
 }
 GRID = list(dict.fromkeys(k for g in TIER_GRID.values() for k in g))  # CSV param columns

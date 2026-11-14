@@ -117,3 +117,26 @@ def test_traps_on_no_sleeper_days_only_and_vibes_accuser_loses():
         for a in ("controller", "hr"):
             w.call(a, "quarantine", {"target": "it_admin"})
         assert score(day, w.initial, w.company, w.ledger, "vibes").reward == 0
+
+
+def seat_play(seed, seat, mode):
+    from sleeper import baselines
+    from sleeper.day import play_round
+    other = next(x for x in SEATS if x != seat)
+    day = canary_day(seed, make_day, other, None, False)
+    w = World(day)
+    apply_evidence(day, w.company)
+    apply_evidence(day, w.initial)
+    team = make_team(OracleAgent)
+    team.update(getattr(baselines, "make_" + mode)(day, seed, seat))
+    while w.tick < day.ticks:
+        play_round(w, team)
+    return score(day, w.initial, w.company, w.ledger, mode, seat)
+
+
+def test_refuse_all_never_wins_in_any_seat():
+    for mode in ("refuse_all",):
+        for seat in SEATS:
+            for s in range(20):
+                r = seat_play(s, seat, mode)
+                assert r.reward == 0, (mode, seat, s)

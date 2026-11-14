@@ -1,5 +1,11 @@
 # Gemini CEO log (newest first)
 
+## Sat 23:10: handover to separate sessions
+- Silas launched sessions A (Gemini CEO lite), B (ladder), C (dashboard), F (video assembly) and E/G as chosen. The original CEO session cancelled all its crons (PR 2 01:05, gap check 01:50, atlas merge 03:20, freeze 05:50). **Session A owns them now.**
+- State at handover: gemini-track dffbbb5, 90 lab tests green.
+  - SUBMISSION.md final: blind atlas = 3 of 5 code modes recovered plus 2 new, weak coverage (21% of regret); AfterQuery gap quoted verbatim from gap.md 693a3b2; HoldUp and Aimo breadth.
+  - main is a landing page linking gemini-track → docs/gemini/SUBMISSION.md. Pin it to tag `gemini-final` at the freeze.
+
 ## Sat 23:07: CEO lite takes over
 - This session replaces the full CEO. Four one-shot jobs are armed in this session (Helsinki time): 01:05 PR 2 (merge the ladder/atlas/swarm/dashboard branches, tests, merge justSilas, diff-scope check, PR to justSilas); 01:50 refresh the gap.md line-8 quote; 03:30 refresh blind atlas numbers; 05:50 freeze and tag gemini-final.
 - Blind atlas is already merged at dffbbb5. The 03:30 job only re-merges it if origin/gemini-atlas changed.

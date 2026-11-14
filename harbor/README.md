@@ -28,6 +28,13 @@ python harbor/build.py --tiers easy,medium,hard --seeds judge        # everythin
   900000–900002 on an earlier build, i.e. different worlds.)
 - Medium and easy, and any other judge (900000–900039) or held-out (800000–800199) seed, still build with
   `--tiers` / `--seeds`.
+- **Expected oracle range on the judge set.** The oracle's 10-task mean is +0.57 on average and lands in
+  **[+0.40, +0.68] on 90% of builds** (98%: [+0.29, +0.71]; min/max over 500 builds +0.17 / +0.73). Every build
+  draws a fresh secret, so this is the spread a single judge build can show. It was measured in-process (the oracle
+  over MCP scores exactly the in-process solver's score on the same build) with
+  `uv run python scripts/oracle_range.py 500 --tier hard --seeds 10`, giving
+  [`results/solver_range/oracle_hard_judge10.md`](../results/solver_range/oracle_hard_judge10.md). do_nothing,
+  stop_early and cheat_probe never accuse, so they score exactly 0.
 
 `harbor/dataset/` is gitignored: it holds the vendored package copies and the build-time world secret.
 

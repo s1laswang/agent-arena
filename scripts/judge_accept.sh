@@ -84,6 +84,9 @@ for name in ("solver", "guess_day1"):
             d = json.loads(f.read_text())
             bands[(name, t)] = (d["mean"] - K_SD * d["sd"], d["mean"] + K_SD * d["sd"])
             band_src[(name, t)] = f"{f.relative_to(root)}: mean {d['mean']:+.3f}, sd {d['sd']:.3f}, {d['builds']} secrets"
+        elif name == "solver":   # not measured yet: wide sanity band (positive, well below a perfect score)
+            bands[(name, t)] = (0.25, 0.90)
+            band_src[(name, t)] = f"fallback band; {f.relative_to(root)} not committed yet"
         else:
             bands[(name, t)] = None
             band_src[(name, t)] = f"missing {f.relative_to(root)}"

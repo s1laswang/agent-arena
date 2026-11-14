@@ -21,7 +21,7 @@ A simulated company has one **mole** who leaks documents to a rival. Every leak 
   - Solver and Gemini: paired on the same dev seeds 0–29, with every episode replay-verified, in [`data/runs/committed/v1.4/paired_table_gemini.md`](data/runs/committed/v1.4/paired_table_gemini.md). The seed set was pre-registered and is explained in [docs/reports/gap.md](docs/reports/gap.md).
   - do_nothing and stop_early: 40 judge seeds, [`results/judge_table.md`](results/judge_table.md).
   - *Luck-adjusted* scores each accusation by its expected value under the solver's posterior, so it separates decisions from luck.
-- **Honest reading.** The same model run in-process reaches 95% [62%, 140%] on hard, and OpenCode reaches 111% on medium. The gap is on hard, in the judges' harness. A random accusation on day 1 (`guess_day1`) scores −0.950 ± 0.098.
+- **Honest reading.** The same model run in-process reaches 95% [62%, 140%] on hard, and OpenCode reaches 111% on medium. The gap is on hard, in the judges' harness. A random accusation on day 1 (`guess_day1`) averages −0.95 on hard ([`results/solver_range/guess_day1_hard_judge40.md`](results/solver_range/guess_day1_hard_judge40.md)).
 
 ## Reproduce: one command, no API keys
 
@@ -31,7 +31,8 @@ make accept                     # asserts the baselines, MCP smoke test; exit 0 
 ```
 
 - **What `make reproduce` does.** It replays every committed episode, so the Gemini row above comes back as +0.322 ± 0.199. It plays the solver and six baselines on the 40 frozen judge seeds, then runs the anti-cheat battery. The last line is `ANTI-CHEAT: every probe blocked ...`, and it exits 1 if any cheat gets through.
-- **Run-to-run variation.** Each run draws a fresh world secret, so the solver's judge-seed row moves between runs: hard +0.547 ± 0.143 in the committed [`results/judge_table.md`](results/judge_table.md), +0.643 ± 0.087 in our fresh-clone run. do_nothing and stop_early are always exactly 0. `CANARY_WORLD_SECRET=<any string> make reproduce` gives bit-identical output.
+- **Run-to-run variation.** Each run draws a fresh world secret, so the solver's judge-seed row moves between runs: hard +0.625 ± 0.088 in the committed [`results/judge_table.md`](results/judge_table.md), +0.643 ± 0.087 in our fresh-clone run. The spread over 300 fresh secrets is in [`results/solver_range/`](results/solver_range/), and `make accept` checks against it. do_nothing and stop_early are always exactly 0. `CANARY_WORLD_SECRET=<any string> make reproduce` gives bit-identical output.
+- **Speed knobs.** `REPRO_ANTICHEAT=0` prints only the table (about 10 s). `REPRO_FAST=1` shrinks the table to 5 seeds per tier, but it is not much faster: the anti-cheat verdict still uses all 40 judge seeds, because a 5-seed verdict raised false alarms.
 - **Where things go.** Output goes to `results/latest/`, which is gitignored. A timed fresh clone of this branch on macOS is in [`results/fresh_clone/`](results/fresh_clone/).
 
 ## In the judges' harness: Harbor + OpenCode over MCP (needs Docker)
@@ -46,7 +47,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=<key> harbor run -p harbor/dataset -a opencode -m g
     --api-key-name GOOGLE_GENERATIVE_AI_API_KEY -n 4                         # a frontier agent
 ```
 
-**Oracle expected range: ORACLE_RANGE_LINE** Each build draws a new secret, so nobody (us included) has seen the worlds your build serves. The reward is the game server's HMAC-signed ledger, and the agent container holds nothing that reveals the mole. Full details and the isolation proof: [harbor/README.md](harbor/README.md).
+**Oracle expected range:** the oracle's 10-task mean is +0.57 on average and lands in **[+0.40, +0.68] on 90% of builds** (98%: [+0.29, +0.71]). One wrong accusation (−1) moves a 10-task mean by more than 0.1. This was measured over 500 simulated builds in [`results/solver_range/oracle_hard_judge10.md`](results/solver_range/oracle_hard_judge10.md); the oracle over MCP scores exactly what the in-process solver scores on the same build. do_nothing, stop_early and cheat_probe score exactly 0 on every build. Each build draws a new secret, so nobody (us included) has seen the worlds your build serves. The reward is the game server's HMAC-signed ledger, and the agent container holds nothing that reveals the mole. Full details and the isolation proof: [harbor/README.md](harbor/README.md).
 
 ## Links
 

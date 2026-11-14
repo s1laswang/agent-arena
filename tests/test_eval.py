@@ -26,7 +26,7 @@ def tables(out):
         if line.startswith("## "):
             cur = line[3:]
             head = None
-        elif line.startswith("| team") and cur.startswith(("Team plays", "Staff background")):
+        elif line.startswith("| team") and cur.startswith(("Team plays", "Procedure background")):
             head = [x.strip() for x in line.strip("|").split("|")]
         elif line.startswith("|") and not line.startswith("|---") and head:
             c = [x.strip() for x in line.strip("|").split("|")]
@@ -51,6 +51,6 @@ def test_baselines_zero_in_team_tables(two_runs):
 
 @pytest.mark.slow
 def test_baselines_zero_in_seat_tables(two_runs):
-    rows = [r for r in tables(two_runs[0]) if r[1] in ZERO and r[0].startswith("Staff background")]
+    rows = [r for r in tables(two_runs[0]) if r[1] in ZERO and r[0].startswith("Procedure background")]
     assert rows
     assert [r for r in rows if r[2] != "0.000"] == []

@@ -229,7 +229,18 @@ def train(a, states, pool, log):
         scaler.step(opt); scaler.update()
         valid = [r for r in results if r["valid"]]
         tools = Counter(r["tool"] for r in valid)
+        # valid-only signal (WS3 lesson: raw reward can rise just because invalid -1s vanish)
+        vgain = [r["reward"] - row["solver_score"] for r, row in zip(results, rows) if r["valid"]]
+        ents = []                                        # per-state entropy of the sampled call distribution
+        for g in range(len(batch)):
+            cs = Counter(json.dumps(c, sort_keys=True) if c else "INVALID" for c in calls[g * a.group:(g + 1) * a.group])
+            ents.append(-sum(v / a.group * math.log(v / a.group) for v in cs.values()))
         rec = {"step": step, "reward": round(float(R.mean()), 4),
+               "reward_valid": round(sum(r["reward"] for r in valid) / len(valid), 4) if valid else None,
+               "gain_vs_solver_valid": round(sum(vgain) / len(vgain), 4) if vgain else None,
+               "action_entropy": round(sum(ents) / len(ents), 3),
+               "continue_frac": round(sum(1 for r in valid if r["tool"] != "accuse") / max(1, len(results)), 3),
+               "late_state_frac": round(sum(row["t"] >= row["solver_len"] - a.late_window for row in batch) / len(batch), 2),
                "solver_ref": round(sum(r["solver_score"] for r in batch) / len(batch), 4),
                "valid": round(len(valid) / len(results), 3),
                "accuse_frac": round(tools.get("accuse", 0) / max(1, len(results)), 3),

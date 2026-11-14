@@ -161,8 +161,8 @@ class Oracle:
             elif tool == "grant_role" and not any(t.id == a.get("ticket_id") for t in legit):
                 self.queue("it_admin", "revoke_role", {"account_id": a["account_id"], "role": a["role"]})
             elif tool == "update_vendor_bank" and not any(t.kind == "update_vendor_bank" and t.params["vendor_id"] == a["vendor_id"] and t.params["iban"] == a["iban"] for t in legit):
-                old = self.init.vendors[a["vendor_id"]].iban
-                self.queue("procurement", "update_vendor_bank", {"vendor_id": a["vendor_id"], "iban": old})
+                if a["vendor_id"] in self.init.vendors:
+                    self.queue("procurement", "update_vendor_bank", {"vendor_id": a["vendor_id"], "iban": self.init.vendors[a["vendor_id"]].iban})
                 for s in ("finance_ap", "procurement"):
                     self.queue(s, "approve_vendor", {"vendor_id": a["vendor_id"]})
             elif tool == "update_employee" and not any(t.kind == "update_employee" and t.params["employee_id"] == a["employee_id"] and t.params["field"] == a["field"]

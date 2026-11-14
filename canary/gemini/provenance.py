@@ -123,7 +123,11 @@ def _extract_usage(meta: dict[str, Any], model_id: str) -> tuple[int, int, int, 
     if not isinstance(usage, dict):
         return 0, 0, 0, 0, 0.0, "missing_usage"
     raw_in = usage.get("in") if "in" in usage else usage.get("input_tokens", usage.get("prompt_tokens"))
-    raw_out = usage.get("out") if "out" in usage else usage.get("output_tokens", usage.get("candidates_tokens"))
+    raw_out = (
+        usage.get("out")
+        if "out" in usage
+        else usage.get("output_tokens", usage.get("out_tokens", usage.get("candidates_tokens", usage.get("completion_tokens"))))
+    )
     valid = _is_num(raw_in) and _is_num(raw_out) and raw_in > 0 and raw_out > 0
     tin = int(raw_in) if _is_num(raw_in) and raw_in > 0 else 0
     tout = int(raw_out) if _is_num(raw_out) and raw_out > 0 else 0
@@ -143,7 +147,20 @@ def _extract_usage(meta: dict[str, Any], model_id: str) -> tuple[int, int, int, 
 
 
 def _extract_count(run_dir: Path, meta: dict[str, Any]) -> int:
-    for key in ("episode_count", "sample_count", "n_episodes", "n_samples", "count", "n"):
+    for key in (
+        "episode_count",
+        "sample_count",
+        "n_episodes",
+        "n_samples",
+        "n_episodes_packed",
+        "n_charts_analyzed",
+        "n_images_read_by_model",
+        "n_worlds",
+        "n_events_generated",
+        "n_briefings",
+        "count",
+        "n",
+    ):
         val = meta.get(key)
         if isinstance(val, int) and not isinstance(val, bool) and val >= 0:
             return val

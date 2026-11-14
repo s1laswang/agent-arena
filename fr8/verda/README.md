@@ -30,3 +30,5 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 01:01: extra-n eval box (fill order: v3 eval n) on A100 on-demand 68bbe201 (RTXPRO6000 skipped: Blackwell needs a newer torch than our pinned 2.5.1). Burn now €11.43/h → projected ≈ €88 by 07:30.
 
 01:08: v3-8k seed 3 on A100 on-demand f4378173. Burn €13.59/h → projected ≈ €98 by 07:30.
+
+01:15: Meta PaliGemma re-queued after Gemini J1 (Silas via the compute session): 1 GPU ≥40 GB (RTX PRO 6000 OK: Meta uses its own venv with a current torch), 1–2 h, --time 2.5 h equivalent (reaper), est. €3–6. Launches when HF_TOKEN appears in .env (watcher running) and a GPU is free.

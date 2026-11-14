@@ -36,3 +36,20 @@ def test_mlx_script_syntax_and_help():
     subprocess.run(["bash", "-n", "train/mlx_lora.sh"], check=True)
     out = subprocess.run(["bash", "train/mlx_lora.sh", "--help"], capture_output=True, text=True, check=True)
     assert "--size" in out.stdout
+
+
+def test_merge_scripts_syntax(tmp_path):
+    for f in ["train/peft_to_mlx.sh", "fr8/j4_merge.sbatch"]:
+        subprocess.run(["bash", "-n", f], check=True)
+    (tmp_path / "adapter_config.json").write_text('{"base_model_name_or_path": "/m/base"}')
+    from train.merge_peft import base_of
+    assert base_of(str(tmp_path), None) == "/m/base" and base_of(str(tmp_path), "/x") == "/x"
+
+
+def test_mlx_name_without_adapter(monkeypatch):
+    import sys, types
+    fake = types.ModuleType("mlx_lm")
+    fake.load = lambda spec, adapter_path=None: ("M", "T")
+    monkeypatch.setitem(sys.modules, "mlx_lm", fake)
+    from train.eval_hf import load_mlx
+    assert load_mlx("data/fr8/j4/run-44397/mlx-4bit", None) == ("M", "T", "mlx:mlx-4bit")

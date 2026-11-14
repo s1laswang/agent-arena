@@ -181,3 +181,8 @@
 ## 06:35 tick
 - HARNESS stayed "waiting" and did not pick up the reproduce version-pooling P0, so the CEO launched an engineer (branch justSilas-repro-group): group replayed runs by tiers_version, exclude superseded, refresh the committed results.
 - J4 44397 at 2h42m (training ends ~06:50, then eval). Sky 43143_4 held.
+
+## 06:50 reproduce grouping fixed (41c9c95, 507 passed)
+- Replayed runs are grouped by tiers_version, superseded runs are excluded, and history rows show no solver ratio. The committed results were refreshed (fingerprint f4cacdb8537b); README line 35 now matches it: solver medium +0.65 +/-0.07, hard +0.60 +/-0.10; heuristic +0.04 / -0.50. The CEO accepts the refreshed numbers (consistent with the committed file).
+- v1.3 reported (n small): medium gpt-5.5 .319 (n=9) vs solver .717; hard -.003 (n=5) vs .592; codex gpt-5.5 v1.3 n=1-2 is close to the solver.
+- Note: the v1.3 heuristic/random/stop_early/do_nothing rows equal their v1.2 rows. That is expected, since those policies do not read V and dev-seed worlds are identical.

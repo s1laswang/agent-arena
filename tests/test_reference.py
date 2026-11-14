@@ -96,3 +96,11 @@ def test_oracle_call_budget(seat):
             team[seat] = sleeper_for(seat)
         _, w = play(day, team)
         assert max(w.calls.values()) <= 90, (seed, seat, w.calls)
+
+
+def test_oracle_seats_work_standalone():
+    for seed in range(10):
+        day = make_day(seed)
+        team = {s: make_oracle_seat(day, s) for s in SEATS}
+        r, _ = play(day, team)
+        assert r.reward == 1, (seed, r)

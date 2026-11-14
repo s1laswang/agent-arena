@@ -5,7 +5,7 @@ TIER ?= all
 SEEDS ?= dev20
 UV := uv run --python 3.12 --extra dev --extra llm --extra plot
 
-.PHONY: play setup test eval reproduce reproduce-update worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 fr8-pull mcp
+.PHONY: play setup test eval reproduce reproduce-update worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 fr8-pull mcp hunt
 
 setup:            ## install deps (needs uv: curl -LsSf https://astral.sh/uv/install.sh | sh)
 	@command -v uv >/dev/null 2>&1 || { echo "make setup: uv not found. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh  (then open a new shell)"; exit 127; }
@@ -25,6 +25,10 @@ reproduce-update: ## [HARNESS] team only: rerun reproduce and overwrite the comm
 
 mcp:              ## [HARNESS] run the MCP env server (streamable HTTP)
 	$(UV) python -m canary.mcp_server
+
+hunt:             ## [INTEGRITY] judges' exploit playground (no keys, ~1 min): random/malformed/evolved/parallel-accuse fuzzing on every tier; prints best non-solver score vs solver. Real-MCP attacks: pytest tests/test_integrity_mcp.py
+	@for t in $(if $(filter all,$(TIER)),easy medium hard hard_forge,$(TIER)); do \
+	  echo "== $$t"; $(UV) python -m canary.redteam.fuzz --mode all --tier $$t --seeds 0-49 --budget 20000 --report || exit 1; done
 
 worlds:           ## [ENV] (re)generate frozen world text for judge seeds: make worlds PROVIDER=gemini
 	$(UV) python -m canary.text.build --provider $(PROVIDER) --seeds judge

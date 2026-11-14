@@ -76,7 +76,7 @@ def _build_summary_md(meta: dict[str, Any], comparison: dict[str, Any]) -> str:
         f"- Commit: `{meta['commit']}`",
         f"- Timestamp: `{meta['timestamp']}`",
         f"- Command: `{meta['command']}`",
-        f"- Episodes per condition: `{meta['n_episodes']}` (3 conditions x 3 seeds = 9 paired episodes)",
+        f"- Episodes per condition: `{meta['n_episodes']}` (3 conditions x {meta['n_episodes']} seeds = {3 * int(meta['n_episodes'])} paired episodes)",
         f"- Leaked memo PNGs read via `Part.from_bytes(..., mime_type='image/png')`: `{meta['n_images_read_by_model']}` (`{meta['n_canary_memos_read_by_model']}` watermarked canary scans)",
         f"- Vision watermark readout accuracy: `{meta['variant_vision_accuracy']:.1%}` overall (`{meta['canary_variant_vision_accuracy']:.1%}` on planted canary memos)",
         f"- Token usage: `calls={u['calls']}`, `in={u['in']}`, `out={u['out']}`, `thinking={u['thinking']}`, `cached={u['cached']}`, `cost_usd={u['cost_usd']:.6f}`, `latency_s={u['latency_s']:.2f}`",

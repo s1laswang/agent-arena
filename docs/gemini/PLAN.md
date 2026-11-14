@@ -18,6 +18,8 @@ These files live in `docs/gemini/` (not `docs/PLAN.md`) so they never conflict w
 
 6. **ElevenLabs:** not requested for the Gemini entry. The judges reward Gemini being essential, so the demo voice is Gemini TTS (gemini-3.8-flash-tts) and the live commentator is the Gemini Live API (gemini-3.8-live), both already working. Using another vendor's voice here would weaken the "why Gemini" story. ElevenLabs fits the Meta glasses entry much better.
 
+7. **Which project(s) go to the DeepMind Gemini track?** It is a stackable tech challenge, and its rules don't say whether one team may enter several projects. **HoldUp (Meta glasses)** has a strong, very visual Gemini story: Live native audio with mid-stream tool calls, schema-constrained multimodal extraction, spatial box_2d grounding, and speculative verify cutting question → first audio from 5.8 s to 0.8–1.8 s. **Canary Lab** has the depth and rigour story. **Recommendation:** submit Canary Lab as the team's Gemini entry. If the platform allows one Gemini submission per project, also tag HoldUp. If only one is allowed, Canary Lab, unless you prefer the live-demo appeal of HoldUp. Please check the platform's form or ask at the DeepMind booth.
+
 ## Decision: the Gemini entry is Canary, extended into "Canary Lab"
 
 Candidates compared:

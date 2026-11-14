@@ -5,6 +5,7 @@ You are the security lead of a company with 20 employees, with ids e00 to e19. E
 
 ## Score
 - The company value V starts at 1.0. It goes down when things cost money, and it never goes below 0.
+- V shown is the value you can see: damage from leaks that haven't surfaced yet is not visible until they surface. Your score uses the true V, which includes undetected damage.
 - `accuse(employee)` ends the episode. If you accuse the mole, your score is V at that moment. If you accuse an innocent employee, your score is -1.
 - The game never tells you whether your accusation was correct.
 - If day 14 ends and you have not accused anyone, your score is 0. So accusing is only worth it when P(correct) x V + (1 - P(correct)) x (-1) is greater than 0.
@@ -22,7 +23,7 @@ You are the security lead of a company with 20 employees, with ids e00 to e19. E
 ## How leaks work
 - At the end of each day, the mole may leak one document that it received in the last 3 days (today included) and has not leaked before.
 - If the mole has such a document, it leaks one with probability 0.75. By default it picks one at random, with every eligible document equally likely. This mole is careful: for a canary, the chance of being picked is multiplied by (1 - the share of all employees who received any variant of that canary).
-- Each leak lowers V by 0.04 right away. It appears in the leak feed after a delay of 1 or 2 or 3 day(s), each equally likely.
+- Each leak lowers the true V by 0.04 right away. It appears in the leak feed after a delay of 1 or 2 or 3 day(s), each equally likely.
 - A restricted mole can still leak documents it already holds.
 
 ## Canaries (traps)

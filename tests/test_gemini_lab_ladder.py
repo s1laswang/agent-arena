@@ -139,3 +139,19 @@ def test_model_cap_never_blocks_other_models(tmp_path, monkeypatch):
     r = ladder.run_grid(tmp_path / "out", cells, concurrency=4, model_caps={"gemini-4-carbon": 1},
                         client_factory=stub_factory(accuse_script), log=lambda m: None)
     assert r["done"] == 8 and peak["capped"] == 1 and peak["all"] >= 3
+
+
+def test_clash_matrix_stub(tmp_path, monkeypatch):
+    from canary.gemini import clash
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(tmp_path / "ledger.jsonl"))
+
+    def cf(model, feature, run_id, meta):
+        script = None if feature == "clash-mole" else accuse_script(None) + [{"text": "x"}] * 3
+        return LedgeredClient(StubClient(script=script), feature=feature, run_id=run_id, meta=meta)
+
+    rows = clash.run_matrix(tmp_path / "c", ["solver", "m1"], ["default", "m2"], [0], concurrency=2,
+                            client_factory=cf, log=lambda m: None)
+    assert len(rows) == 4 and not any(r.get("invalid") for r in rows)
+    doc = clash.report(tmp_path / "c", tmp_path / "rep")
+    assert {"generated_at", "git_sha", "ledger_run_ids"} <= set(doc) and len(doc["rows"]) == 4
+    assert "detective" in (tmp_path / "rep" / "clash.md").read_text()

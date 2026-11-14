@@ -24,7 +24,7 @@ Known limits for rw-exploit: the agent can open :8000 directly with any MCP clie
 
 Oracle: `solution/solve.sh` runs `harbor/oracle_client.py`, an MCP client playing the seat with `sleeper.scripted.OracleAgent` through the real tools until the day ends.
 
-Check structure without docker: `pytest tests/test_harbor.py`. Local no-docker smoke: run `python -m harbor.sidecar` with SLEEPER_SEED, SLEEPER_SEAT, SLEEPER_OUT, VERIFY_TOKEN set, then `python harbor/oracle_client.py http://localhost:8000/mcp controller`, then curl :8001/reward with the token header (seed 0 controller gives reward 1).
+Check structure without docker: `pytest tests/test_harbor.py`. Local no-docker smoke: run `python -m harbor.sidecar` with SLEEPER_SEED, SLEEPER_SEAT, SLEEPER_OUT, VERIFY_TOKEN set, then `python -m harbor.oracle_client http://localhost:8000/mcp controller`, then curl :8001/reward with the token header (seed 0 controller gives reward 1).
 
 ## Makefile target text (for lead-env)
 
@@ -41,3 +41,9 @@ Check structure without docker: `pytest tests/test_harbor.py`. Local no-docker s
 - The agent runs as unprivileged user `agent`, the verifier as root with `python -I` (a root agent could plant sitecustomize.py and forge reward.txt, proven by hn-opencode). allow_internet stays true: false breaks Harbor expose and the model API. The seed is not in the task text.
 - The sidecar mixes a per-task random `SLEEPER_SALT` (compose env only) into the sleeper seat and goal choice, so the public repo plus the seed does not reveal the day. The salt is fixed per generated task, so reruns of the same task folder reproduce.
 - The sidecar runs the day's real `SleeperAgent` plus `agents.staff` for the others (`SLEEPER_TEAM=oracle` gives the scripted team, used by the tests). `tests/test.sh` writes 0 first, then 1 only on a confirmed reward.
+
+## Install and local notes
+
+- Harbor CLI: `uv tool install harbor` or `pip install harbor` (PyPI package `harbor`, 0.26.0 at time of writing; 0.25.0 was used for the real runs). Not in requirements.txt: judges' harness provides it.
+- `SLEEPER_OUT` must be a file path, not a directory. The sidecar exits with a message on that, and when port 8000 or 8001 is taken. Clear a stale one with `pkill -f harbor.sidecar`.
+- The `/reward` Result carries `seat_under_test` set to `SLEEPER_SEAT`.

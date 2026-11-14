@@ -15,7 +15,7 @@ Every Gemini call goes through one client that writes one log row per call (`can
 |---|---|---|
 | **Player: the Ladder** (`ladder.py`) | `thinking_level` as the only changed factor; thought-signature replay across function-calling turns (13 MCP tools) | 157 paired episodes, 34 cells (5 models × levels × 2 tiers), same worlds as the solver (`results/gemini/ladder.md`) |
 | **Attacker: the Red-team Swarm** (`swarm.py`) | The whole repo in one long-context prompt (about 183k tokens), function calling against the env | 51 audited attacks (35 whitebox, of which 32 in-process and 3 via the real MCP server; 16 blackbox): **0 exploits**. **Positive control: 4/4** (`results/gemini/swarm*.md`) |
-| **Analyst: Atlas and Gallery** (`atlas.py`, `gallery.py`) | 793k-token corpus in one explicit context cache on 3.8-flash; multimodal belief charts; embeddings | Organises and explains code-attributed failures with quotes (`results/gemini/atlas.md`, `docs/reports/failure_gallery.md`). See the honesty notes |
+| **Analyst: Atlas and Gallery** (`atlas.py`, `gallery.py`) | 793k-token corpus in one explicit context cache on 3.8-flash; multimodal belief charts; embeddings | Blind discovery recovers 3 of 5 code-defined failure modes and names 2 new ones (`results/gemini/atlas_blind.md`). Explains the code-attributed failures (`atlas.md`, `docs/reports/failure_gallery.md`). See the honesty notes |
 | **Adversary: the arena mole** (`roles.py`) | gemini-4-carbon plays the mole live | Finds the canary trap's blind spot (§3.3) |
 | **Infrastructure** (`gateway.py`) | Token-gated relay for clusters without internet; record/replay | The showcase and 4 ladder episodes replay keyless (`make lab-replay`) |
 | **Demo only** | TTS (3.8-flash-tts), Live API (3.8-live) | Narration and a live commentator clip. Not part of any measurement |
@@ -40,11 +40,11 @@ Every Gemini call goes through one client that writes one log row per call (`can
 4. **Cost-aware evaluation.** Caching served 82.7% of all input tokens. The cost frontier is in `results/gemini/ladder_cost.png`.
 
 **Honesty notes**
-- **Atlas v1 is not blind.** Its corpus showed Gemini our code-computed regret tags and solver beliefs. So Gemini *organised and explained* failures the code had already attributed; it did not discover them from scratch. A blind re-run strips those fields, lets Gemini find the modes, and scores recovery against our tags in code: `results/gemini/atlas_blind.md` (if present).
+- **Atlas v1 is not blind.** Its corpus showed Gemini our code-computed regret tags and solver beliefs, so Gemini *organised and explained* failures the code had already attributed. **The blind re-run** (`results/gemini/atlas_blind.md`, gemini-3.8-flash, commit aed53f2) shows Gemini only what the agents saw and said: 153 episodes, 751k tokens, one explicit cache. A test proves no regret, tags, beliefs or true mole are present. Scored in code, Gemini **recovered 3 of 5 code-defined failure modes** (≥30% of a tag's steps cited: premature accusation 44%, ignored delay 2 of 2, budget waste 46%; uninformative canary and over-restriction 0%). It also **named 2 modes our tags lack** (canary fingerprint misattribution; passive waiting while value drains). Coverage is weak: it cited 124 steps, covering 21% of solver regret and 4% of high-regret steps. 12 of 16 quotes are verbatim in the agents' own words.
 - **The Failure Gallery is an exact code decomposition.** "0 unexplained" holds by construction. Gemini only names and explains the categories.
 - **The multimodal chart check is a consistency check, not independent discovery.** The charts plot code-computed solver beliefs. Gemini placed the divergence within 3 steps of the code's estimate in 8/8 episodes (`results/gemini/v2/atlas.json` `localisation`).
 - **No human-agreement number is claimed.**
-- **The AfterQuery gap is harness-dependent.** The AfterQuery team reports a gap on hard in the OpenCode/MCP harness and parity in-process; see their `docs/reports/gap.md`. We make no frontier-gap claim here.
+- **The AfterQuery gap depends on the harness.** From `docs/reports/gap.md` (justSilas 693a3b2): "gemini-4-carbon on v1.4 hard via OpenCode over MCP (the judges' harness): 65% [24%, 98%] of the reference solver at n=30, luck-adjusted 72% [52%, 91%]; parity in-process on hard (95%) and via OpenCode on medium (111%)." This submission makes no further frontier-gap claim.
 
 ## 4. Why Gemini is essential
 - **`thinking_level`** on one model family is what makes the ladder a controlled experiment.

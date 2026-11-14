@@ -17,6 +17,7 @@ import argparse
 import base64
 import datetime as dt
 import glob
+import gzip
 import json
 import math
 import os
@@ -128,11 +129,13 @@ def load_ledger(paths: list[str | Path]) -> list[dict]:
         p = Path(p)
         if p.is_dir():
             files += sorted(glob.glob(str(p / "**" / "*.jsonl"), recursive=True))
+            files += sorted(glob.glob(str(p / "**" / "*ledger*.jsonl.gz"), recursive=True))
         elif p.exists():
             files.append(str(p))
     rows, seen = [], set()
     for fp in dict.fromkeys(os.path.realpath(f) for f in files):  # same file reached twice counts once
-        with open(fp) as f:
+        opener = gzip.open if fp.endswith(".gz") else open
+        with opener(fp, "rt") as f:
             for line in f:
                 line = line.strip()
                 if not line:
@@ -170,7 +173,8 @@ def discover_ledgers() -> list[str]:
     if os.environ.get("CANARY_GEMINI_LEDGER_DIR"):
         roots.append(Path(os.environ["CANARY_GEMINI_LEDGER_DIR"]))
     roots += sorted(ROOT.parent.glob("gemini-*/data/gemini"))
-    files: list[str] = []
+    files: list[str] = sorted(glob.glob(str(ROOT / "results" / "gemini" / "*ledger*.jsonl.gz")))  # committed ledgers
+    files += sorted(glob.glob(str(ROOT / "results" / "gemini" / "roles" / "*" / "ledger.jsonl")))
     for r in roots:
         for f in glob.glob(str(r / "**" / "*.jsonl"), recursive=True):
             if any("ledger" in part for part in Path(f).relative_to(r).parts[:-1]) or "ledger" in r.parts:
@@ -491,6 +495,10 @@ def load_results(results_dir: Path) -> dict:
                       "retries": r.get("gw_retries")} for r in gb["rows"] if isinstance(r, dict)]})
     else:
         out["gateway_bench"] = None
+    ri = load_json(results_dir / "roles" / "index.json")
+    out["roles"] = redact({"generated_at": ri.get("generated_at"), "roles": [
+        {k: r.get(k) for k in ("role", "key", "run", "model", "thinking", "commit", "generated_at", "n", "headline")}
+        for r in ri.get("roles") or [] if isinstance(r, dict)]}) if ri else None
     figs = {}
     budget = [3_000_000]
     for name in ("ladder.png",):
@@ -580,6 +588,7 @@ HTML = """<!doctype html>
   <section id="p-ladder" class="panel" data-panel="ladder"></section>
   <section id="p-atlas" class="panel" data-panel="atlas"></section>
   <section id="p-swarm" class="panel" data-panel="swarm"></section>
+  <section id="p-roles" class="panel" data-panel="roles"></section>
 </main>
 <footer class="foot" id="foot"></footer>
 <div id="tip" role="tooltip" hidden></div>
@@ -1332,6 +1341,20 @@ function stripChart(at, solver, paired) {
   return svg;
 }
 
+// ---- roles
+function renderRoles() {
+  const sec = document.getElementById('p-roles'); sec.replaceChildren();
+  const RO = R.roles;
+  panelHead(sec, '06', { kicker: 'Roles', h: 'One real Gemini run per role' },
+    'Gemini is the agent under test, the analyst, the red team, the world-text writer and the adversary. Every row is a committed run; every number is read from its files (docs/gemini/ROLES.md).');
+  if (!RO || !(RO.roles || []).length) { sec.appendChild(pending('Roles', 'python -m canary.gemini.roles index → results/gemini/roles/index.json')); return; }
+  const tb = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['role', 'model (thinking)', 'commit', 'size', 'headline'].map(c => h('th', { text: c })))]),
+    h('tbody', {}, RO.roles.map(r => h('tr', {}, [h('td', {}, [h('b', { text: r.role }), h('div', { class: 'sub', style: 'margin:2px 0 0;font-size:11px', text: r.run || '' })]),
+      h('td', { class: 'plan', text: (r.model || '') + (r.thinking ? ' (' + r.thinking + ')' : '') }), h('td', { class: 'nw', text: r.commit || '' }),
+      h('td', { class: 'plan', text: r.n || '' }), h('td', { text: r.headline || '' })])))]);
+  sec.appendChild(h('div', { class: 'grid' }, [card('c12', null, null, [tb])]));
+}
+
 function renderFoot() {
   const f = document.getElementById('foot'); f.replaceChildren();
   const M = D.meta;
@@ -1343,7 +1366,7 @@ function renderFoot() {
 }
 
 function renderAll() {
-  renderHeadline(); renderUsage(); renderLadder(); renderAtlas(); renderSwarm(); renderFoot();
+  renderHeadline(); renderUsage(); renderLadder(); renderAtlas(); renderSwarm(); renderRoles(); renderFoot();
 }
 const focus = qs.get('panel');
 if (focus) { document.body.classList.add('focus'); focus.split(',').forEach(p => { const e = document.querySelector('[data-panel="' + p + '"]'); if (e) e.classList.add('on'); }); }

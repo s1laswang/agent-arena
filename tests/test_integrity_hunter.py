@@ -90,8 +90,6 @@ def test_h8_judge_seed_not_recoverable_with_secret(monkeypatch):
     assert seed_attack.recover_mole("easy", obs, range(900_000, 900_030)) is None
 
 
-@pytest.mark.xfail(strict=False, reason="H8 unfixed: canary/world.py _key() falls back to b'public' for judge "
-                   "seeds when CANARY_WORLD_SECRET and SALT are missing (warns instead of failing closed)")
 def test_h8_judge_seed_fails_closed_without_secret(monkeypatch):
     monkeypatch.delenv("CANARY_WORLD_SECRET", raising=False)
     import canary.world as W
@@ -101,3 +99,39 @@ def test_h8_judge_seed_fails_closed_without_secret(monkeypatch):
     except Exception:
         return  # fail-closed: refusing to build a judge world without the secret is the fix
     assert seed_attack.recover_mole("easy", obs, range(900_000, 900_030)) is None
+
+
+_MOLES_SNIPPET = (
+    "import warnings; warnings.simplefilter('ignore');"
+    "from canary.world import generate_world; from canary.rules import TIERS;"
+    "print(','.join(generate_world('medium', s, TIERS['medium']).mole for s in range(900000, 900030)))"
+)
+
+
+def _judge_moles_fresh_process(tmp_path):
+    import os, subprocess, sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    if (root / "data" / "worlds" / "judge" / "SALT").exists():
+        pytest.skip("SALT present locally; this check models a fresh clone")
+    env = {k: v for k, v in os.environ.items() if k != "CANARY_WORLD_SECRET"}
+    env["PYTHONPATH"] = str(root)
+    out = subprocess.run([sys.executable, "-c", _MOLES_SNIPPET], cwd=tmp_path, env=env,
+                         capture_output=True, text=True, timeout=120)
+    if out.returncode != 0:
+        return None  # refusing to build without a secret is also fail-closed
+    return out.stdout.strip().split(",")
+
+
+def test_24_judge_worlds_differ_across_server_starts_without_secret(tmp_path):
+    """Contract v0.5 (CEO): with no CANARY_WORLD_SECRET/SALT, each server start draws a fresh random
+    in-memory secret, so two starts serve different judge worlds and neither equals the public-key world."""
+    import os
+    from canary.redteam import seed_attack
+    a = _judge_moles_fresh_process(tmp_path)
+    b = _judge_moles_fresh_process(tmp_path)
+    if a is None or b is None:
+        return
+    assert a != b, "two server starts without a secret served identical judge worlds"
+    public = [seed_attack.public_world("medium", s).mole for s in range(900000, 900030)]
+    assert sum(x == y for x, y in zip(a, public)) <= 10, "served judge world == public-key world"

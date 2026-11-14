@@ -11,8 +11,10 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from harbor.sidecar import effective_id
 from lab.run import day_for
 from sleeper.mcp_server import STALL
+from sleeper.secrets import scoped_secrets
 
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
@@ -23,6 +25,7 @@ INFO = ("trust_all", "random_accuse")
 NAMES = STRICT + INFO + ("oracle",)
 SEATS = ("finance_ap", "controller")
 TOKEN = "baseline-token"
+SALT = "baseline-harbor-salt"
 
 
 def port():
@@ -31,15 +34,17 @@ def port():
         return s.getsockname()[1]
 
 
-def agent_for(name, seed, seat):
+def agent_for(name, seed, seat, salt=SALT):
     from lab.run import build_team, day_for
     from sleeper.baselines import Baseline, register
 
-    day = day_for(seed, seat)[0]
-    if name == "oracle":
-        register()
-        return build_team("oracle", day, 0)[seat]
-    return Baseline(name, day, 0)
+    day_id = effective_id(seed, seat, salt=salt)
+    with scoped_secrets(SLEEPER_SALT=salt):
+        day = day_for(day_id, seat)[0]
+        if name == "oracle":
+            register()
+            return build_team("oracle", day, 0)[seat]
+        return Baseline(name, day, 0)
 
 
 async def play(url, seat, agent, max_rounds=300):
@@ -99,10 +104,15 @@ def judge(name, seed, seat, tries=3):
                 raise
 
 
-def judge_once(name, seed, seat):
+def judge_once(name, seed, seat, salt=SALT):
     mp, rp = port(), port()
     with tempfile.TemporaryDirectory() as d:
-        env = {**os.environ, "SLEEPER_SEED": str(seed), "SLEEPER_SEAT": seat, "SLEEPER_OUT": f"{d}/state.json", "VERIFY_TOKEN": TOKEN,
+        sf = f"{d}/secrets.json"
+        with open(sf, "w", encoding="utf-8") as fh:
+            json.dump({"SLEEPER_SEED": str(seed), "SLEEPER_SALT": salt, "VERIFY_TOKEN": TOKEN}, fh)
+        os.chmod(sf, 0o600)
+        base_env = {k: v for k, v in os.environ.items() if k not in ("SLEEPER_SEED", "SLEEPER_SALT", "VERIFY_TOKEN")}
+        env = {**base_env, "SLEEPER_SECRETS_FILE": sf, "SLEEPER_SECRETS_UNLINK": "1", "SLEEPER_SEAT": seat, "SLEEPER_OUT": f"{d}/state.json",
                "SLEEPER_TEAM": "oracle", "PYTHONPATH": str(ROOT), "SIDECAR_MCP_PORT": str(mp), "SIDECAR_REWARD_PORT": str(rp)}
         p = subprocess.Popen([sys.executable, "-m", "harbor.sidecar"], env=env, cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
@@ -112,15 +122,18 @@ def judge_once(name, seed, seat):
                     break
                 except OSError:
                     time.sleep(0.5)
-            asyncio.run(play(f"http://127.0.0.1:{mp}/mcp", seat, agent_for(name, seed, seat)))
+            asyncio.run(play(f"http://127.0.0.1:{mp}/mcp", seat, agent_for(name, seed, seat, salt=salt)))
             r, score = verify(rp)
-            return {"name": name, "seed": seed, "seat": seat, "score": score, "reward": r.get("reward"), "harm": r.get("harm"), "raw": {k: v for k, v in r.items() if k != "day"}, "strategy": getattr(day_for(seed, seat)[1], "id", None), "sleeper": bool(day_for(seed, seat)[0].sleeper_seat)}
+            day_id = effective_id(seed, seat, salt=salt)
+            with scoped_secrets(SLEEPER_SALT=salt):
+                day_obj, strat_obj, _, _ = day_for(day_id, seat)
+            return {"name": name, "seed": seed, "seat": seat, "score": score, "reward": r.get("reward"), "harm": r.get("harm"), "raw": {k: v for k, v in r.items() if k != "day"}, "strategy": getattr(strat_obj, "id", None), "sleeper": bool(day_obj.sleeper_seat)}
         finally:
             p.kill()
             p.wait()
 
 
-def run(days, seats=SEATS, names=NAMES, workers=3):
+def run(days, seats=SEATS, names=NAMES, workers=2):
     jobs = [(n, d, s) for n in names for s in seats for d in days]
     with ThreadPoolExecutor(workers) as ex:
         return list(ex.map(lambda j: judge(*j), jobs))

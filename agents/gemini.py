@@ -173,9 +173,10 @@ def _generate(model, system, messages, tools, temperature, seed):
     for attempt in range(6):
         try:
             return _get_client().models.generate_content(model=model, contents=_contents(messages), config=cfg)
-        except errors.APIError as e:
+        except Exception as e:
+            transient = type(e).__name__ in ("ReadTimeout", "ConnectTimeout", "ConnectError", "RemoteProtocolError", "ReadError", "TimeoutException", "ServerError")
             code = getattr(e, "code", 0) or 0
-            if (code == 429 or code >= 500) and attempt < 5:
+            if (transient or code == 429 or code >= 500) and attempt < 5:
                 _usage["retries"] += 1
                 time.sleep(delay)
                 delay = min(delay * 2, 30)

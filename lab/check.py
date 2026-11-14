@@ -49,6 +49,12 @@ def gate(root):
         days = analyse.load(p)
         bad = [d["result"]["day_id"] for d in days if (d["result"]["reward"] == 0) != bool(analyse.label(d))]
         rec(not bad, f"{name}: every loss labeled and no win labeled", f"{len(bad)} days, e.g. {bad[:3]}")
+    if "trust_all" in rs and "staff" in rs:
+        m = {k: sum(d["result"]["reward"] for d in analyse.load(rs[k])) / max(len(analyse.load(rs[k])), 1) for k in ("trust_all", "staff")}
+        if m["trust_all"] > m["staff"]:
+            lines.append(f"WARN trust_all {m['trust_all']:.3f} > staff {m['staff']:.3f}: too easy to just trust everything")
+        else:
+            lines.append("PASS trust_all <= staff")
     allbad, seen = [], False
     for p in rs.values():
         m = legit_count_mismatches(analyse.load(p))

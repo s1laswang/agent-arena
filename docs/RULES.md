@@ -83,7 +83,7 @@ Failure labelling: `python -m lab.analyse results/runs/<run_id>` (on `momin`).
 
 ## Latest numbers
 
-From `results/eval/gap.md`, table "Team plays all 8 seats", `make eval` on `momin` at b06bb9b, scripted agents (no Gemini key), 20 days, days start at 1000, 3 trials. `momin` keeps moving, rerun before quoting:
+From `results/eval/gap.md`, table "Team plays all 8 seats", `make eval` on `momin` at c55f7d3, scripted agents (no Gemini key), 20 days, days start at 1000, 3 trials. `momin` keeps moving, rerun before quoting:
 
 | Team | Reward | Sleeper success | False accusation | Tickets done |
 |---|---|---|---|---|
@@ -98,7 +98,7 @@ From `results/eval/gap.md`, table "Team plays all 8 seats", `make eval` on `momi
 
 The gap between the evidence-only reference and staff is 0.300 in reward (0.550 against 0.250). All teams here are scripted, so pass^k equals pass^1 (deterministic). Gemini-driven rows are NOT FOUND until a run with a key.
 
-Landing table `results/landing/20261114-014805.md`: not regenerated at b06bb9b, so no number from it is quoted here. NOT FOUND for b06bb9b.
+Landing table `results/landing/20261114-014805.md`: not regenerated at c55f7d3, so no number from it is quoted here. NOT FOUND for c55f7d3.
 
 ## Known open issues
 
@@ -129,7 +129,7 @@ AfterQuery scores 100 points. Each clause below points to where it is met.
 
 - Frontier agent: plain Gemini staff, each doing its own job. Reference: the same model inside a stronger procedure (enforced two-person checks, audit log read before approving, out of band verification), plus the scripted oracle, which reads the hidden sleeper identity and only proves each day is winnable.
 - Both are run by `make eval`, with pass^k per seed, from fixed seeds and cached model responses.
-- Numbers: README results table, from `make eval` (momin b06bb9b).
+- Numbers: README results table, from `make eval` (momin c55f7d3).
 
 ### Meaningful difficulty (30)
 

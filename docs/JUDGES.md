@@ -1,6 +1,6 @@
 # The judges' 15 minutes
 
-Commands checked on `momin` b06bb9b. Numbers: `make eval` at b06bb9b, all scripted, Gemini rows NOT FOUND.
+Commands checked on `momin` c55f7d3. Numbers: `make eval` at c55f7d3, all scripted, Gemini rows NOT FOUND.
 
 ## 1. Setup (2 minutes)
 
@@ -17,7 +17,7 @@ The venv must be at `./.venv` because the Makefile calls `.venv/bin/python`. `ma
 make eval
 ```
 
-It runs `python -m lab.eval`: oracle, reference, staff, do-nothing, stop-early, quarantine-all, refuse-all and trust-all over 20 days (3 trials each) and prints the tables. A few minutes (2 min 2 s at b06bb9b, more under load). `make eval-full` is the long run and adds `python -m sleeper.baselines`. Single teams:
+It runs `python -m lab.eval`: oracle, reference, staff, do-nothing, stop-early, quarantine-all, refuse-all and trust-all over 20 days (3 trials each) and prints the tables. About 2 minutes (1 min 52 s per lead-lab), ending with a SUMMARY block: read that first. `make eval-full` is the long run and adds `python -m sleeper.baselines`. Single teams:
 
 ```
 .venv/bin/python -m lab.run --team do_nothing --days 20 --seeds 3
@@ -26,7 +26,7 @@ It runs `python -m lab.eval`: oracle, reference, staff, do-nothing, stop-early, 
 
 Results land in `results/` (`results/runs/` per team, `results/eval/` for the table). Each run folder `results/runs/<team>-all-d20@1000-t3` has `days.jsonl`, `meta.json`, `summary.json` and a `days/` folder.
 
-Table "Team plays all 8 seats" at b06bb9b: oracle 1.000, reference 0.550, staff 0.250, every baseline 0.000 (do_nothing, stop_early, quarantine_all, refuse_all, trust_all). Known issues: the finance_ap seat-swapped tables show the oracle at 0.400 and the run warns about it, do not read them as a gap; `WARN trust_all 0.800 > staff 0.300` is printed for the exploit set and not reconciled with the 0.000 above.
+Table "Team plays all 8 seats" at c55f7d3: oracle 1.000, reference 0.550, staff 0.250, every baseline 0.000 (do_nothing, stop_early, quarantine_all, refuse_all, trust_all). Known issues: the finance_ap seat-swapped tables show the oracle at 0.400 and the run warns about it, do not read them as a gap; `WARN trust_all 0.800 > staff 0.300` is printed for the exploit set and not reconciled with the 0.000 above.
 
 ## 3. Read summary.json
 

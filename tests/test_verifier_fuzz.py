@@ -56,7 +56,8 @@ class RandomAgent:
 
     def turn(self, seat, view, tools, call):
         for _ in range(self.r.randint(1, 8)):
-            tool = self.r.choice([t for t in tools if t != "end_turn"] or ["end_turn"])
+            names = [t["name"] if isinstance(t, dict) else t for t in tools]
+            tool = self.r.choice([t for t in names if t != "end_turn"] or ["end_turn"])
             fn = getattr(self.w, f"t_{tool}", None)
             if fn is None:
                 continue

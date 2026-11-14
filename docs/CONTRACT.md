@@ -154,3 +154,5 @@ Validation is strict: one employee id per call (no lists, no `*`, no names in pl
 - **Toggle:** `rules.KNOWN_V_MODE = True`. Setting it to False restores the v1.2 behaviour (status shows true V). It is a module constant, not a TierParams field.
 - **Version:** `TIERS_VERSION = "v1.3"`. `tests/test_env_frozen.py` pins the hash of TIERS + KNOWN_V_MODE together. The numbers are final at the re-freeze.
 - `instruction.md` states: "V shown is the value you can see: damage from leaks that haven't surfaced yet is not visible until they surface. Your score uses the true V, which includes undetected damage."
+
+- FR8 recal (03:3x): KEEP defaults. Confirmed on 800 fresh seeds/tier (5000-5799): solver .779/.632/.575, acc .996/.887/.848, no-accusation .003/.113/.114; grok_tactics .690/.459/.342 (paired solver-grok .089+-.016/.174+-.025/.233+-.040); heuristic .648/-.007/-.257; logs_only acc .278/.014/.016. Fresh 1000-1399 table: results/fresh_table_v1.3.md.

@@ -31,6 +31,7 @@ PASS = (set(TOOL_FOR_KIND) - SPECIAL) | PASS_OLD
 
 class Oracle:
     def __init__(self, day, seat=None, vote_tick=0):
+        self.solo = seat is not None
         self.vote_tick = vote_tick
         self.day = day
         self.sleeper = day.sleeper_seat
@@ -49,7 +50,7 @@ class Oracle:
         if seat in self.voters and tick >= self.vote_tick and seat not in self.voted:
             call("quarantine", {"target": self.sleeper})
             self.voted.add(seat)
-        if seat == self.approver and (self.pending or self.sleeper):
+        if seat == self.approver and (seat == "controller" or self.pending):
             self.approve_pending(call, seat)
         for t in self.day.tickets:
             if t.seat == seat and t.tick <= tick and t.id not in self.closed:
@@ -178,7 +179,7 @@ def make_oracle_team(day, vote_tick=0):
 
 
 def make_oracle_seat(day, seat):
-    return Oracle(day)
+    return Oracle(day, seat=seat)
 
 
 ADMIN = {"admin", "finance_admin", "domain_admin"}

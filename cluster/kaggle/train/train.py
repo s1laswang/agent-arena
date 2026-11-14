@@ -1,6 +1,6 @@
 import glob, json, os, subprocess, sys, threading
 code = glob.glob("/kaggle/input/**/train/sft.py", recursive=True)[0].rsplit("/train/", 1)[0]
-data = os.path.dirname(glob.glob("/kaggle/input/**/*.jsonl", recursive=True)[0])
+data = os.path.dirname((glob.glob("/kaggle/input/**/run.json", recursive=True) or glob.glob("/kaggle/input/**/train.jsonl", recursive=True))[0])
 work = "/kaggle/working"
 os.chdir(code)
 cfgp = data + "/run.json"
@@ -19,23 +19,37 @@ ngpu = max(1, torch.cuda.device_count())
 has_decide = os.path.exists(code + "/train/decide.py")
 oracle = work + "/oracle"
 if has_decide:
-    run(env0, "-m", "lab.run", "--team", "oracle", "--day-start", "1000", "--days", "40", "--trials", "1", "--out", oracle)
+    run(env0, "-m", "lab.run", "--team", "oracle", "--day-start", "1000", "--days", "40", "--trials", "1", "--out", oracle, *cfg.get("oracle", []))
 sft_extra = cfg.get("sft_extra", {})
+steps = cfg.get("steps", ["sft", "decide", "eval"])
+errs = []
+def step(tag, name, env, *a):
+    try:
+        run(env, *a)
+    except Exception as e:
+        errs.append((tag, name, repr(e)))
 def pipeline(model, i):
     tag = model.split("/")[-1]
     env = dict(env0, CUDA_VISIBLE_DEVICES=str(i % ngpu))
-    ad, out = f"{work}/{tag}/adapter", f"{work}/{tag}"
-    run(env, "-m", "train.sft", "--model", model, "--data", train_file, "--out", ad, *sft_args, *sft_extra.get(tag, []))
+    out = f"{work}/{tag}"
+    os.makedirs(out, exist_ok=True)
+    ad = out + "/adapter"
+    if "sft" not in steps:
+        found = glob.glob(f"/kaggle/input/**/{tag}/adapter/adapter_config.json", recursive=True)
+        print("adapters found", found, flush=True)
+        ad = os.path.dirname(found[0]) if found else ad
+    else:
+        step(tag, "sft", env, "-m", "train.sft", "--model", model, "--data", train_file, "--out", ad, *sft_args, *sft_extra.get(tag, []))
     for name, a in (("base", []), ("adapter", ["--adapter", ad])):
-        if has_decide:
-            run(env, "-m", "train.decide", "--model", model, *a, "--run", oracle, "--min-day", "1000", "--out", f"{out}/decide_{name}.json", *decide_args)
-        run(env, "-m", "train.eval", "--model", model, *a, "--out", f"{out}/eval_{name}", *eval_args)
-errs = []
+        if has_decide and "decide" in steps:
+            step(tag, "decide_" + name, env, "-m", "train.decide", "--model", model, *a, "--run", oracle, "--min-day", "1000", "--out", f"{out}/decide_{name}.json", *decide_args)
+        if "eval" in steps:
+            step(tag, "eval_" + name, env, "-m", "train.eval", "--model", model, *a, "--out", f"{out}/eval_{name}", *eval_args)
 def guard(m, i):
     try:
         pipeline(m, i)
     except Exception as e:
-        errs.append((m, repr(e)))
+        errs.append((m, "pipeline", repr(e)))
 if ngpu > 1:
     ts = [threading.Thread(target=guard, args=(m, i)) for i, m in enumerate(models)]
     [t.start() for t in ts]; [t.join() for t in ts]
@@ -45,8 +59,8 @@ else:
 rows = {}
 for m in models:
     tag = m.split("/")[-1]
-    for p in glob.glob(f"{work}/{tag}/*/metrics.json") + glob.glob(f"{work}/{tag}/*/*.json"):
-        if p.endswith("metrics.json") or "decide" in p:
+    for p in glob.glob(f"{work}/{tag}/*.json") + glob.glob(f"{work}/{tag}/*/metrics.json"):
+        if p.endswith("metrics.json") or "decide_" in p:
             rows[f"{tag}/{os.path.relpath(p, work + '/' + tag)}"] = json.load(open(p))
 json.dump({"rows": rows, "errors": errs}, open(work + "/metrics.json", "w"), indent=1)
 print(json.dumps({"rows": list(rows), "errors": errs}))

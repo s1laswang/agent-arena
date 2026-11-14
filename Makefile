@@ -11,4 +11,7 @@ eval:
 harbor:
 	$(PY) -m harbor.build --seeds 0..19 --seat controller
 
-.PHONY: test eval harbor
+.PHONY: test eval harbor exploits
+
+exploits:
+	$(PY) -m redteam.report

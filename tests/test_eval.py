@@ -25,7 +25,8 @@ def tables(out):
     for line in (out / "eval" / "gap.md").read_text().splitlines():
         if line.startswith("## "):
             cur = line[3:]
-        elif line.startswith("| team"):
+            head = None
+        elif line.startswith("| team") and cur.startswith(("Team plays", "Staff background")):
             head = [x.strip() for x in line.strip("|").split("|")]
         elif line.startswith("|") and not line.startswith("|---") and head:
             c = [x.strip() for x in line.strip("|").split("|")]

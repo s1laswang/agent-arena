@@ -74,7 +74,7 @@ Of the days staff lost, the share with a named mistake and the share that flip t
 
 ## 7:00 Reward integrity
 
-Skill ladder slide (placeholder): "Reward rises with skill, and only the full procedure reaches the reference." Figures NOT FOUND (ladder.md not on momin yet).
+SCRIPTED ladder, `results/ladder.md` (make ladder, momin commit 53ea35e7, n=400 days, no model ran). All 8 seats, mean reward by level: L0 0.000, L1 0.242, L2 0.435, L3 0.435, L4 0.810, L5 0.877, L6 0.938, L7 0.988; reference 0.507, oracle 1.000. Say: reward rises as named rules are added, with bootstrap CIs per step. Mandatory caveats: (1) L3 is flat on current days (+0.000), so that rule is untested (lead-attack fixing). (2) The tell_only probe, which reads surface phrases only, also scores 1.000, so trap tickets are text-identifiable until decoys land. Do not say that verification alone wins. In the finance_ap seat alone L1 to L3 are 0.205, L4 0.605, L7 0.800, oracle 0.800, and L2 to L3, L5, L6 are not exercised there.
 
 
 Now the part we care about most. The reward reads only the final state of the company. If you say in the chat that you caught the sleeper, nothing changes.

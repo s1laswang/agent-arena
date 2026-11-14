@@ -109,6 +109,9 @@ class LLMPolicy:
         u = getattr(resp, "usage", None) or {}
         for k in ("in", "out", "cost_usd"):
             self.usage[k] += u.get(k, 0) or 0
+        # cached input (Responses API): cost_usd_est bills it at the cached list price; cost_usd stays the upper bound
+        self.usage["cached_in"] = self.usage.get("cached_in", 0) + (u.get("cached_in", 0) or 0)
+        self.usage["cost_usd_est"] = self.usage.get("cost_usd_est", 0.0) + (u.get("cost_usd_est", u.get("cost_usd", 0)) or 0)
         self.usage["calls"] += 1
         return resp
 

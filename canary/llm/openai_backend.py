@@ -143,8 +143,11 @@ class OpenAIClient(LLMClient):
         u = getattr(r, "usage", None)
         tin = getattr(u, "input_tokens", 0) or 0
         tout = getattr(u, "output_tokens", 0) or 0
+        cached = getattr(getattr(u, "input_tokens_details", None), "cached_tokens", 0) or 0
+        if not isinstance(cached, int):
+            cached = 0
         resp = LLMResponse(text="".join(text_parts), tool_calls=tcs,
-                           usage={"in": tin, "out": tout, **cost(self.model, tin, tout)}, raw=r)
+                           usage={"in": tin, "out": tout, **cost(self.model, tin, tout, cached)}, raw=r)
         resp.provider_items = out_items
         return resp
 

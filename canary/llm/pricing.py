@@ -9,11 +9,22 @@ PRICES: dict[str, tuple[float, float]] = {
 }
 
 
-def cost(model: str, tin: int, tout: int) -> dict:
+# Cached-input list price (USD / 1M). gpt-5.5: $0.50, verified on developers.openai.com/api/docs/pricing
+# (2026-11-14, <272K context). Prompt caching is automatic; usage reports cached tokens.
+CACHED_PRICES: dict[str, float] = {"gpt-5.5": 0.5}
+
+
+def cost(model: str, tin: int, tout: int, cached: int = 0) -> dict:
     p = PRICES.get(model)
     if p is None:  # try longest prefix (e.g. dated snapshots)
         cands = [k for k in PRICES if model.startswith(k)]
         p = PRICES[max(cands, key=len)] if cands else None
     if p is None:
         return {"cost_usd": 0.0, "cost_unknown": True}
-    return {"cost_usd": (tin * p[0] + tout * p[1]) / 1e6}
+    out = {"cost_usd": (tin * p[0] + tout * p[1]) / 1e6}  # upper bound: all input at the full price
+    if cached:
+        key = model if model in CACHED_PRICES else next((k for k in CACHED_PRICES if model.startswith(k)), None)
+        pc = CACHED_PRICES[key] if key else p[0] * 0.1
+        out["cached_in"] = cached
+        out["cost_usd_est"] = ((tin - cached) * p[0] + cached * pc + tout * p[1]) / 1e6
+    return out

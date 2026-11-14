@@ -95,8 +95,7 @@ class Episode:
             env = self.env
             return {"score": env.score(), "done": env.done, "end_reason": env._end_reason,
                     "accused": env._accused, "accused_correct": bool(env._correct) if env._accused else False,
-                    "tier": env.tier, "final_day": env.day, "V": env.V, "tool_calls": len(env.history),
-                    "episode": self.token, "ledger": [asdict(e) for e in env.ledger()]}
+                    "tier": env.tier, "final_day": env.day, "V": env.V, "episode": self.token, "ledger": [asdict(e) for e in env.ledger()]}
 
 
 def _token_ok(given: str | None, expected: str | None) -> bool:

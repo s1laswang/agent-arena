@@ -137,7 +137,7 @@ def test_episode_over_mcp_matches_in_process(srv, policy_cls, tier, seed):
     local = run_episode(Env(tier, seed), mk())
     led = srv.ledger()
     assert led["done"] and led["score"] == local.score
-    assert led["end_reason"] == local.end_reason and led["tool_calls"] == len(local.steps)
+    assert led["end_reason"] == local.end_reason and len(hist) == len(local.steps)
     assert [h.result for h in hist] == [s.result for s in local.steps]
     if policy_cls is DoNothing:
         assert led["score"] == 0.0 and led["end_reason"] == "horizon"

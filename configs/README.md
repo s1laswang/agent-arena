@@ -44,7 +44,7 @@ codex -c 'mcp_servers.canary.url="http://127.0.0.1:8765/mcp"' exec "<same prompt
 
 ```bash
 curl -s "http://127.0.0.1:8765/ledger?token=$CANARY_LEDGER_TOKEN"
-# {"score", "done", "end_reason", "accused", "accused_correct", "final_day", "V", "tool_calls", "ledger": [...]}
+# {"score", "done", "end_reason", "accused", "accused_correct", "final_day", "V", "episode", "ledger": [...]}
 ```
 
 Reference run over MCP (no keys needed): `python -m canary.mcp_server --play solver --url http://127.0.0.1:8765/mcp`.

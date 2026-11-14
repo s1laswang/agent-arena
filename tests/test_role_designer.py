@@ -50,9 +50,12 @@ def test_schema_filter_removes_unsupported_dsl_feature():
     raw_schema = inline_schema(Proposal)
     raw_txt = json.dumps(raw_schema)
     assert '"n_held_docs"' in raw_txt
+    assert '"anyOf"' in raw_txt
     filtered = mod.filter_response_schema(raw_schema)
     filtered_txt = json.dumps(filtered)
     assert '"n_held_docs"' not in filtered_txt
+    assert '"anyOf"' not in filtered_txt
+    assert '"maxLength"' not in filtered_txt
     assert '"days_since_last_leak"' in filtered_txt
     assert '"recent_low_recipient_docs"' in filtered_txt
 

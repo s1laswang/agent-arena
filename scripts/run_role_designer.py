@@ -83,12 +83,22 @@ def git_commit() -> str:
 
 def filter_response_schema(schema: Any) -> Any:
     if isinstance(schema, dict):
+        if "anyOf" in schema and isinstance(schema["anyOf"], list):
+            non_null = [
+                x for x in schema["anyOf"] if not (isinstance(x, dict) and x.get("type") == "null")
+            ]
+            if len(non_null) == 1:
+                return filter_response_schema(non_null[0])
         out: dict[str, Any] = {}
         for k, v in schema.items():
+            if k in ("maxLength", "maxItems", "minLength", "minItems"):
+                continue
             if k == "enum" and isinstance(v, list) and "days_since_last_leak" in v:
                 out[k] = [x for x in v if x in DSL_FEATURES]
             else:
                 out[k] = filter_response_schema(v)
+        if out.get("type") == "object" and isinstance(out.get("properties"), dict):
+            out["required"] = list(out["properties"].keys())
         return out
     if isinstance(schema, list):
         return [filter_response_schema(x) for x in schema]
@@ -431,7 +441,6 @@ def run_designer_suite(
     max_rounds = int(rounds) if rounds is not None else (2 if require_llm else 1)
 
     out_path = Path(out_dir)
-    out_path.mkdir(parents=True, exist_ok=True)
     run_ts = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     run_id = f"paired_designer:{int(time.time())}"
     addendum = build_system_addendum(tier=tier, n=n, x_thr=x_thr, y_thr=y_thr)
@@ -639,6 +648,7 @@ def run_designer_suite(
         )
     )
 
+    out_path.mkdir(parents=True, exist_ok=True)
     (out_path / "meta.json").write_text(
         clean_text(json.dumps(meta, indent=2, sort_keys=True, allow_nan=False)) + "\n"
     )

@@ -65,3 +65,14 @@ def test_fallback_without_key(monkeypatch):
     r.fallback.turn = lambda *a: called.append(1)
     r.turn("hr", {}, [], None)
     assert called
+
+
+def test_agent_kind(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
+    r = GeminiReference("hr")
+    r.fallback.turn = lambda *a: None
+    r.turn("hr", {}, [], None)
+    assert r.agent_kind == "scripted"
+    monkeypatch.setenv("GEMINI_API_KEY", "x")
+    assert GeminiReference("hr").agent_kind == "gemini"

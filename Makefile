@@ -5,5 +5,6 @@ test:
 
 eval:
 	$(PY) -m lab.eval
+	$(PY) -m sleeper.baselines
 
 .PHONY: test eval

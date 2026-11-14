@@ -130,7 +130,7 @@ def main(argv=None, runner=None):
     p.add_argument("--web-out", default="web/results/eval")
     a = p.parse_args(argv)
     if a.agent in ("claude", "codex"):
-        from lab import frontier_cli as frontier
+        from lab import frontier
 
         if not a.model:
             p.error("--model required")

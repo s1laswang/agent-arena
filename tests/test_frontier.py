@@ -1,6 +1,6 @@
 import pytest
 
-from lab import frontier_cli as frontier
+from lab import frontier
 from lab.eval import main
 
 calls = []

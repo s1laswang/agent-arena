@@ -88,3 +88,20 @@ def test_rescore_frontier_layout(tmp_path):
     (d / "finance_ap-s4-t0.json").write_text(json.dumps({**res, "state_path": "st.json"}))
     p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "rescore", str(tmp_path)], cwd=ROOT, capture_output=True, text=True)
     assert p.returncode == 0, p.stdout
+
+
+@pytest.mark.parametrize("agent", ["oracle", "do_nothing", "stop_early", "staff", "reference"])
+def test_model_label_matches_who_played(agent, monkeypatch):
+    from agents import gemini
+    from lab import run as lrun
+
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    monkeypatch.setattr(lrun, "gemini_on", lambda: False)
+    before = gemini._usage["calls"] + gemini._usage["cache_hits"]
+    res, _ = lrun.play_day("oracle", agent, "finance_ap", 4, 0)
+    used = gemini._usage["calls"] + gemini._usage["cache_hits"] - before
+    assert used == 0 and res["model"] == "scripted"
+    monkeypatch.setattr(lrun, "gemini_on", lambda: True)
+    expect = "scripted" if lrun.FACTORIES[agent][1] == "scripted" else lrun.agent_model(agent)
+    assert expect != "scripted" or lrun.FACTORIES[agent][1] == "scripted"
+    assert lrun.agent_model(agent) == expect

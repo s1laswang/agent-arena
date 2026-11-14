@@ -511,3 +511,36 @@ def excerpt(ep: Episode, t: int, before: int = 8, after: int = 2, rationale_char
             r = re.sub(r"\s+", " ", s.rationale).strip()
             lines.append(f"   says: {r[:rationale_chars]}{' [...]' if len(r) > rationale_chars else ''}")
     return "\n".join(lines)
+
+
+def behaviour_stats(eps: list[Episode]) -> dict[str, dict]:
+    """Per cohort, code-computed decision statistics (to check Gemini's cross-family reading against)."""
+    from collections import defaultdict
+    by: dict[str, list[Episode]] = defaultdict(list)
+    for e in eps:
+        by[e.cohort].append(e)
+    out = {}
+    for c, es in sorted(by.items()):
+        n = len(es)
+        can = [s for e in es for s in e.steps if s.tool == "plant_canary" and s.ok]
+        groups = [len(s.args.get("assignment") or {}) for s in can]
+        variants = [len(set((s.args.get("assignment") or {}).values())) for s in can]
+        acc = [s for e in es for s in e.steps if s.tool == "accuse"]
+        p_acc = [s.p_accusee for s in acc if s.p_accusee is not None]
+        out[c] = {
+            "episodes": n,
+            "steps_per_episode": round(sum(len(e.steps) for e in es) / n, 1),
+            "canaries_per_episode": round(len(can) / n, 2),
+            "canary_recipients_mean": round(sum(groups) / len(groups), 1) if groups else None,
+            "canary_variants_mean": round(sum(variants) / len(variants), 2) if variants else None,
+            "canary_regret_per_episode": round(sum(s.regret for s in can) / n, 4),
+            "interviews_per_episode": round(sum(1 for e in es for s in e.steps if s.tool == "interview") / n, 1),
+            "restrictions_per_episode": round(sum(1 for e in es for s in e.steps if s.tool == "restrict_access") / n, 2),
+            "failed_calls_per_episode": round(sum(1 for e in es for s in e.steps if not s.ok) / n, 2),
+            "accuse_day_mean": round(sum(s.day for s in acc) / len(acc), 1) if acc else None,
+            "p_accused_mean": round(sum(p_acc) / len(p_acc), 3) if p_acc else None,
+            "accused_below_0.6": sum(1 for p in p_acc if p < 0.6),
+            "wrong_accusations": sum(1 for e in es if e.accused and not e.correct),
+            "no_accusation": sum(1 for e in es if not e.accused),
+        }
+    return out

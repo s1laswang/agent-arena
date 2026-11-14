@@ -174,10 +174,11 @@ class AtlasOps:
             if schema is not None:
                 cfg["response_mime_type"] = "application/json"
                 cfg["response_json_schema"] = schema
-            if system and not cache_name:
+            cn = cache_name() if callable(cache_name) else cache_name  # lazy: created on the first real miss
+            if system and not cn:
                 cfg["system_instruction"] = system
-            if cache_name:
-                cfg["cached_content"] = cache_name
+            if cn:
+                cfg["cached_content"] = cn
             if thinking_level:
                 cfg["thinking_config"] = types.ThinkingConfig(thinking_level=thinking_level.upper())
             r, t0 = self._retry(lambda: self.client.models.generate_content(
@@ -200,6 +201,11 @@ class AtlasOps:
                          tokens={"in": 0, "out": 0})
             return {"total_tokens": n}
         return int(self._cached("count", model, payload, call)["total_tokens"])
+
+    def recorded_cache_tokens(self, model: str, corpus: str, system: str) -> int:
+        key = self._key("cache_meta", model, {"corpus_sha": hashlib.sha256(corpus.encode()).hexdigest(), "system": system})
+        p = self.cache_dir / f"{key}.json.gz"
+        return int(json.loads(gzip.decompress(p.read_bytes())).get("tokens", 0)) if p.exists() else 0
 
     def create_cache(self, model: str, corpus: str, system: str, ttl_s: int = 3600) -> tuple[str | None, int]:
         """Explicit context cache of the corpus. Returns (cache_name, cached_token_count). Never replayed: in

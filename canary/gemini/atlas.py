@@ -35,7 +35,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from .atlas_data import (HIGH_REGRET, ROOT, Episode, excerpt, high_regret_steps, load_corpus, load_snapshot,
+from .atlas_data import (HIGH_REGRET, ROOT, Episode, behaviour_stats, excerpt, high_regret_steps, load_corpus, load_snapshot,
                          pack_corpus, save_snapshot, step_line)
 from .atlas_gemini import AtlasOps, ReplayMiss
 from .atlas_schema import (ClusterNames, Comparison, Counterfactuals, Divergence, SingleLabel, StepLabels,
@@ -153,9 +153,12 @@ class Atlas:
         self.corpus_sha = hashlib.sha256(self.text.encode()).hexdigest()
         self.verifier = Verifier(eps, self.blocks)
         self.cstats = cohort_stats(eps)
+        self.behaviour = behaviour_stats(eps)
         self.errors: list[str] = []
         self.result: dict[str, Any] = {}
         self.cache_name: str | None = None
+        self.use_cache = False
+        self._cache_failed = False
         self.cache_tokens = 0
         self.cached_tokens_used = 0
         self.hr = high_regret_steps(eps)
@@ -178,10 +181,12 @@ class Atlas:
         return parsed
 
     def _ask_cached(self, question: str, schema_model, tag: str):
-        """A question against the cached corpus (explicit cache when available, else the corpus inline)."""
-        if self.cache_name or (self.ops.replay and self.cache_tokens):
-            return self._gen(self.cache_model, [question], schema_model, tag, cache_name=self.cache_name,
-                             cache_key=self.corpus_sha, system=None)
+        """A question against the cached corpus (explicit context cache), else with the corpus inline."""
+        if getattr(self, "use_cache", False) and not self._cache_failed:
+            r = self._gen(self.cache_model, [question], schema_model, tag, cache_name=self._lazy_cache,
+                          cache_key=self.corpus_sha, system=None)
+            if r is not None or not self._cache_failed:
+                return r
         return self._gen(self.cache_model, [self.text, question], schema_model, tag, system=SYSTEM)
 
     # ---- 1. long context
@@ -225,13 +230,27 @@ class Atlas:
 
     # ---- 2. context cache
     def open_cache(self):
-        try:
-            self.cache_name, self.cache_tokens = self.ops.create_cache(self.cache_model, self.text, SYSTEM)
-            self.log(f"context cache on {self.cache_model}: {self.cache_tokens:,} tokens ({self.cache_name or 'replay'})")
-        except Exception as e:  # noqa: BLE001
-            self.errors.append(f"caches.create: {type(e).__name__}: {str(e)[:200]}")
-            self.log(f"  ! cache create failed ({e}); questions will send the corpus inline")
-            self.cache_name = None
+        """Explicit context caching, created lazily on the first cached question that is not already recorded
+        (so a rerun that replays every answer creates no cache)."""
+        import threading
+        self.use_cache = True
+        self._cache_lock = threading.Lock()
+        self._cache_failed = False
+        self.cache_tokens = self.ops.recorded_cache_tokens(self.cache_model, self.text, SYSTEM)
+
+    def _lazy_cache(self) -> str | None:
+        with self._cache_lock:
+            if self.cache_name is None and not self._cache_failed:
+                try:
+                    self.cache_name, self.cache_tokens = self.ops.create_cache(self.cache_model, self.text, SYSTEM)
+                    self.log(f"context cache on {self.cache_model}: {self.cache_tokens:,} tokens ({self.cache_name})")
+                except Exception as e:  # noqa: BLE001
+                    self._cache_failed = True
+                    self.errors.append(f"caches.create: {type(e).__name__}: {str(e)[:200]}")
+                    self.log(f"  ! cache create failed ({e}); questions will send the corpus inline")
+            if self.cache_name is None:
+                raise RuntimeError("context cache unavailable")
+            return self.cache_name
 
     def taxonomy_text(self, tax: Taxonomy) -> str:
         return "\n".join(f"- {m.id}: {m.name} ({m.decision}). {m.description}" for m in tax.modes) + \
@@ -303,7 +322,9 @@ class Atlas:
 
     # ---- questions on the cache
     def compare(self, tax: Taxonomy) -> Comparison | None:
+        beh = "\n".join(f"{c}: {json.dumps(d)}" for c, d in self.behaviour.items())
         q = (f"TAXONOMY:\n{self.taxonomy_text(tax)}\n\nCOHORT STATS (computed in code):\n{stats_table_text(self.cstats)}"
+             f"\n\nDECISION STATISTICS PER COHORT (computed in code):\n{beh}"
              "\n\nTASK. Compare how each cohort plays and fails. Cohorts on different tiers_versions played under "
              "different rules (v1.2 showed same-day V drops; v1.4 hard has 40 staff and 3-variant canaries): say so "
              "and never treat them as one pool. Give each cohort 1-3 verbatim quotes (cohorts without agent text: "
@@ -631,6 +652,7 @@ def run(args) -> dict:
         "summary": tax.summary,
         "modes": modes,
         "cohort_mode_share": A.cohort_modes(labels),
+        "cohort_behaviour": A.behaviour,
         "comparison": comp,
         "counterfactuals": cf_rows,
         "thinking": think,

@@ -76,6 +76,17 @@ def render_md(r: dict) -> str:
         out.append(f"| {row['cohort']} | {row['episodes']} | {row['score_mean']:.3f} | {_pct(row['accuracy'])} | "
                    f"{row['regret_mean']:.3f} | {top} |")
     out.append("")
+    beh = r.get("cohort_behaviour") or {}
+    if beh:
+        out += ["Decision statistics per cohort (computed in code from the trajectories):", "",
+                "| cohort | steps/ep | canaries/ep | recipients/canary | canary regret/ep | interviews/ep | "
+                "restrictions/ep | mean P(accused) at accusation | accusations below 0.6 | wrong | none |",
+                "|---|---|---|---|---|---|---|---|---|---|---|"]
+        for co, d in beh.items():
+            out.append(f"| {co} | {d['steps_per_episode']} | {d['canaries_per_episode']} | {d['canary_recipients_mean']} | "
+                       f"{d['canary_regret_per_episode']} | {d['interviews_per_episode']} | {d['restrictions_per_episode']} | "
+                       f"{d['p_accused_mean']} | {d['accused_below_0.6']} | {d['wrong_accusations']} | {d['no_accusation']} |")
+        out.append("")
     if comp:
         out += [f"**Cross-family finding (Gemini's reading, checked against the table above):** "
                 f"{comp['cross_family_finding']}", "", f"*Caveats:* {comp['caveats']}", ""]

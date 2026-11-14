@@ -116,6 +116,11 @@ class FakeModels:
             vecs.append(SimpleNamespace(values=[1.0 if j == h else 0.01 * ((i + j) % 5) for j in range(8)]))
         return SimpleNamespace(embeddings=vecs)
 
+    def generate_content_stream(self, model, contents, config):
+        r = self.generate_content(model, contents, config)
+        yield SimpleNamespace(text=r.text[: len(r.text) // 2], usage_metadata=None)
+        yield SimpleNamespace(text=r.text[len(r.text) // 2:], usage_metadata=r.usage_metadata)
+
     def generate_content(self, model, contents, config):
         self.o.calls += 1
         if self.o.fail:
@@ -181,6 +186,9 @@ class FakeGenai:
             m = re.search(r"^(t(\d+) d\d+ [^\n]{20,})", prompt, re.M)
             return {"divergence_t": int(m.group(2)) if m else 0, "what_chart_shows": "c", "what_agent_believed": "b",
                     "quote": m.group(1)[:50] if m else "none"}
+        if "pairs" in props:
+            ids = re.findall(r"^- (\w+):", prompt.split("SECOND TAXONOMY")[-1], re.M)
+            return {"pairs": [{"second_id": i, "primary_id": "wide_split", "note": ""} for i in ids]}
         if "clusters" in props:
             return {"clusters": [{"cluster": i, "name": f"c{i}", "description": "d"} for i in range(6)]}
         return {}
@@ -189,7 +197,8 @@ class FakeGenai:
 def _args(tmp_path, **kw):
     a = dict(runs=[str(RUN)], model="gemini-4-carbon", cache_model="gemini-3.8-flash", out=str(tmp_path / "out"),
              cache_dir=str(tmp_path / "cache"), replay=False, max_tokens=900_000, limit=0, charts=1, no_cache=False,
-             skip_labels=False, batch=False, batch_timeout=1, embed=False)
+             skip_labels=False, batch=False, batch_timeout=1, embed=False, crosscheck=True,
+             shard_tokens=250_000, allow_fallback=False)
     a.update(kw)
     return Namespace(**a)
 
@@ -221,6 +230,8 @@ def test_pipeline_with_fake_gemini_verifies_and_computes_in_code(tmp_path, eps, 
     lab_regret = sum(mm["regret"] for mm in j["modes"])
     assert lab_regret <= total + 1e-6 and sum(mm["regret_share"] for mm in j["modes"]) <= 1 + 1e-6
     assert j["labels"]["source"] == "cached" and j["labels"]["n"] > 0
+    xc = j["crosscheck"]
+    assert xc and xc["modes"] and xc["primary_modes_recovered"] == 1 and xc["n_shards"] >= 1
     assert (out / "atlas.md").read_text().startswith("# Canary Failure Atlas")
     assert list((out / "atlas_charts").glob("*.png"))
     rows = [json.loads(x) for x in (tmp_path / "ledger.jsonl").read_text().splitlines()]
@@ -235,8 +246,14 @@ def test_pipeline_with_fake_gemini_verifies_and_computes_in_code(tmp_path, eps, 
     assert [m["regret_share"] for m in r2["modes"]] == [m["regret_share"] for m in r["modes"]]
 
 
-def test_deterministic_fallback_when_gemini_fails(tmp_path, eps, monkeypatch):
-    r = _run(tmp_path, eps, monkeypatch, FakeGenai(eps, fail=True), charts=0)
+def test_no_fallback_atlas_is_published_when_discovery_fails(tmp_path, eps, monkeypatch):
+    with pytest.raises(SystemExit):
+        _run(tmp_path, eps, monkeypatch, FakeGenai(eps, fail=True), charts=0)
+    assert not (tmp_path / "out" / "atlas.json").exists()
+
+
+def test_deterministic_fallback_only_on_request(tmp_path, eps, monkeypatch):
+    r = _run(tmp_path, eps, monkeypatch, FakeGenai(eps, fail=True), charts=0, allow_fallback=True)
     assert r["labels"]["source"] == "fallback"
     ids = {m["id"] for m in r["modes"]}
     assert "low_information_canary" in ids

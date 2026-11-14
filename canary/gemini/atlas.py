@@ -6,11 +6,12 @@ decisions and the solver regret, with every claim checked in code.
 
 Pipeline (each Gemini capability does real work; every call is in the ledger, feature="atlas"):
  1. long context   pack every episode (tool calls, result summaries, agent thought/message text, per-step solver
-                   regret + tags + solver top-suspect belief) into one prompt; models.count_tokens; discovery of a
-                   failure-mode taxonomy by --model in one call (sharded by family only above --max-tokens).
- 2. context cache  caches.create on --cache-model with the same corpus; many structured questions against it:
-                   per-step labels of every high-regret decision, cohort comparison, solver counterfactuals,
-                   thinking-level effects (when the corpus has several thinking levels).
+                   regret + tags + solver top-suspect belief) into one corpus (~800k tokens, models.count_tokens).
+ 2. context cache  caches.create on --cache-model with the whole corpus; discovery of the failure-mode taxonomy is a
+                   one-shot question over it, followed by many more: per-step labels of every high-regret decision,
+                   cohort comparison, solver counterfactuals, thinking-level effects. --crosscheck: --model
+                   (gemini-4-carbon, no explicit caching) independently re-reads the corpus in <=250k-token shards
+                   and merges; its modes are mapped onto the taxonomy. All long calls stream.
  3. multimodal     belief-trace PNG + transcript excerpt -> Gemini localises the divergence step; compared with
                    the code-computed divergence step.
  4. embeddings     gemini-embedding-2 on the agent's own words at high-regret steps; numpy k-means; Gemini names
@@ -38,7 +39,7 @@ from typing import Any
 from .atlas_data import (HIGH_REGRET, ROOT, Episode, behaviour_stats, excerpt, high_regret_steps, load_corpus, load_snapshot,
                          pack_corpus, save_snapshot, step_line)
 from .atlas_gemini import AtlasOps, ReplayMiss
-from .atlas_schema import (ClusterNames, Comparison, Counterfactuals, Divergence, SingleLabel, StepLabels,
+from .atlas_schema import (ClusterNames, Comparison, Counterfactuals, Divergence, ModeMap, SingleLabel, StepLabels,
                            Taxonomy, ThinkingEffects, Verifier, inline_schema, parse)
 
 DEFAULT_RUNS = ["data/runs/committed", "data/gemini/runs"]
@@ -198,35 +199,111 @@ class Atlas:
             self.tokens = len(self.text) // 4
         self.log(f"corpus: {len(self.eps)} episodes, {len(self.text):,} chars, {self.tokens:,} tokens ({self.model})")
 
-    def discover(self) -> Taxonomy:
-        q = ("COHORT STATS (computed in code):\n" + stats_table_text(self.cstats) + "\n\n"
-             "TASK. Read every episode above. Build a taxonomy of 4-8 mutually exclusive FAILURE MODES that explain "
-             "where these agents lose value against the reference solver. Ground each mode in the high-REGRET steps "
-             "and in the agent's own words (`says:`). For each mode give 3-8 evidence steps from different episodes "
-             "and cohorts where possible, each with a verbatim quote. Prefer modes that are about a decision "
-             "(how canaries are split, when to commit, whom to accuse, whom to restrict, what evidence to gather) "
-             "over generic ones. Do not estimate frequencies or regret: the program computes those.")
-        shards = [("all", self.text)]
-        if self.tokens > self.max_tokens:  # shard by family
-            fams = sorted({e.family for e in self.eps})
-            shards = [(f, pack_corpus([e for e in self.eps if e.family == f])[0]) for f in fams]
-        modes, summary = [], []
-        for name, text in shards:
-            t = self._gen(self.model, [text, q], Taxonomy, f"discover:{name}", system=SYSTEM)
-            if t:
-                modes += t.modes
-                summary.append(t.summary)
-        if not modes:
-            self.log("  discovery failed -> deterministic fallback taxonomy")
-            return fallback_taxonomy()
+    DISCOVER_Q = ("TASK. Read every episode above. Build a taxonomy of 4-8 mutually exclusive FAILURE MODES that "
+                  "explain where these agents lose value against the reference solver. Ground each mode in the "
+                  "high-REGRET steps and in the agent's own words (`says:`). For each mode give 3-8 evidence steps "
+                  "from different episodes and cohorts where possible, each with a verbatim quote. Prefer modes that "
+                  "are about a decision (how canaries are split, when to commit, whom to accuse, whom to restrict, "
+                  "what evidence to gather) over generic ones. Do not estimate frequencies or regret: the program "
+                  "computes those.")
+
+    @staticmethod
+    def _norm_tax(t: Taxonomy) -> Taxonomy:
         seen, uniq = set(), []
-        for m in modes:
+        for m in t.modes:
             mid = m.id.strip().lower().replace(" ", "_")[:40]
             if mid in seen or mid == "other":
                 continue
             seen.add(mid)
             uniq.append(m.model_copy(update={"id": mid}))
-        return Taxonomy(summary=" ".join(summary), modes=uniq[:10])
+        return Taxonomy(summary=t.summary, modes=uniq[:10])
+
+    def discover(self) -> Taxonomy | None:
+        """One-shot discovery over the WHOLE corpus as a question on the context cache (--cache-model)."""
+        q = "COHORT STATS (computed in code):\n" + stats_table_text(self.cstats) + "\n\n" + self.DISCOVER_Q
+        t = self._ask_cached(q, Taxonomy, "discover:cached")
+        return self._norm_tax(t) if t and t.modes else None
+
+    def shards(self, max_tokens: int = 250_000) -> list[tuple[str, list[Episode]]]:
+        """Cohorts packed greedily (family order) into shards of <= max_tokens; big cohorts split by episode."""
+        ratio = self.tokens / max(1, len(self.text))
+        cost = {e.id: len(self.blocks[e.id]) * ratio for e in self.eps}
+        by: dict[str, list[Episode]] = defaultdict(list)
+        for e in self.eps:
+            by[e.cohort].append(e)
+        out, cur, cur_t = [], [], 0.0
+        for c in sorted(by, key=lambda c: (by[c][0].family, c)):
+            for e in by[c]:
+                if cur and cur_t + cost[e.id] > max_tokens:
+                    out.append(cur)
+                    cur, cur_t = [], 0.0
+                cur.append(e)
+                cur_t += cost[e.id]
+        if cur:
+            out.append(cur)
+        return [(f"shard{i}:" + "+".join(sorted({e.cohort for e in sh})), sh) for i, sh in enumerate(out)]
+
+    def carbon_crosscheck(self, primary: Taxonomy, shard_tokens: int = 250_000) -> dict | None:
+        """Cross-check: --model (gemini-4-carbon, no explicit caching) reads the corpus in <=250k-token shards,
+        then merges the shard taxonomies in one call; flash maps the merged modes onto the primary taxonomy."""
+        shards = self.shards(shard_tokens)
+
+        def one(sh):
+            name, eps = sh
+            text, _ = pack_corpus(eps)
+            stats = stats_table_text(cohort_stats(eps))
+            contents = [text, "COHORT STATS (computed in code):\n" + stats + "\n\n" + self.DISCOVER_Q]
+            tag = f"discover:{self.model}:{name[:60]}"
+            # a default-thinking answer recorded by an earlier run is reused; new calls use LOW thinking, because
+            # at the default level gemini-4-carbon spent its whole 32k output budget thinking on a 300k shard
+            try:
+                r = self.ops.generate(self.model, contents, schema=inline_schema(Taxonomy), system=SYSTEM, tag=tag,
+                                      recorded_only=True)
+                t, _ = parse(r.get("text", ""), Taxonomy)
+                if t:
+                    return name, t
+            except ReplayMiss:
+                pass
+            return name, self._gen(self.model, contents, Taxonomy, tag, system=SYSTEM, thinking_level="low")
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            res = list(ex.map(one, shards))
+        got = [(n, t) for n, t in res if t and t.modes]
+        if not got:
+            return None
+        shard_json = json.dumps([{"shard": n, "summary": t.summary, "modes": [m.model_dump() for m in t.modes]}
+                                 for n, t in got], ensure_ascii=False)
+        merged = self._gen(self.model, [SYSTEM + "\n\nSHARD TAXONOMIES (each from a different slice of the corpus):\n"
+                                        + shard_json + "\n\nCOHORT STATS (computed in code):\n"
+                                        + stats_table_text(self.cstats) + "\n\nTASK. Merge these into ONE taxonomy "
+                                        "of 4-8 mutually exclusive failure modes. Keep evidence (episode, t, quote) "
+                                        "exactly as given; do not write new quotes."], Taxonomy,
+                           f"discover:{self.model}:merge")
+        if not merged:
+            return {"shards": [n for n, _ in got], "modes": [], "mapping": []}
+        merged = self._norm_tax(merged)
+        prim = "\n".join(f"- {m.id}: {m.name}. {m.description}" for m in primary.modes)
+        cand = "\n".join(f"- {m.id}: {m.name}. {m.description}" for m in merged.modes)
+        mp = self._gen(self.cache_model, ["PRIMARY TAXONOMY:\n" + prim + "\n\nSECOND TAXONOMY (independent "
+                                          "reading):\n" + cand + "\n\nFor each SECOND mode give the PRIMARY mode id "
+                                          "that describes the same failure, or 'none'."], ModeMap, "discover:map")
+        ids = {m.id for m in primary.modes}
+        pairs = [p.model_dump() for p in (mp.pairs if mp else []) if p.second_id in {m.id for m in merged.modes}]
+        for p in pairs:
+            if p["primary_id"] not in ids:
+                p["primary_id"] = "none"
+        covered = {p["primary_id"] for p in pairs if p["primary_id"] != "none"}
+        evid = []
+        for m in merged.modes:
+            for ev in m.evidence:
+                evid.append(self.verifier.check(ev.episode, ev.t, ev.quote, context=f"carbon:{m.id}"))
+        return {"model": self.model, "shards": [n for n, _ in got], "n_shards": len(shards),
+                "summary": merged.summary,
+                "modes": [{"id": m.id, "name": m.name, "description": m.description, "decision": m.decision}
+                          for m in merged.modes],
+                "mapping": pairs,
+                "primary_modes_recovered": len(covered), "primary_modes": len(ids),
+                "second_modes_matched": sum(1 for p in pairs if p["primary_id"] != "none"),
+                "quotes_verified": sum(e["verified"] for e in evid), "quotes_checked": len(evid)}
 
     # ---- 2. context cache
     def open_cache(self):
@@ -587,17 +664,30 @@ def run(args) -> dict:
     ops = AtlasOps(replay=args.replay, cache_dir=cache_dir)
     A = Atlas(eps, ops, args.model, args.cache_model, out, max_tokens=args.max_tokens)
     A.count()
-    tax = A.discover()
-    A.log(f"taxonomy: {[m.id for m in tax.modes]}")
     if not args.no_cache:
         A.open_cache()
+    tax = A.discover()
+    if tax is None:
+        if not args.allow_fallback:
+            A.log("discovery failed; refusing to publish a deterministic-fallback atlas (errors: "
+                  f"{A.errors[-3:]}). Rerun, or pass --allow-fallback for a non-Gemini draft.")
+            ops.delete_cache(A.cache_name)
+            raise SystemExit(2)
+        A.log("  discovery failed -> deterministic fallback taxonomy (--allow-fallback)")
+        tax = fallback_taxonomy()
+    A.log(f"taxonomy: {[m.id for m in tax.modes]}")
+    xcheck_pool = ThreadPoolExecutor(max_workers=2)
+    xcheck_f = xcheck_pool.submit(A.carbon_crosscheck, tax, args.shard_tokens) \
+        if args.crosscheck and args.model != args.cache_model else None
     labels_cached = A.label_cached(tax) if not args.skip_labels else {}
-    labels_batch = A.label_batch(tax, args.batch_timeout, cache_dir / "batch_state.json") \
+    # the Batch API job runs server-side while the cached questions and charts proceed
+    batch_f = xcheck_pool.submit(A.label_batch, tax, args.batch_timeout, cache_dir / "batch_state.json") \
         if args.batch else None
     comparison = A.compare(tax)
     cfs = A.counterfactuals()
     thinking = A.thinking(tax)
     loc = A.charts_and_localise(args.charts) if args.charts else []
+    labels_batch = batch_f.result() if batch_f is not None else None
     labels = labels_batch if labels_batch else labels_cached
     if not labels:
         labels = {(ep.id, s.t): {"mode": fallback_label(ep, s), "confidence": 1.0, "quote": step_line(s),
@@ -641,6 +731,13 @@ def run(args) -> dict:
         for f in thinking.findings:
             ev = [A.verifier.check(e.episode, e.t, e.quote, context="thinking") for e in f.evidence]
             think["findings"].append({**f.model_dump(exclude={"evidence"}), "quotes": [q for q in ev if q["verified"]]})
+    crosscheck = None
+    if xcheck_f is not None:
+        try:
+            crosscheck = xcheck_f.result()
+        except Exception as e:  # noqa: BLE001
+            A.errors.append(f"crosscheck: {type(e).__name__}: {str(e)[:200]}")
+    xcheck_pool.shutdown(wait=False)
     loc_n = [r for r in loc if "gemini_t" in r]
     result = {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "git_sha": git_sha(),
@@ -662,6 +759,9 @@ def run(args) -> dict:
         "localisation": {"rows": loc, "n": len(loc_n), "agree_within_3_steps": sum(bool(r.get("agrees")) for r in loc_n),
                          "rate": round(sum(bool(r.get("agrees")) for r in loc_n) / len(loc_n), 4) if loc_n else None},
         "clusters": clusters,
+        "crosscheck": crosscheck,
+        "discovery": {"mode": "one-shot over the whole corpus, as a question on the explicit context cache",
+                      "model": None if source == "fallback" else args.cache_model},
         "labels": {"source": source, "n": len(labels), "cached_n": len(labels_cached),
                    "batch_n": len(labels_batch) if labels_batch else 0,
                    "batch_vs_cached": label_agreement(labels_batch, labels_cached) if labels_batch else None,
@@ -694,7 +794,7 @@ def run(args) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--runs", nargs="+", default=DEFAULT_RUNS)
-    ap.add_argument("--model", default="gemini-4-carbon", help="long-context discovery model")
+    ap.add_argument("--model", default="gemini-4-carbon", help="cross-check reader (sharded long context)")
     ap.add_argument("--cache-model", default="gemini-3.8-flash",
                     help="model with createCachedContent for the cached questions, labels, batch, multimodal")
     ap.add_argument("--out", default=str(ROOT / "results" / "gemini"))
@@ -708,6 +808,11 @@ def main(argv=None) -> int:
     ap.add_argument("--batch", action="store_true", help="also label every high-regret step via the Batch API")
     ap.add_argument("--batch-timeout", type=float, default=1800)
     ap.add_argument("--embed", action="store_true", help="embedding clusters of the agents' words")
+    ap.add_argument("--crosscheck", action="store_true",
+                    help="independent --model reading in <= --shard-tokens shards + merge, mapped onto the taxonomy")
+    ap.add_argument("--shard-tokens", type=int, default=250_000)
+    ap.add_argument("--allow-fallback", action="store_true",
+                    help="write a deterministic (non-Gemini) atlas if discovery fails (never publish it)")
     a = ap.parse_args(argv)
     run(a)
     return 0

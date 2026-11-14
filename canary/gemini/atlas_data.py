@@ -107,6 +107,9 @@ def infer_version(path: str, meta: dict) -> str:
     for cand in ("v1.4", "v1.3", "v1.2"):
         if f"/{cand}/" in path or f"/{cand}-" in path:
             return cand
+    m = re.search(r"(?:^|[/_-])v1\.?([234])(?:$|[/_.-])", f"{path}/{meta.get('ladder_run', '')}")
+    if m:  # e.g. ~/agent-arena-data/gemini/ladder/ladder-v14/...
+        return f"v1.{m.group(1)}"
     return "v1.2"  # pre-versioned committed runs (README: v1.2 history)
 
 

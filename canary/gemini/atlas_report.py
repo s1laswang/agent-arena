@@ -25,11 +25,12 @@ def render_md(r: dict) -> str:
            f"*Gemini read every trajectory our agents produced and explained why they fail. Generated "
            f"{r['generated_at']} at `{r.get('git_sha', '')}`.*", "",
            "## At a glance", "",
-           f"- **Corpus:** {c['episodes']} episodes from {len(c.get('cohorts', []))} agent cohorts, "
-           f"**{c['tokens']:,} tokens in one long-context prompt** to `{r['models']['long_context']}`; "
-           f"the same corpus held in an explicit **context cache** on `{r['models']['cache']}` "
-           f"({c.get('cache_size_tokens', 0):,} tokens) and queried {sp.get('by_kind', {}).get('generate', 0)} times; "
-           f"**{c.get('cached_tokens', 0):,} input tokens served from cache**.",
+           f"- **One sitting, whole corpus:** {c['episodes']} episodes from {len(c.get('cohorts', []))} agent cohorts "
+           f"(**{c['tokens']:,} tokens**, counted with `count_tokens`) held in one explicit **context cache** on "
+           f"`{(r.get('discovery') or {}).get('model') or r['models']['cache']}` "
+           f"({c.get('cache_size_tokens', 0):,} tokens). Gemini discovered the failure modes in one read of the whole "
+           f"corpus, then answered {sp.get('by_kind', {}).get('generate', 0)} structured questions against the same "
+           f"cache; **{c.get('cached_tokens', 0):,} input tokens were served from cache**.",
            f"- **Every claim checked in code:** {v['quotes_checked']} Gemini quotes checked, "
            f"**{_pct(v['pass_rate'])} verbatim in the named episode** ({_pct(v['step_pass_rate'])} at the named step); "
            f"{v['dropped']} unverifiable quotes dropped. Regret shares and episode counts are computed from the "
@@ -123,6 +124,19 @@ def render_md(r: dict) -> str:
                     + (" *The solver's own posterior backed this wrong accusation (>= 0.5): misleading evidence, "
                        "not an agent error.*" if row.get("evidence_backed_wrong") else ""), "",
                     f"![{row['episode']}]({row['chart']})", ""]
+    xc = r.get("crosscheck")
+    if xc and xc.get("modes"):
+        out += ["## Independent re-reading by gemini-4-carbon (cross-check)", "",
+                f"`{xc['model']}` (no explicit caching on gemini-4) re-read the corpus in {xc['n_shards']} shards of "
+                f"<= 250k tokens and merged its shard taxonomies in one call. Mapped onto the atlas taxonomy, it "
+                f"recovered **{xc['primary_modes_recovered']}/{xc['primary_modes']}** of the atlas modes; "
+                f"{xc['second_modes_matched']}/{len(xc['modes'])} of its own modes match an atlas mode. Its quotes: "
+                f"{xc['quotes_verified']}/{xc['quotes_checked']} verbatim.", "",
+                "| carbon mode | maps to atlas mode |", "|---|---|"]
+        mp = {p["second_id"]: p["primary_id"] for p in xc.get("mapping", [])}
+        for m in xc["modes"]:
+            out.append(f"| {m['name']} (`{m['id']}`) | {mp.get(m['id'], 'none')} |")
+        out.append("")
     cl = r.get("clusters")
     if cl:
         out += ["## The agents' own words, clustered (embeddings)", "",
@@ -148,3 +162,12 @@ def render_md(r: dict) -> str:
     if r.get("errors"):
         out += ["<details><summary>Run notes</summary>", ""] + [f"- {e}" for e in r["errors"][:20]] + ["", "</details>", ""]
     return "\n".join(out)
+
+
+if __name__ == "__main__":  # re-render atlas.md from atlas.json: python -m canary.gemini.atlas_report [atlas.json]
+    import json
+    import sys
+    from pathlib import Path
+    src = Path(sys.argv[1] if len(sys.argv) > 1 else "results/gemini/atlas.json")
+    src.with_suffix(".md").write_text(render_md(json.loads(src.read_text())))
+    print(f"wrote {src.with_suffix('.md')}")

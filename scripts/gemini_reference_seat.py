@@ -1,8 +1,6 @@
 import argparse
-import asyncio
 import json
 import os
-import random
 import subprocess
 import sys
 import time
@@ -16,16 +14,9 @@ if os.environ.get("OFFLINE") == "1":
 from agents import gemini
 from agents.gemini_reference import make_gemini_procedure_team
 from agents.procedure import make_procedure_team
-from agents.sleeper_agent import SleeperAgent
-from lab.run import day_for
-from sleeper.company import World, tools_for
-from sleeper.mcp_server import build_server
+from scripts import frontier_day
 
 PRICE = {"in": float(os.environ.get("SLEEPER_PRICE_IN_PER_M") or 2.0), "out": float(os.environ.get("SLEEPER_PRICE_OUT_PER_M") or 12.0)}
-
-
-class Abort(Exception):
-    pass
 
 
 def commit():
@@ -37,47 +28,13 @@ def verify(state, seat):
     return json.loads(p.stdout.strip().splitlines()[-1])
 
 
+def spend():
+    u = gemini.usage()
+    return (u["in_tokens"] * PRICE["in"] + u["out_tokens"] * PRICE["out"]) / 1e6
+
+
 def play(seat, day_id, agent_for, out, max_calls=150, max_usd=2.0):
-    day, strategy, _, _ = day_for(day_id, seat)
-    team = make_procedure_team(day, seed=0)
-    if day.sleeper_seat and strategy:
-        team[day.sleeper_seat] = SleeperAgent(day.sleeper_seat, day.goal, strategy, random.Random(day_id), **({"ticks": day.ticks} if "ticks" in SleeperAgent.__init__.__code__.co_varnames else {}))
-    world = World(day)
-    Path(out).mkdir(parents=True, exist_ok=True)
-    state = Path(out) / f"reference-{seat}-s{day_id}-t0.state.json"
-    srv = build_server(world, seat, team, str(state))
-    tools = tools_for(seat)
-    st = {"calls": 0, "abort": None}
-    mcp = []
-
-    def call(name, args=None):
-        u = gemini.usage()
-        if st["calls"] >= max_calls:
-            st["abort"] = "max_calls"
-            raise Abort
-        if (u["in_tokens"] * PRICE["in"] + u["out_tokens"] * PRICE["out"]) / 1e6 >= max_usd:
-            st["abort"] = "max_usd"
-            raise Abort
-        st["calls"] += 1
-        try:
-            r = asyncio.run(srv.call_tool(name, args or {}))
-            res = r.structured_content if getattr(r, "structured_content", None) else json.loads(r.content[0].text)
-        except Exception as e:
-            res = {"ok": False, "error": "tool error: %s" % (e.__cause__ or e)}
-        mcp.append({"tool": name, "args": args or {}, "result": res})
-        return res
-
-    agent = agent_for(day, seat)
-    try:
-        while world.tick < world.last_tick and not st["abort"]:
-            t = world.tick
-            agent.turn(seat, {"tick": t, "seat": seat, "round": t}, tools, call)
-            if world.tick == t:
-                call("end_turn", {})
-    except Abort:
-        pass
-    srv.finish()
-    return state, st, mcp, agent
+    return frontier_day.play(seat, day_id, agent_for, out, max_calls, max_usd, spend)
 
 
 def run(model, seat="finance_ap", day_id=0, max_calls=150, max_usd=2.0, com=None, base=None):

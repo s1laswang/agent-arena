@@ -334,7 +334,7 @@ def analyse(ledger_obj, trace, transcript, crashed, probe, mole: str | None = No
 
 
 def run_once(args, i, outdir, server_module) -> dict:
-    seed = args.seed + i
+    seed = args.seed if args.same_seed else args.seed + i
     tdir = outdir / "transcripts"
     tdir.mkdir(parents=True, exist_ok=True)
     srv = Server(server_module, args.tier, seed, tdir / f"server-{i}.log", backend_env=args.kind == "envshim",
@@ -377,6 +377,7 @@ def main(argv=None):
     ap.add_argument("--tier", default="easy")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--runs", type=int, default=1)
+    ap.add_argument("--same-seed", action="store_true", help="every run uses --seed (default: seed+i)")
     ap.add_argument("--server", choices=["auto", "real", "envshim", "fake"], default="auto")
     ap.add_argument("--timeout", type=int, default=900)
     ap.add_argument("--model", default=None)

@@ -137,3 +137,11 @@
 - **WS4:** 44410 train and 44411 base eval running; 44412 waits for 44410 to finish OK.
 - **Disk (needs Silas):** after the 0.5B download, `~/agent-arena-data` = 11 GB (cap 10), /home 97%. The CEO-requested `rm` of `j3/` (unused, 1.1 GB) + J4 ckpt-200/400 (142 MB) was **denied by the session's permission classifier**, so nothing was deleted. sbatch suggests `/data/<user>`, but `/data/silas` is absent on the login node.
 - Fleet jobs (`fleet-*`) are Momin's; untouched.
+
+## 15:55 status — v3 prepared (not submitted)
+- **`train/grpo_investigator.py`** (decision-point GRPO from the v2 LoRA). Each prompt is one decision point of a solver episode on easy+medium **TRAIN** seeds (150000+; held-out/judge asserted untouched). The model samples 8 next tool calls; reward = **Env score** after the solver finishes the episode from there (invalid −1). Anti-collapse: group ≥ 8 (enforced), entropy bonus .01, k3 KL to the frozen v2 adapter .04, zero-variance groups masked, advantage std floor .1. 60% of states fall in the last 6 steps before the solver's accusation (the commit decision v2/J4 fails at).
+  - Verified (CPU dry run, 400 states): replay is exact (400/400 reproduce the solver score); reward: solver's own call .758, accuse-right-now .816, accuse-wrong −1.0, invalid −1.0.
+  - Verified (CPU, tiny random Qwen2 + LoRA): 2 GRPO steps end to end, adapters saved in the eval_hf layout.
+  - Untested on GPU. Estimate: ~35–45 s/step on a V100 → ~450–550 steps in 5.5 h.
+- **`fr8/v3_grpo.sbatch` + `fr8/v3_submit.sh`:** 2 jobs (seeds 0/1, 1 GPU each, `--time 7h`, training capped at 5.5 h), each with an afterok held-out fast eval n=30/tier (`--time 3h`). Submitted at 22:00 → training ends ~03:45 → evals done ~06:45.
+- **Gate (Silas via CEO):** submit only if the v2 eval 44412 shows no reward gain over base, after posting the plan to the CEO.

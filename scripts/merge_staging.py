@@ -73,7 +73,7 @@ def main(argv=None) -> int:
                          "status": ("complete" if not missing else f"INCOMPLETE: seeds {missing} not run (budget stop)")
                          + (f"; extension seeds {ext[0]}-{ext[-1]} as budget allowed: ran {[s for s in seeds if s in ext]}"
                             if ext else ""),
-                         "git_sha": shas[0] if len(shas) == 1 else shas, "smoke": False, "hint": None,
+                         "git_sha": shas[0] if shas else None, "git_shas": shas, "smoke": False, "hint": None,
                          "usage": usage, "pricing": PRICING,
                          "provenance": "scripts/budget_runner.py (one episode per process, budget-guarded), "
                                        "merged by scripts/merge_staging.py",

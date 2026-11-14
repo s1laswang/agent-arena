@@ -27,7 +27,7 @@ Honest reading: a gap on hard in the judges' harness (both the raw and the luck-
 
 The prompts and the 13 tools are byte-identical between the two harnesses (parity test). The planned set was seeds 0–9 per tier. Codex seed 10 (both tiers) and in-process medium seed 8 / hard seed 7 were in flight when spend was held at 11:16 and were allowed to finish. In-process medium 9 and hard 8–9 were never run (held: the remaining budget goes to v1.4).
 
-Reproduce (no keys): `python scripts/paired_v13.py --seeds 0-19` (table below), `python -m canary.analysis.gap --runs data/runs/committed/v1.3`, `python -m canary.analysis.tags|accuse --runs data/runs/committed/v1.3/<run>`, `python scripts/regret_report.py <episodes.jsonl> ...` → `results/regret_{codex-gpt-5.5-full,gpt-5.5-full}-v1.3.md`.
+Reproduce (no keys): `python scripts/paired_v13.py --seeds 0-19` (table below), `python -m canary.analysis.gap --runs data/runs/committed/v1.3`, `python -m canary.analysis.tags|accuse --runs data/runs/committed/v1.3/<run>`, `python scripts/regret_report.py <episodes.jsonl> ...` → `results/history/regret_{codex-gpt-5.5-full,gpt-5.5-full}-v1.3.md`.
 
 ### Paired table (all episodes run; `data/runs/committed/v1.3/paired_table.md`)
 | tier | run | n | score ± 95% CI | accuracy | accused | mean P(accused) at accusation | solver, same seeds | **frontier / solver [95% CI]** | paired diff ± CI | luck-adjusted score | luck-adj. / solver |

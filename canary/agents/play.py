@@ -39,6 +39,12 @@ def main(argv=None, client=None) -> Path:
     ap.add_argument("--hint", default=None)
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--max-turns", type=int, default=40)
+    ap.add_argument("--context", choices=["full", "window"], default="full",
+                    help="full (default): whole transcript; window: legacy last-N turns + truncated tool results")
+    ap.add_argument("--reasoning-effort", default=None,
+                    help="openai reasoning effort (default: medium = Codex's default for gpt-5.5)")
+    ap.add_argument("--api", choices=["responses", "chat"], default=None,
+                    help="openai API (default: responses for gpt-5*/o*, else chat)")
     ap.add_argument("--smoke", action="store_true", help="tag meta.json smoke=true (small models / quick checks)")
     ap.add_argument("--fake", action="store_true", help="use tests/fake_env.FakeEnv (testing only)")
     a = ap.parse_args(argv)
@@ -47,24 +53,33 @@ def main(argv=None, client=None) -> Path:
     out = Path(a.out) if a.out else Path("data/runs") / run_id(a.agent, a.tier)
     w = RunWriter(out)
     provider, model = split_spec(a.agent)
+    from canary.agents.llm_policy import DEFAULT_REASONING_EFFORT
+    effort = a.reasoning_effort or DEFAULT_REASONING_EFFORT
+    api_used = None
     total = {"in": 0, "out": 0, "cost_usd": 0.0, "calls": 0}
     for seed in seeds:
         env = make_env(a.tier, seed, a.fake)
-        pol = LLMPolicy(a.agent, hint=a.hint, temperature=a.temperature, max_turns=a.max_turns, client=client)
+        pol = LLMPolicy(a.agent, hint=a.hint, temperature=a.temperature, max_turns=a.max_turns, client=client,
+                        context=a.context, reasoning_effort=effort, api=a.api)
         try:
             res = run_episode(env, pol, pol.name)
         except Exception as e:  # keep the run going; record the failure
             print(f"seed {seed}: error {e!r}", file=sys.stderr)
             res = env.result(pol.name)
             res.end_reason, res.meta = "error", {**res.meta, "error": repr(e)}
-        res.meta = {**(res.meta or {}), "usage": pol.usage, "hint": a.hint}
+        api_used = getattr(pol._client, "api", api_used)
+        res.meta = {**(res.meta or {}), "usage": pol.usage, "hint": a.hint, "context": a.context,
+                    "reasoning_effort": effort if provider == "openai" else None, "api": api_used}
         w.episode(res)
         w.transcript(seed, pol.transcript)
         for k in total:
             total[k] += pol.usage.get(k, 0)
         print(f"seed {seed}: score={res.score:.3f} correct={res.correct} accused={res.accused} day={res.final_day}")
     w.meta({"agent": a.agent, "model": model, "provider": provider, "git_sha": git_sha(), "tier": a.tier,
-            "seeds": seeds, "hint": a.hint, "usage": total, "fake_env": a.fake, "smoke": bool(a.smoke or a.fake)})
+            "seeds": seeds, "hint": a.hint, "usage": total, "fake_env": a.fake, "smoke": bool(a.smoke or a.fake), "context": a.context,
+            "reasoning_effort": effort if provider == "openai" else None,
+            "reasoning_effort_source": "default: Codex 0.167 models catalog default_reasoning_level for gpt-5.5" if not a.reasoning_effort else "cli",
+            "api": api_used or a.api, "max_turns": a.max_turns if a.context == "window" else None})
     print(f"wrote {out}")
     return out
 

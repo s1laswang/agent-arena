@@ -19,12 +19,17 @@ HINTS: dict[str, str] = {
     "no_accusation": "The episode scores zero unless you accuse someone before it ends.",
 }
 NUDGE = "Please call a tool now (for example status, or accuse when you are confident)."
-TOOL_RESULT_CHARS = 2000
+TOOL_RESULT_CHARS = 2000   # only used by context="window"
+WINDOW_TURNS = 40          # only used by context="window"
+# Default reasoning effort = what Codex uses for gpt-5.5 by default: models_cache.json in Codex 0.167
+# lists default_reasoning_level "medium" for gpt-5.5 (our Codex runs ignore the user config).
+DEFAULT_REASONING_EFFORT = "medium"
+CONTEXTS = ("full", "window")
 
 
-def _get_client(spec: str):
+def _get_client(spec: str, **kw):
     from canary.llm import get_client  # lazy: provider layer built in parallel
-    return get_client(spec)
+    return get_client(spec, **kw)
 
 
 def build_system_prompt(instruction: str, hint: str | None = None) -> str:
@@ -38,8 +43,16 @@ def build_system_prompt(instruction: str, hint: str | None = None) -> str:
 
 class LLMPolicy:
     def __init__(self, spec: str, hint: str | None = None, temperature: float = 0.0,
-                 max_turns: int = 40, client: Any = None, max_tokens: int | None = None):
+                 max_turns: int = WINDOW_TURNS, client: Any = None, max_tokens: int | None = None,
+                 context: str = "full", reasoning_effort: str | None = DEFAULT_REASONING_EFFORT,
+                 api: str | None = None):
+        """context="full" (default): the whole transcript, every tool result in full.
+        context="window": legacy lossy mode (system + last `max_turns` assistant turns, older tool
+        results cut to TOOL_RESULT_CHARS). reasoning_effort/api are passed to openai:* clients only."""
+        if context not in CONTEXTS:
+            raise ValueError(f"context must be one of {CONTEXTS}")
         self.spec, self.hint, self.temperature, self.max_turns, self.max_tokens = spec, hint, temperature, max_turns, max_tokens
+        self.context, self.reasoning_effort, self.api = context, reasoning_effort, api
         self.name = spec if not hint else f"{spec}+hint:{hint}"
         self._client = client
         self.reset([], "")
@@ -47,7 +60,12 @@ class LLMPolicy:
     @property
     def client(self):
         if self._client is None:
-            self._client = _get_client(self.spec)
+            kw = {}
+            if self.spec.startswith("openai"):
+                kw = {"reasoning_effort": self.reasoning_effort}
+                if self.api:
+                    kw["api"] = self.api
+            self._client = _get_client(self.spec, **kw)
         return self._client
 
     def reset(self, tools_spec: list[dict], instruction: str) -> None:
@@ -70,6 +88,8 @@ class LLMPolicy:
         self._seen = len(history)
 
     def _context(self) -> list[dict]:
+        if self.context == "full":
+            return list(self.transcript)
         body = self.transcript[1:]
         # keep the last max_turns assistant turns (+ their tool results); start on an assistant/user msg
         idx = [i for i, m in enumerate(body) if m["role"] == "assistant"]
@@ -98,6 +118,9 @@ class LLMPolicy:
             cid = getattr(tc, "id", None) or f"call_{self._n}_{i}"
             calls.append({"id": cid, "name": tc.name, "args": dict(tc.args or {})})
         msg = {"role": "assistant", "content": resp.text or ""}
+        items = getattr(resp, "provider_items", None)
+        if items:  # opaque provider output (e.g. Responses API reasoning items), replayed next turn
+            msg["provider_items"] = items
         if calls:
             msg["tool_calls"] = calls
         self.transcript.append(msg)

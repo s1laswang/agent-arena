@@ -131,7 +131,7 @@ def test_openai_conversion_and_parsing():
 def test_openai_temperature_handling():
     from canary.llm.openai_backend import OpenAIClient
     fake = FakeOpenAI([oa_resp(content="hi")])
-    OpenAIClient("gpt-5-mini", sdk_client=fake).chat([{"role": "user", "content": "q"}], temperature=0.5)
+    OpenAIClient("gpt-5-mini", sdk_client=fake, api="chat").chat([{"role": "user", "content": "q"}], temperature=0.5)
     assert "temperature" not in fake.requests[0]
     err = Exception("Unsupported value: 'temperature' does not support 0.0")
     err.status_code = 400

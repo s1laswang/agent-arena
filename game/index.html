@@ -3,41 +3,178 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Canary: catch the mole</title>
+<title>Canary: Catch the Mole (Benchmark Game)</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
 </head>
 <body>
 <header>
-  <h1>Canary <span>catch the mole</span></h1>
-  <p class="sub">You are the head of security. One employee is leaking documents and every leak costs the company value.
-     Plant canaries, watch the leak feed, and accuse exactly once. This page runs the real benchmark environment in your browser.</p>
+  <div class="header-main">
+    <div class="brand">
+      <span class="canary-icon">🐦</span>
+      <div>
+        <h1>Canary <span class="badge">Catch the Mole</span></h1>
+        <p class="sub">Head of Security Simulator · Real RL Benchmark in Pyodide</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span class="chip">Tiers <strong id="ver">v1.4</strong></span>
+      <span class="chip">Medium Tier</span>
+      <span class="chip" id="turnIndicator">Ready</span>
+    </div>
+  </div>
+
+  <!-- Interactive Onboarding & 10-Minute Field Guide -->
+  <details class="card guide-card" id="fieldGuide" open>
+    <summary><strong>📖 10-Minute Field Guide (How to Play & Win)</strong> <span class="guide-toggle muted">Click to toggle</span></summary>
+    <div class="guide-grid">
+      <div class="guide-step">
+        <div class="step-num">1</div>
+        <h4>Survey the Board</h4>
+        <p>Check <code>status</code> and <code>list_employees</code>. You start with Value <strong>V = 1.00</strong>. Every leaked document costs 0.04 V. Daily budget: 8 actions.</p>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">2</div>
+        <h4>Plant Canary Traps</h4>
+        <p>Use <code>plant_canary</code> to distribute distinct marked document variants (<strong>A, B, C</strong>) across suspect groups. Click "Quick 3-Way Split" for instant cohort generation!</p>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">3</div>
+        <h4>Advance & Track</h4>
+        <p>Advance days with <code>advance_day</code>. Leaks take 1–3 days to surface. Check <code>check_leak_feed</code> to see which variant leaked and eliminate innocent cohorts.</p>
+      </div>
+      <div class="guide-step">
+        <div class="step-num">4</div>
+        <h4>Accuse with Confidence</h4>
+        <p>Accuse <strong>once</strong> when narrowed down. Correct = remaining <strong>+V</strong>. Wrong = <strong>-1.00</strong>! Unsure on Day 14? Abstaining (0.00) beats guessing!</p>
+      </div>
+    </div>
+    <div class="guide-warnings">
+      <span class="warn-pill">⚠️ <strong>The Decoy:</strong> One angry employee vents in chat messages—they are innocent!</span>
+      <span class="warn-pill">⚠️ <strong>Framing:</strong> The mole fabricates after-hours access logs. Logs alone mislead.</span>
+      <span class="warn-pill">⚠️ <strong>Careful Mole:</strong> Don't send traps to the whole company at once; the mole will evade.</span>
+    </div>
+  </details>
 </header>
 
 <main>
-  <section id="start" class="card">
-    <label>Seed (public dev seeds 3000–9999, medium tier)
-      <input id="seed" type="number" min="3000" max="9999" step="1">
-    </label>
-    <button id="startBtn" disabled>Loading the environment…</button>
-    <p id="loadMsg" class="muted"></p>
+  <!-- Game Launch Card -->
+  <section id="start" class="card launch-card">
+    <div class="launch-inner">
+      <div class="seed-control">
+        <label for="seed"><strong>Investigation Seed</strong> (Public dev seeds 3000–9999)
+          <span class="muted">Each seed deterministically generates a unique company, personnel, and mole.</span>
+        </label>
+        <div class="seed-input-row">
+          <input id="seed" type="number" min="3000" max="9999" step="1" value="3000">
+          <button type="button" id="randomSeedBtn" class="btn-secondary" title="Roll Random Seed">🎲 Random</button>
+        </div>
+      </div>
+      <div class="launch-actions">
+        <button id="startBtn" disabled class="btn-primary">Loading Python Runtime…</button>
+        <p id="loadMsg" class="muted">Initializing Pyodide sandbox and loading the real <code>canary</code> benchmark package…</p>
+      </div>
+    </div>
   </section>
 
+  <!-- Main Active Game Screen -->
   <section id="game" hidden>
-    <details class="card" id="rulesBox"><summary>Rules (exactly what the AI agents are told)</summary><pre id="rules"></pre></details>
+    <!-- Live Status HUD (Updated without making tool calls) -->
+    <div class="hud card" id="hudBar">
+      <div class="hud-item">
+        <span class="hud-label">CALENDAR</span>
+        <span class="hud-val" id="hudDay">Day 1 <small>/ 14</small></span>
+        <div class="progress-bar"><div class="progress-fill" id="hudDayFill" style="width: 7.1%;"></div></div>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">COMPANY VALUE</span>
+        <span class="hud-val val-green" id="hudV">V = 1.000</span>
+        <span class="hud-sub" id="hudVNote">No surfaced leaks</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">DAILY ACTIONS</span>
+        <span class="hud-val" id="hudDailyCalls">8 / 8</span>
+        <span class="hud-sub">calls left today</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">TOTAL BUDGET</span>
+        <span class="hud-val" id="hudTotalCalls">300</span>
+        <span class="hud-sub" id="hudCallsSpent">0 calls spent</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">SURFACED LEAKS</span>
+        <span class="hud-val val-amber" id="hudLeaksCount">0</span>
+        <span class="hud-sub">at rival firm</span>
+      </div>
+      <div class="hud-item hud-cta">
+        <button type="button" id="hudAdvanceBtn" class="btn-advance" title="End day and advance to tomorrow">⏩ Advance Day</button>
+      </div>
+    </div>
+
+    <!-- Collapsible Environment Contract / Rules -->
+    <details class="card" id="rulesBox">
+      <summary><strong>📜 Full Benchmark Contract (Instruction Prompt Given to AI Agents)</strong></summary>
+      <pre id="rules"></pre>
+    </details>
+
+    <!-- Main Workspace Layout -->
     <div class="layout">
-      <div id="tools"></div>
+      <!-- Left Column: Operations, Tools & Suspect Roster -->
+      <div class="ops-column">
+        <!-- Interactive Suspect Board & Directory -->
+        <div class="card roster-card" id="rosterCard">
+          <div class="card-head">
+            <h3>👥 Suspect Directory (<span id="rosterCount">20</span> Personnel)</h3>
+            <span class="muted">Click an employee to select them</span>
+          </div>
+          <div id="rosterPlaceholder" class="muted">Call <code>list_employees</code> to populate personnel profiles.</div>
+          <div id="rosterList" class="roster-grid" hidden></div>
+        </div>
+
+        <!-- Investigation Tools Control Panel -->
+        <div class="card tools-panel">
+          <div class="tools-header">
+            <h3>🛠️ Security Console</h3>
+            <div class="tool-tabs" id="toolTabs">
+              <button type="button" class="tab-btn active" data-tab="all">All Tools</button>
+              <button type="button" class="tab-btn" data-tab="intel">🔍 Intel</button>
+              <button type="button" class="tab-btn" data-tab="traps">🐦 Canaries</button>
+              <button type="button" class="tab-btn" data-tab="ops">⏱️ Turns</button>
+              <button type="button" class="tab-btn tab-danger" data-tab="accuse">🚨 Accuse</button>
+            </div>
+          </div>
+          <div id="tools"></div>
+        </div>
+      </div>
+
+      <!-- Right Column: Formatted Investigation Log -->
       <div class="card" id="logBox">
-        <div class="logHead"><h2>Investigation log</h2><span id="calls">0 tool calls</span></div>
+        <div class="logHead">
+          <div>
+            <h2>📋 Investigation Feed</h2>
+            <span class="muted">Chronological record of findings & telemetry</span>
+          </div>
+          <div class="log-actions">
+            <span id="calls" class="chip">0 tool calls</span>
+            <button type="button" id="clearLogViewBtn" class="btn-small" title="Reset scroll position">Top</button>
+          </div>
+        </div>
         <div id="log"></div>
       </div>
     </div>
   </section>
 
-  <section id="reveal" class="card" hidden></section>
+  <!-- Game Reveal & Benchmark Comparison Screen -->
+  <section id="reveal" class="card end-card" hidden></section>
 </main>
 
-<footer class="muted">Canary · Junction 2026 · the environment, rules and scores are the same code as the benchmark (<code>canary</code> package, tiers <span id="ver">?</span>).</footer>
+<footer class="muted">
+  <div class="footer-inner">
+    <span>Canary · Junction 2026 · AfterQuery "Break the Agent" & DeepMind "Gemini API" Challenge</span>
+    <span>Runs real <code>canary</code> package v1.4 with Pyodide sandbox parity.</span>
+  </div>
+</footer>
+
 <script src="app.js"></script>
 </body>
 </html>

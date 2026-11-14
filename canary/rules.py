@@ -105,7 +105,8 @@ TIERS_V13: dict[str, TierParams] = {
 }
 # Frozen history: tiers v1.2. v1.2 -> v1.3 (02a6ee9) changed only KNOWN_V_MODE, i.e. which V the agent is SHOWN;
 # TIERS and scoring were untouched. So v1.2 episodes replay and re-grade under the v1.3 params, with
-# KNOWN_V_MODE=False (tiers_version below). Checked by the anti-cheat replay: all 300 committed v1.2 episodes
+# KNOWN_V_MODE=False (tiers_version below). Checked by the anti-cheat replay: all 300 replayable committed v1.2 episodes (of 310; the other 10 are grok runs on
+# secret-keyed judge seeds)
 # (gpt-5.5, codex-gpt-5.5, opencode-gpt-5.6-sol, reference) re-grade to their recorded score and accused id.
 TIERS_V12: dict[str, TierParams] = TIERS_V13
 KNOWN_V_MODE_HISTORY: dict[str, bool] = {"v1.2": False, "v1.3": True}

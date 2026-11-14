@@ -221,8 +221,8 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError as exc:
             print(f"canary.eval: {exc}", file=sys.stderr)
             return 2
-        reproduce(a.repro_seeds, out)
-        return 0
+        res = reproduce(a.repro_seeds, out)
+        return 1 if res.get("anticheat_ok") is False else 0   # an anti-cheat failure fails `make reproduce`
     tiers = list(TIERS) if a.tier == "all" else [a.tier]
     try:
         seeds = parse_seeds(a.seeds)

@@ -237,3 +237,8 @@ def test_key_check_needs_key(monkeypatch, capsys):
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
     assert kc.main(1) == 2
+
+
+def test_bank_swap_still_blocked_with_compaction(monkeypatch):
+    monkeypatch.setenv("SLEEPER_COMPACT", "1")
+    test_bank_swap_naive_approve_blocked(monkeypatch)

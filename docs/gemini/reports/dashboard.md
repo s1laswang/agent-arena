@@ -29,10 +29,10 @@
 
 **Done**
 - Background loop checked after the 15:35–17:30 outage: it survived and exited on its timer at 17:38. Rebuilt by hand at 18:23.
-- `results/gemini/dashboard.html` (122 KB) built from the real ledger (`--ledger auto`, 11,187 calls) + G2 `ladder.json` (18:21, 125 episodes / 29 cells)
-  + G4 `swarm.json` (18:20, 35 attacks) + G1 `gateway_bench.json`. Atlas has no committed `atlas.json` yet, so it shows "pending".
-- Ledger totals at 18:23: 11,187 calls, 251M input / 0.49M output / 4.39M thinking / 204M cached tokens, $88.75 list, 0.77% errors,
-  p50 3.0 s / p95 25 s, 10 models, 8 features.
+- The 18:23 build was a 122 KB `dashboard.html` from the ledger then (`--ledger auto`, build log 11,187 calls) + G2 `ladder.json` (18:21, 125 episodes / 29 cells)
+  + G4 `swarm.json` (18:20, 35 attacks) + G1 `gateway_bench.json`.
+- The `dashboard.html` in this tree is the later rebuild. It embeds 15,757 calls and $146.0212 ($146.02; quote these), 411M input / 0.93M output / 6.75M thinking / 340M cached tokens (82.7%),
+  p50 3.38 s / p95 30.13 s, 11 models, 12 features. The 18:23 build log's 11,187 calls and $88.75 is not this file.
 - Swarm panel follows G4's new semantics. The headline is the **best unjustified score** (+0.000 on hard vs solver +0.602), and the 1 honest
   detective win (+0.90 on medium, accusation justified by public evidence) is shown hollow and excluded. The strip plots score − solver on
   the same seed, so hard and medium share one axis. 0 exploits; 5 regression tests.

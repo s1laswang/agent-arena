@@ -10,7 +10,7 @@ A fictional company has a **mole** leaking secrets, and every leak costs company
 ## Status vs the rubric (CEO estimate ≈ 79/100; bake-off 2 gave 70 before the latest work)
 | Criterion | Now | Evidence | Missing |
 |---|---|---|---|
-| Gap (30) | ~17 | v1.2 gpt-5.5 86–87%; v1.3 Codex 55% medium / 106% hard; v1.4 gemini-4-carbon OpenCode hard 58% (n=9, CI to 107%); Harbor judge path: Gemini 0.50 vs oracle 0.76 (6/6 below) | gemini-4-carbon v1.4 at n ≥ 30 per tier with a CI excluding parity (running) |
+| Gap (30) | ~17 | v1.2 gpt-5.5 86–87%; v1.3 Codex 55% medium / 106% hard; v1.4 gemini-4-carbon OpenCode hard 58% (n=9, CI to 107%); Harbor judge path (6 tasks, one run each): gemini-4-carbon 0.50 vs oracle 0.76, below on 6/6 (paired diff 0.25, 95% t-interval [−0.07, +0.58]; sign test p = 0.03 two-sided) | gemini-4-carbon v1.4 at n ≥ 30 per tier with a CI excluding parity (running) |
 | Difficulty (30) | ~25 | premature accusation ≈ 97% of tagged loss; no agent ever abstains; skill ladder; rules all in the instructions | hint ablations, human playtests |
 | Integrity (25) | ~23 | anti-cheat battery in `make reproduce` (13 probes, stop-early ladder = 0, control, 299 replays); `make hunt` = 0; real Harbor boot, isolation 11/11 | Harbor cheat-solution run; an external judge hunt on the final tip |
 | Craft (15) | ~14 | `make reproduce` in seconds, keyless; version-grouped replay; CI; browser game identical to Python; 571 tests | final refresh on the submit commit |

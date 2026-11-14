@@ -5,7 +5,7 @@ TIER ?= all
 SEEDS ?= dev20
 UV := uv run --python 3.12 --extra dev --extra llm --extra plot
 
-.PHONY: play setup test eval reproduce reproduce-update worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 fr8-pull mcp hunt game game-serve
+.PHONY: play setup test eval reproduce reproduce-update worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 forge-gemini fr8-pull mcp hunt game game-serve
 
 setup:            ## install deps (needs uv: curl -LsSf https://astral.sh/uv/install.sh | sh)
 	@command -v uv >/dev/null 2>&1 || { echo "make setup: uv not found. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh  (then open a new shell)"; exit 127; }
@@ -23,11 +23,13 @@ reproduce:        ## [HARNESS] judge table on the frozen judge seeds (no keys) -
 reproduce-update: ## [HARNESS] team only: rerun reproduce and overwrite the committed results/judge_table.md, judge_episodes.jsonl, gap_chart.png
 	$(UV) python -m canary.eval --reproduce --update-committed
 
-mcp:              ## [HARNESS] run the MCP env server (streamable HTTP). CANARY_TIER/SEED/LEDGER_TOKEN are moved into 0600 files (CANARY_EPISODE_FILE), never left in the server env
+mcp:              ## [HARNESS] run the MCP env server (streamable HTTP). CANARY_TIER/SEED/LEDGER_TOKEN are moved into 0600 files (CANARY_EPISODE_FILE), never left in the server env. If 8765 is busy and MCP_PORT/CANARY_PORT is unset, bind the next free port.
 	@umask 077; d=$$(mktemp -d); \
 	printf '{"tier": "%s", "seed": %s}' "$${CANARY_TIER:-easy}" "$${CANARY_SEED:-900000}" > $$d/episode.json; \
 	if [ -n "$${CANARY_LEDGER_TOKEN:-}" ]; then printf %s "$$CANARY_LEDGER_TOKEN" > $$d/ledger_token; export CANARY_LEDGER_TOKEN_FILE=$$d/ledger_token; fi; \
-	exec env -u CANARY_TIER -u CANARY_SEED -u CANARY_LEDGER_TOKEN CANARY_EPISODE_FILE=$$d/episode.json $(UV) python -m canary.mcp_server
+	port=$$(python3 scripts/mcp_port.py) || exit $$?; \
+	echo "canary MCP http://127.0.0.1:$$port/mcp"; \
+	exec env -u CANARY_TIER -u CANARY_SEED -u CANARY_LEDGER_TOKEN CANARY_EPISODE_FILE=$$d/episode.json CANARY_PORT=$$port $(UV) python -m canary.mcp_server
 
 game:             ## [HARNESS] build the static browser game (real canary package in Pyodide) into game/site/
 	$(UV) python game/build.py
@@ -62,6 +64,15 @@ fr8-j3:           ## [FR8] J3 SFT data (8 cores). Keep total <=24: ARGS="--depen
 
 fr8-j5:           ## [FR8] J5 Mole Forge, stub LLM (8 cores)
 	bash fr8/submit.sh j5 $(ARGS)
+
+FORGE_MODEL ?= gemini-3.8-flash
+FORGE_OUT ?= data/forge/gemini-live-$(FORGE_MODEL)
+forge-gemini:     ## [GEMINI] live Mole Forge with the Gemini mutator (needs GEMINI_API_KEY). FORGE_GENS=8 FORGE_POP=12
+	$(UV) python -m canary.forge.evolve --mutator gemini:$(FORGE_MODEL) --tier hard --pop $(or $(FORGE_POP),12) \
+	  --gens $(or $(FORGE_GENS),8) --seeds 0-11 --workers 8 --out $(FORGE_OUT)
+	@tail -n 1 $(FORGE_OUT)/log.jsonl | python -c "import json,sys; l=json.load(sys.stdin); s=l['mutator_stats']; \
+	  print('FORGE', l['mutator'], 'gen', l['gen'], 'best', l['best_fitness'], 'feasible', l['feasible_share'], 'stats', s); \
+	  sys.exit(0 if s and s['llm_children'] > 0 else 'FORGE: no Gemini-written children (all stub); not a Gemini run')"
 
 fr8-pull:         ## [FR8] make fr8-pull JOB=j1 -> data/fr8/j1/
 	bash fr8/pull.sh $(JOB)

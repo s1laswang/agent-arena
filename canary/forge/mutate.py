@@ -249,6 +249,16 @@ class LLMMutator:
         self.temperature = temperature
         self.n_invalid = 0
         self.n_valid = 0
+        self.n_calls = 0       # LLM calls attempted
+        self.n_errors = 0      # calls that raised (network, quota, parse): those children all came from the stub
+        self.n_fallback = 0    # children backfilled by the stub
+
+    def stats(self) -> dict:
+        """Provenance of every child so far: a 'Gemini forge run' only counts if llm_children > 0."""
+        total = self.n_valid + self.n_fallback
+        return {"llm_calls": self.n_calls, "llm_errors": self.n_errors, "llm_children": self.n_valid,
+                "llm_invalid": self.n_invalid, "stub_children": self.n_fallback,
+                "llm_share": round(self.n_valid / total, 4) if total else 0.0}
 
     def reseed(self, gen: int) -> None:
         self.fallback.reseed(gen)
@@ -271,11 +281,13 @@ class LLMMutator:
 
     def propose(self, parents: list[dict], n: int) -> list[dict]:
         children: list[dict] = []
+        self.n_calls += 1
         try:
             resp = self.client.chat(self.prompt(parents, n), temperature=self.temperature,
                                     response_schema=RESPONSE_SCHEMA)
             raw = json.loads(resp.text).get("children", [])
         except Exception:  # noqa: BLE001  network/parse failure -> full stub fallback
+            self.n_errors += 1
             raw = []
         for c in raw:
             if len(children) >= n:
@@ -286,6 +298,7 @@ class LLMMutator:
             except (ValueError, TypeError, AttributeError):
                 self.n_invalid += 1
         if len(children) < n:
+            self.n_fallback += n - len(children)
             children += self.fallback.propose(parents, n - len(children))
         return children
 
@@ -293,5 +306,9 @@ class LLMMutator:
 def get_mutator(spec: str, seed: int = 0) -> Mutator:
     if spec == "stub":
         return StubMutator(seed)
+    if spec.partition(":")[0] == "gemini":
+        # ledgered, so live forge calls show up in the usage dashboard as feature="mole_forge"
+        from canary.gemini.ledger import lab_client
+        return LLMMutator(lab_client(spec, feature="mole_forge"), seed=seed)
     from canary.llm import get_client
     return LLMMutator(get_client(spec), seed=seed)

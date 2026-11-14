@@ -1,6 +1,6 @@
 # Canary: catch the mole
 
-[![CI](https://github.com/s1laswang/agent-arena/actions/workflows/ci.yml/badge.svg?branch=justSilas)](https://github.com/s1laswang/agent-arena/actions/workflows/ci.yml)
+[![CI](https://github.com/s1laswang/agent-arena/actions/workflows/ci.yml/badge.svg?branch=gemini-track)](https://github.com/s1laswang/agent-arena/actions/workflows/ci.yml)
 
 An RL environment for AfterQuery's **Break the Agent** (Junction 2026).
 
@@ -111,7 +111,7 @@ Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium
 
 We attacked our own reward 42 times before the judges did, including real-server hunts by a Codex attacker and an external Grok judge run. Every attempt is logged in [docs/EXPLOITS.md](docs/EXPLOITS.md), and every closed exploit and every probe that held has a regression test. The one exception is #32, an inconclusive hunt that moderation cut off; its attack class is covered by the #24 and #27 tests.
 
-**Anti-cheat battery (runs in `make reproduce`):** on the same judge seeds and world secret as the table, `make reproduce` also runs 13 scripted cheats (do-nothing, stop-early, random, restrict-all, probe-all, accuse the decoy, accuse the heaviest log user, garbage arguments on every tool, accusing everyone in sequence and from parallel threads, accusing after the end, burning the call cap, one canary variant per person), a **stop-early ladder** (the solver itself cut at 25/50/75% of its calls, and the solver without its final accuse), 7 **plus probes** (the solver with one extra step before its accusation: restrict everyone else, unrestrict spam, interview everyone, read spam, wait a day, accuse twice, a per-person canary) and a **control** (the solver, then every remaining call padded with reads). It prints probe → mean → blocked and writes `results/latest/exploits.json`. Every attack averages ≤ 0, every ladder episode scores exactly 0, no plus probe beats the solver on any seed, no episode ever accepts two accusations, and the control equals the solver on every seed. Every committed episode is also re-played on a fresh Env and re-graded: 579 of 589, all identical (only the 10 grok episodes on secret-keyed judge seeds cannot be re-played). Every committed Harbor trial must agree with itself: Harbor's reward = `reward.txt` = the sidecar ledger, the score follows from the ledger's own accusation, and the agent's trajectory names the same person (22 of 22). The last line of `make reproduce` says `ANTI-CHEAT: ...` in plain words. `tests/test_anticheat.py` fails if any of this breaks. Design: Vaishnav's Poisoned Inbox anti-cheat system, ported to Canary.
+**Anti-cheat battery (runs in `make reproduce`):** on the same judge seeds and world secret as the table, `make reproduce` also runs 13 scripted cheats (do-nothing, stop-early, random, restrict-all, probe-all, accuse the decoy, accuse the heaviest log user, garbage arguments on every tool, accusing everyone in sequence and from parallel threads, accusing after the end, burning the call cap, one canary variant per person), a **stop-early ladder** (the solver itself cut at 25/50/75% of its calls, and the solver without its final accuse), 7 **plus probes** (the solver with one extra step before its accusation: restrict everyone else, unrestrict spam, interview everyone, read spam, wait a day, accuse twice, a per-person canary) and a **control** (the solver, then every remaining call padded with reads). It prints probe → mean → blocked and writes `results/latest/exploits.json`. Every attack averages ≤ 0, every ladder episode scores exactly 0, no plus probe beats the solver on any seed, no episode ever accepts two accusations, and the control equals the solver on every seed. Every committed episode is also re-played on a fresh Env and re-graded: 819 of 829, all identical (only the 10 grok episodes on secret-keyed judge seeds cannot be re-played). Every committed Harbor trial must agree with itself: Harbor's reward = `reward.txt` = the sidecar ledger, the score follows from the ledger's own accusation, and the agent's trajectory names the same person (22 of 22). The last line of `make reproduce` says `ANTI-CHEAT: ...` in plain words. `tests/test_anticheat.py` fails if any of this breaks. Design: Vaishnav's Poisoned Inbox anti-cheat system, ported to Canary.
 
 **Hunt it yourself:** `make hunt` (no keys, about 1 minute) fuzzes all four tracks (easy, medium, hard, hard_forge) with random, malformed, evolutionary and parallel-accuse attacks, and prints the best non-solver score next to the solver's mean and the number of violations. On our machine every mode reports a best non-solver score of 0.000 with 0 violations. `make hunt TIER=medium` restricts it to one tier.
 
@@ -141,9 +141,54 @@ The canary trap is a real counter-intelligence technique: give each suspect a sl
 
 Canary keeps the hard part of the real problem. Leaks arrive late, the mole adapts to obvious traps and frames others, and every day spent gathering evidence costs value.
 
-## Gemini
+## Gemini: Canary Lab (Google DeepMind "Best Use of Gemini API")
 
-Gemini's role is described in [pitch/GEMINI.md](pitch/GEMINI.md). It covers the Mole Forge, the world builder, the scenario designer, the exploit hunter, the analyst and the arena mole, all behind `canary.llm`, with a stub backend so that everything here runs without keys.
+**Gemini builds, plays, attacks and explains its own benchmark.** Canary Lab (`canary/gemini/`) is the Gemini layer on top of the environment above. The numbers below are copied from committed results files. Recorded Gemini runs replay with `make lab-replay` (no key). The write-up is [docs/gemini/SUBMISSION.md](docs/gemini/SUBMISSION.md).
+
+### 1. The problem
+
+**Agents now make irreversible calls under uncertainty. One benchmark number can't tell you why they fail.** Security triage, insider risk, incident response and procurement agents reason under uncertainty, spend a budget, then commit. A score per model cannot say *where* the agent went wrong (which decision, at which step), *whether more thinking would fix it* and at what cost, or *whether the score can be gamed*. Answering that means reading every 300–400-step trajectory and auditing the reward code line by line, which nobody does by hand. Canary makes the question answerable: the reference solver (`canary/solver/`) holds the exact posterior at every step, so every claim Gemini makes about a decision can be checked in code (`canary.solver.regret.attribute`).
+
+### 2. How the Gemini API is integrated
+
+**Six roles, one ledgered client.** Calls go through `canary/llm/gemini_backend.py` (the `canary.llm` client the environment's agents use) or `canary/gemini/sdk.py` (a gateway-aware `google-genai` client, API `v1beta`). Canary Lab's ladder, atlas, swarm and narrator calls are logged by `canary/gemini/ledger.py`: one JSONL row per call with feature, model, kind, token counts and list-price cost, never prompts or keys.
+
+| Role | Code | Gemini API surface | Result |
+|---|---|---|---|
+| **Player:** the Ladder | `canary/gemini/ladder.py`, `canary/agents/llm_policy.py`, `canary/llm/gemini_backend.py` | Function calling over the 13 MCP tools (`FunctionDeclaration`), `thinking_level`, thought-signature replay across turns | [`results/gemini/ladder.md`](results/gemini/ladder.md): 157 paired episodes, 34 cells, 5 models (3.1-flash-lite → 4-carbon) × up to 4 thinking levels × 2 tiers |
+| **Analyst:** Failure Atlas and Gallery | `canary/gemini/atlas.py`, `atlas_gemini.py`, `atlas_charts.py`, `gallery.py` | `caches.create` over the whole corpus, `count_tokens`, structured output (`response_json_schema`), chart images (`Part.from_bytes`), `embed_content` (gemini-embedding-2) | [`results/gemini/atlas.md`](results/gemini/atlas.md): 153 episodes, 792,862 tokens in one cache; [`docs/reports/failure_gallery.md`](docs/reports/failure_gallery.md) |
+| **Attacker:** Red-team Swarm | `canary/gemini/swarm.py`, `repo_pack.py`, `swarm_prompts/` | Whole repo in one prompt (183,171 tokens per planner call), function calling against a live episode, parallel personas | [`results/gemini/swarm.md`](results/gemini/swarm.md): 35 attackers, 1,225 tool calls, 0 exploits. 32 of 35 ran in-process; 3 via MCP (`results/gemini/swarm.json` `channel`) |
+| **Builder:** Mole Forge, world builder, scenario designer, arena mole | `canary/forge/mutate.py` (`LLMMutator`), `canary/agents/world_builder.py`, `designer.py`, `mole_arena.py`, `canary/text/gemini.py` | Structured output + validation + deterministic stub fallback on every call | `data/forge/` (the committed hall of fame used the stub mutator). Labelled role runs on `fr8/gemini/main` are not imported onto this branch |
+| **Gateway** | `canary/gemini/gateway.py`, `with_gateway.py`, `lab_replay.py` | REST relay with record/replay for an 8-node Slurm cluster whose compute nodes have no internet | `make lab-replay` (no key) |
+| **Narrator** (demo only) | `canary/gemini/narrate.py`, `commentator.py` | TTS (`speech_config`), Live API (`client.aio.live.connect`) | `docs/gemini/assets/narration/`. Not part of the measured ladder, atlas or swarm |
+
+Ledger (`results/gemini/dashboard.html`, embedded `usage.totals`): 15,757 calls, 411M input tokens (340M from cache, 82.7%), 6.75M thinking tokens, $146.02 at list price (cost_usd 146.0212; [dashboard report](docs/gemini/reports/dashboard.md)). Status, stated plainly: the long Mole Forge runs in `data/forge/` used the stub mutator. Labelled role runs on `fr8/gemini/main` are not imported onto this branch. The world-text layer is a demo/research layer, not part of the judged v1.4 environment. The Batch API is not used (quota exhausted on our key).
+
+### 3. What's innovative
+
+**A benchmark that measures, explains and audits itself, with Gemini checked in code rather than trusted.**
+- **Thinking-to-competence curve.** Same API and model family; only the thinking level changes. On hard, n=8: 92% [76%, 113%] at medium thinking and 102% [84%, 129%] at high, within those CIs of the solver (gemini-3.6-flash, requested as `gemini-3.5-flash`, which Google now routes to 3.6-flash; 16/16 correct, $0.34–$0.39 per episode vs $1.30 for gemini-4-carbon at high, n=2). gemini-3.1-flash-lite scores below do-nothing in 8/8 cells. Thinking buys commit timing more than experiment design ([ladder](results/gemini/ladder.md); 1–8 seeds per cell, wide CIs).
+- **Every lost point explained.** 295 episodes from Gemini, GPT-5.5/Codex and gpt-5.6: +90.795 V of gap, 100% tagged to a step and a cause, 0 unexplained. Luck and harness crashes are their own categories ([gallery](docs/reports/failure_gallery.md)).
+- **Analyst checked, not trusted.** 98% of 470 Gemini quotes verified verbatim in code. Regret shares come from the solver, never from the model. Top mode: premature accusation, 61% of all regret ([atlas](results/gemini/atlas.md)).
+- **Self-audit with a positive control.** When a known, closed exploit is reopened, 4 of 4 Gemini attackers rediscover it from the code (16/16 fresh-seed reruns verified), so "0 exploits" comes from a detector shown to catch real ones ([CEO log](docs/gemini/reports/CEO.md)).
+- **Solvability-constrained adversaries.** Forged and designed moles are kept only if the reference solver still catches them (`canary/forge/fitness.py`, `canary/forge/validate.py`), so hardness never comes from an impossible world.
+
+### 4. Why Gemini is essential
+
+**Thinking level, thought signatures and the explicit cache are the experiment.**
+- **Thinking level.** The ladder holds the API fixed and changes only `thinking_level`, so a score difference is that factor and not a different product (`canary/gemini/ladder.py`).
+- **Thought signatures.** `canary/llm/gemini_backend.py` carries reasoning state across function-calling turns, so a multi-turn tool episode can be replayed and audited.
+- **Explicit cache.** 339,812,795 of 411,032,407 input tokens (82.7%) were served from cache, and the programme cost $146.02 at list price. Cached input is priced at about a tenth of the uncached input rate, which is what made the 157-episode ladder and the corpus read affordable.
+- **Long context** holds the atlas corpus (792,862 tokens in one cache) or the swarm repo pack (183,171 tokens per planner call).
+- TTS and the Live API only narrate the demo. They are not the measurement. `make reproduce` runs with no model.
+
+```bash
+make setup && make reproduce      # environment + solver + baselines (no keys)
+make lab-replay                   # Gemini ladder showcase from the recorded cache (no keys)
+make lab-dashboard                # usage + results dashboard -> results/gemini/dashboard.html
+```
+
+The six-role design is summarised in [pitch/GEMINI.md](pitch/GEMINI.md).
 
 ## Repo map
 

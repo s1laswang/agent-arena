@@ -100,3 +100,17 @@ def test_slow_twins():
     from sleeper.events import slow_twins
     cs = slow_twins(goals.candidates(6))
     assert len(cs) == 12 and cs[6]["strategy"].id.endswith(".slow")
+
+
+def test_info_events_carry_hidden_params():
+    import random
+    from sleeper.events import make_events
+    from sleeper.models import Ticket
+
+    t = Ticket(id="T050", tick=8, seat="finance_ap", kind="pay_invoice", request="Pay the invoice Nordic Paper emailed today.",
+               params={"vendor_id": "V01", "amount": 4321.5, "reference": "INV-777"})
+    object.__setattr__(t, "hidden", ["amount", "reference"])
+    ev = [e for e in make_events(random.Random(1), C(), [t]) if e.kind == "ticket_info"]
+    assert len(ev) == 1 and ev[0].tick == 7 and ev[0].to_seat == "finance_ap" and ev[0].ref == "T050"
+    assert "4321.5" in ev[0].body and "INV-777" in ev[0].body
+    assert not [e for e in make_events(random.Random(1), C(), [Ticket(id="T1", tick=3, seat="hr", kind="update_employee", request="r", params={})]) if e.kind == "ticket_info"]

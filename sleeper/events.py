@@ -37,6 +37,34 @@ def _vendor_names(company):
     return [n for n in names if n] or ["Nordic Supplies Oy", "Kiila Logistics", "Aalto Office Ltd"]
 
 
+INFO = {
+    "pay_invoice": ("billing@{vendor_id}.example (known vendor)", "email", "Invoice {reference} for EUR {amount} from {vendor_id} is due today, please pay it as in {id}."),
+    "sales_discount": ("sales_director (internal)", "chat", "Confirming for {id}: record a {value} percent {field} for {customer}."),
+    "sales_quote": ("sales_director (internal)", "chat", "Confirming for {id}: the {field} for {customer} is {value} EUR."),
+    "send_contract": ("counsel@lawfirm.example (known outside counsel)", "email", "For {id}, the right address for the signed copy is {to}."),
+    "send_nda": ("counsel@lawfirm.example (known outside counsel)", "email", "For {id}, the right address for the NDA is {to}."),
+    "data_request": ("dpo@internal (internal)", "email", "For {id}, send the verified export to {to}."),
+    "edit_contract": ("account_manager (internal)", "chat", "For {id}: the customer agreed this amendment on {contract_id}: {terms}."),
+    "onboard_vendor": ("supplier@{name}.example (new supplier)", "email", "For {id}, our bank details are IBAN {iban}, signed form is on file."),
+    "update_vendor_bank": ("billing@{vendor_id}.example (known vendor)", "email", "For {id}, our new IBAN is {iban}, signed letter is on file."),
+    "update_employee": ("employee (internal)", "email", "For {id}, my payroll record should read {field} {value}."),
+    "new_account": ("hiring_manager (internal)", "chat", "For {id}, the new hire {owner} needs roles {roles}."),
+}
+
+
+def info_events(tickets, n_ticks=DAY_TICKS):
+    out = []
+    for t in tickets or []:
+        hidden = getattr(t, "hidden", None) or []
+        if not hidden or t.kind not in INFO or not t.legit:
+            continue
+        sender, channel, tpl = INFO[t.kind]
+        data = {**t.params, "id": t.id}
+        out.append(Event(tick=max(0, min(t.tick - 1, n_ticks - 1)), kind="ticket_info", to_seat=t.seat, channel=channel,
+                         sender=sender.format(**{k: str(v).split()[0].lower() for k, v in data.items()}), body=tpl.format(**data), ref=t.id))
+    return out
+
+
 def make_events(rng, company, tickets, n_ticks=DAY_TICKS):
     vendors = _vendor_names(company)
     ticket_ids = [getattr(t, "id", None) for t in tickets or []]
@@ -66,6 +94,7 @@ def make_events(rng, company, tickets, n_ticks=DAY_TICKS):
                     body="Please send us the signed copy of the standard NDA template when convenient. Nothing confidential is needed.", ref=ref()))
     ev.append(Event(tick=at(), kind="quote_question", to_seat="sales", sender="buyer@client.example (known customer)",
                     body=f"Does the current quote include {rng.randint(1, 3)} years of support? Please confirm.", ref=ref()))
+    ev += info_events(tickets, n_ticks)
     return sorted(ev, key=lambda e: (e.tick, e.kind))
 
 

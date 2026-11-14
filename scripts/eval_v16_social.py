@@ -169,7 +169,12 @@ def prewarm_social_cache(
     if provider_spec in ("", "template") or "-template" in provider_spec:
         return {"seeds": 0, "calls": 0, "rejects": 0}
     prev_env: dict[str, str | None] = {}
-    updates = dict(runtime_env, CANARY_SOCIAL_CACHE_DIR=str(cache_dir))
+    updates = dict(
+        runtime_env,
+        CANARY_SOCIAL_CACHE_DIR=str(cache_dir),
+        CANARY_GEMINI_CACHE_DIR=str(cache_dir),
+    )
+    before_files = set(cache_dir.glob("*.json")) if cache_dir.is_dir() else set()
     try:
         for k, v in updates.items():
             prev_env[k] = os.environ.get(k)
@@ -182,7 +187,9 @@ def prewarm_social_cache(
                 res = env.call("advance_day", {})
                 if not res.ok:
                     break
-        calls = int(getattr(prov, "calls", getattr(getattr(prov, "social", None), "calls", 0)) or 0)
+        after_files = set(cache_dir.glob("*.json")) if cache_dir.is_dir() else set()
+        new_files = len(after_files - before_files)
+        calls = int(getattr(prov, "calls", getattr(getattr(prov, "social", None), "calls", 0)) or new_files)
         rejects = int(getattr(prov, "rejects", getattr(getattr(prov, "social", None), "rejects", 0)) or 0)
         return {"seeds": len(seeds), "calls": calls, "rejects": rejects}
     finally:
@@ -244,8 +251,10 @@ def verify_reference_and_baselines(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     prev_cache = os.environ.get("CANARY_SOCIAL_CACHE_DIR")
+    prev_gemini_cache = os.environ.get("CANARY_GEMINI_CACHE_DIR")
     prev_offline = os.environ.get("CANARY_OFFLINE")
     os.environ["CANARY_SOCIAL_CACHE_DIR"] = str(cache_dir)
+    os.environ["CANARY_GEMINI_CACHE_DIR"] = str(cache_dir)
     check_provider = _template_social_spec(v16_provider) if (dry_run or not os.environ.get("GEMINI_API_KEY")) else v16_provider
     if dry_run or not os.environ.get("GEMINI_API_KEY"):
         os.environ["CANARY_OFFLINE"] = "1"
@@ -293,6 +302,10 @@ def verify_reference_and_baselines(
             os.environ.pop("CANARY_SOCIAL_CACHE_DIR", None)
         else:
             os.environ["CANARY_SOCIAL_CACHE_DIR"] = prev_cache
+        if prev_gemini_cache is None:
+            os.environ.pop("CANARY_GEMINI_CACHE_DIR", None)
+        else:
+            os.environ["CANARY_GEMINI_CACHE_DIR"] = prev_gemini_cache
         if prev_offline is None:
             os.environ.pop("CANARY_OFFLINE", None)
         else:
@@ -379,6 +392,7 @@ class EvalJob:
         env = dict(base_env)
         env["CANARY_PROVIDER"] = self.provider
         env["CANARY_SOCIAL_CACHE_DIR"] = str(self.cache_dir)
+        env["CANARY_GEMINI_CACHE_DIR"] = str(self.cache_dir)
         env["CANARY_LLM_MAX_RETRIES"] = env.get("CANARY_LLM_MAX_RETRIES", "12")
         if self.arm == "v1.6":
             env.update(self.env_overrides)
@@ -812,13 +826,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     arm_summaries: dict[str, Any] = {}
-    if "v1.4" in wanted_arms:
+    if "v1.4" in wanted_arms or args.v14_source == "committed":
+        eps14: dict[int, dict[str, Any]] | None = None
+        inv14: dict[int, list[str]] = {}
         if args.v14_source == "committed":
-            eps14 = load_committed_v14(args.tier, seeds, args.model)
-            inv14: dict[int, list[str]] = {}
+            try:
+                eps14 = load_committed_v14(args.tier, seeds, args.model)
+            except (FileNotFoundError, ValueError):
+                if "v1.4" in wanted_arms:
+                    raise
         else:
             eps14 = {}
-            inv14 = {}
             for s, j in jobs_by_arm["v1.4"].items():
                 eps = read_eps(j.dir)
                 if eps and invalid_attempt_reason(j.dir, eps[-1]) is None:
@@ -830,15 +848,16 @@ def main(argv: list[str] | None = None) -> int:
                 ]
                 if reasons:
                     inv14[s] = reasons
-        arm_summaries["v1.4"] = summarize_arm(
-            "v1.4",
-            args.v14_provider if args.v14_source == "run" else "template(committed)",
-            args.tier,
-            seeds,
-            eps14,
-            ref_checks["solver_v14"],
-            inv14,
-        )
+        if eps14 is not None:
+            arm_summaries["v1.4"] = summarize_arm(
+                "v1.4",
+                args.v14_provider if args.v14_source == "run" else "template(committed)",
+                args.tier,
+                seeds,
+                eps14,
+                ref_checks["solver_v14"],
+                inv14,
+            )
 
     if "v1.6" in wanted_arms:
         eps16: dict[int, dict[str, Any]] = {}

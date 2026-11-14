@@ -1,0 +1,18 @@
+ok: no *truth* / *SALT* / *.world.json / *.mole.json files
+ok: no canary package source / install
+ok: python cannot import canary
+ok: no CANARY_* variable (WORLD_SECRET / LEDGER_TOKEN / ADMIN_TOKEN / SEED / TIER) in env
+ok: ps: no canary.mcp_server / uvicorn process (10 processes visible)
+ok: /proc: no server cmdline
+ok: /proc: no readable /proc/*/environ contains CANARY_ (5 pids scanned, 5 environ readable)
+ok: own PID namespace (no dockerd/containerd/kubelet/launchd/systemd visible)
+ok: no docker socket
+ok: no bind mount of the repo / worlds
+info: http://canary-server:8765/healthz -> HTTP 200 (the game is reachable over the network only)
+ok: GET /ledger without/with a wrong token -> 403
+----
+ISOLATION OK: 11 checks passed, 0 findings
+[notice] A new release of pip is available: 25.0.1 -> 26.3
+[notice] To update, run: pip install --upgrade pip
+oracle agent: stop_early
+played 2 tool calls; last: accuse -> {"ok": true, "data": {"accused": "e12", "episode_over": true}, "error": null}

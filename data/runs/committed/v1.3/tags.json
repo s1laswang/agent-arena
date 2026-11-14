@@ -1,0 +1,499 @@
+{
+ "codex:gpt-5.5": {
+  "episodes": 22,
+  "tiers": {
+   "hard": 11,
+   "medium": 11
+  },
+  "regret_total": 6.4592,
+  "tags": {
+   "premature_accusation": {
+    "count": 7,
+    "episodes_with": 7,
+    "regret_sum": 4.5868,
+    "worst": {
+     "run_id": "medium",
+     "seed": 0,
+     "t": 52,
+     "day": 6,
+     "tool": "accuse",
+     "args": {
+      "employee": "e02"
+     },
+     "regret": 1.3895,
+     "p_best": 0.1834,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.18 < 0.6)"
+    },
+    "rate": 0.318
+   },
+   "uninformative_canary": {
+    "count": 5,
+    "episodes_with": 4,
+    "regret_sum": 0.0622,
+    "worst": {
+     "run_id": "hard",
+     "seed": 7,
+     "t": 39,
+     "day": 6,
+     "tool": "plant_canary",
+     "args": {
+      "doc_title": "Research Archive Notice D6",
+      "assignment": {
+       "e21": "I",
+       "e29": "J"
+      }
+     },
+     "regret": 0.0232,
+     "p_best": 0.2568,
+     "why": "canary variants split the suspects poorly (low information)"
+    },
+    "rate": 0.182
+   },
+   "budget_waste": {
+    "count": 12,
+    "episodes_with": 5,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 2,
+     "t": 8,
+     "day": 1,
+     "tool": "search_messages",
+     "args": {
+      "query": "angry"
+     },
+     "regret": 0.0,
+     "p_best": 0.0333,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 0.227
+   }
+  },
+  "score_mean": 0.5277
+ },
+ "openai:gpt-5.5": {
+  "episodes": 17,
+  "tiers": {
+   "hard": 8,
+   "medium": 9
+  },
+  "regret_total": 3.0515,
+  "tags": {
+   "premature_accusation": {
+    "count": 4,
+    "episodes_with": 4,
+    "regret_sum": 1.4152,
+    "worst": {
+     "run_id": "hard",
+     "seed": 2,
+     "t": 142,
+     "day": 13,
+     "tool": "accuse",
+     "args": {
+      "employee": "e19"
+     },
+     "regret": 0.901,
+     "p_best": 0.5764,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.58 < 0.6)"
+    },
+    "rate": 0.235
+   },
+   "uninformative_canary": {
+    "count": 10,
+    "episodes_with": 6,
+    "regret_sum": 0.0474,
+    "worst": {
+     "run_id": "medium",
+     "seed": 5,
+     "t": 19,
+     "day": 3,
+     "tool": "plant_canary",
+     "args": {
+      "doc_title": "Canary Gamma customer renewal exceptions",
+      "assignment": {
+       "e18": "G",
+       "e19": "H"
+      }
+     },
+     "regret": 0.024,
+     "p_best": 0.05,
+     "why": "canary variants split the suspects poorly (low information)"
+    },
+    "rate": 0.353
+   },
+   "budget_waste": {
+    "count": 18,
+    "episodes_with": 7,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 3,
+     "t": 53,
+     "day": 6,
+     "tool": "search_messages",
+     "args": {
+      "query": "fed up",
+      "day_from": 1,
+      "day_to": 6
+     },
+     "regret": 0.0,
+     "p_best": 0.115,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 0.412
+   }
+  },
+  "score_mean": 0.4776
+ },
+ "do_nothing": {
+  "episodes": 40,
+  "tiers": {
+   "hard": 20,
+   "medium": 20
+  },
+  "regret_total": 0.0,
+  "tags": {
+   "no_accusation": {
+    "count": 40,
+    "episodes_with": 40,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "do_nothing-hard-20261114-0332",
+     "seed": 0,
+     "t": 14,
+     "day": 14,
+     "tool": "(no accusation)",
+     "args": {},
+     "regret": 0.0,
+     "p_best": null,
+     "why": "episode ended without an accusation (best belief 0.00)"
+    },
+    "rate": 1.0
+   }
+  },
+  "score_mean": 0.0
+ },
+ "heuristic": {
+  "episodes": 40,
+  "tiers": {
+   "hard": 20,
+   "medium": 20
+  },
+  "regret_total": 26.2957,
+  "tags": {
+   "premature_accusation": {
+    "count": 30,
+    "episodes_with": 30,
+    "regret_sum": 22.6543,
+    "worst": {
+     "run_id": "heuristic-medium-20261114-0332",
+     "seed": 12,
+     "t": 47,
+     "day": 12,
+     "tool": "accuse",
+     "args": {
+      "employee": "e17"
+     },
+     "regret": 1.0438,
+     "p_best": 0.3333,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.33 < 0.6)"
+    },
+    "rate": 0.75
+   }
+  },
+  "score_mean": -0.2186
+ },
+ "random": {
+  "episodes": 40,
+  "tiers": {
+   "hard": 20,
+   "medium": 20
+  },
+  "regret_total": 61.5898,
+  "tags": {
+   "premature_accusation": {
+    "count": 29,
+    "episodes_with": 29,
+    "regret_sum": 44.0682,
+    "worst": {
+     "run_id": "random-hard-20261114-0332",
+     "seed": 4,
+     "t": 23,
+     "day": 8,
+     "tool": "accuse",
+     "args": {
+      "employee": "e09"
+     },
+     "regret": 1.7631,
+     "p_best": 0.3474,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.35 < 0.6)"
+    },
+    "rate": 0.725
+   },
+   "ignored_delay": {
+    "count": 9,
+    "episodes_with": 9,
+    "regret_sum": 12.9316,
+    "worst": {
+     "run_id": "random-hard-20261114-0332",
+     "seed": 4,
+     "t": 23,
+     "day": 8,
+     "tool": "accuse",
+     "args": {
+      "employee": "e09"
+     },
+     "regret": 1.7631,
+     "p_best": 0.3474,
+     "why": "accused while a leak could still surface in the feed"
+    },
+    "rate": 0.225
+   },
+   "over_restriction": {
+    "count": 126,
+    "episodes_with": 35,
+    "regret_sum": 9.965,
+    "worst": {
+     "run_id": "random-hard-20261114-0332",
+     "seed": 2,
+     "t": 4,
+     "day": 1,
+     "tool": "restrict_access",
+     "args": {
+      "employee": "e25"
+     },
+     "regret": 0.1257,
+     "p_best": 0.0333,
+     "why": "restricted an employee the evidence says is very unlikely the mole"
+    },
+    "rate": 0.875
+   },
+   "no_accusation": {
+    "count": 11,
+    "episodes_with": 11,
+    "regret_sum": 2.8922,
+    "worst": {
+     "run_id": "random-medium-20261114-0332",
+     "seed": 2,
+     "t": 86,
+     "day": 14,
+     "tool": "(no accusation)",
+     "args": {},
+     "regret": 0.5358,
+     "p_best": 0.9909,
+     "why": "episode ended without an accusation (best belief 0.99)"
+    },
+    "rate": 0.275
+   },
+   "uninformative_canary": {
+    "count": 25,
+    "episodes_with": 17,
+    "regret_sum": 0.5541,
+    "worst": {
+     "run_id": "random-medium-20261114-0332",
+     "seed": 18,
+     "t": 30,
+     "day": 10,
+     "tool": "plant_canary",
+     "args": {
+      "doc_title": "Memo 912",
+      "assignment": {
+       "e02": "A",
+       "e17": "A",
+       "e05": "A",
+       "e18": "B"
+      }
+     },
+     "regret": 0.0433,
+     "p_best": 0.1397,
+     "why": "canary variants split the suspects poorly (low information)"
+    },
+    "rate": 0.425
+   },
+   "budget_waste": {
+    "count": 371,
+    "episodes_with": 38,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "random-hard-20261114-0332",
+     "seed": 0,
+     "t": 5,
+     "day": 2,
+     "tool": "unrestrict_access",
+     "args": {
+      "employee": "e29"
+     },
+     "regret": 0.0,
+     "p_best": 0.0347,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 0.95
+   }
+  },
+  "score_mean": -0.689
+ },
+ "restrict_all": {
+  "episodes": 40,
+  "tiers": {
+   "hard": 20,
+   "medium": 20
+  },
+  "regret_total": 152.2512,
+  "tags": {
+   "over_restriction": {
+    "count": 1000,
+    "episodes_with": 40,
+    "regret_sum": 113.64,
+    "worst": {
+     "run_id": "restrict_all-hard-20261114-0332",
+     "seed": 0,
+     "t": 1,
+     "day": 1,
+     "tool": "restrict_access",
+     "args": {
+      "employee": "e00"
+     },
+     "regret": 0.1257,
+     "p_best": 0.0333,
+     "why": "restricted an employee the evidence says is very unlikely the mole"
+    },
+    "rate": 1.0
+   },
+   "premature_accusation": {
+    "count": 40,
+    "episodes_with": 40,
+    "regret_sum": 38.6111,
+    "worst": {
+     "run_id": "restrict_all-hard-20261114-0332",
+     "seed": 5,
+     "t": 43,
+     "day": 8,
+     "tool": "accuse",
+     "args": {
+      "employee": "e14"
+     },
+     "regret": 0.9999,
+     "p_best": 0.1172,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.12 < 0.6)"
+    },
+    "rate": 1.0
+   },
+   "ignored_delay": {
+    "count": 12,
+    "episodes_with": 12,
+    "regret_sum": 11.2395,
+    "worst": {
+     "run_id": "restrict_all-medium-20261114-0332",
+     "seed": 16,
+     "t": 31,
+     "day": 7,
+     "tool": "accuse",
+     "args": {
+      "employee": "e15"
+     },
+     "regret": 0.9876,
+     "p_best": 0.0737,
+     "why": "accused while a leak could still surface in the feed"
+    },
+    "rate": 0.3
+   },
+   "budget_waste": {
+    "count": 100,
+    "episodes_with": 40,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "restrict_all-hard-20261114-0332",
+     "seed": 0,
+     "t": 9,
+     "day": 1,
+     "tool": "restrict_access",
+     "args": {
+      "employee": "e08"
+     },
+     "regret": 0.0,
+     "p_best": 0.0333,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 1.0
+   }
+  },
+  "score_mean": -0.975
+ },
+ "solver": {
+  "episodes": 40,
+  "tiers": {
+   "hard": 20,
+   "medium": 20
+  },
+  "regret_total": 0.9338,
+  "tags": {
+   "premature_accusation": {
+    "count": 1,
+    "episodes_with": 1,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "solver-hard-20261114-0332",
+     "seed": 4,
+     "t": 103,
+     "day": 14,
+     "tool": "accuse",
+     "args": {
+      "employee": "e28"
+     },
+     "regret": 0.0,
+     "p_best": 0.5921,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.59 < 0.6)"
+    },
+    "rate": 0.025
+   },
+   "no_accusation": {
+    "count": 3,
+    "episodes_with": 3,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "solver-hard-20261114-0332",
+     "seed": 10,
+     "t": 106,
+     "day": 14,
+     "tool": "(no accusation)",
+     "args": {},
+     "regret": 0.0,
+     "p_best": 0.5798,
+     "why": "episode ended without an accusation (best belief 0.58)"
+    },
+    "rate": 0.075
+   }
+  },
+  "score_mean": 0.6545
+ },
+ "stop_early": {
+  "episodes": 40,
+  "tiers": {
+   "hard": 20,
+   "medium": 20
+  },
+  "regret_total": 67.0062,
+  "tags": {
+   "premature_accusation": {
+    "count": 40,
+    "episodes_with": 40,
+    "regret_sum": 67.0062,
+    "worst": {
+     "run_id": "stop_early-medium-20261114-0332",
+     "seed": 0,
+     "t": 1,
+     "day": 1,
+     "tool": "accuse",
+     "args": {
+      "employee": "e12"
+     },
+     "regret": 1.6918,
+     "p_best": 0.05,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.05 < 0.6)"
+    },
+    "rate": 1.0
+   }
+  },
+  "score_mean": -0.95
+ }
+}

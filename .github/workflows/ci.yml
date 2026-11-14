@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [justSilas]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # justSilas gets several merges a minute: let push runs finish (queued, not cancelled); only PR reruns cancel
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test-and-reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: make setup
+        run: make setup
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: pyodide for the browser-game parity test (tests/test_game.py)
+        run: |
+          mkdir -p "$RUNNER_TEMP/pyo" && cd "$RUNNER_TEMP/pyo" && npm init -y >/dev/null && npm install pyodide@0.27.7
+          echo "CANARY_PYODIDE_DIR=$RUNNER_TEMP/pyo/node_modules/pyodide" >> "$GITHUB_ENV"
+      - name: make test
+        run: make test
+      - name: make reproduce (fast mode, 5 seeds/tier, no API keys)
+        env:
+          REPRO_FAST: "1"
+        run: make reproduce
+      - name: upload fast judge table
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: judge-table-fast
+          path: |
+            results/latest/judge_table.md
+            results/latest/gap_chart.png

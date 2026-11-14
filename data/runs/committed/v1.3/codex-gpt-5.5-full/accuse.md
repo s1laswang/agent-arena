@@ -1,0 +1,24 @@
+| tier | agent | seed | day | accused | correct | score | P(accused) | P(top) | verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| hard | codex:gpt-5.5 | 0 | 14 | e25 | True | 0.64 | 0.677 | 0.677 | justified |
+| hard | codex:gpt-5.5 | 1 | 11 | e01 | True | 0.66 | 0.98 | 0.98 | justified |
+| hard | codex:gpt-5.5 | 2 | 13 | e19 | True | 0.52 | 0.935 | 0.935 | justified |
+| hard | codex:gpt-5.5 | 3 | 12 | e26 | True | 0.77 | 0.449 | 0.449 | lucky |
+| hard | codex:gpt-5.5 | 4 | 8 | e28 | True | 0.63 | 0.953 | 0.953 | justified |
+| hard | codex:gpt-5.5 | 5 | 14 | e19 | True | 0.67 | 0.62 | 0.62 | justified |
+| hard | codex:gpt-5.5 | 6 | 8 | e19 | True | 0.69 | 1.0 | 1.0 | justified |
+| hard | codex:gpt-5.5 | 7 | 13 | e03 | True | 0.64 | 0.98 | 0.98 | justified |
+| hard | codex:gpt-5.5 | 8 | 11 | e13 | True | 0.76 | 0.408 | 0.408 | lucky |
+| hard | codex:gpt-5.5 | 9 | 11 | e06 | True | 0.60 | 0.996 | 0.996 | justified |
+| hard | codex:gpt-5.5 | 10 | 13 | e06 | True | 0.64 | 1.0 | 1.0 | justified |
+| medium | codex:gpt-5.5 | 0 | 6 | e02 | False | -1.00 | 0.183 | 0.183 | premature-wrong |
+| medium | codex:gpt-5.5 | 1 | 5 | e02 | True | 0.84 | 1.0 | 1.0 | justified |
+| medium | codex:gpt-5.5 | 2 | 9 | e09 | True | 0.72 | 1.0 | 1.0 | justified |
+| medium | codex:gpt-5.5 | 3 | 14 | e14 | True | 0.44 | 0.525 | 0.525 | lucky |
+| medium | codex:gpt-5.5 | 4 | 14 | e07 | False | -1.00 | 0.33 | 0.33 | premature-wrong |
+| medium | codex:gpt-5.5 | 5 | 14 | e14 | True | 0.59 | 0.41 | 0.41 | lucky |
+| medium | codex:gpt-5.5 | 6 | 8 | e17 | True | 0.77 | 1.0 | 1.0 | justified |
+| medium | codex:gpt-5.5 | 7 | 9 | e09 | True | 0.65 | 0.461 | 0.461 | lucky |
+| medium | codex:gpt-5.5 | 8 | 2 | e02 | True | 0.95 | 1.0 | 1.0 | justified |
+| medium | codex:gpt-5.5 | 9 | 9 | e15 | True | 0.68 | 1.0 | 1.0 | justified |
+| medium | codex:gpt-5.5 | 10 | 7 | e07 | True | 0.77 | 1.0 | 1.0 | justified |

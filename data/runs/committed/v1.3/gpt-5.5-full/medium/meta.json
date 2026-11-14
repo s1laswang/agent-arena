@@ -1,0 +1,55 @@
+{
+ "agent": "openai:gpt-5.5",
+ "model": "gpt-5.5",
+ "provider": "openai",
+ "context": "full",
+ "reasoning_effort": "medium",
+ "reasoning_effort_source": "default: Codex 0.167 models catalog default_reasoning_level for gpt-5.5",
+ "api": "responses",
+ "tier": "medium",
+ "tiers_version": "v1.3",
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8
+ ],
+ "planned_seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "status": "INCOMPLETE: seed 9 not run (spend held at 11:16: the hard-tier Codex result triggered v1.4; remaining budget reserved for v1.4)",
+ "git_sha": "1724a48ed4350fdf8f7cb43bd18532044a24d44e",
+ "smoke": false,
+ "hint": null,
+ "usage": {
+  "in": 5592223,
+  "cached_in": 4982144,
+  "out": 57821,
+  "cost_usd_est": 7.2761,
+  "cost_usd_upper": 29.6957
+ },
+ "pricing": "gpt-5.5 list prices per 1M tokens: input $5.00, cached input $0.50, output $30.00 (<272K context), verified on developers.openai.com/api/docs/pricing on 2026-11-14. cost_usd_est bills cached input at $0.50; the upper bound bills all input at $5.00.",
+ "provenance": "scripts/budget_runner.py (one episode per process, budget-guarded), merged by scripts/merge_staging.py",
+ "invalid_episodes": [],
+ "spend_note": "cost_usd_est (cached input at $0.50/M) is the accounting basis; Silas's OpenAI dashboard total (~$170 at ~11:20 for overnight + this morning) was below the summed discounted estimates, validating it. cost_usd_upper bills all input at $5/M (no cache discount).",
+ "code_note": "episodes ran at 1724a48 / 4877978 / a978aa1; env, policy, prompts and MCP server identical across them (only change: LLM transport retries in canary/llm/base.py, 4877978). Solver reference (0933805) re-verified identical at this code on medium/hard seeds 0-19.",
+ "git_shas": [
+  "1724a48ed4350fdf8f7cb43bd18532044a24d44e",
+  "4877978b52301af19f9b9244448acd793e5db339",
+  "a978aa1d8794d0e2012a0db3bb20f5f5ca8e0bec"
+ ]
+}

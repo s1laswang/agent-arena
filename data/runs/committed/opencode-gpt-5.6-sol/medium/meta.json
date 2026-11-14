@@ -1,0 +1,29 @@
+{
+ "agent": "opencode:openai/gpt-5.6-sol",
+ "model": "openai/gpt-5.6-sol",
+ "provider": "opencode",
+ "git_sha": "43b28b0674e9091d2ab943d06a8bc167648eaa1b",
+ "tier": "medium",
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4
+ ],
+ "hint": null,
+ "usage": null,
+ "harness": "frontier-cli+mcp_server",
+ "steps_source": "agent_transcript",
+ "smoke": false,
+ "status": "INCOMPLETE",
+ "valid_seeds": [
+  2
+ ],
+ "invalid_reasons": {
+  "0": "infra:opencode_db_locked",
+  "1": "RuntimeError('MCP server died during the episode (rc=-15; see data/runs/committed/opencode-gpt-5.6-sol/medium/transcripts/server-medium-1.log)')",
+  "3": "infra:provider_quota",
+  "4": "infra:provider_quota"
+ }
+}

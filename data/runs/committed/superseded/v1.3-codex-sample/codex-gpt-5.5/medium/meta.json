@@ -1,0 +1,25 @@
+{
+ "agent": "codex:gpt-5.5",
+ "model": "gpt-5.5",
+ "provider": "codex",
+ "git_sha": "85c503e2a79825ad1d32e5b5471c0c95e18a7f89",
+ "tier": "medium",
+ "hint": null,
+ "harness": "frontier-cli+mcp_server",
+ "steps_source": "agent_transcript",
+ "smoke": false,
+ "seeds": [
+  0
+ ],
+ "tiers_version": "v1.3",
+ "usage": {
+  "in": 3718159,
+  "cached_in": 3582592,
+  "out": 13138,
+  "cost_usd_est": 2.8633,
+  "cost_usd_upper": 18.9849,
+  "cost_note": "ESTIMATE from codex turn.completed token usage at gpt-5.5 list price ($5/$30 per 1M); est bills cached input at 10%, upper bills all input at full price; Codex ran in API-key (API-billed) mode"
+ },
+ "status": "INCOMPLETE",
+ "note": "stopped after the in-flight episode due to the OpenAI spend cap; planned seeds 0-4"
+}

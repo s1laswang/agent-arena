@@ -1,11 +1,37 @@
 .env
 .env.*
-data/*.json
-data/*.csv
-!data/openapi.json
-!data/valio_aimo_junction26_product_data_schema.json
+!.env.example
 __pycache__/
 .venv/
 node_modules/
 *.db
 .DS_Store
+data/runs/*
+!data/runs/committed/
+data/worlds/*
+!data/worlds/judge/
+*.log
+
+# judge world secret (INTEGRITY): never commit
+data/worlds/judge/SALT
+data/fr8/**/*.jsonl
+data/fr8/**/parts/
+data/fr8/**/*.done
+data/fr8/j1/parts/
+data/fr8/j1/merged.csv
+data/fr8/tau/rows.csv
+data/j3/
+data/fr8/cotune/parts/
+data/fr8/cotune.log
+data/fr8/*/parts/
+data/j3v2/
+
+# `make reproduce` output (the committed copies live directly in results/)
+results/latest/
+data/fr8/j4/**/lora/
+data/fr8/j4/**/*.safetensors
+data/j3v14/
+
+# browser game build output + local pyodide for the parity test
+game/site/
+game/node_modules/

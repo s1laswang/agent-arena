@@ -1,0 +1,184 @@
+{
+ "agent": {
+  "hard": {
+   "n": 2,
+   "mean_score": 0.5875,
+   "accuracy": 1.0,
+   "mean_total_regret": 0.1362505,
+   "tags": {
+    "uninformative_canary": {
+     "value_lost": 0.0866,
+     "per_episode": 0.0433,
+     "count": 4
+    },
+    "premature_accusation": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "decoy_chase": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "ignored_delay": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "over_restriction": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "budget_waste": {
+     "value_lost": 0.0,
+     "per_episode": 0.0,
+     "count": 1
+    },
+    "no_accusation": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    }
+   },
+   "mean_p_correct_at_accusation": 0.9902,
+   "top5": [
+    {
+     "seed": 0,
+     "t": 75,
+     "day": 10,
+     "action": "restrict_access",
+     "regret": 0.032445,
+     "tags": []
+    },
+    {
+     "seed": 0,
+     "t": 53,
+     "day": 8,
+     "action": "plant_canary",
+     "regret": 0.029907,
+     "tags": [
+      "uninformative_canary"
+     ]
+    },
+    {
+     "seed": 0,
+     "t": 74,
+     "day": 10,
+     "action": "restrict_access",
+     "regret": 0.029728,
+     "tags": []
+    },
+    {
+     "seed": 0,
+     "t": 12,
+     "day": 2,
+     "action": "plant_canary",
+     "regret": 0.020218,
+     "tags": [
+      "uninformative_canary"
+     ]
+    },
+    {
+     "seed": 0,
+     "t": 7,
+     "day": 1,
+     "action": "plant_canary",
+     "regret": 0.019717,
+     "tags": [
+      "uninformative_canary"
+     ]
+    }
+   ]
+  },
+  "medium": {
+   "n": 1,
+   "mean_score": 0.53,
+   "accuracy": 1.0,
+   "mean_total_regret": 0.16316,
+   "tags": {
+    "uninformative_canary": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "premature_accusation": {
+     "value_lost": 0.1155,
+     "per_episode": 0.1155,
+     "count": 1
+    },
+    "decoy_chase": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "ignored_delay": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "over_restriction": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "budget_waste": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "no_accusation": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    }
+   },
+   "mean_p_correct_at_accusation": 0.5494,
+   "top5": [
+    {
+     "seed": 0,
+     "t": 129,
+     "day": 14,
+     "action": "accuse",
+     "regret": 0.115465,
+     "tags": [
+      "premature_accusation"
+     ]
+    },
+    {
+     "seed": 0,
+     "t": 116,
+     "day": 12,
+     "action": "restrict_access",
+     "regret": 0.01,
+     "tags": []
+    },
+    {
+     "seed": 0,
+     "t": 66,
+     "day": 7,
+     "action": "plant_canary",
+     "regret": 0.007978,
+     "tags": []
+    },
+    {
+     "seed": 0,
+     "t": 76,
+     "day": 8,
+     "action": "plant_canary",
+     "regret": 0.007647,
+     "tags": []
+    },
+    {
+     "seed": 0,
+     "t": 36,
+     "day": 4,
+     "action": "plant_canary",
+     "regret": 0.006578,
+     "tags": []
+    }
+   ]
+  }
+ }
+}

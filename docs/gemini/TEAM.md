@@ -16,6 +16,8 @@ branch often, and merge `gemini-track` into their own branch to stay current. **
 - **Tests:** every module has a stub-backed test that runs keyless in < 5 s. `make test` must stay green.
 - Report in `docs/gemini/reports/<role>.md`: newest entry at the top, with what is done (verified how), what is next, and blockers.
 
+- **Momin's fleet:** read-only. Never edit `~/momin/fleet` on freighter (board, roles, STOP, repos), never push to `fr8/*`, `momin` or `sleeper/*`, never scancel. FR8 ssh from the venue times out sometimes: retry with ControlMaster and never block on it.
+
 ## Interfaces (stable contracts)
 
 ```python

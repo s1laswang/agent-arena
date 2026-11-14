@@ -122,3 +122,29 @@ def test_error_parity_mole_vs_innocent(server):
     assert em == ei
     assert [len(x) for x in em] == [len(x) for x in ei]
     assert not accusations(server), "malformed accuse must not be recorded"
+
+
+def test_h8_seed_attack_fails_on_real_server(tmp_path, monkeypatch):
+    """H7/H8 against the live server: judge seed, no ALLOW_DEV, no secret -> roster must not match any
+    publicly regenerable world, so the public seed attack recovers nothing."""
+    if importlib.util.find_spec("canary.mcp_server") is None:
+        pytest.skip("canary.mcp_server not implemented yet")
+    from canary.redteam import seed_attack
+    monkeypatch.delenv("CANARY_WORLD_SECRET", raising=False)
+    srv = Server("canary.mcp_server", "medium", 900_007, tmp_path / "s.log",
+                 extra_env={"CANARY_ALLOW_DEV": "", "CANARY_WORLD_SECRET": ""})
+    try:
+        data = client(srv).call("list_employees", {})["data"]
+        rows = data["employees"] if isinstance(data, dict) else data
+        obs = [(r["id"], r["name"], r["dept"], r["role"]) for r in rows]
+        cands = list(range(900_000, 900_030)) + list(range(800_000, 800_200)) + list(range(0, 2000))
+        assert seed_attack.recover_mole("medium", obs, cands) is None
+    finally:
+        srv.stop()
+
+
+def test_real_server_refuses_dev_seed_without_allow_dev(tmp_path):
+    if importlib.util.find_spec("canary.mcp_server") is None:
+        pytest.skip("canary.mcp_server not implemented yet")
+    with pytest.raises(RuntimeError, match="exit 2"):
+        Server("canary.mcp_server", "easy", 7, tmp_path / "s.log", extra_env={"CANARY_ALLOW_DEV": ""})

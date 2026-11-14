@@ -234,3 +234,39 @@ def test_outcome_trace_real_env():
     t = fv.outcome_trace(default_strategy_json(), "hard", [6000], agents=("do_nothing",))
     assert t == fv.outcome_trace(default_strategy_json(), "hard", [6000], agents=("do_nothing",))
     assert all(x[3] in fv.OUTCOME_EVENTS for x in t)
+
+
+def _ep(tier, seed, tools, score, correct, invalid=0, accused="e01"):
+    steps = [{"t": i, "day": 1, "tool": t, "args": {}, "result": {"ok": t != "bad"}} for i, t in enumerate(tools)]
+    return {"tier": tier, "seed": seed, "agent": "x", "steps": steps, "score": score, "accused": accused,
+            "correct": correct, "final_day": 3, "end_reason": "accused" if accused else "horizon",
+            "meta": {"invalid_calls": invalid}}
+
+
+def test_j4_proxy_summary(tmp_path):
+    from fr8.analysis import j4_proxy as jp
+    eps = [_ep("easy", 0, ["status", "status", "plant_canary", "bad", "accuse"], 0.8, True, invalid=1),
+           _ep("hard", 1, ["advance_day", "foo", "status"], 0.0, False, invalid=0, accused=None)]
+    s = jp.summarize(eps, solver_agree=False)
+    assert s["n_steps"] == 8 and s["invalid_share"] == 1 / 8
+    assert s["valid_rate"] == (8 - 1 - 1) / 8  # 1 invalid, 1 result not ok
+    assert s["repeat_share"] == 1 / 8 and s["mix[other]"] == 2 / 8
+    assert s["mix[status net of invalid]"] == 2 / 8 and s["reached_accusation"] == 0.5
+    for name, e in (("base", eps[:1]), ("lora", eps)):
+        d = tmp_path / name / "run1"; d.mkdir(parents=True)
+        (d / "episodes.jsonl").write_text("".join(json.dumps(x) + "\n" for x in e))
+        (d / "meta.json").write_text(json.dumps({"agent": name}))
+    out = tmp_path / "p.md"
+    jp.main([str(tmp_path / "base"), str(tmp_path / "lora"), "--out", str(out), "--no-solver-agree"])
+    md = out.read_text()
+    assert "Descriptive only" in md and "base/run1: n = 1 episodes" in md and "## hard" in md
+
+
+def test_j4_solver_self_agreement():
+    from dataclasses import asdict
+    from canary.env import Env
+    from canary.eval import make_policy_factory, run_episode
+    from fr8.analysis.j4_proxy import solver_agreement
+    ep = asdict(run_episode(Env("easy", 5), make_policy_factory("solver")(5)))
+    a, n = solver_agreement(ep)
+    assert n > 0 and a == n

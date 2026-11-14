@@ -1,0 +1,245 @@
+{
+ "rows": [
+  {
+   "tier": "hard",
+   "agent": "codex:gpt-5.5",
+   "n": 11,
+   "invalid": 0,
+   "score": 0.6545454545454544,
+   "ci": 0.04091009534120456,
+   "accuracy": 1,
+   "accuse_day": 11.636363636363637,
+   "label": "REAL",
+   "sources": [
+    "codex-gpt-5.5-full/hard"
+   ],
+   "vs_solver": 1.1056511056511058
+  },
+  {
+   "tier": "hard",
+   "agent": "solver",
+   "n": 20,
+   "invalid": 0,
+   "score": 0.5919999999999999,
+   "ci": 0.11438922142818947,
+   "accuracy": 0.85,
+   "accuse_day": 10.764705882352942,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/solver-hard-20261114-0332"
+   ],
+   "vs_solver": 1
+  },
+  {
+   "tier": "hard",
+   "agent": "openai:gpt-5.5",
+   "n": 8,
+   "invalid": 0,
+   "score": 0.26375,
+   "ci": 0.5411997159090163,
+   "accuracy": 0.75,
+   "accuse_day": 12.25,
+   "label": "REAL",
+   "sources": [
+    "gpt-5.5-full/hard"
+   ],
+   "vs_solver": 0.44552364864864874
+  },
+  {
+   "tier": "hard",
+   "agent": "do_nothing",
+   "n": 20,
+   "invalid": 0,
+   "score": 0,
+   "ci": 0,
+   "accuracy": 0,
+   "accuse_day": null,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/do_nothing-hard-20261114-0332"
+   ],
+   "vs_solver": 0
+  },
+  {
+   "tier": "hard",
+   "agent": "heuristic",
+   "n": 20,
+   "invalid": 0,
+   "score": -0.32175,
+   "ci": 0.3739551665430102,
+   "accuracy": 0.4,
+   "accuse_day": 11.55,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/heuristic-hard-20261114-0332"
+   ],
+   "vs_solver": -0.5434966216216217
+  },
+  {
+   "tier": "hard",
+   "agent": "random",
+   "n": 20,
+   "invalid": 0,
+   "score": -0.7,
+   "ci": 0.20605773335083588,
+   "accuracy": 0,
+   "accuse_day": 6.571428571428571,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/random-hard-20261114-0332"
+   ],
+   "vs_solver": -1.1824324324324327
+  },
+  {
+   "tier": "hard",
+   "agent": "stop_early",
+   "n": 20,
+   "invalid": 0,
+   "score": -0.9,
+   "ci": 0.1959999999999999,
+   "accuracy": 0.05,
+   "accuse_day": 1,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/stop_early-hard-20261114-0332"
+   ],
+   "vs_solver": -1.5202702702702706
+  },
+  {
+   "tier": "hard",
+   "agent": "restrict_all",
+   "n": 20,
+   "invalid": 0,
+   "score": -1,
+   "ci": 0,
+   "accuracy": 0,
+   "accuse_day": 8,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/restrict_all-hard-20261114-0332"
+   ],
+   "vs_solver": -1.6891891891891897
+  },
+  {
+   "tier": "medium",
+   "agent": "solver",
+   "n": 20,
+   "invalid": 0,
+   "score": 0.7169999999999999,
+   "ci": 0.05232444613331224,
+   "accuracy": 1,
+   "accuse_day": 7.5,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/solver-medium-20261114-0332"
+   ],
+   "vs_solver": 1
+  },
+  {
+   "tier": "medium",
+   "agent": "openai:gpt-5.5",
+   "n": 9,
+   "invalid": 0,
+   "score": 0.6677777777777778,
+   "ci": 0.1031862274281999,
+   "accuracy": 1,
+   "accuse_day": 9.88888888888889,
+   "label": "REAL",
+   "sources": [
+    "gpt-5.5-full/medium"
+   ],
+   "vs_solver": 0.9313497598016429
+  },
+  {
+   "tier": "medium",
+   "agent": "codex:gpt-5.5",
+   "n": 11,
+   "invalid": 0,
+   "score": 0.40090909090909094,
+   "ci": 0.4166552369914444,
+   "accuracy": 0.8181818181818182,
+   "accuse_day": 8.818181818181818,
+   "label": "REAL",
+   "sources": [
+    "codex-gpt-5.5-full/medium"
+   ],
+   "vs_solver": 0.5591479650057057
+  },
+  {
+   "tier": "medium",
+   "agent": "do_nothing",
+   "n": 20,
+   "invalid": 0,
+   "score": 0,
+   "ci": 0,
+   "accuracy": 0,
+   "accuse_day": null,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/do_nothing-medium-20261114-0332"
+   ],
+   "vs_solver": 0
+  },
+  {
+   "tier": "medium",
+   "agent": "heuristic",
+   "n": 20,
+   "invalid": 0,
+   "score": -0.11549999999999998,
+   "ci": 0.3606878615265997,
+   "accuracy": 0.55,
+   "accuse_day": 11.1,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/heuristic-medium-20261114-0332"
+   ],
+   "vs_solver": -0.16108786610878661
+  },
+  {
+   "tier": "medium",
+   "agent": "random",
+   "n": 20,
+   "invalid": 0,
+   "score": -0.678,
+   "ci": 0.22482562056660244,
+   "accuracy": 0.05,
+   "accuse_day": 6.466666666666667,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/random-medium-20261114-0332"
+   ],
+   "vs_solver": -0.9456066945606697
+  },
+  {
+   "tier": "medium",
+   "agent": "restrict_all",
+   "n": 20,
+   "invalid": 0,
+   "score": -0.95,
+   "ci": 0.09800000000000002,
+   "accuracy": 0.05,
+   "accuse_day": 7,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/restrict_all-medium-20261114-0332"
+   ],
+   "vs_solver": -1.3249651324965135
+  },
+  {
+   "tier": "medium",
+   "agent": "stop_early",
+   "n": 20,
+   "invalid": 0,
+   "score": -1,
+   "ci": 0,
+   "accuracy": 0,
+   "accuse_day": 1,
+   "label": "SCRIPTED",
+   "sources": [
+    "reference/stop_early-medium-20261114-0332"
+   ],
+   "vs_solver": -1.3947001394700143
+  }
+ ],
+ "source": "data/runs/committed/v1.3 (current generation only; older runs excluded)"
+}

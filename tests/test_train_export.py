@@ -42,3 +42,10 @@ def test_render_error_and_truncation():
     m = render_messages("rules", st)
     assert json.loads(m[3]["content"]) == {"error": "daily action limit"}
     assert m[5]["content"].endswith("[truncated]") and len(m[5]["content"]) < 3100
+
+
+def test_shards_disjoint(tmp_path):
+    a = export("train", ["easy"], 3, str(tmp_path), policy="fake", shard=0, nshards=2, only_correct=False)
+    b = export("train", ["easy"], 3, str(tmp_path), policy="fake", shard=1, nshards=2, only_correct=False)
+    seeds = [json.loads(l)["seed"] for f in tmp_path.glob("train-easy-s*.jsonl") for l in open(f)]
+    assert sorted(seeds) == list(range(100000, 100006))

@@ -80,6 +80,7 @@ def main(argv=None):
     ap.add_argument("--pilot", action="store_true")
     ap.add_argument("--pilot-steps", type=int, default=5)
     ap.add_argument("--tiny", action="store_true")
+    ap.add_argument("--max-hours", type=float, default=0, help="stop + save after this long")
     ap.add_argument("--save-every", type=int, default=200)
     a = ap.parse_args(argv)
 
@@ -148,6 +149,9 @@ def main(argv=None):
         log.flush()
         if step % 10 == 0 or step == total_steps or a.pilot:
             print(f"[train] {rec}", flush=True)
+        if a.max_hours and el > 3600 * a.max_hours:
+            print(f"[train] time box hit at step {step}", flush=True)
+            break
         if not a.pilot and step % a.save_every == 0:
             model.save_pretrained(os.path.join(a.out, f"ckpt-{step}"))
 

@@ -2,7 +2,7 @@
 
     python -m train.export_sft --split train|val --tier easy|medium|hard|all --n N --out DIR
                                [--seed-offset K] [--workers W] [--shard-size S] [--all-episodes]
-                               [--policy solver|fake]
+                               [--policy solver|fake] [--shard K --nshards M]
 
 Seeds: TRAIN seeds only. train = 100000..189999, val = 190000..199999 (disjoint slices of
 TRAIN_SEEDS). Held-out (800000+) and judge (900000+) seeds are never touched (asserted).
@@ -67,9 +67,13 @@ def play_one(job: tuple[str, str, int]) -> dict:
 
 def export(split: str, tiers: list[str], n: int, out: str, seed_offset: int = 0,
            workers: int = 1, shard_size: int = 1000, only_correct: bool = True,
-           policy: str = "solver") -> dict:
+           policy: str = "solver", shard: int = 0, nshards: int = 1) -> dict:
+    """shard k of nshards plays the disjoint seed block offset + k*n .. offset + (k+1)*n."""
+    assert 0 <= shard < nshards
+    seed_offset += shard * n
+    tag = f"s{shard}-" if nshards > 1 else ""
     os.makedirs(out, exist_ok=True)
-    stats: dict = {"split": split, "policy": policy, "tiers": {}, "files": []}
+    stats: dict = {"split": split, "shard": shard, "seed_offset": seed_offset, "policy": policy, "tiers": {}, "files": []}
     t0 = time.time()
     for tier in tiers:
         jobs = [(policy, tier, s) for s in split_seeds(split, n, seed_offset)]
@@ -83,7 +87,7 @@ def export(split: str, tiers: list[str], n: int, out: str, seed_offset: int = 0,
             chunk = kept[k:k + shard_size]
             if not chunk:
                 break
-            path = os.path.join(out, f"{split}-{tier}-{k // shard_size:03d}.jsonl")
+            path = os.path.join(out, f"{split}-{tier}-{tag}{k // shard_size:03d}.jsonl")
             with open(path, "w") as f:
                 for r in chunk:
                     f.write(json.dumps(r, separators=(",", ":")) + "\n")
@@ -96,7 +100,7 @@ def export(split: str, tiers: list[str], n: int, out: str, seed_offset: int = 0,
             "mean_assistant_turns": sum(len(r["messages"]) - 2 for r in recs) / max(2 * n_ep, 1),
         }
     stats["seconds"] = round(time.time() - t0, 1)
-    with open(os.path.join(out, f"{split}-manifest.json"), "w") as f:
+    with open(os.path.join(out, f"{split}-{tag}manifest.json"), "w") as f:
         json.dump(stats, f, indent=2)
     return stats
 
@@ -111,11 +115,13 @@ def main(argv=None):
     ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--shard-size", type=int, default=1000)
     ap.add_argument("--all-episodes", action="store_true", help="keep incorrect episodes too")
+    ap.add_argument("--shard", type=int, default=0)
+    ap.add_argument("--nshards", type=int, default=1)
     ap.add_argument("--policy", choices=["solver", "fake"], default="solver")
     a = ap.parse_args(argv)
     tiers = list(TIERS) if a.tier == "all" else [a.tier]
     stats = export(a.split, tiers, a.n, a.out, a.seed_offset, a.workers, a.shard_size,
-                   not a.all_episodes, a.policy)
+                   not a.all_episodes, a.policy, a.shard, a.nshards)
     print(json.dumps(stats))
 
 

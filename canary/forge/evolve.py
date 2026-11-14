@@ -17,7 +17,7 @@ import time
 from pathlib import Path
 
 from .fitness import (default_investigators, default_solver_factory, evaluate, fake_factory, fake_runner,
-                      real_runner, solver_baseline)
+                      real_runner, solver_baseline, tier_defaults)
 from .mutate import canonical, default_strategy_json, get_mutator, validate_strategy
 
 
@@ -43,7 +43,7 @@ def _tournament(rng, pop, k=3):
 
 def run(mutator_spec="stub", tier="hard", pop_size=16, gens=50, seeds=range(20), workers=1, out="data/forge/run",
         fake=False, seed=0, elite=2, hof_k=20, investigators=None, solver_factory=None, runner=None,
-        log=print) -> dict:
+        log=print, fitness_mode: str | None = None, min_solver_acc: float | None = None) -> dict:
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     seeds = list(seeds)
@@ -55,6 +55,9 @@ def run(mutator_spec="stub", tier="hard", pop_size=16, gens=50, seeds=range(20),
         runner = runner or real_runner
         investigators = investigators or default_investigators()
         solver_factory = solver_factory or default_solver_factory()
+    td = tier_defaults(tier)
+    fitness_mode = fitness_mode or td["fitness_mode"]
+    min_solver_acc = td["min_solver_acc"] if min_solver_acc is None else min_solver_acc
     mutator = get_mutator(mutator_spec, seed=seed)
     baseline = solver_baseline(solver_factory, seeds, tier, runner, workers)
     cache: dict[str, dict] = {}
@@ -62,7 +65,8 @@ def run(mutator_spec="stub", tier="hard", pop_size=16, gens=50, seeds=range(20),
     def ev(s):
         k = canonical(s)
         if k not in cache:
-            cache[k] = evaluate(s, investigators, solver_factory, seeds, tier, runner, workers, baseline)
+            cache[k] = evaluate(s, investigators, solver_factory, seeds, tier, runner, workers, baseline,
+                                fitness_mode=fitness_mode, min_solver_acc=min_solver_acc)
         return cache[k]
 
     def member(s):
@@ -148,10 +152,13 @@ def main(argv=None):
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--elite", type=int, default=2)
     ap.add_argument("--hof", type=int, default=20)
+    ap.add_argument("--fitness", choices=["min", "mean"], default=None,
+                    help="min = regret vs strongest investigator (default on hard), mean = mean regret")
+    ap.add_argument("--min-solver-acc", type=float, default=None, help="feasibility floor (hard 0.75, else 0.85)")
     ap.add_argument("--fake", action="store_true", help="test doubles instead of Env/solver/heuristics")
     a = ap.parse_args(argv)
     res = run(a.mutator, a.tier, a.pop, a.gens, parse_seeds(a.seeds), a.workers, a.out, a.fake, a.seed,
-              a.elite, a.hof)
+              a.elite, a.hof, fitness_mode=a.fitness, min_solver_acc=a.min_solver_acc)
     print(json.dumps({"out": res["out"], "baseline": res["baseline"], "hof_size": len(res["hof"]),
                       "best": res["hof"][0]["fitness"] if res["hof"] else None}))
     return 0

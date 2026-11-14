@@ -1,0 +1,560 @@
+{
+ "agent": {
+  "hard": {
+   "n": 7,
+   "mean_score": 0.6664285714285715,
+   "accuracy": 1.0,
+   "mean_total_regret": 0.33493671428571425,
+   "tags": {
+    "uninformative_canary": {
+     "value_lost": 0.0148,
+     "per_episode": 0.0021,
+     "count": 11
+    },
+    "premature_accusation": {
+     "value_lost": 1.6049,
+     "per_episode": 0.2293,
+     "count": 1
+    },
+    "decoy_chase": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "ignored_delay": {
+     "value_lost": 1.6049,
+     "per_episode": 0.2293,
+     "count": 1
+    },
+    "over_restriction": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "budget_waste": {
+     "value_lost": 0.0,
+     "per_episode": 0.0,
+     "count": 9
+    },
+    "no_accusation": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    }
+   },
+   "mean_p_correct_at_accusation": 0.7794714285714286,
+   "top5": [
+    {
+     "seed": 0,
+     "t": 129,
+     "day": 14,
+     "action": "accuse",
+     "regret": 1.60493,
+     "tags": [
+      "premature_accusation",
+      "ignored_delay"
+     ]
+    },
+    {
+     "seed": 7,
+     "t": 51,
+     "day": 6,
+     "action": "accuse",
+     "regret": 0.438229,
+     "tags": []
+    },
+    {
+     "seed": 5,
+     "t": 52,
+     "day": 6,
+     "action": "accuse",
+     "regret": 0.02392,
+     "tags": []
+    },
+    {
+     "seed": 0,
+     "t": 87,
+     "day": 10,
+     "action": "plant_canary",
+     "regret": 0.014845,
+     "tags": [
+      "uninformative_canary"
+     ]
+    },
+    {
+     "seed": 5,
+     "t": 45,
+     "day": 5,
+     "action": "plant_canary",
+     "regret": 0.013249,
+     "tags": []
+    }
+   ]
+  },
+  "medium": {
+   "n": 8,
+   "mean_score": 0.014999999999999986,
+   "accuracy": 0.625,
+   "mean_total_regret": 0.20090775,
+   "tags": {
+    "uninformative_canary": {
+     "value_lost": 0.1135,
+     "per_episode": 0.0142,
+     "count": 5
+    },
+    "premature_accusation": {
+     "value_lost": 0.5883,
+     "per_episode": 0.0735,
+     "count": 2
+    },
+    "decoy_chase": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "ignored_delay": {
+     "value_lost": 0.0378,
+     "per_episode": 0.0047,
+     "count": 1
+    },
+    "over_restriction": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "budget_waste": {
+     "value_lost": 0.0,
+     "per_episode": 0.0,
+     "count": 20
+    },
+    "no_accusation": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    }
+   },
+   "mean_p_correct_at_accusation": 0.8143375,
+   "top5": [
+    {
+     "seed": 7,
+     "t": 133,
+     "day": 14,
+     "action": "accuse",
+     "regret": 0.550497,
+     "tags": [
+      "premature_accusation"
+     ]
+    },
+    {
+     "seed": 4,
+     "t": 41,
+     "day": 5,
+     "action": "restrict_access",
+     "regret": 0.070324,
+     "tags": []
+    },
+    {
+     "seed": 4,
+     "t": 40,
+     "day": 5,
+     "action": "restrict_access",
+     "regret": 0.06717,
+     "tags": []
+    },
+    {
+     "seed": 6,
+     "t": 61,
+     "day": 8,
+     "action": "restrict_access",
+     "regret": 0.047435,
+     "tags": []
+    },
+    {
+     "seed": 5,
+     "t": 112,
+     "day": 14,
+     "action": "accuse",
+     "regret": 0.037848,
+     "tags": [
+      "premature_accusation",
+      "ignored_delay"
+     ]
+    }
+   ]
+  }
+ },
+ "solver": {
+  "hard": {
+   "n": 7,
+   "mean_score": 0.39999999999999997,
+   "accuracy": 0.7142857142857143,
+   "mean_total_regret": 0.057775714285714284,
+   "tags": {
+    "uninformative_canary": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "premature_accusation": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "decoy_chase": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "ignored_delay": {
+     "value_lost": 0.0,
+     "per_episode": 0.0,
+     "count": 1
+    },
+    "over_restriction": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "budget_waste": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "no_accusation": {
+     "value_lost": 0.0,
+     "per_episode": 0.0,
+     "count": 1
+    }
+   },
+   "mean_p_correct_at_accusation": 0.9213166666666667,
+   "top5": [
+    {
+     "seed": 5,
+     "t": 60,
+     "day": 9,
+     "action": "accuse",
+     "regret": 0.214742,
+     "tags": []
+    },
+    {
+     "seed": 8,
+     "t": 81,
+     "day": 12,
+     "action": "accuse",
+     "regret": 0.077741,
+     "tags": []
+    },
+    {
+     "seed": 1,
+     "t": 53,
+     "day": 8,
+     "action": "accuse",
+     "regret": 0.054465,
+     "tags": []
+    },
+    {
+     "seed": 7,
+     "t": 53,
+     "day": 8,
+     "action": "accuse",
+     "regret": 0.038986,
+     "tags": []
+    },
+    {
+     "seed": 0,
+     "t": 74,
+     "day": 11,
+     "action": "accuse",
+     "regret": 0.018496,
+     "tags": []
+    }
+   ]
+  },
+  "medium": {
+   "n": 8,
+   "mean_score": 0.62875,
+   "accuracy": 0.875,
+   "mean_total_regret": 0.0,
+   "tags": {
+    "uninformative_canary": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "premature_accusation": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "decoy_chase": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "ignored_delay": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "over_restriction": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "budget_waste": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "no_accusation": {
+     "value_lost": 0.0,
+     "per_episode": 0.0,
+     "count": 1
+    }
+   },
+   "mean_p_correct_at_accusation": 1.0,
+   "top5": [
+    {
+     "seed": 0,
+     "t": 0,
+     "day": 1,
+     "action": "list_employees",
+     "regret": 0.0,
+     "tags": []
+    },
+    {
+     "seed": 0,
+     "t": 1,
+     "day": 1,
+     "action": "status",
+     "regret": 0.0,
+     "tags": []
+    },
+    {
+     "seed": 0,
+     "t": 2,
+     "day": 1,
+     "action": "list_documents",
+     "regret": 0.0,
+     "tags": []
+    },
+    {
+     "seed": 0,
+     "t": 3,
+     "day": 1,
+     "action": "check_leak_feed",
+     "regret": 0.0,
+     "tags": []
+    },
+    {
+     "seed": 0,
+     "t": 4,
+     "day": 1,
+     "action": "plant_canary",
+     "regret": 0.0,
+     "tags": []
+    }
+   ]
+  }
+ },
+ "heuristic": {
+  "hard": {
+   "n": 7,
+   "mean_score": -0.06928571428571428,
+   "accuracy": 0.5714285714285714,
+   "mean_total_regret": 0.5832418571428571,
+   "tags": {
+    "uninformative_canary": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "premature_accusation": {
+     "value_lost": 3.5955,
+     "per_episode": 0.5136,
+     "count": 5
+    },
+    "decoy_chase": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "ignored_delay": {
+     "value_lost": 0.5888,
+     "per_episode": 0.0841,
+     "count": 1
+    },
+    "over_restriction": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "budget_waste": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "no_accusation": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    }
+   },
+   "mean_p_correct_at_accusation": 0.5089571428571429,
+   "top5": [
+    {
+     "seed": 7,
+     "t": 47,
+     "day": 12,
+     "action": "accuse",
+     "regret": 0.796393,
+     "tags": [
+      "premature_accusation"
+     ]
+    },
+    {
+     "seed": 5,
+     "t": 47,
+     "day": 12,
+     "action": "accuse",
+     "regret": 0.788707,
+     "tags": [
+      "premature_accusation"
+     ]
+    },
+    {
+     "seed": 1,
+     "t": 47,
+     "day": 12,
+     "action": "accuse",
+     "regret": 0.760461,
+     "tags": [
+      "premature_accusation"
+     ]
+    },
+    {
+     "seed": 0,
+     "t": 47,
+     "day": 12,
+     "action": "accuse",
+     "regret": 0.661188,
+     "tags": [
+      "premature_accusation"
+     ]
+    },
+    {
+     "seed": 8,
+     "t": 47,
+     "day": 12,
+     "action": "accuse",
+     "regret": 0.588775,
+     "tags": [
+      "premature_accusation",
+      "ignored_delay"
+     ]
+    }
+   ]
+  },
+  "medium": {
+   "n": 8,
+   "mean_score": -0.19125,
+   "accuracy": 0.5,
+   "mean_total_regret": 0.60097625,
+   "tags": {
+    "uninformative_canary": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "premature_accusation": {
+     "value_lost": 3.9557,
+     "per_episode": 0.4945,
+     "count": 5
+    },
+    "decoy_chase": {
+     "value_lost": 0.9921,
+     "per_episode": 0.124,
+     "count": 1
+    },
+    "ignored_delay": {
+     "value_lost": 3.067,
+     "per_episode": 0.3834,
+     "count": 4
+    },
+    "over_restriction": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "budget_waste": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    },
+    "no_accusation": {
+     "value_lost": 0,
+     "per_episode": 0.0,
+     "count": 0
+    }
+   },
+   "mean_p_correct_at_accusation": 0.645825,
+   "top5": [
+    {
+     "seed": 2,
+     "t": 47,
+     "day": 12,
+     "action": "accuse",
+     "regret": 0.992099,
+     "tags": [
+      "premature_accusation",
+      "decoy_chase",
+      "ignored_delay"
+     ]
+    },
+    {
+     "seed": 4,
+     "t": 47,
+     "day": 12,
+     "action": "accuse",
+     "regret": 0.888633,
+     "tags": [
+      "premature_accusation"
+     ]
+    },
+    {
+     "seed": 1,
+     "t": 47,
+     "day": 12,
+     "action": "accuse",
+     "regret": 0.710844,
+     "tags": [
+      "premature_accusation",
+      "ignored_delay"
+     ]
+    },
+    {
+     "seed": 5,
+     "t": 47,
+     "day": 12,
+     "action": "accuse",
+     "regret": 0.691644,
+     "tags": [
+      "premature_accusation",
+      "ignored_delay"
+     ]
+    },
+    {
+     "seed": 0,
+     "t": 47,
+     "day": 12,
+     "action": "accuse",
+     "regret": 0.672444,
+     "tags": [
+      "premature_accusation",
+      "ignored_delay"
+     ]
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,427 @@
+{
+ "agent": "openai:gpt-5.5",
+ "tier": "hard",
+ "seeds": [
+  0
+ ],
+ "budget": 8.0,
+ "cost_usd": 12.763089999999998,
+ "stopped": null,
+ "moles": [
+  {
+   "mole": "hof1",
+   "strategy_json": {
+    "default": {
+     "frame": "most_restricted_peer",
+     "leak": "newest"
+    },
+    "rules": [
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "==",
+        12
+       ]
+      ],
+      "then": {
+       "frame": "decoy",
+       "leak": "none"
+      }
+     },
+     {
+      "if": [
+       [
+        "day",
+        "==",
+        2
+       ],
+       [
+        "recent_low_recipient_docs",
+        ">=",
+        2
+       ],
+       [
+        "max_recipient_count",
+        "!=",
+        7
+       ]
+      ],
+      "then": {
+       "frame": "none",
+       "leak": "none"
+      }
+     },
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "==",
+        19
+       ]
+      ],
+      "then": {
+       "frame": "most_restricted_peer",
+       "leak": "most_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "==",
+        18
+       ]
+      ],
+      "then": {
+       "frame": "most_restricted_peer",
+       "leak": "most_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "==",
+        20
+       ]
+      ],
+      "then": {
+       "frame": "most_restricted_peer",
+       "leak": "most_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "i_am_restricted",
+        "==",
+        1
+       ]
+      ],
+      "then": {
+       "frame": "none",
+       "leak": "most_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "min_recipient_count",
+        ">=",
+        13
+       ]
+      ],
+      "then": {
+       "frame": "most_restricted_peer",
+       "leak": "none"
+      }
+     },
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "<=",
+        19
+       ]
+      ],
+      "then": {
+       "frame": "decoy",
+       "leak": "fewest_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "day",
+        "==",
+        14
+       ]
+      ],
+      "then": {
+       "frame": "random_peer",
+       "leak": "oldest"
+      }
+     },
+     {
+      "if": [
+       [
+        "day",
+        "==",
+        7
+       ],
+       [
+        "days_since_last_leak",
+        ">",
+        2
+       ]
+      ],
+      "then": {
+       "frame": "random_peer",
+       "leak": "newest"
+      }
+     },
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "==",
+        20
+       ]
+      ],
+      "then": {
+       "frame": "most_restricted_peer",
+       "leak": "most_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "day",
+        "<=",
+        8
+       ]
+      ],
+      "then": {
+       "frame": "decoy",
+       "leak": "none"
+      }
+     }
+    ]
+   },
+   "forge": {
+    "fitness": 1.509825,
+    "solver_score": 0.616575,
+    "per_investigator": {
+     "heuristic": {
+      "score": -0.89325,
+      "acc": 0.06,
+      "regret": 1.509825
+     }
+    }
+   },
+   "episodes": [
+    {
+     "seed": 0,
+     "agent_score": 0.75,
+     "agent_correct": true,
+     "agent_day": 14,
+     "solver_score": 0.0,
+     "solver_correct": false,
+     "cost_usd": 6.1297999999999995,
+     "error": null
+    }
+   ],
+   "agent_score": 0.75,
+   "agent_acc": 1,
+   "solver_score": 0.0,
+   "solver_acc": 0,
+   "gap": -0.75
+  },
+  {
+   "mole": "hof2",
+   "strategy_json": {
+    "default": {
+     "frame": "decoy",
+     "leak": "newest"
+    },
+    "rules": [
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "==",
+        12
+       ]
+      ],
+      "then": {
+       "frame": "decoy",
+       "leak": "none"
+      }
+     },
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "==",
+        18
+       ]
+      ],
+      "then": {
+       "frame": "most_restricted_peer",
+       "leak": "most_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "==",
+        19
+       ]
+      ],
+      "then": {
+       "frame": "most_restricted_peer",
+       "leak": "most_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "==",
+        18
+       ]
+      ],
+      "then": {
+       "frame": "most_restricted_peer",
+       "leak": "most_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "==",
+        20
+       ]
+      ],
+      "then": {
+       "frame": "most_restricted_peer",
+       "leak": "most_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "==",
+        18
+       ]
+      ],
+      "then": {
+       "frame": "random_peer",
+       "leak": "most_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "min_recipient_count",
+        ">=",
+        13
+       ]
+      ],
+      "then": {
+       "frame": "most_restricted_peer",
+       "leak": "none"
+      }
+     },
+     {
+      "if": [
+       [
+        "max_recipient_count",
+        "<=",
+        19
+       ]
+      ],
+      "then": {
+       "frame": "decoy",
+       "leak": "fewest_recipients"
+      }
+     },
+     {
+      "if": [
+       [
+        "day",
+        "==",
+        14
+       ]
+      ],
+      "then": {
+       "frame": "random_peer",
+       "leak": "oldest"
+      }
+     },
+     {
+      "if": [
+       [
+        "day",
+        "==",
+        7
+       ],
+       [
+        "days_since_last_leak",
+        ">",
+        2
+       ]
+      ],
+      "then": {
+       "frame": "decoy",
+       "leak": "newest"
+      }
+     },
+     {
+      "if": [
+       [
+        "day",
+        "==",
+        2
+       ],
+       [
+        "recent_low_recipient_docs",
+        "<",
+        2
+       ]
+      ],
+      "then": {
+       "frame": "none",
+       "leak": "none"
+      }
+     },
+     {
+      "if": [
+       [
+        "day",
+        "<=",
+        8
+       ]
+      ],
+      "then": {
+       "frame": "decoy",
+       "leak": "none"
+      }
+     }
+    ]
+   },
+   "forge": {
+    "fitness": 1.3931,
+    "solver_score": 0.616575,
+    "per_investigator": {
+     "heuristic": {
+      "score": -0.776525,
+      "acc": 0.125,
+      "regret": 1.3931
+     }
+    }
+   },
+   "episodes": [
+    {
+     "seed": 0,
+     "agent_score": 0.69,
+     "agent_correct": true,
+     "agent_day": 14,
+     "solver_score": 0.0,
+     "solver_correct": false,
+     "cost_usd": 6.633289999999999,
+     "error": null
+    }
+   ],
+   "agent_score": 0.69,
+   "agent_acc": 1,
+   "solver_score": 0.0,
+   "solver_acc": 0,
+   "gap": -0.69
+  }
+ ]
+}

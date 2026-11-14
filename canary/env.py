@@ -12,7 +12,7 @@ import random
 from dataclasses import asdict
 from typing import Any
 
-from .rules import TIERS
+from .rules import TIERS, TRACKS, tier_params
 from .text.facts import EmployeeFacts, PublicDayFacts
 from .types import INVESTIGATIVE_TOOLS, EpisodeResult, LedgerEntry, Step, ToolResult
 from .mole.dsl import DEFAULT_STRATEGY, MoleDoc, MoleView, MoleStrategy
@@ -60,10 +60,13 @@ def _default_provider():
 
 class Env:
     def __init__(self, tier: str, seed: int, text_provider=None, mole_strategy=None):
-        if tier not in TIERS:
+        if tier not in TIERS and tier not in TRACKS:
             raise ValueError(f"unknown tier {tier}")
-        self.tier, self.seed, self.p = tier, seed, TIERS[tier]
+        self.tier, self.seed, self.p = tier, seed, tier_params(tier)
         self._world = generate_world(tier, seed, self.p)
+        if tier in TRACKS and mole_strategy is None:
+            from .forge_track import strategy_for
+            mole_strategy = strategy_for(tier, seed)
         if mole_strategy is not None:
             if isinstance(mole_strategy, dict):
                 mole_strategy = MoleStrategy.from_json(mole_strategy)
@@ -109,7 +112,7 @@ class Env:
         ws = p.wrong_accusation_score
         single = round(100 * p.p_single_dept_recipients)
         L = [
-            f"# Canary: catch the mole ({p.name} tier)",
+            f"# Canary: catch the mole ({p.name} tier)" if self.tier not in TRACKS else f"# Canary: catch the mole ({self.tier} track, {p.name} tier rules)",
             "",
             "## Your job",
             f"You are the security lead of a company with {n} employees, with ids e00 to e{n-1:02d}. "
@@ -190,7 +193,11 @@ class Env:
             "- A rule may also frame one colleague (the decoy, the first restricted colleague, or a random colleague). "
             "Framing adds one fake after-hours access for that colleague.",
             f"- The mole never knows which documents are canaries. The {p.p_leak} leak probability above still applies to every leak.",
-            "- The default mole leaks a random document and does no extra framing, exactly as described above.",
+            ("- The default mole leaks a random document and does no extra framing, exactly as described above."
+             if self.tier not in TRACKS else
+             "- In this track the mole does NOT use the default strategy. It follows one evolved Mole DSL strategy, "
+             "built from exactly the facts and choices listed here. You are not told which one. "
+             "All other rules and numbers are the same as in the hard tier."),
             "",
             "## Rules for tool arguments",
             "- Give exactly one employee id per call, such as e07. Lists, wildcards and names are rejected.",
@@ -212,6 +219,11 @@ class Env:
     @property
     def done(self) -> bool:
         return self._done
+
+    def peek_status(self) -> dict:
+        """Same data as the `status` tool, without counting a call (UIs only; never an MCP tool)."""
+        with self._lock:
+            return dict(self._t_status({}).data)
 
     def verdict(self) -> dict:
         """Server-side outcome for the grader/ledger (never an MCP tool)."""

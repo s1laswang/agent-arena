@@ -551,3 +551,42 @@ def behaviour_stats(eps: list[Episode]) -> dict[str, dict]:
             "no_accusation": sum(1 for e in es if not e.accused),
         }
     return out
+
+
+# ----------------------------------------------------------------------------------------- blind packing
+# Only what the agent saw and did: tool calls, tool results (summarised), the agent's own words, and the final
+# outcome. No regret, no code tags, no solver beliefs, no true mole, no solver scores.
+
+BLIND_FORBIDDEN = ("REGRET", "regret", "top=", "mole:", "true_mole", "total_regret", "solver", "premature_accusation",
+                   "decoy_chase", "ignored_delay", "uninformative_canary", "over_restriction", "budget_waste",
+                   "no_accusation")
+
+BLIND_LEGEND = """FORMAT. One block per episode: a header (agent, harness, rules version, tier, seed) and the final outcome
+(who was accused, whether that was correct, the score), then one line per step:
+  t<step> d<day> <tool>(<args>) -> <result as the agent saw it>
+plant_canary args are written as variant groups, e.g. "A:e01,e05 | B:e07" (variant A went to e01 and e05).
+`says:` lines are the agent's own words (thought summaries or messages) before that call, verbatim but truncated.
+Score = remaining company value V on a correct accusation, -1 on a wrong one, 0 for none."""
+
+
+def blind_step_line(s: StepRow) -> str:
+    return f"t{s.t} d{s.day} {s.tool}({compact_args(s.tool, s.args)}) -> {s.brief}"
+
+
+def pack_episode_blind(ep: Episode, short: int = RATIONALE_SHORT, long: int = 900) -> str:
+    lines = [f"=== EPISODE {ep.id} | agent={ep.agent} harness={ep.harness} rules={ep.tiers_version} tier={ep.tier} "
+             f"seed={ep.seed} thinking={ep.thinking_level}",
+             f"outcome: accused={ep.accused} correct={ep.correct} score={ep.score:.3f} final_day={ep.final_day} "
+             f"end={ep.end_reason}"]
+    for s in ep.steps:
+        lines.append(blind_step_line(s))
+        if s.rationale:
+            budget = long if s.tool in ("accuse", "plant_canary", "restrict_access") else short
+            r = re.sub(r"\s+", " ", s.rationale).strip()
+            lines.append(f"   says: {r[:budget]}{' [...]' if len(r) > budget else ''}")
+    return "\n".join(lines)
+
+
+def pack_corpus_blind(eps: list[Episode], **kw) -> tuple[str, dict[str, str]]:
+    blocks = {ep.id: pack_episode_blind(ep, **kw) for ep in eps}
+    return BLIND_LEGEND + "\n\n" + "\n\n".join(blocks.values()), blocks

@@ -195,7 +195,7 @@ class AtlasOps:
             def stream():
                 # streaming keeps long calls alive: non-streamed ~800k-token calls on gemini-4-carbon were cut by
                 # the server after ~9 min ("Server disconnected without sending a response")
-                texts, um = [], None
+                texts, um, mv = [], None, None
                 for ch in self.client.models.generate_content_stream(
                         model=model, contents=[types.Content(role="user", parts=parts)],
                         config=types.GenerateContentConfig(**cfg)):
@@ -206,10 +206,11 @@ class AtlasOps:
                         pass
                     if getattr(ch, "usage_metadata", None) is not None:
                         um = ch.usage_metadata
-                return "".join(texts), um
-            (text, um), t0 = self._retry(stream, model, "generate", meta)
-            self._ledger(model, "generate", um, t0, meta=meta)
-            out = {"text": text, "usage": _usage_dict(um)}
+                    mv = getattr(ch, "model_version", None) or mv
+                return "".join(texts), um, mv
+            (text, um, mv), t0 = self._retry(stream, model, "generate", meta)
+            self._ledger(model, "generate", um, t0, meta={**meta, "model_version": mv})
+            out = {"text": text, "usage": _usage_dict(um), "model_version": mv}
             if schema is not None:
                 try:
                     json.loads(text)

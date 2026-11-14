@@ -17,6 +17,11 @@ HINTS: dict[str, str] = {
     "over_restriction": "Each restriction costs company value every day it stays in place.",
     "budget_waste": "Tool calls and daily actions are limited; spend them on informative actions.",
     "no_accusation": "The episode scores zero unless you accuse someone before it ends.",
+    # PLAN-95 B1 (text fixed by the CEO, checked by head-env against instruction() v1.4). Opt-in only.
+    "ev_delay": "Accusing has positive expected value only if P(correct) > 1/(1+V), where V is your score if correct "
+                "(true V, which can be below the shown V while leaks are still in transit); otherwise abstaining "
+                "(score 0) is better. Leaks reach the feed 1\u20133 days (medium) / 2\u20133 days (hard) after they "
+                "happen, uniformly.",
 }
 # v2 (hint ablation, NEXT-LEVEL HEAD-AGENTS 3): one sentence per failure mode, restating ONLY facts already on the
 # instruction page (so a tag drop shows the information suffices, not that we leaked new information).

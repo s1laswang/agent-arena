@@ -14,7 +14,7 @@ The solver is paired on all 30 seeds per tier (solver means: hard 0.499, medium 
 
 Honest reading: a gap on hard in the judges' harness (both the raw and the luck-adjusted CI exclude parity); parity in-process on hard and in OpenCode on medium. Infra-invalid attempts (CLI error events, empty model replies, provider unavailable) were excluded and retried; the table's "alternative" rows count them as 0 instead.
 
-**Pre-registered seed rule (written 15 Nov ~00:15, before any rerun landed):** the set above (seeds 0-29, staged by the measurement engineer) is the PRIMARY result. Any later OpenCode reruns on the same seeds (e.g. the fleet's `--timeout 3600` reruns) are reported separately as a REPLICATION, never swapped in or cherry-picked. Fleet PR #3 episodes that timed out at 900 s were never part of this set.
+**Pre-registered seed rule (written Sat 14 Nov ~22:45 Helsinki (commit 671ed96), before any rerun landed):** the set above (seeds 0-29, staged by the measurement engineer) is the PRIMARY result. Any later OpenCode reruns on the same seeds (e.g. the fleet's `--timeout 3600` reruns) are reported separately as a REPLICATION, never swapped in or cherry-picked. Fleet PR #3 episodes that timed out at 900 s were never part of this set.
 
 
 ## Official v1.3 measurement (approved, 2026-11-14 10:30–11:21)

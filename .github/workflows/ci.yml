@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [justSilas]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: make setup
+        run: make setup
+      - name: make test
+        run: make test
+      - name: make reproduce (fast mode, 5 seeds/tier, no API keys)
+        env:
+          REPRO_FAST: "1"
+        run: make reproduce
+      - name: upload fast judge table
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: judge-table-fast
+          path: |
+            results/judge_table.md
+            results/gap_chart.png

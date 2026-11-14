@@ -51,7 +51,7 @@ Paste into the write-up (`pitch/SUBMISSION.md`, `pitch/GEMINI.md`) only after st
 1. trust_all vs staff. At momin 5634505 trust_all scores 0.35 and scripted staff 0.25: the ignore-chat baseline still beats staff. Leak, sabotage and frame only land by persuading another seat, so ignoring chat is immune. This is an open reward-integrity hole, say so honestly. Reread the WARNING lines after every merge.
 2. Seat mode. Judges run ONE seat, default finance_ap. At momin 5634505 the oracle scores 0.40 in that seat (should be 1.00), fix in progress. Show only the all-8 table until oracle is 1.00 in the seat table.
 3. The oracle uses the hidden identity. It is the "winnable" proof, not the reference. The fair reference is the evidence-only one: 0.55 at momin 5634505.
-4. Staff losses at momin 5634505: 45 of 45 labelled, 36 pure decision mistakes (missed_slow_burn 12, edited_contract_on_chat_request 9, wrong_accusation 9). The other 9 are not pure decision mistakes, so part of the gap is not being fooled.
+4. Staff losses at momin 5634505: 45 of 45 labelled, 36 pure decision mistakes (missed_slow_burn 12, edited_contract_on_chat_request 9, wrong_accusation 9). The other 9 are not classed as pure decision mistakes (meaning not reported to dm-pitch).
 5. make eval runtime: about 2.5 min with 4 jobs (lab-runner). Baselines are moving to `make eval-full`. Fresh-clone timing: NOT FOUND.
 6. No Gemini number anywhere. #1 gap for both prizes. Judges also want a real Docker `harbor run` of OpenCode: the Gemini line of `harbor/opencode/judge_runs.sh` has never run.
 7. Harbor: sleeper-in-sidecar and hidden SLEEPER_SALT were still open at 04:45 (chief notes). The small-model tiebreaker: run 1 worse, run 2 possibly teacher imitation, run 3 pending.

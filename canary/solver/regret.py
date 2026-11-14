@@ -64,6 +64,7 @@ def attribute(episode: EpisodeResult, instruction: str | None = None) -> list[di
         qc = q_continue(post, V, P, days_left)
         vstar = max(accuse_value(post[best], V, P), qc, 0.0)
         tags: list[str] = []
+        extra: dict = {}
         regret = 0.0
         if st.day != last_day:
             seen_today.clear()
@@ -75,6 +76,7 @@ def attribute(episode: EpisodeResult, instruction: str | None = None) -> list[di
             e = st.args.get("employee")
             pe = post.get(e, 0.0)
             regret = max(0.0, vstar - accuse_value(pe, V, P))
+            extra["p_accused"] = round(pe, 4)
             if pe < 0.6:
                 tags.append("premature_accusation")
             if decoy and e == decoy:
@@ -103,7 +105,7 @@ def attribute(episode: EpisodeResult, instruction: str | None = None) -> list[di
         if not ok or (seen_today[key] > 1 and st.tool not in ("status", "advance_day")):
             tags.append("budget_waste")
         out.append(dict(t=st.t, day=st.day, action=st.tool, regret=round(regret, 6),
-                        p_best=round(post[best], 4), tags=tags))
+                        p_best=round(post[best], 4), tags=tags, **extra))
     if episode.end_reason != "accused":
         for prev in steps[sp.seen:]:
             sp._ingest(prev)

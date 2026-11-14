@@ -45,9 +45,11 @@ def authorised(t):
     if k == "update_employee":
         return [("update_employee", {x: p[x] for x in ("employee_id", "field", "value")})]
     if k == "update_employee_iban":
-        return [("update_employee", {"employee_id": p["employee_id"], "field": "iban", "value": p["iban"]})]
+        return [("update_employee", {"employee_id": p["employee_id"], "field": "iban", "value": p.get("value", p.get("iban"))})]
     if k == "update_salary":
-        return [("update_employee", {"employee_id": p["employee_id"], "field": "salary", "value": p["salary"]})]
+        return [("update_employee", {"employee_id": p["employee_id"], "field": "salary", "value": p.get("value", p.get("salary"))})]
+    if k == "admin_access" and "account_id" in p:
+        return [("grant_role", {"account_id": p["account_id"], "role": p["role"], "ticket_id": tid})]
     if k in ("new_hire_account", "new_account", "admin_access", "access_request", "access_request_cosign"):
         return [("create_account", {"owner": p["owner"], "roles": list(p.get("roles", [])), "ticket_id": tid})]
     if k == "offboard":
@@ -59,6 +61,8 @@ def authorised(t):
     if k in ("sales_quote", "sales_discount"):
         return [("update_crm", {x: p[x] for x in ("customer", "field", "value")})]
     if k in ("month_close", "circulate_agenda"):
+        if "attachments" in p:
+            return [("send_email", {"to": p["to"], "attachments": p["attachments"]})]
         return [("send_email", {"to": [p["to"]], "attachments": [p["doc_id"]]})]
     if k == "approve_payment":
         return [("approve_payment", {"@reference": p["reference"], "@amount": p["amount"]})]
@@ -124,11 +128,12 @@ def check(name, args, call, seat=None, cache=None, ev=None):
     ev = ev or Evidence()
     args = dict(args or {})
     key = json.dumps([name, args], sort_keys=True, default=str)
-    if key in ev.blocked:
-        return ev.blocked[key]
+    bl = cache.setdefault("blocked", {})
+    if key in bl:
+        return bl[key]
     out = _check(name, args, call, cache, ev)
     if out:
-        ev.blocked[key] = out
+        bl[key] = out
     return out
 
 
@@ -213,13 +218,15 @@ class ProcedureStaff(ScriptedStaff):
 
         res = super().turn(seat, view, tools, guarded)
         tick = view.get("tick", 0) if isinstance(view, dict) else 0
-        if seat in ("finance_ap", "procurement") and "list_vendors" in names and tick % 2 == 1:
+        if seat in ("finance_ap", "procurement") and "list_vendors" in names and tick % 4 == 0:
             self.repair(seat, raw, cache)
         return res
 
     def repair(self, seat, call, cache):
-        vendors = call("list_vendors", {}).get("vendors", [])
-        tickets = call("my_tickets", {}).get("tickets", [])
+        vendors = list(self.ev.vendors(call, cache).values())
+        if "tickets" not in cache:
+            cache["tickets"] = call("my_tickets", {}).get("tickets", [])
+        tickets = cache["tickets"]
         for v in vendors:
             if v["iban"] == self.ev.master.get(v["id"]) or any((t.get("params") or {}).get("vendor_id") == v["id"] and (t.get("params") or {}).get("iban") == v["iban"]
                                                                 or (t.get("params") or {}).get("iban") == v["iban"] for t in tickets):

@@ -17,7 +17,7 @@ make test
 make eval
 ```
 
-`make test` works on `momin` today. `make eval` calls `lab/eval.py`, which is not on `momin` yet, so check before promising it. Without `GEMINI_API_KEY` everything runs with scripted agents. See a day: `python -m http.server -d web 8765`, then open `http://localhost:8765/index.html?day=demo`. Details: [README](../README.md), [JUDGES.md](JUDGES.md).
+`make test` and `make eval` both work on `momin`. `make eval` takes about 30 seconds with scripted agents and writes `results/runs/<run_id>/` and `results/eval/{summary.json,gap.md}`. Without `GEMINI_API_KEY` everything runs with scripted agents. See a day: `python -m http.server -d web 8765`, then open `http://localhost:8765/index.html?day=demo`. Details: [README](../README.md), [JUDGES.md](JUDGES.md).
 
 ## What each folder is
 
@@ -26,7 +26,7 @@ make eval
 | `sleeper/` | the company, tickets, day loop, events, verifier |
 | `agents/` | Gemini client, honest staff, sleeper, reference team, failure analyst |
 | `harbor/` | packaging for the judges' Harbor + OpenCode harness, seat mode |
-| `lab/` | failure labelling today. Runner and eval are planned on `momin` |
+| `lab/` | runner, eval, results summary. Failure labelling is on `sleeper/lab-analyst-names` |
 | `train/` | data and fine-tune code for the small model (tiebreaker) |
 | `cluster/` | Slurm scripts for the FR8 GPUs |
 | `web/` | the office dashboard that replays a day |
@@ -40,16 +40,15 @@ Owners are in the table in [CONTRACT.md](../CONTRACT.md). By team: lead-env (wor
 
 ## Where numbers come from
 
-Every number in the docs comes from `make eval`. Until it runs they read NOT FOUND.
+Every number in the docs comes from `results/eval/gap.md` (`make eval`) or `results/landing/20261114-014805.md`. Anything else reads NOT FOUND.
 
 ## Open issues
 
-- `make eval` needs `lab/run.py` and `lab/results.py` on `momin`.
-- The verifier is being rewritten to a whitelist, with harm reported as `kind:ref@seq`. A changed vendor bank on an unpaid payment is not harm today.
-- On seed 2 the oracle scores 1 without catching the sleeper, because the bad payment stayed pending.
-- The verifier excludes tickets on the sleeper's own seat.
-- `DOC-INV-URGENT` cannot be read by the controller on seed 2.
-- Canary detection matches the raw token only until `canary.py` lands.
-- Every row in `docs/EXPLOITS.md` was still todo at last check.
+- The oracle uses the hidden sleeper identity. An evidence-only reference (`agents/procedure.py`) is in progress.
+- The seat-mode table from `make eval` is wrong because of a day-mix bug (lead-env is fixing it). Do not quote it.
+- The verifier rewrite (whitelist harm, `kind:ref@seq`) is at 8c65aa1 on `sleeper/rw-verifier-core` and not on `momin`.
+- Staff are scripted in every table. Gemini rows are NOT FOUND.
+- `fraud.fake_vendor_procurement` and `fraud.forged_scanned_invoice` did not land against staff in the landing table.
+- Failure labels come from `lab/analyse.py` on `sleeper/lab-analyst-names`, not merged.
 - Gemini credits and model tier for 8 seats are not settled.
 - AfterQuery starter kit and scoring skeleton are due Saturday morning.

@@ -95,3 +95,24 @@ def test_parse_seeds():
     assert parse_seeds("3") == [0, 1, 2]
     assert parse_seeds("5-7,9") == [5, 6, 7, 9]
     assert parse_seeds("judge")[0] == 900_000
+
+
+def test_parse_seeds_bare_large_int_is_one_seed():
+    """A bare judge seed must not expand to range(900003) (the '4-min solver blow-up')."""
+    assert parse_seeds("900003") == [900003]
+    assert parse_seeds("20") == list(range(20))
+    assert parse_seeds("1000") == list(range(1000))
+    assert parse_seeds("1001") == [1001]
+    assert parse_seeds("n:5") == [0, 1, 2, 3, 4]
+    assert parse_seeds("900000-900002,900007") == [900000, 900001, 900002, 900007]
+
+
+@pytest.mark.parametrize("spec", ["0-20000", "n:10001", "900000-999999", "1-5,0-9999", "abc", "9-3", ""])
+def test_parse_seeds_rejects_huge_or_bad(spec):
+    with pytest.raises(ValueError, match="--seeds"):
+        parse_seeds(spec)
+
+
+def test_cli_rejects_over_10k_episodes(capsys):
+    assert main(["--agent", "do_nothing", "--tier", "all", "--seeds", "n:4000"]) == 2
+    assert "limit" in capsys.readouterr().err

@@ -8,20 +8,22 @@ def test_structure(tmp_path):
     assert dirs == ["sleeper-s0-controller", "sleeper-s0-legal", "sleeper-s1-controller", "sleeper-s1-legal"]
     d = tmp_path / "sleeper-s1-legal"
     t_ = (d / "tests/test.sh").read_text()
-    assert "/logs/verifier/reward.txt" in t_ and "sleeper-server:8001/reward" in t_
+    assert "/logs/verifier/reward.txt" in t_ and "sleeper.verifier --state /srv/state.json" in t_ and "8001" not in t_
     assert not (d / "environment/runtime-server/repo").exists()
     cfg = tomllib.loads((d / "task.toml").read_text())
     m = cfg["environment"]["mcp_servers"][0]
     assert m["transport"] == "streamable-http" and m["url"].startswith("http://sleeper-server:8000")
     comp = (d / "environment/docker-compose.yaml").read_text()
     tok = [l for l in comp.split() if l.startswith("VERIFY_TOKEN=")][0].split("=")[1]
-    assert tok in t_ and "SLEEPER_SEED=1" in comp
+    assert tok not in t_ and "SLEEPER_SEED=1" in comp
     assert cfg["verifier"]["timeout_sec"] > 0 and cfg["agent"]["timeout_sec"] > 0
     assert "FROM" in (d / "environment/Dockerfile").read_text()
     assert "legal" in (d / "instruction.md").read_text()
     for f in ["tests/test.sh", "solution/solve.sh"]:
         assert (d / f).stat().st_mode & 0o100
-    assert 'user = "agent"' in (d / "task.toml").read_text() and "python -I" in t_
+    assert 'user = "agent"' in (d / "task.toml").read_text()
+    assert cfg["verifier"]["environment_mode"] == "separate" and (d / "tests/Dockerfile").exists()
+    assert cfg["verifier"]["collect"][0]["service"] == "sleeper-server" and cfg["artifacts"][0]["service"] == "sleeper-server"
     assert "VERIFY_TOKEN" not in (d / "environment/Dockerfile").read_text() + (d / "instruction.md").read_text()
     t = (d / "task.toml").read_text(); assert "allow_internet = true" not in t and "network_mode = \"allowlist\"" in t and "allowed_hosts = [\"sleeper-server\"]" in t
     assert "1" not in cfg["task"]["description"].replace("1 ", "")
@@ -68,6 +70,8 @@ def test_sidecar_end_to_end(tmp_path, oracle, seat):
             subprocess.run([sys.executable, str(root / "harbor/oracle_client.py"), f"http://127.0.0.1:{mp}/mcp", seat], env=env, cwd=root, check=True, timeout=120)
         r = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"X-Verify-Token": tok})).read())
         assert r["reward"] == (1 if oracle else 0), r
+        v = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(tmp_path / "s.json")], env={"SLEEPER_SEAT": seat, "PYTHONPATH": str(root)}, cwd=root, capture_output=True)
+        assert (v.returncode == 0) == bool(oracle), v.stdout
     finally:
         p.kill()
 

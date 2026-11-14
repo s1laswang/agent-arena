@@ -37,6 +37,9 @@ const state = {
   enteredCertainty: 60,
   chosenSuspect: null,
   playerAbstained: false,
+  decisionDay: null,
+  decisionV: null,
+  decisionBreakEvenP: null,
   actionHistory: [], // [[tool, args, day], ...]
   feedFilter: "all"
 };
@@ -258,6 +261,9 @@ function startGame(customSeed = null) {
   state.selectedEmpId = null;
   state.actionHistory = [];
   state.playerAbstained = false;
+  state.decisionDay = null;
+  state.decisionV = null;
+  state.decisionBreakEvenP = null;
 
   refreshHUD();
 
@@ -1115,6 +1121,9 @@ function confirmAccusation() {
     alert("Please select the suspect you wish to accuse.");
     return;
   }
+  state.decisionDay = state.day;
+  state.decisionV = state.knownV;
+  state.decisionBreakEvenP = 1 / (1 + state.decisionV);
   state.chosenSuspect = empId;
   closeAccuseDialog();
   executeTool("accuse", { employee: empId });
@@ -1131,6 +1140,9 @@ function abstainAndClose() {
   if (!confirmed) return;
 
   state.playerAbstained = true;
+  state.decisionDay = state.day;
+  state.decisionV = state.knownV;
+  state.decisionBreakEvenP = 1 / (1 + state.decisionV);
   closeAccuseDialog();
 
   // Advance through days until the episode horizon is reached
@@ -1188,6 +1200,10 @@ function showEndScreen() {
     flipCard.classList.add("revealed");
   }, 400);
 
+  const decisionDay = state.decisionDay || reveal.you.final_day || state.day;
+  const decisionV = state.decisionV !== null ? state.decisionV : (reveal.you.score > 0 ? reveal.you.score : state.knownV);
+  const breakEvenP = state.decisionBreakEvenP !== null ? state.decisionBreakEvenP : (1 / (1 + decisionV));
+
   // Scoreboard Table (Honest Labeling)
   const scoreboard = $("scoreboardBody");
   scoreboard.innerHTML = "";
@@ -1197,7 +1213,7 @@ function showEndScreen() {
     {
       who: "You (Human Operator)",
       score: reveal.you.score,
-      telemetry: `${reveal.you.end_reason === "accused" ? "accused " + reveal.you.accused + (reveal.you.correct ? " (CORRECT)" : " (WRONG)") : "abstained / horizon"}, day ${reveal.you.final_day}, ${reveal.you.tool_calls} calls`,
+      telemetry: `${reveal.you.end_reason === "accused" ? "accused " + getEmployeeDisplayName(reveal.you.accused) + (reveal.you.correct ? " (CORRECT)" : " (WRONG)") : "abstained"}, day ${decisionDay}, ${reveal.you.tool_calls} calls`,
       isPlayer: true
     },
     {
@@ -1276,17 +1292,15 @@ function showEndScreen() {
 
   // "Your Call" Regret Analysis
   const regretBox = $("regretAnalysisText");
-  const V = reveal.you.score > 0 ? reveal.you.score : state.knownV;
-  const breakEvenP = 1 / (1 + V);
 
   regretBox.innerHTML = `
-    <p>You estimated your certainty at <strong>${state.enteredCertainty}%</strong>. The mathematical break-even threshold for accusing on Day ${reveal.you.final_day} was <strong>p* = ${(breakEvenP * 100).toFixed(1)}%</strong>.</p>
+    <p>You estimated certainty at <strong>${state.enteredCertainty}%</strong>. At the decision on Day ${decisionDay} (V = ${decisionV.toFixed(3)}), the break-even threshold was <strong>p* = ${(breakEvenP * 100).toFixed(1)}%</strong>.</p>
     <p>${
       isWin
-        ? `Because your certainty (${state.enteredCertainty}%) exceeded break-even, accusing was the optimal decision (+${reveal.you.score.toFixed(3)}). You beat naive heuristics and safely preserved company assets.`
+        ? `Certainty (${state.enteredCertainty}%) exceeded break-even p*, making the accusation on Day ${decisionDay} optimal (+${reveal.you.score.toFixed(3)}).`
         : isAbstain
-        ? `By choosing to abstain, you scored 0.00. Frontier LLMs routinely lose 1.00 at the deadline by taking low-confidence gambles. Abstaining when p < p* is the mathematically dominant play.`
-        : `At ${state.enteredCertainty}% certainty, taking the gamble resulted in a wrong accusation (-1.00). When uncertain, closing the case without an accusation (0.00) prevents devastating false-termination damages.`
+        ? `Closing the case on Day ${decisionDay} preserved 0.00 score. Frontier models lose 1.00 by gambling at deadlines; abstaining when p < p* is the dominant play.`
+        : `At ${state.enteredCertainty}% certainty, accusing on Day ${decisionDay} resulted in a wrong accusation (-1.00). Closing the case (0.00) prevents devastating false accusations.`
     }</p>
   `;
 

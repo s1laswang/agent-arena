@@ -112,6 +112,7 @@ class FakeModels:
     def embed_content(self, model, contents, config=None):
         vecs = []
         for i, t in enumerate(contents):
+            t = t.parts[0].text if hasattr(t, "parts") else t
             h = abs(hash(t.split()[0] if t.split() else "")) % 3
             vecs.append(SimpleNamespace(values=[1.0 if j == h else 0.01 * ((i + j) % 5) for j in range(8)]))
         return SimpleNamespace(embeddings=vecs)
@@ -290,3 +291,72 @@ def test_pack_episode_marks_high_regret_words(eps):
     e = max(eps, key=lambda e: e.total_regret)
     block = pack_episode(e)
     assert block.startswith("=== EPISODE") and f"total_regret={e.total_regret:.3f}" in block
+
+
+def test_embedding_count_mismatch_is_reported_not_crashing(tmp_path, eps, monkeypatch):
+    """full5 crashed in clustering when the API returned fewer vectors than texts (gemini-embedding-2 merges a list of
+    strings into one embedding). The atlas must skip the clusters and record the error."""
+    from canary.gemini.atlas import Atlas
+    from canary.gemini.atlas_gemini import AtlasOps
+    ops = AtlasOps(client=FakeGenai(eps), cache_dir=tmp_path / "c")
+    A = Atlas(eps, ops, "gemini-4-carbon", "gemini-3.8-flash", tmp_path)
+    for e in eps:  # make sure there are enough rationale texts at high-regret steps
+        for s in e.steps:
+            if s.regret >= 0.01 and not s.rationale:
+                s.rationale = f"reasoning about {s.tool} at {s.t}"
+    A.hr = [(e, s) for e in eps for s in e.steps if s.regret >= 0.0]
+    monkeypatch.setattr(ops, "embed", lambda texts, **kw: [[1.0, 0.0]] * (len(texts) - 1))
+    assert A.embed_clusters({}, k=2) is None
+    assert any("embed: got" in e for e in A.errors)
+
+
+def test_embed_sends_one_content_per_text(tmp_path, eps):
+    from canary.gemini.atlas_gemini import AtlasOps
+    fake = FakeGenai(eps)
+    seen = []
+    orig = fake.models.embed_content
+
+    def spy(model, contents, config=None):
+        seen.append(len(contents))
+        return orig(model, contents, config)
+    fake.models.embed_content = spy
+    vecs = AtlasOps(client=fake, cache_dir=tmp_path / "c").embed(["a b", "c d", "e f"])
+    assert len(vecs) == 3 and seen == [1, 1, 1]
+
+
+# ------------------------------------------------------------------------------------ blind atlas
+
+def test_blind_pack_has_no_code_labels(eps):
+    from canary.gemini.atlas_data import pack_corpus_blind
+    text, blocks = pack_corpus_blind(eps)
+    assert text.count("=== EPISODE") == len(eps) and "says:" in text
+    for tok in ("REGRET", "top=", "true_mole", "total_regret", "solver_same_seed", "[premature_accusation",
+                "[uninformative_canary", "[over_restriction", "[budget_waste", "[decoy_chase", "[ignored_delay"):
+        assert tok not in text, tok
+    code_lines = [ln for ln in text.splitlines() if not ln.lstrip().startswith("says:")]
+    for tok in ("mole:", "regret", "solver"):
+        assert not any(tok in ln for ln in code_lines), tok
+
+
+def test_blind_recovery_is_scored_in_code(eps):
+    from canary.gemini.atlas_blind import code_truth, score_recovery
+    T = code_truth(eps)
+    tg = next(t for t, s in T["tag_steps"].items() if s)
+    steps = sorted(T["tag_steps"][tg])
+    half = set(steps[: max(1, len(steps) // 2)])
+    junk = {(eps[0].id, 0)}
+    r = score_recovery(eps, {"m1": half, "m2": junk}, tol=0)
+    assert r["tags"][tg]["recall"] == pytest.approx(len(half) / len(steps), abs=1e-4)
+    assert r["tags"][tg]["best_mode"] == "m1"
+    assert r["modes"]["m2"]["novel"] and r["modes"]["m2"]["precision_tagged"] == 0
+    assert 0 <= r["regret_share_covered"] <= 1
+
+
+def test_blind_quotes_count_agent_text_only(eps):
+    from canary.gemini.atlas_blind import verify_agent_quote
+    from canary.gemini.atlas_data import blind_step_line
+    e = next(e for e in eps if any(len(s.rationale) > 40 for s in e.steps))
+    s = next(s for s in e.steps if len(s.rationale) > 40)
+    assert verify_agent_quote(e, s.t, " ".join(s.rationale.split()[:8]))["step_verified"]
+    assert not verify_agent_quote(e, s.t, blind_step_line(s))["verified"]  # a step record is not agent text
+    assert verify_agent_quote(e, s.t, "")["empty"]

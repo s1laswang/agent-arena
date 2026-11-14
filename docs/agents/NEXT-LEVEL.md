@@ -87,3 +87,65 @@ Every frontier agent we measured shares one robust, explainable failure: **it ne
 
 ## FR8 (live session; the CEO messages it directly)
 Small-model v2 when a V100 frees up (Silas's sky array ends ~18:30): dense 4k windows + `--oversample-endings 3` on the J3 v2 data, a FAST eval (a KV-cached loop, or capped calls) with n ≥ 30 per tier. The goal is a REWARD gain on held-out seeds.
+
+---
+
+# PLAN v3 additions (CEO, after the 14 Nov team brainstorm)
+Read the team-facing summary `docs/IDEAS.md` and the notes `docs/meetings/2026-11-14-mole-company-simulation.md`. Team decisions:
+- Canary is the base;
+- Vaishnav's anti-cheat goes in;
+- Momin's strongest parts go in;
+- biased, human-like employees;
+- an RL-trained mole;
+- Gemini on the mole/poison side;
+- a video + a "beat the AI" browser game.
+
+Silas's calls:
+- Momin pauses the sky jobs (GPUs free for training);
+- the bias layer is a **v1.5 candidate, gated**;
+- RL mole: **both, light first**;
+- game: a **static browser game (Pyodide)**.
+
+Gates:
+- **A, 17:00:** gemini-4-carbon v1.4 headline (n ≥ 20 per tier); v1.5 solver numbers; first RL-mole curve.
+- **B, 20:00:** ship or drop v1.5 (the gemini-4-carbon frontier/solver ratio must DROP vs v1.4, and integrity must stay clean); then the feature freeze.
+
+## WS2: human-bias social layer, v1.5 candidate (HEAD-ENV; research grounding from Ivar)
+Branch `justSilas-v15`. This replaces the "dormant mole" idea as the v1.5 candidate; keep the dormant-mole knob only if it's already built.
+- New TierParams knobs (default OFF; TIERS_V14 and its hash untouched), every number stated in the instructions:
+  - **Rumours:** each day, Poisson(r) messages in which an employee speculates that a colleague is the mole. Accused colleagues are chosen uniformly among non-mole employees, plus a share s_frame chosen by the mole (see below). The instructions state the exact likelihood, so a rational investigator knows how much a rumour is worth: nearly nothing.
+  - **Grudge pairs:** k pairs of innocent employees who repeatedly accuse each other (a stated pattern).
+  - **Authority bias:** a manager posts one confident, documented-as-unverified accusation (target uniform among innocents, or the framed target).
+  - **Miscommunication:** with probability m, a regular document is also forwarded to one unplanned recipient. The forward IS visible in `list_documents` (so it's fair) but easy to miss.
+  - **Mole exploitation:** a new Mole DSL action `seed_rumour(target)` (the decoy / the most-restricted peer / a random peer), which raises that target's rumour share.
+- **Solver:** model the rumours/authority/forwards exactly from the stated likelihoods (they should barely move its belief), and keep it deterministic.
+- **TextProvider:** the template renders these messages from labels. The Gemini provider (gemini-4-carbon) writes realistic biased chatter from the same labels, never seeing the truth. Cache it in `data/gemini_cache/` for offline replay.
+- **Calibrate** on fresh seeds (Mac, ≤6 processes):
+  - the solver stays ≥ 85% accurate on medium and hard;
+  - the solver is still clearly above grok_tactics and heuristic;
+  - `make hunt` is clean.
+
+  Report `results/fresh_table_v1.5-candidate.md` by ~17:00.
+- At Gate B the CEO runs a gemini-4-carbon spot check on v1.5 hard (10 episodes, OpenCode). Merge to justSilas ONLY on the CEO's go.
+
+## WS3: RL-trained mole (HEAD-AGENTS + Momin; FR8 for the GPUs)
+- **Light (CPU, now):** `canary/forge/rl_mole.py`, a small MLP policy over MoleView features → DSL actions (leak choice, go quiet, frame/seed_rumour), trained with REINFORCE/PPO. Reward = solver-relative regret against the strongest investigator in {solver, grok_tactics, heuristic}, **subject to solver accuracy ≥ 0.75 on that mole** (hard constraint, so the mole stays catchable). Commit the learning curve and the frozen policies (`data/rl_mole/`). Add a `hard_rl` judge track that loads them, like `hard_forge`. Spot check the best mole against gemini-4-carbon (≥5 episodes) and report honestly.
+- **LLM mole (GPU, after Momin pauses sky):** with FR8, `train/grpo_mole.py`: a Qwen2.5-0.5B (then 1.5B) mole prompted with the MoleView, outputting a DSL action, trained with TRL GRPO in fp16 on V100s against the same reward (environment rollouts on CPU workers). Report the reward curve and the catchability check. Labels: REAL small model, scripted investigators.
+- Coordinate with Momin, who owns this workstream; his Sleeper runners and Gemini mole code are on branch `momin`.
+
+## WS6: browser game + video (Ivar owns; HARNESS engineer + Grok site bot build)
+- `game/`: a static page that loads the real `canary` package in **Pyodide** (pure Python + numpy; check every import works in Pyodide) and plays a **medium dev-seed** episode (seeds ≥ 3000, never judge seeds):
+  - one button or form per tool;
+  - a day counter, the known V, the leak feed, canary assignment with drag/drop or checkboxes;
+  - at the end: the player's score vs the solver's vs gemini-4-carbon's on the SAME seed (precomputed JSON from committed runs; replay the solver in-browser if fast enough);
+  - must be finishable in ~10 minutes;
+  - deploy to GitHub Pages or Vercel;
+  - a test: the same seed and the same actions in the browser and in Python give the identical score.
+- **Video script (≤ 10 min)**, owned by Ivar with Silas:
+  1. hook: insider threats; a company bleeding to zero (Nokia/Yahoo framing plus real insider-leak cases from `docs/research-biases.md`);
+  2. the game;
+  3. a live replay of solver vs gemini-4-carbon with the "Fooled" moment (Momin's dashboard idea + the Grok viewer/site);
+  4. the gap and the failure modes;
+  5. anti-cheat;
+  6. the trained small model and the RL mole;
+  7. the game link.

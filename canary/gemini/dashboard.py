@@ -703,6 +703,14 @@ details.tbl { margin-top: 10px; } details.tbl summary { cursor: pointer; color: 
 #tip .r i { width: 12px; height: 2px; border-radius: 1px; flex: none; }
 #tip .r b { font-variant-numeric: tabular-nums; }
 #tip .r span { color: var(--ink2); }
+@media (max-width: 640px) {
+  .top, main, .foot { padding-left: 16px; padding-right: 16px; }
+  h1 { font-size: 21px; } .phead h2 { font-size: 19px; } .heroNum { font-size: 48px; }
+  .topmeta { flex-wrap: wrap; } .card { padding: 14px; }
+  .matrix { font-size: 10.5px; } .matrix th { padding: 2px; }
+  .card:has(.matrix) { overflow-x: auto; }
+}
+.grid > *, .hero > * { min-width: 0; }
 body.focus .panel { display: none; } body.focus .panel.on { display: block; padding-top: 18px; }
 body.focus .foot { display: none; }
 @media (prefers-reduced-motion: no-preference) {

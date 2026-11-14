@@ -1,0 +1,19 @@
+| tier | agent | seed | day | accused | correct | score | P(accused) | P(top) | verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| hard | openai:gpt-5.5 | 0 | 8 | e25 | True | 0.73 | 1.0 | 1.0 | justified |
+| hard | openai:gpt-5.5 | 1 | 14 | e01 | True | 0.64 | 0.922 | 0.922 | justified |
+| hard | openai:gpt-5.5 | 2 | 13 | e19 | True | 0.64 | 0.169 | 0.576 | lucky |
+| hard | openai:gpt-5.5 | 3 | 14 | e18 | False | -1.00 | 0.579 | 0.579 | premature-wrong |
+| hard | openai:gpt-5.5 | 4 | 14 | e26 | False | -1.00 | 0.498 | 0.498 | premature-wrong |
+| hard | openai:gpt-5.5 | 5 | 11 | e19 | True | 0.73 | 0.852 | 0.852 | justified |
+| hard | openai:gpt-5.5 | 6 | 11 | e19 | True | 0.67 | 0.982 | 0.982 | justified |
+| hard | openai:gpt-5.5 | 7 | 13 | e03 | True | 0.70 | 0.976 | 0.976 | justified |
+| medium | openai:gpt-5.5 | 0 | 8 | e05 | True | 0.69 | 1.0 | 1.0 | justified |
+| medium | openai:gpt-5.5 | 1 | 12 | e02 | True | 0.53 | 1.0 | 1.0 | justified |
+| medium | openai:gpt-5.5 | 2 | 6 | e09 | True | 0.83 | 1.0 | 1.0 | justified |
+| medium | openai:gpt-5.5 | 3 | 9 | e14 | True | 0.72 | 1.0 | 1.0 | justified |
+| medium | openai:gpt-5.5 | 4 | 14 | e17 | True | 0.46 | 0.522 | 0.522 | lucky |
+| medium | openai:gpt-5.5 | 5 | 14 | e14 | True | 0.51 | 1.0 | 1.0 | justified |
+| medium | openai:gpt-5.5 | 6 | 13 | e17 | True | 0.62 | 0.733 | 0.733 | justified |
+| medium | openai:gpt-5.5 | 7 | 11 | e09 | True | 0.70 | 1.0 | 1.0 | justified |
+| medium | openai:gpt-5.5 | 8 | 2 | e02 | True | 0.95 | 1.0 | 1.0 | justified |

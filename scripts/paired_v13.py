@@ -6,7 +6,9 @@ Each row is one run group on one tier, restricted to the dev seeds it shares wit
 Columns: n, mean score +/- 95% CI (normal approx), accuracy (correct / n), accused rate, mean solver
 posterior P(accused is the mole) at the accusation (canary.analysis.accuse), the solver's mean on the
 SAME seeds, frontier/solver = mean_F / mean_S with a paired bootstrap 95% CI over seeds, and the mean
-paired difference F - S +/- 95% CI.
+paired difference F - S +/- 95% CI, and a luck-adjusted score: each accusation's expected value under the
+solver posterior, P*V - (1-P) (0 without an accusation), with its ratio to the solver's on the same seeds.
+Codex steps are rebuilt from the agent's event stream (meta.steps_source), so its posteriors are best effort.
 """
 from __future__ import annotations
 
@@ -46,6 +48,33 @@ def boot_ratio(f: list[float], s: list[float], B: int = 10000, rng_seed: int = 0
     return vals[int(0.025 * len(vals))], vals[int(0.975 * len(vals)) - 1]
 
 
+_P_CACHE: dict = {}
+
+
+def p_acc(e: dict):
+    """Solver posterior P(accused is the mole | what the agent had seen) at the accusation."""
+    key = id(e)  # episodes stay alive in their lists for the whole run
+    if key not in _P_CACHE:
+        try:
+            _P_CACHE[key] = audit_episode(to_result(e))["p_accused"]
+        except Exception:  # noqa: BLE001
+            _P_CACHE[key] = None
+    return _P_CACHE[key]
+
+
+def post_expected(e: dict):
+    """Luck-adjusted score: the accusation's expected value under the solver posterior,
+    P*V - (1-P) (V = company value at accusation); 0 without an accusation."""
+    if not e.get("accused"):
+        return 0.0
+    p = p_acc(e)
+    m = e.get("meta") or {}
+    v = m.get("V", m.get("V_final"))
+    if p is None or v is None:
+        return None
+    return p * float(v) - (1 - p)
+
+
 def rows_for(root: Path, seeds: set[int]) -> list[dict]:
     solver = {(e["tier"], e["seed"]): e for e in load_runs(root / "v1.3" / "reference") if e["agent"] == "solver"}
     out = []
@@ -64,22 +93,19 @@ def rows_for(root: Path, seeds: set[int]) -> list[dict]:
             m, h = mean_ci([e["score"] for e in es])
             ms = sum(s) / len(s) if s else float("nan")
             dm, dh = mean_ci([a - b for a, b in zip(f, s)]) if f else (float("nan"), float("nan"))
-            ps = []
-            for e in es:
-                if e.get("accused"):
-                    try:
-                        p = audit_episode(to_result(e))["p_accused"]
-                    except Exception:  # noqa: BLE001
-                        p = None
-                    if p is not None:
-                        ps.append(p)
+            ps = [x for x in (p_acc(e) for e in es if e.get("accused")) if x is not None]
+            pe = [post_expected(e) for e in paired]
+            pe_s = [post_expected(solver[(tier, e["seed"])]) for e in paired]
+            pe_ratio = (sum(pe) / sum(pe_s)) if pe and None not in pe + pe_s and sum(pe_s) > 0 else float("nan")
             lo, hi = boot_ratio(f, s) if len(f) > 1 and agent != "solver" else (float("nan"), float("nan"))
             out.append(dict(label=label, group=sub, agent=agent, tier=tier, n=len(es), seeds=[e["seed"] for e in es],
                             mean=m, ci=h, accuracy=sum(bool(e["correct"]) for e in es) / len(es),
                             accused_rate=sum(1 for e in es if e.get("accused")) / len(es),
                             p_accused=(sum(ps) / len(ps)) if ps else float("nan"), n_p=len(ps),
                             solver_same_seeds=ms, ratio=(sum(f) / len(f) / ms) if f and ms > 0 else float("nan"),
-                            ratio_lo=lo, ratio_hi=hi, diff=dm, diff_ci=dh))
+                            ratio_lo=lo, ratio_hi=hi, diff=dm, diff_ci=dh,
+                            post_expected=(sum(pe) / len(pe)) if pe and None not in pe else float("nan"),
+                            post_expected_ratio=pe_ratio))
     return out
 
 
@@ -88,15 +114,16 @@ def _f(x, nd=3):
 
 
 def to_md(rows: list[dict]) -> str:
-    out = ["| tier | run | n | score ± 95% CI | accuracy | accused | mean P(accused) at accusation | solver, same seeds | frontier / solver [95% CI] | paired diff ± CI |",
-           "|---|---|---|---|---|---|---|---|---|---|"]
+    out = ["| tier | run | n | score ± 95% CI | accuracy | accused | mean P(accused) at accusation | solver, same seeds | frontier / solver [95% CI] | paired diff ± CI | posterior-expected score (luck-adjusted) | luck-adjusted / solver |",
+           "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in sorted(rows, key=lambda r: (r["tier"] != "medium", GROUPS.index(next(g for g in GROUPS if g[1] == r["group"] and g[2] == r["agent"])))):
         ratio = "–" if r["agent"] == "solver" else f"{r['ratio']:.0%} [{_f(r['ratio_lo'] * 100, 0)}%, {_f(r['ratio_hi'] * 100, 0)}%]" if r["ratio"] == r["ratio"] else "–"
         if r["agent"] != "solver" and r["ratio"] == r["ratio"] and r["ratio_lo"] != r["ratio_lo"]:
             ratio = f"{r['ratio']:.0%}"
         out.append(f"| {r['tier']} | {r['label']} | {r['n']} | {_f(r['mean'])} ± {_f(r['ci'])} | {r['accuracy']:.2f} | "
                    f"{r['accused_rate']:.2f} | {_f(r['p_accused'], 2)} | {_f(r['solver_same_seeds'])} | {ratio} | "
-                   f"{'–' if r['agent'] == 'solver' else _f(r['diff']) + ' ± ' + _f(r['diff_ci'])} |")
+                   f"{'–' if r['agent'] == 'solver' else _f(r['diff']) + ' ± ' + _f(r['diff_ci'])} | "
+                   f"{_f(r['post_expected'])} | {'–' if r['agent'] == 'solver' or r['post_expected_ratio'] != r['post_expected_ratio'] else format(r['post_expected_ratio'], '.0%')} |")
     return "\n".join(out)
 
 

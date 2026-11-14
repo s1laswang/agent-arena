@@ -16,7 +16,8 @@
   6,
   7,
   8,
-  9
+  9,
+  10
  ],
  "planned_seeds": [
   0,
@@ -30,21 +31,24 @@
   8,
   9
  ],
- "status": "complete",
+ "status": "complete on planned seeds 0-9; seed 10 = start of the approved 10-14 extension, in flight when spend was held (11:16) and allowed to finish",
  "git_sha": [
   "1724a48ed4350fdf8f7cb43bd18532044a24d44e",
-  "4877978b52301af19f9b9244448acd793e5db339"
+  "4877978b52301af19f9b9244448acd793e5db339",
+  "a978aa1d8794d0e2012a0db3bb20f5f5ca8e0bec"
  ],
  "smoke": false,
  "hint": null,
  "usage": {
-  "in": 19666813,
-  "cached_in": 18795648,
-  "out": 91869,
-  "cost_usd_est": 16.5097,
-  "cost_usd_upper": 101.0901
+  "in": 22132224,
+  "cached_in": 21139072,
+  "out": 102478,
+  "cost_usd_est": 18.6096,
+  "cost_usd_upper": 113.7354
  },
  "pricing": "gpt-5.5 list prices per 1M tokens: input $5.00, cached input $0.50, output $30.00 (<272K context), verified on developers.openai.com/api/docs/pricing on 2026-11-14. cost_usd_est bills cached input at $0.50; the upper bound bills all input at $5.00.",
  "provenance": "scripts/budget_runner.py (one episode per process, budget-guarded), merged by scripts/merge_staging.py",
- "invalid_episodes": []
+ "invalid_episodes": [],
+ "spend_note": "cost_usd_est (cached input at $0.50/M) is the accounting basis; Silas's OpenAI dashboard total (~$170 at ~11:20 for overnight + this morning) was below the summed discounted estimates, validating it. cost_usd_upper bills all input at $5/M (no cache discount).",
+ "code_note": "episodes ran at 1724a48 / 4877978 / a978aa1; env, policy, prompts and MCP server identical across them (only change: LLM transport retries in canary/llm/base.py, 4877978). Solver reference (0933805) re-verified identical at this code on medium/hard seeds 0-19."
 }

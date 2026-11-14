@@ -119,7 +119,7 @@ def test_confirm_gating():
     s.turn("controller", {}, [], w.call)
     assert any(n == "post_chat" and "T-BD5" in a["body"] for n, a in w.log)
     it = ScriptedStaff()
-    t = {"id": "T-BD5", "seat": "it_admin", "kind": "access_request_cosign", "params": {"roles": ["admin"], "owner": "x"}, "closed": False}
+    t = {"id": "T-BD5", "seat": "it_admin", "kind": "new_account", "request": "Admin for x. Needs the controller's sign-off.", "params": {"roles": ["admin"], "owner": "x"}, "closed": False}
     w2 = Fake([t])
     it.turn("it_admin", {"tick": 0}, [], w2.call)
     assert not any(n == "create_account" for n, _ in w2.log)

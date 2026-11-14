@@ -2,7 +2,7 @@
 
 > **Headline findings** (auto-generated from the table below: 1–7 paired seeds per cell; 95% CIs are wide, so read them as directions).
 >
-> **gemini-3.5-flash with medium or high thinking matches the reference solver on hard:** 97% [76%, 126%] and 106% [82%, 145%] of the solver on the same seeds, 12/12 correct accusations, $0.35–0.41 per episode, versus $1.30 for gemini-4-carbon at high thinking.
+> **gemini-3.6-flash (requested as 3.5-flash) with medium or high thinking on hard is within the CI of the solver, n=6:** 97% [76%, 126%] and 106% [82%, 145%] of the solver on the same seeds, 12/12 correct accusations, $0.35–0.41 per episode, versus $1.30 for gemini-4-carbon at high thinking.
 >
 > **gemini-3.1-flash-lite fails at every thinking level:** its mean score is below the do-nothing score (0) in 8/8 (level, tier) cells; at minimal thinking it accused the wrong employee in 8/8 episodes.
 >
@@ -20,10 +20,10 @@ Every cell is one (model, thinking level, tier) played by the in-process `LLMPol
 | gemini-3.1-flash-lite | low | 4 | -0.525 ± 0.93 | 0.25 | 5.2 | +0.633 | **-83% [-154%, 89%]** | -1.157 ± 1.09 | -57% [-124%, 103%] | 4,440 | 32 | 0.05 | 1.4 |
 | gemini-3.1-flash-lite | medium | 4 | -0.140 ± 0.97 | 0.50 | 7.0 | +0.633 | **-22% [-143%, 127%]** | -0.773 ± 1.06 | -135% [-168%, -112%] | 2,407 | 62 | 0.10 | 2.2 |
 | gemini-3.1-flash-lite | high | 4 | -0.100 ± 1.02 | 0.50 | 7.0 | +0.633 | **-16% [-130%, 162%]** | -0.733 ± 1.18 | -104% [-128%, -77%] | 5,158 | 38 | 0.06 | 5.7 |
-| gemini-3.5-flash | minimal | 4 | +0.315 ± 0.86 | 0.75 | 8.8 | +0.633 | **50% [-82%, 159%]** | -0.318 ± 0.94 | 36% [-51%, 133%] | 0 | 36 | 0.12 | 0.7 |
-| gemini-3.5-flash | low | 4 | -0.152 ± 0.97 | 0.50 | 11.5 | +0.633 | **-24% [-149%, 117%]** | -0.785 ± 1.04 | -9% [-93%, 114%] | 5,330 | 47 | 0.24 | 4.5 |
-| gemini-3.5-flash | medium | 6 | +0.768 ± 0.07 | 1.00 | 7.0 | +0.668 | **115% [97%, 147%]** | +0.100 ± 0.16 | 115% [97%, 147%] | 12,468 | 38 | 0.21 | 2.7 |
-| gemini-3.5-flash | high | 6 | +0.452 ± 0.58 | 0.83 | 8.0 | +0.668 | **68% [-21%, 138%]** | -0.217 ± 0.62 | 26% [-50%, 110%] | 19,586 | 53 | 0.35 | 4.4 |
+| gemini-3.6-flash (requested as 3.5-flash) | minimal | 4 | +0.315 ± 0.86 | 0.75 | 8.8 | +0.633 | **50% [-82%, 159%]** | -0.318 ± 0.94 | 36% [-51%, 133%] | 0 | 36 | 0.12 | 0.7 |
+| gemini-3.6-flash (requested as 3.5-flash) | low | 4 | -0.152 ± 0.97 | 0.50 | 11.5 | +0.633 | **-24% [-149%, 117%]** | -0.785 ± 1.04 | -9% [-93%, 114%] | 5,330 | 47 | 0.24 | 4.5 |
+| gemini-3.6-flash (requested as 3.5-flash) | medium | 6 | +0.768 ± 0.07 | 1.00 | 7.0 | +0.668 | **115% [97%, 147%]** | +0.100 ± 0.16 | 115% [97%, 147%] | 12,468 | 38 | 0.21 | 2.7 |
+| gemini-3.6-flash (requested as 3.5-flash) | high | 6 | +0.452 ± 0.58 | 0.83 | 8.0 | +0.668 | **68% [-21%, 138%]** | -0.217 ± 0.62 | 26% [-50%, 110%] | 19,586 | 53 | 0.35 | 4.4 |
 | gemini-3.8-flash | low | 5 | -0.344 ± 0.79 | 0.40 | 8.8 | +0.664 | **-52% [-181%, 46%]** | -1.008 ± 0.71 | -16% [-69%, 39%] | 0 | 52 | 0.11 | 1.9 |
 | gemini-3.8-flash | medium | 6 | +0.365 ± 0.54 | 0.83 | 12.0 | +0.668 | **55% [-30%, 103%]** | -0.303 ± 0.55 | 2% [-71%, 61%] | 30,792 | 71 | 0.51 | 12.1 |
 | gemini-3.8-flash | high | 7 | +0.646 ± 0.08 | 1.00 | 10.6 | +0.686 | **94% [79%, 117%]** | -0.040 ± 0.14 | 53% [-8%, 107%] | 36,002 | 67 | 0.51 | 11.9 |
@@ -41,10 +41,10 @@ Reference on the union of these seeds: solver +0.686 ± 0.11 (n=7, acc 1.00); gr
 | gemini-3.1-flash-lite | low | 4 | -0.092 ± 1.03 | 0.50 | 7.8 | +0.547 | **-17% [-164%, 168%]** | -0.640 ± 1.11 | -138% [-165%, -94%] | 4,867 | 34 | 0.05 | 1.5 |
 | gemini-3.1-flash-lite | medium | 4 | -1.000 ± 0.00 | 0.00 | 5.8 | +0.547 | **-183% [-270%, -150%]** | -1.548 ± 0.18 | -122% [-175%, -57%] | 1,805 | 39 | 0.05 | 3.4 |
 | gemini-3.1-flash-lite | high | 4 | -0.580 ± 0.82 | 0.25 | 7.0 | +0.547 | **-106% [-165%, 70%]** | -1.127 ± 1.00 | -95% [-154%, 80%] | 6,556 | 46 | 0.08 | 6.1 |
-| gemini-3.5-flash | minimal | 4 | -0.320 ± 0.78 | 0.50 | 12.2 | +0.547 | **-58% [-206%, 59%]** | -0.867 ± 0.73 | -47% [-187%, 63%] | 0 | 66 | 0.24 | 1.6 |
-| gemini-3.5-flash | low | 4 | +0.172 ± 0.77 | 0.75 | 13.8 | +0.547 | **32% [-99%, 158%]** | -0.375 ± 0.87 | 38% [-85%, 167%] | 8,362 | 54 | 0.30 | 5.0 |
-| gemini-3.5-flash | medium | 6 | +0.557 ± 0.10 | 1.00 | 12.2 | +0.573 | **97% [76%, 126%]** | -0.017 ± 0.15 | 35% [-47%, 121%] | 20,349 | 61 | 0.41 | 6.6 |
-| gemini-3.5-flash | high | 6 | +0.608 ± 0.11 | 1.00 | 9.3 | +0.573 | **106% [82%, 145%]** | +0.035 ± 0.18 | 95% [67%, 142%] | 23,011 | 50 | 0.35 | 4.1 |
+| gemini-3.6-flash (requested as 3.5-flash) | minimal | 4 | -0.320 ± 0.78 | 0.50 | 12.2 | +0.547 | **-58% [-206%, 59%]** | -0.867 ± 0.73 | -47% [-187%, 63%] | 0 | 66 | 0.24 | 1.6 |
+| gemini-3.6-flash (requested as 3.5-flash) | low | 4 | +0.172 ± 0.77 | 0.75 | 13.8 | +0.547 | **32% [-99%, 158%]** | -0.375 ± 0.87 | 38% [-85%, 167%] | 8,362 | 54 | 0.30 | 5.0 |
+| gemini-3.6-flash (requested as 3.5-flash) | medium | 6 | +0.557 ± 0.10 | 1.00 | 12.2 | +0.573 | **97% [76%, 126%]** | -0.017 ± 0.15 | 35% [-47%, 121%] | 20,349 | 61 | 0.41 | 6.6 |
+| gemini-3.6-flash (requested as 3.5-flash) | high | 6 | +0.608 ± 0.11 | 1.00 | 9.3 | +0.573 | **106% [82%, 145%]** | +0.035 ± 0.18 | 95% [67%, 142%] | 23,011 | 50 | 0.35 | 4.1 |
 | gemini-3.8-flash | low | 6 | +0.170 ± 0.49 | 0.83 | 12.7 | +0.573 | **30% [-58%, 91%]** | -0.403 ± 0.51 | 47% [17%, 73%] | 0 | 69 | 0.18 | 2.6 |
 | gemini-3.8-flash | medium | 6 | +0.025 ± 0.64 | 0.67 | 13.0 | +0.573 | **4% [-111%, 92%]** | -0.548 ± 0.58 | 46% [-13%, 91%] | 27,899 | 60 | 0.44 | 10.9 |
 | gemini-3.8-flash | high | 5 | +0.166 ± 0.58 | 0.80 | 16.8 | +0.584 | **28% [-79%, 87%]** | -0.418 ± 0.58 | 12% [-87%, 84%] | 50,463 | 86 | 0.80 | 15.2 |
@@ -64,7 +64,7 @@ Provenance: tiers v1.4, v1.4 (imported dir); launch commits 107c485, 2786c00, 49
 
 ## Which mistakes does thinking fix?
 
-Solver regret per episode by failure tag (`canary.solver.regret.attribute`), pooled over the models that ran low, medium and high: gemini-3.1-flash-lite, gemini-3.5-flash, gemini-3.8-flash, gemini-4-argon. Δ = high − low (negative = thinking fixes it).
+Solver regret per episode by failure tag (`canary.solver.regret.attribute`), pooled over the models that ran low, medium and high: gemini-3.1-flash-lite, gemini-3.6-flash (requested as 3.5-flash), gemini-3.8-flash, gemini-4-argon. Δ = high − low (negative = thinking fixes it).
 
 **medium**
 
@@ -96,7 +96,7 @@ Solver regret per episode by failure tag (`canary.solver.regret.attribute`), poo
 | model | accepted thinking_level |
 |---|---|
 | gemini-3.1-flash-lite | minimal, low, medium, high |
-| gemini-3.5-flash | minimal, low, medium, high |
+| gemini-3.6-flash (requested as 3.5-flash) | minimal, low, medium, high |
 | gemini-3.8-flash | low, medium, high |
 | gemini-4-hydrogen | low, medium, high, xhigh |
 | gemini-4-argon | low, medium, high |

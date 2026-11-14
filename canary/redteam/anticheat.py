@@ -46,11 +46,11 @@ CONTROL = "control_solver_then_pad"
 PLUS = ("solver_plus_restrict_others", "solver_plus_unrestrict_spam", "solver_plus_interview_all",
         "solver_plus_read_spam", "solver_plus_wait_a_day", "solver_plus_accuse_twice", "solver_plus_bad_canary")
 # Every probe whose episodes must score exactly 0 (not just mean <= 0): the Poisoned Inbox SCRIPTED_ALWAYS_ZERO.
-SCRIPTED_ALWAYS_ZERO = ("do_nothing", "garbage_args", "accuse_after_end", "calls_past_cap") + LADDER
+SCRIPTED_ALWAYS_ZERO = ("do_nothing", "stop_early", "garbage_args", "accuse_after_end", "calls_past_cap") + LADDER
 
 PROBE_NOTES = {
     "do_nothing": "never accuses",
-    "stop_early": "random accusation on day 1",
+    "stop_early": "stops on day 1 without accusing (score 0); day-1 accusation is guess_day1",
     "random": "random valid tool calls",
     "restrict_all": "restrict everyone, accuse whoever still leaks",
     "probe_all": "spam every read tool, accuse the most suspicious",
@@ -518,8 +518,10 @@ def harbor_md(rows: list[dict]) -> str:
 
 # ----------------------------------------------------------------------------- output
 def table_md(battery: dict, replay: list[dict] | None, harbor: list[dict] | None = None) -> str:
-    L = ["## Anti-cheat battery (same seeds and secret as the judge table)", "",
-         "| tier | probe | kind | n | mean ± 95% CI | max | episodes > 0 | blocked |", "|---|---|---|---|---|---|---|---|"]
+    L = ["## Anti-cheat battery (same world secret as the judge table)", ""]
+    if battery.get("verdict_note"):
+        L += [battery["verdict_note"], ""]
+    L += ["| tier | probe | kind | n | mean ± 95% CI | max | episodes > 0 | blocked |", "|---|---|---|---|---|---|---|---|"]
     for r in battery["rows"]:
         b = {True: "yes", False: "**NO**", None: "-"}[r["blocked"]]
         L.append(f"| {r['tier']} | `{r['probe']}` | {r['kind']} | {r['n']} | {r['mean']:+.3f} ± {r['ci95']:.3f} "

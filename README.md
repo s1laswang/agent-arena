@@ -59,7 +59,7 @@ You need GNU make and [uv](https://docs.astral.sh/uv/) first (see Prerequisites)
 
 This table has no v1.4 frontier row. `data/runs/committed/v1.4/` holds reference baselines only, so `make reproduce` leaves the v1.4 reported-agent block without a score (it prints `pending` there). That is a missing measurement, not a result. The v1.3 rows below are an earlier hard tier (30 staff, 14 days) and are not a v1.4 gap.
 
-`do_nothing` is exactly 0: the episode ends with no accusation. `stop_early` looks around on day 1 and stops without accusing, so its score is exactly 0 as well (an unaccused episode scores 0). `guess_day1` is that day-1 uniform accusation. A wrong accusation scores −1 (`wrong_accusation_score`); we are not changing that penalty. The `guess_day1` brackets are the 30-run spread measured at commit 5b56b60 under the old name `stop_early` (same script). On the committed judge table ([`results/judge_table.md`](results/judge_table.md), fingerprint `3a7d7db9b23d`) that day-1 accusation, then still named stop_early, is −0.900 ± 0.137 on medium and −1.000 ± 0.000 on hard.
+`do_nothing` is exactly 0: the episode ends with no accusation. `stop_early` looks around on day 1 and stops without accusing, so its score is exactly 0 as well (an unaccused episode scores 0). `guess_day1` is that day-1 uniform accusation. A wrong accusation scores −1 (`wrong_accusation_score`); we are not changing that penalty. The `guess_day1` brackets in the band table are the 30-run spread measured at commit 5b56b60 under the old name `stop_early` (same script). On the regenerated judge table ([`results/judge_table.md`](results/judge_table.md), fingerprint `6a38958f8096`) `stop_early` is +0.000 ± 0.000 on medium, hard, and easy, and `guess_day1` is −0.900 ± 0.137 / −0.950 ± 0.098 / −0.950 ± 0.098. Replayed history rows still named `stop_early` are the old day-1 accusation.
 
 **v1.3 history: frontier agents.** These runs used the v1.3 hard tier (30 staff, 14 days, 1 canary a day), so they are not comparable to v1.4 hard. Medium is unchanged. They were played on v1.3 **dev** seeds 0–10, not judge seeds, and paired with the solver on the same seeds. Each cell is mean ± 95% CI = % of the solver [bootstrap 95% CI]. See the [gap report](docs/reports/gap.md).
 
@@ -68,14 +68,16 @@ This table has no v1.4 frontier row. `data/runs/committed/v1.4/` holds reference
 | **Codex gpt-5.5 over MCP** (judges' harness), n=11 per tier, commit a978aa1+ | +0.40 ± 0.42 = **55%** [−8%, 104%] (50% on the planned seeds 0–9) | +0.66 ± 0.04 = **106%** [91%, 136%] (**97%** [89%, 107%] on seeds 0–9) |
 | in-process gpt-5.5, fixed loop (full history, Responses API + reasoning replay), n=9 / 8 | +0.67 ± 0.10 = 92% [80%, 106%] | +0.26 ± 0.54 = 38% [−51%, 99%] |
 
-- **Committed run.** [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one keyless run on v1.4 (secret fingerprint `3a7d7db9b23d`), written with `make reproduce-update`. The committed v1.3 and v1.2 frontier runs appear there as labelled history. In replayed runs, episodes lost to infrastructure (provider quota, a crashed MCP server) are left out of the mean and counted in a separate `invalid` column with their reasons, and each seed counts once: if two runs cover the same seed, only the newest counts.
-  - Solver: medium **+0.673 ± 0.060** (95% correct), hard **+0.613 ± 0.040** (100% correct).
-  - Heuristic: medium +0.132 ± 0.233, hard −0.012 ± 0.183.
+- **Committed run.** [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one keyless run on v1.4 (secret fingerprint `6a38958f8096`), written with `make reproduce-update`. The committed v1.3 and v1.2 frontier runs appear there as labelled history. In replayed runs, episodes lost to infrastructure (provider quota, a crashed MCP server) are left out of the mean and counted in a separate `invalid` column with their reasons, and each seed counts once: if two runs cover the same seed, only the newest counts.
+  - Solver: medium **+0.679 ± 0.048** (97% correct), hard **+0.547 ± 0.143** (93% correct), easy **+0.808 ± 0.027** (100% correct).
+  - Heuristic: medium +0.043 ± 0.241, hard −0.044 ± 0.189, easy +0.652 ± 0.090.
+  - `stop_early`: +0.000 ± 0.000 on medium, hard, and easy. `guess_day1`: medium −0.900 ± 0.137, hard −0.950 ± 0.098, easy −0.950 ± 0.098.
 - **Fresh seeds.** On seeds never used for tuning, the gap holds and is measured paired (same seed, agent − solver):
   - **v1.4:** [`results/fresh_table_v1.4.md`](results/fresh_table_v1.4.md) covers 800 confirmation seeds per tier (5000–5799) and every baseline.
-    - Solver easy/medium/hard **+0.779 / +0.633 / +0.556**, accuracy 99.6 / 88.8 / 94.9%.
-    - The strongest scripted baseline is `grok_tactics`, a scripted replay of a strong Grok agent's tactics: the agent's runs and transcripts are in [docs/reports/grok-agent.md](docs/reports/grok-agent.md), and the replay is `GrokTactics` in [`canary/baselines.py`](canary/baselines.py). It trails the solver by **0.089 ± 0.016 / 0.174 ± 0.025 / 0.195 ± 0.033**.
-    - The heuristic trails by 0.131 / 0.639 / 0.534.
+    - Solver easy/medium/hard **+0.779 / +0.634 / +0.556**, accuracy 99.6 / 89.0 / 94.9%.
+    - The strongest scripted baseline is `grok_tactics`, a scripted replay of a strong Grok agent's tactics: the agent's runs and transcripts are in [docs/reports/grok-agent.md](docs/reports/grok-agent.md), and the replay is `GrokTactics` in [`canary/baselines.py`](canary/baselines.py). It trails the solver by **0.089 ± 0.016 / 0.176 ± 0.025 / 0.195 ± 0.033**.
+    - The heuristic trails by 0.131 / 0.641 / 0.534.
+    - `stop_early` is 0.000 on every tier (no accusation). `guess_day1` is −0.830 ± 0.039 / −0.902 ± 0.030 / −0.945 ± 0.023.
   - **v1.3 history**, with hard at 30 staff and 14 days:
     - [`results/fresh_table_v1.3.md`](results/fresh_table_v1.3.md), seeds 1000–1399: solver **+0.760 / +0.639 / +0.559**; grok_tactics trails by 0.070 / 0.180 / 0.252.
     - On 5000–5799: solver hard .575, solver − grok_tactics +.233 ± .040.

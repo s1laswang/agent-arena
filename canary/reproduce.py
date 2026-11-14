@@ -101,6 +101,22 @@ def seeds_per_tier(cli: int | None = None) -> list[int]:
     return judge[:max(1, n)]
 
 
+def anticheat_seeds(table_seeds: list[int]) -> list[int]:
+    """Seeds for the anti-cheat verdict on the same world secret as the table.
+
+    REPRO_FAST prints a 5-seed table. On those five judge seeds, easy accuse_most_logs
+    (negative on the 800-seed confirmation table in results/fresh_table_v1.4.md) still
+    averaged above 0 on 6 of 30 fresh secrets. The mean<=0 rule is unchanged. Below 20
+    table seeds the fast path scores the verdict on every judge seed, where that probe's
+    mean stayed negative.
+    """
+    from .rules import JUDGE_SEEDS
+    fast = os.environ.get("REPRO_FAST", "").strip() not in ("", "0")
+    if fast and len(table_seeds) < 20:
+        return list(JUDGE_SEEDS)
+    return list(table_seeds)
+
+
 def world_secret_mode() -> tuple[str, str, bool]:
     """Returns (mode, fingerprint, generated) and installs this invocation's judge-world secret.
 
@@ -371,6 +387,9 @@ def load_committed(root: Path = ROOT) -> tuple[list[Row], list[str]]:
         n_distinct = len(set(r.seeds))
         r.note = (f"replayed, {'judge' if judge else 'NON-judge'} seeds, {n_distinct} seeds, "
                   f"git {', '.join(shas) if shas else 'unknown'} ({', '.join(sorted(r.extra['runs']))})")
+        if agent == "stop_early":
+            r.note += ("; these episodes accused on day 1 under the old stop_early script "
+                       "(that policy is now guess_day1; current stop_early scores 0)")
         if r.n != n_distinct:
             r.note += f"; WARNING n={r.n} != {n_distinct} distinct seeds (repeats within one run)"
         if r.extra["dropped_duplicates"]:
@@ -561,9 +580,18 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
         episodes: list[dict] = []
         rows = run_in_process(tiers, seeds, episodes_out=episodes)
         anticheat = None
-        if os.environ.get("REPRO_ANTICHEAT", "1") != "0":   # INTEGRITY: anti-cheat battery, same seeds + secret
+        if os.environ.get("REPRO_ANTICHEAT", "1") != "0":   # INTEGRITY: anti-cheat battery, same secret as the table
             from .redteam.anticheat import run_battery
-            anticheat = run_battery(list(tiers), seeds)
+            ac_seeds = anticheat_seeds(seeds)
+            anticheat = run_battery(list(tiers), ac_seeds)
+            if ac_seeds != list(seeds):
+                anticheat["verdict_note"] = (
+                    f"Anti-cheat verdict uses all {len(ac_seeds)} judge seeds on this secret. "
+                    f"The table above uses {len(seeds)} (REPRO_FAST). "
+                    "A 5-seed mean can sit above 0 for a negative-EV probe "
+                    "(easy accuse_most_logs did, while its 800-seed confirmation mean is negative). "
+                    "The blocked rule is still mean <= 0."
+                )
     finally:  # never leak this invocation's secret into the rest of the process (tests, MCP, ...)
         restore_world_secret(generated, prev)
     committed, files = load_committed(root)

@@ -186,9 +186,9 @@ Harbor 0.26.0 on colima (2 CPU / 3 GB), Saturday 14 Nov. Every log and output is
 |---|---:|---:|---|
 | oracle (reference solver over MCP) | **0.78** | **0.66** | equal to the in-process solver on the same build: 0.78 / 0.66 |
 | `ORACLE_POLICY=do_nothing` | 0.0 | 0.0 | 0 |
-| `ORACLE_POLICY=stop_early` | −1.0 | −1.0 | about −1 |
+| `ORACLE_POLICY=stop_early` | −1.0 | −1.0 | that build accused on day 1 |
 
-Jobs: `results/harbor/{oracle,do_nothing,stop_early}/`. There were 0 exceptions, about 1.5 min per 2-trial job.
+Jobs: `results/harbor/{oracle,do_nothing,stop_early}/`. There were 0 exceptions, about 1.5 min per 2-trial job. Those `stop_early` rewards are the day-1 accusation this build actually played. That script is now `guess_day1`. Current `stop_early` stops without accusing and scores exactly 0 in-process. This Harbor job was not re-run (no Docker on the integration machine).
 
 **Isolation, checked inside the agent container (`main`).** `solve.sh` runs `check_isolation.sh` before it plays (`agent/isolation.txt` in every oracle trial). Result on both tiers: `ISOLATION OK: 11 checks passed, 0 findings`.
 - No secret, truth or world files; no canary source, and `import canary` fails; no `CANARY_*` variables.

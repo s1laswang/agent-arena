@@ -269,6 +269,15 @@ def test_determinism_two_subprocesses_fixed_secret(tmp_path):
     assert outs[0] == outs[1] and len(outs[0].splitlines()) == 3 * len(R.REPRO_AGENTS) * 2
 
 
+def test_fast_anticheat_uses_every_judge_seed(monkeypatch):
+    monkeypatch.delenv("REPRO_FAST", raising=False)
+    five = list(JUDGE_SEEDS)[:R.FAST_SEEDS]
+    assert R.anticheat_seeds(five) == five
+    monkeypatch.setenv("REPRO_FAST", "1")
+    assert R.anticheat_seeds(five) == list(JUDGE_SEEDS)
+    assert R.anticheat_seeds(list(JUDGE_SEEDS)) == list(JUDGE_SEEDS)
+
+
 def test_seed_count_controls(monkeypatch):
     monkeypatch.delenv("REPRO_SEEDS", raising=False)
     monkeypatch.delenv("REPRO_FAST", raising=False)

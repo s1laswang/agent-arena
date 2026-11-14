@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Iterable
 
 Z95 = 1.959963984540054
-CORE_COLS = {"tier", "agent", "seed", "score", "correct", "final_day", "cell", "end_reason", "secs", "wrong", "accused"}
+CORE_COLS = {"tier", "agent", "seed", "score", "correct", "final_day", "cell", "end_reason", "secs", "wrong", "accused", "none"}
 
 
 def read_rows(path: str | Path) -> list[dict]:

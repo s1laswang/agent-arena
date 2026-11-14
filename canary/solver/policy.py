@@ -46,8 +46,9 @@ class SolverPolicy:
     name = "solver"
 
     def __init__(self, params: TierParams | str | None = None, threshold: float | None = None,
-                 behaviour_temper: float = 0.3, choice_temper: float = 0.5, noleak_temper: float = 0.5,
-                 none_group: bool = True, read_logs: bool = True):
+                 behaviour_temper: float = 0.6, choice_temper: float = 0.5, noleak_temper: float = 0.5,
+                 none_group: bool = True, read_logs: bool = True, design: str = "auto",
+                 coverages: tuple = (0.1, 0.15, 0.25, 0.4, 0.55, 0.7, 1.0), alternate: bool = False, adaptive: bool = False, utility: str = "mi"):
         self._given = params
         self.threshold = threshold
         self.behaviour_temper = behaviour_temper
@@ -55,6 +56,11 @@ class SolverPolicy:
         self.noleak_temper = noleak_temper
         self.none_group = none_group
         self.read_logs = read_logs
+        self.design = design
+        self.coverages = coverages
+        self.alternate = alternate
+        self.adaptive = adaptive
+        self.utility = utility
         self.reset([], "")
 
     # ---------------------------------------------------------------- Policy API
@@ -207,7 +213,122 @@ class SolverPolicy:
         # fallback
         self.queue = [("advance_day", {})]
 
+    def canary_shy(self) -> bool:
+        """Strategy-agnostic switch: >= 3 regular leaks surfaced while our canaries were leakable,
+        and no canary ever leaked => this mole avoids small/new canaries (e.g. DSL most_recipients)."""
+        o = self.obs
+        canary_days = sorted(d.day for d in o.docs.values() if d.is_canary)
+        if not canary_days or any(o.docs.get(it.doc_id) and o.docs[it.doc_id].is_canary for it in o.feed):
+            return False
+        reg = [it for it in o.feed if it.doc_id in o.docs and not o.docs[it.doc_id].is_canary
+               and it.surfaced_day - max(self.P.delay_choices) > canary_days[0]]
+        return len(reg) >= 3
+
+    def pad(self, asg: dict[str, str], post: dict[str, float]) -> dict[str, str]:
+        """Give the canary to everyone (max recipients); non-suspects join the lightest-mass label."""
+        if not asg:
+            return asg
+        mass = {}
+        for e, l in asg.items():
+            mass[l] = mass.get(l, 0.0) + post[e]
+        light = min(mass, key=mass.get)
+        out = dict(asg)
+        for e in self.obs.employees:
+            if e not in out and e not in self.restricted:
+                out[e] = light
+        return out
+
     def partition(self, post: dict[str, float]) -> dict[str, str]:
+        if self.adaptive and self.canary_shy() and self.obs.today % 2 == 0:
+            return self.pad(self.partition_balanced(post), post)
+        if self.design == "balanced" or (self.design == "auto" and not self.P.careful_mole):
+            return self.partition_balanced(post)
+        return self.partition_search(post)
+
+    def partition_search(self, post: dict[str, float], n_shuffles: int = 16) -> dict[str, str]:
+        """Pick the canary assignment maximising P(canary leaks) x (Gini gain over the cells of the
+        still-pending canaries). Orthogonal to pending canaries (pipelining under delay) and
+        careful-mole aware (smaller groups are leaked more often)."""
+        import random as _r
+        P, o = self.P, self.obs
+        k = P.max_variants
+        n = len(o.employees) or 1
+        alive = [e for e in post if post[e] > 1e-4 and e not in self.restricted]
+        if len(alive) <= 1:
+            return {}
+        surfaced = {it.doc_id for it in o.feed}
+        pend = [d for d in o.docs.values() if d.is_canary and d.variants and d.doc_id not in surfaced
+                and d.day >= o.today - P.leak_window_days + 1]
+        def cell_old(e):
+            return tuple(d.variants.get(e, "-") for d in pend)
+        def gini(keyf):
+            m = {}
+            for e in post:
+                m[keyf(e)] = m.get(keyf(e), 0.0) + post[e]
+            return 1.0 - sum(v * v for v in m.values())
+        g_old = gini(cell_old)
+        # expected regular leakable docs for the mole (competition for the leak choice)
+        win = [d for d in o.docs.values() if not d.is_canary and d.day >= o.today - P.leak_window_days]
+        nreg = sum(post[e] * sum(1 for d in win if e in d.recipients) for e in post) * P.leak_window_days / max(1, len({d.day for d in win}) or 1)
+        nreg = max(1.0, nreg)
+        nreg_s = {e: sum(1 for d in win if e in d.recipients) for e in post}
+        rng = _r.Random(f"canary:{o.today}:{len(o.feed)}")
+        best, bestu = {}, -1.0
+        fracs = self.coverages
+        if self.alternate and o.today % 2 == 0:
+            fracs = (1.0,)   # robustness: big canaries for moles that prefer widely-shared docs (DSL)
+        for f in fracs:
+            for t in range(n_shuffles):
+                order = sorted(alive, key=lambda e: -post[e]) if t == 0 else rng.sample(alive, len(alive))
+                rec, m = [], 0.0
+                for e in order:
+                    if m >= f - 1e-9 and rec:
+                        break
+                    rec.append(e)
+                    m += post[e]
+                ng = min(k, len(rec))
+                mass, groups = [0.0] * ng, [[] for _ in range(ng)]
+                for e in rec:
+                    g = min(range(ng), key=lambda i: (mass[i], len(groups[i])))
+                    groups[g].append(e)
+                    mass[g] += post[e]
+                asg = {e: LABELS[i] for i, g in enumerate(groups) for e in g}
+                u = self.canary_mi(post, asg, nreg_s, n) if self.utility == "mi" else None
+                if u is None:
+                    w = (1.0 - len(asg) / n) if P.careful_mole else 1.0
+                    if w <= 0:
+                        continue
+                    pl = w / (w + nreg)
+                    u = pl * (gini(lambda e: (cell_old(e), asg.get(e, "-"))) - g_old)
+                if u > bestu:
+                    best, bestu = asg, u
+        return best
+
+    def canary_mi(self, post, asg, nreg_s, n) -> float:
+        """Mutual information (nats) between the mole's identity and this canary's outcome
+        (which label leaks within the leak window, or none), under the careful-mole weight."""
+        P = self.P
+        w = max(0.0, 1.0 - len(asg) / n) if P.careful_mole else 1.0
+        win = P.leak_window_days
+        po = {}
+        hcond = 0.0
+        for e, p in post.items():
+            if p <= 0:
+                continue
+            lab = asg.get(e)
+            if lab is None or w <= 0:
+                q = 0.0
+            else:
+                per_day = P.p_leak * w / (w + max(1.0, nreg_s.get(e, 0)))
+                q = 1 - (1 - per_day) ** win
+            po["_none"] = po.get("_none", 0.0) + p * (1 - q)
+            if q > 0:
+                po[lab] = po.get(lab, 0.0) + p * q
+                hcond -= p * (q * math.log(q) + ((1 - q) * math.log(1 - q) if q < 1 else 0.0))
+        h = -sum(v * math.log(v) for v in po.values() if v > 0)
+        return h - hcond
+
+    def partition_balanced(self, post: dict[str, float]) -> dict[str, str]:
         """Split alive suspects into <= max_variants labelled groups (+ an implicit 'no canary' group)
         with balanced posterior mass."""
         k = self.P.max_variants

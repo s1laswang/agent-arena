@@ -352,3 +352,15 @@ def test_v03_path_is_active():
     if declared is None:
         pytest.skip("v0 rules: no wrong_accusation_score")
     assert wrong_score() == declared == -1.0, (wrong_score(), declared)
+
+
+def test_solver_tier_ordering():
+    """Difficulty must be monotone across tiers: solver mean easy > medium > hard (100 dev seeds).
+    Guards future retunes from silently inverting the tier ladder."""
+    import statistics
+    from canary.solver import SolverPolicy
+    from canary.baselines import play
+    means = {}
+    for tier in ("easy", "medium", "hard"):
+        means[tier] = statistics.mean(play(make_env(tier, s), SolverPolicy()) for s in range(100))
+    assert means["easy"] > means["medium"] > means["hard"], means

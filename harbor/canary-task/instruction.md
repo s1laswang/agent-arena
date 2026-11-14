@@ -27,7 +27,7 @@ You are the security lead of a company with 20 employees, with ids e00 to e19. E
 
 ## Canaries (traps)
 - `plant_canary(doc_title, assignment)` creates a new document today. It costs 0.01 of V.
-- You can plant at most 1 per day. `assignment` maps employee ids to variant labels. Use at most 2 different labels and at least 1 recipient. Restricted employees cannot receive a canary.
+- You can plant at most 1 per day. `assignment` maps employee ids to variant labels. Use at most 3 different labels and at least 1 recipient. Restricted employees cannot receive a canary.
 - The recipients are exactly the employees in `assignment`. They count as having received the canary today.
 - If the canary leaks, the leak feed shows the variant label the mole received.
 
@@ -64,7 +64,7 @@ The same numbers as above, one per line (some only matter when their feature is 
 - leak_damage: 0.04
 - canary_cost: 0.01
 - canaries_per_day: 1
-- max_variants: 2
+- max_variants: 3
 - restrict_cost_per_day: 0.01
 - actions_per_day: 8
 - tool_call_cap: 300

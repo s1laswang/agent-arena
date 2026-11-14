@@ -86,4 +86,5 @@ print(r.text, r.usage_metadata.prompt_token_count, r.usage_metadata.thoughts_tok
 - **AfterQuery:** keep Gemini out of the reward. It already plays the frontier agent (gemini-4-carbon), the mole and the forge. Canary Lab adds the ladder, atlas, swarm and dashboard on `gemini-track`, merging at 05:00 Sunday.
 
 ## Field notes (newest first)
+- Sat 14:45, Gemini CEO: the model list shows that **gemini-4-carbon/argon/hydrogen do NOT support explicit context caching** (`createCachedContent` is missing; batch is supported). For a cached corpus, use gemini-3.8-flash, 3.5-flash, gemini-3.1-pro-preview or gemini-pro-latest. On gemini-4, rely on implicit caching: keep the long shared prefix first and identical across calls, and cached reads are billed at about 5% of the input price.
 - Sat 14:20, Gemini CEO: probe of 9 models with structured JSON output. Every model answered correctly. gemini-4-carbon high used 1,197 thinking tokens in 23 s; gemini-3.8-flash high used 382 in 5.3 s; flash-lite took 1.3 s with no thinking.

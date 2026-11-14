@@ -192,3 +192,11 @@ def test_check_gate(tmp_path, monkeypatch):
     gap.write_text("# gap\n")
     check.append(tmp_path, gap)
     assert "## Self-checks" in gap.read_text() and "PASS oracle" in gap.read_text()
+
+
+def test_tiebreaker_section(tmp_path):
+    p = tmp_path / "runs.jsonl"
+    assert report.tiebreaker(tmp_path / "none.jsonl") == []
+    p.write_text(json.dumps({"id": "run9", "date": "d", "model": "m", "data": {"rows": 5, "decision_share": 0.4, "seat": "finance_ap"}, "base": {"fooled_rate": 0.5, "false_accusations": 1, "reward": 0.0, "ticket_completion": 0.1}, "adapter": {"fooled_rate": 0.2}, "outcome": "verbatim outcome text", "flags": ["x"], "reproduce": "cmd"}) + "\n")
+    t = "\n".join(report.tiebreaker(p))
+    assert "| run9 | m | finance_ap | 5 | 0.4 | 0.5 / 1 / 0.0 / 0.1 | 0.2 / - / - / - |" in t and "outcome: verbatim outcome text" in t and "flags" in t

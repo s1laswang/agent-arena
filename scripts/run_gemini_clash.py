@@ -5,6 +5,9 @@ import dataclasses
 import datetime as dt
 import json
 import os
+import random
+import re
+import shlex
 import sys
 import time
 from pathlib import Path
@@ -16,11 +19,12 @@ if str(ROOT) not in sys.path:
 
 from canary.agents.llm_policy import LLMPolicy
 from canary.agents.loop import run_episode
-from canary.agents.mole_arena import LLMMole
+from canary.agents.mole_arena import LLMMole, view_to_dict
 from canary.agents.runlog import git_sha
 from canary.env import Env
 from canary.gemini.ledger import LedgeredClient, lab_client
 from canary.llm import StubClient, default_gemini_model
+from canary.llm.base import is_retryable
 from canary.llm.pricing import cost
 from canary.rules import TIERS_VERSION
 from canary.solver.policy import SolverPolicy
@@ -61,6 +65,29 @@ def _meta_int(obj: Any, attr: str) -> int:
     return val if isinstance(val, int) else 0
 
 
+EM_DASH = chr(0x2014)
+EN_DASH = chr(0x2013)
+
+
+def sanitize_str(val: str) -> str:
+    return val.replace(EM_DASH, "-").replace(EN_DASH, "-")
+
+
+def sanitize_obj(obj: Any) -> Any:
+    if isinstance(obj, str):
+        return sanitize_str(obj)
+    if isinstance(obj, list):
+        return [sanitize_obj(x) for x in obj]
+    if isinstance(obj, dict):
+        return {
+            sanitize_str(k) if isinstance(k, str) else k: (
+                v if k in ("thoughtSignature", "thought_signature") else sanitize_obj(v)
+            )
+            for k, v in obj.items()
+        }
+    return obj
+
+
 class UsageTracker:
     def __init__(self, inner: Any):
         self.inner = inner
@@ -69,10 +96,7 @@ class UsageTracker:
     def __getattr__(self, name: str) -> Any:
         return getattr(self.__dict__["inner"], name)
 
-    def chat(self, messages: list[dict], **kw: Any) -> Any:
-        t0 = time.time()
-        resp = self.inner.chat(messages, **kw)
-        dt_s = time.time() - t0
+    def _record(self, resp: Any, dt_s: float) -> None:
         um = getattr(resp.raw, "usage_metadata", None) if getattr(resp, "raw", None) is not None else None
         if um is not None:
             tin = _meta_int(um, "prompt_token_count")
@@ -95,7 +119,80 @@ class UsageTracker:
         self.usage["cached"] += cached
         self.usage["cost_usd"] = round(self.usage["cost_usd"] + usd, 6)
         self.usage["latency_s"] = round(self.usage["latency_s"] + dt_s, 3)
+
+    def chat(self, messages: list[dict], **kw: Any) -> Any:
+        is_gemini = getattr(self.inner, "provider", "") == "gemini"
+        schema_mode = kw.get("response_schema") is not None
+        max_attempts = int(os.environ.get("CANARY_LLM_MAX_RETRIES", "10")) if is_gemini else 1
+        last_exc: Exception | None = None
+        resp = None
+        for attempt in range(max(1, max_attempts)):
+            t0 = time.time()
+            try:
+                resp = self.inner.chat(messages, **kw)
+            except Exception as exc:
+                retry_net = is_retryable(exc) or isinstance(exc, (ConnectionError, BrokenPipeError, TimeoutError))
+                if not is_gemini or attempt + 1 >= max_attempts or not retry_net:
+                    raise
+                last_exc = exc
+                time.sleep(min(1.5 * (2 ** attempt), 20.0))
+                continue
+            dt_s = time.time() - t0
+            self._record(resp, dt_s)
+            if not schema_mode:
+                return resp
+            raw_txt = (getattr(resp, "text", None) or "").strip()
+            if not raw_txt:
+                if is_gemini and attempt + 1 < max_attempts:
+                    time.sleep(min(1.5 * (2 ** attempt), 15.0))
+                    continue
+                return resp
+            try:
+                parsed = json.loads(raw_txt)
+                if isinstance(parsed, dict) and isinstance(parsed.get("reason"), str):
+                    parsed["reason"] = sanitize_str(parsed["reason"])[:280]
+                    resp.text = json.dumps(parsed)
+                return resp
+            except json.JSONDecodeError:
+                if is_gemini and attempt + 1 < max_attempts:
+                    time.sleep(min(1.5 * (2 ** attempt), 15.0))
+                    continue
+                return resp
+        if last_exc is not None and resp is None:
+            raise last_exc
         return resp
+
+
+class ClashMole(LLMMole):
+    def __init__(self, client: Any, seed_tag: str = "", temperature: float = 0.4):
+        super().__init__(client, temperature=temperature)
+        self.seed_tag = seed_tag
+
+    def decide(self, view: Any) -> dict:
+        v = view_to_dict(view)
+        alias_map: dict[str, str] = {}
+        if v.get("held_docs"):
+            docs_copy = [dict(d) for d in v["held_docs"]]
+            rng = random.Random(f"clash-mole:{self.seed_tag}:{v.get('day', 0)}")
+            rng.shuffle(docs_copy)
+            masked = []
+            for idx, d in enumerate(docs_copy):
+                alias = f"doc_{idx + 1:02d}"
+                alias_map[alias] = str(d["doc_id"])
+                masked.append({**d, "doc_id": alias})
+            v["held_docs"] = masked
+        move = super().decide(v)
+        if move.get("leak") in alias_map:
+            real_id = alias_map[move["leak"]]
+            move["leak"] = real_id
+            if self.log:
+                self.log[-1]["move"]["leak"] = real_id
+        if self.log and isinstance(self.log[-1].get("reason"), str) and alias_map:
+            reason_txt = self.log[-1]["reason"]
+            for alias, real_id in alias_map.items():
+                reason_txt = re.sub(rf"\b{re.escape(alias)}\b", real_id, reason_txt)
+            self.log[-1]["reason"] = sanitize_str(reason_txt)[:300]
+        return move
 
 
 def normalize_spec(spec: str) -> tuple[str, str]:
@@ -124,7 +221,7 @@ def build_ledgered_client(spec: str, feature: str, run_id: str, meta: dict[str, 
 def clean_md(text: str | None) -> str:
     if not text:
         return ""
-    return " ".join(str(text).replace("\u2014", "-").replace("\u2013", "-").replace("|", "/").split())
+    return " ".join(sanitize_str(str(text)).replace("|", "/").split())
 
 
 def format_summary(meta: dict[str, Any], clash_mole_log: list[dict], solver_mole_log: list[dict]) -> str:
@@ -142,6 +239,7 @@ def format_summary(meta: dict[str, Any], clash_mole_log: list[dict], solver_mole
         f"- Scenario: tier `{meta['tier']}`, seed `{meta['seed']}`",
         f"- Commit: `{meta['commit']}`",
         f"- Timestamp: `{meta['timestamp']}`",
+        f"- Command: `{meta['command']}`",
         "",
         "## Episode Outcomes",
         "",
@@ -225,7 +323,8 @@ def format_summary(meta: dict[str, Any], clash_mole_log: list[dict], solver_mole
 
 def run_clash(spec: str = "gemini:gemini-4-carbon", tier: str = "medium", seed: int = 0,
               out_dir: str | Path = DEFAULT_OUT, thinking_level: str | None = None,
-              client_builder: Callable[..., Any] | None = None) -> dict[str, Any]:
+              client_builder: Callable[..., Any] | None = None,
+              command_str: str | None = None) -> dict[str, Any]:
     os.environ.setdefault("CANARY_LLM_MAX_RETRIES", "10")
     spec, model_id = normalize_spec(spec)
     out = Path(out_dir)
@@ -240,16 +339,16 @@ def run_clash(spec: str = "gemini:gemini-4-carbon", tier: str = "medium", seed: 
     clash_mole_tracker = UsageTracker(mole_base_client)
     inv_tracker = UsageTracker(inv_base_client)
 
-    clash_mole = LLMMole(clash_mole_tracker)
+    clash_mole = ClashMole(clash_mole_tracker, seed_tag=f"{tier}:{seed}:clash")
     clash_env = Env(tier=tier, seed=seed, mole_strategy=clash_mole)
     investigator = LLMPolicy(spec, client=inv_tracker)
     clash_res = run_episode(clash_env, investigator, investigator.name)
     investigator._feed_results(clash_env.history)
 
     solver_mole_tracker = UsageTracker(mole_base_client)
-    solver_mole = LLMMole(solver_mole_tracker)
+    solver_mole = ClashMole(solver_mole_tracker, seed_tag=f"{tier}:{seed}:solver")
     solver_env = Env(tier=tier, seed=seed, mole_strategy=solver_mole)
-    solver_policy = SolverPolicy()
+    solver_policy = SolverPolicy(adaptive=True, alternate=True, probing=True)
     solver_res = run_episode(solver_env, solver_policy, solver_policy.name)
 
     inv_usage = dict(inv_tracker.usage)
@@ -260,7 +359,11 @@ def run_clash(spec: str = "gemini:gemini-4-carbon", tier: str = "medium", seed: 
 
     timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     commit = git_sha()
-    meta = {
+    default_cmd = " ".join(
+        shlex.quote(x)
+        for x in [sys.executable, "scripts/run_gemini_clash.py", "--llm", spec, "--tier", tier, "--seed", str(seed)]
+    )
+    meta = sanitize_obj({
         "role": "adaptive_mole",
         "subrole": "carbon_vs_carbon_clash",
         "model_id": model_id,
@@ -270,6 +373,7 @@ def run_clash(spec: str = "gemini:gemini-4-carbon", tier: str = "medium", seed: 
         "seed": seed,
         "commit": commit,
         "timestamp": timestamp,
+        "command": command_str or default_cmd,
         "run_id": run_id,
         "investigator_score": clash_res.score,
         "investigator_correct": clash_res.correct,
@@ -300,9 +404,9 @@ def run_clash(spec: str = "gemini:gemini-4-carbon", tier: str = "medium", seed: 
             "clash_mole_vs_investigator": mole_inv_usage,
             "clash_mole_vs_solver": mole_sol_usage,
         },
-    }
+    })
 
-    investigator_payload = {
+    investigator_payload = sanitize_obj({
         "tier": clash_res.tier,
         "seed": clash_res.seed,
         "agent": clash_res.agent,
@@ -315,9 +419,9 @@ def run_clash(spec: str = "gemini:gemini-4-carbon", tier: str = "medium", seed: 
         "usage": inv_usage,
         "steps": [dataclasses.asdict(s) for s in clash_res.steps],
         "transcript": investigator.transcript,
-    }
+    })
 
-    mole_payload = {
+    mole_payload = sanitize_obj({
         "tier": tier,
         "seed": seed,
         "model_id": model_id,
@@ -329,9 +433,9 @@ def run_clash(spec: str = "gemini:gemini-4-carbon", tier: str = "medium", seed: 
             "clash_mole_vs_investigator": mole_inv_usage,
             "clash_mole_vs_solver": mole_sol_usage,
         },
-    }
+    })
 
-    solver_payload = {
+    solver_payload = sanitize_obj({
         "tier": solver_res.tier,
         "seed": solver_res.seed,
         "investigator": solver_res.agent,
@@ -347,13 +451,13 @@ def run_clash(spec: str = "gemini:gemini-4-carbon", tier: str = "medium", seed: 
         "belief_trace": solver_policy.trace,
         "mole_log": solver_mole.log,
         "mole_usage": mole_sol_usage,
-    }
+    })
 
     (out / "meta.json").write_text(json.dumps(meta, indent=2, default=str) + "\n")
     (out / "investigator_transcript.json").write_text(json.dumps(investigator_payload, indent=2, default=str) + "\n")
     (out / "mole_log.json").write_text(json.dumps(mole_payload, indent=2, default=str) + "\n")
     (out / "solver_check.json").write_text(json.dumps(solver_payload, indent=2, default=str) + "\n")
-    (out / "summary.md").write_text(format_summary(meta, clash_mole.log, solver_mole.log))
+    (out / "summary.md").write_text(sanitize_str(format_summary(meta, mole_payload["clash_mole_log"], mole_payload["solver_mole_log"])))
     return meta
 
 
@@ -365,8 +469,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default=DEFAULT_OUT)
     ap.add_argument("--thinking-level", default=None)
     args = ap.parse_args(argv)
+    raw_args = argv if argv is not None else sys.argv[1:]
+    cmd_str = " ".join(shlex.quote(x) for x in [sys.executable, "scripts/run_gemini_clash.py", *raw_args])
     meta = run_clash(spec=args.llm, tier=args.tier, seed=args.seed, out_dir=args.out,
-                     thinking_level=args.thinking_level)
+                     thinking_level=args.thinking_level, command_str=cmd_str)
     print(json.dumps({
         "out": str(args.out),
         "model_id": meta["model_id"],

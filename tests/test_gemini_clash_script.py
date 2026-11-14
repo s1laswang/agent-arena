@@ -37,7 +37,9 @@ class MockGeminiBackend(LLMClient):
             payload = json.loads(messages[-1]["content"])
             docs = payload.get("held_docs") or []
             leak_id = docs[0]["doc_id"] if docs else None
-            text = json.dumps({"leak": leak_id, "frame": None, "reason": "wide distribution \u2014 safe"})
+            long_tail = "x" * 320
+            reason = f"wide distribution {chr(0x2014)} safe {long_tail}"
+            text = json.dumps({"leak": leak_id, "frame": None, "reason": reason})
             return LLMResponse(text=text, tool_calls=[], usage={"in": 100, "out": 75, "cost_usd": 0.001}, raw=raw)
         if self.turn == 1:
             tc = [ToolCall(id="c_1", name="advance_day", args={})]
@@ -99,7 +101,7 @@ def test_run_gemini_clash_stub_keyless(tmp_path, monkeypatch):
     assert len(solver_check["belief_trace"]) > 0
 
     summary_md = (out_dir / "summary.md").read_text()
-    assert "\u2014" not in summary_md
+    assert chr(0x2014) not in summary_md
     assert "clash_investigator" in summary_md
     assert "clash_mole" in summary_md
 
@@ -146,8 +148,13 @@ def test_run_gemini_clash_carbon_usage_and_solvability(tmp_path, monkeypatch):
     assert sum(r["in"] for r in rows) == u["in"]
     assert sum(r["out"] for r in rows) == u["out"]
 
+    for fname in ("meta.json", "investigator_transcript.json", "mole_log.json", "solver_check.json", "summary.md"):
+        content = (out_dir / fname).read_text()
+        assert chr(0x2014) not in content
+        assert "\\u2014" not in content
+    assert meta["mole_clash_errors"] == 0
+    assert meta["mole_solver_errors"] == 0
     summary_md = (out_dir / "summary.md").read_text()
-    assert "\u2014" not in summary_md
     assert "wide distribution - safe" in summary_md
 
 

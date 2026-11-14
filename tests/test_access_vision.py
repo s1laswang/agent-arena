@@ -247,6 +247,50 @@ def test_run_access_vision_cli_writes_all_artifacts(tmp_path, monkeypatch):
     assert "\u2014" not in summary_md and "\u2013" not in summary_md
 
 
+def test_hard_tier_public_tool_isolation_and_cli_subrole(tmp_path, monkeypatch):
+    ledger_file = tmp_path / "hard_ledger.jsonl"
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(ledger_file))
+    out_dir = tmp_path / "access-heatmap-hard-carbon"
+
+    env_a = Env("hard", 0)
+    proxy_a = StrictPublicToolProxy(env_a)
+    obs_a = collect_soc_observations(proxy_a, seed_label=0, tier="hard")
+    png_a = render_soc_raster(obs_a)
+
+    assert set(proxy_a.called_tools) == ALLOWED_TOOLS
+    assert len(obs_a["employees"]) == 40
+    assert obs_a["closed_day"] == 20
+    assert len(obs_a["canaries"]) == 38
+    assert png_a[:8] == b"\x89PNG\r\n\x1a\n"
+
+    png_b = render_soc_raster(collect_soc_observations(StrictPublicToolProxy(Env("hard", 0)), seed_label=0, tier="hard"))
+    assert raster_sha256(png_a) == raster_sha256(png_b)
+
+    with Image.open(io.BytesIO(png_a)) as im:
+        assert im.format == "PNG"
+        assert im.size == (2180, 1660)
+
+    fake_sdk = FakeSDKClient([
+        _fake_response({
+            "top_suspect_ids": ["e38"],
+            "suspected_decoy_ids": ["e14"],
+            "confidence": 0.99,
+            "canary_leak_summary": "6/6 surfaced canaries matched e38",
+            "visual_reasoning": "e14 is framed decoy; e38 holds 6/6 surfaced canaries with 6/6 variant matches.",
+        }),
+    ])
+    rc = runner.main(["--tier", "hard", "--seeds", "0", "--out", str(out_dir)], sdk_client=fake_sdk)
+    assert rc == 0
+
+    meta = json.loads((out_dir / "meta.json").read_text())
+    assert meta["role"] == "multimodal_evidence"
+    assert meta["subrole"] == "soc_access_vision_hard"
+    assert meta["tiers_version"] == "v1.4"
+    assert meta["tier"] == "hard"
+    assert meta["n_images_read_by_model"] == 1
+    assert "HARD TIER" in fake_sdk.models.calls[0]["contents"][1].upper() or "hard-tier" in fake_sdk.models.calls[0]["contents"][1]
+
+
 def test_no_comments_or_em_dashes_in_created_python_files():
     root = Path(__file__).resolve().parents[1]
     targets = [

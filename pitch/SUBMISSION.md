@@ -34,7 +34,7 @@ Add after the description once lead-lab publishes. Every figure is REAL (model i
 
 Text: "We played the staff seat with gemini-4-carbon (REAL NOT FOUND (lead-lab pending)), Claude and Codex over the same MCP server, against the evidence-only reference on the same days. Reward: gemini-4-carbon NOT FOUND (lead-lab pending), reference NOT FOUND (lead-lab pending), gap NOT FOUND (lead-lab pending). In the replay, the sleeper lands at NOT FOUND (lead-lab pending) and the reference notices NOT FOUND (lead-lab pending) instead."
 
-Fallback if no real number arrives: "The Gemini path is built and tested offline; no real Gemini run finished. Every figure here is scripted." "The gap is scripted staff against a scripted reference, reproduced by `make eval`."
+Fallback if no real number arrives: "Offline tests of the Gemini path ran with a fake model; no real Gemini run finished. Every figure here is scripted." "The gap is scripted staff against a scripted reference, reproduced by `make eval`."
 
 ## Deliverable checklist (from CHALLENGES-AFTERQUERY-GEMINI.md)
 

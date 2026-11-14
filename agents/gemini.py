@@ -180,6 +180,9 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
     if um:
         _usage["in_tokens"] += um.prompt_token_count or 0
         _usage["out_tokens"] += um.candidates_token_count or 0
+        CACHE.mkdir(parents=True, exist_ok=True)
+        with open(CACHE / "usage.jsonl", "a") as f:
+            f.write(json.dumps({"model": model, "in": um.prompt_token_count or 0, "out": um.candidates_token_count or 0}) + "\n")
     out = _parse(resp)
     CACHE.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp%d" % os.getpid())

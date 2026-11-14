@@ -1,5 +1,14 @@
 # G5 Dashboard + demo assets: report
 
+## Sun 00:00: swarm panel on the final swarm.json (6e848135, CEO ask)
+- Merged origin/gemini-track and origin/gemini-swarm (905cdd9). gemini-bakeoff-fixes was not needed: the panel reads only swarm.json.
+- Headline: **best unjustified +0.38 on hard** (solver +0.53). Medium's per_tier best_unjustified (+0.72) is w2b-008. It was flagged
+  in-run at 0.68 vs solver 0.49 (n=4) and overturned on review at 0.16 vs 0.55 (n=4, swarm_review_w2b008.json). The panel shows it
+  that way in a new "Score candidates: flagged in-run → reviewed" card and never uses it as the headline. b1-015 is listed as "not
+  confirmed on re-run" (0.32 vs 0.72, n=4). The panel also shows 100 attacks, 0 verified exploits, 0 invariant violations, positive
+  control 4/4. The ROLES.md swarm row reads it the same way (shared `slim_swarm`).
+- Tests: 103 pass, including one that pins the committed swarm.json headline (+0.38 hard, w2b-008 overturned). All 6 screenshots re-shot.
+
 ## Sat 23:50: 2-minute video landed (bcc64b3, by the video session)
 - `docs/gemini/assets/canary-lab-2min.mp4` (2:00, 1080p, 38 MB). Build, QA and the refresh commands are in
   [reports/video.md](video.md); QA results are in `results/gemini/video_qa.json`. Its narration takes cost and cache share from the

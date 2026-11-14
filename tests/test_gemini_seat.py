@@ -36,5 +36,6 @@ def test_replay_byte_identical(f, tmp_path, monkeypatch):
     import shutil
     shutil.copytree(src.parent, tmp_path / model / com)
     (tmp_path / model / com / src.name).unlink()
-    row, p = gs.run_seat("gemini", model, seat, int(seed), trial=int(trial), com=com, base=tmp_path)
+    pb = json.loads(src.read_text()).get("prompt_budget", 60)
+    row, p = gs.run_seat("gemini", model, seat, int(seed), trial=int(trial), com=com, base=tmp_path, prompt_budget=pb)
     assert p.read_bytes() == src.read_bytes()

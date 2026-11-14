@@ -112,10 +112,13 @@ def run_seat(agent, model, seat, seed, days=1, max_turns=60, max_calls=350, max_
         else:
             cmd = ["codex", "exec", "resume", "--last", "--json", "--skip-git-repo-check", "-m", model, "-c", 'sandbox_mode="read-only"'] + mcp_c + [text + "\nUse only the sleeper MCP tools. Do not run shell commands."]
         json.dump(calls, open(prior, "w"))
-        p = subprocess.run(cmd, cwd=ROOT if agent == "claude" else tmp, capture_output=True, text=True, env=env, timeout=1800)
-        ls = p.stdout.splitlines()
+        try:
+            p = subprocess.run(cmd, cwd=ROOT if agent == "claude" else tmp, capture_output=True, text=True, env=env, timeout=1500)
+            out_t, errs = p.stdout, p.stderr[-2000:]
+        except subprocess.TimeoutExpired as ex:
+            out_t, errs = (ex.stdout.decode() if isinstance(ex.stdout, bytes) else ex.stdout) or "", "timeout"
+        ls = out_t.splitlines()
         lines += ls
-        errs = p.stderr[-2000:]
         new = (parse_claude if agent == "claude" else parse_codex)(ls)
         calls += new
         if agent == "claude" and not sid:

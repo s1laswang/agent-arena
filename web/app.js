@@ -21,7 +21,7 @@ function harmful(D,a){
   return Object.values(D.day.goal.target).map(String).some(v=>s.includes(v));
 }
 
-const TEAM={oracle:"oracle (knows the sleeper)",procedure:"procedure (evidence only)"};
+const TEAM={oracle:"oracle (hidden identity, not fair)",procedure:"procedure (evidence only)"};
 const nice=h=>h.replace(/@-?\d+$/,"").replace(/_/g," ");
 const shortIban=v=>v?String(v).slice(0,2)+".."+String(v).slice(-4):"";
 function goalLine(D){
@@ -141,7 +141,7 @@ async function init(){
   const q=new URLSearchParams(location.search);
   if(+q.get("speed")>0)speed=+q.get("speed");
   const man=q.get("day")?[]:await (await fetch("days/index.json")).json();
-  const other=r=>["procedure","oracle"].map(t=>man.find(o=>o.seed===r.seed&&o.team===t&&(t!=="procedure"||o.reward===1))).find(Boolean);
+  const other=r=>["procedure","oracle"].map(t=>man.find(o=>o.seed===r.seed&&o.team===t&&true)).find(Boolean);
   const pair=man.find(r=>r.team==="staff"&&other(r));
   const ids=q.get("day")?[q.get("day")]:pair?[pair.id,other(pair).id]:[man[0].id];
   if(q.get("vs"))ids.push(q.get("vs"));

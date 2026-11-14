@@ -153,6 +153,7 @@ def main():
     ap.add_argument("--teams", nargs="+", default=["oracle", "noop"])
     ap.add_argument("--landing", help="strategy id, e.g. fraud.bank_swap, writes <seed>-staff and <seed>-oracle")
     ap.add_argument("--landing-teams", nargs="+", default=["staff", "procedure", "oracle"])
+    ap.add_argument("--force", action="store_true")
     ap.add_argument("--live", action="store_true")
     ap.add_argument("--sleeper-seeds", type=int, nargs="*", default=None)
     a = ap.parse_args()
@@ -169,6 +170,9 @@ def main():
         return
     out = {f"{seed}-{team}.json": build(seed, team, seed in sl) for seed in a.seeds for team in a.teams}
     for name, doc in out.items():
+        if (OUT / name).exists() and "strategy" in json.load(open(OUT / name)) and not a.force:
+            print(f"keep {name}: landing run, pass --force to overwrite")
+            continue
         json.dump(doc, open(OUT / name, "w"), indent=1, sort_keys=True)
     print(len(manifest()))
 

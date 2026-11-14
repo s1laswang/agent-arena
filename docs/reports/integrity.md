@@ -12,3 +12,9 @@
 - In progress: exploit-hunter (codex over MCP), props-probe (hypothesis + text probe + seed-not-exposed test).
 - Asks to ENV: `env._world.mole`; ledger "accused" detail {"employee": id}; "day" in status/advance_day and "V" in status; accuse under a lock (check-and-set); non-dict args → ok=False, never raise.
 - Next 45 min: run fuzz + baselines on Env v0 the moment it lands; first EXPLOITS rows with results.
+
+## 02:40 status
+- Done (verified: `make test` 163 passed / 2 skipped after merging origin/justSilas): props-probe merged (hypothesis property tests, explicit integrity tests, text_probe, monotonicity). Judge salt verified: judge worlds built without CANARY_WORLD_SECRET ≠ served moles (test_judge_salt). Added test_salt_never_tracked + `.gitignore` entry for data/worlds/judge/SALT.
+- EXPLOITS.md unified to 9 rows; row 1 = stop-early v0 = 0.10 on medium → fix contract v0.3 (wrong accusation = −1.0), test updates in progress.
+- In progress: props-probe → v0.3 sign properties; fuzzer → medium/hard fuzz + calibration + FR8 J2; exploit-hunter → codex over MCP.
+- Next 45 min: v0.3 tests green on merge; text probe on medium 0-49; first codex hunt once MCP lands.

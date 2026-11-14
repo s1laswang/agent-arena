@@ -32,7 +32,7 @@ def bootstrap_n(diffs: list[float], gap: float, reps: int = 2000, seed: int = 0)
     return n_needed(sds[int(0.95 * (reps - 1))], gap)
 
 
-def size_cells(rows: list[dict], solver: str = "solver", heuristic: str = "heuristic") -> list[dict]:
+def size_cells(rows: list[dict], solver: str = "solver", heuristic: str = "obvious_heuristic") -> list[dict]:
     out = []
     for (tier, params), rs in sorted(group(rows, cell_key).items(), key=lambda kv: str(kv[0])):
         by_agent = group(rs, lambda r: r["agent"])
@@ -72,7 +72,7 @@ def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("csv")
     ap.add_argument("--solver", default="solver")
-    ap.add_argument("--heuristic", default="heuristic")
+    ap.add_argument("--heuristic", default="obvious_heuristic")
     ap.add_argument("--out")
     a = ap.parse_args(argv)
     md = to_markdown(size_cells(read_rows(a.csv), a.solver, a.heuristic))

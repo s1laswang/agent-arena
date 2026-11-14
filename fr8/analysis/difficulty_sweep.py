@@ -22,7 +22,7 @@ from pathlib import Path
 from ._common import ci_half, group, mean, read_rows, write_rows
 
 NOISE_FIELDS = ("noise", "difficulty", "noise_scale", "noise_level")
-DEFAULT_AGENTS = ("solver", "heuristic", "random")
+DEFAULT_AGENTS = ("solver", "obvious_heuristic", "random", "stop_early")
 
 
 def parse_seeds(s: str) -> list[int]:
@@ -39,19 +39,44 @@ def noise_field() -> str:
     raise RuntimeError(f"no noise scalar on TierParams yet (looked for {NOISE_FIELDS})")
 
 
-def run_cell(tier: str, noise: float, seeds: list[int], agents=DEFAULT_AGENTS) -> list[dict]:
-    from canary.rules import TIERS
+def _episode(tier: str, seed: int, agent: str, params):
+    """One episode under `params`. Prefers canary.eval.run_episode if HARNESS ships it;
+    otherwise Env + canary.baselines (scripted baselines; 'solver' once ENV exposes it)."""
     try:
-        from canary.eval import run_episode  # HARNESS
-    except ImportError as e:
-        raise RuntimeError("canary.eval.run_episode not available yet") from e
-    params = dataclasses.replace(TIERS[tier], **{noise_field(): noise})
+        from canary.eval import run_episode  # HARNESS (may not exist yet)
+        return run_episode(tier=tier, seed=seed, agent=agent, params=params)
+    except ImportError:
+        pass
+    from canary import rules
+    from canary.baselines import BASELINES, play
+    from canary.env import Env
+    if agent not in BASELINES:
+        raise RuntimeError(f"agent {agent!r} needs canary.eval.run_episode (have: {sorted(BASELINES)})")
+    old = rules.TIERS[tier]
+    rules.TIERS[tier] = params          # Env reads TIERS[tier] at construction; restore right after
+    try:
+        env = Env(tier, seed)
+    finally:
+        rules.TIERS[tier] = old
+    cls = BASELINES[agent]
+    try:
+        pol = cls(seed=seed)
+    except TypeError:
+        pol = cls()
+    play(env, pol)
+    return env.result(agent)
+
+
+def run_cell(tier: str, noise: float, seeds: list[int], agents=DEFAULT_AGENTS) -> list[dict]:
+    from canary.rules import TIERS, apply_noise
+    params = apply_noise(TIERS[tier], noise)
     rows = []
     for agent in agents:
         for seed in seeds:
-            r = run_episode(tier=tier, seed=seed, agent=agent, params=params)
-            rows.append({"noise": noise, "tier": tier, "agent": agent, "seed": seed,
-                         "score": r.score, "correct": int(r.correct), "final_day": r.final_day})
+            r = _episode(tier, seed, agent, params)
+            rows.append({"noise": noise, "tier": tier, "agent": agent, "seed": seed, "score": r.score,
+                         "correct": int(r.correct), "wrong": int(r.accused is not None and not r.correct),
+                         "final_day": r.final_day})
     return rows
 
 
@@ -62,6 +87,7 @@ def aggregate(rows: list[dict]) -> list[dict]:
         sc = [r["score"] for r in rs]
         out.append({"noise": noise, "tier": tier, "agent": agent, "mean_score": mean(sc),
                     "ci95": ci_half(sc), "accuracy": mean([float(r["correct"]) for r in rs]),
+                    "wrong_rate": mean([float(r.get("wrong", 0) or 0) for r in rs]),
                     "n": len(rs)})
     return out
 

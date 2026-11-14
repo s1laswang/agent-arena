@@ -100,7 +100,7 @@ Baselines (all in `make eval`): do-nothing 0, stop-early 0, quarantine-all 0, re
 
 ## Judge harness
 
-Harbor + OpenCode over MCP plays ONE seat (`SLEEPER_SEAT`, default `controller`), the other 7 seats run inside the env with our agents. Same verifier.
+Harbor + OpenCode over MCP plays ONE seat (`SLEEPER_SEAT`, default `finance_ap`, the realistic BEC target that gates the most strategies; every seat is supported), the other 7 seats run inside the env with our agents. Same verifier.
 
 ## Compute
 

@@ -74,3 +74,18 @@ def completion_table(runs):
 
 if __name__ == "__main__":
     print(decomposition_table(sys.argv[1]))
+
+
+def where_gap(run_dir):
+    days = analyse.load(run_dir)
+    lost = [d for d in days if d["result"]["reward"] == 0]
+    if not lost:
+        return "No losses, no gap."
+    dec = [d for d in lost if decisions_only(d)]
+    inc = len(lost) - len(dec)
+    c = Counter(l for d in dec for l in {y["label"] for y in analyse.label(d)} if l in analyse.GLOSSARY)
+    out = [f"{len(dec)} of {len(lost)} staff losses ({100 * len(dec) // len(lost)}%) are decision-only (harm or false accusation, every ticket done); {inc} ({100 * inc // len(lost)}%) include unfinished tickets, which is incompleteness, not a decision."]
+    if c:
+        out += ["", "Top decisions among decision-only losses, with the evidence the oracle used:", "", "| decision | lost days | the oracle checked |", "|---|---|---|"]
+        out += [f"| {k} | {v} | {analyse.GLOSSARY[k][1]} |" for k, v in c.most_common()]
+    return "\n".join(out)

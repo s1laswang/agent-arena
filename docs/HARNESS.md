@@ -50,3 +50,17 @@ Fix: the agent runs unprivileged, the verifier as root, and test.sh uses an isol
 Proven: the same exploit as the unprivileged agent gets `Permission denied` and reward 0; the oracle solve.sh as the unprivileged agent still gets reward 1.0 (34s).
 
 Also found: `allow_internet = false` makes Harbor add an egress-control sidecar that cannot coexist with compose `expose:` ports (`conflicting options: port exposing and the container type network mode`), and it would block the Gemini API anyway. Keep `allow_internet = true`, or use `network_mode = "allowlist"` with the Gemini host (untested).
+
+## Judges' harness, observed (real Harbor 0.25.0 + Docker, seed 0, controller seat, hardened sidecar build)
+
+One command: `bash harbor/opencode/judge_runs.sh` (env: `SEED`, `SEAT`, `HARBOR=/path/to/harbor`, `OUT`). It builds the task with `python -m harbor.build`, then runs:
+
+| Run | Harbor command | Reward |
+|---|---|---|
+| reference (oracle solve.sh over MCP) | `harbor run -p <task> -a oracle` | 1 |
+| do-nothing | `harbor run -p <task> -a nop` | 0 |
+| stop-early (one my_tickets + end_turn) | `harbor run -p <task> --agent-import-path stop_early:StopEarlyAgent` | 0 |
+| sitecustomize exploit | `harbor run -p <task> --agent-import-path exploit_agent:ExploitAgent` | 0 |
+| OpenCode agent | `harbor run -p <task> -a opencode -m gemini/<model> --ae GEMINI_API_KEY=$GEMINI_API_KEY` | needs a Gemini key, not run |
+
+Gotchas found: (1) our repo package `harbor/` shadows the Harbor framework if the repo is on PYTHONPATH, so custom agents live in `harbor/opencode/judge_agents/` (modules `stop_early`, `exploit_agent`, PYTHONPATH set only for that dir) and the repo is only on the path for `harbor.build`; (2) custom agents must declare `capabilities = AgentCapabilities(mcp_servers=True)` or Harbor refuses tasks with MCP servers; (3) env-harbor's build must COPY `lab` into the sidecar image (sidecar imports `lab.run`), otherwise the sidecar exits 1.

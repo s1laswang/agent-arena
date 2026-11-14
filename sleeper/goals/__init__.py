@@ -66,5 +66,6 @@ def candidates(n, seed=0, seat=None):
     out = []
     for i in range(n):
         s = pool[i % len(pool)]
-        out.append({"seed": rng.randrange(10**6), "sleeper_seat": seat or s.seats[(i // len(pool)) % len(s.seats)], "goal": s.kind, "strategy": s.id})
+        seats = [x for x in s.seats if x != "controller"] or s.seats
+        out.append({"seed": rng.randrange(10**6), "sleeper_seat": seat or seats[(i // len(pool)) % len(seats)], "goal": s.kind, "strategy": s.id})
     return out

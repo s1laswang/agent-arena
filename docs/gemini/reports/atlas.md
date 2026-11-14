@@ -1,5 +1,27 @@
 # G3 Failure Atlas: report (newest first)
 
+DONE Sat 22:59
+
+## Sat 22:59 (EET): blind atlas re-run
+
+- **`--blind`**: the pack contains only agent-visible calls and results, the agent's own words, and the outcome.
+  A test asserts that no REGRET, tags, `top=`, `mole:`, true_mole, total_regret or solver scores appear.
+- **Run:** discovery and mining on the gemini-3.8-flash explicit cache, streamed: 153 episodes, 751k tokens.
+  Served model_version `gemini-3.8-flash`; runs atlas-20261114-223741 and -224929; $2.73.
+- **Result** (`results/gemini/atlas_blind.{json,md}`), scored in code against tags.py:
+  - Recovered **3 of 5** code tags with recall >= 30%:
+    - premature_accusation: 44%
+    - ignored_delay: 2/2
+    - budget_waste: 46%
+  - Missed: uninformative_canary 0%, over_restriction 0%.
+  - Named 2 modes our tags don't have:
+    - canary fingerprint misattribution
+    - passive delay / value depletion
+  - Weak coverage: Gemini cited only 124 steps, 12% of them high-regret, covering 21% of all regret.
+  - Quotes: 12 of 16 verbatim in the agents' own words.
+- **v1:** atlas.md now opens with a "v1 was not blind" note; v1's files are otherwise unchanged.
+- **Tests:** all 90 gemini lab tests pass.
+
 ## Sat 19:01 (EET, `date`): failure gallery (PLAN-95 B2) and atlas v2
 
 **Failure gallery** (`python -m canary.gemini.gallery`): `docs/reports/failure_gallery.md`,

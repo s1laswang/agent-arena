@@ -322,3 +322,41 @@ def test_embed_sends_one_content_per_text(tmp_path, eps):
     fake.models.embed_content = spy
     vecs = AtlasOps(client=fake, cache_dir=tmp_path / "c").embed(["a b", "c d", "e f"])
     assert len(vecs) == 3 and seen == [1, 1, 1]
+
+
+# ------------------------------------------------------------------------------------ blind atlas
+
+def test_blind_pack_has_no_code_labels(eps):
+    from canary.gemini.atlas_data import pack_corpus_blind
+    text, blocks = pack_corpus_blind(eps)
+    assert text.count("=== EPISODE") == len(eps) and "says:" in text
+    for tok in ("REGRET", "top=", "true_mole", "total_regret", "solver_same_seed", "[premature_accusation",
+                "[uninformative_canary", "[over_restriction", "[budget_waste", "[decoy_chase", "[ignored_delay"):
+        assert tok not in text, tok
+    code_lines = [ln for ln in text.splitlines() if not ln.lstrip().startswith("says:")]
+    for tok in ("mole:", "regret", "solver"):
+        assert not any(tok in ln for ln in code_lines), tok
+
+
+def test_blind_recovery_is_scored_in_code(eps):
+    from canary.gemini.atlas_blind import code_truth, score_recovery
+    T = code_truth(eps)
+    tg = next(t for t, s in T["tag_steps"].items() if s)
+    steps = sorted(T["tag_steps"][tg])
+    half = set(steps[: max(1, len(steps) // 2)])
+    junk = {(eps[0].id, 0)}
+    r = score_recovery(eps, {"m1": half, "m2": junk}, tol=0)
+    assert r["tags"][tg]["recall"] == pytest.approx(len(half) / len(steps), abs=1e-4)
+    assert r["tags"][tg]["best_mode"] == "m1"
+    assert r["modes"]["m2"]["novel"] and r["modes"]["m2"]["precision_tagged"] == 0
+    assert 0 <= r["regret_share_covered"] <= 1
+
+
+def test_blind_quotes_count_agent_text_only(eps):
+    from canary.gemini.atlas_blind import verify_agent_quote
+    from canary.gemini.atlas_data import blind_step_line
+    e = next(e for e in eps if any(len(s.rationale) > 40 for s in e.steps))
+    s = next(s for s in e.steps if len(s.rationale) > 40)
+    assert verify_agent_quote(e, s.t, " ".join(s.rationale.split()[:8]))["step_verified"]
+    assert not verify_agent_quote(e, s.t, blind_step_line(s))["verified"]  # a step record is not agent text
+    assert verify_agent_quote(e, s.t, "")["empty"]

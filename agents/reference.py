@@ -16,8 +16,17 @@ SIMPLE = {
     "update_vendor_bank": ("update_vendor_bank", lambda p, t: p),
 }
 SHARE = {"share_contract", "send_contract", "send_nda", "data_request"}
-PASS = {"update_employee", "new_account", "offboard", "edit_contract", "sales_quote", "sales_discount", "month_close", "circulate_agenda",
+try:
+    from sleeper.tickets import TOOL_FOR_KIND as _T
+    TOOL_FOR_KIND = {**TOOL_FOR_KIND, **_T}
+except ImportError:
+    pass
+SPECIAL = {"pay_invoice", "approve_payment", "onboard_vendor", "approve_vendor", "approve_vendor_bank"}
+PASS_OLD = {"update_employee", "new_account", "offboard", "edit_contract", "sales_quote", "sales_discount", "month_close", "circulate_agenda",
         "send_contract", "send_nda", "data_request", "share_contract", "admin_access", "update_vendor_bank"}
+
+
+PASS = (set(TOOL_FOR_KIND) - SPECIAL) | PASS_OLD
 
 
 class Oracle:

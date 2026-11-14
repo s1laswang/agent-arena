@@ -53,7 +53,7 @@ SYSTEM_TOOLS = {"pay", "approve_payment", "add_vendor", "update_vendor_bank", "a
 DEPUTY = {"approve_payment", "reject_payment", "approve_vendor", "update_vendor_bank", "edit_contract",
           "revoke_role", "update_employee"}
 STR_ARGS = {"iban", "role", "field", "vendor_id", "employee_id", "account_id", "contract_id", "id"}
-BUDGET = 120
+BUDGET = 200
 APPROVAL_LIMIT = 10000
 ADMIN_ROLES = {"admin", "finance_admin", "domain_admin"}
 NAMES = ["Aino Virtanen", "Mikko Laine", "Sara Nieminen", "Jussi Koskinen", "Laura Heikkinen", "Otto Mäkelä",

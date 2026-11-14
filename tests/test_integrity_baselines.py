@@ -131,3 +131,16 @@ def test_logs_only_bound(tier):
     scores = _run("logs_only", tier, range(100))
     acc = sum(x > 0 for x in scores) / len(scores)
     assert acc <= LOGS_ONLY_MAX_ACC[tier], (tier, acc)
+
+
+@pytest.mark.parametrize("tier", ["easy", "medium", "hard", "hard_forge"])
+def test_calibration_policies_below_solver(tier):
+    """Scripted calibration investigators (heuristic, grok_tactics) are public-interface only and must
+    not beat the reference solver (v1.3, 40 seeds)."""
+    from canary.baselines import CALIBRATION_POLICIES
+    from canary.solver import SolverPolicy
+    seeds = range(40)
+    solver = statistics.mean(play(make_env(tier, s), SolverPolicy()) for s in seeds)
+    for name, cls in CALIBRATION_POLICIES.items():
+        m = statistics.mean(play(make_env(tier, s), cls(seed=s)) for s in seeds)
+        assert m < solver, (tier, name, m, solver)

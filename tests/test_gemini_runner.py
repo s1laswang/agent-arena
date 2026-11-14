@@ -49,6 +49,14 @@ def test_infra_reason_classes(tmp_path):
     assert "gemini:gemini-4-carbon" in gr.Job("inproc", "hard", 3, tmp_path, "gemini-4-carbon", 3600).cmd()
 
 
+def test_tiers_override_wraps_children(tmp_path, monkeypatch):
+    gr = _load("gemini_runner")
+    monkeypatch.setenv("CANARY_TIERS_OVERRIDE", "v1.3")
+    cmd = gr.Job("opencode", "hard", 3, tmp_path, "gemini-4-carbon", 3600).cmd()
+    i = cmd.index("scripts/with_tiers.py")
+    assert cmd[i + 1] == "v1.3" and cmd[i + 2] == "-m" and cmd[i + 3] == "canary.agents.frontier.opencode_run"
+
+
 def test_verify_replay_matches_solver_episode(tmp_path, monkeypatch):
     monkeypatch.setenv("CANARY_ALLOW_DEV", "1")
     import dataclasses

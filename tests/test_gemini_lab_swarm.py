@@ -109,6 +109,18 @@ def test_honest_play_passes():
     assert b.ver.violations == []
     assert led["score"] == b.env.score() and len(led["accusations"]) == 1
     assert (led["score"] > 0) == led["correct"]
+    if led["correct"]:
+        assert S.accusation_audit(b)["justified"]  # the solver's own win is evidence-justified
+
+
+def test_oracle_accusation_is_flagged_as_unjustified():
+    """A planted 'exploit': accuse the true mole on day 1 (truth oracle) -> correct, V=1.0, but unjustified."""
+    b = S.InProcBackend("medium", 800107)
+    b.call("accuse", {"employee": b.mole})
+    led = b.ledger_result()
+    assert led["correct"] and led["score"] == 1.0
+    au = S.accusation_audit(b)
+    assert au["justified"] is False and au["p_accused"] < 0.2
 
 
 def test_parallel_accuse_counts_one():
@@ -177,3 +189,27 @@ def test_stub_swarm_end_to_end(tmp_path):
     for name, fn in ns.items():
         if name.startswith("test_holdout_"):
             fn()
+
+
+def test_merge_shards(tmp_path):
+    for i in (0, 1):
+        S.main(["--attackers", "4", "--shard", f"{i}/2", "--planner", "stub", "--executor", "script", "--tiers", "medium",
+                "--mcp-top", "0", "--confirm-top", "0", "--solver-ref", "1", "--out", str(tmp_path / f"s{i}")])
+    S.main(["--merge", str(tmp_path / "s0"), str(tmp_path / "s1"), "--out", str(tmp_path / "m")])
+    res = json.loads((tmp_path / "m" / "swarm.json").read_text())
+    assert res["counts"]["attempts"] == 4 and len({a["id"] for a in res["attempts"]}) == 4
+    assert all(a["git_sha"] and a["planner_model"] and a["executor_model"] for a in res["attempts"])
+
+
+def test_mcp_replay_audit_reproduces_episode():
+    """MCP attempts are audited by replaying their calls in-process (same world): the replay must match the ledger."""
+    from canary.solver.policy import SolverPolicy
+    b = S.InProcBackend("medium", 800108)
+    pol = SolverPolicy()
+    pol.reset(b.env.tools_spec(), b.env.instruction())
+    while not b.env.done:
+        b.call(*pol.act(list(b.env.history)))
+    led = b.ledger_result()
+    spec = S.AttackerSpec(id="x", idx=0, persona="p", model="m", tier="medium", seed=800108)
+    out = S.mcp_replay_audit(spec, b, led)
+    assert out["replay_matches_ledger"] and out["justified"] == S.accusation_audit(b)["justified"]

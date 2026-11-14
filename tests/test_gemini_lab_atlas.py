@@ -1,406 +1,292 @@
+"""Failure Atlas: keyless tests (fake google-genai client). Packing, quote verification, schemas, the full pipeline
+with a fake Gemini, offline replay from the response cache, deterministic fallback, and the agreement sheet."""
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import re
+from argparse import Namespace
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from canary.gemini import atlas, dashboard
-from canary.gemini.ledger import read_ledger
-from canary.llm import StubClient
+from canary.gemini.atlas_data import (align_rationale, compact_args, load_run, pack_corpus, pack_episode,
+                                      _calls_from_jsonl_transcript)
+from canary.gemini.atlas_schema import Taxonomy, Verifier, inline_schema, parse, quote_in
 
-FAKE_SECRET = "AIza" + "FAKE-atlas-unit-test-secret"
+ROOT = Path(__file__).resolve().parents[1]
+RUN = ROOT / "data" / "runs" / "committed" / "codex-gpt-5.5" / "medium"
+
+
+@pytest.fixture(scope="module")
+def eps():
+    out = load_run(RUN)
+    for i, e in enumerate(out):
+        e.id = f"codex.m{e.seed}#{i}"
+    return out
 
 
 @pytest.fixture(autouse=True)
-def _isolated_ledger(tmp_path, monkeypatch):
-    ledger_file = tmp_path / "ledger.jsonl"
-    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(ledger_file))
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    monkeypatch.delenv("GOOGLE_GENERATIVE_AI_API_KEY", raising=False)
-    monkeypatch.delenv("GEMINI_GATEWAY_URL", raising=False)
-    return ledger_file
+def _ledger(tmp_path, monkeypatch):
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(tmp_path / "ledger.jsonl"))
 
 
-def _roster_step(n: int = 20) -> dict:
-    emps = [
-        {"id": f"e{i:02d}", "name": f"Emp {i}", "dept": "Engineering", "role": "engineer", "clearance": 2}
-        for i in range(n)
-    ]
-    return {
-        "t": 0,
-        "day": 1,
-        "tool": "list_employees",
-        "args": {},
-        "result": {"ok": True, "data": {"employees": emps}, "error": None},
-    }
+# ------------------------------------------------------------------------------------ packing
+
+def test_pack_has_regret_belief_and_agent_words(eps):
+    assert eps and all(e.steps for e in eps)
+    assert any(s.rationale for e in eps for s in e.steps), "codex agent messages aligned to steps"
+    assert all(e.rationale_source == "agent_messages" for e in eps if any(s.rationale for s in e.steps))
+    text, blocks = pack_corpus(eps)
+    assert text.count("=== EPISODE") == len(eps) and set(blocks) == {e.id for e in eps}
+    assert "REGRET" in text and "top=" in text and "says:" in text
+    # regret in the pack is the solver's (canary.solver.regret.attribute), summed by code
+    e = max(eps, key=lambda e: e.total_regret)
+    assert e.total_regret == pytest.approx(sum(s.regret for s in e.steps) + e.terminal_regret)
 
 
-def _sample_episodes() -> list[dict]:
-    ep_premature = {
-        "tier": "medium",
-        "seed": 0,
-        "agent": "gemini:gemini-4-carbon",
-        "steps": [
-            _roster_step(20),
-            {
-                "t": 1,
-                "day": 1,
-                "tool": "plant_canary",
-                "args": {"doc_title": "Draft", "assignment": {"e00": "A"}},
-                "result": {"ok": True, "data": {"doc_id": "c1"}, "error": None},
-            },
-            {
-                "t": 2,
-                "day": 1,
-                "tool": "accuse",
-                "args": {"employee": "e01"},
-                "result": {"ok": True, "data": {"episode_over": True}, "error": None},
-            },
-        ],
-        "score": -1.0,
-        "accused": "e01",
-        "correct": False,
-        "final_day": 1,
-        "end_reason": "accused",
-        "meta": {"decoy": "e01"},
-    }
-    ep_restrict_budget = {
-        "tier": "medium",
-        "seed": 1,
-        "agent": "gemini:gemini-4-carbon",
-        "steps": [
-            _roster_step(20),
-            {
-                "t": 1,
-                "day": 1,
-                "tool": "restrict_access",
-                "args": {"employee": "e02"},
-                "result": {"ok": True, "data": {}, "error": None},
-            },
-            {
-                "t": 2,
-                "day": 1,
-                "tool": "search_messages",
-                "args": {"query": "leak"},
-                "result": {"ok": False, "data": None, "error": "daily action limit; call advance_day"},
-            },
-        ],
-        "score": 0.0,
-        "accused": None,
-        "correct": False,
-        "final_day": 14,
-        "end_reason": "horizon",
-        "meta": {"notes": [{"t": 2, "quote": f"Hit action limit key={FAKE_SECRET}\u2014stopping."}]},
-    }
-    return [ep_premature, ep_restrict_budget]
+def test_compact_args_groups_canary_variants():
+    s = compact_args("plant_canary", {"assignment": {"e03": "B", "e01": "A", "e02": "A"}, "doc_title": "x"})
+    assert s == "A:e01,e02 | B:e03"
 
 
-def test_corpus_packer_tags_and_posteriors(tmp_path):
-    runs_dir = tmp_path / "runs"
-    runs_dir.mkdir()
-    eps = _sample_episodes()
-    (runs_dir / "episodes.jsonl").write_text("\n".join(json.dumps(e) for e in eps) + "\n")
-    tdir = runs_dir / "transcripts"
-    tdir.mkdir()
-    (tdir / "0.json").write_text(
-        json.dumps([{"role": "assistant", "content": "Rushing accusation on e01 without waiting for leak.", "tool_calls": [{}, {}, {}]}])
-    )
-
-    records, skipped = atlas.load_corpus([runs_dir])
-    assert len(records) == 2 and skipped == 0
-
-    r0, r1 = records
-    assert "premature_accusation" in r0["rule_tags"]
-    assert "uninformative_canary" in r0["rule_tags"]
-    assert "decoy_chase" in r0["rule_tags"]
-    assert r0["posterior"]["did_accuse"] is True
-    assert r0["posterior"]["p_accused"] is not None and r0["posterior"]["p_accused"] < r0["posterior"]["threshold"]
-    assert r0["posterior"]["premature_commit"] is True
-
-    assert "over_restriction" in r1["rule_tags"]
-    assert "budget_waste" in r1["rule_tags"]
-    assert "no_accusation" in r1["rule_tags"]
-    assert r1["posterior"]["did_accuse"] is False
-
-    packed, blocks = atlas.pack_corpus(records)
-    assert len(blocks) == 2
-    assert "posterior: p_accused=" in packed
-    assert "Rushing accusation on e01 without waiting for leak." in blocks[r0["key"]]
-    assert FAKE_SECRET not in packed and "AIza" not in packed
-    assert "\u2014" not in packed and "\u2013" not in packed
-
-    committed_records, _ = atlas.load_corpus(max_episodes=5)
-    assert len(committed_records) == 5
+def test_alignment_walks_by_tool_name():
+    steps = [{"tool": "status"}, {"tool": "plant_canary"}, {"tool": "advance_day"}]
+    calls = [("status", "look"), ("bogus_tool", "oops"), ("plant_canary", "split the six"), ("advance_day", "")]
+    assert align_rationale(steps, calls) == ["look", "oops\nsplit the six", ""]
 
 
-def test_strict_verbatim_quote_verifier():
-    records = atlas.records_from_episodes(_sample_episodes())
-    _, blocks = atlas.pack_corpus(records)
-    k0, k1 = records[0]["key"], records[1]["key"]
-    exact_line = next(ln for ln in blocks[k0].splitlines() if ln.startswith("t=2 "))
-    other_line = next(ln for ln in blocks[k1].splitlines() if ln.startswith("t=2 "))
-
-    modes = [
-        {
-            "id": "premature-accusation",
-            "name": "Premature accusation",
-            "description": "Accuses early.",
-            "decision": "accuse",
-            "rule_tag": "premature_accusation",
-            "episode_keys": [k0],
-            "quotes": [
-                {"episode": k0, "t": 2, "quote": exact_line},
-                {"episode": k0, "t": 2, "quote": exact_line[:12] + "..." + exact_line[-6:]},
-                {"episode": k0, "t": 2, "quote": other_line},
-                {"episode": "missing-episode", "t": 0, "quote": exact_line},
-                {"episode": k0, "t": 0, "quote": "   "},
-            ],
-        }
-    ]
-
-    qv = atlas.verify_quotes(modes, blocks)
-    assert qv["verified_quotes"] == 1
-    assert qv["total_quotes"] == 5
-    assert qv["rate"] == 0.2
-    assert qv["pct"] == 20.0
-    assert [q["verified"] for q in modes[0]["quotes"]] == [True, False, False, False, False]
-    assert len(qv["unverified"]) == 4
+def test_opencode_transcript_parsing():
+    lines = ['$ opencode run', json.dumps({"type": "text", "part": {"text": "I will plant a canary."}}),
+             json.dumps({"type": "tool_use", "part": {"tool": "canary_plant_canary"}}),
+             json.dumps({"type": "text", "part": {"text": "Accused e38."}})]
+    calls, src = _calls_from_jsonl_transcript("\n".join(lines))
+    assert calls == [("plant_canary", "I will plant a canary.\nAccused e38.")] and src == "agent_messages"
 
 
-def test_rule_based_vs_llm_agreement_score():
-    records = atlas.records_from_episodes(_sample_episodes())
-    _, blocks = atlas.pack_corpus(records)
-    stub_payload = atlas.build_stub_payload(records, blocks, max_modes=8)
-    exact_ag = atlas.compute_agreement(stub_payload["modes"], records)
-    assert exact_ag["agree"] == exact_ag["total"] > 0
-    assert exact_ag["rate"] == 1.0
-    assert exact_ag["macro_jaccard"] == 1.0
+# ------------------------------------------------------------------------------------ verification
 
-    k0, k1 = records[0]["key"], records[1]["key"]
-    noisy_modes = [
-        {
-            "id": "premature-accusation",
-            "name": "Premature accusation",
-            "description": "Early commit.",
-            "decision": "accuse",
-            "rule_tag": "premature_accusation",
-            "episode_keys": [k0, k1],
-            "quotes": [],
-        },
-        {
-            "id": "late-commit",
-            "name": "Commits too late",
-            "description": "Waits too long.",
-            "decision": "advance_day",
-            "rule_tag": "late_commit",
-            "episode_keys": [k0],
-            "quotes": [],
-        },
-    ]
-    partial_ag = atlas.compute_agreement(noisy_modes, records)
-    assert partial_ag["agree"] == 1
-    assert partial_ag["total"] > partial_ag["agree"]
-    assert 0.0 < partial_ag["rate"] < 1.0
-    assert partial_ag["precision"] == round(1 / 3, 4)
+def test_quote_in_normalises_but_requires_verbatim():
+    hay = "I’ll run this like a Bayesian   investigation: first map employees."
+    assert quote_in("I'll run this like a Bayesian investigation", hay)
+    assert quote_in("run this like ... map employees", hay)              # ellipsis fragments in order
+    assert not quote_in("map employees ... run this like", hay)          # wrong order
+    assert not quote_in("I'll run this like a frequentist investigation", hay)
+    assert not quote_in("first", hay)                                     # too short to be evidence
 
 
-def test_mock_gemini_4_carbon_via_lab_client(tmp_path, monkeypatch, _isolated_ledger):
-    runs_dir = tmp_path / "runs"
-    runs_dir.mkdir()
-    eps = _sample_episodes()
-    (runs_dir / "episodes.jsonl").write_text("\n".join(json.dumps(e) for e in eps) + "\n")
-
-    records, _ = atlas.load_corpus([runs_dir])
-    _, blocks = atlas.pack_corpus(records)
-    k0, k1 = records[0]["key"], records[1]["key"]
-    q0 = next(ln for ln in blocks[k0].splitlines() if ln.startswith("t=2 "))
-    q1 = next(ln for ln in blocks[k1].splitlines() if ln.startswith("t=2 "))
-
-    llm_json = {
-        "summary": "Long-context carbon synthesis\u2014sanitized to ASCII hyphens.",
-        "modes": [
-            {
-                "id": "premature-accusation",
-                "name": "Premature accusation",
-                "description": "Accuses below break-even posterior.",
-                "decision": "accuse",
-                "rule_tag": "premature_accusation",
-                "episode_keys": [k0],
-                "quotes": [{"episode": k0, "t": 2, "quote": q0}],
-            },
-            {
-                "id": "budget-waste",
-                "name": "Budget waste",
-                "description": "Hits daily action limit.",
-                "decision": "search_messages",
-                "rule_tag": "budget_waste",
-                "episode_keys": [k1],
-                "quotes": [
-                    {"episode": k1, "t": 2, "quote": q1},
-                    {"episode": k1, "t": 99, "quote": "invented non-existent quote"},
-                ],
-            },
-        ],
-    }
-
-    captured_calls: list[dict] = []
-
-    class FakeModels:
-        def generate_content(self, **kwargs):
-            captured_calls.append(kwargs)
-            part = SimpleNamespace(text=json.dumps(llm_json), function_call=None, thought=False)
-            cand = SimpleNamespace(content=SimpleNamespace(parts=[part]), finish_reason="STOP")
-            um = SimpleNamespace(
-                prompt_token_count=245_000,
-                candidates_token_count=920,
-                thoughts_token_count=1_850,
-                cached_content_token_count=210_000,
-            )
-            return SimpleNamespace(candidates=[cand], usage_metadata=um, text=json.dumps(llm_json))
-
-    fake_sdk = SimpleNamespace(models=FakeModels())
-    monkeypatch.setattr("canary.gemini.sdk.genai_client", lambda timeout_s=None: fake_sdk)
-
-    out_dir = tmp_path / "out_carbon"
-    rc = atlas.main(
-        [
-            "--runs",
-            str(runs_dir),
-            "--llm",
-            "gemini:gemini-4-carbon",
-            "--run-id",
-            "atlas-carbon-test",
-            "--out",
-            str(out_dir),
-        ]
-    )
-    assert rc == 0
-    assert len(captured_calls) >= 1
-    assert captured_calls[0]["model"] == "gemini-4-carbon"
-
-    doc = json.loads((out_dir / "atlas.json").read_text())
-    assert doc["model"] == "gemini-4-carbon"
-    assert doc["synthetic"] is False
-    assert doc["source"] == "llm"
-    assert doc["ledger_run_ids"] == ["atlas-carbon-test"]
-    assert doc["corpus"]["episodes"] == 2
-    assert doc["corpus"]["tokens"] >= 245_000
-    assert doc["corpus"]["cached_tokens"] >= 210_000
-    assert doc["quote_verification"]["verified_quotes"] == 2
-    assert doc["quote_verification"]["total_quotes"] == 3
-    assert sum(m["regret_share"] for m in doc["modes"]) <= 1.0001
-    assert "\u2014" not in (out_dir / "atlas.json").read_text()
-    assert "\u2014" not in (out_dir / "atlas.md").read_text()
-
-    ledger_rows = read_ledger([_isolated_ledger])
-    assert len(ledger_rows) == len(captured_calls)
-    assert all(r["feature"] == "atlas" and r["model"] == "gemini-4-carbon" for r in ledger_rows)
-    assert all(r["run_id"] == "atlas-carbon-test" for r in ledger_rows)
+def test_verifier_counts_and_drops(eps):
+    text, blocks = pack_corpus(eps)
+    v = Verifier(eps, blocks)
+    e = next(e for e in eps if any(s.rationale for s in e.steps))
+    s = next(s for s in e.steps if len(s.rationale) > 40)
+    good = " ".join(s.rationale.split()[:8])
+    assert v.check(e.id, s.t, good)["step_verified"]
+    assert not v.check(e.id, s.t, "the mole is obviously the angry engineer")["verified"]
+    assert not v.check("no-such-episode", 3, good)["verified"]
+    summ = v.summary()
+    assert summ["quotes_checked"] == 3 and summ["quotes_verified"] == 1 and summ["dropped"] == 2
+    assert summ["pass_rate"] == pytest.approx(1 / 3, abs=1e-3)
 
 
-def test_cli_stub_and_dashboard_renders_cleanly(tmp_path, _isolated_ledger):
-    out_dir = tmp_path / "results_gemini"
-    rc = atlas.main(
-        [
-            "--runs",
-            str(atlas.DEFAULT_RUNS),
-            "--max-episodes",
-            "8",
-            "--llm",
-            "stub",
-            "--run-id",
-            "atlas-stub-smoke",
-            "--out",
-            str(out_dir),
-        ]
-    )
-    assert rc == 0
-
-    atlas_json_path = out_dir / "atlas.json"
-    atlas_md_path = out_dir / "atlas.md"
-    assert atlas_json_path.is_file() and atlas_md_path.is_file()
-
-    doc = json.loads(atlas_json_path.read_text())
-    for key in (
-        "generated_at",
-        "git_sha",
-        "ledger_run_ids",
-        "synthetic",
-        "model",
-        "modes",
-        "corpus",
-        "quote_verification",
-        "agreement",
-        "human_agreement",
-    ):
-        assert key in doc
-
-    assert doc["synthetic"] is True
-    assert doc["ledger_run_ids"] == ["atlas-stub-smoke"]
-    assert doc["corpus"]["episodes"] == 8
-    assert doc["corpus"]["tokens"] > 0
-    assert len(doc["modes"]) >= 1
-    assert doc["quote_verification"]["verified_quotes"] == doc["quote_verification"]["total_quotes"] > 0
-    assert doc["quote_verification"]["rate"] == 1.0
-    assert doc["agreement"]["rate"] == 1.0
-    for mode in doc["modes"]:
-        assert (out_dir / mode["chart"]).is_file()
-
-    html_out = out_dir / "dashboard.html"
-    assert (
-        dashboard.main(
-            [
-                "--ledger",
-                str(_isolated_ledger),
-                "--results",
-                str(out_dir),
-                "--out",
-                str(html_out),
-            ]
-        )
-        == 0
-    )
-    html = html_out.read_text()
-    m = re.search(r'<script id="data" type="application/json">(.*?)</script>', html, re.S)
-    assert m is not None
-    payload = json.loads(m.group(1).replace("<\\/", "</"))
-    loaded_atlas = payload["results"]["atlas"]
-    assert loaded_atlas is not None
-    assert len(loaded_atlas["modes"]) == len(doc["modes"])
-    assert all(mode["chart_src"].startswith("data:image/") for mode in loaded_atlas["modes"])
-    assert "atlas" in payload["usage"]["totals"]["features"]
+def test_inline_schema_and_parse():
+    sch = inline_schema(Taxonomy)
+    assert "$defs" not in json.dumps(sch) and "$ref" not in json.dumps(sch)
+    ok = {"summary": "s", "modes": [{"id": "a", "name": "A", "description": "d", "decision": "canary_design",
+                                     "mechanism": "m", "solver_would": "w", "evidence": []}]}
+    assert parse("```json\n" + json.dumps(ok) + "\n```", Taxonomy)[0].modes[0].id == "a"
+    bad = dict(ok, modes=[dict(ok["modes"][0], decision="vibes")])
+    assert parse(json.dumps(bad), Taxonomy)[0] is None
+    assert parse("not json", Taxonomy)[0] is None
 
 
-def test_custom_stub_client_injection():
-    eps = _sample_episodes()
-    records = atlas.records_from_episodes(eps)
-    _, blocks = atlas.pack_corpus(records)
-    k0 = records[0]["key"]
-    q0 = next(ln for ln in blocks[k0].splitlines() if ln.startswith("regret t="))
-    scripted = StubClient(
-        script=[
-            {
-                "json": {
-                    "summary": "Injected stub summary.",
-                    "modes": [
-                        {
-                            "id": "custom-premature",
-                            "name": "Custom premature mode",
-                            "description": "Custom mode.",
-                            "decision": "accuse",
-                            "rule_tag": "premature_accusation",
-                            "episode_keys": [k0],
-                            "quotes": [{"episode": k0, "t": 2, "quote": q0}],
-                        }
-                    ],
-                }
-            }
-        ]
-    )
-    doc = atlas.run_atlas(episodes=eps, client=scripted, out_dir=None, render_charts=False)
-    assert len(doc["modes"]) == 1
-    assert doc["modes"][0]["id"] == "custom-premature"
-    assert doc["quote_verification"]["rate"] == 1.0
+# ------------------------------------------------------------------------------------ fake Gemini
+
+class FakeModels:
+    def __init__(self, outer):
+        self.o = outer
+
+    def count_tokens(self, model, contents):
+        return SimpleNamespace(total_tokens=len(str(contents)) // 4)
+
+    def embed_content(self, model, contents, config=None):
+        vecs = []
+        for i, t in enumerate(contents):
+            h = abs(hash(t.split()[0] if t.split() else "")) % 3
+            vecs.append(SimpleNamespace(values=[1.0 if j == h else 0.01 * ((i + j) % 5) for j in range(8)]))
+        return SimpleNamespace(embeddings=vecs)
+
+    def generate_content_stream(self, model, contents, config):
+        r = self.generate_content(model, contents, config)
+        yield SimpleNamespace(text=r.text[: len(r.text) // 2], usage_metadata=None)
+        yield SimpleNamespace(text=r.text[len(r.text) // 2:], usage_metadata=r.usage_metadata)
+
+    def generate_content(self, model, contents, config):
+        self.o.calls += 1
+        if self.o.fail:
+            raise RuntimeError("PERMISSION_DENIED fake")
+        prompt = "\n".join(p.text for c in contents for p in c.parts if getattr(p, "text", None))
+        corpus = self.o.cache_text if getattr(config, "cached_content", None) else prompt
+        props = (config.response_json_schema or {}).get("properties", {})
+        out = self.o.answer(props, prompt, corpus)
+        um = SimpleNamespace(prompt_token_count=1000, candidates_token_count=100, thoughts_token_count=10,
+                             cached_content_token_count=900 if getattr(config, "cached_content", None) else 0)
+        return SimpleNamespace(text=json.dumps(out), usage_metadata=um)
+
+
+class FakeCaches:
+    def __init__(self, outer):
+        self.o = outer
+
+    def create(self, model, config):
+        self.o.cache_text = config.contents[0].parts[0].text
+        return SimpleNamespace(name="cachedContents/fake", usage_metadata=SimpleNamespace(total_token_count=12345))
+
+    def delete(self, name):
+        self.o.deleted = name
+
+
+class FakeGenai:
+    """Answers each structured question from the corpus it was given: one verbatim and one invented quote per mode."""
+
+    def __init__(self, eps, fail=False):
+        self.eps, self.fail, self.calls, self.cache_text = eps, fail, 0, ""
+        self.models, self.caches = FakeModels(self), FakeCaches(self)
+
+    def _line(self, corpus, ep_id, t):
+        m = re.search(rf"=== EPISODE {re.escape(ep_id)} .*?(?=\n=== EPISODE|\Z)", corpus, re.S)
+        if not m:
+            return "missing"
+        lm = re.search(rf"^t{t} d\d+ [^\n]{{20,}}", m.group(0), re.M)
+        return lm.group(0)[:60] if lm else "missing"
+
+    def answer(self, props, prompt, corpus):
+        hr = sorted(((e, s) for e in self.eps for s in e.steps if s.regret > 0), key=lambda es: -es[1].regret)
+        if "modes" in props:
+            ev = [{"episode": e.id, "t": s.t, "quote": self._line(corpus, e.id, s.t), "why": "w"} for e, s in hr[:3]]
+            ev.append({"episode": hr[0][0].id, "t": hr[0][1].t, "quote": "an invented sentence nobody wrote", "why": "x"})
+            return {"summary": "fake", "modes": [
+                {"id": "wide_split", "name": "Wide split", "description": "d", "decision": "canary_design",
+                 "mechanism": "m", "solver_would": "w", "evidence": ev},
+                {"id": "rush", "name": "Rush", "description": "d", "decision": "commit_timing", "mechanism": "m",
+                 "solver_would": "w", "evidence": []}]}
+        if "labels" in props:
+            pairs = re.findall(r"^(\S+) t=(\d+) ", prompt, re.M)
+            return {"labels": [{"episode": e, "t": int(t), "mode": "wide_split" if i % 2 == 0 else "rush",
+                                "confidence": 0.8, "quote": self._line(corpus, e, int(t)), "explanation": "x"}
+                               for i, (e, t) in enumerate(pairs)]}
+        if "cohorts" in props:
+            return {"cohorts": [{"cohort": "gpt-5.5/codex/v1.2", "dominant_modes": ["wide_split"], "behaviour": "b",
+                                 "evidence": []}], "cross_family_finding": "f", "caveats": "c"}
+        if "items" in props:
+            pairs = re.findall(r"^(\S+) t=(\d+) ", prompt, re.M)
+            return {"items": [{"episode": e, "t": int(t), "agent_did": "a", "solver_would": "s", "why_diverged": "w",
+                               "quote": self._line(corpus, e, int(t))} for e, t in pairs]}
+        if "divergence_t" in props:
+            m = re.search(r"^(t(\d+) d\d+ [^\n]{20,})", prompt, re.M)
+            return {"divergence_t": int(m.group(2)) if m else 0, "what_chart_shows": "c", "what_agent_believed": "b",
+                    "quote": m.group(1)[:50] if m else "none"}
+        if "pairs" in props:
+            ids = re.findall(r"^- (\w+):", prompt.split("SECOND TAXONOMY")[-1], re.M)
+            return {"pairs": [{"second_id": i, "primary_id": "wide_split", "note": ""} for i in ids]}
+        if "clusters" in props:
+            return {"clusters": [{"cluster": i, "name": f"c{i}", "description": "d"} for i in range(6)]}
+        return {}
+
+
+def _args(tmp_path, **kw):
+    a = dict(runs=[str(RUN)], model="gemini-4-carbon", cache_model="gemini-3.8-flash", out=str(tmp_path / "out"),
+             cache_dir=str(tmp_path / "cache"), replay=False, max_tokens=900_000, limit=0, charts=1, no_cache=False,
+             skip_labels=False, batch=False, batch_timeout=1, embed=False, crosscheck=True,
+             shard_tokens=250_000, allow_fallback=False)
+    a.update(kw)
+    return Namespace(**a)
+
+
+def _run(tmp_path, eps, monkeypatch, fake, **kw):
+    import canary.gemini.atlas as atlas
+    import canary.gemini.atlas_gemini as ag
+    monkeypatch.setattr(atlas, "load_corpus", lambda paths: eps)
+    monkeypatch.setattr(ag, "sdk_client", lambda: fake)
+    return atlas.run(_args(tmp_path, **kw))
+
+
+def test_pipeline_with_fake_gemini_verifies_and_computes_in_code(tmp_path, eps, monkeypatch):
+    fake = FakeGenai(eps)
+    r = _run(tmp_path, eps, monkeypatch, fake)
+    out = tmp_path / "out"
+    j = json.loads((out / "atlas.json").read_text())
+    for k in ("modes", "corpus", "human_agreement", "generated_at", "git_sha", "ledger_run_ids"):
+        assert k in j
+    assert {"episodes", "tokens", "cached_tokens"} <= set(j["corpus"]) and j["corpus"]["episodes"] == len(eps)
+    assert j["corpus"]["cached_tokens"] > 0 and fake.deleted == "cachedContents/fake"
+    m = j["modes"][0]
+    assert {"id", "name", "description", "decision", "regret_share", "episodes", "quotes", "chart"} <= set(m)
+    # the invented quote was dropped and counted; the verbatim ones survived
+    assert all(q["verified"] for mm in j["modes"] for q in mm["quotes"])
+    assert j["verification"]["dropped"] >= 1 and 0 < j["verification"]["pass_rate"] < 1
+    # shares come from code: labelled regret over total regret, never above 1
+    total = sum(e.total_regret for e in eps)
+    lab_regret = sum(mm["regret"] for mm in j["modes"])
+    assert lab_regret <= total + 1e-6 and sum(mm["regret_share"] for mm in j["modes"]) <= 1 + 1e-6
+    assert j["labels"]["source"] == "cached" and j["labels"]["n"] > 0
+    xc = j["crosscheck"]
+    assert xc and xc["modes"] and xc["primary_modes_recovered"] == 1 and xc["n_shards"] >= 1
+    assert (out / "atlas.md").read_text().startswith("# Canary Failure Atlas")
+    assert list((out / "atlas_charts").glob("*.png"))
+    rows = [json.loads(x) for x in (tmp_path / "ledger.jsonl").read_text().splitlines()]
+    assert rows and all(x["feature"] == "atlas" for x in rows) and {"cache", "generate"} <= {x["kind"] for x in rows}
+    assert r["ledger_run_ids"]
+
+    # offline replay: no client, same answers from results cache
+    fake2 = FakeGenai(eps, fail=True)
+    r2 = _run(tmp_path, eps, monkeypatch, fake2, replay=True, out=str(tmp_path / "out2"))
+    assert fake2.calls == 0
+    assert [m["id"] for m in r2["modes"]] == [m["id"] for m in r["modes"]]
+    assert [m["regret_share"] for m in r2["modes"]] == [m["regret_share"] for m in r["modes"]]
+
+
+def test_no_fallback_atlas_is_published_when_discovery_fails(tmp_path, eps, monkeypatch):
+    with pytest.raises(SystemExit):
+        _run(tmp_path, eps, monkeypatch, FakeGenai(eps, fail=True), charts=0)
+    assert not (tmp_path / "out" / "atlas.json").exists()
+
+
+def test_deterministic_fallback_only_on_request(tmp_path, eps, monkeypatch):
+    r = _run(tmp_path, eps, monkeypatch, FakeGenai(eps, fail=True), charts=0, allow_fallback=True)
+    assert r["labels"]["source"] == "fallback"
+    ids = {m["id"] for m in r["modes"]}
+    assert "low_information_canary" in ids
+    assert r["errors"]
+
+
+def test_agreement_sheet_roundtrip(tmp_path):
+    from canary.gemini.atlas_agreement import agreement, claims_from_atlas, make_sheet, parse_sheet
+    atlas = {"git_sha": "x", "modes": [{"id": "m", "name": "M", "quotes": [
+        {"episode": f"e{i}", "t": i, "quote": "q q q", "verified": True, "why": "w"} for i in range(40)]}],
+        "labels": {"steps": []}, "counterfactuals": [], "localisation": {"rows": []}}
+    assert len(claims_from_atlas(atlas)) == 30
+    sheet = tmp_path / "v.md"
+    make_sheet(atlas, None, sheet, tmp_path / "ctx.md")
+    txt = sheet.read_text()
+    filled = []
+    for line in txt.splitlines():
+        m = re.match(r"^\| (\d+) \|", line)
+        if m:
+            v = ["agree", "d", "unsure"][int(m.group(1)) % 3]
+            cells = line.split("|")
+            cells[6] = f" {v} "
+            line = "|".join(cells)
+        filled.append(line)
+    sheet.write_text("\n".join(filled))
+    ha = agreement(parse_sheet(sheet.read_text()))
+    assert ha["status"] == "done" and ha["n_labelled"] == 30 and ha["agree"] == 10 and ha["disagree"] == 10
+    assert ha["score"] == 0.5
+    with pytest.raises(SystemExit):
+        make_sheet(atlas, None, sheet, tmp_path / "ctx.md")
+
+
+def test_pack_episode_marks_high_regret_words(eps):
+    e = max(eps, key=lambda e: e.total_regret)
+    block = pack_episode(e)
+    assert block.startswith("=== EPISODE") and f"total_regret={e.total_regret:.3f}" in block

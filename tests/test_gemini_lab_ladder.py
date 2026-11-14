@@ -64,6 +64,8 @@ def test_run_resume_and_report_format(tmp_path, monkeypatch):
     assert ep["meta"]["ladder"]["model"] == "gemini-3.8-flash" and ep["meta"]["ladder"]["tokens"]["calls"] == 2
     meta = json.loads((d / "meta.json").read_text())
     assert meta["thinking_level"] == c.level and meta["agent"] == "gemini:gemini-3.8-flash"
+    assert meta["tiers_version"] == "v1.4" and meta["model_id"] == "gemini-3.8-flash" and meta["launch_git_sha"]
+    assert ep["meta"]["ladder"]["code_fingerprint"] == ladder.code_fingerprint()
     assert (d / "transcripts" / f"{c.seed}.json").exists() and not (d / "RUNNING.json").exists()
     rows = [json.loads(x) for x in (tmp_path / "ledger.jsonl").read_text().splitlines()]
     assert len(rows) == 8 and all(x["feature"] == "ladder" and x["run_id"].startswith("ladder:") for x in rows)
@@ -77,7 +79,6 @@ def test_run_resume_and_report_format(tmp_path, monkeypatch):
 
 def test_infra_failure_is_moved_aside_and_requeued(tmp_path, monkeypatch):
     monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(tmp_path / "ledger.jsonl"))
-    monkeypatch.setattr(ladder.time, "sleep", lambda s: None)
     calls = {"n": 0}
 
     def flaky(cell):
@@ -88,10 +89,10 @@ def test_infra_failure_is_moved_aside_and_requeued(tmp_path, monkeypatch):
 
     cells = ladder.expand_grid(["gemini-3.5-flash"], ["minimal"], ["medium"], [3])
     r = ladder.run_grid(tmp_path / "out", cells, concurrency=1, client_factory=stub_factory(flaky),
-                        log=lambda m: None)
+                        log=lambda m: None, retry_delay=0.0)
     assert r["done"] == 1
     inv = list((tmp_path / "out" / "_invalid").iterdir())
-    assert len(inv) == 1 and "api:" in (inv[0] / "INVALID.txt").read_text()
+    assert len(inv) == 1 and any(k in (inv[0] / "INVALID.txt").read_text() for k in ("api:", "invalid:", "500"))
     assert ladder.attempts(tmp_path / "out", cells[0]) == 1
     prog = [json.loads(x) for x in (tmp_path / "out" / "_progress.jsonl").read_text().splitlines()]
     assert [bool(p["infra_invalid"]) for p in prog] == [True, False]
@@ -105,7 +106,7 @@ def test_report_reads_ladder_output(tmp_path, monkeypatch):
                     log=lambda m: None)
     rep = tmp_path / "rep"
     assert ladder_report.main(["--runs", str(tmp_path / "out"), "--out", str(rep), "--bootstrap", "200",
-                               "--probe", str(tmp_path / "none.json")]) == 0
+                               "--probe", str(tmp_path / "none.json"), "--no-figures"]) == 0
     doc = json.loads((rep / "ladder.json").read_text())
     assert {"generated_at", "git_sha", "ledger_run_ids"} <= set(doc)
     assert len(doc["rows"]) == 3 and all(r["n"] == 2 for r in doc["rows"])
@@ -113,3 +114,98 @@ def test_report_reads_ladder_output(tmp_path, monkeypatch):
     assert any(r["agent"] == "solver" for r in doc["reference"])
     assert "low|medium" in doc["tags"]["pooled"]
     assert "gemini-3.8-flash" in (rep / "ladder.md").read_text()
+
+
+def test_model_cap_never_blocks_other_models(tmp_path, monkeypatch):
+    import threading
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(tmp_path / "ledger.jsonl"))
+    live, peak, lock = {"capped": 0, "all": 0}, {"capped": 0, "all": 0}, threading.Lock()
+    real = ladder.run_cell
+
+    def spy(out, c, *a, **k):
+        with lock:
+            live["all"] += 1
+            live["capped"] += c.model == "gemini-4-carbon"
+            for x in peak:
+                peak[x] = max(peak[x], live[x])
+        try:
+            ladder.time.sleep(0.05)
+            return real(out, c, *a, **k)
+        finally:
+            with lock:
+                live["all"] -= 1
+                live["capped"] -= c.model == "gemini-4-carbon"
+
+    monkeypatch.setattr(ladder, "run_cell", spy)
+    cells = ladder.expand_grid(["gemini-4-carbon", "gemini-3.8-flash"], ["low"], ["medium"], [0, 1, 2, 3])
+    r = ladder.run_grid(tmp_path / "out", cells, concurrency=4, model_caps={"gemini-4-carbon": 1},
+                        client_factory=stub_factory(accuse_script), log=lambda m: None)
+    assert r["done"] == 8 and peak["capped"] == 1 and peak["all"] >= 3
+
+
+def test_clash_matrix_stub(tmp_path, monkeypatch):
+    from canary.gemini import clash
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(tmp_path / "ledger.jsonl"))
+
+    def cf(model, feature, run_id, meta):
+        script = None if feature == "clash-mole" else accuse_script(None) + [{"text": "x"}] * 3
+        return LedgeredClient(StubClient(script=script), feature=feature, run_id=run_id, meta=meta)
+
+    rows = clash.run_matrix(tmp_path / "c", ["solver", "m1"], ["default", "m2"], [0], concurrency=2,
+                            client_factory=cf, log=lambda m: None)
+    assert len(rows) == 4 and not any(r.get("invalid") for r in rows)
+    doc = clash.report(tmp_path / "c", tmp_path / "rep")
+    assert {"generated_at", "git_sha", "ledger_run_ids"} <= set(doc) and len(doc["rows"]) == 4
+    assert "detective" in (tmp_path / "rep" / "clash.md").read_text()
+
+
+def test_second_process_skips_cells_held_by_a_live_process(tmp_path, monkeypatch):
+    import os
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(tmp_path / "ledger.jsonl"))
+    cells = ladder.expand_grid(["gemini-3.8-flash"], ["low"], ["medium"], [0, 1])
+    held = cells[0].dir(tmp_path / "out")
+    held.mkdir(parents=True)
+    (held / "RUNNING.json").write_text(json.dumps({"host": "other-name", "machine": ladder.MACHINE,
+                                                    "pid": os.getppid()}))  # a live pid on this machine
+    r = ladder.run_grid(tmp_path / "out", cells, concurrency=2, client_factory=stub_factory(accuse_script),
+                        log=lambda m: None)
+    assert r["ran"] == 1 and not ladder.is_done(tmp_path / "out", cells[0]) and ladder.is_done(tmp_path / "out", cells[1])
+
+
+
+def test_subset_cut_from_a_recording_replays(tmp_path):
+    """ladder_subset cuts one episode out of a committed ladder recording; its manifest matches the original."""
+    import subprocess
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    full = root / "results/gemini/replay-ladder"
+    if not (full / "manifest.json").exists():
+        pytest.skip("no committed ladder recording")
+    rel = "gemini-3.1-flash-lite/low/easy/0/episodes.jsonl"
+    r = subprocess.run([sys.executable, "-m", "canary.gemini.ladder_subset", "--store", str(full), "--name", "t",
+                        "--dest", str(tmp_path), "--work", str(tmp_path / "work"), "--", "python", "-m",
+                        "canary.gemini.ladder", "--models", "gemini-3.1-flash-lite", "--levels", "low", "--tiers",
+                        "easy", "--seeds", "0", "--out", "{out}", "--run-name", "replay-showcase", "--max-attempts", "1"],
+                       cwd=root, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-1500:]
+    got = json.loads((tmp_path / "replay-t" / "manifest.json").read_text())
+    want = json.loads((full / "manifest.json").read_text())
+    assert got["episodes"][rel] == want["episodes"][rel] and got["responses"] > 0
+    assert len(list((tmp_path / "replay-t").rglob("*.json.gz"))) == got["responses"]
+
+
+def test_report_export_roundtrip(tmp_path, monkeypatch):
+    from canary.gemini import ladder_report
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(tmp_path / "out" / "_ledger" / "x.jsonl"))
+    cells = ladder.expand_grid(["gemini-3.8-flash"], ["low", "high"], ["medium"], [0, 1])
+    ladder.run_grid(tmp_path / "out", cells, concurrency=2, client_factory=stub_factory(accuse_script),
+                    log=lambda m: None)
+    common = ["--bootstrap", "100", "--probe", str(tmp_path / "none.json"), "--no-figures", "--no-tags"]
+    assert ladder_report.main(["--runs", str(tmp_path / "out"), "--out", str(tmp_path / "a"),
+                               "--export", str(tmp_path / "ex"), *common]) == 0
+    assert ladder_report.main(["--runs", str(tmp_path / "ex" / "ladder_episodes.jsonl.gz"), "--ledger",
+                               str(tmp_path / "ex" / "ladder_ledger.jsonl.gz"), "--out", str(tmp_path / "b"), *common]) == 0
+    a, b = (json.loads((tmp_path / d / "ladder.json").read_text()) for d in ("a", "b"))
+    strip = lambda rows: [{k: v for k, v in r.items() if k != "source"} for r in rows]  # noqa: E731
+    assert strip(a["rows"]) == strip(b["rows"]) and a["ledger"] == b["ledger"]

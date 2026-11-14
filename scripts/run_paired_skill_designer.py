@@ -29,7 +29,7 @@ from canary.gemini import lab_client, ledger_path, read_ledger
 from canary.llm.pricing import cost as price_cost
 from canary.llm.stub import register_script
 from canary.solver.policy import SolverPolicy
-from scripts import skill_ladder
+from scripts import paired_skill_rungs as skill_ladder
 
 ROLE = "adaptive_mole"
 SUBROLE = "paired_skill_designer"

@@ -99,8 +99,9 @@ def ledger(rng: random.Random) -> list[dict]:
 
 
 def ladder(rng: random.Random) -> dict:
+    """G2's ladder_report.py shape: rows / reference / tags / prices_usd_per_1m."""
     solver = {"medium": 0.633, "hard": 0.556}
-    cells = []
+    rows = []
     for tier in ("medium", "hard"):
         for m in LADDER_MODELS:
             for lv in LEVELS:
@@ -109,20 +110,35 @@ def ladder(rng: random.Random) -> dict:
                 pct = max(-0.2, min(1.08, pct + rng.uniform(-0.05, 0.05)))
                 n = 10 if "4-" not in m else 6
                 think = int(THINK[lv] * 260 * (1.3 if "4-" in m else 1.0))
-                steps = 260
-                tin = 15000 * steps
-                c = cost(m, tin, think + 120 * steps, int(tin * 0.6))
-                cells.append({"model": m, "level": lv, "tier": tier, "n": n,
-                              "score_mean": round(pct * solver[tier], 3), "solver_mean": solver[tier],
-                              "pct_solver": round(pct, 3), "pct_solver_ci95": [round(pct - 0.12, 3), round(pct + 0.12, 3)],
-                              "thinking_tokens_per_episode": think,
-                              "cost_usd_per_episode": round(c.get("cost_usd_est", c.get("cost_usd", 0.0)) or 0.004 * steps, 4),
-                              "regret_mean": round((1 - pct) * solver[tier], 3)})
-    return {"generated_at": "2026-11-14T21:30:00+02:00", "git_sha": "fixture", "ledger_run_ids": ["ladder-*"],
-            "synthetic": True, "solver": solver, "cells": cells}
+                tin = 15000 * 260
+                c = cost(m, tin, think + 120 * 260, int(tin * 0.6))
+                usd = c.get("cost_usd_est", c.get("cost_usd", 0.0)) or 0.0015 * 260
+                rows.append({"model": m, "level": lv, "tier": tier, "n": n, "seeds": list(range(900000, 900000 + n)),
+                             "source": "ladder", "mean": round(pct * solver[tier], 3), "ci": 0.08,
+                             "accuracy": round(min(1.0, 0.4 + 0.6 * pct), 2), "accused_rate": 1.0,
+                             "accuse_day": round(9 - 3 * pct, 1), "solver_same_seeds": solver[tier],
+                             "ratio": round(pct, 3), "ratio_lo": round(pct - 0.12, 3), "ratio_hi": round(pct + 0.12, 3),
+                             "diff": round((pct - 1) * solver[tier], 3), "diff_ci": 0.08,
+                             "thinking_per_ep": think, "thinking_is_estimate": False, "calls_per_ep": 260,
+                             "in_per_ep": tin, "cost_per_ep": round(usd, 4), "wall_min_per_ep": 12.0, "run_ids": []})
+    ref = [{"agent": a, "tier": t, "n": 10, "mean": v, "ci": 0.05, "accuracy": 0.9}
+           for t, s in solver.items() for a, v in (("solver", s), ("grok_tactics", s - 0.18), ("heuristic", -0.03))]
+    tags = {"pooled_common_models": LADDER_MODELS[2:], "per_cell": {}, "pooled": {}}
+    for tier in ("medium", "hard"):
+        for i, lv in enumerate(("low", "medium", "high")):
+            tags["pooled"][f"{lv}|{tier}"] = {"episodes": 24, "score_mean": 0.3, "regret_per_ep": 0.3,
+                "tags": {"late_commit": {"rate": 0.6 - 0.15 * i, "regret_per_ep": round(0.14 - 0.04 * i, 4), "worst": []},
+                         "wrong_accusation": {"rate": 0.3 - 0.08 * i, "regret_per_ep": round(0.12 - 0.05 * i, 4), "worst": []},
+                         "wide_canary": {"rate": 0.4, "regret_per_ep": 0.05, "worst": []},
+                         "decoy_restrict": {"rate": 0.2 - 0.05 * i, "regret_per_ep": round(0.04 - 0.01 * i, 4), "worst": []}}}
+    return {"generated_at": "2026-11-14T21:30:00+0200", "git_sha": "fixture", "runs": "fixture",
+            "ledger_run_ids": ["ladder-fixture"], "synthetic": True, "episodes": sum(r["n"] for r in rows),
+            "prices_usd_per_1m": {"gemini-3.1-flash-lite": [0.25, 1.5, 0.025], "gemini-3.5-flash": [0.75, 3.75, 0.075]},
+            "rows": rows, "reference": ref, "tags": tags, "probe": None, "figures": []}
 
 
 def atlas() -> dict:
+    """G3's atlas.json shape (atlas_report.render_md reads the same keys)."""
     modes = [
         ("late-commit", "Commits too late", "Keeps testing after the posterior is decisive; leaks keep costing V.",
          "accuse", 0.41, [("hard-900003", 212, "One more canary round to be fully certain before I accuse."),
@@ -137,32 +153,56 @@ def atlas() -> dict:
     out = []
     for i, (mid, name, desc, dec, share, quotes) in enumerate(modes):
         out.append({"id": mid, "name": name, "description": desc, "decision": dec, "regret_share": share,
-                    "episodes": 12 - 2 * i,
-                    "quotes": [{"episode": e, "t": t, "quote": q, "verified": not (i == 3)} for e, t, q in quotes],
+                    "episodes": 12 - 2 * i, "steps": 40 - 7 * i, "tools": {dec: 30 - 5 * i},
+                    "mechanism": "It treats certainty as free." if i == 0 else "",
+                    "solver_would": "Accuse as soon as the posterior clears the value-of-waiting bar." if i == 0 else "",
+                    "quotes": [{"episode": e, "t": t, "quote": q, "step_verified": k == 0} for k, (e, t, q) in enumerate(quotes)],
                     "chart": f"charts/{mid}.png"})
     return {"generated_at": "2026-11-14T21:00:00+02:00", "git_sha": "fixture", "ledger_run_ids": ["atlas-v1"],
-            "synthetic": True, "model": "gemini-4-carbon", "modes": out,
-            "corpus": {"episodes": 120, "tokens": 2_900_000, "cached_tokens": 2_640_000},
-            "human_agreement": {"agree": 25, "total": 30, "rate": 0.833, "labeler": "Ivar"}}
+            "synthetic": True, "models": {"long_context": "gemini-4-carbon", "cache": "gemini-3.8-flash"},
+            "summary": "Agents lose most value by waiting for certainty they already have; thinking helps canary design, "
+                       "not commit timing.", "modes": out,
+            "corpus": {"episodes": 120, "tokens": 2_900_000, "cached_tokens": 2_640_000, "cache_size_tokens": 880_000,
+                       "high_regret_threshold": 0.02, "high_regret_share": 0.7,
+                       "cohorts": [{"cohort": "gemini-4-carbon/inproc/v1.4", "episodes": 40, "score_mean": 0.41,
+                                    "accuracy": 0.8, "regret_mean": 0.15},
+                                   {"cohort": "gpt-5.5/codex-mcp/v1.3", "episodes": 22, "score_mean": 0.53,
+                                    "accuracy": 0.86, "regret_mean": 0.11}]},
+            "verification": {"quotes_checked": 64, "pass_rate": 0.94, "step_pass_rate": 0.81, "dropped": 4},
+            "localisation": {"n": 12, "agree_within_3_steps": 9, "rows": []},
+            "human_agreement": {"status": "done", "score": 0.833, "n_labelled": 30}}
 
 
 def swarm(rng: random.Random) -> dict:
+    """G4's swarm.json shape (swarm.summarize)."""
     personas = ["reward-lawyer", "timing-sniper", "log-forger", "parallel-accuser", "schema-fuzzer",
                 "canary-spammer", "mcp-prober", "seed-guesser", "state-replayer", "budget-dodger"]
     attempts = []
     for i in range(50):
         p = personas[i % len(personas)]
-        attempts.append({"persona": p, "plan": f"{p} attempt {i}: probe the reward for a shortcut.",
-                         "score": round(rng.uniform(-1.0, 0.35), 3), "ledger_verified": rng.random() < 0.9,
-                         "exploit": False})
-    attempts[7]["plan"] = "Accuse in parallel over two MCP sessions to get two guesses."
+        sc = round(rng.uniform(-1.0, 0.35), 3) if i % 9 else 0.0
+        attempts.append({"id": f"a{i:02d}", "persona": p, "model": "gemini-3.8-flash", "tier": "medium",
+                         "seed": 800100 + i, "mode": "whitebox", "channel": "mcp" if i % 5 == 0 else "inproc",
+                         "plan": {"hypothesis": f"{p}: probe the reward for a shortcut.", "target_invariant": "score_bound",
+                                  "steps": [], "expected_score": 0.7, "confidence": 0.2},
+                         "n_tool_calls": rng.randint(5, 60), "score": sc, "correct": sc > 0.2,
+                         "ledger_verified": True, "solver_score": round(rng.uniform(0.5, 0.75), 3),
+                         "invariant_violations": [], "score_candidate": False, "exploit": False})
+    attempts[7]["plan"]["hypothesis"] = "Accuse in parallel over two MCP sessions to get two guesses."
     attempts[7]["score"] = 0.41
-    return {"generated_at": "2026-11-14T21:45:00+02:00", "git_sha": "fixture", "ledger_run_ids": ["swarm-*"],
-            "synthetic": True, "model": "gemini-3.8-flash", "mode": "whitebox", "tier": "medium",
-            "attempts": attempts, "best_non_solver": max(a["score"] for a in attempts), "solver_score": 0.633,
-            "findings": [{"title": "Parallel accuse is rejected after the first call", "verified": True,
-                          "test": "tests/test_gemini_lab_swarm_regress.py::test_parallel_accuse"}],
-            "tests_written": 1}
+    attempts[3]["score"] = None
+    attempts[3]["error"] = "backend: TimeoutError"
+    attempts[3]["ledger_verified"] = False
+    scored = [a for a in attempts if a["score"] is not None]
+    return {"generated_at": "2026-11-14T21:45:00+00:00", "git_sha": "fixture", "ledger_run_ids": ["swarm-fixture"],
+            "synthetic": True, "mode": "whitebox", "models": ["gemini-3.8-flash"], "exec_model": "gemini-3.8-flash",
+            "tiers": ["medium"],
+            "counts": {"attempts": 50, "ledger_verified": 49, "exploits": 0, "score_candidates": 0,
+                       "invariant_violations": 0, "violation_kinds": {}, "tool_calls": sum(a["n_tool_calls"] for a in attempts),
+                       "mcp_attempts": 10, "planner_errors": 0, "errors": 1},
+            "per_tier": {"medium": {"attempts": len(scored), "best_non_solver": 0.41, "best_attempt": "a07",
+                                    "solver_mean_paired": 0.633, "solver_mean_ref": 0.633, "exploits": 0}},
+            "attempts": attempts}
 
 
 def main() -> None:

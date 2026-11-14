@@ -63,14 +63,30 @@ def price(model: str, tin: int, tout_incl_thinking: int, cached: int) -> float:
 
 
 # --------------------------------------------------------------------------- loading
-def load_ladder(runs: Path) -> list[dict]:
-    """Valid ladder episodes, each tagged e['_cell'] = {model, level, tier, seed, source}."""
-    out = []
-    for f in sorted(Path(runs).glob("*/*/*/*/episodes.jsonl")):
+def _ladder_lines(runs: Path):
+    """(model, level, tier, seed, line) from a ladder dir, or from an exported ladder_episodes.jsonl.gz."""
+    runs = Path(runs)
+    if runs.is_file():
+        import gzip
+        with gzip.open(runs, "rt") as fh:
+            for line in fh:
+                if line.strip():
+                    lad = (json.loads(line).get("meta") or {}).get("ladder") or {}
+                    yield lad["model"], lad["level"], lad["tier"], str(lad["seed"]), line
+        return
+    for f in sorted(runs.glob("*/*/*/*/episodes.jsonl")):
         model, level, tier, seed = f.parent.relative_to(runs).parts
         if model.startswith("_"):
             continue
         for line in f.read_text().splitlines():
+            yield model, level, tier, seed, line
+
+
+def load_ladder(runs: Path) -> list[dict]:
+    """Valid ladder episodes, each tagged e['_cell'] = {model, level, tier, seed, source}."""
+    out = []
+    for model, level, tier, seed, line in _ladder_lines(runs):
+        if True:
             if not line.strip():
                 continue
             e = json.loads(line)
@@ -81,7 +97,10 @@ def load_ladder(runs: Path) -> list[dict]:
             e["_cell"] = {"model": model, "level": level, "tier": tier, "seed": int(seed), "source": "ladder",
                           "run_id": lad.get("run_id"), "thinking": tok.get("thinking"), "calls": tok.get("calls"),
                           "in": tok.get("in"), "out": tok.get("out"), "cached": tok.get("cached"),
-                          "wall_s": lad.get("wall_s"), "thinking_is_estimate": False}
+                          "wall_s": lad.get("wall_s"), "thinking_is_estimate": False,
+                          "tiers_version": lad.get("tiers_version"), "launch_git_sha": lad.get("launch_git_sha"),
+                          "code_fingerprint": lad.get("code_fingerprint"),
+                          "model_versions": sorted((tok.get("model_versions") or {}).keys())}
             t = e["_cell"]
             t["cost_usd"] = price(model, t["in"] or 0, (t["out"] or 0) + (t["thinking"] or 0), t["cached"] or 0)
             out.append(e)
@@ -97,11 +116,17 @@ def load_import(spec: str) -> list[dict]:
     for e in load_runs(path):
         if e.get("end_reason") == "error" or e["tier"] not in TIERS:
             continue
+        mf = next(iter(Path(path).rglob(f"{e['meta'].get('run_id')}/meta.json")), None)
+        if mf is None:
+            mf = Path(path) / e["tier"] / "meta.json"
+        msha = json.loads(mf.read_text()).get("git_sha") if mf.exists() else None
         u = (e.get("meta") or {}).get("usage") or {}
         e["_cell"] = {"model": model, "level": level, "tier": e["tier"], "seed": int(e["seed"]),
-                      "source": f"import:{path}", "run_id": None, "thinking": u.get("out"), "calls": u.get("calls"),
+                      "source": "import:" + str(path).replace(str(Path.home()), "~"), "run_id": None, "thinking": u.get("out"), "calls": u.get("calls"),
                       "in": u.get("in"), "out": None, "cached": u.get("cached_in"), "wall_s": None,
-                      "thinking_is_estimate": True,
+                      "thinking_is_estimate": True, "tiers_version": "v1.4 (imported dir)",
+                      "launch_git_sha": msha, "code_fingerprint": None,
+                      "model_versions": [],
                       "cost_usd": u.get("cost_usd_est", u.get("cost_usd"))}
         out.append(e)
     return out
@@ -123,13 +148,14 @@ def reference_episodes(pairs: set[tuple[str, int]], agents=REFERENCE_AGENTS) -> 
 
 
 def load_ledger(runs: Path, extra: list[str]) -> list[dict]:
-    files = glob.glob(str(Path(runs) / "_ledger" / "*.jsonl"))
+    import gzip
+    files = glob.glob(str(Path(runs) / "_ledger" / "*.jsonl")) if Path(runs).is_dir() else []
     for x in extra or []:
         p = Path(x).expanduser()
         files += glob.glob(str(p / "**" / "*.jsonl"), recursive=True) if p.is_dir() else [str(p)]
     rows = []
     for fp in sorted(set(files)):
-        with open(fp) as f:
+        with (gzip.open(fp, "rt") if fp.endswith(".gz") else open(fp)) as f:
             rows += [json.loads(line) for line in f if line.strip()]
     return [r for r in rows if r.get("feature") == "ladder"]
 
@@ -173,7 +199,11 @@ def cell_rows(eps: list[dict], solver: dict, B: int = 10000) -> list[dict]:
             thinking_per_ep=_mean([c["thinking"] for c in cs]), thinking_is_estimate=cs[0]["thinking_is_estimate"],
             calls_per_ep=_mean([c["calls"] for c in cs]), in_per_ep=_mean([c["in"] for c in cs]),
             cost_per_ep=_mean([c["cost_usd"] for c in cs]), wall_min_per_ep=_mean([c["wall_s"] for c in cs]) / 60,
-            run_ids=[c["run_id"] for c in cs if c["run_id"]]))
+            run_ids=[c["run_id"] for c in cs if c["run_id"]],
+            tiers_versions=sorted({str(c.get("tiers_version")) for c in cs}),
+            launch_git_shas=sorted({str(c.get("launch_git_sha")) for c in cs}),
+            code_fingerprints=sorted({str(c.get("code_fingerprint")) for c in cs}),
+            model_versions=sorted({v for c in cs for v in c.get("model_versions") or []})))
     key = lambda r: (TIERS.index(r["tier"]) if r["tier"] in TIERS else 9,  # noqa: E731
                      MODEL_ORDER.index(r["model"]) if r["model"] in MODEL_ORDER else 99,
                      LEVEL_ORDER.index(r["level"]) if r["level"] in LEVEL_ORDER else 99)
@@ -193,25 +223,58 @@ def reference_rows(ref: list[dict], pairs: set[tuple[str, int]]) -> list[dict]:
     return rows
 
 
+def _regret_items(e: dict) -> list[dict]:
+    from canary.analysis.tags import to_result
+    from canary.solver.regret import attribute
+    try:
+        return attribute(to_result(e)) or []
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _bucket(items_by_ep: list[list[dict]]) -> dict:
+    """Regret per episode by failure tag. Each step's regret is split evenly over its tags; steps the tagger leaves
+    untagged go to `other:<tool>` (e.g. other:accuse = accusing at a belief the tagger does not call premature),
+    so the buckets sum to the total solver regret."""
+    n = len(items_by_ep)
+    agg: dict = defaultdict(lambda: {"regret": 0.0, "eps": 0})
+    for items in items_by_ep:
+        seen = set()
+        for it in items:
+            r = float(it.get("regret", 0.0))
+            if r <= 0:
+                continue
+            keys = list(it.get("tags") or []) or [f"other:{it.get('action')}"]
+            for k in keys:
+                agg[k]["regret"] += r / len(keys)
+                if k not in seen:
+                    agg[k]["eps"] += 1
+                    seen.add(k)
+    total = sum(v["regret"] for v in agg.values())
+    return {"episodes": n, "regret_per_ep": round(total / max(1, n), 4),
+            "tags": {k: {"regret_per_ep": round(v["regret"] / max(1, n), 4), "rate": round(v["eps"] / max(1, n), 3)}
+                     for k, v in sorted(agg.items(), key=lambda kv: -kv[1]["regret"])}}
+
+
 def tag_tables(eps: list[dict]) -> dict:
-    """Regret by failure tag (canary.solver.regret.attribute via canary.analysis.tags.tag_report), per
-    (model, level, tier) and pooled per (level, tier) over the models that ran every one of low/medium/high."""
-    from canary.analysis.tags import tag_report
-    per_cell = [dict(e, agent=f"{e['_cell']['model']}@{e['_cell']['level']}|{e['_cell']['tier']}") for e in eps]
-    rep = tag_report(per_cell)
+    """Solver regret (canary.solver.regret.attribute, the attribution canary.analysis.tags uses) by failure tag,
+    per (model, level, tier) and pooled per (level, tier) over the models that ran every one of low/medium/high."""
+    items = {id(e): _regret_items(e) for e in eps}
+    per_cell: dict = defaultdict(list)
+    for e in eps:
+        c = e["_cell"]
+        per_cell[f"{c['model']}@{c['level']}|{c['tier']}"].append(items[id(e)])
     have = defaultdict(set)
     for e in eps:
         have[e["_cell"]["model"]].add(e["_cell"]["level"])
     common = sorted(m for m, ls in have.items() if {"low", "medium", "high"} <= ls)
-    pooled_eps = [dict(e, agent=f"{e['_cell']['level']}|{e['_cell']['tier']}") for e in eps
-                  if e["_cell"]["model"] in common and e["_cell"]["level"] in ("low", "medium", "high")]
-    pooled = tag_report(pooled_eps)
-    slim = lambda r: {k: {"episodes": v["episodes"], "score_mean": v["score_mean"],  # noqa: E731
-                          "regret_per_ep": round(v["regret_total"] / max(1, v["episodes"]), 4),
-                          "tags": {t: {"rate": d["rate"], "regret_per_ep": round(d["regret_sum"] / max(1, v["episodes"]), 4),
-                                       "worst": d["worst"]} for t, d in v["tags"].items()}}
-                      for k, v in r.items()}
-    return {"per_cell": slim(rep), "pooled_common_models": common, "pooled": slim(pooled)}
+    pooled: dict = defaultdict(list)
+    for e in eps:
+        c = e["_cell"]
+        if c["model"] in common and c["level"] in ("low", "medium", "high"):
+            pooled[f"{c['level']}|{c['tier']}"].append(items[id(e)])
+    return {"per_cell": {k: _bucket(v) for k, v in per_cell.items()}, "pooled_common_models": common,
+            "pooled": {k: _bucket(v) for k, v in pooled.items()}}
 
 
 # --------------------------------------------------------------------------- figures
@@ -230,7 +293,8 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
     solver_mean = {r["tier"]: r["mean"] for r in ref_rows if r["agent"] == "solver"}
 
     # (a) heatmap: score / solver
-    fig, axes = plt.subplots(1, 2, figsize=(11, 0.55 * len(models) + 2.2), squeeze=False)
+    fig, axes = plt.subplots(1, 2, figsize=(12, 0.55 * len(models) + 2.2), squeeze=False, sharey=True,
+                             constrained_layout=True)
     for ax, tier in zip(axes[0], TIERS):
         grid = [[float("nan")] * len(levels) for _ in models]
         for r in rows:
@@ -239,6 +303,8 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
         im = ax.imshow(grid, cmap="RdYlGn", vmin=-0.5, vmax=1.2, aspect="auto")
         ax.set_xticks(range(len(levels)), levels)
         ax.set_yticks(range(len(models)), models)
+        if tier != TIERS[0]:
+            ax.tick_params(labelleft=False)
         for r in rows:
             if r["tier"] == tier and r["model"] in models:
                 ax.text(levels.index(r["level"]), models.index(r["model"]),
@@ -260,7 +326,7 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
                           and r["thinking_per_ep"] == r["thinking_per_ep"]], key=lambda r: r["thinking_per_ep"])
             if not pts:
                 continue
-            xs = [max(r["thinking_per_ep"], 1) for r in pts]
+            xs = [r["thinking_per_ep"] for r in pts]
             ax.errorbar(xs, [r["mean"] for r in pts], yerr=[r["ci"] for r in pts], marker="o", capsize=2,
                         color=colors.get(m), label=m, alpha=0.9)
             for r, x in zip(pts, xs):
@@ -269,8 +335,10 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
         if tier in solver_mean:
             ax.axhline(solver_mean[tier], ls="--", color="k", lw=1, label="reference solver")
         ax.axhline(0, color="#999", lw=0.6)
-        ax.set_xscale("log")
-        ax.set_xlabel("mean thinking tokens per episode (log)")
+        ax.set_xscale("symlog", linthresh=1000)
+        ax.set_xlim(-200, 150000)
+        ax.set_xticks([0, 1000, 10000, 100000], ["0", "1k", "10k", "100k"])
+        ax.set_xlabel("mean thinking tokens per episode (symlog; 0 = no thinking)")
         ax.set_ylabel("mean score (true V if correct, -1 wrong)")
         ax.set_title(f"{tier}: thinking-to-competence")
     axes[0][0].legend(fontsize=7, loc="lower right")
@@ -302,7 +370,8 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
         ax.set_xlabel("list-price $ per episode (log)")
         ax.set_ylabel("mean score")
         ax.set_title(f"{tier}: cost frontier")
-        ax.legend(fontsize=7, loc="lower right")
+        if ax.get_legend_handles_labels()[0]:
+            ax.legend(fontsize=7, loc="lower right")
     p = out / "ladder_cost.png"
     fig.savefig(p, dpi=130, bbox_inches="tight")
     plt.close(fig)
@@ -324,7 +393,8 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
             ax.set_xticks([j + 0.4 - w / 2 for j in range(len(all_tags))], all_tags, rotation=30, ha="right", fontsize=7)
             ax.set_ylabel("solver regret per episode")
             ax.set_title(f"{tier}: which mistakes does thinking fix?")
-            ax.legend(fontsize=7)
+            if ax.get_legend_handles_labels()[0]:
+                ax.legend(fontsize=7)
         fig.text(0.01, -0.06, "pooled over " + ", ".join(tags.get("pooled_common_models", [])), fontsize=7)
         p = out / "ladder_tags.png"
         fig.savefig(p, dpi=130, bbox_inches="tight")
@@ -348,7 +418,9 @@ def _pct(r, k):
 
 def to_md(doc: dict) -> str:
     rows, ref = doc["rows"], doc["reference"]
-    L = [f"# Gemini Ladder (Canary v1.4)", "",
+    head = Path(doc.get("headline_file") or "")
+    hl = head.read_text().rstrip() if head.is_file() else headline(rows, doc.get("tags") or {})
+    L = [f"# Gemini Ladder (Canary v1.4)", "", hl, ""] + [
          f"Generated {doc['generated_at']} at git `{doc['git_sha'][:10]}` from `{doc['runs']}`. "
          f"{doc['episodes']} valid Gemini episodes in {len(rows)} cells; ledger: {doc['ledger']['calls']} calls, "
          f"{doc['ledger']['run_ids']} run ids, list price ${doc['ledger']['cost_usd_priced']:.2f}.", "",
@@ -377,6 +449,12 @@ def to_md(doc: dict) -> str:
         rr = [r for r in ref if r["tier"] == tier]
         L += ["Reference on the union of these seeds: " + "; ".join(
             f"{r['agent']} {_f(r['mean'])} ± {_f(r['ci'], 2)} (n={r['n']}, acc {r['accuracy']:.2f})" for r in rr), ""]
+    tv = sorted({t for r in rows for t in r["tiers_versions"]})
+    shas = sorted({t for r in rows for t in r["launch_git_shas"]})
+    fps = sorted({t for r in rows for t in r["code_fingerprints"]})
+    mv = sorted({t for r in rows for t in r["model_versions"]})
+    L += [f"Provenance: tiers {', '.join(tv)}; launch commits {', '.join(x[:10] for x in shas)}; code fingerprints "
+          f"(env/harness/client files) {', '.join(fps)}; API-served model versions {', '.join(mv) or '–'}.", ""]
     L += ["\\* imported cell: output tokens incl. thinking (the measurement's usage does not split thinking out).",
           "† imported read-only from the AfterQuery measurement (branch justSilas-gemini); not rerun by the ladder.", ""]
     tags = doc.get("tags") or {}
@@ -412,6 +490,62 @@ def to_md(doc: dict) -> str:
     return "\n".join(L)
 
 
+def _pc(r) -> str:
+    if r["ratio"] != r["ratio"]:
+        return "–"
+    return f"{r['ratio']:.0%}" if r["ratio_lo"] != r["ratio_lo"] else f"{r['ratio']:.0%} [{r['ratio_lo']:.0%}, {r['ratio_hi']:.0%}]"
+
+
+def headline(rows: list[dict], tags: dict) -> str:
+    """Three findings, every number read from the rows/tags; wording is chosen by the CIs, never asserted."""
+    R = {(r["model"], r["level"], r["tier"]): r for r in rows if not r["source"].startswith("import")}
+    ns = [r["n"] for r in R.values()]
+    out = [f"> **Headline findings** (auto-generated from the table below: {min(ns) if ns else 0}–{max(ns) if ns else 0} "
+           "paired seeds per cell; 95% CIs are wide, so read them as directions)."]
+    a, b = R.get(("gemini-3.5-flash", "medium", "hard")), R.get(("gemini-3.5-flash", "high", "hard"))
+    if a and b:
+        both = all(x["ratio_lo"] == x["ratio_lo"] and x["ratio_lo"] <= 1.0 <= x["ratio_hi"] for x in (a, b))
+        verb = "matches the reference solver on hard" if both else "comes close to the reference solver on hard"
+        k = sum(round(x["accuracy"] * x["n"]) for x in (a, b))
+        carbon = [r["cost_per_ep"] for (m, lv, t), r in R.items() if m == "gemini-4-carbon" and lv == "high" and t == "hard"]
+        cost = f"${min(a['cost_per_ep'], b['cost_per_ep']):.2f}–{max(a['cost_per_ep'], b['cost_per_ep']):.2f} per episode"
+        if carbon:
+            cost += f", versus ${carbon[0]:.2f} for gemini-4-carbon at high thinking"
+        out.append(f"> **gemini-3.5-flash with medium or high thinking {verb}:** {_pc(a)} and {_pc(b)} of the solver "
+                   f"on the same seeds, {k}/{a['n'] + b['n']} correct accusations, {cost}.")
+    lite = [r for (m, _, _), r in R.items() if m == "gemini-3.1-flash-lite"]
+    if lite:
+        neg = sum(r["mean"] < 0 for r in lite)
+        mn = [r for r in lite if r["level"] == "minimal"]
+        wrong = sum(round((1 - r["accuracy"]) * r["n"]) for r in mn if r["accused_rate"] == 1)
+        tot = sum(r["n"] for r in mn)
+        tail = f"; at minimal thinking it accused the wrong employee in {wrong}/{tot} episodes" if mn else ""
+        verb = "fails at every thinking level" if neg == len(lite) else f"is below zero in {neg}/{len(lite)} cells"
+        out.append(f"> **gemini-3.1-flash-lite {verb}:** its mean score is below the do-nothing score (0) in "
+                   f"{neg}/{len(lite)} (level, tier) cells{tail}.")
+    lo_m, hi_m = R.get(("gemini-3.8-flash", "low", "medium")), R.get(("gemini-3.8-flash", "high", "medium"))
+    lo_h, hi_h = R.get(("gemini-3.8-flash", "low", "hard")), R.get(("gemini-3.8-flash", "high", "hard"))
+    if lo_m and hi_m:
+        s3 = (f"> **gemini-3.8-flash gains from thinking on medium** ({_pc(lo_m)} at low → {_pc(hi_m)} at high)"
+              + (f" **but not on hard** ({_pc(lo_h)} → {_pc(hi_h)})" if lo_h and hi_h and hi_h["ratio"] <= lo_h["ratio"] + 0.1
+                 else (f"; on hard {_pc(lo_h)} → {_pc(hi_h)}" if lo_h and hi_h else "")) + ".")
+        P = (tags or {}).get("pooled") or {}
+        d = []
+        for tier in TIERS:
+            lo, hi = P.get(f"low|{tier}"), P.get(f"high|{tier}")
+            if lo and hi:
+                g = lambda x, t: x["tags"].get(t, {}).get("regret_per_ep", 0.0)  # noqa: E731
+                d.append((tier, g(hi, "premature_accusation") - g(lo, "premature_accusation"),
+                          g(lo, "uninformative_canary"), g(hi, "uninformative_canary")))
+        if d:
+            s3 += (" Pooled over the flash models, low → high thinking changes premature-accusation regret by "
+                   + ", ".join(f"{x[1]:+.2f}/episode on {x[0]}" for x in d)
+                   + "; uninformative-canary regret goes " + ", ".join(f"{x[2]:.3f} → {x[3]:.3f} on {x[0]}" for x in d)
+                   + " (thinking buys commit timing more than experiment design).")
+        out.append(s3)
+    return "\n>\n".join(out)
+
+
 def _nan_to_none(x):
     if isinstance(x, float) and x != x:
         return None
@@ -428,15 +562,27 @@ def main(argv=None) -> int:
     ap.add_argument("--runs", required=True)
     ap.add_argument("--import-cell", action="append", default=[], help="<model>:<level>=<data/runs dir> (read-only)")
     ap.add_argument("--ledger", action="append", default=[])
-    ap.add_argument("--probe", default=str(ROOT / "data" / "gemini" / "ladder" / "probe" / "_probe.json"))
+    ap.add_argument("--probe", default=str(ROOT / "results" / "gemini" / "ladder_probe.json"))
     ap.add_argument("--out", default=str(ROOT / "results" / "gemini"))
     ap.add_argument("--bootstrap", type=int, default=10000)
     ap.add_argument("--no-tags", action="store_true")
+    ap.add_argument("--no-figures", action="store_true")
+    ap.add_argument("--export", default=None, help="also write <dir>/ladder_episodes.jsonl.gz and ladder_ledger.jsonl.gz "
+                    "(valid ladder episodes + feature=ladder ledger rows; --runs/--ledger can read them back)")
+    ap.add_argument("--headline", default=None,
+                    help="hand-written findings block for the top of ladder.md (default: generated from the table)")
     a = ap.parse_args(argv)
     runs = Path(a.runs).expanduser()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     eps = load_ladder(runs)
+    if a.export:
+        import gzip
+        ex = Path(a.export)
+        ex.mkdir(parents=True, exist_ok=True)
+        with gzip.open(ex / "ladder_episodes.jsonl.gz", "wt") as fh:
+            for e in eps:
+                fh.write(json.dumps({k: v for k, v in e.items() if k != "_cell"}, sort_keys=True) + "\n")
     for spec in a.import_cell:
         eps += load_import(spec)
     pairs = {(e["_cell"]["tier"], e["_cell"]["seed"]) for e in eps}
@@ -446,6 +592,10 @@ def main(argv=None) -> int:
     ref_rows = reference_rows(ref, pairs)
     tags = {} if a.no_tags or not eps else tag_tables(eps)
     led = load_ledger(runs, a.ledger)
+    if a.export:
+        with gzip.open(Path(a.export) / "ladder_ledger.jsonl.gz", "wt") as fh:
+            for r in led:
+                fh.write(json.dumps(r, sort_keys=True) + "\n")
     run_ids = sorted({r.get("run_id", "") for r in led if r.get("run_id")})
     led_sum = {"calls": len(led), "errors": sum(not r.get("ok", True) for r in led), "run_ids": len(run_ids),
                "tokens_in": sum(r.get("in", 0) for r in led), "tokens_thinking": sum(r.get("thinking", 0) for r in led),
@@ -456,10 +606,10 @@ def main(argv=None) -> int:
     probe = None
     if Path(a.probe).exists():
         probe = json.loads(Path(a.probe).read_text()).get("rows")
-    doc = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "git_sha": git_sha(), "runs": str(a.runs),
-           "imports": a.import_cell, "ledger_run_ids": run_ids, "ledger": led_sum, "prices_usd_per_1m": PRICES,
-           "episodes": len(eps), "rows": rows, "reference": ref_rows, "tags": tags, "probe": probe, "figures": []}
-    doc["figures"] = figures(rows, ref_rows, tags, out)
+    doc = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "git_sha": git_sha(), "runs": str(a.runs).replace(str(Path.home()), "~"),
+           "imports": [x.replace(str(Path.home()), "~") for x in a.import_cell], "ledger_run_ids": run_ids, "ledger": led_sum, "prices_usd_per_1m": PRICES,
+           "episodes": len(eps), "headline_file": a.headline, "rows": rows, "reference": ref_rows, "tags": tags, "probe": probe, "figures": []}
+    doc["figures"] = [] if a.no_figures else figures(rows, ref_rows, tags, out)
     clean = _nan_to_none(json.loads(json.dumps(doc, default=str)))
     (out / "ladder.json").write_text(json.dumps(clean, indent=1) + "\n")
     (out / "ladder.md").write_text(to_md(doc))

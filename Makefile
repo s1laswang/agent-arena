@@ -34,3 +34,7 @@ cheat-corpus:
 
 cheat-eval:
 	GEMINI_API_KEY= PYTHONPATH=. $(PY) -m redteam.cheat_eval
+
+.PHONY: demo
+demo:
+	@echo "http://localhost:8000/index.html"; $(PY) -m http.server 8000 -d web

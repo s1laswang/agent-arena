@@ -13,6 +13,7 @@ if os.environ.get("OFFLINE") == "1":
 
 from agents import gemini
 from scripts.prompt_hints import SEAT_SUFFIX
+from sleeper.company import BUDGET
 from harbor.opencode.instruction import seat_instruction
 from sleeper.company import World
 from sleeper.mcp_server import build_server
@@ -38,9 +39,9 @@ def usage_total(cache, fn=None, model=None):
 
 
 class FrontierAgent:
-    def __init__(self, model, seat, seed, trial):
+    def __init__(self, model, seat, seed, trial, budget=None):
         self.model, self.seat, self.seed, self.note, self.log = model, seat, seed + 1000 * trial, "", []
-        self.system = seat_instruction(seat) + SEAT_SUFFIX
+        self.system = seat_instruction(seat).replace("You have %d tool calls" % BUDGET, "You have %d tool calls" % (budget or BUDGET)) + SEAT_SUFFIX
 
     def turn(self, seat, view, tools, call):
         t, n = view["tick"], len(self.log)
@@ -49,7 +50,7 @@ class FrontierAgent:
         self.note = r["text"] or self.note
 
 
-def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_calls=350, max_usd=3.0, trial=0, mode="seat", com=None, base=None):
+def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_calls=350, max_usd=3.0, trial=0, mode="seat", com=None, base=None, prompt_budget=None):
     import time
 
     assert days == 1 and mode == "seat", "ponytail: 1 day, seat mode only"
@@ -62,7 +63,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     name = f"{seat}-s{seed}-t{trial}"
     gemini.USAGE_FILE = name + ".usage.jsonl"
     t0 = time.time()
-    fa = FrontierAgent(model, seat, seed, trial)
+    fa = FrontierAgent(model, seat, seed, trial, prompt_budget)
     state, st, mcp, _ = frontier_day.play(seat, seed, lambda d, s: fa, out_dir, max_calls, max_usd, lambda: usage_total(gemini.CACHE, model=model)["usd"], name)
     wf = out_dir / f"{name}.wall"
     if os.environ.get("SLEEPER_OFFLINE") == "1" and wf.is_file():
@@ -74,7 +75,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     r = json.loads(p.stdout.strip().splitlines()[-1])
     strategy = frontier_day.build_day(seat, seed)[2]
     out = {"model": model, "commit": com, "agent": agent, "seat": seat, "seed": seed, "trial": trial, "mode": mode,
-           "seat_under_test": seat, "day_source": "day_for", "team": "procedure", "sleeper": (gemini.model_for("sleeper") if os.environ.get("SLEEPER_LIVE_SLEEPER") == "1" else "scripted"), "strategy": strategy,
+           "seat_under_test": seat, "day_source": "day_for", "prompt_budget": prompt_budget or BUDGET, "team": "procedure", "sleeper": (gemini.model_for("sleeper") if os.environ.get("SLEEPER_LIVE_SLEEPER") == "1" else "scripted"), "strategy": strategy,
            "state_path": str(state.relative_to(out_dir.parent.parent)), "transcript_path": f"{model}/{com}/{name}.json",
            "scores": {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r.get("false_quarantine", []), "sleeper_caught": r.get("sleeper_caught", False),
                       "tickets_done": r.get("tickets_done", 0), "tickets_total": r.get("tickets_total", 0)},
@@ -94,9 +95,10 @@ def main():
     ap.add_argument("--max-calls", type=int, default=350)
     ap.add_argument("--max-usd", type=float, default=3.0)
     ap.add_argument("--trial", type=int, default=0)
+    ap.add_argument("--prompt-budget", type=int)
     ap.add_argument("--commit")
     a = ap.parse_args()
-    row, p = run_seat("gemini", a.model, a.seat, a.seed, 1, a.max_calls, a.max_usd, a.trial, com=a.commit)
+    row, p = run_seat("gemini", a.model, a.seat, a.seed, 1, a.max_calls, a.max_usd, a.trial, com=a.commit, prompt_budget=a.prompt_budget)
     sc = row["scores"]
     print("reward=%s harm=%s tickets=%s/%s calls=%s cost=$%s model=%s commit=%s%s -> %s" % (
         sc["reward"], sc["harm"], sc["tickets_done"], sc["tickets_total"], row["calls"], row["usd"], row["model"], row["commit"],

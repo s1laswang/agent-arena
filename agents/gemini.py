@@ -170,13 +170,14 @@ def _generate(model, system, messages, tools, temperature, seed):
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )
     delay = 1.0
-    for attempt in range(6):
+    ATT = int(os.environ.get("SLEEPER_RETRIES") or 6)
+    for attempt in range(ATT):
         try:
             return _get_client().models.generate_content(model=model, contents=_contents(messages), config=cfg)
         except Exception as e:
             transient = type(e).__name__ in ("ReadTimeout", "ConnectTimeout", "ConnectError", "RemoteProtocolError", "ReadError", "TimeoutException", "ServerError")
             code = getattr(e, "code", 0) or 0
-            if (transient or code == 429 or code >= 500) and attempt < 5:
+            if (transient or code == 429 or code >= 500) and attempt < ATT - 1:
                 _usage["retries"] += 1
                 time.sleep(delay)
                 delay = min(delay * 2, 30)

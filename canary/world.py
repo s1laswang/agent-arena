@@ -64,9 +64,22 @@ class World:
         return [e.id for e in self.employees]
 
 
+_SET_SECRET: bytes | None = None
+
+
+def set_world_secret(secret: bytes | None) -> None:
+    """In-process judge-world secret (checked before CANARY_WORLD_SECRET and SALT). None clears it."""
+    global _SET_SECRET
+    if secret is not None and (not isinstance(secret, (bytes, bytearray)) or len(secret) < 16):
+        raise ValueError("world secret must be >= 16 bytes")
+    _SET_SECRET = bytes(secret) if secret is not None else None
+
+
 def _key(seed: int) -> bytes:
     if seed not in JUDGE_SEEDS and seed not in HELDOUT_SEEDS:
         return b"public"
+    if _SET_SECRET is not None:
+        return _SET_SECRET
     env = os.environ.get("CANARY_WORLD_SECRET")
     if env:
         return env.encode()

@@ -269,10 +269,16 @@ CUSTOM_PROBES: dict[str, Callable] = {
 
 
 # ----------------------------------------------------------------------------- solver-derived probes
+def _oracle() -> str:
+    """Reference agent for the solver-derived probes/control (default `solver`; CANARY_ANTICHEAT_ORACLE=solver_v2)."""
+    import os
+    return os.environ.get("CANARY_ANTICHEAT_ORACLE", "solver")
+
+
 def solver_actions(tier: str, seed: int) -> tuple[list[tuple[str, dict]], float]:
     from ..eval import make_env, make_policy_factory, run_episode
     env = make_env(tier, seed)
-    res = run_episode(env, make_policy_factory("solver")(seed))
+    res = run_episode(env, make_policy_factory(_oracle())(seed))
     return [(s.tool, s.args) for s in res.steps], float(res.score)
 
 
@@ -343,7 +349,7 @@ def cut_guess_scores(tier: str, seed: int, n_calls: int) -> dict[str, float]:
     out = {}
     for name in CUT_GUESS:
         pct = int(name.split("_")[2])
-        r = run_episode(make_env(tier, seed), CutThenGuess(make_policy_factory("solver")(seed), (n_calls * pct) // 100))
+        r = run_episode(make_env(tier, seed), CutThenGuess(make_policy_factory(_oracle())(seed), (n_calls * pct) // 100))
         out[name] = float(r.score)
     return out
 

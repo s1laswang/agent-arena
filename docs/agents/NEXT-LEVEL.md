@@ -149,3 +149,10 @@ Branch `justSilas-v15`. This replaces the "dormant mole" idea as the v1.5 candid
   5. anti-cheat;
   6. the trained small model and the RL mole;
   7. the game link.
+
+## FR8 (relaunch): GPU authorisation (Silas approved plan v3, Sat ~14:00)
+Momin pauses his sky jobs to free V100s. NEVER touch, cancel or hold any job yourself; Momin does the pausing. As soon as GPUs are free you are authorised today for:
+1. **WS4 small investigator v2:** 1 GPU training (dense 4k + `--oversample-endings 3` on `~/agent-arena-data/j3v14`) + 2 GPUs for the fast KV-cached eval (n ≥ 30 per tier, base vs v2, held-out seeds). Goal: a REWARD gain, reported honestly with CIs.
+2. **WS3 LLM mole:** up to 3 GPUs for GRPO training of a Qwen2.5-0.5B (then 1.5B) mole (`train/grpo_mole.py` from AGENTS/Momin; prepare the sbatch + TRL env in pytorch-volta, fp16).
+
+Always `--time` (≤ 24 h); log job ids in `~/agent-arena-data/jobs/OURS.txt`; ≤ 24 CPU cores on `normal`. Report progress in docs/reports/fr8.md and message the CEO with job ids.

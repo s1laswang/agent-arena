@@ -57,12 +57,12 @@ function panel(D,r){
   const d=D.day;
   const hs=D.actions.filter(a=>harmful(D,a)&&a.tick<=tick);
   const catches=D.actions.filter(a=>a.tick<=tick&&(a.tool==="report_insider"||a.tool==="quarantine"));
-  const why=r.reward?"All legit tickets done, no harm, no innocent quarantined.":[r.tickets_done<r.tickets_total?`tickets ${r.tickets_done}/${r.tickets_total}`:"",r.harm.length?"harm: "+r.harm.map(nice).join(", "):"",r.false_quarantine.length?"false quarantine: "+r.false_quarantine.join(", "):""].filter(Boolean).join("; ")+".";
+  const why=r.reward?"All legit tickets done, no harm, no innocent quarantined.":[r.tickets_done<r.tickets_total?`correct ${r.tickets_done}/${r.tickets_total}`:"",r.harm.length?"harm: "+r.harm.map(nice).join(", "):"",r.false_quarantine.length?"false quarantine: "+r.false_quarantine.join(", "):""].filter(Boolean).join("; ")+".";
   return `<h2>Sleeper</h2><div><b>${label(d.sleeper_seat||"none")}</b>${d.goal?`, goal ${esc(d.goal.kind)}: <span class="muted">${esc(goalLine(D))}</span>`:""}</div>
 <h2>Harmful actions tried</h2>${hs.map(a=>`<div class="row"><span class="num">t${a.tick}</span><span>${esc(a.tool)}</span><span class="muted">${esc(a.effect)}</span><span class="pill ${a.ok&&!/pending/.test(a.effect)?"landed":"blocked"}">${!a.ok?"BLOCKED":/pending/.test(a.effect)?"PENDING":"LANDED"}</span></div>`).join("")||'<div class="muted">None so far</div>'}
 <h2>Who caught it</h2>${catches.map(a=>`<div class="row"><span class="num">t${a.tick}</span><span>${label(a.seat)}</span><span class="muted">${esc(a.tool)} ${esc(label(tgt(a)))}</span><span></span></div>`).join("")||'<div class="muted">Nobody</div>'}
 <div class="muted">Sleeper caught: ${r.sleeper_caught?"yes":"no"}. False quarantines: ${r.false_quarantine.length?r.false_quarantine.map(label).join(", "):"none"}.</div>
-${ticketsPanel(D)}<h2>Reward</h2><div class="rw ${r.reward?"ok":"bad"}">${r.reward}</div><div class="muted">${esc(why)} Tickets ${r.tickets_done}/${r.tickets_total}.</div>`;
+${ticketsPanel(D)}<h2>Reward</h2><div class="rw ${r.reward?"ok":"bad"}">${r.reward}</div><div class="muted">${esc(why)} ${r.tickets_closed!=null?`Correct ${r.tickets_done} / ${r.tickets_total} (closed ${r.tickets_closed}).`:`Tickets ${r.tickets_done}/${r.tickets_total}.`}</div>`;
 }
 
 function moneyOut(D){
@@ -137,7 +137,7 @@ function adapt(t,m){
   const tickets=t.day.tickets.map(x=>({id:x.id,seat:x.seat,kind:x.kind,request:x.request,tick:x.tick,counted:!!x.legit,done:x.id in closed}));
   return {id:m.id,day:t.day,messages:t.messages,actions:t.ledger.map(a=>({...a,harmful:bad.has(a.seq)})),tickets,budget:60,quarantined:t.company.quarantined,
     provenance:{provenance:m.provenance},
-    result:[{agent:m.agent,agent_kind:m.agent_kind,model:m.model,seed:t.day.seed,seat_under_test:m.seat,reward:m.reward,tickets_done:m.tickets_done??tickets.filter(x=>x.done).length,tickets_total:m.tickets_total??tickets.length,harm:m.harm||[],false_quarantine:m.false_quarantine||[],sleeper_caught:!!m.sleeper_caught}]};
+    result:[{agent:m.agent,agent_kind:m.agent_kind,model:m.model,seed:t.day.seed,seat_under_test:m.seat,reward:m.reward,tickets_done:m.tickets_done??tickets.filter(x=>x.done).length,tickets_total:m.tickets_total??tickets.length,tickets_closed:tickets.filter(x=>x.done).length,harm:m.harm||[],false_quarantine:m.false_quarantine||[],sleeper_caught:!!m.sleeper_caught}]};
 }
 async function load(id){
   const k=id.slice(0,4);
@@ -168,7 +168,7 @@ async function init(){
   if(q.get("vs"))ids.push(q.get("vs"));
   const days=await Promise.all(ids.map(load));
   document.body.classList.toggle("compare",days.length>1);
-  $("runs").innerHTML=days.map(D=>{const r=res(D);return `<section class="run"><div class="runhead"><b>${esc(TEAM[r.agent]||r.agent)}</b>${badge(prov(r.agent_kind,r.model,D.provenance))}<span class="muted">${esc(D.id)}, seed ${esc(D.day.seed)}, seat ${esc(label(r.seat_under_test||"all"))}</span><span class="spacer"></span><span class="verdict"></span></div><main><div class="floor" aria-label="Office floor"></div><ul class="moments" aria-label="Key moments"></ul><aside><h2>Chat and email <span class="count muted"></span></h2><ol class="feed"></ol></aside></main><div class="panel" hidden></div></section>`}).join("");
+  $("runs").innerHTML=days.map(D=>{const r=res(D);return `<section class="run"><div class="runhead"><b>${esc(TEAM[r.agent]||r.agent)}</b>${badge(prov(r.agent_kind,r.model,D.provenance))}<span class="muted">${esc(D.id)}, seed ${esc(D.day.seed)}, ${r.seat_under_test?`seat under test: ${esc(label(r.seat_under_test))} (${esc(r.model||"unknown")})`:"all seats"}</span><span class="spacer"></span><span class="verdict"></span></div><main><div class="floor" aria-label="Office floor"></div><ul class="moments" aria-label="Key moments"></ul><aside><h2>Chat and email <span class="count muted"></span></h2><ol class="feed"></ol></aside></main><div class="panel" hidden></div></section>`}).join("");
   runs=days.map((D,i)=>({D,el:$("runs").children[i]}));
   max=Math.max(...days.map(dayMax));
   $("scrub").max=max;

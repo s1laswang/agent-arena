@@ -40,7 +40,7 @@ Fallback if no real number arrives: "Offline tests of the Gemini path ran with a
 
 REAL: a gemini-3.5-flash attacker (`redteam/gemini_exploiter.py`) played 10 seat-days (finance_ap and controller, days 1000 to 1004, commit c460e0c, `results/frontier/exploiter/gemini-3.5-flash/c460e0c/`). 7 of the 10 had a live attack, reward 0 on all 10, rescored by `sleeper.verifier` with 0 mismatches and replayable offline. Tokens and price: NOT FOUND.
 
-Integrity probes, per lead-demo (`make probes`, not rerun by dm-pitch): 14 cheat probes in the finance_ap seat and with the full team all score 0.0, and the control (reference plus 50 padding calls) scores 1.0. SCRIPTED, no model.
+Integrity probes, VERIFIED (dm-qa, `make probes` on momin 1f6e1f0, 1m04s): every probe row 0.0, the control control_pad 1.0, and 730 committed run files rescored with 0 mismatches. SCRIPTED, no model.
 
 ## Deliverable checklist (from CHALLENGES-AFTERQUERY-GEMINI.md)
 

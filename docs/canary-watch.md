@@ -79,3 +79,23 @@ New (docs only, 4 files, 189 lines, `git diff cca3cb8 origin/justSilas`): "Plan 
 Read: still no frontier number on v1.4. Their gap bet is v1.5. Our edge only exists if we have a real frontier run below our reference before 17:00-20:00 gates.
 Ideas to copy (idea only): rumour/grudge/authority-bias noise stated in the instructions (human-like insiders; fits The Sleeper's chat-request attacks); RL-trained attacker with a catchability constraint (lead-attack, lead-lab); a static browser game for judges.
 Open question for the chief: Silas's plan says Momin's parts go into Canary. If the submission is a merged Canary, confirm which of our assets (Sleeper seats, verifier, attacks) are in it, so docs and scorecard target the same artifact.
+
+## Tick 4, 2026-11-14 14:37 Helsinki
+
+Last-seen SHAs: justSilas b4bcd4e (was 5813bb2), harness2 50d8a90, fr8 8b14c4b. New branches: env2 d84fc10, env2-ladder e2f74bb, agents2 65bc46e, integrity2 078a000, v15 f19cc71, v15-bias 5973d92. Still absent: justSilas-gemini. Unchanged: poisoned-inbox 9068b16, measure, v14, others.
+
+Numbers (theirs, `git show 58f25318`, `harbor/README.md` on justSilas):
+- **gemini-4-carbon through the judges' path (Harbor + OpenCode over MCP), v1.4, judge seeds 900000-900002, 3 medium + 3 hard, same worlds as the oracle:** oracle mean 0.757, Gemini 0.503 (-0.253); Gemini below the solver on 6/6; medium 900002 Gemini never accused (0). Scores from the server ledger, transcripts kept, 0 keys in the commit. n=6 only. Their Gate A target is n>=20 per tier.
+- Pitfall they hit: OpenCode reads only `GOOGLE_GENERATIVE_AI_API_KEY` and Harbor needs `--api-key-name`; otherwise 6 invalid auth zeros (not committed as results).
+- Harbor baselines (earlier): oracle 0.78/0.66, do_nothing 0, stop_early -1, isolation 11/11. `make test` 548 passed, 4 skipped (their claim, not re-run by me).
+- Skill ladder v1.4 (env2-ladder e2f74bb, results/skill_ladder_v1.4.md, seeds 7000-7399, n=400 per tier): on easy, removing the EV accusation rule costs -0.407 (accuse-last) or -0.178 (accuse at P>=0.5); the other five one-component ablations (careful, delay, single-canary, decoy, framing) show +0.000 on easy. Medium/hard rows not read. Honest read: some rungs do not cost score on easy; they must show cost on hard.
+
+New work, not merged to justSilas yet:
+- integrity2 078a000: anti-cheat battery inside `make reproduce` (probes, stop-early ladder, control, replay consistency, grader hardening tests), the Poisoned Inbox port.
+- agents2 65bc46e / 75ab74c: RL mole (REINFORCE + catchability constraint), `hard_rl` track, GRPO LLM mole script.
+- v15-bias 5973d92: human-bias social layer (rumours, grudges, authority, misforward, seed_rumour), off by default.
+- justSilas: Pyodide browser game (WS6) merged (de5e420); FR8 GPU jobs 44410-44412 submitted (WS4).
+
+Beats us: a real frontier run through the exact judge path with a gap on 6/6 (their gap axis moves from 8 toward the top of the range if n grows and holds); integrity battery landing; skill ladder; browser game.
+We can beat: n=6, only gemini-4-carbon, v1.4 tier whose scripted gap narrowed; v1.5 not merged; ladder rungs showing +0.000 on easy; they have no multi-seat, no leak detector, no verifier rescore. We have no frontier row at all, so we trail on gap until lab lands one.
+Ideas to copy (idea only): run the judge path via Harbor + OpenCode with the key name pitfall noted in our README; the oracle-vs-model same-world pair table; skill-ladder paired deltas with CI.

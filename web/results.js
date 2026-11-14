@@ -39,9 +39,9 @@ async function init(){
   document.querySelector("#gap thead").innerHTML="<tr><th>Agent</th><th>Label</th><th>Mode</th><th>n days</th><th>Mean reward</th><th>pass^1</th><th>pass^3 (95% CI)</th><th>Sleeper success</th><th>False accusation</th><th>Gap vs reference (paired when present)</th><th>Gap vs oracle</th><th>Source</th></tr>";
   const top=r=>r.headline===true||(r.status==="pending"&&/gemini|claude|codex/i.test(r.row))||(!("headline" in r)&&!r.status);
   const A=rows.filter(top),B=rows.filter(r=>!top(r));
-  const ex=rows.filter(r=>r.excluded||r.invalid);
+  const ex=rows.filter(r=>r.n_excluded||r.invalid||r.capped);
   const hd=t=>`<tr class="grp"><th colspan="12">${t}</th></tr>`;
-  document.querySelector("#gap tbody").innerHTML=(B.length?hd("Headline"):"")+A.map(row).join("")+(B.length?hd("Ablation and other groups"):"")+B.map(row).join("")+(ex.length?`<tr><td colspan="12" class="muted">Excluded or invalid runs: ${ex.map(r=>esc(r.row)+" "+esc(r.excluded??r.invalid)).join(", ")}</td></tr>`:"");
+  document.querySelector("#gap tbody").innerHTML=(B.length?hd("Headline"):"")+A.map(row).join("")+(B.length?hd("Ablation and other groups"):"")+B.map(row).join("")+(ex.length?`<tr><td colspan="12" class="muted">${ex.map(r=>esc(r.row)+": "+[r.n_excluded?`${r.n_excluded} seeds excluded (oracle cannot win in this seat: ${esc((r.excluded_seeds||[]).join(", "))})`:"",r.invalid?`${esc(r.invalid)} infra-failed runs left out of means`:"",r.capped?`${esc(r.capped)} runs capped`:""].filter(Boolean).join("; ")).join(" | ")}</td></tr>`:"");
   document.getElementById("seatwrap").hidden=true;
 }
 init();

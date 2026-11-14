@@ -207,6 +207,11 @@ class World:
             pass
         for h in seed_hooks:
             h(day, self.company)
+        for d in day.docs:
+            d = {**d}
+            if "image_lines" in d:
+                d["image"] = "\n".join(d.pop("image_lines"))
+            self.company.docs[d["id"]] = Doc(**d)
         self.before = {}
         self.initial = self.company.model_copy(deep=True)
         self.last_tick = day.ticks

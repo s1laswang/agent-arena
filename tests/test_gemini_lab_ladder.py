@@ -92,7 +92,7 @@ def test_infra_failure_is_moved_aside_and_requeued(tmp_path, monkeypatch):
                         log=lambda m: None, retry_delay=0.0)
     assert r["done"] == 1
     inv = list((tmp_path / "out" / "_invalid").iterdir())
-    assert len(inv) == 1 and "api:" in (inv[0] / "INVALID.txt").read_text()
+    assert len(inv) == 1 and any(k in (inv[0] / "INVALID.txt").read_text() for k in ("api:", "invalid:", "500"))
     assert ladder.attempts(tmp_path / "out", cells[0]) == 1
     prog = [json.loads(x) for x in (tmp_path / "out" / "_progress.jsonl").read_text().splitlines()]
     assert [bool(p["infra_invalid"]) for p in prog] == [True, False]

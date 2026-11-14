@@ -1,6 +1,6 @@
 """OpenCode over MCP, judges' harness shape. LIVE PATH UNTESTED (needs HARNESS MCP server).
 
-    python -m canary.agents.frontier.opencode_run --model openai/gpt-5.5 --tier medium --seeds 0-2 \
+    python -m canary.agents.frontier.opencode_run --model openai/gpt-5.6-sol --tier medium --seeds 0-2 \
         --mcp-url http://127.0.0.1:8765/mcp --token T
 
 Config schema: https://opencode.ai/docs/mcp-servers/ (remote: type/url/enabled/headers),
@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from canary.llm import default_openai_model
 from canary.agents.frontier.common import base_args, run_seeds, spec_from
 
 FILES = {"opencode.json"}
@@ -39,7 +38,9 @@ def build_cmd(workdir: Path, prompt: str, model: str, mcp_url: str, headers: dic
 
 
 def _default() -> str:
-    return f"openai/{default_openai_model()}"
+    # CEO decision: the judges'-harness-shape model is gpt-5.6-sol via OpenCode's ChatGPT login
+    # (gpt-5.5 is rejected on that login). Agent label: "opencode:openai/gpt-5.6-sol".
+    return "openai/gpt-5.6-sol"
 
 
 def main(argv=None):

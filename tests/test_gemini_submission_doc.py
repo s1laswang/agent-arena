@@ -8,7 +8,13 @@ from pathlib import Path
 
 import pytest
 
-from canary.gemini.provenance import COMMIT_RE, REQUIRED_ROLES, TARGET_MODEL, scan_file_secrets
+from canary.gemini.provenance import (
+    COMMIT_RE,
+    REQUIRED_ROLES,
+    TARGET_MODEL,
+    audit_provenance,
+    scan_file_secrets,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ROLES_DOC_PATH = REPO_ROOT / "docs" / "gemini" / "ROLES.md"
@@ -52,9 +58,12 @@ def extract_platform_summary(md_text: str) -> str:
 
 def extract_cited_run_folders(md_text: str) -> list[str]:
     seen: dict[str, None] = {}
+    file_exts = {".json", ".jsonl", ".md", ".html", ".png", ".jpg", ".jpeg", ".csv", ".txt", ".py"}
     for match in RUN_PATH_RE.finditer(md_text):
         cleaned = match.group(1).rstrip(".,;:)/")
         if cleaned in {"results/gemini_roles", "data/runs/committed", "data/runs/committed/v1.4/reference"}:
+            continue
+        if Path(cleaned).suffix.lower() in file_exts:
             continue
         if cleaned:
             seen[cleaned] = None
@@ -143,7 +152,7 @@ def test_submission_platform_summary_char_limit() -> None:
 @pytest.mark.parametrize(
     ("doc_path", "min_folders"),
     [
-        (ROLES_DOC_PATH, 37),
+        (ROLES_DOC_PATH, 55),
         (SUBMISSION_DOC_PATH, 6),
         (PITCH_DOC_PATH, 6),
     ],
@@ -155,6 +164,21 @@ def test_cited_run_folders_exist_use_carbon_and_cite_commits(doc_path: Path, min
     assert len(folders) >= min_folders
     missing_roles = [r for r in REQUIRED_ROLES if r not in roles_seen]
     assert missing_roles == [], f"Missing cited run folders in {doc_path.name} for roles: {missing_roles}"
+
+
+def test_docs_cited_runs_match_provenance_entries() -> None:
+    prov = audit_provenance(REPO_ROOT)
+    assert prov["verified"] is True
+    by_dir = {r["run_dir"]: r for r in prov["runs"] if r["verified"]}
+
+    roles_txt = ROLES_DOC_PATH.read_text(encoding="utf-8")
+    cited = extract_cited_run_folders(roles_txt)
+    assert 55 <= len(cited) <= prov["totals"]["verified_runs"]
+    for rel in cited:
+        assert rel in by_dir, f"Cited run {rel} not verified in audit_provenance"
+        entry = by_dir[rel]
+        assert f"{entry['tokens_in']:,}" in roles_txt
+        assert f"{entry['tokens_out']:,}" in roles_txt
 
 
 def test_submission_and_pitch_required_sections_present() -> None:

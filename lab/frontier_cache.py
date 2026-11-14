@@ -34,7 +34,7 @@ def export(d, stem, keys, cache=None):
 def rerun(row, cache, extra_env=None):
     out = tempfile.mkdtemp()
     env = {**os.environ, "GEMINI_API_KEY": "", "SLEEPER_OFFLINE": "1", "SLEEPER_CACHE_DIR": str(cache), "PYTHONPATH": str(ROOT), **(extra_env or {})}
-    cmd = [sys.executable, "-m", "lab.frontier_rows", "--model", row["model"], "--day-start", str(row["seed"]), "--days", "1", "--trials", "1", "--trial-start", str(row["trial"]), "--seat", row["seat"], "--team", row["team"], "--sleeper", row["sleeper_mode"], "--budget-calls", "350", "--out", out]
+    cmd = [sys.executable, "-m", "lab.frontier_rows", "--model", row["model"], "--day-start", str(row["seed"]), "--days", "1", "--trials", "1", "--trial-start", str(row["trial"]), "--seat", row["seat"], "--team", row["team"], "--sleeper", row["sleeper_mode"], "--budget-calls", str(row.get("budget_calls") or 400), "--out", out]
     p = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True)
     hits = list(Path(out).glob("*/*/finance_ap-s*.json")) + list(Path(out).glob("*/*/%s-s*.json" % row["seat"]))
     if p.returncode or not hits:

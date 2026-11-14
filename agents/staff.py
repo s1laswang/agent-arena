@@ -315,7 +315,11 @@ class GeminiStaff:
             return r
         except OfflineCacheMiss:
             raise
-        except Exception:
+        except Exception as e:
+            if os.environ.get("SLEEPER_STRICT") == "1":
+                if type(e).__name__ == "GeminiUnavailable" and "MAX_CALLS" in str(e):
+                    return None
+                raise
             return self.fallback.turn(seat, view, tools, call)
 
 

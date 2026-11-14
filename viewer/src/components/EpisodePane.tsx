@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { episodeLabel, fmtNum } from "../format";
 import type { Frame } from "../replay";
 import type { Episode, LoadedFile } from "../types";
+import { LEGEND, provenance } from "../provenance";
 import { Company } from "./Company";
 import { LeakFeed } from "./LeakFeed";
 import { Timeline } from "./Timeline";
@@ -44,6 +45,9 @@ export function EpisodePane({
       <header className="summary" data-testid={paneId === "A" ? "summary" : "summary-b"} data-agent={episode.agent}>
         <div className="sum-top">
           <span className="file">{file.label}</span>
+          <span className={`badge ${provenance(episode).tone}`} title={provenance(episode).why} data-testid="provenance">
+            {provenance(episode).label}
+          </span>
           {file.episodes.length > 1 && (
             <label>
               Episode
@@ -72,6 +76,19 @@ export function EpisodePane({
           <Stat k="End" v={episode.end_reason} />
         </dl>
         {file.warnings.length > 0 && <p className="warnline">{file.warnings.join(" · ")}</p>}
+        {paneId === "A" && (
+          <details className="legend">
+            <summary>How to read this</summary>
+            <dl>
+              {LEGEND.map(([k, v]) => (
+                <div key={k}>
+                  <dt>{k}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </details>
+        )}
         {ended && <p className="ended">This episode is already over at the synced clock.</p>}
       </header>
       <Timeline steps={episode.steps} cursor={frame.cursor} onSeek={onSeek} />

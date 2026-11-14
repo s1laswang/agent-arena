@@ -51,7 +51,9 @@ class SolverPolicy:
                  coverages: tuple = (0.1, 0.15, 0.25, 0.4, 0.55, 0.7, 1.0), alternate: bool = False, adaptive: bool = False, utility: str = "mi",
                  probing: bool = False, probe_cap: int = 4, probe_extra: int = 1, probe_core: int = 4,
                  behaviour_weight: float | None = None, act_budget: float = 0.3, max_candidates: int = 136, tiny: bool = True,
-                 use_v_drops: bool | None = None, find_decoy: bool = True):
+                 use_v_drops: bool | None = None, find_decoy: bool = True,
+                 multi: str = "joint", multi_candidates: int = 96, max_pending: int = 4, min_gain: float = 0.1,
+                 min_gain_first: float = 0.0, multi_utility: str = "mi"):
         self._given = params
         self.threshold = threshold
         # behaviour_weight: public alias (FR8 sweeps it); exponent on access-log/interview likelihoods
@@ -70,6 +72,13 @@ class SolverPolicy:
         self.find_decoy = find_decoy
         self.tiny = tiny
         self.max_candidates = max_candidates  # deterministic cap on candidate splits per decision
+        # v1.4 (canaries_per_day > 1): "joint" = every canary of the day chosen greedily by the mutual information
+        # between the mole and the joint outcome of ALL outstanding canaries (pending ones included: pipelining
+        # under delay); "seq" = first canary as in v1.3, extra ones greedily by the joint objective; "off" = 1/day.
+        # Count-capped (multi_candidates per extra canary, max_pending outstanding canaries): never wall-clock.
+        self.multi, self.multi_candidates, self.max_pending, self.min_gain = multi, multi_candidates, max_pending, min_gain
+        self.multi_utility = multi_utility    # "mi" (nats) or "maxp" (expected max posterior)
+        self.min_gain_first = min_gain_first  # "joint" only: the day's first canary also needs this many nats
         self.probing, self.probe_cap, self.probe_extra, self.probe_core = probing, probe_cap, probe_extra, probe_core
         self.reset([], "")
 
@@ -296,9 +305,9 @@ class SolverPolicy:
                 self.queue = [("accuse", {"employee": best})]
                 return
             q = self.probe_actions(post)
-            asg = self.partition(post)
-            if asg:
-                q.append(("plant_canary", {"doc_title": f"Board memo draft {o.today}", "assignment": asg}))
+            for i, asg in enumerate(self.plan_canaries(post)):
+                q.append(("plant_canary", {"doc_title": f"Board memo draft {o.today}" + (f" ({i + 1})" if i else ""),
+                                           "assignment": asg}))
             q += [("status", {}), ("advance_day", {})]
             self.queue = q
             self.phase = "advancing"
@@ -474,6 +483,155 @@ class SolverPolicy:
                 hcond -= p * (q * math.log(q) + ((1 - q) * math.log(1 - q) if q < 1 else 0.0))
         h = -sum(v * math.log(v) for v in po.values() if v > 0)
         return h - hcond
+
+    # ---------------------------------------------------------------- v1.4: several canaries per day
+    def plan_canaries(self, post: dict[str, float]) -> list[dict[str, str]]:
+        """Up to canaries_per_day assignments for today. With 1/day (tiers <= v1.3) this is exactly
+        [partition(post)], so earlier runs replay identically."""
+        P = self.P
+        cpd = max(1, int(getattr(P, "canaries_per_day", 1)))
+        if cpd == 1 or self.multi == "off" or self.design == "balanced" or (self.design == "auto" and not P.careful_mole):
+            first = self.partition(post)
+            if not first or cpd == 1 or self.multi == "off":
+                return [first] if first else []
+            chosen = [first]
+        else:
+            chosen = []
+            if self.multi == "seq":
+                first = self.partition(post)
+                if not first:
+                    return []
+                chosen = [first]
+        o = self.obs
+        n = len(o.employees) or 1
+        alive = [e for e in post if post[e] > 1e-4 and e not in self.restricted]
+        if len(alive) <= 1:
+            return chosen
+        win = P.leak_window_days
+        wdocs = [d for d in o.docs.values() if not d.is_canary and d.day >= o.today - win]
+        nreg_s = {e: sum(1 for d in wdocs if e in d.recipients) for e in post}
+        pend = self._pending_canaries()
+        sub = {e: post[e] for e in post if post[e] > 1e-4}
+        z = sum(sub.values()) or 1.0
+        sub = {e: v / z for e, v in sub.items()}
+        def spec(asg):
+            return (asg, self._cweight(len(asg), n), win)
+        base = self.joint_mi(sub, pend + [spec(a) for a in chosen], nreg_s)
+        while len(chosen) < cpd:
+            rng = __import__("random").Random(f"canary:{o.today}:{len(o.feed)}:{len(chosen)}")
+            best, bestu = None, -1.0
+            for n_eval, asg in enumerate(self._candidates(post, alive, rng, chosen)):
+                if n_eval >= self.multi_candidates:
+                    break
+                u = self.joint_mi(sub, pend + [spec(a) for a in chosen] + [spec(asg)], nreg_s)
+                if u > bestu:
+                    best, bestu = asg, u
+            if best is None or bestu - base <= (self.min_gain if chosen else self.min_gain_first):
+                break
+            chosen.append(best)
+            base = bestu
+        return chosen
+
+    def _cweight(self, n_rec: int, n: int) -> float:
+        """Careful-mole pick weight of a canary with n_rec recipients (same floor as belief._weight)."""
+        return max(0.05, 1.0 - n_rec / n) if self.P.careful_mole else 1.0
+
+    def _pending_canaries(self) -> list[tuple[dict, float, int]]:
+        """Outstanding canaries (not surfaced, some leak day still unresolved): (assignment, weight, days)."""
+        P, o = self.P, self.obs
+        n = len(o.employees) or 1
+        surfaced = {it.doc_id for it in o.feed}
+        maxd = max(P.delay_choices)
+        out = []
+        for d in sorted(o.docs.values(), key=lambda x: (-x.day, x.doc_id)):
+            if not (d.is_canary and d.variants) or d.doc_id in surfaced:
+                continue
+            days = sum(1 for x in range(d.day, d.day + P.leak_window_days) if x >= o.today or x + maxd > o.today)
+            if days > 0:
+                out.append((dict(d.variants), self._cweight(len(d.recipients), n), days))
+            if len(out) >= self.max_pending:
+                break
+        return out
+
+    def joint_mi(self, post: dict[str, float], cans: list[tuple[dict, float, int]], nreg_s: dict[str, int]) -> float:
+        """I(mole; joint outcome of the canaries `cans`) in nats. Outcome of a canary = the label that leaks
+        within its remaining days, or none; the canaries a suspect holds compete with each other and with its
+        regular leakable docs for the one leak a day (careful-mole weights); independent given the mole."""
+        p_leak = self.P.p_leak
+        pj: dict = {}
+        pmax: dict = {}
+        hcond = 0.0
+        for e, p in post.items():
+            held = [(i, c[0][e], c[1], c[2]) for i, c in enumerate(cans) if e in c[0]]
+            if not held:
+                pj[()] = pj.get((), 0.0) + p
+                if p > pmax.get((), 0.0):
+                    pmax[()] = p
+                continue
+            W = max(1.0, nreg_s.get(e, 0)) + sum(h[2] for h in held)
+            combos = [((), p)]
+            for i, lab, w, days in held:
+                q = 1.0 - (1.0 - p_leak * w / W) ** days
+                if 0.0 < q < 1.0:
+                    hcond -= p * (q * math.log(q) + (1.0 - q) * math.log(1.0 - q))
+                nxt = []
+                for key, pr in combos:
+                    nxt.append((key, pr * (1.0 - q)))
+                    if q > 0:
+                        nxt.append((key + ((i, lab),), pr * q))
+                combos = nxt
+            for key, pr in combos:
+                pj[key] = pj.get(key, 0.0) + pr
+                if pr > pmax.get(key, 0.0):
+                    pmax[key] = pr
+        if self.multi_utility == "maxp":   # E_outcome[max posterior]: decision-focused (reach the accusation bar)
+            return sum(pmax.values())
+        h = -sum(v * math.log(v) for v in pj.values() if v > 0)
+        return h - hcond
+
+    def _candidates(self, post, alive, rng, chosen, n_shuffles: int = 12):
+        """Deterministic candidate assignments for an extra canary (count-capped by the caller)."""
+        k = self.P.max_variants
+        used = {e for a in chosen for e in a}
+        top = sorted(alive, key=lambda e: (-post[e], e))
+        rest = [e for e in top if e not in used]
+        for pool in ((rest, top) if rest != top else (top,)):
+            for per in (1, 2):
+                for m in range(1, k + 1):
+                    rec = pool[: m * per]
+                    if len(rec) == m * per:
+                        yield {e: LABELS[i // per] for i, e in enumerate(rec)}
+        # orthogonal splits: within every label group of each chosen canary, deal members round-robin
+        for a in chosen:
+            groups = {}
+            for e in top:
+                groups.setdefault(a.get(e, "-"), []).append(e)
+            for cover in ("held", "all"):
+                asg, j = {}, 0
+                for g in sorted(groups):
+                    if cover == "held" and g == "-":
+                        continue
+                    for e in groups[g]:
+                        asg[e] = LABELS[j % k]
+                        j += 1
+                if len(asg) > 1:
+                    yield asg
+        for f in self.coverages:
+            for t in range(n_shuffles):
+                order = top if t == 0 else rng.sample(alive, len(alive))
+                rec, m = [], 0.0
+                for e in order:
+                    if m >= f - 1e-9 and rec:
+                        break
+                    rec.append(e)
+                    m += post[e]
+                ng = min(k, len(rec))
+                mass, groups = [0.0] * ng, [[] for _ in range(ng)]
+                for e in rec:
+                    g = min(range(ng), key=lambda i: (mass[i], len(groups[i])))
+                    groups[g].append(e)
+                    mass[g] += post[e]
+                yield {e: LABELS[i] for i, g in enumerate(groups) for e in g}
 
     def partition_balanced(self, post: dict[str, float]) -> dict[str, str]:
         """Split alive suspects into <= max_variants labelled groups (+ an implicit 'no canary' group)

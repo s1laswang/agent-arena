@@ -13,5 +13,7 @@ def test_rule_labels(monkeypatch):
 
 def test_gemini_path(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "x")
+    monkeypatch.setenv("SLEEPER_LIVE", "1")
+    monkeypatch.setenv("SLEEPER_LIVE_SLEEPER", "1")
     monkeypatch.setattr(gemini, "chat", lambda *a, **k: {"text": "Trusted_Familiar_Name.", "tool_calls": []})
     assert analyst.label_failure([], {}) == "trusted_familiar_name"

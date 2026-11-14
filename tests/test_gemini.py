@@ -109,6 +109,8 @@ def test_replay_deterministic(tmp_path, monkeypatch):
 def test_offline_never_calls(tmp_path, monkeypatch):
     monkeypatch.setattr(gemini, "CACHE", tmp_path)
     monkeypatch.setenv("GEMINI_API_KEY", "x")
+    monkeypatch.setenv("SLEEPER_LIVE", "1")
+    monkeypatch.setenv("SLEEPER_LIVE_SLEEPER", "1")
     monkeypatch.setenv("SLEEPER_OFFLINE", "1")
     monkeypatch.setattr(gemini, "_generate", lambda *a: 1 / 0)
     with pytest.raises(gemini.OfflineCacheMiss):

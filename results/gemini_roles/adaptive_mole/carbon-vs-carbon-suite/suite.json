@@ -2,7 +2,7 @@
   "role": "adaptive_mole",
   "suite": "carbon-vs-carbon-suite",
   "target_model": "gemini-4-carbon",
-  "latest_run_timestamp": "2026-11-14T22:40:43+00:00",
+  "latest_run_timestamp": "2026-11-14T22:46:35Z",
   "source_commits": [
     "03c676c1d3cd42629994ac434c056758a75148e0",
     "c00d49189d1a4c63495d9111e11b5f13528a5093",
@@ -43,6 +43,7 @@
     "results/gemini_roles/adaptive_mole/carbon-vs-carbon-seed0",
     "results/gemini_roles/adaptive_mole/catchability-audit-carbon",
     "results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep",
+    "results/gemini_roles/adaptive_mole/mole-forge-carbon-med-deep",
     "results/gemini_roles/adaptive_mole/mole-forge-carbon-v14",
     "results/gemini_roles/adaptive_mole/paired-designer-carbon",
     "results/gemini_roles/adaptive_mole/paired-designer-carbon-hard",
@@ -1540,6 +1541,47 @@
   "mole_forge_suite": {
     "runs": [
       {
+        "run_dir": "results/gemini_roles/adaptive_mole/mole-forge-carbon-med-deep",
+        "tier": "medium",
+        "model_id": "gemini-4-carbon",
+        "commit": "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
+        "gens": 8,
+        "n_valid_llm_children": 43,
+        "n_invalid_llm_children": 0,
+        "best_fitness": 0.7381,
+        "default_dev_fitness": 0.6315,
+        "dev_fitness_gain": 0.1066,
+        "fresh_solver_accuracy": 0.85,
+        "fresh_min_regret": 0.139,
+        "default_fresh_min_regret": 0.161,
+        "has_holdout_generalization": true,
+        "n_confirm_seeds": 40,
+        "top1_confirm_solver_acc": 0.9,
+        "top1_confirm_min_regret": 0.1202,
+        "all_evolved_solvable_confirm": true,
+        "generations_recorded": 8,
+        "hof_fitness_trajectory": [
+          0.6315,
+          0.6315,
+          0.6678,
+          0.7223,
+          0.7381,
+          0.7381,
+          0.7381,
+          0.7381
+        ],
+        "usage": {
+          "calls": 19,
+          "in": 9256,
+          "out": 6680,
+          "thinking": 4353,
+          "cached": 0,
+          "total_tokens": 20289,
+          "cost_usd": 0.128842,
+          "latency_s": 338.506
+        }
+      },
+      {
         "run_dir": "results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep",
         "tier": "hard",
         "model_id": "gemini-4-carbon",
@@ -1618,23 +1660,24 @@
       }
     ],
     "overall": {
-      "n_runs": 2,
+      "n_runs": 3,
       "tiers": [
-        "hard"
+        "hard",
+        "medium"
       ],
-      "total_gens": 11,
-      "total_valid_llm_children": 55,
-      "max_best_fitness": 0.3745,
-      "mean_fresh_solver_accuracy": 0.925,
+      "total_gens": 19,
+      "total_valid_llm_children": 98,
+      "max_best_fitness": 0.7381,
+      "mean_fresh_solver_accuracy": 0.9,
       "usage": {
-        "calls": 20,
-        "in": 14679,
-        "out": 14091,
-        "thinking": 6138,
+        "calls": 39,
+        "in": 23935,
+        "out": 20771,
+        "thinking": 10491,
         "cached": 0,
-        "total_tokens": 34908,
-        "cost_usd": 0.231648,
-        "latency_s": 446.725
+        "total_tokens": 55197,
+        "cost_usd": 0.36049,
+        "latency_s": 785.231
       }
     }
   },
@@ -1949,22 +1992,22 @@
     }
   ],
   "totals": {
-    "verified_folders": 24,
-    "n_verified_runs": 24,
-    "calls": 1612,
-    "in": 25553212,
-    "out": 110209,
-    "thinking": 379059,
+    "verified_folders": 25,
+    "n_verified_runs": 25,
+    "calls": 1631,
+    "in": 25562468,
+    "out": 116889,
+    "thinking": 383412,
     "cached": 23015724,
-    "total_tokens": 26042480,
-    "cost_usd": 12.269245,
-    "latency_s": 26923.878,
+    "total_tokens": 26062769,
+    "cost_usd": 12.398087,
+    "latency_s": 27262.384,
     "tokens": {
-      "in": 25553212,
-      "out": 110209,
-      "thinking": 379059,
+      "in": 25562468,
+      "out": 116889,
+      "thinking": 383412,
       "cached": 23015724,
-      "total": 26042480
+      "total": 26062769
     },
     "by_suite": {
       "clash_suite": {
@@ -1990,15 +2033,15 @@
         "latency_s": 6440.121
       },
       "mole_forge_suite": {
-        "verified_folders": 2,
-        "calls": 20,
-        "in": 14679,
-        "out": 14091,
-        "thinking": 6138,
+        "verified_folders": 3,
+        "calls": 39,
+        "in": 23935,
+        "out": 20771,
+        "thinking": 10491,
         "cached": 0,
-        "total_tokens": 34908,
-        "cost_usd": 0.231648,
-        "latency_s": 446.725
+        "total_tokens": 55197,
+        "cost_usd": 0.36049,
+        "latency_s": 785.231
       },
       "paired_designer_suite": {
         "verified_folders": 5,

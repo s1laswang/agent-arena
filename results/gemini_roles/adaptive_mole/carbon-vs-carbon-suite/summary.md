@@ -2,10 +2,10 @@
 
 - Role: `adaptive_mole`
 - Target Model ID: `gemini-4-carbon`
-- Verified `adaptive_mole` run folders consolidated: `24`
-- Total Gemini API calls: `1612`
-- Total tokens (in / out / thinking / cached): `25,553,212` / `110,209` / `379,059` / `23,015,724`
-- Total estimated cost (USD): `$12.269245`
+- Verified `adaptive_mole` run folders consolidated: `25`
+- Total Gemini API calls: `1631`
+- Total tokens (in / out / thinking / cached): `25,562,468` / `116,889` / `383,412` / `23,015,724`
+- Total estimated cost (USD): `$12.398087`
 - Provenance note: `carbon-vs-carbon-suite/` intentionally omits `meta.json` so `canary.gemini.provenance` does not double-count tokens or costs.
 
 ## 1. Head-to-Head Carbon-vs-Carbon Clash Suite (`clash_suite`)
@@ -60,6 +60,7 @@
 
 | Run Folder | Tier | Gens | Valid LLM Children | Best Fitness | Default Dev Fitness | Fresh Solver Acc | Fresh Min Regret | Default Fresh Min Regret | Confirm Holdout Acc | Calls | Cost (USD) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `results/gemini_roles/adaptive_mole/mole-forge-carbon-med-deep` | `medium` | 8 | 43 | 0.7381 | 0.6315 | 85.00% | 0.1390 | 0.1610 | 90.00% (n=40) | 19 | $0.1288 |
 | `results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep` | `hard` | 8 | 49 | 0.3745 | 0.0560 | 90.00% | 0.2310 | 0.1650 | 85.00% (n=20) | 8 | $0.2042 |
 | `results/gemini_roles/adaptive_mole/mole-forge-carbon-v14` | `hard` | 3 | 6 | 0.3700 | 0.2450 | 95.00% | 0.2395 | 0.2420 | n/a | 12 | $0.0275 |
 
@@ -93,7 +94,7 @@
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `clash_suite` | 8 | 884 | 24,883,996 | 36,386 | 316,189 | 23,015,724 | $9.563883 |
 | `live_arena_suite` | 8 | 696 | 595,344 | 45,317 | 47,534 | 0 | $2.119198 |
-| `mole_forge_suite` | 2 | 20 | 14,679 | 14,091 | 6,138 | 0 | $0.231648 |
+| `mole_forge_suite` | 3 | 39 | 23,935 | 20,771 | 10,491 | 0 | $0.360490 |
 | `paired_designer_suite` | 5 | 5 | 8,724 | 6,543 | 3,004 | 0 | $0.112918 |
 | `other_verified_runs` | 1 | 7 | 50,469 | 7,872 | 6,194 | 0 | $0.241598 |
-| **total** | **24** | **1612** | **25,553,212** | **110,209** | **379,059** | **23,015,724** | **$12.269245** |
+| **total** | **25** | **1631** | **25,562,468** | **116,889** | **383,412** | **23,015,724** | **$12.398087** |

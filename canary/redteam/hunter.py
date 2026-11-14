@@ -175,7 +175,10 @@ def clean_env() -> dict:
 # ---------------- backends: each returns (transcript_text, trace[list of {tool,args,result}]) -------------
 
 def run_codex(prompt, url, wd, timeout, model=None):
-    cmd = ["codex", "exec", "--json", "--skip-git-repo-check", "-s", "workspace-write", "-C", str(wd),
+    # read-only sandbox: the attacker reaches the env only through MCP (which runs outside the sandbox);
+    # it must not write to or signal anything on the host (CEO rule after the 02:43 mcp_server SIGTERMs).
+    sandbox = os.environ.get("CANARY_HUNTER_SANDBOX", "read-only")
+    cmd = ["codex", "exec", "--json", "--skip-git-repo-check", "-s", sandbox, "-C", str(wd),
            "-c", f'mcp_servers.canary.url="{url}"',
            "-c", "mcp_servers.canary.tool_timeout_sec=60",
            "-c", 'mcp_servers.canary.default_tools_approval_mode="approve"',

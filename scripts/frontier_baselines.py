@@ -22,7 +22,7 @@ def main(argv=None):
     commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
     runs = {}
     for label, key in ROWS.items():
-        for mode in ("seat", "all8") if a.all8 else ("seat",):
+        for mode in ("seat", "all8") if a.all8 and label != "oracle" else ("seat",):
             for d in range(1000, 1000 + a.n):
                 for t in range(a.trials):
                     r, _ = run.play_day("oracle", key, a.seat, d, t) if mode == "seat" else run.play_day(key, key, None, d, t)

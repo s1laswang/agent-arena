@@ -750,6 +750,46 @@ def run_ablation(
     command_str: str | None = None,
     quiet: bool = False,
 ) -> dict[str, Any]:
+    prev_retries = os.environ.get("CANARY_LLM_MAX_RETRIES")
+    try:
+        return _run_ablation_impl(
+            out_dir,
+            tier=tier,
+            seeds=seeds,
+            model=model,
+            stub=stub,
+            samples_cache=samples_cache,
+            thinking_level=thinking_level,
+            max_episode_attempts=max_episode_attempts,
+            concurrency=concurrency,
+            chatter_client=chatter_client,
+            investigator_client_factory=investigator_client_factory,
+            command_str=command_str,
+            quiet=quiet,
+        )
+    finally:
+        if prev_retries is None:
+            os.environ.pop("CANARY_LLM_MAX_RETRIES", None)
+        else:
+            os.environ["CANARY_LLM_MAX_RETRIES"] = prev_retries
+
+
+def _run_ablation_impl(
+    out_dir: str | Path = DEFAULT_OUT,
+    *,
+    tier: str = "medium",
+    seeds: Sequence[int] = (10, 11),
+    model: str = DEFAULT_MODEL,
+    stub: bool = False,
+    samples_cache: str | Path | None = None,
+    thinking_level: str | None = None,
+    max_episode_attempts: int = 3,
+    concurrency: int | None = None,
+    chatter_client: Any = None,
+    investigator_client_factory: Callable[..., Any] | None = None,
+    command_str: str | None = None,
+    quiet: bool = False,
+) -> dict[str, Any]:
     if not stub:
         os.environ.setdefault("CANARY_LLM_MAX_RETRIES", "8")
 

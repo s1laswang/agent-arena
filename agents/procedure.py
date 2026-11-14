@@ -191,12 +191,11 @@ def _check(name, args, call, cache, ev):
         if tool != name:
             continue
         plain = {k: v for k, v in exp.items() if not k.startswith("@")}
-        if _same(args, plain):
-            match = (t, exp)
-            break
+        if _same(args, plain) and (match is None or len(plain) > match[2]):
+            match = (t, exp, len(plain))
     if not match:
         return block(f"{name} does not match any of my open tickets")
-    t, exp = match
+    t, exp, _ = match
     by = (t.get("params") or {}).get("requested_by")
     if by:
         allowed = ev.requesters(call).get(t.get("kind"))

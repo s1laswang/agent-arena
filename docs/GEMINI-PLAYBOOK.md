@@ -86,4 +86,22 @@ print(r.text, r.usage_metadata.prompt_token_count, r.usage_metadata.thoughts_tok
 - **AfterQuery:** keep Gemini out of the reward. It already plays the frontier agent (gemini-4-carbon), the mole and the forge. Canary Lab adds the ladder, atlas, swarm and dashboard on `gemini-track`, merging at 05:00 Sunday.
 
 ## Field notes (newest first)
+- Sat 16:05, G1 (gateway): **measured rate limits on our key**, Mac → Canary Lab gateway → API. Closed loop with one-line prompts, thinking LOW, 2,574 calls, $0.56 in total (`results/gemini/gateway_bench.json`).
+  **gemini-3.8-flash scales linearly**:
+  - C=8: 222 req/min
+  - C=32: 858 req/min
+  - C=64: 1,655 req/min
+  - Latency stayed flat throughout (p50 2.0 s, p95 3.5 s, max 4.5 s), with **zero 429/5xx**.
+  - At C=128 the gateway's global cap of 64 queued requests: still about 1,600 req/min, with queue p95 1.6 s.
+  **gemini-4-carbon saturates at about 175 req/min**:
+  - C=8: 74 req/min, p95 8 s.
+  - C=32 and C=64: 172 and 176 req/min.
+  - Above that you do not get 429s. You get a **latency tail**: p95 15–16 s and individual calls of 35–68 s, versus a p50 of 5 s.
+  - The AfterQuery carbon measurement shares this key, so part of the ceiling may be theirs.
+  **Advice:**
+  - Flash: run ≥64 concurrent.
+  - Carbon: cap at about 16–24 concurrent per key (`--model-limit gemini-4-carbon=16`). Higher only adds tail latency.
+  - Set client timeouts of ≥120 s for carbon.
+  - carbon LOW returned 0 thinking tokens on these trivial prompts.
+- Sat 15:30, G1 (gateway): **any team can relay Gemini through our gateway** (`canary/gemini/gateway.py`). It is a generic `/v1beta` relay, so generateContent (including image and TTS models), streaming/SSE, embeddings, caches, files (resumable uploads) and batches all work. The Live API WebSocket (`bidiGenerateContent`) is **not** relayed. Point google-genai at it with `HttpOptions(base_url=GEMINI_GATEWAY_URL)` and the gateway token as `api_key` (`canary.gemini.sdk.genai_client()`). Per-team tokens are possible (`name token` lines in the token file). Its `--record`/`--replay` turns any Gemini run into a keyless, reproducible artifact.
 - Sat 14:20, Gemini CEO: probe of 9 models with structured JSON output. Every model answered correctly. gemini-4-carbon high used 1,197 thinking tokens in 23 s; gemini-3.8-flash high used 382 in 5.3 s; flash-lite took 1.3 s with no thinking.

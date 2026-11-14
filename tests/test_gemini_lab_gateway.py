@@ -159,6 +159,16 @@ def _gw(upstream, tmp_path, **kw):
     return GW(**base)
 
 
+def _stats(g, n=1, timeout=5.0):
+    """Stats lines are written just after the response is sent: wait for at least n."""
+    t = time.time() + timeout
+    while True:
+        lines = g.gw.stats_path.read_text().splitlines() if g.gw.stats_path.exists() else []
+        if len(lines) >= n or time.time() > t:
+            return [json.loads(x) for x in lines]
+        time.sleep(0.02)
+
+
 def _gen(url, key=TOKEN, model="gemini-3.1-flash-lite", body=None, via="header"):
     body = body or {"contents": [{"role": "user", "parts": [{"text": "hi"}]}]}
     path = f"/v1beta/models/{model}:generateContent"
@@ -192,7 +202,7 @@ def test_key_swap_header_and_query(upstream, tmp_path):
             blob = json.dumps(s["headers"]) + s["path"] + s["body"].decode()
             assert TOKEN not in blob and OTHER not in blob
             assert "key=" not in s["path"]
-        stats = [json.loads(x) for x in g.gw.stats_path.read_text().splitlines()]
+        stats = _stats(g, 2)
         assert {s["client"] for s in stats} == {"lab", "meta"}
         assert all(s["model"] == "gemini-3.1-flash-lite" and s["op"] == "generateContent" for s in stats)
     finally:
@@ -247,7 +257,7 @@ def test_concurrency_cap_and_queueing(upstream, tmp_path):
             rs = list(ex.map(lambda i: _gen(g.url, body={"contents": [{"parts": [{"text": str(i)}]}]}), range(6)))
         assert all(r.status_code == 200 for r in rs)
         assert upstream.max_active <= 2
-        stats = [json.loads(x) for x in g.gw.stats_path.read_text().splitlines()]
+        stats = _stats(g, 6)
         assert max(s["queued_s"] for s in stats) >= 0.1
     finally:
         g.close()
@@ -270,7 +280,7 @@ def test_retries_429_with_backoff(upstream, tmp_path):
     g = _gw(upstream, tmp_path)
     try:
         assert _gen(g.url).status_code == 200
-        stats = [json.loads(x) for x in g.gw.stats_path.read_text().splitlines()]
+        stats = _stats(g, 1)
         assert stats[-1]["retries"] == 2 and stats[-1]["status"] == 200
     finally:
         g.close()
@@ -303,6 +313,7 @@ def test_stats_have_no_secrets_or_bodies(upstream, tmp_path):
     try:
         _gen(g.url, body={"contents": [{"parts": [{"text": "SECRET-PROMPT"}]}]})
         _gen(g.url, key="bad-bad-bad-bad-bad-bad")
+        _stats(g, 2)
         text = g.gw.stats_path.read_text()
         assert REAL not in text and TOKEN not in text and "SECRET-PROMPT" not in text and "bad-bad" not in text
         assert {"ts", "model", "method", "status", "latency_s", "queued_s", "bytes_in", "bytes_out",

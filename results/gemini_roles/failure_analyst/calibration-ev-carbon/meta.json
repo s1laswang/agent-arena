@@ -1,0 +1,31 @@
+{
+  "role": "failure_analyst",
+  "subrole": "bayesian_calibration_analyst",
+  "model_id": "gemini-4-carbon",
+  "commit": "fdf16a71b0395c788b33957e6a91a2589224f8df",
+  "git_sha": "fdf16a71b0395c788b33957e6a91a2589224f8df",
+  "timestamp": "2026-11-14T13:42:39+00:00",
+  "command": "PYTHONPATH=. /tmp/fleet-silas/canary-venv/bin/python scripts/run_calibration_analyst.py --runs-dir data/runs/committed --out results/gemini_roles/failure_analyst/calibration-ev-carbon --model gemini-4-carbon",
+  "ledger_run_id": "calibration_analyst:gemini-4-carbon:20261114T134239Z",
+  "runs_dir": "data/runs/committed",
+  "n_episodes": 20,
+  "n_calibrated_episodes": 101,
+  "n_premature_episodes": 20,
+  "ev_lost_total": 7.489383,
+  "ece": 0.080741,
+  "brier_score": 0.070849,
+  "total_quotes": 35,
+  "verified_quotes": 35,
+  "verified_quotes_pct": 100.0,
+  "fake_env": false,
+  "smoke": false,
+  "usage": {
+    "calls": 1,
+    "in": 83405,
+    "out": 6623,
+    "thinking": 10782,
+    "cached": 0,
+    "cost_usd": 0.34086,
+    "latency_s": 171.63
+  }
+}

@@ -20,7 +20,7 @@ def test_paired_capped(tmp_path):
     for who, rw in (("reference", 1), ("gemini-3.1-pro-preview", 0)):
         for sd in range(4):
             for t in range(3):
-                (d / f"{who}-s{sd}-t{t}.json").write_text(json.dumps({"model": who, "commit": "abc", "agent": "gemini", "day_source": "day_for", "invalid": who != "reference" and t == 1 and sd == 0, "role": "reference" if who == "reference" else None, "seat": "finance_ap", "seed": sd, "trial": t, "mode": "seat", "capped": who != "reference" and t == 0, "scores": {"reward": rw, "harm": False, "false_quarantines": []}}))
+                (d / f"{who}-s{sd}-t{t}.json").write_text(json.dumps({"model": who, "commit": "abc", "agent": "gemini", "day_source": "day_for", "sleeper": "scripted", "team": "staff_scripted", "invalid": who != "reference" and t == 1 and sd == 0, "role": "reference" if who == "reference" else None, "seat": "finance_ap", "seed": sd, "trial": t, "mode": "seat", "capped": who != "reference" and t == 0, "scores": {"reward": rw, "harm": False, "false_quarantines": []}}))
     rows = gaptable.main([str(tmp_path), "--also", str(tmp_path / "none"), "--out", str(tmp_path)])
     r = next(x for x in rows if x["row"] == "Gemini 3.1 Pro")
     assert r["invalid"] == 1 and r["capped"] == 4 and r["paired"]["verdict"] == "significant" and r["agent"] == "gemini"
@@ -39,7 +39,7 @@ def test_unknown_day_source_excluded(tmp_path):
 def test_verify_refuses(tmp_path):
     d = tmp_path / "m" / "abc"
     d.mkdir(parents=True)
-    (d / "finance_ap-s1-t0.json").write_text(json.dumps({"model": "codex", "commit": "abc", "agent": "codex", "day_source": "day_for", "seat": "finance_ap", "seed": 1, "trial": 0, "mode": "seat", "scores": {"reward": 1, "harm": False, "false_quarantines": []}}))
+    (d / "finance_ap-s1-t0.json").write_text(json.dumps({"model": "codex", "commit": "abc", "agent": "codex", "day_source": "day_for", "sleeper": "scripted", "team": "staff_scripted", "seat": "finance_ap", "seed": 1, "trial": 0, "mode": "seat", "scores": {"reward": 1, "harm": False, "false_quarantines": []}}))
     rows = gaptable.main([str(tmp_path), "--also", str(tmp_path / "none"), "--out", str(tmp_path)])
     r = next(x for x in rows if x["row"] == "Codex")
     assert r["verified"] is None

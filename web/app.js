@@ -168,7 +168,7 @@ async function init(){
   if(q.get("vs"))ids.push(q.get("vs"));
   const days=await Promise.all(ids.map(load));
   document.body.classList.toggle("compare",days.length>1);
-  $("runs").innerHTML=days.map(D=>{const r=res(D);return `<section class="run"><div class="runhead"><b>${esc(TEAM[r.agent]||r.agent)}</b>${badge(prov(r.agent_kind,r.model,D.provenance))}<span class="muted">${esc(D.id)}, seed ${esc(D.day.seed)}, seat ${esc(label(r.seat_under_test||"all"))}</span><span class="spacer"></span><span class="verdict"></span></div><main><div class="floor" aria-label="Office floor"></div><ul class="moments" aria-label="Key moments"></ul><aside><h2>Chat and email <span class="count muted"></span></h2><ol class="feed"></ol></aside></main><div class="panel" hidden></div></section>`}).join("");
+  $("runs").innerHTML=days.map(D=>{const r=res(D);return `<section class="run"><div class="runhead"><b>${esc(TEAM[r.agent]||r.agent)}</b>${badge(prov(r.agent_kind,r.model,D.provenance))}<span class="muted">${esc(D.id)}, seed ${esc(D.day.seed)}, ${r.seat_under_test?`seat under test: ${esc(label(r.seat_under_test))} (${esc(r.model||"unknown")})`:"all seats"}</span><span class="spacer"></span><span class="verdict"></span></div><main><div class="floor" aria-label="Office floor"></div><ul class="moments" aria-label="Key moments"></ul><aside><h2>Chat and email <span class="count muted"></span></h2><ol class="feed"></ol></aside></main><div class="panel" hidden></div></section>`}).join("");
   runs=days.map((D,i)=>({D,el:$("runs").children[i]}));
   max=Math.max(...days.map(dayMax));
   $("scrub").max=max;

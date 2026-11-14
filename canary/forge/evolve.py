@@ -123,6 +123,7 @@ def _write_gen(path, gen, pop, baseline, mutator, t0):
             "feasible_share": len(feas) / len(pop), "best_strategy": best["strategy_json"],
             "best_eval": {k: v for k, v in best["eval"].items() if k != "fitness"},
             "baseline_solver_score": baseline["score"], "mutator": getattr(mutator, "name", "?"),
+            "mutator_stats": mutator.stats() if hasattr(mutator, "stats") else None,
             "seconds": round(time.time() - t0, 3),
             "population": [{"strategy_json": p["strategy_json"], "fitness": _fin(p["fitness"]),
                             "eval": {k: v for k, v in p["eval"].items() if k != "fitness"}} for p in pop]}

@@ -22,9 +22,8 @@ every evolved or designed mole is verified to remain catchable by the reference 
 from the agent's reasoning failures, never from impossible or unfair scenarios. That is how the
 difficulty gap gets built by design, not by luck.
 
-**4. Why Gemini is essential.** Without it there is no company (no personas or text), no evolved moles,
-and therefore no hard tier. The judge tier is literally Gemini's output, frozen and solver-verified.
-Long context makes the analyst possible: one call over dozens of full trajectories.
+**4. Why Gemini is essential.** Three API features are the experiment. Thinking level is the single factor the ladder changes. Thought signatures keep reasoning state across function-calling turns, so a tool episode can be replayed. The explicit context cache served 82.7% of input tokens (339,812,795 of 411,032,407), and the programme cost $146.02 at list price. TTS and the Live API only narrate the demo. Write-up: `docs/gemini/SUBMISSION.md`.
 
-**Honest status (Sat 03:00):** every Gemini path runs and is tested tonight on the deterministic `stub`
-backend (no API key yet). Tomorrow only the key changes; outputs, quality and the numbers then come from real Gemini.
+**Status:** the Gemini paths have run against the live Gemini API. Every call is ledgered:
+15,757 calls, $146.02 at list price (`results/gemini/dashboard.html`, cost_usd 146.0212). On hard, n=8, gemini-3.6-flash (requested as gemini-3.5-flash) is 92% [76%, 113%] of the solver at medium thinking and 102% [84%, 129%] at high, within those CIs, 16/16 correct (`results/gemini/ladder.md`, 157 episodes). Results: `results/gemini/ladder.md`, `atlas.md`,
+`swarm.md`; write-up: `docs/gemini/SUBMISSION.md`. The deterministic `stub` client remains for keyless tests.

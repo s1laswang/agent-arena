@@ -100,12 +100,16 @@ def load_import(spec: str) -> list[dict]:
     for e in load_runs(path):
         if e.get("end_reason") == "error" or e["tier"] not in TIERS:
             continue
+        mf = next(iter(Path(path).rglob(f"{e['meta'].get('run_id')}/meta.json")), None)
+        if mf is None:
+            mf = Path(path) / e["tier"] / "meta.json"
+        msha = json.loads(mf.read_text()).get("git_sha") if mf.exists() else None
         u = (e.get("meta") or {}).get("usage") or {}
         e["_cell"] = {"model": model, "level": level, "tier": e["tier"], "seed": int(e["seed"]),
                       "source": "import:" + str(path).replace(str(Path.home()), "~"), "run_id": None, "thinking": u.get("out"), "calls": u.get("calls"),
                       "in": u.get("in"), "out": None, "cached": u.get("cached_in"), "wall_s": None,
                       "thinking_is_estimate": True, "tiers_version": "v1.4 (imported dir)",
-                      "launch_git_sha": (e.get("meta") or {}).get("git_sha"), "code_fingerprint": None,
+                      "launch_git_sha": msha, "code_fingerprint": None,
                       "model_versions": [],
                       "cost_usd": u.get("cost_usd_est", u.get("cost_usd"))}
         out.append(e)
@@ -315,6 +319,8 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
             ax.axhline(solver_mean[tier], ls="--", color="k", lw=1, label="reference solver")
         ax.axhline(0, color="#999", lw=0.6)
         ax.set_xscale("symlog", linthresh=1000)
+        ax.set_xlim(-200, 150000)
+        ax.set_xticks([0, 1000, 10000, 100000], ["0", "1k", "10k", "100k"])
         ax.set_xlabel("mean thinking tokens per episode (symlog; 0 = no thinking)")
         ax.set_ylabel("mean score (true V if correct, -1 wrong)")
         ax.set_title(f"{tier}: thinking-to-competence")

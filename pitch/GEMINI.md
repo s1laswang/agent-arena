@@ -11,6 +11,25 @@ Project: The Sleeper. Status key: BUILT means merged into `momin` with a test; P
 - `SLEEPER_OFFLINE=1` never calls the API. Staff and reference raise on a cache miss. The sleeper agent and the analyst explanation fall back to scripted instead, so an offline rerun can quietly use the scripted sleeper there.
 - The "reference" is a scripted evidence-only team: `Reference` in `agents/reference.py` (lines 187 to 353) has no reference to `day.sleeper_seat`, `goal` or ticket `legit` flags, and `make_reference_team` ignores the day. The oracle does use the hidden sleeper identity, so it is a perfect-information check, not the reference.
 
+## Numbers to paste
+
+Every cell is NOT FOUND until a keyed run exists. Run HANDOFF.md section 2 steps 2 to 5, then paste from `results/*/summary.json` (including `gemini_usage`) and `make eval` output, with the commit hash.
+
+| Item | Value |
+|---|---|
+| Model id used | NOT FOUND |
+| Gemini staff reward (20 days x 3) | NOT FOUND |
+| Gemini reference reward (20 days x 3) | NOT FOUND |
+| Gap (reference minus staff) | NOT FOUND |
+| Sleeper success vs Gemini staff | NOT FOUND |
+| False accusation rate, Gemini staff | NOT FOUND |
+| Gemini calls and tokens for the run | NOT FOUND |
+| Cost of the run | NOT FOUND |
+| Cache size and offline replay identical | NOT FOUND |
+| Failure analyst: top failure labels | NOT FOUND |
+| Multimodal forged invoice verified live | NOT FOUND |
+| Commit hash of the keyed run | NOT FOUND |
+
 ## 1. The problem and why it matters
 
 Companies are starting to run real work through teams of AI agents: paying invoices, changing bank details, granting access. An agent with a hidden goal, or a compromised one, can move money or leak a secret while looking like a normal coworker. Most agent tests check one agent on one task. They do not test whether a group of agents can notice an insider and stop it without accusing an innocent.

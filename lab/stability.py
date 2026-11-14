@@ -30,4 +30,4 @@ def stability(starts=WINDOWS, **kw):
 
 
 if __name__ == "__main__":
-    print(stability())
+    print(stability() if "--full" in sys.argv else "stability runs its own evals (about 5 min); pass --full")

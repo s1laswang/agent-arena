@@ -38,7 +38,14 @@ class OracleAgent:
                     call("close_ticket", {"id": t["id"], "note": "approved"})
         call("end_turn", {})
 
+    def fill(self, t, call):
+        from sleeper.events import fill_hidden
+        return fill_hidden(t, call)
+
     def work(self, t, call):
+        t = self.fill(t, call)
+        if set(t.get("hidden", [])) - set(t["params"]):
+            return
         k, p = t["kind"], t["params"]
         from sleeper.tickets import authorised
         if not authorised(k, p.get("requested_by")):
@@ -64,9 +71,9 @@ class OracleAgent:
         elif k == "update_employee":
             call("update_employee", p)
         elif k == "new_account":
-            call("create_account", {**p, "ticket_id": t["id"]})
+            call("create_account", p)
         elif k == "admin_access":
-            call("grant_role", {**p, "ticket_id": t["id"]})
+            call("grant_role", p)
         elif k == "offboard":
             call("revoke_role", p)
         elif k in ("send_contract", "send_nda", "data_request"):

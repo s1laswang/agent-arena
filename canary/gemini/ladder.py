@@ -391,9 +391,6 @@ def run_grid(out: Path, cells: list[Cell], concurrency: int = 4, max_episodes: i
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     ladder_run = ladder_run or out.name
-    os.environ.setdefault("CANARY_LLM_MAX_RETRIES", "12")
-    if not os.environ.get("CANARY_GEMINI_LEDGER"):
-        os.environ["CANARY_GEMINI_LEDGER"] = str(out / "_ledger" / f"{HOST}-{os.getpid()}.jsonl")
     todo = [c for c in cells if not is_done(out, c) and not in_flight_elsewhere(out, c)
             and attempts(out, c) < max_attempts]
     skipped = len(cells) - len(todo)
@@ -477,6 +474,8 @@ def main(argv=None) -> int:
             print(("done " if is_done(out, c) else "todo ") + c.key)
         log(f"DRY: {len(cells)} cells ({n_done} done) in shard {a.shard or '0/1'}")
         return 0
+    os.environ.setdefault("CANARY_LLM_MAX_RETRIES", "12")  # transport retries (as scripts/gemini_runner.py)
+    os.environ.setdefault("CANARY_GEMINI_LEDGER", str(out / "_ledger" / f"{HOST}-{os.getpid()}.jsonl"))
     run_grid(out, cells, a.concurrency, a.max_episodes, a.max_attempts, caps, a.run_name, log=log)
     return 0
 

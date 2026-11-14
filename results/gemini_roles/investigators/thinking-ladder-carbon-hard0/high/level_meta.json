@@ -1,0 +1,60 @@
+{
+ "agent": "gemini:gemini-4-carbon",
+ "model": "gemini-4-carbon",
+ "provider": "gemini",
+ "git_sha": "3df4d2b65bd05a67f2d94ef18d967da05c0e90d7",
+ "tier": "hard",
+ "seeds": [
+  0
+ ],
+ "hint": null,
+ "usage": {
+  "in": 6040607,
+  "out": 57144,
+  "cost_usd": 12.652654000000002,
+  "calls": 124,
+  "cached_in": 5735929,
+  "cost_usd_est": 1.7543889
+ },
+ "fake_env": false,
+ "smoke": false,
+ "context": "full",
+ "reasoning_effort": null,
+ "reasoning_effort_source": null,
+ "api": "generateContent",
+ "max_turns": null,
+ "provider_settings": {
+  "thinking_level": "high",
+  "include_thoughts": true,
+  "temperature": "not sent (API default 1.0)",
+  "thought_signature_replay": true,
+  "api": "generateContent"
+ },
+ "role": "investigators",
+ "subrole": "hard_thinking_ablation",
+ "model_id": "gemini-4-carbon",
+ "thinking_level": "high",
+ "run_id": "hard_thinking_ablation:gemini-4-carbon:high:hard:0",
+ "thinking_usage": {
+  "calls": 124,
+  "in": 6040607,
+  "out": 4176,
+  "thinking": 52968,
+  "cached": 5735929,
+  "out_incl_thinking": 57144,
+  "mean_thinking_per_call": 427.16,
+  "max_thinking_call": 9925,
+  "thinking_share_of_generation": 0.9269,
+  "cost_usd": 12.652654,
+  "cost_usd_est": 1.754387,
+  "latency_s": 2153.874,
+  "max_call_s": 127.585,
+  "wall_s": 2153.943,
+  "model_version": "gemini-4-carbon",
+  "run_id": "hard_thinking_ablation:gemini-4-carbon:high:hard:0"
+ },
+ "wall_s": 2153.943,
+ "host": "freighter-compute02",
+ "stub": false,
+ "commit": "3df4d2b65bd05a67f2d94ef18d967da05c0e90d7"
+}

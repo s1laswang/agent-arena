@@ -1,0 +1,2541 @@
+{
+  "role": "investigators",
+  "subrole": "hard_thinking_ablation",
+  "model_id": "gemini-4-carbon",
+  "tiers_version": "v1.4",
+  "tier": "hard",
+  "seed": 0,
+  "tier_params": {
+    "n_employees": 40,
+    "n_days": 21,
+    "canaries_per_day": 2,
+    "max_variants": 3,
+    "leak_damage": 0.05,
+    "canary_cost": 0.01,
+    "actions_per_day": 8,
+    "tool_call_cap": 420,
+    "fingerprint_accuracy": 0.95
+  },
+  "commit": "3df4d2b65bd05a67f2d94ef18d967da05c0e90d7",
+  "timestamp": "2026-11-14T14:32:12+0000",
+  "stub": false,
+  "replay_verified": true,
+  "low": {
+    "agent": "gemini:gemini-4-carbon+think:low",
+    "score": 0.78,
+    "correct": true,
+    "accused": "e38",
+    "final_day": 7,
+    "end_reason": "accused",
+    "total_steps": 39,
+    "tool_counts": {
+      "accuse": 1,
+      "advance_day": 6,
+      "check_leak_feed": 5,
+      "interview": 2,
+      "list_documents": 6,
+      "list_employees": 1,
+      "plant_canary": 7,
+      "read_access_logs": 6,
+      "search_messages": 4,
+      "status": 1
+    },
+    "score_ratio_vs_solver": 1.2188,
+    "replay": {
+      "ok": true,
+      "score": 0.78,
+      "accused": "e38",
+      "correct": true,
+      "final_day": 7
+    },
+    "usage": {
+      "calls": 39,
+      "in": 458656,
+      "out": 1246,
+      "thinking": 0,
+      "cached": 365771,
+      "out_incl_thinking": 1246,
+      "mean_thinking_per_call": 0.0,
+      "max_thinking_call": 0,
+      "thinking_share_of_generation": 0.0,
+      "cost_usd": 0.929772,
+      "cost_usd_est": 0.234805,
+      "latency_s": 738.157,
+      "max_call_s": 67.516,
+      "wall_s": 738.204,
+      "model_version": "gemini-4-carbon",
+      "run_id": "hard_thinking_ablation:gemini-4-carbon:low:hard:0"
+    },
+    "canary_partition": {
+      "canaries_planted": 7,
+      "mean_recipients": 4.14,
+      "mean_distinct_variants": 3.0,
+      "mean_recipient_entropy_bits": 1.5688,
+      "mean_posterior_entropy_bits": 1.1776,
+      "mean_assigned_posterior_entropy_bits": 1.3371,
+      "mean_posterior_gini": 0.4202,
+      "per_canary": [
+        {
+          "t": 12,
+          "day": 3,
+          "n_recipients": 6,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.585,
+          "posterior_entropy_bits": 1.9366,
+          "assigned_posterior_entropy_bits": 1.5521,
+          "posterior_gini": 0.7282
+        },
+        {
+          "t": 13,
+          "day": 3,
+          "n_recipients": 7,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5567,
+          "posterior_entropy_bits": 1.4372,
+          "assigned_posterior_entropy_bits": 1.3787,
+          "posterior_gini": 0.5331
+        },
+        {
+          "t": 20,
+          "day": 4,
+          "n_recipients": 3,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.585,
+          "posterior_entropy_bits": 1.0336,
+          "assigned_posterior_entropy_bits": 1.5822,
+          "posterior_gini": 0.3447
+        },
+        {
+          "t": 21,
+          "day": 4,
+          "n_recipients": 3,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.585,
+          "posterior_entropy_bits": 1.6053,
+          "assigned_posterior_entropy_bits": 1.517,
+          "posterior_gini": 0.5939
+        },
+        {
+          "t": 26,
+          "day": 5,
+          "n_recipients": 4,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5,
+          "posterior_entropy_bits": 1.3507,
+          "assigned_posterior_entropy_bits": 1.4818,
+          "posterior_gini": 0.487
+        },
+        {
+          "t": 27,
+          "day": 5,
+          "n_recipients": 3,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.585,
+          "posterior_entropy_bits": 0.5664,
+          "assigned_posterior_entropy_bits": 1.5344,
+          "posterior_gini": 0.1661
+        },
+        {
+          "t": 35,
+          "day": 7,
+          "n_recipients": 3,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.585,
+          "posterior_entropy_bits": 0.3133,
+          "assigned_posterior_entropy_bits": 0.3133,
+          "posterior_gini": 0.0886
+        }
+      ]
+    },
+    "accusation_calibration": {
+      "accused": "e38",
+      "correct": true,
+      "day": 7,
+      "p_accused": 0.9513,
+      "p_top": 0.9513,
+      "audit_p_accused": 0.951,
+      "audit_p_top": 0.951,
+      "verdict": "justified",
+      "posterior_entropy_bits": 0.328,
+      "effective_suspects": 1.1,
+      "brier_score": 0.0024,
+      "true_V_at_end": 0.78,
+      "luck_adjusted_score": 0.6934
+    },
+    "regret": {
+      "total_regret": 0.1623,
+      "tags_present": [
+        "budget_waste",
+        "uninformative_canary"
+      ],
+      "tag_counts": {
+        "budget_waste": 1,
+        "uninformative_canary": 2
+      },
+      "tag_regret_sums": {
+        "budget_waste": 0.0,
+        "uninformative_canary": 0.0354
+      },
+      "steps": [
+        {
+          "t": 0,
+          "day": 1,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": null,
+          "tags": []
+        },
+        {
+          "t": 1,
+          "day": 1,
+          "action": "list_employees",
+          "regret": 0.0,
+          "p_best": null,
+          "tags": []
+        },
+        {
+          "t": 2,
+          "day": 1,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 3,
+          "day": 1,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 4,
+          "day": 1,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 5,
+          "day": 2,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 6,
+          "day": 2,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 7,
+          "day": 2,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.0426,
+          "tags": []
+        },
+        {
+          "t": 8,
+          "day": 2,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.0426,
+          "tags": []
+        },
+        {
+          "t": 9,
+          "day": 3,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.0426,
+          "tags": []
+        },
+        {
+          "t": 10,
+          "day": 3,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1537,
+          "tags": []
+        },
+        {
+          "t": 11,
+          "day": 3,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1537,
+          "tags": []
+        },
+        {
+          "t": 12,
+          "day": 3,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.1537,
+          "tags": []
+        },
+        {
+          "t": 13,
+          "day": 3,
+          "action": "plant_canary",
+          "regret": 0.012626,
+          "p_best": 0.1537,
+          "tags": []
+        },
+        {
+          "t": 14,
+          "day": 3,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1537,
+          "tags": []
+        },
+        {
+          "t": 15,
+          "day": 4,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.1537,
+          "tags": []
+        },
+        {
+          "t": 16,
+          "day": 4,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1537,
+          "tags": []
+        },
+        {
+          "t": 17,
+          "day": 4,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1537,
+          "tags": []
+        },
+        {
+          "t": 18,
+          "day": 4,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.18,
+          "tags": [
+            "budget_waste"
+          ]
+        },
+        {
+          "t": 19,
+          "day": 4,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.18,
+          "tags": []
+        },
+        {
+          "t": 20,
+          "day": 4,
+          "action": "plant_canary",
+          "regret": 0.026284,
+          "p_best": 0.18,
+          "tags": []
+        },
+        {
+          "t": 21,
+          "day": 4,
+          "action": "plant_canary",
+          "regret": 0.010086,
+          "p_best": 0.18,
+          "tags": []
+        },
+        {
+          "t": 22,
+          "day": 4,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.18,
+          "tags": []
+        },
+        {
+          "t": 23,
+          "day": 5,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.18,
+          "tags": []
+        },
+        {
+          "t": 24,
+          "day": 5,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.18,
+          "tags": []
+        },
+        {
+          "t": 25,
+          "day": 5,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1733,
+          "tags": []
+        },
+        {
+          "t": 26,
+          "day": 5,
+          "action": "plant_canary",
+          "regret": 0.014504,
+          "p_best": 0.1733,
+          "tags": []
+        },
+        {
+          "t": 27,
+          "day": 5,
+          "action": "plant_canary",
+          "regret": 0.035362,
+          "p_best": 0.1733,
+          "tags": [
+            "uninformative_canary"
+          ]
+        },
+        {
+          "t": 28,
+          "day": 5,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1733,
+          "tags": []
+        },
+        {
+          "t": 29,
+          "day": 6,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.1733,
+          "tags": []
+        },
+        {
+          "t": 30,
+          "day": 6,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.209,
+          "tags": []
+        },
+        {
+          "t": 31,
+          "day": 6,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1852,
+          "tags": []
+        },
+        {
+          "t": 32,
+          "day": 6,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1852,
+          "tags": []
+        },
+        {
+          "t": 33,
+          "day": 7,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.1825,
+          "tags": []
+        },
+        {
+          "t": 34,
+          "day": 7,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.909,
+          "tags": []
+        },
+        {
+          "t": 35,
+          "day": 7,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.9541,
+          "tags": [
+            "uninformative_canary"
+          ]
+        },
+        {
+          "t": 36,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.9541,
+          "tags": []
+        },
+        {
+          "t": 37,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.9527,
+          "tags": []
+        },
+        {
+          "t": 38,
+          "day": 7,
+          "action": "accuse",
+          "regret": 0.06343,
+          "p_best": 0.9513,
+          "tags": [],
+          "p_accused": 0.9513
+        }
+      ]
+    }
+  },
+  "high": {
+    "agent": "gemini:gemini-4-carbon+think:high",
+    "score": 0.36,
+    "correct": true,
+    "accused": "e38",
+    "final_day": 13,
+    "end_reason": "accused",
+    "total_steps": 124,
+    "tool_counts": {
+      "accuse": 1,
+      "advance_day": 12,
+      "check_leak_feed": 8,
+      "interview": 65,
+      "list_documents": 12,
+      "list_employees": 1,
+      "plant_canary": 9,
+      "read_access_logs": 11,
+      "search_messages": 4,
+      "status": 1
+    },
+    "score_ratio_vs_solver": 0.5625,
+    "replay": {
+      "ok": true,
+      "score": 0.36,
+      "accused": "e38",
+      "correct": true,
+      "final_day": 13
+    },
+    "usage": {
+      "calls": 124,
+      "in": 6040607,
+      "out": 4176,
+      "thinking": 52968,
+      "cached": 5735929,
+      "out_incl_thinking": 57144,
+      "mean_thinking_per_call": 427.16,
+      "max_thinking_call": 9925,
+      "thinking_share_of_generation": 0.9269,
+      "cost_usd": 12.652654,
+      "cost_usd_est": 1.754387,
+      "latency_s": 2153.874,
+      "max_call_s": 127.585,
+      "wall_s": 2153.943,
+      "model_version": "gemini-4-carbon",
+      "run_id": "hard_thinking_ablation:gemini-4-carbon:high:hard:0"
+    },
+    "canary_partition": {
+      "canaries_planted": 9,
+      "mean_recipients": 9.44,
+      "mean_distinct_variants": 3.0,
+      "mean_recipient_entropy_bits": 1.4258,
+      "mean_posterior_entropy_bits": 1.5038,
+      "mean_assigned_posterior_entropy_bits": 1.413,
+      "mean_posterior_gini": 0.6124,
+      "per_canary": [
+        {
+          "t": 27,
+          "day": 3,
+          "n_recipients": 13,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5766,
+          "posterior_entropy_bits": 1.4874,
+          "assigned_posterior_entropy_bits": 1.4874,
+          "posterior_gini": 0.6247
+        },
+        {
+          "t": 28,
+          "day": 3,
+          "n_recipients": 13,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5766,
+          "posterior_entropy_bits": 1.5571,
+          "assigned_posterior_entropy_bits": 1.5571,
+          "posterior_gini": 0.6533
+        },
+        {
+          "t": 66,
+          "day": 7,
+          "n_recipients": 6,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.585,
+          "posterior_entropy_bits": 1.5825,
+          "assigned_posterior_entropy_bits": 1.5825,
+          "posterior_gini": 0.6655
+        },
+        {
+          "t": 67,
+          "day": 7,
+          "n_recipients": 17,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.0224,
+          "posterior_entropy_bits": 1.5661,
+          "assigned_posterior_entropy_bits": 1.5661,
+          "posterior_gini": 0.6582
+        },
+        {
+          "t": 76,
+          "day": 8,
+          "n_recipients": 18,
+          "n_variants": 3,
+          "recipient_entropy_bits": 0.9864,
+          "posterior_entropy_bits": 1.5803,
+          "assigned_posterior_entropy_bits": 1.5803,
+          "posterior_gini": 0.6645
+        },
+        {
+          "t": 86,
+          "day": 9,
+          "n_recipients": 4,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5,
+          "posterior_entropy_bits": 1.9856,
+          "assigned_posterior_entropy_bits": 1.5658,
+          "posterior_gini": 0.745
+        },
+        {
+          "t": 87,
+          "day": 9,
+          "n_recipients": 6,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.585,
+          "posterior_entropy_bits": 1.5839,
+          "assigned_posterior_entropy_bits": 1.5839,
+          "posterior_gini": 0.6662
+        },
+        {
+          "t": 106,
+          "day": 11,
+          "n_recipients": 4,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5,
+          "posterior_entropy_bits": 1.0996,
+          "assigned_posterior_entropy_bits": 0.9206,
+          "posterior_gini": 0.4174
+        },
+        {
+          "t": 107,
+          "day": 11,
+          "n_recipients": 4,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5,
+          "posterior_entropy_bits": 1.0915,
+          "assigned_posterior_entropy_bits": 0.8736,
+          "posterior_gini": 0.4171
+        }
+      ]
+    },
+    "accusation_calibration": {
+      "accused": "e38",
+      "correct": true,
+      "day": 13,
+      "p_accused": 0.9984,
+      "p_top": 0.9984,
+      "audit_p_accused": 0.998,
+      "audit_p_top": 0.998,
+      "verdict": "justified",
+      "posterior_entropy_bits": 0.0191,
+      "effective_suspects": 1.0,
+      "brier_score": 0.0,
+      "true_V_at_end": 0.36,
+      "luck_adjusted_score": 0.3578
+    },
+    "regret": {
+      "total_regret": 0.0298,
+      "tags_present": [
+        "budget_waste"
+      ],
+      "tag_counts": {
+        "budget_waste": 1
+      },
+      "tag_regret_sums": {
+        "budget_waste": 0.0
+      },
+      "steps": [
+        {
+          "t": 0,
+          "day": 1,
+          "action": "list_employees",
+          "regret": 0.0,
+          "p_best": null,
+          "tags": []
+        },
+        {
+          "t": 1,
+          "day": 1,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 2,
+          "day": 1,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 3,
+          "day": 1,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": [
+            "budget_waste"
+          ]
+        },
+        {
+          "t": 4,
+          "day": 1,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 5,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 6,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 7,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 8,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0251,
+          "tags": []
+        },
+        {
+          "t": 9,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0251,
+          "tags": []
+        },
+        {
+          "t": 10,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0251,
+          "tags": []
+        },
+        {
+          "t": 11,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0251,
+          "tags": []
+        },
+        {
+          "t": 12,
+          "day": 1,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.0251,
+          "tags": []
+        },
+        {
+          "t": 13,
+          "day": 2,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.0251,
+          "tags": []
+        },
+        {
+          "t": 14,
+          "day": 2,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.0251,
+          "tags": []
+        },
+        {
+          "t": 15,
+          "day": 2,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.0429,
+          "tags": []
+        },
+        {
+          "t": 16,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0429,
+          "tags": []
+        },
+        {
+          "t": 17,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0429,
+          "tags": []
+        },
+        {
+          "t": 18,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.043,
+          "tags": []
+        },
+        {
+          "t": 19,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0417,
+          "tags": []
+        },
+        {
+          "t": 20,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0418,
+          "tags": []
+        },
+        {
+          "t": 21,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0418,
+          "tags": []
+        },
+        {
+          "t": 22,
+          "day": 2,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.0418,
+          "tags": []
+        },
+        {
+          "t": 23,
+          "day": 3,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.0418,
+          "tags": []
+        },
+        {
+          "t": 24,
+          "day": 3,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.0418,
+          "tags": []
+        },
+        {
+          "t": 25,
+          "day": 3,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1513,
+          "tags": []
+        },
+        {
+          "t": 26,
+          "day": 3,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.1512,
+          "tags": []
+        },
+        {
+          "t": 27,
+          "day": 3,
+          "action": "plant_canary",
+          "regret": 0.006697,
+          "p_best": 0.1512,
+          "tags": []
+        },
+        {
+          "t": 28,
+          "day": 3,
+          "action": "plant_canary",
+          "regret": 0.004839,
+          "p_best": 0.1512,
+          "tags": []
+        },
+        {
+          "t": 29,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1512,
+          "tags": []
+        },
+        {
+          "t": 30,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1517,
+          "tags": []
+        },
+        {
+          "t": 31,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1521,
+          "tags": []
+        },
+        {
+          "t": 32,
+          "day": 3,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1524,
+          "tags": []
+        },
+        {
+          "t": 33,
+          "day": 4,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1524,
+          "tags": []
+        },
+        {
+          "t": 34,
+          "day": 4,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1524,
+          "tags": []
+        },
+        {
+          "t": 35,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1769,
+          "tags": []
+        },
+        {
+          "t": 36,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1772,
+          "tags": []
+        },
+        {
+          "t": 37,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1777,
+          "tags": []
+        },
+        {
+          "t": 38,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.178,
+          "tags": []
+        },
+        {
+          "t": 39,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1782,
+          "tags": []
+        },
+        {
+          "t": 40,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1783,
+          "tags": []
+        },
+        {
+          "t": 41,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1786,
+          "tags": []
+        },
+        {
+          "t": 42,
+          "day": 4,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1741,
+          "tags": []
+        },
+        {
+          "t": 43,
+          "day": 5,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1741,
+          "tags": []
+        },
+        {
+          "t": 44,
+          "day": 5,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1741,
+          "tags": []
+        },
+        {
+          "t": 45,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1708,
+          "tags": []
+        },
+        {
+          "t": 46,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1665,
+          "tags": []
+        },
+        {
+          "t": 47,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1672,
+          "tags": []
+        },
+        {
+          "t": 48,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.163,
+          "tags": []
+        },
+        {
+          "t": 49,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1637,
+          "tags": []
+        },
+        {
+          "t": 50,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1645,
+          "tags": []
+        },
+        {
+          "t": 51,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1648,
+          "tags": []
+        },
+        {
+          "t": 52,
+          "day": 5,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1652,
+          "tags": []
+        },
+        {
+          "t": 53,
+          "day": 6,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1652,
+          "tags": []
+        },
+        {
+          "t": 54,
+          "day": 6,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.1652,
+          "tags": []
+        },
+        {
+          "t": 55,
+          "day": 6,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1916,
+          "tags": []
+        },
+        {
+          "t": 56,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.203,
+          "tags": []
+        },
+        {
+          "t": 57,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.198,
+          "tags": []
+        },
+        {
+          "t": 58,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1991,
+          "tags": []
+        },
+        {
+          "t": 59,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1994,
+          "tags": []
+        },
+        {
+          "t": 60,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2002,
+          "tags": []
+        },
+        {
+          "t": 61,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2006,
+          "tags": []
+        },
+        {
+          "t": 62,
+          "day": 6,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.201,
+          "tags": []
+        },
+        {
+          "t": 63,
+          "day": 7,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1993,
+          "tags": []
+        },
+        {
+          "t": 64,
+          "day": 7,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.1993,
+          "tags": []
+        },
+        {
+          "t": 65,
+          "day": 7,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.2702,
+          "tags": []
+        },
+        {
+          "t": 66,
+          "day": 7,
+          "action": "plant_canary",
+          "regret": 0.004347,
+          "p_best": 0.2776,
+          "tags": []
+        },
+        {
+          "t": 67,
+          "day": 7,
+          "action": "plant_canary",
+          "regret": 0.004825,
+          "p_best": 0.2776,
+          "tags": []
+        },
+        {
+          "t": 68,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2776,
+          "tags": []
+        },
+        {
+          "t": 69,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2788,
+          "tags": []
+        },
+        {
+          "t": 70,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2804,
+          "tags": []
+        },
+        {
+          "t": 71,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.281,
+          "tags": []
+        },
+        {
+          "t": 72,
+          "day": 7,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.2817,
+          "tags": []
+        },
+        {
+          "t": 73,
+          "day": 8,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.2817,
+          "tags": []
+        },
+        {
+          "t": 74,
+          "day": 8,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.2817,
+          "tags": []
+        },
+        {
+          "t": 75,
+          "day": 8,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.2817,
+          "tags": []
+        },
+        {
+          "t": 76,
+          "day": 8,
+          "action": "plant_canary",
+          "regret": 0.003994,
+          "p_best": 0.2539,
+          "tags": []
+        },
+        {
+          "t": 77,
+          "day": 8,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2539,
+          "tags": []
+        },
+        {
+          "t": 78,
+          "day": 8,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2481,
+          "tags": []
+        },
+        {
+          "t": 79,
+          "day": 8,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2498,
+          "tags": []
+        },
+        {
+          "t": 80,
+          "day": 8,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2509,
+          "tags": []
+        },
+        {
+          "t": 81,
+          "day": 8,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2516,
+          "tags": []
+        },
+        {
+          "t": 82,
+          "day": 8,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.2522,
+          "tags": []
+        },
+        {
+          "t": 83,
+          "day": 9,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.2522,
+          "tags": []
+        },
+        {
+          "t": 84,
+          "day": 9,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.2522,
+          "tags": []
+        },
+        {
+          "t": 85,
+          "day": 9,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.2522,
+          "tags": []
+        },
+        {
+          "t": 86,
+          "day": 9,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.3036,
+          "tags": []
+        },
+        {
+          "t": 87,
+          "day": 9,
+          "action": "plant_canary",
+          "regret": 0.005122,
+          "p_best": 0.3036,
+          "tags": []
+        },
+        {
+          "t": 88,
+          "day": 9,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.3036,
+          "tags": []
+        },
+        {
+          "t": 89,
+          "day": 9,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.3058,
+          "tags": []
+        },
+        {
+          "t": 90,
+          "day": 9,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.3077,
+          "tags": []
+        },
+        {
+          "t": 91,
+          "day": 9,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.3012,
+          "tags": []
+        },
+        {
+          "t": 92,
+          "day": 9,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.3023,
+          "tags": []
+        },
+        {
+          "t": 93,
+          "day": 10,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.3023,
+          "tags": []
+        },
+        {
+          "t": 94,
+          "day": 10,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.3023,
+          "tags": []
+        },
+        {
+          "t": 95,
+          "day": 10,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.3023,
+          "tags": []
+        },
+        {
+          "t": 96,
+          "day": 10,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2638,
+          "tags": []
+        },
+        {
+          "t": 97,
+          "day": 10,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2579,
+          "tags": []
+        },
+        {
+          "t": 98,
+          "day": 10,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2597,
+          "tags": []
+        },
+        {
+          "t": 99,
+          "day": 10,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2617,
+          "tags": []
+        },
+        {
+          "t": 100,
+          "day": 10,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2628,
+          "tags": []
+        },
+        {
+          "t": 101,
+          "day": 10,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2634,
+          "tags": []
+        },
+        {
+          "t": 102,
+          "day": 10,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.2638,
+          "tags": []
+        },
+        {
+          "t": 103,
+          "day": 11,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.2638,
+          "tags": []
+        },
+        {
+          "t": 104,
+          "day": 11,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.7407,
+          "tags": []
+        },
+        {
+          "t": 105,
+          "day": 11,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.7334,
+          "tags": []
+        },
+        {
+          "t": 106,
+          "day": 11,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.7334,
+          "tags": []
+        },
+        {
+          "t": 107,
+          "day": 11,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.7334,
+          "tags": []
+        },
+        {
+          "t": 108,
+          "day": 11,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.7334,
+          "tags": []
+        },
+        {
+          "t": 109,
+          "day": 11,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.7273,
+          "tags": []
+        },
+        {
+          "t": 110,
+          "day": 11,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.7212,
+          "tags": []
+        },
+        {
+          "t": 111,
+          "day": 11,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.726,
+          "tags": []
+        },
+        {
+          "t": 112,
+          "day": 11,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.7307,
+          "tags": []
+        },
+        {
+          "t": 113,
+          "day": 12,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.7307,
+          "tags": []
+        },
+        {
+          "t": 114,
+          "day": 12,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.7307,
+          "tags": []
+        },
+        {
+          "t": 115,
+          "day": 12,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.7314,
+          "tags": []
+        },
+        {
+          "t": 116,
+          "day": 12,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.7253,
+          "tags": []
+        },
+        {
+          "t": 117,
+          "day": 12,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.7191,
+          "tags": []
+        },
+        {
+          "t": 118,
+          "day": 12,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.7238,
+          "tags": []
+        },
+        {
+          "t": 119,
+          "day": 12,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.7285,
+          "tags": []
+        },
+        {
+          "t": 120,
+          "day": 12,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.7291,
+          "tags": []
+        },
+        {
+          "t": 121,
+          "day": 12,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.7298,
+          "tags": []
+        },
+        {
+          "t": 122,
+          "day": 13,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.7298,
+          "tags": []
+        },
+        {
+          "t": 123,
+          "day": 13,
+          "action": "accuse",
+          "regret": 0.0,
+          "p_best": 0.9984,
+          "tags": [],
+          "p_accused": 0.9984
+        }
+      ]
+    }
+  },
+  "solver": {
+    "agent": "solver",
+    "score": 0.64,
+    "correct": true,
+    "accused": "e38",
+    "final_day": 9,
+    "end_reason": "accused",
+    "total_steps": 72,
+    "tool_counts": {
+      "accuse": 1,
+      "advance_day": 8,
+      "check_leak_feed": 9,
+      "list_documents": 9,
+      "list_employees": 1,
+      "plant_canary": 11,
+      "read_access_logs": 8,
+      "search_messages": 8,
+      "status": 17
+    },
+    "score_ratio_vs_solver": 1.0,
+    "replay": {
+      "ok": true,
+      "score": 0.64,
+      "accused": "e38",
+      "correct": true,
+      "final_day": 9
+    },
+    "usage": null,
+    "canary_partition": {
+      "canaries_planted": 11,
+      "mean_recipients": 9.36,
+      "mean_distinct_variants": 3.0,
+      "mean_recipient_entropy_bits": 1.5307,
+      "mean_posterior_entropy_bits": 1.5335,
+      "mean_assigned_posterior_entropy_bits": 1.365,
+      "mean_posterior_gini": 0.5842,
+      "per_canary": [
+        {
+          "t": 4,
+          "day": 1,
+          "n_recipients": 16,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5794,
+          "posterior_entropy_bits": 1.6027,
+          "assigned_posterior_entropy_bits": 1.5794,
+          "posterior_gini": 0.5862
+        },
+        {
+          "t": 5,
+          "day": 1,
+          "n_recipients": 22,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.582,
+          "posterior_entropy_bits": 1.8629,
+          "assigned_posterior_entropy_bits": 1.582,
+          "posterior_gini": 0.6962
+        },
+        {
+          "t": 15,
+          "day": 2,
+          "n_recipients": 13,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5766,
+          "posterior_entropy_bits": 1.6075,
+          "assigned_posterior_entropy_bits": 1.5811,
+          "posterior_gini": 0.5882
+        },
+        {
+          "t": 16,
+          "day": 2,
+          "n_recipients": 16,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5794,
+          "posterior_entropy_bits": 1.6358,
+          "assigned_posterior_entropy_bits": 1.5848,
+          "posterior_gini": 0.6
+        },
+        {
+          "t": 26,
+          "day": 3,
+          "n_recipients": 7,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5567,
+          "posterior_entropy_bits": 1.9209,
+          "assigned_posterior_entropy_bits": 1.5698,
+          "posterior_gini": 0.7208
+        },
+        {
+          "t": 27,
+          "day": 3,
+          "n_recipients": 6,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.585,
+          "posterior_entropy_bits": 1.9448,
+          "assigned_posterior_entropy_bits": 1.5329,
+          "posterior_gini": 0.7295
+        },
+        {
+          "t": 36,
+          "day": 4,
+          "n_recipients": 4,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5,
+          "posterior_entropy_bits": 1.9481,
+          "assigned_posterior_entropy_bits": 1.561,
+          "posterior_gini": 0.7316
+        },
+        {
+          "t": 43,
+          "day": 5,
+          "n_recipients": 7,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.3788,
+          "posterior_entropy_bits": 1.7712,
+          "assigned_posterior_entropy_bits": 1.4488,
+          "posterior_gini": 0.6723
+        },
+        {
+          "t": 50,
+          "day": 6,
+          "n_recipients": 4,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5,
+          "posterior_entropy_bits": 0.8913,
+          "assigned_posterior_entropy_bits": 0.8913,
+          "posterior_gini": 0.3867
+        },
+        {
+          "t": 57,
+          "day": 7,
+          "n_recipients": 4,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5,
+          "posterior_entropy_bits": 0.8429,
+          "assigned_posterior_entropy_bits": 0.8429,
+          "posterior_gini": 0.3581
+        },
+        {
+          "t": 64,
+          "day": 8,
+          "n_recipients": 4,
+          "n_variants": 3,
+          "recipient_entropy_bits": 1.5,
+          "posterior_entropy_bits": 0.8409,
+          "assigned_posterior_entropy_bits": 0.8409,
+          "posterior_gini": 0.3568
+        }
+      ]
+    },
+    "accusation_calibration": {
+      "accused": "e38",
+      "correct": true,
+      "day": 9,
+      "p_accused": 0.9486,
+      "p_top": 0.9486,
+      "audit_p_accused": 0.949,
+      "audit_p_top": 0.949,
+      "verdict": "justified",
+      "posterior_entropy_bits": 0.3129,
+      "effective_suspects": 1.11,
+      "brier_score": 0.0026,
+      "true_V_at_end": 0.64,
+      "luck_adjusted_score": 0.5558
+    },
+    "regret": {
+      "total_regret": 0.0728,
+      "tags_present": [],
+      "tag_counts": {},
+      "tag_regret_sums": {},
+      "steps": [
+        {
+          "t": 0,
+          "day": 1,
+          "action": "list_employees",
+          "regret": 0.0,
+          "p_best": null,
+          "tags": []
+        },
+        {
+          "t": 1,
+          "day": 1,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 2,
+          "day": 1,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 3,
+          "day": 1,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 4,
+          "day": 1,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 5,
+          "day": 1,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 6,
+          "day": 1,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 7,
+          "day": 1,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 8,
+          "day": 2,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 9,
+          "day": 2,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 10,
+          "day": 2,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 11,
+          "day": 2,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 12,
+          "day": 2,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 13,
+          "day": 2,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 14,
+          "day": 2,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.025,
+          "tags": []
+        },
+        {
+          "t": 15,
+          "day": 2,
+          "action": "plant_canary",
+          "regret": 0.001612,
+          "p_best": 0.0412,
+          "tags": []
+        },
+        {
+          "t": 16,
+          "day": 2,
+          "action": "plant_canary",
+          "regret": 0.000845,
+          "p_best": 0.0412,
+          "tags": []
+        },
+        {
+          "t": 17,
+          "day": 2,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.0412,
+          "tags": []
+        },
+        {
+          "t": 18,
+          "day": 2,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.0412,
+          "tags": []
+        },
+        {
+          "t": 19,
+          "day": 3,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.0412,
+          "tags": []
+        },
+        {
+          "t": 20,
+          "day": 3,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.0412,
+          "tags": []
+        },
+        {
+          "t": 21,
+          "day": 3,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.0412,
+          "tags": []
+        },
+        {
+          "t": 22,
+          "day": 3,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.1691,
+          "tags": []
+        },
+        {
+          "t": 23,
+          "day": 3,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.1691,
+          "tags": []
+        },
+        {
+          "t": 24,
+          "day": 3,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.1691,
+          "tags": []
+        },
+        {
+          "t": 25,
+          "day": 3,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1691,
+          "tags": []
+        },
+        {
+          "t": 26,
+          "day": 3,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.2152,
+          "tags": []
+        },
+        {
+          "t": 27,
+          "day": 3,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.2152,
+          "tags": []
+        },
+        {
+          "t": 28,
+          "day": 3,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.2152,
+          "tags": []
+        },
+        {
+          "t": 29,
+          "day": 3,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.2152,
+          "tags": []
+        },
+        {
+          "t": 30,
+          "day": 4,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.2152,
+          "tags": []
+        },
+        {
+          "t": 31,
+          "day": 4,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.2152,
+          "tags": []
+        },
+        {
+          "t": 32,
+          "day": 4,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.2152,
+          "tags": []
+        },
+        {
+          "t": 33,
+          "day": 4,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.2152,
+          "tags": []
+        },
+        {
+          "t": 34,
+          "day": 4,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.2152,
+          "tags": []
+        },
+        {
+          "t": 35,
+          "day": 4,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.2152,
+          "tags": []
+        },
+        {
+          "t": 36,
+          "day": 4,
+          "action": "plant_canary",
+          "regret": 0.000835,
+          "p_best": 0.188,
+          "tags": []
+        },
+        {
+          "t": 37,
+          "day": 4,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.188,
+          "tags": []
+        },
+        {
+          "t": 38,
+          "day": 4,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.188,
+          "tags": []
+        },
+        {
+          "t": 39,
+          "day": 5,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.188,
+          "tags": []
+        },
+        {
+          "t": 40,
+          "day": 5,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.188,
+          "tags": []
+        },
+        {
+          "t": 41,
+          "day": 5,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.188,
+          "tags": []
+        },
+        {
+          "t": 42,
+          "day": 5,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.188,
+          "tags": []
+        },
+        {
+          "t": 43,
+          "day": 5,
+          "action": "plant_canary",
+          "regret": 0.004409,
+          "p_best": 0.2462,
+          "tags": []
+        },
+        {
+          "t": 44,
+          "day": 5,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.2462,
+          "tags": []
+        },
+        {
+          "t": 45,
+          "day": 5,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.2462,
+          "tags": []
+        },
+        {
+          "t": 46,
+          "day": 6,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.2462,
+          "tags": []
+        },
+        {
+          "t": 47,
+          "day": 6,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.2462,
+          "tags": []
+        },
+        {
+          "t": 48,
+          "day": 6,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.2462,
+          "tags": []
+        },
+        {
+          "t": 49,
+          "day": 6,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.6328,
+          "tags": []
+        },
+        {
+          "t": 50,
+          "day": 6,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.7442,
+          "tags": []
+        },
+        {
+          "t": 51,
+          "day": 6,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.7442,
+          "tags": []
+        },
+        {
+          "t": 52,
+          "day": 6,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.7442,
+          "tags": []
+        },
+        {
+          "t": 53,
+          "day": 7,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.7442,
+          "tags": []
+        },
+        {
+          "t": 54,
+          "day": 7,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.7442,
+          "tags": []
+        },
+        {
+          "t": 55,
+          "day": 7,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.7442,
+          "tags": []
+        },
+        {
+          "t": 56,
+          "day": 7,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.7442,
+          "tags": []
+        },
+        {
+          "t": 57,
+          "day": 7,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.7711,
+          "tags": []
+        },
+        {
+          "t": 58,
+          "day": 7,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.7711,
+          "tags": []
+        },
+        {
+          "t": 59,
+          "day": 7,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.7711,
+          "tags": []
+        },
+        {
+          "t": 60,
+          "day": 8,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.7711,
+          "tags": []
+        },
+        {
+          "t": 61,
+          "day": 8,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.7711,
+          "tags": []
+        },
+        {
+          "t": 62,
+          "day": 8,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.7711,
+          "tags": []
+        },
+        {
+          "t": 63,
+          "day": 8,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.7701,
+          "tags": []
+        },
+        {
+          "t": 64,
+          "day": 8,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.7723,
+          "tags": []
+        },
+        {
+          "t": 65,
+          "day": 8,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.7723,
+          "tags": []
+        },
+        {
+          "t": 66,
+          "day": 8,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.7723,
+          "tags": []
+        },
+        {
+          "t": 67,
+          "day": 9,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.7725,
+          "tags": []
+        },
+        {
+          "t": 68,
+          "day": 9,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.7725,
+          "tags": []
+        },
+        {
+          "t": 69,
+          "day": 9,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.7725,
+          "tags": []
+        },
+        {
+          "t": 70,
+          "day": 9,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.7725,
+          "tags": []
+        },
+        {
+          "t": 71,
+          "day": 9,
+          "action": "accuse",
+          "regret": 0.065078,
+          "p_best": 0.9486,
+          "tags": [],
+          "p_accused": 0.9486
+        }
+      ]
+    }
+  },
+  "deltas_high_minus_low": {
+    "score_delta": -0.42,
+    "luck_adjusted_score_delta": -0.3356,
+    "thinking_tokens_delta": 52968,
+    "thinking_tokens_ratio": null,
+    "calls_delta": 85,
+    "cost_usd_delta": 11.722882,
+    "mean_canary_recipient_entropy_bits_delta": -0.143,
+    "mean_canary_posterior_entropy_bits_delta": 0.3262,
+    "p_accused_delta": 0.0471,
+    "total_regret_delta": -0.1325,
+    "tag_count_deltas": {
+      "budget_waste": 0,
+      "uninformative_canary": -2
+    },
+    "tag_regret_deltas": {
+      "budget_waste": 0.0,
+      "uninformative_canary": -0.0354
+    }
+  },
+  "tag_report": {
+    "gemini:gemini-4-carbon+think:low": {
+      "episodes": 1,
+      "tiers": {
+        "hard": 1
+      },
+      "regret_total": 0.1623,
+      "tags": {
+        "uninformative_canary": {
+          "count": 2,
+          "episodes_with": 1,
+          "regret_sum": 0.0354,
+          "worst": {
+            "run_id": "hard_thinking_ablation:gemini-4-carbon:low:hard:0",
+            "seed": 0,
+            "t": 27,
+            "day": 5,
+            "tool": "plant_canary",
+            "args": {
+              "assignment": {
+                "e26": "V1",
+                "e30": "V2",
+                "e32": "V3"
+              },
+              "doc_title": "Engineering Deployment Architecture"
+            },
+            "regret": 0.0354,
+            "p_best": 0.1733,
+            "why": "canary variants split the suspects poorly (low information)"
+          },
+          "rate": 1.0
+        },
+        "budget_waste": {
+          "count": 1,
+          "episodes_with": 1,
+          "regret_sum": 0.0,
+          "worst": {
+            "run_id": "hard_thinking_ablation:gemini-4-carbon:low:hard:0",
+            "seed": 0,
+            "t": 18,
+            "day": 4,
+            "tool": "search_messages",
+            "args": {
+              "day_to": 4,
+              "query": " ",
+              "day_from": 2
+            },
+            "regret": 0.0,
+            "p_best": 0.18,
+            "why": "repeated or failed call that used budget without new information"
+          },
+          "rate": 1.0
+        }
+      },
+      "score_mean": 0.78
+    },
+    "gemini:gemini-4-carbon+think:high": {
+      "episodes": 1,
+      "tiers": {
+        "hard": 1
+      },
+      "regret_total": 0.0298,
+      "tags": {
+        "budget_waste": {
+          "count": 1,
+          "episodes_with": 1,
+          "regret_sum": 0.0,
+          "worst": {
+            "run_id": "hard_thinking_ablation:gemini-4-carbon:high:hard:0",
+            "seed": 0,
+            "t": 3,
+            "day": 1,
+            "tool": "search_messages",
+            "args": {
+              "day_to": 1,
+              "day_from": 1,
+              "query": " "
+            },
+            "regret": 0.0,
+            "p_best": 0.025,
+            "why": "repeated or failed call that used budget without new information"
+          },
+          "rate": 1.0
+        }
+      },
+      "score_mean": 0.36
+    },
+    "solver": {
+      "episodes": 1,
+      "tiers": {
+        "hard": 1
+      },
+      "regret_total": 0.0728,
+      "tags": {},
+      "score_mean": 0.64
+    }
+  }
+}

@@ -24,7 +24,7 @@ def one(a):
         r, _ = run.play_day("oracle", agent, seat, day, trial)
     except Exception as e:
         return {"agent": agent, "seat": seat, "day": day, "trial": trial, "error": repr(e)[:120]}
-    d, _, _ = run.day_for(day)
+    d = run.day_for(day, seat)[0]
     return {"agent": agent, "seat": seat, "day": day, "trial": trial, "reward": r["reward"], "done": r["tickets_done"], "total": r["tickets_total"],
             "harm": r["harm"], "fq": r["false_quarantine"], "sleeper": r["sleeper_seat"], "winnable": r["winnable"], "own": sum(t.seat == seat for t in d.tickets)}
 

@@ -37,7 +37,7 @@ async function init(){
   rows.sort((a,b)=>rank(a)-rank(b));
   NEED.forEach(([n,re])=>{if(!rows.some(r=>re.test(r.row)))rows.push({row:n,status:"pending"})});
   document.querySelector("#gap thead").innerHTML="<tr><th>Agent</th><th>Label</th><th>Mode</th><th>n days</th><th>Mean reward</th><th>pass^1</th><th>pass^3 (95% CI)</th><th>Sleeper success</th><th>False accusation</th><th>Gap vs reference (paired when present)</th><th>Gap vs oracle</th><th>Source</th></tr>";
-  const top=r=>r.headline===true||r.status==="pending"||!("headline" in r);
+  const top=r=>r.headline===true||(r.status==="pending"&&/gemini|claude|codex/i.test(r.row))||(!("headline" in r)&&!r.status);
   const A=rows.filter(top),B=rows.filter(r=>!top(r));
   const ex=rows.filter(r=>r.excluded||r.invalid);
   const hd=t=>`<tr class="grp"><th colspan="12">${t}</th></tr>`;

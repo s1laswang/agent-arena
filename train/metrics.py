@@ -26,11 +26,16 @@ def seat_metrics(day, seat, harmful=None):
             "tickets_done": sum(t["id"] in done for t in tickets), "tickets_total": len(tickets),
             "false_accusations": len(wrong), "reward": day["result"]["reward"]}
 
-def aggregate(run_dir, seat="controller", min_day=1000, harmful=None):
+def needs_seat(day_id, seat):
+    from sleeper.daymix import entry
+    return entry(day_id, seat)["needs_tested_seat"]
+
+def aggregate(run_dir, seat="controller", min_day=1000, harmful=None, only_needs=False):
     rows = []
-    for p in sorted(Path(run_dir).glob("days/*-t*.json")):
+    for p in sorted(Path(run_dir).rglob("days/*-t*.json")):
         d = json.loads(p.read_text())
-        if d["day"]["day_id"] >= min_day:
+        i = d["day"]["day_id"]
+        if i >= min_day and (not only_needs or needs_seat(i, seat)):
             rows.append(seat_metrics(d, seat, harmful))
     n = max(len(rows), 1)
     td = sum(r["tickets_done"] for r in rows)

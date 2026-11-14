@@ -113,18 +113,18 @@ def day_for(day_id, seat=None):
 
         spec = daymix.day_spec(day_id, seat)
     except (ImportError, AttributeError):
-        return make_day(day_id), None, True
+        return make_day(day_id), None, True, {}
     spec = spec if isinstance(spec, dict) else dict(spec.__dict__)
     day = make_day(day_id, spec.get("sleeper_seat"), spec.get("goal"))
     day.tickets = day.tickets + list(spec.get("tickets") or [])
-    return day, spec.get("strategy"), spec.get("winnable", True)
+    return day, spec.get("strategy"), spec.get("winnable", True), {"needs_tested_seat": bool(spec.get("needs_tested_seat")), "strategy": getattr(spec.get("strategy"), "id", None)}
 
 
 def play_day(team, agent, seat, day_id, trial, claim=False):
     from sleeper.day import run_day
     from sleeper.verifier import dump_state, score
 
-    day, strategy, winnable = day_for(day_id, seat)
+    day, strategy, winnable, meta = day_for(day_id, seat)
     players = build_team(team, day, trial)
     if seat:
         players[seat] = build_team(agent, day, trial)[seat]
@@ -147,6 +147,8 @@ def play_day(team, agent, seat, day_id, trial, claim=False):
     result["has_sleeper"] = day.sleeper_seat is not None
     result["sleeper_seat"] = day.sleeper_seat
     result["winnable"] = winnable
+    result["needs_tested_seat"] = meta.get("needs_tested_seat", False)
+    result["strategy"] = meta.get("strategy")
     result["goal_kind"] = goal.kind if goal else None
     state = dump_state(world)
     try:

@@ -48,6 +48,26 @@ def test_report(tmp_path):
         (d / "summary.json").write_text(json.dumps({"team": team, "n_runs": 1, "reward_mean": x["result"]["reward"], "pass^1": x["result"]["reward"], "sleeper_success_rate": 0.0, "false_accusation_rate": 0.0, "ticket_completion": 1.0, "by_goal_kind": {}}))
     report.main(tmp_path)
     t = (tmp_path / "REPORT.md").read_text()
-    assert "unfinished_tickets" in t and "| reference |" in t and "## Who gets fooled" in t
+    assert "unfinished_tickets" in t and "| reference-all-d1@1-t1 |" in t and "## Who gets fooled" in t
     for n in ("gap", "labels", "seats"):
         assert (tmp_path / f"{n}.svg").read_text().startswith("<svg")
+
+
+def play(team, day_id):
+    from lab.run import play_day
+    res, extra = play_day(team, team, None, day_id, 0)
+    return analyse.norm({**extra, "result": res})
+
+
+def test_fraud_day_oracle_clean_staff_fires():
+    assert analyse.label(play("oracle", 1012)) == []
+    d = play("staff", 1012)
+    got = {(x["label"], x["seat"]) for x in analyse.label(d)}
+    assert ("trusted_familiar_name", "finance_ap") in got
+    assert d["result"]["reward"] == 0
+
+
+def test_losing_staff_days_are_all_labeled():
+    for i in (1001, 1002, 1003, 1005, 1006, 1007, 1008, 1011, 1012, 1013, 1015, 1016):
+        d = play("staff", i)
+        assert d["result"]["reward"] == 1 or analyse.label(d), i

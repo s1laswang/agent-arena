@@ -181,6 +181,9 @@ def get_provider(spec: str | None, **kw):
     | 'gemini-world' | 'gemini-world:<model>' | 'gemini-world-stub' (AGENTS' GeminiWorldText)."""
     if spec in (None, "", "template"):
         return TemplateProvider()
+    if spec.startswith(("v16:", "v16-gemini:", "v16-gemini-stub:")):
+        from canary.social.engine import make_v16_provider
+        return make_v16_provider(spec, **kw)
     if spec == "gemini-world-stub":
         from canary.llm import get_client
         return GeminiWorldTextProvider(client=get_client("stub"), **kw)

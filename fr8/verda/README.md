@@ -11,6 +11,7 @@ Each instance runs an on-instance reaper that deletes it at its deadline; ask FR
 | 3bb74f5a-ae5f-492d-b805-daf2de7d9ebd | 1H100.80S.32V on-demand | FIN-02 | 4.7421 | 14 Nov 22:46 | reaper 15 Nov 07:30 | FR8: v3-4k s0 → v3-8k s0 (R1); shared from 00:35 with Meta glasses CEO YOLOv8n (/root/meta-glasses, ≤30 GB GPU, ≤8 CPU) | running |
 | ac58df04-428c-45f8-ba69-7d62c3d64aec | 1A100.22V (80 GB) spot | FIN-01 | 1.0794 | 15 Nov 00:00 | reaper 07:30 | FR8: v3-8k s1 (R2) | running |
 | dbd083ca-c87a-4c5f-9acf-f1ce4f6144bd | 1H100.80S.30V spot | FIN-01 | 2.3711 | 15 Nov 00:24 | reaper 07:30 | FR8: v3-8k s2 (fill order #2) | running |
+| 924e81d8-e82b-4980-9e51-632241b3357d | 1A100.22V (80 GB) spot | FIN-03 | 1.0794 | 15 Nov 00:49 | reaper 07:30 | Gemini J1-lite: vLLM Qwen3-14B bf16 + canary.agents.play, 10 hard + 10 medium dev seeds (fr8/verda/j1_run.sh) | running |
 
 Balance: €200.00 at start → €191.71 at 00:20 (account shows €200 of credit; Silas mentions €400 total, so a teammate's credit is in another account).
 Capacity: Verda A100/A6000/L40S on-demand and spot have been near zero all night; FR8 polls and launches queued workloads as capacity appears.
@@ -21,3 +22,5 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 00:24: cap raised to **€300** (Silas, confirmed to the Arena CEO directly). An H100 spot appeared at 00:23 → v3-8k seed 2. Burn now €8.19/h (H100 4.74 + A100 spot 1.08 + H100 spot 2.37) → projected ≈ €66 total by 07:30.
 
 00:40: Meta glasses CEO finished on 3bb74f5a: YOLOv8n fine-tune in /root/meta-glasses, train 22:16:13Z → ~22:25Z (80 epochs, 513 s), eval + ONNX export ~22:30Z; 5.6 GB GPU memory, ≤8 workers, ≈0.15 GPU-h, no extra cost (shared H100). Results copied off by Meta; nothing of theirs is still running. It slowed v3 s0 by ~12% for ~10 min.
+
+00:49: Gemini J1-lite (fill order #3, Arena CEO approved per Gemini CEO) on A100 spot 924e81d8; model in /dev/shm (48 GB disk too small). Burn now €9.27/h → projected ≈ €73 by 07:30.

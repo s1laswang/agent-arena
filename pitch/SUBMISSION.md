@@ -1,6 +1,6 @@
 # Submission text (Junction platform)
 
-Field limits for both forms: NOT FOUND (not in the brief we have). Check the platform before pasting. Each description below is under 150 words. Numbers: from `make eval`, see HANDOFF.md for the current ones and the commit hash. Links: repo and demo video NOT FOUND until final. All results so far are from scripted teams; no live Gemini run exists.
+Field limits for both forms: NOT FOUND (not in the brief we have). Check the platform before pasting. Each description below is under 150 words. Numbers: from `make eval`, see HANDOFF.md for the current ones and the commit hash. Links: repo and demo video NOT FOUND until final. All numbers in this file are from scripted teams; real-model results are NOT FOUND (lead-lab pending).
 
 ## Track 1: AfterQuery "Break the Agent"
 
@@ -22,7 +22,7 @@ Title: The Sleeper (Gemini breaks Gemini)
 One-liner: Gemini is designed to play the staff, the traitor, the reference and the analyst in a company that looks like yours.
 
 Description:
-Companies are starting to hand real work to AI agents. We built a test for the worst case: one agent is a hidden insider. In the design, Gemini plays the honest employees through MCP tools, the sleeper that rewrites its strategy each day, a reference team with a stronger procedure, and the reader of failed days. The reward is plain code reading the final company state, so a model cannot talk its way to a score. Responses are cached by prompt hash for reproducible runs, and everything also runs with scripted agents. Honest status: the Gemini client, staff, sleeper (with strategy mutation), reference and analyst are built and tested offline with a fake model. No live Gemini call has run yet because we have no key, so we claim no Gemini results. Enabling it takes `GEMINI_API_KEY` plus `LAB_GEMINI=1`.
+Companies are starting to hand real work to AI agents. We built a test for the worst case: one agent is a hidden insider. In the design, Gemini plays the honest employees through MCP tools, the sleeper that rewrites its strategy each day, a reference team with a stronger procedure, and the reader of failed days. The reward is plain code reading the final company state, so a model cannot talk its way to a score. Responses are cached by prompt hash for reproducible runs, and everything also runs with scripted agents. Honest status: the Gemini client, staff, sleeper (with strategy mutation), reference and analyst are built and tested offline with a fake model. Some real Gemini calls have run in labelled test runs, but no run is final, so we claim no Gemini results yet. The live switch is changing and is documented in pitch/GEMINI.md.
 
 Tech: Gemini API via google-genai, function calling, response cache, MCP.
 

@@ -18,6 +18,9 @@ def resolve_agent(agent: str | None) -> str:
     if agent in (None, "", "openai", "openai:"):
         from canary.llm import default_openai_model
         return f"openai:{default_openai_model()}"
+    if agent in ("gemini", "gemini:"):
+        from canary.llm import default_gemini_model
+        return f"gemini:{default_gemini_model()}"
     return agent
 
 
@@ -56,6 +59,7 @@ def main(argv=None, client=None) -> Path:
     from canary.agents.llm_policy import DEFAULT_REASONING_EFFORT
     effort = a.reasoning_effort or DEFAULT_REASONING_EFFORT
     api_used = None
+    provider_settings = None
     total = {"in": 0, "out": 0, "cost_usd": 0.0, "calls": 0, "cached_in": 0, "cost_usd_est": 0.0}
     for seed in seeds:
         env = make_env(a.tier, seed, a.fake)
@@ -68,8 +72,14 @@ def main(argv=None, client=None) -> Path:
             res = env.result(pol.name)
             res.end_reason, res.meta = "error", {**res.meta, "error": repr(e)}
         api_used = getattr(pol._client, "api", api_used)
+        if hasattr(pol._client, "settings"):  # gemini: thinking level / temperature / signature replay
+            provider_settings = pol._client.settings()
+            api_used = provider_settings.get("api", api_used)
         res.meta = {**(res.meta or {}), "usage": pol.usage, "hint": a.hint, "context": a.context,
                     "reasoning_effort": effort if provider == "openai" else None, "api": api_used}
+        if provider_settings:
+            res.meta["provider_settings"] = provider_settings
+            res.meta["finish_reasons"] = dict(getattr(pol._client, "finish_reasons", {}) or {})
         w.episode(res)
         w.transcript(seed, pol.transcript)
         for k in total:
@@ -78,8 +88,9 @@ def main(argv=None, client=None) -> Path:
     w.meta({"agent": a.agent, "model": model, "provider": provider, "git_sha": git_sha(), "tier": a.tier,
             "seeds": seeds, "hint": a.hint, "usage": total, "fake_env": a.fake, "smoke": bool(a.smoke or a.fake), "context": a.context,
             "reasoning_effort": effort if provider == "openai" else None,
-            "reasoning_effort_source": "default: Codex 0.167 models catalog default_reasoning_level for gpt-5.5" if not a.reasoning_effort else "cli",
-            "api": api_used or a.api, "max_turns": a.max_turns if a.context == "window" else None})
+            "reasoning_effort_source": (None if provider != "openai" else "default: Codex 0.167 models catalog default_reasoning_level for gpt-5.5" if not a.reasoning_effort else "cli"),
+            "api": api_used or a.api, "max_turns": a.max_turns if a.context == "window" else None,
+            "provider_settings": provider_settings})
     print(f"wrote {out}")
     return out
 

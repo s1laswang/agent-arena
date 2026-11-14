@@ -68,8 +68,9 @@ def is_retryable(exc: BaseException) -> bool:
         if isinstance(v, int) and (v == 429 or v == 408 or 500 <= v < 600):
             return True
     name = type(exc).__name__.lower()
-    return any(k in name for k in ("ratelimit", "timeout", "connection", "unavailable",
-                                   "internalserver", "resourceexhausted", "servererror"))
+    return any(k in name for k in ("ratelimit", "timeout", "connection", "connecterror", "unavailable",
+                                   "internalserver", "resourceexhausted", "servererror",
+                                   "remoteprotocol", "readerror", "writeerror"))
 
 
 class LLMClient:

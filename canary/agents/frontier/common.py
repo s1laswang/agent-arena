@@ -212,15 +212,37 @@ def steps_from_events(stdout: str) -> list[Step]:
 INFRA_PATTERNS = {
     "provider_quota": ("usage limit has been reached", "credits_depleted", '"statusCode":429',
                        "hit your usage limit", "usage_limit_reached", "429 Too Many Requests"),
+    "provider_rate_limit": ("RESOURCE_EXHAUSTED", "Resource has been exhausted", "Quota exceeded for metric"),
+    "provider_unavailable": ("UNAVAILABLE", "The model is overloaded", '"statusCode":503', '"statusCode":500',
+                             "INTERNAL", "fetch failed", "ECONNRESET", "ETIMEDOUT", "ENOTFOUND",
+                             "socket connection was closed unexpectedly"),
     "opencode_db_locked": ("database is locked",),
 }
+
+
+def _error_events(stdout: str) -> str:
+    """Only the CLI's own error events (OpenCode `{"type":"error"}`), never tool outputs, are pattern-matched
+    for provider errors: tool results are env text and must not be classified."""
+    out = []
+    for line in (stdout or "").splitlines():
+        if '"type":"error"' in line.replace(" ", ""):
+            out.append(line)
+    return "\n".join(out)
 
 
 def classify_infra(stdout: str, stderr: str) -> str | None:
     blob = (stdout or "") + "\n" + (stderr or "")
     for kind, pats in INFRA_PATTERNS.items():
+        if kind in ("provider_rate_limit", "provider_unavailable"):
+            continue
         if any(p in blob for p in pats):
             return kind
+    errs = _error_events(stdout) + "\n" + (stderr or "")
+    for kind in ("provider_rate_limit", "provider_unavailable"):
+        if any(p in errs for p in INFRA_PATTERNS[kind]):
+            return kind
+    if _error_events(stdout):
+        return "cli_error_event"
     return None
 
 
@@ -228,6 +250,7 @@ def usage_from_events(stdout: str, model: str) -> dict:
     """Token usage from Codex `turn.completed` events -> ESTIMATED cost at canary.llm.pricing list prices.
     cost_usd_est bills cached input at 10% of the input price; cost_usd_upper bills all input at full price."""
     tin = cached = tout = 0
+    oc_cost, oc_steps, src = 0.0, 0, "codex turn.completed"
     for line in stdout.splitlines():
         try:
             ev = json.loads(line)
@@ -238,17 +261,40 @@ def usage_from_events(stdout: str, model: str) -> dict:
             tin += u.get("input_tokens", 0) or 0
             cached += u.get("cached_input_tokens", 0) or 0
             tout += u.get("output_tokens", 0) or 0
+        part = ev.get("part") if isinstance(ev, dict) else None
+        if isinstance(part, dict) and part.get("type") == "step-finish":
+            # OpenCode: tokens.input excludes cache reads; reasoning tokens are billed as output
+            src = "opencode step-finish"
+            t = part.get("tokens") or {}
+            c = (t.get("cache") or {}).get("read", 0) or 0
+            tin += (t.get("input", 0) or 0) + c
+            cached += c
+            tout += (t.get("output", 0) or 0) + (t.get("reasoning", 0) or 0)
+            oc_cost += float(part.get("cost") or 0.0)
+            oc_steps += 1
     if not (tin or tout):
         return {"cost_unknown": True}
-    from canary.llm.pricing import PRICES
-    pin, pout = PRICES.get(model.split("/")[-1], (None, None))
+    from canary.llm.pricing import CACHED_PRICES, PRICES
+    name = model.split("/")[-1]
+    pin, pout = PRICES.get(name, (None, None))
     out = {"in": tin, "cached_in": cached, "out": tout}
+    if oc_steps:
+        out["llm_calls"] = oc_steps
+        out["opencode_reported_cost_usd"] = round(oc_cost, 4)
     if pin is None:
         return {**out, "cost_unknown": True}
-    out["cost_usd_est"] = round(((tin - cached) * pin + cached * pin * 0.1 + tout * pout) / 1e6, 4)
+    pc = CACHED_PRICES.get(name, pin * 0.1)
+    out["cost_usd_est"] = round(((tin - cached) * pin + cached * pc + tout * pout) / 1e6, 4)
     out["cost_usd_upper"] = round((tin * pin + tout * pout) / 1e6, 4)
-    out["cost_note"] = "estimate from codex turn.completed usage at canary.llm.pricing list prices"
+    out["cost_note"] = f"estimate from {src} usage at canary.llm.pricing list prices"
     return out
+
+
+def compact_transcript(stdout: str) -> str:
+    """Drop opaque provider blobs (Gemini thoughtSignature, base64) from stored transcripts; keeps everything else."""
+    import re
+    return re.sub(r'"thoughtSignature":\s?"([^"]{64,})"', lambda m: f'"thoughtSignature":"<{len(m.group(1))} chars>"',
+                  stdout or "")
 
 
 # ---------- conversion
@@ -277,6 +323,9 @@ class RunSpec:
     jobs: int = 1
     retries: int = 1
     extra: dict = field(default_factory=dict)
+    # per-episode extra child env: callable(workdir) -> (env vars, [paths to remove afterwards]); used by
+    # OpenCode for the provider key and an isolated per-episode OpenCode data/config dir (no shared DB lock)
+    child_env_extra: Callable[[Path], tuple[dict, list[Path]]] | None = None
 
 
 def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str]], files: set[str],
@@ -285,6 +334,7 @@ def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str
     t0 = time.time()
     srv = server_factory(spec.tier, seed)
     wd = None
+    cleanup: list[Path] = []
     try:
         srv.start(log_dir=spec.out / "transcripts", port_dir=spec.out / "servers")
         prompt = episode_prompt(spec.tier, seed)
@@ -292,9 +342,14 @@ def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str
         argv = build(wd, prompt, srv.url)
         assert_clean(wd, files)
         assert srv.token not in " ".join(argv) and srv.token not in prompt
+        env = child_env()
+        if spec.child_env_extra:
+            extra_env, cleanup = spec.child_env_extra(wd)
+            env.update(extra_env)
+        assert not any(srv.token in str(v) for v in env.values())
         try:
             p = runner(argv, cwd=str(wd), capture_output=True, text=True, timeout=spec.timeout_s,
-                       env=child_env(), stdin=subprocess.DEVNULL)
+                       env=env, stdin=subprocess.DEVNULL)
             rc, out, err = p.returncode, p.stdout or "", p.stderr or ""
         except subprocess.TimeoutExpired as e:
             rc = "timeout"
@@ -310,7 +365,8 @@ def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str
             meta["error"] = f"infra:{infra}"
         res = to_episode(spec.tier, seed, spec.agent, ledger, steps, meta)
         with lock:
-            w.transcript(seed, f"$ {' '.join(argv[:-1])} <prompt>\n--- rc={rc}\n--- stdout\n{out}\n--- stderr\n{err[-20000:]}", "txt")
+            w.transcript(seed, f"$ {' '.join(argv[:-1])} <prompt>\n--- rc={rc}\n--- stdout\n{compact_transcript(out)}"
+                               f"\n--- stderr\n{err[-20000:]}", "txt")
     except Exception as e:
         res = EpisodeResult(spec.tier, seed, spec.agent, [], 0.0, None, False, 0, "error",
                             {"error": repr(e), "wall_s": round(time.time() - t0, 1)})
@@ -318,6 +374,8 @@ def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str
         srv.stop()
         if wd:
             shutil.rmtree(wd, ignore_errors=True)
+        for pth in cleanup:
+            shutil.rmtree(pth, ignore_errors=True)
     with lock:
         if write:
             w.episode(res)

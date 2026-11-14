@@ -42,3 +42,10 @@ def default_openai_model() -> str:
     """The frontier model under test: $CANARY_OPENAI_MODEL, else gpt-5.5. Small models = smoke tests only."""
     import os
     return os.environ.get("CANARY_OPENAI_MODEL") or FRONTIER_OPENAI_DEFAULT
+
+
+def default_gemini_model() -> str:
+    """The Gemini model under test: $CANARY_GEMINI_MODEL, else gemini-4-carbon (strongest on the API, 2026-11-14)."""
+    import os
+    from .gemini_backend import DEFAULT_MODEL
+    return os.environ.get("CANARY_GEMINI_MODEL") or DEFAULT_MODEL

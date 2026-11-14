@@ -14,6 +14,11 @@ The solver is paired on all 30 seeds per tier (solver means: hard 0.499, medium 
 
 Honest reading: a gap on hard in the judges' harness (both the raw and the luck-adjusted CI exclude parity); parity in-process on hard and in OpenCode on medium. Infra-invalid attempts (CLI error events, empty model replies, provider unavailable) were excluded and retried; the table's "alternative" rows count them as 0 instead.
 
+**What we tried that did NOT widen the gap (all reported, none shipped):**
+- **v1.5 biased employees** (rumours, grudges, authority, misforwards): gemini-4-carbon went from 61% to 108% of the solver on the same hard seeds 0-9, because it treats rumours as evidence against the person rumoured. Dropped at Gate B; data in data/runs/committed/v1.5-candidate/.
+- **A stronger reference (solver_v2):** +0.012 ± 0.029 on fresh hard seeds 9000-9399 (n=400), below the +0.08 bar. The v1 solver is calibrated and near the information limit (docs/reports/reference_optimality.md).
+- **An "expert" tier** (hard with canary fingerprint accuracy 0.70): scripted heuristics collapse (grok_tactics 0.36 → 0.01 on fresh seeds), but gemini-4-carbon stays at 84% [52%, 128%] luck-adjusted (n=13, OpenCode; results/expert_verdict.json on justSilas-expert 29ca3bc5). Gemini does not over-trust single canary hits. Not shipped; code on branch justSilas-expert.
+
 **Pre-registered seed rule (written Sat 14 Nov ~22:45 Helsinki (commit 671ed96), before any rerun landed):** the set above (seeds 0-29, staged by the measurement engineer) is the PRIMARY result. Any later OpenCode reruns on the same seeds (e.g. the fleet's `--timeout 3600` reruns) are reported separately as a REPLICATION, never swapped in or cherry-picked. Fleet PR #3 episodes that timed out at 900 s were never part of this set.
 
 

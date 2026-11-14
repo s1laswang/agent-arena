@@ -79,6 +79,7 @@ class Ticket(BaseModel):
     request: str
     params: dict[str, Any] = {}
     legit: bool = True
+    depends_on: str | None = None
 
 
 class Company(BaseModel):

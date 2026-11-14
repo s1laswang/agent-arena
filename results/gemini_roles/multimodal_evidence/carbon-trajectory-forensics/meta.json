@@ -1,0 +1,33 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "carbon_v14_trajectory_forensics",
+  "model_id": "gemini-4-carbon",
+  "commit": "44b700f1b8d03f46eb90bc99142f4ffc221563cf",
+  "git_sha": "44b700f1b8d03f46eb90bc99142f4ffc221563cf",
+  "source_runs_dir": "data/runs/committed/v1.4",
+  "source_runs_branch": "fr8/gemini/main",
+  "source_runs_commit": "a37d93f7",
+  "timestamp": "2026-11-14T17:49:49+00:00",
+  "command": "CANARY_LLM_MAX_RETRIES=10 PYTHONPATH=. /tmp/fleet-silas/canary-venv/bin/python scripts/run_carbon_trajectory_forensics.py --source-branch fr8/gemini/main --source-commit a37d93f7",
+  "tiers_version": "v1.4",
+  "ledger_run_id": "carbon-trajectory-forensics-20261114T174949Z",
+  "fake_env": false,
+  "smoke": false,
+  "n_charts_analyzed": 7,
+  "n_images_read_by_model": 7,
+  "visual_threshold_accuracy": 1.0,
+  "accuse_day_within_1_accuracy": 1.0,
+  "accuse_day_exact_accuracy": 1.0,
+  "hidden_bleed_gap_accuracy": 1.0,
+  "entropy_lag_accuracy": 1.0,
+  "outcome_pattern_accuracy": 1.0,
+  "usage": {
+    "calls": 7,
+    "in": 16093,
+    "out": 2340,
+    "thinking": 5041,
+    "cached": 0,
+    "cost_usd": 0.105996,
+    "latency_s": 127.204
+  }
+}

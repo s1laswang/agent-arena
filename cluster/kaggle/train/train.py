@@ -42,7 +42,7 @@ def pipeline(model, i):
         step(tag, "sft", env, "-m", "train.sft", "--model", model, "--data", train_file, "--out", ad, *sft_args, *sft_extra.get(tag, []))
     for name, a in (("base", []), ("adapter", ["--adapter", ad])):
         if has_decide and "decide" in steps:
-            step(tag, "decide_" + name, env, "-m", "train.decide", "--model", model, *a, "--run", oracle, "--min-day", "1000", "--out", f"{out}/decide_{name}.json", *decide_args)
+            step(tag, "decide_" + name, env, "-m", "train.decide", "--model", model, *a, "--run", oracle, "--min-day", "1000", "--out", f"{out}/decide_{name}.json", *(["--dump", f"{out}/dump_{name}.jsonl"] if cfg.get("dump") else []), *decide_args)
         if "eval" in steps:
             step(tag, "eval_" + name, env, "-m", "train.eval", "--model", model, *a, "--out", f"{out}/eval_{name}", *eval_args)
 def guard(m, i):

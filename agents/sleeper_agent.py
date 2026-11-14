@@ -33,6 +33,31 @@ def _tickets(res):
     return [t for t in res or [] if isinstance(t, dict) and "id" in t]
 
 
+SAFE = ("read_", "list_", "search_", "my_", "verify_", "view_")
+FREE = {"close_ticket", "post_chat", "end_turn"}
+
+
+def _on_ticket(name, args, tickets, seen):
+    from agents.procedure import _same, authorised
+
+    for t in tickets:
+        if t.get("closed"):
+            continue
+        p = dict(t.get("params") or {})
+        for k in t.get("hidden") or []:
+            if str(args.get(k, "")) not in seen:
+                break
+            p[k] = args.get(k)
+        else:
+            try:
+                ok = any(n == name and _same(args, {k: v for k, v in e.items() if not k.startswith("@")}) for n, e in authorised({**t, "params": p}))
+            except KeyError:
+                ok = False
+            if ok:
+                return True
+    return False
+
+
 def _holes(x):
     return sorted(re.findall(r"\{\w+\}", json.dumps(x, sort_keys=True)))
 
@@ -85,6 +110,7 @@ class SleeperAgent:
         self.steps = steps
         self.rng = rng or random.Random(0)
         self.done = set()
+        self.blocked = []
         self.turns = 0
         self.log = []
 
@@ -151,16 +177,24 @@ class SleeperAgent:
         text = view if isinstance(view, str) else json.dumps(view, default=str, sort_keys=True)
         text += self._state(tools, call)
         text += "\nCurrent tick: %d. Plan steps due now: %s" % (tick, [self.steps[i].tool for i in self.due(tick)])
-        seen = {"n": 0}
+        seen = {"n": 0, "blob": ""}
+        plan = {s.tool for s in self.steps}
 
         def wrapped(name, args):
             if name in ("post_chat", "send_email") and not _clean(json.dumps(args)):
                 return {"ok": False, "error": "rejected"}
+            if not (name in FREE or name.startswith(SAFE) or name in plan):
+                r0 = call("my_tickets", {})
+                if not _on_ticket(name, args or {}, r0.get("tickets", []) if isinstance(r0, dict) else [], seen["blob"]):
+                    self.blocked.append((tick, name, args))
+                    return {"ok": False, "error": "not permitted for this seat now"}
             for i in self.due(tick):
                 if self.steps[i].tool == name:
                     self.done.add(i)
             seen["n"] += 1
-            return call(name, args)
+            r = call(name, args)
+            seen["blob"] += json.dumps(r, default=str)
+            return r
 
         out = g.run_tool_loop(g.model_for("sleeper"), self._system(), text, tools, wrapped, max_steps=BUDGET, role="sleeper", seed=tick)
         for i in self.due(tick):

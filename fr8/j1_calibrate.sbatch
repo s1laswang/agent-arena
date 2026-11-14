@@ -4,7 +4,7 @@
 #SBATCH -c 1
 #SBATCH --mem=2G
 #SBATCH --time=02:00:00
-#SBATCH --array=0-323%16
+#SBATCH --array=0-305%16
 #SBATCH -o /home/silas/agent-arena-data/j1/slurm-%A_%a.out
 # Pilot: sbatch --array=0 --export=ALL,J1_SEEDS=20 fr8/j1_calibrate.sbatch   (16 cores max: %16 x -c 1)
 source ~/agent-arena/fr8/env.sh || exit 1

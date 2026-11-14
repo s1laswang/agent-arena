@@ -1,0 +1,59 @@
+{
+    "schema_version": 1,
+    "id": "11560755-a499-4afa-b6b7-5dd93da5de90",
+    "started_at": "2026-11-14T13:10:37.527516",
+    "updated_at": "2026-11-14T14:21:53.309734",
+    "finished_at": "2026-11-14T14:21:53.309734",
+    "n_total_trials": 5,
+    "stats": {
+        "n_completed_trials": 5,
+        "n_errored_trials": 4,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__google/gemini-4-carbon__dataset-gemini-rest": {
+                "n_trials": 5,
+                "n_errors": 4,
+                "metrics": [
+                    {
+                        "mean": 0.438
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "reward": {
+                        "0.5": [
+                            "canary-hard-900000__TBsQvEr"
+                        ],
+                        "0.62": [
+                            "canary-hard-900001__sVYbZ7T"
+                        ],
+                        "0.46": [
+                            "canary-hard-900002__CyMF4ze"
+                        ],
+                        "0.61": [
+                            "canary-medium-900001__ed4btv6"
+                        ],
+                        "0.0": [
+                            "canary-medium-900002__DfqfWmW"
+                        ]
+                    }
+                },
+                "exception_stats": {
+                    "NonZeroAgentExitCodeError": [
+                        "canary-hard-900000__TBsQvEr",
+                        "canary-hard-900001__sVYbZ7T",
+                        "canary-hard-900002__CyMF4ze",
+                        "canary-medium-900002__DfqfWmW"
+                    ]
+                }
+            }
+        },
+        "n_input_tokens": 14593353,
+        "n_cache_tokens": 13705374,
+        "n_output_tokens": 56528,
+        "cost_usd": null
+    }
+}

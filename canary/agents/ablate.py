@@ -29,16 +29,19 @@ def main(argv=None, client_factory=None) -> dict:
     ap.add_argument("--out", default=None)
     ap.add_argument("--fake", action="store_true")
     ap.add_argument("--smoke", action="store_true")
+    ap.add_argument("--hint-set", default="v1", choices=["v1", "v2"])
+    ap.add_argument("--no-control", action="store_true", help="skip the control arm (run arms as parallel processes)")
     a = ap.parse_args(argv)
     agent = resolve_agent(a.agent)
     tags = [t.strip() for t in a.tags.split(",") if t.strip()]
-    bad = [t for t in tags if t not in HINTS]
+    from canary.agents.llm_policy import HINT_SETS
+    bad = [t for t in tags if t not in HINT_SETS[a.hint_set]]
     if bad:
         ap.error(f"unknown tags {bad}; known {sorted(HINTS)}")
     seeds = parse_seeds(a.seeds)
     out = Path(a.out or f"data/runs/ablate-{a.tier}-{time.strftime('%Y%m%d-%H%M')}")
     provider, model = split_spec(agent)
-    arms = [("control", None)] + [(t, t) for t in tags]
+    arms = ([] if a.no_control else [("control", None)]) + [(t, t) for t in tags]
     cost, stopped = 0.0, False
     results: dict[str, list] = {}
     for arm, hint in arms:
@@ -49,7 +52,7 @@ def main(argv=None, client_factory=None) -> dict:
             if cost >= a.budget:
                 stopped = True
                 break
-            pol = LLMPolicy(agent, hint=hint, client=client_factory() if client_factory else None)
+            pol = LLMPolicy(agent, hint=hint, hint_set=a.hint_set, client=client_factory() if client_factory else None)
             env = make_env(a.tier, seed, a.fake)
             try:
                 res = run_episode(env, pol, pol.name)
@@ -65,7 +68,7 @@ def main(argv=None, client_factory=None) -> dict:
             results[arm].append(res)
             print(f"[{arm}] seed {seed}: score={res.score:+.3f} correct={res.correct}  running cost ${cost:.2f}", flush=True)
         w.meta({"agent": agent, "model": model, "provider": provider, "git_sha": git_sha(), "tier": a.tier,
-                "seeds": seeds, "hint": hint, "arm": arm, "usage": usage, "smoke": bool(a.smoke or a.fake),
+                "seeds": seeds, "hint": hint, "hint_set": a.hint_set, "arm": arm, "usage": usage, "smoke": bool(a.smoke or a.fake),
                 "fake_env": a.fake})
         if stopped:
             print(f"budget ${a.budget:.2f} reached; stopping")

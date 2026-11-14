@@ -524,17 +524,49 @@ function addEvidenceCard(tool, args, res) {
     } else {
       let html = `<div style="font-weight:700; color:var(--err); margin-bottom:6px;">⚠️ Leaked Memos Detected at Rival Firm (${items.length}):</div>`;
       for (const item of items) {
-        const v = item.variant || "Unknown";
-        const vClass = v.toLowerCase();
+        const isCanary = !!item.variant || (item.doc_id && item.doc_id.startsWith("c"));
+        const v = item.variant;
+        const vClass = v ? v.toLowerCase() : "";
         const minDay = Math.max(1, item.surfaced_day - 3);
         const maxDay = Math.max(1, item.surfaced_day - 1);
 
+        let badgeHtml = "";
+        let detailsHtml = "";
+
+        if (isCanary && v) {
+          badgeHtml = `<span class="canary-pill canary-pill-${vClass}">🎯 Leaked Canary: Variant ${v}</span>`;
+          // Find who was assigned Variant v for this canary doc
+          const hist = state.canaryHistory.find(h => h.id === item.doc_id);
+          const holderNames = [];
+          if (hist && hist.assignment) {
+            for (const [eId, varName] of Object.entries(hist.assignment)) {
+              if (varName === v) {
+                const emp = state.employees.find(e => e.id === eId);
+                holderNames.push(emp ? `${emp.name.split(" ")[0]} (${eId})` : eId);
+              }
+            }
+          }
+          detailsHtml = `
+            <div style="background:var(--canary-${vClass}-bg); border:1px solid var(--canary-${vClass}); border-radius:4px; padding:6px 10px; margin:6px 0; color:var(--canary-${vClass}); font-size:12px;">
+              🎯 <strong>CANARY WATERMARK IDENTIFIED: VARIANT ${v}</strong>
+              ${holderNames.length ? `<div style="margin-top:3px; font-size:11.5px; opacity:0.95;">Staff given Variant ${v}: <strong>${holderNames.join(", ")}</strong></div>` : ''}
+            </div>
+          `;
+        } else if (isCanary) {
+          badgeHtml = `<span class="canary-pill canary-pill-a">🎯 Leaked Canary</span>`;
+          detailsHtml = `<div class="muted font-small" style="margin-top:4px;">A planted canary was surfaced, but the specific variant could not be recovered.</div>`;
+        } else {
+          badgeHtml = `<span class="regular-doc-pill">📄 Regular Document (No Canary)</span>`;
+          detailsHtml = `<div class="muted font-small" style="margin-top:4px;">Standard internal document. Cross-reference access logs and document recipients to narrow down who accessed ${item.doc_id}.</div>`;
+        }
+
         html += `
           <div style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:10px; margin-bottom:8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px; flex-wrap:wrap;">
               <strong>Doc: ${item.doc_id} · "${item.title || 'Internal Memo'}"</strong>
-              <span class="canary-pill canary-pill-${vClass}">Leaked Variant: ${v}</span>
+              ${badgeHtml}
             </div>
+            ${detailsHtml}
             <div class="muted font-small">${item.snippet || 'Proprietary corporate strategy data leaked.'}</div>
             <div class="leak-delay-warning">
               ⏱️ <strong>Delayed Leak Warning:</strong> Surfaced Day ${item.surfaced_day}. Leaks take 1–3 days to emerge.
@@ -696,14 +728,47 @@ function openCanaryWizard() {
     return;
   }
 
-  $("canaryDocTitle").value = `Q${Math.min(4, Math.ceil(state.day / 3.5))} Confidential Strategy & Acquisition Memo`;
-  renderWizardEmployees();
-  updateWholeCompanyWarning();
+  $("canaryDocTitle").value = `Board memo draft ${state.day}`;
+  const hasAssignments = Object.values(state.canaryAssignments).some(v => !!v);
+  if (!hasAssignments) {
+    wizardSplitSolver();
+  } else {
+    renderWizardEmployees();
+    updateWholeCompanyWarning();
+  }
   $("canaryModal").hidden = false;
 }
 
 function closeCanaryWizard() {
   $("canaryModal").hidden = true;
+}
+
+function wizardSplitSolver() {
+  // Solver style: balance cohorts across variants (A, B, C) while leaving a control group unassigned.
+  // In Medium tier, careful moles will never leak a document sent to the whole company!
+  const suspects = state.employees.filter(e => state.employeeTags[e.id] === "suspect" && !state.restricted.has(e.id));
+  const pool = suspects.length >= 2 ? suspects : state.employees.filter(e => !state.restricted.has(e.id));
+
+  for (const emp of state.employees) {
+    state.canaryAssignments[emp.id] = "";
+  }
+
+  const variants = ["A", "B", "C"];
+  if (suspects.length >= 2) {
+    suspects.forEach((emp, idx) => {
+      state.canaryAssignments[emp.id] = variants[idx % variants.length];
+    });
+  } else {
+    // 8-9 staff across A/B/C (~40-45% of workforce), leaving control group
+    const targetCount = Math.min(pool.length, Math.max(3, Math.min(9, Math.floor(pool.length * 0.45))));
+    const selected = pool.slice(0, targetCount);
+    selected.forEach((emp, idx) => {
+      state.canaryAssignments[emp.id] = variants[idx % variants.length];
+    });
+  }
+
+  renderWizardEmployees();
+  updateWholeCompanyWarning();
 }
 
 function renderWizardEmployees() {
@@ -726,7 +791,8 @@ function renderWizardEmployees() {
     chip.addEventListener("click", () => {
       // Cycle: "" -> "A" -> "B" -> "C" -> ""
       const variants = ["", "A", "B", "C"];
-      const nextIdx = (variants.indexOf(currentVar) + 1) % variants.length;
+      const cur = state.canaryAssignments[emp.id] || "";
+      const nextIdx = (variants.indexOf(cur) + 1) % variants.length;
       const nextVar = variants[nextIdx];
 
       chip.classList.remove("assign-a", "assign-b", "assign-c");
@@ -750,8 +816,12 @@ function updateWholeCompanyWarning() {
 
   const unique = new Set(assigned);
   const warn = $("wholeCoWarning");
-  if (assigned.length === state.employees.length && unique.size === 1) {
+  if (assigned.length === state.employees.length && state.employees.length > 0) {
     warn.style.display = "block";
+    warn.innerHTML = "⚠️ <strong>Careful Mole Warning:</strong> All employees are receiving this canary. In Medium tier, careful moles will <em>never</em> leak a full-company document! Leave some staff unassigned as a control group.";
+  } else if (assigned.length > 0 && unique.size === 1) {
+    warn.style.display = "block";
+    warn.innerHTML = "⚠️ <strong>Single Variant Warning:</strong> All assigned staff received the same variant. Use multiple variants (A, B, C) to partition cohorts.";
   } else {
     warn.style.display = "none";
   }
@@ -1322,6 +1392,7 @@ function setupGlobalEventListeners() {
 
   // Canary Wizard Events
   $("closeCanaryModalBtn").addEventListener("click", closeCanaryWizard);
+  $("wizardSplitSolverBtn") && $("wizardSplitSolverBtn").addEventListener("click", wizardSplitSolver);
   $("wizardSplitEvenBtn").addEventListener("click", () => wizardSplit(3));
   $("wizardSplitTwoBtn").addEventListener("click", () => wizardSplit(2));
   $("wizardSplitDeptBtn").addEventListener("click", wizardSplitByDept);

@@ -37,7 +37,7 @@ def traced_modules() -> list[Path]:
     """Trace in a FRESH interpreter: in a process that already imported canary (e.g. pytest), a
     before/after diff of sys.modules would miss modules and ship a broken site."""
     out = subprocess.run([sys.executable, "-c", _TRACE, str(HERE)], capture_output=True, text=True,
-                         check=True, cwd=ROOT)
+                         check=True, cwd=ROOT, stdin=subprocess.DEVNULL)
     return sorted(Path(f).resolve() for f in json.loads(out.stdout.strip().splitlines()[-1]))
 
 

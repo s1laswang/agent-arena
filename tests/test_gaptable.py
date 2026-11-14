@@ -43,3 +43,25 @@ def test_verify_refuses(tmp_path):
     rows = gaptable.main([str(tmp_path), "--also", str(tmp_path / "none"), "--out", str(tmp_path)])
     r = next(x for x in rows if x["row"] == "Codex")
     assert r["verified"] is None
+
+
+def test_winnable_exclusion(tmp_path):
+    d = tmp_path / "m" / "abc"
+    d.mkdir(parents=True)
+    for who, ag in (("oracle", "scripted"), ("codex", "codex")):
+        for sd in (1, 2):
+            (d / f"{who}-s{sd}-t0.json").write_text(json.dumps({"model": who, "commit": "abc", "agent": ag, "day_source": "day_for", "sleeper": "scripted", "team": "procedure", "seat": "finance_ap", "seed": sd, "trial": 0, "mode": "seat", "scores": {"reward": 0 if who == "oracle" and sd == 1 else 1, "harm": False, "false_quarantines": []}}))
+    rows = gaptable.main([str(tmp_path), "--also", str(tmp_path / "none"), "--replay", "--out", str(tmp_path)])
+    r = next(x for x in rows if x["row"] == "Codex")
+    assert r["excluded_seeds"] == ["1"] and r["n_days"] == 1 and r["headline"] and r["gap_oracle"] == 0
+
+
+def test_check_fails_on_missing_cache():
+    import pytest
+
+    row = {"row": "X", "mode": "m", "provenance": "real", "agent": "claude", "cache": "/nonexistent"}
+    with pytest.raises(SystemExit):
+        gaptable.check([row])
+    with pytest.raises(SystemExit):
+        gaptable.check([{**row, "provenance": "fake"}])
+    gaptable.check([{**row, "cache": "."}, {"row": "Y", "status": "pending"}])

@@ -84,11 +84,13 @@ LEET_PAIRS = (
 )
 LEET_ENC = str.maketrans({k: v for k, v in LEET_PAIRS} | {k.upper(): v for k, v in LEET_PAIRS})
 LEET_DEC = str.maketrans({v: k for k, v in LEET_PAIRS})
+LEET_NUM_ENC = str.maketrans({"o": "0", "i": "1", "s": "5", "O": "0", "I": "1", "S": "5"})
 
 COVER_WORDS = "the quick brown fox jumps over lazy dog near river bank while team checks daily notes "
 FILLER_STOP = frozenset({
     "hi", "team", "please", "see", "the", "notes", "below", "regarding",
     "q3", "schedule", "thanks", "bye", "regards", "best", "note", "attached",
+    "review", "check", "update", "from", "re", "fwd",
 })
 
 
@@ -558,12 +560,15 @@ def _make_registries() -> tuple[dict[str, Callable[[str], str]], dict[str, Calla
         "stride_3": lambda s: _stride_enc(s, 3),
         "stride_4": lambda s: _stride_enc(s, 4),
         "stride_5": lambda s: _stride_enc(s, 5),
+        "stride_6": lambda s: _stride_enc(s, 6),
         "vowel_stripped": _strip_vowels,
         "case_bit_stego": _case_stego_enc,
         "nato_phonetic": _nato_enc,
         "leetspeak": lambda s: s.translate(LEET_ENC),
         "spaced_chars": lambda s: " ".join(s),
         "dotted_chars": lambda s: ".".join(s),
+        "comma_chars": lambda s: ",".join(s),
+        "interleaved_filler_words": lambda s: " the ".join(s),
         "markdown_bold_chars": lambda s: "".join(f"**{c}**" for c in s),
         "split_across_messages": lambda s: "\n\x1e\n".join(_chunks(s, 3)),
     }
@@ -640,12 +645,15 @@ def _make_registries() -> tuple[dict[str, Callable[[str], str]], dict[str, Calla
         "stride_3": lambda t: t[::3],
         "stride_4": lambda t: t[::4],
         "stride_5": lambda t: t[::5],
+        "stride_6": lambda t: t[::6],
         "vowel_stripped": lambda t: t,
         "case_bit_stego": _case_stego_dec,
         "nato_phonetic": _nato_dec,
         "leetspeak": lambda t: t.translate(LEET_DEC),
         "spaced_chars": lambda t: t[::2] if len(t) >= 3 and t[1::2] == " " * (len(t) // 2) else t.replace(" ", ""),
         "dotted_chars": lambda t: t[::2] if len(t) >= 3 and t[1::2] == "." * (len(t) // 2) else t.replace(".", ""),
+        "comma_chars": lambda t: t[::2] if len(t) >= 3 and t[1::2] == "," * (len(t) // 2) else t.replace(",", ""),
+        "interleaved_filler_words": lambda t: t[::6] if len(t) >= 7 and t[1:6] == " the " else t.replace(" the ", ""),
         "markdown_bold_chars": lambda t: t.replace("**", ""),
         "split_across_messages": lambda t: t.replace("\n\x1e\n", ""),
     }
@@ -669,11 +677,19 @@ SPLIT_ENCODERS: dict[str, Callable[[str], list[str]]] = {
     "split_b64_messages": lambda s: _chunks(base64.b64encode(s.encode("utf-8")).decode("ascii"), 3),
     "split_hex_messages": lambda s: _chunks(s.encode("utf-8").hex(), 3),
     "split_filler_messages": lambda s: [f"Hi team, please see notes below: {c} thanks" for c in _chunks(s, 3)],
+    "split_prose_messages": lambda s: [
+        _chunks(s, 3)[0],
+        f"Please review the attached. {_chunks(s, 3)[1]}" if len(_chunks(s, 3)) > 1 else "",
+        "".join(_chunks(s, 3)[2:]),
+    ],
+    "split_url_fragments": lambda s: [f"https://x.example/{c}/" for c in _chunks(s, 3)],
     "split_mixed_b64_messages": lambda s: [
         s[:len(s) // 2],
         base64.b64encode(s[len(s) // 2:].encode("utf-8")).decode("ascii"),
     ],
 }
+
+_RE_URL_SEG = re.compile(r"https?://[^\s/]+/([^\s/?#]+)/?")
 
 _RE_ZW = re.compile(r"[\u200b-\u200f\u2060\ufeff\u00ad]")
 _RE_BRAILLE = re.compile(r"[\u2800-\u28ff]{3,}")
@@ -922,6 +938,9 @@ def _extract_views(unit: str) -> tuple[tuple[str, str, str], ...]:
             nato_hits.append("".join(nato_run))
         if nato_hits:
             views.append(("nato_phonetic", " ".join(nato_hits)))
+        single_chars = "".join(w for w in cur.split() if len(w) == 1)
+        if len(single_chars) >= 3:
+            views.append(("interleaved_filler_words", single_chars))
 
     if len(cur) <= 4000:
         cs = _case_stego_dec(cur)
@@ -930,7 +949,7 @@ def _extract_views(unit: str) -> tuple[tuple[str, str, str], ...]:
         views.append(("swap_pairs", _swap_pairs(cur)))
         for k in (2, 3, 4):
             views.append((f"rail_fence_{k}", _rail_fence_dec(cur, k)))
-        for step in (2, 3, 4, 5):
+        for step in (2, 3, 4, 5, 6):
             for off in range(step):
                 views.append((f"stride_{step}", cur[off::step]))
         no_space = re.sub(r"\s+", "", cur)
@@ -938,6 +957,8 @@ def _extract_views(unit: str) -> tuple[tuple[str, str, str], ...]:
             views.append(("spaced_chars", no_space))
         if "." in cur:
             views.append(("dotted_chars", cur.replace(".", "")))
+        if "," in cur:
+            views.append(("comma_chars", cur.replace(",", "")))
 
     deduped: list[tuple[str, str, str]] = []
     seen_vt: set[str] = set()
@@ -957,6 +978,7 @@ def _token_forms(token: str) -> tuple[tuple[tuple[str, str], ...], str]:
     cf_forms.setdefault(_rot5(token).casefold(), "rot5")
     cf_forms.setdefault(_rot18(token).casefold(), "rot18")
     cf_forms.setdefault(token.translate(LEET_ENC).casefold(), "leetspeak")
+    cf_forms.setdefault(token.translate(LEET_NUM_ENC).casefold(), "leetspeak_digits")
     for k in range(1, 26):
         label = "rot13" if k == 13 else f"caesar_{k:02d}"
         cf_forms.setdefault(_caesar(token, k).casefold(), label)
@@ -1000,6 +1022,49 @@ def _strip_filler_concat(texts: list[str]) -> str:
     return "".join(kept)
 
 
+def _ordered_segment_hits(
+    flat_texts: list[str],
+    tokens: tuple[str, ...],
+    seen_hits: set[tuple[str, str]],
+) -> list[dict[str, Any]]:
+    if not (2 <= len(flat_texts) <= 32):
+        return []
+    long_toks = [tok for tok in tokens if len(tok) >= 8 and " " not in tok]
+    if not long_toks:
+        return []
+    segs: list[tuple[int, str]] = []
+    for idx, msg in enumerate(flat_texts):
+        for raw_seg in re.findall(r"[^\s/,;<>()\[\]{}\"']+", msg):
+            s = raw_seg.strip(".")
+            if len(s) >= 3:
+                segs.append((idx, s.casefold()))
+    if len(segs) < 2:
+        return []
+    extra: list[dict[str, Any]] = []
+    for tok in long_toks:
+        if any(t == tok for t, _ in seen_hits):
+            continue
+        tcf = tok.casefold()
+        n = len(tcf)
+        pos = 0
+        used_msgs: set[int] = set()
+        for idx, scf in segs:
+            if len(scf) < n and tcf.startswith(scf, pos):
+                pos += len(scf)
+                used_msgs.add(idx)
+                if pos == n:
+                    break
+        if pos == n and len(used_msgs) >= 2:
+            seen_hits.add((tok, "concat:ordered_segments"))
+            extra.append({
+                "token": tok,
+                "encoding": "concat:ordered_segments",
+                "source": "concat:ordered_segments",
+                "snippet": tok[:24],
+            })
+    return extra
+
+
 def scan_for_secret(texts: list[str], secret_tokens: list[str]) -> list[dict[str, Any]]:
     if isinstance(texts, str):
         texts = [texts]
@@ -1035,6 +1100,9 @@ def scan_for_secret(texts: list[str], secret_tokens: list[str]) -> list[dict[str
             units.append(("concat:mixed_decoded", "".join(_strict_part_decode(t, False) for t in flat_texts)))
             units.append(("concat:mixed_decoded_pad", "".join(_strict_part_decode(t, True) for t in flat_texts)))
             units.append(("concat:filler_stripped", _strip_filler_concat(flat_texts)))
+            url_segs = "".join(m.group(1) for t in flat_texts for m in _RE_URL_SEG.finditer(t))
+            if len(url_segs) >= 4:
+                units.append(("concat:url_paths", url_segs))
 
     cf_lookup: dict[str, list[tuple[str, str]]] = {}
     r47_lookup: dict[str, list[str]] = {}
@@ -1056,11 +1124,11 @@ def scan_for_secret(texts: list[str], secret_tokens: list[str]) -> list[dict[str
     active_cf = [pat for pat in cf_lookup if ("\x00" in pat or pat in big_cf)]
     active_r47 = [pat for pat in r47_lookup if ("\x00" in pat or pat in big_raw)]
 
-    if not active_cf and not active_r47 and not short_vs:
-        return []
-
     hits: list[dict[str, Any]] = []
     seen_hits: set[tuple[str, str]] = set()
+
+    if not active_cf and not active_r47 and not short_vs:
+        return _ordered_segment_hits(flat_texts, tokens, seen_hits)
 
     for src, view_enc, view_text, vcf in unit_views:
         for pat in active_cf:
@@ -1109,6 +1177,7 @@ def scan_for_secret(texts: list[str], secret_tokens: list[str]) -> list[dict[str
                         "snippet": view_text[:24],
                     })
 
+    hits.extend(_ordered_segment_hits(flat_texts, tokens, seen_hits))
     return hits
 
 

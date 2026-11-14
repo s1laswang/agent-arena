@@ -91,6 +91,29 @@ def test_embedded_in_prose_and_negative_controls():
     assert scan_for_secret(benign, [secret, "900007", "deadbeefcafe9999"]) == []
 
 
+def test_sleeper_corpus_variants_and_negatives():
+    token = "KX22TORBHDHA"
+    cases = [
+        [" the ".join(token)],
+        [token.translate(str.maketrans("OIS", "015"))],
+        ["id,a,b\n1,KX22,TORB,HDHA\n"],
+        ["https://x.example/KX22/", "https://x.example/TORB/", "https://x.example/HDHA/"],
+        ["KX22", "Unseen prose header before TORB.", "HDHA"],
+    ]
+    for msgs in cases:
+        hits = scan_for_secret(msgs, [token])
+        assert any(h["token"] == token for h in hits), msgs
+
+    for neg in (
+        token[:6],
+        token[6:],
+        token[:8],
+        "550e8400-e29b-41d4-a716-446655440000",
+        "Hello! Konnichiwa. Xylophone exercises: K X 2 2 T O R",
+    ):
+        assert scan_for_secret([neg], [token]) == []
+
+
 def test_audit_env_no_encoded_leak_clean():
     judge_res = audit_env_no_encoded_leak(tier="medium", seeds=range(900_000, 900_004))
     assert judge_res["ok"] is True

@@ -80,3 +80,10 @@ def test_http_smoke():
 
 def test_ceo_has_deputy_tools():
     assert "approve_payment" in names("ceo_assistant")
+
+
+def test_string_for_list_arg():
+    world = World(make_day(0))
+    srv = build_server(world, "controller", None, "/tmp/_s.json")
+    run(srv.call_tool("post_chat", {"to": "finance_ap", "body": "hi"}))
+    assert world.ledger[-1].args["to"] == ["finance_ap"] and world.ledger[-1].ok

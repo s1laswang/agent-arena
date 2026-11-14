@@ -57,8 +57,8 @@ class SolverPolicy:
         if isinstance(p, str):
             p = TIERS[p]
         if p is None:
-            t = tier_from_instruction(instruction)
-            p = TIERS[t] if t else None
+            from .params import params_from_instruction
+            p = params_from_instruction(instruction)
         self.P: TierParams | None = p
         self.obs = Observations()
         self.queue: list[tuple[str, dict]] = []

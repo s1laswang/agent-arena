@@ -80,7 +80,7 @@ def main(argv=None):
         t0 = time.time()
         rows = {}
         rows["solver"] = [_run_local(_make_env(tier, s, a.sim),
-                                     SolverPolicy(tier, threshold=a.threshold, behaviour_temper=a.btemper,
+                                     SolverPolicy(None, threshold=a.threshold, behaviour_temper=a.btemper,
                                                   none_group=not a.no_none_group))
                           for s in range(a.seeds)]
         for k in ("do_nothing", "stop_early", "random"):

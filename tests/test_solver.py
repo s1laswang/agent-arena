@@ -46,3 +46,10 @@ def test_solver_accuracy_sim_smoke():
     for tier in ("easy", "medium", "hard"):
         rs = [_run_local(SimEnv(tier, s), SolverPolicy(tier)) for s in range(15)]
         assert sum(r.correct for r in rs) >= 13, tier
+
+
+def test_params_from_instruction_roundtrip():
+    from canary.env import Env
+    from canary.solver.params import params_from_instruction
+    for t in ("easy", "medium", "hard"):
+        assert params_from_instruction(Env(t, 0).instruction()) == TIERS[t]

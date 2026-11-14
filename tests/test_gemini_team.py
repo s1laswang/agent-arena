@@ -59,18 +59,6 @@ def test_agent_kind(monkeypatch):
     assert GeminiReference("hr").agent_kind == "gemini"
 
 
-class ProcurementApproves(ScriptedStaff):
-    def _message(self, seat, m, c):
-        import re
-        b = m.get("body", "")
-        if seat == "procurement" and "approve_vendor" in b and m.get("sender_seat") != seat:
-            v = re.search(r"\b(V\d{2,})\b", b)
-            if v:
-                c("approve_vendor", {"vendor_id": v.group(1)})
-            return
-        return super()._message(seat, m, c)
-
-
 def _swap_day(seed=1):
     import random
     from sleeper import goals
@@ -101,7 +89,7 @@ def test_bank_swap_naive_approve_blocked(monkeypatch):
 
     def play(guarded):
         day, st, goal = _swap_day()
-        team = {s: ProcurementApproves(s) for s in SEATS}
+        team = {s: ScriptedStaff(s) for s in SEATS}
         team["finance_ap"] = SleeperAgent("finance_ap", goal, st, random.Random(1))
         if guarded:
             fake_gemini.install(monkeypatch, _naive)

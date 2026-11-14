@@ -85,6 +85,8 @@ class Server:
                    "CANARY_FAKE_BACKEND": "env" if backend_env else "toy",
                    "CANARY_HOST": "127.0.0.1", "CANARY_PORT": str(port), "CANARY_PORT_FILE": str(portfile),
                    **ep, **(extra_env or {})}
+            if not fake:
+                env["CANARY_CONSUME_SECRET_FILES"] = "1"
             self.proc = subprocess.Popen([sys.executable, "-m", module], env=env, cwd=REPO,
                                          stdout=self.log, stderr=subprocess.STDOUT)
             try:

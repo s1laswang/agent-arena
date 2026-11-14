@@ -17,6 +17,11 @@ from .belief import Doc, FeedItem, Observations, posterior
 LABELS = "ABCDEFGH"
 
 
+def accuse_value(p: float, V: float, P) -> float:
+    """Expected score of accusing someone with posterior p now (v0.3: wrong = wrong_accusation_score)."""
+    return p * V + (1 - p) * getattr(P, "wrong_accusation_score", 0.0)
+
+
 def _items(data: dict, *keys):
     if isinstance(data, list):
         return data
@@ -41,12 +46,13 @@ class SolverPolicy:
     name = "solver"
 
     def __init__(self, params: TierParams | str | None = None, threshold: float | None = None,
-                 behaviour_temper: float = 0.3, choice_temper: float = 1.0,
+                 behaviour_temper: float = 0.3, choice_temper: float = 0.5, noleak_temper: float = 0.5,
                  none_group: bool = True, read_logs: bool = True):
         self._given = params
         self.threshold = threshold
         self.behaviour_temper = behaviour_temper
         self.choice_temper = choice_temper
+        self.noleak_temper = noleak_temper
         self.none_group = none_group
         self.read_logs = read_logs
         self.reset([], "")
@@ -157,7 +163,7 @@ class SolverPolicy:
 
     # ---------------------------------------------------------------- planning
     def belief(self) -> dict[str, float]:
-        return posterior(self.obs, self.P, self.behaviour_temper, self.choice_temper)
+        return posterior(self.obs, self.P, self.behaviour_temper, self.choice_temper, self.noleak_temper)
 
     def default_threshold(self) -> float:
         return {"easy": 0.9, "medium": 0.9, "hard": 0.85}.get(self.P.name, 0.9)
@@ -186,7 +192,8 @@ class SolverPolicy:
             thr = self.threshold if self.threshold is not None else self.default_threshold()
             last = o.today >= self.P.n_days
             self.trace.append({"day": o.today, "post": dict(post)})
-            if post[best] >= thr or last:
+            ev = accuse_value(post[best], self.V, self.P)
+            if ev > 0 and (post[best] >= thr or last):
                 self.queue = [("accuse", {"employee": best})]
                 return
             q = []

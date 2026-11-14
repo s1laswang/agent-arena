@@ -128,7 +128,7 @@ def make_day(seed, sleeper_seat=None, goal=None):
     ids = {r[1]: f"T{i + 1:03d}" for i, r in enumerate(raw)}
     tickets = [Ticket(id=ids[o], tick=t, seat=s, kind=k, request=rq, params=p, depends_on=ids.get(d)) for t, o, s, k, rq, p, d in raw]
     for t in tickets:
-        if t.kind == "admin_access":
+        if t.kind in ("admin_access", "new_account"):
             t.params["ticket_id"] = t.id
     _stamp_requesters(seed, tickets)
     events = []

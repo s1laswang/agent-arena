@@ -80,3 +80,18 @@
 ## 06:10 status
 - **J4 = job 44397:** training for 2h17, step 347, 1.41k tok/s, loss ~0.02–0.13 (verified: train_log.jsonl); ckpt-200 saved. Training ends ~06:42, then the base vs LoRA held-out eval until ~08:10. The before/after table with CIs follows.
 - Nothing else is running (FR8 or Mac). FR8 data 7.3 GB of 10. No blockers.
+
+## 07:30 status
+- **J4 = job 44397:** training DONE. The time box hit at step 450: 14.3M tokens, 1.41k tok/s, 2.82 h, ≈5% of one epoch over 3k J3 v2 (tiers v1.3) episodes. LoRA adapter + ckpt-200/400 are at `freighter:~/agent-arena-data/j4/run-44397/lora`.
+- **Eval:** the HF eval is very slow (no KV reuse, base episodes run to the 300-call cap), so the LoRA eval runs IN PARALLEL inside our own allocation (`srun --overlap`, step 44397.1).
+  - Episodes so far: base 1, LoRA 3. The job ends ~08:17, then auto-rsync to `data/fr8/j4/`.
+- **First signal** (n = 1 easy held-out episode per model; descriptive only; `fr8/analysis/j4_proxy.py`):
+
+  | | valid tool calls | exact repeats | solver action-type agreement | accusation |
+  |---|---|---|---|---|
+  | base | .15 | 99.7% | 0 | none (300-call cap, never leaves day 1) |
+  | LoRA | .98 | 0 | .94 | none (runs all 14 days, ends at the horizon) |
+
+  → The LoRA model learned the protocol and investigation rhythm, but not the commit decision.
+- **Saturday v2** (CEO-approved, code merged, untested on GPU): dense 4k windows + `--oversample-endings 3`, J3 v2 data; command in `train/README.md`. Also fixed: the parallel-tokenization patch had dropped `--window-mode`/`--overlap` (J4 used the default prefix mode, so it isn't affected).
+- **Next:** final per-model table (n, score, accused rate, valid rate, solver agreement) after the job ends; then tell the CEO to release sky 43143_4.

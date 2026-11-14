@@ -93,3 +93,9 @@ The one 0 (seed 1, finance_ap, day d30233, 1/5 tickets, 3 steps) is an oracle bu
     PYTHONPATH= harbor run -p harbor/tasks/sleeper-s0-controller -a opencode -m gemini/<model> --ae GEMINI_API_KEY=$GEMINI_API_KEY -k 3
 
 Without a key opencode cannot call a model, so there is no offline OpenCode run; the offline equivalents are the oracle, nop, stop-early and exploit agents above. The sidecar's other seats use `SLEEPER_TEAM` (compose env): `staff` uses Gemini when `GEMINI_API_KEY` is set in the sidecar, else scripted staff; `oracle` is the scripted team.
+
+## Oracle via agents.reference (work in progress)
+
+`harbor/oracle_run.py` plays the seat with `agents.reference.make_oracle_seat(day, seat)` through the MCP tools (needs the real day, so the task's `solution/` ships `day.json`, `sleeper/`, `agents/`; solution/ is hidden from the agent). `harbor/opencode/oracle_build.patch` is the build.py change (git apply on harbor/build.py; env-harbor's file).
+
+Observed in a scratch merge of momin + hn-reference-landing (3 conflicting files taken from landing): it runs end to end through Harbor without crashing, but reward is 0 on the new 46-ticket days (s0 finance_ap: 17/47 tickets with SLEEPER_TEAM=staff or oracle). Even in-process, `build_team("oracle")` over `World` on that day gives reward 0 (43/47 tickets), so this is the oracle/day mix on landing, not the harness. Needs hn-reference to confirm the oracle wins landing days before the Harbor reference run can be 1 on them.

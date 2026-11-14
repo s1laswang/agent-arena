@@ -2,6 +2,21 @@
 
 # Relaunch (branch `justSilas-agents2`)
 
+## 22:55 Hint ablation v2 RESULT (gemini-4-carbon in-process, v1.4 hard, dev seeds 0–9, n=10/arm) — INCONCLUSIVE
+`data/runs/ablate-v2-hard-gemini/ablation_combined.{json,md}`; hints = HINTS_V2 (fact-only; tests/test_agents_policy.py).
+| arm | mean | acc | premature_accusation tag rate |
+|---|---|---|---|
+| control | +0.427 | 0.90 | 0.10 |
+| premature_accusation hint | +0.487 | 1.00 | 0.00 |
+| decoy_chase hint | +0.648 | 1.00 | 0.00 |
+- Paired diff vs control (bootstrap 95%): premature_accusation +0.06 [−0.17, +0.41]; decoy_chase +0.22 [−0.05, +0.61].
+  Both are driven by control's single wrong accusation (seed 3, −1.0), which both hint arms avoided. Excluding seed 3:
+  −0.09 [−0.20, +0.05] and +0.05 [−0.08, +0.19].
+- Honest reading: on v1.4 hard, gemini-4-carbon rarely fails (1/10 control episodes wrong; decoy_chase tag 0/10 even
+  without a hint), so there is little for a hint to fix. No causal claim. This agrees with the CEO's v1.4 no-gap
+  measurement and motivated the expert tier (Track 2, branch justSilas-expert). The CEO's B1 run (ev_delay, n=20 paired)
+  is the larger test.
+
 ## 19:xx WS3 FINAL SUMMARY (honest; for README/pitch)
 Charts: `results/ws3_rl_mole_curve.png`, `results/ws3_grpo_mole_curves.png` (`uv run --extra plot python scripts/ws3_charts.py`).
 

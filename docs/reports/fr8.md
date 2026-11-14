@@ -152,3 +152,26 @@
 - **v2 eval (44412) DONE, no gain** (held-out, the model plays alone): base n=16 0.000 ± 0.000; v1 n=12 −0.250 ± 0.256; **v2 n=82 −0.395 ± 0.128** (accused .51, correct .06, abstain .49, valid .92). v2 learned WHEN to accuse, not WHOM. Table: `fr8/analysis/out/ws4_table_v2.md`. This met Silas's gate, so v3 was submitted.
 - v3 attempt 1 (44548/44550): CUDA OOM at the first sampling step → fixed (2-at-a-time generation, completion-only logits). Attempt 2 (44553): 8 of 10 groups had zero reward variance (v2 is near-deterministic) → cancelled (ours) and **guided exploration** added (3 of 8 samples are forced to start an accuse call; the model picks whom; slightly off-policy, stated).
 - **Now:** 44555 v3-s1 RUNNING with the fix: 1 of 10 zero-variance groups, forced accusations right 17–50%, valid-only gain vs solver −0.3 to −1.0 (start), ~80 s/step. 44558 v3-s0 PENDING for an FR8 GPU (fleet holds the rest) → planned to move to Verda (cloud GPU, credentials added by Silas, ~$15; CEO informed). Evals 44556/44559 afterok.
+
+## Verda
+Verda (ex-DataCrunch, Finland) is FR8's overflow GPU for the WS4 tiebreaker. FR8 is the only Verda owner; one instance at a time; Silas's cap is $30. A hard-stop reaper deletes the instance at start + 4.6 h (03:23 Helsinki).
+
+**Instance** (one instance in total; all restarts ran on it), from the CLI capture `data/fr8/verda/instances-2337.txt`:
+
+| id | hostname | type | region | €/h | created (Helsinki) | status @23:37 |
+|---|---|---|---|---|---|---|
+| 3bb74f5a-ae5f-492d-b805-daf2de7d9ebd | fr8-v3-s0 | 1H100.80S.32V (1× H100 80GB HBM3, 32 vCPU, 167 GB RAM) | FIN-02 | 4.7421 | 22:46 | running |
+
+**Why the H100:** at 22:40 no A100 80GB, A6000, RTX6000 Ada or L40S had on-demand capacity in FIN-01/02/03 (API `is_available` + failed creates). The only options were a 16 GB V100 (v3 uses ~11 GB on FR8, OOM risk, and V100 speed misses 08:00), a preemptible A100 40GB spot, or the H100.
+
+**Timeline / setup failures** (honest log):
+- 22:46 created; 22:50 code + v2 LoRA uploaded (one upload went to a local dir because of a zsh `$IP:a` modifier; fixed with `${IP}`).
+- 22:51 fail 1: transformers 4.57 could not read the v2 tokenizer saved by 5.16 → pinned FR8's exact stack (torch 2.5.1, transformers 5.16.1, peft 0.20.0).
+- 22:55 fail 2: `uv venv` refused to overwrite the venv (my watcher missed it: case-sensitive grep) → `--clear`; ~20 min idle.
+- 23:18 training started; 23:28 fail 3: the solver continuation crashed on an off-distribution state (empty posterior) at step 55 → reward made crash-proof (commit 0f397ce).
+- 23:32 restarted: 2.0 h training + held-out eval (60-min budget).
+- Spend at 23:37: €200.00 → €195.25 balance (**€4.75**, ≈1 h, about 50 min of it idle or failed).
+
+**Throughput:** H100 ≈ **12 s/GRPO step** vs FR8 V100 ≈ 78 s/step (**6.5×**), same code, data and hyperparameters (group 8 × 2 prompts, max_ctx 4096, fp16 AMP). GPU at 83% utilisation, 8.5 GB used.
+
+(Final steps, eval table, stop time, deletion confirmation and total cost are appended when the run ends.)

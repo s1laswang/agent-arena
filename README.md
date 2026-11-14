@@ -85,7 +85,9 @@ Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium
 
 ## Reward integrity
 
-We attacked our own reward 33 times before the judges did, including real-server hunts by a Codex attacker and an external Grok judge run. Every attempt is logged in [docs/EXPLOITS.md](docs/EXPLOITS.md) with a regression test.
+We attacked our own reward 41 times before the judges did, including real-server hunts by a Codex attacker and an external Grok judge run. Every attempt is logged in [docs/EXPLOITS.md](docs/EXPLOITS.md) with a regression test.
+
+**Hunt it yourself:** `make hunt` (no keys, about 1 minute) fuzzes all four tracks (easy, medium, hard, hard_forge) with random, malformed, evolutionary and parallel-accuse attacks, and prints the best non-solver score next to the solver's mean and the number of violations. On our machine every mode reports a best non-solver score of 0.000 with 0 violations. `make hunt TIER=medium` restricts it to one tier.
 
 - **Three real exploits, all closed:**
   - **Stop-early:** a free lottery ticket under 0/1 scoring, closed by making a wrong accusation cost −1.

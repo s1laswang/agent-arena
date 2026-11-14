@@ -1,5 +1,20 @@
 # G5 Dashboard + demo assets: report
 
+## Sat 15:00 — PR-1 ready; G2 ladder + G1 gateway bench live in the dashboard
+
+**Done**
+- **Ready for PR 1 now** (CEO deadline 18:30): branch `gemini-dashboard` has gemini-track merged in; all `tests/test_gemini_lab_*.py`
+  pass (61 in 11 s with the teammates' tests); full suite earlier 575 passed / 6 skipped. New `make lab-dashboard` (ARGS="--ledger auto").
+- Dashboard renders G2's committed `ladder.json` (14:50, 64 episodes / 24 cells, smoke-sized n=2): diverging heatmap (red = worse than
+  doing nothing, grey = 0, blue → solver), thinking curve, cost frontier, "which mistakes does thinking fix" matrix, reference lines.
+- Gateway throughput card from G1's `gateway_bench.json` (3.8-flash ~1.6k req/min at 64 clients; carbon saturates ~175).
+- Phone width: 16 px gutters, smaller type, matrix scrolls inside its card (checked at 520 px; headless Chrome floors the window at ~500).
+- VIDEO.md hook now opens on the Live commentator's day-5 call (29.0–38.5 s of commentator-demo.wav), VO shortened to 45 words.
+- How I build: `/tmp`-staged read-only copies of each teammate's committed `results/gemini/*` (owner branch or gemini-track, whichever
+  is newer) + `--ledger auto`; results/gemini/dashboard.html is refreshed and committed when results change or hourly.
+
+**Next**: atlas/swarm panels as soon as G3/G4 commit JSON; narration v1 at M2 once numbers are final enough to speak.
+
 ## Sat 14:50 — dashboard v1 on the real ledger, VIDEO.md, narrate.py, Live commentator clip (ahead of M2)
 
 **Done**

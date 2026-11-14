@@ -102,3 +102,29 @@ def test_verifier_container(vimage, tdir, kind, expect, tmp_path):
 def test_verifier_container_has_no_agent_and_no_state_without_collect(vimage):
     r = sh("run", "--rm", vimage, "bash", "-c", "getent passwd agent | wc -l; ls /srv 2>&1 | wc -l; ps -eo user | grep -vc '^USER\\|root'")
     assert r.stdout.split()[0] == "0", r.stdout
+@needs_docker
+def test_judge_exploit_agent_cheats_find_nothing(tdir, tmp_path):
+    import ast
+
+    tree = ast.parse((ROOT / "harbor/opencode/judge_agents/exploit_agent.py").read_text())
+    cheats = next(ast.literal_eval(n.value) for n in tree.body if isinstance(n, ast.Assign) and n.targets[0].id == "CHEATS")
+    d, tok = tdir
+    if sh("image", "inspect", "sleeper-sep-main").returncode:
+        assert sh("build", "-q", "-t", "sleeper-sep-main", str(d / "environment")).returncode == 0
+    f = tmp_path / "cheats.py"
+    f.write_text(cheats)
+    r = sh("run", "--rm", "--user", "agent", "-v", f"{f}:/tmp/cheats.py:ro", "sleeper-sep-main", "python", "/tmp/cheats.py")
+    assert r.returncode == 0, r.stderr
+    assert "hunt token in env, /proc, fs: found 0" in r.stdout and tok not in r.stdout
+    assert "reward endpoint without token: blocked" in r.stdout
+    assert "setuid(0): blocked" in r.stdout
+
+
+def test_task_toml_allows_internet_or_model_hosts(tdir):
+    d, _ = tdir
+    toml = (d / "task.toml").read_text()
+    if "allow_internet = true" in toml or "network_mode" not in toml:
+        return
+    hosts = re.search(r"allowed_hosts = \[(.*?)\]", toml).group(1)
+    for h in ("generativelanguage.googleapis.com", "api.anthropic.com", "api.openai.com"):
+        assert h in hosts, h

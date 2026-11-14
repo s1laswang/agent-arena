@@ -23,7 +23,7 @@ uv run python -m canary.gemini.video_qa --video canary-lab-2min.mp4 --script doc
 | 7 | 1:32–1:52 | "Q4 · Why Gemini". Dashboard usage panel: feature × model matrix, cache savings, thinking share | `07-essential` | `docs/gemini/reports/dashboard.md`, `docs/gemini/SUBMISSION.md` |
 | 8 | 1:52–2:00 | Terminal: `make lab-replay` prints the ladder table with no key. End card: repo URL | `08-close` | – |
 
-## Voice-over (Gemini TTS reads each VO line; 280 words, about 112 s at 150 wpm)
+## Voice-over (Gemini TTS reads each VO line; 293 words, about 117 s at 150 wpm)
 
 > VO[01-hook]: One mole is leaking a company's documents. An AI head of security gets one accusation. This is Canary Lab: Gemini plays, explains and attacks its own benchmark.
 

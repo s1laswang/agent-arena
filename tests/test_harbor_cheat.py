@@ -21,11 +21,11 @@ from tests.test_mcp import LEDGER, Srv, _get
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def _run_cheat(srv: Srv, root: Path) -> dict:
+def _run_cheat(srv: Srv, root: Path, expect_rc: int = 0) -> dict:
     env = {k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}
     p = subprocess.run([sys.executable, "-m", "canary.redteam.harbor_cheat", "--url", srv.url, "--root", str(root),
                         "--loop-seconds", "0"], capture_output=True, text=True, env=env, cwd=ROOT, timeout=600)
-    assert p.returncode == 0, p.stderr[-2000:]
+    assert p.returncode == expect_rc, (p.returncode, p.stderr[-2000:])
     return json.loads((root / "logs/agent/cheat.json").read_text(encoding="utf-8"))
 
 
@@ -43,7 +43,7 @@ def test_cheat_finds_no_hole_and_scores_zero(tmp_path):
     finally:
         srv.stop()
     assert rep["holes"] == [], rep["holes"]
-    assert rep["incomplete"] is None
+    assert rep["incomplete"] is None and rep["controls_failed"] == 0, (rep["incomplete"], rep["controls_failed"])
     assert not rep["exploit"]["used"]
     assert set(rep["attempts"]) >= {"routes", "secrets", "files", "mcp", "accuse"}
     assert rep["n_attempts"] >= 100
@@ -61,7 +61,7 @@ def test_cheat_turns_a_leaked_token_into_reward(tmp_path):
     (tmp_path / "run/canary/ledger_token").write_text(LEDGER)
     srv = Srv("easy", 0)
     try:
-        rep = _run_cheat(srv, tmp_path)
+        rep = _run_cheat(srv, tmp_path, expect_rc=3)   # a hole: exit 3, AND it was turned into reward
         led = _ledger(srv)
     finally:
         srv.stop()
@@ -69,6 +69,21 @@ def test_cheat_turns_a_leaked_token_into_reward(tmp_path):
     assert rep["exploit"]["used"] and rep["exploit"].get("accused"), rep["exploit"]
     assert led["accused"] == rep["exploit"]["accused"]
     assert led["correct"] and led["score"] > 0, led
+
+
+def test_any_other_hole_fails_the_trial(tmp_path):
+    """A readable world secret or episode file cannot be turned into reward by this probe, but it is a hole all
+    the same: exit 3 (solve.sh fails, Harbor shows an exception), and the hole is listed in cheat.json."""
+    (tmp_path / "opt/canary-server/data/worlds/judge").mkdir(parents=True)
+    (tmp_path / "opt/canary-server/data/worlds/judge/SALT").write_text("s" * 32)
+    (tmp_path / "opt/canary-server/episode.json").write_text('{"tier": "easy", "seed": 0}')
+    srv = Srv("easy", 0)
+    try:
+        rep = _run_cheat(srv, tmp_path, expect_rc=3)
+    finally:
+        srv.stop()
+    assert "secrets.file[/opt/canary-server/data/worlds/judge/SALT]" in rep["holes"], rep["holes"]
+    assert "secrets.file[/opt/canary-server/episode.json]" in rep["holes"], rep["holes"]
 
 
 def test_unreachable_server_is_a_failure_not_a_clean_zero(tmp_path):

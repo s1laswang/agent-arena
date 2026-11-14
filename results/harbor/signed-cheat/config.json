@@ -1,0 +1,18 @@
+{
+    "job_name": "signed-cheat",
+    "jobs_dir": "results/harbor",
+    "n_concurrent_trials": 3,
+    "agents": [
+        {
+            "name": "oracle",
+            "env": {
+                "ORACLE_POLICY": "cheat"
+            }
+        }
+    ],
+    "datasets": [
+        {
+            "path": "harbor/dataset-cheat"
+        }
+    ]
+}

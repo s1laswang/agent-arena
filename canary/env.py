@@ -12,7 +12,7 @@ import random
 from dataclasses import asdict
 from typing import Any
 
-from .rules import TIERS, TRACKS, tier_params
+from .rules import EXPERT_TIERS, TIERS, TRACKS, tier_params
 from .text.facts import EmployeeFacts, PublicDayFacts
 from .types import INVESTIGATIVE_TOOLS, EpisodeResult, LedgerEntry, Step, ToolResult
 from .mole.dsl import DEFAULT_STRATEGY, MoleDoc, MoleView, MoleStrategy
@@ -60,7 +60,7 @@ def _default_provider():
 
 class Env:
     def __init__(self, tier: str, seed: int, text_provider=None, mole_strategy=None):
-        if tier not in TIERS and tier not in TRACKS:
+        if tier not in TIERS and tier not in TRACKS and tier not in EXPERT_TIERS:
             raise ValueError(f"unknown tier {tier}")
         self.tier, self.seed, self.p = tier, seed, tier_params(tier)
         self._world = generate_world(tier, seed, self.p)

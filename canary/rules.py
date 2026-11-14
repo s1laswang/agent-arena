@@ -117,9 +117,18 @@ TIERS_HISTORY: dict[str, dict[str, TierParams]] = {"v1.3": TIERS_V13, "v1.2": TI
 # hard_rl = hard params + a per-seed RL-trained mole policy (canary/forge/rl_mole.py, data/rl_mole/).
 TRACKS: dict[str, str] = {"hard_forge": "hard", "hard_rl": "hard"}
 
+# Rules v1.6 (PLAN-95 reopen, Track 2): an EXPERT tier = v1.4 hard with ONE existing, documented knob changed:
+# fingerprint_accuracy 0.95 -> 0.70 (30% of leaked canary variants are misread; the instruction states it and the
+# solver models it exactly). Kept OUT of TIERS so the v1.4 TIERS hash stays frozen. Calibrated on dev seeds
+# 60000-60299 (results/expert_sweep_coarse.json): solver 0.415, acc 0.97; grok_tactics -0.01; heuristic -0.60.
+EXPERT_RULES_VERSION = "v1.6"
+EXPERT_TIERS: dict[str, TierParams] = {"expert": replace(TIERS["hard"], name="expert", fingerprint_accuracy=0.70)}
+
 
 def tier_params(name: str) -> TierParams:
-    """TierParams for a tier or a track name."""
+    """TierParams for a tier, a track name, or an expert tier (rules v1.6)."""
+    if name in EXPERT_TIERS:
+        return EXPERT_TIERS[name]
     return TIERS[TRACKS.get(name, name)]
 
 

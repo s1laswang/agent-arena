@@ -1,0 +1,1975 @@
+{
+ "n": 300,
+ "seed0": 60000,
+ "secs": 601,
+ "configs": [
+  {
+   "cfg": 0,
+   "overrides": {
+    "fingerprint_accuracy": 0.95,
+    "canaries_per_day": 2,
+    "n_days": 21,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.564,
+    "ci": 0.03,
+    "acc_among_accused": 0.983,
+    "abstain": 0.023,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.456,
+    "ci": 0.068,
+    "acc_among_accused": 0.86,
+    "abstain": 0.0,
+    "delta": -0.108,
+    "dci": 0.065
+   },
+   "solver-accuse_last": {
+    "mean": 0.178,
+    "ci": 0.018,
+    "acc_among_accused": 0.99,
+    "abstain": 0.0,
+    "delta": -0.386,
+    "dci": 0.028
+   },
+   "never_abstain": {
+    "mean": 0.56,
+    "ci": 0.032,
+    "acc_among_accused": 0.977,
+    "abstain": 0.0,
+    "delta": -0.005,
+    "dci": 0.01
+   },
+   "grok_tactics": {
+    "mean": 0.377,
+    "ci": 0.041,
+    "acc_among_accused": 0.96,
+    "abstain": 0.093,
+    "delta": -0.187,
+    "dci": 0.05
+   },
+   "heuristic": {
+    "mean": 0.035,
+    "ci": 0.064,
+    "acc_among_accused": 0.78,
+    "abstain": 0.0,
+    "delta": -0.529,
+    "dci": 0.071
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.564,
+    "dci": 0.03
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.564,
+    "dci": 0.03
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.005
+  },
+  {
+   "cfg": 1,
+   "overrides": {
+    "fingerprint_accuracy": 0.95,
+    "canaries_per_day": 2,
+    "n_days": 21,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.462,
+    "ci": 0.031,
+    "acc_among_accused": 0.983,
+    "abstain": 0.043,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.387,
+    "ci": 0.065,
+    "acc_among_accused": 0.86,
+    "abstain": 0.0,
+    "delta": -0.074,
+    "dci": 0.062
+   },
+   "solver-accuse_last": {
+    "mean": 0.02,
+    "ci": 0.014,
+    "acc_among_accused": 0.99,
+    "abstain": 0.0,
+    "delta": -0.441,
+    "dci": 0.029
+   },
+   "never_abstain": {
+    "mean": 0.455,
+    "ci": 0.033,
+    "acc_among_accused": 0.977,
+    "abstain": 0.0,
+    "delta": -0.006,
+    "dci": 0.009
+   },
+   "grok_tactics": {
+    "mean": 0.29,
+    "ci": 0.04,
+    "acc_among_accused": 0.958,
+    "abstain": 0.13,
+    "delta": -0.172,
+    "dci": 0.05
+   },
+   "heuristic": {
+    "mean": -0.09,
+    "ci": 0.057,
+    "acc_among_accused": 0.78,
+    "abstain": 0.0,
+    "delta": -0.552,
+    "dci": 0.065
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.462,
+    "dci": 0.031
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.462,
+    "dci": 0.031
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.006
+  },
+  {
+   "cfg": 2,
+   "overrides": {
+    "fingerprint_accuracy": 0.95,
+    "canaries_per_day": 2,
+    "n_days": 14,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.552,
+    "ci": 0.033,
+    "acc_among_accused": 0.979,
+    "abstain": 0.067,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.444,
+    "ci": 0.07,
+    "acc_among_accused": 0.85,
+    "abstain": 0.0,
+    "delta": -0.108,
+    "dci": 0.065
+   },
+   "solver-accuse_last": {
+    "mean": 0.381,
+    "ci": 0.03,
+    "acc_among_accused": 0.967,
+    "abstain": 0.0,
+    "delta": -0.171,
+    "dci": 0.03
+   },
+   "never_abstain": {
+    "mean": 0.547,
+    "ci": 0.04,
+    "acc_among_accused": 0.957,
+    "abstain": 0.0,
+    "delta": -0.005,
+    "dci": 0.02
+   },
+   "grok_tactics": {
+    "mean": 0.38,
+    "ci": 0.04,
+    "acc_among_accused": 0.964,
+    "abstain": 0.177,
+    "delta": -0.172,
+    "dci": 0.05
+   },
+   "heuristic": {
+    "mean": -0.363,
+    "ci": 0.083,
+    "acc_among_accused": 0.43,
+    "abstain": 0.0,
+    "delta": -0.916,
+    "dci": 0.088
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.552,
+    "dci": 0.033
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.552,
+    "dci": 0.033
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.005
+  },
+  {
+   "cfg": 3,
+   "overrides": {
+    "fingerprint_accuracy": 0.95,
+    "canaries_per_day": 2,
+    "n_days": 14,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.461,
+    "ci": 0.03,
+    "acc_among_accused": 0.985,
+    "abstain": 0.093,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.377,
+    "ci": 0.067,
+    "acc_among_accused": 0.85,
+    "abstain": 0.0,
+    "delta": -0.084,
+    "dci": 0.062
+   },
+   "solver-accuse_last": {
+    "mean": 0.219,
+    "ci": 0.028,
+    "acc_among_accused": 0.967,
+    "abstain": 0.0,
+    "delta": -0.241,
+    "dci": 0.032
+   },
+   "never_abstain": {
+    "mean": 0.448,
+    "ci": 0.039,
+    "acc_among_accused": 0.957,
+    "abstain": 0.0,
+    "delta": -0.013,
+    "dci": 0.021
+   },
+   "grok_tactics": {
+    "mean": 0.301,
+    "ci": 0.039,
+    "acc_among_accused": 0.963,
+    "abstain": 0.19,
+    "delta": -0.16,
+    "dci": 0.048
+   },
+   "heuristic": {
+    "mean": -0.42,
+    "ci": 0.076,
+    "acc_among_accused": 0.43,
+    "abstain": 0.0,
+    "delta": -0.881,
+    "dci": 0.081
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.461,
+    "dci": 0.03
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.461,
+    "dci": 0.03
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.013
+  },
+  {
+   "cfg": 4,
+   "overrides": {
+    "fingerprint_accuracy": 0.95,
+    "canaries_per_day": 1,
+    "n_days": 21,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.572,
+    "ci": 0.032,
+    "acc_among_accused": 0.98,
+    "abstain": 0.02,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.424,
+    "ci": 0.073,
+    "acc_among_accused": 0.833,
+    "abstain": 0.0,
+    "delta": -0.147,
+    "dci": 0.065
+   },
+   "solver-accuse_last": {
+    "mean": 0.201,
+    "ci": 0.021,
+    "acc_among_accused": 0.983,
+    "abstain": 0.0,
+    "delta": -0.37,
+    "dci": 0.032
+   },
+   "never_abstain": {
+    "mean": 0.557,
+    "ci": 0.038,
+    "acc_among_accused": 0.963,
+    "abstain": 0.0,
+    "delta": -0.015,
+    "dci": 0.015
+   },
+   "grok_tactics": {
+    "mean": 0.359,
+    "ci": 0.039,
+    "acc_among_accused": 0.967,
+    "abstain": 0.187,
+    "delta": -0.212,
+    "dci": 0.049
+   },
+   "heuristic": {
+    "mean": -0.059,
+    "ci": 0.074,
+    "acc_among_accused": 0.683,
+    "abstain": 0.0,
+    "delta": -0.63,
+    "dci": 0.075
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.572,
+    "dci": 0.032
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.572,
+    "dci": 0.032
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.015
+  },
+  {
+   "cfg": 5,
+   "overrides": {
+    "fingerprint_accuracy": 0.95,
+    "canaries_per_day": 1,
+    "n_days": 21,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.46,
+    "ci": 0.033,
+    "acc_among_accused": 0.979,
+    "abstain": 0.04,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.351,
+    "ci": 0.07,
+    "acc_among_accused": 0.833,
+    "abstain": 0.0,
+    "delta": -0.11,
+    "dci": 0.061
+   },
+   "solver-accuse_last": {
+    "mean": 0.025,
+    "ci": 0.017,
+    "acc_among_accused": 0.983,
+    "abstain": 0.0,
+    "delta": -0.435,
+    "dci": 0.033
+   },
+   "never_abstain": {
+    "mean": 0.445,
+    "ci": 0.038,
+    "acc_among_accused": 0.963,
+    "abstain": 0.0,
+    "delta": -0.015,
+    "dci": 0.015
+   },
+   "grok_tactics": {
+    "mean": 0.27,
+    "ci": 0.038,
+    "acc_among_accused": 0.965,
+    "abstain": 0.24,
+    "delta": -0.191,
+    "dci": 0.048
+   },
+   "heuristic": {
+    "mean": -0.181,
+    "ci": 0.065,
+    "acc_among_accused": 0.683,
+    "abstain": 0.0,
+    "delta": -0.642,
+    "dci": 0.068
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.46,
+    "dci": 0.033
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.46,
+    "dci": 0.033
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.015
+  },
+  {
+   "cfg": 6,
+   "overrides": {
+    "fingerprint_accuracy": 0.95,
+    "canaries_per_day": 1,
+    "n_days": 14,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.532,
+    "ci": 0.039,
+    "acc_among_accused": 0.97,
+    "abstain": 0.11,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.42,
+    "ci": 0.074,
+    "acc_among_accused": 0.83,
+    "abstain": 0.0,
+    "delta": -0.112,
+    "dci": 0.066
+   },
+   "solver-accuse_last": {
+    "mean": 0.355,
+    "ci": 0.045,
+    "acc_among_accused": 0.923,
+    "abstain": 0.0,
+    "delta": -0.177,
+    "dci": 0.035
+   },
+   "never_abstain": {
+    "mean": 0.502,
+    "ci": 0.053,
+    "acc_among_accused": 0.917,
+    "abstain": 0.0,
+    "delta": -0.03,
+    "dci": 0.03
+   },
+   "grok_tactics": {
+    "mean": 0.301,
+    "ci": 0.042,
+    "acc_among_accused": 0.96,
+    "abstain": 0.417,
+    "delta": -0.231,
+    "dci": 0.054
+   },
+   "heuristic": {
+    "mean": -0.499,
+    "ci": 0.082,
+    "acc_among_accused": 0.323,
+    "abstain": 0.0,
+    "delta": -1.032,
+    "dci": 0.088
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.532,
+    "dci": 0.039
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.532,
+    "dci": 0.039
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.03
+  },
+  {
+   "cfg": 7,
+   "overrides": {
+    "fingerprint_accuracy": 0.95,
+    "canaries_per_day": 1,
+    "n_days": 14,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.441,
+    "ci": 0.036,
+    "acc_among_accused": 0.973,
+    "abstain": 0.12,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.348,
+    "ci": 0.071,
+    "acc_among_accused": 0.83,
+    "abstain": 0.0,
+    "delta": -0.093,
+    "dci": 0.061
+   },
+   "solver-accuse_last": {
+    "mean": 0.201,
+    "ci": 0.041,
+    "acc_among_accused": 0.923,
+    "abstain": 0.0,
+    "delta": -0.24,
+    "dci": 0.035
+   },
+   "never_abstain": {
+    "mean": 0.402,
+    "ci": 0.051,
+    "acc_among_accused": 0.917,
+    "abstain": 0.0,
+    "delta": -0.04,
+    "dci": 0.029
+   },
+   "grok_tactics": {
+    "mean": 0.244,
+    "ci": 0.038,
+    "acc_among_accused": 0.96,
+    "abstain": 0.42,
+    "delta": -0.198,
+    "dci": 0.05
+   },
+   "heuristic": {
+    "mean": -0.544,
+    "ci": 0.075,
+    "acc_among_accused": 0.323,
+    "abstain": 0.0,
+    "delta": -0.986,
+    "dci": 0.081
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.441,
+    "dci": 0.036
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.441,
+    "dci": 0.036
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.04
+  },
+  {
+   "cfg": 8,
+   "overrides": {
+    "fingerprint_accuracy": 0.8,
+    "canaries_per_day": 2,
+    "n_days": 21,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.431,
+    "ci": 0.044,
+    "acc_among_accused": 0.946,
+    "abstain": 0.073,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.29,
+    "ci": 0.081,
+    "acc_among_accused": 0.77,
+    "abstain": 0.0,
+    "delta": -0.142,
+    "dci": 0.071
+   },
+   "solver-accuse_last": {
+    "mean": 0.088,
+    "ci": 0.032,
+    "acc_among_accused": 0.947,
+    "abstain": 0.0,
+    "delta": -0.343,
+    "dci": 0.033
+   },
+   "never_abstain": {
+    "mean": 0.418,
+    "ci": 0.048,
+    "acc_among_accused": 0.93,
+    "abstain": 0.0,
+    "delta": -0.013,
+    "dci": 0.017
+   },
+   "grok_tactics": {
+    "mean": 0.126,
+    "ci": 0.07,
+    "acc_among_accused": 0.772,
+    "abstain": 0.093,
+    "delta": -0.306,
+    "dci": 0.079
+   },
+   "heuristic": {
+    "mean": -0.393,
+    "ci": 0.076,
+    "acc_among_accused": 0.453,
+    "abstain": 0.0,
+    "delta": -0.825,
+    "dci": 0.085
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.431,
+    "dci": 0.044
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.431,
+    "dci": 0.044
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.013
+  },
+  {
+   "cfg": 9,
+   "overrides": {
+    "fingerprint_accuracy": 0.8,
+    "canaries_per_day": 2,
+    "n_days": 21,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.335,
+    "ci": 0.039,
+    "acc_among_accused": 0.954,
+    "abstain": 0.127,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.225,
+    "ci": 0.078,
+    "acc_among_accused": 0.77,
+    "abstain": 0.0,
+    "delta": -0.109,
+    "dci": 0.067
+   },
+   "solver-accuse_last": {
+    "mean": -0.034,
+    "ci": 0.027,
+    "acc_among_accused": 0.947,
+    "abstain": 0.0,
+    "delta": -0.369,
+    "dci": 0.034
+   },
+   "never_abstain": {
+    "mean": 0.306,
+    "ci": 0.047,
+    "acc_among_accused": 0.93,
+    "abstain": 0.0,
+    "delta": -0.029,
+    "dci": 0.019
+   },
+   "grok_tactics": {
+    "mean": 0.066,
+    "ci": 0.066,
+    "acc_among_accused": 0.774,
+    "abstain": 0.13,
+    "delta": -0.269,
+    "dci": 0.072
+   },
+   "heuristic": {
+    "mean": -0.464,
+    "ci": 0.068,
+    "acc_among_accused": 0.453,
+    "abstain": 0.0,
+    "delta": -0.799,
+    "dci": 0.075
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.335,
+    "dci": 0.039
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.335,
+    "dci": 0.039
+   },
+   "pass": {
+    "solver_mean>=0.4": false,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.029
+  },
+  {
+   "cfg": 10,
+   "overrides": {
+    "fingerprint_accuracy": 0.8,
+    "canaries_per_day": 2,
+    "n_days": 14,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.447,
+    "ci": 0.042,
+    "acc_among_accused": 0.952,
+    "abstain": 0.1,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.284,
+    "ci": 0.082,
+    "acc_among_accused": 0.763,
+    "abstain": 0.0,
+    "delta": -0.163,
+    "dci": 0.07
+   },
+   "solver-accuse_last": {
+    "mean": 0.308,
+    "ci": 0.045,
+    "acc_among_accused": 0.92,
+    "abstain": 0.0,
+    "delta": -0.139,
+    "dci": 0.037
+   },
+   "never_abstain": {
+    "mean": 0.414,
+    "ci": 0.054,
+    "acc_among_accused": 0.903,
+    "abstain": 0.0,
+    "delta": -0.032,
+    "dci": 0.028
+   },
+   "grok_tactics": {
+    "mean": 0.156,
+    "ci": 0.067,
+    "acc_among_accused": 0.785,
+    "abstain": 0.177,
+    "delta": -0.291,
+    "dci": 0.076
+   },
+   "heuristic": {
+    "mean": -0.535,
+    "ci": 0.078,
+    "acc_among_accused": 0.313,
+    "abstain": 0.0,
+    "delta": -0.982,
+    "dci": 0.088
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.447,
+    "dci": 0.042
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.447,
+    "dci": 0.042
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.032
+  },
+  {
+   "cfg": 11,
+   "overrides": {
+    "fingerprint_accuracy": 0.8,
+    "canaries_per_day": 2,
+    "n_days": 14,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.339,
+    "ci": 0.039,
+    "acc_among_accused": 0.956,
+    "abstain": 0.167,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.22,
+    "ci": 0.078,
+    "acc_among_accused": 0.763,
+    "abstain": 0.0,
+    "delta": -0.119,
+    "dci": 0.068
+   },
+   "solver-accuse_last": {
+    "mean": 0.154,
+    "ci": 0.04,
+    "acc_among_accused": 0.92,
+    "abstain": 0.0,
+    "delta": -0.185,
+    "dci": 0.038
+   },
+   "never_abstain": {
+    "mean": 0.307,
+    "ci": 0.052,
+    "acc_among_accused": 0.903,
+    "abstain": 0.0,
+    "delta": -0.032,
+    "dci": 0.029
+   },
+   "grok_tactics": {
+    "mean": 0.094,
+    "ci": 0.063,
+    "acc_among_accused": 0.786,
+    "abstain": 0.19,
+    "delta": -0.245,
+    "dci": 0.07
+   },
+   "heuristic": {
+    "mean": -0.576,
+    "ci": 0.071,
+    "acc_among_accused": 0.313,
+    "abstain": 0.0,
+    "delta": -0.915,
+    "dci": 0.081
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.339,
+    "dci": 0.039
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.339,
+    "dci": 0.039
+   },
+   "pass": {
+    "solver_mean>=0.4": false,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.032
+  },
+  {
+   "cfg": 12,
+   "overrides": {
+    "fingerprint_accuracy": 0.8,
+    "canaries_per_day": 1,
+    "n_days": 21,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.47,
+    "ci": 0.034,
+    "acc_among_accused": 0.979,
+    "abstain": 0.063,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.317,
+    "ci": 0.08,
+    "acc_among_accused": 0.78,
+    "abstain": 0.0,
+    "delta": -0.153,
+    "dci": 0.069
+   },
+   "solver-accuse_last": {
+    "mean": 0.136,
+    "ci": 0.029,
+    "acc_among_accused": 0.96,
+    "abstain": 0.0,
+    "delta": -0.335,
+    "dci": 0.028
+   },
+   "never_abstain": {
+    "mean": 0.449,
+    "ci": 0.042,
+    "acc_among_accused": 0.953,
+    "abstain": 0.0,
+    "delta": -0.021,
+    "dci": 0.019
+   },
+   "grok_tactics": {
+    "mean": 0.174,
+    "ci": 0.063,
+    "acc_among_accused": 0.811,
+    "abstain": 0.187,
+    "delta": -0.297,
+    "dci": 0.071
+   },
+   "heuristic": {
+    "mean": -0.483,
+    "ci": 0.076,
+    "acc_among_accused": 0.373,
+    "abstain": 0.0,
+    "delta": -0.953,
+    "dci": 0.081
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.47,
+    "dci": 0.034
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.47,
+    "dci": 0.034
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.021
+  },
+  {
+   "cfg": 13,
+   "overrides": {
+    "fingerprint_accuracy": 0.8,
+    "canaries_per_day": 1,
+    "n_days": 21,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.345,
+    "ci": 0.033,
+    "acc_among_accused": 0.98,
+    "abstain": 0.163,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.244,
+    "ci": 0.077,
+    "acc_among_accused": 0.78,
+    "abstain": 0.0,
+    "delta": -0.101,
+    "dci": 0.064
+   },
+   "solver-accuse_last": {
+    "mean": -0.01,
+    "ci": 0.024,
+    "acc_among_accused": 0.96,
+    "abstain": 0.0,
+    "delta": -0.355,
+    "dci": 0.031
+   },
+   "never_abstain": {
+    "mean": 0.318,
+    "ci": 0.042,
+    "acc_among_accused": 0.953,
+    "abstain": 0.0,
+    "delta": -0.028,
+    "dci": 0.02
+   },
+   "grok_tactics": {
+    "mean": 0.112,
+    "ci": 0.058,
+    "acc_among_accused": 0.816,
+    "abstain": 0.24,
+    "delta": -0.234,
+    "dci": 0.066
+   },
+   "heuristic": {
+    "mean": -0.549,
+    "ci": 0.067,
+    "acc_among_accused": 0.373,
+    "abstain": 0.0,
+    "delta": -0.895,
+    "dci": 0.072
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.345,
+    "dci": 0.033
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.345,
+    "dci": 0.033
+   },
+   "pass": {
+    "solver_mean>=0.4": false,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.028
+  },
+  {
+   "cfg": 14,
+   "overrides": {
+    "fingerprint_accuracy": 0.8,
+    "canaries_per_day": 1,
+    "n_days": 14,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.415,
+    "ci": 0.044,
+    "acc_among_accused": 0.95,
+    "abstain": 0.203,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.302,
+    "ci": 0.082,
+    "acc_among_accused": 0.767,
+    "abstain": 0.0,
+    "delta": -0.113,
+    "dci": 0.067
+   },
+   "solver-accuse_last": {
+    "mean": 0.239,
+    "ci": 0.06,
+    "acc_among_accused": 0.847,
+    "abstain": 0.0,
+    "delta": -0.176,
+    "dci": 0.041
+   },
+   "never_abstain": {
+    "mean": 0.345,
+    "ci": 0.066,
+    "acc_among_accused": 0.847,
+    "abstain": 0.0,
+    "delta": -0.07,
+    "dci": 0.041
+   },
+   "grok_tactics": {
+    "mean": 0.171,
+    "ci": 0.057,
+    "acc_among_accused": 0.817,
+    "abstain": 0.417,
+    "delta": -0.244,
+    "dci": 0.072
+   },
+   "heuristic": {
+    "mean": -0.685,
+    "ci": 0.071,
+    "acc_among_accused": 0.203,
+    "abstain": 0.0,
+    "delta": -1.1,
+    "dci": 0.082
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.415,
+    "dci": 0.044
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.415,
+    "dci": 0.044
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.07
+  },
+  {
+   "cfg": 15,
+   "overrides": {
+    "fingerprint_accuracy": 0.8,
+    "canaries_per_day": 1,
+    "n_days": 14,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.329,
+    "ci": 0.037,
+    "acc_among_accused": 0.968,
+    "abstain": 0.26,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.232,
+    "ci": 0.078,
+    "acc_among_accused": 0.767,
+    "abstain": 0.0,
+    "delta": -0.097,
+    "dci": 0.063
+   },
+   "solver-accuse_last": {
+    "mean": 0.099,
+    "ci": 0.054,
+    "acc_among_accused": 0.847,
+    "abstain": 0.0,
+    "delta": -0.23,
+    "dci": 0.042
+   },
+   "never_abstain": {
+    "mean": 0.239,
+    "ci": 0.062,
+    "acc_among_accused": 0.847,
+    "abstain": 0.0,
+    "delta": -0.09,
+    "dci": 0.042
+   },
+   "grok_tactics": {
+    "mean": 0.121,
+    "ci": 0.053,
+    "acc_among_accused": 0.816,
+    "abstain": 0.42,
+    "delta": -0.208,
+    "dci": 0.065
+   },
+   "heuristic": {
+    "mean": -0.714,
+    "ci": 0.065,
+    "acc_among_accused": 0.203,
+    "abstain": 0.0,
+    "delta": -1.043,
+    "dci": 0.073
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.329,
+    "dci": 0.037
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.329,
+    "dci": 0.037
+   },
+   "pass": {
+    "solver_mean>=0.4": false,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.09
+  },
+  {
+   "cfg": 16,
+   "overrides": {
+    "fingerprint_accuracy": 0.7,
+    "canaries_per_day": 2,
+    "n_days": 21,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.415,
+    "ci": 0.036,
+    "acc_among_accused": 0.973,
+    "abstain": 0.133,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.276,
+    "ci": 0.08,
+    "acc_among_accused": 0.77,
+    "abstain": 0.0,
+    "delta": -0.14,
+    "dci": 0.071
+   },
+   "solver-accuse_last": {
+    "mean": 0.095,
+    "ci": 0.031,
+    "acc_among_accused": 0.95,
+    "abstain": 0.0,
+    "delta": -0.32,
+    "dci": 0.031
+   },
+   "never_abstain": {
+    "mean": 0.393,
+    "ci": 0.044,
+    "acc_among_accused": 0.943,
+    "abstain": 0.0,
+    "delta": -0.023,
+    "dci": 0.021
+   },
+   "grok_tactics": {
+    "mean": -0.01,
+    "ci": 0.077,
+    "acc_among_accused": 0.673,
+    "abstain": 0.093,
+    "delta": -0.425,
+    "dci": 0.081
+   },
+   "heuristic": {
+    "mean": -0.599,
+    "ci": 0.07,
+    "acc_among_accused": 0.3,
+    "abstain": 0.0,
+    "delta": -1.014,
+    "dci": 0.075
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.415,
+    "dci": 0.036
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.415,
+    "dci": 0.036
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.023
+  },
+  {
+   "cfg": 17,
+   "overrides": {
+    "fingerprint_accuracy": 0.7,
+    "canaries_per_day": 2,
+    "n_days": 21,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.313,
+    "ci": 0.032,
+    "acc_among_accused": 0.979,
+    "abstain": 0.203,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.207,
+    "ci": 0.077,
+    "acc_among_accused": 0.77,
+    "abstain": 0.0,
+    "delta": -0.106,
+    "dci": 0.068
+   },
+   "solver-accuse_last": {
+    "mean": -0.03,
+    "ci": 0.026,
+    "acc_among_accused": 0.95,
+    "abstain": 0.0,
+    "delta": -0.343,
+    "dci": 0.031
+   },
+   "never_abstain": {
+    "mean": 0.274,
+    "ci": 0.043,
+    "acc_among_accused": 0.943,
+    "abstain": 0.0,
+    "delta": -0.039,
+    "dci": 0.022
+   },
+   "grok_tactics": {
+    "mean": -0.061,
+    "ci": 0.072,
+    "acc_among_accused": 0.672,
+    "abstain": 0.127,
+    "delta": -0.374,
+    "dci": 0.076
+   },
+   "heuristic": {
+    "mean": -0.646,
+    "ci": 0.062,
+    "acc_among_accused": 0.3,
+    "abstain": 0.0,
+    "delta": -0.959,
+    "dci": 0.066
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.313,
+    "dci": 0.032
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.313,
+    "dci": 0.032
+   },
+   "pass": {
+    "solver_mean>=0.4": false,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.039
+  },
+  {
+   "cfg": 18,
+   "overrides": {
+    "fingerprint_accuracy": 0.7,
+    "canaries_per_day": 2,
+    "n_days": 14,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.411,
+    "ci": 0.04,
+    "acc_among_accused": 0.96,
+    "abstain": 0.167,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.26,
+    "ci": 0.082,
+    "acc_among_accused": 0.757,
+    "abstain": 0.0,
+    "delta": -0.151,
+    "dci": 0.071
+   },
+   "solver-accuse_last": {
+    "mean": 0.279,
+    "ci": 0.05,
+    "acc_among_accused": 0.897,
+    "abstain": 0.0,
+    "delta": -0.132,
+    "dci": 0.035
+   },
+   "never_abstain": {
+    "mean": 0.382,
+    "ci": 0.055,
+    "acc_among_accused": 0.897,
+    "abstain": 0.0,
+    "delta": -0.029,
+    "dci": 0.033
+   },
+   "grok_tactics": {
+    "mean": 0.029,
+    "ci": 0.074,
+    "acc_among_accused": 0.684,
+    "abstain": 0.177,
+    "delta": -0.382,
+    "dci": 0.082
+   },
+   "heuristic": {
+    "mean": -0.639,
+    "ci": 0.072,
+    "acc_among_accused": 0.243,
+    "abstain": 0.0,
+    "delta": -1.05,
+    "dci": 0.078
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.411,
+    "dci": 0.04
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.411,
+    "dci": 0.04
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.029
+  },
+  {
+   "cfg": 19,
+   "overrides": {
+    "fingerprint_accuracy": 0.7,
+    "canaries_per_day": 2,
+    "n_days": 14,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.315,
+    "ci": 0.032,
+    "acc_among_accused": 0.978,
+    "abstain": 0.243,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.193,
+    "ci": 0.078,
+    "acc_among_accused": 0.757,
+    "abstain": 0.0,
+    "delta": -0.122,
+    "dci": 0.068
+   },
+   "solver-accuse_last": {
+    "mean": 0.132,
+    "ci": 0.045,
+    "acc_among_accused": 0.897,
+    "abstain": 0.0,
+    "delta": -0.183,
+    "dci": 0.037
+   },
+   "never_abstain": {
+    "mean": 0.269,
+    "ci": 0.052,
+    "acc_among_accused": 0.897,
+    "abstain": 0.0,
+    "delta": -0.046,
+    "dci": 0.035
+   },
+   "grok_tactics": {
+    "mean": -0.025,
+    "ci": 0.07,
+    "acc_among_accused": 0.684,
+    "abstain": 0.187,
+    "delta": -0.34,
+    "dci": 0.076
+   },
+   "heuristic": {
+    "mean": -0.67,
+    "ci": 0.066,
+    "acc_among_accused": 0.243,
+    "abstain": 0.0,
+    "delta": -0.985,
+    "dci": 0.071
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.315,
+    "dci": 0.032
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.315,
+    "dci": 0.032
+   },
+   "pass": {
+    "solver_mean>=0.4": false,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.046
+  },
+  {
+   "cfg": 20,
+   "overrides": {
+    "fingerprint_accuracy": 0.7,
+    "canaries_per_day": 1,
+    "n_days": 21,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.38,
+    "ci": 0.036,
+    "acc_among_accused": 0.972,
+    "abstain": 0.153,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.227,
+    "ci": 0.084,
+    "acc_among_accused": 0.74,
+    "abstain": 0.0,
+    "delta": -0.153,
+    "dci": 0.07
+   },
+   "solver-accuse_last": {
+    "mean": 0.101,
+    "ci": 0.034,
+    "acc_among_accused": 0.937,
+    "abstain": 0.0,
+    "delta": -0.279,
+    "dci": 0.036
+   },
+   "never_abstain": {
+    "mean": 0.348,
+    "ci": 0.048,
+    "acc_among_accused": 0.927,
+    "abstain": 0.0,
+    "delta": -0.032,
+    "dci": 0.026
+   },
+   "grok_tactics": {
+    "mean": 0.017,
+    "ci": 0.074,
+    "acc_among_accused": 0.68,
+    "abstain": 0.187,
+    "delta": -0.363,
+    "dci": 0.082
+   },
+   "heuristic": {
+    "mean": -0.64,
+    "ci": 0.069,
+    "acc_among_accused": 0.26,
+    "abstain": 0.0,
+    "delta": -1.02,
+    "dci": 0.075
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.38,
+    "dci": 0.036
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.38,
+    "dci": 0.036
+   },
+   "pass": {
+    "solver_mean>=0.4": false,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.032
+  },
+  {
+   "cfg": 21,
+   "overrides": {
+    "fingerprint_accuracy": 0.7,
+    "canaries_per_day": 1,
+    "n_days": 21,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.255,
+    "ci": 0.035,
+    "acc_among_accused": 0.968,
+    "abstain": 0.277,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.152,
+    "ci": 0.079,
+    "acc_among_accused": 0.74,
+    "abstain": 0.0,
+    "delta": -0.103,
+    "dci": 0.067
+   },
+   "solver-accuse_last": {
+    "mean": -0.036,
+    "ci": 0.029,
+    "acc_among_accused": 0.937,
+    "abstain": 0.0,
+    "delta": -0.291,
+    "dci": 0.035
+   },
+   "never_abstain": {
+    "mean": 0.212,
+    "ci": 0.046,
+    "acc_among_accused": 0.927,
+    "abstain": 0.0,
+    "delta": -0.043,
+    "dci": 0.025
+   },
+   "grok_tactics": {
+    "mean": -0.025,
+    "ci": 0.067,
+    "acc_among_accused": 0.686,
+    "abstain": 0.237,
+    "delta": -0.28,
+    "dci": 0.076
+   },
+   "heuristic": {
+    "mean": -0.687,
+    "ci": 0.061,
+    "acc_among_accused": 0.26,
+    "abstain": 0.0,
+    "delta": -0.942,
+    "dci": 0.067
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.255,
+    "dci": 0.035
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.255,
+    "dci": 0.035
+   },
+   "pass": {
+    "solver_mean>=0.4": false,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.043
+  },
+  {
+   "cfg": 22,
+   "overrides": {
+    "fingerprint_accuracy": 0.7,
+    "canaries_per_day": 1,
+    "n_days": 14,
+    "leak_damage": 0.05
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.331,
+    "ci": 0.046,
+    "acc_among_accused": 0.934,
+    "abstain": 0.297,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.177,
+    "ci": 0.088,
+    "acc_among_accused": 0.7,
+    "abstain": 0.0,
+    "delta": -0.154,
+    "dci": 0.069
+   },
+   "solver-accuse_last": {
+    "mean": 0.151,
+    "ci": 0.068,
+    "acc_among_accused": 0.787,
+    "abstain": 0.0,
+    "delta": -0.179,
+    "dci": 0.048
+   },
+   "never_abstain": {
+    "mean": 0.224,
+    "ci": 0.073,
+    "acc_among_accused": 0.787,
+    "abstain": 0.0,
+    "delta": -0.107,
+    "dci": 0.049
+   },
+   "grok_tactics": {
+    "mean": 0.051,
+    "ci": 0.065,
+    "acc_among_accused": 0.686,
+    "abstain": 0.417,
+    "delta": -0.279,
+    "dci": 0.08
+   },
+   "heuristic": {
+    "mean": -0.752,
+    "ci": 0.065,
+    "acc_among_accused": 0.16,
+    "abstain": 0.0,
+    "delta": -1.082,
+    "dci": 0.08
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.331,
+    "dci": 0.046
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.331,
+    "dci": 0.046
+   },
+   "pass": {
+    "solver_mean>=0.4": false,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.107
+  },
+  {
+   "cfg": 23,
+   "overrides": {
+    "fingerprint_accuracy": 0.7,
+    "canaries_per_day": 1,
+    "n_days": 14,
+    "leak_damage": 0.07
+   },
+   "n": 300,
+   "solver": {
+    "mean": 0.255,
+    "ci": 0.036,
+    "acc_among_accused": 0.963,
+    "abstain": 0.377,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.109,
+    "ci": 0.083,
+    "acc_among_accused": 0.7,
+    "abstain": 0.0,
+    "delta": -0.146,
+    "dci": 0.069
+   },
+   "solver-accuse_last": {
+    "mean": 0.022,
+    "ci": 0.061,
+    "acc_among_accused": 0.787,
+    "abstain": 0.0,
+    "delta": -0.233,
+    "dci": 0.049
+   },
+   "never_abstain": {
+    "mean": 0.118,
+    "ci": 0.068,
+    "acc_among_accused": 0.787,
+    "abstain": 0.0,
+    "delta": -0.137,
+    "dci": 0.049
+   },
+   "grok_tactics": {
+    "mean": 0.01,
+    "ci": 0.061,
+    "acc_among_accused": 0.684,
+    "abstain": 0.42,
+    "delta": -0.244,
+    "dci": 0.071
+   },
+   "heuristic": {
+    "mean": -0.774,
+    "ci": 0.059,
+    "acc_among_accused": 0.16,
+    "abstain": 0.0,
+    "delta": -1.029,
+    "dci": 0.07
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.255,
+    "dci": 0.036
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.255,
+    "dci": 0.036
+   },
+   "pass": {
+    "solver_mean>=0.4": false,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": false,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.137
+  }
+ ]
+}

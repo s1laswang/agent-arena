@@ -14,7 +14,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any
 
-from .rules import HELDOUT_SEEDS, JUDGE_SEEDS, TierParams
+from .rules import HELDOUT_SEEDS, JUDGE_SEEDS, TRACKS, TierParams
 
 FIRST = ["Aino", "Mikko", "Laura", "Jussi", "Sanna", "Teemu", "Elina", "Ville", "Noora", "Antti",
          "Hanna", "Petri", "Kaisa", "Olli", "Riikka", "Tuomas", "Maria", "Janne", "Emma", "Lauri",
@@ -118,7 +118,7 @@ def generate_world(tier: str, seed: int, p: TierParams) -> World:
     ws = world_seed(tier, seed)
     rng = random.Random(ws)
     n = p.n_employees
-    depts = DEPTS[: 5 if tier in ("hard", "hard_forge") else 4]
+    depts = DEPTS[: 5 if TRACKS.get(tier, tier) in ("hard", "expert") else 4]
     company = rng.choice(COMPANIES)
     names: set[str] = set()
     emps = []

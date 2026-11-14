@@ -16,7 +16,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Callable
 
-from .rules import TRACKS
+from .rules import EXPERT_TIERS, TRACKS
 from .types import EpisodeResult, Step
 
 MAX_ITERS = 1000
@@ -200,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m canary.eval", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--agent", default="solver")
-    ap.add_argument("--tier", default="all", choices=[*TIERS, *TRACKS, "all"])
+    ap.add_argument("--tier", default="all", choices=[*TIERS, *TRACKS, *EXPERT_TIERS, "all"])
     ap.add_argument("--seeds", default="dev20", help="dev20 | judge | n:N (count) | N (count if <=1000, else one seed) | a-b | a,b,c")
     ap.add_argument("--provider", default="template")
     ap.add_argument("--out", default="data/runs")

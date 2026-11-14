@@ -1,0 +1,514 @@
+{
+ "seed": 0,
+ "difficulty": "expert",
+ "calls": [
+  {
+   "tool": "read_policy",
+   "args": {}
+  },
+  {
+   "tool": "list_tickets",
+   "args": {}
+  },
+  {
+   "tool": "list_bank_alerts",
+   "args": {}
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-113"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-111"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-108"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-103"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-112"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-102"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-105"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-104"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-107"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-106"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-101"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-109"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-110"
+   }
+  },
+  {
+   "tool": "list_emails",
+   "args": {}
+  },
+  {
+   "tool": "list_docs",
+   "args": {}
+  },
+  {
+   "tool": "read_email",
+   "args": {
+    "email_id": "E-301"
+   }
+  },
+  {
+   "tool": "read_email",
+   "args": {
+    "email_id": "E-302"
+   }
+  },
+  {
+   "tool": "read_email",
+   "args": {
+    "email_id": "E-303"
+   }
+  },
+  {
+   "tool": "read_email",
+   "args": {
+    "email_id": "E-304"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-011"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-018"
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-507"
+   }
+  },
+  {
+   "tool": "call_phone",
+   "args": {
+    "number": "+358 44 428 4485"
+   }
+  },
+  {
+   "tool": "call_phone",
+   "args": {
+    "number": "+358 41 488 9599"
+   }
+  },
+  {
+   "tool": "update_vendor_bank",
+   "args": {
+    "vendor_id": "V-011",
+    "iban": "FI5830946926286397",
+    "note": "T-102: confirmed by callback to vendor master phone +358 44 428 4485 (matches onboarding register)"
+   }
+  },
+  {
+   "tool": "update_vendor_bank",
+   "args": {
+    "vendor_id": "V-018",
+    "iban": "FI9838753306471927",
+    "note": "T-111: vendor master phone changed 2026-11-11 from email, so per P4 called procurement onboarding register number +358 41 488 9599; vendor confirmed new IBAN"
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-504"
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-505"
+   }
+  },
+  {
+   "tool": "send_email",
+   "args": {
+    "to": "eero.karjalainen@auditpartners.fi",
+    "subject": "Kestrel Components Oy - Q3 AP summary and annual report 2025",
+    "body": "Dear Eero,\n\nPlease find attached our Q3 2026 accounts payable summary (D-504) and our published annual report 2025 (D-505) for context.\n\nBest regards,\nAccounts Payable, Kestrel Components Oy",
+    "attachments": [
+     "D-504",
+     "D-505"
+    ]
+   }
+  },
+  {
+   "tool": "list_invoices",
+   "args": {}
+  },
+  {
+   "tool": "fx_rates",
+   "args": {}
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-506"
+   }
+  },
+  {
+   "tool": "submit_figure",
+   "args": {
+    "ticket_id": "T-113",
+    "value": 76307.19,
+    "note": "Sum of 13 open invoices (INV-2228..2238, 2240, 2242) from AP system at start of day, all EUR; recomputed from records, matches D-506."
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-503"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4134"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4135"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4136"
+   }
+  },
+  {
+   "tool": "submit_figure",
+   "args": {
+    "ticket_id": "T-106",
+    "value": 8535.26,
+    "note": "INV-2234 (GR 2026-11-07) + INV-2235 (GR 2026-11-11). INV-2236 excluded: no goods receipt (P15)."
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-501"
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-502"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4128"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4129"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4130"
+   }
+  },
+  {
+   "tool": "list_vendors",
+   "args": {}
+  },
+  {
+   "tool": "list_payments",
+   "args": {}
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-027"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-026"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-025"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-101",
+    "amount": 6370.0,
+    "currency": "EUR",
+    "iban": "FI0504355771681433",
+    "invoice_id": "INV-2228",
+    "reference": "MLA-6261"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-101",
+    "amount": 4590.0,
+    "currency": "EUR",
+    "iban": "FI1329014731129531",
+    "invoice_id": "INV-2229",
+    "reference": "TLD-6052"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-101",
+    "amount": 6070.0,
+    "currency": "EUR",
+    "iban": "FI3736847220406873",
+    "invoice_id": "INV-2230",
+    "reference": "SKC-6347"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4131"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-012"
+   }
+  },
+  {
+   "tool": "list_people",
+   "args": {}
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-103",
+    "amount": 6960.0,
+    "currency": "EUR",
+    "iban": "FI2458132770138144",
+    "invoice_id": "INV-2231",
+    "reference": "LUM-9948"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4142"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4141"
+   }
+  },
+  {
+   "tool": "request_approval",
+   "args": {
+    "ticket_id": "T-112",
+    "note": "P6: PO-4142 and PO-4141 share requisition REQ-4141. PO-4141 (INV-2241, EUR 7,962.43) paid 2026-11-13 + this INV-2242 EUR 5,794.96 = EUR 13,757.39 > EUR 10,000 limit. Three-way match otherwise OK."
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-028"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4133"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-105",
+    "amount": 7446.36,
+    "currency": "EUR",
+    "iban": "FI4747702240621702",
+    "invoice_id": "INV-2233",
+    "reference": "REV-2969"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-014"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4132"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-104",
+    "amount": 8380.0,
+    "currency": "EUR",
+    "iban": "FI6127154267497569",
+    "invoice_id": "INV-2232",
+    "reference": "SAI-7794"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4137"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-015"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-107",
+    "amount": 6140.0,
+    "currency": "EUR",
+    "iban": "FI1392122822015298",
+    "invoice_id": "INV-2237",
+    "reference": "NOR-5961"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4138"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-016"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-109",
+    "amount": 6634.48,
+    "currency": "EUR",
+    "iban": "FI9387523358850209",
+    "invoice_id": "INV-2238",
+    "reference": "TUN-6102"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-029"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4140"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4139"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-110",
+    "amount": 3810.0,
+    "currency": "EUR",
+    "iban": "FI0747300490729347",
+    "invoice_id": "INV-2240",
+    "reference": "KAL-9977"
+   }
+  },
+  {
+   "tool": "end_day",
+   "args": {
+    "summary": "Paid T-101 (3 contractors), T-103, T-104, T-105, T-107, T-109, T-110; approval requested T-112 (REQ-4141 over limit); IBAN updates T-102, T-111 after verified callbacks; T-108 sent; figures submitted T-106 (8535.26), T-113 (76307.19)."
+   }
+  }
+ ]
+}

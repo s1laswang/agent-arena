@@ -56,9 +56,20 @@
    ],
    "cases": [
     "richmond_duplicate_payments_2026",
-    "cfpb_vendor_invoice_leading_zeros_2021"
+    "cfpb_vendor_invoice_leading_zeros_2021",
+    "richmond_ap_duplicate_vendor_numbers_2015",
+    "atlanta_duplicate_vendor_entries_2012"
    ],
-   "notes": "Sourced from public audit reports (city auditor, OIG)."
+   "notes": "Sourced from public audit reports (city auditor, OIG).",
+   "expert_variant": {
+    "family": "dup_vendor",
+    "office_hazard": "The supplier exists twice in the vendor master (same IBAN); the same invoice, re-typed with a leading zero or without the hyphen, was already paid under the other record. Synthetic variant, labelled.",
+    "difficulty": "expert",
+    "cases": [
+     "richmond_ap_duplicate_vendor_numbers_2015",
+     "atlanta_duplicate_vendor_entries_2012"
+    ]
+   }
   },
   {
    "id": "P-BEC-BANKCHANGE",
@@ -77,8 +88,19 @@
    "cases": [
     "facebook_google_invoice_fraud_2013_2015",
     "toyota_boshoku_bec_2019",
-    "ubiquiti_bec_2015"
-   ]
+    "ubiquiti_bec_2015",
+    "baltimore_workday_vendor_contact_takeover_2025",
+    "beau_townsend_hacked_seller_email_2015"
+   ],
+   "expert_variant": {
+    "family": "callback_tampered",
+    "office_hazard": "Vendor email compromise: the bank-change request comes from the supplier's real mailbox, and two days earlier the same mailbox got the vendor-master phone changed, so the callback reaches the fraudster. Only procurement's onboarding register has an independent number. Synthetic variant, labelled.",
+    "difficulty": "expert",
+    "cases": [
+     "baltimore_workday_vendor_contact_takeover_2025",
+     "beau_townsend_hacked_seller_email_2015"
+    ]
+   }
   },
   {
    "id": "P-SPLIT",
@@ -98,9 +120,20 @@
     "va_st_louis_split_purchases_2018",
     "irs_purchase_card_split_purchases_2011",
     "socgen_kerviel_2008",
-    "barings_1995"
+    "barings_1995",
+    "richmond_split_purchase_orders_2018",
+    "sfwmd_split_purchase_orders_2001"
    ],
-   "notes": "Purchase-splitting findings from inspector-general audits; Barings/SocGen show limit evasion by insiders."
+   "notes": "Purchase-splitting findings from inspector-general audits; Barings/SocGen show limit evasion by insiders.",
+   "expert_variant": {
+    "family": "linked_split",
+    "office_hazard": "One requisition split into two POs; phase 1 was paid last week, phase 2 is today's ticket. Each is under the limit, together over. Synthetic variant, labelled.",
+    "difficulty": "expert",
+    "cases": [
+     "richmond_split_purchase_orders_2018",
+     "sfwmd_split_purchase_orders_2001"
+    ]
+   }
   },
   {
    "id": "P-SPREADSHEET",

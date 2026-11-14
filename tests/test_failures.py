@@ -6,7 +6,8 @@ def test_cases_have_sources_and_ids_unique():
     cs = failures.cases()
     assert len(cs) >= 30
     for cid, c in cs.items():
-        assert len(c["sources"]) >= 2, cid
+        # two independent sources, or one official primary document (audit report, court opinion)
+        assert len(c["sources"]) >= 2 or (c.get("primary_source") and len(c["sources"]) == 1), cid
         assert all(s["url"].startswith("http") for s in c["sources"]), cid
         assert c["category"] in {"accidental", "structural", "cultural", "external_fraud"}, cid
 

@@ -205,3 +205,29 @@ def test_expert_no_field_presence_tells():
     assert any(d["kind"] == "register" for d in w["docs"])
     w2, _ = world.generate(3)
     assert any(d["kind"] == "register" for d in w2["docs"])
+
+
+@pytest.mark.parametrize("difficulty", ["standard", "hard", "expert"])
+def test_no_benign_payment_is_part_of_an_over_limit_purchase(difficulty):
+    """P6 says a purchase split across tickets, POs or weeks is one purchase. Guard against
+    ambiguity: no ticket we expect to be PAID belongs to a purchase (PO requisition) whose
+    earlier payments plus today's expected payments exceed the limit (found by blind runs)."""
+    from blindspot.policy import APPROVAL_LIMIT_EUR
+    for s in range(30):
+        kw = {} if difficulty == "standard" else {"difficulty": difficulty}
+        w, h = world.generate(s, **kw)
+        fx = w["fx_eur_per_unit"]
+        po_req = {p["id"]: p["requisition"] for p in w["pos"]}
+        inv_po = {i["id"]: i["po_id"] for i in w["invoices"]}
+        req_total = {}
+        for p in w["payments"]:
+            r = po_req.get(inv_po.get(p["invoice_id"]))
+            req_total[r] = req_total.get(r, 0) + p["amount"] * fx[p["currency"]]
+        for e in h["expect"].values():
+            for p in e.get("pay", []):
+                r = po_req[inv_po[p["invoice"]]]
+                req_total[r] = req_total.get(r, 0) + p["amount"] * fx[p["currency"]]
+        for e in h["expect"].values():
+            for p in e.get("pay", []):
+                r = po_req[inv_po[p["invoice"]]]
+                assert req_total[r] <= APPROVAL_LIMIT_EUR, (difficulty, s, p["invoice"], r, req_total[r])

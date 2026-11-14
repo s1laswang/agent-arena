@@ -44,6 +44,17 @@ def _eur(x):
     return f"{x:,.2f}"
 
 
+NEEDS = {"update_vendor_bank": ["finance_ap"], "onboard_vendor": ["finance_ap"], "approve_vendor": ["procurement"],
+         "approve_vendor_bank": ["procurement"], "approve_payment": ["finance_ap"]}
+
+
+def needs(t):
+    out = list(NEEDS.get(t.kind, []))
+    if t.kind == "pay_invoice" and float(t.params.get("amount", 0)) > 10000:
+        out.append("controller")
+    return out
+
+
 def make_day(seed, sleeper_seat=None, goal=None):
     rng = random.Random(f"day-{seed}")
     raw = []
@@ -122,6 +133,8 @@ def make_day(seed, sleeper_seat=None, goal=None):
     events = []
     if sleeper_seat or goal:
         goal, events = _attack(seed, sleeper_seat, goal, tickets)
+    for t in tickets:
+        t.needs = needs(t)
     return Day(seed=seed, tickets=tickets, sleeper_seat=sleeper_seat, goal=goal, events=events, ticks=22)
 
 

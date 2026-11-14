@@ -95,11 +95,20 @@ def main():
     prior = os.environ.get("SLEEPER_PRIOR")
     if prior and os.path.exists(prior):
         import asyncio
-        for c in json.load(open(prior)):
+        import sys
+        for i, c in enumerate(json.load(open(prior))):
             try:
-                asyncio.run(srv.call_tool(c["tool"], c["args"] or {}))
-            except Exception:
-                pass
+                r = asyncio.run(srv.call_tool(c["tool"], c["args"] or {}))
+                now = r.structured_content if getattr(r, "structured_content", None) else json.loads(r.content[0].text)
+                bad = isinstance(now, dict) and now.get("ok") is False
+            except Exception as e:
+                now, bad = str(e), True
+            was = str(c.get("result"))
+            if bad and '"ok": false' not in was.lower() and "'ok': false" not in was.lower() and "error" not in was.lower():
+                print(f"replay diverged at call {i} {c['tool']}: {now}", file=sys.stderr)
+                sys.exit(1)
+            if bad:
+                print(f"replay call {i} {c['tool']} failed as recorded: {now}", file=sys.stderr)
     atexit.register(srv.finish)
     srv.run(transport=a.transport)
 

@@ -473,3 +473,37 @@ def test_genai_client_pins_v1beta_direct_and_gateway(upstream, tmp_path, monkeyp
         assert c._api_client._http_options.api_version == "v1beta"
     finally:
         g.close()
+
+
+def test_replay_tag_separates_identical_requests(upstream, tmp_path):
+    """Two episodes sending the same first request get their own recordings; the tag never goes upstream."""
+    store = tmp_path / "replay"
+    g = _gw(upstream, tmp_path, mode="record", store_dir=store)
+    try:
+        for tag in ("ep-a", "ep-b"):
+            r = httpx.post(g.url + "/v1beta/models/m:generateContent", json={"contents": []},
+                           headers={"x-goog-api-key": TOKEN, "x-canary-replay-tag": tag}, timeout=10)
+            assert r.status_code == 200
+    finally:
+        g.close()
+    assert len(list(store.rglob("*.json.gz"))) == 2
+    assert all(".1." not in p.name for p in store.rglob("*.json.gz"))
+    assert all("x-canary-replay-tag" not in {k.lower() for k in s["headers"]} for s in upstream.seen)
+    assert request_key("POST", "/p", [], b"{}", "a") != request_key("POST", "/p", [], b"{}", "b") \
+        != request_key("POST", "/p", [], b"{}")
+
+
+def test_committed_ladder_replays_keyless(tmp_path):
+    """The committed ladder recording (4 episodes, recorded at concurrency 4) reproduces step for step."""
+    pytest.importorskip("google.genai")
+    import subprocess
+    import sys
+    root = Path(__file__).resolve().parents[1]
+    if not (root / "results/gemini/replay-ladder/manifest.json").exists() or \
+            not (root / "canary/gemini/ladder.py").exists():
+        pytest.skip("no committed ladder recording")
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GEMINI_")}
+    env["GEMINI_API_KEY"] = ""
+    r = subprocess.run([sys.executable, "-m", "canary.gemini.lab_replay", "--only", "ladder"], cwd=root, env=env,
+                       capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0 and "REPLAY OK" in r.stdout, (r.stdout + r.stderr)[-2000:]

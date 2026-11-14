@@ -46,6 +46,8 @@ def summarize(out: Path) -> dict:
 
 
 def _with_gateway(mode: str, store: Path, cmd: list[str], ledger: Path) -> int:
+    if cmd and cmd[0] in ("python", "python3"):
+        cmd = [sys.executable, *cmd[1:]]  # the interpreter running us (uv venv), not whatever is on PATH
     return subprocess.call([sys.executable, "-m", "canary.gemini.with_gateway", f"--{mode}", str(store),
                             "--ledger", str(ledger), "--", *cmd], cwd=ROOT)
 

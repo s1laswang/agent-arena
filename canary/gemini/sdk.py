@@ -60,12 +60,16 @@ def gateway_http_options(timeout_s: float | None = None) -> dict | None:
     return {"base_url": url, "timeout": _timeout_ms(timeout_s), "api_version": API_VERSION}
 
 
-def genai_client(timeout_s: float | None = None):
-    """google.genai.Client via the gateway (token as API key) if GEMINI_GATEWAY_URL is set, else direct."""
+def genai_client(timeout_s: float | None = None, replay_tag: str | None = None):
+    """google.genai.Client via the gateway (token as API key) if GEMINI_GATEWAY_URL is set, else direct.
+    replay_tag (gateway only): a stable label for one logical run (e.g. a ladder episode), sent as
+    x-canary-replay-tag so record/replay can tell identical requests from different episodes apart."""
     from google import genai
     from google.genai import types
     opts = gateway_http_options(timeout_s)
     if opts is not None:
+        if replay_tag:
+            opts["headers"] = {"x-canary-replay-tag": replay_tag}
         return genai.Client(api_key=gateway_token(), http_options=types.HttpOptions(**opts))
     from canary.llm.base import require_key
     return genai.Client(api_key=require_key("GEMINI_API_KEY"),

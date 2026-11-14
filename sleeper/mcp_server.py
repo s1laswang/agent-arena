@@ -3,6 +3,8 @@ import inspect
 import json
 import os
 import signal
+import sys
+import traceback
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.prompts import Prompt
@@ -55,7 +57,13 @@ def build_server(world, seat, team=None, out=None):
             st["n"] = 0 if name == "end_turn" else st["n"] + 1
             if team is not None and (name == "end_turn" or st["n"] >= STALL):
                 st["n"] = 0
-                play_round(world, team, skip=seat)
+                t0 = world.tick
+                try:
+                    play_round(world, team, skip=seat)
+                except Exception:
+                    traceback.print_exc(file=sys.stderr)
+                    if world.tick == t0:
+                        world.advance()
             if world.tick >= world.last_tick or world.calls[seat] >= BUDGET:
                 finish()
             if name == "end_turn":

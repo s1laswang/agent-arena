@@ -72,3 +72,14 @@ def test_stdin_close_writes(tmp_path):
     p.stdin.close()
     p.wait(10)
     assert json.load(open(out))
+
+
+def test_team_crash_still_advances(tmp_path):
+    class Boom:
+        def turn(self, *a):
+            raise KeyError("x")
+
+    w = World(make_day(0))
+    s = build_server(w, "controller", {"hr": Boom()}, str(tmp_path / "s.json"))
+    assert call(s, "end_turn", {})["ok"] is not False
+    assert w.tick == 1

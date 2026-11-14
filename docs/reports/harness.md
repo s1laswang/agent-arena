@@ -114,7 +114,8 @@ Branch `justSilas-harness-harbor`. Files: `harbor/README.md` (Harbor research (a
   instruction.md as preface + `Env(tier, 0).instruction()` at build time: verified equal to `Env(tier, 900017).instruction()`
   for easy/medium/hard, medium equal to the committed `harbor/canary-task/instruction.md`, hard shows
   `fingerprint_accuracy: 0.95`, `framing_rate: 2`. Full dataset: `python harbor/build.py` wrote 120 tasks in 4 s (139 MB, gitignored).
-  The oracle numbers above were measured on the pre-v1.2 tiers; rerun after rebuilding.
+  Rerun on the final merged code (v1.2 tiers + exact-fingerprint solver), same secret file, `harbor run -p <2 tasks> -a oracle -n 2`:
+  medium/900000 reward 0.79, hard/900000 reward 0.81, both accused correctly on day 6, both ISOLATION OK (11 checks). colima stopped afterwards.
 
 ### Notes for other owners
 - The `*_FILE` interface landed in `mcp_server.py` during this work and the sidecar uses it; nothing else needed.

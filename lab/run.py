@@ -83,6 +83,8 @@ def agent_kind(name):
 
 
 def agent_model(name):
+    if name.startswith("local:"):
+        return os.environ.get("SLEEPER_MODEL_ID") or name[6:]
     if agent_kind(name) == "gemini":
         from agents import gemini
 

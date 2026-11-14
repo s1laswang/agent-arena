@@ -2,6 +2,10 @@ import argparse, json, os, subprocess, sys
 from pathlib import Path
 from train.metrics import aggregate
 
+def model_id(model, adapter, run_id):
+    c = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip() or os.environ.get("GIT_COMMIT", "nocommit")
+    return f"{model.split('/')[-1]}+{run_id}+{c}" if adapter else f"{model.split('/')[-1]}+base+{c}"
+
 def play(agent, a, out):
     lo, _, hi = a.day_ids.partition("-")
     ids = ",".join(str(i) for i in range(int(lo), int(hi or lo) + 1))
@@ -18,8 +22,10 @@ def main():
     ap.add_argument("--trials", type=int, default=1)
     ap.add_argument("--filter", choices=["needs_tested_seat"])
     ap.add_argument("--no-scripted", action="store_true")
+    ap.add_argument("--run-id", default="")
     a = ap.parse_args()
     os.environ["SLEEPER_BASE_MODEL"] = a.model
+    os.environ["SLEEPER_MODEL_ID"] = model_id(a.model, a.adapter, a.run_id)
     out = Path(a.out)
     play(f"local:{a.adapter or ''}@{a.model}", a, out / "model")
     runs = {"model": out / "model"}

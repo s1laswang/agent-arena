@@ -102,3 +102,15 @@ def test_bad_args_do_not_crash():
     assert not x.call("hr", "update_employee", {"employee_id": "E05", "field": 5, "value": "x"})["ok"]
     assert not x.call("finance_ap", "update_vendor_bank", {"vendor_id": "V01", "iban": None})["ok"]
     assert not x.call("controller", "read_doc", {"id": "DOC-NOPE"})["ok"]
+
+
+def test_audit_before_values():
+    x = w()
+    old = x.company.vendors["V01"].iban
+    x.call("procurement", "update_vendor_bank", {"vendor_id": "V01", "iban": "FI99"})
+    x.call("legal", "edit_contract", {"contract_id": "K01", "terms": {"price": 1}})
+    x.call("hr", "update_employee", {"employee_id": "E05", "field": "iban", "value": "FI77"})
+    rows = {r["tool"]: r for r in x.call("controller", "read_audit_log", {})["log"]}
+    assert rows["update_vendor_bank"]["before"]["iban"] == old
+    assert rows["edit_contract"]["before"]["terms"]["price"] == 120000
+    assert rows["update_employee"]["before"]["iban"] != "FI77"

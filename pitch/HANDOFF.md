@@ -4,6 +4,20 @@ Written by dm-pitch, Sat 14 Nov, on branch sleeper/dm-pitch-draft rebased on ori
 
 Number source used below: `make eval` run by dm-pitch on momin 4ebafc3, 20 days x 3 trials, all 8 seats, all scripted, self-checks all PASS (results/eval/gap.md). dm-qa's 5634505 rehearsal agrees on oracle 1.000 / reference 0.550 / staff 0.250, sleeper-day rewards 1.000 / 0.438 / 0.062.
 
+## 0. Placeholder register (multi-model, 5 minute fill)
+
+Every `NOT FOUND (lead-lab pending)` in pitch/ is listed here with its count. When lead-lab publishes a run, grep the string, replace each with the figure plus (model id, date, run id), then delete the line here. `tests/test_pitch_labels.py` fails if a count here is wrong.
+
+- pitch/GEMINI.md: 4
+- pitch/MULTIMODEL.md: 28
+- pitch/SCRIPT.md: 1
+- pitch/SLIDES.md: 1
+- pitch/SUBMISSION.md: 6
+
+What to fill: gemini-4-carbon staff and reference reward, sleeper landed, false accusation, gap, Claude and Codex rows (MULTIMODEL.md table); replay fields: run id, date, seed, step where the sleeper lands, Gemini's tool call, what the reference notices, both rewards (MULTIMODEL.md beat, mirrored in SUBMISSION.md and GEMINI.md). If nothing arrives by the deadline, use the 2-line fallback in MULTIMODEL.md and leave the placeholders out of the final text.
+
+Real vs scripted: seed 1 bank_swap and trust_all are SCRIPTED, no model ran.
+
 ## 1. What is real vs scripted
 
 Labels: real-model = a Gemini call, scripted = plain Python, hidden-info = reads the sleeper identity that honest players never see.

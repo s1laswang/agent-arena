@@ -45,6 +45,22 @@ def test_gemma_section_separate_labelled_and_roundtrips(tmp_path, monkeypatch):
     assert strip(a["gemma"]["rows"]) == strip(b["gemma"]["rows"]) and a["gemma"]["ledger"] == b["gemma"]["ledger"]
 
 
+def test_frontier_chart_and_json(tmp_path, monkeypatch):
+    _grid(tmp_path / "gem", ["gemini-3.8-flash"], "low", monkeypatch)
+    _grid(tmp_path / "gma", ["gemma-4-31b-it"], "default", monkeypatch)
+    assert ladder_report.main(["--runs", str(tmp_path / "gem"), "--gemma-runs", str(tmp_path / "gma"), "--out",
+                               str(tmp_path / "a"), "--bootstrap", "100", "--probe", str(tmp_path / "none.json"),
+                               "--no-tags"]) == 0
+    assert (tmp_path / "a" / "frontier.png").stat().st_size > 10_000
+    fr = json.loads((tmp_path / "a" / "frontier.json").read_text())
+    assert fr["title"]["hard"].startswith("Thinking is a dial")
+    g = [p for p in fr["points"]["hard"] if p["kind"] == "gemma"]
+    assert g and g[0]["label"] == "gemma-4-31b-it via Gemini API (hosted Gemma)"
+    assert g[0]["cost_per_ep_usd"] is None  # no list price: never placed at an invented cost
+    assert all("Verda" not in p["label"] for p in fr["points"]["hard"])
+    assert "](frontier.png)" in (tmp_path / "a" / "ladder.md").read_text()
+
+
 def test_no_gemma_section_without_gemma_runs(tmp_path, monkeypatch):
     _grid(tmp_path / "gem", ["gemini-3.8-flash"], "low", monkeypatch)
     assert ladder_report.main(["--runs", str(tmp_path / "gem"), "--out", str(tmp_path / "a"), "--bootstrap", "100",

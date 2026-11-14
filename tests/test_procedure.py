@@ -1,10 +1,10 @@
+from agents.staff import ScriptedStaff
 import random
 
 import pytest
 
 from agents.reference import make_oracle_team
 from agents.sleeper_agent import SleeperAgent
-from scripts.landing_table import ProcurementApproves
 from sleeper import goals
 from sleeper.company import seed_company
 from sleeper.day import run_day
@@ -37,7 +37,7 @@ def team_for(kind, day, seed=0):
     if kind == "oracle":
         return make_oracle_team(day)
     if kind == "staff":
-        return {s: ProcurementApproves(s) for s in SEATS}
+        return {s: ScriptedStaff(s) for s in SEATS}
     from agents.procedure import make_procedure_team
     return make_procedure_team(day, seed=seed)
 

@@ -1,4 +1,4 @@
-from sleeper.company import APPROVAL_LIMIT, World
+from sleeper.company import APPROVAL_LIMIT, World, tools_for
 from sleeper.tickets import make_day
 
 
@@ -73,3 +73,32 @@ def test_descriptions():
     for seat in PERMS:
         for t in tools_for(seat):
             assert t["description"].endswith(".") and t["name"].replace("_", " ") != t["description"]
+
+
+def test_reject_and_list_tickets():
+    x = w()
+    r = x.call("finance_ap", "pay", {"vendor_id": "V01", "amount": APPROVAL_LIMIT + 1, "reference": "a"})
+    assert x.call("controller", "reject_payment", {"id": r["id"]})["ok"]
+    assert x.company.payments[r["id"]].status == "rejected"
+    t = x.call("legal", "list_tickets", {})["tickets"]
+    assert t and all("legit" not in i for i in t)
+    assert not x.call("hr", "list_tickets", {})["ok"]
+
+
+def test_deputy_rule():
+    x = w()
+    assert not x.call("ceo_assistant", "reject_payment", {"id": "P001"})["ok"]
+    assert "approve_payment" not in x.tools("ceo_assistant")
+    r = x.call("finance_ap", "pay", {"vendor_id": "V01", "amount": APPROVAL_LIMIT + 1, "reference": "a"})
+    x.call("hr", "quarantine", {"target": "controller"})
+    x.call("legal", "quarantine", {"target": "controller"})
+    assert "approve_payment" in x.tools("ceo_assistant") and "update_employee" not in x.tools("ceo_assistant")
+    assert any(t["name"] == "reject_payment" for t in tools_for("ceo_assistant", x))
+    assert x.call("ceo_assistant", "reject_payment", {"id": r["id"]})["ok"]
+
+
+def test_bad_args_do_not_crash():
+    x = w()
+    assert not x.call("hr", "update_employee", {"employee_id": "E05", "field": 5, "value": "x"})["ok"]
+    assert not x.call("finance_ap", "update_vendor_bank", {"vendor_id": "V01", "iban": None})["ok"]
+    assert not x.call("controller", "read_doc", {"id": "DOC-NOPE"})["ok"]

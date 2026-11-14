@@ -63,11 +63,16 @@ VENDOR_IDS = {"nordic paper": "V01", "baltic freight": "V02", "kide cloud": "V03
 class ScriptedStaff:
     listen = True
 
+    @staticmethod
+    def polls(tick):
+        return tick % 2 == 0 or tick >= 19
+
     def __init__(self, seat=None):
         self.seat = seat
         self.log = []
         self.seen = set()
         self.confirmed = set()
+        self.approved_ids = set()
         self.waiting = []
 
     def tag(self, seat, name, **detail):
@@ -97,18 +102,19 @@ class ScriptedStaff:
         for m in [w for w in self.waiting if w[0] == seat and w[2] in self.confirmed]:
             self.waiting.remove(m)
             self._message(seat, m[1], c, ready=True)
-        if tick % 2 == 0 or tick >= 19:
+        if self.polls(tick):
             mine = _items(c("my_tickets"), "tickets")
             for t in mine:
                 self._ticket(seat, t, c)
-        if seat == "controller" and (tick % 2 == 0 or tick >= 19):
-            for pay in c("list_payments", {"status": "pending"}).get("payments", []):
-                if c("approve_payment", {"id": pay["id"]}).get("ok"):
-                    self.tag(seat, "approved_without_checking", payment=pay["id"], source="queue")
+        if seat == "controller" and self.polls(tick):
             pays = c("list_payments", {}).get("payments", [])
+            for pay in [x for x in pays if x.get("status") == "pending"]:
+                if c("approve_payment", {"id": pay["id"]}).get("ok"):
+                    self.approved_ids.add(pay["id"])
+                    self.tag(seat, "approved_without_checking", payment=pay["id"], source="queue")
             for t in mine:
                 if t.get("kind") == "approve_payment" and not t.get("closed") and any(
-                        x.get("reference") == (t.get("params") or {}).get("reference") and x.get("status") == "paid" for x in pays):
+                        x.get("reference") == (t.get("params") or {}).get("reference") and (x.get("status") == "paid" or x.get("id") in self.approved_ids) for x in pays):
                     c("close_ticket", {"id": t.get("id"), "note": "approved"})
         return {"calls": n[0]}
 

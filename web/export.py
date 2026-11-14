@@ -96,7 +96,7 @@ def build(seed, team_name, sleeper, live=None):
         def snap(done):
             r = score(day, world.initial, world.company, world.ledger, agent=team_name) if done else None
             doc = {"id": "live", "day": day.model_dump(), "messages": [m.model_dump() for m in world.company.messages],
-                   "actions": [a.model_dump() for a in world.ledger], "result": [r.model_dump()] if r else [], "quarantined": world.company.quarantined, "tick": world.tick, "done": done}
+                   "actions": [a.model_dump() for a in world.ledger], "result": [{**r.model_dump(), "agent_kind": "scripted", "model": "scripted"}] if r else [], "provenance": {"provenance": "scripted"}, "quarantined": world.company.quarantined, "tick": world.tick, "done": done}
             tmp = OUT / "live.json.tmp"
             json.dump(doc, open(tmp, "w"), sort_keys=True)
             os.replace(tmp, live)

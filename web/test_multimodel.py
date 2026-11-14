@@ -1,3 +1,4 @@
+from conftest import launch
 import subprocess, sys, time
 from pathlib import Path
 import pytest
@@ -9,7 +10,7 @@ def test_multimodel():
     time.sleep(1)
     try:
         with sync_playwright() as p:
-            b = p.chromium.launch(executable_path="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+            b = launch(p)
             pg = b.new_page(viewport={"width": 1500, "height": 700})
             pg.goto("http://localhost:8767/results.html")
             pg.wait_for_selector("#gap tbody tr")
@@ -37,7 +38,7 @@ def test_landing_and_paired(tmp_path):
     time.sleep(1)
     try:
         with sync_playwright() as p:
-            b = p.chromium.launch(executable_path="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+            b = launch(p)
             pg = b.new_page(viewport={"width": 1500, "height": 700})
             pg.goto("http://localhost:8768/index.html?src=fixtures/_paired_tmp.json")
             pg.wait_for_selector("#gap tbody tr")

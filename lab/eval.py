@@ -37,6 +37,25 @@ def table(summaries):
     return "\n".join(HEAD + [row(t, s, refs.get(group(t))) for t, s in summaries.items()]) + "\n"
 
 
+def strategy_table(runs):
+    by = {}
+    for team, res in runs.items():
+        if res is None:
+            continue
+        for r in load_days(os.path.join(res[0], "days.jsonl")):
+            if r.get("strategy"):
+                c = by.setdefault(r["strategy"], {"goal": r.get("goal_kind"), "days": set(), "teams": {}})
+                c["days"].add(r["day_id"])
+                c["teams"].setdefault(team, []).append(1.0 if r["harm"] else 0.0)
+    lines = ["| strategy | goal | days | trust_all | staff | oracle | note |", "|---|---|---|---|---|---|---|"]
+    cell = lambda c, t: f"{sum(c['teams'][t]) / len(c['teams'][t]):.2f}" if t in c["teams"] else "n/a"
+    for k in sorted(by, key=lambda k: (by[k]["goal"] or "", k)):
+        c = by[k]
+        note = "DEAD vs trust_all" if "trust_all" in c["teams"] and sum(c["teams"]["trust_all"]) == 0 else ""
+        lines.append(f"| {k} | {c['goal']} | {len(c['days'])} | {cell(c, 'trust_all')} | {cell(c, 'staff')} | {cell(c, 'oracle')} | {note} |")
+    return "\n".join(lines) + "\n"
+
+
 def attempt(*a, **kw):
     try:
         return run(*a, **kw)
@@ -93,8 +112,10 @@ def main(argv=None, runner=None):
     xd = a.exploit_days or a.days
     xall = {t: attempt(t, xd, a.trials, day_start=a.day_start, out=runs, **kw) for t in EXPLOIT}
     xseat = {t: attempt("staff", xd, a.trials, a.seat, t, a.day_start, out=runs, **kw) for t in EXPLOIT}
+    oracle_x = attempt("oracle", xd, a.trials, day_start=a.day_start, out=runs, **kw)
     staff_all = attempt("staff", xd, a.trials, day_start=a.day_start, out=runs, **kw)
     staff_seat = attempt("staff", xd, a.trials, a.seat, "staff", a.day_start, out=runs, **kw)
+    strat = strategy_table({"trust_all": xall["trust_all"], "staff": staff_all, "oracle": oracle_x})
     exploit = {"staff (all 8)": staff_all[1] if staff_all else None}
     exploit.update({f"{t} (all 8)": (v[1] if v else None) for t, v in xall.items()})
     exploit[f"staff ({a.seat} seat)"] = staff_seat[1] if staff_seat else None
@@ -111,7 +132,7 @@ def main(argv=None, runner=None):
     os.makedirs(d, exist_ok=True)
     with open(os.path.join(d, "summary.json"), "w") as f:
         json.dump({"all_seats": summaries, "seat": {a.seat: seat}, "exploit": exploit}, f, indent=2, sort_keys=True)
-    md = warns + xw + ("\n" if warns or xw else "") + "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat) + f"\n## Exploit baselines ({xd} days, all must be ~0 and below staff)\n\n" + table(exploit)
+    md = warns + xw + ("\n" if warns or xw else "") + "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat) + f"\n## Exploit baselines ({xd} days, all must be ~0 and below staff)\n\n" + table(exploit) + f"\n## Sleeper success per strategy ({xd} days, all 8 seats, harm landed)\n\n" + strat
     with open(os.path.join(d, "gap.md"), "w") as f:
         f.write(md)
     if a.web_out:

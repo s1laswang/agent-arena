@@ -1,8 +1,8 @@
 """Tiers v1.2 co-tune: solver behaviour weight x tier params (CEO objective). <=3 processes.
 
   uv run --python 3.12 --extra dev python fr8/cotune.py [--seeds 200] [--procs 3] [--out data/fr8/cotune]
-Behaviour weight: passed as SolverPolicy(behaviour_weight=w) if that kwarg exists, else as
-SolverPolicy(behaviour_temper=w) (the existing multiplier on behavioural log-likelihoods, belief.posterior).
+Behaviour weight: SolverPolicy(behaviour_weight=w) (3c46a20+; older code fell back to
+behaviour_temper=w) (the existing multiplier on behavioural log-likelihoods, belief.posterior).
 The column `bw_kwarg` records which one was used. Non-solver agents ignore it (run once per cell anyway, same seeds).
 Outputs parts/<cell>.csv (one row per agent x seed), summary.csv (per cell x agent), triples.csv, top.json.
 """
@@ -12,7 +12,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-BWS = [0.7, 0.8, 0.9, 1.0]
+import subprocess
+SHA = subprocess.run(["git", "log", "-1", "--format=%h", "--", "canary/solver"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+BWS = [0.6, 0.7, 0.8, 0.9, 1.0]
 AGENTS = ["solver", "heuristic", "logs_only", "stop_early", "random"]
 
 
@@ -25,8 +27,10 @@ def tier_cells(hard_n=False):
     return out
 
 
-def cells(hard_n=False):
-    return [(bw, t, p) for bw in BWS for t, p in tier_cells(hard_n)]
+def cells(hard_n=False, fp=None):
+    """fp='1' -> only fingerprint_accuracy==1.0 cells; fp='lt1' -> only < 1.0; None -> all."""
+    keep = lambda p: fp is None or (p.get("fingerprint_accuracy", 1.0) == 1.0) == (fp == "1")
+    return [(bw, t, p) for bw in BWS for t, p in tier_cells(hard_n) if keep(p)]
 
 
 def cell_id(bw, tier, p):
@@ -54,7 +58,7 @@ def work(args):
             rows.append({"cell": cell_id(bw, tier, params), "bw": bw, "bw_kwarg": kw, "tier": tier,
                          "n_employees": rules.TIERS[tier].n_employees,
                          "fingerprint_accuracy": rules.TIERS[tier].fingerprint_accuracy,
-                         "framing_rate": rules.TIERS[tier].framing_rate, "agent": agent, "seed": s,
+                         "framing_rate": rules.TIERS[tier].framing_rate, "solver_sha": SHA, "agent": agent, "seed": s,
                          "score": r.score, "correct": int(r.correct), "none": int(r.accused is None),
                          "wrong": int(r.accused is not None and not r.correct), "final_day": r.final_day})
     tmp = path.with_suffix(".tmp")
@@ -123,12 +127,13 @@ if __name__ == "__main__":
     ap.add_argument("--procs", type=int, default=3)
     ap.add_argument("--hard-n", action="store_true", help="also n_employees 25 vs 30 on hard")
     ap.add_argument("--out", default=str(ROOT / "data/fr8/cotune"))
+    ap.add_argument("--fp", choices=["1", "lt1"], help="run only fp==1.0 or fp<1.0 cells")
     ap.add_argument("--analyse-only", action="store_true")
     a = ap.parse_args()
     assert a.procs <= 3
     (Path(a.out) / "parts").mkdir(parents=True, exist_ok=True)
     if not a.analyse_only:
-        jobs = [(bw, t, p, range(a.seeds), a.out) for bw, t, p in cells(a.hard_n)]
+        jobs = [(bw, t, p, range(a.seeds), a.out) for bw, t, p in cells(a.hard_n, a.fp)]
         with Pool(a.procs) as pool:
             for name, secs in pool.imap_unordered(work, jobs):
                 print(f"{name} {secs:.1f}s", flush=True)

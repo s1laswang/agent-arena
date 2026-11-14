@@ -48,6 +48,18 @@ def test_run_and_eval(tmp_path):
     assert "gap vs reference" in open(tmp_path / "e/eval/gap.md").read()
 
 
+def test_eval_summary_block(tmp_path, capsys):
+    from lab.eval import main as ev
+
+    (tmp_path / "e/runs/stale-all-d1@0-t1/days").mkdir(parents=True)
+    ev(["--days", "2", "--trials", "1", "--out", str(tmp_path / "e"), "--web-out", ""], runner=fake)
+    assert not (tmp_path / "e/runs/stale-all-d1@0-t1").exists()
+    tail = capsys.readouterr().out.split("\nSUMMARY ")[1].splitlines()
+    assert tail[0].startswith("(2 days x 1 trials)") and len(tail) == 6
+    assert tail[1].startswith("all 8 seats: oracle") and tail[2].startswith("do_nothing")
+    assert "needs-seat days: oracle" in tail[3] and tail[4].startswith("self-checks:") and tail[5].startswith("full table:")
+
+
 def test_recorder():
     from lab.run import Recorder
 

@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import shutil
 
 from lab.results import load_days, summarise
 from lab.run import run, setup_gemini
@@ -136,6 +137,8 @@ def main(argv=None, runner=None):
     kw = {"runner": runner} if runner else {}
     kw["jobs"] = a.jobs
     runs = os.path.join(a.out, "runs")
+    for sub in ("runs", "eval"):
+        shutil.rmtree(os.path.join(a.out, sub), ignore_errors=True)
     wins = lambda r: r.get("winnable", True)
     full = {t: attempt(t, a.days, a.trials, day_start=a.day_start, out=runs, **kw) for t in ORDER}
     seatruns = {g: attempt("staff", a.days, a.trials, a.seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}

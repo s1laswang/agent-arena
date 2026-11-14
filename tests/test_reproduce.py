@@ -215,6 +215,7 @@ def test_table_current_version_first_then_history(tmp_path, monkeypatch):
     assert "| reported | 3 | 0 | -1.000" in cur_row and "bbbbbbb" in cur_row
     assert "| reported | 2 | 0 | +0.500" in v12_row and "aaaaaaa" in v12_row
     assert "| 9.0 | – |" in v12_row  # no `/ solver` ratio against this run's solver for history
+    assert "| – | – |" in cur_row  # nor for current-version reported runs (dev seeds, not paired with this run)
     # superseded excluded from the table and the rows
     assert "superseded" not in md.split("## medium")[1] and "eeeeeee" not in md and "+0.990" not in md
     assert not [r for r in out["rows"] if r.kind == "reported" and r.agent == "solver"]

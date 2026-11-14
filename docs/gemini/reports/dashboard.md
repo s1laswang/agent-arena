@@ -1,5 +1,11 @@
 # G5 Dashboard + demo assets: report
 
+## Sat 23:50: 2-minute video landed (bcc64b3, by the video session)
+- `docs/gemini/assets/canary-lab-2min.mp4` (2:00, 1080p, 38 MB). Build, QA and the refresh commands are in
+  [reports/video.md](video.md); QA results are in `results/gemini/video_qa.json`. Its narration takes cost and cache share from the
+  committed ledger and the atlas from atlas_blind.json. Re-cut it (about 10 min) after my 05:40 final rebuild.
+- I checked the commit: it touches only the agreed paths plus an additive narrate.py `usage_summary()`/`{cost}`. 98 lab tests pass.
+
 ## Sat 23:20: task 1 done; dashboard now built from committed files only (42eddce)
 
 **Done**

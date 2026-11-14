@@ -68,8 +68,9 @@ def is_retryable(exc: BaseException) -> bool:
         if isinstance(v, int) and (v == 429 or v == 408 or 500 <= v < 600):
             return True
     name = type(exc).__name__.lower()
-    return any(k in name for k in ("ratelimit", "timeout", "connection", "unavailable",
-                                   "internalserver", "resourceexhausted", "servererror"))
+    return any(k in name for k in ("ratelimit", "timeout", "connection", "connecterror", "unavailable",
+                                   "internalserver", "resourceexhausted", "servererror",
+                                   "remoteprotocol", "readerror", "writeerror"))
 
 
 class LLMClient:
@@ -106,6 +107,10 @@ class LLMClient:
                     raise
                 delay = min(self.base_delay * (2 ** attempt), 60.0) * (1 + 0.1 * random.random())
                 attempt += 1
+                if os.environ.get("CANARY_PROGRESS"):  # transport retries are otherwise silent
+                    import sys
+                    print(f"[llm retry {attempt}/{self.max_retries}] {type(e).__name__}: {str(e)[:160]} "
+                          f"(sleep {delay:.0f}s)", file=sys.stderr, flush=True)
                 self.sleep(delay)
         for k in ("in", "out", "cost_usd"):
             self.total_usage[k] += resp.usage.get(k, 0) or 0

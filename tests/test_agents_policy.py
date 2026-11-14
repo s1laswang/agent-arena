@@ -114,7 +114,7 @@ def test_opencode_cmd_and_hygiene():
     cfg = json.loads((wd / "opencode.json").read_text())
     assert cfg["$schema"] == "https://opencode.ai/config.json"
     assert cfg["mcp"]["canary"]["url"] == "http://127.0.0.1:8765/mcp" and cfg["mcp"]["canary"]["type"] == "remote"
-    assert cfg["permission"]["bash"] == "deny"
+    assert cfg["permission"] == {"*": "deny", "canary_*": "allow"}   # every built-in tool denied
     assert_clean(wd, opencode_run.FILES)
     assert REPO_ROOT not in wd.parents
     (wd / "env.py").write_text("x")

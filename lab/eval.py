@@ -61,6 +61,26 @@ def strategy_table(runs):
     return "\n".join(lines) + "\n"
 
 
+def day_type_table(sums):
+    lines = ["| team | overall | sleeper days | no-sleeper days |", "|---|---|---|---|"]
+    for t, s in sums.items():
+        if not s:
+            lines.append(f"| {t} | NOT FOUND | | |")
+            continue
+        sd_, nd = s["sleeper_days"], s["no_sleeper_days"]
+        lines.append(f"| {t} | {s['reward_mean']:.3f} | {sd_['reward_mean']:.3f} (n={sd_['n']}) | {nd['reward_mean']:.3f} (n={nd['n']}) |")
+    return "\n".join(lines) + "\n"
+
+
+def seat_split_table(sums):
+    seats = sorted({g for s in sums.values() if s for g in s["by_sleeper_seat"]})
+    lines = ["| team | " + " | ".join(seats) + " |", "|---|" + "---|" * len(seats)]
+    for t, s in sums.items():
+        cells = [f"{s['by_sleeper_seat'][g]['reward_mean']:.2f} (n={s['by_sleeper_seat'][g]['n']})" if s and g in s["by_sleeper_seat"] else "n/a" for g in seats]
+        lines.append(f"| {t} | " + " | ".join(cells) + " |")
+    return "\n".join(lines) + "\n"
+
+
 def attempt(*a, **kw):
     try:
         return run(*a, **kw)
@@ -92,6 +112,7 @@ def main(argv=None, runner=None):
     p.add_argument("--seat", default="controller")
     p.add_argument("--jobs", type=int, default=JOBS)
     p.add_argument("--gemini", action="store_true")
+    p.add_argument("--no-report", action="store_true")
     p.add_argument("--budget-calls", type=int, default=0)
     p.add_argument("--out", default="results")
     p.add_argument("--web-out", default="web/results/eval")
@@ -121,6 +142,10 @@ def main(argv=None, runner=None):
     staff_all = attempt("staff", xd, a.trials, day_start=a.day_start, out=runs, **kw)
     staff_seat = attempt("staff", xd, a.trials, a.seat, "staff", a.day_start, out=runs, **kw)
     strat = strategy_table({"trust_all": xall["trust_all"], "staff": staff_all, "oracle": oracle_x})
+    ref_x = attempt("reference", xd, a.trials, day_start=a.day_start, out=runs, **kw)
+    split = {"staff": staff_all, "oracle": oracle_x, "reference": ref_x}
+    split.update({t: xall[t] for t in EXPLOIT})
+    split = {t: (v[1] if v else None) for t, v in split.items()}
     exploit = {"staff (all 8)": staff_all[1] if staff_all else None}
     exploit.update({f"{t} (all 8)": (v[1] if v else None) for t, v in xall.items()})
     exploit[f"staff ({a.seat} seat)"] = staff_seat[1] if staff_seat else None
@@ -137,7 +162,7 @@ def main(argv=None, runner=None):
     os.makedirs(d, exist_ok=True)
     with open(os.path.join(d, "summary.json"), "w") as f:
         json.dump({"all_seats": summaries, "seat": {a.seat: seat}, "exploit": exploit}, f, indent=2, sort_keys=True)
-    md = warns + xw + ("\n" if warns or xw else "") + "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat) + f"\n## Exploit baselines ({xd} days, all must be ~0 and below staff)\n\n" + table(exploit) + f"\n## Sleeper success per strategy ({xd} days, all 8 seats, harm landed)\n\n" + strat
+    md = warns + xw + ("\n" if warns or xw else "") + "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat) + f"\n## Exploit baselines ({xd} days, all must be ~0 and below staff)\n\n" + table(exploit) + f"\n## Sleeper success per strategy ({xd} days, all 8 seats, harm landed)\n\n" + strat + f"\n## Reward by day type ({xd} days, all 8 seats)\n\n" + day_type_table(split) + f"\n## Reward by sleeper seat ({xd} days, all 8 seats)\n\n" + seat_split_table(split)
     with open(os.path.join(d, "gap.md"), "w") as f:
         f.write(md)
     if a.web_out:
@@ -149,6 +174,13 @@ def main(argv=None, runner=None):
         with open(os.path.join(a.web_out, "gap.md"), "w") as f:
             f.write(md)
     print(md)
+    if not a.no_report:
+        try:
+            from lab import report
+
+            report.main(d)
+        except Exception as ex:
+            print(f"report skipped: {type(ex).__name__}: {ex}")
     return summaries, seat
 
 

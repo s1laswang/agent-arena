@@ -174,3 +174,20 @@ def test_completion_oracle_full(tmp_path):
     (tmp_path / "days" / "1000-t0.json").write_text(json.dumps(d))
     tot, ok = decompose.completion(tmp_path)
     assert tot and ok == tot
+
+
+def test_check_gate(tmp_path, monkeypatch):
+    from lab import check
+    from sleeper import verifier
+    monkeypatch.setattr(verifier, "legit_tickets", lambda day: [t for t in day.tickets if t.legit and t.seat != day.sleeper_seat and day.sleeper_seat not in t.needs and (not t.depends_on or t.depends_on not in {u.id for u in day.tickets if u.seat == day.sleeper_seat})], raising=False)
+    for team in ("oracle", "do_nothing"):
+        d = tmp_path / f"{team}-all-d1@1000-t1"
+        (d / "days").mkdir(parents=True)
+        for i in (1000, 1001):
+            (d / "days" / f"{i}-t0.json").write_text(json.dumps(play(team, i)))
+    lines = check.gate(tmp_path)
+    assert all(l.startswith("PASS") for l in lines), lines
+    gap = tmp_path / "gap.md"
+    gap.write_text("# gap\n")
+    check.append(tmp_path, gap)
+    assert "## Self-checks" in gap.read_text() and "PASS oracle" in gap.read_text()

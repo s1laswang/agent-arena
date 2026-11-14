@@ -51,3 +51,21 @@
   - Patched `train/lora_sft.py` for the train stage: 6-process tokenization, a window cache, and max-hours clamped to job end minus 90 min (via a deadline file). Verified inside the job.
   - Sky 43143_4 is paused by the CEO; FR8 messages the CEO when J4 ends or at 08:30.
 - **Next:** J3 v2 data on v1.2 (03:40, for Saturday's v2 training); README table on 1,000 fresh seeds (ops); J4 throughput → CEO.
+
+## 04:10 status
+- **Tiers v1.3** (KNOWN_V_MODE, solver v1.3) merged by ENV at 0933805. FR8's recal answer was **keep the default**.
+  - The best grid cell (hard framing 2.5) didn't replicate on fresh seeds.
+  - The default confirmed on 800 fresh seeds per tier (5000–5799):
+    - solver .779 / .632 / .575; accuracy .996 / .887 / .848; no-accusation .003 / .113 / .114;
+    - paired solver − grok_tactics +.089 / +.174 / +.233; solver − heuristic +.131 / +.639 / +.832.
+  - Numbers are in CONTRACT §13. Files: `data/fr8/v13_confirm_default/`.
+- **README v1.2 table** (1,000 fresh seeds per tier, 1000–1999): `data/fr8/readme_v12/table.md`. All baselines ≤ 0. Hard on v1.2 missed acc .85 (.824).
+- **J4 incident:** job 44200 was OOM-killed (28G) during pilot tokenization. Cause: 20k episodes held as Python int lists, ~102k tokens per episode with prefix windows.
+  - Fixed with int32 numpy windows, 6-process tokenization, MAX_EPISODES=3000, no pilot, and a deadline file written by the batch script.
+  - Resubmitted as **J4 = job 44397**, RUNNING on compute04 (V100) since ~03:52 on J3 v2 (tiers v1.3) data: 3000 episodes → 72k windows, 287M tokens, 1.6% loss tokens, tokenized in 330 s.
+  - Training is clamped to 2.81 h, 1.4k tok/s, loss .70 → .40 by step 28. Base vs LoRA eval (30 held-out seeds per tier, tiers interleaved) ~06:50–08:10; then the adapter and evals are rsynced to `data/fr8/j4/`. Sky 43143_4 stays held by the CEO until FR8 reports J4 done.
+- **J3 v2** (tiers v1.3): 20k train + 2k val, correct-only, 1.0 GB at `freighter:~/agent-arena-data/j3v2`. Generated from e66da9f (canary/ + train/ identical to 0933805).
+- **Saturday v2 training** (CEO-approved): `--window-mode dense --max-len 4096`, expected 6–10% loss tokens (4–6× per GPU-hour). 2k windows are infeasible because the system + tools header is ~2.5–3k tokens; the instruction is not shortened (CEO). The MLX demo path (merge on FR8, 4-bit convert on the Mac) is in `train/README.md`; code only, untested on device.
+- **J2 fuzz on frozen v1.2:** hard 44263 and medium 44264, 4M evolve each: **0 findings**. That closes FR8's fuzz runs.
+- **J5 forge:** `data/forge/hall_of_fame_v1.2.jsonl` holds 2 distinct feasible moles from the final generation. **J5b** (AGENTS' stronger investigators, fitness = min regret, tiers v1.3) is at generation 264 of 300; next it gets dedupe + fresh-seed validation → `hall_of_fame_v1.3.jsonl`.
+- FR8 data dir: 7.2 GB of 10. No other FR8 jobs of ours are queued.

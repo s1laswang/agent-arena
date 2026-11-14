@@ -224,3 +224,9 @@
 ## v1.4 FROZEN (env engineer, branch justSilas-v14)
 - Hard only: 40 staff, 21 days, 2 canaries/day x 3 variants, leak_damage 0.05, tool cap 420; easy/medium unchanged. TIERS_VERSION v1.4 (hash a8f99c2537c91d72); v1.3 kept as rules.TIERS_V13 (replays). CONTRACT §14.
 - Confirmation seeds 5000-5799 (results/fresh_table_v1.4.md): solver .779/.633/.556, hard acc 94.9%; hard solver-grok_tactics +.195+-.033 (target .2 just missed; v1.3 same seeds +.233), solver-heuristic +.534. make hunt: best non-solver 0, 0 violations.
+
+## 14:10 PLAN v3 (team brainstorm) approved
+- Team notes (Momin, docs/IDEAS.md + docs/meetings/...) merged into justSilas.
+- Decisions: Canary base + Vaishnav anti-cheat + Momin parts; biased-employee layer = v1.5 candidate gated at 20:00; RL mole (light CPU now, GRPO LLM mole on GPU); static Pyodide browser game; Momin pauses sky for the GPUs (FR8 authorised for WS4 + WS3 jobs).
+- Gates: A 17:00 (gemini-4-carbon v1.4 n>=20, v1.5 solver numbers, RL curve); B 20:00 (ship or drop v1.5 + feature freeze).
+- The CEO measurement engineer resumed (WS1). HARNESS got WS6 game build support. FR8/ENV/AGENTS/INTEGRITY need relaunching (briefs in NEXT-LEVEL.md).

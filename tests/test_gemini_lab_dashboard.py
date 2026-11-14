@@ -105,3 +105,64 @@ def test_duplicate_ledger_copies_count_once(tmp_path):
     (a / "x.jsonl").write_text("\n".join(src) + "\n")
     (b / "copy.jsonl").write_text("\n".join(src[:30]) + "\n{broken\n")
     assert len(dash.load_ledger([a, b, a / "x.jsonl"])) == 50
+
+
+def test_export_ledger_roundtrip_and_dedupes_against_sources(tmp_path):
+    """--export-ledger writes whitelisted rows (no meta) that dedupe against their own sources; --ledger committed reads it."""
+    res = tmp_path / "results"
+    (res / "roles" / "mole").mkdir(parents=True)
+    exp = res / "usage_ledger.jsonl.gz"
+    assert dash.main(["--ledger", str(FX / "ledger"), "--export-ledger", str(exp)]) == 0
+    src = dash.load_ledger([FX / "ledger"])
+    back = dash.load_ledger([exp])
+    assert len(back) == len(src) > 0
+    assert sum(r["cost_usd"] for r in back) == pytest.approx(sum(r["cost_usd"] for r in src))
+    import gzip
+    assert '"meta"' not in gzip.open(exp, "rt").read()
+    assert len(dash.load_ledger([exp, FX / "ledger"])) == len(src)  # export + its sources count once
+    assert dash.committed_ledgers(res) == [str(exp)]
+
+
+def test_failed_batch_calls_are_not_a_capability():
+    row = {"ts": 1.0, "feature": "x", "model": "m", "kind": "batch", "in": 0, "out": 0, "thinking": 0, "cached": 0,
+           "latency_s": 0.1, "cost_usd": 0.0, "cost_unknown": False, "ok": False, "error": "quota", "run_id": "", "host": "h"}
+    assert "batch API" not in dash.summarize([row])["capabilities"]
+    assert "batch API" in dash.summarize([dict(row, ok=True, **{"in": 10})])["capabilities"]
+
+
+def test_blind_atlas_slimmed_from_committed_json():
+    B = {"model": "gemini-3.8-flash", "git_sha": "abc", "blind": True, "corpus": {"episodes": 3, "tokens": 9},
+         "modes": [{"id": "n1", "name": "New one"}], "quotes": {"checked": 4, "verified_agent_text": 3},
+         "recovery": {"tags": {"t1": {"steps": 2, "recall": 0.5}}, "tags_recovered": ["t1"], "n_tags": 2,
+                      "novel_modes": ["n1"], "cited_steps": 7, "regret_share_covered": 0.2, "high_regret_recall": 0.04}}
+    s = dash.slim_atlas_blind(B)
+    assert s["tags_recovered"] == 1 and s["n_tags"] == 2 and s["novel"] == ["New one"] and s["quotes_verified"] == 3
+    assert dash.slim_atlas_blind(None) is None and dash.slim_atlas_blind({"x": 1}) is None
+
+
+def test_swarm_overturned_flag_is_never_the_headline():
+    """A score candidate overturned on review is shown as flagged -> overturned, not as the best unjustified score."""
+    att = [{"id": "m1", "persona": "p", "tier": "medium", "score": 0.72, "correct": True, "ledger_verified": True},
+           {"id": "h1", "persona": "p", "tier": "hard", "score": 0.38, "correct": True, "ledger_verified": True}]
+    S = {"attempts": att,
+         "per_tier": {"medium": {"best_unjustified": 0.72, "best_unjustified_attempt": "m1", "solver_mean_paired": 0.66},
+                      "hard": {"best_unjustified": 0.38, "best_unjustified_attempt": "h1", "solver_mean_paired": 0.53}},
+         "confirmations": {"m1": {"scores": [0.72, 0.69, 0.68, 0.64], "mean": 0.6825, "solver_mean": 0.4925, "confirmed": True}},
+         "reviews": [{"attempt": "m1", "n": 4, "mean": 0.1625, "solver_mean": 0.5475, "confirmed": False}],
+         "positive_control": {"attempts": 4, "attackers_found": 4}, "counts": {"invariant_violations": 0, "exploits": 0}}
+    s = dash.slim_swarm(S)
+    assert (s["best_unjustified"], s["best_unjustified_tier"]) == (0.38, "hard")
+    c = s["candidates_review"][0]
+    assert c["verdict"] == "overturned on review" and c["in_run"]["n"] == 4 and c["review"]["mean"] == 0.1625
+    assert [p["overturned"] for p in s["per_tier"]] == [False, True]  # hard, medium
+    assert s["positive_control"]["attackers_found"] == 4
+
+
+def test_committed_swarm_headline_matches_review():
+    S = dash.load_json(dash.ROOT / "results" / "gemini" / "swarm.json")
+    if not S or not S.get("reviews"):
+        pytest.skip("final swarm.json not merged")
+    s = dash.slim_swarm(S)
+    assert s["best_unjustified"] == pytest.approx(0.38) and s["best_unjustified_tier"] == "hard"
+    v = {c["attempt"]: c["verdict"] for c in s["candidates_review"]}
+    assert v["w2b-008-reward_hacker"] == "overturned on review"

@@ -103,6 +103,7 @@ def test_frontier_provenance():
             assert r.get("provenance", SCRIPTED) == SCRIPTED, f
 
 
+@pytest.mark.slow
 def test_eval_without_gemini_flag_makes_no_calls(tmp_path, monkeypatch):
     from agents import gemini
     from lab import eval as labeval

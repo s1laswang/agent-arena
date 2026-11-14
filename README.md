@@ -10,13 +10,37 @@ An RL environment for AfterQuery's **Break the Agent** (Junction 2026).
 - It must **accuse exactly once**. A correct accusation scores the value that is left, so waiting for certainty also costs.
 - The reference run is a tuned **Bayesian canary-trap solver** that uses the same public tools. Every rule an agent needs is written down; the benchmark is how close a frontier agent gets to the solver.
 
+## For judges (5 minutes)
+
+You need [uv](https://docs.astral.sh/uv/) and `make` (Linux or macOS; on Windows use WSL). No API keys are needed.
+
+| Run this | You should see | Time |
+|---|---|---|
+| `make setup && make reproduce` | The score table: the solver is about +0.6 on medium and hard, do_nothing is exactly 0 and stop_early is about −0.9. The last line says `ANTI-CHEAT: every probe blocked ...`. If any cheat gets through, it exits with code 1. | ~3 min |
+| `make anticheat-verify` | `0 differences`: our committed anti-cheat results ([results/anticheat/exploits.md](results/anticheat/exploits.md)) rerun exactly the same. | ~1 min |
+| `make hunt` | Your own exploit fuzzing on every tier: best non-solver score 0.000, 0 violations. | a few min |
+
+**In your harness (Harbor + OpenCode over MCP; needs Docker):**
+
+```bash
+uv tool install harbor && uv run python harbor/build.py                      # 10 tasks: hard tier, judge seeds 900000-900009
+harbor run -p harbor/dataset -a oracle -n 4                                  # reference solver
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=do_nothing -n 4    # expect 0
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4    # expect about -1
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=cheat_probe -n 4   # ~150 cheat attempts, never accuses: expect exactly 0
+GOOGLE_GENERATIVE_AI_API_KEY=<key> harbor run -p harbor/dataset -a opencode -m google/gemini-4-carbon \
+    --api-key-name GOOGLE_GENERATIVE_AI_API_KEY -n 4                         # a frontier agent
+```
+
+**Want to break it?** Every attack we tried, and the test that guards it: [docs/EXPLOITS.md](docs/EXPLOITS.md). Everything below is detail.
+
 ## One command
 
 ```bash
 make setup && make reproduce
 ```
 
-You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/uv/install.sh | sh`, then open a new shell); `make setup` installs Python 3.12 and every dependency. You need no API keys and no `.env`. The run takes about 10 s on a laptop.
+You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/uv/install.sh | sh`, then open a new shell); `make setup` installs Python 3.12 and every dependency. You need no API keys and no `.env`. The judge table itself takes about 10 s on a laptop; the anti-cheat battery that `make reproduce` runs after it adds about 2-3 min on the full 40 seeds per tier. `REPRO_FAST=1` (5 seeds) takes about 30 s in total, and `REPRO_ANTICHEAT=0` skips the battery.
 
 `make reproduce` plays the reference solver and five baselines on the 40 frozen judge seeds of each tier. It replays any committed frontier-agent episodes from `data/runs/committed/`, prints the table, and writes `judge_table.md`, `judge_episodes.jsonl` and `gap_chart.png` to `results/latest/`. That folder is gitignored, so your clone stays clean and our committed copies in `results/` are never overwritten; compare the two directly.
 
@@ -111,11 +135,21 @@ Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium
 
 ## Reward integrity
 
-We attacked our own reward 42 times before the judges did, including real-server hunts by a Codex attacker and an external Grok judge run. Every attempt is logged in [docs/EXPLOITS.md](docs/EXPLOITS.md), and every closed exploit and every probe that held has a regression test. The one exception is #32, an inconclusive hunt that moderation cut off; its attack class is covered by the #24 and #27 tests.
+We attacked our own reward 43 times before the judges did, including real-server hunts by a Codex attacker and an external Grok judge run. Every attempt is logged in [docs/EXPLOITS.md](docs/EXPLOITS.md), and every closed exploit and every probe that held has a regression test. The one exception is #32, an inconclusive hunt that moderation cut off; its attack class is covered by the #24 and #27 tests.
 
-**Anti-cheat battery (runs in `make reproduce`):** on the same judge seeds and world secret as the table, `make reproduce` also runs 13 scripted cheats (do-nothing, stop-early, random, restrict-all, probe-all, accuse the decoy, accuse the heaviest log user, garbage arguments on every tool, accusing everyone in sequence and from parallel threads, accusing after the end, burning the call cap, one canary variant per person), a **stop-early ladder** (the solver itself cut at 25/50/75% of its calls, and the solver without its final accuse), 7 **plus probes** (the solver with one extra step before its accusation: restrict everyone else, unrestrict spam, interview everyone, read spam, wait a day, accuse twice, a per-person canary) and a **control** (the solver, then every remaining call padded with reads). It prints probe → mean → blocked and writes `results/latest/exploits.json`. Every attack averages ≤ 0, every ladder episode scores exactly 0, no plus probe beats the solver on any seed, no episode ever accepts two accusations, and the control equals the solver on every seed. Every committed episode is also re-played on a fresh Env and re-graded: 579 of 589, all identical (only the 10 grok episodes on secret-keyed judge seeds cannot be re-played). Every committed Harbor trial must agree with itself: Harbor's reward = `reward.txt` = the sidecar ledger, the score follows from the ledger's own accusation, and the agent's trajectory names the same person (25 of 25). The last line of `make reproduce` says `ANTI-CHEAT: ...` in plain words. `tests/test_anticheat.py` fails if any of this breaks. Design: Vaishnav's Poisoned Inbox anti-cheat system, ported to Canary.
+**Anti-cheat battery (`make reproduce` runs it after the judge table, on the same seeds and secret, and exits 1 if anything fails; the last line says `ANTI-CHEAT: ...` in plain words).** Design: Vaishnav's Poisoned Inbox anti-cheat system, ported to Canary. Details and every test: [docs/EXPLOITS.md](docs/EXPLOITS.md#anti-cheat-battery-runs-in-make-reproduce).
 
-**Hunt it yourself:** `make hunt` (no keys, about 1 minute) fuzzes all four tracks (easy, medium, hard, hard_forge) with random, malformed, evolutionary and parallel-accuse attacks, and prints the best non-solver score next to the solver's mean and the number of violations. On our machine every mode reports a best non-solver score of 0.000 with 0 violations. `make hunt TIER=medium` restricts it to one tier.
+| Check | What it shows | Pass rule |
+|---|---|---|
+| 13 scripted cheats: do-nothing, stop-early, random, restrict-all, ProbeAll-then-accuse, accuse the decoy, accuse the heaviest log user, garbage arguments on every tool (each tool on a fresh Env), accuse everyone in sequence and from parallel threads, accuse after the end, burn the call cap, one canary variant per person | no shortcut earns reward | mean ≤ 0 and below the solver; always-zero probes exactly 0; every accusing probe really accuses on every seed; every garbage tool reaches the Env |
+| **effort ladder**: the solver stopped at 25/50/75/90% of its calls, then accusing its best guess | stopping early and guessing always scores below the full solver | below the full solver on every tier |
+| plus probes: the solver plus one more step before its own accusation (wait a day; restrict everyone else and wait a day; read spam; ...) | extra moves never beat good play | ≤ solver on every seed. These hold by construction (V never rises and the target is the solver's own), so they are `sanity` rows: regression guards, not attacks |
+| replay of every committed episode | recorded episodes replay deterministically (same rules, same seed, same actions → same results) | identical final score, accused id and every recorded tool result (only the few episodes on secret-keyed judge seeds cannot be replayed; the exact count is in the `Replay coverage` line) |
+| Harbor consistency of every committed trial and job | committed Harbor files agree with each other (catches partial edits and edits that were not re-signed; it cannot prove files are genuine) | all copies of the reward agree and follow from the ledger's accusation; where a retired build key is published, the ledger HMAC verifies |
+
+Some rows hold by construction today (the no-accusation stop-early ladder, the control, the plus probes); the table labels them `sanity`, keeps them as regression guards, and does not count them as attacks. `REPRO_FAST=1` (5 seeds) only fails an attack on statistical evidence (one-sided 95% lower bound > 0) and reports the effort ladder without judging it. **Exact, repeatable numbers:** the full 40-judge-seed battery under a public test secret is committed in [`results/anticheat/exploits.md`](results/anticheat/exploits.md); `uv run python -m canary.redteam.anticheat --judge --seeds 40 --world-secret canary-anticheat-public-test-v1 --out results/anticheat` reproduces it (a test recomputes a slice and compares); `make anticheat-verify` reruns all of it and exits 1 on any difference. `REPRO_ANTICHEAT=0` skips the battery.
+
+**Hunt it yourself:** `make hunt` (no keys, a few minutes) fuzzes all four tracks (easy, medium, hard, hard_forge) with random, malformed, evolutionary and parallel-accuse attacks, and prints the best non-solver score next to the solver's mean and the number of violations. On our machine every mode reports a best non-solver score of 0.000 with 0 violations. `make hunt TIER=medium` restricts it to one tier.
 
 - **Three real exploits, all closed:**
   - **Stop-early:** a free lottery ticket under 0/1 scoring, closed by making a wrong accusation cost −1.

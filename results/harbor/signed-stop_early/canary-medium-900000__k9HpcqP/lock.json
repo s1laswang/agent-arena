@@ -1,0 +1,41 @@
+{
+    "schema_version": 2,
+    "task": {
+        "name": "canary-medium-900000",
+        "type": "local",
+        "digest": "sha256:90b57a1703f8628fa86b55007a88b14e0286b1a62e28218ce183c98063b23f5a",
+        "source": "hb-final",
+        "path": "harbor/dataset-cheat/canary-medium-900000"
+    },
+    "install_only": false,
+    "timeout_multiplier": 1.0,
+    "agent": {
+        "name": "oracle",
+        "skip_model_parsing": false,
+        "skills": [],
+        "resume_trajectory": false,
+        "extra_allowed_hosts": [],
+        "kwargs": {},
+        "env": {
+            "ORACLE_POLICY": "stop_early"
+        },
+        "mcp_servers": []
+    },
+    "bridge_inputs": {},
+    "skills": [],
+    "environment": {
+        "type": "docker",
+        "force_build": false,
+        "delete": true,
+        "stream": false,
+        "cpu_enforcement_policy": "auto",
+        "memory_enforcement_policy": "auto",
+        "extra_docker_compose": [],
+        "kwargs": {},
+        "extra_allowed_hosts": []
+    },
+    "verifier": {
+        "disable": false,
+        "environment_mode": "separate"
+    }
+}

@@ -100,3 +100,7 @@
 
 ## 06:49 status (heartbeat)
 - No ENV/MCP/baselines code changes (new: reproduce groups runs by tier version, judge table refresh, README). Nothing to re-run; justSilas green. Grok re-run expected ~07:15.
+
+## 07:30 status
+- Judge rehearsal on a FRESH GitHub clone of justSilas (no .env, no keys): `make hunt` was MISSING (HARNESS never added it) -> added Makefile target `hunt` (all 4 tracks, ~51 s): 0.000 best non-solver, 0 violations everywhere. Fresh clone: `make hunt TIER=medium` clean; seed_attack on judge seed 900007 -> None (v0.5 fail-closed holds). make test 507 passed.
+- Grok judge re-run not yet on origin (latest grok-judge commit 00:28).

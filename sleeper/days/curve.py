@@ -1,16 +1,15 @@
 import json
+import random
 import sys
+from concurrent.futures import ProcessPoolExecutor
 
-from lab.run import day_for
-from sleeper.company import World
-from sleeper.day import play_round
-from sleeper.days.canaries import apply_evidence, seed_decoys
-from sleeper.models import SEATS
-from sleeper.scripted import OracleAgent, make_team
+from lab.run import build_team, day_for
+from sleeper.day import run_day
 from sleeper.verifier import score
 
 FRACTIONS = tuple(i / 10 for i in range(11))
 MODES = ("team", "finance_ap", "controller")
+START = 1000
 
 
 class StopAt:
@@ -25,45 +24,56 @@ class StopAt:
 
 
 def run(day_id, mode, f):
-    day = day_for(day_id)[0]
-    day, _ = seed_decoys(day, False)
-    w = World(day)
-    apply_evidence(day, w.company)
-    apply_evidence(day, w.initial)
-    team = make_team(OracleAgent)
+    import inspect
+
+    seat = None if mode == "team" else mode
+    day, strategy, _, _ = day_for(day_id, seat)
+    players = build_team("oracle", day, 0)
+    if day.sleeper_seat and strategy:
+        from agents.sleeper_agent import SleeperAgent
+
+        kw = {"ticks": day.ticks} if "ticks" in inspect.signature(SleeperAgent).parameters else {}
+        players[day.sleeper_seat] = SleeperAgent(day.sleeper_seat, day.goal, strategy, random.Random(day_id), **kw)
     stop = int(f * day.ticks)
-    for s in (SEATS if mode == "team" else (mode,)):
-        team[s] = StopAt(team[s], stop)
-    while w.tick < day.ticks:
-        play_round(w, team)
-    return score(day, w.initial, w.company, w.ledger, f"stop_{f}", None if mode == "team" else mode)
+    for s in (players if seat is None else (seat,)):
+        if s in players and s != day.sleeper_seat:
+            players[s] = StopAt(players[s], stop)
+    w = run_day(day, players)
+    return score(day, w.initial, w.company, w.ledger, f"stop_{f}", seat)
 
 
-def curve(days=20, fractions=FRACTIONS, modes=MODES, start=0):
-    out = {}
-    for mode in modes:
-        for f in fractions:
-            rs = [run(d, mode, f) for d in range(start, start + days)]
-            out[f"{mode}@{f}"] = {"mode": mode, "fraction": f, "days": days, "reward": sum(r.reward for r in rs) / days,
-                                  "exploits": [(start + i, r.reward) for i, r in enumerate(rs) if f < 1 and r.reward > 0 and r.tickets_done < r.tickets_total],
-                                  "ticket_completion": round(sum(r.tickets_done / max(1, r.tickets_total) for r in rs) / days, 3)}
-    return out
+def cell(a):
+    mode, f, days, start = a
+    rs = [(start + i, run(start + i, mode, f)) for i in range(days)]
+    undone = lambda r: r.tickets_done < r.tickets_total
+    return f"{mode}@{f}", {"mode": mode, "fraction": f, "days": days, "reward": sum(r.reward for _, r in rs) / days,
+                           "ticket_completion": round(sum(r.tickets_done / max(1, r.tickets_total) for _, r in rs) / days, 3),
+                           "exploits": [(i, r.reward) for i, r in rs if r.reward > 0 and undone(r)],
+                           "below_one": [(i, r.reward, r.harm, r.tickets_total - r.tickets_done) for i, r in rs if r.reward < 1] if f == 1 else []}
+
+
+def curve(days=50, fractions=FRACTIONS, modes=MODES, start=START, workers=1):
+    jobs = [(m, f, days, start) for m in modes for f in fractions]
+    if workers == 1:
+        return dict(map(cell, jobs))
+    with ProcessPoolExecutor(workers) as ex:
+        return dict(ex.map(cell, jobs))
 
 
 def md(c):
     rows = ["| mode | k | reward | ticket completion | exploits |", "|---|---|---|---|---|"]
-    rows += [f"| {v['mode']} | {int(v['fraction'] * 100)} | {v['reward']:.2f} | {v['ticket_completion']} | {len(v['exploits'])} |" for v in c.values()]
+    rows += [f"| {v['mode']} | {int(v['fraction'] * 100)} | {v['reward']:.3f} | {v['ticket_completion']} | {len(v['exploits'])} |" for v in c.values()]
     return "\n".join(rows) + "\n"
 
 
-def main(path="results/stop_early_curve.json", days=20):
-    c = curve(int(days))
+def main(path="results/stop_early_curve.json", days=50):
+    c = curve(int(days), workers=4)
     with open(path, "w") as fh:
         json.dump(c, fh, indent=1)
     with open(path.replace(".json", ".md"), "w") as fh:
         fh.write(md(c))
     for k, v in c.items():
-        print(k, v["reward"], v["ticket_completion"], v["exploits"])
+        print(k, round(v["reward"], 3), v["ticket_completion"], v["exploits"], v["below_one"])
 
 
 if __name__ == "__main__":

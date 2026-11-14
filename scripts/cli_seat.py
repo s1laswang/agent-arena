@@ -18,8 +18,8 @@ def commit():
     return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
 
 
-def server_argv(seat, seed, out):
-    return [PY, "-m", "sleeper.mcp_server", "--seat", seat, "--day", str(seed), "--team", "oracle", "--out", out]
+def server_argv(seat, seed, out, day_source="make_day"):
+    return [PY, "-m", "sleeper.mcp_server", "--seat", seat, "--day", str(seed), "--day-source", day_source, "--team", "procedure" if day_source == "day_for" else "oracle", "--out", out]
 
 
 def score_state(out, seat, model):
@@ -65,10 +65,17 @@ def parse_codex(lines):
     return calls
 
 
-def run_seat(agent, model, seat, seed, days=1, max_turns=60, trial=0, mode="seat"):
+def strategy(seat, seed, day_source):
+    if day_source != "day_for":
+        return None
+    from scripts.frontier_day import build_day
+    return build_day(seat, seed)[2]
+
+
+def run_seat(agent, model, seat, seed, days=1, max_turns=60, trial=0, mode="seat", day_source="day_for"):
     tmp = tempfile.mkdtemp(prefix="cliseat_")
     out = os.path.join(tmp, "state.json")
-    argv = server_argv(seat, seed, out)
+    argv = server_argv(seat, seed, out, day_source)
     prompt = seat_instruction(seat) + SEAT_SUFFIX
     env = {**os.environ, "PYTHONPATH": ROOT}
     if agent == "claude":
@@ -98,19 +105,23 @@ def run_seat(agent, model, seat, seed, days=1, max_turns=60, trial=0, mode="seat
     src = "server_dump"
     if not os.path.exists(out):
         src = "replay"
-        asyncio.run(_replay(calls, seat, seed, out))
-    return {"model": model, "commit": commit(), "agent": agent, "seat": seat, "seed": seed, "trial": trial, "mode": mode, "seat_under_test": seat, "state_path": out, "state_source": src,
+        asyncio.run(_replay(calls, seat, seed, out, day_source))
+    return {"model": model, "commit": commit(), "agent": agent, "seat": seat, "seed": seed, "trial": trial, "mode": mode, "day_source": day_source, "strategy": strategy(seat, seed, day_source), "seat_under_test": seat, "state_path": out, "state_source": src,
             "scores": score_state(out, seat, model), "calls": len(calls), "wall_s": round(wall, 1),
             "mcp_calls": calls, "transcript": lines, "stderr": p.stderr[-2000:]}
 
 
-async def _replay(calls, seat, seed, out):
+async def _replay(calls, seat, seed, out, day_source="make_day"):
     from sleeper.company import World
     from sleeper.mcp_server import build_server
     from sleeper.scripted import OracleAgent, make_team
     from sleeper.tickets import make_day
-    w = World(make_day(seed))
-    srv = build_server(w, seat, make_team(OracleAgent), out)
+    if day_source == "day_for":
+        from scripts.frontier_day import build_day
+        w, team, _ = build_day(seat, seed)
+    else:
+        w, team = World(make_day(seed)), make_team(OracleAgent)
+    srv = build_server(w, seat, team, out)
     for c in calls:
         await srv.call_tool(c["tool"], c["args"])
     srv.finish()
@@ -118,7 +129,7 @@ async def _replay(calls, seat, seed, out):
 
 def rescore(rec):
     out = tempfile.mkdtemp(prefix="replay_") + "/state.json"
-    asyncio.run(_replay(rec["mcp_calls"], rec["seat"], rec["seed"], out))
+    asyncio.run(_replay(rec["mcp_calls"], rec["seat"], rec["seed"], out, rec.get("day_source", "make_day")))
     return score_state(out, rec["seat"], rec["model"])
 
 
@@ -140,13 +151,14 @@ def main():
     ap.add_argument("--max-turns", type=int, default=60)
     ap.add_argument("--trial", type=int, default=0)
     ap.add_argument("--mode", default="seat")
+    ap.add_argument("--day-source", default="day_for")
     ap.add_argument("--rescore")
     a = ap.parse_args()
     if a.rescore:
         rec = json.load(open(a.rescore))
         print(json.dumps(rescore(rec)), "saved:", json.dumps(rec["scores"]))
         return
-    rec = run_seat(a.agent, a.model, a.seat, a.seed, a.days, a.max_turns, a.trial, a.mode)
+    rec = run_seat(a.agent, a.model, a.seat, a.seed, a.days, a.max_turns, a.trial, a.mode, a.day_source)
     s = rec["scores"]
     print(f"{a.model} {a.seat} s{a.seed} reward={s['reward']} harm={s['harm']} fq={s['false_quarantines']} calls={rec['calls']} wall={rec['wall_s']}s -> {save(rec)}")
 

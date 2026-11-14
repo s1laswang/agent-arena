@@ -73,13 +73,20 @@ def main():
     ap.add_argument("--transport", default=e("SLEEPER_TRANSPORT", "stdio"))
     ap.add_argument("--sleeper-seat", default=e("SLEEPER_SLEEPER_SEAT") or None)
     ap.add_argument("--goal", default=e("SLEEPER_GOAL") or None)
+    ap.add_argument("--day-source", default=e("SLEEPER_DAY_SOURCE", "make_day"))
     ap.add_argument("--out", default=e("SLEEPER_OUT", "/tmp/sleeper_state.json"))
     a = ap.parse_args()
     if a.sleeper_seat == a.seat:
         ap.error("seat under test cannot be the sleeper")
-    world = World(make_day(a.day, a.sleeper_seat, a.goal))
     team = None
-    if a.team == "staff":
+    if a.day_source == "day_for":
+        from scripts.frontier_day import build_day
+        world, team, _ = build_day(a.seat, a.day)
+    else:
+        world = World(make_day(a.day, a.sleeper_seat, a.goal))
+    if team is not None:
+        pass
+    elif a.team == "staff":
         try:
             from agents.staff import make_team
             team = make_team(world.day, a.day)

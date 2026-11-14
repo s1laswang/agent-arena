@@ -71,10 +71,13 @@ def make_policy_factory(agent: str) -> Callable[[int], Any]:
         except ImportError as exc:
             raise AgentUnavailable(f"solver not available yet (canary.solver.policy.SolverPolicy: {exc})") from exc
         return lambda seed: SolverPolicy()
+    if agent == "solver_v2":
+        from .solver.policy_v2 import SolverV2Policy
+        return lambda seed: SolverV2Policy()
     if ":" in agent:  # openai:<model>, gemini:<model>
         raise AgentUnavailable(f"LLM agent '{agent}' is not wired into canary.eval yet; "
                                "run it over MCP (make mcp + configs/README.md) instead")
-    names = sorted(set(BASELINES) | set(CALIBRATION_POLICIES) | {"solver"})
+    names = sorted(set(BASELINES) | set(CALIBRATION_POLICIES) | {"solver", "solver_v2"})
     raise AgentUnavailable(f"unknown agent '{agent}'. Known: {', '.join(names)}")
 
 

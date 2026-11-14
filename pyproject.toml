@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pinbox"
+version = "0.1.0"
+description = "Poisoned Inbox: a tool-use RL environment where an AI back-office assistant works through partly poisoned data"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []  # the environment, grader and eval are stdlib only
+
+[project.optional-dependencies]
+mcp = ["mcp>=2.3,<3"]
+gemini = ["google-genai>=1.0", "httpx"]
+all = ["mcp>=2.3,<3", "google-genai>=1.0", "httpx"]
+
+[project.scripts]
+pinbox = "pinbox.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["pinbox*"]
+
+[tool.setuptools.package-data]
+pinbox = ["data/*.json"]

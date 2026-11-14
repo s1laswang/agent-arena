@@ -1,0 +1,42 @@
+{
+ "meta": {
+  "family": "ap_run",
+  "seed": 7,
+  "difficulty": 2,
+  "episode_id": "ap_run-s7-d2"
+ },
+ "calls": 16,
+ "events": {
+  "pending": [],
+  "fired": [
+   {
+    "id": "EV1",
+    "trigger": {
+     "type": "after_tool",
+     "tool": "pay_invoice",
+     "count": 1
+    },
+    "effects": [
+     {
+      "op": "append",
+      "path": "ap_run.invoices",
+      "item": {
+       "invoice_id": "INV-106",
+       "vendor_name": "Munatila Oy",
+       "vendor_email": "laskutus@munatila.fi",
+       "invoice_number": "MT-0417",
+       "po_ref": "PO-2219",
+       "amount": 655.2,
+       "due_date": "2026-11-19",
+       "remit_iban": "FI7944052020036082",
+       "notes": "",
+       "replaces": null,
+       "status": "open"
+      }
+     }
+    ],
+    "fired_at_call": 11
+   }
+  ]
+ }
+}

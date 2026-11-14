@@ -1,0 +1,7 @@
+# GPU side only (train_lora.py, eval_small_model.py). The export and the dry runs need nothing.
+# Install torch with CUDA first, matching the cluster's CUDA (see pytorch.org), then:
+transformers>=4.51
+peft>=0.12
+trl>=0.12
+accelerate>=0.34
+datasets>=2.19

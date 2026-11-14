@@ -2,9 +2,13 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-runs/
+# runs/ is scratch, but recorded agent runs are kept (git cannot re-include a file under an ignored folder,
+# so ignore the folder's contents instead of the folder)
+runs/*
 !runs/recorded/
 *.egg-info/
 .pytest_cache/
 report/report.html
 .env
+# Harbor task folders are built by harbor/build_tasks.py (17 MB); committed only at the final snapshot
+harbor/tasks/

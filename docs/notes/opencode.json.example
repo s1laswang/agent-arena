@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "pinbox": {
+        "type": "local",
+        "command": ["python", "-m", "pinbox", "serve", "ap_run:7:2", "--transport", "stdio"],
+        "environment": {
+          "PYTHONUTF8": "1",
+          "PINBOX_STATE_DIR": "runs/opencode-ap_run-s7-d2"
+        },
+        "timeout": {"startup": 60000, "execution": 120000},
+        "codemode": false
+      },
+      "pinbox-remote": {
+        "type": "remote",
+        "url": "http://127.0.0.1:8765/mcp",
+        "oauth": false,
+        "codemode": false,
+        "disabled": true
+      }
+    }
+  }
+}

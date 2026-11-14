@@ -6,13 +6,28 @@ agent container holds nothing that reveals the mole.
 
 ```bash
 uv tool install harbor                       # Harbor CLI (tested: 0.26.0); needs Docker with the compose plugin
-python harbor/build.py                       # -> harbor/dataset/canary-<tier>-<seed>/ (3 tiers x 40 judge seeds)
+python harbor/build.py                       # THE JUDGE SET -> harbor/dataset/canary-hard-9000{00..09}/ (10 hard tasks)
 harbor run -p harbor/dataset -a oracle -n 4                               # reference solver over MCP
 harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=do_nothing -n 4  # do-nothing baseline (expect 0)
-harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early baseline (expect about -1)
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early baseline: stops without accusing (expect exactly 0)
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=guess_day1 -n 4  # day-1 random accusation (expect about -1)
 harbor run -p harbor/dataset -a opencode -m openai/<model> -n 4           # the agent (needs OPENAI_API_KEY)
-python harbor/build.py --tiers medium --seeds 900000   # just one task
+python harbor/build.py --tiers medium --seeds 900000                 # just one task
+python harbor/build.py --tiers easy,medium,hard --seeds judge        # everything: 3 tiers x all 40 judge seeds
 ```
+
+**The default build is the judge set: tier hard, judge seeds 900000–900009 (10 tasks).**
+- **Why hard.** Hard is the tier where the reference solver keeps its expected-value edge. On medium a frontier agent
+  can land near the solver with one lucky early accusation, so a short rerun can show parity by chance; on hard the
+  21-day horizon, delayed leak feed and 2 canaries a day reward the calibrated "keep investigating vs commit" call
+  that agents get wrong.
+- **Why these seeds.** 900000–900009 are the first 10 frozen judge seeds, fixed in `docs/PLAN-95.md` (commit
+  08f87b6, Saturday 14 Nov 18:48) before any frontier run on this set, so it is pre-registered, not picked after
+  seeing results. The seed numbers alone don't pick the worlds either: each build draws a fresh world secret, so the
+  worlds a judge's build serves are new to everyone, us included. (The 6-task Gemini demo below used seeds
+  900000–900002 on an earlier build, i.e. different worlds.)
+- Medium and easy, and any other judge (900000–900039) or held-out (800000–800199) seed, still build with
+  `--tiers` / `--seeds`.
 
 `harbor/dataset/` is gitignored: it holds the vendored package copies and the build-time world secret.
 
@@ -30,7 +45,7 @@ harbor/
     environment/docker-compose.yaml  the canary-server sidecar
     environment/canary-server/       sidecar image: Dockerfile, entrypoint.sh, collect.py (+ vendored canary/, SALT)
     solution/solve.sh                oracle: check_isolation --oracle-run, then `--play solver` over MCP
-    tests/Dockerfile, tests/test.sh  verifier: reward = ledger["score"] -> /logs/verifier/reward.txt
+    tests/Dockerfile, tests/test.sh  verifier: checks the ledger's HMAC signature, then reward = ledger["score"]
   canary-task/instruction.md         ENV's rules text (tests/test_env_docs.py pins it); build.py uses the same renderer
 ```
 
@@ -44,6 +59,7 @@ harbor/
  nothing else                                   data/worlds/judge/SALT  (build-time secret, 0600, owner canary)
                                                 episode.json {tier, seed} (build time, 0600)
                                                 /run/canary/ledger_token (0600, made at start)
+                                                ledger_key (build-time HMAC key, 0600; also in the verifier image)
                                                 environ: only *_FILE paths, host, port, provider
 ```
 
@@ -64,6 +80,17 @@ harbor/
   artifact, and a **separate verifier container** (`tests/Dockerfile`) writes `float(ledger["score"])` to
   `/logs/verifier/reward.txt`. Negative scores pass through (wrong accusation = -1). The agent never holds the
   token, can't run processes during collection, and never touches the verifier sandbox.
+- **Signed ledger (defence in depth).** `build.py` draws one random 32-byte **ledger signing key** per build and
+  writes it, 0600, into exactly two build contexts: the sidecar's (`canary-server/ledger_key`, read through
+  `CANARY_LEDGER_KEY_FILE`) and the separate verifier's (`tests/ledger_key`). Neither is in the agent image's build
+  context (`environment/.dockerignore` excludes `canary-server/`; `tests/` is never uploaded to `main`) or in
+  `solution/`. The server HMAC-SHA256-signs every `/ledger` payload (`"sig": {"alg": "HMAC-SHA256", "mac": ...}` over
+  the canonical JSON of every other field; `canary.mcp_server.sign_ledger`). `test.sh` **fails closed**, reward 0
+  plus a `FAIL:` line, if the key is missing, the signature is missing or wrong (forged score, any edited field,
+  another build's key), or the score is outside {−1, 0} ∪ (0, 1]. So even a ledger.json written into the verifier's
+  path by something other than this task's server is worthless. `tests/test_harbor_ledger_sig.py` covers forged,
+  tampered, unsigned, wrong-key and out-of-range ledgers, and a real server whose signed ledger reproduces the
+  in-process score through `test.sh`. `check_isolation.sh` also fails on any `*ledger_key*` file in `main`.
 - From the agent's side the network shows only `/mcp`, `/healthz`, `/ledger` (403 without the token) and
   `/admin/reset` (disabled: no admin token is set).
 
@@ -89,7 +116,7 @@ source, `import canary`, CANARY_* env, server cmdline in /proc, CANARY_ in `/pro
 
 | Situation | What to do | Trade-off |
 |---|---|---|
-| Harbor older than the sidecar collect hooks (`[[verifier.collect]]`, artifact `service`, added 2026; present in 0.26.0) | `python harbor/build.py --verifier shared`: test.sh runs in `main` and GETs `/ledger` with a per-build token from `[verifier].env` (also put in the sidecar's compose env) | The verifier shares the agent's container: a hostile agent could leave a process that rewrites `/logs/verifier/reward.txt` or replace `python3`. It still can't read the truth, but grading is weaker. Prefer the default |
+| Harbor older than the sidecar collect hooks (`[[verifier.collect]]`, artifact `service`, added 2026; present in 0.26.0) | `python harbor/build.py --verifier shared --unsafe-shared-not-for-judging` (build.py refuses shared mode without that flag): test.sh runs in `main` and grades ONLY from `GET /ledger` with a per-build token from `[verifier].env` (also put in the sidecar's compose env); it never reads `/evidence` in this mode, because in `main` that file is agent-writable (EXPLOITS #42: before the fix a planted `{"score": 1.0}` there scored 1.0), and it first kills every process the agent left behind; the ledger signing key also comes from `[verifier].env` (it wins over any `/tests/ledger_key`, which would sit in the agent's container) | **Not for judging** (build.py warns). The verifier shares the agent's container: leftover processes are killed first and both reward files are rewritten, but a hostile agent could still replace `python3` or `bash`. It still can't read the truth or forge a signed ledger. On our Harbor 0.25 / Docker Desktop host, shared mode did not run test.sh at all (even `do_nothing` got RewardFileNotFoundError), so a reward file the agent left behind was all Harbor saw. Use the default separate verifier |
 | Provider without compose (e2b, runloop, apple-container, ...) | Server outside the sandbox: run `python -m canary.mcp_server` on a host the sandbox can reach, put its URL in `[[environment.mcp_servers]]`, keep the ledger token on the host; test.sh can't reach it, so score from the host (or via a token in `[verifier].env` with a shared verifier) | Each trial needs its own server (single-episode), started by the operator; the agent can reach the host's `/ledger` endpoint (token-protected) |
 | Must run server and agent in ONE container | Run the server as a different uid; episode, secret and tokens from 0600 files owned by that uid via the `*_FILE` vars (now in `mcp_server.py`), never env; `hidepid=2` on /proc if possible | Same kernel PID namespace: relies on uid separation; root in the agent container defeats it, so run the agent as non-root (`[agent] user`) |
 | `network_mode = "allowlist"` | Harbor's egress sidecar puts services without explicit `networks:` into one network namespace. Still separate PID/filesystem, but re-run check_isolation.sh | none for the truth; keep `public` (the agent needs its model API anyway) |
@@ -159,9 +186,9 @@ Harbor 0.26.0 on colima (2 CPU / 3 GB), Saturday 14 Nov. Every log and output is
 |---|---:|---:|---|
 | oracle (reference solver over MCP) | **0.78** | **0.66** | equal to the in-process solver on the same build: 0.78 / 0.66 |
 | `ORACLE_POLICY=do_nothing` | 0.0 | 0.0 | 0 |
-| `ORACLE_POLICY=stop_early` | −1.0 | −1.0 | about −1 |
+| `ORACLE_POLICY=stop_early` | −1.0 | −1.0 | that build accused on day 1 |
 
-Jobs: `results/harbor/{oracle,do_nothing,stop_early}/`. There were 0 exceptions, about 1.5 min per 2-trial job.
+Jobs: `results/harbor/{oracle,do_nothing,stop_early}/`. There were 0 exceptions, about 1.5 min per 2-trial job. Those `stop_early` rewards are the day-1 accusation this build actually played. That script is now `guess_day1`. Current `stop_early` stops without accusing and scores exactly 0 in-process. This Harbor job was not re-run (no Docker on the integration machine).
 
 **Isolation, checked inside the agent container (`main`).** `solve.sh` runs `check_isolation.sh` before it plays (`agent/isolation.txt` in every oracle trial). Result on both tiers: `ISOLATION OK: 11 checks passed, 0 findings`.
 - No secret, truth or world files; no canary source, and `import canary` fails; no `CANARY_*` variables.
@@ -178,15 +205,17 @@ Jobs: `results/harbor/{oracle,do_nothing,stop_early}/`. There were 0 exceptions,
 | hard 900000 | 0.60 | 0.50 | −0.10 | correct, day 14, 158 calls |
 | hard 900001 | 0.67 | 0.62 | −0.05 | correct, day 8, 85 calls |
 | hard 900002 | 0.71 | 0.46 | −0.25 | correct, day 13, 154 calls |
-| **mean** | **0.757** | **0.503** | **−0.253** | below the solver on all 6 tasks |
+| **mean** | **0.757** | **0.503** | **−0.253** | lower on these 6 tasks; not a v1.4 gap |
 
-Jobs: `results/harbor/g-oracle/` and `results/harbor/g-gemini-try2/` (medium 900000) plus `results/harbor/g-gemini-rest/` (the other 5). Every score is the server-side ledger's (`verifier/ledger.json`), and each trial keeps the agent's full OpenCode transcript (`agent/opencode.txt`). Harbor reports `NonZeroAgentExitCodeError` on most Gemini trials because OpenCode exits non-zero after the game has already ended. The ledgers show completed episodes, so the scores are real. This is a small sample (6 tasks, one run each): read it as a judge-path demonstration, not as the benchmark's gap estimate.
+Jobs: `results/harbor/g-oracle/` and `results/harbor/g-gemini-try2/` (medium 900000) plus `results/harbor/g-gemini-rest/` (the other 5). Every score is the server-side ledger's (`verifier/ledger.json`), and each trial keeps the agent's full OpenCode transcript (`agent/opencode.txt`). Harbor reports `NonZeroAgentExitCodeError` on most Gemini trials because OpenCode exits non-zero after the game has already ended. The ledgers show completed episodes, so the scores are real. This is a small sample (6 tasks, one run each). It is not a v1.4 frontier gap. The later in-process bake-off (rules v1.4, paired seeds, n=10 per tier, 21:26) has gemini-4-carbon matching or beating the solver: medium +0.680±0.085 vs solver +0.734±0.050, hard +0.509±0.136 vs solver +0.433±0.324. Gap not established.
 
 ```bash
 # the working command; the key must reach OpenCode as GOOGLE_GENERATIVE_AI_API_KEY
 GOOGLE_GENERATIVE_AI_API_KEY=<your key> harbor run -p harbor/dataset -a opencode \
     -m google/gemini-4-carbon --api-key-name GOOGLE_GENERATIVE_AI_API_KEY -n 2
 ```
+
+**Pitfall: the agent setup timeout.** If the agent setup times out on a slow network or high `-n`, add `--agent-setup-timeout-multiplier 3`. The cause: Harbor's `opencode` agent installs `nodejs npm` (apt), nvm/Node and `opencode-ai` in every agent container within its default 360 s setup timeout. `task.toml` cannot raise that limit; only the CLI multiplier can. In our dry rehearsal (Sat 14 Nov ~23:30, `-n 5` on a loaded laptop), all 10 trials hit `AgentSetupTimeoutError` before the first model call. Those trials have no reward and are infrastructure failures, not results.
 
 **Pitfall: the API key name.** OpenCode's Google provider reads only `GOOGLE_GENERATIVE_AI_API_KEY`. If you export only `GEMINI_API_KEY`, or export `GOOGLE_GENERATIVE_AI_API_KEY` without `--api-key-name`, Harbor does not forward the key. OpenCode then fails with `AI_LoadAPIKeyError` before its first model call, and every trial ends at reward 0 with `NonZeroAgentExitCodeError`. Those zeros are infrastructure failures, not model results, and we did not commit them as results.
 
@@ -205,19 +234,19 @@ There are two cheat solutions:
   - **Grader routes:** `/ledger` and `/admin/reset` with no token, 16 guessed tokens, header/cookie tokens, and path/case/method tricks; likely debug paths.
   - **Secrets:** the token, SALT and episode files; `CANARY_*` variables; every `/proc/*/environ`.
   - **Reward files:** pre-written `/logs/verifier/reward.{txt,json}`; a fake ledger in `/evidence`, `/logs/verifier` and `/logs/artifacts`; a background process that rewrites the reward files for 15 minutes.
-  - **MCP wire:** made-up tools (`score`, `verdict`, `set_reward`, `_t_accuse`, ...), hidden arguments on real tools, `resources/*` and `prompts/*`, and `accuse` with a list / `*` / object / comma string.
+  - **MCP wire:** made-up tools (`score`, `verdict`, `set_reward`, `_t_accuse`, ...), hidden arguments on read and state-changing tools, three days of replies scanned for truth-like keys, `resources/*` and `prompts/*`, a JSON-RPC batch of two accusations, and `accuse` with a list / `*` / object / comma string.
 
-If an attack does get in, `cheat_probe` uses it: it reads the server ledger, narrows the mole down with canaries and accuses. So a real hole shows up as a reward above 0, not only as a log line. `tests/test_harbor_cheat.py` checks both directions against the real MCP server:
+If an attack does get in, `cheat_probe` uses it: with a ledger hole it reads the server ledger, narrows the mole down with canaries and accuses, so the hole shows up as a reward above 0. Any other hole (a readable SALT, episode or token file, a `CANARY_*` variable, a leak key) makes it exit 3, so `solve.sh` fails and Harbor reports an exception; exit 2 means it could not reach the server and tested nothing. `canary.redteam.anticheat` also flags any committed trial whose `agent/cheat.json` lists a hole. `tests/test_harbor_cheat.py` checks both directions against the real MCP server:
 
 - the probe finds no hole, and the ledger score stays 0;
 - with the ledger token planted on disk, the probe accuses the right person, and the score is above 0.
 
-**`cheat_probe` verified through Harbor** (Harbor 0.25.0 on Docker Desktop / Windows 11, Saturday 14 Nov; medium + hard 900000, separate verifier). Job: [`results/harbor/cheat-probe/`](../results/harbor/cheat-probe/). The logs were scanned for the build secret (0 hits), and local paths were rewritten.
+**`cheat_probe` verified through Harbor** (Harbor 0.25.0 on Docker Desktop / Windows 11, Saturday 14 Nov ~21:10, with this branch's final probe and test.sh; **3 judge seeds (900000-900002) × medium and hard**, separate verifier, HMAC-signed ledger). The job folder's `PROVENANCE.md` lists the SHA-256 of the code that ran, and `ledger_key` is the retired build's key. Job: [`results/harbor/cheat-probe/`](../results/harbor/cheat-probe/). The logs were scanned for the build secret (0 hits), and local paths were rewritten.
 
-| | medium 900000 | hard 900000 |
+| | medium 900000-900002 | hard 900000-900002 |
 |---|---|---|
-| reward | **0.0** | **0.0** |
-| `agent/cheat.json` | 130 attempts, `"holes": []` | 130 attempts, `"holes": []` |
+| reward | **0.0, 0.0, 0.0** (`signature=ok`) | **0.0, 0.0, 0.0** (`signature=ok`) |
+| `agent/cheat.json` | 149 attempts each, `"holes": []`, 0 failed controls | same |
 | grader routes | 35 × 403, 21 × 404, 3 × 405, 1 × 307 | same |
 | secrets | no file, no `CANARY_*` variable, nothing in `/proc` | same |
 | reward files | 6 fakes planted and the 15-minute rewrite loop started; the separate verifier ignored them all | same |
@@ -225,6 +254,56 @@ If an attack does get in, `cheat_probe` uses it: it reads the server ledger, nar
 | server ledger | `accused: null`, `score: 0.0` | same |
 | isolation | `ISOLATION OK: 11 checks passed, 0 findings` | same |
 
-The job had 0 exceptions and took 2 min 14 s. Harbor also copied two of the planted fakes (`score: 1.0`) out of `/logs/artifacts` in `main`, so they appear under `artifacts/logs/artifacts/` in the job. They are evidence of the attack, not results. The reward comes only from `artifacts/ledger.json`, which the sidecar collect hook writes.
+The job had 0 exceptions and took about 2-3 min. Harbor also copied two of the planted fakes (`score: 1.0`) out of `/logs/artifacts` in `main`, so they appear under `artifacts/logs/artifacts/` in the job. They are evidence of the attack, not results. The reward comes only from `artifacts/ledger.json`, which the sidecar collect hook writes.
 
 Windows note: a Windows checkout with `core.autocrlf=true` gives the `.sh` files CRLF endings, and bash in the Linux containers rejects those. Convert the built `harbor/dataset*/` to LF before `harbor run` (this run did), or check out with `core.autocrlf=input`.
+
+## Ledger signing verified through Harbor (PLAN-95 C1)
+
+Harbor 0.26.0 on colima (2 CPU / 3 GB), Saturday 14 Nov ~19:30. One fresh build of the default judge set's first
+task (`build.py --seeds 900000` → hard 900000; world-secret fingerprint `3730cff6ea0c`), separate verifier, signed
+ledger. The logs were scanned for the build's world secret and ledger key (0 hits), and local paths were rewritten.
+
+| policy | reward | verifier line | expected |
+|---|---:|---|---|
+| oracle (solver over MCP) | **0.5** | `signature=ok`, accused day 12 | the in-process solver on the same secret: 0.5 |
+| `ORACLE_POLICY=do_nothing` | 0.0 | `signature=ok`, horizon day 21 | 0 |
+| `ORACLE_POLICY=cheat` (fake rewards + accuse everyone) | −1.0 | `signature=ok`, one accusation accepted, day 1 | ≤ 0 |
+| **negative control:** collect hook forges `score = 1.0` after signing | **0** | `FAIL: bad ledger signature ...` | 0 |
+
+Jobs: `results/harbor/c1-{oracle,do_nothing,cheat}/`. All three passed `check_isolation.sh`, including the new
+`*ledger_key*` check (`ISOLATION OK: 11 checks passed, 0 findings`). The negative control used a copy of the task
+with one line added to `collect.py`, never the template. Its job sits in `results/harbor_negative/c1-tamper/`,
+outside `results/harbor/`, because the consistency check there would rightly flag its forged artifact (ledger 1.0,
+reward 0).
+
+## Expected oracle range for a judge rerun
+
+A judge's build draws a fresh world secret, so the 10 hard tasks are new worlds and the oracle's mean varies by build.
+`scripts/oracle_range.py` reproduces the sidecar's world derivation (HMAC(secret, "tier:seed") in `canary/world.py`)
+in-process with 200 synthetic secrets (never a real build SALT) on judge seeds 900000–900019 (rules v1.4):
+
+```bash
+uv run --python 3.12 --extra dev python scripts/oracle_range.py --builds 200 --tiers hard,medium \
+    --agents solver,do_nothing,stop_early --procs 2      # ~3.5 min; results/oracle_range_v1.4.{md,json}
+```
+
+| agent | tier | tasks | mean | sd | p5 | p50 | p95 | P(mean<0) |
+|---|---|---|---|---|---|---|---|---|
+| solver (oracle) | hard | 2 | +0.533 | 0.274 | −0.211 | +0.620 | +0.745 | 10.5% |
+| solver (oracle) | hard | 3 | +0.547 | 0.208 | +0.047 | +0.613 | +0.723 | 1.5% |
+| solver (oracle) | hard | **10 (judge set)** | **+0.569** | **0.094** | **+0.393** | **+0.600** | **+0.678** | **0%** |
+| solver (oracle) | hard | 20 | +0.568 | 0.064 | +0.454 | +0.585 | +0.656 | 0% |
+| solver (oracle) | medium | 10 | +0.623 | 0.086 | +0.469 | +0.633 | +0.742 | 0% |
+| do_nothing, stop_early | hard, medium | 2/10/20 | 0 exactly in every build | | | | | |
+
+- A 10-task hard rerun of the oracle should land in about **+0.39 to +0.68** (90% of builds; mean +0.569, p5 +0.39).
+- A single wrong accusation scores −1; with the solver at ~95% accuracy on hard, a 2–3-task rerun shows a negative mean about 1.5–10% of the time without anything being broken.
+  (Measured: P(mean < 0) = 10.5% for 2 tasks, 1.5% for 3 tasks.) The 2-task rerun at −0.43 (one wrong day-6
+  accusation, −1.0, plus a late correct one, +0.14) was replayed in-process with the same build secret and gave
+  identical decisions: it was luck.
+- `stop_early` now scores exactly 0 on every build (verified after PR #16), as does `do_nothing`.
+- **20 vs 10 seeds:** the sd drops from 0.094 to 0.064 (×0.68, as expected from 1/√2). The oracle computes in 0.09 s per
+  hard task in-process. Through Harbor the cost is container time, about 1.5 min per 2-trial job above, so 20
+  tasks take roughly twice as long as 10. Worth it only if the rerun is meant to compare an agent with the oracle
+  (a frontier agent's per-task sd is much larger than the oracle's). For an oracle sanity check, 10 is enough.

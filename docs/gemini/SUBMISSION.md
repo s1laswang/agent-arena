@@ -3,12 +3,12 @@
 *Google DeepMind "Best Use of Gemini API", Junction 2026. Code: github.com/s1laswang/agent-arena (`canary/gemini/`). Every number below links to a committed file. Model ids are as listed by the Gemini API (`models.list`) on our key on 14 Nov 2026. When we request `gemini-3.5-flash`, the API serves **`gemini-3.6-flash`** (recorded per call in the ladder provenance), so this text says "3.6-flash".*
 
 ## Short version (≤ 600 chars)
-Before shipping an agent that makes irreversible calls on a budget, a team must pick a model and a thinking level. Canary Lab measures that choice on an insider-threat RL environment scored against a Bayesian reference solver: on hard, 3.6-flash at high thinking matches the solver for $0.33 an episode vs $1.93 for carbon at high (357 paired episodes; n=10 per cell, wide CIs). 100 Gemini red-team attacks found 0 verified exploits, with a detector validated on a reopened one. 24,855 calls, all logged.
+Before shipping an agent that makes irreversible calls on a budget, a team must pick a model and a thinking level. Canary Lab measures that choice on an insider-threat RL environment scored against a Bayesian reference solver: on hard, 3.6-flash at high thinking is within the CI of the solver for $0.33 an episode vs $1.93 for carbon at high (357 paired episodes; n=10 per cell, wide CIs). 100 Gemini red-team attacks found 0 verified exploits, with a detector validated on a reopened one. 24,855 calls, all logged.
 
 ## 1. The problem
 **Who it is for:** the team about to ship an agent that makes irreversible decisions under uncertainty with a budget (security triage, insider risk, procurement). Before launch they must pick a model and a `thinking_level`, and trust that the benchmark they tuned on can't be gamed.
 
-**What is at stake:** in our environment, as in those jobs, a wrong accusation is the worst outcome (score −1), and every day of waiting leaks value. The choice of thinking level is about a 6× cost decision on hard: $0.33 vs $1.93 per episode (3.6-flash vs gemini-4-carbon, both at high thinking), both at about solver level: 109% [90, 139] and 106% [94, 126], n=10 each (`results/gemini/ladder.md`).
+**What is at stake:** in our environment, as in those jobs, a wrong accusation is the worst outcome (score −1), and every day of waiting leaks value. The choice of thinking level is about a 6× cost decision on hard: $0.33 vs $1.93 per episode (3.6-flash vs gemini-4-carbon, both at high thinking), both within the CI of the solver: 109% [90, 139] and 106% [94, 126], n=10 each (`results/gemini/ladder.md`).
 
 A benchmark gives one number per model. It can't tell you whether more thinking would help, what that costs, or whether the score can be gamed. Answering that needs controlled experiments and an adversarial audit, at a scale nobody does by hand.
 

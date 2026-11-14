@@ -553,7 +553,7 @@ def to_md(doc: dict) -> str:
             th = "–" if r["thinking_per_ep"] != r["thinking_per_ep"] else f"{r['thinking_per_ep']:,.0f}" + \
                 ("*" if r["thinking_is_estimate"] else "")
             src = " (imported†)" if r["source"].startswith("import") else ""
-            L.append(f"| {r['model']}{src} | {r['level']} | {r['n']} | {_f(r['mean'])} ± {_f(r['ci'], 2)} | "
+            L.append(f"| {model_label(r)}{src} | {r['level']} | {r['n']} | {_f(r['mean'])} ± {_f(r['ci'], 2)} | "
                      f"{r['accuracy']:.2f} | {_f(r['accuse_day'], 1)} | {_f(r['solver_same_seeds'])} | "
                      f"**{_pct(r, 'ratio')}** | {_f(r['diff'])} ± {_f(r['diff_ci'], 2)} | {_pct(r, 'luck_adj_ratio')} | "
                      f"{th} | {_f(r['calls_per_ep'], 0)} | {_f(r['cost_per_ep'], 2)} | {_f(r['wall_min_per_ep'], 1)} |")
@@ -574,7 +574,7 @@ def to_md(doc: dict) -> str:
     if pooled:
         L += ["## Which mistakes does thinking fix?", "",
               f"Solver regret per episode by failure tag (`canary.solver.regret.attribute`), pooled over the models "
-              f"that ran low, medium and high: {', '.join(tags.get('pooled_common_models', []))}. "
+              f"that ran low, medium and high: {', '.join(display_id(m) for m in tags.get('pooled_common_models', []))}. "
               "Δ = high − low (negative = thinking fixes it).", ""]
         for tier in TIERS:
             lv = [x for x in ("low", "medium", "high") if f"{x}|{tier}" in pooled]
@@ -598,7 +598,7 @@ def to_md(doc: dict) -> str:
                 acc[r["model"]].append(r["level"])
         L += ["## Thinking levels each model accepts (probe)", "",
               "| model | accepted thinking_level |", "|---|---|"] + \
-             [f"| {m} | {', '.join(v)} |" for m, v in acc.items()] + [""]
+             [f"| {display_id(m)} | {', '.join(v)} |" for m, v in acc.items()] + [""]
     L += [f"Figures: {', '.join(doc['figures'])}. Data: ladder.json (rows, tags, ledger run ids).", ""]
     return "\n".join(L)
 
@@ -638,6 +638,22 @@ def gemma_md(g: dict | None) -> list[str]:
     return L
 
 
+def display_id(model: str) -> str:
+    """The id a reader should see. gemini-3.5-flash is served as gemini-3.6-flash."""
+    if model == "gemini-3.5-flash":
+        return "gemini-3.6-flash (requested as 3.5-flash)"
+    return model
+
+
+def model_label(row: dict) -> str:
+    """Request id, or the served model when the API substituted one."""
+    requested = row["model"]
+    served = row.get("model_versions") or []
+    if requested == "gemini-3.5-flash" and (not served or "gemini-3.6-flash" in served):
+        return display_id(requested)
+    return requested
+
+
 def _pc(r) -> str:
     if r["ratio"] != r["ratio"]:
         return "–"
@@ -652,14 +668,20 @@ def headline(rows: list[dict], tags: dict) -> str:
            "paired seeds per cell; 95% CIs are wide, so read them as directions)."]
     a, b = R.get(("gemini-3.5-flash", "medium", "hard")), R.get(("gemini-3.5-flash", "high", "hard"))
     if a and b:
-        both = all(x["ratio_lo"] == x["ratio_lo"] and x["ratio_lo"] <= 1.0 <= x["ratio_hi"] for x in (a, b))
-        verb = "matches the reference solver on hard" if both else "comes close to the reference solver on hard"
+        within = all(x["ratio_lo"] == x["ratio_lo"] and x["ratio_lo"] <= 1.0 <= x["ratio_hi"] for x in (a, b))
+        name = "gemini-3.6-flash (requested as 3.5-flash)"
         k = sum(round(x["accuracy"] * x["n"]) for x in (a, b))
         carbon = [r["cost_per_ep"] for (m, lv, t), r in R.items() if m == "gemini-4-carbon" and lv == "high" and t == "hard"]
         cost = f"${min(a['cost_per_ep'], b['cost_per_ep']):.2f}–{max(a['cost_per_ep'], b['cost_per_ep']):.2f} per episode"
         if carbon:
             cost += f", versus ${carbon[0]:.2f} for gemini-4-carbon at high thinking"
-        out.append(f"> **gemini-3.5-flash (requested ID; the API serves gemini-3.6-flash) with medium or high thinking {verb}:** {_pc(a)} and {_pc(b)} of the solver "
+        if within and a["n"] == b["n"]:
+            claim = f"on hard is within the CI of the solver, n={a['n']}"
+        elif within:
+            claim = f"on hard is within the CI of the solver, n={a['n']} and n={b['n']}"
+        else:
+            claim = "on hard is not within the CI of the solver"
+        out.append(f"> **{name} with medium or high thinking {claim}:** {_pc(a)} and {_pc(b)} of the solver "
                    f"on the same seeds, {k}/{a['n'] + b['n']} correct accusations, {cost}.")
     lite = [r for (m, _, _), r in R.items() if m == "gemini-3.1-flash-lite"]
     if lite:

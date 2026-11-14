@@ -22,6 +22,8 @@ services:
       CANARY_EPISODE_FILE: "/opt/canary-server/episode.json"
       CANARY_WORLD_SECRET_FILE: "/opt/canary-server/data/worlds/judge/SALT"
       CANARY_LEDGER_TOKEN_FILE: "/run/canary/ledger_token"
+      # Build-time HMAC key: the server signs every /ledger payload; the verifier rejects unsigned/forged ones.
+      CANARY_LEDGER_KEY_FILE: "/opt/canary-server/ledger_key"
       CANARY_HOST: "0.0.0.0"
       CANARY_PORT: "8765"
       CANARY_PROVIDER: "$${CANARY_PROVIDER:-template}"

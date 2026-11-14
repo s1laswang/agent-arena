@@ -274,3 +274,62 @@
   4. Failure gallery port: 4/10 Codex losses untagged. Not merged; Atlas (Gemini CEO) owns the gallery.
 - Ivar: no pushes since 02:28 (ivar/main). Game/video/research lane is uncovered on GitHub; ask Silas.
 - head-integrity session no longer live; Vaishnav + the CEO cover integrity until submit.
+
+## 19:00 Silas decisions on PLAN-95
+1. Relaunch HARNESS (A1 hard-only judge set, C1 ledger HMAC) and INTEGRITY (C2 EXPLOITS.md, B4 instruction audit) engineers: launched as CEO subagents on justSilas-harness3 / justSilas-integrity3, PRs into justSilas.
+2. v3 GPU plan approved (2 V100 × ~6 h), conditional on v2 eval showing no reward gain; relayed to fr8.
+3. Hard-only judge set: approved (A1).
+4. Ivar owns the browser game deploy. Video owner: Silas/Momin (open).
+5. Human playtests Sunday morning: approved (all four, 2 hard dev-seed episodes each).
+B1 hint wording fixed (head-env, verified against instruction() v1.4) and sent to head-agents as an opt-in prompt flag.
+
+## 19:50 GATE B: v1.5 dropped, v1.4 is the judged env; feature freeze 20:00
+- gemini-4-carbon via OpenCode, hard, dev seeds 0-9, same seeds on both versions: v1.4 61% [3, 104] of the solver (luck-adj 56% [21, 80]); v1.5-candidate 108% [96, 122] (luck-adj 98%, 10/10 correct, mean P 0.94). Gemini treats seeded rumours as evidence AGAINST the person rumoured; no rumour-following.
+- The ship criterion (ratio drops vs v1.4) failed, so v1.5 stays on justSilas-v15 as a documented negative result, not a judged tier. Gemini's world-text role is labelled demo/research.
+- v1.4 seed-1 miss: accused at P=0.988, lost to the 5% fingerprint misread. That's luck, which is why the luck-adjusted ratio is reported alongside.
+- Freeze from 20:00: canary/rules.py, env.py, solver/ change only via the CEO. Harbor/verifier hardening (A1, C1), docs and analysis continue.
+
+## 20:20 PR #7 merged; switch from subagents to separate sessions
+- PR #7 (harness engineer) merged as b4557e0. The default Harbor build is the judge set (hard × 900000–900009). The ledger is HMAC-signed and the verifier fails closed: a forged score gives 0, oracle 0.5 = in-process, do-nothing 0, cheat −1. `make test` on justSilas: 761 passed, 6 skipped.
+- Measurement and integrity subagents stopped at the Claude usage limit. Per Silas (token cost), the remaining work moves to separate sessions; paste prompts are in docs/agents/SESSIONS.md. The integrity drafts (EXPLOITS.md, DIFFICULTY.md) sit uncommitted in the old subagent worktree; the new session picks them up.
+- Gemini CEO arena finding: the gemini-4-carbon mole beat the solver 4/4 on medium dev seeds by leaking only widely distributed docs. It's presented as arena mode with caveats, not the judged env.
+
+## 23:15 Review of Silas's Grok/Cursor work; the v1.4 gap is gone; reopened (Silas)
+- Pooled paired v1.4 data (ours + fleet PR #3, not yet replay-verified):
+
+  | | n | Gemini / solver [95% CI] |
+  |---|---|---|
+  | gemini-4-carbon OpenCode, hard | 32 | 76% [34, 126] |
+  | gemini-4-carbon in-process, hard | 30 | 109% |
+  | gemini-4-carbon OpenCode, medium | 30 | 111% |
+  | gemini-3.5-flash OpenCode, hard | 30 | 107% |
+
+  This agrees with Cursor's 21:26 bake-off (parity).
+- Silas chose to REOPEN, with a gate at 02:00:
+  - Track 1 (head-env, branch justSilas-solver2): a stronger reference, solver_v2, on unchanged v1.4 rules; evaluated offline against existing Gemini episodes.
+  - Track 2 (head-agents, branch justSilas-expert): an expert tier (v1.6 = v1.4 + one tier) found by a CPU sweep, plus a 10-seed gemini-4-carbon spot check by 01:30.
+  - If neither track meets its ship criterion, v1.4 ships with honest parity wording.
+- PR #16 merged as 2bb6729:
+  - stop_early now stops without accusing and scores 0; the day-1 guess is guess_day1;
+  - adds make accept;
+  - macOS fix (memfd fallback);
+  - anti-cheat artifact regenerated;
+  - 824 passed.
+- Reviewed:
+  - PR 15: Gemini CEO took the fact-checks; drop its duplicate ledger HMAC.
+  - PR 14: subsumed by PR 16.
+  - PR 17: targets momin, ignore.
+  - Ivar's ivar/aq-game-ux (game fixes, research-biases.md, VIDEO-SCRIPT.md, 44 failure cases): to merge after review.
+  - Vaishnav: PR 12 and PR 18 merged.
+- Small model v2 (44412): no gain. Held-out v2 −0.395 vs base 0.000; it accuses indiscriminately. v3 GRPO is running (44553, plus 44555 pending; evals 44554/44556).
+
+## ~00:55 check-in
+- Track 1 solver_v2: DROPPED (fresh seeds: hard +0.012, below the +0.08 bar). PR #20 merged (oracle range, reference optimality).
+- Track 2 expert tier: built and integrity-clean; Gemini OpenCode runs in flight, about 10 lost to the make-accept pkill (fixed 3603f25); verdict 01:40.
+- v3: s0 on the H100 IMPROVING at step 140 (+0.09 valid-only vs solver, no collapse; whom-accuracy ~19%, flat). Then v3-8k s0 (H100) + v3-8k s1 (A100 spot) + v3-4k s1 (FR8 44572).
+- Merged: #26, #28, #29, #30, #32, ivar/game-v-port. S7 open-7B dropped (no capacity). Verda cap €100 (Silas).
+
+## ~01:30 GAP GATE: v1.4 hard ships unchanged
+- solver_v2: dropped (+0.012 on fresh seeds). Expert tier: dropped (Gemini 81% luck-adjusted, n=12; it isn't fooled by fingerprint noise). v1.5: dropped earlier.
+- The judged headline stays OpenCode hard 65% [24, 98], luck-adjusted 72% [52, 91]. gap.md now lists all three negative results.
+- Rehearsal protocol merged (pre-registered before any run). The tag moves to ~06:30; Gemini key quiet window 06:30–08:15.

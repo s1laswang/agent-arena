@@ -2,7 +2,7 @@
 
 > **Headline findings** (auto-generated from the table below: 10–10 paired seeds per cell; 95% CIs are wide, so read them as directions).
 >
-> **gemini-3.5-flash (requested ID; the API serves gemini-3.6-flash) with medium or high thinking matches the reference solver on hard:** 98% [82%, 119%] and 109% [90%, 139%] of the solver on the same seeds, 20/20 correct accusations, $0.33–0.37 per episode, versus $1.93 for gemini-4-carbon at high thinking.
+> **gemini-3.6-flash (requested as 3.5-flash) with medium or high thinking on hard is within the CI of the solver, n=10:** 98% [82%, 119%] and 109% [90%, 139%] of the solver on the same seeds, 20/20 correct accusations, $0.33–0.37 per episode, versus $1.93 for gemini-4-carbon at high thinking.
 >
 > **gemini-3.1-flash-lite fails at every thinking level:** its mean score is below the do-nothing score (0) in 8/8 (level, tier) cells; at minimal thinking it accused the wrong employee in 19/20 episodes.
 >

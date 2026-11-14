@@ -55,3 +55,11 @@ def test_import_report_parse_and_dev_replay(tmp_path):
     assert rep[("hard", 900000)]["accused"] is None
     r = replay("medium", 3, [{"tool": "status", "args": {}}, {"tool": "accuse", "args": {"employee": "e01"}}], "x")
     assert r.end_reason == "accused" and r.accused == "e01"
+
+
+def test_invalid_episodes_excluded(tmp_path):
+    d = tmp_path / "r"; d.mkdir()
+    good, bad = ep("a", 0, 0.5, True), ep("a", 1, 0.0, False)
+    bad["meta"] = {"valid": False, "error": "429"}
+    (d / "episodes.jsonl").write_text(json.dumps(good) + "\n" + json.dumps(bad) + "\n")
+    assert [e["seed"] for e in load_runs(tmp_path)] == [0]

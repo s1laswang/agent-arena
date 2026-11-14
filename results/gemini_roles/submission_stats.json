@@ -1,10 +1,10 @@
 {
   "target_model": "gemini-4-carbon",
-  "git_head": "6a26be2e",
+  "git_head": "b2678506",
   "provenance": {
     "verified": true,
-    "scanned_runs": 82,
-    "verified_runs": 82,
+    "scanned_runs": 84,
+    "verified_runs": 84,
     "secret_leaks_count": 0
   },
   "totals": {
@@ -29,17 +29,17 @@
     "n_roles_required": 6,
     "n_roles_verified": 6,
     "all_roles_verified": true,
-    "n_verified_carbon_runs": 82,
+    "n_verified_carbon_runs": 84,
     "n_canonical_runs": 6,
-    "n_supporting_runs": 76,
-    "count": 801,
-    "calls": 6392,
-    "tokens_in": 180263986,
-    "tokens_out": 2123550,
-    "thinking_tokens": 1201796,
-    "cached_tokens": 164235078,
-    "total_tokens": 183589332,
-    "cost_usd": 77.974551
+    "n_supporting_runs": 78,
+    "count": 805,
+    "calls": 6523,
+    "tokens_in": 182744553,
+    "tokens_out": 2129139,
+    "thinking_tokens": 1261433,
+    "cached_tokens": 166433051,
+    "total_tokens": 186135125,
+    "cost_usd": 79.411797
   },
   "roles": {
     "world_text": {
@@ -457,7 +457,7 @@
       "title": "Adaptive Mole & Mole Forge",
       "stage": "Adversarial Evolution",
       "verified": true,
-      "n_verified_runs": 26,
+      "n_verified_runs": 28,
       "canonical_run": {
         "role": "adaptive_mole",
         "subrole": "mole_forge",
@@ -833,6 +833,36 @@
           "cached_tokens": 817534,
           "cost_usd": 0.66069,
           "headline_metric": "investigator +0.750 vs solver +0.450 (5d clash)"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed0",
+          "model_id": "gemini-4-carbon",
+          "commit": "e650291e7874f115733affd54b725ba6b9fdfafb",
+          "count": 2,
+          "calls": 66,
+          "tokens_in": 1632751,
+          "tokens_out": 2947,
+          "thinking_tokens": 33780,
+          "cached_tokens": 1486373,
+          "cost_usd": 0.808665,
+          "headline_metric": "investigator +0.640 vs solver +0.710 (6d clash)"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed4",
+          "model_id": "gemini-4-carbon",
+          "commit": "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
+          "count": 2,
+          "calls": 65,
+          "tokens_in": 847816,
+          "tokens_out": 2642,
+          "thinking_tokens": 25857,
+          "cached_tokens": 711600,
+          "cost_usd": 0.628581,
+          "headline_metric": "investigator +0.800 vs solver +0.000 (4d clash)"
         },
         {
           "role": "adaptive_mole",
@@ -1228,6 +1258,36 @@
         },
         {
           "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed0",
+          "model_id": "gemini-4-carbon",
+          "commit": "e650291e7874f115733affd54b725ba6b9fdfafb",
+          "count": 2,
+          "calls": 66,
+          "tokens_in": 1632751,
+          "tokens_out": 2947,
+          "thinking_tokens": 33780,
+          "cached_tokens": 1486373,
+          "cost_usd": 0.808665,
+          "headline_metric": "investigator +0.640 vs solver +0.710 (6d clash)"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed4",
+          "model_id": "gemini-4-carbon",
+          "commit": "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
+          "count": 2,
+          "calls": 65,
+          "tokens_in": 847816,
+          "tokens_out": 2642,
+          "thinking_tokens": 25857,
+          "cached_tokens": 711600,
+          "cost_usd": 0.628581,
+          "headline_metric": "investigator +0.800 vs solver +0.000 (4d clash)"
+        },
+        {
+          "role": "adaptive_mole",
           "subrole": "catchability_isolation_audit",
           "run_folder": "results/gemini_roles/adaptive_mole/catchability-audit-carbon",
           "model_id": "gemini-4-carbon",
@@ -1242,13 +1302,13 @@
           "headline_metric": "adaptive mole verified"
         }
       ],
-      "count": 320,
-      "calls": 1632,
-      "tokens_in": 25564117,
-      "tokens_out": 118318,
-      "thinking_tokens": 384007,
-      "cached_tokens": 23015724,
-      "cost_usd": 12.421625
+      "count": 324,
+      "calls": 1763,
+      "tokens_in": 28044684,
+      "tokens_out": 123907,
+      "thinking_tokens": 443644,
+      "cached_tokens": 25213697,
+      "cost_usd": 13.858871
     },
     "investigators": {
       "role": "investigators",

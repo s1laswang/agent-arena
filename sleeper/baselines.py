@@ -160,6 +160,7 @@ def play(team, seed, sleeper_seat=None, seat=None, malicious=False):
 
 
 ROWS = ("do_nothing", "stop_early", "refuse_all", "quarantine_all", "random_accuse", "claim_only", "trust_all", "gullible", "oracle")
+LABEL = {"oracle": "scripted oracle", "random_accuse": "random_accuse (seat cols: lone vote, no effect)"}
 ORACLE = os.environ.get("BASELINE_ORACLE", "scripted")
 COLS = (None,) + tuple(SEATS)
 
@@ -210,7 +211,7 @@ def markdown(t):
         return m + (f" ({c['ungraded']} ungraded)" if c["ungraded"] else "")
 
     lines = ["| baseline | " + " | ".join(cols) + " |", "|" + "---|" * (len(cols) + 1)]
-    lines += [f"| {'scripted oracle' if n == 'oracle' and ORACLE == 'scripted' else n} | " + " | ".join(fmt(t[n][c]) for c in cols) + " |" for n in ROWS]
+    lines += [f"| {LABEL.get(n, n) if n != 'oracle' or ORACLE == 'scripted' else n} | " + " | ".join(fmt(t[n][c]) for c in cols) + " |" for n in ROWS]
     lines += ["", "Mean reward over graded days x trials. Seat columns: oracle plays the other 7 seats. ungraded = runs the verifier rejected as config (seat has no graded ticket or is the sleeper), left out of the mean; n/a = none graded. trust_all, random_accuse and gullible are averaged over sleeper days only: with no sleeper, blind diligence is correct work.", "", "Sleeper days (full team) that gullible still wins, so the strategy cannot land: " + (", ".join(f"d{w['day']}:{w['strategy']}" for w in t["_gullible_wins"]) or "none")]
     return "\n".join(lines) + "\n"
 

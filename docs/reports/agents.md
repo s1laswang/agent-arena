@@ -2,6 +2,18 @@
 
 # Relaunch (branch `justSilas-agents2`)
 
+## 01:35 Track 2 (expert tier) — DROPPED (CEO), branch `justSilas-expert` kept, not merged
+- Expert = v1.4 hard + fingerprint_accuracy 0.70 (EXPERT_TIERS, rules v1.6; v1.4 hash untouched; v1.4 dev worlds
+  byte-identical, pinned test). Chosen from a 24-config × 8-rung × n=300 sweep (`results/expert_sweep_coarse.json`).
+- Fresh dev seeds 70000–70399 (n=400): solver 0.422 (acc .97), grok_tactics 0.011, heuristic −0.573
+  (hard on same seeds: 0.543 / 0.361 / 0.013). Integrity: anti-cheat all_blocked; make hunt best non-solver 0.000.
+- gemini-4-carbon via OpenCode, n=13 valid: 13/13 correct, mean 0.531 vs solver 0.296 on same seeds;
+  **luck-adjusted 84% [52%, 128%]** → fails the ship bar (≤70%, upper CI < 100%). Gemini does not over-trust single
+  canary hits (2/13, both at P ≥ 0.97; solver 4/12). It loses ground only via 3 correct accusations at P≈0.58–0.65.
+- Abstention lever is weak in general: a "never abstain" solver costs ≤ 0.04 wherever the solver scores ≥ 0.4.
+- Infra: 9 runs SIGTERM-ed by `make accept`'s `pkill -f canary.mcp_server` (fixed on justSilas 3603f25), 12+
+  provider_quota, 7 empty replies; all excluded and re-queued. Spend ≈ $35 est. No Gemini calls after 01:30.
+
 ## 22:55 Hint ablation v2 RESULT (gemini-4-carbon in-process, v1.4 hard, dev seeds 0–9, n=10/arm) — INCONCLUSIVE
 `data/runs/ablate-v2-hard-gemini/ablation_combined.{json,md}`; hints = HINTS_V2 (fact-only; tests/test_agents_policy.py).
 | arm | mean | acc | premature_accusation tag rate |

@@ -1,0 +1,827 @@
+{
+  "generated_at": "2026-11-14T13:59:28+00:00",
+  "git_sha": "26ab62d",
+  "ledger_run_ids": [
+    "atlas-carbon-v1"
+  ],
+  "synthetic": false,
+  "source": "llm",
+  "model": "gemini-4-carbon",
+  "summary": "Across 101 Canary Lab episodes (total solver regret 20.3903), agent failures cluster around stopping-time miscalibration and suboptimal experiment design. Stopping errors account for 61.1% of total regret: agents frequently commit premature accusations below P=0.60 using noisy framing logs (39.4% regret share), settle for moderate-posterior accusations when another canary split carries higher continuation value (13.8%), or misinterpret unsurfaced 1-to-3 day pipeline leaks as exoneration (7.9%). On the information-gathering side, narrow 2-to-3 recipient or lopsided canaries lag optimal Gini partitions across 71 episodes (27.8% regret share), leaving finalists unresolved near day 14, while aggressive access restrictions (10.7%) burn company value and block suspects from receiving diagnostic traps. Late commits after certainty (0.4%) represent a minor residual leak cost.",
+  "modes": [
+    {
+      "id": "premature-accusation",
+      "name": "Premature Accusation on Noisy Framing Evidence",
+      "description": "Agents call accuse with Bayesian posterior P(accused) < 0.60 (17 episodes, 8.0359 regret, 39.4% share; wrong accusations average P=0.3979). When canary variants fail to surface or leave a multi-person pool at the horizon, agents over-weight framed after-hours access logs and evasive interviews instead of waiting for diagnostic splits, risking a -1.0 penalty.",
+      "decision": "accuse",
+      "regret_share": 0.3941,
+      "regret_sum": 8.0359,
+      "episodes": 17,
+      "quotes": [
+        {
+          "episode": "codex:gpt-5.5/medium/0#73",
+          "t": 52,
+          "quote": "transcript t=52: Waiting mainly risks more hidden leak damage while giving low odds of a cleaner canary hit.",
+          "verified": true
+        },
+        {
+          "episode": "codex:gpt-5.5/hard/1#1",
+          "t": 84,
+          "quote": "transcript t=84: The single sharpest clue is that the leaked canary `c4` was label A, and inside that A group `e06` is the one with an after-hours access to `c4` on the very day it leaked.",
+          "verified": true
+        },
+        {
+          "episode": "codex:gpt-5.5/hard/8#70",
+          "t": 59,
+          "quote": "transcript t=59: At this point, the ordinary feed has gone quiet, so the best live signal is the accumulated log imbalance.",
+          "verified": true
+        }
+      ],
+      "chart": "../gemini_roles/multimodal_evidence/belief-chart-forensics-carbon/charts/ep_0.png"
+    },
+    {
+      "id": "uninformative-canary",
+      "name": "Narrow or Lopsided Canary Partitions",
+      "description": "Agents plant 2-to-3 employee micro-sweeps, lopsided 1-vs-many splits, or redundant post-lock traps whose Gini information gain lags the Bayesian reference partition (71 episodes, 5.6662 regret, 27.8% share). Tiny early batches often miss the true mole entirely, leaving multiple suspects indistinguishable late in the 14-day horizon.",
+      "decision": "plant_canary",
+      "regret_share": 0.2779,
+      "regret_sum": 5.6662,
+      "episodes": 71,
+      "quotes": [
+        {
+          "episode": "codex:gpt-5.5/medium/5#78",
+          "t": 14,
+          "quote": "transcript t=14: I've started exact-label canaries across small batches; if one surfaces, it will directly name one of those batch members rather than just a department pair.",
+          "verified": true
+        },
+        {
+          "episode": "codex:gpt-5.5/hard/0#0",
+          "t": 36,
+          "quote": "regret t=36 d5 plant_canary r=0.0251 p_best=0.1746 tags=['uninformative_canary']",
+          "verified": true
+        },
+        {
+          "episode": "openai:gpt-5.5/hard/4#14",
+          "t": 9,
+          "quote": "t=9 d1 plant_canary(title='Canary D1 pair e00 e01',assignment={A:[e00], B:[e01]}) -> ok [p_best=0.033]",
+          "verified": true
+        }
+      ],
+      "chart": "../gemini_roles/multimodal_evidence/belief-chart-forensics-carbon/charts/ep_1.png"
+    },
+    {
+      "id": "subthreshold-commit",
+      "name": "Subthreshold Accusation Before Optimal Split",
+      "description": "Agents accuse at moderate confidence (0.60 <= P(accused) < p*) when planting or awaiting one more canary split yields higher continuation expected value than immediate termination (24 episodes, 2.8175 regret, 13.8% share). Under 5% fingerprint noise or indirect timing inference, stopping above the static myopic threshold still forfeits positive option value.",
+      "decision": "accuse",
+      "regret_share": 0.1382,
+      "regret_sum": 2.8175,
+      "episodes": 24,
+      "quotes": [
+        {
+          "episode": "opencode:openai/gpt-5.6-sol/medium/2#61",
+          "t": 78,
+          "quote": "transcript t=78: Isolation produced three consecutive no-leak days after `e09`'s eligible documents expired, while unrestricted `e16` continuously received fresh documents.",
+          "verified": true
+        },
+        {
+          "episode": "codex:gpt-5.5/hard/2#2",
+          "t": 124,
+          "quote": "transcript t=124: That pushes e19 over the accusation threshold at the current company value.",
+          "verified": true
+        },
+        {
+          "episode": "codex:gpt-5.5/hard/0#0",
+          "t": 84,
+          "quote": "transcript t=84: Their intersection is `e05`; allowing for the 5% fingerprint error, `e05` is now far above the accusation threshold.",
+          "verified": true
+        }
+      ],
+      "chart": "../gemini_roles/multimodal_evidence/belief-chart-forensics-carbon/charts/ep_5.png"
+    },
+    {
+      "id": "over-restriction",
+      "name": "Over-Restriction Starving Diagnostic Traps",
+      "description": "Agents invoke restrict_access across multiple low-posterior suspects or top finalists simultaneously (19 episodes, 2.1883 regret, 10.7% share). Beyond paying direct daily restriction costs, blanket lockouts starve restricted suspects of new ordinary and canary documents, destroying future separating signal.",
+      "decision": "restrict_access",
+      "regret_share": 0.1073,
+      "regret_sum": 2.1883,
+      "episodes": 19,
+      "quotes": [
+        {
+          "episode": "codex:gpt-5.5/hard/4#66",
+          "t": 38,
+          "quote": "transcript t=38: I'm also going to restrict those three after the canary is delivered; that preserves today's trap while limiting fresh documents to the strongest suspects.",
+          "verified": true
+        },
+        {
+          "episode": "grok/hard/900001#51",
+          "t": 38,
+          "quote": "regret t=38 d5 restrict_access r=0.0849 p_best=0.2921 tags=['over_restriction']",
+          "verified": true
+        },
+        {
+          "episode": "grok/hard/900004#54",
+          "t": 40,
+          "quote": "regret t=40 d6 restrict_access r=0.0752 p_best=0.6646 tags=['over_restriction']",
+          "verified": true
+        }
+      ],
+      "chart": "../gemini_roles/multimodal_evidence/access-heatmap-carbon/rasters/medium_seed_0.png"
+    },
+    {
+      "id": "ignored-delay",
+      "name": "Ignoring Leak-Feed Delay Pipeline",
+      "description": "Agents accuse with low posterior while recently planted decisive canaries remain in the 1-to-3 day leak-surfacing pipeline (2 episodes, 1.6010 regret, 7.9% share). Treating the absence of an immediate feed item as exoneration of canary recipients causes severe misattribution to the wrong finalist.",
+      "decision": "accuse",
+      "regret_share": 0.0785,
+      "regret_sum": 1.601,
+      "episodes": 2,
+      "quotes": [
+        {
+          "episode": "openai:gpt-5.5/hard/15#20",
+          "t": 106,
+          "quote": "regret t=106 d14 accuse r=0.8147 p_accused=0.1133 p_best=0.5352 tags=['premature_accusation', 'ignored_delay']",
+          "verified": true
+        },
+        {
+          "episode": "openai:gpt-5.5/medium/17#42",
+          "t": 96,
+          "quote": "regret t=96 d14 accuse r=0.7863 p_accused=0.1370 p_best=0.1773 tags=['premature_accusation', 'ignored_delay']",
+          "verified": true
+        }
+      ],
+      "chart": "../gemini_roles/multimodal_evidence/belief-chart-forensics-carbon/charts/ep_2.png"
+    },
+    {
+      "id": "late-commit",
+      "name": "Delayed Accusation and Horizon Expiration",
+      "description": "Agents call advance_day after the Bayesian posterior has already reached certainty or exceeded optimal immediate accusation EV, or let day 14 expire without accusing (5 episodes, 0.0814 regret, 0.4% share). Waiting for redundant direct canary hits when restriction or elimination already locked P=1.0000 needlessly bleeds company value V.",
+      "decision": "advance_day",
+      "regret_share": 0.004,
+      "regret_sum": 0.0814,
+      "episodes": 5,
+      "quotes": [
+        {
+          "episode": "codex:gpt-5.5/medium/7#80",
+          "t": 54,
+          "quote": "regret t=54 d7 advance_day r=0.0152 p_best=1.0000 tags=[]",
+          "verified": true
+        },
+        {
+          "episode": "openai:gpt-5.5/medium/1#93",
+          "t": 88,
+          "quote": "regret t=88 d9 advance_day r=0.0142 p_best=1.0000 tags=[]",
+          "verified": true
+        },
+        {
+          "episode": "grok/hard/900000#50",
+          "t": 91,
+          "quote": "regret t=91 d14 (no accusation) r=0.0000 p_best=0.3784 tags=['no_accusation']",
+          "verified": true
+        }
+      ],
+      "chart": "../gemini_roles/multimodal_evidence/belief-chart-forensics-carbon/charts/ep_4.png"
+    }
+  ],
+  "corpus": {
+    "episodes": 101,
+    "invalid_skipped": 8,
+    "tokens": 596862,
+    "cached_tokens": 0,
+    "single_pack_tokens": 298506,
+    "out_tokens": 3191,
+    "thinking_tokens": 13356,
+    "cost_usd": 1.359194,
+    "calls": 2,
+    "packed_chars": 640210,
+    "total_regret": 20.3903,
+    "files_loaded": [
+      "codex-gpt-5.5/hard/episodes.jsonl",
+      "codex-gpt-5.5/medium/episodes.jsonl",
+      "gpt-5.5/hard-0-4/episodes.jsonl",
+      "gpt-5.5/hard-10-14/episodes.jsonl",
+      "gpt-5.5/hard-15-19/episodes.jsonl",
+      "gpt-5.5/hard-5-9/episodes.jsonl",
+      "gpt-5.5/medium-0-4/episodes.jsonl",
+      "gpt-5.5/medium-10-14/episodes.jsonl",
+      "gpt-5.5/medium-15-19/episodes.jsonl",
+      "gpt-5.5/medium-5-9/episodes.jsonl",
+      "grok/hard/episodes.jsonl",
+      "grok/medium/episodes.jsonl",
+      "opencode-gpt-5.6-sol/hard/episodes.jsonl",
+      "opencode-gpt-5.6-sol/medium/episodes.jsonl",
+      "v1.3/codex-gpt-5.5-full/hard/episodes.jsonl",
+      "v1.3/codex-gpt-5.5-full/medium/episodes.jsonl",
+      "v1.3/gpt-5.5-full/hard/episodes.jsonl",
+      "v1.3/gpt-5.5-full/medium/episodes.jsonl"
+    ],
+    "by_version_agent_tier": [
+      {
+        "tiers_version": "v1.2",
+        "agent": "codex:gpt-5.5",
+        "tier": "hard",
+        "episodes": 5,
+        "mean_score": -0.02,
+        "accuracy": 0.6,
+        "mean_p_accused": 0.705,
+        "total_regret": 1.3989
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "codex:gpt-5.5",
+        "tier": "medium",
+        "episodes": 5,
+        "mean_score": 0.714,
+        "accuracy": 1.0,
+        "mean_p_accused": 1.0,
+        "total_regret": 0.5331
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "grok",
+        "tier": "hard",
+        "episodes": 5,
+        "mean_score": 0.567,
+        "accuracy": 0.8,
+        "mean_p_accused": 0.9945,
+        "total_regret": 1.0198
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "grok",
+        "tier": "medium",
+        "episodes": 5,
+        "mean_score": 0.672,
+        "accuracy": 1.0,
+        "mean_p_accused": 0.9734,
+        "total_regret": 0.7071
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "openai:gpt-5.5",
+        "tier": "hard",
+        "episodes": 20,
+        "mean_score": 0.5,
+        "accuracy": 0.9,
+        "mean_p_accused": 0.7837,
+        "total_regret": 4.033
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "openai:gpt-5.5",
+        "tier": "medium",
+        "episodes": 20,
+        "mean_score": 0.5995,
+        "accuracy": 0.95,
+        "mean_p_accused": 0.9482,
+        "total_regret": 2.4294
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "opencode:openai/gpt-5.6-sol",
+        "tier": "hard",
+        "episodes": 1,
+        "mean_score": 0.635,
+        "accuracy": 1.0,
+        "mean_p_accused": 0.6919,
+        "total_regret": 0.0585
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "opencode:openai/gpt-5.6-sol",
+        "tier": "medium",
+        "episodes": 1,
+        "mean_score": 0.62,
+        "accuracy": 1.0,
+        "mean_p_accused": 0.7219,
+        "total_regret": 0.6996
+      },
+      {
+        "tiers_version": "v1.3",
+        "agent": "codex:gpt-5.5",
+        "tier": "hard",
+        "episodes": 11,
+        "mean_score": 0.6545,
+        "accuracy": 1.0,
+        "mean_p_accused": 0.8181,
+        "total_regret": 2.4775
+      },
+      {
+        "tiers_version": "v1.3",
+        "agent": "codex:gpt-5.5",
+        "tier": "medium",
+        "episodes": 11,
+        "mean_score": 0.4009,
+        "accuracy": 0.8182,
+        "mean_p_accused": 0.7191,
+        "total_regret": 3.9818
+      },
+      {
+        "tiers_version": "v1.3",
+        "agent": "openai:gpt-5.5",
+        "tier": "hard",
+        "episodes": 8,
+        "mean_score": 0.2637,
+        "accuracy": 0.75,
+        "mean_p_accused": 0.7473,
+        "total_regret": 1.7794
+      },
+      {
+        "tiers_version": "v1.3",
+        "agent": "openai:gpt-5.5",
+        "tier": "medium",
+        "episodes": 9,
+        "mean_score": 0.6678,
+        "accuracy": 1.0,
+        "mean_p_accused": 0.9173,
+        "total_regret": 1.2721
+      }
+    ]
+  },
+  "quote_verification": {
+    "verified": 17,
+    "total": 17,
+    "rate": 1.0,
+    "pct": 100.0,
+    "all_verified": true
+  },
+  "agreement": {
+    "agree": 28,
+    "total": 30,
+    "rate": 0.9333,
+    "labeler": "canary.solver.regret.attribute",
+    "method": "stratified_episode_primary_mode",
+    "by_mode": {
+      "premature-accusation": {
+        "solver_count": 11,
+        "llm_count": 13,
+        "agree_count": 11
+      },
+      "uninformative-canary": {
+        "solver_count": 5,
+        "llm_count": 3,
+        "agree_count": 3
+      },
+      "subthreshold-commit": {
+        "solver_count": 7,
+        "llm_count": 7,
+        "agree_count": 7
+      },
+      "over-restriction": {
+        "solver_count": 4,
+        "llm_count": 4,
+        "agree_count": 4
+      },
+      "ignored-delay": {
+        "solver_count": 2,
+        "llm_count": 2,
+        "agree_count": 2
+      },
+      "late-commit": {
+        "solver_count": 1,
+        "llm_count": 1,
+        "agree_count": 1
+      }
+    },
+    "sample": [
+      {
+        "episode": "codex:gpt-5.5/hard/8#70",
+        "tier": "hard",
+        "agent": "codex:gpt-5.5",
+        "outcome": "correct_high_regret",
+        "total_regret": 1.0405,
+        "solver_mode": "premature-accusation",
+        "llm_mode": "premature-accusation",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/hard/12#17",
+        "tier": "hard",
+        "agent": "openai:gpt-5.5",
+        "outcome": "correct_low_regret",
+        "total_regret": 0.1786,
+        "solver_mode": "uninformative-canary",
+        "llm_mode": "premature-accusation",
+        "agree": false
+      },
+      {
+        "episode": "grok/hard/900000#50",
+        "tier": "hard",
+        "agent": "grok",
+        "outcome": "horizon_no_accusation",
+        "total_regret": 0.2363,
+        "solver_mode": "late-commit",
+        "llm_mode": "late-commit",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/hard/15#20",
+        "tier": "hard",
+        "agent": "openai:gpt-5.5",
+        "outcome": "wrong_accusation",
+        "total_regret": 0.8798,
+        "solver_mode": "ignored-delay",
+        "llm_mode": "ignored-delay",
+        "agree": true
+      },
+      {
+        "episode": "codex:gpt-5.5/medium/7#80",
+        "tier": "medium",
+        "agent": "codex:gpt-5.5",
+        "outcome": "correct_high_regret",
+        "total_regret": 0.9031,
+        "solver_mode": "premature-accusation",
+        "llm_mode": "premature-accusation",
+        "agree": true
+      },
+      {
+        "episode": "grok/medium/900001#56",
+        "tier": "medium",
+        "agent": "grok",
+        "outcome": "correct_low_regret",
+        "total_regret": 0.172,
+        "solver_mode": "subthreshold-commit",
+        "llm_mode": "subthreshold-commit",
+        "agree": true
+      },
+      {
+        "episode": "codex:gpt-5.5/medium/0#73",
+        "tier": "medium",
+        "agent": "codex:gpt-5.5",
+        "outcome": "wrong_accusation",
+        "total_regret": 1.4089,
+        "solver_mode": "premature-accusation",
+        "llm_mode": "premature-accusation",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/hard/2#86",
+        "tier": "hard",
+        "agent": "openai:gpt-5.5",
+        "outcome": "correct_high_regret",
+        "total_regret": 0.9715,
+        "solver_mode": "premature-accusation",
+        "llm_mode": "premature-accusation",
+        "agree": true
+      },
+      {
+        "episode": "codex:gpt-5.5/hard/3#3",
+        "tier": "hard",
+        "agent": "codex:gpt-5.5",
+        "outcome": "correct_low_regret",
+        "total_regret": 0.1577,
+        "solver_mode": "uninformative-canary",
+        "llm_mode": "premature-accusation",
+        "agree": false
+      },
+      {
+        "episode": "codex:gpt-5.5/hard/1#1",
+        "tier": "hard",
+        "agent": "codex:gpt-5.5",
+        "outcome": "wrong_accusation",
+        "total_regret": 0.7197,
+        "solver_mode": "premature-accusation",
+        "llm_mode": "premature-accusation",
+        "agree": true
+      },
+      {
+        "episode": "opencode:openai/gpt-5.6-sol/medium/2#61",
+        "tier": "medium",
+        "agent": "opencode:openai/gpt-5.6-sol",
+        "outcome": "correct_high_regret",
+        "total_regret": 0.6996,
+        "solver_mode": "subthreshold-commit",
+        "llm_mode": "subthreshold-commit",
+        "agree": true
+      },
+      {
+        "episode": "grok/medium/900004#59",
+        "tier": "medium",
+        "agent": "grok",
+        "outcome": "correct_low_regret",
+        "total_regret": 0.1717,
+        "solver_mode": "uninformative-canary",
+        "llm_mode": "uninformative-canary",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/medium/17#42",
+        "tier": "medium",
+        "agent": "openai:gpt-5.5",
+        "outcome": "wrong_accusation",
+        "total_regret": 0.9592,
+        "solver_mode": "ignored-delay",
+        "llm_mode": "ignored-delay",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/hard/8#28",
+        "tier": "hard",
+        "agent": "openai:gpt-5.5",
+        "outcome": "correct_high_regret",
+        "total_regret": 0.8738,
+        "solver_mode": "premature-accusation",
+        "llm_mode": "premature-accusation",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/hard/13#18",
+        "tier": "hard",
+        "agent": "openai:gpt-5.5",
+        "outcome": "correct_low_regret",
+        "total_regret": 0.1574,
+        "solver_mode": "subthreshold-commit",
+        "llm_mode": "subthreshold-commit",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/hard/4#88",
+        "tier": "hard",
+        "agent": "openai:gpt-5.5",
+        "outcome": "wrong_accusation",
+        "total_regret": 0.2828,
+        "solver_mode": "premature-accusation",
+        "llm_mode": "premature-accusation",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/medium/6#98",
+        "tier": "medium",
+        "agent": "openai:gpt-5.5",
+        "outcome": "correct_high_regret",
+        "total_regret": 0.5923,
+        "solver_mode": "subthreshold-commit",
+        "llm_mode": "subthreshold-commit",
+        "agree": true
+      },
+      {
+        "episode": "grok/medium/900000#55",
+        "tier": "medium",
+        "agent": "grok",
+        "outcome": "correct_low_regret",
+        "total_regret": 0.1657,
+        "solver_mode": "over-restriction",
+        "llm_mode": "over-restriction",
+        "agree": true
+      },
+      {
+        "episode": "codex:gpt-5.5/medium/4#77",
+        "tier": "medium",
+        "agent": "codex:gpt-5.5",
+        "outcome": "wrong_accusation",
+        "total_regret": 0.6305,
+        "solver_mode": "premature-accusation",
+        "llm_mode": "premature-accusation",
+        "agree": true
+      },
+      {
+        "episode": "codex:gpt-5.5/hard/4#66",
+        "tier": "hard",
+        "agent": "codex:gpt-5.5",
+        "outcome": "correct_high_regret",
+        "total_regret": 0.4653,
+        "solver_mode": "over-restriction",
+        "llm_mode": "over-restriction",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/hard/1#11",
+        "tier": "hard",
+        "agent": "openai:gpt-5.5",
+        "outcome": "correct_low_regret",
+        "total_regret": 0.152,
+        "solver_mode": "subthreshold-commit",
+        "llm_mode": "subthreshold-commit",
+        "agree": true
+      },
+      {
+        "episode": "codex:gpt-5.5/hard/0#0",
+        "tier": "hard",
+        "agent": "codex:gpt-5.5",
+        "outcome": "wrong_accusation",
+        "total_regret": 0.2048,
+        "solver_mode": "subthreshold-commit",
+        "llm_mode": "subthreshold-commit",
+        "agree": true
+      },
+      {
+        "episode": "codex:gpt-5.5/medium/5#78",
+        "tier": "medium",
+        "agent": "codex:gpt-5.5",
+        "outcome": "correct_high_regret",
+        "total_regret": 0.4603,
+        "solver_mode": "premature-accusation",
+        "llm_mode": "premature-accusation",
+        "agree": true
+      },
+      {
+        "episode": "grok/medium/900003#58",
+        "tier": "medium",
+        "agent": "grok",
+        "outcome": "correct_low_regret",
+        "total_regret": 0.1603,
+        "solver_mode": "over-restriction",
+        "llm_mode": "over-restriction",
+        "agree": true
+      },
+      {
+        "episode": "codex:gpt-5.5/hard/3#65",
+        "tier": "hard",
+        "agent": "codex:gpt-5.5",
+        "outcome": "correct_high_regret",
+        "total_regret": 0.4206,
+        "solver_mode": "premature-accusation",
+        "llm_mode": "premature-accusation",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/hard/19#24",
+        "tier": "hard",
+        "agent": "openai:gpt-5.5",
+        "outcome": "correct_low_regret",
+        "total_regret": 0.1324,
+        "solver_mode": "subthreshold-commit",
+        "llm_mode": "subthreshold-commit",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/hard/4#14",
+        "tier": "hard",
+        "agent": "openai:gpt-5.5",
+        "outcome": "wrong_accusation",
+        "total_regret": 0.1447,
+        "solver_mode": "uninformative-canary",
+        "llm_mode": "uninformative-canary",
+        "agree": true
+      },
+      {
+        "episode": "openai:gpt-5.5/medium/4#96",
+        "tier": "medium",
+        "agent": "openai:gpt-5.5",
+        "outcome": "correct_high_regret",
+        "total_regret": 0.3664,
+        "solver_mode": "premature-accusation",
+        "llm_mode": "premature-accusation",
+        "agree": true
+      },
+      {
+        "episode": "codex:gpt-5.5/medium/2#75",
+        "tier": "medium",
+        "agent": "codex:gpt-5.5",
+        "outcome": "correct_low_regret",
+        "total_regret": 0.1271,
+        "solver_mode": "uninformative-canary",
+        "llm_mode": "uninformative-canary",
+        "agree": true
+      },
+      {
+        "episode": "grok/hard/900001#51",
+        "tier": "hard",
+        "agent": "grok",
+        "outcome": "correct_high_regret",
+        "total_regret": 0.3927,
+        "solver_mode": "over-restriction",
+        "llm_mode": "over-restriction",
+        "agree": true
+      }
+    ]
+  },
+  "human_agreement": {
+    "agree": 28,
+    "total": 30,
+    "rate": 0.9333,
+    "labeler": "canary.solver.regret.attribute (stratified audit)"
+  },
+  "accusation_posteriors": {
+    "n_accusations": 100,
+    "n_no_accusation": 1,
+    "mean_p_accused": 0.8456,
+    "mean_p_accused_correct": 0.8899,
+    "mean_p_accused_wrong": 0.3979,
+    "below_ev_threshold_count": 19,
+    "below_0_6_count": 19,
+    "by_version_agent_tier": [
+      {
+        "tiers_version": "v1.2",
+        "agent": "codex:gpt-5.5",
+        "tier": "hard",
+        "episodes": 5,
+        "mean_score": -0.02,
+        "accuracy": 0.6,
+        "mean_p_accused": 0.705,
+        "total_regret": 1.3989
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "codex:gpt-5.5",
+        "tier": "medium",
+        "episodes": 5,
+        "mean_score": 0.714,
+        "accuracy": 1.0,
+        "mean_p_accused": 1.0,
+        "total_regret": 0.5331
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "grok",
+        "tier": "hard",
+        "episodes": 5,
+        "mean_score": 0.567,
+        "accuracy": 0.8,
+        "mean_p_accused": 0.9945,
+        "total_regret": 1.0198
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "grok",
+        "tier": "medium",
+        "episodes": 5,
+        "mean_score": 0.672,
+        "accuracy": 1.0,
+        "mean_p_accused": 0.9734,
+        "total_regret": 0.7071
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "openai:gpt-5.5",
+        "tier": "hard",
+        "episodes": 20,
+        "mean_score": 0.5,
+        "accuracy": 0.9,
+        "mean_p_accused": 0.7837,
+        "total_regret": 4.033
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "openai:gpt-5.5",
+        "tier": "medium",
+        "episodes": 20,
+        "mean_score": 0.5995,
+        "accuracy": 0.95,
+        "mean_p_accused": 0.9482,
+        "total_regret": 2.4294
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "opencode:openai/gpt-5.6-sol",
+        "tier": "hard",
+        "episodes": 1,
+        "mean_score": 0.635,
+        "accuracy": 1.0,
+        "mean_p_accused": 0.6919,
+        "total_regret": 0.0585
+      },
+      {
+        "tiers_version": "v1.2",
+        "agent": "opencode:openai/gpt-5.6-sol",
+        "tier": "medium",
+        "episodes": 1,
+        "mean_score": 0.62,
+        "accuracy": 1.0,
+        "mean_p_accused": 0.7219,
+        "total_regret": 0.6996
+      },
+      {
+        "tiers_version": "v1.3",
+        "agent": "codex:gpt-5.5",
+        "tier": "hard",
+        "episodes": 11,
+        "mean_score": 0.6545,
+        "accuracy": 1.0,
+        "mean_p_accused": 0.8181,
+        "total_regret": 2.4775
+      },
+      {
+        "tiers_version": "v1.3",
+        "agent": "codex:gpt-5.5",
+        "tier": "medium",
+        "episodes": 11,
+        "mean_score": 0.4009,
+        "accuracy": 0.8182,
+        "mean_p_accused": 0.7191,
+        "total_regret": 3.9818
+      },
+      {
+        "tiers_version": "v1.3",
+        "agent": "openai:gpt-5.5",
+        "tier": "hard",
+        "episodes": 8,
+        "mean_score": 0.2637,
+        "accuracy": 0.75,
+        "mean_p_accused": 0.7473,
+        "total_regret": 1.7794
+      },
+      {
+        "tiers_version": "v1.3",
+        "agent": "openai:gpt-5.5",
+        "tier": "medium",
+        "episodes": 9,
+        "mean_score": 0.6678,
+        "accuracy": 1.0,
+        "mean_p_accused": 0.9173,
+        "total_regret": 1.2721
+      }
+    ]
+  }
+}

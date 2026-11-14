@@ -64,7 +64,7 @@ def parse_codex(lines):
     return calls
 
 
-def run_seat(agent, model, seat, seed, days=1, max_turns=60):
+def run_seat(agent, model, seat, seed, days=1, max_turns=60, trial=0, mode="seat"):
     tmp = tempfile.mkdtemp(prefix="cliseat_")
     out = os.path.join(tmp, "state.json")
     argv = server_argv(seat, seed, out)
@@ -96,7 +96,7 @@ def run_seat(agent, model, seat, seed, days=1, max_turns=60):
     calls = (parse_claude if agent == "claude" else parse_codex)(lines)
     if not os.path.exists(out):
         asyncio.run(_finish(calls[:0], seat, seed, out))
-    return {"model": model, "commit": commit(), "agent": agent, "seat": seat, "seed": seed,
+    return {"model": model, "commit": commit(), "agent": agent, "seat": seat, "seed": seed, "trial": trial, "mode": mode,
             "scores": score_state(out, seat, model), "calls": len(calls), "wall_s": round(wall, 1),
             "mcp_calls": calls, "transcript": lines, "stderr": p.stderr[-2000:]}
 
@@ -126,7 +126,7 @@ def rescore(rec):
 def save(rec):
     d = os.path.join(ROOT, "results", "frontier", rec["model"], rec["commit"])
     os.makedirs(d, exist_ok=True)
-    p = os.path.join(d, f"{rec['seat']}-s{rec['seed']}.json")
+    p = os.path.join(d, f"{rec['seat']}-s{rec['seed']}-t{rec.get('trial', 0)}.json")
     json.dump(rec, open(p, "w"), indent=1)
     return p
 
@@ -139,13 +139,15 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--days", type=int, default=1)
     ap.add_argument("--max-turns", type=int, default=60)
+    ap.add_argument("--trial", type=int, default=0)
+    ap.add_argument("--mode", default="seat")
     ap.add_argument("--rescore")
     a = ap.parse_args()
     if a.rescore:
         rec = json.load(open(a.rescore))
         print(json.dumps(rescore(rec)), "saved:", json.dumps(rec["scores"]))
         return
-    rec = run_seat(a.agent, a.model, a.seat, a.seed, a.days, a.max_turns)
+    rec = run_seat(a.agent, a.model, a.seat, a.seed, a.days, a.max_turns, a.trial, a.mode)
     s = rec["scores"]
     print(f"{a.model} {a.seat} s{a.seed} reward={s['reward']} harm={s['harm']} fq={s['false_quarantines']} calls={rec['calls']} wall={rec['wall_s']}s -> {save(rec)}")
 

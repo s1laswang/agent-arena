@@ -63,14 +63,30 @@ def price(model: str, tin: int, tout_incl_thinking: int, cached: int) -> float:
 
 
 # --------------------------------------------------------------------------- loading
-def load_ladder(runs: Path) -> list[dict]:
-    """Valid ladder episodes, each tagged e['_cell'] = {model, level, tier, seed, source}."""
-    out = []
-    for f in sorted(Path(runs).glob("*/*/*/*/episodes.jsonl")):
+def _ladder_lines(runs: Path):
+    """(model, level, tier, seed, line) from a ladder dir, or from an exported ladder_episodes.jsonl.gz."""
+    runs = Path(runs)
+    if runs.is_file():
+        import gzip
+        with gzip.open(runs, "rt") as fh:
+            for line in fh:
+                if line.strip():
+                    lad = (json.loads(line).get("meta") or {}).get("ladder") or {}
+                    yield lad["model"], lad["level"], lad["tier"], str(lad["seed"]), line
+        return
+    for f in sorted(runs.glob("*/*/*/*/episodes.jsonl")):
         model, level, tier, seed = f.parent.relative_to(runs).parts
         if model.startswith("_"):
             continue
         for line in f.read_text().splitlines():
+            yield model, level, tier, seed, line
+
+
+def load_ladder(runs: Path) -> list[dict]:
+    """Valid ladder episodes, each tagged e['_cell'] = {model, level, tier, seed, source}."""
+    out = []
+    for model, level, tier, seed, line in _ladder_lines(runs):
+        if True:
             if not line.strip():
                 continue
             e = json.loads(line)
@@ -132,13 +148,14 @@ def reference_episodes(pairs: set[tuple[str, int]], agents=REFERENCE_AGENTS) -> 
 
 
 def load_ledger(runs: Path, extra: list[str]) -> list[dict]:
-    files = glob.glob(str(Path(runs) / "_ledger" / "*.jsonl"))
+    import gzip
+    files = glob.glob(str(Path(runs) / "_ledger" / "*.jsonl")) if Path(runs).is_dir() else []
     for x in extra or []:
         p = Path(x).expanduser()
         files += glob.glob(str(p / "**" / "*.jsonl"), recursive=True) if p.is_dir() else [str(p)]
     rows = []
     for fp in sorted(set(files)):
-        with open(fp) as f:
+        with (gzip.open(fp, "rt") if fp.endswith(".gz") else open(fp)) as f:
             rows += [json.loads(line) for line in f if line.strip()]
     return [r for r in rows if r.get("feature") == "ladder"]
 
@@ -493,6 +510,8 @@ def main(argv=None) -> int:
     ap.add_argument("--bootstrap", type=int, default=10000)
     ap.add_argument("--no-tags", action="store_true")
     ap.add_argument("--no-figures", action="store_true")
+    ap.add_argument("--export", default=None, help="also write <dir>/ladder_episodes.jsonl.gz and ladder_ledger.jsonl.gz "
+                    "(valid ladder episodes + feature=ladder ledger rows; --runs/--ledger can read them back)")
     ap.add_argument("--headline", default=str(ROOT / "results" / "gemini" / "ladder_headline.md"),
                     help="hand-written findings block put at the top of ladder.md (every number from the table)")
     a = ap.parse_args(argv)
@@ -500,6 +519,13 @@ def main(argv=None) -> int:
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     eps = load_ladder(runs)
+    if a.export:
+        import gzip
+        ex = Path(a.export)
+        ex.mkdir(parents=True, exist_ok=True)
+        with gzip.open(ex / "ladder_episodes.jsonl.gz", "wt") as fh:
+            for e in eps:
+                fh.write(json.dumps({k: v for k, v in e.items() if k != "_cell"}, sort_keys=True) + "\n")
     for spec in a.import_cell:
         eps += load_import(spec)
     pairs = {(e["_cell"]["tier"], e["_cell"]["seed"]) for e in eps}
@@ -509,6 +535,10 @@ def main(argv=None) -> int:
     ref_rows = reference_rows(ref, pairs)
     tags = {} if a.no_tags or not eps else tag_tables(eps)
     led = load_ledger(runs, a.ledger)
+    if a.export:
+        with gzip.open(Path(a.export) / "ladder_ledger.jsonl.gz", "wt") as fh:
+            for r in led:
+                fh.write(json.dumps(r, sort_keys=True) + "\n")
     run_ids = sorted({r.get("run_id", "") for r in led if r.get("run_id")})
     led_sum = {"calls": len(led), "errors": sum(not r.get("ok", True) for r in led), "run_ids": len(run_ids),
                "tokens_in": sum(r.get("in", 0) for r in led), "tokens_thinking": sum(r.get("thinking", 0) for r in led),

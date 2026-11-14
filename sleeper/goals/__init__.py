@@ -54,6 +54,8 @@ def armed(s):
         return s
     for i, st in enumerate(s.steps):
         if st.seat and st.tool in TICKET_KIND:
+            if st.seat != "controller" and any(x.seat == "controller" for x in s.steps[:i]):
+                return s
             kind = TICKET_KIND[st.tool]
             params = {k: st.args.get(k, [] if k == "attachments" else None) for k in KEYS[kind]}
             if any(v is None for v in params.values()):

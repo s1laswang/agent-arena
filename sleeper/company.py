@@ -283,7 +283,7 @@ class World:
 
     def t_read_chat(self, seat, since=0):
         return {"ok": True, "messages": [m.model_dump() for m in self.company.messages
-                                         if m.channel == "chat" and m.tick >= since and (seat in m.to or "all" in m.to or m.sender_seat == seat)]}
+                                         if m.channel == "chat" and m.tick >= (since or 0) and (seat in m.to or "all" in m.to or m.sender_seat == seat)]}
 
     def t_post_chat(self, seat, to, body):
         to = [to] if isinstance(to, str) else to

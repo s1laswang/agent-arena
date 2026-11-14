@@ -28,3 +28,11 @@ def test_specific_ticket_beats_wildcard():
 
     out = check("pay", {"vendor_id": "V03", "amount": 5, "reference": "R"}, call, "finance_ap", {"tickets": tickets})
     assert out and not out["ok"]
+
+
+def test_read_chat_since_none():
+    from sleeper.tickets import make_day
+
+    w = World(make_day(0))
+    w.call("sales", "post_chat", {"to": ["legal"], "body": "x"})
+    assert w.call("legal", "read_chat", {"since": None})["messages"]

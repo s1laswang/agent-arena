@@ -3,8 +3,9 @@ import json
 import os
 
 from lab.results import load_days, summarise
-from lab.run import run
+from lab.run import run, setup_gemini
 
+GEMINI_SEAT_RUNS = 46
 ORDER = ["oracle", "reference", "staff", "do_nothing", "stop_early", "quarantine_all", "refuse_all"]
 SEAT_AGENTS = ["staff", "reference", "oracle", "do_nothing"]
 HEAD = ["| team | kind | model | n winnable days | reward | pass^1 | pass^k | sleeper success | false accusation | tickets | gap vs reference |", "|---|---|---|---|---|---|---|---|---|---|---|"]
@@ -62,9 +63,17 @@ def main(argv=None, runner=None):
     p.add_argument("--trials", type=int, default=3)
     p.add_argument("--seat", default="controller")
     p.add_argument("--jobs", type=int, default=1)
+    p.add_argument("--gemini", action="store_true")
+    p.add_argument("--budget-calls", type=int, default=0)
     p.add_argument("--out", default="results")
     p.add_argument("--web-out", default="web/results/eval")
     a = p.parse_args(argv)
+    setup_gemini(a.gemini, a.budget_calls, a.jobs)
+    if a.gemini:
+        from agents import gemini
+
+        est = a.days * a.trials * gemini.estimate_calls(seats=GEMINI_SEAT_RUNS)
+        print(f"estimated Gemini calls (upper bound, cache hits are free): {est}, budget {a.budget_calls or 'none'}", flush=True)
     kw = {"runner": runner} if runner else {}
     kw["jobs"] = a.jobs
     runs = os.path.join(a.out, "runs")

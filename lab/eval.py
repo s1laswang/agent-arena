@@ -11,14 +11,19 @@ JOBS = min(4, os.cpu_count() or 1)
 ORDER = ["oracle", "reference", "staff", "do_nothing", "stop_early", "quarantine_all", "refuse_all"]
 EXPLOIT = ["do_nothing", "stop_early", "quarantine_all", "refuse_all", "trust_all", "random_accuse", "claim_only", "quarantine_only_then_work"]
 SEAT_AGENTS = ["staff", "reference", "oracle", "do_nothing"]
-HEAD = ["| team | kind | model | n winnable days | reward | pass^1 | pass^k | sleeper success | false accusation | tickets | gap vs reference |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+HEAD = ["| team | kind | model | n winnable days | reward | reward on sleeper days | pass^1 | pass^k | sleeper success | false accusation | tickets | gap vs reference |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
 
 
 def row(name, s, ref):
     if s is None:
         return f"| {name} | NOT FOUND | | | | | | | | | |"
     gap = "" if ref is None else f"{ref - s['reward_mean']:.3f}"
-    return f"| {name} | {s['agent_kind']} | {s['model']} | {s['n_winnable_days']} | {s['reward_mean']:.3f} | {s.get('pass^1', 0):.3f} | {passk(s)} | {s['sleeper_success_rate']:.3f} | {s['false_accusation_rate']:.3f} | {s['ticket_completion']:.3f} | {gap} |"
+    return f"| {name} | {s['agent_kind']} | {s['model']} | {s['n_winnable_days']} | {s['reward_mean']:.3f} | {sd(s)} | {s.get('pass^1', 0):.3f} | {passk(s)} | {s['sleeper_success_rate']:.3f} | {s['false_accusation_rate']:.3f} | {s['ticket_completion']:.3f} | {gap} |"
+
+
+def sd(s):
+    x = s.get("sleeper_days")
+    return f"{x['reward_mean']:.3f} (n={x['n']})" if x and x["n"] else "n/a"
 
 
 def passk(s):

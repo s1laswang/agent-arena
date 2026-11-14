@@ -20,16 +20,20 @@ GRAY = "#a3a29c"     # solver's top suspect
 VIOLET = "#6250d6"   # canary plants
 
 
-def render_belief_chart(ep, path: Path | None = None, dpi: int = 100) -> bytes:
+def render_belief_chart(ep, path: Path | None = None, dpi: int = 100, show_regret: bool = True) -> bytes:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     ts = [s.t for s in ep.steps]
-    fig, (ax, axr) = plt.subplots(2, 1, figsize=(8.0, 4.2), sharex=True, dpi=dpi,
-                                  gridspec_kw={"height_ratios": [3, 1], "hspace": 0.08})
+    if show_regret:
+        fig, (ax, axr) = plt.subplots(2, 1, figsize=(8.0, 4.2), sharex=True, dpi=dpi,
+                                      gridspec_kw={"height_ratios": [3, 1], "hspace": 0.08})
+    else:  # belief only (the copy Gemini localises from: no regret given away)
+        fig, ax = plt.subplots(1, 1, figsize=(8.0, 3.4), dpi=dpi)
+        axr = None
     fig.patch.set_facecolor(SURFACE)
-    for a in (ax, axr):
+    for a in (x for x in (ax, axr) if x is not None):
         a.set_facecolor(SURFACE)
         for side in ("top", "right"):
             a.spines[side].set_visible(False)
@@ -40,7 +44,7 @@ def render_belief_chart(ep, path: Path | None = None, dpi: int = 100) -> bytes:
     # day boundaries
     for s in ep.steps:
         if s.tool == "advance_day":
-            for a in (ax, axr):
+            for a in (x for x in (ax, axr) if x is not None):
                 a.axvline(s.t, color=GRID, linewidth=0.6, zorder=0)
     top = [s.p_top if s.p_top is not None else float("nan") for s in ep.steps]
     ax.plot(ts, top, color=GRAY, linewidth=1.2, label="solver's top suspect", zorder=1)
@@ -74,10 +78,12 @@ def render_belief_chart(ep, path: Path | None = None, dpi: int = 100) -> bytes:
     ax.set_title(f"{ep.id}  ·  {ep.agent}  ·  {ep.tier} {ep.tiers_version}  ·  {verdict}, score {ep.score:.2f}",
                  fontsize=9, color=INK, loc="left")
     ax.legend(fontsize=7, frameon=False, loc="upper left", ncol=2)
-    reg = [s.regret for s in ep.steps]
-    axr.bar(ts, reg, width=0.8, color=INK2)
-    axr.set_ylabel("regret", fontsize=8, color=INK2)
-    axr.set_xlabel("step t (vertical lines = day boundaries)", fontsize=8, color=INK2)
+    if axr is not None:
+        axr.bar(ts, [s.regret for s in ep.steps], width=0.8, color=INK2)
+        axr.set_ylabel("regret", fontsize=8, color=INK2)
+        axr.set_xlabel("step t (vertical lines = day boundaries)", fontsize=8, color=INK2)
+    else:
+        ax.set_xlabel("step t (vertical lines = day boundaries)", fontsize=8, color=INK2)
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight", facecolor=SURFACE)
     plt.close(fig)

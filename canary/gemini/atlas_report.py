@@ -29,7 +29,7 @@ def render_md(r: dict) -> str:
            f"(**{c['tokens']:,} tokens**, counted with `count_tokens`) held in one explicit **context cache** on "
            f"`{(r.get('discovery') or {}).get('model') or r['models']['cache']}` "
            f"({c.get('cache_size_tokens', 0):,} tokens). Gemini discovered the failure modes in one read of the whole "
-           f"corpus, then answered {sp.get('by_kind', {}).get('generate', 0)} structured questions against the same "
+           f"corpus, then answered {c.get('cached_questions', 0) - 1} more structured questions against the same "
            f"cache; **{c.get('cached_tokens', 0):,} input tokens were served from cache**.",
            f"- **Every claim checked in code:** {v['quotes_checked']} Gemini quotes checked, "
            f"**{_pct(v['pass_rate'])} verbatim in the named episode** ({_pct(v['step_pass_rate'])} at the named step); "
@@ -155,7 +155,9 @@ def render_md(r: dict) -> str:
             "the reference solver's per-step regret, tags and top-suspect belief (`canary.solver.regret`).",
             "- Quotes are kept only if every fragment appears verbatim (whitespace/quote marks normalised) in the "
             "named episode; step-level claims are also checked against that step's lines.",
-            f"- Spend: {sp.get('calls', 0)} live Gemini calls, ${sp.get('cost_usd', 0):.2f} (ledger run ids "
+            f"- Spend (usage ledger, all atlas runs incl. failed attempts): {(r.get('spend_ledger') or {}).get('calls', 0)} "
+            f"Gemini calls, ${(r.get('spend_ledger') or {}).get('cost_usd', 0):.2f}. This build: "
+            f"{sp.get('calls', 0)} live calls, ${sp.get('cost_usd', 0):.2f} (ledger run ids "
             f"{', '.join(r.get('ledger_run_ids', [])) or '-'}); {sp.get('replayed', 0)} responses replayed from cache.",
             "- Reproduce offline, no key: `python -m canary.gemini.atlas --replay` (responses in "
             "`results/gemini/atlas_cache/`).", ""]

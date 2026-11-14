@@ -29,7 +29,7 @@ uv run python -m canary.redteam.anticheat --judge --seeds 40 --world-secret cana
 REPRO_FAST=1 make reproduce        # the last line says ANTI-CHEAT: ...; the exit code is 1 on a failure
 ```
 
-## Status (Sat 14 Nov, ~20:45; on top of `justSilas` b4557e0, which includes PR #7's signed ledger)
+## Status (Sat 14 Nov, ~21:30; on top of `justSilas` b4557e0, which includes PR #7's signed ledger)
 
 **Judge panel (fresh agents each round, scoring the official rubric; every finding checked by 3 skeptics):**
 
@@ -37,6 +37,9 @@ REPRO_FAST=1 make reproduce        # the last line says ANTI-CHEAT: ...; the exi
 |---|---|---|---|
 | 1 (7bd9ca4) | 19-20 / 25 | 11-12 / 15 | 14, all fixed |
 | 2 (06ebf9c) | 20-23 / 25 | 12-13 / 15 | 16, all fixed in the next commit |
+| 3 (db62ab3) | 20-22 / 25 | 12-13 / 15 | 16, fixed in the commit after db62ab3 |
+
+The full record of every round (scores per judge, every confirmed and rejected finding) is in `docs/reports/anticheat-judge-panel.md`.
 
 **Done (verified):**
 - Closed an exploit: in shared-verifier builds a planted `/evidence/ledger.json` scored 1.0 (EXPLOITS #42). Shared mode is still **not for judging**: on our Harbor 0.25 / Docker Desktop host it did not run test.sh at all. `build.py` now refuses shared mode unless you pass `--unsafe-shared-not-for-judging`. The hardened test.sh is checked in a committed Docker reproduction: `results/anticheat/shared-verifier-docker-repro.md`.
@@ -52,8 +55,8 @@ REPRO_FAST=1 make reproduce        # the last line says ANTI-CHEAT: ...; the exi
 - `results/anticheat/exploits.md`: 40 judge seeds × 3 tiers under a public test secret, all blocked. A test recomputes a slice and compares it per seed.
 
 **Known limits, said plainly:**
-- For Harbor jobs without a published retired key (everything older than PR #7, and PR #7's own c1-* jobs), the consistency check catches files that disagree. It cannot catch a forger who edits every copy the same way.
+- Committed Harbor files cannot be proven genuine. The consistency check catches files that disagree and edits that were not re-signed. A published retired key lets anyone re-sign, so it cannot catch a forger who does. Real proof would need an asymmetric (Ed25519) signature from the sidecar, which is an env/server change.
 - Shared verifier mode is not usable for judging.
 - On Windows: `test_build_writes_key_only_to_sidecar_and_verifier` fails (it expects file mode 0600, and Windows reports 0666), and so do 2 POSIX-only timeout tests and the `test_integrity_mcp.py` file-permission tests. They fail the same way on `justSilas`.
 
-**Next:** judge round 3 on the new commit.
+**Next:** judge round 4 on the new commit.

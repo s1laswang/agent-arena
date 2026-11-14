@@ -1,0 +1,123 @@
+{
+    "id": "157a59ad-b0ce-4a7e-824d-6176906c1b46",
+    "task_name": "canary/medium-900000",
+    "trial_name": "canary-medium-900000__JC8xzAj",
+    "trial_uri": "file://results/harbor/cheat-probe/canary-medium-900000__JC8xzAj",
+    "task_id": {
+        "path": "harbor/dataset-cheat/canary-medium-900000"
+    },
+    "source": "hb-r3",
+    "task_checksum": "48c0dd3572e141b7d0c2f32bfbc9b869d1132fcea663c12e239d140876c6ecf1",
+    "config": {
+        "task": {
+            "path": "harbor/dataset-cheat/canary-medium-900000",
+            "git_url": null,
+            "git_commit_id": null,
+            "name": null,
+            "ref": null,
+            "overwrite": false,
+            "download_dir": null,
+            "source": "hb-r3"
+        },
+        "trial_name": "canary-medium-900000__JC8xzAj",
+        "trials_dir": "results/harbor/cheat-probe",
+        "install_only": false,
+        "timeout_multiplier": 1.0,
+        "agent_timeout_multiplier": null,
+        "verifier_timeout_multiplier": null,
+        "agent_setup_timeout_multiplier": null,
+        "environment_build_timeout_multiplier": null,
+        "agent": {
+            "name": "oracle",
+            "import_path": null,
+            "model_name": null,
+            "base_url": null,
+            "model_api_key_name": null,
+            "model_api_format": null,
+            "skip_model_parsing": false,
+            "n_concurrent": null,
+            "concurrency_group": null,
+            "skills": [],
+            "override_timeout_sec": null,
+            "override_setup_timeout_sec": null,
+            "max_timeout_sec": null,
+            "resume_trajectory": false,
+            "load_trajectory": null,
+            "extra_allowed_hosts": [],
+            "kwargs": {},
+            "env": {
+                "ORACLE_POLICY": "cheat_probe"
+            },
+            "mcp_servers": []
+        },
+        "user_agent": null,
+        "environment": {
+            "type": "docker",
+            "import_path": null,
+            "force_build": false,
+            "delete": true,
+            "stream": false,
+            "cpu_enforcement_policy": "auto",
+            "memory_enforcement_policy": "auto",
+            "override_cpus": null,
+            "override_memory_mb": null,
+            "override_storage_mb": null,
+            "override_gpus": null,
+            "override_tpu": null,
+            "mounts": null,
+            "extra_docker_compose": [],
+            "kwargs": {},
+            "extra_allowed_hosts": []
+        },
+        "verifier": {
+            "override_timeout_sec": null,
+            "max_timeout_sec": null,
+            "disable": false
+        },
+        "artifacts": [],
+        "extra_instruction_paths": [],
+        "extra_instructions": [],
+        "job_id": "e7c1cba1-973d-4bec-b6c1-bfcb68d9c43f",
+        "source_trial": null
+    },
+    "agent_info": {
+        "name": "oracle",
+        "version": "1.0.0",
+        "model_info": null
+    },
+    "agent_result": {
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null,
+        "model_usage": null,
+        "rollout_details": null,
+        "metadata": null
+    },
+    "verifier_result": {
+        "rewards": {
+            "reward": 0.0
+        }
+    },
+    "verifier_environment_mode": "separate",
+    "exception_info": null,
+    "started_at": "2026-11-14T19:11:18.928852Z",
+    "finished_at": "2026-11-14T19:12:29.458556Z",
+    "environment_setup": {
+        "started_at": "2026-11-14T19:11:19.464009Z",
+        "finished_at": "2026-11-14T19:11:43.121690Z"
+    },
+    "agent_setup": {
+        "started_at": "2026-11-14T19:11:43.121753Z",
+        "finished_at": "2026-11-14T19:11:43.121823Z"
+    },
+    "agent_execution": {
+        "started_at": "2026-11-14T19:11:43.121904Z",
+        "finished_at": "2026-11-14T19:11:50.406464Z"
+    },
+    "verifier": {
+        "started_at": "2026-11-14T19:12:02.769841Z",
+        "finished_at": "2026-11-14T19:12:29.458534Z"
+    },
+    "step_results": null
+}

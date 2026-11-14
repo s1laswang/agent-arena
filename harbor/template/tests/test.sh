@@ -8,7 +8,8 @@
 #     GET http://canary-server:8765/ledger with the token and never reads /evidence (EXPLOITS #42).
 #   * separate verifier (the default; no token): /evidence/ledger.json, collected from the canary-server
 #     sidecar by the [[verifier.collect]] hook and copied into this separate verifier container.
-# Harbor reads reward.json BEFORE reward.txt, so every outcome writes both.
+# Harbor reads reward.json BEFORE reward.txt, so every outcome writes both. python3 runs with -I -S: no
+# sitecustomize/usercustomize, no PYTHON* variables, no current-directory imports.
 # Fails closed (reward 0 and a FAIL line) unless the ledger carries a valid HMAC-SHA256 signature under the
 # build-time key (/tests/ledger_key, or CANARY_LEDGER_KEY for shared builds) and its score is in
 # {-1, 0} U (0, 1]. The canonical form matches canary.mcp_server.sign_ledger (tests/test_harbor_ledger_sig.py).
@@ -28,14 +29,19 @@ if [ -n "${CANARY_LEDGER_TOKEN:-}" ]; then
     keep="$keep$pp "
     p="$pp"
   done
-  if command -v ps >/dev/null 2>&1; then pids=$(ps -eo pid= 2>/dev/null); else pids=$(ls /proc | grep -E '^[0-9]+$'); fi
-  for q in $pids; do
-    case "$keep" in *" $q "*) ;; *) kill -9 "$q" 2>/dev/null || true ;; esac
+  for pass in 1 2 3 4 5; do   # repeat: a process that forks while we kill must not survive
+    if command -v ps >/dev/null 2>&1; then pids=$(ps -eo pid= 2>/dev/null); else pids=$(ls /proc | grep -E '^[0-9]+$'); fi
+    left=0
+    for q in $pids; do
+      case "$keep" in *" $q "*) ;; *) if kill -9 "$q" 2>/dev/null; then left=1; fi ;; esac
+    done
+    [ "$left" = 0 ] && break
+    sleep 0.2
   done
   rm -f /logs/verifier/reward.txt /logs/verifier/reward.json
 fi
 
-python3 - <<'PY'
+python3 -I -S - <<'PY'
 import hashlib
 import hmac
 import json

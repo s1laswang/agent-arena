@@ -243,7 +243,7 @@ def test_identical_across_pythonhashseed():
 
 def _verifier_py(tmp: Path, server_base: str | None = None) -> str:
     sh = (ROOT / "harbor/template/tests/test.sh").read_text()
-    py = re.search(r"python3 - <<'PY'\n(.*?)\nPY", sh, re.S).group(1)
+    py = re.search(r"python3[^\n]*<<'PY'\n(.*?)\nPY", sh, re.S).group(1)
     if server_base:
         py = py.replace("http://canary-server:8765", server_base)
     # as_posix: a Windows path pasted into Python source would turn "\U..." into a unicode escape
@@ -410,9 +410,14 @@ def test_harbor_check_cannot_prove_a_coherent_forgery_is_fake(tmp_path):
         ev["detail"]["correct"] = True
         d.update(score=round(ev["detail"]["V"], 10), correct=True, accused_correct=True)
         (t / f).write_text(json.dumps(d))
-    (t / "verifier/reward.txt").write_text(repr(round(ev["detail"]["V"], 10)))
+    v = round(ev["detail"]["V"], 10)
+    (t / "verifier/reward.txt").write_text(repr(v))
+    if (t / "verifier/reward.json").is_file():
+        (t / "verifier/reward.json").write_text(json.dumps({"reward": v}))
+    out = (t / "verifier/test-stdout.txt").read_text()
+    (t / "verifier/test-stdout.txt").write_text(out.replace("reward=-1.0", f"reward={v!r}"))
     r = json.loads((t / "result.json").read_text())
-    r["verifier_result"]["rewards"]["reward"] = round(ev["detail"]["V"], 10)
+    r["verifier_result"]["rewards"]["reward"] = v
     (t / "result.json").write_text(json.dumps(r))
     assert ac.check_harbor_trial(t)["consistent"] is True
 
@@ -479,7 +484,7 @@ def test_committed_public_secret_battery_artifact():
     assert d["all_blocked"] is True and d["replay_all_consistent"] is True and d["harbor_all_consistent"] is True
     assert d["world_secret_public"] and d["seeds"][2] == 40
     assert all(r["n"] == 40 for r in d["rows"])
-    assert {r["kind"] for r in d["rows"]} >= {"attack", "sanity", "effort", "plus", "reference"}
+    assert {r["kind"] for r in d["rows"]} >= {"attack", "sanity", "effort", "reference"}
 
 
 # ----------------------------------------------------------------------------- round-2 judge findings
@@ -549,8 +554,9 @@ def test_cheat_probe_trial_without_its_report_is_flagged(tmp_path):
     assert row["consistent"] is False and any("cheat.json is missing" in p for p in row["problems"]), row
 
 
-def test_published_retired_key_catches_a_coherent_forgery(tmp_path):
-    """With the build's retired signing key published next to the job, a matching edit of every copy is caught."""
+def test_published_retired_key_catches_an_edit_that_was_not_re_signed(tmp_path):
+    """With the build's retired signing key published next to the job, a matching edit of every copy that was NOT
+    re-signed is caught (see the next test for the limit)."""
     job = _copy_job(tmp_path, "cheat-probe")
     t = next(p for p in job.iterdir() if p.is_dir())
     assert ac.check_harbor_trial(t).get("hmac_verified") is True
@@ -586,3 +592,84 @@ def test_build_refuses_shared_mode_without_the_explicit_flag(tmp_path):
     spec.loader.exec_module(build)
     with pytest.raises(SystemExit):
         build.main(["--tiers", "hard", "--seeds", "900000", "--out", str(tmp_path), "--verifier", "shared"])
+
+
+# ----------------------------------------------------------------------------- round-3 judge findings
+def _forge_signed_trial_to_correct(t, key: bytes):
+    """Rewrite a signed stop_early trial from a wrong accusation (-1) into a correct one, re-signed with the key."""
+    import hashlib
+    import hmac as _hmac
+    for f in ("artifacts/ledger.json", "verifier/ledger.json"):
+        d = json.loads((t / f).read_text())
+        ev = next(e for e in d["ledger"] if e["event"] == "accused")
+        ev["detail"]["correct"] = True
+        d.update(score=round(ev["detail"]["V"], 10), correct=True, accused_correct=True)
+        body = {k: v for k, v in d.items() if k != "sig"}
+        d["sig"]["mac"] = _hmac.new(key, json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+                                    .encode(), hashlib.sha256).hexdigest()
+        (t / f).write_text(json.dumps(d))
+    v = d["score"]
+    (t / "verifier/reward.txt").write_text(repr(v))
+    (t / "verifier/reward.json").write_text(json.dumps({"reward": v}))
+    out = (t / "verifier/test-stdout.txt").read_text()
+    (t / "verifier/test-stdout.txt").write_text(out.replace("reward=-1.0", f"reward={v!r}"))
+    r = json.loads((t / "result.json").read_text())
+    r["verifier_result"]["rewards"]["reward"] = v
+    (t / "result.json").write_text(json.dumps(r))
+
+
+def test_published_key_cannot_catch_a_re_signed_forgery(tmp_path):
+    """Documented limit (EXPLOITS.md, harbor_md): once a build's key is public, a forger can re-sign. A trial rewritten
+    from -1 to a correct accusation, re-signed and edited everywhere, passes the trial check."""
+    job = _copy_job(tmp_path, "signed-stop_early")
+    t = next(p for p in job.iterdir() if p.is_dir())
+    _forge_signed_trial_to_correct(t, (job / "ledger_key").read_text().strip().encode())
+    row = ac.check_harbor_trial(t)
+    assert row["consistent"] is True and row["hmac_verified"] is True, row
+
+
+@pytest.mark.parametrize("where", ["reward.json", "test-stdout"])
+def test_harbor_check_compares_every_printed_reward(tmp_path, where):
+    job = _copy_job(tmp_path, "signed-stop_early")
+    t = next(p for p in job.iterdir() if p.is_dir())
+    if where == "reward.json":
+        (t / "verifier/reward.json").write_text('{"reward": 1.0}')
+    else:
+        out = (t / "verifier/test-stdout.txt").read_text()
+        (t / "verifier/test-stdout.txt").write_text(out.replace("reward=-1.0", "reward=1.0"))
+    row = ac.check_harbor_trial(t)
+    assert row["consistent"] is False, row
+
+
+def test_probe_trial_without_a_reward_is_not_waved_through(tmp_path):
+    """A cheat_probe trial that lost its verifier reward is not 'infrastructure': it is flagged, holes or not."""
+    job = _copy_job(tmp_path, "cheat-probe")
+    t = next(p for p in job.iterdir() if p.is_dir())
+    r = json.loads((t / "result.json").read_text())
+    r["verifier_result"] = None
+    (t / "result.json").write_text(json.dumps(r))
+    rep = json.loads((t / "agent/cheat.json").read_text())
+    rep["holes"] = ["secrets.file[/run/canary/ledger_token]"]
+    (t / "agent/cheat.json").write_text(json.dumps(rep))
+    row = ac.check_harbor_trial(t)
+    assert row["consistent"] is False and any("holes" in p for p in row["problems"]), row
+
+
+def test_verify_artifact_reruns_and_diffs(tmp_path, capsys):
+    """`make anticheat-verify` in miniature: a 2-seed artifact under the public secret verifies; one edited number fails."""
+    from canary import rules
+    from canary.world import set_world_secret
+    secret = "canary-anticheat-public-test-v1"
+    set_world_secret(secret.encode())
+    try:
+        ac.run_and_write(["medium"], list(rules.JUDGE_SEEDS)[:2], tmp_path, replay=False, quiet=True,
+                         extra={"world_secret_public": secret})
+    finally:
+        set_world_secret(None)
+    p = tmp_path / "exploits.json"
+    assert ac.verify_artifact(p) == 0
+    d = json.loads(p.read_text())
+    d["rows"][0]["mean"] = 0.5
+    p.write_text(json.dumps(d))
+    assert ac.verify_artifact(p) == 1
+    assert "differences" in capsys.readouterr().out

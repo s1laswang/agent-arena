@@ -43,7 +43,7 @@ def test_cheat_finds_no_hole_and_scores_zero(tmp_path):
     finally:
         srv.stop()
     assert rep["holes"] == [], rep["holes"]
-    assert rep["incomplete"] is None
+    assert rep["incomplete"] is None and rep["controls_failed"] == 0, (rep["incomplete"], rep["controls_failed"])
     assert not rep["exploit"]["used"]
     assert set(rep["attempts"]) >= {"routes", "secrets", "files", "mcp", "accuse"}
     assert rep["n_attempts"] >= 100

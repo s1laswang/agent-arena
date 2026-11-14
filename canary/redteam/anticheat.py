@@ -46,6 +46,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 import threading
 from pathlib import Path
 from typing import Any, Callable
@@ -62,10 +63,11 @@ CUT_GUESS = ("solver_cut_25_guess", "solver_cut_50_guess", "solver_cut_75_guess"
 PLUS = ("solver_plus_restrict_others", "solver_plus_unrestrict_spam", "solver_plus_interview_all",
         "solver_plus_read_spam", "solver_plus_wait_a_day", "solver_plus_restrict_others_wait",
         "solver_plus_accuse_twice", "solver_plus_bad_canary")
-# Rows that hold BY CONSTRUCTION today (no accusation means 0; nothing before the accusation can change V on the
-# same day). They stay as regression guards but are reported as "sanity", not counted as attacks that were blocked.
-SANITY = LADDER + (CONTROL, "solver_plus_restrict_others", "solver_plus_unrestrict_spam", "solver_plus_interview_all",
-                   "solver_plus_read_spam", "solver_plus_accuse_twice", "solver_plus_bad_canary")
+# Rows that hold BY CONSTRUCTION today: no accusation means 0 (stop-early ladder), and the control and every plus
+# row accuse the solver's own target after extra steps, while V never rises. They stay as regression guards (a
+# change that let an extra step raise V or accept a second accusation would fail them) but are reported as
+# "sanity", not counted as attacks that were blocked.
+SANITY = LADDER + (CONTROL,) + PLUS   # every plus row re-accuses the solver's target and V never rises
 # Probes whose whole point is an accusation: if one never accuses on any seed, it tested nothing.
 EXPECT_ACCUSE = ("stop_early", "restrict_all", "accuse_decoy", "accuse_most_logs", "probe_all_then_accuse",
                  "accuse_all_sequential", "accuse_all_parallel", "canary_per_person")
@@ -457,8 +459,8 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
                 blocked = False
             if d["extra"].get("garbage_tools_unreached") or d["extra"].get("garbage_nonzero_scores"):
                 blocked = False   # a tool's garbage never reached the Env (tested nothing), or garbage moved a score
-            if name in EXPECT_ACCUSE and d["extra"].get("accused", 0) == 0:
-                blocked = False   # an accusing probe that never accused tested nothing
+            if name in EXPECT_ACCUSE and d["extra"].get("accused", 0) < n:
+                blocked = False   # an accusing probe that did not accuse on every seed tested nothing there
             if d["extra"].get("max_accusations_accepted", 0) > 1:
                 blocked = False   # more than one accepted accusation in some episode
         rows.append({"tier": tier, "probe": name, "kind": kind, "n": n, "mean": round(m, 4),
@@ -608,12 +610,34 @@ def check_harbor_trial(trial: Path) -> dict:
     reward = _num(((res.get("verifier_result") or {}).get("rewards") or {}).get("reward"))
     if reward is None:
         row["why"] = "no verifier reward (infrastructure failure; not counted as a result)"
+        policy = _trial_policy(trial)              # ...unless it was the probe: a probe hole is never "infrastructure"
+        rep = None
+        if (trial / "agent/cheat.json").is_file():
+            try:
+                rep = json.loads((trial / "agent/cheat.json").read_text(encoding="utf-8"))
+            except ValueError:
+                rep = {}
+        if policy == "cheat_probe" or (isinstance(rep, dict) and rep.get("holes")):
+            row["problems"].append("cheat_probe trial without a verifier reward" +
+                                   (f"; its report lists holes: {rep['holes'][:5]}" if isinstance(rep, dict) and rep.get("holes") else ""))
+            row["consistent"] = False
         return row
     row["reward"] = reward
     probs = row["problems"]
     vals = {"result.json": reward}
     if (trial / "verifier/reward.txt").is_file():
         vals["verifier/reward.txt"] = _num((trial / "verifier/reward.txt").read_text().strip())
+    if (trial / "verifier/reward.json").is_file():
+        try:
+            vals["verifier/reward.json"] = _num(json.loads((trial / "verifier/reward.json").read_text()).get("reward"))
+        except (ValueError, AttributeError):
+            vals["verifier/reward.json"] = None
+    out_txt = trial / "verifier/test-stdout.txt"
+    if out_txt.is_file():
+        import re
+        m = re.findall(r"reward=(-?[0-9.]+(?:e-?[0-9]+)?)", out_txt.read_text(encoding="utf-8", errors="replace"))
+        if m:
+            vals["verifier/test-stdout.txt reward="] = _num(m[-1])
     led = None
     for name in ("artifacts/ledger.json", "verifier/ledger.json"):
         f = trial / name
@@ -665,7 +689,7 @@ def check_harbor_trial(trial: Path) -> dict:
         ok = _hmac_ok(led, key_file.read_text().strip().encode())
         row["hmac_verified"] = bool(ok)
         if not ok:
-            probs.append("ledger HMAC does not verify under the job's published retired key (forged or edited)")
+            probs.append("ledger HMAC does not verify under the job's published retired key (edited, not re-signed)")
     probe = trial / "agent/cheat.json"           # cheat_probe report: no hole, ran fully, reward exactly 0
     if policy == "cheat_probe" and not probe.is_file():
         probs.append("ORACLE_POLICY=cheat_probe but agent/cheat.json is missing (the probe never reported)")
@@ -764,10 +788,11 @@ def harbor_md(rows: list[dict]) -> str:
          "agent trajectory, and it names the same person (oracle and probe trials have none). Each job summary "
          f"matches its trials. {skip} trials without a verifier reward (infrastructure failures, not results). "
          f"Verifier generation: {signed} trials were graded by the signing verifier (`signature=ok`), "
-         f"{len(trials) - signed - skip} by the earlier unsigned one. {hm} trials are HMAC-verified here against their "
-         "build's published retired signing key (results/harbor/<job>/ledger_key); for those, even a matching edit of "
-         "every copy is caught. For the rest, this check catches files that disagree with each other, but cannot "
-         "prove they are genuine."]
+         f"{len(trials) - signed - skip} by the earlier unsigned one. {hm} trials also pass an HMAC check against their "
+         "build's published retired signing key (results/harbor/<job>/ledger_key). That catches an edit that was not "
+         "re-signed; because the key is now public, it cannot catch a forger who re-signs. So, for every trial, this "
+         "check catches files that disagree with each other and edits that were not re-signed; it cannot prove that "
+         "the files are genuine."]
     for r in bad:
         L.append(f"- **NO** `{r['trial']}`: {'; '.join(r['problems'][:3])}")
     return "\n".join(L) + "\n"
@@ -852,6 +877,38 @@ def run_and_write(tiers, seeds, out_dir: Path, replay: bool = True, quiet: bool 
     return payload
 
 
+ROW_FIELDS = ("tier", "probe", "kind", "n", "mean", "max", "positive", "blocked", "scores", "seeds")
+
+
+def verify_artifact(path: Path) -> int:
+    """Rerun the battery exactly as a committed exploits.json ran it (same seeds, tiers and public test secret) and
+    compare every row field by field. Prints the differences; returns 0 only if there are none."""
+    from ..world import set_world_secret
+    d = json.loads(path.read_text(encoding="utf-8"))
+    secret = d.get("world_secret_public")
+    if not secret:
+        print(f"{path}: no world_secret_public; only exact (public-secret) artifacts can be verified", file=sys.stderr)
+        return 2
+    seeds = sorted({s for r in d["rows"] for s in r.get("seeds", [])})
+    set_world_secret(secret.encode())
+    try:
+        b = run_battery(d["tiers"], seeds)
+    finally:
+        set_world_secret(None)
+    old = {(r["tier"], r["probe"]): r for r in d["rows"]}
+    new = {(r["tier"], r["probe"]): r for r in b["rows"]}
+    diffs = [f"{k}: only in {'committed' if k in old else 'rerun'}" for k in sorted(set(old) ^ set(new))]
+    for k in sorted(set(old) & set(new)):
+        for f in ROW_FIELDS:
+            if old[k].get(f) != new[k].get(f):
+                diffs.append(f"{k} {f}: committed {old[k].get(f)!r} != rerun {new[k].get(f)!r}")
+    print(f"verify {path}: {len(new)} rows rerun on {len(seeds)} seeds x {len(d['tiers'])} tiers under the public "
+          f"secret; {len(diffs)} differences")
+    for x in diffs[:30]:
+        print("  " + x)
+    return 0 if not diffs else 1
+
+
 def main(argv=None) -> int:
     from .. import rules
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -860,9 +917,14 @@ def main(argv=None) -> int:
     ap.add_argument("--judge", action="store_true", help="use the judge seeds (needs CANARY_WORLD_SECRET for exact numbers)")
     ap.add_argument("--no-replay", action="store_true")
     ap.add_argument("--out", default="results/latest")
+    ap.add_argument("--verify", default=None, metavar="EXPLOITS_JSON",
+                    help="rerun exactly what a committed exploits.json ran (seeds, tiers, public secret) and exit 1 on "
+                         "any difference in the rows (e.g. results/anticheat/exploits.json; `make anticheat-verify`)")
     ap.add_argument("--world-secret", default=None,
                     help="a PUBLIC test secret (>= 16 chars) for exact, repeatable judge-seed worlds; never the real one")
     a = ap.parse_args(argv)
+    if a.verify:
+        return verify_artifact(Path(a.verify))
     seeds = list(rules.JUDGE_SEEDS)[: a.seeds] if a.judge else list(range(a.seeds))
     extra = {}
     if a.world_secret:
@@ -871,7 +933,8 @@ def main(argv=None) -> int:
         set_world_secret(a.world_secret.encode())
         extra = {"world_secret_public": a.world_secret,
                  "world_secret_fingerprint": hashlib.sha256(a.world_secret.encode()).hexdigest()[:12]}
-    p = run_and_write(a.tiers.split(","), seeds, ROOT / a.out, replay=not a.no_replay, extra=extra)
+    out = Path(a.out) if Path(a.out).is_absolute() else Path.cwd() / a.out
+    p = run_and_write(a.tiers.split(","), seeds, out, replay=not a.no_replay, extra=extra)
     return 0 if p["all_blocked"] and p["replay_all_consistent"] is not False and p["harbor_all_consistent"] is not False else 1
 
 

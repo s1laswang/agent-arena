@@ -238,12 +238,12 @@ If an attack does get in, `cheat_probe` uses it: with a ledger hole it reads the
 - the probe finds no hole, and the ledger score stays 0;
 - with the ledger token planted on disk, the probe accuses the right person, and the score is above 0.
 
-**`cheat_probe` verified through Harbor** (Harbor 0.25.0 on Docker Desktop / Windows 11, Saturday 14 Nov ~19:30, with this branch's final probe and test.sh; medium + hard 900000, separate verifier). Job: [`results/harbor/cheat-probe/`](../results/harbor/cheat-probe/). The logs were scanned for the build secret (0 hits), and local paths were rewritten.
+**`cheat_probe` verified through Harbor** (Harbor 0.25.0 on Docker Desktop / Windows 11, Saturday 14 Nov ~21:10, with this branch's final probe and test.sh; **3 judge seeds (900000-900002) × medium and hard**, separate verifier, HMAC-signed ledger). The job folder's `PROVENANCE.md` lists the SHA-256 of the code that ran, and `ledger_key` is the retired build's key. Job: [`results/harbor/cheat-probe/`](../results/harbor/cheat-probe/). The logs were scanned for the build secret (0 hits), and local paths were rewritten.
 
-| | medium 900000 | hard 900000 |
+| | medium 900000-900002 | hard 900000-900002 |
 |---|---|---|
-| reward | **0.0** | **0.0** |
-| `agent/cheat.json` | 149 attempts, `"holes": []` | 149 attempts, `"holes": []` |
+| reward | **0.0, 0.0, 0.0** (`signature=ok`) | **0.0, 0.0, 0.0** (`signature=ok`) |
+| `agent/cheat.json` | 149 attempts each, `"holes": []`, 0 failed controls | same |
 | grader routes | 35 × 403, 21 × 404, 3 × 405, 1 × 307 | same |
 | secrets | no file, no `CANARY_*` variable, nothing in `/proc` | same |
 | reward files | 6 fakes planted and the 15-minute rewrite loop started; the separate verifier ignored them all | same |

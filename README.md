@@ -10,6 +10,30 @@ An RL environment for AfterQuery's **Break the Agent** (Junction 2026).
 - It must **accuse exactly once**. A correct accusation scores the value that is left, so waiting for certainty also costs.
 - The reference run is a tuned **Bayesian canary-trap solver** that uses the same public tools. Every rule an agent needs is written down; the benchmark is how close a frontier agent gets to the solver.
 
+## For judges (5 minutes)
+
+You need [uv](https://docs.astral.sh/uv/) and `make` (Linux or macOS; on Windows use WSL). No API keys are needed.
+
+| Run this | You should see | Time |
+|---|---|---|
+| `make setup && make reproduce` | The score table: the solver is about +0.6 on medium and hard, do_nothing is exactly 0 and stop_early is about −0.9. The last line says `ANTI-CHEAT: every probe blocked ...`. If any cheat gets through, it exits with code 1. | ~3 min |
+| `make anticheat-verify` | `0 differences`: our committed anti-cheat results ([results/anticheat/exploits.md](results/anticheat/exploits.md)) rerun exactly the same. | ~1 min |
+| `make hunt` | Your own exploit fuzzing on every tier: best non-solver score 0.000, 0 violations. | a few min |
+
+**In your harness (Harbor + OpenCode over MCP; needs Docker):**
+
+```bash
+uv tool install harbor && uv run python harbor/build.py                      # 10 tasks: hard tier, judge seeds 900000-900009
+harbor run -p harbor/dataset -a oracle -n 4                                  # reference solver
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=do_nothing -n 4    # expect 0
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4    # expect about -1
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=cheat_probe -n 4   # ~150 cheat attempts, never accuses: expect exactly 0
+GOOGLE_GENERATIVE_AI_API_KEY=<key> harbor run -p harbor/dataset -a opencode -m google/gemini-4-carbon \
+    --api-key-name GOOGLE_GENERATIVE_AI_API_KEY -n 4                         # a frontier agent
+```
+
+**Want to break it?** Every attack we tried, and the test that guards it: [docs/EXPLOITS.md](docs/EXPLOITS.md). Everything below is detail.
+
 ## One command
 
 ```bash
@@ -117,15 +141,15 @@ We attacked our own reward 43 times before the judges did, including real-server
 
 | Check | What it shows | Pass rule |
 |---|---|---|
-| 13 scripted cheats: do-nothing, stop-early, random, restrict-all, ProbeAll-then-accuse, accuse the decoy, accuse the heaviest log user, garbage arguments on every tool (each tool on a fresh Env), accuse everyone in sequence and from parallel threads, accuse after the end, burn the call cap, one canary variant per person | no shortcut earns reward | mean ≤ 0 and below the solver; always-zero probes exactly 0; every accusing probe really accuses; every garbage tool reaches the Env |
-| **effort ladder**: the solver stopped at 25/50/75/90% of its calls, then accusing its best guess | stopping early and guessing never pays | below the full solver on every tier |
-| plus probes: the solver plus one step that can change V (wait a day; restrict everyone else and wait a day) | extra moves never beat good play | ≤ solver on every seed |
-| replay of every committed episode | recorded results are real | identical final score, accused id and every recorded tool result (only the few episodes on secret-keyed judge seeds cannot be replayed; the exact count is in the `Replay coverage` line) |
-| Harbor consistency of every committed trial and job | committed Harbor results are not edited | all copies of the reward agree and follow from the ledger's accusation; where a retired build key is published, the ledger HMAC verifies |
+| 13 scripted cheats: do-nothing, stop-early, random, restrict-all, ProbeAll-then-accuse, accuse the decoy, accuse the heaviest log user, garbage arguments on every tool (each tool on a fresh Env), accuse everyone in sequence and from parallel threads, accuse after the end, burn the call cap, one canary variant per person | no shortcut earns reward | mean ≤ 0 and below the solver; always-zero probes exactly 0; every accusing probe really accuses on every seed; every garbage tool reaches the Env |
+| **effort ladder**: the solver stopped at 25/50/75/90% of its calls, then accusing its best guess | stopping early and guessing always scores below the full solver | below the full solver on every tier |
+| plus probes: the solver plus one more step before its own accusation (wait a day; restrict everyone else and wait a day; read spam; ...) | extra moves never beat good play | ≤ solver on every seed. These hold by construction (V never rises and the target is the solver's own), so they are `sanity` rows: regression guards, not attacks |
+| replay of every committed episode | recorded episodes replay deterministically (same rules, same seed, same actions → same results) | identical final score, accused id and every recorded tool result (only the few episodes on secret-keyed judge seeds cannot be replayed; the exact count is in the `Replay coverage` line) |
+| Harbor consistency of every committed trial and job | committed Harbor files agree with each other (catches partial edits and edits that were not re-signed; it cannot prove files are genuine) | all copies of the reward agree and follow from the ledger's accusation; where a retired build key is published, the ledger HMAC verifies |
 
-Some rows hold by construction today (the no-accusation stop-early ladder, the control, same-day plus steps); the table labels them `sanity`, keeps them as regression guards, and does not count them as attacks. `REPRO_FAST=1` (5 seeds) only fails an attack on statistical evidence (one-sided 95% lower bound > 0) and reports the effort ladder without judging it. **Exact, repeatable numbers:** the full 40-judge-seed battery under a public test secret is committed in [`results/anticheat/exploits.md`](results/anticheat/exploits.md); `uv run python -m canary.redteam.anticheat --judge --seeds 40 --world-secret canary-anticheat-public-test-v1 --out results/anticheat` reproduces it (a test recomputes a slice and compares). `REPRO_ANTICHEAT=0` skips the battery.
+Some rows hold by construction today (the no-accusation stop-early ladder, the control, the plus probes); the table labels them `sanity`, keeps them as regression guards, and does not count them as attacks. `REPRO_FAST=1` (5 seeds) only fails an attack on statistical evidence (one-sided 95% lower bound > 0) and reports the effort ladder without judging it. **Exact, repeatable numbers:** the full 40-judge-seed battery under a public test secret is committed in [`results/anticheat/exploits.md`](results/anticheat/exploits.md); `uv run python -m canary.redteam.anticheat --judge --seeds 40 --world-secret canary-anticheat-public-test-v1 --out results/anticheat` reproduces it (a test recomputes a slice and compares); `make anticheat-verify` reruns all of it and exits 1 on any difference. `REPRO_ANTICHEAT=0` skips the battery.
 
-**Hunt it yourself:** `make hunt` (no keys, about 1 minute) fuzzes all four tracks (easy, medium, hard, hard_forge) with random, malformed, evolutionary and parallel-accuse attacks, and prints the best non-solver score next to the solver's mean and the number of violations. On our machine every mode reports a best non-solver score of 0.000 with 0 violations. `make hunt TIER=medium` restricts it to one tier.
+**Hunt it yourself:** `make hunt` (no keys, a few minutes) fuzzes all four tracks (easy, medium, hard, hard_forge) with random, malformed, evolutionary and parallel-accuse attacks, and prints the best non-solver score next to the solver's mean and the number of violations. On our machine every mode reports a best non-solver score of 0.000 with 0 violations. `make hunt TIER=medium` restricts it to one tier.
 
 - **Three real exploits, all closed:**
   - **Stop-early:** a free lottery ticket under 0/1 scoring, closed by making a wrong accusation cost −1.

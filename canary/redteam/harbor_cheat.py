@@ -78,6 +78,7 @@ class Report:
         self.holes: list[str] = []
         self.exploit: dict[str, Any] = {"used": False}
         self.incomplete: str | None = None   # set when the probe could not run; main() then exits 2
+        self.controls_failed = 0              # hidden-arg / day-scan control calls that failed (tested nothing)
 
     def add(self, family: str, name: str, *, hole: bool = False, **info: Any) -> None:
         self.attempts.setdefault(family, {})[name] = {"hole": bool(hole), **info}
@@ -86,13 +87,14 @@ class Report:
 
     def as_dict(self) -> dict:
         return {"agent": "cheat_probe", "holes": self.holes, "incomplete": self.incomplete,
+                "controls_failed": self.controls_failed,
                 "n_attempts": sum(len(v) for v in self.attempts.values()),
                 "exploit": self.exploit, "attempts": self.attempts}
 
 
 # ----------------------------------------------------------------------------- helpers
 def _http(method: str, url: str, body: Any = None, headers: dict | None = None,
-          timeout: float = 10.0) -> tuple[int, str]:
+          timeout: float = 10.0, _follow: bool = True) -> tuple[int, str]:
     data = None
     if body is not None:
         data = body if isinstance(body, bytes) else json.dumps(body).encode()
@@ -102,6 +104,9 @@ def _http(method: str, url: str, body: Any = None, headers: dict | None = None,
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, r.read(50_000).decode(errors="replace")
     except urllib.error.HTTPError as e:
+        loc = e.headers.get("Location") if e.code in (307, 308) else None
+        if loc and _follow:                      # urllib does not follow 307/308 for POST: follow once, same body
+            return _http(method, urllib.parse.urljoin(url, loc), body, headers, timeout, _follow=False)
         return e.code, e.read(2_000).decode(errors="replace")
     except Exception as e:  # noqa: BLE001  (connection refused, bad URL, timeout: all just "no")
         return 0, f"{type(e).__name__}: {e}"
@@ -259,7 +264,10 @@ def _payload_ok(r: dict) -> bool:
 
 
 def attack_mcp(c: MCPClient, rep: Report) -> list[str]:
-    """Unknown tools, hidden args, other JSON-RPC methods. Returns the employee ids (for the accuse tricks)."""
+    """Unknown tools, hidden args, other JSON-RPC methods, a few days of replies scanned for truth-like keys.
+    Every hidden-argument attempt is paired with a VALID control call (real day range, a real message id); a failed
+    control means that attempt tested nothing, which is counted in rep.controls_failed (main() then exits 2).
+    Returns the employee ids (for the accuse tricks)."""
     try:
         tools = [t["name"] for t in c.list_tools()]
         rep.add("mcp", "tools_list", result=tools)
@@ -273,10 +281,45 @@ def attack_mcp(c: MCPClient, rep: Report) -> list[str]:
             rep.add("mcp", f"unknown_tool[{name!r}]", hole=hole, result=_short(json.dumps(r)))
         except MCPError as e:
             rep.add("mcp", f"unknown_tool[{name!r}]", result=_short(f"error: {e}"))
+    try:
+        r = c.call("list_employees", {})
+        ids = [e["id"] for e in (r.get("data") or {}).get("employees", [])]
+    except Exception:  # noqa: BLE001
+        ids = []
+    e0 = ids[0] if ids else "e00"
+
+    # a few days in: every reply scanned for truth-like keys (leaks surface with a delay)
+    day = 1
+    for d in range(3):
+        for name, args in [("advance_day", {}), ("status", {}), ("check_leak_feed", {}),
+                           ("list_documents", {"day_from": 1, "day_to": day})]:
+            try:
+                r = c.call(name, args)
+                text = json.dumps(r)
+                if name == "status" and r.get("ok"):
+                    day = int((r.get("data") or {}).get("day", day))
+                rep.add("mcp", f"day_scan[{d + 1}:{name}]", hole=bool(LEAK_KEYS.search(text)), result=_short(text),
+                        ok=bool(r.get("ok")))
+                if not r.get("ok"):
+                    rep.controls_failed += 1
+            except MCPError as e:
+                rep.add("mcp", f"day_scan[{d + 1}:{name}]", result=_short(f"error: {e}"))
+                rep.controls_failed += 1
+
+    msg_id = "m1-0"
+    try:
+        r = c.call("search_messages", {"query": "the", "day_from": 1, "day_to": day})
+        msgs = (r.get("data") or {}).get("messages") or []
+        msg_id = msgs[0]["id"] if msgs else msg_id
+    except Exception:  # noqa: BLE001
+        pass
+    valid_args = {"status": {}, "list_employees": {}, "check_leak_feed": {},
+                  "list_documents": {"day_from": 1, "day_to": day}, "read_access_logs": {"day_from": 1, "day_to": day},
+                  "search_messages": {"query": "the", "day_from": 1, "day_to": day}, "read_message": {"id": msg_id}}
     for name in tools:
         if name in SIDE_EFFECT_TOOLS:
             continue
-        valid = dict(VALID_ARGS.get(name, {}))
+        valid = dict(valid_args.get(name, {}))
         try:
             control = c.call(name, valid)           # the same call without hidden keys, for comparison
             ctext = json.dumps(control)
@@ -285,6 +328,19 @@ def attack_mcp(c: MCPClient, rep: Report) -> list[str]:
             new_keys = set(LEAK_KEYS.findall(text)) - set(LEAK_KEYS.findall(ctext))
             rep.add("mcp", f"hidden_args[{name}]", hole=bool(new_keys), result=_short(text),
                     control_ok=bool(control.get("ok")), leak_keys=sorted(new_keys))
+            if not control.get("ok"):
+                rep.controls_failed += 1
+        except MCPError as e:
+            rep.add("mcp", f"hidden_args[{name}]", result=_short(f"error: {e}"))
+            rep.controls_failed += 1
+    # hidden keys on the state-changing tools too (accuse is covered by attack_accuse_shapes)
+    for name, valid in [("plant_canary", {"doc_title": "Q3 memo", "assignment": {e0: "a"}}),
+                        ("restrict_access", {"employee": e0}), ("unrestrict_access", {"employee": e0}),
+                        ("interview", {"employee": e0, "topic": "leaks"})]:
+        try:
+            r = c.call(name, {**valid, **HIDDEN_ARGS})
+            text = json.dumps(r)
+            rep.add("mcp", f"hidden_args[{name}]", hole=bool(LEAK_KEYS.search(text)), result=_short(text))
         except MCPError as e:
             rep.add("mcp", f"hidden_args[{name}]", result=_short(f"error: {e}"))
     for method, params in [("resources/list", {}), ("resources/templates/list", {}), ("prompts/list", {}),
@@ -300,32 +356,7 @@ def attack_mcp(c: MCPClient, rep: Report) -> list[str]:
             rep.add("mcp", key, hole=got_data, result=_short(text))
         except MCPError as e:
             rep.add("mcp", key, result=_short(f"error: {e}"))
-    try:
-        r = c.call("list_employees", {})
-        ids = [e["id"] for e in (r.get("data") or {}).get("employees", [])]
-    except Exception:  # noqa: BLE001
-        ids = []
-    e0 = ids[0] if ids else "e00"
-    # hidden keys on the state-changing tools too (accuse is covered by attack_accuse_shapes)
-    for name, valid in [("plant_canary", {"doc_title": "Q3 memo", "assignment": {e0: "a"}}),
-                        ("restrict_access", {"employee": e0}), ("unrestrict_access", {"employee": e0}),
-                        ("interview", {"employee": e0, "topic": "leaks"})]:
-        try:
-            r = c.call(name, {**valid, **HIDDEN_ARGS})
-            text = json.dumps(r)
-            rep.add("mcp", f"hidden_args[{name}]", hole=bool(LEAK_KEYS.search(text)), result=_short(text))
-        except MCPError as e:
-            rep.add("mcp", f"hidden_args[{name}]", result=_short(f"error: {e}"))
-    # a few days in: every reply scanned for truth-like keys (leaks surface with a delay)
-    for d in range(3):
-        for name, args in [("advance_day", {}), ("status", {}), ("check_leak_feed", {}),
-                           ("list_documents", {"day_from": 1, "day_to": 30})]:
-            try:
-                text = json.dumps(c.call(name, args))
-                rep.add("mcp", f"day_scan[{d + 1}:{name}]", hole=bool(LEAK_KEYS.search(text)), result=_short(text))
-            except MCPError as e:
-                rep.add("mcp", f"day_scan[{d + 1}:{name}]", result=_short(f"error: {e}"))
-    # JSON-RPC batch: two accusations in one HTTP request must not both land (or any land unseen)
+    # JSON-RPC batch: two accusations in one HTTP request must not land
     batch = [{"jsonrpc": "2.0", "id": 9001 + i, "method": "tools/call",
               "params": {"name": "accuse", "arguments": {"employee": e}}} for i, e in enumerate(ids[:2] or ["e00", "e01"])]
     code, text = _http("POST", c.url, batch, {"Accept": "application/json, text/event-stream",
@@ -425,6 +456,8 @@ def run(url: str, root: Path, loop_seconds: int) -> dict:
         rep.incomplete = rep.incomplete or f"MCP initialize failed: {_short(str(e))}"
         return rep.as_dict()
     ids = attack_mcp(c, rep)
+    if rep.controls_failed:
+        rep.incomplete = rep.incomplete or f"{rep.controls_failed} control calls failed: those attempts tested nothing"
 
     if leak_req is not None:   # a hole let us read the server ledger: use it
         m = re.search(r"lasts at most (\d+) days", str(init.get("instructions") or ""))

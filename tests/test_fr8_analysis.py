@@ -214,3 +214,23 @@ def test_forge_validate_two_investigators(monkeypatch):
     out = fv.survivors(rows, [{"rank": i, "strategy_json": {"rules": []}} for i in (1, 2)])
     assert set(out[0]["per_investigator"]) == {"heuristic", "hinted_heuristic"} and out[0]["fitness"] == .6
     assert "hinted_heuristic_score" in fv.to_markdown(rows, "r", "hard", list(range(10)), {})
+
+
+def test_outcome_dedupe_collapses_groups():
+    from fr8.analysis import forge_validate as fv
+    sj = {"rules": []}
+    hof = [{"rank": i, "strategy_json": sj} for i in (1, 2)]
+    base = {"solver_score": .7, "solver_acc": .9, "heur_score": -.5, "heur_acc": .2, "feasible": True}
+    rows = [{"strategy": "hof#1", "behaviour": "A", "outcome": "X", "regret": 1.0, **base},
+            {"strategy": "hof#2", "behaviour": "B", "outcome": "X", "regret": 1.1, **base}]
+    out = fv.survivors(rows, hof)
+    assert len(out) == 1 and out[0]["fitness"] == 1.1
+    assert "Distinct moles by outcome: 1" in fv.outcome_md(rows, {"X": ["hof#1", "hof#2"]}, "0:2")
+
+
+def test_outcome_trace_real_env():
+    from canary.forge.mutate import default_strategy_json
+    from fr8.analysis import forge_validate as fv
+    t = fv.outcome_trace(default_strategy_json(), "hard", [6000], agents=("do_nothing",))
+    assert t == fv.outcome_trace(default_strategy_json(), "hard", [6000], agents=("do_nothing",))
+    assert all(x[3] in fv.OUTCOME_EVENTS for x in t)

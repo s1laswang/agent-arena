@@ -46,3 +46,6 @@
 - Two-level dedupe: 20 distinct canonical JSONs collapse into **2 behaviour groups**. Survivors are in `data/forge/hall_of_fame_v1.2.jsonl`: rank 1 = hof#2 group (regret 1.510), rank 2 = hof#1 (regret 1.393).
 - Solver outcomes are identical for both groups (0.617 ± 0.059, acc 0.855, none 0.100). The 0.855 accuracy is only just above the 0.85 bar.
 - **Flag:** the default mole fails the §7 accuracy bar on v1.2 hard (0.79).
+
+## Outcome-level dedupe (supersedes the behaviour count above)
+**Distinct moles by outcome: 1.** The 2 behaviour groups produce identical leak/frame traces under do_nothing and the solver on hard seeds 6000–6019. Hashes were computed at the v1.3 code; hard params are unchanged from v1.2. `data/forge/hall_of_fame_v1.2.jsonl` now has 1 entry (regret 1.510). See `forge_v12_validation.outcome.md`.

@@ -41,3 +41,7 @@
 - Done (verified: make test 357 passed on justSilas 3c46a20): Env.verdict(), world.set_world_secret, SolverPolicy(behaviour_weight), act() guards (max act 0.09s over 1800 random-secret episodes; HARNESS 4-min hang not reproduced).
 - In progress: solver models fingerprint_accuracy (needed for FR8 noise sweep, ETA 06:40); per-seed hard comparison vs gpt-5.5 (gpt-5.5 0.72 vs solver 0.64 on tiers v1, n=4).
 - Freeze tiers v1.2 ~07:00 from FR8 co-tune.
+
+## 02:42 status (CLOCK CORRECTION)
+- Real time is 02:42 EET; my report headings after 02:25 used estimated times and are wrong (the content is right). Env v0 really merged ~02:25.
+- Freeze tiers v1.2 moved to 04:30 EET per CEO.

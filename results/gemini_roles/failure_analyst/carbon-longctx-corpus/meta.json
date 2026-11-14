@@ -1,0 +1,22 @@
+{
+  "role": "failure_analyst",
+  "model_id": "gemini-4-carbon",
+  "commit": "71a425530574aecd282e53a13f022be25fe4f292",
+  "timestamp": "2026-11-14T13:31:42Z",
+  "command": "python scripts/run_role_failure_analyst.py --runs data/runs/committed --llm gemini:gemini-4-carbon --out results/gemini_roles/failure_analyst/carbon-longctx-corpus --doc-out docs/reports/failure_gallery.md --require-llm",
+  "usage": {
+    "prompt_tokens": 237763,
+    "out_tokens": 16390,
+    "thinking_tokens": 14887,
+    "cached_tokens": 0,
+    "cost_usd": 0.639426,
+    "calls": 2
+  },
+  "n_episodes_packed": 101,
+  "packed_chars": 261087,
+  "source": "llm",
+  "verified_quotes_pct": 100.0,
+  "n_clusters": 6,
+  "n_quotes_raw": 16,
+  "n_quotes_verified": 16
+}

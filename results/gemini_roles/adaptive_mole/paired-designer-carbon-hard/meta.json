@@ -1,0 +1,53 @@
+{
+  "X": 0.45,
+  "Y": 0.2,
+  "baseline_default_scenario": {
+    "heuristic_accuracy": 0.0,
+    "heuristic_mean": -1.0,
+    "regret": 1.62,
+    "solver_accuracy": 1.0,
+    "solver_mean": 0.62
+  },
+  "command": "/tmp/fleet-silas/canary-venv/bin/python scripts/run_role_designer.py --llm gemini:gemini-4-carbon --tier hard --seeds 0-9 --n 6 --rounds 3 --X 0.45 --Y 0.20 --out results/gemini_roles/adaptive_mole/paired-designer-carbon-hard",
+  "commit": "9222669912afd57e53fbd3b07f0cdba985df705d",
+  "kept_heuristic_mean": -1.0,
+  "kept_regret_mean": 1.6827,
+  "kept_solver_mean": 0.6827,
+  "llm_ok": true,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "n_episodes_evaluated": 140,
+  "n_kept": 6,
+  "n_kept_llm": 6,
+  "n_llm_valid": 6,
+  "n_proposals": 6,
+  "role": "adaptive_mole",
+  "rounds_executed": 1,
+  "sample_count": 6,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "subrole": "paired_designer",
+  "tier": "hard",
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T17:06:51Z",
+  "usage": {
+    "cached": 0,
+    "calls": 1,
+    "cost_usd": 0.027058,
+    "in": 1889,
+    "latency_s": 30.887,
+    "out": 1659,
+    "thinking": 669,
+    "total_tokens": 4217
+  }
+}

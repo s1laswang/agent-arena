@@ -1,0 +1,77 @@
+{
+  "command": "/tmp/fleet-silas/canary-venv/bin/python scripts/run_role_world_text.py --llm gemini:gemini-4-carbon --specs easy:0,easy:1,easy:2,easy:3,medium:7,medium:8,medium:9,hard:4,hard:5,hard:6 --jobs 5 --out results/gemini_roles/world_text/carbon-v14-easy03-med789-hard46",
+  "commit": "6104bebd3fd95e1ff298698110dd816da1565efc",
+  "gemini_provider_fallbacks": 0,
+  "lint_violations": 0,
+  "llm_ok_count": 10,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "n_day_messages_generated": 136,
+  "n_departments_generated": 43,
+  "n_interviews_generated": 20,
+  "n_llm_personas": 228,
+  "n_personas_generated": 228,
+  "n_worlds": 10,
+  "role": "world_text",
+  "solver_accuracy": 1.0,
+  "solver_all_clean": true,
+  "solver_episodes_verified": 10,
+  "solver_mean_score": 0.761,
+  "subrole": "company_personas_chatter",
+  "template_baseline_mean_score": 0.766,
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T17:32:57Z",
+  "truth_leak_violations": 0,
+  "usage": {
+    "cached": 0,
+    "calls": 52,
+    "cost_usd": 0.776626,
+    "in": 61748,
+    "latency_s": 1308.673,
+    "out": 29038,
+    "thinking": 36275,
+    "total_tokens": 127061
+  },
+  "world_specs": [
+    {
+      "seed": 0,
+      "tier": "easy"
+    },
+    {
+      "seed": 1,
+      "tier": "easy"
+    },
+    {
+      "seed": 2,
+      "tier": "easy"
+    },
+    {
+      "seed": 3,
+      "tier": "easy"
+    },
+    {
+      "seed": 7,
+      "tier": "medium"
+    },
+    {
+      "seed": 8,
+      "tier": "medium"
+    },
+    {
+      "seed": 9,
+      "tier": "medium"
+    },
+    {
+      "seed": 4,
+      "tier": "hard"
+    },
+    {
+      "seed": 5,
+      "tier": "hard"
+    },
+    {
+      "seed": 6,
+      "tier": "hard"
+    }
+  ]
+}

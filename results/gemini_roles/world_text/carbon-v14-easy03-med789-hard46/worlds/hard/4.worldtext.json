@@ -1,0 +1,264 @@
+{
+  "chatter_templates": [
+    "Hey {colleague}, did you finish looking over {doc_title} before the {dept} sync {when}?",
+    "{sender} here - dropping a reminder that {dept} notes on {doc_title} are due {when}.",
+    "Morning {colleague}, can we grab ten minutes {when} to align on {doc_title}?",
+    "Thanks {colleague}! I updated the {dept} folder after reading {doc_title} {when}.",
+    "Quick question from {sender}: is {colleague} still owning the {dept} review for {doc_title}?",
+    "Heads up {colleague}, the {dept} check-in moved to {when} so we can cover {doc_title}.",
+    "Hi {colleague}, {sender} again - let me know if {doc_title} needs any formatting edits {when}.",
+    "All set on my side, {colleague}; {dept} signed off on the routine items in {doc_title} {when}.",
+    "Could someone in {dept} ping {colleague} {when} about the latest version of {doc_title}?",
+    "Coffee break {when}, {colleague}? Would love a quick sanity check on {doc_title} for {dept}."
+  ],
+  "company_blurb": "Aurora Freight builds automated routing software and cold-chain logistics hardware for Nordic and Baltic shipping corridors. Founded in Helsinki, the firm balances steady freight operations with applied materials testing and fleet telemetry.",
+  "departments": [
+    {
+      "culture": "Pragmatic and reliability-focused, the Engineering team values clear architecture docs, reproducible builds, and calm post-release check-ins. Discussions center on latency budgets, telemetry uptime, and practical fixes rather than flashy rewrites.",
+      "dept": "Engineering"
+    },
+    {
+      "culture": "Methodical and deadline-driven, Finance keeps Aurora Freight grounded with structured month-end closes, transparent cost tracking, and sober margin analysis. Colleagues appreciate tidy spreadsheets, early heads-up on spend changes, and punctual meetings.",
+      "dept": "Finance"
+    },
+    {
+      "culture": "Measured and approachable, Legal translates maritime rules, software terms, and compliance checklists into plain language. The team prizes thorough version history, well-organized repositories, and early collaboration before commercial commitments are signed.",
+      "dept": "Legal"
+    },
+    {
+      "culture": "Curious and empirical, Research blends hands-on environmental chamber testing with careful sensor data logging. Staff share bench time cooperatively, debate test tolerances openly, and take pride in cold-chain hardware that survives harsh weather.",
+      "dept": "Research"
+    },
+    {
+      "culture": "Energetic and relationship-oriented, Sales focuses on steady shipping partnerships, accurate capacity quotes, and smooth handoffs to operations. Weekly pipeline syncs stay brisk, practical, and centered on long-term client retention.",
+      "dept": "Sales"
+    }
+  ],
+  "meta": {
+    "error": null,
+    "llm_ok": true,
+    "model_id": "gemini-4-carbon",
+    "n_fallback_personas": 0,
+    "n_llm_personas": 40,
+    "usage": {
+      "cached": 0,
+      "calls": 1,
+      "cost_usd": 0.032388,
+      "in": 2369,
+      "out": 2765,
+      "thinking": 429
+    }
+  },
+  "model_id": "gemini-4-carbon",
+  "personas": [
+    {
+      "bio": "Lauri Rantanen maintains core routing services in Engineering and mentors junior staff on distributed queue stability and clean deployment habits.",
+      "employee_id": "e00",
+      "tone": "dry"
+    },
+    {
+      "bio": "Kaisa Niemi manages carrier ledger reconciliations and monthly freight accruals in Finance, keeping audit trails tidy across regional accounts.",
+      "employee_id": "e01",
+      "tone": "formal"
+    },
+    {
+      "bio": "Teemu Niemi handles mid-market shipping accounts in Sales, focusing on seasonal freight renewals and clear onboarding timelines for new clients.",
+      "employee_id": "e02",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Riikka Korhonen oversees transport regulatory filings and vendor policy checks in Legal, ensuring cross-border customs rules are followed.",
+      "employee_id": "e03",
+      "tone": "formal"
+    },
+    {
+      "bio": "Kalle Korhonen coordinates thermal packaging trials in Research, scheduling chamber runs and organizing sensor calibration schedules.",
+      "employee_id": "e04",
+      "tone": "warm"
+    },
+    {
+      "bio": "Riikka Heikkinen runs vibration and humidity tests on container seals in Research, logging daily batch measurements with steady precision.",
+      "employee_id": "e05",
+      "tone": "terse"
+    },
+    {
+      "bio": "Jussi Kinnunen prepares sample pallets and monitors battery endurance rigs in Research, assisting senior staff with raw data cleanup.",
+      "employee_id": "e06",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Lauri Saarinen guides backend API sprints in Engineering, reviewing pull requests and coordinating database schema updates across squads.",
+      "employee_id": "e07",
+      "tone": "blunt"
+    },
+    {
+      "bio": "Joonas Virtanen models fuel surcharge scenarios and lane profitability in Finance, turning operational metrics into concise weekly tables.",
+      "employee_id": "e08",
+      "tone": "dry"
+    },
+    {
+      "bio": "Iida Koskinen directs cold-chain telemetry studies in Research, aligning lab validation milestones with upcoming hardware releases.",
+      "employee_id": "e09",
+      "tone": "formal"
+    },
+    {
+      "bio": "Kaisa Turunen tracks capital expenditure and warehouse lease forecasts in Finance, partnering with department leads during budget reviews.",
+      "employee_id": "e10",
+      "tone": "warm"
+    },
+    {
+      "bio": "Eero Laitinen leads fleet gateway firmware work in Engineering, troubleshooting edge connectivity issues and hardware test benches.",
+      "employee_id": "e11",
+      "tone": "terse"
+    },
+    {
+      "bio": "Joonas Salonen drafts carrier agreements and software licensing terms in Legal, helping commercial teams navigate liability clauses.",
+      "employee_id": "e12",
+      "tone": "dry"
+    },
+    {
+      "bio": "Joonas Laitinen processes supplier invoices and tax documentation in Finance, known for reliable month-end closing routines.",
+      "employee_id": "e13",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Jussi Salonen manages enterprise logistics prospects in Sales, running product demos and coordinating pilot rollouts with operations.",
+      "employee_id": "e14",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Hanna Kinnunen supervises internal accounting controls and cash flow reporting in Finance, keeping quarterly close schedules on track.",
+      "employee_id": "e15",
+      "tone": "blunt"
+    },
+    {
+      "bio": "Petri Salonen maintains CRM pipelines and territory assignments in Sales, cleaning up quote templates and commission worksheets.",
+      "employee_id": "e16",
+      "tone": "terse"
+    },
+    {
+      "bio": "Ville Lehtinen reviews maritime subcontractor contracts and insurance riders in Legal, offering practical guidance on standard terms.",
+      "employee_id": "e17",
+      "tone": "warm"
+    },
+    {
+      "bio": "Tuomas Hamalainen builds internal dashboard tools and alerting scripts in Engineering, focusing on uptime visibility and log parsing.",
+      "employee_id": "e18",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Mikko Salo leads acoustic and shock testing initiatives in Research, turning field transit recordings into repeatable lab benchmarks.",
+      "employee_id": "e19",
+      "tone": "dry"
+    },
+    {
+      "bio": "Kaisa Saarinen handles key retail distribution accounts in Sales, negotiating multi-year volume commitments and service level targets.",
+      "employee_id": "e20",
+      "tone": "formal"
+    },
+    {
+      "bio": "Iida Laine organizes contract archives, corporate filings, and signature workflows in Legal, keeping matter trackers accurate every day.",
+      "employee_id": "e21",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Noora Makinen conducts insulation foam aging tests in Research, maintaining tidy lab notebooks and calibrating thermal probes.",
+      "employee_id": "e22",
+      "tone": "warm"
+    },
+    {
+      "bio": "Sanna Jokinen oversees consolidated financial statements and treasury policies in Finance, coordinating closely with external auditors.",
+      "employee_id": "e23",
+      "tone": "formal"
+    },
+    {
+      "bio": "Olli Nieminen heads platform infrastructure in Engineering, overseeing cloud cost discipline, build pipelines, and failover drills.",
+      "employee_id": "e24",
+      "tone": "blunt"
+    },
+    {
+      "bio": "Joonas Koskinen advises on data governance and employment policies in Legal, drafting clear internal guidelines for everyday use.",
+      "employee_id": "e25",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Mikko Jarvinen directs regional revenue targets and account coaching in Sales, running structured pipeline reviews every Monday morning.",
+      "employee_id": "e26",
+      "tone": "blunt"
+    },
+    {
+      "bio": "Janne Heinonen develops Baltic ferry and rail freight partnerships in Sales, matching client schedules with available container capacity.",
+      "employee_id": "e27",
+      "tone": "warm"
+    },
+    {
+      "bio": "Janne Saarinen tracks proposal turnaround times and order forms in Sales, helping reps move paperwork cleanly through approval queues.",
+      "employee_id": "e28",
+      "tone": "dry"
+    },
+    {
+      "bio": "Markus Rantanen writes integration connectors for port scheduling systems in Engineering, enjoying clean specs and predictable test suites.",
+      "employee_id": "e29",
+      "tone": "terse"
+    },
+    {
+      "bio": "Noora Lehtonen compiles variance reports and department spend summaries in Finance, checking cost center codes with steady care.",
+      "employee_id": "e30",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Elina Karjalainen administers pricing calculators and renewal reminders in Sales, supporting account executives during busy quarter ends.",
+      "employee_id": "e31",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Aino Salonen manages sensor fusion prototypes in Research, bridging bench experiments with early field trials on regional trucks.",
+      "employee_id": "e32",
+      "tone": "terse"
+    },
+    {
+      "bio": "Antti Salminen optimizes route calculation engines in Engineering, shaving latency off batch planning jobs for large vehicle fleets.",
+      "employee_id": "e33",
+      "tone": "dry"
+    },
+    {
+      "bio": "Tuomas Salo tracks freight margin trends and customer payment cycles in Finance, preparing crisp charts for monthly review decks.",
+      "employee_id": "e34",
+      "tone": "blunt"
+    },
+    {
+      "bio": "Petri Laitinen coordinates mobile driver app releases in Engineering, balancing bug triage with usability feedback from dispatchers.",
+      "employee_id": "e35",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Olli Kinnunen studies phase-change cooling packs in Research, modeling heat transfer rates across long winter and summer transit legs.",
+      "employee_id": "e36",
+      "tone": "formal"
+    },
+    {
+      "bio": "Aleksi Salo runs environmental chamber diagnostics and fixture repairs in Research, keeping test bays ready for back-to-back runs.",
+      "employee_id": "e37",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Venla Jokinen maintains automated integration tests and staging environments in Engineering, catching regressions before release cutoffs.",
+      "employee_id": "e38",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Olli Lehtinen validates cellular and satellite tracker performance in Research, documenting signal drop patterns across northern routes.",
+      "employee_id": "e39",
+      "tone": "terse"
+    }
+  ],
+  "provider": "gemini-world:gemini-4-carbon",
+  "usage": {
+    "cached": 0,
+    "calls": 1,
+    "cost_usd": 0.032388,
+    "in": 2369,
+    "out": 2765,
+    "thinking": 429
+  }
+}

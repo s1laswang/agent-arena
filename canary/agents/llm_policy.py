@@ -148,9 +148,12 @@ class LLMPolicy:
                 return "status", {}
         call = self._queue.popleft()
         self._pending_id = call["id"]
-        if _PROGRESS:  # CANARY_PROGRESS=1: one line per tool call on stderr (long live runs)
+        if _PROGRESS:
             import sys
-            print(f"[llm_policy] step {len(history)} calls={self.usage['calls']} last_call={getattr(self, '_last_call_s', None)}s "
-                  f"-> {call['name']} "
-                  f"{json.dumps(call['args'])[:120]}", file=sys.stderr, flush=True)
+            try:
+                print(f"[llm_policy] step {len(history)} calls={self.usage['calls']} last_call={getattr(self, '_last_call_s', None)}s "
+                      f"-> {call['name']} "
+                      f"{json.dumps(call['args'])[:120]}", file=sys.stderr, flush=True)
+            except OSError:
+                pass
         return call["name"], call["args"]

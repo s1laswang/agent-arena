@@ -1,0 +1,201 @@
+{
+  "day": 1,
+  "model_id": "gemini-4-carbon",
+  "samples": [
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Legal vendor contracts Q1",
+        "grudge_pair": [
+          "e08",
+          "e02"
+        ],
+        "manager_id": "e09",
+        "rumour_target": "e00"
+      },
+      "company": "Borealis Dynamics",
+      "day": 1,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Hey Nea, have you noticed anything odd with Ville Tuominen (e00) this week? Someone from Finance mentioned seeing his calendar packed with private one hour blocks every morning, and word around the kitchen is that he has been taking external recruiter calls or staying late on some personal pitch deck.",
+          "channel": "#slack_dm",
+          "day": 1,
+          "id": "bc1-0",
+          "recipients": [
+            "e13"
+          ],
+          "sender": "e07",
+          "subject": "Sprint planning bandwidth"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Kalle, you overwrote my territory adjustments in the shared sheet again and completely ignored the review comments I left yesterday. Because of your hasty upload, my quota baseline is wrong right before our afternoon review.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-1",
+          "recipients": [
+            "e02"
+          ],
+          "sender": "e08",
+          "subject": "Q2 Sales budget forecast version issue"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Nea, if you actually submitted your numbers by the noon deadline instead of pasting edits into an old local copy after lock, nothing would be lost. Stop blaming Sales Ops every time you miss a cutoff.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-2",
+          "recipients": [
+            "e08"
+          ],
+          "sender": "e02",
+          "subject": "Re: Q2 Sales budget forecast version issue"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "Do not spend the afternoon pulling primary invoices to reconcile that small discrepancy on the draft slides. We have relied on my summary macro workflow for four quarters without an issue, so treat those rollup totals as final and close out the checklist.",
+          "channel": "#slack_channel",
+          "day": 1,
+          "id": "bc1-3",
+          "recipients": [
+            "e16",
+            "e18"
+          ],
+          "sender": "e09",
+          "subject": "Accrual variance signoff"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hi Joonas, forwarding over the key renewal dates and support tier notes from Legal vendor contracts Q1 directly in this thread so Engineering can align on tooling schedules today without waiting on folder permissions.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-4",
+          "recipients": [
+            "e07"
+          ],
+          "sender": "e04",
+          "subject": "Quick notes from Legal vendor contracts Q1"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 10,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "medium",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.023426,
+        "in": 1718,
+        "input_tokens": 1718,
+        "out": 1999,
+        "output_tokens": 448,
+        "thinking_tokens": 1551,
+        "total_tokens": 3717
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Engineering reorg proposal",
+        "grudge_pair": [
+          "e05",
+          "e17"
+        ],
+        "manager_id": "e03",
+        "rumour_target": "e01"
+      },
+      "company": "Borealis Dynamics",
+      "day": 1,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Did you hear from Kaisa on the third floor that Pihla Heinonen (e01) has been blocking off two hours every afternoon for private calls in the small phone booth? People are saying she might be interviewing with an outside fund or working on some unannounced side deck late at night.",
+          "channel": "#slack_dm",
+          "day": 1,
+          "id": "bc1-0",
+          "recipients": [
+            "e13"
+          ],
+          "sender": "e06",
+          "subject": "Quick chat"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Emma, you overwrote the master legal tracker again without merging my comments from yesterday afternoon. Now the renewal dates are completely out of sync and my team looks unprepared for the afternoon review.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-1",
+          "recipients": [
+            "e17"
+          ],
+          "sender": "e05",
+          "subject": "Re: Vendor contract redlines"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "That is completely unfair, Aleksi. Your edits were sitting in an unshared local draft past the 4 PM cutoff, and if you had actually met the agreed deadline instead of blaming Finance, nobody would have needed to push the clean sheet forward.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-2",
+          "recipients": [
+            "e05"
+          ],
+          "sender": "e17",
+          "subject": "Re: Vendor contract redlines"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "No need to pull the raw audit logs on that intake timestamp mismatch from this morning. I set up that fast-track template with Finance last quarter and it always reconciles cleanly on its own, so let us just mark those items approved and move on.",
+          "channel": "#slack_channel",
+          "day": 1,
+          "id": "bc1-3",
+          "recipients": [
+            "e07",
+            "e09",
+            "e16",
+            "e18"
+          ],
+          "sender": "e03",
+          "subject": "Approval sign-off workflow"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hey Janne, pasting the key headcount notes from the Engineering reorg proposal below so you know which pod leads are shifting before your client scoping call at two. Figured sending it straight over was faster than waiting for the formal cross-team briefing.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-4",
+          "recipients": [
+            "e04"
+          ],
+          "sender": "e08",
+          "subject": "Fwd: Engineering reorg proposal"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 11,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "medium",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.010772,
+        "in": 1711,
+        "input_tokens": 1711,
+        "out": 735,
+        "output_tokens": 530,
+        "thinking_tokens": 205,
+        "total_tokens": 2446
+      }
+    }
+  ],
+  "seeds": [
+    10,
+    11
+  ],
+  "tier": "medium"
+}

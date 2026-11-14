@@ -1,0 +1,181 @@
+{
+  "role": "adaptive_mole",
+  "subrole": "mole_forge",
+  "model_id": "gemini-4-carbon",
+  "commit": "99767a5d144e89cbd9522ddd9720af55bb2217eb",
+  "timestamp": "2026-11-14T14:30:05Z",
+  "command": "scripts/run_role_mole_forge.py --llm gemini:gemini-4-carbon --tier hard --gens 3 --pop 4 --children 4 --elite 1 --seeds 4000-4009 --fresh-seeds 5000-5019 --workers 10 --out results/gemini_roles/adaptive_mole/mole-forge-carbon-v14",
+  "usage": {
+    "calls": 12,
+    "in": 2546,
+    "out": 1060,
+    "thinking": 1180,
+    "cached": 0,
+    "cost_usd": 0.027492,
+    "latency_s": 133.853,
+    "ledger_run_id": "mole-forge-20261114-142558-0"
+  },
+  "n_valid_llm_children": 6,
+  "n_invalid_llm_children": 0,
+  "n_samples": 6,
+  "best_fitness": 0.37,
+  "default_dev_fitness": 0.24500000000000002,
+  "fresh_solver_accuracy": 0.95,
+  "fresh_min_regret": 0.23949999999999996,
+  "default_fresh_min_regret": 0.242,
+  "fake_env": false,
+  "tier": "hard",
+  "tiers_version": "v1.4",
+  "gens": 3,
+  "pop_size": 4,
+  "requested_children": 4,
+  "elite": 1,
+  "children_per_gen": 3,
+  "dev_seeds": [
+    4000,
+    4001,
+    4002,
+    4003,
+    4004,
+    4005,
+    4006,
+    4007,
+    4008,
+    4009
+  ],
+  "fresh_seeds": [
+    5000,
+    5001,
+    5002,
+    5003,
+    5004,
+    5005,
+    5006,
+    5007,
+    5008,
+    5009,
+    5010,
+    5011,
+    5012,
+    5013,
+    5014,
+    5015,
+    5016,
+    5017,
+    5018,
+    5019
+  ],
+  "fitness_mode": "min",
+  "min_solver_acc": 0.75,
+  "hof_size": 4,
+  "top_strategy": {
+    "default": {
+      "frame": "random_peer",
+      "leak": "random_seeded"
+    },
+    "rules": [
+      {
+        "if": [
+          [
+            "n_restricted_colleagues",
+            ">",
+            0
+          ]
+        ],
+        "then": {
+          "frame": "most_restricted_peer",
+          "leak": "oldest"
+        }
+      },
+      {
+        "if": [
+          [
+            "day",
+            "<=",
+            5
+          ]
+        ],
+        "then": {
+          "frame": "decoy",
+          "leak": "most_recipients"
+        }
+      },
+      {
+        "if": [
+          [
+            "recent_low_recipient_docs",
+            ">=",
+            2
+          ]
+        ],
+        "then": {
+          "frame": "random_peer",
+          "leak": "oldest"
+        }
+      }
+    ]
+  },
+  "provider_settings": {
+    "thinking_level": "model default (not sent; gemini-4-carbon: medium)",
+    "include_thoughts": true,
+    "temperature": "not sent (API default 1.0)",
+    "thought_signature_replay": true,
+    "api": "generateContent"
+  },
+  "fresh_confirmation": {
+    "top_hof": {
+      "fitness": 0.23949999999999996,
+      "regret": 0.88025,
+      "min_regret": 0.23949999999999996,
+      "fitness_mode": "min",
+      "min_solver_acc": 0.75,
+      "solver_score": 0.5209999999999999,
+      "solver_acc": 0.95,
+      "per_investigator": {
+        "grok_tactics": {
+          "score": 0.28150000000000003,
+          "acc": 0.85,
+          "regret": 0.23949999999999996
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.5210000000000001
+        }
+      },
+      "feasible": true,
+      "baseline_solver_score": 0.5780000000000001,
+      "beaten": [
+        "grok_tactics",
+        "obvious_heuristic"
+      ]
+    },
+    "default_mole": {
+      "fitness": 0.242,
+      "regret": 0.9099999999999999,
+      "min_regret": 0.242,
+      "fitness_mode": "min",
+      "min_solver_acc": 0.75,
+      "solver_score": 0.5780000000000001,
+      "solver_acc": 0.95,
+      "per_investigator": {
+        "grok_tactics": {
+          "score": 0.33599999999999997,
+          "acc": 0.8,
+          "regret": 0.242
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.578
+        }
+      },
+      "feasible": true,
+      "baseline_solver_score": 0.5780000000000001,
+      "beaten": [
+        "grok_tactics",
+        "obvious_heuristic"
+      ]
+    }
+  }
+}

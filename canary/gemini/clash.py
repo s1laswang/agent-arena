@@ -188,10 +188,22 @@ def main(argv=None) -> int:
     if not a.report_only:
         seeds = parse_seed_spec(a.seeds)
         check_seeds(seeds)
-        os.environ.setdefault("CANARY_LLM_MAX_RETRIES", "12")
-        os.environ.setdefault("CANARY_GEMINI_LEDGER", str(out / "_ledger" / f"{HOST}-{os.getpid()}.jsonl"))
-        run_matrix(out, a.detectives.split(","), a.moles.split(","), seeds, a.tier, a.concurrency,
-                   log=lambda m: print(time.strftime("%H:%M:%S"), m, flush=True))
+        prev_retries = os.environ.get("CANARY_LLM_MAX_RETRIES")
+        prev_ledger = os.environ.get("CANARY_GEMINI_LEDGER")
+        try:
+            os.environ.setdefault("CANARY_LLM_MAX_RETRIES", "12")
+            os.environ.setdefault("CANARY_GEMINI_LEDGER", str(out / "_ledger" / f"{HOST}-{os.getpid()}.jsonl"))
+            run_matrix(out, a.detectives.split(","), a.moles.split(","), seeds, a.tier, a.concurrency,
+                       log=lambda m: print(time.strftime("%H:%M:%S"), m, flush=True))
+        finally:
+            if prev_retries is None:
+                os.environ.pop("CANARY_LLM_MAX_RETRIES", None)
+            else:
+                os.environ["CANARY_LLM_MAX_RETRIES"] = prev_retries
+            if prev_ledger is None:
+                os.environ.pop("CANARY_GEMINI_LEDGER", None)
+            else:
+                os.environ["CANARY_GEMINI_LEDGER"] = prev_ledger
     if a.report or a.report_only:
         report(out, Path(a.report or "results/gemini"))
     return 0

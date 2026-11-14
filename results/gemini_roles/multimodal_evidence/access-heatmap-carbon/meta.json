@@ -1,0 +1,59 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "soc_access_vision",
+  "model_id": "gemini-4-carbon",
+  "commit": "62ea18bae54f2e525e942df7c08bff9247e3bb1d",
+  "git_sha": "62ea18bae54f2e525e942df7c08bff9247e3bb1d",
+  "timestamp": "2026-11-14T13:23:46+00:00",
+  "command": "CANARY_LLM_MAX_RETRIES=10 PYTHONPATH=. /tmp/fleet-silas/canary-venv/bin/python scripts/run_access_vision.py --tier medium --seeds 0,1,2 --model gemini-4-carbon --out results/gemini_roles/multimodal_evidence/access-heatmap-carbon",
+  "n_images_read_by_model": 3,
+  "tiers_version": "v1.4",
+  "tier": "medium",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "ledger_run_id": "multimodal_evidence:soc_access_vision:gemini-4-carbon:1794662626",
+  "rasters": [
+    {
+      "seed": 0,
+      "path": "rasters/medium_seed_0.png",
+      "sha256": "353e9b66a13d46deab1c2305c33956140e71fce6a1db774aa658ecad27d2e5d7",
+      "bytes": 153744,
+      "size": [
+        1880,
+        1020
+      ]
+    },
+    {
+      "seed": 1,
+      "path": "rasters/medium_seed_1.png",
+      "sha256": "1a09eb4de72f8893e5b434c2eb727c20cbca449ba68b8445220c559b976f0b6f",
+      "bytes": 155973,
+      "size": [
+        1880,
+        1020
+      ]
+    },
+    {
+      "seed": 2,
+      "path": "rasters/medium_seed_2.png",
+      "sha256": "ae99a74f781a64adcaa03c439c1c140cfecf2cd0c2136c212027c05f126f9b91",
+      "bytes": 148310,
+      "size": [
+        1880,
+        1020
+      ]
+    }
+  ],
+  "usage": {
+    "calls": 3,
+    "in": 6000,
+    "out": 1055,
+    "thinking": 3291,
+    "cached": 0,
+    "cost_usd": 0.05546,
+    "latency_s": 72.27
+  }
+}

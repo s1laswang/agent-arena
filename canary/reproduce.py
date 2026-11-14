@@ -491,11 +491,13 @@ def table_md(rows: list[Row], header: dict[str, Any]) -> str:
     out.append("- **paired runs**: reference and baselines played in this invocation on the same worlds (one secret). "
                "**reported agent runs**: frontier-agent episodes replayed from data/runs/committed/, played on the "
                "team's worlds, so they are NOT paired with this run; compare them by mean ± CI only")
-    out.append("- **v1.4 frontier gap: not established.** This table has no committed v1.4 frontier episodes. "
-               "An in-process bake-off on rules v1.4, paired seeds, n=10 per tier (21:26) has gemini-4-carbon "
-               "matching or beating the solver: medium solver +0.734±0.050 vs carbon +0.680±0.085; "
-               "hard solver +0.433±0.324 vs carbon +0.509±0.136. Smaller Gemini models sat below the solver. "
-               "The tiebreaker's notes gain is the generic hint (notes minus hint −0.039±0.204), not a learned policy.")
+    if any(r.pending for r in rows):
+        out.append(f"- **{cur} frontier gap: not established.** This table has no committed {cur} frontier episodes.")
+    else:
+        out.append(f"- **{cur} frontier vs solver, paired on the same seeds:** "
+                   f"`data/runs/committed/{cur}/paired_table_gemini.md`, explained in `docs/reports/gap.md`. "
+                   f"The {cur} reported rows below replay those committed episodes (played on dev seeds under the "
+                   "team's secret), so they are not paired with this invocation's judge worlds.")
     out.append(f"- reported runs are grouped by tier version and never pooled: {cur} (current rules) first, then "
                "earlier versions as history (not comparable to the paired table; `/ solver` left blank). "
                f"Builds under {COMMITTED_DIR}/{SUPERSEDED_DIR}/ are excluded")
@@ -516,7 +518,12 @@ def table_md(rows: list[Row], header: dict[str, Any]) -> str:
             out += [_row_md(r, sol.get(tier)) for r in paired]
         for version, heading, grp in reported_groups(reported, cur):
             out += ["", f"{heading}:", "", COLS]
-            out += [_row_md(r, sol.get(tier), compare=(version == cur)) for r in grp]
+            out += [_row_md(r, sol.get(tier), compare=False) for r in grp]
+            if version == cur:
+                out += ["", f"`/ solver` is blank for reported runs: they were played on dev seeds under the team's "
+                        f"secret, so a ratio to this invocation's judge-world solver would mislead. The paired ratios "
+                        f"(same seeds as the solver) are in `data/runs/committed/{cur}/paired_table_gemini.md` "
+                        f"and `docs/reports/gap.md`."]
     return "\n".join(out) + "\n"
 
 

@@ -162,6 +162,22 @@ def load_ledger(paths: list[str | Path]) -> list[dict]:
     return rows
 
 
+def discover_ledgers() -> list[str]:
+    """--ledger auto: every ledger JSONL we can see on this machine (dedupe makes overlaps safe).
+    Looks in data/gemini/ledger, $CANARY_GEMINI_LEDGER_DIR, ~/agent-arena-data/gemini/**/_ledger (ladder/FR8 pulls) and
+    sibling Canary Lab worktrees (../gemini-*/data/gemini/**). Only files under a directory named like *ledger*."""
+    roots = [ROOT / "data" / "gemini", Path.home() / "agent-arena-data" / "gemini"]
+    if os.environ.get("CANARY_GEMINI_LEDGER_DIR"):
+        roots.append(Path(os.environ["CANARY_GEMINI_LEDGER_DIR"]))
+    roots += sorted(ROOT.parent.glob("gemini-*/data/gemini"))
+    files: list[str] = []
+    for r in roots:
+        for f in glob.glob(str(r / "**" / "*.jsonl"), recursive=True):
+            if any("ledger" in part for part in Path(f).relative_to(r).parts[:-1]) or "ledger" in r.parts:
+                files.append(f)
+    return sorted(set(files))
+
+
 def _agg(rows: list[dict]) -> dict:
     a = {"calls": len(rows), "errors": sum(not r["ok"] for r in rows),
          "in": sum(r["in"] for r in rows), "out": sum(r["out"] for r in rows),
@@ -478,12 +494,15 @@ def render_html(payload: dict) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--ledger", nargs="*", default=None, help="ledger dirs/files (default data/gemini/ledger)")
+    ap.add_argument("--ledger", nargs="*", default=None,
+                    help="ledger dirs/files (default data/gemini/ledger); 'auto' = every ledger found on this machine")
     ap.add_argument("--results", default=str(DEFAULT_RESULTS))
     ap.add_argument("--out", default=str(DEFAULT_RESULTS / "dashboard.html"))
     ap.add_argument("--json", action="store_true", help="print the aggregated usage summary and exit")
     a = ap.parse_args(argv)
     sources = a.ledger or [str(DEFAULT_LEDGER)]
+    if sources == ["auto"]:
+        sources = discover_ledgers()
     rows = load_ledger(sources)
     lad = load_json(Path(a.results) / "ladder.json") or {}
     reprice(rows, lad.get("prices_usd_per_1m") if isinstance(lad.get("prices_usd_per_1m"), dict) else None)
@@ -495,11 +514,13 @@ def main(argv: list[str] | None = None) -> int:
         print()
         return 0
     rel = []
-    for s in sources:
+    for s in (sources if len(sources) <= 6 else []):
         try:
             rel.append(str(Path(s).resolve().relative_to(ROOT)))
         except ValueError:
             rel.append(Path(s).name)
+    if len(sources) > 6:
+        rel = [f"{len(sources)} ledger files (--ledger auto)"]
     html = render_html(build_payload(rows, Path(a.results), rel))
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -614,7 +635,7 @@ button:focus-visible, .cell:focus-visible, [tabindex]:focus-visible { outline: 2
 .tile { background: var(--surface); padding: 14px 16px; min-width: 0; }
 .tile .lab { color: var(--muted); font-size: 12px; }
 .tile .val { font: 600 22px/1.2 system-ui, -apple-system, sans-serif; margin-top: 4px; letter-spacing: -.01em; }
-.tile .note { color: var(--muted); font-size: 11.5px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .note { color: var(--muted); font-size: 11.5px; line-height: 1.35; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .caps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .chip { font: 500 11.5px/1 ui-monospace, "SF Mono", Menlo, monospace; padding: 6px 9px; border-radius: 999px;
   border: 1px solid var(--ring); color: var(--ink2); background: var(--wash); }
@@ -843,12 +864,14 @@ function hbars(items, opt) {
 // stacked columns over time (calls per bin, by feature)
 function timelineChart() {
   const T = U.timeline; if (!T.bins.length) return h('p', { class: 'sub', text: 'No ledger rows yet.' });
-  const feats = U.totals.features.filter(f => fslot(f)).sort((a, b) => fslot(a) - fslot(b));
-  const series = feats.slice(0, 7); const hasOther = U.totals.features.some(f => !series.includes(f));
+  // one series per colour slot: features sharing a prefix slot (gateway-bench, gateway-smoke) fold into 'gateway'
+  const grp = f => FEATURE_SLOT[f] ? f : FEATURE_SLOT_PREFIX[String(f).split(/[-_]/)[0]] ? String(f).split(/[-_]/)[0] : 'other';
+  const series = [...new Set(U.totals.features.map(grp))].filter(k => k !== 'other').sort((a, b) => fslot(a) - fslot(b));
+  const hasOther = U.totals.features.some(f => grp(f) === 'other');
   const keys = hasOther ? series.concat(['other']) : series;
   const W = 780, H = 240, L = 40, Rr = 8, Tp = 8, B = 26;
   const vals = T.bins.map(b => { const o = {}; let tot = 0; keys.forEach(k => o[k] = 0);
-    for (const f in b.counts) { const k = series.includes(f) ? f : 'other'; o[k] += b.counts[f]; tot += b.counts[f]; } o._t = tot; return o; });
+    for (const f in b.counts) { const k = grp(f); o[k] += b.counts[f]; tot += b.counts[f]; } o._t = tot; return o; });
   const max = Math.max(1, ...vals.map(v => v._t)); const ticks = niceTicks(max, 4); const ymax = ticks[ticks.length - 1];
   const n = T.bins.length, slot = (W - L - Rr) / n, bw = Math.max(1, Math.min(24, slot - 2));
   const y = v => Tp + (H - Tp - B) * (1 - v / ymax);

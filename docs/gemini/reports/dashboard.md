@@ -1,5 +1,40 @@
 # G5 Dashboard + demo assets: report
 
+## Sat 14:50 — dashboard v1 on the real ledger, VIDEO.md, narrate.py, Live commentator clip (ahead of M2)
+
+**Done**
+- **Merge-ready for PR 1** (`canary/gemini/{dashboard,shoot,narrate,commentator}.py`, fixtures, 4 test files): `make test`
+  equivalent green on this branch (575 passed, 6 skipped, 6.4 min); lab tests 13 passed in 0.3 s, keyless.
+- **v1 from real data**: `python -m canary.gemini.dashboard --ledger auto` finds every ledger on this Mac (data/gemini/ledger,
+  ~/agent-arena-data/gemini/**/_ledger, sibling gemini-* worktrees), dedupes rows that were synced twice, and writes
+  `results/gemini/dashboard.html` (committed, 70 KB). At 14:43: **5,502 Gemini calls**, 8 features, 10 models, 73M input / 1M thinking /
+  58M cached tokens, $21.10 list price, 0.6% errors, p50 2.7 s / p95 13 s. Ladder/atlas/swarm panels show "pending" until their JSON lands.
+- Reads the **real result shapes** now: G2 `ladder.json` (`rows` with ratio/CI/thinking_per_ep/cost_per_ep, `reference`, `tags.pooled`
+  → a "Which mistakes does thinking fix?" matrix, solver/grok_tactics/heuristic reference lines), G3 `atlas.json` (verification
+  pass rate, multimodal localisation, cohorts, summary, mechanism/solver_would, step-verified quotes, chart thumbnails),
+  G4 `swarm.json` (per_tier paired solver mean, counts, plan.hypothesis, violation kinds, `tests/test_gemini_lab_swarm_found.py` count).
+  Large fields (tool calls, per-episode lists, seeds) are dropped before embedding. Fixtures regenerated in these shapes.
+- Unpriced flash rows (3.1-flash-lite, 3.5-flash) are repriced with the same table G2 uses (and `prices_usd_per_1m` from
+  ladder.json); the cost tile counts what is still unpriced (embedding/TTS/Live).
+- Screenshots (real data): `docs/gemini/assets/dashboard-headline.png`, `dashboard-usage.png` (1600 px). Fixture screenshot removed.
+- `docs/gemini/VIDEO.md`: 3:00 storyboard, shot list, asset table and `VO[id]` narration lines with `{placeholders}`.
+- `canary/gemini/narrate.py`: fills placeholders from results + ledger (refuses to speak a missing number unless `--allow-pending`),
+  one `gemini-3.8-flash-tts` call per clip, `--voices` auditions, `--check` = Gemini 3.8 Flash transcribes each clip and scores recall
+  against the script. Findings: the SDK default API version rejects `speech_config` for 3.8 TTS (400 "Unknown name speechConfig") →
+  we force `v1beta`; the model returns `audio/wav`; style prefixes ("Say in a … voice:") are **read aloud** by most voices and
+  `system_instruction` is rejected, so the voice carries the style. Auditions on the hook: Kore 25.1 s (≈150 wpm, matches the budget,
+  default), Charon 18.8, Puck 21.6, Algieba 23.4, Zephyr 21.7, Orus 20.7; transcript recall 94–98%.
+- **Stretch done early**: `canary/gemini/commentator.py`, a Live API (`gemini-3.8-live`) sportscaster. Streams one text turn per game
+  day of the committed gemini-4-carbon hard seed 9 (correct accusation, +0.74) and records audio + output transcription.
+  Clip: `docs/gemini/assets/narration/commentator-demo.wav` (50.6 s) + `.json` (events, commentary). Guarded against inventing leaks
+  (first take called a V drop "a leak"; the system prompt now forbids that and the second take is accurate).
+
+**Next**: rebuild as G2/G3/G4 results land (target 19:00 v1 with ladder); narration clips once the numbers exist (22:00);
+final screenshots incl. dark + ladder/atlas figures (Sun 05:00).
+
+**Asks**: CEO, for the published page run `python -m canary.gemini.dashboard --ledger auto` (or point `--ledger` at the synced FR8
+ledger dir). `canary/llm/pricing.py` still lacks 3.1-flash-lite / 3.5-flash (the dashboard reprices them itself).
+
 ## Sat 14:25 — M1 (dashboard v0 from fixtures) done
 
 **Done**

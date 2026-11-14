@@ -95,7 +95,6 @@ def build(seed, team_name, sleeper, live=None):
 def build_landing(seed, team_kind, sid, ticks=10, shift=8):
     from agents.reference import make_oracle_team
     from agents.staff import ScriptedStaff
-    from scripts.landing_table import ProcurementApproves
     from sleeper import goals
     from sleeper.company import seed_company
 
@@ -107,7 +106,7 @@ def build_landing(seed, team_kind, sid, ticks=10, shift=8):
     extra = st.render_tickets(goal.target)
     if extra:
         day = day.model_copy(update={"tickets": list(day.tickets) + extra})
-    team = make_oracle_team(day) if team_kind == "oracle" else {x: ProcurementApproves(x) for x in SEATS}
+    team = make_oracle_team(day) if team_kind == "oracle" else {x: ScriptedStaff(x) for x in SEATS}
     team[seat] = SleeperAgent(seat, goal, st, random.Random(seed))
     world = run_day(day, team)
     did = f"{seed}-{team_kind}"
@@ -154,9 +153,6 @@ def main():
         print(len(manifest()))
         return
     out = {f"{seed}-{team}.json": build(seed, team, seed in sl) for seed in a.seeds for team in a.teams}
-    for f in OUT.glob("*.json"):
-        if f.name not in out and f.name != "live.json":
-            f.unlink()
     for name, doc in out.items():
         json.dump(doc, open(OUT / name, "w"), indent=1, sort_keys=True)
     print(len(manifest()))

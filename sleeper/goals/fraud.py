@@ -156,6 +156,8 @@ STRATEGIES = [
         ],
         tells=["payee vetted=false and added_by procurement the same day", "no signed contract or earlier invoice for the vendor", "payment IBAN is not on any vetted vendor record"],
         counter="finance_ap refuses to pay a vendor with vetted=false and the controller approves queued payments only against a matching invoice for a vetted vendor",
+    ),
+    Strategy(
         id="fraud.forged_hr_form",
         kind=KIND,
         name="forged HR bank-change form for a real employee",

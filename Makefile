@@ -5,7 +5,7 @@ MCP_PORT ?= 8000
 MCP_PORT_FALLBACK ?= 1
 MCP_REWARD_PORT ?= 8001
 
-.PHONY: test setup reproduce frontier-replay mcp accept gap-replay eval probes eval-full harbor exploits key-check ladder cheat-corpus cheat-eval demo frontier-replay-run
+.PHONY: test setup reproduce frontier-replay mcp accept gap-replay eval probes eval-full harbor exploits key-check ladder ladder-drop cheat-corpus cheat-eval demo frontier-replay-run
 
 test:
 	$(PY) -m pytest -q
@@ -25,8 +25,10 @@ mcp:
 	rport=$$(MCP_PORT=$(MCP_REWARD_PORT) MCP_PORT_FALLBACK=$(MCP_PORT_FALLBACK) MCP_AVOID_PORT=$$port PYTHON_BIN=$(PY) bash scripts/mcp_port.sh) || exit $$?; \
 	echo "make mcp: sidecar MCP http://127.0.0.1:$$port/mcp  reward :$$rport  (override: make mcp MCP_PORT=8800; fail if busy: MCP_PORT_FALLBACK=0)"; \
 	if [ "$${MCP_DRY_RUN:-0}" = "1" ]; then exit 0; fi; \
-	sfile=$$(SLEEPER_SALT="$${SLEEPER_SALT:-judge-local-salt}" SLEEPER_SEED="$${SLEEPER_SEED:-1000}" VERIFY_TOKEN="$${VERIFY_TOKEN:-judge-local}" $(PY) -c 'import json,os,tempfile; fd,p=tempfile.mkstemp(prefix="sleeper-mcp-",suffix=".json"); os.chmod(p,0o600); f=os.fdopen(fd,"w"); json.dump({k:os.environ[k] for k in ("SLEEPER_SALT","SLEEPER_SEED","VERIFY_TOKEN")},f); f.close(); print(p)') || exit $$?; \
-	trap 'rm -f "$$sfile"' EXIT INT TERM; \
+	sfile=$$(SLEEPER_SALT="$${SLEEPER_SALT:-}" SLEEPER_SEED="$${SLEEPER_SEED:-1000}" VERIFY_TOKEN="$${VERIFY_TOKEN:-}" $(PY) -c 'import json,os,secrets,tempfile; e=os.environ.get; v={"SLEEPER_SALT":e("SLEEPER_SALT") or secrets.token_hex(16),"SLEEPER_SEED":e("SLEEPER_SEED") or "1000","VERIFY_TOKEN":e("VERIFY_TOKEN") or secrets.token_hex(16)}; d=tempfile.mkdtemp(prefix="sleeper-mcp-"); w=lambda n,s: os.close((lambda fd: (os.write(fd,s.encode()),fd)[1])(os.open(os.path.join(d,n),os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600))); w("secrets.json",json.dumps(v)); w("reward-token",v["VERIFY_TOKEN"]); print(os.path.join(d,"secrets.json"))') || exit $$?; \
+	sdir=$$(dirname "$$sfile"); \
+	trap 'rm -rf "$$sdir"' EXIT INT TERM; \
+	echo "make mcp: reward: curl -s -H \"X-Verify-Token: \$$(cat $$sdir/reward-token)\" http://127.0.0.1:$$rport/reward"; \
 	env -u SLEEPER_SALT -u SLEEPER_SEED -u VERIFY_TOKEN SLEEPER_SECRETS_FILE="$$sfile" SLEEPER_SECRETS_UNLINK=1 SLEEPER_SEAT="$${SLEEPER_SEAT:-$(SEAT)}" SLEEPER_OUT="$${SLEEPER_OUT:-/tmp/sleeper-mcp-state.json}" SIDECAR_MCP_PORT="$$port" SIDECAR_REWARD_PORT="$$rport" $(PY) -m harbor.sidecar
 
 accept:
@@ -67,6 +69,9 @@ cheat-corpus:
 
 cheat-eval:
 	GEMINI_API_KEY= PYTHONPATH=. $(PY) -m redteam.cheat_eval
+
+ladder-drop:
+	GEMINI_API_KEY= $(PY) -m agents.ladder_drop --days 200 --jobs 4
 
 demo:
 	@echo "http://localhost:8000/index.html"; $(PY) -m http.server 8000 -d web

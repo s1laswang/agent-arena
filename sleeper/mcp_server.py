@@ -34,9 +34,10 @@ def build_server(world, seat, team=None, out=None, token=None):
     def finish():
         if not st["done"]:
             st["done"] = True
+            st_ = dump_state(world)
+            st["state"] = sign(st_, token) if token else st_
             with open(out, "w") as f:
-                st_ = dump_state(world)
-                json.dump(sign(st_, token) if token else st_, f)
+                json.dump(st["state"], f)
 
     def make(spec):
         name = spec["name"]
@@ -72,6 +73,9 @@ def build_server(world, seat, team=None, out=None, token=None):
     for spec in specs.values():
         mcp.add_tool(make(spec), name=spec["name"], description=spec["description"])
     mcp.finish = finish
+    # The reward reads this in-memory copy, not the file: on the local `make mcp` path the agent
+    # runs as the same OS user and can rewrite the file (red-team note docs/redteam-vaishnav.md).
+    mcp.final_state = lambda: st.get("state")
     return mcp
 
 
@@ -103,7 +107,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--secrets-file", default=None)
     ap.add_argument("--seat", default=e("SLEEPER_SEAT", "finance_ap"))
-    ap.add_argument("--day", type=int, default=int((sec.get("SLEEPER_SEED") or "").strip() or "0"))
+    ap.add_argument("--day", type=int, default=None)
     ap.add_argument("--team", default=e("SLEEPER_TEAM", "procedure"))
     ap.add_argument("--transport", default=e("SLEEPER_TRANSPORT", "stdio"))
     ap.add_argument("--sleeper-seat", default=e("SLEEPER_SLEEPER_SEAT") or None)
@@ -122,6 +126,8 @@ def main(argv=None):
         ap.error("seat under test cannot be the sleeper")
     from harbor.sidecar import effective_id
 
+    if a.day is None:  # parse SLEEPER_SEED only when --day is not given
+        a.day = int((sec.get("SLEEPER_SEED") or "").strip() or "0")
     day_id = effective_id(a.day, a.seat, salt=salt)
     strategy = None
     if a.sleeper_seat or a.goal:

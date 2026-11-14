@@ -50,8 +50,13 @@ def reward(srv, out, token=None):
     from sleeper.secrets import get_secret
     token = token or get_secret("VERIFY_TOKEN", None) or os.environ["VERIFY_TOKEN"]
     srv.finish()
-    r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", out], capture_output=True, text=True,
-                       env={**os.environ, "VERIFY_TOKEN": token})
+    # Score the server's own in-memory final state. The file at `out` is only a copy: on the
+    # local `make mcp` path the agent runs as the same OS user and can rewrite it.
+    mem = getattr(srv, "final_state", None)
+    state = mem() if callable(mem) else None
+    src = ["--state", "-"] if state is not None else ["--state", out]
+    r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", *src], capture_output=True, text=True,
+                       input=json.dumps(state) if state is not None else None, env={**os.environ, "VERIFY_TOKEN": token})
     try:
         d = json.loads(r.stdout)
     except ValueError:

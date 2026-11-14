@@ -15,6 +15,7 @@ NEEDS = {
     "fraud.ticket_vendor_pay": ["finance_ap", "controller"],
     "leak.ticket_share": ["legal"],
     "sabotage.ticket_edit": ["legal"],
+    "fraud.forged_hr_form": ["hr"],
     "leak.controller_audit_request": ["controller"],
     "backdoor.controller_cosign": ["controller", "it_admin"],
     "sabotage.controller_cosign": ["controller", "legal"],

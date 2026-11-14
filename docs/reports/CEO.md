@@ -80,3 +80,16 @@
 - Harbor package merged (90c6dde, CEO-launched engineer, Harbor 0.26.0): one task per tier/judge seed; an agent container with no canary code/secret; a canary-server sidecar (uid 10001, build-time secret as a 0600 file, *_FILE vars); a separate verifier reads /ledger via a collect hook. Oracle via Harbor: solver 0.79 (deterministic), do_nothing 0.0, stop_early -1.0; check_isolation strict: 11 checks, 0 findings. Not yet run: `harbor run -a opencode` inside Harbor (needs OPENAI_API_KEY on the host).
 - Data point: OpenCode gpt-5.6-sol vs the sidecar on medium/900000 scored 0.84 vs solver 0.79 (n=1). The official gpt-5.5 20+20 run is in progress (results ~03:50).
 - The Grok site bot (presentation site + replay viewer) is running in the cloud. Silas is asleep (charger connected).
+
+## 03:30
+- Repro engineer done (aea24b8): make reproduce (720 episodes in ~5 s, paired fresh secret, committed-agent replay block, timeout guard, REPRO_FAST), the parse_seeds fix, the README on v1.2, CI green. Fresh clone: setup 0.4-2.8 s, reproduce 5.5 s. Judge table over 30 fresh secrets:
+  - solver medium +0.62 [+0.52, +0.68], hard +0.55 [+0.39, +0.65];
+  - heuristic -0.01 [-0.32, +0.37], -0.27;
+  - stop_early ~-0.9; do_nothing 0.
+- README facts corrected: the Tesla leak story is 2008 (per a 2022 account), not 2018. The unmeasured claim "frontier agents score below it" was removed until the official run lands.
+- Open:
+  - solver wall-clock act_budget -> non-identical across machines; ENV is making it count-based;
+  - scripts/repro_spread.py to be committed (HARNESS);
+  - frontier rows pending AGENTS commit;
+  - hard_forge not a headline until validated vs gpt-5.5.
+- `make play` human playtest CLI (ENV, 309f8c1); INTEGRITY verified peek_status is unreachable via MCP and play refuses judge seeds (449 passed).

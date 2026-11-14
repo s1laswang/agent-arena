@@ -191,12 +191,14 @@ Branch `justSilas-harness-harbor`. Files: `harbor/README.md` (Harbor research (a
   - Expansions over 10,000 seeds, or seeds × tiers over 10,000 in the CLI, are rejected with exit 2 and a clear message.
   - 3 new tests in tests/test_eval.py (12 cases).
 - **Merged to justSilas** at b17d269 (fast-forward). `make test`: 385 passed, 3 skipped (exit 0).
+- **Final merge on frozen v1.2:** justSilas at 093ed1b (fast-forward), with README and results on frozen v1.2, the fresh-seed table cited, and easy marked as a sanity tier. `make test`: 390 passed, 3 skipped (exit 0).
+  - **Fresh clone of justSilas at 093ed1b** (no .env, no keys): clone 1.3 s; `make setup` 0.4 s (warm cache); `make reproduce` exit 0 in 5.5 s.
+  - Solver: medium +0.661 ± 0.067, hard +0.452 ± 0.196 (39/40 accused, 82% correct), easy +0.774 ± 0.046. All three are inside the 30-secret ranges in the README; hard sits near the low end.
+- **CI verified on GitHub.**
+  - The first runs appeared a few minutes after the push; the API reported 0 at first. Run 43538261675 on justSilas at 50f4074 (contains this work): **success in 1m33s** (`make setup`, `make test`, `REPRO_FAST=1 make reproduce`, artifact upload). A PR run (justSilas-grok-pitch) also succeeded.
+  - Fix: `cancel-in-progress` cancelled every push run on the busy justSilas branch (7 cancelled in a row). It now cancels only on PRs, so push runs queue and finish.
 
 ### Untested / open
-- **CI has never run on GitHub.** After the push to justSilas (b17d269), `gh api repos/s1laswang/agent-arena/actions/workflows` and `.../actions/runs` both report total_count 0, although Actions show as enabled.
-  - Possible causes: a private repo with no Actions minutes or billing, or a workflow that must also be on the default branch (`main`, which we must not touch).
-  - Silas should check Settings → Actions / Billing.
-  - The workflow file itself is untested on GitHub.
 - No committed frontier runs yet. AGENTS should write `data/runs/committed/<run_id>/episodes.jsonl` (EpisodeResult lines; steps may be empty), ideally on judge seeds. The table marks non-judge seeds.
 - The README numbers must be refreshed whenever ENV changes the solver or the tiers: run `python /tmp/canary_spread.py 30`, or just `make reproduce` and use its CI.
 - `test_integrity_hunter.py::test_stub_hunt_fake_server_plumbing` still fails intermittently under load (INTEGRITY's code).

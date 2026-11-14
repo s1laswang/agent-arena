@@ -142,3 +142,8 @@
 - All API-billed runs are stopped after their in-flight episodes (~10-12 v1.3 episodes). No further API spend without Silas.
 - Zero-marginal-cost path: Codex CLI on the ChatGPT login (only if its auth mode is verified); Gemini free credits in the morning.
 - v1.2 OFFICIAL FINAL (efef43b): medium gpt-5.5 .600 vs solver .690 (87%); hard .500 vs .584 (86%); Grok 97%/97%.
+
+## 03:49 spend + reference
+- The reference is consistent (9c236b3): v1.2 numbers = episodes played at db104c9; v1.3 numbers = solver at 0933805. The re-run rows are kept under committed/superseded/.
+- Codex gpt-5.5 over MCP, v1.2 5+5: medium .714 (5/5, 104% of solver); hard -0.02 (3/5; two wrong accusations at -1). Hard is high-variance for frontier agents under the -1 rule.
+- SPEND estimate now ~$220 (Codex cached-input assumption; worst case ~$340 if caching is not discounted). All API runs stopped except ~3 in-flight v1.3 episodes (~14 v1.3 episodes total). **Silas: check the OpenAI billing dashboard.**

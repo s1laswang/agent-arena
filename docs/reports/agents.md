@@ -2,6 +2,18 @@
 
 # Relaunch (branch `justSilas-agents2`)
 
+## 17:xx status
+- Done: **in-process Gemini bug found** (thought_signature dropped on turn 2 → 400; swallowed into res.meta → silent score 0).
+  Reported to CEO; fixed on justSilas (e8a6fdf, from gemini-track); merged here. My first RL spot check (12 eps) was
+  entirely invalid because of it and was discarded (not committed).
+- Verified that gemini-4-carbon works in-process after the fix: hard seed 200000 → accused correctly, 0.80, 57 calls,
+  ~20 min, est. $0.76.
+- Done (verified: tests/test_agents_policy.py): hint set **v2**, one sentence per failure mode, restating ONLY facts on
+  the instruction page (a test checks each fact against the hard instruction). `ablate --hint-set v2 --no-control`.
+- In progress: hint ablation v2 on gemini-4-carbon, v1.4 hard, seeds 0–9: arms control / premature_accusation /
+  decoy_chase (3 parallel processes, ≈3.5 h) → `data/runs/ablate-v2-hard-gemini/`.
+- Next: RL spot check (gemini-4-carbon, hard_rl vs hard, same 6 seeds; `scripts/rl_mole_gemini_spot.py`), then Forge.
+
 ## 16:xx status: WS3 merged into justSilas (ded822e)
 - Done (verified: `uv run --extra dev --extra llm pytest -q` → 587 passed, 6 skipped)
 - **RL mole held-out result** (`scripts/rl_mole_heldout.py`, hard, seeds 200000–200099, n=100, paired bootstrap 95% CI, RL − default):

@@ -1074,7 +1074,8 @@ def write_tests(res: dict, path: Path, n_holdouts: int = 5) -> int:
 
 # ----------------------------------------------------------------------------------------------- escalation input
 def wave_summary(prev: dict, k: int = 30) -> str:
-    atts = sorted(prev["attempts"], key=lambda a: (-len(a["invariant_violations"]), -(a.get("score") or -9)))[:k]
+    planned = [a for a in prev["attempts"] if not ((a.get("plan") or {}).get("hypothesis") or "").startswith("(planner failed")]
+    atts = sorted(planned, key=lambda a: (-len(a["invariant_violations"]), -(a.get("score") or -9)))[:k]
     out = []
     for a in atts:
         pl = a.get("plan") or {}

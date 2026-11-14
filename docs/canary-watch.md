@@ -147,3 +147,9 @@ Read: this is the number that beats ours. n=26, one tier, one model family, CI u
 Our status for contrast: real rows exist but the Carbon 0/15 and Flash 1/15 had the understated 60-call prompt (not a gap result); true-budget rows at base 5251e446 expected ~16:30 in the gaptable. Same-background partners: oracle 1.000 [0.84,1.00], reference 0.600 [0.39,0.78].
 Weaknesses we can beat: their headline is CEO-computed from /tmp staging, not in the tree; medium has no gap; CI [11, 99] is wide; all one family. If ours lands true-budget Carbon and Flash with committed, replayable rows on the judge seat, we match on provenance (their weak point) even at smaller n.
 Ideas to copy (idea only): luck-adjusted ratio next to the raw ratio; reporting the alternative counting (empty replies as 0) openly; paired-on-same-seeds table.
+
+## Tick 7, 2026-11-14 17:50 Helsinki (wall clock `date`; the 16:26 wakeup ran late)
+
+No change: every origin/justSilas* and origin/vaishnav/* tip equals the tick 6 list by 7-char prefix (diff of the two sorted lists empty; last justSilas commit d3afdcb7 at 15:24). Gate A (17:00) passed with no new commit from Silas, so his gemini-4-carbon v1.4 hard n=26, 59% [11, 99] remains CEO-computed from /tmp staging and uncommitted. His engineer was on a usage limit until 19:00.
+Ours: origin/momin 81dc8298 gaptable shows Gemini 4 Carbon and Flash rows `real`, but none at the true-budget base 5251e446 yet (Carbon a44ca5d, 9ce48b3, 577fd55; Flash ce5a8ce, b06e6ad); bg_version column still `unknown`. True-budget rows not landed; scorecard gap stays as written.
+Bundle for Silas/Vaishnav sent to the chief this tick (see canary-landing.md).

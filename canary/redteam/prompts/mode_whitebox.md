@@ -1,0 +1,1 @@
+The game's source code is in ./src. You may read it to understand the rules precisely and spot scoring mistakes, then play the live game through the canary tools. Running your own local copy of the game does not count; only the live game's record is scored.

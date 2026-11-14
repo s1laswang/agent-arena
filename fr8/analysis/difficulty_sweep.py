@@ -9,8 +9,7 @@ Aggregate raw CSVs -> summary CSV (noise,tier,agent,mean,ci95,accuracy,n) + PNG:
 (The old flat form `--tier T --noise X --seeds a:b --out CSV` is accepted as `run`.)
 
 Wiring: the noise field is auto-detected on canary.rules.TierParams (first of NOISE_FIELDS);
-episodes run through canary.eval.run_episode(tier=..., seed=..., agent=..., params=...) once
-HARNESS ships it. Until then `run` raises a clear error; aggregation/plot are fully usable.
+episodes run through canary.eval.run_episode(Env, policy) with make_policy_factory(agent).
 """
 from __future__ import annotations
 
@@ -22,7 +21,7 @@ from pathlib import Path
 from ._common import ci_half, group, mean, read_rows, write_rows
 
 NOISE_FIELDS = ("noise", "difficulty", "noise_scale", "noise_level")
-DEFAULT_AGENTS = ("solver", "obvious_heuristic", "random", "stop_early")
+DEFAULT_AGENTS = ("solver", "heuristic", "random", "stop_early")
 
 
 def parse_seeds(s: str) -> list[int]:
@@ -40,31 +39,18 @@ def noise_field() -> str:
 
 
 def _episode(tier: str, seed: int, agent: str, params):
-    """One episode under `params`. Prefers canary.eval.run_episode if HARNESS ships it;
-    otherwise Env + canary.baselines (scripted baselines; 'solver' once ENV exposes it)."""
-    try:
-        from canary.eval import run_episode  # HARNESS (may not exist yet)
-        return run_episode(tier=tier, seed=seed, agent=agent, params=params)
-    except ImportError:
-        pass
+    """One episode under `params`: canary.eval.run_episode(Env, policy) with a per-process
+    TIERS[tier] swap during Env construction (Env has no params= argument)."""
     from canary import rules
-    from canary.baselines import BASELINES, play
     from canary.env import Env
-    if agent not in BASELINES:
-        raise RuntimeError(f"agent {agent!r} needs canary.eval.run_episode (have: {sorted(BASELINES)})")
+    from canary.eval import make_policy_factory, run_episode
     old = rules.TIERS[tier]
-    rules.TIERS[tier] = params          # Env reads TIERS[tier] at construction; restore right after
+    rules.TIERS[tier] = params
     try:
         env = Env(tier, seed)
     finally:
         rules.TIERS[tier] = old
-    cls = BASELINES[agent]
-    try:
-        pol = cls(seed=seed)
-    except TypeError:
-        pol = cls()
-    play(env, pol)
-    return env.result(agent)
+    return run_episode(env, make_policy_factory(agent)(seed))
 
 
 def run_cell(tier: str, noise: float, seeds: list[int], agents=DEFAULT_AGENTS) -> list[dict]:

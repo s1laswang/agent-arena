@@ -332,3 +332,23 @@ def test_salt_never_tracked():
     assert not tracked, "data/worlds/judge/SALT is committed: judge worlds are regenerable"
     ignored = subprocess.run(["git", "check-ignore", "-q", "data/worlds/judge/SALT"], cwd=root)
     assert ignored.returncode == 0, "add data/worlds/judge/SALT to .gitignore"
+
+
+# ------------------------------------------------------------- reward ranks skill
+def test_monotonicity_order():
+    """random < obvious heuristic < solver on medium (30 dev seeds)."""
+    make_env("medium", 0)  # skip while Env is the stub
+    mono = pytest.importorskip("canary.redteam.monotonicity")
+    rows = {r[0]: r[1] for r in mono.measure("medium", list(range(30)))}
+    if "solver" not in rows or "heuristic" not in rows:
+        pytest.skip(f"policies missing: have {sorted(rows)}")
+    assert rows["random"] < rows["heuristic"] < rows["solver"], rows
+
+
+def test_v03_path_is_active():
+    """Guard: once CONTRACT v0.3 is live, the sign checks above must run their v0.3 branch."""
+    make_env("easy", 0)
+    declared = getattr(TIERS["easy"], "wrong_accusation_score", None)
+    if declared is None:
+        pytest.skip("v0 rules: no wrong_accusation_score")
+    assert wrong_score() == declared == -1.0, (wrong_score(), declared)

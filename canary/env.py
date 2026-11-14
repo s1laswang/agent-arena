@@ -103,24 +103,110 @@ class Env:
                 for n, (d, props, req) in _SPECS.items()]
 
     def instruction(self) -> str:
+        """Plain-English rules. Every TierParams number appears here (harbor/canary-task/instruction.md)."""
         p = self.p
-        return "\n".join([
-            f"You are the security lead of a company with {p.n_employees} employees (ids e00..e{p.n_employees-1:02d}). Exactly one is a mole leaking sensitive documents. Find and accuse them.",
-            f"Tier: {p.name}. The episode lasts at most {p.n_days} days, starting on day 1. Company value V starts at 1.0 and never goes below 0.",
-            f"Scoring: accuse(employee) ends the episode; score = V at that moment if correct; if you accuse an innocent employee the score is {p.wrong_accusation_score:g} (you fired an innocent and the mole keeps leaking). Correctness is not revealed. Not accusing at all scores 0, so only accuse when P(correct)*V - (1-P(correct)) > 0. If day {p.n_days} closes without an accusation, score = 0.",
-            f"Documents: each day {min(p.docs_per_day)}-{max(p.docs_per_day)} (uniform over {list(p.docs_per_day)}) regular docs are published; recipients are one whole department (60%) or the union of two departments (40%). Restricted employees receive no new docs.",
-            f"Leaks: when a day closes, if the mole holds at least one leakable doc (received in the last {p.leak_window_days} days incl. today, not yet leaked) it leaks one with probability {p.p_leak}, chosen uniformly among leakable docs." + (" Careful mole: a canary's weight is multiplied by (1 - share of all employees who received any variant of it)." if p.careful_mole else ""),
-            f"Each leak costs V -{p.leak_damage} immediately and surfaces in the leak feed after a delay uniform over {list(p.delay_choices)} days. Leaked canaries show the variant label the mole received. A restricted mole can still leak docs it already holds.",
-            f"Canaries: plant_canary costs V -{p.canary_cost}, at most {p.canaries_per_day} per day, at most {p.max_variants} distinct variant labels, at least 1 recipient, no restricted recipients. Recipients are exactly the assignment keys; it counts as received today." + (f" Recipients must have clearance >= the canary level (canaries are level {p.canary_level}; every employee has clearance >= 1)." if p.access_constraints else ""),
-            f"Restriction: each restricted employee costs V -{p.restrict_cost_per_day} per closed day.",
-            f"Access logs (closed days only): every employee makes Poisson(rate) accesses per day to random docs it holds; innocent rate {p.log_rate_benign}, mole rate {p.log_rate_mole}. Each access is after_hours with prob {p.p_after_hours_benign} (innocent) or {p.p_after_hours_mole} (mole).",
-            (f"Framing: the mole adds Poisson({p.framing_rate}) fake after-hours accesses per day attributed to another employee: the decoy with prob {p.framing_decoy_share}, otherwise uniform over the other non-mole employees." if p.framing else "No framing in this tier."),
-            ("A decoy exists: one innocent, disgruntled employee writes angry messages. The mole is uniform among the other employees." if p.decoy else "No decoy in this tier; the mole is uniform among all employees."),
-            f"Interviews: answer is evasive with probability {p.p_evasive_innocent} for innocents and {p.p_evasive_innocent} x {p.interview_lr} for the mole; repeating the same (employee, topic) on the same day gives the same answer.",
-            f"Caps: investigative tools ({', '.join(sorted(INVESTIGATIVE_TOOLS))}) are limited to {p.actions_per_day} per day; status, list_*, advance_day and accuse are free. Every call counts toward a global cap of {p.tool_call_cap}; reaching it ends the episode with score 0.",
-            f"Mole behaviour: the mole follows a rule strategy (Mole DSL). It may condition only on: day, days_since_last_leak, i_am_restricted, n_restricted_colleagues, recent_low_recipient_docs (leakable docs with <= {p.low_recipient_threshold} recipients), n_leakable (= n_docs_held), min_recipient_count, max_recipient_count, newest_doc_age_days (all over its leakable docs); it chooses which leakable doc to leak (newest, oldest, most_recipients, fewest_recipients, random_seeded, none) and may frame one colleague (decoy, most_restricted_peer, random_peer, none) by adding one fake after-hours access. It never knows which docs are canaries. p_leak still gates every leak. The default strategy is random_seeded with no extra framing (the rules above).",
-            "Arguments are validated strictly: one employee id per call, no lists, wildcards or names.",
-        ])
+        n = p.n_employees
+        ws = p.wrong_accusation_score
+        single = round(100 * p.p_single_dept_recipients)
+        L = [
+            f"# Canary: catch the mole ({p.name} tier)",
+            "",
+            "## Your job",
+            f"You are the security lead of a company with {n} employees, with ids e00 to e{n-1:02d}. "
+            "Exactly one employee is a mole who leaks sensitive documents. Find the mole and accuse them. "
+            "Every rule and number of the game is written on this page. Nothing is hidden except who the mole is.",
+            "",
+            "## Score",
+            "- The company value V starts at 1.0. It goes down when things cost money, and it never goes below 0.",
+            f"- `accuse(employee)` ends the episode. If you accuse the mole, your score is V at that moment. "
+            f"If you accuse an innocent employee, your score is {ws:g}.",
+            "- The game never tells you whether your accusation was correct.",
+            f"- If day {p.n_days} ends and you have not accused anyone, your score is 0. "
+            f"So accusing is only worth it when P(correct) x V + (1 - P(correct)) x ({ws:g}) is greater than 0.",
+            f"- Every tool call counts toward a total limit of {p.tool_call_cap} calls. "
+            "If you reach the limit, the episode ends with score 0.",
+            "",
+            "## Days",
+            f"- The episode starts on day 1 and lasts at most {p.n_days} days. `advance_day` ends the current day.",
+            f"- {', '.join(sorted(INVESTIGATIVE_TOOLS))} each use one of your {p.actions_per_day} actions per day. "
+            "After that they fail until you call `advance_day`. `status`, `list_employees`, `list_documents`, "
+            "`advance_day` and `accuse` are free.",
+            "",
+            "## Documents",
+            f"- Each day, between {min(p.docs_per_day)} and {max(p.docs_per_day)} new sensitive documents are published "
+            f"(equally likely: {', '.join(map(str, p.docs_per_day))}).",
+            f"- {single}% of documents go to everyone in one department. The other {100 - single}% go to everyone in two departments.",
+            "- Restricted employees do not receive new documents. An employee holds every document it ever received.",
+            "",
+            "## How leaks work",
+            f"- At the end of each day, the mole may leak one document that it received in the last {p.leak_window_days} days "
+            "(today included) and has not leaked before.",
+            f"- If the mole has such a document, it leaks one with probability {p.p_leak}. "
+            "By default it picks one at random, with every eligible document equally likely."
+            + (" This mole is careful: for a canary, the chance of being picked is multiplied by "
+               "(1 - the share of all employees who received any variant of that canary)." if p.careful_mole else ""),
+            f"- Each leak lowers V by {p.leak_damage} right away. It appears in the leak feed after a delay of "
+            f"{' or '.join(map(str, p.delay_choices))} day(s), each equally likely.",
+            "- A restricted mole can still leak documents it already holds.",
+            "",
+            "## Canaries (traps)",
+            f"- `plant_canary(doc_title, assignment)` creates a new document today. It costs {p.canary_cost} of V.",
+            f"- You can plant at most {p.canaries_per_day} per day. `assignment` maps employee ids to variant labels. "
+            f"Use at most {p.max_variants} different labels and at least 1 recipient. Restricted employees cannot receive a canary.",
+            "- The recipients are exactly the employees in `assignment`. They count as having received the canary today.",
+            "- If the canary leaks, the leak feed shows the variant label the mole received"
+            + (f" with probability {p.fingerprint_accuracy}. Otherwise (fingerprint recovery from a rewritten leak is imperfect) it shows one of the OTHER variant labels planted for that canary, chosen uniformly. One leaked label is therefore evidence, not proof." if p.fingerprint_accuracy < 1.0 else "."),
+        ]
+        if p.access_constraints:
+            L.append(f"- Each employee has a clearance level (1 to 3). Canaries are level {p.canary_level}, "
+                     "so every employee may receive one.")
+        L += [
+            "",
+            "## Restricting access",
+            f"- `restrict_access(employee)` costs {p.restrict_cost_per_day} of V for every day that ends while the employee is restricted. "
+            "`unrestrict_access` lifts it.",
+            "",
+            "## Evidence",
+            f"- Access logs exist for days that have ended. Every employee opens documents it holds a random number of times "
+            f"per day (Poisson). The average is {p.log_rate_benign} for an innocent employee and {p.log_rate_mole} for the mole.",
+            f"- Each access is marked after_hours with probability {p.p_after_hours_benign} (innocent) or {p.p_after_hours_mole} (mole).",
+            (f"- Framing is on in this tier. Each day the mole adds fake after-hours accesses for other employees "
+             f"(Poisson, average {p.framing_rate}). Each fake access goes to the decoy with probability {p.framing_decoy_share}, "
+             "and otherwise to a random employee who is neither the mole nor the decoy." if p.framing else "- Framing is off in this tier."),
+            ("- There is a decoy: one innocent, unhappy employee who writes angry messages. The mole is equally likely to be "
+             "any other employee." if p.decoy else "- There is no decoy. The mole is equally likely to be any employee."),
+            f"- Interviews: an innocent answers evasively with probability {p.p_evasive_innocent}. The mole answers evasively "
+            f"with probability {p.p_evasive_innocent} x {p.interview_lr}. Asking the same employee about the same topic on the same day "
+            "gives the same answer.",
+            f"- `search_messages` returns at most {p.search_max_results} results.",
+            "",
+            "## How the mole decides (Mole DSL)",
+            "- The mole follows a fixed list of if-then rules. The first rule that matches is used; otherwise a default rule applies.",
+            "- A rule can only look at these facts: the day number, days since its last leak, whether it is restricted, "
+            "how many colleagues are restricted, the number of documents it could leak, the fewest and most recipients "
+            f"of those documents, the age of the newest one, and how many of them have at most {p.low_recipient_threshold} recipients.",
+            "- A rule chooses which document to leak: newest, oldest, most recipients, fewest recipients, random, or none.",
+            "- A rule may also frame one colleague (the decoy, the first restricted colleague, or a random colleague). "
+            "Framing adds one fake after-hours access for that colleague.",
+            f"- The mole never knows which documents are canaries. The {p.p_leak} leak probability above still applies to every leak.",
+            "- The default mole leaks a random document and does no extra framing, exactly as described above.",
+            "",
+            "## Rules for tool arguments",
+            "- Give exactly one employee id per call, such as e07. Lists, wildcards and names are rejected.",
+            "- Unknown arguments are rejected. Invalid calls still count toward the total call limit.",
+        ]
+        if p.noise != 1.0:
+            L.append(f"- Difficulty setting (noise) = {p.noise:g}. It is already included in the numbers above.")
+        L += ["", "## Exact parameters", "The same numbers as above, one per line (some only matter when their feature is on):"]
+        for k, v in p.to_dict().items():
+            if isinstance(v, (list, tuple)):
+                v = ", ".join(map(str, v))
+            elif isinstance(v, bool):
+                v = "on" if v else "off"
+            elif isinstance(v, float):
+                v = f"{v:g}"
+            L.append(f"- {k}: {v}")
+        return "\n".join(L) + "\n"
 
     @property
     def done(self) -> bool:
@@ -389,7 +475,13 @@ class Env:
             delta = rng.choice(p.delay_choices)
             item = {"surfaced_day": d + delta, "doc_id": leak, "title": doc["title"]}
             if doc["is_canary"]:
-                item["variant"] = next(k for k, v in doc["variants"].items() if w.mole in v)
+                true_v = next(k for k, v in doc["variants"].items() if w.mole in v)
+                others = sorted(k for k in doc["variants"] if k != true_v)
+                # v0.4: imperfect fingerprint recovery (no RNG draw when accuracy is 1.0 -> v0 determinism)
+                if p.fingerprint_accuracy < 1.0 and others and rng.random() >= p.fingerprint_accuracy:
+                    item["variant"] = rng.choice(others)
+                else:
+                    item["variant"] = true_v
             self._leaked.add(leak)
             self._feed.append(item)
             self._charge(p.leak_damage)

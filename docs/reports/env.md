@@ -14,3 +14,8 @@
 - Done (verified: 200 dev seeds): `heuristic` baseline (leak-recipient intersection + halving canary). Score/acc easy .74/99%, medium .67/96%, hard .41/59%.
 - **Finding: easy/medium too easy, since an obvious heuristic nearly solves them.** Calibration must cut leak informativeness (e.g. more recipients per doc, max_variants=2 everywhere, longer delays, careful mole on medium). Will tune with solver numbers at 04:00.
 - In progress: Mole DSL (sim-engine), solver v1 (bayes-solver).
+
+## 03:20 status
+- Done (verified: make test 260 passed on justSilas 744f503): solver v1 (acc 99.5/99/97.5%, score .83/.75/.72 under old scoring), regret v1, Mole DSL (default = v0 ledger on 200 seeds), contract v0.2+v0.3 (wrong accusation = -1), Forge compat (features, !=, decide(view)).
+- In progress: bayes-solver: v0.3 accuse rule, DSL robustness (20 random strategies), recalibration (heuristic <=55% solver on medium, logs-only <=2x chance), ETA 05:00.
+- Next: instruction.md, judge worlds (07:30), GeminiWorldText wiring.

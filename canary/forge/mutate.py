@@ -15,7 +15,7 @@ from typing import Any, Protocol
 FEATURES = ["n_docs_held", "min_recipient_count", "max_recipient_count", "newest_doc_age_days",
             "days_since_last_leak", "i_am_restricted", "n_restricted_colleagues",
             "recent_low_recipient_docs", "day"]
-FEATURE_RANGES = {"n_docs_held": (0, 12), "min_recipient_count": (1, 20), "max_recipient_count": (1, 30),
+FEATURE_RANGES = {"n_leakable": (0, 12), "n_docs_held": (0, 12), "min_recipient_count": (1, 20), "max_recipient_count": (1, 30),
                   "newest_doc_age_days": (0, 3), "days_since_last_leak": (0, 14), "i_am_restricted": (0, 1),
                   "n_restricted_colleagues": (0, 10), "recent_low_recipient_docs": (0, 6), "day": (1, 14)}
 OPS = ["<", "<=", ">", ">=", "==", "!="]
@@ -23,6 +23,15 @@ LEAK_SELECTORS = ["newest", "oldest", "most_recipients", "fewest_recipients", "r
 FRAME_SELECTORS = ["decoy", "most_restricted_peer", "random_peer", "none"]
 MAX_RULES = 12
 MAX_CONDS = 4
+try:  # the real DSL is the source of truth for the vocabulary
+    from canary.mole import dsl as _dsl
+    FEATURES = list(_dsl.FEATURES)
+    OPS = list(_dsl.OPS)
+    LEAK_SELECTORS = list(_dsl.LEAK_SELECTORS)
+    FRAME_SELECTORS = list(_dsl.FRAME_SELECTORS)
+    MAX_RULES = _dsl.MAX_RULES
+except ImportError:  # pragma: no cover
+    _dsl = None
 
 DEFAULT_STRATEGY_JSON: dict = {"rules": [], "default": {"leak": "random_seeded", "frame": "none"}}
 
@@ -65,17 +74,21 @@ def _local_validate(obj: Any) -> dict:
 
 
 def validate_strategy(obj: Any) -> dict:
-    """Return a normalised strategy dict or raise ValueError. The one place to swap validators."""
+    """Return a normalised strategy dict or raise ValueError. The one place to swap validators.
+    With the real DSL, the result is MoleStrategy.from_json(obj).to_json() (sans name): the canonical form."""
     norm = _local_validate(obj)
-    try:
-        from canary.mole.dsl import MoleStrategy  # type: ignore
-    except ImportError:
+    if _dsl is None:
         return norm
     try:
-        MoleStrategy.from_json(obj)
+        out = _dsl.MoleStrategy.from_json(norm).to_json()
     except Exception as e:  # noqa: BLE001
         raise ValueError(f"DSL rejected strategy: {e}") from e
-    return norm
+    out.pop("name", None)
+    for r in out["rules"]:
+        for c in r["if"]:
+            if isinstance(c[2], float) and c[2].is_integer():
+                c[2] = int(c[2])
+    return out
 
 
 def default_strategy_json() -> dict:
@@ -111,7 +124,7 @@ class StubMutator:
     def _cond(self):
         r = self.rng
         f = r.choice(FEATURES)
-        lo, hi = FEATURE_RANGES[f]
+        lo, hi = FEATURE_RANGES.get(f, (0, 10))
         return [f, r.choice(OPS), r.randint(lo, hi)]
 
     def _action(self):

@@ -82,7 +82,7 @@ REAL means model id, date and run id printed. Accidental calls from pytest or pl
 
 | Role | File | REAL run or pending owner |
 |---|---|---|
-| staff | `agents/staff.py`, `scripts/gemini_seat.py`, `scripts/cli_seat.py` | pending (lead-harness). Cited so far: gemini-3.5-flash day 1002 reward 0, codex gpt-6.1-sol day 1000 reward 0, gemini-4-carbon clean day only, all 14 Nov, finance_ap seat, n=1 day each, folder `results/frontier/<model>/<commit>/`. No commit or run id given, not rescored, so not REAL. Cost: NOT FOUND |
+| staff | `agents/staff.py`, `scripts/gemini_seat.py`, `scripts/cli_seat.py` | pending (lead-harness). Cited so far: gemini-3.5-flash day 1002 reward 0, codex gpt-6.1-sol day 1000 reward 0, gemini-4-carbon clean day only, all 14 Nov, finance_ap seat, n=1 day each, folder `results/frontier/<model>/<commit>/`. No commit or run id given, not rescored, so not REAL. Every real staff row before d9ac528f used a prompt saying 60 tool calls against a true 200, so all are "as first measured (prompt understated budget)"; true-budget reruns on momin 5251e446 are running. Cost: NOT FOUND |
 | reference | `agents/gemini_reference.py` | pending (lead-harness). No real run reported |
 | sleeper and strategy mutation | `agents/sleeper_agent.py` | pending (lead-attack, atk-gen). No real run reported |
 | failure analyst | `agents/analyst.py`, `lab/analyse.py --gemini` | pending (lab-analyst). No real run reported |

@@ -87,3 +87,38 @@ def test_solver_robust_to_random_dsl_moles():
         n += 1
         ok += r.correct
     assert n >= 15 and ok / n >= 0.65  # TODO(bayes-solver): restore 0.85 on tiers v1, (ok, n)
+
+
+def test_leak_matching_bounded_worst_case():
+    """Regression (HARNESS 4-min/1.9GB report): adversarial feed with every day leaking, wide delays,
+    every doc held by everyone. Must stay fast and bounded."""
+    import time
+    from dataclasses import replace
+    P = replace(TIERS["hard"], delay_choices=(1, 2, 3, 4, 5))
+    emps = [f"e{i:02d}" for i in range(30)]
+    o = Observations(employees=emps, today=15)
+    for d in range(1, 15):
+        for j in range(4):
+            o.docs[f"d{d}-{j}"] = Doc(f"d{d}-{j}", d, frozenset(emps))
+    o.closed_days = set(range(1, 15))
+    o.leak_days = set(range(1, 15))
+    o.feed = [FeedItem(min(15, d + 1 + (d % 3)), f"d{d}-0") for d in range(1, 14)]
+    t = time.perf_counter()
+    posterior(o, P, behaviour_temper=0)
+    assert time.perf_counter() - t < 5.0
+
+
+def test_act_time_bounded_judge_seeds():
+    import os, time
+    from canary.env import Env
+    os.environ.setdefault("CANARY_WORLD_SECRET", "regression-secret")
+    for tier in ("medium", "hard"):
+        for seed in (900003, 900035):
+            env = Env(tier, seed)
+            p = SolverPolicy(None)
+            p.reset(env.tools_spec(), env.instruction())
+            while not env.done:
+                t = time.perf_counter()
+                tool, args = p.act(list(env.history))
+                assert time.perf_counter() - t < 1.0
+                env.call(tool, args)

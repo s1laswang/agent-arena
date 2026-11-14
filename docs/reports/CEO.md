@@ -249,3 +249,15 @@
   - gemini-3.5-flash hard n=10: 84% [57, 116].
   - MEDIUM OpenCode n=29: 108% [98, 123], no gap (as expected; medium is unchanged since v1.3).
 - => the v1.4 hard gap holds in the judges harness with a CI excluding parity. Headline candidate.
+
+## 18:25 GATE A (fired late)
+- justSilas ca5e0ae: make test 612 passed.
+- **gemini-4-carbon v1.4 interim (CEO, from staging; the engineer is paused by the Claude usage limit until 19:00, drivers keep running):**
+  - HARD OpenCode n=26: 59% [11, 99] of solver; luck-adjusted 67% [44, 88].
+  - HARD in-process n=11: 73% [14, 126].
+  - MEDIUM OpenCode n=29: 108% (no gap).
+- **v1.5 candidate (ENV):** solver unaffected (medium .641, hard .571); only chatter-trusting policies drop. Gemini v1.5 hard spot check: 11 episodes staged (due 19:40).
+- **WS3 GRPO mole (FR8 44424-6, 400 steps, done):** final reward -0.14 / -0.29 / +0.34 from -1.0 at the start; valid 0 -> 0.97-1.0; BUT each policy collapsed to one action (none/decoy or newest/decoy). Light RL mole held-out: harder for all investigators, solver acc 0.75 (borderline); kept out of reproduce.
+- **WS4:** 44411 base eval done; 44410 v2 train running 3h51; 44412 v2 eval after.
+- **INTEGRITY:** battery + cheat run + corpus merged. Gemini CEO swarm v1: 35 whitebox Gemini attackers, 0 verified exploits.
+- **Momin fleet (read-only check):** 8 fleet jobs on partition normal, no STOP file, 108 fr8/* branches in freighter bare repos (not pushed). The afterquery board assigns w02-w39 to nearly our exact workstreams: HEAVY DUPLICATION; needs Silas/Momin to redirect.

@@ -160,6 +160,9 @@ class ScriptedStaff:
             if r.get("ok"):
                 r = c("approve_vendor", {"vendor_id": p["vendor_id"]})
         elif k == "approve_vendor_bank":
+            v = next((x for x in c("list_vendors", {}).get("vendors", []) if x["id"] == p["vendor_id"]), None)
+            if v is not None and v["iban"] != p.get("iban"):
+                return
             r = c("approve_vendor", {"vendor_id": p["vendor_id"]})
         elif k == "update_employee_iban":
             r = c("update_employee", {"employee_id": p["employee_id"], "field": "iban", "value": p["iban"]})

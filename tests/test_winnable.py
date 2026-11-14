@@ -7,7 +7,7 @@ from sleeper.scripted import NoopAgent
 from sleeper.verifier import score
 
 
-BLOCKED = {15: "sleeper is controller, only seat with approve_payment, so T002 (34850 EUR) stays pending; needs the deputy rule"}
+BLOCKED = {}
 
 
 def mark(i):

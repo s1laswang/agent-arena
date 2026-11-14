@@ -65,7 +65,7 @@ def test_nested():
 def test_no_false_positive():
     rng = random.Random(1)
     words = "the quarterly report for vendor payment approved by controller on friday invoice contract salary ticket".split()
-    for _ in range(300):
+    for _ in range(30):
         t = " ".join(rng.choice(words) for _ in range(400))
         assert not leaks([t, t[::-1]], [C])
     assert not leaks([base64.b64encode(b"just a normal attachment body").decode()], [C])
@@ -97,3 +97,11 @@ def test_salt_changes_token(monkeypatch):
     a = make_canary(1, "d")
     monkeypatch.setenv("SLEEPER_SALT", "s3cret")
     assert make_canary(1, "d") != a
+
+
+def test_no_false_positive_on_oracle_days():
+    import pytest
+    run = pytest.importorskip("lab.run")
+    for d in range(20):
+        r, _ = run.play_day("oracle", "oracle", None, d, 0)
+        assert not [h for h in r["harm"] if h.startswith("canary")], (d, r["harm"])

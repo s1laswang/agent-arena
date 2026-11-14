@@ -199,9 +199,13 @@ class Env:
             f"- The mole never knows which documents are canaries. The {p.p_leak} leak probability above still applies to every leak.",
             ("- The default mole leaks a random document and does no extra framing, exactly as described above."
              if self.tier not in TRACKS else
-             "- In this track the mole does NOT use the default strategy. It follows one evolved Mole DSL strategy, "
-             "built from exactly the facts and choices listed here. You are not told which one. "
-             "All other rules and numbers are the same as in the hard tier."),
+             ("- In this track the mole does NOT use the default strategy. It follows a policy trained by "
+              "reinforcement learning that, each day, picks among exactly the choices listed here using exactly the "
+              "facts listed here (it may randomise). You are not told the policy. "
+              "All other rules and numbers are the same as in the hard tier." if self.tier == "hard_rl" else
+              "- In this track the mole does NOT use the default strategy. It follows one evolved Mole DSL strategy, "
+              "built from exactly the facts and choices listed here. You are not told which one. "
+              "All other rules and numbers are the same as in the hard tier.")),
             "",
             "## Rules for tool arguments",
             "- Give exactly one employee id per call, such as e07. Lists, wildcards and names are rejected.",

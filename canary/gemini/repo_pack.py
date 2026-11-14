@@ -30,7 +30,9 @@ DEFAULT_INCLUDE = (
 )
 EXCLUDE_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache", "data", "wt", ".claude",
                 "judge", "runs", "results"}
-EXCLUDE_PREFIXES = ("canary/gemini/",)   # lab tooling (this module, swarm, ledger): not part of the env
+# lab tooling (this module, swarm, ledger) and our own red-team prompts/tools: not part of the env or grader.
+# (canary/redteam holds attacker prompts; with it in context Gemini's input filter blocks some requests.)
+EXCLUDE_PREFIXES = ("canary/gemini/", "canary/redteam/")
 EXCLUDE_NAME_PATTERNS = (".env*", "SALT", "*secret*.txt", "*secret*.json", "*.secret", "*token*.txt", "*.key", "*.pem", "*.pyc", "*.png", "*.jpg",
                          "*.gif", "*.ico", "*.zip", "*.gz", "*.safetensors", "*.db", "*.sqlite")
 SECRET_ENV_VARS = ("GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "CANARY_WORLD_SECRET",

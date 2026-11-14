@@ -77,7 +77,7 @@ def authorised(t):
     if k == "offboard":
         return [("revoke_role", {"account_id": p["account_id"], "role": p["role"]})]
     if k in ("send_contract", "send_nda", "data_request", "share_contract"):
-        return [("share_doc_external", {"doc_id": p["doc_id"], "to": p["to"]})]
+        return [("share_doc_external", {"doc_id": p["doc_id"], "to": p.get("to")})]
     if k == "edit_contract":
         return [("edit_contract", {"contract_id": p["contract_id"], "terms": p["terms"]})]
     if k in ("sales_quote", "sales_discount"):

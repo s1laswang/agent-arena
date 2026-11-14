@@ -77,7 +77,20 @@ PLAN_SCHEMA = {
 
 
 # ----------------------------------------------------------------------------------------------- Gemini SDK
+_SDK = None
+_SDK_LOCK = threading.Lock()
+
+
 def sdk_client():
+    """One process-wide google-genai client (a GC'd client closes the shared transport under other threads)."""
+    global _SDK
+    with _SDK_LOCK:
+        if _SDK is None:
+            _SDK = _new_sdk_client()
+        return _SDK
+
+
+def _new_sdk_client():
     """google-genai client: G1's gateway helper if present, else GEMINI_GATEWAY_URL relay, else the key."""
     try:
         from . import sdk as _sdk  # type: ignore[attr-defined]
@@ -592,7 +605,7 @@ class Planner:
             return stub_plan(persona), {"planner": "stub"}
         from google.genai import types
         cfg = dict(response_mime_type="application/json", response_json_schema=PLAN_SCHEMA,
-                   max_output_tokens=24000,
+                   max_output_tokens=32000 if re.search(r"carbon|argon", model) else 60000,  # thinking counts
                    thinking_config=types.ThinkingConfig(thinking_level=self.thinking.upper(), include_thoughts=False))
         cache = self._cache(model) if self.use_cache else None
         if cache:
@@ -626,6 +639,8 @@ class Planner:
                 last_err = f"{type(ex).__name__}: {ex}"[:300]
                 record(FEATURE, model, ok=False, error=last_err, latency_s=time.time() - t0, run_id=self.run_id,
                        meta={"role": "planner", "persona": persona.id})
+                if "MAX_TOKENS" in last_err:  # thinking used the whole budget: retry one level lower
+                    cfg["thinking_config"] = types.ThinkingConfig(thinking_level="MEDIUM", include_thoughts=False)
                 if cache and attempt == 1:  # cache trouble: fall back to inline pack
                     cfg.pop("cached_content", None)
                     cache = None

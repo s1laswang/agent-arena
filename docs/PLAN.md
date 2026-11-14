@@ -12,7 +12,7 @@ Judges' procedure: a 10-min demo, then a rerun with **Harbor + OpenCode over MCP
 
 | # | Rubric line (verbatim intent) | Pts | Now | Evidence a judge can open | Status / owner |
 |---|---|---|---|---|---|
-| G1 | Frontier agent **consistently** below a reference run we demonstrate | 30 | 22 | gemini-4-carbon (default thinking = medium) on v1.4 hard seeds 0–9: 66% [5%, 117%] of the solver, n=10 (`results/gemini/ladder.md`, imported run; its episodes and the n=26 run (59% [11, 99]) are not committed yet). Harbor judge path (6 tasks, one run each): gemini-4-carbon 0.50 vs oracle 0.76, below on 6/6 (paired diff 0.25, 95% t-interval [−0.07, +0.58]; sign test p = 0.03 two-sided) | ☐ n ≥ 60 hard (fleet seeds 30–59, measurement engineer) |
+| G1 | Frontier agent **consistently** below a reference run we demonstrate | 30 | – | **Gap not established.** In-process bake-off, rules v1.4, paired seeds, n=10 per tier (21:26): gemini-4-carbon matches or beats the solver. Medium solver +0.734±0.050 vs carbon +0.680±0.085. Hard solver +0.433±0.324 vs carbon +0.509±0.136. Smaller Gemini models sat below the solver. The ladder's imported hard cell (66% [5%, 117%], n=10) includes parity, and the Harbor 6-task demo (0.50 vs 0.76, CI includes 0) is not this result | ☐ not a demonstrated gap |
 | G2 | Reproducible **across repeated runs** | (in G) | | `results/harbor/rehearsal/`: 3 runs × 10 hard tasks via Harbor + OpenCode, with the oracle + both baselines | ☐ A2, after 20:00 |
 | G3 | The judges' rerun lands on the gap tier | (in G) | | `python harbor/build.py` defaults to hard, judge seeds 900000–900009, fixed before any run | ☐ A1, harness engineer, 20:30 |
 | G4 | Not one model's quirk | (in G) | | gemini-3.6-flash (requested as 3.5-flash) on hard is within the CI of the solver, n=6: 97% [76%, 126%] medium thinking and 106% [82%, 145%] high (`results/gemini/ladder.md`); Codex gpt-5.5 v1.3 rows | ☐ A4 |
@@ -28,8 +28,8 @@ Judges' procedure: a 10-min demo, then a rerun with **Harbor + OpenCode over MCP
 
 **Demo (10 min), mapped to the points:**
 1. 0:00–1:00 The story: a company bleeding value to a mole (canary-trap practice).
-2. 1:00–3:00 **Live**: `make reproduce` prints the table (C2), then solver vs gemini-4-carbon on the same hard seed in the viewer, stopping at the "Fooled" moment: Gemini accuses at P≈0.4 (G1, D1).
-3. 3:00–5:00 The rehearsal plot: 3 judge-path runs, each below the oracle (G2), plus the luck-adjusted ratio.
+2. 1:00–3:00 **Live**: `make reproduce` prints the table (C2). Do not present gemini-4-carbon as below the solver: the in-process n=10 bake-off is parity (G1).
+3. 3:00–5:00 The rehearsal plot, if it exists. Do not say each run is below the oracle unless that run is. The n=10 bake-off is not.
 4. 5:00–6:30 Why it fails: the failure gallery plus the hint ablation (D1–D3).
 5. 6:30–8:00 Integrity: the EXPLOITS.md table, the cheat run at −1, the Gemini swarm at 0/51 (R1–R3).
 6. 8:00–9:00 Tiebreak: the small-model curve, honest (T).
@@ -54,7 +54,7 @@ Judges' procedure: a 10-min demo, then a rerun with **Harbor + OpenCode over MCP
 
 ### Momin's fleet: proposed lanes (for Silas/Momin to set on the board; the CEO does NOT touch fleet files)
 To avoid duplicating the Claude org, the fleet's **afterquery team** takes the IDEAS.md weak points that need breadth, not core-code changes:
-1. **More frontier families on paired v1.4 seeds** (weak point 1), using Momin's runners: a `claude -p` seat, gemini-3.5-flash, other available models. Paired with the solver, labelled REAL with model id and commit; the gemini-4-carbon headline stays with the CEO engineer.
+1. **More frontier families on paired v1.4 seeds**, using Momin's runners: a `claude -p` seat and other available models. Paired with the solver. The gemini-4-carbon in-process n=10 bake-off is parity (matches or beats the solver), so it is not a gap headline. gemini-3.6-flash (requested as 3.5-flash) on hard is within the CI of the solver, n=6 (`results/gemini/ladder.md`).
 2. **Research grounding** (weak point 4): sourced papers on organisational bias and real company-failure and insider-leak cases → `docs/research-biases.md`, for Ivar's video and the v1.5 instructions.
 3. **Large exploit sweeps on v1.4 and v1.5** (Momin's 265k-style random search plus his cheat corpus), with findings reported to HEAD-INTEGRITY and the CEO, never patched by the fleet.
 4. **The office replay dashboard with the "Fooled" moment** for Canary episodes (demo; for Ivar).

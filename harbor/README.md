@@ -205,9 +205,9 @@ Jobs: `results/harbor/{oracle,do_nothing,stop_early}/`. There were 0 exceptions,
 | hard 900000 | 0.60 | 0.50 | −0.10 | correct, day 14, 158 calls |
 | hard 900001 | 0.67 | 0.62 | −0.05 | correct, day 8, 85 calls |
 | hard 900002 | 0.71 | 0.46 | −0.25 | correct, day 13, 154 calls |
-| **mean** | **0.757** | **0.503** | **−0.253** | below the solver on all 6 tasks |
+| **mean** | **0.757** | **0.503** | **−0.253** | lower on these 6 tasks; not a v1.4 gap |
 
-Jobs: `results/harbor/g-oracle/` and `results/harbor/g-gemini-try2/` (medium 900000) plus `results/harbor/g-gemini-rest/` (the other 5). Every score is the server-side ledger's (`verifier/ledger.json`), and each trial keeps the agent's full OpenCode transcript (`agent/opencode.txt`). Harbor reports `NonZeroAgentExitCodeError` on most Gemini trials because OpenCode exits non-zero after the game has already ended. The ledgers show completed episodes, so the scores are real. This is a small sample (6 tasks, one run each): read it as a judge-path demonstration, not as the benchmark's gap estimate.
+Jobs: `results/harbor/g-oracle/` and `results/harbor/g-gemini-try2/` (medium 900000) plus `results/harbor/g-gemini-rest/` (the other 5). Every score is the server-side ledger's (`verifier/ledger.json`), and each trial keeps the agent's full OpenCode transcript (`agent/opencode.txt`). Harbor reports `NonZeroAgentExitCodeError` on most Gemini trials because OpenCode exits non-zero after the game has already ended. The ledgers show completed episodes, so the scores are real. This is a small sample (6 tasks, one run each). It is not a v1.4 frontier gap. The later in-process bake-off (rules v1.4, paired seeds, n=10 per tier, 21:26) has gemini-4-carbon matching or beating the solver: medium +0.680±0.085 vs solver +0.734±0.050, hard +0.509±0.136 vs solver +0.433±0.324. Gap not established.
 
 ```bash
 # the working command; the key must reach OpenCode as GOOGLE_GENERATIVE_AI_API_KEY

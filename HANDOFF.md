@@ -163,6 +163,8 @@ Add a paragraph **under** the table, not in the headline cells:
 
 The paragraph must include: the flash-lite model id, train seeds `100000`–`100002`, held-out seeds `800000`–`800004`, tier `medium`, rules `v1.4`, zero-shot mean, in-context mean, and **reward change** (`paired_reward_change` in `results/gemini_bakeoff/tiebreaker/summary.json`). Say the notes came from that model's own training episodes, that train and eval seeds are disjoint, and that the weights were not updated. A change of about 0 is a result. Write it. Do not claim the model learned if the delta is inside the CI.
 
+**Measured 21:26 (do not overwrite with a gap claim).** In-process, rules v1.4, paired seeds, n=10 per tier: gemini-4-carbon matches or beats the solver (medium solver +0.734±0.050 vs carbon +0.680±0.085; hard solver +0.433±0.324 vs carbon +0.509±0.136). Smaller Gemini models sat below the solver. Gap not established. The tiebreaker's whole notes gain is the generic hint: notes minus hint is −0.039±0.204. Say that confound. Do not say the notes taught the task.
+
 ### GB-6 — pitch
 
 `pitch/GEMINI.md` is the Gemini pitch. There is no slide file in the repo. Add two sections there, titled as slides, using only numbers from the real `summary.md`:

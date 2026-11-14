@@ -4,7 +4,7 @@
 response. Nobody can measure whether they actually reason under uncertainty or just pattern-match.
 Canary is an RL environment where an agent is head of security at a simulated company and must catch
 the one mole leaking documents (canary traps, logs, interviews), while company value bleeds out.
-A Bayesian reference solver sets the bar; frontier agents fall below it, and we show why.
+A Bayesian reference solver sets the bar. A v1.4 frontier gap is not established. On an in-process bake-off (rules v1.4, paired seeds, n=10 per tier, 21:26) gemini-4-carbon matches or beats the solver: medium solver +0.734±0.050 vs carbon +0.680±0.085; hard solver +0.433±0.324 vs carbon +0.509±0.136. Smaller Gemini models sat below the solver. The tiebreaker's notes gain is the generic hint (notes minus hint −0.039±0.204), not a weight update and not evidence the model learned the task.
 
 **2. How Gemini is integrated: six roles, all behind one `canary.llm` client with structured output**
 (`response_schema` + pydantic validation + deterministic fallback on every call):

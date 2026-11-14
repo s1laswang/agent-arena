@@ -7,6 +7,7 @@
 - accuracy = correct accusations / episodes; accused = episodes that ended in an accusation
 - `/ solver` = agent mean / solver mean on the same tier (ratio of means); `pass^k` only for agents with k repeated runs per seed
 - **paired runs**: reference and baselines played in this invocation on the same worlds (one secret). **reported agent runs**: frontier-agent episodes replayed from data/runs/committed/, played on the team's worlds, so they are NOT paired with this run; compare them by mean ± CI only
+- **v1.4 frontier gap: not established.** This table has no committed v1.4 frontier episodes. An in-process bake-off on rules v1.4, paired seeds, n=10 per tier (21:26) has gemini-4-carbon matching or beating the solver: medium solver +0.734±0.050 vs carbon +0.680±0.085; hard solver +0.433±0.324 vs carbon +0.509±0.136. Smaller Gemini models sat below the solver. The tiebreaker's notes gain is the generic hint (notes minus hint −0.039±0.204), not a learned policy.
 - reported runs are grouped by tier version and never pooled: v1.4 (current rules) first, then earlier versions as history (not comparable to the paired table; `/ solver` left blank). Builds under data/runs/committed/superseded/ are excluded
 - per-episode timeout guard: 60 s; no episode timed out
 

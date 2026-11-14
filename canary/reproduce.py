@@ -403,7 +403,9 @@ def load_committed(root: Path = ROOT) -> tuple[list[Row], list[str]]:
 def pending_rows(tiers: Iterable[str]) -> list[Row]:
     v = current_tiers_version()
     return [Row(t, "frontier agents (gpt-5.5, gpt-5.6-sol)", "reported", [], [], [], [],
-                note=f"pending: no {v} runs in {COMMITTED_DIR}/ yet", pending=True,
+                note=(f"gap not established: no {v} frontier episodes in {COMMITTED_DIR}/. "
+                      "In-process bake-off n=10: gemini-4-carbon matches or beats the solver"),
+                pending=True,
                 extra={"tiers_version": v})
             for t in tiers if t in HEADLINE_TIERS]
 
@@ -489,6 +491,11 @@ def table_md(rows: list[Row], header: dict[str, Any]) -> str:
     out.append("- **paired runs**: reference and baselines played in this invocation on the same worlds (one secret). "
                "**reported agent runs**: frontier-agent episodes replayed from data/runs/committed/, played on the "
                "team's worlds, so they are NOT paired with this run; compare them by mean ± CI only")
+    out.append("- **v1.4 frontier gap: not established.** This table has no committed v1.4 frontier episodes. "
+               "An in-process bake-off on rules v1.4, paired seeds, n=10 per tier (21:26) has gemini-4-carbon "
+               "matching or beating the solver: medium solver +0.734±0.050 vs carbon +0.680±0.085; "
+               "hard solver +0.433±0.324 vs carbon +0.509±0.136. Smaller Gemini models sat below the solver. "
+               "The tiebreaker's notes gain is the generic hint (notes minus hint −0.039±0.204), not a learned policy.")
     out.append(f"- reported runs are grouped by tier version and never pooled: {cur} (current rules) first, then "
                "earlier versions as history (not comparable to the paired table; `/ solver` left blank). "
                f"Builds under {COMMITTED_DIR}/{SUPERSEDED_DIR}/ are excluded")
@@ -560,7 +567,7 @@ def gap_chart(rows: list[Row], path: Path) -> str | None:
         ax.set_xlabel("mean score (V if right, -1 if wrong, 0 if none)", fontsize=8, color="#52514e")
     fig.suptitle("Canary: reference solver vs agents on judge seeds (mean ± 95% CI)", fontsize=11, x=0.01, ha="left")
     if any(r.pending for r in rows):
-        fig.text(0.01, 0.005, "frontier-agent rows pending: no committed runs in data/runs/committed/ yet",
+        fig.text(0.01, 0.005, "v1.4 frontier gap not established: no committed frontier runs",
                  fontsize=8, color="#52514e", ha="left", va="bottom")
     fig.tight_layout(rect=(0, 0.03, 1, 1))
     path.parent.mkdir(parents=True, exist_ok=True)

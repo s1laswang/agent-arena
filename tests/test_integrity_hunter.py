@@ -90,8 +90,6 @@ def test_h8_judge_seed_not_recoverable_with_secret(monkeypatch):
     assert seed_attack.recover_mole("easy", obs, range(900_000, 900_030)) is None
 
 
-@pytest.mark.xfail(strict=False, reason="H8 unfixed: canary/world.py _key() falls back to b'public' for judge "
-                   "seeds when CANARY_WORLD_SECRET and SALT are missing (warns instead of failing closed)")
 def test_h8_judge_seed_fails_closed_without_secret(monkeypatch):
     monkeypatch.delenv("CANARY_WORLD_SECRET", raising=False)
     import canary.world as W
@@ -125,7 +123,6 @@ def _judge_moles_fresh_process(tmp_path):
     return out.stdout.strip().split(",")
 
 
-@pytest.mark.xfail(strict=False, reason="#24 open until contract v0.5: per-start random secret for judge seeds")
 def test_24_judge_worlds_differ_across_server_starts_without_secret(tmp_path):
     """Contract v0.5 (CEO): with no CANARY_WORLD_SECRET/SALT, each server start draws a fresh random
     in-memory secret, so two starts serve different judge worlds and neither equals the public-key world."""

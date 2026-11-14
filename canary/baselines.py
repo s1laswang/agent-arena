@@ -131,9 +131,20 @@ class DoNothing(ScriptedPolicy):
     name = "do_nothing"
 
 
-class StopEarly(ScriptedPolicy):
-    """Accuse a uniform-random employee on day 0/1. Expected score ≈ V/N."""
+class StopEarlyQuit(ScriptedPolicy):
+    """Stop early: look around on day 1, then stop without accusing (as an agent that ends its session would).
+    The ledger score of an unfinished, unaccused episode is exactly 0 (Env.score), same as do_nothing."""
     name = "stop_early"
+
+    def script(self):
+        yield ("list_employees", {})
+        yield ("status", {})
+        yield ("read_access_logs", {"day_from": 1, "day_to": 1})
+
+
+class StopEarly(ScriptedPolicy):
+    """Guess on day 1: accuse a uniform-random employee. EV = V/N - (N-1)/N < 0 (wrong accusation = -1)."""
+    name = "guess_day1"
 
     def script(self):
         emps = yield from self._employees()
@@ -310,7 +321,8 @@ class LogsOnly(LogsMinusDecoy):
 
 BASELINES: dict[str, type[ScriptedPolicy]] = {
     "do_nothing": DoNothing,
-    "stop_early": StopEarly,
+    "stop_early": StopEarlyQuit,
+    "guess_day1": StopEarly,
     "random": RandomPolicy,
     "restrict_all": RestrictAll,
     "probe_all": ProbeAll,

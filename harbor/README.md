@@ -9,7 +9,8 @@ uv tool install harbor                       # Harbor CLI (tested: 0.26.0); need
 python harbor/build.py                       # THE JUDGE SET -> harbor/dataset/canary-hard-9000{00..09}/ (10 hard tasks)
 harbor run -p harbor/dataset -a oracle -n 4                               # reference solver over MCP
 harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=do_nothing -n 4  # do-nothing baseline (expect 0)
-harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early baseline (expect about -1)
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early baseline: stops without accusing (expect exactly 0)
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=guess_day1 -n 4  # day-1 random accusation (expect about -1)
 harbor run -p harbor/dataset -a opencode -m openai/<model> -n 4           # the agent (needs OPENAI_API_KEY)
 python harbor/build.py --tiers medium --seeds 900000                 # just one task
 python harbor/build.py --tiers easy,medium,hard --seeds judge        # everything: 3 tiers x all 40 judge seeds

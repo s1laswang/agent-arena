@@ -50,7 +50,9 @@ def test_baseline_integrity_in_table(tmp_path, monkeypatch):
         (dn,) = _rows(out, tier, "do_nothing")
         assert dn.scores == [0.0] * N and not dn.accuse_days
         (se,) = _rows(out, tier, "stop_early")
-        assert all(s == -1.0 or s > 0 for s in se.scores) and len(se.accuse_days) == N
+        assert se.scores == [0.0] * N and not se.accuse_days
+        (gd,) = _rows(out, tier, "guess_day1")
+        assert all(s == -1.0 or s > 0 for s in gd.scores) and len(gd.accuse_days) == N
 
 
 def test_frontier_rows_pending_without_committed_runs(tmp_path, monkeypatch):

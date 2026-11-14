@@ -34,7 +34,7 @@ def _hof_files():
 @pytest.mark.parametrize("path", _hof_files(), ids=lambda p: p.name)
 def test_40_evolved_moles_catchable_and_unexploitable(path):
     """#40: every hall-of-fame evolved mole stays catchable by the solver, do_nothing = 0,
-    stop_early < 0, and the fuzzer finds no invariant violation (hard, 20 seeds)."""
+    guess_day1 < 0 (the day-1 accusation), and the fuzzer finds no invariant violation (hard, 20 seeds)."""
     from canary.baselines import BASELINES, play
     from canary.env import Env
     from canary.mole.dsl import MoleStrategy
@@ -50,6 +50,6 @@ def test_40_evolved_moles_catchable_and_unexploitable(path):
         mk = lambda s: Env("hard", s, mole_strategy=st)
         assert statistics.mean(play(mk(s), SolverPolicy()) for s in seeds) > 0.3
         assert all(play(mk(s), BASELINES["do_nothing"](seed=s)) == 0 for s in seeds)
-        assert statistics.mean(play(mk(s), BASELINES["stop_early"](seed=s)) for s in seeds) < 0
+        assert statistics.mean(play(mk(s), BASELINES["guess_day1"](seed=s)) for s in seeds) < 0
         r = fuzz.hunt("hard", seeds, 2000, 0, mode="all", factory=lambda t, s: Env(t, s, mole_strategy=st))
         assert r["best_non_solver_score"] <= 0 and not r["invariant_violations"]

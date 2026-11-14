@@ -39,13 +39,14 @@ ROOT = Path(__file__).resolve().parent.parent
 TIER_ORDER = ("medium", "hard", "easy")          # medium + hard are the headline tiers; easy = sanity
 HEADLINE_TIERS = ("medium", "hard")
 # In-process agents, in table order (the frontier replays are inserted after the solver).
-REPRO_AGENTS = ("solver", "heuristic", "logs_only", "random", "stop_early", "do_nothing")
+REPRO_AGENTS = ("solver", "heuristic", "logs_only", "random", "guess_day1", "stop_early", "do_nothing")
 AGENT_NOTES = {
     "solver": "reference: tuned Bayesian canary-trap solver",
     "heuristic": "canary bisection, no Bayes, no V timing",
     "logs_only": "strongest no-canary log reader",
     "random": "random valid tool calls",
-    "stop_early": "random accusation on day 1",
+    "guess_day1": "random accusation on day 1 (EV < 0 by design)",
+    "stop_early": "stops on day 1 without accusing",
     "do_nothing": "never accuses",
 }
 FAST_SEEDS = 5

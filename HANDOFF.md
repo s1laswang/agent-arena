@@ -66,7 +66,7 @@ Points are incremental estimates for **this** package, not the category totals. 
 | GB-4 | Gap 30. Write the README partial (not the headline) from a **real** run. | 6 | 15 | 0.40 | GB-3 |
 | GB-5 | Tiebreaker. Write the README paragraph with the reward delta from a **real** probe. | 4 | 10 | 0.40 | GB-3 |
 | GB-1 | Craft 15. Apply the patch and pass the keyless acceptance test. | 1 | 3 | 0.33 | nothing |
-| GB-7 | Reward integrity 25. Check `do_nothing` is 0, `stop_early` is negative, and `invalid` episodes are out of the mean. | 1 | 5 | 0.20 | GB-3 |
+| GB-7 | Reward integrity 25. Check `do_nothing` and `stop_early` are 0 (stop_early no longer accuses), and `invalid` episodes are out of the mean. Day-1 accusation is `guess_day1` and stays negative. | 1 | 5 | 0.20 | GB-3 |
 | GB-6 | Craft 15. Two pitch slides from the real table. | 2 | 15 | 0.13 | GB-3 |
 | GB-2 | Gemini prize. One live episode, so a bad key fails before the long run. | 2 | 20 | 0.10 | the key, GB-1 |
 | GB-3 | Gap 30 + tiebreaker + Gemini prize. The 90-minute grid. The points are realized in GB-4 and GB-5, not by the run alone. | 0 until written up | 82 | 0.07 | GB-2 or an explicit skip |
@@ -174,7 +174,7 @@ Leave the dry-run's `-1.000` Gemini cells out. Those are the mock.
 
 ### GB-7 — integrity check on the new table
 
-After GB-3, in `summary.md`: `do_nothing` mean is `+0.000` on every tier, `stop_early` is negative, and any `invalid` count is excluded from `n` and the mean. If `do_nothing` is not 0, the run is wrong; do not put it in the README. This does not add a new exploit test. The existing anti-cheat battery is unchanged.
+After GB-3, in `summary.md`: `do_nothing` and `stop_early` means are `+0.000` on every tier (`stop_early` stops without accusing), and any `invalid` count is excluded from `n` and the mean. If `do_nothing` is not 0, the run is wrong; do not put it in the README. The day-1 random accusation is `guess_day1`, not this row. This does not add a new exploit test. The existing anti-cheat battery is unchanged.
 
 ## Untested without a real key
 

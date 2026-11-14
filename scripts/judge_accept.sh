@@ -75,9 +75,14 @@ bands = {
     ("do_nothing", "medium"): (0.0, 0.0),
     ("do_nothing", "hard"): (0.0, 0.0),
     ("do_nothing", "easy"): (0.0, 0.0),
-    ("stop_early", "medium"): (-1.0, -0.75),
-    ("stop_early", "hard"): (-1.0, -0.85),
-    ("stop_early", "easy"): (-1.0, -0.65),
+    ("stop_early", "medium"): (0.0, 0.0),
+    ("stop_early", "hard"): (0.0, 0.0),
+    ("stop_early", "easy"): (0.0, 0.0),
+    # guess_day1 is the day-1 accusation previously named stop_early.
+    # Bands are the README 30-run spread from commit 5b56b60 (same script).
+    ("guess_day1", "medium"): (-1.0, -0.75),
+    ("guess_day1", "hard"): (-1.0, -0.85),
+    ("guess_day1", "easy"): (-1.0, -0.65),
 }
 # Parse paired-run rows under each ## tier
 tier = None
@@ -125,9 +130,11 @@ for key, (lo, hi) in bands.items():
         ok = abs(s) < 1e-9
         emit("PASS" if ok else "FAIL", f"do_nothing {tier}", f"score={s:+.3f} (must be exactly 0)")
     elif name == "stop_early":
-        # designed to be negative (wrong day-1 guess = -1); "about 0" would be wrong here
+        ok = abs(s) < 1e-9
+        emit("PASS" if ok else "FAIL", f"stop_early {tier}", f"score={s:+.3f} (must be exactly 0: day-1 stop, no accusation)")
+    elif name == "guess_day1":
         ok = s <= 0 and (lo - slack) <= s <= (hi + slack)
-        emit("PASS" if ok else "FAIL", f"stop_early {tier}", f"score={s:+.3f} (must be <= 0 and in README band [{lo}, {hi}] ±0.01)")
+        emit("PASS" if ok else "FAIL", f"guess_day1 {tier}", f"score={s:+.3f} (must be <= 0 and in README band [{lo}, {hi}] ±0.01)")
     else:
         ok = (lo - slack) <= s <= (hi + slack)
         emit("PASS" if ok else "FAIL", f"{name} {tier}", f"score={s:+.3f} (README band [{lo}, {hi}] ±0.01 slack)")

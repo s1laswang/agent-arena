@@ -1,8 +1,18 @@
-import json, sys
+import json, random, sys
+from collections import Counter
 from train.window import SYSTEM, prompt, call_json
 from pathlib import Path
 
 TRAIN_MAX, HELD_MIN = 99, 1000
+ACTS = ('approve_payment', 'quarantine', 'report_insider')
+UP, KEEP = 5, 0.25
+
+def is_decision(step, hist):
+    if step['tool'] in ACTS:
+        return True
+    last = hist[-1] if hist else None
+    return bool(last and last['tool'] in ('list_payments', 'read_audit_log') and '"status": "pending"' in json.dumps(last['effect']))
+
 
 def system_for(step):
     return SYSTEM
@@ -18,7 +28,7 @@ def examples(day, seats=None):
         h = hist.setdefault(s["seat"], [])
         msgs = prompt(system_for(s), s["seat"], h, s["view"])
         msgs.append({"role": "assistant", "content": call_json(s["tool"], s.get("args") or {})})
-        out.append({"messages": msgs})
+        out.append({"messages": msgs, "decision": is_decision(s, h)})
         h.append(s)
     return out
 
@@ -32,11 +42,21 @@ def build(results_dir, out_dir, seats=None):
         k = split_of(day["day"]["day_id"])
         if k:
             buckets[k] += examples(day, seats)
+    rng = random.Random(0)
+    for k in buckets:
+        mixed = []
+        for r in buckets[k]:
+            if r['decision']:
+                mixed += [r] * UP
+            elif rng.random() < KEEP:
+                mixed.append(r)
+        rng.shuffle(mixed)
+        buckets[k] = mixed
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     for k, rows in buckets.items():
         (out / f"{k}.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
-    return {k: len(v) for k, v in buckets.items()}
+    return {k: {"n": len(v), "decision": sum(r["decision"] for r in v)} for k, v in buckets.items()}
 
 if __name__ == "__main__":
     print(build(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "train/data", sys.argv[3:] or None))

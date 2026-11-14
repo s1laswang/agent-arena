@@ -43,6 +43,7 @@ def summarise(results, team=None, agent_kind="scripted", model=None):
         "deterministic": det,
         "team": team or (results[0].get("agent") if results else None),
         "n_days": len(by_day),
+        "n_winnable_days": sum(1 for v in by_day.values() if all(x.get("winnable", True) for x in v)),
         "n_runs": len(results),
         "reward_mean": _mean([r["reward"] for r in results]),
         **passk,

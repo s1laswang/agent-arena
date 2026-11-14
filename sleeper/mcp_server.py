@@ -10,7 +10,7 @@ from sleeper.day import play_round
 from sleeper.verifier import dump_state
 
 STALL = 8
-TYPES = {"number": float, "array": list, "object": dict, "string": str}
+TYPES = {"number": float, "array": list | str, "object": dict, "string": str}
 
 
 def build_server(world, seat, team=None, out=None):
@@ -32,6 +32,7 @@ def build_server(world, seat, team=None, out=None):
         def fn(**kw):
             if st["done"]:
                 return {"ok": False, "error": "day over"}
+            kw = {k: [v] if isinstance(v, str) and props[k]["type"] == "array" else v for k, v in kw.items()}
             res = world.call(seat, name, kw)
             st["n"] = 0 if name == "end_turn" else st["n"] + 1
             if team is not None and (name == "end_turn" or st["n"] >= STALL):

@@ -2,7 +2,7 @@
 # check_isolation.sh: run INSIDE the agent container (Harbor's `main` service). Exits non-zero on any finding.
 #
 # Asserts that nothing the agent can reach locally reveals the answer:
-#   1. no files named *truth*, *SALT*, *.world.json, no canary package source (canary/*.py, a canary dist-info)
+#   1. no files named *truth*, *SALT*, *ledger_key*, *.world.json, no canary package source (canary/*.py, a canary dist-info)
 #   2. no CANARY_* variable at all in this env (CANARY_WORLD_SECRET / CANARY_LEDGER_TOKEN / CANARY_SEED /
 #      CANARY_TIER / ...), and no readable /proc/*/environ containing CANARY_ (the Grok judge-sim exploit:
 #      a same-uid process read the server's /proc/<pid>/environ and scored 1.0)
@@ -34,9 +34,9 @@ PRUNE=(-path /proc -o -path /sys -o -path /dev)
 if [ "$ORACLE" = 1 ]; then PRUNE+=(-o -path /solution -o -path /logs); fi
 
 # ---------------------------------------------------------------- 1. files
-hits="$(find / \( "${PRUNE[@]}" \) -prune -o \( -iname '*truth*' -o -name '*SALT*' -o -name '*.world.json' \
+hits="$(find / \( "${PRUNE[@]}" \) -prune -o \( -iname '*truth*' -o -name '*SALT*' -o -name '*ledger_key*' -o -name '*.world.json' \
         -o -name '*.mole.json' \) -print 2>/dev/null | head -n 50)"
-if [ -n "$hits" ]; then finding "truth/secret-like files:"; echo "$hits" | sed 's/^/    /'; else ok "no *truth* / *SALT* / *.world.json / *.mole.json files"; fi
+if [ -n "$hits" ]; then finding "truth/secret-like files:"; echo "$hits" | sed 's/^/    /'; else ok "no *truth* / *SALT* / *ledger_key* / *.world.json / *.mole.json files"; fi
 
 src="$(find / \( "${PRUNE[@]}" \) -prune -o \( -path '*/canary/mcp_server.py' -o -path '*/canary/world.py' \
        -o -path '*/canary/env.py' -o -path '*/canary/rules.py' -o -path '*/mole/dsl.py' -o -name 'canary-*.dist-info' \

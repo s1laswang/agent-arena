@@ -68,3 +68,17 @@ fr8-pull:         ## [FR8] make fr8-pull JOB=j1 -> data/fr8/j1/
 
 play:             ## [ENV] human playtest: make play TIER=medium NAME=alice SEED=3000
 	$(UV) python -m canary.play --tier $(if $(filter all,$(TIER)),medium,$(TIER)) --name $(or $(NAME),human) --seed "$(SEED)"
+
+# Canary Lab (Gemini)
+lab-replay:       ## [GEMINI] keyless: replay every recorded Gemini run (results/gemini/replay*) through a local gateway
+	$(UV) python -m canary.gemini.lab_replay
+
+lab-record:       ## [GEMINI] re-record the showcase (needs GEMINI_API_KEY, 6 calls). Ladder: python -m canary.gemini.lab_replay --record NAME -- <cmd {out}>
+	rm -rf results/gemini/replay && $(UV) python -m canary.gemini.with_gateway --record results/gemini/replay -- \
+	  python -m canary.gemini.showcase --write results/gemini/replay/showcase.json
+
+lab-gateway:      ## [GEMINI] run the gateway locally: make lab-gateway ARGS="--port 8787 --record data/gemini/rec"
+	$(UV) python -m canary.gemini.gateway $(ARGS)
+
+lab-dashboard:    ## [GEMINI] keyless: ledger + results/gemini/*.json -> results/gemini/dashboard.html (ARGS="--ledger auto" finds every local ledger)
+	$(UV) python -m canary.gemini.dashboard $(ARGS)

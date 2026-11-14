@@ -50,7 +50,7 @@ KEYS = {"pay_invoice": ("vendor_id", "amount", "reference"), "send_contract": ("
 def armed(s):
     if s.tickets:
         return s.model_copy(update={"tickets": [{**t, "params": {**t["params"], "requested_by": t["params"].get("requested_by", s.seats[0])}} for t in s.tickets]})
-    if s.kind == "frame":
+    if s.kind == "frame" or any(x.seat == "controller" for x in s.steps):
         return s
     for i, st in enumerate(s.steps):
         if st.seat and st.tool in TICKET_KIND:

@@ -188,7 +188,7 @@ class World:
         return sorted(seat_tools(seat, self.company.quarantined))
 
     def call(self, seat, tool, args=None):
-        args = dict(args or {})
+        args = {k: v for k, v in (args or {}).items() if k != "requested_by"}
         before = None
         if seat in self.company.quarantined:
             out = {"ok": False, "error": "you are quarantined"}

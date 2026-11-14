@@ -40,7 +40,7 @@ async def _mcp(seat, day, calls, env=None):
     from mcp.client.stdio import stdio_client
     out = os.path.join("/tmp", f"rt_{secrets.token_hex(4)}.json")
     tok = secrets.token_hex(8)
-    e = {**os.environ, "PYTHONPATH": ROOT, "VERIFY_TOKEN": tok, "GEMINI_API_KEY": "", **(env or {})}
+    e = {**os.environ, "PYTHONPATH": ROOT, "VERIFY_TOKEN": tok, "SLEEPER_SALT": "rt-salt-3", "GEMINI_API_KEY": "", **(env or {})}
     p = StdioServerParameters(command=PY, args=["-m", "sleeper.mcp_server", "--seat", seat, "--day", str(day), "--out", out], env=e, cwd=ROOT)
     res = []
     async with stdio_client(p) as (r, w):
@@ -67,7 +67,9 @@ def test_s2_omitted_optional_args_work():
 
 def test_s2b_close_ticket_without_note_does_not_crash_verifier():
     res, out, tok = asyncio.run(_mcp("finance_ap", 1001, [("my_tickets", {})]))
-    tid = res[0]["tickets"][0]["id"]
+    if not res[0]["tickets"]:
+        res, out, tok = asyncio.run(_mcp("finance_ap", 1001, [("end_turn", {})] * 6 + [("my_tickets", {})]))
+    tid = res[-1]["tickets"][0]["id"]
     res, out, tok = asyncio.run(_mcp("finance_ap", 1001, [("close_ticket", {"id": tid})]))
     v = _verify(out, tok, "finance_ap")
     assert not any(h.startswith("verifier_error") for h in v["harm"]), v
@@ -75,14 +77,40 @@ def test_s2b_close_ticket_without_note_does_not_crash_verifier():
 
 def test_s4_salt_space_not_enumerable_and_mcp_server_honours_salt():
     from harbor.sidecar import effective_id
+    from lab.run import day_for
+    from sleeper.company import World
+    old_salt = os.environ.get("SLEEPER_SALT")
     os.environ["SLEEPER_SALT"] = "x"
     try:
         assert max(effective_id(s) for s in range(50)) > 10 ** 9
     finally:
-        os.environ.pop("SLEEPER_SALT")
-    plain, _, _ = asyncio.run(_mcp("finance_ap", 0, [("my_tickets", {})]))
-    salted, _, _ = asyncio.run(_mcp("finance_ap", 0, [("my_tickets", {})], env={"SLEEPER_SALT": "judge-salt"}))
-    assert plain[0]["tickets"] != salted[0]["tickets"], "sleeper.mcp_server ignores SLEEPER_SALT"
+        if old_salt is None:
+            os.environ.pop("SLEEPER_SALT", None)
+        else:
+            os.environ["SLEEPER_SALT"] = old_salt
+    clean_env = {k: v for k, v in os.environ.items() if k not in ("SLEEPER_SALT", "SLEEPER_SECRETS_FILE")}
+    clean_env["PYTHONPATH"] = ROOT
+    for bad in (None, "   "):
+        run_env = dict(clean_env) if bad is None else {**clean_env, "SLEEPER_SALT": bad}
+        r = subprocess.run([PY, "-m", "sleeper.mcp_server", "--seat", "finance_ap", "--day", "0"],
+                           capture_output=True, text=True, cwd=ROOT, env=run_env, timeout=15)
+        assert r.returncode != 0 and "SLEEPER_SALT" in r.stderr
+    calls = [("end_turn", {})] * 4 + [("my_tickets", {})]
+    alpha, _, _ = asyncio.run(_mcp("finance_ap", 0, calls, env={"SLEEPER_SALT": "salt-alpha"}))
+    salted, _, _ = asyncio.run(_mcp("finance_ap", 0, calls, env={"SLEEPER_SALT": "judge-salt"}))
+    assert alpha[-1]["tickets"] != salted[-1]["tickets"], "sleeper.mcp_server ignores SLEEPER_SALT"
+    os.environ["SLEEPER_SALT"] = "judge-salt"
+    try:
+        exp_day = day_for(effective_id(0, "finance_ap", salt="judge-salt"), "finance_ap")[0]
+    finally:
+        if old_salt is None:
+            os.environ.pop("SLEEPER_SALT", None)
+        else:
+            os.environ["SLEEPER_SALT"] = old_salt
+    exp_world = World(exp_day)
+    exp_world.company.tick = 4
+    exp_tickets = exp_world.call("finance_ap", "my_tickets", {})["tickets"]
+    assert salted[-1]["tickets"] == exp_tickets
 
 
 def test_s5_instruction_states_clock_budget_and_param_names():
@@ -136,8 +164,9 @@ def test_s8b_forged_signature_without_token_is_tampered(tmp_path):
 
 def test_s9_secrets_not_readable_from_proc_environ():
     tok = "TOKEN" + secrets.token_hex(8)
-    seed = "SEED" + tok
-    e = {**os.environ, "PYTHONPATH": ROOT, "VERIFY_TOKEN": tok, "SLEEPER_SALT": "SALT" + tok, "SLEEPER_SEED": seed, "GEMINI_API_KEY": ""}
+    seed = "SEED" + secrets.token_hex(8)
+    salt_val = "SALT" + secrets.token_hex(8)
+    e = {**os.environ, "PYTHONPATH": ROOT, "VERIFY_TOKEN": tok, "SLEEPER_SALT": salt_val, "SLEEPER_SEED": seed, "GEMINI_API_KEY": ""}
     p = subprocess.Popen([PY, "-m", "sleeper.mcp_server", "--seat", "finance_ap", "--day", "0", "--out", "/tmp/rt_env.json"],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=e, cwd=ROOT)
     try:
@@ -146,9 +175,10 @@ def test_s9_secrets_not_readable_from_proc_environ():
             blob = open(f"/proc/{p.pid}/environ", "rb").read()
         except PermissionError:
             blob = b""
-        assert tok.encode() not in blob and seed.encode() not in blob
+        assert tok.encode() not in blob and seed.encode() not in blob and salt_val.encode() not in blob
     finally:
         p.kill()
+        p.wait()
 
 
 def test_s10_shotgun_quarantine_votes_are_not_free():

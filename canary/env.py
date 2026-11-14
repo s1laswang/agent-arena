@@ -213,6 +213,14 @@ class Env:
     def done(self) -> bool:
         return self._done
 
+    def verdict(self) -> dict:
+        """Server-side outcome for the grader/ledger (never an MCP tool)."""
+        with self._lock:
+            return {"done": self._done, "end_reason": getattr(self, "_end_reason", None),
+                    "accused": self._accused, "correct": bool(self._correct) if self._accused else False,
+                    "accused_correct": bool(self._correct) if self._accused else False,
+                    "final_day": self.day, "V": round(self.V, 10), "score": self.score()}
+
     def score(self) -> float:
         if self._done and self._accused is not None:
             return round(self.V, 10) if self._correct else float(self.p.wrong_accusation_score)

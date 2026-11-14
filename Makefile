@@ -37,7 +37,7 @@ hunt:             ## [INTEGRITY] judges' exploit playground (no keys, ~1 min): r
 	  echo "== $$t"; $(UV) python -m canary.redteam.fuzz --mode all --tier $$t --seeds 0-49 --budget 20000 --report $(if $(TV),--tiers-version $(TV)) || exit 1; done
 
 worlds:           ## [ENV] (re)generate frozen world text for judge seeds: make worlds PROVIDER=gemini
-	$(UV) python -m canary.text.build --provider $(PROVIDER) --seeds judge
+	$(UV) python -m canary.text.build --provider $(PROVIDER) --seeds $(or $(WSEEDS),judge) $(if $(TV),--tiers-version $(TV))
 
 clash:            ## [AGENTS] Gemini mole vs investigators + scenario designer (needs GEMINI_API_KEY)
 	$(UV) python -m canary.agents.clash

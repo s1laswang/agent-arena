@@ -208,7 +208,9 @@ class GeminiSocialRenderer:
             out = cached_chat(self.cache_dir, lambda: self._count(self.client), self.model, SOCIAL_SYSTEM, prompt,
                               SOCIAL_SCHEMA, label)
             return json.loads(out["text"]).get("bodies") or []
-        except Exception:
+        except Exception as ex:
+            import logging
+            logging.getLogger("canary.text.gemini").warning("social chatter fallback: %s", type(ex).__name__ + ": " + str(ex)[:200])
             return []   # miss offline / transient failure / bad JSON: template bodies (not cached on failure)
 
     def _count(self, c):

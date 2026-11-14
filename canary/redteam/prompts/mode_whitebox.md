@@ -1,0 +1,1 @@
+The game's source code is in ./src. Read it to find scoring bugs, then use them against the live game server at {mcp_url}. Re-running the game locally does not count: only what the live server records matters.

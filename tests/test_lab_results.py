@@ -127,3 +127,13 @@ def test_strategy_table(tmp_path):
             "staff": run("staff", 2, 1, out=str(tmp_path / "b"), runner=mk(True), day_start=0)}
     t = strategy_table(runs)
     assert "| s1 | fraud | 1 | 0.00 | 1.00 | n/a | DEAD vs trust_all |" in t
+
+
+def test_replace_hook():
+    from lab.run import play_day
+
+    base, _ = play_day("oracle", "oracle", None, 1000, 0)
+    swapped, _ = play_day("oracle", "oracle", None, 1000, 0, replace={"finance_ap": "do_nothing"})
+    assert swapped["seat_under_test"] is None
+    assert swapped["day_id"] == base["day_id"] and swapped["sleeper_seat"] == base["sleeper_seat"]
+    assert swapped["tickets_done"] < base["tickets_done"] or swapped["reward"] <= base["reward"]

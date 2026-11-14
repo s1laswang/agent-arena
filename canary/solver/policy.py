@@ -50,7 +50,7 @@ class SolverPolicy:
                  none_group: bool = True, read_logs: bool = True, design: str = "auto",
                  coverages: tuple = (0.1, 0.15, 0.25, 0.4, 0.55, 0.7, 1.0), alternate: bool = False, adaptive: bool = False, utility: str = "mi",
                  probing: bool = False, probe_cap: int = 4, probe_extra: int = 1, probe_core: int = 4,
-                 behaviour_weight: float | None = None, act_budget: float = 0.3):
+                 behaviour_weight: float | None = None, act_budget: float = 0.3, max_candidates: int = 128):
         self._given = params
         self.threshold = threshold
         # behaviour_weight: public alias (FR8 sweeps it); exponent on access-log/interview likelihoods
@@ -64,7 +64,8 @@ class SolverPolicy:
         self.alternate = alternate
         self.adaptive = adaptive
         self.utility = utility
-        self.act_budget = act_budget  # wall-clock cap (s) for the canary-split search
+        self.act_budget = act_budget  # warning threshold only (s); NEVER changes the chosen action
+        self.max_candidates = max_candidates  # deterministic cap on candidate splits per decision
         self.probing, self.probe_cap, self.probe_extra, self.probe_core = probing, probe_cap, probe_extra, probe_core
         self.reset([], "")
 
@@ -97,9 +98,9 @@ class SolverPolicy:
         finally:
             dt = _t.perf_counter() - t0
             self.max_act_time = max(getattr(self, "max_act_time", 0.0), dt)
-            if dt > 1.0:
+            if dt > self.act_budget:
                 import logging
-                logging.getLogger("canary.solver").warning("slow act(): %.2fs at step %d", dt, len(history))
+                logging.getLogger("canary.solver").warning("slow act(): %.2fs > budget %.2fs at step %d", dt, self.act_budget, len(history))
 
     def _act(self, history: list[Step]) -> tuple[str, dict[str, Any]]:
         if len(history) < self.seen:   # runner restarted/trimmed history: re-ingest from scratch
@@ -337,12 +338,15 @@ class SolverPolicy:
         fracs = self.coverages
         if self.alternate and o.today % 2 == 0:
             fracs = (1.0,)   # robustness: big canaries for moles that prefer widely-shared docs (DSL)
-        import time as _t
-        deadline = _t.perf_counter() + self.act_budget
+        # Deterministic COUNT cap (never wall-clock): fixed candidate order, at most max_candidates.
+        n_eval = 0
         for f in fracs:
-            if _t.perf_counter() > deadline and best:
+            if n_eval >= self.max_candidates:
                 break
             for t in range(n_shuffles):
+                if n_eval >= self.max_candidates:
+                    break
+                n_eval += 1
                 order = sorted(alive, key=lambda e: -post[e]) if t == 0 else rng.sample(alive, len(alive))
                 rec, m = [], 0.0
                 for e in order:

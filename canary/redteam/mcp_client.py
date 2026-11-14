@@ -92,3 +92,5 @@ def http_get(url: str, timeout: float = 10.0) -> tuple[int, str]:
             return r.status, r.read().decode()
     except urllib.error.HTTPError as e:
         return e.code, e.read().decode(errors="replace")
+    except (urllib.error.URLError, OSError) as e:
+        return 0, str(e)

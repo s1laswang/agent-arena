@@ -54,6 +54,8 @@ class TierParams:
         return asdict(self)
 
 
+TIERS_VERSION = "v1.2"  # FROZEN 02:55 EET 14 Nov (CEO pick from FR8 co-tune: hard fp .95, framing 2.0). Bug fixes only.
+
 TIERS: dict[str, TierParams] = {
     # tiers v1.1 (bayes-solver): medium max_variants 2->3, hard framing_rate 1.5->3.0 (monotone easy>medium>hard)
     # tiers v1 (04:40): FR8 J1 recommendation (153k episodes, v0.3 scoring), fr8/analysis/out/j1_recommendation.md
@@ -79,9 +81,19 @@ TIERS: dict[str, TierParams] = {
         restrict_cost_per_day=0.01, actions_per_day=8, tool_call_cap=300,
         log_rate_benign=1.0, log_rate_mole=1.0, interview_lr=1.2, p_evasive_innocent=0.2,
         decoy=True, framing=True, careful_mole=True, access_constraints=True,
-        framing_rate=3.0, p_after_hours_mole=0.3, p_single_dept_recipients=0.0,
+        framing_rate=2.0, p_after_hours_mole=0.3, p_single_dept_recipients=0.0,
+        fingerprint_accuracy=0.95,  # v1.2 CEO decision: small fingerprint noise on hard
     ),
 }
+
+# Judge tracks: extra tier *names* that reuse a frozen tier's params (TIERS itself stays frozen).
+# hard_forge = hard params + a per-seed evolved Mole DSL strategy (canary/forge_track.py).
+TRACKS: dict[str, str] = {"hard_forge": "hard"}
+
+
+def tier_params(name: str) -> TierParams:
+    """TierParams for a tier or a track name."""
+    return TIERS[TRACKS.get(name, name)]
 
 # Seed hygiene: tune ONLY on dev seeds. Judge seeds are frozen and committed under data/worlds/judge/.
 DEV_SEEDS = range(0, 10_000)

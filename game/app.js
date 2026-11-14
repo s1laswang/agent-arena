@@ -149,7 +149,7 @@ function startGame(customSeed = null) {
   state.tier = spec.tier;
   state.tiersVersion = spec.tiers_version;
   $("tierChip").textContent = (spec.tier.charAt(0).toUpperCase() + spec.tier.slice(1)) + " Tier";
-  $("benchmarkRulesText").textContent = spec.instruction;
+  if ($("benchmarkRulesText")) $("benchmarkRulesText").textContent = spec.instruction;
 
   // Reset episode state
   callsSpent = 0;
@@ -170,7 +170,7 @@ function startGame(customSeed = null) {
   state.playerAbstained = false;
 
   refreshHUD();
-  renderExpertTools(spec.tools);
+  if ($("toolsList")) renderExpertTools(spec.tools);
 
   // Switch screens
   $("titleScreen").hidden = true;
@@ -683,10 +683,6 @@ function addEvidenceCard(tool, args, res) {
       <span class="mono muted font-small">Day ${state.day} · #${callsSpent}</span>
     </div>
     <div class="feed-body">${bodyContent}</div>
-    <details>
-      <summary>Raw JSON Protocol</summary>
-      <pre>${JSON.stringify(res.ok ? res.data : { error: res.error }, null, 2)}</pre>
-    </details>
   `;
 
   feed.prepend(card);
@@ -1280,7 +1276,7 @@ function setupGlobalEventListeners() {
   $("playBtn").addEventListener("click", () => startGame());
   $("startTutorialBtn").addEventListener("click", () => startTutorial());
 
-  $("randomSeedBtn").addEventListener("click", () => {
+  $("randomSeedBtn")?.addEventListener("click", () => {
     const s = randomSeed();
     $("seedInput").value = s;
     state.seed = s;
@@ -1300,10 +1296,12 @@ function setupGlobalEventListeners() {
     executeTool("advance_day", {});
   });
 
-  $("expertToggleBtn").addEventListener("click", () => {
+  $("expertToggleBtn")?.addEventListener("click", () => {
     const consoleEl = $("expertConsole");
-    consoleEl.open = !consoleEl.open;
-    if (consoleEl.open) consoleEl.scrollIntoView({ behavior: "smooth" });
+    if (consoleEl) {
+      consoleEl.open = !consoleEl.open;
+      if (consoleEl.open) consoleEl.scrollIntoView({ behavior: "smooth" });
+    }
   });
 
   // Office & Dossier buttons
@@ -1378,10 +1376,10 @@ function setupGlobalEventListeners() {
 
   // Canary Wizard Events
   $("closeCanaryModalBtn").addEventListener("click", closeCanaryWizard);
-  $("wizardSplitSolverBtn") && $("wizardSplitSolverBtn").addEventListener("click", wizardSplitSolver);
-  $("wizardSplitEvenBtn").addEventListener("click", () => wizardSplit(3));
-  $("wizardSplitTwoBtn").addEventListener("click", () => wizardSplit(2));
-  $("wizardSplitDeptBtn").addEventListener("click", wizardSplitByDept);
+  $("wizardSplitSolverBtn")?.addEventListener("click", wizardSplitSolver);
+  $("wizardSplitEvenBtn")?.addEventListener("click", wizardSplitSolver);
+  $("wizardSplitTwoBtn")?.addEventListener("click", () => wizardSplit(2));
+  $("wizardSplitDeptBtn")?.addEventListener("click", wizardSplitByDept);
   $("wizardClearBtn").addEventListener("click", () => {
     document.querySelectorAll(".wizard-emp-chip").forEach(c => {
       c.classList.remove("assign-a", "assign-b", "assign-c");
@@ -1413,7 +1411,7 @@ function setupGlobalEventListeners() {
     });
   });
 
-  $("dlActionsBtn").addEventListener("click", () => {
+  $("dlActionsBtn")?.addEventListener("click", () => {
     const blob = new Blob([game.actions_json()], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

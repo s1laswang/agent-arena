@@ -54,7 +54,6 @@
           <label for="seedInput">Seed (3000–9999)</label>
           <div class="seed-input-controls">
             <input id="seedInput" type="number" min="3000" max="9999" step="1" value="3000">
-            <button type="button" id="randomSeedBtn" class="btn-secondary" title="Roll Random Seed">Random Seed</button>
           </div>
         </div>
         <div class="launch-buttons-group">
@@ -115,9 +114,6 @@
         </button>
         <button type="button" id="hudAccuseBtn" class="btn-danger" title="Accuse or close case [A]">
           Accuse [A]
-        </button>
-        <button type="button" id="expertToggleBtn" class="btn-secondary btn-icon" title="Toggle Expert Protocol Console">
-          Tools
         </button>
       </div>
     </div>
@@ -205,17 +201,21 @@
                 <span class="font-small muted">Security & Access Logs:</span>
                 <button type="button" id="dosLogsBtn" class="btn-secondary btn-full">Access Logs</button>
               </div>
-
-              <div class="action-item">
-                <span class="font-small muted">Internal Chat Search:</span>
-                <button type="button" id="dosMessagesBtn" class="btn-secondary btn-full">Search Messages</button>
-              </div>
-
-              <div class="action-item">
-                <span class="font-small muted">Access Permissions:</span>
-                <button type="button" id="dosRestrictBtn" class="btn-secondary btn-full">Restrict Access</button>
-              </div>
             </div>
+
+            <details class="more-actions" style="margin-top: 8px;">
+              <summary class="muted font-small" style="cursor: pointer;">More actions (chat search, permissions)</summary>
+              <div class="dossier-actions-grid" style="margin-top: 8px;">
+                <div class="action-item">
+                  <span class="font-small muted">Internal Chat Search:</span>
+                  <button type="button" id="dosMessagesBtn" class="btn-secondary btn-full">Search Messages</button>
+                </div>
+                <div class="action-item">
+                  <span class="font-small muted">Access Permissions:</span>
+                  <button type="button" id="dosRestrictBtn" class="btn-secondary btn-full">Restrict Access</button>
+                </div>
+              </div>
+            </details>
           </div>
 
           <div class="dossier-footer">
@@ -269,29 +269,6 @@
         </div>
       </div>
     </div>
-
-    <!-- EXPERT RAW PROTOCOL CONSOLE (COLLAPSIBLE TOGGLE) -->
-    <details class="card expert-card" id="expertConsole">
-      <summary>
-        <strong>Expert Protocol Console (Raw 13 Tools & Benchmark Parity)</strong>
-        <span class="muted font-small">Direct tool execution & JSON payloads</span>
-      </summary>
-      <div class="expert-inner">
-        <div class="tool-tabs" id="toolTabs">
-          <button type="button" class="tab-btn active" data-tab="all">All Tools</button>
-          <button type="button" class="tab-btn" data-tab="intel">Intel</button>
-          <button type="button" class="tab-btn" data-tab="traps">Canaries</button>
-          <button type="button" class="tab-btn" data-tab="ops">Turns</button>
-          <button type="button" class="tab-btn tab-danger" data-tab="accuse">Accuse</button>
-        </div>
-        <div id="toolsList" class="tools-grid"></div>
-
-        <div class="contract-box">
-          <h4>Full Benchmark Contract & Rules</h4>
-          <pre id="benchmarkRulesText" class="mono font-small"></pre>
-        </div>
-      </div>
-    </details>
   </section>
 
   <!-- SCREEN 3: ACCUSE DIALOG MODAL (THE TEACHING MOMENT) -->
@@ -390,11 +367,7 @@
         </div>
 
         <div class="canary-helpers-bar">
-          <span class="font-small muted">Cohort Helpers:</span>
-          <button type="button" id="wizardSplitSolverBtn" class="btn-primary btn-small">Solver Balanced (A/B/C + Control)</button>
-          <button type="button" id="wizardSplitEvenBtn" class="btn-secondary btn-small">Split Evenly (3-Way)</button>
-          <button type="button" id="wizardSplitTwoBtn" class="btn-secondary btn-small">Split Evenly (2-Way)</button>
-          <button type="button" id="wizardSplitDeptBtn" class="btn-secondary btn-small">Group by Department</button>
+          <button type="button" id="wizardSplitEvenBtn" class="btn-secondary btn-small">Split Evenly</button>
           <button type="button" id="wizardClearBtn" class="btn-secondary btn-small">Reset</button>
         </div>
 
@@ -491,7 +464,6 @@
       <button type="button" id="playAgainBtn" class="btn-primary btn-large">Play Another Seed</button>
       <button type="button" id="replaySameSeedBtn" class="btn-secondary btn-large">Replay Same Seed</button>
       <button type="button" id="copyResultBtn" class="btn-secondary btn-large">Copy Result & Link</button>
-      <button type="button" id="dlActionsBtn" class="btn-secondary btn-large">Download Actions JSON</button>
     </div>
   </section>
 

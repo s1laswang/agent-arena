@@ -230,3 +230,7 @@
 - Decisions: Canary base + Vaishnav anti-cheat + Momin parts; biased-employee layer = v1.5 candidate gated at 20:00; RL mole (light CPU now, GRPO LLM mole on GPU); static Pyodide browser game; Momin pauses sky for the GPUs (FR8 authorised for WS4 + WS3 jobs).
 - Gates: A 17:00 (gemini-4-carbon v1.4 n>=20, v1.5 solver numbers, RL curve); B 20:00 (ship or drop v1.5 + feature freeze).
 - The CEO measurement engineer resumed (WS1). HARNESS got WS6 game build support. FR8/ENV/AGENTS/INTEGRITY need relaunching (briefs in NEXT-LEVEL.md).
+
+## 14:32 FR8 back, sky paused by Momin
+- freighter reachable again; Silas has no jobs in the queue; compute03/04 have 8 V100s idle. FR8 told to submit WS4 (investigator v2 train + evals) now and WS3 GRPO when train/grpo_mole.py lands (<=3 GPUs).
+- Harbor gemini-4-carbon judge-path demo merged (77fd402): 6 tasks, Gemini mean 0.50 vs oracle 0.76, below the oracle on 6/6 (a demonstration, n=6).

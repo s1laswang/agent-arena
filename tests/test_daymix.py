@@ -32,7 +32,7 @@ def test_day_spec():
 
 
 def test_covers_every_strategy():
-    used = {e["strategy"] for e in mix(5 * 4 * 8)}
+    used = {e["strategy"] for e in mix(5 * 4 * 16)}
     assert used >= set(STRATEGIES) - {s for s in STRATEGIES if not set(STRATEGIES[s].seats) - {"controller"}}
 
 
@@ -43,3 +43,26 @@ def test_seat_mode_is_gated():
         for e in mix(20, seat):
             if e["strategy"]:
                 assert seat in accomplices(STRATEGIES[e["strategy"]]) and e["sleeper_seat"] != seat
+
+
+def test_seat_marginal_uniform():
+    from collections import Counter
+    from sleeper.daymix import mix
+    m = mix(400)
+    c = Counter(e["sleeper_seat"] for e in m)
+    assert abs(c.pop(None) / 400 - 0.2) <= 0.05
+    assert "controller" not in c
+    u = 0.8 / len(c)
+    for seat, n in c.items():
+        assert abs(n / 400 - u) <= 0.05, (seat, n)
+
+
+def test_seat_marginal_uniform_modes():
+    from collections import Counter
+    from sleeper.daymix import mix
+    for sut in ("finance_ap", "controller"):
+        c = Counter(e["sleeper_seat"] for e in mix(400, sut))
+        assert abs(c.pop(None) / 400 - 0.2) <= 0.05
+        u = 0.8 / len(c)
+        assert all(abs(n / 400 - u) <= 0.05 for n in c.values()), c
+    assert "it_admin" in {e["sleeper_seat"] for e in mix(400)}

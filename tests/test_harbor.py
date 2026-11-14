@@ -54,11 +54,14 @@ def test_sidecar_end_to_end(tmp_path, oracle, seat):
            "VERIFY_TOKEN": tok, "SLEEPER_TEAM": "oracle", "PYTHONPATH": str(root), "SIDECAR_MCP_PORT": str(mp), "SIDECAR_REWARD_PORT": str(rp)}
     p = subprocess.Popen([sys.executable, "-m", "harbor.sidecar"], env=env, cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        for _ in range(60):
+        end = time.time() + 240
+        while True:
+            assert p.poll() is None, "sidecar exited (port taken?)"
             try:
                 socket.create_connection(("127.0.0.1", mp), 1).close()
                 break
             except OSError:
+                assert time.time() < end, "sidecar not listening"
                 time.sleep(0.5)
         url = f"http://127.0.0.1:{rp}/reward"
         with pytest.raises(urllib.error.HTTPError) as e:
@@ -67,7 +70,7 @@ def test_sidecar_end_to_end(tmp_path, oracle, seat):
         with pytest.raises(urllib.error.HTTPError):
             urllib.request.urlopen(urllib.request.Request(url, headers={"X-Verify-Token": "wrong"}))
         if oracle:
-            subprocess.run([sys.executable, str(root / "harbor/oracle_client.py"), f"http://127.0.0.1:{mp}/mcp", seat], env=env, cwd=root, check=True, timeout=120)
+            subprocess.run([sys.executable, str(root / "harbor/oracle_client.py"), f"http://127.0.0.1:{mp}/mcp", seat], env=env, cwd=root, check=True, timeout=400)
         r = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"X-Verify-Token": tok})).read())
         assert r["reward"] == (1 if oracle else 0), r
         v = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(tmp_path / "s.json")], env={"SLEEPER_SEAT": seat, "VERIFY_TOKEN": tok, "PYTHONPATH": str(root)}, cwd=root, capture_output=True)

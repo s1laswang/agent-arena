@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-11-14T15:28:11+0200",
- "git_sha": "8f0e0286dca4783a96f4f16b4d3268a60b2113c7",
+ "generated_at": "2026-11-14T18:21:31+0200",
+ "git_sha": "e9f58b4580b4ad75856068468c4c0e06639da84f",
  "runs": "~/agent-arena-data/gemini/ladder/ladder-v14",
  "imports": [
   "gemini-4-carbon:default=~/junction-aimo-team/wt/justSilas-gemini/data/runs/committed/v1.4/inproc-gemini-4-carbon"
@@ -54,6 +54,7 @@
   "ladder:ladder-v14:gemini-3.5-flash/low/hard/1",
   "ladder:ladder-v14:gemini-3.5-flash/low/hard/2",
   "ladder:ladder-v14:gemini-3.5-flash/low/hard/3",
+  "ladder:ladder-v14:gemini-3.5-flash/low/hard/4",
   "ladder:ladder-v14:gemini-3.5-flash/low/medium/0",
   "ladder:ladder-v14:gemini-3.5-flash/low/medium/1",
   "ladder:ladder-v14:gemini-3.5-flash/low/medium/2",
@@ -68,6 +69,8 @@
   "ladder:ladder-v14:gemini-3.5-flash/medium/medium/1",
   "ladder:ladder-v14:gemini-3.5-flash/medium/medium/2",
   "ladder:ladder-v14:gemini-3.5-flash/medium/medium/3",
+  "ladder:ladder-v14:gemini-3.5-flash/medium/medium/4",
+  "ladder:ladder-v14:gemini-3.5-flash/medium/medium/5",
   "ladder:ladder-v14:gemini-3.5-flash/minimal/hard/0",
   "ladder:ladder-v14:gemini-3.5-flash/minimal/hard/1",
   "ladder:ladder-v14:gemini-3.5-flash/minimal/hard/2",
@@ -116,9 +119,11 @@
   "ladder:ladder-v14:gemini-4-argon/high/hard/1",
   "ladder:ladder-v14:gemini-4-argon/high/medium/0",
   "ladder:ladder-v14:gemini-4-argon/high/medium/1",
+  "ladder:ladder-v14:gemini-4-argon/low/hard/0",
   "ladder:ladder-v14:gemini-4-argon/medium/hard/0",
   "ladder:ladder-v14:gemini-4-argon/medium/hard/1",
   "ladder:ladder-v14:gemini-4-argon/medium/medium/0",
+  "ladder:ladder-v14:gemini-4-argon/medium/medium/1",
   "ladder:ladder-v14:gemini-4-carbon/high/hard/0",
   "ladder:ladder-v14:gemini-4-carbon/high/hard/1",
   "ladder:ladder-v14:gemini-4-carbon/high/medium/0",
@@ -128,13 +133,13 @@
   "ladder:ladder-v14:gemini-4-carbon/low/medium/0"
  ],
  "ledger": {
-  "calls": 6615,
+  "calls": 6915,
   "errors": 0,
-  "run_ids": 120,
-  "tokens_in": 186060351,
-  "tokens_thinking": 1928274,
-  "cost_usd_ledger": 29.37,
-  "cost_usd_priced": 41.7
+  "run_ids": 125,
+  "tokens_in": 197483715,
+  "tokens_thinking": 2047033,
+  "cost_usd_ledger": 30.77,
+  "cost_usd_priced": 44.38
  },
  "prices_usd_per_1m": {
   "gemini-3.1-flash-lite": [
@@ -168,7 +173,8 @@
    0.1
   ]
  },
- "episodes": 121,
+ "episodes": 125,
+ "headline_file": "/Users/silaswang/junction-aimo-team/wt/gemini-ladder/results/gemini/ladder_headline.md",
  "rows": [
   {
    "model": "gemini-3.1-flash-lite",
@@ -517,39 +523,41 @@
    "model": "gemini-3.5-flash",
    "level": "high",
    "tier": "medium",
-   "n": 4,
+   "n": 5,
    "seeds": [
     0,
     1,
     2,
-    3
+    3,
+    5
    ],
    "source": "ladder",
-   "mean": 0.2925,
-   "ci": 0.8597743172871976,
-   "accuracy": 0.75,
+   "mean": 0.392,
+   "ci": 0.693945189766454,
+   "accuracy": 0.8,
    "accused_rate": 1.0,
-   "accuse_day": 9.0,
-   "solver_same_seeds": 0.6325000000000001,
-   "ratio": 0.46245059288537543,
-   "ratio_lo": -0.8275862068965518,
-   "ratio_hi": 1.7005649717514122,
-   "diff": -0.34,
-   "diff_ci": 0.9436200789159445,
-   "luck_adj_ratio": 0.20818181818181808,
-   "luck_adj_lo": -0.8606716417910453,
-   "luck_adj_hi": 1.4117647058823533,
-   "thinking_per_ep": 22821.0,
+   "accuse_day": 8.4,
+   "solver_same_seeds": 0.664,
+   "ratio": 0.5903614457831325,
+   "ratio_lo": -0.4613259668508287,
+   "ratio_hi": 1.4909090909090907,
+   "diff": -0.272,
+   "diff_ci": 0.7429770322156668,
+   "luck_adj_ratio": 0.08819879518072274,
+   "luck_adj_lo": -0.7321268011527382,
+   "luck_adj_hi": 1.0953136531365317,
+   "thinking_per_ep": 20768.0,
    "thinking_is_estimate": false,
-   "calls_per_ep": 62.25,
-   "in_per_ep": 2269091.5,
-   "cost_per_ep": 0.42394756874999995,
-   "wall_min_per_ep": 4.538749999999999,
+   "calls_per_ep": 56.6,
+   "in_per_ep": 1950941.6,
+   "cost_per_ep": 0.3746721,
+   "wall_min_per_ep": 4.689666666666667,
    "run_ids": [
     "ladder:ladder-v14:gemini-3.5-flash/high/medium/0",
     "ladder:ladder-v14:gemini-3.5-flash/high/medium/1",
     "ladder:ladder-v14:gemini-3.5-flash/high/medium/2",
-    "ladder:ladder-v14:gemini-3.5-flash/high/medium/3"
+    "ladder:ladder-v14:gemini-3.5-flash/high/medium/3",
+    "ladder:ladder-v14:gemini-3.5-flash/high/medium/5"
    ],
    "tiers_versions": [
     "v1.4"
@@ -1106,39 +1114,41 @@
    "model": "gemini-3.5-flash",
    "level": "medium",
    "tier": "hard",
-   "n": 4,
+   "n": 5,
    "seeds": [
     0,
     1,
     2,
-    3
+    3,
+    4
    ],
    "source": "ladder",
-   "mean": 0.5425,
-   "ci": 0.12911600726994826,
+   "mean": 0.532,
+   "ci": 0.10210828761662788,
    "accuracy": 1.0,
    "accused_rate": 1.0,
-   "accuse_day": 13.25,
-   "solver_same_seeds": 0.5475,
-   "ratio": 0.9908675799086758,
-   "ratio_lo": 0.716,
-   "ratio_hi": 1.3856209150326797,
-   "diff": -0.004999999999999977,
-   "diff_ci": 0.18255377289993213,
-   "luck_adj_ratio": 0.4325038135530465,
-   "luck_adj_lo": -0.753304795327652,
-   "luck_adj_hi": 1.4780737994744566,
-   "thinking_per_ep": 22462.0,
+   "accuse_day": 13.2,
+   "solver_same_seeds": 0.584,
+   "ratio": 0.9109589041095891,
+   "ratio_lo": 0.7058823529411765,
+   "ratio_hi": 1.1950207468879666,
+   "diff": -0.05199999999999998,
+   "diff_ci": 0.16876499163037337,
+   "luck_adj_ratio": 0.21079447103608162,
+   "luck_adj_lo": -0.6701765495001197,
+   "luck_adj_hi": 1.2059789706988222,
+   "thinking_per_ep": 21114.0,
    "thinking_is_estimate": false,
-   "calls_per_ep": 69.25,
-   "in_per_ep": 2692662.75,
-   "cost_per_ep": 0.4729364625,
-   "wall_min_per_ep": 7.250416666666666,
+   "calls_per_ep": 64.4,
+   "in_per_ep": 2427247.4,
+   "cost_per_ep": 0.43566823499999996,
+   "wall_min_per_ep": 7.152666666666667,
    "run_ids": [
     "ladder:ladder-v14:gemini-3.5-flash/medium/hard/0",
     "ladder:ladder-v14:gemini-3.5-flash/medium/hard/1",
     "ladder:ladder-v14:gemini-3.5-flash/medium/hard/2",
-    "ladder:ladder-v14:gemini-3.5-flash/medium/hard/3"
+    "ladder:ladder-v14:gemini-3.5-flash/medium/hard/3",
+    "ladder:ladder-v14:gemini-3.5-flash/medium/hard/4"
    ],
    "tiers_versions": [
     "v1.4"
@@ -1312,39 +1322,41 @@
    "model": "gemini-3.8-flash",
    "level": "high",
    "tier": "hard",
-   "n": 4,
+   "n": 5,
    "seeds": [
     0,
     1,
     2,
-    3
+    3,
+    4
    ],
    "source": "ladder",
-   "mean": 0.095,
-   "ci": 0.7325568282847869,
-   "accuracy": 0.75,
+   "mean": 0.166,
+   "ci": 0.5842509816850973,
+   "accuracy": 0.8,
    "accused_rate": 1.0,
-   "accuse_day": 15.75,
-   "solver_same_seeds": 0.5475,
-   "ratio": 0.17351598173515984,
-   "ratio_lo": -1.0420168067226891,
-   "ratio_hi": 0.8865979381443299,
-   "diff": -0.4525,
-   "diff_ci": 0.7373428216689076,
-   "luck_adj_ratio": 0.45047811341432675,
-   "luck_adj_lo": -0.9055931599572518,
-   "luck_adj_hi": 0.8898698618356933,
-   "thinking_per_ep": 47984.0,
+   "accuse_day": 16.8,
+   "solver_same_seeds": 0.584,
+   "ratio": 0.2842465753424658,
+   "ratio_lo": -0.7896678966789669,
+   "ratio_hi": 0.868217054263566,
+   "diff": -0.418,
+   "diff_ci": 0.5751322686130557,
+   "luck_adj_ratio": 0.11979663747836239,
+   "luck_adj_lo": -0.8655525474789842,
+   "luck_adj_hi": 0.8426653070413579,
+   "thinking_per_ep": 50463.4,
    "thinking_is_estimate": false,
-   "calls_per_ep": 78.5,
-   "in_per_ep": 4755465.0,
-   "cost_per_ep": 0.7270974375,
-   "wall_min_per_ep": 11.398333333333333,
+   "calls_per_ep": 85.8,
+   "in_per_ep": 5381277.0,
+   "cost_per_ep": 0.7990995599999999,
+   "wall_min_per_ep": 15.160666666666666,
    "run_ids": [
     "ladder:ladder-v14:gemini-3.8-flash/high/hard/0",
     "ladder:ladder-v14:gemini-3.8-flash/high/hard/1",
     "ladder:ladder-v14:gemini-3.8-flash/high/hard/2",
-    "ladder:ladder-v14:gemini-3.8-flash/high/hard/3"
+    "ladder:ladder-v14:gemini-3.8-flash/high/hard/3",
+    "ladder:ladder-v14:gemini-3.8-flash/high/hard/4"
    ],
    "tiers_versions": [
     "v1.4"
@@ -1392,16 +1404,13 @@
     "ladder:ladder-v14:gemini-4-argon/medium/hard/1"
    ],
    "tiers_versions": [
-    "None",
     "v1.4"
    ],
    "launch_git_shas": [
-    "107c485",
-    "None"
+    "107c485"
    ],
    "code_fingerprints": [
-    "06ea9b6a0f68d1dc",
-    "None"
+    "06ea9b6a0f68d1dc"
    ],
    "model_versions": []
   },
@@ -1409,32 +1418,34 @@
    "model": "gemini-4-argon",
    "level": "high",
    "tier": "hard",
-   "n": 1,
+   "n": 2,
    "seeds": [
+    0,
     1
    ],
    "source": "ladder",
-   "mean": 0.68,
-   "ci": 0.0,
+   "mean": 0.665,
+   "ci": 0.029400000000000023,
    "accuracy": 1.0,
    "accused_rate": 1.0,
-   "accuse_day": 10.0,
-   "solver_same_seeds": 0.69,
-   "ratio": 0.9855072463768118,
-   "ratio_lo": null,
-   "ratio_hi": null,
-   "diff": -0.009999999999999898,
-   "diff_ci": 0.0,
-   "luck_adj_ratio": 0.7298879109305649,
-   "luck_adj_lo": null,
-   "luck_adj_hi": null,
-   "thinking_per_ep": 25065.0,
+   "accuse_day": 11.5,
+   "solver_same_seeds": 0.665,
+   "ratio": 1.0,
+   "ratio_lo": 0.9855072463768118,
+   "ratio_hi": 1.015625,
+   "diff": 5.551115123125783e-17,
+   "diff_ci": 0.01959999999999991,
+   "luck_adj_ratio": 0.8039819493697841,
+   "luck_adj_lo": 0.7298879109305649,
+   "luck_adj_hi": 0.8924976633834208,
+   "thinking_per_ep": 34159.0,
    "thinking_is_estimate": false,
-   "calls_per_ep": 65.0,
-   "in_per_ep": 1744524.0,
-   "cost_per_ep": 0.7464641999999999,
-   "wall_min_per_ep": 32.473333333333336,
+   "calls_per_ep": 95.0,
+   "in_per_ep": 3349672.0,
+   "cost_per_ep": 1.1396374,
+   "wall_min_per_ep": 47.3425,
    "run_ids": [
+    "ladder:ladder-v14:gemini-4-argon/high/hard/0",
     "ladder:ladder-v14:gemini-4-argon/high/hard/1"
    ],
    "tiers_versions": [
@@ -1854,16 +1865,16 @@
     }
    },
    "gemini-3.5-flash@high|medium": {
-    "episodes": 4,
-    "regret_per_ep": 0.4407,
+    "episodes": 5,
+    "regret_per_ep": 0.5544,
     "tags": {
      "premature_accusation": {
-      "regret_per_ep": 0.4078,
-      "rate": 0.5
+      "regret_per_ep": 0.5281,
+      "rate": 0.6
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0329,
-      "rate": 1.0
+      "regret_per_ep": 0.0263,
+      "rate": 0.8
      }
     }
    },
@@ -1900,28 +1911,28 @@
     }
    },
    "gemini-3.5-flash@medium|hard": {
-    "episodes": 4,
-    "regret_per_ep": 0.3191,
+    "episodes": 5,
+    "regret_per_ep": 0.41,
     "tags": {
      "premature_accusation": {
-      "regret_per_ep": 0.1965,
-      "rate": 0.25
+      "regret_per_ep": 0.3049,
+      "rate": 0.4
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0636,
-      "rate": 1.0
-     },
-     "other:accuse": {
-      "regret_per_ep": 0.0269,
-      "rate": 0.25
+      "regret_per_ep": 0.0509,
+      "rate": 0.8
      },
      "uninformative_canary": {
-      "regret_per_ep": 0.0257,
-      "rate": 0.5
+      "regret_per_ep": 0.0276,
+      "rate": 0.6
+     },
+     "other:accuse": {
+      "regret_per_ep": 0.0216,
+      "rate": 0.2
      },
      "other:advance_day": {
-      "regret_per_ep": 0.0063,
-      "rate": 0.25
+      "regret_per_ep": 0.0051,
+      "rate": 0.2
      }
     }
    },
@@ -1972,24 +1983,24 @@
     }
    },
    "gemini-3.8-flash@high|hard": {
-    "episodes": 4,
-    "regret_per_ep": 0.1987,
+    "episodes": 5,
+    "regret_per_ep": 0.2758,
     "tags": {
      "premature_accusation": {
-      "regret_per_ep": 0.1275,
-      "rate": 0.25
+      "regret_per_ep": 0.2128,
+      "rate": 0.4
      },
      "other:accuse": {
-      "regret_per_ep": 0.044,
-      "rate": 0.5
+      "regret_per_ep": 0.0352,
+      "rate": 0.4
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0272,
+      "regret_per_ep": 0.0278,
       "rate": 1.0
      },
      "uninformative_canary": {
       "regret_per_ep": 0.0,
-      "rate": 0.25
+      "rate": 0.2
      }
     }
    },
@@ -2076,15 +2087,15 @@
     }
    },
    "gemini-4-argon@high|hard": {
-    "episodes": 1,
+    "episodes": 2,
     "regret_per_ep": 0.1758,
     "tags": {
      "other:accuse": {
-      "regret_per_ep": 0.1632,
+      "regret_per_ep": 0.1464,
       "rate": 1.0
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0126,
+      "regret_per_ep": 0.0294,
       "rate": 1.0
      }
     }
@@ -2181,58 +2192,58 @@
   ],
   "pooled": {
    "high|hard": {
-    "episodes": 13,
-    "regret_per_ep": 0.5014,
+    "episodes": 14,
+    "regret_per_ep": 0.5073,
     "tags": {
      "premature_accusation": {
-      "regret_per_ep": 0.3188,
-      "rate": 0.308
+      "regret_per_ep": 0.3356,
+      "rate": 0.357
      },
      "ignored_delay": {
-      "regret_per_ep": 0.0568,
-      "rate": 0.077
+      "regret_per_ep": 0.0527,
+      "rate": 0.071
      },
      "uninformative_canary": {
-      "regret_per_ep": 0.0377,
-      "rate": 0.538
+      "regret_per_ep": 0.035,
+      "rate": 0.5
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0351,
-      "rate": 0.923
+      "regret_per_ep": 0.0348,
+      "rate": 0.929
      },
      "other:restrict_access": {
-      "regret_per_ep": 0.0307,
-      "rate": 0.154
+      "regret_per_ep": 0.0285,
+      "rate": 0.143
      },
      "other:accuse": {
-      "regret_per_ep": 0.0223,
-      "rate": 0.462
+      "regret_per_ep": 0.0207,
+      "rate": 0.429
      }
     }
    },
    "high|medium": {
-    "episodes": 14,
-    "regret_per_ep": 0.595,
+    "episodes": 15,
+    "regret_per_ep": 0.6226,
     "tags": {
      "premature_accusation": {
-      "regret_per_ep": 0.4989,
-      "rate": 0.571
+      "regret_per_ep": 0.533,
+      "rate": 0.6
      },
      "ignored_delay": {
-      "regret_per_ep": 0.0586,
-      "rate": 0.071
+      "regret_per_ep": 0.0547,
+      "rate": 0.067
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0203,
-      "rate": 0.929
+      "regret_per_ep": 0.019,
+      "rate": 0.867
      },
      "other:restrict_access": {
-      "regret_per_ep": 0.0113,
-      "rate": 0.143
+      "regret_per_ep": 0.0105,
+      "rate": 0.133
      },
      "over_restriction": {
-      "regret_per_ep": 0.0059,
-      "rate": 0.071
+      "regret_per_ep": 0.0055,
+      "rate": 0.067
      }
     }
    },
@@ -2293,28 +2304,28 @@
     }
    },
    "medium|hard": {
-    "episodes": 14,
-    "regret_per_ep": 0.6048,
+    "episodes": 15,
+    "regret_per_ep": 0.6161,
     "tags": {
      "premature_accusation": {
-      "regret_per_ep": 0.5233,
-      "rate": 0.5
+      "regret_per_ep": 0.5376,
+      "rate": 0.533
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0339,
-      "rate": 0.929
+      "regret_per_ep": 0.0317,
+      "rate": 0.867
      },
      "other:accuse": {
-      "regret_per_ep": 0.0289,
-      "rate": 0.357
+      "regret_per_ep": 0.027,
+      "rate": 0.333
      },
      "uninformative_canary": {
-      "regret_per_ep": 0.0169,
-      "rate": 0.357
+      "regret_per_ep": 0.0181,
+      "rate": 0.4
      },
      "other:advance_day": {
-      "regret_per_ep": 0.0018,
-      "rate": 0.071
+      "regret_per_ep": 0.0017,
+      "rate": 0.067
      }
     }
    },

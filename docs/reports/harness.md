@@ -81,7 +81,11 @@
 - **Fresh-clone check** (`/tmp/canary_fresh_clone.sh`): `git clone --branch justSilas-harness-repro` (111484b) into /tmp/canary-fresh, no `.env`, CANARY_WORLD_SECRET/OPENAI/GEMINI keys unset.
   - clone 1.5 s; `make setup` exit 0 in 0.5 s (warm uv cache); `make reproduce` exit 0 in 8.5 s.
   - With an empty uv cache (`UV_CACHE_DIR=/tmp/canary-uvcache`): `make setup` 2.9 s, `make reproduce` 8.6 s. Python 3.12 was already present on this Mac.
-  - Fresh-clone solver: medium +0.526 ± 0.089, hard +0.532 ± 0.116, easy +0.771 ± 0.039, all inside the README ranges. All three results files were written.
+  - Fresh-clone solver: medium +0.526 ± 0.089, hard +0.532 ± 0.116, easy +0.771 ± 0.039, all inside the README ranges at that commit. All three results files were written.
+  - **Re-run on the final branch head 5ff950b:**
+    - clone 1.2 s; `make setup` exit 0 in 0.6 s (warm cache); `make reproduce` exit 0 in 5.5 s;
+    - cold uv cache: `make setup` 2.8 s, `make reproduce` 5.6 s;
+    - solver medium +0.593 ± 0.090, hard +0.573 ± 0.099, easy +0.804 ± 0.034, all inside the README ranges.
 
 ### Commands run
 `make setup`; `make test`; `make reproduce` (×4); `uv run ... pytest -q tests/test_reproduce.py`; `python /tmp/canary_spread.py 10` and `... 30`; `CANARY_WORLD_SECRET=cmp-secret` CLI vs in-process comparison (identical); `bash /tmp/canary_fresh_clone.sh`; `bash /tmp/canary_cold_setup.sh`.

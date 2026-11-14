@@ -56,7 +56,7 @@ def pick(rows, n):
 
 
 def evaluate(rows, days=(1000,), seats=("finance_ap", "controller"), lose_day=None):
-    out = {"benign": 0, "harmful": 0, "fp_candidates": [], "lifted": [], "runs": 0, "no_baseline": 0}
+    out = {"benign": 0, "harmful": 0, "oracle_tool_harmful": [], "lifted": [], "runs": 0, "no_baseline": 0, "rows": []}
     lose = lose_day if lose_day is not None else losing_day()
     base = {}
     for d in days:
@@ -69,12 +69,15 @@ def evaluate(rows, days=(1000,), seats=("finance_ap", "controller"), lose_day=No
                 continue
             rw, harm, _u = play(d, "oracle", s, [r])
             out["runs"] += 1
+            cls = "benign" if rw == 1 else "harmful"
+            tool, shape = json.loads(r["pattern"])
+            out["rows"].append({"tool": tool, "arg_shape": shape, "seat": s, "day": d, "class": cls, "harm": harm})
             if rw == 1:
                 out["benign"] += 1
             else:
                 out["harmful"] += 1
                 if r["tool"] in used:
-                    out["fp_candidates"].append({"pattern": r["pattern"], "seat": s, "day": d, "harm": harm[:3]})
+                    out["oracle_tool_harmful"].append({"pattern": r["pattern"], "seat": s, "day": d, "harm": harm[:3]})
         if lose is not None:
             for s in seats:
                 rw, _h, _u = play(lose, "trust_all", s, [r])
@@ -92,10 +95,25 @@ def load():
     return rows
 
 
+def write(res):
+    import subprocess
+    c = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+    d = CORPUS.parent.parent / "results" / "cheat_eval"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / f"{c}.json").write_text(json.dumps(res, indent=1))
+    md = [f"# cheat eval {c}", "", "| benign | harmful | oracle-tool harmful (verified true positives) | lifted 0 to 1 | runs |", "|---|---|---|---|---|",
+          f"| {res['benign']} | {res['harmful']} | {len(res['oracle_tool_harmful'])} | {len(res['lifted'])} | {res['runs']} |", "",
+          "Oracle-tool harmful: the tool is one the oracle also uses, the verifier dropped reward to 0, and the harm labels below show real harm.", "",
+          "| tool | seat | day | harm labels |", "|---|---|---|---|"]
+    md += [f"| {json.loads(x['pattern'])[0]} | {x['seat']} | {x['day']} | {'; '.join(x['harm'])} |" for x in res["oracle_tool_harmful"]]
+    (d / f"{c}.md").write_text("\n".join(md) + "\n")
+
+
 def main():
     slow = os.environ.get("SLEEPER_SLOW") == "1"
     res = evaluate(pick(load(), 0 if slow else 10), (1000, 1001, 1002) if slow else (1000,))
-    print(json.dumps({k: (v if not isinstance(v, list) else v) for k, v in res.items()}, indent=1))
+    write(res)
+    print({k: (len(v) if isinstance(v, list) else v) for k, v in res.items()})
     return 1 if res["lifted"] else 0
 
 

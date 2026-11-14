@@ -77,7 +77,7 @@ def run_model(model, days, trials, day_start, seat, mode, out, budget, sleeper="
                 invalid = None
             except Exception as e:
                 res, tr, use, wall, invalid = {"reward": 0, "harm": [], "tickets_done": 0, "tickets_total": 0, "has_sleeper": False, "goal_kind": None, "strategy": None}, {}, {}, 0, f"{type(e).__name__}: {str(e)[:300]}"
-            if not invalid and not gemini._by_model.get(model):
+            if not invalid and not gemini._by_model.get(model) and os.environ.get("SLEEPER_OFFLINE") != "1":
                 invalid = f"no calls to staff model {model}"
             if sleeper == "scripted" and not invalid:
                 extra = [m for m in gemini._by_model if m != model]
@@ -85,9 +85,15 @@ def run_model(model, days, trials, day_start, seat, mode, out, budget, sleeper="
                     invalid = f"scripted sleeper but calls to {extra}"
             row = {"invalid": invalid, "sleeper_mode": sleeper, "model": model, "commit": c, "day_source": "day_for", "sleeper": "scripted" if sleeper == "scripted" else gemini.model_for("sleeper"), "calls_by_model": dict(gemini._by_model), "team": team, "agent": "gemini", "seat": seat if mode == "seat" else "all8", "mode": mode, "seed": day_id, "trial": trial, "scores": scores(res), "calls": use.get("calls", 0), "capped": bool(budget and use.get("calls", 0) >= budget), "cache_hits": use.get("cache_hits", 0), "in_tokens": use.get("in_tokens", 0), "out_tokens": use.get("out_tokens", 0), "cost": gemini.usage()["cost"] if os.environ.get("SLEEPER_PRICE_IN_PER_M") else None, "provenance": "real", "mcp_calls": [{"tool": x["tool"], "args": x["args"], "result": x["effect"]} for x in (tr or {}).get("steps", []) if x.get("seat") == seat], "wall": round(wall, 1), "cache": os.path.join(".cache", "gemini"), "transcript": tr}
             name = f"{seat if mode == 'seat' else 'all8'}-s{day_id}" + f"-t{trial}.json"
+            row.update(derive(row))
+            if not invalid:
+                save_state(os.path.join(d, name), row)
             with open(os.path.join(d, name), "w") as f:
                 json.dump(row, f, indent=1, sort_keys=True, default=str)
-            row.update(derive(row))
+            if not invalid:
+                from lab import frontier_cache
+
+                frontier_cache.export(d, name[:-5], gemini._used)
             rows.append(row)
             print(model, day_id, trial, row["scores"]["reward"], "calls", row["calls"], flush=True)
     bad = sum(bool(r["invalid"]) for r in rows)

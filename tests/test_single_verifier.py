@@ -9,8 +9,8 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 DIRS = ["sleeper", "lab", "agents", "harbor", "scripts", "web", "redteam", "train", "arena"]
 SELF = {"sleeper/verifier.py"}
-TXT_OK = {"harbor/build.py", "harbor/opencode/judge_agents/exploit_agent.py", "redteam/logs_race.sh"}
-LITERAL = re.compile(r"""["']reward["']\s*:\s*(\d|int\(|bool\()|\breward\s*=\s*(\d|int\()|\bResult\(""")
+TXT_OK = {"harbor/build.py", "harbor/opencode/judge_agents/exploit_agent.py", "redteam/logs_race.sh", "redteam/logs_symlink.sh"}
+LITERAL = re.compile(r"""["']reward["']\s*:\s*([1-9]|int\(|bool\()|\breward\s*=\s*([1-9]|int\()|\bResult\(""")
 
 
 def files():

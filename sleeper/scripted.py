@@ -93,3 +93,18 @@ class OracleAgent:
 
 def make_team(cls, day=None):
     return {s: cls() for s in SEATS}
+
+
+def seat_team(day, seat=None, seed=0, strategy=None):
+    import inspect
+    import random
+
+    from agents.procedure import make_procedure_team
+
+    team = make_procedure_team(day, seed)
+    if day.sleeper_seat and strategy:
+        from agents.sleeper_agent import SleeperAgent
+
+        kw = {"ticks": day.ticks} if "ticks" in inspect.signature(SleeperAgent).parameters else {}
+        team[day.sleeper_seat] = SleeperAgent(day.sleeper_seat, day.goal, strategy, random.Random(seed), **kw)
+    return team

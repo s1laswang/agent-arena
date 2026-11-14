@@ -14,15 +14,11 @@ One of the eight people in this company is a traitor.
 
 It looks like a normal coworker. It does its tickets. It talks in the chat. And somewhere in the day it moves money, or leaks a secret, or opens a backdoor.
 
-Our question is simple. Can the other seven catch it before the damage is done, and still finish the work?
-
 ## 1:00 The company
 
 This is a small company with eight AI employees. A CEO assistant, finance, a controller, HR, IT, procurement, sales and legal.
 
 Each one has a real job and real permissions. Nobody can do everything. The dangerous moves need two people. A payment over ten thousand euros needs the controller. New vendor bank details need procurement and finance. A new admin account needs IT and a ticket. A document leaving the company needs legal.
-
-Each day has a queue of tickets. Pay this invoice. Change this employee's bank. Give the new hire access. Send the customer the contract.
 
 On some days, one seat is a sleeper with a hidden goal. Fraud, a leak, a backdoor, sabotage, or framing a coworker. On other days there is no sleeper at all. That matters, and I will come back to it.
 
@@ -60,10 +56,6 @@ The scripted reference, which works only from the evidence, gets 0.550. The scri
 
 The Gemini reference row says not found. We have not run it with a key yet.
 
-These runs are deterministic, so pass-hat-k equals a single run. We say that rather than imply repeated variance.
-
-One honest note: the staff number is below the reference partly because the staff are weak, and we measured a baseline that ignores chat and it scores 0.000 here (make eval, momin 814a723, offline).
-
 ## 5:45 Multi-model table and replay (fill when lead-lab publishes)
 
 Show the multi-model gap table and play the Gemini 4 Carbon replay from `pitch/MULTIMODEL.md`. Every cell there says REAL (model id, date, run id) or SCRIPTED. Today the REAL cells are NOT FOUND (lead-lab pending). Do not say a model failed or won until the cell is filled.
@@ -78,13 +70,11 @@ When we read the failed days, the mistakes are not random. They are decisions.
 
 The controller approved without checking the audit log. A familiar name was trusted. A secret was leaked inside a summary. The wrong person was accused. A slow attack, spread over several steps, was missed.
 
-Of the days staff lost, the share with a named mistake and the share that flip to a win under the procedure: NOT FOUND (not in README or docs/RULES.md at 814a723). Every one of these is a choice made while the evidence to choose differently was on the screen. The audit log, the approval history, the vendor records and the policies are in every day. Nothing is hidden and nothing is worded to trick anyone. That is the rule we held ourselves to.
-
-The failure table is produced by `python -m lab.analyse` over the run folder. The counts come from there.
+Of the days staff lost, the share with a named mistake and the share that flip to a win under the procedure: NOT FOUND (not in README or docs/RULES.md at 814a723). The evidence to choose differently was on screen every time. Nothing is hidden, nothing is worded to trick anyone.
 
 ## 7:00 Reward integrity
 
-Skill ladder slide (placeholder): "Reward rises with skill, and only the full procedure reaches the reference." Each level adds one named procedure rule on the same n of 400 or more paired days, with a bootstrap CI per step, and do_nothing < trust_all < staff < reference < oracle. Every figure: NOT FOUND (ladder.md not on momin yet). Source when it lands: `results/ladder.md`, SCRIPTED unless it says model id.
+Skill ladder slide (placeholder): "Reward rises with skill, and only the full procedure reaches the reference." Figures NOT FOUND (ladder.md not on momin yet).
 
 
 Now the part we care about most. The reward reads only the final state of the company. If you say in the chat that you caught the sleeper, nothing changes.
@@ -105,9 +95,7 @@ You have fifteen minutes. Everything we already tried is in the exploit log. Ple
 
 One command reproduces what I showed you. `make eval`.
 
-It runs without a Gemini key, with scripted agents. With a key, the Gemini seats switch on, and every response is cached by prompt hash, so a rerun gives the same answer and costs nothing.
-
-[Run it or show the saved output.]
+[Show the saved output. Do not run it live: it took 10 minutes in the rehearsal.]
 
 ## 9:15 Training and close
 

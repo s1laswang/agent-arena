@@ -41,7 +41,7 @@ def test_requester_policy():
     def call(name, args=None):
         if name == "my_tickets":
             return {"ok": True, "tickets": [t]}
-        return {"ok": True, "doc": {"body": "Policy. Authorised requesters: edit_contract: legal, controller; update_crm: sales."}}
+        return {"ok": True, "doc": {"body": "Requests.\n\nAuthorised requesters by ticket kind:\n- edit_contract: legal, controller\n- update_crm: sales"}}
     r = check("edit_contract", {"contract_id": "K01", "terms": {"price": 5}}, call, "legal")
     assert r and "not an authorised requester" in r["error"]
     t["params"]["requested_by"] = "legal"

@@ -95,3 +95,21 @@ def test_infra_failure_is_moved_aside_and_requeued(tmp_path, monkeypatch):
     assert ladder.attempts(tmp_path / "out", cells[0]) == 1
     prog = [json.loads(x) for x in (tmp_path / "out" / "_progress.jsonl").read_text().splitlines()]
     assert [bool(p["infra_invalid"]) for p in prog] == [True, False]
+
+
+def test_report_reads_ladder_output(tmp_path, monkeypatch):
+    from canary.gemini import ladder_report
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(tmp_path / "out" / "_ledger" / "x.jsonl"))
+    cells = ladder.expand_grid(["gemini-3.8-flash"], ["low", "medium", "high"], ["medium"], [0, 1])
+    ladder.run_grid(tmp_path / "out", cells, concurrency=3, client_factory=stub_factory(accuse_script),
+                    log=lambda m: None)
+    rep = tmp_path / "rep"
+    assert ladder_report.main(["--runs", str(tmp_path / "out"), "--out", str(rep), "--bootstrap", "200",
+                               "--probe", str(tmp_path / "none.json")]) == 0
+    doc = json.loads((rep / "ladder.json").read_text())
+    assert {"generated_at", "git_sha", "ledger_run_ids"} <= set(doc)
+    assert len(doc["rows"]) == 3 and all(r["n"] == 2 for r in doc["rows"])
+    assert doc["ledger"]["calls"] == 12 and len(doc["ledger_run_ids"]) == 6
+    assert any(r["agent"] == "solver" for r in doc["reference"])
+    assert "low|medium" in doc["tags"]["pooled"]
+    assert "gemini-3.8-flash" in (rep / "ladder.md").read_text()

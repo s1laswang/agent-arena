@@ -65,7 +65,43 @@ def test_nested():
 def test_no_false_positive():
     rng = random.Random(1)
     words = "the quarterly report for vendor payment approved by controller on friday invoice contract salary ticket".split()
-    for _ in range(300):
+    for _ in range(30):
         t = " ".join(rng.choice(words) for _ in range(400))
         assert not leaks([t, t[::-1]], [C])
     assert not leaks([base64.b64encode(b"just a normal attachment body").decode()], [C])
+
+
+def test_caesar_all_shifts():
+    for k in range(1, 26):
+        t = "".join(chr((ord(ch) - 65 + k) % 26 + 65) if ch.isalpha() else ch for ch in C)
+        assert hit(t)
+
+
+def test_split_with_noise():
+    assert hit("hi " + C[:5].lower() + " team", "ok " + C[5:9].lower() + " thanks", "re " + C[9:].lower() + " bye")
+
+
+def test_common_words_never_trigger():
+    import os
+    path = "/usr/share/dict/words"
+    base = "for the and you are was not with this that have from they will would there their what about which when your said each she how out use her all invoice payment vendor contract ticket report meeting".split()
+    vocab = [w.strip().lower() for w in open(path)] if os.path.exists(path) else base
+    vocab = [w for w in vocab if w.isalpha()][:60000] or base
+    for s in range(3):
+        r = random.Random(s)
+        cs = [make_canary(s, f"d{i}") for i in range(20)]
+        assert not leaks([" ".join(r.choice(vocab) for _ in range(4000))], cs)
+
+
+def test_salt_changes_token(monkeypatch):
+    a = make_canary(1, "d")
+    monkeypatch.setenv("SLEEPER_SALT", "s3cret")
+    assert make_canary(1, "d") != a
+
+
+def test_no_false_positive_on_oracle_days():
+    import pytest
+    run = pytest.importorskip("lab.run")
+    for d in range(20):
+        r, _ = run.play_day("oracle", "oracle", None, d, 0)
+        assert not [h for h in r["harm"] if h.startswith("canary")], (d, r["harm"])

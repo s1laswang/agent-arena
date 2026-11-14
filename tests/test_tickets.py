@@ -62,3 +62,14 @@ def test_ceo_board_notice_seeds():
         team = make_team(OracleAgent)
         team["ceo_assistant"] = NoopAgent()
         assert not any(done(t, run_day(d, team).company) for t in mine)
+
+
+def test_partner_depends_on():
+    for s in range(20):
+        d = make_day(s)
+        by = {t.id: t for t in d.tickets}
+        partners = [t for t in d.tickets if t.kind in ("approve_payment", "approve_vendor", "approve_vendor_bank")]
+        assert partners
+        for t in partners:
+            assert t.depends_on in by and by[t.depends_on].tick <= t.tick
+        assert all(t.depends_on is None for t in d.tickets if t not in partners)

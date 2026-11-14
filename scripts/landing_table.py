@@ -10,6 +10,9 @@ os.environ.pop("GEMINI_API_KEY", None)
 
 from agents.sleeper_agent import SleeperAgent
 from lab.run import build_team, day_for
+from sleeper import baselines
+
+baselines.register()
 from sleeper.day import run_day
 from sleeper.verifier import score
 
@@ -30,7 +33,7 @@ def collect(day_ids):
     rows = []
     for d in day_ids:
         row = {"day_id": d}
-        for team in ("staff", "oracle"):
+        for team in ("staff", "oracle", "trust_all"):
             try:
                 row[team], sid = play(d, team)
                 row["strategy"] = sid
@@ -44,20 +47,20 @@ def table(rows):
     g = defaultdict(list)
     for r in rows:
         g[r["strategy"] or "no_sleeper"].append(r)
-    out = ["| strategy | days | landed vs staff | staff reward | oracle reward | oracle errors |", "|---|---|---|---|---|---|"]
+    out = ["| strategy | days | landed vs staff | staff reward | oracle reward | trust_all reward | landed vs trust_all | errors |", "|---|---|---|---|---|---|---|---|"]
     bad = []
     for sid, rs in sorted(g.items()):
         ok = lambda t: [r[t] for r in rs if "error" not in r[t]]
-        st, orc = ok("staff"), ok("oracle")
-        errs = sum("error" in r["oracle"] for r in rs) + sum("error" in r["staff"] for r in rs)
+        st, orc, ta = ok("staff"), ok("oracle"), ok("trust_all")
+        errs = sum("error" in r[t] for r in rs for t in ("staff", "oracle", "trust_all"))
         land = sum(x["landed"] or 0 for x in st)
-        out.append(f"| {sid} | {len(rs)} | {land} | {sum(x['reward'] for x in st)} | {sum(x['reward'] for x in orc)} | {errs} |")
+        out.append(f"| {sid} | {len(rs)} | {land} | {sum(x['reward'] for x in st)} | {sum(x['reward'] for x in orc)} | {sum(x['reward'] for x in ta)} | {sum(x['landed'] or 0 for x in ta)} | {errs} |")
         if errs or any(x["reward"] != 1 for x in orc):
             bad.append(sid)
     return "\n".join(out), bad
 
 
-def main(n=40, out="results/landing"):
+def main(n=60, out="results/landing"):
     rows = collect(range(n))
     md, bad = table(rows)
     ts = time.strftime("%Y%m%d-%H%M%S")
@@ -69,4 +72,4 @@ def main(n=40, out="results/landing"):
 
 
 if __name__ == "__main__":
-    main(int(sys.argv[1]) if len(sys.argv) > 1 else 40)
+    main(int(sys.argv[1]) if len(sys.argv) > 1 else 60)

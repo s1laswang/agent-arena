@@ -8,7 +8,8 @@ the agent must have all the information it needs (rubric: "meaningful difficulty
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+import math
+from dataclasses import dataclass, asdict, replace
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,14 @@ class TierParams:
     framing: bool                  # mole injects fake suspicious accesses attributed to others
     careful_mole: bool             # mole leaks a canary with prob scaled by (1 - share of staff that got it)
     access_constraints: bool       # canaries may only go to employees with clearance for that doc
+    # --- v0 additive fields (HEAD-ENV 02:00); all stated in instruction.md ---
+    leak_window_days: int = 3      # mole may leak docs received on days d-2..d (not yet leaked)
+    p_after_hours_benign: float = 0.10   # share of an innocent's accesses flagged after_hours
+    p_after_hours_mole: float = 0.30     # share of the mole's own accesses flagged after_hours
+    framing_rate: float = 1.0      # if framing: Poisson rate/day of fake after-hours accesses attributed to others
+    framing_decoy_share: float = 0.5     # share of framed accesses attributed to the decoy (rest uniform over others)
+    docs_per_day: tuple[int, ...] = (2, 3, 4)  # regular docs published per day, uniform
+    noise: float = 1.0             # difficulty-curve knob (FR8 sweep); see apply_noise. 1.0 = tier as defined
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -67,3 +76,33 @@ DEV_SEEDS = range(0, 10_000)
 JUDGE_SEEDS = range(900_000, 900_030)   # 30 per tier
 TRAIN_SEEDS = range(100_000, 200_000)   # small-model training data; disjoint from judge seeds
 HELDOUT_SEEDS = range(800_000, 800_200) # small-model held-out eval
+
+
+def apply_noise(params: TierParams, noise: float) -> TierParams:
+    """Return a copy of `params` whose evidence is less (noise>1) or more (noise<1) informative.
+
+    Mapping (noise = k > 0; k = 1 returns the tier unchanged except noise=1.0):
+      * delay_choices: lo..max(lo, round(hi * k)) where (lo, hi) = (min, max) of the tier's choices
+      * p_leak: min(1, p_leak / k)   (fewer leaks -> fewer observations)
+      * likelihood ratios shrink toward 1 by a factor k:
+          interview_lr      -> 1 + (interview_lr - 1) / k
+          log_rate_mole     -> log_rate_benign + (log_rate_mole - log_rate_benign) / k
+          p_after_hours_mole-> p_after_hours_benign + (p_after_hours_mole - p_after_hours_benign) / k
+      * framing_rate: framing_rate * k
+    """
+    if noise <= 0:
+        raise ValueError("noise must be > 0")
+    k = float(noise)
+    lo, hi = min(params.delay_choices), max(params.delay_choices)
+    hi2 = max(lo, int(math.floor(hi * k + 0.5)))
+    return replace(
+        params,
+        noise=k,
+        delay_choices=tuple(range(lo, hi2 + 1)),
+        p_leak=min(1.0, params.p_leak / k),
+        interview_lr=1 + (params.interview_lr - 1) / k,
+        log_rate_mole=params.log_rate_benign + (params.log_rate_mole - params.log_rate_benign) / k,
+        p_after_hours_mole=params.p_after_hours_benign
+        + (params.p_after_hours_mole - params.p_after_hours_benign) / k,
+        framing_rate=params.framing_rate * k,
+    )

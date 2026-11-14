@@ -11,6 +11,16 @@ USAGE_FILE = "usage.jsonl"
 DEFAULT_MODEL = "gemini-2.5-flash"
 _usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0, "api_errors": 0}
 _client = None
+PRICES = json.loads((ROOT / "agents" / "prices.json").read_text())
+
+
+def price_for(model):
+    i = os.environ.get("SLEEPER_PRICE_IN_PER_M")
+    o = os.environ.get("SLEEPER_PRICE_OUT_PER_M")
+    if i and o:
+        return float(i), float(o), "env override"
+    p = PRICES.get(model)
+    return (p["in"], p["out"], p["source"] + " " + p["checked"]) if p else (2.0, 12.0, "assumed: model not in agents/prices.json")
 
 
 class GeminiUnavailable(Exception):
@@ -126,8 +136,7 @@ def _contents(messages):
             parts.append(types.Part.from_bytes(data=Path(img).read_bytes(), mime_type=_mime(img)))
         for c in m.get("tool_calls") or []:
             fp = types.Part.from_function_call(name=c["name"], args=c.get("args") or {})
-            if c.get("sig"):
-                fp.thought_signature = base64.b64decode(c["sig"])
+            fp.thought_signature = base64.b64decode(c["sig"]) if c.get("sig") else b"skip_thought_signature_validator"
             parts.append(fp)
         for r in m.get("tool_results") or []:
             parts.append(types.Part.from_function_response(name=r["name"], response={"result": r["result"]}))
@@ -146,7 +155,7 @@ def _get_client():
     if _client is None:
         from google import genai
 
-        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options=__import__("google.genai.types", fromlist=["x"]).HttpOptions(timeout=120000))
     return _client
 
 
@@ -156,7 +165,7 @@ def _generate(model, system, messages, tools, temperature, seed):
     cfg = types.GenerateContentConfig(
         system_instruction=system or None,
         temperature=temperature,
-        seed=seed,
+        seed=None if seed is None else seed % 2**31,
         tools=[types.Tool(function_declarations=to_declarations(tools))] if tools else None,
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )

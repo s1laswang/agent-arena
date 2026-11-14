@@ -10,6 +10,8 @@ from agents import gemini
 from scripts import gemini_seat as gs
 
 ROOT = Path(__file__).resolve().parent.parent
+import subprocess
+TRACKED = [str(ROOT / x) for x in subprocess.run(["git", "ls-files", "results/frontier"], cwd=ROOT, capture_output=True, text=True).stdout.split() if x.endswith(".json") and "-s" in x and "-t" in x and ".state." not in x]
 
 
 def test_abort_still_scores(tmp_path, monkeypatch):
@@ -21,7 +23,7 @@ def test_abort_still_scores(tmp_path, monkeypatch):
     assert json.loads(p.read_text())["model"] == "m"
 
 
-@pytest.mark.parametrize("f", glob.glob(str(ROOT / "results/frontier/*/*/*-s*-t*.json")) or [None])
+@pytest.mark.parametrize("f", TRACKED or [None])
 def test_replay_byte_identical(f, tmp_path, monkeypatch):
     if f is None or ".state." in f:
         pytest.skip("no committed run")

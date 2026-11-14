@@ -393,6 +393,10 @@ def build(runs: list[str], replay: bool = False, model: str = "gemini-3.8-flash"
                 if not a["faithful"]:
                     acc[ep.id] = {"skip": f"replay not faithful ({a['mismatched_results']} results differ)"}
                     continue
+                from canary.analysis.accuse import audit_episode
+                from canary.analysis.tags import to_result
+                au = audit_episode(to_result(e))  # canary.analysis.accuse: posterior at the accusation, verdict
+                a["accuse_audit"] = {k: au.get(k) for k in ("day", "p_accused", "p_top", "verdict")}
                 acc[ep.id] = a
                 sk = "|".join(map(str, key))
                 if sk not in sol:
@@ -418,6 +422,7 @@ def build(runs: list[str], replay: bool = False, model: str = "gemini-3.8-flash"
         rows.append({"episode": ep.id, "cohort": ep.cohort, "family": ep.family, "model": ep.model,
                      "thinking": ep.thinking_level, "harness": ep.harness, "tiers_version": ep.tiers_version,
                      "tier": ep.tier, "seed": ep.seed, "agent_score": a["score"], "solver_score": s["acc"]["score"],
+                     "accuse_audit": a.get("accuse_audit"), "harness_artifacts": a.get("harness_artifacts", 0),
                      **d})
     # aggregate
     total_gap = sum(r["gap"] for r in rows)
@@ -480,13 +485,15 @@ def build(runs: list[str], replay: bool = False, model: str = "gemini-3.8-flash"
                       "by_version": {k: round(v, 4) for k, v in sorted(c["versions"].items())},
                       "examples": examples, "quotes": nm.get("quotes", []), "chart": chart})
     max_resid = max((abs(r["residual"]) for r in rows), default=0.0)
-    cohorts = defaultdict(lambda: {"episodes": 0, "gap": 0.0, "agent": 0.0, "solver": 0.0, "by_cat": Counter()})
+    cohorts = defaultdict(lambda: {"episodes": 0, "gap": 0.0, "agent": 0.0, "solver": 0.0, "by_cat": Counter(),
+                                   "verdicts": Counter()})
     for r in rows:
         c = cohorts[r["cohort"]]
         c["episodes"] += 1
         c["gap"] += r["gap"]
         c["agent"] += r["agent_score"]
         c["solver"] += r["solver_score"]
+        c["verdicts"][(r.get("accuse_audit") or {}).get("verdict") or "none"] += 1
         for it in r["items"]:
             c["by_cat"][it["category"]] += it["value"]
     from .atlas import git_sha
@@ -508,6 +515,7 @@ def build(runs: list[str], replay: bool = False, model: str = "gemini-3.8-flash"
         "cohorts": {k: {"episodes": v["episodes"], "mean_gap": round(v["gap"] / v["episodes"], 4),
                         "mean_agent": round(v["agent"] / v["episodes"], 4),
                         "mean_solver": round(v["solver"] / v["episodes"], 4),
+                        "accusation_verdicts": dict(v["verdicts"]),
                         "by_category_mean": {c: round(x / v["episodes"], 4) for c, x in v["by_cat"].most_common()}}
                     for k, v in sorted(cohorts.items())},
         "episodes": rows,
@@ -575,11 +583,16 @@ def render(r: dict) -> str:
             out.append(f"  > `{q['episode']}` t={q['t']}: \"{' '.join(q['quote'].split())[:240]}\"")
         out.append("")
     out += ["## By cohort (never pooled across models, thinking levels or rules versions)", "",
-            "| cohort | episodes | mean agent | mean solver | mean gap | top categories (mean per episode) |",
-            "|---|---|---|---|---|---|"]
+            "Accusation verdicts from `canary.analysis.accuse` (solver posterior on the accused at the accusation: "
+            "justified >= 0.6; lucky = correct below 0.6; premature-wrong = wrong below 0.6).", "",
+            "| cohort | episodes | mean agent | mean solver | mean gap | justified / lucky / premature-wrong / none | "
+            "top categories (mean per episode) |", "|---|---|---|---|---|---|---|"]
     for k, v in r["cohorts"].items():
         top = ", ".join(f"{c} {x:+.3f}" for c, x in list(v["by_category_mean"].items())[:3])
-        out.append(f"| {k} | {v['episodes']} | {v['mean_agent']:.3f} | {v['mean_solver']:.3f} | {v['mean_gap']:+.3f} | {top} |")
+        vd = v.get("accusation_verdicts", {})
+        vs = " / ".join(str(vd.get(x, 0)) for x in ("justified", "lucky", "premature-wrong", "none"))
+        out.append(f"| {k} | {v['episodes']} | {v['mean_agent']:.3f} | {v['mean_solver']:.3f} | {v['mean_gap']:+.3f} | "
+                   f"{vs} | {top} |")
     out += ["", "Reproduce offline, no key: `python -m canary.gemini.gallery --replay`.", ""]
     return "\n".join(out)
 

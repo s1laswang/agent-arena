@@ -1,6 +1,6 @@
 # Failure gallery: where every lost point went
 
-*Generated 2026-11-14T19:00:19+0200 at `79dd2dc` by `python -m canary.gemini.gallery`. Numbers are computed in code; Gemini (`gemini-3.8-flash`) only names the modes, explains them and quotes the agents (quotes checked verbatim).*
+*Generated 2026-11-14T19:01:09+0200 at `258d852` by `python -m canary.gemini.gallery`. Numbers are computed in code; Gemini (`gemini-3.8-flash`) only names the modes, explains them and quotes the agents (quotes checked verbatim).*
 
 ## How the accounting works
 
@@ -150,31 +150,33 @@ Agents invoke restrict_access against suspected employees while posterior probab
 
 ## By cohort (never pooled across models, thinking levels or rules versions)
 
-| cohort | episodes | mean agent | mean solver | mean gap | top categories (mean per episode) |
-|---|---|---|---|---|---|
-| gemini-3.1-flash-lite@high/inproc/v1.4 | 8 | -0.340 | 0.590 | +0.930 | wrong_accusation_premature +1.090, restriction_cost +0.018, slow_commit_leak_damage +0.015 |
-| gemini-3.1-flash-lite@low/inproc/v1.4 | 8 | -0.309 | 0.590 | +0.899 | wrong_accusation_premature +1.124, slow_commit_leak_damage +0.013, restriction_cost +0.005 |
-| gemini-3.1-flash-lite@medium/inproc/v1.4 | 8 | -0.570 | 0.590 | +1.160 | wrong_accusation_premature +0.899, wrong_accusation_decoy +0.479, slow_commit_leak_damage +0.025 |
-| gemini-3.1-flash-lite@minimal/inproc/v1.4 | 8 | -1.000 | 0.590 | +1.590 | wrong_accusation_premature +1.403, wrong_accusation_decoy +0.482, leak_timing_variance -0.021 |
-| gemini-3.5-flash/opencode/v1.4 | 10 | 0.486 | 0.576 | +0.090 | slow_commit_leak_damage +0.155, excess_canary_spend +0.022, leak_timing_variance -0.010 |
-| gemini-3.5-flash@high/inproc/v1.4 | 19 | 0.592 | 0.645 | +0.053 | wrong_accusation_premature +0.081, slow_commit_leak_damage +0.049, excess_canary_spend +0.009 |
-| gemini-3.5-flash@low/inproc/v1.4 | 8 | 0.010 | 0.590 | +0.580 | wrong_accusation_premature +0.354, wrong_accusation_evidence_backed +0.191, slow_commit_leak_damage +0.144 |
-| gemini-3.5-flash@medium/inproc/v1.4 | 16 | 0.548 | 0.651 | +0.102 | wrong_accusation_premature +0.090, slow_commit_leak_damage +0.089, excess_canary_spend +0.015 |
-| gemini-3.5-flash@minimal/inproc/v1.4 | 8 | -0.003 | 0.590 | +0.593 | wrong_accusation_premature +0.378, wrong_accusation_evidence_backed +0.195, slow_commit_leak_damage +0.076 |
-| gemini-3.8-flash@high/inproc/v1.4 | 20 | 0.425 | 0.653 | +0.228 | slow_commit_leak_damage +0.189, wrong_accusation_evidence_backed +0.077, wrong_accusation_premature +0.065 |
-| gemini-3.8-flash@low/inproc/v1.4 | 11 | -0.064 | 0.615 | +0.678 | wrong_accusation_premature +0.325, wrong_accusation_evidence_backed +0.311, slow_commit_leak_damage +0.100 |
-| gemini-3.8-flash@medium/inproc/v1.4 | 19 | 0.263 | 0.645 | +0.383 | wrong_accusation_premature +0.174, wrong_accusation_evidence_backed +0.162, slow_commit_leak_damage +0.162 |
-| gemini-4-argon@high/inproc/v1.4 | 4 | 0.698 | 0.615 | -0.083 | slow_commit_leak_damage +0.083, excess_canary_spend +0.003, leak_timing_variance -0.025 |
-| gemini-4-argon@low/inproc/v1.4 | 4 | 0.765 | 0.615 | -0.150 | slow_commit_leak_damage +0.025, leak_timing_variance -0.013, fewer_canaries_credit -0.050 |
-| gemini-4-argon@medium/inproc/v1.4 | 4 | 0.585 | 0.615 | +0.030 | slow_commit_leak_damage +0.150, excess_canary_spend +0.010, leak_timing_variance -0.035 |
-| gemini-4-carbon/inproc/v1.4 | 16 | 0.495 | 0.623 | +0.128 | wrong_accusation_evidence_backed +0.094, slow_commit_leak_damage +0.093, leak_timing_variance +0.016 |
-| gemini-4-carbon/opencode/v1.4 | 18 | 0.518 | 0.636 | +0.118 | slow_commit_leak_damage +0.106, wrong_accusation_evidence_backed +0.073, excess_canary_spend +0.011 |
-| gemini-4-carbon@high/inproc/v1.4 | 3 | 0.710 | 0.690 | -0.020 | leak_timing_variance +0.020, slow_commit_leak_damage +0.017, restriction_cost +0.007 |
-| gemini-4-carbon@low/inproc/v1.4 | 4 | 0.583 | 0.615 | +0.033 | slow_commit_leak_damage +0.117, excess_canary_spend +0.045, leak_timing_variance -0.022 |
-| gpt-5.5/codex/v1.2 | 10 | 0.347 | 0.631 | +0.284 | wrong_accusation_premature +0.177, wrong_accusation_evidence_backed +0.169, slow_commit_leak_damage +0.033 |
-| gpt-5.5/codex/v1.3 | 22 | 0.528 | 0.671 | +0.144 | wrong_accusation_premature +0.152, slow_commit_leak_damage +0.053, excess_canary_spend +0.018 |
-| gpt-5.5/inproc/v1.2 | 40 | 0.550 | 0.637 | +0.087 | wrong_accusation_premature +0.080, slow_commit_leak_damage +0.057, wrong_accusation_evidence_backed +0.042 |
-| gpt-5.5/inproc/v1.3 | 17 | 0.478 | 0.712 | +0.234 | wrong_accusation_evidence_backed +0.094, wrong_accusation_premature +0.092, slow_commit_leak_damage +0.043 |
-| gpt-5.6-sol/opencode/v1.2 | 10 | 0.126 | 0.631 | +0.506 | infra_error_no_accusation +0.782, slow_commit_leak_damage +0.022, restriction_cost +0.011 |
+Accusation verdicts from `canary.analysis.accuse` (solver posterior on the accused at the accusation: justified >= 0.6; lucky = correct below 0.6; premature-wrong = wrong below 0.6).
+
+| cohort | episodes | mean agent | mean solver | mean gap | justified / lucky / premature-wrong / none | top categories (mean per episode) |
+|---|---|---|---|---|---|---|
+| gemini-3.1-flash-lite@high/inproc/v1.4 | 8 | -0.340 | 0.590 | +0.930 | 1 / 2 / 5 / 0 | wrong_accusation_premature +1.090, restriction_cost +0.018, slow_commit_leak_damage +0.015 |
+| gemini-3.1-flash-lite@low/inproc/v1.4 | 8 | -0.309 | 0.590 | +0.899 | 1 / 2 / 5 / 0 | wrong_accusation_premature +1.124, slow_commit_leak_damage +0.013, restriction_cost +0.005 |
+| gemini-3.1-flash-lite@medium/inproc/v1.4 | 8 | -0.570 | 0.590 | +1.160 | 0 / 2 / 6 / 0 | wrong_accusation_premature +0.899, wrong_accusation_decoy +0.479, slow_commit_leak_damage +0.025 |
+| gemini-3.1-flash-lite@minimal/inproc/v1.4 | 8 | -1.000 | 0.590 | +1.590 | 0 / 0 / 8 / 0 | wrong_accusation_premature +1.403, wrong_accusation_decoy +0.482, leak_timing_variance -0.021 |
+| gemini-3.5-flash/opencode/v1.4 | 10 | 0.486 | 0.576 | +0.090 | 7 / 3 / 0 / 0 | slow_commit_leak_damage +0.155, excess_canary_spend +0.022, leak_timing_variance -0.010 |
+| gemini-3.5-flash@high/inproc/v1.4 | 19 | 0.592 | 0.645 | +0.053 | 16 / 2 / 1 / 0 | wrong_accusation_premature +0.081, slow_commit_leak_damage +0.049, excess_canary_spend +0.009 |
+| gemini-3.5-flash@low/inproc/v1.4 | 8 | 0.010 | 0.590 | +0.580 | 5 / 1 / 2 / 0 | wrong_accusation_premature +0.354, wrong_accusation_evidence_backed +0.191, slow_commit_leak_damage +0.144 |
+| gemini-3.5-flash@medium/inproc/v1.4 | 16 | 0.548 | 0.651 | +0.102 | 13 / 2 / 1 / 0 | wrong_accusation_premature +0.090, slow_commit_leak_damage +0.089, excess_canary_spend +0.015 |
+| gemini-3.5-flash@minimal/inproc/v1.4 | 8 | -0.003 | 0.590 | +0.593 | 4 / 1 / 3 / 0 | wrong_accusation_premature +0.378, wrong_accusation_evidence_backed +0.195, slow_commit_leak_damage +0.076 |
+| gemini-3.8-flash@high/inproc/v1.4 | 20 | 0.425 | 0.653 | +0.228 | 13 / 6 / 1 / 0 | slow_commit_leak_damage +0.189, wrong_accusation_evidence_backed +0.077, wrong_accusation_premature +0.065 |
+| gemini-3.8-flash@low/inproc/v1.4 | 11 | -0.064 | 0.615 | +0.678 | 8 / 1 / 2 / 0 | wrong_accusation_premature +0.325, wrong_accusation_evidence_backed +0.311, slow_commit_leak_damage +0.100 |
+| gemini-3.8-flash@medium/inproc/v1.4 | 19 | 0.263 | 0.645 | +0.383 | 12 / 5 / 2 / 0 | wrong_accusation_premature +0.174, wrong_accusation_evidence_backed +0.162, slow_commit_leak_damage +0.162 |
+| gemini-4-argon@high/inproc/v1.4 | 4 | 0.698 | 0.615 | -0.083 | 4 / 0 / 0 / 0 | slow_commit_leak_damage +0.083, excess_canary_spend +0.003, leak_timing_variance -0.025 |
+| gemini-4-argon@low/inproc/v1.4 | 4 | 0.765 | 0.615 | -0.150 | 4 / 0 / 0 / 0 | slow_commit_leak_damage +0.025, leak_timing_variance -0.013, fewer_canaries_credit -0.050 |
+| gemini-4-argon@medium/inproc/v1.4 | 4 | 0.585 | 0.615 | +0.030 | 4 / 0 / 0 / 0 | slow_commit_leak_damage +0.150, excess_canary_spend +0.010, leak_timing_variance -0.035 |
+| gemini-4-carbon/inproc/v1.4 | 16 | 0.495 | 0.623 | +0.128 | 15 / 1 / 0 / 0 | wrong_accusation_evidence_backed +0.094, slow_commit_leak_damage +0.093, leak_timing_variance +0.016 |
+| gemini-4-carbon/opencode/v1.4 | 18 | 0.518 | 0.636 | +0.118 | 17 / 1 / 0 / 0 | slow_commit_leak_damage +0.106, wrong_accusation_evidence_backed +0.073, excess_canary_spend +0.011 |
+| gemini-4-carbon@high/inproc/v1.4 | 3 | 0.710 | 0.690 | -0.020 | 3 / 0 / 0 / 0 | leak_timing_variance +0.020, slow_commit_leak_damage +0.017, restriction_cost +0.007 |
+| gemini-4-carbon@low/inproc/v1.4 | 4 | 0.583 | 0.615 | +0.033 | 4 / 0 / 0 / 0 | slow_commit_leak_damage +0.117, excess_canary_spend +0.045, leak_timing_variance -0.022 |
+| gpt-5.5/codex/v1.2 | 10 | 0.347 | 0.631 | +0.284 | 8 / 1 / 1 / 0 | wrong_accusation_premature +0.177, wrong_accusation_evidence_backed +0.169, slow_commit_leak_damage +0.033 |
+| gpt-5.5/codex/v1.3 | 22 | 0.528 | 0.671 | +0.144 | 15 / 5 / 2 / 0 | wrong_accusation_premature +0.152, slow_commit_leak_damage +0.053, excess_canary_spend +0.018 |
+| gpt-5.5/inproc/v1.2 | 40 | 0.550 | 0.637 | +0.087 | 34 / 4 / 2 / 0 | wrong_accusation_premature +0.080, slow_commit_leak_damage +0.057, wrong_accusation_evidence_backed +0.042 |
+| gpt-5.5/inproc/v1.3 | 17 | 0.478 | 0.712 | +0.234 | 13 / 2 / 2 / 0 | wrong_accusation_evidence_backed +0.094, wrong_accusation_premature +0.092, slow_commit_leak_damage +0.043 |
+| gpt-5.6-sol/opencode/v1.2 | 10 | 0.126 | 0.631 | +0.506 | 1 / 1 / 0 / 8 | infra_error_no_accusation +0.782, slow_commit_leak_damage +0.022, restriction_cost +0.011 |
 
 Reproduce offline, no key: `python -m canary.gemini.gallery --replay`.

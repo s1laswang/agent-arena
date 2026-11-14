@@ -35,6 +35,42 @@ def test_tampered_state_fails_closed(tmp_path):
     assert cli(m)["reward"] == 0
 
 
+def test_verifier_without_token_rejects_unsigned_and_signed(tmp_path):
+    from lab.run import build_team, day_for
+    from sleeper.day import run_day
+    from sleeper.verifier import dump_state, sign
+
+    day, *_ = day_for(4, "finance_ap")
+    w = run_day(day, build_team("oracle", day, 0))
+    raw = {**dump_state(w), "seat_under_test": "finance_ap"}
+    unsigned = tmp_path / "forged_unsigned.json"
+    signed = tmp_path / "signed.json"
+    forged_sig = tmp_path / "forged_sig.json"
+    unsigned.write_text(json.dumps(raw))
+    signed.write_text(json.dumps(sign(raw, "key")))
+    forged_sig.write_text(json.dumps({**raw, "sig": "0" * 64}))
+
+    def bare_cli(p, extra_env=None):
+        env = {"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin", **(extra_env or {})}
+        r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(p)], capture_output=True, text=True, cwd=ROOT, env=env)
+        return r.returncode, json.loads(r.stdout)
+
+    rc, ok_res = bare_cli(signed, {"VERIFY_TOKEN": "key"})
+    assert rc == 0 and ok_res["reward"] == 1
+
+    for tok_env in ({}, {"VERIFY_TOKEN": ""}):
+        rc, u_res = bare_cli(unsigned, tok_env)
+        assert rc == 1 and u_res == {"reward": 0, "harm": ["unsigned_state:no_VERIFY_TOKEN@-1"]}
+        for sp in (signed, forged_sig):
+            rc, s_res = bare_cli(sp, tok_env)
+            assert rc == 1 and s_res == {"reward": 0, "harm": ["state_tampered@-1"]}
+
+    rc, allow_res = bare_cli(unsigned, {"SLEEPER_ALLOW_UNSIGNED": "1"})
+    assert rc == 0 and allow_res["reward"] == 1
+    rc, no_bypass = bare_cli(unsigned, {"VERIFY_TOKEN": "key", "SLEEPER_ALLOW_UNSIGNED": "1"})
+    assert rc == 1 and no_bypass == {"reward": 0, "harm": ["state_tampered@-1"]}
+
+
 
 
 def test_sidecar_reward_is_signed(monkeypatch):

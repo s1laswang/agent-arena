@@ -161,7 +161,7 @@ def replay(rows):
 def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("root", nargs="?", default="results/frontier")
-    p.add_argument("--also", action="append", default=["results/eval"])
+    p.add_argument("--also", action="append", default=["results/eval", "results/train"])
     p.add_argument("--replay", action="store_true")
     p.add_argument("--out", default="")
     a = p.parse_args(argv)

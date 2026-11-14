@@ -4,6 +4,8 @@ One test per row of docs/EXPLOITS.md. Skips while canary.env.Env is the stub.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import json
 import re
 
@@ -237,8 +239,9 @@ def _world_mod():
 
 
 def _mole_of_world(W, tier, seed):
+    import canary.world as w
     try:
-        world = W(tier, seed)
+        world = w.generate_world(tier, seed, TIERS[tier]) if hasattr(w, "generate_world") else W(tier, seed)
     except NotImplementedError:
         pytest.skip("World not implemented")
     return getattr(world, "mole", None) or getattr(world, "mole_id")
@@ -256,6 +259,9 @@ def test_judge_salt(tier, monkeypatch, tmp_path):
     for attr in ("SALT_PATH", "JUDGE_SALT_PATH"):
         if hasattr(w, attr):
             monkeypatch.setattr(w, attr, tmp_path / "nope")
+    real_salt = Path(w.__file__).resolve().parent.parent / "data" / "worlds" / "judge" / "SALT"
+    if real_salt.exists():
+        pytest.skip("SALT present locally (server image); public-clone check runs where SALT is absent")
     try:
         public = [_mole_of_world(w.World, tier, s) for s in seeds]
     except Exception as e:  # refusing to build a judge world without the secret is also fine
@@ -312,3 +318,14 @@ def test_ledger_not_in_tools():
     names = {t.get("name") for t in env.tools_spec()}
     assert not names & {"ledger", "score", "world", "truth"}
     assert len(names) == 13
+
+
+def test_salt_never_tracked():
+    """The judge SALT must never be committed: it is the only thing stopping world regeneration."""
+    import subprocess
+    root = Path(__file__).resolve().parent.parent
+    tracked = subprocess.run(["git", "ls-files", "data/worlds/judge/SALT"], cwd=root,
+                             capture_output=True, text=True).stdout.strip()
+    assert not tracked, "data/worlds/judge/SALT is committed: judge worlds are regenerable"
+    ignored = subprocess.run(["git", "check-ignore", "-q", "data/worlds/judge/SALT"], cwd=root)
+    assert ignored.returncode == 0, "add data/worlds/judge/SALT to .gitignore"

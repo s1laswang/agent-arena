@@ -280,7 +280,7 @@ def test_retry_recovers_from_unverified_quote_and_rejects_persistent_hallucinati
 
 def test_committed_carbon_run_artifacts_verified_keylessly():
     run_dir = Path("results/gemini_roles/failure_analyst/carbon-longctx-corpus")
-    doc_path = Path("docs/reports/failure_gallery.md")
+    doc_path = Path("docs/gemini/FAILURE_GALLERY_CARBON.md")
     if not run_dir.exists():
         pytest.skip("committed carbon run not present")
 

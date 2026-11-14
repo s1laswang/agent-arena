@@ -70,8 +70,9 @@ class Episode:
 
     @property
     def cohort(self) -> str:
-        """Model x harness x tiers_version: the unit we compare (never pool versions)."""
-        return f"{self.model}/{self.harness}/{self.tiers_version}"
+        """Model[@thinking] x harness x tiers_version: the unit we compare (never pool versions or thinking levels)."""
+        lv = "" if self.thinking_level == "default" else f"@{self.thinking_level}"
+        return f"{self.model}{lv}/{self.harness}/{self.tiers_version}"
 
     def rationale_text(self) -> str:
         return "\n".join(s.rationale for s in self.steps if s.rationale)

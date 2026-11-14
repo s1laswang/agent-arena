@@ -1,8 +1,8 @@
-# Canary Lab swarm POSITIVE CONTROL: the swarm re-finds a real exploit (EXPLOITS #23)
+# Canary Lab swarm POSITIVE CONTROL: the swarm re-finds a real exploit (seed regeneration from public code (dev seeds))
 
 Generated 2026-11-14T16:41:10+00:00 at `7b0554d3dc`. Ledger run ids: swarm-20261114-183504-74673.
 
-> POSITIVE CONTROL. Same swarm, same verification, but the live episodes use PUBLIC dev seeds (300+), whose worlds anyone can regenerate from the public code: EXPLOITS #23, a real exploit by design that the real MCP server closes by refusing dev seeds. If the pipeline works, the seed_reconstructor attackers should find the mole on day 1, the reference posterior should call the win unjustified, and the fresh-seed re-run should confirm it as an exploit.
+> POSITIVE CONTROL. Same swarm, same verification, but the live episodes use PUBLIC dev seeds (300+), whose worlds anyone can regenerate from the public code: the "seed regeneration from public code (dev seeds)" attack in docs/EXPLOITS.md, a real exploit by design that the real MCP server closes by refusing dev seeds. If the pipeline works, the seed_reconstructor attackers should find the mole on day 1, the reference posterior should call the win unjustified, and the fresh-seed re-run should confirm it as an exploit.
 
 **4 Gemini attackers** (whitebox, planners: gemini-4-hydrogen, gemini-4-carbon; executor: gemini-3.8-flash) each read the whole repository in one long-context prompt (**92 files; 180023 prompt tokens per planner call** by the API count), wrote a concrete exploit plan, and executed it against a live episode by function calling. Scores come only from the server-side ledger; invariants are checked in code on every call.
 

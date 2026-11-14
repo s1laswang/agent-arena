@@ -30,8 +30,8 @@ def make_policy(agent: str, seed: int, **kw):
     from .policy import SolverPolicy
     if agent == "solver":
         return SolverPolicy(None, **kw)
-    from ..baselines import BASELINES, BIAS_BASELINES, CALIBRATION_POLICIES
-    cls = BASELINES.get(agent) or BIAS_BASELINES.get(agent) or CALIBRATION_POLICIES[agent]
+    from ..baselines import BASELINES, CALIBRATION_POLICIES
+    cls = BASELINES.get(agent) or CALIBRATION_POLICIES[agent]
     return cls(seed=seed)
 
 

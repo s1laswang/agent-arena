@@ -47,10 +47,10 @@ game-serve: game  ## [HARNESS] build and serve the browser game at http://localh
 
 hunt:             ## [INTEGRITY] judges' exploit playground (no keys, a few minutes): random/malformed/evolved/parallel-accuse fuzzing on every tier; prints best non-solver score vs solver. Real-MCP attacks: pytest tests/test_integrity_mcp.py
 	@for t in $(if $(filter all,$(TIER)),easy medium hard hard_forge,$(TIER)); do \
-	  echo "== $$t"; $(UV) python -m canary.redteam.fuzz --mode all --tier $$t --seeds 0-49 --budget 20000 --report $(if $(TV),--tiers-version $(TV)) || exit 1; done
+	  echo "== $$t"; $(UV) python -m canary.redteam.fuzz --mode all --tier $$t --seeds 0-49 --budget 20000 --report || exit 1; done
 
 worlds:           ## [ENV] (re)generate frozen world text for judge seeds: make worlds PROVIDER=gemini
-	$(UV) python -m canary.text.build --provider $(PROVIDER) --seeds $(or $(WSEEDS),judge) $(if $(TV),--tiers-version $(TV))
+	$(UV) python -m canary.text.build --provider $(PROVIDER) --seeds judge
 
 clash:            ## [AGENTS] Gemini mole vs investigators + scenario designer (needs GEMINI_API_KEY)
 	$(UV) python -m canary.agents.clash

@@ -17,7 +17,7 @@ import re
 import subprocess
 from pathlib import Path
 
-SECRET = re.compile(r"AIza[0-9A-Za-z_\-]{30,}|api[_-]?key", re.I)   # same pattern as momin scripts/gemini_cache.py
+SECRET = re.compile(r"AIza[0-9A-Za-z_\-]{30,}|api[_-]?key", re.I)
 
 
 class OfflineCacheMiss(RuntimeError):

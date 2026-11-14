@@ -150,3 +150,27 @@ Tasks:
    - the scale path: Instant Clusters for multi-node GRPO over thousands of rollouts, batch jobs for nightly eval sweeps, auto-scaling containers to serve the Canary MCP env to labs as an eval-as-a-service.
 3. PR into justSilas; report to "Arena · CEO" via SendMessage. Never print keys (the Verda creds are in agent-arena/.env as VERDA_CLIENT_ID / VERDA_CLIENT_SECRET). Commits end with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>".
 ```
+
+---
+
+## S7. OPEN-7B: train an open model on Canary experience (the big compute bet)
+Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/s7-open7b -b s7-open7b origin/justSilas`
+
+```
+You are the OPEN-MODEL engineer for Canary (s1laswang/agent-arena). Read docs/PLAN-COMPUTE.md first. That is your plan. Goal by 08:30: a replay-verified chart on v1.4 hard held-out seeds (n=30 each) for Qwen2.5-7B-Instruct base → SFT → expert iteration, next to gemini-4-carbon (0.322) and the solver (0.499). Work in ~/junction-aimo-team/wt/s7-open7b. Do everything yourself; no sub-agents. GPUs: 4 Verda A100-40G plus an H100, provisioned ONLY by the "fr8 relaunch gpu audit" session. Send it exact job specs (command, GPU, hours) and never create instances yourself. Never touch Momin's FR8 jobs; never pkill by pattern.
+
+Reuse what exists:
+- train/ (SFT/LoRA pipeline, eval_hf, j4/v2 scripts);
+- train/grpo_investigator.py (the v3 GRPO, decision-point states);
+- canary.agents.play / LLMPolicy (OpenAI-compatible tool-calling loop, so point it at a vLLM server);
+- canary.eval (solver episodes on CPU);
+- scripts/paired_gemini.py or scripts/gap_vs_reference.py (pairing).
+Diagnosis to fix: the 1.5B/4k model accuses at the right time but at the wrong person (v2: accused 51%, correct 6%), because the evidence falls outside its window. Use FULL history (16k-32k context).
+
+Steps:
+1. (00:30-01:30) vLLM OpenAI server with Qwen2.5-7B-Instruct on one A100 (tool calling on), then 1 episode end-to-end with LLMPolicy on v1.4 hard dev seed. Then the base eval: n=30 held-out (HELDOUT seeds, v1.4 hard), run in parallel.
+2. Generate ~3,000 v1.4 solver episodes on CPU (train seeds only, never judge/held-out), render them as full-history chat transcripts in the exact LLMPolicy format, and run SFT with LoRA on 7B at 16k context (A100 #3). Eval n=30.
+3. Expert iteration: sample K=4 episodes per train seed from the SFT model via vLLM (A100 #1-2), keep the episodes that beat 0 / match the solver's accusation, SFT again (EI-1), eval n=30. EI-2 only if EI-1 improved.
+4. Write results/leaderboard_v14_hard.json (rows: agent, n, mean ± CI, accuracy, abstain rate, GPU-hours, €) and docs/reports/open7b.md (honest, a null result included). Commit episodes under data/runs/committed/v1.4/open7b-*/ and replay-verify them.
+Kill criteria are in PLAN-COMPUTE.md. Report every milestone to "Arena · CEO". Commits end with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>".
+```

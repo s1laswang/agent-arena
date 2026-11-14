@@ -138,7 +138,6 @@ class GeminiProvider:
         return ans
 
 
-# ---------------------------------------------------------------- v1.5-candidate social chatter
 SOCIAL_SCHEMA = {"type": "object", "properties": {"bodies": {"type": "array", "items": {"type": "string"}}},
                  "required": ["bodies"]}
 SOCIAL_SYSTEM = ("You write realistic, short internal workplace chat messages for a fictional company. You are told "
@@ -166,10 +165,9 @@ def social_prompt(facts: PublicDayFacts, events: list[dict]) -> str:
             f"exactly {len(events)} strings.\nITEMS:\n" + json.dumps(items, sort_keys=True))
 
 
-# Decoy-inference vocabulary (solver ANGER_WORDS, baselines ANGRY_WORDS / DECOY_QUERIES): social chatter must
-# not contain it, so the decoy signal stays about the decoy's own messages (same rule as the template renderer).
 DECOY_VOCAB = ("raise", "management", "deserve", "promotion", "cv", "pay", "angry", "unfair", "furious", "sick of",
-               "quit", "ridiculous", "fed up", "hate", "burn out", "recruiter", "goalposts", "nobody asks")
+               "quit", "ridiculous", "fed up", "hate", "burn out", "burnout", "recruiter", "goalposts", "nobody asks",
+               "updating my cv", "culprit")
 
 
 def social_body_ok(body: str, ev: dict) -> bool:
@@ -182,11 +180,7 @@ def social_body_ok(body: str, ev: dict) -> bool:
 
 
 class GeminiSocialRenderer:
-    """Gemini bodies for rumour / grudge / unverified-accusation messages. Metadata (ids, subjects, senders,
-    recipients) always comes from the template renderer, so mechanics are byte-identical; only `body` changes.
-    Raw responses are cached via canary.text.llm_cache (Momin's sha256 key scheme + provenance) in <cache_dir>/
-    (data/gemini_cache/, committed: offline replay with no key).
-    A body failing lint / id checks falls back to the template body (counted in `rejects`)."""
+    """Gemini bodies for rumour / grudge / unverified-accusation messages."""
 
     def __init__(self, model: str = "gemini-4-carbon", cache_dir: str = "data/gemini_cache", client=None):
         self.model, self.cache_dir, self._client = model, cache_dir, client
@@ -211,7 +205,7 @@ class GeminiSocialRenderer:
         except Exception as ex:
             import logging
             logging.getLogger("canary.text.gemini").warning("social chatter fallback: %s", type(ex).__name__ + ": " + str(ex)[:200])
-            return []   # miss offline / transient failure / bad JSON: template bodies (not cached on failure)
+            return []
 
     def _count(self, c):
         self.calls += 1
@@ -289,11 +283,39 @@ class GeminiWorldTextProvider:
         return self._get(facts).interview_answer(facts, employee, topic, signal)
 
 
+def _make_social_v2(spec: str, **kw):
+    from canary.social.engine import SocialV2Provider
+    cache_dir = kw.get("cache_dir")
+    client = kw.get("client")
+    head, _, rest = spec.partition(":")
+    stub = head.endswith("-stub")
+    tpl = head.endswith("-template")
+    prefix = "social-v2" if head.startswith("social-v2") else "v16"
+    variant = "all"
+    model = "gemini-4-carbon"
+    if rest:
+        if rest.startswith("gemini-"):
+            model = rest
+        elif ":" in rest:
+            variant, model = rest.split(":", 1)
+        else:
+            variant = rest
+    if stub and client is None:
+        from canary.llm import get_client
+        client = get_client("stub")
+    return SocialV2Provider(variant=variant, model=model, cache_dir=cache_dir, client=client,
+                            template_only=tpl, name_prefix=prefix)
+
+
 def get_provider(spec: str | None, **kw):
-    """'template' | 'gemini' | 'gemini:<model>' | 'stub' (gemini path with canary.llm stub client)
-    | 'gemini-world' | 'gemini-world:<model>' | 'gemini-world-stub' (AGENTS' GeminiWorldText)."""
+    """'template' | 'social-v2[:variant]' | 'v16[:variant[:model]]' | 'gemini' | 'gemini:<model>' | 'stub'
+    | 'gemini-world' | 'gemini-world:<model>' | 'gemini-world-stub'."""
     if spec in (None, "", "template"):
         return TemplateProvider()
+    if spec in ("social-v2", "social-v2-stub", "social-v2-template", "v16", "v16-stub", "v16-template") or spec.startswith(
+        ("social-v2:", "social-v2-stub:", "social-v2-template:", "v16:", "v16-stub:", "v16-template:")
+    ):
+        return _make_social_v2(spec, **kw)
     if spec == "gemini-social-stub":
         from canary.llm import get_client
         return GeminiSocialProvider(client=get_client("stub"), **kw)

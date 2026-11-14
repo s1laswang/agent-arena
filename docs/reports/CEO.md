@@ -322,3 +322,9 @@ B1 hint wording fixed (head-env, verified against instruction() v1.4) and sent t
   - Ivar's ivar/aq-game-ux (game fixes, research-biases.md, VIDEO-SCRIPT.md, 44 failure cases): to merge after review.
   - Vaishnav: PR 12 and PR 18 merged.
 - Small model v2 (44412): no gain. Held-out v2 −0.395 vs base 0.000; it accuses indiscriminately. v3 GRPO is running (44553, plus 44555 pending; evals 44554/44556).
+
+## ~00:55 check-in
+- Track 1 solver_v2: DROPPED (fresh seeds: hard +0.012, below the +0.08 bar). PR #20 merged (oracle range, reference optimality).
+- Track 2 expert tier: built and integrity-clean; Gemini OpenCode runs in flight, about 10 lost to the make-accept pkill (fixed 3603f25); verdict 01:40.
+- v3: s0 on the H100 IMPROVING at step 140 (+0.09 valid-only vs solver, no collapse; whom-accuracy ~19%, flat). Then v3-8k s0 (H100) + v3-8k s1 (A100 spot) + v3-4k s1 (FR8 44572).
+- Merged: #26, #28, #29, #30, #32, ivar/game-v-port. S7 open-7B dropped (no capacity). Verda cap €100 (Silas).

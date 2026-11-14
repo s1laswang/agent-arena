@@ -184,10 +184,6 @@ class TemplateProvider:
         return _fill(rng, rng.choice(_ANSWERS[(topic, signal)]), doc=doc, dept=dept)
 
 
-# ---------------------------------------------------------------- v1.5-candidate social layer
-# Rendered from env-chosen labels {kind, speaker, target} only (no truth). The machine-readable subject
-# ("rumour: e07", "unverified accusation: e07", "grudge: e07") is part of the stated rules. Wording avoids
-# the decoy-detection vocabulary on purpose (decoy inference must stay about the decoy's own messages).
 _RUMOUR = [
     "Not saying it's {tn} for sure, but they've been acting odd lately. Could be them passing things out.",
     "Overheard something in the kitchen. People think {tn} is the one passing documents out.",

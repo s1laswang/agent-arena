@@ -26,14 +26,14 @@ class Recorder:
     def interview_answer(self, facts, employee, topic, signal):
         return self.inner.interview_answer(facts, employee, topic, signal)
 
-    def social_messages(self, facts, events):   # v1.5-candidate social chatter (template fallback if absent)
+    def social_messages(self, facts, events):
         fn = getattr(self.inner, "social_messages", None)
         if fn is None:
             from .template import render_social
             msgs = render_social(facts, events)
         else:
             msgs = fn(facts, events)
-        self._soc[str(facts.day)] = list(msgs)   # env renders social chatter before day_messages
+        self._soc[str(facts.day)] = list(msgs)
         return msgs
 
 

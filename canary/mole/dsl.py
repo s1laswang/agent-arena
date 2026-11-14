@@ -20,10 +20,6 @@ OPS = {"<": lambda a, b: a < b, "<=": lambda a, b: a <= b, ">": lambda a, b: a >
        ">=": lambda a, b: a >= b, "==": lambda a, b: a == b, "!=": lambda a, b: a != b}
 LEAK_SELECTORS = ("newest", "oldest", "most_recipients", "fewest_recipients", "random_seeded", "none")
 FRAME_SELECTORS = ("decoy", "most_restricted_peer", "random_peer", "none")
-# v1.5-candidate: strategy-level `seed_rumour(target)` action. When the tier has rumours on, a share
-# rumour_frame_share of rumours (and of the authority accusation) targets this colleague. "default" = the
-# documented fixed policy: the decoy if the tier has one, else a random peer (drawn per rumour).
-RUMOUR_SELECTORS = ("default", "decoy", "most_restricted_peer", "random_peer", "none")
 MAX_RULES = 12
 
 
@@ -103,11 +99,10 @@ class MoleStrategy:
     rules: tuple[tuple[tuple[tuple[str, str, float], ...], tuple[str, str]], ...]
     default: tuple[str, str] = ("random_seeded", "none")
     name: str = "custom"
-    seed_rumour: str = "default"   # v1.5-candidate; ignored unless the tier has rumours on
 
     @classmethod
     def from_json(cls, obj: Any) -> "MoleStrategy":
-        if not isinstance(obj, dict) or set(obj) - {"rules", "default", "name", "seed_rumour"}:
+        if not isinstance(obj, dict) or set(obj) - {"rules", "default", "name"}:
             raise StrategyError("bad strategy")
         rules = obj.get("rules", [])
         if not isinstance(rules, list) or len(rules) > MAX_RULES:
@@ -121,16 +116,12 @@ class MoleStrategy:
         name = obj.get("name", "custom")
         if not isinstance(name, str) or len(name) > 80:
             raise StrategyError("bad name")
-        sr = obj.get("seed_rumour", "default")
-        if sr not in RUMOUR_SELECTORS:
-            raise StrategyError("bad seed_rumour")
-        return cls(tuple(out), default, name, sr)
+        return cls(tuple(out), default, name)
 
     def to_json(self) -> dict:
         return {"name": self.name,
                 "rules": [{"if": [list(c) for c in conds], "then": {"leak": l, "frame": f}} for conds, (l, f) in self.rules],
-                "default": {"leak": self.default[0], "frame": self.default[1]},
-                **({"seed_rumour": self.seed_rumour} if self.seed_rumour != "default" else {})}
+                "default": {"leak": self.default[0], "frame": self.default[1]}}
 
     def decide(self, view: MoleView, rng: random.Random) -> dict:
         leak_sel, frame_sel = self.default
@@ -164,13 +155,6 @@ def _select_frame(sel: str, v: MoleView, rng: random.Random) -> str | None:
     if sel == "random_peer":
         return rng.choice(v.peers) if v.peers else None
     return None
-
-
-def seed_rumour_target(sel: str, v: MoleView, rng: random.Random) -> str | None:
-    """The mole's seed_rumour(target) choice for one rumour. "default" = decoy if any, else random peer."""
-    if sel == "default":
-        sel = "decoy" if v.decoy is not None else "random_peer"
-    return _select_frame(sel, v, rng)
 
 
 DEFAULT_STRATEGY = MoleStrategy(rules=(), default=("random_seeded", "none"), name="default_v0")

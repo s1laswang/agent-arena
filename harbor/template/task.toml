@@ -40,7 +40,9 @@ command = "python /opt/canary-server/collect.py"
 timeout_sec = 60.0
 
 [agent]
-timeout_sec = 3600.0
+# 3 h: 5 of 30 committed OpenCode gemini-4-carbon hard episodes ran > 3600 s (max 6,592 s, mostly provider latency);
+# a shorter cap would cut honest agents off at score 0 (docs/DIFFICULTY.md P0).
+timeout_sec = 10800.0
 
 [environment]
 build_timeout_sec = 900.0

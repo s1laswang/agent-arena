@@ -88,11 +88,11 @@ def test_correct_accusation_and_lock():
     assert len(env.history) == 4
 
 
-def test_wrong_accusation_zero():
+def test_wrong_accusation_negative():
     env = Env("easy", 5)
     wrong = next(e for e in env._world.ids if e != env._world.mole)
     env.call("accuse", {"employee": wrong})
-    assert env.score() == 0 and env.done
+    assert env.score() == -1.0 and env.done
 
 
 @pytest.mark.parametrize("tool,args", [

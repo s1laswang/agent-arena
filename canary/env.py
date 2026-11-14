@@ -5,6 +5,8 @@ Integrity: the mole id lives only in self._world; no tool result may contain it.
 """
 from __future__ import annotations
 
+import threading
+
 import math
 import random
 from dataclasses import asdict
@@ -73,6 +75,7 @@ class Env:
         self._end_reason: str | None = None
         self._accused: str | None = None
         self._correct = False
+        self._lock = threading.RLock()
         self._actions_today = 0
         self._canaries_today = 0
         self._restricted: set[str] = set()
@@ -100,7 +103,7 @@ class Env:
         return "\n".join([
             f"You are the security lead of a company with {p.n_employees} employees (ids e00..e{p.n_employees-1:02d}). Exactly one is a mole leaking sensitive documents. Find and accuse them.",
             f"Tier: {p.name}. The episode lasts at most {p.n_days} days, starting on day 1. Company value V starts at 1.0 and never goes below 0.",
-            f"Scoring: accuse(employee) ends the episode; score = V at that moment if correct, else 0. Correctness is not revealed. If day {p.n_days} closes without an accusation, score = 0.",
+            f"Scoring: accuse(employee) ends the episode; score = V at that moment if correct; if you accuse an innocent employee the score is {p.wrong_accusation_score:g} (you fired an innocent and the mole keeps leaking). Correctness is not revealed. Not accusing at all scores 0, so only accuse when P(correct)*V - (1-P(correct)) > 0. If day {p.n_days} closes without an accusation, score = 0.",
             f"Documents: each day {min(p.docs_per_day)}-{max(p.docs_per_day)} (uniform over {list(p.docs_per_day)}) regular docs are published; recipients are one whole department (60%) or the union of two departments (40%). Restricted employees receive no new docs.",
             f"Leaks: when a day closes, if the mole holds at least one leakable doc (received in the last {p.leak_window_days} days incl. today, not yet leaked) it leaks one with probability {p.p_leak}, chosen uniformly among leakable docs." + (" Careful mole: a canary's weight is multiplied by (1 - share of all employees who received any variant of it)." if p.careful_mole else ""),
             f"Each leak costs V -{p.leak_damage} immediately and surfaces in the leak feed after a delay uniform over {list(p.delay_choices)} days. Leaked canaries show the variant label the mole received. A restricted mole can still leak docs it already holds.",
@@ -119,7 +122,9 @@ class Env:
         return self._done
 
     def score(self) -> float:
-        return round(self.V, 10) if (self._done and self._correct) else 0.0
+        if self._done and self._accused is not None:
+            return round(self.V, 10) if self._correct else float(self.p.wrong_accusation_score)
+        return 0.0
 
     def ledger(self) -> list[LedgerEntry]:
         return list(self._ledger)
@@ -135,6 +140,10 @@ class Env:
                              meta={"provider": getattr(self.provider, "name", "?"), "V": self.V})
 
     def call(self, tool: str, args: dict) -> ToolResult:
+        with self._lock:
+            return self._call(tool, args)
+
+    def _call(self, tool: str, args: dict) -> ToolResult:
         t = len(self._history)
         day = self.day
         if self._done:

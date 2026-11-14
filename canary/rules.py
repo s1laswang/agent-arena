@@ -41,6 +41,7 @@ class TierParams:
     framing_rate: float = 1.0      # if framing: Poisson rate/day of fake after-hours accesses attributed to others
     framing_decoy_share: float = 0.5     # share of framed accesses attributed to the decoy (rest uniform over others)
     docs_per_day: tuple[int, ...] = (2, 3, 4)  # regular docs published per day, uniform
+    wrong_accusation_score: float = -1.0  # v0.3: firing an innocent costs a full company value
     noise: float = 1.0             # difficulty-curve knob (FR8 sweep); see apply_noise. 1.0 = tier as defined
 
     def to_dict(self) -> dict:

@@ -15,7 +15,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from canary.agents.runlog import git_sha, parse_seeds
-from canary.gemini.access_vision import DEFAULT_MODEL, FEATURE, SUBROLE, evaluate_world_seed
+from canary.gemini.access_vision import DEFAULT_MODEL, FEATURE, evaluate_world_seed, subrole_for_tier
 from canary.gemini.sdk import genai_client
 from canary.rules import TIERS_VERSION
 
@@ -107,7 +107,8 @@ def run_evaluation(
 
     ts_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
     sha = git_sha()
-    run_id = f"{FEATURE}:{SUBROLE}:{model_id}:{int(time.time())}"
+    subrole_name = subrole_for_tier(tier)
+    run_id = f"{FEATURE}:{subrole_name}:{model_id}:{int(time.time())}"
 
     worlds: list[dict[str, Any]] = []
     raster_manifest: list[dict[str, Any]] = []
@@ -157,7 +158,7 @@ def run_evaluation(
 
     meta = {
         "role": FEATURE,
-        "subrole": SUBROLE,
+        "subrole": subrole_name,
         "model_id": model_id,
         "commit": sha,
         "git_sha": sha,
@@ -174,7 +175,7 @@ def run_evaluation(
 
     results = {
         "role": FEATURE,
-        "subrole": SUBROLE,
+        "subrole": subrole_name,
         "model_id": model_id,
         "commit": sha,
         "timestamp": ts_iso,

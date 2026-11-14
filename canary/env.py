@@ -135,7 +135,8 @@ class Env:
             "## Documents",
             f"- Each day, between {min(p.docs_per_day)} and {max(p.docs_per_day)} new sensitive documents are published "
             f"(equally likely: {', '.join(map(str, p.docs_per_day))}).",
-            f"- {single}% of documents go to everyone in one department. The other {100 - single}% go to everyone in two departments.",
+            f"- {single}% of documents go to everyone in one department. The other {100 - single}% go to everyone in two departments."
+            + (f" Then random other employees are added until at least {round(100 * p.doc_recipient_share)}% of all staff receive it." if p.doc_recipient_share > 0 else ""),
             "- Restricted employees do not receive new documents. An employee holds every document it ever received.",
             "",
             "## How leaks work",

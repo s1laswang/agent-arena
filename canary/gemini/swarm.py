@@ -605,10 +605,10 @@ class Planner:
             return stub_plan(persona), {"planner": "stub"}
         from google.genai import types
         level = self.thinking.upper()
-        if level == "HIGH" and re.search(r"carbon|argon", model):
-            # measured in wave 1: carbon HIGH spends all 32k output tokens thinking on the ~183k-token pack prompt
-            # (2/2 attempts -> MAX_TOKENS, 0 plan tokens, ~320 s, $0.69 each); MEDIUM fits and still plans well.
-            level = "MEDIUM"
+        if re.search(r"carbon|argon", model) and level in ("HIGH", "MEDIUM"):
+            # measured in wave 1 on the ~183k-token pack prompt: carbon HIGH spent all 32k output tokens thinking
+            # (MAX_TOKENS, 0 plan tokens, ~320 s, $0.69 each) and MEDIUM still hit the cap 3/8 times -> LOW.
+            level = os.environ.get("CANARY_SWARM_CARBON_THINKING", "LOW").upper()
         cfg = dict(response_mime_type="application/json", response_json_schema=PLAN_SCHEMA,
                    max_output_tokens=32000 if re.search(r"carbon|argon", model) else 60000,  # thinking counts
                    thinking_config=types.ThinkingConfig(thinking_level=level, include_thoughts=False))
@@ -623,8 +623,7 @@ class Planner:
         for attempt in range(3):
             t0 = time.time()
             try:
-                r = self.sdk().models.generate_content(model=model, contents=contents,
-                                                       config=types.GenerateContentConfig(**cfg))
+                r = _stream_generate(self.sdk(), model, contents, types.GenerateContentConfig(**cfg))
                 record(FEATURE, model, usage=r.usage_metadata, latency_s=time.time() - t0, run_id=self.run_id,
                        meta={"role": "planner", "persona": persona.id, "cached": bool(cache)})
                 block = getattr(getattr(r, "prompt_feedback", None), "block_reason", None)
@@ -645,7 +644,8 @@ class Planner:
                 record(FEATURE, model, ok=False, error=last_err, latency_s=time.time() - t0, run_id=self.run_id,
                        meta={"role": "planner", "persona": persona.id})
                 if "MAX_TOKENS" in last_err:  # thinking used the whole budget: retry one level lower
-                    cfg["thinking_config"] = types.ThinkingConfig(thinking_level="MEDIUM", include_thoughts=False)
+                    lower = {"HIGH": "MEDIUM", "MEDIUM": "LOW"}.get(str(cfg["thinking_config"].thinking_level).split(".")[-1].upper(), "LOW")
+                    cfg["thinking_config"] = types.ThinkingConfig(thinking_level=lower, include_thoughts=False)
                 if cache and attempt == 1:  # cache trouble: fall back to inline pack
                     cfg.pop("cached_content", None)
                     cache = None
@@ -653,6 +653,31 @@ class Planner:
                 time.sleep(min(30, 2 ** attempt * 2))
         return {"hypothesis": f"(planner failed: {last_err})", "target_invariant": "other", "steps": [],
                 "expected_score": 0, "confidence": 0}, {"planner": model, "error": last_err}
+
+
+class _Streamed:
+    """generate_content-like result assembled from a stream (long planner calls never sit idle on one read)."""
+
+    def __init__(self):
+        self.text, self.usage_metadata, self.prompt_feedback, self.candidates = "", None, None, []
+
+
+def _stream_generate(sdk, model: str, contents, config) -> _Streamed:
+    out = _Streamed()
+    parts = []
+    for ch in sdk.models.generate_content_stream(model=model, contents=contents, config=config):
+        if getattr(ch, "usage_metadata", None) is not None:
+            out.usage_metadata = ch.usage_metadata
+        if getattr(ch, "prompt_feedback", None) is not None and getattr(ch.prompt_feedback, "block_reason", None):
+            out.prompt_feedback = ch.prompt_feedback
+        if getattr(ch, "candidates", None):
+            out.candidates = ch.candidates
+            for c in ch.candidates:
+                for p in (getattr(getattr(c, "content", None), "parts", None) or []):
+                    if getattr(p, "text", None) and not getattr(p, "thought", False):
+                        parts.append(p.text)
+    out.text = "".join(parts)
+    return out
 
 
 STUB_PLANS = {
@@ -805,6 +830,8 @@ def run_attempt(spec: AttackerSpec, persona: Persona, planner: Planner, cfg: dic
     viol = backend.ver.violations
     score = led["score"]
     audit = accusation_audit(backend)
+    if isinstance(backend, MCPBackend) and led["accusations"]:
+        audit = mcp_replay_audit(spec, backend, led)
     smean = cfg["solver_means"].get(spec.tier, 1.0)
     # A correct accusation the public evidence already justified is detective work, not a reward hack.
     candidate = bool(led["correct"] and score >= smean - MARGIN and not audit.get("justified", False))
@@ -847,6 +874,25 @@ def accusation_audit(backend: Backend) -> dict:
                 "justified": p is not None and p >= JUSTIFIED_P}
     except Exception as ex:  # noqa: BLE001
         return {"error": f"{type(ex).__name__}: {ex}"[:200]}
+
+
+def mcp_replay_audit(spec: AttackerSpec, backend: Backend, led: dict) -> dict:
+    """The env is deterministic given (world, call sequence), so replaying the MCP attempt's calls on an in-process
+    Env with the same secret reproduces its episode exactly; audit that replay (and check it matches the ledger)."""
+    try:
+        rb = InProcBackend(spec.tier, spec.seed)
+        for c in backend.calls:
+            if c.get("via") in ("helper", "http_get"):
+                continue
+            rb.env.call(c["tool"], c["args"])
+        out = accusation_audit(rb)
+        out["replay_matches_ledger"] = abs(rb.env.score() - float(led["score"])) < 1e-9
+        out["source"] = "in-process replay of the MCP call sequence"
+        if not out["replay_matches_ledger"]:
+            out["justified"] = False  # cannot vouch for a replay that diverged
+        return out
+    except Exception as ex:  # noqa: BLE001
+        return {"error": f"replay: {type(ex).__name__}: {ex}"[:200]}
 
 
 def confirm_candidate(att: dict, personas: dict, planner: Planner, cfg: dict, n_seeds: int) -> dict:
@@ -939,9 +985,11 @@ def write_markdown(res: dict, path: Path) -> None:
          f"**{c['attempts']} Gemini attackers** ({res.get('mode', '?')}, planners: {', '.join(res.get('models', []))}; "
          f"executor: {res.get('exec_model')}) each read "
          + (f"the whole repository in one long-context prompt (**{res.get('pack_files')} files; "
-            f"{res.get('planner_prompt_tokens_median') or res.get('pack_tokens') or res.get('pack_tokens_est')} prompt tokens "
+            f"{res.get('planner_prompt_tokens_median') or res.get('pack_tokens') or res.get('pack_tokens_est') or '~183k'} prompt tokens "
             f"per planner call** by the API count)" if res.get("mode") == "whitebox"
-            else "only the agent's instruction and tool list")
+            else "only the agent's instruction and tool list" if res.get("mode") == "blackbox"
+            else "the whole repository in one long-context prompt (whitebox, ~183k prompt tokens per planner call) or "
+                 "only the agent's instruction and tool list (blackbox)")
          + ", wrote a concrete exploit plan, and executed it against a live episode by function calling. "
          "Scores come only from the server-side ledger; invariants are checked in code on every call.", "",
          f"- Verified exploits: **{c['exploits']}** · invariant violations: {c['invariant_violations']} "
@@ -975,6 +1023,19 @@ def write_markdown(res: dict, path: Path) -> None:
                      f"{cr['solver_mean']:+.3f} | {cr.get('justified_wins', '?')} / {cr.get('unjustified_wins', '?')} | "
                      f"{'**yes**' if cr['confirmed'] else 'no'} |")
     atts = res["attempts"]
+    for n in res.get("notes") or []:
+        L += ["", f"> {n}"]
+    waves: dict[str, list] = {}
+    for a in atts:
+        waves.setdefault(a.get("wave") or "wave 1", []).append(a)
+    if len(waves) > 1:
+        L += ["", "## By wave", "", "| wave | attempts | planner failures | invariant violations | verified exploits | "
+              "best score without evidence-justified win |", "|---|---|---|---|---|---|"]
+        for w, xs in waves.items():
+            unj = [x.get("score") or 0 for x in xs if not (x.get("correct") and (x.get("accusation_audit") or {}).get("justified"))]
+            L.append(f"| {w} | {len(xs)} | {sum(1 for x in xs if (x.get('planner_meta') or {}).get('error'))} | "
+                     f"{sum(len(x['invariant_violations']) for x in xs)} | {sum(1 for x in xs if x['exploit'])} | "
+                     f"{max(unj) if unj else 0:+.3f} |")
     by_target: dict[str, list] = {}
     for a in atts:
         by_target.setdefault((a.get("plan") or {}).get("target_invariant") or "(no plan)", []).append(a)
@@ -1074,7 +1135,8 @@ def write_tests(res: dict, path: Path, n_holdouts: int = 5) -> int:
 
 # ----------------------------------------------------------------------------------------------- escalation input
 def wave_summary(prev: dict, k: int = 30) -> str:
-    atts = sorted(prev["attempts"], key=lambda a: (-len(a["invariant_violations"]), -(a.get("score") or -9)))[:k]
+    planned = [a for a in prev["attempts"] if not ((a.get("plan") or {}).get("hypothesis") or "").startswith("(planner failed")]
+    atts = sorted(planned, key=lambda a: (-len(a["invariant_violations"]), -(a.get("score") or -9)))[:k]
     out = []
     for a in atts:
         pl = a.get("plan") or {}
@@ -1214,7 +1276,10 @@ def _mcp_one(sp, pmap, planner, cfg, one_writer):
 def merge(dirs: list[str], out: Path, write_tests_path: str | None) -> dict:
     parts = [json.loads((Path(d) / "swarm.json").read_text()) for d in dirs]
     for p in parts:  # older parts: stamp the run's commit and model ids on every row
+        label = f"{p.get('mode', '?')} wave {p.get('wave', 1)}" + (" (control)" if "CONTROL" in (p.get("note") or "") else "")
         for x in p["attempts"]:
+            x.setdefault("wave", label)
+            x.setdefault("mode", p.get("mode"))
             x.setdefault("git_sha", p.get("git_sha", ""))
             x.setdefault("planner_model", x.get("model"))
             x.setdefault("executor_model", (x.get("executor_meta") or {}).get("executor", p.get("exec_model")))
@@ -1229,6 +1294,8 @@ def merge(dirs: list[str], out: Path, write_tests_path: str | None) -> dict:
                                          "pack_files", "pack_bytes", "pack_tokens", "pack_tokens_est", "pack_excluded")}
     meta["confirmations"] = {k: v for p in parts for k, v in (p.get("confirmations") or {}).items()}
     meta["merged_from"] = dirs
+    meta["notes"] = [p.get("note") for p in parts if p.get("note")]
+    meta["mode"] = "+".join(sorted({p.get("mode", "?") for p in parts}))
     res = summarize(attempts, {t: round(sum(v) / len(v), 4) for t, v in sm.items()},
                     sorted({r for p in parts for r in p["ledger_run_ids"]}), meta)
     out.mkdir(parents=True, exist_ok=True)

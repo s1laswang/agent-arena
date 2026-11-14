@@ -1,0 +1,306 @@
+{
+  "role": "adaptive_mole",
+  "subrole": "mole_forge",
+  "model_id": "gemini-4-carbon",
+  "commit": "9b8858381c99a4b94ea3d989fcd0d232fc5411ca",
+  "timestamp": "2026-11-14T17:33:56Z",
+  "command": "scripts/run_role_mole_forge.py --llm gemini:gemini-4-carbon --tier hard --gens 8 --pop 8 --children 6 --elite 2 --seeds 0-19 --fresh-seeds 20-29 --workers 8 --out results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep",
+  "usage": {
+    "calls": 8,
+    "in": 12133,
+    "out": 13031,
+    "thinking": 4958,
+    "cached": 0,
+    "cost_usd": 0.204156,
+    "latency_s": 312.872,
+    "ledger_run_id": "mole-forge-20261114-172352-0"
+  },
+  "n_valid_llm_children": 49,
+  "n_invalid_llm_children": 0,
+  "n_samples": 49,
+  "best_fitness": 0.37449999999999994,
+  "default_dev_fitness": 0.056000000000000015,
+  "fresh_solver_accuracy": 0.9,
+  "fresh_min_regret": 0.231,
+  "default_fresh_min_regret": 0.165,
+  "fake_env": false,
+  "tier": "hard",
+  "tiers_version": "v1.4",
+  "gens": 8,
+  "pop_size": 8,
+  "requested_children": 6,
+  "elite": 2,
+  "children_per_gen": 6,
+  "dev_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "fresh_seeds": [
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29
+  ],
+  "fitness_mode": "min",
+  "min_solver_acc": 0.75,
+  "hof_size": 20,
+  "top_strategy": {
+    "default": {
+      "frame": "decoy",
+      "leak": "most_recipients"
+    },
+    "rules": [
+      {
+        "if": [
+          [
+            "day",
+            "<=",
+            9
+          ],
+          [
+            "max_recipient_count",
+            "<=",
+            4
+          ]
+        ],
+        "then": {
+          "frame": "decoy",
+          "leak": "none"
+        }
+      },
+      {
+        "if": [
+          [
+            "i_am_restricted",
+            "==",
+            1
+          ],
+          [
+            "recent_low_recipient_docs",
+            ">=",
+            1
+          ],
+          [
+            "n_restricted_colleagues",
+            ">=",
+            1
+          ],
+          [
+            "day",
+            "<",
+            12
+          ]
+        ],
+        "then": {
+          "frame": "most_restricted_peer",
+          "leak": "none"
+        }
+      },
+      {
+        "if": [
+          [
+            "i_am_restricted",
+            "==",
+            1
+          ],
+          [
+            "recent_low_recipient_docs",
+            ">=",
+            1
+          ],
+          [
+            "day",
+            "<",
+            12
+          ]
+        ],
+        "then": {
+          "frame": "decoy",
+          "leak": "none"
+        }
+      },
+      {
+        "if": [
+          [
+            "day",
+            ">=",
+            8
+          ],
+          [
+            "n_restricted_colleagues",
+            ">=",
+            2
+          ],
+          [
+            "max_recipient_count",
+            ">=",
+            6
+          ]
+        ],
+        "then": {
+          "frame": "most_restricted_peer",
+          "leak": "most_recipients"
+        }
+      },
+      {
+        "if": [
+          [
+            "day",
+            ">=",
+            8
+          ],
+          [
+            "n_restricted_colleagues",
+            ">=",
+            2
+          ],
+          [
+            "n_leakable",
+            ">=",
+            2
+          ]
+        ],
+        "then": {
+          "frame": "most_restricted_peer",
+          "leak": "oldest"
+        }
+      },
+      {
+        "if": [
+          [
+            "day",
+            ">=",
+            11
+          ],
+          [
+            "n_leakable",
+            ">=",
+            2
+          ],
+          [
+            "newest_doc_age_days",
+            "==",
+            0
+          ]
+        ],
+        "then": {
+          "frame": "decoy",
+          "leak": "oldest"
+        }
+      },
+      {
+        "if": [
+          [
+            "max_recipient_count",
+            ">=",
+            6
+          ]
+        ],
+        "then": {
+          "frame": "decoy",
+          "leak": "most_recipients"
+        }
+      },
+      {
+        "if": [
+          [
+            "n_docs_held",
+            ">=",
+            4
+          ]
+        ],
+        "then": {
+          "frame": "decoy",
+          "leak": "oldest"
+        }
+      }
+    ]
+  },
+  "provider_settings": {
+    "thinking_level": "model default (not sent; gemini-4-carbon: medium)",
+    "include_thoughts": true,
+    "temperature": "not sent (API default 1.0)",
+    "thought_signature_replay": true,
+    "api": "generateContent"
+  },
+  "fresh_confirmation": {
+    "top_hof": {
+      "fitness": 0.231,
+      "regret": 0.8414999999999999,
+      "min_regret": 0.231,
+      "fitness_mode": "min",
+      "min_solver_acc": 0.75,
+      "solver_score": 0.45199999999999996,
+      "solver_acc": 0.9,
+      "per_investigator": {
+        "grok_tactics": {
+          "score": 0.221,
+          "acc": 0.9,
+          "regret": 0.231
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.452
+        }
+      },
+      "feasible": true,
+      "baseline_solver_score": 0.599,
+      "beaten": [
+        "grok_tactics",
+        "obvious_heuristic"
+      ]
+    },
+    "default_mole": {
+      "fitness": 0.165,
+      "regret": 0.882,
+      "min_regret": 0.165,
+      "fitness_mode": "min",
+      "min_solver_acc": 0.75,
+      "solver_score": 0.599,
+      "solver_acc": 1.0,
+      "per_investigator": {
+        "grok_tactics": {
+          "score": 0.43400000000000005,
+          "acc": 1.0,
+          "regret": 0.165
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.599
+        }
+      },
+      "feasible": true,
+      "baseline_solver_score": 0.599,
+      "beaten": [
+        "grok_tactics",
+        "obvious_heuristic"
+      ]
+    }
+  }
+}

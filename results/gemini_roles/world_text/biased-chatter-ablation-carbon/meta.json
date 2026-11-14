@@ -1,0 +1,69 @@
+{
+  "carbon_biased_accuracy": 1.0,
+  "carbon_biased_distraction_rate": 1.0,
+  "carbon_biased_mean": 0.705,
+  "carbon_episode_count": 4,
+  "carbon_template_accuracy": 1.0,
+  "carbon_template_distraction_rate": 1.0,
+  "carbon_template_mean": 0.64,
+  "command": "python scripts/run_biased_chatter_ablation.py --tier medium --seeds 10,11 --model gemini-4-carbon --samples-cache results/gemini_roles/world_text/biased-chatter-carbon/chatter_samples.json --out results/gemini_roles/world_text/biased-chatter-ablation-carbon",
+  "commit": "f307290845c4a0040feebf4e146d2ec3aa1596c7",
+  "episode_count": 12,
+  "fake_env": false,
+  "ledger_run_id": "biased_chatter_ablation:gemini-4-carbon:2026-11-14T14:09:33Z",
+  "model_id": "gemini-4-carbon",
+  "obvious_biased_distraction_rate": 0.0,
+  "obvious_biased_mean": -1.0,
+  "obvious_template_distraction_rate": 0.0,
+  "obvious_template_mean": -1.0,
+  "role": "world_text",
+  "seeds": [
+    10,
+    11
+  ],
+  "smoke": false,
+  "solver_biased_distraction_rate": 0.0,
+  "solver_biased_mean": 0.765,
+  "solver_template_distraction_rate": 0.0,
+  "solver_template_mean": 0.765,
+  "stub": false,
+  "subrole": "biased_chatter_investigator_ablation",
+  "tier": "medium",
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T14:09:33Z",
+  "usage": {
+    "cached_tokens": 11793550,
+    "calls": 399,
+    "cost_usd": 5.212352,
+    "in": 12766963,
+    "input_tokens": 12766963,
+    "out": 208617,
+    "output_tokens": 24532,
+    "thinking_tokens": 184085,
+    "total_tokens": 12975580
+  },
+  "usage_breakdown": {
+    "investigator": {
+      "cached_tokens": 11793550,
+      "calls": 373,
+      "cost_usd": 4.82878,
+      "in": 12722537,
+      "input_tokens": 12722537,
+      "out": 179145,
+      "output_tokens": 11807,
+      "thinking_tokens": 167338,
+      "total_tokens": 12901682
+    },
+    "world_text": {
+      "cached_tokens": 0,
+      "calls": 26,
+      "cost_usd": 0.383572,
+      "in": 44426,
+      "input_tokens": 44426,
+      "out": 29472,
+      "output_tokens": 12725,
+      "thinking_tokens": 16747,
+      "total_tokens": 73898
+    }
+  }
+}

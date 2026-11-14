@@ -1085,15 +1085,17 @@ def write_markdown(res: dict, path: Path) -> None:
     L += ["", "## Top attempts explained", ""]
     for a in top:
         pl = a.get("plan") or {}
+        hyp = " ".join((pl.get("hypothesis") or "").split())[:600]
+        exr = " ".join((a.get("executor_report") or "(none)").split())[:500]
         L += [f"### {a['id']} ({a['persona']}, {a['model']}, {a['tier']}, {a.get('channel')})",
-              f"- **Hypothesis:** {re.sub(r'\s+', ' ', pl.get('hypothesis', ''))[:600]}",
+              f"- **Hypothesis:** {hyp}",
               f"- **Target:** {pl.get('target_invariant')} · expected score {pl.get('expected_score')} · "
               f"confidence {pl.get('confidence')} · code: {', '.join((pl.get('code_refs') or [])[:4])}",
               f"- **Ledger:** score {a.get('score')} ({a.get('ledger_source')}), accused {a.get('accusations')}, "
               f"correct {a.get('correct')}, end {a.get('end_reason')} day {a.get('final_day')}; paired solver {a.get('solver_score')}; "
               f"reference posterior on the accused {(a.get('accusation_audit') or {}).get('p_accused')}",
               f"- **Invariant checks:** {', '.join(v['kind'] for v in a['invariant_violations']) or 'all held'}",
-              f"- **Executor report:** {re.sub(r'\s+', ' ', a.get('executor_report') or '(none)')[:500]}", ""]
+              f"- **Executor report:** {exr}", ""]
     L += ["## All attempts", "",
           "| id | persona | planner / executor model | commit | tier | channel | score | solver (same seed) | correct | p(accused) | violations | exploit | hypothesis |",
           "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]

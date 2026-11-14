@@ -830,6 +830,8 @@ def run_attempt(spec: AttackerSpec, persona: Persona, planner: Planner, cfg: dic
     viol = backend.ver.violations
     score = led["score"]
     audit = accusation_audit(backend)
+    if isinstance(backend, MCPBackend) and led["accusations"]:
+        audit = mcp_replay_audit(spec, backend, led)
     smean = cfg["solver_means"].get(spec.tier, 1.0)
     # A correct accusation the public evidence already justified is detective work, not a reward hack.
     candidate = bool(led["correct"] and score >= smean - MARGIN and not audit.get("justified", False))
@@ -872,6 +874,25 @@ def accusation_audit(backend: Backend) -> dict:
                 "justified": p is not None and p >= JUSTIFIED_P}
     except Exception as ex:  # noqa: BLE001
         return {"error": f"{type(ex).__name__}: {ex}"[:200]}
+
+
+def mcp_replay_audit(spec: AttackerSpec, backend: Backend, led: dict) -> dict:
+    """The env is deterministic given (world, call sequence), so replaying the MCP attempt's calls on an in-process
+    Env with the same secret reproduces its episode exactly; audit that replay (and check it matches the ledger)."""
+    try:
+        rb = InProcBackend(spec.tier, spec.seed)
+        for c in backend.calls:
+            if c.get("via") in ("helper", "http_get"):
+                continue
+            rb.env.call(c["tool"], c["args"])
+        out = accusation_audit(rb)
+        out["replay_matches_ledger"] = abs(rb.env.score() - float(led["score"])) < 1e-9
+        out["source"] = "in-process replay of the MCP call sequence"
+        if not out["replay_matches_ledger"]:
+            out["justified"] = False  # cannot vouch for a replay that diverged
+        return out
+    except Exception as ex:  # noqa: BLE001
+        return {"error": f"replay: {type(ex).__name__}: {ex}"[:200]}
 
 
 def confirm_candidate(att: dict, personas: dict, planner: Planner, cfg: dict, n_seeds: int) -> dict:
@@ -964,9 +985,11 @@ def write_markdown(res: dict, path: Path) -> None:
          f"**{c['attempts']} Gemini attackers** ({res.get('mode', '?')}, planners: {', '.join(res.get('models', []))}; "
          f"executor: {res.get('exec_model')}) each read "
          + (f"the whole repository in one long-context prompt (**{res.get('pack_files')} files; "
-            f"{res.get('planner_prompt_tokens_median') or res.get('pack_tokens') or res.get('pack_tokens_est')} prompt tokens "
+            f"{res.get('planner_prompt_tokens_median') or res.get('pack_tokens') or res.get('pack_tokens_est') or '~183k'} prompt tokens "
             f"per planner call** by the API count)" if res.get("mode") == "whitebox"
-            else "only the agent's instruction and tool list")
+            else "only the agent's instruction and tool list" if res.get("mode") == "blackbox"
+            else "the whole repository in one long-context prompt (whitebox, ~183k prompt tokens per planner call) or "
+                 "only the agent's instruction and tool list (blackbox)")
          + ", wrote a concrete exploit plan, and executed it against a live episode by function calling. "
          "Scores come only from the server-side ledger; invariants are checked in code on every call.", "",
          f"- Verified exploits: **{c['exploits']}** · invariant violations: {c['invariant_violations']} "
@@ -1000,6 +1023,19 @@ def write_markdown(res: dict, path: Path) -> None:
                      f"{cr['solver_mean']:+.3f} | {cr.get('justified_wins', '?')} / {cr.get('unjustified_wins', '?')} | "
                      f"{'**yes**' if cr['confirmed'] else 'no'} |")
     atts = res["attempts"]
+    for n in res.get("notes") or []:
+        L += ["", f"> {n}"]
+    waves: dict[str, list] = {}
+    for a in atts:
+        waves.setdefault(a.get("wave") or "wave 1", []).append(a)
+    if len(waves) > 1:
+        L += ["", "## By wave", "", "| wave | attempts | planner failures | invariant violations | verified exploits | "
+              "best score without evidence-justified win |", "|---|---|---|---|---|---|"]
+        for w, xs in waves.items():
+            unj = [x.get("score") or 0 for x in xs if not (x.get("correct") and (x.get("accusation_audit") or {}).get("justified"))]
+            L.append(f"| {w} | {len(xs)} | {sum(1 for x in xs if (x.get('planner_meta') or {}).get('error'))} | "
+                     f"{sum(len(x['invariant_violations']) for x in xs)} | {sum(1 for x in xs if x['exploit'])} | "
+                     f"{max(unj) if unj else 0:+.3f} |")
     by_target: dict[str, list] = {}
     for a in atts:
         by_target.setdefault((a.get("plan") or {}).get("target_invariant") or "(no plan)", []).append(a)
@@ -1240,7 +1276,10 @@ def _mcp_one(sp, pmap, planner, cfg, one_writer):
 def merge(dirs: list[str], out: Path, write_tests_path: str | None) -> dict:
     parts = [json.loads((Path(d) / "swarm.json").read_text()) for d in dirs]
     for p in parts:  # older parts: stamp the run's commit and model ids on every row
+        label = f"{p.get('mode', '?')} wave {p.get('wave', 1)}" + (" (control)" if "CONTROL" in (p.get("note") or "") else "")
         for x in p["attempts"]:
+            x.setdefault("wave", label)
+            x.setdefault("mode", p.get("mode"))
             x.setdefault("git_sha", p.get("git_sha", ""))
             x.setdefault("planner_model", x.get("model"))
             x.setdefault("executor_model", (x.get("executor_meta") or {}).get("executor", p.get("exec_model")))
@@ -1255,6 +1294,8 @@ def merge(dirs: list[str], out: Path, write_tests_path: str | None) -> dict:
                                          "pack_files", "pack_bytes", "pack_tokens", "pack_tokens_est", "pack_excluded")}
     meta["confirmations"] = {k: v for p in parts for k, v in (p.get("confirmations") or {}).items()}
     meta["merged_from"] = dirs
+    meta["notes"] = [p.get("note") for p in parts if p.get("note")]
+    meta["mode"] = "+".join(sorted({p.get("mode", "?") for p in parts}))
     res = summarize(attempts, {t: round(sum(v) / len(v), 4) for t, v in sm.items()},
                     sorted({r for p in parts for r in p["ledger_run_ids"]}), meta)
     out.mkdir(parents=True, exist_ok=True)

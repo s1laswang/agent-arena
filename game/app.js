@@ -47,6 +47,93 @@ const DEPT_COLORS = {
   Research: "var(--muted)"
 };
 
+// DISPLAY-ONLY mapping from engine employee IDs (e00, e01, ...) to famous tech pioneers
+const FAMOUS_TECH_PEOPLE = {
+  e00: "Ada Lovelace",
+  e01: "Alan Turing",
+  e02: "Grace Hopper",
+  e03: "Steve Jobs",
+  e04: "Steve Wozniak",
+  e05: "Bill Gates",
+  e06: "Linus Torvalds",
+  e07: "Tim Berners-Lee",
+  e08: "Margaret Hamilton",
+  e09: "Dennis Ritchie",
+  e10: "Ken Thompson",
+  e11: "Satya Nadella",
+  e12: "Lisa Su",
+  e13: "Jensen Huang",
+  e14: "Sam Altman",
+  e15: "Demis Hassabis",
+  e16: "Fei-Fei Li",
+  e17: "Elon Musk",
+  e18: "Larry Page",
+  e19: "Sergey Brin",
+  e20: "Mark Zuckerberg",
+  e21: "Sheryl Sandberg",
+  e22: "Susan Wojcicki",
+  e23: "Guido van Rossum",
+  e24: "John Carmack",
+  e25: "Hedy Lamarr",
+  e26: "Claude Shannon",
+  e27: "Katherine Johnson",
+  e28: "Jeff Bezos",
+  e29: "Marissa Mayer",
+  e30: "Barbara Liskov",
+  e31: "Donald Knuth",
+  e32: "Radia Perlman",
+  e33: "Bjarne Stroustrup",
+  e34: "Leslie Lamport",
+  e35: "Geoffrey Hinton",
+  e36: "Yann LeCun",
+  e37: "Yoshua Bengio",
+  e38: "Andrew Ng",
+  e39: "Ilya Sutskever",
+  e40: "Andrej Karpathy",
+  e41: "John von Neumann",
+  e42: "Gordon Moore",
+  e43: "Andy Grove",
+  e44: "Robert Noyce",
+  e45: "Marc Andreessen",
+  e46: "Peter Thiel",
+  e47: "Vint Cerf",
+  e48: "Bob Kahn",
+  e49: "Douglas Engelbart"
+};
+
+const engineNameToFamous = {};
+
+function registerEngineEmployees(emps) {
+  for (const emp of emps) {
+    if (emp.id && FAMOUS_TECH_PEOPLE[emp.id] && emp.name) {
+      engineNameToFamous[emp.name] = FAMOUS_TECH_PEOPLE[emp.id];
+    }
+  }
+}
+
+function getEmployeeName(id) {
+  return FAMOUS_TECH_PEOPLE[id] || id;
+}
+
+function getEmployeeDisplayName(id) {
+  const name = FAMOUS_TECH_PEOPLE[id];
+  return name ? `${name} (${id})` : id;
+}
+
+function mapTextNames(text) {
+  if (!text || typeof text !== "string") return text;
+  let out = text;
+  for (const [engName, famName] of Object.entries(engineNameToFamous)) {
+    if (engName && famName && engName !== famName) {
+      out = out.split(engName).join(famName);
+    }
+  }
+  out = out.replace(/\b(e\d{2})\b/g, (match) => {
+    return FAMOUS_TECH_PEOPLE[match] ? `${FAMOUS_TECH_PEOPLE[match]} (${match})` : match;
+  });
+  return out;
+}
+
 function randomSeed() {
   return 3000 + Math.floor(Math.random() * 7000);
 }
@@ -251,7 +338,11 @@ function syncStateFromData(tool, args, data) {
   if (tool === "list_employees") {
     const emps = data.employees || (Array.isArray(data) ? data : []);
     if (Array.isArray(emps) && emps.length > 0) {
-      state.employees = emps;
+      registerEngineEmployees(emps);
+      state.employees = emps.map(e => ({
+        ...e,
+        name: FAMOUS_TECH_PEOPLE[e.id] || e.name || e.id
+      }));
       renderOfficeDirectory(state.employees);
       populateAccuseDropdown(state.employees);
     }
@@ -536,8 +627,7 @@ function addEvidenceCard(tool, args, res) {
           if (hist && hist.assignment) {
             for (const [eId, varName] of Object.entries(hist.assignment)) {
               if (varName === v) {
-                const emp = state.employees.find(e => e.id === eId);
-                holderNames.push(emp ? `${emp.name.split(" ")[0]} (${eId})` : eId);
+                holderNames.push(getEmployeeDisplayName(eId));
               }
             }
           }
@@ -572,9 +662,9 @@ function addEvidenceCard(tool, args, res) {
     };
     bodyContent = `
       <div>
-        <strong>Subject:</strong> ${args.employee} &nbsp;|&nbsp; <strong>Topic:</strong> ${topicLabels[args.topic] || args.topic}
+        <strong>Subject:</strong> ${getEmployeeDisplayName(args.employee)} &nbsp;|&nbsp; <strong>Topic:</strong> ${topicLabels[args.topic] || args.topic}
         <div class="interview-quote">
-          "${res.data.answer || res.data.statement || 'No statement provided.'}"
+          "${mapTextNames(res.data.answer || res.data.statement || 'No statement provided.')}"
         </div>
         <div class="muted font-small">
           Evasive answers indicate higher mole probability.
@@ -600,9 +690,9 @@ function addEvidenceCard(tool, args, res) {
         html += `
           <tr>
             <td>Day ${log.day}</td>
-            <td><strong style="color:var(--accent);">${log.employee}</strong></td>
+            <td><strong style="color:var(--accent);">${getEmployeeDisplayName(log.employee)}</strong></td>
             <td>${log.doc_id}</td>
-            <td>${log.after_hours ? '<span class="after-hours-tag">AFTER-HOURS</span>' : '<span class="muted">normal</span>'}</td>
+            <td>${log.after-hours ? '<span class="after-hours-tag">AFTER-HOURS</span>' : '<span class="muted">normal</span>'}</td>
           </tr>
         `;
       }
@@ -644,11 +734,11 @@ function addEvidenceCard(tool, args, res) {
         html += `
           <div style="background:var(--bg); border:1px solid var(--line); border-radius:4px; padding:6px 8px; margin-bottom:4px;">
             <div style="display:flex; justify-content:space-between; font-size:11.5px;">
-              <strong>${m.sender} ➔ ${m.channel || 'DM'}</strong>
+              <strong>${getEmployeeDisplayName(m.sender)} ➔ ${m.channel || 'DM'}</strong>
               <span class="muted">Day ${m.day}</span>
             </div>
-            <div style="font-weight:600; font-size:12px; color:var(--ink-bright);">${m.subject || ''}</div>
-            <div class="muted font-small">${m.snippet || ''}</div>
+            <div style="font-weight:600; font-size:12px; color:var(--ink-bright);">${mapTextNames(m.subject || '')}</div>
+            <div class="muted font-small">${mapTextNames(m.snippet || '')}</div>
           </div>
         `;
       }
@@ -666,11 +756,11 @@ function addEvidenceCard(tool, args, res) {
     `;
   } else if (tool === "restrict_access") {
     bodyContent = `
-      <p>Access restricted for employee <strong>${args.employee}</strong>.</p>
+      <p>Access restricted for employee <strong>${getEmployeeDisplayName(args.employee)}</strong>.</p>
     `;
   } else if (tool === "unrestrict_access") {
     bodyContent = `
-      <p>Access permissions restored for <strong>${args.employee}</strong>.</p>
+      <p>Access permissions restored for <strong>${getEmployeeDisplayName(args.employee)}</strong>.</p>
     `;
   } else {
     bodyContent = `<p class="muted">${tool} completed successfully.</p>`;
@@ -991,6 +1081,9 @@ function showEndScreen() {
   const isWin = reveal.you.correct;
   const isAbstain = reveal.you.end_reason === "horizon" || state.playerAbstained;
 
+  const moleDisplayName = getEmployeeDisplayName(moleId);
+  const moleName = getEmployeeName(moleId);
+
   // Header Title
   const icon = $("endVerdictIcon");
   const title = $("endVerdictTitle");
@@ -999,7 +1092,7 @@ function showEndScreen() {
   if (isWin) {
     icon.textContent = "";
     title.textContent = "INVESTIGATION SUCCESSFUL: MOLE CAPTURED";
-    sub.textContent = `You accurately identified ${moleId} as the corporate mole and preserved ${Math.round(reveal.you.score * 100)}% of company value.`;
+    sub.textContent = `You accurately identified ${moleDisplayName} as the corporate mole and preserved ${Math.round(reveal.you.score * 100)}% of company value.`;
   } else if (isAbstain) {
     icon.textContent = "";
     title.textContent = "INVESTIGATION CLOSED: ABSTAINED";
@@ -1007,12 +1100,12 @@ function showEndScreen() {
   } else {
     icon.textContent = "";
     title.textContent = "INVESTIGATION FAILED: FALSE ACCUSATION";
-    sub.textContent = `You accused ${reveal.you.accused}, but the real mole was ${moleId}. A false accusation imposes a -1.00 penalty.`;
+    sub.textContent = `You accused ${getEmployeeDisplayName(reveal.you.accused)}, but the real mole was ${moleDisplayName}. A false accusation imposes a -1.00 penalty.`;
   }
 
   // Flipping Mole Card
-  const moleEmp = state.employees.find(e => e.id === moleId) || { name: moleId, dept: "Unknown", role: "Mole" };
-  $("moleNameDisplay").textContent = moleEmp.name;
+  const moleEmp = state.employees.find(e => e.id === moleId) || { name: moleName, dept: "Unknown", role: "Mole" };
+  $("moleNameDisplay").textContent = moleName;
   $("moleMetaDisplay").textContent = `${moleId} · ${moleEmp.dept} · ${moleEmp.role}`;
 
   const flipCard = $("moleFlipCard");
@@ -1095,13 +1188,14 @@ function showEndScreen() {
   const moleTag = state.userTags[moleId];
   if (moleTag === "cleared") {
     fooledBox.hidden = false;
-    $("fooledHeading").textContent = "You Were Fooled: Cleared the Real Traitor";
-    $("fooledMessage").textContent = `During the investigation, you tagged ${moleEmp.name} (${moleId}) as 'Cleared'. The mole successfully maintained a low profile and deflected your suspicion!`;
+    $("fooledHeading").textContent = "Investigator Note";
+    $("fooledMessage").textContent = `During the investigation, you tagged ${moleDisplayName} as 'Cleared'. The mole successfully maintained a low profile and deflected your suspicion.`;
   } else if (!isWin && reveal.you.accused) {
     fooledBox.hidden = false;
     const accusedEmp = state.employees.find(e => e.id === reveal.you.accused);
-    $("fooledHeading").textContent = "You Were Fooled: Innocent Suspect Framed";
-    $("fooledMessage").textContent = `You accused ${accusedEmp ? accusedEmp.name : reveal.you.accused}. The true mole planted fabricated after-hours access logs and exploited the delayed leaks to frame colleagues!`;
+    const accusedDisp = accusedEmp ? `${accusedEmp.name} (${accusedEmp.id})` : getEmployeeDisplayName(reveal.you.accused);
+    $("fooledHeading").textContent = "Investigator Note";
+    $("fooledMessage").textContent = `You accused ${accusedDisp}. The true mole planted fabricated after-hours access logs and exploited delayed leaks to frame colleagues.`;
   } else {
     fooledBox.hidden = true;
   }
@@ -1130,10 +1224,18 @@ function showEndScreen() {
   for (const act of state.actionHistory) {
     const entry = document.createElement("div");
     entry.className = "replay-entry";
+    let desc = "";
+    if (act.tool === 'plant_canary') {
+      desc = act.args.doc_title || 'Memo';
+    } else if (act.args.employee) {
+      desc = `${getEmployeeDisplayName(act.args.employee)} ${act.args.topic ? '(' + act.args.topic + ')' : ''}`.trim();
+    } else {
+      desc = JSON.stringify(act.args);
+    }
     entry.innerHTML = `
       <span class="mono muted font-small">Day ${act.day}</span>
       <strong>${act.tool}</strong>
-      <span class="muted font-small">${act.tool === 'plant_canary' ? act.args.doc_title || 'Memo' : JSON.stringify(act.args)}</span>
+      <span class="muted font-small">${desc}</span>
     `;
     replayBox.appendChild(entry);
   }

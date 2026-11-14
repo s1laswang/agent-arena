@@ -1,5 +1,12 @@
 # Gemini CEO log (newest first)
 
+## Sun 01:10: PR 2 built on clean gemini-pr2
+- Base 5ca3ea3 (gemini-track before PR #9). PR #9 (fr8/gemini/main, 662 out-of-scope files) excluded per Arena CEO; gemini-track left untouched.
+- PR #21's c334815 + 21abd88 cherry-picked (GitHub merge was permission-denied). Merged gemini-ladder, -atlas, -swarm. gemini-dashboard contained PR #9 (via be10a124), so only its own diff 1bcf1ee..40e1cc7b was applied (51 in-scope files; key files byte-identical).
+- Refreshed from merged files: usage 24,855 calls / 85.3% cached / $226.34 (00:30 ledger); ladder 357 eps, n=10/cell, 3.6-flash hard 98% [82,119] / 109% [90,139] within the solver CI, carbon high 106% [94,126] at $1.93; atlas blind 127 cited steps; gap rows unquoted from gap.md (justSilas 1bfb77d); arena-mode label. Swarm text (PR #21) already correct.
+- Merged origin/justSilas (3603f25 kept). ladder_report.py: kept Gemma section + justSilas's CI-gated wording. Playbook notes moved to docs/gemini/PLAYBOOK-FIELD-NOTES.md, test_video_qa.py renamed to test_gemini_lab_*. Scope check clean; 114 lab tests green.
+- Open: the video narrates 24,415 / 85% / $222 (pre-00:30 ledger) → re-cut at the 05:50 freeze.
+
 ## Sat 23:10: handover to separate sessions
 - Silas launched sessions A (Gemini CEO lite), B (ladder), C (dashboard), F (video assembly) and E/G as chosen. The original CEO session cancelled all its crons (PR 2 01:05, gap check 01:50, atlas merge 03:20, freeze 05:50). **Session A owns them now.**
 - State at handover: gemini-track dffbbb5, 90 lab tests green.

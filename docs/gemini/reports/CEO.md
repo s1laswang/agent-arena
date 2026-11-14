@@ -1,5 +1,13 @@
 # Gemini CEO log (newest first)
 
+## Sat 19:25: tick 6
+- PR #6 merged into justSilas by the Arena CEO.
+- PR 2 asks done: root docs moved under docs/gemini/; attacks referenced by name, not EXPLOITS row id; no GRPO claim.
+- Failure gallery merged (G3): 295 episodes, +90.795 lost value, 100% tagged, 0 unexplained. Atlas v2 is in results/gemini/v2. The full5 crash is fixed.
+- Batch API unusable on our key (resource exhausted per request). Removed every Batch claim from SUBMISSION.md and PLAN.md, and warned the Aimo and Meta CEOs.
+- Read JUDGING.md: scoring checklist added to PLAN.md. ElevenLabs is not needed for the Gemini entry. Question 7 added: Canary Lab vs HoldUp for the Gemini track.
+- Gate B: v1.4 stays the judged env. The world-text role is labelled a demo/research layer (v1.5 candidate); rule sent to G5.
+
 ## Sat 18:55: PR 1 opened (https://github.com/s1laswang/agent-arena/pull/6)
 - Merged origin/justSilas into gemini-track. The diff vs justSilas adds files only, plus appended Makefile and .gitignore blocks. make test: 700 passed, 6 skipped. Fixed one ladder test for the measurement's new invalid-episode wording.
 - Swarm positive control: with EXPLOITS #23 re-opened, 4/4 attackers re-find it and it is verified (16/16 fresh seeds). Blackbox wave: 0 exploits.

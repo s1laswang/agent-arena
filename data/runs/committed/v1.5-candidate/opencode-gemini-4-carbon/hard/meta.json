@@ -1,0 +1,64 @@
+{
+ "agent": "opencode:google/gemini-4-carbon",
+ "model": "google/gemini-4-carbon",
+ "model_id": "gemini-4-carbon",
+ "provider": "opencode",
+ "harness": "opencode-cli+mcp_server",
+ "steps_source": "agent_transcript",
+ "provider_settings": {
+  "thinking": "includeThoughts, no thinkingLevel (model default; gemini-4-carbon: medium)",
+  "temperature": "not set (API default)"
+ },
+ "opencode_version": "1.19.5",
+ "opencode_permission": {
+  "*": "deny",
+  "canary_*": "allow"
+ },
+ "tier": "hard",
+ "tiers_version": "v1.5-candidate",
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "planned_seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "status": "complete",
+ "git_sha": "de9cc50ea46420d507010b02f3562e370ca2b34b",
+ "git_shas": [
+  "de9cc50ea46420d507010b02f3562e370ca2b34b"
+ ],
+ "smoke": false,
+ "hint": null,
+ "usage": {
+  "in": 61834735,
+  "cached_in": 59093600,
+  "out": 677323,
+  "cost_usd_est": 18.1648,
+  "cost_usd_upper": 130.4427
+ },
+ "pricing": "gemini-4-carbon $2/$10 per 1M, cached $0.10 (aistudio pricing 2026-11-14)",
+ "provenance": "scripts/with_tiers.py v1.5-candidate scripts/gemini_runner.py (OpenCode 1.18.29 over MCP), merged by scripts/merge_staging.py",
+ "invalid_episodes": [],
+ "infra_invalid_attempts_excluded": [
+  "opencode-hard-2-165447: invalid: infra:provider_unavailable",
+  "opencode-hard-8-150734: invalid: infra:empty_model_response"
+ ]
+}

@@ -9,6 +9,8 @@ git fetch -q origin
 mkdir $W/code $W/data
 git archive $REF lab train sleeper agents requirements.txt | tar -x -C $W/code
 cp train/data/*.jsonl $W/data/
+echo "$SFT_ARGS" > $W/data/sft_args.txt
+echo "$EVAL_ARGS" > $W/data/eval_args.txt
 for d in code data; do
   printf '{"title":"sleeper-%s","id":"%s/sleeper-%s","licenses":[{"name":"CC0-1.0"}]}' $d $U $d > $W/$d/dataset-metadata.json
   if $KG datasets status $U/sleeper-$d >/dev/null 2>&1; then

@@ -8,7 +8,10 @@ def run(*a):
     print("+", *a, flush=True)
     subprocess.check_call([sys.executable, *a], env=env)
 run("-m", "pip", "install", "-q", "-r", "requirements.txt")
+run("-m", "pip", "uninstall", "-y", "-q", "torchao")
 model = os.environ.get("MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
-run("-m", "train.sft", "--model", model, "--data", data + "/train.jsonl", "--out", work + "/adapter")
-run("-m", "train.eval", "--model", model, "--out", work + "/eval_base")
-run("-m", "train.eval", "--model", model, "--adapter", work + "/adapter", "--out", work + "/eval_adapter")
+sft = open(data + "/sft_args.txt").read().split() if os.path.exists(data + "/sft_args.txt") else []
+ev = open(data + "/eval_args.txt").read().split() if os.path.exists(data + "/eval_args.txt") else []
+run("-m", "train.sft", "--model", model, "--data", data + "/train.jsonl", "--out", work + "/adapter", *sft)
+run("-m", "train.eval", "--model", model, "--out", work + "/eval_base", *ev)
+run("-m", "train.eval", "--model", model, "--adapter", work + "/adapter", "--out", work + "/eval_adapter", *ev)

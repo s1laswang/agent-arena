@@ -44,7 +44,7 @@ def test_hints():
     assert HINTS["budget_waste"] not in build_system_prompt("INSTR", None)
     with pytest.raises(ValueError):
         build_system_prompt("x", "nope")
-    assert len(HINTS) == 7
+    assert len(HINTS) == 8  # 7 failure-mode tags + the PLAN-95 B1 ev_delay hint
 
 
 def test_nudge_then_fallback():
@@ -223,3 +223,40 @@ def test_usage_from_events():
     u = usage_from_events(ev, "gpt-5.5")
     assert u["cost_usd_upper"] == 8.0 and u["cost_usd_est"] == 5.75
     assert usage_from_events("", "gpt-5.5") == {"cost_unknown": True}
+
+
+def test_hints_v2_only_restate_hard_instruction_facts():
+    """v2 hints add salience, not information: every fact they state is on the hard instruction page."""
+    from canary.agents.llm_policy import HINTS_V2
+    from canary.env import Env
+    ins = Env("hard", 0).instruction()
+    assert "P(correct) x V + (1 - P(correct)) x (-1) is greater than 0" in ins
+    assert "after a delay of 2 or 3 day(s)" in ins and "2 or 3 days" in HINTS_V2["ignored_delay"]
+    assert "goes to the decoy with probability 0.5" in ins and "half of them onto the angry decoy" in HINTS_V2["decoy_chase"]
+    p = build_system_prompt("INSTR", "premature_accusation", hint_set="v2")
+    assert HINTS_V2["premature_accusation"] in p and HINTS["premature_accusation"] not in p
+
+
+def test_ev_delay_hint_b1_opt_in_prompt_only():
+    """PLAN-95 B1: exact CEO text; off by default; appended to the agent prompt, never to the env instruction."""
+    from canary.agents.frontier.common import episode_prompt
+    from canary.env import Env
+    txt = HINTS["ev_delay"]
+    assert txt.startswith("Accusing has positive expected value only if P(correct) > 1/(1+V)")
+    assert "1–3 days (medium) / 2–3 days (hard)" in txt
+    for tier in ("medium", "hard"):
+        ins = Env(tier, 0).instruction()
+        assert txt not in ins and txt not in episode_prompt(tier, 0)
+        assert episode_prompt(tier, 0, "ev_delay") == episode_prompt(tier, 0) + "\n" + txt
+    assert "after a delay of 1 or 2 or 3 day(s)" in Env("medium", 0).instruction()
+    assert "after a delay of 2 or 3 day(s)" in Env("hard", 0).instruction()
+
+
+def test_gemini_runner_passes_hint_to_both_harnesses(tmp_path):
+    import importlib.util, pathlib
+    spec = importlib.util.spec_from_file_location("gr", pathlib.Path(__file__).parent.parent / "scripts" / "gemini_runner.py")
+    gr = importlib.util.module_from_spec(spec); spec.loader.exec_module(gr)
+    for h in ("opencode", "inproc"):
+        cmd = gr.Job(h, "hard", 3, tmp_path, "gemini-4-carbon", 60, "ev_delay")._cmd()
+        assert cmd[-2:] == ["--hint", "ev_delay"]
+        assert "--hint" not in gr.Job(h, "hard", 3, tmp_path, "gemini-4-carbon", 60)._cmd()

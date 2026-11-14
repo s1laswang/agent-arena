@@ -12,3 +12,8 @@
 - Finding P1: one in-process solver episode ran >4 min / 1.9 GB before I killed it (others 0.02 s) → solver needs a guard.
 - Finding P2: `--reproduce` still a stub (repro engineer); LLM agents only via MCP; ledger_payload uses Env private attrs.
 - Next: review the harbor/repro branches as they land; fresh-clone reproduce at about 06:30.
+
+## 02:55 decisions (CEO)
+- SALT will NOT be committed (public repo + internet in agent containers = answer key). `make reproduce` uses one random secret per invocation shared by all its runs (paired comparison; statistical repro, exact with CANARY_WORLD_SECRET) → repro engineer, plus a fixed-secret two-subprocess determinism test. Harbor bakes a build-time secret into the server image only (harbor/build.py, never committed) → harbor engineer.
+- Solver guard + 1.9 GB root-cause → ENV. Public env.verdict() → ENV.
+- QA follow-up for me: the README must state expected numbers as mean ± CI (not exact), and the fresh-clone check must verify the gap holds across two different secrets.

@@ -1,5 +1,8 @@
 import inspect
+import os
 import random
+import tempfile
+from pathlib import Path
 
 from sleeper.models import SEATS, Account, Action, Company, Contract, Day, Doc, Employee, Message, Payment, Vendor
 
@@ -176,6 +179,14 @@ def tools_for(seat, world=None):
     return out
 
 
+def render_scan(lines, seed, doc_id):
+    from agents.images import render_invoice
+
+    d = Path(os.environ.get("SLEEPER_IMG_DIR") or Path(tempfile.gettempdir()) / "sleeper_img")
+    d.mkdir(parents=True, exist_ok=True)
+    return str(render_invoice(lines, d / ("scan-%s-%s.png" % (seed, doc_id))))
+
+
 class World:
     def __init__(self, day: Day, seed_hooks=()):
         self.day = day
@@ -210,7 +221,7 @@ class World:
         for d in day.docs:
             d = {**d}
             if "image_lines" in d:
-                d["image"] = "\n".join(d.pop("image_lines"))
+                d["image"] = render_scan(d.pop("image_lines"), day.seed, d["id"])
             self.company.docs[d["id"]] = Doc(**d)
         self.before = {}
         self.initial = self.company.model_copy(deep=True)
@@ -329,6 +340,7 @@ class World:
         out = {"ok": True, "doc": d.model_dump(exclude={"canary", "secret", "image"})}
         if getattr(d, "image", None):
             out["image"] = d.image
+            out["image_note"] = "image attached, %d bytes" % os.path.getsize(d.image)
         return out
 
     def t_search_docs(self, seat, q=""):

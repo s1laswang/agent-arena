@@ -40,6 +40,40 @@ DEFAULT_OUT_DIR = (
 )
 OUT_JSON_NAME = "parity_audit_21worlds.json"
 OUT_MD_NAME = "parity_audit_21worlds.md"
+FULL_24_TIER_SEEDS: dict[str, tuple[int, ...]] = {
+    "easy": (0, 1, 2, 3),
+    "medium": (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+    "hard": (0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+}
+FULL_24_SOURCE_DIRS: tuple[Path, ...] = (
+    *DEFAULT_SOURCE_DIRS,
+    ROOT / "results" / "gemini_roles" / "world_text" / "carbon-v14-hard789" / "worlds",
+)
+FULL_24_OUT_DIR = (
+    ROOT / "results" / "gemini_roles" / "world_text" / "carbon-v14-hard789"
+)
+OUT_24_JSON_NAME = "parity_audit_24worlds.json"
+OUT_24_MD_NAME = "parity_audit_24worlds.md"
+PRESET_CONFIGS: dict[str, dict[str, Any]] = {
+    "21worlds": {
+        "out_dir": DEFAULT_OUT_DIR,
+        "source_dirs": DEFAULT_SOURCE_DIRS,
+        "easy_seeds": "0-3",
+        "medium_seeds": "0-9",
+        "hard_seeds": "0-6",
+        "out_json_name": OUT_JSON_NAME,
+        "out_md_name": OUT_MD_NAME,
+    },
+    "24worlds": {
+        "out_dir": FULL_24_OUT_DIR,
+        "source_dirs": FULL_24_SOURCE_DIRS,
+        "easy_seeds": "0-3",
+        "medium_seeds": "0-9",
+        "hard_seeds": "0-9",
+        "out_json_name": OUT_24_JSON_NAME,
+        "out_md_name": OUT_24_MD_NAME,
+    },
+}
 MD_H1 = "\x23"
 MD_H2 = "\x23\x23"
 
@@ -161,14 +195,20 @@ def render_parity_markdown(report: dict[str, Any]) -> str:
     nl = report["non_leak"]
     sp = report["solver_parity"]
     le = report["leak_encodings"]
+    n_worlds = int(report["n_worlds"])
+    tier_counts = ", ".join(
+        f"`{t}={report['tiers'][t]['n']}`"
+        for t in TIER_ORDER
+        if t in report["tiers"]
+    )
 
     lines = [
-        f"{MD_H1} Unified 21-World 3-Tier Non-Leak and SolverPolicy Parity Audit",
+        f"{MD_H1} Unified {n_worlds}-World 3-Tier Non-Leak and SolverPolicy Parity Audit",
         "",
         f"- Status: **{status}**",
         f"- Model ID: `{report['model_id']}`",
         f"- Canary Tiers Version: `{report['tiers_version']}`",
-        f"- Corpus Worlds Audited: `{report['n_worlds']}` (`easy=4`, `medium=10`, `hard=7`)",
+        f"- Corpus Worlds Audited: `{n_worlds}` ({tier_counts})",
         f"- Total Personas Audited: `{report['n_personas_total']}` across `{le['n_worldtext_files_scanned']}` `.worldtext.json` and `{le['n_text_files_scanned']}` `.text.json` files",
         f"- Non-Leak Status: `{'pass' if nl['ok'] else 'fail'}` (`truth_violations={nl['n_truth_violations']}`, `lint_violations={nl['n_lint_violations']}`, `leak_encoding_violations={nl['n_leak_encoding_violations']}`, `messages_checked={nl['n_messages_checked']}`, `interviews_checked={nl['n_interviews_checked']}`)",
         f"- Encoding Detectors Checked: `{le['n_supported_encodings']}` (`leak_encodings.scan_text_for_secret` violations=`{le['n_violations']}`)",
@@ -207,7 +247,7 @@ def render_parity_markdown(report: dict[str, Any]) -> str:
 
     lines.extend([
         "",
-        f"{MD_H2} Per-World 21-World Breakdown",
+        f"{MD_H2} Per-World {n_worlds}-World Breakdown",
         "",
         "| Tier | Seed | Personas | Truth OK | Lint OK | Stego Clean | Template Score | World Score | Score Diff | World Correct | Source Artifact |",
         "|---|---:|---:|---|---|---|---:|---:|---:|---|---|",
@@ -241,6 +281,8 @@ def run_3tier_parity_sweep(
     tier_seeds: Mapping[str, Sequence[int]] | None = None,
     jobs: int = 12,
     root: Path = ROOT,
+    out_json_name: str = OUT_JSON_NAME,
+    out_md_name: str = OUT_MD_NAME,
 ) -> dict[str, Any]:
     target_tier_seeds: dict[str, list[int]] = {}
     raw_map = tier_seeds if tier_seeds is not None else DEFAULT_TIER_SEEDS
@@ -434,8 +476,8 @@ def run_3tier_parity_sweep(
     if out_dir is not None:
         out_path = Path(out_dir)
         out_path.mkdir(parents=True, exist_ok=True)
-        json_fp = out_path / OUT_JSON_NAME
-        md_fp = out_path / OUT_MD_NAME
+        json_fp = out_path / out_json_name
+        md_fp = out_path / out_md_name
         json_fp.write_text(
             clean_str(json.dumps(report, indent=2, sort_keys=True)) + "\n",
             encoding="utf-8",
@@ -447,30 +489,48 @@ def run_3tier_parity_sweep(
 
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="run_worldtext_3tier_parity")
-    ap.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR))
+    ap.add_argument("--preset", choices=sorted(PRESET_CONFIGS), default="21worlds")
+    ap.add_argument("--out-dir", default=None)
     ap.add_argument("--source-dirs", nargs="*", default=None)
-    ap.add_argument("--easy-seeds", default="0-3")
-    ap.add_argument("--medium-seeds", default="0-9")
-    ap.add_argument("--hard-seeds", default="0-6")
+    ap.add_argument("--easy-seeds", default=None)
+    ap.add_argument("--medium-seeds", default=None)
+    ap.add_argument("--hard-seeds", default=None)
+    ap.add_argument("--out-json-name", default=None)
+    ap.add_argument("--out-md-name", default=None)
     ap.add_argument("--jobs", type=int, default=12)
     ap.add_argument("--no-write", action="store_true")
     args = ap.parse_args(list(argv) if argv is not None else None)
 
-    src_dirs = [Path(p) for p in args.source_dirs] if args.source_dirs else list(DEFAULT_SOURCE_DIRS)
-    tier_seeds: dict[str, list[int]] = {}
-    if args.easy_seeds:
-        tier_seeds["easy"] = normalize_seeds(args.easy_seeds)
-    if args.medium_seeds:
-        tier_seeds["medium"] = normalize_seeds(args.medium_seeds)
-    if args.hard_seeds:
-        tier_seeds["hard"] = normalize_seeds(args.hard_seeds)
+    preset_cfg = PRESET_CONFIGS[args.preset]
+    src_dirs = (
+        [Path(p) for p in args.source_dirs]
+        if args.source_dirs
+        else list(preset_cfg["source_dirs"])
+    )
+    easy_spec = args.easy_seeds if args.easy_seeds is not None else preset_cfg["easy_seeds"]
+    medium_spec = args.medium_seeds if args.medium_seeds is not None else preset_cfg["medium_seeds"]
+    hard_spec = args.hard_seeds if args.hard_seeds is not None else preset_cfg["hard_seeds"]
 
-    out_target = None if args.no_write else Path(args.out_dir)
+    tier_seeds: dict[str, list[int]] = {}
+    if easy_spec:
+        tier_seeds["easy"] = normalize_seeds(easy_spec)
+    if medium_spec:
+        tier_seeds["medium"] = normalize_seeds(medium_spec)
+    if hard_spec:
+        tier_seeds["hard"] = normalize_seeds(hard_spec)
+
+    resolved_out_dir = Path(args.out_dir) if args.out_dir is not None else Path(preset_cfg["out_dir"])
+    out_target = None if args.no_write else resolved_out_dir
+    out_json_name = args.out_json_name or str(preset_cfg["out_json_name"])
+    out_md_name = args.out_md_name or str(preset_cfg["out_md_name"])
+
     report = run_3tier_parity_sweep(
         source_dirs=src_dirs,
         out_dir=out_target,
         tier_seeds=tier_seeds,
         jobs=args.jobs,
+        out_json_name=out_json_name,
+        out_md_name=out_md_name,
     )
     summary = {
         "ok": report["ok"],

@@ -1,0 +1,49 @@
+{
+  "command": "/tmp/fleet-silas/canary-venv/bin/python scripts/run_role_world_text.py --llm gemini:gemini-4-carbon --specs hard:7,hard:8,hard:9 --jobs 3 --out results/gemini_roles/world_text/carbon-v14-hard789",
+  "commit": "97674175c388cef613fcbc9ae6728bd9d228d8e6",
+  "gemini_provider_fallbacks": 0,
+  "lint_violations": 0,
+  "llm_ok_count": 3,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "n_day_messages_generated": 41,
+  "n_departments_generated": 15,
+  "n_interviews_generated": 6,
+  "n_llm_personas": 120,
+  "n_personas_generated": 120,
+  "n_worlds": 3,
+  "role": "world_text",
+  "solver_accuracy": 1.0,
+  "solver_all_clean": true,
+  "solver_episodes_verified": 3,
+  "solver_mean_score": 0.5367,
+  "subrole": "company_personas_chatter",
+  "template_baseline_mean_score": 0.5367,
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T18:11:01Z",
+  "truth_leak_violations": 0,
+  "usage": {
+    "cached": 0,
+    "calls": 19,
+    "cost_usd": 0.35932,
+    "in": 33620,
+    "latency_s": 487.461,
+    "out": 12068,
+    "thinking": 17140,
+    "total_tokens": 62828
+  },
+  "world_specs": [
+    {
+      "seed": 7,
+      "tier": "hard"
+    },
+    {
+      "seed": 8,
+      "tier": "hard"
+    },
+    {
+      "seed": 9,
+      "tier": "hard"
+    }
+  ]
+}

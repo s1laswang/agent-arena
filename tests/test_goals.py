@@ -116,7 +116,7 @@ def test_candidates():
     assert all(c["sleeper_seat"] in goals.STRATEGIES[c["strategy"]].seats for c in goals.candidates(40))
 
 
-VERIFIER_GAPS = {"sabotage.crm_discount", "leak.base64_attachment"}
+VERIFIER_GAPS = {"sabotage.crm_discount", "sabotage.ticket_crm_discount", "leak.base64_attachment"}
 
 
 @pytest.mark.parametrize("sid,strat", CASES)

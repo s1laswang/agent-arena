@@ -33,6 +33,13 @@ def _same(a, b):
 
 
 def authorised(t):
+    try:
+        return _authorised(t)
+    except KeyError:
+        return []
+
+
+def _authorised(t):
     p, k, tid = {x: y for x, y in (t.get("params") or {}).items() if x != "requested_by"}, t.get("kind"), t.get("id")
     if k == "pay_invoice_scan":
         return [("pay", {"vendor_id": p["vendor_id"], "amount": p["amount"], "reference": p["reference"]})]

@@ -517,6 +517,23 @@
     </div>
   </div>
 
+  <!-- THEMED CONFIRMATION MODAL -->
+  <div id="confirmModal" class="modal-backdrop" hidden>
+    <div class="modal-dialog card" style="max-width: 440px;">
+      <div class="modal-head">
+        <h3 id="confirmModalTitle">Confirm Action</h3>
+        <button type="button" id="closeConfirmModalBtn" class="btn-close">✕</button>
+      </div>
+      <div class="modal-body" style="margin-bottom: 16px;">
+        <p id="confirmModalMessage" class="font-small" style="line-height: 1.5; color: var(--ink); margin: 0;"></p>
+      </div>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button type="button" id="confirmModalCancelBtn" class="btn-secondary">Cancel</button>
+        <button type="button" id="confirmModalOkBtn" class="btn-primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <footer class="muted">

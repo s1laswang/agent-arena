@@ -1197,27 +1197,57 @@ function confirmAccusation() {
   executeTool("accuse", { employee: empId });
 }
 
-function abstainAndClose() {
-  const confirmed = confirm(
-    "CLOSE CASE WITHOUT ACCUSING (ABSTAIN)\n\n" +
-    "You are choosing to abstain rather than making an uncertain accusation.\n" +
-    "- Your final score will be exactly 0.00.\n" +
-    "- You avoid the catastrophic -1.00 penalty for a false accusation.\n\n" +
-    "End the investigation now?"
-  );
-  if (!confirmed) return;
-
-  state.playerAbstained = true;
-  state.decisionDay = state.day;
-  state.decisionV = state.knownV;
-  state.decisionBreakEvenP = 1 / (1 + state.decisionV);
-  closeAccuseDialog();
-
-  // Advance through days until the episode horizon is reached
-  while (game && !JSON.parse(game.call_json("advance_day", "{}")).done) {
-    // Loop advances to horizon
+function showConfirmDialog({ title, message, okText = "Confirm", isDanger = false, onConfirm }) {
+  const modal = $("confirmModal");
+  if (!modal) {
+    if (confirm(message.replace(/<[^>]+>/g, ""))) onConfirm();
+    return;
   }
-  showEndScreen();
+  $("confirmModalTitle").textContent = title;
+  $("confirmModalMessage").innerHTML = message;
+
+  const okBtn = $("confirmModalOkBtn");
+  okBtn.textContent = okText;
+  okBtn.className = isDanger ? "btn-danger" : "btn-primary";
+
+  modal.hidden = false;
+
+  const cleanup = () => {
+    modal.hidden = true;
+    okBtn.onclick = null;
+    $("confirmModalCancelBtn").onclick = null;
+    $("closeConfirmModalBtn").onclick = null;
+  };
+
+  okBtn.onclick = () => {
+    cleanup();
+    onConfirm();
+  };
+
+  $("confirmModalCancelBtn").onclick = cleanup;
+  $("closeConfirmModalBtn").onclick = cleanup;
+}
+
+function abstainAndClose() {
+  showConfirmDialog({
+    title: "Close Case Without Accusing (Abstain)",
+    message: "You are choosing to abstain rather than making an uncertain accusation.<br><br>• Your final score will be exactly <strong>0.00</strong>.<br>• You avoid the <strong>-1.00 penalty</strong> for a false accusation.<br><br>End the investigation now?",
+    okText: "Abstain & Close Case",
+    isDanger: false,
+    onConfirm: () => {
+      state.playerAbstained = true;
+      state.decisionDay = state.day;
+      state.decisionV = state.knownV;
+      state.decisionBreakEvenP = 1 / (1 + state.decisionV);
+      closeAccuseDialog();
+
+      // Advance through days until the episode horizon is reached
+      while (game && !JSON.parse(game.call_json("advance_day", "{}")).done) {
+        // Loop advances to horizon
+      }
+      showEndScreen();
+    }
+  });
 }
 
 // -----------------------------------------------------------------------------
@@ -1490,8 +1520,14 @@ function setupGlobalEventListeners() {
 
   $("hudNextDayBtn").addEventListener("click", () => {
     if (state.actionsLeftToday > 0) {
-      const ok = confirm(`You still have ${state.actionsLeftToday} action(s) left today. Are you sure you want to end Day ${state.day} and advance to tomorrow?`);
-      if (!ok) return;
+      showConfirmDialog({
+        title: "End Day Early?",
+        message: `You still have <strong>${state.actionsLeftToday} action(s)</strong> left today.<br><br>Unused actions do not carry over to tomorrow. Are you sure you want to end Day ${state.day} and advance?`,
+        okText: "Advance to Tomorrow",
+        isDanger: false,
+        onConfirm: () => executeTool("advance_day", {})
+      });
+      return;
     }
     executeTool("advance_day", {});
   });
@@ -1509,8 +1545,14 @@ function setupGlobalEventListeners() {
   $("surveyOfficeActionBtn").addEventListener("click", () => executeTool("list_employees", {}));
   $("checkLeaksFeedBtn").addEventListener("click", () => {
     if (state.checkedLeaksToday) {
-      const ok = confirm("Already checked today. In this benchmark, leaks only surface when advancing to a new day. Spend 1 action to re-check anyway?");
-      if (!ok) return;
+      showConfirmDialog({
+        title: "Re-Check Leak Wire?",
+        message: "You already checked the leak feed today.<br><br>In this benchmark, new leaks only surface when advancing to a new day. Spend 1 action to re-check anyway?",
+        okText: "Check Anyway (1 action)",
+        isDanger: false,
+        onConfirm: () => executeTool("check_leak_feed", {})
+      });
+      return;
     }
     executeTool("check_leak_feed", {});
   });

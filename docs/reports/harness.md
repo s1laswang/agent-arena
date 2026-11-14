@@ -32,6 +32,12 @@
 - Gap on the old table (my checker: solver lower CI > every baseline upper CI, do_nothing == 0): medium +0.735, hard +0.596, easy +0.091 (CIs only 0.031 apart). It holds, but easy is thin.
 - Fresh-clone check scheduled: my background job PID 64753 wakes at 05:00 → clone into /tmp → make setup → make reproduce under secrets A and B → gap check on both tables.
 
+## 03:20 head: CEO tasks 1-3
+- Done (verified: ran): scripts/repro_spread.py committed + referenced in the README. An independent 30-secret run agrees with the README within 0.04 on every mean.
+- Done (verified: make test 449 passed): README wording + two factual rule fixes vs rules.py v1.2 (variants per tier, canaries/day, delays); no numbers changed. Merge into justSilas requested from the CEO.
+- Open (content, not wording): the README lacks the failure-mode / regret-tag story; the frontier row is pending; the Tesla 2008 date is unverified.
+- Fresh-clone check rescheduled with harbor lint: my job PID 82715 (old PID 64753 stopped by me), wakes at 05:00.
+
 ---
 # Engineer sections
 

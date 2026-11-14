@@ -19,6 +19,12 @@ from .mutate import FRAME_SELECTORS, canonical, default_strategy_json
 
 FEASIBLE_SOLVER_RATIO = 0.5
 FEASIBLE_SOLVER_ACC = 0.85
+# J5b defaults per tier: hard = regret vs strongest investigator, solver acc >= 0.75
+TIER_DEFAULTS = {"hard": {"fitness_mode": "min", "min_solver_acc": 0.75}}
+
+
+def tier_defaults(tier: str) -> dict:
+    return TIER_DEFAULTS.get(tier, {"fitness_mode": "mean", "min_solver_acc": FEASIBLE_SOLVER_ACC})
 SOLVER_NAME = "solver"
 
 
@@ -112,7 +118,10 @@ def solver_baseline(solver_factory, seeds, tier, runner=real_runner, workers=1) 
 
 def evaluate(strategy_json: dict, investigators: dict[str, Callable], solver_factory: Callable,
              seeds, tier: str, runner: Callable = real_runner, workers: int = 1,
-             baseline: dict | None = None) -> dict:
+             baseline: dict | None = None, fitness_mode: str = "mean",
+             min_solver_acc: float = FEASIBLE_SOLVER_ACC) -> dict:
+    """fitness_mode: "mean" = mean regret over investigators x seeds; "min" (J5b) = regret vs the STRONGEST
+    investigator = solver_score - max_i mean score_i."""
     seeds = list(seeds)
     if baseline is None:
         baseline = solver_baseline(solver_factory, seeds, tier, runner, workers)
@@ -127,9 +136,14 @@ def evaluate(strategy_json: dict, investigators: dict[str, Callable], solver_fac
         per_inv[name] = {"score": sum(sc) / len(sc), "acc": sum(r[name][1] for r in rows) / len(rows),
                          "regret": sum(a - b for a, b in zip(solver, sc)) / len(sc)}
         regrets += [a - b for a, b in zip(solver, sc)]
-    feasible = (solver_score >= FEASIBLE_SOLVER_RATIO * baseline["score"]) and solver_acc >= FEASIBLE_SOLVER_ACC
+    feasible = (solver_score >= FEASIBLE_SOLVER_RATIO * baseline["score"]) and solver_acc >= min_solver_acc
     mean_regret = sum(regrets) / len(regrets) if regrets else 0.0
-    return {"fitness": mean_regret if feasible else -math.inf, "regret": mean_regret,
+    min_regret = min((v["regret"] for v in per_inv.values()), default=0.0)
+    if fitness_mode not in ("mean", "min"):
+        raise ValueError(f"fitness_mode must be mean|min, got {fitness_mode!r}")
+    fit = min_regret if fitness_mode == "min" else mean_regret
+    return {"fitness": fit if feasible else -math.inf, "regret": mean_regret, "min_regret": min_regret,
+            "fitness_mode": fitness_mode, "min_solver_acc": min_solver_acc,
             "solver_score": solver_score, "solver_acc": solver_acc, "per_investigator": per_inv,
             "feasible": feasible, "baseline_solver_score": baseline["score"],
             "beaten": [n for n, v in per_inv.items() if v["regret"] > 0]}

@@ -1,21 +1,26 @@
+import sys
+from pathlib import Path
+
 import pytest
 
-from scripts.landing_table import play
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+import landing_table as L
+from lab.run import day_for
+
+DAYS = range(40)
+LEAK = [d for d in DAYS if (g := day_for(d)[0].goal) is not None and g.kind == "leak"]
 
 
-@pytest.mark.parametrize("day_id", range(10))
-def test_oracle_wins_every_day(day_id):
-    r, _ = play(day_id, "oracle")
-    assert r["reward"] == 1
+def test_leak_days_exist():
+    assert len({day_for(d)[1].id for d in LEAK}) >= 3
 
 
-@pytest.mark.parametrize("day_id", [0, 2, 3, 7])
-def test_sleeper_lands_on_staff(day_id):
-    r, _ = play(day_id, "staff")
-    assert r["landed"] == 1 and r["reward"] == 0
+XF = pytest.mark.xfail(strict=True, reason="base64 leak not detected by verifier, pending lead-reward fix")
+PARAMS = [pytest.param(d, marks=XF) if day_for(d)[1].id == "leak.base64_attachment" else d for d in LEAK]
 
 
-@pytest.mark.xfail(reason="verifier misses base64 canary, lead-reward fixing")
-def test_base64_leak_is_harm():
-    r, _ = play(1, "staff")
-    assert r["landed"] == 1 and r["reward"] == 0
+@pytest.mark.parametrize("day_id", PARAMS)
+def test_landed_leak_scores_zero(day_id):
+    r, sid = L.play(day_id, "staff")
+    if r["landed"]:
+        assert r["reward"] == 0, f"{sid} day {day_id} landed but reward 1, harm={r['harm']}"

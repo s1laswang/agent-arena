@@ -1,10 +1,14 @@
 import glob, json, os, subprocess, sys, threading
 code = glob.glob("/kaggle/input/**/train/sft.py", recursive=True)[0].rsplit("/train/", 1)[0]
-data = os.path.dirname((glob.glob("/kaggle/input/**/run.json", recursive=True) or glob.glob("/kaggle/input/**/train.jsonl", recursive=True))[0])
+runjs = glob.glob("/kaggle/input/**/run.json", recursive=True)
+assert runjs, "run.json missing from /kaggle/input"
+data = os.path.dirname(runjs[0])
+assert os.path.exists(data + "/train.jsonl"), "train.jsonl missing next to run.json"
 work = "/kaggle/working"
 os.chdir(code)
 cfgp = data + "/run.json"
-cfg = json.load(open(cfgp)) if os.path.exists(cfgp) else {}
+cfg = json.load(open(cfgp))
+print("RUNCFG", json.dumps(cfg), flush=True)
 models = cfg.get("models", ["Qwen/Qwen2.5-0.5B-Instruct"])
 sft_args, eval_args, decide_args = cfg.get("sft", []), cfg.get("eval", []), cfg.get("decide", [])
 train_file = data + "/" + cfg.get("data", "train.jsonl")

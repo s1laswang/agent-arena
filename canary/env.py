@@ -220,6 +220,11 @@ class Env:
     def done(self) -> bool:
         return self._done
 
+    def peek_status(self) -> dict:
+        """Same data as the `status` tool, without counting a call (UIs only; never an MCP tool)."""
+        with self._lock:
+            return dict(self._t_status({}).data)
+
     def verdict(self) -> dict:
         """Server-side outcome for the grader/ledger (never an MCP tool)."""
         with self._lock:

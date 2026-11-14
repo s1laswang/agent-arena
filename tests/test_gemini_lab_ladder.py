@@ -77,7 +77,6 @@ def test_run_resume_and_report_format(tmp_path, monkeypatch):
 
 def test_infra_failure_is_moved_aside_and_requeued(tmp_path, monkeypatch):
     monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(tmp_path / "ledger.jsonl"))
-    monkeypatch.setattr(ladder.time, "sleep", lambda s: None)
     calls = {"n": 0}
 
     def flaky(cell):
@@ -88,7 +87,7 @@ def test_infra_failure_is_moved_aside_and_requeued(tmp_path, monkeypatch):
 
     cells = ladder.expand_grid(["gemini-3.5-flash"], ["minimal"], ["medium"], [3])
     r = ladder.run_grid(tmp_path / "out", cells, concurrency=1, client_factory=stub_factory(flaky),
-                        log=lambda m: None)
+                        log=lambda m: None, retry_delay=0.0)
     assert r["done"] == 1
     inv = list((tmp_path / "out" / "_invalid").iterdir())
     assert len(inv) == 1 and "api:" in (inv[0] / "INVALID.txt").read_text()
@@ -113,3 +112,30 @@ def test_report_reads_ladder_output(tmp_path, monkeypatch):
     assert any(r["agent"] == "solver" for r in doc["reference"])
     assert "low|medium" in doc["tags"]["pooled"]
     assert "gemini-3.8-flash" in (rep / "ladder.md").read_text()
+
+
+def test_model_cap_never_blocks_other_models(tmp_path, monkeypatch):
+    import threading
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(tmp_path / "ledger.jsonl"))
+    live, peak, lock = {"capped": 0, "all": 0}, {"capped": 0, "all": 0}, threading.Lock()
+    real = ladder.run_cell
+
+    def spy(out, c, *a, **k):
+        with lock:
+            live["all"] += 1
+            live["capped"] += c.model == "gemini-4-carbon"
+            for x in peak:
+                peak[x] = max(peak[x], live[x])
+        try:
+            ladder.time.sleep(0.05)
+            return real(out, c, *a, **k)
+        finally:
+            with lock:
+                live["all"] -= 1
+                live["capped"] -= c.model == "gemini-4-carbon"
+
+    monkeypatch.setattr(ladder, "run_cell", spy)
+    cells = ladder.expand_grid(["gemini-4-carbon", "gemini-3.8-flash"], ["low"], ["medium"], [0, 1, 2, 3])
+    r = ladder.run_grid(tmp_path / "out", cells, concurrency=4, model_caps={"gemini-4-carbon": 1},
+                        client_factory=stub_factory(accuse_script), log=lambda m: None)
+    assert r["done"] == 8 and peak["capped"] == 1 and peak["all"] >= 3

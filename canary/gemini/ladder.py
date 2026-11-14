@@ -44,7 +44,6 @@ import sys
 import threading
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Callable
 
@@ -387,7 +386,7 @@ def probe(models: list[str], levels: list[str], out: Path, log=print) -> list[di
 def run_grid(out: Path, cells: list[Cell], concurrency: int = 4, max_episodes: int | None = None,
              max_attempts: int = 4, model_caps: dict[str, int] | None = None, ladder_run: str | None = None,
              client_factory: Callable | None = None, play_argv_extra: list[str] | None = None,
-             log: Callable[[str], None] = print) -> dict:
+             log: Callable[[str], None] = print, retry_delay: float = 30.0) -> dict:
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     ladder_run = ladder_run or out.name
@@ -398,35 +397,62 @@ def run_grid(out: Path, cells: list[Cell], concurrency: int = 4, max_episodes: i
         todo = todo[:max_episodes]
     log(f"START ladder_run={ladder_run} cells={len(cells)} done/skipped={skipped} todo={len(todo)} "
         f"concurrency={concurrency} host={HOST} pid={os.getpid()}")
-    caps = {m: threading.Semaphore(k) for m, k in (model_caps or {}).items()}
-    pending: list[Cell] = list(todo)
+    caps = dict(model_caps or {})
+    busy: dict[str, int] = {m: 0 for m in caps}
+    pending: list[tuple[float, Cell]] = [(0.0, c) for c in todo]   # (not before, cell)
     rows: list[dict] = []
+    active = [0]
+    cv = threading.Condition()
 
-    def work(c: Cell) -> dict:
-        sem = next((s for m, s in caps.items() if c.model.startswith(m)), None)
-        if sem:
-            sem.acquire()
-        try:
-            for _ in range(max_attempts):
-                try:
-                    row = run_cell(out, c, ladder_run, client_factory, play_argv_extra, log)
-                except Exception as e:  # noqa: BLE001  (bug in our own code: log, never kill the pool)
-                    log(f"CRASH {c.key}: {type(e).__name__}: {e}\n{traceback.format_exc()[-800:]}")
-                    return {"cell": c.key, "crash": str(e)}
-                if not row.get("infra_invalid") or attempts(out, c) >= max_attempts:
-                    return row
-                time.sleep(min(300, 30 * attempts(out, c)))  # let a rate limit / outage pass
-            return row
-        finally:
-            if sem:
-                sem.release()
+    def cap_of(c: Cell) -> str | None:
+        return next((m for m in sorted(caps, key=len, reverse=True) if c.model.startswith(m)), None)
 
-    with ThreadPoolExecutor(max_workers=max(1, concurrency)) as ex:
-        futs = []
-        for c in pending:
-            futs.append(ex.submit(work, c))
-        for f in as_completed(futs):
-            rows.append(f.result())
+    def take() -> Cell | None:
+        """Next runnable cell in grid order whose model cap has room (a capped model never blocks a thread)."""
+        with cv:
+            while True:
+                if not pending:
+                    return None
+                now = time.time()
+                for i, (nb, c) in enumerate(pending):
+                    k = cap_of(c)
+                    if nb <= now and (k is None or busy[k] < caps[k]):
+                        pending.pop(i)
+                        if k is not None:
+                            busy[k] += 1
+                        active[0] += 1
+                        return c
+                future = [nb - now for nb, _ in pending if nb > now]
+                cv.wait(timeout=min([5.0, *future]))  # woken early by give_back()
+
+    def give_back(c: Cell, row: dict) -> None:
+        with cv:
+            k = cap_of(c)
+            if k is not None:
+                busy[k] -= 1
+            active[0] -= 1
+            rows.append(row)
+            if row.get("infra_invalid") and attempts(out, c) < max_attempts:
+                pending.append((time.time() + min(300, retry_delay * attempts(out, c)), c))  # let a rate limit pass
+            cv.notify_all()
+
+    def worker() -> None:
+        while True:
+            c = take()
+            if c is None:
+                return
+            try:
+                row = run_cell(out, c, ladder_run, client_factory, play_argv_extra, log)
+            except Exception as e:  # noqa: BLE001  (bug in our own code: log, never kill the pool)
+                log(f"CRASH {c.key}: {type(e).__name__}: {e}\n{traceback.format_exc()[-800:]}")
+                row = {"cell": c.key, "crash": str(e)}
+            give_back(c, row)
+
+    threads = [threading.Thread(target=worker, daemon=True) for _ in range(max(1, concurrency))]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
     done = sum(1 for c in cells if is_done(out, c))
     log(f"ALL DONE: {done}/{len(cells)} cells finished in {out}")
     return {"cells": len(cells), "done": done, "ran": len(rows), "rows": rows}

@@ -210,3 +210,7 @@
   - Codex gpt-5.5 over MCP (judges shape): HARD 97% [89, 107] (0.657 vs 0.678, 10/10 correct); MEDIUM 50% [-19, 103] (0.364, 8/10; the gap comes from 2 early wrong accusations).
   - In-process fixed loop: medium 90% [77, 105] (n=8), hard 29% [-44, 100] (n=7).
 - => **v1.4 contingency TRIGGERED on hard.** Spend today $47.46 discounted; all further spend held pending the v1.4 decision with Silas.
+
+## v1.4 FROZEN (env engineer, branch justSilas-v14)
+- Hard only: 40 staff, 21 days, 2 canaries/day x 3 variants, leak_damage 0.05, tool cap 420; easy/medium unchanged. TIERS_VERSION v1.4 (hash a8f99c2537c91d72); v1.3 kept as rules.TIERS_V13 (replays). CONTRACT §14.
+- Confirmation seeds 5000-5799 (results/fresh_table_v1.4.md): solver .779/.633/.556, hard acc 94.9%; hard solver-grok_tactics +.195+-.033 (target .2 just missed; v1.3 same seeds +.233), solver-heuristic +.534. make hunt: best non-solver 0, 0 violations.

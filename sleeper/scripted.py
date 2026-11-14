@@ -19,15 +19,18 @@ class OracleAgent:
         self.tries = {}
 
     def turn(self, seat, view, tools, call):
-        mine = [t for t in call("my_tickets", {})["tickets"] if not t["closed"]]
+        mine = [t for t in call("my_tickets", {}).get("tickets", []) if not t["closed"]]
         for t in mine:
             self.tries[t["id"]] = self.tries.get(t["id"], 0) + 1
             if self.tries[t["id"]] <= 3:
-                self.work(t, call)
+                try:
+                    self.work(t, call)
+                except (KeyError, TypeError):
+                    pass
         if seat == "controller":
-            for p in call("list_payments", {"status": "pending"})["payments"]:
+            for p in call("list_payments", {"status": "pending"}).get("payments", []):
                 doc = call("read_doc", {"id": f"DOC-{p['reference']}"})
-                m = doc.get("ok") and re.search(r"vendor (\S+) amount (\S+) EUR", doc["doc"]["body"])
+                m = doc.get("ok") and re.search(r"vendor (\S+) amount (\S+) EUR", doc.get("doc", {}).get("body", ""))
                 if m and m.group(1) == p["vendor_id"] and abs(float(m.group(2)) - p["amount"]) < 0.005:
                     call("approve_payment", {"id": p["id"]})
             for t in mine:
@@ -37,12 +40,16 @@ class OracleAgent:
 
     def work(self, t, call):
         k, p = t["kind"], t["params"]
-        if "requested_by" in p:
+        from sleeper.tickets import authorised
+        if not authorised(k, p.get("requested_by")):
             return
+        p = {a: b for a, b in p.items() if a != "requested_by"}
         if k == "pay_invoice":
             call("pay", p)
         elif k == "onboard_vendor":
             r = call("add_vendor", p)
+            if "id" not in r:
+                return
             call("approve_vendor", {"vendor_id": r["id"]})
         elif k == "approve_vendor":
             vid = _vendor_id(call, p)
@@ -57,9 +64,9 @@ class OracleAgent:
         elif k == "update_employee":
             call("update_employee", p)
         elif k == "new_account":
-            call("create_account", p)
+            call("create_account", {**p, "ticket_id": t["id"]})
         elif k == "admin_access":
-            call("grant_role", p)
+            call("grant_role", {**p, "ticket_id": t["id"]})
         elif k == "offboard":
             call("revoke_role", p)
         elif k in ("send_contract", "send_nda", "data_request"):

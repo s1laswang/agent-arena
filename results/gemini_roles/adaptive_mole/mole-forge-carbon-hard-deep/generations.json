@@ -1,0 +1,1142 @@
+{
+  "model_id": "gemini-4-carbon",
+  "tier": "hard",
+  "dev_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "fitness_mode": "min",
+  "min_solver_acc": 0.75,
+  "baseline_solver": {
+    "score": 0.48649999999999993,
+    "acc": 0.95
+  },
+  "default_mole_dev": {
+    "fitness": 0.056000000000000015,
+    "solver_score": 0.48649999999999993,
+    "solver_acc": 0.95,
+    "per_investigator": {
+      "grok_tactics": {
+        "score": 0.43050000000000005,
+        "acc": 0.9,
+        "regret": 0.056000000000000015
+      },
+      "heuristic": {
+        "score": 0.186,
+        "acc": 0.85,
+        "regret": 0.3005
+      },
+      "hinted_heuristic": {
+        "score": 0.21350000000000002,
+        "acc": 0.7,
+        "regret": 0.2730000000000001
+      },
+      "obvious_heuristic": {
+        "score": -1.0,
+        "acc": 0.0,
+        "regret": 1.4865000000000002
+      }
+    }
+  },
+  "generations": [
+    {
+      "gen": 0,
+      "best_fitness": 0.31749999999999995,
+      "hof_best_fitness": 0.31749999999999995,
+      "mean_fitness": 0.17366666666666664,
+      "feasible_share": 0.375,
+      "feasible_count": 3,
+      "pop_size": 8,
+      "best_solver_score": 0.4739999999999999,
+      "best_solver_acc": 0.8,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.14450000000000002,
+          "acc": 0.45,
+          "regret": 0.32949999999999996
+        },
+        "heuristic": {
+          "score": -0.29300000000000004,
+          "acc": 0.55,
+          "regret": 0.7670000000000001
+        },
+        "hinted_heuristic": {
+          "score": 0.1565,
+          "acc": 0.45,
+          "regret": 0.31749999999999995
+        },
+        "obvious_heuristic": {
+          "score": -0.9055,
+          "acc": 0.05,
+          "regret": 1.3795000000000002
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "recent_low_recipient_docs",
+                ">",
+                1
+              ],
+              [
+                "day",
+                "<",
+                11
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "newest_doc_age_days",
+                "==",
+                0
+              ],
+              [
+                "n_docs_held",
+                ">",
+                2
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "n_restricted_colleagues",
+                ">",
+                0
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "most_restricted_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "oldest",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 0.0
+    },
+    {
+      "gen": 1,
+      "best_fitness": 0.31749999999999995,
+      "hof_best_fitness": 0.31749999999999995,
+      "mean_fitness": 0.21675000000000003,
+      "feasible_share": 0.5,
+      "feasible_count": 4,
+      "pop_size": 8,
+      "best_solver_score": 0.4739999999999999,
+      "best_solver_acc": 0.8,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.14450000000000002,
+          "acc": 0.45,
+          "regret": 0.32949999999999996
+        },
+        "heuristic": {
+          "score": -0.29300000000000004,
+          "acc": 0.55,
+          "regret": 0.7670000000000001
+        },
+        "hinted_heuristic": {
+          "score": 0.1565,
+          "acc": 0.45,
+          "regret": 0.31749999999999995
+        },
+        "obvious_heuristic": {
+          "score": -0.9055,
+          "acc": 0.05,
+          "regret": 1.3795000000000002
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "recent_low_recipient_docs",
+                ">",
+                1
+              ],
+              [
+                "day",
+                "<",
+                11
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "newest_doc_age_days",
+                "==",
+                0
+              ],
+              [
+                "n_docs_held",
+                ">",
+                2
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "n_restricted_colleagues",
+                ">",
+                0
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "most_restricted_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "oldest",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 92.963
+    },
+    {
+      "gen": 2,
+      "best_fitness": 0.31749999999999995,
+      "hof_best_fitness": 0.31749999999999995,
+      "mean_fitness": 0.22749999999999998,
+      "feasible_share": 0.5,
+      "feasible_count": 4,
+      "pop_size": 8,
+      "best_solver_score": 0.4739999999999999,
+      "best_solver_acc": 0.8,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.14450000000000002,
+          "acc": 0.45,
+          "regret": 0.32949999999999996
+        },
+        "heuristic": {
+          "score": -0.29300000000000004,
+          "acc": 0.55,
+          "regret": 0.7670000000000001
+        },
+        "hinted_heuristic": {
+          "score": 0.1565,
+          "acc": 0.45,
+          "regret": 0.31749999999999995
+        },
+        "obvious_heuristic": {
+          "score": -0.9055,
+          "acc": 0.05,
+          "regret": 1.3795000000000002
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "recent_low_recipient_docs",
+                ">",
+                1
+              ],
+              [
+                "day",
+                "<",
+                11
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "newest_doc_age_days",
+                "==",
+                0
+              ],
+              [
+                "n_docs_held",
+                ">",
+                2
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "n_restricted_colleagues",
+                ">",
+                0
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "most_restricted_peer"
+            }
+          }
+        ],
+        "default": {
+          "leak": "oldest",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 55.883
+    },
+    {
+      "gen": 3,
+      "best_fitness": 0.3645,
+      "hof_best_fitness": 0.3645,
+      "mean_fitness": 0.26135714285714284,
+      "feasible_share": 0.875,
+      "feasible_count": 7,
+      "pop_size": 8,
+      "best_solver_score": 0.4765,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.11199999999999999,
+          "acc": 0.55,
+          "regret": 0.3645
+        },
+        "heuristic": {
+          "score": 0.06899999999999999,
+          "acc": 0.8,
+          "regret": 0.4074999999999999
+        },
+        "hinted_heuristic": {
+          "score": 0.079,
+          "acc": 0.25,
+          "regret": 0.3975
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.4765000000000001
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "day",
+                "<=",
+                9
+              ],
+              [
+                "max_recipient_count",
+                "<=",
+                4
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "recent_low_recipient_docs",
+                ">=",
+                1
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                11
+              ],
+              [
+                "n_leakable",
+                ">=",
+                2
+              ],
+              [
+                "newest_doc_age_days",
+                "==",
+                0
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                6
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "n_docs_held",
+                ">=",
+                4
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "most_recipients",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 55.361
+    },
+    {
+      "gen": 4,
+      "best_fitness": 0.3645,
+      "hof_best_fitness": 0.3645,
+      "mean_fitness": 0.2871428571428571,
+      "feasible_share": 0.875,
+      "feasible_count": 7,
+      "pop_size": 8,
+      "best_solver_score": 0.4765,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.11199999999999999,
+          "acc": 0.55,
+          "regret": 0.3645
+        },
+        "heuristic": {
+          "score": 0.06899999999999999,
+          "acc": 0.8,
+          "regret": 0.4074999999999999
+        },
+        "hinted_heuristic": {
+          "score": 0.079,
+          "acc": 0.25,
+          "regret": 0.3975
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.4765000000000001
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "day",
+                "<=",
+                9
+              ],
+              [
+                "max_recipient_count",
+                "<=",
+                4
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "recent_low_recipient_docs",
+                ">=",
+                1
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                11
+              ],
+              [
+                "n_leakable",
+                ">=",
+                2
+              ],
+              [
+                "newest_doc_age_days",
+                "==",
+                0
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                6
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "n_docs_held",
+                ">=",
+                4
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "most_recipients",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 75.865
+    },
+    {
+      "gen": 5,
+      "best_fitness": 0.3645,
+      "hof_best_fitness": 0.3645,
+      "mean_fitness": 0.3069285714285714,
+      "feasible_share": 0.875,
+      "feasible_count": 7,
+      "pop_size": 8,
+      "best_solver_score": 0.4765,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.11199999999999999,
+          "acc": 0.55,
+          "regret": 0.3645
+        },
+        "heuristic": {
+          "score": 0.06899999999999999,
+          "acc": 0.8,
+          "regret": 0.4074999999999999
+        },
+        "hinted_heuristic": {
+          "score": 0.079,
+          "acc": 0.25,
+          "regret": 0.3975
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.4765000000000001
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "day",
+                "<=",
+                9
+              ],
+              [
+                "max_recipient_count",
+                "<=",
+                4
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "recent_low_recipient_docs",
+                ">=",
+                1
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                11
+              ],
+              [
+                "n_leakable",
+                ">=",
+                2
+              ],
+              [
+                "newest_doc_age_days",
+                "==",
+                0
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                6
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "n_docs_held",
+                ">=",
+                4
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "most_recipients",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 69.752
+    },
+    {
+      "gen": 6,
+      "best_fitness": 0.37449999999999994,
+      "hof_best_fitness": 0.37449999999999994,
+      "mean_fitness": 0.33819999999999995,
+      "feasible_share": 0.625,
+      "feasible_count": 5,
+      "pop_size": 8,
+      "best_solver_score": 0.4765,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.10200000000000001,
+          "acc": 0.5,
+          "regret": 0.37449999999999994
+        },
+        "heuristic": {
+          "score": 0.06899999999999999,
+          "acc": 0.8,
+          "regret": 0.4074999999999999
+        },
+        "hinted_heuristic": {
+          "score": 0.079,
+          "acc": 0.25,
+          "regret": 0.3975
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.4765000000000001
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "day",
+                "<=",
+                9
+              ],
+              [
+                "max_recipient_count",
+                "<=",
+                4
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "recent_low_recipient_docs",
+                ">=",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "recent_low_recipient_docs",
+                ">=",
+                1
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                8
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                2
+              ],
+              [
+                "max_recipient_count",
+                ">=",
+                6
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                8
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                2
+              ],
+              [
+                "n_leakable",
+                ">=",
+                2
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                11
+              ],
+              [
+                "n_leakable",
+                ">=",
+                2
+              ],
+              [
+                "newest_doc_age_days",
+                "==",
+                0
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                6
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "n_docs_held",
+                ">=",
+                4
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "most_recipients",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 70.983
+    },
+    {
+      "gen": 7,
+      "best_fitness": 0.37449999999999994,
+      "hof_best_fitness": 0.37449999999999994,
+      "mean_fitness": 0.3318,
+      "feasible_share": 0.625,
+      "feasible_count": 5,
+      "pop_size": 8,
+      "best_solver_score": 0.4765,
+      "best_solver_acc": 0.9,
+      "best_per_investigator": {
+        "grok_tactics": {
+          "score": 0.10200000000000001,
+          "acc": 0.5,
+          "regret": 0.37449999999999994
+        },
+        "heuristic": {
+          "score": 0.06899999999999999,
+          "acc": 0.8,
+          "regret": 0.4074999999999999
+        },
+        "hinted_heuristic": {
+          "score": 0.079,
+          "acc": 0.25,
+          "regret": 0.3975
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.4765000000000001
+        }
+      },
+      "best_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "day",
+                "<=",
+                9
+              ],
+              [
+                "max_recipient_count",
+                "<=",
+                4
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "recent_low_recipient_docs",
+                ">=",
+                1
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "i_am_restricted",
+                "==",
+                1
+              ],
+              [
+                "recent_low_recipient_docs",
+                ">=",
+                1
+              ],
+              [
+                "day",
+                "<",
+                12
+              ]
+            ],
+            "then": {
+              "leak": "none",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                8
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                2
+              ],
+              [
+                "max_recipient_count",
+                ">=",
+                6
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                8
+              ],
+              [
+                "n_restricted_colleagues",
+                ">=",
+                2
+              ],
+              [
+                "n_leakable",
+                ">=",
+                2
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                11
+              ],
+              [
+                "n_leakable",
+                ">=",
+                2
+              ],
+              [
+                "newest_doc_age_days",
+                "==",
+                0
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "max_recipient_count",
+                ">=",
+                6
+              ]
+            ],
+            "then": {
+              "leak": "most_recipients",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "n_docs_held",
+                ">=",
+                4
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          }
+        ],
+        "default": {
+          "leak": "most_recipients",
+          "frame": "decoy"
+        }
+      },
+      "seconds": 70.328
+    }
+  ]
+}

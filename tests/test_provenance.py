@@ -1,3 +1,4 @@
+import functools
 import glob
 import json
 import os
@@ -96,9 +97,11 @@ def test_frontier_provenance():
         if prov == "real":
             assert model and commit and model != SCRIPTED, row
             assert row.get("agent", "x") != SCRIPTED, row
-            files = [json.load(open(f)) for f in _perrun() if f.startswith(f"results/frontier/{model}/{commit}/")]
+            files = [json.load(open(f)) for f in _row_files(row)]
             assert files, row
-            assert all(f.get("agent") not in (None, SCRIPTED) and f.get("model") == model and f.get("commit") == commit for f in files), row
+            assert all(f.get("agent") not in (None, SCRIPTED) and f.get("model") == model for f in files), row
+            assert all(f.get("commit") for f in files), row
+            assert row.get("invalid", 0) == sum(1 for f in files if f.get("invalid")), f"invalid count mismatch: {row}"
         elif row.get("agent") not in (None, SCRIPTED):
             raise AssertionError(f"non-scripted agent labeled scripted: {row}")
     for f in _perrun():
@@ -114,7 +117,7 @@ def test_real_rows_have_mcp_calls():
         pytest.skip("no frontier results yet")
     for row in _rows(json.load(open(gp))):
         if row.get("provenance") == "real":
-            files = [json.load(open(f)) for f in _perrun() if f.startswith(f"results/frontier/{row['model']}/{row['commit']}/")]
+            files = [json.load(open(f)) for f in _row_files(row)]
             assert any(f.get("mcp_calls") for f in files), row
 @pytest.mark.slow
 def test_eval_without_gemini_flag_makes_no_calls(tmp_path, monkeypatch):
@@ -141,6 +144,19 @@ def _perrun():
     return [f for f in glob.glob("results/frontier/*/*/*.json") if RUN_FILE.match(os.path.basename(f))]
 
 
+@functools.lru_cache(maxsize=None)
+def _index():
+    idx = {}
+    for f in _perrun():
+        r = json.load(open(f))
+        idx.setdefault((r.get("model"), r.get("commit")), []).append(f)
+    return idx
+
+
+def _row_files(row):
+    return _index().get((row.get("model"), row.get("commit")), [])
+
+
 def test_perrun_frontier_files():
     fs = _perrun()
     if not fs:
@@ -151,7 +167,7 @@ def test_perrun_frontier_files():
             assert r.get("provenance", SCRIPTED) == SCRIPTED, f
             continue
         assert r.get("agent") and r.get("model") and r.get("commit"), f
-        assert r["transcript"], f
+        assert r["transcript"] or r.get("invalid"), f
         assert r.get("provenance", "real") == "real", f
 
 
@@ -163,3 +179,15 @@ def test_perrun_real_has_mcp_calls_and_provenance():
         pytest.skip("no real per-run files")
     for r in fs:
         assert r.get("provenance") == "real" and r.get("mcp_calls"), r.get("seed")
+
+
+def test_headline_rows_use_true_budget():
+    gp = "web/results/frontier/gaptable.json"
+    if not os.path.exists(gp):
+        pytest.skip("no frontier results yet")
+    for row in _rows(json.load(open(gp))):
+        if row.get("headline") is True:
+            files = _row_files(row)
+            assert files, row
+            for f in files:
+                assert json.load(open(f)).get("prompt_budget") == "200(true)", (f, row)

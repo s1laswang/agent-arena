@@ -41,7 +41,7 @@ memory_mb = 2048
 storage_mb = 10240
 gpus = 0
 network_mode = "allowlist"
-allowed_hosts = ["sleeper-server"]
+allowed_hosts = ["sleeper-server", "generativelanguage.googleapis.com", "api.anthropic.com", "api.openai.com", "openrouter.ai", "models.dev", "registry.npmjs.org", "github.com", "deb.debian.org", "security.debian.org", "opencode.ai", "objects.githubusercontent.com", "raw.githubusercontent.com", "nodejs.org"]
 
 [[environment.mcp_servers]]
 name = "sleeper"

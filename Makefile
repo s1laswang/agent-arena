@@ -9,6 +9,10 @@ eval:
 	if [ -f $(CACHE) ]; then $(PY) scripts/gemini_cache.py unpack $(CACHE) && SLEEPER_OFFLINE=1 $(PY) -m lab.eval; else $(PY) -m lab.eval; fi
 	$(PY) -m lab.gaptable results/frontier --replay
 	cat results/frontier/gaptable.md >> results/eval/REPORT.md
+	$(MAKE) probes
+
+probes:
+	GEMINI_API_KEY= $(PY) -m scripts.probes --days 3
 
 eval-full:
 	$(PY) -m lab.eval --full
@@ -17,7 +21,7 @@ eval-full:
 harbor:
 	$(PY) -m harbor.build --seeds 0..19 --seat $(SEAT)
 
-.PHONY: test eval eval-full harbor exploits key-check cheat-corpus
+.PHONY: probes test eval eval-full harbor exploits key-check cheat-corpus
 
 exploits:
 	$(PY) -m redteam.report

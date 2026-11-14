@@ -120,3 +120,12 @@
   - v2 eval: same, `--dependency=afterok:<train>`, adapter `j4/run-<train>/lora`.
 - **Done (untested): WS3 prep** `fr8/ws3_trl_setup.sh` (TRL into `~/agent-arena-data/pylib-trl` with `--no-deps`, login node) and `fr8/ws3_grpo.sbatch` (1 GPU, fp16, `--time` 6 h, `CHECK_ONLY=1` mode). **`train/grpo_mole.py` is not on any branch yet**; the sbatch assumes `python -m train.grpo_mole --model --out --seed --fp16 --workers N [GRPO_ARGS]`. AGENTS/Momin: please match this or tell me.
 - **Next:** when port 22 opens and Momin confirms sky paused → `bash fr8/ws4_submit.sh`, message the CEO with ids; then TRL setup + `CHECK_ONLY=1` GPU job.
+
+## 14:35 status
+- Freighter came back at 14:31. `squeue -p gpu`: no sky jobs (Momin paused them; Silas confirmed via the CEO). FR8 touched no other job.
+- **WS4 submitted** (`fr8/ws4_submit.sh`; first attempt submitted nothing because `ls` on an unmatched glob tripped pipefail, fixed with `|| true`):
+  - **44410** canary-ws4-train: RUNNING on compute03, `--time 7h`, j3v14, dense 4k + `--oversample-endings 3`, 800 episodes, 5 h of training.
+  - **44411** canary-ws4-evalbase: RUNNING on compute03, `--time 3h`, base model, n=30/tier held-out (KV-reuse eval).
+  - **44412** canary-ws4-evalv2: PENDING with afterok:44410, `--time 3h`, adapter `j4/run-44410/lora`.
+  - All three are logged in OURS.txt. FR8 data: 8.6 GB of 10.
+- **WS3:** waiting for AGENTS' `train/grpo_mole.py` (CLI contract passed on by the CEO); then the TRL setup, a `CHECK_ONLY=1` job and up to 3 GRPO jobs.

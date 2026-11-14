@@ -14,7 +14,7 @@ read -r -d '' REMOTE <<'EOF' || true
 set -euo pipefail
 cd ~/agent-arena; mkdir -p ~/agent-arena-data/jobs ~/agent-arena-data/j4/runs
 log() { echo "$1 $2 $(date -Iseconds) $3" >> ~/agent-arena-data/jobs/OURS.txt; }
-DATA=$(ls -d ~/agent-arena-data/j3v14/train/train-*.jsonl ~/agent-arena-data/j3v14/train/*/train-*.jsonl 2>/dev/null | head -1)
+DATA=$(ls -d ~/agent-arena-data/j3v14/train/train-*.jsonl ~/agent-arena-data/j3v14/train/*/train-*.jsonl 2>/dev/null | head -1 || true)
 [ -n "$DATA" ] || { echo "no j3v14 shards" >&2; exit 2; }
 GLOB="$(dirname "$DATA")/train-*.jsonl"
 T=$(sbatch --parsable --time=07:00:00 -J canary-ws4-train \

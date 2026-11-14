@@ -511,7 +511,7 @@ def headline(rows: list[dict], tags: dict) -> str:
         cost = f"${min(a['cost_per_ep'], b['cost_per_ep']):.2f}–{max(a['cost_per_ep'], b['cost_per_ep']):.2f} per episode"
         if carbon:
             cost += f", versus ${carbon[0]:.2f} for gemini-4-carbon at high thinking"
-        out.append(f"> **gemini-3.5-flash with medium or high thinking {verb}:** {_pc(a)} and {_pc(b)} of the solver "
+        out.append(f"> **gemini-3.5-flash (requested ID; the API serves gemini-3.6-flash) with medium or high thinking {verb}:** {_pc(a)} and {_pc(b)} of the solver "
                    f"on the same seeds, {k}/{a['n'] + b['n']} correct accusations, {cost}.")
     lite = [r for (m, _, _), r in R.items() if m == "gemini-3.1-flash-lite"]
     if lite:

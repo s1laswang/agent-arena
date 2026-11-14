@@ -88,6 +88,7 @@ def play(seed, kind):
 
 
 def tiny():
+    print("models: " + " ".join("%s=%s" % (r, gemini.model_for(r)) for r in ("staff", "sleeper", "reference")))
     if not gemini.enabled():
         print("key-check: no GEMINI_API_KEY set, nothing to check. Everything runs scripted/offline. Set the key and rerun.")
         return 0

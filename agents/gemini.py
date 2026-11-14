@@ -32,8 +32,12 @@ def _load_env():
 _load_env()
 
 
+ARENA_ROLE = {"staff": "DEFENDER", "defender": "DEFENDER", "sleeper": "ATTACKER", "attacker": "ATTACKER", "reference": "REFERENCE", "procedure": "REFERENCE"}
+
+
 def model_for(role):
-    return os.environ.get("SLEEPER_MODEL_" + role.upper()) or DEFAULT_MODEL
+    arena = ARENA_ROLE.get(role)
+    return os.environ.get("SLEEPER_MODEL_" + role.upper()) or (arena and os.environ.get("ARENA_MODEL_" + arena)) or DEFAULT_MODEL
 
 
 TEMPS = {"staff": 0.7, "reference": 0.7, "sleeper": 0.9}

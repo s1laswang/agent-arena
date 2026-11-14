@@ -15,7 +15,7 @@ from agents import gemini
 from harbor.opencode.instruction import seat_instruction
 from sleeper.company import World
 from sleeper.mcp_server import build_server
-from sleeper.scripted import OracleAgent, make_team
+from agents.procedure import make_procedure_team
 from sleeper.tickets import make_day
 
 PRICE = {"in": float(os.environ.get("SLEEPER_PRICE_IN_PER_M") or 2.0), "out": float(os.environ.get("SLEEPER_PRICE_OUT_PER_M") or 12.0)}
@@ -38,7 +38,7 @@ def usage_total(cache):
     return {"in_tokens": i, "out_tokens": o, "usd": round((i * PRICE["in"] + o * PRICE["out"]) / 1e6, 4)}
 
 
-def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_calls=60, max_usd=2.0, trial=0, mode="seat", com=None, base=None):
+def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_calls=250, max_usd=2.0, trial=0, mode="seat", com=None, base=None):
     import time
 
     assert days == 1 and mode == "seat", "ponytail: 1 day, seat mode only"
@@ -49,7 +49,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     gemini.CACHE = out_dir / "cache"
     gemini.reset_usage()
     world = World(make_day(seed))
-    srv = build_server(world, seat, make_team(OracleAgent), str(out_dir / f"{seat}-s{seed}-t{trial}.state.json"))
+    srv = build_server(world, seat, make_procedure_team(world.day, seed), str(out_dir / f"{seat}-s{seed}-t{trial}.state.json"))
     tools = [{"name": t.name, "description": t.description or "", "parameters": t.input_schema} for t in asyncio.run(srv.list_tools())]
     st = {"calls": 0, "abort": None}
     mcp = []
@@ -70,7 +70,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     log = []
     t0 = time.time()
     state = out_dir / f"{seat}-s{seed}-t{trial}.state.json"
-    sys_prompt = seat_instruction(seat)
+    sys_prompt = seat_instruction(seat) + "\n\nIf the tools expose list or batch operations, you may use them to save calls."
     note = ""
     try:
         while world.tick < world.last_tick:
@@ -104,7 +104,7 @@ def main():
     ap.add_argument("--seat", default="finance_ap")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--model", default=os.environ.get("SLEEPER_MODEL_STAFF") or "gemini-4-carbon")
-    ap.add_argument("--max-calls", type=int, default=60)
+    ap.add_argument("--max-calls", type=int, default=250)
     ap.add_argument("--max-usd", type=float, default=2.0)
     ap.add_argument("--trial", type=int, default=0)
     ap.add_argument("--commit")

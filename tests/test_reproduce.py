@@ -104,7 +104,7 @@ def test_keyless_run_is_statistical_and_never_leaks_the_secret(tmp_path, monkeyp
 
 def test_committed_agent_runs_are_replayed_with_pass_k(tmp_path, monkeypatch):
     monkeypatch.setenv("CANARY_WORLD_SECRET", "test-reproduce")
-    run = tmp_path / "data" / "runs" / "committed" / "openai_gpt-5.5-medium-x"
+    run = tmp_path / "data" / "runs" / "committed" / R.current_tiers_version() / "openai_gpt-5.5-medium-x"
     run.mkdir(parents=True)
     lines = []
     for rep in range(3):
@@ -124,6 +124,110 @@ def test_committed_agent_runs_are_replayed_with_pass_k(tmp_path, monkeypatch):
     medium = md.split("## medium")[1].split("## hard")[0]
     # reported runs sit in their own unpaired block, after the paired block
     assert medium.index("Paired runs") < medium.index("Reported agent runs") < medium.index("openai:gpt-5.5")
+
+
+# ---- reported runs are grouped by tier version, never pooled; superseded builds excluded -------------
+def _write_run(path: Path, agent: str, tier: str, seeds, score: float, meta: dict | None = None):
+    path.mkdir(parents=True)
+    lines = [json.dumps({"tier": tier, "seed": s, "agent": agent, "steps": [], "score": score,
+                         "accused": "e01", "correct": score > 0, "final_day": 9, "end_reason": "accused",
+                         "meta": {}}) for s in seeds]
+    (path / "episodes.jsonl").write_text("\n".join(lines) + "\n")
+    if meta is not None:
+        (path / "meta.json").write_text(json.dumps(meta))
+
+
+def _versioned_fixture(tmp_path):
+    cur = R.current_tiers_version()
+    assert cur not in ("v1.1", "v1.2")
+    c = tmp_path / "data" / "runs" / "committed"
+    seeds = list(JUDGE_SEEDS)[:4]
+    # v1.2 by path (no version segment, no tiers_version in meta), with a git sha
+    _write_run(c / "gpt-5.5" / "medium-0-4", "openai:gpt-5.5", "medium", seeds[:2], 0.5,
+               {"git_sha": "aaaaaaa1111", "agent": "openai:gpt-5.5", "tier": "medium"})
+    # v1.2 by meta
+    _write_run(c / "codex" / "medium", "codex:gpt-5.5", "medium", seeds[:1], 0.4,
+               {"tiers_version": "v1.2", "git_sha": "ccccccc3333"})
+    # current version by path segment (meta has no tiers_version)
+    _write_run(c / cur / "gpt-5.5" / "medium-0-4", "openai:gpt-5.5", "medium", seeds[:3], -1.0,
+               {"git_sha": "bbbbbbb2222"})
+    # current version by meta, same agent also present in v1.2
+    _write_run(c / cur / "codex" / "medium", "codex:gpt-5.5", "medium", seeds[:1], 0.9,
+               {"tiers_version": cur, "git_sha": "ddddddd4444"})
+    # an older generic vX.Y segment, no git sha
+    _write_run(c / "v1.1" / "gpt-5.5" / "medium", "openai:gpt-5.5", "medium", seeds[:1], 0.2, {})
+    # superseded builds: excluded entirely, whatever version they claim
+    _write_run(c / "superseded" / "old_solver" / "solver-medium", "solver", "medium", seeds, 0.99,
+               {"tiers_version": cur, "git_sha": "eeeeeee5555"})
+    _write_run(c / "superseded" / "x" / "gpt-medium", "openai:gpt-5.5", "medium", seeds, 0.99,
+               {"tiers_version": cur})
+    return cur
+
+
+def test_run_tiers_version_from_meta_then_path(tmp_path):
+    c = tmp_path / "data" / "runs" / "committed"
+    for d in ("a/medium", "v1.3/a/medium", "v2.0/b", "superseded/v1.3/z"):
+        (c / d).mkdir(parents=True)
+    (c / "a" / "medium" / "meta.json").write_text(json.dumps({"tiers_version": "v1.3"}))
+    assert R.run_tiers_version(c / "a" / "medium", tmp_path) == "v1.3"            # meta wins
+    assert R.run_tiers_version(c / "v1.3" / "a" / "medium", tmp_path) == "v1.3"   # path segment
+    assert R.run_tiers_version(c / "v2.0" / "b", tmp_path) == "v2.0"              # any vX.Y segment
+    (c / "a" / "medium" / "meta.json").write_text(json.dumps({"git_sha": "x"}))
+    assert R.run_tiers_version(c / "a" / "medium", tmp_path) == "v1.2"            # no segment: v1.2
+    assert R.is_superseded(c / "superseded" / "v1.3" / "z", tmp_path)
+    assert not R.is_superseded(c / "v1.3" / "a" / "medium", tmp_path)
+
+
+def test_committed_runs_grouped_by_version_never_pooled(tmp_path):
+    cur = _versioned_fixture(tmp_path)
+    rows, files = R.load_committed(tmp_path)
+    key = {(r.extra["tiers_version"], r.agent): r for r in rows}
+    assert len(key) == len(rows) == 5  # one row per (tier, version, agent): nothing merged
+    assert key[(cur, "openai:gpt-5.5")].scores == [-1.0] * 3
+    assert key[("v1.2", "openai:gpt-5.5")].scores == [0.5] * 2
+    assert key[("v1.1", "openai:gpt-5.5")].scores == [0.2]
+    assert key[(cur, "codex:gpt-5.5")].scores == [0.9] and key[("v1.2", "codex:gpt-5.5")].scores == [0.4]
+    assert "git bbbbbbb" in key[(cur, "openai:gpt-5.5")].note
+    assert "git aaaaaaa" in key[("v1.2", "openai:gpt-5.5")].note
+    assert "git unknown" in key[("v1.1", "openai:gpt-5.5")].note
+    # superseded: no rows, no files, none of their scores
+    assert len(files) == 5 and not any("superseded" in f for f in files)
+    assert all(0.99 not in r.scores for r in rows) and not any(r.agent == "solver" for r in rows)
+
+
+def test_table_current_version_first_then_history(tmp_path, monkeypatch):
+    monkeypatch.setenv("CANARY_WORLD_SECRET", "test-reproduce")
+    cur = _versioned_fixture(tmp_path)
+    out = _run(tmp_path)
+    md = out["markdown"]
+    medium = md.split("## medium")[1].split("## hard")[0]
+    h_cur = f"Reported agent runs: {cur} (current rules):"
+    h_12 = "History: v1.2 (earlier rules, not comparable to the paired table):"
+    h_11 = "History: v1.1 (earlier rules, not comparable to the paired table):"
+    assert "Reported agent runs (replayed" not in md  # the old pooled block is gone
+    assert medium.index("Paired runs") < medium.index(h_cur) < medium.index(h_12) < medium.index(h_11)
+    block = lambda h: medium.split(h)[1].split("\n\n")[1]
+    gpt = lambda b: [l for l in b.splitlines() if l.startswith("| openai:gpt-5.5 |")]
+    (cur_row,) = gpt(block(h_cur))
+    (v12_row,) = gpt(block(h_12))
+    assert "| reported | 3 | -1.000" in cur_row and "bbbbbbb" in cur_row
+    assert "| reported | 2 | +0.500" in v12_row and "aaaaaaa" in v12_row
+    assert "| 9.0 | – |" in v12_row  # no `/ solver` ratio against this run's solver for history
+    # superseded excluded from the table and the rows
+    assert "superseded" not in md.split("## medium")[1] and "eeeeeee" not in md and "+0.990" not in md
+    assert not [r for r in out["rows"] if r.kind == "reported" and r.agent == "solver"]
+    assert not [r for r in out["rows"] if r.pending]  # current-version runs exist, nothing pending
+
+
+def test_only_history_runs_leave_current_rules_pending(tmp_path, monkeypatch):
+    monkeypatch.setenv("CANARY_WORLD_SECRET", "test-reproduce")
+    c = tmp_path / "data" / "runs" / "committed"
+    _write_run(c / "gpt-5.5" / "medium", "openai:gpt-5.5", "medium", list(JUDGE_SEEDS)[:2], 0.5, {})
+    out = _run(tmp_path)
+    medium = out["markdown"].split("## medium")[1].split("## hard")[0]
+    cur = R.current_tiers_version()
+    assert (medium.index(f"Reported agent runs: {cur} (current rules)") < medium.index("pending")
+            < medium.index("History: v1.2"))
 
 
 def test_timeout_guard_scores_zero_and_is_reported(tmp_path, monkeypatch):

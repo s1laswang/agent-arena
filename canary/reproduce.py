@@ -3,7 +3,8 @@
     python -m canary.eval --reproduce [--repro-seeds N] [--results-dir DIR | --update-committed]
 
 Runs the reference solver and the baselines in-process on JUDGE_SEEDS for every tier, replays any
-committed frontier-agent episodes from data/runs/committed/**/episodes.jsonl, then writes
+committed frontier-agent episodes from data/runs/committed/**/episodes.jsonl (grouped by tier version,
+current rules first, never pooled; data/runs/committed/superseded/ skipped), then writes
 judge_table.md, judge_episodes.jsonl and gap_chart.png (needs matplotlib, the `plot` extra; skipped
 with a note if missing) and prints the table.
 
@@ -24,6 +25,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import signal
 import threading
 import time
@@ -49,6 +51,10 @@ AGENT_NOTES = {
 FAST_SEEDS = 5
 EPISODE_TIMEOUT_S = 60.0   # per-episode guard (env REPRO_EPISODE_TIMEOUT); a timed-out episode scores 0 and is reported
 COMMITTED_GLOB = "data/runs/committed/**/episodes.jsonl"
+COMMITTED_DIR = "data/runs/committed"
+SUPERSEDED_DIR = "superseded"           # data/runs/committed/superseded/** is never replayed
+LEGACY_TIERS_VERSION = "v1.2"           # committed runs with no version segment and no meta tiers_version
+_VERSION_SEG = re.compile(r"^v\d+(\.\d+)*$")
 DEFAULT_RESULTS_DIR = "results/latest"  # gitignored; what `make reproduce` writes by default
 COMMITTED_RESULTS_DIR = "results"       # the committed copies; only --update-committed writes here
 
@@ -228,20 +234,83 @@ def run_in_process(tiers: Iterable[str], seeds: list[int], agents: Iterable[str]
     return rows
 
 
+def current_tiers_version() -> str:
+    from .rules import TIERS_VERSION
+    return TIERS_VERSION
+
+
+def version_key(v: str) -> tuple[int, ...]:
+    """'v1.10' -> (1, 10); unparseable versions sort first (oldest)."""
+    try:
+        return tuple(int(x) for x in v.lstrip("v").split("."))
+    except ValueError:
+        return (-1,)
+
+
+def _rel_committed(run_dir: Path, root: Path) -> Path:
+    try:
+        return run_dir.relative_to(root / COMMITTED_DIR)
+    except ValueError:
+        return run_dir
+
+
+def is_superseded(run_dir: Path, root: Path = ROOT) -> bool:
+    """True for anything under data/runs/committed/superseded/ (any `superseded` path segment)."""
+    return SUPERSEDED_DIR in _rel_committed(run_dir, root).parts
+
+
+def run_meta(run_dir: Path) -> dict[str, Any]:
+    try:
+        meta = json.loads((run_dir / "meta.json").read_text())
+    except (OSError, ValueError):
+        return {}
+    return meta if isinstance(meta, dict) else {}
+
+
+def run_tiers_version(run_dir: Path, root: Path = ROOT, meta: dict[str, Any] | None = None) -> str:
+    """Tier version of one committed run: meta.json tiers_version, else a `vX.Y/` path segment under
+    data/runs/committed/, else v1.2 (the runs committed before versioned folders existed)."""
+    meta = run_meta(run_dir) if meta is None else meta
+    v = meta.get("tiers_version")
+    if isinstance(v, str) and v.strip():
+        return v.strip()
+    for seg in _rel_committed(run_dir, root).parts:
+        if _VERSION_SEG.match(seg):
+            return seg
+    return LEGACY_TIERS_VERSION
+
+
+def committed_files(root: Path = ROOT) -> list[Path]:
+    """Committed episode files, superseded builds excluded."""
+    return [f for f in sorted(root.glob(COMMITTED_GLOB)) if not is_superseded(f.parent, root)]
+
+
 def load_committed(root: Path = ROOT) -> tuple[list[Row], list[str]]:
-    """Replay committed frontier-agent episodes (scores were computed server-side when recorded)."""
+    """Replay committed frontier-agent episodes (scores were computed server-side when recorded).
+
+    One row per (tier, tiers_version, agent): runs from different tier versions are never pooled,
+    and data/runs/committed/superseded/ is skipped. Each row carries extra["tiers_version"] and
+    extra["git_shas"] (from meta.json, where present)."""
     from .rules import JUDGE_SEEDS
-    files = sorted(root.glob(COMMITTED_GLOB))
-    groups: dict[tuple[str, str], Row] = {}
+    files = committed_files(root)
+    groups: dict[tuple[str, str, str], Row] = {}
+    labels: list[str] = []
     for f in files:
+        meta = run_meta(f.parent)
+        version = run_tiers_version(f.parent, root, meta)
+        sha = str(meta.get("git_sha") or "").strip()
+        labels.append(f"{f.relative_to(root)} [{version}]")
         for line in f.read_text().splitlines():
             if not line.strip():
                 continue
             e = json.loads(line)
-            key = (e["tier"], e["agent"])
+            key = (e["tier"], version, e["agent"])
             if key not in groups:
-                groups[key] = Row(e["tier"], e["agent"], "reported", [], [], [], [], note="replayed")
+                groups[key] = Row(e["tier"], e["agent"], "reported", [], [], [], [], note="replayed",
+                                  extra={"tiers_version": version, "git_shas": set()})
             r = groups[key]
+            if sha:
+                r.extra["git_shas"].add(sha[:7])
             r.scores.append(float(e["score"]))
             r.correct.append(bool(e["correct"]))
             r.seeds.append(int(e["seed"]))
@@ -250,15 +319,34 @@ def load_committed(root: Path = ROOT) -> tuple[list[Row], list[str]]:
             r.extra.setdefault("runs", set()).add(str(f.parent.relative_to(root)))
     for r in groups.values():
         judge = all(s in JUDGE_SEEDS for s in r.seeds)
-        r.note = (f"replayed, {'judge' if judge else 'NON-judge'} seeds, {len(set(r.seeds))} seeds "
-                  f"({', '.join(sorted(r.extra['runs']))})")
-    return list(groups.values()), [str(f.relative_to(root)) for f in files]
+        shas = sorted(r.extra["git_shas"])
+        r.note = (f"replayed, {'judge' if judge else 'NON-judge'} seeds, {len(set(r.seeds))} seeds, "
+                  f"git {', '.join(shas) if shas else 'unknown'} ({', '.join(sorted(r.extra['runs']))})")
+    return list(groups.values()), labels
 
 
 def pending_rows(tiers: Iterable[str]) -> list[Row]:
+    v = current_tiers_version()
     return [Row(t, "frontier agents (gpt-5.5, gpt-5.6-sol)", "reported", [], [], [], [],
-                note=f"pending: no {COMMITTED_GLOB} yet", pending=True)
+                note=f"pending: no {v} runs in {COMMITTED_DIR}/ yet", pending=True,
+                extra={"tiers_version": v})
             for t in tiers if t in HEADLINE_TIERS]
+
+
+def reported_groups(rows: list[Row], current: str | None = None) -> list[tuple[str, str, list[Row]]]:
+    """Reported rows split by tier version: [(version, heading, rows)], current version first, then
+    the other versions newest first. Never pools across versions."""
+    current = current or current_tiers_version()
+    by_v: dict[str, list[Row]] = defaultdict(list)
+    for r in rows:
+        by_v[r.extra.get("tiers_version") or current].append(r)
+    out = []
+    if current in by_v:
+        out.append((current, f"Reported agent runs: {current} (current rules)", by_v.pop(current)))
+    for v in sorted(by_v, key=version_key, reverse=True):
+        rel = "earlier" if version_key(v) < version_key(current) else "other"
+        out.append((v, f"History: {v} ({rel} rules, not comparable to the paired table)", by_v[v]))
+    return out
 
 
 # --------------------------------------------------------------------------- report
@@ -279,12 +367,14 @@ COLS = ("| agent | kind | n | score ± 95% CI | accuracy | accused | mean accuse
         "|---|---|---:|---:|---:|---:|---:|---:|---:|---|")
 
 
-def _row_md(r: Row, solver_mean: float | None) -> str:
+def _row_md(r: Row, solver_mean: float | None, compare: bool = True) -> str:
     if r.pending:
         return f"| {r.agent} | {r.kind} | 0 | pending | – | – | – | – | – | {r.note} |"
     m, h = mean_ci(r.scores)
     if r.agent == "solver" and r.kind == "reference":
         norm = 1.0
+    elif not compare:  # earlier-rules history: a ratio to this run's solver would mislead
+        norm = float("nan")
     else:
         norm = m / solver_mean if solver_mean and solver_mean > 0 else float("nan")
     pk = pass_k(r)
@@ -309,9 +399,13 @@ def table_md(rows: list[Row], header: dict[str, Any]) -> str:
     out.append("- accuracy = correct accusations / episodes; accused = episodes that ended in an accusation")
     out.append("- `/ solver` = agent mean / solver mean on the same tier (ratio of means); "
                "`pass^k` only for agents with k repeated runs per seed")
+    cur = header.get("tiers_version") or current_tiers_version()
     out.append("- **paired runs**: reference and baselines played in this invocation on the same worlds (one secret). "
                "**reported agent runs**: frontier-agent episodes replayed from data/runs/committed/, played on the "
                "team's worlds, so they are NOT paired with this run; compare them by mean ± CI only")
+    out.append(f"- reported runs are grouped by tier version and never pooled: {cur} (current rules) first, then "
+               "earlier versions as history (not comparable to the paired table; `/ solver` left blank). "
+               f"Builds under {COMMITTED_DIR}/{SUPERSEDED_DIR}/ are excluded")
     timeouts = [(r.tier, r.agent, s) for r in rows for s in r.extra.get("timeouts", [])]
     out.append(f"- per-episode timeout guard: {header.get('timeout_s', EPISODE_TIMEOUT_S):g} s; "
                + (f"**{len(timeouts)} timed out (scored 0)**: "
@@ -327,9 +421,9 @@ def table_md(rows: list[Row], header: dict[str, Any]) -> str:
         if paired:
             out += ["", "Paired runs (this invocation, same worlds):", "", COLS]
             out += [_row_md(r, sol.get(tier)) for r in paired]
-        if reported:
-            out += ["", "Reported agent runs (replayed, unpaired, own CI):", "", COLS]
-            out += [_row_md(r, sol.get(tier)) for r in reported]
+        for version, heading, grp in reported_groups(reported, cur):
+            out += ["", f"{heading}:", "", COLS]
+            out += [_row_md(r, sol.get(tier), compare=(version == cur)) for r in grp]
     return "\n".join(out) + "\n"
 
 
@@ -354,6 +448,8 @@ def gap_chart(rows: list[Row], path: Path) -> str | None:
         import matplotlib.pyplot as plt
     except ImportError:
         return "matplotlib not installed (uv sync --extra plot); skipped gap_chart.png"
+    cur = current_tiers_version()  # earlier-rules history rows are table-only, never charted
+    rows = [r for r in rows if r.kind != "reported" or r.extra.get("tiers_version", cur) == cur]
     tiers = [t for t in TIER_ORDER if any(r.tier == t and not r.pending for r in rows)]
     colors = {"reference": "#2a78d6", "reported": "#eb6834", "baseline": "#9a9893"}
     fig, axes = plt.subplots(1, len(tiers), figsize=(4.6 * len(tiers), 3.9), sharey=False, squeeze=False)
@@ -402,13 +498,14 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
     committed, files = load_committed(root)
     tiers = list(tiers)
     committed = [r for r in committed if r.tier in tiers]
-    if not committed:
+    current = current_tiers_version()
+    if not any(r.extra.get("tiers_version") == current for r in committed):
         rows += pending_rows(tiers)
     rows = order_rows(rows + committed)
     from .rules import JUDGE_SEEDS
     header = {"n_seeds": len(seeds), "seed_range": f"{seeds[0]}..{seeds[-1]}",
               "fast": len(seeds) < len(JUDGE_SEEDS), "mode": mode, "fingerprint": fingerprint,
-              "generated": generated, "timeout_s": episode_timeout_s(),
+              "generated": generated, "timeout_s": episode_timeout_s(), "tiers_version": current,
               "git_sha": git_sha(), "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
               "seconds": time.time() - t0}
     out = Path(results_dir)
@@ -424,8 +521,9 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
     header["seconds"] = time.time() - t0
     if not quiet:
         print(md)
-        print(f"committed agent episode files: {len(files)}" + ("".join(f"\n  {f}" for f in files) if files else
-              f" (frontier rows pending until {COMMITTED_GLOB} exists)"))
+        print(f"committed agent episode files: {len(files)} (excluding {COMMITTED_DIR}/{SUPERSEDED_DIR}/)"
+              + ("".join(f"\n  {f}" for f in files) if files else
+                 f" (frontier rows pending until {COMMITTED_GLOB} exists)"))
         print(exact_match_text(mode, generated, fingerprint))
         print(f"\nwrote {out / 'judge_table.md'}, {out / 'judge_episodes.jsonl'}"
               + (f"\nNOTE: {skip}" if skip else f", {out / 'gap_chart.png'}"))

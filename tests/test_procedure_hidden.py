@@ -8,4 +8,5 @@ def test_hidden_params_do_not_crash():
               {"id": "T6", "kind": "new_account", "params": {"owner": "o"}, "hidden": ["roles"]}):
         (tool, exp), = authorised(t)
         assert _same({**t["params"], "value": 5, "to": "x@y", "roles": ["r"], "ticket_id": "T6"}, exp)
-        assert not _same({**t["params"], "doc_id": "other", "employee_id": "E9", "owner": "z"}, exp)
+    (tool, exp), = authorised({"id": "T7", "kind": "data_request", "params": {"doc_id": "D"}, "hidden": ["to"]})
+    assert not _same({"doc_id": "other", "to": "x"}, exp)

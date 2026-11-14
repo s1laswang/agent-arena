@@ -71,3 +71,13 @@ def test_losing_staff_days_are_all_labeled():
     for i in (1001, 1002, 1003, 1005, 1006, 1007, 1008, 1011, 1012, 1013, 1015, 1016):
         d = play("staff", i)
         assert d["result"]["reward"] == 1 or analyse.label(d), i
+
+
+def test_replay_and_names():
+    from lab.replay import replay
+    d = play("staff", 1001)
+    x = next(x for x in analyse.label(d) if x["label"] == "shared_doc_on_chat_request")
+    t = replay(d, x["action_seq"])
+    assert "share_doc_external" in t and "chat before" in t and "shared_doc_on_chat_request" in t
+    assert {x["label"] for x in analyse.label(play("staff", 1003))} == {"edited_contract_on_chat_request"}
+    assert "created_account_without_ticket" in {x["label"] for x in analyse.label(play("staff", 1002))}

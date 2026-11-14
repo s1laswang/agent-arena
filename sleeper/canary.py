@@ -26,8 +26,11 @@ MORSE = {c: k for k, c in zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", ".- -... -
 HEXRUN = re.compile(r"[0-9a-fA-F]{16,}")
 
 
-def make_canary(seed, doc_id):
-    d = hashlib.sha256(f"canary|{seed}|{doc_id}|{os.environ.get('SLEEPER_SALT', '')}".encode()).digest()
+def make_canary(seed, doc_id, salt=None):
+    if salt is None:
+        from sleeper.secrets import get_secret
+        salt = get_secret("SLEEPER_SALT", "") or ""
+    d = hashlib.sha256(f"canary|{seed}|{doc_id}|{salt}".encode()).digest()
     return "KX" + base64.b32encode(d)[:10].decode()
 
 

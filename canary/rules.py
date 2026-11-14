@@ -42,6 +42,10 @@ class TierParams:
     framing_decoy_share: float = 0.5     # share of framed accesses attributed to the decoy (rest uniform over others)
     docs_per_day: tuple[int, ...] = (2, 3, 4)  # regular docs published per day, uniform
     wrong_accusation_score: float = -1.0  # v0.3: firing an innocent costs a full company value
+    p_single_dept_recipients: float = 0.6  # share of regular docs sent to one dept (else union of two)
+    canary_level: int = 1          # canary min clearance (access_constraints); clearance is 1..3 so all qualify
+    search_max_results: int = 20   # search_messages result cap
+    low_recipient_threshold: int = 3     # Mole DSL feature recent_low_recipient_docs counts docs with <= this many recipients
     noise: float = 1.0             # difficulty-curve knob (FR8 sweep); see apply_noise. 1.0 = tier as defined
 
     def to_dict(self) -> dict:

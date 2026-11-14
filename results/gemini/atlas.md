@@ -1,5 +1,13 @@
 # Canary Failure Atlas
 
+> **v1 was not blind.** An independent review found this atlas partly circular: the packed corpus showed Gemini the
+> code's own per-step `REGRET` values and `canary/analysis/tags.py` labels, the solver's beliefs (`top=`, `mole:`),
+> and the true mole and total regret in each episode header. So "Gemini named the failure modes" is partly Gemini
+> reading our labels back, and the 98% verbatim rate counts code-generated step lines (16 of the 27 quotes shown in
+> atlas.json are such lines). The blind re-run, where Gemini sees only what the agents saw, did and said and
+> recovery is scored in code, is in [atlas_blind.md](atlas_blind.md).
+
+
 *Gemini read every trajectory our agents produced and explained why they fail. Generated 2026-11-14T18:26:06+0200 at `6826010`.*
 
 ## At a glance

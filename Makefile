@@ -31,7 +31,7 @@ mcp:              ## [HARNESS] MCP env server (streamable HTTP). Port: MCP_PORT 
 	umask 077; d=$$(mktemp -d); \
 	printf '{"tier": "%s", "seed": %s}' "$${CANARY_TIER:-easy}" "$${CANARY_SEED:-900000}" > $$d/episode.json; \
 	if [ -n "$${CANARY_LEDGER_TOKEN:-}" ]; then printf %s "$$CANARY_LEDGER_TOKEN" > $$d/ledger_token; export CANARY_LEDGER_TOKEN_FILE=$$d/ledger_token; fi; \
-	exec env -u CANARY_TIER -u CANARY_SEED -u CANARY_LEDGER_TOKEN CANARY_EPISODE_FILE=$$d/episode.json CANARY_PORT=$$port $(UV) python -m canary.mcp_server
+	exec env -u CANARY_TIER -u CANARY_SEED -u CANARY_LEDGER_TOKEN CANARY_CONSUME_SECRET_FILES=1 CANARY_EPISODE_FILE=$$d/episode.json CANARY_PORT=$$port $(UV) python -m canary.mcp_server
 
 accept:           ## [HARNESS] keyless judge acceptance: setup, reproduce, baseline checks, MCP smoke. Exit non-zero on any failure.
 	bash scripts/judge_accept.sh

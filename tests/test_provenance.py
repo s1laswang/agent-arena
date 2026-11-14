@@ -1,6 +1,7 @@
 import glob
 import json
 import os
+import re
 
 import pytest
 
@@ -95,12 +96,12 @@ def test_frontier_provenance():
         if prov == "real":
             assert model and commit and model != SCRIPTED, row
             assert row.get("agent", "x") != SCRIPTED, row
-            files = [json.load(open(f)) for f in glob.glob(f"results/frontier/{model}/{commit}/*.json")]
+            files = [json.load(open(f)) for f in _perrun() if f.startswith(f"results/frontier/{model}/{commit}/")]
             assert files, row
             assert all(f.get("agent") not in (None, SCRIPTED) and f.get("model") == model and f.get("commit") == commit for f in files), row
         elif row.get("agent") not in (None, SCRIPTED):
             raise AssertionError(f"non-scripted agent labeled scripted: {row}")
-    for f in glob.glob("results/frontier/*/*/*.json"):
+    for f in _perrun():
         r = json.load(open(f))
         if r.get("agent") == SCRIPTED:
             assert r.get("provenance", SCRIPTED) == SCRIPTED, f
@@ -113,7 +114,7 @@ def test_real_rows_have_mcp_calls():
         pytest.skip("no frontier results yet")
     for row in _rows(json.load(open(gp))):
         if row.get("provenance") == "real":
-            files = [json.load(open(f)) for f in glob.glob(f"results/frontier/{row['model']}/{row['commit']}/*.json")]
+            files = [json.load(open(f)) for f in _perrun() if f.startswith(f"results/frontier/{row['model']}/{row['commit']}/")]
             assert any(f.get("mcp_calls") for f in files), row
 @pytest.mark.slow
 def test_eval_without_gemini_flag_makes_no_calls(tmp_path, monkeypatch):
@@ -133,8 +134,11 @@ def test_eval_without_gemini_flag_makes_no_calls(tmp_path, monkeypatch):
     assert gemini._usage["calls"] == before
 
 
+RUN_FILE = re.compile(r"^[a-z_]+-s\d+-t\d+\.json$")
+
+
 def _perrun():
-    return [f for f in glob.glob("results/frontier/*/*/*-s*.json")]
+    return [f for f in glob.glob("results/frontier/*/*/*.json") if RUN_FILE.match(os.path.basename(f))]
 
 
 def test_perrun_frontier_files():

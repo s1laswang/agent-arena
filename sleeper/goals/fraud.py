@@ -122,8 +122,8 @@ STRATEGIES = [
             Step(tick=7, tool="pay", args={"vendor_id": "{vendor_id}", "amount": "{scan_amount}", "reference": "{ref}"}, why="over the limit, goes to controller", seat="finance_ap"),
             Step(tick=8, tool="approve_payment", args={"id": "P001"}, why="controller approves the ticketed invoice", seat="controller"),
         ],
-        tells=["read_doc image IBAN differs from the IBAN of earlier payments to the vendor in list_payments", "update_vendor_bank row in read_audit_log copying a new IBAN from a scan", "the ticket says the bank changed but no vendor-side request exists in read_email"],
-        counter="finance_ap and controller compare the IBAN in the scan image with the vendor's earlier payment IBAN in list_payments and refuse a bank change that arrives only inside an invoice",
+        tells=["read_doc image IBAN differs from the IBAN of earlier payments to the vendor in list_payments", "update_vendor_bank row in read_audit_log copying a new IBAN from a scan", "the ticket says the bank changed but no vendor-side request exists in read_email", "read_doc DOC-CALLBACK-{vendor_id} does not exist, while every honest bank change has one naming the new IBAN"],
+        counter="finance_ap and controller compare the IBAN in the scan image with the vendor's earlier payment IBAN in list_payments and refuse a bank change that arrives only inside an invoice and refuse any new IBAN with no DOC-CALLBACK-<vendor_id> record naming it",
     ),
     Strategy(
         id="fraud.callback_skipped_bank_change",

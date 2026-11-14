@@ -22,8 +22,26 @@ from canary.analysis.gap import load_runs, mean_ci  # noqa: E402
 from paired_v13 import _f, boot_ratio, p_acc, post_expected  # noqa: E402
 
 
+ALT_LABEL = ("OpenCode, alternative (NOT the headline): episodes whose first attempt ended on an empty model reply "
+             "counted as 0 instead of retried")
+
+
+def empty_reply_seeds(run_dir: Path, tier: str) -> set[int]:
+    """Seeds with an excluded attempt that ended on an empty model reply (from merge_staging's meta.json)."""
+    f = run_dir / tier / "meta.json"
+    if not f.exists():
+        return set()
+    out = set()
+    for entry in json.loads(f.read_text()).get("infra_invalid_attempts_excluded") or []:
+        name, _, why = entry.partition(":")
+        if "empty_model_response" in why:
+            out.add(int(name.split("-")[2]))   # opencode-<tier>-<seed>-<hhmmss>
+    return out
+
+
 def groups(version: str, model: str) -> list[tuple[str, str, str]]:
     g = [(f"OpenCode + {model} over MCP (judges' shape)", f"{version}/opencode-{model}", f"opencode:google/{model}"),
+         (ALT_LABEL, f"{version}/opencode-{model}", f"opencode:google/{model}"),
          (f"in-process {model} (full history, thought-signature replay)", f"{version}/inproc-{model}", f"gemini:{model}")]
     if version == "v1.3":
         g += [("Codex gpt-5.5 over MCP (earlier official run)", "v1.3/codex-gpt-5.5-full", "codex:gpt-5.5"),
@@ -44,6 +62,15 @@ def rows_for(root: Path, version: str, model: str, seeds: set[int]) -> list[dict
                and (e.get("meta") or {}).get("valid") is not False]
         for tier in ("medium", "hard"):
             es = sorted((e for e in eps if e["tier"] == tier), key=lambda e: e["seed"])
+            if label == ALT_LABEL:
+                zero = empty_reply_seeds(d, tier)
+                if not zero:
+                    continue
+                es = [dict(e, score=0.0, correct=False, accused=None) if e["seed"] in zero else e for e in es]
+                have = {e["seed"] for e in es}
+                es += [{"tier": tier, "seed": z, "agent": agent, "score": 0.0, "correct": False, "accused": None,
+                        "final_day": 0, "steps": [], "meta": {}} for z in sorted(zero - have) if z in seeds]
+                es.sort(key=lambda e: e["seed"])
             if not es:
                 continue
             paired = [e for e in es if (tier, e["seed"]) in solver]
@@ -71,11 +98,11 @@ def rows_for(root: Path, version: str, model: str, seeds: set[int]) -> list[dict
 
 
 def to_md(rows: list[dict], version: str, model: str) -> str:
-    order = [g[1] + "|" + g[2] for g in groups(version, model)]
+    order = [g[0] for g in groups(version, model)]
     out = ["| tier | run | n | score ± 95% CI | accuracy | accused | mean accuse day | mean P(accused) at accusation | "
            "solver, same seeds | **frontier / solver [95% CI]** | paired diff ± CI | luck-adjusted score | luck-adj. / solver |",
            "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
-    for r in sorted(rows, key=lambda r: (r["tier"] != "medium", order.index(r["group"] + "|" + r["agent"]))):
+    for r in sorted(rows, key=lambda r: (r["tier"] != "medium", order.index(r["label"]))):
         solver = r["agent"] == "solver"
         if solver or r["ratio"] != r["ratio"]:
             ratio = "–"

@@ -41,8 +41,11 @@ def completion(run_dir):
     tot, ok = Counter(), Counter()
     for day in analyse.load(run_dir):
         comp = company_of(day)
-        for t in day["day"]["tickets"]:
-            if not t.get("legit", True) or t["seat"] == day.get("sleeper_seat"):
+        ss = day.get("sleeper_seat")
+        ts = day["day"]["tickets"]
+        own = {t["id"] for t in ts if t["seat"] == ss}
+        for t in ts:
+            if not t.get("legit", True) or t["id"] in own or t.get("depends_on") in own or ss in (t.get("needs") or []):
                 continue
             tot[t["kind"]] += 1
             try:

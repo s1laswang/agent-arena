@@ -1,0 +1,220 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "soc_access_vision",
+  "model_id": "gemini-4-carbon",
+  "commit": "62ea18bae54f2e525e942df7c08bff9247e3bb1d",
+  "timestamp": "2026-11-14T13:23:46+00:00",
+  "tier": "medium",
+  "tiers_version": "v1.4",
+  "n_worlds": 3,
+  "n_images_read_by_model": 3,
+  "metrics": {
+    "top1_mole_hits": 3,
+    "top1_mole_accuracy": 1.0,
+    "top3_mole_hits": 3,
+    "top3_mole_hit_rate": 1.0,
+    "top1_decoy_hits": 3,
+    "top1_decoy_accuracy": 1.0,
+    "decoy_identified_hits": 3,
+    "decoy_identified_rate": 1.0,
+    "avoided_framing_trap_hits": 3,
+    "avoided_framing_trap_rate": 1.0,
+    "naive_baseline_mole_hits": 0,
+    "naive_after_hours_baseline_mole_accuracy": 0.0,
+    "naive_baseline_decoy_traps": 3,
+    "naive_after_hours_baseline_decoy_trap_rate": 1.0
+  },
+  "usage": {
+    "calls": 3,
+    "in": 6000,
+    "out": 1055,
+    "thinking": 3291,
+    "cached": 0,
+    "cost_usd": 0.05546,
+    "latency_s": 72.27
+  },
+  "worlds": [
+    {
+      "seed": 0,
+      "tier": "medium",
+      "tiers_version": "v1.4",
+      "raster_sha256": "353e9b66a13d46deab1c2305c33956140e71fce6a1db774aa658ecad27d2e5d7",
+      "raster_bytes": 153744,
+      "raster_size": [
+        1880,
+        1020
+      ],
+      "observable_summary": {
+        "n_employees": 20,
+        "closed_day": 13,
+        "total_access_events": 279,
+        "total_after_hours_events": 48,
+        "n_canaries_planted": 12,
+        "n_surfaced_canary_leaks": 3,
+        "n_surfaced_regular_leaks": 3,
+        "canary_narrowed_candidates": [
+          "e05"
+        ],
+        "naive_most_after_hours_id": "e19"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e05"
+        ],
+        "suspected_decoy_ids": [
+          "e19",
+          "e07"
+        ],
+        "confidence": 0.99,
+        "canary_leak_summary": "Three planted canaries surfaced in the leak feed: c5 (=C!), c8 (=B!), and c9 (=B!). Employee e05 is the sole staff member matching ALL 3/3 surfaced variants ([C] on c5, [B] on c8, and [B] on c9), whereas e02 and e08 match only 1/3 (c5=[C], cleared on c8 and c9) and all other employees match 0/3.",
+        "visual_reasoning": "In Panel B, exact medium-tier canary fingerprinting isolates e05 (SAL) as the only employee holding all three leaked canary variants (ALL 3/3), while clearing every other row via struck-out variant mismatches. Panel C corroborates e05's access to all three regular leaked documents through the SAL department (L1 D3/3, with direct opens L3 on d1-1 and department access D on d4-2 and d5-3). In Panel A, e05 shows a moderate 3/21 (14.3%) after-hours rate consistent with true mole behavior, whereas e19 (13/27 after-hours) and e07 (5/19 after-hours) exhibit heavy red after-hours framing spikes despite 0/3 canary matches, identifying e19 as the primary framed decoy and e07 as secondary framing spillover."
+      },
+      "ground_truth": {
+        "true_mole": "e05",
+        "true_decoy": "e19"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true
+      },
+      "usage": {
+        "in": 2000,
+        "out": 354,
+        "thinking": 1195,
+        "cached": 0,
+        "cost_usd": 0.01949,
+        "latency_s": 26.116
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/medium_seed_0.png"
+    },
+    {
+      "seed": 1,
+      "tier": "medium",
+      "tiers_version": "v1.4",
+      "raster_sha256": "1a09eb4de72f8893e5b434c2eb727c20cbca449ba68b8445220c559b976f0b6f",
+      "raster_bytes": 155973,
+      "raster_size": [
+        1880,
+        1020
+      ],
+      "observable_summary": {
+        "n_employees": 20,
+        "closed_day": 13,
+        "total_access_events": 276,
+        "total_after_hours_events": 48,
+        "n_canaries_planted": 12,
+        "n_surfaced_canary_leaks": 2,
+        "n_surfaced_regular_leaks": 6,
+        "canary_narrowed_candidates": [
+          "e02",
+          "e09"
+        ],
+        "naive_most_after_hours_id": "e00"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e02",
+          "e09"
+        ],
+        "suspected_decoy_ids": [
+          "e00",
+          "e06",
+          "e11",
+          "e19",
+          "e07"
+        ],
+        "confidence": 0.94,
+        "canary_leak_summary": "Two planted canaries surfaced in Panel B: c7 with variant A and c12 with variant B. Exactly two employees matched ALL 2/2 surfaced canary variants: e02 and e09. Employee e00 and e01 matched 1/2 (c7=A only, cleared by c12), while all remaining employees matched 0/2.",
+        "visual_reasoning": "In Panel A, e00 exhibits an extreme after-hours spike of 9/13 (69%) alongside secondary spikes in e06 (5/17) and e11 (4/7), but Panel B clears all of them via exact canary variant mismatches (e00 holds 1/2, e06 and e11 hold 0/2), confirming e00 as the primary framed decoy. In Panel B, only e02 and e09 hold both surfaced canary variants (c7=A and c12=B for ALL 2/2). Panel C breaks the tie decisively in favor of e02, who directly opened four of the six regular leaked documents and belongs to a department correlated with five of six leaks (L4 D5/6), whereas e09 only opened one regular leaked document with two department matches (L1 D2/6) - making e02 the true mole."
+      },
+      "ground_truth": {
+        "true_mole": "e02",
+        "true_decoy": "e00"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true
+      },
+      "usage": {
+        "in": 2000,
+        "out": 354,
+        "thinking": 1211,
+        "cached": 0,
+        "cost_usd": 0.01965,
+        "latency_s": 25.856
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/medium_seed_1.png"
+    },
+    {
+      "seed": 2,
+      "tier": "medium",
+      "tiers_version": "v1.4",
+      "raster_sha256": "ae99a74f781a64adcaa03c439c1c140cfecf2cd0c2136c212027c05f126f9b91",
+      "raster_bytes": 148310,
+      "raster_size": [
+        1880,
+        1020
+      ],
+      "observable_summary": {
+        "n_employees": 20,
+        "closed_day": 13,
+        "total_access_events": 277,
+        "total_after_hours_events": 40,
+        "n_canaries_planted": 12,
+        "n_surfaced_canary_leaks": 5,
+        "n_surfaced_regular_leaks": 5,
+        "canary_narrowed_candidates": [
+          "e09"
+        ],
+        "naive_most_after_hours_id": "e05"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e09"
+        ],
+        "suspected_decoy_ids": [
+          "e05",
+          "e13"
+        ],
+        "confidence": 0.99,
+        "canary_leak_summary": "Five planted canaries surfaced in the leak feed: c1 (=A!), c3 (=A!), c6 (=B!), c8 (=B!), and c9 (=B!). Employee e09 (ENG) is the sole staff member matching ALL 5/5 surfaced canary variants ([A] on c1 and c3; [B] on c6, c8, and c9), while all other employees have crossed-out mismatches (only e00 at 2/5, and e03 and e06 at 1/5, hold partial matches).",
+        "visual_reasoning": "In Panel B, exact medium-tier canary fingerprinting uniquely isolates e09 with an ALL 5/5 green match across c1, c3, c6, c8, and c9, eliminating every other employee. In Panel A, e05 displays an extreme red after-hours spike (10/19 accesses) and e13 shows a secondary elevated red rate (5/13 accesses), yet both score 0/5 in Panel B - identifying e05 as the primary framed decoy absorbing injected fake after-hours logs and e13 as a secondary noise target. Meanwhile, e09 exhibits a moderate 3/14 (21%) after-hours profile consistent with genuine mole activity and aligns with ENG department access (L1 D4/5) in Panel C."
+      },
+      "ground_truth": {
+        "true_mole": "e09",
+        "true_decoy": "e05"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true
+      },
+      "usage": {
+        "in": 2000,
+        "out": 347,
+        "thinking": 885,
+        "cached": 0,
+        "cost_usd": 0.01632,
+        "latency_s": 20.298
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/medium_seed_2.png"
+    }
+  ]
+}

@@ -7,13 +7,13 @@ Every number below is extracted programmatically from committed run files with z
 
 - Provenance status: **VERIFIED**
 - Target model: `gemini-4-carbon`
-- Repository HEAD at build: `c89f0fc1`
+- Repository HEAD at build: `6d2e3381`
 - Verified roles: **6 / 6** (missing: none)
-- Verified `gemini-4-carbon` run folders: **76** (6 canonical headline + 70 supporting; scanned 76 folders)
-- Total verified episodes / samples: **717**
-- Total Gemini API calls: **6,312**
-- Total tokens (in / out / thinking / cached): **180,035,516 / 2,104,402 / 1,150,168 / 164,231,261**
-- Total estimated API cost (USD): **$76.8099**
+- Verified `gemini-4-carbon` run folders: **78** (6 canonical headline + 72 supporting; scanned 78 folders)
+- Total verified episodes / samples: **772**
+- Total Gemini API calls: **6,328**
+- Total tokens (in / out / thinking / cached): **180,121,755 / 2,111,164 / 1,158,795 / 164,235,078**
+- Total estimated API cost (USD): **$77.1362**
 - Secret leaks detected: **0**
 
 ## 1. Canonical Headline Runs (One Labelled Real Run per Role)
@@ -32,12 +32,13 @@ Every number below is extracted programmatically from committed run files with z
 ### 01. `world_text` - World Text & Persona Synthesis (VERIFIED)
 
 - Stage: Company Construction
-- Verified `gemini-4-carbon` runs: **12** (count: 118, calls: 1,023, in: 27,696,081, out: 514,236, thinking: 522,729, cached: 25,358,784, cost: $13.9615)
+- Verified `gemini-4-carbon` runs: **13** (count: 133, calls: 1,038, in: 27,780,671, out: 519,569, thinking: 530,761, cached: 25,362,601, cost: $14.2643)
 - Canonical headline run: `results/gemini_roles/world_text/persona-interviews-carbon` (`persona_interviews`, commit `dbe9569fcc44abf8bc0665e0533dd1d1b677c6e9`, count=32, calls=32, cost=$0.1560) - 32 live interviews (4 worlds), 0 leaks, signal acc 100%, solver +0.645 vs +0.642
-- Supporting verified runs: **11**
+- Supporting verified runs: **12**
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Headline Metric |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `dynamic_mid_episode_events` | `results/gemini_roles/world_text/dynamic-events-hard37-carbon` | `gemini-4-carbon` | `1bcf1ee7479814921d0aa506dc9b1af5a3f6ad22` | 15 | 15 | 84,590 | 5,333 | 8,032 | 3,817 | $0.3028 | 15 events (5 hard seeds, 56 msgs), 0 leaks, solver +0.576 vs base +0.576 (pooled n=8: +0.599 +/- 0.101) |
 | `biased_chatter_investigator_ablation` | `results/gemini_roles/world_text/biased-chatter-ablation-hard01` | `gemini-4-carbon` | `c3ebb075397b09cb837375b079836c020aed779e` | 12 | 407 | 14,584,848 | 191,726 | 168,412 | 13,565,234 | $5.3130 | 12 eps, carbon +0.620 (biased) vs +0.645 (template), solver +0.665 |
 | `biased_chatter_investigator_ablation` | `results/gemini_roles/world_text/biased-chatter-ablation-carbon` | `gemini-4-carbon` | `f307290845c4a0040feebf4e146d2ec3aa1596c7` | 12 | 399 | 12,766,963 | 208,617 | 184,085 | 11,793,550 | $5.2124 | 12 eps, carbon +0.705 (biased) vs +0.640 (template), solver +0.765 |
 | `biased_chatter_hard` | `results/gemini_roles/world_text/biased-chatter-hard-carbon` | `gemini-4-carbon` | `b7b28257900c22aef1d3230a117581773df30945` | 12 | 12 | 32,161 | 13,478 | 7,609 | 0 | $0.1991 | 60 messages, 0 truth leaks, 0 lint errs |
@@ -53,13 +54,14 @@ Every number below is extracted programmatically from committed run files with z
 ### 02. `adaptive_mole` - Adaptive Mole & Mole Forge (VERIFIED)
 
 - Stage: Adversarial Evolution
-- Verified `gemini-4-carbon` runs: **25** (count: 280, calls: 1,631, in: 25,562,468, out: 116,889, thinking: 383,412, cached: 23,015,724, cost: $12.3981)
+- Verified `gemini-4-carbon` runs: **26** (count: 320, calls: 1,632, in: 25,564,117, out: 118,318, thinking: 384,007, cached: 23,015,724, cost: $12.4216)
 - Canonical headline run: `results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep` (`mole_forge`, commit `9b8858381c99a4b94ea3d989fcd0d232fc5411ca`, count=49, calls=8, cost=$0.2042) - fitness 0.374, solver acc 90%, 49 LLM children
-- Supporting verified runs: **24**
+- Supporting verified runs: **25**
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Headline Metric |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | `mole_forge` | `results/gemini_roles/adaptive_mole/mole-forge-carbon-med-deep` | `gemini-4-carbon` | `8425507a2791d4c8fa449cb7fdcc744e3f4767ea` | 43 | 19 | 9,256 | 6,680 | 4,353 | 0 | $0.1288 | fitness 0.738, solver acc 85%, 43 LLM children |
+| `paired_skill_designer` | `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-med-s10_14` | `gemini-4-carbon` | `cec07dc8ea61d2c129dd81e249e93dec05b76983` | 40 | 1 | 1,649 | 1,429 | 595 | 0 | $0.0235 | kept 6/6 solvable scenarios, eval solver +0.592, heuristic -1.000, n=40 |
 | `paired_skill_designer` | `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard-s10_14` | `gemini-4-carbon` | `94974340ae44c96fe5eb03d797c041b95d19d922` | 40 | 1 | 1,645 | 1,348 | 639 | 0 | $0.0232 | kept 5/6 solvable scenarios, eval solver +0.497, heuristic -1.000, n=40 |
 | `paired_skill_designer` | `results/gemini_roles/adaptive_mole/paired-solvable-scenarios-carbon` | `gemini-4-carbon` | `16f24a08e1fb57397ddf90a5b413b4359a5f16bc` | 20 | 1 | 1,649 | 957 | 476 | 0 | $0.0176 | kept 3/4 solvable scenarios, eval solver +0.722, heuristic -0.811, n=20 |
 | `paired_skill_designer` | `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard` | `gemini-4-carbon` | `0e59cc10aa43f068e5fe7c1007215df1db4d10fe` | 20 | 1 | 1,645 | 1,459 | 540 | 0 | $0.0233 | kept 6/6 solvable scenarios, eval solver +0.628, heuristic -1.000, n=20 |
@@ -228,13 +230,13 @@ In-game leaked-memo pixel watermark ablation: text `variant` fields are redacted
 
 | Role | Verified Runs | Count | Calls | Tokens In | Tokens Out | Thinking Tokens | Cached Tokens | Cost (USD) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `world_text` | 12 | 118 | 1,023 | 27,696,081 | 514,236 | 522,729 | 25,358,784 | $13.9615 |
-| `adaptive_mole` | 25 | 280 | 1,631 | 25,562,468 | 116,889 | 383,412 | 23,015,724 | $12.3981 |
+| `world_text` | 13 | 133 | 1,038 | 27,780,671 | 519,569 | 530,761 | 25,362,601 | $14.2643 |
+| `adaptive_mole` | 26 | 320 | 1,632 | 25,564,117 | 118,318 | 384,007 | 23,015,724 | $12.4216 |
 | `investigators` | 25 | 38 | 3,333 | 122,547,175 | 1,388,566 | 157,797 | 114,113,778 | $43.7418 |
 | `failure_analyst` | 3 | 222 | 5 | 918,030 | 26,204 | 39,025 | 0 | $2.3395 |
 | `exploit_hunter` | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
 | `multimodal_evidence` | 9 | 48 | 105 | 217,840 | 21,676 | 47,205 | 0 | $1.1245 |
-| **total** | **76** | **717** | **6,312** | **180,035,516** | **2,104,402** | **1,150,168** | **164,231,261** | **$76.8099** |
+| **total** | **78** | **772** | **6,328** | **180,121,755** | **2,111,164** | **1,158,795** | **164,235,078** | **$77.1362** |
 
 ## 6. Keyless Offline Verification
 

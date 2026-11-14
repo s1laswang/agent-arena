@@ -1,10 +1,10 @@
 {
   "target_model": "gemini-4-carbon",
-  "git_head": "c89f0fc1",
+  "git_head": "6d2e3381",
   "provenance": {
     "verified": true,
-    "scanned_runs": 76,
-    "verified_runs": 76,
+    "scanned_runs": 78,
+    "verified_runs": 78,
     "secret_leaks_count": 0
   },
   "totals": {
@@ -29,17 +29,17 @@
     "n_roles_required": 6,
     "n_roles_verified": 6,
     "all_roles_verified": true,
-    "n_verified_carbon_runs": 76,
+    "n_verified_carbon_runs": 78,
     "n_canonical_runs": 6,
-    "n_supporting_runs": 70,
-    "count": 717,
-    "calls": 6312,
-    "tokens_in": 180035516,
-    "tokens_out": 2104402,
-    "thinking_tokens": 1150168,
-    "cached_tokens": 164231261,
-    "total_tokens": 183290086,
-    "cost_usd": 76.809851
+    "n_supporting_runs": 72,
+    "count": 772,
+    "calls": 6328,
+    "tokens_in": 180121755,
+    "tokens_out": 2111164,
+    "thinking_tokens": 1158795,
+    "cached_tokens": 164235078,
+    "total_tokens": 183391714,
+    "cost_usd": 77.136219
   },
   "roles": {
     "world_text": {
@@ -48,7 +48,7 @@
       "title": "World Text & Persona Synthesis",
       "stage": "Company Construction",
       "verified": true,
-      "n_verified_runs": 12,
+      "n_verified_runs": 13,
       "canonical_run": {
         "role": "world_text",
         "subrole": "persona_interviews",
@@ -65,6 +65,21 @@
         "headline_metric": "32 live interviews (4 worlds), 0 leaks, signal acc 100%, solver +0.645 vs +0.642"
       },
       "supporting_runs": [
+        {
+          "role": "world_text",
+          "subrole": "dynamic_mid_episode_events",
+          "run_folder": "results/gemini_roles/world_text/dynamic-events-hard37-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "1bcf1ee7479814921d0aa506dc9b1af5a3f6ad22",
+          "count": 15,
+          "calls": 15,
+          "tokens_in": 84590,
+          "tokens_out": 5333,
+          "thinking_tokens": 8032,
+          "cached_tokens": 3817,
+          "cost_usd": 0.30283,
+          "headline_metric": "15 events (5 hard seeds, 56 msgs), 0 leaks, solver +0.576 vs base +0.576 (pooled n=8: +0.599 +/- 0.101)"
+        },
         {
           "role": "world_text",
           "subrole": "biased_chatter_investigator_ablation",
@@ -249,6 +264,21 @@
         },
         {
           "role": "world_text",
+          "subrole": "dynamic_mid_episode_events",
+          "run_folder": "results/gemini_roles/world_text/dynamic-events-hard37-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "1bcf1ee7479814921d0aa506dc9b1af5a3f6ad22",
+          "count": 15,
+          "calls": 15,
+          "tokens_in": 84590,
+          "tokens_out": 5333,
+          "thinking_tokens": 8032,
+          "cached_tokens": 3817,
+          "cost_usd": 0.30283,
+          "headline_metric": "15 events (5 hard seeds, 56 msgs), 0 leaks, solver +0.576 vs base +0.576 (pooled n=8: +0.599 +/- 0.101)"
+        },
+        {
+          "role": "world_text",
           "subrole": "biased_chatter_investigator_ablation",
           "run_folder": "results/gemini_roles/world_text/biased-chatter-ablation-hard01",
           "model_id": "gemini-4-carbon",
@@ -413,13 +443,13 @@
           "headline_metric": "10 messages (2 seeds), 0 truth leaks, 0 lint errs"
         }
       ],
-      "count": 118,
-      "calls": 1023,
-      "tokens_in": 27696081,
-      "tokens_out": 514236,
-      "thinking_tokens": 522729,
-      "cached_tokens": 25358784,
-      "cost_usd": 13.961498
+      "count": 133,
+      "calls": 1038,
+      "tokens_in": 27780671,
+      "tokens_out": 519569,
+      "thinking_tokens": 530761,
+      "cached_tokens": 25362601,
+      "cost_usd": 14.264328
     },
     "adaptive_mole": {
       "role": "adaptive_mole",
@@ -427,7 +457,7 @@
       "title": "Adaptive Mole & Mole Forge",
       "stage": "Adversarial Evolution",
       "verified": true,
-      "n_verified_runs": 25,
+      "n_verified_runs": 26,
       "canonical_run": {
         "role": "adaptive_mole",
         "subrole": "mole_forge",
@@ -458,6 +488,21 @@
           "cached_tokens": 0,
           "cost_usd": 0.128842,
           "headline_metric": "fitness 0.738, solver acc 85%, 43 LLM children"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "paired_skill_designer",
+          "run_folder": "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-med-s10_14",
+          "model_id": "gemini-4-carbon",
+          "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+          "count": 40,
+          "calls": 1,
+          "tokens_in": 1649,
+          "tokens_out": 1429,
+          "thinking_tokens": 595,
+          "cached_tokens": 0,
+          "cost_usd": 0.023538,
+          "headline_metric": "kept 6/6 solvable scenarios, eval solver +0.592, heuristic -1.000, n=40"
         },
         {
           "role": "adaptive_mole",
@@ -839,6 +884,21 @@
         {
           "role": "adaptive_mole",
           "subrole": "paired_skill_designer",
+          "run_folder": "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-med-s10_14",
+          "model_id": "gemini-4-carbon",
+          "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+          "count": 40,
+          "calls": 1,
+          "tokens_in": 1649,
+          "tokens_out": 1429,
+          "thinking_tokens": 595,
+          "cached_tokens": 0,
+          "cost_usd": 0.023538,
+          "headline_metric": "kept 6/6 solvable scenarios, eval solver +0.592, heuristic -1.000, n=40"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "paired_skill_designer",
           "run_folder": "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard-s10_14",
           "model_id": "gemini-4-carbon",
           "commit": "94974340ae44c96fe5eb03d797c041b95d19d922",
@@ -1182,13 +1242,13 @@
           "headline_metric": "adaptive mole verified"
         }
       ],
-      "count": 280,
-      "calls": 1631,
-      "tokens_in": 25562468,
-      "tokens_out": 116889,
-      "thinking_tokens": 383412,
+      "count": 320,
+      "calls": 1632,
+      "tokens_in": 25564117,
+      "tokens_out": 118318,
+      "thinking_tokens": 384007,
       "cached_tokens": 23015724,
-      "cost_usd": 12.398087
+      "cost_usd": 12.421625
     },
     "investigators": {
       "role": "investigators",

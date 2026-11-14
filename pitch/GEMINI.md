@@ -10,6 +10,9 @@ The Sleeper is an environment for that. Eight AI employees run a simulated compa
 
 ## 2. How the Gemini API is integrated
 
+To run the Gemini path: `GEMINI_API_KEY` and `LAB_GEMINI=1` (the key alone leaves rows scripted). Wiring is verified offline with a scripted fake model (`tests/test_gemini_team.py`), which proves the plumbing and nothing about how the real model behaves. First live check once a key exists: `PYTHONPATH=. .venv/bin/python scripts/gemini_smoke.py`. Under `SLEEPER_OFFLINE=1`, a cache miss raises for staff and reference but the sleeper agent and analyst explanation fall back to scripted.
+
+
 - BUILT, in `momin`, tested offline only, NOT yet run against the live Gemini API (no key):
   - `agents/gemini.py` (a2b1cdd): google-genai client, function calling, tool loop, per-role model by env var, retries, prompt-hash cache. It also sends image parts (`Part.from_bytes`) so tool results can carry images.
   - `agents/staff.py` (7597c39): `ScriptedStaff` and `GeminiStaff` (8 role prompts, Gemini path used only with a key).

@@ -193,3 +193,19 @@ def test_subset_cut_from_a_recording_replays(tmp_path):
     want = json.loads((full / "manifest.json").read_text())
     assert got["episodes"][rel] == want["episodes"][rel] and got["responses"] > 0
     assert len(list((tmp_path / "replay-t").rglob("*.json.gz"))) == got["responses"]
+
+
+def test_report_export_roundtrip(tmp_path, monkeypatch):
+    from canary.gemini import ladder_report
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(tmp_path / "out" / "_ledger" / "x.jsonl"))
+    cells = ladder.expand_grid(["gemini-3.8-flash"], ["low", "high"], ["medium"], [0, 1])
+    ladder.run_grid(tmp_path / "out", cells, concurrency=2, client_factory=stub_factory(accuse_script),
+                    log=lambda m: None)
+    common = ["--bootstrap", "100", "--probe", str(tmp_path / "none.json"), "--no-figures", "--no-tags"]
+    assert ladder_report.main(["--runs", str(tmp_path / "out"), "--out", str(tmp_path / "a"),
+                               "--export", str(tmp_path / "ex"), *common]) == 0
+    assert ladder_report.main(["--runs", str(tmp_path / "ex" / "ladder_episodes.jsonl.gz"), "--ledger",
+                               str(tmp_path / "ex" / "ladder_ledger.jsonl.gz"), "--out", str(tmp_path / "b"), *common]) == 0
+    a, b = (json.loads((tmp_path / d / "ladder.json").read_text()) for d in ("a", "b"))
+    strip = lambda rows: [{k: v for k, v in r.items() if k != "source"} for r in rows]  # noqa: E731
+    assert strip(a["rows"]) == strip(b["rows"]) and a["ledger"] == b["ledger"]

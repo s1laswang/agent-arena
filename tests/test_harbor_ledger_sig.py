@@ -32,7 +32,7 @@ LEDGER = {"score": 0.66, "done": True, "end_reason": "accused", "accused": "e07"
 
 def _verifier_src(tmp: Path) -> str:
     sh = (ROOT / "harbor/template/tests/test.sh").read_text()
-    py = re.search(r"python3 - <<'PY'\n(.*?)\nPY", sh, re.S).group(1)
+    py = re.search(r"python3[^\n]*<<'PY'\n(.*?)\nPY", sh, re.S).group(1)
     return (py.replace("/logs/verifier", (tmp / "logs").as_posix())
               .replace("/evidence", (tmp / "evidence").as_posix())
               .replace("/tests/ledger_key", (tmp / "tests/ledger_key").as_posix()))
@@ -269,7 +269,8 @@ def test_build_writes_key_only_to_sidecar_and_verifier(tmp_path):
 
 
 def test_build_shared_verifier_passes_key_via_verifier_env(tmp_path):
-    assert _build_mod().main(["--tiers", "hard", "--seeds", "900000", "--out", str(tmp_path), "--verifier", "shared"]) == 0
+    assert _build_mod().main(["--tiers", "hard", "--seeds", "900000", "--out", str(tmp_path), "--verifier", "shared",
+                               "--unsafe-shared-not-for-judging"]) == 0
     t = tmp_path / "canary-hard-900000"
     key = (t / "environment/canary-server/ledger_key").read_text()
     assert not (t / "tests/ledger_key").exists() and not (t / "tests/Dockerfile").exists()

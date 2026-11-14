@@ -26,7 +26,7 @@ from canary.solver.regret import _gini, attribute, q_continue
 
 FRONTIER_FAMILIES = ("codex-gpt-5.5", "gpt-5.5", "grok", "opencode-gpt-5.6-sol")
 DEFAULT_OUT = Path("results/gemini_roles/failure_analyst/carbon-longctx-corpus")
-DEFAULT_DOC = Path("docs/reports/failure_gallery.md")
+DEFAULT_DOC = Path("docs/gemini/FAILURE_GALLERY_CARBON.md")
 
 VERBATIM_RULES = (
     "\n\nSTRICT GROUNDING AND SCHEMA RULES (enforced in code by exact substring check):\n"

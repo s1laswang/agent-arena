@@ -1,5 +1,18 @@
 # G4 Red-team swarm: report (newest first)
 
+## Sat 18:42 EET (`date`): positive control passes, blackbox wave 0 exploits, wave 2 running
+
+Done (verified):
+- **Positive control** (`results/gemini/swarm_control.{json,md}`, run `swarm-20261114-183504-74673`): the same swarm and verification, run on PUBLIC dev seeds 300–303, where the "seed regeneration from public code (dev seeds)" attack is real by design. **4/4 seed_reconstructor attackers** (hydrogen HIGH; carbon LOW, streamed) read the code, scanned the judge, held-out and dev windows with the public generator, matched the roster and accused on day 1 for a score of 1.0. The accusation audit put the reference posterior on the accused at about 0.05, so it marked each win **unjustified**. Fresh-seed confirmation gave **16/16 episodes at 1.0** against a paired solver mean of 0.42–0.50, and the result is **4 verified exploits**. The detector demonstrably catches a real exploit, which makes the 0 in the real waves meaningful.
+- **Blackbox wave** (`results/gemini/swarm_blackbox.{json,md}`, run `swarm-20261114-182120-61241`): 16 attackers plus 2 real-MCP re-runs, 564 calls, **0 exploits and 0 invariant violations**. The input filter blocked 11/18 planners, and in those runs the executor improvised. There was 1 score candidate (an MCP re-run that scored 0.70 with a correct accusation). Re-run on 3 fresh seeds it averaged 0.32 against the solver's 0.72, so it was **not confirmed**.
+- New code since then:
+  - MCP attempts are audited by deterministically replaying their calls in-process on the same world. A test checks that the replay matches the ledger.
+  - Carbon planners now run at LOW thinking with streaming. This fixes the 32k cap and the read timeouts.
+  - A by-wave table and wave labels in merges.
+  - Tier rotation now also varies for a single persona.
+
+Next: wave 2 (24 attackers) and wave 2b (16 attackers), escalation with the wave-1 results in context and a hydrogen executor, 4+4 concurrent. Then the final merged `results/gemini/swarm.md` for PR 2.
+
 ## Sat 18:20 EET (`date`): swarm v1 results committed (wave 1, 35 whitebox attackers)
 
 Done (verified):
@@ -11,7 +24,7 @@ Done (verified):
 - `tests/test_gemini_lab_swarm_found.py`: auto-written. No findings means no xfail tests; 5 hold-out tests replay the strongest attacker call sequences and assert that every invariant still holds (pass). `tests/test_gemini_lab_swarm.py` has 13 tests. All 18 pass in under 1 s.
 - Planner failures: 6 of 35. There were 3 carbon ReadTimeouts on the old HIGH setting and 3 carbon MAX_TOKENS failures at the 32k cap. In each case the executor improvised without a plan, and the attempt was still ledger-verified.
 
-Next: the blackbox wave (16, at most 8 concurrent) and wave 2 (escalation: carbon and hydrogen planners read wave-1 results in context, hydrogen executor, MCP re-runs plus fresh-seed confirmation), then a positive control. The positive control runs the seed_reconstructor persona on public dev seeds, where EXPLOITS #23 is real by design, to show the pipeline flags a real exploit. These results go into PR 2.
+Next: the blackbox wave (16, at most 8 concurrent) and wave 2 (escalation: carbon and hydrogen planners read wave-1 results in context, hydrogen executor, MCP re-runs plus fresh-seed confirmation), then a positive control. The positive control runs the seed_reconstructor persona on public dev seeds, where the "seed regeneration from public code (dev seeds)" attack is real by design, to show the pipeline flags a real exploit. These results go into PR 2.
 Blockers: none. Spend: $32.61 for feature=swarm so far (ledger, incl. probes and aborted runs).
 
 ## Sat 14:58: wave 1 running (40 whitebox attackers, Mac, concurrency 8)

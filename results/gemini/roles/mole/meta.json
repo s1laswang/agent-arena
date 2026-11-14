@@ -1,0 +1,54 @@
+{
+ "role": "mole",
+ "model": "gemini-4-carbon",
+ "provider_settings": {
+  "thinking_level": "model default (not sent; gemini-4-carbon: medium)",
+  "include_thoughts": true,
+  "temperature": "not sent (API default 1.0)",
+  "thought_signature_replay": true,
+  "api": "generateContent"
+ },
+ "thinking_level": "model default (not sent; gemini-4-carbon: medium)",
+ "git_sha": "6e2ba558800b27df0944cf3f1d592a865f4a0b41",
+ "git_branch": "gemini-dashboard",
+ "git_dirty": true,
+ "run_id": "roles-mole-20261114-185950",
+ "started_at": "2026-11-14T18:59:50+02:00",
+ "finished_at": "2026-11-14T19:03:19+02:00",
+ "host": "Silass-MacBook-Pro",
+ "ledger": {
+  "run_id": "roles-mole-20261114-185950",
+  "calls": 64,
+  "errors": 0,
+  "by_model": {
+   "gemini-4-carbon": 64
+  },
+  "in": 48117,
+  "out": 4406,
+  "thinking": 16499,
+  "cached": 0,
+  "cost_usd_list": 0.3053,
+  "latency_s_mean": 11.81
+ },
+ "tier": "medium",
+ "seeds": [
+  0,
+  1,
+  2,
+  3
+ ],
+ "investigators": [
+  "solver",
+  "heuristic"
+ ],
+ "mode": "arena (canary.agents.mole_arena), not the judge path",
+ "p_leak_gate": "respected (LLM leak dropped when MoleView.can_leak is False)",
+ "outputs": [
+  "episodes.jsonl (per-day mole decisions)",
+  "summary.json",
+  "ledger.jsonl"
+ ],
+ "code_commit": "ddbdd1a",
+ "code_commit_note": "launched from a tree based on 6e2ba55 with canary/gemini/roles.py not yet committed; ddbdd1a commits that code plus summary-only changes (lint/tone split, canary-leak count) that were applied to these outputs without new Gemini calls",
+ "layer": "arena mode (canary.agents.mole_arena), not the judge path; dev seeds only"
+}

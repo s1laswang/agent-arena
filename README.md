@@ -20,7 +20,7 @@ You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/u
 
 `make reproduce` plays the reference solver and five baselines on the 40 frozen judge seeds of each tier. It replays any committed frontier-agent episodes from `data/runs/committed/`, prints the table, and writes `results/judge_table.md`, `results/judge_episodes.jsonl` and `results/gap_chart.png`.
 
-**Expected numbers (mean score, expected ± CI) on the frozen tiers v1.2.** We ran keyless `make reproduce` 30 times on the 40 judge seeds per tier (commit edffdac), each run with a fresh secret. Each cell is the mean of the 30 run means, with their range in brackets. A single run prints its own 95% CI, about ±0.07–0.08 for the solver and ±0.25 for the heuristic.
+**Expected numbers on the frozen tiers v1.2.** We ran keyless `make reproduce` 30 times on the 40 judge seeds per tier (commit edffdac), each run with a fresh secret. Each cell is the mean of the 30 run means, with the lowest and highest run mean in brackets. A single run prints its own 95% CI, about ±0.07–0.08 for the solver and ±0.25 for the heuristic. To rebuild this table: `uv run python scripts/repro_spread.py 30` (about 5 minutes).
 
 | agent | medium (headline) | hard (headline) | easy (sanity tier only) |
 |---|---:|---:|---:|
@@ -42,14 +42,13 @@ You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/u
 
 The full spec is in [docs/CONTRACT.md](docs/CONTRACT.md). The agent receives every rate and rule as the MCP instructions.
 
-- **Tiers.** Easy has 12 employees, medium 20 and hard 30, over a horizon of 14 days. Medium and hard add the following:
+- **Tiers.** Easy has 12 employees, medium 20 and hard 30, over a horizon of 14 days. Every tier allows one canary per day. In easy, a leak surfaces the next day and a canary can have up to 3 variants. Medium and hard add the following:
   - an innocent decoy who writes angry messages;
   - a mole that frames others in the access logs;
   - a careful mole that avoids widely distributed canaries;
-  - leaks that surface in the feed 1–3 days late;
-  - only 2 variants per canary and 1 canary per day.
+  - leaks that surface in the feed late: 1–3 days on medium, 2–3 days on hard.
 
-  Hard also has clearance constraints.
+  Hard also allows only 2 variants per canary and adds clearance constraints. The exact values live in [`canary/rules.py`](canary/rules.py) (`TIERS_VERSION = "v1.2"`).
 - **Budget.** The agent gets 8 investigative calls per day (then it must `advance_day`) and 300 tool calls in total.
 - **Reward,** computed server-side from the ledger, never from agent text:
 
@@ -67,7 +66,7 @@ The environment is an MCP server (streamable HTTP) that serves one episode per p
 
 ```bash
 CANARY_TIER=medium CANARY_SEED=900007 CANARY_LEDGER_TOKEN=<random> make mcp   # http://127.0.0.1:8765/mcp
-cp configs/opencode/opencode.json /tmp/run/ && cd /tmp/run && opencode mcp list   # expect: canary connected
+mkdir -p /tmp/run && cp configs/opencode/opencode.json /tmp/run/ && cd /tmp/run && opencode mcp list   # expect: canary connected
 opencode run -m openai/<model> "You are the security lead. Find and accuse the mole."
 curl -s "http://127.0.0.1:8765/ledger?token=<random>"                            # grader: score from the ledger
 python -m canary.mcp_server --play solver --url http://127.0.0.1:8765/mcp       # reference run over MCP
@@ -83,13 +82,12 @@ Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium
 
 We attacked our own reward 33 times before the judges did, including real-server hunts by a Codex attacker and an external Grok judge run. Every attempt is logged in [docs/EXPLOITS.md](docs/EXPLOITS.md) with a regression test.
 
-- **Two real exploits, both closed:**
+- **Three real exploits, all closed:**
   - **Stop-early:** a free lottery ticket under 0/1 scoring, closed by making a wrong accusation cost −1.
-  - **Judge seeds failing open without a secret:** an agent could regenerate the world from public code and read the mole. Judge worlds now fail closed with a fresh secret, and no world file containing the mole is committed.
+  - **Judge seeds failing open without a secret (#24):** an agent could regenerate the world from public code and read the mole. Judge worlds now fail closed with a fresh secret, and no world file containing the mole is committed.
+  - **Reading the server's environment from the same uid (#27):** the server now takes its secrets only from 0600 files (`*_FILE`) and never exports them. In Harbor the server runs in a separate sidecar container with no shared PID namespace or filesystem, and [`harbor/check_isolation.sh`](harbor/check_isolation.sh) checks that boundary from inside the agent container.
 
-  A third finding, that public dev seeds can be regenerated from the code, is handled by design: the MCP server refuses dev seeds unless `CANARY_ALLOW_DEV=1`.
-
-  One finding is still being closed: a process with the same uid could read the server's environment (#27). The server now takes its secrets from 0600 files (`*_FILE`), and the Harbor sidecar keeps it out of the agent's PID namespace.
+  A further finding, that public dev seeds can be regenerated from the code, is handled by design: the MCP server refuses dev seeds unless `CANARY_ALLOW_DEV=1`.
 - **Probes that hold,** with tests:
   - fuzzing (malformed, homoglyph and list ids, accusing after the episode ends, a parallel accuse race);
   - error and length side channels between the mole and innocents;
@@ -112,7 +110,7 @@ Canary keeps the hard part of the real problem. Leaks arrive late, the mole adap
 
 ## Gemini
 
-Placeholder: see [pitch/GEMINI.md](pitch/GEMINI.md) (owned by AGENTS). It covers the Mole Forge, the world builder, the scenario designer, the exploit hunter, the analyst and the arena mole, all behind `canary.llm`, with a stub backend so that everything here runs without keys.
+Gemini's role is described in [pitch/GEMINI.md](pitch/GEMINI.md). It covers the Mole Forge, the world builder, the scenario designer, the exploit hunter, the analyst and the arena mole, all behind `canary.llm`, with a stub backend so that everything here runs without keys.
 
 ## Repo map
 

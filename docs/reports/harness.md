@@ -1,5 +1,46 @@
 # HARNESS report
 
+## 03:05 head summary (HEAD-HARNESS, reviewer/QA role)
+- Tiers v1.2 FROZEN (db104c9). The fresh-clone check (~05:00), the reproduce/README numbers and Harbor instruction.md must all use v1.2 and the regenerated instruction.md (relayed to the repro and harbor branches).
+- The repro branch already has the parse_seeds fix (a73b283): bare N > 1000 is one seed, plus a 10k cap. Review pending.
+## 02:30 status
+- Head was blocked on a permission prompt from 01:55 to 02:25. CEO reassigned the build work: eval.py and mcp_server.py are merged (f2931d4); repro/README/CI is on justSilas-harness-repro; Harbor and isolation are on justSilas-harness-harbor (engineers in the CEO session).
+- Head role from now on: review and QA of eval/MCP (issues go to the CEO), a fresh-clone reproduce at about 06:30, and this summary.
+- Blockers: none.
+- Next 45 min: review canary/eval.py and canary/mcp_server.py, run make test, report issues.
+
+## 02:45 status
+- Done (verified: ran): `make test` 338 passed. Live MCP server medium/900003 + `--play solver` over MCP → accused correctly, ledger score 0.64; /ledger 403 without/with wrong token; second session gets "episode over".
+- Finding P0 (sent to CEO): no committed SALT / CANARY_WORLD_SECRET → judge worlds re-randomise per process (solver medium/900003: 0.65, 0.43, 0.79, 0.0 in separate runs). `make reproduce` can't give exact numbers until SALT is committed and reproduce fails closed.
+- Finding P1: one in-process solver episode ran >4 min / 1.9 GB before I killed it (others 0.02 s) → solver needs a guard.
+- Finding P2: `--reproduce` still a stub (repro engineer); LLM agents only via MCP; ledger_payload uses Env private attrs.
+- Next: review the harbor/repro branches as they land; fresh-clone reproduce at about 06:30.
+
+## 02:55 decisions (CEO)
+- SALT will NOT be committed (public repo + internet in agent containers = answer key). `make reproduce` uses one random secret per invocation shared by all its runs (paired comparison; statistical repro, exact with CANARY_WORLD_SECRET) → repro engineer, plus a fixed-secret two-subprocess determinism test. Harbor bakes a build-time secret into the server image only (harbor/build.py, never committed) → harbor engineer.
+- Solver guard + 1.9 GB root-cause → ENV. Public env.verdict() → ENV.
+- QA follow-up for me: the README must state expected numbers as mean ± CI (not exact), and the fresh-clone check must verify the gap holds across two different secrets.
+
+## 02:55 P1 resolved (not a solver bug)
+- Root cause (verified): `parse_seeds('900003')` returns `range(900003)`, because a bare integer means "N seeds". `--seeds 900003` therefore queues 900,003 episodes. Reproduced 6/6 (60 s timeout, about 1 GB RSS). run_episode itself is fine. Fix + test routed to the repro engineer via the CEO; ENV told to stand down.
+- The fresh-clone check moves to about 05:00 (clock correction).
+
+## 02:58 head review: repro + harbor (both merged on justSilas)
+- OK (verified): the harbor branch contains db104c9. harbor/canary-task/instruction.md equals Env('medium').instruction() under v1.2 exactly; harbor/build.py renders it per tier, seed-independent.
+- OK (verified): seed fix. parse_seeds('900003') == [900003]; '5' gives 5 seeds; ranges parse.
+- BLOCKER (sent to CEO → repro engineer): the README "Expected numbers" are v1.1 (849e652) and results/judge_table.md was generated at ecb986b (pre-v1.2). Both must be regenerated on v1.2, with the README in mean ± CI. The repro branch is behind (no db104c9, no unmerged commits).
+- Gap on the old table (my checker: solver lower CI > every baseline upper CI, do_nothing == 0): medium +0.735, hard +0.596, easy +0.091 (CIs only 0.031 apart). It holds, but easy is thin.
+- Fresh-clone check scheduled: my background job PID 64753 wakes at 05:00 → clone into /tmp → make setup → make reproduce under secrets A and B → gap check on both tables.
+
+## 03:20 head: CEO tasks 1-3
+- Done (verified: ran): scripts/repro_spread.py committed + referenced in the README. An independent 30-secret run agrees with the README within 0.04 on every mean.
+- Done (verified: make test 449 passed): README wording + two factual rule fixes vs rules.py v1.2 (variants per tier, canaries/day, delays); no numbers changed. Merge into justSilas requested from the CEO.
+- Open (content, not wording): the README lacks the failure-mode / regret-tag story; the frontier row is pending; the Tesla 2008 date is unverified.
+- Fresh-clone check rescheduled with harbor lint: my job PID 82715 (old PID 64753 stopped by me), wakes at 05:00.
+
+---
+# Engineer sections
+
 ## 02:37 status (mcp-server engineer, filling in for HEAD-HARNESS)
 
 ### Done (verified)

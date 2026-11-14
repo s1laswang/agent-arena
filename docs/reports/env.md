@@ -85,3 +85,9 @@ Fresh-seed table (`uv run --python 3.12 python scripts/fresh_table.py 1000 1400`
 ## 03:32 status: v1.3 MERGED (justSilas 0933805)
 - Verified: make test 469 passed (pipefail). Known V in status; solver v1.3; grok_tactics; results/fresh_table_v1.3.md. FR8 800 fresh seeds/tier: solver .779/.632/.575, acc 99.6/88.7/84.8%, solver-grok +.089/+.174/+.233.
 - Waiting: AGENTS official gpt-5.5 v1.3 runs -> regret table. INTEGRITY fuzz on v1.3.
+
+## 14:35 status (HEAD-ENV relaunch, NEXT-LEVEL)
+- Done: worktrees `justSilas-env2` (skill ladder, merges when green) and `justSilas-v15` (WS2 bias layer, NOT merged; CEO decides at Gate B 20:00). Rules v1.4 frozen.
+- In progress: ladder engineer (`justSilas-env2-ladder`, n≥400/tier on fresh dev seeds, ETA 16:30); bias engineer (`justSilas-v15-bias`: rumours, grudge pairs, authority, misforwards, mole `seed_rumour`; solver models the stated likelihoods; ETA 16:40).
+- Blockers: none. Mac load capped at 3+3 processes.
+- Next: review both, merge the ladder, then v1.5 numbers in `results/fresh_table_v1.5-candidate.md` by 17:00.

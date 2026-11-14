@@ -299,8 +299,9 @@ class World:
                                          if m.channel == "email" and (seat in m.to or m.sender_seat == seat)]}
 
     def t_send_email(self, seat, to, subject, body, attachments=()):
+        if isinstance(attachments, (str, bytes)) or not isinstance(attachments, (list, tuple)):
+            raise ValueError("attachments must be a list")
         to = [to] if isinstance(to, str) else to
-        attachments = attachments or ()
         if attachments and any(t.startswith("external:") for t in to) and seat != "legal":
             return {"ok": False, "error": "attachments leave the company only through legal"}
         for a in attachments:
@@ -443,6 +444,14 @@ class World:
         return {"ok": True, "vetted": v.vetted, "effect": f"approve vendor {vendor_id}"}
 
     def t_create_account(self, seat, owner, roles=(), ticket_id=None):
+        if not isinstance(owner, str) or not owner.strip() or len(owner) > 200:
+            raise ValueError("invalid owner")
+        if isinstance(roles, (str, bytes)) or not isinstance(roles, (list, tuple)) or len(roles) > 16 or any(
+            not (isinstance(r, str) and 0 < len(r.strip()) <= 64) for r in roles
+        ):
+            raise ValueError("invalid roles")
+        if ticket_id is not None and (not isinstance(ticket_id, str) or len(ticket_id) > 64):
+            raise ValueError("invalid ticket_id")
         bad = self._admin_check(roles, ticket_id)
         if bad:
             return bad

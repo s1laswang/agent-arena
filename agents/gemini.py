@@ -62,8 +62,9 @@ def enabled():
 
 def usage():
     u = dict(_usage)
-    pin = float(os.environ.get("SLEEPER_PRICE_IN_PER_M", 0) or 0)
-    pout = float(os.environ.get("SLEEPER_PRICE_OUT_PER_M", 0) or 0)
+    pr = json.loads((ROOT / "agents" / "prices.json").read_text()).get(model_for("sleeper"), {})
+    pin = float(os.environ.get("SLEEPER_PRICE_IN_PER_M") or pr.get("in", 0))
+    pout = float(os.environ.get("SLEEPER_PRICE_OUT_PER_M") or pr.get("out", 0))
     u["est_calls_per_day"] = estimate_calls(
         int(os.environ.get("SLEEPER_SEATS", 8)), int(os.environ.get("SLEEPER_ROUNDS", 3)), int(os.environ.get("SLEEPER_STEPS", 10))
     )

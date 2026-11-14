@@ -1,0 +1,75 @@
+{
+  "role": "investigators",
+  "subrole": "hard_thinking_ablation",
+  "model_id": "gemini-4-carbon",
+  "tiers_version": "v1.4",
+  "tier": "hard",
+  "seed": 0,
+  "episode_count": 2,
+  "commit": "3df4d2b65bd05a67f2d94ef18d967da05c0e90d7",
+  "timestamp": "2026-11-14T14:32:12+0000",
+  "command": "CANARY_LLM_MAX_RETRIES=10 PYTHONPATH=. python scripts/run_carbon_hard_thinking.py --out results/gemini_roles/investigators/thinking-ladder-carbon-hard0 --model gemini-4-carbon --tier hard --seed 0 --max-retries 10",
+  "usage": {
+    "calls": 163,
+    "in": 6499263,
+    "out": 5422,
+    "thinking": 52968,
+    "cached": 6101700,
+    "out_incl_thinking": 58390,
+    "cost_usd": 13.582426,
+    "cost_usd_est": 1.989192,
+    "latency_s": 2892.031,
+    "by_level": {
+      "low": {
+        "calls": 39,
+        "in": 458656,
+        "out": 1246,
+        "thinking": 0,
+        "cached": 365771,
+        "out_incl_thinking": 1246,
+        "mean_thinking_per_call": 0.0,
+        "max_thinking_call": 0,
+        "thinking_share_of_generation": 0.0,
+        "cost_usd": 0.929772,
+        "cost_usd_est": 0.234805,
+        "latency_s": 738.157,
+        "max_call_s": 67.516,
+        "wall_s": 738.204,
+        "model_version": "gemini-4-carbon",
+        "run_id": "hard_thinking_ablation:gemini-4-carbon:low:hard:0"
+      },
+      "high": {
+        "calls": 124,
+        "in": 6040607,
+        "out": 4176,
+        "thinking": 52968,
+        "cached": 5735929,
+        "out_incl_thinking": 57144,
+        "mean_thinking_per_call": 427.16,
+        "max_thinking_call": 9925,
+        "thinking_share_of_generation": 0.9269,
+        "cost_usd": 12.652654,
+        "cost_usd_est": 1.754387,
+        "latency_s": 2153.874,
+        "max_call_s": 127.585,
+        "wall_s": 2153.943,
+        "model_version": "gemini-4-carbon",
+        "run_id": "hard_thinking_ablation:gemini-4-carbon:high:hard:0"
+      }
+    }
+  },
+  "low_score": 0.78,
+  "high_score": 0.36,
+  "solver_score": 0.64,
+  "levels_summary": {
+    "low": 0.78,
+    "high": 0.36
+  },
+  "key_metric": "low +0.780 (0 think tok, day 7) -> high +0.360 (52,968 think tok, day 13) vs solver +0.640",
+  "replay_verified": true,
+  "stub": false,
+  "ledger_run_ids": [
+    "hard_thinking_ablation:gemini-4-carbon:low:hard:0",
+    "hard_thinking_ablation:gemini-4-carbon:high:hard:0"
+  ]
+}

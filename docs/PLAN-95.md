@@ -131,7 +131,7 @@ Never print keys. Never touch other users' jobs.
 (2) B4: run an instruction audit (one Gemini pass, gemini-4-carbon) for trick wording, hidden info or broken tools. Answer or fix the findings in docs/DIFFICULTY.md; rules changes go to the CEO only.
 (3) C3 at 02:00 on the tagged candidate: rerun `make hunt` and the Gemini swarm, and run the 15-minute judge-protocol hunt with Vaishnav. Report to docs/reports/integrity.md.
 
-## Update 15 Nov ~00:20
+## Update Sat 14 Nov ~22:50
 - **Verda cloud GPU** (Silas approved, cap $30): overflow GPU for the tiebreaker, so v3 seed 0 no longer waits for FR8 GPUs held by the fleet. **FR8 is the only Verda owner.** Other heads route GPU requests to FR8 with a GPU-hours estimate. Instances are deleted as soon as results are pulled; spend goes in docs/reports/fr8.md.
 - **Gap gate at 01:40** (reviewer guardrails adopted):
   - Track 1 solver_v2: same tools and instruction; tuned off seeds 0–29 and 900000+; reported on fresh and judge seeds; v1 rows kept.

@@ -51,7 +51,12 @@ Baselines (v1.3, 30 fresh secrets, README): solver medium +0.64 / hard +0.55; he
   - #1 stop-early (wrong = −1);
   - #10 logs-only solve;
   - **#24 judge worlds regenerable from public code** (found independently by us and by the Grok judge run) → fail-closed secret;
-  - **#25/#27 /proc environ leak** → `*_FILE` secrets + Harbor sidecar.
+  - **#27 /proc environ leak** (the Grok judge run called it #25) → `*_FILE` secrets + Harbor sidecar;
+  - #23 public dev/train seeds can be regenerated → the server serves only judge and held-out seeds unless `CANARY_ALLOW_DEV=1`.
+- **Still open:**
+  - the Grok judge re-run on the final tip (`grok-judge` was last updated at 00:28);
+  - the Gemini exploit hunter (needs the key plus the `canary.llm` wiring in `hunter.py`);
+  - the Codex hunts are weak evidence, since moderation cut 8 of 9 runs.
 - `make hunt` (no keys, ~1 min): every track reports a best non-solver score of 0.000 with 0 violations.
 - Harbor: server sidecar (uid 10001, build-time secret as a 0600 file); `check_isolation.sh`: 11 checks, 0 findings; oracle via Harbor: solver 0.79, do_nothing 0.0, stop_early −1.0.
 

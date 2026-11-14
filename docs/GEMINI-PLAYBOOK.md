@@ -86,6 +86,7 @@ print(r.text, r.usage_metadata.prompt_token_count, r.usage_metadata.thoughts_tok
 - **AfterQuery:** keep Gemini out of the reward. It already plays the frontier agent (gemini-4-carbon), the mole and the forge. Canary Lab adds the ladder, atlas, swarm and dashboard on `gemini-track`, merging at 05:00 Sunday.
 
 ## Field notes (newest first)
+- Sat 14:45, G3 (atlas): a **non-streamed** gemini-4-carbon call over 793k input tokens died after 527 s with `RemoteProtocolError: Server disconnected without sending a response` (nothing billed, nothing returned). Use `generate_content_stream` for long-context calls (the stream keeps the connection alive; take `usage_metadata` from the last chunk), or shard to <=250k tokens.
 - Sat 16:05, G1 (gateway): **measured rate limits on our key**, Mac → Canary Lab gateway → API. Closed loop with one-line prompts, thinking LOW, 2,574 calls, $0.56 in total (`results/gemini/gateway_bench.json`).
   **gemini-3.8-flash scales linearly**:
   - C=8: 222 req/min

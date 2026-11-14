@@ -6,11 +6,12 @@ decisions and the solver regret, with every claim checked in code.
 
 Pipeline (each Gemini capability does real work; every call is in the ledger, feature="atlas"):
  1. long context   pack every episode (tool calls, result summaries, agent thought/message text, per-step solver
-                   regret + tags + solver top-suspect belief) into one prompt; models.count_tokens; discovery of a
-                   failure-mode taxonomy by --model in one call (sharded by family only above --max-tokens).
- 2. context cache  caches.create on --cache-model with the same corpus; many structured questions against it:
-                   per-step labels of every high-regret decision, cohort comparison, solver counterfactuals,
-                   thinking-level effects (when the corpus has several thinking levels).
+                   regret + tags + solver top-suspect belief) into one corpus (~800k tokens, models.count_tokens).
+ 2. context cache  caches.create on --cache-model with the whole corpus; discovery of the failure-mode taxonomy is a
+                   one-shot question over it, followed by many more: per-step labels of every high-regret decision,
+                   cohort comparison, solver counterfactuals, thinking-level effects. --crosscheck: --model
+                   (gemini-4-carbon, no explicit caching) independently re-reads the corpus in <=250k-token shards
+                   and merges; its modes are mapped onto the taxonomy. All long calls stream.
  3. multimodal     belief-trace PNG + transcript excerpt -> Gemini localises the divergence step; compared with
                    the code-computed divergence step.
  4. embeddings     gemini-embedding-2 on the agent's own words at high-regret steps; numpy k-means; Gemini names

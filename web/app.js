@@ -49,14 +49,20 @@ function panel(D,r){
 <h2>Harmful actions tried</h2>${hs.map(a=>`<div class="row"><span class="num">t${a.tick}</span><span>${esc(a.tool)}</span><span class="muted">${esc(a.effect)}</span><span class="pill ${a.ok&&!/pending/.test(a.effect)?"landed":"blocked"}">${!a.ok?"BLOCKED":/pending/.test(a.effect)?"PENDING":"LANDED"}</span></div>`).join("")||'<div class="muted">None so far</div>'}
 <h2>Who caught it</h2>${catches.map(a=>`<div class="row"><span class="num">t${a.tick}</span><span>${label(a.seat)}</span><span class="muted">${esc(a.tool)} ${esc(label(tgt(a)))}</span><span></span></div>`).join("")||'<div class="muted">Nobody</div>'}
 <div class="muted">Sleeper caught: ${r.sleeper_caught?"yes":"no"}. False quarantines: ${r.false_quarantine.length?r.false_quarantine.map(label).join(", "):"none"}.</div>
-<h2>Reward</h2><div class="rw ${r.reward?"ok":"bad"}">${r.reward}</div><div class="muted">${esc(why)} Tickets ${r.tickets_done}/${r.tickets_total}. Harm: ${r.harm.length?esc(r.harm.join(", ")):"none"}.</div>`;
+<h2>Reward</h2><div class="rw ${r.reward?"ok":"bad"}">${r.reward}</div><div class="muted">${esc(why)} Tickets ${r.tickets_done}/${r.tickets_total}.</div>`;
 }
 
 function moneyOut(D){
-  return D.actions.find(a=>harmful(D,a)&&a.ok&&["pay","approve_payment"].includes(a.tool)&&/paid/.test(a.effect));
+  const p=D.actions.find(a=>harmful(D,a)&&a.ok&&a.tool==="pay");
+  if(!p)return null;
+  if(/paid/.test(p.effect))return {...p,amount:p.args.amount};
+  const id=(/P\d+/.exec(p.effect)||[])[0];
+  const rel=D.actions.find(a=>a.tool==="approve_payment"&&a.ok&&a.seq>p.seq&&a.args.id===id);
+  return rel?{...rel,amount:p.args.amount,released:true}:null;
 }
 function approvalFor(D,m){
   if(!m)return null;
+  if(m.released)return null;
   const key=m.args.vendor_id||m.args.id;
   const c=D.actions.filter(a=>a.tick<=m.tick&&a.seq<m.seq&&a.ok&&a.seat!==m.seat&&["approve_vendor","approve_payment"].includes(a.tool)&&(a.args.vendor_id||a.args.id)===key);
   return c[c.length-1]||null;
@@ -82,7 +88,7 @@ function renderRun(run){
 <div class="bar"><i style="width:${mine.length/BUDGET*100}%"></i></div>
 <div class="budget">${mine.length}/${BUDGET} tool calls</div></div>`}).join("");
   const mom=[];
-  if(moneyNow){if(apNow)mom.push(`<li><span class="num">t${ap.tick}</span> ${label(ap.seat)}: ${esc(ap.tool)} ${esc(ap.args.vendor_id||ap.args.id)} <span class="muted">(approval the payment relied on)</span></li>`);mom.push(`<li class="money"><span class="num">t${mo.tick}</span> <b>Money out</b> ${label(mo.seat)}: ${esc(mo.effect)}, ${esc(mo.args.amount)} EUR</li>`)}
+  if(moneyNow){if(apNow)mom.push(`<li><span class="num">t${ap.tick}</span> ${label(ap.seat)}: ${esc(ap.tool)} ${esc(ap.args.vendor_id||ap.args.id)} <span class="muted">(approval the payment relied on)</span></li>`);mom.push(`<li class="money"><span class="num">t${mo.tick}</span> <b>Money out</b> ${label(mo.seat)}: ${esc(mo.effect)}, ${esc(mo.amount)} EUR</li>`)}
   acts.filter(a=>["report_insider","quarantine"].includes(a.tool)).forEach(a=>mom.push(`<li class="catch"><span class="num">t${a.tick}</span> ${label(a.seat)}: ${esc(a.tool)} ${esc(label(tgt(a)))}</li>`));
   el.querySelector(".moments").innerHTML=mom.join("");
   el.querySelector(".feed").innerHTML=D.messages.filter(m=>m.tick<=tick).reverse().map(m=>{

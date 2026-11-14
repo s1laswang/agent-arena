@@ -9,7 +9,7 @@ git fetch -q origin
 mkdir $W/code $W/data
 git archive $REF lab train sleeper agents requirements.txt | tar -x -C $W/code
 cp train/data/*.jsonl $W/data/
-python3 -c "import json,os;s=os.environ.get;print(json.dumps({'models':s('MODELS','Qwen/Qwen2.5-0.5B-Instruct').split(),'sft':s('SFT_ARGS','').split(),'eval':s('EVAL_ARGS','').split(),'decide':s('DECIDE_ARGS','').split(),'data':s('DATA_FILE','train.jsonl')}))" > $W/data/run.json
+python3 -c "import json,os;s=os.environ.get;print(json.dumps({'models':s('MODELS','Qwen/Qwen2.5-0.5B-Instruct').split(),'sft':s('SFT_ARGS','').split(),'eval':s('EVAL_ARGS','').split(),'decide':s('DECIDE_ARGS','').split(),'data':s('DATA_FILE','train.jsonl'),'sft_extra':{'Qwen2.5-1.5B-Instruct':s('SFT_ARGS_1_5B','').split()}}))" > $W/data/run.json
 T0=$(date +%s)
 for d in code data; do
   printf '{"title":"sleeper-%s","id":"%s/sleeper-%s","licenses":[{"name":"CC0-1.0"}]}' $d $U $d > $W/$d/dataset-metadata.json

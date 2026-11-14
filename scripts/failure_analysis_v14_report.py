@@ -348,7 +348,25 @@ def render(data: dict) -> str:
     a("")
     a("✗ = wrong accusation. *cf* = exact score had Gemini accused the top suspect at that end of day.")
     a("")
-    a("## 8. What this means for the rubric")
+    a("## 8. Context from other analyses (cited, not recomputed by this script)")
+    a("")
+    a("- **The reference is a fair bar.** HEAD-ENV's `docs/reports/reference_optimality.md` (PR #20, `justSilas-oracle-range` "
+      "77e61e3; hard dev seeds 8000–8399) finds the v1.4 solver's posterior *calibrated*: accuracy at accusation is "
+      "96–99% on hard, and P(top = mole) tracks the posterior across all decision days. This is the property the luck "
+      "adjustment and the \"expected wrong accusations\" above rely on. It also finds the solver's stopping *near-optimal*: "
+      "the best p ≥ a + b·V rule adds +0.005 on hard. Its hard loss is information-rate bound, made of leak damage "
+      "0.250 plus canary cost 0.120 out of 0.422, and a stronger `solver_v2` gained only +0.012 ± 0.029 on fresh "
+      "seeds. So Gemini's shortfall measured against it is Gemini's own, not a soft reference.")
+    a("- **Why hard and not medium.** S3's scripted version of the Gemini swarm's w2b-008 plan is a no-Bayes elimination "
+      "heuristic that intersects suspects with the recipients of leaked documents and canaries and accuses only when one suspect "
+      "is left (`canary/redteam/swarm_probes.py` on `s3-integrity` d3e7629, work in progress, numbers as reported by S3). "
+      "On 40 judge seeds per tier it ties the solver on easy (+0.742 vs +0.765) and medium (+0.648 vs +0.671), but "
+      "falls clearly behind on hard (+0.363 vs +0.545, 3 wrong). That matches the pattern here. On medium, set elimination is "
+      "enough, so frontier parity there (OpenCode 111%) is expected. On hard, fingerprint noise and the 2–3-day delays break "
+      "strict elimination (seeds 1 and 26 above: the strict consistent set excluded the true mole after a flip), and "
+      "weighing evidence and choosing what to test next is what pays.")
+    a("")
+    a("## 9. What this means for the rubric")
     a("")
     a("- **Main mistakes, tied to decisions:** (1) committing before the leaks isolate one person, including three negative-EV "
       "shots at the horizon; (2) spending the daily action budget on interviews instead of the second canary; (3) late, "

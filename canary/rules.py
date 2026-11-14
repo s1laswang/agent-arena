@@ -55,7 +55,7 @@ class TierParams:
 
 
 TIERS: dict[str, TierParams] = {
-    # tiers v1.1 (bayes-solver): medium max_variants 2->3, hard framing_rate 1.5->2.0 (monotone easy>medium>hard)
+    # tiers v1.1 (bayes-solver): medium max_variants 2->3, hard framing_rate 1.5->3.0 (monotone easy>medium>hard)
     # tiers v1 (04:40): FR8 J1 recommendation (153k episodes, v0.3 scoring), fr8/analysis/out/j1_recommendation.md
     "easy": TierParams(
         name="easy", n_employees=12, n_days=14, p_leak=0.9, delay_choices=(1,),
@@ -79,7 +79,7 @@ TIERS: dict[str, TierParams] = {
         restrict_cost_per_day=0.01, actions_per_day=8, tool_call_cap=300,
         log_rate_benign=1.0, log_rate_mole=1.0, interview_lr=1.2, p_evasive_innocent=0.2,
         decoy=True, framing=True, careful_mole=True, access_constraints=True,
-        framing_rate=2.0, p_after_hours_mole=0.3, p_single_dept_recipients=0.0,
+        framing_rate=3.0, p_after_hours_mole=0.3, p_single_dept_recipients=0.0,
     ),
 }
 

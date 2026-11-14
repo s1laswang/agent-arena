@@ -2,13 +2,13 @@
 
 > **Headline findings** (auto-generated from the table below: 8–10 paired seeds per cell; 95% CIs are wide, so read them as directions).
 >
-> **gemini-3.5-flash with medium or high thinking matches the reference solver on hard:** 98% [82%, 119%] and 109% [90%, 139%] of the solver on the same seeds, 20/20 correct accusations, $0.33–0.37 per episode, versus $1.68 for gemini-4-carbon at high thinking.
+> **gemini-3.5-flash (requested ID; the API serves gemini-3.6-flash) with medium or high thinking matches the reference solver on hard:** 98% [82%, 119%] and 109% [90%, 139%] of the solver on the same seeds, 20/20 correct accusations, $0.33–0.37 per episode, versus $1.68 for gemini-4-carbon at high thinking.
 >
 > **gemini-3.1-flash-lite fails at every thinking level:** its mean score is below the do-nothing score (0) in 8/8 (level, tier) cells; at minimal thinking it accused the wrong employee in 19/20 episodes.
 >
 > **gemini-3.8-flash gains from thinking on medium** (-2% [-77%, 62%] at low → 92% [82%, 106%] at high); on hard 3% [-82%, 68%] → 31% [-44%, 88%]. Pooled over the flash models, low → high thinking changes premature-accusation regret by -0.11/episode on medium, -0.15/episode on hard; uninformative-canary regret goes 0.004 → 0.002 on medium, 0.017 → 0.029 on hard (thinking buys commit timing more than experiment design).
 
-Generated 2026-11-14T23:11:40+0200 at git `1889696adf` from `~/agent-arena-data/gemini/ladder/ladder-v14`. 350 valid Gemini episodes in 34 cells; ledger: 18735 calls, 320 run ids, list price $143.91.
+Generated 2026-11-14T23:14:41+0200 at git `6c8b05d11d` from `~/agent-arena-data/gemini/ladder/ladder-v14`. 350 valid Gemini episodes in 34 cells; ledger: 18788 calls, 320 run ids, list price $144.51.
 
 Every cell is one (model, thinking level, tier) played by the in-process `LLMPolicy` (full history, thought-signature replay) through `canary.agents.play`, the frontier measurement's own runner, on v1.4 dev seeds. The solver and baselines are replayed on exactly the same worlds. **ratio** = mean score / solver's mean on the same seeds, with a paired bootstrap 95% CI over seeds; **luck-adj.** scores each accusation as P·V − (1−P) under the solver's exact posterior at that step.
 

@@ -64,6 +64,8 @@ def test_run_resume_and_report_format(tmp_path, monkeypatch):
     assert ep["meta"]["ladder"]["model"] == "gemini-3.8-flash" and ep["meta"]["ladder"]["tokens"]["calls"] == 2
     meta = json.loads((d / "meta.json").read_text())
     assert meta["thinking_level"] == c.level and meta["agent"] == "gemini:gemini-3.8-flash"
+    assert meta["tiers_version"] == "v1.4" and meta["model_id"] == "gemini-3.8-flash" and meta["launch_git_sha"]
+    assert ep["meta"]["ladder"]["code_fingerprint"] == ladder.code_fingerprint()
     assert (d / "transcripts" / f"{c.seed}.json").exists() and not (d / "RUNNING.json").exists()
     rows = [json.loads(x) for x in (tmp_path / "ledger.jsonl").read_text().splitlines()]
     assert len(rows) == 8 and all(x["feature"] == "ladder" and x["run_id"].startswith("ladder:") for x in rows)

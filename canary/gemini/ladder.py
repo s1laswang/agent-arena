@@ -252,6 +252,10 @@ class TallyClient:
         r = self.inner.chat(messages, **kw)
         dt = time.time() - t0
         um = getattr(r.raw, "usage_metadata", None) if getattr(r, "raw", None) is not None else None
+        mv = getattr(r.raw, "model_version", None) if getattr(r, "raw", None) is not None else None
+        if isinstance(mv, str):  # what the API says it served (gemini-3.5-flash -> gemini-3.6-flash)
+            self.tally.setdefault("model_versions", {})
+            self.tally["model_versions"][mv] = self.tally["model_versions"].get(mv, 0) + 1
 
         def n(a):
             v = getattr(um, a, 0) if um is not None else 0
@@ -304,6 +308,44 @@ def default_client_factory(c: Cell, run_id: str, meta: dict):
     return lab_client(f"gemini:{c.model}", feature=FEATURE, run_id=run_id, meta=meta, **kw)
 
 
+# Files whose content decides what an episode is (env, rules, harness, Gemini client). Their sha256 is recorded per
+# cell, so a cell's code is pinned even if HEAD moves while a long run is in flight.
+CODE_FILES = ("canary/env.py", "canary/rules.py", "canary/world.py", "canary/types.py", "canary/eval.py",
+              "canary/mole/dsl.py", "canary/agents/llm_policy.py", "canary/agents/play.py", "canary/agents/loop.py",
+              "canary/agents/runlog.py", "canary/llm/base.py", "canary/llm/gemini_backend.py",
+              "canary/gemini/ledger.py")   # ladder.py itself is orchestration only (scheduling, labels)
+
+
+def code_fingerprint() -> str:
+    import hashlib
+    root = Path(__file__).resolve().parents[2]
+    h = hashlib.sha256()
+    for f in CODE_FILES:
+        p = root / f
+        h.update(f.encode() + b"\0" + (p.read_bytes() if p.exists() else b"<missing>") + b"\0")
+    return h.hexdigest()[:16]
+
+
+def provenance() -> dict:
+    """Launch-time provenance (computed once per process): commit, dirty flag, tiers version, code fingerprint."""
+    global _PROV
+    if _PROV is None:
+        import subprocess
+        from canary.rules import TIERS_VERSION
+        root = Path(__file__).resolve().parents[2]
+        try:
+            dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", *CODE_FILES], capture_output=True,
+                                        text=True, cwd=root, timeout=10).stdout.strip())
+        except Exception:  # noqa: BLE001
+            dirty = None
+        _PROV = {"tiers_version": TIERS_VERSION, "launch_git_sha": _git_sha(), "launch_code_dirty": dirty,
+                 "code_fingerprint": code_fingerprint(), "launched_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+    return _PROV
+
+
+_PROV: dict | None = None
+
+
 def _git_sha() -> str:
     from canary.agents.runlog import git_sha
     return git_sha()
@@ -345,7 +387,8 @@ def run_cell(out: Path, c: Cell, ladder_run: str, client_factory: Callable | Non
     tally = dict(client.tally) if client is not None else {}
     eps = read_eps(d)
     ep = eps[-1] if eps else None
-    label = {**meta, "thinking_level": c.level, "label": f"{c.model} @ thinking={c.level}", "run_id": run_id,
+    label = {**meta, **provenance(), "thinking_level": c.level, "label": f"{c.model} @ thinking={c.level}",
+             "run_id": run_id,
              "wall_s": round(wall, 1), "tokens": tally, "attempt": attempts(out, c) + 1, "host": HOST,
              "gateway": bool(os.environ.get("GEMINI_GATEWAY_URL"))}
     if ep is not None:  # label the episode REAL: model + thinking level (agent field kept as play.py wrote it)
@@ -353,7 +396,8 @@ def run_cell(out: Path, c: Cell, ladder_run: str, client_factory: Callable | Non
         (d / "episodes.jsonl").write_text(json.dumps(ep, default=str) + "\n")
         mf = d / "meta.json"
         m = json.loads(mf.read_text()) if mf.exists() else {}
-        m.update({"thinking_level": c.level, "label": label["label"], "feature": FEATURE, "ladder_run": ladder_run,
+        m.update({**provenance(), "model_id": c.model, "thinking_level": c.level, "label": label["label"],
+                  "feature": FEATURE, "ladder_run": ladder_run,
                   "run_id": run_id, "tokens": tally, "wall_s": round(wall, 1), "host": HOST,
                   "seed_key": "public (dev seed)", "smoke": False})
         mf.write_text(json.dumps(m, indent=1, default=str))
@@ -428,7 +472,8 @@ def run_grid(out: Path, cells: list[Cell], concurrency: int = 4, max_episodes: i
     skipped = len(cells) - len(todo)
     if max_episodes is not None:
         todo = todo[:max_episodes]
-    log(f"START ladder_run={ladder_run} cells={len(cells)} done/skipped={skipped} todo={len(todo)} "
+    pv = provenance()
+    log(f"START {pv['tiers_version']} sha={pv['launch_git_sha'][:10]} code={pv['code_fingerprint']} ladder_run={ladder_run} cells={len(cells)} done/skipped={skipped} todo={len(todo)} "
         f"concurrency={concurrency} host={HOST} pid={os.getpid()}")
     caps = dict(model_caps or {})
     busy: dict[str, int] = {m: 0 for m in caps}

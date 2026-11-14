@@ -106,3 +106,13 @@
   - a `grok_tactics` scripted baseline;
   - FR8 recal; re-freeze as v1.3.
 - OpenCode ChatGPT credits depleted (resets in ~6 days); the judges-shape run uses Codex gpt-5.5 over MCP. MCP parity verified.
+
+## 03:45 DECISION: v1.3
+- Official v1.2 interim (AGENTS, 29/40 gpt-5.5 episodes):
+  - medium: solver .690 (acc .95) vs gpt-5.5 .605 (acc .94, 88%) vs Grok .672 (97%);
+  - hard: solver .584 (acc .85) vs gpt-5.5 .544 (acc .91, 93%) vs Grok .567 (97%);
+  - heuristic <0; stop_early ~-.9..-1; do_nothing 0.
+  - v1.2 opens no gap. Cause: the true V in status reveals leak timing (Grok write-up).
+- Go v1.3: known-V + a stronger solver + a grok_tactics baseline; FR8 recal; merge ~04:45; official gpt-5.5 20+20 + Codex 5+5 on v1.3. v1.2 is kept as the "clean evidence" record and before-picture.
+- Contingency v1.4 (only if v1.3 frontier >= 85%): 2 moles on hard, or a longer horizon with pipelined canaries.
+- Grok runs imported to data/runs/committed/grok (not replay-verified: per-process secret).

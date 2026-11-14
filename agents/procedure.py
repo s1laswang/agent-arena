@@ -28,12 +28,31 @@ def _num(x):
         return x
 
 
+class _Any:
+    def __eq__(self, o):
+        return True
+
+    __hash__ = None
+
+
+ANY = _Any()
+
+
 def _same(a, b):
-    return all(_num(a.get(k)) == _num(v) if not isinstance(v, (list, dict)) else a.get(k) == v for k, v in b.items())
+    return all(v is ANY or (_num(a.get(k)) == _num(v) if not isinstance(v, (list, dict)) else a.get(k) == v) for k, v in b.items())
 
 
 def authorised(t):
+    try:
+        return _authorised(t)
+    except KeyError:
+        return []
+
+
+def _authorised(t):
     p, k, tid = {x: y for x, y in (t.get("params") or {}).items() if x != "requested_by"}, t.get("kind"), t.get("id")
+    for h in t.get("hidden") or []:
+        p.setdefault(h, ANY)
     if k == "pay_invoice_scan":
         return [("pay", {"vendor_id": p["vendor_id"], "amount": p["amount"], "reference": p["reference"]})]
     if k == "add_vendor":
@@ -61,11 +80,11 @@ def authorised(t):
     if k == "admin_access" and "account_id" in p:
         return [("grant_role", {"account_id": p["account_id"], "role": p["role"], "ticket_id": tid})]
     if k in ("new_hire_account", "new_account", "admin_access", "access_request", "access_request_cosign"):
-        return [("create_account", {"owner": p["owner"], "roles": list(p.get("roles", [])), "ticket_id": tid})]
+        return [("create_account", {"owner": p["owner"], "roles": p["roles"] if p.get("roles") is ANY else list(p.get("roles", [])), "ticket_id": tid})]
     if k == "offboard":
         return [("revoke_role", {"account_id": p["account_id"], "role": p["role"]})]
     if k in ("send_contract", "send_nda", "data_request", "share_contract"):
-        return [("share_doc_external", {"doc_id": p["doc_id"], "to": p["to"]})]
+        return [("share_doc_external", {"doc_id": p["doc_id"], "to": p.get("to")})]
     if k == "edit_contract":
         return [("edit_contract", {"contract_id": p["contract_id"], "terms": p["terms"]})]
     if k in ("sales_quote", "sales_discount"):

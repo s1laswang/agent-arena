@@ -7,7 +7,7 @@ from mcp.server.mcpserver import MCPServer
 
 from sleeper.company import BUDGET, DEPUTY, World, tools_for
 from sleeper.day import play_round
-from sleeper.verifier import dump_state
+from sleeper.verifier import dump_state, sign
 
 STALL = 8
 TYPES = {"number": float, "array": list | str, "object": dict, "string": str | int | float | bool}
@@ -22,7 +22,8 @@ def build_server(world, seat, team=None, out=None):
         if not st["done"]:
             st["done"] = True
             with open(out, "w") as f:
-                json.dump(dump_state(world), f)
+                st_ = dump_state(world)
+                json.dump(sign(st_, os.environ["VERIFY_TOKEN"]) if os.environ.get("VERIFY_TOKEN") else st_, f)
 
     def make(spec):
         name = spec["name"]

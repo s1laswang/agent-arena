@@ -139,7 +139,7 @@ async function load(id){
 
 async function init(){
   const q=new URLSearchParams(location.search);
-  if(+q.get("speed")>0)speed=+q.get("speed");
+  if(q.get("speed")==="slow")speed=1500;else if(+q.get("speed")>0)speed=+q.get("speed");
   const man=q.get("day")?[]:await (await fetch("days/index.json")).json();
   const other=r=>["procedure","oracle"].map(t=>man.find(o=>o.seed===r.seed&&o.team===t&&true)).find(Boolean);
   const pair=man.find(r=>r.team==="staff"&&other(r));

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Canary — case file</title>
 <meta name="description" content="Find the insider who is leaking documents. The real Canary benchmark environment, running in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23ffe14d'/%3E%3Cpath d='M3 15c3.5 0 6-2.6 7.2-6.2C11.2 5.9 13.4 4 16.3 4 19 4 21 5.9 21 8.4c0 .9-.3 1.7-.7 2.3l2 1.1-2.6.6C18.3 16.6 14.4 20 9.4 20H3l2.4-2.3L3 15Z' fill='%231a1915'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -99,6 +100,28 @@
 <dialog id="rulesDlg" aria-label="Rules">
   <div class="dlg-h"><span>Rules — exactly what the AI agents are told</span><button class="ghost" type="button" id="rulesClose">Close</button></div>
   <pre id="rules" class="mono"></pre>
+</dialog>
+
+<dialog id="accuseDlg" class="accuse-dlg" aria-label="Accuse">
+  <form id="accForm" autocomplete="off">
+  <div class="dlg-h"><span>Accusation — ends the case</span><button class="ghost" type="button" id="accClose">Close</button></div>
+  <div class="acc-b">
+    <div class="acc-pick">
+      <label><span class="lbl">Employee</span><select id="accWho"></select></label>
+      <label class="arm"><span class="lbl">Type the id to arm</span><input id="accArm" placeholder="type the id" autocomplete="off" spellcheck="false"></label>
+    </div>
+    <label class="acc-p"><span class="lbl">Your certainty <i>only on this page, never sent to the game</i></span>
+      <span class="acc-slide"><input id="accP" type="range" min="0" max="100" step="1" value="50"><output id="accPOut" class="mono">50%</output></span></label>
+    <dl class="acc-nums">
+      <div><dt>Value (visible)</dt><dd class="mono" id="accV">1.00</dd><dd class="asof mono" id="accVAsof"></dd></div>
+      <div><dt>Break-even</dt><dd class="mono" id="accBE">50.0%</dd><dd class="asof mono">certainty</dd></div>
+      <div><dt>Expected score</dt><dd class="mono" id="accEV">0.00</dd><dd class="asof mono">if you accuse now</dd></div>
+    </dl>
+    <p class="acc-verdict" id="accVerdict"></p>
+    <p class="acc-fine dim" id="accFine">Right: the company's value at this moment. Wrong: −1. No accusation by the last day: 0. There is no second accusation.</p>
+  </div>
+  <div class="acc-f"><button class="ghost" type="button" id="accCancel">Keep investigating</button><button class="danger" type="submit" id="accGo" disabled>Accuse</button></div>
+  </form>
 </dialog>
 
 <footer class="foot">

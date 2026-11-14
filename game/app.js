@@ -139,6 +139,45 @@ function mapTextNames(text) {
   return out;
 }
 
+function formatActionPlainWords(tool, args = {}) {
+  const empName = args.employee ? getEmployeeDisplayName(args.employee) : "";
+  switch (tool) {
+    case "check_leak_feed":
+      return "Checked the leak feed";
+    case "read_access_logs":
+      if (args.day_from !== undefined && args.day_to !== undefined) {
+        return `Read access logs, days ${args.day_from}–${args.day_to}${empName ? ' for ' + empName : ''}`;
+      }
+      return `Read access logs${empName ? ' for ' + empName : ''}`;
+    case "interview": {
+      const topicLabels = {
+        workload: "workload",
+        recent_documents: "recent documents",
+        contacts_outside: "outside contacts",
+        access_needs: "access needs"
+      };
+      const topicStr = topicLabels[args.topic] || args.topic || "general";
+      return `Interviewed ${empName || 'staff'} (${topicStr})`;
+    }
+    case "plant_canary":
+      return `Planted canary: "${args.doc_title || 'Memo'}"`;
+    case "list_employees":
+      return "Surveyed office personnel";
+    case "search_messages":
+      return `Searched staff messages for "${args.query || ''}"`;
+    case "restrict_access":
+      return `Restricted access for ${empName || 'employee'}`;
+    case "unrestrict_access":
+      return `Restored access for ${empName || 'employee'}`;
+    case "advance_day":
+      return "Advanced to next day";
+    case "accuse":
+      return `Accused ${empName || 'suspect'}`;
+    default:
+      return tool.replace(/_/g, " ");
+  }
+}
+
 function randomSeed() {
   return 3000 + Math.floor(Math.random() * 7000);
 }
@@ -846,7 +885,7 @@ function addEvidenceCard(tool, args, res) {
     bodyContent = `<p class="muted">${tool} completed successfully.</p>`;
   }
 
-  const toolBadge = tool.toUpperCase().replace(/_/g, " ");
+  const toolBadge = formatActionPlainWords(tool, args);
   card.innerHTML = `
     <div class="feed-head">
       <span class="feed-badge">${toolBadge}</span>
@@ -1312,18 +1351,10 @@ function showEndScreen() {
   for (const act of state.actionHistory) {
     const entry = document.createElement("div");
     entry.className = "replay-entry";
-    let desc = "";
-    if (act.tool === 'plant_canary') {
-      desc = act.args.doc_title || 'Memo';
-    } else if (act.args.employee) {
-      desc = `${getEmployeeDisplayName(act.args.employee)} ${act.args.topic ? '(' + act.args.topic + ')' : ''}`.trim();
-    } else {
-      desc = JSON.stringify(act.args);
-    }
+    const plainWords = formatActionPlainWords(act.tool, act.args);
     entry.innerHTML = `
       <span class="mono muted font-small">Day ${act.day}</span>
-      <strong>${act.tool}</strong>
-      <span class="muted font-small">${desc}</span>
+      <strong>${plainWords}</strong>
     `;
     replayBox.appendChild(entry);
   }

@@ -3,7 +3,7 @@ import time
 
 from agents import gemini
 
-if not gemini.enabled():
+if not gemini.enable_live():
     sys.exit("no GEMINI_API_KEY")
 tool = {"name": "get_number", "description": "returns a number", "parameters": {"type": "object", "properties": {}}}
 t = time.time()

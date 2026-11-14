@@ -444,6 +444,23 @@ def _plan_text(plan) -> str:
     return ""
 
 
+def slim_leaderboard(L: dict | None) -> dict | None:
+    """results/gemini/leaderboard_v14_hard.json (canary.gemini.leaderboard): rows exactly as the source file states them.
+    Only scalar fields and [lo, hi] pairs are kept; nothing is renamed, rescaled or relabelled."""
+    if not isinstance(L, dict):
+        return None
+    src = L.get("source_json") if L.get("kind") == "leaderboard" else L
+    rows = src if isinstance(src, list) else next((src.get(k) for k in ("rows", "entries", "leaderboard", "results")
+                                                   if isinstance(src, dict) and isinstance(src.get(k), list)), [])
+
+    def keep(v):
+        return v is None or isinstance(v, (str, int, float, bool)) or (
+            isinstance(v, list) and len(v) == 2 and all(isinstance(x, (int, float)) for x in v))
+    rows = [{k: v for k, v in r.items() if keep(v)} for r in rows if isinstance(r, dict)]
+    return {"kind": L.get("kind"), "source": L.get("source"), "source_sha": L.get("source_sha"),
+            "note": L.get("note"), "generated_at": L.get("generated_at"), "rows": rows}
+
+
 def slim_swarm(S: dict) -> dict:
     """Normalise G4's swarm.json (or the TEAM.md minimal shape) to what the page renders."""
     at = []
@@ -562,6 +579,7 @@ def load_results(results_dir: Path) -> dict:
     else:
         out["gateway_bench"] = None
     ri = load_json(results_dir / "roles" / "index.json")
+    out["leaderboard"] = slim_leaderboard(load_json(results_dir / "leaderboard_v14_hard.json"))
     out["roles"] = redact({"generated_at": ri.get("generated_at"), "roles": [
         {k: r.get(k) for k in ("role", "key", "run", "model", "thinking", "commit", "generated_at", "n", "headline", "caveats")}
         for r in ri.get("roles") or [] if isinstance(r, dict)]}) if ri else None
@@ -664,6 +682,7 @@ HTML = """<!doctype html>
   <section id="p-atlas" class="panel" data-panel="atlas"></section>
   <section id="p-swarm" class="panel" data-panel="swarm"></section>
   <section id="p-roles" class="panel" data-panel="roles"></section>
+  <section id="p-leaderboard" class="panel" data-panel="leaderboard"></section>
 </main>
 <footer class="foot" id="foot"></footer>
 <div id="tip" role="tooltip" hidden></div>
@@ -1459,6 +1478,29 @@ function renderRoles() {
   sec.appendChild(h('div', { class: 'grid' }, [card('c12', null, null, [tb])]));
 }
 
+// ---- leaderboard (v1.4 hard): every cell is the source file's own value; pct/ci fields shown as percent
+function renderLeaderboard() {
+  const sec = document.getElementById('p-leaderboard'); sec.replaceChildren();
+  const LB = R.leaderboard;
+  panelHead(sec, '07', { kicker: 'Leaderboard', h: 'v1.4 hard: trained open model vs Gemini vs the solver' },
+    'Every value is read as-is from ' + (LB && LB.source ? LB.source : 'results/leaderboard_v14_hard.json') + (LB && LB.source_sha ? ' @ ' + String(LB.source_sha).slice(0, 7) : '') + ', with n and CI; compute is labelled exactly as the file states it.');
+  if (!LB || !(LB.rows || []).length) { sec.appendChild(pending('Leaderboard', 'python -m canary.gemini.leaderboard → results/gemini/leaderboard_v14_hard.json')); return; }
+  const pref = ['name', 'model', 'agent', 'stage', 'round', 'harness', 'n', 'score', 'mean', 'score_ci', 'ci', 'pct_solver', 'pct_solver_ci', 'luck_adjusted_pct_solver', 'luck_adjusted_pct_solver_ci', 'compute', 'gpu_hours', 'eur', 'cost_eur'];
+  const keys = []; LB.rows.forEach(r => Object.keys(r).forEach(k => { if (!keys.includes(k)) keys.push(k); }));
+  const cols = pref.filter(k => keys.includes(k)).concat(keys.filter(k => !pref.includes(k)));
+  // a *_ci column takes its unit from the value column it qualifies (x_ci -> x), so a ratio CI is never shown raw
+  const isPct = k => /pct|ratio|share/.test(k) || (/_ci$/.test(k) && keys.some(o => o !== k && o.startsWith(k.slice(0, -3)) && /pct|ratio|share/.test(o)));
+  const fmt = (k, v) => {
+    if (v == null) return k === 'compute' ? 'not stated' : '–';
+    if (Array.isArray(v)) return '[' + v.map(x => isPct(k) ? pctf(x) : (+x).toFixed(3)).join(', ') + ']';
+    if (typeof v === 'number') return isPct(k) ? pctf(v) : Number.isInteger(v) ? String(v) : (+v).toFixed(3);
+    return String(v);
+  };
+  const tb = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, cols.map(c => h('th', { text: c })))]),
+    h('tbody', {}, LB.rows.map(r => h('tr', {}, cols.map(c => h('td', { class: typeof r[c] === 'number' ? 'num' : '', text: fmt(c, r[c]) })))))]);
+  sec.appendChild(h('div', { class: 'grid' }, [card('c12', null, LB.note || null, [tb])]));
+}
+
 function renderFoot() {
   const f = document.getElementById('foot'); f.replaceChildren();
   const M = D.meta;
@@ -1470,7 +1512,7 @@ function renderFoot() {
 }
 
 function renderAll() {
-  renderHeadline(); renderUsage(); renderLadder(); renderAtlas(); renderSwarm(); renderRoles(); renderFoot();
+  renderHeadline(); renderUsage(); renderLadder(); renderAtlas(); renderSwarm(); renderRoles(); renderLeaderboard(); renderFoot();
 }
 const focus = qs.get('panel');
 if (focus) { document.body.classList.add('focus'); focus.split(',').forEach(p => { const e = document.querySelector('[data-panel="' + p + '"]'); if (e) e.classList.add('on'); }); }

@@ -1,9 +1,11 @@
 // Canary Browser Game: Full Interactive UI over game/canary_game.py in Pyodide.
 // Core Mandates:
 // 1. All logic goes through Game (spec_json, call_json, reveal_json). Never re-implement rules in JS.
-// 2. Never call a tool the player didn't trigger (no hidden calls, no automatic status calls).
+// 2. Never call a tool the player didn't trigger, except list_documents: it is free of daily
+//    actions and is used only to show who held a leaked memo. It still counts toward the
+//    global tool-call cap. Never auto-call status or investigative tools.
 // 3. Truth is revealed only after the episode is completed.
-// 4. Honest labeling: gemini-4-carbon and codex numbers are BENCHMARK MEANS, not per-seed scores.
+// 4. Honest labeling: gemini-4-carbon and codex numbers are benchmark means, not per-seed scores.
 "use strict";
 
 const $ = (id) => document.getElementById(id);
@@ -44,8 +46,20 @@ const state = {
   decisionV: null,
   decisionBreakEvenP: null,
   actionHistory: [], // [[tool, args, day], ...]
-  feedFilter: "all"
+  feedFilter: "all",
+  docsById: {},          // doc_id -> list_documents record
+  suspectIds: null,      // Set of employee ids still in the leak intersection; null = everyone
+  highlightSuspects: false,
+  lastVariantRecipients: [],  // names from the most recent canary-variant leak
+  suspectCountAtLastPlant: null
 };
+
+// Tools that consume one of the 8 daily action slots (mirrors canary.types.INVESTIGATIVE_TOOLS).
+const DAILY_ACTION_TOOLS = new Set([
+  "read_access_logs", "search_messages", "read_message",
+  "interview", "plant_canary", "check_leak_feed",
+  "restrict_access", "unrestrict_access"
+]);
 
 const DEPT_COLORS = {
   Engineering: "var(--muted)",
@@ -268,10 +282,10 @@ async function boot() {
   setupGlobalEventListeners();
 
   try {
-    updateLoader(10, "Initializing Pyodide sandbox environment...");
+    updateLoader(10, "Starting the game engine...");
     py = await loadPyodide();
 
-    updateLoader(45, "Loading benchmark package into virtual filesystem...");
+    updateLoader(45, "Loading game files...");
     const manifestRes = await fetch("py/manifest.json");
     if (!manifestRes.ok) throw new Error("Could not find py/manifest.json. Run build.py first.");
     const manifest = await manifestRes.json();
@@ -284,7 +298,7 @@ async function boot() {
       py.FS.writeFile(path, text);
       loaded++;
       const pct = 45 + Math.floor((loaded / manifest.files.length) * 45);
-      updateLoader(pct, `Loading benchmark modules (${loaded}/${manifest.files.length})...`);
+      updateLoader(pct, `Loading game files (${loaded}/${manifest.files.length})...`);
     }
 
     updateLoader(95, "Initializing canary_game module in Python...");
@@ -297,7 +311,7 @@ async function boot() {
       referenceData = {};
     }
 
-    updateLoader(100, "Benchmark runtime ready.");
+    updateLoader(100, "Ready to play.");
     $("playBtn").disabled = false;
     $("playBtn").textContent = "Play";
     if ($("startTutorialBtn")) $("startTutorialBtn").disabled = false;
@@ -361,6 +375,12 @@ function startGame(customSeed = null) {
   state.restricted.clear();
   state.selectedEmpId = null;
   state.actionHistory = [];
+  state.docsById = {};
+  state.suspectIds = null;
+  state.highlightSuspects = false;
+  state.lastVariantRecipients = [];
+  state.suspectCountAtLastPlant = null;
+  document.body.classList.remove("highlight-suspects");
   state.playerAbstained = false;
   state.decisionDay = null;
   state.decisionV = null;
@@ -386,8 +406,7 @@ function startGame(customSeed = null) {
         <span class="mono muted font-small">Day 1 · Seed ${state.seed}</span>
       </div>
       <div class="feed-body">
-        <p>Investigation initiated. Someone in the company is leaking secrets to rival firm.</p>
-        <p class="muted font-small">First action: Survey personnel with <strong>Survey Office (1 action)</strong> or deploy marked traps via <strong>Plant Canaries [P]</strong>.</p>
+        <p>Someone in the company is leaking secrets. Survey the office, then plant a canary to about half the staff.</p>
       </div>
     </div>
   `;
@@ -412,15 +431,20 @@ function executeTool(toolName, args = {}) {
   callsSpent++;
   state.actionHistory.push({ tool: toolName, args, day: state.day, ok: res.ok });
 
-  // Decrement client-side daily actions if call succeeded
   if (res.ok) {
-    if (state.actionsLeftToday > 0) state.actionsLeftToday--;
+    if (DAILY_ACTION_TOOLS.has(toolName) && state.actionsLeftToday > 0) state.actionsLeftToday--;
     if (state.totalCallsLeft > 0) state.totalCallsLeft--;
   }
 
   // Sync state from engine response
   if (res.ok && res.data) {
     syncStateFromData(toolName, args, res.data);
+  }
+
+  if (res.ok && (toolName === "list_employees" || toolName === "plant_canary" ||
+      toolName === "advance_day" || toolName === "check_leak_feed")) {
+    fetchDocumentsSilent();
+    recomputeSuspects();
   }
 
   refreshHUD();
@@ -494,6 +518,7 @@ function syncStateFromData(tool, args, data) {
       doc_title: args.doc_title || "Confidential Memo",
       assignment: args.assignment || {}
     });
+    state.suspectCountAtLastPlant = getSuspectIds().length;
     // Merge new variant assignments
     if (args.assignment) {
       for (const [eId, variant] of Object.entries(args.assignment)) {
@@ -502,6 +527,151 @@ function syncStateFromData(tool, args, data) {
       }
     }
   }
+}
+
+// -----------------------------------------------------------------------------
+// DOCUMENT HOLDERS & SUSPECT INTERSECTION
+// -----------------------------------------------------------------------------
+// list_documents is free of daily actions (not in INVESTIGATIVE_TOOLS) but still
+// counts toward the 300-call cap, so we call it sparingly and never via executeTool.
+function fetchDocumentsSilent() {
+  if (!game) return;
+  try {
+    const raw = game.call_json("list_documents", JSON.stringify({ day_from: 1, day_to: state.day }));
+    const res = JSON.parse(raw);
+    if (!res.ok || !res.data || !Array.isArray(res.data.documents)) return;
+    const map = {};
+    for (const d of res.data.documents) {
+      if (!d || !d.doc_id) continue;
+      map[d.doc_id] = d;
+      if (d.title) state.docTitles[d.doc_id] = d.title;
+    }
+    state.docsById = map;
+    if (state.totalCallsLeft > 0) state.totalCallsLeft--;
+  } catch (_) {}
+}
+
+function holdersForLeak(item) {
+  if (!item) return [];
+  const doc = state.docsById[item.doc_id];
+  if (item.variant) {
+    if (doc && doc.variants && Array.isArray(doc.variants[item.variant])) {
+      return doc.variants[item.variant].slice();
+    }
+    const hist = state.canaryHistory.find(h => h.id === item.doc_id);
+    if (hist && hist.assignment) {
+      return Object.entries(hist.assignment)
+        .filter(([, v]) => v === item.variant)
+        .map(([id]) => id);
+    }
+    return [];
+  }
+  if (doc && Array.isArray(doc.recipients)) return doc.recipients.slice();
+  return [];
+}
+
+function joinNames(names) {
+  if (!names || !names.length) return "";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return names[0] + " and " + names[1];
+  return names.slice(0, -1).join(", ") + ", and " + names[names.length - 1];
+}
+
+function suspectsAfterLeaks(items) {
+  let current = null;
+  for (const item of items || []) {
+    const holders = holdersForLeak(item);
+    if (!holders.length) continue;
+    const set = new Set(holders);
+    current = current ? new Set([...current].filter(id => set.has(id))) : set;
+  }
+  return current;
+}
+
+function canaryDeductionLine(item, previousItems) {
+  if (!item || !item.variant) return "";
+  const holders = holdersForLeak(item);
+  if (!holders.length) return "";
+  const holderNames = holders.map(id => getEmployeeDisplayName(id));
+  const prior = suspectsAfterLeaks(previousItems);
+  const priorSet = prior || new Set(state.employees.map(e => e.id));
+  const alreadyCleared = holders.filter(id => !priorSet.has(id));
+  const remaining = holders.filter(id => priorSet.has(id));
+  let line = `Variant ${item.variant} went to ${joinNames(holderNames)}.`;
+  if (alreadyCleared.length && remaining.length) {
+    const cleared = joinNames(alreadyCleared.map(id => getEmployeeDisplayName(id)));
+    const verb = alreadyCleared.length === 1 ? "was" : "were";
+    line += ` ${cleared} ${verb} cleared by earlier leaks, so: ${joinNames(remaining.map(id => getEmployeeDisplayName(id)))}.`;
+  } else if (remaining.length === 1) {
+    line += ` So: ${getEmployeeDisplayName(remaining[0])}.`;
+  }
+  return line;
+}
+
+function latestCanaryPlant() {
+  if (!state.canaryHistory.length) return null;
+  return state.canaryHistory[state.canaryHistory.length - 1];
+}
+
+function canaryRecipientCount(plant) {
+  if (!plant || !plant.assignment) return 0;
+  return Object.keys(plant.assignment).length;
+}
+
+function waitingOnCanary() {
+  // A planted canary may take 1–3 days to surface. Don't nag for another plant
+  // until then, unless the suspect set has since shrunk (a tighter trap is useful).
+  if ((state.leakedItems || []).some(item => !!item.variant)) return false;
+  const plant = latestCanaryPlant();
+  if (!plant) return false;
+  if ((state.day - plant.day) >= 3) return false;
+  const n = getSuspectIds().length;
+  if (state.suspectCountAtLastPlant != null && n < state.suspectCountAtLastPlant) return false;
+  return true;
+}
+
+function getSuspectIds() {
+  if (!state.employees.length) return [];
+  if (!state.suspectIds) return state.employees.map(e => e.id);
+  return state.employees.map(e => e.id).filter(id => state.suspectIds.has(id));
+}
+
+function recomputeSuspects() {
+  if (!state.employees.length) {
+    state.suspectIds = null;
+    state.lastVariantRecipients = [];
+    return;
+  }
+  let current = null;
+  let lastVariant = [];
+  for (const item of (state.leakedItems || [])) {
+    const holders = holdersForLeak(item);
+    if (!holders.length) continue;
+    const set = new Set(holders);
+    current = current ? new Set([...current].filter(id => set.has(id))) : set;
+    if (item.variant) {
+      lastVariant = holders.map(id => getEmployeeDisplayName(id));
+    }
+  }
+  state.suspectIds = current;
+  state.lastVariantRecipients = lastVariant;
+  refreshSuspectHighlights();
+}
+
+function refreshSuspectHighlights() {
+  const ids = new Set(getSuspectIds());
+  document.querySelectorAll(".emp-card").forEach(c => {
+    c.classList.toggle("in-suspect-set", ids.has(c.dataset.id));
+  });
+  document.body.classList.toggle("highlight-suspects", !!state.highlightSuspects);
+  const btn = $("hudSuspectsBtn");
+  if (btn) btn.classList.toggle("active", !!state.highlightSuspects);
+}
+
+function toggleSuspectHighlight() {
+  if (!state.employees.length) return;
+  state.highlightSuspects = !state.highlightSuspects;
+  refreshSuspectHighlights();
 }
 
 // -----------------------------------------------------------------------------
@@ -546,7 +716,20 @@ function refreshHUD() {
 
   // Leaks
   $("hudLeaksCount").textContent = state.leaksCount;
-  $("callCounterChip").textContent = `${callsSpent} call${callsSpent === 1 ? "" : "s"}`;
+  if ($("callCounterChip")) $("callCounterChip").textContent = `${callsSpent} call${callsSpent === 1 ? "" : "s"}`;
+
+  const susCountEl = $("hudSuspectsCount");
+  const susSubEl = $("hudSuspectsSub");
+  if (susCountEl && susSubEl) {
+    if (!state.employees.length) {
+      susCountEl.textContent = "—";
+      susSubEl.textContent = "survey first";
+    } else {
+      const n = getSuspectIds().length;
+      susCountEl.textContent = String(n);
+      susSubEl.textContent = n === 1 ? "1 person" : (state.leaksCount ? `${n} people` : "no leaks yet");
+    }
+  }
 
   // Next Day button indicator
   const nextBtn = $("hudNextDayBtn");
@@ -588,58 +771,82 @@ function updateGuidance() {
   if (!el) return;
 
   if (state.employees.length === 0) {
-    if (state.actionsLeftToday === 0) {
-      el.textContent = "All daily actions spent. Press Next Day [N] to advance time.";
-    } else {
-      el.textContent = "Survey office personnel to index staff across departments (1 action).";
-    }
+    el.textContent = state.actionsLeftToday === 0
+      ? "All daily actions spent. Press Next Day [N]."
+      : "Survey the office, then plant a canary to about half the staff.";
     return;
   }
 
-  const totalCanaries = state.canaryHistory.length;
+  const nSuspects = getSuspectIds().length;
   const plantedToday = state.canaryHistory.some(c => c.day === state.day);
+  const hasVariantLeak = (state.leakedItems || []).some(item => !!item.variant);
+  const waiting = waitingOnCanary();
+  const waitHint = (() => {
+    const plant = latestCanaryPlant();
+    const n = canaryRecipientCount(plant);
+    return n
+      ? `Canary out to ${n} people. Leaks take 1–3 days. Advance the day.`
+      : "Leaks take 1–3 days. Advance the day.";
+  })();
 
   if (state.actionsLeftToday === 0) {
-    el.textContent = totalCanaries > 0
-      ? "All daily actions spent. Press Next Day [N] to advance time and let leaks surface."
-      : "All daily actions spent. Press Next Day [N] to advance time.";
-    return;
-  }
-
-  if (totalCanaries === 0) {
-    el.textContent = "No canaries active yet. Press Plant Canaries [P] to distribute marked memos across cohorts.";
-    return;
-  }
-
-  if (plantedToday) {
-    el.textContent = "Canary planted today. Leaks take 1–3 days to surface, so investigate suspects or advance to tomorrow [N].";
+    el.textContent = "All daily actions spent. Press Next Day [N] so leaks can surface.";
     return;
   }
 
   if (state.day > 1 && !state.checkedLeaksToday) {
-    el.textContent = `Day ${state.day} began. Check the leak feed to see if any planted canaries surfaced at rival firm.`;
+    el.textContent = "Check the leak feed.";
+    return;
+  }
+
+  if (state.day >= state.maxDays && nSuspects > 1) {
+    el.textContent = `${nSuspects} suspects remain on the last day. Accuse only if you are sure; otherwise close the case.`;
+    return;
+  }
+
+  if (nSuspects === 1) {
+    const name = getEmployeeDisplayName(getSuspectIds()[0]);
+    el.textContent = hasVariantLeak
+      ? `The leaked canary went only to ${name}. Accuse them.`
+      : `Suspects narrowed to ${name}. Accuse them.`;
+    return;
+  }
+
+  if (hasVariantLeak && state.lastVariantRecipients.length) {
+    const names = joinNames(state.lastVariantRecipients);
+    if (plantedToday || waiting) {
+      el.textContent = `Canary variant holders: ${names}. Advance to tomorrow [N], or accuse if you are sure.`;
+    } else {
+      el.textContent = `Canary variant holders: ${names}. Plant a small canary among them, or accuse if only one remains.`;
+    }
+    return;
+  }
+
+  if (waiting) {
+    el.textContent = waitHint;
     return;
   }
 
   if (state.leaksCount > 0) {
-    const hasVariantLeak = (state.leakedItems || []).some(item => !!item.variant);
-    if (hasVariantLeak) {
-      el.textContent = "Leaks detected! Match the leaked variant to assigned cohorts, interview suspects, or Accuse [A].";
-      return;
-    }
-
-    const untagged = getUntaggedEmployees();
-    if (untagged.length > 0) {
-      const names = untagged.map(e => e.name).join(", ");
-      el.textContent = `Leaks keep arriving with no canary variant — the mole probably isn't among the people who got canaries. Plant canaries to the employees who haven't had one: ${names}.`;
-      return;
+    if (plantedToday) {
+      el.textContent = `Suspects narrowed to ${nSuspects}. Advance to tomorrow [N] so the canary can surface.`;
     } else {
-      el.textContent = "Leaks keep arriving with no canary variant — all active personnel have received canaries. Review access logs, interview suspects, or Accuse [A].";
-      return;
+      el.textContent = `Suspects narrowed to ${nSuspects}. Plant a small canary among them.`;
     }
+    return;
   }
 
-  el.textContent = "Canaries are out in the field. Review access logs, interview suspects, or advance to tomorrow [N].";
+  if (!state.canaryHistory.length) {
+    el.textContent = "Plant a canary to about half the staff. Leave the rest unassigned.";
+    return;
+  }
+
+  if (plantedToday) {
+    el.textContent = waitHint;
+    return;
+  }
+
+  el.textContent = "Plant a small canary among the remaining suspects, then advance a day.";
 }
 
 function showInPageHint(message) {
@@ -690,6 +897,7 @@ function renderOfficeDirectory(employees) {
     }
     container.appendChild(section);
   }
+  refreshSuspectHighlights();
 }
 
 function createEmployeeCard(emp) {
@@ -850,29 +1058,31 @@ function addEvidenceCard(tool, args, res) {
         const vClass = v ? v.toLowerCase() : "";
         const minDay = Math.max(1, item.surfaced_day - 3);
         const maxDay = Math.max(1, item.surfaced_day - 1);
+        const title = item.title || state.docTitles[item.doc_id] || "Memo";
+        const holderNames = holdersForLeak(item).map(id => getEmployeeDisplayName(id));
+        const prevItems = items.slice(0, items.indexOf(item));
 
         let badgeHtml = "";
         let detailsHtml = "";
 
         if (isCanary && v) {
           badgeHtml = `<span class="canary-pill canary-pill-${vClass}">Canary Variant ${v}</span>`;
-          // Find who was assigned Variant v for this canary doc
-          const hist = state.canaryHistory.find(h => h.id === item.doc_id);
-          const holderNames = [];
-          if (hist && hist.assignment) {
-            for (const [eId, varName] of Object.entries(hist.assignment)) {
-              if (varName === v) {
-                holderNames.push(getEmployeeDisplayName(eId));
-              }
-            }
-          }
-          detailsHtml = holderNames.length ? `<div class="muted font-small" style="margin-top:2px;">Staff given Var ${v}: ${holderNames.join(", ")}</div>` : '';
+          const deduction = canaryDeductionLine(item, prevItems);
+          detailsHtml = deduction
+            ? `<div class="muted font-small" style="margin-top:2px;">${deduction}</div>`
+            : (holderNames.length
+              ? `<div class="muted font-small" style="margin-top:2px;">Who had this memo (variant ${v}): ${joinNames(holderNames)}</div>`
+              : "");
         } else if (isCanary) {
           badgeHtml = `<span class="canary-pill canary-pill-a">Canary Leak</span>`;
-          detailsHtml = `<div class="muted font-small" style="margin-top:2px;">Planted canary leaked.</div>`;
+          detailsHtml = holderNames.length
+            ? `<div class="muted font-small" style="margin-top:2px;">Who had this memo: ${joinNames(holderNames)}</div>`
+            : `<div class="muted font-small" style="margin-top:2px;">Planted canary leaked.</div>`;
         } else {
           badgeHtml = `<span class="regular-doc-pill">Regular Document</span>`;
-          detailsHtml = `<div class="muted font-small" style="margin-top:2px;">Standard memo. Cross-reference access logs.</div>`;
+          detailsHtml = holderNames.length
+            ? `<div class="muted font-small" style="margin-top:2px;">Who had this memo: ${joinNames(holderNames)}</div>`
+            : `<div class="muted font-small" style="margin-top:2px;">Standard memo. Cross-reference who had access.</div>`;
         }
 
         html += `
@@ -880,7 +1090,7 @@ function addEvidenceCard(tool, args, res) {
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px; flex-wrap:wrap;">
               <div>
                 <span class="chip" style="color:var(--ok); border-color:var(--ok); font-weight:700; margin-right:4px;">NEW</span>
-                <strong>Doc: ${item.doc_id} · "${item.title || 'Memo'}"</strong>
+                <strong>${title}</strong>
               </div>
               ${badgeHtml}
             </div>
@@ -969,7 +1179,7 @@ function addEvidenceCard(tool, args, res) {
 
     bodyContent = `
       <div>
-        <strong>Canary Deployed:</strong> "${args.doc_title || 'Memo'}" (ID: ${res.data.canary_id})
+        <strong>Canary deployed:</strong> "${args.doc_title || 'Memo'}"
         <div style="margin: 6px 0; display:flex; gap:6px; flex-wrap:wrap;">${varSummary}</div>
         <div class="muted font-small">Total recipients tagged: ${totalAssigned} employees.</div>
       </div>
@@ -1060,9 +1270,9 @@ function openCanaryWizard() {
   ];
   $("canaryDocTitle").value = sampleTitles[(canaryNum - 1) % sampleTitles.length];
 
-  const untagged = getUntaggedEmployees();
-  if (state.canaryHistory.length > 0 && untagged.length > 0) {
-    wizardCoverUntagged();
+  // Never auto-cover untagged staff. Later plants retest a tight group of remaining suspects.
+  if (state.canaryHistory.length > 0 || (state.suspectIds && state.suspectIds.size && state.suspectIds.size < state.employees.length)) {
+    wizardRetestCohort();
   } else {
     wizardSplitSolver();
   }
@@ -1071,6 +1281,28 @@ function openCanaryWizard() {
 
 function closeCanaryWizard() {
   $("canaryModal").hidden = true;
+}
+
+function wizardRetestCohort() {
+  // Tight 2–6 person retest of people still in the leak intersection (or tagged suspects).
+  const ids = new Set(getSuspectIds());
+  const tagged = state.employees.filter(e => state.userTags[e.id] === "suspect" && !state.restricted.has(e.id) && ids.has(e.id));
+  const pool = (tagged.length >= 2 ? tagged : state.employees.filter(e => !state.restricted.has(e.id) && ids.has(e.id)));
+
+  state.wizardAssignments = {};
+  for (const emp of state.employees) state.wizardAssignments[emp.id] = "";
+
+  const variants = pool.length === 2 ? ["A", "B"] : ["A", "B", "C"];
+  const targetCount = pool.length <= 6 ? pool.length : 6;
+  // Rotate the 6-person window each plant so later-listed suspects are not skipped forever.
+  const offset = pool.length ? (state.canaryHistory.length * targetCount) % pool.length : 0;
+  for (let i = 0; i < targetCount; i++) {
+    const emp = pool[(offset + i) % pool.length];
+    state.wizardAssignments[emp.id] = variants[i % variants.length];
+  }
+
+  renderWizardEmployees();
+  updateWholeCompanyWarning();
 }
 
 function wizardCoverUntagged() {
@@ -1182,7 +1414,10 @@ function updateWholeCompanyWarning() {
   const warn = $("wholeCoWarning");
   if (assigned.length === state.employees.length && state.employees.length > 0) {
     warn.style.display = "block";
-    warn.innerHTML = "<strong>Warning:</strong> All employees are receiving this canary. Careful moles will not leak a full-company document. Leave some staff unassigned as a control group.";
+    warn.innerHTML = "<strong>Warning:</strong> Careful moles will not leak a full-company document. Leave some staff unassigned.";
+  } else if (assigned.length >= 10) {
+    warn.style.display = "block";
+    warn.innerHTML = `<strong>Note:</strong> ${assigned.length} recipients. Tighter traps (2–6 people) leak more often.`;
   } else if (assigned.length > 0 && unique.size === 1) {
     warn.style.display = "block";
     warn.innerHTML = "<strong>Warning:</strong> All assigned staff received the same variant. Use multiple variants (A, B, C) to partition cohorts.";
@@ -1258,12 +1493,20 @@ function openAccuseDialog(preselectEmpId = null) {
     return;
   }
 
-  populateAccuseDropdown(state.employees);
+  populateAccuseDropdown(state.employees, { expandOthers: false });
 
-  if (preselectEmpId) {
-    $("accuseSuspectSelect").value = preselectEmpId;
-  } else if (state.selectedEmpId) {
-    $("accuseSuspectSelect").value = state.selectedEmpId;
+  const select = $("accuseSuspectSelect");
+  const suspects = getSuspectIds();
+  if (suspects.length === 1) {
+    select.value = suspects[0];
+  } else if (preselectEmpId && suspects.includes(preselectEmpId)) {
+    select.value = preselectEmpId;
+  } else if (state.selectedEmpId && suspects.includes(state.selectedEmpId)) {
+    select.value = state.selectedEmpId;
+  } else if (preselectEmpId) {
+    // Named preselect (e.g. from a dossier) even if already cleared; expand Others so it's visible.
+    populateAccuseDropdown(state.employees, { expandOthers: true });
+    select.value = preselectEmpId;
   }
 
   updateAccuseTargetName();
@@ -1275,23 +1518,63 @@ function closeAccuseDialog() {
   $("accuseModal").hidden = true;
 }
 
-function populateAccuseDropdown(employees) {
+function accuseOption(emp) {
+  const opt = document.createElement("option");
+  opt.value = emp.id;
+  opt.textContent = `${emp.name} (${emp.dept || 'Staff'}, ${emp.role || 'Member'})`;
+  return opt;
+}
+
+function populateAccuseDropdown(employees, opts = {}) {
   const select = $("accuseSuspectSelect");
-  const current = select.value;
-  select.innerHTML = `<option value="">-- Choose Employee to Accuse --</option>`;
-  for (const emp of employees) {
-    const opt = document.createElement("option");
-    opt.value = emp.id;
-    opt.textContent = `${emp.name} (${emp.dept || 'Staff'}, ${emp.role || 'Member'})`;
-    select.appendChild(opt);
+  if (!select) return;
+  const expandOthers = !!opts.expandOthers;
+  const current = (select.value && select.value !== "__others__") ? select.value : "";
+  const suspectIds = new Set(getSuspectIds());
+  const suspects = employees.filter(e => suspectIds.has(e.id));
+  const others = employees.filter(e => !suspectIds.has(e.id));
+
+  select.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "-- Choose someone --";
+  select.appendChild(placeholder);
+
+  if (suspects.length) {
+    const group = document.createElement("optgroup");
+    group.label = suspects.length === 1 ? "Still suspected" : `Still suspected (${suspects.length})`;
+    for (const emp of suspects) group.appendChild(accuseOption(emp));
+    select.appendChild(group);
   }
-  if (current) select.value = current;
+
+  if (others.length) {
+    if (expandOthers) {
+      const group = document.createElement("optgroup");
+      group.label = "Others";
+      for (const emp of others) group.appendChild(accuseOption(emp));
+      select.appendChild(group);
+    } else {
+      const more = document.createElement("option");
+      more.value = "__others__";
+      more.textContent = `Others (${others.length})…`;
+      select.appendChild(more);
+    }
+  }
+
+  if (current && Array.from(select.options).some(o => o.value === current)) {
+    select.value = current;
+  }
 }
 
 function updateAccuseTargetName() {
+  const select = $("accuseSuspectSelect");
+  if (select && select.value === "__others__") {
+    populateAccuseDropdown(state.employees, { expandOthers: true });
+    select.value = "";
+  }
   const empId = $("accuseSuspectSelect").value;
   const emp = state.employees.find(e => e.id === empId);
-  $("accuseTargetBtnName").textContent = emp ? emp.name : "Suspect";
+  if ($("accuseTargetBtnName")) $("accuseTargetBtnName").textContent = emp ? emp.name : "Suspect";
 }
 
 function recalculateAccuseMath() {
@@ -1427,7 +1710,7 @@ function abstainAndClose() {
 }
 
 // -----------------------------------------------------------------------------
-// END SCREEN & BENCHMARK SCOREBOARD (Screen 5)
+// END SCREEN
 // -----------------------------------------------------------------------------
 function showEndScreen() {
   for (const b of document.querySelectorAll("button")) {
@@ -1563,14 +1846,14 @@ function showEndScreen() {
     const moleTag = state.userTags[moleId];
     if (moleTag === "cleared") {
       fooledBox.hidden = false;
-      $("fooledHeading").textContent = "Investigator Note";
-      $("fooledMessage").textContent = `During the investigation, you tagged ${moleDisplayName} as 'Cleared'. The mole successfully maintained a low profile and deflected your suspicion.`;
+      if ($("fooledHeading")) $("fooledHeading").textContent = "Investigator Note";
+      if ($("fooledMessage")) $("fooledMessage").textContent = `During the investigation, you tagged ${moleDisplayName} as 'Cleared'. The mole successfully maintained a low profile and deflected your suspicion.`;
     } else if (!isWin && reveal.you.accused) {
       fooledBox.hidden = false;
       const accusedEmp = state.employees.find(e => e.id === reveal.you.accused);
       const accusedDisp = accusedEmp ? accusedEmp.name : getEmployeeDisplayName(reveal.you.accused);
-      $("fooledHeading").textContent = "Investigator Note";
-      $("fooledMessage").textContent = `You accused ${accusedDisp}. The true mole planted fabricated after-hours access logs and exploited delayed leaks to frame colleagues.`;
+      if ($("fooledHeading")) $("fooledHeading").textContent = "Investigator Note";
+      if ($("fooledMessage")) $("fooledMessage").textContent = `You accused ${accusedDisp}. The true mole planted fabricated after-hours access logs and exploited delayed leaks to frame colleagues.`;
     } else {
       fooledBox.hidden = true;
     }
@@ -1695,7 +1978,7 @@ function closeTutorial() {
 function setupGlobalEventListeners() {
   // Title Launch buttons
   $("playBtn").addEventListener("click", () => startGame());
-  $("startTutorialBtn").addEventListener("click", () => startTutorial());
+  $("startTutorialBtn")?.addEventListener("click", () => startTutorial());
 
   $("seedInput")?.addEventListener("input", (e) => {
     const s = parseInt(e.target.value.trim(), 10);
@@ -1715,7 +1998,7 @@ function setupGlobalEventListeners() {
 
   $("randomSeedBtn")?.addEventListener("click", () => {
     const s = randomSeed();
-    $("seedInput").value = s;
+    if ($("seedInput")) $("seedInput").value = s;
     state.seed = s;
     $("headerSeedDisplay").textContent = s;
   });
@@ -1754,7 +2037,7 @@ function setupGlobalEventListeners() {
     if (state.checkedLeaksToday) {
       showConfirmDialog({
         title: "Re-Check Leak Wire?",
-        message: "You already checked the leak feed today.<br><br>In this benchmark, new leaks only surface when advancing to a new day. Spend 1 action to re-check anyway?",
+        message: "You already checked the leak feed today.<br><br>New leaks only surface when you advance to a new day. Spend 1 action to re-check anyway?",
         okText: "Check Anyway (1 action)",
         isDanger: false,
         onConfirm: () => executeTool("check_leak_feed", {})
@@ -1840,9 +2123,16 @@ function setupGlobalEventListeners() {
 
   // Canary Wizard Events
   $("closeCanaryModalBtn").addEventListener("click", closeCanaryWizard);
+  $("hudSuspectsBtn")?.addEventListener("click", toggleSuspectHighlight);
   $("wizardCoverUntaggedBtn")?.addEventListener("click", wizardCoverUntagged);
   $("wizardSplitSolverBtn")?.addEventListener("click", wizardSplitSolver);
-  $("wizardSplitEvenBtn")?.addEventListener("click", wizardSplitSolver);
+  $("wizardSplitEvenBtn")?.addEventListener("click", () => {
+    if (state.canaryHistory.length > 0 || (state.suspectIds && state.suspectIds.size < state.employees.length)) {
+      wizardRetestCohort();
+    } else {
+      wizardSplitSolver();
+    }
+  });
   $("wizardSplitTwoBtn")?.addEventListener("click", () => wizardSplit(2));
   $("wizardSplitDeptBtn")?.addEventListener("click", wizardSplitByDept);
   $("wizardClearBtn").addEventListener("click", () => {
@@ -1898,13 +2188,13 @@ function setupGlobalEventListeners() {
   $("skipTutorialBtn").addEventListener("click", closeTutorial);
 
   // Shortcuts & Demo View
-  $("helpShortcutBtn").addEventListener("click", () => {
+  $("helpShortcutBtn")?.addEventListener("click", () => {
     $("shortcutsModal").hidden = false;
   });
   $("closeShortcutsBtn").addEventListener("click", () => {
     $("shortcutsModal").hidden = true;
   });
-  $("demoToggleBtn").addEventListener("click", () => {
+  $("demoToggleBtn")?.addEventListener("click", () => {
     const isDemo = document.body.classList.toggle("demo-mode");
     $("demoToggleBtn").textContent = isDemo ? "Standard View" : "Demo View";
   });

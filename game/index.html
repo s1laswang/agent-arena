@@ -89,7 +89,14 @@
         <span class="hud-sub">at rival firm</span>
       </div>
 
-      <!-- 5. Primary Ops Controls -->
+      <!-- 5. Remaining suspects (click to highlight) -->
+      <button type="button" class="hud-item hud-suspects" id="hudSuspectsBtn" title="Highlight remaining suspects in the office">
+        <span class="hud-label">STILL SUSPECTED</span>
+        <span class="hud-val mono" id="hudSuspectsCount">—</span>
+        <span class="hud-sub" id="hudSuspectsSub">no leaks yet</span>
+      </button>
+
+      <!-- 6. Primary Ops Controls -->
       <div class="hud-controls">
         <button type="button" id="hudPlantCanaryBtn" class="btn-plant" title="Deploy variant-marked documents [P]">
           Plant Canaries [P]
@@ -121,7 +128,7 @@
             </div>
             <div class="office-actions">
               <button type="button" id="surveyOfficeBtn" class="btn-primary btn-small">
-                Survey Office (1 action)
+                Survey Office
               </button>
             </div>
           </div>
@@ -131,9 +138,9 @@
             <span class="banner-icon" style="display:none;"></span>
             <div class="banner-content">
               <h4>Personnel Directory Not Surveyed</h4>
-              <p>Execute <strong>Survey Office</strong> to catalog staff, departments, and roles. Spends 1 daily action.</p>
+              <p>Use <strong>Survey Office</strong> to catalog staff, departments, and roles.</p>
               <button type="button" id="surveyOfficeActionBtn" class="btn-primary">
-                Survey Office (1 action)
+                Survey Office
               </button>
             </div>
           </div>
@@ -301,7 +308,7 @@
 
         <!-- Live Break-even & Expected Value Math -->
         <div class="math-card">
-          <div class="math-title">BENCHMARK SCORING & EXPECTED VALUE (EV)</div>
+          <div class="math-title">EXPECTED VALUE</div>
           <div class="math-grid">
             <div class="math-stat">
               <span class="muted font-small">Current Company Value:</span>
@@ -348,7 +355,7 @@
       <div class="modal-head">
         <div>
           <h3>Canary Planting Wizard</h3>
-          <p class="muted font-small">Distribute document variants (A, B, C) to cohorts to catch exfiltrations.</p>
+          <p class="muted font-small">Mark a small group with variants A, B, or C. Leave some staff unassigned.</p>
         </div>
         <button type="button" id="closeCanaryModalBtn" class="btn-close">✕</button>
       </div>
@@ -360,7 +367,6 @@
         </div>
 
         <div class="canary-helpers-bar">
-          <button type="button" id="wizardCoverUntaggedBtn" class="btn-secondary btn-small">Cover Untagged</button>
           <button type="button" id="wizardSplitEvenBtn" class="btn-secondary btn-small">Split Evenly</button>
           <button type="button" id="wizardClearBtn" class="btn-secondary btn-small">Reset</button>
         </div>
@@ -382,7 +388,7 @@
     </div>
   </div>
 
-  <!-- SCREEN 5: END SCREEN (REVEAL & BENCHMARK SCOREBOARD) -->
+  <!-- SCREEN 5: END SCREEN -->
   <section id="endScreen" class="card end-card" hidden>
     <div class="end-header">
       <span class="end-icon" id="endVerdictIcon" style="display:none;"></span>

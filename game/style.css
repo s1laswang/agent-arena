@@ -253,7 +253,7 @@ h1 .badge {
 /* SCREEN 2: TOP HUD */
 .hud {
   display: grid;
-  grid-template-columns: 120px 150px 160px 110px 1fr;
+  grid-template-columns: 110px 140px 150px 90px 120px 1fr;
   gap: 12px;
   align-items: center;
   position: sticky;
@@ -296,6 +296,29 @@ h1 .badge {
   gap: 6px;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+.hud-suspects {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  background: transparent;
+}
+.hud-suspects:hover,
+.hud-suspects.active {
+  border-color: var(--accent);
+  background: var(--panel-elevated);
+}
+.emp-card.in-suspect-set {
+  border-color: var(--accent);
+}
+body.highlight-suspects .emp-card:not(.in-suspect-set) {
+  opacity: 0.4;
 }
 
 /* Contextual Guidance Bar */

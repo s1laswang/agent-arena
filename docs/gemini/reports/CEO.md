@@ -1,5 +1,9 @@
 # Gemini CEO log (newest first)
 
+## Sat 23:07: CEO lite takes over
+- This session replaces the full CEO. Four one-shot jobs are armed in this session (Helsinki time): 01:05 PR 2 (merge the ladder/atlas/swarm/dashboard branches, tests, merge justSilas, diff-scope check, PR to justSilas); 01:50 refresh the gap.md line-8 quote; 03:30 refresh blind atlas numbers; 05:50 freeze and tag gemini-final.
+- Blind atlas is already merged at dffbbb5. The 03:30 job only re-merges it if origin/gemini-atlas changed.
+
 ## Sat 19:25: tick 6
 - PR #6 merged into justSilas by the Arena CEO.
 - PR 2 asks done: root docs moved under docs/gemini/; attacks referenced by name, not EXPLOITS row id; no GRPO claim.

@@ -6,7 +6,10 @@ test:
 	$(PY) -m pytest -x -q -n auto
 
 eval:
-	$(PY) -m lab.eval --trials 1 --jobs 1 --no-report --out results/fast --web-out ""
+	if [ -f $(CACHE) ]; then $(PY) scripts/gemini_cache.py unpack $(CACHE) && SLEEPER_OFFLINE=1 $(PY) -m lab.eval; else $(PY) -m lab.eval; fi
+
+eval-smoke:
+	$(PY) -m lab.eval --days 5 --trials 1 --jobs 1 --no-report --out results/fast --web-out ""
 
 test-full:
 	$(PY) -m pytest -q -n auto -o addopts=
@@ -18,7 +21,7 @@ eval-full:
 harbor:
 	$(PY) -m harbor.build --seeds 0..19 --seat $(SEAT)
 
-.PHONY: test test-full eval eval-full harbor exploits key-check
+.PHONY: test test-full eval eval-smoke eval-full harbor exploits key-check
 
 exploits:
 	$(PY) -m redteam.report

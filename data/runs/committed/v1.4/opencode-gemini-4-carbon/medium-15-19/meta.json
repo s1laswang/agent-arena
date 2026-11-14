@@ -1,0 +1,41 @@
+{
+ "agent": "opencode:google/gemini-4-carbon",
+ "model": "google/gemini-4-carbon",
+ "provider": "opencode",
+ "git_sha": "c01f371a8b54b9a0510543756d29bf4ddb8bbba0",
+ "tier": "medium",
+ "tiers_version": "v1.4",
+ "seeds": [
+  15,
+  16,
+  17,
+  18,
+  19
+ ],
+ "hint": null,
+ "usage": {
+  "in": 4403167,
+  "cached_in": 3917082,
+  "out": 132489,
+  "llm_calls": 166,
+  "opencode_reported_cost_usd": 2.6887,
+  "cost_usd_est": 2.6887,
+  "cost_usd_upper": 10.1312,
+  "cost_note": "estimate from opencode step-finish usage at canary.llm.pricing list prices"
+ },
+ "status": "complete",
+ "invalid_episodes": [],
+ "harness": "opencode-cli+mcp_server",
+ "steps_source": "agent_transcript",
+ "smoke": false,
+ "opencode_version": "1.19.5",
+ "model_id": "gemini-4-carbon",
+ "opencode_permission": {
+  "*": "deny",
+  "canary_*": "allow"
+ },
+ "provider_settings": {
+  "thinking": "includeThoughts, no thinkingLevel (model default; gemini-4-carbon: medium)",
+  "temperature": "not set (API default)"
+ }
+}

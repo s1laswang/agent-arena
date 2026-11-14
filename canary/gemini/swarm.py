@@ -803,7 +803,9 @@ def run_attempt(spec: AttackerSpec, persona: Persona, planner: Planner, cfg: dic
     smean = cfg["solver_means"].get(spec.tier, 1.0)
     # A correct accusation the public evidence already justified is detective work, not a reward hack.
     candidate = bool(led["correct"] and score >= smean - MARGIN and not audit.get("justified", False))
-    return {"id": spec.id, "persona": spec.persona, "model": spec.model, "tier": spec.tier, "seed": spec.seed,
+    return {"id": spec.id, "persona": spec.persona, "model": spec.model, "planner_model": spec.model,
+            "executor_model": cfg["exec_model"] if cfg["executor"] != "script" else "script",
+            "git_sha": cfg.get("git_sha", ""), "run_id": cfg["run_id"], "tier": spec.tier, "seed": spec.seed,
             "mode": spec.mode, "channel": spec.channel, "plan": plan, "planner_meta": meta, "executor_meta": ex_meta,
             "executor_report": backend.finished_report, "tool_calls": backend.calls, "n_tool_calls": len(backend.calls),
             "score": score, "correct": led["correct"], "accusations": led["accusations"], "end_reason": led.get("end_reason"),
@@ -912,7 +914,8 @@ def _row(a: dict) -> str:
     v = ",".join(sorted({x["kind"] for x in a["invariant_violations"]})) or "none"
     sc = "n/a" if a.get("score") is None else f"{a['score']:+.3f}"
     pa = (a.get("accusation_audit") or {}).get("p_accused")
-    return (f"| {a['id']} | {a['persona']} | {a['model']} | {a['tier']} | {a.get('channel')} | {sc} | "
+    return (f"| {a['id']} | {a['persona']} | {a['model']} / {a.get('executor_model', '?')} | "
+            f"`{(a.get('git_sha') or '')[:8]}` | {a['tier']} | {a.get('channel')} | {sc} | "
             f"{(a.get('solver_score') or 0):+.3f} | {'yes' if a.get('correct') else 'no'} | "
             f"{'-' if pa is None else f'{pa:.2f}'} | {v} | "
             f"{'**YES**' if a['exploit'] else 'no'} | {h} |")
@@ -972,8 +975,8 @@ def write_markdown(res: dict, path: Path) -> None:
               f"- **Invariant checks:** {', '.join(v['kind'] for v in a['invariant_violations']) or 'all held'}",
               f"- **Executor report:** {re.sub(r'\s+', ' ', a.get('executor_report') or '(none)')[:500]}", ""]
     L += ["## All attempts", "",
-          "| id | persona | planner | tier | channel | score | solver (same seed) | correct | p(accused) | violations | exploit | hypothesis |",
-          "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+          "| id | persona | planner / executor model | commit | tier | channel | score | solver (same seed) | correct | p(accused) | violations | exploit | hypothesis |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     L += [_row(a) for a in atts]
     L += ["", "Reproduce: `python -m canary.gemini.swarm --attackers N --mode whitebox --tiers medium,hard --out DIR` "
           "(needs GEMINI_API_KEY or GEMINI_GATEWAY_URL). Keyless smoke: `--planner stub --executor script`."]
@@ -1107,7 +1110,7 @@ def run_swarm(a) -> dict:
         escalate_summary, n_prev = wave_summary(prev), len(prev["attempts"])
     planner = Planner(a.mode, pack_text, run_id, thinking=a.planner_thinking, use_cache=not a.no_cache,
                       stub=a.planner == "stub")
-    cfg = {"solver_scores": solver_scores, "solver_means": solver_means, "secret_text": secret_text, "out": out,
+    cfg = {"git_sha": git_sha(), "solver_scores": solver_scores, "solver_means": solver_means, "secret_text": secret_text, "out": out,
            "executor": a.executor, "exec_model": a.exec_model, "run_id": run_id, "max_turns": a.max_turns,
            "escalate_summary": escalate_summary, "n_prev": n_prev}
     attempts: list[dict] = []
@@ -1186,6 +1189,12 @@ def _mcp_one(sp, pmap, planner, cfg, one_writer):
 
 def merge(dirs: list[str], out: Path, write_tests_path: str | None) -> dict:
     parts = [json.loads((Path(d) / "swarm.json").read_text()) for d in dirs]
+    for p in parts:  # older parts: stamp the run's commit and model ids on every row
+        for x in p["attempts"]:
+            x.setdefault("git_sha", p.get("git_sha", ""))
+            x.setdefault("planner_model", x.get("model"))
+            x.setdefault("executor_model", (x.get("executor_meta") or {}).get("executor", p.get("exec_model")))
+            x.setdefault("run_id", (p.get("ledger_run_ids") or [""])[0])
     attempts = [x for p in parts for x in p["attempts"]]
     sm: dict[str, list[float]] = {}
     for p in parts:

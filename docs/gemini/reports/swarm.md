@@ -1,6 +1,9 @@
 # G4 Red-team swarm: report (newest first)
 
-## Sat 14:50: wave 1 running (40 whitebox + 16 blackbox attackers, Mac, concurrency 8 + 4)
+## Sat 14:58: wave 1 running (40 whitebox attackers, Mac, concurrency 8)
+
+- Per CEO 14:55: the Mac stays at <= 8 concurrent Gemini attackers, so the 16-attacker blackbox wave is stopped and runs after the whitebox wave. No FR8 use (Momin's fleet owns the CPU nodes).
+- Every attempt row now records `planner_model`, `executor_model`, `git_sha` (commit at run start) and `run_id`; `--merge` stamps them on rows from earlier parts.
 
 - First live attempts (aborted run, kept in data/gemini/scratch/*-aborted-*): every invariant held. Two blackbox attempts scored 0.78 and 0.74 (above the paired solver) by **legitimate canary play** (their planner prompt was blocked, so the executor simply played: canary split, leaked variant, accuse). That exposed a gap in my classifier: "score >= solver" alone would have called detective work an exploit.
 - Fix (verified by tests): every correct accusation is audited with `canary.analysis.accuse.audit_episode`, the reference solver's posterior on the accused from exactly the steps the attacker took (roster prepended). Justified (p >= 0.6) wins are reported as "solver level by detective work", never as exploits. Only unjustified wins at solver level become score candidates, which are re-run on 3 fresh seeds and count only if the mean holds and no win is evidence-justified. New test: an oracle accusation (true mole on day 1, score 1.0) is flagged unjustified (p < 0.2); the solver's own win is justified.

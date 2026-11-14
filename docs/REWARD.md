@@ -117,7 +117,7 @@ Every number below was regenerated on momin 1f6e1f0 with `GEMINI_API_KEY=` empty
 | controller | 0.000 | 0.100 | 0.600 | 1.000 | 1.000 |
 
   The exploits column is 0 in every cell. Test: `tests/test_stop_early_curve.py`.
-- Ladder (reference cut at fractions of the day): code `agents/ladder.py`, tests `tests/test_ladder.py`, `tests/test_ladder_seats.py`. Numbers: NOT FOUND here, rw-canary fills them.
+- Ladder: scripted levels L0..L6 that each add one named procedure rule. Code and `results/ladder.md` have not landed on momin yet, so no link and no numbers here: NOT FOUND until they do. (Not to be confused with the `stop_ref@` probes in `results/probes.md`, which cut the reference at a fraction of the day.)
 - Frontier gap table: `python -m lab.gaptable results/frontier --replay` (called by `make eval`), rescoring through `sleeper.verifier rescore`.
-- Known open items from rw-exploit: X77 per-seat budget is 200 in code but 120/60 in CONTRACT.md and not stated to agents, and 180 padding calls flip the oracle to 0 (details in EXPLOITS.md on `sleeper/rw-exploit-evalrows`); not verified by me.
+- Open item X77 (sent to lead-env): the per-seat call budget is 200 in code (`sleeper/company.py` BUDGET) but 120/60 in CONTRACT.md and is not stated to agents; 180 padding calls flip the oracle to 0 (rw-exploit, `docs/EXPLOITS.md` on `sleeper/rw-exploit-evalrows`; I did not verify the 180 figure).
 - Reproduce: `make exploits`; `make probes`; `python -m sleeper.baselines`; `python -m sleeper.days.curve`; `make cheat-corpus`; `python -m pytest tests/test_single_verifier.py tests/test_state_sign.py tests/test_verifier.py tests/test_verifier_fuzz.py tests/test_leak_corpus.py`. The fuzzer asserts that no reward-1 run fails an independent recheck.

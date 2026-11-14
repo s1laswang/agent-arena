@@ -1,0 +1,44 @@
+{
+  "baseline_default_mole": {
+    "grok_tactics_accuracy": 0.6667,
+    "grok_tactics_mean": 0.39,
+    "heuristic_accuracy": 0.0,
+    "heuristic_mean": -1.0,
+    "solver_accuracy": 1.0,
+    "solver_mean": 0.5867
+  },
+  "command": "/tmp/fleet-root/shared/agent-arena-venv/bin/python scripts/run_role_adaptive_mole.py --llm gemini:gemini-4-carbon --tier medium --seeds 6 7 8 --jobs 6 --out results/gemini_roles/adaptive_mole/arena-live-carbon-med678",
+  "commit": "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
+  "grok_tactics_accuracy": 0.0,
+  "grok_tactics_mean": 0.0,
+  "heuristic_accuracy": 0.0,
+  "heuristic_mean": -1.0,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "mole_decisions_count": 79,
+  "mole_llm_errors": 0,
+  "mole_rejected_moves_count": 0,
+  "role": "adaptive_mole",
+  "seeds": [
+    6,
+    7,
+    8
+  ],
+  "solvability_verified": true,
+  "solver_accuracy": 1.0,
+  "solver_mean": 0.4433,
+  "subrole": "live_arena_mole",
+  "tier": "medium",
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T22:32:52Z",
+  "usage": {
+    "cached": 0,
+    "calls": 79,
+    "cost_usd": 0.238536,
+    "in": 63938,
+    "latency_s": 790.208,
+    "out": 5151,
+    "thinking": 5915,
+    "total_tokens": 75004
+  }
+}

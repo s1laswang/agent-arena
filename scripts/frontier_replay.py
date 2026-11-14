@@ -16,7 +16,7 @@ def check(path):
 
 def main(argv=None):
     a = argv if argv is not None else sys.argv[1:]
-    paths = a or sorted(glob.glob(os.path.join(ROOT, "results", "frontier", "**", "*.json"), recursive=True))
+    paths = a or sorted(p for p in glob.glob(os.path.join(ROOT, "results", "frontier", "**", "*.json"), recursive=True) if "/cache/" not in p and not p.endswith(".state.json"))
     fail = 0
     for p in paths:
         if os.path.basename(p) == "GAP.json":

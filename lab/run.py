@@ -83,6 +83,8 @@ def agent_kind(name):
 
 
 def agent_model(name):
+    if name.startswith("local:"):
+        return os.environ.get("SLEEPER_MODEL_ID") or name[6:]
     if agent_kind(name) == "gemini":
         from agents import gemini
 
@@ -257,6 +259,8 @@ def run(team, days, trials, seat=None, agent=None, day_start=0, day_ids=None, ou
         cap = int(os.environ.get("SLEEPER_MAX_CALLS", 0) or 0)
         summary["gemini_usage"]["budget_exhausted"] = bool(cap and summary["gemini_usage"].get("calls", 0) >= cap * max(jobs, 1))
     summary.update(run_id=rid, background_team=team, seat_under_test=seat)
+    if os.environ.get("SLEEPER_ROW_LABEL"):
+        summary.update(label=os.environ["SLEEPER_ROW_LABEL"], commit=os.environ.get("SLEEPER_MODEL_ID", "").rsplit("+", 1)[-1])
     with open(os.path.join(d, "summary.json"), "w") as f:
         json.dump(summary, f, indent=2, sort_keys=True)
     with open(os.path.join(d, "meta.json"), "w") as f:

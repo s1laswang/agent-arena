@@ -32,7 +32,14 @@ class BudgetExceeded(RuntimeError):
 def load_moles(hof_path: str, top: int) -> list[tuple[str, dict, dict]]:
     moles = [("default", default_strategy_json(), {})]
     rows = [json.loads(l) for l in Path(hof_path).read_text().splitlines() if l.strip()]
-    for h in rows[:top]:
+    seen = set()
+    for h in rows:
+        if len(moles) > top:
+            break
+        sig = json.dumps([h.get("fitness"), h.get("solver_score"), h.get("per_investigator")], sort_keys=True)
+        if sig in seen:  # behaviourally identical on the forge seeds (e.g. dead rules): skip, save budget
+            continue
+        seen.add(sig)
         moles.append((f"hof{h.get('rank', len(moles))}", h["strategy_json"],
                       {k: h.get(k) for k in ("fitness", "solver_score", "per_investigator")}))
     return moles

@@ -85,3 +85,30 @@ Fresh-seed table (`uv run --python 3.12 python scripts/fresh_table.py 1000 1400`
 ## 03:32 status: v1.3 MERGED (justSilas 0933805)
 - Verified: make test 469 passed (pipefail). Known V in status; solver v1.3; grok_tactics; results/fresh_table_v1.3.md. FR8 800 fresh seeds/tier: solver .779/.632/.575, acc 99.6/88.7/84.8%, solver-grok +.089/+.174/+.233.
 - Waiting: AGENTS official gpt-5.5 v1.3 runs -> regret table. INTEGRITY fuzz on v1.3.
+
+## 14:35 status (HEAD-ENV relaunch, NEXT-LEVEL)
+- Done: worktrees `justSilas-env2` (skill ladder, merges when green) and `justSilas-v15` (WS2 bias layer, NOT merged; CEO decides at Gate B 20:00). Rules v1.4 frozen.
+- In progress: ladder engineer (`justSilas-env2-ladder`, n≥400/tier on fresh dev seeds, ETA 16:30); bias engineer (`justSilas-v15-bias`: rumours, grudge pairs, authority, misforwards, mole `seed_rumour`; solver models the stated likelihoods; ETA 16:40).
+- Blockers: none. Mac load capped at 3+3 processes.
+- Next: review both, merge the ladder, then v1.5 numbers in `results/fresh_table_v1.5-candidate.md` by 17:00.
+
+## 14:43 status: Gate A numbers
+- **Skill ladder MERGED** (justSilas 7e84d7d; verified with the full pytest run, 561 passed). Seeds 7000-7399, n=400 per tier, v1.4. `results/skill_ladder_v1.4.md`. The EV accusation rule (−0.15 to −0.41) and the delay model (−0.46 medium / −0.25 hard) cost significant score. Careful mole, single canary, decoy and framing are within noise (flagged in the file).
+- **v1.5 candidate, NOT merged** (branch `justSilas-v15` de9cc50; full pytest 561 passed on the eng branch; `make hunt TIER=all` clean on v1.4 and v1.5-candidate). Knobs: rumour_rate 2.0/day, rumour_frame_share 0.4, grudge_pairs 2 @0.5, authority_day 3, p_misforward 0.15. The exact rumour likelihood is in the instructions; with the default mole a rumour carries 0 evidence.
+  Fresh seeds 7000-7399, n=400 per tier (`results/fresh_table_v1.5-candidate.md`). Rows are v1.4 → v1.5:
+
+  | tier | solver | acc (accused) | abstain | grok_tactics | heuristic | rumour_follower |
+  |---|---|---|---|---|---|---|
+  | medium | 0.628 → 0.641 | 100% | 11.0% | 0.431 → 0.456 | −0.052 → 0.067 | −0.909 → −0.986 |
+  | hard | 0.564 → 0.571 | 97.0% | 0.5% | 0.362 → 0.371 | −0.024 → 0.002 | −0.960 → −0.995 |
+
+  Targets met: solver ≥85% accurate; well above grok_tactics (−0.19/−0.20 paired) and heuristic (−0.57). The scripted baselines don't read chatter, so the layer only bites LLM agents that trust rumours. That is the Gate B gemini-4-carbon spot check.
+- Deviation (accepted): unseeded rumours, the authority post and grudge pairs can name the mole (otherwise being named would be proof of innocence). Only mole-seeded targets are guaranteed innocent, and the instructions say so.
+- Not done: Gemini rendering of chatter (falls back to the template renderer). v1.5 easy is hunt-only.
+- Next: stand by for the Gate B decision; the v1.5 merge happens only on the CEO's go.
+
+## 19:05 Gate B record (v1.5 NOT shipped, CEO decision)
+- The CEO's gemini-4-carbon spot check, hard seeds 0-9: **61% of the solver on v1.4 → 108% on v1.5** (10/10 correct, mean P at accusation 0.94). Gemini treated rumours as evidence *against* the rumoured person; it did not follow them.
+- So the bias layer made the frontier agent's job *easier*, not harder: the rumoured person is usually innocent, which narrows the candidates. **Negative result: "frontier agents read past social bias."** Branch `justSilas-v15` (de9cc50) stays unmerged as the record; the scripted rumour_follower baseline (−0.99) shows the trap works only against naive policies.
+- Fresh-seed numbers for the record (seeds 7000-7399, n=400): solver medium 0.641 / hard 0.571 (100% / 97% accurate when accusing); grok_tactics 0.456 / 0.371; heuristic 0.067 / 0.002; rumour_follower −0.986 / −0.995. `make hunt TIER=all` was clean on v1.5. The anti-cheat battery was NOT run on v1.5 (it wasn't needed once v1.5 was dropped). The Gemini chatter rendering was stopped part-way on `justSilas-v15-bias`.
+- The judged env stays **v1.4** (8f87ed1, hash a8f99c2537c91d72). The freeze on rules.py/env.py/solver/ starts 20:00. After that HEAD-ENV is review only (justSilas-harness3 / justSilas-integrity3).

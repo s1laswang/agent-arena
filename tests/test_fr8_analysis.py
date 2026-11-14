@@ -136,3 +136,21 @@ def test_j1_joint_ordering():
     bad = _cell_rows("easy", 0, 0.3) + _cell_rows("medium", 1, 0.7)
     _, held2 = j1_recommend.recommend_joint(bad)
     assert not held2 and "Ordering cannot hold" in j1_recommend.to_markdown(bad, ["x"])
+
+
+def test_forge_validate_feasibility(monkeypatch):
+    from fr8.analysis import forge_validate as fv
+    fake = {"default": (0.8, 1.0, 0.2), "hof#1": (0.5, 0.9, 0.3), "hof#2": (0.3, 0.95, 0.0), "hof#3": (0.7, 0.8, 0.5)}
+
+    def ev(args):
+        sid = args[0]
+        s, acc, h = fake[sid]
+        return {"strategy": sid, "n": 10, "solver_score": s, "solver_ci": .01, "solver_acc": acc, "solver_none": 0.0,
+                "heur_score": h, "heur_acc": .5, "regret": s - h, "regret_ci": .05}
+    monkeypatch.setattr(fv, "eval_strategy", ev)
+    rows = fv.validate([{"rank": i, "strategy_json": {}} for i in (1, 2, 3)], "hard", list(range(10)), workers=1)
+    by = {r["strategy"]: r for r in rows}
+    assert by["hof#1"]["feasible"] and by["hof#1"]["judge_candidate"]
+    assert not by["hof#2"]["feasible"]          # 0.3 < 0.5 x 0.8
+    assert not by["hof#3"]["feasible"]          # acc 0.8 < 0.85
+    assert "judge candidates: hof#1" in fv.to_markdown(rows, "r", "hard", list(range(10)), {})

@@ -18,3 +18,9 @@
 - EXPLOITS.md unified to 9 rows; row 1 = stop-early v0 = 0.10 on medium → fix contract v0.3 (wrong accusation = −1.0), test updates in progress.
 - In progress: props-probe → v0.3 sign properties; fuzzer → medium/hard fuzz + calibration + FR8 J2; exploit-hunter → codex over MCP.
 - Next 45 min: v0.3 tests green on merge; text probe on medium 0-49; first codex hunt once MCP lands.
+
+## 02:55 status
+- Done (verified: `make test` 189 passed / 2 skipped / 8 xfailed): fuzz `--mode all`, seeds 0-49, budget 20000 on easy/medium/hard → best non-solver score 0.000, 0 invariant violations everywhere (all ~5 s). Baselines calibrated on 30 seeds/tier. v0.3 sign invariants in the fuzzer (xfail until v0.3 lands).
+- **FINDING #10 (open, ENV):** access logs alone name the mole: LogsMinusDecoy (no canaries) is correct 71% easy / 33% medium / 19% hard at wait=9 (chance 8/5/3%) and beats the canary heuristic on easy+medium. Hurts "meaningful difficulty" (canaries optional). Proposed fix sent to ENV.
+- FR8 J2 sbatch ready (untested on FR8), handed to FR8 head.
+- Next 45 min: v0.3 + props round 2 merged; text probe; MCP exploit hunt once MCP lands.

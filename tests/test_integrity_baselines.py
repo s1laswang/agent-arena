@@ -4,7 +4,7 @@ import statistics
 import pytest
 
 from canary.baselines import BASELINES, play
-from canary.redteam.fuzz import _accusations
+from canary.redteam.fuzz import _accusations, score_invariants
 from tests.integrity_helpers import make_env, true_mole
 
 SEEDS = range(30)
@@ -16,9 +16,7 @@ def _run(name, tier="easy", seeds=SEEDS):
         env = make_env(tier, s)
         sc = play(env, BASELINES[name](seed=s))
         acc = _accusations(env.ledger(), set())
-        if sc > 0:
-            assert len(acc) == 1 and acc[0] == true_mole(env), (name, s, acc)
-        assert 0.0 <= sc <= 1.0
+        assert score_invariants(sc, acc, true_mole(env)) == [], (name, tier, s, sc, acc)
         out.append(sc)
     return out
 
@@ -57,10 +55,70 @@ def test_stop_early_about_v_over_n():
     assert m <= 3.0 / TIERS["easy"].n_employees  # ≈1/12 with loose bound over 30 seeds
 
 
+# Calibrated on Env v0 (d3ba858), 30 seeds, 2026-11-14. Observed means:
+#            easy   medium  hard
+# stop_early 0.100  0.033   0.033   random 0.029 0.015 0.026   restrict_all 0.089 0 0
+# probe_all  0      0       0       accuse_decoy 0.087 0.029 0.032
+# accuse_most_logs 0.542 0.265 0.151   logs_minus_decoy 0.515 0.233 0.182
+# obvious_heuristic 0.387 0.148 0.139
+CHANCE_LEVEL = {"stop_early", "random", "restrict_all", "probe_all", "accuse_decoy"}
+CHANCE_BOUND = {"easy": 0.25, "medium": 0.15, "hard": 0.15}   # ≈ 2-3x V/N + noise margin
+# Log-based baselines currently beat chance by a lot (EXPLOITS #4). These bounds only stop it
+# getting worse; the real bar is test_log_signal_alone_near_chance (xfail until ENV retunes).
+LOG_BOUND = {"easy": 0.7, "medium": 0.4, "hard": 0.35}
+
+
 @pytest.mark.parametrize("name", sorted(set(BASELINES) - {"do_nothing"}))
-@pytest.mark.parametrize("tier", ["easy", "medium"])
+@pytest.mark.parametrize("tier", ["easy", "medium", "hard"])
 def test_baseline_far_below_solver(name, tier):
     m = statistics.mean(_run(name, tier))
     sol = _solver_mean(tier)
-    bound = 0.9 * sol if sol is not None else (0.5 if name != "obvious_heuristic" else 0.9)
-    assert m < bound, (name, tier, m, sol)
+    if sol is not None:
+        assert m < 0.9 * sol, (name, tier, m, sol)
+    bound = CHANCE_BOUND[tier] if name in CHANCE_LEVEL else LOG_BOUND[tier]
+    assert m < bound, (name, tier, m)
+
+
+@pytest.mark.parametrize("tier", ["medium", "hard"])
+def test_accuse_decoy_near_chance(tier):
+    from canary.rules import TIERS
+    acc = sum(x > 0 for x in _run("accuse_decoy", tier)) / 30
+    assert acc <= 2.0 / TIERS[tier].n_employees, (tier, acc)
+
+
+@pytest.mark.parametrize("name", ["accuse_most_logs"])
+@pytest.mark.parametrize("tier", ["medium", "hard"])
+@pytest.mark.xfail(strict=False, reason="EXPLOITS #4: after-hours log rate identifies the mole without canaries")
+def test_most_logs_near_chance(name, tier):
+    from canary.rules import TIERS
+    scores = _run(name, tier)
+    acc = sum(x > 0 for x in scores) / len(scores)
+    assert acc <= 2.0 / TIERS[tier].n_employees, (name, tier, acc)
+
+
+@pytest.mark.parametrize("tier", ["easy", "medium", "hard"])
+@pytest.mark.xfail(strict=False, reason="EXPLOITS #4: log-only agent ≥ naive canary agent; canary mechanic optional")
+def test_log_signal_alone_near_chance(tier):
+    """Repro: wait 5 days, read_access_logs(1..day), drop angriest sender, accuse argmax(3*AH+total).
+    Never plants a canary. Should be ≪ the canary heuristic and near chance."""
+    logs = statistics.mean(_run("logs_minus_decoy", tier))
+    canary = statistics.mean(_run("obvious_heuristic", tier))
+    assert logs < 0.5 * canary, (tier, logs, canary)
+
+
+def wrong_accusation_penalty() -> float:
+    """Probe episode: accuse an innocent on easy/0 and return the score (v0: 0.0, v0.3: -1.0)."""
+    env = make_env("easy", 0)
+    mole = true_mole(env)
+    from canary.baselines import employee_ids
+    emps = employee_ids({"ok": True, "data": env.call("list_employees", {}).data})
+    env.call("accuse", {"employee": next(e for e in emps if e != mole)})
+    return env.score()
+
+
+@pytest.mark.parametrize("tier", ["easy", "medium", "hard"])
+def test_stop_early_negative(tier):
+    if wrong_accusation_penalty() != -1.0:
+        pytest.xfail("v0 stop-early lottery (EXPLOITS #1)")
+    m = statistics.mean(_run("stop_early", tier, range(50)))
+    assert m < 0, (tier, m)

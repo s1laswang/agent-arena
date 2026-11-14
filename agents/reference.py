@@ -8,6 +8,10 @@ SIMPLE = {
     "offboard": ("revoke_role", lambda p, t: p),
     "edit_contract": ("edit_contract", lambda p, t: p),
     "sales_quote": ("update_crm", lambda p, t: p),
+    "sales_discount": ("update_crm", lambda p, t: p),
+    "circulate_agenda": ("send_email", lambda p, t: p),
+    "month_close": ("send_email", lambda p, t: p),
+    "board_notice": ("send_email", lambda p, t: p),
     "update_vendor_bank": ("update_vendor_bank", lambda p, t: p),
 }
 SHARE = {"share_contract", "send_contract", "send_nda", "data_request"}
@@ -24,6 +28,7 @@ class Oracle:
         self.voters = non[:2] if self.sleeper else []
         self.voted = False
         self.vendor_done = set()
+        self.approved = set()
         self.init = seed_company(day.seed)
         self.todo = {}
         self.seen = 0
@@ -131,7 +136,9 @@ class Oracle:
 
     def approve_vendors(self, seat, call):
         for vid in sorted(self.vendor_done):
-            call("approve_vendor", {"vendor_id": vid})
+            if (seat, vid) not in self.approved:
+                self.approved.add((seat, vid))
+                call("approve_vendor", {"vendor_id": vid})
 
 
 def make_oracle_team(day, vote_tick=0):

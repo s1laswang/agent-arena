@@ -7,8 +7,8 @@ cd ~
 export PATH=$HOME/.local/bin:$PATH
 command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
 cd ~/agent-arena
-uv venv -q --python 3.11 ~/venv && . ~/venv/bin/activate
-uv pip install -q -e . torch==2.5.1 "transformers==4.57.*" "peft==0.17.*" accelerate jinja2 huggingface_hub
+uv venv -q --clear --python 3.11 ~/venv && . ~/venv/bin/activate
+uv pip install -q -e . torch==2.5.1 transformers==5.16.1 peft==0.20.0 accelerate jinja2 huggingface_hub
 python -c "import torch,transformers,peft;print('cuda',torch.cuda.is_available(),torch.cuda.get_device_name(0),'tf',transformers.__version__,'peft',peft.__version__)"
 M=$HOME/models/Qwen2.5-1.5B-Instruct
 [ -f $M/config.json ] || python -c "from huggingface_hub import snapshot_download as d; d('Qwen/Qwen2.5-1.5B-Instruct', local_dir='$M', allow_patterns=['*.json','*.safetensors','*.txt'])"

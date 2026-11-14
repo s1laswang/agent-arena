@@ -104,13 +104,30 @@ def branch_reward(task) -> dict:
     if not env.done:
         sol.act(list(env.history))   # keep the solver's internal phase in step; its call is replaced by the model's
     env.call(tool, args)
-    n = 0
+    n, fallback = 0, False
     while not env.done and n < MAX_ITERS:
-        env.call(*sol.act(list(env.history)))
+        try:
+            nxt = sol.act(list(env.history))
+        except Exception:            # solver can't handle an off-distribution state (e.g. empty posterior):
+            fallback = True          # play on without accusing; the Env decides the score (no hand-set reward)
+            break
+        env.call(*nxt)
+        n += 1
+    while fallback and not env.done and n < MAX_ITERS:
+        env.call("advance_day", {})
         n += 1
     res = env.result("grpo-branch")
-    return {"reward": float(res.score) if env.done else 0.0, "valid": True, "tool": tool,
+    return {"reward": float(res.score) if env.done else 0.0, "valid": True, "tool": tool, "fallback": fallback,
             "correct": bool(res.correct), "early_accuse": tool == "accuse" and row["t"] < row["solver_len"] - 1}
+
+
+def safe_branch_reward(task) -> dict:
+    """Never raise inside the reward pool (one crash killed run 1 at step 55)."""
+    try:
+        return branch_reward(task)
+    except Exception as e:
+        return {"reward": 0.0, "valid": task[1] is not None, "tool": (task[1] or [None])[0], "fallback": True,
+                "error": f"{type(e).__name__}: {e}"[:200]}
 
 
 class RewardPool:
@@ -123,7 +140,7 @@ class RewardPool:
 
     def __call__(self, rows, calls):
         tasks = list(zip(rows, calls))
-        return list(self.ex.map(branch_reward, tasks, chunksize=4)) if self.ex else [branch_reward(t) for t in tasks]
+        return list(self.ex.map(safe_branch_reward, tasks, chunksize=4)) if self.ex else [safe_branch_reward(t) for t in tasks]
 
 
 # ---------------------------------------------------------------- model side (GPU)
@@ -268,7 +285,8 @@ def train(a, states, pool, log):
                "accuse_correct": round(sum(r.get("correct", False) for r in valid if r["tool"] == "accuse")
                                        / max(1, tools.get("accuse", 0)), 3),
                "distinct_tools": len(tools), "top_tool_share": round(tools.most_common(1)[0][1] / len(results), 3) if tools else 0,
-               "zero_var_groups": int((std < 1e-6).sum()), "ent": round(stats["ent"], 4), "kl": round(stats["kl"], 5),
+               "zero_var_groups": int((std < 1e-6).sum()),
+               "fallbacks": sum(1 for r in results if r.get("fallback")), "reward_errors": sum(1 for r in results if r.get("error")), "ent": round(stats["ent"], 4), "kl": round(stats["kl"], 5),
                "sec": round(time.time() - t0, 1), "elapsed_h": round((time.time() - t_start) / 3600, 3)}
         log(json.dumps(rec))
         with curve.open("a") as f:

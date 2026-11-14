@@ -374,7 +374,10 @@ class Env:
 
     def _mole_decide(self, view: MoleView) -> dict:
         strat = self._world.mole_strategy or DEFAULT_STRATEGY
-        return strat.decide(view, self._dyn)
+        try:
+            return strat.decide(view, self._dyn)
+        except TypeError:  # LLM moles (canary.agents.mole_arena) take decide(view)
+            return strat.decide(view)
 
     def _t_advance_day(self, a):
         p, w, d, rng = self.p, self._world, self.day, self._dyn

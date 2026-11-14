@@ -98,3 +98,11 @@ def test_real_env_short_hunt():
     res = fuzz.hunt("easy", range(5), 200, 0, "all")
     assert res["best_non_solver_score"] == 0, res["invariant_violations"][:3]
     assert res["invariant_violations"] == [], res["invariant_violations"][:3]
+
+
+def test_score_invariants_v03():
+    si = fuzz.score_invariants
+    assert si(0.0, [], "e01") == [] and si(0.0, ["e02"], "e01") == []      # v0 wrong accuse
+    assert si(-1.0, ["e02"], "e01") == [] and si(0.8, ["e01"], "e01") == []
+    assert si(-1.0, [], "e01") and si(-1.0, ["e01"], "e01") and si(-0.5, ["e02"], "e01")
+    assert si(0.5, ["e02"], "e01") and si(0.5, ["e01", "e01"], "e01") and si(1.5, ["e01"], "e01")

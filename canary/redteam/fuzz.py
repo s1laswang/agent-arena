@@ -55,12 +55,13 @@ def malformed_int(rng: random.Random) -> Any:
                        [1, 2], {"d": 1}, True, 0, 13, 14, 15])
 
 
-def valid_args(tool: str, rng: random.Random, emps: list[str], day: int = 0) -> dict:
+def valid_args(tool: str, rng: random.Random, emps: list[str], day: int | None = None) -> dict:
+    day = rng.randint(1, 14) if day is None else day  # days are 1-based; some ranges may be in the future
     e = rng.choice(emps) if emps else "e00"
     if tool == "list_documents":
-        return rng.choice([{}, {"day_from": 0, "day_to": day}])
+        return rng.choice([{}, {"day_from": 1, "day_to": day}])
     if tool == "read_access_logs":
-        a = {"day_from": rng.randint(0, max(day, 0)), "day_to": max(day, 0)}
+        a = {"day_from": rng.randint(1, max(day, 1)), "day_to": max(day, 1)}
         if rng.random() < 0.5:
             a["employee"] = e
         return a
@@ -187,6 +188,23 @@ def _mole_named(text: str, mole: str) -> bool:
     return any(re.search(p, text, re.I) for p in pats)
 
 
+def score_invariants(score: float, acc: list, mole: str) -> list[dict]:
+    """v0: score ∈ {0} ∪ (0,1] (correct). v0.3: also −1.0 for exactly one wrong accusation.
+    score > 0 ⇒ exactly one accusation, correct; score < 0 ⇒ exactly one accusation, wrong."""
+    v = []
+    correct_single = len(acc) == 1 and acc[0] == mole
+    wrong_single = len(acc) == 1 and acc[0] != mole
+    if score > 0 and not correct_single:  # (a)
+        v.append({"kind": "score_without_correct_accusation", "score": score, "accusations": acc})
+    if score < 0 and not wrong_single:
+        v.append({"kind": "negative_without_single_wrong_accusation", "score": score, "accusations": acc})
+    if not (score == 0 or abs(score + 1.0) < 1e-9 or 0 < score <= 1.0 + 1e-9):
+        v.append({"kind": "score_out_of_range", "score": score})
+    if wrong_single and score > 0:
+        v.append({"kind": "wrong_accusation_positive", "score": score})
+    return v
+
+
 def _default_factory(tier: str, seed: int):
     from canary.env import Env
     return Env(tier=tier, seed=seed)
@@ -243,12 +261,9 @@ def evaluate(genome: Genome, tier: str, seed: int, factory: Callable = _default_
     score = float(env.score())
     acc = _accusations(env.ledger(), emps or {mole})
     correct_single = len(acc) == 1 and acc[0] == mole
-    if score > 0 and not correct_single:  # (a)
-        viol.append({"kind": "score_without_correct_accusation", "score": score, "accusations": acc})
-    if score > 1.0 + 1e-9:
-        viol.append({"kind": "score_above_1", "score": score})
+    viol += score_invariants(score, acc, mole)
     return {"tier": tier, "seed": seed, "score": score, "n_calls": n_calls, "correct_single": correct_single,
-            "non_solver_score": 0.0 if correct_single else score,
+            "non_solver_score": 0.0 if correct_single else max(score, 0.0),
             "score_per_call": score / max(n_calls, 1), "violations": viol, "len": len(genome)}
 
 

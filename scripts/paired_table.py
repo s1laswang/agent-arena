@@ -15,9 +15,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
-def _init(known):
+def _init(known, version=None):
     from canary import rules
     rules.KNOWN_V_MODE = known
+    if version and version != rules.TIERS_VERSION:  # frozen earlier tiers (rules.TIERS_HISTORY), worker-wide
+        rules.TIERS.clear()
+        rules.TIERS.update(rules.TIERS_HISTORY[version])
+        rules.TIERS_VERSION = version
 
 
 def _one(job):
@@ -35,17 +39,19 @@ def main():
     ap.add_argument("--agents", default="grok_tactics,heuristic,random,stop_early,do_nothing")
     ap.add_argument("--mode", choices=["known", "true"], default="known", help="rules.KNOWN_V_MODE")
     ap.add_argument("--procs", type=int, default=6)
+    ap.add_argument("--tiers-version", default=None, help="replay an earlier frozen version, e.g. v1.3 (rules.TIERS_HISTORY)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     lo, hi = (int(x) for x in a.seeds.split(":"))
     seeds = range(lo, hi)
     agents = ["solver"] + [x for x in a.agents.split(",") if x and x != "solver"]
     from canary import rules
-    lines = [f"# Paired table: seeds {lo}-{hi - 1}, V mode = {a.mode}, tiers {rules.TIERS_VERSION if hasattr(rules, 'TIERS_VERSION') else '?'}", "",
+    version = a.tiers_version or rules.TIERS_VERSION
+    lines = [f"# Paired table: seeds {lo}-{hi - 1}, V mode = {a.mode}, tiers {version}", "",
              "Diff = agent - solver on the same seed (paired 95% CI). Acc = correct accusations; no-acc = episodes without an accusation.", "",
              "| tier | agent | mean score | ±95% | diff vs solver (paired) | acc | no-acc | mean accusation day |",
              "|---|---|---|---|---|---|---|---|"]
-    with Pool(a.procs, initializer=_init, initargs=(a.mode == "known",)) as pool:
+    with Pool(min(6, a.procs), initializer=_init, initargs=(a.mode == "known", a.tiers_version)) as pool:
         for tier in a.tiers.split(","):
             res = {ag: pool.map(_one, [(tier, s, ag) for s in seeds], chunksize=8) for ag in agents}
             base = [x[0] for x in res["solver"]]

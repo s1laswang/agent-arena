@@ -266,6 +266,7 @@ def test_harbor_verifier_fails_closed(tmp_path, ledger):
     p = subprocess.run([sys.executable, "-c", _verifier_py(tmp_path)], capture_output=True, text=True, env=env)
     assert p.returncode != 0
     assert (tmp_path / "logs/reward.txt").read_text() == "0"
+    assert json.loads((tmp_path / "logs/reward.json").read_text()) == {"reward": 0}   # Harbor reads reward.json first
 
 
 def test_harbor_verifier_ignores_symlinked_evidence(tmp_path):
@@ -309,6 +310,7 @@ def test_shared_verifier_grades_only_from_the_token_ledger(tmp_path):
         srv.stop()
     assert p.returncode == 0, p.stderr[-800:]
     assert float((tmp_path / "logs/reward.txt").read_text()) == 0.0
+    assert json.loads((tmp_path / "logs/reward.json").read_text()) == {"reward": 0.0}
     assert "/evidence ignored" in p.stdout
 
 

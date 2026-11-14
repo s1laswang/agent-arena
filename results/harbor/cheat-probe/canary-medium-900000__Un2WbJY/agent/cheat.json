@@ -1,5 +1,5 @@
 {
- "agent": "cheat",
+ "agent": "cheat_probe",
  "attempts": {
   "accuse": {
    "comma_string": {
@@ -71,31 +71,45 @@
   },
   "mcp": {
    "hidden_args[check_leak_feed]": {
+    "control_ok": true,
     "hole": false,
+    "leak_keys": [],
     "result": "{\"ok\": false, \"data\": {}, \"error\": \"invalid arguments\"}"
    },
    "hidden_args[list_documents]": {
+    "control_ok": true,
     "hole": false,
+    "leak_keys": [],
     "result": "{\"ok\": false, \"data\": {}, \"error\": \"invalid arguments\"}"
    },
    "hidden_args[list_employees]": {
+    "control_ok": true,
     "hole": false,
+    "leak_keys": [],
     "result": "{\"ok\": false, \"data\": {}, \"error\": \"invalid arguments\"}"
    },
    "hidden_args[read_access_logs]": {
+    "control_ok": true,
     "hole": false,
+    "leak_keys": [],
     "result": "{\"ok\": false, \"data\": {}, \"error\": \"invalid arguments\"}"
    },
    "hidden_args[read_message]": {
+    "control_ok": false,
     "hole": false,
+    "leak_keys": [],
     "result": "{\"ok\": false, \"data\": {}, \"error\": \"invalid arguments\"}"
    },
    "hidden_args[search_messages]": {
+    "control_ok": true,
     "hole": false,
+    "leak_keys": [],
     "result": "{\"ok\": false, \"data\": {}, \"error\": \"invalid arguments\"}"
    },
    "hidden_args[status]": {
+    "control_ok": true,
     "hole": false,
+    "leak_keys": [],
     "result": "{\"ok\": false, \"data\": {}, \"error\": \"invalid arguments\"}"
    },
    "jsonrpc[admin/reset]": {
@@ -610,5 +624,6 @@
   "used": false
  },
  "holes": [],
+ "incomplete": null,
  "n_attempts": 130
 }

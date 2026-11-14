@@ -157,6 +157,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--secret-file", default=None,
                     help="world secret to bake into the sidecars (default: a fresh random secret per build)")
     a = ap.parse_args(argv)
+    if a.verifier == "shared":   # EXPLOITS #42
+        print("WARNING: --verifier shared is NOT for judging. test.sh then runs inside the agent's container. On our "
+              "Harbor 0.25 / Docker Desktop host it did not run at all (even do_nothing got RewardFileNotFoundError), "
+              "so a reward file the agent leaves behind is all Harbor sees. Use the default separate verifier.",
+              file=sys.stderr)
     sys.path.insert(0, str(ROOT))
     from canary.rules import HELDOUT_SEEDS, JUDGE_SEEDS, TIERS
 

@@ -99,3 +99,25 @@ New work, not merged to justSilas yet:
 Beats us: a real frontier run through the exact judge path with a gap on 6/6 (their gap axis moves from 8 toward the top of the range if n grows and holds); integrity battery landing; skill ladder; browser game.
 We can beat: n=6, only gemini-4-carbon, v1.4 tier whose scripted gap narrowed; v1.5 not merged; ladder rungs showing +0.000 on easy; they have no multi-seat, no leak detector, no verifier rescore. We have no frontier row at all, so we trail on gap until lab lands one.
 Ideas to copy (idea only): run the judge path via Harbor + OpenCode with the key name pitfall noted in our README; the oracle-vs-model same-world pair table; skill-ladder paired deltas with CI.
+
+## Tick 5, 2026-11-14 15:15 Helsinki
+
+Last-seen SHAs: justSilas e8a6fdf7 (= justSilas-gemini, now exists; was b4bcd4e), integrity2 cfeb59db, agents2 90e33542, env2 3965cbe3, fr8 8f2e01a1, v15 de9cc50e, v15-bias 9e4bda34. Unchanged: harness2 50d8a903, env2-ladder e2f74bb5, poisoned-inbox 9068b16a, all older branches. (git printed 7 and 8 char SHAs this time; compare by prefix.)
+
+Merged into justSilas since tick 4 (their CEO log 14:38/15:40, env report 14:43, integrity report 15:40; all their claims, I did not re-run):
+- Anti-cheat battery in `make reproduce` (bd446c6): 13 attack probes, stop-early ladder (solver cut at 25/50/75% and minus final accuse = exactly 0), control (= solver), replay of 299 v1.3 episodes all consistent (+15 s). `tests/test_anticheat.py` 21 tests.
+- Harbor `ORACLE_POLICY=cheat` real run: -1.0 medium, -1.0 hard; fake reward.txt and rewriter ignored; /ledger and /admin 403 on all 12 token variants; no server files or CANARY_* env visible (`results/harbor/cheat/`).
+- `CANARY_EPISODE_FILE` / token files: `make mcp`, frontier runner and hunter no longer put the seed or token in the server env (closes the bake-off `/proc` note).
+- valid:false means infra only (two holes closed: agent text matching infra patterns; agent killing its server gets valid 0); a crashing policy or API error marks the episode valid:false, never a silent 0.
+- **Momin's cheat corpus ported** (`canary/redteam/corpus.py`, `data/redteam/corpus.jsonl`, 129 rows): 774 injected runs, 0 accepted, 0 score changes. This is one of OUR assets landing (scorecard section A: cheat corpus now partial YES).
+- Skill ladder merged (7e84d7d, v1.4, seeds 7000-7399, n=400): EV accusation rule costs -0.15 to -0.41, delay model -0.46 medium / -0.25 hard; careful mole, single canary, decoy, framing are within noise (flagged).
+- `make hunt` on v1.4, 4 tracks x 4 modes: best non-solver 0.000, 0 violations (default budget). `make test` 592 passed / 6 skipped.
+
+On branches only:
+- v1.5 candidate (v15 de9cc50): solver medium 0.628 -> 0.641, hard 0.564 -> 0.571, acc >=97% hard; grok_tactics 0.371 hard; heuristic 0.002 hard; rumour_follower -0.995 hard. Scripted baselines ignore chatter, so the layer only bites LLM agents that trust rumours: Gate B Gemini spot check decides (CEO, 20:00). v15-bias: Gemini (gemini-4-carbon) chatter with sha256 cache and provenance, "adapted from momin" (our caching idea landing).
+- RL mole (agents2): trained 80 it x 48 seeds, min regret ~0.26, solver acc 0.83; GRPO jobs 44424-44426 on V100s (FR8, WS3); WS4 v2 investigator eval ~22:00.
+- Gemini exploit hunter dropped; Swarm on `gemini-track`. Harbor gemini-4-carbon demo (n=6, 0.50 vs oracle 0.76) unchanged.
+
+Read: their integrity story is now closed on every point their own bake-off raised (Harbor boot, cheat run, env seed, valid filter). Expect integrity 24-25 and craft 13-14 on a re-score; gap still depends on Gate A n>=20 gemini-4-carbon.
+We can beat: gap n=6 only (no n>=20 yet); v1.5 unproven; ladder shows 4 of 6 rungs flat; real frontier row still missing on our side.
+Ideas to copy (idea only): their replay-consistency flag and stop-early ladder on our reference (lead-reward); valid:false = infra-only audit (lead-lab); `CANARY_EPISODE_FILE` style secret-out-of-env launch (lead-env).

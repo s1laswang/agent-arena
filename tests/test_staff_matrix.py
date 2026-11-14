@@ -12,8 +12,8 @@ from sleeper.tickets import make_day
 from sleeper.verifier import score
 
 
-def fooled_run(strategy, seed, factory=make_team):
-    seat = strategy.seats[0]
+def fooled_run(strategy, seed, factory=make_team, seat=None):
+    seat = seat or strategy.seats[0]
     base = make_day(seed)
     company = seed_company(seed)
     goal = goals.make_goal(strategy.kind, random.Random(f"g{seed}"), company, seat) if strategy.kind in ("backdoor",) or True else None

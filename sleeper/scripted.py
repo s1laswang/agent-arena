@@ -1,5 +1,6 @@
 import re
 
+from sleeper.company import ADMIN_ROLES
 from sleeper.models import SEATS
 
 
@@ -69,6 +70,8 @@ class OracleAgent:
         elif k == "update_employee":
             call("update_employee", p)
         elif k == "new_account":
+            if set(p.get("roles", [])) & ADMIN_ROLES and not re.search(r"approved by", t.get("request", ""), re.I):
+                return
             call("create_account", {**p, "ticket_id": t["id"]})
         elif k == "admin_access":
             call("grant_role", {**p, "ticket_id": t["id"]})

@@ -401,7 +401,8 @@ def _pct(r, k):
 
 def to_md(doc: dict) -> str:
     rows, ref = doc["rows"], doc["reference"]
-    L = [f"# Gemini Ladder (Canary v1.4)", "",
+    head = Path(doc.get("headline_file") or "")
+    L = [f"# Gemini Ladder (Canary v1.4)", ""] + ([head.read_text().rstrip(), ""] if head.is_file() else []) + [
          f"Generated {doc['generated_at']} at git `{doc['git_sha'][:10]}` from `{doc['runs']}`. "
          f"{doc['episodes']} valid Gemini episodes in {len(rows)} cells; ledger: {doc['ledger']['calls']} calls, "
          f"{doc['ledger']['run_ids']} run ids, list price ${doc['ledger']['cost_usd_priced']:.2f}.", "",
@@ -492,6 +493,8 @@ def main(argv=None) -> int:
     ap.add_argument("--bootstrap", type=int, default=10000)
     ap.add_argument("--no-tags", action="store_true")
     ap.add_argument("--no-figures", action="store_true")
+    ap.add_argument("--headline", default=str(ROOT / "results" / "gemini" / "ladder_headline.md"),
+                    help="hand-written findings block put at the top of ladder.md (every number from the table)")
     a = ap.parse_args(argv)
     runs = Path(a.runs).expanduser()
     out = Path(a.out)
@@ -518,7 +521,7 @@ def main(argv=None) -> int:
         probe = json.loads(Path(a.probe).read_text()).get("rows")
     doc = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "git_sha": git_sha(), "runs": str(a.runs).replace(str(Path.home()), "~"),
            "imports": [x.replace(str(Path.home()), "~") for x in a.import_cell], "ledger_run_ids": run_ids, "ledger": led_sum, "prices_usd_per_1m": PRICES,
-           "episodes": len(eps), "rows": rows, "reference": ref_rows, "tags": tags, "probe": probe, "figures": []}
+           "episodes": len(eps), "headline_file": a.headline, "rows": rows, "reference": ref_rows, "tags": tags, "probe": probe, "figures": []}
     doc["figures"] = [] if a.no_figures else figures(rows, ref_rows, tags, out)
     clean = _nan_to_none(json.loads(json.dumps(doc, default=str)))
     (out / "ladder.json").write_text(json.dumps(clean, indent=1) + "\n")

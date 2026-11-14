@@ -68,7 +68,6 @@ Validation is strict: one employee id per call (no lists, no `*`, no names in pl
 ## 4. Reward and integrity
 - The reward is computed from the server-side ledger only and never from agent text.
 - The MCP server process owns the Env. The grader reads `GET /ledger?token=…` (not an MCP tool) and writes `/logs/verifier/reward.txt`.
-- On Harbor the server HMAC-SHA256-signs the ledger with a build-time key held only by the server and verifier images (`CANARY_LEDGER_KEY_FILE`, `canary.mcp_server.sign_ledger`); the verifier scores 0 on a missing or bad signature or a score outside {−1, 0} ∪ (0, 1].
 - The truth (the mole id, the seed→world mapping for judge seeds) never enters the agent's container or filesystem.
 - Seeds:
   - dev: 0–9,999

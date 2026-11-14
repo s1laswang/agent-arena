@@ -245,11 +245,7 @@ def _verifier_py(tmp: Path) -> str:
     sh = (ROOT / "harbor/template/tests/test.sh").read_text()
     py = re.search(r"python3 - <<'PY'\n(.*?)\nPY", sh, re.S).group(1)
     # as_posix: a Windows path pasted into Python source would turn "\U..." into a unicode escape
-    # A valid signing key is present, so these cases fail on the ledger itself (signing: test_harbor_ledger_sig.py).
-    (tmp / "tests").mkdir(exist_ok=True)
-    (tmp / "tests/ledger_key").write_text("ab" * 32)
-    return (py.replace("/logs/verifier", (tmp / "logs").as_posix()).replace("/evidence", (tmp / "evidence").as_posix())
-              .replace("/tests/ledger_key", (tmp / "tests/ledger_key").as_posix()))
+    return py.replace("/logs/verifier", (tmp / "logs").as_posix()).replace("/evidence", (tmp / "evidence").as_posix())
 
 
 @pytest.mark.parametrize("ledger", [None, "", "not json", '{"score": "nan"}', '{"score": 1e309}', '{"score": 2}',
@@ -260,7 +256,7 @@ def test_harbor_verifier_fails_closed(tmp_path, ledger):
     (tmp_path / "evidence").mkdir()
     if ledger is not None:
         (tmp_path / "evidence/ledger.json").write_text(ledger)
-    env = {k: v for k, v in os.environ.items() if k not in ("CANARY_LEDGER_TOKEN", "CANARY_LEDGER_KEY")}
+    env = {k: v for k, v in os.environ.items() if k != "CANARY_LEDGER_TOKEN"}
     p = subprocess.run([sys.executable, "-c", _verifier_py(tmp_path)], capture_output=True, text=True, env=env)
     assert p.returncode != 0
     assert (tmp_path / "logs/reward.txt").read_text() == "0"
@@ -275,7 +271,7 @@ def test_harbor_verifier_ignores_symlinked_evidence(tmp_path):
         (tmp_path / "evidence/ledger.json").symlink_to(fake)
     except OSError:   # Windows without developer mode / admin cannot create symlinks
         pytest.skip("symlinks not allowed here")
-    env = {k: v for k, v in os.environ.items() if k not in ("CANARY_LEDGER_TOKEN", "CANARY_LEDGER_KEY")}
+    env = {k: v for k, v in os.environ.items() if k != "CANARY_LEDGER_TOKEN"}
     p = subprocess.run([sys.executable, "-c", _verifier_py(tmp_path)], capture_output=True, text=True, env=env)
     assert p.returncode != 0 and (tmp_path / "logs/reward.txt").read_text() == "0"
 

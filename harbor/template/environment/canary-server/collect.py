@@ -1,8 +1,7 @@
 """Harbor [[verifier.collect]] hook, run INSIDE the canary-server sidecar after the agent finishes.
 
 Reads the sidecar-only ledger token, fetches GET /ledger from the local server and writes
-/evidence/ledger.json, which Harbor then copies to the verifier as an artifact. The server has already
-HMAC-signed the payload ("sig"); this hook passes it through untouched and the verifier checks it.
+/evidence/ledger.json, which Harbor then copies to the verifier as an artifact.
 """
 import json
 import sys
@@ -18,6 +17,5 @@ out = Path("/evidence/ledger.json")
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(json.dumps(payload))
 out.chmod(0o644)
-print(f"collected ledger: score={payload.get('score')} done={payload.get('done')} end_reason={payload.get('end_reason')} "
-      f"signed={'sig' in payload}",
+print(f"collected ledger: score={payload.get('score')} done={payload.get('done')} end_reason={payload.get('end_reason')}",
       file=sys.stderr)

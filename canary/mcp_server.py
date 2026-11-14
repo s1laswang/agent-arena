@@ -11,8 +11,6 @@ Environment variables:
     CANARY_PROVIDER             text provider (default template)
     CANARY_LEDGER_TOKEN         token for GET /ledger?token=... (grader). Unset => /ledger always 403.
     CANARY_ADMIN_TOKEN          token for POST /admin/reset?token=... body {"tier","seed"}. Unset => disabled.
-    CANARY_LEDGER_KEY           HMAC-SHA256 key: when set, every /ledger payload carries
-                                "sig": {"alg": "HMAC-SHA256", "mac": <hex>} over its canonical JSON (sign_ledger).
 
 Secret files (EXPLOITS #25: a same-uid process can read the exec-time environment via /proc/<pid>/environ
 or `ps eww`, so judge runs must not put the seed, world secret or tokens in env vars). Each names a 0600 file
@@ -21,7 +19,6 @@ read once at startup; a *_FILE var wins over its plain counterpart, which is the
     CANARY_WORLD_SECRET_FILE    world secret for judge/held-out seeds (handed to canary.world in-process)
     CANARY_LEDGER_TOKEN_FILE    grader token
     CANARY_ADMIN_TOKEN_FILE     admin token
-    CANARY_LEDGER_KEY_FILE      ledger signing key (Harbor: build-time, sidecar + verifier only; PLAN-95 C1)
 The plain env vars keep working for local dev.
 
 Design notes:
@@ -37,7 +34,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import hashlib
 import hmac
 import json
 import logging
@@ -105,8 +101,7 @@ def load_config(environ=None) -> dict:
     return {"tier": str(tier), "seed": seed,
             "world_secret": secret.encode() if secret is not None else None,
             "ledger_token": _read_file_var("CANARY_LEDGER_TOKEN_FILE", environ) or environ.get("CANARY_LEDGER_TOKEN") or None,
-            "admin_token": _read_file_var("CANARY_ADMIN_TOKEN_FILE", environ) or environ.get("CANARY_ADMIN_TOKEN") or None,
-            "ledger_key": _read_file_var("CANARY_LEDGER_KEY_FILE", environ) or environ.get("CANARY_LEDGER_KEY") or None}
+            "admin_token": _read_file_var("CANARY_ADMIN_TOKEN_FILE", environ) or environ.get("CANARY_ADMIN_TOKEN") or None}
 
 
 def write_secret_files(tier: str, seed: int, ledger_token: str | None = None, directory=None) -> dict[str, str]:
@@ -132,8 +127,7 @@ def write_secret_files(tier: str, seed: int, ledger_token: str | None = None, di
 def clean_launch_env(base=None) -> dict[str, str]:
     """os.environ minus the plain episode/token vars (a *_FILE launch must not also carry them)."""
     base = dict(os.environ if base is None else base)
-    for k in ("CANARY_TIER", "CANARY_SEED", "CANARY_LEDGER_TOKEN", "CANARY_ADMIN_TOKEN", "CANARY_WORLD_SECRET",
-              "CANARY_LEDGER_KEY"):
+    for k in ("CANARY_TIER", "CANARY_SEED", "CANARY_LEDGER_TOKEN", "CANARY_ADMIN_TOKEN", "CANARY_WORLD_SECRET"):
         base.pop(k, None)
     return base
 
@@ -194,35 +188,6 @@ class Episode:
             return out
 
 
-# --------------------------------------------------------------------------- ledger signing (PLAN-95 C1)
-# Defence in depth for the grader: the verifier (harbor/template/tests/test.sh, which re-implements these two
-# functions with the stdlib; tests/test_harbor_ledger_sig.py pins them together) accepts a ledger only if its
-# "sig" verifies under the build-time key, so a ledger.json forged or edited anywhere between the server and the
-# verifier scores 0. The MAC covers every top-level field except "sig" itself.
-SIG_ALG = "HMAC-SHA256"
-
-
-def ledger_canonical(payload: dict) -> bytes:
-    body = {k: v for k, v in payload.items() if k != "sig"}
-    return json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
-
-
-def sign_ledger(payload: dict, key: str | bytes) -> dict:
-    """payload plus "sig" = HMAC-SHA256(key, canonical JSON of payload without "sig")."""
-    k = key.encode() if isinstance(key, str) else key
-    mac = hmac.new(k, ledger_canonical(payload), hashlib.sha256).hexdigest()
-    return {**{k2: v for k2, v in payload.items() if k2 != "sig"}, "sig": {"alg": SIG_ALG, "mac": mac}}
-
-
-def verify_ledger(payload, key: str | bytes) -> bool:
-    if not isinstance(payload, dict) or not key:
-        return False
-    sig = payload.get("sig")
-    if not isinstance(sig, dict) or sig.get("alg") != SIG_ALG or not isinstance(sig.get("mac"), str):
-        return False
-    return hmac.compare_digest(sign_ledger(payload, key)["sig"]["mac"], sig["mac"])
-
-
 def _token_ok(given: str | None, expected: str | None) -> bool:
     return bool(expected) and given is not None and hmac.compare_digest(given.encode(), expected.encode())
 
@@ -246,12 +211,11 @@ def build_server(ep: Episode) -> Server:
 
 
 def build_app(ep: Episode, host: str = "127.0.0.1", ledger_token: str | None = None,
-              admin_token: str | None = None, ledger_key: str | None = None):
+              admin_token: str | None = None):
     async def ledger(request: Request):
         if not _token_ok(request.query_params.get("token"), ledger_token):
             return JSONResponse({"error": "forbidden"}, status_code=403)
-        payload = ep.ledger_payload()
-        return JSONResponse(sign_ledger(payload, ledger_key) if ledger_key else payload)
+        return JSONResponse(ep.ledger_payload())
 
     async def admin_reset(request: Request):
         if not _token_ok(request.query_params.get("token"), admin_token):
@@ -320,16 +284,15 @@ def main(argv: list[str] | None = None) -> int:
         cfg = load_config()
         if cfg["world_secret"] is not None:
             apply_world_secret(cfg["world_secret"])
-        tier, ledger_token, admin_token, ledger_key = cfg["tier"], cfg["ledger_token"], cfg["admin_token"], cfg["ledger_key"]
+        tier, ledger_token, admin_token = cfg["tier"], cfg["ledger_token"], cfg["admin_token"]
         ep = Episode(tier, cfg["seed"], os.environ.get("CANARY_PROVIDER", "template"))
     except (SeedNotAllowed, ConfigError, ValueError) as exc:
         print(f"canary.mcp_server: refusing to start: {exc}", file=sys.stderr)
         return 2
     if not ledger_token:
         log.warning("CANARY_LEDGER_TOKEN unset: GET /ledger is disabled (always 403)")
-    log.info("ledger signing: %s", "HMAC-SHA256" if ledger_key else "off (CANARY_LEDGER_KEY[_FILE] unset)")
     log.info("canary MCP server: tier=%s episode=%s url=http://%s:%d/mcp", tier, ep.token, host, port)
-    uvicorn.run(build_app(ep, host, ledger_token, admin_token, ledger_key), host=host, port=port, log_level="warning")
+    uvicorn.run(build_app(ep, host, ledger_token, admin_token), host=host, port=port, log_level="warning")
     return 0
 
 

@@ -11,9 +11,6 @@ schema_version = "1.4"
 #   localhost), copies /evidence/ledger.json out as an artifact, and the separate verifier writes
 #   ledger["score"] to /logs/verifier/reward.txt. The agent never holds the token and never touches
 #   the verifier sandbox.
-# - Defence in depth (PLAN-95 C1): the server HMAC-SHA256-signs the ledger with a build-time key that only the
-#   sidecar image and the verifier image hold (tests/ledger_key). test.sh fails closed (reward 0) on a missing
-#   or bad signature, so a ledger.json written or edited anywhere else is worthless.
 artifacts = [
     { source = "/evidence/ledger.json", service = "canary-server", destination = "ledger.json" },
 ]

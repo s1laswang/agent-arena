@@ -47,8 +47,11 @@ def register(ov: dict):
     from canary import rules
     hard = rules.TIERS["hard"]
     ov = {k: (tuple(v) if isinstance(v, list) else v) for k, v in ov.items()}
-    rules.TIERS["expert"] = replace(hard, name="expert", **ov)
-    return rules.TIERS["expert"]
+    cfg = replace(hard, name="expert", **ov)
+    rules.TIERS["expert"] = cfg   # solver's exact-block parser looks the name up in TIERS
+    if hasattr(rules, "EXPERT_TIERS"):  # rules v1.6: tier_params() resolves EXPERT_TIERS first
+        rules.EXPERT_TIERS["expert"] = cfg
+    return cfg
 
 
 class NeverAbstain:

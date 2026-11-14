@@ -1,0 +1,165 @@
+{
+ "n": 400,
+ "seed0": 70000,
+ "secs": 153,
+ "configs": [
+  {
+   "cfg": 0,
+   "overrides": {
+    "fingerprint_accuracy": 0.95
+   },
+   "n": 400,
+   "solver": {
+    "mean": 0.543,
+    "ci": 0.034,
+    "acc_among_accused": 0.959,
+    "abstain": 0.012,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.366,
+    "ci": 0.067,
+    "acc_among_accused": 0.805,
+    "abstain": 0.0,
+    "delta": -0.177,
+    "dci": 0.06
+   },
+   "solver-accuse_last": {
+    "mean": 0.191,
+    "ci": 0.014,
+    "acc_among_accused": 0.993,
+    "abstain": 0.0,
+    "delta": -0.352,
+    "dci": 0.033
+   },
+   "never_abstain": {
+    "mean": 0.543,
+    "ci": 0.035,
+    "acc_among_accused": 0.958,
+    "abstain": 0.0,
+    "delta": -0.0,
+    "dci": 0.005
+   },
+   "grok_tactics": {
+    "mean": 0.361,
+    "ci": 0.035,
+    "acc_among_accused": 0.961,
+    "abstain": 0.095,
+    "delta": -0.182,
+    "dci": 0.047
+   },
+   "heuristic": {
+    "mean": 0.013,
+    "ci": 0.057,
+    "acc_among_accused": 0.76,
+    "abstain": 0.0,
+    "delta": -0.53,
+    "dci": 0.064
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.543,
+    "dci": 0.034
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.543,
+    "dci": 0.034
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.0
+  },
+  {
+   "cfg": 1,
+   "overrides": {
+    "fingerprint_accuracy": 0.7
+   },
+   "n": 400,
+   "solver": {
+    "mean": 0.422,
+    "ci": 0.032,
+    "acc_among_accused": 0.969,
+    "abstain": 0.11,
+    "delta": 0.0,
+    "dci": 0.0
+   },
+   "solver-accuse_p50": {
+    "mean": 0.3,
+    "ci": 0.068,
+    "acc_among_accused": 0.785,
+    "abstain": 0.0,
+    "delta": -0.122,
+    "dci": 0.06
+   },
+   "solver-accuse_last": {
+    "mean": 0.114,
+    "ci": 0.024,
+    "acc_among_accused": 0.963,
+    "abstain": 0.0,
+    "delta": -0.308,
+    "dci": 0.028
+   },
+   "never_abstain": {
+    "mean": 0.409,
+    "ci": 0.037,
+    "acc_among_accused": 0.95,
+    "abstain": 0.0,
+    "delta": -0.013,
+    "dci": 0.015
+   },
+   "grok_tactics": {
+    "mean": 0.011,
+    "ci": 0.064,
+    "acc_among_accused": 0.699,
+    "abstain": 0.095,
+    "delta": -0.411,
+    "dci": 0.071
+   },
+   "heuristic": {
+    "mean": -0.573,
+    "ci": 0.062,
+    "acc_among_accused": 0.318,
+    "abstain": 0.0,
+    "delta": -0.994,
+    "dci": 0.069
+   },
+   "do_nothing": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.422,
+    "dci": 0.032
+   },
+   "stop_early": {
+    "mean": 0.0,
+    "ci": 0.0,
+    "acc_among_accused": null,
+    "abstain": 1.0,
+    "delta": -0.422,
+    "dci": 0.032
+   },
+   "pass": {
+    "solver_mean>=0.4": true,
+    "solver_acc>=0.85": true,
+    "no_EV_rule_costs>=0.3": true,
+    "do_nothing=0": true,
+    "stop_early=0": true
+   },
+   "never_abstain_cost": 0.013
+  }
+ ]
+}

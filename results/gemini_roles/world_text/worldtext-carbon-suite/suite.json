@@ -1,0 +1,972 @@
+{
+  "biased_chatter_suite": {
+    "ablation_batches": [
+      {
+        "carbon_biased_mean": 0.705,
+        "carbon_template_mean": 0.64,
+        "commit": "f307290845",
+        "episode_count": 12,
+        "obvious_biased_mean": -1.0,
+        "run_dir": "results/gemini_roles/world_text/biased-chatter-ablation-carbon",
+        "seeds": [
+          10,
+          11
+        ],
+        "solver_biased_mean": 0.765,
+        "solver_template_mean": 0.765,
+        "tier": "medium",
+        "usage": {
+          "cached": 11793550,
+          "calls": 399,
+          "cost_usd": 5.212352,
+          "in": 12766963,
+          "out": 208617,
+          "thinking": 184085
+        }
+      },
+      {
+        "carbon_biased_mean": 0.62,
+        "carbon_template_mean": 0.645,
+        "commit": "c3ebb07539",
+        "episode_count": 12,
+        "obvious_biased_mean": -1.0,
+        "run_dir": "results/gemini_roles/world_text/biased-chatter-ablation-hard01",
+        "seeds": [
+          0,
+          1
+        ],
+        "solver_biased_mean": 0.665,
+        "solver_template_mean": 0.665,
+        "tier": "hard",
+        "usage": {
+          "cached": 13565234,
+          "calls": 407,
+          "cost_usd": 5.313006,
+          "in": 14584848,
+          "out": 191726,
+          "thinking": 168412
+        }
+      }
+    ],
+    "chatter_batches": [
+      {
+        "commit": "12e5ab3e81",
+        "encoding_violations": 0,
+        "lint_violations": 0,
+        "n_fallback_messages": 0,
+        "n_llm_messages": 10,
+        "n_messages": 10,
+        "run_dir": "results/gemini_roles/world_text/biased-chatter-carbon",
+        "seeds": [
+          10,
+          11
+        ],
+        "subrole": "biased_chatter",
+        "tier": "medium",
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 2,
+          "cost_usd": 0.034198,
+          "in": 3429,
+          "out": 2734,
+          "thinking": 1756
+        }
+      },
+      {
+        "commit": "b7b2825790",
+        "encoding_violations": 0,
+        "lint_violations": 0,
+        "n_fallback_messages": 0,
+        "n_llm_messages": 60,
+        "n_messages": 60,
+        "run_dir": "results/gemini_roles/world_text/biased-chatter-hard-carbon",
+        "seeds": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "subrole": "biased_chatter_hard",
+        "tier": "hard",
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 12,
+          "cost_usd": 0.199102,
+          "in": 32161,
+          "out": 13478,
+          "thinking": 7609
+        }
+      }
+    ],
+    "n_ablation_batches": 2,
+    "n_chatter_batches": 2,
+    "paired_slices": {
+      "hard": {
+        "carbon": {
+          "biased_accuracy": 1.0,
+          "biased_accuracy_ci95": [
+            0.3424,
+            1.0
+          ],
+          "biased_ci95": [
+            0.58,
+            0.66
+          ],
+          "biased_distraction_ci95": [
+            0.3424,
+            1.0
+          ],
+          "biased_distraction_rate": 1.0,
+          "biased_mean": 0.62,
+          "biased_rumor_accused_rate": 0.0,
+          "n_paired_seeds": 2,
+          "paired_delta_ci95": [
+            -0.17,
+            0.12
+          ],
+          "paired_delta_mean": -0.025,
+          "template_accuracy": 1.0,
+          "template_ci95": [
+            0.54,
+            0.75
+          ],
+          "template_distraction_rate": 0.0,
+          "template_mean": 0.645
+        },
+        "obvious_heuristic": {
+          "biased_accuracy": 0.0,
+          "biased_accuracy_ci95": [
+            0.0,
+            0.6576
+          ],
+          "biased_ci95": [
+            -1.0,
+            -1.0
+          ],
+          "biased_distraction_ci95": [
+            0.0,
+            0.6576
+          ],
+          "biased_distraction_rate": 0.0,
+          "biased_mean": -1.0,
+          "biased_rumor_accused_rate": 0.5,
+          "n_paired_seeds": 2,
+          "paired_delta_ci95": [
+            0.0,
+            0.0
+          ],
+          "paired_delta_mean": 0.0,
+          "template_accuracy": 0.0,
+          "template_ci95": [
+            -1.0,
+            -1.0
+          ],
+          "template_distraction_rate": 0.0,
+          "template_mean": -1.0
+        },
+        "solver": {
+          "biased_accuracy": 1.0,
+          "biased_accuracy_ci95": [
+            0.3424,
+            1.0
+          ],
+          "biased_ci95": [
+            0.64,
+            0.69
+          ],
+          "biased_distraction_ci95": [
+            0.0,
+            0.6576
+          ],
+          "biased_distraction_rate": 0.0,
+          "biased_mean": 0.665,
+          "biased_rumor_accused_rate": 0.0,
+          "n_paired_seeds": 2,
+          "paired_delta_ci95": [
+            0.0,
+            0.0
+          ],
+          "paired_delta_mean": 0.0,
+          "template_accuracy": 1.0,
+          "template_ci95": [
+            0.64,
+            0.69
+          ],
+          "template_distraction_rate": 0.0,
+          "template_mean": 0.665
+        }
+      },
+      "medium": {
+        "carbon": {
+          "biased_accuracy": 1.0,
+          "biased_accuracy_ci95": [
+            0.3424,
+            1.0
+          ],
+          "biased_ci95": [
+            0.65,
+            0.76
+          ],
+          "biased_distraction_ci95": [
+            0.3424,
+            1.0
+          ],
+          "biased_distraction_rate": 1.0,
+          "biased_mean": 0.705,
+          "biased_rumor_accused_rate": 0.0,
+          "n_paired_seeds": 2,
+          "paired_delta_ci95": [
+            0.05,
+            0.08
+          ],
+          "paired_delta_mean": 0.065,
+          "template_accuracy": 1.0,
+          "template_ci95": [
+            0.6,
+            0.68
+          ],
+          "template_distraction_rate": 1.0,
+          "template_mean": 0.64
+        },
+        "obvious_heuristic": {
+          "biased_accuracy": 0.0,
+          "biased_accuracy_ci95": [
+            0.0,
+            0.6576
+          ],
+          "biased_ci95": [
+            -1.0,
+            -1.0
+          ],
+          "biased_distraction_ci95": [
+            0.0,
+            0.6576
+          ],
+          "biased_distraction_rate": 0.0,
+          "biased_mean": -1.0,
+          "biased_rumor_accused_rate": 0.0,
+          "n_paired_seeds": 2,
+          "paired_delta_ci95": [
+            0.0,
+            0.0
+          ],
+          "paired_delta_mean": 0.0,
+          "template_accuracy": 0.0,
+          "template_ci95": [
+            -1.0,
+            -1.0
+          ],
+          "template_distraction_rate": 0.0,
+          "template_mean": -1.0
+        },
+        "solver": {
+          "biased_accuracy": 1.0,
+          "biased_accuracy_ci95": [
+            0.3424,
+            1.0
+          ],
+          "biased_ci95": [
+            0.69,
+            0.84
+          ],
+          "biased_distraction_ci95": [
+            0.0,
+            0.6576
+          ],
+          "biased_distraction_rate": 0.0,
+          "biased_mean": 0.765,
+          "biased_rumor_accused_rate": 0.0,
+          "n_paired_seeds": 2,
+          "paired_delta_ci95": [
+            0.0,
+            0.0
+          ],
+          "paired_delta_mean": 0.0,
+          "template_accuracy": 1.0,
+          "template_ci95": [
+            0.69,
+            0.84
+          ],
+          "template_distraction_rate": 0.0,
+          "template_mean": 0.765
+        }
+      },
+      "overall": {
+        "carbon": {
+          "biased_accuracy": 1.0,
+          "biased_accuracy_ci95": [
+            0.5101,
+            1.0
+          ],
+          "biased_ci95": [
+            0.6,
+            0.7325
+          ],
+          "biased_distraction_ci95": [
+            0.5101,
+            1.0
+          ],
+          "biased_distraction_rate": 1.0,
+          "biased_mean": 0.6625,
+          "biased_rumor_accused_rate": 0.0,
+          "n_paired_seeds": 4,
+          "paired_delta_ci95": [
+            -0.1075,
+            0.1025
+          ],
+          "paired_delta_mean": 0.02,
+          "template_accuracy": 1.0,
+          "template_ci95": [
+            0.57,
+            0.715
+          ],
+          "template_distraction_rate": 0.5,
+          "template_mean": 0.6425
+        },
+        "obvious_heuristic": {
+          "biased_accuracy": 0.0,
+          "biased_accuracy_ci95": [
+            0.0,
+            0.4899
+          ],
+          "biased_ci95": [
+            -1.0,
+            -1.0
+          ],
+          "biased_distraction_ci95": [
+            0.0,
+            0.4899
+          ],
+          "biased_distraction_rate": 0.0,
+          "biased_mean": -1.0,
+          "biased_rumor_accused_rate": 0.25,
+          "n_paired_seeds": 4,
+          "paired_delta_ci95": [
+            0.0,
+            0.0
+          ],
+          "paired_delta_mean": 0.0,
+          "template_accuracy": 0.0,
+          "template_ci95": [
+            -1.0,
+            -1.0
+          ],
+          "template_distraction_rate": 0.0,
+          "template_mean": -1.0
+        },
+        "solver": {
+          "biased_accuracy": 1.0,
+          "biased_accuracy_ci95": [
+            0.5101,
+            1.0
+          ],
+          "biased_ci95": [
+            0.6525,
+            0.8025
+          ],
+          "biased_distraction_ci95": [
+            0.0,
+            0.4899
+          ],
+          "biased_distraction_rate": 0.0,
+          "biased_mean": 0.715,
+          "biased_rumor_accused_rate": 0.0,
+          "n_paired_seeds": 4,
+          "paired_delta_ci95": [
+            0.0,
+            0.0
+          ],
+          "paired_delta_mean": 0.0,
+          "template_accuracy": 1.0,
+          "template_ci95": [
+            0.6525,
+            0.8025
+          ],
+          "template_distraction_rate": 0.0,
+          "template_mean": 0.715
+        }
+      }
+    },
+    "total_biased_messages": 70,
+    "total_llm_biased_messages": 70,
+    "unique_ablation_episodes": 24
+  },
+  "by_subrole_totals": {
+    "biased_chatter": {
+      "cached": 0,
+      "calls": 2,
+      "cost_usd": 0.034198,
+      "in": 3429,
+      "out": 2734,
+      "thinking": 1756,
+      "verified_folders": 1
+    },
+    "biased_chatter_hard": {
+      "cached": 0,
+      "calls": 12,
+      "cost_usd": 0.199102,
+      "in": 32161,
+      "out": 13478,
+      "thinking": 7609,
+      "verified_folders": 1
+    },
+    "biased_chatter_investigator_ablation": {
+      "cached": 25358784,
+      "calls": 806,
+      "cost_usd": 10.525358,
+      "in": 27351811,
+      "out": 400343,
+      "thinking": 352497,
+      "verified_folders": 2
+    },
+    "company_personas_chatter": {
+      "cached": 0,
+      "calls": 129,
+      "cost_usd": 2.085038,
+      "in": 170729,
+      "out": 74513,
+      "thinking": 99845,
+      "verified_folders": 4
+    },
+    "dynamic_mid_episode_events": {
+      "cached": 3817,
+      "calls": 33,
+      "cost_usd": 0.650326,
+      "in": 166943,
+      "out": 11924,
+      "thinking": 19720,
+      "verified_folders": 3
+    },
+    "persona_interviews": {
+      "cached": 0,
+      "calls": 32,
+      "cost_usd": 0.156012,
+      "in": 31496,
+      "out": 2345,
+      "thinking": 6957,
+      "verified_folders": 1
+    },
+    "thinking_level_calibration": {
+      "cached": 0,
+      "calls": 24,
+      "cost_usd": 0.614294,
+      "in": 24102,
+      "out": 14232,
+      "thinking": 42377,
+      "verified_folders": 1
+    }
+  },
+  "company_personas_suite": {
+    "batches": [
+      {
+        "commit": "6104bebd3f",
+        "fallbacks": 0,
+        "lint_violations": 0,
+        "n_day_messages": 136,
+        "n_llm_personas": 228,
+        "n_personas": 228,
+        "n_worlds": 10,
+        "run_dir": "results/gemini_roles/world_text/carbon-v14-easy03-med789-hard46",
+        "solver_accuracy": 1.0,
+        "solver_mean_score": 0.761,
+        "template_mean_score": 0.766,
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 52,
+          "cost_usd": 0.776626,
+          "in": 61748,
+          "out": 29038,
+          "thinking": 36275
+        }
+      },
+      {
+        "commit": "97674175c3",
+        "fallbacks": 0,
+        "lint_violations": 0,
+        "n_day_messages": 41,
+        "n_llm_personas": 120,
+        "n_personas": 120,
+        "n_worlds": 3,
+        "run_dir": "results/gemini_roles/world_text/carbon-v14-hard789",
+        "solver_accuracy": 1.0,
+        "solver_mean_score": 0.5367,
+        "template_mean_score": 0.5367,
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 19,
+          "cost_usd": 0.35932,
+          "in": 33620,
+          "out": 12068,
+          "thinking": 17140
+        }
+      },
+      {
+        "commit": "c82f27a737",
+        "fallbacks": 0,
+        "lint_violations": 0,
+        "n_day_messages": 67,
+        "n_llm_personas": 140,
+        "n_personas": 140,
+        "n_worlds": 5,
+        "run_dir": "results/gemini_roles/world_text/carbon-v14-seeds012",
+        "solver_accuracy": 1.0,
+        "solver_mean_score": 0.654,
+        "template_mean_score": 0.652,
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 27,
+          "cost_usd": 0.439364,
+          "in": 35047,
+          "out": 15028,
+          "thinking": 21899
+        }
+      },
+      {
+        "commit": "dbe9569fcc",
+        "fallbacks": 0,
+        "lint_violations": 0,
+        "n_day_messages": 84,
+        "n_llm_personas": 160,
+        "n_personas": 160,
+        "n_worlds": 6,
+        "run_dir": "results/gemini_roles/world_text/carbon-v14-seeds3456-hard23",
+        "solver_accuracy": 0.8333,
+        "solver_mean_score": 0.6183,
+        "template_mean_score": 0.695,
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 31,
+          "cost_usd": 0.509728,
+          "in": 40314,
+          "out": 18379,
+          "thinking": 24531
+        }
+      }
+    ],
+    "by_tier": {
+      "easy": {
+        "n_personas": 48,
+        "n_worlds": 4,
+        "paired_delta_ci95": [
+          0.0,
+          0.0
+        ],
+        "paired_delta_mean": 0.0,
+        "solver_accuracy": 1.0,
+        "solver_accuracy_ci95": [
+          0.5101,
+          1.0
+        ],
+        "solver_ci95": [
+          0.755,
+          0.85
+        ],
+        "solver_mean": 0.8,
+        "template_ci95": [
+          0.755,
+          0.85
+        ],
+        "template_mean": 0.8
+      },
+      "hard": {
+        "n_personas": 400,
+        "n_worlds": 10,
+        "paired_delta_ci95": [
+          0.0,
+          0.042
+        ],
+        "paired_delta_mean": 0.014,
+        "solver_accuracy": 1.0,
+        "solver_accuracy_ci95": [
+          0.7225,
+          1.0
+        ],
+        "solver_ci95": [
+          0.535,
+          0.703
+        ],
+        "solver_mean": 0.634,
+        "template_ci95": [
+          0.521,
+          0.691
+        ],
+        "template_mean": 0.62
+      },
+      "medium": {
+        "n_personas": 200,
+        "n_worlds": 10,
+        "paired_delta_ci95": [
+          -0.188,
+          0.002
+        ],
+        "paired_delta_mean": -0.064,
+        "solver_accuracy": 0.9,
+        "solver_accuracy_ci95": [
+          0.5958,
+          0.9821
+        ],
+        "solver_ci95": [
+          0.48,
+          0.794
+        ],
+        "solver_mean": 0.666,
+        "template_ci95": [
+          0.635,
+          0.8
+        ],
+        "template_mean": 0.73
+      },
+      "overall": {
+        "n_personas": 648,
+        "n_worlds": 24,
+        "paired_delta_ci95": [
+          -0.0792,
+          0.0133
+        ],
+        "paired_delta_mean": -0.0208,
+        "solver_accuracy": 0.9583,
+        "solver_accuracy_ci95": [
+          0.7976,
+          0.9926
+        ],
+        "solver_ci95": [
+          0.5842,
+          0.7446
+        ],
+        "solver_mean": 0.675,
+        "template_ci95": [
+          0.6367,
+          0.7467
+        ],
+        "template_mean": 0.6958
+      }
+    },
+    "n_batches": 4,
+    "total_day_messages_across_batches": 328,
+    "total_llm_personas_across_batches": 648,
+    "total_personas_across_batches": 648,
+    "unique_personas": 648,
+    "unique_worlds": 24
+  },
+  "dynamic_events_suite": {
+    "batches": [
+      {
+        "commit": "361fbab16b",
+        "days": [
+          3,
+          6,
+          10
+        ],
+        "lint_violations": 0,
+        "n_events": 9,
+        "run_dir": "results/gemini_roles/world_text/dynamic-events-carbon",
+        "seeds": [
+          3,
+          4,
+          5
+        ],
+        "solver_parity_ok": true,
+        "stego_leaks": 0,
+        "tier": "medium",
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 9,
+          "cost_usd": 0.153042,
+          "in": 30331,
+          "out": 3204,
+          "thinking": 6034
+        }
+      },
+      {
+        "commit": "dbe9569fcc",
+        "days": [
+          4,
+          9,
+          15
+        ],
+        "lint_violations": 0,
+        "n_events": 9,
+        "run_dir": "results/gemini_roles/world_text/dynamic-events-hard-carbon",
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "solver_parity_ok": true,
+        "stego_leaks": 0,
+        "tier": "hard",
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 9,
+          "cost_usd": 0.194454,
+          "in": 52022,
+          "out": 3387,
+          "thinking": 5654
+        }
+      },
+      {
+        "commit": "1bcf1ee747",
+        "days": [
+          4,
+          9,
+          15
+        ],
+        "lint_violations": 0,
+        "n_events": 15,
+        "run_dir": "results/gemini_roles/world_text/dynamic-events-hard37-carbon",
+        "seeds": [
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "solver_parity_ok": true,
+        "stego_leaks": 0,
+        "tier": "hard",
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 3817,
+          "calls": 15,
+          "cost_usd": 0.30283,
+          "in": 84590,
+          "out": 5333,
+          "thinking": 8032
+        }
+      }
+    ],
+    "by_tier": {
+      "hard": {
+        "baseline_solver_ci95": [
+          0.495,
+          0.675
+        ],
+        "baseline_solver_mean": 0.5988,
+        "live_solver_accuracy": 1.0,
+        "live_solver_accuracy_ci95": [
+          0.6756,
+          1.0
+        ],
+        "live_solver_ci95": [
+          0.495,
+          0.675
+        ],
+        "live_solver_mean": 0.5988,
+        "n_worlds": 8,
+        "obvious_heuristic_mean": -1.0,
+        "paired_delta_ci95": [
+          0.0,
+          0.0
+        ],
+        "paired_delta_mean": 0.0
+      },
+      "medium": {
+        "baseline_solver_ci95": [
+          0.6,
+          0.79
+        ],
+        "baseline_solver_mean": 0.6933,
+        "live_solver_accuracy": 1.0,
+        "live_solver_accuracy_ci95": [
+          0.4385,
+          1.0
+        ],
+        "live_solver_ci95": [
+          0.6,
+          0.79
+        ],
+        "live_solver_mean": 0.6933,
+        "n_worlds": 3,
+        "obvious_heuristic_mean": -1.0,
+        "paired_delta_ci95": [
+          0.0,
+          0.0
+        ],
+        "paired_delta_mean": 0.0
+      },
+      "overall": {
+        "baseline_solver_ci95": [
+          0.5418,
+          0.6955
+        ],
+        "baseline_solver_mean": 0.6245,
+        "live_solver_accuracy": 1.0,
+        "live_solver_accuracy_ci95": [
+          0.7412,
+          1.0
+        ],
+        "live_solver_ci95": [
+          0.5418,
+          0.6955
+        ],
+        "live_solver_mean": 0.6245,
+        "n_worlds": 11,
+        "obvious_heuristic_mean": -1.0,
+        "paired_delta_ci95": [
+          0.0,
+          0.0
+        ],
+        "paired_delta_mean": 0.0
+      }
+    },
+    "n_batches": 3,
+    "total_events_generated": 33,
+    "unique_worlds": 11
+  },
+  "leak_and_safety_audit": {
+    "all_clean": true,
+    "fallback_count": 0,
+    "lint_violations": 0,
+    "prompt_truth_leak_violations": 0,
+    "secret_leaks_detected": 0,
+    "stego_encoding_violations": 0,
+    "truth_leak_violations": 0,
+    "verified_folders_audited": 13
+  },
+  "model_id": "gemini-4-carbon",
+  "persona_interviews_suite": {
+    "batches": [
+      {
+        "commit": "dbe9569fcc",
+        "counterfactual_invariance_rate": 1.0,
+        "n_interviews": 32,
+        "n_worlds": 4,
+        "pairwise_ordering_rate": 1.0,
+        "run_dir": "results/gemini_roles/world_text/persona-interviews-carbon",
+        "signal_calibration_accuracy": 1.0,
+        "solver_mean_score": 0.645,
+        "stego_leaks": 0,
+        "template_mean_score": 0.6425,
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 32,
+          "cost_usd": 0.156012,
+          "in": 31496,
+          "out": 2345,
+          "thinking": 6957
+        }
+      }
+    ],
+    "counterfactual_invariance_ci95": [
+      0.9615,
+      1.0
+    ],
+    "counterfactual_invariance_rate": 1.0,
+    "n_batches": 1,
+    "paired_delta_ci95": [
+      0.0,
+      0.0075
+    ],
+    "paired_delta_mean": 0.0025,
+    "persona_solver_accuracy": 1.0,
+    "persona_solver_accuracy_ci95": [
+      0.5101,
+      1.0
+    ],
+    "persona_solver_ci95": [
+      0.48,
+      0.775
+    ],
+    "persona_solver_mean": 0.645,
+    "signal_calibration_accuracy": 1.0,
+    "signal_calibration_ci95": [
+      0.8928,
+      1.0
+    ],
+    "template_solver_ci95": [
+      0.4775,
+      0.77
+    ],
+    "template_solver_mean": 0.6425,
+    "total_interviews": 32,
+    "unique_worlds": 4
+  },
+  "role": "world_text",
+  "thinking_calibration_suite": {
+    "batches": [
+      {
+        "commit": "dbe9569fcc",
+        "n_worlds": 6,
+        "run_dir": "results/gemini_roles/world_text/thinking-calibration-carbon",
+        "seeds": [
+          6,
+          7
+        ],
+        "solver_parity_ok": true,
+        "tier": "medium",
+        "usage": {
+          "cached": 0,
+          "calls": 24,
+          "cost_usd": 0.614294,
+          "in": 24102,
+          "out": 14232,
+          "thinking": 42377
+        }
+      }
+    ],
+    "levels": {
+      "high": {
+        "cost_usd": 0.455378,
+        "mean_distinct_bigrams": 1750.0,
+        "n_worlds": 2,
+        "output_tokens": 5257,
+        "solver_mean_score": 0.78,
+        "thinking_tokens": 38674,
+        "thinking_tokens_per_world": 19337.0
+      },
+      "low": {
+        "cost_usd": 0.062748,
+        "mean_distinct_bigrams": 1178.0,
+        "n_worlds": 2,
+        "output_tokens": 4668,
+        "solver_mean_score": 0.78,
+        "thinking_tokens": 0,
+        "thinking_tokens_per_world": 0.0
+      },
+      "medium": {
+        "cost_usd": 0.096168,
+        "mean_distinct_bigrams": 1124.0,
+        "n_worlds": 2,
+        "output_tokens": 4307,
+        "solver_mean_score": 0.78,
+        "thinking_tokens": 3703,
+        "thinking_tokens_per_world": 1851.5
+      }
+    },
+    "n_batches": 1,
+    "total_calibrated_worlds": 6
+  },
+  "totals": {
+    "cached": 25362601,
+    "calls": 1038,
+    "cost_usd": 14.264328,
+    "in": 27780671,
+    "out": 519569,
+    "thinking": 530761,
+    "verified_folders": 13
+  },
+  "verified_run_folders": [
+    "results/gemini_roles/world_text/biased-chatter-ablation-carbon",
+    "results/gemini_roles/world_text/biased-chatter-ablation-hard01",
+    "results/gemini_roles/world_text/biased-chatter-carbon",
+    "results/gemini_roles/world_text/biased-chatter-hard-carbon",
+    "results/gemini_roles/world_text/carbon-v14-easy03-med789-hard46",
+    "results/gemini_roles/world_text/carbon-v14-hard789",
+    "results/gemini_roles/world_text/carbon-v14-seeds012",
+    "results/gemini_roles/world_text/carbon-v14-seeds3456-hard23",
+    "results/gemini_roles/world_text/dynamic-events-carbon",
+    "results/gemini_roles/world_text/dynamic-events-hard-carbon",
+    "results/gemini_roles/world_text/dynamic-events-hard37-carbon",
+    "results/gemini_roles/world_text/persona-interviews-carbon",
+    "results/gemini_roles/world_text/thinking-calibration-carbon"
+  ]
+}

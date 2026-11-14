@@ -158,3 +158,10 @@
 ## 03:58 v1.3 regret (1a650df) + CAVEAT
 - Paired on gpt-5.5 seeds: medium solver .670 vs gpt .319 (48%), hard .553 vs -.003; dominant tag premature_accusation.
 - **CAVEAT:** Codex gpt-5.5 over MCP (judges-like harness, n=3) scored .59 hard / .53 medium, much closer to the reference. The in-process scaffold may handicap the model. Morning priority #1: a judges-shape (OpenCode/Codex over MCP) v1.3 measurement at n>=10/tier, plus a scaffold-parity check. Keep the v1.4 contingency (longer horizon + pipelined canaries) in reserve.
+
+## 04:12 tick
+- justSilas b861d74: 496 passed. On AC power.
+- J4 44397 training (19 min; 1,404 tok/s; training to ~06:50, eval to ~08:10). Sky 43143_4 held.
+- INTEGRITY v1.3: full fuzz incl. hard_forge, 0 violations; known-V never equals the true V and never rises; EXPLOITS 40 rows, none open on our side (#27 residual = the Harbor sidecar).
+- AGENTS: scaffold fix merged (full history, Responses API with reasoning replay, effort=medium), zero API spend; morning smoke ~$3 then a paired v1.3 re-run ~$90 (needs Silas).
+- Heads mostly idle and waiting on the morning (Gemini key, spend approval, Grok re-run).

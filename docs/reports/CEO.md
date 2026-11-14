@@ -282,3 +282,9 @@
 4. Ivar owns the browser game deploy. Video owner: Silas/Momin (open).
 5. Human playtests Sunday morning: approved (all four, 2 hard dev-seed episodes each).
 B1 hint wording fixed (head-env, verified against instruction() v1.4) and sent to head-agents as an opt-in prompt flag.
+
+## 19:50 GATE B: v1.5 dropped, v1.4 is the judged env; feature freeze 20:00
+- gemini-4-carbon via OpenCode, hard, dev seeds 0-9, same seeds on both versions: v1.4 61% [3, 104] of the solver (luck-adj 56% [21, 80]); v1.5-candidate 108% [96, 122] (luck-adj 98%, 10/10 correct, mean P 0.94). Gemini treats seeded rumours as evidence AGAINST the person rumoured; no rumour-following.
+- The ship criterion (ratio drops vs v1.4) failed, so v1.5 stays on justSilas-v15 as a documented negative result, not a judged tier. Gemini's world-text role is labelled demo/research.
+- v1.4 seed-1 miss: accused at P=0.988, lost to the 5% fingerprint misread. That's luck, which is why the luck-adjusted ratio is reported alongside.
+- Freeze from 20:00: canary/rules.py, env.py, solver/ change only via the CEO. Harbor/verifier hardening (A1, C1), docs and analysis continue.

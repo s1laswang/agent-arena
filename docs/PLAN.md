@@ -73,7 +73,7 @@ It does **not** change `canary/env.py`, `rules.py`, `solver/`, `reproduce.py` or
 ## Timeline (Helsinki; details in docs/PLAN-95.md)
 | Time | What |
 |---|---|
-| 19:47 | **Gate B:** ship or drop v1.5 |
+| 19:47 | **Gate B: DONE, v1.5 dropped** (Gemini 108% on v1.5 vs 61% on v1.4, same seeds); v1.4 is the judged env |
 | 20:00 | **Feature freeze** (rules/env/solver); A1 hard-only judge set merged |
 | 20:00–23:00 | Judge rehearsal 3×10 hard; hint ablation; fleet seeds 30–59; ledger HMAC; EXPLOITS.md |
 | 22:00 | Small-model v2 eval → v3 GRPO overnight (2 V100s, approved) |

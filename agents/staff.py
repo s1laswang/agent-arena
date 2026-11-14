@@ -130,7 +130,11 @@ class ScriptedStaff:
     def _ticket(self, seat, t, c):
         if t.get("closed") or t.get("seat") not in (None, seat):
             return
-        p = dict(t.get("params") or {})
+        from sleeper.events import fill_hidden
+        t = fill_hidden({**t, "params": t.get("params") or {}}, c)
+        if set(t.get("hidden") or []) - set(t["params"]):
+            return
+        p = dict(t["params"])
         p.pop("requested_by", None)
         k = t.get("kind", "")
         tid = t.get("id")

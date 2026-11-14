@@ -181,3 +181,8 @@ Verda (ex-DataCrunch, Finland) is FR8's overflow GPU for the WS4 tiebreaker. FR8
 - v3 s1 = **44572** (FR8 V100) step 20, no errors; eval 44573 afterok.
 - Cost reaper now runs ON the Verda instance (the laptop's memory-pressure reaper killed the Mac-side one); deletes at 03:23.
 - **CEO GPU requests prepared, NOT launched** (above the $30 cap until Silas's yes is relayed): R1 v3-8k on the same H100 after s0's eval: `CTX=8192 TAG=verda-8k-s0 SKIP_SETUP=1 HOURS=3 EVAL_MIN=60 bash fr8/verda/run_v3.sh` + extend the reaper (`REAP_AT_UTC`). R2 only if a ≥40 GB GPU appears (none now). R3 waits on s6-verda.
+
+### Verda 00:15: cap raised to €100 (Silas via CEO); R1 v3-8k chained
+- On-instance reaper moved: deletes 3bb74f5a at **07:30 Helsinki** (05:30 UTC). For ~2 min during the swap no reaper was running (SSH dropped mid-command); re-armed and verified with `pgrep`.
+- `/root/chain_8k.sh` waits for s0's `~/v3/DONE`, then runs R1: `CTX=8192 TAG=verda-8k-s0 SEED=0 SKIP_SETUP=1 HOURS=3 EVAL_MIN=75` (from a copy `run_v3b.sh`, so s0's running script was never edited). ETA: start ~02:45, training to ~05:45, eval to ~07:05, pull, delete ≤ 07:30.
+- Projected total ≈ 8.75 h × €4.742 ≈ **€41.5** (cap €100). Tracked for the hypothesis: forced-accuse whom-accuracy at 4k (s0: ~.19 flat) vs 8k.

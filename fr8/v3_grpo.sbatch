@@ -16,7 +16,7 @@ OUT=${OUT:-$HOME/agent-arena-data/v3/run-${SLURM_JOB_ID:-local}}
 mkdir -p "$OUT"
 module load pytorch-volta
 export PYTHONPATH=$CODE PYTHONUNBUFFERED=1 HF_HOME=$HOME/agent-arena-data/cache HF_HUB_OFFLINE=1 \
-       TOKENIZERS_PARALLELISM=false OMP_NUM_THREADS=1
+       TOKENIZERS_PARALLELISM=false OMP_NUM_THREADS=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 cd "$CODE"
 [ -f "${ADAPTER:?ADAPTER=v2 lora dir}/adapter_config.json" ] || { echo "[v3] no adapter at $ADAPTER"; exit 2; }
 [ -n "${SLURM_JOB_ID:-}" ] && date -d "$(squeue -j $SLURM_JOB_ID -h -o %e)" +%s > "$OUT/deadline.txt" || true

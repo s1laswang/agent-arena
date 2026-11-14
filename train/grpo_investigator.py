@@ -175,12 +175,18 @@ def train(a, states, pool, log):
         model.eval()
         for row, ids, names in zip(batch, prompts, tool_names):
             x = torch.tensor([ids], device=dev)
-            with torch.no_grad(), torch.autocast(dev, dtype=torch.float16, enabled=amp):
-                g = model.generate(input_ids=x.expand(a.group, -1), attention_mask=torch.ones_like(x).expand(a.group, -1),
-                                   max_new_tokens=a.max_new, do_sample=True, temperature=a.temperature, top_p=1.0,
-                                   pad_token_id=tok.pad_token_id)
+            gb = max(1, min(a.gen_batch, a.group))   # V100 SDPA math kernel: 8 x 4k prefill OOMs, so sub-batch
+            outs = []
+            for j in range(0, a.group, gb):
+                b = min(gb, a.group - j)
+                with torch.no_grad(), torch.autocast(dev, dtype=torch.float16, enabled=amp):
+                    outs += list(model.generate(input_ids=x.expand(b, -1), attention_mask=torch.ones_like(x).expand(b, -1),
+                                                max_new_tokens=a.max_new, do_sample=True, temperature=a.temperature,
+                                                top_p=1.0, pad_token_id=tok.pad_token_id))
+            if dev == "cuda":
+                torch.cuda.empty_cache()
             for k in range(a.group):
-                comp = g[k, len(ids):]
+                comp = outs[k][len(ids):]
                 eos = (comp == tok.eos_token_id) | (comp == tok.pad_token_id)
                 n = int(eos.nonzero()[0]) + 1 if eos.any() else len(comp)   # keep the first EOS as a target
                 seqs.append((ids, comp[:n].tolist()))
@@ -205,14 +211,15 @@ def train(a, states, pool, log):
             full = torch.tensor([p_ids + c_ids], device=dev)
             P = len(p_ids)
             tgt = full[:, P:]
+            K = tgt.shape[1] + 1                       # only the logits that predict completion tokens
             if use_ref:
                 model.set_adapter("ref")
                 with torch.no_grad(), torch.autocast(dev, dtype=torch.float16, enabled=amp):
-                    ref_lp = torch.log_softmax(model(input_ids=full).logits[:, P - 1:-1].float(), -1) \
+                    ref_lp = torch.log_softmax(model(input_ids=full, logits_to_keep=K).logits[:, :-1].float(), -1) \
                         .gather(-1, tgt.unsqueeze(-1)).squeeze(-1)
                 model.set_adapter("default")
             with torch.autocast(dev, dtype=torch.float16, enabled=amp):
-                logits = model(input_ids=full).logits[:, P - 1:-1].float()
+                logits = model(input_ids=full, logits_to_keep=K).logits[:, :-1].float()   # positions P-1 .. end-2
             lp_all = torch.log_softmax(logits, -1)
             tlp = lp_all.gather(-1, tgt.unsqueeze(-1)).squeeze(-1)          # [1, C]
             ent = -(lp_all.exp() * lp_all).sum(-1).mean()
@@ -304,6 +311,7 @@ def main(argv=None):
     ap.add_argument("--group", type=int, default=8)
     ap.add_argument("--prompts-per-step", type=int, default=2)
     ap.add_argument("--max-new", type=int, default=48)
+    ap.add_argument("--gen-batch", type=int, default=2, help="samples generated at once per prompt (memory)")
     ap.add_argument("--max-ctx", type=int, default=4096)
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--lr", type=float, default=5e-6)

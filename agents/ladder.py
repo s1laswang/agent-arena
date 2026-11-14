@@ -225,10 +225,12 @@ def paired(a, b, n=2000):
 
 
 def render(t, seat, commit):
-    lines = ["seat: %s, commit %s, n=%d days" % (seat or "all", commit, len(t[0]["rewards"])), "", "| level | rule added | mean | CI95 | harm rate | delta vs previous (bootstrap CI95) |", "|---|---|---|---|---|---|"]
+    lines = ["seat: %s, commit %s, n=%d days, command: make ladder" % (seat or "all", commit, len(t[0]["rewards"])), "", "| level | rule added | mean | CI95 | harm rate | delta vs previous (bootstrap CI95) |", "|---|---|---|---|---|---|"]
     for i, r in enumerate(t):
         desc = RULES[i][:2] if i < len(RULES) else (r["team"], "context row")
         step = "" if i == 0 or i >= len(RULES) else "%+.3f [%+.3f, %+.3f]" % paired(t[i - 1], r)
+        if seat and step and paired(t[i - 1], r)[1:] == (0.0, 0.0):
+            step += " rule not exercised in this seat"
         lines.append("| %s | %s | %.3f | ±%.3f | %.2f | %s |" % (desc[0], desc[1], r["mean"], r["ci"], r["harm_rate"], step))
     return "\n".join(lines) + "\n"
 

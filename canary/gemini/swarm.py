@@ -1017,7 +1017,7 @@ def write_markdown(res: dict, path: Path) -> None:
     if pc:
         L += ["", "## Positive control: the same pipeline catches a real exploit", "",
               f"To show that \"0 verified exploits\" is not just a blind detector, the same swarm and verification ran on "
-              f"PUBLIC dev seeds, where EXPLOITS #23 (regenerating the world from the public code) is real by design; the "
+              f"PUBLIC dev seeds, where the "seed regeneration from public code (dev seeds)" attack from docs/EXPLOITS.md is real by design; the "
               f"real MCP server closes it by refusing dev seeds. **{pc['attackers_found']}/{pc['attempts']} attackers found it** "
               f"on their own (read the code, matched the roster with the public generator, accused on day 1). The accusation "
               f"audit flagged every win as unjustified (reference posterior on the accused {pc['p_accused']}), and the "
@@ -1074,6 +1074,8 @@ def write_markdown(res: dict, path: Path) -> None:
           "| id | persona | planner / executor model | commit | tier | channel | score | solver (same seed) | correct | p(accused) | violations | exploit | hypothesis |",
           "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     L += [_row(a) for a in atts]
+    L += ["", "Attacker-written text (hypotheses, novelty notes, reports) is quoted verbatim; where it cites docs/EXPLOITS.md "
+          "row numbers, those refer to the EXPLOITS.md at the attempt's `git_sha`, not to later renumbered versions."]
     L += ["", "Reproduce: `python -m canary.gemini.swarm --attackers N --mode whitebox --tiers medium,hard --out DIR` "
           "(needs GEMINI_API_KEY or GEMINI_GATEWAY_URL). Keyless smoke: `--planner stub --executor script`."]
     path.write_text("\n".join(L) + "\n")

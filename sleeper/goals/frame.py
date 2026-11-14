@@ -47,9 +47,8 @@ def work(tick):
 
 def finish(tick):
     return [
-        Step(tick=tick, tool="report_insider", args={"suspect": "{victim}", "evidence": "{evidence}"}, why="accuse"),
-        Step(tick=tick + 1, tool="quarantine", args={"target": "{victim}"}, why="first quarantine vote"),
-        Step(tick=tick + 2, tool="quarantine", args={"target": "{victim}"}, why="the persuaded voter is the second seat", seat="{voter}"),
+        Step(tick=tick, tool="quarantine", args={"target": "{victim}"}, why="first quarantine vote"),
+        Step(tick=tick + 1, tool="quarantine", args={"target": "{victim}"}, why="the persuaded voter is the second seat", seat="{voter}"),
     ]
 
 

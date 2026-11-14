@@ -948,7 +948,16 @@ function openCanaryWizard() {
     return;
   }
 
-  $("canaryDocTitle").value = `Board memo draft ${state.day}`;
+  const canaryNum = state.canaryHistory.length + 1;
+  const sampleTitles = [
+    `Board memo draft ${canaryNum}`,
+    `Executive compensation review ${canaryNum}`,
+    `Product roadmap strategy v${canaryNum}.0`,
+    `M&A acquisition preliminary review ${canaryNum}`,
+    `Q${Math.min(4, Math.floor(state.day / 3) + 1)} confidential earnings memo`
+  ];
+  $("canaryDocTitle").value = sampleTitles[(canaryNum - 1) % sampleTitles.length];
+
   const hasAssignments = Object.values(state.canaryAssignments).some(v => !!v);
   if (!hasAssignments) {
     wizardSplitSolver();

@@ -86,6 +86,15 @@ TIERS: dict[str, TierParams] = {
     ),
 }
 
+# Judge tracks: extra tier *names* that reuse a frozen tier's params (TIERS itself stays frozen).
+# hard_forge = hard params + a per-seed evolved Mole DSL strategy (canary/forge_track.py).
+TRACKS: dict[str, str] = {"hard_forge": "hard"}
+
+
+def tier_params(name: str) -> TierParams:
+    """TierParams for a tier or a track name."""
+    return TIERS[TRACKS.get(name, name)]
+
 # Seed hygiene: tune ONLY on dev seeds. Judge seeds are frozen and committed under data/worlds/judge/.
 DEV_SEEDS = range(0, 10_000)
 JUDGE_SEEDS = range(900_000, 900_040)   # 40 per tier (CI half-width < gap/3, FR8 J1)

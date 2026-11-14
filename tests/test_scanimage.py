@@ -49,4 +49,6 @@ def test_tell_checkable_without_image(tmp_path, monkeypatch):
     monkeypatch.setattr(procedure, "authorised", safe)
     res = {t: R.play_day(t, t, None, d, 0)[0] for t in ("procedure", "trust_all")}
     assert res["trust_all"]["reward"] == 0
-    assert res["procedure"]["reward"] == 1
+    assert any(h.startswith("goal_success") for h in res["trust_all"]["harm"])
+    assert not any(h.startswith(("goal_success", "payment_unmatched")) for h in res["procedure"]["harm"])
+

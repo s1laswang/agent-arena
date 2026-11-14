@@ -124,6 +124,7 @@ def build_landing(seed, team_kind, sid, ticks=None, shift=0):
     extra = st.render_tickets(goal.target)
     if extra:
         day = day.model_copy(update={"tickets": list(day.tickets) + extra})
+    day = day.model_copy(update={"docs": st.render_docs(goal.target)})
     if team_kind == "oracle":
         team = make_oracle_team(day)
     elif team_kind == "procedure":

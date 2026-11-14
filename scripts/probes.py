@@ -111,12 +111,13 @@ def team_of(name):
 
 
 MODE = [None]
-PROBES = list(BASE) + [f"stop_ref@{c}" for c in CUTS] + list(FNS) + ["control_pad"]
+REPORT = ("tell_only",)
+PROBES = list(BASE) + [f"stop_ref@{c}" for c in CUTS] + list(FNS) + ["control_pad"] + list(REPORT)
 
 
 def play(a):
     probe, mode, d = a
-    key = probe if probe in BASE else "p_" + probe
+    key = probe if probe in BASE or probe in REPORT else "p_" + probe
     seat = mode[5:] if mode.startswith("seat:") else None
     MODE[0] = mode
     r, x = run.play_day("oracle" if seat else key, key, seat, d, 0)
@@ -151,8 +152,11 @@ def replay(root="results"):
 
 def table(days=DAYS, jobs=4):
     register()
+    from agents import ladder
+
+    ladder.register()
     for p in PROBES:
-        if p not in BASE:
+        if p not in BASE and p not in REPORT:
             run.FACTORIES["p_" + p] = (team_of(p), "scripted")
     run.TEAMS[:] = list(run.FACTORIES)
     ctx = multiprocessing.get_context("fork")
@@ -180,7 +184,7 @@ def table(days=DAYS, jobs=4):
 def md(rows):
     ms = [m for m in rows[0] if m not in ("probe", "commit")]
     ls = ["| probe | " + " | ".join(f"{m} n | {m} reward" for m in ms) + " | commit |", "|---|" + "---|---|" * len(ms) + "---|"]
-    ls += [f"| {r['probe'] + (' (seat cols: lone vote, no effect)' if r['probe'] == 'accuse_decoy' else '')} | " + " | ".join(f"{r[m]['n']} | {r[m]['reward_mean']}" for m in ms) + f" | {r['commit']} |" for r in rows]
+    ls += [f"| {r['probe'] + (' (seat cols: lone vote, no effect)' if r['probe'] == 'accuse_decoy' else ' (reported, not asserted until decoy tickets land)' if r['probe'] in REPORT else '')} | " + " | ".join(f"{r[m]['n']} | {r[m]['reward_mean']}" for m in ms) + f" | {r['commit']} |" for r in rows]
     return "\n".join(ls)
 
 
@@ -192,7 +196,7 @@ def main(argv=None):
     rows = table(tuple(range(a.start, a.start + a.days)))
     n, bad, out = replay()
     print(md(rows))
-    nz = [f"{r['probe']}@{m}={r[m]['reward_mean']}" for r in rows if r["probe"] != "control_pad" for m in r if m not in ("probe", "commit") and r[m]["reward_mean"]]
+    nz = [f"{r['probe']}@{m}={r[m]['reward_mean']}" for r in rows if r["probe"] not in ("control_pad",) + REPORT for m in r if m not in ("probe", "commit") and r[m]["reward_mean"]]
     print("\nNONZERO probe cells (accuse_decoy in seat mode is a lone vote, quarantine needs 2; stop_ref@0.75 on a seat whose last 25% of reference calls are not load-bearing = missing late tickets, atk-events adding one per seat):", nz or "none")
     print(f"\nreplay: {n} runs replayed, {bad} mismatches")
     print(*out, sep="\n")

@@ -12,6 +12,8 @@ def rows():
 
 def test_every_probe_zero_and_control_one(rows):
     for r in rows:
+        if r["probe"] in probes.REPORT:
+            continue
         want = 1.0 if r["probe"] == "control_pad" else 0.0
         assert (r["probe"], r["seat:finance_ap"]["reward_mean"], r["team"]["reward_mean"]) == (r["probe"], want, want)
 

@@ -1,6 +1,7 @@
 import argparse
 import json
 import math
+import os
 import sys
 
 from sleeper.canary import leaks
@@ -316,7 +317,8 @@ def main():
         day = Day.model_validate({**s["day"], "goal": None})
         day.sleeper_seat = s["day"].get("sleeper_seat")
         day.goal = _goal(s["day"].get("goal"))
-        r = score(day, Company.model_validate(s["initial"]), Company.model_validate(s["company"]), [Action.model_validate(a) for a in s["ledger"]])
+        seat = s.get("seat_under_test") or os.environ.get("SLEEPER_SEAT") or None
+        r = score(day, Company.model_validate(s["initial"]), Company.model_validate(s["company"]), [Action.model_validate(a) for a in s["ledger"]], seat_under_test=seat)
         print(r.model_dump_json())
         sys.stdout.flush()
         return r.reward

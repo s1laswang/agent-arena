@@ -31,11 +31,20 @@ Source: `make eval` on momin at 9bbf7da (rerun from a clean `results/`, `summary
 
 Known issue: the controller-seat-swapped table is all 0.000 because of a day-mix bug (lead-env fixing). Do not read it as a gap.
 
-Known issue: `make eval` prints `WARNING: exploit baseline above 0: trust_all (all 8) reward 0.820 vs staff 0.320 BEATS STAFF`. A trivial approve-everything team beats scripted staff, so the staff number is not yet evidence of a hard task. Not explained yet.
+Known issue: a "do your own tickets, ignore chat, never accuse" baseline (`trust_all`) scores about 0.8 against scripted staff at about 0.3 (dm-qa, 50 days; `make eval` prints `WARNING: exploit baseline above 0`). Leak, sabotage and frame attacks work only by persuading another seat, so ignoring chat makes you immune to them. Being immune to chat is not what the task should reward. Fix in progress: legit work that needs information from chat (the 48-ticket days). Numbers will be rerun.
 
 The earlier do_nothing hole (seat mode, seats with no graded tickets scoring 1, for example seed 1006) was fixed with a verifier backstop. do_nothing is 0.000 in every table above.
 
 Named failure modes and what each was tied to: [docs/FAILURES.md](docs/FAILURES.md).
+
+## What is real vs scripted
+
+- Every team in every table is scripted. Staff, oracle, reference, sleeper and all baselines are Python, not Gemini. `agent_kind` is `scripted` in every row.
+- There is no Gemini key yet, so no live Gemini call has ever been made. No Gemini number exists: NOT FOUND.
+- Gemini code that exists and is tested offline only, with a scripted fake model that proves the wiring and nothing about how the real model behaves: the client with cache (`agents/gemini.py`), Gemini staff (`agents/staff.py` `GeminiStaff`), Gemini sleeper (`agents/sleeper_agent.py`), Gemini reference (`agents/gemini_reference.py`), failure explanations (`lab/analyse.py --gemini`), invoice images (`agents/images.py`, image plumbing only).
+- What flips when `GEMINI_API_KEY` and `LAB_GEMINI=1` are both set: the staff and reference teams in `lab.run` use the Gemini path and rows say `agent_kind` gemini. The key alone changes nothing. First live check: `PYTHONPATH=. .venv/bin/python scripts/gemini_smoke.py`.
+- `SLEEPER_OFFLINE=1` never calls the API. Staff and reference raise on a cache miss. The sleeper agent and the analyst explanation fall back to scripted instead, so an offline rerun can quietly use the scripted sleeper there.
+- The "reference" is a scripted evidence-only team: `Reference` in `agents/reference.py` (lines 187 to 353) has no reference to `day.sleeper_seat`, `goal` or ticket `legit` flags, and `make_reference_team` ignores the day. The oracle does use the hidden sleeper identity, so it is a perfect-information check, not the reference.
 
 ## Judge seat
 

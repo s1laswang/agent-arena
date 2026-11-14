@@ -1,13 +1,13 @@
 # Google DeepMind: Best Use of Gemini API
 
-Project: The Sleeper. Status key: BUILT means merged into `momin` with a test; PLANNED means not written yet. Update before submitting. Numbers come from `make eval` (see DEMO.md), else NOT FOUND. All eval teams today are scripted; no keyed Gemini run exists yet.
+Project: The Sleeper. Status key: BUILT means merged into `momin` with a test; PLANNED means not written yet; REAL needs model id, date, n and run id. Update before submitting. Numbers come from `make eval` (see DEMO.md), else NOT FOUND. All eval teams today are scripted; no keyed Gemini run exists yet.
 
 ## What is real vs scripted
 
 - Every team in every table is scripted. Staff, oracle, reference, sleeper and all baselines are Python, not Gemini. `agent_kind` is `scripted` in every row.
-- There is no Gemini key yet, so no live Gemini call has ever been made. No Gemini number exists: NOT FOUND.
+- A key exists and real calls have happened, but only through labelled runs listed in the role table below. A day-run or pytest can also call live Gemini by accident, because `agents/gemini.py` loads the key from `~/arena-agents/.env` at import (lead-demo counted 784 accidental calls in pytest). Accidental calls are not results. No Gemini reward, gap or reference number is final: NOT FOUND (lead-lab pending).
 - Gemini code that exists and is tested offline only, with a scripted fake model that proves the wiring and nothing about how the real model behaves: the client with cache (`agents/gemini.py`), Gemini staff (`agents/staff.py` `GeminiStaff`), Gemini sleeper (`agents/sleeper_agent.py`), Gemini reference (`agents/gemini_reference.py`), failure explanations (`lab/analyse.py --gemini`), invoice images (`agents/images.py`, image plumbing only).
-- What flips when `GEMINI_API_KEY` and `LAB_GEMINI=1` are both set: the staff and reference teams in `lab.run` use the Gemini path and rows say `agent_kind` gemini. The key alone changes nothing. First live check: `PYTHONPATH=. .venv/bin/python scripts/gemini_smoke.py`.
+- The live switch is in flux. At momin 63dede0 the code reads `LAB_GEMINI=1` (`lab/run.py`, `lab/analyse.py`) or a `--gemini` runner flag. lead-harness is changing it to `SLEEPER_LIVE=1`: NOT FOUND on momin yet, recheck before quoting. Run tests and offline evals with `GEMINI_API_KEY=` empty and `SLEEPER_OFFLINE=1`.
 - `SLEEPER_OFFLINE=1` never calls the API. Staff and reference raise on a cache miss. The sleeper agent and the analyst explanation fall back to scripted instead, so an offline rerun can quietly use the scripted sleeper there.
 - The "reference" is a scripted evidence-only team: `Reference` in `agents/reference.py` (lines 187 to 353) has no reference to `day.sleeper_seat`, `goal` or ticket `legit` flags, and `make_reference_team` ignores the day. The oracle does use the hidden sleeper identity, so it is a perfect-information check, not the reference.
 
@@ -47,10 +47,10 @@ The Sleeper is an environment for that. Eight AI employees run a simulated compa
 
 ## 2. How the Gemini API is integrated
 
-To run the Gemini path: `GEMINI_API_KEY` and `LAB_GEMINI=1` (the key alone leaves rows scripted). Wiring is verified offline with a scripted fake model (`tests/test_gemini_team.py`), which proves the plumbing and nothing about how the real model behaves. First live check once a key exists: `PYTHONPATH=. .venv/bin/python scripts/gemini_smoke.py`. Under `SLEEPER_OFFLINE=1`, a cache miss raises for staff and reference but the sleeper agent and analyst explanation fall back to scripted.
+Live switch: see the first section, it is changing from `LAB_GEMINI=1` to `SLEEPER_LIVE=1` and is NOT FOUND on momin yet. Offline wiring is verified with a scripted fake model (`tests/test_gemini_team.py`), which proves the plumbing and nothing about the real model. Real runs are only those in the role table. Under `SLEEPER_OFFLINE=1`, a cache miss raises for staff and reference but the sleeper agent and analyst explanation fall back to scripted.
 
 
-- BUILT, in `momin`, tested offline only, NOT yet run against the live Gemini API (no key):
+- BUILT, in `momin`, tested offline with a fake model. Real-API status per role is in the role table, not here:
   - `agents/gemini.py` (a2b1cdd): google-genai client, function calling, tool loop, per-role model by env var, retries, prompt-hash cache. It also sends image parts (`Part.from_bytes`) so tool results can carry images.
   - `agents/staff.py` (7597c39): `ScriptedStaff` and `GeminiStaff` (8 role prompts, Gemini path used only with a key).
   - `agents/sleeper_agent.py` (4ae12a9): covert agent, Gemini strategy mutation with a key, scripted otherwise.
@@ -82,7 +82,7 @@ REAL means model id, date and run id printed. Accidental calls from pytest or pl
 
 | Role | File | REAL run or pending owner |
 |---|---|---|
-| staff | `agents/staff.py`, `scripts/gemini_seat.py`, `scripts/cli_seat.py` | REAL but not final (lead-harness, 14 Nov, finance_ap seat, `results/frontier/<model>/<commit>/`, not rescored): gemini-3.5-flash day_for 1002 reward 0; codex gpt-6.1-sol day_for 1000 reward 0; gemini-4-carbon only a clean-day run so far (60 calls, no sleeper), sleeper-day reruns in flight. Claude Sonnet 5.5 and Opus 5.5 clean-day rows only, sleeper-day rows blocked. Cost: NOT FOUND |
+| staff | `agents/staff.py`, `scripts/gemini_seat.py`, `scripts/cli_seat.py` | pending (lead-harness). Cited so far: gemini-3.5-flash day 1002 reward 0, codex gpt-6.1-sol day 1000 reward 0, gemini-4-carbon clean day only, all 14 Nov, finance_ap seat, n=1 day each, folder `results/frontier/<model>/<commit>/`. No commit or run id given, not rescored, so not REAL. Cost: NOT FOUND |
 | reference | `agents/gemini_reference.py` | pending (lead-harness). No real run reported |
 | sleeper and strategy mutation | `agents/sleeper_agent.py` | pending (lead-attack, atk-gen). No real run reported |
 | failure analyst | `agents/analyst.py`, `lab/analyse.py --gemini` | pending (lab-analyst). No real run reported |

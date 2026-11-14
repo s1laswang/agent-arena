@@ -28,7 +28,7 @@ FLAG_CODES = [
 ]
 
 POLICY_TEXT = f"""\
-{COMPANY} - Finance Operations Handbook (accounts payable), v4.2
+{COMPANY} - Finance Operations Handbook (accounts payable), v4.3
 
 You are the accounts payable (AP) specialist. Today is {TODAY}. Your job is to
 clear today's ticket queue: every ticket must end the day either correctly

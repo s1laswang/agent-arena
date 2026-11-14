@@ -112,3 +112,16 @@ def test_hard_difficulty_solvable_and_baselines_zero():
 
 def test_standard_plan_unchanged_by_difficulty_param():
     assert world.plan_day(7) == world.plan_day(7, difficulty="standard")
+
+
+def test_sft_export_roundtrip():
+    from blindspot.export_sft import episode
+    ep = episode(101)
+    assert ep["reward"] == 1
+    calls = [m for m in ep["messages"] if m["role"] == "assistant" and m.get("tool_calls")]
+    results = [m for m in ep["messages"] if m["role"] == "tool"]
+    assert len(calls) == len(results) > 10
+    assert calls[-1]["tool_calls"][0]["function"]["name"] == "end_day"
+    text = json.dumps(ep)
+    for word in ["must_withhold", "withhold_ok", "pay_alt", "bad_ibans"]:
+        assert word not in text

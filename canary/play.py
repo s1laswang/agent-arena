@@ -147,7 +147,7 @@ def session(env: Env, lines: Iterable[str], name: str, tier: str, seed: int, out
         r = env.call(tool, args)
         out(render(r.data) if r.ok else f"error: {r.error}")
         if not env.done:
-            st = env._t_status({}).data  # local peek, not an env.call: never uses the cap
+            st = env.peek_status()  # local peek, not an env.call: never uses the cap
             out(f"[day {st.get('day')}  V={st.get('V')}  actions_left_today={st.get('actions_left_today')}]")
         if env.done:
             break

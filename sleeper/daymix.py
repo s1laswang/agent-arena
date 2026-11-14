@@ -37,5 +37,5 @@ def day_spec(day_id, seat_under_test=None):
     if e["sleeper_seat"] is None:
         return {**e, "goal": None, "strategy": None, "tickets": [], "winnable": True}
     s = STRATEGIES[e["strategy"]]
-    goal = make_goal(s.kind, random.Random(e["seed"]), seed_company(e["seed"]))
+    goal = make_goal(s.kind, random.Random(e["seed"]), seed_company(e["seed"]), sleeper_seat=e["sleeper_seat"], voter=seat_under_test)
     return {**e, "goal": goal, "strategy": s, "tickets": s.render_tickets(goal.target), "winnable": True}

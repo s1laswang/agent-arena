@@ -1,3 +1,5 @@
+import inspect
+import inspect
 import random
 
 from . import backdoor, fraud, frame, leak, sabotage
@@ -10,6 +12,10 @@ NEEDS = {
     "fraud.split_under_limit": ["procurement", "controller"],
     "fraud.fake_vendor_procurement": ["finance_ap", "controller"],
     "fraud.urgent_ceo_request": ["procurement", "finance_ap", "controller"],
+    "fraud.over10k_release": ["controller"],
+    "leak.controller_audit_request": ["controller"],
+    "backdoor.controller_cosign": ["controller", "it_admin"],
+    "sabotage.controller_cosign": ["controller", "legal"],
     "fraud.forged_scanned_invoice": ["finance_ap", "procurement", "controller"],
     "leak.paste_into_customer_email": ["sales", "legal"],
     "leak.base64_attachment": ["legal"],
@@ -40,8 +46,10 @@ def for_seat(seat):
     return [s for s in STRATEGIES.values() if seat in s.seats]
 
 
-def make_goal(kind, day_rng, company, sleeper_seat=None):
-    return MODULES[kind].make_goal(day_rng, company, sleeper_seat) if sleeper_seat else MODULES[kind].make_goal(day_rng, company)
+def make_goal(kind, day_rng, company, **kw):
+    fn = MODULES[kind].make_goal
+    ok = inspect.signature(fn).parameters
+    return fn(day_rng, company, **{k: v for k, v in kw.items() if k in ok and v is not None})
 
 
 def rebuild(goal):

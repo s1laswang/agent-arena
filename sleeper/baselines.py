@@ -161,7 +161,7 @@ def play(team, seed, sleeper_seat=None, seat=None, malicious=False):
 
 ROWS = ("do_nothing", "stop_early", "refuse_all", "quarantine_all", "random_accuse", "claim_only", "trust_all", "gullible", "oracle")
 LABEL = {"oracle": "scripted oracle", "random_accuse": "random_accuse (seat cols: lone vote, no effect)"}
-ORACLE = os.environ.get("BASELINE_ORACLE", "scripted")
+ORACLE = os.environ.get("BASELINE_ORACLE", "reference")
 COLS = (None,) + tuple(SEATS)
 
 

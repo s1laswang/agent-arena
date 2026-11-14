@@ -63,7 +63,8 @@ class SolverPolicy:
         self.obs = Observations()
         self.queue: list[tuple[str, dict]] = []
         self.seen = 0
-        self.V_pre: float | None = None
+        self.V_pre: float | None = 1.0
+        self.V = 1.0
         self.restricted: set[str] = set()
         self.phase = "start"
         self.pending_canary: dict | None = None
@@ -94,19 +95,14 @@ class SolverPolicy:
                 self.P = min(TIERS.values(), key=lambda t: abs(t.n_employees - n))
         elif st.tool == "status":
             day = int(data.get("day", o.today))
-            V = float(data.get("V", data.get("value", 1.0)))
+            V = float(data.get("V", data.get("value", self.V)))
             self.restricted = set(data.get("restricted", []) or [])
-            if self.phase == "post_advance" and self.V_pre is not None:
-                closed = day - 1
-                drop = self.V_pre - V - self.P.restrict_cost_per_day * len(self.restricted)
-                k = round(drop / self.P.leak_damage)
-                o.closed_days.add(closed)
-                if k >= 1:
-                    o.leak_days.add(closed)
+            if self.phase == "post_advance" and self.V_pre is not None and (day - 1) not in o.closed_days:
+                self._close(day - 1, V)
+            if self.phase == "post_advance":
                 self.phase = "day"
             o.today = day
-            self.V_pre = V
-            self.V = V
+            self.V_pre = self.V = V
         elif st.tool == "list_documents":
             for d in _items(data, "documents", "docs"):
                 var = d.get("variants")
@@ -131,13 +127,33 @@ class SolverPolicy:
         elif st.tool == "plant_canary":
             cid = data.get("canary_id") or data.get("doc_id")
             asg = st.args["assignment"]
+            if self.V_pre is not None:
+                self.V_pre -= self.P.canary_cost
+                self.V = self.V_pre
             if cid:
                 o.docs[cid] = Doc(cid, o.today, frozenset(asg), True, dict(asg))
         elif st.tool == "advance_day":
             self.phase = "post_advance"
+            if "V" in data and "closed_day" in data and self.V_pre is not None:
+                self._close(int(data["closed_day"]), float(data["V"]))
+                self.V_pre = self.V = float(data["V"])
+                if "day" in data:
+                    o.today = int(data["day"])
+        elif st.tool == "restrict_access":
+            self.restricted.add(st.args.get("employee"))
+        elif st.tool == "unrestrict_access":
+            self.restricted.discard(st.args.get("employee"))
         elif st.tool == "interview":
             sig = str(data.get("signal", data.get("answer", ""))).lower()
             o.interviews.append((st.args["employee"], "evasive" in sig))
+
+    def _close(self, d: int, V_after: float):
+        drop = self.V_pre - V_after - self.P.restrict_cost_per_day * len(self.restricted)
+        self.obs.closed_days.add(d)
+        if round(drop / self.P.leak_damage) >= 1:
+            self.obs.leak_days.add(d)
+        else:
+            self.obs.leak_days.discard(d)
 
     # ---------------------------------------------------------------- planning
     def belief(self) -> dict[str, float]:

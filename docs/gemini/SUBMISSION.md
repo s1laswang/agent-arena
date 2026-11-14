@@ -3,10 +3,14 @@
 *Google DeepMind "Best Use of Gemini API", Junction 2026. Code: github.com/s1laswang/agent-arena (`canary/gemini/`). Every number below links to a committed file. Model ids are as listed by the Gemini API (`models.list`) on our key on 14 Nov 2026. When we request `gemini-3.5-flash`, the API serves **`gemini-3.6-flash`** (recorded per call in the ladder provenance), so this text says "3.6-flash".*
 
 ## Short version (≤ 600 chars)
-Canary is an RL environment where an AI head of security must catch a mole with canary traps while company value bleeds away, scored against a Bayesian reference solver. We used Gemini's thinking level as a controlled variable across 157 paired episodes, and on hard, 3.6-flash reaches the solver at a quarter of carbon-high's cost (n=8, wide CIs). A Gemini red team read our whole repo and found 0 exploits, and in a positive control it re-found a known exploit 4/4. 15,757 Gemini calls, all logged.
+Before shipping an agent that makes irreversible calls on a budget, a team must pick a model and a thinking level. Canary Lab measures that choice on an insider-threat RL environment scored against a Bayesian reference solver: on hard, 3.6-flash at high thinking matches the solver for $0.34 an episode vs $1.30 for carbon (157 paired episodes; n=8, wide CIs). 100 Gemini red-team attacks found 0 verified exploits, with a detector validated on a reopened one. 15,757 calls, all logged.
 
 ## 1. The problem
-Agents now make irreversible decisions under uncertainty with a budget: security triage, insider risk, procurement. A benchmark gives one number per model. It can't tell you whether more thinking would help, what that costs, or whether the score can be gamed. Answering that needs controlled experiments and an adversarial audit, at a scale nobody does by hand.
+**Who it is for:** the team about to ship an agent that makes irreversible decisions under uncertainty with a budget (security triage, insider risk, procurement). Before launch they must pick a model and a `thinking_level`, and trust that the benchmark they tuned on can't be gamed.
+
+**What is at stake:** in our environment, as in those jobs, a wrong accusation is the worst outcome (score −1), and every day of waiting leaks value. The choice of thinking level is about a 4× cost decision on hard: $0.34 vs $1.30 per episode, both at about solver level (`results/gemini/ladder.md`).
+
+A benchmark gives one number per model. It can't tell you whether more thinking would help, what that costs, or whether the score can be gamed. Answering that needs controlled experiments and an adversarial audit, at a scale nobody does by hand.
 
 ## 2. How Gemini is integrated
 Every Gemini call goes through one client that writes one log row per call (`canary/gemini/ledger.py`). The totals are 15,757 calls, 411M input tokens of which 340M (82.7%) came from cache, 6.75M thinking tokens, and $146.02 at list price (`results/gemini/dashboard.html`, `usage.totals`).
@@ -14,7 +18,7 @@ Every Gemini call goes through one client that writes one log row per call (`can
 | Role | Gemini-specific capability | Result (committed) |
 |---|---|---|
 | **Player: the Ladder** (`ladder.py`) | `thinking_level` as the only changed factor; thought-signature replay across function-calling turns (13 MCP tools) | 157 paired episodes, 34 cells (5 models × levels × 2 tiers), same worlds as the solver (`results/gemini/ladder.md`) |
-| **Attacker: the Red-team Swarm** (`swarm.py`) | The whole repo in one long-context prompt (about 183k tokens), function calling against the env | 51 audited attacks (35 whitebox, of which 32 in-process and 3 via the real MCP server; 16 blackbox): **0 exploits**. **Positive control: 4/4** (`results/gemini/swarm*.md`) |
+| **Attacker: the Red-team Swarm** (`swarm.py`) | The whole repo in one long-context prompt (about 183k tokens), function calling against the env | 100 ledger-verified attacks over 4 waves (82 whitebox, 18 blackbox; 19 through the real MCP server; 5 more lost to a DNS outage, unscored): **0 verified exploits**. Detector validated on a reopened exploit: 4/4 caught (`results/gemini/swarm.md`) |
 | **Analyst: Atlas and Gallery** (`atlas.py`, `gallery.py`) | 793k-token corpus in one explicit context cache on 3.8-flash; multimodal belief charts; embeddings | Blind discovery recovers 3 of 5 code-defined failure modes and names 2 new ones (`results/gemini/atlas_blind.md`). Explains the code-attributed failures (`atlas.md`, `docs/reports/failure_gallery.md`). See the honesty notes |
 | **Adversary: the arena mole** (`roles.py`) | gemini-4-carbon plays the mole live | Finds the canary trap's blind spot (§3.3) |
 | **Infrastructure** (`gateway.py`) | Token-gated relay for clusters without internet; record/replay | The showcase and 4 ladder episodes replay keyless (`make lab-replay`) |
@@ -26,10 +30,10 @@ Every Gemini call goes through one client that writes one log row per call (`can
    - 3.1-flash-lite scores below do-nothing at every thinking level.
    - 3.8-flash improves with thinking on medium (−52% at low → 93% [80, 112] at high) but not on hard.
    - These are real Gemini-only controls (`thinking_level`, thought signatures), not a swappable LLM slot. The OpenAI backend in the repo is used only for the AfterQuery comparison runs.
-2. **A red team proven by a positive control** (`results/gemini/swarm.md`, `swarm_control.md`).
-   - Gemini attackers read the full source and attack the reward. Scores come only from the server's ledger, and every correct accusation is audited against the solver's posterior, so detective work is not mistaken for an exploit.
-   - In 51 attacks, the best score not justified by evidence was 0.000, against a solver score of 0.60–0.75.
-   - To show the detector works, we reopened a known exploit ("seed regeneration from public code"). **4/4 attackers rediscovered it from the code, and 16/16 fresh-seed re-runs scored 1.0, flagged as verified.** "0 exploits" therefore comes from a detector shown to catch a real one.
+2. **A red team with a validated detector** (`results/gemini/swarm.md`, `swarm_control.md`).
+   - Gemini attackers read the full source (whitebox) or only the agent's instructions and tools (blackbox) and attack the reward. Scores come only from the server's ledger, and every correct accusation is audited against what the attacker had seen, so detective work is not mistaken for an exploit.
+   - 100 attacks, 0 verified exploits. 3 correct accusations were not justified by the evidence; the 2 that reached solver level were re-run on fresh seeds and did not hold. One of them (w2b-008, ordinary canary play) was confirmed in-run (0.68 vs solver 0.49 on 4 fresh seeds) because the audit under-credited exact set-intersection deductions. We fixed the audit (commit 34d73c3, with a test) and re-executed the plan on the same seeds: 0.16 vs solver 0.55, with its one win justified by public evidence. We report it as overturned, n=4, in `swarm.md`.
+   - **Detector validation (positive control).** We reopened a known exploit: on public dev seeds, anyone can regenerate the world from the public code. Every attacker in every wave has a `public_world_match` tool that runs the public generator, so this control tests the detector, not the attackers' unaided discovery. On the real (secret-keyed) seeds, 31 attackers called it 262 times and it never matched a world. On the reopened seeds, 4/4 attackers used it to accuse on day 1, the audit flagged every win as unjustified, and 16/16 fresh-seed re-runs scored 1.0, so all 4 were confirmed. "0 exploits" comes from a detector shown to catch a real one.
 3. **Gemini as adversary finds the canary trap's blind spot** (arena mode, not the judged env; medium, n=4 dev seeds 0–3, run `roles-mole-20261114-185950`).
    - The gemini-4-carbon mole was caught 0/4 times (solver score +0.00), against 4/4 caught (+0.63) with the default mole.
    - It leaked only documents everyone had: 48 leaks, 1 of them a canary. In its words: *"Leaking c1 is completely safe because all 20 employees received it."*

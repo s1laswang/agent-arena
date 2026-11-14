@@ -1,0 +1,303 @@
+{
+ "salt_file_exists": false,
+ "env_CANARY_WORLD_SECRET_set": false,
+ "key_for_dev_seed_0": "public",
+ "key_for_judge_900003": "public",
+ "key_for_heldout_800000": "public",
+ "regen_samples": [
+  {
+   "tier": "easy",
+   "seed": 300,
+   "served_mole": "e04",
+   "public_regen_mole": "e04",
+   "match": true,
+   "accuse_tool": {
+    "ok": true,
+    "data": {
+     "accused": "e04",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "score": 1.0,
+   "V": 1.0,
+   "correct": true
+  },
+  {
+   "tier": "easy",
+   "seed": 900003,
+   "served_mole": "e03",
+   "public_regen_mole": "e03",
+   "match": true,
+   "accuse_tool": {
+    "ok": true,
+    "data": {
+     "accused": "e03",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "score": 1.0,
+   "V": 1.0,
+   "correct": true
+  },
+  {
+   "tier": "medium",
+   "seed": 900003,
+   "served_mole": "e05",
+   "public_regen_mole": "e05",
+   "match": true,
+   "accuse_tool": {
+    "ok": true,
+    "data": {
+     "accused": "e05",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "score": 1.0,
+   "V": 1.0,
+   "correct": true
+  },
+  {
+   "tier": "hard",
+   "seed": 900003,
+   "served_mole": "e23",
+   "public_regen_mole": "e23",
+   "match": true,
+   "accuse_tool": {
+    "ok": true,
+    "data": {
+     "accused": "e23",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "score": 1.0,
+   "V": 1.0,
+   "correct": true
+  },
+  {
+   "tier": "medium",
+   "seed": 0,
+   "served_mole": "e05",
+   "public_regen_mole": "e05",
+   "match": true,
+   "accuse_tool": {
+    "ok": true,
+    "data": {
+     "accused": "e05",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "score": 1.0,
+   "V": 1.0,
+   "correct": true
+  },
+  {
+   "tier": "hard",
+   "seed": 800000,
+   "served_mole": "e10",
+   "public_regen_mole": "e10",
+   "match": true,
+   "accuse_tool": {
+    "ok": true,
+    "data": {
+     "accused": "e10",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "score": 1.0,
+   "V": 1.0,
+   "correct": true
+  }
+ ],
+ "seed_attack_cli_easy_300": {
+  "returncode": 0,
+  "stdout": "(300, 'e04')",
+  "stderr": ""
+ },
+ "seed_attack_cli_easy_900003": {
+  "returncode": 0,
+  "stdout": "(900003, 'e03')",
+  "stderr": "/workspace/canary/world.py:75: UserWarning: CANARY_WORLD_SECRET not set and no SALT file; judge worlds use the public key\n  warnings.warn(\"CANARY_WORLD_SECRET not set and no SALT file; judge worlds use the public key\")"
+ },
+ "http_regen_accuse": [
+  {
+   "tier": "easy",
+   "seed": 900003,
+   "recovered_seed": 900003,
+   "mole": "e03",
+   "direct_match": [
+    900003,
+    "e03"
+   ],
+   "search_ms": 0.8,
+   "tool_data": {
+    "accused": "e03",
+    "episode_over": true
+   },
+   "tool_error": null,
+   "ledger_score": 1.0,
+   "ledger_correct": true,
+   "tool_reveals_correct": false,
+   "server_stderr_tail": "/workspace/canary/world.py:75: UserWarning: CANARY_WORLD_SECRET not set and no SALT file; judge worlds use the public key\n  warnings.warn(\"CANARY_WORLD_SECRET not set and no SALT file; judge worlds use the public key\")\n"
+  },
+  {
+   "tier": "medium",
+   "seed": 900000,
+   "recovered_seed": 900000,
+   "mole": "e19",
+   "direct_match": [
+    900000,
+    "e19"
+   ],
+   "search_ms": 0.2,
+   "tool_data": {
+    "accused": "e19",
+    "episode_over": true
+   },
+   "tool_error": null,
+   "ledger_score": 1.0,
+   "ledger_correct": true,
+   "tool_reveals_correct": false,
+   "server_stderr_tail": "/workspace/canary/world.py:75: UserWarning: CANARY_WORLD_SECRET not set and no SALT file; judge worlds use the public key\n  warnings.warn(\"CANARY_WORLD_SECRET not set and no SALT file; judge worlds use the public key\")\n"
+  },
+  {
+   "tier": "hard",
+   "seed": 900020,
+   "recovered_seed": 900020,
+   "mole": "e15",
+   "direct_match": [
+    900020,
+    "e15"
+   ],
+   "search_ms": 4.4,
+   "tool_data": {
+    "accused": "e15",
+    "episode_over": true
+   },
+   "tool_error": null,
+   "ledger_score": 1.0,
+   "ledger_correct": true,
+   "tool_reveals_correct": false,
+   "server_stderr_tail": "/workspace/canary/world.py:75: UserWarning: CANARY_WORLD_SECRET not set and no SALT file; judge worlds use the public key\n  warnings.warn(\"CANARY_WORLD_SECRET not set and no SALT file; judge worlds use the public key\")\n"
+  }
+ ],
+ "dev0_19_day1_regen": {
+  "easy": {
+   "n": 20,
+   "mean": 1.0,
+   "min": 1.0,
+   "max": 1.0,
+   "n_perfect": 20,
+   "n_wrong": 0
+  },
+  "medium": {
+   "n": 20,
+   "mean": 1.0,
+   "min": 1.0,
+   "max": 1.0,
+   "n_perfect": 20,
+   "n_wrong": 0
+  },
+  "hard": {
+   "n": 20,
+   "mean": 1.0,
+   "min": 1.0,
+   "max": 1.0,
+   "n_perfect": 20,
+   "n_wrong": 0
+  }
+ },
+ "output_scan": [
+  {
+   "tier": "easy",
+   "seed": 0,
+   "world_seed_in_any_output": false,
+   "labeled_mole_field": false,
+   "mole_id_in_instruction": false,
+   "mole_id_in_employee_list": true,
+   "word_mole_in_messages": true
+  },
+  {
+   "tier": "medium",
+   "seed": 7,
+   "world_seed_in_any_output": false,
+   "labeled_mole_field": false,
+   "mole_id_in_instruction": false,
+   "mole_id_in_employee_list": true,
+   "word_mole_in_messages": true
+  },
+  {
+   "tier": "hard",
+   "seed": 3,
+   "world_seed_in_any_output": false,
+   "labeled_mole_field": false,
+   "mole_id_in_instruction": false,
+   "mole_id_in_employee_list": true,
+   "word_mole_in_messages": true
+  }
+ ],
+ "unrestrict_without_restriction": {
+  "ok": false,
+  "error": "invalid arguments",
+  "V_before": 1.0,
+  "V_after": 1.0,
+  "score": 0.0
+ },
+ "restrict_then_unrestrict": {
+  "V_after_restrict_day": 0.94,
+  "V_after_unrestrict": 0.94,
+  "raised": false
+ },
+ "delete_ledger_does_not_reset": {
+  "delete_code": 200,
+  "delete_body": "{}",
+  "score_before": -1.0,
+  "score_after_second_accuse": -1.0,
+  "n_accusations_after": 1,
+  "done_after": true
+ },
+ "inprocess_parallel_accuse": {
+  "winners": [
+   [
+    "e19",
+    true,
+    {
+     "accused": "e19",
+     "episode_over": true
+    },
+    null
+   ]
+  ],
+  "n_episode_over": 19,
+  "score": -1.0,
+  "n_accused_events": 1
+ },
+ "brute_dev_10k": {
+  "seconds": 0.051,
+  "found": [
+   300,
+   "e04"
+  ]
+ },
+ "mole_histogram_easy_200": {
+  "e00": 17,
+  "e01": 21,
+  "e02": 17,
+  "e03": 19,
+  "e04": 20,
+  "e05": 9,
+  "e06": 15,
+  "e07": 12,
+  "e08": 14,
+  "e09": 21,
+  "e10": 17,
+  "e11": 18
+ },
+ "output_scan_note": "word_mole_in_messages is a false positive: the scanned blob included instruction(), which describes the game. A follow-up search_messages query 'mole' on easy/0 after 3 days returned {\"messages\": []} and no day blob contained the substring mole. world_seed was absent from status and list_employees (checked easy/0, world_seed 12439804459027654073).",
+ "easy_seed_23_mole": "e11"
+}

@@ -1,0 +1,1505 @@
+{
+ "server": {
+  "kind": "canary.redteam.fake_mcp CANARY_FAKE_BACKEND=env",
+  "tier": "easy",
+  "seed": 0,
+  "base": "http://127.0.0.1:60427"
+ },
+ "probes": [],
+ "official_mcp_server_import": {
+  "returncode": 1,
+  "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'canary.mcp_server'"
+ },
+ "get_scan": [
+  {
+   "path": "/",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/mcp",
+   "code": 405,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/ledger",
+   "code": 403,
+   "bytes": 22,
+   "body": "{\"error\": \"forbidden\"}"
+  },
+  {
+   "path": "/ledger?token=",
+   "code": 403,
+   "bytes": 22,
+   "body": "{\"error\": \"forbidden\"}"
+  },
+  {
+   "path": "/health",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/debug",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/world",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/seed",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/env",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/metrics",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/docs",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/openapi.json",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/episode/start",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/admin",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/mcp/../ledger",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  },
+  {
+   "path": "/%6cedger",
+   "code": 404,
+   "bytes": 15,
+   "body": "{\"error\": \"no\"}"
+  }
+ ],
+ "ledger_verbs": [
+  {
+   "method": "PUT",
+   "code": 501,
+   "body": "<!DOCTYPE HTML>\n<html lang=\"en\">\n    <head>\n        <meta charset=\"utf-8\">\n        <title>Error response</title>\n    </head>\n    <body>\n        <h1>Error response</h1>\n        <p>Error code: 501</p>\n "
+  },
+  {
+   "method": "DELETE",
+   "code": 200,
+   "body": "{}"
+  },
+  {
+   "method": "PATCH",
+   "code": 501,
+   "body": "<!DOCTYPE HTML>\n<html lang=\"en\">\n    <head>\n        <meta charset=\"utf-8\">\n        <title>Error response</title>\n    </head>\n    <body>\n        <h1>Error response</h1>\n        <p>Error code: 501</p>\n "
+  },
+  {
+   "method": "POST",
+   "code": 404,
+   "body": "{\"error\": \"no\"}"
+  }
+ ],
+ "ledger_auth": {
+  "no_token": {
+   "code": 403,
+   "bytes": 22,
+   "dt_s": 0.0005,
+   "body": "{\"error\": \"forbidden\"}"
+  },
+  "empty": {
+   "code": 403,
+   "bytes": 22,
+   "dt_s": 0.0004,
+   "body": "{\"error\": \"forbidden\"}"
+  },
+  "wrong": {
+   "code": 403,
+   "bytes": 22,
+   "dt_s": 0.0003,
+   "body": "{\"error\": \"forbidden\"}"
+  },
+  "prefix": {
+   "code": 403,
+   "bytes": 22,
+   "dt_s": 0.0003,
+   "body": "{\"error\": \"forbidden\"}"
+  },
+  "suffix_extra": {
+   "code": 403,
+   "bytes": 22,
+   "dt_s": 0.0003,
+   "body": "{\"error\": \"forbidden\"}"
+  },
+  "guess_test": {
+   "code": 403,
+   "bytes": 22,
+   "dt_s": 0.0003,
+   "body": "{\"error\": \"forbidden\"}"
+  },
+  "guess_secret": {
+   "code": 403,
+   "bytes": 22,
+   "dt_s": 0.0003,
+   "body": "{\"error\": \"forbidden\"}"
+  },
+  "guess_seed": {
+   "code": 403,
+   "bytes": 22,
+   "dt_s": 0.0005,
+   "body": "{\"error\": \"forbidden\"}"
+  },
+  "double_first_wrong": {
+   "code": 403,
+   "bytes": 22,
+   "dt_s": 0.0007,
+   "body": "{\"error\": \"forbidden\"}"
+  },
+  "good": {
+   "code": 200,
+   "bytes": 43,
+   "dt_s": 0.0008,
+   "body": "{\"score\": 0.0, \"done\": false, \"ledger\": []}"
+  }
+ },
+ "initialize": {
+  "code": 200,
+  "bytes": 158,
+  "msg": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "result": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {
+     "tools": {}
+    },
+    "serverInfo": {
+     "name": "canary-fake",
+     "version": "0"
+    }
+   }
+  }
+ },
+ "tools_list": {
+  "code": 200,
+  "bytes": 3847,
+  "names": [
+   "status",
+   "list_employees",
+   "list_documents",
+   "read_access_logs",
+   "search_messages",
+   "read_message",
+   "interview",
+   "plant_canary",
+   "check_leak_feed",
+   "restrict_access",
+   "unrestrict_access",
+   "advance_day",
+   "accuse"
+  ],
+  "mentions_mole_key": false,
+  "mentions_seed": false
+ },
+ "other_rpc": {
+  "resources/list": {
+   "code": 200,
+   "dt_s": 0.0005,
+   "bytes": 85,
+   "msg": {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "error": {
+     "code": -32601,
+     "message": "method not found"
+    }
+   },
+   "body_prefix": "{\"jsonrpc\": \"2.0\", \"id\": 3, \"error\": {\"code\": -32601, \"message\": \"method not found\"}}"
+  },
+  "prompts/list": {
+   "code": 200,
+   "dt_s": 0.0009,
+   "bytes": 85,
+   "msg": {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "error": {
+     "code": -32601,
+     "message": "method not found"
+    }
+   },
+   "body_prefix": "{\"jsonrpc\": \"2.0\", \"id\": 4, \"error\": {\"code\": -32601, \"message\": \"method not found\"}}"
+  },
+  "ping": {
+   "code": 200,
+   "dt_s": 0.0005,
+   "bytes": 41,
+   "msg": {
+    "jsonrpc": "2.0",
+    "id": 5,
+    "result": {}
+   },
+   "body_prefix": "{\"jsonrpc\": \"2.0\", \"id\": 5, \"result\": {}}"
+  },
+  "tools/call": {
+   "code": 200,
+   "dt_s": 0.0005,
+   "bytes": 157,
+   "msg": {
+    "jsonrpc": "2.0",
+    "id": 6,
+    "result": {
+     "content": [
+      {
+       "type": "text",
+       "text": "{\"ok\": false, \"data\": {}, \"error\": \"unknown tool\"}"
+      }
+     ],
+     "isError": true
+    }
+   },
+   "body_prefix": "{\"jsonrpc\": \"2.0\", \"id\": 6, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\\"ok\\\": false, \\\"data\\\": {}, \\\"error\\\": \\\"unknown tool\\\"}\"}], \"isError\": true}}"
+  }
+ },
+ "opening": {
+  "status:{}": {
+   "ok": true,
+   "error": null,
+   "bytes": 148,
+   "dt_s": 0.0005,
+   "data_keys": [
+    "V",
+    "actions_left_today",
+    "canaries_planted",
+    "day",
+    "restricted",
+    "tool_calls_left"
+   ],
+   "payload_snip": "{\"ok\": true, \"data\": {\"day\": 1, \"V\": 1.0, \"actions_left_today\": 8, \"tool_calls_left\": 298, \"restricted\": [], \"canaries_planted\": []}, \"error\": null}"
+  },
+  "list_employees:{}": {
+   "ok": true,
+   "error": null,
+   "bytes": 1050,
+   "dt_s": 0.0005,
+   "data_keys": [
+    "employees"
+   ],
+   "payload_snip": "{\"ok\": true, \"data\": {\"employees\": [{\"id\": \"e00\", \"name\": \"Sanna Hamalainen\", \"dept\": \"Engineering\", \"role\": \"tech lead\"}, {\"id\": \"e01\", \"name\": \"Olli Korhonen\", \"dept\": \"Finance\", \"role\": \"analyst\"}, {\"id\": \"e02\", \"name\": \"Kaisa Virtanen\", \"dept\": \"Sales\", \"role\": \"sales manager\"}, {\"id\": \"e03\", \"name\": \"Ville Koskinen\", \"dept\": \"Legal\", \"role\": \"compliance officer\"}, {\"id\": \"e04\", \"name\": \"Markus Laitinen\", \"dept\": \"Finance\", \"role\": \"accountant\"}, {\"id\": \"e05\", \"name\": \"Sanna Nieminen\", \"dept"
+  },
+  "list_documents:{}": {
+   "ok": true,
+   "error": null,
+   "bytes": 581,
+   "dt_s": 0.0004,
+   "data_keys": [
+    "documents"
+   ],
+   "payload_snip": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\", \"day\": 1, \"recipients\": [\"e00\", \"e06\", \"e09\"], \"is_canary\": false}, {\"doc_id\": \"d1-2\", \"title\": \"Board deck draft Q1\", \"day\": 1, \"recipients\": [\"e01\", \"e03\", \"e04\", \"e05\", \"e07\", \"e11\"], \"is_canary\": false}, {\"doc_id\": \"d1-3\", \"title\": \"Project Glacier security review\", \"day\": 1, \"recipients\": [\"e01\", \"e04\", \"e05\"], \"is_canary\": false}, {\"doc_id\": \"d1-4\", \"title\": \"Acquisition target memo: Polaris\", \"da"
+  },
+  "check_leak_feed:{}": {
+   "ok": true,
+   "error": null,
+   "bytes": 50,
+   "dt_s": 0.0004,
+   "data_keys": [
+    "items"
+   ],
+   "payload_snip": "{\"ok\": true, \"data\": {\"items\": []}, \"error\": null}"
+  },
+  "search_messages:{\"query\": \"mole\"}": {
+   "ok": true,
+   "error": null,
+   "bytes": 53,
+   "dt_s": 0.0007,
+   "data_keys": [
+    "messages"
+   ],
+   "payload_snip": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+  },
+  "search_messages:{\"query\": \"*\"}": {
+   "ok": false,
+   "error": "invalid arguments",
+   "bytes": 55,
+   "dt_s": 0.0006,
+   "data_keys": [],
+   "payload_snip": "{\"ok\": false, \"data\": {}, \"error\": \"invalid arguments\"}"
+  },
+  "read_access_logs:{\"day_from\": 1, \"day_to\": 1}": {
+   "ok": true,
+   "error": null,
+   "bytes": 49,
+   "dt_s": 0.0005,
+   "data_keys": [
+    "logs"
+   ],
+   "payload_snip": "{\"ok\": true, \"data\": {\"logs\": []}, \"error\": null}"
+  }
+ },
+ "malformed_accuse": {
+  "cases": [
+   {
+    "case": "missing",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "list",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "star",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "comma",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "all",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "fullwidth",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "upper",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "name",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "extra",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "bool",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "int",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "null",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "sql",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "traversal",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "homoglyph_e",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "empty",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "wildcard2",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   },
+   {
+    "case": "newline",
+    "ok": false,
+    "error": "invalid arguments",
+    "data": {},
+    "bytes": 55
+   }
+  ],
+  "ledger_before": {
+   "code": 200,
+   "bytes": 43,
+   "dt_s": 0.0005,
+   "body": "{\"score\": 0.0, \"done\": false, \"ledger\": []}"
+  },
+  "ledger_after": {
+   "code": 200,
+   "bytes": 43,
+   "dt_s": 0.0003,
+   "body": "{\"score\": 0.0, \"done\": false, \"ledger\": []}"
+  }
+ },
+ "error_parity": {
+  "distinct_body_groups": 1,
+  "group_sizes": [
+   12
+  ],
+  "example": {
+   "employee": "e00",
+   "samples": [
+    {
+     "tool": "interview",
+     "bytes": 55,
+     "dt_s": 0.0003,
+     "body": "{\"data\": {}, \"error\": \"invalid arguments\", \"ok\": false}"
+    },
+    {
+     "tool": "interview",
+     "bytes": 55,
+     "dt_s": 0.0003,
+     "body": "{\"data\": {}, \"error\": \"invalid arguments\", \"ok\": false}"
+    },
+    {
+     "tool": "restrict_access",
+     "bytes": 55,
+     "dt_s": 0.0003,
+     "body": "{\"data\": {}, \"error\": \"invalid arguments\", \"ok\": false}"
+    },
+    {
+     "tool": "unrestrict_access",
+     "bytes": 55,
+     "dt_s": 0.0003,
+     "body": "{\"data\": {}, \"error\": \"invalid arguments\", \"ok\": false}"
+    },
+    {
+     "tool": "accuse",
+     "bytes": 55,
+     "dt_s": 0.0004,
+     "body": "{\"data\": {}, \"error\": \"invalid arguments\", \"ok\": false}"
+    }
+   ]
+  },
+  "dt_by_employee_ms": {
+   "e00": [
+    0.3,
+    0.3,
+    0.3,
+    0.3,
+    0.4
+   ],
+   "e01": [
+    0.5,
+    0.4,
+    0.5,
+    0.5,
+    0.4
+   ],
+   "e02": [
+    0.6,
+    0.5,
+    0.4,
+    0.7,
+    0.7
+   ],
+   "e03": [
+    0.5,
+    0.4,
+    0.4,
+    0.4,
+    0.3
+   ],
+   "e04": [
+    0.7,
+    0.5,
+    0.4,
+    0.4,
+    0.3
+   ],
+   "e05": [
+    0.4,
+    0.3,
+    0.3,
+    0.4,
+    0.3
+   ],
+   "e06": [
+    0.4,
+    0.6,
+    0.4,
+    0.7,
+    0.4
+   ],
+   "e07": [
+    0.4,
+    0.3,
+    0.8,
+    0.6,
+    0.5
+   ],
+   "e08": [
+    0.5,
+    0.4,
+    0.3,
+    0.4,
+    0.5
+   ],
+   "e09": [
+    0.4,
+    0.4,
+    0.5,
+    0.4,
+    0.4
+   ],
+   "e10": [
+    0.5,
+    0.4,
+    0.4,
+    0.5,
+    0.4
+   ],
+   "e11": [
+    0.4,
+    0.3,
+    0.3,
+    0.3,
+    0.3
+   ]
+  }
+ },
+ "interview_lengths": [
+  {
+   "employee": "e00",
+   "ok": true,
+   "error": null,
+   "answer_len": 75,
+   "dt_ms": 0.4
+  },
+  {
+   "employee": "e01",
+   "ok": true,
+   "error": null,
+   "answer_len": 94,
+   "dt_ms": 0.4
+  },
+  {
+   "employee": "e02",
+   "ok": true,
+   "error": null,
+   "answer_len": 39,
+   "dt_ms": 0.4
+  },
+  {
+   "employee": "e03",
+   "ok": true,
+   "error": null,
+   "answer_len": 71,
+   "dt_ms": 0.5
+  },
+  {
+   "employee": "e04",
+   "ok": true,
+   "error": null,
+   "answer_len": 76,
+   "dt_ms": 0.5
+  },
+  {
+   "employee": "e05",
+   "ok": false,
+   "error": "daily action limit; call advance_day",
+   "answer_len": null,
+   "dt_ms": 0.4
+  },
+  {
+   "employee": "e06",
+   "ok": false,
+   "error": "daily action limit; call advance_day",
+   "answer_len": null,
+   "dt_ms": 0.3
+  },
+  {
+   "employee": "e07",
+   "ok": false,
+   "error": "daily action limit; call advance_day",
+   "answer_len": null,
+   "dt_ms": 0.3
+  },
+  {
+   "employee": "e08",
+   "ok": false,
+   "error": "daily action limit; call advance_day",
+   "answer_len": null,
+   "dt_ms": 0.3
+  },
+  {
+   "employee": "e09",
+   "ok": false,
+   "error": "daily action limit; call advance_day",
+   "answer_len": null,
+   "dt_ms": 0.3
+  },
+  {
+   "employee": "e10",
+   "ok": false,
+   "error": "daily action limit; call advance_day",
+   "answer_len": null,
+   "dt_ms": 0.3
+  },
+  {
+   "employee": "e11",
+   "ok": false,
+   "error": "daily action limit; call advance_day",
+   "answer_len": null,
+   "dt_ms": 0.3
+  }
+ ],
+ "v_unrestrict_without_restriction": {
+  "V_before": 1.0,
+  "unrestrict": {
+   "ok": false,
+   "data": {},
+   "error": "daily action limit; call advance_day"
+  },
+  "V_after": 1.0
+ },
+ "parallel_accuse": {
+  "payloads": [
+   {
+    "employee": "e00",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "employee": "e01",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "employee": "e02",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "employee": "e03",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "employee": "e04",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "employee": "e05",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "employee": "e06",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "employee": "e07",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "employee": "e08",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "employee": "e09",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "employee": "e10",
+    "payload": {
+     "ok": true,
+     "data": {
+      "accused": "e10",
+      "episode_over": true
+     },
+     "error": null
+    }
+   },
+   {
+    "employee": "e11",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   }
+  ],
+  "ledger": {
+   "code": 200,
+   "bytes": 246,
+   "dt_s": 0.0004,
+   "body": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 101, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e10\", \"correct\": false, \"V\": 1.0}}, {\"t\": 101, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  }
+ },
+ "after_end": {
+  "calls": [
+   {
+    "tool": "accuse",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "tool": "advance_day",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "tool": "restrict_access",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "tool": "interview",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "tool": "status",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   },
+   {
+    "tool": "plant_canary",
+    "payload": {
+     "ok": false,
+     "data": {},
+     "error": "episode over"
+    }
+   }
+  ],
+  "ledger": {
+   "code": 200,
+   "bytes": 246,
+   "dt_s": 0.0003,
+   "body": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 101, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e10\", \"correct\": false, \"V\": 1.0}}, {\"t\": 101, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  }
+ },
+ "crash_probes": [
+  {
+   "case": "json_array",
+   "code": 202,
+   "body": ""
+  },
+  {
+   "case": "args_list",
+   "res": {
+    "code": 200,
+    "dt_s": 0.0003,
+    "bytes": 159,
+    "msg": {
+     "jsonrpc": "2.0",
+     "id": 113,
+     "result": {
+      "content": [
+       {
+        "type": "text",
+        "text": "{\"ok\": false, \"data\": {}, \"error\": \"episode over\"}"
+       }
+      ],
+      "isError": true
+     }
+    },
+    "body_prefix": "{\"jsonrpc\": \"2.0\", \"id\": 113, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\\"ok\\\": false, \\\"data\\\": {}, \\\"error\\\": \\\"episode over\\\"}\"}], \"isError\": true}}"
+   }
+  },
+  {
+   "case": "name_null",
+   "res": {
+    "code": 200,
+    "dt_s": 0.0003,
+    "bytes": 159,
+    "msg": {
+     "jsonrpc": "2.0",
+     "id": 114,
+     "result": {
+      "content": [
+       {
+        "type": "text",
+        "text": "{\"ok\": false, \"data\": {}, \"error\": \"episode over\"}"
+       }
+      ],
+      "isError": true
+     }
+    },
+    "body_prefix": "{\"jsonrpc\": \"2.0\", \"id\": 114, \"result\": {\"content\": [{\"type\": \"text\", \"text\": \"{\\\"ok\\\": false, \\\"data\\\": {}, \\\"error\\\": \\\"episode over\\\"}\"}], \"isError\": true}}"
+   }
+  },
+  {
+   "case": "huge_title",
+   "res_payload": {
+    "ok": false,
+    "data": {},
+    "error": "episode over"
+   }
+  }
+ ],
+ "server_alive_ledger": {
+  "code": 200,
+  "bytes": 246,
+  "dt_s": 0.0004,
+  "body": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 101, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e10\", \"correct\": false, \"V\": 1.0}}, {\"t\": 101, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+ },
+ "day1_rotating_accuse_easy_0_23": [
+  {
+   "seed": 0,
+   "accused": "e00",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e00",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e00\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 1,
+   "accused": "e01",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e01",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e01\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 2,
+   "accused": "e02",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e02",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e02\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 3,
+   "accused": "e03",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e03",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e03\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 4,
+   "accused": "e04",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e04",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e04\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 5,
+   "accused": "e05",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e05",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e05\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 6,
+   "accused": "e06",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e06",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e06\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 7,
+   "accused": "e07",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e07",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e07\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 8,
+   "accused": "e08",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e08",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e08\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 9,
+   "accused": "e09",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e09",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e09\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 10,
+   "accused": "e10",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e10",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e10\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 11,
+   "accused": "e11",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e11",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e11\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 12,
+   "accused": "e00",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e00",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e00\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 13,
+   "accused": "e01",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e01",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e01\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 14,
+   "accused": "e02",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e02",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e02\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 15,
+   "accused": "e03",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e03",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e03\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 16,
+   "accused": "e04",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e04",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e04\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 17,
+   "accused": "e05",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e05",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e05\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 18,
+   "accused": "e06",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e06",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e06\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 19,
+   "accused": "e07",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e07",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e07\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 20,
+   "accused": "e08",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e08",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e08\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 21,
+   "accused": "e09",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e09",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e09\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 22,
+   "accused": "e10",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e10",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e10\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "seed": 23,
+   "accused": "e11",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e11",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": 1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e11\", \"correct\": true, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": 1.0, \"V\": 1.0}}]}"
+  }
+ ],
+ "same_seed_two_targets": [
+  {
+   "accused": "e00",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e00",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e00\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  },
+  {
+   "accused": "e05",
+   "tool": {
+    "ok": true,
+    "data": {
+     "accused": "e05",
+     "episode_over": true
+    },
+    "error": null
+   },
+   "ledger": "{\"score\": -1.0, \"done\": true, \"ledger\": [{\"t\": 0, \"day\": 1, \"event\": \"accused\", \"detail\": {\"employee\": \"e05\", \"correct\": false, \"V\": 1.0}}, {\"t\": 0, \"day\": 1, \"event\": \"episode_end\", \"detail\": {\"reason\": \"accused\", \"score\": -1.0, \"V\": 1.0}}]}"
+  }
+ ],
+ "do_nothing": {
+  "advances": [
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 1,
+     "day": 2,
+     "V": 1.0,
+     "new_documents": [
+      "d2-1",
+      "d2-2",
+      "d2-3"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 2,
+     "day": 3,
+     "V": 0.95,
+     "new_documents": [
+      "d3-1",
+      "d3-2"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 3,
+     "day": 4,
+     "V": 0.9,
+     "new_documents": [
+      "d4-1",
+      "d4-2",
+      "d4-3"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 4,
+     "day": 5,
+     "V": 0.9,
+     "new_documents": [
+      "d5-1",
+      "d5-2",
+      "d5-3",
+      "d5-4"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 5,
+     "day": 6,
+     "V": 0.9,
+     "new_documents": [
+      "d6-1",
+      "d6-2"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 6,
+     "day": 7,
+     "V": 0.85,
+     "new_documents": [
+      "d7-1",
+      "d7-2",
+      "d7-3"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 7,
+     "day": 8,
+     "V": 0.8,
+     "new_documents": [
+      "d8-1",
+      "d8-2",
+      "d8-3"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 8,
+     "day": 9,
+     "V": 0.75,
+     "new_documents": [
+      "d9-1",
+      "d9-2",
+      "d9-3",
+      "d9-4"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 9,
+     "day": 10,
+     "V": 0.7,
+     "new_documents": [
+      "d10-1",
+      "d10-2",
+      "d10-3"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 10,
+     "day": 11,
+     "V": 0.7,
+     "new_documents": [
+      "d11-1",
+      "d11-2"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 11,
+     "day": 12,
+     "V": 0.65,
+     "new_documents": [
+      "d12-1",
+      "d12-2"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 12,
+     "day": 13,
+     "V": 0.6,
+     "new_documents": [
+      "d13-1",
+      "d13-2",
+      "d13-3",
+      "d13-4"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 13,
+     "day": 14,
+     "V": 0.55,
+     "new_documents": [
+      "d14-1",
+      "d14-2",
+      "d14-3",
+      "d14-4"
+     ]
+    },
+    "error": null
+   },
+   {
+    "ok": true,
+    "data": {
+     "closed_day": 14,
+     "episode_over": true
+    },
+    "error": null
+   }
+  ],
+  "ledger": {
+   "code": 200,
+   "bytes": 1955,
+   "dt_s": 0.0007,
+   "body": "{\"score\": 0.0, \"done\": true, \"ledger\": [{\"t\": 1, \"day\": 2, \"event\": \"leak\", \"detail\": {\"doc_id\": \"d2-1\", \"surfaces_on\": 3, \"V\": 0.95}}, {\"t\": 1, \"day\": 3, \"event\": \"leak_surfaced\", \"detail\": {\"doc_id\": \"d2-1\"}}, {\"t\": 2, \"day\": 3, \"event\": \"leak\", \"detail\": {\"doc_id\": \"d3-2\", \"surfaces_on\": 4, \"V\": 0.8999999999999999}}, {\"t\": 2, \"day\": 4, \"event\": \"leak_surfaced\", \"detail\": {\"doc_id\": \"d3-2\"}}, {\"t\": 5, \"day\": 6, \"event\": \"leak\", \"detail\": {\"doc_id\": \"d6-2\", \"surfaces_on\": 7, \"V\": 0.8499999999999999}}, {\"t\": 5, \"day\": 7, \"event\": \"leak_surfaced\", \"detail\": {\"doc_id\": \"d6-2\"}}, {\"t\": 6, \"day\": 7, \"event\": \"leak\", \"detail\": {\"doc_id\": \"d7-2\", \"surfaces_on\": 8, \"V\": 0.7999999999999998}}, {\"t\": 6, \"day\": 8, \"event\": \"leak_surfaced\", \"detail\": {\"doc_id\": \"d7-2\"}}, {\"t\": 7, \"day\": 8, \"event\": \"leak\", \"detail\": {\"doc_id\": \"d6-1\", \"surfaces_on\": 9, \"V\": 0.7499999999999998}}, {\"t\": 7, \"day\": 9, \"event\": \"leak_surfaced\", \"detail\": {\"doc_id\": \"d6-1\"}}, {\"t\": 8, \"day\": 9, \"event\": \"leak\", \"detail\": {\"doc_id\": \"d9-2\", \"surfaces_on\": 10, \"V\": 0.6999999999999997}}, {\"t\": 8, \"day\": 10, \"event\": \"leak_surfaced\", \"detail\": {\"doc_id\": \"d9-2\"}}, {\"t\": 10, \"day\": 11, \"event\": \"leak\", \"detail\": {\"doc_id\": \"d10-2\", \"surfaces_on\": 12, \"V\": 0.6499999999999997}}, {\"t\": 10, \"day\": 12, \"event\": \"leak_surfaced\", \"detail\": {\"doc_id\": \"d10-2\"}}, {\"t\": 11, \"day\": 12, \"event\": \"leak\", \"detail\": {\"doc_id\": \"d10-1\", \"surfaces_on\": 13, \"V\": 0.5999999999999996}}, {\"t\": 11, \"day\": 13, \"event\": \"leak_surfaced\", \"d"
+  }
+ }
+}

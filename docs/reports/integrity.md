@@ -74,3 +74,8 @@
 ## 03:45 status (tiers v1.3 known-V @ 0933805)
 - Done (verified: make test green after merge): fuzz all modes on easy/medium/hard (100 seeds, 50k) + hard_forge (50 seeds, 20k): 0 violations, best non-solver 0.000. Known V: 665 hidden-leak states, status/advance_day never equal true V, never rise (tests added). Calibration policies < solver on all 4 tracks (grok_tactics closest: easy .71 vs .79). peek_status unchanged & covered.
 - EXPLOITS rows 38–40 (correction: earlier 03:22 entry said 38 rows; it was 37).
+
+## 03:49 status (heartbeat)
+- No ENV/MCP/baselines code changes since the v1.3 sweep (new commits are results/logs: official gpt-5.5 v1.2 runs, regret reports). No re-run needed.
+- justSilas green after merge (see merge commit). EXPLOITS: 40 rows, none open on our side; #27 residual = Harbor sidecar (HARNESS).
+- Waiting on: Grok judge re-run ~07:15 (Silas), Gemini key for the Gemini hunter.

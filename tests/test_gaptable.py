@@ -34,3 +34,12 @@ def test_unknown_day_source_excluded(tmp_path):
     rows = gaptable.main([str(tmp_path), "--also", str(tmp_path / "none"), "--out", str(tmp_path)])
     r = next(x for x in rows if x["row"] == "Codex")
     assert r["day_source"] == "unknown" and r["paired"] is None and r["gap_ref"] is None
+
+
+def test_verify_refuses(tmp_path):
+    d = tmp_path / "m" / "abc"
+    d.mkdir(parents=True)
+    (d / "finance_ap-s1-t0.json").write_text(json.dumps({"model": "codex", "commit": "abc", "agent": "codex", "day_source": "day_for", "seat": "finance_ap", "seed": 1, "trial": 0, "mode": "seat", "scores": {"reward": 1, "harm": False, "false_quarantines": []}}))
+    rows = gaptable.main([str(tmp_path), "--also", str(tmp_path / "none"), "--out", str(tmp_path)])
+    r = next(x for x in rows if x["row"] == "Codex")
+    assert r["verified"] is None

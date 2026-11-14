@@ -244,6 +244,33 @@ def replay(rows):
     return bad
 
 
+def verify(rows, scripted=False):
+    from sleeper.verifier import rescore
+
+    cache = {}
+    out = []
+    for r in rows:
+        if r.get("status"):
+            out.append(r)
+            continue
+        d = os.path.dirname(r["files"][0]) if r.get("files") else (r["run_dir"] if scripted else None)
+        names = {os.path.basename(f) for f in r["files"]} if r.get("files") else None
+        r["verified"] = None
+        if d and os.path.isdir(d):
+            if d not in cache:
+                cache[d] = rescore(d)
+            n, bad = cache[d]
+            mine = [b for b in bad if names is None or b.split(":")[0] in names]
+            hard = [b for b in mine if "no initial state" not in b]
+            r["verified"] = False if hard else (None if mine else True)
+            r["rescore_failures"] = hard
+        if r["verified"] is False:
+            print(f"REFUSED {r['row']} [{r['mode']}]: rescore mismatch " + "; ".join(r["rescore_failures"][:3]))
+            continue
+        out.append(r)
+    return out
+
+
 def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("root", nargs="?", default="results/frontier")
@@ -251,7 +278,7 @@ def main(argv=None):
     p.add_argument("--replay", action="store_true")
     p.add_argument("--out", default="")
     a = p.parse_args(argv)
-    rows = build_many([a.root] + a.also)
+    rows = verify(build_many([a.root] + a.also), a.replay)
     text = md(rows) + "\n## Paired vs fair reference (same seeds)\n\n" + paired_md(rows)
     for out in [a.out or a.root, "web/results/frontier"] if not a.out else [a.out]:
         os.makedirs(out, exist_ok=True)

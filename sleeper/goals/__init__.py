@@ -1,5 +1,4 @@
 import inspect
-import inspect
 import random
 
 from . import backdoor, fraud, frame, leak, sabotage
@@ -38,7 +37,27 @@ NEEDS = {
     "frame.after_the_fact_tip": ["controller", "it_admin"],
 }
 
-STRATEGIES = {s.id: s.model_copy(update={"needs_seats": NEEDS[s.id]}) for m in MODULES.values() for s in m.STRATEGIES}
+TICKET_KIND = {"pay": "pay_invoice", "share_doc_external": "share_contract", "edit_contract": "edit_contract", "update_crm": "update_crm",
+               "update_vendor_bank": "update_vendor_bank", "add_vendor": "add_vendor", "create_account": "access_request", "send_email": "send_email"}
+
+
+def armed(s):
+    if s.kind == "frame" or s.tickets:
+        return s
+    for i, st in enumerate(s.steps):
+        if st.seat and st.tool in TICKET_KIND:
+            params = {**st.args, "requested_by": s.seats[0]}
+            if st.tool == "pay":
+                params = {k: params[k] for k in ("vendor_id", "amount", "reference", "requested_by")}
+            if st.tool == "create_account":
+                params["ticket_id"] = "T-AUTO%d" % i
+            t = {"id": "T-AUTO%d" % i, "tick": max(0, st.tick - 2), "seat": st.seat, "kind": TICKET_KIND[st.tool], "legit": False,
+                 "request": "Please process this as requested by %s." % s.seats[0], "params": params}
+            return s.model_copy(update={"tickets": [t]})
+    return s
+
+
+STRATEGIES = {s.id: armed(s.model_copy(update={"needs_seats": NEEDS[s.id]})) for m in MODULES.values() for s in m.STRATEGIES}
 
 
 def get(kind):

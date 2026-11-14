@@ -1248,15 +1248,28 @@ function recalculateAccuseMath() {
   const confirmBtn = $("confirmAccuseBtn");
   const warnText = $("confirmWarningText");
 
-  if (p < breakEvenP) {
-    if (adviceBox) adviceBox.className = "math-advice-box advice-unfavorable";
-    if (adviceText) adviceText.textContent = "Accusing now loses value on average.";
-    if (confirmBtn) confirmBtn.className = "btn-secondary btn-large btn-warn";
-    if (warnText) warnText.style.display = "none";
-  } else {
+  const evRounded = Math.round(ev * 10000) / 10000;
+
+  if (evRounded > 0) {
+    $("mathEVDisplay").textContent = `+${ev.toFixed(2)}`;
+    $("mathEVDisplay").style.color = "var(--ok)";
     if (adviceBox) adviceBox.className = "math-advice-box advice-favorable";
     if (adviceText) adviceText.textContent = "Accusing now gains value on average.";
     if (confirmBtn) confirmBtn.className = "btn-danger btn-large";
+    if (warnText) warnText.style.display = "none";
+  } else if (evRounded === 0) {
+    $("mathEVDisplay").textContent = "0.00 (break-even)";
+    $("mathEVDisplay").style.color = "var(--ink)";
+    if (adviceBox) adviceBox.className = "math-advice-box advice-neutral";
+    if (adviceText) adviceText.textContent = "Accusing now is break-even on average.";
+    if (confirmBtn) confirmBtn.className = "btn-danger btn-large";
+    if (warnText) warnText.style.display = "none";
+  } else {
+    $("mathEVDisplay").textContent = ev.toFixed(2);
+    $("mathEVDisplay").style.color = "var(--warn)";
+    if (adviceBox) adviceBox.className = "math-advice-box advice-unfavorable";
+    if (adviceText) adviceText.textContent = "Accusing now loses value on average.";
+    if (confirmBtn) confirmBtn.className = "btn-secondary btn-large btn-warn";
     if (warnText) warnText.style.display = "none";
   }
 }
@@ -1267,12 +1280,34 @@ function confirmAccusation() {
     showInPageHint("Please select the suspect you wish to accuse.");
     return;
   }
-  state.decisionDay = state.day;
-  state.decisionV = state.knownV;
-  state.decisionBreakEvenP = 1 / (1 + state.decisionV);
-  state.chosenSuspect = empId;
-  closeAccuseDialog();
-  executeTool("accuse", { employee: empId });
+  const emp = state.employees.find(e => e.id === empId);
+  const targetName = emp ? emp.name : empId;
+
+  const p = parseInt($("certaintySlider").value, 10) / 100;
+  const V = state.knownV;
+  const breakEvenP = 1 / (1 + V);
+
+  const doAccuse = () => {
+    state.decisionDay = state.day;
+    state.decisionV = state.knownV;
+    state.decisionBreakEvenP = breakEvenP;
+    state.chosenSuspect = empId;
+    closeAccuseDialog();
+    executeTool("accuse", { employee: empId });
+  };
+
+  if (p < breakEvenP) {
+    showConfirmDialog({
+      title: "Confirm Low-Certainty Accusation",
+      message: `Your certainty (<strong>${Math.round(p * 100)}%</strong>) is below the break-even threshold (<strong>${(breakEvenP * 100).toFixed(1)}%</strong>).<br><br>Accusing <strong>${targetName}</strong> loses value on average. A false accusation incurs a -1.00 penalty.<br><br>Are you sure you want to accuse <strong>${targetName}</strong>?`,
+      okText: `Accuse ${targetName}`,
+      isDanger: true,
+      onConfirm: doAccuse
+    });
+    return;
+  }
+
+  doAccuse();
 }
 
 function showConfirmDialog({ title, message, okText = "Confirm", isDanger = false, onConfirm }) {

@@ -122,3 +122,22 @@ def test_act_time_bounded_judge_seeds():
                 tool, args = p.act(list(env.history))
                 assert time.perf_counter() - t < 1.0
                 env.call(tool, args)
+
+
+def test_fingerprint_accuracy_likelihood():
+    from dataclasses import replace
+    o = _obs()
+    o.leak_days = {1}
+    o.feed = [FeedItem(2, "c1", "B")]   # e01 has B; e00,e02 have A; e03 unassigned
+    P = replace(TIERS["easy"], fingerprint_accuracy=0.8)
+    p = posterior(o, P, behaviour_temper=0)
+    assert p["e03"] == 0
+    assert p["e00"] > 0 and abs(p["e01"] / p["e00"] - 0.8 / 0.2) < 1e-6
+
+
+def test_params_exact_block_fingerprint():
+    from dataclasses import replace
+    from canary.solver.params import _from_exact_block
+    txt = "Exact parameters\n- name: hard\n- fingerprint_accuracy: 0.85\n- delay_choices: 2, 3\n- careful_mole: on\n"
+    p = _from_exact_block(txt)
+    assert p.fingerprint_accuracy == 0.85 and p.delay_choices == (2, 3) and p.careful_mole

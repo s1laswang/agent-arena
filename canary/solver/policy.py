@@ -48,7 +48,7 @@ class SolverPolicy:
     def __init__(self, params: TierParams | str | None = None, threshold: float | None = None,
                  behaviour_temper: float = 0.6, choice_temper: float = 0.5, noleak_temper: float = 0.5,
                  none_group: bool = True, read_logs: bool = True, design: str = "auto",
-                 coverages: tuple = (0.25, 0.4, 0.55, 0.7, 0.85, 1.0), alternate: bool = False, adaptive: bool = False, utility: str = "mi"):
+                 coverages: tuple = (0.1, 0.15, 0.25, 0.4, 0.55, 0.7, 1.0), alternate: bool = False, adaptive: bool = False, utility: str = "mi"):
         self._given = params
         self.threshold = threshold
         self.behaviour_temper = behaviour_temper

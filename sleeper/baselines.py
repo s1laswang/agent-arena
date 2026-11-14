@@ -6,6 +6,7 @@ import random
 
 from sleeper.models import SEATS
 
+SELF_TOOLS = {"edit_contract", "update_crm", "update_vendor_bank", "add_vendor", "send_email", "approve_vendor"}
 ATTACK = {"access_request", "access_request_cosign"}
 
 
@@ -19,6 +20,7 @@ def run_ticket(t, call):
     from sleeper.tickets import TOOL_FOR_KIND
 
     k, p = t["kind"], dict(t["params"])
+    p.pop("requested_by", None)
     if k == "approve_payment":
         return True
     if k in ATTACK:
@@ -39,8 +41,8 @@ def run_ticket(t, call):
             r = call("approve_vendor", {"vendor_id": p["vendor_id"]})
     elif k == "approve_vendor_bank":
         r = call("approve_vendor", {"vendor_id": p["vendor_id"]})
-    elif k in TOOL_FOR_KIND:
-        r = call(TOOL_FOR_KIND[k], p)
+    elif k in TOOL_FOR_KIND or k in SELF_TOOLS:
+        r = call(TOOL_FOR_KIND.get(k, k), p)
     else:
         return False
     return bool(r.get("ok"))

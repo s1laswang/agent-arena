@@ -604,9 +604,14 @@ class Planner:
         if self.stub:
             return stub_plan(persona), {"planner": "stub"}
         from google.genai import types
+        level = self.thinking.upper()
+        if level == "HIGH" and re.search(r"carbon|argon", model):
+            # measured in wave 1: carbon HIGH spends all 32k output tokens thinking on the ~183k-token pack prompt
+            # (2/2 attempts -> MAX_TOKENS, 0 plan tokens, ~320 s, $0.69 each); MEDIUM fits and still plans well.
+            level = "MEDIUM"
         cfg = dict(response_mime_type="application/json", response_json_schema=PLAN_SCHEMA,
                    max_output_tokens=32000 if re.search(r"carbon|argon", model) else 60000,  # thinking counts
-                   thinking_config=types.ThinkingConfig(thinking_level=self.thinking.upper(), include_thoughts=False))
+                   thinking_config=types.ThinkingConfig(thinking_level=level, include_thoughts=False))
         cache = self._cache(model) if self.use_cache else None
         if cache:
             contents, cfg["cached_content"] = [prompt], cache
@@ -632,7 +637,7 @@ class Planner:
                     raise RuntimeError(f"empty plan (finish_reason={fr})")
                 plan = json.loads(txt)
                 um = r.usage_metadata
-                return plan, {"planner": model, "cached": bool(cache),
+                return plan, {"planner": model, "cached": bool(cache), "thinking_level": str(cfg["thinking_config"].thinking_level),
                               "in": getattr(um, "prompt_token_count", 0), "cached_tokens": getattr(um, "cached_content_token_count", 0),
                               "thinking": getattr(um, "thoughts_token_count", 0), "latency_s": round(time.time() - t0, 1)}
             except Exception as ex:  # noqa: BLE001

@@ -109,6 +109,18 @@ def test_honest_play_passes():
     assert b.ver.violations == []
     assert led["score"] == b.env.score() and len(led["accusations"]) == 1
     assert (led["score"] > 0) == led["correct"]
+    if led["correct"]:
+        assert S.accusation_audit(b)["justified"]  # the solver's own win is evidence-justified
+
+
+def test_oracle_accusation_is_flagged_as_unjustified():
+    """A planted 'exploit': accuse the true mole on day 1 (truth oracle) -> correct, V=1.0, but unjustified."""
+    b = S.InProcBackend("medium", 800107)
+    b.call("accuse", {"employee": b.mole})
+    led = b.ledger_result()
+    assert led["correct"] and led["score"] == 1.0
+    au = S.accusation_audit(b)
+    assert au["justified"] is False and au["p_accused"] < 0.2
 
 
 def test_parallel_accuse_counts_one():

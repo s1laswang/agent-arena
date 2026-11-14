@@ -412,6 +412,7 @@ def slim_swarm(S: dict) -> dict:
                    "tier": a.get("tier"), "score": _num(a.get("score")), "correct": a.get("correct"),
                    "ledger_verified": bool(a.get("ledger_verified")), "exploit": bool(a.get("exploit")),
                    "candidate": bool(a.get("score_candidate")), "solver_score": _num(a.get("solver_score")),
+                   "justified": bool(a.get("correct") and (a.get("accusation_audit") or {}).get("justified")),
                    "tools": a.get("n_tool_calls"), "channel": a.get("channel"), "error": bool(a.get("error"))})
     scored = [a for a in at if a["score"] is not None]
     tiers = {}
@@ -428,6 +429,11 @@ def slim_swarm(S: dict) -> dict:
     solver = S.get("solver_score", S.get("solver"))
     if solver is None:
         solver = pt.get("solver_mean_paired", pt.get("solver_mean_ref"))
+    # G4 >= 18:20: a correct accusation the public evidence already justified is detective work, not a hack, so the
+    # headline is the best *unjustified* score (per tier, against that tier's paired solver mean)
+    bu = [(v.get("best_unjustified"), v.get("solver_mean_paired", v.get("solver_mean_ref")), t)
+          for t, v in (S.get("per_tier") or {}).items() if isinstance(v, dict) and v.get("best_unjustified") is not None]
+    best_unj = max(bu, key=lambda x: x[0] - (x[1] or 0)) if bu else None
     counts = S.get("counts") or {}
     tests = S.get("tests_written")
     found = ROOT / "tests" / "test_gemini_lab_swarm_found.py"
@@ -441,6 +447,11 @@ def slim_swarm(S: dict) -> dict:
             "model": model,
             "mode": S.get("mode"), "tier": main_tier, "attempts": at, "best_non_solver": _num(best),
             "solver_score": _num(solver), "tests_written": tests, "findings": findings,
+            "best_unjustified": _num(best_unj[0]) if best_unj else None,
+            "best_unjustified_solver": _num(best_unj[1]) if best_unj else None,
+            "best_unjustified_tier": best_unj[2] if best_unj else None,
+            "honest_wins": counts.get("high_score_justified", sum(1 for a in at if a["justified"])),
+            "tiers": sorted(tiers),
             "exploits": counts.get("exploits", sum(1 for a in at if a["exploit"] and a["ledger_verified"])),
             "candidates": counts.get("score_candidates", sum(1 for a in at if a["candidate"])),
             "violations": counts.get("invariant_violations"), "violation_kinds": counts.get("violation_kinds") or {},
@@ -1264,18 +1275,22 @@ function renderSwarm() {
   const at = S.attempts, scored = at.filter(a => a.score != null);
   const personas = new Set(at.map(a => a.persona)).size;
   const best = S.best_non_solver, solver = S.solver_score;
-  const tiles = [['Attacks', nf.format(at.length), [S.mode, S.tier].filter(Boolean).join(' · ') + (S.tool_calls ? ' · ' + nf.format(S.tool_calls) + ' tool calls' : '')],
+  const tiles = [['Attacks', nf.format(at.length), [S.mode, (S.tiers && S.tiers.length ? S.tiers.join(' + ') : S.tier)].filter(Boolean).join(' · ') + (S.tool_calls ? ' · ' + nf.format(S.tool_calls) + ' tool calls' : '')],
     ['Personas', String(personas), S.model ? String(S.model).split(',').map(short).join(', ') : ''],
-    ['Best non-solver score', best != null ? (best >= 0 ? '+' : '') + best.toFixed(3) : '—', solver != null ? 'solver ' + (solver >= 0 ? '+' : '') + solver.toFixed(3) + ' on the same seeds' : ''],
+    S.best_unjustified != null
+      ? ['Best unjustified score', (S.best_unjustified >= 0 ? '+' : '') + S.best_unjustified.toFixed(3), (S.best_unjustified_tier || '') + ' · solver ' + (S.best_unjustified_solver != null ? '+' + S.best_unjustified_solver.toFixed(3) : '?') + ' · ' + (S.honest_wins || 0) + ' honest ' + (S.honest_wins === 1 ? 'win' : 'wins') + ' excluded']
+      : ['Best non-solver score', best != null ? (best >= 0 ? '+' : '') + best.toFixed(3) : '—', solver != null ? 'solver ' + (solver >= 0 ? '+' : '') + solver.toFixed(3) + ' on the same seeds' : ''],
     ['Verified exploits', String(S.exploits || 0), (S.exploits ? 'invariant broken, ledger-verified' : 'no invariant broken') + (S.candidates ? ' · ' + S.candidates + ' score candidates' : '')],
     ['Regression tests', S.tests_written != null ? String(S.tests_written) : '—', 'written from the attacks']];
   const g = h('div', { class: 'grid' });
   g.appendChild(tilesRow(tiles));
-  g.appendChild(card('c7', 'Every attack vs the solver', 'one dot per attack · x = episode score · grey = not ledger-verified · red = exploit', [synthBadge(S), stripChart(scored, solver)]));
-  const top = scored.slice().sort((a, b) => b.score - a.score).slice(0, 7);
+  const paired = scored.every(a => a.solver_score != null) && (S.tiers || []).length > 1;
+  g.appendChild(card('c7', 'Every attack vs the solver', 'one dot per attack · x = ' + (paired ? 'score − solver on the same seed (0 = solver)' : 'episode score') + ' · blue = verified attack · hollow = honest detective win (evidence justified the accusation) · red = exploit',
+    [synthBadge(S), stripChart(paired ? scored.map(a => Object.assign({}, a, { score: a.score - a.solver_score, raw: a.score })) : scored, paired ? 0 : solver, paired)]));
+  const top = scored.slice().sort((a, b) => b.score - a.score).slice(0, 6);
   const tbl = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, [h('th', { text: 'persona' }), h('th', { text: 'hypothesis' }), h('th', { class: 'num', text: 'score' }), h('th', { text: 'ledger' })])]),
-    h('tbody', {}, top.map(a => h('tr', {}, [h('td', { class: 'nw', text: a.persona }), h('td', { class: 'plan', text: String(a.plan || '').slice(0, 150) + (String(a.plan || '').length > 150 ? '…' : '') }), h('td', { class: 'num', text: (a.score >= 0 ? '+' : '') + a.score.toFixed(3) }),
-      h('td', {}, [h('span', { class: 'badge ' + (a.ledger_verified ? 'ok' : 'no'), text: a.ledger_verified ? '✓ verified' : '✗ claim only' })])])))]);
+    h('tbody', {}, top.map(a => h('tr', {}, [h('td', { class: 'nw', text: a.persona }), h('td', { class: 'plan', text: String(a.plan || '').slice(0, 90) + (String(a.plan || '').length > 90 ? '…' : '') }), h('td', { class: 'num', text: (a.score >= 0 ? '+' : '') + a.score.toFixed(3) }),
+      h('td', {}, [h('span', { class: 'badge ' + (a.ledger_verified ? 'ok' : 'no'), text: a.justified ? '✓ honest win' : a.ledger_verified ? '✓ verified' : '✗ claim only' })])])))]);
   g.appendChild(card('c5', 'Top attacks', 'highest verified scores first', [tbl]));
   const vk = Object.entries(S.violation_kinds || {});
   if (S.findings.length || vk.length) {
@@ -1287,15 +1302,17 @@ function renderSwarm() {
   }
   sec.appendChild(g);
 }
-function stripChart(at, solver) {
+function stripChart(at, solver, paired) {
   const W = 680, H = 240, L = 16, Rr = 16, cy = 110;
   const lo = Math.min(-1, ...at.map(a => a.score)), hi = Math.max(1, ...at.map(a => a.score));
   const X = v => L + (W - L - Rr) * (v - lo) / (hi - lo);
   const svg = s('svg', { class: 'chart', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'attack scores vs solver' });
-  [-1, -0.5, 0, 0.5, 1].forEach(t => { svg.appendChild(s('line', { class: 'gridline', x1: X(t), x2: X(t), y1: 20, y2: H - 30 }));
+  const st = (hi - lo) > 2.5 ? 1 : 0.5, ticks = [];
+  for (let v = Math.ceil(lo / st) * st; v <= hi + 1e-9; v += st) ticks.push(+v.toFixed(2));
+  ticks.forEach(t => { svg.appendChild(s('line', { class: 'gridline', x1: X(t), x2: X(t), y1: 20, y2: H - 30 }));
     svg.appendChild(s('text', { x: X(t), y: H - 12, 'text-anchor': 'middle', text: (t > 0 ? '+' : '') + t })); });
   if (solver != null) { svg.appendChild(s('line', { x1: X(solver), x2: X(solver), y1: 12, y2: H - 30, stroke: css('--ink'), 'stroke-width': 1.5 }));
-    svg.appendChild(s('text', { x: X(solver) + 6, y: 20, class: 'ink', text: 'solver ' + (+solver).toFixed(2) })); }
+    svg.appendChild(s('text', { x: X(solver) + 6, y: 20, class: 'ink', text: paired ? 'solver (same seed)' : 'solver ' + (+solver).toFixed(2) })); }
   const surf = css('--surface'), blue = css('--s1'), grey = css('--other'), red = css('--crit');
   const sorted = at.slice().sort((a, b) => a.score - b.score); const placed = [];
   sorted.forEach(a => { const x = X(a.score); let k = 0; while (placed.some(p => Math.abs(p.x - x) < 9 && p.k === k)) k++; placed.push({ x, k, a }); });
@@ -1304,10 +1321,13 @@ function stripChart(at, solver) {
     const y = cy + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * step;
     const g = s('g', { class: 'hov', tabindex: 0 });
     g.appendChild(s('circle', { class: 'hit', cx: x, cy: y, r: 10 }));
-    g.appendChild(s('circle', { class: 'mark', cx: x, cy: y, r: step < 7 ? 3 : 4, fill: a.exploit && a.ledger_verified ? red : a.ledger_verified ? blue : grey, stroke: surf, 'stroke-width': step < 7 ? 1 : 2 }));
-    bindTip(g, () => [a.persona, [{ v: (a.score >= 0 ? '+' : '') + a.score.toFixed(3), l: 'episode score' }, { v: a.ledger_verified ? 'ledger-verified' : 'claim only', l: '' }]
+    const col = a.exploit && a.ledger_verified ? red : a.ledger_verified ? blue : grey;
+    g.appendChild(a.justified ? s('circle', { class: 'mark', cx: x, cy: y, r: step < 7 ? 3 : 4, fill: surf, stroke: col, 'stroke-width': 2 })
+      : s('circle', { class: 'mark', cx: x, cy: y, r: step < 7 ? 3 : 4, fill: col, stroke: surf, 'stroke-width': step < 7 ? 1 : 2 }));
+    bindTip(g, () => [a.persona + (a.tier ? ' · ' + a.tier : ''), [{ v: ((a.raw != null ? a.raw : a.score) >= 0 ? '+' : '') + (a.raw != null ? a.raw : a.score).toFixed(3), l: 'episode score' }]
+      .concat(a.raw != null ? [{ v: (a.score >= 0 ? '+' : '') + a.score.toFixed(3), l: 'vs solver, same seed' }] : []).concat(a.justified ? [{ v: 'honest win', l: 'accusation justified by public evidence' }] : []).concat([ { v: a.ledger_verified ? 'ledger-verified' : 'claim only', l: '' }]
       .concat(a.solver_score != null ? [{ v: a.solver_score.toFixed(3), l: 'solver, same seed' }] : []).concat(a.exploit ? [{ v: 'exploit', l: 'invariant broken' }] : [])
-      .concat(a.plan ? [{ v: '', l: String(a.plan).slice(0, 120) }] : [])]);
+      .concat(a.plan ? [{ v: '', l: String(a.plan).slice(0, 120) }] : []))]);
     svg.appendChild(g); });
   return svg;
 }

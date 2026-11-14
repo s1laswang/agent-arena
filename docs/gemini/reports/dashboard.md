@@ -1,5 +1,20 @@
 # G5 Dashboard + demo assets: report
 
+## Sat 18:25: dashboard rebuilt on ladder v1 + swarm, screenshots refreshed (CEO 18:55 ask)
+
+**Done**
+- Background loop checked after the 15:35–17:30 outage: it survived and exited on its timer at 17:38. Rebuilt by hand at 18:23.
+- `results/gemini/dashboard.html` (122 KB) built from the real ledger (`--ledger auto`, 11,187 calls) + G2 `ladder.json` (18:21, 125 episodes / 29 cells)
+  + G4 `swarm.json` (18:20, 35 attacks) + G1 `gateway_bench.json`. Atlas has no committed `atlas.json` yet, so it shows "pending".
+- Ledger totals at 18:23: 11,187 calls, 251M input / 0.49M output / 4.39M thinking / 204M cached tokens, $88.75 list, 0.77% errors,
+  p50 3.0 s / p95 25 s, 10 models, 8 features.
+- Swarm panel follows G4's new semantics. The headline is the **best unjustified score** (+0.000 on hard vs solver +0.602), and the 1 honest
+  detective win (+0.90 on medium, accusation justified by public evidence) is shown hollow and excluded. The strip plots score − solver on
+  the same seed, so hard and medium share one axis. 0 exploits; 5 regression tests.
+- Screenshots (1600 px, light): docs/gemini/assets/dashboard-{headline,usage,ladder,swarm}.png. Assets total 3.1 MB.
+
+**Next** (after 19:30): atlas panel when G3 commits atlas.json; narrate.py to use best_unjustified; narration v1; dark + atlas screenshots.
+
 ## Sat 15:00 — PR-1 ready; G2 ladder + G1 gateway bench live in the dashboard
 
 **Done**

@@ -45,3 +45,8 @@
 ## 02:42 status (CLOCK CORRECTION)
 - Real time is 02:42 EET; my report headings after 02:25 used estimated times and are wrong (the content is right). Env v0 really merged ~02:25.
 - Freeze tiers v1.2 moved to 04:30 EET per CEO.
+
+## 02:44 status
+- Done (verified: make test 362 passed on justSilas 08c68b8): exact fingerprint_accuracy likelihood in the solver (hard 40 seeds: a=1 .637/87.5%, a=.85 .46/72.5%). Current solver beats gpt-5.5 per seed on hard tiers v1 (sum 4.42 vs 4.12, 6 seeds).
+- In progress: FR8 final grid on 08c68b8 (hard fingerprint < medium), top setting by 04:20.
+- Next: freeze tiers v1.2 at 04:30 with full table.

@@ -14,7 +14,7 @@ def test_multimodel():
             pg.goto("http://localhost:8767/results.html")
             pg.wait_for_selector("#gap tbody tr")
             t = pg.inner_text("#gap tbody")
-            assert "SCRIPTED PLACEHOLDER" in t and "NOT FOUND" in t and "REAL" not in t.replace("NOT FOUND", "")
+            assert "SCRIPTED PLACEHOLDER" in t and "NOT FOUND" in t and "100%" not in t.split("\n")[0] and "oracle" in t
             pg.screenshot(path=str(web.parent / "pitch/capture/multimodel-gap-table.png"))
             run = "run:fixtures/frontier/gemini-4-carbon/placeholder/finance_ap-s1.json"
             pg.goto(f"http://localhost:8767/replay.html?day={run}&vs=1-procedure&tick=99&reveal=1")
@@ -43,8 +43,8 @@ def test_landing_and_paired(tmp_path):
             pg.wait_for_selector("#gap tbody tr")
             t = pg.inner_text("#gap tbody")
             assert "CAPPED" in t and "SIGNIFICANT" in t and "0.40" in t
-            assert pg.locator("#gap tbody tr").nth(0).locator(".badge.scripted").count() == 1
-            assert pg.locator("#gap tbody tr").nth(1).locator(".badge.real").count() == 1
+            assert pg.locator("#gap tbody tr", has_text="Gemini").locator(".badge.scripted").count() == 1
+            assert pg.locator("#gap tbody tr", has_text="Claude").locator(".badge.real").count() == 1
             assert pg.locator("#days tbody tr").count() > 0
             b.close()
     finally:

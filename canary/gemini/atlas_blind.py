@@ -69,6 +69,24 @@ class Mined(BaseModel):
     steps: list[StepRef]
 
 
+class ModeRef(BaseModel):
+    episode: str
+    t: int
+    mode: str
+
+
+class MinedBatch(BaseModel):
+    steps: list[ModeRef]
+
+
+def mine_batch_q(tax: "BlindTaxonomy", ids: list[str]) -> str:
+    modes = "\n".join(f"- {m.id}: {m.name}. {m.description}" for m in tax.modes)
+    return (f"FAILURE MODES:\n{modes}\n\nTASK. Go through these {len(ids)} episodes one by one, step by step: "
+            + ", ".join(ids) + ". List EVERY step (episode id, step number t of the decision itself) where the agent "
+            "makes one of these mistakes, with the mode id. Be exhaustive within these episodes; do not list steps "
+            "that are not one of these mistakes.")
+
+
 DISCOVER = ("TASK. Read every episode above. Without any scoring hints, find the 4-8 most important FAILURE MODES: "
             "recurring decisions that cost the agents company value or got them a wrong accusation (or none). For "
             "each mode cite 5-10 specific steps (episode id exactly as in the header, step number t) from different "
@@ -217,6 +235,12 @@ def run(args) -> dict:
     print(f"blind taxonomy: {[m.id for m in tax.modes]}", flush=True)
     with ThreadPoolExecutor(max_workers=6) as ex:
         mined = list(ex.map(lambda m: ask(mine_q(m), Mined, f"blind:mine:{m.id}"), tax.modes))
+    # second pass, exhaustive per batch of episodes (one mode-at-a-time listing over 153 episodes stays short)
+    ids = [e.id for e in eps]
+    batches = [ids[i:i + 12] for i in range(0, len(ids), 12)]
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        mined2 = list(ex.map(lambda ib: ask(mine_batch_q(tax, ib[1]), MinedBatch, f"blind:mine_batch:{ib[0]}"),
+                             enumerate(batches)))
     ops.delete_cache(state["name"])
     by = {e.id: e for e in eps}
     valid = {(e.id, s.t) for e in eps for s in e.steps} | {(e.id, len(e.steps)) for e in eps}
@@ -231,6 +255,15 @@ def run(args) -> dict:
             else:
                 invalid[m.id] += 1
         cited[m.id] = cs
+    by_mode_only = score_recovery(eps, {k: set(v) for k, v in cited.items()})
+    mode_ids = {m.id for m in tax.modes}
+    for mb, _ in mined2:
+        for c in (mb.steps if mb else []):
+            k = (c.episode, c.t)
+            if c.mode in mode_ids and k in valid:
+                cited[c.mode].add(k)
+            else:
+                invalid[c.mode if c.mode in mode_ids else "unknown_mode"] += 1
     rec = score_recovery(eps, cited)
     qrows = []
     for m in tax.modes:
@@ -252,6 +285,9 @@ def run(args) -> dict:
                    "cited_steps": len(cited[m.id]), "invalid_citations": invalid[m.id],
                    **rec["modes"].get(m.id, {})} for m in tax.modes],
         "recovery": rec,
+        "recovery_pass1_by_mode_only": {k: by_mode_only[k] for k in ("tags_recovered", "precision_high_regret",
+                                                                     "regret_share_covered", "high_regret_recall",
+                                                                     "cited_steps")},
         "quotes": {"checked": len(nq), "verified_agent_text": sum(q["verified"] for q in nq),
                    "verified_at_step": sum(q["step_verified"] for q in nq), "empty": len(qrows) - len(nq),
                    "rule": "a quote counts only if it appears verbatim in the agent's own words"},
@@ -285,7 +321,8 @@ def render(r: dict) -> str:
            f"What Gemini saw: {r['corpus']['episodes']} episodes, {r['corpus']['tokens']:,} tokens, held in one explicit "
            "context cache. Only tool calls, tool results as the agent saw them, the agent's own words and the "
            "final outcome. No regret, no tags, no solver belief, no true mole, no solver score (a test checks the "
-           "pack). Gemini first named the modes with examples, then listed every step of each mode; all scoring "
+           "pack). Gemini first named the modes with examples, then listed every step of each mode (once per mode over the "
+           "whole corpus, then exhaustively per batch of 12 episodes); all scoring "
            "below is computed in code against `canary/analysis/tags.py` and the solver regret, which Gemini never saw.",
            "", "## Recall per code tag", "",
            f"A cited step matches a tagged step in the same episode within {rec['tolerance_steps']} step(s).", "",

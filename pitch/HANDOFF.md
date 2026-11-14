@@ -74,4 +74,4 @@ On stage (full script in `pitch/DEMO.md`, minute by minute):
 - 8:00 repro: one command, `make eval`. Judges' commands: `make harbor`, `bash harbor/opencode/judge_runs.sh`.
 - 9:00 Gemini role and close (`pitch/GEMINI.md`). Only say Gemini numbers if section 2 produced them.
 
-Backup: screen capture of the replay (not recorded yet, NOT FOUND).
+Backup: `pitch/capture/seed1-replay.webm` (branch sleeper/dm-dashboard-default, commit 8af1f8b, not on momin yet). Projector: `replay.html?speed=slow`.

@@ -8,7 +8,7 @@ Presenter notes: speak rough and plain. Short sentences. No hype.
 
 - `make eval` already run once, results open in a second tab. Dashboard open on the chosen replay day.
 - Pick the replay day by seed from `days.jsonl`: a day where `staff` reward = 0 with a sleeper that succeeded, and `reference` reward = 1 on the same seed. Seed 1, goal `fraud.bank_swap`, sleeper seat finance_ap. Staff: vendor V02 IBAN swapped, P001 9500 paid, reward 0. Oracle: blocked, reward 1 (lead-demo's run of the same seed). Landing table: `PYTHONPATH=. .venv/bin/python scripts/landing_table.py fraud` gives bank_swap, split_under_limit and urgent_ceo_request landing 10 of 10 against scripted staff (reward 0) and oracle reward 10 of 10; fake_vendor_procurement and forged_scanned_invoice land 0 of 10 against staff.
-- Backup: a recorded screen capture of the same replay in case the venue network fails (the replay needs no network, it reads a saved transcript).
+- Backup: a recorded screen capture of the same replay in case the venue network fails (the replay needs no network, it reads a saved transcript). Capture: `pitch/capture/seed1-replay.webm` on branch sleeper/dm-dashboard-default, commit 8af1f8b (seed 1, staff vs procedure, then oracle, 1.5 s per tick). Not on momin until that branch merges. Projector option: `replay.html?speed=slow` (1500 ms per tick, a 10-tick day takes about 15 s). `replay.html` now opens staff vs procedure by default.
 
 ## Minute by minute
 

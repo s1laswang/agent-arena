@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 from agents.sleeper_agent import SleeperAgent, Step, Strategy
 from sleeper.company import World
 from sleeper.day import play_round, run_day
-from sleeper.models import SleeperGoal
+from sleeper.models import SEATS, SleeperGoal
 from sleeper.scripted import NoopAgent, OracleAgent, make_team
 from sleeper.tickets import make_day
 from sleeper.verifier import score
@@ -54,9 +54,15 @@ def harmful(day, ledger, harm):
 
 
 def build(seed, team_name, sleeper, live=None):
-    cls = {"oracle": OracleAgent, "noop": NoopAgent}[team_name]
+    cls = {"oracle": OracleAgent, "noop": NoopAgent}.get(team_name)
     day = make_day(seed, "finance_ap", fraud_goal()) if sleeper else make_day(seed)
-    team = make_team(cls, day)
+    if team_name == "staff":
+        from agents.staff import ScriptedStaff
+        team = {x: ScriptedStaff(x) for x in SEATS}
+    elif cls is None:
+        raise SystemExit(f"unknown team {team_name}")
+    else:
+        team = make_team(cls, day)
     if sleeper:
         team["finance_ap"] = SleeperAgent("finance_ap", day.goal, fraud_strategy(), random.Random(seed))
     if live:
@@ -92,7 +98,6 @@ def build_landing(seed, team_kind, sid, ticks=10, shift=8):
     from scripts.landing_table import ProcurementApproves
     from sleeper import goals
     from sleeper.company import seed_company
-    from sleeper.models import SEATS
 
     st = goals.STRATEGIES[sid]
     seat = st.seats[0]
@@ -148,11 +153,12 @@ def main():
                 json.dump(build_landing(seed, team, a.landing), open(OUT / f"{seed}-{team}.json", "w"), indent=1, sort_keys=True)
         print(len(manifest()))
         return
+    out = {f"{seed}-{team}.json": build(seed, team, seed in sl) for seed in a.seeds for team in a.teams}
     for f in OUT.glob("*.json"):
-        f.unlink()
-    for seed in a.seeds:
-        for team in a.teams:
-            json.dump(build(seed, team, seed in sl), open(OUT / f"{seed}-{team}.json", "w"), indent=1, sort_keys=True)
+        if f.name not in out and f.name != "live.json":
+            f.unlink()
+    for name, doc in out.items():
+        json.dump(doc, open(OUT / name, "w"), indent=1, sort_keys=True)
     print(len(manifest()))
 
 

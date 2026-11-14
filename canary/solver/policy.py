@@ -48,7 +48,7 @@ class SolverPolicy:
     def __init__(self, params: TierParams | str | None = None, threshold: float | None = None,
                  behaviour_temper: float = 0.6, choice_temper: float = 0.5, noleak_temper: float = 0.5,
                  none_group: bool = True, read_logs: bool = True, design: str = "auto",
-                 coverages: tuple = (0.25, 0.4, 0.55, 0.7, 0.85, 1.0), alternate: bool = False, adaptive: bool = False):
+                 coverages: tuple = (0.25, 0.4, 0.55, 0.7, 0.85, 1.0), alternate: bool = False, adaptive: bool = False, utility: str = "mi"):
         self._given = params
         self.threshold = threshold
         self.behaviour_temper = behaviour_temper
@@ -60,6 +60,7 @@ class SolverPolicy:
         self.coverages = coverages
         self.alternate = alternate
         self.adaptive = adaptive
+        self.utility = utility
         self.reset([], "")
 
     # ---------------------------------------------------------------- Policy API
@@ -270,6 +271,7 @@ class SolverPolicy:
         win = [d for d in o.docs.values() if not d.is_canary and d.day >= o.today - P.leak_window_days]
         nreg = sum(post[e] * sum(1 for d in win if e in d.recipients) for e in post) * P.leak_window_days / max(1, len({d.day for d in win}) or 1)
         nreg = max(1.0, nreg)
+        nreg_s = {e: sum(1 for d in win if e in d.recipients) for e in post}
         rng = _r.Random(f"canary:{o.today}:{len(o.feed)}")
         best, bestu = {}, -1.0
         fracs = self.coverages
@@ -291,14 +293,40 @@ class SolverPolicy:
                     groups[g].append(e)
                     mass[g] += post[e]
                 asg = {e: LABELS[i] for i, g in enumerate(groups) for e in g}
-                w = (1.0 - len(asg) / n) if P.careful_mole else 1.0
-                if w <= 0:
-                    continue
-                pl = w / (w + nreg)
-                u = pl * (gini(lambda e: (cell_old(e), asg.get(e, "-"))) - g_old)
+                u = self.canary_mi(post, asg, nreg_s, n) if self.utility == "mi" else None
+                if u is None:
+                    w = (1.0 - len(asg) / n) if P.careful_mole else 1.0
+                    if w <= 0:
+                        continue
+                    pl = w / (w + nreg)
+                    u = pl * (gini(lambda e: (cell_old(e), asg.get(e, "-"))) - g_old)
                 if u > bestu:
                     best, bestu = asg, u
         return best
+
+    def canary_mi(self, post, asg, nreg_s, n) -> float:
+        """Mutual information (nats) between the mole's identity and this canary's outcome
+        (which label leaks within the leak window, or none), under the careful-mole weight."""
+        P = self.P
+        w = max(0.0, 1.0 - len(asg) / n) if P.careful_mole else 1.0
+        win = P.leak_window_days
+        po = {}
+        hcond = 0.0
+        for e, p in post.items():
+            if p <= 0:
+                continue
+            lab = asg.get(e)
+            if lab is None or w <= 0:
+                q = 0.0
+            else:
+                per_day = P.p_leak * w / (w + max(1.0, nreg_s.get(e, 0)))
+                q = 1 - (1 - per_day) ** win
+            po["_none"] = po.get("_none", 0.0) + p * (1 - q)
+            if q > 0:
+                po[lab] = po.get(lab, 0.0) + p * q
+                hcond -= p * (q * math.log(q) + ((1 - q) * math.log(1 - q) if q < 1 else 0.0))
+        h = -sum(v * math.log(v) for v in po.values() if v > 0)
+        return h - hcond
 
     def partition_balanced(self, post: dict[str, float]) -> dict[str, str]:
         """Split alive suspects into <= max_variants labelled groups (+ an implicit 'no canary' group)

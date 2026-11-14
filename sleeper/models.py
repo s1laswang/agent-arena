@@ -126,6 +126,7 @@ class Day(BaseModel):
     sleeper_seat: str | None = None
     goal: SleeperGoal | None = None
     events: list[dict[str, Any]] = []
+    docs: list[dict[str, Any]] = []
     ticks: int = 20
 
 

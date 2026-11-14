@@ -97,3 +97,6 @@
 
 ## 06:19 status (heartbeat)
 - No ENV/MCP/baselines code changes (new: reproduce output path → gitignored results/latest/, reports). Nothing to re-run; justSilas green. Waiting on Grok re-run ~07:15 and Gemini key.
+
+## 06:49 status (heartbeat)
+- No ENV/MCP/baselines code changes (new: reproduce groups runs by tier version, judge table refresh, README). Nothing to re-run; justSilas green. Grok re-run expected ~07:15.

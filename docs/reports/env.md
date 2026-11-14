@@ -30,3 +30,9 @@
 - Known regression: DSL-robustness on medium tiers v1 = 70% (test relaxed to 0.65, fix in progress).
 - In progress: bayes-solver: stopping rule/pipelining (gpt-5.5 accused 1.4 days earlier on old hard), ETA 06:00.
 - Next: judge-run prep, regret check on frontier episodes.
+
+## 05:50 status
+- Done (verified: make test 348 passed on justSilas b875386): solver evidence-gathering fix (exact decoy-marginalised logs, careful-mole-aware info-max canary splits), tiers v1.1 (medium max_variants 3, hard framing 3.0). MONOTONE: solver easy .793 > medium .633 > hard .601 (200 dev seeds); test_solver_tier_ordering xpasses.
+- Solver acc/no-accusation: easy 99.5%/0%, medium 89.5%/10.5%, hard 85.5%/13%. Heuristic: .665 / -.051 / -.235. logs_only <=1.5% on medium/hard; stop_early, random < 0.
+- Short of target: no-accusation >5% and hard acc <90%; random-DSL-mole robustness 60% on medium (test at 0.65).
+- Next: restriction probing (solver), FR8 recal on fixed solver, judge-run prep.

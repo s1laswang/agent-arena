@@ -36,7 +36,7 @@ Scoring: correct = remaining company value V, wrong = −1, no accusation = 0.
 Baselines (v1.3, 30 fresh secrets, README): solver medium +0.64 / hard +0.55; heuristic −0.06 / −0.30; stop-early ≈ −0.9; do-nothing exactly 0. A Grok-tactics scripted policy is beaten by the solver by +0.17 (medium) / +0.23 (hard), paired.
 
 ## 3. Why agents fail (rubric 30)
-- Per-decision regret: `results/regret_gpt-5.5-v1.2.md`, `results/regret_*-v1.3.md`.
+- Per-decision regret: `results/history/regret_gpt-5.5-v1.2.md`, `results/regret_*-v1.3.md`.
 - **Dominant failure: premature accusation.** Day-14 gambles at a low posterior: mean P(correct) at accusation is .78 for gpt-5.5 vs .95–.96 for the solver. On v1.3 all 4 wrong accusations were made at P = .18–.43. **The agent never abstains,** even though the EV is negative below P = 1/(1+V). Grok did abstain once, so the information is available.
 - Smaller costs: ignored_delay, uninformative_canary.
 - Annotated example: medium seed 5 in `gap.md` (a single-variant canary on day 1, late canaries under delay, a 50/50 accusation at day 14 → −1).

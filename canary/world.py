@@ -56,7 +56,7 @@ class World:
     # pregenerated regular docs per day (raw recipients, before restriction filtering)
     planned_docs: dict[int, list[dict[str, Any]]] = field(default_factory=dict)
     world_seed: int = 0
-    mole_strategy: Any = None   # None = default v0 behaviour (Mole DSL plugs in later)
+    mole_strategy: Any = None   # None = DEFAULT_STRATEGY (canary.mole.dsl)
 
     @property
     def ids(self) -> list[str]:
@@ -111,7 +111,7 @@ def generate_world(tier: str, seed: int, p: TierParams) -> World:
         k = rng.choice(p.docs_per_day)
         docs = []
         for j in range(1, k + 1):
-            if rng.random() < 0.6:
+            if rng.random() < p.p_single_dept_recipients:
                 ds = [rng.choice(depts)]
             else:
                 ds = rng.sample(depts, 2)

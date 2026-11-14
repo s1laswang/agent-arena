@@ -18,7 +18,7 @@ def _run(name, tier="easy", seeds=SEEDS):
         acc = _accusations(env.ledger(), set())
         if sc > 0:
             assert len(acc) == 1 and acc[0] == true_mole(env), (name, s, acc)
-        assert 0.0 <= sc <= 1.0
+        assert sc == -1.0 or 0.0 <= sc <= 1.0  # v0.3: wrong accusation = -1
         out.append(sc)
     return out
 
@@ -54,7 +54,7 @@ def test_do_nothing_zero(tier):
 def test_stop_early_about_v_over_n():
     from canary.rules import TIERS
     m = statistics.mean(_run("stop_early"))
-    assert m <= 3.0 / TIERS["easy"].n_employees  # ≈1/12 with loose bound over 30 seeds
+    assert m < 0  # v0.3: guessing is strictly worse than doing nothing
 
 
 @pytest.mark.parametrize("name", sorted(set(BASELINES) - {"do_nothing"}))

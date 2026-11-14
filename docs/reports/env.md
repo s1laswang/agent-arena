@@ -9,3 +9,8 @@
 - **Env v0 MERGED to justSilas** (verified: make test 44 green; 1000 random episodes ~1.4s). Includes v0.2 integrity (HMAC seeds, fixed errors, accuse parity), template text, baselines (do_nothing/stop_early/random/restrict_all), rules.apply_noise.
 - Baselines, 100 dev seeds, mean score easy/med/hard: do_nothing 0/0/0; stop_early .11/.04/.02; random .08/.03/.02; restrict_all .09/.03/.005
 - In progress: bayes-solver (v1 04:00); next: heuristic baseline, Mole DSL
+
+## 02:40 status
+- Done (verified: 200 dev seeds): `heuristic` baseline (leak-recipient intersection + halving canary). Score/acc easy .74/99%, medium .67/96%, hard .41/59%.
+- **Finding: easy/medium too easy, since an obvious heuristic nearly solves them.** Calibration must cut leak informativeness (e.g. more recipients per doc, max_variants=2 everywhere, longer delays, careful mole on medium). Will tune with solver numbers at 04:00.
+- In progress: Mole DSL (sim-engine), solver v1 (bayes-solver).

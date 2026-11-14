@@ -289,6 +289,77 @@ BASELINES: dict[str, type[ScriptedPolicy]] = {
 }
 
 
+
+def _employees(history):
+    for s in history:
+        if s.tool == "list_employees" and s.result.get("ok"):
+            return employee_ids(s.result)
+    return []
+
+
+class Heuristic:
+    """The 'obvious' investigator: intersect suspects with the recipients of every leaked doc,
+    split the remaining suspects in half with a canary each day, accuse when one is left
+    (or on day `deadline`, the most-frequent leak recipient). Ignores logs/interviews/V timing.
+    """
+    name = "heuristic"
+    def __init__(self, seed: int = 0, deadline: int = 12):
+        self.seed, self.deadline = seed, deadline
+    def reset(self, tools_spec, instruction):
+        self.rng = random.Random(f"heuristic:{self.seed}")
+        self.day_done: set[tuple[int, str]] = set()
+        self.docs: dict[str, dict] = {}
+    def _last(self, history, tool):
+        for s in reversed(history):
+            if s.tool == tool and s.result.get("ok"):
+                return s.result["data"]
+        return None
+    def act(self, history):
+        emps = _employees(history)
+        if not emps:
+            return "list_employees", {}
+        day = history[-1].day if history else 1
+        if history[-1].tool == "advance_day" and history[-1].result.get("ok"):
+            day = history[-1].result["data"]["day"]
+        def once(tag):
+            k = (day, tag)
+            if k in self.day_done:
+                return False
+            self.day_done.add(k); return True
+        if once("docs"):
+            return "list_documents", {}
+        d = self._last(history, "list_documents")
+        for doc in (d or {}).get("documents", []):
+            self.docs[doc["doc_id"]] = doc
+        if once("feed"):
+            return "check_leak_feed", {}
+        suspects = set(emps)
+        feed = (self._last(history, "check_leak_feed") or {}).get("items", [])
+        for it in feed:
+            doc = self.docs.get(it["doc_id"])
+            if not doc:
+                continue
+            if doc.get("is_canary") and it.get("variant") and doc.get("variants"):
+                grp = set(doc["variants"].get(it["variant"], []))
+            else:
+                grp = set(doc["recipients"])
+            if suspects & grp:
+                suspects &= grp
+        ranked = sorted(suspects)
+        if len(ranked) == 1 or day >= self.deadline:
+            return "accuse", {"employee": ranked[0] if len(ranked) == 1 else self.rng.choice(ranked)}
+        if once("canary") and len(ranked) >= 2:
+            self.rng.shuffle(ranked)
+            half = len(ranked) // 2
+            assign = {e: ("A" if i < half else "B") for i, e in enumerate(ranked)}
+            return "plant_canary", {"doc_title": f"Board update {day}", "assignment": assign}
+        return "advance_day", {}
+
+
+# Not in BASELINES until tiers are recalibrated (it currently beats the far-below-solver bound).
+CALIBRATION_POLICIES = {"heuristic": Heuristic}
+
+
 def play(env, policy, max_steps: int = 400):
     """Minimal runner (canary.eval.run_episode may supersede it). Returns env.score()."""
     policy.reset(env.tools_spec(), env.instruction() if hasattr(env, "instruction") else "")

@@ -24,3 +24,9 @@
 - Done (verified: make test 291 passed): solver v0.3 accuse rule (EV>0 + threshold), DSL robustness 85% on medium over random strategies, RECALIBRATED tiers. 200 dev seeds, acc/score: solver easy 100%/.825, medium 95.5%/.538, hard 89.5%/.651; heuristic .711/.265 (0.49x)/.037; logs-only 25.5/3.5/4.0% correct; random, stop_early < 0 everywhere.
 - v0.4 fingerprint_accuracy param (default 1.0), v0.5 fail-closed judge secret (INTEGRITY #24), instruction.md generator + committed medium file, GeminiWorldText provider.
 - Next: v0.4 values via FR8 sweep (solver must model fingerprint noise), regret check, judge-run prep.
+
+## 04:55 status
+- Done (verified: make test green on justSilas 54e1fa4): tiers v1 (FR8 J1 values; hard log_rate_mole 1.0), JUDGE_SEEDS 40/tier, v0.5 fail-closed judge secret (+test), v0.4 knobs default-off.
+- Known regression: DSL-robustness on medium tiers v1 = 70% (test relaxed to 0.65, fix in progress).
+- In progress: bayes-solver: stopping rule/pipelining (gpt-5.5 accused 1.4 days earlier on old hard), ETA 06:00.
+- Next: judge-run prep, regret check on frontier episodes.

@@ -8,11 +8,12 @@ from lab import analyse
 
 def runs(root):
     root = Path(root)
+    keep = analyse.listed(root, root.parent / "eval")
     for g in (root.glob("*/summary.json"), (root / "runs").glob("*/summary.json"), (root.parent / "runs").glob("*/summary.json")):
         out = {}
         for p in sorted(g):
             s = json.loads(p.read_text())
-            if "n_runs" in s:
+            if "n_runs" in s and (keep is None or p.parent.name in keep):
                 out[p.parent.name] = (p.parent, s)
         if out:
             return out

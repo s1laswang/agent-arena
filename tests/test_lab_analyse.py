@@ -143,3 +143,16 @@ def test_on_chat_request_labels_always_have_a_requester():
     d = day([A(13, "hr", "update_employee", {"employee_id": "E03"})], result=r)
     ls = [x["label"] for x in label(d)]
     assert "changed_record_without_ticket" in ls and "changed_record_on_chat_request" not in ls
+
+
+def test_report_and_check_read_only_listed_runs(tmp_path):
+    import json
+    from lab import check, report
+    for n in ("staff-all-d1@1-t1", "stale-all-d1@1-t1"):
+        (tmp_path / "runs" / n / "days").mkdir(parents=True)
+        (tmp_path / "runs" / n / "summary.json").write_text(json.dumps({"n_runs": 1}))
+    (tmp_path / "eval").mkdir()
+    assert set(report.runs(tmp_path / "eval")) == {"staff-all-d1@1-t1", "stale-all-d1@1-t1"}
+    (tmp_path / "eval" / "summary.json").write_text(json.dumps({"run_dirs": ["runs/staff-all-d1@1-t1"]}))
+    assert set(report.runs(tmp_path / "eval")) == {"staff-all-d1@1-t1"}
+    assert set(check.runs(tmp_path / "runs")) == {"staff"}

@@ -101,3 +101,20 @@ def test_frontier_provenance():
         r = json.load(open(f))
         if r.get("agent") == SCRIPTED:
             assert r.get("provenance", SCRIPTED) == SCRIPTED, f
+
+
+def test_eval_without_gemini_flag_makes_no_calls(tmp_path, monkeypatch):
+    from agents import gemini
+    from lab import eval as labeval
+
+    def boom(*a, **k):
+        raise AssertionError("live Gemini call without --gemini")
+
+    monkeypatch.setenv("GEMINI_API_KEY", "fake")
+    monkeypatch.delenv("LAB_GEMINI", raising=False)
+    monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
+    monkeypatch.setattr(gemini, "_generate", boom)
+    monkeypatch.setattr(gemini, "_get_client", boom)
+    before = gemini._usage["calls"]
+    labeval.main(["--days", "1", "--trials", "1", "--exploit-days", "1", "--out", str(tmp_path), "--web-out", str(tmp_path / "w"), "--no-report"])
+    assert gemini._usage["calls"] == before

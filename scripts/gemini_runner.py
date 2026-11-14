@@ -217,7 +217,7 @@ def main(argv=None) -> int:
                 continue
             j.dir.mkdir(parents=True, exist_ok=True)
             out = (staging / "logs" / f"{j.harness}-{j.tier}-{j.seed}.log").open("a")
-            env = dict(os.environ, CANARY_LLM_MAX_RETRIES=os.environ.get("CANARY_LLM_MAX_RETRIES", "12"))
+            env = dict(os.environ, CANARY_LLM_MAX_RETRIES=os.environ.get("CANARY_LLM_MAX_RETRIES", "12"), CANARY_PROGRESS="1")
             p = subprocess.Popen(j.cmd(), stdout=out, stderr=subprocess.STDOUT, env=env, start_new_session=True)
             (j.dir / "RUNNING.json").write_text(json.dumps({"pid": p.pid, "started": time.time(), "cmd": j.cmd()}))
             running.append(j)

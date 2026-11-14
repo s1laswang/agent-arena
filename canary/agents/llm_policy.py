@@ -25,6 +25,7 @@ WINDOW_TURNS = 40          # only used by context="window"
 # lists default_reasoning_level "medium" for gpt-5.5 (our Codex runs ignore the user config).
 DEFAULT_REASONING_EFFORT = "medium"
 CONTEXTS = ("full", "window")
+_PROGRESS = bool(__import__("os").environ.get("CANARY_PROGRESS"))
 
 
 def _get_client(spec: str, **kw):
@@ -144,4 +145,8 @@ class LLMPolicy:
                 return "status", {}
         call = self._queue.popleft()
         self._pending_id = call["id"]
+        if _PROGRESS:  # CANARY_PROGRESS=1: one line per tool call on stderr (long live runs)
+            import sys
+            print(f"[llm_policy] step {len(history)} calls={self.usage['calls']} -> {call['name']} "
+                  f"{json.dumps(call['args'])[:120]}", file=sys.stderr, flush=True)
         return call["name"], call["args"]

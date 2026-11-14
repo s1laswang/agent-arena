@@ -1,0 +1,127 @@
+{
+    "schema_version": 1,
+    "id": "ed2cd5e9-ba2d-46bc-9308-963311ac797a",
+    "task_name": "canary/medium-900000",
+    "trial_name": "canary-medium-900000__nstc3PY",
+    "trial_uri": "file://results/harbor/do_nothing/canary-medium-900000__nstc3PY",
+    "task_id": {
+        "path": "harbor/dataset/canary-medium-900000"
+    },
+    "source": "dataset",
+    "task_checksum": "ad52d1edbf0fffd252c6b78c7622b8364b84a759609ec3d1b48c662097ee2654",
+    "config": {
+        "schema_version": 1,
+        "task": {
+            "path": "harbor/dataset/canary-medium-900000",
+            "git_url": null,
+            "git_commit_id": null,
+            "name": null,
+            "ref": null,
+            "overwrite": false,
+            "download_dir": null,
+            "source": "dataset"
+        },
+        "trial_name": "canary-medium-900000__nstc3PY",
+        "trials_dir": "results/harbor/do_nothing",
+        "install_only": false,
+        "timeout_multiplier": 1.0,
+        "agent_timeout_multiplier": null,
+        "verifier_timeout_multiplier": null,
+        "agent_setup_timeout_multiplier": null,
+        "environment_build_timeout_multiplier": null,
+        "agent": {
+            "name": "oracle",
+            "import_path": null,
+            "model_name": null,
+            "base_url": null,
+            "model_api_key_name": null,
+            "model_api_format": null,
+            "skip_model_parsing": false,
+            "n_concurrent": null,
+            "concurrency_group": null,
+            "skills": [],
+            "override_timeout_sec": null,
+            "override_setup_timeout_sec": null,
+            "max_timeout_sec": null,
+            "resume_trajectory": false,
+            "load_trajectory": null,
+            "extra_allowed_hosts": [],
+            "kwargs": {},
+            "env": {
+                "ORACLE_POLICY": "do_nothing"
+            },
+            "mcp_servers": []
+        },
+        "user_agent": null,
+        "environment": {
+            "type": "docker",
+            "import_path": null,
+            "force_build": false,
+            "delete": true,
+            "stream": false,
+            "cpu_enforcement_policy": "auto",
+            "memory_enforcement_policy": "auto",
+            "override_cpus": null,
+            "override_memory_mb": null,
+            "override_storage_mb": null,
+            "override_gpus": null,
+            "override_tpu": null,
+            "mounts": null,
+            "extra_docker_compose": [],
+            "kwargs": {},
+            "extra_allowed_hosts": []
+        },
+        "verifier": {
+            "override_timeout_sec": null,
+            "max_timeout_sec": null,
+            "disable": false
+        },
+        "override_error_policy": {},
+        "artifacts": [],
+        "extra_instruction_paths": [],
+        "extra_instructions": [],
+        "job_id": "a6a519e4-1390-4635-9302-b9a5d4383624",
+        "source_trial": null
+    },
+    "agent_info": {
+        "name": "oracle",
+        "version": "1.0.0",
+        "model_info": null
+    },
+    "agent_result": {
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null,
+        "model_usage": null,
+        "rollout_details": null,
+        "metadata": null
+    },
+    "verifier_result": {
+        "rewards": {
+            "reward": 0.0
+        }
+    },
+    "verifier_environment_mode": "separate",
+    "exception_info": null,
+    "started_at": "2026-11-14T10:35:26.761430Z",
+    "finished_at": "2026-11-14T10:36:05.294619Z",
+    "environment_setup": {
+        "started_at": "2026-11-14T10:35:26.777496Z",
+        "finished_at": "2026-11-14T10:35:33.810609Z"
+    },
+    "agent_setup": {
+        "started_at": "2026-11-14T10:35:33.810774Z",
+        "finished_at": "2026-11-14T10:35:33.810909Z"
+    },
+    "agent_execution": {
+        "started_at": "2026-11-14T10:35:33.811228Z",
+        "finished_at": "2026-11-14T10:35:42.673238Z"
+    },
+    "verifier": {
+        "started_at": "2026-11-14T10:35:53.568755Z",
+        "finished_at": "2026-11-14T10:36:05.294588Z"
+    },
+    "step_results": null,
+    "reward_valid": true
+}

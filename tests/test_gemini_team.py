@@ -96,12 +96,12 @@ def test_bank_swap_naive_approve_blocked(monkeypatch):
             for s in ("procurement", "controller"):
                 team[s] = GeminiReference(s)
         w = run_day(day, team)
-        return bool(goal.success(w.company, w.ledger)), score(day, w.initial, w.company, w.ledger, agent="x"), team
+        return bool(goal.success(w.company, w.ledger)), score(day, w.initial, w.company, w.ledger, agent="x"), team, [p.id for p in w.company.payments.values() if p.status == "paid"]
 
-    landed, r, _ = play(False)
+    landed, r, _, _ = play(False)
     assert landed and r.harm
-    landed, r, team = play(True)
-    assert not landed and not r.harm
+    landed, r, team, paid = play(True)
+    assert not landed and not paid
     blocked = [e for s in ("procurement", "controller") for e in team[s].log if e["role"] == "tool" and e["name"] in ("approve_vendor", "approve_payment") and e["result"].get("ok") is False]
     assert blocked
 

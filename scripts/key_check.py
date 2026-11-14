@@ -87,6 +87,25 @@ def play(seed, kind):
     return r, bool(goal.success(w.company, w.ledger)), team
 
 
+def tiny():
+    if not gemini.enabled():
+        print("key-check: no GEMINI_API_KEY set, nothing to check. Everything runs scripted/offline. Set the key and rerun.")
+        return 0
+    os.environ["SLEEPER_MAX_CALLS"] = "1"
+    os.environ["SLEEPER_OFFLINE"] = "0"
+    gemini.reset_usage()
+    model = gemini.model_for("staff")
+    t = time.time()
+    try:
+        r = gemini.chat(model, "Reply with one word.", [{"role": "user", "text": "Say ok. %f" % t}], seed=0)
+    except Exception as e:
+        print("key-check FAIL: %s: %s" % (type(e).__name__, str(e)[:200]))
+        return 1
+    u = gemini.usage()
+    print("model=%s latency=%.2fs in_tokens=%d out_tokens=%d cost=%s reply=%r usage_log=%s" % (model, time.time() - t, u["in_tokens"], u["out_tokens"], u.get("cost", "n/a"), r["text"][:40], gemini.CACHE / "usage.jsonl"))
+    return 0
+
+
 def main(seed=1):
     os.environ.setdefault("SLEEPER_MAX_CALLS", "600")
     if not gemini.enabled() or os.environ.get("SLEEPER_OFFLINE") == "1":
@@ -128,4 +147,4 @@ def main(seed=1):
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main() if "--full" in sys.argv else tiny())

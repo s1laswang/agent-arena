@@ -122,8 +122,7 @@ function getEmployeeName(id) {
 }
 
 function getEmployeeDisplayName(id) {
-  const name = FAMOUS_TECH_PEOPLE[id];
-  return name ? `${name} (${id})` : id;
+  return FAMOUS_TECH_PEOPLE[id] || id;
 }
 
 function mapTextNames(text) {
@@ -135,9 +134,59 @@ function mapTextNames(text) {
     }
   }
   out = out.replace(/\b(e\d{2})\b/g, (match) => {
-    return FAMOUS_TECH_PEOPLE[match] ? `${FAMOUS_TECH_PEOPLE[match]} (${match})` : match;
+    return FAMOUS_TECH_PEOPLE[match] || match;
   });
   return out;
+}
+
+function resolveSearchQuery(query) {
+  if (!query) return query;
+  const raw = query.trim();
+  const lower = raw.toLowerCase();
+
+  if (/^e\d{2}$/i.test(raw)) {
+    return raw.toLowerCase();
+  }
+
+  if (state.employees && state.employees.length > 0) {
+    for (const emp of state.employees) {
+      if (emp.name && emp.name.toLowerCase() === lower) {
+        return emp.id;
+      }
+    }
+    for (const emp of state.employees) {
+      if (emp.name) {
+        const parts = emp.name.toLowerCase().split(/\s+/);
+        if (parts.includes(lower)) {
+          return emp.id;
+        }
+      }
+    }
+  }
+
+  for (const [id, famousName] of Object.entries(FAMOUS_TECH_PEOPLE)) {
+    if (famousName.toLowerCase() === lower) {
+      return id;
+    }
+  }
+  for (const [id, famousName] of Object.entries(FAMOUS_TECH_PEOPLE)) {
+    const parts = famousName.toLowerCase().split(/\s+/);
+    if (parts.includes(lower)) {
+      return id;
+    }
+  }
+
+  for (const [engName, famName] of Object.entries(engineNameToFamous)) {
+    if (engName.toLowerCase() === lower || famName.toLowerCase() === lower) {
+      for (const [id, fName] of Object.entries(FAMOUS_TECH_PEOPLE)) {
+        if (fName.toLowerCase() === famName.toLowerCase()) {
+          return id;
+        }
+      }
+    }
+  }
+
+  return raw;
 }
 
 function formatActionPlainWords(tool, args = {}) {
@@ -165,15 +214,17 @@ function formatActionPlainWords(tool, args = {}) {
     case "list_employees":
       return "Surveyed office personnel";
     case "search_messages":
-      return `Searched staff messages for "${args.query || ''}"`;
+      return `Searched staff messages for "${mapTextNames(args.query || '')}"`;
     case "restrict_access":
       return `Restricted access for ${empName || 'employee'}`;
     case "unrestrict_access":
       return `Restored access for ${empName || 'employee'}`;
     case "advance_day":
       return "Advanced to next day";
-    case "accuse":
-      return `Accused ${empName || 'suspect'}`;
+    case "accuse": {
+      const targetName = args.employee ? getEmployeeDisplayName(args.employee) : (args.target ? getEmployeeDisplayName(args.target) : 'suspect');
+      return `Accused ${targetName}`;
+    }
     default:
       return tool.replace(/_/g, " ");
   }
@@ -642,13 +693,10 @@ function updateCardContent(card, emp) {
     `;
   }
 
-  let lockHtml = isLocked ? `<span class="locked-badge">Restricted</span>` : "";
+  let lockHtml = isLocked ? `<div class="emp-card-top" style="justify-content:flex-end;"><span class="locked-badge">Restricted</span></div>` : "";
 
   card.innerHTML = `
-    <div class="emp-card-top">
-      <span class="emp-id-label">${emp.id}</span>
-      ${lockHtml}
-    </div>
+    ${lockHtml}
     <div class="emp-name-label" title="${emp.name}">${emp.name}</div>
     <div class="emp-role-label">${emp.role || 'Team Member'}</div>
     <div class="emp-card-badges">
@@ -696,11 +744,11 @@ function updateDossierView(empId) {
   const emp = state.employees.find(e => e.id === empId);
   if (!emp) return;
 
-  $("dosId").textContent = emp.id;
+  if ($("dosId")) $("dosId").textContent = "";
   $("dosName").textContent = emp.name;
   $("dosRole").textContent = emp.role || "Member";
   $("dosDeptBadge").textContent = emp.dept || "Staff";
-  if ($("msgQueryInput")) $("msgQueryInput").value = emp.id;
+  if ($("msgQueryInput")) $("msgQueryInput").value = "";
 
   const isLocked = state.restricted.has(emp.id);
   $("dosRestrictedBadge").hidden = !isLocked;
@@ -1030,7 +1078,7 @@ function renderWizardEmployees() {
     if (currentVar) chip.classList.add(`assign-${currentVar.toLowerCase()}`);
 
     chip.innerHTML = `
-      <span><strong>${emp.id}</strong> ${emp.name.split(" ")[0]}</span>
+      <span><strong>${emp.name}</strong></span>
       <span class="mono font-small chip-var">${currentVar || '–'}</span>
     `;
 
@@ -1164,7 +1212,7 @@ function populateAccuseDropdown(employees) {
   for (const emp of employees) {
     const opt = document.createElement("option");
     opt.value = emp.id;
-    opt.textContent = `${emp.id} - ${emp.name} (${emp.dept || 'Staff'}, ${emp.role || 'Member'})`;
+    opt.textContent = `${emp.name} (${emp.dept || 'Staff'}, ${emp.role || 'Member'})`;
     select.appendChild(opt);
   }
   if (current) select.value = current;
@@ -1173,7 +1221,7 @@ function populateAccuseDropdown(employees) {
 function updateAccuseTargetName() {
   const empId = $("accuseSuspectSelect").value;
   const emp = state.employees.find(e => e.id === empId);
-  $("accuseTargetBtnName").textContent = emp ? `${emp.name} (${emp.id})` : "Suspect";
+  $("accuseTargetBtnName").textContent = emp ? emp.name : "Suspect";
 }
 
 function recalculateAccuseMath() {
@@ -1322,7 +1370,7 @@ function showEndScreen() {
   // Flipping Mole Card
   const moleEmp = state.employees.find(e => e.id === moleId) || { name: moleName, dept: "Unknown", role: "Mole" };
   $("moleNameDisplay").textContent = moleName;
-  $("moleMetaDisplay").textContent = `${moleId} · ${moleEmp.dept} · ${moleEmp.role}`;
+  $("moleMetaDisplay").textContent = `${moleEmp.dept} · ${moleEmp.role}`;
 
   const flipCard = $("moleFlipCard");
   flipCard.classList.remove("revealed");
@@ -1413,7 +1461,7 @@ function showEndScreen() {
   } else if (!isWin && reveal.you.accused) {
     fooledBox.hidden = false;
     const accusedEmp = state.employees.find(e => e.id === reveal.you.accused);
-    const accusedDisp = accusedEmp ? `${accusedEmp.name} (${accusedEmp.id})` : getEmployeeDisplayName(reveal.you.accused);
+    const accusedDisp = accusedEmp ? accusedEmp.name : getEmployeeDisplayName(reveal.you.accused);
     $("fooledHeading").textContent = "Investigator Note";
     $("fooledMessage").textContent = `You accused ${accusedDisp}. The true mole planted fabricated after-hours access logs and exploited delayed leaks to frame colleagues.`;
   } else {
@@ -1637,7 +1685,8 @@ function setupGlobalEventListeners() {
 
   $("dosMessagesBtn").addEventListener("click", () => {
     const inputVal = $("msgQueryInput") ? $("msgQueryInput").value.trim() : "";
-    const q = inputVal || state.selectedEmpId || "e00";
+    const q = inputVal ? resolveSearchQuery(inputVal) : (state.selectedEmpId || "");
+    if (!q) return;
     executeTool("search_messages", { query: q, day_from: 1, day_to: state.day });
   });
 

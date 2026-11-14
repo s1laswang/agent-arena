@@ -1,4 +1,4 @@
-import argparse, json, multiprocessing, os, subprocess
+import argparse, gzip, json, multiprocessing, os, subprocess
 
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["LAB_GEMINI"] = "0"
@@ -37,7 +37,12 @@ def main(argv=None):
         runs.setdefault((label, mode), []).append(rec)
         p = f"{a.out}/scripted:{label}/{commit}"
         os.makedirs(p, exist_ok=True)
-        json.dump(rec, open(f"{p}/{seat if mode == 'seat' else 'all8'}-s{d}-t{t}.json", "w"), separators=(",", ":"))
+        base = f"{p}/{seat if mode == 'seat' else 'all8'}-s{d}-t{t}"
+        st = {k: rec.pop(k) for k in ("day", "initial", "company", "ledger")}
+        with gzip.open(base + ".state.json.gz", "wt") as g:
+            json.dump(st, g, separators=(",", ":"))
+        rec["state_path"] = os.path.basename(base) + ".state.json.gz"
+        json.dump(rec, open(base + ".json", "w"), separators=(",", ":"))
     rows = []
     for (label, mode), rs in runs.items():
         for n in NS:

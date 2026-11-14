@@ -29,3 +29,16 @@ def test_replay_rescore_matches_and_detects_tamper(tmp_path):
     res["reward"] = 1 - res["reward"]
     f.write_text(json.dumps({**x, "result": res}))
     assert probes.replay(str(tmp_path))[:2] == (1, 1)
+
+
+def test_rescore_reads_gzipped_state(tmp_path):
+    import gzip
+
+    from lab import run
+    from sleeper.verifier import rescore
+
+    res, x = run.play_day("oracle", "oracle", "finance_ap", 1000, 0)
+    res["seat_under_test"] = "finance_ap"
+    (tmp_path / "a.state.json.gz").write_bytes(gzip.compress(json.dumps({k: x[k] for k in ("day", "initial", "company", "ledger")}).encode()))
+    (tmp_path / "finance_ap-s1000-t0.json").write_text(json.dumps({"result": res, "state_path": "a.state.json.gz"}))
+    assert rescore(tmp_path) == (1, [])

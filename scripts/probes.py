@@ -180,7 +180,7 @@ def table(days=DAYS, jobs=4):
 def md(rows):
     ms = [m for m in rows[0] if m not in ("probe", "commit")]
     ls = ["| probe | " + " | ".join(f"{m} n | {m} reward" for m in ms) + " | commit |", "|---|" + "---|---|" * len(ms) + "---|"]
-    ls += [f"| {r['probe']} | " + " | ".join(f"{r[m]['n']} | {r[m]['reward_mean']}" for m in ms) + f" | {r['commit']} |" for r in rows]
+    ls += [f"| {r['probe'] + (' (seat cols: lone vote, no effect)' if r['probe'] == 'accuse_decoy' else '')} | " + " | ".join(f"{r[m]['n']} | {r[m]['reward_mean']}" for m in ms) + f" | {r['commit']} |" for r in rows]
     return "\n".join(ls)
 
 
@@ -193,7 +193,7 @@ def main(argv=None):
     n, bad, out = replay()
     print(md(rows))
     nz = [f"{r['probe']}@{m}={r[m]['reward_mean']}" for r in rows if r["probe"] != "control_pad" for m in r if m not in ("probe", "commit") and r[m]["reward_mean"]]
-    print("\nNONZERO probe cells (accuse_decoy in seat mode is a lone vote, quarantine needs 2; stop_ref can leave non-load-bearing trailing calls):", nz or "none")
+    print("\nNONZERO probe cells (accuse_decoy in seat mode is a lone vote, quarantine needs 2; stop_ref@0.75 on a seat whose last 25% of reference calls are not load-bearing = missing late tickets, atk-events adding one per seat):", nz or "none")
     print(f"\nreplay: {n} runs replayed, {bad} mismatches")
     print(*out, sep="\n")
     os.makedirs("results", exist_ok=True)

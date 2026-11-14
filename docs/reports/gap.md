@@ -16,17 +16,43 @@
 - Accusation audit: `python -m canary.analysis.accuse --runs <same>`
 - Per-tag value lost: ENV's `results/regret_*-v1.2.md`
 
-## Headline
-| | medium: frontier / solver | hard: frontier / solver |
+## Headline (read the caveats first)
+| tier version | medium: frontier / solver | hard: frontier / solver |
 |---|---|---|
-| **v1.2** (true V visible daily): gpt-5.5 in-process, n=20+20 | 0.600 / 0.690 = **87%** | 0.500 / 0.584 = **86%** |
-| **v1.3** (only *surfaced* damage visible): gpt-5.5 in-process, small n=9+5 | 0.319 / 0.717 = **44%** | −0.003 / 0.592 = **≈0%** |
+| **v1.2** (true V visible daily): gpt-5.5 in-process, **n=20+20** | 0.600 ± 0.175 / 0.690 ± 0.086 = **87%** | 0.500 ± 0.227 / 0.584 ± 0.194 = **86%** |
+| **v1.3**: gpt-5.5 in-process, **SMALL n=9+5**, paired with the solver on the same seeds (ENV 1a650df) | 0.319 ± 0.497 / 0.670 = **48%** | −0.003 ± 0.799 / 0.553 = **≈0%** |
+| **v1.3**: Codex gpt-5.5 over MCP (judges' harness shape), **n=1+2** | 0.53 | 0.59 |
 
-The story:
-- **v1.2:** frontier agents got close to the reference by reading the true company value V in `status` every day. Each leak showed up immediately as a 0.04 V drop, which defeated the leak-delay mechanic. Grok described this exploit in its own write-up.
-- **v1.3:** shows only *known* V (from leaks that have surfaced), so the delay matters again.
-- **Result:** the reference barely moves (medium .690→.717, hard .584→.592), while gpt-5.5 collapses into day-14 coin-flip accusations.
-- **Caveat:** v1.3 n is small (14 episodes); the 95% CIs are wide (±0.5–0.8). The morning re-run with Gemini and more gpt-5.5 seeds tightens it.
+> ⚠ **Do not quote the v1.3 in-process gap as the headline yet.** Three caveats:
+> 1. **Small n:** 14 episodes, so the 95% CIs are ±0.5–0.8 V. We expect to tighten them in the morning (spend approval needed).
+> 2. **Our in-process scaffold is handicapped** (see "Scaffold vs harness" below): it keeps only the last 40 turns (episodes are 70–150 tool calls) and cuts older tool results to 2,000 characters, so the agent loses its own early canary assignments and leak history. The judges' harness-shape runs (Codex over MCP, n=3: .53 / .59) are much closer to the reference.
+> 3. **So the honest v1.3 claim tonight:** the reference is unchanged by v1.3 while frontier scores drop; the size of the gap needs the morning's judges'-shape measurement with a fixed scaffold.
+
+The story so far:
+- **v1.2:** frontier agents got close to the reference partly by reading the true company value V in `status` every day. Each leak showed up immediately as a 0.04 V drop, which defeated the leak-delay mechanic (Grok describes this in its own write-up).
+- **v1.3:** shows only *known* V (from surfaced leaks).
+- **Result:** the reference barely moves (medium .690→.717, hard .584→.592 on 20 seeds).
+
+## Scaffold vs harness: is our in-process loop handicapped? (yes, likely)
+| | `LLMPolicy` (in-process, `canary/agents/llm_policy.py`) | Codex CLI over MCP (`canary/agents/frontier/codex_run.py`) |
+|---|---|---|
+| Task text | Env `instruction()` + one generic line | **identical** (same builder, tested) + the MCP server's instructions |
+| System prompt | the task text only | Codex's own agentic system prompt + the task text |
+| API | Chat Completions; **reasoning is not carried across calls** | Responses API via Codex; reasoning kept across turns |
+| Context | **last 40 assistant turns only; older tool results cut to 2,000 chars** | full history (Codex compacts only near the window limit) |
+| Reasoning effort | API default (not set) | Codex default (not set) |
+| Temperature | 0.0 requested, ignored for gpt-5.x | Codex default |
+| Turn cap | none beyond the env's 300-call cap | none beyond the env's 300-call cap |
+
+The context truncation is the likely handicap: in a 14-day episode the decisive evidence (which variant went to whom on days 1–5, which leaks surfaced when) falls out of the window right before the day-14 decision, which matches the observed day-14 coin flips. **Morning fix:** keep the full history (or a structured, non-lossy evidence summary: canary assignments, the surfaced leak feed, restrictions), use the Responses API with persisted reasoning, set the reasoning effort explicitly, and re-run in-process + Codex on the same seeds. An honest gap must come from the task, not from a weak scaffold.
+
+## Fairness: the reference uses only public information
+Under v1.3 every quantity the solver uses is public:
+- the shown (known) V;
+- the delay distribution, `p_leak`, the leak-selection and careful-mole rules, and the canary fingerprint accuracy (all in `instruction()`);
+- the agent's own canary assignments, the leak feed, the access logs and the documents (all from tools).
+
+Its accusation rule is computable from the instructions: accuse e iff P(e)·E[true V] − (1 − P(e)) > 0, otherwise keep gathering or abstain (score 0). Frontier agents can do this. Grok abstained on v1.2 hard 900000 at P≈0.53, explicitly computing the 1/(1+V) threshold, and gpt-5.5 reaches P=1.0 by day 6–7 on medium seeds where the canary evidence is decisive. The text-only content never names the mole (lint + text-only probe, ENV/INTEGRITY).
 
 ## v1.2: full table (db104c9, dev seeds 0–19)
 | tier | agent | n | score ± 95% CI | accuracy | accuse day | / solver | pass^3 |
@@ -86,7 +112,7 @@ The gpt-5.5 v1.3 rows are an **incomplete** sample (seeds as reached by 8 parall
 ## Why gpt-5.5 loses value: gambling at the horizon
 **Accusation audit (v1.3, gpt-5.5):** at each accusation we replay the solver's exact posterior P(accused is the mole | everything the agent had seen).
 - 9 of 14 accusations are *justified* (P ≥ 0.6). gpt-5.5 is excellent when the canary evidence is decisive (medium seeds 0, 10, 12, 16: day 6–7, P=1.0).
-- **All 4 wrong accusations are day-14 gambles**: P(accused) = 0.18, 0.43 (hard), 0.35, 0.32 (medium). One more correct day-14 accusation was *lucky* (P=0.56).
+- **All 4 wrong accusations are day-14 gambles**: P(accused) = 0.18, 0.43 (hard), 0.35, 0.32 (medium). (ENV 1a650df, hard: `premature_accusation` in 2 episodes = 1.22 V lost, mean P at accusation .61.) Caveat: the in-process scaffold's context truncation may cause part of this, see "Scaffold vs harness". One more correct day-14 accusation was *lucky* (P=0.56).
 - Under −1 scoring a gamble at P < 1/(1+V) has negative expected value; abstaining (score 0) beats it. gpt-5.5 never abstained. Grok did (hard 900000, P≈0.53, explicitly computing the threshold), which shows the information to decide well is available.
 - Hard seed 15 is the starkest: the solver's top suspect had P=0.78, but gpt-5.5 accused a different employee with P=0.18.
 
@@ -114,10 +140,15 @@ The gpt-5.5 v1.3 rows are an **incomplete** sample (seeds as reached by 8 parall
 
 Better play: the same 2-way split on days 9–10 (inside the delay window) resolves e02 vs e14 in time, and at P=0.50 abstaining (0) beats a −1 coin flip.
 
-## How the tiers got here (kill-switch history)
-1. **v0 tiers:** gpt-5.5 got 97% (medium) and 111% (hard) of the solver, with every accusation justified at P=1.0. The tiers handed out certainty.
-2. **v1:** hard gpt-5.5 113%. Root cause: the solver's canaries covered about 20 of 30 staff, and the careful mole leaks a canary with weight (1 − share), so they rarely leaked. gpt-5.5 used small groups that did leak. Sent to ENV and fixed (solver + tiers v1.1/v1.2).
-3. **v1.2:** 86–87%, and Grok 97%. Root cause: true V visible daily (above). Fixed in **v1.3**.
+## Kill-switch history: what moved the gap at each version
+| version | gpt-5.5 / solver (medium, hard) | what we found | what changed |
+|---|---|---|---|
+| **v0** | 97%, 111% (n=3+3) | every accusation justified at P=1.0: the evidence was too crisp | tiers v1: delay 1–3, careful mole, framing, a weaker log signal |
+| **v1** | 14%, **113%** (n=3+4, pre-fix solver) | the solver's canaries covered about 20 of 30 staff, and the careful mole leaks a canary with weight (1 − share), so they rarely leaked; gpt-5.5 used small groups that did | a careful-mole-aware solver; v1.1 timing fix |
+| **v1.2** | 87%, 86% (n=20+20); Grok 97%, 97% | true V shown daily → each leak visible the same day, so the delay is moot | **v1.3: known-V only** (unsurfaced damage hidden; true V used only for scoring, stated in the instructions) |
+| **v1.3** | 48%, ≈0% in-process (n=9+5, scaffold caveat); Codex over MCP n=3: .53 / .59 | gpt-5.5 gambles at the horizon (P .18–.43) instead of abstaining | morning: fix the scaffold, measure in the judges' shape, Gemini family |
+
+Each fix was a change to the *information or mechanics* (stated in the instructions), never a hidden trick, and the solver's own score stayed in .58–.72 throughout.
 
 ## Mole Forge: honest status
 - The pipeline works and is solver-constrained (CONTRACT §7). FR8's J5 ran 500 generations; the hall of fame has 2 distinct behaviours, both feasible on v1.2 hard (solver acc .855).

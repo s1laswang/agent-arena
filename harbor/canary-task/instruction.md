@@ -16,18 +16,18 @@ You are the security lead of a company with 20 employees, with ids e00 to e19. E
 
 ## Documents
 - Each day, between 2 and 4 new sensitive documents are published (equally likely: 2, 3, 4).
-- 60% of documents go to everyone in one department. The other 40% go to everyone in two departments. Then random other employees are added until at least 60% of all staff receive it.
+- 0% of documents go to everyone in one department. The other 100% go to everyone in two departments.
 - Restricted employees do not receive new documents. An employee holds every document it ever received.
 
 ## How leaks work
 - At the end of each day, the mole may leak one document that it received in the last 3 days (today included) and has not leaked before.
 - If the mole has such a document, it leaks one with probability 0.75. By default it picks one at random, with every eligible document equally likely. This mole is careful: for a canary, the chance of being picked is multiplied by (1 - the share of all employees who received any variant of that canary).
-- Each leak lowers V by 0.06 right away. It appears in the leak feed after a delay of 1 or 2 or 3 day(s), each equally likely.
+- Each leak lowers V by 0.04 right away. It appears in the leak feed after a delay of 1 or 2 or 3 day(s), each equally likely.
 - A restricted mole can still leak documents it already holds.
 
 ## Canaries (traps)
 - `plant_canary(doc_title, assignment)` creates a new document today. It costs 0.01 of V.
-- You can plant at most 1 per day. `assignment` maps employee ids to variant labels. Use at most 3 different labels and at least 1 recipient. Restricted employees cannot receive a canary.
+- You can plant at most 1 per day. `assignment` maps employee ids to variant labels. Use at most 2 different labels and at least 1 recipient. Restricted employees cannot receive a canary.
 - The recipients are exactly the employees in `assignment`. They count as having received the canary today.
 - If the canary leaks, the leak feed shows the variant label the mole received.
 
@@ -35,9 +35,9 @@ You are the security lead of a company with 20 employees, with ids e00 to e19. E
 - `restrict_access(employee)` costs 0.01 of V for every day that ends while the employee is restricted. `unrestrict_access` lifts it.
 
 ## Evidence
-- Access logs exist for days that have ended. Every employee opens documents it holds a random number of times per day (Poisson). The average is 1.0 for an innocent employee and 1.12 for the mole.
+- Access logs exist for days that have ended. Every employee opens documents it holds a random number of times per day (Poisson). The average is 1.0 for an innocent employee and 1.15 for the mole.
 - Each access is marked after_hours with probability 0.1 (innocent) or 0.15 (mole).
-- Framing is on in this tier. Each day the mole adds fake after-hours accesses for other employees (Poisson, average 1.0). Each fake access goes to the decoy with probability 0.5, and otherwise to a random employee who is neither the mole nor the decoy.
+- Framing is on in this tier. Each day the mole adds fake after-hours accesses for other employees (Poisson, average 1.5). Each fake access goes to the decoy with probability 0.5, and otherwise to a random employee who is neither the mole nor the decoy.
 - There is a decoy: one innocent, unhappy employee who writes angry messages. The mole is equally likely to be any other employee.
 - Interviews: an innocent answers evasively with probability 0.2. The mole answers evasively with probability 0.2 x 1.3. Asking the same employee about the same topic on the same day gives the same answer.
 - `search_messages` returns at most 20 results.
@@ -61,15 +61,15 @@ The same numbers as above, one per line (some only matter when their feature is 
 - n_days: 14
 - p_leak: 0.75
 - delay_choices: 1, 2, 3
-- leak_damage: 0.06
+- leak_damage: 0.04
 - canary_cost: 0.01
 - canaries_per_day: 1
-- max_variants: 3
+- max_variants: 2
 - restrict_cost_per_day: 0.01
 - actions_per_day: 8
 - tool_call_cap: 300
 - log_rate_benign: 1
-- log_rate_mole: 1.12
+- log_rate_mole: 1.15
 - interview_lr: 1.3
 - p_evasive_innocent: 0.2
 - decoy: on
@@ -79,12 +79,12 @@ The same numbers as above, one per line (some only matter when their feature is 
 - leak_window_days: 3
 - p_after_hours_benign: 0.1
 - p_after_hours_mole: 0.15
-- framing_rate: 1
+- framing_rate: 1.5
 - framing_decoy_share: 0.5
 - docs_per_day: 2, 3, 4
 - wrong_accusation_score: -1
-- p_single_dept_recipients: 0.6
-- doc_recipient_share: 0.6
+- p_single_dept_recipients: 0
+- doc_recipient_share: 0
 - canary_level: 1
 - search_max_results: 20
 - low_recipient_threshold: 3

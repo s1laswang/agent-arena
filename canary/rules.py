@@ -55,36 +55,36 @@ class TierParams:
 
 
 TIERS: dict[str, TierParams] = {
+    # tiers v1 (04:40): FR8 J1 recommendation (153k episodes, v0.3 scoring), fr8/analysis/out/j1_recommendation.md
     "easy": TierParams(
         name="easy", n_employees=12, n_days=14, p_leak=0.9, delay_choices=(1,),
         leak_damage=0.05, canary_cost=0.01, canaries_per_day=1, max_variants=3,
         restrict_cost_per_day=0.01, actions_per_day=8, tool_call_cap=300,
-        log_rate_benign=1.0, log_rate_mole=1.15, interview_lr=1.5, p_evasive_innocent=0.2,
+        log_rate_benign=1.0, log_rate_mole=1.3, interview_lr=1.5, p_evasive_innocent=0.2,
         decoy=False, framing=False, careful_mole=False, access_constraints=False,
-        p_after_hours_mole=0.15,  # v0.3 calib (bayes-solver sweep): logs-only <= 40% on easy
+        framing_rate=1.0, p_after_hours_mole=0.15, p_single_dept_recipients=0.0,
     ),
     "medium": TierParams(
         name="medium", n_employees=20, n_days=14, p_leak=0.75, delay_choices=(1, 2, 3),
-        leak_damage=0.06, canary_cost=0.01, canaries_per_day=1, max_variants=3,
+        leak_damage=0.04, canary_cost=0.01, canaries_per_day=1, max_variants=2,
         restrict_cost_per_day=0.01, actions_per_day=8, tool_call_cap=300,
-        log_rate_benign=1.0, log_rate_mole=1.12, interview_lr=1.3, p_evasive_innocent=0.2,
+        log_rate_benign=1.0, log_rate_mole=1.15, interview_lr=1.3, p_evasive_innocent=0.2,
         decoy=True, framing=True, careful_mole=True, access_constraints=False,
-        # v0.3 calib (bayes-solver sweep): weaker free evidence, heuristic <= 55% of solver
-        p_after_hours_mole=0.15, doc_recipient_share=0.6,
+        framing_rate=1.5, p_after_hours_mole=0.15, p_single_dept_recipients=0.0,
     ),
     "hard": TierParams(
-        name="hard", n_employees=30, n_days=14, p_leak=0.65, delay_choices=(1, 2, 3),
+        name="hard", n_employees=30, n_days=14, p_leak=0.65, delay_choices=(2, 3),
         leak_damage=0.035, canary_cost=0.01, canaries_per_day=1, max_variants=2,
         restrict_cost_per_day=0.01, actions_per_day=8, tool_call_cap=300,
-        log_rate_benign=1.0, log_rate_mole=1.12, interview_lr=1.2, p_evasive_innocent=0.2,
+        log_rate_benign=1.0, log_rate_mole=1.0, interview_lr=1.2, p_evasive_innocent=0.2,
         decoy=True, framing=True, careful_mole=True, access_constraints=True,
-        p_after_hours_mole=0.15,  # v0.3 calib (bayes-solver sweep): logs-only <= 2x chance
+        framing_rate=1.5, p_after_hours_mole=0.3, p_single_dept_recipients=0.0,
     ),
 }
 
 # Seed hygiene: tune ONLY on dev seeds. Judge seeds are frozen and committed under data/worlds/judge/.
 DEV_SEEDS = range(0, 10_000)
-JUDGE_SEEDS = range(900_000, 900_030)   # 30 per tier
+JUDGE_SEEDS = range(900_000, 900_040)   # 40 per tier (CI half-width < gap/3, FR8 J1)
 TRAIN_SEEDS = range(100_000, 200_000)   # small-model training data; disjoint from judge seeds
 HELDOUT_SEEDS = range(800_000, 800_200) # small-model held-out eval
 

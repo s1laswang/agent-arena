@@ -81,6 +81,14 @@ def main():
         from scripts.frontier_day import build_day
         world, team, _ = build_day(a.seat, a.day)
         srv = build_server(world, a.seat, team, a.out)
+        prior = os.environ.get("SLEEPER_PRIOR")
+        if prior and os.path.exists(prior):
+            import asyncio
+            for c in json.load(open(prior)):
+                try:
+                    asyncio.run(srv.call_tool(c["tool"], c["args"] or {}))
+                except Exception:
+                    pass
         atexit.register(srv.finish)
         return srv.run(transport=a.transport)
     world = World(make_day(a.day, a.sleeper_seat, a.goal))

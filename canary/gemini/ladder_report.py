@@ -99,7 +99,7 @@ def load_import(spec: str) -> list[dict]:
             continue
         u = (e.get("meta") or {}).get("usage") or {}
         e["_cell"] = {"model": model, "level": level, "tier": e["tier"], "seed": int(e["seed"]),
-                      "source": f"import:{path}", "run_id": None, "thinking": u.get("out"), "calls": u.get("calls"),
+                      "source": "import:" + str(path).replace(str(Path.home()), "~"), "run_id": None, "thinking": u.get("out"), "calls": u.get("calls"),
                       "in": u.get("in"), "out": None, "cached": u.get("cached_in"), "wall_s": None,
                       "thinking_is_estimate": True,
                       "cost_usd": u.get("cost_usd_est", u.get("cost_usd"))}
@@ -495,8 +495,8 @@ def main(argv=None) -> int:
     probe = None
     if Path(a.probe).exists():
         probe = json.loads(Path(a.probe).read_text()).get("rows")
-    doc = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "git_sha": git_sha(), "runs": str(a.runs),
-           "imports": a.import_cell, "ledger_run_ids": run_ids, "ledger": led_sum, "prices_usd_per_1m": PRICES,
+    doc = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "git_sha": git_sha(), "runs": str(a.runs).replace(str(Path.home()), "~"),
+           "imports": [x.replace(str(Path.home()), "~") for x in a.import_cell], "ledger_run_ids": run_ids, "ledger": led_sum, "prices_usd_per_1m": PRICES,
            "episodes": len(eps), "rows": rows, "reference": ref_rows, "tags": tags, "probe": probe, "figures": []}
     doc["figures"] = [] if a.no_figures else figures(rows, ref_rows, tags, out)
     clean = _nan_to_none(json.loads(json.dumps(doc, default=str)))

@@ -103,6 +103,12 @@ class Job:
         return f"{self.harness}/{self.tier}/{self.seed}"
 
     def cmd(self) -> list[str]:
+        tv = os.environ.get("CANARY_TIERS_OVERRIDE")  # driver run under scripts/with_tiers.py: wrap children too
+        if tv:
+            return self._cmd()[:len(UV)] + ["scripts/with_tiers.py", tv] + self._cmd()[len(UV):]
+        return self._cmd()
+
+    def _cmd(self) -> list[str]:
         if self.harness == "opencode":
             return UV + ["-m", "canary.agents.frontier.opencode_run", "--model", f"google/{self.model}",
                          "--tier", self.tier, "--seeds", str(self.seed), "--jobs", "1", "--retries", "0",

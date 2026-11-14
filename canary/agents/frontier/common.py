@@ -76,7 +76,11 @@ class Server:
             self.log_path = Path(log_dir) / f"server-{self.tier}-{self.seed}.log"
             log = self.log_path.open("w")
         # Own session: avoids process-group signals reaching the server. Plainly visible as canary.mcp_server.
-        self.proc = subprocess.Popen([sys.executable, "-m", "canary.mcp_server"], cwd=str(REPO_ROOT), env=env,
+        cmd = [sys.executable, "-m", "canary.mcp_server"]
+        tv = os.environ.get("CANARY_TIERS_OVERRIDE")  # set by scripts/with_tiers.py: serve a frozen/candidate version
+        if tv:
+            cmd = [sys.executable, str(REPO_ROOT / "scripts" / "with_tiers.py"), tv, "-m", "canary.mcp_server"]
+        self.proc = subprocess.Popen(cmd, cwd=str(REPO_ROOT), env=env,
                                      stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
         if port_dir:
             Path(port_dir).mkdir(parents=True, exist_ok=True)

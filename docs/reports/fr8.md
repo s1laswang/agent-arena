@@ -111,3 +111,12 @@
   - **No reward improvement yet**; a clear protocol/behaviour improvement.
 - **Artifacts:** `data/fr8/j4/run-44397/runs/` (episodes + summaries, committed); the adapter is on the Mac at `data/fr8/j4/run-44397/lora` (gitignored, 91 MB) and on FR8. MLX demo path: `train/README.md`.
 - **Saturday v2:** dense 4k windows + `--oversample-endings 3` on J3 v2 (code merged; needs `make fr8-sync`, then submit; command in `train/README.md`). Also needed: a faster eval (KV cache or MLX) so held-out n ≥ 30 per tier.
+
+## 14:xx status (FR8 relaunch, GPU authorisation)
+- **Blocker: freighter is unreachable from the Mac.** `ssh freighter` → port 22 timeout (3 attempts); `nc -z freighter.fr8.so 22` closed; DNS resolves (194.157.9.46), and general internet works. No jobs submitted, nothing touched. Is it the FR8 VPN/firewall or is the host down? Silas/Momin to check.
+- **Done (untested on FR8, `bash -n` only): WS4 one-shot** `fr8/ws4_submit.sh`: sync, then 3 jobs, each logged in OURS.txt:
+  - train: `j4_train.sbatch`, STAGES=train, j3v14 shards, `--window-mode dense --max-len 4096 --oversample-endings 3`, 800 episodes, 5 h, `--time=07:00:00`;
+  - base eval: `j4_eval.sbatch` (KV reuse), n=30/tier held-out, `--time=03:00:00`, starts immediately;
+  - v2 eval: same, `--dependency=afterok:<train>`, adapter `j4/run-<train>/lora`.
+- **Done (untested): WS3 prep** `fr8/ws3_trl_setup.sh` (TRL into `~/agent-arena-data/pylib-trl` with `--no-deps`, login node) and `fr8/ws3_grpo.sbatch` (1 GPU, fp16, `--time` 6 h, `CHECK_ONLY=1` mode). **`train/grpo_mole.py` is not on any branch yet**; the sbatch assumes `python -m train.grpo_mole --model --out --seed --fp16 --workers N [GRPO_ARGS]`. AGENTS/Momin: please match this or tell me.
+- **Next:** when port 22 opens and Momin confirms sky paused → `bash fr8/ws4_submit.sh`, message the CEO with ids; then TRL setup + `CHECK_ONLY=1` GPU job.

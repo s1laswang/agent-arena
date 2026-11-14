@@ -70,6 +70,60 @@ def test_no_sleeper_days_no_quarantine():
         assert w.company.quarantined == [], seed
 
 
+TESTED = ("controller", "legal", "it_admin", "finance_ap")
+
+
+def seat_strategies(tested):
+    return [s for s in sorted(goals.STRATEGIES.values(), key=lambda x: x.id) if tested in s.needs_seats and set(s.seats) - {tested}]
+
+
+def play_seat(seed, sid, tested, kind):
+    from agents.reference import make_oracle_seat
+    from agents.staff import make_team as staff_team
+    st = goals.STRATEGIES[sid]
+    seat = sorted(set(st.seats) - {tested})[0]
+    goal = goals.make_goal(st.kind, random.Random(seed), seed_company(seed))
+    st = st.model_copy(update={"steps": [x.model_copy(update={"tick": max(0, x.tick - SHIFT)}) for x in st.steps]})
+    day = make_day(seed, seat).model_copy(update={"goal": goal, "ticks": TICKS})
+    extra = st.render_tickets(goal.target)
+    if extra:
+        day = day.model_copy(update={"tickets": list(day.tickets) + extra})
+    team = staff_team(day, seed, kind="scripted")
+    if kind == "oracle":
+        team[tested] = make_oracle_seat(day, tested)
+    elif kind == "procedure":
+        from agents.procedure import make_procedure_team
+        team[tested] = make_procedure_team(scrub(day), seed=seed)[tested]
+    team[seat] = SleeperAgent(seat, goal, st, random.Random(seed))
+    w = run_day(day, team)
+    r = score(day, w.initial, w.company, w.ledger, agent=kind, seat_under_test=tested)
+    return {"reward": r.reward, "harm": len(r.harm), "fq": len(r.false_quarantine), "caught": r.sleeper_caught}
+
+
+def seat_matrix(kinds, seeds=range(5), seats=TESTED):
+    lines = []
+    for tested in seats:
+        for st in seat_strategies(tested):
+            cells = []
+            for k in kinds:
+                rs = [play_seat(sd, st.id, tested, k) for sd in seeds]
+                cells.append("%s r%d h%d fq%d" % (k[:4], sum(r["reward"] for r in rs), sum(r["harm"] > 0 for r in rs), sum(r["fq"] > 0 for r in rs)))
+            lines.append("%-11s %-34s " % (tested, st.id) + " | ".join(cells) + " (of %d)" % len(list(seeds)))
+    return "\n".join(lines)
+
+
+def test_seat_matrix_runs():
+    kinds = ["staff", "oracle"]
+    try:
+        import agents.procedure
+        kinds.insert(1, "procedure")
+    except ImportError:
+        pass
+    out = seat_matrix(kinds, range(2))
+    assert out
+    print(out)
+
+
 def matrix(kinds=("staff", "procedure", "oracle"), seeds=range(10)):
     rows = []
     for sid in goals.STRATEGIES:
@@ -101,4 +155,8 @@ def test_matrix_runs():
 
 
 if __name__ == "__main__":
-    print(format_matrix(matrix(), 10))
+    import sys
+    if "seat" in sys.argv:
+        print(seat_matrix(["staff", "procedure", "oracle"] if __import__("importlib").util.find_spec("agents.procedure") else ["staff", "oracle"]))
+    else:
+        print(format_matrix(matrix(), 10))

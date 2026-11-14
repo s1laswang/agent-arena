@@ -170,10 +170,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seeds", default="dev20", help="N (0..N-1) | dev20 | judge | a-b | a,b,c")
     ap.add_argument("--provider", default="template")
     ap.add_argument("--out", default="data/runs")
-    ap.add_argument("--reproduce", action="store_true")
+    ap.add_argument("--reproduce", action="store_true",
+                    help="judge table on the frozen judge seeds (see canary/reproduce.py)")
+    ap.add_argument("--repro-seeds", type=int, default=None,
+                    help="with --reproduce: seeds per tier (default all JUDGE_SEEDS; env REPRO_SEEDS / REPRO_FAST=1)")
+    ap.add_argument("--results-dir", default="results", help="with --reproduce: output directory")
     a = ap.parse_args(argv)
     if a.reproduce:
-        print("TODO: --reproduce (judge table on frozen judge seeds) is not implemented yet")
+        from .reproduce import reproduce
+        reproduce(a.repro_seeds, a.results_dir)
         return 0
     tiers = list(TIERS) if a.tier == "all" else [a.tier]
     try:

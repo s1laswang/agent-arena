@@ -25,7 +25,9 @@ document, and accuses. A real hole therefore shows up as reward > 0, not only in
 The probe never reads /solution (the oracle's vendored files, which an agent never has).
 
 Output: one JSON report on stdout and at <root>/logs/agent/cheat.json with every attempt, what came back,
-and `holes` (attempts that got anything). Exit code 0 either way: the trial's reward is the verdict.
+and `holes` (attempts that got anything). Exit code 0 when the probe ran; the trial's reward is the verdict.
+Exit code 2 when it could not run (sidecar unreachable, MCP initialize failed): solve.sh then fails and
+Harbor reports an exception, so a probe that tested nothing never looks like a clean 0.
 Stdlib only (urllib + canary.redteam.mcp_client), so it also runs before any pip install.
 """
 from __future__ import annotations
@@ -66,6 +68,7 @@ class Report:
         self.attempts: dict[str, dict[str, dict]] = {}
         self.holes: list[str] = []
         self.exploit: dict[str, Any] = {"used": False}
+        self.incomplete: str | None = None   # set when the probe could not run; main() then exits 2
 
     def add(self, family: str, name: str, *, hole: bool = False, **info: Any) -> None:
         self.attempts.setdefault(family, {})[name] = {"hole": bool(hole), **info}
@@ -73,7 +76,8 @@ class Report:
             self.holes.append(f"{family}.{name}")
 
     def as_dict(self) -> dict:
-        return {"agent": "cheat", "holes": self.holes, "n_attempts": sum(len(v) for v in self.attempts.values()),
+        return {"agent": "cheat_probe", "holes": self.holes, "incomplete": self.incomplete,
+                "n_attempts": sum(len(v) for v in self.attempts.values()),
                 "exploit": self.exploit, "attempts": self.attempts}
 
 
@@ -359,6 +363,8 @@ def run(url: str, root: Path, loop_seconds: int) -> dict:
     rep = Report()
     base = base_of(url)
     leak_req = attack_routes(base, rep)
+    if all(a.get("status") == 0 for a in rep.attempts.get("routes", {}).values()):
+        rep.incomplete = f"sidecar unreachable: every HTTP attempt to {base} failed to connect"
     for t in attack_secrets(root, rep):
         req = ("GET", f"{base}/ledger?token={urllib.parse.quote(t)}", None, None)
         code, _ = _http(*req)
@@ -371,8 +377,9 @@ def run(url: str, root: Path, loop_seconds: int) -> dict:
     c = MCPClient(url)
     try:
         init = c.initialize()
-    except MCPError as e:
+    except (MCPError, OSError) as e:
         rep.add("mcp", "initialize", result=f"error: {e}")
+        rep.incomplete = rep.incomplete or f"MCP initialize failed: {_short(str(e))}"
         return rep.as_dict()
     ids = attack_mcp(c, rep)
 
@@ -400,8 +407,11 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as e:  # noqa: BLE001
         print(f"could not write {out}: {e}", file=sys.stderr)
     print(json.dumps(report, indent=1, sort_keys=True))
-    print(f"cheat: {report['n_attempts']} attempts, holes: {report['holes'] or 'none'}"
+    print(f"cheat_probe: {report['n_attempts']} attempts, holes: {report['holes'] or 'none'}"
           + (f", exploit: {report['exploit']}" if report["exploit"].get("used") else ""), file=sys.stderr)
+    if report["incomplete"]:
+        print(f"cheat_probe: DID NOT RUN ({report['incomplete']}); this trial tested nothing", file=sys.stderr)
+        return 2
     return 0
 
 

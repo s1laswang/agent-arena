@@ -43,6 +43,7 @@ def test_cheat_finds_no_hole_and_scores_zero(tmp_path):
     finally:
         srv.stop()
     assert rep["holes"] == [], rep["holes"]
+    assert rep["incomplete"] is None
     assert not rep["exploit"]["used"]
     assert set(rep["attempts"]) >= {"routes", "secrets", "files", "mcp", "accuse"}
     assert rep["n_attempts"] >= 100
@@ -68,6 +69,22 @@ def test_cheat_turns_a_leaked_token_into_reward(tmp_path):
     assert rep["exploit"]["used"] and rep["exploit"].get("accused"), rep["exploit"]
     assert led["accused"] == rep["exploit"]["accused"]
     assert led["correct"] and led["score"] > 0, led
+
+
+def test_unreachable_server_is_a_failure_not_a_clean_zero(tmp_path):
+    """A probe that could not reach the server tested nothing: exit 2 (solve.sh fails, Harbor shows an
+    exception) instead of exit 0 and a reward of 0 that looks like 'no hole'."""
+    import socket
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]          # closed again when the block ends: nothing listens there
+    env = {k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}
+    p = subprocess.run([sys.executable, "-m", "canary.redteam.harbor_cheat", "--url", f"http://127.0.0.1:{port}/mcp",
+                        "--root", str(tmp_path), "--loop-seconds", "0"], capture_output=True, text=True, env=env,
+                       cwd=ROOT, timeout=600)
+    assert p.returncode == 2, (p.returncode, p.stderr[-500:])
+    rep = json.loads((tmp_path / "logs/agent/cheat.json").read_text(encoding="utf-8"))
+    assert rep["incomplete"] and rep["holes"] == []
 
 
 def test_solve_sh_routes_cheat_and_build_vendors_it():

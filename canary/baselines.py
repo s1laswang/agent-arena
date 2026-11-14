@@ -301,6 +301,13 @@ class LogsMinusDecoy(ScriptedPolicy):
         yield ("accuse", {"employee": _argmax(c, [e for e in emps if e != decoy] or emps, self.rng)})
 
 
+class LogsOnly(LogsMinusDecoy):
+    """CEO-tracked bound (EXPLOITS #10): the strongest no-canary log reader (waits 9 days).
+    Must stay ≤40% correct on easy and ≤2x chance on medium/hard."""
+    name = "logs_only"
+    wait = 9
+
+
 BASELINES: dict[str, type[ScriptedPolicy]] = {
     "do_nothing": DoNothing,
     "stop_early": StopEarly,
@@ -311,6 +318,7 @@ BASELINES: dict[str, type[ScriptedPolicy]] = {
     "accuse_most_logs": AccuseMostLogs,
     "obvious_heuristic": ObviousHeuristic,
     "logs_minus_decoy": LogsMinusDecoy,
+    "logs_only": LogsOnly,
 }
 
 

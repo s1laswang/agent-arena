@@ -122,3 +122,15 @@ def test_stop_early_negative(tier):
         pytest.xfail("v0 stop-early lottery (EXPLOITS #1)")
     m = statistics.mean(_run("stop_early", tier, range(50)))
     assert m < 0, (tier, m)
+
+
+LOGS_ONLY_MAX_ACC = {"easy": 0.40, "medium": 2.0 / 20, "hard": 2.0 / 30}  # CEO decision 03:00
+
+
+@pytest.mark.parametrize("tier", ["easy", "medium", "hard"])
+@pytest.mark.xfail(strict=False, reason="EXPLOITS #10: logs alone identify the mole (open, ENV recalibration)")
+def test_logs_only_bound(tier):
+    """logs_only (no canaries, wait 9 days) accuracy over 100 dev seeds stays under the CEO bound."""
+    scores = _run("logs_only", tier, range(100))
+    acc = sum(x > 0 for x in scores) / len(scores)
+    assert acc <= LOGS_ONLY_MAX_ACC[tier], (tier, acc)

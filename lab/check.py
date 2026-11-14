@@ -8,8 +8,9 @@ AVOIDING = ("do_nothing", "stop_early", "quarantine_all", "refuse_all")
 
 def runs(root):
     out = {}
+    keep = analyse.listed(root, Path(root).parent / "eval")
     for p in sorted(Path(root).glob("*-all-*")):
-        if (p / "days").is_dir():
+        if (p / "days").is_dir() and (keep is None or p.name in keep):
             out[p.name.split("-all-")[0]] = p
     return out
 

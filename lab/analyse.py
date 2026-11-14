@@ -303,6 +303,19 @@ def report(days, fls):
 CACHE = {}
 
 
+def listed(*roots):
+    for r in roots:
+        p = Path(r) / "summary.json"
+        if p.exists():
+            try:
+                x = json.loads(p.read_text()).get("run_dirs")
+            except (ValueError, AttributeError):
+                x = None
+            if x:
+                return {Path(n).name for n in x}
+    return None
+
+
 def load(run_dir):
     run_dir = Path(run_dir)
     files = sorted((run_dir / "days").glob("*.json"))

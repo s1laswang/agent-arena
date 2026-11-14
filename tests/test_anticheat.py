@@ -67,6 +67,23 @@ def test_plus_probes_never_beat_the_solver(battery):
         assert r["extra"].get("max_accusations_accepted", 0) <= 1, r
 
 
+def test_plus_probe_preempted_by_horizon_is_not_above_solver():
+    """A wrong solver accusation on the LAST day (-1), then a plus probe whose extra advance_day reaches the
+    horizon first: the probe never replays the accusation (score 0). That is abstaining, not an exploit, so it
+    counts as preempted, not as "above the solver" (it failed make reproduce on an honest secret, medium 900017)."""
+    from canary.eval import make_env
+    from canary.rules import TIERS
+    env = make_env("medium", 0)
+    wrong = next(e for e in ac._ids(env) if e != env._world.mole)
+    actions = [("advance_day", {})] * (TIERS["medium"].n_days - 1) + [("accuse", {"employee": wrong})]
+    assert ac.replay_actions("medium", 0, actions).score() == -1.0
+    out = ac.plus_envs("medium", 0, actions)
+    w_env, n_ok, _, preempted = out["solver_plus_wait_a_day"]
+    assert preempted and n_ok == 0 and w_env.score() == 0.0
+    r_env, n_ok, _, preempted = out["solver_plus_read_spam"]
+    assert not preempted and n_ok == 1 and r_env.score() == -1.0
+
+
 def test_control_equals_solver(battery):
     solver = {r["tier"]: r for r in battery["rows"] if r["probe"] == "solver"}
     for r in [r for r in battery["rows"] if r["probe"] == ac.CONTROL]:

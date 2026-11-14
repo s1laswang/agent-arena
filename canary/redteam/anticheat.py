@@ -348,9 +348,14 @@ def cut_guess_scores(tier: str, seed: int, n_calls: int) -> dict[str, float]:
     return out
 
 
-def plus_envs(tier: str, seed: int, actions) -> dict[str, tuple[Any, int, int]]:
+def plus_envs(tier: str, seed: int, actions) -> dict[str, tuple[Any, int, int, bool]]:
     """Solver trajectory with one extra step before its final accuse.
-    Returns name -> (env, accusations accepted, extra plant_canary calls accepted)."""
+    Returns name -> (env, accusations accepted, extra plant_canary calls accepted, preempted).
+
+    preempted: the solver accused, but the extra steps ended the episode first (an extra advance_day on the
+    last day reaches the horizon), so the solver's accusation was never replayed and the probe tested nothing
+    on that seed. Without this, a wrong last-day solver accusation (-1) made the unaccused probe (0) count as
+    "above the solver" and failed the battery on an honest secret (medium judge seed 900017, 14 Nov 23:44)."""
     acc = [i for i, (t, _) in enumerate(actions) if t == "accuse"]
     # a solver episode with no accusation (horizon / cap) gets the extra step at its end and no accuse
     head, final = (actions[: acc[-1]], actions[acc[-1]]) if acc else (list(actions), None)
@@ -366,11 +371,12 @@ def plus_envs(tier: str, seed: int, actions) -> dict[str, tuple[Any, int, int]]:
             r = env.call(tool, args)
             canary_ok += int(tool == "plant_canary" and r.ok)
         n_ok = 0
-        if final is not None:
+        preempted = final is not None and env.done
+        if final is not None and not preempted:
             n_ok = int(env.call(*final).ok)
             if name == "solver_plus_accuse_twice":
                 n_ok += int(env.call(*final).ok)
-        out[name] = (env, n_ok, canary_ok)
+        out[name] = (env, n_ok, canary_ok, preempted)
     return out
 
 
@@ -427,9 +433,12 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
             rec(tier, CONTROL, seed, c.score(), {"drift": abs(c.score() - s_score) > 1e-9})
             for name, sc in cut_guess_scores(tier, seed, len(actions)).items():
                 rec(tier, name, seed, sc)
-            for name, (env, n_ok, canary_ok) in plus_envs(tier, seed, actions).items():
-                rec(tier, name, seed, env.score(), {"above_solver": env.score() > s_score + 1e-9,
-                                                     "accusations_accepted": n_ok, "extra_canary_accepted": canary_ok})
+            for name, (env, n_ok, canary_ok, preempted) in plus_envs(tier, seed, actions).items():
+                extra = {"above_solver": (not preempted) and env.score() > s_score + 1e-9,
+                         "accusations_accepted": n_ok, "extra_canary_accepted": canary_ok}
+                if preempted:   # key only when it happens, so committed rows without it stay byte-identical
+                    extra["preempted_by_horizon"] = 1
+                rec(tier, name, seed, env.score(), extra)
 
     rows = []
     solver_mean = {t: _stats(d["scores"])[0] for (t, nm), d in per.items() if nm == "solver"}

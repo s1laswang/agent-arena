@@ -518,7 +518,12 @@ def table_md(rows: list[Row], header: dict[str, Any]) -> str:
             out += [_row_md(r, sol.get(tier)) for r in paired]
         for version, heading, grp in reported_groups(reported, cur):
             out += ["", f"{heading}:", "", COLS]
-            out += [_row_md(r, sol.get(tier), compare=(version == cur)) for r in grp]
+            out += [_row_md(r, sol.get(tier), compare=False) for r in grp]
+            if version == cur:
+                out += ["", f"`/ solver` is blank for reported runs: they were played on dev seeds under the team's "
+                        f"secret, so a ratio to this invocation's judge-world solver would mislead. The paired ratios "
+                        f"(same seeds as the solver) are in `data/runs/committed/{cur}/paired_table_gemini.md` "
+                        f"and `docs/reports/gap.md`."]
     return "\n".join(out) + "\n"
 
 

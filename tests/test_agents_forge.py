@@ -124,3 +124,32 @@ def test_hof_round_trips_through_dsl(tmp_path):
     for h in hof:
         s = MoleStrategy.from_json(h["strategy_json"])
         assert validate_strategy(s.to_json()) == h["strategy_json"]
+
+
+def test_hinted_heuristic_beats_heuristic_on_hard():
+    from canary.baselines import Heuristic, play
+    from canary.env import Env
+    from canary.forge.fitness import default_investigators
+    from canary.forge.investigators import HintedHeuristic
+    assert set(default_investigators()) == {"heuristic", "hinted_heuristic"}
+    h = sum(play(Env("hard", s), Heuristic(seed=s)) for s in range(8))
+    hh = sum(play(Env("hard", s), HintedHeuristic(seed=s)) for s in range(8))
+    assert hh > h
+
+
+def test_validate_with_stub_llm(tmp_path):
+    from canary.forge import validate as V
+    from canary.llm.stub import StubClient
+    hof = tmp_path / "hall_of_fame.jsonl"
+    s = {"rules": [], "default": {"leak": "random_seeded", "frame": "decoy"}}
+    hof.write_text(json.dumps({"rank": 1, "fitness": 0.5, "strategy_json": s}) + "\n")
+
+    def factory():
+        return StubClient(script=[{"tool_calls": [{"name": "accuse", "args": {"employee": "e00"}}]}])
+    rep = V.main(["--hof", str(hof), "--top", "1", "--agent", "stub", "--seeds", "0-1", "--tier", "hard",
+                  "--out", str(tmp_path / "v.json")], client_factory=factory)
+    assert [m["mole"] for m in rep["moles"]] == ["default", "hof1"]
+    for m in rep["moles"]:
+        assert m["solver_acc"] >= 0.5 and all(e["error"] is None for e in m["episodes"])
+        assert m["agent_score"] in (-1.0, ) or m["agent_score"] <= 1.0
+    assert (tmp_path / "v.json").exists()

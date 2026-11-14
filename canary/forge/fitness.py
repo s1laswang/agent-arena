@@ -170,14 +170,13 @@ class ClassFactory:
 
 
 def default_investigators() -> dict[str, Callable]:
+    """heuristic = canary.baselines.Heuristic (bisection, gambles at deadline; stronger than ObviousHeuristic);
+    hinted_heuristic = canary.forge.investigators.HintedHeuristic (evidence-only, never gambles)."""
     inv = {}
-    for name, names, kw in [("heuristic", ["HeuristicPolicy", "Heuristic", "ObviousHeuristic"], {}),
-                            ("hinted_heuristic", ["HintedHeuristic", "HintedHeuristicPolicy"], {})]:
-        cls = _find("canary.baselines", names)
-        if cls is not None:
-            inv[name] = ClassFactory("canary.baselines", cls.__name__, **kw)
-    if not inv:
-        raise RuntimeError("no heuristic investigator in canary.baselines (need HeuristicPolicy)")
+    cls = _find("canary.baselines", ["Heuristic", "HeuristicPolicy", "ObviousHeuristic"])
+    if cls is not None:
+        inv["heuristic"] = ClassFactory("canary.baselines", cls.__name__)
+    inv["hinted_heuristic"] = ClassFactory("canary.forge.investigators", "HintedHeuristic")
     return inv
 
 

@@ -42,10 +42,10 @@ fi
 
 for s in $STAGES; do case $s in
   pilot)
-    $PY -m train.lora_sft --data "$DATA" --out "$RUN/pilot" --model "$MODEL" --pilot $EPI \
+    $PY -m train.lora_sft --data "$DATA" --out "$RUN/pilot" --model "$MODEL" --pilot $EPI ${TRAIN_ARGS:-} \
         --pilot-steps 5 --epochs "${EPOCHS:-1}" --max-steps "${MAX_STEPS:-0}" ;;
   train)
-    $PY -m train.lora_sft --data "$DATA" --out "$RUN/lora" --model "$MODEL" $EPI \
+    $PY -m train.lora_sft --data "$DATA" --out "$RUN/lora" --model "$MODEL" $EPI ${TRAIN_ARGS:-} \
         --epochs "${EPOCHS:-1}" --max-steps "${MAX_STEPS:-0}" --max-hours "${TRAIN_HOURS:-3.5}" ;;
   eval)
     for m in base "$RUN/lora"; do

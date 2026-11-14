@@ -1,11 +1,11 @@
-"""Harbor `ORACLE_POLICY=cheat` probe (canary/redteam/harbor_cheat.py) against the real MCP server (INTEGRITY).
+"""Harbor `ORACLE_POLICY=cheat_probe` probe (canary/redteam/harbor_cheat.py) against the real MCP server (INTEGRITY).
 
 * On a correctly set up server the probe finds no hole, nobody is accused, and the ledger score (the
   trial's reward) stays exactly 0.
 * Positive control: plant one hole (the ledger token readable on disk, as if the sidecar shared a volume)
   and the probe must turn it into a correct accusation and a reward > 0. So a "0" from the Harbor run
   means "no hole", not "the probe never tried".
-* solve.sh must route ORACLE_POLICY=cheat to the probe, and build.py must vendor it into /solution.
+* solve.sh must route ORACLE_POLICY=cheat_probe to the probe, and build.py must vendor it into /solution.
 """
 from __future__ import annotations
 
@@ -72,7 +72,8 @@ def test_cheat_turns_a_leaked_token_into_reward(tmp_path):
 
 def test_solve_sh_routes_cheat_and_build_vendors_it():
     sh = (ROOT / "harbor/template/solution/solve.sh").read_text(encoding="utf-8")
-    assert '"$AGENT" = "cheat"' in sh and "canary.redteam.harbor_cheat" in sh
+    assert '"$AGENT" = "cheat_probe"' in sh and "canary.redteam.harbor_cheat" in sh
+    assert '"$AGENT" = "cheat"' in sh and "/solution/cheat.py" in sh   # the accuse-everyone cheat stays
     spec = importlib.util.spec_from_file_location("harbor_build", ROOT / "harbor/build.py")
     build = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(build)

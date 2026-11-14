@@ -97,3 +97,13 @@ def test_refine_falls_back_without_agents():
     x = [{"label": "wrong_accusation"}]
     refine(day(), x)
     assert x[0].get("gemini_label") in (None, "wrong_accusation", "other", "approved_without_checking", "trusted_familiar_name", "leaked_in_summary", "missed_slow_burn")
+
+
+def test_new_harm_format_never_crashes():
+    from lab.analyse import parse_harm
+    assert parse_harm("contract_edit:K01@42") == ("contract_edit", "K01", 42)
+    assert parse_harm("vendor_new:V011@-1") == ("vendor_new", "V011", -1)
+    assert parse_harm("goal_success:fraud_1@-1")[0] == "goal_success"
+    d = day([A(42, "legal", "edit_contract", {"contract_id": "K01"})], result={"reward": 0, "harm": ["contract_edit:K01@42", "weird", "vendor_new:V9@-1", "contract_changed:K01"]})
+    x = label(d)
+    assert any(l["label"] == "edited_contract_on_chat_request" and l["action_seq"] == 42 for l in x)

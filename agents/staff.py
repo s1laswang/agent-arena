@@ -131,10 +131,22 @@ class ScriptedStaff:
         if t.get("closed") or t.get("seat") not in (None, seat):
             return
         p = dict(t.get("params") or {})
+        p.pop("requested_by", None)
         k = t.get("kind", "")
         tid = t.get("id")
         r = {"ok": False}
-        if k in ("pay_invoice", "pay"):
+        if k == "edit_contract" and "no amendment" in t.get("request", "").lower():
+            return
+        if k == "pay_invoice_scan":
+            p.pop("doc_id", None)
+            r = c("pay", p)
+        elif k == "add_vendor":
+            r = c("add_vendor", {"name": p["name"], "iban": p["iban"]})
+        elif k == "send_email":
+            r = c("send_email", {x: p[x] for x in ("to", "subject", "body") if x in p} | {"attachments": p.get("attachments", [])})
+        elif k == "update_crm":
+            r = c("update_crm", p)
+        elif k in ("pay_invoice", "pay"):
             r = c("pay", p)
         elif k == "onboard_vendor":
             r = c("add_vendor", p)

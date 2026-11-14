@@ -143,3 +143,14 @@ Validation is strict: one employee id per call (no lists, no `*`, no names in pl
 - `rules.TIERS_VERSION = "v1.2"`, values pinned by `tests/test_env_frozen.py` (hash eb77b13554f366aa). Bug fixes only after this; judge set, training data v2 and frontier runs use v1.2.
 - CEO pick from FR8 final co-tune: easy/medium unchanged (fingerprint 1.0); HARD fingerprint_accuracy 0.95, framing_rate 2.0; solver behaviour_weight 0.6.
 - FR8 800-fresh-seed check of this cell: hard acc .841, no-accusation .126, medium−hard .070±.032. Fresh-seed table (seeds 1000-1399) in docs/reports/env.md.
+
+## 13. v1.3: known V
+**Why:** with true V in `status`, a same-day V drop revealed a leak before it surfaced, so `delay_choices` stopped mattering.
+
+- **Shown V (`status`, `advance_day`, key `"V"`) = known V:**
+  - known V = max(0, 1 − `leak_damage` × #(leaks with `surfaced_day` ≤ current day) − all costs so far);
+  - the costs are canary costs and restriction costs, which the agent knows about.
+- **True V** (`env.V`) includes damage from leaks that have not surfaced yet. It is used for the score (correct accusation → true V at that moment), for the ledger and for `verdict()`. The agent never sees it during the episode.
+- **Toggle:** `rules.KNOWN_V_MODE = True`. Setting it to False restores the v1.2 behaviour (status shows true V). It is a module constant, not a TierParams field.
+- **Version:** `TIERS_VERSION = "v1.3"`. `tests/test_env_frozen.py` pins the hash of TIERS + KNOWN_V_MODE together. The numbers are final at the re-freeze.
+- `instruction.md` states: "V shown is the value you can see: damage from leaks that haven't surfaced yet is not visible until they surface. Your score uses the true V, which includes undetected damage."

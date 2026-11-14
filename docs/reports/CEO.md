@@ -93,3 +93,16 @@
   - frontier rows pending AGENTS commit;
   - hard_forge not a headline until validated vs gpt-5.5.
 - `make play` human playtest CLI (ENV, 309f8c1); INTEGRITY verified peek_status is unreachable via MCP and play refuses judge seeds (449 passed).
+
+## 03:30 Grok agent matches the solver on v1.2 -> v1.3 prepared on a branch
+- Kill source found: ~/canary-eval/client/start ran `pkill -f canary.mcp_server` per episode (a local Grok evaluation bot; finished at 03:01).
+- Grok over MCP, v1.2 judge seeds 900000-4: medium 0.672, hard 0.567, 9/9 correct + 1 abstention (P~.53 < 1/(1+V)). That is >= the solver (~0.62 / ~0.55). Tactics:
+  - TRUE V in status reveals the leak timing instantly, so the delay is irrelevant and restriction probing works;
+  - recipient intersection narrows to a department, then tiny 1-per-variant canaries;
+  - an explicit EV threshold.
+- Plan v1.3 (branch, merge gated on the gpt-5.5 v1.2 results ~03:50):
+  - status shows KNOWN V only (unsurfaced damage hidden; the true V is scored);
+  - solver gains restriction probing + a tiny-canary endgame;
+  - a `grok_tactics` scripted baseline;
+  - FR8 recal; re-freeze as v1.3.
+- OpenCode ChatGPT credits depleted (resets in ~6 days); the judges-shape run uses Codex gpt-5.5 over MCP. MCP parity verified.

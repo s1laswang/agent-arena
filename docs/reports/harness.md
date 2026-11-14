@@ -17,3 +17,7 @@
 - SALT will NOT be committed (public repo + internet in agent containers = answer key). `make reproduce` uses one random secret per invocation shared by all its runs (paired comparison; statistical repro, exact with CANARY_WORLD_SECRET) → repro engineer, plus a fixed-secret two-subprocess determinism test. Harbor bakes a build-time secret into the server image only (harbor/build.py, never committed) → harbor engineer.
 - Solver guard + 1.9 GB root-cause → ENV. Public env.verdict() → ENV.
 - QA follow-up for me: the README must state expected numbers as mean ± CI (not exact), and the fresh-clone check must verify the gap holds across two different secrets.
+
+## 02:55 P1 resolved (not a solver bug)
+- Root cause (verified): `parse_seeds('900003')` returns `range(900003)`, because a bare integer means "N seeds". `--seeds 900003` therefore queues 900,003 episodes. Reproduced 6/6 (60 s timeout, about 1 GB RSS). run_episode itself is fine. Fix + test routed to the repro engineer via the CEO; ENV told to stand down.
+- The fresh-clone check moves to about 05:00 (clock correction).

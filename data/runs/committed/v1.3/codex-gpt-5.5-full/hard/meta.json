@@ -1,0 +1,50 @@
+{
+ "agent": "codex:gpt-5.5",
+ "model": "gpt-5.5",
+ "provider": "codex",
+ "harness": "frontier-cli+mcp_server",
+ "steps_source": "agent_transcript",
+ "tier": "hard",
+ "tiers_version": "v1.3",
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "planned_seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "status": "complete",
+ "git_sha": [
+  "1724a48ed4350fdf8f7cb43bd18532044a24d44e",
+  "4877978b52301af19f9b9244448acd793e5db339"
+ ],
+ "smoke": false,
+ "hint": null,
+ "usage": {
+  "in": 19666813,
+  "cached_in": 18795648,
+  "out": 91869,
+  "cost_usd_est": 16.5097,
+  "cost_usd_upper": 101.0901
+ },
+ "pricing": "gpt-5.5 list prices per 1M tokens: input $5.00, cached input $0.50, output $30.00 (<272K context), verified on developers.openai.com/api/docs/pricing on 2026-11-14. cost_usd_est bills cached input at $0.50; the upper bound bills all input at $5.00.",
+ "provenance": "scripts/budget_runner.py (one episode per process, budget-guarded), merged by scripts/merge_staging.py",
+ "invalid_episodes": []
+}

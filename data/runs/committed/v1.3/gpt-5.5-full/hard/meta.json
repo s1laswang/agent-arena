@@ -1,0 +1,49 @@
+{
+ "agent": "openai:gpt-5.5",
+ "model": "gpt-5.5",
+ "provider": "openai",
+ "context": "full",
+ "reasoning_effort": "medium",
+ "reasoning_effort_source": "default: Codex 0.167 models catalog default_reasoning_level for gpt-5.5",
+ "api": "responses",
+ "tier": "hard",
+ "tiers_version": "v1.3",
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6
+ ],
+ "planned_seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "status": "INCOMPLETE: seeds [7, 8, 9] not run (budget stop)",
+ "git_sha": [
+  "1724a48ed4350fdf8f7cb43bd18532044a24d44e",
+  "4877978b52301af19f9b9244448acd793e5db339"
+ ],
+ "smoke": false,
+ "hint": null,
+ "usage": {
+  "in": 7462404,
+  "cached_in": 6757632,
+  "out": 72336,
+  "cost_usd_est": 9.0728,
+  "cost_usd_upper": 39.4821
+ },
+ "pricing": "gpt-5.5 list prices per 1M tokens: input $5.00, cached input $0.50, output $30.00 (<272K context), verified on developers.openai.com/api/docs/pricing on 2026-11-14. cost_usd_est bills cached input at $0.50; the upper bound bills all input at $5.00.",
+ "provenance": "scripts/budget_runner.py (one episode per process, budget-guarded), merged by scripts/merge_staging.py",
+ "invalid_episodes": []
+}

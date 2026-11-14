@@ -42,3 +42,9 @@
 - Story: medium = "fair tier, frontier ~ reference"; the headline gap is on hard + Forge-evolved moles (difficulty curve).
 - FR8 J1 sweeps fingerprint_accuracy x leak_damage. J5 forge (stub) runs pop 24 x 500 gens; its moles must be re-validated after the freeze.
 - OpenCode login only accepts gpt-5.6-sol, so it is used for the harness-shape runs (labelled). Morning: Silas adds OpenCode API-key auth for gpt-5.5 parity.
+
+## 04:10
+- Merged 54e1fa4: tiers v1 (FR8 J1: medium solver .54/acc .93 vs heuristic -.18/acc .50; hard solver .60/acc .95 vs heuristic -.26), JUDGE_SEEDS 40/tier, v0.5 fail-closed (fresh in-memory secret per server start; no committed world files containing the mole). v0.4 knobs present, defaults off. CEO run: 321 passed, 8 xpassed (INTEGRITY is flipping them to strict).
+- AGENTS accusation audit: every gpt-5.5 accusation on the old tiers had P(accused)=1.00 under the solver belief; it accused ~1.5 days earlier than the solver on hard. ENV is diagnosing (certainty day vs accuse day): tuned tau + EV guard + daily pipelined canaries, ETA ~05:10. The solver robustness to random DSL moles dropped to 70% on medium (test relaxed to 0.65 until that fix).
+- gpt-5.5 on tiers v1 (10 medium + 10 hard, dev seeds) started.
+- HARNESS head still idle; a CEO-launched mcp-server engineer is building eval.run_episode + mcp_server.

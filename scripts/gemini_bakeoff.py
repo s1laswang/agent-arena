@@ -889,6 +889,9 @@ def play_job(job: Job, *, make_client: Callable[[str], Any], make_env: Callable[
                             rules_version=rules_version, reason=reason, secrets=secrets)
         rec["traceback"] = scrub_text(traceback.format_exc().splitlines()[-1], secrets)
     write_json(path, rec, secrets)
+    print(scrub_text(f"[{time.strftime('%H:%M:%S')}] episode {job.agent} {job.tier} {job.seed} "
+                     f"valid={rec.get('valid')} score={rec.get('score')} reason={rec.get('invalid_reason') or rec.get('reason') or ''}"[:400],
+                     secrets), flush=True)
     if not rec["valid"]:
         side = job.root / "invalid" / f"{_slug(job.agent)}-{job.tier}-{job.seed}-{time.strftime('%H%M%S')}.json"
         write_json(side, rec, secrets)
@@ -988,6 +991,8 @@ def run_bakeoff(
     dry_run: bool = False,
     fail_on: set[tuple[str, int]] | None = None,
     lessons_bias: str | None = None,
+    skip_grid: bool = False,
+    skip_pro: bool = False,
 ) -> dict:
     rules_version = current_rules_version()
     secrets = list(secrets) if secrets is not None else _secrets_from_env()
@@ -996,6 +1001,8 @@ def run_bakeoff(
     out.mkdir(parents=True, exist_ok=True)
     catalog = FIXTURE_CATALOG if catalog is None else catalog
     selected = select_models(catalog, max_small=max_small)
+    if skip_pro:
+        selected = [m for m in selected if m["role"] != "pro"]
     seeds = bakeoff_seeds(n)
     pro_seed_n = n if pro_n is None else pro_n
     if pro_seed_n < 1 or pro_seed_n > n:
@@ -1034,6 +1041,8 @@ def run_bakeoff(
                 continue
             jobs.extend(jobs_for(bake_root, "model", f"gemini:{model['id']}", model["role"], model["id"], tier, model_seeds))
 
+    if skip_grid:
+        jobs = [j for j in jobs if j.kind == "baseline"]
     records = _reuse_or_run(jobs, slots, resume, **kw)
 
     solver_by_key = {(r["tier"], int(r["seed"])): float(r["score"]) for r in records
@@ -1056,7 +1065,7 @@ def run_bakeoff(
         tie_root = out / "tiebreaker"
         train_jobs = jobs_for(tie_root, "tie-train", f"gemini:{tie_model}", "flash-lite-train", tie_model,
                               tie_tier, train_seeds)
-        train_recs = [play_job(job, **kw) for job in train_jobs]
+        train_recs = _reuse_or_run(train_jobs, slots, resume, **kw)
         lessons = distill_lessons(train_recs, model=tie_model, train_seeds=train_seeds, eval_seeds=held_seeds,
                                   rules_version=rules_version, secrets=secrets)
         (tie_root).mkdir(parents=True, exist_ok=True)
@@ -1067,8 +1076,10 @@ def run_bakeoff(
         zero_jobs = jobs_for(tie_root, "tie-zero", f"gemini:{tie_model}", "zero-shot", tie_model, tie_tier, held_seeds)
         icl_agent = f"gemini:{tie_model}+icl"
         icl_jobs = jobs_for(tie_root, "tie-icl", icl_agent, "in-context", tie_model, tie_tier, held_seeds, lessons)
-        zero_recs = [play_job(job, **kw) for job in zero_jobs]
-        icl_recs = [play_job(job, **kw) for job in icl_jobs]
+        with ThreadPoolExecutor(max_workers=2) as arms:
+            fz = arms.submit(_reuse_or_run, zero_jobs, slots, resume, **kw)
+            fi = arms.submit(_reuse_or_run, icl_jobs, slots, resume, **kw)
+            zero_recs, icl_recs = fz.result(), fi.result()
         z_rows = summarize_rows(zero_recs, None)
         i_rows = summarize_rows(icl_recs, None)
         # paired reward change on the intersection of valid seeds
@@ -1149,7 +1160,10 @@ def build_live_client_factory(api_key: str):
     from google import genai
     from google.genai import types
     timeout_ms = int(float(os.environ.get("CANARY_GEMINI_TIMEOUT_S", "600")) * 1000)
-    sdk = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=timeout_ms))
+    # live fix: retry 429/5xx with exponential backoff instead of turning one throttle into an invalid episode
+    retry = types.HttpRetryOptions(attempts=int(os.environ.get("CANARY_GEMINI_ATTEMPTS", "6")), initial_delay=2.0,
+                                   max_delay=60.0, http_status_codes=[408, 429, 500, 502, 503, 504])
+    sdk = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=timeout_ms, retry_options=retry))
 
     def make_client(model: str, seed: int = -1):
         from canary.llm.gemini_backend import GeminiClient
@@ -1174,6 +1188,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--train-n", type=int, default=3, help="training seeds for the in-context notes")
     ap.add_argument("--tie-eval-n", type=int, default=5, help="held-out seeds for the tiebreaker")
     ap.add_argument("--skip-tiebreaker", action="store_true")
+    ap.add_argument("--skip-grid", action="store_true", help="play only the local baselines and the tiebreaker")
+    ap.add_argument("--skip-pro", action="store_true", help="drop the pro model from the grid (run it in another process)")
     ap.add_argument("--no-resume", action="store_true")
     ap.add_argument("--dry-run", action="store_true",
                     help="no network and no API key: fixture catalog, mock client, real Canary env and baselines")
@@ -1211,7 +1227,7 @@ def main(argv: list[str] | None = None) -> int:
             out, n=args.n, tiers=tiers, slots=args.slots, catalog=catalog, make_client=make_client,
             skip_tiebreaker=args.skip_tiebreaker, tie_tier=args.tie_tier, train_n=args.train_n,
             tie_eval_n=args.tie_eval_n, max_small=args.max_small, pro_n=args.pro_n, pro_tiers=pro_tiers,
-            resume=not args.no_resume, dry_run=dry,
+            resume=not args.no_resume, dry_run=dry, skip_grid=args.skip_grid, skip_pro=args.skip_pro,
         )
     except Exception as exc:  # noqa: BLE001
         secrets = _secrets_from_env()

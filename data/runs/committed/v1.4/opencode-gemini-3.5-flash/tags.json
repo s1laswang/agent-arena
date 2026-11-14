@@ -1,0 +1,76 @@
+{
+ "opencode:google/gemini-3.5-flash": {
+  "episodes": 30,
+  "tiers": {
+   "hard": 30
+  },
+  "regret_total": 13.4251,
+  "tags": {
+   "premature_accusation": {
+    "count": 10,
+    "episodes_with": 10,
+    "regret_sum": 8.5591,
+    "worst": {
+     "run_id": "hard",
+     "seed": 10,
+     "t": 97,
+     "day": 20,
+     "tool": "accuse",
+     "args": {
+      "employee": "e34"
+     },
+     "regret": 1.2166,
+     "p_best": 0.9533,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.95 < 0.6)"
+    },
+    "rate": 0.333
+   },
+   "uninformative_canary": {
+    "count": 51,
+    "episodes_with": 12,
+    "regret_sum": 1.4824,
+    "worst": {
+     "run_id": "hard",
+     "seed": 11,
+     "t": 38,
+     "day": 6,
+     "tool": "plant_canary",
+     "args": {
+      "assignment": {
+       "e31": "v2",
+       "e29": "v1",
+       "e34": "v3"
+      },
+      "doc_title": "Canary Day 6 B"
+     },
+     "regret": 0.0485,
+     "p_best": 0.2317,
+     "why": "canary variants split the suspects poorly (low information)"
+    },
+    "rate": 0.4
+   },
+   "budget_waste": {
+    "count": 21,
+    "episodes_with": 15,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 0,
+     "t": 96,
+     "day": 21,
+     "tool": "search_messages",
+     "args": {
+      "day_to": 21,
+      "day_from": 1,
+      "query": "frustrat"
+     },
+     "regret": 0.0,
+     "p_best": 0.3325,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 0.5
+   }
+  },
+  "score_mean": 0.373
+ }
+}

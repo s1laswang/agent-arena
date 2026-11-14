@@ -103,11 +103,19 @@ TIERS_V13: dict[str, TierParams] = {
     "hard": replace(TIERS["hard"], n_employees=30, n_days=14, leak_damage=0.035, canaries_per_day=1,
                     max_variants=2, tool_call_cap=300),
 }
-TIERS_HISTORY: dict[str, dict[str, TierParams]] = {"v1.3": TIERS_V13}
+# Frozen history: tiers v1.2. v1.2 -> v1.3 (02a6ee9) changed only KNOWN_V_MODE, i.e. which V the agent is SHOWN;
+# TIERS and scoring were untouched. So v1.2 episodes replay and re-grade under the v1.3 params, with
+# KNOWN_V_MODE=False (tiers_version below). Checked by the anti-cheat replay: all 300 replayable committed v1.2 episodes (of 310; the other 10 are grok runs on
+# secret-keyed judge seeds)
+# (gpt-5.5, codex-gpt-5.5, opencode-gpt-5.6-sol, reference) re-grade to their recorded score and accused id.
+TIERS_V12: dict[str, TierParams] = TIERS_V13
+KNOWN_V_MODE_HISTORY: dict[str, bool] = {"v1.2": False, "v1.3": True}
+TIERS_HISTORY: dict[str, dict[str, TierParams]] = {"v1.3": TIERS_V13, "v1.2": TIERS_V12}
 
 # Judge tracks: extra tier *names* that reuse a frozen tier's params (TIERS itself stays frozen).
 # hard_forge = hard params + a per-seed evolved Mole DSL strategy (canary/forge_track.py).
-TRACKS: dict[str, str] = {"hard_forge": "hard"}
+# hard_rl = hard params + a per-seed RL-trained mole policy (canary/forge/rl_mole.py, data/rl_mole/).
+TRACKS: dict[str, str] = {"hard_forge": "hard", "hard_rl": "hard"}
 
 
 def tier_params(name: str) -> TierParams:
@@ -138,22 +146,24 @@ def tier_params_for_episode(name: str, steps=()) -> TierParams:
 
 @contextmanager
 def tiers_version(version: str):
-    """Temporarily swap TIERS (in place) and TIERS_VERSION to a frozen earlier version, e.g. "v1.3".
+    """Temporarily swap TIERS (in place), TIERS_VERSION and KNOWN_V_MODE to a frozen earlier version, e.g. "v1.3".
     In-process only (not thread-safe); for replaying/regenerating earlier-rules numbers."""
-    global TIERS_VERSION
+    global TIERS_VERSION, KNOWN_V_MODE
     if version == TIERS_VERSION:
         yield TIERS
         return
-    old, old_v = dict(TIERS), TIERS_VERSION
+    old, old_v, old_k = dict(TIERS), TIERS_VERSION, KNOWN_V_MODE
     TIERS.clear()
     TIERS.update(TIERS_HISTORY[version])
     TIERS_VERSION = version
+    KNOWN_V_MODE = KNOWN_V_MODE_HISTORY.get(version, KNOWN_V_MODE)
     try:
         yield TIERS
     finally:
         TIERS.clear()
         TIERS.update(old)
         TIERS_VERSION = old_v
+        KNOWN_V_MODE = old_k
 
 # Seed hygiene: tune ONLY on dev seeds. Judge seeds are frozen and committed under data/worlds/judge/.
 DEV_SEEDS = range(0, 10_000)

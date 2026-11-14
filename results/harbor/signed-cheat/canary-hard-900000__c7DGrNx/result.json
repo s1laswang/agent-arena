@@ -1,0 +1,123 @@
+{
+    "id": "280b58a8-cb7e-46ca-b39f-b862bf4c33f8",
+    "task_name": "canary/hard-900000",
+    "trial_name": "canary-hard-900000__c7DGrNx",
+    "trial_uri": "file://results/harbor/signed-cheat/canary-hard-900000__c7DGrNx",
+    "task_id": {
+        "path": "harbor/dataset-cheat/canary-hard-900000"
+    },
+    "source": "hb-r3",
+    "task_checksum": "823a7c3ab5ff50949c336190e4745ce618486436e0d06f01cd2b3cd65db07689",
+    "config": {
+        "task": {
+            "path": "harbor/dataset-cheat/canary-hard-900000",
+            "git_url": null,
+            "git_commit_id": null,
+            "name": null,
+            "ref": null,
+            "overwrite": false,
+            "download_dir": null,
+            "source": "hb-r3"
+        },
+        "trial_name": "canary-hard-900000__c7DGrNx",
+        "trials_dir": "results/harbor/signed-cheat",
+        "install_only": false,
+        "timeout_multiplier": 1.0,
+        "agent_timeout_multiplier": null,
+        "verifier_timeout_multiplier": null,
+        "agent_setup_timeout_multiplier": null,
+        "environment_build_timeout_multiplier": null,
+        "agent": {
+            "name": "oracle",
+            "import_path": null,
+            "model_name": null,
+            "base_url": null,
+            "model_api_key_name": null,
+            "model_api_format": null,
+            "skip_model_parsing": false,
+            "n_concurrent": null,
+            "concurrency_group": null,
+            "skills": [],
+            "override_timeout_sec": null,
+            "override_setup_timeout_sec": null,
+            "max_timeout_sec": null,
+            "resume_trajectory": false,
+            "load_trajectory": null,
+            "extra_allowed_hosts": [],
+            "kwargs": {},
+            "env": {
+                "ORACLE_POLICY": "cheat"
+            },
+            "mcp_servers": []
+        },
+        "user_agent": null,
+        "environment": {
+            "type": "docker",
+            "import_path": null,
+            "force_build": false,
+            "delete": true,
+            "stream": false,
+            "cpu_enforcement_policy": "auto",
+            "memory_enforcement_policy": "auto",
+            "override_cpus": null,
+            "override_memory_mb": null,
+            "override_storage_mb": null,
+            "override_gpus": null,
+            "override_tpu": null,
+            "mounts": null,
+            "extra_docker_compose": [],
+            "kwargs": {},
+            "extra_allowed_hosts": []
+        },
+        "verifier": {
+            "override_timeout_sec": null,
+            "max_timeout_sec": null,
+            "disable": false
+        },
+        "artifacts": [],
+        "extra_instruction_paths": [],
+        "extra_instructions": [],
+        "job_id": "ba17510f-122b-4189-9418-aa074080cbb7",
+        "source_trial": null
+    },
+    "agent_info": {
+        "name": "oracle",
+        "version": "1.0.0",
+        "model_info": null
+    },
+    "agent_result": {
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null,
+        "model_usage": null,
+        "rollout_details": null,
+        "metadata": null
+    },
+    "verifier_result": {
+        "rewards": {
+            "reward": -1.0
+        }
+    },
+    "verifier_environment_mode": "separate",
+    "exception_info": null,
+    "started_at": "2026-11-14T19:13:09.798608Z",
+    "finished_at": "2026-11-14T19:14:44.331657Z",
+    "environment_setup": {
+        "started_at": "2026-11-14T19:13:16.943197Z",
+        "finished_at": "2026-11-14T19:13:41.015090Z"
+    },
+    "agent_setup": {
+        "started_at": "2026-11-14T19:13:41.015123Z",
+        "finished_at": "2026-11-14T19:13:41.015193Z"
+    },
+    "agent_execution": {
+        "started_at": "2026-11-14T19:13:41.015270Z",
+        "finished_at": "2026-11-14T19:14:07.463800Z"
+    },
+    "verifier": {
+        "started_at": "2026-11-14T19:14:18.376189Z",
+        "finished_at": "2026-11-14T19:14:44.331629Z"
+    },
+    "step_results": null
+}

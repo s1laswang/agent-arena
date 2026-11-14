@@ -68,6 +68,7 @@ Validation is strict: one employee id per call (no lists, no `*`, no names in pl
 ## 4. Reward and integrity
 - The reward is computed from the server-side ledger only and never from agent text.
 - The MCP server process owns the Env. The grader reads `GET /ledger?token=…` (not an MCP tool) and writes `/logs/verifier/reward.txt`.
+- On Harbor the server HMAC-SHA256-signs the ledger with a build-time key held only by the server and verifier images (`CANARY_LEDGER_KEY_FILE`, `canary.mcp_server.sign_ledger`); the verifier scores 0 on a missing or bad signature or a score outside {−1, 0} ∪ (0, 1].
 - The truth (the mole id, the seed→world mapping for judge seeds) never enters the agent's container or filesystem.
 - Seeds:
   - dev: 0–9,999
@@ -155,7 +156,7 @@ Validation is strict: one employee id per call (no lists, no `*`, no names in pl
 - **Version:** `TIERS_VERSION = "v1.3"`. `tests/test_env_frozen.py` pins the hash of TIERS + KNOWN_V_MODE together. The numbers are final at the re-freeze.
 - `instruction.md` states: "V shown is the value you can see: damage from leaks that haven't surfaced yet is not visible until they surface. Your score uses the true V, which includes undetected damage."
 
-- FR8 recal (03:3x): KEEP defaults. Confirmed on 800 fresh seeds/tier (5000-5799): solver .779/.632/.575, acc .996/.887/.848, no-accusation .003/.113/.114; grok_tactics .690/.459/.342 (paired solver-grok .089+-.016/.174+-.025/.233+-.040); heuristic .648/-.007/-.257; logs_only acc .278/.014/.016. Fresh 1000-1399 table: results/fresh_table_v1.3.md.
+- FR8 recal (03:3x): KEEP defaults. Confirmed on 800 fresh seeds/tier (5000-5799): solver .779/.632/.575, acc .996/.887/.848, no-accusation .003/.113/.114; grok_tactics .690/.459/.342 (paired solver-grok .089+-.016/.174+-.025/.233+-.040); heuristic .648/-.007/-.257; logs_only acc .278/.014/.016. Fresh 1000-1399 table: results/history/fresh_table_v1.3.md.
 
 ## 14. Tiers v1.4 FROZEN: long-horizon hard (14 Nov)
 **Why:** in the official v1.3 measurement (docs/reports/gap.md), Codex gpt-5.5 over MCP, which is the judges' harness shape, scored **97% of the reference solver on hard** on the planned seeds 0–9 (106% with seed 10; 11/11 correct). On medium the only gap was 2 early wrong accusations, and the CI reached parity. Frontier agents are good at "reach certainty, then accuse" when the evidence is compact. v1.4 makes hard about what exact Bayesian bookkeeping does well and LLMs do badly: many concurrent, delayed, noisy tests over a long horizon, under time pressure, plus the commit decision. It is a **pure parameter change**: no new tools, no new mechanics, and the reward is unchanged (agreed with the ENV head).

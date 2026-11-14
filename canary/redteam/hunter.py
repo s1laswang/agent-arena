@@ -76,10 +76,17 @@ class Server:
             portfile.write_text("")
             fake = module != "canary.mcp_server"
             port = 0 if fake else free_port()
-            env = {**os.environ, "CANARY_FAKE_BACKEND": "env" if backend_env else "toy",
+            if fake:   # the plumbing-only fake server reads plain env vars
+                ep = {"CANARY_LEDGER_TOKEN": self.token, "CANARY_TIER": tier, "CANARY_SEED": str(seed)}
+            else:      # real server: seed + token in 0600 files, never in its environment (EXPLOITS #27)
+                from canary.mcp_server import write_secret_files
+                ep = write_secret_files(tier, seed, self.token)
+            env = {**(os.environ if fake else __import__("canary.mcp_server", fromlist=["x"]).clean_launch_env()),
+                   "CANARY_FAKE_BACKEND": "env" if backend_env else "toy",
                    "CANARY_HOST": "127.0.0.1", "CANARY_PORT": str(port), "CANARY_PORT_FILE": str(portfile),
-                   "CANARY_LEDGER_TOKEN": self.token, "CANARY_TIER": tier, "CANARY_SEED": str(seed),
-                   **(extra_env or {})}
+                   **ep, **(extra_env or {})}
+            if not fake:
+                env["CANARY_CONSUME_SECRET_FILES"] = "1"
             self.proc = subprocess.Popen([sys.executable, "-m", module], env=env, cwd=REPO,
                                          stdout=self.log, stderr=subprocess.STDOUT)
             try:

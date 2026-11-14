@@ -230,3 +230,101 @@
 - Decisions: Canary base + Vaishnav anti-cheat + Momin parts; biased-employee layer = v1.5 candidate gated at 20:00; RL mole (light CPU now, GRPO LLM mole on GPU); static Pyodide browser game; Momin pauses sky for the GPUs (FR8 authorised for WS4 + WS3 jobs).
 - Gates: A 17:00 (gemini-4-carbon v1.4 n>=20, v1.5 solver numbers, RL curve); B 20:00 (ship or drop v1.5 + feature freeze).
 - The CEO measurement engineer resumed (WS1). HARNESS got WS6 game build support. FR8/ENV/AGENTS/INTEGRITY need relaunching (briefs in NEXT-LEVEL.md).
+
+## 14:32 FR8 back, sky paused by Momin
+- freighter reachable again; Silas has no jobs in the queue; compute03/04 have 8 V100s idle. FR8 told to submit WS4 (investigator v2 train + evals) now and WS3 GRPO when train/grpo_mole.py lands (<=3 GPUs).
+- Harbor gemini-4-carbon judge-path demo merged (77fd402): 6 tasks, Gemini mean 0.50 vs oracle 0.76, below the oracle on 6/6 (a demonstration, n=6).
+
+## 14:38 merges + WS status
+- Merged the INTEGRITY anti-cheat battery (bd446c6): 13 attack probes + a stop-early ladder (solver cut at 25/50/75% and minus the final accuse, exactly 0) + the control (= solver) + replay of 299 v1.3 episodes, all consistent; runs in make reproduce (+15 s). 571 passed.
+- FR8 WS4 jobs: 44410 train (running), 44411 base eval (running), 44412 v2 eval (afterok). v2 eval ~22:00.
+- AGENTS WS3: grpo_mole.py matches the FR8 CLI (CPU stub OK, GPU untested); the light RL mole is at iter 76/80 (min regret ~0.26, solver acc 0.83); hard_rl track built, not yet in reproduce. Priority after: hint ablations > Forge-with-Gemini.
+- HARNESS session ended; INTEGRITY owns colima for the cheat run (2 GB, Mac memory ~4.9 GB free).
+
+## 15:24 interim gemini-4-carbon v1.4 (CEO-computed; engineer hit the Claude usage limit until 19:00, its drivers keep running)
+- Computed from staging (copied to /tmp; not committed), paired with the solver on the same seeds:
+  - **HARD, OpenCode (judges shape), n=26: 0.288 vs solver 0.485 -> 59% [11, 99]; luck-adjusted 67% [44, 88]**; acc 0.81; mean P(accused) at accusation 0.87.
+  - Alternative (empty replies counted as 0): 52% [14, 84].
+  - In-process hard n=10: 66% [5, 117].
+  - gemini-3.5-flash hard n=10: 84% [57, 116].
+  - MEDIUM OpenCode n=29: 108% [98, 123], no gap (as expected; medium is unchanged since v1.3).
+- => the v1.4 hard gap holds in the judges harness with a CI excluding parity. Headline candidate.
+
+## 18:25 GATE A (fired late)
+- justSilas ca5e0ae: make test 612 passed.
+- **gemini-4-carbon v1.4 interim (CEO, from staging; the engineer is paused by the Claude usage limit until 19:00, drivers keep running):**
+  - HARD OpenCode n=26: 59% [11, 99] of solver; luck-adjusted 67% [44, 88].
+  - HARD in-process n=11: 73% [14, 126].
+  - MEDIUM OpenCode n=29: 108% (no gap).
+- **v1.5 candidate (ENV):** solver unaffected (medium .641, hard .571); only chatter-trusting policies drop. Gemini v1.5 hard spot check: 11 episodes staged (due 19:40).
+- **WS3 GRPO mole (FR8 44424-6, 400 steps, done):** final reward -0.14 / -0.29 / +0.34 from -1.0 at the start; valid 0 -> 0.97-1.0; BUT each policy collapsed to one action (none/decoy or newest/decoy). Light RL mole held-out: harder for all investigators, solver acc 0.75 (borderline); kept out of reproduce.
+- **WS4:** 44411 base eval done; 44410 v2 train running 3h51; 44412 v2 eval after.
+- **INTEGRITY:** battery + cheat run + corpus merged. Gemini CEO swarm v1: 35 whitebox Gemini attackers, 0 verified exploits.
+- **Momin fleet (read-only check):** 8 fleet jobs on partition normal, no STOP file, 108 fr8/* branches in freighter bare repos (not pushed). The afterquery board assigns w02-w39 to nearly our exact workstreams: HEAVY DUPLICATION; needs Silas/Momin to redirect.
+
+## 18:36 fleet redirect (Silas approved)
+- Appended a REDIRECT note to the afterquery fleet lead inbox (board/afterquery/inbox/afterquery-lead.md, a new message; nothing else touched): stop the duplicate lanes; do (1) gemini-4-carbon v1.4 hard seeds 30-59 with our runner, replay-verified; (2) docs/research-biases.md; (3) exploit sweeps v1.4/v1.5, report only; (4) the Fooled-moment dashboard. Push branches and open PRs into justSilas for CEO review.
+
+## 18:40 teammate check
+- Vaishnav: vaishnav/canary-cheat merged (5a61a78): never-accuse Harbor cheat 0/0, Harbor result consistency 19/19, v1.2 frozen for replay. 626 tests pass.
+- Momin's fleet (read-only review of origin/momin + sleeper/*): docs/canary-landing.md, canary-watch.md, gap/badge PNGs, plus probe branches. Useful findings, none scoring above the rules:
+  1. Harbor verifier trusts the sidecar ledger's score field (a forged ledger would score 1.0, but only with a compromised sidecar, which the isolation tests cover). The verifier can't recompute `correct` without the seed and mole, and exposing those would leak judge seeds. Decision: residual risk, documented in the exploit list, no change after the freeze.
+  2. The sidecar receives GEMINI_API_KEY (needed for the gemini text provider only). The agent container can't read it. Low.
+  3. control_pad: check_leak_feed is not a harmless read (it spends the daily budget). Our anticheat control pads after the episode ends, so it's unaffected; noted.
+  4. Failure gallery port: 4/10 Codex losses untagged. Not merged; Atlas (Gemini CEO) owns the gallery.
+- Ivar: no pushes since 02:28 (ivar/main). Game/video/research lane is uncovered on GitHub; ask Silas.
+- head-integrity session no longer live; Vaishnav + the CEO cover integrity until submit.
+
+## 19:00 Silas decisions on PLAN-95
+1. Relaunch HARNESS (A1 hard-only judge set, C1 ledger HMAC) and INTEGRITY (C2 EXPLOITS.md, B4 instruction audit) engineers: launched as CEO subagents on justSilas-harness3 / justSilas-integrity3, PRs into justSilas.
+2. v3 GPU plan approved (2 V100 × ~6 h), conditional on v2 eval showing no reward gain; relayed to fr8.
+3. Hard-only judge set: approved (A1).
+4. Ivar owns the browser game deploy. Video owner: Silas/Momin (open).
+5. Human playtests Sunday morning: approved (all four, 2 hard dev-seed episodes each).
+B1 hint wording fixed (head-env, verified against instruction() v1.4) and sent to head-agents as an opt-in prompt flag.
+
+## 19:50 GATE B: v1.5 dropped, v1.4 is the judged env; feature freeze 20:00
+- gemini-4-carbon via OpenCode, hard, dev seeds 0-9, same seeds on both versions: v1.4 61% [3, 104] of the solver (luck-adj 56% [21, 80]); v1.5-candidate 108% [96, 122] (luck-adj 98%, 10/10 correct, mean P 0.94). Gemini treats seeded rumours as evidence AGAINST the person rumoured; no rumour-following.
+- The ship criterion (ratio drops vs v1.4) failed, so v1.5 stays on justSilas-v15 as a documented negative result, not a judged tier. Gemini's world-text role is labelled demo/research.
+- v1.4 seed-1 miss: accused at P=0.988, lost to the 5% fingerprint misread. That's luck, which is why the luck-adjusted ratio is reported alongside.
+- Freeze from 20:00: canary/rules.py, env.py, solver/ change only via the CEO. Harbor/verifier hardening (A1, C1), docs and analysis continue.
+
+## 20:20 PR #7 merged; switch from subagents to separate sessions
+- PR #7 (harness engineer) merged as b4557e0. The default Harbor build is the judge set (hard × 900000–900009). The ledger is HMAC-signed and the verifier fails closed: a forged score gives 0, oracle 0.5 = in-process, do-nothing 0, cheat −1. `make test` on justSilas: 761 passed, 6 skipped.
+- Measurement and integrity subagents stopped at the Claude usage limit. Per Silas (token cost), the remaining work moves to separate sessions; paste prompts are in docs/agents/SESSIONS.md. The integrity drafts (EXPLOITS.md, DIFFICULTY.md) sit uncommitted in the old subagent worktree; the new session picks them up.
+- Gemini CEO arena finding: the gemini-4-carbon mole beat the solver 4/4 on medium dev seeds by leaking only widely distributed docs. It's presented as arena mode with caveats, not the judged env.
+
+## 23:15 Review of Silas's Grok/Cursor work; the v1.4 gap is gone; reopened (Silas)
+- Pooled paired v1.4 data (ours + fleet PR #3, not yet replay-verified):
+
+  | | n | Gemini / solver [95% CI] |
+  |---|---|---|
+  | gemini-4-carbon OpenCode, hard | 32 | 76% [34, 126] |
+  | gemini-4-carbon in-process, hard | 30 | 109% |
+  | gemini-4-carbon OpenCode, medium | 30 | 111% |
+  | gemini-3.5-flash OpenCode, hard | 30 | 107% |
+
+  This agrees with Cursor's 21:26 bake-off (parity).
+- Silas chose to REOPEN, with a gate at 02:00:
+  - Track 1 (head-env, branch justSilas-solver2): a stronger reference, solver_v2, on unchanged v1.4 rules; evaluated offline against existing Gemini episodes.
+  - Track 2 (head-agents, branch justSilas-expert): an expert tier (v1.6 = v1.4 + one tier) found by a CPU sweep, plus a 10-seed gemini-4-carbon spot check by 01:30.
+  - If neither track meets its ship criterion, v1.4 ships with honest parity wording.
+- PR #16 merged as 2bb6729:
+  - stop_early now stops without accusing and scores 0; the day-1 guess is guess_day1;
+  - adds make accept;
+  - macOS fix (memfd fallback);
+  - anti-cheat artifact regenerated;
+  - 824 passed.
+- Reviewed:
+  - PR 15: Gemini CEO took the fact-checks; drop its duplicate ledger HMAC.
+  - PR 14: subsumed by PR 16.
+  - PR 17: targets momin, ignore.
+  - Ivar's ivar/aq-game-ux (game fixes, research-biases.md, VIDEO-SCRIPT.md, 44 failure cases): to merge after review.
+  - Vaishnav: PR 12 and PR 18 merged.
+- Small model v2 (44412): no gain. Held-out v2 −0.395 vs base 0.000; it accuses indiscriminately. v3 GRPO is running (44553, plus 44555 pending; evals 44554/44556).
+
+## ~00:55 check-in
+- Track 1 solver_v2: DROPPED (fresh seeds: hard +0.012, below the +0.08 bar). PR #20 merged (oracle range, reference optimality).
+- Track 2 expert tier: built and integrity-clean; Gemini OpenCode runs in flight, about 10 lost to the make-accept pkill (fixed 3603f25); verdict 01:40.
+- v3: s0 on the H100 IMPROVING at step 140 (+0.09 valid-only vs solver, no collapse; whom-accuracy ~19%, flat). Then v3-8k s0 (H100) + v3-8k s1 (A100 spot) + v3-4k s1 (FR8 44572).
+- Merged: #26, #28, #29, #30, #32, ivar/game-v-port. S7 open-7B dropped (no capacity). Verda cap €100 (Silas).

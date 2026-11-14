@@ -45,6 +45,8 @@ def run_episode(env, policy, max_iters: int = MAX_ITERS) -> EpisodeResult:
     if not env.done:
         res.end_reason = "error"
         res.meta["error"] = error or f"no episode end after {max_iters} iterations"
+        if error:  # the policy crashed (e.g. an LLM API error): not a played episode, never a silent 0
+            res.meta["valid"] = False
     return res
 
 
@@ -219,8 +221,8 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError as exc:
             print(f"canary.eval: {exc}", file=sys.stderr)
             return 2
-        reproduce(a.repro_seeds, out)
-        return 0
+        res = reproduce(a.repro_seeds, out)
+        return 1 if res.get("anticheat_ok") is False else 0   # an anti-cheat failure fails `make reproduce`
     tiers = list(TIERS) if a.tier == "all" else [a.tier]
     try:
         seeds = parse_seeds(a.seeds)

@@ -1,0 +1,18 @@
+{
+    "job_name": "cheat-probe",
+    "jobs_dir": "results/harbor",
+    "n_concurrent_trials": 3,
+    "agents": [
+        {
+            "name": "oracle",
+            "env": {
+                "ORACLE_POLICY": "cheat_probe"
+            }
+        }
+    ],
+    "datasets": [
+        {
+            "path": "harbor/dataset-cheat"
+        }
+    ]
+}

@@ -135,6 +135,24 @@ def test_empty_model_turn_is_not_sent_as_empty_part():
     assert [c.role for c in contents] == ["user", "user"]
 
 
+def test_api_error_marks_episode_invalid_not_silent_zero():
+    """A policy that raises (e.g. 400 'Function call is missing a thought_signature') ends the episode as an
+    invalid error, never as a silently scored 0."""
+    from canary.eval import run_episode
+
+    class Boom:
+        name = "boom"
+
+        def reset(self, tools, instruction):
+            pass
+
+        def act(self, history):
+            raise RuntimeError("400 INVALID_ARGUMENT: Function call is missing a thought_signature")
+
+    res = run_episode(FakeEnv(), Boom())
+    assert res.end_reason == "error" and res.meta["valid"] is False and "thought_signature" in res.meta["error"]
+
+
 def test_play_meta_records_gemini_settings(tmp_path, monkeypatch):
     from google.genai import types
     from canary.agents import play

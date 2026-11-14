@@ -11,6 +11,7 @@ from harbor.opencode.instruction import seat_instruction
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PY = sys.executable
+FRONTIER_SUFFIX = "\nThe day has many rounds. `end_turn` only passes one round and new tickets arrive in later rounds. After `end_turn`, call `my_tickets` again and keep working until a tool answers 'day over'. Do not stop before that.\n"
 
 
 def commit():
@@ -68,7 +69,7 @@ def run_seat(agent, model, seat, seed, days=1, max_turns=60, trial=0, mode="seat
     tmp = tempfile.mkdtemp(prefix="cliseat_")
     out = os.path.join(tmp, "state.json")
     argv = server_argv(seat, seed, out)
-    prompt = seat_instruction(seat) + "\nThe day has many rounds. `end_turn` only passes one round and new tickets arrive in later rounds. After `end_turn`, call `my_tickets` again and keep working until a tool answers 'day over'. Do not stop before that.\n"
+    prompt = seat_instruction(seat) + FRONTIER_SUFFIX
     env = {**os.environ, "PYTHONPATH": ROOT}
     if agent == "claude":
         cfg = os.path.join(tmp, "mcp.json")

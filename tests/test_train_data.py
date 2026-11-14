@@ -134,3 +134,10 @@ def test_decide_finance():
     assert [p["expected"] for p in pts] == ["refuse", "approve"]
     assert classify({"tool": "pay", "args": {"vendor_id": "V9"}}, pts[0]) == "approve_bad"
     assert classify({"tool": "pay", "args": {"vendor_id": "V1"}}, pts[0]) == "approve"
+
+def test_decide_dump():
+    from train.decide import score
+    pts = [{"day_id": 1, "idx": 2, "history": [], "header": {}, "expected": "approve", "sleeper": None, "bad": set()}]
+    rows = []
+    score(pts, lambda *a: {"tool": "pay", "args": {"vendor_id": "V1"}}, "finance_ap", rows, lambda: "txt")
+    assert rows == [{"day_id": 1, "idx": 2, "expected": "approve", "classified": "approve", "call": {"tool": "pay", "args": {"vendor_id": "V1"}}, "raw": "txt"}]

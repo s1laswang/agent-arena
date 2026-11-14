@@ -32,3 +32,5 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 01:08: v3-8k seed 3 on A100 on-demand f4378173. Burn €13.59/h → projected ≈ €98 by 07:30.
 
 01:15: Meta PaliGemma re-queued after Gemini J1 (Silas via the compute session): 1 GPU ≥40 GB (RTX PRO 6000 OK: Meta uses its own venv with a current torch), 1–2 h, --time 2.5 h equivalent (reaper), est. €3–6. Launches when HF_TOKEN appears in .env (watcher running) and a GPU is free.
+
+01:30: v3-4k s0 (H100 3bb74f5a) training DONE: 609 GRPO steps in 2.0 h (seed 1 on the FR8 V100 gets ~250 in 4 h). Its held-out eval (seeds 0–29/tier) is running on the H100; the adapter was relayed to eval box 68bbe201 for seeds 30–59 after v2 (v2 at ~11/tier after 26 min).

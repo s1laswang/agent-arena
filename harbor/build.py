@@ -50,6 +50,7 @@ url = "http://sleeper-server:8000/mcp"
 
 [verifier.env]
 SLEEPER_SEAT = "{seat}"
+VERIFY_TOKEN = "{token}"
 
 [environment.env]
 

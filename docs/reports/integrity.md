@@ -51,3 +51,9 @@
 - Note for CEO/ENV: on tiers v1 the solver scores lower on medium (0.44) than hard (0.51).
 - Flaky test found: test_stub_hunt_fake_server_plumbing (~1/6 full runs); hunter engineer fixing (port 0 + health poll). Merges gated with pipefail.
 - Real MCP server landed: hunter engineer running [real] MCP tests + codex black/white-box vs real server.
+
+## 05:00 status
+- Done (verified: make test 352 passed / 3 skipped / 1 xfailed on justSilas): test_solver_tier_ordering strict (ENV b875386: .79 > .63 > .60); #24 verified fixed; FR8 J2 (4M evolve, hard, pre-v1): 0 violations, best non-solver 0.000.
+- External Grok judge run reviewed: re-found #24 (fixed) and NEW #25 HIGH: server secrets readable via same-uid /proc/<pid>/environ / `ps eww` → 1.0. Regression test tests/test_integrity_secrets.py (xfail strict) + attacker-primitive sanity test (passes on macOS). Interface CEO-approved: CANARY_*_FILE 0600 files, no plain secrets in exec env, Harbor sidecar primary. Owners: mcp-server + harbor engineers.
+- In progress: exploit-hunter → flake fix (port 0 + health poll, 20 green runs), [real] MCP tests, codex black/white-box vs real server.
+- Next: verify #25 when mcp_server lands *_FILE; re-run the Grok judge prompt on the tip; FR8 J2 rerun on tiers v1.

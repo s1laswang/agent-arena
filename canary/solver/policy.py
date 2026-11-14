@@ -48,10 +48,13 @@ class SolverPolicy:
     def __init__(self, params: TierParams | str | None = None, threshold: float | None = None,
                  behaviour_temper: float = 0.6, choice_temper: float = 0.5, noleak_temper: float = 0.5,
                  none_group: bool = True, read_logs: bool = True, design: str = "auto",
-                 coverages: tuple = (0.1, 0.15, 0.25, 0.4, 0.55, 0.7, 1.0), alternate: bool = False, adaptive: bool = False, utility: str = "mi"):
+                 coverages: tuple = (0.1, 0.15, 0.25, 0.4, 0.55, 0.7, 1.0), alternate: bool = False, adaptive: bool = False, utility: str = "mi",
+                 probing: bool = False, probe_cap: int = 4, probe_extra: int = 1, probe_core: int = 4,
+                 behaviour_weight: float | None = None):
         self._given = params
         self.threshold = threshold
-        self.behaviour_temper = behaviour_temper
+        # behaviour_weight: public alias (FR8 sweeps it); exponent on access-log/interview likelihoods
+        self.behaviour_temper = behaviour_temper if behaviour_weight is None else behaviour_weight
         self.choice_temper = choice_temper
         self.noleak_temper = noleak_temper
         self.none_group = none_group
@@ -61,6 +64,7 @@ class SolverPolicy:
         self.alternate = alternate
         self.adaptive = adaptive
         self.utility = utility
+        self.probing, self.probe_cap, self.probe_extra, self.probe_core = probing, probe_cap, probe_extra, probe_core
         self.reset([], "")
 
     # ---------------------------------------------------------------- Policy API
@@ -80,6 +84,7 @@ class SolverPolicy:
         self.restricted: set[str] = set()
         self.phase = "start"
         self.pending_canary: dict | None = None
+        self.probe = None
         self.post: dict[str, float] = {}
         self.trace: list[dict] = []   # per-day belief snapshots (for regret/debug)
 
@@ -202,7 +207,7 @@ class SolverPolicy:
             if ev > 0 and (post[best] >= thr or last):
                 self.queue = [("accuse", {"employee": best})]
                 return
-            q = []
+            q = self.probe_actions(post)
             asg = self.partition(post)
             if asg:
                 q.append(("plant_canary", {"doc_title": f"Board memo draft {o.today}", "assignment": asg}))
@@ -212,6 +217,44 @@ class SolverPolicy:
             return
         # fallback
         self.queue = [("advance_day", {})]
+
+    def probe_actions(self, post: dict[str, float]) -> list[tuple[str, dict]]:
+        """Restriction probing (strategy-independent): a restricted mole gets no new docs, so once the
+        leak window passes it has nothing to leak; continued V drops then exclude the restricted group.
+        The belief models this exactly (leakable set of a restricted suspect empties)."""
+        if not self.probing:
+            return []
+        o, P = self.obs, self.P
+        q = []
+        if self.probe is not None:
+            grp, start = self.probe
+            if o.today >= start + P.leak_window_days + self.probe_extra:
+                q += [("unrestrict_access", {"employee": e}) for e in sorted(grp) if e in self.restricted]
+                self.probe = None
+            return q
+        if o.today < 3 or o.today > P.n_days - P.leak_window_days - 1:
+            return q
+        alive = sorted((e for e in post if post[e] > 1e-3), key=lambda e: -post[e])
+        cum, core = 0.0, 0
+        for e in alive:
+            cum += post[e]
+            core += 1
+            if cum >= 0.95:
+                break
+        if not (self.canary_shy() or core <= self.probe_core):
+            return q
+        if len(alive) <= 1:
+            return q
+        grp, m = [], 0.0
+        for e in alive:
+            if m >= 0.5 or len(grp) >= self.probe_cap:
+                break
+            grp.append(e)
+            m += post[e]
+        if m > 0.9:
+            grp = grp[:-1] or grp
+        self.probe = (frozenset(grp), o.today)
+        return [("restrict_access", {"employee": e}) for e in grp]
 
     def canary_shy(self) -> bool:
         """Strategy-agnostic switch: >= 3 regular leaks surfaced while our canaries were leakable,

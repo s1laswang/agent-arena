@@ -18,10 +18,10 @@ def _local_run_episode(env, policy, agent_name: str | None = None) -> EpisodeRes
 
 def run_episode(env, policy, agent_name: str | None = None) -> EpisodeResult:
     try:
-        from canary.eval import run_episode as harness_run  # type: ignore
-    except Exception:
+        from canary.eval import run_episode as harness_run  # HARNESS's runner: (env, policy, max_iters)
+    except ImportError:
         return _local_run_episode(env, policy, agent_name)
-    try:
-        return harness_run(env, policy, agent_name) if agent_name else harness_run(env, policy)
-    except TypeError:
-        return harness_run(env, policy)
+    res = harness_run(env, policy)
+    if agent_name:
+        res.agent = agent_name
+    return res

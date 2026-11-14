@@ -1,3 +1,4 @@
+from canary.rules import JUDGE_SEEDS
 import json
 
 import pytest
@@ -116,4 +117,4 @@ def test_build_recorder_without_env():
     from canary.text.build import Recorder, seeds_for
     r = Recorder(TemplateProvider())
     r.day_messages(make_facts("easy", 1, 2))
-    assert "2" in r.days and len(seeds_for("judge")) == 30 and seeds_for("dev20") == list(range(20))
+    assert "2" in r.days and len(seeds_for("judge")) == len(JUDGE_SEEDS) and seeds_for("dev20") == list(range(20))

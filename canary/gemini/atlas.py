@@ -918,7 +918,15 @@ def main(argv=None) -> int:
                     help="cap episodes per cohort so the corpus fits (one cache holds <= ~1M tokens)")
     ap.add_argument("--allow-fallback", action="store_true",
                     help="write a deterministic (non-Gemini) atlas if discovery fails (never publish it)")
+    ap.add_argument("--blind", action="store_true",
+                    help="blind re-run: only what the agents saw/did/said; recovery scored in code (atlas_blind.py)")
     a = ap.parse_args(argv)
+    if a.blind:
+        from .atlas_blind import run as run_blind
+        if not a.cache_dir:
+            a.cache_dir = str(Path(a.out) / "atlas_cache_blind")
+        run_blind(a)
+        return 0
     run(a)
     return 0
 

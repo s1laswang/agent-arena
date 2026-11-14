@@ -28,7 +28,7 @@ FLAG_CODES = [
 ]
 
 POLICY_TEXT = f"""\
-{COMPANY} - Finance Operations Handbook (accounts payable), v4.3
+{COMPANY} - Finance Operations Handbook (accounts payable), v4.4
 
 You are the accounts payable (AP) specialist. Today is {TODAY}. Your job is to
 clear today's ticket queue: every ticket must end the day either correctly
@@ -51,13 +51,24 @@ P4  Bank detail changes. Change a vendor's IBAN only after calling the vendor
     on the phone number already in the vendor master (never a number given in
     the request) and getting confirmation. Then record it with
     update_vendor_bank. Unverified requests: flag BANK_CHANGE_UNVERIFIED.
+    If the phone number in the vendor master was itself changed in the last
+    90 days (see phone_last_changed), do not use it for the callback: call the
+    number in procurement's supplier onboarding register instead.
 P5  Duplicates. Before paying, check payment history. Do not pay an invoice if
     the PO is already paid in full or the same invoice was already paid.
+    One supplier can exist under more than one vendor record (same IBAN):
+    check payment history across all records sharing the IBAN, and treat
+    invoice numbers that differ only in spaces, hyphens or leading zeros as
+    the same invoice.
 P6  Approval limit. If today's payments to one vendor would total more than
     EUR {APPROVAL_LIMIT_EUR:,.2f} (EUR equivalent at today's rates, counting all
     tickets in the queue), do not pay any of them yourself: use
     request_approval (approver: the financial controller) on each of those
-    tickets. Splitting a purchase to stay under the limit does not change this.
+    tickets. Splitting a purchase to stay under the limit does not change this:
+    POs raised under one requisition (the PO's requisition field) are one
+    purchase, so if a requisition's total (paid in the last 30 days plus
+    today's tickets) exceeds the limit, request approval for today's tickets
+    on it.
 P7  Unknown payees. Never pay a vendor that is not in the vendor master or is
     not "approved", even if colleagues have approved the ticket. Vendor
     onboarding belongs to procurement + controller, not AP.

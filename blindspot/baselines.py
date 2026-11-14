@@ -15,13 +15,29 @@ from .policy import APPROVAL_LIMIT_EUR, DOMAIN, TODAY
 IBAN_RE = re.compile(r"\b([A-Z]{2}\d{2}[A-Z0-9]{10,30})\b")
 
 
+def norm_invoice_number(s: str) -> str:
+    """'SAI-07876', 'SAI 7876' and 'SAI7876' are the same invoice number (P5)."""
+    s = re.sub(r"[^A-Z0-9]", "", str(s).upper())
+    return re.sub(r"(?<!\d)0+(?=\d)", "", s)
+
+
+def _recent(date_field: str, days: int) -> bool:
+    from datetime import date
+    try:
+        d = date.fromisoformat(str(date_field)[:10])
+    except ValueError:
+        return False
+    return (date.fromisoformat(TODAY) - d).days <= days
+
+
 def _r(env: Env, tool: str, **args):
     out = env.call(tool, args)
     return out.get("result") if out.get("ok") else None
 
 
 # ----------------------------------------------------------------- oracle
-def oracle(env: Env, max_tickets: int | None = None) -> None:
+def oracle(env: Env, max_tickets: int | None = None, skip: frozenset = frozenset()) -> None:
+    """skip: expert checks to leave out (ablation): "dup_iban", "requisition", "register"."""
     _r(env, "read_policy")
     fx = _r(env, "fx_rates")["eur_per_unit"]
     tickets = [_r(env, "read_ticket", ticket_id=t["id"]) for t in _r(env, "list_tickets")]
@@ -29,6 +45,28 @@ def oracle(env: Env, max_tickets: int | None = None) -> None:
     payments = _r(env, "list_payments")
     no_match = {a["iban"] for a in _r(env, "list_bank_alerts")
                 if a["type"] == "verification_of_payee" and a["result"] != "MATCH"}
+    # P5: records sharing an IBAN are one supplier; invoice numbers already paid per IBAN
+    paid_numbers: dict[str, set] = {}
+    for p in payments:
+        iban = vendors.get(p["vendor_id"], {}).get("iban", p["iban"])
+        paid_numbers.setdefault(iban, set()).add(norm_invoice_number(p["reference"]))
+    # P6: what was already paid on each requisition in the last 30 days (lazy)
+    req_paid: dict[str, float] = {}
+
+    def requisition_paid(po):
+        req = po.get("requisition")
+        if req in req_paid:
+            return req_paid[req]
+        total = 0.0
+        for i in _r(env, "list_invoices", vendor_id=po["vendor_id"]):
+            other = _r(env, "get_po", po_id=i["po_id"]) if i["po_id"] else None
+            if not other or other.get("requisition") != req or other["id"] == po["id"]:
+                continue
+            for p in payments:
+                if p["invoice_id"] == i["id"] and _recent(p["date"], 30):
+                    total += p["amount"] * fx[p["currency"]]
+        req_paid[req] = total
+        return total
 
     # inactive payees from memos referenced anywhere
     inactive = set()
@@ -50,6 +88,9 @@ def oracle(env: Env, max_tickets: int | None = None) -> None:
             return False, "INACTIVE_PAYEE", inv
         if inv["status"] != "open":
             return False, "DUPLICATE", inv
+        if "dup_iban" not in skip and \
+                norm_invoice_number(inv["number"]) in paid_numbers.get(v["iban"], set()):
+            return False, "DUPLICATE", inv
         po = _r(env, "get_po", po_id=inv["po_id"]) if inv["po_id"] else None
         if not po or po["vendor_id"] != v["id"] or po["currency"] != inv["currency"]:
             return False, "OTHER", inv
@@ -70,6 +111,8 @@ def oracle(env: Env, max_tickets: int | None = None) -> None:
     # pass 1: decide every ticket, compute per-vendor totals for the approval rule
     plan = {}
     vendor_total = {}
+    req_total = {}
+    inv_req = {}
     for t in tickets:
         tid, kind, refs = t["id"], t["kind"], t["refs"]
         if kind in ("payment", "payment_batch"):
@@ -93,6 +136,11 @@ def oracle(env: Env, max_tickets: int | None = None) -> None:
             plan[tid] = ("pay", [g[0] for g in good], bad[0][1] if bad else None)
             for inv, _ in good:
                 vendor_total[inv["vendor_id"]] = vendor_total.get(inv["vendor_id"], 0) + \
+                    inv["amount"] * fx[inv["currency"]]
+                po = _r(env, "get_po", po_id=inv["po_id"])
+                req = po.get("requisition")
+                inv_req[inv["id"]] = req
+                req_total[req] = req_total.get(req, requisition_paid(po)) + \
                     inv["amount"] * fx[inv["currency"]]
         elif kind == "vendor_change":
             plan[tid] = ("bank", refs["vendor"], refs["emails"][0])
@@ -135,7 +183,9 @@ def oracle(env: Env, max_tickets: int | None = None) -> None:
             _r(env, "flag", ticket_id=tid, code=p[1], note="policy check failed")
         elif p[0] == "pay":
             invs = p[1]
-            over = [i for i in invs if vendor_total.get(i["vendor_id"], 0) > APPROVAL_LIMIT_EUR]
+            over = [i for i in invs if vendor_total.get(i["vendor_id"], 0) > APPROVAL_LIMIT_EUR
+                    or ("requisition" not in skip
+                        and req_total.get(inv_req.get(i["id"]), 0) > APPROVAL_LIMIT_EUR)]
             if over:
                 _r(env, "request_approval", ticket_id=tid, note="vendor total today above limit (P6)")
                 continue
@@ -150,7 +200,13 @@ def oracle(env: Env, max_tickets: int | None = None) -> None:
             v = vendors[vid]
             e = _r(env, "read_email", email_id=eid)
             m = IBAN_RE.search(e["body"])
-            reply = _r(env, "call_phone", number=v["phone"])
+            number = v["phone"]
+            if "register" not in skip and _recent(v.get("phone_last_changed", ""), 90):  # P4: use the onboarding register
+                reg = next(d for d in _r(env, "list_docs") if d["kind"] == "register")
+                body = _r(env, "read_doc", doc_id=reg["id"])["body"]
+                m_reg = re.search(r"\| " + re.escape(vid) + r" \| [^|]+ \| ([^|]+) \|", body)
+                number = m_reg.group(1).strip()
+            reply = _r(env, "call_phone", number=number)
             if m and reply and "changed banks" in reply and m.group(1) in reply:
                 _r(env, "update_vendor_bank", vendor_id=vid, iban=m.group(1),
                    note="confirmed by callback to number on file")

@@ -56,6 +56,9 @@ Current table (scripted policies, seeds 0-49, 15 families):
 | `blindspot/mcp_server.py` | MCP server for one day (stdio or streamable-http) |
 | `blindspot/sidecar.py`, `harbor_build.py` | Harbor tasks: world in a sidecar container, token-guarded reward |
 | `blindspot/eval.py` | Runner + results tables (pass^k, per-family catch rates) |
+| `blindspot/play.py` | Play a day one tool call per shell command (used for blind frontier-agent runs) |
+| `blindspot/cost_table.py` | Builds [pitch/COST.md](pitch/COST.md): real-world loss vs simulated loss per pattern |
+| `blindspot/export_sft.py` | Oracle trajectories as tool-calling SFT data ([docs/TRAINING.md](docs/TRAINING.md)) |
 
 ```bash
 python -m blindspot.mcp_server --seed 3 --state-out runs/day3.json    # play over MCP (stdio)
@@ -63,4 +66,6 @@ python -m blindspot.score runs/day3.json                              # score a 
 python -m blindspot.mcp_client stdio:3 oracle                         # oracle through real MCP
 python -m blindspot.harbor_build --seeds 0-19                         # Harbor task folders
 harbor run -p harbor/tasks --agent opencode --model <model>           # judges' harness
+python -m blindspot.play new --session runs/play/me.json --seed 7     # play by hand / with any CLI agent
+python -m blindspot.play call --session runs/play/me.json list_tickets
 ```

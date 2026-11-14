@@ -155,7 +155,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", default="0-19")
     ap.add_argument("--out", default="harbor/tasks")
-    ap.add_argument("--difficulty", default="standard", choices=["standard", "hard"])
+    ap.add_argument("--difficulty", default="standard", choices=["standard", "hard", "expert"])
     a = ap.parse_args(argv)
     out = ROOT / a.out
     shutil.rmtree(out, ignore_errors=True)

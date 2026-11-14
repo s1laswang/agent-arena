@@ -75,7 +75,7 @@ def episode(seed: int, difficulty: str = "standard") -> dict:
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", default="100-399")
-    ap.add_argument("--difficulty", default="standard", choices=["standard", "hard"])
+    ap.add_argument("--difficulty", default="standard", choices=["standard", "hard", "expert"])
     ap.add_argument("--out", default="data/sft/oracle_train.jsonl")
     a = ap.parse_args(argv)
     out = Path(a.out)

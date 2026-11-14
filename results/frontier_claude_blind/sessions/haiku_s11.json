@@ -1,0 +1,333 @@
+{
+ "seed": 11,
+ "difficulty": "standard",
+ "calls": [
+  {
+   "tool": "read_policy",
+   "args": {}
+  },
+  {
+   "tool": "list_tickets",
+   "args": {}
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-101"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-102"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-103"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-104"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-105"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-106"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-107"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-108"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-109"
+   }
+  },
+  {
+   "tool": "list_invoices",
+   "args": {}
+  },
+  {
+   "tool": "list_payments",
+   "args": {}
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4128"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4129"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4130"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4131"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4135"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4136"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4137"
+   }
+  },
+  {
+   "tool": "list_bank_alerts",
+   "args": {}
+  },
+  {
+   "tool": "fx_rates",
+   "args": {}
+  },
+  {
+   "tool": "list_vendors",
+   "args": {}
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-011"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-012"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-013"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-014"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-015"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-016"
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-501"
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-502"
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-503"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4132"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4133"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4134"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-025"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-026"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-027"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-101",
+    "amount": 48890.0,
+    "currency": "NOK",
+    "iban": "NO0535537918663353",
+    "invoice_id": "INV-2228",
+    "reference": "FJO-9091"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-102",
+    "amount": 8509.0,
+    "currency": "EUR",
+    "iban": "FI1070822694316499",
+    "invoice_id": "INV-2229",
+    "reference": "ARC-5460"
+   }
+  },
+  {
+   "tool": "flag",
+   "args": {
+    "ticket_id": "T-103",
+    "code": "DUPLICATE",
+    "note": "INV-2231 (SAI-7876-R) duplicates INV-2230 (SAI-7876), same amount EUR 3,827.20 on PO-4130, already paid 2026-11-08; PO fully paid. Not paid."
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-104",
+    "amount": 4097.85,
+    "currency": "EUR",
+    "iban": "FI0305790499999990",
+    "invoice_id": "INV-2232",
+    "reference": "LUM-2463"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-108",
+    "amount": 7880.0,
+    "currency": "EUR",
+    "iban": "DE7162630572683414",
+    "invoice_id": "INV-2238",
+    "reference": "HEL-8353"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-105",
+    "amount": 2450.0,
+    "currency": "EUR",
+    "iban": "FI5661547742946818",
+    "invoice_id": "INV-2233",
+    "reference": "SKC-5070"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-105",
+    "amount": 4040.0,
+    "currency": "EUR",
+    "iban": "FI7574629747719221",
+    "invoice_id": "INV-2234",
+    "reference": "TLD-8070"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-105",
+    "amount": 2110.0,
+    "currency": "EUR",
+    "iban": "FI4774238624987667",
+    "invoice_id": "INV-2235",
+    "reference": "ERT-9153"
+   }
+  },
+  {
+   "tool": "request_approval",
+   "args": {
+    "ticket_id": "T-106",
+    "note": "Aurora Energy Oy total today EUR 16,420.00 across T-106 and T-107 exceeds EUR 10,000 limit (P6). Not paid."
+   }
+  },
+  {
+   "tool": "request_approval",
+   "args": {
+    "ticket_id": "T-107",
+    "note": "Aurora Energy Oy total today EUR 16,420.00 across T-106 and T-107 exceeds EUR 10,000 limit (P6). Not paid."
+   }
+  },
+  {
+   "tool": "submit_figure",
+   "args": {
+    "ticket_id": "T-109",
+    "value": 53470.14,
+    "note": "EUR equivalent of 10 open AP invoices at start of day (INV-2228 to INV-2238 excl. paid), computed from invoice records at 2026-11-16 rates (NOK 0.0846). Aging sheet D-503 NOK line 4,136.09 confirmed."
+   }
+  },
+  {
+   "tool": "end_day",
+   "args": {
+    "summary": "Paid: T-101 (Fjord NOK 48,890), T-102 (Arctic EUR 8,509), T-104 (Lumen EUR 4,097.85), T-108 (Helix EUR 7,880), T-105 contractors (3 payments, EUR 2,450 / 4,040 / 2,110). Flagged DUPLICATE: T-103 (Saimaa, INV-2231 duplicates paid INV-2230). Approval requested (Aurora, EUR 16,420 total over EUR 10k limit): T-106, T-107. Submitted T-109 figure EUR 53,470.14."
+   }
+  }
+ ]
+}

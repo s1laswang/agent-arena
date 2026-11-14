@@ -125,3 +125,83 @@ def test_sft_export_roundtrip():
     text = json.dumps(ep)
     for word in ["must_withhold", "withhold_ok", "pay_alt", "bad_ibans"]:
         assert word not in text
+
+
+def test_play_cli_replays_oracle(tmp_path):
+    from blindspot import baselines, play
+    from blindspot.env import Env
+    env = Env(5)
+    calls = []
+    orig = env.call
+
+    def rec(tool, args=None):
+        calls.append({"tool": tool, "args": dict(args or {})})
+        return orig(tool, args)
+    env.call = rec
+    baselines.oracle(env)
+    sess = tmp_path / "s.json"
+    play.main(["new", "--session", str(sess), "--seed", "5"])
+    for c in calls:
+        play.main(["call", "--session", str(sess), c["tool"], json.dumps(c["args"])])
+    text = sess.read_text(encoding="utf-8")
+    for word in ["must_withhold", "expect", "bad_ibans", "hidden"]:
+        assert word not in text
+    s = play.cmd_score(type("A", (), {"session": str(sess)})())
+    assert s["reward"] == 1 and s["ended"]
+
+
+def test_cost_table_covers_every_live_family():
+    from blindspot.cost_table import build
+    text = build(2)
+    for fam in world.FAMILIES:
+        if fam != "ap_report":
+            assert f"`{fam}`" in text
+
+
+# ---------------------------------------------------------------- expert tier
+def test_expert_oracle_solves_and_baselines_zero():
+    from blindspot import baselines
+    from blindspot.env import Env
+    from blindspot.verify import score
+    for s in range(25):
+        e = Env(s, difficulty="expert"); baselines.oracle(e)
+        assert score(e.state())["reward"] == 1, s
+        for name in ["do_nothing", "stop_early", "refuse_all", "escalate_all", "claim_in_chat",
+                     "autopilot"]:
+            e = Env(s, difficulty="expert"); baselines.POLICIES[name](e)
+            assert score(e.state())["reward"] == 0, (name, s)
+
+
+def test_expert_each_family_has_hazard_and_twin():
+    from blindspot import baselines
+    from blindspot.env import Env
+    from blindspot.verify import score
+    for fam in world.EXPERT_FAMILIES:
+        for hz in (True, False):
+            for s in range(5):
+                e = Env(s, families=[fam, "ap_report"], hazards=[fam] if hz else [])
+                baselines.oracle(e)
+                assert score(e.state())["reward"] == 1, (fam, hz, s)
+
+
+def test_expert_every_new_check_is_necessary():
+    """Leaving out any one expert check fails its family on some day (no free passes)."""
+    from blindspot import baselines
+    from blindspot.env import Env
+    from blindspot.verify import score
+    need = {"dup_iban": "dup_vendor", "requisition": "linked_split", "register": "callback_tampered"}
+    for check, fam in need.items():
+        e = Env(0, families=[fam, "ap_report"], hazards=[fam])
+        baselines.oracle(e, skip=frozenset({check}))
+        s = score(e.state())
+        assert s["reward"] == 0 and any(t["family"] == fam and not t["ok"] for t in s["tickets"].values())
+
+
+def test_expert_no_field_presence_tells():
+    """Fields used by expert hazards exist on every vendor / PO, hazard or not."""
+    w, _ = world.generate(3, difficulty="expert")
+    assert all("phone_last_changed" in v for v in w["vendors"])
+    assert all("requisition" in p for p in w["pos"])
+    assert any(d["kind"] == "register" for d in w["docs"])
+    w2, _ = world.generate(3)
+    assert any(d["kind"] == "register" for d in w2["docs"])

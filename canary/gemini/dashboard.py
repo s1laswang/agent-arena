@@ -469,6 +469,17 @@ def load_results(results_dir: Path) -> dict:
     out["atlas"] = redact(slim_atlas(atlas, results_dir)) if atlas else None
     swarm = load_json(results_dir / "swarm.json")
     out["swarm"] = redact(slim_swarm(swarm)) if swarm else None
+    gb = load_json(results_dir / "gateway_bench.json")
+    if gb and isinstance(gb.get("rows"), list):
+        out["gateway_bench"] = redact({
+            "generated_at": gb.get("generated_at"), "git_sha": gb.get("git_sha"), "calls": gb.get("calls"),
+            "spend_usd": gb.get("spend_usd"), "setup": str(gb.get("setup", ""))[:300],
+            "rows": [{"model": r.get("model"), "conc": r.get("conc"), "rpm": _num(r.get("rpm")), "p50_s": _num(r.get("p50_s")),
+                      "p95_s": _num(r.get("p95_s")), "ok": r.get("ok"),
+                      "errors": sum(v for v in (r.get("errors") or {}).values() if isinstance(v, (int, float))),
+                      "retries": r.get("gw_retries")} for r in gb["rows"] if isinstance(r, dict)]})
+    else:
+        out["gateway_bench"] = None
     figs = {}
     budget = [3_000_000]
     for name in ("ladder.png",):
@@ -957,10 +968,10 @@ function xyChart(series, opt) {
   const svg = s('svg', { class: 'chart', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': opt.aria || '' });
   const ystep = (y1 - y0) > 2.2 ? 0.5 : 0.25, yt = [];
   for (let v = Math.ceil(y0 / ystep) * ystep; v <= y1 + 1e-9; v += ystep) yt.push(+v.toFixed(4));
-  (opt.yticks && (y1 - y0) <= 1.3 ? opt.yticks : yt).forEach(t => { if (t < y0 || t > y1) return;
+  (opt.yticks && !(opt.pctAuto && (y1 - y0) > 1.3) ? opt.yticks : yt).forEach(t => { if (t < y0 || t > y1) return;
     svg.appendChild(s('line', { class: 'gridline', x1: L, x2: W - Rr, y1: Y(t), y2: Y(t) }));
     svg.appendChild(s('text', { x: L - 6, y: Y(t) + 4, 'text-anchor': 'end', text: opt.yfmt ? opt.yfmt(t) : t })); });
-  const xt = []; if (logx) { const dec = Math.round(Math.log10(x1 / x0)); for (let v = x0; v <= x1 * 1.0001; v *= 10) { xt.push(v); if (dec <= 2 && v * 2 < x1) xt.push(v * 2, v * 5); } } else niceTicks(x1, 5).forEach(v => xt.push(v));
+  const xt = []; if (opt.xticks) { opt.xticks.forEach(v => xt.push(v)); } else if (logx) { const dec = Math.round(Math.log10(x1 / x0)); for (let v = x0; v <= x1 * 1.0001; v *= 10) { xt.push(v); if (dec <= 2 && v * 2 < x1) xt.push(v * 2, v * 5); } } else niceTicks(x1, 5).forEach(v => xt.push(v));
   xt.forEach(t => svg.appendChild(s('text', { x: X(t), y: H - 12, 'text-anchor': 'middle', text: opt.xfmt ? opt.xfmt(t) : compact(t) })));
   svg.appendChild(s('line', { class: 'baseline', x1: L, x2: W - Rr, y1: Y(Math.max(y0, 0)), y2: Y(Math.max(y0, 0)) }));
   if (opt.xlabel) svg.appendChild(s('text', { x: W - Rr, y: H - 0, 'text-anchor': 'end', text: opt.xlabel }));
@@ -1049,6 +1060,17 @@ function renderUsage() {
   g.appendChild(card('c5', 'Cache and batch economics', 'Saved vs paying full list price for the same tokens', [econ, cb.length ? hbars(cb, { labW: 80, W: 470, aria: 'cache savings by feature' }) : null]));
   const lm = U.by_model.filter(m => m.latency_n > 0);
   g.appendChild(card('c7', 'Latency by model', 'generate calls · dot = p50, bar end = p95', [latencyChart(lm)]));
+  const GB = R.gateway_bench;
+  if (GB && GB.rows.length) {
+    const ms = [...new Set(GB.rows.map(r => r.model))].sort(morder);
+    const ser = ms.map(m => ({ name: short(m), c: modelColor(m), pts: GB.rows.filter(r => r.model === m && r.rpm != null).map(r => ({ x: r.conc, y: r.rpm,
+      title: short(m) + ' · ' + r.conc + ' concurrent', tip: [{ v: nf.format(Math.round(r.rpm)), l: 'requests / min' }, { v: secs(r.p50_s || 0) + ' / ' + secs(r.p95_s || 0), l: 'p50 / p95 latency' },
+        { v: nf.format(r.errors || 0), l: 'errors' }, { v: nf.format(r.retries || 0), l: 'gateway retries' }] })) })).filter(s => s.pts.length);
+    const ymax = Math.max(...GB.rows.map(r => r.rpm || 0)) * 1.1;
+    const yt = niceTicks(ymax, 4);
+    g.appendChild(card('c12', 'Gateway throughput', 'closed-loop rate bench through the Canary Lab gateway · requests per minute vs concurrent clients · ' + nf.format(GB.calls || 0) + ' calls, $' + (GB.spend_usd || 0),
+      [legend(ser.map(s => ({ c: s.c, l: s.name })), true), xyChart(ser, { W: 1180, H: 260, R: 24, ymin: 0, ymax: yt[yt.length - 1], yticks: yt, yfmt: v => compact(v), xfmt: v => String(v), xticks: [...new Set(GB.rows.map(r => r.conc))].sort((a, b) => a - b), xmin: 0, xlabel: 'concurrent clients', aria: 'gateway throughput' })]));
+  }
   const ft = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['feature', 'calls', 'input', 'output', 'thinking', 'cached', 'cost', 'errors', 'models'].map((c, i) => h('th', { class: i && i < 8 ? 'num' : '', text: c })))]),
     h('tbody', {}, U.by_feature.map(f => h('tr', {}, [h('td', { text: f.feature }), h('td', { class: 'num', text: nf.format(f.calls) }), h('td', { class: 'num', text: compact(f.in) }),
       h('td', { class: 'num', text: compact(f.out) }), h('td', { class: 'num', text: compact(f.thinking) }), h('td', { class: 'num', text: compact(f.cached) }),
@@ -1141,7 +1163,7 @@ function renderLadder() {
   if (series.length) {
     const ys = series.flatMap(s => s.pts.map(p => p.y)).concat(refs.map(r => r.y));
     g.appendChild(card('c7', 'Score vs thinking tokens · ' + tier, 'mean thinking tokens per episode (log) · one line per model, through its thinking levels',
-      [legend(series.map(s => ({ c: s.c, l: s.name })), true), xyChart(series, { logx: true, xfloor: 10, ymin: Math.min(0, ...ys), ymax: Math.max(1.1, ...ys), yticks: [0, .25, .5, .75, 1],
+      [legend(series.map(s => ({ c: s.c, l: s.name })), true), xyChart(series, { logx: true, xfloor: 10, ymin: Math.min(0, ...ys), ymax: Math.max(1.1, ...ys), yticks: [0, .25, .5, .75, 1], pctAuto: true,
         yfmt: v => pctf(v), xfmt: v => v <= 10 ? '≤10' : compact(v), ref: { y: 1, l: 'solver' }, refs, W: 680, H: 320, aria: 'score vs thinking tokens' })]));
   }
   const cc = tc.filter(c => c.cost != null && c.cost > 0);

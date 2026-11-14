@@ -49,6 +49,7 @@ def test_renders_all_panels_from_fixtures(tmp_path):
         assert f'id="{pid}"' in html
     p = _payload(html)
     assert p["usage"]["totals"]["calls"] > 1500
+    assert p["results"]["gateway_bench"]["rows"][0]["rpm"] > 0
     assert p["results"]["ladder"]["rows"] and p["results"]["atlas"]["modes"] and p["results"]["swarm"]["attempts"]
     # self-contained: no network fetches
     assert not re.search(r'(src|href)="https?://', html)

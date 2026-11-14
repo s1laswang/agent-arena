@@ -122,8 +122,9 @@ class AtlasOps:
         if self.replay:
             raise ReplayMiss(f"{op}/{model}: no recorded response {key[:12]}")
         d = fn()
-        self._store(key, d)
-        self.source_run_ids.add(self.run_id)
+        if not d.get("invalid"):
+            self._store(key, d)
+            self.source_run_ids.add(self.run_id)
         return d
 
     def _ledger(self, model: str, kind: str, usage: Any, t0: float, ok: bool = True, error: str = "",
@@ -158,10 +159,12 @@ class AtlasOps:
     # ------------------------------------------------------------------ operations
     def generate(self, model: str, contents: list, schema: dict | None = None, system: str | None = None,
                  cache_name: str | None = None, cache_key: str | None = None, thinking_level: str | None = None,
-                 max_output_tokens: int = 32768, tag: str = "") -> dict:
+                 max_output_tokens: int | None = None, tag: str = "") -> dict:
         """Structured (or plain) generateContent. contents: [str | {'image': bytes, 'mime': ...}].
         cache_name: an explicit context cache; cache_key: the corpus hash it stands for (part of the request key).
         Returns {'text', 'usage'}."""
+        if max_output_tokens is None:  # thinking counts against it: use the model's ceiling
+            max_output_tokens = 32768 if model.startswith("gemini-4") else 65536
         payload = {"contents": text_parts(contents), "schema": schema, "system": system, "cache": cache_key,
                    "thinking": thinking_level, "max": max_output_tokens}
         meta = {"op": tag or "generate", "explicit_cache": bool(cache_name)}
@@ -202,7 +205,13 @@ class AtlasOps:
                 return "".join(texts), um
             (text, um), t0 = self._retry(stream, model, "generate", meta)
             self._ledger(model, "generate", um, t0, meta=meta)
-            return {"text": text, "usage": _usage_dict(um)}
+            out = {"text": text, "usage": _usage_dict(um)}
+            if schema is not None:
+                try:
+                    json.loads(text)
+                except (json.JSONDecodeError, TypeError):
+                    out["invalid"] = True  # e.g. truncated by max_output_tokens: never recorded for replay
+            return out
         return self._cached("generate", model, payload, call)
 
     def count_tokens(self, model: str, text: str) -> int:

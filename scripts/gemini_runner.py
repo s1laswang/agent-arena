@@ -74,7 +74,11 @@ def infra_reason(harness: str, d: Path, ep: dict) -> str | None:
         return f"invalid: {str(m.get('error', ''))[:200]}"
     tr = d / "transcripts" / f"{ep.get('seed')}.txt"
     if harness == "opencode" and tr.exists() and empty_final_response(tr.read_text(errors="replace")):
-        return "infra:empty_model_response (Gemini returned an empty reply: 0 output tokens, finish=stop; opencode exited)"
+        from canary.agents.frontier.common import final_step
+        fs = final_step(tr.read_text(errors="replace")) or {}
+        t = fs.get("tokens") or {}
+        return (f"infra:empty_model_response (final reply had no text and no tool call: finish={fs.get('reason')}, "
+                f"output_tokens={t.get('output')}, reasoning_tokens={t.get('reasoning')}; opencode exited)")
     if ep.get("end_reason") != "error":
         return None
     err = str(m.get("error") or "")

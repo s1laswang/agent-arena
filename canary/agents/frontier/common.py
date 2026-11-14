@@ -230,25 +230,37 @@ def _error_events(stdout: str) -> str:
     return "\n".join(out)
 
 
-def empty_final_response(stdout: str) -> bool:
-    """OpenCode: the run ended because the model's last reply was EMPTY (finish "stop" with 0 output and 0
-    reasoning tokens). Gemini occasionally returns an empty candidate; `opencode run` then exits with no
-    accusation. That is an API glitch, not an agent decision (the in-process loop nudges past it)."""
-    last = None
+def final_step(stdout: str) -> dict | None:
+    """OpenCode --format json: the last model step: {reason, tokens, n_text, n_tool} (events after its step_start)."""
+    cur, last = {"n_text": 0, "n_tool": 0}, None
     for line in (stdout or "").splitlines():
-        if '"step-finish"' not in line and '"step_finish"' not in line:
-            continue
         try:
             ev = json.loads(line)
         except (json.JSONDecodeError, ValueError):
             continue
         part = ev.get("part") if isinstance(ev, dict) else None
-        if isinstance(part, dict) and part.get("type") == "step-finish":
-            last = part
-    if not last or last.get("reason") != "stop":
-        return False
-    t = last.get("tokens") or {}
-    return not (t.get("output") or 0) and not (t.get("reasoning") or 0)
+        if not isinstance(part, dict):
+            continue
+        typ = part.get("type")
+        if typ == "step-start":
+            cur = {"n_text": 0, "n_tool": 0}
+        elif typ == "text" and (part.get("text") or "").strip():
+            cur["n_text"] += 1
+        elif typ == "tool":
+            cur["n_tool"] += 1
+        elif typ == "step-finish":
+            last = {**cur, "reason": part.get("reason"), "tokens": part.get("tokens") or {}}
+    return last
+
+
+def empty_final_response(stdout: str) -> bool:
+    """OpenCode: the run ended because the model's last reply had NO VISIBLE CONTENT: finish "stop" with no
+    text and no tool call (seen: 0 output tokens, or a few output tokens that surface as nothing, which is
+    consistent with a dropped/malformed function call). `opencode run` then exits with no accusation. That is
+    an API/harness glitch, not an agent decision (an agent that stops writes a reply; the in-process loop
+    nudges past empty replies)."""
+    last = final_step(stdout)
+    return bool(last) and last["reason"] == "stop" and not last["n_text"] and not last["n_tool"]
 
 
 def classify_infra(stdout: str, stderr: str) -> str | None:

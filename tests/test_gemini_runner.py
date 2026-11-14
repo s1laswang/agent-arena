@@ -31,11 +31,16 @@ def test_infra_reason_classes(tmp_path):
     (tmp_path / "transcripts" / "7.txt").write_text(fin("tool-calls", 30) + "\n" + fin("stop", 0) + "\n")
     ep7 = {"seed": 7, "end_reason": "error", "meta": {"rc": 0}}
     assert "empty_model_response" in gr.infra_reason("opencode", tmp_path, ep7)
-    (tmp_path / "transcripts" / "7.txt").write_text(fin("tool-calls", 30) + "\n" + fin("stop", 12) + "\n")
-    assert gr.infra_reason("opencode", tmp_path, ep7) is None        # the agent chose to stop: played, 0
+    start = json.dumps({"type": "step_start", "part": {"type": "step-start"}})
+    text = json.dumps({"type": "text", "part": {"type": "text", "text": "I have enough; stopping here."}})
+    # a few output tokens but nothing visible (no text, no tool call) -> still an empty reply
+    (tmp_path / "transcripts" / "7.txt").write_text("\n".join([start, fin("tool-calls", 30), start, fin("stop", 44)]))
+    assert "output_tokens=44" in gr.infra_reason("opencode", tmp_path, ep7)
+    (tmp_path / "transcripts" / "7.txt").write_text("\n".join([start, fin("tool-calls", 30), start, text, fin("stop", 12)]))
+    assert gr.infra_reason("opencode", tmp_path, ep7) is None        # the agent wrote a reply and stopped: played, 0
     from canary.agents.frontier.common import classify_infra
     assert classify_infra(fin("stop", 0), "") == "empty_model_response"
-    assert classify_infra(fin("stop", 5), "") is None
+    assert classify_infra(start + "\n" + text + "\n" + fin("stop", 5), "") is None
     assert gr.infra_reason("inproc", tmp_path, {"end_reason": "error", "meta": {"error": "ClientError('429 RESOURCE_EXHAUSTED')"}})
     assert gr.infra_reason("inproc", tmp_path, {"end_reason": "horizon", "meta": {}}) is None
     assert gr.RATE.search("api: ClientError 429 RESOURCE_EXHAUSTED")

@@ -208,3 +208,10 @@ def test_server_port_file_and_stop(tmp_path):
     finally:
         srv.stop()
     assert not (tmp_path / "servers" / "easy-0.port").exists() and srv.proc.poll() is not None
+
+
+def test_classify_infra():
+    from canary.agents.frontier.common import classify_infra
+    assert classify_infra('{"message":"The usage limit has been reached","statusCode":429}', "") == "provider_quota"
+    assert classify_infra("", "Error: database is locked") == "opencode_db_locked"
+    assert classify_infra("ok", "") is None

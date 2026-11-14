@@ -208,6 +208,21 @@ def steps_from_events(stdout: str) -> list[Step]:
     return steps
 
 
+# ---------- infra failure classification (not the agent's fault; excluded / retried)
+INFRA_PATTERNS = {
+    "provider_quota": ("usage limit has been reached", "credits_depleted", '"statusCode":429'),
+    "opencode_db_locked": ("database is locked",),
+}
+
+
+def classify_infra(stdout: str, stderr: str) -> str | None:
+    blob = (stdout or "") + "\n" + (stderr or "")
+    for kind, pats in INFRA_PATTERNS.items():
+        if any(p in blob for p in pats):
+            return kind
+    return None
+
+
 # ---------- conversion
 def to_episode(tier: str, seed: int, agent: str, ledger: dict, steps: list[Step], extra_meta: dict | None = None) -> EpisodeResult:
     meta = dict(extra_meta or {})
@@ -261,6 +276,9 @@ def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str
         steps = steps_from_events(out)
         meta = {"rc": rc, "wall_s": round(time.time() - t0, 1), "steps_source": "agent_transcript",
                 "n_ledger_tool_calls": None}
+        infra = classify_infra(out, err)
+        if infra and not ledger.get("done"):
+            meta["error"] = f"infra:{infra}"
         res = to_episode(spec.tier, seed, spec.agent, ledger, steps, meta)
         with lock:
             w.transcript(seed, f"$ {' '.join(argv[:-1])} <prompt>\n--- rc={rc}\n--- stdout\n{out}\n--- stderr\n{err[-20000:]}", "txt")
@@ -286,7 +304,10 @@ def run_seeds(spec: RunSpec, build, files: set[str], runner=subprocess.run, serv
     lock = threading.Lock()
 
     def one(seed: int) -> EpisodeResult:
+        time.sleep(3.0 * (spec.seeds.index(seed) % max(1, spec.jobs)))  # stagger CLI starts (opencode db lock)
         for attempt in range(spec.retries + 1):
+            if attempt:
+                time.sleep(5.0)
             res = run_one(spec, seed, build, files, w, lock, runner, server_factory, write=False)
             if "error" not in (res.meta or {}) or attempt == spec.retries:
                 break

@@ -20,16 +20,16 @@ You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/u
 
 `make reproduce` plays the reference solver and five baselines on the 40 frozen judge seeds of each tier. It replays any committed frontier-agent episodes from `data/runs/committed/`, prints the table, and writes `results/judge_table.md`, `results/judge_episodes.jsonl` and `results/gap_chart.png`.
 
-**Expected numbers (mean score, expected ± CI).** Each value is the mean over 30 keyless runs of `make reproduce` at commit 33f4454 (40 seeds per tier, a fresh secret for each run), with the lowest-to-highest range across those 30 runs in brackets. A single run also prints its own 95% CI, about ±0.10 for the solver and up to ±0.26 for the heuristic. The committed [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one such run.
+**Expected numbers (mean score, expected ± CI).** Each value is the mean over 30 keyless runs of `make reproduce` at commit 9c36218 (solver fix + tiers v1.1; 40 seeds per tier, a fresh secret for each run), with the lowest-to-highest range across those 30 runs in brackets. A single run also prints its own 95% CI, about ±0.07–0.10 for the solver and up to ±0.26 for the heuristic. The tiers freeze at v1.2, and the numbers will be refreshed then. The committed [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one such run.
 
 | agent | medium (headline) | hard (headline) | easy (sanity) |
 |---|---:|---:|---:|
-| **solver** (reference) | **+0.51** [+0.40, +0.59] | **+0.56** [+0.42, +0.62] | +0.78 [+0.74, +0.81] |
+| **solver** (reference) | **+0.63** [+0.57, +0.71] | **+0.60** [+0.47, +0.71] | +0.77 [+0.73, +0.80] |
 | frontier agents (gpt-5.5, gpt-5.6-sol) | pending (AGENTS commit runs to `data/runs/committed/`) | pending | – |
-| heuristic (canary bisection, no Bayes) | −0.04 [−0.32, +0.13] | −0.20 [−0.43, +0.12] | +0.65 [+0.57, +0.72] |
-| logs_only (best no-canary log reader) | −0.96 [−1.00, −0.82] | −0.92 [−1.00, −0.77] | −0.52 [−0.80, −0.35] |
-| random | −0.66 [−0.73, −0.51] | −0.81 [−0.85, −0.70] | −0.70 [−0.80, −0.56] |
-| stop_early (random accusation, day 1) | −0.90 [−1.00, −0.75] | −0.95 [−1.00, −0.85] | −0.85 [−1.00, −0.65] |
+| heuristic (canary bisection, no Bayes) | −0.02 [−0.36, +0.14] | −0.24 [−0.50, +0.01] | +0.65 [+0.53, +0.72] |
+| logs_only (best no-canary log reader) | −0.99 [−1.00, −0.92] | −1.00 [−1.00, −0.95] | −0.52 [−0.76, −0.31] |
+| random | −0.67 [−0.73, −0.56] | −0.79 [−0.85, −0.62] | −0.68 [−0.80, −0.41] |
+| stop_early (random accusation, day 1) | −0.91 [−1.00, −0.75] | −0.95 [−1.00, −0.85] | −0.83 [−0.95, −0.65] |
 | do_nothing | 0.00 (exact) | 0.00 (exact) | 0.00 (exact) |
 
 **Why the numbers are statistical.** The world behind a judge seed is derived with HMAC from a secret ([CONTRACT §8, §11](docs/CONTRACT.md)). The secret behind our Harbor image is not published, because it would reveal the judge-world moles. Without `CANARY_WORLD_SECRET`, `make reproduce` draws one fresh random secret and shares it across every agent in that run. The comparison is therefore paired, and the run prints only the secret's SHA-256 fingerprint. Each mean lands inside its CI rather than matching ours bit for bit. Committed frontier-agent runs were played on the team's own worlds, so they appear in a separate, unpaired "reported agent runs" block with their own CI. **For exact numbers**, run `CANARY_WORLD_SECRET=<any string> make reproduce`: the same string always produces an identical `results/judge_episodes.jsonl`. For a fast check use `REPRO_FAST=1 make reproduce` (5 seeds per tier, which CI runs), or `make test` for the full test suite.

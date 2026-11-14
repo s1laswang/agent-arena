@@ -56,7 +56,14 @@
   - Exact mode is bit-for-bit in-process, and **two subprocesses with a fixed secret give identical judge_episodes.jsonl** (CEO request).
   - A keyless run never writes a 64-hex secret and removes the env var.
   - The timeout guard; the seed-count env vars; the chart is skipped without matplotlib; the CLI.
-- **Variance across secrets:** 30 keyless runs at 33f4454 (`/tmp/canary_spread.py 30`). Solver mean-of-means: medium +0.51 [+0.40, +0.59], hard +0.56 [+0.42, +0.62], easy +0.78 [+0.74, +0.81]. Heuristic: medium −0.04 [−0.32, +0.13], hard −0.20. do_nothing is exactly 0 in every run. These are the README "expected" numbers.
+- **Variance across secrets:** 30 keyless runs (`/tmp/canary_spread.py 30`).
+  - At 33f4454: solver medium +0.51 [+0.40, +0.59], hard +0.56.
+  - After merging the solver fix + tiers v1.1 (9c36218), which are the README "expected" numbers:
+    - solver mean-of-means: medium **+0.63** [+0.57, +0.71], hard **+0.60** [+0.47, +0.71], easy +0.77 [+0.73, +0.80];
+    - heuristic: medium −0.02 [−0.36, +0.14], hard −0.24 [−0.50, +0.01];
+    - logs_only: medium −0.99, hard −1.00;
+    - do_nothing is exactly 0 in every run.
+  - **These numbers must be refreshed after the v1.2 freeze.**
 - **README rewrite:**
   - the 5-line pitch, the one command `make setup && make reproduce` (uv prerequisite stated) and expected numbers with ranges;
   - why the numbers are statistical, plus exact-match instructions;

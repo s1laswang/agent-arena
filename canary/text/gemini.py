@@ -132,10 +132,62 @@ class GeminiProvider:
         return ans
 
 
+class GeminiWorldTextProvider:
+    """Wraps AGENTS' canary.agents.world_builder.GeminiWorldText as a TextProvider.
+
+    Gemini writes the world text once per (tier, seed) (build_world_text, from public facts only);
+    it is cached at <cache_dir>/<tier>/<seed>.worldtext.json and rendering is deterministic after that.
+    """
+
+    def __init__(self, model: str = "gemini-2.5-flash", cache_dir: str = "data/worlds", client=None):
+        self.model = model
+        self.name = f"gemini-world:{model}"
+        self.cache_dir = cache_dir
+        self._client = client
+        self._inner: dict[tuple, object] = {}
+
+    @property
+    def client(self):
+        if self._client is None:
+            from canary.llm import get_client
+            self._client = get_client(f"gemini:{self.model}")
+        return self._client
+
+    def _get(self, facts: PublicDayFacts):
+        key = (facts.tier, facts.seed)
+        if key not in self._inner:
+            from canary.agents.world_builder import GeminiWorldText, build_world_text
+            path = os.path.join(self.cache_dir, facts.tier, f"{facts.seed}.worldtext.json")
+            if os.path.exists(path):
+                with open(path) as fh:
+                    wt = json.load(fh)
+            else:
+                wt = build_world_text(facts, self.client, seed=facts.seed)
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "w") as fh:
+                    json.dump(wt, fh, indent=1, sort_keys=True)
+            self._inner[key] = GeminiWorldText(wt, name=self.name)
+        return self._inner[key]
+
+    def day_messages(self, facts: PublicDayFacts) -> list[dict]:
+        return self._get(facts).day_messages(facts)
+
+    def interview_answer(self, facts: PublicDayFacts, employee: str, topic: str, signal: str) -> str:
+        return self._get(facts).interview_answer(facts, employee, topic, signal)
+
+
 def get_provider(spec: str | None, **kw):
-    """'template' | 'gemini' | 'gemini:<model>' | 'stub' (gemini path with canary.llm stub client)."""
+    """'template' | 'gemini' | 'gemini:<model>' | 'stub' (gemini path with canary.llm stub client)
+    | 'gemini-world' | 'gemini-world:<model>' | 'gemini-world-stub' (AGENTS' GeminiWorldText)."""
     if spec in (None, "", "template"):
         return TemplateProvider()
+    if spec == "gemini-world-stub":
+        from canary.llm import get_client
+        return GeminiWorldTextProvider(client=get_client("stub"), **kw)
+    if spec == "gemini-world":
+        return GeminiWorldTextProvider(**kw)
+    if spec.startswith("gemini-world:"):
+        return GeminiWorldTextProvider(model=spec.split(":", 1)[1], **kw)
     if spec == "stub":
         from canary.llm import get_client
         return GeminiProvider(client=get_client("stub"), **kw)

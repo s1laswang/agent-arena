@@ -27,7 +27,34 @@ _INTS = {"n_days": r"at most (\d+) days", "canaries_per_day": r"at most (\d+) pe
          "n_employees": r"company with (\d+) employees"}
 
 
+def _from_param_block(text: str) -> TierParams | None:
+    """Parse the '## Exact parameters' block of instruction.md (`- name: value` lines)."""
+    if "## Exact parameters" not in (text or ""):
+        return None
+    from dataclasses import fields
+    kv = dict(re.findall(r"^- (\w+): (.*)$", text.split("## Exact parameters", 1)[1], re.M))
+    upd = {}
+    for f in fields(TierParams):
+        if f.name not in kv:
+            return None
+        raw = kv[f.name].strip()
+        if f.name == "name":
+            upd[f.name] = raw
+        elif raw in ("on", "off"):
+            upd[f.name] = raw == "on"
+        elif "tuple" in str(f.type):
+            upd[f.name] = tuple(int(x) for x in raw.split(","))
+        elif f.type in (int, "int"):
+            upd[f.name] = int(raw)
+        else:
+            upd[f.name] = float(raw)
+    return TierParams(**upd)
+
+
 def params_from_instruction(text: str) -> TierParams | None:
+    blk = _from_param_block(text)
+    if blk is not None:
+        return blk
     m = re.search(r"Tier:\s*(\w+)", text or "")
     if not m or m.group(1) not in TIERS:
         return None

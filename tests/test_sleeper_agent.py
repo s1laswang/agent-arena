@@ -1,3 +1,4 @@
+import pytest
 import random
 
 from agents.sleeper_agent import SleeperAgent, Step, Strategy, mutate_strategy
@@ -112,3 +113,18 @@ def test_gemini_variant_must_keep_placeholders(monkeypatch):
     monkeypatch.setattr(g, "chat", bad)
     m = mutate_strategy(base, 1)
     assert m.steps[0].args == base.steps[0].args
+
+
+def test_offline_miss_is_hard(monkeypatch):
+    import agents.gemini as g
+
+    def boom(*a, **k):
+        raise g.OfflineCacheMiss("miss")
+
+    monkeypatch.setattr(g, "enabled", lambda: True)
+    monkeypatch.setattr(g, "run_tool_loop", boom)
+    monkeypatch.setattr(g, "chat", boom)
+    with pytest.raises(g.OfflineCacheMiss):
+        SleeperAgent("finance_ap", None, strat(), random.Random(1)).turn("finance_ap", {"tick": 1}, [], Fake())
+    with pytest.raises(g.OfflineCacheMiss):
+        mutate_strategy(strat(), 1)

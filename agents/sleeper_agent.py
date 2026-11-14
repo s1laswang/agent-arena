@@ -10,6 +10,11 @@ RESERVE = 2
 BANNED = ("sleeper", "hidden goal", "my real goal", "covert")
 
 
+def _reraise(e):
+    if type(e).__name__ == "OfflineCacheMiss":
+        raise e
+
+
 def _gemini():
     try:
         from agents import gemini
@@ -62,8 +67,8 @@ def mutate_strategy(strategy, seed):
             )
             if ok and all(_clean(json.dumps(n["args"])) for n in new):
                 return _copy(strategy, steps=[Step(tick=int(n["tick"]), tool=n["tool"], args=n["args"], why=n.get("why", ""), seat=n.get("seat")) for n in new])
-        except Exception:
-            pass
+        except Exception as e:
+            _reraise(e)
     steps = [_copy(s, tick=max(0, s.tick + rng.randint(-1, 2))) for s in strategy.steps]
     return _copy(strategy, steps=steps)
 
@@ -106,8 +111,8 @@ class SleeperAgent:
         if g:
             try:
                 return self._gemini_turn(g, tick, view, tools, guarded)
-            except Exception:
-                pass
+            except Exception as e:
+                _reraise(e)
         return self._scripted_turn(tick, guarded)
 
     def _run_step(self, i, call):

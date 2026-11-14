@@ -36,8 +36,9 @@ def test_all_seats(tmp_path):
 import pytest
 
 
+@pytest.mark.parametrize("seat", ["controller", "finance_ap"])
 @pytest.mark.parametrize("oracle", [True, False])
-def test_sidecar_end_to_end(tmp_path, oracle):
+def test_sidecar_end_to_end(tmp_path, oracle, seat):
     import json, os, socket, subprocess, sys, time, urllib.error, urllib.request
     import pytest
     pytest.importorskip("sleeper.mcp_server")
@@ -47,7 +48,7 @@ def test_sidecar_end_to_end(tmp_path, oracle):
         a.bind(("127.0.0.1", 0)); b.bind(("127.0.0.1", 0))
         mp, rp = a.getsockname()[1], b.getsockname()[1]
     tok = "t0k"
-    env = {**os.environ, "SLEEPER_SEED": "4", "SLEEPER_SEAT": "controller", "SLEEPER_OUT": str(tmp_path / "s.json"),
+    env = {**os.environ, "SLEEPER_SEED": "4", "SLEEPER_SEAT": seat, "SLEEPER_OUT": str(tmp_path / "s.json"),
            "VERIFY_TOKEN": tok, "SLEEPER_TEAM": "oracle", "PYTHONPATH": str(root), "SIDECAR_MCP_PORT": str(mp), "SIDECAR_REWARD_PORT": str(rp)}
     p = subprocess.Popen([sys.executable, "-m", "harbor.sidecar"], env=env, cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -64,7 +65,7 @@ def test_sidecar_end_to_end(tmp_path, oracle):
         with pytest.raises(urllib.error.HTTPError):
             urllib.request.urlopen(urllib.request.Request(url, headers={"X-Verify-Token": "wrong"}))
         if oracle:
-            subprocess.run([sys.executable, str(root / "harbor/oracle_client.py"), f"http://127.0.0.1:{mp}/mcp", "controller"], env=env, cwd=root, check=True, timeout=120)
+            subprocess.run([sys.executable, str(root / "harbor/oracle_client.py"), f"http://127.0.0.1:{mp}/mcp", seat], env=env, cwd=root, check=True, timeout=120)
         r = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"X-Verify-Token": tok})).read())
         assert r["reward"] == (1 if oracle else 0)
     finally:

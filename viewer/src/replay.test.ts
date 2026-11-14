@@ -185,3 +185,15 @@ describe("synced clock", () => {
     expect(resolveCursor(heuristic, end)).toBe(heuristic.steps.length - 1);
   });
 });
+
+describe("provenance", () => {
+  const ep = (agent: string, meta: Record<string, unknown>) => ({ agent, meta } as unknown as Episode);
+  it("labels from the data", async () => {
+    const { provenance } = await import("./provenance");
+    expect(provenance(ep("solver", {})).label).toBe("SCRIPTED");
+    expect(provenance(ep("codex:gpt-5.5", { usage: { in: 1 }, steps_source: "agent_transcript" })).label).toBe("REAL");
+    expect(provenance(ep("codex:gpt-5.5", {})).label).toBe("UNVERIFIED");
+    expect(provenance(ep("solver", { usage: { in: 1 } })).label).toBe("UNVERIFIED");
+    expect(provenance(ep("codex:gpt-5.5", { smoke: true })).label).toBe("SMOKE");
+  });
+});

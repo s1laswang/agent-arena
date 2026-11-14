@@ -68,3 +68,22 @@ def genai_client(timeout_s: float | None = None):
     from canary.llm.base import require_key
     return genai.Client(api_key=require_key("GEMINI_API_KEY"),
                         http_options=types.HttpOptions(timeout=_timeout_ms(timeout_s)))
+
+
+def smoke(model: str = "gemini-3.1-flash-lite") -> dict:
+    """One ledgered call (via the gateway if GEMINI_GATEWAY_URL is set). Prints no secrets."""
+    import socket
+    import time
+    from .ledger import lab_client, ledger_path
+    t0 = time.time()
+    c = lab_client(f"gemini:{model}", feature="gateway-smoke")
+    r = c.chat([{"role": "user", "content": "Reply with exactly: canary ok"}])
+    return {"host": socket.gethostname().split(".")[0], "via": gateway_url() or "direct", "model": model,
+            "text": r.text.strip()[:80], "in": r.usage.get("in"), "out": r.usage.get("out"),
+            "latency_s": round(time.time() - t0, 2), "ledger": str(ledger_path())}
+
+
+if __name__ == "__main__":
+    import json
+    import sys
+    print(json.dumps(smoke(*(sys.argv[1:2] or []))))

@@ -382,3 +382,26 @@ def test_committed_showcase_replays_keyless(tmp_path):
                        cwd=root, env=env, capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, r.stderr[-2000:]
     assert "REPLAY OK" in r.stdout
+
+
+def test_tcprelay_forwards_to_gateway(upstream, tmp_path):
+    """ssh -R fallback piece: a byte relay in front of the gateway keeps auth end to end."""
+    from canary.gemini.tcprelay import serve
+    g = _gw(upstream, tmp_path)
+    port = _free_port()
+    gport = int(g.url.rsplit(":", 1)[1])
+    th = threading.Thread(target=lambda: asyncio.run(serve(("127.0.0.1", port), ("127.0.0.1", gport), 0.002)),
+                          daemon=True)
+    th.start()
+    try:
+        url = f"http://127.0.0.1:{port}"
+        for _ in range(50):
+            try:
+                httpx.get(url + "/healthz", timeout=1)
+                break
+            except httpx.TransportError:
+                time.sleep(0.05)
+        assert _gen(url).status_code == 200
+        assert _gen(url, key=None).status_code == 401
+    finally:
+        g.close()

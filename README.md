@@ -20,42 +20,65 @@ You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/u
 
 `make reproduce` plays the reference solver and five baselines on the 40 frozen judge seeds of each tier. It replays any committed frontier-agent episodes from `data/runs/committed/`, prints the table, and writes `judge_table.md`, `judge_episodes.jsonl` and `gap_chart.png` to `results/latest/`. That folder is gitignored, so your clone stays clean and our committed copies in `results/` are never overwritten; compare the two directly.
 
-**Expected numbers on the frozen tiers v1.3.** We ran keyless `make reproduce` 30 times on the 40 judge seeds per tier (commit 21e5b2e), each run with a fresh secret. Each cell is the mean of the 30 run means, with the lowest and highest run mean in brackets. A single run prints its own 95% CI, about ±0.03–0.12 for the solver and ±0.25 for the heuristic. To rebuild this table: `uv run python scripts/repro_spread.py 30` (about 5 minutes).
+**Expected numbers on the frozen tiers v1.4.** We ran keyless `make reproduce` 30 times on the 40 judge seeds per tier (commit 5b56b60), each run with a fresh secret. Each cell is the mean of the 30 run means, with the lowest and highest run mean in brackets. A single run prints its own 95% CI, about ±0.03–0.10 for the solver and ±0.2 for the heuristic. To rebuild this table: `uv run python scripts/repro_spread.py 30` (about 2 minutes). v1.4 changed only **hard**; easy and medium are the same as in v1.3.
 
 | agent | medium (headline) | hard (headline) | easy (sanity tier only) |
 |---|---:|---:|---:|
-| **solver** (reference) | **+0.64** [+0.58, +0.69] | **+0.55** [+0.40, +0.66] | +0.77 [+0.74, +0.82] |
-| frontier: **Codex gpt-5.5 over MCP** (judges' harness). Not judge seeds: v1.3 **dev** seeds 0–10, n=11 per tier, paired with the solver on the same seeds; cell = mean ± 95% CI = % of the solver [bootstrap 95% CI]; commit a978aa1+, see the [gap report](docs/reports/gap.md) | +0.40 ± 0.42 = **55%** [−8%, 104%] (50% on the planned seeds 0–9) | +0.66 ± 0.04 = **106%** [91%, 136%] (**97%** [89%, 107%] on seeds 0–9) | – |
-| frontier: in-process gpt-5.5, fixed loop (full history, Responses API + reasoning replay; same dev seeds, n=9 / 8) | +0.67 ± 0.10 = 92% [80%, 106%] | +0.26 ± 0.54 = 38% [−51%, 99%] | – |
-| heuristic (canary bisection, no Bayes) | −0.06 [−0.39, +0.14] | −0.30 [−0.58, −0.09] | +0.64 [+0.56, +0.72] |
-| logs_only (best no-canary log reader) | −0.98 [−1.00, −0.91] | −0.99 [−1.00, −0.91] | −0.51 [−0.76, −0.28] |
-| random | −0.68 [−0.72, −0.58] | −0.81 [−0.85, −0.72] | −0.69 [−0.80, −0.58] |
-| stop_early (random accusation, day 1) | −0.90 [−1.00, −0.75] | −0.95 [−1.00, −0.85] | −0.84 [−0.95, −0.60] |
+| **solver** (reference) | **+0.64** [+0.55, +0.72] | **+0.56** [+0.36, +0.62] | +0.77 [+0.71, +0.80] |
+| frontier agents on v1.4 | pending (measurement in progress) | pending | – |
+| heuristic (canary bisection, no Bayes) | −0.05 [−0.40, +0.19] | −0.03 [−0.23, +0.17] | +0.66 [+0.46, +0.73] |
+| logs_only (best no-canary log reader) | −0.98 [−1.00, −0.87] | −0.98 [−1.00, −0.91] | −0.52 [−0.64, −0.36] |
+| random | −0.67 [−0.72, −0.49] | −0.79 [−0.82, −0.68] | −0.70 [−0.80, −0.58] |
+| stop_early (random accusation, day 1) | −0.89 [−1.00, −0.75] | −0.95 [−1.00, −0.85] | −0.83 [−1.00, −0.65] |
 | do_nothing | 0.00 (exact) | 0.00 (exact) | 0.00 (exact) |
 
-- **Committed run.** [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one keyless run on v1.3 (secret fingerprint `2759407705e1`), written with `make reproduce-update` on 2026-11-14 to add the official frontier runs to the replayed block. Solver: medium **+0.64 ± 0.08** (90% correct), hard **+0.61 ± 0.11** (85% correct). Heuristic: medium +0.12 ± 0.23, hard −0.47 ± 0.24.
+**v1.3 history: frontier agents.** These runs used the v1.3 hard tier (30 staff, 14 days, 1 canary a day), so they are not comparable to v1.4 hard. Medium is unchanged. They were played on v1.3 **dev** seeds 0–10, not judge seeds, and paired with the solver on the same seeds. Each cell is mean ± 95% CI = % of the solver [bootstrap 95% CI]. See the [gap report](docs/reports/gap.md).
+
+| v1.3 frontier run | medium | hard (v1.3) |
+|---|---:|---:|
+| **Codex gpt-5.5 over MCP** (judges' harness), n=11 per tier, commit a978aa1+ | +0.40 ± 0.42 = **55%** [−8%, 104%] (50% on the planned seeds 0–9) | +0.66 ± 0.04 = **106%** [91%, 136%] (**97%** [89%, 107%] on seeds 0–9) |
+| in-process gpt-5.5, fixed loop (full history, Responses API + reasoning replay), n=9 / 8 | +0.67 ± 0.10 = 92% [80%, 106%] | +0.26 ± 0.54 = 38% [−51%, 99%] |
+
+- **Committed run.** [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one keyless run on v1.4 (secret fingerprint `207e257a2c18`), written with `make reproduce-update` at the v1.4 freeze. The committed v1.3 and v1.2 frontier runs appear there as labelled history.
+  - Solver: medium **+0.63 ± 0.08** (90% correct), hard **+0.57 ± 0.09** (95% correct).
+  - Heuristic: medium +0.01 ± 0.25, hard −0.03 ± 0.18.
 - **Fresh seeds.** On seeds never used for tuning, the gap holds and is measured paired (same seed, agent − solver):
-  - [`results/fresh_table_v1.3.md`](results/fresh_table_v1.3.md), 400 dev seeds per tier (1000–1399): solver easy/medium/hard **+0.760 / +0.639 / +0.559**, accuracy 99.2 / 89.2 / 83.5%. The strongest scripted baseline, `grok_tactics` (a scripted replay of a strong Grok agent's tactics: the agent's runs and transcripts are in [docs/reports/grok-agent.md](docs/reports/grok-agent.md), the replay is `GrokTactics` in [`canary/baselines.py`](canary/baselines.py)), trails the solver by **0.070 ± 0.021 / 0.180 ± 0.040 / 0.252 ± 0.058**; the heuristic by 0.125 / 0.674 / 0.831.
-  - FR8's recalibration on 800 more seeds per tier (5000–5799, [CONTRACT §13](docs/CONTRACT.md)): solver **.779 / .632 / .575**, accuracy 99.6 / 88.7 / 84.8%; solver − grok_tactics **+.089 ± .016 / +.174 ± .025 / +.233 ± .040**.
-  - On hard the solver is honest rather than perfect: it abstains (no accusation, score 0) in about 12% of episodes instead of guessing.
+  - **v1.4:** [`results/fresh_table_v1.4.md`](results/fresh_table_v1.4.md) covers 800 confirmation seeds per tier (5000–5799) and every baseline.
+    - Solver easy/medium/hard **+0.779 / +0.633 / +0.556**, accuracy 99.6 / 88.8 / 94.9%.
+    - The strongest scripted baseline is `grok_tactics`, a scripted replay of a strong Grok agent's tactics: the agent's runs and transcripts are in [docs/reports/grok-agent.md](docs/reports/grok-agent.md), and the replay is `GrokTactics` in [`canary/baselines.py`](canary/baselines.py). It trails the solver by **0.089 ± 0.016 / 0.174 ± 0.025 / 0.195 ± 0.033**.
+    - The heuristic trails by 0.131 / 0.639 / 0.534.
+  - **v1.3 history**, with hard at 30 staff and 14 days:
+    - [`results/fresh_table_v1.3.md`](results/fresh_table_v1.3.md), seeds 1000–1399: solver **+0.760 / +0.639 / +0.559**; grok_tactics trails by 0.070 / 0.180 / 0.252.
+    - On 5000–5799: solver hard .575, solver − grok_tactics +.233 ± .040.
+    - On v1.3 hard the solver abstained in about 12% of episodes. On v1.4 hard that is 1%.
 - **Easy is a sanity tier, not a headline.** The solver and the scripted baselines are close there, by design: the gap comes from the noise and adversaries in medium and hard.
+- **v1.3 → v1.4: why hard got longer** ([CONTRACT §14](docs/CONTRACT.md)).
+  - On v1.3, Codex gpt-5.5 over MCP reached 97% of the solver on hard: compact evidence, then "reach certainty and accuse".
+  - v1.4 hard keeps every mechanic but asks for long-horizon bookkeeping: 40 staff, 21 days, and 2 canaries a day with 3 variants each. That means up to ~6 canary tests in flight at once, each surfacing 2–3 days late and fingerprinted with noise. Leaks also cost 0.05 V, so speed matters.
+  - It is a pure parameter change (no new tools, same reward).
+  - The scripted baselines gain from the longer horizon too, so the solver − grok_tactics gap is +0.195, not larger. Whether frontier agents keep up on v1.4 has to be measured.
 - **v1.2 → v1.3: why `status` no longer shows the true V.** On v1.2, `status` showed the true company value, so a same-day drop in V told the agent a leak had just happened, before it surfaced in the feed. Frontier agents read those same-day drops to time leaks. In its own report the Grok agent writes that leaks were "visible immediately as 0.04 V drops" and used "day-1 V drops" to narrow the suspects ([docs/reports/grok-agent.md](docs/reports/grok-agent.md)). That made the leak delay meaningless and the task easier than the real problem. v1.3 shows only *known* damage (surfaced leaks plus the agent's own costs); undetected damage still counts in the score. Set `rules.KNOWN_V_MODE = False` to get the v1.2 behaviour back.
 
-**Why the numbers are statistical.** The world behind a judge seed is derived with HMAC from a secret ([CONTRACT §8, §11](docs/CONTRACT.md)). The secret behind our Harbor image is not published, because it would reveal the judge-world moles. Without `CANARY_WORLD_SECRET`, `make reproduce` draws one fresh random secret and shares it across every agent in that run. The comparison is therefore paired, and the run prints only the secret's SHA-256 fingerprint. Each mean lands inside its CI rather than matching ours bit for bit. Committed frontier-agent runs were played on the team's own worlds, so they appear in a separate, unpaired "reported agent runs" block with their own CI. That block is grouped by tier version and never pools versions: v1.3 runs (current rules) come first, and v1.2 runs follow under "History" because they were played under earlier rules and are not comparable to the paired table. Superseded builds in `data/runs/committed/superseded/` are left out. **For exact numbers**, run `CANARY_WORLD_SECRET=<any string> make reproduce`: the same string always produces an identical `results/latest/judge_episodes.jsonl`. For a fast check use `REPRO_FAST=1 make reproduce` (5 seeds per tier, which CI runs), or `make test` for the full test suite.
+**Why the numbers are statistical.** The world behind a judge seed is derived with HMAC from a secret ([CONTRACT §8, §11](docs/CONTRACT.md)). The secret behind our Harbor image is not published, because it would reveal the judge-world moles. Without `CANARY_WORLD_SECRET`, `make reproduce` draws one fresh random secret and shares it across every agent in that run. The comparison is therefore paired, and the run prints only the secret's SHA-256 fingerprint. Each mean lands inside its CI rather than matching ours bit for bit. Committed frontier-agent runs were played on the team's own worlds, so they appear in a separate, unpaired "reported agent runs" block with their own CI. That block is grouped by tier version and never pools versions: v1.4 runs (current rules) come first, and v1.3 and v1.2 runs follow under "History" because they were played under earlier rules and are not comparable to the paired table. Superseded builds in `data/runs/committed/superseded/` are left out. **For exact numbers**, run `CANARY_WORLD_SECRET=<any string> make reproduce`: the same string always produces an identical `results/latest/judge_episodes.jsonl`. For a fast check use `REPRO_FAST=1 make reproduce` (5 seeds per tier, which CI runs), or `make test` for the full test suite.
 
 ## The rules, briefly
 
 The full spec is in [docs/CONTRACT.md](docs/CONTRACT.md). The agent receives every rate and rule as the MCP instructions.
 
-- **Tiers.** Easy has 12 employees, medium 20 and hard 30, over a horizon of 14 days. Every tier allows one canary per day. In easy, a leak surfaces the next day and a canary can have up to 3 variants. Medium and hard add the following:
+- **Tiers (v1.4).**
+  - **Easy:** 12 employees, 14 days, one canary per day with up to 3 variants. A leak surfaces the next day.
+  - **Medium:** 20 employees, 14 days, one canary per day with up to 3 variants.
+  - **Hard:** 40 employees and **21 days**. **Two canaries per day**, each with up to 3 variants. A leak costs 0.05 of V (0.04 on medium). Hard adds clearance constraints and small fingerprint noise: the feed shows the true variant 95% of the time.
+
+  Medium and hard also add the following:
   - an innocent decoy who writes angry messages;
   - a mole that frames others in the access logs;
   - a careful mole that avoids widely distributed canaries;
   - leaks that surface in the feed late: 1–3 days on medium, 2–3 days on hard.
 
-  Hard also allows only 2 variants per canary and adds clearance constraints. The exact values live in [`canary/rules.py`](canary/rules.py) (`TIERS_VERSION = "v1.3"`).
+  The exact values live in [`canary/rules.py`](canary/rules.py) (`TIERS_VERSION = "v1.4"`; the v1.3 tiers are kept as `rules.TIERS_V13`, where hard had 30 employees, 14 days, 1 canary a day with 2 variants, and leak damage 0.035).
 - **What V you see (v1.3, known V).** `status` shows the value the company *knows* it has lost: damage from leaks that have already surfaced in the feed, plus the canary and restriction costs the agent itself paid. Damage from a leak that hasn't surfaced yet is invisible until it surfaces. The score uses the **true** V, which includes that undetected damage, so waiting still costs even when the shown V doesn't move. The agent is told this in the instructions ([CONTRACT §13](docs/CONTRACT.md)).
-- **Budget.** The agent gets 8 investigative calls per day (then it must `advance_day`) and 300 tool calls in total.
+- **Budget.** The agent gets 8 investigative calls per day (then it must `advance_day`) and 300 tool calls in total (420 on hard, i.e. 20 per day over 21 days).
 - **Reward,** computed server-side from the ledger, never from agent text:
 
   | outcome | score |

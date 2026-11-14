@@ -38,10 +38,12 @@ Show the gap table. Rows, each labelled:
 |---|---|---|---|
 | Bayesian solver (reference) | CITED, justSilas, README 30-run mean (commit 21e5b2e) | +0.64 | +0.55 |
 | Codex gpt-5.5 over MCP, v1.3 | CITED, docs/reports/gap.md (justSilas f56cc1d), n=11 each | 0.401, 55% of solver [CI -8, 104] | 0.655, 106% of solver [91, 136], 11 of 11 correct |
-| gemini-4-carbon, v1.4 | REAL pending: NOT FOUND (Silas pending) | NOT FOUND (Silas pending) | NOT FOUND (Silas pending) |
+| gemini-4-carbon, v1.4, Harbor + OpenCode over MCP | CITED, Silas, justSilas commit 58f25318 (14 Nov 14:24), `harbor/README.md`, `results/harbor/`; judge seeds 900000 to 900002, 3 medium + 3 hard, n=6, same worlds as the oracle. Scores from the server ledger | mean over all 6: 0.503 vs oracle/solver 0.757 (difference -0.253), below the solver on 6 of 6 tasks | per-tier split: NOT FOUND (read from the table at 58f25318) |
 | Claude (claude -p) | NOT FOUND (Silas pending) | NOT FOUND (Silas pending) | NOT FOUND (Silas pending) |
 
-Say the honest line: "On hard, Codex matches the solver. The gap holds on medium, with a wide interval. Silas's own report says the hard gap is not there, and v1.4 is meant to restore it. We show what is measured." If the gemini-4-carbon row stays empty, use the fallback at the end.
+Say the small n out loud: the Gemini row is six episodes (3 medium, 3 hard), one model, one run, and Silas's own Gate A target is n of 20 or more per tier. In one medium episode (900002) Gemini never accused and scored 0 (per Silas's watch log, dm-docs). It is the first real frontier gap through the judges' own path.
+
+Say the honest line: "On hard, Codex matches the solver. The gap holds on medium, with a wide interval. Silas's own report says the hard gap is not there, and v1.4 is meant to restore it. We show what is measured." If a larger gemini-4-carbon run lands, replace the n=6 row. If this row is withdrawn, use the fallback at the end.
 
 ### Beat 2, 1:30 to 3:00. The company and the mole
 
@@ -78,7 +80,7 @@ Close: "Frontier agents commit too early. We measured how much that costs, and t
 
 ## Fallback if no gemini-4-carbon number arrives
 
-Two lines: "Offline tests of the Gemini path ran with a fake model; no real Gemini run on Canary finished, so the gap I showed is Codex over MCP, cited from Silas's report." "The scripted company numbers are separate, reproducible with `make eval`."
+Two lines: "The gemini-4-carbon gap is six episodes, so treat it as an early signal, not a proven number." "Codex matches the solver on hard in Silas's v1.3 run, so the hard-tier gap is not established." "The scripted company numbers are separate, reproducible with `make eval`."
 
 ## Which of our beats survive
 

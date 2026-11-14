@@ -2,10 +2,10 @@
 
 - Role: `adaptive_mole`
 - Target Model ID: `gemini-4-carbon`
-- Verified `adaptive_mole` run folders consolidated: `25`
-- Total Gemini API calls: `1631`
-- Total tokens (in / out / thinking / cached): `25,562,468` / `116,889` / `383,412` / `23,015,724`
-- Total estimated cost (USD): `$12.398087`
+- Verified `adaptive_mole` run folders consolidated: `26`
+- Total Gemini API calls: `1632`
+- Total tokens (in / out / thinking / cached): `25,564,117` / `118,318` / `384,007` / `23,015,724`
+- Total estimated cost (USD): `$12.421625`
 - Provenance note: `carbon-vs-carbon-suite/` intentionally omits `meta.json` so `canary.gemini.provenance` does not double-count tokens or costs.
 
 ## 1. Head-to-Head Carbon-vs-Carbon Clash Suite (`clash_suite`)
@@ -69,6 +69,7 @@
 | Run Folder | Tier | Subrole | Kept / Valid | Design/Kept Solver Mean | Design/Kept Heuristic Mean | Holdout Full Solver Mean | Holdout Heuristic Mean | Top Scenario | Calls | Cost (USD) |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: |
 | `results/gemini_roles/adaptive_mole/paired-designer-carbon` | `medium` | `paired_designer` | 3/4 | +0.5743 | -1.0000 | n/a | n/a | - | 1 | $0.0218 |
+| `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-med-s10_14` | `medium` | `paired_skill_designer` | 6/6 | +0.6888 | -1.0000 | +0.5921 | -1.0000 | `paced_cadence_framer` | 1 | $0.0235 |
 | `results/gemini_roles/adaptive_mole/paired-solvable-scenarios-carbon` | `medium` | `paired_skill_designer` | 3/4 | +0.7100 | -1.0000 | +0.7220 | -0.8110 | `high_tempo_frame_rotator` | 1 | $0.0176 |
 | `results/gemini_roles/adaptive_mole/paired-designer-carbon-hard` | `hard` | `paired_designer` | 6/6 | +0.6827 | -1.0000 | n/a | n/a | - | 1 | $0.0271 |
 | `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard` | `hard` | `paired_skill_designer` | 6/6 | +0.6890 | -1.0000 | +0.6280 | -1.0000 | `rotating_blame_sprinter` | 1 | $0.0233 |
@@ -95,6 +96,6 @@
 | `clash_suite` | 8 | 884 | 24,883,996 | 36,386 | 316,189 | 23,015,724 | $9.563883 |
 | `live_arena_suite` | 8 | 696 | 595,344 | 45,317 | 47,534 | 0 | $2.119198 |
 | `mole_forge_suite` | 3 | 39 | 23,935 | 20,771 | 10,491 | 0 | $0.360490 |
-| `paired_designer_suite` | 5 | 5 | 8,724 | 6,543 | 3,004 | 0 | $0.112918 |
+| `paired_designer_suite` | 6 | 6 | 10,373 | 7,972 | 3,599 | 0 | $0.136456 |
 | `other_verified_runs` | 1 | 7 | 50,469 | 7,872 | 6,194 | 0 | $0.241598 |
-| **total** | **25** | **1631** | **25,562,468** | **116,889** | **383,412** | **23,015,724** | **$12.398087** |
+| **total** | **26** | **1632** | **25,564,117** | **118,318** | **384,007** | **23,015,724** | **$12.421625** |

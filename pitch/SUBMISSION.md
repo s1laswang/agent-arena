@@ -36,6 +36,12 @@ Text: "We played the staff seat with gemini-4-carbon (REAL NOT FOUND (lead-lab p
 
 Fallback if no real number arrives: "Offline tests of the Gemini path ran with a fake model; no real Gemini run finished. Every figure here is scripted." "The gap is scripted staff against a scripted reference, reproduced by `make eval`."
 
+## Real Gemini exploiter and integrity probes
+
+REAL: a gemini-3.5-flash attacker (`redteam/gemini_exploiter.py`) played 10 seat-days (finance_ap and controller, days 1000 to 1004, commit c460e0c, `results/frontier/exploiter/gemini-3.5-flash/c460e0c/`). 7 of the 10 had a live attack, reward 0 on all 10, rescored by `sleeper.verifier` with 0 mismatches and replayable offline. Tokens and price: NOT FOUND.
+
+Integrity probes, per lead-demo (`make probes`, not rerun by dm-pitch): 14 cheat probes in the finance_ap seat and with the full team all score 0.0, and the control (reference plus 50 padding calls) scores 1.0. SCRIPTED, no model.
+
 ## Deliverable checklist (from CHALLENGES-AFTERQUERY-GEMINI.md)
 
 Status as of 14 Nov, from what is on momin. Verify each "have" before submitting. Owner is the team that closes it; humans own the platform items.
@@ -69,7 +75,7 @@ Status as of 14 Nov, from what is on momin. Verify each "have" before submitting
 | Why Gemini is essential | have as argument. Evidence needs live numbers: NOT FOUND | dm-pitch, humans |
 | A live run proving it (staff, reference, analyst) | missing: HANDOFF.md section 2 steps 2 to 5 | humans |
 | Multimodal invoices | pending (lead-attack): image rendering is not used by any day yet | lead-attack |
-| Gemini exploiter | real run exists on branch sleeper/rw-exploit-live; held out of this text until lead-reward says it is on momin with a run dir | lead-reward |
+| Gemini exploiter | have: REAL, c460e0c, see above | lead-reward |
 | Cached replay without a key | missing: `data/gemini_cache.tar.gz` does not exist | hn-gemini |
 | Cost and usage numbers | missing: NOT FOUND until step 5 | humans |
 | Form text and demo | partial: text above, demo NOT FOUND | humans |

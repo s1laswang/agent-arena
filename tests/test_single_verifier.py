@@ -47,7 +47,7 @@ def test_inprocess_equals_cli(team, seed, seat, tmp_path):
     from lab.run import build_team, day_for
     from sleeper.day import run_day
     from sleeper.models import Company
-    from sleeper.verifier import dump_state, score
+    from sleeper.verifier import dump_state, score, sign
 
     day, *_ = day_for(seed, seat)
     w = run_day(day, build_team(team, day, 0))
@@ -55,8 +55,8 @@ def test_inprocess_equals_cli(team, seed, seat, tmp_path):
     p = tmp_path / "s.json"
     st = dump_state(w)
     st["seat_under_test"] = seat
-    p.write_text(json.dumps(st))
-    r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(p)], capture_output=True, text=True, cwd=ROOT, env={"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin"})
+    p.write_text(json.dumps(sign(st, "sv-key")))
+    r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(p)], capture_output=True, text=True, cwd=ROOT, env={"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin", "VERIFY_TOKEN": "sv-key"})
     assert json.loads(r.stdout) == a
 
 

@@ -15,7 +15,7 @@ for s in 0 1; do
   T=$(sbatch --parsable --time=07:00:00 -J canary-v3-grpo-s$s --export=ALL,ADAPTER="$ADAPTER",SEED=$s,HOURS=5.5 fr8/v3_grpo.sbatch)
   log "$T" canary-v3-grpo-s$s "from $ADAPTER easy+medium TRAIN"
   E=$(sbatch --parsable --time=03:00:00 -J canary-v3-eval-s$s --dependency=afterok:$T \
-      --export=ALL,MODEL=$HOME/agent-arena-data/v3/run-$T/lora,N=30,EVAL_MIN=150,RUN_ID=v3-s$s-$T,OUT=$HOME/agent-arena-data/v3/runs fr8/j4_eval.sbatch)
+      --export=ALL,MODEL=$HOME/agent-arena-data/v3/run-$T/lora,N=30,EVAL_MIN=170,RUN_ID=v3-s$s-$T,OUT=$HOME/agent-arena-data/v3/runs fr8/j4_eval.sbatch)
   log "$E" canary-v3-eval-s$s "afterok:$T n=30/tier heldout"
   echo "seed$s train=$T eval=$E"
 done

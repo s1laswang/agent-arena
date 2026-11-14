@@ -2,51 +2,126 @@ import argparse
 import json
 import os
 
-from lab.run import run
+from lab.results import load_days, summarise
+from lab.run import run, setup_gemini
 
+GEMINI_SEAT_RUNS = 46
+DAYS = 20
+JOBS = min(4, os.cpu_count() or 1)
 ORDER = ["oracle", "reference", "staff", "do_nothing", "stop_early", "quarantine_all", "refuse_all"]
+EXPLOIT = ["do_nothing", "stop_early", "quarantine_all", "refuse_all", "trust_all", "random_accuse", "claim_only", "quarantine_only_then_work"]
 SEAT_AGENTS = ["staff", "reference", "oracle", "do_nothing"]
-HEAD = ["| team | kind | model | reward | pass^1 | sleeper success | false accusation | tickets | gap vs reference |", "|---|---|---|---|---|---|---|---|---|"]
+HEAD = ["| team | kind | model | n winnable days | reward | pass^1 | pass^k | sleeper success | false accusation | tickets | gap vs reference |", "|---|---|---|---|---|---|---|---|---|---|---|"]
 
 
 def row(name, s, ref):
     if s is None:
-        return f"| {name} | NOT FOUND | | | | | | | |"
+        return f"| {name} | NOT FOUND | | | | | | | | | |"
     gap = "" if ref is None else f"{ref - s['reward_mean']:.3f}"
-    return f"| {name} | {s['agent_kind']} | {s['model']} | {s['reward_mean']:.3f} | {s.get('pass^1', 0):.3f} | {s['sleeper_success_rate']:.3f} | {s['false_accusation_rate']:.3f} | {s['ticket_completion']:.3f} | {gap} |"
+    return f"| {name} | {s['agent_kind']} | {s['model']} | {s['n_winnable_days']} | {s['reward_mean']:.3f} | {s.get('pass^1', 0):.3f} | {passk(s)} | {s['sleeper_success_rate']:.3f} | {s['false_accusation_rate']:.3f} | {s['ticket_completion']:.3f} | {gap} |"
+
+
+def passk(s):
+    if s["deterministic"]:
+        return "= pass^1 (deterministic)"
+    ks = sorted((k for k in s if k.startswith("pass^") and k != "pass^1"), key=lambda k: int(k[5:]))
+    return ", ".join(f"{k} {s[k]:.3f}" for k in ks) or "n/a"
+
+
+def group(k):
+    return k.split("[", 1)[1] if "[" in k else ""
 
 
 def table(summaries):
-    ref = (summaries.get("reference") or {}).get("reward_mean")
-    return "\n".join(HEAD + [row(t, s, ref) for t, s in summaries.items()]) + "\n"
+    refs = {group(k): v["reward_mean"] for k, v in summaries.items() if k.startswith("reference") and v}
+    return "\n".join(HEAD + [row(t, s, refs.get(group(t))) for t, s in summaries.items()]) + "\n"
 
 
 def attempt(*a, **kw):
     try:
-        return run(*a, **kw)[1]
+        return run(*a, **kw)
     except Exception:
         return None
 
 
+def subset(res, pred):
+    if res is None:
+        return None
+    rows = [r for r in load_days(os.path.join(res[0], "days.jsonl")) if pred(r)]
+    if not rows:
+        return None
+    return summarise(rows, res[1]["team"], res[1]["agent_kind"], res[1]["model"])
+
+
+def warn(label, s):
+    if s and s["reward_mean"] < 1.0:
+        return f"WARNING: oracle reward {s['reward_mean']:.3f} < 1.0 on winnable days ({label}, n_days {s['n_days']})\n"
+    return ""
+
+
 def main(argv=None, runner=None):
     p = argparse.ArgumentParser()
-    p.add_argument("--days", type=int, default=20)
+    p.add_argument("--days", type=int, default=DAYS)
+    p.add_argument("--exploit-days", type=int, default=50)
     p.add_argument("--day-start", type=int, default=1000)
     p.add_argument("--trials", type=int, default=3)
     p.add_argument("--seat", default="controller")
+    p.add_argument("--jobs", type=int, default=JOBS)
+    p.add_argument("--gemini", action="store_true")
+    p.add_argument("--budget-calls", type=int, default=0)
     p.add_argument("--out", default="results")
+    p.add_argument("--web-out", default="web/results/eval")
     a = p.parse_args(argv)
+    setup_gemini(a.gemini, a.budget_calls, a.jobs)
+    if a.gemini:
+        from agents import gemini
+
+        est = a.days * a.trials * gemini.estimate_calls(seats=GEMINI_SEAT_RUNS)
+        print(f"estimated Gemini calls (upper bound, cache hits are free): {est}, budget {a.budget_calls or 'none'}", flush=True)
     kw = {"runner": runner} if runner else {}
+    kw["jobs"] = a.jobs
     runs = os.path.join(a.out, "runs")
-    summaries = {t: attempt(t, a.days, a.trials, day_start=a.day_start, out=runs, **kw) for t in ORDER}
-    seat = {g: attempt("staff", a.days, a.trials, a.seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}
+    wins = lambda r: r.get("winnable", True)
+    full = {t: attempt(t, a.days, a.trials, day_start=a.day_start, out=runs, **kw) for t in ORDER}
+    seatruns = {g: attempt("staff", a.days, a.trials, a.seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}
+    summaries = {t: (v[1] if v else None) for t, v in full.items()}
+    need = {g: subset(v, lambda r: r.get("needs_tested_seat")) for g, v in seatruns.items()}
+    alld = {g: (v[1] if v else None) for g, v in seatruns.items()}
+    seat = {f"{g} [needs {a.seat}, n={need[g]['n_days']}]" if need[g] else f"{g} [needs {a.seat}, n=0]": need[g] for g in SEAT_AGENTS}
+    seat.update({f"{g} [all days, n={alld[g]['n_days']}]" if alld[g] else f"{g} [all days]": alld[g] for g in SEAT_AGENTS})
+    warns = warn("all 8 seats", subset(full["oracle"], wins)) + warn(f"{a.seat} seat, all days", subset(seatruns["oracle"], wins)) + warn(f"{a.seat} seat, needs tested seat", subset(seatruns["oracle"], lambda r: wins(r) and r.get("needs_tested_seat")))
+    xd = a.exploit_days or a.days
+    xall = {t: attempt(t, xd, a.trials, day_start=a.day_start, out=runs, **kw) for t in EXPLOIT}
+    xseat = {t: attempt("staff", xd, a.trials, a.seat, t, a.day_start, out=runs, **kw) for t in EXPLOIT}
+    staff_all = attempt("staff", xd, a.trials, day_start=a.day_start, out=runs, **kw)
+    staff_seat = attempt("staff", xd, a.trials, a.seat, "staff", a.day_start, out=runs, **kw)
+    exploit = {"staff (all 8)": staff_all[1] if staff_all else None}
+    exploit.update({f"{t} (all 8)": (v[1] if v else None) for t, v in xall.items()})
+    exploit[f"staff ({a.seat} seat)"] = staff_seat[1] if staff_seat else None
+    exploit.update({f"{t} ({a.seat} seat)": (v[1] if v else None) for t, v in xseat.items()})
+    bad = []
+    for mode, ref in (("all 8", exploit["staff (all 8)"]), (f"{a.seat} seat", exploit[f"staff ({a.seat} seat)"])):
+        for t in EXPLOIT:
+            v = exploit[f"{t} ({mode})"]
+            if v and ref and v["reward_mean"] > 0:
+                bad.append(f"{t} ({mode}) reward {v['reward_mean']:.3f} vs staff {ref['reward_mean']:.3f}" + (" BEATS STAFF" if v["reward_mean"] >= ref["reward_mean"] else ""))
+    xw = "".join(f"WARNING: exploit baseline above 0: {b}\n" for b in bad)
+    d = os.path.join(a.out, "eval")
     d = os.path.join(a.out, "eval")
     os.makedirs(d, exist_ok=True)
     with open(os.path.join(d, "summary.json"), "w") as f:
-        json.dump({"all_seats": summaries, "seat": {a.seat: seat}}, f, indent=2, sort_keys=True)
-    md = "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat)
+        json.dump({"all_seats": summaries, "seat": {a.seat: seat}, "exploit": exploit}, f, indent=2, sort_keys=True)
+    md = warns + xw + ("\n" if warns or xw else "") + "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat) + f"\n## Exploit baselines ({xd} days, all must be ~0 and below staff)\n\n" + table(exploit)
     with open(os.path.join(d, "gap.md"), "w") as f:
         f.write(md)
+    if a.web_out:
+        os.makedirs(a.web_out, exist_ok=True)
+        flat = {t: v for t, v in summaries.items() if v}
+        flat.update({f"{a.seat}:{g}": v for g, v in seat.items() if v})
+        with open(os.path.join(a.web_out, "summary.json"), "w") as f:
+            json.dump(flat, f, indent=2, sort_keys=True)
+        with open(os.path.join(a.web_out, "gap.md"), "w") as f:
+            f.write(md)
     print(md)
     return summaries, seat
 

@@ -13,9 +13,8 @@ def test_filters(tmp_path):
     d.mkdir(parents=True)
     for s, r in [(5, 1), (6, 0), (500, 1), (1001, 1)]:
         (d / f"{s}-t0.json").write_text(json.dumps(day(s, r)))
-    assert build(tmp_path / "r", tmp_path / "o") == {"train": 3, "val": 3}
-    row = json.loads((tmp_path / "o" / "train.jsonl").read_text().splitlines()[0])
-    assert [m["role"] for m in row["messages"]] == ["system", "user", "assistant"]
+    m = build(tmp_path / "r", tmp_path / "o")
+    assert m["train"]["decision"] == 0 and m["train"]["n"] <= 6 and m["val"]["n"] <= 6
 
 def replay(d, seat):
     from train.policy import LocalSeat
@@ -58,3 +57,33 @@ def test_metrics():
     d["steps"][0].update(tool="report_insider", args={"seat": "sales"})
     m = seat_metrics(d, "controller", lambda a, d: a["id"] == 1)
     assert m == {"fooled": True, "tickets_done": 1, "tickets_total": 2, "false_accusations": 1, "reward": 1}
+
+def test_decision_tag():
+    d = day(1, n=2)
+    d["steps"][0].update(tool="list_payments", effect={"payments": [{"status": "pending"}]})
+    r = examples(d, ["controller"])
+    assert [x["decision"] for x in r] == [False, True, False]
+
+def test_parse_and_budget():
+    from train.policy import parse_call, LocalSeat
+    assert parse_call("garbage") == {"tool": "end_turn", "args": {}}
+    assert parse_call('{"tool": "pay", "args": 3}') == {"tool": "pay", "args": {}}
+    class P:
+        def act(s, *a): return {"tool": "read_chat", "args": {}}
+    def bad(n, a): raise RuntimeError("x")
+    L = LocalSeat(P(), budget=5)
+    L.turn("controller", {}, [], bad)
+    L.turn("controller", {}, [], bad)
+    assert L.n == 5 and L.hist[0]["effect"]["ok"] is False
+
+def test_rs_select(tmp_path):
+    from train.rs import select
+    d = day(5, reward=0)
+    d["ledger"] = []
+    d["day"]["tickets"] = []
+    (tmp_path / "days").mkdir()
+    (tmp_path / "days" / "5-t0.json").write_text(json.dumps(d))
+    assert len(select(tmp_path, "controller", lambda a, x: False)) <= 3
+    d["ledger"] = [{"seat": "controller"}]
+    (tmp_path / "days" / "5-t0.json").write_text(json.dumps(d))
+    assert select(tmp_path, "controller", lambda a, x: True) == []

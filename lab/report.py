@@ -133,6 +133,11 @@ def headline(rs, cf):
     out.append(f"- Most common named mistakes ({k}): " + ", ".join(f"{a} ({n} of {f['losses']} lost days)" for a, n in f["top"]) + f". Command: `python -m lab.analyse {d}`.")
     if "cf" in f:
         out.append(f"- {f['cf']['fixed']} of {f['losses']} {k} losses ({f['one_seat_pct']:.0f}%) flip to a win when the one seat that made the decisive decision follows the oracle procedure; {f['two_seat_pct']:.0f}% when up to two seats do. Command: `python -m lab.counterfactual {d}`.")
+    from lab import decompose
+    n, losses, c = decompose.shares(d)
+    if losses:
+        inc = sum(v for k, v in c.items() if "unfinished" in k)
+        out.append(f"- {inc} of {losses} {k} losses include unfinished legit tickets (incompleteness, not a decision); {losses - inc} are harm or false accusation only. Command: `python -m lab.decompose {d}`.")
     if f["goal"]:
         out.append(f"- {k.capitalize()} reward by sleeper goal: " + ", ".join(f"{a} {pct(v)}" for a, v in f["goal"].items()) + f". Command: `python -m lab.report {d.parent}`.")
     return out
@@ -150,6 +155,17 @@ def build(root):
     parts += ["", "## Who gets fooled (per seat)", seat_table(tot), "", "Charts: gap.svg, labels.svg, seats.svg"]
     if st:
         parts += ["", "## Counterfactual: careful seats", "", f"Run {st[0].name}: each staff loss replayed with the decisive seat(s) replaced by the oracle seat, same day and trial.", "", counterfactual.table(cf)]
+    if st:
+        from lab import decompose
+        runs_ = {"staff": st[0]}
+        for t in ("reference", "oracle"):
+            r = pick(rs, t)
+            if r:
+                runs_[t] = r[0]
+        cf2 = counterfactual.counterfactual(st[0], where=decompose.decisions_only)
+        parts += ["", "## Gap decomposition (staff)", "", "Each lost day has exactly one cause set. 'unfinished' means legit tickets left open, which is incompleteness of the agent, not a decision.", "", decompose.decomposition_table(st[0]),
+                  "", "## Counterfactual on decision-only losses", "", "Only lost days with harm or a false accusation and no unfinished tickets.", "", counterfactual.table(cf2),
+                  "", "## Ticket completion by kind", "", decompose.completion_table(runs_)]
     parts += ["", "## Label glossary", "", "| label | decision | tool or evidence that would have prevented it |", "|---|---|---|"]
     parts += [f"| {k} | {v[0]} | {v[1]} |" for k, v in analyse.GLOSSARY.items()]
     a, b = pick(rs, "staff"), pick(rs, "reference")

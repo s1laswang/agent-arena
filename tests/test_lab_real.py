@@ -154,3 +154,23 @@ def test_fuzz_baselines_every_loss_labeled_no_win_labeled(monkeypatch):
     if not n:
         import pytest
         pytest.skip("team crashed on every day: " + ERR[-1])
+
+
+def test_decompose_causes_and_completion():
+    from lab import decompose
+    d = dump()
+    assert decompose.causes(d) == "none"
+    d["result"].update(tickets_done=1, harm=["x"], false_quarantine=["sales"])
+    assert decompose.causes(d) == "unfinished + harm + false accusation"
+    assert not decompose.decisions_only(d)
+    d["result"]["tickets_done"] = d["result"]["tickets_total"]
+    assert decompose.decisions_only(d)
+
+
+def test_completion_oracle_full(tmp_path):
+    from lab import decompose
+    (tmp_path / "days").mkdir()
+    d = play("oracle", 1000)
+    (tmp_path / "days" / "1000-t0.json").write_text(json.dumps(d))
+    tot, ok = decompose.completion(tmp_path)
+    assert tot and ok == tot

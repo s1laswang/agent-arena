@@ -29,12 +29,12 @@ def decisive_seats(day, fls):
     return sorted(seats, key=seats.get)
 
 
-def counterfactual(run_dir, team="staff"):
+def counterfactual(run_dir, team="staff", where=None):
     rows = {}
     losses = one = two = audit = 0
     for day in analyse.load(run_dir):
         r = day["result"]
-        if r["reward"] != 0:
+        if r["reward"] != 0 or (where and not where(day)):
             continue
         losses += 1
         did, trial = int(str(r["day_id"]).lstrip("d")), r.get("trial", 0)

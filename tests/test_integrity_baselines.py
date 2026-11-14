@@ -64,7 +64,7 @@ def test_stop_early_about_v_over_n():
 CHANCE_LEVEL = {"stop_early", "random", "restrict_all", "probe_all", "accuse_decoy"}
 CHANCE_BOUND = {"easy": 0.25, "medium": 0.15, "hard": 0.15}   # ≈ 2-3x V/N + noise margin
 # Log-based baselines currently beat chance by a lot (EXPLOITS #4). These bounds only stop it
-# getting worse; the real bar is test_log_signal_alone_near_chance (xfail until ENV retunes).
+# getting worse; the real bar is test_log_signal_alone_near_chance (strict since ENV tiers v1).
 LOG_BOUND = {"easy": 0.7, "medium": 0.4, "hard": 0.35}
 
 
@@ -88,16 +88,14 @@ def test_accuse_decoy_near_chance(tier):
 
 @pytest.mark.parametrize("name", ["accuse_most_logs"])
 @pytest.mark.parametrize("tier", ["medium", "hard"])
-@pytest.mark.xfail(strict=False, reason="EXPLOITS #4: after-hours log rate identifies the mole without canaries")
 def test_most_logs_near_chance(name, tier):
     from canary.rules import TIERS
-    scores = _run(name, tier)
+    scores = _run(name, tier, range(100))  # 100 seeds: 30 is too noisy at a 2x-chance bound
     acc = sum(x > 0 for x in scores) / len(scores)
     assert acc <= 2.0 / TIERS[tier].n_employees, (name, tier, acc)
 
 
 @pytest.mark.parametrize("tier", ["easy", "medium", "hard"])
-@pytest.mark.xfail(strict=False, reason="EXPLOITS #4: log-only agent ≥ naive canary agent; canary mechanic optional")
 def test_log_signal_alone_near_chance(tier):
     """Repro: wait 5 days, read_access_logs(1..day), drop angriest sender, accuse argmax(3*AH+total).
     Never plants a canary. Should be ≪ the canary heuristic and near chance."""
@@ -128,7 +126,6 @@ LOGS_ONLY_MAX_ACC = {"easy": 0.40, "medium": 2.0 / 20, "hard": 2.0 / 30}  # CEO 
 
 
 @pytest.mark.parametrize("tier", ["easy", "medium", "hard"])
-@pytest.mark.xfail(strict=False, reason="EXPLOITS #10: logs alone identify the mole (open, ENV recalibration)")
 def test_logs_only_bound(tier):
     """logs_only (no canaries, wait 9 days) accuracy over 100 dev seeds stays under the CEO bound."""
     scores = _run("logs_only", tier, range(100))

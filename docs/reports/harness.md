@@ -1,5 +1,21 @@
 # HARNESS report
 
+## 02:37 status (mcp-server engineer, filling in for HEAD-HARNESS)
+
+### Done (verified)
+- **EXPLOITS #25 closed on the server side.** canary/mcp_server.py reads `CANARY_EPISODE_FILE` (JSON {tier,seed}), `CANARY_WORLD_SECRET_FILE`, `CANARY_LEDGER_TOKEN_FILE` and `CANARY_ADMIN_TOKEN_FILE`. These are 0600 files read at startup; a file wins over its plain env var, and the plain vars still work for local dev.
+  - The world secret goes to canary.world in-process and is never exported. The server uses `world.set_world_secret` if ENV adds it (requested via SendMessage); until then it fills the per-process secret slot. If CANARY_WORLD_SECRET or SALT would take precedence, the server refuses to start.
+  - A missing, empty or malformed file makes the server exit 2 without echoing the contents.
+  - Verified: `pytest -rA tests/test_integrity_secrets.py` shows `test_25_server_environ_holds_no_secrets` PASSED. The strict xfail flipped automatically. `tests/test_mcp.py` (14 passed) adds two tests:
+    - the files configure the episode and the world: the server with the secret file matches an in-process Env with the same secret, step for step, and the file token beats the plain token;
+    - a bad episode file is refused without echo.
+- `/ledger` uses `Env.verdict()` when ENV adds it (requested) and falls back to the private attributes until then.
+- `set -o pipefail; make test`: 355 passed, 3 skipped.
+
+### Untested / open
+- `world.set_world_secret` and `Env.verdict()` are not on justSilas yet (asked HEAD-ENV). The server code uses them automatically once they land.
+- Unchanged from 02:20: no real-model OpenCode or Codex episode yet, no Harbor task, `--reproduce` still TODO.
+
 ## 02:20 status (mcp-server engineer, filling in for HEAD-HARNESS)
 
 ### Done (verified)

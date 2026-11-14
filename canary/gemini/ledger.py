@@ -112,5 +112,10 @@ class LedgeredClient(LLMClient):
 
 
 def lab_client(spec: str, feature: str, run_id: str = "", meta: dict | None = None, **kw) -> LedgeredClient:
-    """get_client(spec, **kw) wrapped in the ledger. spec: 'gemini:<model>' (or 'stub' in tests)."""
+    """get_client(spec, **kw) wrapped in the ledger. spec: 'gemini:<model>' (or 'stub' in tests).
+    Gemini specs get a gateway-aware SDK client (canary.gemini.sdk.genai_client): with GEMINI_GATEWAY_URL set,
+    every call goes through the Canary Lab gateway; otherwise direct with GEMINI_API_KEY."""
+    if spec.partition(":")[0] == "gemini" and kw.get("sdk_client") is None:
+        from .sdk import genai_client
+        kw["sdk_client"] = genai_client()
     return LedgeredClient(get_client(spec, **kw), feature=feature, run_id=run_id, meta=meta)

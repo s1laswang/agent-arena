@@ -1,0 +1,38 @@
+{
+ "model": "gemini-3.1-flash-lite",
+ "steps": [
+  {
+   "step": "function_call",
+   "tool_calls": [
+    {
+     "args": {
+      "variant": "B"
+     },
+     "name": "check_leak"
+    }
+   ]
+  },
+  {
+   "step": "function_response",
+   "text": "The suspect who leaked the document is Dana.",
+   "tool_calls": []
+  },
+  {
+   "json": {
+    "confidence": 1.0,
+    "suspect": "Dana"
+   },
+   "step": "structured_output"
+  },
+  {
+   "chunks": 2,
+   "step": "stream",
+   "text": "Identify leaks using unique information."
+  },
+  {
+   "cosine": 0.63781,
+   "dim": 256,
+   "step": "embed"
+  }
+ ]
+}

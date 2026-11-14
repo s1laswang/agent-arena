@@ -19,6 +19,7 @@ _PATS = {
     "framing_rate": rf"adds Poisson\({_F}\) fake",
     "framing_decoy_share": rf"the decoy with prob {_F}",
     "p_evasive_innocent": rf"evasive with probability {_F} for innocents",
+    "wrong_accusation_score": r"innocent employee the score is (-?[0-9]*\.?[0-9]+)",
     "interview_lr": rf"for the mole[^0-9]*{_F} x {_F}",
 }
 _INTS = {"n_days": r"at most (\d+) days", "canaries_per_day": r"at most (\d+) per day",
@@ -71,6 +72,11 @@ def params_from_instruction(text: str) -> TierParams | None:
     mm = re.search(r"after a delay uniform over \[([0-9, ]+)\]", text)
     if mm:
         upd["delay_choices"] = tuple(int(x) for x in mm.group(1).split(","))
+    mm = re.search(r"at least (\d+)% of all staff", text)
+    upd["doc_recipient_share"] = int(mm.group(1)) / 100 if mm else 0.0
+    mm = re.search(r"one whole department \((\d+)%\)", text)
+    if mm:
+        upd["p_single_dept_recipients"] = int(mm.group(1)) / 100
     upd["careful_mole"] = "Careful mole" in text
     upd["framing"] = "Framing:" in text
     upd["decoy"] = "A decoy exists" in text

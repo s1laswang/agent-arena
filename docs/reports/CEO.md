@@ -42,3 +42,14 @@
 - Story: medium = "fair tier, frontier ~ reference"; the headline gap is on hard + Forge-evolved moles (difficulty curve).
 - FR8 J1 sweeps fingerprint_accuracy x leak_damage. J5 forge (stub) runs pop 24 x 500 gens; its moles must be re-validated after the freeze.
 - OpenCode login only accepts gpt-5.6-sol, so it is used for the harness-shape runs (labelled). Morning: Silas adds OpenCode API-key auth for gpt-5.5 parity.
+
+## 04:10
+- Merged 54e1fa4: tiers v1 (FR8 J1: medium solver .54/acc .93 vs heuristic -.18/acc .50; hard solver .60/acc .95 vs heuristic -.26), JUDGE_SEEDS 40/tier, v0.5 fail-closed (fresh in-memory secret per server start; no committed world files containing the mole). v0.4 knobs present, defaults off. CEO run: 321 passed, 8 xpassed (INTEGRITY is flipping them to strict).
+- AGENTS accusation audit: every gpt-5.5 accusation on the old tiers had P(accused)=1.00 under the solver belief; it accused ~1.5 days earlier than the solver on hard. ENV is diagnosing (certainty day vs accuse day): tuned tau + EV guard + daily pipelined canaries, ETA ~05:10. The solver robustness to random DSL moles dropped to 70% on medium (test relaxed to 0.65 until that fix).
+- gpt-5.5 on tiers v1 (10 medium + 10 hard, dev seeds) started.
+- HARNESS head still idle; a CEO-launched mcp-server engineer is building eval.run_episode + mcp_server.
+
+## 04:35 GPU
+- Per Silas, paused sky task 43143_4 (w0625-c1, the worst run, mAP50-95 0.484; it was at epoch 50/149) with `scontrol requeuehold 43143_4`. It resumes from last.pt. **To resume: `ssh freighter scontrol release 43143_4`** (the CEO does this when J4 ends, or at 08:30).
+- sleeper-pilot 43478 took the freed GPU first (10-min limit). J4 44200 (canary-j4: LoRA SFT Qwen2.5-1.5B, fp16, 6 h limit) is next. J3 data: 20k+2k solver episodes on tiers v1 (pre-stopping-fix solver), 1.1 GB.
+- The MCP server + eval.run_episode are merged (f2931d4, CEO-launched engineer): 338 passed. The CEO launched two more engineers in place of the idle HARNESS head: reproduce + README + CI, and Harbor task + isolation check (colima only with small resources, given memory pressure).

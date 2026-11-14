@@ -77,3 +77,27 @@ def test_committed_runs_labelled():
         d = os.path.dirname(sp)
         if os.path.exists(os.path.join(d, "days.jsonl")):
             assert check_run(d) == [], d
+
+
+def _rows(t):
+    return t if isinstance(t, list) else t.get("rows", [])
+
+
+def test_frontier_provenance():
+    gp = "web/results/frontier/gaptable.json"
+    if not os.path.exists(gp):
+        pytest.skip("no frontier results yet")
+    for row in _rows(json.load(open(gp))):
+        prov, model, commit = row.get("provenance"), row.get("model"), row.get("commit")
+        files = [json.load(open(f)) for f in glob.glob(f"results/frontier/{model}/{commit}/*.json")]
+        if prov == "real":
+            assert model and commit, row
+            assert files, row
+            assert all(f.get("agent") not in (None, SCRIPTED) and f.get("model") == model and f.get("commit") == commit for f in files), row
+            assert any(f.get("mcp_calls") for f in files), row
+        else:
+            assert prov == SCRIPTED, row
+    for f in glob.glob("results/frontier/*/*/*.json"):
+        r = json.load(open(f))
+        if r.get("agent") == SCRIPTED:
+            assert r.get("provenance", SCRIPTED) == SCRIPTED, f

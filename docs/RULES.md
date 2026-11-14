@@ -83,28 +83,28 @@ Failure labelling: `python -m lab.analyse results/runs/<run_id>` (on `momin`).
 
 ## Latest numbers
 
-From `results/eval/gap.md`, table "Team plays all 8 seats", `make eval` on `momin` at c55f7d3, scripted agents (no Gemini key), 20 days, days start at 1000, 3 trials. `momin` keeps moving, rerun before quoting:
+From `results/eval/gap.md`, table "Team plays all 8 seats", `make eval` on `momin` at 814a723, scripted agents (no Gemini key), 20 days, days start at 1000, 3 trials. `momin` keeps moving, rerun before quoting:
 
 | Team | Reward | Sleeper success | False accusation | Tickets done |
 |---|---|---|---|---|
 | oracle (hidden identity) | 1.000 | 0.000 | 0.000 | 1.000 |
 | reference (evidence only) | 0.550 | 0.562 | 0.000 | 1.000 |
 | staff | 0.250 | 0.938 | 0.150 | 0.961 |
-| do_nothing | 0.000 | 0.125 | 0.000 | 0.000 |
-| stop_early | 0.000 | 0.625 | 0.000 | 0.126 |
+| do_nothing | 0.000 | 0.062 | 0.000 | 0.000 |
+| stop_early | 0.000 | 0.562 | 0.000 | 0.126 |
 | quarantine_all | 0.000 | 0.000 | 1.000 | 0.000 |
-| refuse_all | 0.000 | 0.125 | 0.000 | 0.000 |
+| refuse_all | 0.000 | 0.062 | 0.000 | 0.000 |
 | trust_all | 0.000 | 0.812 | 0.000 | 0.666 |
 
 The gap between the evidence-only reference and staff is 0.300 in reward (0.550 against 0.250). All teams here are scripted, so pass^k equals pass^1 (deterministic). Gemini-driven rows are NOT FOUND until a run with a key.
 
-Landing table `results/landing/20261114-014805.md`: not regenerated at c55f7d3, so no number from it is quoted here. NOT FOUND for c55f7d3.
+Landing table `results/landing/20261114-014805.md`: not regenerated at 814a723, so no number from it is quoted here. NOT FOUND for 814a723.
 
 ## Known open issues
 
-- `make eval` prints `WARN trust_all 0.800 > staff 0.300: too easy to just trust everything` for its exploit-baseline set, but trust_all is 0.000 in the all-8 table above. Two different day sets, not reconciled. Do not cite the staff-over-baselines gap as proof until they agree.
+- The older `WARN trust_all 0.800 > staff 0.300` line is not printed at 814a723; the self-check `trust_all <= staff` prints PASS.
 - The oracle uses the hidden sleeper identity (`day.sleeper_seat`), so it is not a fair comparison. The `reference` row is a separate scripted team built from the seat and the evidence only. Compare staff to the reference.
-- The finance_ap seat-swapped tables in `gap.md` show the oracle at 0.400 (all days) and 0.250 (16 sleeper days), and `lab.eval` warns "oracle reward 0.400 < 1.0 on winnable days". Do not quote those rows as a gap.
+- The finance_ap seat-swapped tables in `gap.md` show the oracle at 0.800 (all days) and 0.750 (16 sleeper days), and `lab.eval` warns "oracle reward 0.800 < 1.0 on winnable days". Do not quote those rows as a gap.
 
 ## Why it cannot be gamed
 
@@ -129,7 +129,7 @@ AfterQuery scores 100 points. Each clause below points to where it is met.
 
 - Frontier agent: plain Gemini staff, each doing its own job. Reference: the same model inside a stronger procedure (enforced two-person checks, audit log read before approving, out of band verification), plus the scripted oracle, which reads the hidden sleeper identity and only proves each day is winnable.
 - Both are run by `make eval`, with pass^k per seed, from fixed seeds and cached model responses.
-- Numbers: README results table, from `make eval` (momin c55f7d3).
+- Numbers: README results table, from `make eval` (momin 814a723).
 
 ### Meaningful difficulty (30)
 

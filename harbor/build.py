@@ -150,7 +150,7 @@ def task(out, seed, seat, repo=True, manifest=None):
     put(d / "instruction.md", INSTRUCTION.format(**f))
     put(d / "environment/Dockerfile", DOCKERFILE)
     put(d / "environment/oracle_client.py", (ROOT / "harbor/oracle_client.py").read_text())
-    for m in ["__init__", "models", "scripted"]:
+    for m in ["__init__", "models", "scripted", "tickets"]:
         put(d / f"solution/sleeper/{m}.py", (ROOT / f"sleeper/{m}.py").read_text())
     put(d / "environment/docker-compose.yaml", COMPOSE.format(**f))
     put(d / "environment/runtime-server/Dockerfile", SERVER_DOCKERFILE)

@@ -103,6 +103,8 @@ def test_eval_job_command_uses_timeout_3600_and_provider_isolation(tmp_path: Pat
     assert cmd[0] == sys.executable
     env16 = job.build_env({"PATH": "/usr/bin"})
     assert env16["CANARY_PROVIDER"] == "v16:authority"
+    assert env16["CANARY_SOCIAL_CACHE_DIR"] == str(tmp_path / "cache")
+    assert env16["CANARY_GEMINI_CACHE_DIR"] == str(tmp_path / "cache")
     assert env16["CANARY_CUSTOM"] == "1"
 
     job14 = h.EvalJob(

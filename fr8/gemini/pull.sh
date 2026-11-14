@@ -6,11 +6,11 @@ set -euo pipefail
 source "$(dirname "$0")/common.sh"
 cd "$REPO_ROOT"
 mkdir -p data/gemini/ledger/fr8 data/gemini/fr8
-rsync -az "$FR8_HOST:agent-arena-data/gemini/ledger/" data/gemini/ledger/fr8/
+rsync -e "$FR8_RSYNC_RSH" -az "$FR8_HOST:agent-arena-data/gemini/ledger/" data/gemini/ledger/fr8/
 if [ $# -gt 0 ]; then
-  for d in "$@"; do mkdir -p "data/gemini/fr8/$d"; rsync -az "$FR8_HOST:agent-arena-data/gemini/$d/" "data/gemini/fr8/$d/"; done
+  for d in "$@"; do mkdir -p "data/gemini/fr8/$d"; rsync -e "$FR8_RSYNC_RSH" -az "$FR8_HOST:agent-arena-data/gemini/$d/" "data/gemini/fr8/$d/"; done
 else
-  rsync -az --exclude ledger/ "$FR8_HOST:agent-arena-data/gemini/" data/gemini/fr8/
+  rsync -e "$FR8_RSYNC_RSH" -az --exclude ledger/ "$FR8_HOST:agent-arena-data/gemini/" data/gemini/fr8/
 fi
 echo "pulled -> data/gemini/ledger/fr8 ($(cat data/gemini/ledger/fr8/*.jsonl 2>/dev/null | wc -l | tr -d ' ') ledger rows), data/gemini/fr8"
 du -sh data/gemini/fr8 2>/dev/null | tail -1

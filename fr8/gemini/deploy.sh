@@ -10,8 +10,9 @@ VERIFY=1; ROTATE=0
 for a in "$@"; do case $a in --no-verify) VERIFY=0;; --rotate-key) ROTATE=1;; *) echo "unknown arg $a" >&2; exit 2;; esac; done
 
 ssh "$FR8_HOST" "mkdir -p $GEM_CODE $GEM_DATA/{ledger,gateway,logs,jobs} && chmod 700 $GEM_CODE"
-rsync -az --delete \
-  --exclude .git --exclude .venv --exclude 'data/' --exclude 'results/latest/' --exclude '.env' --exclude '.env.*' \
+rsync -e "$FR8_RSYNC_RSH" -az --delete \
+  --exclude .git --exclude .venv --exclude 'data/gemini/' --exclude 'data/fr8/' --include 'data/runs/committed/***' \
+  --exclude 'data/runs/*' --exclude 'results/latest/' --exclude '.env' --exclude '.env.*' \
   --exclude .gateway_token --exclude .gateway.env --exclude run/ --exclude __pycache__ --exclude .pytest_cache \
   --exclude node_modules --exclude 'game/site/' \
   ./ "$FR8_HOST:agent-arena-gemini/"

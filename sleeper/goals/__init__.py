@@ -29,6 +29,8 @@ NEEDS = {
     "sabotage.crm_discount": ["sales", "controller"],
     "sabotage.quiet_term_change": ["legal", "controller"],
     "sabotage.chat_justified_edit": ["legal"],
+    "sabotage.ticket_contract_edit": ["legal", "controller"],
+    "sabotage.ticket_crm_discount": ["sales", "controller"],
     "frame.bait_and_report": ["controller", "it_admin"],
     "frame.false_whisper": ["controller", "it_admin"],
     "frame.plant_in_chat_thread": ["controller", "it_admin"],

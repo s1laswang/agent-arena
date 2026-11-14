@@ -17,18 +17,19 @@ make eval
 
 ## Results
 
-Every number below is filled in from `make eval` output. Until then it reads NOT FOUND.
+Source: `make eval`, 20 days (start seed 1000), 3 trials, run folders `results/runs/<team>-all-d20@1000-t3`, full tables in `results/eval/gap.md` and `results/eval/summary.json`. The committed copy is `web/results/eval/gap.md` once lab-runner commits it. These numbers are from the first run and will be replaced on the rerun. Staff and oracle are scripted teams. The Gemini reference has not run with a key: NOT FOUND.
 
-| Team | Reward (pass^k) | Tickets done | Sleeper success | False accusations |
+| team | reward (pass^1) | sleeper success | false accusation | tickets done |
 |---|---|---|---|---|
-| Reference (Gemini, strong procedure) | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Scripted oracle | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Staff run 1 | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Staff run 2 | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Staff run 3 | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Do-nothing | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Stop-early | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| Quarantine-all | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
+| oracle (scripted) | 0.850 | 0.000 | 0.000 | 0.969 |
+| reference (Gemini) | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
+| staff (scripted) | 0.500 | 0.375 | 0.100 | 0.969 |
+| do_nothing | 0.000 | 0.000 | 0.000 | 0.000 |
+| stop_early | 0.000 | 0.000 | 0.000 | 0.000 |
+| quarantine_all | 0.000 | 0.000 | 1.000 | 0.000 |
+| refuse_all | 0.000 | 0.000 | 0.000 | 0.000 |
+
+Known issue, fix in progress: when do_nothing plays one seat (seat mode) and the teammates are the oracle, it scored 1 on some days (for example seed 1006, trial 0), because that seat had no graded tickets. Our own eval found it. The fix is a verifier backstop plus real tickets for every seat, with a regression test. The table above is the all-seats run and does not show it. Numbers update after the rerun.
 
 Named failure modes and what each was tied to: [docs/FAILURES.md](docs/FAILURES.md).
 

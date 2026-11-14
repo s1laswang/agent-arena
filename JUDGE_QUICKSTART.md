@@ -40,7 +40,7 @@ make game-serve
 
 ## 3. Live Harbor + OpenCode Rerun Checklist (Needs Docker + API Key)
 
-Build **ONCE** (`10` hard judge tasks `900000-900009` in gitignored `harbor/dataset/`, fresh `0600` `SALT` + `ledger_key` mounted only in `canary-server` sidecar and separate verifier). **Never rebuild between `oracle` and frontier runs** so worlds stay paired (protocol: [`results/harbor/rehearsal/README.md`](results/harbor/rehearsal/README.md), isolation: [`harbor/README.md`](harbor/README.md)):
+Build **ONCE** (`10` hard judge tasks `900000-900009` in gitignored `harbor/dataset/`, fresh `0600` `SALT` + `ledger_key` mounted only in `canary-server` sidecar and separate verifier). **Never rebuild between `oracle` and frontier runs** so worlds stay paired (protocol: [`results/harbor/rehearsal/README.md`](results/harbor/rehearsal/README.md), dry run: [`rehearsal-dry`](results/harbor/rehearsal-dry/README.md), isolation: [`harbor/README.md`](harbor/README.md)):
 
 ```bash
 uv tool install harbor && uv run python harbor/build.py

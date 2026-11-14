@@ -5,6 +5,9 @@ from sleeper.company import SEATS
 _cache = {}
 
 def make_team(spec, day, trial):
+    if spec == "careful_fin":
+        from train.teacher import CarefulFinance
+        return {s: CarefulFinance() for s in SEATS}
     if spec == "careful":
         from train.teacher import Careful
         return {s: Careful() for s in SEATS}

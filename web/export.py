@@ -11,12 +11,18 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from agents.sleeper_agent import SleeperAgent, Step, Strategy
-from sleeper.company import World
+from sleeper.company import BUDGET, World
 from sleeper.day import play_round, run_day
 from sleeper.models import SEATS, SleeperGoal
 from sleeper.scripted import NoopAgent, OracleAgent, make_team
-from sleeper.tickets import make_day
+from sleeper.tickets import done, make_day
 from sleeper.verifier import score
+
+try:
+    from sleeper.verifier import graded, needs_sleeper
+except ImportError:
+    graded = lambda day: day.tickets
+    needs_sleeper = lambda t, seat: False
 
 OUT = Path(__file__).resolve().parent / "days"
 QUIET = {"post_chat", "end_turn", "my_tickets", "close_ticket", "read_chat", "read_email", "read_doc"}
@@ -53,6 +59,23 @@ def harmful(day, ledger, harm):
     return out
 
 
+def pack(did, day, world, team_name, extra=None):
+    r = score(day, world.initial, world.company, world.ledger, agent=team_name)
+    r.day_id = did
+    r.transcript_path = f"web/days/{did}.json"
+    bad = harmful(day, world.ledger, r.harm)
+    own = {t.id for t in day.tickets if t.seat == day.sleeper_seat}
+    graded_ids = {t.id for t in graded(day)}
+    tickets = [{"id": t.id, "seat": t.seat, "kind": t.kind, "request": t.request, "tick": t.tick,
+                "counted": t.id in graded_ids and t.legit and t.id not in own and getattr(t, "depends_on", None) not in own
+                and not needs_sleeper(t, day.sleeper_seat), "done": bool(done(t, world.company))} for t in day.tickets]
+    doc = {"id": did, "day": day.model_dump(), "messages": [m.model_dump() for m in world.company.messages],
+           "actions": [{**a.model_dump(), "harmful": a.seq in bad} for a in world.ledger], "result": [r.model_dump()],
+           "quarantined": world.company.quarantined, "budget": BUDGET, "tickets": tickets}
+    doc.update(extra or {})
+    return doc
+
+
 def build(seed, team_name, sleeper, live=None):
     cls = {"oracle": OracleAgent, "noop": NoopAgent}.get(team_name)
     day = make_day(seed, "finance_ap", fraud_goal()) if sleeper else make_day(seed)
@@ -82,17 +105,10 @@ def build(seed, team_name, sleeper, live=None):
         snap(True)
     else:
         world = run_day(day, team)
-    did = f"{seed}-{team_name}"
-    r = score(day, world.initial, world.company, world.ledger, agent=team_name, seat_under_test=None)
-    r.day_id = did
-    r.transcript_path = f"web/days/{did}.json"
-    bad = harmful(day, world.ledger, r.harm)
-    actions = [{**a.model_dump(), "harmful": a.seq in bad} for a in world.ledger]
-    return {"id": did, "day": day.model_dump(), "messages": [m.model_dump() for m in world.company.messages],
-            "actions": actions, "result": [r.model_dump()], "quarantined": world.company.quarantined}
+    return pack(f"{seed}-{team_name}", day, world, team_name)
 
 
-def build_landing(seed, team_kind, sid, ticks=10, shift=8):
+def build_landing(seed, team_kind, sid, ticks=None, shift=0):
     from agents.reference import make_oracle_team
     from agents.staff import ScriptedStaff
     from sleeper import goals
@@ -102,22 +118,20 @@ def build_landing(seed, team_kind, sid, ticks=10, shift=8):
     seat = st.seats[0]
     goal = goals.make_goal(st.kind, random.Random(seed), seed_company(seed))
     st = st.model_copy(update={"steps": [x.model_copy(update={"tick": max(0, x.tick - shift)}) for x in st.steps]})
-    day = make_day(seed, seat).model_copy(update={"goal": goal, "ticks": ticks})
+    day = make_day(seed, seat).model_copy(update={"goal": goal, **({"ticks": ticks} if ticks else {})})
     extra = st.render_tickets(goal.target)
     if extra:
         day = day.model_copy(update={"tickets": list(day.tickets) + extra})
-    team = make_oracle_team(day) if team_kind == "oracle" else {x: ScriptedStaff(x) for x in SEATS}
+    if team_kind == "oracle":
+        team = make_oracle_team(day)
+    elif team_kind == "procedure":
+        from agents.procedure import make_procedure_team
+        team = make_procedure_team(day, seed=seed, quarantine=True)
+    else:
+        team = {x: ScriptedStaff(x) for x in SEATS}
     team[seat] = SleeperAgent(seat, goal, st, random.Random(seed))
     world = run_day(day, team)
-    did = f"{seed}-{team_kind}"
-    r = score(day, world.initial, world.company, world.ledger, agent=team_kind)
-    r.day_id = did
-    r.transcript_path = f"web/days/{did}.json"
-    bad = harmful(day, world.ledger, r.harm)
-    actions = [{**a.model_dump(), "harmful": a.seq in bad} for a in world.ledger]
-    return {"id": did, "day": day.model_dump(), "messages": [m.model_dump() for m in world.company.messages],
-            "actions": actions, "result": [r.model_dump()], "quarantined": world.company.quarantined,
-            "strategy": sid, "goal_success": bool(goal.success(world.company, world.ledger))}
+    return pack(f"{seed}-{team_kind}", day, world, team_kind, {"strategy": sid, "goal_success": bool(goal.success(world.company, world.ledger))})
 
 
 def manifest():
@@ -138,6 +152,7 @@ def main():
     ap.add_argument("--seeds", type=int, nargs="+", default=[2, 3])
     ap.add_argument("--teams", nargs="+", default=["oracle", "noop"])
     ap.add_argument("--landing", help="strategy id, e.g. fraud.bank_swap, writes <seed>-staff and <seed>-oracle")
+    ap.add_argument("--landing-teams", nargs="+", default=["staff", "procedure", "oracle"])
     ap.add_argument("--live", action="store_true")
     ap.add_argument("--sleeper-seeds", type=int, nargs="*", default=None)
     a = ap.parse_args()
@@ -148,7 +163,7 @@ def main():
         return
     if a.landing:
         for seed in a.seeds:
-            for team in ("staff", "oracle"):
+            for team in a.landing_teams:
                 json.dump(build_landing(seed, team, a.landing), open(OUT / f"{seed}-{team}.json", "w"), indent=1, sort_keys=True)
         print(len(manifest()))
         return

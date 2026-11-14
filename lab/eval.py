@@ -109,7 +109,8 @@ def main(argv=None, runner=None):
     p.add_argument("--exploit-days", type=int, default=50)
     p.add_argument("--day-start", type=int, default=1000)
     p.add_argument("--trials", type=int, default=3)
-    p.add_argument("--seat", default="controller")
+    p.add_argument("--seat", default=os.environ.get("SLEEPER_SEAT") or "finance_ap")
+    p.add_argument("--extra-seat", default="")
     p.add_argument("--jobs", type=int, default=JOBS)
     p.add_argument("--gemini", action="store_true")
     p.add_argument("--no-report", action="store_true")
@@ -163,7 +164,14 @@ def main(argv=None, runner=None):
     os.makedirs(d, exist_ok=True)
     with open(os.path.join(d, "summary.json"), "w") as f:
         json.dump({"all_seats": summaries, "seat": {a.seat: seat}, "exploit": exploit}, f, indent=2, sort_keys=True)
-    md = warns + xw + ("\n" if warns or xw else "") + "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat) + f"\n## Exploit baselines ({xd} days, all must be ~0 and below staff)\n\n" + table(exploit) + f"\n## Sleeper success per strategy ({xd} days, all 8 seats, harm landed)\n\n" + strat + f"\n## Reward by day type ({xd} days, all 8 seats)\n\n" + day_type_table(split) + f"\n## Reward by sleeper seat ({xd} days, all 8 seats)\n\n" + seat_split_table(split)
+    extra = ""
+    if a.extra_seat and a.extra_seat != a.seat:
+        runs2 = {g: attempt("staff", a.days, a.trials, a.extra_seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}
+        need2 = {g: subset(v, lambda r: r.get("needs_tested_seat")) for g, v in runs2.items()}
+        seat2 = {f"{g} [needs {a.extra_seat}, n={need2[g]['n_days'] if need2[g] else 0}]": need2[g] for g in SEAT_AGENTS}
+        seat2.update({f"{g} [all days, n={v[1]['n_days']}]" if v else f"{g} [all days]": (v[1] if v else None) for g, v in runs2.items()})
+        extra = f"\n## Staff background, {a.extra_seat} seat swapped\n\n" + table(seat2)
+    md = warns + xw + ("\n" if warns or xw else "") + "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat) + extra + f"\n## Exploit baselines ({xd} days, all must be ~0 and below staff)\n\n" + table(exploit) + f"\n## Sleeper success per strategy ({xd} days, all 8 seats, harm landed)\n\n" + strat + f"\n## Reward by day type ({xd} days, all 8 seats)\n\n" + day_type_table(split) + f"\n## Reward by sleeper seat ({xd} days, all 8 seats)\n\n" + seat_split_table(split)
     with open(os.path.join(d, "gap.md"), "w") as f:
         f.write(md)
     if a.web_out:

@@ -113,6 +113,7 @@ def main(argv=None, runner=None):
     p.add_argument("--jobs", type=int, default=JOBS)
     p.add_argument("--gemini", action="store_true")
     p.add_argument("--no-report", action="store_true")
+    p.add_argument("--strict", action="store_true")
     p.add_argument("--budget-calls", type=int, default=0)
     p.add_argument("--out", default="results")
     p.add_argument("--web-out", default="web/results/eval")
@@ -181,6 +182,18 @@ def main(argv=None, runner=None):
             report.main(d)
         except Exception as ex:
             print(f"report skipped: {type(ex).__name__}: {ex}")
+    lines = []
+    try:
+        from lab import check
+
+        lines = check.append(os.path.join(a.out, "runs"), os.path.join(d, "gap.md")) or []
+        print("\n".join(lines))
+    except ImportError:
+        print("self-checks skipped: lab.check missing")
+    except Exception as ex:
+        print(f"self-checks skipped: {type(ex).__name__}: {ex}")
+    if a.strict and any(str(x).startswith("FAIL") for x in lines):
+        raise SystemExit(1)
     return summaries, seat
 
 

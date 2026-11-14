@@ -158,7 +158,19 @@ class V16SocialProvider:
             from canary.social.gemini_chatter import render_with_gemini
         except Exception:
             return social_msgs
-        copy_msgs = _clone_messages(social_msgs)
+        copy_msgs = []
+        for idx, m in enumerate(social_msgs):
+            item = _strip_message(m)
+            if idx < len(raw_events):
+                ev_meta: dict[str, Any] = {}
+                if raw_events[idx].get("bias"):
+                    ev_meta["bias"] = str(raw_events[idx]["bias"])
+                if raw_events[idx].get("target"):
+                    ev_meta["target"] = str(raw_events[idx]["target"])
+                    item["target"] = str(raw_events[idx]["target"])
+                if ev_meta:
+                    item["meta"] = ev_meta
+            copy_msgs.append(item)
         stub = self.mode == "gemini-stub"
         try:
             rendered = render_with_gemini(facts, copy_msgs, stub=stub, **self.extra_kw)

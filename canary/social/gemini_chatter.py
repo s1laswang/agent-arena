@@ -132,7 +132,9 @@ def validate_social_body(body: Any, draft_msg: dict[str, Any]) -> bool:
 def _clean_doc_titles(facts: PublicDayFacts) -> list[str]:
     titles: list[str] = []
     for doc in getattr(facts, "docs", ()) or ():
-        title = str(doc.get("title") or "").strip() if isinstance(doc, dict) else ""
+        if not isinstance(doc, dict) or str(doc.get("doc_id") or "").startswith("c"):
+            continue
+        title = str(doc.get("title") or "").strip()
         low = title.lower()
         if (
             title
@@ -160,6 +162,17 @@ def _sanitize_draft_for_prompt(draft_body: str) -> str:
     return scrubbed[:240]
 
 
+def _target_label_for_prompt(emp: Any, target_id: str | None) -> str:
+    if emp is None or not target_id:
+        return target_id or ""
+    nm = str(getattr(emp, "name", "") or "").strip()
+    if not nm or lint_text(nm) or any(term in nm.lower() for term in DECOY_VOCAB):
+        nm = target_id
+    if len(nm) > 28:
+        nm = nm[:28].rstrip()
+    return f"{nm} ({target_id})"
+
+
 def build_social_prompt(facts: PublicDayFacts, social_msgs: list[dict[str, Any]]) -> str:
     by_id = {e.id: e for e in (getattr(facts, "employees", ()) or ())}
     doc_titles = _clean_doc_titles(facts)
@@ -171,27 +184,30 @@ def build_social_prompt(facts: PublicDayFacts, social_msgs: list[dict[str, Any]]
         tg = by_id.get(target_id) if target_id else None
         speaker_desc = f"{sp.name} ({sp.id}), {sp.role}, {sp.dept}" if sp else sender_id
         target_desc = f"{tg.name} ({tg.id}), {tg.role}, {tg.dept}" if tg else (target_id or "")
+        target_label = _target_label_for_prompt(tg, target_id)
         items.append({
             "index": idx,
             "channel": str(msg.get("channel") or ""),
             "speaker": speaker_desc,
             "target_id": target_id or "",
+            "target_label": target_label,
             "target": target_desc,
             "tone": _bias_label(msg),
             "allowed_ids": sorted(_allowed_employee_ids(msg)),
             "draft": _sanitize_draft_for_prompt(str(msg.get("body") or "")),
         })
     payload = {
-        "company": str(getattr(facts, "company", "") or ""),
+        "company": str(getattr(facts, "company") or ""),
         "day": int(getattr(facts, "day", 1) or 1),
         "documents": doc_titles[:4],
         "items": items,
     }
     return (
         f"Company: {payload['company']}. Day {payload['day']}. "
-        f"Rewrite each item's draft into a natural 1-2 sentence internal message (at most 280 chars) "
-        f"in the speaker's voice. Place 'target_id' within the first 80 characters, include at least one of "
-        f"'doc', 'leak', or 'meeting', and never mention any employee id outside 'allowed_ids'. "
+        f"Rewrite each item's draft into a natural 1-2 sentence internal message (at most 260 chars) "
+        f"in the speaker's voice matching 'tone'. Include the exact 'target_label' string within the first 75 characters, "
+        f"include at least one of 'doc', 'leak', or 'meeting' within the first 95 characters, "
+        f"and never mention any employee id outside 'allowed_ids'. "
         f"Avoid all compensation, promotion, recruiter, or burnout vocabulary. "
         f"Return {{\"bodies\": [...]}} with {len(social_msgs)} strings.\n"
         + json.dumps(payload, sort_keys=True)

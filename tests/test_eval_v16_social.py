@@ -183,3 +183,49 @@ def test_committed_v14_hard_seeds_0_to_9_load_and_dry_run(tmp_path: Path, capsys
     assert "exact_match=True" in out
     assert "do_nothing=0.000" in out
     assert "stop_early=0.000" in out
+
+
+def test_social_v2_cache_invariance_under_canary_planting_and_solver(monkeypatch, tmp_path: Path):
+    from canary.baselines import DoNothing, Heuristic, play
+    from canary.env import Env
+    from canary.solver.policy import SolverPolicy
+    from canary.text.gemini import get_provider
+
+    cache_dir = tmp_path / "social_cache"
+    monkeypatch.delenv("CANARY_OFFLINE", raising=False)
+    monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
+    monkeypatch.setenv("CANARY_GEMINI_CACHE_DIR", str(cache_dir))
+
+    env_warm = Env("hard", 0, text_provider=get_provider("social-v2-stub", cache_dir=str(cache_dir)))
+    play(env_warm, DoNothing(seed=0))
+    assert len(list(cache_dir.glob("*.json"))) >= 15
+
+    monkeypatch.setenv("CANARY_OFFLINE", "1")
+    seen_tones: set[str] = set()
+
+    class _NoLiveClient:
+        def chat(self, *a, **kw):
+            raise AssertionError("unexpected cache miss during active investigation")
+
+    prov_sol = get_provider("social-v2", cache_dir=str(cache_dir), client=_NoLiveClient())
+    env_sol = Env("hard", 0, text_provider=prov_sol)
+    sc_sol = play(env_sol, SolverPolicy("hard"))
+    sc_v14 = play(Env("hard", 0), SolverPolicy("hard"))
+    assert sc_sol == sc_v14
+    sol_social = [m for m in env_sol._messages.values() if "-s" in m["id"]]
+    assert sol_social and all("though nothing is verified" in m["body"] for m in sol_social)
+
+    prov_heur = get_provider("social-v2", cache_dir=str(cache_dir), client=_NoLiveClient())
+    env_heur = Env("hard", 0, text_provider=prov_heur)
+    play(env_heur, Heuristic(seed=0))
+    heur_social = [m for m in env_heur._messages.values() if "-s" in m["id"]]
+    assert heur_social and all("though nothing is verified" in m["body"] for m in heur_social)
+
+    for cf in cache_dir.glob("*.json"):
+        data = json.loads(cf.read_text())
+        txt = data.get("text", "")
+        for b in ("anchoring", "misforward", "grudge", "authority", "confirmation", "sycophancy", "recency", "bandwagon", "false_memory"):
+            if f"({b})" in txt:
+                seen_tones.add(b)
+    assert len(seen_tones) >= 5
+

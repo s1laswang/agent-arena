@@ -25,6 +25,7 @@ from canary.env import Env
 from canary.eval import make_env, parse_seeds, run_episode
 from canary.llm.base import load_env
 from canary.solver.policy import SolverPolicy
+from canary.text.llm_cache import DEFAULT_SHARED_CACHE_DIR, REPO_COMMITTED_CACHE_DIR
 from paired_v13 import boot_ratio, p_acc, post_expected
 
 RATE_RE = re.compile(r"RESOURCE_EXHAUSTED|\b429\b|rate.?limit|Quota exceeded", re.I)
@@ -168,8 +169,19 @@ def prewarm_social_cache(
 ) -> dict[str, int]:
     if provider_spec in ("", "template") or "-template" in provider_spec:
         return {"seeds": 0, "calls": 0, "rejects": 0}
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    for src_dir in (Path(DEFAULT_SHARED_CACHE_DIR), REPO_COMMITTED_CACHE_DIR):
+        if src_dir.is_dir() and src_dir.resolve() != cache_dir.resolve():
+            for cf in src_dir.glob("*.json"):
+                dst = cache_dir / cf.name
+                if not dst.exists():
+                    shutil.copy2(cf, dst)
     prev_env: dict[str, str | None] = {}
-    updates = dict(runtime_env, CANARY_SOCIAL_CACHE_DIR=str(cache_dir))
+    updates = dict(
+        runtime_env,
+        CANARY_SOCIAL_CACHE_DIR=str(cache_dir),
+        CANARY_GEMINI_CACHE_DIR=str(cache_dir),
+    )
     try:
         for k, v in updates.items():
             prev_env[k] = os.environ.get(k)
@@ -244,8 +256,10 @@ def verify_reference_and_baselines(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     prev_cache = os.environ.get("CANARY_SOCIAL_CACHE_DIR")
+    prev_gem_cache = os.environ.get("CANARY_GEMINI_CACHE_DIR")
     prev_offline = os.environ.get("CANARY_OFFLINE")
     os.environ["CANARY_SOCIAL_CACHE_DIR"] = str(cache_dir)
+    os.environ["CANARY_GEMINI_CACHE_DIR"] = str(cache_dir)
     check_provider = _template_social_spec(v16_provider) if (dry_run or not os.environ.get("GEMINI_API_KEY")) else v16_provider
     if dry_run or not os.environ.get("GEMINI_API_KEY"):
         os.environ["CANARY_OFFLINE"] = "1"
@@ -293,6 +307,10 @@ def verify_reference_and_baselines(
             os.environ.pop("CANARY_SOCIAL_CACHE_DIR", None)
         else:
             os.environ["CANARY_SOCIAL_CACHE_DIR"] = prev_cache
+        if prev_gem_cache is None:
+            os.environ.pop("CANARY_GEMINI_CACHE_DIR", None)
+        else:
+            os.environ["CANARY_GEMINI_CACHE_DIR"] = prev_gem_cache
         if prev_offline is None:
             os.environ.pop("CANARY_OFFLINE", None)
         else:
@@ -379,6 +397,7 @@ class EvalJob:
         env = dict(base_env)
         env["CANARY_PROVIDER"] = self.provider
         env["CANARY_SOCIAL_CACHE_DIR"] = str(self.cache_dir)
+        env["CANARY_GEMINI_CACHE_DIR"] = str(self.cache_dir)
         env["CANARY_LLM_MAX_RETRIES"] = env.get("CANARY_LLM_MAX_RETRIES", "12")
         if self.arm == "v1.6":
             env.update(self.env_overrides)
@@ -741,7 +760,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--jobs", "--concurrency", dest="jobs", type=int, default=2)
     ap.add_argument("--max-attempts", type=int, default=3)
     ap.add_argument("--staging", default="/tmp/opencode/v16-eval-staging")
-    ap.add_argument("--social-cache-dir", default="/tmp/opencode/v16-gemini-cache")
+    ap.add_argument("--social-cache-dir", default=DEFAULT_SHARED_CACHE_DIR)
     ap.add_argument("--env", dest="env_vars", action="append", default=[], help="KEY=VALUE passed to v1.6 MCP server")
     ap.add_argument("--no-prewarm-social", action="store_true")
     ap.add_argument("--out-json", default=None)

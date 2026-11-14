@@ -76,3 +76,7 @@
 - **Saturday:** v2 training on J3 v2 (tiers v1.3) with dense 4k windows; the MLX demo path. Both are code-ready.
 - No CPU jobs of ours on FR8. FR8 data 7.2 GB of 10. Mac: no FR8 processes running.
 - **Next:** at J4 end, the before/after table with CIs → CEO and this report; then tell the CEO to release sky 43143_4.
+
+## 06:10 status
+- **J4 = job 44397:** training for 2h17, step 347, 1.41k tok/s, loss ~0.02–0.13 (verified: train_log.jsonl); ckpt-200 saved. Training ends ~06:42, then the base vs LoRA held-out eval until ~08:10. The before/after table with CIs follows.
+- Nothing else is running (FR8 or Mac). FR8 data 7.3 GB of 10. No blockers.

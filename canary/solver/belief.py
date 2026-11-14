@@ -65,7 +65,7 @@ def _weight(doc: Doc, n_emp: int, careful: bool) -> float:
     return 1.0
 
 
-def leak_loglik(obs: Observations, s: str, P, choice_temper: float = 1.0) -> float:
+def leak_loglik(obs: Observations, s: str, P, choice_temper: float = 1.0, noleak_temper: float = 1.0) -> float:
     """log P(leak-day pattern + feed | mole = s). -inf if impossible."""
     window = getattr(P, "leak_window_days", 3)
     delays = tuple(P.delay_choices)
@@ -91,7 +91,7 @@ def leak_loglik(obs: Observations, s: str, P, choice_temper: float = 1.0) -> flo
         wdoc[d] = {x.doc_id: _weight(x, n, P.careful_mole) for x in lk}
         if d not in obs.leak_days:
             if W[d] > 0:
-                logp += math.log(max(1e-12, 1.0 - P.p_leak))
+                logp += noleak_temper * math.log(max(1e-12, 1.0 - P.p_leak))
     ok_variant = []
     for it in items:
         doc = obs.docs.get(it.doc_id)
@@ -156,11 +156,11 @@ def behaviour_llr(obs: Observations, e: str, P) -> float:
 
 
 def posterior(obs: Observations, P, behaviour_temper: float = 0.3,
-              choice_temper: float = 1.0) -> dict[str, float]:
+              choice_temper: float = 1.0, noleak_temper: float = 1.0) -> dict[str, float]:
     emps = obs.employees
     logs = {}
     for s in emps:
-        lp = leak_loglik(obs, s, P, choice_temper)
+        lp = leak_loglik(obs, s, P, choice_temper, noleak_temper)
         if behaviour_temper > 0 and lp > -math.inf:
             lp += behaviour_temper * behaviour_llr(obs, s, P)
         logs[s] = lp

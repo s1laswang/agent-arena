@@ -428,6 +428,45 @@ def run_cell(out: Path, c: Cell, ladder_run: str, client_factory: Callable | Non
 _LOCK = threading.Lock()
 
 
+# --------------------------------------------------------------------------- provenance backfill
+def backfill_provenance(out: Path, sha_for: list[tuple[str, str]], log=print) -> int:
+    """Cells written by a process launched before provenance() existed lack tiers_version/launch sha. Fill them from
+    `sha_for` ([(model prefix, launch sha)], longest prefix wins), only if the env/harness/client code at that sha
+    is byte-identical to the code now (same code_fingerprint at that commit), and mark them provenance_backfilled."""
+    import subprocess
+    root = Path(__file__).resolve().parents[2]
+    from canary.rules import TIERS_VERSION
+    fp_now = code_fingerprint()
+    ok_sha: dict[str, bool] = {}
+    n = 0
+    for f in sorted(Path(out).glob("*/*/*/*/meta.json")):
+        m = json.loads(f.read_text())
+        if m.get("tiers_version") or not m.get("thinking_level"):
+            continue
+        model = f.parent.relative_to(out).parts[0]
+        sha = lookup(sha_for, model)
+        if not sha:
+            continue
+        if sha not in ok_sha:
+            diff = subprocess.run(["git", "diff", "--quiet", sha, "--", *CODE_FILES], cwd=root).returncode
+            ok_sha[sha] = diff == 0
+            log(f"backfill: code at {sha} {'==' if ok_sha[sha] else '!='} current code ({fp_now})")
+        if not ok_sha[sha]:
+            continue
+        prov = {"tiers_version": TIERS_VERSION, "launch_git_sha": sha, "launch_code_dirty": False,
+                "code_fingerprint": fp_now, "provenance_backfilled": True}
+        m.update({**prov, "model_id": model})
+        f.write_text(json.dumps(m, indent=1, default=str))
+        ef = f.parent / "episodes.jsonl"
+        eps = read_eps(f.parent)
+        for e in eps:
+            e.setdefault("meta", {}).setdefault("ladder", {}).update(prov)
+        ef.write_text("".join(json.dumps(e, default=str) + "\n" for e in eps))
+        n += 1
+    log(f"backfill: {n} cells")
+    return n
+
+
 # --------------------------------------------------------------------------- probe
 def probe(models: list[str], levels: list[str], out: Path, log=print) -> list[dict]:
     """One tiny ledgered call per (model, level): which thinking levels does each model accept?"""
@@ -560,6 +599,8 @@ def main(argv=None) -> int:
     ap.add_argument("--max-attempts", type=int, default=4)
     ap.add_argument("--run-name", default=None, help="ladder_run label in the ledger (default: OUT's name)")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--backfill-sha", action="append", default=[],
+                    help="fill provenance of cells from older processes: 'gemini-3=<sha>;gemini-4=<sha>'")
     ap.add_argument("--probe", action="store_true", help="one tiny call per (model, level); writes OUT/_probe.json")
     a = ap.parse_args(argv)
     out = Path(os.path.expanduser(a.out))
@@ -569,6 +610,9 @@ def main(argv=None) -> int:
     def log(msg: str) -> None:
         print(time.strftime("%H:%M:%S"), msg, flush=True)
 
+    if a.backfill_sha:
+        backfill_provenance(out, parse_overrides(a.backfill_sha), log)
+        return 0
     if a.probe:
         os.environ.setdefault("CANARY_GEMINI_LEDGER", str(out / "_ledger" / f"{HOST}-{os.getpid()}.jsonl"))
         probe(models, levels, out, log)

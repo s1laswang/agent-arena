@@ -111,6 +111,6 @@ def test_info_events_carry_hidden_params():
                params={"vendor_id": "V01", "amount": 4321.5, "reference": "INV-777"})
     object.__setattr__(t, "hidden", ["amount", "reference"])
     ev = [e for e in make_events(random.Random(1), C(), [t]) if e.kind == "ticket_info"]
-    assert len(ev) == 1 and ev[0].tick == 7 and ev[0].to_seat == "finance_ap" and ev[0].ref == "T050"
-    assert "4321.5" in ev[0].body and "INV-777" in ev[0].body
+    assert len(ev) == 1 and ev[0].tick == 6 and ev[0].to_seat == "finance_ap" and ev[0].ref == "T050"
+    assert "amount: 4321.5" in ev[0].body and "reference: INV-777" in ev[0].body
     assert not [e for e in make_events(random.Random(1), C(), [Ticket(id="T1", tick=3, seat="hr", kind="update_employee", request="r", params={})]) if e.kind == "ticket_info"]

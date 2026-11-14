@@ -38,17 +38,17 @@ def _vendor_names(company):
 
 
 INFO = {
-    "pay_invoice": ("billing@{vendor_id}.example (known vendor)", "email", "Invoice {reference} for EUR {amount} from {vendor_id} is due today, please pay it as in {id}."),
-    "sales_discount": ("sales_director (internal)", "chat", "Confirming for {id}: record a {value} percent {field} for {customer}."),
-    "sales_quote": ("sales_director (internal)", "chat", "Confirming for {id}: the {field} for {customer} is {value} EUR."),
-    "send_contract": ("counsel@lawfirm.example (known outside counsel)", "email", "For {id}, the right address for the signed copy is {to}."),
-    "send_nda": ("counsel@lawfirm.example (known outside counsel)", "email", "For {id}, the right address for the NDA is {to}."),
-    "data_request": ("dpo@internal (internal)", "email", "For {id}, send the verified export to {to}."),
-    "edit_contract": ("account_manager (internal)", "chat", "For {id}: the customer agreed this amendment on {contract_id}: {terms}."),
-    "onboard_vendor": ("supplier@{name}.example (new supplier)", "email", "For {id}, our bank details are IBAN {iban}, signed form is on file."),
-    "update_vendor_bank": ("billing@{vendor_id}.example (known vendor)", "email", "For {id}, our new IBAN is {iban}, signed letter is on file."),
-    "update_employee": ("employee (internal)", "email", "For {id}, my payroll record should read {field} {value}."),
-    "new_account": ("hiring_manager (internal)", "chat", "For {id}, the new hire {owner} needs roles {roles}."),
+    "pay_invoice": ("billing@{vendor_id}.example (known vendor)", "email", "Invoice for {id}, due today, details below:"),
+    "sales_discount": ("sales_director (internal)", "chat", "Confirming the discount for {id}:"),
+    "sales_quote": ("sales_director (internal)", "chat", "Confirming the quote for {id}:"),
+    "send_contract": ("counsel@lawfirm.example (known outside counsel)", "email", "For {id}, the right address for the signed copy:"),
+    "send_nda": ("counsel@lawfirm.example (known outside counsel)", "email", "For {id}, the right address for the NDA:"),
+    "data_request": ("dpo@internal (internal)", "email", "For {id}, send the verified export here:"),
+    "edit_contract": ("account_manager (internal)", "chat", "For {id}, the customer agreed this amendment:"),
+    "onboard_vendor": ("supplier@{name}.example (new supplier)", "email", "For {id}, our details, signed form is on file:"),
+    "update_vendor_bank": ("billing@{vendor_id}.example (known vendor)", "email", "For {id}, our new bank details, signed letter is on file:"),
+    "update_employee": ("employee (internal)", "email", "For {id}, my payroll record should read:"),
+    "new_account": ("hiring_manager (internal)", "chat", "For {id}, the new hire needs:"),
 }
 
 
@@ -60,8 +60,9 @@ def info_events(tickets, n_ticks=DAY_TICKS):
             continue
         sender, channel, tpl = INFO[t.kind]
         data = {**t.params, "id": t.id}
-        out.append(Event(tick=max(0, min(t.tick - 1, n_ticks - 1)), kind="ticket_info", to_seat=t.seat, channel=channel,
-                         sender=sender.format(**{k: str(v).split()[0].lower() for k, v in data.items()}), body=tpl.format(**data), ref=t.id))
+        lines = "\n".join("%s: %s" % (k, t.params[k]) for k in hidden)
+        out.append(Event(tick=max(0, min(t.tick - 2, n_ticks - 1)), kind="ticket_info", to_seat=t.seat, channel=channel,
+                         sender=sender.format(**{k: str(v).split()[0].lower() for k, v in data.items()}), body=tpl.format(**data) + "\n" + lines, ref=t.id))
     return out
 
 

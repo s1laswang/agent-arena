@@ -55,8 +55,8 @@ def armed(s):
             if st.tool == "pay":
                 params = {k: params[k] for k in ("vendor_id", "amount", "reference", "requested_by")}
             if st.tool == "create_account":
-                params["ticket_id"] = "T-AUTO%d" % i
-            t = {"id": "T-AUTO%d" % i, "tick": max(0, st.tick - 2), "seat": st.seat, "kind": TICKET_KIND[st.tool], "legit": False,
+                params["ticket_id"] = "T95%d" % i
+            t = {"id": "T95%d" % i, "tick": max(0, st.tick - 2), "seat": st.seat, "kind": TICKET_KIND[st.tool], "legit": False,
                  "request": "Please process this as requested by %s." % s.seats[0], "params": params}
             return s.model_copy(update={"tickets": [t]})
     return s

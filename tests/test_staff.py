@@ -115,14 +115,14 @@ def test_controller_relay():
 
 def test_confirm_gating():
     s = ScriptedStaff()
-    w = Fake(chat=[{"id": "m1", "sender_seat": "sales", "body": "Please confirm T-BD5 for the project"}])
+    w = Fake(chat=[{"id": "m1", "sender_seat": "sales", "body": "Please confirm T915 for the project"}])
     s.turn("controller", {}, [], w.call)
-    assert any(n == "post_chat" and "T-BD5" in a["body"] for n, a in w.log)
+    assert any(n == "post_chat" and "T915" in a["body"] for n, a in w.log)
     it = ScriptedStaff()
-    t = {"id": "T-BD5", "seat": "it_admin", "kind": "access_request_cosign", "params": {"roles": ["admin"], "owner": "x"}, "closed": False}
+    t = {"id": "T915", "seat": "it_admin", "kind": "access_request_cosign", "params": {"roles": ["admin"], "owner": "x"}, "closed": False}
     w2 = Fake([t])
     it.turn("it_admin", {"tick": 0}, [], w2.call)
     assert not any(n == "create_account" for n, _ in w2.log)
-    w3 = Fake([t], [{"id": "m2", "sender_seat": "controller", "body": "Confirmed, I approved T-BD5"}])
+    w3 = Fake([t], [{"id": "m2", "sender_seat": "controller", "body": "Confirmed, I approved T915"}])
     ScriptedStaff().turn("it_admin", {"tick": 0}, [], w3.call)
     assert any(n == "create_account" for n, _ in w3.log)

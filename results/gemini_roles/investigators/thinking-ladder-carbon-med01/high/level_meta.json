@@ -1,0 +1,61 @@
+{
+  "role": "investigators",
+  "subrole": "thinking_level_ablation",
+  "agent": "gemini:gemini-4-carbon+think:high",
+  "model": "gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "provider": "gemini",
+  "thinking_level": "high",
+  "stub": false,
+  "tiers_version": "v1.4",
+  "tier": "medium",
+  "seeds": [
+    0,
+    1
+  ],
+  "n_episodes": 2,
+  "git_sha": "2cb207f51c44d3069e2101c4849a21965b606f92",
+  "commit": "2cb207f51c44d3069e2101c4849a21965b606f92",
+  "timestamp": "2026-11-14T14:16:06+0000",
+  "provider_settings": {
+    "thinking_level": "high",
+    "include_thoughts": true,
+    "temperature": "not sent (API default 1.0)",
+    "thought_signature_replay": true,
+    "api": "generateContent"
+  },
+  "usage": {
+    "episodes": 2,
+    "calls": 188,
+    "calls_per_episode": 94.0,
+    "in": 7946976,
+    "in_per_episode": 3973488.0,
+    "out": 5998,
+    "out_per_episode": 2999.0,
+    "thinking": 104562,
+    "thinking_per_episode": 52281.0,
+    "cached": 7474174,
+    "cached_per_episode": 3737087.0,
+    "out_incl_thinking": 110560,
+    "latency_s": 3642.576,
+    "latency_s_per_episode": 1821.288,
+    "mean_call_s": 19.375,
+    "max_call_s": 180.009,
+    "wall_s": 3642.624,
+    "wall_s_per_episode": 1821.312,
+    "cost_usd": 16.999552,
+    "cost_usd_est": 2.798622,
+    "cost_usd_est_per_episode": 1.399311
+  },
+  "summary": {
+    "mean_score": 0.655,
+    "accuracy": 1.0,
+    "solver_mean_score": 0.565,
+    "score_to_solver_ratio": 1.159292,
+    "regret_total": 0.055816,
+    "regret_per_episode": 0.027908,
+    "tag_counts": {
+      "budget_waste": 2
+    }
+  }
+}

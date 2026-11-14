@@ -12,7 +12,7 @@ print("run.json", json.dumps(cfg), flush=True)
 models = cfg.get("models", ["Qwen/Qwen2.5-0.5B-Instruct"])
 sft_args, eval_args, decide_args = cfg.get("sft", []), cfg.get("eval", []), cfg.get("decide", [])
 train_file = data + "/" + cfg.get("data", "train.jsonl")
-env0 = dict(os.environ, PYTHONPATH=code, HF_HUB_DISABLE_PROGRESS_BARS="1")
+env0 = dict(os.environ, GIT_COMMIT=cfg.get("commit", "nocommit"), PYTHONPATH=code, HF_HUB_DISABLE_PROGRESS_BARS="1")
 def run(env, *a):
     print("+", env.get("CUDA_VISIBLE_DEVICES"), *a, flush=True)
     subprocess.check_call([sys.executable, *a], env=env)

@@ -104,6 +104,34 @@ def load_config(environ=None) -> dict:
             "admin_token": _read_file_var("CANARY_ADMIN_TOKEN_FILE", environ) or environ.get("CANARY_ADMIN_TOKEN") or None}
 
 
+def write_secret_files(tier: str, seed: int, ledger_token: str | None = None, directory=None) -> dict[str, str]:
+    """Write the episode (and ledger token) to 0600 files in a fresh 0700 dir and return the *_FILE env vars
+    to launch the server with. Launchers use this instead of CANARY_TIER/CANARY_SEED/CANARY_LEDGER_TOKEN so the
+    seed and token never sit in the server's exec-time environment (/proc/<pid>/environ, `ps eww`; EXPLOITS #27)."""
+    import tempfile
+    d = directory or tempfile.mkdtemp(prefix="canary-ep-")
+    os.chmod(d, 0o700)
+    out = {}
+    for name, var, text in (("episode.json", "CANARY_EPISODE_FILE", json.dumps({"tier": tier, "seed": int(seed)})),
+                            ("ledger_token", "CANARY_LEDGER_TOKEN_FILE", ledger_token)):
+        if text is None:
+            continue
+        path = os.path.join(d, name)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as fh:
+            fh.write(text)
+        out[var] = path
+    return out
+
+
+def clean_launch_env(base=None) -> dict[str, str]:
+    """os.environ minus the plain episode/token vars (a *_FILE launch must not also carry them)."""
+    base = dict(os.environ if base is None else base)
+    for k in ("CANARY_TIER", "CANARY_SEED", "CANARY_LEDGER_TOKEN", "CANARY_ADMIN_TOKEN", "CANARY_WORLD_SECRET"):
+        base.pop(k, None)
+    return base
+
+
 def apply_world_secret(secret: bytes) -> None:
     """Hand the file secret to world generation in-process (never exported to os.environ / children).
     canary.world checks it before CANARY_WORLD_SECRET and SALT; it must be >= 16 bytes."""

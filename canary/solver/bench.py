@@ -1,6 +1,7 @@
-"""Bench the solver vs baselines on dev seeds.
+"""Bench the solver vs baselines on dev seeds (real canary.env.Env).
 
-    uv run python -m canary.solver.bench --seeds 200 [--tiers easy,medium,hard] [--sim]
+    uv run python -m canary.solver.bench --seeds 200 [--tiers easy,medium,hard] [--procs 6]
+          [--agents solver,heuristic,...] [--random-moles]   # random DSL mole per seed
 """
 from __future__ import annotations
 
@@ -9,19 +10,9 @@ import math
 import random
 import statistics
 import time
+from multiprocessing import Pool
 
-from ..rules import TIERS
-
-
-def _make_env(tier, seed, sim):
-    if not sim:
-        try:
-            from ..env import Env
-            return Env(tier, seed)
-        except NotImplementedError:
-            pass
-    from ._sim import SimEnv
-    return SimEnv(tier, seed)
+DEFAULT_AGENTS = "solver,heuristic,obvious_heuristic,logs_only,random,stop_early,do_nothing"
 
 
 def _run_local(env, policy, max_calls=400):
@@ -29,66 +20,87 @@ def _run_local(env, policy, max_calls=400):
     policy.reset(env.tools_spec(), env.instruction())
     n = 0
     while not env.done and n < max_calls:
-        tool, args = policy.act(env.history)
+        tool, args = policy.act(list(env.history))
         env.call(tool, args)
         n += 1
     return env.result(policy.name)
 
 
-class _Scripted:
-    """do_nothing / stop_early / random baselines expressed as policies."""
-    def __init__(self, kind, seed):
-        self.name, self.kind, self.rng = kind, kind, random.Random(f"base:{kind}:{seed}")
-
-    def reset(self, spec, instr):
-        self.emps, self.day_acc = None, None
-
-    def act(self, history):
-        if self.emps is None:
-            if not history or history[-1].tool != "list_employees":
-                return "list_employees", {}
-            from .policy import _items
-            self.emps = [e["id"] for e in _items(history[-1].result["data"], "employees")]
-            self.day_acc = {"do_nothing": 10**9, "stop_early": 1}.get(self.kind) or self.rng.randint(1, 14)
-        day = history[-1].day if history else 1
-        if day >= self.day_acc:
-            return "accuse", {"employee": self.rng.choice(self.emps)}
-        return "advance_day", {}
+def make_policy(agent: str, seed: int, **kw):
+    from .policy import SolverPolicy
+    if agent == "solver":
+        return SolverPolicy(None, **kw)
+    from ..baselines import BASELINES, CALIBRATION_POLICIES
+    cls = BASELINES.get(agent) or CALIBRATION_POLICIES[agent]
+    return cls(seed=seed)
 
 
-def stats(rs):
-    sc = [r.score for r in rs]
+def make_env(tier, seed, random_mole=False):
+    from ..env import Env
+    strat = None
+    if random_mole:
+        from ..mole.dsl import random_strategy
+        strat = random_strategy(random.Random(f"bench-mole:{seed}"))
+    return Env(tier, seed, mole_strategy=strat)
+
+
+def _one(job):
+    tier, agent, seed, random_mole, kw = job
+    r = _run_local(make_env(tier, seed, random_mole), make_policy(agent, seed, **kw))
+    return (tier, agent, r.score, r.correct, r.final_day if r.end_reason == "accused" else None)
+
+
+def summarize(rows):
+    sc = [x[2] for x in rows]
     m = statistics.mean(sc)
     ci = 1.96 * statistics.pstdev(sc) / math.sqrt(len(sc)) if len(sc) > 1 else 0.0
-    acc = sum(r.correct for r in rs) / len(rs)
-    days = [r.final_day for r in rs if r.end_reason == "accused"]
-    return m, ci, acc, (statistics.mean(days) if days else float("nan"))
+    acc = sum(x[3] for x in rows) / len(rows)
+    days = [x[4] for x in rows if x[4] is not None]
+    return m, ci, acc, (statistics.mean(days) if days else float("nan")), len(days) / len(rows)
+
+
+def _init(overrides):
+    """Apply TierParams overrides inside a worker (calibration sweeps)."""
+    if overrides:
+        from dataclasses import replace
+        from .. import rules
+        for t, ov in overrides.items():
+            rules.TIERS[t] = replace(rules.TIERS[t], **ov)
+
+
+def run(tiers, agents, seeds, procs=6, random_mole=False, overrides=None, **kw):
+    jobs = [(t, a, s, random_mole, kw) for t in tiers for a in agents for s in seeds]
+    with Pool(procs, initializer=_init, initargs=(overrides,)) as pool:
+        res = pool.map(_one, jobs, chunksize=8)
+    out = {}
+    for r in res:
+        out.setdefault((r[0], r[1]), []).append(r)
+    return {k: summarize(v) for k, v in out.items()}
 
 
 def main(argv=None):
-    from .policy import SolverPolicy
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=200)
     ap.add_argument("--tiers", default="easy,medium,hard")
-    ap.add_argument("--sim", action="store_true", help="force the private SimEnv")
+    ap.add_argument("--agents", default=DEFAULT_AGENTS)
+    ap.add_argument("--procs", type=int, default=6)
+    ap.add_argument("--random-moles", action="store_true")
     ap.add_argument("--threshold", type=float, default=None)
-    ap.add_argument("--btemper", type=float, default=0.3)
-    ap.add_argument("--no-none-group", action="store_true")
+    ap.add_argument("--btemper", type=float, default=None)
+    ap.add_argument("--ctemper", type=float, default=None)
+    ap.add_argument("--ntemper", type=float, default=None)
     a = ap.parse_args(argv)
-    print(f"{'tier':7s} {'agent':11s} {'acc':>6s} {'score':>7s} {'±95%':>6s} {'day':>5s}")
-    for tier in a.tiers.split(","):
-        t0 = time.time()
-        rows = {}
-        rows["solver"] = [_run_local(_make_env(tier, s, a.sim),
-                                     SolverPolicy(None, threshold=a.threshold, behaviour_temper=a.btemper,
-                                                  none_group=not a.no_none_group))
-                          for s in range(a.seeds)]
-        for k in ("do_nothing", "stop_early", "random"):
-            rows[k] = [_run_local(_make_env(tier, s, a.sim), _Scripted(k, s)) for s in range(a.seeds)]
-        for k, rs in rows.items():
-            m, ci, acc, d = stats(rs)
-            print(f"{tier:7s} {k:11s} {acc:6.1%} {m:7.3f} {ci:6.3f} {d:5.1f}")
-        print(f"# {tier}: {time.time()-t0:.1f}s")
+    kw = {k: v for k, v in dict(threshold=a.threshold, behaviour_temper=a.btemper,
+                                choice_temper=a.ctemper, noleak_temper=a.ntemper).items() if v is not None}
+    t0 = time.time()
+    tiers, agents = a.tiers.split(","), a.agents.split(",")
+    res = run(tiers, agents, range(a.seeds), a.procs, a.random_moles, **kw)
+    print("| tier | agent | acc | accused | score | ±95% | day |\n|---|---|---|---|---|---|---|")
+    for t in tiers:
+        for ag in agents:
+            m, ci, acc, d, fa = res[(t, ag)]
+            print(f"| {t} | {ag} | {acc:.1%} | {fa:.0%} | {m:.3f} | {ci:.3f} | {d:.1f} |")
+    print(f"# {time.time()-t0:.1f}s")
 
 
 if __name__ == "__main__":

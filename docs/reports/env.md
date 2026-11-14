@@ -14,3 +14,13 @@
 - Done (verified: 200 dev seeds): `heuristic` baseline (leak-recipient intersection + halving canary). Score/acc easy .74/99%, medium .67/96%, hard .41/59%.
 - **Finding: easy/medium too easy, since an obvious heuristic nearly solves them.** Calibration must cut leak informativeness (e.g. more recipients per doc, max_variants=2 everywhere, longer delays, careful mole on medium). Will tune with solver numbers at 04:00.
 - In progress: Mole DSL (sim-engine), solver v1 (bayes-solver).
+
+## 03:20 status
+- Done (verified: make test 260 passed on justSilas 744f503): solver v1 (acc 99.5/99/97.5%, score .83/.75/.72 under old scoring), regret v1, Mole DSL (default = v0 ledger on 200 seeds), contract v0.2+v0.3 (wrong accusation = -1), Forge compat (features, !=, decide(view)).
+- In progress: bayes-solver: v0.3 accuse rule, DSL robustness (20 random strategies), recalibration (heuristic <=55% solver on medium, logs-only <=2x chance), ETA 05:00.
+- Next: instruction.md, judge worlds (07:30), GeminiWorldText wiring.
+
+## 04:20 status
+- Done (verified: make test 291 passed): solver v0.3 accuse rule (EV>0 + threshold), DSL robustness 85% on medium over random strategies, RECALIBRATED tiers. 200 dev seeds, acc/score: solver easy 100%/.825, medium 95.5%/.538, hard 89.5%/.651; heuristic .711/.265 (0.49x)/.037; logs-only 25.5/3.5/4.0% correct; random, stop_early < 0 everywhere.
+- v0.4 fingerprint_accuracy param (default 1.0), v0.5 fail-closed judge secret (INTEGRITY #24), instruction.md generator + committed medium file, GeminiWorldText provider.
+- Next: v0.4 values via FR8 sweep (solver must model fingerprint noise), regret check, judge-run prep.

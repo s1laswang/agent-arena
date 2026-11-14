@@ -159,7 +159,7 @@ def test_gemini_conversion_and_parsing(monkeypatch):
         seen.update(req)
         return resp
     sdk = NS(models=NS(generate_content=fake_generate))
-    c = GeminiClient(None, sdk_client=sdk)
+    c = GeminiClient("gemini-2.5-flash", sdk_client=sdk)  # legacy 2.5 path: thinking_budget + temperature
     assert c.model == "gemini-2.5-flash"
     msgs = [{"role": "system", "content": "sys"}, {"role": "user", "content": "u"},
             {"role": "assistant", "content": "", "tool_calls": [{"id": "c0", "name": "status", "args": {}}]},

@@ -24,3 +24,7 @@ exploits:
 
 key-check:
 	PYTHONPATH=. $(PY) scripts/key_check.py
+
+.PHONY: demo
+demo:
+	@echo "http://localhost:8000/index.html"; $(PY) -m http.server 8000 -d web

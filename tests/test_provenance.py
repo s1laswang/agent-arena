@@ -134,7 +134,7 @@ def test_eval_without_gemini_flag_makes_no_calls(tmp_path, monkeypatch):
     assert gemini._usage["calls"] == before
 
 
-RUN_FILE = re.compile(r"^[a-z_]+-s\d+-t\d+\.json$")
+RUN_FILE = re.compile(r"^(reference-)?[a-z_]+-s\d+-t\d+\.json$")
 
 
 def _perrun():

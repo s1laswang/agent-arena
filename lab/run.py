@@ -30,6 +30,10 @@ def gemini_on():
 
 
 def _staff(day, trial):
+    if os.environ.get("SLEEPER_HINT"):
+        from lab import hint
+
+        hint.apply(os.environ["SLEEPER_HINT"])
     from agents.staff import make_team
 
     return make_team(day, seed=trial, kind="gemini" if gemini_on() else "scripted")
@@ -65,11 +69,19 @@ FACTORIES = {
     "staff": (_staff, "gemini"),
     "reference": (_reference, "gemini"),
     "oracle": (_module("agents.reference", "make_oracle_team"), "scripted"),
+    "procedure": (_module("agents.procedure", "make_procedure_team"), "scripted"),
     "do_nothing": (_scripted("NoopAgent"), "scripted"),
     "stop_early": (_baseline("make_stop_early"), "scripted"),
     "quarantine_all": (_baseline("make_quarantine_all"), "scripted"),
     "refuse_all": (_baseline("make_refuse_all"), "scripted"),
 }
+def _procedure(day, trial):
+    from agents.procedure import make_procedure_team
+
+    return make_procedure_team(day, seed=trial)
+
+
+FACTORIES["procedure"] = (_procedure, "scripted")
 EXTRA = ("trust_all", "random_accuse", "claim_only", "quarantine_only_then_work")
 for _n in EXTRA:
     FACTORIES[_n] = (_baseline("make_" + _n), "scripted")
@@ -83,6 +95,8 @@ def agent_kind(name):
 
 
 def agent_model(name):
+    if name.startswith("local:"):
+        return os.environ.get("SLEEPER_MODEL_ID") or name[6:]
     if agent_kind(name) == "gemini":
         from agents import gemini
 
@@ -144,6 +158,7 @@ def day_for(day_id, seat=None):
     spec = spec if isinstance(spec, dict) else dict(spec.__dict__)
     day = make_day(day_id, spec.get("sleeper_seat"), spec.get("goal"))
     day.tickets = day.tickets + list(spec.get("tickets") or [])
+    day.docs = list(spec.get("docs") or [])
     return day, spec.get("strategy"), spec.get("winnable", True), {"needs_tested_seat": bool(spec.get("needs_tested_seat")), "strategy": getattr(spec.get("strategy"), "id", None)}
 
 
@@ -190,6 +205,7 @@ def play_day(team, agent, seat, day_id, trial, claim=False, replace=None):
         bad = []
     extra = {
         "day": {**state["day"], "day_id": day_id, "goal": {**state["day"]["goal"], "strategy": getattr(strategy, "id", None)} if state["day"].get("goal") else None},
+        "initial": state["initial"],
         "company": state["company"],
         "ledger": state["ledger"],
         "messages": state["company"]["messages"],
@@ -256,6 +272,8 @@ def run(team, days, trials, seat=None, agent=None, day_start=0, day_ids=None, ou
         cap = int(os.environ.get("SLEEPER_MAX_CALLS", 0) or 0)
         summary["gemini_usage"]["budget_exhausted"] = bool(cap and summary["gemini_usage"].get("calls", 0) >= cap * max(jobs, 1))
     summary.update(run_id=rid, background_team=team, seat_under_test=seat)
+    if os.environ.get("SLEEPER_ROW_LABEL"):
+        summary.update(label=os.environ["SLEEPER_ROW_LABEL"], commit=os.environ.get("SLEEPER_MODEL_ID", "").rsplit("+", 1)[-1])
     with open(os.path.join(d, "summary.json"), "w") as f:
         json.dump(summary, f, indent=2, sort_keys=True)
     with open(os.path.join(d, "meta.json"), "w") as f:

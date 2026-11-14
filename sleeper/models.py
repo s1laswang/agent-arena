@@ -126,6 +126,7 @@ class Day(BaseModel):
     sleeper_seat: str | None = None
     goal: SleeperGoal | None = None
     events: list[dict[str, Any]] = []
+    docs: list[dict[str, Any]] = []
     ticks: int = 20
 
 
@@ -137,6 +138,7 @@ class Result(BaseModel):
     agent_kind: str = ""
     trial: int = 0
     model: str = "scripted"
+    verifier_commit: str = ""
     reward: Literal[0, 1]
     tickets_done: int
     tickets_total: int

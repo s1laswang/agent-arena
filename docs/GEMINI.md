@@ -1,6 +1,6 @@
 # Gemini: first 30 minutes once the key exists
 
-Nothing here has been run with a real key. Every script and flag below exists on `momin` c55f7d3. No Gemini number is in these docs until a live run has produced it. Do not claim multimodal or any Gemini result before step 5.
+Nothing here has been run with a real key. Every script and flag below exists on `momin` 814a723. No Gemini number is in these docs until a live run has produced it. Do not claim multimodal or any Gemini result before step 5.
 
 Status on `momin` at the time of writing: `scripts/gemini_smoke.py` and `scripts/gemini_cache.py` are present. `scripts/gemini_budget.py`, `scripts/key_check.py` and `gemini_cache.py check|pack|unpack` are present; `data/gemini_cache.tar.gz` is not yet, so step 7 waits for it.
 

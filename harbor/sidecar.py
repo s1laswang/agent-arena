@@ -23,7 +23,11 @@ def make_world_and_team(seed, seat):
     from lab.run import build_team, day_for
     day_id = effective_id(seed)
     day, strategy, _, _ = day_for(day_id, seat)
-    team = build_team(os.environ.get("SLEEPER_TEAM", "staff"), day, 0)
+    name = os.environ.get("SLEEPER_TEAM", "procedure")
+    if name in ("procedure", "seat"):
+        from sleeper.scripted import seat_team
+        return day_id, World(day), seat_team(day, seat, day_id, strategy)
+    team = build_team(name, day, 0)
     if day.sleeper_seat and strategy:
         from agents.sleeper_agent import SleeperAgent
         kw = {"ticks": day.ticks} if "ticks" in inspect.signature(SleeperAgent).parameters else {}
@@ -39,7 +43,8 @@ def reward(srv, out):
     except ValueError:
         return "{}"
     d["seat_under_test"] = os.environ["SLEEPER_SEAT"]
-    return json.dumps(d)
+    from sleeper.verifier import sign
+    return json.dumps(sign(d, os.environ["VERIFY_TOKEN"]))
 
 
 def serve_reward(srv, out, token, httpd):

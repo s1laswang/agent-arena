@@ -45,7 +45,15 @@ class MockGeminiBackend(LLMClient):
             tc = [ToolCall(id="c_1", name="advance_day", args={})]
         else:
             tc = [ToolCall(id="c_2", name="accuse", args={"employee": self.true_mole})]
-        return LLMResponse(text="", tool_calls=tc, usage={"in": 100, "out": 75, "cost_usd": 0.001}, raw=raw)
+        resp = LLMResponse(text="", tool_calls=tc, usage={"in": 100, "out": 75, "cost_usd": 0.001}, raw=raw)
+        resp.provider_items = [{
+            "role": "model",
+            "parts": [
+                {"text": "Evaluating canary variants.", "thought": True},
+                {"function_call": {"name": tc[0].name, "args": tc[0].args}, "thought_signature": "sk-" + ("A" * 96)},
+            ],
+        }]
+        return resp
 
 
 def test_run_gemini_clash_stub_keyless(tmp_path, monkeypatch):
@@ -153,6 +161,10 @@ def test_run_gemini_clash_carbon_usage_and_solvability(tmp_path, monkeypatch):
         content = (out_dir / fname).read_text()
         assert chr(0x2014) not in content
         assert "\\u2014" not in content
+    inv_txt = (out_dir / "investigator_transcript.json").read_text()
+    assert "<99 chars>" in inv_txt
+    assert "Evaluating canary variants." in inv_txt
+    assert "sk-" + ("A" * 96) not in inv_txt
     assert meta["mole_clash_errors"] == 0
     assert meta["mole_solver_errors"] == 0
     summary_md = (out_dir / "summary.md").read_text()

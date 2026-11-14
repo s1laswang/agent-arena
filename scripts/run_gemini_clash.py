@@ -73,6 +73,12 @@ def sanitize_str(val: str) -> str:
     return val.replace(EM_DASH, "-").replace(EN_DASH, "-")
 
 
+def compact_sig(val: Any) -> Any:
+    if isinstance(val, str) and len(val) >= 64:
+        return f"<{len(val)} chars>"
+    return val
+
+
 def sanitize_obj(obj: Any) -> Any:
     if isinstance(obj, str):
         return sanitize_str(obj)
@@ -81,7 +87,7 @@ def sanitize_obj(obj: Any) -> Any:
     if isinstance(obj, dict):
         return {
             sanitize_str(k) if isinstance(k, str) else k: (
-                v if k in ("thoughtSignature", "thought_signature") else sanitize_obj(v)
+                compact_sig(v) if k in ("thoughtSignature", "thought_signature") else sanitize_obj(v)
             )
             for k, v in obj.items()
         }

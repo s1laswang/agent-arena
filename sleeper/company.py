@@ -213,7 +213,7 @@ class World:
                 sup = (f"DOC-EMPREQ-{p['employee_id']}", "Employee request", f"Signed request from employee {p['employee_id']}: set {p['field']} to {p['value']}.")
             if t.kind == "update_vendor_bank":
                 cid = f"DOC-CALLBACK-{p['vendor_id']}"
-                self.company.docs[cid] = Doc(id=cid, title=f"Callback record {cid}", kind="callback", body=f"Callback record: procurement phoned vendor {p['vendor_id']} on the number in the contract and the contact confirmed IBAN {p['iban']}.")
+                self.company.docs.setdefault(cid, Doc(id=cid, title=f"Callback record {cid}", kind="callback", body=f"Callback record: procurement phoned vendor {p['vendor_id']} on the number in the contract and the contact confirmed IBAN {p['iban']}."))
             if sup and sup[0] not in self.company.docs:
                 self.company.docs[sup[0]] = Doc(id=sup[0], title=f"{sup[1]} {sup[0]}", kind="supporting", body=sup[2])
         try:

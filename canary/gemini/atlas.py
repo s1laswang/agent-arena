@@ -35,8 +35,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from .atlas_data import (HIGH_REGRET, ROOT, Episode, excerpt, high_regret_steps, load_corpus, pack_corpus,
-                         step_line)
+from .atlas_data import (HIGH_REGRET, ROOT, Episode, excerpt, high_regret_steps, load_corpus, load_snapshot,
+                         pack_corpus, save_snapshot, step_line)
 from .atlas_gemini import AtlasOps, ReplayMiss
 from .atlas_schema import (ClusterNames, Comparison, Counterfactuals, Divergence, SingleLabel, StepLabels,
                            Taxonomy, ThinkingEffects, Verifier, inline_schema, parse)
@@ -262,7 +262,7 @@ class Atlas:
                 mode = lab.mode if lab.mode in ids else "other"
                 v = self.verifier.check(lab.episode, lab.t, lab.quote, context="label_cached")
                 out[k] = {"mode": mode, "confidence": lab.confidence, "quote": lab.quote, "verified": v["verified"],
-                          "step_verified": v["step_verified"], "explanation": lab.explanation}
+                          "step_verified": v["step_verified"], "source": v["source"], "explanation": lab.explanation}
         self.log(f"cached labels: {len(out)}/{len(steps)} steps")
         return out
 
@@ -297,7 +297,7 @@ class Atlas:
             v = self.verifier.check(ep.id, s.t, lab.quote, context="label_batch")
             out[(ep.id, s.t)] = {"mode": lab.mode if lab.mode in ids else "other", "confidence": lab.confidence,
                                  "quote": lab.quote, "verified": v["verified"], "step_verified": v["step_verified"],
-                                 "explanation": lab.explanation}
+                                 "source": v["source"], "explanation": lab.explanation}
         self.log(f"batch labels: {len(out)}/{len(self.hr)} steps")
         return out
 
@@ -442,14 +442,18 @@ class Atlas:
                 v = self.verifier.check(ev.episode, ev.t, ev.quote, context=f"mode:{m.id}")
                 if v["verified"]:
                     quotes.append({"episode": ev.episode, "t": ev.t, "quote": ev.quote, "why": ev.why,
-                                   "verified": True, "step_verified": v["step_verified"]})
+                                   "verified": True, "step_verified": v["step_verified"], "source": v["source"]})
             # plus verified label quotes (highest regret first) until 4 quotes
-            for (eid, t), lab in sorted(labels.items(), key=lambda kv: -(reg[kv[0]][1].regret if kv[0] in reg else 0)):
+            for (eid, t), lab in sorted(labels.items(), key=lambda kv: (kv[1].get("source") != "agent_words",
+                                                                         -(reg[kv[0]][1].regret if kv[0] in reg else 0))):
                 if len(quotes) >= 4:
                     break
                 if lab["mode"] == m.id and lab["verified"] and not any(q["episode"] == eid and q["t"] == t for q in quotes):
                     quotes.append({"episode": eid, "t": t, "quote": lab["quote"], "why": lab["explanation"],
-                                   "verified": True, "step_verified": lab["step_verified"], "from": "label"})
+                                   "verified": True, "step_verified": lab["step_verified"],
+                                   "source": lab.get("source", "step_record"), "from": "label"})
+            # the agent's own words first, then step records
+            quotes.sort(key=lambda q: q.get("source") != "agent_words")
             tools = mode_tools[m.id]
             code_decision = TOOL_DECISION.get(tools.most_common(1)[0][0], "other") if tools else m.decision
             rows.append({"id": m.id, "name": m.name, "description": m.description, "decision": m.decision,
@@ -544,12 +548,19 @@ def run(args) -> dict:
     t0 = time.time()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    runs = [str(ROOT / r) if not Path(r).is_absolute() else r for r in args.runs]
-    eps = load_corpus([r for r in runs if Path(r).exists()])
+    cache_dir = Path(args.cache_dir) if args.cache_dir else out / "atlas_cache"
+    snap = cache_dir / "corpus.json.gz"
+    if args.replay and snap.exists():
+        eps = load_snapshot(snap)  # the exact corpus the recorded responses were made from
+    else:
+        runs = [str(ROOT / r) if not Path(r).is_absolute() else r for r in args.runs]
+        eps = load_corpus([r for r in runs if Path(r).exists()])
     if args.limit:
         random.Random(0).shuffle(eps)
         eps = sorted(eps[:args.limit], key=lambda e: e.id)
-    ops = AtlasOps(replay=args.replay, cache_dir=Path(args.cache_dir) if args.cache_dir else None)
+    if not args.replay:
+        save_snapshot(eps, snap)
+    ops = AtlasOps(replay=args.replay, cache_dir=cache_dir)
     A = Atlas(eps, ops, args.model, args.cache_model, out, max_tokens=args.max_tokens)
     A.count()
     tax = A.discover()
@@ -557,7 +568,7 @@ def run(args) -> dict:
     if not args.no_cache:
         A.open_cache()
     labels_cached = A.label_cached(tax) if not args.skip_labels else {}
-    labels_batch = A.label_batch(tax, args.batch_timeout, out / "atlas_cache" / "batch_state.json") \
+    labels_batch = A.label_batch(tax, args.batch_timeout, cache_dir / "batch_state.json") \
         if args.batch else None
     comparison = A.compare(tax)
     cfs = A.counterfactuals()

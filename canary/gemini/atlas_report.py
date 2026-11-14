@@ -11,6 +11,8 @@ def _q(q: dict) -> str:
     if len(quote) > 260:
         quote = quote[:257] + "..."
     mark = "verified at step" if q.get("step_verified") else "verified in episode"
+    if q.get("source") == "step_record":
+        mark += ", step record"
     return f"> `{q['episode']}` t={q.get('t')}: \"{quote}\" *({mark})*"
 
 

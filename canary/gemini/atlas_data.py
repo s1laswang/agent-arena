@@ -378,7 +378,7 @@ def _solver_scores(paths: list[str | Path]) -> dict[tuple[str, str, int], float]
     """(tiers_version, tier, seed) -> reference solver score, from reference runs under the given roots."""
     out = {}
     for p in paths:
-        for f in glob.glob(str(Path(p) / "**" / "solver-*" / "episodes.jsonl"), recursive=True):
+        for f in sorted(glob.glob(str(Path(p) / "**" / "solver-*" / "episodes.jsonl"), recursive=True)):
             if "superseded" in f:
                 continue
             d = Path(f).parent
@@ -412,7 +412,25 @@ def load_corpus(paths: list[str | Path], solver_roots: list[str | Path] | None =
         seen[base] = n + 1
         ep.id = base if n == 0 else f"{base}#{n}"
         ep.solver_score = solver.get((ep.tiers_version, ep.tier, ep.seed))
+    eps.sort(key=lambda e: e.id)  # path-independent order: the same episodes always pack to the same corpus
     return eps
+
+
+def save_snapshot(eps: list[Episode], path: Path) -> None:
+    """The loaded corpus (episodes + per-step regret/belief/words) as gzip JSON, so --replay needs no run dirs."""
+    import gzip
+    from dataclasses import asdict
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(gzip.compress(json.dumps([asdict(e) for e in eps], separators=(",", ":")).encode(), mtime=0))
+
+
+def load_snapshot(path: Path) -> list[Episode]:
+    import gzip
+    out = []
+    for d in json.loads(gzip.decompress(Path(path).read_bytes())):
+        d["steps"] = [StepRow(**s) for s in d["steps"]]
+        out.append(Episode(**d))
+    return out
 
 
 # ----------------------------------------------------------------------------------------- packing
@@ -421,10 +439,15 @@ def _f(x: float | None) -> str:
     return "-" if x is None else f"{x:.2f}".lstrip("0") if 0 <= x < 1 else f"{x:.2f}"
 
 
-def step_line(s: StepRow) -> str:
+def belief_str(s: StepRow) -> str:
     belief = f"top={s.top}:{_f(s.p_top)}" if s.top else ""
     if s.p_mole is not None:
         belief += f" mole:{_f(s.p_mole)}"
+    return belief
+
+
+def step_line(s: StepRow, show_belief: bool = True) -> str:
+    belief = belief_str(s) if show_belief else ""
     reg = f" | REGRET {s.regret:.3f}" + (f" [{','.join(s.tags)}]" if s.tags else "") if s.regret >= 0.001 or s.tags else ""
     return f"t{s.t} d{s.day} {s.tool}({compact_args(s.tool, s.args)}) -> {s.brief}{reg} | {belief}".rstrip(" |")
 
@@ -440,8 +463,11 @@ def episode_header(ep: Episode) -> str:
 
 def pack_episode(ep: Episode, short: int = RATIONALE_SHORT, long: int = RATIONALE_LONG) -> str:
     lines = [episode_header(ep)]
+    last = None
     for s in ep.steps:
-        lines.append(step_line(s))
+        b = belief_str(s)  # the solver belief is printed only when it changes (saves ~25% tokens)
+        lines.append(step_line(s, show_belief=(b != last)))
+        last = b
         if s.rationale:
             budget = long if s.regret >= HIGH_REGRET or s.tool == "accuse" else short
             r = re.sub(r"\s+", " ", s.rationale).strip()
@@ -453,6 +479,7 @@ def pack_episode(ep: Episode, short: int = RATIONALE_SHORT, long: int = RATIONAL
 
 PACK_LEGEND = """FORMAT. One block per episode. Each step line:
   t<step> d<day> <tool>(<args>) -> <result summary> | REGRET <r> [<tags>] | top=<solver's top suspect>:<P> mole:<P(true mole)>
+The solver belief (top=, mole:) is printed only when it changed since the previous line.
 REGRET is computed in code by replaying the Bayesian reference solver's belief before that step: the value lost
 versus the solver's choice (plant_canary: information lost vs the solver's partition; advance_day: value of
 accusing now vs waiting; accuse: value vs the best accusation; restrict_access: cost x P(innocent)).

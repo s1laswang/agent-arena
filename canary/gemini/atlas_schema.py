@@ -191,6 +191,7 @@ class Verifier:
         self.blocks = blocks
         self.eps = {ep.id: ep for ep in eps}
         self.full = {ep.id: blocks.get(ep.id, pack_episode(ep)) + "\n" + ep.rationale_text() for ep in eps}
+        self.words = {ep.id: ep.rationale_text() for ep in eps}
         self.step_text: dict[tuple[str, int], str] = {}
         for ep in eps:
             for i, s in enumerate(ep.steps):
@@ -213,7 +214,9 @@ class Verifier:
         if not ep_ok:
             self.dropped.append({"episode": episode, "t": t, "quote": quote[:200], "context": context,
                                  "reason": "unknown episode" if episode not in self.full else "not verbatim"})
-        return {"episode": episode, "t": t, "quote": quote, "verified": ep_ok, "step_verified": step_ok}
+        source = "agent_words" if ep_ok and quote_in(quote, self.words.get(episode, "")) else "step_record"
+        return {"episode": episode, "t": t, "quote": quote, "verified": ep_ok, "step_verified": step_ok,
+                "source": source}
 
     def summary(self) -> dict[str, Any]:
         n = max(1, self.n_checked)

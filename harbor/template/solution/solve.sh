@@ -1,12 +1,12 @@
 #!/bin/bash
 # Oracle: play the reference Bayesian solver against the sidecar over MCP (the same wire the agent uses).
 # Harbor copies solution/ to /solution only for `-a oracle` runs; the agent never sees it.
-# The judges' baselines use the same path:  harbor run ... -a oracle --ae CANARY_ORACLE_AGENT=do_nothing
-#                                            harbor run ... -a oracle --ae CANARY_ORACLE_AGENT=stop_early
+# The judges' baselines use the same path:  harbor run ... -a oracle --ae ORACLE_POLICY=do_nothing
+#                                            harbor run ... -a oracle --ae ORACLE_POLICY=stop_early
 # build.py vendors the canary package into solution/canary so the solver can run as an MCP client.
 set -euo pipefail
-URL="${CANARY_MCP_URL:-http://canary-server:8765/mcp}"
-AGENT="${CANARY_ORACLE_AGENT:-solver}"   # solver | do_nothing | stop_early | any canary.baselines name
+URL="${MCP_URL:-http://canary-server:8765/mcp}"
+AGENT="${ORACLE_POLICY:-solver}"   # solver | do_nothing | stop_early | any canary.baselines name
 mkdir -p /logs/agent
 
 # 1) Prove the container is clean before playing (the vendored /solution is expected in oracle runs only).

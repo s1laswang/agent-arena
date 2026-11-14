@@ -8,6 +8,8 @@ agent container holds nothing that reveals the mole.
 uv tool install harbor                       # Harbor CLI (tested: 0.26.0); needs Docker with the compose plugin
 python harbor/build.py                       # -> harbor/dataset/canary-<tier>-<seed>/ (3 tiers x 40 judge seeds)
 harbor run -p harbor/dataset -a oracle -n 4                               # reference solver over MCP
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=do_nothing -n 4  # do-nothing baseline (expect 0)
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early baseline (expect about -1)
 harbor run -p harbor/dataset -a opencode -m openai/<model> -n 4           # the agent (needs OPENAI_API_KEY)
 python harbor/build.py --tiers medium --seeds 900000   # just one task
 ```
@@ -72,6 +74,12 @@ Runs inside `main` and fails on any of:
 - `GET /ledger` answering without the token (positive control: `/healthz` reachable = network only).
 
 `--oracle-run` skips `/solution` and `/logs`: the oracle's vendored solver is uploaded only for `-a oracle`.
+Any `CANARY_*` name in the agent container is a finding, even a harmless one: an early oracle selector named
+`CANARY_ORACLE_AGENT` was flagged in our own runs (env and three `/proc/<pid>/environ`), so it was renamed to
+`ORACLE_POLICY`. Keep every variable passed into `main` (`--ae`, `[environment].env`) free of the `CANARY_` prefix.
+
+Negative control: the same script run inside the `canary-server` sidecar reports 6 findings (SALT file, canary
+source, `import canary`, CANARY_* env, server cmdline in /proc, CANARY_ in `/proc/1/environ`) and exits 1.
 
 ### Fallbacks and trade-offs
 

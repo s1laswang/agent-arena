@@ -165,3 +165,9 @@
 - INTEGRITY v1.3: full fuzz incl. hard_forge, 0 violations; known-V never equals the true V and never rises; EXPLOITS 40 rows, none open on our side (#27 residual = the Harbor sidecar).
 - AGENTS: scaffold fix merged (full history, Responses API with reasoning replay, effort=medium), zero API spend; morning smoke ~$3 then a paired v1.3 re-run ~$90 (needs Silas).
 - Heads mostly idle and waiting on the morning (Gemini key, spend approval, Grok re-run).
+
+## 05:04 tick
+- justSilas d69448e: 499 passed. AC power. J4 44397 training (1h12m). Sky 43143_4 held.
+- HARNESS 05:00 fresh-clone check on v1.3 PASSED: two secrets, the gap holds on every tier (solver lower CI > every baseline upper CI; do_nothing 0), exact mode byte-identical, harbor lint OK. Fix in progress: reproduce writes to a gitignored dir so a clone stays clean.
+- INTEGRITY: HoF v1.3 holds (#41), but its 3 survivors behave identically; FR8 dedups before any claim.
+- NOTE: the HEAD-ENV session is no longer running (it ended after finishing its work). Relaunch it in the morning only if ENV work is needed (prompt in docs/agents/ENV.md).

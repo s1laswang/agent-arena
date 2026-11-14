@@ -47,3 +47,20 @@
   - Forge engineer: hard forge + HOF vs gpt-5.5 validation.
   - FR8 J5 forge (500 gens) on the Mac.
 - Next: on ENV's freeze (~07:00) the OFFICIAL run (gpt-5.5 20+20 dev seeds + OpenCode 5+5) → data/runs/committed; then tags, ablations, final gap.md.
+
+## 03:25 status
+- Official v1.2 (interim 29/40 gpt-5.5; `python -m canary.analysis.gap --runs data/runs/committed`):
+  - **medium:** solver .690 | gpt-5.5 .605 (88%) | Grok .672 (97%)
+  - **hard:** solver .584 | gpt-5.5 .544 (93%) | Grok .567 (97%)
+  - → no gap on v1.2. Root cause: true V in `status` reveals each leak the same day, which defeats the delay (from Grok's own write-up). CEO decision: **v1.3** (known-V only + a stronger solver) is the official measurement; v1.2 = the "before" record.
+- Merged (3bae6b6): MCP frontier runners (solver-over-MCP parity ✓), Codex gpt-5.5 over MCP (hard 0: 0.67 ✓), Grok import (10 episodes, judge seeds, ledger-reported), invalid-episode filter.
+- OpenCode gpt-5.6-sol: ChatGPT credits depleted (429, ~5.8 days); 2/10 valid. **Silas morning item.**
+- MCP server kills at 02:43/02:46/03:01: caused by the Grok eval client (`pkill -f canary.mcp_server` in ~/canary-eval/client/start); it has finished.
+- Next: on the v1.3 merge, gpt-5.5 20+20 in-process + Codex gpt-5.5 5+5 → data/runs/committed/v1.3/; then tags, accusation audit, ablations, Forge vs gpt-5.5, final gap.md by 08:00.
+
+### Grok re-run prompt for Silas (morning, tiers v1.3)
+Run Grok exactly as before (only `configs/README.md` may be read; no source, tests or docs; don't use the reference solver), against the merged v1.3 `justSilas`. **Don't pkill other processes**: start your own server on a unique port and stop only its pid.
+
+> You are the head of security at a company with a mole leaking documents. Start the Canary environment from the `justSilas` branch: `make setup`, then for each episode `CANARY_TIER=<tier> CANARY_SEED=<seed> CANARY_LEDGER_TOKEN=<random> CANARY_PORT=<unique free port> make mcp`, and connect to http://127.0.0.1:<port>/mcp. Read ONLY configs/README.md (no source, tests or other docs) and the MCP server's instructions. Play judge seeds 900000–900004 on medium and on hard (10 episodes), one server process per episode, and stop only the server you started (by its pid; never pkill). After each episode record GET /ledger?token=<token>. Write docs/reports/grok-agent-v1.3.md with a table (tier, seed, score, accused, correct, final day, tool calls) plus a 3-bullet rationale per episode, and save each episode's tool-call transcript to docs/reports/grok-agent-v1.3/<tier>-<seed>.jsonl (one {ts, tool, args, isError, result} per call).
+
+Then: `python -m canary.analysis.import_transcript --agent grok --src docs/reports/grok-agent-v1.3 --report docs/reports/grok-agent-v1.3.md --out data/runs/committed/v1.3/grok`.

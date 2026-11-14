@@ -116,3 +116,18 @@
 - Go v1.3: known-V + a stronger solver + a grok_tactics baseline; FR8 recal; merge ~04:45; official gpt-5.5 20+20 + Codex 5+5 on v1.3. v1.2 is kept as the "clean evidence" record and before-picture.
 - Contingency v1.4 (only if v1.3 frontier >= 85%): 2 moles on hard, or a longer horizon with pipelined canaries.
 - Grok runs imported to data/runs/committed/grok (not replay-verified: per-process secret).
+
+## 04:40 v1.3 merged (0933805, 469 passed)
+- Known-V mechanics; solver v1.3 (latent leak days, decoy inference, tiny canaries, EV with expected true V; restriction probing off).
+- 800 fresh seeds: solver .779/.632/.575, acc 99.6/88.7/84.8%, no-accusation .3/11.3/11.4%. Paired solver - grok_tactics: +.089/+.174/+.233.
+- In flight: AGENTS official gpt-5.5 v1.3 run, FR8 J3 v2, INTEGRITY fuzz, HARNESS README refresh to v1.3.
+
+## 03:35 (real clock, from `date`) correction
+- The CEO entries headed "03:45" and "04:40" were actually written at about 03:25 and 03:33. From now on, CEO timestamps come from `date`. v1.3 merged around 03:30 real time.
+- J3 v2 (v1.3 solver data, 20k+2k, correct-only) is staged on FR8 for the Saturday training v2. J4 44200 has run 1h10m, still in the pilot tokenization.
+
+## 03:41 tick
+- justSilas e411cf1, 476 passed (last verified 3e31c20). Power on AC.
+- FR8: J4 44200 running 1h17m (pilot tokenization; training ~03:55-06:50, eval until 08:24). Sky 43143_4 still paused (requeuehold).
+- AGENTS: official v1.3 gpt-5.5 run in progress (20 medium + 20 hard, started ~03:33, 8 workers). Spend cap $150/night without Silas.
+- Forge: the evolved moles are not harder for gpt-5.5 (7/7 correct on 2 seeds). Framing: "a solver-constrained pipeline works; LLM-in-the-loop fitness is the morning step". J5b runs on v1.3.

@@ -1,0 +1,74 @@
+{
+ "codex:gpt-5.5": {
+  "episodes": 22,
+  "tiers": {
+   "hard": 11,
+   "medium": 11
+  },
+  "regret_total": 6.4592,
+  "tags": {
+   "premature_accusation": {
+    "count": 7,
+    "episodes_with": 7,
+    "regret_sum": 4.5868,
+    "worst": {
+     "run_id": "medium",
+     "seed": 0,
+     "t": 52,
+     "day": 6,
+     "tool": "accuse",
+     "args": {
+      "employee": "e02"
+     },
+     "regret": 1.3895,
+     "p_best": 0.1834,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.18 < 0.6)"
+    },
+    "rate": 0.318
+   },
+   "uninformative_canary": {
+    "count": 5,
+    "episodes_with": 4,
+    "regret_sum": 0.0622,
+    "worst": {
+     "run_id": "hard",
+     "seed": 7,
+     "t": 39,
+     "day": 6,
+     "tool": "plant_canary",
+     "args": {
+      "doc_title": "Research Archive Notice D6",
+      "assignment": {
+       "e21": "I",
+       "e29": "J"
+      }
+     },
+     "regret": 0.0232,
+     "p_best": 0.2568,
+     "why": "canary variants split the suspects poorly (low information)"
+    },
+    "rate": 0.182
+   },
+   "budget_waste": {
+    "count": 12,
+    "episodes_with": 5,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 2,
+     "t": 8,
+     "day": 1,
+     "tool": "search_messages",
+     "args": {
+      "query": "angry"
+     },
+     "regret": 0.0,
+     "p_best": 0.0333,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 0.227
+   }
+  },
+  "score_mean": 0.5277
+ }
+}

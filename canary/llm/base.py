@@ -77,10 +77,11 @@ class LLMClient:
 
     provider = "base"
 
-    def __init__(self, model: str = "", max_retries: int = 5, base_delay: float = 1.0,
+    def __init__(self, model: str = "", max_retries: int | None = None, base_delay: float = 1.0,
                  sleep: Callable[[float], None] = time.sleep, seed: int | None = None):
         self.model = model
-        self.max_retries = max_retries
+        # transport retries only (never changes what the model sees); CANARY_LLM_MAX_RETRIES rides out network blips
+        self.max_retries = int(os.environ.get("CANARY_LLM_MAX_RETRIES", "5")) if max_retries is None else max_retries
         self.base_delay = base_delay
         self.sleep = sleep
         self.seed = seed
@@ -103,7 +104,7 @@ class LLMClient:
             except Exception as e:  # noqa: BLE001
                 if attempt >= self.max_retries or not is_retryable(e):
                     raise
-                delay = self.base_delay * (2 ** attempt) * (1 + 0.1 * random.random())
+                delay = min(self.base_delay * (2 ** attempt), 60.0) * (1 + 0.1 * random.random())
                 attempt += 1
                 self.sleep(delay)
         for k in ("in", "out", "cost_usd"):

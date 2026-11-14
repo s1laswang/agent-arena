@@ -1,135 +1,62 @@
 {
  "codex:gpt-5.5": {
-  "episodes": 3,
+  "episodes": 22,
   "tiers": {
-   "hard": 2,
-   "medium": 1
+   "hard": 11,
+   "medium": 11
   },
-  "regret_total": 0.4357,
+  "regret_total": 6.4592,
   "tags": {
    "premature_accusation": {
-    "count": 1,
-    "episodes_with": 1,
-    "regret_sum": 0.1155,
+    "count": 7,
+    "episodes_with": 7,
+    "regret_sum": 4.5868,
     "worst": {
      "run_id": "medium",
      "seed": 0,
-     "t": 129,
-     "day": 14,
+     "t": 52,
+     "day": 6,
      "tool": "accuse",
      "args": {
-      "employee": "e05"
+      "employee": "e02"
      },
-     "regret": 0.1155,
-     "p_best": 0.5494,
-     "why": "accused before the evidence was decisive (solver top-suspect belief 0.55 < 0.6)"
+     "regret": 1.3895,
+     "p_best": 0.1834,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.18 < 0.6)"
     },
-    "rate": 0.333
+    "rate": 0.318
    },
    "uninformative_canary": {
-    "count": 4,
-    "episodes_with": 2,
-    "regret_sum": 0.0866,
-    "worst": {
-     "run_id": "hard",
-     "seed": 0,
-     "t": 53,
-     "day": 8,
-     "tool": "plant_canary",
-     "args": {
-      "doc_title": "Audit memo theta",
-      "assignment": {
-       "e12": "A"
-      }
-     },
-     "regret": 0.0299,
-     "p_best": 0.2488,
-     "why": "canary variants split the suspects poorly (low information)"
-    },
-    "rate": 0.667
-   },
-   "budget_waste": {
-    "count": 1,
-    "episodes_with": 1,
-    "regret_sum": 0.0,
-    "worst": {
-     "run_id": "hard",
-     "seed": 0,
-     "t": 79,
-     "day": 10,
-     "tool": "interview",
-     "args": {
-      "employee": "e22",
-      "topic": "contacts_outside"
-     },
-     "regret": 0.0,
-     "p_best": 0.4183,
-     "why": "repeated or failed call that used budget without new information"
-    },
-    "rate": 0.333
-   }
-  },
-  "score_mean": 0.5683
- },
- "openai:gpt-5.5": {
-  "episodes": 14,
-  "tiers": {
-   "hard": 5,
-   "medium": 9
-  },
-  "regret_total": 3.5473,
-  "tags": {
-   "premature_accusation": {
     "count": 5,
-    "episodes_with": 5,
-    "regret_sum": 2.3631,
-    "worst": {
-     "run_id": "hard-15-19",
-     "seed": 15,
-     "t": 115,
-     "day": 14,
-     "tool": "accuse",
-     "args": {
-      "employee": "e12"
-     },
-     "regret": 0.9617,
-     "p_best": 0.7772,
-     "why": "accused before the evidence was decisive (solver top-suspect belief 0.78 < 0.6)"
-    },
-    "rate": 0.357
-   },
-   "uninformative_canary": {
-    "count": 7,
     "episodes_with": 4,
-    "regret_sum": 0.0943,
+    "regret_sum": 0.0622,
     "worst": {
-     "run_id": "medium-15-19",
-     "seed": 17,
-     "t": 51,
-     "day": 7,
+     "run_id": "hard",
+     "seed": 7,
+     "t": 39,
+     "day": 6,
      "tool": "plant_canary",
      "args": {
-      "doc_title": "Canary D7 suspects",
+      "doc_title": "Research Archive Notice D6",
       "assignment": {
-       "e00": "A",
-       "e09": "B",
-       "e10": "C"
+       "e21": "I",
+       "e29": "J"
       }
      },
-     "regret": 0.0446,
-     "p_best": 0.125,
+     "regret": 0.0232,
+     "p_best": 0.2568,
      "why": "canary variants split the suspects poorly (low information)"
     },
-    "rate": 0.286
+    "rate": 0.182
    },
    "budget_waste": {
-    "count": 36,
-    "episodes_with": 10,
+    "count": 12,
+    "episodes_with": 5,
     "regret_sum": 0.0,
     "worst": {
-     "run_id": "hard-0-4",
-     "seed": 1,
-     "t": 10,
+     "run_id": "hard",
+     "seed": 2,
+     "t": 8,
      "day": 1,
      "tool": "search_messages",
      "args": {
@@ -139,10 +66,84 @@
      "p_best": 0.0333,
      "why": "repeated or failed call that used budget without new information"
     },
-    "rate": 0.714
+    "rate": 0.227
    }
   },
-  "score_mean": 0.2039
+  "score_mean": 0.5277
+ },
+ "openai:gpt-5.5": {
+  "episodes": 17,
+  "tiers": {
+   "hard": 8,
+   "medium": 9
+  },
+  "regret_total": 3.0515,
+  "tags": {
+   "premature_accusation": {
+    "count": 4,
+    "episodes_with": 4,
+    "regret_sum": 1.4152,
+    "worst": {
+     "run_id": "hard",
+     "seed": 2,
+     "t": 142,
+     "day": 13,
+     "tool": "accuse",
+     "args": {
+      "employee": "e19"
+     },
+     "regret": 0.901,
+     "p_best": 0.5764,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.58 < 0.6)"
+    },
+    "rate": 0.235
+   },
+   "uninformative_canary": {
+    "count": 10,
+    "episodes_with": 6,
+    "regret_sum": 0.0474,
+    "worst": {
+     "run_id": "medium",
+     "seed": 5,
+     "t": 19,
+     "day": 3,
+     "tool": "plant_canary",
+     "args": {
+      "doc_title": "Canary Gamma customer renewal exceptions",
+      "assignment": {
+       "e18": "G",
+       "e19": "H"
+      }
+     },
+     "regret": 0.024,
+     "p_best": 0.05,
+     "why": "canary variants split the suspects poorly (low information)"
+    },
+    "rate": 0.353
+   },
+   "budget_waste": {
+    "count": 18,
+    "episodes_with": 7,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 3,
+     "t": 53,
+     "day": 6,
+     "tool": "search_messages",
+     "args": {
+      "query": "fed up",
+      "day_from": 1,
+      "day_to": 6
+     },
+     "regret": 0.0,
+     "p_best": 0.115,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 0.412
+   }
+  },
+  "score_mean": 0.4776
  },
  "do_nothing": {
   "episodes": 40,

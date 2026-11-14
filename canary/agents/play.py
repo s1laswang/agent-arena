@@ -56,7 +56,7 @@ def main(argv=None, client=None) -> Path:
     from canary.agents.llm_policy import DEFAULT_REASONING_EFFORT
     effort = a.reasoning_effort or DEFAULT_REASONING_EFFORT
     api_used = None
-    total = {"in": 0, "out": 0, "cost_usd": 0.0, "calls": 0}
+    total = {"in": 0, "out": 0, "cost_usd": 0.0, "calls": 0, "cached_in": 0, "cost_usd_est": 0.0}
     for seed in seeds:
         env = make_env(a.tier, seed, a.fake)
         pol = LLMPolicy(a.agent, hint=a.hint, temperature=a.temperature, max_turns=a.max_turns, client=client,

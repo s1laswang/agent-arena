@@ -25,14 +25,15 @@ You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/u
 | agent | medium (headline) | hard (headline) | easy (sanity tier only) |
 |---|---:|---:|---:|
 | **solver** (reference) | **+0.64** [+0.58, +0.69] | **+0.55** [+0.40, +0.66] | +0.77 [+0.74, +0.82] |
-| frontier agents (gpt-5.5, gpt-5.6-sol) | pending (AGENTS commit runs to `data/runs/committed/`) | pending | – |
+| frontier: **Codex gpt-5.5 over MCP** (judges' harness). Not judge seeds: v1.3 **dev** seeds 0–10, n=11 per tier, paired with the solver on the same seeds; cell = mean ± 95% CI = % of the solver [bootstrap 95% CI]; commit a978aa1+, see the [gap report](docs/reports/gap.md) | +0.40 ± 0.42 = **55%** [−8%, 104%] (50% on the planned seeds 0–9) | +0.66 ± 0.04 = **106%** [91%, 136%] (**97%** [89%, 107%] on seeds 0–9) | – |
+| frontier: in-process gpt-5.5, fixed loop (full history, Responses API + reasoning replay; same dev seeds, n=9 / 8) | +0.67 ± 0.10 = 92% [80%, 106%] | +0.26 ± 0.54 = 38% [−51%, 99%] | – |
 | heuristic (canary bisection, no Bayes) | −0.06 [−0.39, +0.14] | −0.30 [−0.58, −0.09] | +0.64 [+0.56, +0.72] |
 | logs_only (best no-canary log reader) | −0.98 [−1.00, −0.91] | −0.99 [−1.00, −0.91] | −0.51 [−0.76, −0.28] |
 | random | −0.68 [−0.72, −0.58] | −0.81 [−0.85, −0.72] | −0.69 [−0.80, −0.58] |
 | stop_early (random accusation, day 1) | −0.90 [−1.00, −0.75] | −0.95 [−1.00, −0.85] | −0.84 [−0.95, −0.60] |
 | do_nothing | 0.00 (exact) | 0.00 (exact) | 0.00 (exact) |
 
-- **Committed run.** [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one keyless run on v1.3 (secret fingerprint `f4cacdb8537b`), written with `make reproduce-update`. Solver: medium **+0.65 ± 0.07** (92.5% correct), hard **+0.60 ± 0.10** (90% correct). Heuristic: medium +0.04 ± 0.24, hard −0.50 ± 0.24.
+- **Committed run.** [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one keyless run on v1.3 (secret fingerprint `2759407705e1`), written with `make reproduce-update` on 2026-11-14 to add the official frontier runs to the replayed block. Solver: medium **+0.64 ± 0.08** (90% correct), hard **+0.61 ± 0.11** (85% correct). Heuristic: medium +0.12 ± 0.23, hard −0.47 ± 0.24.
 - **Fresh seeds.** On seeds never used for tuning, the gap holds and is measured paired (same seed, agent − solver):
   - [`results/fresh_table_v1.3.md`](results/fresh_table_v1.3.md), 400 dev seeds per tier (1000–1399): solver easy/medium/hard **+0.760 / +0.639 / +0.559**, accuracy 99.2 / 89.2 / 83.5%. The strongest scripted baseline, `grok_tactics` (a scripted replay of a strong Grok agent's tactics: the agent's runs and transcripts are in [docs/reports/grok-agent.md](docs/reports/grok-agent.md), the replay is `GrokTactics` in [`canary/baselines.py`](canary/baselines.py)), trails the solver by **0.070 ± 0.021 / 0.180 ± 0.040 / 0.252 ± 0.058**; the heuristic by 0.125 / 0.674 / 0.831.
   - FR8's recalibration on 800 more seeds per tier (5000–5799, [CONTRACT §13](docs/CONTRACT.md)): solver **.779 / .632 / .575**, accuracy 99.6 / 88.7 / 84.8%; solver − grok_tactics **+.089 ± .016 / +.174 ± .025 / +.233 ± .040**.

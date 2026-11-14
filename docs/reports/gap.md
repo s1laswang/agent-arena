@@ -1,5 +1,93 @@
 # Gap report: frontier agents vs the reference solver
 
+## Official v1.3 measurement (approved, 2026-11-14 10:30–11:21)
+
+> **v1.4 contingency triggered on hard (Codex 97%).** In the judges' harness shape (Codex CLI gpt-5.5 over MCP), the frontier agent scores **97% of the reference solver on hard** on the planned seeds 0–9 (95% CI 89–107%, 10/10 correct). With the one extension seed that finished it scores **106%** (n=11, CI 91–136%). So **the v1.3 gap does not hold on hard in the judges' shape.** On medium, Codex scores **50%** of the solver (n=10, CI −19% to 103%; 55% with seed 10). That gap comes entirely from 2 early wrong accusations out of 10, and the CI reaches parity, so medium is inconclusive rather than a demonstrated gap. The fixed in-process loop is **92% of the solver on medium** (n=9, CI 80–106%), which is also above the 85% line.
+
+**Setup.** Tiers v1.3 (`TIERS_VERSION="v1.3"`, `KNOWN_V_MODE=True`), dev seeds. Every frontier episode is paired with the committed reference solver episode on the same seed (`data/runs/committed/v1.3/reference/`, played at 0933805). We re-checked those solver episodes at today's code: all 40 medium/hard episodes on seeds 0–19 are identical. Frontier/solver = (frontier mean) / (solver mean on the same seeds), with a paired bootstrap 95% CI over seeds (10,000 resamples).
+- **Codex over MCP** (the judges' shape): `codex exec` 0.167, gpt-5.5, Codex's default reasoning effort. One MCP server per episode on its own port; shell, web and apps disabled. The score comes from the server ledger.
+- **In-process fixed loop**: `LLMPolicy` with the full history, the Responses API with encrypted-reasoning replay and `reasoning_effort="medium"`. The live smoke passed: api=responses, 37 calls, 30/30 reasoning items carried encrypted content and were replayed without errors.
+
+The prompts and the 13 tools are byte-identical between the two harnesses (parity test). The planned set was seeds 0–9 per tier. Codex seed 10 (both tiers) and in-process medium seed 8 / hard seed 7 were in flight when spend was held at 11:16 and were allowed to finish. In-process medium 9 and hard 8–9 were never run (held: the remaining budget goes to v1.4).
+
+Reproduce (no keys): `python scripts/paired_v13.py --seeds 0-19` (table below), `python -m canary.analysis.gap --runs data/runs/committed/v1.3`, `python -m canary.analysis.tags|accuse --runs data/runs/committed/v1.3/<run>`, `python scripts/regret_report.py <episodes.jsonl> ...` → `results/regret_{codex-gpt-5.5-full,gpt-5.5-full}-v1.3.md`.
+
+### Paired table (all episodes run; `data/runs/committed/v1.3/paired_table.md`)
+| tier | run | n | score ± 95% CI | accuracy | accused | mean P(accused) at accusation | solver, same seeds | **frontier / solver [95% CI]** | paired diff ± CI | luck-adjusted score | luck-adj. / solver |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| medium | **Codex gpt-5.5 over MCP** (judges' shape) | 11 | 0.401 ± 0.417 | 0.82 | 1.00 | 0.72 | 0.726 | **55% [−8%, 104%]** | −0.325 ± 0.420 | 0.249 | 34% |
+| medium | **in-process gpt-5.5, fixed loop** | 9 | 0.668 ± 0.103 | 1.00 | 1.00 | 0.92 | 0.722 | **92% [80%, 106%]** | −0.054 ± 0.101 | 0.542 | 75% |
+| medium | in-process gpt-5.5, handicapped scaffold, superseded (40-turn window, 0933805) | 9 | 0.319 ± 0.497 | 0.78 | 1.00 | 0.80 | 0.670 | 48% [−38%, 100%] | −0.351 ± 0.415 | 0.358 | 53% |
+| medium | Codex gpt-5.5 over MCP, earlier sample (0933805, history) | 1 | 0.530 | 1.00 | 1.00 | 0.55 | 0.740 | 72% | −0.210 | −0.160 | – |
+| medium | reference solver | 20 | 0.717 ± 0.052 | 1.00 | 1.00 | 1.00 | 0.717 | – | – | 0.717 | – |
+| medium | heuristic | 20 | −0.116 ± 0.361 | 0.55 | 1.00 | 0.60 | 0.717 | −16% [−66%, 30%] | −0.832 ± 0.353 | −0.035 | −5% |
+| medium | do_nothing | 20 | 0.000 | 0.00 | 0.00 | – | 0.717 | 0% | −0.717 ± 0.052 | 0.000 | 0% |
+| medium | stop_early | 20 | −1.000 | 0.00 | 1.00 | 0.05 | 0.717 | −139% | −1.717 ± 0.052 | −0.900 | – |
+| hard | **Codex gpt-5.5 over MCP** (judges' shape) | 11 | 0.655 ± 0.041 | 1.00 | 1.00 | 0.82 | 0.616 | **106% [91%, 136%]** | +0.038 ± 0.131 | 0.343 | 82% |
+| hard | **in-process gpt-5.5, fixed loop** | 8 | 0.264 ± 0.541 | 0.75 | 1.00 | 0.75 | 0.701 | **38% [−51%, 99%]** | −0.437 ± 0.534 | 0.250 | 58% |
+| hard | in-process gpt-5.5, handicapped scaffold, superseded (40-turn window, 0933805) | 5 | −0.003 ± 0.799 | 0.60 | 1.00 | 0.61 | 0.553 | −1% [−121%, 166%] | −0.556 ± 0.944 | 0.004 | 1% |
+| hard | Codex gpt-5.5 over MCP, earlier sample (0933805, history) | 2 | 0.588 ± 0.132 | 1.00 | 1.00 | 0.99 | 0.705 | 83% [73%, 94%] | −0.117 ± 0.142 | 0.572 | 100% |
+| hard | reference solver | 20 | 0.592 ± 0.114 | 0.85 | 0.85 | 0.91 | 0.592 | – | – | 0.468 | – |
+| hard | heuristic | 20 | −0.322 ± 0.374 | 0.40 | 1.00 | 0.40 | 0.592 | −54% [−113%, 6%] | −0.914 ± 0.403 | −0.333 | −71% |
+| hard | do_nothing | 20 | 0.000 | 0.00 | 0.00 | – | 0.592 | 0% | −0.592 ± 0.114 | 0.000 | 0% |
+| hard | stop_early | 20 | −0.900 ± 0.196 | 0.05 | 1.00 | 0.03 | 0.592 | −152% | −1.492 ± 0.222 | −0.934 | – |
+
+**Planned seeds 0–9 only:** Codex medium n=10: 0.364 ± 0.454, **50% [−19%, 103%]**. Codex hard n=10: 0.657 ± 0.045, **97% [89%, 107%]**. The in-process rows are unchanged (they ran no seeds beyond 9). On hard seed 10 the solver abstained (score 0) while Codex reached P=1.0 and accused correctly, so the reference is not an upper bound there.
+
+How to read the columns:
+- *accused* = the share of episodes that ended in an accusation.
+- *mean P(accused)* = the solver's exact posterior that the accused employee is the mole, given everything the agent had seen, at the moment it accused (`canary.analysis.accuse`).
+- *luck-adjusted score* = each accusation's expected value under that posterior, P·V − (1 − P) (0 without an accusation). It separates decision quality from luck. For Codex, the steps are rebuilt from its event stream, so its posteriors are best effort.
+- The handicapped-scaffold rows are the night's v1.3 run (n=9+5, seeds 0–19 subset), now under `data/runs/committed/superseded/`. They were moved there so they aren't pooled with the fixed runs, which carry the same agent label.
+
+### Honest read
+1. **Hard: parity in the judges' shape.** Codex gpt-5.5 over MCP got 11/11 correct, at 97% of the solver on the planned seeds and 106% with seed 10. Even after removing luck, it keeps 69% (seeds 0–9) to 82% (n=11) of the solver's expected value. Two of its 11 correct accusations were gambles at P=0.41 and 0.45 (seeds 8 and 3), below the break-even 1/(1+V) ≈ 0.6. **This is ≥85% of the solver: the v1.4 contingency is triggered on hard.**
+2. **Medium: variance-driven and inconclusive.** Codex's medium gap comes from 2 wrong accusations (seeds 0 and 4, −1 each, at P=0.18 and 0.33). The other 9 of 11 episodes are near the solver. The CI (−8% to 104%) includes parity. The fixed in-process loop is at 92% on medium (≥85%).
+3. **The harness matters less than the variance.** With the same model and prompt, Codex is strong on hard and weak on medium, and the in-process loop is the reverse. Each −1 accusation moves a 10-seed mean by about 0.17, so n≈10 cannot separate 70% from 100%.
+4. **The scaffold fix was real.** The in-process loop on medium went from 48% (40-turn window, truncated tool results) to 92% (full history plus reasoning replay). The night's "≈0% on hard" also came mostly from the handicap: the fixed loop is at 38% on hard (n=8), driven by 2 day-14 accusations at P=0.58 and 0.50.
+5. **The failure mode is unchanged, but rarer:** accusing below the break-even posterior instead of abstaining. No frontier episode abstained, including when abstaining (0) beat the gamble.
+
+### Dominant failure tags (value lost in V; ENV's `scripts/regret_report.py`, `canary.analysis.tags`)
+| run | `premature_accusation` | `uninformative_canary` | `budget_waste` | others |
+|---|---|---|---|---|
+| Codex medium (n=11) | **5 instances, 3.25 V** (0.30 V/episode) | 1, 0.00 V | 8, 0 V | none |
+| Codex hard (n=11) | **2 instances, 1.34 V** (the 2 lucky gambles, seeds 8 and 3) | 4, 0.06 V | 4, 0 V | none |
+| in-process medium (n=9) | 1, 0.24 V | 3, 0.02 V | 11, 0 V | none |
+| in-process hard (n=8) | **3 instances, 1.18 V** | 7, 0.02 V | 7, 0 V | none |
+
+Premature accusation is about 97–99% of the *tagged* value lost (Codex 4.59 of 4.65 V, in-process 1.42 of 1.46 V) and 71% / 46% of all regret (Codex 6.46 V, in-process 3.05 V). The rest is untagged small per-decision losses, such as Codex's day-5 restrictions on hard seed 4. Canary design costs are negligible.
+
+### Annotated failure: Codex medium seed 0 (score −1.0, accused e02 on day 6 at P=0.18; true mole e05, decoy e19)
+| day | action (from the Codex event stream) | note |
+|---|---|---|
+| 1–2 | 3-variant canaries over 6 people each (e00–e05, e06–e11) | good design: the careful mole rarely leaks company-wide canaries, and Codex says so itself |
+| 3–4 | two ordinary leaks (d1-1, d1-2) surface → intersection = Sales {e02, e05, e06, e11, e15, e16, e18} | correct narrowing |
+| 3–5 | ~10 interviews | weak evidence (documented LR ≈1.3) |
+| 4–5 | "e02 is becoming statistically loud in the logs: after-hours access on both leaked docs plus a canary" | **this tier has framing**: the mole adds about 1.5 fake after-hours accesses a day attributed to others (stated in the instructions) |
+| 5 | plants a 3-way exact canary **e02=A, e18=B, e05=C**: the true mole is in it | with a delay of 1–3 days it would surface on day 6–8 |
+| 6 | no new leak → **accuses e02**: "waiting mainly risks more hidden leak damage" | P(e02)=0.18, P(top)=0.18. Break-even ≈ 0.53 at V=0.87. Regret 1.39 V |
+
+**Codex medium seed 4** (−1.0) is the same failure at the horizon. Codex narrowed the pool to Legal {e03, e07, e13, e15, e17}, correctly dismissed e03 as the decoy, and planted solo canaries on e07, e15 and e17 on days 10–12. None surfaced by day 14. It then accused e07 on "highest after-hours count", which is again the framed signal, at P=0.33 (true mole e17). Its own day-9 note said the "evasive interview tilts slightly toward e17". Abstaining (0) beat that accusation, whose expected value was −0.49.
+
+### Spend (OpenAI API; gpt-5.5 list prices, verified on developers.openai.com/api/docs/pricing: input $5.00, cached input $0.50, output $30.00 per 1M tokens, <272K context)
+| run | episodes | estimate (cached input at $0.50/M) | upper bound (no cache discount) |
+|---|---|---|---|
+| Codex over MCP, medium | 11 | $14.53 | $85.31 |
+| Codex over MCP, hard | 11 | $18.61 | $113.74 |
+| in-process fixed loop, medium | 9 | $7.28 | $29.70 |
+| in-process fixed loop, hard | 8 | $10.78 | $48.74 |
+| in-process attempts killed by the 10:45 network outage (2 partial, 7 zero-cost; re-run) | 9 | $0.87 | $2.74 |
+| smoke (medium seed 0, not in the table) | 1 | $0.36 | $1.19 |
+| **total (approved budget $93)** | | **$52.43** | $281.42 |
+
+- **Source of the numbers.** Codex: the `turn.completed` token usage per episode. In-process: the Responses API `usage` per call, now including `input_tokens_details.cached_tokens`. Cached shares of input tokens: 95% for Codex, 89–91% for in-process. Per-run numbers are in each run's `meta.json` (`usage.cost_usd_est`, `usage.cost_usd_upper`); per-episode lines are in `data/runs/staging-v1.3/spend_ledger.jsonl` (gitignored).
+- **The dashboard validates the discounted basis.** Silas's OpenAI dashboard showed a total bill of **about $170 at ~11:20** for overnight plus this morning. That is below the summed discounted estimates (overnight ≈ $260 + this morning ≈ $45), so the cached-input pricing is right and, if anything, conservative.
+- **Control.** `scripts/budget_runner.py` ran one episode per process, with Codex first. It stopped launching once spent + in-flight reserve + the next episode would exceed the cap. The cap was $90, lowered to $50 between 11:01 and 11:15 pending the dashboard check. Spend was held at 11:16 because the hard-tier result triggered v1.4.
+
+---
+
+# History (superseded by the official measurement above)
+
 **Status 03:54 (HEAD-AGENTS).** v1.2 = complete official measurement (the "before" picture). v1.3 = the official tier, but **small-n**: runs stopped at the night's API spend cap ($150; see Spend). Gemini becomes a frontier family in the morning.
 
 **Scoring (contract v0.3):** correct accusation = company value V at accusation; wrong = −1; no accusation = 0.

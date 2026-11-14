@@ -215,6 +215,8 @@ GOOGLE_GENERATIVE_AI_API_KEY=<your key> harbor run -p harbor/dataset -a opencode
     -m google/gemini-4-carbon --api-key-name GOOGLE_GENERATIVE_AI_API_KEY -n 2
 ```
 
+**Pitfall: the agent setup timeout.** If the agent setup times out on a slow network or high `-n`, add `--agent-setup-timeout-multiplier 3`. The cause: Harbor's `opencode` agent installs `nodejs npm` (apt), nvm/Node and `opencode-ai` in every agent container within its default 360 s setup timeout. `task.toml` cannot raise that limit; only the CLI multiplier can. In our dry rehearsal (Sat 14 Nov ~23:30, `-n 5` on a loaded laptop), all 10 trials hit `AgentSetupTimeoutError` before the first model call. Those trials have no reward and are infrastructure failures, not results.
+
 **Pitfall: the API key name.** OpenCode's Google provider reads only `GOOGLE_GENERATIVE_AI_API_KEY`. If you export only `GEMINI_API_KEY`, or export `GOOGLE_GENERATIVE_AI_API_KEY` without `--api-key-name`, Harbor does not forward the key. OpenCode then fails with `AI_LoadAPIKeyError` before its first model call, and every trial ends at reward 0 with `NonZeroAgentExitCodeError`. Those zeros are infrastructure failures, not model results, and we did not commit them as results.
 
 **Running the anti-cheat solutions (INTEGRITY):**

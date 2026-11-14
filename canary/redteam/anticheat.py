@@ -46,6 +46,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import sys
 import threading
 from pathlib import Path
@@ -502,19 +503,32 @@ def replay_committed(root: Path = ROOT) -> list[dict]:
                 row["not_replayable"] += 1
                 row.setdefault("why", f"tier params for {version} are not frozen in rules.TIERS_HISTORY")
                 continue
-            step_bad, first_bad = 0, None
+            step_bad, first_bad, n_trunc, n_client = 0, None, 0, 0
             with rules.tiers_version(version):
                 env = Env(tier, seed)
                 for i, st in enumerate(e.get("steps", [])):
+                    if _client_only_step(st):      # never reached the MCP server: replaying it would eat a call
+                        n_client += 1              # from the env's tool cap that the agent never spent
+                        continue
                     r = env.call(st["tool"], st["args"])
-                    want = _norm_result(st.get("result"))
-                    if want is not None and _canon({"ok": r.ok, "data": r.data, "error": r.error}) != _canon(want):
+                    got_payload = {"ok": r.ok, "data": r.data, "error": r.error}
+                    trunc = _client_truncated_bytes(st.get("result"))
+                    if trunc is not None:          # OpenCode kept only "...N bytes truncated...": check N
+                        n_trunc += 1
+                        ok = len(json.dumps(got_payload).encode()) == trunc
+                    else:
+                        want = _norm_result(st.get("result"))
+                        ok = want is None or _canon(got_payload) == _canon(want)
+                    if not ok:
                         step_bad += 1
                         first_bad = i if first_bad is None else first_bad
                 got, acc = env.score(), env.verdict()["accused"]
             row["replayed"] += 1
             row["steps"] = row.get("steps", 0) + len(e.get("steps", []))
             row["step_mismatches"] = row.get("step_mismatches", 0) + step_bad
+            if n_trunc or n_client:
+                row["steps_truncated_checked"] = row.get("steps_truncated_checked", 0) + n_trunc
+                row["steps_client_only"] = row.get("steps_client_only", 0) + n_client
             if abs(got - float(e["score"])) < 1e-6 and acc == e.get("accused") and not step_bad:
                 row["consistent"] += 1
             else:
@@ -543,10 +557,37 @@ def _norm_result(want):
     return want
 
 
+# OpenCode (1.19.x) cuts a long tool output client-side and records only this notice. The server serializes every
+# reply as json.dumps(payload) (canary/mcp_server.py), so N must equal the replayed payload's byte length exactly.
+_OC_TRUNC = re.compile(r"\A\s*\.\.\.(\d+) bytes truncated\.\.\.\s+The tool call succeeded but the output was "
+                       r"truncated\. Full output saved to: ")
+# OpenCode's own reply when the model calls a tool it does not have (e.g. `bash` under permission "*": "deny").
+_OC_NO_TOOL = "Model tried to call unavailable tool"
+
+
+def _client_truncated_bytes(want) -> int | None:
+    if isinstance(want, dict) and set(want) == {"raw"} and isinstance(want["raw"], str):
+        m = _OC_TRUNC.match(want["raw"])
+        if m:
+            return int(m.group(1))
+    return None
+
+
+def _client_only_step(st: dict) -> bool:
+    """A step the CLI answered itself: not an Env tool, and the recorded error is OpenCode's unavailable-tool text.
+    Skipping a real server call disguised this way shifts every later result, so the replay still catches it."""
+    from ..env import _SPECS
+    res = st.get("result")
+    return (st.get("tool") not in _SPECS and isinstance(res, dict) and res.get("ok") is False
+            and isinstance(res.get("error"), str) and res["error"].startswith(_OC_NO_TOOL))
+
+
 def replay_counts(replay: list[dict]) -> dict:
     c = {k: sum(r[k] for r in replay) for k in ("n", "replayed", "consistent", "not_replayable")}
     c["steps"] = sum(r.get("steps", 0) for r in replay)
     c["step_mismatches"] = sum(r.get("step_mismatches", 0) for r in replay)
+    c["steps_truncated_checked"] = sum(r.get("steps_truncated_checked", 0) for r in replay)
+    c["steps_client_only"] = sum(r.get("steps_client_only", 0) for r in replay)
     return c
 
 
@@ -859,6 +900,12 @@ def coverage_line(replay: list[dict]) -> str:
     head = (f"**Replay coverage: {c['replayed']} of {c['n']} committed episodes re-played, "
             f"{c['consistent']} consistent; {c['steps']} recorded tool results compared step by step, "
             f"{c['step_mismatches']} differ.**")
+    if c["steps_truncated_checked"] or c["steps_client_only"]:
+        head += (f" Of those, {c['steps_truncated_checked']} were cut client-side by OpenCode (\"...N bytes "
+                 "truncated...\"); for those, N is checked against the exact byte length of the replayed reply. "
+                 f"{c['steps_client_only']} tool call{'s' if c['steps_client_only'] != 1 else ''} OpenCode itself "
+                 "refused (\"Model tried to call unavailable tool\") never reached the server and "
+                 f"{'are' if c['steps_client_only'] != 1 else 'is'} skipped.")
     if c["replayed"] == 0:
         head += " NOTHING was re-played, so this check proves nothing."
     return head + (f" Not replayable: {skipped}." if skipped else "")

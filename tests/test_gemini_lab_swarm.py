@@ -233,3 +233,60 @@ def test_mcp_replay_audit_reproduces_episode():
     spec = S.AttackerSpec(id="x", idx=0, persona="p", model="m", tier="medium", seed=800108)
     out = S.mcp_replay_audit(spec, b, led)
     assert out["replay_matches_ledger"] and out["justified"] == S.accusation_audit(b)["justified"]
+
+
+def _flagged_part(tmp_path, name="w"):
+    """A stub wave whose first attempt carries an in-run 'confirmed' score flag (as wave 2b's w2b-008 did)."""
+    S.main(["--attackers", "2", "--planner", "stub", "--executor", "script", "--tiers", "medium", "--mcp-top", "0",
+            "--confirm-top", "0", "--solver-ref", "1", "--out", str(tmp_path / name)])
+    p = tmp_path / name / "swarm.json"
+    res = json.loads(p.read_text())
+    a = res["attempts"][0]
+    a["exploit"] = True
+    a["invariant_violations"] = [{"kind": "score_at_solver_level_confirmed", "t": -1, "mean": 0.7, "solver_mean": 0.5}]
+    res["confirmations"] = {a["id"]: {"seeds": [1], "scores": [0.7], "solver_scores": [0.5], "justified_wins": 0,
+                                      "unjustified_wins": 1, "mean": 0.7, "solver_mean": 0.5, "confirmed": True}}
+    p.write_text(json.dumps(res))
+    return a["id"]
+
+
+def _review(tmp_path, aid, rows):
+    p = tmp_path / "review.json"
+    p.write_text(json.dumps({"attempt": aid, "git_sha": "abc", "ledger_run_ids": ["r"], "rows": rows}))
+    return str(p)
+
+
+def test_merge_labels_waves_and_counts_lost_attempts(tmp_path):
+    _flagged_part(tmp_path)
+    S.main(["--merge", f"{tmp_path / 'w'}:wave 9 (test):5", "--out", str(tmp_path / "m")])
+    res = json.loads((tmp_path / "m" / "swarm.json").read_text())
+    w = res["waves"][0]
+    assert w["wave"] == "wave 9 (test)" and w["planned"] == 5 and w["finished"] == 2 and w["lost_infra_invalid"] == 3
+    assert {a["wave"] for a in res["attempts"]} == {"wave 9 (test)"}
+    md = (tmp_path / "m" / "swarm.md").read_text()
+    assert "## By wave" in md and "## Attacks by persona and name" in md and "## Hold-out regression tests" in md
+
+
+def test_review_that_does_not_confirm_overturns_the_in_run_flag(tmp_path):
+    aid = _flagged_part(tmp_path)
+    rows = [{"seed": 1, "score": 0.0, "correct": False, "solver_score": 0.7, "audit": {}},
+            {"seed": 2, "score": 0.65, "correct": True, "solver_score": 0.6, "audit": {"justified": True}}]
+    S.main(["--merge", f"{tmp_path / 'w'}:wave x:2", "--review", _review(tmp_path, aid, rows),
+            "--write-tests", str(tmp_path / "t.py"), "--out", str(tmp_path / "m")])
+    res = json.loads((tmp_path / "m" / "swarm.json").read_text())
+    a = next(x for x in res["attempts"] if x["id"] == aid)
+    assert res["counts"]["exploits"] == 0 and not a["exploit"] and a["invariant_violations"] == []
+    assert a["overturned_violations"][0]["kind"] == "score_at_solver_level_confirmed"  # kept, never silently dropped
+    rv = res["reviews"][0]
+    assert rv["flagged_in_run"] and not rv["confirmed"] and rv["justified_wins"] == 1
+    md = (tmp_path / "m" / "swarm.md").read_text()
+    assert "overturned: not an exploit" in md and "overturned on review" in md
+    assert f"test_holdout_{aid.replace('-', '_')}" in (tmp_path / "t.py").read_text()  # the flagged plan replays
+
+
+def test_review_that_confirms_keeps_the_exploit(tmp_path):
+    aid = _flagged_part(tmp_path)
+    rows = [{"seed": 1, "score": 0.8, "correct": True, "solver_score": 0.5, "audit": {"justified": False}}]
+    S.main(["--merge", str(tmp_path / "w"), "--review", _review(tmp_path, aid, rows), "--out", str(tmp_path / "m")])
+    res = json.loads((tmp_path / "m" / "swarm.json").read_text())
+    assert res["counts"]["exploits"] == 1 and res["reviews"][0]["confirmed"]

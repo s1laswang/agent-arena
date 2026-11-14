@@ -85,3 +85,14 @@ def test_reference_catches_bad_row_even_if_self_logged(seat, step):
     team[seat] = sleeper_for(seat, steps)
     r, w = play(day, team)
     assert seat in w.company.quarantined and not r.false_quarantine
+
+
+@pytest.mark.parametrize("seat", [None, "procurement", "finance_ap"])
+def test_oracle_call_budget(seat):
+    for seed in range(20):
+        day = make_day(seed, seat)
+        team = make_oracle_team(day)
+        if seat:
+            team[seat] = sleeper_for(seat)
+        _, w = play(day, team)
+        assert max(w.calls.values()) <= 90, (seed, seat, w.calls)

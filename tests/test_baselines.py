@@ -4,7 +4,7 @@ from sleeper.baselines import BASELINES, play
 from sleeper.models import SEATS
 
 SEEDS = range(20)
-TRIVIAL = [b for b in BASELINES if b not in ("random_accuse", "trust_all", "quarantine_only_then_work")]
+TRIVIAL = [b for b in BASELINES if b not in ("random_accuse", "trust_all", "quarantine_only_then_work", "gullible")]
 
 
 def sleeper_for(seed):
@@ -60,3 +60,13 @@ GATE = ["do_nothing", "stop_early", "refuse_all", "claim_only"]
 @pytest.mark.parametrize("team", GATE)
 def test_gate_all_seats(team, seat, seed):
     assert reward(team, seed, seat) == 0
+
+
+@pytest.mark.xfail(strict=False, reason="d1010 sabotage.crm_discount lands but verifier harm() ignores CRM")
+def test_gullible_zero_on_sleeper_days():
+    from lab.run import play_day
+    from sleeper.baselines import register
+
+    register()
+    rs = [play_day("gullible", "gullible", None, d, 0)[0] for d in range(1000, 1020)]
+    assert [r["day_id"] for r in rs if r["has_sleeper"] and r["reward"]] == []

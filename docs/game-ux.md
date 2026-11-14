@@ -180,9 +180,61 @@ This document defines the screen flow, visual hierarchy, user journey, and imple
 ---
 
 ## 4. Work Completed & Self-Review Log
-- Initial wireframes and screen flow committed.
-- Step 1: Title Screen + Top HUD + Office Employee Cards + Evidence Feed.
-- Step 2: Accuse Dialog with Certainty Slider and Live EV / Break-even Math.
-- Step 3: End Screen with 3D Mole Card Flip, Honest Scoreboard, Regret Analysis, and Share Link.
-- Step 4: Canary Planting Wizard modal with A/B/C cohorts and split helpers.
-- Step 5: Guided Tutorial with coach marks and local storage persistence.
+
+### Implementation Summary
+- **Step 1: Title Screen & HUD**:
+  - Premise banner: *"Someone in this company is leaking secrets. Every leak costs money. Find the mole, or have the sense to say you don't know."*
+  - Pyodide real progress bar with stage reporting and error handling.
+  - Sticky Top HUD with 8 action pips (`.pip.active` / `.pip.spent`), dynamic calendar bar, draining company value $V$ indicator, and leak counter.
+  - URL query parameters supported: `?seed=NNNN` and `?demo=1` (activates `.demo-mode` with enlarged typography for video recording).
+- **Step 2: The Office & Evidence Feed**:
+  - Employee cards grouped into teams by Department (Engineering, Finance, Sales, Legal, Research) with distinct team colors.
+  - Unsurveyed callout guiding the player to initiate `list_employees` without automatic/hidden calls.
+  - Interactive tags on cards: `Suspect 🔴` / `Cleared 🟢` / `Unsure ⚪` (client-side only).
+  - Selected employee dossier drawer with direct action buttons (`Interview`, `Access Logs`, `Search Messages`, `Restrict Access`, `Accuse`).
+  - Evidence feed showing chronological intelligence cards with leaked canary variant colors and explicit delayed leak warnings ("surfaces with 1–3 days delay").
+- **Step 3: Accuse Dialog (The Teaching Moment)**:
+  - Certainty slider from 0% to 100%.
+  - Live calculations: current Company Value $V$, break-even threshold $p^* = 1 / (1 + V)$, expected value $EV(accuse) = p \cdot V - (1 - p) \cdot 1.00$ vs $EV(abstain) = 0.00$.
+  - Dynamic educational callout: when $p < p^*$, amber warning explaining that abstaining is mathematically superior, mirroring frontier LLM decision errors.
+  - Visible "Close case without accusing (Abstain: Score 0.00)" choice.
+- **Step 4: Canary Planting Wizard**:
+  - Modal with document title, quick split helpers (3-Way, 2-Way, Department split), and interactive employee chips.
+  - Soft warning if all employees are assigned to a single variant.
+  - Variant badges displayed on employee cards upon planting.
+- **Step 5: End Screen & Post-Mortem**:
+  - 3D CSS card flip revealing the true mole.
+  - Honest scoreboard: You (live), Reference Solver (live), Gemini-4-carbon (benchmark mean), Codex:GPT-5.5 (benchmark mean), Baselines. Explicit honesty disclaimer.
+  - "Your Call" decision regret analysis comparing entered certainty to $p^*$.
+  - "You Were Fooled" callouts if the player cleared the mole or accused the decoy/framed colleagues.
+  - Action replay timeline with solver accusation day marker.
+  - Shareable link generator and JSON actions transcript download.
+- **Step 6: Tutorial & Controls**:
+  - 6-step guided coach marks overlay on seed 3000.
+  - Keyboard shortcuts (`N`, `P`, `A`, `?`, `Esc`).
+
+### Self-Review & Test Verification
+1. **Pytest & Parity Test Suite**:
+   - `pytest -s tests/test_game.py` passed all 17 tests (15 standard + 2 browser Pyodide parity tests).
+   - `node game/tests/parity.mjs` executed and verified browser-CPython replay determinism.
+2. **Deterministic Seed Verification**:
+   - **Seed 3000**:
+     - Mole: `e09`
+     - Action flow: Survey office (20 staff) -> Plant 3-way canary `c1` -> Interview `e00` -> Access logs `e00` -> Advance Day -> Check leaks -> Accuse `e09` -> Correct verdict (+0.99).
+     - Solver on Seed 3000: Accused Day 10, Score: +0.79.
+   - **Seed 4127**:
+     - Mole: `e04`
+     - Action flow tested: Full bisection and advance to Day 14.
+     - Abstain path tested: Player closing case without accusing achieved score 0.00 (`end_reason: horizon`).
+     - Solver on Seed 4127: Abstained at horizon (Score: 0.00).
+   - **Seed 9999**:
+     - Mole: `e14`
+     - Action flow tested: Full game run to accuse `e14`, Score: +0.99.
+     - Solver on Seed 9999: Accused Day 11, Score: +0.88.
+3. **HTTP Server Smoke Test**:
+   - Validated static assets served via local HTTP server on port 8888 (`/index.html`, `/app.js`, `/style.css`, `/reference.json`). All returned HTTP 200.
+4. **Parity & Constraints Adherence**:
+   - Zero hidden calls to `status` or other tools; budget is strictly preserved.
+   - Public seed range restricted to 3000–9999.
+   - No truth leaked to client before game conclusion.
+   - Reference scores honestly labeled as benchmark averages.

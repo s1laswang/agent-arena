@@ -254,3 +254,22 @@ If an attack does get in, `cheat_probe` uses it: it reads the server ledger, nar
 The job had 0 exceptions and took 2 min 14 s. Harbor also copied two of the planted fakes (`score: 1.0`) out of `/logs/artifacts` in `main`, so they appear under `artifacts/logs/artifacts/` in the job. They are evidence of the attack, not results. The reward comes only from `artifacts/ledger.json`, which the sidecar collect hook writes.
 
 Windows note: a Windows checkout with `core.autocrlf=true` gives the `.sh` files CRLF endings, and bash in the Linux containers rejects those. Convert the built `harbor/dataset*/` to LF before `harbor run` (this run did), or check out with `core.autocrlf=input`.
+
+## Ledger signing verified through Harbor (PLAN-95 C1)
+
+Harbor 0.26.0 on colima (2 CPU / 3 GB), Saturday 14 Nov ~19:30. One fresh build of the default judge set's first
+task (`build.py --seeds 900000` → hard 900000; world-secret fingerprint `3730cff6ea0c`), separate verifier, signed
+ledger. The logs were scanned for the build's world secret and ledger key (0 hits), and local paths were rewritten.
+
+| policy | reward | verifier line | expected |
+|---|---:|---|---|
+| oracle (solver over MCP) | **0.5** | `signature=ok`, accused day 12 | the in-process solver on the same secret: 0.5 |
+| `ORACLE_POLICY=do_nothing` | 0.0 | `signature=ok`, horizon day 21 | 0 |
+| `ORACLE_POLICY=cheat` (fake rewards + accuse everyone) | −1.0 | `signature=ok`, one accusation accepted, day 1 | ≤ 0 |
+| **negative control:** collect hook forges `score = 1.0` after signing | **0** | `FAIL: bad ledger signature ...` | 0 |
+
+Jobs: `results/harbor/c1-{oracle,do_nothing,cheat}/`. All three passed `check_isolation.sh`, including the new
+`*ledger_key*` check (`ISOLATION OK: 11 checks passed, 0 findings`). The negative control used a copy of the task
+with one line added to `collect.py`, never the template. Its job sits in `results/harbor_negative/c1-tamper/`,
+outside `results/harbor/`, because the consistency check there would rightly flag its forged artifact (ledger 1.0,
+reward 0).

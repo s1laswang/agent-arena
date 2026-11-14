@@ -24,7 +24,7 @@ def replay(d, seat):
             s.out.append(prompt(system, st, hist, header)); return {"tool": s.steps[len(s.out) - 1]["tool"], "args": s.steps[len(s.out) - 1]["args"]}
     p = P()
     p.steps = [x for x in d["steps"] if x["seat"] == seat]
-    L = LocalSeat(p, SYSTEM)
+    L = LocalSeat(p, SYSTEM, budget=10000)
     it = iter(p.steps)
     def call(name, args):
         return next(e for e in [p.steps[len(L.hist)]])["effect"]
@@ -39,12 +39,12 @@ def test_replay_matches_build():
     got = replay(d, "controller")
     assert [r["messages"][:-1] for r in rows] == got
 
-def test_real_dump_matches():
-    fs = glob.glob("/private/tmp/**/oracle-all-*/days/*-t0.json", recursive=True)
-    if not fs:
-        pytest.skip("no dump")
+def test_real_dump_matches(tmp_path):
+    import subprocess, sys
+    subprocess.run([sys.executable, "-m", "lab.run", "--team", "oracle", "--days", "1", "--trials", "1", "--out", str(tmp_path)], check=True, capture_output=True)
+    fs = sorted(tmp_path.rglob("days/*-t0.json"))
     d = json.load(open(fs[0]))
-    rows = examples(d, ["controller"])
+    rows = examples(d, ["controller"], force=True)
     got = replay(d, "controller")
     assert [r["messages"][:-1] for r in rows] == got
 

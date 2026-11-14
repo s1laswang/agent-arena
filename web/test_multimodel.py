@@ -74,3 +74,30 @@ def test_gemini_export_never_scripted():
     finally:
         srv.kill()
         f.unlink()
+
+
+def test_ticket_and_excluded_labels():
+    import json
+    web = Path(__file__).parent
+    rows = [{"row": "Gemini 3.5 Flash", "mode": "seat", "n_days": 4, "reward": 0.0, "model": "gemini-3.5-flash", "provenance": "real", "agent": "gemini", "headline": True, "n_excluded": 1, "excluded_seeds": [1003], "invalid": 0, "capped": 0}]
+    f = web / "fixtures" / "_ex_tmp.json"
+    f.write_text(json.dumps(rows))
+    real = web.parent / "results/frontier/gemini-3.5-flash/ce5a8ce/finance_ap-s1004-t0.json"
+    srv = subprocess.Popen([sys.executable, "-m", "http.server", "8773", "-d", str(web.parent)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(1)
+    try:
+        with sync_playwright() as p:
+            b = launch(p)
+            pg = b.new_page()
+            pg.goto("http://localhost:8773/web/results.html?src=fixtures/_ex_tmp.json")
+            pg.wait_for_selector("#gap tbody tr")
+            t = pg.inner_text("#gap tbody")
+            assert "1 seeds excluded" in t and "1003" in t
+            if real.exists():
+                pg.goto("http://localhost:8773/web/replay.html?day=run:../results/frontier/gemini-3.5-flash/ce5a8ce/finance_ap-s1004-t0.json&tick=99")
+                pg.wait_for_selector(".panel:not([hidden])")
+                assert "Correct 43 / 50 (closed 48)" in pg.inner_text(".panel")
+            b.close()
+    finally:
+        srv.kill()
+        f.unlink()

@@ -625,6 +625,34 @@ class Atlas:
                 for c, d in out.items()}
 
 
+LEVELS = ["minimal", "low", "medium", "high", "xhigh", "default"]
+
+
+def thinking_table(eps: list[Episode], cohort_modes: dict) -> list[dict]:
+    """Code-computed: per (model, harness, version) with >= 2 thinking levels, one row per level."""
+    groups: dict[tuple, dict[str, list[Episode]]] = defaultdict(lambda: defaultdict(list))
+    for e in eps:
+        groups[(e.model, e.harness, e.tiers_version)][e.thinking_level].append(e)
+    rows = []
+    for (m, h, v), lv in sorted(groups.items()):
+        if len(lv) < 2:
+            continue
+        for level in sorted(lv, key=lambda x: LEVELS.index(x) if x in LEVELS else 99):
+            es = lv[level]
+            n = len(es)
+            acc = [s for e in es for s in e.steps if s.tool == "accuse"]
+            rows.append({"model": m, "harness": h, "tiers_version": v, "thinking": level, "episodes": n,
+                         "tiers": dict(Counter(e.tier for e in es)),
+                         "score_mean": round(sum(e.score for e in es) / n, 3),
+                         "accuracy": round(sum(e.correct for e in es) / n, 3),
+                         "regret_mean": round(sum(e.total_regret for e in es) / n, 4),
+                         "p_accused_mean": round(sum((s.p_accusee or 0) for s in acc) / len(acc), 3) if acc else None,
+                         "canary_regret_per_episode": round(sum(s.regret for e in es for s in e.steps
+                                                                if s.tool == "plant_canary") / n, 4),
+                         "mode_share": cohort_modes.get(es[0].cohort, {})})
+    return rows
+
+
 def fit_budget(eps: list[Episode], budget_tokens: int, chars_per_token: float = 2.52) -> list[Episode]:
     """Cap episodes per cohort (lowest seeds kept, tiers balanced) until the packed corpus fits the budget; the
     atlas reports the corpus it actually read."""
@@ -822,6 +850,7 @@ def run(args) -> dict:
         "modes": modes,
         "cohort_mode_share": A.cohort_modes(labels),
         "cohort_behaviour": A.behaviour,
+        "thinking_table": thinking_table(eps, A.cohort_modes(labels)),
         "comparison": comp,
         "counterfactuals": cf_rows,
         "thinking": think,
@@ -834,6 +863,7 @@ def run(args) -> dict:
         "labels": {"source": source, "n": len(labels), "cached_n": len(labels_cached),
                    "batch_n": len(labels_batch) if labels_batch else 0,
                    "batch_vs_cached": label_agreement(labels_batch, labels_cached) if labels_batch else None,
+                   "batch_job": ops.last_batch or None,
                    "steps": [{"episode": k[0], "t": k[1], **v} for k, v in sorted(labels.items())]},
         "verification": A.verifier.summary(),
         "dropped_quotes": A.verifier.dropped[:200],
@@ -888,7 +918,15 @@ def main(argv=None) -> int:
                     help="cap episodes per cohort so the corpus fits (one cache holds <= ~1M tokens)")
     ap.add_argument("--allow-fallback", action="store_true",
                     help="write a deterministic (non-Gemini) atlas if discovery fails (never publish it)")
+    ap.add_argument("--blind", action="store_true",
+                    help="blind re-run: only what the agents saw/did/said; recovery scored in code (atlas_blind.py)")
     a = ap.parse_args(argv)
+    if a.blind:
+        from .atlas_blind import run as run_blind
+        if not a.cache_dir:
+            a.cache_dir = str(Path(a.out) / "atlas_cache_blind")
+        run_blind(a)
+        return 0
     run(a)
     return 0
 

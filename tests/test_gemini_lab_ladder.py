@@ -171,3 +171,25 @@ def test_second_process_skips_cells_held_by_a_live_process(tmp_path, monkeypatch
                         log=lambda m: None)
     assert r["ran"] == 1 and not ladder.is_done(tmp_path / "out", cells[0]) and ladder.is_done(tmp_path / "out", cells[1])
 
+
+
+def test_subset_cut_from_a_recording_replays(tmp_path):
+    """ladder_subset cuts one episode out of a committed ladder recording; its manifest matches the original."""
+    import subprocess
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    full = root / "results/gemini/replay-ladder"
+    if not (full / "manifest.json").exists():
+        pytest.skip("no committed ladder recording")
+    rel = "gemini-3.1-flash-lite/low/easy/0/episodes.jsonl"
+    r = subprocess.run([sys.executable, "-m", "canary.gemini.ladder_subset", "--store", str(full), "--name", "t",
+                        "--dest", str(tmp_path), "--work", str(tmp_path / "work"), "--", "python", "-m",
+                        "canary.gemini.ladder", "--models", "gemini-3.1-flash-lite", "--levels", "low", "--tiers",
+                        "easy", "--seeds", "0", "--out", "{out}", "--run-name", "replay-showcase", "--max-attempts", "1"],
+                       cwd=root, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stdout[-1500:] + r.stderr[-1500:]
+    got = json.loads((tmp_path / "replay-t" / "manifest.json").read_text())
+    want = json.loads((full / "manifest.json").read_text())
+    assert got["episodes"][rel] == want["episodes"][rel] and got["responses"] > 0
+    assert len(list((tmp_path / "replay-t").rglob("*.json.gz"))) == got["responses"]

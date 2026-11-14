@@ -143,6 +143,29 @@ def headline(rs, cf):
     return out
 
 
+KNOWN = ("id", "date", "kernel", "model", "data", "sft", "loss_quarter_means", "base", "adapter", "outcome", "reproduce")
+
+
+def tiebreaker(path="train/runs.jsonl"):
+    p = Path(path)
+    if not p.exists():
+        return []
+    rows = [json.loads(l) for l in p.read_text().splitlines() if l.strip()]
+    if not rows:
+        return []
+    out = ["", "## Tiebreaker runs", "", f"Read verbatim from {path}.", "", "| run | model | seat | train rows | decision share | base fooled / false acc / reward / tickets | adapter fooled / false acc / reward / tickets |", "|---|---|---|---|---|---|---|"]
+    m = lambda x: " / ".join(str(x.get(k, "-")) for k in ("fooled_rate", "false_accusations", "reward", "ticket_completion"))
+    for r in rows:
+        dt = r.get("data", {})
+        out.append(f"| {r.get('id')} | {r.get('model')} | {dt.get('seat')} | {dt.get('rows')} | {dt.get('decision_share')} | {m(r.get('base', {}))} | {m(r.get('adapter', {}))} |")
+    for r in rows:
+        out += ["", f"### {r.get('id')} ({r.get('date')})", f"- kernel: {r.get('kernel')}", f"- data: {json.dumps(r.get('data'))}", f"- sft: {r.get('sft')}", f"- loss quarter means: {r.get('loss_quarter_means')}",
+                f"- eval days base: {r.get('base', {}).get('eval_days')}, adapter: {r.get('adapter', {}).get('eval_days')}", f"- outcome: {r.get('outcome')}"]
+        out += [f"- {k}: {json.dumps(v)}" for k, v in r.items() if k not in KNOWN]
+        out.append(f"- reproduce: `{r.get('reproduce')}`")
+    return out
+
+
 def build(root):
     rs = runs(root)
     st = pick(rs, "staff")
@@ -175,6 +198,7 @@ def build(root):
         days = analyse.load(d)
         fls = [x for dy in days for x in analyse.label(dy)]
         parts += ["", f"## Failures: {d.name}", analyse.report(days, fls).split("\n", 1)[1].split("\n## Label glossary")[0]]
+    parts += tiebreaker()
     return "\n".join(parts) + "\n"
 
 

@@ -1,6 +1,6 @@
 import glob, json, os, subprocess, sys, threading
 code = glob.glob("/kaggle/input/**/train/sft.py", recursive=True)[0].rsplit("/train/", 1)[0]
-data = os.path.dirname(glob.glob("/kaggle/input/**/*.jsonl", recursive=True)[0])
+data = os.path.dirname((glob.glob("/kaggle/input/**/run.json", recursive=True) or glob.glob("/kaggle/input/**/train.jsonl", recursive=True))[0])
 work = "/kaggle/working"
 os.chdir(code)
 cfgp = data + "/run.json"
@@ -19,7 +19,7 @@ ngpu = max(1, torch.cuda.device_count())
 has_decide = os.path.exists(code + "/train/decide.py")
 oracle = work + "/oracle"
 if has_decide:
-    run(env0, "-m", "lab.run", "--team", "oracle", "--day-start", "1000", "--days", "40", "--trials", "1", "--out", oracle)
+    run(env0, "-m", "lab.run", "--team", "oracle", "--day-start", "1000", "--days", "40", "--trials", "1", "--out", oracle, *cfg.get("oracle", []))
 sft_extra = cfg.get("sft_extra", {})
 steps = cfg.get("steps", ["sft", "decide", "eval"])
 errs = []

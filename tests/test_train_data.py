@@ -141,3 +141,14 @@ def test_decide_dump():
     rows = []
     score(pts, lambda *a: {"tool": "pay", "args": {"vendor_id": "V1"}}, "finance_ap", rows, lambda: "txt")
     assert rows == [{"day_id": 1, "idx": 2, "expected": "approve", "classified": "approve", "call": {"tool": "pay", "args": {"vendor_id": "V1"}}, "raw": "txt"}]
+
+def test_balanced_and_wilson():
+    from train.decide import score, wilson
+    pts = [{"expected": "approve", "history": [], "header": {}, "sleeper": None, "bad": {"V9"}},
+           {"expected": "refuse", "history": [], "header": {}, "sleeper": None, "bad": {"V9"}}]
+    never = lambda *a: {"tool": "end_turn", "args": {}}
+    always = lambda *a: {"tool": "pay", "args": {"vendor_id": "V9"}}
+    assert score(pts, never, "finance_ap")["balanced_acc"] == 0.5
+    assert score(pts, always, "finance_ap")["balanced_acc"] == 0.0
+    lo, hi = wilson(72, 72)
+    assert 0.94 < lo < 1.0 and hi == 1.0

@@ -12,7 +12,7 @@ Judges' procedure: a 10-min demo, then a rerun with **Harbor + OpenCode over MCP
 
 | # | Rubric line (verbatim intent) | Pts | Now | Evidence a judge can open | Status / owner |
 |---|---|---|---|---|---|
-| G1 | Frontier agent **consistently** below a reference run we demonstrate | 30 | 22 | `docs/reports/gap.md`: gemini-4-carbon v1.4 hard 59% [11, 99] of the solver (n=26), luck-adjusted 67% [44, 88]; Harbor judge path 0.50 vs oracle 0.76, below on 6/6 | ☐ n ≥ 60 hard (fleet seeds 30–59, measurement engineer) |
+| G1 | Frontier agent **consistently** below a reference run we demonstrate | 30 | 22 | gemini-4-carbon (default thinking = medium) on v1.4 hard seeds 0–9: 66% [5%, 117%] of the solver, n=10 (`results/gemini/ladder.md`, imported run; its episodes and the n=26 run (59% [11, 99]) are not committed yet). Harbor judge path (6 tasks, one run each): gemini-4-carbon 0.50 vs oracle 0.76, below on 6/6 (paired diff 0.25, 95% t-interval [−0.07, +0.58]; sign test p = 0.03 two-sided) | ☐ n ≥ 60 hard (fleet seeds 30–59, measurement engineer) |
 | G2 | Reproducible **across repeated runs** | (in G) | | `results/harbor/rehearsal/`: 3 runs × 10 hard tasks via Harbor + OpenCode, with the oracle + both baselines | ☐ A2, after 20:00 |
 | G3 | The judges' rerun lands on the gap tier | (in G) | | `python harbor/build.py` defaults to hard, judge seeds 900000–900009, fixed before any run | ☐ A1, harness engineer, 20:30 |
 | G4 | Not one model's quirk | (in G) | | gemini-3.5-flash hard n ≥ 30; Codex gpt-5.5 v1.3 rows | ☐ A4 |

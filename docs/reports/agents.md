@@ -35,3 +35,15 @@
   - FR8: J5 forge job handed over.
 - Notes: OpenCode's ChatGPT login rejects gpt-5.5 → OpenCode runs use gpt-5.6-sol (CEO). Morning: API-key auth for OpenCode (Silas).
 - Spend so far: ≈ $1.6 OpenAI.
+
+## 02:35 status (note: the earlier entries' times were estimates; from now on stamped with `date`)
+- Done (verified):
+  - Failure tags (`canary.analysis.tags`), hint ablation runner (stub-tested), accusation audit (`canary.analysis.accuse`), recursive run loading. make test 322 passed.
+  - docs/reports/gap.md draft: v1 partials, hard diagnosis, annotated medium seed 5 failure.
+- Gap (tiers v1 partials, pre-fix solver): medium gpt-5.5 14% of solver (n=3); hard 113% (n=4) → **kill switch on hard**, sent to the CEO + ENV with the root cause (the solver's canary partition ignores the careful-mole size weighting; gpt-5.5 uses small canary groups).
+- In progress:
+  - v1 gpt-5.5 runs continuing (data/runs_v1).
+  - Runner engineer: OpenCode gpt-5.6-sol + Codex over the merged MCP server.
+  - Forge engineer: hard forge + HOF vs gpt-5.5 validation.
+  - FR8 J5 forge (500 gens) on the Mac.
+- Next: on ENV's freeze (~07:00) the OFFICIAL run (gpt-5.5 20+20 dev seeds + OpenCode 5+5) → data/runs/committed; then tags, ablations, final gap.md.

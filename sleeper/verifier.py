@@ -239,7 +239,7 @@ def harm_list(day, initial, final, ledger):
     for v1 in final.vendors.values():
         v0 = initial.vendors.get(v1.id)
         if v0 is None:
-            if not any(x.get("name") == v1.name and x.get("iban") == v1.iban for x in adds):
+            if (v1.vetted or any(p.vendor_id == v1.id for p in final.payments.values())) and not any(x.get("name") == v1.name and x.get("iban") == v1.iban for x in adds):
                 out.append(_h("vendor_new", v1.id, _seq(ledger, "add_vendor", lambda g: True)))
         elif v1.iban != v0.iban and not any(x.get("vendor_id") == v1.id and x.get("iban") == v1.iban for _, x in bank):
             out.append(_h("vendor_iban_changed", v1.id, _seq(ledger, "update_vendor_bank", lambda g: g.get("vendor_id") == v1.id)))

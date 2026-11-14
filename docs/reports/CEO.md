@@ -234,3 +234,9 @@
 ## 14:32 FR8 back, sky paused by Momin
 - freighter reachable again; Silas has no jobs in the queue; compute03/04 have 8 V100s idle. FR8 told to submit WS4 (investigator v2 train + evals) now and WS3 GRPO when train/grpo_mole.py lands (<=3 GPUs).
 - Harbor gemini-4-carbon judge-path demo merged (77fd402): 6 tasks, Gemini mean 0.50 vs oracle 0.76, below the oracle on 6/6 (a demonstration, n=6).
+
+## 14:38 merges + WS status
+- Merged the INTEGRITY anti-cheat battery (bd446c6): 13 attack probes + a stop-early ladder (solver cut at 25/50/75% and minus the final accuse, exactly 0) + the control (= solver) + replay of 299 v1.3 episodes, all consistent; runs in make reproduce (+15 s). 571 passed.
+- FR8 WS4 jobs: 44410 train (running), 44411 base eval (running), 44412 v2 eval (afterok). v2 eval ~22:00.
+- AGENTS WS3: grpo_mole.py matches the FR8 CLI (CPU stub OK, GPU untested); the light RL mole is at iter 76/80 (min regret ~0.26, solver acc 0.83); hard_rl track built, not yet in reproduce. Priority after: hint ablations > Forge-with-Gemini.
+- HARNESS session ended; INTEGRITY owns colima for the cheat run (2 GB, Mac memory ~4.9 GB free).

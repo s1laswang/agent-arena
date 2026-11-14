@@ -67,10 +67,11 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     state, st, mcp, _ = frontier_day.play(seat, seed, lambda d, s: fa, out_dir, max_calls, max_usd, lambda: usage_total(gemini.CACHE, model=model)["usd"], name)
     wf = out_dir / f"{name}.wall"
     if os.environ.get("SLEEPER_OFFLINE") == "1" and wf.is_file():
-        wall = float(wf.read_text())
+        w = (wf.read_text().split() + ["0", "0"])[:3]
+        wall, retries, errs = float(w[0]), int(w[1]), int(w[2])
     else:
-        wall = round(time.time() - t0, 1)
-        wf.write_text(str(wall))
+        wall, retries, errs = round(time.time() - t0, 1), gemini.usage()["retries"], gemini.usage()["api_errors"]
+        wf.write_text("%s %d %d" % (wall, retries, errs))
     p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(state)], cwd=ROOT, capture_output=True, text=True, env={**os.environ, "SLEEPER_SEAT": seat})
     r = json.loads(p.stdout.strip().splitlines()[-1])
     strategy = frontier_day.build_day(seat, seed)[2]
@@ -79,7 +80,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
            "state_path": str(state.relative_to(out_dir.parent.parent)), "transcript_path": f"{model}/{com}/{name}.json",
            "scores": {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r.get("false_quarantine", []), "sleeper_caught": r.get("sleeper_caught", False),
                       "tickets_done": r.get("tickets_done", 0), "tickets_total": r.get("tickets_total", 0)},
-           "calls": st["calls"], "api_retries": gemini.usage()["retries"], "api_errors": gemini.usage()["api_errors"], "aborted": st["abort"],
+           "calls": st["calls"], "api_retries": retries, "api_errors": errs, "aborted": st["abort"],
            **usage_total(gemini.CACHE, model=model), "wall_s": wall, "mcp_calls": mcp, "transcript": fa.log}
     pj = out_dir / f"{name}.json"
     pj.write_text(json.dumps(out, sort_keys=True, indent=1, default=str))

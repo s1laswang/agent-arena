@@ -30,6 +30,10 @@ def gemini_on():
 
 
 def _staff(day, trial):
+    if os.environ.get("SLEEPER_HINT"):
+        from lab import hint
+
+        hint.apply(os.environ["SLEEPER_HINT"])
     from agents.staff import make_team
 
     return make_team(day, seed=trial, kind="gemini" if gemini_on() else "scripted")

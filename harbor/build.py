@@ -175,7 +175,7 @@ def parse(spec):
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", default="0..19")
-    ap.add_argument("--seat", default="controller", help="seat name, comma list, or all")
+    ap.add_argument("--seat", default="finance_ap", help="seat name, comma list, or all")
     ap.add_argument("--out", default=str(ROOT / "harbor/tasks"))
     ap.add_argument("--no-repo", action="store_true")
     a = ap.parse_args(argv)

@@ -15,6 +15,7 @@ Each task is self-contained (works on any compose-capable Harbor provider):
       environment/docker-compose.yaml   the canary-server sidecar (tier/seed); one server container per trial
       environment/canary-server/        sidecar image: vendored canary/ package + entrypoint + collect hook
                                         + data/worlds/judge/SALT (the build-time world secret, 0600 in the image)
+                                        + episode.json {tier, seed} (0600; read via CANARY_EPISODE_FILE)
       solution/solve.sh (+ canary/)     oracle: reference solver over MCP (uploaded only for `-a oracle`)
       solution/check_isolation.sh
       tests/Dockerfile, tests/test.sh   verifier: reward = ledger score from the sidecar
@@ -29,6 +30,7 @@ Rebuilding the dataset draws a new secret (new worlds) unless --secret-file is g
 from __future__ import annotations
 
 import argparse
+import json
 import secrets
 import shutil
 import string
@@ -99,6 +101,9 @@ def build_task(out: Path, tier: str, seed: int, verifier: str, world_secret: byt
     salt.parent.mkdir(parents=True, exist_ok=True)
     salt.write_bytes(world_secret)
     salt.chmod(0o600)
+    episode = dst / "environment" / "canary-server" / "episode.json"
+    episode.write_text(json.dumps({"tier": tier, "seed": seed}))
+    episode.chmod(0o600)
     shutil.copy2(HERE / "check_isolation.sh", dst / "solution" / "check_isolation.sh")
     for sh in dst.rglob("*.sh"):
         sh.chmod(0o755)

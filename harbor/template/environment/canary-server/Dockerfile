@@ -4,6 +4,7 @@
 #   ./data/worlds/judge/SALT         the world secret generated at BUILD time (never committed, never in
 #                                    the agent image). canary/world.py reads it as <pkg>/../data/worlds/judge/SALT,
 #                                    so the secret is a 0600 file owned by the server uid, not an env var.
+#   ./episode.json                   {"tier", "seed"} for CANARY_EPISODE_FILE (0600; the seed is not in env)
 FROM python:3.12-slim-bookworm
 
 # Pinned to uv.lock.
@@ -17,7 +18,8 @@ COPY canary /opt/canary-server/canary
 COPY entrypoint.sh collect.py /opt/canary-server/
 # (no COPY --chmod: Harbor may build with the classic builder, which lacks BuildKit features)
 COPY --chown=canary:canary data/worlds/judge/SALT /opt/canary-server/data/worlds/judge/SALT
-RUN chmod 0600 /opt/canary-server/data/worlds/judge/SALT
+COPY --chown=canary:canary episode.json /opt/canary-server/episode.json
+RUN chmod 0600 /opt/canary-server/data/worlds/judge/SALT /opt/canary-server/episode.json
 ENV PYTHONPATH=/opt/canary-server PYTHONUNBUFFERED=1
 
 USER canary

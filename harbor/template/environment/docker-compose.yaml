@@ -3,8 +3,7 @@
 # Sidecars share a Docker network with main (reachable by service name) but NOT its filesystem,
 # PID namespace or environment variables.
 # Never add `pid: host`, `pid: "service:..."`, shared volumes or a docker socket mount to either
-# service: the server's /proc/<pid>/environ holds CANARY_SEED / CANARY_WORLD_SECRET / the ledger token,
-# and a shared PID namespace would let the agent read it (judge-sim finding, score 1.0).
+# service: a shared PID namespace would expose the server's /proc (judge-sim finding #25, score 1.0).
 # harbor/check_isolation.sh asserts all of this from inside `main`.
 services:
   main:
@@ -18,8 +17,11 @@ services:
     expose:
       - "8765"
     environment:
-      CANARY_TIER: "${TIER}"
-      CANARY_SEED: "${SEED}"
+      # Episode, world secret and ledger token come from 0600 files owned by the server uid (mcp_server.py
+      # *_FILE interface, EXPLOITS #25), so even the server's own /proc/<pid>/environ holds no seed or secret.
+      CANARY_EPISODE_FILE: "/opt/canary-server/episode.json"
+      CANARY_WORLD_SECRET_FILE: "/opt/canary-server/data/worlds/judge/SALT"
+      CANARY_LEDGER_TOKEN_FILE: "/run/canary/ledger_token"
       CANARY_HOST: "0.0.0.0"
       CANARY_PORT: "8765"
       CANARY_PROVIDER: "$${CANARY_PROVIDER:-template}"

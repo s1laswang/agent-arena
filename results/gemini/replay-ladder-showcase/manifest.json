@@ -1,0 +1,76 @@
+{
+ "cmd": [
+  "python",
+  "-m",
+  "canary.gemini.ladder",
+  "--models",
+  "gemini-3.1-flash-lite,gemini-3.5-flash,gemini-3.8-flash,gemini-4-hydrogen,gemini-4-argon,gemini-4-carbon",
+  "--levels",
+  "high",
+  "--tiers",
+  "medium",
+  "--seeds",
+  "0",
+  "--out",
+  "{out}",
+  "--run-name",
+  "ladder-showcase",
+  "--concurrency",
+  "2",
+  "--max-attempts",
+  "1"
+ ],
+ "episodes": {
+  "gemini-3.1-flash-lite/high/medium/0/episodes.jsonl": [
+   {
+    "score": -1.0,
+    "seed": 0,
+    "steps_sha256": "9c3836e47039c8d6589e80db9bc38ed505afecff70bd285c640f13da9ee34654",
+    "tier": "medium"
+   }
+  ],
+  "gemini-3.5-flash/high/medium/0/episodes.jsonl": [
+   {
+    "score": 0.67,
+    "seed": 0,
+    "steps_sha256": "d5f941143146ab8435f2b020deee8284e3ecc481b4036f60542654198c1dc127",
+    "tier": "medium"
+   }
+  ],
+  "gemini-3.8-flash/high/medium/0/episodes.jsonl": [
+   {
+    "score": 0.63,
+    "seed": 0,
+    "steps_sha256": "0d8890b751d4c589d44404e3c6dd1a4c3550d633a480ef16c0842c74af729331",
+    "tier": "medium"
+   }
+  ],
+  "gemini-4-argon/high/medium/0/episodes.jsonl": [
+   {
+    "score": 0.51,
+    "seed": 0,
+    "steps_sha256": "14e02939620f4831e8e755bc946b89719743bcdd1f35148041b96698e8219042",
+    "tier": "medium"
+   }
+  ],
+  "gemini-4-carbon/high/medium/0/episodes.jsonl": [
+   {
+    "score": 0.69,
+    "seed": 0,
+    "steps_sha256": "dc4f4fb14af33c7353e0bd6348f7593728d5cd404a2593d14a073ba347650861",
+    "tier": "medium"
+   }
+  ],
+  "gemini-4-hydrogen/high/medium/0/episodes.jsonl": [
+   {
+    "score": 0.59,
+    "seed": 0,
+    "steps_sha256": "28807a05bea879243f0f8bb81bf09b470d3fae3da89a25d65a2d2023a9840a9a",
+    "tier": "medium"
+   }
+  ]
+ },
+ "git_sha": "7cb16dc",
+ "name": "ladder-showcase",
+ "recorded_at": "2026-11-14T19:09:19+0200"
+}

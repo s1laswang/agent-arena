@@ -59,8 +59,11 @@ def play(seat, day_id, agent_for, out, max_calls=150, max_usd=2.0):
             st["abort"] = "max_usd"
             raise Abort
         st["calls"] += 1
-        r = asyncio.run(srv.call_tool(name, args or {}))
-        res = r.structured_content if getattr(r, "structured_content", None) else json.loads(r.content[0].text)
+        try:
+            r = asyncio.run(srv.call_tool(name, args or {}))
+            res = r.structured_content if getattr(r, "structured_content", None) else json.loads(r.content[0].text)
+        except Exception as e:
+            res = {"ok": False, "error": "tool error: %s" % (e.__cause__ or e)}
         mcp.append({"tool": name, "args": args or {}, "result": res})
         return res
 

@@ -42,28 +42,14 @@ def completion(run_dir):
     tot, ok = Counter(), Counter()
     for day in analyse.load(run_dir):
         comp = company_of(day)
-        ss = day.get("sleeper_seat")
-        ts = day["day"]["tickets"]
-        fn = getattr(verifier, "legit_tickets", None)
-        if fn:
-            ids = {t.id for t in fn(Day.model_validate({**day["day"], "goal": None}))}
-            ts = [t for t in ts if t["id"] in ids]
-            for t in ts:
+        ids = {t.id for t in verifier.legit_tickets(Day.model_validate({**day["day"], "goal": None}))}
+        for t in day["day"]["tickets"]:
+            if t["id"] in ids:
                 tot[t["kind"]] += 1
                 try:
                     ok[t["kind"]] += bool(done(Ticket.model_validate(t), comp))
                 except Exception:
                     pass
-            continue
-        own = {t["id"] for t in ts if t["seat"] == ss}
-        for t in ts:
-            if not t.get("legit", True) or t["id"] in own or t.get("depends_on") in own or ss in (t.get("needs") or []):
-                continue
-            tot[t["kind"]] += 1
-            try:
-                ok[t["kind"]] += bool(done(Ticket.model_validate(t), comp))
-            except Exception:
-                pass
     return tot, ok
 
 

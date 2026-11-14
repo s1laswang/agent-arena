@@ -1,0 +1,867 @@
+date: 2026-11-14T23:05:48Z
+host: Linux 6.12.0-211.49.1.el10_2.x86_64 x86_64
+os: Rocky Linux 9.5 (Blue Onyx)
+cpu: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz (24 logical CPUs)
+loadavg_start: 7.57 13.13 16.34 6/3811 1292613
+python: Python 3.12.16 (/tmp/fleet-silas/shared/agent-arena-venv/bin/python)
+pytest: pytest 9.2.0
+make: GNU Make 4.3
+git: git version 2.52.0
+clean env: env -i PATH=/tmp/fleet-silas/shared/agent-arena-venv/bin:/usr/local/bin:/usr/bin:/bin HOME=$HOME PYTHONPATH=/tmp/opencode/canary-fr8-d1; no CANARY_* env; no .env
+=== clone: rm -rf /tmp/opencode/canary-fr8-d1 && git clone --no-hardlinks /home/silas/momin/fleet/repos/agent-arena /tmp/opencode/canary-fr8-d1 && git -C /tmp/opencode/canary-fr8-d1 checkout 2b301cea
+Cloning into '/tmp/opencode/canary-fr8-d1'...
+done.
+warning: remote HEAD refers to nonexistent ref, unable to checkout
+Note: switching to '2b301cea'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at 2b301cea PLAN-COMPUTE: S7 off; three v3-8k seeds on Verda; cap €300
+git status --porcelain: empty
+elapsed_s: 4.91
+=== clone: exit 0, 5 s
+commit: 2b301ceacb8df901bcec07ca0cae750abac99f72
+=== reproduce_fast: REPRO_FAST=1 /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.eval --reproduce
+# Canary judge table
+
+- seeds: 5 judge seeds per tier (900000..900004)  **[FAST MODE: not the reported numbers]**
+- judge-world secret: statistical, sha256 fingerprint `0971bf9a92a8` (statistical reproduction; set CANARY_WORLD_SECRET for exact numbers)
+- git: `2b301ceacb8d`, generated 2026-11-14T23:07:05+0000, 71.4 s
+- reward: true V at accusation if correct (V starts at 1.0 and drops with every leak, including leaks that have not surfaced yet; v1.3 `status` shows only surfaced damage), -1 if wrong, 0 if no accusation
+- accuracy = correct accusations / episodes; accused = episodes that ended in an accusation
+- `/ solver` = agent mean / solver mean on the same tier (ratio of means); `pass^k` only for agents with k repeated runs per seed
+- **paired runs**: reference and baselines played in this invocation on the same worlds (one secret). **reported agent runs**: frontier-agent episodes replayed from data/runs/committed/, played on the team's worlds, so they are NOT paired with this run; compare them by mean ± CI only
+- **v1.4 frontier vs solver, paired on the same seeds:** `data/runs/committed/v1.4/paired_table_gemini.md`, explained in `docs/reports/gap.md`. The v1.4 reported rows below replay those committed episodes (played on dev seeds under the team's secret), so they are not paired with this invocation's judge worlds.
+- reported runs are grouped by tier version and never pooled: v1.4 (current rules) first, then earlier versions as history (not comparable to the paired table; `/ solver` left blank). Builds under data/runs/committed/superseded/ are excluded
+- per-episode timeout guard: 60 s; no episode timed out
+
+## medium (headline)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 5 | 0 | +0.542 ± 0.286 | 0.80 | 4/5 | 8.2 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 5 | 0 | -0.030 ± 0.778 | 0.60 | 5/5 | 10.8 | -0.06 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 5 | 0 | -1.000 ± 0.000 | 0.00 | 5/5 | 10.0 | -1.85 | – | strongest no-canary log reader |
+| random | baseline | 5 | 0 | -0.400 ± 0.480 | 0.00 | 2/5 | 3.5 | -0.74 | – | random valid tool calls |
+| guess_day1 | baseline | 5 | 0 | -1.000 ± 0.000 | 0.00 | 5/5 | 1.0 | -1.85 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 5 | 0 | +0.000 ± 0.000 | 0.00 | 0/5 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 5 | 0 | +0.000 ± 0.000 | 0.00 | 0/5 | – | 0.00 | – | never accuses |
+
+Reported agent runs: v1.4 (current rules):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| gemini:gemini-4-carbon | reported | 30 | 0 | +0.530 ± 0.138 | 0.83 | 26/30 | 9.0 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/inproc-gemini-4-carbon/medium) |
+| opencode:google/gemini-4-carbon | reported | 30 | 0 | +0.713 ± 0.042 | 1.00 | 30/30 | 8.0 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/opencode-gemini-4-carbon/medium) |
+| restrict_all | reported | 20 | 0 | -0.950 ± 0.098 | 0.05 | 20/20 | 7.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/restrict_all-medium-20261114-121126) |
+| solver | reported | 30 | 0 | +0.645 ± 0.087 | 0.90 | 27/30 | 7.6 | – | – | replayed, NON-judge seeds, 30 seeds, git a54c896, e4b5634 (data/runs/committed/v1.4/reference/solver-medium-20261114-121126, data/runs/committed/v1.4/reference/solver-medium-seeds20to29) |
+| heuristic | reported | 20 | 0 | -0.275 ± 0.361 | 0.45 | 20/20 | 11.3 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/heuristic-medium-20261114-121126) |
+| random | reported | 20 | 0 | -0.678 ± 0.225 | 0.05 | 15/20 | 6.5 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/random-medium-20261114-121126) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/stop_early-medium-20261114-121126); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/do_nothing-medium-20261114-121126) |
+
+`/ solver` is blank for reported runs: they were played on dev seeds under the team's secret, so a ratio to this invocation's judge-world solver would mislead. The paired ratios (same seeds as the solver) are in `data/runs/committed/v1.4/paired_table_gemini.md` and `docs/reports/gap.md`.
+
+History: v1.3 (earlier rules, not comparable to the paired table):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| codex:gpt-5.5 | reported | 11 | 0 | +0.401 ± 0.417 | 0.82 | 11/11 | 8.8 | – | – | replayed, NON-judge seeds, 11 seeds, git 1724a48 (data/runs/committed/v1.3/codex-gpt-5.5-full/medium) |
+| openai:gpt-5.5 | reported | 9 | 0 | +0.668 ± 0.103 | 1.00 | 9/9 | 9.9 | – | – | replayed, NON-judge seeds, 9 seeds, git 1724a48 (data/runs/committed/v1.3/gpt-5.5-full/medium) |
+| restrict_all | reported | 20 | 0 | -0.950 ± 0.098 | 0.05 | 20/20 | 7.0 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/restrict_all-medium-20261114-0332) |
+| solver | reported | 20 | 0 | +0.717 ± 0.052 | 1.00 | 20/20 | 7.5 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/solver-medium-20261114-0332) |
+| heuristic | reported | 20 | 0 | -0.116 ± 0.361 | 0.55 | 20/20 | 11.1 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/heuristic-medium-20261114-0332) |
+| random | reported | 20 | 0 | -0.678 ± 0.225 | 0.05 | 15/20 | 6.5 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/random-medium-20261114-0332) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/stop_early-medium-20261114-0332); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/do_nothing-medium-20261114-0332) |
+
+History: v1.2 (earlier rules, not comparable to the paired table):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| codex:gpt-5.5 | reported | 5 | 0 | +0.714 ± 0.106 | 1.00 | 5/5 | 7.4 | – | – | replayed, NON-judge seeds, 5 seeds, git 868e5de (data/runs/committed/codex-gpt-5.5/medium) |
+| grok | reported | 5 | 0 | +0.672 ± 0.109 | 1.00 | 5/5 | 9.0 | – | – | replayed, judge seeds, 5 seeds, git unknown (data/runs/committed/grok/medium) |
+| openai:gpt-5.5 | reported | 20 | 0 | +0.600 ± 0.175 | 0.95 | 20/20 | 8.8 | – | – | replayed, NON-judge seeds, 20 seeds, git 6e2455f, db104c9, e02b831 (data/runs/committed/gpt-5.5/medium-0-4, data/runs/committed/gpt-5.5/medium-10-14, data/runs/committed/gpt-5.5/medium-15-19, data/runs/committed/gpt-5.5/medium-5-9) |
+| opencode:openai/gpt-5.6-sol | reported | 1 | 4 (infra:opencode_db_locked, infra:provider_quota ×2, mcp server died) | +0.620 ± 0.000 | 1.00 | 1/1 | 11.0 | – | – | replayed, NON-judge seeds, 1 seeds, git 43b28b0 (data/runs/committed/opencode-gpt-5.6-sol/medium) |
+| restrict_all | reported | 20 | 0 | -0.950 ± 0.098 | 0.05 | 20/20 | 7.0 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/restrict_all-medium-20261114-0253) |
+| solver | reported | 20 | 0 | +0.690 ± 0.086 | 0.95 | 19/20 | 7.4 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/solver-medium-20261114-0253) |
+| heuristic | reported | 20 | 0 | -0.116 ± 0.361 | 0.55 | 20/20 | 11.1 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/heuristic-medium-20261114-0253) |
+| random | reported | 20 | 0 | -0.678 ± 0.225 | 0.05 | 15/20 | 6.5 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/random-medium-20261114-0253) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/stop_early-medium-20261114-0253); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/do_nothing-medium-20261114-0253) |
+
+## hard (headline)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 5 | 0 | +0.716 ± 0.075 | 1.00 | 5/5 | 6.8 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 5 | 0 | +0.060 ± 0.531 | 0.80 | 5/5 | 15.6 | 0.08 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 5 | 0 | -1.000 ± 0.000 | 0.00 | 5/5 | 10.0 | -1.40 | – | strongest no-canary log reader |
+| random | baseline | 5 | 0 | -0.600 ± 0.480 | 0.00 | 3/5 | 3.7 | -0.84 | – | random valid tool calls |
+| guess_day1 | baseline | 5 | 0 | -1.000 ± 0.000 | 0.00 | 5/5 | 1.0 | -1.40 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 5 | 0 | +0.000 ± 0.000 | 0.00 | 0/5 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 5 | 0 | +0.000 ± 0.000 | 0.00 | 0/5 | – | 0.00 | – | never accuses |
+
+Reported agent runs: v1.4 (current rules):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| gemini:gemini-4-carbon | reported | 30 | 0 | +0.473 ± 0.118 | 0.93 | 29/30 | 12.7 | – | – | replayed, NON-judge seeds, 30 seeds, git 498bccd (data/runs/committed/v1.4/inproc-gemini-4-carbon/hard) |
+| opencode:google/gemini-3.5-flash | reported | 30 | 0 | +0.373 ± 0.177 | 0.90 | 30/30 | 12.7 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard) |
+| opencode:google/gemini-4-carbon | reported | 30 | 0 | +0.322 ± 0.199 | 0.83 | 29/30 | 13.2 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/opencode-gemini-4-carbon/hard) |
+| restrict_all | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 9.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/restrict_all-hard-20261114-121126) |
+| solver | reported | 30 | 0 | +0.499 ± 0.119 | 0.97 | 30/30 | 10.6 | – | – | replayed, NON-judge seeds, 30 seeds, git a54c896, e4b5634 (data/runs/committed/v1.4/reference/solver-hard-20261114-121126, data/runs/committed/v1.4/reference/solver-hard-seeds20to29) |
+| heuristic | reported | 20 | 0 | +0.186 ± 0.233 | 0.85 | 20/20 | 13.9 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/heuristic-hard-20261114-121126) |
+| random | reported | 20 | 0 | -0.850 ± 0.161 | 0.00 | 17/20 | 8.1 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/random-hard-20261114-121126) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/stop_early-hard-20261114-121126); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/do_nothing-hard-20261114-121126) |
+
+`/ solver` is blank for reported runs: they were played on dev seeds under the team's secret, so a ratio to this invocation's judge-world solver would mislead. The paired ratios (same seeds as the solver) are in `data/runs/committed/v1.4/paired_table_gemini.md` and `docs/reports/gap.md`.
+
+History: v1.3 (earlier rules, not comparable to the paired table):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| codex:gpt-5.5 | reported | 11 | 0 | +0.655 ± 0.041 | 1.00 | 11/11 | 11.6 | – | – | replayed, NON-judge seeds, 11 seeds, git 1724a48 (data/runs/committed/v1.3/codex-gpt-5.5-full/hard) |
+| openai:gpt-5.5 | reported | 8 | 0 | +0.264 ± 0.541 | 0.75 | 8/8 | 12.2 | – | – | replayed, NON-judge seeds, 8 seeds, git 1724a48 (data/runs/committed/v1.3/gpt-5.5-full/hard) |
+| restrict_all | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 8.0 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/restrict_all-hard-20261114-0332) |
+| solver | reported | 20 | 0 | +0.592 ± 0.114 | 0.85 | 17/20 | 10.8 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/solver-hard-20261114-0332) |
+| heuristic | reported | 20 | 0 | -0.322 ± 0.374 | 0.40 | 20/20 | 11.6 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/heuristic-hard-20261114-0332) |
+| random | reported | 20 | 0 | -0.700 ± 0.206 | 0.00 | 14/20 | 6.6 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/random-hard-20261114-0332) |
+| stop_early | reported | 20 | 0 | -0.900 ± 0.196 | 0.05 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/stop_early-hard-20261114-0332); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/do_nothing-hard-20261114-0332) |
+
+History: v1.2 (earlier rules, not comparable to the paired table):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| codex:gpt-5.5 | reported | 5 | 0 | -0.020 ± 0.784 | 0.60 | 5/5 | 12.6 | – | – | replayed, NON-judge seeds, 5 seeds, git 868e5de (data/runs/committed/codex-gpt-5.5/hard) |
+| grok | reported | 5 | 0 | +0.567 ± 0.286 | 0.80 | 4/5 | 9.5 | – | – | replayed, judge seeds, 5 seeds, git unknown (data/runs/committed/grok/hard) |
+| openai:gpt-5.5 | reported | 20 | 0 | +0.500 ± 0.227 | 0.90 | 20/20 | 11.8 | – | – | replayed, NON-judge seeds, 20 seeds, git 6e2455f, d2b85a9 (data/runs/committed/gpt-5.5/hard-0-4, data/runs/committed/gpt-5.5/hard-10-14, data/runs/committed/gpt-5.5/hard-15-19, data/runs/committed/gpt-5.5/hard-5-9) |
+| opencode:openai/gpt-5.6-sol | reported | 1 | 4 (infra:provider_quota ×3, mcp server died) | +0.635 ± 0.000 | 1.00 | 1/1 | 14.0 | – | – | replayed, NON-judge seeds, 1 seeds, git 43b28b0 (data/runs/committed/opencode-gpt-5.6-sol/hard) |
+| restrict_all | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 8.0 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/restrict_all-hard-20261114-0253) |
+| solver | reported | 20 | 0 | +0.584 ± 0.194 | 0.85 | 18/20 | 9.6 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/solver-hard-20261114-0253) |
+| heuristic | reported | 20 | 0 | -0.322 ± 0.374 | 0.40 | 20/20 | 11.6 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/heuristic-hard-20261114-0253) |
+| random | reported | 20 | 0 | -0.700 ± 0.206 | 0.00 | 14/20 | 6.6 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/random-hard-20261114-0253) |
+| stop_early | reported | 20 | 0 | -0.900 ± 0.196 | 0.05 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/stop_early-hard-20261114-0253); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/do_nothing-hard-20261114-0253) |
+
+## easy (sanity tier)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 5 | 0 | +0.852 ± 0.050 | 1.00 | 5/5 | 3.8 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 5 | 0 | +0.642 ± 0.112 | 1.00 | 5/5 | 7.8 | 0.75 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 5 | 0 | -1.000 ± 0.000 | 0.00 | 5/5 | 10.0 | -1.17 | – | strongest no-canary log reader |
+| random | baseline | 5 | 0 | -0.800 ± 0.392 | 0.00 | 4/5 | 5.5 | -0.94 | – | random valid tool calls |
+| guess_day1 | baseline | 5 | 0 | -1.000 ± 0.000 | 0.00 | 5/5 | 1.0 | -1.17 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 5 | 0 | +0.000 ± 0.000 | 0.00 | 0/5 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 5 | 0 | +0.000 ± 0.000 | 0.00 | 0/5 | – | 0.00 | – | never accuses |
+
+## Anti-cheat battery (same world secret as the judge table)
+
+Anti-cheat verdict uses all 40 judge seeds on this secret. The table above uses 5 (REPRO_FAST). A 5-seed mean can sit above 0 for a negative-EV probe (easy accuse_most_logs did, while its 800-seed confirmation mean is negative). The blocked rule is still mean <= 0.
+
+| tier | probe | kind | n | mean ± 95% CI | max | episodes > 0 | blocked |
+|---|---|---|---|---|---|---|---|
+| medium | `do_nothing` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `stop_early` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `guess_day1` | attack | 40 | -0.950 ± 0.098 | +1.000 | 1 | yes |
+| medium | `random` | attack | 40 | -0.725 ± 0.140 | +0.000 | 0 | yes |
+| medium | `restrict_all` | attack | 40 | -0.950 ± 0.068 | +0.000 | 0 | yes |
+| medium | `accuse_decoy` | attack | 40 | -0.953 ± 0.092 | +0.880 | 1 | yes |
+| medium | `accuse_most_logs` | attack | 40 | -0.953 ± 0.092 | +0.880 | 1 | yes |
+| medium | `swarm_w2b008` | swarm | 40 | +0.568 ± 0.091 | +0.900 | 33 | yes |
+| medium | `probe_all_then_accuse` | attack | 40 | -0.960 ± 0.078 | +0.600 | 1 | yes |
+| medium | `garbage_args` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `accuse_all_sequential` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| medium | `accuse_all_parallel` | attack | 40 | -0.950 ± 0.098 | +1.000 | 1 | yes |
+| medium | `accuse_after_end` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `calls_past_cap` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `canary_per_person` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| medium | `solver` | reference | 40 | +0.619 ± 0.072 | +0.900 | 36 | - |
+| medium | `solver_cut_25` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `solver_cut_50` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `solver_cut_75` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `solver_minus_accuse` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `control_solver_then_pad` | sanity | 40 | +0.619 ± 0.072 | +0.900 | 36 | yes |
+| medium | `solver_cut_25_guess` | effort | 40 | -0.951 ± 0.096 | +0.950 | 1 | yes |
+| medium | `solver_cut_50_guess` | effort | 40 | -0.681 ± 0.218 | +0.890 | 7 | yes |
+| medium | `solver_cut_75_guess` | effort | 40 | -0.068 ± 0.279 | +0.880 | 21 | yes |
+| medium | `solver_cut_90_guess` | effort | 40 | +0.024 ± 0.264 | +0.900 | 24 | yes |
+| medium | `solver_plus_restrict_others` | sanity | 40 | +0.619 ± 0.072 | +0.900 | 36 | yes |
+| medium | `solver_plus_unrestrict_spam` | sanity | 40 | +0.619 ± 0.072 | +0.900 | 36 | yes |
+| medium | `solver_plus_interview_all` | sanity | 40 | +0.619 ± 0.072 | +0.900 | 36 | yes |
+| medium | `solver_plus_read_spam` | sanity | 40 | +0.619 ± 0.072 | +0.900 | 36 | yes |
+| medium | `solver_plus_wait_a_day` | sanity | 40 | +0.524 ± 0.092 | +0.860 | 31 | yes |
+| medium | `solver_plus_restrict_others_wait` | sanity | 40 | +0.479 ± 0.085 | +0.830 | 31 | yes |
+| medium | `solver_plus_accuse_twice` | sanity | 40 | +0.619 ± 0.072 | +0.900 | 36 | yes |
+| medium | `solver_plus_bad_canary` | sanity | 40 | +0.619 ± 0.072 | +0.900 | 36 | yes |
+| hard | `do_nothing` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `stop_early` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `guess_day1` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| hard | `random` | attack | 40 | -0.776 ± 0.148 | +0.970 | 1 | yes |
+| hard | `restrict_all` | attack | 40 | -0.925 ± 0.083 | +0.000 | 0 | yes |
+| hard | `accuse_decoy` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| hard | `accuse_most_logs` | attack | 40 | -0.954 ± 0.091 | +0.850 | 1 | yes |
+| hard | `swarm_w2b008` | swarm | 40 | +0.510 ± 0.097 | +0.840 | 38 | yes |
+| hard | `probe_all_then_accuse` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| hard | `garbage_args` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `accuse_all_sequential` | attack | 40 | -0.900 ± 0.137 | +1.000 | 2 | yes |
+| hard | `accuse_all_parallel` | attack | 40 | -0.800 ± 0.188 | +1.000 | 4 | yes |
+| hard | `accuse_after_end` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `calls_past_cap` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `canary_per_person` | attack | 40 | -0.912 ± 0.120 | +0.800 | 2 | yes |
+| hard | `solver` | reference | 40 | +0.628 ± 0.028 | +0.790 | 40 | - |
+| hard | `solver_cut_25` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `solver_cut_50` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `solver_cut_75` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `solver_minus_accuse` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `control_solver_then_pad` | sanity | 40 | +0.628 ± 0.028 | +0.790 | 40 | yes |
+| hard | `solver_cut_25_guess` | effort | 40 | -0.952 ± 0.095 | +0.930 | 1 | yes |
+| hard | `solver_cut_50_guess` | effort | 40 | -0.679 ± 0.219 | +0.910 | 7 | yes |
+| hard | `solver_cut_75_guess` | effort | 40 | -0.046 ± 0.271 | +0.870 | 22 | yes |
+| hard | `solver_cut_90_guess` | effort | 40 | +0.153 ± 0.238 | +0.770 | 28 | yes |
+| hard | `solver_plus_restrict_others` | sanity | 40 | +0.628 ± 0.028 | +0.790 | 40 | yes |
+| hard | `solver_plus_unrestrict_spam` | sanity | 40 | +0.628 ± 0.028 | +0.790 | 40 | yes |
+| hard | `solver_plus_interview_all` | sanity | 40 | +0.628 ± 0.028 | +0.790 | 40 | yes |
+| hard | `solver_plus_read_spam` | sanity | 40 | +0.628 ± 0.028 | +0.790 | 40 | yes |
+| hard | `solver_plus_wait_a_day` | sanity | 40 | +0.592 ± 0.029 | +0.770 | 40 | yes |
+| hard | `solver_plus_restrict_others_wait` | sanity | 40 | +0.532 ± 0.030 | +0.710 | 40 | yes |
+| hard | `solver_plus_accuse_twice` | sanity | 40 | +0.628 ± 0.028 | +0.790 | 40 | yes |
+| hard | `solver_plus_bad_canary` | sanity | 40 | +0.628 ± 0.028 | +0.790 | 40 | yes |
+| easy | `do_nothing` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `stop_early` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `guess_day1` | attack | 40 | -0.950 ± 0.098 | +1.000 | 1 | yes |
+| easy | `random` | attack | 40 | -0.627 ± 0.189 | +0.820 | 4 | yes |
+| easy | `restrict_all` | attack | 40 | -0.662 ± 0.184 | +0.390 | 10 | yes |
+| easy | `accuse_decoy` | attack | 40 | -0.954 ± 0.091 | +0.850 | 1 | yes |
+| easy | `accuse_most_logs` | attack | 40 | -0.557 ± 0.241 | +0.800 | 10 | yes |
+| easy | `swarm_w2b008` | swarm | 40 | +0.727 ± 0.056 | +0.880 | 39 | yes |
+| easy | `probe_all_then_accuse` | attack | 40 | -0.502 ± 0.213 | +0.600 | 14 | yes |
+| easy | `garbage_args` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `accuse_all_sequential` | attack | 40 | -0.950 ± 0.098 | +1.000 | 1 | yes |
+| easy | `accuse_all_parallel` | attack | 40 | -0.800 ± 0.188 | +1.000 | 4 | yes |
+| easy | `accuse_after_end` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `calls_past_cap` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `canary_per_person` | attack | 40 | -0.960 ± 0.078 | +0.600 | 1 | yes |
+| easy | `solver` | reference | 40 | +0.799 ± 0.035 | +0.880 | 40 | - |
+| easy | `solver_cut_25` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `solver_cut_50` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `solver_cut_75` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `solver_minus_accuse` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `control_solver_then_pad` | sanity | 40 | +0.799 ± 0.035 | +0.880 | 40 | yes |
+| easy | `solver_cut_25_guess` | effort | 40 | -0.858 ± 0.157 | +0.940 | 3 | yes |
+| easy | `solver_cut_50_guess` | effort | 40 | -0.575 ± 0.248 | +0.980 | 9 | yes |
+| easy | `solver_cut_75_guess` | effort | 40 | +0.090 ± 0.280 | +0.920 | 24 | yes |
+| easy | `solver_cut_90_guess` | effort | 40 | +0.109 ± 0.271 | +0.880 | 25 | yes |
+| easy | `solver_plus_restrict_others` | sanity | 40 | +0.799 ± 0.035 | +0.880 | 40 | yes |
+| easy | `solver_plus_unrestrict_spam` | sanity | 40 | +0.799 ± 0.035 | +0.880 | 40 | yes |
+| easy | `solver_plus_interview_all` | sanity | 40 | +0.799 ± 0.035 | +0.880 | 40 | yes |
+| easy | `solver_plus_read_spam` | sanity | 40 | +0.799 ± 0.035 | +0.880 | 40 | yes |
+| easy | `solver_plus_wait_a_day` | sanity | 40 | +0.747 ± 0.047 | +0.880 | 39 | yes |
+| easy | `solver_plus_restrict_others_wait` | sanity | 40 | +0.689 ± 0.045 | +0.820 | 39 | yes |
+| easy | `solver_plus_accuse_twice` | sanity | 40 | +0.799 ± 0.035 | +0.880 | 40 | yes |
+| easy | `solver_plus_bad_canary` | sanity | 40 | +0.799 ± 0.035 | +0.880 | 40 | yes |
+
+All probes blocked: **yes** (attack mean <= 0 and below the solver; always-zero probes exactly 0 on every seed; every garbage tool reached the Env; every accusing probe accused; plus probes <= solver on every seed where they accused (an extra step that ends the episode first is an abstention and must score exactly 0); never two accepted accusations in one episode; effort ladder below the solver; plus-probe mean <= solver + 0.05; swarm-flagged policies not significantly above the solver (paired, one-sided 95%)).
+39 rows are `sanity` checks that hold by construction today (the stop-early ladder: no accusation means 0; the control and the same-day plus steps cannot change V before the accusation). They guard against regressions and are not counted as attacks.
+
+## Replay consistency (committed episodes re-played on a fresh Env and re-graded)
+
+| file | version | episodes | replayed | consistent | not replayable | replay_consistent |
+|---|---|---|---|---|---|---|
+| `data/runs/committed/codex-gpt-5.5/hard/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/codex-gpt-5.5/medium/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/hard-0-4/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/hard-10-14/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/hard-15-19/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/hard-5-9/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/medium-0-4/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/medium-10-14/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/medium-15-19/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/medium-5-9/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/grok/hard/episodes.jsonl` | v1.2 | 5 | 0 | 0 | 5 | n/a: secret-keyed seeds |
+| `data/runs/committed/grok/medium/episodes.jsonl` | v1.2 | 5 | 0 | 0 | 5 | n/a: secret-keyed seeds |
+| `data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/reference/do_nothing-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/do_nothing-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/heuristic-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/heuristic-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/random-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/random-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/restrict_all-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/restrict_all-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/solver-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/solver-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/stop_early-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/stop_early-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/codex-gpt-5.5-full/hard/episodes.jsonl` | v1.3 | 11 | 11 | 11 | 0 | yes |
+| `data/runs/committed/v1.3/codex-gpt-5.5-full/medium/episodes.jsonl` | v1.3 | 11 | 11 | 11 | 0 | yes |
+| `data/runs/committed/v1.3/gpt-5.5-full/hard/episodes.jsonl` | v1.3 | 8 | 8 | 8 | 0 | yes |
+| `data/runs/committed/v1.3/gpt-5.5-full/medium/episodes.jsonl` | v1.3 | 9 | 9 | 9 | 0 | yes |
+| `data/runs/committed/v1.3/reference/do_nothing-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/do_nothing-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/heuristic-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/heuristic-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/random-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/random-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/restrict_all-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/restrict_all-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/solver-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/solver-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/stop_early-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/stop_early-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/inproc-gemini-4-carbon/hard/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/inproc-gemini-4-carbon/medium/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/opencode-gemini-4-carbon/medium/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/reference/do_nothing-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/do_nothing-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/heuristic-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/heuristic-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/random-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/random-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/restrict_all-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/restrict_all-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-hard-seeds20to29/episodes.jsonl` | v1.4 | 10 | 10 | 10 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-medium-seeds20to29/episodes.jsonl` | v1.4 | 10 | 10 | 10 | 0 | yes |
+| `data/runs/committed/v1.4/reference/stop_early-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/stop_early-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+
+**Replay coverage: 989 of 999 committed episodes re-played, 989 consistent; 49549 recorded tool results compared step by step, 0 differ.** Of those, 2 were cut client-side by OpenCode ("...N bytes truncated..."); for those, N is checked against the exact byte length of the replayed reply. 1 tool call OpenCode itself refused ("Model tried to call unavailable tool") never reached the server and is skipped. Not replayable: 10: secret-keyed judge/held-out seeds (the world secret is not committed).
+
+## Harbor result consistency (committed trials under results/harbor/)
+
+**37 of 37 trials and 13 of 13 job summaries consistent.** Each trial: Harbor reward = reward.txt = sidecar ledger = verifier copy; the ledger score follows from its accusation; at most one accusation; a cheat_probe trial lists no hole and scores 0; isolation OK. 6 trials also have an agent trajectory, and it names the same person (oracle and probe trials have none). Each job summary matches its trials. 0 trials without a verifier reward (infrastructure failures, not results). Verifier generation: 17 trials were graded by the signing verifier (`signature=ok`), 20 by the earlier unsigned one. 14 trials also pass an HMAC check against their build's published retired signing key (results/harbor/<job>/ledger_key). That catches an edit that was not re-signed; because the key is now public, it cannot catch a forger who re-signs. So, for every trial, this check catches files that disagree with each other and edits that were not re-signed; it cannot prove that the files are genuine.
+
+
+anti-cheat: wrote /tmp/opencode/canary-fr8-d1/results/latest/exploits.json, /tmp/opencode/canary-fr8-d1/results/latest/exploits.md
+committed agent episode files: 61 (excluding data/runs/committed/superseded/)
+  data/runs/committed/codex-gpt-5.5/hard/episodes.jsonl [v1.2]
+  data/runs/committed/codex-gpt-5.5/medium/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/hard-0-4/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/hard-10-14/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/hard-15-19/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/hard-5-9/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/medium-0-4/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/medium-10-14/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/medium-15-19/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/medium-5-9/episodes.jsonl [v1.2]
+  data/runs/committed/grok/hard/episodes.jsonl [v1.2]
+  data/runs/committed/grok/medium/episodes.jsonl [v1.2]
+  data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl [v1.2]
+  data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl [v1.2]
+  data/runs/committed/reference/do_nothing-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/do_nothing-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/heuristic-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/heuristic-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/random-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/random-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/restrict_all-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/restrict_all-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/solver-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/solver-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/stop_early-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/stop_early-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/v1.3/codex-gpt-5.5-full/hard/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/codex-gpt-5.5-full/medium/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/gpt-5.5-full/hard/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/gpt-5.5-full/medium/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/do_nothing-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/do_nothing-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/heuristic-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/heuristic-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/random-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/random-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/restrict_all-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/restrict_all-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/solver-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/solver-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/stop_early-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/stop_early-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.4/inproc-gemini-4-carbon/hard/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/inproc-gemini-4-carbon/medium/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/opencode-gemini-4-carbon/medium/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/do_nothing-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/do_nothing-medium-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/heuristic-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/heuristic-medium-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/random-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/random-medium-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/restrict_all-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/restrict_all-medium-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/solver-hard-seeds20to29/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/solver-medium-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/solver-medium-seeds20to29/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/stop_early-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/stop_early-medium-20261114-121126/episodes.jsonl [v1.4]
+Statistical reproduction; set CANARY_WORLD_SECRET for exact numbers.
+No CANARY_WORLD_SECRET was set, so this invocation drew ONE fresh random judge-world secret
+(sha256 fingerprint 0971bf9a92a8; the secret itself is never printed or written) and used it for
+every agent, so the comparison is paired. Expect each mean inside the published ± 95% CI, not
+bit-for-bit equality. For exact, repeatable numbers:
+    CANARY_WORLD_SECRET=<any string> make reproduce   # same string -> identical judge_episodes.jsonl
+(the secret behind the team's Harbor worlds stays private: it would reveal the judge-world moles).
+
+wrote /tmp/opencode/canary-fr8-d1/results/latest/judge_table.md, /tmp/opencode/canary-fr8-d1/results/latest/judge_episodes.jsonl, /tmp/opencode/canary-fr8-d1/results/latest/gap_chart.png
+(the committed copies in results/ are untouched; the team refreshes them with --update-committed)
+total 83.1 s
+ANTI-CHEAT: every probe blocked, every replayable episode and Harbor trial consistent
+git status --porcelain: empty
+elapsed_s: 83.32
+=== reproduce_fast: exit 0, 83 s
+=== reproduce: /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.eval --reproduce
+slow act(): 0.32s > budget 0.30s at step 36
+slow act(): 0.35s > budget 0.30s at step 26
+# Canary judge table
+
+- seeds: 40 judge seeds per tier (900000..900039)
+- judge-world secret: statistical, sha256 fingerprint `996353b5a6c1` (statistical reproduction; set CANARY_WORLD_SECRET for exact numbers)
+- git: `2b301ceacb8d`, generated 2026-11-14T23:09:25+0000, 127.7 s
+- reward: true V at accusation if correct (V starts at 1.0 and drops with every leak, including leaks that have not surfaced yet; v1.3 `status` shows only surfaced damage), -1 if wrong, 0 if no accusation
+- accuracy = correct accusations / episodes; accused = episodes that ended in an accusation
+- `/ solver` = agent mean / solver mean on the same tier (ratio of means); `pass^k` only for agents with k repeated runs per seed
+- **paired runs**: reference and baselines played in this invocation on the same worlds (one secret). **reported agent runs**: frontier-agent episodes replayed from data/runs/committed/, played on the team's worlds, so they are NOT paired with this run; compare them by mean ± CI only
+- **v1.4 frontier vs solver, paired on the same seeds:** `data/runs/committed/v1.4/paired_table_gemini.md`, explained in `docs/reports/gap.md`. The v1.4 reported rows below replay those committed episodes (played on dev seeds under the team's secret), so they are not paired with this invocation's judge worlds.
+- reported runs are grouped by tier version and never pooled: v1.4 (current rules) first, then earlier versions as history (not comparable to the paired table; `/ solver` left blank). Builds under data/runs/committed/superseded/ are excluded
+- per-episode timeout guard: 60 s; no episode timed out
+
+## medium (headline)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 40 | 0 | +0.615 ± 0.081 | 0.88 | 35/40 | 8.5 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 40 | 0 | -0.215 ± 0.260 | 0.47 | 40/40 | 11.2 | -0.35 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 40 | 0 | -1.000 ± 0.000 | 0.00 | 40/40 | 10.0 | -1.63 | – | strongest no-canary log reader |
+| random | baseline | 40 | 0 | -0.725 ± 0.140 | 0.00 | 29/40 | 4.5 | -1.18 | – | random valid tool calls |
+| guess_day1 | baseline | 40 | 0 | -0.900 ± 0.137 | 0.05 | 40/40 | 1.0 | -1.46 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | never accuses |
+
+Reported agent runs: v1.4 (current rules):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| gemini:gemini-4-carbon | reported | 30 | 0 | +0.530 ± 0.138 | 0.83 | 26/30 | 9.0 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/inproc-gemini-4-carbon/medium) |
+| opencode:google/gemini-4-carbon | reported | 30 | 0 | +0.713 ± 0.042 | 1.00 | 30/30 | 8.0 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/opencode-gemini-4-carbon/medium) |
+| restrict_all | reported | 20 | 0 | -0.950 ± 0.098 | 0.05 | 20/20 | 7.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/restrict_all-medium-20261114-121126) |
+| solver | reported | 30 | 0 | +0.645 ± 0.087 | 0.90 | 27/30 | 7.6 | – | – | replayed, NON-judge seeds, 30 seeds, git a54c896, e4b5634 (data/runs/committed/v1.4/reference/solver-medium-20261114-121126, data/runs/committed/v1.4/reference/solver-medium-seeds20to29) |
+| heuristic | reported | 20 | 0 | -0.275 ± 0.361 | 0.45 | 20/20 | 11.3 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/heuristic-medium-20261114-121126) |
+| random | reported | 20 | 0 | -0.678 ± 0.225 | 0.05 | 15/20 | 6.5 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/random-medium-20261114-121126) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/stop_early-medium-20261114-121126); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/do_nothing-medium-20261114-121126) |
+
+`/ solver` is blank for reported runs: they were played on dev seeds under the team's secret, so a ratio to this invocation's judge-world solver would mislead. The paired ratios (same seeds as the solver) are in `data/runs/committed/v1.4/paired_table_gemini.md` and `docs/reports/gap.md`.
+
+History: v1.3 (earlier rules, not comparable to the paired table):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| codex:gpt-5.5 | reported | 11 | 0 | +0.401 ± 0.417 | 0.82 | 11/11 | 8.8 | – | – | replayed, NON-judge seeds, 11 seeds, git 1724a48 (data/runs/committed/v1.3/codex-gpt-5.5-full/medium) |
+| openai:gpt-5.5 | reported | 9 | 0 | +0.668 ± 0.103 | 1.00 | 9/9 | 9.9 | – | – | replayed, NON-judge seeds, 9 seeds, git 1724a48 (data/runs/committed/v1.3/gpt-5.5-full/medium) |
+| restrict_all | reported | 20 | 0 | -0.950 ± 0.098 | 0.05 | 20/20 | 7.0 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/restrict_all-medium-20261114-0332) |
+| solver | reported | 20 | 0 | +0.717 ± 0.052 | 1.00 | 20/20 | 7.5 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/solver-medium-20261114-0332) |
+| heuristic | reported | 20 | 0 | -0.116 ± 0.361 | 0.55 | 20/20 | 11.1 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/heuristic-medium-20261114-0332) |
+| random | reported | 20 | 0 | -0.678 ± 0.225 | 0.05 | 15/20 | 6.5 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/random-medium-20261114-0332) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/stop_early-medium-20261114-0332); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/do_nothing-medium-20261114-0332) |
+
+History: v1.2 (earlier rules, not comparable to the paired table):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| codex:gpt-5.5 | reported | 5 | 0 | +0.714 ± 0.106 | 1.00 | 5/5 | 7.4 | – | – | replayed, NON-judge seeds, 5 seeds, git 868e5de (data/runs/committed/codex-gpt-5.5/medium) |
+| grok | reported | 5 | 0 | +0.672 ± 0.109 | 1.00 | 5/5 | 9.0 | – | – | replayed, judge seeds, 5 seeds, git unknown (data/runs/committed/grok/medium) |
+| openai:gpt-5.5 | reported | 20 | 0 | +0.600 ± 0.175 | 0.95 | 20/20 | 8.8 | – | – | replayed, NON-judge seeds, 20 seeds, git 6e2455f, db104c9, e02b831 (data/runs/committed/gpt-5.5/medium-0-4, data/runs/committed/gpt-5.5/medium-10-14, data/runs/committed/gpt-5.5/medium-15-19, data/runs/committed/gpt-5.5/medium-5-9) |
+| opencode:openai/gpt-5.6-sol | reported | 1 | 4 (infra:opencode_db_locked, infra:provider_quota ×2, mcp server died) | +0.620 ± 0.000 | 1.00 | 1/1 | 11.0 | – | – | replayed, NON-judge seeds, 1 seeds, git 43b28b0 (data/runs/committed/opencode-gpt-5.6-sol/medium) |
+| restrict_all | reported | 20 | 0 | -0.950 ± 0.098 | 0.05 | 20/20 | 7.0 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/restrict_all-medium-20261114-0253) |
+| solver | reported | 20 | 0 | +0.690 ± 0.086 | 0.95 | 19/20 | 7.4 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/solver-medium-20261114-0253) |
+| heuristic | reported | 20 | 0 | -0.116 ± 0.361 | 0.55 | 20/20 | 11.1 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/heuristic-medium-20261114-0253) |
+| random | reported | 20 | 0 | -0.678 ± 0.225 | 0.05 | 15/20 | 6.5 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/random-medium-20261114-0253) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/stop_early-medium-20261114-0253); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/do_nothing-medium-20261114-0253) |
+
+## hard (headline)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 40 | 0 | +0.505 ± 0.139 | 0.93 | 40/40 | 8.8 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 40 | 0 | +0.016 ± 0.178 | 0.78 | 40/40 | 15.1 | 0.03 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 40 | 0 | -1.000 ± 0.000 | 0.00 | 40/40 | 10.0 | -1.98 | – | strongest no-canary log reader |
+| random | baseline | 40 | 0 | -0.727 ± 0.170 | 0.05 | 33/40 | 6.8 | -1.44 | – | random valid tool calls |
+| guess_day1 | baseline | 40 | 0 | -0.950 ± 0.098 | 0.03 | 40/40 | 1.0 | -1.88 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | never accuses |
+
+Reported agent runs: v1.4 (current rules):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| gemini:gemini-4-carbon | reported | 30 | 0 | +0.473 ± 0.118 | 0.93 | 29/30 | 12.7 | – | – | replayed, NON-judge seeds, 30 seeds, git 498bccd (data/runs/committed/v1.4/inproc-gemini-4-carbon/hard) |
+| opencode:google/gemini-3.5-flash | reported | 30 | 0 | +0.373 ± 0.177 | 0.90 | 30/30 | 12.7 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard) |
+| opencode:google/gemini-4-carbon | reported | 30 | 0 | +0.322 ± 0.199 | 0.83 | 29/30 | 13.2 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/opencode-gemini-4-carbon/hard) |
+| restrict_all | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 9.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/restrict_all-hard-20261114-121126) |
+| solver | reported | 30 | 0 | +0.499 ± 0.119 | 0.97 | 30/30 | 10.6 | – | – | replayed, NON-judge seeds, 30 seeds, git a54c896, e4b5634 (data/runs/committed/v1.4/reference/solver-hard-20261114-121126, data/runs/committed/v1.4/reference/solver-hard-seeds20to29) |
+| heuristic | reported | 20 | 0 | +0.186 ± 0.233 | 0.85 | 20/20 | 13.9 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/heuristic-hard-20261114-121126) |
+| random | reported | 20 | 0 | -0.850 ± 0.161 | 0.00 | 17/20 | 8.1 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/random-hard-20261114-121126) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/stop_early-hard-20261114-121126); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/do_nothing-hard-20261114-121126) |
+
+`/ solver` is blank for reported runs: they were played on dev seeds under the team's secret, so a ratio to this invocation's judge-world solver would mislead. The paired ratios (same seeds as the solver) are in `data/runs/committed/v1.4/paired_table_gemini.md` and `docs/reports/gap.md`.
+
+History: v1.3 (earlier rules, not comparable to the paired table):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| codex:gpt-5.5 | reported | 11 | 0 | +0.655 ± 0.041 | 1.00 | 11/11 | 11.6 | – | – | replayed, NON-judge seeds, 11 seeds, git 1724a48 (data/runs/committed/v1.3/codex-gpt-5.5-full/hard) |
+| openai:gpt-5.5 | reported | 8 | 0 | +0.264 ± 0.541 | 0.75 | 8/8 | 12.2 | – | – | replayed, NON-judge seeds, 8 seeds, git 1724a48 (data/runs/committed/v1.3/gpt-5.5-full/hard) |
+| restrict_all | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 8.0 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/restrict_all-hard-20261114-0332) |
+| solver | reported | 20 | 0 | +0.592 ± 0.114 | 0.85 | 17/20 | 10.8 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/solver-hard-20261114-0332) |
+| heuristic | reported | 20 | 0 | -0.322 ± 0.374 | 0.40 | 20/20 | 11.6 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/heuristic-hard-20261114-0332) |
+| random | reported | 20 | 0 | -0.700 ± 0.206 | 0.00 | 14/20 | 6.6 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/random-hard-20261114-0332) |
+| stop_early | reported | 20 | 0 | -0.900 ± 0.196 | 0.05 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/stop_early-hard-20261114-0332); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git 0933805 (data/runs/committed/v1.3/reference/do_nothing-hard-20261114-0332) |
+
+History: v1.2 (earlier rules, not comparable to the paired table):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| codex:gpt-5.5 | reported | 5 | 0 | -0.020 ± 0.784 | 0.60 | 5/5 | 12.6 | – | – | replayed, NON-judge seeds, 5 seeds, git 868e5de (data/runs/committed/codex-gpt-5.5/hard) |
+| grok | reported | 5 | 0 | +0.567 ± 0.286 | 0.80 | 4/5 | 9.5 | – | – | replayed, judge seeds, 5 seeds, git unknown (data/runs/committed/grok/hard) |
+| openai:gpt-5.5 | reported | 20 | 0 | +0.500 ± 0.227 | 0.90 | 20/20 | 11.8 | – | – | replayed, NON-judge seeds, 20 seeds, git 6e2455f, d2b85a9 (data/runs/committed/gpt-5.5/hard-0-4, data/runs/committed/gpt-5.5/hard-10-14, data/runs/committed/gpt-5.5/hard-15-19, data/runs/committed/gpt-5.5/hard-5-9) |
+| opencode:openai/gpt-5.6-sol | reported | 1 | 4 (infra:provider_quota ×3, mcp server died) | +0.635 ± 0.000 | 1.00 | 1/1 | 14.0 | – | – | replayed, NON-judge seeds, 1 seeds, git 43b28b0 (data/runs/committed/opencode-gpt-5.6-sol/hard) |
+| restrict_all | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 8.0 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/restrict_all-hard-20261114-0253) |
+| solver | reported | 20 | 0 | +0.584 ± 0.194 | 0.85 | 18/20 | 9.6 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/solver-hard-20261114-0253) |
+| heuristic | reported | 20 | 0 | -0.322 ± 0.374 | 0.40 | 20/20 | 11.6 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/heuristic-hard-20261114-0253) |
+| random | reported | 20 | 0 | -0.700 ± 0.206 | 0.00 | 14/20 | 6.6 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/random-hard-20261114-0253) |
+| stop_early | reported | 20 | 0 | -0.900 ± 0.196 | 0.05 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/stop_early-hard-20261114-0253); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git db104c9 (data/runs/committed/reference/do_nothing-hard-20261114-0253) |
+
+## easy (sanity tier)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 40 | 0 | +0.813 ± 0.023 | 1.00 | 40/40 | 4.3 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 40 | 0 | +0.639 ± 0.092 | 0.97 | 40/40 | 6.8 | 0.79 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 40 | 0 | -0.635 ± 0.213 | 0.23 | 40/40 | 10.0 | -0.78 | – | strongest no-canary log reader |
+| random | baseline | 40 | 0 | -0.724 ± 0.157 | 0.05 | 32/40 | 6.5 | -0.89 | – | random valid tool calls |
+| guess_day1 | baseline | 40 | 0 | -0.850 ± 0.165 | 0.07 | 40/40 | 1.0 | -1.05 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | never accuses |
+
+## Anti-cheat battery (same world secret as the judge table)
+
+| tier | probe | kind | n | mean ± 95% CI | max | episodes > 0 | blocked |
+|---|---|---|---|---|---|---|---|
+| medium | `do_nothing` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `stop_early` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `guess_day1` | attack | 40 | -0.900 ± 0.137 | +1.000 | 2 | yes |
+| medium | `random` | attack | 40 | -0.725 ± 0.140 | +0.000 | 0 | yes |
+| medium | `restrict_all` | attack | 40 | -0.900 ± 0.094 | +0.000 | 0 | yes |
+| medium | `accuse_decoy` | attack | 40 | -0.905 ± 0.130 | +0.920 | 2 | yes |
+| medium | `accuse_most_logs` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| medium | `swarm_w2b008` | swarm | 40 | +0.645 ± 0.067 | +0.880 | 37 | yes |
+| medium | `probe_all_then_accuse` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| medium | `garbage_args` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `accuse_all_sequential` | attack | 40 | -0.850 ± 0.165 | +1.000 | 3 | yes |
+| medium | `accuse_all_parallel` | attack | 40 | -0.900 ± 0.137 | +1.000 | 2 | yes |
+| medium | `accuse_after_end` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `calls_past_cap` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `canary_per_person` | attack | 40 | -0.872 ± 0.141 | +0.800 | 3 | yes |
+| medium | `solver` | reference | 40 | +0.615 ± 0.082 | +0.900 | 35 | - |
+| medium | `solver_cut_25` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `solver_cut_50` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `solver_cut_75` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `solver_minus_accuse` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| medium | `control_solver_then_pad` | sanity | 40 | +0.615 ± 0.082 | +0.900 | 35 | yes |
+| medium | `solver_cut_25_guess` | effort | 40 | -0.903 ± 0.133 | +0.950 | 2 | yes |
+| medium | `solver_cut_50_guess` | effort | 40 | -0.490 ± 0.260 | +0.980 | 11 | yes |
+| medium | `solver_cut_75_guess` | effort | 40 | -0.387 ± 0.263 | +0.930 | 14 | yes |
+| medium | `solver_cut_90_guess` | effort | 40 | -0.264 ± 0.270 | +0.900 | 17 | yes |
+| medium | `solver_plus_restrict_others` | sanity | 40 | +0.615 ± 0.082 | +0.900 | 35 | yes |
+| medium | `solver_plus_unrestrict_spam` | sanity | 40 | +0.615 ± 0.082 | +0.900 | 35 | yes |
+| medium | `solver_plus_interview_all` | sanity | 40 | +0.615 ± 0.082 | +0.900 | 35 | yes |
+| medium | `solver_plus_read_spam` | sanity | 40 | +0.615 ± 0.082 | +0.900 | 35 | yes |
+| medium | `solver_plus_wait_a_day` | sanity | 40 | +0.558 ± 0.093 | +0.860 | 32 | yes |
+| medium | `solver_plus_restrict_others_wait` | sanity | 40 | +0.511 ± 0.086 | +0.830 | 32 | yes |
+| medium | `solver_plus_accuse_twice` | sanity | 40 | +0.615 ± 0.082 | +0.900 | 35 | yes |
+| medium | `solver_plus_bad_canary` | sanity | 40 | +0.615 ± 0.082 | +0.900 | 35 | yes |
+| hard | `do_nothing` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `stop_early` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `guess_day1` | attack | 40 | -0.950 ± 0.098 | +1.000 | 1 | yes |
+| hard | `random` | attack | 40 | -0.727 ± 0.170 | +1.000 | 2 | yes |
+| hard | `restrict_all` | attack | 40 | -0.975 ± 0.049 | +0.000 | 0 | yes |
+| hard | `accuse_decoy` | attack | 40 | -0.951 ± 0.096 | +0.950 | 1 | yes |
+| hard | `accuse_most_logs` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| hard | `swarm_w2b008` | swarm | 40 | +0.395 ± 0.097 | +0.800 | 37 | yes |
+| hard | `probe_all_then_accuse` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| hard | `garbage_args` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `accuse_all_sequential` | attack | 40 | -0.950 ± 0.098 | +1.000 | 1 | yes |
+| hard | `accuse_all_parallel` | attack | 40 | -0.900 ± 0.137 | +1.000 | 2 | yes |
+| hard | `accuse_after_end` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `calls_past_cap` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `canary_per_person` | attack | 40 | -0.955 ± 0.088 | +0.800 | 1 | yes |
+| hard | `solver` | reference | 40 | +0.505 ± 0.139 | +0.790 | 37 | - |
+| hard | `solver_cut_25` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `solver_cut_50` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `solver_cut_75` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `solver_minus_accuse` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `control_solver_then_pad` | sanity | 40 | +0.505 ± 0.139 | +0.790 | 37 | yes |
+| hard | `solver_cut_25_guess` | effort | 40 | -0.954 ± 0.090 | +0.840 | 1 | yes |
+| hard | `solver_cut_50_guess` | effort | 40 | -0.868 ± 0.146 | +0.830 | 3 | yes |
+| hard | `solver_cut_75_guess` | effort | 40 | -0.260 ± 0.271 | +0.850 | 17 | yes |
+| hard | `solver_cut_90_guess` | effort | 40 | +0.131 ± 0.247 | +0.820 | 27 | yes |
+| hard | `solver_plus_restrict_others` | sanity | 40 | +0.505 ± 0.139 | +0.790 | 37 | yes |
+| hard | `solver_plus_unrestrict_spam` | sanity | 40 | +0.505 ± 0.139 | +0.790 | 37 | yes |
+| hard | `solver_plus_interview_all` | sanity | 40 | +0.505 ± 0.139 | +0.790 | 37 | yes |
+| hard | `solver_plus_read_spam` | sanity | 40 | +0.505 ± 0.139 | +0.790 | 37 | yes |
+| hard | `solver_plus_wait_a_day` | sanity | 40 | +0.474 ± 0.137 | +0.770 | 37 | yes |
+| hard | `solver_plus_restrict_others_wait` | sanity | 40 | +0.419 ± 0.132 | +0.710 | 37 | yes |
+| hard | `solver_plus_accuse_twice` | sanity | 40 | +0.505 ± 0.139 | +0.790 | 37 | yes |
+| hard | `solver_plus_bad_canary` | sanity | 40 | +0.505 ± 0.139 | +0.790 | 37 | yes |
+| easy | `do_nothing` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `stop_early` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `guess_day1` | attack | 40 | -0.850 ± 0.165 | +1.000 | 3 | yes |
+| easy | `random` | attack | 40 | -0.724 ± 0.157 | +1.000 | 2 | yes |
+| easy | `restrict_all` | attack | 40 | -0.726 ± 0.172 | +0.390 | 8 | yes |
+| easy | `accuse_decoy` | attack | 40 | -0.861 ± 0.153 | +0.850 | 3 | yes |
+| easy | `accuse_most_logs` | attack | 40 | -0.511 ± 0.249 | +0.850 | 11 | yes |
+| easy | `swarm_w2b008` | swarm | 40 | +0.773 ± 0.035 | +0.880 | 40 | yes |
+| easy | `probe_all_then_accuse` | attack | 40 | -0.749 ± 0.172 | +0.600 | 7 | yes |
+| easy | `garbage_args` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `accuse_all_sequential` | attack | 40 | -0.800 ± 0.188 | +1.000 | 4 | yes |
+| easy | `accuse_all_parallel` | attack | 40 | -0.950 ± 0.098 | +1.000 | 1 | yes |
+| easy | `accuse_after_end` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `calls_past_cap` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `canary_per_person` | attack | 40 | -0.843 ± 0.148 | +0.650 | 4 | yes |
+| easy | `solver` | reference | 40 | +0.813 ± 0.023 | +0.880 | 40 | - |
+| easy | `solver_cut_25` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `solver_cut_50` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `solver_cut_75` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `solver_minus_accuse` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| easy | `control_solver_then_pad` | sanity | 40 | +0.813 ± 0.023 | +0.880 | 40 | yes |
+| easy | `solver_cut_25_guess` | effort | 40 | -0.853 ± 0.162 | +0.990 | 3 | yes |
+| easy | `solver_cut_50_guess` | effort | 40 | -0.573 ± 0.249 | +0.930 | 9 | yes |
+| easy | `solver_cut_75_guess` | effort | 40 | -0.165 ± 0.290 | +0.920 | 18 | yes |
+| easy | `solver_cut_90_guess` | effort | 40 | -0.138 ± 0.285 | +0.880 | 19 | yes |
+| easy | `solver_plus_restrict_others` | sanity | 40 | +0.813 ± 0.023 | +0.880 | 40 | yes |
+| easy | `solver_plus_unrestrict_spam` | sanity | 40 | +0.813 ± 0.023 | +0.880 | 40 | yes |
+| easy | `solver_plus_interview_all` | sanity | 40 | +0.813 ± 0.023 | +0.880 | 40 | yes |
+| easy | `solver_plus_read_spam` | sanity | 40 | +0.813 ± 0.023 | +0.880 | 40 | yes |
+| easy | `solver_plus_wait_a_day` | sanity | 40 | +0.766 ± 0.024 | +0.880 | 40 | yes |
+| easy | `solver_plus_restrict_others_wait` | sanity | 40 | +0.707 ± 0.024 | +0.820 | 40 | yes |
+| easy | `solver_plus_accuse_twice` | sanity | 40 | +0.813 ± 0.023 | +0.880 | 40 | yes |
+| easy | `solver_plus_bad_canary` | sanity | 40 | +0.813 ± 0.023 | +0.880 | 40 | yes |
+
+All probes blocked: **yes** (attack mean <= 0 and below the solver; always-zero probes exactly 0 on every seed; every garbage tool reached the Env; every accusing probe accused; plus probes <= solver on every seed where they accused (an extra step that ends the episode first is an abstention and must score exactly 0); never two accepted accusations in one episode; effort ladder below the solver; plus-probe mean <= solver + 0.05; swarm-flagged policies not significantly above the solver (paired, one-sided 95%)).
+39 rows are `sanity` checks that hold by construction today (the stop-early ladder: no accusation means 0; the control and the same-day plus steps cannot change V before the accusation). They guard against regressions and are not counted as attacks.
+
+## Replay consistency (committed episodes re-played on a fresh Env and re-graded)
+
+| file | version | episodes | replayed | consistent | not replayable | replay_consistent |
+|---|---|---|---|---|---|---|
+| `data/runs/committed/codex-gpt-5.5/hard/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/codex-gpt-5.5/medium/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/hard-0-4/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/hard-10-14/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/hard-15-19/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/hard-5-9/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/medium-0-4/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/medium-10-14/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/medium-15-19/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/gpt-5.5/medium-5-9/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/grok/hard/episodes.jsonl` | v1.2 | 5 | 0 | 0 | 5 | n/a: secret-keyed seeds |
+| `data/runs/committed/grok/medium/episodes.jsonl` | v1.2 | 5 | 0 | 0 | 5 | n/a: secret-keyed seeds |
+| `data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl` | v1.2 | 5 | 5 | 5 | 0 | yes |
+| `data/runs/committed/reference/do_nothing-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/do_nothing-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/heuristic-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/heuristic-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/random-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/random-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/restrict_all-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/restrict_all-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/solver-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/solver-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/stop_early-hard-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/reference/stop_early-medium-20261114-0253/episodes.jsonl` | v1.2 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/codex-gpt-5.5-full/hard/episodes.jsonl` | v1.3 | 11 | 11 | 11 | 0 | yes |
+| `data/runs/committed/v1.3/codex-gpt-5.5-full/medium/episodes.jsonl` | v1.3 | 11 | 11 | 11 | 0 | yes |
+| `data/runs/committed/v1.3/gpt-5.5-full/hard/episodes.jsonl` | v1.3 | 8 | 8 | 8 | 0 | yes |
+| `data/runs/committed/v1.3/gpt-5.5-full/medium/episodes.jsonl` | v1.3 | 9 | 9 | 9 | 0 | yes |
+| `data/runs/committed/v1.3/reference/do_nothing-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/do_nothing-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/heuristic-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/heuristic-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/random-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/random-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/restrict_all-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/restrict_all-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/solver-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/solver-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/stop_early-hard-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.3/reference/stop_early-medium-20261114-0332/episodes.jsonl` | v1.3 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/inproc-gemini-4-carbon/hard/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/inproc-gemini-4-carbon/medium/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/opencode-gemini-4-carbon/medium/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/reference/do_nothing-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/do_nothing-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/heuristic-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/heuristic-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/random-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/random-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/restrict_all-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/restrict_all-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-hard-seeds20to29/episodes.jsonl` | v1.4 | 10 | 10 | 10 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-medium-seeds20to29/episodes.jsonl` | v1.4 | 10 | 10 | 10 | 0 | yes |
+| `data/runs/committed/v1.4/reference/stop_early-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/stop_early-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+
+**Replay coverage: 989 of 999 committed episodes re-played, 989 consistent; 49549 recorded tool results compared step by step, 0 differ.** Of those, 2 were cut client-side by OpenCode ("...N bytes truncated..."); for those, N is checked against the exact byte length of the replayed reply. 1 tool call OpenCode itself refused ("Model tried to call unavailable tool") never reached the server and is skipped. Not replayable: 10: secret-keyed judge/held-out seeds (the world secret is not committed).
+
+## Harbor result consistency (committed trials under results/harbor/)
+
+**37 of 37 trials and 13 of 13 job summaries consistent.** Each trial: Harbor reward = reward.txt = sidecar ledger = verifier copy; the ledger score follows from its accusation; at most one accusation; a cheat_probe trial lists no hole and scores 0; isolation OK. 6 trials also have an agent trajectory, and it names the same person (oracle and probe trials have none). Each job summary matches its trials. 0 trials without a verifier reward (infrastructure failures, not results). Verifier generation: 17 trials were graded by the signing verifier (`signature=ok`), 20 by the earlier unsigned one. 14 trials also pass an HMAC check against their build's published retired signing key (results/harbor/<job>/ledger_key). That catches an edit that was not re-signed; because the key is now public, it cannot catch a forger who re-signs. So, for every trial, this check catches files that disagree with each other and edits that were not re-signed; it cannot prove that the files are genuine.
+
+
+anti-cheat: wrote /tmp/opencode/canary-fr8-d1/results/latest/exploits.json, /tmp/opencode/canary-fr8-d1/results/latest/exploits.md
+committed agent episode files: 61 (excluding data/runs/committed/superseded/)
+  data/runs/committed/codex-gpt-5.5/hard/episodes.jsonl [v1.2]
+  data/runs/committed/codex-gpt-5.5/medium/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/hard-0-4/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/hard-10-14/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/hard-15-19/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/hard-5-9/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/medium-0-4/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/medium-10-14/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/medium-15-19/episodes.jsonl [v1.2]
+  data/runs/committed/gpt-5.5/medium-5-9/episodes.jsonl [v1.2]
+  data/runs/committed/grok/hard/episodes.jsonl [v1.2]
+  data/runs/committed/grok/medium/episodes.jsonl [v1.2]
+  data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl [v1.2]
+  data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl [v1.2]
+  data/runs/committed/reference/do_nothing-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/do_nothing-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/heuristic-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/heuristic-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/random-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/random-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/restrict_all-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/restrict_all-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/solver-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/solver-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/stop_early-hard-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/reference/stop_early-medium-20261114-0253/episodes.jsonl [v1.2]
+  data/runs/committed/v1.3/codex-gpt-5.5-full/hard/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/codex-gpt-5.5-full/medium/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/gpt-5.5-full/hard/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/gpt-5.5-full/medium/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/do_nothing-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/do_nothing-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/heuristic-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/heuristic-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/random-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/random-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/restrict_all-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/restrict_all-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/solver-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/solver-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/stop_early-hard-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.3/reference/stop_early-medium-20261114-0332/episodes.jsonl [v1.3]
+  data/runs/committed/v1.4/inproc-gemini-4-carbon/hard/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/inproc-gemini-4-carbon/medium/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/opencode-gemini-4-carbon/medium/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/do_nothing-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/do_nothing-medium-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/heuristic-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/heuristic-medium-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/random-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/random-medium-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/restrict_all-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/restrict_all-medium-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/solver-hard-seeds20to29/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/solver-medium-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/solver-medium-seeds20to29/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/stop_early-hard-20261114-121126/episodes.jsonl [v1.4]
+  data/runs/committed/v1.4/reference/stop_early-medium-20261114-121126/episodes.jsonl [v1.4]
+Statistical reproduction; set CANARY_WORLD_SECRET for exact numbers.
+No CANARY_WORLD_SECRET was set, so this invocation drew ONE fresh random judge-world secret
+(sha256 fingerprint 996353b5a6c1; the secret itself is never printed or written) and used it for
+every agent, so the comparison is paired. Expect each mean inside the published ± 95% CI, not
+bit-for-bit equality. For exact, repeatable numbers:
+    CANARY_WORLD_SECRET=<any string> make reproduce   # same string -> identical judge_episodes.jsonl
+(the secret behind the team's Harbor worlds stays private: it would reveal the judge-world moles).
+
+wrote /tmp/opencode/canary-fr8-d1/results/latest/judge_table.md, /tmp/opencode/canary-fr8-d1/results/latest/judge_episodes.jsonl, /tmp/opencode/canary-fr8-d1/results/latest/gap_chart.png
+(the committed copies in results/ are untouched; the team refreshes them with --update-committed)
+total 158.5 s
+ANTI-CHEAT: every probe blocked, every replayable episode and Harbor trial consistent
+git status --porcelain: empty
+elapsed_s: 159.01
+=== reproduce: exit 0, 159 s
+=== audit: /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/audit_submission.py --root /tmp/opencode/canary-fr8-d1 --run-reproduce
+[PASS] Secret & Answer-Key Hygiene: scanned 1668 tracked files; 0 secrets or answer keys
+[PASS] Frozen Tier Hashes: TIERS_VERSION=v1.4 (a8f99c2537c91d72), TIERS_V13 (8df71cf570bb48bc)
+[WARN] Committed Runs Integrity: 61 files, 999 episodes audited; 8 valid:false episode(s) flagged and verified excluded from canary.reproduce means
+       - data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl:1 (opencode:openai/gpt-5.6-sol, hard, v1.2, seed=0): mcp server died
+       - data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl:3 (opencode:openai/gpt-5.6-sol, hard, v1.2, seed=2): infra:provider_quota
+       - data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl:4 (opencode:openai/gpt-5.6-sol, hard, v1.2, seed=3): infra:provider_quota
+       - data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl:5 (opencode:openai/gpt-5.6-sol, hard, v1.2, seed=4): infra:provider_quota
+       - data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl:1 (opencode:openai/gpt-5.6-sol, medium, v1.2, seed=0): infra:opencode_db_locked
+       - data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl:2 (opencode:openai/gpt-5.6-sol, medium, v1.2, seed=1): mcp server died
+       - data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl:4 (opencode:openai/gpt-5.6-sol, medium, v1.2, seed=3): infra:provider_quota
+       - data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl:5 (opencode:openai/gpt-5.6-sol, medium, v1.2, seed=4): infra:provider_quota
+[PASS] Harbor Package Static Audit: canary-hard-900000 verified (separate verifier, [[verifier.collect]], clean Dockerfile/.dockerignore, 0600 SALT/episode.json/ledger_key, 0 CANARY_* agent env vars)
+[PASS] Clean-Tree Reproduce Audit: REPRO_FAST=1 reproduce succeeded in 201.42s; git status --porcelain unchanged
+SUMMARY: 4 PASS, 1 WARN, 0 FAIL (201.46s)
+git status --porcelain: empty
+elapsed_s: 201.71
+=== audit: exit 0, 202 s
+=== test: /tmp/fleet-silas/shared/agent-arena-venv/bin/pytest -q tests/test_reproduce.py tests/test_submission_audit.py tests/test_env_frozen.py tests/test_anticheat.py
+........................................................................ [ 62%]
+...........................................                              [100%]
+115 passed in 261.65s (0:04:21)
+git status --porcelain: empty
+elapsed_s: 262.62
+=== test: exit 0, 263 s

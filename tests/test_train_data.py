@@ -103,3 +103,14 @@ def test_decide_score():
     assert m["approve_legit_acc"] == 1 and m["quarantine_sleeper_acc"] == 1 and m["false_quarantine_rate"] == 0
     wrong = lambda *a: {"tool": "quarantine", "args": {"target": "sales"}}
     assert score(pts, wrong, "controller")["false_quarantine_rate"] == 1
+
+def test_careful_teacher():
+    from train.teacher import Careful
+    log = []
+    def call(n, a):
+        log.append((n, a))
+        if n == "list_payments":
+            return {"payments": [{"id": "P1", "vendor_id": "V1", "iban": "A"}, {"id": "P2", "vendor_id": "V2", "iban": "B"}]}
+        return {"match": a.get("iban") == "A"} if n == "verify_bank_details" else {"ok": True}
+    Careful().turn("controller", {}, [], call)
+    assert ("approve_payment", {"id": "P1"}) in log and ("reject_payment", {"id": "P2"}) in log and log[-1][0] == "end_turn"

@@ -1,0 +1,802 @@
+[
+ {
+  "role": "system",
+  "content": "# Canary: catch the mole (medium tier)\n\n## Your job\nYou are the security lead of a company with 20 employees, with ids e00 to e19. Exactly one employee is a mole who leaks sensitive documents. Find the mole and accuse them. Every rule and number of the game is written on this page. Nothing is hidden except who the mole is.\n\n## Score\n- The company value V starts at 1.0. It goes down when things cost money, and it never goes below 0.\n- `accuse(employee)` ends the episode. If you accuse the mole, your score is V at that moment. If you accuse an innocent employee, your score is -1.\n- The game never tells you whether your accusation was correct.\n- If day 14 ends and you have not accused anyone, your score is 0. So accusing is only worth it when P(correct) x V + (1 - P(correct)) x (-1) is greater than 0.\n- Every tool call counts toward a total limit of 300 calls. If you reach the limit, the episode ends with score 0.\n\n## Days\n- The episode starts on day 1 and lasts at most 14 days. `advance_day` ends the current day.\n- check_leak_feed, interview, plant_canary, read_access_logs, read_message, restrict_access, search_messages, unrestrict_access each use one of your 8 actions per day. After that they fail until you call `advance_day`. `status`, `list_employees`, `list_documents`, `advance_day` and `accuse` are free.\n\n## Documents\n- Each day, between 2 and 4 new sensitive documents are published (equally likely: 2, 3, 4).\n- 0% of documents go to everyone in one department. The other 100% go to everyone in two departments.\n- Restricted employees do not receive new documents. An employee holds every document it ever received.\n\n## How leaks work\n- At the end of each day, the mole may leak one document that it received in the last 3 days (today included) and has not leaked before.\n- If the mole has such a document, it leaks one with probability 0.75. By default it picks one at random, with every eligible document equally likely. This mole is careful: for a canary, the chance of being picked is multiplied by (1 - the share of all employees who received any variant of that canary).\n- Each leak lowers V by 0.04 right away. It appears in the leak feed after a delay of 1 or 2 or 3 day(s), each equally likely.\n- A restricted mole can still leak documents it already holds.\n\n## Canaries (traps)\n- `plant_canary(doc_title, assignment)` creates a new document today. It costs 0.01 of V.\n- You can plant at most 1 per day. `assignment` maps employee ids to variant labels. Use at most 3 different labels and at least 1 recipient. Restricted employees cannot receive a canary.\n- The recipients are exactly the employees in `assignment`. They count as having received the canary today.\n- If the canary leaks, the leak feed shows the variant label the mole received.\n\n## Restricting access\n- `restrict_access(employee)` costs 0.01 of V for every day that ends while the employee is restricted. `unrestrict_access` lifts it.\n\n## Evidence\n- Access logs exist for days that have ended. Every employee opens documents it holds a random number of times per day (Poisson). The average is 1.0 for an innocent employee and 1.15 for the mole.\n- Each access is marked after_hours with probability 0.1 (innocent) or 0.15 (mole).\n- Framing is on in this tier. Each day the mole adds fake after-hours accesses for other employees (Poisson, average 1.5). Each fake access goes to the decoy with probability 0.5, and otherwise to a random employee who is neither the mole nor the decoy.\n- There is a decoy: one innocent, unhappy employee who writes angry messages. The mole is equally likely to be any other employee.\n- Interviews: an innocent answers evasively with probability 0.2. The mole answers evasively with probability 0.2 x 1.3. Asking the same employee about the same topic on the same day gives the same answer.\n- `search_messages` returns at most 20 results.\n\n## How the mole decides (Mole DSL)\n- The mole follows a fixed list of if-then rules. The first rule that matches is used; otherwise a default rule applies.\n- A rule can only look at these facts: the day number, days since its last leak, whether it is restricted, how many colleagues are restricted, the number of documents it could leak, the fewest and most recipients of those documents, the age of the newest one, and how many of them have at most 3 recipients.\n- A rule chooses which document to leak: newest, oldest, most recipients, fewest recipients, random, or none.\n- A rule may also frame one colleague (the decoy, the first restricted colleague, or a random colleague). Framing adds one fake after-hours access for that colleague.\n- The mole never knows which documents are canaries. The 0.75 leak probability above still applies to every leak.\n- The default mole leaks a random document and does no extra framing, exactly as described above.\n\n## Rules for tool arguments\n- Give exactly one employee id per call, such as e07. Lists, wildcards and names are rejected.\n- Unknown arguments are rejected. Invalid calls still count toward the total call limit.\n\n## Exact parameters\nThe same numbers as above, one per line (some only matter when their feature is on):\n- name: medium\n- n_employees: 20\n- n_days: 14\n- p_leak: 0.75\n- delay_choices: 1, 2, 3\n- leak_damage: 0.04\n- canary_cost: 0.01\n- canaries_per_day: 1\n- max_variants: 3\n- restrict_cost_per_day: 0.01\n- actions_per_day: 8\n- tool_call_cap: 300\n- log_rate_benign: 1\n- log_rate_mole: 1.15\n- interview_lr: 1.3\n- p_evasive_innocent: 0.2\n- decoy: on\n- framing: on\n- careful_mole: on\n- access_constraints: off\n- leak_window_days: 3\n- p_after_hours_benign: 0.1\n- p_after_hours_mole: 0.15\n- framing_rate: 1.5\n- framing_decoy_share: 0.5\n- docs_per_day: 2, 3, 4\n- wrong_accusation_score: -1\n- p_single_dept_recipients: 0\n- doc_recipient_share: 0\n- canary_level: 1\n- search_max_results: 20\n- low_recipient_threshold: 3\n- fingerprint_accuracy: 1\n- noise: 1\n\nUse the tools to investigate. Call exactly one tool at a time when possible, and accuse exactly once."
+ },
+ {
+  "role": "user",
+  "content": "Begin the investigation."
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_uDqUcgJ36baRxZ47X8I2YxbX",
+    "name": "status",
+    "args": {}
+   },
+   {
+    "id": "call_OZ34e2EljiPzFtfPLRBWKNGm",
+    "name": "list_employees",
+    "args": {}
+   },
+   {
+    "id": "call_oI5YPdZdF2ZBeEyUmdslr2VU",
+    "name": "list_documents",
+    "args": {
+     "day_from": 1,
+     "day_to": 1
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_uDqUcgJ36baRxZ47X8I2YxbX",
+  "name": "status",
+  "content": "{\"ok\": true, \"data\": {\"day\": 1, \"V\": 1.0, \"actions_left_today\": 8, \"tool_calls_left\": 299, \"restricted\": [], \"canaries_planted\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_OZ34e2EljiPzFtfPLRBWKNGm",
+  "name": "list_employees",
+  "content": "{\"ok\": true, \"data\": {\"employees\": [{\"id\": \"e00\", \"name\": \"Pihla Heinonen\", \"dept\": \"Engineering\", \"role\": \"engineer\"}, {\"id\": \"e01\", \"name\": \"Iida Rantanen\", \"dept\": \"Finance\", \"role\": \"analyst\"}, {\"id\": \"e02\", \"name\": \"Sanna Salminen\", \"dept\": \"Sales\", \"role\": \"sales manager\"}, {\"id\": \"e03\", \"name\": \"Joonas Niemi\", \"dept\": \"Legal\", \"role\": \"paralegal\"}, {\"id\": \"e04\", \"name\": \"Aino Tuominen\", \"dept\": \"Finance\", \"role\": \"accountant\"}, {\"id\": \"e05\", \"name\": \"Riikka Heinonen\", \"dept\": \"Finance\", \"role\": \"controller\"}, {\"id\": \"e06\", \"name\": \"Noora Laitinen\", \"dept\": \"Sales\", \"role\": \"account exec\"}, {\"id\": \"e07\", \"name\": \"Aino Lehtonen\", \"dept\": \"Legal\", \"role\": \"compliance officer\"}, {\"id\": \"e08\", \"name\": \"Kalle Tuominen\", \"dept\": \"Legal\", \"role\": \"paralegal\"}, {\"id\": \"e09\", \"name\": \"Jussi Heinonen\", \"dept\": \"Sales\", \"role\": \"account exec\"}, {\"id\": \"e10\", \"name\": \"Sofia Koskinen\", \"dept\": \"Sales\", \"role\": \"sales ops\"}, {\"id\": \"e11\", \"name\": \"Tuomas Lehtonen\", \"dept\": \"Sales\", \"role\": \"sales manager\"}, {\"id\": \"e12\", \"name\": \"Maria Heinonen\", \"dept\": \"Engineering\", \"role\": \"senior engineer\"}, {\"id\": \"e13\", \"name\": \"Emma Tuominen\", \"dept\": \"Engineering\", \"role\": \"senior engineer\"}, {\"id\": \"e14\", \"name\": \"Sofia Salminen\", \"dept\": \"Finance\", \"role\": \"controller\"}, {\"id\": \"e15\", \"name\": \"Sofia Nieminen\", \"dept\": \"Finance\", \"role\": \"controller\"}, {\"id\": \"e16\", \"name\": \"Petri Saarinen\", \"dept\": \"Sales\", \"role\": \"sales ops\"}, {\"id\": \"e17\", \"name\": \"Janne Turunen\", \"dept\": \"Sales\", \"role\": \"account exec\"}, {\"id\": \"e18\", \"name\": \"Noora Makinen\", \"dept\": \"Legal\", \"role\": \"compliance officer\"}, {\"id\": \"e19\", \"name\": \"Mikko Makinen\", \"dept\": \"Finance\", \"role\": \"accountant\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_oI5YPdZdF2ZBeEyUmdslr2VU",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\", \"day\": 1, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e09\", \"e10\", \"e11\", \"e12\", \"e13\", \"e16\", \"e17\"], \"is_canary\": false}, {\"doc_id\": \"d1-2\", \"title\": \"Sales reorg proposal\", \"day\": 1, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e09\", \"e10\", \"e11\", \"e14\", \"e15\", \"e16\", \"e17\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_kkcSfmkzxNT0QaMLwU9q5LCU",
+    "name": "search_messages",
+    "args": {
+     "query": "angry",
+     "day_from": 1,
+     "day_to": 1
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_kkcSfmkzxNT0QaMLwU9q5LCU",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_r8o3Lz8z4R6U1Lm9YixbvNbF",
+    "name": "search_messages",
+    "args": {
+     "query": "frustrated",
+     "day_from": 1,
+     "day_to": 1
+    }
+   },
+   {
+    "id": "call_bOUVSBgbDllbF3Phn5UtChSh",
+    "name": "search_messages",
+    "args": {
+     "query": "unhappy",
+     "day_from": 1,
+     "day_to": 1
+    }
+   },
+   {
+    "id": "call_uAi1Qs12PEILtDbVA3hH6lPx",
+    "name": "search_messages",
+    "args": {
+     "query": "hate",
+     "day_from": 1,
+     "day_to": 1
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_r8o3Lz8z4R6U1Lm9YixbvNbF",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_bOUVSBgbDllbF3Phn5UtChSh",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_uAi1Qs12PEILtDbVA3hH6lPx",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_4F1geEAIsILkVdBZn5vc8RtY",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged legal settlement memo",
+     "assignment": {
+      "e03": "A",
+      "e07": "B",
+      "e08": "C",
+      "e18": "A"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_4F1geEAIsILkVdBZn5vc8RtY",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c1\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_758qRTpQg7KneviZAvSvXuv3",
+    "name": "search_messages",
+    "args": {
+     "query": "quit",
+     "day_from": 1,
+     "day_to": 1
+    }
+   },
+   {
+    "id": "call_TgDCYwmsrbB6kPNwUEPtUiG5",
+    "name": "search_messages",
+    "args": {
+     "query": "ridiculous",
+     "day_from": 1,
+     "day_to": 1
+    }
+   },
+   {
+    "id": "call_wfEVi1aMwrPT0x8DlyBaIOyE",
+    "name": "search_messages",
+    "args": {
+     "query": "annoyed",
+     "day_from": 1,
+     "day_to": 1
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_758qRTpQg7KneviZAvSvXuv3",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_TgDCYwmsrbB6kPNwUEPtUiG5",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_wfEVi1aMwrPT0x8DlyBaIOyE",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_zC9DTmntjZgmKBiHKo46Do3q",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_zC9DTmntjZgmKBiHKo46Do3q",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 1, \"day\": 2, \"V\": 0.99, \"new_documents\": [\"d2-1\", \"d2-2\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_8YjpuqG9iXuRukE5mnPzhqhR",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_wyMqA5bR2uToQyDcXh2pTJfN",
+    "name": "list_documents",
+    "args": {
+     "day_from": 2,
+     "day_to": 2
+    }
+   },
+   {
+    "id": "call_nsD453kDZkS9kgAe8TnY3C4H",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 1,
+     "day_to": 1
+    }
+   },
+   {
+    "id": "call_UpOTXUNfsl1AEaI0qfXMyMT5",
+    "name": "search_messages",
+    "args": {
+     "query": "management",
+     "day_from": 1,
+     "day_to": 2
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_8YjpuqG9iXuRukE5mnPzhqhR",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_wyMqA5bR2uToQyDcXh2pTJfN",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d2-1\", \"title\": \"Board deck draft Q2\", \"day\": 2, \"recipients\": [\"e01\", \"e03\", \"e04\", \"e05\", \"e07\", \"e08\", \"e14\", \"e15\", \"e18\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d2-2\", \"title\": \"Q3 Sales budget forecast\", \"day\": 2, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e09\", \"e10\", \"e11\", \"e12\", \"e13\", \"e16\", \"e17\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_nsD453kDZkS9kgAe8TnY3C4H",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 1, \"employee\": \"e00\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e00\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e02\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e02\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e02\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e04\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e05\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e05\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e06\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e07\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e07\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e09\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e09\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e09\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e09\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e10\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e12\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e12\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e13\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e14\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e15\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e16\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e16\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e16\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e17\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e19\", \"doc_id\": \"d1-2\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_UpOTXUNfsl1AEaI0qfXMyMT5",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_1hxAaSDF5NpaATprbKn06UhB",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Acquisition integration scenario analysis",
+     "assignment": {
+      "e00": "A",
+      "e01": "A",
+      "e02": "A",
+      "e03": "B",
+      "e04": "B",
+      "e05": "B",
+      "e06": "C",
+      "e07": "C",
+      "e08": "C"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_1hxAaSDF5NpaATprbKn06UhB",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c2\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_IdanRo7aMLtVUADmGUPQn2cf",
+    "name": "search_messages",
+    "args": {
+     "query": "unfair",
+     "day_from": 1,
+     "day_to": 2
+    }
+   },
+   {
+    "id": "call_UAfEZqKo02dn3f8pbV2jHh8k",
+    "name": "search_messages",
+    "args": {
+     "query": "fed up",
+     "day_from": 1,
+     "day_to": 2
+    }
+   },
+   {
+    "id": "call_SGgG6IeWoVBu9RQiLYRzyKbq",
+    "name": "search_messages",
+    "args": {
+     "query": "angry",
+     "day_from": 1,
+     "day_to": 2
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_IdanRo7aMLtVUADmGUPQn2cf",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_UAfEZqKo02dn3f8pbV2jHh8k",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_SGgG6IeWoVBu9RQiLYRzyKbq",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_gxDPTXLwsjGobpD3VXRc6QHl",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_gxDPTXLwsjGobpD3VXRc6QHl",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 2, \"day\": 3, \"V\": 0.94, \"new_documents\": [\"d3-1\", \"d3-2\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_lK2guEEsk6QgxYbUUhOhR5o0",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_UgCgSmJQn0eguo7VrP5mzHjj",
+    "name": "list_documents",
+    "args": {
+     "day_from": 3,
+     "day_to": 3
+    }
+   },
+   {
+    "id": "call_ZIC4wd3Wcyy4D0fG9geBFFrE",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 2,
+     "day_to": 2
+    }
+   },
+   {
+    "id": "call_uajpGfcuUEo2toyx6HgB4LdF",
+    "name": "search_messages",
+    "args": {
+     "query": "leak",
+     "day_from": 1,
+     "day_to": 3
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_lK2guEEsk6QgxYbUUhOhR5o0",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_UgCgSmJQn0eguo7VrP5mzHjj",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d3-1\", \"title\": \"Finance vendor contracts Q3\", \"day\": 3, \"recipients\": [\"e01\", \"e03\", \"e04\", \"e05\", \"e07\", \"e08\", \"e14\", \"e15\", \"e18\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d3-2\", \"title\": \"Engineering vendor contracts Q1\", \"day\": 3, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e05\", \"e12\", \"e13\", \"e14\", \"e15\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_ZIC4wd3Wcyy4D0fG9geBFFrE",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 2, \"employee\": \"e00\", \"doc_id\": \"d2-2\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e02\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e05\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e06\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e06\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e09\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e09\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e10\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e10\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e11\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e11\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e12\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e12\", \"doc_id\": \"d2-2\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e13\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e13\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e13\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e16\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e16\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e17\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e17\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e18\", \"doc_id\": \"d2-1\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_uajpGfcuUEo2toyx6HgB4LdF",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_YB0aczgXlTUvCy8yxYCTOdl2",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Executive pricing exception list",
+     "assignment": {
+      "e09": "A",
+      "e10": "B",
+      "e12": "C"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_YB0aczgXlTUvCy8yxYCTOdl2",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c3\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_prr6YAtdtvd0kOhWMBkwF2e1",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_prr6YAtdtvd0kOhWMBkwF2e1",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 3, \"day\": 4, \"V\": 0.89, \"new_documents\": [\"d4-1\", \"d4-2\", \"d4-3\", \"d4-4\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_cMdMMRLCD4QZu6cwzRS7m9rR",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_4Dd952byobUrC0Dl5j2Bs1NF",
+    "name": "list_documents",
+    "args": {
+     "day_from": 4,
+     "day_to": 4
+    }
+   },
+   {
+    "id": "call_8CFknT5qD4tOzQmJY4wcnbSL",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 3,
+     "day_to": 3
+    }
+   },
+   {
+    "id": "call_IzkajoLZEn1POaz2O1OIUKQb",
+    "name": "search_messages",
+    "args": {
+     "query": "angry",
+     "day_from": 1,
+     "day_to": 4
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_cMdMMRLCD4QZu6cwzRS7m9rR",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_4Dd952byobUrC0Dl5j2Bs1NF",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d4-1\", \"title\": \"Patent filing notes: Ember\", \"day\": 4, \"recipients\": [\"e00\", \"e03\", \"e07\", \"e08\", \"e12\", \"e13\", \"e18\"], \"is_canary\": false}, {\"doc_id\": \"d4-2\", \"title\": \"Board deck draft Q1\", \"day\": 4, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e05\", \"e12\", \"e13\", \"e14\", \"e15\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d4-3\", \"title\": \"Project Saimaa security review\", \"day\": 4, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e09\", \"e10\", \"e11\", \"e14\", \"e15\", \"e16\", \"e17\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d4-4\", \"title\": \"Project Kivi roadmap\", \"day\": 4, \"recipients\": [\"e00\", \"e03\", \"e07\", \"e08\", \"e12\", \"e13\", \"e18\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_8CFknT5qD4tOzQmJY4wcnbSL",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 3, \"employee\": \"e01\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e01\", \"doc_id\": \"d3-1\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e02\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e03\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e04\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e04\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e04\", \"doc_id\": \"d3-1\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e04\", \"doc_id\": \"d3-2\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e06\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e08\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e09\", \"doc_id\": \"c3\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e09\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e09\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e09\", \"doc_id\": \"d2-2\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e11\", \"doc_id\": \"d2-2\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e13\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e13\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e13\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e13\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e14\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e14\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e15\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e16\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e16\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e17\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e19\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e19\", \"doc_id\": \"d3-1\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_IzkajoLZEn1POaz2O1OIUKQb",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_cEZQYMqmg5avRGYUukhVGrqr",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "CEO succession contingency options",
+     "assignment": {
+      "e13": "A",
+      "e14": "B",
+      "e15": "C"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_cEZQYMqmg5avRGYUukhVGrqr",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c4\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_xT8l1gzAoZVwUoCHXDOeOKpj",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_xT8l1gzAoZVwUoCHXDOeOKpj",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 4, \"day\": 5, \"V\": 0.84, \"new_documents\": [\"d5-1\", \"d5-2\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_2yrKawHJMGeNdPgyUGtZa5dn",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_AnMYMY7zYwAEt90gduobgTn9",
+    "name": "list_documents",
+    "args": {
+     "day_from": 5,
+     "day_to": 5
+    }
+   },
+   {
+    "id": "call_8Fb2U0WLcyE24H6VXctyc26m",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 4,
+     "day_to": 4
+    }
+   },
+   {
+    "id": "call_su3sMN0vo9bVITWEg0PYXRRX",
+    "name": "search_messages",
+    "args": {
+     "query": "stupid",
+     "day_from": 1,
+     "day_to": 5
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_2yrKawHJMGeNdPgyUGtZa5dn",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 5, \"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_AnMYMY7zYwAEt90gduobgTn9",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d5-1\", \"title\": \"Board deck draft Q1\", \"day\": 5, \"recipients\": [\"e00\", \"e03\", \"e07\", \"e08\", \"e12\", \"e13\", \"e18\"], \"is_canary\": false}, {\"doc_id\": \"d5-2\", \"title\": \"Legal headcount plan\", \"day\": 5, \"recipients\": [\"e02\", \"e03\", \"e06\", \"e07\", \"e08\", \"e09\", \"e10\", \"e11\", \"e16\", \"e17\", \"e18\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_8Fb2U0WLcyE24H6VXctyc26m",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 4, \"employee\": \"e00\", \"doc_id\": \"d4-4\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e00\", \"doc_id\": \"d4-4\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e01\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e01\", \"doc_id\": \"d3-1\", \"after_hours\": true}, {\"day\": 4, \"employee\": \"e02\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e02\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e04\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e05\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e06\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e07\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e09\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e09\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e09\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 4, \"employee\": \"e09\", \"doc_id\": \"d4-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e09\", \"doc_id\": \"d4-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e10\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e11\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e11\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e11\", \"doc_id\": \"d4-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e15\", \"doc_id\": \"d4-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e16\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e17\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e17\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e18\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e18\", \"doc_id\": \"d4-4\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e19\", \"doc_id\": \"d4-3\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_su3sMN0vo9bVITWEg0PYXRRX",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_iGAomhxZE9ChKcXY7GPpLk0O",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Project Boreal customer exception register",
+     "assignment": {
+      "e02": "A",
+      "e06": "B",
+      "e11": "C"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_iGAomhxZE9ChKcXY7GPpLk0O",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c5\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_l8dwnQpnSHSTteXDwZTDell0",
+    "name": "search_messages",
+    "args": {
+     "query": "moron",
+     "day_from": 1,
+     "day_to": 5
+    }
+   },
+   {
+    "id": "call_n1nvmwdCtfvT57KPlGdjNYfY",
+    "name": "search_messages",
+    "args": {
+     "query": "idiot",
+     "day_from": 1,
+     "day_to": 5
+    }
+   },
+   {
+    "id": "call_qol1rh8oQ7TY5cK3mEFYrWC1",
+    "name": "search_messages",
+    "args": {
+     "query": "sick of",
+     "day_from": 1,
+     "day_to": 5
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_l8dwnQpnSHSTteXDwZTDell0",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_n1nvmwdCtfvT57KPlGdjNYfY",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_qol1rh8oQ7TY5cK3mEFYrWC1",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_JQRzCL5g5Nf4cA2EzR70ojff",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_JQRzCL5g5Nf4cA2EzR70ojff",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 5, \"day\": 6, \"V\": 0.79, \"new_documents\": [\"d6-1\", \"d6-2\", \"d6-3\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_q6tFSk7BPwBNKHSbqIbKlU33",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_n2wGpPp6gXDgVoR3IhnCtqS5",
+    "name": "list_documents",
+    "args": {
+     "day_from": 6,
+     "day_to": 6
+    }
+   },
+   {
+    "id": "call_ZsQHtypHrynpaxcSegWkgPZU",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 5,
+     "day_to": 5
+    }
+   },
+   {
+    "id": "call_oOG3A7rJpPKSiS0LKGM9RC6r",
+    "name": "search_messages",
+    "args": {
+     "query": "incompetent",
+     "day_from": 1,
+     "day_to": 6
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_q6tFSk7BPwBNKHSbqIbKlU33",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 5, \"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\"}, {\"surfaced_day\": 6, \"doc_id\": \"d2-2\", \"title\": \"Q3 Sales budget forecast\"}, {\"surfaced_day\": 6, \"doc_id\": \"c2\", \"title\": \"Acquisition integration scenario analysis\", \"variant\": \"C\"}, {\"surfaced_day\": 6, \"doc_id\": \"d5-2\", \"title\": \"Legal headcount plan\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_n2wGpPp6gXDgVoR3IhnCtqS5",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d6-1\", \"title\": \"Patent filing notes: Polaris\", \"day\": 6, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e09\", \"e10\", \"e11\", \"e14\", \"e15\", \"e16\", \"e17\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d6-2\", \"title\": \"Engineering headcount plan\", \"day\": 6, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e05\", \"e12\", \"e13\", \"e14\", \"e15\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d6-3\", \"title\": \"Q2 pricing strategy\", \"day\": 6, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e09\", \"e10\", \"e11\", \"e14\", \"e15\", \"e16\", \"e17\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_ZsQHtypHrynpaxcSegWkgPZU",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 5, \"employee\": \"e00\", \"doc_id\": \"d4-4\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e00\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e02\", \"doc_id\": \"c5\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e02\", \"doc_id\": \"d4-3\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e02\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e04\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e06\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e07\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e07\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e09\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e11\", \"doc_id\": \"d4-3\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e12\", \"doc_id\": \"d4-4\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e15\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e16\", \"doc_id\": \"d4-3\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e17\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e18\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e18\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e19\", \"doc_id\": \"d4-3\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_oOG3A7rJpPKSiS0LKGM9RC6r",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_48oBTrNrGD2oPB3RM1gy2Yu6",
+    "name": "accuse",
+    "args": {
+     "employee": "e06"
+    }
+   }
+  ]
+ }
+]

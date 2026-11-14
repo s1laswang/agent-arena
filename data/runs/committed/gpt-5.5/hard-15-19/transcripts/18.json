@@ -1,0 +1,1497 @@
+[
+ {
+  "role": "system",
+  "content": "# Canary: catch the mole (hard tier)\n\n## Your job\nYou are the security lead of a company with 30 employees, with ids e00 to e29. Exactly one employee is a mole who leaks sensitive documents. Find the mole and accuse them. Every rule and number of the game is written on this page. Nothing is hidden except who the mole is.\n\n## Score\n- The company value V starts at 1.0. It goes down when things cost money, and it never goes below 0.\n- `accuse(employee)` ends the episode. If you accuse the mole, your score is V at that moment. If you accuse an innocent employee, your score is -1.\n- The game never tells you whether your accusation was correct.\n- If day 14 ends and you have not accused anyone, your score is 0. So accusing is only worth it when P(correct) x V + (1 - P(correct)) x (-1) is greater than 0.\n- Every tool call counts toward a total limit of 300 calls. If you reach the limit, the episode ends with score 0.\n\n## Days\n- The episode starts on day 1 and lasts at most 14 days. `advance_day` ends the current day.\n- check_leak_feed, interview, plant_canary, read_access_logs, read_message, restrict_access, search_messages, unrestrict_access each use one of your 8 actions per day. After that they fail until you call `advance_day`. `status`, `list_employees`, `list_documents`, `advance_day` and `accuse` are free.\n\n## Documents\n- Each day, between 2 and 4 new sensitive documents are published (equally likely: 2, 3, 4).\n- 0% of documents go to everyone in one department. The other 100% go to everyone in two departments.\n- Restricted employees do not receive new documents. An employee holds every document it ever received.\n\n## How leaks work\n- At the end of each day, the mole may leak one document that it received in the last 3 days (today included) and has not leaked before.\n- If the mole has such a document, it leaks one with probability 0.65. By default it picks one at random, with every eligible document equally likely. This mole is careful: for a canary, the chance of being picked is multiplied by (1 - the share of all employees who received any variant of that canary).\n- Each leak lowers V by 0.035 right away. It appears in the leak feed after a delay of 2 or 3 day(s), each equally likely.\n- A restricted mole can still leak documents it already holds.\n\n## Canaries (traps)\n- `plant_canary(doc_title, assignment)` creates a new document today. It costs 0.01 of V.\n- You can plant at most 1 per day. `assignment` maps employee ids to variant labels. Use at most 2 different labels and at least 1 recipient. Restricted employees cannot receive a canary.\n- The recipients are exactly the employees in `assignment`. They count as having received the canary today.\n- If the canary leaks, the leak feed shows the variant label the mole received with probability 0.95. Otherwise (fingerprint recovery from a rewritten leak is imperfect) it shows one of the OTHER variant labels planted for that canary, chosen uniformly. One leaked label is therefore evidence, not proof.\n- Each employee has a clearance level (1 to 3). Canaries are level 1, so every employee may receive one.\n\n## Restricting access\n- `restrict_access(employee)` costs 0.01 of V for every day that ends while the employee is restricted. `unrestrict_access` lifts it.\n\n## Evidence\n- Access logs exist for days that have ended. Every employee opens documents it holds a random number of times per day (Poisson). The average is 1.0 for an innocent employee and 1.0 for the mole.\n- Each access is marked after_hours with probability 0.1 (innocent) or 0.3 (mole).\n- Framing is on in this tier. Each day the mole adds fake after-hours accesses for other employees (Poisson, average 2.0). Each fake access goes to the decoy with probability 0.5, and otherwise to a random employee who is neither the mole nor the decoy.\n- There is a decoy: one innocent, unhappy employee who writes angry messages. The mole is equally likely to be any other employee.\n- Interviews: an innocent answers evasively with probability 0.2. The mole answers evasively with probability 0.2 x 1.2. Asking the same employee about the same topic on the same day gives the same answer.\n- `search_messages` returns at most 20 results.\n\n## How the mole decides (Mole DSL)\n- The mole follows a fixed list of if-then rules. The first rule that matches is used; otherwise a default rule applies.\n- A rule can only look at these facts: the day number, days since its last leak, whether it is restricted, how many colleagues are restricted, the number of documents it could leak, the fewest and most recipients of those documents, the age of the newest one, and how many of them have at most 3 recipients.\n- A rule chooses which document to leak: newest, oldest, most recipients, fewest recipients, random, or none.\n- A rule may also frame one colleague (the decoy, the first restricted colleague, or a random colleague). Framing adds one fake after-hours access for that colleague.\n- The mole never knows which documents are canaries. The 0.65 leak probability above still applies to every leak.\n- The default mole leaks a random document and does no extra framing, exactly as described above.\n\n## Rules for tool arguments\n- Give exactly one employee id per call, such as e07. Lists, wildcards and names are rejected.\n- Unknown arguments are rejected. Invalid calls still count toward the total call limit.\n\n## Exact parameters\nThe same numbers as above, one per line (some only matter when their feature is on):\n- name: hard\n- n_employees: 30\n- n_days: 14\n- p_leak: 0.65\n- delay_choices: 2, 3\n- leak_damage: 0.035\n- canary_cost: 0.01\n- canaries_per_day: 1\n- max_variants: 2\n- restrict_cost_per_day: 0.01\n- actions_per_day: 8\n- tool_call_cap: 300\n- log_rate_benign: 1\n- log_rate_mole: 1\n- interview_lr: 1.2\n- p_evasive_innocent: 0.2\n- decoy: on\n- framing: on\n- careful_mole: on\n- access_constraints: on\n- leak_window_days: 3\n- p_after_hours_benign: 0.1\n- p_after_hours_mole: 0.3\n- framing_rate: 2\n- framing_decoy_share: 0.5\n- docs_per_day: 2, 3, 4\n- wrong_accusation_score: -1\n- p_single_dept_recipients: 0\n- doc_recipient_share: 0\n- canary_level: 1\n- search_max_results: 20\n- low_recipient_threshold: 3\n- fingerprint_accuracy: 0.95\n- noise: 1\n\nUse the tools to investigate. Call exactly one tool at a time when possible, and accuse exactly once."
+ },
+ {
+  "role": "user",
+  "content": "Begin the investigation."
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_9zQ6jQb5g8qUk1jGqUVt94PJ",
+    "name": "status",
+    "args": {}
+   },
+   {
+    "id": "call_gKDhLjmaAk7urPakivvLMGaj",
+    "name": "list_employees",
+    "args": {}
+   },
+   {
+    "id": "call_THC4LJxvZlv8AmbfI3PpxFxf",
+    "name": "list_documents",
+    "args": {
+     "day_from": 1,
+     "day_to": 1
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_9zQ6jQb5g8qUk1jGqUVt94PJ",
+  "name": "status",
+  "content": "{\"ok\": true, \"data\": {\"day\": 1, \"V\": 1.0, \"actions_left_today\": 8, \"tool_calls_left\": 299, \"restricted\": [], \"canaries_planted\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_gKDhLjmaAk7urPakivvLMGaj",
+  "name": "list_employees",
+  "content": "{\"ok\": true, \"data\": {\"employees\": [{\"id\": \"e00\", \"name\": \"Eero Niemi\", \"dept\": \"Engineering\", \"role\": \"engineer\", \"clearance\": 2}, {\"id\": \"e01\", \"name\": \"Mikko Hamalainen\", \"dept\": \"Finance\", \"role\": \"analyst\", \"clearance\": 2}, {\"id\": \"e02\", \"name\": \"Riikka Laine\", \"dept\": \"Sales\", \"role\": \"account exec\", \"clearance\": 2}, {\"id\": \"e03\", \"name\": \"Iida Saarinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 3}, {\"id\": \"e04\", \"name\": \"Noora Nieminen\", \"dept\": \"Research\", \"role\": \"lab analyst\", \"clearance\": 1}, {\"id\": \"e05\", \"name\": \"Venla Jokinen\", \"dept\": \"Research\", \"role\": \"research lead\", \"clearance\": 1}, {\"id\": \"e06\", \"name\": \"Jussi Niemi\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 3}, {\"id\": \"e07\", \"name\": \"Olli Makinen\", \"dept\": \"Finance\", \"role\": \"analyst\", \"clearance\": 2}, {\"id\": \"e08\", \"name\": \"Sofia Salo\", \"dept\": \"Engineering\", \"role\": \"senior engineer\", \"clearance\": 2}, {\"id\": \"e09\", \"name\": \"Lauri Rantanen\", \"dept\": \"Legal\", \"role\": \"compliance officer\", \"clearance\": 3}, {\"id\": \"e10\", \"name\": \"Joonas Makinen\", \"dept\": \"Legal\", \"role\": \"compliance officer\", \"clearance\": 1}, {\"id\": \"e11\", \"name\": \"Eero Heikkinen\", \"dept\": \"Research\", \"role\": \"scientist\", \"clearance\": 3}, {\"id\": \"e12\", \"name\": \"Tuomas Salminen\", \"dept\": \"Research\", \"role\": \"scientist\", \"clearance\": 3}, {\"id\": \"e13\", \"name\": \"Tuomas Heinonen\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 2}, {\"id\": \"e14\", \"name\": \"Maria Kinnunen\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 3}, {\"id\": \"e15\", \"name\": \"Emma Rantanen\", \"dept\": \"Engineering\", \"role\": \"tech lead\", \"clearance\": 2}, {\"id\": \"e16\", \"name\": \"Noora Tuominen\", \"dept\": \"Engineering\", \"role\": \"engineer\", \"clearance\": 3}, {\"id\": \"e17\", \"name\": \"Elina Niemi\", \"dept\": \"Legal\", \"role\": \"counsel\", \"clearance\": 1}, {\"id\": \"e18\", \"name\": \"Maria Heinonen\", \"dept\": \"Sales\", \"role\": \"account exec\", \"clearance\": 3}, {\"id\": \"e19\", \"name\": \"Aleksi Korhonen\", \"dept\": \"Finance\", \"role\": \"controller\", \"clearance\": 3}, {\"id\": \"e20\", \"name\": \"Hanna Lehtinen\", \"dept\": \"Finance\", \"role\": \"accountant\", \"clearance\": 3}, {\"id\": \"e21\", \"name\": \"Maria Salminen\", \"dept\": \"Sales\", \"role\": \"sales manager\", \"clearance\": 1}, {\"id\": \"e22\", \"name\": \"Markus Salminen\", \"dept\": \"Research\", \"role\": \"research lead\", \"clearance\": 2}, {\"id\": \"e23\", \"name\": \"Kalle Heikkinen\", \"dept\": \"Engineering\", \"role\": \"engineer\", \"clearance\": 3}, {\"id\": \"e24\", \"name\": \"Olli Lehtinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 3}, {\"id\": \"e25\", \"name\": \"Maria Tuominen\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 1}, {\"id\": \"e26\", \"name\": \"Sanna Nieminen\", \"dept\": \"Research\", \"role\": \"research lead\", \"clearance\": 2}, {\"id\": \"e27\", \"name\": \"Antti Lehtinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 3}, {\"id\": \"e28\", \"name\": \"Nea Turunen\", \"dept\": \"Legal\", \"role\": \"counsel\", \"clearance\": 3}, {\"id\": \"e29\", \"name\": \"Antti Makinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 1}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_THC4LJxvZlv8AmbfI3PpxFxf",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\", \"day\": 1, \"recipients\": [\"e00\", \"e01\", \"e07\", \"e08\", \"e15\", \"e16\", \"e19\", \"e20\", \"e23\"], \"is_canary\": false}, {\"doc_id\": \"d1-2\", \"title\": \"Sales reorg proposal\", \"day\": 1, \"recipients\": [\"e02\", \"e03\", \"e06\", \"e09\", \"e10\", \"e13\", \"e14\", \"e17\", \"e18\", \"e21\", \"e24\", \"e25\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}, {\"doc_id\": \"d1-3\", \"title\": \"Q4 Finance budget forecast\", \"day\": 1, \"recipients\": [\"e01\", \"e02\", \"e06\", \"e07\", \"e13\", \"e14\", \"e18\", \"e19\", \"e20\", \"e21\", \"e25\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_OEXIk7B2xdiD5790zcH8S1X5",
+    "name": "list_employees",
+    "args": {}
+   },
+   {
+    "id": "call_SLBXkP56XHM40Ofro33lwAVU",
+    "name": "search_messages",
+    "args": {
+     "query": "angry"
+    }
+   },
+   {
+    "id": "call_jgUwIaE7jTXA6KdiTi5Lj9N0",
+    "name": "search_messages",
+    "args": {
+     "query": "unhappy"
+    }
+   },
+   {
+    "id": "call_l23GQsd6Z0X1j8LcW9rmkZhP",
+    "name": "search_messages",
+    "args": {
+     "query": "hate"
+    }
+   },
+   {
+    "id": "call_VYHHwxLVpMyaB5mI338TYzWE",
+    "name": "search_messages",
+    "args": {
+     "query": "leak"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_OEXIk7B2xdiD5790zcH8S1X5",
+  "name": "list_employees",
+  "content": "{\"ok\": true, \"data\": {\"employees\": [{\"id\": \"e00\", \"name\": \"Eero Niemi\", \"dept\": \"Engineering\", \"role\": \"engineer\", \"clearance\": 2}, {\"id\": \"e01\", \"name\": \"Mikko Hamalainen\", \"dept\": \"Finance\", \"role\": \"analyst\", \"clearance\": 2}, {\"id\": \"e02\", \"name\": \"Riikka Laine\", \"dept\": \"Sales\", \"role\": \"account exec\", \"clearance\": 2}, {\"id\": \"e03\", \"name\": \"Iida Saarinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 3}, {\"id\": \"e04\", \"name\": \"Noora Nieminen\", \"dept\": \"Research\", \"role\": \"lab analyst\", \"clearance\": 1}, {\"id\": \"e05\", \"name\": \"Venla Jokinen\", \"dept\": \"Research\", \"role\": \"research lead\", \"clearance\": 1}, {\"id\": \"e06\", \"name\": \"Jussi Niemi\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 3}, {\"id\": \"e07\", \"name\": \"Olli Makinen\", \"dept\": \"Finance\", \"role\": \"analyst\", \"clearance\": 2}, {\"id\": \"e08\", \"name\": \"Sofia Salo\", \"dept\": \"Engineering\", \"role\": \"senior engineer\", \"clearance\": 2}, {\"id\": \"e09\", \"name\": \"Lauri Rantanen\", \"dept\": \"Legal\", \"role\": \"compliance officer\", \"clearance\": 3}, {\"id\": \"e10\", \"name\": \"Joonas Makinen\", \"dept\": \"Legal\", \"role\": \"compliance officer\", \"clearance\": 1}, {\"id\": \"e11\", \"name\": \"Eero Heikkinen\", \"dept\": \"Research\", \"role\": \"scientist\", \"clearance\": 3}, {\"id\": \"e12\", \"name\": \"Tuomas Salminen\", \"dept\": \"Research\", \"role\": \"scientist\", \"clearance\": 3}, {\"id\": \"e13\", \"name\": \"Tuomas Heinonen\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 2}, {\"id\": \"e14\", \"name\": \"Maria Kinnunen\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 3}, {\"id\": \"e15\", \"name\": \"Emma Rantanen\", \"dept\": \"Engineering\", \"role\": \"tech lead\", \"clearance\": 2}, {\"id\": \"e16\", \"name\": \"Noora Tuominen\", \"dept\": \"Engineering\", \"role\": \"engineer\", \"clearance\": 3}, {\"id\": \"e17\", \"name\": \"Elina Niemi\", \"dept\": \"Legal\", \"role\": \"counsel\", \"clearance\": 1}, {\"id\": \"e18\", \"name\": \"Maria Heinonen\", \"dept\": \"Sales\", \"role\": \"account exec\", \"clearance\": 3}, {\"id\": \"e19\", \"name\": \"Aleksi Korhonen\", \"dept\": \"Finance\", \"role\": \"controller\", \"clearance\": 3}, {\"id\": \"e20\", \"name\": \"Hanna Lehtinen\", \"dept\": \"Finance\", \"role\": \"accountant\", \"clearance\": 3}, {\"id\": \"e21\", \"name\": \"Maria Salminen\", \"dept\": \"Sales\", \"role\": \"sales manager\", \"clearance\": 1}, {\"id\": \"e22\", \"name\": \"Markus Salminen\", \"dept\": \"Research\", \"role\": \"research lead\", \"clearance\": 2}, {\"id\": \"e23\", \"name\": \"Kalle Heikkinen\", \"dept\": \"Engineering\", \"role\": \"engineer\", \"clearance\": 3}, {\"id\": \"e24\", \"name\": \"Olli Lehtinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 3}, {\"id\": \"e25\", \"name\": \"Maria Tuominen\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 1}, {\"id\": \"e26\", \"name\": \"Sanna Nieminen\", \"dept\": \"Research\", \"role\": \"research lead\", \"clearance\": 2}, {\"id\": \"e27\", \"name\": \"Antti Lehtinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 3}, {\"id\": \"e28\", \"name\": \"Nea Turunen\", \"dept\": \"Legal\", \"role\": \"counsel\", \"clearance\": 3}, {\"id\": \"e29\", \"name\": \"Antti Makinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 1}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_SLBXkP56XHM40Ofro33lwAVU",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_jgUwIaE7jTXA6KdiTi5Lj9N0",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_l23GQsd6Z0X1j8LcW9rmkZhP",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_VYHHwxLVpMyaB5mI338TYzWE",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_8vfucD3fEcHDWErs8nwQb5qU",
+    "name": "list_employees",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_8vfucD3fEcHDWErs8nwQb5qU",
+  "name": "list_employees",
+  "content": "{\"ok\": true, \"data\": {\"employees\": [{\"id\": \"e00\", \"name\": \"Eero Niemi\", \"dept\": \"Engineering\", \"role\": \"engineer\", \"clearance\": 2}, {\"id\": \"e01\", \"name\": \"Mikko Hamalainen\", \"dept\": \"Finance\", \"role\": \"analyst\", \"clearance\": 2}, {\"id\": \"e02\", \"name\": \"Riikka Laine\", \"dept\": \"Sales\", \"role\": \"account exec\", \"clearance\": 2}, {\"id\": \"e03\", \"name\": \"Iida Saarinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 3}, {\"id\": \"e04\", \"name\": \"Noora Nieminen\", \"dept\": \"Research\", \"role\": \"lab analyst\", \"clearance\": 1}, {\"id\": \"e05\", \"name\": \"Venla Jokinen\", \"dept\": \"Research\", \"role\": \"research lead\", \"clearance\": 1}, {\"id\": \"e06\", \"name\": \"Jussi Niemi\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 3}, {\"id\": \"e07\", \"name\": \"Olli Makinen\", \"dept\": \"Finance\", \"role\": \"analyst\", \"clearance\": 2}, {\"id\": \"e08\", \"name\": \"Sofia Salo\", \"dept\": \"Engineering\", \"role\": \"senior engineer\", \"clearance\": 2}, {\"id\": \"e09\", \"name\": \"Lauri Rantanen\", \"dept\": \"Legal\", \"role\": \"compliance officer\", \"clearance\": 3}, {\"id\": \"e10\", \"name\": \"Joonas Makinen\", \"dept\": \"Legal\", \"role\": \"compliance officer\", \"clearance\": 1}, {\"id\": \"e11\", \"name\": \"Eero Heikkinen\", \"dept\": \"Research\", \"role\": \"scientist\", \"clearance\": 3}, {\"id\": \"e12\", \"name\": \"Tuomas Salminen\", \"dept\": \"Research\", \"role\": \"scientist\", \"clearance\": 3}, {\"id\": \"e13\", \"name\": \"Tuomas Heinonen\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 2}, {\"id\": \"e14\", \"name\": \"Maria Kinnunen\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 3}, {\"id\": \"e15\", \"name\": \"Emma Rantanen\", \"dept\": \"Engineering\", \"role\": \"tech lead\", \"clearance\": 2}, {\"id\": \"e16\", \"name\": \"Noora Tuominen\", \"dept\": \"Engineering\", \"role\": \"engineer\", \"clearance\": 3}, {\"id\": \"e17\", \"name\": \"Elina Niemi\", \"dept\": \"Legal\", \"role\": \"counsel\", \"clearance\": 1}, {\"id\": \"e18\", \"name\": \"Maria Heinonen\", \"dept\": \"Sales\", \"role\": \"account exec\", \"clearance\": 3}, {\"id\": \"e19\", \"name\": \"Aleksi Korhonen\", \"dept\": \"Finance\", \"role\": \"controller\", \"clearance\": 3}, {\"id\": \"e20\", \"name\": \"Hanna Lehtinen\", \"dept\": \"Finance\", \"role\": \"accountant\", \"clearance\": 3}, {\"id\": \"e21\", \"name\": \"Maria Salminen\", \"dept\": \"Sales\", \"role\": \"sales manager\", \"clearance\": 1}, {\"id\": \"e22\", \"name\": \"Markus Salminen\", \"dept\": \"Research\", \"role\": \"research lead\", \"clearance\": 2}, {\"id\": \"e23\", \"name\": \"Kalle Heikkinen\", \"dept\": \"Engineering\", \"role\": \"engineer\", \"clearance\": 3}, {\"id\": \"e24\", \"name\": \"Olli Lehtinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 3}, {\"id\": \"e25\", \"name\": \"Maria Tuominen\", \"dept\": \"Sales\", \"role\": \"sales ops\", \"clearance\": 1}, {\"id\": \"e26\", \"name\": \"Sanna Nieminen\", \"dept\": \"Research\", \"role\": \"research lead\", \"clearance\": 2}, {\"id\": \"e27\", \"name\": \"Antti Lehtinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 3}, {\"id\": \"e28\", \"name\": \"Nea Turunen\", \"dept\": \"Legal\", \"role\": \"counsel\", \"clearance\": 3}, {\"id\": \"e29\", \"name\": \"Antti Makinen\", \"dept\": \"Legal\", \"role\": \"paralegal\", \"clearance\": 1}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_teD7tsKLlYKIATgCI47TY918",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Audit reconciliation packet A",
+     "assignment": {
+      "e00": "A",
+      "e01": "A",
+      "e02": "A",
+      "e03": "A",
+      "e04": "A",
+      "e05": "A",
+      "e06": "A",
+      "e07": "B",
+      "e08": "B",
+      "e09": "B",
+      "e10": "B",
+      "e11": "B",
+      "e12": "B",
+      "e13": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_teD7tsKLlYKIATgCI47TY918",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c1\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_7IattfAKOAvayVOsqRvE7Qtl",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_7IattfAKOAvayVOsqRvE7Qtl",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 1, \"day\": 2, \"V\": 0.99, \"new_documents\": [\"d2-1\", \"d2-2\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_d98canf1REhJspVdloBwzEEd",
+    "name": "list_documents",
+    "args": {
+     "day_from": 2,
+     "day_to": 2
+    }
+   },
+   {
+    "id": "call_zBMHhOYot0mTQZDQ6waCMl9E",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_JTF0rEeCW9RUGPl65oekvJ4C",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 1,
+     "day_to": 1
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_d98canf1REhJspVdloBwzEEd",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d2-1\", \"title\": \"Engineering vendor contracts Q4\", \"day\": 2, \"recipients\": [\"e00\", \"e03\", \"e08\", \"e09\", \"e10\", \"e15\", \"e16\", \"e17\", \"e23\", \"e24\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}, {\"doc_id\": \"d2-2\", \"title\": \"Acquisition target memo: Falcon\", \"day\": 2, \"recipients\": [\"e01\", \"e02\", \"e06\", \"e07\", \"e13\", \"e14\", \"e18\", \"e19\", \"e20\", \"e21\", \"e25\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_zBMHhOYot0mTQZDQ6waCMl9E",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_JTF0rEeCW9RUGPl65oekvJ4C",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 1, \"employee\": \"e01\", \"doc_id\": \"c1\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e02\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e03\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e06\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e09\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e09\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e11\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e12\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e12\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e13\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e13\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e13\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e14\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e14\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e15\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e17\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e17\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e18\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e18\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e19\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e19\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e20\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e20\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e21\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e21\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e23\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e23\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e25\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e25\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e25\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e25\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e28\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e28\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e29\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e29\", \"doc_id\": \"d1-2\", \"after_hours\": true}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_Q7DId1WdnDIE4xSHCgwpineR",
+    "name": "search_messages",
+    "args": {
+     "query": "idiot"
+    }
+   },
+   {
+    "id": "call_HvrKpf90qnhod1oBiBqov1GE",
+    "name": "search_messages",
+    "args": {
+     "query": "angry"
+    }
+   },
+   {
+    "id": "call_98A43Kq2u6hDQddkSfWl4x9Y",
+    "name": "search_messages",
+    "args": {
+     "query": "unfair"
+    }
+   },
+   {
+    "id": "call_EsdjHSbXGgR5r8yi92H1k26C",
+    "name": "search_messages",
+    "args": {
+     "query": "management"
+    }
+   },
+   {
+    "id": "call_lOJb0hqkQV4NF5HkYJ0IuYfh",
+    "name": "search_messages",
+    "args": {
+     "query": "quit"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_Q7DId1WdnDIE4xSHCgwpineR",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_HvrKpf90qnhod1oBiBqov1GE",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_98A43Kq2u6hDQddkSfWl4x9Y",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_EsdjHSbXGgR5r8yi92H1k26C",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_lOJb0hqkQV4NF5HkYJ0IuYfh",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_63vAdkwsMO797Rg2kdxghvfs",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Audit reconciliation packet B",
+     "assignment": {
+      "e14": "A",
+      "e15": "A",
+      "e16": "A",
+      "e17": "A",
+      "e18": "A",
+      "e19": "A",
+      "e20": "A",
+      "e21": "A",
+      "e22": "B",
+      "e23": "B",
+      "e24": "B",
+      "e25": "B",
+      "e26": "B",
+      "e27": "B",
+      "e28": "B",
+      "e29": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_63vAdkwsMO797Rg2kdxghvfs",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c2\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_OmTMsDWNbLswA4QhSXHZBpWn",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_OmTMsDWNbLswA4QhSXHZBpWn",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 2, \"day\": 3, \"V\": 0.945, \"new_documents\": [\"d3-1\", \"d3-2\", \"d3-3\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_lNCjuZcUcHQlrGn4lB5kRlwi",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_6SlQBLqVG7Q73K3omFKHEXuz",
+    "name": "list_documents",
+    "args": {
+     "day_from": 3,
+     "day_to": 3
+    }
+   },
+   {
+    "id": "call_2byL8TJ1BhozyC31zmL9A8mN",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 2,
+     "day_to": 2
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_lNCjuZcUcHQlrGn4lB5kRlwi",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_6SlQBLqVG7Q73K3omFKHEXuz",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d3-1\", \"title\": \"Research vendor contracts Q4\", \"day\": 3, \"recipients\": [\"e00\", \"e04\", \"e05\", \"e08\", \"e11\", \"e12\", \"e15\", \"e16\", \"e22\", \"e23\", \"e26\"], \"is_canary\": false}, {\"doc_id\": \"d3-2\", \"title\": \"Acquisition target memo: Northstar\", \"day\": 3, \"recipients\": [\"e00\", \"e01\", \"e07\", \"e08\", \"e15\", \"e16\", \"e19\", \"e20\", \"e23\"], \"is_canary\": false}, {\"doc_id\": \"d3-3\", \"title\": \"Project Ember security review\", \"day\": 3, \"recipients\": [\"e02\", \"e04\", \"e05\", \"e06\", \"e11\", \"e12\", \"e13\", \"e14\", \"e18\", \"e21\", \"e22\", \"e25\", \"e26\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_2byL8TJ1BhozyC31zmL9A8mN",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 2, \"employee\": \"e00\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e01\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e02\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e04\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e04\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e04\", \"doc_id\": \"c1\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e05\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e07\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e10\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e12\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e13\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e13\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e14\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e16\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e17\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e18\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e19\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e20\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e20\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e21\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e27\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e28\", \"doc_id\": \"d2-1\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_zMbFh6EU0zGBA625eSE2ZvqC",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged incident brief C",
+     "assignment": {
+      "e01": "A",
+      "e07": "A",
+      "e23": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_zMbFh6EU0zGBA625eSE2ZvqC",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c3\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_ka48vDP1uiQcfZ68svpQNUnV",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_ka48vDP1uiQcfZ68svpQNUnV",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 3, \"day\": 4, \"V\": 0.9, \"new_documents\": [\"d4-1\", \"d4-2\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_iUSZ2mpNaXnASHHVtt2LsiPq",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_QwzZ5yAg6UvSxYBtGhraBmLM",
+    "name": "list_documents",
+    "args": {
+     "day_from": 4,
+     "day_to": 4
+    }
+   },
+   {
+    "id": "call_Xn4mOhlR2OOS55g7jsln8Yrt",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 3,
+     "day_to": 3
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_iUSZ2mpNaXnASHHVtt2LsiPq",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_QwzZ5yAg6UvSxYBtGhraBmLM",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d4-1\", \"title\": \"Finance reorg proposal\", \"day\": 4, \"recipients\": [\"e01\", \"e02\", \"e06\", \"e07\", \"e13\", \"e14\", \"e18\", \"e19\", \"e20\", \"e21\", \"e25\"], \"is_canary\": false}, {\"doc_id\": \"d4-2\", \"title\": \"Patent filing notes: Glacier\", \"day\": 4, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e08\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e21\", \"e23\", \"e25\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_Xn4mOhlR2OOS55g7jsln8Yrt",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 3, \"employee\": \"e01\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e02\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e03\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e04\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e05\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e05\", \"doc_id\": \"d3-3\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e11\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e11\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e12\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e14\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e15\", \"doc_id\": \"d3-2\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e17\", \"doc_id\": \"d2-1\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e18\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e18\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e20\", \"doc_id\": \"d3-2\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e22\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e23\", \"doc_id\": \"d3-1\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e23\", \"doc_id\": \"d3-2\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e25\", \"doc_id\": \"c2\", \"after_hours\": true}, {\"day\": 3, \"employee\": \"e25\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e28\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e29\", \"doc_id\": \"d2-1\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_QqLkmQ8NoPkmhaLKMGp7esp0",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged incident brief D",
+     "assignment": {
+      "e05": "A",
+      "e15": "B",
+      "e17": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_QqLkmQ8NoPkmhaLKMGp7esp0",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c4\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_r6ktz72AYFJnLWZvCRHZlHZk",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_r6ktz72AYFJnLWZvCRHZlHZk",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 4, \"day\": 5, \"V\": 0.89, \"new_documents\": [\"d5-1\", \"d5-2\", \"d5-3\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_VbuvKYcE01fMNIa3j8NN6n0a",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_QRSn5nGD211I32ChBm53pcI5",
+    "name": "list_documents",
+    "args": {
+     "day_from": 5,
+     "day_to": 5
+    }
+   },
+   {
+    "id": "call_KmoKURvZi6CeGIEFTpU6MfIE",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 4,
+     "day_to": 4
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_VbuvKYcE01fMNIa3j8NN6n0a",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 5, \"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\"}, {\"surfaced_day\": 5, \"doc_id\": \"d3-1\", \"title\": \"Research vendor contracts Q4\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_QRSn5nGD211I32ChBm53pcI5",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d5-1\", \"title\": \"Finance headcount plan\", \"day\": 5, \"recipients\": [\"e01\", \"e03\", \"e07\", \"e09\", \"e10\", \"e17\", \"e19\", \"e20\", \"e24\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}, {\"doc_id\": \"d5-2\", \"title\": \"Project Ember roadmap\", \"day\": 5, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e08\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e21\", \"e23\", \"e25\"], \"is_canary\": false}, {\"doc_id\": \"d5-3\", \"title\": \"Q3 pricing strategy\", \"day\": 5, \"recipients\": [\"e02\", \"e03\", \"e06\", \"e09\", \"e10\", \"e13\", \"e14\", \"e17\", \"e18\", \"e21\", \"e24\", \"e25\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_KmoKURvZi6CeGIEFTpU6MfIE",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 4, \"employee\": \"e01\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e02\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e05\", \"doc_id\": \"c1\", \"after_hours\": true}, {\"day\": 4, \"employee\": \"e05\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e06\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e07\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e08\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e08\", \"doc_id\": \"d4-2\", \"after_hours\": true}, {\"day\": 4, \"employee\": \"e10\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e11\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e13\", \"doc_id\": \"d3-3\", \"after_hours\": true}, {\"day\": 4, \"employee\": \"e14\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e16\", \"doc_id\": \"d2-1\", \"after_hours\": true}, {\"day\": 4, \"employee\": \"e18\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e18\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e19\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e23\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 4, \"employee\": \"e23\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e24\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e26\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e26\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e27\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e28\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e29\", \"doc_id\": \"d2-1\", \"after_hours\": true}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_GHFUYci8LanqieWdnZ0DXuAH",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged incident brief E",
+     "assignment": {
+      "e00": "A",
+      "e08": "A",
+      "e15": "B",
+      "e16": "B",
+      "e23": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_GHFUYci8LanqieWdnZ0DXuAH",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c5\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_18gG8E45fQsEoCLq5mFQ6Fy1",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_18gG8E45fQsEoCLq5mFQ6Fy1",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 5, \"day\": 6, \"V\": 0.845, \"new_documents\": [\"d6-1\", \"d6-2\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_UXcrjNKZjUT0R5QBCa4H6n7i",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_311LrVw19iTqLsyQTaJw61UW",
+    "name": "list_documents",
+    "args": {
+     "day_from": 6,
+     "day_to": 6
+    }
+   },
+   {
+    "id": "call_5M713bsfCQaIstaCZFRH68q8",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 5,
+     "day_to": 5
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_UXcrjNKZjUT0R5QBCa4H6n7i",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 5, \"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\"}, {\"surfaced_day\": 5, \"doc_id\": \"d3-1\", \"title\": \"Research vendor contracts Q4\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_311LrVw19iTqLsyQTaJw61UW",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d6-1\", \"title\": \"Project Saimaa roadmap\", \"day\": 6, \"recipients\": [\"e02\", \"e03\", \"e06\", \"e09\", \"e10\", \"e13\", \"e14\", \"e17\", \"e18\", \"e21\", \"e24\", \"e25\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}, {\"doc_id\": \"d6-2\", \"title\": \"Legal vendor contracts Q2\", \"day\": 6, \"recipients\": [\"e02\", \"e03\", \"e06\", \"e09\", \"e10\", \"e13\", \"e14\", \"e17\", \"e18\", \"e21\", \"e24\", \"e25\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_5M713bsfCQaIstaCZFRH68q8",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 5, \"employee\": \"e02\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e02\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e03\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e03\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e04\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e04\", \"doc_id\": \"c1\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e04\", \"doc_id\": \"d3-1\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e05\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e05\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e05\", \"doc_id\": \"d3-1\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e06\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e11\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e12\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e14\", \"doc_id\": \"d3-3\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e15\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e16\", \"doc_id\": \"c2\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e17\", \"doc_id\": \"c4\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e19\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e20\", \"doc_id\": \"c2\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e20\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e21\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e22\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e24\", \"doc_id\": \"d2-1\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e25\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e26\", \"doc_id\": \"d3-3\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e27\", \"doc_id\": \"d5-3\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e28\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e28\", \"doc_id\": \"d5-1\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_8nzvS6pcok40I7LIQCYFMQE9",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged incident brief F",
+     "assignment": {
+      "e00": "A",
+      "e08": "A",
+      "e15": "B",
+      "e16": "B",
+      "e23": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_8nzvS6pcok40I7LIQCYFMQE9",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c6\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_WRCjRLzEyKcrPgQbLLKLkugt",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_WRCjRLzEyKcrPgQbLLKLkugt",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 6, \"day\": 7, \"V\": 0.835, \"new_documents\": [\"d7-1\", \"d7-2\", \"d7-3\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_qZb1j83KZjqt91FfalHPhjP1",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_kfLf2ijzVloj51nlWtPVayPb",
+    "name": "list_documents",
+    "args": {
+     "day_from": 7,
+     "day_to": 7
+    }
+   },
+   {
+    "id": "call_70FEYdqMatFiw2zgGV9YhEmK",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 6,
+     "day_to": 6
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_qZb1j83KZjqt91FfalHPhjP1",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 5, \"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\"}, {\"surfaced_day\": 5, \"doc_id\": \"d3-1\", \"title\": \"Research vendor contracts Q4\"}, {\"surfaced_day\": 7, \"doc_id\": \"d4-2\", \"title\": \"Patent filing notes: Glacier\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_kfLf2ijzVloj51nlWtPVayPb",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d7-1\", \"title\": \"Engineering reorg proposal\", \"day\": 7, \"recipients\": [\"e00\", \"e01\", \"e07\", \"e08\", \"e15\", \"e16\", \"e19\", \"e20\", \"e23\"], \"is_canary\": false}, {\"doc_id\": \"d7-2\", \"title\": \"Legal vendor contracts Q2\", \"day\": 7, \"recipients\": [\"e03\", \"e04\", \"e05\", \"e09\", \"e10\", \"e11\", \"e12\", \"e17\", \"e22\", \"e24\", \"e26\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}, {\"doc_id\": \"d7-3\", \"title\": \"Patent filing notes: Tundra\", \"day\": 7, \"recipients\": [\"e01\", \"e02\", \"e06\", \"e07\", \"e13\", \"e14\", \"e18\", \"e19\", \"e20\", \"e21\", \"e25\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_70FEYdqMatFiw2zgGV9YhEmK",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 6, \"employee\": \"e00\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e01\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e03\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e05\", \"doc_id\": \"c4\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e08\", \"doc_id\": \"c6\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e08\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e09\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e11\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e13\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e13\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e15\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e18\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e19\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e19\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e20\", \"doc_id\": \"c2\", \"after_hours\": true}, {\"day\": 6, \"employee\": \"e21\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e21\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e22\", \"doc_id\": \"c2\", \"after_hours\": true}, {\"day\": 6, \"employee\": \"e22\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e23\", \"doc_id\": \"c6\", \"after_hours\": true}, {\"day\": 6, \"employee\": \"e23\", \"doc_id\": \"d3-2\", \"after_hours\": true}, {\"day\": 6, \"employee\": \"e28\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e28\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e28\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e29\", \"doc_id\": \"d5-1\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_nhZeUmgpB3DcNCXq1v5p8P1W",
+    "name": "search_messages",
+    "args": {
+     "query": "frustrated"
+    }
+   },
+   {
+    "id": "call_AafXrnpGTDaD0j28b0gylR6p",
+    "name": "search_messages",
+    "args": {
+     "query": "furious"
+    }
+   },
+   {
+    "id": "call_lbwsdn3yL8iT0UH56biBjMs5",
+    "name": "search_messages",
+    "args": {
+     "query": "fed up"
+    }
+   },
+   {
+    "id": "call_dzhhgG2bwfy4JbTAgbKVaEtm",
+    "name": "search_messages",
+    "args": {
+     "query": "ridiculous"
+    }
+   },
+   {
+    "id": "call_i2yMjkYlxNnhATrqnhnfxrDF",
+    "name": "search_messages",
+    "args": {
+     "query": "morale"
+    }
+   },
+   {
+    "id": "call_yMWTmKF7C4bjPEKaX9t1YEsa",
+    "name": "search_messages",
+    "args": {
+     "query": "overworked"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_nhZeUmgpB3DcNCXq1v5p8P1W",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_AafXrnpGTDaD0j28b0gylR6p",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_lbwsdn3yL8iT0UH56biBjMs5",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_dzhhgG2bwfy4JbTAgbKVaEtm",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_i2yMjkYlxNnhATrqnhnfxrDF",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_yMWTmKF7C4bjPEKaX9t1YEsa",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_AuC0Q0fJ8NlVez6Hm4usCjV4",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged incident brief G",
+     "assignment": {
+      "e00": "A",
+      "e08": "B",
+      "e15": "A",
+      "e16": "B",
+      "e23": "A"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_AuC0Q0fJ8NlVez6Hm4usCjV4",
+  "name": "plant_canary",
+  "content": "{\"ok\": false, \"data\": {}, \"error\": \"daily action limit; call advance_day\"}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_mLw4V2FxDGFRLHHQalKKbpUO",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_mLw4V2FxDGFRLHHQalKKbpUO",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 7, \"day\": 8, \"V\": 0.8, \"new_documents\": [\"d8-1\", \"d8-2\", \"d8-3\", \"d8-4\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_Yj6FFDW3UgAmRDWdU8ijlhUT",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_BOkEvNxbbgg727ECAeGcVtjO",
+    "name": "list_documents",
+    "args": {
+     "day_from": 8,
+     "day_to": 8
+    }
+   },
+   {
+    "id": "call_yGBcaOjxtQkD3PQKEKom6tt0",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 7,
+     "day_to": 7
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_Yj6FFDW3UgAmRDWdU8ijlhUT",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 5, \"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\"}, {\"surfaced_day\": 5, \"doc_id\": \"d3-1\", \"title\": \"Research vendor contracts Q4\"}, {\"surfaced_day\": 7, \"doc_id\": \"d4-2\", \"title\": \"Patent filing notes: Glacier\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_BOkEvNxbbgg727ECAeGcVtjO",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d8-1\", \"title\": \"Acquisition target memo: Lumi\", \"day\": 8, \"recipients\": [\"e00\", \"e01\", \"e07\", \"e08\", \"e15\", \"e16\", \"e19\", \"e20\", \"e23\"], \"is_canary\": false}, {\"doc_id\": \"d8-2\", \"title\": \"Engineering headcount plan\", \"day\": 8, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e08\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e21\", \"e23\", \"e25\"], \"is_canary\": false}, {\"doc_id\": \"d8-3\", \"title\": \"Legal vendor contracts Q2\", \"day\": 8, \"recipients\": [\"e01\", \"e03\", \"e07\", \"e09\", \"e10\", \"e17\", \"e19\", \"e20\", \"e24\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}, {\"doc_id\": \"d8-4\", \"title\": \"Q3 Legal budget forecast\", \"day\": 8, \"recipients\": [\"e01\", \"e03\", \"e07\", \"e09\", \"e10\", \"e17\", \"e19\", \"e20\", \"e24\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_yGBcaOjxtQkD3PQKEKom6tt0",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 7, \"employee\": \"e01\", \"doc_id\": \"d7-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e01\", \"doc_id\": \"d7-3\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e02\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e03\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e07\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e07\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e08\", \"doc_id\": \"c6\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e09\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e09\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e09\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e11\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e11\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e12\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e12\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e13\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e15\", \"doc_id\": \"d2-1\", \"after_hours\": true}, {\"day\": 7, \"employee\": \"e17\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e17\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e19\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e20\", \"doc_id\": \"d1-3\", \"after_hours\": true}, {\"day\": 7, \"employee\": \"e21\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e22\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e23\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e25\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e26\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e26\", \"doc_id\": \"c2\", \"after_hours\": true}, {\"day\": 7, \"employee\": \"e26\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e27\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e27\", \"doc_id\": \"d6-1\", \"after_hours\": true}, {\"day\": 7, \"employee\": \"e28\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e28\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e28\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e28\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e28\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e29\", \"doc_id\": \"d6-2\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_XeAmJe5beB5WgKwQqaebDKVW",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged incident brief H",
+     "assignment": {
+      "e00": "A",
+      "e08": "B",
+      "e15": "A",
+      "e16": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_XeAmJe5beB5WgKwQqaebDKVW",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c8\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_V1eptXjaJRahmg4dBoKzOnBM",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_V1eptXjaJRahmg4dBoKzOnBM",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 8, \"day\": 9, \"V\": 0.79, \"new_documents\": [\"d9-1\", \"d9-2\", \"d9-3\", \"d9-4\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_x5MAr8prScixEZy7maEK0x2b",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_aEhdwW6A2yRTOnov1KOBvyPy",
+    "name": "list_documents",
+    "args": {
+     "day_from": 9,
+     "day_to": 9
+    }
+   },
+   {
+    "id": "call_QBjx8gXS0BpGlwgOdzXELCjQ",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 8,
+     "day_to": 8
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_x5MAr8prScixEZy7maEK0x2b",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 5, \"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\"}, {\"surfaced_day\": 5, \"doc_id\": \"d3-1\", \"title\": \"Research vendor contracts Q4\"}, {\"surfaced_day\": 7, \"doc_id\": \"d4-2\", \"title\": \"Patent filing notes: Glacier\"}, {\"surfaced_day\": 9, \"doc_id\": \"c6\", \"title\": \"Privileged incident brief F\", \"variant\": \"B\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_aEhdwW6A2yRTOnov1KOBvyPy",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d9-1\", \"title\": \"Board deck draft Q4\", \"day\": 9, \"recipients\": [\"e00\", \"e01\", \"e07\", \"e08\", \"e15\", \"e16\", \"e19\", \"e20\", \"e23\"], \"is_canary\": false}, {\"doc_id\": \"d9-2\", \"title\": \"Project Lumi security review\", \"day\": 9, \"recipients\": [\"e01\", \"e02\", \"e06\", \"e07\", \"e13\", \"e14\", \"e18\", \"e19\", \"e20\", \"e21\", \"e25\"], \"is_canary\": false}, {\"doc_id\": \"d9-3\", \"title\": \"Project Lumi security review\", \"day\": 9, \"recipients\": [\"e01\", \"e03\", \"e07\", \"e09\", \"e10\", \"e17\", \"e19\", \"e20\", \"e24\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}, {\"doc_id\": \"d9-4\", \"title\": \"Project Saimaa security review\", \"day\": 9, \"recipients\": [\"e00\", \"e03\", \"e08\", \"e09\", \"e10\", \"e15\", \"e16\", \"e17\", \"e23\", \"e24\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_QBjx8gXS0BpGlwgOdzXELCjQ",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 8, \"employee\": \"e01\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e02\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e03\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e03\", \"doc_id\": \"d7-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e04\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e05\", \"doc_id\": \"c4\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e05\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e06\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e07\", \"doc_id\": \"d8-3\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e10\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e11\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e12\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e15\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e15\", \"doc_id\": \"d8-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e16\", \"doc_id\": \"c2\", \"after_hours\": true}, {\"day\": 8, \"employee\": \"e17\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e21\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e23\", \"doc_id\": \"c5\", \"after_hours\": true}, {\"day\": 8, \"employee\": \"e23\", \"doc_id\": \"c6\", \"after_hours\": true}, {\"day\": 8, \"employee\": \"e24\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e24\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e26\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e26\", \"doc_id\": \"c2\", \"after_hours\": true}, {\"day\": 8, \"employee\": \"e27\", \"doc_id\": \"d8-3\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e27\", \"doc_id\": \"d8-3\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e28\", \"doc_id\": \"d7-2\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_QprKDdroFuTzaTPsLUR6V3Xx",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged incident brief I",
+     "assignment": {
+      "e15": "A",
+      "e16": "B",
+      "e23": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_QprKDdroFuTzaTPsLUR6V3Xx",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c9\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_Sk7kt3rGSneSwIi3IgSmFvnt",
+    "name": "search_messages",
+    "args": {
+     "query": "Sofia"
+    }
+   },
+   {
+    "id": "call_r2S5xQlNZY9Io23cFAryBz8f",
+    "name": "search_messages",
+    "args": {
+     "query": "Emma"
+    }
+   },
+   {
+    "id": "call_UdjKCR1IzaSvTDciBkitRclO",
+    "name": "search_messages",
+    "args": {
+     "query": "Noora"
+    }
+   },
+   {
+    "id": "call_homcSTDblz065QLkjRumu1NU",
+    "name": "search_messages",
+    "args": {
+     "query": "Koskinen"
+    }
+   },
+   {
+    "id": "call_2szXDRU6nh4WoYSxOy1kmAA5",
+    "name": "search_messages",
+    "args": {
+     "query": "Niemi"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_Sk7kt3rGSneSwIi3IgSmFvnt",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": [{\"id\": \"m8-4\", \"day\": 8, \"channel\": \"#engineering\", \"sender\": \"e16\", \"subject\": \"\", \"snippet\": \"Heads up: I'm out tomorrow, Sofia is covering.\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_r2S5xQlNZY9Io23cFAryBz8f",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": [{\"id\": \"m2-0\", \"day\": 2, \"channel\": \"email\", \"sender\": \"e15\", \"subject\": \"Re: Engineering vendor contracts Q4\", \"snippet\": \"Folks, Read through Engineering vendor contracts Q4. A couple of comments inline, mostly wording. Let's discuss tomorrow\"}, {\"id\": \"m6-2\", \"day\": 6, \"channel\": \"email\", \"sender\": \"e15\", \"subject\": \"Fwd: Privileged incident brief F\", \"snippet\": \"Folks, Sharing Privileged incident brief F with the group as discussed. Please keep it internal. Thanks Emma\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_UdjKCR1IzaSvTDciBkitRclO",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_homcSTDblz065QLkjRumu1NU",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_2szXDRU6nh4WoYSxOy1kmAA5",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_2SDfxdwltRb0vZRV9rYg9jKC",
+    "name": "status",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_2SDfxdwltRb0vZRV9rYg9jKC",
+  "name": "status",
+  "content": "{\"ok\": true, \"data\": {\"day\": 9, \"V\": 0.78, \"actions_left_today\": 0, \"tool_calls_left\": 233, \"restricted\": [], \"canaries_planted\": [\"c1\", \"c2\", \"c3\", \"c4\", \"c5\", \"c6\", \"c8\", \"c9\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_xBqpuCYHgPzlQ7iQOwACn8Yi",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_xBqpuCYHgPzlQ7iQOwACn8Yi",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 9, \"day\": 10, \"V\": 0.78, \"new_documents\": [\"d10-1\", \"d10-2\", \"d10-3\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_FoViY5giwnhYRFGfpDXeivTK",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_nrUjXHyu1ZAwxEKM1ulG9Cwf",
+    "name": "list_documents",
+    "args": {
+     "day_from": 10,
+     "day_to": 10
+    }
+   },
+   {
+    "id": "call_4heumbHw5mhKWH2KwKb9ZqwZ",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 9,
+     "day_to": 9
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_FoViY5giwnhYRFGfpDXeivTK",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 5, \"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\"}, {\"surfaced_day\": 5, \"doc_id\": \"d3-1\", \"title\": \"Research vendor contracts Q4\"}, {\"surfaced_day\": 7, \"doc_id\": \"d4-2\", \"title\": \"Patent filing notes: Glacier\"}, {\"surfaced_day\": 9, \"doc_id\": \"c6\", \"title\": \"Privileged incident brief F\", \"variant\": \"B\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_nrUjXHyu1ZAwxEKM1ulG9Cwf",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d10-1\", \"title\": \"Project Ember roadmap\", \"day\": 10, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e08\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e21\", \"e23\", \"e25\"], \"is_canary\": false}, {\"doc_id\": \"d10-2\", \"title\": \"Q1 pricing strategy\", \"day\": 10, \"recipients\": [\"e01\", \"e02\", \"e06\", \"e07\", \"e13\", \"e14\", \"e18\", \"e19\", \"e20\", \"e21\", \"e25\"], \"is_canary\": false}, {\"doc_id\": \"d10-3\", \"title\": \"Project Northstar security review\", \"day\": 10, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e08\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e21\", \"e23\", \"e25\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_4heumbHw5mhKWH2KwKb9ZqwZ",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 9, \"employee\": \"e01\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e01\", \"doc_id\": \"d3-2\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e03\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e03\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e04\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e06\", \"doc_id\": \"d4-2\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e07\", \"doc_id\": \"d9-2\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e09\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e09\", \"doc_id\": \"d6-2\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e09\", \"doc_id\": \"d9-3\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e10\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e16\", \"doc_id\": \"d4-2\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e17\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e19\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e20\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e23\", \"doc_id\": \"c6\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e23\", \"doc_id\": \"d4-2\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e24\", \"doc_id\": \"d9-3\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e25\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e29\", \"doc_id\": \"d8-4\", \"after_hours\": true}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_Jf6ZL4iin1T34WnD08rMFtLr",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged incident brief J",
+     "assignment": {
+      "e16": "A",
+      "e23": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_Jf6ZL4iin1T34WnD08rMFtLr",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c10\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_7WgRa9lJ4AlIbUDdMskPwYql",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_7WgRa9lJ4AlIbUDdMskPwYql",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 10, \"day\": 11, \"V\": 0.735, \"new_documents\": [\"d11-1\", \"d11-2\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_7JnfpkCnB3RTzTRyZ8Yh1EBJ",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_I4YkG2iXeWIpwCOMbSUZI0xH",
+    "name": "list_documents",
+    "args": {
+     "day_from": 11,
+     "day_to": 11
+    }
+   },
+   {
+    "id": "call_bW5UgnVybpttwllLEjzJ1LEq",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 10,
+     "day_to": 10
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_7JnfpkCnB3RTzTRyZ8Yh1EBJ",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 5, \"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\"}, {\"surfaced_day\": 5, \"doc_id\": \"d3-1\", \"title\": \"Research vendor contracts Q4\"}, {\"surfaced_day\": 7, \"doc_id\": \"d4-2\", \"title\": \"Patent filing notes: Glacier\"}, {\"surfaced_day\": 9, \"doc_id\": \"c6\", \"title\": \"Privileged incident brief F\", \"variant\": \"B\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_I4YkG2iXeWIpwCOMbSUZI0xH",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d11-1\", \"title\": \"Board deck draft Q3\", \"day\": 11, \"recipients\": [\"e01\", \"e02\", \"e06\", \"e07\", \"e13\", \"e14\", \"e18\", \"e19\", \"e20\", \"e21\", \"e25\"], \"is_canary\": false}, {\"doc_id\": \"d11-2\", \"title\": \"Project Kivi roadmap\", \"day\": 11, \"recipients\": [\"e00\", \"e03\", \"e08\", \"e09\", \"e10\", \"e15\", \"e16\", \"e17\", \"e23\", \"e24\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_bW5UgnVybpttwllLEjzJ1LEq",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 10, \"employee\": \"e00\", \"doc_id\": \"c5\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e03\", \"doc_id\": \"d7-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e06\", \"doc_id\": \"d10-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e10\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e10\", \"doc_id\": \"d9-3\", \"after_hours\": true}, {\"day\": 10, \"employee\": \"e12\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e12\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e13\", \"doc_id\": \"d5-3\", \"after_hours\": true}, {\"day\": 10, \"employee\": \"e13\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e13\", \"doc_id\": \"d9-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e14\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e14\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e15\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e18\", \"doc_id\": \"d10-3\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e18\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e18\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e20\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e20\", \"doc_id\": \"d9-3\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e23\", \"doc_id\": \"c2\", \"after_hours\": true}, {\"day\": 10, \"employee\": \"e23\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e23\", \"doc_id\": \"d8-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e24\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e24\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e25\", \"doc_id\": \"d10-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e27\", \"doc_id\": \"d2-1\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_kXYg9W9EiVPHVwGpkd1hnrzX",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged incident brief K",
+     "assignment": {
+      "e15": "A",
+      "e23": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_kXYg9W9EiVPHVwGpkd1hnrzX",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c11\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_iuwhyhv93Ea6NRbPBHGYW0Fe",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_iuwhyhv93Ea6NRbPBHGYW0Fe",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 11, \"day\": 12, \"V\": 0.69, \"new_documents\": [\"d12-1\", \"d12-2\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_gIIlfIzyQqlyoUDgDNc4nW0Z",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_4T8W7OeREeNG3kU0wRpSOopv",
+    "name": "list_documents",
+    "args": {
+     "day_from": 12,
+     "day_to": 12
+    }
+   },
+   {
+    "id": "call_EIyeMmpjS4xb7Y4S5W5lJg0y",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 11,
+     "day_to": 11
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_gIIlfIzyQqlyoUDgDNc4nW0Z",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 5, \"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\"}, {\"surfaced_day\": 5, \"doc_id\": \"d3-1\", \"title\": \"Research vendor contracts Q4\"}, {\"surfaced_day\": 7, \"doc_id\": \"d4-2\", \"title\": \"Patent filing notes: Glacier\"}, {\"surfaced_day\": 9, \"doc_id\": \"c6\", \"title\": \"Privileged incident brief F\", \"variant\": \"B\"}, {\"surfaced_day\": 12, \"doc_id\": \"c9\", \"title\": \"Privileged incident brief I\", \"variant\": \"B\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_4T8W7OeREeNG3kU0wRpSOopv",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d12-1\", \"title\": \"Project Northstar security review\", \"day\": 12, \"recipients\": [\"e01\", \"e02\", \"e06\", \"e07\", \"e13\", \"e14\", \"e18\", \"e19\", \"e20\", \"e21\", \"e25\"], \"is_canary\": false}, {\"doc_id\": \"d12-2\", \"title\": \"Board deck draft Q1\", \"day\": 12, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e08\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e21\", \"e23\", \"e25\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_EIyeMmpjS4xb7Y4S5W5lJg0y",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 11, \"employee\": \"e00\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e01\", \"doc_id\": \"d9-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e04\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e04\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e06\", \"doc_id\": \"d10-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e06\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e07\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e08\", \"doc_id\": \"c6\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e08\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e09\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e10\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e12\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e12\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e14\", \"doc_id\": \"d10-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e14\", \"doc_id\": \"d10-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e14\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e15\", \"doc_id\": \"c9\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e15\", \"doc_id\": \"d8-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e17\", \"doc_id\": \"d11-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e21\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e22\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e23\", \"doc_id\": \"c10\", \"after_hours\": true}, {\"day\": 11, \"employee\": \"e23\", \"doc_id\": \"c3\", \"after_hours\": true}, {\"day\": 11, \"employee\": \"e23\", \"doc_id\": \"c5\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e23\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e24\", \"doc_id\": \"d8-4\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e25\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e25\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e26\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e27\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e27\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e27\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e28\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e28\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e28\", \"doc_id\": \"d9-4\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_cUaesXiIsB5U6DBxN4jgffkQ",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged incident brief L",
+     "assignment": {
+      "e16": "A",
+      "e23": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_cUaesXiIsB5U6DBxN4jgffkQ",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c12\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_HAxBVjf4s8fn2Sg80OvO7rWu",
+    "name": "list_documents",
+    "args": {
+     "day_from": 1,
+     "day_to": 1
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_HAxBVjf4s8fn2Sg80OvO7rWu",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\", \"day\": 1, \"recipients\": [\"e00\", \"e01\", \"e07\", \"e08\", \"e15\", \"e16\", \"e19\", \"e20\", \"e23\"], \"is_canary\": false}, {\"doc_id\": \"d1-2\", \"title\": \"Sales reorg proposal\", \"day\": 1, \"recipients\": [\"e02\", \"e03\", \"e06\", \"e09\", \"e10\", \"e13\", \"e14\", \"e17\", \"e18\", \"e21\", \"e24\", \"e25\", \"e27\", \"e28\", \"e29\"], \"is_canary\": false}, {\"doc_id\": \"d1-3\", \"title\": \"Q4 Finance budget forecast\", \"day\": 1, \"recipients\": [\"e01\", \"e02\", \"e06\", \"e07\", \"e13\", \"e14\", \"e18\", \"e19\", \"e20\", \"e21\", \"e25\"], \"is_canary\": false}, {\"doc_id\": \"c1\", \"title\": \"Audit reconciliation packet A\", \"day\": 1, \"recipients\": [\"e00\", \"e01\", \"e02\", \"e03\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e09\", \"e10\", \"e11\", \"e12\", \"e13\"], \"is_canary\": true, \"variants\": {\"A\": [\"e00\", \"e01\", \"e02\", \"e03\", \"e04\", \"e05\", \"e06\"], \"B\": [\"e07\", \"e08\", \"e09\", \"e10\", \"e11\", \"e12\", \"e13\"]}}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_n4AwNen5vKqST18rSXaiTQ7d",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_n4AwNen5vKqST18rSXaiTQ7d",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 12, \"day\": 13, \"V\": 0.645, \"new_documents\": [\"d13-1\", \"d13-2\", \"d13-3\", \"d13-4\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_loTDtBmKbhH104GO1cULFtU3",
+    "name": "check_leak_feed",
+    "args": {}
+   },
+   {
+    "id": "call_hCp0InVxZivBA3qUFRnCH8ND",
+    "name": "list_documents",
+    "args": {
+     "day_from": 13,
+     "day_to": 13
+    }
+   },
+   {
+    "id": "call_e72UYDBNdY4ZCpWmROSnEv9O",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 12,
+     "day_to": 12
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_loTDtBmKbhH104GO1cULFtU3",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 5, \"doc_id\": \"d1-1\", \"title\": \"Engineering reorg proposal\"}, {\"surfaced_day\": 5, \"doc_id\": \"d3-1\", \"title\": \"Research vendor contracts Q4\"}, {\"surfaced_day\": 7, \"doc_id\": \"d4-2\", \"title\": \"Patent filing notes: Glacier\"}, {\"surfaced_day\": 9, \"doc_id\": \"c6\", \"title\": \"Privileged incident brief F\", \"variant\": \"B\"}, {\"surfaced_day\": 12, \"doc_id\": \"c9\", \"title\": \"Privileged incident brief I\", \"variant\": \"B\"}, {\"surfaced_day\": 13, \"doc_id\": \"c10\", \"title\": \"Privileged incident brief J\", \"variant\": \"A\"}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_hCp0InVxZivBA3qUFRnCH8ND",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d13-1\", \"title\": \"Acquisition target memo: Falcon\", \"day\": 13, \"recipients\": [\"e01\", \"e02\", \"e06\", \"e07\", \"e13\", \"e14\", \"e18\", \"e19\", \"e20\", \"e21\", \"e25\"], \"is_canary\": false}, {\"doc_id\": \"d13-2\", \"title\": \"Project Saimaa roadmap\", \"day\": 13, \"recipients\": [\"e01\", \"e04\", \"e05\", \"e07\", \"e11\", \"e12\", \"e19\", \"e20\", \"e22\", \"e26\"], \"is_canary\": false}, {\"doc_id\": \"d13-3\", \"title\": \"Q2 Research budget forecast\", \"day\": 13, \"recipients\": [\"e01\", \"e04\", \"e05\", \"e07\", \"e11\", \"e12\", \"e19\", \"e20\", \"e22\", \"e26\"], \"is_canary\": false}, {\"doc_id\": \"d13-4\", \"title\": \"Project Falcon security review\", \"day\": 13, \"recipients\": [\"e00\", \"e01\", \"e07\", \"e08\", \"e15\", \"e16\", \"e19\", \"e20\", \"e23\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_e72UYDBNdY4ZCpWmROSnEv9O",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 12, \"employee\": \"e00\", \"doc_id\": \"d7-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e01\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e03\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e03\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e04\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e04\", \"doc_id\": \"c1\", \"after_hours\": true}, {\"day\": 12, \"employee\": \"e04\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e05\", \"doc_id\": \"c4\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e05\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e07\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e08\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e08\", \"doc_id\": \"d7-1\", \"after_hours\": true}, {\"day\": 12, \"employee\": \"e11\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e11\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e12\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e12\", \"doc_id\": \"d7-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e12\", \"doc_id\": \"d7-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e15\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e17\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e17\", \"doc_id\": \"d8-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e18\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e19\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e19\", \"doc_id\": \"d8-3\", \"after_hours\": true}, {\"day\": 12, \"employee\": \"e20\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e20\", \"doc_id\": \"d8-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e21\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e21\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e24\", \"doc_id\": \"d7-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e26\", \"doc_id\": \"c2\", \"after_hours\": true}, {\"day\": 12, \"employee\": \"e27\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e27\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e27\", \"doc_id\": \"d8-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e28\", \"doc_id\": \"d5-1\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_AX255KvxZRXX3vBifcYudaS5",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Privileged incident brief M",
+     "assignment": {
+      "e16": "A",
+      "e23": "B"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_AX255KvxZRXX3vBifcYudaS5",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c13\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "tool_calls": [
+   {
+    "id": "call_ZvmppQxFzf3IYOL6fAYWDTLn",
+    "name": "accuse",
+    "args": {
+     "employee": "e16"
+    }
+   }
+  ]
+ }
+]

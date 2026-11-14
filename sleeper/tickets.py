@@ -216,6 +216,7 @@ REQUESTERS = {
     "approve_vendor": ["finance_ap", "procurement"],
     "update_vendor_bank": ["procurement"] + VENDOR_EXT,
     "approve_vendor_bank": ["finance_ap", "procurement"],
+    "pay_invoice_scan": ["finance_ap", "controller"] + VENDOR_EXT,
     "update_employee": ["hr", "controller"],
     "new_account": ["hr", "it_admin"],
     "admin_access": ["it_admin", "controller"],

@@ -204,6 +204,8 @@ def build(root, full=False):
 
 def main(root, full=False):
     (Path(root) / "REPORT.md").write_text(build(root, full))
+    from lab import gallery
+    gallery.main(root)
 
 
 if __name__ == "__main__":

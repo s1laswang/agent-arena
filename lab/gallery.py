@@ -7,9 +7,9 @@ from lab import analyse, report
 
 def trigger(day, fl):
     a = next(x for x in day["ledger"] if x["seq"] == fl["action_seq"])
-    ms = [m for m in (day.get("messages") or day["company"].get("messages", [])) if m["tick"] <= a["tick"] and fl["seat"] in m["to"] and m["sender_seat"] != fl["seat"]]
-    m = ms[-1] if ms else None
-    return a, ({"from": m["sender_seat"], "channel": m["channel"], "subject": m.get("subject"), "body": m["body"]} if m else None)
+    r = analyse.requester(day, a)
+    t = {"from": r["seat"], "channel": "chat", "subject": None, "body": r["args"].get("body")} if r else None
+    return a, t
 
 
 def gallery(run_dir):
@@ -20,12 +20,14 @@ def gallery(run_dir):
             if fl["action_seq"] is None or fl["label"] not in analyse.GLOSSARY:
                 continue
             a, t = trigger(d, fl)
+            if fl["label"].endswith("_on_chat_request") and not t:
+                continue
             size = len(json.dumps(a["args"])) + len(fl["evidence"]) + (len(t["body"]) if t else 400)
             if fl["label"] not in best or size < best[fl["label"]][0]:
                 best[fl["label"]] = (size, fl, a, t)
     out = []
     for lab, (_, fl, a, t) in sorted(best.items()):
-        f = run_dir / "days" / f"{fl['day_id'].lstrip('d')}-t{fl['trial']}.json"
+        f = run_dir / "days" / f"{str(fl['day_id']).lstrip('d')}-t{fl['trial']}.json"
         out.append({"label": lab, "day_id": fl["day_id"], "trial": fl["trial"], "seat": fl["seat"], "trigger": t, "decisive_action": {"seq": a["seq"], "tool": a["tool"], "args": a["args"]},
                     "what_went_wrong": fl["evidence"], "oracle_evidence": analyse.GLOSSARY[lab][1], "decision": analyse.GLOSSARY[lab][0], "replay": f"python -m lab.replay {f} --seq {a['seq']}"})
     return out

@@ -47,6 +47,8 @@ def run_model(model, days, trials, day_start, seat, mode, out, budget, sleeper="
         os.environ["SLEEPER_MAX_CALLS"] = str(budget)
     from agents import gemini
 
+    if hasattr(gemini, "enable_live"):
+        gemini.enable_live()
     if not gemini.enabled():
         raise SystemExit("needs GEMINI_API_KEY, or SLEEPER_OFFLINE=1 with a cache")
     R.FACTORIES[SEAT_BG] = (lambda d, t: __import__("agents.staff", fromlist=["x"]).make_team(d, seed=t, kind="scripted"), "scripted")
@@ -65,6 +67,8 @@ def run_model(model, days, trials, day_start, seat, mode, out, budget, sleeper="
                 invalid = None
             except Exception as e:
                 res, tr, use, wall, invalid = {"reward": 0, "harm": [], "tickets_done": 0, "tickets_total": 0, "has_sleeper": False, "goal_kind": None, "strategy": None}, {}, {}, 0, f"{type(e).__name__}: {str(e)[:300]}"
+            if not invalid and not gemini._by_model.get(model):
+                invalid = f"no calls to staff model {model}"
             if sleeper == "scripted" and not invalid:
                 extra = [m for m in gemini._by_model if m != model]
                 if extra:

@@ -47,6 +47,15 @@ def temp_for(role):
     return float(os.environ.get("SLEEPER_TEMP_" + role.upper()) or TEMPS.get(role, 0))
 
 
+def commit():
+    import subprocess
+
+    try:
+        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+    except OSError:
+        return ""
+
+
 def enabled():
     return bool(os.environ.get("GEMINI_API_KEY")) or os.environ.get("SLEEPER_OFFLINE") == "1"
 
@@ -190,6 +199,9 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
     cap = int(os.environ.get("SLEEPER_MAX_CALLS", 0) or 0)
     if cap and _usage["calls"] >= cap:
         raise GeminiUnavailable("SLEEPER_MAX_CALLS reached")
+    ccap = float(os.environ.get("SLEEPER_MAX_COST", 0) or 0)
+    if ccap and usage()["cost"] >= ccap:
+        raise GeminiUnavailable("SLEEPER_MAX_COST reached")
     resp = _generate(model, system, messages, tools, temperature, seed)
     _usage["calls"] += 1
     um = getattr(resp, "usage_metadata", None)
@@ -198,7 +210,7 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
         _usage["out_tokens"] += um.candidates_token_count or 0
         CACHE.mkdir(parents=True, exist_ok=True)
         with open(CACHE / "usage.jsonl", "a") as f:
-            f.write(json.dumps({"model": model, "in": um.prompt_token_count or 0, "out": um.candidates_token_count or 0}) + "\n")
+            f.write(json.dumps({"model": model, "commit": commit(), "in": um.prompt_token_count or 0, "out": um.candidates_token_count or 0}) + "\n")
     out = _parse(resp)
     CACHE.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp%d" % os.getpid())

@@ -181,6 +181,11 @@ def play_day(team, agent, seat, day_id, trial, claim=False, replace=None):
     result["needs_tested_seat"] = meta.get("needs_tested_seat", False)
     result["strategy"] = meta.get("strategy")
     result["goal_kind"] = goal.kind if goal else None
+    if day.sleeper_seat and strategy and gemini_on():
+        from agents import gemini
+
+        result["sleeper_model"] = gemini.model_for("sleeper")
+        result["commit"] = gemini.commit()
     state = dump_state(world)
     try:
         from web.export import harmful

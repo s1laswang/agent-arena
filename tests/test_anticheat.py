@@ -580,6 +580,45 @@ def test_replay_catches_a_tampered_step(tmp_path):
     assert rows[0]["replay_consistent"] is False and rows[0]["step_mismatches"] >= 1, rows[0]
 
 
+_OC_NOTICE = ("\n\n...{n} bytes truncated...\n\nThe tool call succeeded but the output was truncated. Full output "
+              "saved to: /tmp/oc/tool-output/tool_x\nUse Grep to search the full content or Read with offset/limit "
+              "to view specific sections.")
+_OC_REFUSED = {"ok": False, "error": "Model tried to call unavailable tool 'invalid'. Available tools: canary_accuse."}
+
+
+def _opencode_like_episode(tmp_path, edit):
+    """A committed solver episode rewritten the way OpenCode records it: one reply cut client-side, plus one
+    model call to a tool OpenCode refuses (it never reaches the server)."""
+    src = next(f for f in sorted((ROOT / "data/runs/committed").glob("v1.3/reference/solver-medium-*/episodes.jsonl")))
+    e = json.loads(src.read_text().splitlines()[0])
+    i = next(k for k, s in enumerate(e["steps"]) if s["result"].get("ok"))
+    n = len(json.dumps(e["steps"][i]["result"]).encode())       # the server sends json.dumps(payload)
+    e["steps"][i]["result"] = {"raw": _OC_NOTICE.format(n=n + (1 if edit == "wrong_bytes" else 0))}
+    if edit == "disguised_env_call":                            # a real Env call dressed up as refused
+        e["steps"][i + 1]["result"] = dict(_OC_REFUSED)
+    else:
+        e["steps"].insert(i + 1, {"t": i + 1, "day": e["steps"][i]["day"], "tool": "bash",
+                                  "args": {"command": "ls"}, "result": dict(_OC_REFUSED)})
+    dst = tmp_path / "data/runs/committed/v1.3/fake/medium"
+    dst.mkdir(parents=True)
+    (dst / "episodes.jsonl").write_text(json.dumps(e) + "\n")
+    (dst / "meta.json").write_text(json.dumps({"tiers_version": "v1.3"}))
+    return ac.replay_committed(tmp_path)[0]
+
+
+def test_replay_accepts_opencode_client_truncation_and_refused_tools(tmp_path):
+    row = _opencode_like_episode(tmp_path, None)
+    assert row["replay_consistent"] is True and row["step_mismatches"] == 0, row
+    assert row["steps_truncated_checked"] == 1 and row["steps_client_only"] == 1, row
+    assert "were cut client-side by OpenCode" in ac.coverage_line([row])
+
+
+@pytest.mark.parametrize("edit", ["wrong_bytes", "disguised_env_call"])
+def test_replay_still_catches_edits_behind_opencode_artifacts(tmp_path, edit):
+    row = _opencode_like_episode(tmp_path, edit)
+    assert row["replay_consistent"] is False and row["step_mismatches"] >= 1, row
+
+
 def test_every_committed_step_replays_identically():
     c = ac.replay_counts(ac.replay_committed(ROOT))
     assert c["steps"] > 10_000 and c["step_mismatches"] == 0, c

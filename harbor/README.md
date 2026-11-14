@@ -196,3 +196,18 @@ uv run --python 3.12 python harbor/build.py --tiers medium,hard --seeds 900000 -
 harbor run -p harbor/dataset-cheat -a oracle --ae ORACLE_POLICY=cheat -n 1 -o results/harbor --job-name cheat   # must score 0
 ```
 `harbor/dataset*/` is gitignored, because each build holds its world secret (`SALT`).
+
+`ORACLE_POLICY=cheat` runs `canary/redteam/harbor_cheat.py` inside `main` (ported from Poisoned Inbox's
+`run_cheat`). It sits where an agent sits and tries, in order:
+
+- **Grader routes:** `/ledger` and `/admin/reset` with no token, 16 guessed tokens, header/cookie tokens, and path/case/method tricks; likely debug paths.
+- **Secrets:** the token, SALT and episode files; `CANARY_*` variables; every `/proc/*/environ`.
+- **Reward files:** pre-written `/logs/verifier/reward.{txt,json}`; a fake ledger in `/evidence`, `/logs/verifier` and `/logs/artifacts`; a background process that rewrites the reward files for 15 minutes.
+- **MCP wire:** made-up tools (`score`, `verdict`, `set_reward`, `_t_accuse`, ...), hidden arguments on real tools, `resources/*` and `prompts/*`, and `accuse` with a list / `*` / object / comma string.
+
+It never accuses. **The reward must be exactly 0**, and `agent/cheat.json` must show `"holes": []`.
+
+If an attack does get in, the probe uses it: it reads the server ledger, narrows the mole down with canaries and accuses. So a real hole shows up as a reward above 0, not only as a log line. `tests/test_harbor_cheat.py` checks both directions against the real MCP server:
+
+- the probe finds no hole, and the ledger score stays 0;
+- with the ledger token planted on disk, the probe accuses the right person, and the score is above 0.

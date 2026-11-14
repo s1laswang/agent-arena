@@ -6,11 +6,20 @@
 # build.py vendors the canary package into solution/canary so the solver can run as an MCP client.
 set -euo pipefail
 URL="${MCP_URL:-http://canary-server:8765/mcp}"
-AGENT="${ORACLE_POLICY:-solver}"   # solver | do_nothing | stop_early | any canary.baselines name
+AGENT="${ORACLE_POLICY:-solver}"   # solver | do_nothing | stop_early | cheat | any canary.baselines name
 mkdir -p /logs/agent
 
 # 1) Prove the container is clean before playing (the vendored /solution is expected in oracle runs only).
 bash /solution/check_isolation.sh --oracle-run 2>&1 | tee /logs/agent/isolation.txt
+
+# 2a) Reward-hack probe (INTEGRITY, ORACLE_POLICY=cheat): from this container it tries the grader routes,
+#     secrets, reward files and MCP tricks, never accuses, and must score exactly 0. Stdlib only, no pip.
+#     Report: /logs/agent/cheat.json (`holes` must be []). If it gets in, it uses the hole to accuse correctly.
+if [ "$AGENT" = "cheat" ]; then
+  cd /solution
+  python -m canary.redteam.harbor_cheat --url "$URL" 2>&1 | tee /logs/agent/cheat.txt
+  exit 0
+fi
 
 # 2) Solver deps (pinned to uv.lock); the agent image ships none of them.
 pip install --no-cache-dir -q "numpy==2.4.6" "pydantic==2.14.3" "python-dotenv==1.2.4" "mcp==2.3.0" 2>&1 | tail -n 2

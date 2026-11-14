@@ -1,7 +1,7 @@
 """Mole Forge J5c v1.4 evolution runner with rotating training seeds, behavioral deduplication, and fresh holdout ranking.
 
 python -m canary.mole.evolve_v14 --mutator v14 --tier hard --pop 16 --gens 20 \
-    --train-seeds 200-599 --batch-size 24 --holdout-seeds 6200-6239 --workers 8 --out data/forge/j5c
+    --train-seeds 200-599 --batch-size 24 --holdout-seeds 6200-6239 --workers 1 --out data/forge/j5c
 """
 from __future__ import annotations
 
@@ -43,6 +43,7 @@ from canary.rules import HELDOUT_SEEDS, JUDGE_SEEDS, tier_params
 
 DEFAULT_TRAIN_SEEDS = range(200, 600)
 DEFAULT_HOLDOUT_SEEDS = range(6200, 6240)
+RESERVED_HELDOUT_EVAL_SEEDS = range(30_000, 30_200)
 DEFAULT_BATCH_SIZE = 24
 DEFAULT_MIN_SOLVER_ACC = 0.80
 DEFAULT_MIN_SOLVER_RATIO = 0.5
@@ -631,6 +632,10 @@ def validate_seed_hygiene(train_seeds: Sequence[int], holdout_seeds: Sequence[in
                 raise ValueError(
                     f"{label} contains forbidden judge/heldout seed {s} (800000+ and 900000+ prohibited)"
                 )
+            if label == "train_seeds" and s in RESERVED_HELDOUT_EVAL_SEEDS:
+                raise ValueError(
+                    f"train_seeds contains reserved held-out seed {s} (30000..30199 reserved for held-out eval)"
+                )
     overlap = sorted(set(train_seeds) & set(holdout_seeds))
     if overlap:
         raise ValueError(f"train_seeds and holdout_seeds must be disjoint; overlap={overlap[:10]}")
@@ -1129,7 +1134,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--train-seeds", "--seeds", dest="train_seeds", default="200-599")
     ap.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     ap.add_argument("--holdout-seeds", default="6200-6239")
-    ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--out", required=True)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--elite", type=int, default=3)

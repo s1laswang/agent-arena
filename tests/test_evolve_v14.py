@@ -193,10 +193,12 @@ def test_rotating_seed_schedule_and_seed_hygiene():
         ([-1, 200], [6200, 6201]),
         ([200, 201], [900000, 900001]),
         ([200, 201], [800000, 800001]),
+        ([30000, 30001], [6200, 6201]),
         ([200, 201, 202], [202, 6200]),
     ]:
         with pytest.raises(ValueError):
             validate_seed_hygiene(bad_train, bad_holdout)
+    validate_seed_hygiene([10000, 10001], [30000, 30001])
 
 
 class _CosmeticCloneMutator:
@@ -444,7 +446,7 @@ def test_fake_determinism_resume_and_cli(tmp_path):
             "--holdout-seeds",
             "6200-6205",
             "--workers",
-            "1",
+            "2",
             "--out",
             str(cli_out),
         ]
@@ -465,10 +467,10 @@ def test_real_env_two_seed_smoke_with_workers(tmp_path):
         tier="hard",
         pop_size=2,
         gens=1,
-        train_seeds=[200, 201],
+        train_seeds=[10000, 10001],
         batch_size=2,
         holdout_seeds=[6200, 6202],
-        workers=2,
+        workers=1,
         out=out_dir,
         fake=False,
         seed=3,

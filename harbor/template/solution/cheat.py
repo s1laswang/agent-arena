@@ -75,18 +75,30 @@ def poke_routes():
             note("http", method=m, path=p + tok, status=st, body=body[:120])
 
 
+def _walk(names, limit=20000):
+    hits, n = [], 0
+    for root, dirs, files in os.walk("/"):
+        dirs[:] = [d for d in dirs if os.path.join(root, d) not in ("/proc", "/sys", "/dev", "/solution", "/usr", "/lib")]
+        for f in files:
+            n += 1
+            if f in names or "token" in f.lower():
+                hits.append(os.path.join(root, f))
+        if n > limit or len(hits) > 30:
+            break
+    return hits
+
+
 def read_server_files():
-    pats = ["/opt/canary-server/**", "/evidence/*", "/**/SALT", "/**/episode.json", "/**/*token*", "/proc/*/environ"]
-    for pat in pats:
-        hits = [h for h in glob.glob(pat, recursive=True) if not h.startswith(("/proc/self", "/solution", "/sys"))][:20]
-        found = []
-        for h in hits:
-            try:
-                with open(h, "rb") as f:
-                    found.append((h, f.read(80).decode(errors="replace")))
-            except Exception as exc:  # noqa: BLE001
-                found.append((h, f"unreadable: {type(exc).__name__}"))
-        note("glob", pattern=pat, hits=found)
+    cands = glob.glob("/opt/canary-server/**", recursive=True) + glob.glob("/evidence/*") + \
+        _walk({"SALT", "episode.json", "ledger.json"}) + ["/proc/1/environ"]
+    found = []
+    for h in cands[:40]:
+        try:
+            with open(h, "rb") as f:
+                found.append((h, f.read(80).decode(errors="replace")))
+        except Exception as exc:  # noqa: BLE001
+            found.append((h, f"unreadable: {type(exc).__name__}"))
+    note("server files", hits=found)
     keys = sorted(k for k in os.environ if any(s in k.upper() for s in ("CANARY", "SEED", "SECRET", "TOKEN", "SALT")))
     note("env vars", canary_like=keys)
 

@@ -115,3 +115,11 @@
 
 ## 08:19 status (heartbeat)
 - No code changes since 07:49. Reviewed docs/reports/MORNING.md §4 against EXPLOITS: accurate; sent CEO 3 nits (#25/#27 = one exploit, #23 missing, Grok re-run + Gemini hunter still open). justSilas green.
+
+## 14:50 status (HEAD-INTEGRITY relaunch, branch justSilas-integrity2)
+- Done (verified: `make test` 571 passed / 6 skipped; `make reproduce` x2 with 40 judge seeds and fresh secrets → "All probes blocked: yes"): **anti-cheat battery in make reproduce** (Vaishnav's Poisoned Inbox design). It has 13 attack probes, the stop-early ladder (solver cut at 25/50/75% and minus its accuse = exactly 0 on every seed) and the control (= solver on every seed). Output goes to results/latest/exploits.{json,md}. Merged by the CEO (bd446c6).
+- Done (verified: tests/test_anticheat.py, 21 tests): replay consistency (299/299 v1.3 committed episodes re-grade identically; v1.2 and judge-seed runs flagged not-replayable), detached tool results, PYTHONHASHSEED independence, and the Harbor verifier failing closed on a bad, NaN, out-of-range or symlinked ledger.
+- Done: docs/EXPLOITS.md section "Anti-cheat battery (runs in make reproduce)"; README paragraph.
+- In progress: Harbor `ORACLE_POLICY=cheat` (harbor/template/solution/cheat.py). First attempt hung on a recursive `/**` glob over /proc (fixed with a bounded os.walk). Partial log before the hang: every token-less or guessed-token GET /ledger and POST /admin/reset returned 403. The rerun is in flight.
+- Dropped per the CEO lane update: Gemini exploit hunter (now Swarm on gemini-track).
+- Next: commit the cheat log and stop colima; then items 2 (CANARY_EPISODE_FILE for non-Harbor launches) and 4 (the valid:false audit).

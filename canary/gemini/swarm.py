@@ -153,7 +153,7 @@ def expand(n: int, personas: list[Persona], models: list[str], tiers: list[str],
         p = personas[i % P]
         r = i // P                        # round: every persona once per round
         m = models[(i % P + r) % M]       # models rotate within a round and per persona across rounds
-        t = tiers[(i + r) % T]            # tiers alternate too, so persona x model x tier all vary
+        t = tiers[(i % P + r + r // M) % T]  # tiers alternate too (also for a single persona)
         out.append(AttackerSpec(id=f"{prefix}{i:03d}-{p.id}", idx=i, persona=p.id, model=m, tier=t,
                                 seed=seed_base + i, mode=mode,
                                 channel="mcp" if p.id == "ledger_guesser" else "inproc"))

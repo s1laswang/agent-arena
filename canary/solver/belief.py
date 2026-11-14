@@ -65,6 +65,9 @@ def _weight(doc: Doc, n_emp: int, careful: bool) -> float:
     return 1.0
 
 
+MAX_STATES = 4096
+
+
 def leak_loglik(obs: Observations, s: str, P, choice_temper: float = 1.0, noleak_temper: float = 1.0) -> float:
     """log P(leak-day pattern + feed | mole = s). -inf if impossible."""
     window = getattr(P, "leak_window_days", 3)
@@ -92,36 +95,60 @@ def leak_loglik(obs: Observations, s: str, P, choice_temper: float = 1.0, noleak
         if d not in obs.leak_days:
             if W[d] > 0:
                 logp += noleak_temper * math.log(max(1e-12, 1.0 - P.p_leak))
+    # v0.4 fingerprint_accuracy a: feed shows the true label w.p. a, else uniform over the
+    # canary's OTHER planted labels (k = #distinct labels planted).
+    a = getattr(P, "fingerprint_accuracy", 1.0)
     ok_variant = []
     for it in items:
         doc = obs.docs.get(it.doc_id)
-        ok_variant.append(not (it.variant and doc and doc.variants)
-                          or doc.variants.get(s) == it.variant)
+        if not (it.variant and doc and doc.variants):
+            ok_variant.append(1.0)
+            continue
+        mine = doc.variants.get(s)
+        k = len(set(doc.variants.values()))
+        if mine == it.variant:
+            ok_variant.append(a)
+        elif mine is None or k <= 1:
+            ok_variant.append(0.0)
+        else:
+            ok_variant.append((1.0 - a) / (k - 1))
     L = sorted(d for d in obs.leak_days if d in obs.closed_days)
     today = obs.today
 
-    @lru_cache(maxsize=None)
-    def rec(i: int, used: frozenset) -> float:
-        if i == len(L):
-            return 1.0 if len(used) == len(items) else 0.0
-        d = L[i]
+    # Forward DP over leak days. State = frozenset of feed items already matched. Items whose
+    # latest possible leak day has passed unmatched are dead -> state pruned immediately; the state
+    # set is capped (keep the heaviest MAX_STATES) so runtime/memory are bounded on any input.
+    latest = [it.surfaced_day - min(delays) for it in items]
+    states = {frozenset(): 1.0}
+    for d in L:
         if W[d] <= 0:
-            return 0.0
-        tot = 0.0
-        for j, it in enumerate(items):
-            if j in used:
-                continue
-            dl = it.surfaced_day - d
-            if dl in delays and it.doc_id in wdoc[d] and ok_variant[j]:
-                f = (wdoc[d][it.doc_id] / W[d]) ** choice_temper * pd
-                if f > 0:
-                    tot += f * rec(i + 1, used | {j})
+            return -math.inf
         pend = sum(pd for dl in delays if d + dl > today)
-        if pend > 0:
-            tot += pend * rec(i + 1, used)
-        return tot
-
-    v = rec(0, frozenset())
+        nxt: dict = {}
+        for used, wt in states.items():
+            for j, it in enumerate(items):
+                if j in used:
+                    continue
+                dl = it.surfaced_day - d
+                if dl in delays and it.doc_id in wdoc[d] and ok_variant[j] > 0:
+                    f = (wdoc[d][it.doc_id] / W[d]) ** choice_temper * pd * ok_variant[j]
+                    if f > 0:
+                        k = used | {j}
+                        nxt[k] = nxt.get(k, 0.0) + wt * f
+            if pend > 0:
+                nxt[used] = nxt.get(used, 0.0) + wt * pend
+        # prune dead states: an unmatched item that can no longer be matched by a later leak day
+        nxt_d = L[L.index(d) + 1] if L.index(d) + 1 < len(L) else None
+        alive = {}
+        for used, wt in nxt.items():
+            if all(j in used or (nxt_d is not None and latest[j] >= nxt_d) for j in range(len(items))):
+                alive[used] = wt
+        if len(alive) > MAX_STATES:
+            alive = dict(sorted(alive.items(), key=lambda kv: -kv[1])[:MAX_STATES])
+        states = alive
+        if not states:
+            return -math.inf
+    v = sum(wt for used, wt in states.items() if len(used) == len(items))
     if v <= 0:
         return -math.inf
     return logp + len(L) * math.log(P.p_leak) + math.log(v)

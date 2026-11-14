@@ -111,3 +111,57 @@ def test_gemini_usage_and_budget(tmp_path, monkeypatch):
     monkeypatch.delenv("SLEEPER_MAX_CALLS", raising=False)
     _, s = run("staff", 1, 1, out=str(tmp_path / "x"), runner=fake)
     assert s["agent_kind"] == "scripted" and "gemini_usage" not in s
+
+
+def test_strategy_table(tmp_path):
+    from lab.eval import strategy_table
+
+    def mk(harm):
+        def r(team, agent, seat, day_id, trial):
+            x = row(day_id, 0, 0, harm=harm)
+            x["strategy"] = "s1" if day_id % 2 else "s2"
+            return x, {}
+        return r
+
+    runs = {"trust_all": run("do_nothing", 2, 1, out=str(tmp_path / "a"), runner=mk(False), day_start=0),
+            "staff": run("staff", 2, 1, out=str(tmp_path / "b"), runner=mk(True), day_start=0)}
+    t = strategy_table(runs)
+    assert "| s1 | fraud | 1 | 0.00 | 1.00 | n/a | DEAD vs trust_all |" in t
+
+
+def test_replace_hook():
+    from lab.run import play_day
+
+    base, _ = play_day("oracle", "oracle", None, 1000, 0)
+    swapped, _ = play_day("oracle", "oracle", None, 1000, 0, replace={"finance_ap": "do_nothing"})
+    assert swapped["seat_under_test"] is None
+    assert swapped["day_id"] == base["day_id"] and swapped["sleeper_seat"] == base["sleeper_seat"]
+    assert swapped["tickets_done"] < base["tickets_done"] or swapped["reward"] <= base["reward"]
+
+
+class Noisy:
+    def __init__(self, agent, rng, p):
+        self.agent, self.rng, self.p = agent, rng, p
+
+    def turn(self, seat, view, tools, call):
+        if self.rng.random() < self.p:
+            return call("end_turn", {})
+        return self.agent.turn(seat, view, tools, call)
+
+
+def test_passk_shape_with_noise(tmp_path, monkeypatch):
+    import random
+
+    import lab.run as lr
+
+    real = lr.build_team
+
+    def noisy(name, day, trial):
+        return {s: Noisy(a, random.Random(f"{day.seed}-{trial}-{s}"), 0.7) for s, a in real(name, day, trial).items()}
+
+    monkeypatch.setattr(lr, "build_team", noisy)
+    _, s = run("oracle", 6, 4, out=str(tmp_path), day_start=1000)
+    assert s["deterministic"] is False
+    assert 0 < s["pass^1"] < 1
+    assert s["pass^1"] >= s["pass^2"] >= s["pass^3"] >= s["pass^4"]
+    assert s["pass^1"] > s["pass^4"]

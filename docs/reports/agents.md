@@ -64,3 +64,16 @@ Run Grok exactly as before (only `configs/README.md` may be read; no source, tes
 > You are the head of security at a company with a mole leaking documents. Start the Canary environment from the `justSilas` branch: `make setup`, then for each episode `CANARY_TIER=<tier> CANARY_SEED=<seed> CANARY_LEDGER_TOKEN=<random> CANARY_PORT=<unique free port> make mcp`, and connect to http://127.0.0.1:<port>/mcp. Read ONLY configs/README.md (no source, tests or other docs) and the MCP server's instructions. Play judge seeds 900000–900004 on medium and on hard (10 episodes), one server process per episode, and stop only the server you started (by its pid; never pkill). After each episode record GET /ledger?token=<token>. Write docs/reports/grok-agent-v1.3.md with a table (tier, seed, score, accused, correct, final day, tool calls) plus a 3-bullet rationale per episode, and save each episode's tool-call transcript to docs/reports/grok-agent-v1.3/<tier>-<seed>.jsonl (one {ts, tool, args, isError, result} per call).
 
 Then: `python -m canary.analysis.import_transcript --agent grok --src docs/reports/grok-agent-v1.3 --report docs/reports/grok-agent-v1.3.md --out data/runs/committed/v1.3/grok`.
+
+## 03:55 status
+- Done (verified: make test 482 passed; tables regenerated from committed data):
+  - **docs/reports/gap.md FINAL** for the night. v1.2 official: gpt-5.5 87% / 86% of the solver. v1.3 small-n: 44% / ≈0%. Failure mode: day-14 premature accusations (>90% of value lost).
+  - Codex gpt-5.5 v1.2 5+5 complete. Grok imported. The reference definition agreed with ENV (v1.2 = db104c9 episodes; v1.3 = 0933805).
+  - Forge J5b spec implemented; FR8 is running J5b on v1.3.
+- **Spend:** ≈$260 est. (cap $150 hit at 03:30); all API-billed runs stopped. Codex is in API-key mode, so it is not a free path.
+- Blockers / decisions for Silas (morning):
+  1. Approve ~$60–90 to finish v1.3 gpt-5.5 to 20+20.
+  2. GEMINI_API_KEY → `make gemini-check`, the Gemini frontier family on v1.3, the Gemini Forge mutator.
+  3. OpenCode credits or `codex login` with ChatGPT for subscription-billed runs.
+  4. Grok re-run on v1.3 (prompt above).
+- Next (zero cost): review J5b's HOF when FR8 pings; keep the reports current.

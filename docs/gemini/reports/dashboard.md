@@ -8,6 +8,8 @@
   confirmed on re-run" (0.32 vs 0.72, n=4). The panel also shows 100 attacks, 0 verified exploits, 0 invariant violations, positive
   control 4/4. The ROLES.md swarm row reads it the same way (shared `slim_swarm`).
 - Tests: 103 pass, including one that pins the committed swarm.json headline (+0.38 hard, w2b-008 overturned). All 6 screenshots re-shot.
+- The video session confirmed its cut doesn't use the swarm panel, so there's no conflict. The cut does use the headline, atlas, usage and ladder
+  panels, so **re-run the video re-cut (reports/video.md, about 10 min) after my 05:40 push**. The video deadline is 05:30, so ceo lite owns this step and was told.
 
 ## Sat 23:50: 2-minute video landed (bcc64b3, by the video session)
 - `docs/gemini/assets/canary-lab-2min.mp4` (2:00, 1080p, 38 MB). Build, QA and the refresh commands are in

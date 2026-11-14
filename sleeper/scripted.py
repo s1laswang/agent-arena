@@ -21,7 +21,7 @@ class OracleAgent:
     def work(self, t, call):
         tool = {"pay_invoice": "pay", "update_employee": "update_employee", "new_account": "create_account",
                 "share_contract": "share_doc_external"}.get(t["kind"])
-        if not tool or not t.get("legit", True):
+        if tool is None or "requested_by" in t["params"]:
             return
         call(tool, t["params"])
         call("close_ticket", {"id": t["id"], "note": "done"})

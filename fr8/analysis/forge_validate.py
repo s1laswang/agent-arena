@@ -126,25 +126,71 @@ def to_markdown(rows, run, tier, seeds, tier_params: dict, code_sha="?", tiers_v
     return "\n".join(out) + "\n"
 
 
+HOF_KEYS = ["rank", "fitness", "solver_score", "solver_acc", "per_investigator", "strategy_json"]  # evolve._write_hof
+
+
+def survivors(rows: list[dict], hof: list[dict]) -> list[dict]:
+    """Feasible, behaviour-deduped (best regret per group), re-ranked by v1.2 regret; evolve's HoF line format."""
+    by_sid = {f"hof#{h.get('rank', i + 1)}": h for i, h in enumerate(hof)}
+    best: dict[str, dict] = {}
+    for r in rows:
+        if r["strategy"] == "default" or str(r["feasible"]) not in ("True", "1", "true"):
+            continue
+        b = best.get(r["behaviour"])
+        if b is None or float(r["regret"]) > float(b["regret"]):
+            best[r["behaviour"]] = r
+    keep = sorted(best.values(), key=lambda r: -float(r["regret"]))
+    return [{"rank": i + 1, "fitness": float(r["regret"]), "solver_score": float(r["solver_score"]),
+             "solver_acc": float(r["solver_acc"]),
+             "per_investigator": {"heuristic": {"score": float(r["heur_score"]), "acc": float(r["heur_acc"]),
+                                                "regret": float(r["regret"])}},
+             "strategy_json": by_sid[r["strategy"]]["strategy_json"]} for i, r in enumerate(keep)]
+
+
+def write_survivors(rows, hof, path: str, meta: dict) -> list[dict]:
+    out = survivors(rows, hof)
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    Path(path).write_text("".join(json.dumps(h) + "\n" for h in out))
+    meta = {**meta, "n_survivors": len(out),
+            "source_strategies": [r["strategy"] for r in rows if r["strategy"] != "default"]}
+    Path(str(path).removesuffix(".jsonl") + ".meta.json").write_text(json.dumps(meta, indent=2) + "\n")
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="forge HoF re-validation")
     ap.add_argument("run"); ap.add_argument("--tier", default="hard"); ap.add_argument("--seeds", default="2000:2200")
     ap.add_argument("--workers", type=int, default=2); ap.add_argument("--out", required=True)
     ap.add_argument("--limit", type=int)
+    ap.add_argument("--hof-out", help="write survivors (evolve HoF format) here, e.g. data/forge/hall_of_fame_v1.2.jsonl")
+    ap.add_argument("--from-csv", help="skip evaluation; reuse rows from a previous --out CSV")
     a = ap.parse_args(argv)
     from canary.rules import TIERS
     lo, hi = (int(x) for x in a.seeds.split(":"))
     seeds = list(range(lo, hi))
     hof = [json.loads(l) for l in (Path(a.run) / "hall_of_fame.jsonl").read_text().splitlines() if l.strip()]
     hof = hof[: a.limit] if a.limit else hof
-    rows = validate(hof, a.tier, seeds, a.workers)
-    write_rows(a.out + ".csv", rows)
+    if a.from_csv:
+        import csv
+        with open(a.from_csv, newline="") as fh:
+            rows = list(csv.DictReader(fh))
+    else:
+        rows = validate(hof, a.tier, seeds, a.workers)
+        write_rows(a.out + ".csv", rows)
     import subprocess
     from canary.rules import TIERS_VERSION
     sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
     dirty = subprocess.run(["git", "status", "--porcelain", "--", "canary"], capture_output=True, text=True).stdout.strip()
     logp = Path(a.run) / "log.jsonl"
     gen = json.loads(logp.read_text().splitlines()[-1])["gen"] if logp.exists() else "?"
+    if a.hof_out:
+        write_survivors(rows, hof, a.hof_out, {
+            "code_sha": sha + ("+dirty" if dirty else ""), "tiers_version": TIERS_VERSION, "tier": a.tier,
+            "seeds": f"{lo}:{hi}", "hof_source": str(Path(a.run) / "hall_of_fame.jsonl"), "hof_generation": gen,
+            "command": "python -m fr8.analysis.forge_validate " + " ".join(argv if argv is not None else __import__("sys").argv[1:]),
+            "feasibility": "solver_score >= 0.5 x default-mole solver score AND solver_acc >= 0.85; deduped by behaviour"})
+    if a.from_csv:
+        return
     md = to_markdown(rows, a.run, a.tier, seeds, dataclasses.asdict(TIERS[a.tier]),
                      sha + ("+dirty" if dirty else ""), TIERS_VERSION, gen)
     Path(a.out + ".md").write_text(md)

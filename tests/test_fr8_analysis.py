@@ -157,3 +157,39 @@ def test_forge_validate_feasibility(monkeypatch):
     assert not by["hof#3"]["feasible"]          # acc 0.8 < 0.85
     assert by["hof#4"]["behaviour_group"] == "hof#1" and not by["hof#4"]["distinct"]
     assert "deduped by behaviour): hof#1\n" in fv.to_markdown(rows, "r", "hard", list(range(10)), {})
+
+
+def test_forge_survivors_schema(tmp_path):
+    from canary.forge.mutate import default_strategy_json
+    from canary.mole.dsl import MoleStrategy
+    from fr8.analysis import forge_validate as fv
+    sj = default_strategy_json()
+    hof = [{"rank": i, "strategy_json": sj} for i in (1, 2, 3)]
+    base = {"solver_score": .7, "solver_acc": .9, "heur_score": -.5, "heur_acc": .2}
+    rows = [{"strategy": "default", "feasible": True, "behaviour": "d", "regret": 1.0, **base},
+            {"strategy": "hof#1", "feasible": True, "behaviour": "A", "regret": 1.2, **base},
+            {"strategy": "hof#2", "feasible": True, "behaviour": "A", "regret": 1.3, **base},
+            {"strategy": "hof#3", "feasible": False, "behaviour": "B", "regret": 2.0, **base}]
+    p = tmp_path / "hall_of_fame_v1.2.jsonl"
+    out = fv.write_survivors(rows, hof, str(p), {"code_sha": "x"})
+    lines = [json.loads(l) for l in p.read_text().splitlines()]
+    assert lines == out and len(lines) == 1 and lines[0]["fitness"] == 1.3
+    for h in lines:
+        assert list(h) == fv.HOF_KEYS
+        assert isinstance(h["rank"], int) and isinstance(h["per_investigator"]["heuristic"]["regret"], float)
+        MoleStrategy.from_json(h["strategy_json"])
+    assert json.loads((tmp_path / "hall_of_fame_v1.2.meta.json").read_text())["n_survivors"] == 1
+
+
+def test_real_hof_v12_file_schema():
+    import pytest
+    from pathlib import Path
+    from canary.mole.dsl import MoleStrategy
+    from fr8.analysis import forge_validate as fv
+    p = Path(__file__).resolve().parents[1] / "data/forge/hall_of_fame_v1.2.jsonl"
+    if not p.exists():
+        pytest.skip("not generated yet")
+    for i, l in enumerate(p.read_text().splitlines(), 1):
+        h = json.loads(l)
+        assert list(h) == fv.HOF_KEYS and h["rank"] == i
+        MoleStrategy.from_json(h["strategy_json"])

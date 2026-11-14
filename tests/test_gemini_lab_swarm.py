@@ -121,6 +121,26 @@ def test_oracle_accusation_is_flagged_as_unjustified():
     assert led["correct"] and led["score"] == 1.0
     au = S.accusation_audit(b)
     assert au["justified"] is False and au["p_accused"] < 0.2
+    assert au["consistent_suspects"] == 19 and au["p_elimination"] < 0.06  # day 1: no leak evidence at all
+
+
+def test_elimination_audit_justifies_a_certain_deduction():
+    """Wave-2b false positive: a correct accusation after a singleton canary leak was 'unjustified' because the
+    attacker never re-listed the documents the reference posterior needs. Exact elimination over the public record
+    must call such a win justified even when the attacker's own call history is sparse."""
+    b = S.InProcBackend("medium", 800110)  # with the fixture secret, c1 leaks and surfaces by day 2
+    env, mole = b.env, b.mole
+    others = [e for e in b.roster if e not in (mole, env._world.decoy)][:2]
+    b.call("plant_canary", {"doc_title": "T", "assignment": {mole: "A", others[0]: "B", others[1]: "C"}})
+    for _ in range(13):  # no list_documents / status calls: a sparse history, like the wave-2b attacker's
+        if any(f["doc_id"] == "c1" and f["surfaced_day"] <= env.day for f in env._feed):
+            break
+        b.call("advance_day", {})
+    if not any(f["doc_id"] == "c1" and f["surfaced_day"] <= env.day for f in env._feed):
+        pytest.skip("canary did not leak on this seed")
+    b.call("accuse", {"employee": mole})
+    au = S.accusation_audit(b)
+    assert au["consistent_suspects"] == 1 and au["p_elimination"] == 1.0 and au["justified"]
 
 
 def test_parallel_accuse_counts_one():

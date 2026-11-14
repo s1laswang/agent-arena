@@ -2,6 +2,31 @@
 
 Branch `gemini-ladder`. Newest entry first.
 
+## Sat 19:01 (`date`: Sat Nov 14 19:00 EET 2026): headline cells on track; compute re-prioritised
+
+- **Headline cells (need ≥ 6 paired seeds on both tiers), finished episodes at 18:57:**
+  - 3.5-flash/medium: 8 + 8.
+  - 3.5-flash/high: 8 + 9, plus 3 running.
+  - 3.8-flash/high: 10 + 10.
+  - 3.8-flash/low: 5 (medium) + 6 (hard). The medium cell gets its 6th+ seeds next, in phase 4.
+- **Carbon low/high on hard:** 2 + 2, with 2 high running. g4c (argon + carbon, carbon ≤ 5) continues.
+- **Phase 4** (armed in `bin/phase4.sh`; it fires when the priority flash process exits, keeping the Mac at 16 and
+  carbon ≤ 8). Both launches are recorded:
+  - (a) 3.8-flash low first, then the rest of the flash grid (3.5-flash minimal/low, flash-lite) at concurrency 3;
+  - (b) a second carbon-only process (low/high, hard first) at concurrency 3.
+- **Headline now generated from the table** (`ladder_report.headline`). The wording is gated on the CIs, for
+  example "matches" only if both CIs contain 100%. It stays correct as seeds land. At 18:47:
+  - 3.5-flash medium/high on hard: 92% [76, 113] and 102% [84, 129], 16/16 correct, $0.34–0.39 per episode
+    against $1.30 for carbon-high;
+  - flash-lite is below 0 in 8/8 cells;
+  - 3.8-flash, low → high: medium −52% → 93% [80, 112]; hard 30% → 17%.
+- **Keyless:** `results/gemini/ladder_episodes.jsonl.gz` and `ladder_ledger.jsonl.gz` (0.65 MB) are committed,
+  and the report regenerates from them with `--runs results/gemini/ladder_episodes.jsonl.gz --ledger
+  results/gemini/ladder_ledger.jsonl.gz` (round-trip test). `bin/refresh.sh` re-exports and commits.
+- **Showcase:** carbon/high/medium/0 is recorded (105 calls); the other 5 cells are running. ETA about 19:45.
+  Committed as `results/gemini/replay-ladder-showcase` when `lab_replay` writes its manifest.
+- **Deadlines:** final report and figures by 00:45; the grid keeps running for the 06:00 refresh.
+
 ## Sat 18:23 (`date`: Sat Nov 14 18:22:05 EET 2026): after the outage, grid relaunched on the priorities, report v1.1 with headline findings
 
 **Outage check (verified):**

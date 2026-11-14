@@ -1,5 +1,53 @@
 # G3 Failure Atlas: report (newest first)
 
+## Sat 19:01 (EET, `date`): failure gallery (PLAN-95 B2) and atlas v2
+
+**Failure gallery** (`python -m canary.gemini.gallery`): `docs/reports/failure_gallery.md`,
+`results/gemini/failure_gallery.json`, plus `results/gemini/gallery_{cache,charts}`.
+- **Scope:** 295 episodes, all rules versions, never pooled.
+  - The AfterQuery measurement: gemini-4-carbon (in-process and OpenCode), gemini-3.5-flash OpenCode, Codex gpt-5.5
+    v1.2/v1.3.
+  - Every ladder episode on disk at 19:00.
+  - The rest of the atlas corpus.
+  - 10 Grok episodes on judge seeds are listed as skipped: no world secret, so no replay or solver baseline.
+- **How the gap is accounted:**
+  - gap = solver score - agent score on the same seed and rules, decomposed in code.
+  - Both the agent's and the solver's recorded actions are replayed in the env, and the true-V drops per step are
+    split by cause: leak, canary, restriction.
+  - Fidelity: every replayed result and score matches the recording, except 2 results the harness itself produced
+    (OpenCode output truncation, a rejected bash call).
+  - Each part is assigned to a step and a category: wrong accusation (premature / decoy / evidence-backed luck),
+    infrastructure error, slow commit, canary spend, restriction.
+  - Luck and credit are explicit categories: leak-timing variance, early-commit credit, fewer-canaries credit, solver
+    wrong or abstained.
+- **Result:** net gap +90.795, tagged +90.795, **unexplained 0** (largest per-episode residual 4e-16). Tests in
+  `tests/test_gemini_lab_gallery.py` check, on real committed runs, that the per-episode sums equal the gap.
+- **Gemini's part:** gemini-3.8-flash named the 12 modes and quoted the agents; 40/40 quotes verbatim. Keyless
+  `--replay` works (0 calls).
+- **Headline:** wrong accusations on weak evidence (+63.0) and investigating past the solver's commit point (+23.7)
+  dominate. 18.9 of the lost value is luck the solver's own posterior also backed. 7.8 was harness crashes
+  (gpt-5.6-sol), not agent decisions.
+
+**Atlas v2** (`results/gemini/v2/`; v1's headline is untouched):
+- 111 episodes including ladder runs, capped per (model, thinking level) to fit one cache: 701k tokens.
+- A thinking-level table computed in code.
+- The carbon cross-check, run in 3 shards at LOW thinking, recovers 4/5 of the flash taxonomy's modes; 36/36 quotes
+  verbatim.
+- Blind multimodal localisation (belief-only chart, no regret in the excerpt) still matches the code 8/8.
+- **Batch API is blocked on our key:** every request returns code 8 RESOURCE_EXHAUSTED inside a job that reports
+  SUCCEEDED. This is recorded in the playbook.
+
+**Also fixed:**
+- The full5 clustering IndexError, with 2 regression tests.
+- Cohorts are now split by thinking level.
+- MCP-wrapped error results are compared correctly during replay.
+
+**Next:**
+- Rerun v2 with the full ladder once G2 finishes. Live discovery costs about $4.
+- Retry the batch labels if the quota recovers.
+- Read in Ivar's agreement score: `python -m canary.gemini.atlas_agreement`.
+
+**Spend:** about $9.5 (atlas v1) + $7.4 (v2 runs) + $0.1 (gallery naming).
 ## Sat 18:27 (EET, `date`): atlas v1 committed
 
 **Done (verified)**

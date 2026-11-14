@@ -193,25 +193,58 @@ def reference_rows(ref: list[dict], pairs: set[tuple[str, int]]) -> list[dict]:
     return rows
 
 
+def _regret_items(e: dict) -> list[dict]:
+    from canary.analysis.tags import to_result
+    from canary.solver.regret import attribute
+    try:
+        return attribute(to_result(e)) or []
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _bucket(items_by_ep: list[list[dict]]) -> dict:
+    """Regret per episode by failure tag. Each step's regret is split evenly over its tags; steps the tagger leaves
+    untagged go to `other:<tool>` (e.g. other:accuse = accusing at a belief the tagger does not call premature),
+    so the buckets sum to the total solver regret."""
+    n = len(items_by_ep)
+    agg: dict = defaultdict(lambda: {"regret": 0.0, "eps": 0})
+    for items in items_by_ep:
+        seen = set()
+        for it in items:
+            r = float(it.get("regret", 0.0))
+            if r <= 0:
+                continue
+            keys = list(it.get("tags") or []) or [f"other:{it.get('action')}"]
+            for k in keys:
+                agg[k]["regret"] += r / len(keys)
+                if k not in seen:
+                    agg[k]["eps"] += 1
+                    seen.add(k)
+    total = sum(v["regret"] for v in agg.values())
+    return {"episodes": n, "regret_per_ep": round(total / max(1, n), 4),
+            "tags": {k: {"regret_per_ep": round(v["regret"] / max(1, n), 4), "rate": round(v["eps"] / max(1, n), 3)}
+                     for k, v in sorted(agg.items(), key=lambda kv: -kv[1]["regret"])}}
+
+
 def tag_tables(eps: list[dict]) -> dict:
-    """Regret by failure tag (canary.solver.regret.attribute via canary.analysis.tags.tag_report), per
-    (model, level, tier) and pooled per (level, tier) over the models that ran every one of low/medium/high."""
-    from canary.analysis.tags import tag_report
-    per_cell = [dict(e, agent=f"{e['_cell']['model']}@{e['_cell']['level']}|{e['_cell']['tier']}") for e in eps]
-    rep = tag_report(per_cell)
+    """Solver regret (canary.solver.regret.attribute, the attribution canary.analysis.tags uses) by failure tag,
+    per (model, level, tier) and pooled per (level, tier) over the models that ran every one of low/medium/high."""
+    items = {id(e): _regret_items(e) for e in eps}
+    per_cell: dict = defaultdict(list)
+    for e in eps:
+        c = e["_cell"]
+        per_cell[f"{c['model']}@{c['level']}|{c['tier']}"].append(items[id(e)])
     have = defaultdict(set)
     for e in eps:
         have[e["_cell"]["model"]].add(e["_cell"]["level"])
     common = sorted(m for m, ls in have.items() if {"low", "medium", "high"} <= ls)
-    pooled_eps = [dict(e, agent=f"{e['_cell']['level']}|{e['_cell']['tier']}") for e in eps
-                  if e["_cell"]["model"] in common and e["_cell"]["level"] in ("low", "medium", "high")]
-    pooled = tag_report(pooled_eps)
-    slim = lambda r: {k: {"episodes": v["episodes"], "score_mean": v["score_mean"],  # noqa: E731
-                          "regret_per_ep": round(v["regret_total"] / max(1, v["episodes"]), 4),
-                          "tags": {t: {"rate": d["rate"], "regret_per_ep": round(d["regret_sum"] / max(1, v["episodes"]), 4),
-                                       "worst": d["worst"]} for t, d in v["tags"].items()}}
-                      for k, v in r.items()}
-    return {"per_cell": slim(rep), "pooled_common_models": common, "pooled": slim(pooled)}
+    pooled: dict = defaultdict(list)
+    for e in eps:
+        c = e["_cell"]
+        if c["model"] in common and c["level"] in ("low", "medium", "high"):
+            pooled[f"{c['level']}|{c['tier']}"].append(items[id(e)])
+    return {"per_cell": {k: _bucket(v) for k, v in per_cell.items()}, "pooled_common_models": common,
+            "pooled": {k: _bucket(v) for k, v in pooled.items()}}
 
 
 # --------------------------------------------------------------------------- figures
@@ -230,7 +263,8 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
     solver_mean = {r["tier"]: r["mean"] for r in ref_rows if r["agent"] == "solver"}
 
     # (a) heatmap: score / solver
-    fig, axes = plt.subplots(1, 2, figsize=(11, 0.55 * len(models) + 2.2), squeeze=False)
+    fig, axes = plt.subplots(1, 2, figsize=(12, 0.55 * len(models) + 2.2), squeeze=False, sharey=True,
+                             constrained_layout=True)
     for ax, tier in zip(axes[0], TIERS):
         grid = [[float("nan")] * len(levels) for _ in models]
         for r in rows:
@@ -239,6 +273,8 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
         im = ax.imshow(grid, cmap="RdYlGn", vmin=-0.5, vmax=1.2, aspect="auto")
         ax.set_xticks(range(len(levels)), levels)
         ax.set_yticks(range(len(models)), models)
+        if tier != TIERS[0]:
+            ax.tick_params(labelleft=False)
         for r in rows:
             if r["tier"] == tier and r["model"] in models:
                 ax.text(levels.index(r["level"]), models.index(r["model"]),
@@ -260,7 +296,7 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
                           and r["thinking_per_ep"] == r["thinking_per_ep"]], key=lambda r: r["thinking_per_ep"])
             if not pts:
                 continue
-            xs = [max(r["thinking_per_ep"], 1) for r in pts]
+            xs = [r["thinking_per_ep"] for r in pts]
             ax.errorbar(xs, [r["mean"] for r in pts], yerr=[r["ci"] for r in pts], marker="o", capsize=2,
                         color=colors.get(m), label=m, alpha=0.9)
             for r, x in zip(pts, xs):
@@ -269,8 +305,8 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
         if tier in solver_mean:
             ax.axhline(solver_mean[tier], ls="--", color="k", lw=1, label="reference solver")
         ax.axhline(0, color="#999", lw=0.6)
-        ax.set_xscale("log")
-        ax.set_xlabel("mean thinking tokens per episode (log)")
+        ax.set_xscale("symlog", linthresh=1000)
+        ax.set_xlabel("mean thinking tokens per episode (symlog; 0 = no thinking)")
         ax.set_ylabel("mean score (true V if correct, -1 wrong)")
         ax.set_title(f"{tier}: thinking-to-competence")
     axes[0][0].legend(fontsize=7, loc="lower right")

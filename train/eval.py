@@ -26,6 +26,7 @@ def main():
     a = ap.parse_args()
     os.environ["SLEEPER_BASE_MODEL"] = a.model
     os.environ["SLEEPER_MODEL_ID"] = model_id(a.model, a.adapter, a.run_id)
+    os.environ["SLEEPER_ROW_LABEL"] = a.model.split("/")[-1] + (f"+adapter {a.run_id}" if a.adapter else " base")
     out = Path(a.out)
     play(f"local:{a.adapter or ''}@{a.model}", a, out / "model")
     runs = {"model": out / "model"}

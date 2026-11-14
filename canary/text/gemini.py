@@ -106,6 +106,12 @@ class GeminiProvider:
         self._save(facts)
         return msgs
 
+    def social_messages(self, facts: PublicDayFacts, events: list[dict]) -> list[dict]:
+        if not hasattr(self, "_social"):
+            self._social = GeminiSocialRenderer("gemini-4-carbon" if self.model == "gemini-2.5-flash" else self.model,
+                                                client=self._client)
+        return self._social.render(facts, events)
+
     def interview_answer(self, facts: PublicDayFacts, employee: str, topic: str, signal: str) -> str:
         c = self._cache(facts)
         k = f"{employee}|{topic}|{signal}|{facts.day}"
@@ -130,6 +136,107 @@ class GeminiProvider:
         c["interviews"][k] = ans
         self._save(facts)
         return ans
+
+
+SOCIAL_SCHEMA = {"type": "object", "properties": {"bodies": {"type": "array", "items": {"type": "string"}}},
+                 "required": ["bodies"]}
+SOCIAL_SYSTEM = ("You write realistic, short internal workplace chat messages for a fictional company. You are told "
+                 "who speaks, who they talk about, and the tone. You know nothing else about the company's problems "
+                 "and must not invent evidence, proof or confessions. Never use the word 'mole'. Avoid talk about pay, raises, "
+                 "promotions, management, quitting, recruiters, CVs, or words like angry, unfair, hate. Output JSON only.")
+_TONE = {"rumour": "gossipy, speculative office rumour that this colleague might be the one leaking documents; hedged, no proof",
+         "authority": "a senior person stating with confidence that this colleague is behind the document leaks, while saying "
+                      "explicitly that it is unverified and they have no proof",
+         "grudge": "petty and personal: someone who dislikes this colleague accuses them of being behind the leaks"}
+_EID = __import__("re").compile(r"\be\d\d\b")
+
+
+def social_prompt(facts: PublicDayFacts, events: list[dict]) -> str:
+    """Prompt built ONLY from public labels: speaker, target, kind, day, tone. No truth, no seed, no 'seeded' flag."""
+    by_id = {e.id: e for e in facts.employees}
+    items = []
+    for i, ev in enumerate(events):
+        sp, t = by_id[ev["speaker"]], by_id[ev["target"]]
+        items.append({"n": i, "kind": ev["kind"], "speaker": f"{sp.name}, {sp.role}, {sp.dept}",
+                      "about": f"{t.name} ({t.id})", "tone": _TONE[ev["kind"]]})
+    return (f"Company: {facts.company}. Day {facts.day}. Write one message body (1-3 sentences) per item, in order, "
+            f"in the speaker's voice. Each body must mention the colleague exactly as given in 'about', i.e. name followed "
+            f"by the id in parentheses, and must not mention any other employee id. Return {{\"bodies\": [...]}} with "
+            f"exactly {len(events)} strings.\nITEMS:\n" + json.dumps(items, sort_keys=True))
+
+
+DECOY_VOCAB = ("raise", "management", "deserve", "promotion", "cv", "pay", "angry", "unfair", "furious", "sick of",
+               "quit", "ridiculous", "fed up", "hate", "burn out", "burnout", "recruiter", "goalposts", "nobody asks",
+               "updating my cv", "culprit")
+
+
+def social_body_ok(body: str, ev: dict) -> bool:
+    if not isinstance(body, str) or not body.strip() or len(body) > 600 or lint_text(body):
+        return False
+    if any(w in body.lower() for w in DECOY_VOCAB):
+        return False
+    ids = set(_EID.findall(body))
+    return ev["target"] in ids and ids <= {ev["target"], ev["speaker"]}
+
+
+class GeminiSocialRenderer:
+    """Gemini bodies for rumour / grudge / unverified-accusation messages."""
+
+    def __init__(self, model: str = "gemini-4-carbon", cache_dir: str = "data/gemini_cache", client=None):
+        self.model, self.cache_dir, self._client = model, cache_dir, client
+        self.rejects = 0
+        self.calls = 0
+
+    @property
+    def client(self):
+        if self._client is None:
+            from canary.llm import get_client
+            self._client = get_client(f"gemini:{self.model}")
+        return self._client
+
+    def _bodies(self, prompt: str) -> list:
+        from .llm_cache import cached_chat
+        from canary.llm import StubClient
+        label = "stub" if isinstance(self._client, StubClient) else "REAL"
+        try:
+            out = cached_chat(self.cache_dir, lambda: self._count(self.client), self.model, SOCIAL_SYSTEM, prompt,
+                              SOCIAL_SCHEMA, label)
+            return json.loads(out["text"]).get("bodies") or []
+        except Exception as ex:
+            import logging
+            logging.getLogger("canary.text.gemini").warning("social chatter fallback: %s", type(ex).__name__ + ": " + str(ex)[:200])
+            return []
+
+    def _count(self, c):
+        self.calls += 1
+        return c
+
+    def render(self, facts: PublicDayFacts, events: list[dict]) -> list[dict]:
+        from .template import render_social
+        msgs = render_social(facts, events)
+        if not events:
+            return msgs
+        bodies = self._bodies(social_prompt(facts, events))
+        out = []
+        for i, (m, ev) in enumerate(zip(msgs, events)):
+            b = bodies[i] if i < len(bodies) else None
+            if social_body_ok(b, ev):
+                m = dict(m, body=b.strip())
+            else:
+                self.rejects += 1
+            out.append(m)
+        return out
+
+
+class GeminiSocialProvider(TemplateProvider):
+    """Template text everywhere, Gemini-written social chatter (PROVIDER=gemini-social[:model])."""
+
+    def __init__(self, model: str = "gemini-4-carbon", cache_dir: str = "data/gemini_cache", client=None, **_):
+        self.social = GeminiSocialRenderer(model, cache_dir, client)
+        self.name = f"gemini-social:{model}"
+
+    def social_messages(self, facts: PublicDayFacts, events: list[dict]) -> list[dict]:
+        return self.social.render(facts, events)
 
 
 class GeminiWorldTextProvider:
@@ -176,11 +283,45 @@ class GeminiWorldTextProvider:
         return self._get(facts).interview_answer(facts, employee, topic, signal)
 
 
+def _make_social_v2(spec: str, **kw):
+    from canary.social.engine import SocialV2Provider
+    cache_dir = kw.get("cache_dir")
+    client = kw.get("client")
+    head, _, rest = spec.partition(":")
+    stub = head.endswith("-stub")
+    tpl = head.endswith("-template")
+    prefix = "social-v2" if head.startswith("social-v2") else "v16"
+    variant = "all"
+    model = "gemini-4-carbon"
+    if rest:
+        if rest.startswith("gemini-"):
+            model = rest
+        elif ":" in rest:
+            variant, model = rest.split(":", 1)
+        else:
+            variant = rest
+    if stub and client is None:
+        from canary.llm import get_client
+        client = get_client("stub")
+    return SocialV2Provider(variant=variant, model=model, cache_dir=cache_dir, client=client,
+                            template_only=tpl, name_prefix=prefix)
+
+
 def get_provider(spec: str | None, **kw):
-    """'template' | 'gemini' | 'gemini:<model>' | 'stub' (gemini path with canary.llm stub client)
-    | 'gemini-world' | 'gemini-world:<model>' | 'gemini-world-stub' (AGENTS' GeminiWorldText)."""
+    """'template' | 'social-v2[:variant]' | 'v16[:variant[:model]]' | 'gemini' | 'gemini:<model>' | 'stub'
+    | 'gemini-world' | 'gemini-world:<model>' | 'gemini-world-stub'."""
     if spec in (None, "", "template"):
         return TemplateProvider()
+    if spec in ("social-v2", "social-v2-stub", "social-v2-template", "v16", "v16-stub", "v16-template") or spec.startswith(
+        ("social-v2:", "social-v2-stub:", "social-v2-template:", "v16:", "v16-stub:", "v16-template:")
+    ):
+        return _make_social_v2(spec, **kw)
+    if spec == "gemini-social-stub":
+        from canary.llm import get_client
+        return GeminiSocialProvider(client=get_client("stub"), **kw)
+    if spec == "gemini-social" or spec.startswith("gemini-social:"):
+        return GeminiSocialProvider(model=spec.split(":", 1)[1] if ":" in spec else "gemini-4-carbon",
+                                    **{k: v for k, v in kw.items() if k != "cache_dir"})
     if spec == "gemini-world-stub":
         from canary.llm import get_client
         return GeminiWorldTextProvider(client=get_client("stub"), **kw)

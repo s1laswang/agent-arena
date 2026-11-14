@@ -75,7 +75,9 @@ def text_parts(contents: list) -> list:
 class AtlasOps:
     def __init__(self, client: Any = None, replay: bool = False, cache_dir: Path | None = None, run_id: str = "",
                  record_responses: bool = True, max_retries: int = 5):
+        import threading
         self._client = client
+        self._client_lock = threading.Lock()
         self.replay = replay
         self.cache_dir = Path(cache_dir) if cache_dir else CACHE_DIR
         self.run_id = run_id or f"atlas-{time.strftime('%Y%m%d-%H%M%S')}"
@@ -88,11 +90,12 @@ class AtlasOps:
     # ------------------------------------------------------------------ plumbing
     @property
     def client(self):
-        if self._client is None:
-            if self.replay:
-                raise ReplayMiss("replay mode: no live client")
-            self._client = sdk_client()
-        return self._client
+        with self._client_lock:  # one client: a second one racing in from another thread got closed on GC
+            if self._client is None:
+                if self.replay:
+                    raise ReplayMiss("replay mode: no live client")
+                self._client = sdk_client()
+            return self._client
 
     def _key(self, op: str, model: str, payload: Any) -> str:
         return hashlib.sha256(f"{op}\n{model}\n{_canon(payload)}".encode()).hexdigest()

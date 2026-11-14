@@ -51,6 +51,7 @@ lost versus the solver's choice at that point, computed in code from the solver'
 Answer ONLY from the corpus. Every quote must be copied character for character from the named episode block:
 quotes are checked by a program and any quote that is not verbatim is discarded. Never invent episode ids or steps."""
 
+QUESTION_THINKING = "medium"  # thinking level for new cached questions (discovery recorded at the default level)
 TOOL_DECISION = {"plant_canary": "canary_design", "accuse": "accusation_target", "advance_day": "commit_timing",
                  "restrict_access": "restriction", "unrestrict_access": "restriction"}
 
@@ -184,8 +185,19 @@ class Atlas:
     def _ask_cached(self, question: str, schema_model, tag: str):
         """A question against the cached corpus (explicit context cache), else with the corpus inline."""
         if getattr(self, "use_cache", False) and not self._cache_failed:
+            # reuse an answer an earlier run recorded at the default thinking level; new calls think at
+            # QUESTION_THINKING (default thinking on the 800k-token cache spent up to 63k thinking tokens and
+            # ~8 min per question)
+            try:
+                r = self.ops.generate(self.cache_model, [question], schema=inline_schema(schema_model), tag=tag,
+                                      cache_name=None, cache_key=self.corpus_sha, system=None, recorded_only=True)
+                t, _ = parse(r.get("text", ""), schema_model)
+                if t is not None:
+                    return t
+            except ReplayMiss:
+                pass
             r = self._gen(self.cache_model, [question], schema_model, tag, cache_name=self._lazy_cache,
-                          cache_key=self.corpus_sha, system=None)
+                          cache_key=self.corpus_sha, system=None, thinking_level=QUESTION_THINKING)
             if r is not None or not self._cache_failed:
                 return r
         return self._gen(self.cache_model, [self.text, question], schema_model, tag, system=SYSTEM)

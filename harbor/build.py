@@ -33,7 +33,8 @@ cpus = 1
 memory_mb = 2048
 storage_mb = 10240
 gpus = 0
-allow_internet = true
+network_mode = "allowlist"
+allowed_hosts = ["sleeper-server"]
 
 [[environment.mcp_servers]]
 name = "sleeper"
@@ -49,7 +50,7 @@ url = "http://sleeper-server:8000/mcp"
 
 DOCKERFILE = '''FROM python:3.13-slim
 WORKDIR /app
-RUN pip install --no-cache-dir mcp pydantic && useradd -m agent && mkdir -p /logs && chmod 777 /logs
+RUN pip install --no-cache-dir mcp pydantic && useradd -m agent && mkdir -p /logs && chmod 1777 /logs
 COPY oracle_client.py /opt/oracle_client.py
 '''
 
@@ -62,6 +63,8 @@ COMPOSE = '''services:
   sleeper-server:
     build:
       context: ./runtime-server
+    networks:
+      - default
     environment:
       - SLEEPER_SEED={seed}
       - SLEEPER_SEAT={seat}
@@ -90,11 +93,21 @@ CMD ["python", "-m", "harbor.sidecar"]
 '''
 
 TEST = '''#!/bin/bash
-mkdir -p /logs/verifier
-rm -f /logs/verifier/reward.txt
-echo 0 > /logs/verifier/reward.txt
 /usr/local/bin/python -I - <<'PY'
-import json, urllib.request
+import json, os, shutil, signal, urllib.request
+for p in os.listdir("/proc"):
+    if p.isdigit() and int(p) != os.getpid():
+        try:
+            if os.stat(f"/proc/{{p}}").st_uid != 0:
+                os.kill(int(p), signal.SIGKILL)
+        except OSError:
+            pass
+os.makedirs("/logs/verifier", exist_ok=True)
+os.chown("/logs/verifier", 0, 0)
+os.chmod("/logs/verifier", 0o755)
+for f in os.listdir("/logs/verifier"):
+    if f.startswith("reward"):
+        os.remove("/logs/verifier/" + f)
 req = urllib.request.Request("http://sleeper-server:8001/reward", headers={{"X-Verify-Token": "{token}"}})
 try:
     r = json.loads(urllib.request.urlopen(req, timeout=120).read())
@@ -104,6 +117,8 @@ except Exception as e:
     print("verifier error", repr(e))
     ok = False
 open("/logs/verifier/reward.txt", "w").write("1" if ok else "0")
+os.chmod("/logs/verifier/reward.txt", 0o444)
+os.chmod("/logs/verifier", 0o755)
 PY
 '''
 
@@ -116,9 +131,16 @@ PYTHONPATH=. python oracle_run.py http://sleeper-server:8000/mcp {seat} day.json
 
 def effective_id(salt, seed, seat):
     import os
+    old = os.environ.get("SLEEPER_SALT")
     os.environ["SLEEPER_SALT"] = salt
-    from harbor.sidecar import effective_id as eid
-    return eid(seed, seat)
+    try:
+        from harbor.sidecar import effective_id as eid
+        return eid(seed, seat)
+    finally:
+        if old is None:
+            os.environ.pop("SLEEPER_SALT", None)
+        else:
+            os.environ["SLEEPER_SALT"] = old
 
 
 def oracle_day(salt, seed, seat):

@@ -1,7 +1,5 @@
-import inspect
 import sys
 from collections import Counter
-from unittest import mock
 
 from lab import analyse
 from lab import run as lrun
@@ -12,22 +10,7 @@ AUDITORS = ("controller", "it_admin", "legal")
 
 def swap(team, day_id, trial, seats):
     seats = [seats] if isinstance(seats, str) else list(seats)
-    if "replace" in inspect.signature(lrun.play_day).parameters:
-        return lrun.play_day(team, team, None, day_id, trial, replace={s: "oracle" for s in seats})[0]["reward"]
-    orig = lrun.build_team
-
-    def build(name, day, t):
-        players = orig(name, day, t)
-        if name == team:
-            oracle = orig("oracle", day, t)
-            for s in seats:
-                if s in oracle:
-                    players[s] = oracle[s]
-        return players
-
-    with mock.patch.object(lrun, "build_team", build):
-        res, _ = lrun.play_day(team, team, None, day_id, trial)
-    return res["reward"]
+    return lrun.play_day(team, team, None, day_id, trial, replace={s: "oracle" for s in seats})[0]["reward"]
 
 
 def decisive_seats(day, fls):

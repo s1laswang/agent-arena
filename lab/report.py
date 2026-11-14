@@ -102,24 +102,39 @@ def seat_table(tot):
     return "\n".join(lines + [f"| {s} | {n} |" for s, n in tot.most_common()])
 
 
-def headline(rs, cf):
+def facts(rs, cf):
     st, rf = pick(rs, "staff"), pick(rs, "reference")
     if not st:
-        return []
+        return {}
     d, s = st
     days = analyse.load(d)
     lost = [x for x in days if x["result"]["reward"] == 0]
     c = Counter(l for x in lost for l in {y["label"] for y in analyse.label(x)})
-    un = c.get("unexplained_loss", 0)
-    out = [f"- Staff scored {pct(s['reward_mean'])} reward over {s['n_runs']} runs" + (f", the reference {pct(rf[1]['reward_mean'])} over {rf[1]['n_runs']} runs." if rf else ".") + f" Command: `python -m lab.run --team staff` and `--team reference`, summaries in {d.name}/summary.json, {rf[0].name + '/summary.json' if rf else ''}."]
-    out.append(f"- {len(lost) - un} of {len(lost)} staff losses carry a named mistake tied to a ledger action, {un} unexplained. Command: `python -m lab.analyse {d}`.")
-    top = [(k, n) for k, n in c.most_common() if k not in ("unfinished_tickets", "unexplained_loss")][:3]
-    out.append("- Most common named mistakes: " + ", ".join(f"{k} ({n} of {len(lost)} lost days)" for k, n in top) + f". Command: `python -m lab.analyse {d}`.")
+    n = len(lost) or 1
+    f = {"kind": "scripted staff" if s.get("agent_kind", "scripted") == "scripted" else "Gemini staff", "n_days": s["n_days"], "trials": s["n_runs"] // max(1, s["n_days"]),
+         "staff_reward": s["reward_mean"], "ref_reward": rf[1]["reward_mean"] if rf else None, "n_runs": s["n_runs"], "losses": len(lost),
+         "unexplained": c.get("unexplained_loss", 0), "top": [(k, v) for k, v in c.most_common() if k not in ("unfinished_tickets", "unexplained_loss")][:3],
+         "goal": {k: v["reward_mean"] for k, v in s.get("by_goal_kind", {}).items()}, "dir": d, "ref_dir": rf[0] if rf else None}
     if cf["losses"]:
-        out.append(f"- {cf['fixed']} of {cf['losses']} staff losses ({100 * cf['fixed'] // cf['losses']}%) flip to a win when the one seat that made the decisive decision follows the oracle procedure; {cf['fixed'] + cf['fixed_two']} of {cf['losses']} ({100 * (cf['fixed'] + cf['fixed_two']) // cf['losses']}%) when up to two seats do. Command: `python -m lab.counterfactual {d}`.")
-    g = s.get("by_goal_kind", {})
-    if g:
-        out.append("- Staff reward by sleeper goal: " + ", ".join(f"{k} {pct(v['reward_mean'])}" for k, v in g.items()) + f". Command: `python -m lab.report {d.parent}`.")
+        f["one_seat_pct"] = 100 * cf["fixed"] / cf["losses"]
+        f["two_seat_pct"] = 100 * (cf["fixed"] + cf["fixed_two"]) / cf["losses"]
+        f["cf"] = cf
+    f["named_pct"] = 100 * (len(lost) - f["unexplained"]) / n
+    return f
+
+
+def headline(rs, cf):
+    f = facts(rs, cf)
+    if not f:
+        return []
+    d, k = f["dir"], f["kind"]
+    out = [f"- {k.capitalize()} scored {pct(f['staff_reward'])} reward over {f['n_runs']} runs ({f['n_days']} days x {f['trials']} trials)" + (f", the reference {pct(f['ref_reward'])}." if f["ref_reward"] is not None else ".") + f" Command: `python -m lab.eval`, summaries in {d.name}/summary.json."]
+    out.append(f"- {f['losses'] - f['unexplained']} of {f['losses']} {k} losses carry a named mistake tied to a ledger action, {f['unexplained']} unexplained. Command: `python -m lab.analyse {d}`.")
+    out.append(f"- Most common named mistakes ({k}): " + ", ".join(f"{a} ({n} of {f['losses']} lost days)" for a, n in f["top"]) + f". Command: `python -m lab.analyse {d}`.")
+    if "cf" in f:
+        out.append(f"- {f['cf']['fixed']} of {f['losses']} {k} losses ({f['one_seat_pct']:.0f}%) flip to a win when the one seat that made the decisive decision follows the oracle procedure; {f['two_seat_pct']:.0f}% when up to two seats do. Command: `python -m lab.counterfactual {d}`.")
+    if f["goal"]:
+        out.append(f"- {k.capitalize()} reward by sleeper goal: " + ", ".join(f"{a} {pct(v)}" for a, v in f["goal"].items()) + f". Command: `python -m lab.report {d.parent}`.")
     return out
 
 

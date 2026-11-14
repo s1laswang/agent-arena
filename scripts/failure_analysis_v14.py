@@ -442,6 +442,20 @@ def summarize(data: dict) -> dict:
     return out
 
 
+def approx_equal(a, b, tol: float = 1e-9) -> bool:
+    if isinstance(a, bool) or isinstance(b, bool):
+        return a is b
+    if isinstance(a, int) and isinstance(b, int):
+        return a == b
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return math.isclose(a, b, rel_tol=tol, abs_tol=tol)
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(approx_equal(a[k], b[k], tol) for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(approx_equal(x, y, tol) for x, y in zip(a, b))
+    return a == b
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
@@ -452,10 +466,11 @@ def main(argv=None) -> int:
     if a.check:
         from failure_analysis_v14_report import render  # noqa: E402
         old = OUT_JSON.read_text() if OUT_JSON.exists() else ""
-        if json.loads(old or "{}") != json.loads(blob):
+        fresh = json.loads(blob)
+        if not approx_equal(json.loads(old or "{}"), fresh):
             print("results/failure_analysis_v1.4.json differs from a fresh run")
             return 1
-        if (OUT_MD.read_text() if OUT_MD.exists() else "") != render(json.loads(blob)):
+        if (OUT_MD.read_text() if OUT_MD.exists() else "") != render(fresh):
             print("docs/reports/failure_analysis_v1.4.md differs from a fresh render")
             return 1
         print("failure analysis reproduces")

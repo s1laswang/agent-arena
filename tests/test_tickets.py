@@ -73,3 +73,9 @@ def test_partner_depends_on():
         for t in partners:
             assert t.depends_on in by and by[t.depends_on].tick <= t.tick
         assert all(t.depends_on is None for t in d.tickets if t not in partners)
+
+
+def test_one_employee_change_per_employee():
+    for s in range(30):
+        ids = [t.params["employee_id"] for t in make_day(s).tickets if t.kind == "update_employee"]
+        assert len(ids) == len(set(ids))

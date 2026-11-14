@@ -50,7 +50,6 @@ def test_run_and_eval(tmp_path):
 
 def test_eval_summary_block(tmp_path, capsys):
     from lab.eval import main as ev
-    from tests.test_lab_results import fake
 
     ev(["--days", "2", "--trials", "1", "--out", str(tmp_path / "e"), "--web-out", ""], runner=fake)
     tail = capsys.readouterr().out.split("\nSUMMARY ")[1].splitlines()

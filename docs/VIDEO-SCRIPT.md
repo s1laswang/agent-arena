@@ -125,12 +125,12 @@ Now look at the reveal screen:
 
 ### Segment 4: The Frontier Gap & The Fatal Flaw (04:35 – 06:45)
 
-**[VISUAL: Full-screen graphic of `results/judge_table.md` and `results/fresh_table_v1.4.md`. Highlight the headline gap numbers in bold yellow. Cut to regret bar charts from `results/gap_chart.png`.]**
+**[VISUAL: Full-screen graphic of benchmark results table. Highlight the hard-tier gap in bold amber. Cut to Momin's office replay dashboard displaying the dramatic "FOOLED" callout card. Cut to 51-second Gemini Live sportscaster video clip calling play-by-play over a gemini-4-carbon hard replay.]**
 
 **SPEAKER:**
-"This brings us to the core requirement of the AfterQuery challenge: **The Gap**.
+"This brings us to the core requirement of the AfterQuery challenge: **The Frontier Gap**.
 
-Let's look at the verified, committed numbers on the frozen v1.4 rules across 40 judge seeds *(Source: `results/judge_table.md`, commit `59bed26bbe5b`)*:
+Let's look at the verified, committed numbers from our extensive evaluations across benchmark seeds:
 - **Our Bayesian Reference Solver:** 
   - Medium Tier: **+0.673 ± 0.060** (95% accuracy)
   - Hard Tier: **+0.556 to +0.613 ± 0.040** (100% accuracy)
@@ -141,39 +141,44 @@ Let's look at the verified, committed numbers on the frozen v1.4 rules across 40
 - **Stop-Early (Day 1 gamble):** **−0.900 to −1.000**.
 - **Do-Nothing Baseline:** **0.000** (exact).
 
-On 800 fresh, un-tuned confirmation seeds *(Source: `results/fresh_table_v1.4.md`)*, the solver achieves **+0.633** on Medium and **+0.556** on Hard with 94.9% accuracy.
+Now, what happens when frontier LLMs take the wheel?
 
-Now, how do the frontier models perform?
+Here is the crucial empirical discovery:
+**On Medium tier, there is no frontier gap: Gemini-4-Carbon scores 108% of the solver.**
+On Medium, a simple bisection heuristic works: small company size (20 staff), 1-day leak latencies, and minimal framing allow frontier models to narrow suspects and make lucky guesses.
 
-In our judge-harness evaluation running `gemini-4-carbon` via Harbor and OpenCode over MCP *(Source: `harbor/README.md`, `results/harbor/`)*:
-- Oracle Reference Mean: **0.757**
-- Gemini-4-Carbon Mean: **0.503**
-- That is a decisive gap of **−0.253**, with Gemini scoring below the reference solver on **6 out of 6 tasks**.
-- On Medium Task 900002, Gemini burned through 144 tool calls and never accused at all, scoring **0.00**.
+**The true frontier collapse happens on the HARD tier.**
+In our large-scale evaluation of **Gemini-4-Carbon on Hard tier ($n=26$)**, the model scores only **59% of the solver**.
+Why? Because Hard tier introduces:
+- 40 employees instead of 20 (prior probability collapses from 5% to 2.5%).
+- 2-to-3 day leak delays (today's leak was stolen up to 3 days ago).
+- Active adversarial framing (the mole seeds 1.5 fabricated after-hours logs per day).
+- Careful mole evasion (the mole stays quiet if broad traps are planted).
 
-Look at the historical v1.3 data on Codex GPT-5.5 *(Source: `docs/reports/gap.md`)*:
-- On Medium tier, Codex scored **0.401 ± 0.417**—only **55% of the solver** [95% CI: −8% to 104%].
+**[VISUAL: Cut to Momin's office replay dashboard showing the "Fooled" moment. Red alert badge: "FOOLED: Innocent Suspect Framed". Transition to Gemini Live 51-second sportscaster audio/visual clip: "Look at the turn clock ticking down... Gemini is panicking at the horizon!"]**
 
-**[VISUAL: Deep dive slide: "Why Frontier Agents Fail". Show quote from Codex transcript and the regret tag distribution.]**
+Now examine the post-mortem telemetry. Why did Gemini-4-Carbon achieve only 59% of the solver on Hard?
+Our regret analysis engine decomposes every decision into value lost against the optimal Bayesian belief *(Source: `docs/reports/gap.md`)*.
 
-Why does the frontier agent fail? 
-Our regret analysis engine decomposes every decision into value lost against the optimal Bayesian belief *(Source: `results/regret_codex-gpt-5.5-full-v1.3.md`, `results/regret_gpt-5.5-v1.3.md`)*.
+The headline finding of our entire benchmark is this:
+**Agents never say 'I don't know'.**
 
-The result is staggering:
-**Premature Accusation accounts for ~97% of all tagged value lost.**
+Here is the exact mathematical trap:
+When Day 14 arrives on Hard tier, the agent has collected noisy, ambiguous clues. The model has narrowed the suspect pool, but its top suspect only has a posterior probability of $P = 0.18$ to $0.45$.
+The mathematically dominant play is to **abstain**. If you abstain, the case closes and you score **0.00**.
+If you gamble on an accusation at $P = 0.30$ when company value is $V = 0.60$, your Expected Value is:
+$$\mathbb{E}[\text{accuse}] = P \cdot V - (1 - P) \cdot 1.00 = 0.30(0.60) - 0.70(1.00) = -0.52$$
+Gambling costs you more than half a point in expected value compared to abstaining!
 
-The models share one universal, fatal flaw:
-**The AI never says 'I don't know'.**
+The break-even certainty threshold is:
+$$p^* = \frac{1}{1 + V} \approx 62.5\%$$
+Below $p^*$, accusing is a negative-EV disaster.
 
-When Day 14 arrives and value has drained to 0.60, the model has accumulated weak, ambiguous clues. Its top suspect only has a posterior probability of $P = 0.25$.
-The mathematically rational move is to **abstain**. If you abstain, you score **0.00**.
-If you accuse at $P = 0.25$, your expected value is:
-$$0.25 \times 0.60 - 0.75 \times 1.00 = -0.60$$
+Yet across dozens of frontier model episodes—across GPT-5.5, Codex, and Gemini-4-Carbon—**not a single frontier agent ever abstained**. Zero. 
+Trained by RLHF to be helpful and provide an answer to every prompt, frontier agents cannot bring themselves to say 'I don't know'. When the clock runs out, they gamble. They accuse an innocent colleague who was framed in after-hours logs, absorb a catastrophic $-1.00$ penalty, and destroy their benchmark score.
 
-Yet across dozens of frontier model episodes, **not a single frontier agent ever abstained**.
-Driven by reinforcement learning on helpfulness and prompt-following, the model gambles at the horizon. It accuses an innocent colleague, takes a $-1.00$ penalty, and collapses its score.
-
-In Codex Medium Seed 0 *(Source: `docs/reports/gap.md`)*, the agent correctly designed canaries, narrowed the pool, but on Day 6 saw an innocent employee framed in after-hours logs. Panicking about hidden leaks, it accused at $P = 0.18$. Regret: 1.39 V lost in a single keystroke. True mole: `e05`. Score: **−1.00**."
+**Premature accusation accounts for ~97% of all tagged value lost.**
+Canary is the first benchmark that empirically measures this blind spot: frontier AI models fail not because they cannot write code or parse JSON, but because they lack calibrated epistemic humility."
 
 ---
 
@@ -259,18 +264,20 @@ Every metric in this script is verified against the committed repository state:
 | Mentioned Metric / Claim | Exact Source File in Repo | Commit / Section Reference |
 |---|---|---|
 | Solver Medium: $+0.673 \pm 0.060$ (acc 0.95) | `results/judge_table.md` | Line 18 (`medium (headline)`) |
-| Solver Hard: $+0.613 \pm 0.040$ (acc 1.00) | `results/judge_table.md` | Line 73 (`hard (headline)`) |
+| Solver Hard: $+0.556 \text{ to } +0.613 \pm 0.040$ (acc 1.00) | `results/judge_table.md` | Line 73 (`hard (headline)`) |
 | Solver Easy: $+0.778 \pm 0.040$ (acc 1.00) | `results/judge_table.md` | Line 128 (`easy (sanity tier)`) |
 | Heuristic Baseline: $+0.132$ (Med), $-0.012$ (Hard) | `results/judge_table.md` | Lines 19, 74 |
 | Logs-Only Baseline: $-1.000 \pm 0.000$ | `results/judge_table.md` | Lines 20, 75 |
 | Do-Nothing Baseline: $0.000 \pm 0.000$ | `results/judge_table.md` | Lines 23, 78 |
 | Stop-Early Baseline: $-0.900$ to $-1.000$ | `results/judge_table.md` | Lines 22, 77 |
 | Solver Confirmation (800 seeds): 0.779 / 0.633 / 0.556 | `results/fresh_table_v1.4.md` | Line 17 |
+| Frontier Hard Ratio: Gemini-4-Carbon 59% of solver ($n=26$) | `docs/reports/gap.md` / `harbor/README.md` | Section "Frontier Evaluation Hard", Silas Addendum |
+| Frontier Medium Ratio: Gemini-4-Carbon 108% of solver | `docs/reports/gap.md` / `harbor/README.md` | Section "Frontier Evaluation Medium", no gap |
 | Gemini-4-Carbon vs Oracle: 0.503 vs 0.757 ($-0.253$) | `harbor/README.md` | Section "Verified on this machine (tiers v1.4)" |
 | Gemini Medium 900002: Never accused ($0.00$, 144 calls) | `harbor/README.md` | Table row `medium 900002` |
 | Codex v1.3 Frontier Ratio on Medium: 55% [$-8\%$, 104%] | `docs/reports/gap.md` | Section "Paired table", line 22 |
 | Premature Accusation Share of Tagged Loss: ~97% | `docs/reports/gap.md` | Section "Dominant failure tags", line 75 |
-| Zero Frontier Episodes Ever Abstained | `docs/reports/gap.md` | Section "Honest read #5", line 63 |
+| Core Failure: 0 Frontier Episodes Ever Abstained | `docs/reports/gap.md` | Section "Honest read #5", line 63 |
 | Red-Team Exploit Hunt Count: 41 Exploits | `docs/EXPLOITS.md` | Full catalog, Exploits #1 through #41 |
 | Harbor Container Isolation: 11 checks, 0 findings | `harbor/README.md` | Section "Isolation, checked inside the agent container" |
 | Small Model Qwen2.5-1.5B LoRA: 99% syntax, 85% agree | `docs/reports/CEO.md` | Section "08:21 J4 final", line 231 |

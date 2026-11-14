@@ -32,6 +32,11 @@ def _write_files(base: Path, files: dict[str, str]) -> None:
 
 
 def test_real_repo_passes_doc_commands_verifier(capsys):
+    assert "JUDGE_QUICKSTART.md" in verify_doc_commands.DEFAULT_DOCS
+    assert "docs/REPRODUCIBILITY.md" in verify_doc_commands.DEFAULT_DOCS
+    assert "JUDGE_QUICKSTART.md" in verify_doc_commands.FLAG_CHECK_DOCS
+    assert "docs/REPRODUCIBILITY.md" in verify_doc_commands.FLAG_CHECK_DOCS
+
     rc = verify_doc_commands.main(["--root", str(ROOT), "--json"])
     out = capsys.readouterr().out
     payload = json.loads(out)
@@ -42,6 +47,7 @@ def test_real_repo_passes_doc_commands_verifier(capsys):
     assert by_name["Makefile Targets Check"]["status"] == "PASS"
     assert by_name["Script & Module Paths Check"]["status"] in {"PASS", "WARN"}
     assert by_name["CLI Long-Flag Check"]["status"] == "PASS"
+    assert by_name["Harbor CLI & Env-Var Check"]["status"] == "PASS"
 
 
 def test_fails_on_nonexistent_makefile_target(tmp_path, capsys):
@@ -246,4 +252,219 @@ def test_module_flag_checks_equals_syntax_and_external_branch_warn(tmp_path, cap
     by_name = {r["name"]: r for r in payload_bad_mod["results"]}
     assert by_name["CLI Long-Flag Check"]["status"] == "FAIL"
     assert any("--no-such-eval-flag" in d for d in by_name["CLI Long-Flag Check"]["details"])
+
+
+def test_harbor_rule_a_forbids_canary_env_in_agent_container(tmp_path, capsys):
+    repo = tmp_path / "harbor_rule_a"
+    _write_files(
+        repo,
+        {
+            "Makefile": ".PHONY: setup\nsetup:\n\t@true\n",
+            "README.md": (
+                "```bash\n"
+                "harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=solver -n 4\n"
+                "harbor run -p harbor/dataset -a oracle --ae EXTRA_NON_CANARY=1 -n 2\n"
+                "```\n"
+            ),
+        },
+    )
+    rc_ok = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_ok = json.loads(capsys.readouterr().out)
+    assert rc_ok == 0
+    by_name_ok = {r["name"]: r for r in payload_ok["results"]}
+    assert by_name_ok["Harbor CLI & Env-Var Check"]["status"] == "PASS"
+
+    _write_files(
+        repo,
+        {
+            "README.md": (
+                "```bash\n"
+                "harbor run -p harbor/dataset -a oracle --ae CANARY_WORLD_SECRET=leak -n 2\n"
+                "```\n"
+            ),
+        },
+    )
+    rc_fail = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_fail = json.loads(capsys.readouterr().out)
+    assert rc_fail == 1
+    harbor_res = {r["name"]: r for r in payload_fail["results"]}["Harbor CLI & Env-Var Check"]
+    assert harbor_res["status"] == "FAIL"
+    assert any("CANARY_WORLD_SECRET" in d for d in harbor_res["details"])
+
+    _write_files(
+        repo,
+        {
+            "README.md": "`harbor run -p harbor/dataset -a opencode -m openai/gpt-5.5 --ae=CANARY_SEED=<seed>`\n",
+        },
+    )
+    rc_fail_eq = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_fail_eq = json.loads(capsys.readouterr().out)
+    assert rc_fail_eq == 1
+    harbor_res_eq = {r["name"]: r for r in payload_fail_eq["results"]}["Harbor CLI & Env-Var Check"]
+    assert harbor_res_eq["status"] == "FAIL"
+    assert any("CANARY_SEED" in d for d in harbor_res_eq["details"])
+
+
+def test_harbor_rule_b_requires_google_api_key_name_for_opencode_google(tmp_path, capsys):
+    repo = tmp_path / "harbor_rule_b"
+    _write_files(
+        repo,
+        {
+            "Makefile": ".PHONY: setup\nsetup:\n\t@true\n",
+            "README.md": (
+                "```bash\n"
+                "GOOGLE_GENERATIVE_AI_API_KEY=<your key> harbor run -p harbor/dataset -a opencode \\\n"
+                "    -m google/gemini-4-carbon --api-key-name GOOGLE_GENERATIVE_AI_API_KEY -n 4\n"
+                "harbor run -p harbor/dataset -a opencode -m openai/<model> -n 4\n"
+                "```\n"
+            ),
+        },
+    )
+    rc_ok = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_ok = json.loads(capsys.readouterr().out)
+    assert rc_ok == 0
+    assert {r["name"]: r for r in payload_ok["results"]}["Harbor CLI & Env-Var Check"]["status"] == "PASS"
+
+    _write_files(
+        repo,
+        {
+            "README.md": (
+                "```bash\n"
+                "GOOGLE_GENERATIVE_AI_API_KEY=<key> harbor run -p harbor/dataset -a opencode -m google/gemini-4-carbon -n 4\n"
+                "```\n"
+            ),
+        },
+    )
+    rc_missing = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_missing = json.loads(capsys.readouterr().out)
+    assert rc_missing == 1
+    res_missing = {r["name"]: r for r in payload_missing["results"]}["Harbor CLI & Env-Var Check"]
+    assert res_missing["status"] == "FAIL"
+    assert any("GOOGLE_GENERATIVE_AI_API_KEY" in d for d in res_missing["details"])
+
+    _write_files(
+        repo,
+        {
+            "README.md": (
+                "`harbor run -p harbor/dataset --agent=opencode --model=google/gemini-3.5-flash "
+                "--api-key-name=GEMINI_API_KEY`\n"
+            ),
+        },
+    )
+    rc_wrong = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_wrong = json.loads(capsys.readouterr().out)
+    assert rc_wrong == 1
+    res_wrong = {r["name"]: r for r in payload_wrong["results"]}["Harbor CLI & Env-Var Check"]
+    assert res_wrong["status"] == "FAIL"
+    assert any("GOOGLE_GENERATIVE_AI_API_KEY" in d for d in res_wrong["details"])
+
+
+def test_harbor_rule_c_validates_oracle_policy_and_ignores_placeholders(tmp_path, capsys):
+    repo = tmp_path / "harbor_rule_c"
+    _write_files(
+        repo,
+        {
+            "Makefile": ".PHONY: setup\nsetup:\n\t@true\n",
+            "README.md": (
+                "```bash\n"
+                "harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=solver -n 2\n"
+                "harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=do_nothing -n 2\n"
+                "harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 2\n"
+                "harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=guess_day1 -n 2\n"
+                "harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=cheat_probe -n 2\n"
+                "harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=cheat -n 2\n"
+                "harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=<policy> -n 2\n"
+                "```\n"
+            ),
+        },
+    )
+    rc_ok = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_ok = json.loads(capsys.readouterr().out)
+    assert rc_ok == 0
+    assert {r["name"]: r for r in payload_ok["results"]}["Harbor CLI & Env-Var Check"]["status"] == "PASS"
+
+    _write_files(
+        repo,
+        {
+            "README.md": "`harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=not_a_real_policy -n 2`\n",
+        },
+    )
+    rc_bad = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_bad = json.loads(capsys.readouterr().out)
+    assert rc_bad == 1
+    res_bad = {r["name"]: r for r in payload_bad["results"]}["Harbor CLI & Env-Var Check"]
+    assert res_bad["status"] == "FAIL"
+    assert any("ORACLE_POLICY=not_a_real_policy" in d for d in res_bad["details"])
+
+    _write_files(
+        repo,
+        {
+            "README.md": "`harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=`\n",
+        },
+    )
+    rc_empty = verify_doc_commands.main(["--root", str(repo), "--json"])
+    capsys.readouterr()
+    assert rc_empty == 1
+
+
+def test_judge_quickstart_and_reproducibility_docs_discovery(tmp_path, capsys):
+    repo = tmp_path / "quickstart_discovery"
+    _write_files(
+        repo,
+        {
+            "Makefile": ".PHONY: setup reproduce accept\nsetup:\n\t@true\nreproduce:\n\t@true\naccept:\n\t@true\n",
+            "scripts/check_tool.py": (
+                "import argparse\n"
+                "ap = argparse.ArgumentParser()\n"
+                "ap.add_argument('--check', action='store_true')\n"
+            ),
+            "JUDGE_QUICKSTART.md": (
+                f"{HASH_CHAR} Quickstart\n\n"
+                "```bash\n"
+                "make setup && make reproduce\n"
+                "python scripts/check_tool.py --check\n"
+                "GOOGLE_GENERATIVE_AI_API_KEY=<key> harbor run -p harbor/dataset -a opencode "
+                "-m google/gemini-4-carbon --api-key-name GOOGLE_GENERATIVE_AI_API_KEY -n 2\n"
+                "```\n"
+            ),
+            "docs/REPRODUCIBILITY.md": (
+                f"{HASH_CHAR} Reproducibility\n\n"
+                "`CANARY_WORLD_SECRET=<any-string> make reproduce`\n"
+            ),
+        },
+    )
+    rc_pass = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_pass = json.loads(capsys.readouterr().out)
+    assert rc_pass == 0
+    assert payload_pass["passed"] is True
+
+    _write_files(
+        repo,
+        {
+            "JUDGE_QUICKSTART.md": (
+                f"{HASH_CHAR} Quickstart\n\n"
+                "`harbor run -p harbor/dataset -a opencode -m google/gemini-4-carbon`\n"
+            ),
+        },
+    )
+    rc_qs_fail = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_qs_fail = json.loads(capsys.readouterr().out)
+    assert rc_qs_fail == 1
+    harbor_qs = {r["name"]: r for r in payload_qs_fail["results"]}["Harbor CLI & Env-Var Check"]
+    assert harbor_qs["status"] == "FAIL"
+    assert any("JUDGE_QUICKSTART.md" in d for d in harbor_qs["details"])
+
+    _write_files(
+        repo,
+        {
+            "JUDGE_QUICKSTART.md": "`make reproduce`\n",
+            "docs/REPRODUCIBILITY.md": "`python scripts/check_tool.py --unknown-repro-flag`\n",
+        },
+    )
+    rc_repro_fail = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_repro_fail = json.loads(capsys.readouterr().out)
+    assert rc_repro_fail == 1
+    flag_repro = {r["name"]: r for r in payload_repro_fail["results"]}["CLI Long-Flag Check"]
+    assert flag_repro["status"] == "FAIL"
+    assert any("docs/REPRODUCIBILITY.md" in d for d in flag_repro["details"])
 

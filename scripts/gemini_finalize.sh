@@ -14,7 +14,7 @@ $PY scripts/merge_staging.py --staging data/runs/staging-gemini-$V --root $ROOT 
   --map opencode=opencode-gemini-4-carbon,inproc=inproc-gemini-4-carbon --pricing "$PRICING" \
   --provenance "scripts/gemini_runner.py (one episode per process, resumable; infra-invalid attempts excluded and retried), merged by scripts/merge_staging.py"
 if [ -d data/runs/staging-gemini-3.5-flash-$V ]; then
-  $PY scripts/merge_staging.py --staging data/runs/staging-gemini-3.5-flash-$V --root $ROOT --planned 0-9 --tiers-version $V \
+  $PY scripts/merge_staging.py --staging data/runs/staging-gemini-3.5-flash-$V --root $ROOT --planned $SEEDS --tiers-version $V \
     --map opencode=opencode-gemini-3.5-flash --pricing "gemini-3.5-flash: not on the pricing page (2026-11-14); see opencode_reported_cost_usd" \
     --provenance "scripts/gemini_runner.py --model gemini-3.5-flash, merged by scripts/merge_staging.py"
 fi

@@ -16,7 +16,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 def main() -> int:
     version, rest = sys.argv[1], sys.argv[2:]
+    import os
     from canary import rules
+    os.environ["CANARY_TIERS_OVERRIDE"] = version  # child processes (MCP server, driver jobs) follow the same version
     with rules.tiers_version(version):
         assert rules.TIERS_VERSION == version
         if rest[0] == "-m":

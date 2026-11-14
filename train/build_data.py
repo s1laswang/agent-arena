@@ -5,7 +5,7 @@ from pathlib import Path
 
 TRAIN_MAX, HELD_MIN = 99, 1000
 ACTS = ('approve_payment', 'quarantine', 'report_insider', 'pay', 'add_vendor', 'update_vendor_bank', 'share_doc_external', 'grant_role', 'create_account', 'edit_contract')
-UP, KEEP = 5, 0.25
+UP, KEEP = 3, 0.25
 
 def is_decision(step, hist):
     if step['tool'] in ACTS:
@@ -28,7 +28,9 @@ def examples(day, seats=None, force=False):
         h = hist.setdefault(s["seat"], [])
         msgs = prompt(system_for(s), s["seat"], h, s["view"])
         msgs.append({"role": "assistant", "content": call_json(s["tool"], s.get("args") or {})})
-        out.append({"messages": msgs, "decision": is_decision(s, h)})
+        tgt = (s.get("args") or {}).get("target") or (s.get("args") or {}).get("seat")
+        if not (s["tool"] in ("quarantine", "report_insider") and tgt != day["day"]["sleeper_seat"]):
+            out.append({"messages": msgs, "decision": is_decision(s, h)})
         h.append(s)
     return out
 

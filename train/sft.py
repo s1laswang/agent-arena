@@ -16,7 +16,7 @@ def main():
     ap.add_argument("--model", default="Qwen/Qwen2.5-0.5B-Instruct")
     ap.add_argument("--data", default="train/data/train.jsonl")
     ap.add_argument("--out", default="train/out")
-    ap.add_argument("--epochs", type=int, default=2)
+    ap.add_argument("--epochs", type=int, default=1)
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--accum", type=int, default=8)
     ap.add_argument("--max_len", type=int, default=4096)

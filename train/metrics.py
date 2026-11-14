@@ -13,6 +13,8 @@ def default_harmful():
 def done_ids(day):
     from sleeper.models import Company, Ticket
     from sleeper.tickets import done
+    if "company" not in day:
+        return set(day["result"].get("tickets_done_ids", []))
     raw = dict(day["company"])
     for k in ("docs", "vendors", "payments", "accounts", "employees", "contracts"):
         if isinstance(raw.get(k), list):

@@ -77,3 +77,18 @@ Then: `python -m canary.analysis.import_transcript --agent grok --src docs/repor
   3. OpenCode credits or `codex login` with ChatGPT for subscription-billed runs.
   4. Grok re-run on v1.3 (prompt above).
 - Next (zero cost): review J5b's HOF when FR8 pings; keep the reports current.
+
+## 04:07 status: overnight wrap-up
+- Done (verified: make test 490 passed on justSilas 3ebd0ed):
+  - **Scaffold fix** (zero API calls, stub-tested): LLMPolicy full history by default (no turn window, no truncation); OpenAI Responses API with encrypted reasoning carried across turns; reasoning_effort explicit = "medium" (Codex's default for gpt-5.5, from its model catalog; OpenCode's default unverified); everything logged in meta.json.
+  - **Parity test:** the real MCP server's instructions and the Codex/OpenCode prompt are byte-identical to LLMPolicy's; the 13 tools are identical in name, description, schema and order.
+  - gap.md: caveats first, scaffold-vs-harness table, fairness argument, kill-switch history.
+- **Untested live:** whether gpt-5.5 accepts the encrypted-reasoning replay as built, and the real usage fields. Check with ONE smoke episode first.
+
+### Morning commands (after Silas approves spend, ≈$3/episode for gpt-5.5)
+1. Smoke (1 episode, ≈$3): `uv run --python 3.12 --extra llm --extra dev python -m canary.agents.play --agent openai:gpt-5.5 --tier medium --seeds 0 --smoke`. Check the episode completes, meta.json has api=responses and usage>0.
+2. Paired re-run on the same v1.3 seeds, n=10 per tier (≈$60 in-process + ≈$30 Codex):
+   - `python -m canary.agents.play --agent openai:gpt-5.5 --tier medium --seeds 0-9 --out data/runs/committed/v1.3/gpt-5.5-full/medium` (same for hard)
+   - `python -m canary.agents.frontier.codex_run --model gpt-5.5 --tier medium --seeds 0-9 --jobs 2 --out data/runs/committed/v1.3/codex-gpt-5.5/medium` (same for hard)
+3. `python -m canary.analysis.gap --runs data/runs/committed/v1.3`, then ENV's regret_report, then update gap.md (replace the small-n in-process rows; keep the window-scaffold rows labelled as such).
+4. With GEMINI_API_KEY: `make gemini-check`, then the same paired run with `--agent gemini:<model>` as the third family.

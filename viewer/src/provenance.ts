@@ -2,14 +2,24 @@ import type { Episode } from "./types";
 
 export type Provenance = { label: "REAL" | "SCRIPTED" | "SMOKE" | "UNVERIFIED"; tone: string; why: string };
 
+export const SCRIPTED_AGENTS = new Set([
+  "solver", "heuristic", "grok_tactics", "do_nothing", "stop_early", "random", "restrict_all", "probe_all",
+  "accuse_decoy", "accuse_most_logs", "obvious_heuristic", "logs_minus_decoy", "logs_only",
+]);
+
 export function provenance(ep: Episode): Provenance {
   const m = ep.meta ?? {};
-  const named = ep.agent.includes(":");
-  const logged = typeof m.usage === "object" && m.usage !== null && typeof m.steps_source === "string";
-  if (m.smoke === true) return { label: "SMOKE", tone: "warn", why: "smoke test run, not a measurement" };
-  if (named && logged) return { label: "REAL", tone: "good", why: `model ${ep.agent}, steps from ${String(m.steps_source)}, usage logged` };
-  if (!named && !m.usage) return { label: "SCRIPTED", tone: "", why: "deterministic program, no model call" };
-  return { label: "UNVERIFIED", tone: "warn", why: "model name or run record missing" };
+  const u = (typeof m.usage === "object" && m.usage !== null ? m.usage : {}) as Record<string, unknown>;
+  const tokens = (Number(u.in) || 0) + (Number(u.out) || 0);
+  const named = /^[^:\s]+:[^:\s]+/.test(ep.agent);
+  if (m.smoke === true) return { label: "SMOKE", tone: "warn", why: "flagged smoke test, not a measurement" };
+  if (named && tokens > 0) {
+    const cost = typeof u.cost_usd_est === "number" ? `, cost ESTIMATE $${u.cost_usd_est.toFixed(2)}` : "";
+    return { label: "REAL", tone: "good", why: `usage: ${tokens} tokens, provider ${ep.agent.split(":")[0]}${cost}` };
+  }
+  if (SCRIPTED_AGENTS.has(ep.agent)) return { label: "SCRIPTED", tone: "", why: `${ep.agent} is a built-in scripted agent, no model call` };
+  if (m.valid === false) return { label: "UNVERIFIED", tone: "warn", why: `run marked invalid${typeof m.error === "string" ? `: ${m.error}` : ""}` };
+  return { label: "UNVERIFIED", tone: "warn", why: named ? "model name but no token usage in the run record" : "agent is not a known scripted agent and has no model name" };
 }
 
 export const LEGEND: [string, string][] = [

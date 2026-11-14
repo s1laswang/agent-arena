@@ -191,9 +191,10 @@ describe("provenance", () => {
   it("labels from the data", async () => {
     const { provenance } = await import("./provenance");
     expect(provenance(ep("solver", {})).label).toBe("SCRIPTED");
-    expect(provenance(ep("codex:gpt-5.5", { usage: { in: 1 }, steps_source: "agent_transcript" })).label).toBe("REAL");
+    expect(provenance(ep("mystery", {})).label).toBe("UNVERIFIED");
+    expect(provenance(ep("codex:gpt-5.5", { usage: { in: 1, out: 0 } })).label).toBe("REAL");
+    expect(provenance(ep("codex:gpt-5.5", { usage: { in: 0, out: 0 } })).label).toBe("UNVERIFIED");
     expect(provenance(ep("codex:gpt-5.5", {})).label).toBe("UNVERIFIED");
-    expect(provenance(ep("solver", { usage: { in: 1 } })).label).toBe("UNVERIFIED");
-    expect(provenance(ep("codex:gpt-5.5", { smoke: true })).label).toBe("SMOKE");
+    expect(provenance(ep("codex:gpt-5.5", { usage: { in: 5 }, smoke: true })).label).toBe("SMOKE");
   });
 });

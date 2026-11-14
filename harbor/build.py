@@ -4,7 +4,7 @@
     python harbor/build.py --tiers medium --seeds 900000     # one task
     python harbor/build.py --tiers easy,medium,hard --seeds judge   # everything: 3 tiers x all 40 judge seeds
     python harbor/build.py --seeds 900000-900004 --out /tmp/canary-ds
-    python harbor/build.py --verifier shared                 # fallback for Harbor without [[verifier.collect]]
+    python harbor/build.py --verifier shared --unsafe-shared-not-for-judging   # fallback, NOT for judging
 
 Each task is self-contained (works on any compose-capable Harbor provider):
 
@@ -154,14 +154,18 @@ def main(argv: list[str] | None = None) -> int:
                          "'900000' or a comma list")
     ap.add_argument("--out", default=str(HERE / "dataset"))
     ap.add_argument("--verifier", choices=["separate", "shared"], default="separate")
+    ap.add_argument("--unsafe-shared-not-for-judging", action="store_true",
+                    help="required with --verifier shared: that mode runs test.sh in the agent's container (EXPLOITS #42)")
     ap.add_argument("--secret-file", default=None,
                     help="world secret to bake into the sidecars (default: a fresh random secret per build)")
     a = ap.parse_args(argv)
     if a.verifier == "shared":   # EXPLOITS #42
-        print("WARNING: --verifier shared is NOT for judging. test.sh then runs inside the agent's container. On our "
-              "Harbor 0.25 / Docker Desktop host it did not run at all (even do_nothing got RewardFileNotFoundError), "
-              "so a reward file the agent leaves behind is all Harbor sees. Use the default separate verifier.",
-              file=sys.stderr)
+        if not a.unsafe_shared_not_for_judging:
+            ap.error("--verifier shared is NOT for judging (test.sh then runs inside the agent's container; on our "
+                     "Harbor 0.25 / Docker Desktop host it did not run at all, so a reward file the agent leaves behind "
+                     "was all Harbor saw). Use the default separate verifier, or pass "
+                     "--unsafe-shared-not-for-judging if you really mean it.")
+        print("WARNING: building with --verifier shared: NOT for judging (EXPLOITS #42).", file=sys.stderr)
     sys.path.insert(0, str(ROOT))
     from canary.rules import HELDOUT_SEEDS, JUDGE_SEEDS, TIERS
 

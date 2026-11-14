@@ -18,7 +18,7 @@ mkdir -p /logs/verifier
 # Shared-verifier builds only: stop every process the agent left behind (e.g. a loop that keeps rewriting
 # /logs/verifier/reward.{txt,json}). PID 1, this shell and its parent chain (Harbor's exec wrapper) stay:
 # killing the wrapper would end the verifier session early.
-if [ -n "${CANARY_LEDGER_TOKEN:-}" ] && command -v ps >/dev/null 2>&1; then
+if [ -n "${CANARY_LEDGER_TOKEN:-}" ]; then
   keep=" 1 $$ "
   p=$$
   while [ -r "/proc/$p/status" ]; do
@@ -28,7 +28,8 @@ if [ -n "${CANARY_LEDGER_TOKEN:-}" ] && command -v ps >/dev/null 2>&1; then
     keep="$keep$pp "
     p="$pp"
   done
-  for q in $(ps -eo pid= 2>/dev/null); do
+  if command -v ps >/dev/null 2>&1; then pids=$(ps -eo pid= 2>/dev/null); else pids=$(ls /proc | grep -E '^[0-9]+$'); fi
+  for q in $pids; do
     case "$keep" in *" $q "*) ;; *) kill -9 "$q" 2>/dev/null || true ;; esac
   done
   rm -f /logs/verifier/reward.txt /logs/verifier/reward.json

@@ -52,14 +52,14 @@ def test_always_zero_probes_are_exactly_zero(battery):
 
 
 def test_stop_early_ladder_scores_exactly_zero(battery):
-    ladder = _rows(battery, "ladder")
-    assert len(ladder) == 3 * len(ac.LADDER)
+    ladder = [r for r in battery["rows"] if r["probe"] in ac.LADDER]
+    assert len(ladder) == 3 * len(ac.LADDER) and all(r["kind"] == "sanity" for r in ladder)
     for r in ladder:
         assert r["blocked"] and r["max"] == 0 and r["mean"] == 0, r
 
 
 def test_plus_probes_never_beat_the_solver(battery):
-    plus = _rows(battery, "plus")
+    plus = [r for r in battery["rows"] if r["probe"] in ac.PLUS]
     assert len(plus) == 3 * len(ac.PLUS)
     for r in plus:
         assert r["blocked"], r
@@ -69,7 +69,7 @@ def test_plus_probes_never_beat_the_solver(battery):
 
 def test_control_equals_solver(battery):
     solver = {r["tier"]: r for r in battery["rows"] if r["probe"] == "solver"}
-    for r in _rows(battery, "control"):
+    for r in [r for r in battery["rows"] if r["probe"] == ac.CONTROL]:
         assert r["blocked"], r
         assert r["mean"] == solver[r["tier"]]["mean"] > 0
         assert r["extra"].get("drift", 0) == 0
@@ -479,4 +479,110 @@ def test_committed_public_secret_battery_artifact():
     assert d["all_blocked"] is True and d["replay_all_consistent"] is True and d["harbor_all_consistent"] is True
     assert d["world_secret_public"] and d["seeds"][2] == 40
     assert all(r["n"] == 40 for r in d["rows"])
-    assert {r["kind"] for r in d["rows"]} >= {"attack", "ladder", "effort", "plus", "control", "reference"}
+    assert {r["kind"] for r in d["rows"]} >= {"attack", "sanity", "effort", "plus", "reference"}
+
+
+# ----------------------------------------------------------------------------- round-2 judge findings
+def test_garbage_args_reaches_every_tool(battery):
+    """Each tool's garbage runs on its own fresh Env, so no tool's malformed calls are hidden behind an early end."""
+    from canary.env import _SPECS
+    for r in battery["rows"]:
+        if r["probe"] == "garbage_args":
+            assert r["extra"]["garbage_tools_unreached"] == 0, r
+            assert r["extra"]["garbage_nonzero_scores"] == 0, r
+            assert r["extra"]["garbage_tools"] == (len(_SPECS) + 1) * r["n"], r   # every tool + made-up names
+
+
+def test_accusing_probes_really_accuse(battery):
+    for r in battery["rows"]:
+        if r["probe"] in ac.EXPECT_ACCUSE:
+            assert r["extra"].get("accused", 0) == r["n"], r
+
+
+def test_an_accusing_probe_that_never_accuses_fails(monkeypatch):
+    monkeypatch.setattr(ac, "BASELINE_PROBES", ())
+    monkeypatch.setattr(ac, "CUSTOM_PROBES", {"canary_per_person": lambda env: {}})   # tests nothing
+    b = ac.run_battery(["easy"], [0, 1])
+    row = next(r for r in b["rows"] if r["probe"] == "canary_per_person")
+    assert row["blocked"] is False and b["all_blocked"] is False, row
+
+
+def test_bad_canary_acceptance_fails_the_plus_probe(monkeypatch):
+    real = ac._extra_calls
+
+    def accepted_canary(name, ids, target):
+        if name == "solver_plus_bad_canary":   # a canary the Env accepts: the probe must notice, not stay "blocked"
+            return [("plant_canary", {"doc_title": "Q3 board memo", "assignment": {ids[0]: "a"}})]
+        return real(name, ids, target)
+
+    monkeypatch.setattr(ac, "_extra_calls", accepted_canary)
+    monkeypatch.setattr(ac, "BASELINE_PROBES", ())
+    monkeypatch.setattr(ac, "CUSTOM_PROBES", {})
+    b = ac.run_battery(["easy"], [0, 1])
+    row = next(r for r in b["rows"] if r["probe"] == "solver_plus_bad_canary")
+    assert row["extra"]["extra_canary_accepted"] > 0 and row["blocked"] is False, row
+
+
+def test_committed_artifact_reproduces_a_slice():
+    """Recompute 2 judge seeds of the medium tier under the public test secret and compare every row's per-seed
+    scores with the committed results/anticheat/exploits.json (not just its own pass flags)."""
+    from canary import rules
+    from canary.world import set_world_secret
+    d = json.loads((ROOT / "results/anticheat/exploits.json").read_text(encoding="utf-8"))
+    seeds = list(rules.JUDGE_SEEDS)[:2]
+    set_world_secret(d["world_secret_public"].encode())
+    try:
+        b = ac.run_battery(["medium"], seeds)
+    finally:
+        set_world_secret(None)
+    committed = {r["probe"]: r for r in d["rows"] if r["tier"] == "medium"}
+    for r in b["rows"]:
+        c = committed[r["probe"]]
+        assert c["seeds"][:2] == seeds and c["scores"][:2] == r["scores"], (r["probe"], c["scores"][:2], r["scores"])
+
+
+def test_cheat_probe_trial_without_its_report_is_flagged(tmp_path):
+    job = _copy_job(tmp_path, "cheat-probe")
+    t = next(p for p in job.iterdir() if p.is_dir())
+    (t / "agent/cheat.json").unlink()
+    row = ac.check_harbor_trial(t)
+    assert row["consistent"] is False and any("cheat.json is missing" in p for p in row["problems"]), row
+
+
+def test_published_retired_key_catches_a_coherent_forgery(tmp_path):
+    """With the build's retired signing key published next to the job, a matching edit of every copy is caught."""
+    job = _copy_job(tmp_path, "cheat-probe")
+    t = next(p for p in job.iterdir() if p.is_dir())
+    assert ac.check_harbor_trial(t).get("hmac_verified") is True
+    for f in ("artifacts/ledger.json", "verifier/ledger.json"):
+        d = json.loads((t / f).read_text())
+        d["final_day"] = 7                       # same edit everywhere: the files still agree with each other
+        (t / f).write_text(json.dumps(d))
+    row = ac.check_harbor_trial(t)
+    assert row["consistent"] is False and any("HMAC" in p for p in row["problems"]), row
+
+
+def test_replay_catches_a_tampered_step(tmp_path):
+    src = next(f for f in sorted((ROOT / "data/runs/committed").glob("v1.3/reference/solver-medium-*/episodes.jsonl")))
+    dst = tmp_path / "data/runs/committed/v1.3/fake/medium"
+    dst.mkdir(parents=True)
+    e = json.loads(src.read_text().splitlines()[0])
+    e["steps"][1]["result"] = {"ok": True, "data": {"note": "edited"}, "error": None}   # score and accused untouched
+    (dst / "episodes.jsonl").write_text(json.dumps(e) + "\n")
+    (dst / "meta.json").write_text(json.dumps({"tiers_version": "v1.3"}))
+    rows = ac.replay_committed(tmp_path)
+    assert rows[0]["replay_consistent"] is False and rows[0]["step_mismatches"] >= 1, rows[0]
+
+
+def test_every_committed_step_replays_identically():
+    c = ac.replay_counts(ac.replay_committed(ROOT))
+    assert c["steps"] > 10_000 and c["step_mismatches"] == 0, c
+
+
+def test_build_refuses_shared_mode_without_the_explicit_flag(tmp_path):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("harbor_build", ROOT / "harbor/build.py")
+    build = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(build)
+    with pytest.raises(SystemExit):
+        build.main(["--tiers", "hard", "--seeds", "900000", "--out", str(tmp_path), "--verifier", "shared"])

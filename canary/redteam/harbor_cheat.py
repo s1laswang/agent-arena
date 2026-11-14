@@ -302,9 +302,38 @@ def attack_mcp(c: MCPClient, rep: Report) -> list[str]:
             rep.add("mcp", key, result=_short(f"error: {e}"))
     try:
         r = c.call("list_employees", {})
-        return [e["id"] for e in (r.get("data") or {}).get("employees", [])]
+        ids = [e["id"] for e in (r.get("data") or {}).get("employees", [])]
     except Exception:  # noqa: BLE001
-        return []
+        ids = []
+    e0 = ids[0] if ids else "e00"
+    # hidden keys on the state-changing tools too (accuse is covered by attack_accuse_shapes)
+    for name, valid in [("plant_canary", {"doc_title": "Q3 memo", "assignment": {e0: "a"}}),
+                        ("restrict_access", {"employee": e0}), ("unrestrict_access", {"employee": e0}),
+                        ("interview", {"employee": e0, "topic": "leaks"})]:
+        try:
+            r = c.call(name, {**valid, **HIDDEN_ARGS})
+            text = json.dumps(r)
+            rep.add("mcp", f"hidden_args[{name}]", hole=bool(LEAK_KEYS.search(text)), result=_short(text))
+        except MCPError as e:
+            rep.add("mcp", f"hidden_args[{name}]", result=_short(f"error: {e}"))
+    # a few days in: every reply scanned for truth-like keys (leaks surface with a delay)
+    for d in range(3):
+        for name, args in [("advance_day", {}), ("status", {}), ("check_leak_feed", {}),
+                           ("list_documents", {"day_from": 1, "day_to": 30})]:
+            try:
+                text = json.dumps(c.call(name, args))
+                rep.add("mcp", f"day_scan[{d + 1}:{name}]", hole=bool(LEAK_KEYS.search(text)), result=_short(text))
+            except MCPError as e:
+                rep.add("mcp", f"day_scan[{d + 1}:{name}]", result=_short(f"error: {e}"))
+    # JSON-RPC batch: two accusations in one HTTP request must not both land (or any land unseen)
+    batch = [{"jsonrpc": "2.0", "id": 9001 + i, "method": "tools/call",
+              "params": {"name": "accuse", "arguments": {"employee": e}}} for i, e in enumerate(ids[:2] or ["e00", "e01"])]
+    code, text = _http("POST", c.url, batch, {"Accept": "application/json, text/event-stream",
+                                               "MCP-Protocol-Version": "2025-06-18",
+                                               **({"Mcp-Session-Id": c.session} if c.session else {})})
+    rep.add("mcp", "jsonrpc_batch_accuse", hole='\\"ok\\": true' in text or '"ok": true' in text,
+            status=code, result=_short(text))
+    return ids
 
 
 def attack_accuse_shapes(c: MCPClient, ids: list[str], rep: Report) -> None:

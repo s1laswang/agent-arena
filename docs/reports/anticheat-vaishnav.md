@@ -29,18 +29,31 @@ uv run python -m canary.redteam.anticheat --judge --seeds 40 --world-secret cana
 REPRO_FAST=1 make reproduce        # the last line says ANTI-CHEAT: ...; the exit code is 1 on a failure
 ```
 
-## Status (Sat 14 Nov, 19:45; branch rebuilt on `justSilas` b4557e0, PR #7's HMAC-signed ledger included)
+## Status (Sat 14 Nov, ~20:45; on top of `justSilas` b4557e0, which includes PR #7's signed ledger)
+
+**Judge panel (fresh agents each round, scoring the official rubric; every finding checked by 3 skeptics):**
+
+| Round | Reward integrity | Craft | Findings confirmed |
+|---|---|---|---|
+| 1 (7bd9ca4) | 19-20 / 25 | 11-12 / 15 | 14, all fixed |
+| 2 (06ebf9c) | 20-23 / 25 | 12-13 / 15 | 16, all fixed in the next commit |
 
 **Done (verified):**
-- A fresh four-judge panel scored round 1 at reward integrity 19-20/25 and craft 11-12/15, with 14 findings that skeptics confirmed. All 14 are fixed on this branch; see the commit "fixes from a fresh 4-judge review panel".
-- Closed an exploit: in shared-verifier builds a planted `/evidence/ledger.json` scored 1.0 (EXPLOITS #42).
-- Shared mode is still **not for judging**. On our Harbor 0.25 / Docker Desktop host it did not run test.sh at all, so `build.py` now prints a warning.
-- `cheat_probe` through Harbor at this branch's code (with the PR #7 signed ledger), separate verifier: **0.0 on medium and 0.0 on hard**, `signature=ok`, 0 holes in 130 attempts each.
-- Battery over 40 judge seeds × 3 tiers under a public test secret, every probe blocked: `results/anticheat/exploits.md`. Replay: 819 of 829 committed episodes identical; the other 10 are grok episodes on secret seeds. Harbor consistency: 25/25 trials and 11/11 job summaries, including PR #7's c1-* runs.
+- Closed an exploit: in shared-verifier builds a planted `/evidence/ledger.json` scored 1.0 (EXPLOITS #42). Shared mode is still **not for judging**: on our Harbor 0.25 / Docker Desktop host it did not run test.sh at all. `build.py` now refuses shared mode unless you pass `--unsafe-shared-not-for-judging`. The hardened test.sh is checked in a committed Docker reproduction: `results/anticheat/shared-verifier-docker-repro.md`.
+- Battery:
+  - every tool's garbage runs on its own fresh Env;
+  - every accusing probe must really accuse (ProbeAll is now made to accuse);
+  - plus probes that can change V;
+  - by-construction rows labelled `sanity`;
+  - replay compares all 33,593 recorded tool results, 0 differ;
+  - Harbor checks report signed vs unsigned verifiers and verify the HMAC where a retired build key is published;
+  - `make reproduce` exits 1 on any failure.
+- `cheat_probe` through Harbor at this code: **0.0 / 0.0, `signature=ok`, 0 holes in 149 attempts each**, ledgers HMAC-verified against the published retired key. A signed stop-early baseline scored −1.0 / −1.0.
+- `results/anticheat/exploits.md`: 40 judge seeds × 3 tiers under a public test secret, all blocked. A test recomputes a slice and compares it per seed.
 
 **Known limits, said plainly:**
-- The Harbor consistency check catches files that disagree with each other. It cannot catch a forger who edits every copy the same way.
+- For Harbor jobs without a published retired key (everything older than PR #7, and PR #7's own c1-* jobs), the consistency check catches files that disagree. It cannot catch a forger who edits every copy the same way.
 - Shared verifier mode is not usable for judging.
-- On Windows, 2 timeout tests (POSIX SIGALRM) and the `test_integrity_mcp.py` file-permission tests fail. They fail the same way on `justSilas`.
+- On Windows: `test_build_writes_key_only_to_sidecar_and_verifier` fails (it expects file mode 0600, and Windows reports 0666), and so do 2 POSIX-only timeout tests and the `test_integrity_mcp.py` file-permission tests. They fail the same way on `justSilas`.
 
-**Next:** a second fresh judge round on the pushed commit; any findings get fixed on this branch.
+**Next:** judge round 3 on the new commit.

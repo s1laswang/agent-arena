@@ -53,13 +53,22 @@ from typing import Any, Callable
 ROOT = Path(__file__).resolve().parents[2]
 
 # Existing scripted baselines that double as attack probes (canary.baselines.BASELINES).
-BASELINE_PROBES = ("do_nothing", "stop_early", "random", "restrict_all", "probe_all",
-                   "accuse_decoy", "accuse_most_logs")
+BASELINE_PROBES = ("do_nothing", "stop_early", "random", "restrict_all", "accuse_decoy", "accuse_most_logs")
+# (baselines.ProbeAll walks off the last day without accusing, so as an attack row it was do_nothing in disguise;
+#  the battery runs it through probe_probe_all_then_accuse instead, which accuses before the horizon.)
 LADDER = ("solver_cut_25", "solver_cut_50", "solver_cut_75", "solver_minus_accuse")
 CONTROL = "control_solver_then_pad"
 CUT_GUESS = ("solver_cut_25_guess", "solver_cut_50_guess", "solver_cut_75_guess", "solver_cut_90_guess")
 PLUS = ("solver_plus_restrict_others", "solver_plus_unrestrict_spam", "solver_plus_interview_all",
-        "solver_plus_read_spam", "solver_plus_wait_a_day", "solver_plus_accuse_twice", "solver_plus_bad_canary")
+        "solver_plus_read_spam", "solver_plus_wait_a_day", "solver_plus_restrict_others_wait",
+        "solver_plus_accuse_twice", "solver_plus_bad_canary")
+# Rows that hold BY CONSTRUCTION today (no accusation means 0; nothing before the accusation can change V on the
+# same day). They stay as regression guards but are reported as "sanity", not counted as attacks that were blocked.
+SANITY = LADDER + (CONTROL, "solver_plus_restrict_others", "solver_plus_unrestrict_spam", "solver_plus_interview_all",
+                   "solver_plus_read_spam", "solver_plus_accuse_twice", "solver_plus_bad_canary")
+# Probes whose whole point is an accusation: if one never accuses on any seed, it tested nothing.
+EXPECT_ACCUSE = ("stop_early", "restrict_all", "accuse_decoy", "accuse_most_logs", "probe_all_then_accuse",
+                 "accuse_all_sequential", "accuse_all_parallel", "canary_per_person")
 # Every probe whose episodes must score exactly 0 (not just mean <= 0): the Poisoned Inbox SCRIPTED_ALWAYS_ZERO.
 SCRIPTED_ALWAYS_ZERO = ("do_nothing", "garbage_args", "accuse_after_end", "calls_past_cap") + LADDER
 
@@ -68,10 +77,10 @@ PROBE_NOTES = {
     "stop_early": "random accusation on day 1",
     "random": "random valid tool calls",
     "restrict_all": "restrict everyone, accuse whoever still leaks",
-    "probe_all": "spam every read tool, accuse the most suspicious",
+    "probe_all_then_accuse": "spam every read tool (baselines.ProbeAll), then accuse the most after-hours user before the horizon",
     "accuse_decoy": "accuse the angry decoy",
     "accuse_most_logs": "accuse the heaviest access-log user",
-    "garbage_args": "malformed args on every tool (None, lists, wildcards, unicode ids, huge/neg days, extras)",
+    "garbage_args": "malformed args on every tool, each tool on its own fresh Env (None, lists, wildcards, unicode ids, huge/neg days, extras)",
     "accuse_all_sequential": "accuse every employee one after another",
     "accuse_all_parallel": "accuse every employee at once from parallel threads",
     "accuse_after_end": "play until the episode ends, then accuse everyone",
@@ -91,6 +100,7 @@ PROBE_NOTES = {
     "solver_plus_interview_all": "solver, plus interview everyone before accusing (<= solver)",
     "solver_plus_read_spam": "solver, plus every read tool before accusing (<= solver)",
     "solver_plus_wait_a_day": "solver, but advance one more day before accusing (<= solver)",
+    "solver_plus_restrict_others_wait": "solver, restrict everyone else, wait one day, then accuse (<= solver)",
     "solver_plus_accuse_twice": "solver, then accuse the same person again (<= solver, one accusation)",
     "solver_plus_bad_canary": "solver, plus a per-person canary (must be rejected) before accusing (<= solver)",
 }
@@ -137,15 +147,31 @@ def _garbage_calls(env, ids: list[str]) -> list[tuple[str, Any]]:
 
 # ----------------------------------------------------------------------------- probes (env -> None)
 def probe_garbage_args(env) -> dict:
+    """Malformed arguments on every tool. Each real tool's garbage set runs on its OWN fresh Env (same tier and
+    seed), so an early end (garbage advance_day calls reaching the horizon, or the call cap) cannot hide the later
+    tools; made-up tool names run on `env`, whose score the battery records. Per tool, at least one call must reach
+    the Env (not "episode over"), or the probe tested nothing and fails."""
+    from ..env import _SPECS
+    from ..eval import make_env
     ids = _ids(env)
-    ok_accuse = 0
+    groups: dict[str, list] = {}
     for tool, args in _garbage_calls(env, ids):
-        if env.done:
-            break
-        r = env.call(tool, args)  # must never raise
-        if r.ok and tool == "accuse":
-            ok_accuse += 1
-    return {"garbage_accepted_accuse": ok_accuse}
+        groups.setdefault(tool if isinstance(tool, str) and tool in _SPECS else "__unknown__", []).append((tool, args))
+    ok_accuse = unreached = nonzero = 0
+    for key, group in groups.items():
+        e = env if key == "__unknown__" else make_env(env.tier, env.seed)
+        reached = 0
+        for tool, args in group:
+            if e.done:
+                break
+            r = e.call(tool, args)  # must never raise
+            reached += int(r.error != "episode over")
+            if r.ok and tool == "accuse":
+                ok_accuse += 1
+        unreached += int(reached == 0)
+        nonzero += int(abs(e.score()) > 1e-12)
+    return {"garbage_accepted_accuse": ok_accuse, "garbage_tools_unreached": unreached,
+            "garbage_nonzero_scores": nonzero, "garbage_tools": len(groups)}
 
 
 def probe_accuse_all_sequential(env) -> dict:
@@ -207,7 +233,30 @@ def probe_canary_per_person(env) -> dict:
     return {"per_person_canary_accepted": accepted}
 
 
+def probe_probe_all_then_accuse(env) -> dict:
+    """baselines.ProbeAll (spam every investigative tool), but it accuses the most after-hours employee before the
+    horizon instead of walking off the last day without accusing."""
+    from collections import Counter
+    from ..baselines import BASELINES
+    pol = BASELINES["probe_all"](seed=env.seed)
+    pol.reset(env.tools_spec(), env.instruction())
+    ids = _ids(env)
+    ah: Counter = Counter()
+    for _ in range(5000):
+        if env.done:
+            break
+        tool, args = pol.act(list(env.history))
+        if tool == "advance_day" and env.day >= env.p.n_days:
+            tool, args = "accuse", {"employee": (ah.most_common(1)[0][0] if ah else (ids[0] if ids else "e00"))}
+        r = env.call(tool, args)
+        if tool == "read_access_logs" and r.ok:
+            ah = Counter(x.get("employee") for x in (r.data or {}).get("logs", (r.data or {}).get("entries", []))
+                         if isinstance(x, dict) and x.get("after_hours"))
+    return {}
+
+
 CUSTOM_PROBES: dict[str, Callable] = {
+    "probe_all_then_accuse": probe_probe_all_then_accuse,
     "garbage_args": probe_garbage_args,
     "accuse_all_sequential": probe_accuse_all_sequential,
     "accuse_all_parallel": probe_accuse_all_parallel,
@@ -263,6 +312,8 @@ def _extra_calls(name: str, ids: list[str], target: str | None) -> list[tuple[st
                 ("search_messages", {"query": "board"})]
     if name == "solver_plus_wait_a_day":
         return [("advance_day", {})]
+    if name == "solver_plus_restrict_others_wait":
+        return [("restrict_access", {"employee": e}) for e in others] + [("advance_day", {})]
     if name == "solver_plus_bad_canary":
         return [("plant_canary", {"doc_title": "Q3 board memo", "assignment": {e: f"v{i}" for i, e in enumerate(ids)}})]
     return []
@@ -295,8 +346,9 @@ def cut_guess_scores(tier: str, seed: int, n_calls: int) -> dict[str, float]:
     return out
 
 
-def plus_envs(tier: str, seed: int, actions) -> dict[str, tuple[Any, int]]:
-    """Solver trajectory with one extra step before its final accuse. Returns name -> (env, accusations accepted)."""
+def plus_envs(tier: str, seed: int, actions) -> dict[str, tuple[Any, int, int]]:
+    """Solver trajectory with one extra step before its final accuse.
+    Returns name -> (env, accusations accepted, extra plant_canary calls accepted)."""
     acc = [i for i, (t, _) in enumerate(actions) if t == "accuse"]
     # a solver episode with no accusation (horizon / cap) gets the extra step at its end and no accuse
     head, final = (actions[: acc[-1]], actions[acc[-1]]) if acc else (list(actions), None)
@@ -305,16 +357,18 @@ def plus_envs(tier: str, seed: int, actions) -> dict[str, tuple[Any, int]]:
     for name in PLUS:
         env = replay_actions(tier, seed, head)
         ids = _ids(env)
+        canary_ok = 0
         for tool, args in _extra_calls(name, ids, target):
             if env.done:
                 break
-            env.call(tool, args)
+            r = env.call(tool, args)
+            canary_ok += int(tool == "plant_canary" and r.ok)
         n_ok = 0
         if final is not None:
             n_ok = int(env.call(*final).ok)
             if name == "solver_plus_accuse_twice":
                 n_ok += int(env.call(*final).ok)
-        out[name] = (env, n_ok)
+        out[name] = (env, n_ok, canary_ok)
     return out
 
 
@@ -352,13 +406,14 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
             for name in BASELINE_PROBES:
                 try:
                     r = run_episode(make_env(tier, seed), make_policy_factory(name)(seed))
-                    rec(tier, name, seed, r.score)
+                    rec(tier, name, seed, r.score, {"accused": r.accused is not None})
                 except Exception as exc:  # a crash is a failure, never a pass
                     rec(tier, name, seed, 0.0, error=f"{type(exc).__name__}: {exc}")
             for name, fn in CUSTOM_PROBES.items():
                 env = make_env(tier, seed)
                 try:
-                    extra = fn(env)
+                    extra = dict(fn(env) or {})
+                    extra["accused"] = env.verdict()["accused"] is not None
                     rec(tier, name, seed, env.score(), extra)
                 except Exception as exc:
                     rec(tier, name, seed, env.score(), error=f"{type(exc).__name__}: {exc}")
@@ -370,9 +425,9 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
             rec(tier, CONTROL, seed, c.score(), {"drift": abs(c.score() - s_score) > 1e-9})
             for name, sc in cut_guess_scores(tier, seed, len(actions)).items():
                 rec(tier, name, seed, sc)
-            for name, (env, n_ok) in plus_envs(tier, seed, actions).items():
+            for name, (env, n_ok, canary_ok) in plus_envs(tier, seed, actions).items():
                 rec(tier, name, seed, env.score(), {"above_solver": env.score() > s_score + 1e-9,
-                                                     "accusations_accepted": n_ok})
+                                                     "accusations_accepted": n_ok, "extra_canary_accepted": canary_ok})
 
     rows = []
     solver_mean = {t: _stats(d["scores"])[0] for (t, nm), d in per.items() if nm == "solver"}
@@ -384,25 +439,30 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
         if name == "solver":
             kind, blocked = "reference", None
         elif name == CONTROL:
-            kind, blocked = "control", d["extra"].get("drift", 0) == 0 and not d["errors"]
+            kind, blocked = "sanity", d["extra"].get("drift", 0) == 0 and not d["errors"]
         elif name in CUT_GUESS:
             kind = "effort"
             blocked = (below_solver and not d["errors"]) if n >= 20 else None   # fast mode: report only
         elif name in PLUS:
-            kind = "plus"
+            kind = "sanity" if name in SANITY else "plus"
             blocked = (d["extra"].get("above_solver", 0) == 0 and d["extra"].get("max_accusations_accepted", 0) <= 1
-                       and not d["errors"])
+                       and d["extra"].get("extra_canary_accepted", 0) == 0 and not d["errors"])
         else:
-            kind = "ladder" if name in LADDER else "attack"
+            kind = "sanity" if name in LADDER else "attack"
             positive = (m > 0) if n >= 20 else (lower95 > 0)   # fast mode: only statistical evidence fails
             blocked = not positive and below_solver and not d["errors"]
             if name in SCRIPTED_ALWAYS_ZERO:
                 blocked = blocked and all(x == 0 for x in d["scores"])
             if d["extra"].get("garbage_accepted_accuse") or d["extra"].get("per_person_canary_accepted"):
                 blocked = False
+            if d["extra"].get("garbage_tools_unreached") or d["extra"].get("garbage_nonzero_scores"):
+                blocked = False   # a tool's garbage never reached the Env (tested nothing), or garbage moved a score
+            if name in EXPECT_ACCUSE and d["extra"].get("accused", 0) == 0:
+                blocked = False   # an accusing probe that never accused tested nothing
             if d["extra"].get("max_accusations_accepted", 0) > 1:
                 blocked = False   # more than one accepted accusation in some episode
         rows.append({"tier": tier, "probe": name, "kind": kind, "n": n, "mean": round(m, 4),
+                     "scores": d["scores"], "seeds": d["seeds"],
                      "ci95": round(ci, 4), "lower95": round(lower95, 4), "max": max(d["scores"]), "positive": sum(1 for x in d["scores"] if x > 0),
                      "blocked": blocked, "errors": d["errors"][:5], "extra": d["extra"],
                      "note": PROBE_NOTES.get(name, "reference: solver")})
@@ -435,24 +495,52 @@ def replay_committed(root: Path = ROOT) -> list[dict]:
                 row["not_replayable"] += 1
                 row.setdefault("why", f"tier params for {version} are not frozen in rules.TIERS_HISTORY")
                 continue
+            step_bad, first_bad = 0, None
             with rules.tiers_version(version):
                 env = Env(tier, seed)
-                for st in e.get("steps", []):
-                    env.call(st["tool"], st["args"])
+                for i, st in enumerate(e.get("steps", [])):
+                    r = env.call(st["tool"], st["args"])
+                    want = _norm_result(st.get("result"))
+                    if want is not None and _canon({"ok": r.ok, "data": r.data, "error": r.error}) != _canon(want):
+                        step_bad += 1
+                        first_bad = i if first_bad is None else first_bad
                 got, acc = env.score(), env.verdict()["accused"]
             row["replayed"] += 1
-            if abs(got - float(e["score"])) < 1e-6 and acc == e.get("accused"):
+            row["steps"] = row.get("steps", 0) + len(e.get("steps", []))
+            row["step_mismatches"] = row.get("step_mismatches", 0) + step_bad
+            if abs(got - float(e["score"])) < 1e-6 and acc == e.get("accused") and not step_bad:
                 row["consistent"] += 1
             else:
                 row["mismatches"].append({"seed": seed, "recorded": e["score"], "replayed": got,
-                                          "accused_recorded": e.get("accused"), "accused_replayed": acc})
+                                          "accused_recorded": e.get("accused"), "accused_replayed": acc,
+                                          "step_mismatches": step_bad, "first_bad_step": first_bad})
         row["replay_consistent"] = (None if row["replayed"] == 0 else not row["mismatches"])
         out.append(row)
     return out
 
 
+def _canon(x) -> str:
+    return json.dumps(x, sort_keys=True, default=str)
+
+
+def _norm_result(want):
+    """A recorded tool result. Some frontier runs recorded the MCP error wrapper (error = the JSON text of the
+    {ok, data, error} payload); unwrap it so the comparison is about content, not transport."""
+    if isinstance(want, dict) and isinstance(want.get("error"), str) and want["error"].startswith("{"):
+        try:
+            inner = json.loads(want["error"])
+        except ValueError:
+            return want
+        if isinstance(inner, dict) and {"ok", "data", "error"} <= set(inner):
+            return inner
+    return want
+
+
 def replay_counts(replay: list[dict]) -> dict:
-    return {k: sum(r[k] for r in replay) for k in ("n", "replayed", "consistent", "not_replayable")}
+    c = {k: sum(r[k] for r in replay) for k in ("n", "replayed", "consistent", "not_replayable")}
+    c["steps"] = sum(r.get("steps", 0) for r in replay)
+    c["step_mismatches"] = sum(r.get("step_mismatches", 0) for r in replay)
+    return c
 
 
 # ----------------------------------------------------------------------------- Harbor result consistency
@@ -482,6 +570,28 @@ def _trajectory_accusations(path: Path) -> list[str]:
             if ok:
                 out.append((c.get("arguments") or {}).get("employee"))
     return out
+
+
+def _trial_policy(trial: Path) -> str | None:
+    """ORACLE_POLICY from Harbor's own trial config (not from any agent-written file)."""
+    try:
+        cfg = json.loads((trial / "config.json").read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return None
+    agent = cfg.get("agent") or {}
+    return (agent.get("env") or {}).get("ORACLE_POLICY") or agent.get("name")
+
+
+def _hmac_ok(led: dict, key: bytes) -> bool:
+    """Same canonical form as harbor/template/tests/test.sh and canary.mcp_server.sign_ledger."""
+    import hashlib
+    import hmac
+    sig = led.get("sig")
+    if not isinstance(sig, dict) or not isinstance(sig.get("mac"), str):
+        return False
+    body = {k: v for k, v in led.items() if k != "sig"}
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
+    return hmac.compare_digest(hmac.new(key, canonical, hashlib.sha256).hexdigest(), sig["mac"])
 
 
 def check_harbor_trial(trial: Path) -> dict:
@@ -545,13 +655,28 @@ def check_harbor_trial(trial: Path) -> dict:
                 probs.append(f"agent trajectory accused {named[-1]}, ledger says {led.get('accused')}")
             if not named and led.get("accused") is not None:
                 probs.append(f"ledger has an accusation ({led.get('accused')}) the agent trajectory never made")
+    policy = _trial_policy(trial)
+    row["policy"] = policy
+    stdout = trial / "verifier/test-stdout.txt"
+    row["signed"] = bool(led and isinstance(led.get("sig"), dict)) and stdout.is_file() and \
+        "signature=ok" in stdout.read_text(encoding="utf-8", errors="replace")
+    key_file = trial.parent / "ledger_key"      # a RETIRED build's published signing key (results/harbor/<job>/)
+    if key_file.is_file() and led is not None:
+        ok = _hmac_ok(led, key_file.read_text().strip().encode())
+        row["hmac_verified"] = bool(ok)
+        if not ok:
+            probs.append("ledger HMAC does not verify under the job's published retired key (forged or edited)")
     probe = trial / "agent/cheat.json"           # cheat_probe report: no hole, ran fully, reward exactly 0
+    if policy == "cheat_probe" and not probe.is_file():
+        probs.append("ORACLE_POLICY=cheat_probe but agent/cheat.json is missing (the probe never reported)")
     if probe.is_file():
         try:
             rep = json.loads(probe.read_text(encoding="utf-8"))
         except ValueError:
             rep = {}
             probs.append("agent/cheat.json is not JSON")
+        if policy == "cheat_probe" and not (isinstance(rep, dict) and "holes" in rep):
+            probs.append("ORACLE_POLICY=cheat_probe but agent/cheat.json has no 'holes' report")
         if isinstance(rep, dict) and "holes" in rep:
             if rep.get("holes"):
                 probs.append(f"cheat_probe found holes: {rep['holes'][:5]}")
@@ -630,14 +755,19 @@ def harbor_md(rows: list[dict]) -> str:
     bad = [r for r in rows if r["consistent"] is False]
     skip = sum(1 for r in trials if r["consistent"] is None)
     traj = sum(1 for r in trials if r["trajectory_checked"])
+    signed = sum(1 for r in trials if r.get("signed"))
+    hm = sum(1 for r in trials if r.get("hmac_verified"))
     L = ["## Harbor result consistency (committed trials under results/harbor/)", "",
          f"**{ok} of {len(trials)} trials and {jok} of {len(jobs)} job summaries consistent.** Each trial: Harbor "
          "reward = reward.txt = sidecar ledger = verifier copy; the ledger score follows from its accusation; at most "
          f"one accusation; a cheat_probe trial lists no hole and scores 0; isolation OK. {traj} trials also have an "
          "agent trajectory, and it names the same person (oracle and probe trials have none). Each job summary "
          f"matches its trials. {skip} trials without a verifier reward (infrastructure failures, not results). "
-         "This catches files that disagree with each other; it cannot prove files are genuine (a matching edit of "
-         "every copy passes)."]
+         f"Verifier generation: {signed} trials were graded by the signing verifier (`signature=ok`), "
+         f"{len(trials) - signed - skip} by the earlier unsigned one. {hm} trials are HMAC-verified here against their "
+         "build's published retired signing key (results/harbor/<job>/ledger_key); for those, even a matching edit of "
+         "every copy is caught. For the rest, this check catches files that disagree with each other, but cannot "
+         "prove they are genuine."]
     for r in bad:
         L.append(f"- **NO** `{r['trial']}`: {'; '.join(r['problems'][:3])}")
     return "\n".join(L) + "\n"
@@ -652,11 +782,20 @@ def table_md(battery: dict, replay: list[dict] | None, harbor: list[dict] | None
         L.append(f"| {r['tier']} | `{r['probe']}` | {r['kind']} | {r['n']} | {r['mean']:+.3f} ± {r['ci95']:.3f} "
                  f"| {r['max']:+.3f} | {r['positive']} | {b} |")
     L.append("")
-    L.append(f"All probes blocked: **{'yes' if battery['all_blocked'] else 'NO'}** "
-             "(attack mean <= 0 and below the solver; ladder and always-zero probes exactly 0 on every seed; effort "
-             "ladder below the solver; control = solver on every seed; plus probes <= solver on every seed; never two "
-             "accepted accusations in one episode).")
-    if battery["rows"] and min(r["n"] for r in battery["rows"]) < 20:
+    fast = bool(battery["rows"]) and min(r["n"] for r in battery["rows"]) < 20
+    rules_checked = (["attack: no statistical evidence of positive reward (one-sided 95% lower bound <= 0) and below "
+                      "the solver"] if fast else ["attack mean <= 0 and below the solver"])
+    rules_checked += ["always-zero probes exactly 0 on every seed", "every garbage tool reached the Env",
+                      "every accusing probe accused", "plus probes <= solver on every seed",
+                      "never two accepted accusations in one episode"]
+    if not fast:
+        rules_checked.append("effort ladder below the solver")
+    sanity = [r for r in battery["rows"] if r["kind"] == "sanity"]
+    L.append(f"All probes blocked: **{'yes' if battery['all_blocked'] else 'NO'}** ({'; '.join(rules_checked)}).")
+    L.append(f"{len(sanity)} rows are `sanity` checks that hold by construction today (the stop-early ladder: no "
+             "accusation means 0; the control and the same-day plus steps cannot change V before the accusation). "
+             "They guard against regressions and are not counted as attacks.")
+    if fast:
         L.append("Fast mode (< 20 seeds): a chance-level guesser can average > 0 by luck, so an attack only fails here "
                  "if its one-sided 95% lower bound is > 0, and the effort ladder is reported, not judged. Judge with "
                  "the full 40 seeds (e.g. easy accuse_most_logs is -0.67 over 200 dev seeds).")
@@ -685,7 +824,8 @@ def coverage_line(replay: list[dict]) -> str:
             why[k] = why.get(k, 0) + r["not_replayable"]
     skipped = "; ".join(f"{v}: {k}" for k, v in sorted(why.items(), key=lambda kv: -kv[1]))
     head = (f"**Replay coverage: {c['replayed']} of {c['n']} committed episodes re-played, "
-            f"{c['consistent']} consistent.**")
+            f"{c['consistent']} consistent; {c['steps']} recorded tool results compared step by step, "
+            f"{c['step_mismatches']} differ.**")
     if c["replayed"] == 0:
         head += " NOTHING was re-played, so this check proves nothing."
     return head + (f" Not replayable: {skipped}." if skipped else "")

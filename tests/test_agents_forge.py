@@ -111,3 +111,16 @@ def test_cli_fake(tmp_path, capsys):
     assert E.main(["--fake", "--gens", "2", "--pop", "4", "--seeds", "0-3", "--workers", "1",
                    "--out", str(tmp_path)]) == 0
     assert (tmp_path / "log.jsonl").exists() and (tmp_path / "hall_of_fame.jsonl").exists()
+
+
+def test_hof_round_trips_through_dsl(tmp_path):
+    from canary.mole.dsl import DEFAULT_STRATEGY, MoleStrategy
+    from canary.forge.mutate import FEATURES, default_strategy_json
+    assert "n_leakable" in FEATURES
+    assert validate_strategy(default_strategy_json()) == validate_strategy(DEFAULT_STRATEGY.to_json())
+    _run(tmp_path, gens=3)
+    hof = [json.loads(l) for l in (tmp_path / "hall_of_fame.jsonl").read_text().splitlines()]
+    assert hof
+    for h in hof:
+        s = MoleStrategy.from_json(h["strategy_json"])
+        assert validate_strategy(s.to_json()) == h["strategy_json"]

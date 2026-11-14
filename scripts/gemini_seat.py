@@ -28,11 +28,13 @@ def commit():
 
 def usage_total(cache, fn=None):
     i = o = 0
+    models = set()
     p = cache / (fn or gemini.USAGE_FILE)
     for line in p.read_text().splitlines() if p.is_file() else []:
         d = json.loads(line)
         i, o = i + d["in"], o + d["out"]
-    return {"in_tokens": i, "out_tokens": o, "usd": round((i * PRICE["in"] + o * PRICE["out"]) / 1e6, 4)}
+        models.add(d["model"])
+    return {"in_tokens": i, "out_tokens": o, "usd": round((i * PRICE["in"] + o * PRICE["out"]) / 1e6, 4), "models_sent": sorted(models)}
 
 
 class FrontierAgent:
@@ -72,7 +74,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     r = json.loads(p.stdout.strip().splitlines()[-1])
     strategy = frontier_day.build_day(seat, seed)[2]
     out = {"model": model, "commit": com, "agent": agent, "seat": seat, "seed": seed, "trial": trial, "mode": mode,
-           "seat_under_test": seat, "day_source": "day_for", "strategy": strategy,
+           "seat_under_test": seat, "day_source": "day_for", "team": "procedure", "sleeper": (gemini.model_for("sleeper") if os.environ.get("SLEEPER_LIVE_SLEEPER") == "1" else "scripted"), "strategy": strategy,
            "state_path": str(state.relative_to(out_dir.parent.parent)), "transcript_path": f"{model}/{com}/{name}.json",
            "scores": {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r.get("false_quarantine", []), "sleeper_caught": r.get("sleeper_caught", False),
                       "tickets_done": r.get("tickets_done", 0), "tickets_total": r.get("tickets_total", 0)},

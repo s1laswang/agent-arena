@@ -1,6 +1,6 @@
 """Paired v1.3 frontier-vs-solver table (no API cost).
 
-    python scripts/paired_v13.py [--root data/runs/committed/v1.3] [--seeds 0-9] [--out-md ...] [--out-json ...]
+    python scripts/paired_v13.py [--root data/runs/committed] [--seeds 0-9] [--out-md ...] [--out-json ...]
 
 Each row is one run group on one tier, restricted to the dev seeds it shares with the reference solver.
 Columns: n, mean score +/- 95% CI (normal approx), accuracy (correct / n), accused rate, mean solver
@@ -22,15 +22,15 @@ from canary.analysis.accuse import audit_episode  # noqa: E402
 from canary.analysis.gap import load_runs, mean_ci  # noqa: E402
 from canary.analysis.tags import to_result  # noqa: E402
 
-GROUPS = [  # label, subdir (relative to root), agent name
-    ("Codex gpt-5.5 over MCP (judges' shape), full run", "codex-gpt-5.5-full", "codex:gpt-5.5"),
-    ("in-process gpt-5.5, fixed loop (full history, Responses + reasoning replay, effort=medium)", "gpt-5.5-full", "openai:gpt-5.5"),
-    ("Codex gpt-5.5 over MCP, earlier sample (0933805; history)", "codex-gpt-5.5", "codex:gpt-5.5"),
-    ("in-process gpt-5.5, handicapped scaffold, superseded (40-turn window)", "gpt-5.5", "openai:gpt-5.5"),
-    ("reference solver", "reference", "solver"),
-    ("heuristic", "reference", "heuristic"),
-    ("do_nothing", "reference", "do_nothing"),
-    ("stop_early", "reference", "stop_early"),
+GROUPS = [  # label, subdir (relative to --root = data/runs/committed), agent name
+    ("Codex gpt-5.5 over MCP (judges' shape), full run", "v1.3/codex-gpt-5.5-full", "codex:gpt-5.5"),
+    ("in-process gpt-5.5, fixed loop (full history, Responses + reasoning replay, effort=medium)", "v1.3/gpt-5.5-full", "openai:gpt-5.5"),
+    ("Codex gpt-5.5 over MCP, earlier sample (0933805; history)", "superseded/v1.3-codex-sample/codex-gpt-5.5", "codex:gpt-5.5"),
+    ("in-process gpt-5.5, handicapped scaffold, superseded (40-turn window)", "superseded/v1.3-window-scaffold/gpt-5.5", "openai:gpt-5.5"),
+    ("reference solver", "v1.3/reference", "solver"),
+    ("heuristic", "v1.3/reference", "heuristic"),
+    ("do_nothing", "v1.3/reference", "do_nothing"),
+    ("stop_early", "v1.3/reference", "stop_early"),
 ]
 
 
@@ -47,7 +47,7 @@ def boot_ratio(f: list[float], s: list[float], B: int = 10000, rng_seed: int = 0
 
 
 def rows_for(root: Path, seeds: set[int]) -> list[dict]:
-    solver = {(e["tier"], e["seed"]): e for e in load_runs(root / "reference") if e["agent"] == "solver"}
+    solver = {(e["tier"], e["seed"]): e for e in load_runs(root / "v1.3" / "reference") if e["agent"] == "solver"}
     out = []
     for label, sub, agent in GROUPS:
         d = root / sub
@@ -102,7 +102,7 @@ def to_md(rows: list[dict]) -> str:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--root", default="data/runs/committed/v1.3")
+    ap.add_argument("--root", default="data/runs/committed")
     ap.add_argument("--seeds", default="0-9")
     ap.add_argument("--out-md", default=None)
     ap.add_argument("--out-json", default=None)

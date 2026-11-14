@@ -149,7 +149,7 @@ def _get_client():
     if _client is None:
         from google import genai
 
-        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 300000})
     return _client
 
 
@@ -159,7 +159,7 @@ def _generate(model, system, messages, tools, temperature, seed):
     cfg = types.GenerateContentConfig(
         system_instruction=system or None,
         temperature=temperature,
-        seed=seed,
+        seed=None if seed is None else seed % 2147483647,
         tools=[types.Tool(function_declarations=to_declarations(tools))] if tools else None,
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )

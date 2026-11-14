@@ -62,7 +62,7 @@ The Gemini reference row says not found. We have not run it with a key yet.
 
 These runs are deterministic, so pass-hat-k equals a single run. We say that rather than imply repeated variance.
 
-One honest note: the staff number is below the reference partly because the staff are weak, and we measured a baseline that ignores chat and it scores 0.000 here (make eval on momin 5634505, rerun on 814a723 NOT FOUND (killed under load)).
+One honest note: the staff number is below the reference partly because the staff are weak, and we measured a baseline that ignores chat and it scores 0.000 here (make eval, momin 814a723, offline).
 
 ## 5:45 Multi-model table and replay (fill when lead-lab publishes)
 
@@ -78,7 +78,7 @@ When we read the failed days, the mistakes are not random. They are decisions.
 
 The controller approved without checking the audit log. A familiar name was trusted. A secret was leaked inside a summary. The wrong person was accused. A slow attack, spread over several steps, was missed.
 
-Of the days staff lost, 39 of 39 carry a named mistake, none unexplained. When one seat follows the oracle procedure, 33 of 39 flip to a win. Every one of these is a choice made while the evidence to choose differently was on the screen. The audit log, the approval history, the vendor records and the policies are in every day. Nothing is hidden and nothing is worded to trick anyone. That is the rule we held ourselves to.
+Of the days staff lost, the share with a named mistake and the share that flip to a win under the procedure: NOT FOUND (not in README or docs/RULES.md at 814a723). Every one of these is a choice made while the evidence to choose differently was on the screen. The audit log, the approval history, the vendor records and the policies are in every day. Nothing is hidden and nothing is worded to trick anyone. That is the rule we held ourselves to.
 
 The failure table is produced by `python -m lab.analyse` over the run folder. The counts come from there.
 

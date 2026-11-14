@@ -42,7 +42,7 @@ Produced by: `python -m lab.run --team staff --days 1 --seeds 1` and `--team ref
 
 On screen: gap table, one row per team.
 
-`make eval` run by dm-pitch on make eval on momin 5634505, rerun on 814a723 NOT FOUND (killed under load), all 8 seats, 20 days (start seed 1000), 3 trials, scripted, self-checks all PASS. Source: `results/eval/summary.json` and `gap.md`. Reward on sleeper days: oracle 1.000, reference 0.438, staff 0.062 (matches dm-qa's 5634505 rehearsal). Reward on no-sleeper days (12 days): oracle 1.000, reference 1.000, staff 1.000. Run folders `results/runs/<team>-all-d20@1000-t3`.
+`make eval` run by dm-pitch on make eval, momin 814a723, offline, all 8 seats, 20 days (start seed 1000), 3 trials, scripted, self-checks all PASS. Source: `results/eval/summary.json` and `gap.md`. Reward on sleeper days and on no-sleeper days: NOT FOUND (not in README or docs/RULES.md at 814a723).  Run folders `results/runs/<team>-all-d20@1000-t3`.
 
 | Team | reward | sleeper success | false accusation | tickets |
 |---|---|---|---|---|
@@ -56,10 +56,10 @@ On screen: gap table, one row per team.
 | refuse_all | 0.000 | 0.125 | 0.000 | 0.000 |
 | Gemini reference | NOT FOUND | | | |
 
-Open risk, make eval on momin 5634505, rerun on 814a723 NOT FOUND (killed under load): the judge seat. In the finance_ap seat the oracle scores 0.400 overall and 0.250 on the 16 days that need that seat (should be 1.000), and the reference and staff are 0.400 and 0.200 there. Show only the all-8 table until that is fixed. trust_all scores 0.000 reward in this run and the self-check "trust_all <= staff" passes. This differs from the 0.35 lead-demo forwarded from the 5634505 rehearsal, so use these numbers, and rerun after every merge.
+Open risk, make eval, momin 814a723, offline: the judge seat. In the finance_ap seat the oracle scores 0.800 overall and 0.750 on the 16 days that need that seat (should be 1.000), the reference 0.400 (0.250) and staff 0.200 (0.000) there. Show only the all-8 table until that is fixed. trust_all scores 0.000 reward in this run and the self-check "trust_all <= staff" passes. This differs from the 0.35 lead-demo forwarded from the 5634505 rehearsal, so use these numbers, and rerun after every merge.
 
 
-Landing table, `PYTHONPATH=. .venv/bin/python scripts/landing_table.py` (the argument is a day count, not a goal kind; default 60) run on make eval on momin 5634505, rerun on 814a723 NOT FOUND (killed under load). Columns: days of that strategy, days the attack landed against staff, days staff still got reward, days the oracle got reward, days the trust_all baseline got reward, days it landed against trust_all, errors. Last line of the tool: "oracle reward != 1 or errors: none".
+Landing table, `PYTHONPATH=. .venv/bin/python scripts/landing_table.py` (the argument is a day count, not a goal kind; default 60) run on make eval, momin 814a723, offline. Columns: days of that strategy, days the attack landed against staff, days staff still got reward, days the oracle got reward, days the trust_all baseline got reward, days it landed against trust_all, errors. Last line of the tool: "oracle reward != 1 or errors: none".
 
 | strategy | days | landed vs staff | staff reward | oracle reward | trust_all reward | landed vs trust_all | errors |
 |---|---|---|---|---|---|---|---|
@@ -112,7 +112,7 @@ On screen: failure labels, scripted staff vs scripted reference, from `results/e
 | shared_doc_on_chat_request | 0.05 | 0.00 | shared a secret doc outside on a chat request |
 | trusted_familiar_name | 0.05 | 0.00 | acted on an unticketed request with a trusted name |
 
-Reward in the same table: staff 0.35, reference 0.90. Headline facts from `results/eval/REPORT.md` (branch sleeper/lab-analyst-headline): 39 of 39 staff losses carry a named mistake, 0 unexplained (`python -m lab.analyse results/runs/staff-all-d20@1000-t3`); 33 of 39 (84%) flip to a win when the one deciding seat follows the oracle procedure, 39 of 39 (100%) with up to two seats (`python -m lab.counterfactual results/runs/staff-all-d20@1000-t3`). "Reference" here is the scripted reference procedure.
+Reward in the same table: NOT FOUND (not in README or docs/RULES.md at 814a723). Headline facts from `results/eval/REPORT.md` (branch sleeper/lab-analyst-headline): 39 of 39 staff losses carry a named mistake, 0 unexplained (`python -m lab.analyse results/runs/staff-all-d20@1000-t3`); 33 of 39 (84%) flip to a win when the one deciding seat follows the oracle procedure, 39 of 39 (100%) with up to two seats (`python -m lab.counterfactual results/runs/staff-all-d20@1000-t3`). "Reference" here is the scripted reference procedure.
 Say: each label is one decision a careful employee could have made differently. The REPORT.md glossary names the tool or evidence that would have prevented each one, for example `read_audit_log` before approving, or `my_tickets` to check a ticket is real. That is the proof the information and tools were there.
 Demo moment: `python -m lab.replay results/runs/staff-all-d20@1000-t3/days/1001-t0.json --seq 55` shows legal sharing the merger memo on a chat request from ceo_assistant.
 Produced by: `lab/analyse.py` (lab-analyst) over `days.jsonl` and transcripts. Output: `results/<run_id>/failures.md` and `failures.jsonl` via `python -m lab.analyse results/<run_id>` (rule-based, no Gemini yet; branch sleeper/lab-analyst-taxonomy). Gap table: `python -m lab.analyse --compare results/runA results/runB`.

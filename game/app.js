@@ -529,7 +529,7 @@ function addEvidenceCard(tool, args, res) {
         let detailsHtml = "";
 
         if (isCanary && v) {
-          badgeHtml = `<span class="canary-pill canary-pill-${vClass}">Canary: Variant ${v}</span>`;
+          badgeHtml = `<span class="canary-pill canary-pill-${vClass}">Canary Variant ${v}</span>`;
           // Find who was assigned Variant v for this canary doc
           const hist = state.canaryHistory.find(h => h.id === item.doc_id);
           const holderNames = [];
@@ -541,31 +541,23 @@ function addEvidenceCard(tool, args, res) {
               }
             }
           }
-          detailsHtml = `
-            <div style="background:var(--canary-${vClass}-bg); border:1px solid var(--canary-${vClass}); border-radius:4px; padding:6px 10px; margin:6px 0; color:var(--canary-${vClass}); font-size:12px;">
-              <strong>Canary Watermark: Variant ${v}</strong>
-              ${holderNames.length ? `<div style="margin-top:3px; font-size:11.5px; opacity:0.95;">Staff given Variant ${v}: <strong>${holderNames.join(", ")}</strong></div>` : ''}
-            </div>
-          `;
+          detailsHtml = holderNames.length ? `<div class="muted font-small" style="margin-top:2px;">Staff given Var ${v}: ${holderNames.join(", ")}</div>` : '';
         } else if (isCanary) {
           badgeHtml = `<span class="canary-pill canary-pill-a">Canary Leak</span>`;
-          detailsHtml = `<div class="muted font-small" style="margin-top:4px;">A planted canary surfaced, but variant could not be recovered.</div>`;
+          detailsHtml = `<div class="muted font-small" style="margin-top:2px;">Planted canary leaked.</div>`;
         } else {
           badgeHtml = `<span class="regular-doc-pill">Regular Document</span>`;
-          detailsHtml = `<div class="muted font-small" style="margin-top:4px;">Standard internal document. Cross-reference access logs to narrow down suspect.</div>`;
+          detailsHtml = `<div class="muted font-small" style="margin-top:2px;">Standard memo. Cross-reference access logs.</div>`;
         }
 
         html += `
           <div style="background:var(--panel-elevated); border:1px solid var(--line); border-radius:4px; padding:8px; margin-bottom:6px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px; flex-wrap:wrap;">
-              <strong>Doc: ${item.doc_id} · "${item.title || 'Internal Memo'}"</strong>
+              <strong>Doc: ${item.doc_id} · "${item.title || 'Memo'}"</strong>
               ${badgeHtml}
             </div>
             ${detailsHtml}
-            <div class="muted font-small">${item.snippet || 'Proprietary corporate strategy data leaked.'}</div>
-            <div class="leak-delay-warning">
-              <strong>Delayed Leak:</strong> Surfaced Day ${item.surfaced_day}. Exfiltrated between Day ${minDay} and Day ${maxDay}.
-            </div>
+            <div class="muted font-small" style="margin-top:2px;">Surfaced Day ${item.surfaced_day} (exfiltrated Days ${minDay}–${maxDay}).</div>
           </div>
         `;
       }
@@ -1212,33 +1204,33 @@ function renderExpertTools(tools) {
 const TUTORIAL_STEPS = [
   {
     target: "titleScreen",
-    title: "Canary Benchmark Field Guide",
-    message: "Welcome to Canary! You are Head of Corporate Security. A rival firm is publishing your memos. Your mission is to find the mole while preserving Company Value (V = 1.00).",
+    title: "Welcome to Canary",
+    message: "Find the mole leaking memos before company value hits zero, or abstain.",
   },
   {
     target: "hudBar",
-    title: "The Security HUD",
-    message: "Track your Calendar, Daily Action Pips (8 per day), Company Value (V), and Leaks Detected. Leaks diminish company value. Every action spends budget, so plan carefully!",
+    title: "Security HUD",
+    message: "Calendar, 8 daily action pips, and Company Value (V). Leaks drain V.",
   },
   {
     target: "officeCard",
-    title: "The Office Suspect Pool",
-    message: "Personnel are grouped by department. Click any card to inspect their dossier, interview them, review their access logs, or tag them as Suspect (🔴) or Cleared (🟢).",
+    title: "The Office",
+    message: "Click any card to inspect dossier, interview, review access logs, or tag.",
   },
   {
     target: "hudPlantCanaryBtn",
-    title: "Plant Canary Traps",
-    message: "Use Plant Canaries [P] to distribute marked variants (A, B, C) to cohorts. When a leak appears on the rival wire, the leaked variant reveals the mole's cohort!",
+    title: "Plant Canaries",
+    message: "Distribute marked variants (A, B, C) to cohorts to partition suspects.",
   },
   {
     target: "hudNextDayBtn",
-    title: "Advance Day & Watch the Delay",
-    message: "Advance Day [N] ends today and advances time. Crucial rule: leaks take 1–3 days to surface! Today's leak was stolen days ago. Beware of fabricated after-hours logs.",
+    title: "Advance Day",
+    message: "Advance time. Leaks take 1–3 days to surface at the rival firm.",
   },
   {
     target: "hudAccuseBtn",
-    title: "Accuse or Abstain: The Math",
-    message: "When you're ready, accuse [A]. But heed the break-even math: if your certainty is below p* = 1 / (1 + V), closing the case without accusing (abstaining) scores 0.00 while guessing risks -1.00!",
+    title: "Accuse or Abstain",
+    message: "Correct catch preserves +V. If uncertain, abstain (0.00) beats guessing (-1.00).",
   }
 ];
 

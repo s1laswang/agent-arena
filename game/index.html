@@ -32,37 +32,14 @@
   <!-- SCREEN 1: TITLE & LAUNCH SCREEN -->
   <section id="titleScreen" class="card title-card">
     <div class="title-hero">
-      <h2 class="premise-heading">
-        Someone in this company is leaking secrets.<br>
-        Every leak costs money.<br>
-        Find the mole, or have the sense to say you don't know.
-      </h2>
-      <p class="premise-desc">
-        You are Head of Corporate Security. A competitor is publishing internal memos.
-        Deploy canary traps, analyze delayed leak signals, see through framing logs, and make the high-stakes call.
-      </p>
-    </div>
-
-    <!-- 3 Core Benchmark Rules -->
-    <div class="title-rules-grid">
-      <div class="rule-box">
-        <h3>1. Plant Canaries</h3>
-        <p>Seed sensitive memos with subtle variants (<strong>A, B, C</strong>). When a document leaks, its variant fingerprint narrows down the cohort.</p>
-      </div>
-      <div class="rule-box">
-        <h3>2. Mind the Delay</h3>
-        <p>Leaks take <strong>1–3 days</strong> to surface on the rival wire. Today's leak was stolen days ago. Watch for fabricated after-hours logs.</p>
-      </div>
-      <div class="rule-box">
-        <h3>3. Accuse or Abstain</h3>
-        <p>A correct catch preserves Company Value (<strong>+V</strong>). A wrong accusation costs <strong>-1.00</strong>. When uncertain, <strong>abstaining (0.00)</strong> wins the math.</p>
-      </div>
+      <h2 class="premise-heading">Canary</h2>
+      <p class="premise-desc">Find the mole leaking secrets before company value drains to zero, or have the sense to abstain.</p>
     </div>
 
     <!-- Pyodide Sandboxed Engine Loading Bar -->
     <div class="engine-loader" id="engineLoader">
       <div class="loader-header">
-        <span id="loadMsg">Loading the benchmark engine in your browser...</span>
+        <span id="loadMsg">Loading engine in browser...</span>
         <span id="loadPercent" class="mono">0%</span>
       </div>
       <div class="load-track">
@@ -74,7 +51,7 @@
     <div class="title-actions-card">
       <div class="seed-selection-row">
         <div class="seed-input-group">
-          <label for="seedInput"><strong>Investigation Seed</strong> (Dev seeds 3000–9999)</label>
+          <label for="seedInput">Seed (3000–9999)</label>
           <div class="seed-input-controls">
             <input id="seedInput" type="number" min="3000" max="9999" step="1" value="3000">
             <button type="button" id="randomSeedBtn" class="btn-secondary" title="Roll Random Seed">Random Seed</button>
@@ -82,10 +59,10 @@
         </div>
         <div class="launch-buttons-group">
           <button type="button" id="playBtn" class="btn-primary btn-large" disabled>
-            Initializing Engine...
+            Start Game
           </button>
           <button type="button" id="startTutorialBtn" class="btn-secondary btn-large" disabled>
-            Guided Tutorial
+            Tutorial
           </button>
         </div>
       </div>
@@ -538,8 +515,16 @@
   <div id="shortcutsModal" class="modal-backdrop" hidden>
     <div class="modal-dialog card shortcuts-dialog">
       <div class="modal-head">
-        <h3>Keyboard Shortcuts</h3>
+        <h3>Rules & Shortcuts</h3>
         <button type="button" id="closeShortcutsBtn" class="btn-close">✕</button>
+      </div>
+      <div style="margin-bottom: 12px; font-size: 12px; line-height: 1.5; border-bottom: 1px solid var(--line); padding-bottom: 8px;">
+        <ul style="margin: 0; padding-left: 18px; color: var(--muted);">
+          <li>Plant canaries with variants (A, B, C) to partition suspect cohorts.</li>
+          <li>Leaks take 1–3 days to surface at rival firm; access logs can be fabricated.</li>
+          <li>Accusing mole scores remaining +V; wrong accusation scores -1.00.</li>
+          <li>When uncertain, closing case without accusing (abstain) scores 0.00.</li>
+        </ul>
       </div>
       <div class="shortcuts-grid">
         <div class="shortcut-row"><kbd>N</kbd> <span>Advance to Next Day</span></div>

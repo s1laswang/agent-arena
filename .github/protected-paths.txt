@@ -1,0 +1,24 @@
+# Paths a PR into justSilas may not change without the `protected-ok` label (added by Silas).
+# One prefix per line: a trailing / matches a whole directory; otherwise an exact file.
+# Checked by .github/workflows/protected-paths.yml.
+
+# Canary environment, rules, solver and judge path
+canary/env.py
+canary/rules.py
+canary/world.py
+canary/types.py
+canary/eval.py
+canary/reproduce.py
+canary/mcp_server.py
+canary/solver/
+harbor/
+Makefile
+configs/
+
+# Judge data: make reproduce replays everything here into the judge table
+data/runs/committed/
+results/judge_table.md
+
+# The guard itself
+.github/protected-paths.txt
+.github/workflows/

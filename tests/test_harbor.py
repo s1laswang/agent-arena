@@ -8,7 +8,7 @@ def test_structure(tmp_path):
     assert dirs == ["sleeper-s0-controller", "sleeper-s0-legal", "sleeper-s1-controller", "sleeper-s1-legal"]
     d = tmp_path / "sleeper-s1-legal"
     t_ = (d / "tests/test.sh").read_text()
-    assert "/logs/verifier/reward.txt" in t_ and "sleeper.verifier --state /srv/state.json" in t_ and "8001" not in t_
+    assert "/logs/verifier/reward.txt" in t_ and "sleeper.verifier --require-seat --state /srv/state.json" in t_ and "8001" not in t_
     assert not (d / "environment/runtime-server/repo").exists()
     cfg = tomllib.loads((d / "task.toml").read_text())
     m = cfg["environment"]["mcp_servers"][0]
@@ -70,7 +70,7 @@ def test_sidecar_end_to_end(tmp_path, oracle, seat):
             subprocess.run([sys.executable, str(root / "harbor/oracle_client.py"), f"http://127.0.0.1:{mp}/mcp", seat], env=env, cwd=root, check=True, timeout=120)
         r = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"X-Verify-Token": tok})).read())
         assert r["reward"] == (1 if oracle else 0), r
-        v = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(tmp_path / "s.json")], env={"SLEEPER_SEAT": seat, "VERIFY_TOKEN": tok, "PYTHONPATH": str(root)}, cwd=root, capture_output=True)
+        v = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", str(tmp_path / "s.json")], env={"SLEEPER_SEAT": seat, "VERIFY_TOKEN": tok, "PYTHONPATH": str(root)}, cwd=root, capture_output=True)
         assert (v.returncode == 0) == bool(oracle), v.stdout
     finally:
         p.kill()

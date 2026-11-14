@@ -111,7 +111,7 @@ RUN chmod 755 /tests/test.sh
 
 TEST = '''#!/bin/bash
 mkdir -p /logs/verifier
-if python -m sleeper.verifier --state /srv/state.json > /logs/verifier/result.json; then echo 1 > /logs/verifier/reward.txt; else echo 0 > /logs/verifier/reward.txt; fi
+if python -m sleeper.verifier --require-seat --state /srv/state.json > /logs/verifier/result.json; then echo 1 > /logs/verifier/reward.txt; else echo 0 > /logs/verifier/reward.txt; fi
 '''
 
 SOLVE = '''#!/bin/bash

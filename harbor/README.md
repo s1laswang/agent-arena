@@ -289,15 +289,17 @@ uv run --python 3.12 --extra dev python scripts/oracle_range.py --builds 200 --t
 | agent | tier | tasks | mean | sd | p5 | p50 | p95 | P(mean<0) |
 |---|---|---|---|---|---|---|---|---|
 | solver (oracle) | hard | 2 | +0.533 | 0.274 | −0.211 | +0.620 | +0.745 | 10.5% |
+| solver (oracle) | hard | 3 | +0.547 | 0.208 | +0.047 | +0.613 | +0.723 | 1.5% |
 | solver (oracle) | hard | **10 (judge set)** | **+0.569** | **0.094** | **+0.393** | **+0.600** | **+0.678** | **0%** |
 | solver (oracle) | hard | 20 | +0.568 | 0.064 | +0.454 | +0.585 | +0.656 | 0% |
 | solver (oracle) | medium | 10 | +0.623 | 0.086 | +0.469 | +0.633 | +0.742 | 0% |
 | do_nothing, stop_early | hard, medium | 2/10/20 | 0 exactly in every build | | | | | |
 
-- A 10-task hard rerun of the oracle should land in about **+0.39 to +0.68** (90% of builds). Below +0.3 means something
-  is wrong with the build or the harness, not bad luck.
-- A 2-task mean of −0.43 happened in 0 of 200 builds (P(2-task mean < 0) = 10.5%, always from a wrong or late
-  accusation). Treat it as a likely harness problem worth inspecting, not as an expected draw.
+- A 10-task hard rerun of the oracle should land in about **+0.39 to +0.68** (90% of builds; mean +0.569, p5 +0.39).
+- A single wrong accusation scores −1; with the solver at ~95% accuracy on hard, a 2–3-task rerun shows a negative mean about 1.5–10% of the time without anything being broken.
+  (Measured: P(mean < 0) = 10.5% for 2 tasks, 1.5% for 3 tasks.) The 2-task rerun at −0.43 (one wrong day-6
+  accusation, −1.0, plus a late correct one, +0.14) was replayed in-process with the same build secret and gave
+  identical decisions: it was luck.
 - `stop_early` now scores exactly 0 on every build (verified after PR #16), as does `do_nothing`.
 - **20 vs 10 seeds:** the sd drops from 0.094 to 0.064 (×0.68, as expected from 1/√2). The oracle computes in 0.09 s per
   hard task in-process. Through Harbor the cost is container time, about 1.5 min per 2-trial job above, so 20

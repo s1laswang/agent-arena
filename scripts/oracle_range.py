@@ -3,7 +3,7 @@
 harbor/build.py bakes one random 32-byte world secret per build; the sidecar's canary.world derives each
 world as HMAC(secret, "<tier>:<seed>"). Here we draw --builds synthetic secrets (deterministic from
 --rng-seed, never a real SALT), set them in-process with canary.world.set_world_secret, play each agent on
-the judge seeds, and report the distribution of the k-task mean for k = 2, 10, 20.
+the judge seeds, and report the distribution of the k-task mean for k = 2, 3, 10, 20.
 
     uv run --python 3.12 --extra dev python scripts/oracle_range.py --builds 200 --tiers hard,medium \
         --agents solver,do_nothing,stop_early --procs 2
@@ -49,7 +49,7 @@ def summarize(m):
     m = np.asarray(m)
     return {"mean": float(m.mean()), "sd": float(m.std(ddof=1)),
             "p5": float(np.quantile(m, .05)), "p50": float(np.quantile(m, .5)), "p95": float(np.quantile(m, .95)),
-            "p_lt0": float((m < 0).mean()), "p_le_-0.43": float((m <= -0.43).mean())}
+            "p_lt0": float((m < 0).mean())}
 
 
 def main(argv=None):
@@ -75,7 +75,7 @@ def main(argv=None):
         rt = np.array([[x[1] for x in d[b]] for b in sorted(d)])
         row = {"agent": ag, "tier": t, "builds": len(d), "sec_per_task": float(rt.mean()),
                "per_task_sd": float(sc[:, :10].std(ddof=1))}
-        for k in (2, 10, 20):
+        for k in (2, 3, 10, 20):
             row[f"k{k}"] = summarize(sc[:, :k].mean(1))
         rows.append(row)
     out = {"command": "uv run --python 3.12 --extra dev python " + " ".join(sys.argv), "wall_s": round(wall, 1),
@@ -83,13 +83,13 @@ def main(argv=None):
            "rows": rows}
     Path(a.out + ".json").write_text(json.dumps(out, indent=1))
     L = [f"builds={a.builds}, wall {wall:.0f} s, procs {a.procs}", "",
-         "| agent | tier | k tasks | mean | sd | p5 | p50 | p95 | P(mean<0) | P(mean≤−0.43) | s/task (in-process) |",
-         "|---|---|---|---|---|---|---|---|---|---|---|"]
+         "| agent | tier | k tasks | mean | sd | p5 | p50 | p95 | P(mean<0) | s/task (in-process) |",
+         "|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
-        for k in (2, 10, 20):
+        for k in (2, 3, 10, 20):
             s = r[f"k{k}"]
             L.append(f"| {r['agent']} | {r['tier']} | {k} | {s['mean']:+.3f} | {s['sd']:.3f} | {s['p5']:+.3f} | "
-                     f"{s['p50']:+.3f} | {s['p95']:+.3f} | {s['p_lt0']:.1%} | {s['p_le_-0.43']:.1%} | {r['sec_per_task']:.3f} |")
+                     f"{s['p50']:+.3f} | {s['p95']:+.3f} | {s['p_lt0']:.1%} | {r['sec_per_task']:.3f} |")
     Path(a.out + ".md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 

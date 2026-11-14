@@ -2,6 +2,43 @@
 
 Branch `gemini-ladder`. Newest entry first.
 
+## Sat 18:23 (`date`: Sat Nov 14 18:22:05 EET 2026): after the outage, grid relaunched on the priorities, report v1.1 with headline findings
+
+**Outage check (verified):**
+- Both processes survived as processes. The **gemini-4 process (pid 63094) was hung** from 15:31 to 18:20: no
+  ledger row for 170 min, with 8 sockets stuck ESTABLISHED on a network that had changed, and the 600 s client
+  timeout never fired.
+- The flash process had resumed by itself.
+- **No episode was scored from the outage.** 0 API errors in the ledger, 0 infra-invalid attempts, and no
+  `episodes.jsonl` written after 15:31 by the hung process. An episode that ends on an API/DNS exception is
+  classed `end_reason=error`, moved to `_invalid/` and re-queued (`gemini_runner.infra_reason`). The cells that
+  were in flight have no episode file, and the relaunch clears and re-runs them.
+- Fix: the relaunched gemini-4 process uses a 300 s per-request timeout. `bin/wait.sh` now reports how long ago
+  each process last wrote a ledger row, so a hang shows within minutes.
+
+**Relaunched (Mac total 16, carbon ≤ 8), all new launches recorded through `with_gateway --record`, priorities
+from the CEO:**
+- `gemini-3.5-flash` and `gemini-3.8-flash` at medium/high, medium and hard, seeds 0–9: 38 cells to go,
+  concurrency 6. Store: `data/gemini/replay-ladder-full`.
+- `gemini-4-argon` (low, medium, high) and `gemini-4-carbon` (low, high), seeds 0–9 in seed-pair order, so n ≥ 4
+  arrives first: 92 cells to go, concurrency 8, carbon ≤ 5. Store: `data/gemini/replay-ladder-full-g4`.
+- Showcase: one cell per model (6 models) at high thinking, medium, seed 0, through
+  `lab_replay --record ladder-showcase`, concurrency 2. It lands in `results/gemini/replay-ladder-showcase`
+  with a manifest.
+- Deferred: the rest of flash-lite and the 3.5/3.8-flash minimal/low cells beyond seed 5, plus gemini-4-hydrogen.
+  They run only if slots free up.
+
+**Report v1.1 (commit 8fa04b3):** 125 episodes, 29 cells. The headline block at the top of
+`results/gemini/ladder.md` comes from `results/gemini/ladder_headline.md`; every number is in the table, with
+its CI.
+- 3.5-flash at medium/high on hard: 91% [71, 120] and 102% [73, 150] of the solver, 5/5 correct, $0.36–0.44
+  per episode.
+- flash-lite is below 0 in all 8 cells.
+- 3.8-flash, low → high: medium −52% → 92%; hard 30% → 28%.
+- Thinking cuts premature-accusation regret, not canary-design regret.
+
+**Spend so far:** $44 at list price (ledger, feature=ladder).
+
 ## Sat 15:28 (`date`: Sat Nov 14 15:28:32 EET 2026): report v1 committed, provenance on every cell, subset tool
 
 **Done (verified how)**

@@ -153,6 +153,10 @@ def train(a, states, pool, log):
     scaler = torch.amp.GradScaler("cuda", enabled=amp)
     pol = HFPolicy(model, tok, "v3", max_ctx=a.max_ctx, max_new=a.max_new, kv_reuse=False)
 
+    # guided exploration: the first --force-accuse samples of each group start an accuse call; the model picks WHOM.
+    # v2 is near-deterministic (token entropy ~0.01), and only accuse-vs-continue changes the env outcome, so without
+    # this almost every group has zero reward variance (observed in 44553: 8 of 10 groups). Off-policy bias: noted.
+    force_ids = tok.encode('<tool_call>\n{"name": "accuse", "arguments": {"employee": "e', add_special_tokens=False)
     rng = random.Random(a.seed)
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     curve = out / "curve.jsonl"
@@ -174,19 +178,25 @@ def train(a, states, pool, log):
         seqs, rows, calls, plen = [], [], [], []
         model.eval()
         for row, ids, names in zip(batch, prompts, tool_names):
-            x = torch.tensor([ids], device=dev)
             gb = max(1, min(a.gen_batch, a.group))   # V100 SDPA math kernel: 8 x 4k prefill OOMs, so sub-batch
-            outs = []
+            nf = max(0, min(a.force_accuse, a.group))
+            outs = []                                 # completion token lists, forced prefix included
             for j in range(0, a.group, gb):
                 b = min(gb, a.group - j)
-                with torch.no_grad(), torch.autocast(dev, dtype=torch.float16, enabled=amp):
-                    outs += list(model.generate(input_ids=x.expand(b, -1), attention_mask=torch.ones_like(x).expand(b, -1),
-                                                max_new_tokens=a.max_new, do_sample=True, temperature=a.temperature,
-                                                top_p=1.0, pad_token_id=tok.pad_token_id))
+                for forced, cnt in ((True, max(0, min(b, nf - j))), (False, b - max(0, min(b, nf - j)))):
+                    if cnt == 0:
+                        continue
+                    pre = force_ids if forced else []
+                    x = torch.tensor([ids + pre], device=dev)
+                    with torch.no_grad(), torch.autocast(dev, dtype=torch.float16, enabled=amp):
+                        g = model.generate(input_ids=x.expand(cnt, -1), attention_mask=torch.ones_like(x).expand(cnt, -1),
+                                           max_new_tokens=a.max_new, do_sample=True, temperature=a.temperature,
+                                           top_p=1.0, pad_token_id=tok.pad_token_id)
+                    outs += [pre + r[x.shape[1]:].tolist() for r in g]
             if dev == "cuda":
                 torch.cuda.empty_cache()
             for k in range(a.group):
-                comp = outs[k][len(ids):]
+                comp = torch.tensor(outs[k])
                 eos = (comp == tok.eos_token_id) | (comp == tok.pad_token_id)
                 n = int(eos.nonzero()[0]) + 1 if eos.any() else len(comp)   # keep the first EOS as a target
                 seqs.append((ids, comp[:n].tolist()))
@@ -246,6 +256,10 @@ def train(a, states, pool, log):
                "reward_valid": round(sum(r["reward"] for r in valid) / len(valid), 4) if valid else None,
                "gain_vs_solver_valid": round(sum(vgain) / len(vgain), 4) if vgain else None,
                "action_entropy": round(sum(ents) / len(ents), 3),
+               "free_accuse_frac": round(sum(1 for k, r in enumerate(results) if r["valid"] and r["tool"] == "accuse"
+                                             and k % a.group >= a.force_accuse) / max(1, len(results) - a.force_accuse * len(batch)), 3),
+               "forced_accuse_correct": round(sum(1 for k, r in enumerate(results) if k % a.group < a.force_accuse
+                                                  and r.get("correct")) / max(1, a.force_accuse * len(batch)), 3),
                "continue_frac": round(sum(1 for r in valid if r["tool"] != "accuse") / max(1, len(results)), 3),
                "late_state_frac": round(sum(row["t"] >= row["solver_len"] - a.late_window for row in batch) / len(batch), 2),
                "solver_ref": round(sum(r["solver_score"] for r in batch) / len(batch), 4),
@@ -312,6 +326,7 @@ def main(argv=None):
     ap.add_argument("--prompts-per-step", type=int, default=2)
     ap.add_argument("--max-new", type=int, default=48)
     ap.add_argument("--gen-batch", type=int, default=2, help="samples generated at once per prompt (memory)")
+    ap.add_argument("--force-accuse", type=int, default=3, help="samples per group forced to start an accuse call")
     ap.add_argument("--max-ctx", type=int, default=4096)
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--lr", type=float, default=5e-6)

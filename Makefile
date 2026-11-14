@@ -25,7 +25,9 @@ mcp:
 	rport=$$(MCP_PORT=$(MCP_REWARD_PORT) MCP_PORT_FALLBACK=$(MCP_PORT_FALLBACK) MCP_AVOID_PORT=$$port PYTHON_BIN=$(PY) bash scripts/mcp_port.sh) || exit $$?; \
 	echo "make mcp: sidecar MCP http://127.0.0.1:$$port/mcp  reward :$$rport  (override: make mcp MCP_PORT=8800; fail if busy: MCP_PORT_FALLBACK=0)"; \
 	if [ "$${MCP_DRY_RUN:-0}" = "1" ]; then exit 0; fi; \
-	SLEEPER_SALT=$${SLEEPER_SALT:-judge-local-salt} SLEEPER_SEED=$${SLEEPER_SEED:-1000} SLEEPER_SEAT=$${SLEEPER_SEAT:-$(SEAT)} SLEEPER_OUT=$${SLEEPER_OUT:-/tmp/sleeper-mcp-state.json} VERIFY_TOKEN=$${VERIFY_TOKEN:-judge-local} SIDECAR_MCP_PORT=$$port SIDECAR_REWARD_PORT=$$rport $(PY) -m harbor.sidecar
+	sfile=$$(SLEEPER_SALT="$${SLEEPER_SALT:-judge-local-salt}" SLEEPER_SEED="$${SLEEPER_SEED:-1000}" VERIFY_TOKEN="$${VERIFY_TOKEN:-judge-local}" $(PY) -c 'import json,os,tempfile; fd,p=tempfile.mkstemp(prefix="sleeper-mcp-",suffix=".json"); os.chmod(p,0o600); f=os.fdopen(fd,"w"); json.dump({k:os.environ[k] for k in ("SLEEPER_SALT","SLEEPER_SEED","VERIFY_TOKEN")},f); f.close(); print(p)') || exit $$?; \
+	trap 'rm -f "$$sfile"' EXIT INT TERM; \
+	env -u SLEEPER_SALT -u SLEEPER_SEED -u VERIFY_TOKEN SLEEPER_SECRETS_FILE="$$sfile" SLEEPER_SECRETS_UNLINK=1 SLEEPER_SEAT="$${SLEEPER_SEAT:-$(SEAT)}" SLEEPER_OUT="$${SLEEPER_OUT:-/tmp/sleeper-mcp-state.json}" SIDECAR_MCP_PORT="$$port" SIDECAR_REWARD_PORT="$$rport" $(PY) -m harbor.sidecar
 
 accept:
 	bash scripts/judge_accept.sh

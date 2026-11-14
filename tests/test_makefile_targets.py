@@ -54,7 +54,15 @@ def test_make_dry_run_targets() -> None:
     expected = {
         "setup": ("scripts/setup_env.sh",),
         "reproduce": ("lab.reproduce", "SLEEPER_REPRODUCE_ACTIVE=1", "SLEEPER_OFFLINE=1"),
-        "mcp": ("scripts/mcp_port.sh", "MCP_AVOID_PORT=", "SLEEPER_SALT=", "harbor.sidecar"),
+        "mcp": (
+            "scripts/mcp_port.sh",
+            "MCP_AVOID_PORT=",
+            "SLEEPER_SALT=",
+            "SLEEPER_SECRETS_FILE=",
+            "SLEEPER_SECRETS_UNLINK=1",
+            "env -u SLEEPER_SALT -u SLEEPER_SEED -u VERIFY_TOKEN",
+            "harbor.sidecar",
+        ),
         "frontier-replay": ("lab.frontier_replay", "--strict", "SLEEPER_REPRODUCE_ACTIVE"),
         "accept": ("scripts/judge_accept.sh",),
         "test": ("pytest",),
@@ -128,48 +136,92 @@ def test_make_mcp_busy_port_fallback_avoids_reward_collision() -> None:
     assert mcp_port != reward_port
 
 
-def test_make_mcp_passes_salt_and_resolved_ports_to_sidecar(tmp_path: Path) -> None:
+def test_make_mcp_passes_secrets_file_and_strips_env_for_sidecar(tmp_path: Path) -> None:
     stub = tmp_path / "fake_py"
     stub.write_text(
         chr(35)
         + f"!{sys.executable}\n"
-        + "import json, os, sys\n"
+        + "import json, os, stat, sys\n"
+        + "from pathlib import Path\n"
         + "if sys.argv[1:2] == ['-']:\n"
         + "    sys.argv = ['stdin', *sys.argv[2:]]\n"
         + "    exec(sys.stdin.read())\n"
         + "    raise SystemExit(0)\n"
+        + "if sys.argv[1:2] == ['-c'] and len(sys.argv) >= 3:\n"
+        + "    exec(sys.argv[2])\n"
+        + "    raise SystemExit(0)\n"
         + "if sys.argv[1:3] == ['-m', 'harbor.sidecar']:\n"
+        + "    sfile = os.environ['SLEEPER_SECRETS_FILE']\n"
+        + "    mode = stat.S_IMODE(os.stat(sfile).st_mode)\n"
+        + "    secrets = json.loads(Path(sfile).read_text(encoding='utf-8'))\n"
+        + "    proc_env = Path('/proc/self/environ').read_bytes()\n"
         + "    keys = (\n"
         + "        'SLEEPER_SALT',\n"
         + "        'SLEEPER_SEED',\n"
+        + "        'VERIFY_TOKEN',\n"
+        + "        'SLEEPER_SECRETS_FILE',\n"
+        + "        'SLEEPER_SECRETS_UNLINK',\n"
         + "        'SLEEPER_SEAT',\n"
         + "        'SLEEPER_OUT',\n"
-        + "        'VERIFY_TOKEN',\n"
         + "        'SIDECAR_MCP_PORT',\n"
         + "        'SIDECAR_REWARD_PORT',\n"
         + "    )\n"
-        + "    print('SIDECAR_ENV=' + json.dumps({k: os.environ.get(k) for k in keys}))\n"
+        + "    out = {\n"
+        + "        'env': {k: os.environ.get(k) for k in keys},\n"
+        + "        'mode': mode,\n"
+        + "        'secrets': secrets,\n"
+        + "        'leaked': any(t in proc_env for t in (b'SLEEPER_SALT=', b'SLEEPER_SEED=', b'VERIFY_TOKEN=')),\n"
+        + "    }\n"
+        + "    print('SIDECAR_CHECK=' + json.dumps(out))\n"
         + "    raise SystemExit(0)\n"
         + "raise SystemExit(2)\n",
         encoding="utf-8",
     )
     stub.chmod(0o755)
-    proc = _run_make(["mcp", f"PY={stub}"])
-    assert proc.returncode == 0, proc.stderr
-    match = ENDPOINT_RE.search(proc.stdout)
-    assert match is not None, proc.stdout
-    mcp_port, reward_port = match.group(1), match.group(2)
-    env_line = [line for line in proc.stdout.splitlines() if line.startswith("SIDECAR_ENV=")]
-    assert len(env_line) == 1, proc.stdout
-    payload = json.loads(env_line[0].removeprefix("SIDECAR_ENV="))
-    assert payload["SLEEPER_SALT"] == "judge-local-salt"
-    assert payload["SLEEPER_SEED"] == "1000"
-    assert payload["SLEEPER_SEAT"] == "finance_ap"
-    assert payload["SLEEPER_OUT"] == "/tmp/sleeper-mcp-state.json"
-    assert payload["VERIFY_TOKEN"] == "judge-local"
-    assert payload["SIDECAR_MCP_PORT"] == mcp_port
-    assert payload["SIDECAR_REWARD_PORT"] == reward_port
-    assert mcp_port != reward_port
+    for parent_env, expected_secrets in (
+        (
+            None,
+            {
+                "SLEEPER_SALT": "judge-local-salt",
+                "SLEEPER_SEED": "1000",
+                "VERIFY_TOKEN": "judge-local",
+            },
+        ),
+        (
+            {
+                "SLEEPER_SALT": "parent-salt",
+                "SLEEPER_SEED": "4242",
+                "VERIFY_TOKEN": "parent-token",
+            },
+            {
+                "SLEEPER_SALT": "parent-salt",
+                "SLEEPER_SEED": "4242",
+                "VERIFY_TOKEN": "parent-token",
+            },
+        ),
+    ):
+        proc = _run_make(["mcp", f"PY={stub}"], parent_env)
+        assert proc.returncode == 0, proc.stderr
+        match = ENDPOINT_RE.search(proc.stdout)
+        assert match is not None, proc.stdout
+        mcp_port, reward_port = match.group(1), match.group(2)
+        check_lines = [line for line in proc.stdout.splitlines() if line.startswith("SIDECAR_CHECK=")]
+        assert len(check_lines) == 1, proc.stdout
+        payload = json.loads(check_lines[0].removeprefix("SIDECAR_CHECK="))
+        env_map = payload["env"]
+        assert env_map["SLEEPER_SALT"] is None
+        assert env_map["SLEEPER_SEED"] is None
+        assert env_map["VERIFY_TOKEN"] is None
+        assert payload["leaked"] is False
+        assert payload["mode"] == 0o600
+        assert payload["secrets"] == expected_secrets
+        assert env_map["SLEEPER_SECRETS_UNLINK"] == "1"
+        assert env_map["SLEEPER_SEAT"] == "finance_ap"
+        assert env_map["SLEEPER_OUT"] == "/tmp/sleeper-mcp-state.json"
+        assert env_map["SIDECAR_MCP_PORT"] == mcp_port
+        assert env_map["SIDECAR_REWARD_PORT"] == reward_port
+        assert mcp_port != reward_port
+        assert not Path(env_map["SLEEPER_SECRETS_FILE"]).exists()
 
 
 def test_probes_target_handles_out_dir_flag_detection(tmp_path: Path) -> None:

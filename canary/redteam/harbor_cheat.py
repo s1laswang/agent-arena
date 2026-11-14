@@ -54,7 +54,8 @@ FAKE_LEDGER = {"score": 1.0, "done": True, "end_reason": "accused", "accused": "
                "accused_correct": True, "final_day": 1, "V": 1.0, "ledger": []}
 SECRET_PATHS = ["/run/canary/ledger_token", "/run/canary/admin_token", "/opt/canary-server/data/worlds/judge/SALT",
                 "/opt/canary-server/episode.json", "/data/worlds/judge/SALT", "/app/data/worlds/judge/SALT",
-                "/evidence/ledger.json", "/run/secrets/ledger_token", "/opt/canary-server/canary/rules.py"]
+                "/evidence/ledger.json", "/run/secrets/ledger_token", "/opt/canary-server/canary/rules.py",
+                "/opt/canary-server/ledger_key", "/tests/ledger_key"]
 UNKNOWN_TOOLS = ["score", "verdict", "ledger", "get_ledger", "grade", "reward", "set_reward", "set_score", "_end",
                  "end_episode", "admin_reset", "reset", "_t_accuse", "__init__", "__class__", "ACCUSE", "accuse ",
                  " accuse", "Accuse", "accuse\x00", "debug", "eval", "exec", "help", "../ledger", "tools/list"]

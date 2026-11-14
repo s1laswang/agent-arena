@@ -3,9 +3,11 @@ PROVIDER ?= template
 AGENT ?= solver
 TIER ?= all
 SEEDS ?= dev20
+MCP_PORT ?= 8765
+MCP_PORT_FALLBACK ?= 1
 UV := uv run --python 3.12 --extra dev --extra llm --extra plot
 
-.PHONY: play setup test eval reproduce reproduce-update worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 fr8-pull mcp hunt game game-serve
+.PHONY: play setup test eval reproduce reproduce-update worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 fr8-pull mcp hunt game game-serve accept
 
 setup:            ## install deps (needs uv: curl -LsSf https://astral.sh/uv/install.sh | sh)
 	@command -v uv >/dev/null 2>&1 || { echo "make setup: uv not found. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh  (then open a new shell)"; exit 127; }
@@ -23,11 +25,16 @@ reproduce:        ## [HARNESS] judge table on the frozen judge seeds (no keys) -
 reproduce-update: ## [HARNESS] team only: rerun reproduce and overwrite the committed results/judge_table.md, judge_episodes.jsonl, gap_chart.png
 	$(UV) python -m canary.eval --reproduce --update-committed
 
-mcp:              ## [HARNESS] run the MCP env server (streamable HTTP). CANARY_TIER/SEED/LEDGER_TOKEN are moved into 0600 files (CANARY_EPISODE_FILE), never left in the server env
-	@umask 077; d=$$(mktemp -d); \
+mcp:              ## [HARNESS] MCP env server (streamable HTTP). Port: MCP_PORT (default 8765). If busy, MCP_PORT_FALLBACK=1 (default) picks the next free port and prints it; set 0 to fail instead.
+	@port=$$(MCP_PORT=$(MCP_PORT) MCP_PORT_FALLBACK=$(MCP_PORT_FALLBACK) bash scripts/mcp_port.sh); \
+	echo "make mcp: http://127.0.0.1:$$port/mcp  (override: make mcp MCP_PORT=88765; fail if busy: MCP_PORT_FALLBACK=0)"; \
+	umask 077; d=$$(mktemp -d); \
 	printf '{"tier": "%s", "seed": %s}' "$${CANARY_TIER:-easy}" "$${CANARY_SEED:-900000}" > $$d/episode.json; \
 	if [ -n "$${CANARY_LEDGER_TOKEN:-}" ]; then printf %s "$$CANARY_LEDGER_TOKEN" > $$d/ledger_token; export CANARY_LEDGER_TOKEN_FILE=$$d/ledger_token; fi; \
-	exec env -u CANARY_TIER -u CANARY_SEED -u CANARY_LEDGER_TOKEN CANARY_EPISODE_FILE=$$d/episode.json $(UV) python -m canary.mcp_server
+	exec env -u CANARY_TIER -u CANARY_SEED -u CANARY_LEDGER_TOKEN CANARY_EPISODE_FILE=$$d/episode.json CANARY_PORT=$$port $(UV) python -m canary.mcp_server
+
+accept:           ## [HARNESS] keyless judge acceptance: setup, reproduce, baseline checks, MCP smoke. Exit non-zero on any failure.
+	bash scripts/judge_accept.sh
 
 game:             ## [HARNESS] build the static browser game (real canary package in Pyodide) into game/site/
 	$(UV) python game/build.py

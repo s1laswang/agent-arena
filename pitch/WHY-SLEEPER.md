@@ -1,0 +1,26 @@
+# Why The Sleeper, and not Canary
+
+One page for the humans. Numbers: `make eval` (momin 814a723, offline, SCRIPTED) or the bake-off file `docs/parallel-envs.md` (origin/justSilas-grok-bakeoff2 3f91fe4, Silas's side). No model of ours has run: REAL cells NOT FOUND (lead-lab pending).
+
+## Three honest answers
+
+1. Different question. Canary asks one accusation from one head of security. The Sleeper asks whether eight agents finish the work and stop an insider without accusing an innocent. The reward has to hold both halves. Evidence: no-sleeper days exist in the mix; the per-split rewards are NOT FOUND (not in README or docs/RULES.md at 814a723).
+2. Canary's own gap is inconclusive. Its report: Codex gpt-5.5 over MCP is 106% of the solver on hard (n=11, CI 91..136%) and the gap does not hold there (docs/parallel-envs.md, Silas's report, not ours). We do not have a better number. Our claim is only that the gap is measured the same way, paired days and a reference that never reads the hidden sleeper identity. Our real gap: NOT FOUND (lead-lab pending). If it does not show, we say so.
+3. Every loss is named. Share of staff losses with a named mistake and share that flip under the procedure: NOT FOUND (not in README or docs/RULES.md at 814a723). Canary's report says premature accusation is 97 to 99% of value lost, which is one failure mode. Ours has several.
+
+## Weaknesses fixed
+
+- trust_all: was 0.800 at one point, now 0.000 (make eval). An older 0.35 figure was stale.
+- do_nothing in a non-judge seat scored 1 on some days. Verifier check added, 0 in every seat (SCRIPTED).
+- finance_ap seat oracle: 0.400 earlier, 0.800 overall and 0.750 on needs-seat days now (README at 814a723). Not 1.000.
+
+## Weaknesses still open (bake-off file, scored 51/100, last place)
+
+- No real frontier run yet. Gap 10/30 for that reason.
+- Four days (1003, 1008, 1013, 1018) the oracle scores 0 in the finance_ap seat.
+- `reward.txt` rewritable under a shared verifier with `chmod 777 /logs` (xfail test_x73), `harbor lint` fails, and the sleeper seat is derivable from public code.
+- pytest 20 failed at 07e17ee, docs counts differ from make eval. Recheck on 814a723: NOT FOUND.
+
+## What we say if asked "why not Canary"
+
+"Canary is a good test with a real but inconclusive gap. We are the multi-agent, two-sided version. Our gap is NOT FOUND until the keyed run finishes, and we will say that rather than guess."

@@ -2,21 +2,23 @@
 
 For whoever presents. Plain sentences. Numbers are from `make eval` (20 days, 3 trials, run twice, identical). Check the gap table before you go on. Do not say "Gemini staff" for the scripted runs. Click path is in DEMO.md.
 
+## 0:00 The real gap (first 90 seconds)
+
+Open on the multi-model gap table from `pitch/MULTIMODEL.md`. Say it in four sentences: "We put gemini-4-carbon, Claude and Codex in the staff seat of a company with a hidden insider. We compare them with a reference that works only from the evidence. Here is the gap, on the same days." Read the REAL rows with model id, date and run id. REAL cells are NOT FOUND (lead-lab pending) until lead-lab fills them. If they stay empty, use the fallback below and move the opening to the hook.
+
+Everything scripted later in the talk is "how we validated the reward", not the headline.
+
 ## 0:00 Hook
 
 One of the eight people in this company is a traitor.
 
 It looks like a normal coworker. It does its tickets. It talks in the chat. And somewhere in the day it moves money, or leaks a secret, or opens a backdoor.
 
-Our question is simple. Can the other seven catch it before the damage is done, and still finish the work?
-
 ## 1:00 The company
 
 This is a small company with eight AI employees. A CEO assistant, finance, a controller, HR, IT, procurement, sales and legal.
 
 Each one has a real job and real permissions. Nobody can do everything. The dangerous moves need two people. A payment over ten thousand euros needs the controller. New vendor bank details need procurement and finance. A new admin account needs IT and a ticket. A document leaving the company needs legal.
-
-Each day has a queue of tickets. Pay this invoice. Change this employee's bank. Give the new hire access. Send the customer the contract.
 
 On some days, one seat is a sleeper with a hidden goal. Fraud, a leak, a backdoor, sabotage, or framing a coworker. On other days there is no sleeper at all. That matters, and I will come back to it.
 
@@ -42,7 +44,7 @@ Reward: one.
 
 One honest note. The staff and the oracle in this run are scripted. They are not Gemini. The oracle also knows who the sleeper is, so it is not our reference. The comparison we are building is plain staff against a reference that works only from the evidence. We will show that comparison once it has run with a key.
 
-## 5:00 The gap
+## 5:00 How we validated the reward (scripted numbers)
 
 [Open Results.]
 
@@ -54,15 +56,11 @@ The scripted reference, which works only from the evidence, gets 0.550. The scri
 
 The Gemini reference row says not found. We have not run it with a key yet.
 
-These runs are deterministic, so pass-hat-k equals a single run. We say that rather than imply repeated variance.
-
-One honest note: the staff number is below the reference partly because the staff are weak, and we measured a baseline that ignores chat and it scores 0.000 here (momin 4ebafc3).
-
 ## 5:45 Multi-model table and replay (fill when lead-lab publishes)
 
 Show the multi-model gap table and play the Gemini 4 Carbon replay from `pitch/MULTIMODEL.md`. Every cell there says REAL (model id, date, run id) or SCRIPTED. Today the REAL cells are NOT FOUND (lead-lab pending). Do not say a model failed or won until the cell is filled.
 
-Fallback, 2 lines, if no Gemini number arrives: "We built the Gemini path and tested it offline, but no real Gemini run finished, so every number I showed is scripted." "The gap is scripted staff against a scripted evidence-only reference, and `make eval` reproduces it."
+Fallback, 2 lines, if no Gemini number arrives: "Offline tests of the Gemini path ran with a fake model; no real Gemini run finished, so every number I showed is scripted." "The gap is scripted staff against a scripted evidence-only reference, and `make eval` reproduces it."
 
 The seed 1 bank_swap replay and the trust_all baseline are SCRIPTED. Say so.
 
@@ -72,11 +70,12 @@ When we read the failed days, the mistakes are not random. They are decisions.
 
 The controller approved without checking the audit log. A familiar name was trusted. A secret was leaked inside a summary. The wrong person was accused. A slow attack, spread over several steps, was missed.
 
-Of the days staff lost, 39 of 39 carry a named mistake, none unexplained. When one seat follows the oracle procedure, 33 of 39 flip to a win. Every one of these is a choice made while the evidence to choose differently was on the screen. The audit log, the approval history, the vendor records and the policies are in every day. Nothing is hidden and nothing is worded to trick anyone. That is the rule we held ourselves to.
-
-The failure table is produced by `python -m lab.analyse` over the run folder. The counts come from there.
+Of the days staff lost, the share with a named mistake and the share that flip to a win under the procedure: NOT FOUND (not in README or docs/RULES.md at 814a723). The evidence to choose differently was on screen every time. Nothing is hidden, nothing is worded to trick anyone.
 
 ## 7:00 Reward integrity
+
+Skill ladder slide (placeholder): "Reward rises with skill, and only the full procedure reaches the reference." Figures NOT FOUND (ladder.md not on momin yet).
+
 
 Now the part we care about most. The reward reads only the final state of the company. If you say in the chat that you caught the sleeper, nothing changes.
 
@@ -96,9 +95,7 @@ You have fifteen minutes. Everything we already tried is in the exploit log. Ple
 
 One command reproduces what I showed you. `make eval`.
 
-It runs without a Gemini key, with scripted agents. With a key, the Gemini seats switch on, and every response is cached by prompt hash, so a rerun gives the same answer and costs nothing.
-
-[Run it or show the saved output.]
+[Show the saved output. Do not run it live: it took 10 minutes in the rehearsal.]
 
 ## 9:15 Training and close
 

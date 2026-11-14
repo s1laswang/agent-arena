@@ -268,6 +268,20 @@ def test_leaked_secret_fails_and_is_never_echoed(
     assert secret_value not in rendered_md
 
 
+def test_base64_thought_signature_substring_does_not_false_positive(tmp_path: Path) -> None:
+    _build_valid_tree(tmp_path)
+    prefix = "EvQBCvEBAXLI2nyapw615t"
+    mid = "AI" + "zaaXyO"
+    suffix = "9kLmN0pQrStUvWxYz0123456789_" * 80
+    tx_file = tmp_path / "data" / "runs" / "committed" / "v1.4" / "gemini-4-carbon" / "hard" / "transcripts" / "21.json"
+    _write_json(tx_file, {"turns": [{"thought_signature": prefix + mid + suffix}, {"thought_signature": mid + suffix}]})
+
+    assert scan_file_secrets(tx_file, tmp_path) == []
+    report = audit_provenance(tmp_path)
+    assert report["verified"] is True
+    assert report["secret_leaks"] == []
+
+
 def test_multiple_investigator_tiers_and_pricing_fallback(tmp_path: Path) -> None:
     _build_valid_tree(tmp_path)
     med_dir = tmp_path / "data" / "runs" / "committed" / "v1.4" / "gemini-4-carbon" / "medium"

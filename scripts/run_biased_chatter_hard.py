@@ -613,6 +613,44 @@ def run_biased_chatter_hard(
     max_attempts: int = 4,
     command_str: str | None = None,
 ) -> dict[str, Any]:
+    prev_retries = os.environ.get("CANARY_LLM_MAX_RETRIES")
+    try:
+        return _run_biased_chatter_hard_impl(
+            out_dir,
+            tier=tier,
+            seeds=seeds,
+            days=days,
+            model=model,
+            stub=stub,
+            require_live=require_live,
+            thinking_level=thinking_level,
+            client=client,
+            jobs=jobs,
+            max_attempts=max_attempts,
+            command_str=command_str,
+        )
+    finally:
+        if prev_retries is None:
+            os.environ.pop("CANARY_LLM_MAX_RETRIES", None)
+        else:
+            os.environ["CANARY_LLM_MAX_RETRIES"] = prev_retries
+
+
+def _run_biased_chatter_hard_impl(
+    out_dir: str | Path = DEFAULT_OUT,
+    *,
+    tier: str = DEFAULT_TIER,
+    seeds: Sequence[int] = DEFAULT_SEEDS,
+    days: Sequence[int] = DEFAULT_DAYS,
+    model: str = DEFAULT_MODEL,
+    stub: bool = False,
+    require_live: bool | None = None,
+    thinking_level: str | None = None,
+    client: Any = None,
+    jobs: int = 4,
+    max_attempts: int = 4,
+    command_str: str | None = None,
+) -> dict[str, Any]:
     effective_model = "stub" if stub else model
     is_stub_model = stub or effective_model == "stub" or effective_model.startswith("stub:")
     live_flag = (not is_stub_model) if require_live is None else bool(require_live)

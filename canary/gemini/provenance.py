@@ -20,7 +20,7 @@ REQUIRED_ROLES = (
 TARGET_MODEL = "gemini-4-carbon"
 SKIP_DIRS = frozenset({"reference", "superseded", "_invalid"})
 COMMIT_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
-GOOGLE_KEY_RE = re.compile(r"AIza[0-9A-Za-z_\-]{8,}")
+GOOGLE_KEY_RE = re.compile(r"(?<![A-Za-z0-9_\-])AIza[0-9A-Za-z_\-]{8,60}(?![A-Za-z0-9_\-=])")
 SK_KEY_RE = re.compile(r"(?<![A-Za-z0-9_])sk-[A-Za-z0-9_\-]{12,}")
 OAUTH_RE = re.compile(r"(?<![A-Za-z0-9_])ya29\.[0-9A-Za-z_\-]{12,}")
 ENV_KEY_RE = re.compile(

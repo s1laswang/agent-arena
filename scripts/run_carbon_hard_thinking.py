@@ -851,52 +851,36 @@ def main(argv: list[str] | None = None, client_builder: Callable | None = None) 
     ap.add_argument("--stub", action="store_true")
     args = ap.parse_args(argv)
 
+    prev_retries = os.environ.get("CANARY_LLM_MAX_RETRIES")
     os.environ["CANARY_LLM_MAX_RETRIES"] = str(args.max_retries)
 
-    import verify_replay
-    from canary.agents.runlog import git_sha
-    from canary.analysis.tags import tag_report
-    from canary.rules import TIERS_VERSION, tier_params
-
-    if TIERS_VERSION != "v1.4":
-        raise RuntimeError(f"Expected TIERS_VERSION=='v1.4', got {TIERS_VERSION!r}")
-
-    out_dir = Path(args.out)
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    temp_ledger_ctx = None
-    prev_ledger = os.environ.get("CANARY_GEMINI_LEDGER")
-    if args.stub and not prev_ledger:
-        temp_ledger_ctx = tempfile.TemporaryDirectory()
-        os.environ["CANARY_GEMINI_LEDGER"] = str(Path(temp_ledger_ctx.name) / "stub_ledger.jsonl")
-
     try:
-        levels = ("low", "high")
-        episodes: dict[str, dict] = {}
-        usages: dict[str, dict[str, Any]] = {}
+        import verify_replay
+        from canary.agents.runlog import git_sha
+        from canary.analysis.tags import tag_report
+        from canary.rules import TIERS_VERSION, tier_params
 
-        workers = 1 if args.stub or args.jobs <= 1 else min(args.jobs, len(levels))
-        if workers == 1:
-            for lv in levels:
-                ep, u = run_level_episode(
-                    out_dir=out_dir,
-                    model=args.model,
-                    level=lv,
-                    tier=args.tier,
-                    seed=args.seed,
-                    stub=args.stub,
-                    resume=args.resume,
-                    max_retries=args.max_retries,
-                    max_attempts=args.max_attempts,
-                    client_builder=client_builder,
-                )
-                episodes[lv] = ep
-                usages[lv] = u
-        else:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-                futs = {
-                    pool.submit(
-                        run_level_episode,
+        if TIERS_VERSION != "v1.4":
+            raise RuntimeError(f"Expected TIERS_VERSION=='v1.4', got {TIERS_VERSION!r}")
+
+        out_dir = Path(args.out)
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        temp_ledger_ctx = None
+        prev_ledger = os.environ.get("CANARY_GEMINI_LEDGER")
+        if args.stub and not prev_ledger:
+            temp_ledger_ctx = tempfile.TemporaryDirectory()
+            os.environ["CANARY_GEMINI_LEDGER"] = str(Path(temp_ledger_ctx.name) / "stub_ledger.jsonl")
+
+        try:
+            levels = ("low", "high")
+            episodes: dict[str, dict] = {}
+            usages: dict[str, dict[str, Any]] = {}
+
+            workers = 1 if args.stub or args.jobs <= 1 else min(args.jobs, len(levels))
+            if workers == 1:
+                for lv in levels:
+                    ep, u = run_level_episode(
                         out_dir=out_dir,
                         model=args.model,
                         level=lv,
@@ -907,120 +891,143 @@ def main(argv: list[str] | None = None, client_builder: Callable | None = None) 
                         max_retries=args.max_retries,
                         max_attempts=args.max_attempts,
                         client_builder=client_builder,
-                    ): lv
-                    for lv in levels
-                }
-                for fut in concurrent.futures.as_completed(futs):
-                    lv = futs[fut]
-                    ep, u = fut.result()
+                    )
                     episodes[lv] = ep
                     usages[lv] = u
-
-        rc = verify_replay.main([str(out_dir / "low"), str(out_dir / "high")])
-        if rc != 0:
-            raise RuntimeError("verify_replay failed on generated episodes")
-
-        solver_ep, solver_metrics = run_solver_baseline(args.tier, args.seed)
-        solver_score = float(solver_metrics["score"])
-        low_metrics = analyze_episode(episodes["low"], solver_score=solver_score, usage=usages["low"])
-        high_metrics = analyze_episode(episodes["high"], solver_score=solver_score, usage=usages["high"])
-        deltas = compute_deltas(low_metrics, high_metrics)
-        pooled_tags = tag_report([episodes["low"], episodes["high"], solver_ep])
-
-        p = tier_params(args.tier)
-        commit = git_sha()
-        ts = time.strftime("%Y-%m-%dT%H:%M:%S%z")
-        cmd_tokens = [
-            "CANARY_LLM_MAX_RETRIES=" + str(args.max_retries),
-            "PYTHONPATH=.",
-            "python",
-            "scripts/run_carbon_hard_thinking.py",
-            "--out",
-            str(args.out),
-            "--model",
-            str(args.model),
-            "--tier",
-            str(args.tier),
-            "--seed",
-            str(args.seed),
-            "--max-retries",
-            str(args.max_retries),
-        ]
-        if args.stub:
-            cmd_tokens.append("--stub")
-        cmd_str = " ".join(cmd_tokens)
-        combined_usage = combine_usage({"low": usages["low"], "high": usages["high"]})
-        key_metric = (
-            f"low {low_metrics['score']:+.3f} ({usages['low']['thinking']:,} think tok, day {low_metrics['final_day']}) "
-            f"-> high {high_metrics['score']:+.3f} ({usages['high']['thinking']:,} think tok, day {high_metrics['final_day']}) "
-            f"vs solver {solver_score:+.3f}"
-        )
-
-        meta = {
-            "role": ROLE,
-            "subrole": SUBROLE,
-            "model_id": args.model,
-            "tiers_version": TIERS_VERSION,
-            "tier": args.tier,
-            "seed": args.seed,
-            "episode_count": 2,
-            "commit": commit,
-            "timestamp": ts,
-            "command": cmd_str,
-            "usage": combined_usage,
-            "low_score": low_metrics["score"],
-            "high_score": high_metrics["score"],
-            "solver_score": solver_score,
-            "levels_summary": {
-                "low": low_metrics["score"],
-                "high": high_metrics["score"],
-            },
-            "key_metric": key_metric,
-            "replay_verified": True,
-            "stub": bool(args.stub),
-            "ledger_run_ids": [usages["low"]["run_id"], usages["high"]["run_id"]],
-        }
-
-        comparison = {
-            "role": ROLE,
-            "subrole": SUBROLE,
-            "model_id": args.model,
-            "tiers_version": TIERS_VERSION,
-            "tier": args.tier,
-            "seed": args.seed,
-            "tier_params": {
-                "n_employees": p.n_employees,
-                "n_days": p.n_days,
-                "canaries_per_day": p.canaries_per_day,
-                "max_variants": p.max_variants,
-                "leak_damage": p.leak_damage,
-                "canary_cost": p.canary_cost,
-                "actions_per_day": p.actions_per_day,
-                "tool_call_cap": p.tool_call_cap,
-                "fingerprint_accuracy": p.fingerprint_accuracy,
-            },
-            "commit": commit,
-            "timestamp": ts,
-            "stub": bool(args.stub),
-            "replay_verified": True,
-            "low": low_metrics,
-            "high": high_metrics,
-            "solver": solver_metrics,
-            "deltas_high_minus_low": deltas,
-            "tag_report": pooled_tags,
-        }
-
-        (out_dir / "meta.json").write_text(json.dumps(meta, indent=2, default=str) + "\n")
-        (out_dir / "comparison.json").write_text(json.dumps(comparison, indent=2, default=str) + "\n")
-        (out_dir / "summary.md").write_text(render_summary_md(meta, comparison))
-        return 0
-    finally:
-        if temp_ledger_ctx is not None:
-            if prev_ledger is None:
-                os.environ.pop("CANARY_GEMINI_LEDGER", None)
             else:
-                os.environ["CANARY_GEMINI_LEDGER"] = prev_ledger
-            temp_ledger_ctx.cleanup()
+                with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+                    futs = {
+                        pool.submit(
+                            run_level_episode,
+                            out_dir=out_dir,
+                            model=args.model,
+                            level=lv,
+                            tier=args.tier,
+                            seed=args.seed,
+                            stub=args.stub,
+                            resume=args.resume,
+                            max_retries=args.max_retries,
+                            max_attempts=args.max_attempts,
+                            client_builder=client_builder,
+                        ): lv
+                        for lv in levels
+                    }
+                    for fut in concurrent.futures.as_completed(futs):
+                        lv = futs[fut]
+                        ep, u = fut.result()
+                        episodes[lv] = ep
+                        usages[lv] = u
+
+            rc = verify_replay.main([str(out_dir / "low"), str(out_dir / "high")])
+            if rc != 0:
+                raise RuntimeError("verify_replay failed on generated episodes")
+
+            solver_ep, solver_metrics = run_solver_baseline(args.tier, args.seed)
+            solver_score = float(solver_metrics["score"])
+            low_metrics = analyze_episode(episodes["low"], solver_score=solver_score, usage=usages["low"])
+            high_metrics = analyze_episode(episodes["high"], solver_score=solver_score, usage=usages["high"])
+            deltas = compute_deltas(low_metrics, high_metrics)
+            pooled_tags = tag_report([episodes["low"], episodes["high"], solver_ep])
+
+            p = tier_params(args.tier)
+            commit = git_sha()
+            ts = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+            cmd_tokens = [
+                "CANARY_LLM_MAX_RETRIES=" + str(args.max_retries),
+                "PYTHONPATH=.",
+                "python",
+                "scripts/run_carbon_hard_thinking.py",
+                "--out",
+                str(args.out),
+                "--model",
+                str(args.model),
+                "--tier",
+                str(args.tier),
+                "--seed",
+                str(args.seed),
+                "--max-retries",
+                str(args.max_retries),
+            ]
+            if args.stub:
+                cmd_tokens.append("--stub")
+            cmd_str = " ".join(cmd_tokens)
+            combined_usage = combine_usage({"low": usages["low"], "high": usages["high"]})
+            key_metric = (
+                f"low {low_metrics['score']:+.3f} ({usages['low']['thinking']:,} think tok, day {low_metrics['final_day']}) "
+                f"-> high {high_metrics['score']:+.3f} ({usages['high']['thinking']:,} think tok, day {high_metrics['final_day']}) "
+                f"vs solver {solver_score:+.3f}"
+            )
+
+            meta = {
+                "role": ROLE,
+                "subrole": SUBROLE,
+                "model_id": args.model,
+                "tiers_version": TIERS_VERSION,
+                "tier": args.tier,
+                "seed": args.seed,
+                "episode_count": 2,
+                "commit": commit,
+                "timestamp": ts,
+                "command": cmd_str,
+                "usage": combined_usage,
+                "low_score": low_metrics["score"],
+                "high_score": high_metrics["score"],
+                "solver_score": solver_score,
+                "levels_summary": {
+                    "low": low_metrics["score"],
+                    "high": high_metrics["score"],
+                },
+                "key_metric": key_metric,
+                "replay_verified": True,
+                "stub": bool(args.stub),
+                "ledger_run_ids": [usages["low"]["run_id"], usages["high"]["run_id"]],
+            }
+
+            comparison = {
+                "role": ROLE,
+                "subrole": SUBROLE,
+                "model_id": args.model,
+                "tiers_version": TIERS_VERSION,
+                "tier": args.tier,
+                "seed": args.seed,
+                "tier_params": {
+                    "n_employees": p.n_employees,
+                    "n_days": p.n_days,
+                    "canaries_per_day": p.canaries_per_day,
+                    "max_variants": p.max_variants,
+                    "leak_damage": p.leak_damage,
+                    "canary_cost": p.canary_cost,
+                    "actions_per_day": p.actions_per_day,
+                    "tool_call_cap": p.tool_call_cap,
+                    "fingerprint_accuracy": p.fingerprint_accuracy,
+                },
+                "commit": commit,
+                "timestamp": ts,
+                "stub": bool(args.stub),
+                "replay_verified": True,
+                "low": low_metrics,
+                "high": high_metrics,
+                "solver": solver_metrics,
+                "deltas_high_minus_low": deltas,
+                "tag_report": pooled_tags,
+            }
+
+            (out_dir / "meta.json").write_text(json.dumps(meta, indent=2, default=str) + "\n")
+            (out_dir / "comparison.json").write_text(json.dumps(comparison, indent=2, default=str) + "\n")
+            (out_dir / "summary.md").write_text(render_summary_md(meta, comparison))
+            return 0
+        finally:
+            if temp_ledger_ctx is not None:
+                if prev_ledger is None:
+                    os.environ.pop("CANARY_GEMINI_LEDGER", None)
+                else:
+                    os.environ["CANARY_GEMINI_LEDGER"] = prev_ledger
+                temp_ledger_ctx.cleanup()
+    finally:
+        if prev_retries is None:
+            os.environ.pop("CANARY_LLM_MAX_RETRIES", None)
+        else:
+            os.environ["CANARY_LLM_MAX_RETRIES"] = prev_retries
 
 
 if __name__ == "__main__":

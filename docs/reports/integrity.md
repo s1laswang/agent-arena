@@ -32,3 +32,9 @@
 - Monotonicity: random 0.009 < most_logs 0.017 < heuristic 0.036 (medium, 50 seeds; CIs overlap). Solver/hinted LLM missing → plot incomplete.
 - Blocked: MCP server not on justSilas yet → MCP hunt + Codex hunter waiting (HARNESS).
 - Next: re-run full fuzz + bounds after ENV v0.3 + recalibration; MCP hunt the moment HARNESS lands.
+
+## 03:30 status
+- Done (verified: make test 260 passed / 6 xfailed / 2 xpassed on justSilas 7146062 + v0.3): v0.3 confirmed, stop_early mean −0.80/−0.96/−0.96 → EXPLOITS #1 fixed. Full fuzz (all modes, 3 tiers, 50 seeds, 20k): 0 violations, best non-solver 0.000 vs solver 0.80/0.76/0.74. 400k evolve on hard: 0 violations (#15).
+- #10 partially: log-alone vs canary heuristic now OK on medium/hard; logs_only CEO bound still xfail on all tiers pending ENV recalibration.
+- In progress: exploit-hunter (codex plumbing; MCP from CEO's mcp engineer ETA 04:00); monotonicity re-plot with solver.
+- Next: MCP hunt the moment it lands; re-run bounds after recalibration.

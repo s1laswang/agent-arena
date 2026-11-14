@@ -182,10 +182,9 @@ def default_investigators() -> dict[str, Callable]:
 
 
 def default_solver_factory() -> Callable:
-    cls = _find("canary.solver", ["SolverPolicy"])
-    if cls is None:
-        raise RuntimeError("canary.solver.SolverPolicy not available yet")
-    return ClassFactory("canary.solver", "SolverPolicy")
+    if _find("canary.solver.policy", ["SolverPolicy"]) is None:
+        raise RuntimeError("canary.solver.policy.SolverPolicy not available")
+    return ClassFactory("canary.solver.policy", "SolverPolicy")  # reads tier params from instruction
 
 
 def fake_factory(seed: int):  # placeholder factory for the fake runner

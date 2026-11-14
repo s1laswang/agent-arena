@@ -834,6 +834,7 @@ def run(args) -> dict:
         "labels": {"source": source, "n": len(labels), "cached_n": len(labels_cached),
                    "batch_n": len(labels_batch) if labels_batch else 0,
                    "batch_vs_cached": label_agreement(labels_batch, labels_cached) if labels_batch else None,
+                   "batch_job": ops.last_batch or None,
                    "steps": [{"episode": k[0], "t": k[1], **v} for k, v in sorted(labels.items())]},
         "verification": A.verifier.summary(),
         "dropped_quotes": A.verifier.dropped[:200],

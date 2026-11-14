@@ -112,6 +112,7 @@ class FakeModels:
     def embed_content(self, model, contents, config=None):
         vecs = []
         for i, t in enumerate(contents):
+            t = t.parts[0].text if hasattr(t, "parts") else t
             h = abs(hash(t.split()[0] if t.split() else "")) % 3
             vecs.append(SimpleNamespace(values=[1.0 if j == h else 0.01 * ((i + j) % 5) for j in range(8)]))
         return SimpleNamespace(embeddings=vecs)
@@ -290,3 +291,34 @@ def test_pack_episode_marks_high_regret_words(eps):
     e = max(eps, key=lambda e: e.total_regret)
     block = pack_episode(e)
     assert block.startswith("=== EPISODE") and f"total_regret={e.total_regret:.3f}" in block
+
+
+def test_embedding_count_mismatch_is_reported_not_crashing(tmp_path, eps, monkeypatch):
+    """full5 crashed in clustering when the API returned fewer vectors than texts (gemini-embedding-2 merges a list of
+    strings into one embedding). The atlas must skip the clusters and record the error."""
+    from canary.gemini.atlas import Atlas
+    from canary.gemini.atlas_gemini import AtlasOps
+    ops = AtlasOps(client=FakeGenai(eps), cache_dir=tmp_path / "c")
+    A = Atlas(eps, ops, "gemini-4-carbon", "gemini-3.8-flash", tmp_path)
+    for e in eps:  # make sure there are enough rationale texts at high-regret steps
+        for s in e.steps:
+            if s.regret >= 0.01 and not s.rationale:
+                s.rationale = f"reasoning about {s.tool} at {s.t}"
+    A.hr = [(e, s) for e in eps for s in e.steps if s.regret >= 0.0]
+    monkeypatch.setattr(ops, "embed", lambda texts, **kw: [[1.0, 0.0]] * (len(texts) - 1))
+    assert A.embed_clusters({}, k=2) is None
+    assert any("embed: got" in e for e in A.errors)
+
+
+def test_embed_sends_one_content_per_text(tmp_path, eps):
+    from canary.gemini.atlas_gemini import AtlasOps
+    fake = FakeGenai(eps)
+    seen = []
+    orig = fake.models.embed_content
+
+    def spy(model, contents, config=None):
+        seen.append(len(contents))
+        return orig(model, contents, config)
+    fake.models.embed_content = spy
+    vecs = AtlasOps(client=fake, cache_dir=tmp_path / "c").embed(["a b", "c d", "e f"])
+    assert len(vecs) == 3 and seen == [1, 1, 1]

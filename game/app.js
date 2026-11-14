@@ -27,6 +27,7 @@ const state = {
   totalCallsLeft: 300,
   leaksCount: 0,
   checkedLeaksToday: false,
+  seenLeakDocIds: new Set(),
   employees: [], // populated ONLY after player triggers list_employees
   userTags: {}, // client-side notes: { [empId]: "suspect" | "cleared" | "unsure" }
   canaryAssignments: {}, // { [empId]: "A" | "B" | "C" }
@@ -248,6 +249,7 @@ function startGame(customSeed = null) {
   state.totalCallsLeft = 300;
   state.leaksCount = 0;
   state.checkedLeaksToday = false;
+  state.seenLeakDocIds.clear();
   state.employees = [];
   state.userTags = {};
   state.canaryAssignments = {};
@@ -657,11 +659,16 @@ function addEvidenceCard(tool, args, res) {
     `;
   } else if (tool === "check_leak_feed") {
     const items = res.data.items || [];
+    const newItems = items.filter(it => !state.seenLeakDocIds.has(it.doc_id));
+
     if (!items.length) {
       bodyContent = `<p class="muted">No leaks detected on the rival firm wire as of Day ${state.day}.</p>`;
+    } else if (!newItems.length) {
+      bodyContent = `<p class="muted">No new leaks since last check (${items.length} total leaks previously detected on wire).</p>`;
     } else {
-      let html = `<div style="font-weight:700; color:var(--err); margin-bottom:6px;">Leaked Memos Detected at Rival Firm (${items.length}):</div>`;
-      for (const item of items) {
+      let html = `<div style="font-weight:700; color:var(--err); margin-bottom:6px;">New Leaks Detected (${newItems.length} new, ${items.length} total):</div>`;
+      for (const item of newItems) {
+        state.seenLeakDocIds.add(item.doc_id);
         const isCanary = !!item.variant || (item.doc_id && item.doc_id.startsWith("c"));
         const v = item.variant;
         const vClass = v ? v.toLowerCase() : "";
@@ -695,7 +702,10 @@ function addEvidenceCard(tool, args, res) {
         html += `
           <div style="background:var(--panel-elevated); border:1px solid var(--line); border-radius:4px; padding:8px; margin-bottom:6px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px; flex-wrap:wrap;">
-              <strong>Doc: ${item.doc_id} · "${item.title || 'Memo'}"</strong>
+              <div>
+                <span class="chip" style="color:var(--ok); border-color:var(--ok); font-weight:700; margin-right:4px;">NEW</span>
+                <strong>Doc: ${item.doc_id} · "${item.title || 'Memo'}"</strong>
+              </div>
               ${badgeHtml}
             </div>
             ${detailsHtml}

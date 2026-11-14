@@ -29,12 +29,11 @@ exploits:
 key-check:
 	PYTHONPATH=. $(PY) scripts/key_check.py
 
-<<<<<<< HEAD
 ladder:
 	GEMINI_API_KEY= $(PY) -m agents.ladder --days 400 --jobs 6
 
 .PHONY: ladder
-=======
+
 cheat-corpus:
 	GEMINI_API_KEY= PYTHONPATH=. $(PY) -m redteam.cheat_corpus $(ARGS)
 
@@ -47,4 +46,3 @@ demo:
 
 frontier-replay-run:
 	$(PY) -m lab.frontier_cache replay $(RUN)
->>>>>>> origin/momin

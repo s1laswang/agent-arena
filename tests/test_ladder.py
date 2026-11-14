@@ -20,8 +20,9 @@ def test_monotone(t):
 def test_top_matches_reference_and_beats_lower(t):
     top, ref = t["ladder%d" % ladder.TOP], t["reference"]
     assert top["mean"] >= ref["mean"] - ref["ci"]
+    assert t["ladder0"]["mean"] < top["mean"]
     for i in range(ladder.TOP):
-        assert t["ladder%d" % i]["mean"] < top["mean"] or i == 0 and top["mean"] > 0
+        assert t["ladder%d" % i]["mean"] <= top["mean"]
 
 
 def test_context_order(t):

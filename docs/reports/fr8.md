@@ -69,3 +69,10 @@
 - **J2 fuzz on frozen v1.2:** hard 44263 and medium 44264, 4M evolve each: **0 findings**. That closes FR8's fuzz runs.
 - **J5 forge:** `data/forge/hall_of_fame_v1.2.jsonl` holds 2 distinct feasible moles from the final generation. **J5b** (AGENTS' stronger investigators, fitness = min regret, tiers v1.3) is at generation 264 of 300; next it gets dedupe + fresh-seed validation → `hall_of_fame_v1.3.jsonl`.
 - FR8 data dir: 7.2 GB of 10. No other FR8 jobs of ours are queued.
+
+## 05:10 status
+- **J4 = job 44397:** training on the V100 for 1h17, step 188, 1.41k tok/s steady, loss 0.70 → 0.02–0.08 (verified: train_log.jsonl). First checkpoint at step 200. Training ends ~06:42 (clamp 2.81 h), then the base vs LoRA held-out eval (30 seeds per tier, tiers interleaved, 40 min cap per model), done by ~08:10. The adapter and evals are then auto-rsynced to `data/fr8/j4/`.
+- **Forge HOFs deduped by OUTCOME** (a leak/frame event-trace hash under do_nothing + the solver, seeds 6000–6019; INTEGRITY's catch): v1.2 → 1 mole, v1.3 (J5b) → 1 mole. On fresh seeds the v1.3 mole has regret vs the strongest investigator .470 ± .079 (default .326), solver .639, acc .89. Overfitting: the run's own fitness was .735. Files: `data/forge/hall_of_fame_v1.{2,3}.jsonl`.
+- **Saturday:** v2 training on J3 v2 (tiers v1.3) with dense 4k windows; the MLX demo path. Both are code-ready.
+- No CPU jobs of ours on FR8. FR8 data 7.2 GB of 10. Mac: no FR8 processes running.
+- **Next:** at J4 end, the before/after table with CIs → CEO and this report; then tell the CEO to release sky 43143_4.

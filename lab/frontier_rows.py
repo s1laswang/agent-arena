@@ -108,7 +108,7 @@ def scripted(days, trials, day_start, seat, out):
     for t in SCRIPTED:
         for mode, s in (("all8", None), ("seat", seat)):
             r = R.run(t, days, trials, s, t if s else None, day_start, out=os.path.join(out, "scripted-runs"))
-            rows[f"{t} [{mode}]"] = {k: r[1].get(k) for k in ("model", "n_days", "reward_mean", "pass^1", "sleeper_success_rate", "false_accusation_rate", "ticket_completion")} | {"commit": commit(), "seat": seat if s else "all8", "mode": mode, "days": days, "trials": trials, "calls": 0}
+            rows[f"{t} [{mode}]"] = {k: r[1].get(k) for k in ("model", "n_days", "reward_mean", "pass^1", "sleeper_success_rate", "false_accusation_rate", "ticket_completion")} | {"commit": commit(), "seat": seat if s else "all8", "mode": mode, "days": days, "trials": trials, "calls": 0, "provenance": "scripted", "cost": 0.0}
     with open(os.path.join(out, f"scripted-d{days}-t{trials}.json"), "w") as f:
         json.dump(rows, f, indent=2, sort_keys=True)
     return rows

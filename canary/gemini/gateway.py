@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import base64
+import contextlib
 import gzip
 import hashlib
 import hmac
@@ -37,6 +38,7 @@ import os
 import random
 import re
 import secrets
+import signal
 import socket
 import stat
 import sys
@@ -461,7 +463,18 @@ async def _serve(args, gw: Gateway) -> None:
     import uvicorn
     cfg = uvicorn.Config(gw, host=args.host, port=args.port, log_level="warning", access_log=False,
                          lifespan="on", timeout_keep_alive=75, server_header=False, date_header=False)
-    server = uvicorn.Server(cfg)
+    class _Server(uvicorn.Server):
+        @contextlib.contextmanager
+        def capture_signals(self):  # we stop gracefully ourselves (so the pidfile is cleaned up)
+            yield
+
+    server = _Server(cfg)
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):  # not SIGHUP: survive the ssh session (nohup)
+        try:
+            loop.add_signal_handler(sig, lambda: setattr(server, "should_exit", True))
+        except (NotImplementedError, RuntimeError):
+            pass
 
     async def deadline():
         if args.max_hours and args.max_hours > 0:

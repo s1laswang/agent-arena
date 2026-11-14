@@ -363,3 +363,22 @@ def test_sdk_token_file(tmp_path, monkeypatch):
     assert gateway_token() == TOKEN
     monkeypatch.setenv("GEMINI_GATEWAY_CLIENT", "meta")
     assert gateway_token() == OTHER
+
+
+def test_committed_showcase_replays_keyless(tmp_path):
+    """`make lab-replay` in miniature: the committed recording reproduces through a replay gateway, no key."""
+    pytest.importorskip("google.genai")
+    import subprocess
+    import sys
+    root = Path(__file__).resolve().parents[1]
+    store = root / "results" / "gemini" / "replay"
+    if not (store / "showcase.json").exists():
+        pytest.skip("no committed showcase recording")
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GEMINI_")}
+    env["GEMINI_API_KEY"] = ""
+    r = subprocess.run([sys.executable, "-m", "canary.gemini.with_gateway", "--replay", str(store),
+                        "--ledger", str(tmp_path / "ledger.jsonl"), "--",
+                        sys.executable, "-m", "canary.gemini.showcase", "--check", str(store / "showcase.json")],
+                       cwd=root, env=env, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr[-2000:]
+    assert "REPLAY OK" in r.stdout

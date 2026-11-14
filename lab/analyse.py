@@ -295,8 +295,33 @@ def report(days, fls):
     return "\n".join(lines) + "\n"
 
 
+CACHE = {}
+
+
 def load(run_dir):
-    return [norm(json.loads(p.read_text())) for p in sorted((Path(run_dir) / "days").glob("*.json"))]
+    run_dir = Path(run_dir)
+    files = sorted((run_dir / "days").glob("*.json"))
+    key = (str(run_dir.resolve()), len(files), max((p.stat().st_mtime_ns for p in files), default=0))
+    if key in CACHE:
+        return CACHE[key]
+    digest = run_dir / "digest.jsonl"
+    if files and digest.exists() and digest.stat().st_mtime_ns >= key[2]:
+        rows = [json.loads(l) for l in digest.read_text().splitlines() if l.strip()]
+        if len(rows) == len(files):
+            CACHE[key] = [norm(r) for r in rows]
+            return CACHE[key]
+    rows = []
+    for p in files:
+        d = json.loads(p.read_text())
+        d.pop("steps", None)
+        rows.append(d)
+    if files:
+        try:
+            digest.write_text("".join(json.dumps(r) + "\n" for r in rows))
+        except OSError:
+            pass
+    CACHE[key] = [norm(r) for r in rows]
+    return CACHE[key]
 
 
 def rates(d):

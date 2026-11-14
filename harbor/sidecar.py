@@ -33,7 +33,7 @@ def make_world_and_team(seed, seat):
 
 def reward(srv, out):
     srv.finish()
-    r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", out], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", out], capture_output=True, text=True)
     try:
         d = json.loads(r.stdout)
     except ValueError:

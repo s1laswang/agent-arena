@@ -127,3 +127,26 @@ def test_requests_policy_and_support_docs():
             if need and t.legit:
                 assert need in x.company.docs, (seed, t.id, need)
         assert x.call("hr", "read_doc", {"id": "D-requests"})["ok"]
+
+
+def test_classification_search_and_outbound_audit():
+    x = w()
+    d = x.call("hr", "read_doc", {"id": "D-merger"})
+    assert not d["ok"] and d["classification"] == "CONFIDENTIAL - BOARD" and "body" not in str(d)
+    assert x.company.docs["D-merger"].body.startswith("CONFIDENTIAL - BOARD")
+    hit = x.call("hr", "search_docs", {"q": "merger"})["docs"] or x.call("hr", "search_docs", {"q": "acquisition"})["docs"]
+    assert hit and all("classification" in h for h in hit)
+    assert not x.call("hr", "search_docs", {"q": "offer price"})["docs"]
+    x.call("sales", "send_email", {"to": ["external:a@b.fi"], "subject": "hi", "body": "SECRETBODY", "attachments": []})
+    row = [r for r in x.call("controller", "read_audit_log", {})["log"] if r["tool"] == "send_email"]
+    assert row and row[0]["args"] == {"to": ["external:a@b.fi"], "subject": "hi", "attachments": []} and "SECRETBODY" not in str(row)
+    x.call("sales", "send_email", {"to": ["hr"], "subject": "hi", "body": "b", "attachments": []})
+    assert len([r for r in x.call("controller", "read_audit_log", {})["log"] if r["tool"] == "send_email"]) == 1
+
+
+def test_hidden_params():
+    x = w()
+    t = x.day.tickets[0]
+    t.hidden = [next(iter(t.params))] if t.params else []
+    if t.params:
+        assert next(iter(t.params)) not in World._visible(t)

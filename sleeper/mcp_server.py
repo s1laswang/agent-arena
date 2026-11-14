@@ -67,7 +67,7 @@ def main():
 
     e = os.environ.get
     ap = argparse.ArgumentParser()
-    ap.add_argument("--seat", default=e("SLEEPER_SEAT", "controller"))
+    ap.add_argument("--seat", default=e("SLEEPER_SEAT", "finance_ap"))
     ap.add_argument("--day", type=int, default=int(e("SLEEPER_SEED", "0")))
     ap.add_argument("--team", default=e("SLEEPER_TEAM", "oracle"))
     ap.add_argument("--transport", default=e("SLEEPER_TRANSPORT", "stdio"))

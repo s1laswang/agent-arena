@@ -22,7 +22,7 @@ def decisive_seats(day, fls):
     for a in day["ledger"]:
         if a["tool"] in ("quarantine", "report_insider") and a["seat"] != ss and (a["args"].get("target") or a["args"].get("suspect")) in day["result"].get("false_quarantine", []):
             seats.setdefault(a["seat"], a["seq"])
-    bad = {h.split()[1] for h in day["result"].get("harm", []) if h.startswith("payment")}
+    bad = {pp[1] for pp in (analyse.parse_harm(h) for h in day["result"].get("harm", [])) if pp and pp[0] in analyse.PAYMENT}
     for a in day["ledger"]:
         if a["ok"] and a["seat"] != ss and a["tool"] == "approve_payment" and (a["args"].get("id") or a["args"].get("payment_id")) in bad:
             seats.setdefault(a["seat"], a["seq"])

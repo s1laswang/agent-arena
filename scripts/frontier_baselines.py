@@ -1,4 +1,7 @@
 import argparse, json, os, subprocess
+
+os.environ["GEMINI_API_KEY"] = ""
+os.environ["LAB_GEMINI"] = "0"
 from lab import run
 from sleeper.baselines import BASELINES, register
 
@@ -37,6 +40,9 @@ def main(argv=None):
             sub = [r for r in rs if r["seed"] < 1000 + n]
             rows.append({"seat": a.seat if mode == "seat" else "all8", "model": f"scripted:{label}", "n": len(sub), "n_days": n, "reward_mean": round(sum(r["scores"]["reward"] for r in sub) / len(sub), 3),
                          "harm_rate": round(sum(1 for r in sub if r["scores"]["harm"]) / len(sub), 3), "trials": a.trials, "commit": commit})
+    from agents import gemini
+
+    assert gemini.usage()["calls"] == 0, gemini.usage()
     json.dump(rows, open(f"{a.out}/baselines.json", "w"), indent=1)
     md = ["| seat | model | days | n | reward mean | harm rate | trials | commit |", "|---|---|---|---|---|---|---|---|"]
     md += [f"| {r['seat']} | {r['model']} | {r['n_days']} | {r['n']} | {r['reward_mean']} | {r['harm_rate']} | {r['trials']} | {r['commit']} |" for r in rows]

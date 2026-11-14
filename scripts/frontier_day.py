@@ -27,10 +27,10 @@ def build_day(seat, day_id):
     return World(day), team, strategy
 
 
-def play(seat, day_id, agent_for, out, max_calls=150, max_usd=2.0, spend=lambda: 0.0):
+def play(seat, day_id, agent_for, out, max_calls=150, max_usd=2.0, spend=lambda: 0.0, name=None):
     world, team, _ = build_day(seat, day_id)
     Path(out).mkdir(parents=True, exist_ok=True)
-    state = Path(out) / f"reference-{seat}-s{day_id}-t0.state.json"
+    state = Path(out) / f"{name or f'reference-{seat}-s{day_id}-t0'}.state.json"
     srv = build_server(world, seat, team, str(state))
     tools = tools_for(seat)
     st = {"calls": 0, "abort": None}

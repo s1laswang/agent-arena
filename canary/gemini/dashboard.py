@@ -576,7 +576,7 @@ CSS = r"""
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
   --other: #b5b3ab;
   --good: #0ca30c; --warn: #fab219; --serious: #ec835a; --crit: #d03b3b; --goodtext: #006300;
-  --q100: #cde2fb; --q700: #0d366b;
+  --q100: #cde2fb; --q700: #0d366b; --mid: #f0efec;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -584,7 +584,7 @@ CSS = r"""
     --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
     --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
-    --other: #5f5e59; --goodtext: #0ca30c;
+    --other: #5f5e59; --goodtext: #0ca30c; --mid: #383835;
   }
 }
 :root[data-theme="dark"] {
@@ -592,7 +592,7 @@ CSS = r"""
   --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
   --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
-  --other: #5f5e59; --goodtext: #0ca30c;
+  --other: #5f5e59; --goodtext: #0ca30c; --mid: #383835;
 }
 * { box-sizing: border-box; }
 html { background: var(--page); }
@@ -805,6 +805,15 @@ function modelColor(m) { return MODEL_SLOT[m] ? css('--s' + MODEL_SLOT[m]) : css
 const RAMP = ['#cde2fb', '#b7d3f6', '#9ec5f4', '#86b6ef', '#6da7ec', '#5598e7', '#3987e5', '#2a78d6', '#256abf', '#1c5cab', '#184f95', '#104281', '#0d366b'];
 function rampIdx(t) { return Math.max(0, Math.min(RAMP.length - 1, Math.round(t * (RAMP.length - 1)))); }
 function cellStyle(td, t) { const i = rampIdx(t); td.style.background = RAMP[i]; td.style.color = i >= 7 ? '#ffffff' : '#0b0b0b'; }
+// diverging blue <-> red around a neutral grey midpoint (palette diverging pair); equal steps per arm
+const DIV_POS = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
+const DIV_NEG = ['#fbd9d6', '#f6b3ad', '#ee8a82', '#e3605a', '#d03b3b', '#a82d2d', '#7d2121'];
+function divStyle(td, v, neg, pos) {
+  if (Math.abs(v) < 0.02) { td.style.background = css('--mid'); td.style.color = css('--ink'); return; }
+  const arm = v > 0 ? DIV_POS : DIV_NEG, t = Math.min(1, Math.abs(v) / (v > 0 ? pos : neg));
+  const i = Math.max(0, Math.min(arm.length - 1, Math.ceil(t * arm.length) - 1));
+  td.style.background = arm[i]; td.style.color = i >= 3 ? '#ffffff' : '#0b0b0b';
+}
 
 // ---------- scaffolding
 function panelHead(sec, num, title, lede, right) {
@@ -913,7 +922,7 @@ function heatMatrix(rows, cols, get, fmt, opt) {
       const v = get(r, c);
       if (v == null) { tr.appendChild(h('td', { class: 'empty', text: '·' })); return; }
       const td = h('td', { class: 'cell', tabindex: 0, text: fmt(v) });
-      cellStyle(td, Math.max(0, Math.min(1, scale(v))));
+      if (opt.diverging) divStyle(td, v, opt.diverging[0], opt.diverging[1]); else cellStyle(td, Math.max(0, Math.min(1, scale(v))));
       bindTip(td, () => [(opt.rowLabel ? opt.rowLabel(r) : r) + ' × ' + (opt.colLabel ? opt.colLabel(c) : c), opt.tip ? opt.tip(r, c, v) : [{ v: fmt(v), l: '' }]]);
       tr.appendChild(td);
     });
@@ -921,7 +930,7 @@ function heatMatrix(rows, cols, get, fmt, opt) {
   });
   t.appendChild(tb);
   const sc = h('div', { class: 'scale' }, [h('span', { text: opt.loLabel || fmt(lo) }), h('div', { class: 'bar' }), h('span', { text: opt.hiLabel || fmt(hi) })]);
-  sc.querySelector('.bar').style.background = 'linear-gradient(90deg,' + RAMP.join(',') + ')';
+  sc.querySelector('.bar').style.background = 'linear-gradient(90deg,' + (opt.diverging ? DIV_NEG.slice().reverse().concat([css('--mid')], DIV_POS) : RAMP).join(',') + ')';
   return h('div', {}, [t, sc]);
 }
 
@@ -938,7 +947,9 @@ function xyChart(series, opt) {
   const X = v => L + (W - L - Rr) * (logx ? (Math.log10(Math.max(v, x0)) - Math.log10(x0)) / (Math.log10(x1) - Math.log10(x0)) : (v - x0) / (x1 - x0 || 1));
   const Y = v => Tp + (H - Tp - B) * (1 - (v - y0) / (y1 - y0 || 1));
   const svg = s('svg', { class: 'chart', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': opt.aria || '' });
-  (opt.yticks || [0, .25, .5, .75, 1]).forEach(t => { if (t < y0 || t > y1) return;
+  const ystep = (y1 - y0) > 2.2 ? 0.5 : 0.25, yt = [];
+  for (let v = Math.ceil(y0 / ystep) * ystep; v <= y1 + 1e-9; v += ystep) yt.push(+v.toFixed(4));
+  (opt.yticks && (y1 - y0) <= 1.3 ? opt.yticks : yt).forEach(t => { if (t < y0 || t > y1) return;
     svg.appendChild(s('line', { class: 'gridline', x1: L, x2: W - Rr, y1: Y(t), y2: Y(t) }));
     svg.appendChild(s('text', { x: L - 6, y: Y(t) + 4, 'text-anchor': 'end', text: opt.yfmt ? opt.yfmt(t) : t })); });
   const xt = []; if (logx) { const dec = Math.round(Math.log10(x1 / x0)); for (let v = x0; v <= x1 * 1.0001; v *= 10) { xt.push(v); if (dec <= 2 && v * 2 < x1) xt.push(v * 2, v * 5); } } else niceTicks(x1, 5).forEach(v => xt.push(v));
@@ -1112,9 +1123,10 @@ function renderLadder() {
     if (c.think != null) r.push({ v: compact(c.think) + (c.est ? '*' : ''), l: 'thinking tokens / episode' + (c.est ? ' (*incl. output)' : '') });
     if (c.cost != null) r.push({ v: usd(c.cost), l: 'per episode' }); return r; };
   const g = h('div', { class: 'grid' });
-  const hm = heatMatrix(models, levels, (m, l) => { const c = at(m, l); return c ? c.pct : null; }, v => pctf(v), { min: 0, max: 1, labW: 120, rowLabel: short,
-    corner: 'model ↓ thinking →', loLabel: '≤0%', hiLabel: '≥100% of solver', tip: (m, l) => cellTip(at(m, l)) });
-  g.appendChild(card('c5', 'Score as % of solver · ' + tier, 'model × thinking level · hover for CI, accuracy, cost', [synthBadge(L), hm]));
+  const hm = heatMatrix(models, levels, (m, l) => { const c = at(m, l); return c ? c.pct : null; }, v => pctf(v), { diverging: [1, 1], labW: 120, rowLabel: short,
+    corner: 'model ↓ thinking →', loLabel: '≤ −100% (worse than doing nothing)', hiLabel: '≥ 100% = solver', tip: (m, l) => cellTip(at(m, l)) });
+  const ns = tc.map(c => c.n || 0), nlo = Math.min(...ns), nhi = Math.max(...ns);
+  g.appendChild(card('c5', 'Score as % of solver · ' + tier, 'model × thinking level · ' + (nlo === nhi ? nlo : nlo + '–' + nhi) + ' episodes per cell · hover for the paired CI', [synthBadge(L), hm]));
   const refs = refLines(L, tier);
   const series = models.map(m => ({ name: short(m), c: modelColor(m), pts: tc.filter(c => c.model === m && c.think != null).map(c => ({ x: Math.max(c.think, 10), y: c.pct,
     title: short(m) + ' · ' + c.level, tip: cellTip(c) })) })).filter(sr => sr.pts.length);

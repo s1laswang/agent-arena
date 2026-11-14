@@ -7,7 +7,7 @@
 <style>
 :root{--bg:#0f130f;--fg:#e8ece4;--muted:#9aa595;--line:#2a312a;--ok:#7dc38f;--warn:#e0b04a;--bad:#e07a6a}
 body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif}
-a{color:var(--warn)}h1{font-size:18px}table{border-collapse:collapse;width:100%}
+a{color:var(--warn)}h1{font-size:18px}h2{font-size:16px;margin:28px 0 4px}h3{font-size:13px;color:var(--muted);margin:12px 0 4px}table{border-collapse:collapse;width:100%}
 th,td{padding:6px 8px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
 th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.muted{color:var(--muted);font-size:13px}
@@ -20,19 +20,21 @@ th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute
 <h1>Canary gap table <a href="./">back to replay</a></h1>
 <p class="muted" id="src"></p>
 <div id="out"></div>
-<p class="muted"><b>score</b> mean final company value with a 95% normal interval. <b>accuracy</b> share of episodes that accused the real mole. <b>vs solver</b> score divided by the solver's on the same tier. <b>REAL</b> a model played and logged token usage. <b>SCRIPTED</b> a built-in program. <b>UNVERIFIED</b> run record incomplete or mixed. <b>n</b> counts valid episodes; infra-failed ones are listed separately and left out. <b>NOT FOUND</b> no data, never a guess.</p>
+<p class="muted"><b>score</b> mean final company value with a 95% normal interval. <b>accuracy</b> share of episodes that accused the real mole. <b>vs solver</b> agent mean divided by the solver mean on the seeds both played (the markdown gap_table.md column is computed differently and differs). <b>REAL</b> a model played and logged token usage. <b>SCRIPTED</b> a built-in program. <b>UNVERIFIED</b> run record incomplete or mixed. <b>n</b> counts valid episodes; infra-failed ones are listed separately and left out. <b>NOT FOUND</b> no data, never a guess.</p>
 <script>
 const WANT=["codex:gpt-5.5","openai:gpt-5.5","solver"];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const f=(v,d=3)=>v==null?"n/a":v.toFixed(d);
+const head='<thead><tr><th>Agent</th><th>Label</th><th class="num">n</th><th class="num">Score</th><th class="num">95% CI</th><th class="num">Accuracy</th><th class="num">Accuse day</th><th class="num">vs solver (same seeds)</th><th>Source</th></tr></thead>';
 fetch("gap.json").then(r=>{if(!r.ok)throw 0;return r.json()}).catch(()=>null).then(d=>{
   if(!d){document.getElementById("out").innerHTML='<p class="nf">NOT FOUND: gap.json is missing. Run npm run gap.</p>';return}
-  document.getElementById("src").textContent="from "+d.source;
-  const tiers=[...new Set(d.rows.map(r=>r.tier))];
-  document.getElementById("out").innerHTML=tiers.map(t=>{
-    const rs=d.rows.filter(r=>r.tier===t);
-    const miss=WANT.filter(w=>!rs.some(r=>r.agent===w)).map(w=>`<tr><td>${esc(w)}</td><td colspan="8" class="nf">NOT FOUND</td></tr>`).join("");
-    return `<h2>${esc(t)}</h2><table><thead><tr><th>Agent</th><th>Label</th><th class="num">n</th><th class="num">Score</th><th class="num">95% CI</th><th class="num">Accuracy</th><th class="num">Accuse day</th><th class="num">vs solver</th><th>Source</th></tr></thead><tbody>${rs.map(r=>`<tr><td>${esc(r.agent)}</td><td><span class="badge ${esc(r.label)}">${esc(r.label)}</span></td><td class="num">${r.n}${r.invalid?` <span class="muted">(+${r.invalid} invalid)</span>`:""}</td><td class="num">${f(r.score)}</td><td class="num">${r.ci==null?"n/a":"± "+f(r.ci)}</td><td class="num">${f(r.accuracy,2)}</td><td class="num">${f(r.accuse_day,1)}</td><td class="num">${f(r.vs_solver,2)}</td><td class="muted">${esc(r.sources.join(", "))}</td></tr>`).join("")}${miss}</tbody></table>`}).join("");
+  document.getElementById("src").textContent="from "+d.source+". Rules versions are never mixed in one mean.";
+  document.getElementById("out").innerHTML=d.groups.map(g=>{
+    const tiers=[...new Set(g.rows.map(r=>r.tier))];
+    return `<h2>${esc(g.title)} <span class="muted">rules ${esc(g.version)}, commit ${esc(g.commit)}</span></h2>`+tiers.map(t=>{
+      const rs=g.rows.filter(r=>r.tier===t);
+      const miss=g.id==="v1.3"?WANT.filter(w=>!rs.some(r=>r.agent===w)).map(w=>`<tr><td>${esc(w)}</td><td colspan="8" class="nf">NOT FOUND</td></tr>`).join(""):"";
+      return `<h3>${esc(t)}</h3><table>${head}<tbody>${rs.map(r=>`<tr><td>${esc(r.agent)}</td><td><span class="badge ${esc(r.label)}">${esc(r.label)}</span></td><td class="num">${r.n}${r.invalid?` <span class="muted">(+${r.invalid} invalid)</span>`:""}</td><td class="num">${f(r.score)}</td><td class="num">${r.ci==null?"n/a":"± "+f(r.ci)}</td><td class="num">${f(r.accuracy,2)}</td><td class="num">${f(r.accuse_day,1)}</td><td class="num">${f(r.vs_solver,2)}</td><td class="muted">${esc(r.sources.join(", "))}</td></tr>`).join("")}${miss}</tbody></table>`}).join("")}).join("");
 });
 </script>
 </body>

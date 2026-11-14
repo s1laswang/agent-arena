@@ -4,7 +4,7 @@ export type Provenance = { label: "REAL" | "SCRIPTED" | "SMOKE" | "UNVERIFIED"; 
 
 export const SCRIPTED_AGENTS = new Set([
   "solver", "heuristic", "grok_tactics", "do_nothing", "stop_early", "random", "restrict_all", "probe_all",
-  "accuse_decoy", "accuse_most_logs", "obvious_heuristic", "logs_minus_decoy", "logs_only",
+  "accuse_decoy", "accuse_most_logs", "obvious_heuristic", "logs_minus_decoy", "logs_only", "oracle", "cheat",
 ]);
 
 export function provenance(ep: Episode): Provenance {

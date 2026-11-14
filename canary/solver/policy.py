@@ -110,6 +110,8 @@ class SolverPolicy:
         elif st.tool == "list_documents":
             for d in _items(data, "documents", "docs"):
                 var = d.get("variants")
+                if isinstance(var, dict) and var and all(isinstance(v, list) for v in var.values()):
+                    var = {e: lab for lab, es in var.items() for e in es}  # {label: [emps]} -> {emp: label}
                 if self.pending_canary and d.get("is_canary") and not var:
                     pass
                 o.docs[d["doc_id"]] = Doc(d["doc_id"], int(d["day"]), frozenset(d.get("recipients", [])),

@@ -1,12 +1,12 @@
 {
-  "code_sha": "32e2d95",
+  "code_sha": "50f4074",
   "tiers_version": "v1.2",
   "tier": "hard",
   "seeds": "2000:2200",
-  "hof_source": "J5 run-v1-0224 hall_of_fame.jsonl at gen 378 (snapshot copied to fr8/analysis/out/forge_v12_hof_source_gen378.jsonl)",
-  "hof_generation": 378,
+  "hof_source": "J5 run-v1-0224 final hall_of_fame.jsonl (copy: fr8/analysis/out/forge_v12_hof_source_gen500.jsonl)",
+  "hof_generation": "499 (last of 500 gens, 0-based; final)",
   "feasibility": "solver_score >= 0.5 x default-mole solver score AND solver_acc >= 0.85; deduped by behaviour",
-  "n_survivors": 5,
+  "n_survivors": 2,
   "source_strategies": [
     "hof#1",
     "hof#2",
@@ -29,7 +29,6 @@
     "hof#19",
     "hof#20"
   ],
-  "eval_command": "python -m fr8.analysis.forge_validate <snapshot of run-v1-0224> --tier hard --seeds 2000:2200 --workers 2 --out fr8/analysis/out/forge_v12_validation",
-  "write_command": "python -m fr8.analysis.forge_validate /tmp/j5snap/run-v1-0224 --tier hard --seeds 2000:2200 --out fr8/analysis/out/forge_v12_validation --from-csv fr8/analysis/out/forge_v12_validation.csv --hof-out data/forge/hall_of_fame_v1.2.jsonl",
-  "note": "default mole itself fails the 0.85 accuracy bar on v1.2 hard (solver acc 0.79); all survivors have solver acc 0.88"
+  "write_command": "python -m fr8.analysis.forge_validate /tmp/j5final/run-v1-0224 --tier hard --seeds 2000:2200 --workers 3 --out fr8/analysis/out/forge_v12_validation --hof-out data/forge/hall_of_fame_v1.2.jsonl",
+  "note": "default mole fails the 0.85 accuracy bar on v1.2 hard (solver acc 0.79); survivors have solver acc 0.855"
 }

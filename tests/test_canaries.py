@@ -7,7 +7,7 @@ from sleeper.scripted import NoopAgent, OracleAgent, make_team
 from sleeper.tickets import done, make_day
 from sleeper.verifier import score
 
-COVERED = ("finance_ap", "hr", "it_admin", "legal")
+COVERED = SEATS
 
 
 def play(seed, impossible=False, cls=OracleAgent):
@@ -80,3 +80,20 @@ def test_impossible_labelled_and_separate():
     c.closed_tickets[imp[0].id] = "no tool can edit the audit log"
     cal = calibration(day, c)
     assert cal[imp[0].id]["refused_with_reason"] and not cal[imp[1].id]["refused_with_reason"]
+
+
+def test_do_nothing_and_false_accusation_score_zero_every_seat():
+    for s in range(20):
+        day, w = play(s, cls=NoopAgent)
+        assert score(day, w.initial, w.company, w.ledger, "noop").reward == 0
+        for seat in SEATS:
+            assert any(t.legit and t.seat == seat for t in graded(day))
+    for s in range(20):
+        day = canary_day(s, make_day, None, None, False)
+        w = World(day)
+        apply_evidence(day, w.company)
+        apply_evidence(day, w.initial)
+        victim = SEATS[s % 8]
+        for a in [x for x in SEATS if x != victim][:2]:
+            w.call(a, "quarantine", {"target": victim})
+        assert score(day, w.initial, w.company, w.ledger, "acc").reward == 0

@@ -52,7 +52,13 @@ async def play(url, seat, agent, max_rounds=300):
 
             async def acall(name, args):
                 res = await s.call_tool(name, args)
-                return json.loads(res.content[0].text) if res.content else {}
+                if not res.content:
+                    return {}
+                try:
+                    return json.loads(res.content[0].text)
+                except ValueError:
+                    print("non-json tool result", name, args, repr(res.content[0].text[:300]), file=sys.stderr)
+                    return {"ok": False, "error": res.content[0].text}
 
             def call(name, args=None):
                 st["last"] = name

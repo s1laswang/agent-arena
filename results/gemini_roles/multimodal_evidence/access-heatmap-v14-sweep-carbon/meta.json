@@ -1,0 +1,207 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "soc_access_vision_v14_sweep",
+  "model_id": "gemini-4-carbon",
+  "commit": "b40e5c8ddd303039e7fb605ec50b4005a174a064",
+  "git_sha": "b40e5c8ddd303039e7fb605ec50b4005a174a064",
+  "timestamp": "2026-11-14T17:10:38+00:00",
+  "command": "CANARY_LLM_MAX_RETRIES=10 PYTHONPATH=. /tmp/fleet-silas/canary-venv/bin/python scripts/run_access_vision_sweep.py --tiers medium,hard --seeds 3,4,5,6,7 --model gemini-4-carbon --out results/gemini_roles/multimodal_evidence/access-heatmap-v14-sweep-carbon",
+  "episode_count": 10,
+  "n_worlds": 10,
+  "n_images_read_by_model": 10,
+  "tiers_version": "v1.4",
+  "tiers": [
+    "medium",
+    "hard"
+  ],
+  "tier_seeds": {
+    "medium": [
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "hard": [
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "top1_mole_accuracy": 0.9,
+  "top3_mole_hit_rate": 1.0,
+  "naive_baseline_mole_accuracy": 0.0,
+  "mole_accuracy_delta_vs_naive": 0.9,
+  "top1_decoy_accuracy": 1.0,
+  "avoided_framing_trap_rate": 1.0,
+  "mean_confidence": 0.9487,
+  "brier_score": 0.03901,
+  "expected_calibration_error": 0.0753,
+  "by_tier": {
+    "medium": {
+      "n_worlds": 5,
+      "seeds": [
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "top1_mole_accuracy": 0.8,
+      "top3_mole_hit_rate": 1.0,
+      "top1_decoy_accuracy": 1.0,
+      "avoided_framing_trap_rate": 1.0,
+      "naive_baseline_mole_accuracy": 0.0,
+      "mole_accuracy_delta_vs_naive": 0.8,
+      "mean_confidence": 0.914,
+      "brier_score": 0.07702,
+      "expected_calibration_error": 0.134
+    },
+    "hard": {
+      "n_worlds": 5,
+      "seeds": [
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "top1_mole_accuracy": 1.0,
+      "top3_mole_hit_rate": 1.0,
+      "top1_decoy_accuracy": 1.0,
+      "avoided_framing_trap_rate": 1.0,
+      "naive_baseline_mole_accuracy": 0.0,
+      "mole_accuracy_delta_vs_naive": 1.0,
+      "mean_confidence": 0.9834,
+      "brier_score": 0.001001,
+      "expected_calibration_error": 0.0166
+    }
+  },
+  "key_metric": "10 images (5 medium + 5 hard), mole acc 90% vs naive 0%, decoy acc 100%, Brier 0.0390",
+  "fake_env": false,
+  "smoke": false,
+  "ledger_run_id": "multimodal_evidence:soc_access_vision_v14_sweep:gemini-4-carbon:1794676238",
+  "rasters": [
+    {
+      "tier": "medium",
+      "seed": 3,
+      "path": "rasters/medium_seed_3.png",
+      "sha256": "141eba07a396d53d3601c7a6fbe26ae5e30dadb24a52dc5dd90ff84aa9bed537",
+      "bytes": 153199,
+      "size": [
+        1880,
+        1020
+      ]
+    },
+    {
+      "tier": "medium",
+      "seed": 4,
+      "path": "rasters/medium_seed_4.png",
+      "sha256": "2679b12ed395724e061ab287fc2672067eae6a4fec393d7b5f5308576ae5b883",
+      "bytes": 155074,
+      "size": [
+        1880,
+        1020
+      ]
+    },
+    {
+      "tier": "medium",
+      "seed": 5,
+      "path": "rasters/medium_seed_5.png",
+      "sha256": "f14e824211d689692723153fe9a889d9bf21c1dea3caed3cd63e0a321c26dad9",
+      "bytes": 157451,
+      "size": [
+        1880,
+        1020
+      ]
+    },
+    {
+      "tier": "medium",
+      "seed": 6,
+      "path": "rasters/medium_seed_6.png",
+      "sha256": "035efd837d50025e0536f73d5cbed5fc6d42919ca028d0ed078a72a1724cbffa",
+      "bytes": 155758,
+      "size": [
+        1880,
+        1020
+      ]
+    },
+    {
+      "tier": "medium",
+      "seed": 7,
+      "path": "rasters/medium_seed_7.png",
+      "sha256": "07ee3475bfc705a6db0b1ba97061bd9a4779b06bc912cb792d72b13be4110e8b",
+      "bytes": 142876,
+      "size": [
+        1880,
+        1020
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 3,
+      "path": "rasters/hard_seed_3.png",
+      "sha256": "fa67da3305f70da371847b40fd2e9877a7ff369d75342ce61925df28955e97ae",
+      "bytes": 290569,
+      "size": [
+        2180,
+        1660
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 4,
+      "path": "rasters/hard_seed_4.png",
+      "sha256": "4a83f4ef724ef2fada88dbad6cae82470468e593ef3af32b528103a6637874f8",
+      "bytes": 295081,
+      "size": [
+        2180,
+        1660
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 5,
+      "path": "rasters/hard_seed_5.png",
+      "sha256": "39bbc035b967f46fa697e077ea0d0dd33b82f1d3e05285ead76be6e52892805d",
+      "bytes": 295576,
+      "size": [
+        2180,
+        1660
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 6,
+      "path": "rasters/hard_seed_6.png",
+      "sha256": "b0df34c9a420914a35b20e8136790352fe7a609bb054b4e76a305288deb5eb30",
+      "bytes": 290382,
+      "size": [
+        2180,
+        1660
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 7,
+      "path": "rasters/hard_seed_7.png",
+      "sha256": "549bb199ca88cfa74b781de9aab609770adeae225de712a812cabfeadefe7317",
+      "bytes": 291777,
+      "size": [
+        2180,
+        1660
+      ]
+    }
+  ],
+  "usage": {
+    "calls": 10,
+    "in": 20760,
+    "out": 4181,
+    "thinking": 18283,
+    "cached": 0,
+    "cost_usd": 0.26616,
+    "latency_s": 340.382
+  }
+}

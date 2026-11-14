@@ -34,7 +34,7 @@ def parse_call(text):
         return {"tool": "end_turn", "args": {}}
 
 class LocalSeat:
-    def __init__(self, policy, system=SYSTEM, budget=60):
+    def __init__(self, policy, system=SYSTEM, budget=120):
         self.p = policy
         self.system = system
         self.budget = budget

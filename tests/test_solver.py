@@ -155,3 +155,28 @@ def test_regret_report_runs(tmp_path):
     assert r.returncode == 0, r.stderr
     d = json.loads((tmp_path / "regret_t.json").read_text())
     assert "medium" in d["agent"] and "decoy_chase" in d["agent"]["medium"]["tags"]
+
+
+def _actions(tier, seed, **kw):
+    from canary.env import Env
+    r = _run_local(Env(tier, seed), SolverPolicy(None, **kw))
+    return [(s.tool, sorted(s.args.items())) for s in r.steps]
+
+
+def test_actions_independent_of_time_budget():
+    for tier in ("medium", "hard"):
+        for seed in range(10):
+            assert _actions(tier, seed, act_budget=0.01) == _actions(tier, seed, act_budget=10.0), (tier, seed)
+
+
+def test_actions_independent_of_hashseed():
+    import os, subprocess, sys
+    code = ("import json;from canary.env import Env;from canary.solver import SolverPolicy;"
+            "from canary.solver.bench import _run_local;"
+            "r=_run_local(Env('hard',7),SolverPolicy(None));"
+            "print(json.dumps([[s.tool,s.args] for s in r.steps],sort_keys=True))")
+    outs = []
+    for hs in ("1", "12345"):
+        env = dict(os.environ, PYTHONHASHSEED=hs)
+        outs.append(subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True, check=True).stdout)
+    assert outs[0] == outs[1] and outs[0]

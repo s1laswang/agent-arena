@@ -389,8 +389,201 @@ class Heuristic:
         return "advance_day", {}
 
 
+def _params_from_instruction(instruction: str) -> dict[str, str]:
+    out = {}
+    for line in (instruction or "").splitlines():
+        line = line.strip()
+        if line.startswith("- ") and ": " in line:
+            k, v = line[2:].split(": ", 1)
+            if k.replace("_", "").isalnum():
+                out.setdefault(k, v)
+    return out
+
+
+class GrokTactics:
+    """Scripted replay of a strong Grok agent's tactics (docs/reports/grok-agent.md):
+    (a) track V daily: an unexplained drop means a leak;
+    (b) restriction probe: restrict half the suspects, wait out leak_window_days, see if leaks go on;
+    (c) narrow by intersecting leaked regular-doc recipients, then plant tiny canaries
+        (1 recipient per variant, 2 variants) on the remaining suspects;
+    (d) count-based belief; accuse iff P > 1/(1+V).
+    Public tool interface only; numbers read from env.instruction(); seeded RNG only.
+    """
+    name = "grok_tactics"
+    DECOY_QUERIES = ("raise", "management", "deserve", "promotion", "CV", "pay")
+
+    def __init__(self, seed: int = 0):
+        self.seed = seed
+
+    def reset(self, tools_spec, instruction):
+        P = _params_from_instruction(instruction)
+        f = lambda k, d: float(P.get(k, d))
+        self.n_days = int(f("n_days", 14))
+        self.window = int(f("leak_window_days", 3))
+        self.damage = f("leak_damage", 0.04)
+        self.canary_cost = f("canary_cost", 0.01)
+        self.restrict_cost = f("restrict_cost_per_day", 0.01)
+        self.max_delay = max(int(x) for x in P.get("delay_choices", "1, 2, 3").split(","))
+        self.rng = random.Random(f"grok_tactics:{self.seed}")
+        self.queue: list[tuple[str, dict]] = []
+        self.pending: str | None = None
+        self.emps: list[str] = []
+        self.decoy: str | None = None
+        self.decoy_votes: Counter = Counter()
+        self.docs: dict[str, dict] = {}
+        self.canaries: dict[str, dict[str, list[str]]] = {}   # canary title -> variant -> recipients
+        self.canary_ids: dict[str, str] = {}                  # canary_id -> title
+        self.feed_seen: set[str] = set()
+        self.suspects: set[str] = set()
+        self.hard: str | None = None
+        self.w: Counter = Counter()
+        self.V = 1.0
+        self.v_prev: float | None = None
+        self.spent_today = 0.0
+        self.restricted: set[str] = set()
+        self.probe: dict | None = None
+        self.probe_done = False
+        self.leak_days: list[int] = []
+        self.day = 1
+        self.started_day = 0
+
+    # ------------------------------------------------------------- bookkeeping
+    def _ingest(self, step) -> None:
+        r, t = step.result, step.tool
+        if not r.get("ok"):
+            return
+        d = r.get("data") or {}
+        if t == "list_employees":
+            self.emps = employee_ids(r)
+            self.suspects = set(self.emps)
+        elif t == "search_messages":
+            self.decoy_votes.update(m.get("sender") for m in d.get("messages", []) if m.get("sender"))
+        elif t == "status":
+            self.V = float(d.get("V", self.V))
+            self.day = int(d.get("day", self.day))
+        elif t == "list_documents":
+            for doc in d.get("documents", []):
+                self.docs[doc["doc_id"]] = doc
+        elif t == "plant_canary":
+            self.canary_ids[d.get("canary_id", "")] = step.args.get("doc_title")
+            self.spent_today += self.canary_cost
+        elif t == "restrict_access":
+            self.restricted.add(step.args["employee"])
+        elif t == "unrestrict_access":
+            self.restricted.discard(step.args["employee"])
+        elif t == "check_leak_feed":
+            for it in d.get("items", []):
+                key = f"{it.get('doc_id')}:{it.get('variant')}"
+                if key in self.feed_seen:
+                    continue
+                self.feed_seen.add(key)
+                self._use_leak(it)
+
+    def _use_leak(self, it: dict) -> None:
+        doc = self.docs.get(it.get("doc_id"), {})
+        title = self.canary_ids.get(it.get("doc_id")) or doc.get("title") or it.get("title")
+        var = it.get("variant")
+        if var and title in self.canaries:
+            grp = set(self.canaries[title].get(var, []))
+            if len(grp) == 1:
+                self.hard = next(iter(grp))
+            elif grp & self.suspects:
+                self.suspects &= grp
+            return
+        recips = set(doc.get("recipients", []))
+        if not recips or doc.get("is_canary"):
+            return
+        for e in recips:
+            self.w[e] += 1
+        if recips & self.suspects:          # soft intersection: never empty the set
+            self.suspects &= recips
+
+    def _belief(self) -> tuple[str | None, float]:
+        if self.hard:
+            return self.hard, 1.0
+        pool = sorted(self.suspects - {self.decoy}) or sorted(self.suspects)
+        if not pool:
+            return None, 0.0
+        wt = {e: 1 + self.w[e] for e in pool}
+        tot = sum(wt.values())
+        best = max(pool, key=lambda e: (wt[e], -pool.index(e)))
+        return best, wt[best] / tot
+
+    # ------------------------------------------------------------- day plan
+    def _start_day(self) -> None:
+        # (a) V tracking: drop not explained by our own costs => leak(s)
+        if self.v_prev is not None:
+            explained = self.spent_today + self.restrict_cost * len(self.restricted)
+            leaks = round(max(0.0, self.v_prev - self.V - explained) / self.damage)
+            if leaks > 0:
+                self.leak_days.append(self.day - 1)
+        self.v_prev, self.spent_today = self.V, 0.0
+        # (b) restriction probe bookkeeping
+        if self.probe and self.day >= self.probe["judge_day"]:
+            grp = set(self.probe["group"])
+            after = [d for d in self.leak_days if d >= self.probe["quiet_from"]]
+            if after:                       # leaks continued while group could not leak: clear it
+                if self.suspects - grp:
+                    self.suspects -= grp
+            else:                           # silence favours the restricted group (soft)
+                for e in grp:
+                    self.w[e] += 1
+            for e in sorted(grp & self.restricted):
+                self.queue.append(("unrestrict_access", {"employee": e}))
+            self.probe, self.probe_done = None, True
+
+    def _plan_actions(self) -> None:
+        pool = sorted(self.suspects - {self.decoy} - self.restricted)
+        # (c) tiny canary: 1 recipient per variant, 2 variants, highest-weight suspects first
+        if len(pool) >= 2 and not self.hard:
+            self.rng.shuffle(pool)
+            pool.sort(key=lambda e: -self.w[e])
+            a, b = pool[0], pool[1]
+            title = f"Restricted memo {self.day}-{self.rng.randrange(1000)}"
+            self.canaries[title] = {"A": [a], "B": [b]}
+            self.queue.append(("plant_canary", {"doc_title": title, "assignment": {a: "A", b: "B"}}))
+        # (b) start a probe once narrowing stalls
+        live = sorted(self.suspects - {self.decoy})
+        if (not self.probe and not self.probe_done and not self.hard and 4 <= len(live) <= 10
+                and self.day >= 3 and self.day + self.window + self.max_delay < self.n_days):
+            self.rng.shuffle(live)
+            grp = sorted(live[: len(live) // 2])
+            quiet = self.day + self.window          # first day the group can no longer leak
+            self.probe = {"group": grp, "quiet_from": quiet, "judge_day": quiet + 1}
+            for e in grp:
+                self.queue.append(("restrict_access", {"employee": e}))
+
+    def act(self, history):
+        if history:
+            self._ingest(history[-1])
+            if history[-1].tool == "advance_day" and history[-1].result.get("ok"):
+                self.day = history[-1].result["data"].get("day", self.day + 1)
+        if not self.emps:
+            return "list_employees", {}
+        if self.day != self.started_day:
+            self.started_day = self.day
+            q = []
+            if self.day == 1:
+                q += [("search_messages", {"query": w}) for w in self.DECOY_QUERIES[:3]]
+            q += [("status", {}), ("list_documents", {}), ("check_leak_feed", {}), ("__plan__", {})]
+            self.queue = q + self.queue
+        while self.queue:
+            tool, args = self.queue.pop(0)
+            if tool == "__plan__":
+                if self.decoy is None and self.decoy_votes:
+                    self.decoy = self.decoy_votes.most_common(1)[0][0]
+                self._start_day()
+                guess, p = self._belief()
+                if guess and p > 1.0 / (1.0 + self.V):
+                    return "accuse", {"employee": guess}
+                self._plan_actions()
+                continue
+            return tool, args
+        return "advance_day", {}
+
+
 # Not in BASELINES until tiers are recalibrated (it currently beats the far-below-solver bound).
-CALIBRATION_POLICIES = {"heuristic": Heuristic}
+CALIBRATION_POLICIES = {"heuristic": Heuristic, "grok_tactics": GrokTactics}
 
 
 def play(env, policy, max_steps: int = 400):

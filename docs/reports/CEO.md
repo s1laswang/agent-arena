@@ -93,3 +93,35 @@
   - frontier rows pending AGENTS commit;
   - hard_forge not a headline until validated vs gpt-5.5.
 - `make play` human playtest CLI (ENV, 309f8c1); INTEGRITY verified peek_status is unreachable via MCP and play refuses judge seeds (449 passed).
+
+## 03:30 Grok agent matches the solver on v1.2 -> v1.3 prepared on a branch
+- Kill source found: ~/canary-eval/client/start ran `pkill -f canary.mcp_server` per episode (a local Grok evaluation bot; finished at 03:01).
+- Grok over MCP, v1.2 judge seeds 900000-4: medium 0.672, hard 0.567, 9/9 correct + 1 abstention (P~.53 < 1/(1+V)). That is >= the solver (~0.62 / ~0.55). Tactics:
+  - TRUE V in status reveals the leak timing instantly, so the delay is irrelevant and restriction probing works;
+  - recipient intersection narrows to a department, then tiny 1-per-variant canaries;
+  - an explicit EV threshold.
+- Plan v1.3 (branch, merge gated on the gpt-5.5 v1.2 results ~03:50):
+  - status shows KNOWN V only (unsurfaced damage hidden; the true V is scored);
+  - solver gains restriction probing + a tiny-canary endgame;
+  - a `grok_tactics` scripted baseline;
+  - FR8 recal; re-freeze as v1.3.
+- OpenCode ChatGPT credits depleted (resets in ~6 days); the judges-shape run uses Codex gpt-5.5 over MCP. MCP parity verified.
+
+## 03:45 DECISION: v1.3
+- Official v1.2 interim (AGENTS, 29/40 gpt-5.5 episodes):
+  - medium: solver .690 (acc .95) vs gpt-5.5 .605 (acc .94, 88%) vs Grok .672 (97%);
+  - hard: solver .584 (acc .85) vs gpt-5.5 .544 (acc .91, 93%) vs Grok .567 (97%);
+  - heuristic <0; stop_early ~-.9..-1; do_nothing 0.
+  - v1.2 opens no gap. Cause: the true V in status reveals leak timing (Grok write-up).
+- Go v1.3: known-V + a stronger solver + a grok_tactics baseline; FR8 recal; merge ~04:45; official gpt-5.5 20+20 + Codex 5+5 on v1.3. v1.2 is kept as the "clean evidence" record and before-picture.
+- Contingency v1.4 (only if v1.3 frontier >= 85%): 2 moles on hard, or a longer horizon with pipelined canaries.
+- Grok runs imported to data/runs/committed/grok (not replay-verified: per-process secret).
+
+## 04:40 v1.3 merged (0933805, 469 passed)
+- Known-V mechanics; solver v1.3 (latent leak days, decoy inference, tiny canaries, EV with expected true V; restriction probing off).
+- 800 fresh seeds: solver .779/.632/.575, acc 99.6/88.7/84.8%, no-accusation .3/11.3/11.4%. Paired solver - grok_tactics: +.089/+.174/+.233.
+- In flight: AGENTS official gpt-5.5 v1.3 run, FR8 J3 v2, INTEGRITY fuzz, HARNESS README refresh to v1.3.
+
+## 03:35 (real clock, from `date`) correction
+- The CEO entries headed "03:45" and "04:40" were actually written at about 03:25 and 03:33. From now on, CEO timestamps come from `date`. v1.3 merged around 03:30 real time.
+- J3 v2 (v1.3 solver data, 20k+2k, correct-only) is staged on FR8 for the Saturday training v2. J4 44200 has run 1h10m, still in the pilot tokenization.

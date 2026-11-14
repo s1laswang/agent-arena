@@ -64,3 +64,13 @@
 - Flake fixed at root (20/20). FR8 J2 on v1.1: 0 findings; final v1.2 run requested. parallel_accuse summary now reports race count (it was never a no-op).
 - Canary-surfacing question closed: canaries do surface on medium (verified directly).
 - Next: Grok judge re-run ~07:15 on final tip; Gemini hunter when key arrives.
+
+## 03:22 status (heartbeat; clock per CEO correction)
+- No ENV/MCP changes since last sweep (frozen tiers v1.2). justSilas green: 456 passed / 5 skipped.
+- Done since 04:45 entry: FR8 J2 final on frozen v1.2 (4M evolve hard+medium): 0 findings. peek_status/verdict unreachable by agents + `make play` refuses judge seeds (tests/test_integrity_peek.py). mcp_server SIGTERMs investigated: not integrity (a local Grok eval bot's pkill); codex hunters now run in read-only sandbox. v1.3 known-V tests ready (skip until shipped).
+- EXPLOITS.md: 38 rows; open: none on our side (#27 residual = Harbor sidecar, HARNESS).
+- Next: re-run fuzz + property tests when ENV ships v1.3; Grok re-run ~07:15; Gemini hunter when key arrives.
+
+## 03:45 status (tiers v1.3 known-V @ 0933805)
+- Done (verified: make test green after merge): fuzz all modes on easy/medium/hard (100 seeds, 50k) + hard_forge (50 seeds, 20k): 0 violations, best non-solver 0.000. Known V: 665 hidden-leak states, status/advance_day never equal true V, never rise (tests added). Calibration policies < solver on all 4 tracks (grok_tactics closest: easy .71 vs .79). peek_status unchanged & covered.
+- EXPLOITS rows 38–40 (correction: earlier 03:22 entry said 38 rows; it was 37).

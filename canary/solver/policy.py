@@ -50,7 +50,8 @@ class SolverPolicy:
                  none_group: bool = True, read_logs: bool = True, design: str = "auto",
                  coverages: tuple = (0.1, 0.15, 0.25, 0.4, 0.55, 0.7, 1.0), alternate: bool = False, adaptive: bool = False, utility: str = "mi",
                  probing: bool = False, probe_cap: int = 4, probe_extra: int = 1, probe_core: int = 4,
-                 behaviour_weight: float | None = None, act_budget: float = 0.3):
+                 behaviour_weight: float | None = None, act_budget: float = 0.3, max_candidates: int = 136, tiny: bool = True,
+                 use_v_drops: bool | None = None, find_decoy: bool = True):
         self._given = params
         self.threshold = threshold
         # behaviour_weight: public alias (FR8 sweeps it); exponent on access-log/interview likelihoods
@@ -64,12 +65,17 @@ class SolverPolicy:
         self.alternate = alternate
         self.adaptive = adaptive
         self.utility = utility
-        self.act_budget = act_budget  # wall-clock cap (s) for the canary-split search
+        self.act_budget = act_budget  # warning threshold only (s); NEVER changes the chosen action
+        self.use_v_drops = use_v_drops
+        self.find_decoy = find_decoy
+        self.tiny = tiny
+        self.max_candidates = max_candidates  # deterministic cap on candidate splits per decision
         self.probing, self.probe_cap, self.probe_extra, self.probe_core = probing, probe_cap, probe_extra, probe_core
         self.reset([], "")
 
     # ---------------------------------------------------------------- Policy API
     def reset(self, tools_spec: list[dict], instruction: str) -> None:
+        self.instruction = instruction
         p = self._given
         if isinstance(p, str):
             p = TIERS[p]
@@ -86,6 +92,9 @@ class SolverPolicy:
         self.phase = "start"
         self.pending_canary: dict | None = None
         self.probe = None
+        self.anger: dict[str, int] = {}
+        self.seen_msgs: set = set()
+        self.queries_done: set = set()
         self.post: dict[str, float] = {}
         self.trace: list[dict] = []   # per-day belief snapshots (for regret/debug)
 
@@ -97,14 +106,14 @@ class SolverPolicy:
         finally:
             dt = _t.perf_counter() - t0
             self.max_act_time = max(getattr(self, "max_act_time", 0.0), dt)
-            if dt > 1.0:
+            if dt > self.act_budget:
                 import logging
-                logging.getLogger("canary.solver").warning("slow act(): %.2fs at step %d", dt, len(history))
+                logging.getLogger("canary.solver").warning("slow act(): %.2fs > budget %.2fs at step %d", dt, self.act_budget, len(history))
 
     def _act(self, history: list[Step]) -> tuple[str, dict[str, Any]]:
         if len(history) < self.seen:   # runner restarted/trimmed history: re-ingest from scratch
-            P = self.P
-            self.reset([], "")
+            P, ins = self.P, self.instruction
+            self.reset([], ins)
             self.P = P
         for st in history[self.seen:]:
             self._ingest(st)
@@ -158,6 +167,17 @@ class SolverPolicy:
             for x in _items(data, "entries", "logs", "accesses"):
                 c = o.access_counts.setdefault(x["employee"], [0, 0])
                 c[1 if x.get("after_hours") else 0] += 1
+        elif st.tool == "search_messages":
+            q = str(st.args.get("query", ""))
+            for m in _items(data, "messages"):
+                if m.get("id") in self.seen_msgs:
+                    continue
+                self.seen_msgs.add(m.get("id"))
+                snd = m.get("sender")
+                if snd in o.employees or not o.employees:
+                    self.anger[snd] = self.anger.get(snd, 0) + 1
+            self.queries_done.add(q)
+            self._update_decoy()
         elif st.tool == "plant_canary":
             cid = data.get("canary_id") or data.get("doc_id")
             asg = st.args["assignment"]
@@ -189,8 +209,58 @@ class SolverPolicy:
         else:
             self.obs.leak_days.discard(d)
 
+    ANGER_WORDS = ("promotion", "raise", "deserve", "burn out", "recruiter", "goalposts", "nobody asks", "updating my cv")
+
+    def _update_decoy(self):
+        """Public decoy inference: the decoy writes disgruntled messages (instruction says so)."""
+        if not (self.P and self.P.decoy) or not self.anger:
+            return
+        ranked = sorted(self.anger.items(), key=lambda kv: (-kv[1], kv[0]))
+        top, n1 = ranked[0]
+        n2 = ranked[1][1] if len(ranked) > 1 else 0
+        if n1 >= 3 and n1 >= 3 * max(1, n2):
+            self.obs.decoy = top
+
+    def decoy_queries(self) -> list[tuple[str, dict]]:
+        if not (self.find_decoy and self.P.decoy) or self.obs.decoy is not None or self.obs.today < 2:
+            return []
+        todo = [w for w in self.ANGER_WORDS if w not in self.queries_done][:3]
+        return [("search_messages", {"query": w}) for w in todo]
+
+    def expected_true_V(self) -> float:
+        """Score = TRUE V. With v1.3 'known V' (surfaced leaks only), subtract the expected damage of
+        leaks that happened but have not surfaced yet."""
+        if self.v_drops_reveal_leaks():
+            return self.V
+        P, o = self.P, self.obs
+        pend = 0.0
+        for d in o.closed_days:
+            pend += P.p_leak * sum(1 for dl in P.delay_choices if d + dl > o.today) / len(P.delay_choices)
+        return max(0.0, self.V - P.leak_damage * pend)
+
+    def v_drops_reveal_leaks(self) -> bool:
+        """v1.2: status V is the true V, so a same-day drop reveals a leak day. v1.3: V is 'known V'
+        (only surfaced leaks), so leak days are latent. Auto-detected from params / instruction."""
+        if self.use_v_drops is not None:
+            return self.use_v_drops
+        for attr in ("v_known_only", "hide_true_v", "known_v_only"):
+            if getattr(self.P, attr, False):
+                return False
+        vis = getattr(self.P, "v_visibility", None)
+        if isinstance(vis, str) and vis != "true":
+            return False
+        txt = (self.instruction or "").lower()
+        if ("known v" in txt or "true v is hidden" in txt or "undetected damage" in txt
+                or "not visible until they surface" in txt):
+            return False
+        if not txt:   # in-process without an instruction: fall back to the public rules flag
+            from .. import rules
+            return not getattr(rules, "KNOWN_V_MODE", False)
+        return True
+
     # ---------------------------------------------------------------- planning
     def belief(self) -> dict[str, float]:
+        self.obs.leak_timing_known = self.v_drops_reveal_leaks()
         return posterior(self.obs, self.P, self.behaviour_temper, self.choice_temper, self.noleak_temper)
 
     def default_threshold(self) -> float:
@@ -208,6 +278,7 @@ class SolverPolicy:
         if self.phase == "day":
             q = [("list_documents", {"day_from": max(1, o.today - 3), "day_to": o.today}),
                  ("check_leak_feed", {})]
+            q += self.decoy_queries()
             if self.read_logs and self.behaviour_temper > 0 and o.today > 1:
                 q.append(("read_access_logs", {"day_from": o.today - 1, "day_to": o.today - 1}))
             self.queue = q
@@ -220,7 +291,7 @@ class SolverPolicy:
             thr = self.threshold if self.threshold is not None else self.default_threshold()
             last = o.today >= self.P.n_days
             self.trace.append({"day": o.today, "post": dict(post)})
-            ev = accuse_value(post[best], self.V, self.P)
+            ev = accuse_value(post[best], self.expected_true_V(), self.P)
             if ev > 0 and (post[best] >= thr or last):
                 self.queue = [("accuse", {"employee": best})]
                 return
@@ -337,35 +408,47 @@ class SolverPolicy:
         fracs = self.coverages
         if self.alternate and o.today % 2 == 0:
             fracs = (1.0,)   # robustness: big canaries for moles that prefer widely-shared docs (DSL)
-        import time as _t
-        deadline = _t.perf_counter() + self.act_budget
-        for f in fracs:
-            if _t.perf_counter() > deadline and best:
+        # Deterministic COUNT cap (never wall-clock): fixed candidate order, at most max_candidates.
+        def candidates():
+            # tiny-canary endgame candidates first (1-2 recipients per variant on the top suspects):
+            # high careful-mole weight, and a leak names the mole (or a tiny group) exactly.
+            if self.tiny:
+                top = sorted(alive, key=lambda e: (-post[e], e))
+                for per in (1, 2):
+                    for m in range(1, k + 1):
+                        rec = top[: m * per]
+                        if len(rec) < m * per:
+                            continue
+                        yield {e: LABELS[i // per] for i, e in enumerate(rec)}
+            for f in fracs:
+                for t in range(n_shuffles):
+                    order = sorted(alive, key=lambda e: -post[e]) if t == 0 else rng.sample(alive, len(alive))
+                    rec, m = [], 0.0
+                    for e in order:
+                        if m >= f - 1e-9 and rec:
+                            break
+                        rec.append(e)
+                        m += post[e]
+                    ng = min(k, len(rec))
+                    mass, groups = [0.0] * ng, [[] for _ in range(ng)]
+                    for e in rec:
+                        g = min(range(ng), key=lambda i: (mass[i], len(groups[i])))
+                        groups[g].append(e)
+                        mass[g] += post[e]
+                    yield {e: LABELS[i] for i, g in enumerate(groups) for e in g}
+
+        for n_eval, asg in enumerate(candidates()):
+            if n_eval >= self.max_candidates:
                 break
-            for t in range(n_shuffles):
-                order = sorted(alive, key=lambda e: -post[e]) if t == 0 else rng.sample(alive, len(alive))
-                rec, m = [], 0.0
-                for e in order:
-                    if m >= f - 1e-9 and rec:
-                        break
-                    rec.append(e)
-                    m += post[e]
-                ng = min(k, len(rec))
-                mass, groups = [0.0] * ng, [[] for _ in range(ng)]
-                for e in rec:
-                    g = min(range(ng), key=lambda i: (mass[i], len(groups[i])))
-                    groups[g].append(e)
-                    mass[g] += post[e]
-                asg = {e: LABELS[i] for i, g in enumerate(groups) for e in g}
-                u = self.canary_mi(post, asg, nreg_s, n) if self.utility == "mi" else None
-                if u is None:
-                    w = (1.0 - len(asg) / n) if P.careful_mole else 1.0
-                    if w <= 0:
-                        continue
-                    pl = w / (w + nreg)
-                    u = pl * (gini(lambda e: (cell_old(e), asg.get(e, "-"))) - g_old)
-                if u > bestu:
-                    best, bestu = asg, u
+            u = self.canary_mi(post, asg, nreg_s, n) if self.utility == "mi" else None
+            if u is None:
+                w = (1.0 - len(asg) / n) if P.careful_mole else 1.0
+                if w <= 0:
+                    continue
+                pl = w / (w + nreg)
+                u = pl * (gini(lambda e: (cell_old(e), asg.get(e, "-"))) - g_old)
+            if u > bestu:
+                best, bestu = asg, u
         return best
 
     def canary_mi(self, post, asg, nreg_s, n) -> float:

@@ -1017,7 +1017,7 @@ def write_markdown(res: dict, path: Path) -> None:
     if pc:
         L += ["", "## Positive control: the same pipeline catches a real exploit", "",
               f"To show that \"0 verified exploits\" is not just a blind detector, the same swarm and verification ran on "
-              f"PUBLIC dev seeds, where the "seed regeneration from public code (dev seeds)" attack from docs/EXPLOITS.md is real by design; the "
+              f"PUBLIC dev seeds, where the \"seed regeneration from public code (dev seeds)\" attack from docs/EXPLOITS.md is real by design; the "
               f"real MCP server closes it by refusing dev seeds. **{pc['attackers_found']}/{pc['attempts']} attackers found it** "
               f"on their own (read the code, matched the roster with the public generator, accused on day 1). The accusation "
               f"audit flagged every win as unjustified (reference posterior on the accused {pc['p_accused']}), and the "

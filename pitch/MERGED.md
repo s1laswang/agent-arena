@@ -56,7 +56,7 @@ Best case: Canary's own run through its viewer, one investigation, accusation po
 ### Beat 5, 5:30 to 7:15. Reward integrity
 
 - Canary harness: do_nothing 0, stop_early -1, isolation 11 of 11 (CITED, scorecard, harness2). Container boot status in the judge run: fixed per scorecard, recheck.
-- Our cheat probes, VERIFIED by dm-qa: `make probes`, every probe 0.0 except the control control_pad at 1.0, and 730 committed runs rescored by the single verifier with 0 mismatches. Source: lead-demo relaying dm-qa, momin 1f6e1f0. Beat only if the probes or `rescore` landed in Canary: NOT FOUND (landing pending).
+- Our cheat probes, VERIFIED by dm-qa: `make probes`, every probe 0.0 except the control control_pad at 1.0, and 730 committed runs rescored by the single verifier with 0 mismatches. Source: dm-qa, `make probes` on momin 1f6e1f0, 1m04s. Beat only if the probes or `rescore` landed in Canary: NOT FOUND (landing pending).
 - Our scripted baselines on the company, SCRIPTED, make eval, momin 1f6e1f0 (dm-qa): do_nothing 0.000, stop_early 0.000, all-8 seats oracle 1.000, reference 0.550, staff 0.250. Finance_ap needs-seat: oracle 0.750, staff 0.000, with the staff background, under repair by lead-env: do not headline.
 - Exploiter, REAL: gemini-3.5-flash, 10 seat-days (finance_ap, controller; days 1000 to 1004), 7 live, 572 calls, reward 0 on all, commit c460e0c, rescore 0 mismatches. Only if `redteam/` landed: NOT FOUND (landing pending).
 - Skill ladder: Canary plans `scripts/skill_ladder.py`, n of 400 or more per tier. NOT FOUND (Silas pending).

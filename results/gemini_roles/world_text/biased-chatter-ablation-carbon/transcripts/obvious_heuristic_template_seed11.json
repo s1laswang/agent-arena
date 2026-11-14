@@ -1,0 +1,1879 @@
+{
+  "policy": "obvious_heuristic",
+  "seed": 11,
+  "steps": [
+    {
+      "args": {},
+      "day": 1,
+      "result": {
+        "data": {
+          "employees": [
+            {
+              "dept": "Engineering",
+              "id": "e00",
+              "name": "Kaisa Karjalainen",
+              "role": "engineer"
+            },
+            {
+              "dept": "Finance",
+              "id": "e01",
+              "name": "Pihla Heinonen",
+              "role": "analyst"
+            },
+            {
+              "dept": "Sales",
+              "id": "e02",
+              "name": "Kaisa Nieminen",
+              "role": "sales manager"
+            },
+            {
+              "dept": "Legal",
+              "id": "e03",
+              "name": "Maria Hamalainen",
+              "role": "counsel"
+            },
+            {
+              "dept": "Sales",
+              "id": "e04",
+              "name": "Janne Kinnunen",
+              "role": "account exec"
+            },
+            {
+              "dept": "Legal",
+              "id": "e05",
+              "name": "Aleksi Salo",
+              "role": "counsel"
+            },
+            {
+              "dept": "Finance",
+              "id": "e06",
+              "name": "Nea Laine",
+              "role": "accountant"
+            },
+            {
+              "dept": "Legal",
+              "id": "e07",
+              "name": "Ville Laitinen",
+              "role": "paralegal"
+            },
+            {
+              "dept": "Engineering",
+              "id": "e08",
+              "name": "Riikka Makinen",
+              "role": "tech lead"
+            },
+            {
+              "dept": "Legal",
+              "id": "e09",
+              "name": "Joonas Heinonen",
+              "role": "compliance officer"
+            },
+            {
+              "dept": "Engineering",
+              "id": "e10",
+              "name": "Sofia Salonen",
+              "role": "tech lead"
+            },
+            {
+              "dept": "Engineering",
+              "id": "e11",
+              "name": "Sofia Jarvinen",
+              "role": "senior engineer"
+            },
+            {
+              "dept": "Engineering",
+              "id": "e12",
+              "name": "Lauri Salminen",
+              "role": "tech lead"
+            },
+            {
+              "dept": "Finance",
+              "id": "e13",
+              "name": "Markus Laitinen",
+              "role": "analyst"
+            },
+            {
+              "dept": "Sales",
+              "id": "e14",
+              "name": "Olli Salminen",
+              "role": "sales manager"
+            },
+            {
+              "dept": "Engineering",
+              "id": "e15",
+              "name": "Teemu Salminen",
+              "role": "engineer"
+            },
+            {
+              "dept": "Legal",
+              "id": "e16",
+              "name": "Hanna Virtanen",
+              "role": "paralegal"
+            },
+            {
+              "dept": "Finance",
+              "id": "e17",
+              "name": "Emma Jokinen",
+              "role": "accountant"
+            },
+            {
+              "dept": "Legal",
+              "id": "e18",
+              "name": "Joonas Virtanen",
+              "role": "counsel"
+            },
+            {
+              "dept": "Sales",
+              "id": "e19",
+              "name": "Kaisa Jarvinen",
+              "role": "account exec"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 0,
+      "tool": "list_employees"
+    },
+    {
+      "args": {
+        "assignment": {
+          "e00": "A",
+          "e01": "B",
+          "e02": "C",
+          "e03": "A",
+          "e04": "A",
+          "e05": "C",
+          "e06": "A",
+          "e07": "C",
+          "e08": "A",
+          "e09": "A",
+          "e10": "B",
+          "e11": "B",
+          "e12": "B",
+          "e13": "C",
+          "e14": "B",
+          "e15": "B",
+          "e16": "C",
+          "e17": "A",
+          "e18": "B",
+          "e19": "C"
+        },
+        "doc_title": "Project Falcon pricing"
+      },
+      "day": 1,
+      "result": {
+        "data": {
+          "canary_id": "c1"
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 1,
+      "tool": "plant_canary"
+    },
+    {
+      "args": {},
+      "day": 1,
+      "result": {
+        "data": {
+          "V": 0.99,
+          "closed_day": 1,
+          "day": 2,
+          "new_documents": [
+            "d2-1",
+            "d2-2",
+            "d2-3",
+            "d2-4"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 2,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 2,
+      "result": {
+        "data": {
+          "items": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 3,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {},
+      "day": 2,
+      "result": {
+        "data": {
+          "V": 0.99,
+          "closed_day": 2,
+          "day": 3,
+          "new_documents": [
+            "d3-1",
+            "d3-2",
+            "d3-3",
+            "d3-4"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 4,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 3,
+      "result": {
+        "data": {
+          "items": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 5,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {},
+      "day": 3,
+      "result": {
+        "data": {
+          "V": 0.99,
+          "closed_day": 3,
+          "day": 4,
+          "new_documents": [
+            "d4-1",
+            "d4-2"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 6,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 4,
+      "result": {
+        "data": {
+          "items": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 7,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {},
+      "day": 4,
+      "result": {
+        "data": {
+          "V": 0.99,
+          "closed_day": 4,
+          "day": 5,
+          "new_documents": [
+            "d5-1",
+            "d5-2"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 8,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 5,
+      "result": {
+        "data": {
+          "items": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 9,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {},
+      "day": 5,
+      "result": {
+        "data": {
+          "V": 0.95,
+          "closed_day": 5,
+          "day": 6,
+          "new_documents": [
+            "d6-1",
+            "d6-2",
+            "d6-3"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 10,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 6,
+      "result": {
+        "data": {
+          "items": [
+            {
+              "doc_id": "d2-1",
+              "surfaced_day": 6,
+              "title": "Legal vendor contracts Q3"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 11,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {},
+      "day": 6,
+      "result": {
+        "data": {
+          "V": 0.91,
+          "closed_day": 6,
+          "day": 7,
+          "new_documents": [
+            "d7-1",
+            "d7-2",
+            "d7-3",
+            "d7-4"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 12,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 7,
+      "result": {
+        "data": {
+          "items": [
+            {
+              "doc_id": "d2-1",
+              "surfaced_day": 6,
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "doc_id": "d5-2",
+              "surfaced_day": 7,
+              "title": "Patent filing notes: Kivi"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 13,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {},
+      "day": 7,
+      "result": {
+        "data": {
+          "V": 0.91,
+          "closed_day": 7,
+          "day": 8,
+          "new_documents": [
+            "d8-1",
+            "d8-2",
+            "d8-3"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 14,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 8,
+      "result": {
+        "data": {
+          "items": [
+            {
+              "doc_id": "d2-1",
+              "surfaced_day": 6,
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "doc_id": "d5-2",
+              "surfaced_day": 7,
+              "title": "Patent filing notes: Kivi"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 15,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {},
+      "day": 8,
+      "result": {
+        "data": {
+          "V": 0.91,
+          "closed_day": 8,
+          "day": 9,
+          "new_documents": [
+            "d9-1",
+            "d9-2"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 16,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 9,
+      "result": {
+        "data": {
+          "items": [
+            {
+              "doc_id": "d2-1",
+              "surfaced_day": 6,
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "doc_id": "d5-2",
+              "surfaced_day": 7,
+              "title": "Patent filing notes: Kivi"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 17,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {},
+      "day": 9,
+      "result": {
+        "data": {
+          "V": 0.87,
+          "closed_day": 9,
+          "day": 10,
+          "new_documents": [
+            "d10-1",
+            "d10-2",
+            "d10-3"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 18,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 10,
+      "result": {
+        "data": {
+          "items": [
+            {
+              "doc_id": "d2-1",
+              "surfaced_day": 6,
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "doc_id": "d5-2",
+              "surfaced_day": 7,
+              "title": "Patent filing notes: Kivi"
+            },
+            {
+              "doc_id": "d6-1",
+              "surfaced_day": 10,
+              "title": "Board deck draft Q4"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 19,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {},
+      "day": 10,
+      "result": {
+        "data": {
+          "V": 0.83,
+          "closed_day": 10,
+          "day": 11,
+          "new_documents": [
+            "d11-1",
+            "d11-2"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 20,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 11,
+      "result": {
+        "data": {
+          "items": [
+            {
+              "doc_id": "d2-1",
+              "surfaced_day": 6,
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "doc_id": "d5-2",
+              "surfaced_day": 7,
+              "title": "Patent filing notes: Kivi"
+            },
+            {
+              "doc_id": "d6-1",
+              "surfaced_day": 10,
+              "title": "Board deck draft Q4"
+            },
+            {
+              "doc_id": "d7-1",
+              "surfaced_day": 11,
+              "title": "Q3 pricing strategy"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 21,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {},
+      "day": 11,
+      "result": {
+        "data": {
+          "V": 0.83,
+          "actions_left_today": 7,
+          "canaries_planted": [
+            "c1"
+          ],
+          "day": 11,
+          "restricted": [],
+          "tool_calls_left": 277
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 22,
+      "tool": "status"
+    },
+    {
+      "args": {
+        "day_from": 1,
+        "day_to": 11
+      },
+      "day": 11,
+      "result": {
+        "data": {
+          "logs": [
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-3",
+              "employee": "e00"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-3",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "c1",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "c1",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-2",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "c1",
+              "employee": "e09"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-3",
+              "employee": "e10"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-3",
+              "employee": "e12"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "c1",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "c1",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "c1",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-3",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "c1",
+              "employee": "e16"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-3",
+              "employee": "e00"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-3",
+              "employee": "e00"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-1",
+              "employee": "e03"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-4",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-4",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "c1",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "c1",
+              "employee": "e08"
+            },
+            {
+              "after_hours": true,
+              "day": 2,
+              "doc_id": "d2-3",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "c1",
+              "employee": "e09"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "c1",
+              "employee": "e11"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-1",
+              "employee": "e11"
+            },
+            {
+              "after_hours": true,
+              "day": 2,
+              "doc_id": "d1-1",
+              "employee": "e11"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-3",
+              "employee": "e13"
+            },
+            {
+              "after_hours": true,
+              "day": 2,
+              "doc_id": "d1-2",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-4",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-1",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-1",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-3",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-3",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-4",
+              "employee": "e18"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d3-2",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d2-1",
+              "employee": "e03"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d2-2",
+              "employee": "e03"
+            },
+            {
+              "after_hours": true,
+              "day": 3,
+              "doc_id": "d2-4",
+              "employee": "e03"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "c1",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d1-2",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d1-2",
+              "employee": "e06"
+            },
+            {
+              "after_hours": true,
+              "day": 3,
+              "doc_id": "d3-3",
+              "employee": "e07"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "c1",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d3-3",
+              "employee": "e09"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "c1",
+              "employee": "e10"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d1-2",
+              "employee": "e13"
+            },
+            {
+              "after_hours": true,
+              "day": 3,
+              "doc_id": "d2-3",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d2-4",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d3-1",
+              "employee": "e18"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d3-1",
+              "employee": "e18"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "c1",
+              "employee": "e19"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "c1",
+              "employee": "e00"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "c1",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d2-4",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d1-2",
+              "employee": "e04"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "c1",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d2-2",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d3-3",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d3-3",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d3-2",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d3-1",
+              "employee": "e07"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d3-1",
+              "employee": "e07"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d4-2",
+              "employee": "e10"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d4-2",
+              "employee": "e11"
+            },
+            {
+              "after_hours": true,
+              "day": 4,
+              "doc_id": "d4-1",
+              "employee": "e12"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d1-3",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "c1",
+              "employee": "e15"
+            },
+            {
+              "after_hours": true,
+              "day": 4,
+              "doc_id": "c1",
+              "employee": "e16"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d3-3",
+              "employee": "e16"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "c1",
+              "employee": "e17"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d2-1",
+              "employee": "e18"
+            },
+            {
+              "after_hours": true,
+              "day": 4,
+              "doc_id": "d2-1",
+              "employee": "e18"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d2-2",
+              "employee": "e18"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d1-2",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d2-2",
+              "employee": "e03"
+            },
+            {
+              "after_hours": true,
+              "day": 5,
+              "doc_id": "d2-2",
+              "employee": "e03"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d1-2",
+              "employee": "e04"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "c1",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d2-2",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d3-3",
+              "employee": "e05"
+            },
+            {
+              "after_hours": true,
+              "day": 5,
+              "doc_id": "d1-1",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d1-1",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d1-3",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d2-3",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d2-3",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d4-1",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d4-2",
+              "employee": "e10"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d4-2",
+              "employee": "e11"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d4-2",
+              "employee": "e12"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d1-2",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d1-3",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "c1",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d1-3",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d2-3",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d4-2",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "c1",
+              "employee": "e16"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d2-2",
+              "employee": "e16"
+            },
+            {
+              "after_hours": true,
+              "day": 5,
+              "doc_id": "d3-1",
+              "employee": "e16"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "c1",
+              "employee": "e18"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d2-3",
+              "employee": "e19"
+            },
+            {
+              "after_hours": false,
+              "day": 5,
+              "doc_id": "d3-2",
+              "employee": "e19"
+            },
+            {
+              "after_hours": false,
+              "day": 6,
+              "doc_id": "d3-1",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 6,
+              "doc_id": "d3-3",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 6,
+              "doc_id": "d5-1",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 6,
+              "doc_id": "d4-2",
+              "employee": "e04"
+            },
+            {
+              "after_hours": true,
+              "day": 6,
+              "doc_id": "d1-2",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 6,
+              "doc_id": "d5-1",
+              "employee": "e07"
+            },
+            {
+              "after_hours": true,
+              "day": 6,
+              "doc_id": "d1-3",
+              "employee": "e10"
+            },
+            {
+              "after_hours": true,
+              "day": 6,
+              "doc_id": "d1-1",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 6,
+              "doc_id": "d4-1",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 6,
+              "doc_id": "d2-1",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 6,
+              "doc_id": "d3-2",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 6,
+              "doc_id": "d1-1",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 6,
+              "doc_id": "d2-4",
+              "employee": "e16"
+            },
+            {
+              "after_hours": false,
+              "day": 6,
+              "doc_id": "d6-3",
+              "employee": "e17"
+            },
+            {
+              "after_hours": true,
+              "day": 6,
+              "doc_id": "c1",
+              "employee": "e18"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d1-1",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d2-2",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d2-2",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d7-4",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d2-4",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d6-2",
+              "employee": "e02"
+            },
+            {
+              "after_hours": true,
+              "day": 7,
+              "doc_id": "d3-1",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d5-2",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d3-4",
+              "employee": "e06"
+            },
+            {
+              "after_hours": true,
+              "day": 7,
+              "doc_id": "d4-1",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d2-4",
+              "employee": "e07"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d3-3",
+              "employee": "e07"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d7-4",
+              "employee": "e07"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d7-4",
+              "employee": "e09"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d1-1",
+              "employee": "e10"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d2-3",
+              "employee": "e10"
+            },
+            {
+              "after_hours": true,
+              "day": 7,
+              "doc_id": "d4-1",
+              "employee": "e10"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d1-2",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d3-4",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d1-2",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d3-2",
+              "employee": "e14"
+            },
+            {
+              "after_hours": true,
+              "day": 7,
+              "doc_id": "d2-3",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d7-4",
+              "employee": "e18"
+            },
+            {
+              "after_hours": false,
+              "day": 7,
+              "doc_id": "d4-2",
+              "employee": "e19"
+            },
+            {
+              "after_hours": true,
+              "day": 8,
+              "doc_id": "d7-4",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d3-4",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d1-2",
+              "employee": "e04"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d6-1",
+              "employee": "e04"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d6-1",
+              "employee": "e04"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d2-2",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d3-3",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d7-4",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d8-2",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d1-3",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d6-2",
+              "employee": "e06"
+            },
+            {
+              "after_hours": true,
+              "day": 8,
+              "doc_id": "d6-2",
+              "employee": "e06"
+            },
+            {
+              "after_hours": true,
+              "day": 8,
+              "doc_id": "d7-1",
+              "employee": "e09"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d7-4",
+              "employee": "e09"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d1-1",
+              "employee": "e11"
+            },
+            {
+              "after_hours": true,
+              "day": 8,
+              "doc_id": "d6-3",
+              "employee": "e11"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d7-2",
+              "employee": "e12"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "c1",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d7-1",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d3-3",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d6-2",
+              "employee": "e14"
+            },
+            {
+              "after_hours": true,
+              "day": 8,
+              "doc_id": "d7-3",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 8,
+              "doc_id": "d3-1",
+              "employee": "e17"
+            },
+            {
+              "after_hours": true,
+              "day": 8,
+              "doc_id": "d3-3",
+              "employee": "e18"
+            },
+            {
+              "after_hours": true,
+              "day": 9,
+              "doc_id": "d2-3",
+              "employee": "e00"
+            },
+            {
+              "after_hours": true,
+              "day": 9,
+              "doc_id": "d3-3",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d2-4",
+              "employee": "e03"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d2-4",
+              "employee": "e05"
+            },
+            {
+              "after_hours": true,
+              "day": 9,
+              "doc_id": "d1-1",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d3-2",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d3-4",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d8-2",
+              "employee": "e06"
+            },
+            {
+              "after_hours": true,
+              "day": 9,
+              "doc_id": "d7-4",
+              "employee": "e07"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "c1",
+              "employee": "e09"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d1-1",
+              "employee": "e10"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d4-2",
+              "employee": "e10"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d1-3",
+              "employee": "e12"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d7-2",
+              "employee": "e12"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d8-1",
+              "employee": "e12"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d7-3",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 9,
+              "doc_id": "d9-1",
+              "employee": "e19"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d1-2",
+              "employee": "e02"
+            },
+            {
+              "after_hours": true,
+              "day": 10,
+              "doc_id": "d6-2",
+              "employee": "e02"
+            },
+            {
+              "after_hours": true,
+              "day": 10,
+              "doc_id": "d7-3",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "c1",
+              "employee": "e04"
+            },
+            {
+              "after_hours": true,
+              "day": 10,
+              "doc_id": "d2-4",
+              "employee": "e04"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d4-2",
+              "employee": "e04"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d6-1",
+              "employee": "e04"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d6-2",
+              "employee": "e04"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d2-4",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d6-1",
+              "employee": "e05"
+            },
+            {
+              "after_hours": true,
+              "day": 10,
+              "doc_id": "d3-1",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d3-4",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d7-1",
+              "employee": "e07"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d1-1",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d2-3",
+              "employee": "e08"
+            },
+            {
+              "after_hours": true,
+              "day": 10,
+              "doc_id": "d7-2",
+              "employee": "e08"
+            },
+            {
+              "after_hours": true,
+              "day": 10,
+              "doc_id": "d7-2",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d7-3",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "c1",
+              "employee": "e09"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d1-3",
+              "employee": "e11"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d10-3",
+              "employee": "e11"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d2-3",
+              "employee": "e12"
+            },
+            {
+              "after_hours": true,
+              "day": 10,
+              "doc_id": "d4-1",
+              "employee": "e13"
+            },
+            {
+              "after_hours": true,
+              "day": 10,
+              "doc_id": "d7-2",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d7-4",
+              "employee": "e16"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d7-4",
+              "employee": "e17"
+            },
+            {
+              "after_hours": false,
+              "day": 10,
+              "doc_id": "d9-2",
+              "employee": "e18"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 23,
+      "tool": "read_access_logs"
+    },
+    {
+      "args": {
+        "employee": "e05"
+      },
+      "day": 11,
+      "result": {
+        "data": {
+          "accused": "e05",
+          "episode_over": true
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 24,
+      "tool": "accuse"
+    }
+  ],
+  "tier": "medium",
+  "world": "template"
+}

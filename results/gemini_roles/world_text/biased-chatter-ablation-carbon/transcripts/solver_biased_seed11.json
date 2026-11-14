@@ -1,0 +1,2387 @@
+{
+  "policy": "solver",
+  "seed": 11,
+  "steps": [
+    {
+      "args": {},
+      "day": 1,
+      "result": {
+        "data": {
+          "employees": [
+            {
+              "dept": "Engineering",
+              "id": "e00",
+              "name": "Kaisa Karjalainen",
+              "role": "engineer"
+            },
+            {
+              "dept": "Finance",
+              "id": "e01",
+              "name": "Pihla Heinonen",
+              "role": "analyst"
+            },
+            {
+              "dept": "Sales",
+              "id": "e02",
+              "name": "Kaisa Nieminen",
+              "role": "sales manager"
+            },
+            {
+              "dept": "Legal",
+              "id": "e03",
+              "name": "Maria Hamalainen",
+              "role": "counsel"
+            },
+            {
+              "dept": "Sales",
+              "id": "e04",
+              "name": "Janne Kinnunen",
+              "role": "account exec"
+            },
+            {
+              "dept": "Legal",
+              "id": "e05",
+              "name": "Aleksi Salo",
+              "role": "counsel"
+            },
+            {
+              "dept": "Finance",
+              "id": "e06",
+              "name": "Nea Laine",
+              "role": "accountant"
+            },
+            {
+              "dept": "Legal",
+              "id": "e07",
+              "name": "Ville Laitinen",
+              "role": "paralegal"
+            },
+            {
+              "dept": "Engineering",
+              "id": "e08",
+              "name": "Riikka Makinen",
+              "role": "tech lead"
+            },
+            {
+              "dept": "Legal",
+              "id": "e09",
+              "name": "Joonas Heinonen",
+              "role": "compliance officer"
+            },
+            {
+              "dept": "Engineering",
+              "id": "e10",
+              "name": "Sofia Salonen",
+              "role": "tech lead"
+            },
+            {
+              "dept": "Engineering",
+              "id": "e11",
+              "name": "Sofia Jarvinen",
+              "role": "senior engineer"
+            },
+            {
+              "dept": "Engineering",
+              "id": "e12",
+              "name": "Lauri Salminen",
+              "role": "tech lead"
+            },
+            {
+              "dept": "Finance",
+              "id": "e13",
+              "name": "Markus Laitinen",
+              "role": "analyst"
+            },
+            {
+              "dept": "Sales",
+              "id": "e14",
+              "name": "Olli Salminen",
+              "role": "sales manager"
+            },
+            {
+              "dept": "Engineering",
+              "id": "e15",
+              "name": "Teemu Salminen",
+              "role": "engineer"
+            },
+            {
+              "dept": "Legal",
+              "id": "e16",
+              "name": "Hanna Virtanen",
+              "role": "paralegal"
+            },
+            {
+              "dept": "Finance",
+              "id": "e17",
+              "name": "Emma Jokinen",
+              "role": "accountant"
+            },
+            {
+              "dept": "Legal",
+              "id": "e18",
+              "name": "Joonas Virtanen",
+              "role": "counsel"
+            },
+            {
+              "dept": "Sales",
+              "id": "e19",
+              "name": "Kaisa Jarvinen",
+              "role": "account exec"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 0,
+      "tool": "list_employees"
+    },
+    {
+      "args": {},
+      "day": 1,
+      "result": {
+        "data": {
+          "V": 1.0,
+          "actions_left_today": 8,
+          "canaries_planted": [],
+          "day": 1,
+          "restricted": [],
+          "tool_calls_left": 298
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 1,
+      "tool": "status"
+    },
+    {
+      "args": {
+        "day_from": 1,
+        "day_to": 1
+      },
+      "day": 1,
+      "result": {
+        "data": {
+          "documents": [
+            {
+              "day": 1,
+              "doc_id": "d1-1",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e01",
+                "e06",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e13",
+                "e15",
+                "e17"
+              ],
+              "title": "Engineering reorg proposal"
+            },
+            {
+              "day": 1,
+              "doc_id": "d1-2",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e02",
+                "e04",
+                "e06",
+                "e13",
+                "e14",
+                "e17",
+                "e19"
+              ],
+              "title": "Board deck draft Q2"
+            },
+            {
+              "day": 1,
+              "doc_id": "d1-3",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e01",
+                "e06",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e13",
+                "e15",
+                "e17"
+              ],
+              "title": "Q3 Finance budget forecast"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 2,
+      "tool": "list_documents"
+    },
+    {
+      "args": {},
+      "day": 1,
+      "result": {
+        "data": {
+          "items": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 3,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {
+        "assignment": {
+          "e01": "A",
+          "e04": "B",
+          "e05": "C",
+          "e07": "A",
+          "e09": "A",
+          "e12": "B",
+          "e14": "C",
+          "e18": "B"
+        },
+        "doc_title": "Board memo draft 1"
+      },
+      "day": 1,
+      "result": {
+        "data": {
+          "canary_id": "c1"
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 4,
+      "tool": "plant_canary"
+    },
+    {
+      "args": {},
+      "day": 1,
+      "result": {
+        "data": {
+          "V": 0.99,
+          "actions_left_today": 6,
+          "canaries_planted": [
+            "c1"
+          ],
+          "day": 1,
+          "restricted": [],
+          "tool_calls_left": 294
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 5,
+      "tool": "status"
+    },
+    {
+      "args": {},
+      "day": 1,
+      "result": {
+        "data": {
+          "V": 0.95,
+          "closed_day": 1,
+          "day": 2,
+          "new_documents": [
+            "d2-1",
+            "d2-2",
+            "d2-3",
+            "d2-4"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 6,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 2,
+      "result": {
+        "data": {
+          "V": 0.95,
+          "actions_left_today": 8,
+          "canaries_planted": [
+            "c1"
+          ],
+          "day": 2,
+          "restricted": [],
+          "tool_calls_left": 292
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 7,
+      "tool": "status"
+    },
+    {
+      "args": {
+        "day_from": 1,
+        "day_to": 2
+      },
+      "day": 2,
+      "result": {
+        "data": {
+          "documents": [
+            {
+              "day": 1,
+              "doc_id": "d1-1",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e01",
+                "e06",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e13",
+                "e15",
+                "e17"
+              ],
+              "title": "Engineering reorg proposal"
+            },
+            {
+              "day": 1,
+              "doc_id": "d1-2",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e02",
+                "e04",
+                "e06",
+                "e13",
+                "e14",
+                "e17",
+                "e19"
+              ],
+              "title": "Board deck draft Q2"
+            },
+            {
+              "day": 1,
+              "doc_id": "d1-3",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e01",
+                "e06",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e13",
+                "e15",
+                "e17"
+              ],
+              "title": "Q3 Finance budget forecast"
+            },
+            {
+              "day": 1,
+              "doc_id": "c1",
+              "is_canary": true,
+              "recipients": [
+                "e01",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e12",
+                "e14",
+                "e18"
+              ],
+              "title": "Board memo draft 1",
+              "variants": {
+                "A": [
+                  "e01",
+                  "e07",
+                  "e09"
+                ],
+                "B": [
+                  "e04",
+                  "e12",
+                  "e18"
+                ],
+                "C": [
+                  "e05",
+                  "e14"
+                ]
+              }
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-1",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-2",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e03",
+                "e05",
+                "e06",
+                "e07",
+                "e09",
+                "e13",
+                "e16",
+                "e17",
+                "e18"
+              ],
+              "title": "Project Falcon roadmap"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-3",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e02",
+                "e04",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e14",
+                "e15",
+                "e19"
+              ],
+              "title": "Project Northstar security review"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-4",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Project Ember roadmap"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 8,
+      "tool": "list_documents"
+    },
+    {
+      "args": {},
+      "day": 2,
+      "result": {
+        "data": {
+          "items": [
+            {
+              "doc_id": "c1",
+              "surfaced_day": 2,
+              "title": "Board memo draft 1",
+              "variant": "A"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 9,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {
+        "query": "promotion"
+      },
+      "day": 2,
+      "result": {
+        "data": {
+          "messages": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 10,
+      "tool": "search_messages"
+    },
+    {
+      "args": {
+        "query": "raise"
+      },
+      "day": 2,
+      "result": {
+        "data": {
+          "messages": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 11,
+      "tool": "search_messages"
+    },
+    {
+      "args": {
+        "query": "deserve"
+      },
+      "day": 2,
+      "result": {
+        "data": {
+          "messages": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 12,
+      "tool": "search_messages"
+    },
+    {
+      "args": {
+        "day_from": 1,
+        "day_to": 1
+      },
+      "day": 2,
+      "result": {
+        "data": {
+          "logs": [
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-3",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-2",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-2",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-2",
+              "employee": "e02"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "c1",
+              "employee": "e07"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-3",
+              "employee": "e10"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-3",
+              "employee": "e11"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-2",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "c1",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-3",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-3",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "d1-2",
+              "employee": "e17"
+            },
+            {
+              "after_hours": false,
+              "day": 1,
+              "doc_id": "c1",
+              "employee": "e18"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 13,
+      "tool": "read_access_logs"
+    },
+    {
+      "args": {
+        "assignment": {
+          "e01": "C",
+          "e07": "A",
+          "e09": "B"
+        },
+        "doc_title": "Board memo draft 2"
+      },
+      "day": 2,
+      "result": {
+        "data": {
+          "canary_id": "c2"
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 14,
+      "tool": "plant_canary"
+    },
+    {
+      "args": {},
+      "day": 2,
+      "result": {
+        "data": {
+          "V": 0.94,
+          "actions_left_today": 2,
+          "canaries_planted": [
+            "c1",
+            "c2"
+          ],
+          "day": 2,
+          "restricted": [],
+          "tool_calls_left": 284
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 15,
+      "tool": "status"
+    },
+    {
+      "args": {},
+      "day": 2,
+      "result": {
+        "data": {
+          "V": 0.9,
+          "closed_day": 2,
+          "day": 3,
+          "new_documents": [
+            "d3-1",
+            "d3-2",
+            "d3-3",
+            "d3-4"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 16,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 3,
+      "result": {
+        "data": {
+          "V": 0.9,
+          "actions_left_today": 8,
+          "canaries_planted": [
+            "c1",
+            "c2"
+          ],
+          "day": 3,
+          "restricted": [],
+          "tool_calls_left": 282
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 17,
+      "tool": "status"
+    },
+    {
+      "args": {
+        "day_from": 1,
+        "day_to": 3
+      },
+      "day": 3,
+      "result": {
+        "data": {
+          "documents": [
+            {
+              "day": 1,
+              "doc_id": "d1-1",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e01",
+                "e06",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e13",
+                "e15",
+                "e17"
+              ],
+              "title": "Engineering reorg proposal"
+            },
+            {
+              "day": 1,
+              "doc_id": "d1-2",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e02",
+                "e04",
+                "e06",
+                "e13",
+                "e14",
+                "e17",
+                "e19"
+              ],
+              "title": "Board deck draft Q2"
+            },
+            {
+              "day": 1,
+              "doc_id": "d1-3",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e01",
+                "e06",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e13",
+                "e15",
+                "e17"
+              ],
+              "title": "Q3 Finance budget forecast"
+            },
+            {
+              "day": 1,
+              "doc_id": "c1",
+              "is_canary": true,
+              "recipients": [
+                "e01",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e12",
+                "e14",
+                "e18"
+              ],
+              "title": "Board memo draft 1",
+              "variants": {
+                "A": [
+                  "e01",
+                  "e07",
+                  "e09"
+                ],
+                "B": [
+                  "e04",
+                  "e12",
+                  "e18"
+                ],
+                "C": [
+                  "e05",
+                  "e14"
+                ]
+              }
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-1",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-2",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e03",
+                "e05",
+                "e06",
+                "e07",
+                "e09",
+                "e13",
+                "e16",
+                "e17",
+                "e18"
+              ],
+              "title": "Project Falcon roadmap"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-3",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e02",
+                "e04",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e14",
+                "e15",
+                "e19"
+              ],
+              "title": "Project Northstar security review"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-4",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Project Ember roadmap"
+            },
+            {
+              "day": 2,
+              "doc_id": "c2",
+              "is_canary": true,
+              "recipients": [
+                "e01",
+                "e07",
+                "e09"
+              ],
+              "title": "Board memo draft 2",
+              "variants": {
+                "A": [
+                  "e07"
+                ],
+                "B": [
+                  "e09"
+                ],
+                "C": [
+                  "e01"
+                ]
+              }
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-1",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e03",
+                "e05",
+                "e06",
+                "e07",
+                "e09",
+                "e13",
+                "e16",
+                "e17",
+                "e18"
+              ],
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-2",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e02",
+                "e04",
+                "e06",
+                "e13",
+                "e14",
+                "e17",
+                "e19"
+              ],
+              "title": "Project Kivi security review"
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-3",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Project Saimaa roadmap"
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-4",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e02",
+                "e04",
+                "e06",
+                "e13",
+                "e14",
+                "e17",
+                "e19"
+              ],
+              "title": "Project Falcon roadmap"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 18,
+      "tool": "list_documents"
+    },
+    {
+      "args": {},
+      "day": 3,
+      "result": {
+        "data": {
+          "items": [
+            {
+              "doc_id": "c1",
+              "surfaced_day": 2,
+              "title": "Board memo draft 1",
+              "variant": "A"
+            },
+            {
+              "doc_id": "d2-1",
+              "surfaced_day": 3,
+              "title": "Legal vendor contracts Q3"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 19,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {
+        "query": "burn out"
+      },
+      "day": 3,
+      "result": {
+        "data": {
+          "messages": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 20,
+      "tool": "search_messages"
+    },
+    {
+      "args": {
+        "query": "recruiter"
+      },
+      "day": 3,
+      "result": {
+        "data": {
+          "messages": [
+            {
+              "channel": "#slack_dm",
+              "day": 2,
+              "id": "bc2-0",
+              "sender": "e06",
+              "snippet": "Hey Markus, have you noticed Pihla Heinonen (e01) blocking off two hours every afternoon on her calendar as private appo",
+              "subject": "Quiet calendar blocks"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 21,
+      "tool": "search_messages"
+    },
+    {
+      "args": {
+        "query": "goalposts"
+      },
+      "day": 3,
+      "result": {
+        "data": {
+          "messages": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 22,
+      "tool": "search_messages"
+    },
+    {
+      "args": {
+        "day_from": 2,
+        "day_to": 2
+      },
+      "day": 3,
+      "result": {
+        "data": {
+          "logs": [
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-1",
+              "employee": "e00"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-3",
+              "employee": "e00"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-1",
+              "employee": "e03"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-4",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-4",
+              "employee": "e05"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-2",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-3",
+              "employee": "e08"
+            },
+            {
+              "after_hours": true,
+              "day": 2,
+              "doc_id": "d1-3",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "c1",
+              "employee": "e09"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-1",
+              "employee": "e11"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-3",
+              "employee": "e11"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "c1",
+              "employee": "e12"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "c1",
+              "employee": "e12"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-2",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "c1",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-4",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d1-1",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-3",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 2,
+              "doc_id": "d2-2",
+              "employee": "e17"
+            },
+            {
+              "after_hours": true,
+              "day": 2,
+              "doc_id": "d2-1",
+              "employee": "e19"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 23,
+      "tool": "read_access_logs"
+    },
+    {
+      "args": {
+        "assignment": {
+          "e07": "A",
+          "e09": "B"
+        },
+        "doc_title": "Board memo draft 3"
+      },
+      "day": 3,
+      "result": {
+        "data": {
+          "canary_id": "c3"
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 24,
+      "tool": "plant_canary"
+    },
+    {
+      "args": {},
+      "day": 3,
+      "result": {
+        "data": {
+          "V": 0.89,
+          "actions_left_today": 2,
+          "canaries_planted": [
+            "c1",
+            "c2",
+            "c3"
+          ],
+          "day": 3,
+          "restricted": [],
+          "tool_calls_left": 274
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 25,
+      "tool": "status"
+    },
+    {
+      "args": {},
+      "day": 3,
+      "result": {
+        "data": {
+          "V": 0.89,
+          "closed_day": 3,
+          "day": 4,
+          "new_documents": [
+            "d4-1",
+            "d4-2"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 26,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 4,
+      "result": {
+        "data": {
+          "V": 0.89,
+          "actions_left_today": 8,
+          "canaries_planted": [
+            "c1",
+            "c2",
+            "c3"
+          ],
+          "day": 4,
+          "restricted": [],
+          "tool_calls_left": 272
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 27,
+      "tool": "status"
+    },
+    {
+      "args": {
+        "day_from": 1,
+        "day_to": 4
+      },
+      "day": 4,
+      "result": {
+        "data": {
+          "documents": [
+            {
+              "day": 1,
+              "doc_id": "d1-1",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e01",
+                "e06",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e13",
+                "e15",
+                "e17"
+              ],
+              "title": "Engineering reorg proposal"
+            },
+            {
+              "day": 1,
+              "doc_id": "d1-2",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e02",
+                "e04",
+                "e06",
+                "e13",
+                "e14",
+                "e17",
+                "e19"
+              ],
+              "title": "Board deck draft Q2"
+            },
+            {
+              "day": 1,
+              "doc_id": "d1-3",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e01",
+                "e06",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e13",
+                "e15",
+                "e17"
+              ],
+              "title": "Q3 Finance budget forecast"
+            },
+            {
+              "day": 1,
+              "doc_id": "c1",
+              "is_canary": true,
+              "recipients": [
+                "e01",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e12",
+                "e14",
+                "e18"
+              ],
+              "title": "Board memo draft 1",
+              "variants": {
+                "A": [
+                  "e01",
+                  "e07",
+                  "e09"
+                ],
+                "B": [
+                  "e04",
+                  "e12",
+                  "e18"
+                ],
+                "C": [
+                  "e05",
+                  "e14"
+                ]
+              }
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-1",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-2",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e03",
+                "e05",
+                "e06",
+                "e07",
+                "e09",
+                "e13",
+                "e16",
+                "e17",
+                "e18"
+              ],
+              "title": "Project Falcon roadmap"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-3",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e02",
+                "e04",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e14",
+                "e15",
+                "e19"
+              ],
+              "title": "Project Northstar security review"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-4",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Project Ember roadmap"
+            },
+            {
+              "day": 2,
+              "doc_id": "c2",
+              "is_canary": true,
+              "recipients": [
+                "e01",
+                "e07",
+                "e09"
+              ],
+              "title": "Board memo draft 2",
+              "variants": {
+                "A": [
+                  "e07"
+                ],
+                "B": [
+                  "e09"
+                ],
+                "C": [
+                  "e01"
+                ]
+              }
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-1",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e03",
+                "e05",
+                "e06",
+                "e07",
+                "e09",
+                "e13",
+                "e16",
+                "e17",
+                "e18"
+              ],
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-2",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e02",
+                "e04",
+                "e06",
+                "e13",
+                "e14",
+                "e17",
+                "e19"
+              ],
+              "title": "Project Kivi security review"
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-3",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Project Saimaa roadmap"
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-4",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e02",
+                "e04",
+                "e06",
+                "e13",
+                "e14",
+                "e17",
+                "e19"
+              ],
+              "title": "Project Falcon roadmap"
+            },
+            {
+              "day": 3,
+              "doc_id": "c3",
+              "is_canary": true,
+              "recipients": [
+                "e07",
+                "e09"
+              ],
+              "title": "Board memo draft 3",
+              "variants": {
+                "A": [
+                  "e07"
+                ],
+                "B": [
+                  "e09"
+                ]
+              }
+            },
+            {
+              "day": 4,
+              "doc_id": "d4-1",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e01",
+                "e06",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e13",
+                "e15",
+                "e17"
+              ],
+              "title": "Finance headcount plan"
+            },
+            {
+              "day": 4,
+              "doc_id": "d4-2",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e02",
+                "e04",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e14",
+                "e15",
+                "e19"
+              ],
+              "title": "Engineering vendor contracts Q1"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 28,
+      "tool": "list_documents"
+    },
+    {
+      "args": {},
+      "day": 4,
+      "result": {
+        "data": {
+          "items": [
+            {
+              "doc_id": "c1",
+              "surfaced_day": 2,
+              "title": "Board memo draft 1",
+              "variant": "A"
+            },
+            {
+              "doc_id": "d2-1",
+              "surfaced_day": 3,
+              "title": "Legal vendor contracts Q3"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 29,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {
+        "query": "nobody asks"
+      },
+      "day": 4,
+      "result": {
+        "data": {
+          "messages": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 30,
+      "tool": "search_messages"
+    },
+    {
+      "args": {
+        "query": "updating my cv"
+      },
+      "day": 4,
+      "result": {
+        "data": {
+          "messages": []
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 31,
+      "tool": "search_messages"
+    },
+    {
+      "args": {
+        "day_from": 3,
+        "day_to": 3
+      },
+      "day": 4,
+      "result": {
+        "data": {
+          "logs": [
+            {
+              "after_hours": true,
+              "day": 3,
+              "doc_id": "d2-3",
+              "employee": "e00"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d3-1",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d3-4",
+              "employee": "e01"
+            },
+            {
+              "after_hours": true,
+              "day": 3,
+              "doc_id": "d3-4",
+              "employee": "e01"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d2-2",
+              "employee": "e03"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d2-4",
+              "employee": "e03"
+            },
+            {
+              "after_hours": true,
+              "day": 3,
+              "doc_id": "d3-1",
+              "employee": "e03"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "c1",
+              "employee": "e05"
+            },
+            {
+              "after_hours": true,
+              "day": 3,
+              "doc_id": "d1-1",
+              "employee": "e06"
+            },
+            {
+              "after_hours": true,
+              "day": 3,
+              "doc_id": "d3-4",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d1-1",
+              "employee": "e08"
+            },
+            {
+              "after_hours": true,
+              "day": 3,
+              "doc_id": "d1-1",
+              "employee": "e10"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d1-3",
+              "employee": "e10"
+            },
+            {
+              "after_hours": true,
+              "day": 3,
+              "doc_id": "d2-3",
+              "employee": "e10"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d1-1",
+              "employee": "e11"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d1-2",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "c1",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d2-4",
+              "employee": "e14"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d2-3",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d3-1",
+              "employee": "e16"
+            },
+            {
+              "after_hours": false,
+              "day": 3,
+              "doc_id": "d3-3",
+              "employee": "e16"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 32,
+      "tool": "read_access_logs"
+    },
+    {
+      "args": {
+        "assignment": {
+          "e07": "A",
+          "e09": "B"
+        },
+        "doc_title": "Board memo draft 4"
+      },
+      "day": 4,
+      "result": {
+        "data": {
+          "canary_id": "c4"
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 33,
+      "tool": "plant_canary"
+    },
+    {
+      "args": {},
+      "day": 4,
+      "result": {
+        "data": {
+          "V": 0.88,
+          "actions_left_today": 3,
+          "canaries_planted": [
+            "c1",
+            "c2",
+            "c3",
+            "c4"
+          ],
+          "day": 4,
+          "restricted": [],
+          "tool_calls_left": 265
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 34,
+      "tool": "status"
+    },
+    {
+      "args": {},
+      "day": 4,
+      "result": {
+        "data": {
+          "V": 0.84,
+          "closed_day": 4,
+          "day": 5,
+          "new_documents": [
+            "d5-1",
+            "d5-2"
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 35,
+      "tool": "advance_day"
+    },
+    {
+      "args": {},
+      "day": 5,
+      "result": {
+        "data": {
+          "V": 0.84,
+          "actions_left_today": 8,
+          "canaries_planted": [
+            "c1",
+            "c2",
+            "c3",
+            "c4"
+          ],
+          "day": 5,
+          "restricted": [],
+          "tool_calls_left": 263
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 36,
+      "tool": "status"
+    },
+    {
+      "args": {
+        "day_from": 2,
+        "day_to": 5
+      },
+      "day": 5,
+      "result": {
+        "data": {
+          "documents": [
+            {
+              "day": 2,
+              "doc_id": "d2-1",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-2",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e03",
+                "e05",
+                "e06",
+                "e07",
+                "e09",
+                "e13",
+                "e16",
+                "e17",
+                "e18"
+              ],
+              "title": "Project Falcon roadmap"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-3",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e02",
+                "e04",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e14",
+                "e15",
+                "e19"
+              ],
+              "title": "Project Northstar security review"
+            },
+            {
+              "day": 2,
+              "doc_id": "d2-4",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Project Ember roadmap"
+            },
+            {
+              "day": 2,
+              "doc_id": "c2",
+              "is_canary": true,
+              "recipients": [
+                "e01",
+                "e07",
+                "e09"
+              ],
+              "title": "Board memo draft 2",
+              "variants": {
+                "A": [
+                  "e07"
+                ],
+                "B": [
+                  "e09"
+                ],
+                "C": [
+                  "e01"
+                ]
+              }
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-1",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e03",
+                "e05",
+                "e06",
+                "e07",
+                "e09",
+                "e13",
+                "e16",
+                "e17",
+                "e18"
+              ],
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-2",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e02",
+                "e04",
+                "e06",
+                "e13",
+                "e14",
+                "e17",
+                "e19"
+              ],
+              "title": "Project Kivi security review"
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-3",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Project Saimaa roadmap"
+            },
+            {
+              "day": 3,
+              "doc_id": "d3-4",
+              "is_canary": false,
+              "recipients": [
+                "e01",
+                "e02",
+                "e04",
+                "e06",
+                "e13",
+                "e14",
+                "e17",
+                "e19"
+              ],
+              "title": "Project Falcon roadmap"
+            },
+            {
+              "day": 3,
+              "doc_id": "c3",
+              "is_canary": true,
+              "recipients": [
+                "e07",
+                "e09"
+              ],
+              "title": "Board memo draft 3",
+              "variants": {
+                "A": [
+                  "e07"
+                ],
+                "B": [
+                  "e09"
+                ]
+              }
+            },
+            {
+              "day": 4,
+              "doc_id": "d4-1",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e01",
+                "e06",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e13",
+                "e15",
+                "e17"
+              ],
+              "title": "Finance headcount plan"
+            },
+            {
+              "day": 4,
+              "doc_id": "d4-2",
+              "is_canary": false,
+              "recipients": [
+                "e00",
+                "e02",
+                "e04",
+                "e08",
+                "e10",
+                "e11",
+                "e12",
+                "e14",
+                "e15",
+                "e19"
+              ],
+              "title": "Engineering vendor contracts Q1"
+            },
+            {
+              "day": 4,
+              "doc_id": "c4",
+              "is_canary": true,
+              "recipients": [
+                "e07",
+                "e09"
+              ],
+              "title": "Board memo draft 4",
+              "variants": {
+                "A": [
+                  "e07"
+                ],
+                "B": [
+                  "e09"
+                ]
+              }
+            },
+            {
+              "day": 5,
+              "doc_id": "d5-1",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Project Ember security review"
+            },
+            {
+              "day": 5,
+              "doc_id": "d5-2",
+              "is_canary": false,
+              "recipients": [
+                "e02",
+                "e03",
+                "e04",
+                "e05",
+                "e07",
+                "e09",
+                "e14",
+                "e16",
+                "e18",
+                "e19"
+              ],
+              "title": "Patent filing notes: Kivi"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 37,
+      "tool": "list_documents"
+    },
+    {
+      "args": {},
+      "day": 5,
+      "result": {
+        "data": {
+          "items": [
+            {
+              "doc_id": "c1",
+              "surfaced_day": 2,
+              "title": "Board memo draft 1",
+              "variant": "A"
+            },
+            {
+              "doc_id": "d2-1",
+              "surfaced_day": 3,
+              "title": "Legal vendor contracts Q3"
+            },
+            {
+              "doc_id": "c2",
+              "surfaced_day": 5,
+              "title": "Board memo draft 2",
+              "variant": "A"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 38,
+      "tool": "check_leak_feed"
+    },
+    {
+      "args": {
+        "day_from": 4,
+        "day_to": 4
+      },
+      "day": 5,
+      "result": {
+        "data": {
+          "logs": [
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d1-3",
+              "employee": "e00"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d2-3",
+              "employee": "e00"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d2-1",
+              "employee": "e04"
+            },
+            {
+              "after_hours": true,
+              "day": 4,
+              "doc_id": "d2-3",
+              "employee": "e04"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d3-3",
+              "employee": "e04"
+            },
+            {
+              "after_hours": true,
+              "day": 4,
+              "doc_id": "d3-3",
+              "employee": "e04"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d2-1",
+              "employee": "e05"
+            },
+            {
+              "after_hours": true,
+              "day": 4,
+              "doc_id": "d1-3",
+              "employee": "e06"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "c3",
+              "employee": "e07"
+            },
+            {
+              "after_hours": true,
+              "day": 4,
+              "doc_id": "c4",
+              "employee": "e07"
+            },
+            {
+              "after_hours": true,
+              "day": 4,
+              "doc_id": "d2-1",
+              "employee": "e07"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d4-1",
+              "employee": "e08"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d1-1",
+              "employee": "e12"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d4-1",
+              "employee": "e12"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d1-1",
+              "employee": "e13"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d1-1",
+              "employee": "e15"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d2-2",
+              "employee": "e16"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d2-4",
+              "employee": "e16"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d2-4",
+              "employee": "e16"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d3-2",
+              "employee": "e17"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d2-1",
+              "employee": "e19"
+            },
+            {
+              "after_hours": false,
+              "day": 4,
+              "doc_id": "d3-4",
+              "employee": "e19"
+            }
+          ]
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 39,
+      "tool": "read_access_logs"
+    },
+    {
+      "args": {
+        "employee": "e07"
+      },
+      "day": 5,
+      "result": {
+        "data": {
+          "accused": "e07",
+          "episode_over": true
+        },
+        "error": null,
+        "ok": true
+      },
+      "t": 40,
+      "tool": "accuse"
+    }
+  ],
+  "tier": "medium",
+  "world": "biased"
+}

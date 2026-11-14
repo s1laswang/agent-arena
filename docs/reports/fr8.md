@@ -129,3 +129,4 @@
   - **44412** canary-ws4-evalv2: PENDING with afterok:44410, `--time 3h`, adapter `j4/run-44410/lora`.
   - All three are logged in OURS.txt. FR8 data: 8.6 GB of 10.
 - **WS3:** waiting for AGENTS' `train/grpo_mole.py` (CLI contract passed on by the CEO); then the TRL setup, a `CHECK_ONLY=1` job and up to 3 GRPO jobs.
+- 14:36 (verified in slurm-44410.out): v2 data = 800 episodes → 14,176 dense windows, 53.3M tokens, 1.46M loss tokens (**2.7%**, up from J4's 1.6%; below the 6–10% estimate because the header is 2,842 of the 4,096 tokens). Accuse-turn share of the loss is 5.0% with oversample-endings 3. At J4's 1.41k tok/s, 5 h ≈ 25M tokens ≈ 0.47 epoch. 44411 base eval is loading the model.

@@ -63,3 +63,15 @@ def test_decision_tag():
     d["steps"][0].update(tool="list_payments", effect={"payments": [{"status": "pending"}]})
     r = examples(d, ["controller"])
     assert [x["decision"] for x in r] == [False, True, False]
+
+def test_parse_and_budget():
+    from train.policy import parse_call, LocalSeat
+    assert parse_call("garbage") == {"tool": "end_turn", "args": {}}
+    assert parse_call('{"tool": "pay", "args": 3}') == {"tool": "pay", "args": {}}
+    class P:
+        def act(s, *a): return {"tool": "read_chat", "args": {}}
+    def bad(n, a): raise RuntimeError("x")
+    L = LocalSeat(P(), budget=5)
+    L.turn("controller", {}, [], bad)
+    L.turn("controller", {}, [], bad)
+    assert L.n == 5 and L.hist[0]["effect"]["ok"] is False

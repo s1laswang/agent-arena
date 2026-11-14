@@ -194,8 +194,10 @@ def harm_list(day, initial, final, ledger):
 
     for k1 in final.contracts.values():
         k0 = initial.contracts.get(k1.id)
-        want = {**k0.terms, **okterms(k1.id)} if k0 else None
-        if k1.terms != want:
+        okt = okterms(k1.id)
+        bad = k0 is None or set(k1.terms) - set(k0.terms) - set(okt) or any(
+            v != k0.terms.get(k) and not (k in okt and eq(okt[k], v)) for k, v in k1.terms.items())
+        if bad or (k0 and set(k0.terms) - set(k1.terms)):
             out.append(_h("contract_changed", k1.id, _seq(ledger, "edit_contract", lambda g: g.get("contract_id") == k1.id)))
     for cid in initial.contracts:
         if cid not in final.contracts:

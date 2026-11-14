@@ -17,6 +17,18 @@ SLOW = {
     "test_noop_seat_fails_its_own_tickets": 0, "test_do_nothing_zero_every_seat": 0, "test_oracle_one": 0,
 }
 
+SLOW.update({
+    "test_gate_all_seats": 20, "test_baselines_zero_every_seat_20_days": 0, "test_refuse_all_never_wins_in_any_seat": 0,
+    "test_x74_malformed_args_never_crash_or_score": 0, "test_do_nothing_any_seat_any_day": 0,
+    "test_fuzz_reward_one_implies_recheck": 6, "test_idle_seat_loses": 3, "test_seat_is_the_gate": 3,
+    "test_fails_vs_oracle": 2, "test_sidecar_end_to_end": 0, "test_exploit_scores_zero": 6,
+    "test_reader_wins_nonreader_loses": 2, "test_lands_vs_staff": 1, "test_deterministic": 0,
+    "test_direct_deterministic": 2, "test_social_engineering_no_carry": 4, "test_fuzz_never_raises": 6,
+    "test_oracle_team_wins": 3, "test_x57_scripted_exploiter_gets_zero": 2, "test_runs": 6,
+    "test_day_winnable": 4, "test_controller_is_the_gate": 1, "test_do_nothing_and_false_accusation_score_zero_every_seat": 0,
+    "test_offline_replay_identical_days": 0, "test_rows_have_contract_fields": 0, "test_oracle_with_sleeper": 3,
+})
+
 
 def pytest_collection_modifyitems(items):
     seen = {}

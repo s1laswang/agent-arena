@@ -304,18 +304,13 @@ class GeminiStaff:
     def turn(self, seat, view, tools, call):
         if not self.available():
             return self.fallback.turn(seat, view, tools, call)
-        try:
-            text = str(view)
-            if self.notes:
-                text = "Your notes from earlier turns:\n" + "\n".join(self.notes[-3:]) + "\n\n" + text
-            r = run_tool_loop(model_for("staff"), ROLE_PROMPTS[seat], text, tools, call, max_steps=BUDGET, temperature=float(os.environ.get("SLEEPER_TEMP_STAFF", "0.7")), seed=self.seed, log=self.log.append)
-            if isinstance(r, dict) and r.get("text"):
-                self.notes.append(r["text"][:500])
-            return r
-        except OfflineCacheMiss:
-            raise
-        except Exception:
-            return self.fallback.turn(seat, view, tools, call)
+        text = str(view)
+        if self.notes:
+            text = "Your notes from earlier turns:\n" + "\n".join(self.notes[-3:]) + "\n\n" + text
+        r = run_tool_loop(model_for("staff"), ROLE_PROMPTS[seat], text, tools, call, max_steps=BUDGET, temperature=float(os.environ.get("SLEEPER_TEMP_STAFF", "0.7")), seed=self.seed, log=self.log.append)
+        if isinstance(r, dict) and r.get("text"):
+            self.notes.append(r["text"][:500])
+        return r
 
 
 def make_team(day=None, seed=0, kind="auto"):

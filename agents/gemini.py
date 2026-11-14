@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / ".cache" / "gemini"
 DEFAULT_MODEL = "gemini-2.5-flash"
-_usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0}
+_usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0, "api_errors": 0}
 _client = None
 
 
@@ -167,6 +167,7 @@ def _generate(model, system, messages, tools, temperature, seed):
                 time.sleep(delay)
                 delay = min(delay * 2, 30)
                 continue
+            _usage["api_errors"] += 1
             raise
 
 

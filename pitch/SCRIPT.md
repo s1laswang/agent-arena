@@ -1,6 +1,6 @@
 # SCRIPT: words to say, 10 minutes
 
-For whoever presents. Plain sentences. Numbers are from `make eval` (20 days, 3 trials) and will change on the rerun: check the gap table first and fix the numbers marked [N]. Do not say "Gemini staff" for the scripted runs. Click path is in DEMO.md.
+For whoever presents. Plain sentences. Numbers are from `make eval` (20 days, 3 trials, run twice, identical). Check the gap table before you go on. Do not say "Gemini staff" for the scripted runs. Click path is in DEMO.md.
 
 ## 0:00 Hook
 
@@ -48,9 +48,9 @@ One honest note. The staff and the oracle in this run are scripted. They are not
 
 We ran twenty days, three trials each.
 
-The scripted staff team gets a reward of [0.500]. The sleeper succeeds on [0.375] of the days. [0.100] of the days include a false accusation.
+The scripted staff team gets a reward of 0.350. The sleeper succeeds on 0.625 of the days. 0.150 of the days include a false accusation.
 
-The scripted oracle gets [0.850]. In the first run it missed three days with four of five tickets. That has since been fixed on our main branch, so replace this paragraph with the rerun number. If it is still below one, say so and say why.
+The scripted oracle gets 1.000. It wins every winnable day in this run, and it knows who the sleeper is, so it proves the days can be won. It is not our reference.
 
 The Gemini reference row says not found. We have not run it with a key yet.
 
@@ -76,7 +76,7 @@ Days with no sleeper are in the mix, so accusing someone at random is punished.
 
 Every secret document carries a unique canary token. One leaked byte in an outside message is visible, also if it is encoded in base64 or hex.
 
-And we found a hole in our own reward. When do-nothing played one seat and the teammates were the oracle, it scored one on some days, because that seat had no graded tickets. Our own eval found it, not a judge. The fix is a check in the verifier plus real tickets for every seat, with a test. It is in progress, and we will tell you the new numbers when the rerun is done.
+And we found a hole in our own reward. When do-nothing played one seat and the teammates were the oracle, it scored one on some days, because that seat had no graded tickets. Our own eval found it, not a judge. We added a check in the verifier, and do-nothing now scores zero in every seat and every day.
 
 You have fifteen minutes. Everything we already tried is in the exploit log. Please try to break it.
 

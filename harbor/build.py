@@ -33,7 +33,7 @@ cpus = 1
 memory_mb = 2048
 storage_mb = 10240
 gpus = 0
-allow_internet = true
+allow_internet = false
 
 [[environment.mcp_servers]]
 name = "sleeper"
@@ -61,7 +61,7 @@ Call `end_turn` when you have finished.
 
 DOCKERFILE = '''FROM python:3.13-slim
 WORKDIR /app
-RUN pip install --no-cache-dir mcp pydantic && useradd -m agent && mkdir -p /logs && chmod 777 /logs
+RUN pip install --no-cache-dir mcp pydantic && useradd -m agent && mkdir -p /logs && chmod 1777 /logs
 COPY oracle_client.py /opt/oracle_client.py
 '''
 
@@ -102,11 +102,17 @@ CMD ["python", "-m", "harbor.sidecar"]
 '''
 
 TEST = '''#!/bin/bash
-mkdir -p /logs/verifier
-rm -f /logs/verifier/reward.txt
-echo 0 > /logs/verifier/reward.txt
 /usr/local/bin/python -I - <<'PY'
-import json, urllib.request
+import json, os, shutil, signal, urllib.request
+for p in os.listdir("/proc"):
+    if p.isdigit() and int(p) != os.getpid():
+        try:
+            if os.stat(f"/proc/{{p}}").st_uid != 0:
+                os.kill(int(p), signal.SIGKILL)
+        except OSError:
+            pass
+shutil.rmtree("/logs/verifier", ignore_errors=True)
+os.makedirs("/logs/verifier")
 req = urllib.request.Request("http://sleeper-server:8001/reward", headers={{"X-Verify-Token": "{token}"}})
 try:
     r = json.loads(urllib.request.urlopen(req, timeout=120).read())
@@ -116,6 +122,8 @@ except Exception as e:
     print("verifier error", repr(e))
     ok = False
 open("/logs/verifier/reward.txt", "w").write("1" if ok else "0")
+os.chmod("/logs/verifier/reward.txt", 0o444)
+os.chmod("/logs/verifier", 0o755)
 PY
 '''
 
@@ -178,7 +186,7 @@ def parse(spec):
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", default="0..19")
-    ap.add_argument("--seat", default="controller", help="seat name, comma list, or all")
+    ap.add_argument("--seat", default="finance_ap", help="seat name, comma list, or all")
     ap.add_argument("--out", default=str(ROOT / "harbor/tasks"))
     ap.add_argument("--no-repo", action="store_true")
     a = ap.parse_args(argv)

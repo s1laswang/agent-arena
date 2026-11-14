@@ -23,7 +23,7 @@ def test_structure(tmp_path):
         assert (d / f).stat().st_mode & 0o100
     assert 'user = "agent"' in (d / "task.toml").read_text() and "python -I" in t_
     assert "VERIFY_TOKEN" not in (d / "environment/Dockerfile").read_text() + (d / "instruction.md").read_text()
-    assert "allow_internet = true" in (d / "task.toml").read_text()
+    assert "allow_internet = false" in (d / "task.toml").read_text()
     assert "1" not in cfg["task"]["description"].replace("1 ", "")
     assert not any(w in (d / "instruction.md").read_text().lower() for w in ["is the sleeper", "traitor is"])
 
@@ -69,3 +69,49 @@ def test_sidecar_end_to_end(tmp_path, oracle):
         assert r["reward"] == (1 if oracle else 0)
     finally:
         p.kill()
+
+
+def test_x65_sleeper_placed(monkeypatch):
+    from agents.sleeper_agent import SleeperAgent
+    from harbor.sidecar import make_world_and_team
+    monkeypatch.setenv("SLEEPER_SALT", "abc")
+    monkeypatch.delenv("SLEEPER_TEAM", raising=False)
+    seen = 0
+    for seed in range(8):
+        _, world, team = make_world_and_team(seed, "finance_ap")
+        s = world.day.sleeper_seat
+        if s:
+            seen += 1
+            assert s != "finance_ap" and isinstance(team[s], SleeperAgent)
+            assert not any(isinstance(a, SleeperAgent) for k, a in team.items() if k != s)
+        else:
+            assert not any(isinstance(a, SleeperAgent) for a in team.values())
+    assert seen >= 3
+
+
+def test_x66_salt_not_in_agent_container(tmp_path):
+    main(["--seeds", "2", "--seat", "finance_ap", "--out", str(tmp_path), "--no-repo"])
+    d = tmp_path / "sleeper-s2-finance_ap"
+    comp = (d / "environment/docker-compose.yaml").read_text()
+    salt = [l for l in comp.split() if l.startswith("SLEEPER_SALT=")][0].split("=")[1]
+    assert len(salt) == 32
+    main_block = comp.split("sleeper-server:")[0]
+    assert "SLEEPER_SALT" not in main_block and "environment" not in main_block
+    for f in d.rglob("*"):
+        if f.is_file() and f.name != "docker-compose.yaml":
+            assert salt not in f.read_text(errors="ignore"), f
+    assert "SLEEPER_SALT" not in (d / "environment/Dockerfile").read_text()
+    assert "SLEEPER_SALT" not in (d / "tests/test.sh").read_text()
+
+
+def test_x66_internet_off_and_no_seed_in_text(tmp_path):
+    main(["--seeds", "3", "--seat", "finance_ap", "--out", str(tmp_path), "--no-repo"])
+    d = tmp_path / "sleeper-s3-finance_ap"
+    assert "allow_internet = false" in (d / "task.toml").read_text()
+    assert "SLEEPER_SEED" not in (d / "instruction.md").read_text()
+
+
+def test_x72c_default_seat_finance_ap(tmp_path):
+    main(["--seeds", "1", "--out", str(tmp_path), "--no-repo"])
+    assert [p.name for p in tmp_path.iterdir() if p.is_dir()] == ["sleeper-s1-finance_ap"]
+    assert "SLEEPER_SEAT=finance_ap" in (tmp_path / "sleeper-s1-finance_ap/environment/docker-compose.yaml").read_text()

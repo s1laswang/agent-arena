@@ -2,9 +2,9 @@
 
 Flags checked against harbor 0.25.0 source (`--path`, `--agent`, `--agent-import-path`, `--model`, `--n-attempts`). Verify with `harbor run --help` on the day.
 
-Build the standard set (20 days, seat controller; the same days under any seat with `--seat all`):
+Build the standard set (20 days, seat finance_ap; the same days under any seat with `--seat all`):
 
-    python -m harbor.build --seeds 0..19 --seat controller
+    python -m harbor.build --seeds 0..19 --seat finance_ap
 
 This also writes `harbor/tasks-manifest.json` (secret salt and the lab day_id behind each task; keep it out of the repo and away from the agent).
 

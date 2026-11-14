@@ -324,24 +324,138 @@ def _thumb(results_dir: Path, rel: Any, budget: list[int]) -> str:
     return f"data:{mime};base64," + base64.b64encode(p.read_bytes()).decode()
 
 
+def _num(x) -> float | None:
+    return float(x) if isinstance(x, (int, float)) and not isinstance(x, bool) and x == x else None
+
+
+def slim_atlas(A: dict, results_dir: Path) -> dict:
+    """Normalise G3's atlas.json (or the TEAM.md minimal shape) to what the page renders."""
+    budget = [4_000_000]
+    modes = []
+    for m in A.get("modes") or []:
+        if not isinstance(m, dict):
+            continue
+        eps = m.get("episodes")
+        quotes = []
+        for q in (m.get("quotes") or [])[:3]:
+            if isinstance(q, dict) and q.get("quote"):
+                quotes.append({"episode": str(q.get("episode", "")), "t": q.get("t"), "quote": str(q["quote"])[:400],
+                               "verified": q.get("verified", True) is not False,  # G3 drops unverifiable quotes
+                               "step_verified": bool(q.get("step_verified"))})
+        modes.append({"id": m.get("id"), "name": m.get("name") or m.get("id"), "description": m.get("description", ""),
+                      "mechanism": m.get("mechanism", ""), "solver_would": m.get("solver_would", ""),
+                      "decision": m.get("decision", ""), "regret_share": _num(m.get("regret_share")) or 0.0,
+                      "episodes": len(eps) if isinstance(eps, list) else eps, "steps": m.get("steps"),
+                      "quotes": quotes, "chart": m.get("chart"), "chart_src": _thumb(results_dir, m.get("chart"), budget)})
+    C = A.get("corpus") or {}
+    ha = A.get("human_agreement")
+    if isinstance(ha, (int, float)):
+        ha = {"rate": ha}
+    elif isinstance(ha, dict):
+        rate = ha.get("rate", ha.get("score"))
+        if rate is None and ha.get("total"):
+            rate = ha.get("agree", 0) / ha["total"]
+        if ha.get("status") not in (None, "done"):
+            rate = None
+        ha = {"rate": _num(rate), "n": ha.get("n_labelled", ha.get("total")), "agree": ha.get("agree")}
+    else:
+        ha = None
+    V = A.get("verification") or {}
+    loc = A.get("localisation") or {}
+    cl = A.get("clusters") or {}
+    models = A.get("models") or {}
+    return {"generated_at": A.get("generated_at"), "git_sha": A.get("git_sha"), "synthetic": bool(A.get("synthetic")),
+            "model": A.get("model") or models.get("long_context"), "cache_model": models.get("cache"),
+            "summary": A.get("summary", ""), "modes": modes,
+            "corpus": {"episodes": C.get("episodes"), "tokens": C.get("tokens"), "cached_tokens": C.get("cached_tokens"),
+                       "cohorts": [{k: c.get(k) for k in ("cohort", "episodes", "score_mean", "accuracy", "regret_mean")}
+                                   for c in C.get("cohorts") or [] if isinstance(c, dict)]},
+            "verification": {k: V.get(k) for k in ("quotes_checked", "pass_rate", "step_pass_rate", "dropped")} if V else None,
+            "human_agreement": ha,
+            "localisation": {"agree": loc.get("agree_within_3_steps"), "n": loc.get("n")} if loc.get("n") else None,
+            "clusters": {"n": cl.get("n"), "k": cl.get("k"), "model": cl.get("model")} if cl else None}
+
+
+def _plan_text(plan) -> str:
+    if isinstance(plan, str):
+        return plan
+    if isinstance(plan, dict):
+        return str(plan.get("hypothesis") or plan.get("summary") or plan.get("name") or "")
+    return ""
+
+
+def slim_swarm(S: dict) -> dict:
+    """Normalise G4's swarm.json (or the TEAM.md minimal shape) to what the page renders."""
+    at = []
+    for a in S.get("attempts") or []:
+        if not isinstance(a, dict):
+            continue
+        plan = a.get("plan")
+        at.append({"id": a.get("id"), "persona": str(a.get("persona", "")), "plan": _plan_text(plan)[:300],
+                   "target": plan.get("target_invariant") if isinstance(plan, dict) else None,
+                   "tier": a.get("tier"), "score": _num(a.get("score")), "correct": a.get("correct"),
+                   "ledger_verified": bool(a.get("ledger_verified")), "exploit": bool(a.get("exploit")),
+                   "candidate": bool(a.get("score_candidate")), "solver_score": _num(a.get("solver_score")),
+                   "tools": a.get("n_tool_calls"), "channel": a.get("channel"), "error": bool(a.get("error"))})
+    scored = [a for a in at if a["score"] is not None]
+    tiers = {}
+    for a in scored:
+        tiers[a["tier"]] = tiers.get(a["tier"], 0) + 1
+    main_tier = max(tiers, key=tiers.get) if tiers else S.get("tier")
+    pt = (S.get("per_tier") or {}).get(main_tier) or {}
+    best = S.get("best_non_solver")
+    best = best.get("score") if isinstance(best, dict) else best
+    if best is None:
+        best = pt.get("best_non_solver")
+    if best is None and scored:
+        best = max(a["score"] for a in scored)
+    solver = S.get("solver_score", S.get("solver"))
+    if solver is None:
+        solver = pt.get("solver_mean_paired", pt.get("solver_mean_ref"))
+    counts = S.get("counts") or {}
+    tests = S.get("tests_written")
+    found = ROOT / "tests" / "test_gemini_lab_swarm_found.py"
+    if tests is None and found.exists():
+        tests = len(re.findall(r"^def test_", found.read_text(), re.M))
+    ms = S.get("models")
+    model = S.get("model") or (", ".join(map(str, ms)) if isinstance(ms, list) else ms if isinstance(ms, str) else None)
+    findings = [{"title": str(f.get("title") or f.get("name") or ""), "verified": bool(f.get("verified")),
+                 "test": str(f.get("test") or "")} for f in S.get("findings") or [] if isinstance(f, dict)]
+    return {"generated_at": S.get("generated_at"), "git_sha": S.get("git_sha"), "synthetic": bool(S.get("synthetic")),
+            "model": model,
+            "mode": S.get("mode"), "tier": main_tier, "attempts": at, "best_non_solver": _num(best),
+            "solver_score": _num(solver), "tests_written": tests, "findings": findings,
+            "exploits": counts.get("exploits", sum(1 for a in at if a["exploit"] and a["ledger_verified"])),
+            "candidates": counts.get("score_candidates", sum(1 for a in at if a["candidate"])),
+            "violations": counts.get("invariant_violations"), "violation_kinds": counts.get("violation_kinds") or {},
+            "tool_calls": counts.get("tool_calls", sum(a["tools"] or 0 for a in at)),
+            "errors": counts.get("errors", sum(1 for a in at if a["error"]))}
+
+
 def load_results(results_dir: Path) -> dict:
     results_dir = Path(results_dir)
     out: dict[str, Any] = {}
     ladder = load_json(results_dir / "ladder.json")
+    if ladder:
+        ladder = {k: ladder.get(k) for k in ("generated_at", "git_sha", "synthetic", "episodes", "rows", "cells",
+                                              "reference", "tags", "solver", "ledger")}
+        if isinstance(ladder.get("tags"), dict):
+            ladder["tags"] = {k: ladder["tags"].get(k) for k in ("pooled", "pooled_common_models")}
+            for v in (ladder["tags"].get("pooled") or {}).values():  # drop the per-episode "worst" lists
+                for d in (v.get("tags") or {}).values():
+                    if isinstance(d, dict):
+                        d.pop("worst", None)
+        for r in ladder.get("rows") or []:
+            if isinstance(r, dict):
+                r.pop("seeds", None), r.pop("run_ids", None)
     out["ladder"] = redact(ladder) if ladder else None
     atlas = load_json(results_dir / "atlas.json")
-    if atlas:
-        atlas = redact(atlas)
-        budget = [4_000_000]
-        for m in atlas.get("modes") or []:
-            if isinstance(m, dict):
-                m["chart_src"] = _thumb(results_dir, m.get("chart"), budget)
-    out["atlas"] = atlas
+    out["atlas"] = redact(slim_atlas(atlas, results_dir)) if atlas else None
     swarm = load_json(results_dir / "swarm.json")
-    out["swarm"] = redact(swarm) if swarm else None
+    out["swarm"] = redact(slim_swarm(swarm)) if swarm else None
     figs = {}
     budget = [3_000_000]
-    for name in ("ladder.png", "ladder_tags.png"):
+    for name in ("ladder.png",):
         src = _thumb(results_dir, name, budget)
         if src:
             figs[name] = src
@@ -537,6 +651,8 @@ svg .mark:hover, svg g.hov:hover .mark { filter: brightness(1.12); }
 .rank { font: 600 22px/1 "Iowan Old Style", Palatino, Georgia, serif; color: var(--muted); }
 .mode h4 { margin: 0; font-size: 15px; }
 .mode .desc { margin: 2px 0 8px; color: var(--ink2); }
+.mode .desc b { color: var(--ink); font-weight: 600; }
+p.summary { margin: 0; color: var(--ink); max-width: 100ch; font: 15px/1.55 "Iowan Old Style", Palatino, Georgia, serif; }
 .mode .facts { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
 .mode .facts b { color: var(--ink); font-weight: 600; }
 .share { height: 8px; border-radius: 4px; background: var(--q100); overflow: hidden; margin: 2px 0 10px; max-width: 360px; }
@@ -1025,37 +1141,49 @@ function frontierChart(front, pts, ys, refs) {
 }
 
 // ---- atlas
+function tilesRow(tiles) {
+  return h('div', { class: 'c12 tiles' }, tiles.map(t => h('div', { class: 'tile' }, [h('div', { class: 'lab', text: t[0] }), h('div', { class: 'val', text: t[1] }), h('div', { class: 'note', text: t[2] || '', title: t[2] || '' })])));
+}
 function renderAtlas() {
   const sec = document.getElementById('p-atlas'); sec.replaceChildren();
   const A = R.atlas;
   panelHead(sec, '04', { kicker: 'Failure Atlas', h: 'Why the agent loses, in its own words' },
-    'Gemini reads the whole trajectory corpus in one long, cached context. Every quote is checked verbatim against the transcript; every mode is tied to solver regret.');
+    'Gemini reads the whole trajectory corpus in one long, cached context. Every quote is checked verbatim against the transcript in code; regret shares come from the reference solver, never from Gemini.');
   if (!A || !(A.modes || []).length) { sec.appendChild(pending('Atlas', 'python -m canary.gemini.atlas --runs <dirs> → results/gemini/atlas.json')); return; }
   const g = h('div', { class: 'grid' });
-  const C = A.corpus || {}; const HA = A.human_agreement;
-  let haVal = '—', haNote = 'human labels pending';
-  if (typeof HA === 'number') { haVal = pctf(HA); haNote = 'human–Gemini agreement'; }
-  else if (HA && typeof HA === 'object') { const r = HA.rate != null ? HA.rate : (HA.total ? HA.agree / HA.total : null);
-    if (r != null) { haVal = pctf(r); haNote = (HA.agree != null ? HA.agree + ' / ' + HA.total + ' claims agreed' : 'agreement'); } }
-  const quotes = A.modes.flatMap(m => m.quotes || []); const ver = quotes.filter(q => q.verified).length;
-  const tiles = [['Episodes read', C.episodes != null ? nf.format(C.episodes) : '—', A.model ? 'by ' + short(A.model) : ''],
-    ['Corpus tokens', C.tokens != null ? compact(C.tokens) : '—', C.cached_tokens != null ? compact(C.cached_tokens) + ' served from cache' : ''],
-    ['Failure modes', String(A.modes.length), 'ranked by regret share'],
-    ['Quotes verified', quotes.length ? ver + ' / ' + quotes.length : '—', 'verbatim match against transcripts'],
-    ['Human agreement', haVal, haNote]];
-  g.appendChild(h('div', { class: 'c12 tiles' }, tiles.map(t => h('div', { class: 'tile' }, [h('div', { class: 'lab', text: t[0] }), h('div', { class: 'val', text: t[1] }), h('div', { class: 'note', text: t[2] })]))));
+  const C = A.corpus || {}, HA = A.human_agreement, V = A.verification, LO = A.localisation;
+  const quotes = A.modes.flatMap(m => m.quotes || []);
+  const tiles = [['Episodes read', C.episodes != null ? nf.format(C.episodes) : '—', A.model ? 'by ' + short(A.model) + ' in one prompt' : ''],
+    ['Corpus tokens', C.tokens != null ? compact(C.tokens) : '—', C.cached_tokens ? compact(C.cached_tokens) + ' input tokens served from cache' : 'long context'],
+    ['Quotes verified', V && V.pass_rate != null ? pctf(V.pass_rate) : quotes.length ? quotes.filter(q => q.verified).length + ' / ' + quotes.length : '—',
+      V && V.quotes_checked != null ? nf.format(V.quotes_checked) + ' checked verbatim · ' + (V.dropped || 0) + ' dropped' : 'verbatim match against transcripts'],
+    LO ? ['Chart reading', LO.agree + ' / ' + LO.n, 'divergence step found within 3 steps (multimodal)'] : ['Failure modes', String(A.modes.length), 'ranked by regret share'],
+    ['Human agreement', HA && HA.rate != null ? pctf(HA.rate) : 'pending', HA && HA.rate != null ? (HA.n ? HA.n + ' claims labelled by a teammate' : 'human–Gemini agreement') : 'labels in docs/gemini/validation.md']];
+  g.appendChild(tilesRow(tiles));
+  if (A.summary) g.appendChild(card('c12', 'What Gemini found', null, [h('p', { class: 'summary', text: A.summary })]));
   const modes = A.modes.slice().sort((a, b) => (b.regret_share || 0) - (a.regret_share || 0));
   const list = h('div', { class: 'modes' }, modes.slice(0, 6).map((m, i) => {
-    const eps = Array.isArray(m.episodes) ? m.episodes.length : m.episodes;
     const bar = h('div', { class: 'share' }, [h('div')]); bar.firstChild.style.width = Math.max(0, Math.min(100, (m.regret_share || 0) * 100)) + '%';
     const qs_ = (m.quotes || []).slice(0, 2).map(q => h('blockquote', {}, ['“' + q.quote + '”',
-      h('span', { class: 'src' }, [`${q.episode || ''}${q.t != null ? ' · step ' + q.t : ''}`, h('span', { class: 'badge ' + (q.verified ? 'ok' : 'no'), text: q.verified ? '✓ verified' : '✗ unverified' })])]));
-    const thumb = h('div', { class: 'thumb' }, [m.chart_src ? h('img', { src: m.chart_src, alt: 'belief vs solver chart for ' + (m.name || m.id) }) : h('div', { class: 'ph', text: m.chart ? 'chart: ' + m.chart : 'no chart' })]);
-    return h('div', { class: 'mode' }, [h('div', { class: 'rank', text: String(i + 1) }), h('div', {}, [h('h4', { text: m.name || m.id }), h('p', { class: 'desc', text: m.description || '' }),
-      h('div', { class: 'facts' }, [h('span', {}, [h('b', { text: pctf(m.regret_share || 0) }), ' of regret']), eps != null ? h('span', {}, [h('b', { text: String(eps) }), ' episodes']) : null,
-        m.decision ? h('span', {}, ['decision ', h('b', { text: m.decision })]) : null]), bar].concat(qs_)), thumb]);
+      h('span', { class: 'src' }, [`${q.episode || ''}${q.t != null ? ' · step ' + q.t : ''}`,
+        h('span', { class: 'badge ' + (q.verified ? 'ok' : 'no'), text: q.verified ? (q.step_verified ? '✓ verified at step' : '✓ verified') : '✗ unverified' })])]));
+    const thumb = h('div', { class: 'thumb' }, [m.chart_src ? h('img', { src: m.chart_src, alt: 'belief trace chart for ' + (m.name || m.id) }) : h('div', { class: 'ph', text: m.chart ? 'chart: ' + m.chart : 'no chart' })]);
+    const extra = [];
+    if (m.mechanism) extra.push(h('p', { class: 'desc' }, [h('b', { text: 'Why: ' }), m.mechanism]));
+    if (m.solver_would) extra.push(h('p', { class: 'desc' }, [h('b', { text: 'Solver instead: ' }), m.solver_would]));
+    return h('div', { class: 'mode' }, [h('div', { class: 'rank', text: String(i + 1) }), h('div', {}, [h('h4', { text: m.name || m.id }), h('p', { class: 'desc', text: m.description || '' })].concat(extra).concat([
+      h('div', { class: 'facts' }, [h('span', {}, [h('b', { text: pctf(m.regret_share || 0) }), ' of all regret']), m.episodes != null ? h('span', {}, [h('b', { text: String(m.episodes) }), ' episodes']) : null,
+        m.steps != null ? h('span', {}, [h('b', { text: String(m.steps) }), ' decisions']) : null, m.decision ? h('span', {}, ['decision ', h('b', { text: m.decision })]) : null]), bar]).concat(qs_)), thumb]);
   }));
-  g.appendChild(card('c12', 'Top failure modes', 'bar = share of total solver regret attributed to the mode', [synthBadge(A), list]));
+  g.appendChild(card('c12', 'Top failure modes', 'bar = share of all solver regret attributed to the mode', [synthBadge(A), list]));
+  const co = (C.cohorts || []).filter(c => c.cohort);
+  if (co.length) {
+    const tb = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['cohort (model / harness / rules)', 'episodes', 'mean score', 'accuracy', 'mean regret'].map((c, i) => h('th', { class: i ? 'num' : '', text: c })))]),
+      h('tbody', {}, co.map(c => h('tr', {}, [h('td', { text: c.cohort }), h('td', { class: 'num', text: c.episodes != null ? String(c.episodes) : '–' }),
+        h('td', { class: 'num', text: c.score_mean != null ? c.score_mean.toFixed(3) : '–' }), h('td', { class: 'num', text: c.accuracy != null ? pctf(c.accuracy) : '–' }),
+        h('td', { class: 'num', text: c.regret_mean != null ? c.regret_mean.toFixed(3) : '–' })])))]);
+    g.appendChild(card('c12', 'Corpus by cohort', 'never pooled across rule versions', [tb]));
+  }
   sec.appendChild(g);
 }
 
@@ -1064,31 +1192,36 @@ function renderSwarm() {
   const sec = document.getElementById('p-swarm'); sec.replaceChildren();
   const S = R.swarm;
   panelHead(sec, '05', { kicker: 'Swarm', h: 'Can Gemini game the reward?' },
-    'Gemini attackers read the whole repo and try to beat the score without catching the mole. Only ledger-verified scores count; every real finding becomes a regression test.');
+    'Gemini attackers hold the whole repo in a cached context and try to beat the score without catching the mole. Only scores the env ledger records count; every real finding becomes a regression test.');
   if (!S || !(S.attempts || []).length) { sec.appendChild(pending('Swarm', 'python -m canary.gemini.swarm --attackers 50 → results/gemini/swarm.json')); return; }
-  const at = S.attempts; const personas = new Set(at.map(a => a.persona)).size;
-  const verified = at.filter(a => a.ledger_verified);
-  const best = S.best_non_solver != null ? (typeof S.best_non_solver === 'object' ? S.best_non_solver.score : S.best_non_solver) : Math.max(...verified.map(a => a.score));
-  const solver = S.solver_score != null ? S.solver_score : S.solver;
-  const exploits = at.filter(a => a.exploit && a.ledger_verified).length;
-  const findings = S.findings || []; const tw = S.tests_written != null ? S.tests_written : findings.filter(f => f.test).length;
-  const tiles = [['Attempts', nf.format(at.length), (S.mode || '') + (S.tier ? ' · ' + S.tier : '')], ['Personas', String(personas), S.model ? short(S.model) : ''],
-    ['Best non-solver', best != null ? (+best).toFixed(3) : '—', solver != null ? 'solver ' + (+solver).toFixed(3) : ''],
-    ['Verified exploits', String(exploits), exploits ? 'see findings' : 'none beat the reward'], ['Regression tests', String(tw), 'auto-written from findings']];
+  const at = S.attempts, scored = at.filter(a => a.score != null);
+  const personas = new Set(at.map(a => a.persona)).size;
+  const best = S.best_non_solver, solver = S.solver_score;
+  const tiles = [['Attacks', nf.format(at.length), [S.mode, S.tier].filter(Boolean).join(' · ') + (S.tool_calls ? ' · ' + nf.format(S.tool_calls) + ' tool calls' : '')],
+    ['Personas', String(personas), S.model ? String(S.model).split(',').map(short).join(', ') : ''],
+    ['Best non-solver score', best != null ? (best >= 0 ? '+' : '') + best.toFixed(3) : '—', solver != null ? 'solver ' + (solver >= 0 ? '+' : '') + solver.toFixed(3) + ' on the same seeds' : ''],
+    ['Verified exploits', String(S.exploits || 0), (S.exploits ? 'invariant broken, ledger-verified' : 'no invariant broken') + (S.candidates ? ' · ' + S.candidates + ' score candidates' : '')],
+    ['Regression tests', S.tests_written != null ? String(S.tests_written) : '—', 'written from the attacks']];
   const g = h('div', { class: 'grid' });
-  g.appendChild(h('div', { class: 'c12 tiles' }, tiles.map(t => h('div', { class: 'tile' }, [h('div', { class: 'lab', text: t[0] }), h('div', { class: 'val', text: t[1] }), h('div', { class: 'note', text: t[2] })]))));
-  g.appendChild(card('c7', 'Every attempt vs the solver', 'one dot per attack · x = episode score · grey = not ledger-verified', [synthBadge(S), stripChart(at, solver)]));
-  const top = at.slice().sort((a, b) => b.score - a.score).slice(0, 8);
-  const tbl = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, [h('th', { text: 'persona' }), h('th', { text: 'plan' }), h('th', { class: 'num', text: 'score' }), h('th', { text: 'verified' })])]),
-    h('tbody', {}, top.map(a => h('tr', {}, [h('td', { class: 'nw', text: a.persona }), h('td', { class: 'plan', text: String(a.plan || '').slice(0, 160) }), h('td', { class: 'num', text: (+a.score).toFixed(3) }),
-      h('td', {}, [h('span', { class: 'badge ' + (a.ledger_verified ? 'ok' : 'no'), text: a.ledger_verified ? '✓ ledger' : '✗ claim only' })])])))]);
-  g.appendChild(card('c5', 'Top attempts', 'highest scores first', [tbl]));
-  if (findings.length) g.appendChild(card('c12', 'Findings', null, [h('table', { class: 'list' }, [h('tbody', {}, findings.map(f => h('tr', {}, [h('td', { text: f.title || f.name || '' }),
-    h('td', {}, [h('span', { class: 'badge ' + (f.verified ? 'ok' : 'no'), text: f.verified ? '✓ verified' : 'unverified' })]), h('td', { class: 'plan', text: f.test || '' })])))])]));
+  g.appendChild(tilesRow(tiles));
+  g.appendChild(card('c7', 'Every attack vs the solver', 'one dot per attack · x = episode score · grey = not ledger-verified · red = exploit', [synthBadge(S), stripChart(scored, solver)]));
+  const top = scored.slice().sort((a, b) => b.score - a.score).slice(0, 7);
+  const tbl = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, [h('th', { text: 'persona' }), h('th', { text: 'hypothesis' }), h('th', { class: 'num', text: 'score' }), h('th', { text: 'ledger' })])]),
+    h('tbody', {}, top.map(a => h('tr', {}, [h('td', { class: 'nw', text: a.persona }), h('td', { class: 'plan', text: String(a.plan || '').slice(0, 150) + (String(a.plan || '').length > 150 ? '…' : '') }), h('td', { class: 'num', text: (a.score >= 0 ? '+' : '') + a.score.toFixed(3) }),
+      h('td', {}, [h('span', { class: 'badge ' + (a.ledger_verified ? 'ok' : 'no'), text: a.ledger_verified ? '✓ verified' : '✗ claim only' })])])))]);
+  g.appendChild(card('c5', 'Top attacks', 'highest verified scores first', [tbl]));
+  const vk = Object.entries(S.violation_kinds || {});
+  if (S.findings.length || vk.length) {
+    const kids = [];
+    if (vk.length) kids.push(h('p', { class: 'sub', text: 'Invariant violations by kind: ' + vk.map(([k, n]) => k + ' ×' + n).join(' · ') }));
+    if (S.findings.length) kids.push(h('table', { class: 'list' }, [h('tbody', {}, S.findings.map(f => h('tr', {}, [h('td', { text: f.title }),
+      h('td', {}, [h('span', { class: 'badge ' + (f.verified ? 'ok' : 'no'), text: f.verified ? '✓ verified' : 'unverified' })]), h('td', { class: 'plan', text: f.test })])))]));
+    g.appendChild(card('c12', 'Findings', null, kids));
+  }
   sec.appendChild(g);
 }
 function stripChart(at, solver) {
-  const W = 680, H = 170, L = 16, Rr = 16, cy = 80;
+  const W = 680, H = 240, L = 16, Rr = 16, cy = 110;
   const lo = Math.min(-1, ...at.map(a => a.score)), hi = Math.max(1, ...at.map(a => a.score));
   const X = v => L + (W - L - Rr) * (v - lo) / (hi - lo);
   const svg = s('svg', { class: 'chart', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'attack scores vs solver' });
@@ -1098,12 +1231,16 @@ function stripChart(at, solver) {
     svg.appendChild(s('text', { x: X(solver) + 6, y: 20, class: 'ink', text: 'solver ' + (+solver).toFixed(2) })); }
   const surf = css('--surface'), blue = css('--s1'), grey = css('--other'), red = css('--crit');
   const sorted = at.slice().sort((a, b) => a.score - b.score); const placed = [];
-  sorted.forEach(a => { const x = X(a.score); let k = 0; while (placed.some(p => Math.abs(p.x - x) < 9 && p.k === k)) k++; placed.push({ x, k });
-    const y = cy + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 9;
+  sorted.forEach(a => { const x = X(a.score); let k = 0; while (placed.some(p => Math.abs(p.x - x) < 9 && p.k === k)) k++; placed.push({ x, k, a }); });
+  const maxK = Math.max(1, ...placed.map(p => p.k)); const step = Math.min(9, (H - 60) / (maxK + 1));
+  placed.forEach(({ x, k, a }) => {
+    const y = cy + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * step;
     const g = s('g', { class: 'hov', tabindex: 0 });
     g.appendChild(s('circle', { class: 'hit', cx: x, cy: y, r: 10 }));
-    g.appendChild(s('circle', { class: 'mark', cx: x, cy: y, r: 4, fill: a.exploit && a.ledger_verified ? red : a.ledger_verified ? blue : grey, stroke: surf, 'stroke-width': 2 }));
-    bindTip(g, () => [a.persona, [{ v: (+a.score).toFixed(3), l: 'score' }, { v: a.ledger_verified ? 'ledger-verified' : 'claim only', l: '' }].concat(a.exploit ? [{ v: 'exploit', l: '' }] : [])]);
+    g.appendChild(s('circle', { class: 'mark', cx: x, cy: y, r: step < 7 ? 3 : 4, fill: a.exploit && a.ledger_verified ? red : a.ledger_verified ? blue : grey, stroke: surf, 'stroke-width': step < 7 ? 1 : 2 }));
+    bindTip(g, () => [a.persona, [{ v: (a.score >= 0 ? '+' : '') + a.score.toFixed(3), l: 'episode score' }, { v: a.ledger_verified ? 'ledger-verified' : 'claim only', l: '' }]
+      .concat(a.solver_score != null ? [{ v: a.solver_score.toFixed(3), l: 'solver, same seed' }] : []).concat(a.exploit ? [{ v: 'exploit', l: 'invariant broken' }] : [])
+      .concat(a.plan ? [{ v: '', l: String(a.plan).slice(0, 120) }] : [])]);
     svg.appendChild(g); });
   return svg;
 }

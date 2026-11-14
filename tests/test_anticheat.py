@@ -296,22 +296,41 @@ def test_cheat_corpus_injection_changes_nothing():
 # ----------------------------------------------------------------------------- round-1 judge findings
 def test_shared_verifier_grades_only_from_the_token_ledger(tmp_path):
     """Shared-verifier builds run test.sh INSIDE the agent container, so /evidence is agent-writable there.
-    A planted {"score": 1.0} must be ignored: the reward is the real server ledger (no accusation -> 0)."""
-    from tests.test_mcp import LEDGER, Srv
+    A planted {"score": 1.0} must be ignored: the reward is the real, HMAC-signed server ledger (no accusation -> 0),
+    and both reward files are written (Harbor reads reward.json first)."""
+    import time
+    from tests.test_harbor_ledger_sig import KEY, _file, _free_port, _get
     (tmp_path / "logs").mkdir()
     (tmp_path / "evidence").mkdir()
     (tmp_path / "evidence/ledger.json").write_text('{"score": 1.0, "done": true, "correct": true}')
-    srv = Srv("easy", 0)
+    token, port = "tok-" + "2" * 16, _free_port()
+    env = {k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}
+    env.update(CANARY_HOST="127.0.0.1", CANARY_PORT=str(port), CANARY_ALLOW_DEV="1",
+               CANARY_EPISODE_FILE=_file(tmp_path, "ep.json", json.dumps({"tier": "easy", "seed": 0})),
+               CANARY_LEDGER_TOKEN_FILE=_file(tmp_path, "tok", token),
+               CANARY_LEDGER_KEY_FILE=_file(tmp_path, "lk", KEY))
+    proc = subprocess.Popen([sys.executable, "-m", "canary.mcp_server"], env=env,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    base = f"http://127.0.0.1:{port}"
     try:
-        env = {**{k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}, "CANARY_LEDGER_TOKEN": LEDGER}
-        p = subprocess.run([sys.executable, "-c", _verifier_py(tmp_path, srv.base)], capture_output=True, text=True,
-                           env=env, timeout=120)
+        for _ in range(150):
+            try:
+                if _get(base + "/healthz")[0] == 200:
+                    break
+            except Exception:  # noqa: BLE001
+                pass
+            time.sleep(0.1)
+        venv = {**{k: v for k, v in os.environ.items() if not k.startswith("CANARY_")},
+                "CANARY_LEDGER_TOKEN": token, "CANARY_LEDGER_KEY": KEY}
+        p = subprocess.run([sys.executable, "-c", _verifier_py(tmp_path, base)], capture_output=True, text=True,
+                           env=venv, timeout=120)
     finally:
-        srv.stop()
-    assert p.returncode == 0, p.stderr[-800:]
+        proc.terminate()
+        proc.communicate(timeout=10)
+    assert p.returncode == 0, p.stdout[-800:] + p.stderr[-800:]
     assert float((tmp_path / "logs/reward.txt").read_text()) == 0.0
     assert json.loads((tmp_path / "logs/reward.json").read_text()) == {"reward": 0.0}
-    assert "/evidence ignored" in p.stdout
+    assert "/evidence ignored" in p.stdout and "signature=ok" in p.stdout
 
 
 def test_shared_verifier_with_unreachable_server_fails_closed_despite_planted_file(tmp_path):

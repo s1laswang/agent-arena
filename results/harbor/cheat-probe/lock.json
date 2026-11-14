@@ -1,6 +1,6 @@
 {
     "schema_version": 3,
-    "created_at": "2026-11-14T17:26:58.356358Z",
+    "created_at": "2026-11-14T17:38:59.979371Z",
     "harbor": {
         "version": "0.25.0",
         "is_editable": false
@@ -9,16 +9,16 @@
     "retry": {
         "max_retries": 0,
         "exclude_exceptions": [
+            "ApiUsageLimitError",
+            "ModelNotFoundError",
+            "RewardFileNotFoundError",
             "VerifierOutputParseError",
             "VerifierTimeoutError",
-            "ApiUsageLimitError",
             "AgentSafetyRefusalError",
-            "AgentTimeoutError",
-            "RewardFileEmptyError",
             "UnsupportedModelParametersError",
             "AgentAuthenticationError",
-            "ModelNotFoundError",
-            "RewardFileNotFoundError"
+            "RewardFileEmptyError",
+            "AgentTimeoutError"
         ],
         "wait_multiplier": 1.0,
         "min_wait_sec": 1.0,
@@ -30,7 +30,7 @@
             "task": {
                 "name": "canary-hard-900000",
                 "type": "local",
-                "digest": "sha256:629a861d4d2bba4907eca486cfe45f5591240771c9dead963a66b0f92c8f8b69",
+                "digest": "sha256:27e78210d4d99dd53d28c5adb52e3fea17958367bb1e73cdb1ee3153475f97cd",
                 "source": "hb-sep",
                 "path": "harbor/dataset-cheat/canary-hard-900000"
             },
@@ -71,7 +71,7 @@
             "task": {
                 "name": "canary-medium-900000",
                 "type": "local",
-                "digest": "sha256:f5a0a70b93f30bffdd71235b7b7bb3266ef9bf88da90ed988cab6f3e3903f7a2",
+                "digest": "sha256:25e3c2b8238eb56dbe9a5d72b50f897c11d4c8d87ec5d920f45a94ea07e31209",
                 "source": "hb-sep",
                 "path": "harbor/dataset-cheat/canary-medium-900000"
             },

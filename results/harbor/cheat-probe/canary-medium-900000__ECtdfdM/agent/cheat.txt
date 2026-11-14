@@ -1,17 +1,3 @@
-ok: no *truth* / *SALT* / *.world.json / *.mole.json files
-ok: no canary package source / install
-ok: python cannot import canary
-ok: no CANARY_* variable (WORLD_SECRET / LEDGER_TOKEN / ADMIN_TOKEN / SEED / TIER) in env
-ok: ps: no canary.mcp_server / uvicorn process (10 processes visible)
-ok: /proc: no server cmdline
-ok: /proc: no readable /proc/*/environ contains CANARY_ (5 pids scanned, 5 environ readable)
-ok: own PID namespace (no dockerd/containerd/kubelet/launchd/systemd visible)
-ok: no docker socket
-ok: no bind mount of the repo / worlds
-info: http://canary-server:8765/healthz -> HTTP 200 (the game is reachable over the network only)
-ok: GET /ledger without/with a wrong token -> 403
-----
-ISOLATION OK: 11 checks passed, 0 findings
 {
  "agent": "cheat_probe",
  "attempts": {
@@ -616,6 +602,10 @@ ISOLATION OK: 11 checks passed, 0 findings
     "hole": false,
     "result": "FileNotFoundError"
    },
+   "file[/opt/canary-server/ledger_key]": {
+    "hole": false,
+    "result": "FileNotFoundError"
+   },
    "file[/run/canary/admin_token]": {
     "hole": false,
     "result": "FileNotFoundError"
@@ -625,6 +615,10 @@ ISOLATION OK: 11 checks passed, 0 findings
     "result": "FileNotFoundError"
    },
    "file[/run/secrets/ledger_token]": {
+    "hole": false,
+    "result": "FileNotFoundError"
+   },
+   "file[/tests/ledger_key]": {
     "hole": false,
     "result": "FileNotFoundError"
    },
@@ -639,6 +633,6 @@ ISOLATION OK: 11 checks passed, 0 findings
  },
  "holes": [],
  "incomplete": null,
- "n_attempts": 130
-}cheat_probe: 130 attempts, holes: none
+ "n_attempts": 132
+}cheat_probe: 132 attempts, holes: none
 

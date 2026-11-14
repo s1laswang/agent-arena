@@ -6,7 +6,7 @@ Please review the branch independently. Don't trust this report: rerun the comma
 
 **What to check:**
 
-1. `harbor/template/tests/test.sh` (EXPLOITS #42). In shared-verifier builds it now:
+1. `harbor/template/tests/test.sh` (EXPLOITS #42), merged by hand with PR #7's signature check. In shared-verifier builds it now:
    - kills leftover agent processes (it keeps PID 1, itself and its parent chain);
    - grades only from the token-authenticated `GET /ledger` and never reads `/evidence`;
    - writes both `reward.txt` and `reward.json`, because Harbor reads `reward.json` first.
@@ -29,14 +29,14 @@ uv run python -m canary.redteam.anticheat --judge --seeds 40 --world-secret cana
 REPRO_FAST=1 make reproduce        # the last line says ANTI-CHEAT: ...; the exit code is 1 on a failure
 ```
 
-## Status (Sat 14 Nov, 19:35)
+## Status (Sat 14 Nov, 19:45; branch rebuilt on `justSilas` b4557e0, PR #7's HMAC-signed ledger included)
 
 **Done (verified):**
 - A fresh four-judge panel scored round 1 at reward integrity 19-20/25 and craft 11-12/15, with 14 findings that skeptics confirmed. All 14 are fixed on this branch; see the commit "fixes from a fresh 4-judge review panel".
 - Closed an exploit: in shared-verifier builds a planted `/evidence/ledger.json` scored 1.0 (EXPLOITS #42).
 - Shared mode is still **not for judging**. On our Harbor 0.25 / Docker Desktop host it did not run test.sh at all, so `build.py` now prints a warning.
-- `cheat_probe` through Harbor at this branch's code, separate verifier: **0.0 on medium and 0.0 on hard**, 0 holes in 130 attempts each.
-- Battery over 40 judge seeds × 3 tiers under a public test secret, every probe blocked: `results/anticheat/exploits.md`. Replay: 819 of 829 committed episodes identical; the other 10 are grok episodes on secret seeds. Harbor consistency: 22/22 trials and 8/8 job summaries.
+- `cheat_probe` through Harbor at this branch's code (with the PR #7 signed ledger), separate verifier: **0.0 on medium and 0.0 on hard**, `signature=ok`, 0 holes in 130 attempts each.
+- Battery over 40 judge seeds × 3 tiers under a public test secret, every probe blocked: `results/anticheat/exploits.md`. Replay: 819 of 829 committed episodes identical; the other 10 are grok episodes on secret seeds. Harbor consistency: 25/25 trials and 11/11 job summaries, including PR #7's c1-* runs.
 
 **Known limits, said plainly:**
 - The Harbor consistency check catches files that disagree with each other. It cannot catch a forger who edits every copy the same way.

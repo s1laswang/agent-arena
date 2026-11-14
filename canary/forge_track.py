@@ -21,12 +21,23 @@ from .mole.dsl import MoleStrategy
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_HOF = ROOT / "data" / "forge" / "hall_of_fame_v1.2.jsonl"
+DEFAULT_RL_HOF = ROOT / "data" / "rl_mole" / "hall_of_fame.jsonl"
 MIN_ACC = 0.75
 _cache: dict[str, tuple[list[dict], list[MoleStrategy]]] = {}
 
 
-def hof_path() -> Path:
+def hof_path(track: str = "hard_forge") -> Path:
+    if track == "hard_rl":
+        return Path(os.environ.get("CANARY_RL_HOF") or DEFAULT_RL_HOF)
     return Path(os.environ.get("CANARY_FORGE_HOF") or DEFAULT_HOF)
+
+
+def _strategy(sj):
+    """A hall-of-fame row's strategy: Mole DSL JSON, or an RL mole policy ({"kind": "rl_mole", ...})."""
+    if isinstance(sj, dict) and sj.get("kind") == "rl_mole":
+        from .forge.rl_mole import RLMole
+        return RLMole.from_json(sj)
+    return MoleStrategy.from_json(sj)
 
 
 def load(path: str | Path | None = None) -> tuple[list[dict], list[MoleStrategy]]:
@@ -46,7 +57,7 @@ def load(path: str | Path | None = None) -> tuple[list[dict], list[MoleStrategy]
             if sj is None:
                 raise ValueError(f"{path}: line without strategy_json")
             rows.append(row)
-            strats.append(MoleStrategy.from_json(sj))
+            strats.append(_strategy(sj))
         if not strats:
             raise ValueError(f"{path}: empty hall of fame")
         _cache[key] = (rows, strats)
@@ -60,7 +71,7 @@ def strategy_index(track: str, seed: int, n: int) -> int:
 
 
 def strategy_for(track: str, seed: int, path: str | Path | None = None) -> MoleStrategy:
-    _, strats = load(path)
+    _, strats = load(path or hof_path(track))
     return strats[strategy_index(track, seed, len(strats))]
 
 

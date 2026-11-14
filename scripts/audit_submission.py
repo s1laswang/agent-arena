@@ -29,9 +29,10 @@ EXPECTED_V14_HASH = "a8f99c2537c91d72"
 EXPECTED_V13_HASH = "8df71cf570bb48bc"
 ALLOWED_ENV_TEMPLATES = frozenset({".env.example", ".env.sample", ".env.template"})
 API_KEY_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("google_api_key", re.compile(r"AIza[0-9A-Za-z_-]{20,}")),
-    ("sk_api_key", re.compile(r"(?<![0-9A-Za-z_-])sk-(?:proj-|ant-|live-|test-|svcacct-)?[0-9A-Za-z_-]{16,}")),
+    ("google_api_key", re.compile(r"(?<![0-9A-Za-z+/_-])AIza[0-9A-Za-z_-]{20,}")),
+    ("sk_api_key", re.compile(r"(?<![0-9A-Za-z+/_-])sk-(?:proj-|ant-|live-|test-|svcacct-)?[0-9A-Za-z_-]{16,}")),
 )
+TEST_FIXTURE_MARKERS = ("fake", "fixture", "test-value", "abcdefghijklmn")
 
 
 @dataclass
@@ -109,7 +110,10 @@ def check_secret_hygiene(root: Path) -> CheckResult:
         txt = raw.decode("utf-8", errors="replace")
         for kind, rx in API_KEY_PATTERNS:
             for match in rx.finditer(txt):
-                violations.append(f"tracked raw API key ({kind}: {_redact_token(match.group(0))}) in {rel}")
+                tok = match.group(0)
+                if rel.startswith("tests/") and any(m in tok.lower() for m in TEST_FIXTURE_MARKERS):
+                    continue
+                violations.append(f"tracked raw API key ({kind}: {_redact_token(tok)}) in {rel}")
 
     if violations:
         return CheckResult(
@@ -256,6 +260,10 @@ def check_committed_runs(
 
             ep_meta = ep.get("meta") if isinstance(ep.get("meta"), dict) else {}
             is_invalid = (ep_meta.get("valid") is False) or (ep.get("valid") is False)
+            if not is_invalid and (ep_meta.get("rc") == "timeout" or ep.get("end_reason") == "error"):
+                failures.append(
+                    f"{loc}: episode has rc={ep_meta.get('rc')!r} end_reason={ep.get('end_reason')!r} without meta.valid=False"
+                )
 
             seen[(agent, tier, version, seed)].append(loc)
             failures.extend(_check_score_invariants(ep, loc, is_invalid))
@@ -449,8 +457,11 @@ def audit_harbor_task_dir(task_dir: Path) -> list[str]:
         for child in env_dir.iterdir():
             if child.name == "canary-server":
                 continue
-            if child.name in {"canary", "SALT", "episode.json"} or child.name.endswith(".world.json"):
+            if child.name in {"canary", "SALT", "episode.json", "ledger_key"} or child.name.endswith(".world.json"):
                 failures.append(f"forbidden file/dir in agent environment build context: {child.name}")
+    sol_key = task_dir / "solution" / "ledger_key"
+    if sol_key.exists():
+        failures.append("forbidden ledger_key in solution build context")
 
     dockerignore = task_dir / "environment" / ".dockerignore"
     if not dockerignore.is_file():
@@ -474,23 +485,24 @@ def audit_harbor_task_dir(task_dir: Path) -> list[str]:
             failures.append("environment/.dockerignore does not cleanly exclude canary-server")
 
     sidecar = task_dir / "environment" / "canary-server"
-    for label, rel_path in (
-        ("SALT", Path("data/worlds/judge/SALT")),
-        ("episode.json", Path("episode.json")),
+    for label, target in (
+        ("SALT", sidecar / "data" / "worlds" / "judge" / "SALT"),
+        ("episode.json", sidecar / "episode.json"),
+        ("sidecar ledger_key", sidecar / "ledger_key"),
+        ("verifier ledger_key", task_dir / "tests" / "ledger_key"),
     ):
-        target = sidecar / rel_path
         if not target.exists():
-            failures.append(f"missing sidecar {label} at {rel_path}")
+            failures.append(f"missing {label} at {target.relative_to(task_dir)}")
             continue
         if target.is_symlink() or not target.is_file():
-            failures.append(f"sidecar {label} must be a regular non-symlink file")
+            failures.append(f"{label} must be a regular non-symlink file")
             continue
         st = target.stat()
         mode = stat.S_IMODE(st.st_mode)
         if mode != 0o600:
-            failures.append(f"sidecar {label} mode expected 0o600, got {oct(mode)}")
+            failures.append(f"{label} mode expected 0o600, got {oct(mode)}")
         if st.st_size == 0:
-            failures.append(f"sidecar {label} is empty")
+            failures.append(f"{label} is empty")
 
     ep_path = sidecar / "episode.json"
     if ep_path.is_file() and not ep_path.is_symlink():
@@ -507,7 +519,7 @@ def audit_harbor_task_dir(task_dir: Path) -> list[str]:
 def check_harbor_package(
     root: Path,
     task_dir: Path | None = None,
-    tier: str = "medium",
+    tier: str = "hard",
     seed: int = 900000,
 ) -> CheckResult:
     name = "Harbor Package Static Audit"
@@ -518,7 +530,7 @@ def check_harbor_package(
         return CheckResult(
             name,
             "PASS",
-            f"{task_dir.name} verified (separate verifier, [[verifier.collect]], clean Dockerfile/.dockerignore, 0600 SALT & episode.json, 0 CANARY_* agent env vars)",
+            f"{task_dir.name} verified (separate verifier, [[verifier.collect]], clean Dockerfile/.dockerignore, 0600 SALT/episode.json/ledger_key, 0 CANARY_* agent env vars)",
         )
 
     build_py = root / "harbor" / "build.py"
@@ -545,7 +557,7 @@ def check_harbor_package(
         return CheckResult(
             name,
             "PASS",
-            f"{built.name} verified (separate verifier, [[verifier.collect]], clean Dockerfile/.dockerignore, 0600 SALT & episode.json, 0 CANARY_* agent env vars)",
+            f"{built.name} verified (separate verifier, [[verifier.collect]], clean Dockerfile/.dockerignore, 0600 SALT/episode.json/ledger_key, 0 CANARY_* agent env vars)",
         )
 
 

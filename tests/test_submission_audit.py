@@ -267,6 +267,7 @@ def test_committed_runs_catches_duplicate_seeds(tmp_path):
         {"tier": "medium", "seed": 1, "agent": "x", "score": 0.4, "accused": None, "correct": False, "meta": {}},
         {"tier": "medium", "seed": 1, "agent": "x", "score": 0.0, "accused": "e01", "correct": False, "meta": {}},
         {"tier": "medium", "seed": 1, "agent": "x", "score": 0.5, "accused": "e01", "correct": False, "meta": {}},
+        {"tier": "hard", "seed": 1, "agent": "x", "score": 0.0, "accused": None, "correct": False, "end_reason": "error", "meta": {"rc": "timeout", "valid": True}},
     ],
 )
 def test_committed_runs_catches_score_invariant_violations(tmp_path, bad_ep):
@@ -278,7 +279,7 @@ def test_committed_runs_catches_score_invariant_violations(tmp_path, bad_ep):
 def test_harbor_package_audit_and_synthetic_failures(tmp_path):
     base_out = tmp_path / "harbor_ok"
     base_out.mkdir()
-    built = build_task(base_out, "medium", 900000, "separate", b"w" * 32)
+    built = build_task(base_out, "hard", 900000, "separate", b"w" * 32, b"k" * 64)
     assert audit.check_harbor_package(ROOT, task_dir=built).status == "PASS"
 
     def _clone_case(name: str) -> Path:
@@ -286,6 +287,8 @@ def test_harbor_package_audit_and_synthetic_failures(tmp_path):
         shutil.copytree(built, dst)
         (dst / "environment" / "canary-server" / "data" / "worlds" / "judge" / "SALT").chmod(0o600)
         (dst / "environment" / "canary-server" / "episode.json").chmod(0o600)
+        (dst / "environment" / "canary-server" / "ledger_key").chmod(0o600)
+        (dst / "tests" / "ledger_key").chmod(0o600)
         return dst
 
     c_shared = _clone_case("shared_mode")
@@ -338,6 +341,13 @@ def test_harbor_package_audit_and_synthetic_failures(tmp_path):
     res_ep = audit.check_harbor_package(ROOT, task_dir=c_ep_perm)
     assert res_ep.status == "FAIL"
     assert any("episode.json mode expected 0o600" in d for d in res_ep.details)
+
+    c_lk_perm = _clone_case("bad_lk_perm")
+    lk_file = c_lk_perm / "tests" / "ledger_key"
+    lk_file.chmod(0o644)
+    res_lk = audit.check_harbor_package(ROOT, task_dir=c_lk_perm)
+    assert res_lk.status == "FAIL"
+    assert any("ledger_key mode expected 0o600" in d for d in res_lk.details)
 
 
 def test_clean_reproduce_audit_clean_and_dirty(tmp_path):

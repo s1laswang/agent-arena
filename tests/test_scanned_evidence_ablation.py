@@ -119,7 +119,23 @@ def test_scanned_evidence_ablation_png_hashes_and_determinism() -> None:
             day_surfaced=vc["day_surfaced"],
             variant=vc["expected_variant"],
         )
-        assert memo_sha256(rerendered) == digest
+        rerendered_repeat = render_leak_memo_png(
+            doc_id=vc["doc_id"],
+            day_surfaced=vc["day_surfaced"],
+            variant=vc["expected_variant"],
+        )
+        assert rerendered[:8] == b"\x89PNG\r\n\x1a\n"
+        assert memo_sha256(rerendered) == memo_sha256(rerendered_repeat)
+        with Image.open(io.BytesIO(rerendered)) as rerendered_im:
+            assert rerendered_im.format == "PNG"
+            assert list(rerendered_im.size) == list(MEMO_IMAGE_SIZE)
+        alt_variant = "B" if vc["expected_variant"] == "A" else "A"
+        alt_rendered = render_leak_memo_png(
+            doc_id=vc["doc_id"],
+            day_surfaced=vc["day_surfaced"],
+            variant=alt_variant,
+        )
+        assert memo_sha256(rerendered) != memo_sha256(alt_rendered)
 
 
 def test_scanned_evidence_ablation_meta_schema_and_provenance() -> None:

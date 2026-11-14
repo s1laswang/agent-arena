@@ -2,8 +2,11 @@ import atexit
 import inspect
 import json
 import os
+import signal
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.prompts import Prompt
+from mcp.types import CallToolResult, TextContent
 
 from sleeper.company import BUDGET, DEPUTY, World, tools_for
 from sleeper.day import play_round
@@ -15,14 +18,26 @@ TYPES = {"number": float, "array": list | str, "object": dict, "string": str | i
 
 def build_server(world, seat, team=None, out=None):
     out = out or os.environ.get("SLEEPER_OUT", "/tmp/sleeper_state.json")
-    mcp = MCPServer("sleeper-" + seat)
+    try:
+        from harbor.opencode.instruction import seat_instruction
+        text = seat_instruction(seat)
+    except Exception:
+        text = None
+    mcp = MCPServer("sleeper-" + seat, instructions=text)
     st = {"done": False, "n": 0}
 
+    def dump():
+        tmp = out + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(dump_state(world), f)
+        os.replace(tmp, out)
+
     def finish():
-        if not st["done"]:
-            st["done"] = True
-            with open(out, "w") as f:
-                json.dump(dump_state(world), f)
+        st["done"] = True
+        dump()
+
+    if text:
+        mcp.add_prompt(Prompt.from_function(lambda: text, name="seat_instruction", description="Your job this day"))
 
     def make(spec):
         name = spec["name"]
@@ -33,13 +48,18 @@ def build_server(world, seat, team=None, out=None):
             if st["done"]:
                 return {"ok": False, "error": "day over"}
             kw = {k: [v] if isinstance(v, str) and props[k]["type"] == "array" else v for k, v in kw.items()}
-            res = world.call(seat, name, kw)
+            try:
+                res = world.call(seat, name, kw)
+            except Exception as e:
+                return {"ok": False, "error": f"{type(e).__name__}: {e}"}
             st["n"] = 0 if name == "end_turn" else st["n"] + 1
             if team is not None and (name == "end_turn" or st["n"] >= STALL):
                 st["n"] = 0
                 play_round(world, team, skip=seat)
             if world.tick >= world.last_tick or world.calls[seat] >= BUDGET:
                 finish()
+            if name == "end_turn":
+                dump()
             return res
 
         fn.__name__ = name
@@ -56,7 +76,18 @@ def build_server(world, seat, team=None, out=None):
         specs.update({n: full[n] for n in DEPUTY if n in full})
     for spec in specs.values():
         mcp.add_tool(make(spec), name=spec["name"], description=spec["description"])
+    orig = mcp.call_tool
+
+    async def safe(name, arguments, context=None):
+        try:
+            return await orig(name, arguments, context)
+        except Exception as e:
+            err = {"ok": False, "error": str(e) or type(e).__name__}
+            return CallToolResult(content=[TextContent(type="text", text=json.dumps(err))], structured_content=err)
+
+    mcp.call_tool = safe
     mcp.finish = finish
+    mcp.dump = dump
     return mcp
 
 
@@ -91,8 +122,18 @@ def main():
         from sleeper.scripted import seat_team
         team = seat_team(day, a.seat, a.day, strategy)
     srv = build_server(world, a.seat, team, a.out)
-    atexit.register(srv.finish)
-    srv.run(transport=a.transport)
+    atexit.register(srv.dump)
+
+    def bye(*_):
+        srv.dump()
+        os._exit(0)
+
+    signal.signal(signal.SIGTERM, bye)
+    signal.signal(signal.SIGINT, bye)
+    try:
+        srv.run(transport=a.transport)
+    finally:
+        srv.dump()
 
 
 if __name__ == "__main__":

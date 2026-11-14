@@ -135,6 +135,27 @@ def derive(r):
     return {"sleeper_seat": (t.get("day") or {}).get("sleeper_seat"), "quarantined": (t.get("company") or {}).get("quarantined"), "seat_votes": sorted({x["args"].get("target") for x in mine if x["tool"] == "quarantine"}), "end_reason": why, "tickets_open": opn, "tickets_open_seat": [x for x in opn if x["seat"] == r["seat"]], "model_steps": len(mine), "budget_exhausted_tick": exh["tick"] if exh else None, "useful_steps_before_exhaustion": sum(1 for x in mine if "budget exhausted" not in str(x.get("effect"))), "repeat_calls": len(mine) - len({(x["tool"], json.dumps(x["args"], sort_keys=True, default=str)) for x in mine})}
 
 
+def save_state(f, r):
+    import gzip
+
+    t = r.get("transcript") or {}
+    if not t.get("day"):
+        return
+    init = t.get("initial")
+    if init is None:
+        from sleeper.company import World
+
+        day = R.day_for(r["seed"], r["seat"] if r["mode"] == "seat" else None)[0]
+        init = World(day).initial.model_dump(mode="json")
+    st = {"day": t["day"], "initial": init, "company": t["company"], "ledger": t["ledger"]}
+    sp = f[:-5] + ".state.json.gz"
+    with gzip.open(sp, "wt") as g:
+        json.dump(st, g, separators=(",", ":"), default=str)
+    r["state_path"] = os.path.basename(sp)
+    sc = r["scores"]
+    r["result"] = {"reward": sc["reward"], "tickets_done": sc["tickets_done"], "tickets_total": sc["tickets_total"], "harm": sc["harm"], "false_quarantine": sc["false_quarantines"], "seat_under_test": r["seat"] if r["mode"] == "seat" else None}
+
+
 def backfill(d, team=None, sleeper=None, patch=None):
     import glob
 
@@ -150,6 +171,8 @@ def backfill(d, team=None, sleeper=None, patch=None):
         if patch:
             r["client_patch"] = patch
         r.update(derive(r))
+        if not r.get("invalid"):
+            save_state(f, r)
         if "mcp_calls" not in r:
             r["mcp_calls"] = [{"tool": x["tool"], "args": x["args"], "result": x["effect"]} for x in (r.get("transcript") or {}).get("steps", []) if x.get("seat") == r["seat"]]
         json.dump(r, open(f, "w"), indent=1, sort_keys=True, default=str)

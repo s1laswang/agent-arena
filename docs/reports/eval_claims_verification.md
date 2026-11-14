@@ -55,7 +55,7 @@ All **150** committed v1.4 frontier episodes and **60** committed v1.4 solver re
 | `v1.4/reference/solver:medium` | medium | `solver` | 30 | 0 | 0 | 30/30 | +0.645000 |
 | `v1.4/reference/solver:hard` | hard | `solver` | 30 | 0 | 0 | 30/30 | +0.499000 |
 
-- Gemini effort ladder (`results/gemini/ladder_episodes.jsonl.gz`): 118 native + 16 imported = 134 valid episodes, 0 invariant violations, 0 error/timeout leaks.
+- Gemini effort ladder (`results/gemini/ladder_episodes.jsonl.gz`): 320 native + 37 imported = 357 valid episodes, 0 invariant violations, 0 error/timeout leaks.
 
 ## Gate 3: Baselines and Judge Spread Bands
 

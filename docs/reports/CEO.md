@@ -131,3 +131,14 @@
 - FR8: J4 44200 running 1h17m (pilot tokenization; training ~03:55-06:50, eval until 08:24). Sky 43143_4 still paused (requeuehold).
 - AGENTS: official v1.3 gpt-5.5 run in progress (20 medium + 20 hard, started ~03:33, 8 workers). Spend cap $150/night without Silas.
 - Forge: the evolved moles are not harder for gpt-5.5 (7/7 correct on 2 seeds). Framing: "a solver-constrained pipeline works; LLM-in-the-loop fitness is the morning step". J5b runs on v1.3.
+
+## 03:50 SPEND OVERRUN (for Silas)
+- OpenAI API spend tonight is about $195, above the CEO cap of $150 (set at about 03:30; AGENTS had not been tracking spend before that).
+  - v1.2 official gpt-5.5 20+20: $121.46 (~$3/episode)
+  - v1 directional: $24.4
+  - Forge HOF validation: ~$22.4
+  - killed/unlogged runs: ~$20-25
+  - Codex API: a few $.
+- All API-billed runs are stopped after their in-flight episodes (~10-12 v1.3 episodes). No further API spend without Silas.
+- Zero-marginal-cost path: Codex CLI on the ChatGPT login (only if its auth mode is verified); Gemini free credits in the morning.
+- v1.2 OFFICIAL FINAL (efef43b): medium gpt-5.5 .600 vs solver .690 (87%); hard .500 vs .584 (86%); Grok 97%/97%.

@@ -1311,6 +1311,40 @@ def run_audit_pipeline(
     command_str: str | None = None,
     client_override: Any = None,
 ) -> dict[str, Any]:
+    prev_retries = os.environ.get("CANARY_LLM_MAX_RETRIES")
+    try:
+        return _run_audit_pipeline_impl(
+            llm_spec=llm_spec,
+            seeds=seeds,
+            workers=workers,
+            min_acc=min_acc,
+            roles_dir=roles_dir,
+            out_dir=out_dir,
+            thinking_level=thinking_level,
+            known_secrets=known_secrets,
+            command_str=command_str,
+            client_override=client_override,
+        )
+    finally:
+        if prev_retries is None:
+            os.environ.pop("CANARY_LLM_MAX_RETRIES", None)
+        else:
+            os.environ["CANARY_LLM_MAX_RETRIES"] = prev_retries
+
+
+def _run_audit_pipeline_impl(
+    *,
+    llm_spec: str = DEFAULT_LLM,
+    seeds: Sequence[int] | None = None,
+    workers: int = DEFAULT_WORKERS,
+    min_acc: float = ma.MIN_SOLVER_ACCURACY,
+    roles_dir: str | Path = DEFAULT_ROLES_DIR,
+    out_dir: str | Path = DEFAULT_OUT,
+    thinking_level: str | None = None,
+    known_secrets: Sequence[str | bytes] = (),
+    command_str: str | None = None,
+    client_override: Any = None,
+) -> dict[str, Any]:
     os.environ.setdefault("CANARY_LLM_MAX_RETRIES", "10")
     norm_spec, model_id, is_stub = normalize_llm_spec(llm_spec)
     seeds_list = list(seeds) if seeds is not None else list(range(20, 40))

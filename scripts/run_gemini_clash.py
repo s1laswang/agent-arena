@@ -340,6 +340,28 @@ def run_clash(spec: str = "gemini:gemini-4-carbon", tier: str = "medium", seed: 
               out_dir: str | Path = DEFAULT_OUT, thinking_level: str | None = None,
               client_builder: Callable[..., Any] | None = None,
               command_str: str | None = None) -> dict[str, Any]:
+    prev_retries = os.environ.get("CANARY_LLM_MAX_RETRIES")
+    try:
+        return _run_clash_impl(
+            spec=spec,
+            tier=tier,
+            seed=seed,
+            out_dir=out_dir,
+            thinking_level=thinking_level,
+            client_builder=client_builder,
+            command_str=command_str,
+        )
+    finally:
+        if prev_retries is None:
+            os.environ.pop("CANARY_LLM_MAX_RETRIES", None)
+        else:
+            os.environ["CANARY_LLM_MAX_RETRIES"] = prev_retries
+
+
+def _run_clash_impl(spec: str = "gemini:gemini-4-carbon", tier: str = "medium", seed: int = 0,
+                    out_dir: str | Path = DEFAULT_OUT, thinking_level: str | None = None,
+                    client_builder: Callable[..., Any] | None = None,
+                    command_str: str | None = None) -> dict[str, Any]:
     os.environ.setdefault("CANARY_LLM_MAX_RETRIES", "10")
     spec, model_id = normalize_spec(spec)
     out = Path(out_dir)

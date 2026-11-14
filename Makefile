@@ -23,8 +23,11 @@ reproduce:        ## [HARNESS] judge table on the frozen judge seeds (no keys) -
 reproduce-update: ## [HARNESS] team only: rerun reproduce and overwrite the committed results/judge_table.md, judge_episodes.jsonl, gap_chart.png
 	$(UV) python -m canary.eval --reproduce --update-committed
 
-mcp:              ## [HARNESS] run the MCP env server (streamable HTTP)
-	$(UV) python -m canary.mcp_server
+mcp:              ## [HARNESS] run the MCP env server (streamable HTTP). CANARY_TIER/SEED/LEDGER_TOKEN are moved into 0600 files (CANARY_EPISODE_FILE), never left in the server env
+	@umask 077; d=$$(mktemp -d); \
+	printf '{"tier": "%s", "seed": %s}' "$${CANARY_TIER:-easy}" "$${CANARY_SEED:-900000}" > $$d/episode.json; \
+	if [ -n "$${CANARY_LEDGER_TOKEN:-}" ]; then printf %s "$$CANARY_LEDGER_TOKEN" > $$d/ledger_token; export CANARY_LEDGER_TOKEN_FILE=$$d/ledger_token; fi; \
+	exec env -u CANARY_TIER -u CANARY_SEED -u CANARY_LEDGER_TOKEN CANARY_EPISODE_FILE=$$d/episode.json $(UV) python -m canary.mcp_server
 
 game:             ## [HARNESS] build the static browser game (real canary package in Pyodide) into game/site/
 	$(UV) python game/build.py

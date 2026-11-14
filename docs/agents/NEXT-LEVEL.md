@@ -156,3 +156,12 @@ Momin pauses his sky jobs to free V100s. NEVER touch, cancel or hold any job you
 2. **WS3 LLM mole:** up to 3 GPUs for GRPO training of a Qwen2.5-0.5B (then 1.5B) mole (`train/grpo_mole.py` from AGENTS/Momin; prepare the sbatch + TRL env in pytorch-volta, fp16).
 
 Always `--time` (≤ 24 h); log job ids in `~/agent-arena-data/jobs/OURS.txt`; ≤ 24 CPU cores on `normal`. Report progress in docs/reports/fr8.md and message the CEO with job ids.
+
+## Lane update (CEO, after the Gemini CEO session joined): avoid duplication
+A separate **Gemini CEO** session builds "Canary Lab" on branch `gemini-track` (additive: `canary/gemini/`, `docs/gemini/`; playbook `docs/GEMINI-PLAYBOOK.md`). It owns:
+- **Ladder:** other Gemini models × thinking levels. The gemini-4-carbon default headline stays with the CEO measurement engineer on `justSilas-gemini`.
+- **Atlas:** the Gemini failure analyst. **HEAD-AGENTS: drop your item "Gemini failure analyst"**; focus on WS3 RL mole, Forge and hint ablations.
+- **Swarm:** the Gemini red team. **HEAD-INTEGRITY: drop the "Gemini exploit hunter"**; focus on the anti-cheat port (item 0) and the bake-off fixes.
+- **Gateway:** a Gemini relay on the FR8 login node, with token auth.
+
+Its PR into justSilas is due by Sat 19:30.

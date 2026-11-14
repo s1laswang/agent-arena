@@ -1,5 +1,5 @@
 diff --git a/agents/gemini.py b/agents/gemini.py
-index f0e1dc7..db4f3fc 100644
+index f0e1dc7..3d9d8f3 100644
 --- a/agents/gemini.py
 +++ b/agents/gemini.py
 @@ -142,7 +142,7 @@ def _get_client():
@@ -7,7 +7,7 @@ index f0e1dc7..db4f3fc 100644
          from google import genai
  
 -        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-+        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 120000})
++        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 300000})
      return _client
  
  

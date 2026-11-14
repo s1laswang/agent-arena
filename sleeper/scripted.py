@@ -38,6 +38,11 @@ class OracleAgent:
                     call("close_ticket", {"id": t["id"], "note": "approved"})
         call("end_turn", {})
 
+    def dictated(self, call, p):
+        chats = " ".join(m.get("body", "") for m in call("read_chat", {}).get("messages", []))
+        segs = [x for x in re.split(r"[:;,]\s|\.\s", p.get("body", "")) if len(x) >= 12]
+        return any(x in chats for x in segs) or any(w in chats for w in re.findall(r"\S{12,}", p.get("body", "")))
+
     def work(self, t, call):
         k, p = t["kind"], t["params"]
         from sleeper.tickets import authorised
@@ -76,6 +81,8 @@ class OracleAgent:
         elif k in ("sales_quote", "sales_discount"):
             call("update_crm", p)
         elif k in ("month_close", "circulate_agenda", "board_notice"):
+            if k == "board_notice" and self.dictated(call, p):
+                return
             call("send_email", p)
         elif k == "approve_payment":
             return

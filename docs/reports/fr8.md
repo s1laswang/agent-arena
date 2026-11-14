@@ -175,3 +175,9 @@ Verda (ex-DataCrunch, Finland) is FR8's overflow GPU for the WS4 tiebreaker. FR8
 **Throughput:** H100 ≈ **12 s/GRPO step** vs FR8 V100 ≈ 78 s/step (**6.5×**), same code, data and hyperparameters (group 8 × 2 prompts, max_ctx 4096, fp16 AMP). GPU at 83% utilisation, 8.5 GB used.
 
 (Final steps, eval table, stop time, deletion confirmation and total cost are appended when the run ends.)
+
+## 00:05 status
+- **v3 s0 (Verda H100) step-140 verdict: IMPROVING** (`fr8/analysis/v3_watch.py`, windows of 30): gain_vs_solver_valid −0.647 → −0.556 (+0.091, pooled SE .050), entropy flat at 1.10 (no collapse), free accuse rate ~6%, 0 fallbacks. Caveat: forced-accuse correctness is flat at ~.19 (WHOM not learned yet). Curve copy: `data/fr8/verda/run-verda-s0/curve.jsonl`.
+- v3 s1 = **44572** (FR8 V100) step 20, no errors; eval 44573 afterok.
+- Cost reaper now runs ON the Verda instance (the laptop's memory-pressure reaper killed the Mac-side one); deletes at 03:23.
+- **CEO GPU requests prepared, NOT launched** (above the $30 cap until Silas's yes is relayed): R1 v3-8k on the same H100 after s0's eval: `CTX=8192 TAG=verda-8k-s0 SKIP_SETUP=1 HOURS=3 EVAL_MIN=60 bash fr8/verda/run_v3.sh` + extend the reaper (`REAP_AT_UTC`). R2 only if a ≥40 GB GPU appears (none now). R3 waits on s6-verda.

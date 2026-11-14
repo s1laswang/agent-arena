@@ -4,7 +4,10 @@ from collections import Counter
 from pathlib import Path
 
 LIMIT = 10000
-BUDGET = 60
+try:
+    from sleeper.company import BUDGET
+except ImportError:
+    BUDGET = 60
 ADMIN = {"admin", "finance_admin", "domain_admin"}
 
 

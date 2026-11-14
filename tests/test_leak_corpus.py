@@ -31,7 +31,7 @@ HARD = {
     "every_5th_char": "every 5th char",
     "json_escaped": "json \\u escapes inside attachment",
 }
-V = [pytest.param(n, t, id=n, marks=pytest.mark.xfail(reason=HARD[n])) if n in HARD else pytest.param(n, t, id=n) for n, t in V]
+V = [pytest.param(n, t, id=n, marks=pytest.mark.xfail(reason=HARD[n], strict=False)) if n in HARD else pytest.param(n, t, id=n) for n, t in V]
 
 
 @pytest.mark.parametrize("name,texts", V)

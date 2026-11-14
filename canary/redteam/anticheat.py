@@ -692,6 +692,8 @@ def check_harbor_trial(trial: Path) -> dict:
         row["consistent"] = False
         return row
     row["exception"] = bool(res.get("exception_info"))
+    exc = res.get("exception_info")
+    row["exception_type"] = exc.get("exception_type") if isinstance(exc, dict) else None
     reward = _num(((res.get("verifier_result") or {}).get("rewards") or {}).get("reward"))
     if reward is None:
         row["why"] = "no verifier reward (infrastructure failure; not counted as a result)"
@@ -800,6 +802,9 @@ def check_harbor_trial(trial: Path) -> dict:
     return row
 
 
+HARBOR_UNSCORED = {"ApiRateLimitError", "AgentSetupTimeoutError"}
+
+
 def check_harbor_job(job: Path, trials: list[dict]) -> dict:
     """The job-level result.json (what Harbor's summary table shows) must match its own trials."""
     row: dict[str, Any] = {"trial": job.as_posix() + "/ (job)", "kind": "job", "reward": None, "consistent": None,
@@ -816,12 +821,20 @@ def check_harbor_job(job: Path, trials: list[dict]) -> dict:
         probs.append(f"{len(evals)} eval groups in the job result (expected 1)")
     ev = next(iter(evals.values()), {}) if evals else {}
     by_name = {Path(t["trial"]).name: t for t in trials}
-    if ev.get("n_trials") != len(trials):
-        probs.append(f"job says n_trials={ev.get('n_trials')}, the job folder has {len(trials)} trials")
+    # Harbor leaves trials that ended in an infrastructure exception (provider rate limit, agent setup timeout) out of
+    # its job stats (n_trials, mean, reward buckets), even when the verifier wrote a reward. A trial is treated that
+    # way only if its own result.json AND the job's exception_stats both name that exception for it.
+    listed_exc = {nm: et for et, names in (ev.get("exception_stats") or {}).items() for nm in names}
+    unscored = {nm for nm, t in by_name.items()
+                if t.get("exception_type") in HARBOR_UNSCORED and listed_exc.get(nm) == t.get("exception_type")}
+    scored = [t for t in trials if Path(t["trial"]).name not in unscored]
+    if ev.get("n_trials") != len(scored):
+        probs.append(f"job says n_trials={ev.get('n_trials')}, the job folder has {len(scored)} scored trials"
+                     + (f" (+{len(unscored)} unscored infra)" if unscored else ""))
     n_exc = sum(1 for t in trials if t.get("exception"))
     if ev.get("n_errors") != n_exc:
         probs.append(f"job says n_errors={ev.get('n_errors')}, {n_exc} trials have an exception")
-    rewards = [t["reward"] for t in trials if t["reward"] is not None]
+    rewards = [t["reward"] for t in scored if t["reward"] is not None]
     metrics = ev.get("metrics") or [{}]
     mean = _num((metrics[0] or {}).get("mean"))
     if rewards and (mean is None or abs(mean - sum(rewards) / len(rewards)) > 1e-6):
@@ -843,7 +856,12 @@ def check_harbor_job(job: Path, trials: list[dict]) -> dict:
 def harbor_consistency(root: Path = ROOT) -> list[dict]:
     base = root / "results" / "harbor"
     rows = []
-    for job_res in sorted(base.glob("*/result.json")):
+    # jobs sit at results/harbor/<job>/ or, for a multi-job run such as the judge rehearsal, results/harbor/<run>/<job>/
+    for job_res in sorted([*base.glob("*/result.json"), *base.glob("*/*/result.json")]):
+        if not list(job_res.parent.glob("*/result.json")):   # a trial's own result.json, not a job's
+            continue
+        if (job_res.parent / "config.json").exists() and (job_res.parent / "agent").is_dir():
+            continue
         job = job_res.parent
         trows = []
         for res in sorted(job.glob("*/result.json")):

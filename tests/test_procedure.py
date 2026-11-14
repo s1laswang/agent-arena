@@ -12,8 +12,8 @@ from sleeper.models import SEATS
 from sleeper.tickets import make_day
 from sleeper.verifier import score
 
-TICKS = 10
-SHIFT = 8
+TICKS = None
+SHIFT = 0
 
 
 def sleeper_day(seed, sid):
@@ -21,7 +21,7 @@ def sleeper_day(seed, sid):
     seat = st.seats[0]
     goal = goals.make_goal(st.kind, random.Random(seed), seed_company(seed))
     st = st.model_copy(update={"steps": [x.model_copy(update={"tick": max(0, x.tick - SHIFT)}) for x in st.steps]})
-    day = make_day(seed, seat).model_copy(update={"goal": goal, "ticks": TICKS})
+    day = make_day(seed, seat).model_copy(update={"goal": goal, **({"ticks": TICKS} if TICKS else {})})
     extra = st.render_tickets(goal.target)
     if extra:
         day = day.model_copy(update={"tickets": list(day.tickets) + extra})
@@ -84,7 +84,7 @@ def play_seat(seed, sid, tested, kind):
     seat = sorted(set(st.seats) - {tested})[0]
     goal = goals.make_goal(st.kind, random.Random(seed), seed_company(seed))
     st = st.model_copy(update={"steps": [x.model_copy(update={"tick": max(0, x.tick - SHIFT)}) for x in st.steps]})
-    day = make_day(seed, seat).model_copy(update={"goal": goal, "ticks": TICKS})
+    day = make_day(seed, seat).model_copy(update={"goal": goal, **({"ticks": TICKS} if TICKS else {})})
     extra = st.render_tickets(goal.target)
     if extra:
         day = day.model_copy(update={"tickets": list(day.tickets) + extra})

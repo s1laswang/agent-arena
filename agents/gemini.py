@@ -6,7 +6,12 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CACHE = ROOT / ".cache" / "gemini"
+CACHE = Path(os.environ.get("SLEEPER_CACHE_DIR") or ROOT / ".cache" / "gemini")
+_used = set()
+if os.environ.get("SLEEPER_USED_FILE"):
+    import atexit
+
+    atexit.register(lambda: Path(os.environ["SLEEPER_USED_FILE"]).write_text("\n".join(sorted(_used))))
 DEFAULT_MODEL = "gemini-2.5-flash"
 _usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0}
 _client = None
@@ -71,6 +76,7 @@ def estimate_calls(seats=8, rounds=3, steps=10):
 
 
 def reset_usage():
+    _used.clear()
     for k in _usage:
         _usage[k] = 0
 
@@ -186,6 +192,7 @@ def _parse(resp):
 def chat(model, system, messages, tools=None, temperature=0, seed=None):
     key = cache_key(model, system, messages, tools, temperature, seed)
     path = CACHE / (key + ".json")
+    _used.add(key)
     if path.is_file():
         _usage["cache_hits"] += 1
         return json.loads(path.read_text())

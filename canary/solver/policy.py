@@ -50,7 +50,8 @@ class SolverPolicy:
                  none_group: bool = True, read_logs: bool = True, design: str = "auto",
                  coverages: tuple = (0.1, 0.15, 0.25, 0.4, 0.55, 0.7, 1.0), alternate: bool = False, adaptive: bool = False, utility: str = "mi",
                  probing: bool = False, probe_cap: int = 4, probe_extra: int = 1, probe_core: int = 4,
-                 behaviour_weight: float | None = None, act_budget: float = 0.3, max_candidates: int = 128):
+                 behaviour_weight: float | None = None, act_budget: float = 0.3, max_candidates: int = 128,
+                 use_v_drops: bool | None = None, find_decoy: bool = True):
         self._given = params
         self.threshold = threshold
         # behaviour_weight: public alias (FR8 sweeps it); exponent on access-log/interview likelihoods
@@ -65,12 +66,15 @@ class SolverPolicy:
         self.adaptive = adaptive
         self.utility = utility
         self.act_budget = act_budget  # warning threshold only (s); NEVER changes the chosen action
+        self.use_v_drops = use_v_drops
+        self.find_decoy = find_decoy
         self.max_candidates = max_candidates  # deterministic cap on candidate splits per decision
         self.probing, self.probe_cap, self.probe_extra, self.probe_core = probing, probe_cap, probe_extra, probe_core
         self.reset([], "")
 
     # ---------------------------------------------------------------- Policy API
     def reset(self, tools_spec: list[dict], instruction: str) -> None:
+        self.instruction = instruction
         p = self._given
         if isinstance(p, str):
             p = TIERS[p]
@@ -104,8 +108,8 @@ class SolverPolicy:
 
     def _act(self, history: list[Step]) -> tuple[str, dict[str, Any]]:
         if len(history) < self.seen:   # runner restarted/trimmed history: re-ingest from scratch
-            P = self.P
-            self.reset([], "")
+            P, ins = self.P, self.instruction
+            self.reset([], ins)
             self.P = P
         for st in history[self.seen:]:
             self._ingest(st)
@@ -190,8 +194,25 @@ class SolverPolicy:
         else:
             self.obs.leak_days.discard(d)
 
+    def v_drops_reveal_leaks(self) -> bool:
+        """v1.2: status V is the true V, so a same-day drop reveals a leak day. v1.3: V is 'known V'
+        (only surfaced leaks), so leak days are latent. Auto-detected from params / instruction."""
+        if self.use_v_drops is not None:
+            return self.use_v_drops
+        for attr in ("v_known_only", "hide_true_v", "known_v_only"):
+            if getattr(self.P, attr, False):
+                return False
+        vis = getattr(self.P, "v_visibility", None)
+        if isinstance(vis, str) and vis != "true":
+            return False
+        txt = (self.instruction or "").lower()
+        if "known v" in txt or "true v is hidden" in txt or "true value is hidden" in txt:
+            return False
+        return True
+
     # ---------------------------------------------------------------- planning
     def belief(self) -> dict[str, float]:
+        self.obs.leak_timing_known = self.v_drops_reveal_leaks()
         return posterior(self.obs, self.P, self.behaviour_temper, self.choice_temper, self.noleak_temper)
 
     def default_threshold(self) -> float:

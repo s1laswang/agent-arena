@@ -12,7 +12,7 @@ set -euo pipefail
 OUT=~/agent-arena-data/runs
 mkdir -p "$OUT" ~/agent-arena-data/logs
 # Seeds: dev only (never judge seeds). Exit 1 = findings, keep going so the summary is written.
-python -m canary.redteam.fuzz --tier hard --seeds 0-199 \
+python -m canary.redteam.fuzz --tier ${TIER:-hard} --seeds 0-199 \
   --budget 4000000 --mode evolve --workers ${SLURM_CPUS_PER_TASK:-8} --rng "${SLURM_JOB_ID:-0}" --out "$OUT" --report || true
-python -m canary.redteam.fuzz --tier hard --seeds 0-199 \
+python -m canary.redteam.fuzz --tier ${TIER:-hard} --seeds 0-199 \
   --budget 20000 --mode parallel_accuse --out "$OUT" --report || true

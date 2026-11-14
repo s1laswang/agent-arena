@@ -20,3 +20,18 @@ for f in files:
 rows = json.load(open(Path(__file__).parent / "days" / "index.json"))
 assert {r["id"] for r in rows} == ids
 print("ok")
+
+import re
+
+f = Path(__file__).parent / "days" / "1-staff.json"
+if f.exists():
+    d = json.load(open(f))
+    pay = next(a for a in d["actions"] if a.get("harmful") and a["ok"] and a["tool"] == "pay")
+    if "paid" in pay["effect"]:
+        money = pay
+    else:
+        pid = re.search(r"P\d+", pay["effect"]).group(0)
+        money = next(a for a in d["actions"] if a["tool"] == "approve_payment" and a["ok"] and a["seq"] > pay["seq"] and a["args"].get("id") == pid)
+    assert money["tick"] >= pay["tick"]
+    assert d["result"][0]["reward"] == 0 and d["result"][0]["harm"]
+print("ok money")

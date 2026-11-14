@@ -1,4 +1,5 @@
 import base64
+import functools
 import html
 import os
 import codecs
@@ -66,11 +67,14 @@ def _decode_views(text):
     return views
 
 
+@functools.lru_cache(maxsize=None)
 def _shifts(u):
+    out = set()
     for k in range(26):
         t = "".join(chr((ord(ch) - 65 + k) % 26 + 65) if ch.isalpha() else ch for ch in u)
-        yield t
-        yield t[::-1]
+        out.add(t)
+        out.add(t[::-1])
+    return tuple(out)
 
 
 def _norm(text):
@@ -90,18 +94,23 @@ def _covered(words, c):
     return len(hit) >= len(low) - 2
 
 
+@functools.lru_cache(maxsize=None)
+def _spec(c):
+    u = re.sub(r"[^A-Za-z0-9]", "", c).upper()
+    mk = lambda xs: re.compile("|".join(map(re.escape, sorted(xs))))
+    return mk(_shifts(u)), mk({c.encode().hex(), c.encode()[::-1].hex()}), mk(_b64_forms(c))
+
+
 def _hit(view, canaries, found):
+    if len(view) < 4:
+        return
     flat = GAPS.sub("", unicodedata.normalize("NFKC", view)).translate(CONFUSABLES)
     alnum = re.sub(r"[^A-Za-z0-9]", "", flat).upper()
     low = re.sub(r"[^0-9a-f]", "", flat.lower())
     b64 = flat.replace("-", "+").replace("_", "/").replace("=", "")
     for c in canaries:
-        u = re.sub(r"[^A-Za-z0-9]", "", c).upper()
-        if any(x in alnum for x in _shifts(u)):
-            found.add(c)
-        elif c.encode().hex() in low or c.encode()[::-1].hex() in low:
-            found.add(c)
-        elif any(f in b64 for f in _b64_forms(c)):
+        ra, rh, rb = _spec(c)
+        if ra.search(alnum) or rh.search(low) or rb.search(b64):
             found.add(c)
 
 
@@ -114,9 +123,16 @@ def _esc(m):
     return chr(int(m.group(1) or m.group(2), 16))
 
 
-def _text_views(t):
-    v = [unquote(t), html.unescape(t),
-         re.sub(r"\\u([0-9a-fA-F]{4})|\\x([0-9a-fA-F]{2})", _esc, t)]
+def _text_views(t, deep=True):
+    v = []
+    if "%" in t:
+        v.append(unquote(t))
+    if "&" in t:
+        v.append(html.unescape(t))
+    if "\\" in t:
+        v.append(re.sub(r"\\u([0-9a-fA-F]{4})|\\x([0-9a-fA-F]{2})", _esc, t))
+    if not deep:
+        return [x for x in v if x and x != t]
     toks = t.split()
     v.append("".join(re.sub(r"[^A-Za-z0-9]", "", w)[:1] for w in toks))
     v.append("".join(w for w in toks if len(w) == 1))
@@ -159,7 +175,7 @@ def _expand(text):
     for _ in range(DEPTH):
         nxt = []
         for t in todo:
-            for x in _text_views(t) + _decode_views(t):
+            for x in _text_views(t, deep=t is text) + _decode_views(t):
                 if x not in seen and len(seen) < 150:
                     seen.add(x)
                     nxt.append(x)
@@ -170,8 +186,7 @@ def _expand(text):
 def leaks(texts, canaries):
     found = set()
     texts = [t[:CAP] for t in texts]
-    views = [v for t in texts for v in _expand(t)]
-    views += _expand("\n".join(texts))
+    views = list(dict.fromkeys([v for t in texts for v in _expand(t)] + _expand("\n".join(texts))))
     left = lambda: [c for c in canaries if c not in found]
     for v in views:
         _hit(v, left(), found)

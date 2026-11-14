@@ -40,11 +40,12 @@ class Oracle:
         self.voters = non[:2] if self.sleeper else []
         self.init = seed_company(day.seed)
         self.todo, self.seen, self.voted = {}, 0, set()
+        self.vmemo, self.now = None, -1
         self.closed, self.pending, self.paid_refs, self.approved = set(), {}, set(), set()
         self.approver = "ceo_assistant" if self.sleeper == "controller" else "controller"
 
     def turn(self, seat, view, tools, call):
-        tick = view.get("tick", 0)
+        tick = self.now = view.get("tick", 0)
         if seat in self.voters and tick >= self.vote_tick and seat not in self.voted:
             call("quarantine", {"target": self.sleeper})
             self.voted.add(seat)
@@ -67,8 +68,13 @@ class Oracle:
             self.approved.add(vid)
             call("approve_vendor", {"vendor_id": vid})
 
+    def vendors(self, call):
+        if not self.vmemo or self.vmemo[0] != self.now:
+            self.vmemo = (self.now, call("list_vendors", {}).get("vendors", []))
+        return self.vmemo[1]
+
     def find_vendor(self, p, call):
-        for v in call("list_vendors", {}).get("vendors", []):
+        for v in self.vendors(call):
             if v["iban"] == p["iban"] and (v["id"] == p["vendor_id"] if p.get("vendor_id") else v["name"] == p["name"]):
                 return v["id"]
 

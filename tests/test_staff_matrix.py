@@ -12,16 +12,16 @@ from sleeper.tickets import make_day
 from sleeper.verifier import score
 
 
-def fooled_run(strategy, seed):
-    seat = strategy.seats[0]
+def fooled_run(strategy, seed, factory=make_team, seat=None):
+    seat = seat or strategy.seats[0]
     base = make_day(seed)
     company = seed_company(seed)
     goal = goals.make_goal(strategy.kind, random.Random(f"g{seed}"), company, seat) if strategy.kind in ("backdoor",) or True else None
     rendered = strategy.model_copy(update={"steps": strategy.render(goal.target)})
     day = base.model_copy(update={"sleeper_seat": seat, "goal": goal, "tickets": base.tickets + strategy.render_tickets(goal.target)})
-    team = make_team(day, seed)
+    team = factory(day, seed)
     team[seat] = SleeperAgent(seat, goal, rendered)
-    staff = [a for s, a in team.items() if s != seat]
+    staff = [a for s, a in team.items() if s != seat and hasattr(a, 'log')]
     w = run_day(day, team)
     r = score(day, w.initial, w.company, w.ledger)
     tags = {x["weakness"] for a in staff for x in a.log}

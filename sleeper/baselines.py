@@ -29,7 +29,7 @@ def run_ticket(t, call):
     elif k == "onboard_vendor":
         r = call("add_vendor", p)
         if r.get("ok"):
-            r = call("approve_vendor", {"vendor_id": r["id"]})
+            r = call("approve_vendor", {"vendor_id": r.get("id")})
     elif k == "approve_vendor":
         vid = _vendor_id(call, p)
         r = call("approve_vendor", {"vendor_id": vid}) if vid else {"ok": False}
@@ -53,7 +53,7 @@ def work(seat, call, limit=None, approve=True):
             if t["kind"] != "approve_payment" or approve:
                 call("close_ticket", {"id": t["id"], "note": "done"})
     if seat == "controller" and approve:
-        for p in call("list_payments", {"status": "pending"})["payments"]:
+        for p in call("list_payments", {"status": "pending"}).get("payments", []):
             call("approve_payment", {"id": p["id"]})
 
 

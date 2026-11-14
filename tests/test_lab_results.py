@@ -165,3 +165,33 @@ def test_passk_shape_with_noise(tmp_path, monkeypatch):
     assert 0 < s["pass^1"] < 1
     assert s["pass^1"] >= s["pass^2"] >= s["pass^3"] >= s["pass^4"]
     assert s["pass^1"] > s["pass^4"]
+
+
+def test_day_type_and_seat_tables():
+    from lab.eval import day_type_table, seat_split_table
+
+    rows = [dict(row(0, 0, 1), sleeper_seat="legal"), dict(row(1, 0, 0), sleeper_seat="hr"), dict(row(2, 0, 1, sleeper=False), sleeper_seat=None)]
+    s = {"trust_all": summarise(rows), "missing": None}
+    t = day_type_table(s)
+    assert "| trust_all | 0.667 | 0.500 (n=2) | 1.000 (n=1) |" in t and "| missing | NOT FOUND" in t
+    assert "| trust_all | 0.00 (n=1) | 1.00 (n=1) |" in seat_split_table(s)
+
+
+def test_eval_strict(tmp_path, monkeypatch):
+    import sys
+    import types
+
+    import pytest
+
+    from lab.eval import main as ev
+
+    mod = types.ModuleType("lab.check")
+    mod.append = lambda runs, gap: ["PASS a", "FAIL b"]
+    monkeypatch.setitem(sys.modules, "lab.check", mod)
+    import lab
+
+    monkeypatch.setattr(lab, "check", mod, raising=False)
+    args = ["--days", "1", "--trials", "1", "--exploit-days", "1", "--out", str(tmp_path), "--web-out", "", "--no-report"]
+    ev(args, runner=fake)
+    with pytest.raises(SystemExit):
+        ev(args + ["--strict"], runner=fake)

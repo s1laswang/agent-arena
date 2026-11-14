@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import secrets
 import shutil
 import socket
@@ -73,6 +74,8 @@ class Server:
         # INTEGRITY item 2: the seed and ledger token go in 0600 files, never in the server's environment.
         env = dict(clean_launch_env(), **write_secret_files(self.tier, self.seed, self.token),
                    CANARY_ALLOW_DEV="1", CANARY_PORT=str(self.port), CANARY_HOST="127.0.0.1")
+        if os.environ.get("CANARY_TIERS_OVERRIDE"):
+            env["CANARY_TIERS_OVERRIDE"] = os.environ["CANARY_TIERS_OVERRIDE"]
         log = subprocess.DEVNULL
         if log_dir:
             self.log_path = Path(log_dir) / f"server-{self.tier}-{self.seed}.log"
@@ -269,8 +272,32 @@ def empty_final_response(stdout: str) -> bool:
     return bool(last) and last["reason"] == "stop" and not last["n_text"] and not last["n_tool"]
 
 
+INFRA_EVENT_TYPES = ("error", "turn.failed")
+KILL_RE = re.compile(r"\b(pkill|killall|kill\s+-\w+|kill\s+\d+|kill\s+%)|lsof\s+-t", re.I)
+
+
+def _infra_blob(stdout: str, stderr: str) -> str:
+    """Only harness-level text: stderr plus stdout JSON events of an error type. The agent's own messages and
+    tool outputs never count (INTEGRITY item 4: an agent writing "database is locked" must not void its run)."""
+    keep = [stderr or ""]
+    for line in (stdout or "").splitlines():
+        try:
+            ev = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(ev, dict) and (ev.get("type") in INFRA_EVENT_TYPES or
+                                     ("type" not in ev and ("error" in ev or "statusCode" in ev))):
+            keep.append(line)
+    return "\n".join(keep)
+
+
+def agent_touched_server(stdout: str) -> bool:
+    """True if the agent's transcript contains a process-kill command (it may have killed its own MCP server)."""
+    return bool(KILL_RE.search(stdout or ""))
+
+
 def classify_infra(stdout: str, stderr: str) -> str | None:
-    blob = (stdout or "") + "\n" + (stderr or "")
+    blob = _infra_blob(stdout, stderr)
     if empty_final_response(stdout):
         return "empty_model_response"
     for kind, pats in INFRA_PATTERNS.items():
@@ -409,8 +436,11 @@ def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str
             w.transcript(seed, f"$ {' '.join(argv[:-1])} <prompt>\n--- rc={rc}\n--- stdout\n{compact_transcript(out)}"
                                f"\n--- stderr\n{err[-20000:]}", "txt")
     except Exception as e:
-        res = EpisodeResult(spec.tier, seed, spec.agent, [], 0.0, None, False, 0, "error",
-                            {"error": repr(e), "wall_s": round(time.time() - t0, 1)})
+        meta = {"error": repr(e), "wall_s": round(time.time() - t0, 1)}
+        if agent_touched_server(locals().get("out") or ""):
+            # INTEGRITY item 4: a server the agent may have killed is the agent's failure (score 0), not infra.
+            meta = {"note": f"agent_killed_server: {repr(e)[:200]}", "wall_s": meta["wall_s"]}
+        res = EpisodeResult(spec.tier, seed, spec.agent, [], 0.0, None, False, 0, "error", meta)
     finally:
         srv.stop()
         if wd:

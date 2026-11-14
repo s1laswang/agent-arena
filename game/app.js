@@ -554,6 +554,19 @@ function updateGuidance() {
   el.textContent = "Canaries are out in the field. Review access logs, interview suspects, or advance to tomorrow [N].";
 }
 
+function showInPageHint(message) {
+  const el = $("hudGuidanceText");
+  const bar = $("hudGuidanceBar");
+  if (el) {
+    el.textContent = message;
+  }
+  if (bar) {
+    bar.classList.remove("guidance-pulse");
+    void bar.offsetWidth;
+    bar.classList.add("guidance-pulse");
+  }
+}
+
 // -----------------------------------------------------------------------------
 // OFFICE DIRECTORY & EMPLOYEE CARDS (Left Zone)
 // -----------------------------------------------------------------------------
@@ -948,7 +961,7 @@ function filterFeed() {
 // -----------------------------------------------------------------------------
 function openCanaryWizard() {
   if (state.employees.length === 0) {
-    alert("Please survey the office personnel first so staff IDs are indexed.");
+    showInPageHint("Please survey office personnel first so staff IDs are indexed.");
     return;
   }
 
@@ -979,7 +992,7 @@ function closeCanaryWizard() {
 function wizardSplitSolver() {
   // Solver style: balance cohorts across variants (A, B, C) while leaving a control group unassigned.
   // In Medium tier, careful moles will never leak a document sent to the whole company!
-  const suspects = state.employees.filter(e => state.employeeTags[e.id] === "suspect" && !state.restricted.has(e.id));
+  const suspects = state.employees.filter(e => state.userTags[e.id] === "suspect" && !state.restricted.has(e.id));
   const pool = suspects.length >= 2 ? suspects : state.employees.filter(e => !state.restricted.has(e.id));
 
   for (const emp of state.employees) {
@@ -1123,7 +1136,7 @@ function submitCanaryWizard() {
 // -----------------------------------------------------------------------------
 function openAccuseDialog(preselectEmpId = null) {
   if (state.employees.length === 0) {
-    alert("Please survey the office personnel first so staff IDs are indexed.");
+    showInPageHint("Please survey office personnel first so staff IDs are indexed.");
     return;
   }
 

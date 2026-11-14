@@ -29,3 +29,17 @@ def test_day_spec():
         assert (d["goal"] is None) == (d["sleeper_seat"] is None) and d["winnable"]
         if d["goal"]:
             assert d["goal"].kind == d["strategy"].kind
+
+
+def test_covers_every_strategy():
+    used = {e["strategy"] for e in mix(5 * 4 * 8)}
+    assert used >= set(STRATEGIES) - {s for s in STRATEGIES if not set(STRATEGIES[s].seats) - {"controller"}}
+
+
+def test_seat_mode_is_gated():
+    from sleeper.daymix import accomplices
+    from sleeper.models import SEATS
+    for seat in SEATS:
+        for e in mix(20, seat):
+            if e["strategy"]:
+                assert seat in accomplices(STRATEGIES[e["strategy"]]) and e["sleeper_seat"] != seat

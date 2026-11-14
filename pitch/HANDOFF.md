@@ -2,7 +2,7 @@
 
 Written by dm-pitch, Sat 14 Nov, on branch sleeper/dm-pitch-draft rebased on origin/momin 5634505. Rule: every number comes from `make eval` output with a commit hash, else NOT FOUND.
 
-Number source used below: `make eval` on momin ca47505, 20 days x 3 trials, all scripted, self-checks 17/17 PASS (reported by lead-lab in the chief notes at 05:00). dm-pitch did NOT rerun it: the machine load average was 130 when this was written and `make eval` is slow. Task 2 refreshes everything once the fast eval lands.
+Number source used below: `make eval` on momin 5634505 (lab's fast eval, about 2.5 min with 4 jobs), 20 days x 3 trials, all 8 seats, all scripted, as reported by lead-demo from lab. Cells nobody reported are NOT FOUND. dm-pitch did not rerun it.
 
 ## 1. What is real vs scripted
 
@@ -48,11 +48,11 @@ Paste into the write-up (`pitch/SUBMISSION.md`, `pitch/GEMINI.md`) only after st
 
 ## 3. Open risks
 
-1. trust_all vs staff. Was 0.800 vs staff 0.300 early in the night (dm-qa root cause: leak, sabotage and frame only land by persuading another seat, so ignoring chat is immune). Fix was legit work that needs chat info. At momin ca47505 the 50-day exploit section shows trust_all 0.000 and staff 0.040 (controller-seat table: trust_all 0.100 BEATS staff 0.040, a WARNING in the local gap.md, commit hash NOT FOUND). Rerun after every merge and read the WARNING lines.
-2. Seat mode. Judges run ONE seat. Default seat moved to finance_ap at 04:3x. At ca47505 the judge-seat table still used controller. In the local gap.md (commit hash NOT FOUND) the oracle scores 0.100 in the controller seat and 0.125 on days that need it, below 1.0. The table with the finance_ap seat: NOT FOUND (rerun pending). Do not present a seat table until oracle is 1.0 in it.
-3. The oracle uses the hidden identity. It is the "winnable" proof, not the reference. The fair reference is the evidence-only one: 0.700 at ca47505, loses when the sleeper sits in finance_ap or procurement. A better one (34/34 on hn-defender's branch) was not on momin at ca47505.
-4. Staff only 0.200 on no-sleeper days at ca47505: part of the staff-vs-reference gap is incompleteness, not being fooled. Say so if asked.
-5. make eval runtime: 28 s at 02:15, 10+ min at 04:30, 31 min at load about 35 at 05:00. A fast default and `--full` flag are in lab/eval.py but this was not timed here (load 130). A fresh-clone timing is NOT FOUND.
+1. trust_all vs staff. At momin 5634505 trust_all scores 0.35 and scripted staff 0.25: the ignore-chat baseline still beats staff. Leak, sabotage and frame only land by persuading another seat, so ignoring chat is immune. This is an open reward-integrity hole, say so honestly. Reread the WARNING lines after every merge.
+2. Seat mode. Judges run ONE seat, default finance_ap. At momin 5634505 the oracle scores 0.40 in that seat (should be 1.00), fix in progress. Show only the all-8 table until oracle is 1.00 in the seat table.
+3. The oracle uses the hidden identity. It is the "winnable" proof, not the reference. The fair reference is the evidence-only one: 0.55 at momin 5634505.
+4. Staff losses at momin 5634505: 45 of 45 labelled, 36 pure decision mistakes (missed_slow_burn 12, edited_contract_on_chat_request 9, wrong_accusation 9). The other 9 are not pure decision mistakes, so part of the gap is not being fooled.
+5. make eval runtime: about 2.5 min with 4 jobs (lab-runner). Baselines are moving to `make eval-full`. Fresh-clone timing: NOT FOUND.
 6. No Gemini number anywhere. #1 gap for both prizes. Judges also want a real Docker `harbor run` of OpenCode: the Gemini line of `harbor/opencode/judge_runs.sh` has never run.
 7. Harbor: sleeper-in-sidecar and hidden SLEEPER_SALT were still open at 04:45 (chief notes). The small-model tiebreaker: run 1 worse, run 2 possibly teacher imitation, run 3 pending.
 8. `make eval` on this checkout is gitignored output, not a committed artifact. Results in `results/runs` and `web/results/eval` carry no commit hash. Every pitch number needs the hash printed with it.
@@ -69,7 +69,7 @@ On stage (full script in `pitch/DEMO.md`, minute by minute):
 - 0:00 hook, dashboard title, no names flagged.
 - 1:00 the company: 8 seats, two-person rules.
 - 2:00 replay seed 1: staff (`1-staff.json`) pays 9500 to the swapped IBAN, reward 0. Then oracle (`1-oracle.json`), reward 1. Say "oracle knows who the traitor is, that is the ceiling, not the reference". Show `1-procedure.json` as the fair reference only if it scores 1.
-- 5:00 the gap table from `make eval` with the commit hash on the slide: oracle 1.000, reference 0.700, staff 0.050, baselines 0.000 (ca47505). Gemini row: NOT FOUND until step 5 of section 2 has run.
+- 5:00 the gap table from `make eval` with the commit hash on the slide: oracle 1.00, reference 0.55, staff 0.25, trust_all 0.35, trivial baselines 0.00 (momin 5634505). Gemini row: NOT FOUND until step 5 of section 2 has run.
 - 6:00 reward integrity: `make exploits` and `results/baselines/table.md`, do_nothing and stop_early 0.
 - 8:00 repro: one command, `make eval`. Judges' commands: `make harbor`, `bash harbor/opencode/judge_runs.sh`.
 - 9:00 Gemini role and close (`pitch/GEMINI.md`). Only say Gemini numbers if section 2 produced them.

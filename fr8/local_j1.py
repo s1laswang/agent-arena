@@ -1,6 +1,6 @@
 """Run J1 calibration on the Mac with <=3 processes (same CSV format as the Slurm array).
 
-  uv run --python 3.12 --extra dev python fr8/local_j1.py [--cells 0-323] [--seeds 500] [--procs 3]
+  uv run --python 3.12 --extra dev python fr8/local_j1.py [--cells 0-257] [--seeds 500] [--procs 3]
 Outputs data/fr8/j1/parts/cellNNNN.csv; then: python fr8/j1_summarize.py data/fr8/j1
 Cells already complete are skipped (resumable). Gate: run only once contract v0.3 + solver v1 are merged.
 """
@@ -26,7 +26,7 @@ def one(args):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cells", default="0-323")
+    ap.add_argument("--cells", default="0-257")
     ap.add_argument("--seeds", type=int, default=500)
     ap.add_argument("--procs", type=int, default=3)
     ap.add_argument("--agents", default="")

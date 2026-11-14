@@ -110,7 +110,7 @@ PY
 SOLVE = '''#!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")"
-PYTHONPATH=. python /opt/oracle_client.py http://sleeper-server:8000/mcp {seat}
+PYTHONPATH=. python oracle_run.py http://sleeper-server:8000/mcp {seat} day.json
 '''
 
 
@@ -119,6 +119,11 @@ def effective_id(salt, seed, seat):
     os.environ["SLEEPER_SALT"] = salt
     from harbor.sidecar import effective_id as eid
     return eid(seed, seat)
+
+
+def oracle_day(salt, seed, seat):
+    from lab.run import day_for
+    return day_for(effective_id(salt, seed, seat), seat)[0].model_dump_json()
 
 
 def put(path, text, exe=False):
@@ -139,8 +144,11 @@ def task(out, seed, seat, repo=True, manifest=None):
     put(d / "instruction.md", seat_instruction(seat))
     put(d / "environment/Dockerfile", DOCKERFILE)
     put(d / "environment/oracle_client.py", (ROOT / "harbor/oracle_client.py").read_text())
-    for m in ["__init__", "models", "scripted"]:
-        put(d / f"solution/sleeper/{m}.py", (ROOT / f"sleeper/{m}.py").read_text())
+    for pkg in ["sleeper", "agents"]:
+        shutil.rmtree(d / "solution" / pkg, ignore_errors=True)
+        shutil.copytree(ROOT / pkg, d / "solution" / pkg, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    put(d / "solution/oracle_run.py", (ROOT / "harbor/oracle_run.py").read_text())
+    put(d / "solution/day.json", oracle_day(f["salt"], seed, seat))
     put(d / "environment/docker-compose.yaml", COMPOSE.format(**f))
     put(d / "environment/runtime-server/Dockerfile", SERVER_DOCKERFILE)
     put(d / "tests/test.sh", TEST.format(**f), True)

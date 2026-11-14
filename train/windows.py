@@ -31,8 +31,16 @@ def char_spans(msgs: list[dict], render: Callable[[list[dict], bool], str]):
 
 
 def make_windows(ids: list[int], offsets: list[tuple[int, int]], header_end: int,
-                 bounds: list[tuple[int, int]], asst: list[tuple[int, int]], max_len: int):
-    """Returns list of (input_ids, labels)."""
+                 bounds: list[tuple[int, int]], asst: list[tuple[int, int]], max_len: int,
+                 mode: str = "prefix", overlap: int = 256):
+    """Returns list of (input_ids, labels).
+
+    mode="prefix": each window starts as EARLY as fits (max context; many overlapping windows).
+    mode="dense" : each window starts at the first message boundary >= (end of previous window
+                   - overlap), so chunks barely overlap and most tokens carry loss.
+    Both: header in every window, windows end at an assistant turn, each assistant token is
+    labelled exactly once (a single turn longer than the budget is skipped)."""
+    assert mode in ("prefix", "dense")
     def tok_at(ch: int) -> int:  # first token whose start >= ch
         lo, hi = 0, len(offsets)
         while lo < hi:
@@ -59,7 +67,11 @@ def make_windows(ids: list[int], offsets: list[tuple[int, int]], header_end: int
             covered = e0
             k += 1
             continue
-        ws = min(cands)
+        if mode == "dense":
+            near = [c for c in cands if c >= covered - overlap]
+            ws = min(near) if near else max(cands)
+        else:
+            ws = min(cands)
         we, j = e0, k
         while j + 1 < len(a_tok) and a_tok[j + 1][1] - ws <= budget:
             j += 1
@@ -74,7 +86,7 @@ def make_windows(ids: list[int], offsets: list[tuple[int, int]], header_end: int
     return out
 
 
-def record_windows(rec: dict, tokenizer, max_len: int):
+def record_windows(rec: dict, tokenizer, max_len: int, mode: str = "prefix", overlap: int = 256):
     """HF tokenizer path: apply the model's chat template with tools."""
     tools = rec.get("tools")
 
@@ -84,4 +96,4 @@ def record_windows(rec: dict, tokenizer, max_len: int):
     full, header_end, bounds, asst = char_spans(rec["messages"], render)
     enc = tokenizer(full, add_special_tokens=False, return_offsets_mapping=True)
     return make_windows(enc["input_ids"], [tuple(o) for o in enc["offset_mapping"]],
-                        header_end, bounds, asst, max_len)
+                        header_end, bounds, asst, max_len, mode, overlap)

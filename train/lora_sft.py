@@ -133,7 +133,9 @@ def main(argv=None):
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--epochs", type=float, default=1.0)
     ap.add_argument("--max-steps", type=int, default=0, help="optimizer steps; 0 = from epochs")
-    ap.add_argument("--max-len", type=int, default=4096)
+    ap.add_argument("--max-len", type=int, default=None, help="default 4096 prefix / 2048 dense")
+    ap.add_argument("--window-mode", choices=["prefix", "dense"], default="prefix")
+    ap.add_argument("--overlap", type=int, default=256, help="dense: token overlap between chunks")
     ap.add_argument("--grad-accum", type=int, default=8)
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--r", type=int, default=16)
@@ -150,6 +152,8 @@ def main(argv=None):
                     help="in Slurm: clamp --max-hours to job end minus this (eval reserve)")
     a = ap.parse_args(argv)
 
+    if a.max_len is None:
+        a.max_len = 2048 if a.window_mode == "dense" else 4096
     import torch
     from transformers import AutoTokenizer
 
@@ -177,10 +181,19 @@ def main(argv=None):
     n_tok = sum(len(w[0]) for w in windows)
     n_lab = sum(int((w[1] != -100).sum()) for w in windows)
     print(f"[data] episodes={len(recs)} windows={len(windows)} tokens={n_tok} "
-          f"loss_tokens={n_lab} max_window={max((len(w[0]) for w in windows), default=0)} "
+          f"loss_tokens={n_lab} loss_frac={n_lab / max(n_tok, 1):.3f} mode={a.window_mode} "
+          f"max_len={a.max_len} max_window={max((len(w[0]) for w in windows), default=0)} "
           f"tokenize_s={time.time() - t0:.1f}", flush=True)
+    if recs:
+        hdr = tok.apply_chat_template(recs[0]["messages"][:2], tools=recs[0].get("tools"),
+                                      tokenize=False)
+        h = len(tok(hdr, add_special_tokens=False)["input_ids"])
+        print(f"[data] header(system+tools+kickoff)={h} tokens, body budget={a.max_len - h}",
+              flush=True)
+        if h > a.max_len - 512:
+            print("[warn] header leaves <512 tokens per window; raise --max-len", flush=True)
     if not windows:
-        raise SystemExit("no training windows")
+        raise SystemExit("no training windows (header longer than --max-len?)")
 
     if not a.pilot:
         budget = slurm_budget_hours(a.reserve_min)

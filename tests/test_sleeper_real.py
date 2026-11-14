@@ -97,3 +97,16 @@ def test_seat_is_the_gate(x, sid, z):
 
     st = goals.STRATEGIES[sid]
     assert not any(play_seat(s, st, z, x, NoopAgent()) for s in (1, 2, 3)), (x, sid, z)
+
+
+def test_worked_seat_decides():
+    from sleeper import daymix
+    from sleeper.scripted import NoopAgent, OracleAgent
+
+    for x in SEATS:
+        for st in daymix.gated(x):
+            for z in daymix.sleeper_seats(st, x):
+                staff = [play_seat(s, st, z, x, ScriptedStaff(x)) for s in (1, 2, 3)]
+                assert any(staff), (x, st.id, z)
+                assert not any(play_seat(s, st, z, x, OracleAgent()) for s in (1, 2, 3)), (x, st.id, z)
+                assert not any(play_seat(s, st, z, x, NoopAgent()) for s in (1, 2, 3)), (x, st.id, z)

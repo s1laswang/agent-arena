@@ -12,12 +12,12 @@ import argparse
 from pathlib import Path
 
 from canary.analysis.tags import load, to_result
-from canary.rules import TIERS
+from canary.rules import TIERS, tier_params
 from canary.solver.policy import SolverPolicy
 
 
 def audit_episode(ep) -> dict:
-    sp = SolverPolicy(TIERS[ep.tier])
+    sp = SolverPolicy(tier_params(ep.tier))
     row = dict(tier=ep.tier, seed=ep.seed, agent=ep.agent, accused=ep.accused, correct=ep.correct,
                score=ep.score, day=ep.final_day, end=ep.end_reason, p_accused=None, p_top=None)
     for i, st in enumerate(ep.steps):

@@ -67,7 +67,7 @@ def test_sidecar_end_to_end(tmp_path, oracle, seat):
         if oracle:
             subprocess.run([sys.executable, str(root / "harbor/oracle_client.py"), f"http://127.0.0.1:{mp}/mcp", seat], env=env, cwd=root, check=True, timeout=120)
         r = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"X-Verify-Token": tok})).read())
-        assert r["reward"] == (1 if oracle else 0)
+        assert r["reward"] == (1 if oracle else 0), r
     finally:
         p.kill()
 

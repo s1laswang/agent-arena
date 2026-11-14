@@ -6,6 +6,7 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
 from agents.reference import make_oracle_seat
+from sleeper.mcp_server import STALL
 from sleeper.models import Day
 
 
@@ -30,16 +31,26 @@ async def play(url, seat, day_path):
             class Over(Exception):
                 pass
 
+            st = {"n": 0, "tick": 0, "last": None}
+
             def call(name, args=None):
+                st["last"] = name
+                st["n"] = 0 if name == "end_turn" else st["n"] + 1
+                if name == "end_turn" or st["n"] >= STALL:
+                    st["n"] = 0
+                    st["tick"] += 1
                 out = asyncio.run_coroutine_threadsafe(acall(name, args or {}), loop).result()
                 if out.get("error") == "day over":
                     raise Over
                 return out
 
             def rounds():
-                for tick in range(day.ticks + 5):
+                for _ in range(300):
+                    st["last"] = None
                     try:
-                        oracle.turn(seat, {"tick": tick, "seat": seat, "round": tick}, tools, call)
+                        oracle.turn(seat, {"tick": st["tick"], "seat": seat, "round": st["tick"]}, tools, call)
+                        if st["last"] != "end_turn":
+                            call("end_turn", {})
                     except Over:
                         return
 

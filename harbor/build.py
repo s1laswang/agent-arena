@@ -62,6 +62,8 @@ COMPOSE = '''services:
   sleeper-server:
     build:
       context: ./runtime-server
+    networks:
+      - default
     environment:
       - SLEEPER_SEED={seed}
       - SLEEPER_SEAT={seat}
@@ -99,8 +101,12 @@ for p in os.listdir("/proc"):
                 os.kill(int(p), signal.SIGKILL)
         except OSError:
             pass
-shutil.rmtree("/logs/verifier", ignore_errors=True)
-os.makedirs("/logs/verifier")
+os.makedirs("/logs/verifier", exist_ok=True)
+os.chown("/logs/verifier", 0, 0)
+os.chmod("/logs/verifier", 0o755)
+for f in os.listdir("/logs/verifier"):
+    if f.startswith("reward"):
+        os.remove("/logs/verifier/" + f)
 req = urllib.request.Request("http://sleeper-server:8001/reward", headers={{"X-Verify-Token": "{token}"}})
 try:
     r = json.loads(urllib.request.urlopen(req, timeout=120).read())
@@ -124,9 +130,16 @@ PYTHONPATH=. python oracle_run.py http://sleeper-server:8000/mcp {seat} day.json
 
 def effective_id(salt, seed, seat):
     import os
+    old = os.environ.get("SLEEPER_SALT")
     os.environ["SLEEPER_SALT"] = salt
-    from harbor.sidecar import effective_id as eid
-    return eid(seed, seat)
+    try:
+        from harbor.sidecar import effective_id as eid
+        return eid(seed, seat)
+    finally:
+        if old is None:
+            os.environ.pop("SLEEPER_SALT", None)
+        else:
+            os.environ["SLEEPER_SALT"] = old
 
 
 def oracle_day(salt, seed, seat):

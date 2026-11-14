@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 import stat
 import subprocess
 
@@ -27,12 +26,8 @@ def test_frontier_server_env_has_no_seed_or_token():
     from canary.agents.frontier.common import Server
     s = Server("easy", 4321).start(timeout=60)
     try:
-        if shutil.which("ps"):
-            out = subprocess.run(["ps", "eww", "-p", str(s.proc.pid)], capture_output=True, text=True).stdout
-        else:
-            with open(f"/proc/{s.proc.pid}/environ", "rb") as fh:
-                out = fh.read().replace(b"\x00", b" ").decode("utf-8", "replace")
-        assert "CANARY_EPISODE_FILE" in out
+        out = subprocess.run(["ps", "eww", "-p", str(s.proc.pid)], capture_output=True, text=True).stdout
+        assert "CANARY_EPISODE_FILE" in out           # the file launch is really what ran
         assert "CANARY_SEED=" not in out and "CANARY_TIER=" not in out and "CANARY_LEDGER_TOKEN=" not in out
         assert s.token not in out
     finally:

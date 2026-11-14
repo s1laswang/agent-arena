@@ -1,0 +1,38 @@
+{
+ "model": "gemini-3.1-flash-lite",
+ "steps": [
+  {
+   "step": "function_call",
+   "tool_calls": [
+    {
+     "args": {
+      "variant": "B"
+     },
+     "name": "check_leak"
+    }
+   ]
+  },
+  {
+   "step": "function_response",
+   "text": "The canary document variant 'B' was assigned to Dana, confirming her as the source of the leak.",
+   "tool_calls": []
+  },
+  {
+   "json": {
+    "confidence": 1.0,
+    "suspect": "Dana"
+   },
+   "step": "structured_output"
+  },
+  {
+   "chunks": 3,
+   "step": "stream",
+   "text": "Leak tracking via unique identifiers."
+  },
+  {
+   "cosine": 0.63781,
+   "dim": 256,
+   "step": "embed"
+  }
+ ]
+}

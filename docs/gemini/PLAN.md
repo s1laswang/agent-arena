@@ -5,6 +5,16 @@ These files live in `docs/gemini/` (not `docs/PLAN.md`) so they never conflict w
 
 ## Questions for Silas
 
+**NEW, Sat 22:45 (after the independent review, about 65 → 78 if these land):**
+- **A. Default branch.** GitHub's default is `main` (14:44, with no Gemini doc). Before 10:00, either fast-forward `main` to the final justSilas tip or set the default branch to justSilas, so judges land on README → docs/gemini/SUBMISSION.md.
+- **B. Launch 2 sessions** (briefs in docs/gemini/sessions/):
+  - `atlas-blind.md` (about 3 h, about $15): fixes the atlas circularity, so it is worth about +5.
+  - `ladder.md`: more hard seeds.
+
+  Swarm and dashboard sessions are optional.
+- **C. The 2-minute video** (docs/gemini/VIDEO-2MIN.md has the script, plus Gemini TTS narration and a Live commentator clip). Who records it, and by when? Proposal: Momin screen-records Sun 06:00–08:00.
+- **D. Ivar's validation sheet:** the human-agreement claim has been removed. If Ivar fills docs/gemini/validation.md by 05:00, we add the score back.
+
 1. **Gemini gateway on the FR8 login node.** FR8 compute nodes have no internet (checked again 14:00, curl rc=6); the login node does. To fan Gemini episodes out over the cluster, I want to run one light process on the login node: an asyncio relay (about 1% CPU, one port, bound to the cluster-internal interface) that forwards to `generativelanguage.googleapis.com`, holds the key, rate-limits and logs usage. Compute nodes never see the key. **Default if you don't answer by 16:00:** I run it on the login node with `nice -n 19` and a hard `--time`-style self-exit after 8 h. The fallback is the same relay on the Mac, exposed to the cluster with `ssh -R`, which only works while the Mac is awake.
 2. **Merge path (agreed with the Arena CEO, 15:00):** PR 1 (code plus first results) by **Sat 19:30**, PR 2 (results and docs only) by Sun 01:30. ~~Original proposal: at 05:00 Sunday I open a PR from `gemini-track` into `justSilas`. It is additive: a new package `canary/gemini/`, new `docs/gemini/`, new tests and new Makefile targets, with no edits to env, reward or reproduce. The AfterQuery CEO merges it into `main`.~~
 3. **Which project is the Gemini entry?** I chose **Canary** (agent-arena), see below. Override only if you strongly prefer another.

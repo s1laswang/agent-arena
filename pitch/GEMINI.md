@@ -1,29 +1,11 @@
 # Canary × Gemini
 
-**1. The problem.** AI agents are being put in charge of security work: triage, insider-risk, incident
-response. Nobody can measure whether they actually reason under uncertainty or just pattern-match.
-Canary is an RL environment where an agent is head of security at a simulated company and must catch
-the one mole leaking documents (canary traps, logs, interviews), while company value bleeds out.
-A Bayesian reference solver sets the bar; frontier agents fall below it, and we show why.
+The Gemini write-up is **[docs/gemini/SUBMISSION.md](../docs/gemini/SUBMISSION.md)**. This page is a short pointer to it, so the two can never disagree.
 
-**2. How Gemini is integrated: six roles, all behind one `canary.llm` client with structured output**
-(`response_schema` + pydantic validation + deterministic fallback on every call):
-| Role | What Gemini does |
-|---|---|
-| **Mole Forge** | Evolves mole strategies in a JSON rule DSL (AlphaEvolve-style mutation/crossover) against our investigators. |
-| **World builder** | Writes the company from public facts only: personas, department culture, chat templates (`canary/agents/world_builder.py`). |
-| **Scenario designer** | PAIRED-style: proposes mole strategies + tier knobs; kept only if the solver scores ≥ X **and** the agent scores ≤ Y (`designer.py`). |
-| **Exploit hunter** | Red-teams the reward and tools for loopholes before judges do. |
-| **Analyst** | Uses long context to read N full episodes + regret tags at once; returns clustered failure modes with verbatim, verified quotes (`analyst.py`). |
-| **Arena mole** | Plays the mole live, day by day: what to leak, when to go quiet, whom to frame (`mole_arena.py`, `make clash`). |
+- **Ladder:** Gemini's `thinking_level` is the only factor that changes, across 157 episodes paired with the Bayesian solver on the same worlds ([results/gemini/ladder.md](../results/gemini/ladder.md)).
+- **Red team:** Gemini read the whole repo and made 51 audited attacks, with 0 exploits found. In the positive control, attackers rediscovered a known, reopened exploit 4 times out of 4 ([results/gemini/swarm.md](../results/gemini/swarm.md)).
+- **Analyst:** Gemini organises and explains the failures the code attributes, quoting the transcripts. The [Failure Gallery](../docs/reports/failure_gallery.md) is an exact decomposition done in code; Gemini only names and explains its categories. Atlas v1 was not blind; see the honesty notes in the write-up.
+- **Arena mole:** playing the mole in arena mode, gemini-4-carbon found the canary trap's blind spot (n=4, not the judged environment).
+- **Usage:** 15,757 Gemini calls are logged ([results/gemini/dashboard.html](../results/gemini/dashboard.html)).
 
-**3. What's innovative.** The adversary evolves under an LLM, but with a *solvability constraint*:
-every evolved or designed mole is verified to remain catchable by the reference solver. So hardness comes
-from the agent's reasoning failures, never from impossible or unfair scenarios. That is how the
-difficulty gap gets built by design, not by luck.
-
-**4. Why Gemini is essential.** Three API features are the experiment. Thinking level is the single factor the ladder changes. Thought signatures keep reasoning state across function-calling turns, so a tool episode can be replayed. The explicit context cache served 82.7% of input tokens (339,812,795 of 411,032,407), and the programme cost $146.02 at list price. TTS and the Live API only narrate the demo. Write-up: `docs/gemini/SUBMISSION.md`.
-
-**Status:** the Gemini paths have run against the live Gemini API. Every call is ledgered:
-15,757 calls, $146.02 at list price (`results/gemini/dashboard.html`, cost_usd 146.0212). On hard, n=8, gemini-3.6-flash (requested as gemini-3.5-flash) is 92% [76%, 113%] of the solver at medium thinking and 102% [84%, 129%] at high, within those CIs, 16/16 correct (`results/gemini/ladder.md`, 157 episodes). Results: `results/gemini/ladder.md`, `atlas.md`,
-`swarm.md`; write-up: `docs/gemini/SUBMISSION.md`. The deterministic `stub` client remains for keyless tests.
+The earlier Mole Forge, world-builder and scenario-designer roles have no measured results in this submission and are not claimed.

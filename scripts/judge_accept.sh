@@ -6,6 +6,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 export PATH="${HOME}/.local/bin:${PATH}"
+TMPD="$(mktemp -d "${TMPDIR:-/tmp}/canary-accept.XXXXXX")"   # per-run scratch: parallel accepts never clobber
+trap 'rm -rf "$TMPD"' EXIT
 
 rows=()
 pass=0
@@ -60,30 +62,37 @@ else
   fi
 
   # Parse the paired table and anti-cheat line
-  python3 - <<'PY' > /tmp/canary-accept-check.txt
+  python3 - <<'PY' > "$TMPD/check.txt"
 import re, sys
 from pathlib import Path
 root = Path(".").resolve()
 table = root / "results/latest/judge_table.md"
 logish = table.read_text() if table.exists() else ""
 # also scan no extra file; numbers live in judge_table.md
-# Expected 30-run bands from the README (v1.4)
-bands = {
-    ("solver", "medium"): (0.55, 0.72),
-    ("solver", "hard"): (0.36, 0.62),
-    ("solver", "easy"): (0.71, 0.80),
-    ("do_nothing", "medium"): (0.0, 0.0),
-    ("do_nothing", "hard"): (0.0, 0.0),
-    ("do_nothing", "easy"): (0.0, 0.0),
-    ("stop_early", "medium"): (0.0, 0.0),
-    ("stop_early", "hard"): (0.0, 0.0),
-    ("stop_early", "easy"): (0.0, 0.0),
-    # guess_day1 is the day-1 accusation previously named stop_early.
-    # Bands are the README 30-run spread from commit 5b56b60 (same script).
-    ("guess_day1", "medium"): (-1.0, -0.75),
-    ("guess_day1", "hard"): (-1.0, -0.85),
-    ("guess_day1", "easy"): (-1.0, -0.65),
-}
+# Expected bands, measured on this code: results/solver_range/<agent>_<tier>_judge40.json holds the 40-judge-seed
+# mean of <agent> under 300 fresh world secrets (scripts/solver_spread.py, the same draw a keyless make reproduce
+# makes). Band = mean +/- 4 sd of those run means, so an honest run fails a row with probability < 1e-4.
+# do_nothing and stop_early never accuse: exactly 0.
+import json
+K_SD = 4.0
+bands = {}
+band_src = {}
+for name in ("solver", "guess_day1"):
+    for t in ("medium", "hard", "easy"):
+        f = root / "results" / "solver_range" / f"{name}_{t}_judge40.json"
+        if f.exists():
+            d = json.loads(f.read_text())
+            bands[(name, t)] = (d["mean"] - K_SD * d["sd"], d["mean"] + K_SD * d["sd"])
+            band_src[(name, t)] = f"{f.relative_to(root)}: mean {d['mean']:+.3f}, sd {d['sd']:.3f}, {d['builds']} secrets"
+        elif name == "solver":   # not measured yet: wide sanity band (positive, well below a perfect score)
+            bands[(name, t)] = (0.25, 0.90)
+            band_src[(name, t)] = f"fallback band; {f.relative_to(root)} not committed yet"
+        else:
+            bands[(name, t)] = None
+            band_src[(name, t)] = f"missing {f.relative_to(root)}"
+for name in ("do_nothing", "stop_early"):
+    for t in ("medium", "hard", "easy"):
+        bands[(name, t)] = (0.0, 0.0)
 # Parse paired-run rows under each ## tier
 tier = None
 mode = None
@@ -118,28 +127,25 @@ if not table.exists():
 else:
     emit("PASS", "judge_table.md written", str(table))
 
-for key, (lo, hi) in bands.items():
+for key, band in bands.items():
     name, tier = key
     if key not in found:
         emit("FAIL", f"{name} {tier}", "row missing from paired table")
         continue
     s = found[key]
-    # The README brackets are the min and max of 30 run means at commit 5b56b60.
-    # A fresh secret's solver mean can sit outside that by about the single-run CI
-    # the README already states (±0.03–0.10). Use the low end of that range for the solver.
-    slack = 0.03 if name == "solver" else 0.01
-    if name == "do_nothing":
+    if name in ("do_nothing", "stop_early"):
         ok = abs(s) < 1e-9
-        emit("PASS" if ok else "FAIL", f"do_nothing {tier}", f"score={s:+.3f} (must be exactly 0)")
-    elif name == "stop_early":
-        ok = abs(s) < 1e-9
-        emit("PASS" if ok else "FAIL", f"stop_early {tier}", f"score={s:+.3f} (must be exactly 0: day-1 stop, no accusation)")
-    elif name == "guess_day1":
-        ok = s <= 0 and (lo - slack) <= s <= (hi + slack)
-        emit("PASS" if ok else "FAIL", f"guess_day1 {tier}", f"score={s:+.3f} (must be <= 0 and in README band [{lo}, {hi}] ±0.01)")
-    else:
-        ok = (lo - slack) <= s <= (hi + slack)
-        emit("PASS" if ok else "FAIL", f"{name} {tier}", f"score={s:+.3f} (README band [{lo}, {hi}] ±{slack} slack)")
+        why = "never accuses" if name == "do_nothing" else "day-1 stop, no accusation"
+        emit("PASS" if ok else "FAIL", f"{name} {tier}", f"score={s:+.3f} (must be exactly 0: {why})")
+        continue
+    if band is None:
+        emit("FAIL", f"{name} {tier}", f"score={s:+.3f}; no expected band ({band_src[key]})")
+        continue
+    lo, hi = band
+    ok = lo <= s <= hi and (name != "guess_day1" or s <= 0)
+    extra = " and <= 0" if name == "guess_day1" else ""
+    emit("PASS" if ok else "FAIL", f"{name} {tier}",
+         f"score={s:+.3f} (expected [{lo:+.2f}, {hi:+.2f}]{extra}; {band_src[key]})")
 
 # ANTI-CHEAT is printed by make reproduce to stdout, not always to the table file.
 # Check exploits.json exists and attacks means <= 0
@@ -152,7 +158,7 @@ print("\n".join(out))
 PY
   while IFS=$'\t' read -r st name detail; do
     [ -n "${st:-}" ] && record "$st" "$name" "$detail"
-  done < /tmp/canary-accept-check.txt
+  done < "$TMPD/check.txt"
 
   say "-- MCP smoke (local server, no Docker, no OpenCode) --"
   MCP_PORT="${MCP_PORT:-18765}"
@@ -163,7 +169,7 @@ PY
   set +e
   CANARY_TIER=medium CANARY_SEED=900007 CANARY_LEDGER_TOKEN=judge-accept-demo \
     MCP_PORT="$port" MCP_PORT_FALLBACK=0 \
-    make mcp > /tmp/canary-mcp-accept.log 2>&1 &
+    make mcp > "$TMPD/mcp.log" 2>&1 &
   mcp_pid=$!
   set -e
   ready=0
@@ -184,12 +190,12 @@ PY
     sleep 0.25
   done
   if [ "$ready" = "1" ]; then
-    code=$(curl -sS -m 3 -o /tmp/canary-mcp-body.txt -w "%{http_code}" "http://127.0.0.1:${port}/mcp" || true)
+    code=$(curl -sS -m 3 -o "$TMPD/mcp-body.txt" -w "%{http_code}" "http://127.0.0.1:${port}/mcp" || true)
     record PASS "MCP server binds" "http://127.0.0.1:${port}/mcp http_code=${code:-none}"
   else
     # show last log lines
-    tail -20 /tmp/canary-mcp-accept.log 2>/dev/null | sed 's/^/    /'
-    record FAIL "MCP server binds" "server did not listen on port $port (see /tmp/canary-mcp-accept.log)"
+    tail -20 "$TMPD/mcp.log" 2>/dev/null | sed 's/^/    /'
+    record FAIL "MCP server binds" "server did not listen on port $port (log tail above)"
   fi
   # Stop ONLY the server this script started: walk mcp_pid's descendants (make -> uv -> python) by PID.
   # Never pkill by pattern: other sessions on the same machine run their own canary.mcp_server.

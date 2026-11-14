@@ -96,6 +96,42 @@ def shape(x: Any) -> Any:
     return type(x).__name__
 
 
+_WRONG: list[float] = []
+
+
+def wrong_score() -> float:
+    """Score of a wrong accusation: 0.0 on CONTRACT v0, -1.0 on v0.3. Probed once."""
+    if not _WRONG:
+        env = make_env("easy", 0)
+        ids = employee_ids(env)
+        mole = true_mole(env)
+        env.call("accuse", {"employee": next(i for i in ids if i != mole)})
+        assert env.score() in (0.0, -1.0), f"unexpected wrong-accusation score {env.score()}"
+        _WRONG.append(env.score())
+    return _WRONG[0]
+
+
+def check_score_semantics(env):
+    """score>0 => one correct accuse; score<0 => one wrong accuse and == -1 (v0.3);
+    no accusation => 0."""
+    ok_acc = [s for s in env.history if s.tool == "accuse" and s.result.get("ok")]
+    assert len(ok_acc) <= 1, "accusation lock broken"
+    sc = env.score()
+    if not ok_acc:
+        assert sc == 0.0, f"score {sc} without an accusation"
+        return
+    assert env.done
+    correct = ok_acc[0].args.get("employee") == true_mole(env)
+    if correct:
+        assert sc > 0
+    else:
+        assert sc == wrong_score(), f"wrong accusation scored {sc}"
+    if sc > 0:
+        assert correct
+    if sc < 0:
+        assert not correct and sc == -1.0
+
+
 # ---------------------------------------------------------------- action strategies
 def _bad_employee(ids: list[str]):
     return st.one_of(
@@ -188,12 +224,7 @@ def test_score_implies_single_correct_accuse(tier, seed, data):
     env = make_env(tier, seed)
     ids = employee_ids(env)
     run(env, data.draw(actions(ids)))
-    ok_accuses = [s for s in env.history if s.tool == "accuse" and s.result.get("ok")]
-    assert len(ok_accuses) <= 1, "accusation lock broken"
-    if env.score() > 0:
-        assert len(ok_accuses) == 1
-        assert ok_accuses[0].args.get("employee") == true_mole(env)
-        assert env.done
+    check_score_semantics(env)
 
 
 @SETTINGS
@@ -306,7 +337,7 @@ def test_error_parity(tier, seed, prefix, exhaust, probe):
     if tool == "accuse" and ra.ok:
         assert a.done and b.done
         # the score differs (that's the point) but nothing the agent sees does
-        assert a.score() > 0 and b.score() == 0
+        assert a.score() > 0 and b.score() == wrong_score()
 
 
 @SETTINGS
@@ -412,7 +443,4 @@ def test_props_under_evolved_moles(tier, seed, obj, data):
             break
         assert value_of(s) <= last + 1e-12
         last = value_of(s)
-    ok_acc = [s for s in env.history if s.tool == "accuse" and s.result.get("ok")]
-    assert len(ok_acc) <= 1
-    if env.score() > 0:
-        assert ok_acc[0].args.get("employee") == mole
+    check_score_semantics(env)

@@ -37,9 +37,10 @@ def _first(paths: list[str]):
 def policies(llm: str | None) -> dict[str, object | None]:
     return {
         "random": _first(["canary.baselines:RandomPolicy"]),
+        "accuse_most_logs": _first(["canary.baselines:AccuseMostLogs"]),
         "heuristic": _first(["canary.baselines:Heuristic", "canary.baselines:HeuristicPolicy",
                              "canary.solver.heuristic:HeuristicPolicy",
-                             "canary.baselines:BASELINES.heuristic"]),
+                             "canary.baselines:ObviousHeuristic"]),
         "hinted_llm": (_make_llm(llm) if llm else None),
         "solver": _first(["canary.solver:SolverPolicy", "canary.solver:Solver",
                           "canary.solver.policy:SolverPolicy"]),

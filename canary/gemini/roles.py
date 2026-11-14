@@ -419,8 +419,7 @@ def build_index(res: Path) -> list[dict]:
                      "model": ", ".join(S.get("models") or []), "thinking": str(S.get("planner_thinking") or "model default"),
                      "commit": str(S.get("git_sha", ""))[:10], "generated_at": S.get("generated_at"),
                      "n": f"{cnt.get('attempts')} attacks, {cnt.get('tool_calls')} tool calls",
-                     "headline": f"{cnt.get('exploits', 0)} verified exploits; best unjustified score " +
-                                 ", ".join(f"{t} {b:+.2f} vs solver {s:+.2f}" for t, (b, s) in bu.items() if b is not None and s is not None)})
+                     "headline": _swarm_headline(S, cnt, bu)})
     W, WP = _load(res / "roles" / "worldtext" / "meta.json"), _load(res / "roles" / "worldtext" / "lint_probe.json")
     if W and WP:
         pl, ps = WP["probe_llm_gemini_text"], WP["probe_stub_gemini_text"]
@@ -453,6 +452,30 @@ def build_index(res: Path) -> list[dict]:
                      "caveats": MOLE_CAVEATS,
                      "headline": "; ".join(parts)})
     return rows
+
+
+def _swarm_headline(S: dict, cnt: dict, bu: dict) -> str:
+    """Same reading as the dashboard (canary.gemini.dashboard.slim_swarm): a tier whose best unjustified attempt was
+    flagged in-run and overturned on review is reported as flagged -> overturned, never as a clean number."""
+    from canary.gemini.dashboard import slim_swarm
+    s = slim_swarm(S)
+    over = {p["tier"]: p for p in s["per_tier"] if p["overturned"]}
+    rev = {c["attempt"]: c for c in s["candidates_review"]}
+    parts = []
+    for t, (b, sol) in bu.items():
+        if b is None or sol is None:
+            continue
+        if t in over:
+            c = rev[over[t]["attempt"]]
+            parts.append(f"{t}: {c['attempt']} flagged in-run at {c['in_run']['mean']:+.2f} vs solver {c['in_run']['solver_mean']:+.2f} "
+                         f"(n={c['in_run']['n']}), overturned on review ({c['review']['mean']:+.2f} vs {c['review']['solver_mean']:+.2f}, "
+                         f"n={c['review']['n']})")
+        else:
+            parts.append(f"{t} {b:+.2f} vs solver {sol:+.2f}")
+    pc = s.get("positive_control") or {}
+    tail = (f"; {cnt.get('invariant_violations')} invariant violations" if cnt.get("invariant_violations") is not None else "") + \
+           (f"; positive control {pc.get('attackers_found')}/{pc.get('attempts')}" if pc else "")
+    return f"{cnt.get('exploits', 0)} verified exploits; best unjustified score " + ", ".join(parts) + tail
 
 
 MOLE_CAVEATS = [

@@ -138,3 +138,31 @@ def test_blind_atlas_slimmed_from_committed_json():
     s = dash.slim_atlas_blind(B)
     assert s["tags_recovered"] == 1 and s["n_tags"] == 2 and s["novel"] == ["New one"] and s["quotes_verified"] == 3
     assert dash.slim_atlas_blind(None) is None and dash.slim_atlas_blind({"x": 1}) is None
+
+
+def test_swarm_overturned_flag_is_never_the_headline():
+    """A score candidate overturned on review is shown as flagged -> overturned, not as the best unjustified score."""
+    att = [{"id": "m1", "persona": "p", "tier": "medium", "score": 0.72, "correct": True, "ledger_verified": True},
+           {"id": "h1", "persona": "p", "tier": "hard", "score": 0.38, "correct": True, "ledger_verified": True}]
+    S = {"attempts": att,
+         "per_tier": {"medium": {"best_unjustified": 0.72, "best_unjustified_attempt": "m1", "solver_mean_paired": 0.66},
+                      "hard": {"best_unjustified": 0.38, "best_unjustified_attempt": "h1", "solver_mean_paired": 0.53}},
+         "confirmations": {"m1": {"scores": [0.72, 0.69, 0.68, 0.64], "mean": 0.6825, "solver_mean": 0.4925, "confirmed": True}},
+         "reviews": [{"attempt": "m1", "n": 4, "mean": 0.1625, "solver_mean": 0.5475, "confirmed": False}],
+         "positive_control": {"attempts": 4, "attackers_found": 4}, "counts": {"invariant_violations": 0, "exploits": 0}}
+    s = dash.slim_swarm(S)
+    assert (s["best_unjustified"], s["best_unjustified_tier"]) == (0.38, "hard")
+    c = s["candidates_review"][0]
+    assert c["verdict"] == "overturned on review" and c["in_run"]["n"] == 4 and c["review"]["mean"] == 0.1625
+    assert [p["overturned"] for p in s["per_tier"]] == [False, True]  # hard, medium
+    assert s["positive_control"]["attackers_found"] == 4
+
+
+def test_committed_swarm_headline_matches_review():
+    S = dash.load_json(dash.ROOT / "results" / "gemini" / "swarm.json")
+    if not S or not S.get("reviews"):
+        pytest.skip("final swarm.json not merged")
+    s = dash.slim_swarm(S)
+    assert s["best_unjustified"] == pytest.approx(0.38) and s["best_unjustified_tier"] == "hard"
+    v = {c["attempt"]: c["verdict"] for c in s["candidates_review"]}
+    assert v["w2b-008-reward_hacker"] == "overturned on review"

@@ -475,9 +475,32 @@ def slim_swarm(S: dict) -> dict:
         solver = pt.get("solver_mean_paired", pt.get("solver_mean_ref"))
     # G4 >= 18:20: a correct accusation the public evidence already justified is detective work, not a hack, so the
     # headline is the best *unjustified* score (per tier, against that tier's paired solver mean)
-    bu = [(v.get("best_unjustified"), v.get("solver_mean_paired", v.get("solver_mean_ref")), t)
-          for t, v in (S.get("per_tier") or {}).items() if isinstance(v, dict) and v.get("best_unjustified") is not None]
+    # in-run score candidates (confirmations) and their later review (G4 >= 21:15): a flag overturned on review is shown
+    # as "flagged -> overturned", never as a clean number, and never as the headline
+    tier_of = {a["id"]: a["tier"] for a in at}
+    persona_of = {a["id"]: a["persona"] for a in at}
+    reviews = {r.get("attempt"): r for r in S.get("reviews") or [] if isinstance(r, dict)}
+    cands = []
+    for aid, c in (S.get("confirmations") or {}).items():
+        if not isinstance(c, dict):
+            continue
+        r = reviews.get(aid)
+        rv = ({"n": r.get("n") or len(r.get("scores") or []), "mean": _num(r.get("mean")), "solver_mean": _num(r.get("solver_mean")),
+               "confirmed": bool(r.get("confirmed")), "file": r.get("file")} if r else None)
+        verdict = ("overturned on review" if c.get("confirmed") and rv and not rv["confirmed"] else
+                   "confirmed" if c.get("confirmed") and (not rv or rv["confirmed"]) else "not confirmed on re-run")
+        cands.append({"attempt": aid, "tier": tier_of.get(aid) or (r or {}).get("tier"), "persona": persona_of.get(aid) or (r or {}).get("persona"),
+                      "in_run": {"n": len(c.get("scores") or []), "mean": _num(c.get("mean")), "solver_mean": _num(c.get("solver_mean")),
+                                 "confirmed": bool(c.get("confirmed"))},
+                      "review": rv, "verdict": verdict})
+    overturned = {c["attempt"] for c in cands if c["verdict"] == "overturned on review"}
+    per_tier = [{"tier": t, "best_unjustified": _num(v.get("best_unjustified")), "attempt": v.get("best_unjustified_attempt"),
+                 "solver": _num(v.get("solver_mean_paired", v.get("solver_mean_ref"))),
+                 "overturned": v.get("best_unjustified_attempt") in overturned}
+                for t, v in sorted((S.get("per_tier") or {}).items()) if isinstance(v, dict) and v.get("best_unjustified") is not None]
+    bu = [(p["best_unjustified"], p["solver"], p["tier"]) for p in per_tier if not p["overturned"]]
     best_unj = max(bu, key=lambda x: x[0] - (x[1] or 0)) if bu else None
+    pc = S.get("positive_control") if isinstance(S.get("positive_control"), dict) else None
     counts = S.get("counts") or {}
     tests = S.get("tests_written")
     found = ROOT / "tests" / "test_gemini_lab_swarm_found.py"
@@ -494,6 +517,8 @@ def slim_swarm(S: dict) -> dict:
             "best_unjustified": _num(best_unj[0]) if best_unj else None,
             "best_unjustified_solver": _num(best_unj[1]) if best_unj else None,
             "best_unjustified_tier": best_unj[2] if best_unj else None,
+            "per_tier": per_tier, "candidates_review": cands,
+            "positive_control": {k: pc.get(k) for k in ("attempts", "attackers_found", "verified_exploits", "episodes", "episodes_at_1")} if pc else None,
             "honest_wins": counts.get("high_score_justified", sum(1 for a in at if a["justified"])),
             "tiers": sorted(tiers),
             "exploits": counts.get("exploits", sum(1 for a in at if a["exploit"] and a["ledger_verified"])),
@@ -838,6 +863,7 @@ function usd(n) { n = +n || 0; return n >= 100 ? '$' + nf.format(Math.round(n)) 
 function pctf(x, d) { return (x * 100).toFixed(d == null ? 0 : d) + '%'; }
 function secs(s) { return s >= 60 ? (s / 60).toFixed(1) + ' min' : s >= 10 ? s.toFixed(0) + ' s' : s.toFixed(1) + ' s'; }
 function short(m) { return String(m).replace(/^gemini-/, ''); }
+function sgn(x, d) { return x == null ? '?' : (x >= 0 ? '+' : '') + (+x).toFixed(d == null ? 3 : d); }
 function hhmm(t) { const d = new Date(t * 1000); return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 function day(t) { const d = new Date(t * 1000); return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }); }
 
@@ -1353,9 +1379,11 @@ function renderSwarm() {
   const tiles = [['Attacks', nf.format(at.length), [S.mode, (S.tiers && S.tiers.length ? S.tiers.join(' + ') : S.tier)].filter(Boolean).join(' · ') + (S.tool_calls ? ' · ' + nf.format(S.tool_calls) + ' tool calls' : '')],
     ['Personas', String(personas), S.model ? String(S.model).split(',').map(short).join(', ') : ''],
     S.best_unjustified != null
-      ? ['Best unjustified score', (S.best_unjustified >= 0 ? '+' : '') + S.best_unjustified.toFixed(3), (S.best_unjustified_tier || '') + ' · solver ' + (S.best_unjustified_solver != null ? '+' + S.best_unjustified_solver.toFixed(3) : '?') + ' · ' + (S.honest_wins || 0) + ' honest ' + (S.honest_wins === 1 ? 'win' : 'wins') + ' excluded']
+      ? ['Best unjustified score', sgn(S.best_unjustified, 2), (S.best_unjustified_tier || '') + ' · solver ' + (S.best_unjustified_solver != null ? sgn(S.best_unjustified_solver, 2) : '?') +
+          (S.per_tier || []).filter(p => p.overturned).map(p => ' · ' + p.tier + ' ' + sgn(p.best_unjustified, 2) + ' overturned on review').join('')]
       : ['Best non-solver score', best != null ? (best >= 0 ? '+' : '') + best.toFixed(3) : '—', solver != null ? 'solver ' + (solver >= 0 ? '+' : '') + solver.toFixed(3) + ' on the same seeds' : ''],
-    ['Verified exploits', String(S.exploits || 0), (S.exploits ? 'invariant broken, ledger-verified' : 'no invariant broken') + (S.candidates ? ' · ' + S.candidates + ' score candidates' : '')],
+    ['Verified exploits', String(S.exploits || 0), (S.violations != null ? S.violations + ' invariant violations' : (S.exploits ? 'invariant broken, ledger-verified' : 'no invariant broken')) +
+      (S.positive_control ? ' · positive control ' + S.positive_control.attackers_found + '/' + S.positive_control.attempts : '')],
     ['Regression tests', S.tests_written != null ? String(S.tests_written) : '—', 'written from the attacks']];
   const g = h('div', { class: 'grid' });
   g.appendChild(tilesRow(tiles));
@@ -1367,6 +1395,15 @@ function renderSwarm() {
     h('tbody', {}, top.map(a => h('tr', {}, [h('td', { class: 'nw', text: a.persona }), h('td', { class: 'plan', text: String(a.plan || '').slice(0, 90) + (String(a.plan || '').length > 90 ? '…' : '') }), h('td', { class: 'num', text: (a.score >= 0 ? '+' : '') + a.score.toFixed(3) }),
       h('td', {}, [h('span', { class: 'badge ' + (a.ledger_verified ? 'ok' : 'no'), text: a.justified ? '✓ honest win' : a.ledger_verified ? '✓ verified' : '✗ claim only' })])])))]);
   g.appendChild(card('c5', 'Top attacks', 'highest verified scores first', [tbl]));
+  const CR = S.candidates_review || [];
+  if (CR.length) {
+    const ms = (x, n) => x ? sgn(x.mean, 2) + ' vs solver ' + sgn(x.solver_mean, 2) + ' (n=' + x.n + ')' : '–';
+    const ct = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['attempt', 'tier', 'in-run re-run (fresh seeds)', 'review (same seeds, current audit)', 'verdict'].map(c => h('th', { text: c })))]),
+      h('tbody', {}, CR.map(c => h('tr', {}, [h('td', { class: 'nw', text: c.attempt }), h('td', { text: c.tier || '' }),
+        h('td', { class: 'nw', text: ms(c.in_run) + (c.in_run.confirmed ? ' · flagged' : '') }), h('td', { class: 'nw', text: ms(c.review) }),
+        h('td', {}, [h('span', { class: 'badge ' + (c.verdict === 'confirmed' ? 'no' : 'ok'), text: c.verdict === 'overturned on review' ? 'flagged → overturned on review' : c.verdict })])])))]);
+    g.appendChild(card('c12', 'Score candidates: flagged in-run → reviewed', 'an unjustified correct accusation at solver level is re-run on fresh seeds; a flag only stands if it survives review (results/gemini/swarm.md)', [ct]));
+  }
   const vk = Object.entries(S.violation_kinds || {});
   if (S.findings.length || vk.length) {
     const kids = [];

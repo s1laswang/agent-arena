@@ -252,9 +252,19 @@ class Atlas:
             name, eps = sh
             text, _ = pack_corpus(eps)
             stats = stats_table_text(cohort_stats(eps))
-            return name, self._gen(self.model, [text, "COHORT STATS (computed in code):\n" + stats + "\n\n" +
-                                                self.DISCOVER_Q], Taxonomy, f"discover:{self.model}:{name[:60]}",
-                                   system=SYSTEM)
+            contents = [text, "COHORT STATS (computed in code):\n" + stats + "\n\n" + self.DISCOVER_Q]
+            tag = f"discover:{self.model}:{name[:60]}"
+            # a default-thinking answer recorded by an earlier run is reused; new calls use LOW thinking, because
+            # at the default level gemini-4-carbon spent its whole 32k output budget thinking on a 300k shard
+            try:
+                r = self.ops.generate(self.model, contents, schema=inline_schema(Taxonomy), system=SYSTEM, tag=tag,
+                                      recorded_only=True)
+                t, _ = parse(r.get("text", ""), Taxonomy)
+                if t:
+                    return name, t
+            except ReplayMiss:
+                pass
+            return name, self._gen(self.model, contents, Taxonomy, tag, system=SYSTEM, thinking_level="low")
         with ThreadPoolExecutor(max_workers=4) as ex:
             res = list(ex.map(one, shards))
         got = [(n, t) for n, t in res if t and t.modes]

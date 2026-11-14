@@ -159,7 +159,7 @@ class AtlasOps:
     # ------------------------------------------------------------------ operations
     def generate(self, model: str, contents: list, schema: dict | None = None, system: str | None = None,
                  cache_name: str | None = None, cache_key: str | None = None, thinking_level: str | None = None,
-                 max_output_tokens: int | None = None, tag: str = "") -> dict:
+                 max_output_tokens: int | None = None, tag: str = "", recorded_only: bool = False) -> dict:
         """Structured (or plain) generateContent. contents: [str | {'image': bytes, 'mime': ...}].
         cache_name: an explicit context cache; cache_key: the corpus hash it stands for (part of the request key).
         Returns {'text', 'usage'}."""
@@ -212,6 +212,11 @@ class AtlasOps:
                 except (json.JSONDecodeError, TypeError):
                     out["invalid"] = True  # e.g. truncated by max_output_tokens: never recorded for replay
             return out
+        if recorded_only:  # answer only from the response cache (ReplayMiss otherwise)
+            hit = self._load(self._key("generate", model, payload))
+            if hit is None:
+                raise ReplayMiss("not recorded")
+            return hit
         return self._cached("generate", model, payload, call)
 
     def count_tokens(self, model: str, text: str) -> int:

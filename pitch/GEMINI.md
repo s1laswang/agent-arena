@@ -2,6 +2,34 @@
 
 Project: The Sleeper. Status key: BUILT means merged into `momin` with a test; PLANNED means not written yet. Update before submitting. Numbers come from `make eval` (see DEMO.md), else NOT FOUND. All eval teams today are scripted; no keyed Gemini run exists yet.
 
+## What is real vs scripted
+
+- Every team in every table is scripted. Staff, oracle, reference, sleeper and all baselines are Python, not Gemini. `agent_kind` is `scripted` in every row.
+- There is no Gemini key yet, so no live Gemini call has ever been made. No Gemini number exists: NOT FOUND.
+- Gemini code that exists and is tested offline only, with a scripted fake model that proves the wiring and nothing about how the real model behaves: the client with cache (`agents/gemini.py`), Gemini staff (`agents/staff.py` `GeminiStaff`), Gemini sleeper (`agents/sleeper_agent.py`), Gemini reference (`agents/gemini_reference.py`), failure explanations (`lab/analyse.py --gemini`), invoice images (`agents/images.py`, image plumbing only).
+- What flips when `GEMINI_API_KEY` and `LAB_GEMINI=1` are both set: the staff and reference teams in `lab.run` use the Gemini path and rows say `agent_kind` gemini. The key alone changes nothing. First live check: `PYTHONPATH=. .venv/bin/python scripts/gemini_smoke.py`.
+- `SLEEPER_OFFLINE=1` never calls the API. Staff and reference raise on a cache miss. The sleeper agent and the analyst explanation fall back to scripted instead, so an offline rerun can quietly use the scripted sleeper there.
+- The "reference" is a scripted evidence-only team: `Reference` in `agents/reference.py` (lines 187 to 353) has no reference to `day.sleeper_seat`, `goal` or ticket `legit` flags, and `make_reference_team` ignores the day. The oracle does use the hidden sleeper identity, so it is a perfect-information check, not the reference.
+
+## Numbers to paste
+
+Every cell is NOT FOUND until a keyed run exists. Run HANDOFF.md section 2 steps 2 to 5, then paste from `results/*/summary.json` (including `gemini_usage`) and `make eval` output, with the commit hash.
+
+| Item | Value |
+|---|---|
+| Model id used | NOT FOUND |
+| Gemini staff reward (20 days x 3) | NOT FOUND |
+| Gemini reference reward (20 days x 3) | NOT FOUND |
+| Gap (reference minus staff) | NOT FOUND |
+| Sleeper success vs Gemini staff | NOT FOUND |
+| False accusation rate, Gemini staff | NOT FOUND |
+| Gemini calls and tokens for the run | NOT FOUND |
+| Cost of the run | NOT FOUND |
+| Cache size and offline replay identical | NOT FOUND |
+| Failure analyst: top failure labels | NOT FOUND |
+| Multimodal forged invoice verified live | NOT FOUND |
+| Commit hash of the keyed run | NOT FOUND |
+
 ## 1. The problem and why it matters
 
 Companies are starting to run real work through teams of AI agents: paying invoices, changing bank details, granting access. An agent with a hidden goal, or a compromised one, can move money or leak a secret while looking like a normal coworker. Most agent tests check one agent on one task. They do not test whether a group of agents can notice an insider and stop it without accusing an innocent.

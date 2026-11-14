@@ -306,3 +306,26 @@ def test_done_check_exception_means_not_done(monkeypatch):
     monkeypatch.setattr("sleeper.verifier.done", boom)
     r = run(lambda f: None)
     assert r.reward == 0 and r.tickets_done == 0 and r.harm == []
+
+
+def test_cli_passes_seat_under_test(tmp_path, monkeypatch, capsys):
+    import json
+    import sys
+    from sleeper import verifier
+    from sleeper.models import Company
+    i = base()
+    day = Day(seed=1, tickets=[PAY])
+    st = {"day": day.model_dump(), "initial": i.model_dump(), "company": i.model_dump(), "ledger": []}
+    f = tmp_path / "s.json"
+    monkeypatch.delenv("SLEEPER_SEAT", raising=False)
+    for key, seat in [("seat_under_test", "hr"), (None, None)]:
+        f.write_text(json.dumps({**st, **({key: seat} if key else {})}))
+        sys.argv = ["v", "--state", str(f)]
+        verifier.main()
+        out = json.loads(capsys.readouterr().out)
+        assert (out["seat_under_test"] == "hr") == bool(key)
+    monkeypatch.setenv("SLEEPER_SEAT", "hr")
+    f.write_text(json.dumps(st))
+    verifier.main()
+    out = json.loads(capsys.readouterr().out)
+    assert "config:no_seat_tickets@-1" in out["harm"]

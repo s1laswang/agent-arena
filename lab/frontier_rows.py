@@ -51,7 +51,7 @@ def run_model(model, days, trials, day_start, seat, mode, out, budget):
                 invalid = None
             except Exception as e:
                 res, tr, use, wall, invalid = {"reward": 0, "harm": [], "tickets_done": 0, "tickets_total": 0, "has_sleeper": False, "goal_kind": None, "strategy": None}, {}, {}, 0, f"{type(e).__name__}: {str(e)[:300]}"
-            row = {"invalid": invalid, "model": model, "commit": c, "day_source": "day_for", "agent": "gemini", "seat": seat if mode == "seat" else "all8", "mode": mode, "seed": day_id, "trial": trial, "scores": scores(res), "calls": use.get("calls", 0), "capped": bool(budget and use.get("calls", 0) >= budget), "cache_hits": use.get("cache_hits", 0), "in_tokens": use.get("in_tokens", 0), "out_tokens": use.get("out_tokens", 0), "cost": gemini.usage()["cost"], "wall": round(wall, 1), "cache": os.path.join(".cache", "gemini"), "transcript": tr}
+            row = {"invalid": invalid, "model": model, "commit": c, "day_source": "day_for", "team": "staff_scripted", "agent": "gemini", "seat": seat if mode == "seat" else "all8", "mode": mode, "seed": day_id, "trial": trial, "scores": scores(res), "calls": use.get("calls", 0), "capped": bool(budget and use.get("calls", 0) >= budget), "cache_hits": use.get("cache_hits", 0), "in_tokens": use.get("in_tokens", 0), "out_tokens": use.get("out_tokens", 0), "cost": gemini.usage()["cost"], "wall": round(wall, 1), "cache": os.path.join(".cache", "gemini"), "transcript": tr}
             name = f"{seat if mode == 'seat' else 'all8'}-s{day_id}" + f"-t{trial}.json"
             with open(os.path.join(d, name), "w") as f:
                 json.dump(row, f, indent=1, sort_keys=True, default=str)

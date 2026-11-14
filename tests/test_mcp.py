@@ -226,3 +226,52 @@ def test_judge_seed_served_and_dev_reset_refused():
         assert _post(f"{s.base}/admin/reset?token={ADMIN}", {"tier": "easy", "seed": 800_001})[0] == 200
     finally:
         s.stop()
+
+
+def _file(tmp_path, name, text):
+    f = tmp_path / name
+    f.write_text(text)
+    f.chmod(0o600)
+    return str(f)
+
+
+def test_secret_files_configure_episode_and_world(tmp_path, monkeypatch):
+    secret, token, seed = "ws-" + "ab" * 16, "tok-file-123", 900_011
+    env = {k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}
+    port = _free_port()
+    env.update(CANARY_HOST="127.0.0.1", CANARY_PORT=str(port),
+               CANARY_LEDGER_TOKEN="plain-token-loses",
+               CANARY_EPISODE_FILE=_file(tmp_path, "ep.json", json.dumps({"tier": "hard", "seed": seed})),
+               CANARY_WORLD_SECRET_FILE=_file(tmp_path, "ws", secret + "\n"),
+               CANARY_LEDGER_TOKEN_FILE=_file(tmp_path, "tok", token))
+    proc = subprocess.Popen([sys.executable, "-m", "canary.mcp_server"], env=env,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    base = f"http://127.0.0.1:{port}"
+    try:
+        for _ in range(100):
+            try:
+                if _get(base + "/healthz")[0] == 200:
+                    break
+            except Exception:
+                time.sleep(0.1)
+        hist = asyncio.run(play_policy(base + "/mcp", StopEarly(seed=seed)))
+        assert _get(f"{base}/ledger?token=plain-token-loses")[0] == 403  # the file wins
+        code, led = _get(f"{base}/ledger?token={token}")
+        assert code == 200 and led["tier"] == "hard"
+    finally:
+        proc.terminate()
+        log = proc.communicate(timeout=10)[0]
+    monkeypatch.setenv("CANARY_WORLD_SECRET", secret)  # same key in-process => same world
+    local = run_episode(Env("hard", seed), StopEarly(seed=seed))
+    assert [h.result for h in hist] == [x.result for x in local.steps] and led["score"] == local.score
+    assert secret not in log and token not in log and str(seed) not in log
+
+
+def test_bad_episode_file_refused_without_echo(tmp_path):
+    env = {k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}
+    env.update(CANARY_PORT=str(_free_port()), CANARY_EPISODE_FILE=_file(tmp_path, "ep", "not-json-secret-xyz"))
+    p = subprocess.run([sys.executable, "-m", "canary.mcp_server"], env=env, capture_output=True, text=True, timeout=60)
+    assert p.returncode == 2 and "CANARY_EPISODE_FILE" in p.stderr and "secret-xyz" not in p.stderr
+    env["CANARY_EPISODE_FILE"] = str(tmp_path / "missing")
+    p = subprocess.run([sys.executable, "-m", "canary.mcp_server"], env=env, capture_output=True, text=True, timeout=60)
+    assert p.returncode == 2 and "cannot read" in p.stderr

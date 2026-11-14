@@ -61,8 +61,11 @@ def _leakable(obs: Observations, s: str, d: int, window: int, known_leaked_befor
 
 def _weight(doc: Doc, n_emp: int, careful: bool) -> float:
     if careful and doc.is_canary:
-        return max(0.0, 1.0 - len(doc.recipients) / n_emp)
+        return max(0.05, 1.0 - len(doc.recipients) / n_emp)  # floor: DSL moles need not follow careful weights
     return 1.0
+
+
+MAX_STATES = 4096
 
 
 def leak_loglik(obs: Observations, s: str, P, choice_temper: float = 1.0, noleak_temper: float = 1.0) -> float:
@@ -92,36 +95,60 @@ def leak_loglik(obs: Observations, s: str, P, choice_temper: float = 1.0, noleak
         if d not in obs.leak_days:
             if W[d] > 0:
                 logp += noleak_temper * math.log(max(1e-12, 1.0 - P.p_leak))
+    # v0.4 fingerprint_accuracy a: feed shows the true label w.p. a, else uniform over the
+    # canary's OTHER planted labels (k = #distinct labels planted).
+    a = getattr(P, "fingerprint_accuracy", 1.0)
     ok_variant = []
     for it in items:
         doc = obs.docs.get(it.doc_id)
-        ok_variant.append(not (it.variant and doc and doc.variants)
-                          or doc.variants.get(s) == it.variant)
+        if not (it.variant and doc and doc.variants):
+            ok_variant.append(1.0)
+            continue
+        mine = doc.variants.get(s)
+        k = len(set(doc.variants.values()))
+        if mine == it.variant:
+            ok_variant.append(a)
+        elif mine is None or k <= 1:
+            ok_variant.append(0.0)
+        else:
+            ok_variant.append((1.0 - a) / (k - 1))
     L = sorted(d for d in obs.leak_days if d in obs.closed_days)
     today = obs.today
 
-    @lru_cache(maxsize=None)
-    def rec(i: int, used: frozenset) -> float:
-        if i == len(L):
-            return 1.0 if len(used) == len(items) else 0.0
-        d = L[i]
+    # Forward DP over leak days. State = frozenset of feed items already matched. Items whose
+    # latest possible leak day has passed unmatched are dead -> state pruned immediately; the state
+    # set is capped (keep the heaviest MAX_STATES) so runtime/memory are bounded on any input.
+    latest = [it.surfaced_day - min(delays) for it in items]
+    states = {frozenset(): 1.0}
+    for d in L:
         if W[d] <= 0:
-            return 0.0
-        tot = 0.0
-        for j, it in enumerate(items):
-            if j in used:
-                continue
-            dl = it.surfaced_day - d
-            if dl in delays and it.doc_id in wdoc[d] and ok_variant[j]:
-                f = (wdoc[d][it.doc_id] / W[d]) ** choice_temper * pd
-                if f > 0:
-                    tot += f * rec(i + 1, used | {j})
+            return -math.inf
         pend = sum(pd for dl in delays if d + dl > today)
-        if pend > 0:
-            tot += pend * rec(i + 1, used)
-        return tot
-
-    v = rec(0, frozenset())
+        nxt: dict = {}
+        for used, wt in states.items():
+            for j, it in enumerate(items):
+                if j in used:
+                    continue
+                dl = it.surfaced_day - d
+                if dl in delays and it.doc_id in wdoc[d] and ok_variant[j] > 0:
+                    f = (wdoc[d][it.doc_id] / W[d]) ** choice_temper * pd * ok_variant[j]
+                    if f > 0:
+                        k = used | {j}
+                        nxt[k] = nxt.get(k, 0.0) + wt * f
+            if pend > 0:
+                nxt[used] = nxt.get(used, 0.0) + wt * pend
+        # prune dead states: an unmatched item that can no longer be matched by a later leak day
+        nxt_d = L[L.index(d) + 1] if L.index(d) + 1 < len(L) else None
+        alive = {}
+        for used, wt in nxt.items():
+            if all(j in used or (nxt_d is not None and latest[j] >= nxt_d) for j in range(len(items))):
+                alive[used] = wt
+        if len(alive) > MAX_STATES:
+            alive = dict(sorted(alive.items(), key=lambda kv: -kv[1])[:MAX_STATES])
+        states = alive
+        if not states:
+            return -math.inf
+    v = sum(wt for used, wt in states.items() if len(used) == len(items))
     if v <= 0:
         return -math.inf
     return logp + len(L) * math.log(P.p_leak) + math.log(v)
@@ -155,14 +182,58 @@ def behaviour_llr(obs: Observations, e: str, P) -> float:
     return llr
 
 
+def behaviour_logliks(obs: Observations, P) -> dict[str, float]:
+    """Exact (up to a constant) log P(access logs | mole = s), marginalising the unknown decoy
+    (framing: share `framing_decoy_share` of fake after-hours accesses to the decoy, rest uniform)."""
+    emps = obs.employees
+    n = len(emps)
+    pa_m = getattr(P, "p_after_hours_mole", 0.3)
+    pa_b = getattr(P, "p_after_hours_benign", 0.1)
+    fr = getattr(P, "framing_rate", 1.0) if P.framing else 0.0
+    share = getattr(P, "framing_decoy_share", 0.5) if P.decoy else 0.0
+    if not P.decoy:
+        f_dec, f_plain = 0.0, fr / max(1, n - 1)
+    else:
+        f_dec, f_plain = fr * share, fr * (1 - share) / max(1, n - 2)
+    Lm, Ld, Lp = {}, {}, {}
+    for e in emps:
+        if e not in obs.access_counts:
+            Lm[e] = Ld[e] = Lp[e] = 0.0
+            continue
+        nr, na = obs.access_counts[e]
+        k = obs.access_days.get(e, 0)
+        lm, lb = P.log_rate_mole * k, P.log_rate_benign * k
+        Lm[e] = _pois_logpmf(nr, lm * (1 - pa_m)) + _pois_logpmf(na, lm * pa_m)
+        reg = _pois_logpmf(nr, lb * (1 - pa_b))
+        Ld[e] = reg + _pois_logpmf(na, lb * pa_b + f_dec * k)
+        Lp[e] = reg + _pois_logpmf(na, lb * pa_b + f_plain * k)
+    tot_p = sum(Lp.values())
+    out = {}
+    for s in emps:
+        base = tot_p - Lp[s] + Lm[s]
+        if not P.decoy:
+            out[s] = base
+            continue
+        terms = [Ld[c] - Lp[c] for c in emps if c != s]
+        m = max(terms)
+        out[s] = base + m + math.log(sum(math.exp(t - m) for t in terms) / len(terms))
+    return out
+
+
 def posterior(obs: Observations, P, behaviour_temper: float = 0.3,
               choice_temper: float = 1.0, noleak_temper: float = 1.0) -> dict[str, float]:
     emps = obs.employees
     logs = {}
+    beh = behaviour_logliks(obs, P) if behaviour_temper > 0 else {}
     for s in emps:
         lp = leak_loglik(obs, s, P, choice_temper, noleak_temper)
         if behaviour_temper > 0 and lp > -math.inf:
-            lp += behaviour_temper * behaviour_llr(obs, s, P)
+            lp += behaviour_temper * beh[s]
+            for who, ev in obs.interviews:
+                if who == s:
+                    pe = P.p_evasive_innocent
+                    pm = min(0.999, pe * P.interview_lr)
+                    lp += behaviour_temper * (math.log(pm / pe) if ev else math.log((1 - pm) / (1 - pe)))
         logs[s] = lp
     m = max(logs.values()) if logs else -math.inf
     if m == -math.inf:

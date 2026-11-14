@@ -101,3 +101,38 @@ def test_j1_fp_curve():
 
 
 FPK = "fingerprint_accuracy"
+
+
+def _cell_rows(tier, cell, solver_score, none_every=0, n=20):
+    rows = []
+    for s in range(n):
+        acc = "" if none_every and s % none_every == 0 else "e01"
+        rows.append({"tier": tier, "p": str(cell), "agent": "solver", "seed": s, "score": solver_score,
+                     "correct": acc != "", "accused": acc})
+        rows.append({"tier": tier, "p": str(cell), "agent": "heuristic", "seed": s, "score": 0.0,
+                     "correct": False, "accused": "e02"})
+        rows.append({"tier": tier, "p": str(cell), "agent": "stop_early", "seed": s, "score": -1.0,
+                     "correct": False, "accused": "e03"})
+        rows.append({"tier": tier, "p": str(cell), "agent": "logs_only", "seed": s, "score": 0.0,
+                     "correct": False, "accused": "e04"})
+    return rows
+
+
+def test_j1_solver_none_rate():
+    rows = _cell_rows("easy", 0, 0.8, none_every=10)  # 10% no-accusation -> infeasible
+    rows += _cell_rows("easy", 1, 0.8)
+    cells = {c["params"]: c for c in j1_recommend.evaluate(rows)}
+    assert cells["p=0"]["solver_none_rate"] == 0.1 and "solver_none>0.05" in cells["p=0"]["violations"]
+    assert cells["p=1"]["feasible"] and cells["p=1"]["none_rate[heuristic]"] == 0.0
+
+
+def test_j1_joint_ordering():
+    # independent best per tier would be hard=0.9 > medium=0.7; the joint pick must respect the order
+    rows = _cell_rows("easy", 0, 0.8) + _cell_rows("medium", 1, 0.7) + _cell_rows("medium", 2, 0.5)
+    rows += _cell_rows("hard", 3, 0.9) + _cell_rows("hard", 4, 0.4)
+    picks, held = j1_recommend.recommend_joint(rows)
+    assert held
+    assert [picks[t]["params"] for t in ("easy", "medium", "hard")] == ["p=0", "p=1", "p=4"]
+    bad = _cell_rows("easy", 0, 0.3) + _cell_rows("medium", 1, 0.7)
+    _, held2 = j1_recommend.recommend_joint(bad)
+    assert not held2 and "Ordering cannot hold" in j1_recommend.to_markdown(bad, ["x"])

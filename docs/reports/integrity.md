@@ -104,3 +104,11 @@
 ## 07:30 status
 - Judge rehearsal on a FRESH GitHub clone of justSilas (no .env, no keys): `make hunt` was MISSING (HARNESS never added it) -> added Makefile target `hunt` (all 4 tracks, ~51 s): 0.000 best non-solver, 0 violations everywhere. Fresh clone: `make hunt TIER=medium` clean; seed_attack on judge seed 900007 -> None (v0.5 fail-closed holds). make test 507 passed.
 - Grok judge re-run not yet on origin (latest grok-judge commit 00:28).
+
+## 07:49 status — overnight summary for the 09:00 review
+- **Reward integrity verdict:** no exploit beats the solver on the frozen tiers (v1.3 + hard_forge). 41 attempts logged in docs/EXPLOITS.md; every closed exploit has a regression test (#32 = inconclusive hunt record).
+- **Real exploits found and closed (all with tests):** #1 stop-early lottery (v0: +0.10 medium → v0.3 wrong = −1); #10 logs alone named the mole 71% easy (→ tiers v1 recalibration, CEO bound met); #24 judge seeds fail open → public-key regeneration, 1.0 on 90/90 judge seeds (found by codex white-box + Grok judge; → v0.5 fail-closed); #27 server secrets readable from same-uid /proc environ (Grok judge; → CANARY_*_FILE, Harbor sidecar is the boundary); #23 dev seeds public (→ server serves judge/held-out only).
+- **Held:** fuzz (random/malformed/evolve/parallel-accuse) up to 4M evals on FR8, all tiers → best non-solver 0.000; error/length parity; ledger token; 16-thread accuse race over real MCP; calls after end; V monotone; known-V hiding (665 states); seed never exposed; text-only probe ≈ fair bar; peek_status/verdict unreachable; calibration policies < solver; evolved moles catchable.
+- **Baselines (frozen v1.2, 100 seeds):** do_nothing 0; every other baseline mean ≤ 0; solver +0.79/+0.63/+0.60.
+- **Judge tooling:** `make hunt` (no keys, ~51 s, all tracks) verified on a fresh GitHub clone; `make test` green (517 passed).
+- **Open / for the morning:** Grok judge re-run on the final tip (not yet run); Gemini exploit hunter when GEMINI_API_KEY is in (canary.llm wiring for hunter.py); codex hunts are weak evidence (OpenAI moderation cut 8/9 runs).

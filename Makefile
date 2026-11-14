@@ -25,3 +25,6 @@ key-check:
 
 cheat-corpus:
 	GEMINI_API_KEY= PYTHONPATH=. $(PY) -m redteam.cheat_corpus $(ARGS)
+
+cheat-eval:
+	GEMINI_API_KEY= PYTHONPATH=. $(PY) -m redteam.cheat_eval

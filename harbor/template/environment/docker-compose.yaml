@@ -1,0 +1,38 @@
+# Harbor merges this on top of its base compose: `main` (the agent container, built from
+# environment/Dockerfile) is wired by Harbor; we only add the game-server sidecar.
+# Sidecars share a Docker network with main (reachable by service name) but NOT its filesystem,
+# PID namespace or environment variables.
+# Never add `pid: host`, `pid: "service:..."`, shared volumes or a docker socket mount to either
+# service: a shared PID namespace would expose the server's /proc (judge-sim finding #25, score 1.0).
+# harbor/check_isolation.sh asserts all of this from inside `main`.
+services:
+  main:
+    depends_on:
+      canary-server:
+        condition: service_healthy
+
+  canary-server:
+    build:
+      context: ./canary-server
+    expose:
+      - "8765"
+    environment:
+      # Episode, world secret and ledger token come from 0600 files owned by the server uid (mcp_server.py
+      # *_FILE interface, EXPLOITS #25), so even the server's own /proc/<pid>/environ holds no seed or secret.
+      CANARY_EPISODE_FILE: "/opt/canary-server/episode.json"
+      CANARY_WORLD_SECRET_FILE: "/opt/canary-server/data/worlds/judge/SALT"
+      CANARY_LEDGER_TOKEN_FILE: "/run/canary/ledger_token"
+      CANARY_HOST: "0.0.0.0"
+      CANARY_PORT: "8765"
+      CANARY_PROVIDER: "$${CANARY_PROVIDER:-template}"
+      # The world secret is NOT passed here: build.py bakes it into this image as a 0600 file
+      # (data/worlds/judge/SALT, owned by the server uid), so oracle and agent trials of the same task
+      # see the same world and the secret is in no environment.
+      GEMINI_API_KEY: "$${GEMINI_API_KEY:-}"
+${LEDGER_TOKEN_LINE}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/healthz', timeout=2)"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s

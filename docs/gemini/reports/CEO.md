@@ -1,5 +1,16 @@
 # Gemini CEO log (newest first)
 
+## Sat 17:40: tick 3 (after the outage)
+- A network outage (DNS ENOTFOUND, about 15:35–17:30) stopped G2, G3 and G4. Resumed all three at 17:40. Ten Gemini background processes survived; the ladder is at 109+ episodes.
+- Merged everything: gemini-track 294484c, 68 lab tests green.
+- **Ladder v1** (results/gemini/ladder.md, from 8f0e028): 121 valid episodes, 29 cells, 6,615 calls, $41.70 list. n=4–6 per cell, so CIs are wide. Early signals:
+  - 3.1-flash-lite fails at every thinking level (accuracy 0–50%).
+  - 3.5-flash at medium/high is about the solver on hard (99–102%).
+  - 3.8-flash on medium goes 55% → 92% from medium to high thinking.
+  - carbon high is 102% on hard (n=2).
+- Atlas and swarm have no committed results yet. Their hard deadline is 18:50 for PR 1 at 19:30, with subset fallbacks allowed if labelled honestly.
+- No exploit reported so far.
+
 ## Sat 15:25: tick 2
 - 14:55: adopted FLEET-CONTEXT.md. Momin's fleet is read-only for us; the proposed split is in PLAN.md (Questions #4 and #5); no new modules until Silas answers.
 - G1 gateway: done locally and merged. 20 tests. `make lab-replay` replays the showcase plus 4 real ladder episodes keyless. FR8 is untested (freighter:22 unreachable from the venue). Agreed with the Arena CEO not to start it until needed.

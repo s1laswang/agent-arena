@@ -22,10 +22,10 @@
 **Gotchas** (also in the playbook): google-genai 3.x defaults to API `v1`, where `cachedContents` is a bare 404; use
 `api_version="v1beta"`. gemini-4-* have no explicit caching (batch only), so caching runs on gemini-3.8-flash.
 
-**Finding for ENV (not an atlas bug):** in `g4carbon.in.v14.h6` (v1.4 hard seed 6) the reference solver's own
-posterior, replayed from the agent's observations, puts ~0 on the true mole e34 from t≈65 and ~0.65 on the innocent
-e18, so the agent's wrong accusation is what the solver would also have done. Worth a look at the solver's leak
-model on that seed.
+**Note on luck (no bug):** in `g4carbon.in.v14.h6` (v1.4 hard seed 6) the canary `c4-2` surfaced with variant Z at
+t=64, which the reference solver's own posterior (replayed from the agent's observations) reads as evidence against
+the true mole e34 (P 0.06 -> 0.002) and for the innocent e18 (~0.65). The agent's wrong accusation is what the
+evidence supported; the atlas shows such episodes as "the solver was misled too" rather than as an agent failure.
 
 **Next:** full run on all 153 episodes with gemini-4-carbon discovery (running), validation sheet, commit results.
 

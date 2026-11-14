@@ -23,6 +23,8 @@ from .ledger import record
 ROOT = Path(__file__).resolve().parents[2]
 CACHE_DIR = ROOT / "results" / "gemini" / "atlas_cache"
 FEATURE = "atlas"
+# long-context calls on gemini-4-carbon (~800k tokens + thinking) can take well over 10 minutes
+TIMEOUT_S = float(os.environ.get("CANARY_ATLAS_TIMEOUT_S", "2400"))
 
 
 class ReplayMiss(RuntimeError):
@@ -36,14 +38,14 @@ def sdk_client():
     from google.genai import types
     try:
         from canary.gemini.sdk import gateway_http_options, gateway_token  # type: ignore
-        opts = gateway_http_options(900)
+        opts = gateway_http_options(TIMEOUT_S)
         if opts:
             return genai.Client(api_key=gateway_token(), http_options=types.HttpOptions(**opts, api_version="v1beta"))
     except ImportError:
         pass
     from canary.llm.base import require_key
     return genai.Client(api_key=require_key("GEMINI_API_KEY"),
-                        http_options=types.HttpOptions(timeout=900_000, api_version="v1beta"))
+                        http_options=types.HttpOptions(timeout=int(TIMEOUT_S * 1000), api_version="v1beta"))
 
 
 def _usage_dict(um: Any) -> dict:
@@ -146,7 +148,8 @@ class AtlasOps:
                 self._ledger(model, kind, None, t0, ok=False, error=msg, meta=meta)
                 transient = any(s in msg for s in ("429", "RESOURCE_EXHAUSTED", "503", "500", "UNAVAILABLE",
                                                    "DEADLINE", "Timeout", "timed out", "ServerError"))
-                if not transient or attempt == self.max_retries:
+                timeout = any(s in msg for s in ("Timeout", "timed out", "DEADLINE"))
+                if not transient or attempt == self.max_retries or (timeout and attempt >= 1):
                     raise
                 time.sleep(min(60.0, delay) * (0.5 + random.random()))
                 delay *= 2

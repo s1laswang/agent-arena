@@ -5,6 +5,8 @@ Feasible cell (per tier):
   * medium: heuristic mean <= 0.55 x solver mean
   * medium/hard: logs_only accuracy <= 2 x chance (1/N, N = n_employees column or rules.TIERS)
   * stop_early mean < 0
+  * solver no-accusation rate (empty `accused`) <= 0.05
+Joint pick: solver means ordered easy > medium > hard across the chosen cells.
 Among feasible cells: maximise mean(solver - heuristic); tiebreak on smaller solver CI.
 If none is feasible the report names the binding constraint(s) and lists the closest cells.
   python -m fr8.analysis.j1_recommend <csv>... [--out fr8/analysis/out/j1_recommendation.md]
@@ -21,6 +23,9 @@ from ._common import std
 
 MIN_SOLVER_ACC = 0.90
 MED_HEUR_RATIO = 0.55
+MAX_SOLVER_NONE = 0.05
+ORDER = ("easy", "medium", "hard")  # solver means must be strictly decreasing across chosen cells
+JOINT_TOP_K = 60
 LOGS_CHANCE_MULT = 2.0
 
 
@@ -52,6 +57,8 @@ def evaluate(rows: list[dict]) -> list[dict]:
         n = {a: len(v) for a, v in by.items()}
         wrong = {a: mean([float(r["wrong"]) if r.get("wrong", "") not in ("", None) else float(r["score"] < 0)
                           for r in v]) for a, v in by.items()}
+        none = {a: mean([float(str(r.get("accused") or "").strip() in ("", "None")) for r in v])
+                for a, v in by.items() if all("accused" in r for r in v)}  # no column -> unknown
         s = {r["seed"]: r["score"] for r in by.get("solver", [])}
         h = {r["seed"]: r["score"] for r in by.get(H, [])}
         diffs = [s[k] - h[k] for k in s if k in h]
@@ -65,6 +72,8 @@ def evaluate(rows: list[dict]) -> list[dict]:
         if tier in ("medium", "hard") and N and acc.get("logs_only") is not None \
                 and acc["logs_only"] > LOGS_CHANCE_MULT / N:
             viol.append("logs_only>2x_chance")
+        if none.get("solver", 0) > MAX_SOLVER_NONE:
+            viol.append("solver_none>0.05")
         if not (sc.get("stop_early", 1.0) < 0):
             viol.append("stop_early>=0")
         missing = [a for a in ("solver", H, "stop_early") + (("logs_only",) if tier != "easy" else ())
@@ -78,6 +87,7 @@ def evaluate(rows: list[dict]) -> list[dict]:
             "logs_only_acc": acc.get("logs_only"), "chance": (1 / N) if N else None,
             "stop_early_mean": sc.get("stop_early"), "random_acc": acc.get("random"),
             "solver_wrong_rate": wrong.get("solver"), "heur_wrong_rate": wrong.get(H),
+            **{f"none_rate[{a}]": v for a, v in sorted(none.items())}, "solver_none_rate": none.get("solver"),
             "gap": gap, "gap_ci": ci_half(diffs) if len(diffs) > 1 else float("nan"),
             "seeds_for_ci_gap3": n_needed(std(diffs), gap) if len(diffs) > 1 else float("inf"),
             "violations": viol, "feasible": not viol,
@@ -99,6 +109,35 @@ def recommend(rows: list[dict]) -> dict[str, dict | None]:
     return best
 
 
+def recommend_joint(rows: list[dict]) -> tuple[dict[str, dict | None], bool]:
+    """Pick per-tier feasible cells jointly so solver means are easy > medium > hard,
+    maximising the summed gap (tiebreak: summed solver CI). Returns (picks, ordering_held).
+    If no ordered triple exists, falls back to the independent per-tier best (ordering_held=False)."""
+    by_tier = group([c for c in evaluate(rows) if c["feasible"]], lambda c: c["tier"])
+    tiers = [t for t in ORDER if t in by_tier]
+    pools = [sorted(by_tier[t], key=_rank)[:JOINT_TOP_K] for t in tiers]
+    best, best_key = None, None
+
+    def rec(i, chosen):
+        nonlocal best, best_key
+        if i == len(pools):
+            key = (-sum(c["gap"] for c in chosen), sum(c["solver_ci"] for c in chosen))
+            if best_key is None or key < best_key:
+                best, best_key = list(chosen), key
+            return
+        for c in pools[i]:
+            if chosen and not (c["solver_mean"] < chosen[-1]["solver_mean"]):
+                continue
+            rec(i + 1, chosen + [c])
+
+    rec(0, [])
+    picks: dict[str, dict | None] = {t: None for t in set(c["tier"] for c in evaluate(rows))}
+    if best is not None:
+        picks.update(dict(zip(tiers, best)))
+        return picks, True
+    return recommend(rows), False
+
+
 def _f(v, d=3):
     if v is None:
         return "-"
@@ -110,13 +149,17 @@ def _f(v, d=3):
 def _line(c):
     return (f"| {c['params']} | {c['n']} | {_f(c['solver_mean'])} ± {_f(c['solver_ci'])} | {_f(c['solver_acc'])} | "
             f"{_f(c['heur_mean'])} ± {_f(c['heur_ci'])} | {_f(c['heur_acc'])} | {_f(c['logs_only_acc'])} (chance {_f(c['chance'])}) | "
-            f"{_f(c['stop_early_mean'])} | {_f(c['solver_wrong_rate'])}/{_f(c['heur_wrong_rate'])} | "
+            f"{_f(c['stop_early_mean'])} | {_f(c['solver_wrong_rate'])}/{_f(c['heur_wrong_rate'])} | {_none(c)} | "
             f"{_f(c['gap'])} ± {_f(c['gap_ci'])} | {_f(c['seeds_for_ci_gap3'])} | {', '.join(c['violations']) or 'ok'} |")
 
 
 HDR = ("| params | n | solver mean ± CI95 | solver acc | heur mean ± CI95 | heur acc | logs_only acc | "
-       "stop_early mean | wrong rate solver/heur | gap ± CI95 | seeds for CI<gap/3 | constraints |\n"
-       "|---|---|---|---|---|---|---|---|---|---|---|---|")
+       "stop_early mean | wrong rate solver/heur | none rate (per agent) | gap ± CI95 | seeds for CI<gap/3 | constraints |\n"
+       "|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+
+
+def _none(c):
+    return " ".join(f"{k[10:-1]}={v:.2f}" for k, v in c.items() if k.startswith("none_rate["))
 
 
 FP = "fingerprint_accuracy"
@@ -180,6 +223,17 @@ def to_markdown(rows: list[dict], sources: list[str], closest: int = 3) -> str:
             near = sorted(cs, key=lambda c: (len(c["violations"]),) + _rank(c))[:closest]
             out += ["", "Closest cells:", "", HDR] + [_line(c) for c in near]
         out.append("")
+    picks, held = recommend_joint(rows)
+    out += ["## Joint pick (solver mean easy > medium > hard)", ""]
+    if not held:
+        out.append("**Ordering cannot hold** among feasible cells; showing independent per-tier best "
+                   "(ordering violated) — see per-tier tables for alternatives.")
+    out += ["| tier | params | solver mean ± CI95 | gap | seeds for CI<gap/3 |", "|---|---|---|---|---|"]
+    for t in ORDER:
+        c = picks.get(t)
+        out.append(f"| {t} | none feasible | | | |" if c is None else
+                   f"| {t} | `{c['params']}` | {_f(c['solver_mean'])} ± {_f(c['solver_ci'])} | {_f(c['gap'])} | {_f(c['seeds_for_ci_gap3'])} |")
+    out.append("")
     out += fp_markdown(rows)
     return "\n".join(out)
 

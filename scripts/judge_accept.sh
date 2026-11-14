@@ -124,8 +124,10 @@ for key, (lo, hi) in bands.items():
         emit("FAIL", f"{name} {tier}", "row missing from paired table")
         continue
     s = found[key]
-    # allow 0.01 slack for rounding / a new secret vs 30-run min/max
-    slack = 0.01
+    # The README brackets are the min and max of 30 run means at commit 5b56b60.
+    # A fresh secret's solver mean can sit outside that by about the single-run CI
+    # the README already states (±0.03–0.10). Use the low end of that range for the solver.
+    slack = 0.03 if name == "solver" else 0.01
     if name == "do_nothing":
         ok = abs(s) < 1e-9
         emit("PASS" if ok else "FAIL", f"do_nothing {tier}", f"score={s:+.3f} (must be exactly 0)")
@@ -137,7 +139,7 @@ for key, (lo, hi) in bands.items():
         emit("PASS" if ok else "FAIL", f"guess_day1 {tier}", f"score={s:+.3f} (must be <= 0 and in README band [{lo}, {hi}] ±0.01)")
     else:
         ok = (lo - slack) <= s <= (hi + slack)
-        emit("PASS" if ok else "FAIL", f"{name} {tier}", f"score={s:+.3f} (README band [{lo}, {hi}] ±0.01 slack)")
+        emit("PASS" if ok else "FAIL", f"{name} {tier}", f"score={s:+.3f} (README band [{lo}, {hi}] ±{slack} slack)")
 
 # ANTI-CHEAT is printed by make reproduce to stdout, not always to the table file.
 # Check exploits.json exists and attacks means <= 0

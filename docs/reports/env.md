@@ -83,7 +83,7 @@ Fresh-seed table (`uv run --python 3.12 python scripts/fresh_table.py 1000 1400`
 - Note: hard acc honestly ~82-84% (FR8 800 seeds .841; fresh 400 seeds .815).
 
 ## 03:32 status: v1.3 MERGED (justSilas 0933805)
-- Verified: make test 469 passed (pipefail). Known V in status; solver v1.3; grok_tactics; results/fresh_table_v1.3.md. FR8 800 fresh seeds/tier: solver .779/.632/.575, acc 99.6/88.7/84.8%, solver-grok +.089/+.174/+.233.
+- Verified: make test 469 passed (pipefail). Known V in status; solver v1.3; grok_tactics; results/history/fresh_table_v1.3.md. FR8 800 fresh seeds/tier: solver .779/.632/.575, acc 99.6/88.7/84.8%, solver-grok +.089/+.174/+.233.
 - Waiting: AGENTS official gpt-5.5 v1.3 runs -> regret table. INTEGRITY fuzz on v1.3.
 
 ## 14:35 status (HEAD-ENV relaunch, NEXT-LEVEL)

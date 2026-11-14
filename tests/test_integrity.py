@@ -327,6 +327,11 @@ def test_salt_never_tracked():
     """The judge SALT must never be committed: it is the only thing stopping world regeneration."""
     import subprocess
     root = Path(__file__).resolve().parent.parent
+    if subprocess.run(["git", "rev-parse"], cwd=root, capture_output=True).returncode != 0:
+        # Zip download / git archive: no .git to ask. A SALT inside the archive would mean it was committed.
+        assert not (root / "data/worlds/judge/SALT").exists(), "data/worlds/judge/SALT shipped in the archive"
+        assert "data/worlds/judge/SALT" in (root / ".gitignore").read_text().split()
+        return
     tracked = subprocess.run(["git", "ls-files", "data/worlds/judge/SALT"], cwd=root,
                              capture_output=True, text=True).stdout.strip()
     assert not tracked, "data/worlds/judge/SALT is committed: judge worlds are regenerable"

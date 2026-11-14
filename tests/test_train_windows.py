@@ -46,3 +46,44 @@ def test_windows_cover_each_assistant_turn_once_and_fit():
         assert lab[-1] != IGNORE  # ends at an assistant turn
         total += sum(1 for x in lab if x != IGNORE)
     assert total == sum(e - s for s, e in asst)
+
+
+def long_msgs(n_turns=40):
+    from canary.types import Step
+    steps = [Step(i, 1, "read_access_logs", {"day_from": i, "day_to": i},
+                  {"ok": True, "data": {"rows": "x" * (50 + 7 * (i % 5))}, "error": None})
+             for i in range(n_turns)]
+    return render_messages("rules " * 20, steps)
+
+
+import pytest
+
+
+@pytest.mark.parametrize("mode,overlap", [("dense", 0), ("dense", 64), ("prefix", 0)])
+def test_dense_each_assistant_token_once(mode, overlap):
+    msgs = long_msgs()
+    full, he, bounds, asst = char_spans(msgs, fake_render)
+    ids, offs = char_tok(full)
+    L = he + 700
+    ws = make_windows(ids, offs, he, bounds, asst, max_len=L, mode=mode, overlap=overlap)
+    want = sorted(t for s, e in asst for t in range(s, e))
+    got = []
+    for inp, lab in ws:
+        assert len(inp) <= L and inp[:he] == ids[:he]
+        assert lab[-1] != IGNORE
+        # recover absolute positions: window body is a contiguous slice of ids
+        body = inp[he:]
+        start = next(i for i in range(len(ids)) if ids[i:i + len(body)] == body)
+        got += [start + i - he for i, x in enumerate(lab) if x != IGNORE]
+    assert sorted(got) == want
+
+
+def test_dense_has_higher_loss_fraction_than_prefix():
+    msgs = long_msgs()
+    full, he, bounds, asst = char_spans(msgs, fake_render)
+    ids, offs = char_tok(full)
+    frac = {}
+    for mode in ("prefix", "dense"):
+        ws = make_windows(ids, offs, he, bounds, asst, max_len=he + 700, mode=mode)
+        frac[mode] = sum(sum(x != IGNORE for x in l) for _, l in ws) / sum(len(i) for i, _ in ws)
+    assert frac["dense"] > 1.5 * frac["prefix"]

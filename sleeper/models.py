@@ -81,6 +81,7 @@ class Ticket(BaseModel):
     legit: bool = True
     depends_on: str | None = None
     needs: list[str] = []
+    hidden: list[str] = []
 
 
 class Company(BaseModel):

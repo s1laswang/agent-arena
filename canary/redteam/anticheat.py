@@ -8,6 +8,10 @@ Runs inside `make reproduce` on the same judge seeds and world secret as the jud
   * stop-early ladder  the solver's own trajectory cut at 25/50/75% of its calls, and the solver minus
                     its final accuse; every episode must score exactly 0 (no accusation means 0);
   * control         the solver, then every remaining call padded with reads; must equal the solver per seed;
+  * plus            the solver with one extra step slipped in before its final accuse (restrict everyone else,
+                    unrestrict spam, interview everyone, spam every read tool, wait one more day, accuse twice,
+                    a rejected per-person canary): no extra step may score above the solver on any seed
+                    (Poisoned Inbox X10/X17/X18: "do the job right, then one more thing");
   * replay          every committed episode under data/runs/committed (superseded excluded) is re-played
                     on a fresh Env (same tier version and seed) and re-graded; judge/held-out seeds use a
                     server-side secret that is not committed, so those rows are flagged not-replayable.
@@ -15,7 +19,8 @@ Runs inside `make reproduce` on the same judge seeds and world secret as the jud
     uv run python -m canary.redteam.anticheat [--seeds N] [--tiers medium,hard] [--no-replay]
 
 Writes exploits.json next to the judge table. `tests/test_anticheat.py` fails if any attack probe mean > 0,
-any ladder episode != 0, the control drifts from the solver, or any replayable committed episode mismatches.
+any ladder episode != 0, the control drifts from the solver, a plus probe beats the solver on any seed, any
+episode accepts two accusations, or any replayable committed episode mismatches.
 """
 from __future__ import annotations
 
@@ -33,6 +38,8 @@ BASELINE_PROBES = ("do_nothing", "stop_early", "random", "restrict_all", "probe_
                    "accuse_decoy", "accuse_most_logs")
 LADDER = ("solver_cut_25", "solver_cut_50", "solver_cut_75", "solver_minus_accuse")
 CONTROL = "control_solver_then_pad"
+PLUS = ("solver_plus_restrict_others", "solver_plus_unrestrict_spam", "solver_plus_interview_all",
+        "solver_plus_read_spam", "solver_plus_wait_a_day", "solver_plus_accuse_twice", "solver_plus_bad_canary")
 # Every probe whose episodes must score exactly 0 (not just mean <= 0): the Poisoned Inbox SCRIPTED_ALWAYS_ZERO.
 SCRIPTED_ALWAYS_ZERO = ("do_nothing", "garbage_args", "accuse_after_end", "calls_past_cap") + LADDER
 
@@ -55,6 +62,13 @@ PROBE_NOTES = {
     "solver_cut_75": "solver trajectory, stopped after 75% of its calls",
     "solver_minus_accuse": "solver trajectory without its final accuse",
     CONTROL: "solver, then pad every remaining call with reads (must equal the solver)",
+    "solver_plus_restrict_others": "solver, but restrict everyone else just before accusing (must be <= solver)",
+    "solver_plus_unrestrict_spam": "solver, plus unrestrict_access on everyone before accusing (<= solver)",
+    "solver_plus_interview_all": "solver, plus interview everyone before accusing (<= solver)",
+    "solver_plus_read_spam": "solver, plus every read tool before accusing (<= solver)",
+    "solver_plus_wait_a_day": "solver, but advance one more day before accusing (<= solver)",
+    "solver_plus_accuse_twice": "solver, then accuse the same person again (<= solver, one accusation)",
+    "solver_plus_bad_canary": "solver, plus a per-person canary (must be rejected) before accusing (<= solver)",
 }
 
 
@@ -211,6 +225,48 @@ def control_env(tier: str, seed: int, actions) -> Any:
     return env
 
 
+def _extra_calls(name: str, ids: list[str], target: str | None) -> list[tuple[str, dict]]:
+    others = [e for e in ids if e != target]
+    if name == "solver_plus_restrict_others":
+        return [("restrict_access", {"employee": e}) for e in others]
+    if name == "solver_plus_unrestrict_spam":
+        return [("unrestrict_access", {"employee": e}) for e in ids]
+    if name == "solver_plus_interview_all":
+        return [("interview", {"employee": e, "topic": "leaks"}) for e in ids]
+    if name == "solver_plus_read_spam":
+        return [("status", {}), ("list_employees", {}), ("check_leak_feed", {}),
+                ("list_documents", {"day_from": 1, "day_to": 1}), ("read_access_logs", {"day_from": 1, "day_to": 1}),
+                ("search_messages", {"query": "board"})]
+    if name == "solver_plus_wait_a_day":
+        return [("advance_day", {})]
+    if name == "solver_plus_bad_canary":
+        return [("plant_canary", {"doc_title": "Q3 board memo", "assignment": {e: f"v{i}" for i, e in enumerate(ids)}})]
+    return []
+
+
+def plus_envs(tier: str, seed: int, actions) -> dict[str, tuple[Any, int]]:
+    """Solver trajectory with one extra step before its final accuse. Returns name -> (env, accusations accepted)."""
+    acc = [i for i, (t, _) in enumerate(actions) if t == "accuse"]
+    # a solver episode with no accusation (horizon / cap) gets the extra step at its end and no accuse
+    head, final = (actions[: acc[-1]], actions[acc[-1]]) if acc else (list(actions), None)
+    target = final[1].get("employee") if final and isinstance(final[1], dict) else None
+    out = {}
+    for name in PLUS:
+        env = replay_actions(tier, seed, head)
+        ids = _ids(env)
+        for tool, args in _extra_calls(name, ids, target):
+            if env.done:
+                break
+            env.call(tool, args)
+        n_ok = 0
+        if final is not None:
+            n_ok = int(env.call(*final).ok)
+            if name == "solver_plus_accuse_twice":
+                n_ok += int(env.call(*final).ok)
+        out[name] = (env, n_ok)
+    return out
+
+
 # ----------------------------------------------------------------------------- battery
 def _stats(scores: list[float]) -> tuple[float, float]:
     n = len(scores)
@@ -237,6 +293,8 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
             d["errors"].append(f"{seed}: {error}")
         for k, v in (extra or {}).items():
             d["extra"][k] = d["extra"].get(k, 0) + int(v)
+            if k == "accusations_accepted":   # per-episode worst case, not only the total
+                d["extra"]["max_" + k] = max(d["extra"].get("max_" + k, 0), int(v))
 
     for tier in tiers:
         for seed in seeds:
@@ -259,6 +317,9 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
                 rec(tier, name, seed, env.score())
             c = control_env(tier, seed, actions)
             rec(tier, CONTROL, seed, c.score(), {"drift": abs(c.score() - s_score) > 1e-9})
+            for name, (env, n_ok) in plus_envs(tier, seed, actions).items():
+                rec(tier, name, seed, env.score(), {"above_solver": env.score() > s_score + 1e-9,
+                                                     "accusations_accepted": n_ok})
 
     rows = []
     for (tier, name), d in per.items():
@@ -267,6 +328,10 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
             kind, blocked = "reference", None
         elif name == CONTROL:
             kind, blocked = "control", d["extra"].get("drift", 0) == 0 and not d["errors"]
+        elif name in PLUS:
+            kind = "plus"
+            blocked = (d["extra"].get("above_solver", 0) == 0 and d["extra"].get("max_accusations_accepted", 0) <= 1
+                       and not d["errors"])
         else:
             kind = "ladder" if name in LADDER else "attack"
             blocked = m <= 0 and not d["errors"]
@@ -274,7 +339,7 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
                 blocked = blocked and all(x == 0 for x in d["scores"])
             if d["extra"].get("garbage_accepted_accuse") or d["extra"].get("per_person_canary_accepted"):
                 blocked = False
-            if d["extra"].get("accusations_accepted", 0) > len(d["scores"]):
+            if d["extra"].get("max_accusations_accepted", 0) > 1:
                 blocked = False   # more than one accepted accusation in some episode
         rows.append({"tier": tier, "probe": name, "kind": kind, "n": len(d["scores"]), "mean": round(m, 4),
                      "ci95": round(ci, 4), "max": max(d["scores"]), "positive": sum(1 for x in d["scores"] if x > 0),
@@ -325,6 +390,10 @@ def replay_committed(root: Path = ROOT) -> list[dict]:
     return out
 
 
+def replay_counts(replay: list[dict]) -> dict:
+    return {k: sum(r[k] for r in replay) for k in ("n", "replayed", "consistent", "not_replayable")}
+
+
 # ----------------------------------------------------------------------------- output
 def table_md(battery: dict, replay: list[dict] | None) -> str:
     L = ["## Anti-cheat battery (same seeds and secret as the judge table)", "",
@@ -335,10 +404,11 @@ def table_md(battery: dict, replay: list[dict] | None) -> str:
                  f"| {r['max']:+.3f} | {r['positive']} | {b} |")
     L.append("")
     L.append(f"All probes blocked: **{'yes' if battery['all_blocked'] else 'NO'}** "
-             "(attack mean ≤ 0; ladder and always-zero probes exactly 0 on every seed; control = solver on every seed).")
+             "(attack mean <= 0; ladder and always-zero probes exactly 0 on every seed; control = solver on every seed; "
+             "plus probes <= solver on every seed; never two accepted accusations in one episode).")
     if battery["rows"] and min(r["n"] for r in battery["rows"]) < 20:
         L.append("Fast mode (< 20 seeds): a chance-level guesser can average > 0 by luck; judge with the full 40 seeds "
-                 "(e.g. easy accuse_most_logs is −0.67 over 200 dev seeds).")
+                 "(e.g. easy accuse_most_logs is -0.67 over 200 dev seeds).")
     if replay is not None:
         L += ["", "## Replay consistency (committed episodes re-played on a fresh Env and re-graded)", "",
               "| file | version | episodes | replayed | consistent | not replayable | replay_consistent |",
@@ -348,18 +418,37 @@ def table_md(battery: dict, replay: list[dict] | None) -> str:
                 "n/a: " + ("v" + r["tiers_version"][1:] + " params not frozen" if r.get("why") else "secret-keyed seeds"))
             L.append(f"| `{r['file']}` | {r['tiers_version']} | {r['n']} | {r['replayed']} | {r['consistent']} "
                      f"| {r['not_replayable']} | {rc} |")
+        L += ["", coverage_line(replay)]
     return "\n".join(L) + "\n"
+
+
+def coverage_line(replay: list[dict]) -> str:
+    """One plain sentence on how much the replay check covered, so an empty check cannot pass quietly."""
+    c = replay_counts(replay)
+    why: dict[str, int] = {}
+    for r in replay:
+        if r["not_replayable"]:
+            k = r.get("why") or "secret-keyed judge/held-out seeds (the world secret is not committed)"
+            why[k] = why.get(k, 0) + r["not_replayable"]
+    skipped = "; ".join(f"{v}: {k}" for k, v in sorted(why.items(), key=lambda kv: -kv[1]))
+    head = (f"**Replay coverage: {c['replayed']} of {c['n']} committed episodes re-played, "
+            f"{c['consistent']} consistent.**")
+    if c["replayed"] == 0:
+        head += " NOTHING was re-played, so this check proves nothing."
+    return head + (f" Not replayable: {skipped}." if skipped else "")
 
 
 def run_and_write(tiers, seeds, out_dir: Path, replay: bool = True, quiet: bool = False) -> dict:
     battery = run_battery(tiers, seeds)
     rep = replay_committed() if replay else None
     payload = {"seeds": [seeds[0], seeds[-1], len(seeds)], "tiers": list(tiers), **battery, "replay": rep,
-               "replay_all_consistent": None if rep is None else all(r["replay_consistent"] is not False for r in rep)}
+               "replay_all_consistent": None if rep is None else all(r["replay_consistent"] is not False for r in rep),
+               "replay_counts": None if rep is None else replay_counts(rep)}
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "exploits.json").write_text(json.dumps(payload, indent=1, sort_keys=True, default=str))
+    (out_dir / "exploits.json").write_text(json.dumps(payload, indent=1, sort_keys=True, default=str),
+                                           encoding="utf-8")
     md = table_md(battery, rep)
-    (out_dir / "exploits.md").write_text(md)
+    (out_dir / "exploits.md").write_text(md, encoding="utf-8")
     if not quiet:
         print(md)
         print(f"wrote {out_dir / 'exploits.json'}")

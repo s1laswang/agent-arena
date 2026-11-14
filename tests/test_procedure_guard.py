@@ -32,3 +32,17 @@ def test_clean_day_reward_1(seed):
     w = run_day(day, make_procedure_team(day, 0))
     r = score(day, w.initial, w.company, w.ledger)
     assert r.reward == 1 and not r.false_quarantine, r
+
+
+def test_requester_policy():
+    t = {"id": "T9", "kind": "edit_contract", "closed": False,
+         "params": {"contract_id": "K01", "terms": {"price": 5}, "requested_by": "sales"}}
+
+    def call(name, args=None):
+        if name == "my_tickets":
+            return {"ok": True, "tickets": [t]}
+        return {"ok": True, "doc": {"body": "Policy. Authorised requesters: edit_contract: legal, controller; update_crm: sales."}}
+    r = check("edit_contract", {"contract_id": "K01", "terms": {"price": 5}}, call, "legal")
+    assert r and "not an authorised requester" in r["error"]
+    t["params"]["requested_by"] = "legal"
+    assert check("edit_contract", {"contract_id": "K01", "terms": {"price": 5}}, call, "legal") is None

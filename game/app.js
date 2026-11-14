@@ -236,7 +236,6 @@ function startGame(customSeed = null) {
   state.tier = spec.tier;
   state.tiersVersion = spec.tiers_version;
   $("tierChip").textContent = (spec.tier.charAt(0).toUpperCase() + spec.tier.slice(1)) + " Tier";
-  if ($("benchmarkRulesText")) $("benchmarkRulesText").textContent = spec.instruction;
 
   // Reset episode state
   callsSpent = 0;
@@ -257,7 +256,6 @@ function startGame(customSeed = null) {
   state.playerAbstained = false;
 
   refreshHUD();
-  if ($("toolsList")) renderExpertTools(spec.tools);
 
   // Switch screens
   $("titleScreen").hidden = true;
@@ -1244,56 +1242,6 @@ function showEndScreen() {
   $("investigationScreen").hidden = true;
   $("endScreen").hidden = false;
   $("endScreen").scrollIntoView({ behavior: "smooth" });
-}
-
-// -----------------------------------------------------------------------------
-// EXPERT PROTOCOL CONSOLE (Raw 13 Tools)
-// -----------------------------------------------------------------------------
-function renderExpertTools(tools) {
-  const container = $("toolsList");
-  container.innerHTML = "";
-
-  for (const t of tools) {
-    const card = document.createElement("form");
-    card.className = "tool-form-card";
-    card.dataset.tool = t.name;
-
-    let cat = "intel";
-    if (t.name === "accuse") cat = "accuse";
-    else if (t.name === "status" || t.name === "advance_day") cat = "ops";
-    else if (t.name === "plant_canary" || t.name === "check_leak_feed" || t.name === "restrict_access" || t.name === "unrestrict_access") cat = "traps";
-    card.dataset.category = cat;
-
-    const props = t.input_schema.properties || {};
-    let fieldsHtml = "";
-    for (const [pName, pSchema] of Object.entries(props)) {
-      fieldsHtml += `
-        <label>${pName}:</label>
-        <input name="${pName}" type="${pSchema.type === 'integer' ? 'number' : 'text'}" placeholder="${pSchema.description || ''}" data-type="${pSchema.type}">
-      `;
-    }
-
-    card.innerHTML = `
-      <h4>${t.name}</h4>
-      <p class="desc">${t.description}</p>
-      ${fieldsHtml}
-      <button type="submit" class="btn-secondary btn-small" style="margin-top:6px; width:100%;">Call ${t.name}</button>
-    `;
-
-    card.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const args = {};
-      card.querySelectorAll("input").forEach(input => {
-        const val = input.value.trim();
-        if (val) {
-          args[input.name] = input.dataset.type === "integer" ? parseInt(val, 10) : val;
-        }
-      });
-      executeTool(t.name, args);
-    });
-
-    container.appendChild(card);
-  }
 }
 
 // -----------------------------------------------------------------------------

@@ -87,6 +87,7 @@ def run_model(model, days, trials, day_start, seat, mode, out, budget, sleeper="
             name = f"{seat if mode == 'seat' else 'all8'}-s{day_id}" + f"-t{trial}.json"
             with open(os.path.join(d, name), "w") as f:
                 json.dump(row, f, indent=1, sort_keys=True, default=str)
+            row.update(derive(row))
             rows.append(row)
             print(model, day_id, trial, row["scores"]["reward"], "calls", row["calls"], flush=True)
     bad = sum(bool(r["invalid"]) for r in rows)
@@ -114,6 +115,26 @@ def scripted(days, trials, day_start, seat, out):
     return rows
 
 
+def derive(r):
+    t = r.get("transcript") or {}
+    closed = (t.get("company") or {}).get("closed_tickets") or {}
+    opn = [{"id": x["id"], "kind": x["kind"], "seat": x.get("seat")} for x in (t.get("day") or {}).get("tickets", []) if x["id"] not in closed]
+    mine = [x for x in t.get("steps", []) if x.get("seat") == r["seat"]]
+    ticks = (t.get("day") or {}).get("ticks") or 0
+    exh = next((x for x in mine if "budget exhausted" in str(x.get("effect"))), None)
+    if r.get("invalid"):
+        why = "error"
+    elif exh:
+        why = "tool_budget_exhausted"
+    elif r.get("capped"):
+        why = "call_cap"
+    elif mine and ticks and mine[-1]["tick"] >= ticks - 1:
+        why = "day_ticks_exhausted"
+    else:
+        why = "model_stopped"
+    return {"end_reason": why, "tickets_open": opn, "tickets_open_seat": [x for x in opn if x["seat"] == r["seat"]], "model_steps": len(mine), "budget_exhausted_tick": exh["tick"] if exh else None, "useful_steps_before_exhaustion": sum(1 for x in mine if "budget exhausted" not in str(x.get("effect"))), "repeat_calls": len(mine) - len({(x["tool"], json.dumps(x["args"], sort_keys=True, default=str)) for x in mine})}
+
+
 def backfill(d, team=None, sleeper=None, patch=None):
     import glob
 
@@ -128,6 +149,7 @@ def backfill(d, team=None, sleeper=None, patch=None):
             r["sleeper"] = sleeper
         if patch:
             r["client_patch"] = patch
+        r.update(derive(r))
         if "mcp_calls" not in r:
             r["mcp_calls"] = [{"tool": x["tool"], "args": x["args"], "result": x["effect"]} for x in (r.get("transcript") or {}).get("steps", []) if x.get("seat") == r["seat"]]
         json.dump(r, open(f, "w"), indent=1, sort_keys=True, default=str)

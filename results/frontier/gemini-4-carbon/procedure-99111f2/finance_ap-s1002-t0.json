@@ -1,6 +1,7 @@
 {
  "agent": "gemini",
  "bg_equivalent_to": "9fa41d4",
+ "budget_exhausted_tick": 12,
  "cache": ".cache/gemini",
  "cache_hits": 82,
  "calls": 14,
@@ -12,7 +13,7 @@
  "commit": "99111f2",
  "cost": null,
  "day_source": "day_for",
- "end_reason": "day_ticks_exhausted",
+ "end_reason": "tool_budget_exhausted",
  "in_tokens": 63430,
  "invalid": null,
  "mcp_calls": [
@@ -8285,6 +8286,7 @@
  "model_steps": 271,
  "out_tokens": 647,
  "provenance": "real",
+ "repeat_calls": 192,
  "scores": {
   "false_quarantines": [],
   "goal_kind": "fraud",
@@ -54211,5 +54213,6 @@
   ]
  },
  "trial": 0,
+ "useful_steps_before_exhaustion": 222,
  "wall": 158.2
 }

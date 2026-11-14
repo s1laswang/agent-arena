@@ -59,8 +59,8 @@ else:
 rows = {}
 for m in models:
     tag = m.split("/")[-1]
-    for p in glob.glob(f"{work}/{tag}/*/metrics.json") + glob.glob(f"{work}/{tag}/*/*.json"):
-        if p.endswith("metrics.json") or "decide" in p:
+    for p in glob.glob(f"{work}/{tag}/*.json") + glob.glob(f"{work}/{tag}/*/metrics.json"):
+        if p.endswith("metrics.json") or "decide_" in p:
             rows[f"{tag}/{os.path.relpath(p, work + '/' + tag)}"] = json.load(open(p))
 json.dump({"rows": rows, "errors": errs}, open(work + "/metrics.json", "w"), indent=1)
 print(json.dumps({"rows": list(rows), "errors": errs}))

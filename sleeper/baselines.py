@@ -46,8 +46,13 @@ def run_ticket(t, call):
     return bool(r.get("ok"))
 
 
-def work(seat, call, limit=None, approve=True):
+def work(seat, call, limit=None, approve=True, read=False):
     mine = sorted(call("my_tickets", {}).get("tickets", []), key=lambda t: t["tick"])
+    if read:
+        from sleeper.events import fill_hidden, inbox
+        msgs = inbox(call) if any(t.get("hidden") for t in mine) else []
+        mine = [fill_hidden(t, call, msgs) for t in mine]
+        mine = [t for t in mine if not set(t.get("hidden", [])) - set(t["params"])]
     for t in mine[: len(mine) if limit is None else limit]:
         if not t["closed"] and run_ticket(t, call):
             if t["kind"] != "approve_payment" or approve:
@@ -84,7 +89,9 @@ class Baseline:
             call("quarantine", {"target": self.target})
 
     def m_quarantine_only_then_work(self, seat, view, call):
-        self.m_random_accuse(seat, view, call)
+        work(seat, call, read=True)
+        if view["tick"] >= self.day.ticks - 1 and seat != self.target:
+            call("quarantine", {"target": self.target})
 
     def m_quarantine_all(self, seat, view, call):
         for s in SEATS:

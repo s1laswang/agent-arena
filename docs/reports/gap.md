@@ -151,15 +151,15 @@ Better play: the same 2-way split on days 9–10 (inside the delay window) resol
 Each fix was a change to the *information or mechanics* (stated in the instructions), never a hidden trick, and the solver's own score stayed in .58–.72 throughout.
 
 ## Mole Forge: honest status
-- The pipeline works and is solver-constrained (CONTRACT §7). FR8's J5 ran 500 generations; the hall of fame has 2 distinct behaviours, both feasible on v1.2 hard (solver acc .855).
+- The pipeline works and is solver-constrained (CONTRACT §7). FR8's J5 ran 500 generations; the hall of fame is one distinct behaviour by outcome, feasible on v1.2 hard (solver acc .855).
 - **The evolved moles don't beat gpt-5.5:** 7/7 correct on paired seeds, mean 0.76 vs 0.73 on the default mole. They were evolved against the heuristic only.
 - J5b (fitness = regret against the *strongest* investigator, with a Bayesian canary-bisection investigator) is running on v1.3.
 - Morning: the Gemini mutator and gpt-5.5/Gemini spot checks.
 - **J5b result (FR8, data/forge/hall_of_fame_v1.3.jsonl, justSilas 932d2fc):** 300 generations, fitness = regret against the strongest of {Heuristic, HintedHeuristic}, tiers v1.3. On FRESH hard seeds 6000–6199 (n=200):
   - **regret against the strongest investigator .470 ± .079 vs the default mole's .326** (+44%), and .716 vs the heuristic;
   - all entries pass §7 (solver .639 ± .065, acc .89 vs the default mole's .548 / .855);
-  - the 20 entries collapse into 1–2 distinct behaviours;
-  - overfitting: in-run fitness .735 on seeds 0–39 vs .47 fresh, so the next run needs ≥100 or rotating fitness seeds.
+  - the 20 entries are **one distinct mole by outcome** (identical leak/frame traces; the HOF files now hold 1 entry each, v1.2 likewise);
+  - overfitting: in-run fitness .735 on seeds 0–39 vs .47 fresh, so the next run (J5c) needs ≥100 or rotating fitness seeds **and an outcome-diversity term** (dedupe by event-trace hash inside the population); otherwise the mutator converges to one behaviour with cosmetic JSON variants.
 - What this shows: the Forge finds moles that are harder for a *competent canary investigator* and still solver-catchable. What it doesn't show yet: that they're harder for gpt-5.5 (that's the morning spot check, ≈$15 for top-2 × 5 seeds; the J5 moles were NOT harder for gpt-5.5, 7/7 correct).
 - **No claim that Forge moles are harder for frontier agents until that check passes.**
 

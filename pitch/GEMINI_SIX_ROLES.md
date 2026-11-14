@@ -1,8 +1,8 @@
 # Canary x Gemini: Six Essential `gemini-4-carbon` Roles
 
-**1. The problem and why it matters.** AI agents are now tasked with high-stakes security work: insider-threat triage, incident response, and fraud investigation, where evidence is partial, daily action budgets are scarce, and company value bleeds away until the agent commits to an irreversible accusation. Standard leaderboards return one scalar score that cannot tell you *where* reasoning fails, *what extra thinking buys*, or *whether the reward can be gamed*. Canary pairs every episode with an exact Bayesian reference (`SolverPolicy`) and puts `gemini-4-carbon` in six load-bearing roles across **55 verified runs**, **4,242 API calls**, **116,356,622 input tokens** (**104,909,181 cached**, **90.2%** hit rate), **644,922 thinking tokens**, and **$53.1520** total cost (`0` secret leaks).
+**1. The problem and why it matters.** AI agents are now tasked with high-stakes security work: insider-threat triage, incident response, and fraud investigation, where evidence is partial, daily action budgets are scarce, and company value bleeds away until the agent commits to an irreversible accusation. Standard leaderboards return one scalar score that cannot tell you *where* reasoning fails, *what extra thinking buys*, or *whether the reward can be gamed*. Canary pairs every episode with an exact Bayesian reference (`SolverPolicy`) and puts `gemini-4-carbon` in six load-bearing roles across **57 verified runs**, **4,410 API calls**, **117,461,332 input tokens** (**105,768,081 cached**, **90.0%** hit rate), **673,449 thinking tokens**, and **$54.1040** total cost (`0` secret leaks).
 
-**2. Six verified `gemini-4-carbon` roles (one labelled real run per role, plus 49 supporting runs):**
+**2. Six verified `gemini-4-carbon` roles (one labelled real run per role, plus 51 supporting runs):**
 
 | Role | What `gemini-4-carbon` Does | Canonical Verified Run Folder (`model_id`: `gemini-4-carbon`) | Commit | Verified Result |
 | --- | --- | --- | --- | --- |
@@ -18,7 +18,7 @@
 - **Thinking-level regret attribution:** On `hard` seed `0` (`results/gemini_roles/investigators/thinking-ladder-carbon-hard0`, commit `3df4d2b65bd05a67f2d94ef18d967da05c0e90d7`), scaling `gemini-4-carbon` from `0` to `52,968` thinking tokens cuts step-level Bayesian regret by `81.6%` (`0.1623 -> 0.0298`) and eliminates `uninformative_canary` errors while isolating over-cautious commit timing.
 - **Checked, not trusted:** Every Failure Analyst quote is verified verbatim in Python (`100%`), every regret tag comes from `SolverPolicy`, and every Exploit Hunter score comes from the server-side ledger.
 
-**4. Why Gemini is essential (and how judges verify offline in seconds).** Remove native vision (`Part.from_bytes`) across 115 evidence images and redacted-watermark episodes drop from `+0.6700` to `+0.1845` (`+0.0000` on `medium`); remove 1M long context and neither 101 trajectories (`596,862` tokens) nor the 104-file repo (`203,463` tokens) fits in one pass; remove context caching (`90.2%` hit rate) and 4,242 frontier calls become 4x costlier. Full details and all 55 runs are in `docs/gemini/ROLES.md`, `docs/gemini/ROLES_REPORT.md`, and `docs/gemini/SIX_ROLES_SUBMISSION.md`.
+**4. Why Gemini is essential (and how judges verify offline in seconds).** Remove native vision (`Part.from_bytes`) across 115 evidence images and redacted-watermark episodes drop from `+0.6700` to `+0.1845` (`+0.0000` on `medium`); remove 1M long context and neither 101 trajectories (`596,862` tokens) nor the 104-file repo (`203,463` tokens) fits in one pass; remove context caching (`90.0%` hit rate) and 4,410 frontier calls become 4x costlier. Full details and all 57 runs are in `docs/gemini/ROLES.md`, `docs/gemini/ROLES_REPORT.md`, and `docs/gemini/SIX_ROLES_SUBMISSION.md`.
 
 ```bash
 GEMINI_API_KEY="" GOOGLE_GENERATIVE_AI_API_KEY="" PYTHONPATH=. python -m canary.gemini.provenance --root . --strict

@@ -152,7 +152,7 @@ def test_submission_platform_summary_char_limit() -> None:
 @pytest.mark.parametrize(
     ("doc_path", "min_folders"),
     [
-        (ROLES_DOC_PATH, 55),
+        (ROLES_DOC_PATH, 57),
         (SUBMISSION_DOC_PATH, 6),
         (PITCH_DOC_PATH, 6),
     ],
@@ -173,7 +173,7 @@ def test_docs_cited_runs_match_provenance_entries() -> None:
 
     roles_txt = ROLES_DOC_PATH.read_text(encoding="utf-8")
     cited = extract_cited_run_folders(roles_txt)
-    assert 55 <= len(cited) <= prov["totals"]["verified_runs"]
+    assert 57 <= len(cited) <= prov["totals"]["verified_runs"]
     for rel in cited:
         assert rel in by_dir, f"Cited run {rel} not verified in audit_provenance"
         entry = by_dir[rel]

@@ -2,29 +2,29 @@
 
 Canary is a Bayesian insider-threat RL benchmark where a security-lead agent investigates a simulated company bleeding value to a mole. Across the merged Canary repository, `gemini-4-carbon` is integrated into six distinct, load-bearing roles: synthesizing leak-free company worlds (`world_text`), playing and evolving catchable adversaries (`adaptive_mole`), acting as the frontier security investigator (`investigators`), diagnosing multi-episode failure modes in long context (`failure_analyst`), red-teaming the reward and MCP server (`exploit_hunter`), and reading pixel-only evidence scans and forensic rasters (`multimodal_evidence`).
 
-Every metric in this document is extracted from the 55 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
+Every metric in this document is extracted from the 57 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
 
 ## Provenance & Aggregate Ledger Summary
 
 - Provenance status: **VERIFIED** (`python -m canary.gemini.provenance --root . --strict`)
 - Target model: `gemini-4-carbon`
 - Verified roles: **6 / 6** (`world_text`, `adaptive_mole`, `investigators`, `failure_analyst`, `exploit_hunter`, `multimodal_evidence`)
-- Verified `gemini-4-carbon` run folders: **55** (6 canonical headline runs + 49 supporting runs)
-- Total verified episodes and evaluated samples: **536**
-- Total Gemini API calls: **4,242**
-- Total tokens (input / output / thinking / cached): **116,356,622 / 1,540,038 / 644,922 / 104,909,181** (**90.2%** cache hit rate)
-- Total estimated API cost (USD): **$53.1520**
+- Verified `gemini-4-carbon` run folders: **57** (6 canonical headline runs + 51 supporting runs)
+- Total verified episodes and evaluated samples: **541**
+- Total Gemini API calls: **4,410**
+- Total tokens (input / output / thinking / cached): **117,461,332 / 1,548,956 / 673,449 / 105,768,081** (**90.0%** cache hit rate)
+- Total estimated API cost (USD): **$54.1040**
 - Secret leaks detected: **0**
 
 | Role | Stage | Verified Runs | Episodes / Samples | API Calls | Tokens In | Tokens Out | Thinking Tokens | Cached Tokens | Cost (USD) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `world_text` | Company Construction | 10 | 103 | 597 | 13,077,613 | 310,442 | 337,177 | 11,793,550 | $8.2892 |
-| `adaptive_mole` | Adversarial Evolution | 11 | 119 | 482 | 2,146,875 | 46,728 | 63,718 | 1,618,805 | $2.3225 |
+| `adaptive_mole` | Adversarial Evolution | 13 | 124 | 650 | 3,251,585 | 55,646 | 92,245 | 2,477,705 | $3.2744 |
 | `investigators` | Bayesian Investigation | 20 | 33 | 2,838 | 96,902,342 | 1,098,157 | 157,797 | 89,753,851 | $35.8319 |
 | `failure_analyst` | Trajectory Forensics | 3 | 222 | 5 | 918,030 | 26,204 | 39,025 | 0 | $2.3395 |
 | `exploit_hunter` | Reward & Protocol Red-Team | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
 | `multimodal_evidence` | Pixel & Chart Inspection | 9 | 48 | 105 | 217,840 | 21,676 | 47,205 | 0 | $1.1245 |
-| **Total** | **All 6 Roles** | **55** | **536** | **4,242** | **116,356,622** | **1,540,038** | **644,922** | **104,909,181** | **$53.1520** |
+| **Total** | **All 6 Roles** | **57** | **541** | **4,410** | **117,461,332** | **1,548,956** | **673,449** | **105,768,081** | **$54.1040** |
 
 ## Canonical Headline Runs (One Labelled Real Run per Role)
 
@@ -74,9 +74,11 @@ Every metric in this document is extracted from the 55 committed `gemini-4-carbo
 | `paired_designer` | `results/gemini_roles/adaptive_mole/paired-designer-carbon` | `gemini-4-carbon` | `370de43c38b321bf9dbc5c04220abd90c4614466` | 4 | 1 | 1,896 | 1,120 | 680 | 0 | $0.0218 | Kept 3/4 solvable medium scenarios (solver +0.574 vs heuristic -1.000) |
 | `live_arena_mole` | `results/gemini_roles/adaptive_mole/arena-live-carbon-hard345` | `gemini-4-carbon` | `c00d49189d1a4c63495d9111e11b5f13528a5093` | 3 | 106 | 92,992 | 6,876 | 6,671 | 0 | $0.3215 | 106 live mole decisions on hard 3..5: solver +0.403 vs +0.647 default (67% acc) |
 | `live_arena_mole_hard` | `results/gemini_roles/adaptive_mole/arena-live-carbon-hard012` | `gemini-4-carbon` | `03c676c1d3cd42629994ac434c056758a75148e0` | 3 | 97 | 86,618 | 6,331 | 6,287 | 0 | $0.2994 | 97 live mole decisions on hard 0..2: solver +0.4600 (100% acc) vs +0.6200 default; grok_tactics +0.5967 -> +0.0000 |
+| `live_arena_mole` | `results/gemini_roles/adaptive_mole/arena-live-carbon-hard678` | `gemini-4-carbon` | `c00d49189d1a4c63495d9111e11b5f13528a5093` | 3 | 85 | 79,191 | 5,702 | 5,306 | 0 | $0.2685 | 85 live mole decisions on hard 6..8: solver +0.663 (100% acc) vs +0.600 default |
 | `live_arena_mole` | `results/gemini_roles/adaptive_mole/arena-live-carbon-med345` | `gemini-4-carbon` | `c00d49189d1a4c63495d9111e11b5f13528a5093` | 3 | 86 | 71,969 | 5,638 | 6,358 | 0 | $0.2639 | 86 live mole decisions on medium 3..5: solver +0.143 vs +0.460 default |
 | `live_arena_mole` | `results/gemini_roles/adaptive_mole/arena-live-carbon-med012` | `gemini-4-carbon` | `d39e88c39e8a3859e88805cd8a30156a8cfcaa49` | 3 | 77 | 61,299 | 4,959 | 5,588 | 0 | $0.2281 | 77 live mole decisions on medium 0..2: solver +0.4233 vs +0.7333 default |
 | `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-seed0` | `gemini-4-carbon` | `3bd1d1e2295aa320812f08e2eceaef5b4a8902ef` | 2 | 92 | 1,812,239 | 3,638 | 30,311 | 1,618,805 | $0.8882 | Head-to-head `gemini-4-carbon` investigator (+0.660) vs live `gemini-4-carbon` mole (paired solver +0.400) |
+| `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed1` | `gemini-4-carbon` | `9222669912afd57e53fbd3b07f0cdba985df705d` | 2 | 83 | 1,025,519 | 3,216 | 23,221 | 858,900 | $0.6835 | Head-to-head `gemini-4-carbon` investigator (+0.730) vs live `gemini-4-carbon` mole on medium seed 1 (paired solver +0.330) |
 
 ### Role 03: `investigators` - Security-Lead Frontier Investigators & Thinking Ladder
 
@@ -159,7 +161,7 @@ Across the 25 committed `v1.4` frontier episodes (`easy` seeds `0..3`, `medium` 
 
 ## Keyless Offline Verification Commands
 
-Judges can verify all 55 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
+Judges can verify all 57 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
 
 ```bash
 GEMINI_API_KEY="" GOOGLE_GENERATIVE_AI_API_KEY="" PYTHONPATH=. python -m canary.gemini.provenance --root . --strict

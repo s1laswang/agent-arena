@@ -7,13 +7,13 @@ Every number below is extracted programmatically from committed run files with z
 
 - Provenance status: **VERIFIED**
 - Target model: `gemini-4-carbon`
-- Repository HEAD at build: `ca758827`
+- Repository HEAD at build: `1613ced8`
 - Verified roles: **6 / 6** (missing: none)
-- Verified `gemini-4-carbon` run folders: **55** (6 canonical headline + 49 supporting; scanned 55 folders)
-- Total verified episodes / samples: **536**
-- Total Gemini API calls: **4,242**
-- Total tokens (in / out / thinking / cached): **116,356,622 / 1,540,038 / 644,922 / 104,909,181**
-- Total estimated API cost (USD): **$53.1520**
+- Verified `gemini-4-carbon` run folders: **57** (6 canonical headline + 51 supporting; scanned 57 folders)
+- Total verified episodes / samples: **541**
+- Total Gemini API calls: **4,410**
+- Total tokens (in / out / thinking / cached): **117,461,332 / 1,548,956 / 673,449 / 105,768,081**
+- Total estimated API cost (USD): **$54.1040**
 - Secret leaks detected: **0**
 
 ## 1. Canonical Headline Runs (One Labelled Real Run per Role)
@@ -51,9 +51,9 @@ Every number below is extracted programmatically from committed run files with z
 ### 02. `adaptive_mole` - Adaptive Mole & Mole Forge (VERIFIED)
 
 - Stage: Adversarial Evolution
-- Verified `gemini-4-carbon` runs: **11** (count: 119, calls: 482, in: 2,146,875, out: 46,728, thinking: 63,718, cached: 1,618,805, cost: $2.3225)
+- Verified `gemini-4-carbon` runs: **13** (count: 124, calls: 650, in: 3,251,585, out: 55,646, thinking: 92,245, cached: 2,477,705, cost: $3.2744)
 - Canonical headline run: `results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep` (`mole_forge`, commit `9b8858381c99a4b94ea3d989fcd0d232fc5411ca`, count=49, calls=8, cost=$0.2042) - fitness 0.374, solver acc 90%, 49 LLM children
-- Supporting verified runs: **10**
+- Supporting verified runs: **12**
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Headline Metric |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
@@ -65,8 +65,10 @@ Every number below is extracted programmatically from committed run files with z
 | `live_arena_mole` | `results/gemini_roles/adaptive_mole/arena-live-carbon-hard345` | `gemini-4-carbon` | `c00d49189d1a4c63495d9111e11b5f13528a5093` | 3 | 106 | 92,992 | 6,876 | 6,671 | 0 | $0.3215 | 106 mole decisions, solver +0.403 (vs +0.647 default), solver acc 67% |
 | `live_arena_mole_hard` | `results/gemini_roles/adaptive_mole/arena-live-carbon-hard012` | `gemini-4-carbon` | `03c676c1d3cd42629994ac434c056758a75148e0` | 3 | 97 | 86,618 | 6,331 | 6,287 | 0 | $0.2994 | 97 mole decisions, solver +0.460 (vs +0.620 default), solver acc 100% |
 | `live_arena_mole` | `results/gemini_roles/adaptive_mole/arena-live-carbon-med345` | `gemini-4-carbon` | `c00d49189d1a4c63495d9111e11b5f13528a5093` | 3 | 86 | 71,969 | 5,638 | 6,358 | 0 | $0.2639 | 86 mole decisions, solver +0.143 (vs +0.460 default), solver acc 33% |
+| `live_arena_mole` | `results/gemini_roles/adaptive_mole/arena-live-carbon-hard678` | `gemini-4-carbon` | `c00d49189d1a4c63495d9111e11b5f13528a5093` | 3 | 85 | 79,191 | 5,702 | 5,306 | 0 | $0.2685 | 85 mole decisions, solver +0.663 (vs +0.600 default), solver acc 100% |
 | `live_arena_mole` | `results/gemini_roles/adaptive_mole/arena-live-carbon-med012` | `gemini-4-carbon` | `d39e88c39e8a3859e88805cd8a30156a8cfcaa49` | 3 | 77 | 61,299 | 4,959 | 5,588 | 0 | $0.2281 | 77 mole decisions, solver +0.423 (vs +0.733 default), solver acc 67% |
 | `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-seed0` | `gemini-4-carbon` | `3bd1d1e2295aa320812f08e2eceaef5b4a8902ef` | 2 | 92 | 1,812,239 | 3,638 | 30,311 | 1,618,805 | $0.8882 | investigator +0.660 vs solver +0.400 (7d clash) |
+| `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed1` | `gemini-4-carbon` | `9222669912afd57e53fbd3b07f0cdba985df705d` | 2 | 83 | 1,025,519 | 3,216 | 23,221 | 858,900 | $0.6835 | investigator +0.730 vs solver +0.330 (6d clash) |
 
 ### 03. `investigators` - Security-Lead Investigators (VERIFIED)
 
@@ -203,12 +205,12 @@ In-game leaked-memo pixel watermark ablation: text `variant` fields are redacted
 | Role | Verified Runs | Count | Calls | Tokens In | Tokens Out | Thinking Tokens | Cached Tokens | Cost (USD) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `world_text` | 10 | 103 | 597 | 13,077,613 | 310,442 | 337,177 | 11,793,550 | $8.2892 |
-| `adaptive_mole` | 11 | 119 | 482 | 2,146,875 | 46,728 | 63,718 | 1,618,805 | $2.3225 |
+| `adaptive_mole` | 13 | 124 | 650 | 3,251,585 | 55,646 | 92,245 | 2,477,705 | $3.2744 |
 | `investigators` | 20 | 33 | 2,838 | 96,902,342 | 1,098,157 | 157,797 | 89,753,851 | $35.8319 |
 | `failure_analyst` | 3 | 222 | 5 | 918,030 | 26,204 | 39,025 | 0 | $2.3395 |
 | `exploit_hunter` | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
 | `multimodal_evidence` | 9 | 48 | 105 | 217,840 | 21,676 | 47,205 | 0 | $1.1245 |
-| **total** | **55** | **536** | **4,242** | **116,356,622** | **1,540,038** | **644,922** | **104,909,181** | **$53.1520** |
+| **total** | **57** | **541** | **4,410** | **117,461,332** | **1,548,956** | **673,449** | **105,768,081** | **$54.1040** |
 
 ## 6. Keyless Offline Verification
 

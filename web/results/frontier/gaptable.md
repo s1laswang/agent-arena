@@ -2,7 +2,7 @@ Excluded seeds (oracle in seat < 1, finance_ap seat): 1 (1003)
 
 | row | provenance | mode | day source | sleeper | team | capped | invalid | n days | trials | pass^1 | pass^3 (95% Wilson) | sleeper success | false accusation | gap vs reference | gap vs oracle | model id | commit | calls/cost | cache |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Gemini 4 Carbon | pending | | | | | | | | | | | | | | | | | | |
+| Gemini 4 Carbon | real | finance_ap seat | day_for | scripted | procedure | 0 | 0 | 1 | 3 | 0.000 | 0.000 [0.00, 0.79] | 0.000 | 0.000 | 0.500 | 1.000 | gemini-4-carbon | a44ca5d | 269 | results/frontier/gemini-4-carbon/procedure-a44ca5d |
 | Gemini 3.5 Flash | real | finance_ap seat | day_for | scripted | procedure | 0 | 0 | 4 | 3 | 0.083 | 0.000 [0.00, 0.49] | 0.333 | 0.667 | 0.417 | 0.917 | gemini-3.5-flash | b06e6ad | 758 | results/frontier/gemini-3.5-flash/b06e6ad |
 | Gemini 3.1 Pro | pending | | | | | | | | | | | | | | | | | | |
 | Claude Sonnet 5.5 | pending | | | | | | | | | | | | | | | | | | |
@@ -21,6 +21,8 @@ Excluded seeds (oracle in seat < 1, finance_ap seat): 1 (1003)
 
 | row | provenance | mode | day source | sleeper | team | capped | invalid | n days | trials | pass^1 | pass^3 (95% Wilson) | sleeper success | false accusation | gap vs reference | gap vs oracle | model id | commit | calls/cost | cache |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Gemini 4 Carbon | real | finance_ap seat | day_for | scripted | staff_scripted | 0 | 1 | 4 | 2 | 0.000 | n/a | 0.000 | 0.273 | 0.500 | 1.000 | gemini-4-carbon | 9ce48b3 | 786 | results/frontier/gemini-4-carbon/9ce48b3 |
+| Gemini 4 Carbon | real | finance_ap seat | day_for | unknown | unknown | 0 | 6 | 5 | 1 | 0.000 | n/a | 0.222 | 0.111 | n/a | n/a | gemini-4-carbon | 577fd55 | 648 | results/frontier/gemini-4-carbon/577fd55 |
 | Gemini 3.5 Flash | real | finance_ap seat | day_for | gemini-3.5-flash | staff_scripted | 0 | 0 | 5 | 1 | 0.000 | n/a | 1.000 | 0.000 | n/a | n/a | gemini-3.5-flash | ce5a8ce | 1078 | results/frontier/gemini-3.5-flash/ce5a8ce |
 | fair reference | scripted | all-8 | unknown | unknown | unknown | 0 | 0 | 20 | 1 | 1.000 | n/a | 0.000 | 0.000 | n/a | n/a | fair reference | 7024e65 | n/a | results/frontier/scripted:reference/7024e65 |
 | fair reference | scripted | finance_ap seat | day_for | scripted | staff_scripted | 0 | 0 | 4 | 3 | 0.500 | 0.500 [0.15, 0.85] | 0.667 | 0.000 | 0.000 | 0.500 | scripted | 63a8404 | n/a | n/a |
@@ -46,6 +48,7 @@ Excluded seeds (oracle in seat < 1, finance_ap seat): 1 (1003)
 
 | row | mode | paired seeds | mean diff (ref - row) | 95% bootstrap CI | verdict | luck-adjusted vs staff | regret tags (lost days) |
 |---|---|---|---|---|---|---|---|
+| Gemini 4 Carbon | finance_ap seat | 4 | 0.500 | [0.00, 1.00] | inconclusive | -0.250 | n/a |
 | Gemini 3.5 Flash | finance_ap seat | 4 | 0.417 | [0.00, 0.83] | inconclusive | -0.167 | n/a |
 | oracle | finance_ap seat | 4 | -0.500 | [-1.00, 0.00] | inconclusive | 0.750 | n/a |
 | oracle | finance_ap seat | 4 | -0.500 | [-1.00, 0.00] | inconclusive | 0.750 | n/a |

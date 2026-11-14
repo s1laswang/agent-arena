@@ -20,17 +20,27 @@ You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/u
 
 `make reproduce` plays the reference solver and five baselines on the 40 frozen judge seeds of each tier. It replays any committed frontier-agent episodes from `data/runs/committed/`, prints the table, and writes `results/judge_table.md`, `results/judge_episodes.jsonl` and `results/gap_chart.png`.
 
-**Expected numbers (mean score, expected ± CI).** Each value is the mean over 30 keyless runs of `make reproduce` at commit f85f21c (frozen tiers v1.2 and the final solver; 40 seeds per tier, a fresh secret for each run), with the lowest-to-highest range across those 30 runs in brackets. A single run also prints its own 95% CI, about ±0.07–0.10 for the solver and up to ±0.26 for the heuristic. The committed [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one such run.
+**Expected numbers (mean score, expected ± 95% CI).** These come from one keyless `make reproduce` on the frozen tiers v1.2 (commit edffdac, 40 judge seeds per tier, fresh secret with fingerprint `d7e45dc56304`). That run is committed as [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png).
 
 | agent | medium (headline) | hard (headline) | easy (sanity) |
 |---|---:|---:|---:|
-| **solver** (reference) | **+0.64** [+0.52, +0.71] | **+0.62** [+0.51, +0.72] | +0.77 [+0.72, +0.80] |
+| **solver** (reference) | **+0.65 ± 0.07** (acc 0.90) | **+0.62 ± 0.08** (acc 0.88) | +0.77 ± 0.05 (acc 1.00) |
 | frontier agents (gpt-5.5, gpt-5.6-sol) | pending (AGENTS commit runs to `data/runs/committed/`) | pending | – |
-| heuristic (canary bisection, no Bayes) | +0.00 [−0.32, +0.27] | −0.22 [−0.50, +0.04] | +0.65 [+0.54, +0.71] |
-| logs_only (best no-canary log reader) | −0.97 [−1.00, −0.87] | −1.00 [−1.00, −1.00] | −0.49 [−0.76, −0.32] |
-| random | −0.66 [−0.73, −0.58] | −0.80 [−0.85, −0.65] | −0.70 [−0.80, −0.47] |
-| stop_early (random accusation, day 1) | −0.91 [−1.00, −0.75] | −0.93 [−1.00, −0.80] | −0.84 [−1.00, −0.60] |
+| heuristic (canary bisection, no Bayes) | +0.05 ± 0.24 | −0.26 ± 0.26 | +0.67 ± 0.04 |
+| logs_only (best no-canary log reader) | −0.96 ± 0.08 | −0.87 ± 0.15 | −0.63 ± 0.22 |
+| random | −0.59 ± 0.19 | −0.80 ± 0.14 | −0.72 ± 0.16 |
+| stop_early (random accusation, day 1) | −0.95 ± 0.10 | −0.85 ± 0.17 | −0.70 ± 0.22 |
 | do_nothing | 0.00 (exact) | 0.00 (exact) | 0.00 (exact) |
+
+Your run draws a different secret, so expect each mean within about its CI of these values. As a check, we ran 30 more keyless runs on the same commit. The solver's 30 means averaged and ranged as follows:
+
+| tier | mean of 30 means | range |
+|---|---:|---|
+| medium | +0.62 | +0.52 to +0.68 |
+| hard | +0.55 | +0.39 to +0.65 |
+| easy | +0.78 | +0.74 to +0.81 |
+
+The heuristic averaged −0.01 on medium (range −0.32 to +0.37) and −0.27 on hard (range −0.55 to 0.00). do_nothing was exactly 0 in every run.
 
 **Why the numbers are statistical.** The world behind a judge seed is derived with HMAC from a secret ([CONTRACT §8, §11](docs/CONTRACT.md)). The secret behind our Harbor image is not published, because it would reveal the judge-world moles. Without `CANARY_WORLD_SECRET`, `make reproduce` draws one fresh random secret and shares it across every agent in that run. The comparison is therefore paired, and the run prints only the secret's SHA-256 fingerprint. Each mean lands inside its CI rather than matching ours bit for bit. Committed frontier-agent runs were played on the team's own worlds, so they appear in a separate, unpaired "reported agent runs" block with their own CI. **For exact numbers**, run `CANARY_WORLD_SECRET=<any string> make reproduce`: the same string always produces an identical `results/judge_episodes.jsonl`. For a fast check use `REPRO_FAST=1 make reproduce` (5 seeds per tier, which CI runs), or `make test` for the full test suite.
 
@@ -71,7 +81,7 @@ python -m canary.mcp_server --play solver --url http://127.0.0.1:8765/mcp       
 
 The server serves only judge (900000–900039) and held-out seeds. Set the same `CANARY_WORLD_SECRET` on the server to get the same world across restarts.
 
-**Harbor (judge path: Harbor + OpenCode over MCP, with the server isolated from the agent):** see [harbor/README.md](harbor/README.md). Another engineer is building it.
+**Harbor (judge path: Harbor + OpenCode over MCP, with the server isolated from the agent):** see [harbor/README.md](harbor/README.md).
 
 Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium SEEDS=dev20` and `make test`.
 

@@ -76,3 +76,8 @@ Fresh-seed table (`uv run --python 3.12 python scripts/fresh_table.py 1000 1400`
 | hard | do_nothing | 0.000 ± 0.000 | 0.0% | 0.0% |
 
 - Hard solver acc 81.5% (wrong 5%, silent 13.5%), below CEO bar 83%; flagged to CEO. Medium 91.8% >= 88%. Order easy .760 > medium .658 > hard .539 clear.
+
+## 03:03 status
+- Done (verified: make test 396 passed on justSilas 50f4074): hard_forge track (TRACKS map; HoF from FR8, 5 moles; solver 60 dev seeds acc 90%, mean .684), regret_report.py (trial on v1 gpt runs), difficulty curve (medium, seeds 2000-2199: solver .72->.19 over noise .5->3, heuristic <0 from noise 1).
+- Waiting: AGENTS official gpt-5.5 runs -> regret table.
+- Note: hard acc honestly ~82-84% (FR8 800 seeds .841; fresh 400 seeds .815).

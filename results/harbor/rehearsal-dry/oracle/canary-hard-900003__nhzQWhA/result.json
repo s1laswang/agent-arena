@@ -1,0 +1,124 @@
+{
+    "schema_version": 1,
+    "id": "9274a699-cb99-4415-8933-c78cc335a789",
+    "task_name": "canary/hard-900003",
+    "trial_name": "canary-hard-900003__nhzQWhA",
+    "trial_uri": "file://results/harbor/rehearsal-dry/oracle/canary-hard-900003__nhzQWhA",
+    "task_id": {
+        "path": "harbor/dataset/canary-hard-900003"
+    },
+    "source": "dataset",
+    "task_checksum": "1dd1081769af680cdf7acf27ece73264e9345d55af3a1ab260c84b943283fd9e",
+    "config": {
+        "schema_version": 1,
+        "task": {
+            "path": "harbor/dataset/canary-hard-900003",
+            "git_url": null,
+            "git_commit_id": null,
+            "name": null,
+            "ref": null,
+            "overwrite": false,
+            "download_dir": null,
+            "source": "dataset"
+        },
+        "trial_name": "canary-hard-900003__nhzQWhA",
+        "trials_dir": "results/harbor/rehearsal-dry/oracle",
+        "install_only": false,
+        "timeout_multiplier": 1.0,
+        "agent_timeout_multiplier": null,
+        "verifier_timeout_multiplier": null,
+        "agent_setup_timeout_multiplier": null,
+        "environment_build_timeout_multiplier": null,
+        "agent": {
+            "name": "oracle",
+            "import_path": null,
+            "model_name": null,
+            "base_url": null,
+            "model_api_key_name": null,
+            "model_api_format": null,
+            "skip_model_parsing": false,
+            "n_concurrent": null,
+            "concurrency_group": null,
+            "skills": [],
+            "override_timeout_sec": null,
+            "override_setup_timeout_sec": null,
+            "max_timeout_sec": null,
+            "resume_trajectory": false,
+            "load_trajectory": null,
+            "extra_allowed_hosts": [],
+            "kwargs": {},
+            "mcp_servers": []
+        },
+        "user_agent": null,
+        "environment": {
+            "type": "docker",
+            "import_path": null,
+            "force_build": false,
+            "delete": true,
+            "stream": false,
+            "cpu_enforcement_policy": "auto",
+            "memory_enforcement_policy": "auto",
+            "override_cpus": null,
+            "override_memory_mb": null,
+            "override_storage_mb": null,
+            "override_gpus": null,
+            "override_tpu": null,
+            "mounts": null,
+            "extra_docker_compose": [],
+            "kwargs": {},
+            "extra_allowed_hosts": []
+        },
+        "verifier": {
+            "override_timeout_sec": null,
+            "max_timeout_sec": null,
+            "disable": false
+        },
+        "override_error_policy": {},
+        "artifacts": [],
+        "extra_instruction_paths": [],
+        "extra_instructions": [],
+        "job_id": "b2605f44-5cb4-4649-a519-7d9bf9e73aec",
+        "source_trial": null
+    },
+    "agent_info": {
+        "name": "oracle",
+        "version": "1.0.0",
+        "model_info": null
+    },
+    "agent_result": {
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null,
+        "model_usage": null,
+        "rollout_details": null,
+        "metadata": null
+    },
+    "verifier_result": {
+        "rewards": {
+            "reward": 0.63
+        }
+    },
+    "verifier_environment_mode": "separate",
+    "exception_info": null,
+    "started_at": "2026-11-14T21:51:36.491567Z",
+    "finished_at": "2026-11-14T21:53:00.475630Z",
+    "environment_setup": {
+        "started_at": "2026-11-14T21:51:36.538543Z",
+        "finished_at": "2026-11-14T21:51:57.173072Z"
+    },
+    "agent_setup": {
+        "started_at": "2026-11-14T21:51:57.173129Z",
+        "finished_at": "2026-11-14T21:51:57.173178Z"
+    },
+    "agent_execution": {
+        "started_at": "2026-11-14T21:51:57.173289Z",
+        "finished_at": "2026-11-14T21:52:27.527813Z"
+    },
+    "verifier": {
+        "started_at": "2026-11-14T21:52:41.517596Z",
+        "finished_at": "2026-11-14T21:53:00.475546Z"
+    },
+    "step_results": null,
+    "reward_valid": true
+}

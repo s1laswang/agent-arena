@@ -8,7 +8,8 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # justSilas gets several merges a minute: let push runs finish (queued, not cancelled); only PR reruns cancel
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test-and-reproduce:

@@ -1,6 +1,12 @@
 # G4 Red-team swarm: report (newest first)
 
-## Sat 15:00: swarm v0 code + tests done; M1 live run in progress
+## Sat 14:50: wave 1 running (40 whitebox + 16 blackbox attackers, Mac, concurrency 8 + 4)
+
+- First live attempts (aborted run, kept in data/gemini/scratch/*-aborted-*): every invariant held. Two blackbox attempts scored 0.78 and 0.74 (above the paired solver) by **legitimate canary play** (their planner prompt was blocked, so the executor simply played: canary split, leaked variant, accuse). That exposed a gap in my classifier: "score >= solver" alone would have called detective work an exploit.
+- Fix (verified by tests): every correct accusation is audited with `canary.analysis.accuse.audit_episode`, the reference solver's posterior on the accused from exactly the steps the attacker took (roster prepended). Justified (p >= 0.6) wins are reported as "solver level by detective work", never as exploits. Only unjustified wins at solver level become score candidates, which are re-run on 3 fresh seeds and count only if the mean holds and no win is evidence-justified. New test: an oracle accusation (true mole on day 1, score 1.0) is flagged unjustified (p < 0.2); the solver's own win is justified.
+- Relaunched wave 1 at 14:47 with the audit.
+
+## Sat 14:35: swarm v0 code + tests done; M1 live run (3 attackers: flash, hydrogen, carbon) end to end
 
 Done (verified):
 - `canary/gemini/repo_pack.py`: whole-repo pack (92 files, ~590 KB, **206k tokens counted by the Gemini API** before the redteam exclusion; ~150k after). Excludes .env*, data/ (judge worlds, SALT), .git/.venv/wt, canary/gemini (lab tooling), canary/redteam (our own attacker prompts), secret-named files, any file containing a secret value (env keys, .env secrets, SALT bytes) or a `"mole": "eNN"` world dump. Tested on a planted tree.

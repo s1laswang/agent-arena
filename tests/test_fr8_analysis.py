@@ -146,11 +146,14 @@ def test_forge_validate_feasibility(monkeypatch):
         sid = args[0]
         s, acc, h = fake[sid]
         return {"strategy": sid, "n": 10, "solver_score": s, "solver_ci": .01, "solver_acc": acc, "solver_none": 0.0,
-                "heur_score": h, "heur_acc": .5, "regret": s - h, "regret_ci": .05}
+                "heur_score": h, "heur_acc": .5, "regret": s - h, "regret_ci": .05,
+                "canon": sid, "behaviour": "B" if sid in ("hof#1", "hof#4") else sid}
+    fake["hof#4"] = fake["hof#1"]
     monkeypatch.setattr(fv, "eval_strategy", ev)
-    rows = fv.validate([{"rank": i, "strategy_json": {}} for i in (1, 2, 3)], "hard", list(range(10)), workers=1)
+    rows = fv.validate([{"rank": i, "strategy_json": {}} for i in (1, 2, 3, 4)], "hard", list(range(10)), workers=1)
     by = {r["strategy"]: r for r in rows}
     assert by["hof#1"]["feasible"] and by["hof#1"]["judge_candidate"]
     assert not by["hof#2"]["feasible"]          # 0.3 < 0.5 x 0.8
     assert not by["hof#3"]["feasible"]          # acc 0.8 < 0.85
-    assert "judge candidates: hof#1" in fv.to_markdown(rows, "r", "hard", list(range(10)), {})
+    assert by["hof#4"]["behaviour_group"] == "hof#1" and not by["hof#4"]["distinct"]
+    assert "deduped by behaviour): hof#1\n" in fv.to_markdown(rows, "r", "hard", list(range(10)), {})

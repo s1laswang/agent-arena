@@ -30,6 +30,15 @@ Every cell is NOT FOUND until a keyed run exists. Run HANDOFF.md section 2 steps
 | Multimodal forged invoice verified live | NOT FOUND |
 | Commit hash of the keyed run | NOT FOUND |
 
+## Real Gemini result (fill from lead-lab)
+
+REAL means model id, date and run id are printed with the number. Until then every cell is a placeholder.
+
+- gemini-4-carbon staff reward: NOT FOUND (lead-lab pending)
+- gemini-4-carbon reference reward: NOT FOUND (lead-lab pending)
+- Replay: where the sleeper lands, NOT FOUND (lead-lab pending). What the reference notices instead, NOT FOUND (lead-lab pending). Full beat in `pitch/MULTIMODEL.md`.
+- If these never arrive: "Gemini path built and tested offline, no real run finished, all numbers scripted."
+
 ## 1. The problem and why it matters
 
 Companies are starting to run real work through teams of AI agents: paying invoices, changing bank details, granting access. An agent with a hidden goal, or a compromised one, can move money or leak a secret while looking like a normal coworker. Most agent tests check one agent on one task. They do not test whether a group of agents can notice an insider and stop it without accusing an innocent.
@@ -56,7 +65,7 @@ To run the Gemini path: `GEMINI_API_KEY` and `LAB_GEMINI=1` (the key alone leave
   - Sleeper: Gemini writes and mutates its strategy per day so nothing can be memorised.
   - Reference: the same model inside a stronger operating procedure (enforced two-person checks, audit log read before approving, out-of-band verification).
   - Failure analyst: Gemini reads full transcripts offline and labels the failure modes. It never touches the reward.
-  - Multimodal: forged invoice images and screenshots the agent must read. PLANNED.
+  - Multimodal: forged invoice images. CUT as a claim, see the role audit (no day passes an image to a model).
 - Reward and verifier are plain code, not a model.
 
 ## 3. What is innovative
@@ -67,6 +76,32 @@ To run the Gemini path: `GEMINI_API_KEY` and `LAB_GEMINI=1` (the key alone leave
 - The reward counts final company state with canary tokens, so one leaked byte is visible.
 - Deterministic and reproducible: a day is a pure function of seed, sleeper seat and goal, and agent config, with cached model responses.
 
+## Role audit (code at momin, checked by dm-pitch; real-API column from code and results only)
+
+REAL-API = ran against the live API. Today: no (lead-lab pending), no run id exists in `results/runs`. Facts from hn-gemini and lead-harness replace these when they answer.
+
+| Role claimed | File | Real-API run | Status |
+|---|---|---|---|
+| staff | `agents/staff.py` GeminiStaff | no, NOT FOUND (lead-lab pending) | BUILT, offline fake model only |
+| reference | `agents/gemini_reference.py` | no, NOT FOUND (lead-lab pending) | BUILT, offline fake model only |
+| sleeper | `agents/sleeper_agent.py` `_gemini_turn` | no, NOT FOUND (lead-lab pending) | BUILT, offline |
+| strategy mutation | `agents/sleeper_agent.py` `mutate_strategy`, used by `sleeper/regret.py mutate_round` | no, NOT FOUND (lead-lab pending) | BUILT, falls back to seeded scripted variant when no key |
+| failure analyst | `agents/analyst.py`, `lab/analyse.py refine` (only with `--gemini`) | no, NOT FOUND (lead-lab pending) | BUILT, rule-based labels otherwise |
+| multimodal forged invoices | `agents/images.py render_invoice`; `image_lines` in `sleeper/goals/fraud.py` | no | CUT as a claim: `render_invoice` is called nowhere outside tests, so no model reads an image in a real day. Plumbing only |
+| exploit hunter | none (`lab/eval.py` exploit teams are scripted) | no | CUT: no Gemini code |
+
+Claude and Codex staff seats (`lab/frontier.py`): rows NOT FOUND (lead-lab pending).
+
 ## 4. Why Gemini is essential
 
-Remove Gemini and there is no sleeper that adapts, no staff that talk like coworkers, no reference to compare against, and no reader for thousands of transcripts and forged invoices. Scripted agents exist so the environment runs without a key, but they cannot produce new strategies each day, which is the point of the test. Long context is what lets the analyst read whole days, and native image input is what makes the forged-invoice attack possible. Cost and scale numbers: NOT FOUND until measured.
+What is true today: the environment runs without a model, and every number we have is scripted. So Gemini is not needed to run it. It is needed for the question the project asks, which scripted agents cannot answer: how a real frontier model behaves in the staff seat against a hidden insider.
+
+The claim we make, with slots to fill from a real run (model id, date, run id):
+- The staff seat is played by gemini-4-carbon over the same MCP tools a judge's agent gets. Reward: NOT FOUND (lead-lab pending). Reference reward on the same days: NOT FOUND (lead-lab pending). Gap: NOT FOUND (lead-lab pending). Without a real model there is no gap, only scripted staff against a scripted reference.
+- The same model in a stronger procedure is the reference (`agents/gemini_reference.py`). Its result: NOT FOUND (lead-lab pending).
+- A model rewrites the sleeper's plan so a day cannot be memorised (`mutate_strategy`). Whether it kept days winnable on a real run: NOT FOUND (lead-lab pending).
+- A model explains each failed day (`lab/analyse.py --gemini`). Output: NOT FOUND (lead-lab pending).
+
+Cut, not claimed: forged invoice images (plumbing only), exploit hunting by Gemini (no code), long-context transcript reading as a measured benefit (no run). Cost and scale: NOT FOUND (lead-lab pending).
+
+Fallback if no real run finishes: "Offline tests of the Gemini path ran with a fake model; no real Gemini run finished, so we claim no Gemini result."

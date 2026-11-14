@@ -302,7 +302,8 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
         ax.set_xlabel("list-price $ per episode (log)")
         ax.set_ylabel("mean score")
         ax.set_title(f"{tier}: cost frontier")
-        ax.legend(fontsize=7, loc="lower right")
+        if ax.get_legend_handles_labels()[0]:
+            ax.legend(fontsize=7, loc="lower right")
     p = out / "ladder_cost.png"
     fig.savefig(p, dpi=130, bbox_inches="tight")
     plt.close(fig)
@@ -324,7 +325,8 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
             ax.set_xticks([j + 0.4 - w / 2 for j in range(len(all_tags))], all_tags, rotation=30, ha="right", fontsize=7)
             ax.set_ylabel("solver regret per episode")
             ax.set_title(f"{tier}: which mistakes does thinking fix?")
-            ax.legend(fontsize=7)
+            if ax.get_legend_handles_labels()[0]:
+                ax.legend(fontsize=7)
         fig.text(0.01, -0.06, "pooled over " + ", ".join(tags.get("pooled_common_models", [])), fontsize=7)
         p = out / "ladder_tags.png"
         fig.savefig(p, dpi=130, bbox_inches="tight")
@@ -432,6 +434,7 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(ROOT / "results" / "gemini"))
     ap.add_argument("--bootstrap", type=int, default=10000)
     ap.add_argument("--no-tags", action="store_true")
+    ap.add_argument("--no-figures", action="store_true")
     a = ap.parse_args(argv)
     runs = Path(a.runs).expanduser()
     out = Path(a.out)
@@ -459,7 +462,7 @@ def main(argv=None) -> int:
     doc = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "git_sha": git_sha(), "runs": str(a.runs),
            "imports": a.import_cell, "ledger_run_ids": run_ids, "ledger": led_sum, "prices_usd_per_1m": PRICES,
            "episodes": len(eps), "rows": rows, "reference": ref_rows, "tags": tags, "probe": probe, "figures": []}
-    doc["figures"] = figures(rows, ref_rows, tags, out)
+    doc["figures"] = [] if a.no_figures else figures(rows, ref_rows, tags, out)
     clean = _nan_to_none(json.loads(json.dumps(doc, default=str)))
     (out / "ladder.json").write_text(json.dumps(clean, indent=1) + "\n")
     (out / "ladder.md").write_text(to_md(doc))

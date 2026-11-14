@@ -104,7 +104,7 @@ def test_report_reads_ladder_output(tmp_path, monkeypatch):
                     log=lambda m: None)
     rep = tmp_path / "rep"
     assert ladder_report.main(["--runs", str(tmp_path / "out"), "--out", str(rep), "--bootstrap", "200",
-                               "--probe", str(tmp_path / "none.json")]) == 0
+                               "--probe", str(tmp_path / "none.json"), "--no-figures"]) == 0
     doc = json.loads((rep / "ladder.json").read_text())
     assert {"generated_at", "git_sha", "ledger_run_ids"} <= set(doc)
     assert len(doc["rows"]) == 3 and all(r["n"] == 2 for r in doc["rows"])

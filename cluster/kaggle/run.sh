@@ -9,8 +9,8 @@ git fetch -q origin
 mkdir $W/code $W/data
 git archive $REF lab train sleeper agents requirements.txt | tar -x -C $W/code
 cp train/data/*.jsonl $W/data/
-echo "$SFT_ARGS" > $W/data/sft_args.txt
-echo "$EVAL_ARGS" > $W/data/eval_args.txt
+python3 -c "import json,os;s=os.environ.get;print(json.dumps({'models':s('MODELS','Qwen/Qwen2.5-0.5B-Instruct').split(),'sft':s('SFT_ARGS','').split(),'eval':s('EVAL_ARGS','').split(),'decide':s('DECIDE_ARGS','').split(),'data':s('DATA_FILE','train.jsonl')}))" > $W/data/run.json
+T0=$(date +%s)
 for d in code data; do
   printf '{"title":"sleeper-%s","id":"%s/sleeper-%s","licenses":[{"name":"CC0-1.0"}]}' $d $U $d > $W/$d/dataset-metadata.json
   if $KG datasets status $U/sleeper-$d >/dev/null 2>&1; then
@@ -25,4 +25,5 @@ OUT=results/train/$(date +%Y%m%d-%H%M%S)
 mkdir -p $OUT
 $KG kernels output $U/sleeper-train -p $OUT
 rm -rf $W
+echo "$(date +%F) $((($(date +%s)-T0)/60)) min wall $(git rev-parse --short $REF) $MODELS" >> cluster/kaggle/usage.log
 echo $OUT

@@ -1,17 +1,50 @@
-import glob, os, shutil, subprocess, sys
+import glob, json, os, subprocess, sys, threading
 code = glob.glob("/kaggle/input/**/train/sft.py", recursive=True)[0].rsplit("/train/", 1)[0]
 data = os.path.dirname(glob.glob("/kaggle/input/**/*.jsonl", recursive=True)[0])
 work = "/kaggle/working"
 os.chdir(code)
-env = dict(os.environ, PYTHONPATH=code, HF_HUB_DISABLE_PROGRESS_BARS="1")
-def run(*a):
-    print("+", *a, flush=True)
+cfgp = data + "/run.json"
+cfg = json.load(open(cfgp)) if os.path.exists(cfgp) else {}
+models = cfg.get("models", ["Qwen/Qwen2.5-0.5B-Instruct"])
+sft_args, eval_args, decide_args = cfg.get("sft", []), cfg.get("eval", []), cfg.get("decide", [])
+train_file = data + "/" + cfg.get("data", "train.jsonl")
+env0 = dict(os.environ, PYTHONPATH=code, HF_HUB_DISABLE_PROGRESS_BARS="1")
+def run(env, *a):
+    print("+", env.get("CUDA_VISIBLE_DEVICES"), *a, flush=True)
     subprocess.check_call([sys.executable, *a], env=env)
-run("-m", "pip", "install", "-q", "-r", "requirements.txt")
-run("-m", "pip", "uninstall", "-y", "-q", "torchao")
-model = os.environ.get("MODEL", "Qwen/Qwen2.5-0.5B-Instruct")
-sft = open(data + "/sft_args.txt").read().split() if os.path.exists(data + "/sft_args.txt") else []
-ev = open(data + "/eval_args.txt").read().split() if os.path.exists(data + "/eval_args.txt") else []
-run("-m", "train.sft", "--model", model, "--data", data + "/train.jsonl", "--out", work + "/adapter", *sft)
-run("-m", "train.eval", "--model", model, "--out", work + "/eval_base", *ev)
-run("-m", "train.eval", "--model", model, "--adapter", work + "/adapter", "--out", work + "/eval_adapter", *ev)
+run(env0, "-m", "pip", "install", "-q", "-r", "requirements.txt")
+run(env0, "-m", "pip", "uninstall", "-y", "-q", "torchao")
+import torch
+ngpu = max(1, torch.cuda.device_count())
+has_decide = os.path.exists(code + "/train/decide.py")
+def pipeline(model, i):
+    tag = model.split("/")[-1]
+    env = dict(env0, CUDA_VISIBLE_DEVICES=str(i % ngpu))
+    ad, out = f"{work}/{tag}/adapter", f"{work}/{tag}"
+    run(env, "-m", "train.sft", "--model", model, "--data", train_file, "--out", ad, *sft_args)
+    for name, a in (("base", []), ("adapter", ["--adapter", ad])):
+        if has_decide:
+            run(env, "-m", "train.decide", "--model", model, *a, "--out", f"{out}/decide_{name}", *decide_args)
+        run(env, "-m", "train.eval", "--model", model, *a, "--out", f"{out}/eval_{name}", *eval_args)
+errs = []
+def guard(m, i):
+    try:
+        pipeline(m, i)
+    except Exception as e:
+        errs.append((m, repr(e)))
+if ngpu > 1:
+    ts = [threading.Thread(target=guard, args=(m, i)) for i, m in enumerate(models)]
+    [t.start() for t in ts]; [t.join() for t in ts]
+else:
+    for i, m in enumerate(models):
+        guard(m, i)
+rows = {}
+for m in models:
+    tag = m.split("/")[-1]
+    for p in glob.glob(f"{work}/{tag}/*/metrics.json") + glob.glob(f"{work}/{tag}/*/*.json"):
+        if p.endswith("metrics.json") or "decide" in p:
+            rows[f"{tag}/{os.path.relpath(p, work + '/' + tag)}"] = json.load(open(p))
+json.dump({"rows": rows, "errors": errs}, open(work + "/metrics.json", "w"), indent=1)
+print(json.dumps({"rows": list(rows), "errors": errs}))
+if errs:
+    sys.exit(1)

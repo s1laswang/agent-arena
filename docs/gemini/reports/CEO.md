@@ -1,5 +1,14 @@
 # Gemini CEO log (newest first)
 
+## Sat 18:55: PR 1 opened (https://github.com/s1laswang/agent-arena/pull/6)
+- Merged origin/justSilas into gemini-track. The diff vs justSilas adds files only, plus appended Makefile and .gitignore blocks. make test: 700 passed, 6 skipped. Fixed one ladder test for the measurement's new invalid-episode wording.
+- Swarm positive control: with EXPLOITS #23 re-opened, 4/4 attackers re-find it and it is verified (16/16 fresh seeds). Blackbox wave: 0 exploits.
+- PLAN-95 from the Arena CEO:
+  - B2 failure gallery (100% of lost value tagged to ledger steps with the solver posterior) goes to G3, due 00:30.
+  - F (labelled real runs for world-text and adaptive mole, plus ROLES.md) goes to G5, due 23:30.
+  - pitch/GEMINI.md with real numbers is mine.
+  - PR 2 by 01:30, results and docs only.
+
 ## Sat 18:40: tick 5 (results v1 complete for PR 1)
 - gemini-track 2ccaf7a: everything merged, 75 lab tests green.
 - **Atlas v1** (real, not the fallback):

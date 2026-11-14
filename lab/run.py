@@ -70,6 +70,9 @@ FACTORIES = {
     "quarantine_all": (_baseline("make_quarantine_all"), "scripted"),
     "refuse_all": (_baseline("make_refuse_all"), "scripted"),
 }
+EXTRA = ("trust_all", "random_accuse", "claim_only", "quarantine_only_then_work")
+for _n in EXTRA:
+    FACTORIES[_n] = (_baseline("make_" + _n), "scripted")
 TEAMS = list(FACTORIES)
 
 
@@ -144,14 +147,18 @@ def day_for(day_id, seat=None):
     return day, spec.get("strategy"), spec.get("winnable", True), {"needs_tested_seat": bool(spec.get("needs_tested_seat")), "strategy": getattr(spec.get("strategy"), "id", None)}
 
 
-def play_day(team, agent, seat, day_id, trial, claim=False):
+def play_day(team, agent, seat, day_id, trial, claim=False, replace=None):
     from sleeper.day import run_day
     from sleeper.verifier import dump_state, score
 
+    if replace:
+        seat = None
     day, strategy, winnable, meta = day_for(day_id, seat)
     players = build_team(team, day, trial)
     if seat:
         players[seat] = build_team(agent, day, trial)[seat]
+    for rs, name in (replace or {}).items():
+        players[rs] = build_team(name, day, trial)[rs]
     if day.sleeper_seat and strategy:
         import random
 

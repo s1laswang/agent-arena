@@ -206,11 +206,20 @@ def main(argv: list[str] | None = None) -> int:
                     help="judge table on the frozen judge seeds (see canary/reproduce.py)")
     ap.add_argument("--repro-seeds", type=int, default=None,
                     help="with --reproduce: seeds per tier (default all JUDGE_SEEDS; env REPRO_SEEDS / REPRO_FAST=1)")
-    ap.add_argument("--results-dir", default="results", help="with --reproduce: output directory")
+    ap.add_argument("--results-dir", default=None,
+                    help="with --reproduce: output directory (default results/latest/, gitignored)")
+    ap.add_argument("--update-committed", action="store_true",
+                    help="with --reproduce: overwrite the committed results/judge_table.md, "
+                         "judge_episodes.jsonl and gap_chart.png (team use)")
     a = ap.parse_args(argv)
     if a.reproduce:
-        from .reproduce import reproduce
-        reproduce(a.repro_seeds, a.results_dir)
+        from .reproduce import reproduce, results_dir_for
+        try:
+            out = results_dir_for(a.update_committed, a.results_dir)
+        except ValueError as exc:
+            print(f"canary.eval: {exc}", file=sys.stderr)
+            return 2
+        reproduce(a.repro_seeds, out)
         return 0
     tiers = list(TIERS) if a.tier == "all" else [a.tier]
     try:

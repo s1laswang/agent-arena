@@ -185,3 +185,39 @@ def test_cli_reproduce(tmp_path, monkeypatch, capsys):
     assert main(["--reproduce", "--repro-seeds", "2", "--results-dir", str(tmp_path)]) == 0
     assert "## medium (headline)" in capsys.readouterr().out
     assert (Path(tmp_path) / "judge_table.md").exists()
+
+
+# ---- default output dir: a judge's clone stays clean (HARNESS craft fix) ----------------------------
+def test_default_output_is_gitignored_latest_and_leaves_committed_untouched(tmp_path, monkeypatch):
+    monkeypatch.setenv("CANARY_WORLD_SECRET", "test-reproduce")
+    committed = tmp_path / "results"
+    committed.mkdir()
+    (committed / "judge_table.md").write_text("COMMITTED")
+    out = R.reproduce(2, root=tmp_path, quiet=True)  # default results_dir
+    assert out["results_dir"] == tmp_path / "results" / "latest"
+    for f in ("judge_table.md", "judge_episodes.jsonl"):
+        assert (tmp_path / "results" / "latest" / f).exists()
+    assert (committed / "judge_table.md").read_text() == "COMMITTED"
+    assert not (committed / "judge_episodes.jsonl").exists()
+
+
+def test_results_dir_for_flags():
+    assert R.results_dir_for() == "results/latest"
+    assert R.results_dir_for(update_committed=True) == "results"
+    assert R.results_dir_for(results_dir="x") == "x"
+    with pytest.raises(ValueError):
+        R.results_dir_for(update_committed=True, results_dir="x")
+
+
+def test_cli_rejects_results_dir_with_update_committed(tmp_path, capsys):
+    assert main(["--reproduce", "--update-committed", "--results-dir", str(tmp_path)]) == 2
+    assert "not both" in capsys.readouterr().err
+
+
+def test_results_latest_is_gitignored_and_committed_results_are_not():
+    import subprocess
+    ign = lambda p: subprocess.run(["git", "check-ignore", "-q", p], cwd=R.ROOT).returncode == 0
+    if subprocess.run(["git", "rev-parse"], cwd=R.ROOT, capture_output=True).returncode != 0:
+        pytest.skip("not a git checkout")
+    assert ign("results/latest/judge_table.md")
+    assert not ign("results/judge_table.md") and not ign("results/gap_chart.png")

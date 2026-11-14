@@ -16,7 +16,13 @@ Episode = dict[str, Any]
 
 def load_runs(root: str | Path = "data/runs") -> list[Episode]:
     eps: list[Episode] = []
-    for f in sorted(Path(root).rglob("episodes.jsonl")):
+    root = Path(root)
+    for f in sorted(root.rglob("episodes.jsonl")):
+        rel = f.relative_to(root).parts[:-1]
+        # never mix tier versions or superseded reference builds into one table:
+        # point --runs at data/runs/committed/v1.3 to get the v1.3 table
+        if any(x == "superseded" or x.startswith("v1.") for x in rel):
+            continue
         for line in f.read_text().splitlines():
             if line.strip():
                 e = json.loads(line)

@@ -63,3 +63,11 @@ def test_invalid_episodes_excluded(tmp_path):
     bad["meta"] = {"valid": False, "error": "429"}
     (d / "episodes.jsonl").write_text(json.dumps(good) + "\n" + json.dumps(bad) + "\n")
     assert [e["seed"] for e in load_runs(tmp_path)] == [0]
+
+
+def test_loader_skips_versions_and_superseded(tmp_path):
+    for sub in ("a", "superseded/b", "v1.3/c"):
+        d = tmp_path / sub; d.mkdir(parents=True)
+        (d / "episodes.jsonl").write_text(json.dumps(ep(sub, 0, 0.5, True)) + "\n")
+    assert [e["agent"] for e in load_runs(tmp_path)] == ["a"]
+    assert [e["agent"] for e in load_runs(tmp_path / "v1.3")] == ["v1.3/c"]

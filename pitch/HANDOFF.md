@@ -10,6 +10,7 @@ Every `NOT FOUND (lead-lab pending)` in pitch/ is listed here with its count. Wh
 
 - pitch/GEMINI.md: 13
 - pitch/MULTIMODEL.md: 28
+- pitch/REHEARSAL.md: 1
 - pitch/SCRIPT.md: 2
 - pitch/SLIDES.md: 1
 - pitch/SUBMISSION.md: 6

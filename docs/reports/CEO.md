@@ -210,3 +210,8 @@
   - Codex gpt-5.5 over MCP (judges shape): HARD 97% [89, 107] (0.657 vs 0.678, 10/10 correct); MEDIUM 50% [-19, 103] (0.364, 8/10; the gap comes from 2 early wrong accusations).
   - In-process fixed loop: medium 90% [77, 105] (n=8), hard 29% [-44, 100] (n=7).
 - => **v1.4 contingency TRIGGERED on hard.** Spend today $47.46 discounted; all further spend held pending the v1.4 decision with Silas.
+
+## 11:30 OpenAI removed; v1.4 + Gemini launched
+- Silas: no Gemini spend limit; remove the OpenAI API. OPENAI_API_KEY blanked in every .env (shared checkout + all worktrees). Codex CLI has its own API key in ~/.codex (not touched; we will not run it).
+- Gemini key verified (one gemini-3.8-flash call OK). Available models include gemini-4-carbon/argon/hydrogen and gemini-3.8-flash. The canary.llm default gemini-2.5-flash returns 404 (being fixed).
+- Launched: (1) v1.4 env engineer (branch justSilas-v14): hard 21 days, 2 canaries/day, 3 variants, higher leak damage (maybe n=40), solver plans multiple canaries/day, Mac calibration, freeze v1.4, hunt + reproduce + README. (2) Gemini measurement engineer (branch justSilas-gemini): strongest Gemini model, OpenCode+Gemini over MCP (judges shape) + in-process, v1.3 paired seeds 0-9 now, v1.4 when frozen.

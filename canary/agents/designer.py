@@ -162,7 +162,8 @@ def propose(client, tier: str = "hard", n: int = 4, history: list[dict] | None =
 
 def regret_filter(candidate: dict, solver_eval: Callable[[dict], float],
                   agent_eval: Callable[[dict], float], X: float, Y: float) -> tuple[bool, float, float]:
-    """Keep iff solver_eval(candidate) >= X and agent_eval(candidate) <= Y. Agent is only run if solver passes."""
+    """Scores may be negative (contract v0.3: wrong accusation = -1.0); thresholds are plain floats.
+    Keep iff solver_eval(candidate) >= X and agent_eval(candidate) <= Y. Agent is only run if solver passes."""
     s = float(solver_eval(candidate))
     if s < X:
         return False, s, float("nan")
@@ -177,6 +178,7 @@ def design_round(client, solver_eval, agent_eval, X: float = 0.5, Y: float = 0.3
     for c in cands:
         keep, s, a = regret_filter(c, solver_eval, agent_eval, X, Y)
         rows.append({"name": c["name"], "keep": keep, "solver": s, "agent": a, "candidate": c,
+                     "regret": (s - a) if a == a else float("nan"),  # scores may be negative (-1.0 wrong accusation)
                      "why": "kept" if keep else ("unsolvable (solver < X)" if s < X else "too easy (agent > Y)")})
     return {"tier": tier, "X": X, "Y": Y, "meta": meta, "rows": rows,
             "kept": [r["candidate"] for r in rows if r["keep"]]}

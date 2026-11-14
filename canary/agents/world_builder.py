@@ -138,9 +138,15 @@ def assert_no_truth(text: Any, world: Any) -> None:
     if isinstance(text, dict):
         bad = TRUTH_KEYS & {str(k) for k in _all_keys(text)}
         assert not bad, f"truth keys in text: {sorted(bad)}"
+    try:
+        from canary.text.lint import lint_text  # ENV's lint (confessions, rival addresses)
+    except ImportError:
+        lint_text = lambda s: []  # noqa: E731
     for s in _walk_strings(text):
         m = TRUTH_WORDS.search(s)
         assert not m, f"truth vocabulary in text: {m.group(0)!r} in {s[:80]!r}"
+        probs = lint_text(s)
+        assert not probs, f"text lint: {probs}"
     mole = get(world, "mole") or get(world, "mole_id")
     if isinstance(text, dict) and mole and text.get("personas"):
         pids = [p.get("employee_id") for p in text["personas"]]

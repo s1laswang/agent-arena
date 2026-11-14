@@ -8,6 +8,8 @@
     n_restricted_colleagues, recent_low_recipient_docs, day   (+ optional `peers`: [employee_id])
 The mole never sees canary flags or the investigator. Same `.decide(view)` signature as
 canary.mole.dsl.MoleStrategy, so it plugs into ENV's strategy hook (World.mole_strategy).
+Env v0 passes {"day", "leakable": [doc_id]} (no DSL yet); both shapes are accepted. NOTE: Env v0
+applies a strategy's leak without the p_leak gate and ignores "frame" until the DSL lands.
 Invalid choices (unknown doc, malformed id, schema-invalid output) become "none"; the env
 validates again (p_leak still gates leaking).
 """
@@ -34,6 +36,8 @@ def view_to_dict(view: Any) -> dict:
     docs = []
     for d in get(view, "held_docs", None) or get(view, "docs", None) or []:
         docs.append({k: get(d, k) for k in ("doc_id", "title", "recipient_count", "age_days")})
+    for x in get(view, "leakable", None) or []:  # Env v0 view: {"day", "leakable": [doc_id]}
+        docs.append({"doc_id": x})
     out = {"day": get(view, "day", 0), "held_docs": docs,
            "days_since_last_leak": get(view, "days_since_last_leak"),
            "i_am_restricted": bool(get(view, "i_am_restricted", False)),

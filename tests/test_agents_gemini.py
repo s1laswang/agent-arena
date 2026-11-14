@@ -225,8 +225,8 @@ def test_schemas_have_no_refs():
 
 # ---------------- clash (fakes) ----------------
 class FakeEnv:
-    def __init__(self, tier, seed):
-        self.world = SimpleNamespace(mole_strategy=None)
+    def __init__(self, tier, seed, mole_strategy=None):
+        self.world = SimpleNamespace(mole_strategy=mole_strategy)
         self.history, self.done, self._acc = [], False, None
 
     def tools_spec(self):
@@ -266,7 +266,42 @@ def test_clash_run_arena_with_fakes():
                            [0, 1], "medium")
     assert [r["correct"] for r in rows] == [True, True] and rows[0]["mole"] == "llm-mole"
     assert len(moles[0].log) == 2
-    assert "mean score 0.900" in clash.table(rows)
+    assert "mean score +0.900" in clash.table(rows)
+    neg = clash.table([{**rows[0], "score": -1.0, "correct": False}])
+    assert "-1.000" in neg
+
+
+def test_designer_handles_negative_scores():
+    rep = designer.design_round(StubClient(), lambda c: 0.6, lambda c: -1.0, X=0.5, Y=0.0, n=2)
+    assert all(r["keep"] and r["regret"] == 1.6 for r in rep["rows"])
+    assert not designer.regret_filter({}, lambda c: -1.0, lambda c: -1.0, 0.5, 0.0)[0]
+
+
+def test_llm_mole_env_v0_view_shape():
+    m = mole_arena.LLMMole(StubClient([{"text": json.dumps({"leak": "d3"})}, {"text": json.dumps({"leak": "zz"})}]))
+    assert m.decide({"day": 1, "leakable": ["d3"]})["leak"] == "d3"
+    assert m.decide({"day": 1, "leakable": ["d3"]})["leak"] is None
+
+
+def test_clash_real_env_with_stub():
+    from canary.env import Env
+    try:
+        Env(tier="easy", seed=0)
+    except NotImplementedError:
+        pytest.skip("real Env not on branch")
+    rows = clash.run_arena(clash.make_real_env_factory(), clash.resolve_policy("heuristic"),
+                           lambda: mole_arena.LLMMole(_stub()), [0, 1], "easy")
+    assert len(rows) == 2 and rows[0]["mole"] == "llm-mole"
+
+
+def test_clash_main_end_to_end_stub(capsys):
+    from canary.env import Env
+    try:
+        Env(tier="easy", seed=0)
+    except NotImplementedError:
+        pytest.skip("real Env not on branch")
+    assert clash.main(["--llm", "stub", "--tier", "easy", "--seeds", "0", "1"]) == 0
+    assert "mean score" in capsys.readouterr().out
 
 
 def test_clash_main_exits_cleanly_without_env(capsys):

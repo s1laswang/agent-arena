@@ -22,7 +22,7 @@ from .mole_arena import LLMMole, attach_mole
 _POLICY_CANDIDATES = {
     "solver": [("canary.solver.policy", "SolverPolicy"), ("canary.solver", "SolverPolicy"),
                ("canary.baselines", "SolverPolicy")],
-    "heuristic": [("canary.baselines", "HeuristicPolicy"), ("canary.baselines.heuristic", "HeuristicPolicy"),
+    "heuristic": [("canary.baselines", "ObviousHeuristic"), ("canary.baselines", "HeuristicPolicy"), ("canary.baselines.heuristic", "HeuristicPolicy"),
                   ("canary.agents.heuristic", "HeuristicPolicy"), ("canary.solver.heuristic", "HeuristicPolicy")],
 }
 
@@ -50,7 +50,7 @@ def make_real_env_factory() -> Callable[[str, int], Any]:
     except NotImplementedError as e:
         raise RuntimeError("canary.env.Env is not implemented on this branch yet (ENV lands ~02:45; "
                            "git merge origin/justSilas).") from e
-    return lambda tier, seed: Env(tier=tier, seed=seed)
+    return lambda tier, seed, mole_strategy=None: Env(tier=tier, seed=seed, mole_strategy=mole_strategy)
 
 
 def play(env, policy, agent_name: str, max_steps: int = 400):
@@ -67,9 +67,13 @@ def run_arena(make_env: Callable[[str, int], Any], make_policy: Callable[[], Any
               seeds: list[int], tier: str = "medium") -> list[dict]:
     rows = []
     for seed in seeds:
-        env = make_env(tier, seed)
         mole = mole_factory()
-        hooked = attach_mole(env, mole) if mole is not None else False
+        try:
+            env = make_env(tier, seed, mole_strategy=mole)   # Env(tier, seed, mole_strategy=...) hook
+            hooked = mole is not None
+        except TypeError:
+            env = make_env(tier, seed)
+            hooked = attach_mole(env, mole) if mole is not None else False
         policy = make_policy()
         res = play(env, policy, getattr(policy, "name", "investigator"))
         rows.append({"seed": seed, "mole": getattr(mole, "name", "default") if hooked else "default",
@@ -82,11 +86,12 @@ def run_arena(make_env: Callable[[str, int], Any], make_policy: Callable[[], Any
 def table(rows: list[dict]) -> str:
     out = [f"{'seed':>6} {'mole':<10} {'investigator':<16} {'score':>6} {'correct':>7} {'day':>4} end"]
     for r in rows:
-        out.append(f"{r['seed']:>6} {r['mole']:<10} {r['investigator'][:16]:<16} {r['score']:>6.3f} "
+        out.append(f"{r['seed']:>6} {r['mole']:<10} {r['investigator'][:16]:<16} {r['score']:>+6.3f} "
                    f"{str(r['correct']):>7} {r['day']:>4} {r['end']}")
     if rows:
         sc = [r["score"] for r in rows]
-        out.append(f"mean score {statistics.mean(sc):.3f}  accuracy {sum(r['correct'] for r in rows)}/{len(rows)}")
+        out.append(f"mean score {statistics.mean(sc):+.3f} (wrong accusation = -1.0 under contract v0.3)  "
+                   f"min {min(sc):+.3f}  accuracy {sum(r['correct'] for r in rows)}/{len(rows)}")
     return "\n".join(out)
 
 
@@ -94,7 +99,7 @@ def designer_table(rep: dict) -> str:
     out = [f"designer round tier={rep['tier']} keep iff solver>={rep['X']} and agent<={rep['Y']}  "
            f"(llm_ok={rep['meta']['llm_ok']}, llm_valid={rep['meta']['n_llm_valid']})"]
     for r in rep["rows"]:
-        out.append(f"  {r['name'][:24]:<24} solver={r['solver']:.3f} agent={r['agent']:.3f} -> {r['why']}")
+        out.append(f"  {r['name'][:24]:<24} solver={r['solver']:+.3f} agent={r['agent']:+.3f} regret={r['regret']:+.3f} -> {r['why']}")
     return "\n".join(out)
 
 
@@ -124,15 +129,19 @@ def main(argv: list[str] | None = None) -> int:
         client = resolve_client(a.llm)
         make_env = make_real_env_factory()
         make_inv = resolve_policy(a.investigator)
-        make_solver = resolve_policy("solver")
     except RuntimeError as e:
         print(f"clash: cannot run yet: {e}", file=sys.stderr)
         return 2
+    try:
+        make_solver = resolve_policy("solver")
+    except RuntimeError as e:
+        make_solver = resolve_policy("heuristic")
+        print(f"clash: no solver yet ({e}); designer uses the heuristic as a PROXY solver", file=sys.stderr)
     print(f"== arena: LLM mole ({a.llm}) vs {a.investigator}, tier={a.tier}, seeds={a.seeds}")
     print(table(run_arena(make_env, make_inv, lambda: LLMMole(client), a.seeds, a.tier)))
     print(f"\n== baseline: default mole vs {a.investigator}")
     print(table(run_arena(make_env, make_inv, lambda: None, a.seeds, a.tier)))
-    if not a.no_designer:
+    if not a.no_designer and make_solver is not None:
         rep = design_round(client, _mean_score_eval(make_env, make_solver, a.seeds, a.tier),
                            _mean_score_eval(make_env, make_inv, a.seeds, a.tier), a.X, a.Y, tier=a.tier, n=3)
         print("\n" + designer_table(rep))

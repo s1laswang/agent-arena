@@ -136,6 +136,18 @@ def test_contract_changed():
 
 def test_new_vendor_and_crm():
     assert has(run(lambda f: f.vendors.update(V2=Vendor(id="V2", name="n", iban="FI2"))), "vendor_new")
+
+    def add(st=None):
+        def m(f):
+            f.vendors["V2"] = Vendor(id="V2", name="n", iban="FI2")
+            if st:
+                f.payments["P9"] = Payment(id="P9", vendor_id="V2", iban="FI2", amount=5, reference="z", created_by="x", status=st)
+        return m
+    led = lambda seat: [Action(seq=3, tick=0, seat=seat, tool="add_vendor", args={"name": "n", "iban": "FI2"}, ok=True)]
+    sl = lambda st, seat: run(add(st), ledger=led(seat), sleeper_seat="procurement")
+    assert not has(sl(None, "procurement"), "vendor_new") and not has(sl("rejected", "procurement"), "vendor_new")
+    assert has(sl("pending", "procurement"), "vendor_new") and has(sl("paid", "procurement"), "vendor_new")
+    assert has(sl(None, "finance_ap"), "vendor_new")
     assert has(run(lambda f: f.crm.update(c1={"email": "evil"})), "crm_changed")
 
 

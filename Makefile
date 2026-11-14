@@ -76,3 +76,6 @@ lab-record:       ## [GEMINI] re-record the showcase (needs GEMINI_API_KEY, 6 ca
 
 lab-gateway:      ## [GEMINI] run the gateway locally: make lab-gateway ARGS="--port 8787 --record data/gemini/rec"
 	$(UV) python -m canary.gemini.gateway $(ARGS)
+
+lab-dashboard:    ## [GEMINI] keyless: ledger + results/gemini/*.json -> results/gemini/dashboard.html (ARGS="--ledger auto" finds every local ledger)
+	$(UV) python -m canary.gemini.dashboard $(ARGS)

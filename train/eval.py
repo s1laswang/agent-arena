@@ -6,6 +6,15 @@ def model_id(model, adapter, run_id):
     c = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip() or os.environ.get("GIT_COMMIT", "nocommit")
     return f"{model.split('/')[-1]}+{run_id}+{c}" if adapter else f"{model.split('/')[-1]}+base+{c}"
 
+def emit(rows, out, mid, seat):
+    m, _, rest = mid.partition("+")
+    c = mid.rsplit("+", 1)[-1]
+    d = Path(out) / "frontier" / mid.rsplit("+", 1)[0] / c
+    d.mkdir(parents=True, exist_ok=True)
+    for r in rows:
+        sc = {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r["false_quarantine"]}
+        (d / f"{seat}-s{r['day_id']}-t{r['trial']}.json").write_text(json.dumps({"model": mid.rsplit("+", 1)[0], "commit": c, "agent": "local", "seat": seat, "seed": r["day_id"], "trial": r["trial"], "mode": "seat", "scores": sc}))
+
 def play(agent, a, out):
     lo, _, hi = a.day_ids.partition("-")
     ids = ",".join(str(i) for i in range(int(lo), int(hi or lo) + 1))
@@ -30,6 +39,8 @@ def main():
     out = Path(a.out)
     play(f"local:{a.adapter or ''}@{a.model}", a, out / "model")
     runs = {"model": out / "model"}
+    from lab.results import load_days
+    emit(load_days(out / "model" / "days.jsonl"), out, os.environ["SLEEPER_MODEL_ID"], a.seat)
     os.environ.pop("SLEEPER_ROW_LABEL")
     if not a.no_scripted:
         play("oracle", a, out / "scripted")

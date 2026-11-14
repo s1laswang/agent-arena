@@ -11,7 +11,10 @@ eval:
 harbor:
 	$(PY) -m harbor.build --seeds 0..19 --seat controller
 
-.PHONY: test eval harbor exploits
+.PHONY: test eval harbor exploits key-check
 
 exploits:
 	$(PY) -m redteam.report
+
+key-check:
+	PYTHONPATH=. $(PY) scripts/key_check.py

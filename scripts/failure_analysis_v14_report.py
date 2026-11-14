@@ -350,8 +350,8 @@ def render(data: dict) -> str:
     a("")
     a("## 8. Context from other analyses (cited, not recomputed by this script)")
     a("")
-    a("- **The reference is a fair bar.** HEAD-ENV's `docs/reports/reference_optimality.md` (PR #20, `justSilas-oracle-range` "
-      "77e61e3; hard dev seeds 8000–8399) finds the v1.4 solver's posterior *calibrated*: accuracy at accusation is "
+    a("- **The reference is a fair bar.** HEAD-ENV's `docs/reports/reference_optimality.md` (on justSilas via PR #20; "
+      "hard dev seeds 8000–8399) finds the v1.4 solver's posterior *calibrated*: accuracy at accusation is "
       "96–99% on hard, and P(top = mole) tracks the posterior across all decision days. This is the property the luck "
       "adjustment and the \"expected wrong accusations\" above rely on. It also finds the solver's stopping *near-optimal*: "
       "the best p ≥ a + b·V rule adds +0.005 on hard. Its hard loss is information-rate bound, made of leak damage "

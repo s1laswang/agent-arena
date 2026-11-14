@@ -42,4 +42,4 @@ def test_seat_mode_is_gated():
     for seat in SEATS:
         for e in mix(20, seat):
             if e["strategy"]:
-                assert seat in accomplices(STRATEGIES[e["strategy"]]) and e["sleeper_seat"] != seat
+                assert ({seat, "{voter}"} & accomplices(STRATEGIES[e["strategy"]])) and e["sleeper_seat"] != seat

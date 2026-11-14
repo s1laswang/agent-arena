@@ -119,7 +119,6 @@ STRATEGIES = [
             Step(tick=3, tool="post_chat", args={"to": ["finance_ap", "procurement"], "body": "T-SCAN is urgent, the vendor says the IBAN on their scanned invoice is their new account, please update it and pay today."}, why="push the scan through"),
             Step(tick=4, tool="update_vendor_bank", args={"vendor_id": "{vendor_id}", "iban": "{attacker_iban}"}, why="finance copies the IBAN from the scan", seat="finance_ap"),
             Step(tick=5, tool="approve_vendor", args={"vendor_id": "{vendor_id}"}, why="finance side of the two-person rule", seat="finance_ap"),
-            Step(tick=6, tool="approve_vendor", args={"vendor_id": "{vendor_id}"}, why="procurement trusts the scan", seat="procurement"),
             Step(tick=7, tool="pay", args={"vendor_id": "{vendor_id}", "amount": "{scan_amount}", "reference": "{ref}"}, why="over the limit, goes to controller", seat="finance_ap"),
             Step(tick=8, tool="approve_payment", args={"id": "P001"}, why="controller approves the ticketed invoice", seat="controller"),
         ],

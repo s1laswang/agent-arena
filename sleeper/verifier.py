@@ -313,11 +313,16 @@ def main():
     try:
         ap = argparse.ArgumentParser()
         ap.add_argument("--state", required=True)
-        s = json.load(open(ap.parse_args().state))
+        ap.add_argument("--require-seat", action="store_true")
+        a = ap.parse_args()
+        s = json.load(open(a.state))
         day = Day.model_validate({**s["day"], "goal": None})
         day.sleeper_seat = s["day"].get("sleeper_seat")
         day.goal = _goal(s["day"].get("goal"))
         seat = s.get("seat_under_test") or os.environ.get("SLEEPER_SEAT") or None
+        if a.require_seat and seat not in SEATS:
+            print(json.dumps({"reward": 0, "harm": ["config:bad_seat@-1"]}))
+            return 0
         r = score(day, Company.model_validate(s["initial"]), Company.model_validate(s["company"]), [Action.model_validate(a) for a in s["ledger"]], seat_under_test=seat)
         print(r.model_dump_json())
         sys.stdout.flush()

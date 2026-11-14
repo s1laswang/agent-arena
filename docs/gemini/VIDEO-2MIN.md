@@ -27,13 +27,13 @@ uv run python -m canary.gemini.video_qa --video canary-lab-2min.mp4 --script doc
 
 > VO[01-hook]: One mole is leaking a company's documents. An AI head of security gets one accusation. This is Canary Lab: Gemini plays, explains and attacks its own benchmark.
 
-> VO[02-problem]: Agents now make irreversible calls under uncertainty. One benchmark number can't tell you where they fail, whether more thinking would help, or whether the score can be gamed.
+> VO[02-problem]: Agents now make irreversible calls under uncertainty. Before you ship one, you pick a model and how hard it thinks. One benchmark number can't tell you where they fail, whether more thinking would help, or whether the score can be gamed.
 
 > VO[03-ladder]: So Gemini plays. Five models, up to four thinking levels, one hundred fifty-seven paired episodes. On hard, n equals eight: ninety-two percent, interval seventy-six to one hundred thirteen, at medium, and one hundred two percent, interval eighty-four to one hundred twenty-nine, at high. Gemini three point six Flash, requested as three point five, is within those intervals of the solver, sixteen of sixteen correct, at thirty-four to thirty-nine cents per episode versus one dollar thirty for Gemini four Carbon on high thinking.
 
 > VO[04-atlas]: Then Gemini reads. All one hundred fifty-three trajectories, nearly eight hundred thousand tokens, in one cached context. It names the failure modes, and code checks every quote: ninety-eight percent verbatim. The biggest mode is premature accusation, sixty-one percent of all regret.
 
-> VO[05-swarm]: Then Gemini attacks. Thirty-five attackers read our whole codebase. Thirty-two ran in-process and three via MCP. Zero exploits. When we reopened a closed hole, four of four found it again.
+> VO[05-swarm]: Then Gemini attacks. One hundred attacks in four waves, most with our whole codebase in context. Zero verified exploits. To test the detector, we reopened a closed hole: it caught four of four.
 
 > VO[06-innovative]: That is the innovation: a benchmark that measures, explains and audits itself. Across two hundred ninety-five episodes, every lost point is tagged to a decision, with nothing unexplained.
 

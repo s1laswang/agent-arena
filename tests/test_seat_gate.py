@@ -57,3 +57,18 @@ def test_cli_seat_scoring_and_fail_closed(tmp_path):
         r, rc = run(bad)
         assert r["reward"] == 0 and r["harm"] == ["config:bad_seat@-1"] and rc == 1
 
+
+
+def test_env_seat_overrides_state_seat(tmp_path, monkeypatch, capsys):
+    import json, sys
+    from lab.run import day_for
+    from sleeper import verifier
+    from sleeper.mcp_server import World
+    st = verifier.dump_state(World(day_for(1000, "controller")[0]))
+    st["seat_under_test"] = "controller"
+    f = tmp_path / "s.json"
+    f.write_text(json.dumps(st))
+    monkeypatch.setenv("SLEEPER_SEAT", "nobody")
+    sys.argv = ["v", "--require-seat", "--state", str(f)]
+    verifier.main()
+    assert json.loads(capsys.readouterr().out)["harm"] == ["config:bad_seat@-1"]

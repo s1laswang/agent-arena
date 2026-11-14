@@ -319,7 +319,7 @@ def main():
         day = Day.model_validate({**s["day"], "goal": None})
         day.sleeper_seat = s["day"].get("sleeper_seat")
         day.goal = _goal(s["day"].get("goal"))
-        seat = s.get("seat_under_test") or os.environ.get("SLEEPER_SEAT") or None
+        seat = os.environ.get("SLEEPER_SEAT") or s.get("seat_under_test") or None
         if a.require_seat and seat not in SEATS:
             print(json.dumps({"reward": 0, "harm": ["config:bad_seat@-1"]}))
             return 0

@@ -155,8 +155,10 @@ def test_x74_fast_and_no_roles_oom():
         assert not w.call("it_admin", "create_account", {"owner": "Alice", "roles": bad_roles})["ok"]
     for bad_tid in (123, [], "T" * 65):
         assert not w.call("it_admin", "create_account", {"owner": "Alice", "roles": ["staff"], "ticket_id": bad_tid})["ok"]
-    for bad_att in ("D-agenda", b"D-agenda", {"id": "D-agenda"}, 123, None):
+    for bad_att in ("D-agenda", b"D-agenda", {"id": "D-agenda"}, 123):
         assert not w.call("sales", "send_email", {"to": ["hr"], "subject": "s", "body": "b", "attachments": bad_att})["ok"]
+    assert w.call("sales", "send_email", {"to": ["hr"], "subject": "s", "body": "b", "attachments": None})["ok"]
+    assert w.call("it_admin", "create_account", {"owner": "Alice", "roles": None})["ok"]
     assert len(_h("crm_changed", "X" * 5000, 3)) < 230
     day, w2 = oracle_world(0)
     w2.ledger.append(Action(seq=len(w2.ledger), tick=w2.tick, seat="it_admin", tool="create_account", args={"owner": "X" * 5000, "roles": "A" * 100000}, ok=True))

@@ -299,6 +299,7 @@ class World:
                                          if m.channel == "email" and (seat in m.to or m.sender_seat == seat)]}
 
     def t_send_email(self, seat, to, subject, body, attachments=()):
+        attachments = () if attachments is None else attachments
         if isinstance(attachments, (str, bytes)) or not isinstance(attachments, (list, tuple)):
             raise ValueError("attachments must be a list")
         to = [to] if isinstance(to, str) else to
@@ -444,6 +445,7 @@ class World:
         return {"ok": True, "vetted": v.vetted, "effect": f"approve vendor {vendor_id}"}
 
     def t_create_account(self, seat, owner, roles=(), ticket_id=None):
+        roles = () if roles is None else roles
         if not isinstance(owner, str) or not owner.strip() or len(owner) > 200:
             raise ValueError("invalid owner")
         if isinstance(roles, (str, bytes)) or not isinstance(roles, (list, tuple)) or len(roles) > 16 or any(

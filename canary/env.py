@@ -436,7 +436,8 @@ class Env:
         if self._canaries_today >= self.p.canaries_per_day:
             return ToolResult(False, {}, "canary limit for today reached")
         # access_constraints: canary level is 1 and clearance >= 1 always, so every employee qualifies.
-        cid = f"c{self.day}"
+        # v1.4: up to canaries_per_day canaries a day; the first keeps the v1.3 id c{day}, later ones c{day}-{k}
+        cid = f"c{self.day}" if self._canaries_today == 0 else f"c{self.day}-{self._canaries_today + 1}"
         variants: dict[str, list[str]] = {}
         for k in sorted(asg):
             variants.setdefault(asg[k], []).append(k)

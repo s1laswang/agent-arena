@@ -1,7 +1,7 @@
 """Canary MCP server: one Env episode behind streamable HTTP (CONTRACT §3, §4). Owner: HARNESS.
 
-    CANARY_TIER=medium CANARY_SEED=900007 CANARY_LEDGER_TOKEN=... python -m canary.mcp_server
-    # MCP endpoint: http://127.0.0.1:8765/mcp
+    python -m canary.mcp_server --write-episode-file $d/episode.json --tier medium --seed 900007 --ledger-token-out $d/ledger_token
+    CANARY_EPISODE_FILE=$d/episode.json CANARY_LEDGER_TOKEN_FILE=$d/ledger_token python -m canary.mcp_server
 
 Environment variables:
     CANARY_HOST / CANARY_PORT   bind address (default 127.0.0.1:8765)
@@ -14,11 +14,11 @@ Environment variables:
 
 Secret files (EXPLOITS #25: a same-uid process can read the exec-time environment via /proc/<pid>/environ
 or `ps eww`, so judge runs must not put the seed, world secret or tokens in env vars). Each names a 0600 file
-read once at startup; a *_FILE var wins over its plain counterpart, which is then not needed:
-    CANARY_EPISODE_FILE         JSON {"tier": ..., "seed": ...}
-    CANARY_WORLD_SECRET_FILE    world secret for judge/held-out seeds (handed to canary.world in-process)
-    CANARY_LEDGER_TOKEN_FILE    grader token
-    CANARY_ADMIN_TOKEN_FILE     admin token
+read once at startup; CLI file flags and *_FILE vars win over plain counterparts, which are then not needed:
+    CANARY_EPISODE_FILE / --episode-file             JSON {"tier": ..., "seed": ...}
+    CANARY_WORLD_SECRET_FILE / --world-secret-file   world secret for judge/held-out seeds (handed to canary.world in-process)
+    CANARY_LEDGER_TOKEN_FILE / --ledger-token-file   grader token
+    CANARY_ADMIN_TOKEN_FILE                          admin token
 The plain env vars keep working for local dev.
 
 Design notes:
@@ -39,9 +39,16 @@ import json
 import logging
 import os
 import secrets
+import shutil
+import socket
+import subprocess
 import sys
+import tempfile
 import threading
+import time
+import urllib.request
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any
 
 import mcp.types as types
@@ -64,43 +71,94 @@ class ConfigError(ValueError):
     pass
 
 
-def _read_file_var(var: str, environ) -> str | None:
-    """Contents of the file named by env var `var` (stripped), or None if `var` is unset. Never logs contents."""
-    path = environ.get(var)
-    if not path:
-        return None
+def _read_secret_path(path: str | os.PathLike[str], label: str) -> str:
     try:
         mode = os.stat(path).st_mode
         with open(path) as fh:
             text = fh.read().strip()
     except OSError as exc:
-        raise ConfigError(f"{var}: cannot read file ({type(exc).__name__})") from None
+        raise ConfigError(f"{label}: cannot read file ({type(exc).__name__})") from None
     if mode & 0o077:
-        log.warning("%s is readable by group/others; chmod 600 it", var)
+        log.warning("%s is readable by group/others; chmod 600 it", label)
     if not text:
-        raise ConfigError(f"{var}: file is empty")
+        raise ConfigError(f"{label}: file is empty")
     return text
 
 
-def load_config(environ=None) -> dict:
-    """Server config from env vars and/or 0600 secret files (files win)."""
+def _read_file_var(var: str, environ) -> str | None:
+    """Contents of the file named by env var `var` (stripped), or None if `var` is unset. Never logs contents."""
+    path = environ.get(var)
+    if not path:
+        return None
+    return _read_secret_path(path, var)
+
+
+def _write_0600_file(path: str | os.PathLike[str], content: str) -> None:
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        os.fchmod(fd, 0o600)
+        os.write(fd, content.encode("utf-8"))
+    finally:
+        os.close(fd)
+
+
+def write_episode_files(
+    episode_file: str | os.PathLike[str],
+    tier: str,
+    seed: int,
+    ledger_token_out: str | os.PathLike[str] | None = None,
+    ledger_token: str | None = None,
+) -> str | None:
+    if not tier or not isinstance(tier, str):
+        raise ConfigError("episode tier is required")
+    try:
+        seed_int = int(seed)
+    except (TypeError, ValueError):
+        raise ConfigError("episode seed must be an integer") from None
+    _write_0600_file(episode_file, json.dumps({"tier": str(tier), "seed": seed_int}) + "\n")
+    if ledger_token_out is None:
+        return None
+    tok = ledger_token or secrets.token_hex(32)
+    _write_0600_file(ledger_token_out, tok + "\n")
+    return tok
+
+
+def load_config(
+    environ=None,
+    episode_file: str | None = None,
+    ledger_token_file: str | None = None,
+    world_secret_file: str | None = None,
+) -> dict:
+    """Server config from CLI file flags, 0600 secret files, and/or env vars (files win)."""
     environ = os.environ if environ is None else environ
     tier, seed = environ.get("CANARY_TIER", "easy"), environ.get("CANARY_SEED", "900000")
-    ep_text = _read_file_var("CANARY_EPISODE_FILE", environ)
+    ep_label = "--episode-file" if episode_file else "CANARY_EPISODE_FILE"
+    ep_text = _read_secret_path(episode_file, ep_label) if episode_file else _read_file_var("CANARY_EPISODE_FILE", environ)
     if ep_text is not None:
         try:
             obj = json.loads(ep_text)
             tier, seed = obj["tier"], obj["seed"]
         except Exception:
-            raise ConfigError("CANARY_EPISODE_FILE: expected JSON {\"tier\": ..., \"seed\": ...}") from None
+            raise ConfigError(f"{ep_label}: expected JSON {{\"tier\": ..., \"seed\": ...}}") from None
     try:
         seed = int(seed)
     except (TypeError, ValueError):
         raise ConfigError("episode seed must be an integer") from None
-    secret = _read_file_var("CANARY_WORLD_SECRET_FILE", environ)
+    secret = (
+        _read_secret_path(world_secret_file, "--world-secret-file")
+        if world_secret_file
+        else _read_file_var("CANARY_WORLD_SECRET_FILE", environ)
+    )
+    ledger_tok = (
+        (_read_secret_path(ledger_token_file, "--ledger-token-file") if ledger_token_file else _read_file_var("CANARY_LEDGER_TOKEN_FILE", environ))
+        or environ.get("CANARY_LEDGER_TOKEN")
+        or None
+    )
     return {"tier": str(tier), "seed": seed,
             "world_secret": secret.encode() if secret is not None else None,
-            "ledger_token": _read_file_var("CANARY_LEDGER_TOKEN_FILE", environ) or environ.get("CANARY_LEDGER_TOKEN") or None,
+            "ledger_token": ledger_tok,
             "admin_token": _read_file_var("CANARY_ADMIN_TOKEN_FILE", environ) or environ.get("CANARY_ADMIN_TOKEN") or None}
 
 
@@ -233,13 +291,162 @@ async def play_policy(url: str, policy, max_iters: int = 1000) -> list:
     return history
 
 
-# --------------------------------------------------------------------------- entrypoint
+STRIPPED_SERVER_ENV = (
+    "CANARY_SEED",
+    "CANARY_TIER",
+    "CANARY_LEDGER_TOKEN",
+    "CANARY_WORLD_SECRET",
+    "CANARY_ADMIN_TOKEN",
+    "CANARY_EPISODE_FILE",
+    "CANARY_LEDGER_TOKEN_FILE",
+    "CANARY_WORLD_SECRET_FILE",
+    "CANARY_ADMIN_TOKEN_FILE",
+    "CANARY_ALLOW_DEV",
+    "CANARY_HOST",
+    "CANARY_PORT",
+)
+
+
+def _free_port(host: str = "127.0.0.1") -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((host, 0))
+        return int(sock.getsockname()[1])
+
+
+def spawn_isolated_server(
+    tier: str,
+    seed: int,
+    allow_dev: bool = False,
+    host: str = "127.0.0.1",
+    port: int = 0,
+    world_secret: str | bytes | None = None,
+    timeout: float = 30.0,
+) -> tuple[subprocess.Popen, dict[str, Any]]:
+    tmpdir = Path(tempfile.mkdtemp(prefix="canary-mcp-"))
+    try:
+        os.chmod(tmpdir, 0o700)
+        ep_path = tmpdir / "episode.json"
+        tok_path = tmpdir / "ledger_token"
+        token = write_episode_files(ep_path, tier, seed, ledger_token_out=tok_path)
+        assert token is not None
+        ws_path: Path | None = None
+        if world_secret is not None:
+            ws_path = tmpdir / "world_secret"
+            ws_text = world_secret.decode("utf-8") if isinstance(world_secret, (bytes, bytearray)) else str(world_secret)
+            _write_0600_file(ws_path, ws_text + "\n")
+
+        actual_port = port or _free_port(host)
+        child_env = {k: v for k, v in os.environ.items() if k not in STRIPPED_SERVER_ENV}
+        repo_root = str(Path(__file__).resolve().parent.parent)
+        py_parts = [p for p in child_env.get("PYTHONPATH", "").split(os.pathsep) if p]
+        if repo_root not in py_parts:
+            child_env["PYTHONPATH"] = os.pathsep.join([repo_root, *py_parts])
+        child_env["CANARY_HOST"] = host
+        child_env["CANARY_PORT"] = str(actual_port)
+        child_env["CANARY_EPISODE_FILE"] = str(ep_path)
+        child_env["CANARY_LEDGER_TOKEN_FILE"] = str(tok_path)
+        if ws_path is not None:
+            child_env["CANARY_WORLD_SECRET_FILE"] = str(ws_path)
+        if allow_dev:
+            child_env["CANARY_ALLOW_DEV"] = "1"
+
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "canary.mcp_server"],
+            cwd=str(tmpdir),
+            env=child_env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except Exception:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        raise
+
+    def _stop_proc() -> str:
+        err = ""
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                _, err = proc.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                _, err = proc.communicate()
+        elif proc.stderr is not None and not proc.stderr.closed:
+            try:
+                err = proc.stderr.read()
+            finally:
+                proc.stderr.close()
+        return err or ""
+
+    def cleanup() -> None:
+        _stop_proc()
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    base = f"http://{host}:{actual_port}"
+    health_url = f"{base}/healthz"
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            with urllib.request.urlopen(health_url, timeout=1.0) as resp:
+                if resp.status == 200:
+                    break
+        except Exception:
+            pass
+        if proc.poll() is not None or time.monotonic() >= deadline:
+            err = _stop_proc()[-500:]
+            rc = proc.returncode
+            shutil.rmtree(tmpdir, ignore_errors=True)
+            raise RuntimeError(f"canary.mcp_server failed to start (rc={rc}): {err}".strip())
+        time.sleep(0.1)
+
+    info: dict[str, Any] = {
+        "host": host,
+        "port": actual_port,
+        "base": base,
+        "url": f"{base}/mcp",
+        "token": token,
+        "cleanup": cleanup,
+        "env": dict(child_env),
+        "episode_file": str(ep_path),
+        "ledger_token_file": str(tok_path),
+        "world_secret_file": str(ws_path) if ws_path is not None else None,
+    }
+    return proc, info
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m canary.mcp_server", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--play", metavar="AGENT", help="client mode: play a baseline/solver against --url")
     ap.add_argument("--url", default=None)
+    ap.add_argument("--episode-file", metavar="PATH", default=None,
+                    help="0600 JSON file {\"tier\": ..., \"seed\": ...}")
+    ap.add_argument("--ledger-token-file", metavar="PATH", default=None,
+                    help="0600 file holding the GET /ledger token")
+    ap.add_argument("--world-secret-file", metavar="PATH", default=None,
+                    help="0600 file holding the judge world secret (>= 16 bytes)")
+    ap.add_argument("--write-episode-file", metavar="PATH", default=None,
+                    help="helper mode: write 0600 episode JSON file (and optional token) and exit")
+    ap.add_argument("--tier", default=None, help="episode tier (used with --write-episode-file)")
+    ap.add_argument("--seed", type=int, default=None, help="episode seed (used with --write-episode-file)")
+    ap.add_argument("--ledger-token-out", metavar="PATH", default=None,
+                    help="with --write-episode-file: also write a fresh 0600 ledger token file")
     a = ap.parse_args(argv)
+    if a.write_episode_file:
+        if a.tier is None or a.seed is None:
+            print("canary.mcp_server: --write-episode-file requires --tier and --seed", file=sys.stderr)
+            return 2
+        try:
+            write_episode_files(a.write_episode_file, a.tier, a.seed, ledger_token_out=a.ledger_token_out)
+        except (ConfigError, OSError, ValueError) as exc:
+            msg = str(exc) if isinstance(exc, ConfigError) else type(exc).__name__
+            print(f"canary.mcp_server: cannot write secret files: {msg}", file=sys.stderr)
+            return 2
+        return 0
+    if a.tier is not None or a.seed is not None or a.ledger_token_out is not None:
+        print("canary.mcp_server: refusing to start: --tier, --seed, and --ledger-token-out require --write-episode-file",
+              file=sys.stderr)
+        return 2
     host = os.environ.get("CANARY_HOST", "127.0.0.1")
     port = int(os.environ.get("CANARY_PORT", "8765"))
     if a.play:
@@ -253,7 +460,11 @@ def main(argv: list[str] | None = None) -> int:
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     try:
-        cfg = load_config()
+        cfg = load_config(
+            episode_file=a.episode_file,
+            ledger_token_file=a.ledger_token_file,
+            world_secret_file=a.world_secret_file,
+        )
         if cfg["world_secret"] is not None:
             apply_world_secret(cfg["world_secret"])
         tier, ledger_token, admin_token = cfg["tier"], cfg["ledger_token"], cfg["admin_token"]

@@ -9,17 +9,22 @@ Deleting from os.environ at runtime does NOT help: /proc/<pid>/environ is the ex
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import secrets
 import socket
+import stat
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 import pytest
+
+from canary.mcp_server import spawn_isolated_server
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -95,3 +100,224 @@ def test_25_attack_model_reads_env_of_same_uid_process(tmp_path):
         assert marker in _proc_environ(p.pid)
     finally:
         p.terminate(); p.wait()
+
+
+def _http_get(url: str) -> tuple[int, dict | None]:
+    try:
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            return resp.status, json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        return exc.code, None
+
+
+def _call_mcp_tools(url: str) -> tuple[list[str], dict, dict]:
+    from mcp import Client
+
+    async def go():
+        async with Client(url) as client:
+            tools = [t.name for t in (await client.list_tools()).tools]
+            st = json.loads((await client.call_tool("status", {})).content[0].text)
+            emps = json.loads((await client.call_tool("list_employees", {})).content[0].text)
+            return tools, st, emps
+
+    return asyncio.run(go())
+
+
+def test_spawn_isolated_server_strips_env_and_serves_mcp_and_ledger(monkeypatch):
+    parent_seed = 900_005
+    parent_token = "parent-tok-" + secrets.token_hex(16)
+    parent_secret = "parent-ws-" + secrets.token_hex(16)
+    parent_admin = "parent-adm-" + secrets.token_hex(16)
+    monkeypatch.setenv("CANARY_SEED", str(parent_seed))
+    monkeypatch.setenv("CANARY_TIER", "easy")
+    monkeypatch.setenv("CANARY_LEDGER_TOKEN", parent_token)
+    monkeypatch.setenv("CANARY_WORLD_SECRET", parent_secret)
+    monkeypatch.setenv("CANARY_ADMIN_TOKEN", parent_admin)
+
+    seed = 900_019
+    proc, info = spawn_isolated_server("medium", seed)
+    ep_file = Path(info["episode_file"])
+    tok_file = Path(info["ledger_token_file"])
+    try:
+        assert stat.S_IMODE(ep_file.stat().st_mode) == 0o600
+        assert stat.S_IMODE(tok_file.stat().st_mode) == 0o600
+
+        child_env = info["env"]
+        forbidden_vars = {
+            "CANARY_SEED",
+            "CANARY_TIER",
+            "CANARY_LEDGER_TOKEN",
+            "CANARY_WORLD_SECRET",
+            "CANARY_ADMIN_TOKEN",
+        }
+        assert not (set(child_env) & forbidden_vars)
+        assert "CANARY_EPISODE_FILE" in child_env
+        assert "CANARY_LEDGER_TOKEN_FILE" in child_env
+
+        env_blob = "\n".join(f"{k}={v}" for k, v in child_env.items())
+        for needle in (
+            "CANARY_SEED",
+            "CANARY_WORLD_SECRET",
+            str(seed),
+            str(parent_seed),
+            info["token"],
+            parent_token,
+            parent_secret,
+            parent_admin,
+        ):
+            assert needle not in env_blob
+
+        leaked = _proc_environ(proc.pid)
+        if sys.platform.startswith("linux"):
+            proc_env_path = Path(f"/proc/{proc.pid}/environ")
+            assert proc_env_path.exists()
+            raw_entries = [
+                entry.decode(errors="replace")
+                for entry in proc_env_path.read_bytes().split(b"\0")
+                if entry
+            ]
+            proc_keys = {entry.split("=", 1)[0] for entry in raw_entries if "=" in entry}
+            assert not (proc_keys & forbidden_vars)
+            cmdline_path = Path(f"/proc/{proc.pid}/cmdline")
+            if cmdline_path.exists():
+                leaked = leaked + "\n" + cmdline_path.read_bytes().replace(b"\0", b" ").decode(errors="replace")
+
+        for needle in (
+            "CANARY_SEED",
+            "CANARY_TIER",
+            "CANARY_WORLD_SECRET",
+            "CANARY_LEDGER_TOKEN=",
+            str(seed),
+            str(parent_seed),
+            info["token"],
+            parent_token,
+            parent_secret,
+            parent_admin,
+        ):
+            assert needle not in leaked
+
+        tools, st, emps = _call_mcp_tools(info["url"])
+        assert "status" in tools and "accuse" in tools and len(tools) == 13
+        assert st["ok"] is True and emps["ok"] is True
+        assert str(seed) not in json.dumps([st, emps])
+
+        assert _http_get(f"{info['base']}/ledger")[0] == 403
+        assert _http_get(f"{info['base']}/ledger?token={parent_token}")[0] == 403
+        code, ledger = _http_get(f"{info['base']}/ledger?token={info['token']}")
+        assert code == 200 and ledger is not None
+        assert ledger["tier"] == "medium" and isinstance(ledger["ledger"], list)
+    finally:
+        info["cleanup"]()
+
+    assert proc.poll() is not None
+    assert not ep_file.exists() and not tok_file.exists()
+
+
+def test_spawn_isolated_server_allow_dev_flag():
+    with pytest.raises(RuntimeError):
+        spawn_isolated_server("easy", 7, allow_dev=False)
+
+    proc, info = spawn_isolated_server("easy", 7, allow_dev=True)
+    try:
+        assert "CANARY_SEED" not in info["env"]
+        assert "CANARY_WORLD_SECRET" not in info["env"]
+        assert info["token"] not in _proc_environ(proc.pid)
+        code, ledger = _http_get(f"{info['base']}/ledger?token={info['token']}")
+        assert code == 200 and ledger is not None and ledger["tier"] == "easy"
+    finally:
+        info["cleanup"]()
+
+
+def test_cli_write_episode_file_and_file_flags(tmp_path):
+    seed = 900_021
+    world_secret = "cli-ws-" + secrets.token_hex(16)
+    ep_path = tmp_path / "episode.json"
+    tok_path = tmp_path / "ledger_token"
+    ws_path = tmp_path / "world_secret"
+    ws_path.write_text(world_secret + "\n")
+    ws_path.chmod(0o600)
+
+    clean_env = {k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}
+    clean_env["PYTHONPATH"] = str(ROOT)
+
+    bad = subprocess.run(
+        [sys.executable, "-m", "canary.mcp_server", "--tier", "medium", "--seed", str(seed)],
+        cwd=tmp_path,
+        env=clean_env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert bad.returncode == 2
+
+    wr = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "canary.mcp_server",
+            "--write-episode-file",
+            str(ep_path),
+            "--tier",
+            "medium",
+            "--seed",
+            str(seed),
+            "--ledger-token-out",
+            str(tok_path),
+        ],
+        cwd=tmp_path,
+        env=clean_env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert wr.returncode == 0
+    assert str(seed) not in (wr.stdout + wr.stderr)
+    assert stat.S_IMODE(ep_path.stat().st_mode) == 0o600
+    assert stat.S_IMODE(tok_path.stat().st_mode) == 0o600
+    assert json.loads(ep_path.read_text()) == {"tier": "medium", "seed": seed}
+    token = tok_path.read_text().strip()
+    assert len(token) >= 32 and token not in (wr.stdout + wr.stderr)
+
+    port = _free_port()
+    srv_env = dict(clean_env, CANARY_HOST="127.0.0.1", CANARY_PORT=str(port))
+    proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "canary.mcp_server",
+            "--episode-file",
+            str(ep_path),
+            "--ledger-token-file",
+            str(tok_path),
+            "--world-secret-file",
+            str(ws_path),
+        ],
+        cwd=tmp_path,
+        env=srv_env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        deadline = time.time() + 30
+        while True:
+            try:
+                urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz", timeout=1)
+                break
+            except Exception:
+                if proc.poll() is not None or time.time() > deadline:
+                    err = proc.stderr.read()[-500:] if proc.stderr else ""
+                    pytest.fail(f"server did not start: {err}")
+                time.sleep(0.1)
+
+        leaked = _proc_environ(proc.pid)
+        for needle in ("CANARY_SEED", "CANARY_WORLD_SECRET", str(seed), token, world_secret):
+            assert needle not in leaked
+
+        tools, st, _ = _call_mcp_tools(f"http://127.0.0.1:{port}/mcp")
+        assert len(tools) == 13 and st["ok"] is True
+        code, ledger = _http_get(f"http://127.0.0.1:{port}/ledger?token={token}")
+        assert code == 200 and ledger is not None and ledger["tier"] == "medium"
+    finally:
+        proc.terminate()
+        proc.communicate(timeout=10)

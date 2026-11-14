@@ -21,7 +21,7 @@ eval-full:
 harbor:
 	$(PY) -m harbor.build --seeds 0..19 --seat $(SEAT)
 
-.PHONY: probes test eval eval-full harbor exploits key-check cheat-corpus
+.PHONY: probes frontier-replay-run test eval eval-full harbor exploits key-check cheat-corpus
 
 exploits:
 	$(PY) -m redteam.report
@@ -38,3 +38,6 @@ cheat-eval:
 .PHONY: demo
 demo:
 	@echo "http://localhost:8000/index.html"; $(PY) -m http.server 8000 -d web
+
+frontier-replay-run:
+	$(PY) -m lab.frontier_cache replay $(RUN)

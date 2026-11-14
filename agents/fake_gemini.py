@@ -18,4 +18,6 @@ def install(monkeypatch, plans):
     fm = FakeModel(plans)
     monkeypatch.setattr(gemini, "chat", fm)
     monkeypatch.setenv("GEMINI_API_KEY", "fake")
+    monkeypatch.setenv("SLEEPER_LIVE", "1")
+    monkeypatch.setenv("SLEEPER_LIVE_SLEEPER", "1")
     return fm

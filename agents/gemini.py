@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import os
@@ -6,8 +7,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / ".cache" / "gemini"
+USAGE_FILE = "usage.jsonl"
 DEFAULT_MODEL = "gemini-2.5-flash"
-_usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0}
+_usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0, "api_errors": 0}
 _client = None
 
 
@@ -19,7 +21,7 @@ class OfflineCacheMiss(Exception):
     pass
 
 
-def _load_env():
+def load_env():
     for p in (Path.home() / "arena-agents" / ".env", ROOT / ".env"):
         if p.is_file():
             for line in p.read_text().splitlines():
@@ -29,7 +31,10 @@ def _load_env():
                     os.environ.setdefault(k.strip(), v.strip().strip("\"'"))
 
 
-_load_env()
+def enable_live():
+    load_env()
+    os.environ["SLEEPER_LIVE"] = "1"
+    return enabled()
 
 
 ARENA_ROLE = {"staff": "DEFENDER", "defender": "DEFENDER", "sleeper": "ATTACKER", "attacker": "ATTACKER", "reference": "REFERENCE", "procedure": "REFERENCE"}
@@ -48,7 +53,7 @@ def temp_for(role):
 
 
 def enabled():
-    return bool(os.environ.get("GEMINI_API_KEY")) or os.environ.get("SLEEPER_OFFLINE") == "1"
+    return (os.environ.get("SLEEPER_LIVE") == "1" and bool(os.environ.get("GEMINI_API_KEY"))) or os.environ.get("SLEEPER_OFFLINE") == "1"
 
 
 def usage():
@@ -120,7 +125,10 @@ def _contents(messages):
         for img in m.get("images") or []:
             parts.append(types.Part.from_bytes(data=Path(img).read_bytes(), mime_type=_mime(img)))
         for c in m.get("tool_calls") or []:
-            parts.append(types.Part.from_function_call(name=c["name"], args=c.get("args") or {}))
+            fp = types.Part.from_function_call(name=c["name"], args=c.get("args") or {})
+            if c.get("sig"):
+                fp.thought_signature = base64.b64decode(c["sig"])
+            parts.append(fp)
         for r in m.get("tool_results") or []:
             parts.append(types.Part.from_function_response(name=r["name"], response={"result": r["result"]}))
         role = "model" if m["role"] in ("assistant", "model") else "user"
@@ -163,6 +171,7 @@ def _generate(model, system, messages, tools, temperature, seed):
                 time.sleep(delay)
                 delay = min(delay * 2, 30)
                 continue
+            _usage["api_errors"] += 1
             raise
 
 
@@ -171,7 +180,7 @@ def _parse(resp):
     for cand in (resp.candidates or [])[:1]:
         for p in (cand.content.parts if cand.content and cand.content.parts else []):
             if getattr(p, "function_call", None):
-                calls.append({"name": p.function_call.name, "args": dict(p.function_call.args or {})})
+                calls.append({"name": p.function_call.name, "args": dict(p.function_call.args or {}), **({"sig": base64.b64encode(p.thought_signature).decode()} if getattr(p, "thought_signature", None) else {})})
             elif getattr(p, "text", None):
                 text += p.text
     return {"text": text, "tool_calls": calls}
@@ -197,7 +206,7 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
         _usage["in_tokens"] += um.prompt_token_count or 0
         _usage["out_tokens"] += um.candidates_token_count or 0
         CACHE.mkdir(parents=True, exist_ok=True)
-        with open(CACHE / "usage.jsonl", "a") as f:
+        with open(CACHE / USAGE_FILE, "a") as f:
             f.write(json.dumps({"model": model, "in": um.prompt_token_count or 0, "out": um.candidates_token_count or 0}) + "\n")
     out = _parse(resp)
     CACHE.mkdir(parents=True, exist_ok=True)

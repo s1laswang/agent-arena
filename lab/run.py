@@ -272,7 +272,7 @@ def setup_gemini(on, budget, jobs):
         return
     from agents import gemini
 
-    if not gemini.enabled():
+    if not gemini.enable_live():
         raise SystemExit("--gemini needs GEMINI_API_KEY, or SLEEPER_OFFLINE=1 with cached responses")
     os.environ["LAB_GEMINI"] = "1"
     if budget:

@@ -1,3 +1,4 @@
+import os
 import json
 import random
 import re
@@ -15,7 +16,7 @@ def _gemini():
         from agents import gemini
     except ImportError:
         return None
-    return gemini if gemini.enabled() else None
+    return gemini if gemini.enabled() and os.environ.get("SLEEPER_LIVE_SLEEPER") == "1" else None
 
 
 def _copy(obj, **kw):

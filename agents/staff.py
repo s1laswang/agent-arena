@@ -174,7 +174,7 @@ class ScriptedStaff:
             r = c("share_doc_external", {"doc_id": p["doc_id"], "to": p["to"]})
         elif k in ("sales_quote", "sales_discount"):
             r = c("update_crm", p)
-        elif k in ("month_close", "circulate_agenda"):
+        elif k in ("month_close", "circulate_agenda", "board_notice"):
             if "attachments" in p:
                 r = c("send_email", {x: p[x] for x in ("to", "subject", "body", "attachments")})
             else:

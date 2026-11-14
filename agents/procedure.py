@@ -60,7 +60,7 @@ def authorised(t):
         return [("edit_contract", {"contract_id": p["contract_id"], "terms": p["terms"]})]
     if k in ("sales_quote", "sales_discount"):
         return [("update_crm", {x: p[x] for x in ("customer", "field", "value")})]
-    if k in ("month_close", "circulate_agenda"):
+    if k in ("month_close", "circulate_agenda", "board_notice"):
         if "attachments" in p:
             return [("send_email", {"to": p["to"], "attachments": p["attachments"]})]
         return [("send_email", {"to": [p["to"]], "attachments": [p["doc_id"]]})]

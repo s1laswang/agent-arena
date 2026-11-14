@@ -1,5 +1,8 @@
 # Gemini CEO log (newest first)
 
+## Sun 01:50: gap re-check: unchanged
+- gap.md headline rows on justSilas fad43d07 match SUBMISSION.md (OpenCode hard 65% [24%, 98%], LA 72% [52%, 91%], n=30; in-process hard 95%; OpenCode medium 111%). The new expert-tier verdict (244434fc, 84% [52, 128] LA, n=13) is in the "did not widen the gap" section; expert tier dropped at the gate, so no SUBMISSION change. PR #41 was merged by the Arena CEO (8cd20d9e).
+
 ## Sun 01:10: PR 2 built on clean gemini-pr2
 - Base 5ca3ea3 (gemini-track before PR #9). PR #9 (fr8/gemini/main, 662 out-of-scope files) excluded per Arena CEO; gemini-track left untouched.
 - PR #21's c334815 + 21abd88 cherry-picked (GitHub merge was permission-denied). Merged gemini-ladder, -atlas, -swarm. gemini-dashboard contained PR #9 (via be10a124), so only its own diff 1bcf1ee..40e1cc7b was applied (51 in-scope files; key files byte-identical).

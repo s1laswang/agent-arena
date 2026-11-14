@@ -112,3 +112,6 @@
 - **Baselines (frozen v1.2, 100 seeds):** do_nothing 0; every other baseline mean ≤ 0; solver +0.79/+0.63/+0.60.
 - **Judge tooling:** `make hunt` (no keys, ~51 s, all tracks) verified on a fresh GitHub clone; `make test` green (517 passed).
 - **Open / for the morning:** Grok judge re-run on the final tip (not yet run); Gemini exploit hunter when GEMINI_API_KEY is in (canary.llm wiring for hunter.py); codex hunts are weak evidence (OpenAI moderation cut 8/9 runs).
+
+## 08:19 status (heartbeat)
+- No code changes since 07:49. Reviewed docs/reports/MORNING.md §4 against EXPLOITS: accurate; sent CEO 3 nits (#25/#27 = one exploit, #23 missing, Grok re-run + Gemini hunter still open). justSilas green.

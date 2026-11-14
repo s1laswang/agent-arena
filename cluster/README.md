@@ -11,3 +11,7 @@ Everything lives in `~/momin/sleeper` on `ssh freighter`. Never run training on 
 Rules: partition gpu, `--gres=gpu:1`, always `--time`, V100 so fp16 only (no bf16, no FlashAttention-2), only cancel your own jobs. Module `pytorch-volta` runs commands via `pytorch-exec`. Models are pre-downloaded on the login node into `~/momin/sleeper/models/`.
 
 Submit with env: `ssh freighter 'cd ~/momin/sleeper && MODEL=... sbatch --export=ALL cluster/train.sbatch'` (ask lead-lab first). HF_HOME is ~/momin/sleeper/hf, offline mode, checkpoints adapter-only in runs/<jobid>. eval.sbatch expects `train.eval` with --model --adapter --out (confirm with lab-train).
+
+## Kaggle (main training path)
+
+`cluster/kaggle/run.sh`: uploads code snapshot + train/data/*.jsonl as private datasets, runs kernel mominaldahdouh/sleeper-train, fetches to results/train/<ts>/. Env: MODELS (space separated, one per GPU), SFT_ARGS, EVAL_ARGS, DECIDE_ARGS, DATA_FILE, REF. Kernel writes metrics.json with all rows. Quota 30 GPU h/week, wall minutes per run appended to cluster/kaggle/usage.log. Used so far: about 40 min wall (rough, dry runs approximate; 2 GPUs may count double).

@@ -2,30 +2,58 @@ import argparse
 import json
 import os
 
-from lab.run import run
+from lab.results import load_days, summarise
+from lab.run import run, setup_gemini
 
+GEMINI_SEAT_RUNS = 46
 ORDER = ["oracle", "reference", "staff", "do_nothing", "stop_early", "quarantine_all", "refuse_all"]
 SEAT_AGENTS = ["staff", "reference", "oracle", "do_nothing"]
-HEAD = ["| team | kind | model | reward | pass^1 | sleeper success | false accusation | tickets | gap vs reference |", "|---|---|---|---|---|---|---|---|---|"]
+HEAD = ["| team | kind | model | n winnable days | reward | pass^1 | pass^k | sleeper success | false accusation | tickets | gap vs reference |", "|---|---|---|---|---|---|---|---|---|---|---|"]
 
 
 def row(name, s, ref):
     if s is None:
-        return f"| {name} | NOT FOUND | | | | | | | |"
+        return f"| {name} | NOT FOUND | | | | | | | | | |"
     gap = "" if ref is None else f"{ref - s['reward_mean']:.3f}"
-    return f"| {name} | {s['agent_kind']} | {s['model']} | {s['reward_mean']:.3f} | {s.get('pass^1', 0):.3f} | {s['sleeper_success_rate']:.3f} | {s['false_accusation_rate']:.3f} | {s['ticket_completion']:.3f} | {gap} |"
+    return f"| {name} | {s['agent_kind']} | {s['model']} | {s['n_winnable_days']} | {s['reward_mean']:.3f} | {s.get('pass^1', 0):.3f} | {passk(s)} | {s['sleeper_success_rate']:.3f} | {s['false_accusation_rate']:.3f} | {s['ticket_completion']:.3f} | {gap} |"
+
+
+def passk(s):
+    if s["deterministic"]:
+        return "= pass^1 (deterministic)"
+    ks = sorted((k for k in s if k.startswith("pass^") and k != "pass^1"), key=lambda k: int(k[5:]))
+    return ", ".join(f"{k} {s[k]:.3f}" for k in ks) or "n/a"
+
+
+def group(k):
+    return k.split("[", 1)[1] if "[" in k else ""
 
 
 def table(summaries):
-    ref = (summaries.get("reference") or {}).get("reward_mean")
-    return "\n".join(HEAD + [row(t, s, ref) for t, s in summaries.items()]) + "\n"
+    refs = {group(k): v["reward_mean"] for k, v in summaries.items() if k.startswith("reference") and v}
+    return "\n".join(HEAD + [row(t, s, refs.get(group(t))) for t, s in summaries.items()]) + "\n"
 
 
 def attempt(*a, **kw):
     try:
-        return run(*a, **kw)[1]
+        return run(*a, **kw)
     except Exception:
         return None
+
+
+def subset(res, pred):
+    if res is None:
+        return None
+    rows = [r for r in load_days(os.path.join(res[0], "days.jsonl")) if pred(r)]
+    if not rows:
+        return None
+    return summarise(rows, res[1]["team"], res[1]["agent_kind"], res[1]["model"])
+
+
+def warn(label, s):
+    if s and s["reward_mean"] < 1.0:
+        return f"WARNING: oracle reward {s['reward_mean']:.3f} < 1.0 on winnable days ({label}, n_days {s['n_days']})\n"
+    return ""
 
 
 def main(argv=None, runner=None):
@@ -35,19 +63,34 @@ def main(argv=None, runner=None):
     p.add_argument("--trials", type=int, default=3)
     p.add_argument("--seat", default="controller")
     p.add_argument("--jobs", type=int, default=1)
+    p.add_argument("--gemini", action="store_true")
+    p.add_argument("--budget-calls", type=int, default=0)
     p.add_argument("--out", default="results")
     p.add_argument("--web-out", default="web/results/eval")
     a = p.parse_args(argv)
+    setup_gemini(a.gemini, a.budget_calls, a.jobs)
+    if a.gemini:
+        from agents import gemini
+
+        est = a.days * a.trials * gemini.estimate_calls(seats=GEMINI_SEAT_RUNS)
+        print(f"estimated Gemini calls (upper bound, cache hits are free): {est}, budget {a.budget_calls or 'none'}", flush=True)
     kw = {"runner": runner} if runner else {}
     kw["jobs"] = a.jobs
     runs = os.path.join(a.out, "runs")
-    summaries = {t: attempt(t, a.days, a.trials, day_start=a.day_start, out=runs, **kw) for t in ORDER}
-    seat = {g: attempt("staff", a.days, a.trials, a.seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}
+    wins = lambda r: r.get("winnable", True)
+    full = {t: attempt(t, a.days, a.trials, day_start=a.day_start, out=runs, **kw) for t in ORDER}
+    seatruns = {g: attempt("staff", a.days, a.trials, a.seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}
+    summaries = {t: (v[1] if v else None) for t, v in full.items()}
+    need = {g: subset(v, lambda r: r.get("needs_tested_seat")) for g, v in seatruns.items()}
+    alld = {g: (v[1] if v else None) for g, v in seatruns.items()}
+    seat = {f"{g} [needs {a.seat}, n={need[g]['n_days']}]" if need[g] else f"{g} [needs {a.seat}, n=0]": need[g] for g in SEAT_AGENTS}
+    seat.update({f"{g} [all days, n={alld[g]['n_days']}]" if alld[g] else f"{g} [all days]": alld[g] for g in SEAT_AGENTS})
+    warns = warn("all 8 seats", subset(full["oracle"], wins)) + warn(f"{a.seat} seat, all days", subset(seatruns["oracle"], wins)) + warn(f"{a.seat} seat, needs tested seat", subset(seatruns["oracle"], lambda r: wins(r) and r.get("needs_tested_seat")))
     d = os.path.join(a.out, "eval")
     os.makedirs(d, exist_ok=True)
     with open(os.path.join(d, "summary.json"), "w") as f:
         json.dump({"all_seats": summaries, "seat": {a.seat: seat}}, f, indent=2, sort_keys=True)
-    md = "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat)
+    md = warns + ("\n" if warns else "") + "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat)
     with open(os.path.join(d, "gap.md"), "w") as f:
         f.write(md)
     if a.web_out:

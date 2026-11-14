@@ -18,7 +18,8 @@ class Policy:
 
     def act(self, system, seat, history, header):
         msgs = prompt(system, seat, history, header)
-        ids = self.tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt").to(self.dev)
+        text = self.tok.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False)
+        ids = self.tok(text, return_tensors="pt", add_special_tokens=False)["input_ids"].to(self.dev)
         with self.torch.no_grad():
             out = self.model.generate(ids, max_new_tokens=self.max_new, do_sample=False)
         return parse_call(self.tok.decode(out[0, ids.shape[1]:], skip_special_tokens=True))
@@ -27,7 +28,8 @@ def parse_call(text):
     m = re.search(r"\{.*\}", text, re.S)
     try:
         d = json.loads(m.group(0))
-        return {"tool": d["tool"], "args": d.get("args", {})}
+        args = d.get("args", {})
+        return {"tool": str(d["tool"]), "args": args if isinstance(args, dict) else {}}
     except Exception:
         return {"tool": "end_turn", "args": {}}
 
@@ -37,14 +39,17 @@ class LocalSeat:
         self.system = system
         self.budget = budget
         self.hist = []
+        self.n = 0
 
     def turn(self, seat, view, tools, call):
-        n = 0
-        while n < self.budget:
+        while self.n < self.budget:
             c = self.p.act(self.system, seat, self.hist, view)
-            n += 1
-            eff = call(c["tool"], c["args"])
+            self.n += 1
+            try:
+                eff = call(c["tool"], c["args"])
+            except Exception as e:
+                eff = {"ok": False, "error": str(e)[:200]}
             self.hist.append({**c, "effect": eff})
             if c["tool"] == "end_turn":
                 break
-        return {"calls": n}
+        return {"calls": self.n}

@@ -403,6 +403,114 @@ def figures(rows: list[dict], ref_rows: list[dict], tags: dict, out: Path) -> li
     return written
 
 
+SERVED_AS = {"gemini-3.5-flash": "gemini-3.6-flash"}  # requested id -> API-served modelVersion (see PRICES note)
+FRONTIER_TITLE = "Thinking is a dial along the competence-per-dollar frontier (Canary v1.4 {tier})"
+
+
+def _short(model: str) -> str:
+    s = model.replace("gemini-", "")
+    return f"{s} (served {SERVED_AS[model].replace('gemini-', '')})" if model in SERVED_AS else s
+
+
+def frontier_points(rows: list[dict], gemma_rows: list[dict] | None, tier: str) -> list[dict]:
+    """One point per cell on `tier`: % of the solver (paired, 95% CI) vs list-price $ per episode (None = no list price)."""
+    pts = []
+    for r, kind in [(r, "gemini") for r in rows] + [(r, "gemma") for r in gemma_rows or []]:
+        if r["tier"] != tier or r["ratio"] != r["ratio"]:
+            continue
+        imported = r["source"].startswith("import")
+        cost = r["cost_per_ep"] if r["cost_per_ep"] == r["cost_per_ep"] and r["cost_per_ep"] > 0 else None
+        pts.append({"model": r["model"], "level": r["level"], "tier": tier, "n": r["n"], "kind": kind,
+                    "imported": imported, "cost_per_ep_usd": cost, "ratio": r["ratio"],
+                    "ratio_lo": None if r["ratio_lo"] != r["ratio_lo"] else r["ratio_lo"],
+                    "ratio_hi": None if r["ratio_hi"] != r["ratio_hi"] else r["ratio_hi"],
+                    "served_model_versions": r.get("model_versions") or [],
+                    "label": (f"{r['model']} via Gemini API (hosted Gemma)" if kind == "gemma" else
+                              f"{_short(r['model'])} {r['level']}" + (" (in-process, imported)" if imported else ""))})
+    return pts
+
+
+def frontier(rows: list[dict], gemma_rows: list[dict] | None, out: Path, tiers=TIERS) -> list[str]:
+    """frontier.png (hard) [+ frontier_<tier>.png] and frontier.json: the headline competence-per-dollar chart."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return []
+    colors = dict(zip(MODEL_ORDER, ["#9aa5b1", "#5b8def", "#1f4fbf", "#f2a541", "#d9603b", "#8e1b1b"]))
+    written, doc = [], {"title": {}, "x": "list-price USD per episode (log)", "y": "score / solver on the same seeds "
+                        "(paired bootstrap 95% CI)", "points": {}}
+    for tier in tiers:
+        pts = frontier_points(rows, gemma_rows, tier)
+        if not pts:
+            continue
+        doc["points"][tier] = pts
+        doc["title"][tier] = FRONTIER_TITLE.format(tier=tier)
+        unpriced = [p for p in pts if p["cost_per_ep_usd"] is None]
+        fig = plt.figure(figsize=(10, 6.2), constrained_layout=True)
+        gs = fig.add_gridspec(1, 2, width_ratios=[1, 9] if unpriced else [0.001, 9])
+        ax = fig.add_subplot(gs[1])
+        ax0 = fig.add_subplot(gs[0], sharey=ax)
+        err = lambda p: ([[max(0, p["ratio"] - p["ratio_lo"])], [max(0, p["ratio_hi"] - p["ratio"])]]  # noqa: E731
+                         if p["ratio_lo"] is not None else None)
+        models = [m for m in MODEL_ORDER if any(p["model"] == m and p["kind"] == "gemini" and not p["imported"]
+                                                    for p in pts)]
+        for m in models:
+            line = sorted([p for p in pts if p["model"] == m and p["kind"] == "gemini" and not p["imported"]
+                           and p["cost_per_ep_usd"]], key=lambda p: LEVEL_ORDER.index(p["level"]))
+            ax.plot([p["cost_per_ep_usd"] for p in line], [p["ratio"] for p in line], "-", color=colors.get(m),
+                    lw=1.4, alpha=0.8, label=_short(m) + ": " + " → ".join(p["level"] for p in line))
+            for p in line:
+                ax.errorbar(p["cost_per_ep_usd"], p["ratio"], yerr=err(p), fmt="o", color=colors.get(m), ms=5,
+                            capsize=2, lw=0.8)
+                ax.annotate(p["level"], (p["cost_per_ep_usd"], p["ratio"]), fontsize=6.5, xytext=(4, 3),
+                            textcoords="offset points", color=colors.get(m))
+        for p in [p for p in pts if p["imported"] and p["cost_per_ep_usd"]]:
+            ax.errorbar(p["cost_per_ep_usd"], p["ratio"], yerr=err(p), fmt="D", mfc="white", color=colors.get(p["model"], "k"),
+                        ms=7, capsize=2, lw=0.8, label=f"{_short(p['model'])} default (in-process measurement, imported)")
+        gm = ["s", "^", "v", "P"]
+        for i, p in enumerate(unpriced):
+            ax0.errorbar(i, p["ratio"], yerr=err(p), fmt=gm[i % len(gm)], color="#2e7d32", ms=8, capsize=2, lw=0.8)
+            ax.plot([], [], gm[i % len(gm)], color="#2e7d32", ms=8, label=p["label"] + " (no list price; left strip)")
+        ax0.set_xlim(-0.6, max(0.6, len(unpriced) - 0.4))
+        ax0.set_xticks([])
+        ax0.set_xlabel("no list\nprice", fontsize=7)
+        ax0.set_ylabel("score / solver, same seeds (95% CI)")
+        if not unpriced:
+            ax0.set_axis_off()
+            ax.set_ylabel("score / solver, same seeds (95% CI)")
+        for a_ in (ax0, ax):
+            a_.axhline(1.0, ls="--", color="k", lw=0.9)
+            a_.axhline(0.0, ls=":", color="grey", lw=0.8)
+        ax.set_xscale("log")
+        ax.set_xlabel("list-price USD per episode (log)")
+        ylo = min([p["ratio_lo"] if p["ratio_lo"] is not None else p["ratio"] for p in pts] + [-0.2])
+        yhi = max([p["ratio_hi"] if p["ratio_hi"] is not None else p["ratio"] for p in pts] + [1.3])
+        ax.set_ylim(max(ylo, -2.0) - 0.05, min(yhi, 2.0) + 0.05)
+        from matplotlib.ticker import PercentFormatter
+        ax.yaxis.set_major_formatter(PercentFormatter(1.0))
+        ax.plot([], [], "--", color="k", lw=0.9, label="reference solver (100%)")
+        ax.plot([], [], ":", color="grey", lw=0.8, label="do-nothing (0%)")
+        if unpriced:
+            ax.tick_params(labelleft=False)
+        ax.legend(fontsize=7, loc="lower right", framealpha=0.9)
+        fig.suptitle(doc["title"][tier], fontsize=11)
+        ns = sorted({p["n"] for p in pts})
+        served = sorted({v for p in pts for v in p["served_model_versions"]})
+        note = (f"n per point (paired seeds) = {', '.join(map(str, ns))} (exact n per point in frontier.json). "
+                f"Dashed line = reference solver (100%); dotted = do-nothing (0). Requested gemini-3.5-flash is served "
+                f"as gemini-3.6-flash. API-served model versions: {', '.join(served) or '–'}. Costs: list-price USD from "
+                f"token counts (PRICES in canary/gemini/ladder_report.py). Error bars clipped to the axis at ±200%.")
+        fig.text(0.01, -0.035, note, fontsize=6.5, wrap=True, ha="left", va="top")
+        name = "frontier.png" if tier == "hard" else f"frontier_{tier}.png"
+        fig.savefig(out / name, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        written.append(name)
+    (out / "frontier.json").write_text(json.dumps(_nan_to_none(doc), indent=1) + "\n")
+    return written
+
+
 # --------------------------------------------------------------------------- markdown
 def _f(x, nd=3):
     return "–" if x is None or x != x else f"{x:+.{nd}f}" if nd == 3 else f"{x:.{nd}f}"
@@ -420,7 +528,11 @@ def to_md(doc: dict) -> str:
     rows, ref = doc["rows"], doc["reference"]
     head = Path(doc.get("headline_file") or "")
     hl = head.read_text().rstrip() if head.is_file() else headline(rows, doc.get("tags") or {})
-    L = [f"# Gemini Ladder (Canary v1.4)", "", hl, ""] + [
+    figs = doc.get("figures") or []
+    chart = [f"![{FRONTIER_TITLE.format(tier='hard')}](frontier.png)", "",
+             "Hard tier. Medium tier: [frontier_medium.png](frontier_medium.png). Points and n: frontier.json.", ""] \
+        if "frontier.png" in figs else []
+    L = [f"# Gemini Ladder (Canary v1.4)", "", hl, ""] + chart + [
          f"Generated {doc['generated_at']} at git `{doc['git_sha'][:10]}` from `{doc['runs']}`. "
          f"{doc['episodes']} valid Gemini episodes in {len(rows)} cells; ledger: {doc['ledger']['calls']} calls, "
          f"{doc['ledger']['run_ids']} run ids, list price ${doc['ledger']['cost_usd_priced']:.2f}.", "",
@@ -478,6 +590,7 @@ def to_md(doc: dict) -> str:
                 L.append(f"| {t} | " + " | ".join(f"{v:.3f} ({r:.0%} eps)" for v, r in zip(vals, rates))
                          + f" | {_f(delta)} |")
             L.append("")
+    L += gemma_md(doc.get("gemma"))
     if doc.get("probe"):
         acc = defaultdict(list)
         for r in doc["probe"]:
@@ -488,6 +601,41 @@ def to_md(doc: dict) -> str:
              [f"| {m} | {', '.join(v)} |" for m, v in acc.items()] + [""]
     L += [f"Figures: {', '.join(doc['figures'])}. Data: ladder.json (rows, tags, ledger run ids).", ""]
     return "\n".join(L)
+
+
+GEMMA_LABEL = "via Gemini API (hosted Gemma)"
+
+
+def gemma_md(g: dict | None) -> list[str]:
+    """The open-weight Gemma section: same LLMPolicy, same v1.4 dev seeds and solver pairing as the Gemini cells."""
+    if not g or not g.get("rows"):
+        return []
+    ids = g["ledger_run_ids"]
+    L = ["## Open-weight Gemma (hosted Gemma via the Gemini API)", "",
+         "Gemma 4 open-weight models served by Google's hosted Gemini API (not self-hosted), played by the same "
+         "`LLMPolicy` with native function calling on the same v1.4 dev seeds; ratios are paired against the solver "
+         f"on the same seeds. Gemma gets no thinking config (level `default`). {g['episodes']} valid episodes from "
+         f"`{g['runs']}`; ledger: {g['ledger']['calls']} calls, {g['ledger']['errors']} errors, {len(ids)} run ids "
+         f"(e.g. {', '.join(ids[:2]) or '–'}). $/ep is not shown: our price table has no hosted-Gemma list price.", ""]
+    for tier in TIERS:
+        tr = [r for r in g["rows"] if r["tier"] == tier]
+        if not tr:
+            continue
+        L += [f"**{tier}**", "", "| model | n | score ± 95% CI | acc. | accuse day | solver, same seeds | "
+              "**score / solver [95% CI]** | paired diff ± CI | luck-adj. / solver | calls/ep | min/ep |",
+              "|---|---|---|---|---|---|---|---|---|---|---|"]
+        for r in tr:
+            L.append(f"| {r['model']} {GEMMA_LABEL} | {r['n']} | {_f(r['mean'])} ± {_f(r['ci'], 2)} | "
+                     f"{r['accuracy']:.2f} | {_f(r['accuse_day'], 1)} | {_f(r['solver_same_seeds'])} | "
+                     f"**{_pct(r, 'ratio')}** | {_f(r['diff'])} ± {_f(r['diff_ci'], 2)} | {_pct(r, 'luck_adj_ratio')} | "
+                     f"{_f(r['calls_per_ep'], 0)} | {_f(r['wall_min_per_ep'], 1)} |")
+        L.append("")
+    fps = sorted({t for r in g["rows"] for t in r["code_fingerprints"] if t})
+    mv = sorted({t for r in g["rows"] for t in r["model_versions"]})
+    shas = sorted({t for r in g["rows"] for t in r["launch_git_shas"] if t})
+    L += [f"Gemma provenance: launch commits {', '.join(x[:10] for x in shas)}; code fingerprints {', '.join(fps)}; "
+          f"API-served model versions {', '.join(mv) or '–'}.", ""]
+    return L
 
 
 def _pc(r) -> str:
@@ -511,7 +659,7 @@ def headline(rows: list[dict], tags: dict) -> str:
         cost = f"${min(a['cost_per_ep'], b['cost_per_ep']):.2f}–{max(a['cost_per_ep'], b['cost_per_ep']):.2f} per episode"
         if carbon:
             cost += f", versus ${carbon[0]:.2f} for gemini-4-carbon at high thinking"
-        out.append(f"> **gemini-3.5-flash with medium or high thinking {verb}:** {_pc(a)} and {_pc(b)} of the solver "
+        out.append(f"> **gemini-3.5-flash (requested ID; the API serves gemini-3.6-flash) with medium or high thinking {verb}:** {_pc(a)} and {_pc(b)} of the solver "
                    f"on the same seeds, {k}/{a['n'] + b['n']} correct accusations, {cost}.")
     lite = [r for (m, _, _), r in R.items() if m == "gemini-3.1-flash-lite"]
     if lite:
@@ -569,6 +717,10 @@ def main(argv=None) -> int:
     ap.add_argument("--no-figures", action="store_true")
     ap.add_argument("--export", default=None, help="also write <dir>/ladder_episodes.jsonl.gz and ladder_ledger.jsonl.gz "
                     "(valid ladder episodes + feature=ladder ledger rows; --runs/--ledger can read them back)")
+    ap.add_argument("--gemma-runs", default=None,
+                    help="open-weight Gemma cells (hosted Gemma via the Gemini API; a ladder dir or exported "
+                    "ladder_gemma_episodes.jsonl.gz), reported in their own section against the same solver seeds")
+    ap.add_argument("--gemma-ledger", action="append", default=[])
     ap.add_argument("--headline", default=None,
                     help="hand-written findings block for the top of ladder.md (default: generated from the table)")
     a = ap.parse_args(argv)
@@ -585,7 +737,13 @@ def main(argv=None) -> int:
                 fh.write(json.dumps({k: v for k, v in e.items() if k != "_cell"}, sort_keys=True) + "\n")
     for spec in a.import_cell:
         eps += load_import(spec)
-    pairs = {(e["_cell"]["tier"], e["_cell"]["seed"]) for e in eps}
+    g_runs = Path(a.gemma_runs).expanduser() if a.gemma_runs else None
+    g_eps = load_ladder(g_runs) if g_runs else []
+    if a.export and g_runs:
+        with gzip.open(ex / "ladder_gemma_episodes.jsonl.gz", "wt") as fh:
+            for e in g_eps:
+                fh.write(json.dumps({k: v for k, v in e.items() if k != "_cell"}, sort_keys=True) + "\n")
+    pairs = {(e["_cell"]["tier"], e["_cell"]["seed"]) for e in eps + g_eps}
     ref = reference_episodes(pairs)
     solver = {(e["tier"], e["seed"]): e for e in ref if e["agent"] == "solver"}
     rows = cell_rows(eps, solver, B=a.bootstrap)
@@ -609,7 +767,20 @@ def main(argv=None) -> int:
     doc = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "git_sha": git_sha(), "runs": str(a.runs).replace(str(Path.home()), "~"),
            "imports": [x.replace(str(Path.home()), "~") for x in a.import_cell], "ledger_run_ids": run_ids, "ledger": led_sum, "prices_usd_per_1m": PRICES,
            "episodes": len(eps), "headline_file": a.headline, "rows": rows, "reference": ref_rows, "tags": tags, "probe": probe, "figures": []}
-    doc["figures"] = [] if a.no_figures else figures(rows, ref_rows, tags, out)
+    if g_runs:
+        g_led = load_ledger(g_runs, a.gemma_ledger)
+        if a.export:
+            with gzip.open(Path(a.export) / "ladder_gemma_ledger.jsonl.gz", "wt") as fh:
+                for r in g_led:
+                    fh.write(json.dumps(r, sort_keys=True) + "\n")
+        doc["gemma"] = {"runs": str(a.gemma_runs).replace(str(Path.home()), "~"), "episodes": len(g_eps),
+                        "rows": cell_rows(g_eps, solver, B=a.bootstrap),
+                        "ledger_run_ids": sorted({r.get("run_id", "") for r in g_led if r.get("run_id")}),
+                        "ledger": {"calls": len(g_led), "errors": sum(not r.get("ok", True) for r in g_led),
+                                   "cost_usd_ledger": round(sum(r.get("cost_usd", 0) for r in g_led), 2),
+                                   "cost_unknown_calls": sum(bool(r.get("cost_unknown")) for r in g_led)}}
+    doc["figures"] = [] if a.no_figures else \
+        frontier(rows, (doc.get("gemma") or {}).get("rows"), out) + figures(rows, ref_rows, tags, out)
     clean = _nan_to_none(json.loads(json.dumps(doc, default=str)))
     (out / "ladder.json").write_text(json.dumps(clean, indent=1) + "\n")
     (out / "ladder.md").write_text(to_md(doc))

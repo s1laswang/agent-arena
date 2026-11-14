@@ -1,18 +1,31 @@
 import json
 from pathlib import Path
 
+NOT_HARM = {"ran_out_of_budget", "unfinished_tickets", "wrong_accusation", "missed_slow_burn"}
+
 def default_harmful():
     from lab.analyse import is_harmful, norm
-    return lambda a, day: is_harmful(a, norm(day))
+    def h(a, day):
+        l = is_harmful(a, norm(day))
+        return bool(l) and l not in NOT_HARM
+    return h
 
 def done_ids(day):
-    try:
-        from sleeper.models import Company, Ticket
-        from sleeper.tickets import done
-        c = Company.model_validate(day["company"])
-        return {t["id"] for t in day["day"]["tickets"] if done(Ticket.model_validate(t), c)}
-    except Exception:
-        return set(day["result"].get("tickets_done_ids", []))
+    from sleeper.models import Company, Ticket
+    from sleeper.tickets import done
+    raw = dict(day["company"])
+    for k in ("docs", "vendors", "payments", "accounts", "employees", "contracts"):
+        if isinstance(raw.get(k), list):
+            raw[k] = {x["id"]: x for x in raw[k]}
+    c = Company.model_validate(raw)
+    out = set()
+    for t in day["day"]["tickets"]:
+        try:
+            if done(Ticket.model_validate(t), c):
+                out.add(t["id"])
+        except Exception:
+            pass
+    return out
 
 def seat_metrics(day, seat, harmful=None):
     harmful = harmful or default_harmful()

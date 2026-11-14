@@ -976,14 +976,14 @@ function xyChart(series, opt) {
   svg.appendChild(s('line', { class: 'baseline', x1: L, x2: W - Rr, y1: Y(Math.max(y0, 0)), y2: Y(Math.max(y0, 0)) }));
   if (opt.xlabel) svg.appendChild(s('text', { x: W - Rr, y: H - 0, 'text-anchor': 'end', text: opt.xlabel }));
   (opt.refs || []).forEach(r => { if (r.y < y0 || r.y > y1) return; svg.appendChild(s('line', { x1: L, x2: W - Rr, y1: Y(r.y), y2: Y(r.y), stroke: css('--axis'), 'stroke-width': 1 }));
-    svg.appendChild(s('text', { x: L + 6, y: Y(r.y) - 5, class: 'halo', text: r.l + ' ' + pctf(r.y) })); });
+    svg.appendChild(s('text', { x: L + 6, y: Y(r.y) + 13, class: 'halo', text: r.l + ' ' + pctf(r.y) })); });
   if (opt.ref) { svg.appendChild(s('line', { x1: L, x2: W - Rr, y1: Y(opt.ref.y), y2: Y(opt.ref.y), stroke: css('--ink2'), 'stroke-width': 1 }));
     svg.appendChild(s('text', { x: W - Rr, y: Y(opt.ref.y) - 6, 'text-anchor': 'end', class: 'ink2', text: opt.ref.l })); }
   const surf = css('--surface');
   if (opt.frontier && opt.frontier.length > 1) svg.appendChild(s('path', { d: opt.frontier.map((c, i) => (i ? 'L' : 'M') + X(c.cost).toFixed(1) + ',' + Y(c.pct).toFixed(1)).join(''),
     fill: 'none', stroke: css('--s1'), 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
   series.forEach(sr => {
-    const P = sr.pts.slice().sort((a, b) => a.x - b.x);
+    const P = sr.pts.filter(p => !p.loose).sort((a, b) => (a.o != null && b.o != null) ? a.o - b.o : a.x - b.x);
     if (sr.line !== false && P.length > 1) svg.appendChild(s('path', { d: P.map((p, i) => (i ? 'L' : 'M') + X(p.x).toFixed(1) + ',' + Y(p.y).toFixed(1)).join(''),
       fill: 'none', stroke: sr.c, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
   });
@@ -991,7 +991,8 @@ function xyChart(series, opt) {
   series.forEach(sr => sr.pts.slice().sort((a, b) => (b.label ? 1 : 0) - (a.label ? 1 : 0) || b.y - a.y).forEach(p => {
     const g = s('g', { class: 'hov', tabindex: 0 });
     g.appendChild(s('circle', { cx: X(p.x), cy: Y(p.y), r: 12, class: 'hit' }));
-    g.appendChild(s('circle', { class: 'mark', cx: X(p.x), cy: Y(p.y), r: p.r || 4.5, fill: p.c || sr.c, stroke: surf, 'stroke-width': 2 }));
+    g.appendChild(p.loose ? s('circle', { class: 'mark', cx: X(p.x), cy: Y(p.y), r: 4.5, fill: surf, stroke: p.c || sr.c, 'stroke-width': 2 })
+      : s('circle', { class: 'mark', cx: X(p.x), cy: Y(p.y), r: p.r || 4.5, fill: p.c || sr.c, stroke: surf, 'stroke-width': 2 }));
     if (p.label) { const lx = X(p.x) + 9, ly = Y(p.y) - 9, lw = p.label.length * 6.2;
       const box = { x0: lx, x1: lx + lw, y0: ly - 11, y1: ly + 2 };
       if (!placed.some(b => b.x0 < box.x1 && box.x0 < b.x1 && b.y0 < box.y1 && box.y0 < b.y1) && box.x1 < W) {
@@ -1159,10 +1160,11 @@ function renderLadder() {
   g.appendChild(card('c5', 'Score as % of solver · ' + tier, 'model × thinking level · ' + (nlo === nhi ? nlo : nlo + '–' + nhi) + ' episodes per cell · hover for the paired CI', [synthBadge(L), hm]));
   const refs = refLines(L, tier);
   const series = models.map(m => ({ name: short(m), c: modelColor(m), pts: tc.filter(c => c.model === m && c.think != null).map(c => ({ x: Math.max(c.think, 10), y: c.pct,
-    title: short(m) + ' · ' + c.level, tip: cellTip(c) })) })).filter(sr => sr.pts.length);
+    o: LEVELS.indexOf(c.level) < 0 ? null : LEVELS.indexOf(c.level), loose: LEVELS.indexOf(c.level) < 0 || c.est,
+    title: short(m) + ' · ' + c.level + (c.est ? ' (imported; thinking incl. output)' : ''), tip: cellTip(c) })) })).filter(sr => sr.pts.length);
   if (series.length) {
     const ys = series.flatMap(s => s.pts.map(p => p.y)).concat(refs.map(r => r.y));
-    g.appendChild(card('c7', 'Score vs thinking tokens · ' + tier, 'mean thinking tokens per episode (log) · one line per model, through its thinking levels',
+    g.appendChild(card('c7', 'Score vs thinking tokens · ' + tier, 'mean thinking tokens per episode (log) · one line per model, minimal → high · hollow = imported cell at the model default',
       [legend(series.map(s => ({ c: s.c, l: s.name })), true), xyChart(series, { logx: true, xfloor: 10, ymin: Math.min(0, ...ys), ymax: Math.max(1.1, ...ys), yticks: [0, .25, .5, .75, 1], pctAuto: true,
         yfmt: v => pctf(v), xfmt: v => v <= 10 ? '≤10' : compact(v), ref: { y: 1, l: 'solver' }, refs, W: 680, H: 320, aria: 'score vs thinking tokens' })]));
   }

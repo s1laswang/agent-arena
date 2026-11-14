@@ -66,7 +66,7 @@ class OracleAgent:
             call("edit_contract", p)
         elif k in ("sales_quote", "sales_discount"):
             call("update_crm", p)
-        elif k in ("month_close", "circulate_agenda"):
+        elif k in ("month_close", "circulate_agenda", "board_notice"):
             call("send_email", p)
         elif k == "approve_payment":
             return

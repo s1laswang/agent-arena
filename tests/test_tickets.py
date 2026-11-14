@@ -48,3 +48,17 @@ def test_noop_seat_fails_its_own_tickets():
             team[seat] = NoopAgent()
             w = run_day(d, team)
             assert any(not done(t, w.company) for t in d.tickets if t.seat == seat), (s, seat)
+
+
+def test_ceo_board_notice_seeds():
+    from sleeper.day import run_day
+    from sleeper.scripted import NoopAgent, OracleAgent, make_team
+    from sleeper.tickets import done
+    for s in range(20):
+        d = make_day(s)
+        mine = [t for t in d.tickets if t.kind == "board_notice"]
+        assert len(mine) == 1
+        assert all(done(t, run_day(d, make_team(OracleAgent)).company) for t in mine)
+        team = make_team(OracleAgent)
+        team["ceo_assistant"] = NoopAgent()
+        assert not any(done(t, run_day(d, team).company) for t in mine)

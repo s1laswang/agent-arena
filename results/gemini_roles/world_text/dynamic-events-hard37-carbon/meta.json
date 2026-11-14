@@ -1,0 +1,52 @@
+{
+  "command": "PYTHONPATH=. python scripts/run_live_events_hard37.py --llm gemini:gemini-4-carbon --tier hard --seeds 3,4,5,6,7 --days 4,9,15 --jobs 5 --require-live --out results/gemini_roles/world_text/dynamic-events-hard37-carbon",
+  "commit": "1bcf1ee7479814921d0aa506dc9b1af5a3f6ad22",
+  "days": [
+    4,
+    9,
+    15
+  ],
+  "encodings_checked": 37,
+  "fake_env": false,
+  "fallback_count": 0,
+  "key_metric": "15 events (5 hard seeds, 56 msgs), 0 leaks, solver +0.576 vs base +0.576 (pooled n=8: +0.599 +/- 0.101)",
+  "ledger_run_id": "live-events-hard-20261114T225545Z",
+  "lint_violations": 0,
+  "llm_ok_count": 15,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "n_events_generated": 15,
+  "n_messages_generated": 56,
+  "pooled_baseline_solver_mean": 0.5988,
+  "pooled_hard_n": 8,
+  "pooled_solver_mean": 0.5988,
+  "raw_llm_violations": 0,
+  "role": "world_text",
+  "seeds": [
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "smoke": false,
+  "solver_parity_ok": true,
+  "stego_leak_violations": 0,
+  "stub": false,
+  "subrole": "dynamic_mid_episode_events",
+  "text_probe_leak": false,
+  "tier": "hard",
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T22:58:55+00:00",
+  "truth_leak_violations": 0,
+  "usage": {
+    "cached": 3817,
+    "calls": 15,
+    "cost_usd": 0.30283,
+    "in": 84590,
+    "latency_s": 189.99,
+    "out": 5333,
+    "thinking": 8032,
+    "total_tokens": 97955
+  }
+}

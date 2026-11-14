@@ -2,7 +2,7 @@
   "role": "adaptive_mole",
   "suite": "carbon-vs-carbon-suite",
   "target_model": "gemini-4-carbon",
-  "latest_run_timestamp": "2026-11-14T22:46:35Z",
+  "latest_run_timestamp": "2026-11-14T22:54:25+00:00",
   "source_commits": [
     "03c676c1d3cd42629994ac434c056758a75148e0",
     "c00d49189d1a4c63495d9111e11b5f13528a5093",
@@ -22,6 +22,7 @@
     "370de43c38b321bf9dbc5c04220abd90c4614466",
     "0e59cc10aa43f068e5fe7c1007215df1db4d10fe",
     "94974340ae44c96fe5eb03d797c041b95d19d922",
+    "cec07dc8ea61d2c129dd81e249e93dec05b76983",
     "16f24a08e1fb57397ddf90a5b413b4359a5f16bc"
   ],
   "verified_run_dirs": [
@@ -49,6 +50,7 @@
     "results/gemini_roles/adaptive_mole/paired-designer-carbon-hard",
     "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard",
     "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard-s10_14",
+    "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-med-s10_14",
     "results/gemini_roles/adaptive_mole/paired-solvable-scenarios-carbon"
   ],
   "skipped_runs": [],
@@ -1714,6 +1716,62 @@
         }
       },
       {
+        "run_dir": "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-med-s10_14",
+        "tier": "medium",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+        "n_llm_valid": 6,
+        "n_kept": 6,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.6888,
+        "solver_mean": 0.6888,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.5921,
+        "eval_heuristic_mean": -1.0,
+        "top_scenario_name": "paced_cadence_framer",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.602,
+            "designed_mean_score": 0.5921,
+            "designed_accuracy": 0.875
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.2532,
+            "designed_mean_score": 0.4094,
+            "designed_accuracy": 0.825
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.4487,
+            "designed_mean_score": 0.5159,
+            "designed_accuracy": 0.775
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -0.9165,
+            "designed_mean_score": -1.0,
+            "designed_accuracy": 0.0
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1649,
+          "out": 1429,
+          "thinking": 595,
+          "cached": 0,
+          "total_tokens": 3673,
+          "cost_usd": 0.023538,
+          "latency_s": 25.312
+        }
+      },
+      {
         "run_dir": "results/gemini_roles/adaptive_mole/paired-solvable-scenarios-carbon",
         "tier": "medium",
         "subrole": "paired_skill_designer",
@@ -1913,7 +1971,7 @@
       }
     ],
     "overall": {
-      "n_runs": 5,
+      "n_runs": 6,
       "tiers": [
         "hard",
         "medium"
@@ -1922,23 +1980,23 @@
         "paired_designer",
         "paired_skill_designer"
       ],
-      "total_llm_valid": 26,
-      "total_kept": 23,
-      "keep_rate": 0.8846,
-      "mean_solver_score": 0.6568,
+      "total_llm_valid": 32,
+      "total_kept": 29,
+      "keep_rate": 0.9062,
+      "mean_solver_score": 0.6621,
       "mean_heuristic_score": -1.0,
-      "n_holdout_eval_runs": 3,
-      "mean_eval_full_solver": 0.6157,
-      "mean_eval_heuristic": -0.937,
+      "n_holdout_eval_runs": 4,
+      "mean_eval_full_solver": 0.6098,
+      "mean_eval_heuristic": -0.9527,
       "usage": {
-        "calls": 5,
-        "in": 8724,
-        "out": 6543,
-        "thinking": 3004,
+        "calls": 6,
+        "in": 10373,
+        "out": 7972,
+        "thinking": 3599,
         "cached": 0,
-        "total_tokens": 18271,
-        "cost_usd": 0.112918,
-        "latency_s": 217.088
+        "total_tokens": 21944,
+        "cost_usd": 0.136456,
+        "latency_s": 242.4
       }
     }
   },
@@ -1992,22 +2050,22 @@
     }
   ],
   "totals": {
-    "verified_folders": 25,
-    "n_verified_runs": 25,
-    "calls": 1631,
-    "in": 25562468,
-    "out": 116889,
-    "thinking": 383412,
+    "verified_folders": 26,
+    "n_verified_runs": 26,
+    "calls": 1632,
+    "in": 25564117,
+    "out": 118318,
+    "thinking": 384007,
     "cached": 23015724,
-    "total_tokens": 26062769,
-    "cost_usd": 12.398087,
-    "latency_s": 27262.384,
+    "total_tokens": 26066442,
+    "cost_usd": 12.421625,
+    "latency_s": 27287.696,
     "tokens": {
-      "in": 25562468,
-      "out": 116889,
-      "thinking": 383412,
+      "in": 25564117,
+      "out": 118318,
+      "thinking": 384007,
       "cached": 23015724,
-      "total": 26062769
+      "total": 26066442
     },
     "by_suite": {
       "clash_suite": {
@@ -2044,15 +2102,15 @@
         "latency_s": 785.231
       },
       "paired_designer_suite": {
-        "verified_folders": 5,
-        "calls": 5,
-        "in": 8724,
-        "out": 6543,
-        "thinking": 3004,
+        "verified_folders": 6,
+        "calls": 6,
+        "in": 10373,
+        "out": 7972,
+        "thinking": 3599,
         "cached": 0,
-        "total_tokens": 18271,
-        "cost_usd": 0.112918,
-        "latency_s": 217.088
+        "total_tokens": 21944,
+        "cost_usd": 0.136456,
+        "latency_s": 242.4
       },
       "other_verified_runs": {
         "verified_folders": 1,

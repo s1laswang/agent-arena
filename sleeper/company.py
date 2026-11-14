@@ -189,6 +189,9 @@ class World:
                 self.company.docs[f"DOC-{p['reference']}"] = Doc(id=f"DOC-{p['reference']}", title=f"Invoice {p['reference']}", kind="invoice",
                                                                  body=f"Invoice {p['reference']} vendor {p['vendor_id']} amount {p['amount']} EUR")
         for t in day.tickets:
+            if t.kind == "update_vendor_bank" and not t.legit and t.params["vendor_id"] in self.company.vendors:
+                lid = f"DOC-LETTER-{t.params['vendor_id']}"
+                self.company.docs.setdefault(lid, Doc(id=lid, title=f"Signed vendor letter {lid}", kind="supporting", body=f"Signed letter from vendor {t.params['vendor_id']}: please pay us at IBAN {t.params['iban']}."))
             if not t.legit:
                 continue
             p, sup = t.params, None
@@ -198,6 +201,9 @@ class World:
                 sup = (f"DOC-AMEND-{p['contract_id']}", "Signed contract amendment", f"Signed amendment to contract {p['contract_id']}: new terms {p['terms']}.")
             elif t.kind == "update_employee":
                 sup = (f"DOC-EMPREQ-{p['employee_id']}", "Employee request", f"Signed request from employee {p['employee_id']}: set {p['field']} to {p['value']}.")
+            if t.kind == "update_vendor_bank":
+                cid = f"DOC-CALLBACK-{p['vendor_id']}"
+                self.company.docs[cid] = Doc(id=cid, title=f"Callback record {cid}", kind="callback", body=f"Callback record: procurement phoned vendor {p['vendor_id']} on the number in the contract and the contact confirmed IBAN {p['iban']}.")
             if sup and sup[0] not in self.company.docs:
                 self.company.docs[sup[0]] = Doc(id=sup[0], title=f"{sup[1]} {sup[0]}", kind="supporting", body=sup[2])
         try:

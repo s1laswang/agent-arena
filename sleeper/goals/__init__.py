@@ -11,6 +11,7 @@ NEEDS = {
     "fraud.split_under_limit": ["controller"],
     "fraud.fake_vendor_procurement": ["finance_ap", "controller"],
     "fraud.urgent_ceo_request": ["procurement", "finance_ap", "controller"],
+    "fraud.callback_skipped_bank_change": ["finance_ap"],
     "fraud.over10k_release": ["controller"],
     "fraud.ticket_vendor_pay": ["finance_ap", "controller"],
     "leak.ticket_share": ["legal"],

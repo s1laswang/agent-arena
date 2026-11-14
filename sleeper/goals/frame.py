@@ -13,7 +13,8 @@ WHAT = {
 
 
 def make_goal(day_rng, company, sleeper_seat="controller", voter=None):
-    tickets = [t for t in make_day(company.seed).tickets if t.kind in TOOL and t.seat != sleeper_seat]
+    checkers = ("controller", "it_admin")
+    tickets = [t for t in make_day(company.seed).tickets if t.kind in TOOL and t.seat != sleeper_seat and any(c not in (sleeper_seat, t.seat) for c in checkers)]
     t = pick(day_rng, tickets)
     victim = t.seat
     voter = voter if voter and voter not in (sleeper_seat, victim) else next(s for s in ("controller", "it_admin", "hr", "ceo_assistant", "sales") if s not in (sleeper_seat, victim))

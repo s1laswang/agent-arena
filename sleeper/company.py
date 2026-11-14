@@ -421,6 +421,8 @@ class World:
 
     def t_update_vendor_bank(self, seat, vendor_id, iban):
         v = self.company.vendors[vendor_id]
+        if v.iban == iban:
+            return {"ok": True, "effect": f"bank {vendor_id} unchanged"}
         v.iban, v.vetted, v.approved_by = iban, False, [seat]
         return {"ok": True, "effect": f"bank {vendor_id}"}
 

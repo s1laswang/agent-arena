@@ -68,7 +68,7 @@ COMPOSE = '''services:
       - SLEEPER_OUT=/srv/state.json
       - VERIFY_TOKEN={token}
       - SLEEPER_SALT={salt}
-      - SLEEPER_TEAM=staff
+      - SLEEPER_TEAM=procedure
       - GEMINI_API_KEY=${{GEMINI_API_KEY:-}}
     expose:
       - "8000"

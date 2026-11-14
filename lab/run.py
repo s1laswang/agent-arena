@@ -69,6 +69,7 @@ FACTORIES = {
     "staff": (_staff, "gemini"),
     "reference": (_reference, "gemini"),
     "oracle": (_module("agents.reference", "make_oracle_team"), "scripted"),
+    "procedure": (_module("agents.procedure", "make_procedure_team"), "scripted"),
     "do_nothing": (_scripted("NoopAgent"), "scripted"),
     "stop_early": (_baseline("make_stop_early"), "scripted"),
     "quarantine_all": (_baseline("make_quarantine_all"), "scripted"),

@@ -12,7 +12,7 @@ def test_multimodel():
         with sync_playwright() as p:
             b = launch(p)
             pg = b.new_page(viewport={"width": 1500, "height": 700})
-            pg.goto("http://localhost:8767/results.html")
+            pg.goto("http://localhost:8767/results.html?src=fixtures/gaptable.json")
             pg.wait_for_selector("#gap tbody tr")
             t = pg.inner_text("#gap tbody")
             assert "SCRIPTED PLACEHOLDER" in t and "NOT FOUND" in t and "100%" not in t.split("\n")[0] and "oracle" in t

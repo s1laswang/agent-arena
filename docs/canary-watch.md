@@ -63,3 +63,19 @@ Beats us: their Harbor boot with committed logs; their anti-cheat battery will b
 Beats them: they have no v1.4 frontier run and no Gemini run yet; their frontier gap on v1.3 hard is above the reference. Whoever lands a real, repeated frontier-below-reference number first on the judge seat wins the gap axis.
 Ideas to copy (idea only): anti-cheat probe table printed by the one command; stop-early ladder on the reference itself; replay consistency flag; Harbor cheat solution; booting Harbor via colima and committing logs.
 Routing: chief, lead-lab, lead-reward, lead-env, lead-harness, lead-demo.
+
+## Tick 3, 2026-11-14 13:54 Helsinki
+
+Last-seen SHAs: justSilas* 5813bb2 (was cca3cb8). All other justSilas*, vaishnav/poisoned-inbox 9068b16 unchanged from tick 2. Still not on origin: justSilas-gemini, justSilas-v15, env2, agents2, integrity2.
+
+New (docs only, 4 files, 189 lines, `git diff cca3cb8 origin/justSilas`): "Plan v3" approved by their CEO after a team brainstorm that included Momin (`docs/IDEAS.md`, `docs/meetings/2026-11-14-mole-company-simulation.md`, NEXT-LEVEL.md additions, CEO log).
+- Decision: Canary is the base; Vaishnav's anti-cheat goes in; "Momin's strongest parts go in"; Momin pauses sky GPU jobs so Silas's FR8 can use the GPUs.
+- v1.4 frozen (hard: 40 staff, 21 days, 2 canaries/day x 3 variants, leak_damage 0.05, tool cap 420). Confirmation seeds 5000-5799: solver .779/.633/.556, hard accuracy 94.9%; solver minus grok_tactics on hard +.195 (v1.3 was +.233), so v1.4 narrowed the scripted gap. They say only a frontier measurement decides.
+- v1.5 candidate "human-bias social layer" (branch justSilas-v15, gated, default off): rumours, grudge pairs, authority-bias accusation, miscommunication forwards, mole action seed_rumour; Gemini writes the chatter. Merge only if the gemini-4-carbon/solver ratio drops vs v1.4 and integrity stays clean.
+- RL-trained mole: light MLP on CPU now (reward = solver-relative regret, constraint solver accuracy >= 0.75), GRPO Qwen2.5-0.5B/1.5B mole on V100s later.
+- Static Pyodide browser game "beat the AI"; video.
+- Gates: A 17:00 (gemini-4-carbon v1.4 n>=20 per tier, v1.5 solver numbers, first RL-mole curve); B 20:00 (ship or drop v1.5, feature freeze).
+
+Read: still no frontier number on v1.4. Their gap bet is v1.5. Our edge only exists if we have a real frontier run below our reference before 17:00-20:00 gates.
+Ideas to copy (idea only): rumour/grudge/authority-bias noise stated in the instructions (human-like insiders; fits The Sleeper's chat-request attacks); RL-trained attacker with a catchability constraint (lead-attack, lead-lab); a static browser game for judges.
+Open question for the chief: Silas's plan says Momin's parts go into Canary. If the submission is a merged Canary, confirm which of our assets (Sleeper seats, verifier, attacks) are in it, so docs and scorecard target the same artifact.

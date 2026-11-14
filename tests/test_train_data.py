@@ -75,3 +75,15 @@ def test_parse_and_budget():
     L.turn("controller", {}, [], bad)
     L.turn("controller", {}, [], bad)
     assert L.n == 5 and L.hist[0]["effect"]["ok"] is False
+
+def test_rs_select(tmp_path):
+    from train.rs import select
+    d = day(5, reward=0)
+    d["ledger"] = []
+    d["day"]["tickets"] = []
+    (tmp_path / "days").mkdir()
+    (tmp_path / "days" / "5-t0.json").write_text(json.dumps(d))
+    assert len(select(tmp_path, "controller", lambda a, x: False)) <= 3
+    d["ledger"] = [{"seat": "controller"}]
+    (tmp_path / "days" / "5-t0.json").write_text(json.dumps(d))
+    assert select(tmp_path, "controller", lambda a, x: True) == []

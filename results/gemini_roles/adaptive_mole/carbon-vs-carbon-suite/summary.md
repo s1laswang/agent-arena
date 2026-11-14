@@ -2,10 +2,10 @@
 
 - Role: `adaptive_mole`
 - Target Model ID: `gemini-4-carbon`
-- Verified `adaptive_mole` run folders consolidated: `10`
-- Total Gemini API calls: `474`
-- Total tokens (in / out / thinking / cached): `2,134,742` / `33,697` / `58,760` / `1,618,805`
-- Total estimated cost (USD): `$2.118327`
+- Verified `adaptive_mole` run folders consolidated: `11`
+- Total Gemini API calls: `482`
+- Total tokens (in / out / thinking / cached): `2,146,875` / `46,728` / `63,718` / `1,618,805`
+- Total estimated cost (USD): `$2.322483`
 - Provenance note: `carbon-vs-carbon-suite/` intentionally omits `meta.json` so `canary.gemini.provenance` does not double-count tokens or costs.
 
 ## 1. Head-to-Head Carbon-vs-Carbon Clash Suite (`clash_suite`)
@@ -49,6 +49,7 @@
 
 | Run Folder | Tier | Gens | Valid LLM Children | Best Fitness | Default Dev Fitness | Fresh Solver Acc | Fresh Min Regret | Default Fresh Min Regret | Calls | Cost (USD) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep` | `hard` | 8 | 49 | 0.3745 | 0.0560 | 90.00% | 0.2310 | 0.1650 | 8 | $0.2042 |
 | `results/gemini_roles/adaptive_mole/mole-forge-carbon-v14` | `hard` | 3 | 6 | 0.3700 | 0.2450 | 95.00% | 0.2395 | 0.2420 | 12 | $0.0275 |
 
 ## 4. PAIRED Solvable Scenario Designer Suite (`paired_designer_suite`)
@@ -66,6 +67,6 @@
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `clash_suite` | 1 | 92 | 1,812,239 | 3,638 | 30,311 | 1,618,805 | $0.888241 |
 | `live_arena_suite` | 4 | 366 | 312,878 | 23,804 | 24,904 | 0 | $1.112836 |
-| `mole_forge_suite` | 1 | 12 | 2,546 | 1,060 | 1,180 | 0 | $0.027492 |
+| `mole_forge_suite` | 2 | 20 | 14,679 | 14,091 | 6,138 | 0 | $0.231648 |
 | `paired_designer_suite` | 4 | 4 | 7,079 | 5,195 | 2,365 | 0 | $0.089758 |
-| **total** | **10** | **474** | **2,134,742** | **33,697** | **58,760** | **1,618,805** | **$2.118327** |
+| **total** | **11** | **482** | **2,146,875** | **46,728** | **63,718** | **1,618,805** | **$2.322483** |

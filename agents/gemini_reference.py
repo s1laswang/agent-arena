@@ -10,7 +10,7 @@ NOTE = "\n\nTool calls that break the procedure are blocked and you get an error
 class GeminiReference:
     def __init__(self, seat, seed=0, fallback=None, ev=None):
         self.seat = seat
-        self.seed = zlib.crc32(("%s:%s" % (seed, seat)).encode())
+        self.seed = zlib.crc32(("%s:%s" % (seed, seat)).encode()) & 0x7FFFFFFF
         self.fallback = fallback
         self.ev = ev or Evidence()
         self.log = []

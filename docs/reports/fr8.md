@@ -25,3 +25,13 @@
 - Done (untested on real data): the J1/J2/J3/J5 sbatch scripts and the Mac runners (≤3 processes each).
 - Blockers: J1 needs contract v0.3 + solver v1; J3 (SFT data) and J5 (real forge fitness) need solver v1; J4 needs the J3 data, then the CEO frees a GPU.
 - Next: when the solver lands, run J3 on the Mac (20k + 2k episodes), rsync it, submit J4 and send the id to the CEO; run J1 and J5 on the Mac in parallel (3 + 3 processes).
+
+## 02:24 status
+- Done (verified: 153k local episodes; the hard cell spot-checked against raw CSV): the J1 recalibration. The CEO adopted it verbatim as tiers v1 (ENV 54e1fa4), with JUDGE_SEEDS=40 per tier. Recommendation: `fr8/analysis/out/j1_recommendation.md`. Ops' bonus FR8 copy of J1 (job 43872, 306 tasks) also completed.
+- Done (verified: export manifests): J3 on tiers v1: 20k train + 2k val solver episodes on TRAIN seeds, keeping only correct accusations (easy 100% kept; medium and hard ~80%), 1.1 GB, at `freighter:~/agent-arena-data/j3`. The data dir is 4.0 GB of 10.
+- Submitted: **J4 = job 44200** (gpu:1, -c 6, 28G, 6 h), PENDING (Priority). The CEO is pausing sky task 43143_4 to free a GPU.
+- Running on FR8: J2 fuzz = job 43864 (8 cores, INTEGRITY's job).
+- Restarted: J5 forge. The first run mixed rule versions because forge workers re-import code each generation and I merged tiers v1 mid-run, so it's marked INVALID. The new run uses a frozen tiers-v1 snapshot (`wt/justSilas-fr8-j5run`): hard, pop 24 × 500 gens × 40 seeds, 3 processes. Its hall of fame is on tiers v1 by construction.
+- In progress: ops is running the solver τ sweep (τ 0.70–0.99, 200 seeds, 1 process); ENV wants it re-run after the solver's stopping-rule fix. The v0.4 fingerprint rerun is on hold (CEO).
+- Done (untested on device): the MLX fallback (`train/mlx_lora.sh`, `eval_hf --backend mlx`). Nothing was run tonight because of Mac memory.
+- Mac processes: J5 3 + τ sweep 1.

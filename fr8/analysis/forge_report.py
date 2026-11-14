@@ -21,6 +21,7 @@ ALIASES = {
     "mean": ("mean", "mean_fitness", "avg_fitness"),
     "solver": ("solver_ratio", "solver_score", "solver_score_ratio"),
     "acc": ("solver_acc", "solver_accuracy"),
+    "feasible_share": ("feasible_share",),
 }
 
 
@@ -66,13 +67,15 @@ def report(run: Path, top: int = 5) -> str:
                   f"- solver constraint at last gen: score ratio={last['solver']} (>=0.5), acc={last['acc']} (>=0.85)"]
         viol = [r["gen"] for r in log if (r["solver"] is not None and r["solver"] < 0.5)
                 or (r["acc"] is not None and r["acc"] < 0.85)]
+        if last["feasible_share"] is not None:
+            lines.append(f"- feasible share of population at last gen: {last['feasible_share']:.2f}")
         lines.append(f"- generations reporting a constraint violation: {viol or 'none'}")
     else:
         lines.append("- no log.jsonl")
     lines += ["", f"## Top {top} strategies", "", "| # | fitness | solver | acc | rules |", "|---|---|---|---|---|"]
     for i, h in enumerate(hof[:top], 1):
         lines.append(f"| {i} | {h.get('fitness')} | {pick(h, 'solver')} | {pick(h, 'acc')} | "
-                     f"{describe_strategy(h.get('strategy', {})).replace('|', '/')} |")
+                     f"{describe_strategy(h.get('strategy') or h.get('strategy_json') or {}).replace('|', '/')} |")
     return "\n".join(lines) + "\n"
 
 
@@ -98,6 +101,8 @@ def plot(run: Path, png: Path) -> bool:
     if any(r["acc"] is not None for r in log):
         a2.plot(g, [r["acc"] for r in log], label="solver accuracy")
         a2.axhline(0.85, ls=":", c="grey")
+    if any(r["feasible_share"] is not None for r in log):
+        a2.plot(g, [r["feasible_share"] for r in log], label="feasible share of population")
     a2.set_xlabel("generation"); a2.set_title("catchability constraint"); a2.legend(frameon=False)
     for a in (a1, a2):
         a.spines[["top", "right"]].set_visible(False)
@@ -108,11 +113,14 @@ def plot(run: Path, png: Path) -> bool:
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description="forge report")
     ap.add_argument("run"); ap.add_argument("--top", type=int, default=5)
+    ap.add_argument("--out-dir", help="write report.md/fitness.png here instead of the run dir")
     a = ap.parse_args(argv)
     run = Path(a.run)
     md = report(run, a.top)
-    (run / "report.md").write_text(md)
-    plot(run, run / "fitness.png")
+    od = Path(a.out_dir) if a.out_dir else run
+    od.mkdir(parents=True, exist_ok=True)
+    (od / "report.md").write_text(md)
+    plot(run, od / "fitness.png")
     print(md)
 
 

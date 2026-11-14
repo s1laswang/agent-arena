@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 
 import subprocess
 SHA = subprocess.run(["git", "log", "-1", "--format=%h", "--", "canary/solver"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
-BWS = [0.6, 0.7, 0.8, 0.9, 1.0]
+BWS = [float(x) for x in os.environ.get("COTUNE_BWS", "0.6,0.9").split(",")]
 AGENTS = ["solver", "heuristic", "logs_only", "stop_early", "random"]
 
 
@@ -99,19 +99,29 @@ def analyse(outdir):
                 "gap": round(st.mean(d), 4), "gap_ci": round(ci(d), 4), "logs_only_acc": lo["acc"],
                 "logs_ok": lo["acc"] <= 2 / n, "stop_early_mean": summ[(c, "stop_early")]["mean"],
                 "random_mean": summ[(c, "random")]["mean"]}
+    def paired(c1, c2):
+        a = {r["seed"]: float(r["score"]) for r in raw[c1] if r["agent"] == "solver"}
+        b = {r["seed"]: float(r["score"]) for r in raw[c2] if r["agent"] == "solver"}
+        d = [a[k] - b[k] for k in a if k in b]
+        return st.mean(d), ci(d)
+
     trip = []
     for bw in sorted({v["bw"] for v in summ.values()}):
         by = {t: [c for (c, a), v in summ.items() if a == "solver" and v["bw"] == bw and v["tier"] == t] for t in ("easy", "medium", "hard")}
         for e, m, h in itertools.product(by["easy"], by["medium"], by["hard"]):
             E, M, H = stats(e), stats(m), stats(h)
             viol = []
+            mh = paired(m, h)
             if not (E["solver_mean"] > M["solver_mean"] > H["solver_mean"]): viol.append("monotone")
+            elif mh[0] <= mh[1]: viol.append("medium_hard_within_ci")
             for nm, X in (("medium", M), ("hard", H)):
                 if X["solver_acc"] < 0.85: viol.append(f"{nm}_acc")
                 if X["solver_none"] > 0.12: viol.append(f"{nm}_none")
                 if not X["logs_ok"]: viol.append(f"{nm}_logs_only")
                 if X["gap"] - X["gap_ci"] <= 0: viol.append(f"{nm}_gap")
+            if not E["logs_only_acc"] <= 0.40: viol.append("easy_logs_only")
             trip.append({"bw": bw, "feasible": not viol, "violations": ";".join(viol),
+                         "med_minus_hard": round(mh[0], 4), "med_minus_hard_ci": round(mh[1], 4),
                          **{f"{t}_{k}": v for t, X in (("easy", E), ("medium", M), ("hard", H)) for k, v in X.items()}})
     trip.sort(key=lambda r: (not r["feasible"], len(r["violations"].split(";")) if r["violations"] else 0,
                              r["hard_fp"], -r["hard_gap"]))

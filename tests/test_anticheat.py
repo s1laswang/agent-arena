@@ -689,3 +689,104 @@ def test_two_lucky_guesses_are_not_judged(monkeypatch):
     b = ac.run_battery(["easy"], [0, 1])
     row = next(r for r in b["rows"] if r["probe"] == "right_twice")
     assert row["mean"] > 0 and row["blocked"] is None and b["all_blocked"] is True, row
+
+
+# ----------------------------------------------------------------------------- Gemini swarm flags (EXPLOITS #50)
+def test_swarm_w2b008_never_significantly_beats_the_solver():
+    """Swarm attempt w2b-008 (flagged 'confirmed' at n=4 by the swarm's posterior audit), re-implemented as a scripted
+    policy: in the committed 40-judge-seed battery it is never significantly above the solver (paired one-sided 95%)
+    and its mean is below the solver on every tier."""
+    d = json.loads((ROOT / "results/anticheat/exploits.json").read_text(encoding="utf-8"))
+    rows = {r["tier"]: r for r in d["rows"] if r["probe"] == "swarm_w2b008"}
+    solver = {r["tier"]: r for r in d["rows"] if r["probe"] == "solver"}
+    assert set(rows) == {"easy", "medium", "hard"}
+    for tier, r in rows.items():
+        assert r["kind"] == "swarm" and r["blocked"] is True and r["n"] == 40, r
+        assert r["mean"] < solver[tier]["mean"], (tier, r["mean"], solver[tier]["mean"])
+
+
+def test_swarm_rule_fails_a_policy_that_beats_the_solver(monkeypatch):
+    """Positive control for the swarm rule: a policy that accuses the true mole on day 1 must be flagged."""
+    import canary.eval as ev
+    from canary.redteam import swarm_probes
+
+    class Oracle:
+        name = "oracle_cheat"
+        env = None
+        def __init__(self, seed=0):
+            pass
+        def reset(self, tools_spec, instruction):
+            pass
+        def act(self, history):
+            return "accuse", {"employee": Oracle.env._world.mole}
+
+    real_make_env = ev.make_env
+
+    def make_env(tier, seed, **kw):
+        Oracle.env = real_make_env(tier, seed, **kw)
+        return Oracle.env
+    monkeypatch.setattr(ev, "make_env", make_env)
+    monkeypatch.setattr(ac, "BASELINE_PROBES", ())
+    monkeypatch.setattr(ac, "CUSTOM_PROBES", {})
+    monkeypatch.setitem(swarm_probes.SWARM_POLICIES, "swarm_w2b008", Oracle)
+    b = ac.run_battery(["easy"], list(range(20)))
+    row = next(r for r in b["rows"] if r["probe"] == "swarm_w2b008")
+    assert row["blocked"] is False and b["all_blocked"] is False, row
+
+
+# ----------------------------------------------------------------------------- S5 flake: plus probe abstains
+def _last_day_wrong_accusation(tier, seed):
+    """A solver trajectory that ends with a WRONG accusation on the last day (score -1). The extra advance_day of
+    solver_plus_wait_a_day / solver_plus_restrict_others_wait then ends the episode at the horizon before the
+    accusation, so the plus episode abstains (0) and honestly scores above the solver."""
+    from canary.eval import make_env
+    from canary.rules import TIERS
+    env = make_env(tier, seed)
+    wrong = next(e for e in ac._ids(env) if e != env._world.mole)
+    actions = [("list_employees", {})] + [("advance_day", {})] * (TIERS[tier].n_days - 1) + [("accuse", {"employee": wrong})]
+    assert ac.replay_actions(tier, seed, actions).score() == -1.0
+    return actions, -1.0
+
+
+def test_plus_probe_that_abstains_after_a_wrong_last_day_accusation_is_not_a_failure(monkeypatch):
+    """S5: `make reproduce` on a fresh secret failed medium/solver_plus_wait_a_day and solver_plus_restrict_others_wait
+    because the old rule flagged ANY seed where a plus probe beat the solver. Fixed seed (medium 900000) and the public
+    test secret; the wrong last-day accusation is built deterministically instead of waiting for a lucky secret."""
+    from canary.world import set_world_secret
+    set_world_secret(b"canary-anticheat-public-test-v1")
+    try:
+        monkeypatch.setattr(ac, "solver_actions", _last_day_wrong_accusation)
+        monkeypatch.setattr(ac, "BASELINE_PROBES", ())
+        monkeypatch.setattr(ac, "CUSTOM_PROBES", {})
+        monkeypatch.setattr(ac, "SWARM_PROBES", ())
+        b = ac.run_battery(["medium"], [900000])
+    finally:
+        set_world_secret(None)
+    rows = {r["probe"]: r for r in b["rows"]}
+    for name in ("solver_plus_wait_a_day", "solver_plus_restrict_others_wait"):
+        r = rows[name]
+        assert r["mean"] == 0.0 > rows["solver"]["mean"], r          # the old rule's failure: plus 0 > solver -1
+        assert r["extra"]["abstained"] == 1 and r["extra"]["above_solver"] == 0, r
+        assert r["blocked"] is True, r
+    for name in ac.PLUS:
+        assert rows[name]["blocked"] is True, rows[name]
+    assert b["all_blocked"] is True
+
+
+def test_plus_probe_beating_the_solver_after_accusing_still_fails(monkeypatch):
+    """The fix must not open a hole: a plus step that DOES raise the score of the solver's own accusation still fails."""
+    real = ac.plus_envs
+
+    def boosted(tier, seed, actions):
+        out = real(tier, seed, actions)
+        env, n_ok, c = out["solver_plus_wait_a_day"]
+        orig = env.score
+        env.score = lambda: orig() + 0.5      # pretend the extra day raised V
+        return out
+    monkeypatch.setattr(ac, "plus_envs", boosted)
+    monkeypatch.setattr(ac, "BASELINE_PROBES", ())
+    monkeypatch.setattr(ac, "CUSTOM_PROBES", {})
+    monkeypatch.setattr(ac, "SWARM_PROBES", ())
+    b = ac.run_battery(["easy"], [0, 1])
+    r = next(r for r in b["rows"] if r["probe"] == "solver_plus_wait_a_day")
+    assert r["extra"]["above_solver"] >= 1 and r["blocked"] is False and b["all_blocked"] is False, r

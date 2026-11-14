@@ -83,12 +83,7 @@ It does **not** change `canary/env.py`, `rules.py`, `solver/`, `reproduce.py` or
 | 06:00–09:00 | Playtests, v3 result, two dry runs |
 | **09:30** | **Submit** |
 
-## Verda Compute Track (stacked prize; owner: Arena CEO, executed by session S6)
-A real Verda slice already exists: v3 GRPO seed 0 on a Verda H100 (FR8-owned instance, cap $30). S6 adds an open-weight investigator through the Verda Inference API or the Nemotron endpoint, plus VERDA.md (timeline, product fit, small-model before/after, freighter vs Verda labelled honestly, scale path). Freighter work is never presented as Verda.
-
 ## Questions for Silas
-6. **Verda Inference API / Nemotron access:** do the VERDA_CLIENT_ID/SECRET credentials cover the Inference API, or do we need the team's free-credit code (QR on the table / verda.com/blog/junction-2026)?
-7. **Ivar:** origin/ivar/aq-game-ux (research-biases.md, VIDEO-SCRIPT.md, failure cases) is NOT on GitHub; please ask him to push. His ivar/game-v-port is reviewed as merge-ready.
 1. **ElevenLabs key** for the video voice-over and an optional spoken "Fooled" commentary in the replay. It doesn't score AfterQuery points but helps the peer-review video. Put it in `.env` as `ELEVENLABS_API_KEY` (never committed). Want it?
 2. **Video owner:** you, Momin, or a Claude script-and-storyboard draft for you to record?
 3. **Game hosting:** GitHub Pages or Vercel (Ivar's call is fine)?

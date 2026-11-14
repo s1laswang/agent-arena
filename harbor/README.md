@@ -274,34 +274,3 @@ Jobs: `results/harbor/c1-{oracle,do_nothing,cheat}/`. All three passed `check_is
 with one line added to `collect.py`, never the template. Its job sits in `results/harbor_negative/c1-tamper/`,
 outside `results/harbor/`, because the consistency check there would rightly flag its forged artifact (ledger 1.0,
 reward 0).
-
-## Expected oracle range for a judge rerun
-
-A judge's build draws a fresh world secret, so the 10 hard tasks are new worlds and the oracle's mean varies by build.
-`scripts/oracle_range.py` reproduces the sidecar's world derivation (HMAC(secret, "tier:seed") in `canary/world.py`)
-in-process with 200 synthetic secrets (never a real build SALT) on judge seeds 900000–900019 (rules v1.4):
-
-```bash
-uv run --python 3.12 --extra dev python scripts/oracle_range.py --builds 200 --tiers hard,medium \
-    --agents solver,do_nothing,stop_early --procs 2      # ~3.5 min; results/oracle_range_v1.4.{md,json}
-```
-
-| agent | tier | tasks | mean | sd | p5 | p50 | p95 | P(mean<0) |
-|---|---|---|---|---|---|---|---|---|
-| solver (oracle) | hard | 2 | +0.533 | 0.274 | −0.211 | +0.620 | +0.745 | 10.5% |
-| solver (oracle) | hard | 3 | +0.547 | 0.208 | +0.047 | +0.613 | +0.723 | 1.5% |
-| solver (oracle) | hard | **10 (judge set)** | **+0.569** | **0.094** | **+0.393** | **+0.600** | **+0.678** | **0%** |
-| solver (oracle) | hard | 20 | +0.568 | 0.064 | +0.454 | +0.585 | +0.656 | 0% |
-| solver (oracle) | medium | 10 | +0.623 | 0.086 | +0.469 | +0.633 | +0.742 | 0% |
-| do_nothing, stop_early | hard, medium | 2/10/20 | 0 exactly in every build | | | | | |
-
-- A 10-task hard rerun of the oracle should land in about **+0.39 to +0.68** (90% of builds; mean +0.569, p5 +0.39).
-- A single wrong accusation scores −1; with the solver at ~95% accuracy on hard, a 2–3-task rerun shows a negative mean about 1.5–10% of the time without anything being broken.
-  (Measured: P(mean < 0) = 10.5% for 2 tasks, 1.5% for 3 tasks.) The 2-task rerun at −0.43 (one wrong day-6
-  accusation, −1.0, plus a late correct one, +0.14) was replayed in-process with the same build secret and gave
-  identical decisions: it was luck.
-- `stop_early` now scores exactly 0 on every build (verified after PR #16), as does `do_nothing`.
-- **20 vs 10 seeds:** the sd drops from 0.094 to 0.064 (×0.68, as expected from 1/√2). The oracle computes in 0.09 s per
-  hard task in-process. Through Harbor the cost is container time, about 1.5 min per 2-trial job above, so 20
-  tasks take roughly twice as long as 10. Worth it only if the rerun is meant to compare an agent with the oracle
-  (a frontier agent's per-task sd is much larger than the oracle's). For an oracle sanity check, 10 is enough.

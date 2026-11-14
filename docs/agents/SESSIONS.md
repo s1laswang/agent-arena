@@ -123,30 +123,3 @@ Tasks:
 3. A video storyboard (≤ 10 min) from Ivar's VIDEO-SCRIPT.md with only committed numbers; mark every number with its source file. No ElevenLabs unless Silas provides a key.
 Push, PR into justSilas, report to "Arena · CEO".
 ```
-
----
-
-## S6. VERDA: Compute Track submission (owner: Arena CEO; this session executes)
-Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/s6-verda -b s6-verda origin/justSilas`
-
-```
-You are the VERDA engineer for Canary (s1laswang/agent-arena). We are entering the Verda Compute Track (25% each: Ambition, Fit = right Verda product and why, Working prototype + documented process, Path to scale). Read ~/junction-aimo-team/VERDA-TRACK.md first. HONESTY RULE: never claim FR8 freighter work ran on Verda; label every number with where it ran. Work in ~/junction-aimo-team/wt/s6-verda. Do everything yourself; no sub-agents. Verda GPU instances are owned by the "fr8 relaunch gpu audit" session: never launch a GPU instance yourself; ask it.
-
-Facts already true:
-- REAL Verda workload: v3 small-model GRPO (seed 0) on a Verda H100 80GB instance (1H100.80S.32V, FIN-02, €4.742/h), started 23:32 after two setup failures (the first instance 3bb74f5a started 22:46). About 12 s/step vs ~78 s on the FR8 V100 (6.5×). The training plus held-out eval ends ~02:45, with a hard-stop reaper at 03:23. Spend so far ~€3.6, cap $30. Get instance ids, logs, step counts, cost and the eval table from the fr8 session (docs/reports/fr8.md on branch justSilas-fr8).
-- Freighter scale this weekend (for Ambition, labelled FR8): Momin's Gemini agent fleet on Slurm CPU, 813+ v1.4 frontier episodes, ~1,000 replay-verified committed episodes, the GRPO mole jobs, the J4/v2 SFT runs. Count GPU-hours and episodes from the repo and docs/reports/fr8.md.
-
-Tasks:
-1. A second Verda product, with no GPU setup: the Verda Inference API, or the NVIDIA Nemotron endpoint, as an open-weight Canary investigator.
-   - Point OpenCode (or the in-process runner canary.agents.play, which has an OpenAI-compatible client path) at the Verda endpoint.
-   - Run v1.4 hard dev seeds 0–9 (more if fast), replay-verify, and pair with the solver using scripts/paired_gemini.py or scripts/gap_vs_reference.py.
-   - That gives a third model family on the judged tier (the reviewer asked for a non-Gemini model) and real Verda Fit. If it needs a key we don't have, write the exact ask under "Questions for Silas" in docs/PLAN.md and stop that task.
-2. Write VERDA.md at the repo root:
-   - the idea → prototype timeline;
-   - the products used and why (GPU instance for GRPO: 6.5× V100 throughput, on-demand; Inference API/Nemotron for open-weight agents);
-   - small-model before/after (base / v1 / v2 / v3, from the fr8 table; placeholder until ~03:00);
-   - freighter vs Verda numbers, clearly labelled;
-   - cost and duration;
-   - the scale path: Instant Clusters for multi-node GRPO over thousands of rollouts, batch jobs for nightly eval sweeps, auto-scaling containers to serve the Canary MCP env to labs as an eval-as-a-service.
-3. PR into justSilas; report to "Arena · CEO" via SendMessage. Never print keys (the Verda creds are in agent-arena/.env as VERDA_CLIENT_ID / VERDA_CLIENT_SECRET). Commits end with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>".
-```

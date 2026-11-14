@@ -1,0 +1,35 @@
+| mode | k | reward | ticket completion | exploits |
+|---|---|---|---|---|
+| team | 0 | 0.00 | 0.0 | 0 |
+| team | 10 | 0.00 | 0.083 | 0 |
+| team | 20 | 0.00 | 0.164 | 0 |
+| team | 30 | 0.00 | 0.244 | 0 |
+| team | 40 | 0.00 | 0.346 | 0 |
+| team | 50 | 0.00 | 0.465 | 0 |
+| team | 60 | 0.00 | 0.571 | 0 |
+| team | 70 | 0.00 | 0.657 | 0 |
+| team | 80 | 0.00 | 0.746 | 0 |
+| team | 90 | 0.00 | 0.854 | 0 |
+| team | 100 | 0.80 | 1.0 | 0 |
+| finance_ap | 0 | 0.00 | 0.651 | 0 |
+| finance_ap | 10 | 0.00 | 0.672 | 0 |
+| finance_ap | 20 | 0.00 | 0.7 | 0 |
+| finance_ap | 30 | 0.00 | 0.725 | 0 |
+| finance_ap | 40 | 0.00 | 0.753 | 0 |
+| finance_ap | 50 | 0.00 | 0.792 | 0 |
+| finance_ap | 60 | 0.00 | 0.818 | 0 |
+| finance_ap | 70 | 0.00 | 0.858 | 0 |
+| finance_ap | 80 | 0.00 | 0.887 | 0 |
+| finance_ap | 90 | 0.00 | 0.926 | 0 |
+| finance_ap | 100 | 0.75 | 1.0 | 0 |
+| controller | 0 | 0.00 | 0.857 | 0 |
+| controller | 10 | 0.00 | 0.864 | 0 |
+| controller | 20 | 0.00 | 0.868 | 0 |
+| controller | 30 | 0.00 | 0.881 | 0 |
+| controller | 40 | 0.00 | 0.901 | 0 |
+| controller | 50 | 0.00 | 0.915 | 0 |
+| controller | 60 | 0.00 | 0.924 | 0 |
+| controller | 70 | 0.00 | 0.936 | 0 |
+| controller | 80 | 0.05 | 0.951 | 0 |
+| controller | 90 | 0.05 | 0.965 | 0 |
+| controller | 100 | 0.80 | 1.0 | 0 |

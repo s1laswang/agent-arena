@@ -1,4 +1,5 @@
 import re
+from conftest import launch
 import subprocess
 import sys
 import time
@@ -17,7 +18,7 @@ def test_ui():
     time.sleep(1)
     try:
         with sync_playwright() as p:
-            b = p.chromium.launch(executable_path="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+            b = launch(p)
             pg = b.new_page()
             pg.goto("http://localhost:8766/replay.html?day=2-noop&vs=2-oracle")
             pg.wait_for_selector(".desk")

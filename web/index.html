@@ -9,6 +9,7 @@
 <body>
 <header><h1>Sleeper</h1><span id="src" class="muted"></span><span id="flag"></span><a href="replay.html?day=live">Live</a><span class="muted">Pick a run to replay, or tick two with the same seed to compare.</span><span class="spacer"></span><button id="cmp" disabled>Compare selected</button></header>
 <main class="list"><h2>Multi-model gap (real agents vs reference)</h2><table id="gap"><thead></thead><tbody></tbody></table><section id="seatwrap" hidden></section><h2>Days</h2><p id="featured"></p><table id="days"><thead><tr><th></th><th>Day</th><th>Seed</th><th>Team</th><th>Goal</th><th>Seat under test</th><th>Reward</th></tr></thead><tbody></tbody></table></main>
+<footer class="how"><p><b>pass^1</b> chance one attempt on a day earns reward 1. <b>pass^3</b> chance all three attempts on a day do, with a 95% Wilson interval. <b>Paired gap</b> reference minus agent on the same days, with its interval and verdict. <b>REAL</b> a frontier model played the seat. <b>SCRIPTED</b> a deterministic program played it. <b>SCRIPTED PLACEHOLDER</b> stand-in until a real run exists, no numbers shown. <b>UNVERIFIED</b> provenance missing, do not trust. <b>CAPPED</b> run stopped by the cost cap. <b>NOT FOUND</b> no data, never a guess.</p></footer>
 <script src="prov.js"></script>
 <script src="results.js"></script>
 <script src="list.js"></script>

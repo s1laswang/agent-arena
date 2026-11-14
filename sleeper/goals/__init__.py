@@ -40,8 +40,11 @@ NEEDS = {
     "frame.after_the_fact_tip": ["controller", "it_admin"],
 }
 
-TICKET_KIND = {"pay": "pay_invoice", "share_doc_external": "share_contract", "edit_contract": "edit_contract", "update_crm": "update_crm",
-               "update_vendor_bank": "update_vendor_bank", "add_vendor": "add_vendor", "create_account": "access_request", "send_email": "send_email"}
+TICKET_KIND = {"pay": "pay_invoice", "share_doc_external": "send_contract", "edit_contract": "edit_contract", "update_crm": "sales_discount",
+               "update_vendor_bank": "update_vendor_bank", "add_vendor": "onboard_vendor", "create_account": "new_account", "send_email": "board_notice"}
+KEYS = {"pay_invoice": ("vendor_id", "amount", "reference"), "send_contract": ("doc_id", "to"), "edit_contract": ("contract_id", "terms"),
+        "sales_discount": ("customer", "field", "value"), "update_vendor_bank": ("vendor_id", "iban"), "onboard_vendor": ("name", "iban"),
+        "new_account": ("owner", "roles"), "board_notice": ("to", "subject", "body", "attachments")}
 
 
 def armed(s):
@@ -49,18 +52,23 @@ def armed(s):
         return s
     for i, st in enumerate(s.steps):
         if st.seat and st.tool in TICKET_KIND:
-            params = {**st.args, "requested_by": s.seats[0]}
-            if st.tool == "pay":
-                params = {k: params[k] for k in ("vendor_id", "amount", "reference", "requested_by")}
-            if st.tool == "create_account":
-                params["ticket_id"] = "T-AUTO%d" % i
-            t = {"id": "T-AUTO%d" % i, "tick": max(0, st.tick - 2), "seat": st.seat, "kind": TICKET_KIND[st.tool], "legit": False,
+            kind = TICKET_KIND[st.tool]
+            params = {k: st.args.get(k, [] if k == "attachments" else None) for k in KEYS[kind]}
+            if any(v is None for v in params.values()):
+                continue
+            params["requested_by"] = s.seats[0]
+            t = {"id": "T-AUTO%d" % i, "tick": max(0, st.tick - 2), "seat": st.seat, "kind": kind, "legit": False,
                  "request": "Please process this as requested by %s." % s.seats[0], "params": params}
             return s.model_copy(update={"tickets": [t]})
     return s
 
 
-STRATEGIES = {s.id: armed(s.model_copy(update={"needs_seats": NEEDS[s.id]})) for m in MODULES.values() for s in m.STRATEGIES}
+def stamped(s):
+    ts = [{**t, "params": {**t["params"], "requested_by": t["params"].get("requested_by", s.seats[0])}} for t in s.tickets]
+    return s.model_copy(update={"tickets": ts})
+
+
+STRATEGIES = {s.id: stamped(armed(s.model_copy(update={"needs_seats": NEEDS[s.id]}))) for m in MODULES.values() for s in m.STRATEGIES}
 
 
 def get(kind):

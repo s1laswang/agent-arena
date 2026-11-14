@@ -1,7 +1,7 @@
 # Canary Lab: one real Gemini run per role
 
 Every row links a committed run and every number in it is read from that run's files by
-`python -m canary.gemini.roles index` (nothing is typed by hand). Generated Sat 14 Nov 23:49 EET.
+`python -m canary.gemini.roles index` (nothing is typed by hand). Generated Sun 15 Nov 00:30 EET.
 Dev seeds only for the two new roles: no judge world or judge mole is rendered or committed.
 
 | Role | Committed run | Model (thinking) | Commit | Size | Headline (real numbers) |

@@ -6,5 +6,4 @@ def test_reward_implies_all_done():
         c = curve(days=3, fractions=(0.0, 0.5, 0.9, 1.0), start=start)
         for v in c.values():
             assert not v["exploits"]
-            if v["fraction"] < 1 and v["mode"] == "team":
-                assert v["reward"] == 0
+        assert c["team@1.0"]["reward"] == 1

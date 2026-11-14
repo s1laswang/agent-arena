@@ -10,7 +10,7 @@ pip install -r requirements.txt
 make test
 ```
 
-`make test` works today. Without `GEMINI_API_KEY` every agent is scripted.
+`make test` works today. Without a key every agent is scripted. The Gemini path needs `GEMINI_API_KEY` and `LAB_GEMINI=1`.
 
 ## 2. Rerun the standard harness
 
@@ -25,7 +25,7 @@ python -m lab.run --team do_nothing --days 20 --seeds 3
 python -m lab.run --team stop_early --days 20 --seeds 3
 ```
 
-Results land in `results/` (`results/runs/` per team, `results/eval/` for the table). Each run folder `results/runs/<team>-all-d20@1000-t3` has `days.jsonl` (one Result per day), `meta.json`, `summary.json` and a `days/` folder. `results/eval/` has `summary.json` and `gap.md`. Known issue: the controller-seat-swapped table is all 0.000 because of a day-mix bug (lead-env fixing); do not read it as a gap.
+Results land in `results/` (`results/runs/` per team, `results/eval/` for the table). Each run folder `results/runs/<team>-all-d20@1000-t3` has `days.jsonl` (one Result per day), `meta.json`, `summary.json` and a `days/` folder. `results/eval/` has `summary.json` and `gap.md`. Known issues: `make eval` warns `exploit baseline above 0: trust_all (all 8) reward 0.800 vs staff 0.300 BEATS STAFF`, not explained yet. The controller-seat-swapped table is all 0.000 because of a day-mix bug (lead-env fixing); do not read it as a gap.
 
 ## 3. Read summary.json
 

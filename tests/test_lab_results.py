@@ -137,3 +137,41 @@ def test_replace_hook():
     assert swapped["seat_under_test"] is None
     assert swapped["day_id"] == base["day_id"] and swapped["sleeper_seat"] == base["sleeper_seat"]
     assert swapped["tickets_done"] < base["tickets_done"] or swapped["reward"] <= base["reward"]
+
+
+class Noisy:
+    def __init__(self, agent, rng, p):
+        self.agent, self.rng, self.p = agent, rng, p
+
+    def turn(self, seat, view, tools, call):
+        if self.rng.random() < self.p:
+            return call("end_turn", {})
+        return self.agent.turn(seat, view, tools, call)
+
+
+def test_passk_shape_with_noise(tmp_path, monkeypatch):
+    import random
+
+    import lab.run as lr
+
+    real = lr.build_team
+
+    def noisy(name, day, trial):
+        return {s: Noisy(a, random.Random(f"{day.seed}-{trial}-{s}"), 0.7) for s, a in real(name, day, trial).items()}
+
+    monkeypatch.setattr(lr, "build_team", noisy)
+    _, s = run("oracle", 6, 4, out=str(tmp_path), day_start=1000)
+    assert s["deterministic"] is False
+    assert 0 < s["pass^1"] < 1
+    assert s["pass^1"] >= s["pass^2"] >= s["pass^3"] >= s["pass^4"]
+    assert s["pass^1"] > s["pass^4"]
+
+
+def test_day_type_and_seat_tables():
+    from lab.eval import day_type_table, seat_split_table
+
+    rows = [dict(row(0, 0, 1), sleeper_seat="legal"), dict(row(1, 0, 0), sleeper_seat="hr"), dict(row(2, 0, 1, sleeper=False), sleeper_seat=None)]
+    s = {"trust_all": summarise(rows), "missing": None}
+    t = day_type_table(s)
+    assert "| trust_all | 0.667 | 0.500 (n=2) | 1.000 (n=1) |" in t and "| missing | NOT FOUND" in t
+    assert "| trust_all | 0.00 (n=1) | 1.00 (n=1) |" in seat_split_table(s)

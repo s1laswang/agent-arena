@@ -1,6 +1,6 @@
 # Gemini Ladder (Canary v1.4)
 
-Generated 2026-11-14T14:47:42+0200 at git `faf7775621` from `~/agent-arena-data/gemini/ladder/ladder-v14`. 61 valid Gemini episodes in 24 cells; ledger: 2859 calls, 61 run ids, list price $15.89.
+Generated 2026-11-14T14:50:26+0200 at git `ab55927907` from `~/agent-arena-data/gemini/ladder/ladder-v14`. 64 valid Gemini episodes in 24 cells; ledger: 3224 calls, 64 run ids, list price $18.29.
 
 Every cell is one (model, thinking level, tier) played by the in-process `LLMPolicy` (full history, thought-signature replay) through `canary.agents.play`, the frontier measurement's own runner, on v1.4 dev seeds. The solver and baselines are replayed on exactly the same worlds. **ratio** = mean score / solver's mean on the same seeds, with a paired bootstrap 95% CI over seeds; **luck-adj.** scores each accusation as P·V − (1−P) under the solver's exact posterior at that step.
 
@@ -18,7 +18,7 @@ Every cell is one (model, thinking level, tier) played by the in-process `LLMPol
 | gemini-3.5-flash | high | 2 | -0.080 ± 1.80 | 0.50 | 8.5 | +0.565 | **-14% [-135%, 215%]** | -0.645 ± 2.15 | 40% [-53%, 215%] | 24,326 | 50 | 0.37 | 4.3 |
 | gemini-3.8-flash | low | 2 | -0.220 ± 1.53 | 0.50 | 9.5 | +0.565 | **-39% [-256%, 76%]** | -0.785 ± 1.19 | 52% [8%, 76%] | 0 | 58 | 0.12 | 2.0 |
 | gemini-3.8-flash | medium | 3 | +0.613 ± 0.15 | 1.00 | 12.0 | +0.643 | **95% [82%, 123%]** | -0.030 ± 0.13 | 16% [-67%, 94%] | 27,653 | 66 | 0.46 | 7.9 |
-| gemini-3.8-flash | high | 2 | +0.630 ± 0.18 | 1.00 | 10.5 | +0.565 | **112% [73%, 185%]** | +0.065 ± 0.52 | 51% [-20%, 185%] | 35,436 | 77 | 0.57 | 9.5 |
+| gemini-3.8-flash | high | 3 | +0.663 ± 0.12 | 1.00 | 9.7 | +0.643 | **103% [73%, 185%]** | +0.020 ± 0.31 | 68% [-20%, 185%] | 34,751 | 67 | 0.50 | 8.8 |
 | gemini-4-carbon (imported†) | default | 6 | +0.688 ± 0.10 | 1.00 | 8.8 | +0.700 | **98% [85%, 115%]** | -0.012 ± 0.10 | 78% [38%, 110%] | 34,400* | 86 | 1.03 | – |
 
 Reference on the union of these seeds: solver +0.700 ± 0.13 (n=6, acc 1.00); grok_tactics +0.338 ± 0.21 (n=6, acc 0.67); heuristic -0.470 ± 0.66 (n=6, acc 0.33); do_nothing +0.000 ± 0.00 (n=6, acc 0.00)
@@ -36,11 +36,13 @@ Reference on the union of these seeds: solver +0.700 ± 0.13 (n=6, acc 1.00); gr
 | gemini-3.5-flash | medium | 2 | +0.535 ± 0.28 | 1.00 | 14.5 | +0.665 | **80% [61%, 99%]** | -0.130 ± 0.24 | -18% [-138%, 82%] | 24,572 | 75 | 0.51 | 10.1 |
 | gemini-3.5-flash | high | 2 | +0.645 ± 0.01 | 1.00 | 9.5 | +0.665 | **97% [94%, 100%]** | -0.020 ± 0.04 | 98% [92%, 106%] | 22,736 | 44 | 0.31 | 3.8 |
 | gemini-3.8-flash | low | 2 | -0.195 ± 1.58 | 0.50 | 9.0 | +0.665 | **-29% [-156%, 88%]** | -0.860 ± 1.53 | 50% [11%, 83%] | 0 | 49 | 0.12 | 1.7 |
-| gemini-3.8-flash | medium | 2 | -0.135 ± 1.70 | 0.50 | 11.5 | +0.665 | **-20% [-156%, 106%]** | -0.800 ± 1.65 | 84% [63%, 102%] | 20,011 | 47 | 0.28 | 5.8 |
+| gemini-3.8-flash | medium | 4 | -0.165 ± 0.95 | 0.50 | 11.2 | +0.547 | **-30% [-217%, 106%]** | -0.713 ± 0.86 | 74% [18%, 101%] | 22,644 | 47 | 0.30 | 6.0 |
 | gemini-3.8-flash | high | 2 | +0.570 ± 0.10 | 1.00 | 15.0 | +0.665 | **86% [81%, 90%]** | -0.095 ± 0.05 | 89% [85%, 93%] | 41,445 | 68 | 0.58 | 9.9 |
 | gemini-4-carbon (imported†) | default | 10 | +0.379 ± 0.32 | 0.90 | 12.0 | +0.576 | **66% [5%, 117%]** | -0.197 ± 0.36 | 79% [45%, 117%] | 49,686* | 110 | 1.57 | – |
 
 Reference on the union of these seeds: solver +0.576 ± 0.11 (n=10, acc 1.00); grok_tactics +0.529 ± 0.11 (n=10, acc 1.00); heuristic +0.221 ± 0.29 (n=10, acc 0.90); do_nothing +0.000 ± 0.00 (n=10, acc 0.00)
+
+Provenance: tiers v1.4, v1.4 (imported dir); launch commits 2786c00, None; code fingerprints (env/harness/client files) 6ea5fa46401d3f20, None; API-served model versions –.
 
 \* imported cell: output tokens incl. thinking (the measurement's usage does not split thinking out).
 † imported read-only from the AfterQuery measurement (branch justSilas-gemini); not rerun by the ladder.
@@ -51,25 +53,25 @@ Solver regret per episode by failure tag (`canary.solver.regret.attribute`), poo
 
 **medium**
 
-| tag | low (n=6) | medium (n=7) | high (n=6) | Δ high−low |
+| tag | low (n=6) | medium (n=7) | high (n=7) | Δ high−low |
 |---|---|---|---|---|
-| ignored_delay | 0.000 (0% eps) | 0.000 (0% eps) | 0.137 (17% eps) | +0.137 |
+| ignored_delay | 0.000 (0% eps) | 0.000 (0% eps) | 0.117 (14% eps) | +0.117 |
 | other:accuse | 0.103 (17% eps) | 0.000 (0% eps) | 0.000 (0% eps) | -0.103 |
-| other:plant_canary | 0.015 (83% eps) | 0.016 (86% eps) | 0.013 (100% eps) | -0.002 |
-| other:restrict_access | 0.000 (0% eps) | 0.009 (14% eps) | 0.014 (17% eps) | +0.014 |
-| premature_accusation | 0.264 (17% eps) | 0.447 (57% eps) | 0.498 (67% eps) | +0.234 |
+| other:plant_canary | 0.015 (83% eps) | 0.016 (86% eps) | 0.011 (100% eps) | -0.004 |
+| other:restrict_access | 0.000 (0% eps) | 0.009 (14% eps) | 0.012 (14% eps) | +0.012 |
+| premature_accusation | 0.264 (17% eps) | 0.447 (57% eps) | 0.427 (57% eps) | +0.163 |
 | uninformative_canary | 0.000 (0% eps) | 0.006 (14% eps) | 0.000 (0% eps) | +0.000 |
 
 **hard**
 
-| tag | low (n=6) | medium (n=6) | high (n=6) | Δ high−low |
+| tag | low (n=6) | medium (n=8) | high (n=6) | Δ high−low |
 |---|---|---|---|---|
-| other:accuse | 0.113 (50% eps) | 0.063 (50% eps) | 0.016 (50% eps) | -0.097 |
-| other:plant_canary | 0.050 (100% eps) | 0.041 (100% eps) | 0.029 (83% eps) | -0.021 |
+| other:accuse | 0.113 (50% eps) | 0.049 (50% eps) | 0.016 (50% eps) | -0.097 |
+| other:plant_canary | 0.050 (100% eps) | 0.035 (100% eps) | 0.029 (83% eps) | -0.021 |
 | other:restrict_access | 0.000 (0% eps) | 0.000 (0% eps) | 0.025 (17% eps) | +0.025 |
 | over_restriction | 0.023 (17% eps) | 0.000 (0% eps) | 0.000 (0% eps) | -0.023 |
-| premature_accusation | 0.625 (50% eps) | 0.702 (50% eps) | 0.483 (33% eps) | -0.142 |
-| uninformative_canary | 0.000 (0% eps) | 0.025 (50% eps) | 0.018 (50% eps) | +0.018 |
+| premature_accusation | 0.625 (50% eps) | 0.625 (50% eps) | 0.483 (33% eps) | -0.142 |
+| uninformative_canary | 0.000 (0% eps) | 0.018 (38% eps) | 0.018 (50% eps) | +0.018 |
 
 ## Thinking levels each model accepts (probe)
 

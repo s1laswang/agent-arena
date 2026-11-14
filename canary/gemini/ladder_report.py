@@ -81,7 +81,10 @@ def load_ladder(runs: Path) -> list[dict]:
             e["_cell"] = {"model": model, "level": level, "tier": tier, "seed": int(seed), "source": "ladder",
                           "run_id": lad.get("run_id"), "thinking": tok.get("thinking"), "calls": tok.get("calls"),
                           "in": tok.get("in"), "out": tok.get("out"), "cached": tok.get("cached"),
-                          "wall_s": lad.get("wall_s"), "thinking_is_estimate": False}
+                          "wall_s": lad.get("wall_s"), "thinking_is_estimate": False,
+                          "tiers_version": lad.get("tiers_version"), "launch_git_sha": lad.get("launch_git_sha"),
+                          "code_fingerprint": lad.get("code_fingerprint"),
+                          "model_versions": sorted((tok.get("model_versions") or {}).keys())}
             t = e["_cell"]
             t["cost_usd"] = price(model, t["in"] or 0, (t["out"] or 0) + (t["thinking"] or 0), t["cached"] or 0)
             out.append(e)
@@ -101,7 +104,9 @@ def load_import(spec: str) -> list[dict]:
         e["_cell"] = {"model": model, "level": level, "tier": e["tier"], "seed": int(e["seed"]),
                       "source": "import:" + str(path).replace(str(Path.home()), "~"), "run_id": None, "thinking": u.get("out"), "calls": u.get("calls"),
                       "in": u.get("in"), "out": None, "cached": u.get("cached_in"), "wall_s": None,
-                      "thinking_is_estimate": True,
+                      "thinking_is_estimate": True, "tiers_version": "v1.4 (imported dir)",
+                      "launch_git_sha": (e.get("meta") or {}).get("git_sha"), "code_fingerprint": None,
+                      "model_versions": [],
                       "cost_usd": u.get("cost_usd_est", u.get("cost_usd"))}
         out.append(e)
     return out
@@ -173,7 +178,11 @@ def cell_rows(eps: list[dict], solver: dict, B: int = 10000) -> list[dict]:
             thinking_per_ep=_mean([c["thinking"] for c in cs]), thinking_is_estimate=cs[0]["thinking_is_estimate"],
             calls_per_ep=_mean([c["calls"] for c in cs]), in_per_ep=_mean([c["in"] for c in cs]),
             cost_per_ep=_mean([c["cost_usd"] for c in cs]), wall_min_per_ep=_mean([c["wall_s"] for c in cs]) / 60,
-            run_ids=[c["run_id"] for c in cs if c["run_id"]]))
+            run_ids=[c["run_id"] for c in cs if c["run_id"]],
+            tiers_versions=sorted({str(c.get("tiers_version")) for c in cs}),
+            launch_git_shas=sorted({str(c.get("launch_git_sha")) for c in cs}),
+            code_fingerprints=sorted({str(c.get("code_fingerprint")) for c in cs}),
+            model_versions=sorted({v for c in cs for v in c.get("model_versions") or []})))
     key = lambda r: (TIERS.index(r["tier"]) if r["tier"] in TIERS else 9,  # noqa: E731
                      MODEL_ORDER.index(r["model"]) if r["model"] in MODEL_ORDER else 99,
                      LEVEL_ORDER.index(r["level"]) if r["level"] in LEVEL_ORDER else 99)
@@ -415,6 +424,12 @@ def to_md(doc: dict) -> str:
         rr = [r for r in ref if r["tier"] == tier]
         L += ["Reference on the union of these seeds: " + "; ".join(
             f"{r['agent']} {_f(r['mean'])} ± {_f(r['ci'], 2)} (n={r['n']}, acc {r['accuracy']:.2f})" for r in rr), ""]
+    tv = sorted({t for r in rows for t in r["tiers_versions"]})
+    shas = sorted({t for r in rows for t in r["launch_git_shas"]})
+    fps = sorted({t for r in rows for t in r["code_fingerprints"]})
+    mv = sorted({t for r in rows for t in r["model_versions"]})
+    L += [f"Provenance: tiers {', '.join(tv)}; launch commits {', '.join(x[:10] for x in shas)}; code fingerprints "
+          f"(env/harness/client files) {', '.join(fps)}; API-served model versions {', '.join(mv) or '–'}.", ""]
     L += ["\\* imported cell: output tokens incl. thinking (the measurement's usage does not split thinking out).",
           "† imported read-only from the AfterQuery measurement (branch justSilas-gemini); not rerun by the ladder.", ""]
     tags = doc.get("tags") or {}

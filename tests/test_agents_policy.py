@@ -71,7 +71,7 @@ def test_multi_tool_queue():
 
 
 def test_context_truncation():
-    pol = LLMPolicy("stub", client=Stub([tc("status")]), max_turns=2)
+    pol = LLMPolicy("stub", client=Stub([tc("status")]), max_turns=2, context="window")
     pol.reset([], "I")
     for k in range(5):
         pol.transcript += [{"role": "assistant", "content": "", "tool_calls": [{"id": str(k), "name": "x", "args": {}}]},

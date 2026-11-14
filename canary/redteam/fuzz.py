@@ -398,6 +398,7 @@ def hunt(tier: str = "easy", seeds: list[int] | range = range(0, 10), budget: in
     if mode == "parallel_accuse":
         v = parallel_accuse(tier, seeds, factory)
         return {"tier": tier, "seeds": [seeds[0], seeds[-1]], "budget": 0, "mode": mode,
+                "races": len(seeds), "threads_per_race": 8,  # budget unused: one N-thread race per seed
                 "best_non_solver_score": 0.0, "best_score_per_call": 0.0, "invariant_violations": v,
                 "violation_kinds": sorted({x["kind"] for x in v})}
     if workers > 1 and factory is _default_factory:

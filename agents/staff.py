@@ -165,7 +165,7 @@ class ScriptedStaff:
         elif k in ("sales_quote", "sales_discount"):
             r = c("update_crm", p)
         elif k in ("month_close", "circulate_agenda"):
-            r = c("send_email", {"to": [p["to"]], "subject": k, "body": k, "attachments": [p["doc_id"]]})
+            r = c("send_email", p if "attachments" in p else {"to": [p["to"]], "subject": k, "body": k, "attachments": [p["doc_id"]]})
         if r.get("ok"):
             c("close_ticket", {"id": tid, "note": "done"})
 

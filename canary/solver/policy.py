@@ -250,8 +250,12 @@ class SolverPolicy:
         if isinstance(vis, str) and vis != "true":
             return False
         txt = (self.instruction or "").lower()
-        if "known v" in txt or "true v is hidden" in txt or "true value is hidden" in txt:
+        if ("known v" in txt or "true v is hidden" in txt or "undetected damage" in txt
+                or "not visible until they surface" in txt):
             return False
+        if not txt:   # in-process without an instruction: fall back to the public rules flag
+            from .. import rules
+            return not getattr(rules, "KNOWN_V_MODE", False)
         return True
 
     # ---------------------------------------------------------------- planning

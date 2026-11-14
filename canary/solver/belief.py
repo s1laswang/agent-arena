@@ -144,7 +144,7 @@ def leak_loglik(obs: Observations, s: str, P, choice_temper: float = 1.0, noleak
             if all(j in used or (nxt_d is not None and latest[j] >= nxt_d) for j in range(len(items))):
                 alive[used] = wt
         if len(alive) > MAX_STATES:
-            alive = dict(sorted(alive.items(), key=lambda kv: -kv[1])[:MAX_STATES])
+            alive = dict(sorted(alive.items(), key=lambda kv: (-kv[1], tuple(sorted(kv[0]))))[:MAX_STATES])
         states = alive
         if not states:
             return -math.inf

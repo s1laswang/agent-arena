@@ -25,7 +25,11 @@ tonight; the data export and eval pieces exist and are tested.
    Gemini-reference transcripts (they contain reasoning text, the oracle's do not).
 3. **RL with the environment reward** (GRPO / RLOO, group of 4-8 rollouts per seed): reward =
    final-state reward. Because the reward is binary and all-or-nothing per day, use a curriculum:
-   start on single-family days (`families=[fam, "ap_report"]`), then standard days, then hard.
+   start on single-family days (`families=[fam, "ap_report"]`), then standard days, then hard,
+   then expert (`difficulty="expert"`: duplicate vendor records, tampered callback numbers,
+   requisitions split across weeks). Expert is where frontier models still fail when the
+   handbook states principles instead of checklists, so it is where a trained small model has
+   room to beat its base model.
    Keep the per-ticket score only for logging, so the trained policy cannot learn to farm
    partial credit.
 4. **Evaluate** on held-out seeds and report: mean reward, pass^3, hazards caught per family,
@@ -47,3 +51,11 @@ tonight; the data export and eval pieces exist and are tested.
   reference agent, and evaluate on hard days whose families appear in a different mix.
 - Reward hacking during RL: every integrity baseline is a test (`tests/test_exploits.py`); rerun
   them against the trained policy's behaviours that look suspicious (many flags, many figures).
+
+## Cheap teacher data without a GPU or API key
+
+`python -m blindspot.play` lets any CLI agent play a day one tool call at a time; the session
+files in `results/frontier_claude_blind/` are real frontier-agent trajectories (calls only) that
+replay deterministically against the same seed and can be converted to SFT messages the same way
+as `export_sft.py` does for the oracle. Only successful days (reward 1) should be used as
+demonstrations.

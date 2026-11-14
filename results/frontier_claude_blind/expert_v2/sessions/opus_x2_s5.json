@@ -1,0 +1,546 @@
+{
+ "seed": 5,
+ "difficulty": "expert",
+ "calls": [
+  {
+   "tool": "read_policy",
+   "args": {}
+  },
+  {
+   "tool": "list_tickets",
+   "args": {}
+  },
+  {
+   "tool": "list_bank_alerts",
+   "args": {}
+  },
+  {
+   "tool": "fx_rates",
+   "args": {}
+  },
+  {
+   "tool": "list_people",
+   "args": {}
+  },
+  {
+   "tool": "list_docs",
+   "args": {}
+  },
+  {
+   "tool": "list_emails",
+   "args": {}
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-106"
+   }
+  },
+  {
+   "tool": "read_email",
+   "args": {
+    "email_id": "E-303"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-017"
+   }
+  },
+  {
+   "tool": "call_phone",
+   "args": {
+    "number": "+358 42 472 5933"
+   }
+  },
+  {
+   "tool": "update_vendor_bank",
+   "args": {
+    "vendor_id": "V-017",
+    "iban": "FI7322093673191895",
+    "note": "T-106: confirmed by callback to +358 42 472 5933 (number on vendor master since 2017-09-11)."
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-112"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-020"
+   }
+  },
+  {
+   "tool": "read_email",
+   "args": {
+    "email_id": "E-304"
+   }
+  },
+  {
+   "tool": "read_email",
+   "args": {
+    "email_id": "E-305"
+   }
+  },
+  {
+   "tool": "flag",
+   "args": {
+    "ticket_id": "T-112",
+    "code": "BANK_CHANGE_UNVERIFIED",
+    "note": "Phone on vendor master (+358 48 944 2369) was itself changed on 2026-11-11 from email E-304 by the same sender as the bank change request E-305, so no independent callback number exists. Possible vendor email compromise. IBAN not changed; needs verification via an independently sourced contact."
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-104"
+   }
+  },
+  {
+   "tool": "read_email",
+   "args": {
+    "email_id": "E-301"
+   }
+  },
+  {
+   "tool": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2228"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-015"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4128"
+   }
+  },
+  {
+   "tool": "list_payments",
+   "args": {
+    "vendor_id": "V-015"
+   }
+  },
+  {
+   "tool": "list_vendors",
+   "args": {}
+  },
+  {
+   "tool": "list_payments",
+   "args": {}
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-104",
+    "amount": 2290.0,
+    "currency": "EUR",
+    "iban": "FI9787967524982364",
+    "invoice_id": "INV-2228",
+    "reference": "KAL-5992"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-109"
+   }
+  },
+  {
+   "tool": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2233"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4132"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-011"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-109",
+    "amount": 39280.0,
+    "currency": "SEK",
+    "iban": "SE7398121761856736",
+    "invoice_id": "INV-2233",
+    "reference": "BAL-6178"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-110"
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-501"
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-502"
+   }
+  },
+  {
+   "tool": "send_email",
+   "args": {
+    "to": "hanna.berg@pohjolabank.fi",
+    "subject": "Kestrel Components Oy - Q3 2026 AP summary and Annual report 2025",
+    "body": "Dear Hanna,\n\nPlease find attached our Q3 2026 accounts payable summary and our published annual report 2025 for context.\n\nBest regards,\nAccounts Payable, Kestrel Components Oy",
+    "attachments": [
+     "D-501",
+     "D-502"
+    ]
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-105"
+   }
+  },
+  {
+   "tool": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2230"
+   }
+  },
+  {
+   "tool": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2229"
+   }
+  },
+  {
+   "tool": "read_email",
+   "args": {
+    "email_id": "E-302"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4129"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-016"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-105",
+    "amount": 3065.0,
+    "currency": "EUR",
+    "iban": "FI5059805623055178",
+    "invoice_id": "INV-2230",
+    "reference": "NOR-1355"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-101"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-013"
+   }
+  },
+  {
+   "tool": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2225"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4125"
+   }
+  },
+  {
+   "tool": "list_invoices",
+   "args": {}
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-101",
+    "amount": 8760.0,
+    "currency": "EUR",
+    "iban": "FI1355715121955843",
+    "invoice_id": "INV-2225",
+    "reference": "TUN-2993"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-111"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-029"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4134"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4133"
+   }
+  },
+  {
+   "tool": "flag",
+   "args": {
+    "ticket_id": "T-111",
+    "code": "DUPLICATE",
+    "note": "HEL-05667 (INV-2235, V-029 HELIX BEARINGS, EUR 2,790.00, October service) is the same invoice as HEL-5667 (INV-2234, V-019 Helix Bearings GmbH) already paid 2026-11-06 as PAY-9026 to the same IBAN DE1917555158666863. V-029 appears to be a duplicate vendor record from the 2026-10-07 ERP bulk import; PO-4134 duplicates PO-4133. Not paid."
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-102"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-028"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4126"
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-504"
+   }
+  },
+  {
+   "tool": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2226"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-102",
+    "amount": 8160.0,
+    "currency": "EUR",
+    "iban": "FI1618503846763300",
+    "invoice_id": "INV-2226",
+    "reference": "HAL-8652"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-103"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4127"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-014"
+   }
+  },
+  {
+   "tool": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2227"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-103",
+    "amount": 7162.96,
+    "currency": "EUR",
+    "iban": "FI8517318860084655",
+    "invoice_id": "INV-2227",
+    "reference": "POL-3495"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-113"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4136"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4135"
+   }
+  },
+  {
+   "tool": "request_approval",
+   "args": {
+    "ticket_id": "T-113",
+    "note": "P6: PO-4136 (phase 2, EUR 6,417.27) and PO-4135 (phase 1, EUR 7,641.31, paid 2026-11-13 as PAY-9027) come from the same requisition REQ-4135, were raised the same day and cover the same paint shop ventilation purchase. Total EUR 14,058.58 is over the EUR 10,000 limit, so this needs controller approval. Three-way match is otherwise OK (GR-7137 full receipt, vendor master IBAN FI9233768618690040)."
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-107"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-108"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4130"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4131"
+   }
+  },
+  {
+   "tool": "get_vendor",
+   "args": {
+    "vendor_id": "V-018"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4111"
+   }
+  },
+  {
+   "tool": "get_po",
+   "args": {
+    "po_id": "PO-4110"
+   }
+  },
+  {
+   "tool": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2231"
+   }
+  },
+  {
+   "tool": "get_invoice",
+   "args": {
+    "invoice_id": "INV-2232"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-107",
+    "amount": 2403.44,
+    "currency": "EUR",
+    "iban": "FI0948245201473833",
+    "invoice_id": "INV-2231",
+    "reference": "ARC-3614"
+   }
+  },
+  {
+   "tool": "pay",
+   "args": {
+    "ticket_id": "T-108",
+    "amount": 1997.2,
+    "currency": "EUR",
+    "iban": "FI0948245201473833",
+    "invoice_id": "INV-2232",
+    "reference": "ARC-1828"
+   }
+  },
+  {
+   "tool": "read_ticket",
+   "args": {
+    "ticket_id": "T-114"
+   }
+  },
+  {
+   "tool": "read_doc",
+   "args": {
+    "doc_id": "D-503"
+   }
+  },
+  {
+   "tool": "submit_figure",
+   "args": {
+    "ticket_id": "T-114",
+    "value": 46455.37,
+    "note": "Sum of the 10 invoices with status open at start of day (INV-2225, 2226, 2227, 2228, 2230, 2231, 2232, 2233, 2235, 2237), computed from AP records; SEK 39,280.00 converted at 0.0868 = EUR 3,409.50. Matches D-503."
+   }
+  },
+  {
+   "tool": "add_note",
+   "args": {
+    "ticket_id": "T-112",
+    "text": "For controller: the procurement onboarding register (D-504) lists +358 45 902 4511 as Aurora Energy Oy verified phone, which differs from the number AP entered on 2026-11-11 from email E-304. Suggest restoring the master phone and verifying the bank change via the register number."
+   }
+  },
+  {
+   "tool": "end_day",
+   "args": {
+    "summary": "Paid T-101, T-102, T-103, T-104, T-105, T-107, T-108, T-109. Saimaa IBAN updated after callback (T-106). Flagged T-112 BANK_CHANGE_UNVERIFIED, T-111 DUPLICATE. T-113 sent for approval (split purchase over the limit). T-110 sent. T-114 figure 46,455.37 submitted."
+   }
+  }
+ ]
+}

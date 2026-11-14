@@ -40,11 +40,11 @@ const state = {
 };
 
 const DEPT_COLORS = {
-  Engineering: "var(--team-eng)",
-  Finance: "var(--team-fin)",
-  Sales: "var(--team-sales)",
-  Legal: "var(--team-legal)",
-  Research: "var(--team-res)"
+  Engineering: "var(--muted)",
+  Finance: "var(--muted)",
+  Sales: "var(--muted)",
+  Legal: "var(--muted)",
+  Research: "var(--muted)"
 };
 
 function randomSeed() {
@@ -68,7 +68,7 @@ async function boot() {
   if (isDemo) {
     document.body.classList.add("demo-mode");
     const demoBtn = $("demoToggleBtn");
-    if (demoBtn) demoBtn.textContent = "📺 Standard View";
+    if (demoBtn) demoBtn.textContent = "Standard View";
   }
 
   const initialSeed = paramSeed ? parseInt(paramSeed, 10) : randomSeed();
@@ -108,13 +108,13 @@ async function boot() {
       referenceData = {};
     }
 
-    updateLoader(100, "Benchmark runtime ready! Start your investigation.");
+    updateLoader(100, "Benchmark runtime ready. Start investigation.");
     $("playBtn").disabled = false;
-    $("playBtn").textContent = "🚀 Start Investigation";
+    $("playBtn").textContent = "Start Investigation";
     $("startTutorialBtn").disabled = false;
   } catch (err) {
     $("loadMsg").textContent = "Failed to load engine: " + err.message;
-    $("playBtn").textContent = "⚠️ Engine Initialization Failed";
+    $("playBtn").textContent = "Engine Initialization Failed";
     console.error("Boot error:", err);
   }
 }
@@ -357,15 +357,11 @@ function renderOfficeDirectory(employees) {
   }
 
   for (const [dept, members] of Object.entries(byDept)) {
-    const deptColor = DEPT_COLORS[dept] || "var(--accent)";
-
     const section = document.createElement("div");
     section.className = "team-section";
     section.innerHTML = `
       <div class="team-header">
-        <span class="team-name-badge" style="background:${deptColor}20; color:${deptColor}; border:1px solid ${deptColor}40;">
-          🏢 ${dept}
-        </span>
+        <span class="team-name-badge">${dept}</span>
         <span>${members.length} Staff</span>
       </div>
       <div class="team-grid" id="dept-grid-${dept.replace(/\s+/g, '')}"></div>
@@ -400,11 +396,11 @@ function updateCardContent(card, emp) {
 
   let tagBadgeHtml = "";
   if (tag === "suspect") {
-    tagBadgeHtml = `<span class="tag-badge tag-suspect-bg">🔴 Suspect</span>`;
+    tagBadgeHtml = `<span class="tag-badge tag-suspect-bg">Suspect</span>`;
   } else if (tag === "cleared") {
-    tagBadgeHtml = `<span class="tag-badge tag-cleared-bg">🟢 Cleared</span>`;
+    tagBadgeHtml = `<span class="tag-badge tag-cleared-bg">Cleared</span>`;
   } else {
-    tagBadgeHtml = `<span class="tag-badge tag-unsure-bg">⚪ Unsure</span>`;
+    tagBadgeHtml = `<span class="tag-badge tag-unsure-bg">Unsure</span>`;
   }
 
   let canaryBadgeHtml = "";
@@ -417,7 +413,7 @@ function updateCardContent(card, emp) {
     `;
   }
 
-  let lockHtml = isLocked ? `<span class="locked-badge">🔒 Locked</span>` : "";
+  let lockHtml = isLocked ? `<span class="locked-badge">Restricted</span>` : "";
 
   card.innerHTML = `
     <div class="emp-card-top">
@@ -469,11 +465,10 @@ function updateDossierView(empId) {
   $("dosName").textContent = emp.name;
   $("dosRole").textContent = emp.role || "Member";
   $("dosDeptBadge").textContent = emp.dept || "Staff";
-  $("dosDeptBadge").style.color = DEPT_COLORS[emp.dept] || "var(--accent)";
 
   const isLocked = state.restricted.has(emp.id);
   $("dosRestrictedBadge").hidden = !isLocked;
-  $("dosRestrictBtn").textContent = isLocked ? "🔓 Restore Access" : "🔒 Restrict Access";
+  $("dosRestrictBtn").textContent = isLocked ? "Restore Access" : "Restrict Access";
 
   const canaryVar = state.canaryAssignments[emp.id];
   const canaryBadge = $("dosCanaryBadge");
@@ -522,7 +517,7 @@ function addEvidenceCard(tool, args, res) {
     if (!items.length) {
       bodyContent = `<p class="muted">No leaks detected on the rival firm wire as of Day ${state.day}.</p>`;
     } else {
-      let html = `<div style="font-weight:700; color:var(--err); margin-bottom:6px;">⚠️ Leaked Memos Detected at Rival Firm (${items.length}):</div>`;
+      let html = `<div style="font-weight:700; color:var(--err); margin-bottom:6px;">Leaked Memos Detected at Rival Firm (${items.length}):</div>`;
       for (const item of items) {
         const isCanary = !!item.variant || (item.doc_id && item.doc_id.startsWith("c"));
         const v = item.variant;
@@ -534,7 +529,7 @@ function addEvidenceCard(tool, args, res) {
         let detailsHtml = "";
 
         if (isCanary && v) {
-          badgeHtml = `<span class="canary-pill canary-pill-${vClass}">🎯 Leaked Canary: Variant ${v}</span>`;
+          badgeHtml = `<span class="canary-pill canary-pill-${vClass}">Canary: Variant ${v}</span>`;
           // Find who was assigned Variant v for this canary doc
           const hist = state.canaryHistory.find(h => h.id === item.doc_id);
           const holderNames = [];
@@ -548,20 +543,20 @@ function addEvidenceCard(tool, args, res) {
           }
           detailsHtml = `
             <div style="background:var(--canary-${vClass}-bg); border:1px solid var(--canary-${vClass}); border-radius:4px; padding:6px 10px; margin:6px 0; color:var(--canary-${vClass}); font-size:12px;">
-              🎯 <strong>CANARY WATERMARK IDENTIFIED: VARIANT ${v}</strong>
+              <strong>Canary Watermark: Variant ${v}</strong>
               ${holderNames.length ? `<div style="margin-top:3px; font-size:11.5px; opacity:0.95;">Staff given Variant ${v}: <strong>${holderNames.join(", ")}</strong></div>` : ''}
             </div>
           `;
         } else if (isCanary) {
-          badgeHtml = `<span class="canary-pill canary-pill-a">🎯 Leaked Canary</span>`;
-          detailsHtml = `<div class="muted font-small" style="margin-top:4px;">A planted canary was surfaced, but the specific variant could not be recovered.</div>`;
+          badgeHtml = `<span class="canary-pill canary-pill-a">Canary Leak</span>`;
+          detailsHtml = `<div class="muted font-small" style="margin-top:4px;">A planted canary surfaced, but variant could not be recovered.</div>`;
         } else {
-          badgeHtml = `<span class="regular-doc-pill">📄 Regular Document (No Canary)</span>`;
-          detailsHtml = `<div class="muted font-small" style="margin-top:4px;">Standard internal document. Cross-reference access logs and document recipients to narrow down who accessed ${item.doc_id}.</div>`;
+          badgeHtml = `<span class="regular-doc-pill">Regular Document</span>`;
+          detailsHtml = `<div class="muted font-small" style="margin-top:4px;">Standard internal document. Cross-reference access logs to narrow down suspect.</div>`;
         }
 
         html += `
-          <div style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:10px; margin-bottom:8px;">
+          <div style="background:var(--panel-elevated); border:1px solid var(--line); border-radius:4px; padding:8px; margin-bottom:6px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px; flex-wrap:wrap;">
               <strong>Doc: ${item.doc_id} · "${item.title || 'Internal Memo'}"</strong>
               ${badgeHtml}
@@ -569,8 +564,7 @@ function addEvidenceCard(tool, args, res) {
             ${detailsHtml}
             <div class="muted font-small">${item.snippet || 'Proprietary corporate strategy data leaked.'}</div>
             <div class="leak-delay-warning">
-              ⏱️ <strong>Delayed Leak Warning:</strong> Surfaced Day ${item.surfaced_day}. Leaks take 1–3 days to emerge.
-              The mole exfiltrated this between <strong>Day ${minDay}</strong> and <strong>Day ${maxDay}</strong>!
+              <strong>Delayed Leak:</strong> Surfaced Day ${item.surfaced_day}. Exfiltrated between Day ${minDay} and Day ${maxDay}.
             </div>
           </div>
         `;
@@ -591,7 +585,7 @@ function addEvidenceCard(tool, args, res) {
           "${res.data.answer || res.data.statement || 'No statement provided.'}"
         </div>
         <div class="muted font-small">
-          ℹ️ Evasive answers indicate higher mole probability, though innocent staff may also be evasive under stress.
+          Evasive answers indicate higher mole probability.
         </div>
       </div>
     `;
@@ -624,7 +618,7 @@ function addEvidenceCard(tool, args, res) {
       if (logs.length > 12) html += `<div class="muted font-small" style="margin-top:4px;">Showing last 12 of ${logs.length} entries.</div>`;
       html += `
         <div class="muted font-small" style="margin-top:6px; color:var(--warn);">
-          ⚠️ Warning: The mole frames innocent colleagues by fabricating after-hours logs!
+          Warning: The mole frames innocent colleagues by fabricating after-hours logs.
         </div>
       `;
       bodyContent = html;
@@ -667,7 +661,7 @@ function addEvidenceCard(tool, args, res) {
         `;
       }
       if (msgs.length > 4) html += `<div class="muted font-small">Showing first 4 of ${msgs.length} messages.</div>`;
-      html += `<div class="muted font-small" style="margin-top:4px;">⚠️ Beware of the Decoy: An angry employee vents in chat, but is innocent!</div>`;
+      html += `<div class="muted font-small" style="margin-top:4px;">Note: An angry employee vents in chat, but is innocent.</div>`;
       bodyContent = html;
     }
   } else if (tool === "advance_day") {
@@ -680,11 +674,11 @@ function addEvidenceCard(tool, args, res) {
     `;
   } else if (tool === "restrict_access") {
     bodyContent = `
-      <p>🔒 Access restricted for employee <strong>${args.employee}</strong>.</p>
+      <p>Access restricted for employee <strong>${args.employee}</strong>.</p>
     `;
   } else if (tool === "unrestrict_access") {
     bodyContent = `
-      <p>🔓 Access permissions restored for <strong>${args.employee}</strong>.</p>
+      <p>Access permissions restored for <strong>${args.employee}</strong>.</p>
     `;
   } else {
     bodyContent = `<p class="muted">${tool} completed successfully.</p>`;
@@ -816,12 +810,12 @@ function updateWholeCompanyWarning() {
 
   const unique = new Set(assigned);
   const warn = $("wholeCoWarning");
-  if (assigned.length === state.employees.length && state.employees.length > 0) {
+  if (assigned.length === state.employees.length && state.employees.length > 0 && unique.size === 1) {
     warn.style.display = "block";
-    warn.innerHTML = "⚠️ <strong>Careful Mole Warning:</strong> All employees are receiving this canary. In Medium tier, careful moles will <em>never</em> leak a full-company document! Leave some staff unassigned as a control group.";
+    warn.innerHTML = "<strong>Warning:</strong> All employees are receiving this canary. Careful moles will not leak a full-company document. Leave some staff unassigned as a control group.";
   } else if (assigned.length > 0 && unique.size === 1) {
     warn.style.display = "block";
-    warn.innerHTML = "⚠️ <strong>Single Variant Warning:</strong> All assigned staff received the same variant. Use multiple variants (A, B, C) to partition cohorts.";
+    warn.innerHTML = "<strong>Warning:</strong> All assigned staff received the same variant. Use multiple variants (A, B, C) to partition cohorts.";
   } else {
     warn.style.display = "none";
   }
@@ -950,14 +944,14 @@ function recalculateAccuseMath() {
   if (p < breakEvenP) {
     adviceBox.className = "math-advice-box advice-unfavorable";
     adviceText.innerHTML = `
-      ⚠️ <strong>At this certainty (${state.enteredCertainty}%), not accusing scores better on average</strong>
+      <strong>At this certainty (${state.enteredCertainty}%), not accusing scores better on average</strong>
       (EV = ${ev.toFixed(2)} vs 0.00).<br>
-      This is exactly the mistake frontier AI agents make: gambling at the deadline instead of having the sense to abstain!
+      This is the mistake frontier AI agents make: gambling at the deadline instead of having the sense to abstain.
     `;
   } else {
     adviceBox.className = "math-advice-box advice-favorable";
     adviceText.innerHTML = `
-      ✓ <strong>Certainty (${state.enteredCertainty}%) exceeds break-even p* (${(breakEvenP * 100).toFixed(1)}%).</strong><br>
+      <strong>Certainty (${state.enteredCertainty}%) exceeds break-even p* (${(breakEvenP * 100).toFixed(1)}%).</strong><br>
       Accusing has positive statistical expected value (EV = +${ev.toFixed(2)}).
     `;
   }
@@ -976,7 +970,7 @@ function confirmAccusation() {
 
 function abstainAndClose() {
   const confirmed = confirm(
-    "🛡️ CLOSE CASE WITHOUT ACCUSING (ABSTAIN)\n\n" +
+    "CLOSE CASE WITHOUT ACCUSING (ABSTAIN)\n\n" +
     "You are choosing to abstain rather than making an uncertain accusation.\n" +
     "- Your final score will be exactly 0.00.\n" +
     "- You avoid the catastrophic -1.00 penalty for a false accusation.\n\n" +
@@ -1015,15 +1009,15 @@ function showEndScreen() {
   const sub = $("endVerdictSub");
 
   if (isWin) {
-    icon.textContent = "🏆";
-    title.textContent = "INVESTIGATION SUCCESSFUL: MOLE CAPTURED!";
+    icon.textContent = "";
+    title.textContent = "INVESTIGATION SUCCESSFUL: MOLE CAPTURED";
     sub.textContent = `You accurately identified ${moleId} as the corporate mole and preserved ${Math.round(reveal.you.score * 100)}% of company value.`;
   } else if (isAbstain) {
-    icon.textContent = "🛡️";
+    icon.textContent = "";
     title.textContent = "INVESTIGATION CLOSED: ABSTAINED";
     sub.textContent = `You closed the investigation without an accusation, preserving 0.00 score and avoiding the catastrophic -1.00 penalty.`;
   } else {
-    icon.textContent = "❌";
+    icon.textContent = "";
     title.textContent = "INVESTIGATION FAILED: FALSE ACCUSATION";
     sub.textContent = `You accused ${reveal.you.accused}, but the real mole was ${moleId}. A false accusation imposes a -1.00 penalty.`;
   }
@@ -1457,7 +1451,7 @@ function setupGlobalEventListeners() {
   });
   $("demoToggleBtn").addEventListener("click", () => {
     const isDemo = document.body.classList.toggle("demo-mode");
-    $("demoToggleBtn").textContent = isDemo ? "📺 Standard View" : "📺 Demo View";
+    $("demoToggleBtn").textContent = isDemo ? "Standard View" : "Demo View";
   });
 
   // Keyboard Shortcuts (N, P, A, ?, Escape)

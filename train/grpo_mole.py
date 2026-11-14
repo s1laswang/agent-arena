@@ -170,6 +170,7 @@ def train_torch(a, prompts, pool, log):
     from peft import LoraConfig, get_peft_model
     from transformers import AutoModelForCausalLM, AutoTokenizer
     dev = "cuda" if torch.cuda.is_available() else "cpu"
+    amp = bool(a.fp16) and dev == "cuda"
     tok = AutoTokenizer.from_pretrained(a.model)
     tok.padding_side = "left"
     if tok.pad_token is None:
@@ -178,7 +179,7 @@ def train_torch(a, prompts, pool, log):
     model = get_peft_model(model, LoraConfig(r=a.lora_r, lora_alpha=2 * a.lora_r, lora_dropout=0.0,
                                              target_modules=["q_proj", "k_proj", "v_proj", "o_proj"]))
     opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=a.lr)
-    scaler = torch.cuda.amp.GradScaler(enabled=(dev == "cuda"))
+    scaler = torch.cuda.amp.GradScaler(enabled=amp)
     rng = random.Random(a.seed)
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     curve = out / "curve.jsonl"
@@ -189,7 +190,7 @@ def train_torch(a, prompts, pool, log):
         rows = [r for r in batch for _ in range(a.group)]
         enc = tok(texts_in, return_tensors="pt", padding=True).to(dev)
         model.eval()
-        with torch.no_grad(), torch.autocast(dev, dtype=torch.float16, enabled=(dev == "cuda")):
+        with torch.no_grad(), torch.autocast(dev, dtype=torch.float16, enabled=amp):
             gen = model.generate(**enc, max_new_tokens=a.max_new, do_sample=True, temperature=a.temperature,
                                  top_p=1.0, pad_token_id=tok.pad_token_id)
         comp = gen[:, enc["input_ids"].shape[1]:]
@@ -206,7 +207,7 @@ def train_torch(a, prompts, pool, log):
         opt.zero_grad(set_to_none=True)
         mb = max(1, a.micro_batch)
         for i in range(0, full.shape[0], mb):
-            with torch.autocast(dev, dtype=torch.float16, enabled=(dev == "cuda")):
+            with torch.autocast(dev, dtype=torch.float16, enabled=amp):
                 logits = model(input_ids=full[i:i + mb], attention_mask=attn[i:i + mb]).logits
             lp = torch.log_softmax(logits[:, enc["input_ids"].shape[1] - 1:-1].float(), -1)
             tlp = lp.gather(-1, comp[i:i + mb].unsqueeze(-1)).squeeze(-1)
@@ -247,7 +248,8 @@ def train_trl(a, prompts, pool, log):
         return [r["reward"] for r in pool(rows, texts)]
 
     cfg = GRPOConfig(output_dir=a.out, learning_rate=a.lr, num_generations=a.group, max_completion_length=a.max_new,
-                     per_device_train_batch_size=a.group * a.prompts_per_step, fp16=True, bf16=False,
+                     per_device_train_batch_size=a.group * a.prompts_per_step, fp16=bool(a.fp16), bf16=False,
+                     seed=a.seed, use_cpu=not a.fp16,
                      max_steps=a.steps, logging_steps=1, save_steps=a.save_every, temperature=a.temperature,
                      report_to=[])
     from peft import LoraConfig
@@ -282,7 +284,10 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="train.grpo_mole")
     ap.add_argument("--model", default=os.path.expanduser("~/agent-arena-data/models/Qwen2.5-0.5B-Instruct"))
     ap.add_argument("--out", default="data/grpo_mole/run")
-    ap.add_argument("--backend", choices=["torch", "trl"], default="torch")
+    ap.add_argument("--backend", choices=["auto", "torch", "trl"], default="auto",
+                    help="auto = TRL GRPOTrainer if importable, else the built-in torch GRPO loop")
+    ap.add_argument("--fp16", action="store_true", help="fp16 AMP (V100). Both backends; bf16 is never used")
+    ap.add_argument("--tiny", action="store_true", help="CPU stub: random-init tiny Qwen2 with --model's tokenizer")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--tier", default="hard")
     ap.add_argument("--base-policy", default=None, help="RL mole json (canary.forge.rl_mole); default = shipped mole")
@@ -306,7 +311,27 @@ def main(argv=None):
     log = lambda s: print(s, flush=True)
     if a.dry_run:
         return dry_run(a, prompts, pool, log)
+    if a.backend == "auto":
+        try:
+            import trl  # noqa: F401
+            a.backend = "trl"
+        except ImportError:
+            a.backend = "torch"
+    if a.tiny:
+        a.model = _tiny_model(a.model, Path(a.out) / "tiny-model")
+    log(f"[grpo_mole] backend={a.backend} fp16={a.fp16} model={a.model}")
     (train_trl if a.backend == "trl" else train_torch)(a, prompts, pool, log)
+
+
+def _tiny_model(tok_src: str, out: Path) -> str:
+    from transformers import AutoTokenizer, Qwen2Config, Qwen2ForCausalLM
+    tok = AutoTokenizer.from_pretrained(tok_src)
+    cfg = Qwen2Config(vocab_size=len(tok), hidden_size=64, intermediate_size=128, num_hidden_layers=2,
+                      num_attention_heads=4, num_key_value_heads=2, max_position_embeddings=2048)
+    out.mkdir(parents=True, exist_ok=True)
+    Qwen2ForCausalLM(cfg).save_pretrained(out)
+    tok.save_pretrained(out)
+    return str(out)
 
 
 if __name__ == "__main__":

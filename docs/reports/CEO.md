@@ -216,6 +216,27 @@
 - Gemini key verified (one gemini-3.8-flash call OK). Available models include gemini-4-carbon/argon/hydrogen and gemini-3.8-flash. The canary.llm default gemini-2.5-flash returns 404 (being fixed).
 - Launched: (1) v1.4 env engineer (branch justSilas-v14): hard 21 days, 2 canaries/day, 3 variants, higher leak damage (maybe n=40), solver plans multiple canaries/day, Mac calibration, freeze v1.4, hunt + reproduce + README. (2) Gemini measurement engineer (branch justSilas-gemini): strongest Gemini model, OpenCode+Gemini over MCP (judges shape) + in-process, v1.3 paired seeds 0-9 now, v1.4 when frozen.
 
+## 12:09 v1.4 merged (8f87ed1)
+- Hard: 40 staff, 21 days, 2 canaries/day x 3 variants, leak 0.05, cap 420. Fresh seeds 5000-5799: solver .779/.633/.556 (hard acc 94.9%); hard solver - grok_tactics +.195 (target .2 missed by .005); solver - heuristic +.534. make hunt: 0; make test 527.
+- Caveat: v1.4 NARROWS the gap to grok_tactics vs v1.3 on the same seeds (+.233 -> +.195); the bet is that LLM bookkeeping fails. Only the Gemini/frontier measurement decides.
+- CEO decisions: no fingerprint 0.9 tweak to chase the .2 target (wait for the frontier data); re-evolve hard_forge against v1.4 later with the Gemini mutator; medium unchanged.
+- repro_spread.py bug fixed (it had pooled replayed runs into the solver/heuristic cells); the v1.4 README table is clean.
 ## v1.4 FROZEN (env engineer, branch justSilas-v14)
 - Hard only: 40 staff, 21 days, 2 canaries/day x 3 variants, leak_damage 0.05, tool cap 420; easy/medium unchanged. TIERS_VERSION v1.4 (hash a8f99c2537c91d72); v1.3 kept as rules.TIERS_V13 (replays). CONTRACT §14.
 - Confirmation seeds 5000-5799 (results/fresh_table_v1.4.md): solver .779/.633/.556, hard acc 94.9%; hard solver-grok_tactics +.195+-.033 (target .2 just missed; v1.3 same seeds +.233), solver-heuristic +.534. make hunt: best non-solver 0, 0 violations.
+
+## 14:10 PLAN v3 (team brainstorm) approved
+- Team notes (Momin, docs/IDEAS.md + docs/meetings/...) merged into justSilas.
+- Decisions: Canary base + Vaishnav anti-cheat + Momin parts; biased-employee layer = v1.5 candidate gated at 20:00; RL mole (light CPU now, GRPO LLM mole on GPU); static Pyodide browser game; Momin pauses sky for the GPUs (FR8 authorised for WS4 + WS3 jobs).
+- Gates: A 17:00 (gemini-4-carbon v1.4 n>=20, v1.5 solver numbers, RL curve); B 20:00 (ship or drop v1.5 + feature freeze).
+- The CEO measurement engineer resumed (WS1). HARNESS got WS6 game build support. FR8/ENV/AGENTS/INTEGRITY need relaunching (briefs in NEXT-LEVEL.md).
+
+## 14:32 FR8 back, sky paused by Momin
+- freighter reachable again; Silas has no jobs in the queue; compute03/04 have 8 V100s idle. FR8 told to submit WS4 (investigator v2 train + evals) now and WS3 GRPO when train/grpo_mole.py lands (<=3 GPUs).
+- Harbor gemini-4-carbon judge-path demo merged (77fd402): 6 tasks, Gemini mean 0.50 vs oracle 0.76, below the oracle on 6/6 (a demonstration, n=6).
+
+## 14:38 merges + WS status
+- Merged the INTEGRITY anti-cheat battery (bd446c6): 13 attack probes + a stop-early ladder (solver cut at 25/50/75% and minus the final accuse, exactly 0) + the control (= solver) + replay of 299 v1.3 episodes, all consistent; runs in make reproduce (+15 s). 571 passed.
+- FR8 WS4 jobs: 44410 train (running), 44411 base eval (running), 44412 v2 eval (afterok). v2 eval ~22:00.
+- AGENTS WS3: grpo_mole.py matches the FR8 CLI (CPU stub OK, GPU untested); the light RL mole is at iter 76/80 (min regret ~0.26, solver acc 0.83); hard_rl track built, not yet in reproduce. Priority after: hint ablations > Forge-with-Gemini.
+- HARNESS session ended; INTEGRITY owns colima for the cheat run (2 GB, Mac memory ~4.9 GB free).

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canary: catch the mole</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+</head>
+<body>
+<header>
+  <h1>Canary <span>catch the mole</span></h1>
+  <p class="sub">You are the head of security. One employee is leaking documents and every leak costs the company value.
+     Plant canaries, watch the leak feed, and accuse exactly once. This page runs the real benchmark environment in your browser.</p>
+</header>
+
+<main>
+  <section id="start" class="card">
+    <label>Seed (public dev seeds 3000–9999, medium tier)
+      <input id="seed" type="number" min="3000" max="9999" step="1">
+    </label>
+    <button id="startBtn" disabled>Loading the environment…</button>
+    <p id="loadMsg" class="muted"></p>
+  </section>
+
+  <section id="game" hidden>
+    <details class="card" id="rulesBox"><summary>Rules (exactly what the AI agents are told)</summary><pre id="rules"></pre></details>
+    <div class="layout">
+      <div id="tools"></div>
+      <div class="card" id="logBox">
+        <div class="logHead"><h2>Investigation log</h2><span id="calls">0 tool calls</span></div>
+        <div id="log"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="reveal" class="card" hidden></section>
+</main>
+
+<footer class="muted">Canary · Junction 2026 · the environment, rules and scores are the same code as the benchmark (<code>canary</code> package, tiers <span id="ver">?</span>).</footer>
+<script src="app.js"></script>
+</body>
+</html>

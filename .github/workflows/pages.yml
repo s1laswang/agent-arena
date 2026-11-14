@@ -1,0 +1,36 @@
+name: Browser game (GitHub Pages)
+
+# MANUAL ONLY on purpose: publishing the game is a public, outward-facing step that Silas approves.
+# Run it from the Actions tab ("Run workflow") once approved. Builds game/site/ and deploys it.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: build game/site
+        run: uv run --python 3.12 python game/build.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: game/site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

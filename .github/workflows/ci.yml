@@ -22,6 +22,13 @@ jobs:
           enable-cache: true
       - name: make setup
         run: make setup
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: pyodide for the browser-game parity test (tests/test_game.py)
+        run: |
+          mkdir -p "$RUNNER_TEMP/pyo" && cd "$RUNNER_TEMP/pyo" && npm init -y >/dev/null && npm install pyodide@0.27.7
+          echo "CANARY_PYODIDE_DIR=$RUNNER_TEMP/pyo/node_modules/pyodide" >> "$GITHUB_ENV"
       - name: make test
         run: make test
       - name: make reproduce (fast mode, 5 seeds/tier, no API keys)

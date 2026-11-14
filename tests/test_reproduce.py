@@ -210,8 +210,8 @@ def test_table_current_version_first_then_history(tmp_path, monkeypatch):
     gpt = lambda b: [l for l in b.splitlines() if l.startswith("| openai:gpt-5.5 |")]
     (cur_row,) = gpt(block(h_cur))
     (v12_row,) = gpt(block(h_12))
-    assert "| reported | 3 | -1.000" in cur_row and "bbbbbbb" in cur_row
-    assert "| reported | 2 | +0.500" in v12_row and "aaaaaaa" in v12_row
+    assert "| reported | 3 | 0 | -1.000" in cur_row and "bbbbbbb" in cur_row
+    assert "| reported | 2 | 0 | +0.500" in v12_row and "aaaaaaa" in v12_row
     assert "| 9.0 | – |" in v12_row  # no `/ solver` ratio against this run's solver for history
     # superseded excluded from the table and the rows
     assert "superseded" not in md.split("## medium")[1] and "eeeeeee" not in md and "+0.990" not in md
@@ -325,3 +325,77 @@ def test_results_latest_is_gitignored_and_committed_results_are_not():
         pytest.skip("not a git checkout")
     assert ign("results/latest/judge_table.md")
     assert not ign("results/judge_table.md") and not ign("results/gap_chart.png")
+
+
+# ---- per-seed dedupe (newest run wins) and invalid episodes out of the means --------------------------
+def _ep(tier, agent, seed, score, valid=True, error=None):
+    meta = {"valid": valid} if valid else {"valid": False, "error": error}
+    return {"tier": tier, "seed": seed, "agent": agent, "steps": [], "score": score,
+            "accused": "e01" if valid else None, "correct": score > 0, "final_day": 9,
+            "end_reason": "accused" if valid else "error", "meta": meta}
+
+
+def _write_eps(path: Path, eps, ts: str):
+    path.mkdir(parents=True)
+    (path / "episodes.jsonl").write_text("\n".join(json.dumps(e) for e in eps) + "\n")
+    (path / "meta.json").write_text(json.dumps({"timestamp": ts, "git_sha": "c0ffee00",
+                                                "tiers_version": R.current_tiers_version()}))
+
+
+def _reported(rows, tier, agent):
+    (r,) = [r for r in rows if r.tier == tier and r.agent == agent and r.kind == "reported"]
+    return r
+
+
+def test_dedupe_newest_run_per_seed_wins_by_timestamp_not_path(tmp_path):
+    c = tmp_path / "data" / "runs" / "committed" / R.current_tiers_version()
+    # the OLDER run sorts LAST by path ("zz-smoke"), so path order alone would pick the wrong one
+    _write_eps(c / "zz-smoke" / "hard", [_ep("hard", "codex:gpt-5.5", 0, 0.67)], "2026-11-14T01:00:00")
+    _write_eps(c / "aa-full" / "hard", [_ep("hard", "codex:gpt-5.5", 0, -1.0),
+                                        _ep("hard", "codex:gpt-5.5", 1, 0.6)], "2026-11-14T05:00:00")
+    rows, _ = R.load_committed(tmp_path)
+    r = _reported(rows, "hard", "codex:gpt-5.5")
+    assert r.n == 2 and sorted(r.seeds) == [0, 1]
+    assert dict(zip(r.seeds, r.scores))[0] == -1.0          # the newer full run's seed 0, not the smoke
+    assert r.extra["dropped_duplicates"] == [(0, str((c / "zz-smoke" / "hard").relative_to(tmp_path)))]
+    assert "older duplicate episode(s) dropped" in r.note and "WARNING" not in r.note
+
+
+def test_every_reported_row_has_n_equal_distinct_seeds_unless_warned(tmp_path):
+    c = tmp_path / "data" / "runs" / "committed" / R.current_tiers_version()
+    # repeats WITHIN one run are intentional (pass^k): kept, but the note warns
+    _write_eps(c / "rep" / "medium", [_ep("medium", "openai:gpt-5.5", s, 0.5) for s in (0, 0, 1, 1)],
+               "2026-11-14T05:00:00")
+    _write_eps(c / "one" / "medium", [_ep("medium", "grok", s, 0.5) for s in (0, 1, 2)], "2026-11-14T05:00:00")
+    rows, _ = R.load_committed(tmp_path)
+    rep = _reported(rows, "medium", "openai:gpt-5.5")
+    assert rep.n == 4 and "WARNING n=4 != 2 distinct seeds" in rep.note
+    assert R.pass_k(rep) is not None                        # pass^k still measurable
+    for r in rows:
+        assert r.n == len(set(r.seeds)) or "WARNING" in r.note
+
+
+def test_invalid_episodes_excluded_from_means_and_listed_with_reasons(tmp_path):
+    c = tmp_path / "data" / "runs" / "committed" / R.current_tiers_version()
+    a = "opencode:openai/gpt-5.6-sol"
+    _write_eps(c / "sol" / "hard", [
+        _ep("hard", a, 0, 0.0, valid=False, error="RuntimeError('MCP server died during the episode (rc=-15)')"),
+        _ep("hard", a, 1, 0.635),
+        _ep("hard", a, 2, 0.0, valid=False, error="infra:provider_quota"),
+        _ep("hard", a, 3, 0.0, valid=False, error="infra:provider_quota"),
+    ], "2026-11-14T05:00:00")
+    rows, _ = R.load_committed(tmp_path)
+    r = _reported(rows, "hard", a)
+    assert r.n == 1 and r.scores == [0.635]                 # infra failures do not count as 0
+    assert r.extra["invalid"] == [(0, "mcp server died"), (2, "infra:provider_quota"), (3, "infra:provider_quota")]
+    md = R._row_md(r, None, compare=False)
+    assert "| 3 (infra:provider_quota ×2, mcp server died) |" in md and "+0.635" in md
+
+
+def test_row_with_only_invalid_episodes_still_renders(tmp_path):
+    c = tmp_path / "data" / "runs" / "committed" / R.current_tiers_version()
+    _write_eps(c / "dead" / "medium", [_ep("medium", "gemini:x", 0, 0.0, valid=False, error="infra:provider_quota")],
+               "2026-11-14T05:00:00")
+    rows, _ = R.load_committed(tmp_path)
+    r = _reported(rows, "medium", "gemini:x")
+    assert r.n == 0 and "| 1 (infra:provider_quota) |" in R._row_md(r, None, compare=False)

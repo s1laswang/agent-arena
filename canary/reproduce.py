@@ -285,44 +285,99 @@ def committed_files(root: Path = ROOT) -> list[Path]:
     return [f for f in sorted(root.glob(COMMITTED_GLOB)) if not is_superseded(f.parent, root)]
 
 
+def invalid_reason(e: dict[str, Any]) -> str | None:
+    """None for a valid episode; else a short reason for an infra failure (meta.valid == false)."""
+    meta = e.get("meta") or {}
+    if meta.get("valid") is not False:
+        return None
+    err = str(meta.get("error") or e.get("end_reason") or "unknown")
+    if err.startswith("infra:"):
+        return err
+    if "server died" in err:
+        return "mcp server died"
+    return err[:40]
+
+
+def run_recency(run_dir: Path, meta: dict[str, Any]) -> tuple[str, str]:
+    """Sort key for "newest run wins": meta.json timestamp (ISO, sortable), then the path as tiebreak.
+    File mtimes are not used, because a fresh clone gives every file the same mtime."""
+    return (str(meta.get("timestamp") or ""), str(run_dir))
+
+
 def load_committed(root: Path = ROOT) -> tuple[list[Row], list[str]]:
     """Replay committed frontier-agent episodes (scores were computed server-side when recorded).
 
     One row per (tier, tiers_version, agent): runs from different tier versions are never pooled,
     and data/runs/committed/superseded/ is skipped. Each row carries extra["tiers_version"] and
-    extra["git_shas"] (from meta.json, where present)."""
+    extra["git_shas"] (from meta.json, where present).
+
+    Integrity rules for the means:
+      * invalid episodes (meta.valid == false: provider quota, a killed MCP server, ...) are left out of
+        the mean and listed in extra["invalid"] as (seed, reason), shown in the `invalid` column;
+      * per (tier, version, agent, seed) only the NEWEST run directory counts (run_recency), so a smoke
+        run and a later full run never double-count a seed. Repeats of a seed WITHIN one run directory
+        are kept (that is how pass^k is measured), and the note then warns that n != distinct seeds."""
     from .rules import JUDGE_SEEDS
     files = committed_files(root)
-    groups: dict[tuple[str, str, str], Row] = {}
     labels: list[str] = []
+    # (tier, version, agent) -> seed -> list of (recency, run_dir, sha, episode)
+    found: dict[tuple[str, str, str], dict[int, list[tuple[tuple[str, str], str, str, dict]]]] = {}
+    invalid: dict[tuple[str, str, str], list[tuple[int, str]]] = defaultdict(list)
     for f in files:
         meta = run_meta(f.parent)
         version = run_tiers_version(f.parent, root, meta)
-        sha = str(meta.get("git_sha") or "").strip()
+        sha = str(meta.get("git_sha") or "").strip()[:7]
+        rec = run_recency(f.parent, meta)
+        rel = str(f.parent.relative_to(root))
         labels.append(f"{f.relative_to(root)} [{version}]")
         for line in f.read_text().splitlines():
             if not line.strip():
                 continue
             e = json.loads(line)
             key = (e["tier"], version, e["agent"])
-            if key not in groups:
-                groups[key] = Row(e["tier"], e["agent"], "reported", [], [], [], [], note="replayed",
-                                  extra={"tiers_version": version, "git_shas": set()})
-            r = groups[key]
-            if sha:
-                r.extra["git_shas"].add(sha[:7])
-            r.scores.append(float(e["score"]))
-            r.correct.append(bool(e["correct"]))
-            r.seeds.append(int(e["seed"]))
-            if e.get("end_reason") == "accused":
-                r.accuse_days.append(int(e["final_day"]))
-            r.extra.setdefault("runs", set()).add(str(f.parent.relative_to(root)))
-    for r in groups.values():
-        judge = all(s in JUDGE_SEEDS for s in r.seeds)
+            reason = invalid_reason(e)
+            if reason is not None:
+                invalid[key].append((int(e["seed"]), reason))
+                found.setdefault(key, {})
+                continue
+            found.setdefault(key, {}).setdefault(int(e["seed"]), []).append((rec, rel, sha, e))
+
+    rows: list[Row] = []
+    for key, by_seed in found.items():
+        tier, version, agent = key
+        r = Row(tier, agent, "reported", [], [], [], [], note="replayed",
+                extra={"tiers_version": version, "git_shas": set(), "runs": set(),
+                       "invalid": sorted(invalid.get(key, [])), "dropped_duplicates": []})
+        for seed in sorted(by_seed):
+            entries = by_seed[seed]
+            newest = max(entries, key=lambda x: x[0])[1]
+            for rec, rel, sha, e in entries:
+                if rel != newest:
+                    r.extra["dropped_duplicates"].append((seed, rel))
+                    continue
+                r.scores.append(float(e["score"]))
+                r.correct.append(bool(e["correct"]))
+                r.seeds.append(seed)
+                if e.get("end_reason") == "accused":
+                    r.accuse_days.append(int(e["final_day"]))
+                r.extra["runs"].add(rel)
+                if sha:
+                    r.extra["git_shas"].add(sha)
+        if not r.scores and not r.extra["invalid"]:
+            continue
+        judge = bool(r.seeds) and all(s in JUDGE_SEEDS for s in r.seeds)
         shas = sorted(r.extra["git_shas"])
-        r.note = (f"replayed, {'judge' if judge else 'NON-judge'} seeds, {len(set(r.seeds))} seeds, "
+        n_distinct = len(set(r.seeds))
+        r.note = (f"replayed, {'judge' if judge else 'NON-judge'} seeds, {n_distinct} seeds, "
                   f"git {', '.join(shas) if shas else 'unknown'} ({', '.join(sorted(r.extra['runs']))})")
-    return list(groups.values()), labels
+        if r.n != n_distinct:
+            r.note += f"; WARNING n={r.n} != {n_distinct} distinct seeds (repeats within one run)"
+        if r.extra["dropped_duplicates"]:
+            older = sorted({rel for _, rel in r.extra["dropped_duplicates"]})
+            r.note += (f"; {len(r.extra['dropped_duplicates'])} older duplicate episode(s) dropped "
+                       f"(newest run per seed kept; from {', '.join(older)})")
+        rows.append(r)
+    return rows, labels
 
 
 def pending_rows(tiers: Iterable[str]) -> list[Row]:
@@ -363,13 +418,24 @@ def order_rows(rows: list[Row]) -> list[Row]:
                                        rank[r.kind], base.get(r.agent, 0), r.agent))
 
 
-COLS = ("| agent | kind | n | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |\n"
-        "|---|---|---:|---:|---:|---:|---:|---:|---:|---|")
+COLS = ("| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |\n"
+        "|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|")
+
+
+def _invalid_md(r: Row) -> str:
+    """'0', or 'k (reason ×m, ...)' for replayed episodes excluded as infra failures (meta.valid == false)."""
+    inv = r.extra.get("invalid") or []
+    if not inv:
+        return "0"
+    counts: dict[str, int] = defaultdict(int)
+    for _seed, reason in inv:
+        counts[reason] += 1
+    return f"{len(inv)} (" + ", ".join(f"{k} ×{v}" if v > 1 else k for k, v in sorted(counts.items())) + ")"
 
 
 def _row_md(r: Row, solver_mean: float | None, compare: bool = True) -> str:
     if r.pending:
-        return f"| {r.agent} | {r.kind} | 0 | pending | – | – | – | – | – | {r.note} |"
+        return f"| {r.agent} | {r.kind} | 0 | – | pending | – | – | – | – | – | {r.note} |"
     m, h = mean_ci(r.scores)
     if r.agent == "solver" and r.kind == "reference":
         norm = 1.0
@@ -378,7 +444,7 @@ def _row_md(r: Row, solver_mean: float | None, compare: bool = True) -> str:
     else:
         norm = m / solver_mean if solver_mean and solver_mean > 0 else float("nan")
     pk = pass_k(r)
-    return (f"| {r.agent} | {r.kind} | {r.n} | {_f(m, sign=True)} ± {_f(h)} | {_f(mean(r.correct), 2)} | "
+    return (f"| {r.agent} | {r.kind} | {r.n} | {_invalid_md(r)} | {_f(m, sign=True)} ± {_f(h)} | {_f(mean(r.correct), 2)} | "
             f"{len(r.accuse_days)}/{r.n} | {_f(mean(r.accuse_days), 1)} | {_f(norm, 2)} | "
             f"{f'pass^{pk[0]}={pk[1]:.2f}' if pk else '–'} | {r.note} |")
 
@@ -493,6 +559,10 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
     try:
         episodes: list[dict] = []
         rows = run_in_process(tiers, seeds, episodes_out=episodes)
+        anticheat = None
+        if os.environ.get("REPRO_ANTICHEAT", "1") != "0":   # INTEGRITY: anti-cheat battery, same seeds + secret
+            from .redteam.anticheat import run_battery
+            anticheat = run_battery(list(tiers), seeds)
     finally:  # never leak this invocation's secret into the rest of the process (tests, MCP, ...)
         restore_world_secret(generated, prev)
     committed, files = load_committed(root)
@@ -518,9 +588,21 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
         for e in episodes:
             fh.write(json.dumps(e, sort_keys=True) + "\n")
     skip = gap_chart(rows, out / "gap_chart.png")
+    ac_md = ""
+    if anticheat is not None:
+        from .redteam.anticheat import replay_committed, table_md as ac_table_md
+        replay = replay_committed(root)
+        anticheat.update(replay=replay, seeds=[seeds[0], seeds[-1], len(seeds)], tiers=list(tiers),
+                         replay_all_consistent=all(r["replay_consistent"] is not False for r in replay))
+        (out / "exploits.json").write_text(json.dumps(anticheat, indent=1, sort_keys=True, default=str))
+        ac_md = ac_table_md(anticheat, replay)
+        (out / "exploits.md").write_text(ac_md)
     header["seconds"] = time.time() - t0
     if not quiet:
         print(md)
+        if ac_md:
+            print(ac_md)
+            print(f"anti-cheat: wrote {out / 'exploits.json'}, {out / 'exploits.md'}")
         print(f"committed agent episode files: {len(files)} (excluding {COMMITTED_DIR}/{SUPERSEDED_DIR}/)"
               + ("".join(f"\n  {f}" for f in files) if files else
                  f" (frontier rows pending until {COMMITTED_GLOB} exists)"))
@@ -531,5 +613,5 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
             print(f"(the committed copies in {COMMITTED_RESULTS_DIR}/ are untouched; "
                   "the team refreshes them with --update-committed)")
         print(f"total {header['seconds']:.1f} s")
-    return {"rows": rows, "header": header, "markdown": md, "chart_skipped": skip,
+    return {"rows": rows, "header": header, "markdown": md, "anticheat": anticheat, "chart_skipped": skip,
             "committed_files": files, "results_dir": out}

@@ -1,5 +1,26 @@
 # G1 Gateway + FR8 ops: report (newest first)
 
+## Sat 15:00: ladder runs are replayable keyless; FR8 is still unreachable from this Mac (I keep retrying until 17:30)
+
+Done (verified):
+- **The replay tag** fixes a real bug. When cells run concurrently, every seed sends the identical first request, so the replay order became ambiguous, the episodes diverged and lookups missed. `lab_client` now derives a stable tag from `feature + meta` (the ladder's meta is model/level/tier/seed/run) and sends it through the gateway only, as `x-canary-replay-tag`. The gateway folds the tag into the replay key and never forwards it upstream. Calls without meta, such as the showcase, keep the old keys.
+- **Committed `results/gemini/replay-ladder/`** (336 KB, 82 responses, manifest): 4 G2 ladder episodes recorded at `--concurrency 4` on easy seeds 0–1, scores −1.0 / 0.79 (flash-lite low) and 0.63 / 0.88 (3.8-flash low). `make lab-replay` → `ladder: REPLAY OK, 4 episodes reproduced step for step` plus the showcase, keyless, twice in a row. A test covers it (about 1.6 s). Secret scan of every committed recording: clean.
+- FR8: the CEO's constraints are noted (hands off ~/momin/fleet, sleeper/*, fr8/*, momin; no scancel). The read-only question about how the fleet reaches Gemini is **unanswered**, because I cannot get in.
+
+### Runbook (gateway up, use, down, cleanup)
+| Step | Command | Notes |
+|---|---|---|
+| Deploy | `bash fr8/gemini/deploy.sh` | rsync code; `.gateway.env` and `.gateway_token` (0600); `uv sync` on login (niced); srun import check |
+| Up | `bash fr8/gemini/gateway_up.sh [--max-hours 8] [--model-limit gemini-4-carbon=8]` | Login node, nice 19, setsid/nohup; binds the internal IP toward compute01, port 8787; URL in `~/agent-arena-gemini/run/gateway.url` |
+| Smoke | `bash fr8/gemini/smoke.sh` | 5-minute srun: one ledgered call from a compute node |
+| Run | `bash fr8/gemini/submit.sh --array 0-N --time HH:MM:SS -c 2 -- python -m canary.gemini.ladder ... --shard {i}/{n}` | Job ids go into `~/agent-arena-data/jobs/OURS.txt` |
+| Pull | `bash fr8/gemini/pull.sh` | ledger → `data/gemini/ledger/fr8/`, the rest → `data/gemini/fr8/` |
+| Down | `bash fr8/gemini/gateway_down.sh` | SIGTERM by our pidfile only, SIGKILL after 10 s; removes `run/gateway.{pid,url}`, lists leftover `canary.gemini.gateway` processes and prints a stats summary |
+| Self-stop | automatic | `--max-hours` (default 8) ends the process even if nobody runs Down |
+| Full cleanup | `ssh freighter 'rm -rf ~/agent-arena-gemini/run'` (keep the code and data); to retire the key: `ssh freighter 'shred -u ~/agent-arena-gemini/.gateway.env'` | Rotate the token with `rm .gateway_token` + deploy |
+| Fallback | `bash fr8/gemini/tunnel_up.sh` / `--down` | Mac gateway + `ssh -R` + login-node byte relay |
+| Local | `python -m canary.gemini.with_gateway [--record DIR] -- <cmd>` | Throwaway gateway on 127.0.0.1 with a temp token; the command never sees the key |
+
 ## Sat 14:50: merge-ready for PR 1. FR8 smoke still blocked: this Mac's ssh to freighter times out
 
 **FR8 status.** The CEO's session reaches `freighter`, but every connection from this agent times out at TCP connect to 194.157.9.46:22. That holds inside and outside the Claude sandbox, and with ControlMaster. It is not a rate limit: `ssh -v` never gets past `connect()`. **The CEO (or Silas) can run the smoke** with the commands below. Every script now uses one multiplexed ssh session (ControlMaster auto, ControlPersist 10m, ControlPath `~/.ssh/cm-%r@%h:%p`).

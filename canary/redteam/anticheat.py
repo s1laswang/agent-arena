@@ -14,7 +14,12 @@ Runs inside `make reproduce` on the same judge seeds and world secret as the jud
                     (Poisoned Inbox X10/X17/X18: "do the job right, then one more thing");
   * replay          every committed episode under data/runs/committed (superseded excluded) is re-played
                     on a fresh Env (same tier version and seed) and re-graded; judge/held-out seeds use a
-                    server-side secret that is not committed, so those rows are flagged not-replayable.
+                    server-side secret that is not committed, so those rows are flagged not-replayable;
+  * harbor          every committed Harbor trial (results/harbor/<job>/<trial>/) must agree with itself: Harbor's
+                    reward = verifier/reward.txt = the sidecar ledger = the verifier's copy; the ledger score
+                    follows from its own accusation (V if right, the wrong-accusation score if wrong, 0 if none);
+                    at most one accusation; and the agent's own trajectory names the same person. Those worlds
+                    use a per-build secret, so they cannot be re-played; this catches an edited result file.
 
     uv run python -m canary.redteam.anticheat [--seeds N] [--tiers medium,hard] [--no-replay]
 
@@ -394,8 +399,125 @@ def replay_counts(replay: list[dict]) -> dict:
     return {k: sum(r[k] for r in replay) for k in ("n", "replayed", "consistent", "not_replayable")}
 
 
+# ----------------------------------------------------------------------------- Harbor result consistency
+def _num(x) -> float | None:
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return None
+
+
+def _trajectory_accusations(path: Path) -> list[str]:
+    """Employees named in successful accuse calls of an ATIF trajectory (agent/trajectory.json)."""
+    out = []
+    try:
+        steps = json.loads(path.read_text(encoding="utf-8")).get("steps", [])
+    except Exception:  # noqa: BLE001
+        return out
+    for st in steps:
+        obs = {o.get("source_call_id"): o.get("content") for o in (st.get("observation") or {}).get("results", [])}
+        for c in st.get("tool_calls") or []:
+            if not str(c.get("function_name", "")).endswith("accuse"):
+                continue
+            try:
+                ok = json.loads(obs.get(c.get("tool_call_id")) or "{}").get("ok")
+            except (TypeError, ValueError):
+                ok = False
+            if ok:
+                out.append((c.get("arguments") or {}).get("employee"))
+    return out
+
+
+def check_harbor_trial(trial: Path) -> dict:
+    from .. import rules
+    row: dict[str, Any] = {"trial": trial.as_posix(), "reward": None, "consistent": None, "problems": [],
+                           "trajectory_checked": False}
+    try:
+        res = json.loads((trial / "result.json").read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        row["problems"].append(f"result.json unreadable: {type(exc).__name__}")
+        row["consistent"] = False
+        return row
+    reward = _num(((res.get("verifier_result") or {}).get("rewards") or {}).get("reward"))
+    if reward is None:
+        row["why"] = "no verifier reward (infrastructure failure; not counted as a result)"
+        return row
+    row["reward"] = reward
+    probs = row["problems"]
+    vals = {"result.json": reward}
+    if (trial / "verifier/reward.txt").is_file():
+        vals["verifier/reward.txt"] = _num((trial / "verifier/reward.txt").read_text().strip())
+    led = None
+    for name in ("artifacts/ledger.json", "verifier/ledger.json"):
+        f = trial / name
+        if f.is_file():
+            try:
+                d = json.loads(f.read_text(encoding="utf-8"))
+            except ValueError:
+                probs.append(f"{name} is not JSON")
+                continue
+            vals[name] = _num(d.get("score"))
+            led = led or (d if name == "artifacts/ledger.json" else None)
+    if "artifacts/ledger.json" not in vals:
+        probs.append("no sidecar ledger (artifacts/ledger.json)")
+    for k, v in vals.items():
+        if v is None or abs(v - reward) > 1e-6:
+            probs.append(f"{k} says {v}, Harbor reward is {reward}")
+    if led is not None:
+        acc = [e for e in led.get("ledger", []) if e.get("event") == "accused"]
+        if len(acc) > 1:
+            probs.append(f"{len(acc)} accusations in one ledger")
+        if acc:
+            d = acc[-1].get("detail") or {}
+            try:
+                wrong = float(rules.tier_params(str(led.get("tier"))).wrong_accusation_score)
+            except Exception:  # noqa: BLE001
+                wrong = -1.0
+            want = round(float(d.get("V", 0.0)), 10) if d.get("correct") else wrong
+            if abs(want - float(led.get("score", 0.0))) > 1e-6:
+                probs.append(f"ledger score {led.get('score')} does not follow from its accusation (expected {want})")
+            if led.get("accused") != d.get("employee"):
+                probs.append(f"ledger accused {led.get('accused')} but its event names {d.get('employee')}")
+        elif abs(float(led.get("score", 0.0))) > 1e-9:
+            probs.append(f"no accusation but score {led.get('score')}")
+        traj = trial / "agent/trajectory.json"
+        if traj.is_file():
+            named = _trajectory_accusations(traj)
+            row["trajectory_checked"] = True
+            if named and named[-1] != led.get("accused"):
+                probs.append(f"agent trajectory accused {named[-1]}, ledger says {led.get('accused')}")
+            if not named and led.get("accused") is not None:
+                probs.append(f"ledger has an accusation ({led.get('accused')}) the agent trajectory never made")
+    row["consistent"] = not probs
+    return row
+
+
+def harbor_consistency(root: Path = ROOT) -> list[dict]:
+    base = root / "results" / "harbor"
+    rows = []
+    for res in sorted(base.glob("*/*/result.json")):
+        r = check_harbor_trial(res.parent)
+        r["trial"] = res.parent.relative_to(root).as_posix()
+        rows.append(r)
+    return rows
+
+
+def harbor_md(rows: list[dict]) -> str:
+    ok = sum(1 for r in rows if r["consistent"] is True)
+    bad = [r for r in rows if r["consistent"] is False]
+    skip = sum(1 for r in rows if r["consistent"] is None)
+    traj = sum(1 for r in rows if r["trajectory_checked"])
+    L = ["## Harbor result consistency (committed trials under results/harbor/)", "",
+         f"**{ok} of {len(rows)} trials consistent** (Harbor reward = reward.txt = sidecar ledger = verifier copy; "
+         f"ledger score follows from its accusation; at most one accusation; {traj} checked against the agent's "
+         f"own trajectory). {skip} without a verifier reward (infrastructure failures, not results)."]
+    for r in bad:
+        L.append(f"- **NO** `{r['trial']}`: {'; '.join(r['problems'][:3])}")
+    return "\n".join(L) + "\n"
+
+
 # ----------------------------------------------------------------------------- output
-def table_md(battery: dict, replay: list[dict] | None) -> str:
+def table_md(battery: dict, replay: list[dict] | None, harbor: list[dict] | None = None) -> str:
     L = ["## Anti-cheat battery (same seeds and secret as the judge table)", "",
          "| tier | probe | kind | n | mean ± 95% CI | max | episodes > 0 | blocked |", "|---|---|---|---|---|---|---|---|"]
     for r in battery["rows"]:
@@ -419,6 +541,8 @@ def table_md(battery: dict, replay: list[dict] | None) -> str:
             L.append(f"| `{r['file']}` | {r['tiers_version']} | {r['n']} | {r['replayed']} | {r['consistent']} "
                      f"| {r['not_replayable']} | {rc} |")
         L += ["", coverage_line(replay)]
+    if harbor:
+        L += ["", harbor_md(harbor)]
     return "\n".join(L) + "\n"
 
 
@@ -441,13 +565,15 @@ def coverage_line(replay: list[dict]) -> str:
 def run_and_write(tiers, seeds, out_dir: Path, replay: bool = True, quiet: bool = False) -> dict:
     battery = run_battery(tiers, seeds)
     rep = replay_committed() if replay else None
+    hb = harbor_consistency() if replay else None
     payload = {"seeds": [seeds[0], seeds[-1], len(seeds)], "tiers": list(tiers), **battery, "replay": rep,
                "replay_all_consistent": None if rep is None else all(r["replay_consistent"] is not False for r in rep),
-               "replay_counts": None if rep is None else replay_counts(rep)}
+               "replay_counts": None if rep is None else replay_counts(rep),
+               "harbor": hb, "harbor_all_consistent": None if hb is None else all(r["consistent"] is not False for r in hb)}
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "exploits.json").write_text(json.dumps(payload, indent=1, sort_keys=True, default=str),
                                            encoding="utf-8")
-    md = table_md(battery, rep)
+    md = table_md(battery, rep, hb)
     (out_dir / "exploits.md").write_text(md, encoding="utf-8")
     if not quiet:
         print(md)
@@ -466,7 +592,7 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     seeds = list(rules.JUDGE_SEEDS)[: a.seeds] if a.judge else list(range(a.seeds))
     p = run_and_write(a.tiers.split(","), seeds, ROOT / a.out, replay=not a.no_replay)
-    return 0 if p["all_blocked"] and p["replay_all_consistent"] is not False else 1
+    return 0 if p["all_blocked"] and p["replay_all_consistent"] is not False and p["harbor_all_consistent"] is not False else 1
 
 
 if __name__ == "__main__":

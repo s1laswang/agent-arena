@@ -120,6 +120,52 @@ def test_tiers_version_restores_known_v_mode():
     assert rules.KNOWN_V_MODE == before and rules.TIERS_VERSION == before_v
 
 
+def test_committed_harbor_trials_are_consistent():
+    rows = ac.harbor_consistency(ROOT)
+    assert rows, "no committed Harbor trials found"
+    bad = [(r["trial"], r["problems"]) for r in rows if r["consistent"] is False]
+    assert not bad, bad
+    assert any(r["trajectory_checked"] for r in rows), "no trial was checked against an agent trajectory"
+
+
+def _copy_trial(tmp_path, job="g-gemini-try2"):
+    import shutil
+    src = next((ROOT / "results/harbor" / job).glob("canary-*"))
+    dst = tmp_path / "results/harbor" / job / src.name
+    shutil.copytree(src, dst)
+    return dst
+
+
+@pytest.mark.parametrize("edit", ["reward_txt_and_result", "ledger_score", "trajectory_accused", "second_accusation"])
+def test_harbor_consistency_catches_an_edited_trial(tmp_path, edit):
+    t = _copy_trial(tmp_path)
+    assert ac.check_harbor_trial(t)["consistent"] is True
+    if edit == "reward_txt_and_result":      # bump the reported reward everywhere except the sidecar ledger
+        (t / "verifier/reward.txt").write_text("1.0")
+        r = json.loads((t / "result.json").read_text())
+        r["verifier_result"]["rewards"]["reward"] = 1.0
+        (t / "result.json").write_text(json.dumps(r))
+    elif edit == "ledger_score":             # ...or the ledger copies too, without its accusation event
+        for f in ("artifacts/ledger.json", "verifier/ledger.json"):
+            d = json.loads((t / f).read_text())
+            d["score"] = 1.0
+            (t / f).write_text(json.dumps(d))
+        (t / "verifier/reward.txt").write_text("1.0")
+        r = json.loads((t / "result.json").read_text())
+        r["verifier_result"]["rewards"]["reward"] = 1.0
+        (t / "result.json").write_text(json.dumps(r))
+    elif edit == "trajectory_accused":       # the agent accused someone else than the ledger says
+        tr = (t / "agent/trajectory.json").read_text()
+        d = json.loads((t / "artifacts/ledger.json").read_text())
+        (t / "agent/trajectory.json").write_text(tr.replace(f'"employee": "{d["accused"]}"', '"employee": "e99"'))
+    else:                                    # a second accusation slipped into the ledger
+        d = json.loads((t / "artifacts/ledger.json").read_text())
+        d["ledger"].append(next(e for e in d["ledger"] if e["event"] == "accused"))
+        (t / "artifacts/ledger.json").write_text(json.dumps(d))
+    row = ac.check_harbor_trial(t)
+    assert row["consistent"] is False and row["problems"], row
+
+
 def test_coverage_line_flags_an_empty_replay():
     rows = [{"n": 5, "replayed": 0, "consistent": 0, "not_replayable": 5, "replay_consistent": None}]
     assert "NOTHING was re-played" in ac.coverage_line(rows)

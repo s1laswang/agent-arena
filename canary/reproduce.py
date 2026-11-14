@@ -590,14 +590,16 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
     skip = gap_chart(rows, out / "gap_chart.png")
     ac_md = ""
     if anticheat is not None:
-        from .redteam.anticheat import replay_committed, replay_counts, table_md as ac_table_md
+        from .redteam.anticheat import harbor_consistency, replay_committed, replay_counts, table_md as ac_table_md
         replay = replay_committed(root)
+        harbor = harbor_consistency(root)
         anticheat.update(replay=replay, seeds=[seeds[0], seeds[-1], len(seeds)], tiers=list(tiers),
                          replay_all_consistent=all(r["replay_consistent"] is not False for r in replay),
-                         replay_counts=replay_counts(replay))
+                         replay_counts=replay_counts(replay), harbor=harbor,
+                         harbor_all_consistent=all(r["consistent"] is not False for r in harbor))
         (out / "exploits.json").write_text(json.dumps(anticheat, indent=1, sort_keys=True, default=str),
                                            encoding="utf-8")
-        ac_md = ac_table_md(anticheat, replay)
+        ac_md = ac_table_md(anticheat, replay, harbor)
         (out / "exploits.md").write_text(ac_md, encoding="utf-8")
     header["seconds"] = time.time() - t0
     if not quiet:
@@ -618,7 +620,8 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
         if anticheat is not None:   # last line on purpose: a probe that gets through must not scroll away
             bad = [f"{r['tier']}/{r['probe']}" for r in anticheat["rows"] if r["blocked"] is False]
             bad += [f"replay:{r['file']}" for r in anticheat.get("replay") or [] if r["replay_consistent"] is False]
-            print("ANTI-CHEAT: every probe blocked, every replayable episode consistent" if not bad else
+            bad += [f"harbor:{r['trial']}" for r in anticheat.get("harbor") or [] if r["consistent"] is False]
+            print("ANTI-CHEAT: every probe blocked, every replayable episode and Harbor trial consistent" if not bad else
                   f"ANTI-CHEAT FAILURE: {len(bad)} not blocked / inconsistent: {', '.join(bad[:12])}")
     return {"rows": rows, "header": header, "markdown": md, "anticheat": anticheat, "chart_skipped": skip,
             "committed_files": files, "results_dir": out}

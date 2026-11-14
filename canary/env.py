@@ -218,7 +218,8 @@ class Env:
         with self._lock:
             return {"done": self._done, "end_reason": getattr(self, "_end_reason", None),
                     "accused": self._accused, "correct": bool(self._correct) if self._accused else False,
-                    "score": self.score()}
+                    "accused_correct": bool(self._correct) if self._accused else False,
+                    "final_day": self.day, "V": round(self.V, 10), "score": self.score()}
 
     def score(self) -> float:
         if self._done and self._accused is not None:

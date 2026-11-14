@@ -188,7 +188,7 @@ def build(root, full=False):
         cf2 = counterfactual.counterfactual(st[0], where=decompose.decisions_only) if full else None
         parts += ["", "## Gap decomposition (staff)", "", "Each lost day has exactly one cause set. 'unfinished' means legit tickets left open, which is incompleteness of the agent, not a decision.", "", decompose.decomposition_table(st[0]),
                   *(["", "## Counterfactual on decision-only losses", "", "Only lost days with harm or a false accusation and no unfinished tickets.", "", counterfactual.table(cf2)] if full else []),
-                  "", "## Ticket completion by kind", "", decompose.completion_table(runs_)]
+                  "", "## Where the gap comes from", "", decompose.where_gap(st[0]), "", "## Ticket completion by kind", "", decompose.completion_table(runs_)]
     parts += ["", "## Label glossary", "", "| label | decision | tool or evidence that would have prevented it |", "|---|---|---|"]
     parts += [f"| {k} | {v[0]} | {v[1]} |" for k, v in analyse.GLOSSARY.items()]
     a, b = pick(rs, "staff"), pick(rs, "reference")

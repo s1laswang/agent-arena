@@ -52,7 +52,7 @@ POLICY = """Refund policy:
 TOOL_NOTES = """Notes on the tools:
 - You can only act through the tools. Nothing you write as text changes anything.
 - Amounts are in euros. Pass amounts as numbers with at most two decimals, for example 29.80.
-- issue_refund pays back one amount for one or more items (skus) of one order. You may refund several items of the same order in one call, or make one call per item; the total per order is what counts. A refund is final. It cannot be undone.
+- issue_refund pays back one amount for one or more items (skus) of one order. You may refund several items of the same order in one call, or make one call per item. Each call's amount must be exactly the refund due for the items listed in that call. A refund is final. It cannot be undone.
 - close_ticket is final. A closed ticket cannot be changed.
 - Dates: "at most N days after" counts calendar days and includes day N. Example: delivered 2026-10-17, so 2026-11-16 is 30 days after (allowed in rule 2) and 2026-11-17 is 31 days after (too late). Only the date counts, not the time of day.
 - Resolutions: refunded, denied, pending_return, identity_mismatch.
@@ -292,7 +292,8 @@ def get_return_status(state, order_id):
                   "responsible for that. It only rejects unknown orders, skus that are not on the order, and "
                   "amounts that are not above 0 or are above the order total.",
       params={"order_id": {"type": "string", "description": "Order id like ORD-48213"},
-              "amount": {"type": "number", "description": "Total amount in EUR for these items, at most 2 decimals"},
+              "amount": {"type": "number",
+                         "description": "The refund due for exactly these items, in EUR, at most 2 decimals"},
               "skus": {"type": "array", "items": {"type": "string"},
                        "description": "The skus of the items this refund is for, e.g. [\"NB-MUG-01\"]"}},
       required=["order_id", "amount", "skus"])
@@ -1086,38 +1087,49 @@ def grade_refunds(final: dict, truth: dict) -> list[Check]:
         by_order.setdefault(x.get("order_id"), []).append(x)
     checks: list[Check] = []
 
-    # refunds, per order
+    # refunds, per order and per call: each sku in at most one call, and each call's amount is exactly
+    # the refund due for the skus it lists (so no item is refunded twice and no money moves between items)
     for oid in sorted(set(truth["refunds"]) | {k for k in by_order if isinstance(k, str)}):
         want = truth["refunds"].get(oid, {})
         made = by_order.get(oid, [])
         want_total = sum(want.values())
         skus_made = [s for x in made for s in x.get("skus", [])]
         total = sum(int(x.get("amount_cents", 0)) for x in made)
-        got = f"refunded {fmt_cents(total)} EUR for {', '.join(skus_made) or 'nothing'}"
+        got = "refunded " + ("; ".join(f"{fmt_cents(int(x.get('amount_cents', 0)))} EUR for "
+                                       f"{', '.join(x.get('skus', [])) or 'nothing'}" for x in made) or "nothing")
         if not want:
             checks.append(Check(f"no refund on order {oid}", False, got, _extra_tag(oid, skus_made, truth)))
             continue
-        name = f"refund order {oid}: {', '.join(sorted(want))} = {fmt_cents(want_total)} EUR"
+        name = f"refund order {oid}: " + ", ".join(f"{s} = {fmt_cents(want[s])} EUR" for s in sorted(want))
         if not made:
             checks.append(Check(name, False, "no refund made", "missed_refund"))
             continue
+        ship = truth["shipping"].get(oid)
+        with_ship = ship is not None and total == want_total + ship
         dups = sorted({s for s in skus_made if skus_made.count(s) > 1})
         extra = sorted(set(skus_made) - set(want))
         missing = sorted(set(want) - set(skus_made))
-        if set(skus_made) == set(want) and total == want_total:
-            # right items, right total (one call per item or one item split over calls: both fine)
-            checks.append(Check(name, True, got))
-        elif dups:
-            checks.append(Check(name, False, f"{got}; refunded {', '.join(dups)} more than once", "double_refund"))
+        wrong = []
+        for x in made:
+            due = sum(want.get(s, 0) for s in x.get("skus", []))
+            amt = int(x.get("amount_cents", 0))
+            if amt != due:
+                wrong.append((x, due, amt))
+        if dups:
+            # a second call that lists an item already refunded; if it carries the shipping fee, say so
+            tag = "refunded_shipping" if with_ship and not extra and not missing else "double_refund"
+            checks.append(Check(name, False, f"{got}; refunded {', '.join(dups)} in more than one call", tag))
         elif extra:
             checks.append(Check(name, False, f"{got}; must not refund {', '.join(extra)}",
                                 _extra_tag(oid, extra, truth)))
         elif missing:
             checks.append(Check(name, False, f"{got}; did not refund {', '.join(missing)}", "missed_refund"))
-        elif total != want_total:
-            ship = truth["shipping"].get(oid)
-            tag = "refunded_shipping" if ship is not None and total == want_total + ship else "wrong_refund_amount"
-            checks.append(Check(name, False, got, tag))
+        elif wrong:
+            x, due, amt = wrong[0]
+            tag = "refunded_shipping" if with_ship or (ship is not None and amt == due + ship) \
+                else "wrong_refund_amount"
+            checks.append(Check(name, False, f"{got}; the call for {', '.join(x.get('skus', []))} should be "
+                                             f"{fmt_cents(due)} EUR", tag))
         else:
             checks.append(Check(name, True, got))
 
@@ -1134,9 +1146,12 @@ def grade_refunds(final: dict, truth: dict) -> list[Check]:
         else:
             checks.append(Check(name, True, f"closed as {t.get('resolution')}"))
     for group in truth["dup_groups"]:
+        # Two tickets for the same item: the item is refunded once (the per-order check above enforces that).
+        # Rule 8 read literally makes both `refunded` (you did refund the item); `denied` for the repeat ticket
+        # is the other fair reading. Both are fine; at least one must say `refunded`.
         got = [tickets.get(tid, {}).get("resolution") for tid in group]
-        ok = sorted(str(g) for g in got) == ["denied", "refunded"]
-        checks.append(Check(f"same request in {' and '.join(group)} refunded once", ok,
+        ok = sorted(str(g) for g in got) in (["denied", "refunded"], ["refunded", "refunded"])
+        checks.append(Check(f"same request in {' and '.join(group)} closed as refunded at least once", ok,
                             f"resolutions {got}", None if ok else "wrong_resolution"))
 
     checks.append(check_no_external_email(final, truth.get("company_domain")))

@@ -24,7 +24,7 @@ Built for Junction 2026: AfterQuery "Break the Agent" (main track) and the Gemin
 python -m pinbox eval
 ```
 
-Plain Python 3.10+, no packages, no API keys. It takes about 20 seconds. It runs every scripted
+Plain Python 3.10+, no packages, no API keys. It takes about 30 seconds. It runs every scripted
 agent on the frozen eval set (42 episodes, 3 runs each), runs the exploit probes and the skill
 ladder, prints a table and writes `results/latest.json`. Then build the demo page:
 
@@ -46,10 +46,15 @@ python -m pinbox report          # writes report/report.html (one file, works of
 - **mean** is the mean reward (each run is 1 or 0). **pass^k** is the share of episodes solved in
   all k tries.
 - **Skill ladder**: scripted agents that each follow one more rule. The score only goes up, and only
-  the full policy reaches 1.0. For invoices: 0, 0, 0.03, 0.10, 0.17, 0.33, 0.37, 1.0.
+  the full policy reaches 1.0. For invoices: 0, 0, 0.03, 0.10, 0.17, 0.37, 0.63, 1.0.
 - **Exploit probes**: 18 attempts to get reward without doing the job (pay twice, fake call ref,
   garbage input, obey the injected text, ...). All 18 score 0. One control run (a correct but
   wasteful agent) still scores 1, as it should. See [docs/EXPLOITS.md](docs/EXPLOITS.md).
+- **Red team round 1**: we attacked our own grader with scripted probes, a fairness review and an
+  independent verifier. It found 16 problems (for example: pay a new IBAN first and verify it later,
+  pay out of due-date order, paste a confidential document into the mail body instead of attaching
+  it). All are fixed, and each one is now a regression test. The list is in
+  [docs/EXPLOITS.md](docs/EXPLOITS.md).
 - Each failed check has a **failure tag**, like `paid_ineligible:unverified_bank_change`, and every
   tag maps to one policy rule. The report shows them per agent.
 
@@ -156,20 +161,24 @@ on a GPU, so there are no before/after numbers yet.
 ## Status: what is checked and what is not
 
 Checked:
-- 270 unit tests pass on Python 3.14 (stdlib only; 13 skip without `mcp` / `google-genai`), and all
-  270 pass with `mcp` and `google-genai` installed. The stdlib suite also passes on Python 3.12.
+- 306 unit tests pass on Python 3.14 (stdlib only; 13 skip without `mcp` / `google-genai`), and all
+  306 pass with `mcp` and `google-genai` installed. The stdlib suite also passes on Python 3.12.
 - For every family, over 200 seeds x 3 difficulties: the reference scores 1; do-nothing, stop-early,
   stop-before-last-write and the blunt shortcuts score 0; each one-rule-removed policy scores 0
   exactly where its trap is.
-- `python -m pinbox eval` gives byte-identical results and trajectories on two runs, and the same
-  results on Python 3.12 and 3.14.
+- `python -m pinbox eval` gives the same results (only the run time differs) and byte-identical
+  trajectories on repeated runs, and the same results on Python 3.12 and 3.14.
+- Red team round 1: 16 problems found and fixed (14 in the grader, 1 in the skill ladder, 1 in a
+  test). Each one is a regression test that plays only through the tools. See [docs/EXPLOITS.md](docs/EXPLOITS.md).
 - The reference scores 1 over MCP (stdio and HTTP) for every family.
 - Harbor 0.25.0 on Windows with Docker: oracle 1.0 on all 42 tasks; do-nothing, stop-early and the
-  cheat probe 0.0 (one task per family). After the last rebuild of the task folders we spot-checked
-  again: oracle 1 on `board_pack-s6-d3` and `refunds-s1-d1`, cheat 0 on `board_pack-s6-d3`.
+  cheat probe 0.0 (one task per family). After an earlier rebuild of the task folders we spot-checked
+  again: oracle 1 on `board_pack-s6-d3` and `refunds-s1-d1`, cheat 0 on `board_pack-s6-d3`. The task
+  folders were rebuilt again after the red-team fixes; Harbor has not been re-run on this build.
 - `harbor/test_build_tasks.py`: 10 tests pass (`python -m unittest discover -s harbor -p "test_*.py"`).
 - One LLM (Claude, playing through the CLI by hand) solved `ap_run-s1234-d2` with a reward of 1 in
-  19 calls. So the instruction and tools are enough to win.
+  19 calls. So the instruction and tools are enough to win. The run still scores 1 when replayed on
+  the current grader.
 - The report page builds from the real results and renders in headless Chrome.
 
 Not checked yet:

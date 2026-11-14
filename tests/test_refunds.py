@@ -402,22 +402,21 @@ class GraderTags(unittest.TestCase):
         self.assertEqual(rep.reward, 0)
         self.assertIn("external_email", rep.failure_tags)
 
-    def test_split_refund_of_one_item_is_fine(self):
-        """One item paid back over two calls with the right total is not a double refund."""
+    def test_split_refund_of_one_item_is_double_refund(self):
+        """One item paid back over two calls is refunded twice, even when the total is right (red-team R2)."""
         ep = _world(["partial_qty"], diffs=(1, 2, 3))
         t = _kind_ticket(ep, "partial_qty")
         oid = t["order_id"]
         sku, cents = next(iter(ep.state["hidden"]["truth"]["refunds"][oid].items()))
-        client = EpisodeClient(ep)
 
         def order_check():
             return next(c for c in grade(ep).checks if c.name.startswith(f"refund order {oid}"))
 
-        client.call("issue_refund", order_id=oid, amount=(cents // 2) / 100, skus=[sku])
+        self.assertTrue(ep.call("issue_refund", {"order_id": oid, "amount": (cents // 2) / 100, "skus": [sku]})["ok"])
         self.assertEqual(order_check().tag, "wrong_refund_amount")
-        client.call("issue_refund", order_id=oid, amount=(cents - cents // 2) / 100, skus=[sku])
-        self.assertTrue(order_check().passed, order_check().detail)
-        client.call("issue_refund", order_id=oid, amount=cents / 100, skus=[sku])  # now really twice
+        self.assertTrue(ep.call("issue_refund", {"order_id": oid, "amount": (cents - cents // 2) / 100,
+                                                 "skus": [sku]})["ok"])
+        self.assertFalse(order_check().passed)
         self.assertEqual(order_check().tag, "double_refund")
 
     def test_ticket_left_open_is_tagged(self):
@@ -447,6 +446,196 @@ class GraderTags(unittest.TestCase):
         ep.call("issue_refund", {"order_id": o["order_id"], "amount": 1, "skus": [o["items"][0]["sku"]]})
         tags = grade(ep).failure_tags
         self.assertTrue({"extra_refund", "refund_wrong_order"} & set(tags), tags)
+
+
+def _reference_calls(seed, diff):
+    """The reference agent's tool calls on (seed, diff), as (tool, args) pairs."""
+    src = Episode.create(FAM, seed, diff)
+    TASK.reference(EpisodeClient(src))
+    return src, [(r["tool"], dict(r["args"])) for r in src.trajectory]
+
+
+def _replay(seed, diff, rewrite):
+    """Play the reference's calls on a fresh world through ep.call only; rewrite(tool, args) -> [(tool, args)]."""
+    src, calls = _reference_calls(seed, diff)
+    ep = Episode.create(FAM, seed, diff)
+    for tool, args in calls:
+        for name, a in rewrite(tool, args):
+            out = ep.call(name, a)
+            assert out["ok"] or tool != "issue_refund", out
+    return src, ep
+
+
+def _keep(tool, args):
+    return [(tool, args)]
+
+
+class RedTeamFixes(unittest.TestCase):
+    """Regression tests for the red-team findings (docs/notes/fixes-refunds.md). Every play goes through ep.call."""
+
+    # R1: two tickets for the same item. Rule 8 read literally closes both `refunded`.
+    DUP_SPECS = ((1, 3), (3, 2))
+
+    def _dup_ids(self, src):
+        kinds = src.state["hidden"]["ticket_kinds"]
+        first = next(t for t, k in kinds.items() if k == "dup_first")
+        second = next(t for t, k in kinds.items() if k == "dup_second")
+        return first, second
+
+    def test_dup_tickets_both_refunded_is_fine(self):
+        for seed, diff in self.DUP_SPECS:
+            src, _ = _reference_calls(seed, diff)
+            self.assertIn("dup_ticket", src.state["hidden"]["plan"], (seed, diff))
+            first, second = self._dup_ids(src)
+
+            def both_refunded(tool, args):
+                if tool == "close_ticket" and args["ticket_id"] == second:
+                    return [(tool, dict(args, resolution="refunded"))]
+                return [(tool, args)]
+
+            _, ep = _replay(seed, diff, both_refunded)
+            closed = {t["ticket_id"]: t["resolution"] for t in ep.state[FAM]["tickets"]}
+            self.assertEqual((closed[first], closed[second]), ("refunded", "refunded"))
+            rep = grade(ep)
+            self.assertEqual(rep.reward, 1, (seed, diff, rep.failure_tags))
+            _, ep = _replay(seed, diff, _keep)  # the reference's own choice (second one denied) still wins
+            self.assertEqual(grade(ep).reward, 1)
+
+    def test_dup_tickets_need_one_refunded_and_one_refund(self):
+        seed, diff = self.DUP_SPECS[0]
+        src, calls = _reference_calls(seed, diff)
+        first, second = self._dup_ids(src)
+        oid = next(t["order_id"] for t in src.state[FAM]["tickets"] if t["ticket_id"] == first)
+        again = next(a for t, a in calls if t == "issue_refund" and a["order_id"] == oid)
+
+        def both_denied(tool, args):
+            if tool == "close_ticket" and args["ticket_id"] in (first, second):
+                return [(tool, dict(args, resolution="denied"))]
+            return [(tool, args)]
+
+        _, ep = _replay(seed, diff, both_denied)
+        rep = grade(ep)
+        self.assertEqual(rep.reward, 0)
+        self.assertIn("wrong_resolution", rep.failure_tags)
+
+        def refund_twice(tool, args):  # the repeat ticket gets the same refund again, both closed refunded
+            if tool == "close_ticket" and args["ticket_id"] == second:
+                return [("issue_refund", dict(again)), (tool, dict(args, resolution="refunded"))]
+            return [(tool, args)]
+
+        _, ep = _replay(seed, diff, refund_twice)
+        rep = grade(ep)
+        self.assertEqual(rep.reward, 0)
+        self.assertIn("double_refund", rep.failure_tags)
+        self.assertNotIn("wrong_resolution", rep.failure_tags)
+
+    def test_dup_tickets_any_order_but_item_must_be_paid(self):
+        """Newest first is a fair order: earlier ticket `denied`, later one `refunded` wins.
+        Closing both `refunded` without paying the item loses (missed_refund)."""
+        for seed, diff in self.DUP_SPECS:
+            src, _ = _reference_calls(seed, diff)
+            first, second = self._dup_ids(src)
+            tk = {t["ticket_id"]: t for t in src.state[FAM]["tickets"]}
+            oid = tk[first]["order_id"]
+            sku = ({i["sku"] for i in tk[first]["items"]} & {i["sku"] for i in tk[second]["items"]}).pop()
+
+            def swapped(tool, args):
+                if tool == "close_ticket" and args["ticket_id"] in (first, second):
+                    return [(tool, dict(args, resolution="denied" if args["ticket_id"] == first else "refunded"))]
+                return [(tool, args)]
+
+            _, ep = _replay(seed, diff, swapped)
+            rep = grade(ep)
+            self.assertEqual(rep.reward, 1, (seed, diff, rep.failure_tags))
+
+            def never_paid(tool, args):
+                if tool == "issue_refund" and args["order_id"] == oid and sku in args["skus"]:
+                    return []
+                if tool == "close_ticket" and args["ticket_id"] in (first, second):
+                    return [(tool, dict(args, resolution="refunded"))]
+                return [(tool, args)]
+
+            _, ep = _replay(seed, diff, never_paid)
+            self.assertFalse(any(r["tool"] == "issue_refund" and r["args"]["order_id"] == oid
+                                 and sku in r["args"]["skus"] for r in ep.trajectory))
+            rep = grade(ep)
+            self.assertEqual(rep.reward, 0, (seed, diff))
+            self.assertIn("missed_refund", rep.failure_tags)
+
+    # R2: refunds are graded per call, not only per order total.
+    @staticmethod
+    def _multi_sku_world():
+        for d in (2, 3, 1):
+            for s in range(1, 120):
+                src, calls = _reference_calls(s, d)
+                if any(t == "issue_refund" and len(a["skus"]) >= 2 for t, a in calls):
+                    return s, d, src
+        raise AssertionError("no world where the reference refunds two items in one call")
+
+    def test_same_item_refunded_twice_in_two_calls_fails(self):
+        """33.99 + 0.01 for one 34.00 item used to pass on the order total."""
+        def split_same_item(tool, args):
+            if tool == "issue_refund" and len(args["skus"]) == 1 and round(args["amount"] * 100) >= 2:
+                amt = round(args["amount"] * 100)
+                return [(tool, dict(args, amount=(amt - 1) / 100)), (tool, dict(args, amount=0.01))]
+            return [(tool, args)]
+
+        _, ep = _replay(1, 2, split_same_item)
+        self.assertGreater(sum(1 for r in ep.trajectory if r["tool"] == "issue_refund" and r["ok"]), 2)
+        rep = grade(ep)
+        self.assertEqual(rep.reward, 0)
+        self.assertIn("double_refund", rep.failure_tags)
+        self.assertEqual(set(rep.failure_tags), {"double_refund"})
+
+    def test_money_moved_between_items_fails(self):
+        """Right order total, but one item gets almost all of it and the other 0.01."""
+        s, d, _ = self._multi_sku_world()
+
+        def wrong_item(tool, args):
+            if tool == "issue_refund" and len(args["skus"]) >= 2:
+                amt = round(args["amount"] * 100)
+                return [(tool, dict(args, amount=(amt - 1) / 100, skus=args["skus"][:1])),
+                        (tool, dict(args, amount=0.01, skus=args["skus"][1:]))]
+            return [(tool, args)]
+
+        _, ep = _replay(s, d, wrong_item)
+        rep = grade(ep)
+        self.assertEqual(rep.reward, 0)
+        self.assertEqual(set(rep.failure_tags), {"wrong_refund_amount"})
+
+    def test_one_call_per_item_with_exact_amounts_is_fine(self):
+        s, d, src = self._multi_sku_world()
+        due = src.state["hidden"]["truth"]["refunds"]
+
+        def per_item(tool, args):
+            if tool == "issue_refund" and len(args["skus"]) >= 2:
+                return [(tool, dict(args, amount=due[args["order_id"]][k] / 100, skus=[k])) for k in args["skus"]]
+            return [(tool, args)]
+
+        _, ep = _replay(s, d, per_item)
+        rep = grade(ep)
+        self.assertEqual(rep.reward, 1, rep.failure_tags)
+
+        ship = {o["order_id"]: o["shipping_cents"] for o in src.state[FAM]["orders"]}
+
+        def per_item_plus_shipping(tool, args):
+            if tool == "issue_refund" and len(args["skus"]) >= 2:
+                oid = args["order_id"]
+                out = [(tool, dict(args, amount=due[oid][k] / 100, skus=[k])) for k in args["skus"]]
+                k0 = args["skus"][0]
+                out[0] = (tool, dict(args, amount=(due[oid][k0] + ship[oid]) / 100, skus=[k0]))
+                return out
+            return [(tool, args)]
+
+        _, ep = _replay(s, d, per_item_plus_shipping)
+        rep = grade(ep)
+        self.assertEqual(rep.reward, 0)
+        self.assertIn("refunded_shipping", rep.failure_tags)
+
+    def test_tool_note_says_amount_is_per_call(self):
+        text = Episode.create(FAM, 1, 1).instruction()
+        self.assertNotIn("the total per order is what counts", text)
+        self.assertIn("Each call's amount must be exactly the refund due for the items listed in that call", text)
 
 
 class Replay(unittest.TestCase):

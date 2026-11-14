@@ -44,14 +44,14 @@
   "reply_to_requests",
   "any_pack_version"
  ],
- "n_failed_runs": 1572,
+ "n_failed_runs": 1635,
  "n_runs_total": 2046,
  "packing": null,
  "baselines_only": true,
  "clusters": [
   {
    "name": "Left an unpaid invoice unflagged",
-   "count": 546,
+   "count": 558,
    "rule": "AP policy 5",
    "examples": [
     "ap_run-s1-d1",
@@ -61,11 +61,11 @@
    "description": "Grader tag `missing_flag`. Example: status open",
    "fix": "Flag every open invoice you do not pay.",
    "by_agent": {
-    "do_nothing": 84,
+    "do_nothing": 90,
     "no_flags": 90,
     "pay_all": 18,
     "stop_before_last_write": 90,
-    "stop_early_25": 84,
+    "stop_early_25": 90,
     "stop_early_50": 90,
     "stop_early_75": 90
    },
@@ -81,7 +81,7 @@
     "ap_run-s1-d3"
    ],
    "description": "Grader tag `missed_payment`. Example: not paid (status open); expected 181.00 EUR to FI2506083467056677",
-   "fix": "Check every open invoice against rule 1 and list the queue again before finishing: new invoices arrive after the first payment.",
+   "fix": "Check every open invoice against rule 1 and list the queue again after every payment and before finishing: new invoices arrive after the first payment.",
    "by_agent": {
     "do_nothing": 90,
     "flag_all": 57,
@@ -117,8 +117,45 @@
    "tag": "missing_bank_update"
   },
   {
+   "name": "Paid a new IBAN before verifying it",
+   "count": 210,
+   "rule": "AP policy 2",
+   "examples": [
+    "ap_run-s1-d2",
+    "ap_run-s10-d2",
+    "ap_run-s10-d3"
+   ],
+   "description": "Grader tag `paid_before_verification`. Example: paid before verification: INV-102 to FI7131797878884078",
+   "fix": "Call the number on file, run update_vendor_bank with that call_ref, and only then pay the new IBAN.",
+   "by_agent": {
+    "call_number_in_email": 27,
+    "follow_instructions": 63,
+    "pay_all": 57,
+    "trust_bank_changes": 63
+   },
+   "tag": "paid_before_verification"
+  },
+  {
+   "name": "Paid invoices out of due-date order",
+   "count": 177,
+   "rule": "AP policy 3",
+   "examples": [
+    "ap_run-s1-d1",
+    "ap_run-s1-d2",
+    "ap_run-s10-d1"
+   ],
+   "description": "Grader tag `wrong_order`. Example: paid INV-101 (due 2026-11-19) before INV-102 (due 2026-11-14)",
+   "fix": "Always pay the earliest-due eligible invoice next (ties: lower invoice_id); list the queue again after every payment.",
+   "by_agent": {
+    "ignore_due_order": 81,
+    "pay_all": 75,
+    "recheck_at_end_only": 21
+   },
+   "tag": "wrong_order"
+  },
+  {
    "name": "Closed a ticket with the wrong resolution",
-   "count": 183,
+   "count": 177,
    "rule": "Refunds policy 8",
    "examples": [
     "refunds-s1-d1",
@@ -134,7 +171,7 @@
     "ignore_condition": 15,
     "ignore_dates": 21,
     "no_identity_check": 3,
-    "no_refund_history_check": 15,
+    "no_refund_history_check": 9,
     "pending_over_refunded": 3,
     "refund_all": 24,
     "refund_in_transit": 9,
@@ -300,18 +337,15 @@
    "count": 93,
    "rule": "AP policy 5",
    "examples": [
-    "ap_run-s1-d3",
     "ap_run-s1-d2",
+    "ap_run-s1-d3",
     "ap_run-s10-d1"
    ],
-   "description": "Grader tag `wrong_flag_reason`. Example: flagged as insufficient_funds",
+   "description": "Grader tag `wrong_flag_reason`. Example: flagged as no_matching_po",
    "fix": "Use the reason that matches the failed rule (duplicate, unknown_vendor, ...).",
    "by_agent": {
-    "call_number_in_email": 3,
-    "flag_all": 78,
-    "follow_instructions": 3,
-    "no_duplicate_check": 6,
-    "trust_bank_changes": 3
+    "flag_all": 84,
+    "no_duplicate_check": 9
    },
    "tag": "wrong_flag_reason"
   },
@@ -324,8 +358,8 @@
     "ap_run-s10-d3",
     "ap_run-s3-d3"
    ],
-   "description": "Grader tag `double_payment`. Example: paid 2 times; expected once",
-   "fix": "Track what you paid; pay each invoice once.",
+   "description": "Grader tag `double_payment`. Example: was paid but must not be",
+   "fix": "Track what you paid; pay each invoice once. Of two copies in the queue, pay only the one with the lower invoice_id.",
    "by_agent": {
     "no_duplicate_check": 42,
     "pay_all": 39
@@ -385,7 +419,7 @@
     "ap_run-s2-d3"
    ],
    "description": "Grader tag `paid_ineligible:duplicate`. Example: was paid but must not be",
-   "fix": "Before paying, look for the same invoice_number in list_payments and in the queue.",
+   "fix": "Before paying, look for the same invoice_number in list_payments and in the queue; of two copies in the queue, pay the lower invoice_id and flag the other.",
    "by_agent": {
     "no_duplicate_check": 27,
     "pay_all": 27
@@ -530,8 +564,8 @@
     "ap_run-s1-d3",
     "ap_run-s10-d2"
    ],
-   "description": "Grader tag `unverified_bank_update`. Example: changed: V03",
-   "fix": "Run update_vendor_bank only with the call_ref of a call to the number on file in which the vendor confirmed the IBAN.",
+   "description": "Grader tag `unverified_bank_update`. Example: V03 -> FI7131797878884078 (CALL-0001)",
+   "fix": "Run update_vendor_bank only with the call_ref of a call to the number on file in which the vendor confirmed the IBAN. Changing it back later does not undo this.",
    "by_agent": {
     "call_number_in_email": 30
    },
@@ -699,7 +733,7 @@
     "refunds-s5-d3",
     "refunds-s8-d3"
    ],
-   "description": "Grader tag `wrong_refund_amount`. Example: refunded 56.70 EUR for NB-GLV-20",
+   "description": "Grader tag `wrong_refund_amount`. Example: refunded 56.70 EUR for NB-GLV-20; the call for NB-GLV-20 should be 18.90 EUR",
    "fix": "Refund the item price only; never shipping; each item once.",
    "by_agent": {
     "refund_all": 9,
@@ -764,7 +798,7 @@
     "refunds-s6-d3",
     "refunds-s8-d3"
    ],
-   "description": "Grader tag `refunded_shipping`. Example: refunded 58.90 EUR for NB-BOX-08",
+   "description": "Grader tag `refunded_shipping`. Example: refunded 58.90 EUR for NB-BOX-08; the call for NB-BOX-08 should be 49.00 EUR",
    "fix": "Never refund shipping.",
    "by_agent": {
     "refund_shipping_on_full_return": 9

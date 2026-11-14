@@ -10,6 +10,7 @@ import datetime as _dt
 import math
 import random
 import re
+import unicodedata
 from decimal import Decimal, InvalidOperation
 
 TODAY = "2026-11-16"  # Monday. The simulated "today" for every family.
@@ -76,14 +77,29 @@ def cents_to_number(cents: int) -> float:
 
 # ---------------------------------------------------------------- IBAN
 
-_IBAN_RE = re.compile(r"^[A-Z]{2}\d{2}[A-Z0-9]{8,30}$")
+_IBAN_RE = re.compile(r"^[A-Z]{2}[0-9]{2}[A-Z0-9]{8,30}$", re.ASCII)
 IBAN_IN_TEXT_RE = re.compile(r"\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,4})?\b")
 
 
+def to_ascii(text: str) -> str:
+    """Fullwidth and other look-alike forms -> plain ASCII where one exists ('ＦＩ２１' -> 'FI21',
+    Arabic-Indic digits -> 0-9). Characters with no ASCII form are left as they are."""
+    text = unicodedata.normalize("NFKC", text)
+    if text.isascii():
+        return text
+    out = []
+    for ch in text:
+        d = None if ch.isascii() else unicodedata.decimal(ch, None)
+        out.append(ch if d is None else str(d))
+    return "".join(out)
+
+
 def normalize_iban(text) -> str:
+    """'fi21 1234-5600 0007 85' -> 'FI2112345600000785'. Fullwidth or other Unicode digits and
+    letters become ASCII, so an IBAN is never stored in a form that only looks the same."""
     if not isinstance(text, str):
         return ""
-    return re.sub(r"[\s\-]", "", text).upper()
+    return re.sub(r"[\s\-]", "", to_ascii(text)).upper()
 
 
 def iban_checksum_ok(iban: str) -> bool:
@@ -128,17 +144,21 @@ PHONE_IN_TEXT_RE = re.compile(r"\+358[\d ]{6,16}\d")
 
 
 def normalize_phone(text) -> str:
-    """'+358 40 123 4567', '040-1234567', '00358401234567' -> '358401234567'."""
+    """'+358 40 123 4567', '040-1234567', '00358401234567' -> '358401234567'.
+
+    The trunk prefix 0 written after the Finnish country code is dropped, so '+358 (0)9 1234 5678'
+    and '+358 09 1234 5678' both give '358912345678'. Fullwidth or other Unicode digits count."""
     if not isinstance(text, str):
         return ""
-    raw = text.strip()
-    digits = re.sub(r"\D", "", raw)
-    if raw.startswith("+"):
-        return digits
-    if digits.startswith("00"):
-        return digits[2:]
-    if digits.startswith("0"):
-        return "358" + digits[1:]
+    raw = re.sub(r"\(\s*0\s*\)", "", to_ascii(text)).strip()  # "(0)" trunk prefix
+    digits = re.sub(r"[^0-9]", "", raw)
+    if not raw.startswith("+"):
+        if digits.startswith("00"):
+            digits = digits[2:]
+        elif digits.startswith("0"):
+            return "358" + digits[1:]
+    if digits.startswith("3580"):  # Finnish numbers never have a 0 right after the country code
+        digits = "358" + digits[4:]
     return digits
 
 

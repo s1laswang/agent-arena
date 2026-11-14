@@ -18,7 +18,7 @@ def mark(i):
 
 @pytest.mark.parametrize("day_id", [mark(i) for i in range(20)])
 def test_day_winnable(day_id):
-    day, strategy, winnable = day_for(day_id)
+    day, strategy, winnable, *_ = day_for(day_id)
     assert winnable
     team = make_oracle_team(day)
     if day.sleeper_seat:

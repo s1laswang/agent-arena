@@ -23,7 +23,7 @@ def make_world_and_team(seed, seat):
     import random
     from lab.run import build_team, day_for
     day_id = effective_id(seed, seat)
-    day, strategy, _ = day_for(day_id)
+    day, strategy, *_ = day_for(day_id)
     team = build_team(os.environ.get("SLEEPER_TEAM", "staff"), day, 0)
     if day.sleeper_seat and strategy:
         from agents.sleeper_agent import SleeperAgent

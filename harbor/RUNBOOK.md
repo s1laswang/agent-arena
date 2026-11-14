@@ -1,0 +1,31 @@
+# Judge runbook
+
+Flags checked against harbor 0.25.0 source (`--path`, `--agent`, `--agent-import-path`, `--model`, `--n-attempts`). Verify with `harbor run --help` on the day.
+
+Build the standard set (20 days, seat controller; the same days under any seat with `--seat all`):
+
+    python -m harbor.build --seeds 0..19 --seat controller
+
+This also writes `harbor/tasks-manifest.json` (secret salt and the lab day_id behind each task; keep it out of the repo and away from the agent).
+
+The five judge runs, all on the same `harbor/tasks`:
+
+1. Reference (scripted oracle through the real MCP tools, `solution/solve.sh`):
+
+       harbor run -p harbor/tasks -a oracle
+
+2. Three agent runs (OpenCode over MCP):
+
+       harbor run -p harbor/tasks -a opencode -m <provider/model> --n-attempts 3
+
+3. Do-nothing (Harbor's built-in nop agent, no tool call):
+
+       harbor run -p harbor/tasks -a nop
+
+4. Stop-early (calls `my_tickets` and `end_turn` once, then stops):
+
+       harbor run -p harbor/tasks --agent-import-path harbor.agents.stop_early:StopEarlyAgent
+
+Expected: reference 1 on winnable days, do-nothing 0, stop-early 0, agent runs below the reference. Rewards are in each trial's `/logs/verifier/reward.txt` and the job summary.
+
+Without docker: `pytest tests/test_harbor.py`.

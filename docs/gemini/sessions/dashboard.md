@@ -10,3 +10,8 @@ Tasks:
 1. Finish and commit the above. Tests green; push.
 2. **By 00:45:** rebuild the dashboard (`make lab-dashboard ARGS="--ledger auto"`) on all merged results (`git merge origin/gemini-track` first); fresh screenshots; push.
 3. **By 04:30:** final narration clips v1 from final numbers (the narration must never speak a number missing from the files). VIDEO.md final shot list. Final dashboard and screenshots after the ladder's 05:00 refresh (merge origin/gemini-track again around 05:15). Push.
+
+Addendum (Sat 20:50, approved by the Arena CEO): in ROLES.md, label the adaptive-mole row "arena mode, not the judged env", give n=4 and medium dev seeds 0–3, and add the three caveats from docs/gemini/SUBMISSION.md §3b:
+1. Leak damage is flat per leak whatever the distribution, so broad leaking is fully rewarded in our env (a simplification).
+2. The judged v1.4 tasks use the scripted moles.
+3. Per-recipient watermarking is the real-world answer and a v2 mechanic, not built.

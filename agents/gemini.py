@@ -84,11 +84,23 @@ def _mime(path):
     return {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(Path(path).suffix.lower(), "image/png")
 
 
+def _fhash(path):
+    p = Path(path)
+    return hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else str(path)
+
+
 def _hashed(messages):
     out = []
     for m in messages:
         if m.get("images"):
-            m = {**m, "images": [hashlib.sha256(Path(i).read_bytes()).hexdigest() for i in m["images"]]}
+            m = {**m, "images": [_fhash(i) for i in m["images"]]}
+        if m.get("tool_results"):
+            rs = []
+            for r in m["tool_results"]:
+                if isinstance(r.get("result"), dict) and r["result"].get("image"):
+                    r = {**r, "result": {**r["result"], "image": _fhash(r["result"]["image"])}}
+                rs.append(r)
+            m = {**m, "tool_results": rs}
         out.append(m)
     return out
 
@@ -180,12 +192,57 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
     if um:
         _usage["in_tokens"] += um.prompt_token_count or 0
         _usage["out_tokens"] += um.candidates_token_count or 0
+        CACHE.mkdir(parents=True, exist_ok=True)
+        with open(CACHE / "usage.jsonl", "a") as f:
+            f.write(json.dumps({"model": model, "in": um.prompt_token_count or 0, "out": um.candidates_token_count or 0}) + "\n")
     out = _parse(resp)
     CACHE.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp%d" % os.getpid())
     tmp.write_text(json.dumps(out))
     tmp.replace(path)
     return out
+
+
+KEEP_LAST = 10
+LIST_CAP = 25
+TEXT_CAP = 600
+DOC_CAP = 2000
+
+
+def compact_result(name, result):
+    if not isinstance(result, dict) or os.environ.get("SLEEPER_COMPACT") == "0":
+        return result
+    r = dict(result)
+    if isinstance(r.get("tickets"), list):
+        open_ = [t for t in r["tickets"] if not (isinstance(t, dict) and t.get("closed"))]
+        if len(open_) < len(r["tickets"]):
+            r["closed_ticket_count"] = len(r["tickets"]) - len(open_)
+        r["tickets"] = open_
+    if isinstance(r.get("payments"), list) and len(r["payments"]) > LIST_CAP:
+        pend = [p for p in r["payments"] if isinstance(p, dict) and p.get("status") == "pending"]
+        rest = [p for p in r["payments"] if p not in pend]
+        keep = max(LIST_CAP - len(pend), 0)
+        r["omitted_payments"] = len(rest) - keep
+        r["payments"] = (rest[len(rest) - keep:] if keep else []) + pend
+    for k, v in list(r.items()):
+        if isinstance(v, list) and len(v) > LIST_CAP and k != "payments":
+            r["omitted_" + k] = len(v) - LIST_CAP
+            r[k] = v[-LIST_CAP:]
+    if isinstance(r.get("messages"), list):
+        r["messages"] = [{**m, "body": str(m.get("body", ""))[:TEXT_CAP]} if isinstance(m, dict) else m for m in r["messages"]]
+    if isinstance(r.get("doc"), dict) and len(str(r["doc"].get("body", ""))) > DOC_CAP:
+        r["doc"] = {**r["doc"], "body": str(r["doc"]["body"])[:DOC_CAP], "body_truncated": True}
+    return r
+
+
+def _elide(messages):
+    idx = [i for i, m in enumerate(messages) if m.get("tool_results")]
+    for i in idx[:-KEEP_LAST]:
+        rs = []
+        for x in messages[i]["tool_results"]:
+            n = len(json.dumps(x["result"], default=str))
+            rs.append({**x, "result": {"elided": "%s result, %d chars" % (x["name"], n)}} if n > TEXT_CAP else x)
+        messages[i] = {**messages[i], "tool_results": rs}
 
 
 def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperature=None, seed=None, role="staff", log=None, guard=None):
@@ -211,7 +268,8 @@ def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperatu
             if log:
                 log({"role": "tool", **results[-1]})
         imgs = [x["result"]["image"] for x in results if isinstance(x["result"], dict) and x["result"].get("image")]
-        messages.append({"role": "user", "tool_results": results, **({"images": imgs} if imgs else {})})
+        messages.append({"role": "user", "tool_results": [{**x, "result": compact_result(x["name"], x["result"])} for x in results], **({"images": imgs} if imgs else {})})
+        _elide(messages)
         if done:
             break
     return {"text": text, "messages": messages}

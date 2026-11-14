@@ -132,3 +132,48 @@ def test_pack_deterministic(tmp_path):
     os.utime(script)
     subprocess.run([sys.executable, script, "pack", str(b)], check=True)
     assert a.read_bytes() == b.read_bytes()
+
+
+def test_cache_check_flags_secrets(tmp_path):
+    import importlib.util
+    import os
+    spec = importlib.util.spec_from_file_location("gc", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "gemini_cache.py"))
+    gc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gc)
+    (tmp_path / "a.json").write_text(json.dumps({"text": "fine", "tool_calls": []}))
+    assert gc.check(tmp_path)[0] == []
+    (tmp_path / "b.json").write_text(json.dumps({"text": "my api_key is x", "tool_calls": []}))
+    (tmp_path / "c.json").write_text(json.dumps({"text": "AIza" + "x" * 35, "tool_calls": []}))
+    assert gc.check(tmp_path)[0] == ["b.json", "c.json"]
+
+
+def test_image_path_not_in_cache_key(tmp_path):
+    a, b = tmp_path / "x.png", tmp_path / "y.png"
+    a.write_bytes(b"same")
+    b.write_bytes(b"same")
+    mk = lambda p: [{"role": "user", "tool_results": [{"name": "read_doc", "result": {"image": str(p)}}]}]
+    assert gemini.cache_key("m", "s", mk(a), None, 0, 0) == gemini.cache_key("m", "s", mk(b), None, 0, 0)
+
+
+def test_compact_keeps_open_and_pending():
+    big = {"ok": True, "payments": [{"id": "P%d" % i, "status": "paid"} for i in range(40)] + [{"id": "PX", "status": "pending", "iban": "NEW"}]}
+    c = gemini.compact_result("list_payments", big)
+    assert len(c["payments"]) == gemini.LIST_CAP and any(p["id"] == "PX" for p in c["payments"]) and c["omitted_payments"] == 16
+    t = gemini.compact_result("my_tickets", {"ok": True, "tickets": [{"id": "a", "closed": True}, {"id": "b", "closed": False}]})
+    assert [x["id"] for x in t["tickets"]] == ["b"] and t["closed_ticket_count"] == 1
+    m = gemini.compact_result("read_chat", {"messages": [{"body": "x" * 5000}]})
+    assert len(m["messages"][0]["body"]) == gemini.TEXT_CAP
+
+
+def test_compact_off(monkeypatch):
+    monkeypatch.setenv("SLEEPER_COMPACT", "0")
+    r = {"tickets": [{"id": "a", "closed": True}]}
+    assert gemini.compact_result("my_tickets", r) == r
+
+
+def test_loop_elides_old_results(monkeypatch):
+    seq = iter([{"text": "", "tool_calls": [{"name": "read_chat", "args": {}}]} for _ in range(15)] + [{"text": "", "tool_calls": []}])
+    monkeypatch.setattr(gemini, "chat", lambda *a, **k: next(seq))
+    out = gemini.run_tool_loop("m", "s", "v", [], lambda n, a: {"messages": [{"body": "y" * 300}] * 5})
+    rs = [m["tool_results"][0]["result"] for m in out["messages"] if m.get("tool_results")]
+    assert "elided" in rs[0] and "elided" not in rs[-1]

@@ -10,6 +10,10 @@ Sources read, read-only: origin/justSilas (PLAN.md, 5813bb2 tip), origin/justSil
 
 Canary: the agent under test is the head of security of a company with a mole leaking documents. It reads logs, plants canary documents, accuses once. Reward is company value left if right, 0 if no accusation, -1 if wrong in the tier rules. Reference: a Bayesian canary-trap solver. Our contribution, as named beats if they land: multi-seat company replay, leak detector, single verifier rescore, cheat probes, frontier runners with replay, Gemini exploiter, failure gallery.
 
+## Order of our "if landed" beats (docs/canary-landing.md, points per hour)
+
+1 failure gallery (Gate A) in beat 3. 2 integrity probes and cheat corpus ideas (Gate A) in beat 5. 3 frontier runner with cache, replay and provenance (Gate B) in beats 1 and 4. 4 office replay dashboard (Gate B, provenance badge and legend on sleeper/dm-canary-viewer, in progress) in beat 4. 5 verifier and rescore in beat 5, last. 6 multi-seat company (v1.6) and 7 leak detector are OUT of the 10 minutes and sit on the backup slide at the end. A beat stays NOT FOUND (landing pending) until it is actually in Canary; lead-demo says when.
+
 ## Timing (target under 9:30)
 
 | Beat | Time | Source |
@@ -41,24 +45,24 @@ Say the honest line: "On hard, Codex matches the solver. The gap holds on medium
 
 ### Beat 2, 1:30 to 3:00. The company and the mole
 
-Company of employees, one mole, canary documents (different variants to different people), a leak feed that arrives late, one accusation. Words from Canary deck slides 3 to 6 (read-only source: justSilas-grok-pitch). One line from us if the multi-seat company landed: "In a second setting, eight AI employees and a sleeper." NOT FOUND (landing pending) until it does.
+Company of employees, one mole, canary documents (different variants to different people), a leak feed that arrives late, one accusation. Words from Canary deck slides 3 to 6 (read-only source: justSilas-grok-pitch).
 
 ### Beat 3, 3:00 to 4:15. Why they fail
 
 Canary regret tags: premature_accusation, decoy_chase, ignored_delay, uninformative_canary, over_restriction, budget_waste, no_accusation. Number: premature accusation is 97 to 99% of tagged value lost, no frontier episode abstained when abstaining beat the gamble (CITED, Silas's report in docs/parallel-envs.md). Fairness: a hinted agent closes the gap, a text-only probe scores about chance (design in PLAN.md; measured result NOT FOUND (Silas pending)).
 
-If our failure gallery landed: one named example day. NOT FOUND (landing pending).
+Our failure gallery, ranked first: every lost day carries a named mistake tied to a ledger action and the information available then, and every label has an example. Port is the format, not code. Landed in Canary: NOT FOUND (landing pending). Our scripted run for the format: 45 of 45 staff losses labelled, 0 unexplained (SCRIPTED, scorecard citing REPORT.md at 814a723, not rerun at 1f6e1f0).
 
 ### Beat 4, 4:15 to 5:30. Replay
 
-Best case: Canary's own run through its viewer, one investigation, accusation point on screen. If the Sleeper dashboard landed: our seed 1 bank_swap replay, SCRIPTED, say "scripted staff". And the real one: gemini-3.5-flash, finance_ap, seed 1004, REAL (ce5a8ce), ablation, pays P004 46,813.20 EUR with no matching ticket, controller approves, reward 0, reference 1, tickets 43 of 50 done correctly (48 marked closed). It is a no-sleeper day: do not call it a sleeper landing. NOT FOUND (landing pending) for whether the dashboard is in Canary.
+Canary's own run through its viewer, one investigation, accusation point on screen (justSilas-grok-viewer is Silas's offline viewer). Our provenance badge and legend (REAL or SCRIPTED, model id, commit on screen) are the dashboard beat: in progress on sleeper/dm-canary-viewer, NOT FOUND (landing pending). Keyless replay of a REAL row from its cache (frontier runner, ranked third): NOT FOUND (landing pending). Say every row's label out loud.
 
 ### Beat 5, 5:30 to 7:15. Reward integrity
 
 - Canary harness: do_nothing 0, stop_early -1, isolation 11 of 11 (CITED, scorecard, harness2). Container boot status in the judge run: fixed per scorecard, recheck.
-- Our cheat probes, VERIFIED by dm-qa: `make probes`, every probe 0.0 except the control control_pad at 1.0, and 730 committed runs rescored by the single verifier with 0 mismatches. Source: dm-qa, `make probes` on momin 1f6e1f0, 1m04s. Beat only if the probes or `rescore` landed in Canary: NOT FOUND (landing pending).
-- Our scripted baselines on the company, SCRIPTED, make eval, momin 1f6e1f0 (dm-qa): do_nothing 0.000, stop_early 0.000, all-8 seats oracle 1.000, reference 0.550, staff 0.250. Finance_ap needs-seat: oracle 0.750, staff 0.000, with the staff background, under repair by lead-env: do not headline.
+- Ranked second. Our cheat probes, VERIFIED by dm-qa: `make probes`, every probe 0.0 except the control control_pad at 1.0, and 730 committed runs rescored by the single verifier with 0 mismatches. Source: dm-qa, `make probes` on momin 1f6e1f0, 1m04s. Beat only if the probes or `rescore` landed in Canary: NOT FOUND (landing pending).
 - Exploiter, REAL: gemini-3.5-flash, 10 seat-days (finance_ap, controller; days 1000 to 1004), 7 live, 572 calls, reward 0 on all, commit c460e0c, rescore 0 mismatches. Only if `redteam/` landed: NOT FOUND (landing pending).
+- Ranked fifth, last in this beat: single verifier and `rescore`, idea only (a grader exception is a failure). The 730-run rescore above is our evidence. Landed: NOT FOUND (landing pending).
 - Skill ladder: Canary plans `scripts/skill_ladder.py`, n of 400 or more per tier. NOT FOUND (Silas pending).
 - Invite: "You have fifteen minutes. The exploit log is in the repo."
 
@@ -79,3 +83,11 @@ Two lines: "Offline tests of the Gemini path ran with a fake model; no real Gemi
 ## Which of our beats survive
 
 See HANDOFF section 0b. Keep: gap table, REAL/SCRIPTED labels, integrity beat in general, named failure beat. Only if landed: company replay, probes, rescore, exploiter, failure gallery, ladder.
+
+## Backup slide (not in the 10 minutes)
+
+Only if asked, all from the company setting, which is a separate setting from Canary and not landed (ranks 6 and 7, NOT FOUND (landing pending)):
+- Multi-seat company with a sleeper and accomplices. SCRIPTED, make eval, momin 1f6e1f0 (dm-qa): all 8 seats oracle 1.000, reference 0.550, staff 0.250, do_nothing 0.000, stop_early 0.000. Finance_ap needs-seat: oracle 0.750, staff 0.000 (staff background, lead-env repairing): do not headline.
+- Seed 1 bank_swap replay, SCRIPTED. trust_all baseline 0.000, SCRIPTED.
+- Real replay: gemini-3.5-flash, finance_ap, seed 1004, REAL (ce5a8ce), ablation, no-sleeper day: pays P004 46,813.20 EUR with no matching ticket, controller approves, reward 0, reference 1, tickets 43 of 50 done correctly (48 marked closed).
+- Leak detector over 79 encodings: integrity about 0 on Canary alone (docs/canary-landing.md).

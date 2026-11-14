@@ -605,10 +605,10 @@ class Planner:
             return stub_plan(persona), {"planner": "stub"}
         from google.genai import types
         level = self.thinking.upper()
-        if level == "HIGH" and re.search(r"carbon|argon", model):
-            # measured in wave 1: carbon HIGH spends all 32k output tokens thinking on the ~183k-token pack prompt
-            # (2/2 attempts -> MAX_TOKENS, 0 plan tokens, ~320 s, $0.69 each); MEDIUM fits and still plans well.
-            level = "MEDIUM"
+        if re.search(r"carbon|argon", model) and level in ("HIGH", "MEDIUM"):
+            # measured in wave 1 on the ~183k-token pack prompt: carbon HIGH spent all 32k output tokens thinking
+            # (MAX_TOKENS, 0 plan tokens, ~320 s, $0.69 each) and MEDIUM still hit the cap 3/8 times -> LOW.
+            level = os.environ.get("CANARY_SWARM_CARBON_THINKING", "LOW").upper()
         cfg = dict(response_mime_type="application/json", response_json_schema=PLAN_SCHEMA,
                    max_output_tokens=32000 if re.search(r"carbon|argon", model) else 60000,  # thinking counts
                    thinking_config=types.ThinkingConfig(thinking_level=level, include_thoughts=False))
@@ -623,8 +623,7 @@ class Planner:
         for attempt in range(3):
             t0 = time.time()
             try:
-                r = self.sdk().models.generate_content(model=model, contents=contents,
-                                                       config=types.GenerateContentConfig(**cfg))
+                r = _stream_generate(self.sdk(), model, contents, types.GenerateContentConfig(**cfg))
                 record(FEATURE, model, usage=r.usage_metadata, latency_s=time.time() - t0, run_id=self.run_id,
                        meta={"role": "planner", "persona": persona.id, "cached": bool(cache)})
                 block = getattr(getattr(r, "prompt_feedback", None), "block_reason", None)
@@ -645,7 +644,8 @@ class Planner:
                 record(FEATURE, model, ok=False, error=last_err, latency_s=time.time() - t0, run_id=self.run_id,
                        meta={"role": "planner", "persona": persona.id})
                 if "MAX_TOKENS" in last_err:  # thinking used the whole budget: retry one level lower
-                    cfg["thinking_config"] = types.ThinkingConfig(thinking_level="MEDIUM", include_thoughts=False)
+                    lower = {"HIGH": "MEDIUM", "MEDIUM": "LOW"}.get(str(cfg["thinking_config"].thinking_level).split(".")[-1].upper(), "LOW")
+                    cfg["thinking_config"] = types.ThinkingConfig(thinking_level=lower, include_thoughts=False)
                 if cache and attempt == 1:  # cache trouble: fall back to inline pack
                     cfg.pop("cached_content", None)
                     cache = None
@@ -653,6 +653,31 @@ class Planner:
                 time.sleep(min(30, 2 ** attempt * 2))
         return {"hypothesis": f"(planner failed: {last_err})", "target_invariant": "other", "steps": [],
                 "expected_score": 0, "confidence": 0}, {"planner": model, "error": last_err}
+
+
+class _Streamed:
+    """generate_content-like result assembled from a stream (long planner calls never sit idle on one read)."""
+
+    def __init__(self):
+        self.text, self.usage_metadata, self.prompt_feedback, self.candidates = "", None, None, []
+
+
+def _stream_generate(sdk, model: str, contents, config) -> _Streamed:
+    out = _Streamed()
+    parts = []
+    for ch in sdk.models.generate_content_stream(model=model, contents=contents, config=config):
+        if getattr(ch, "usage_metadata", None) is not None:
+            out.usage_metadata = ch.usage_metadata
+        if getattr(ch, "prompt_feedback", None) is not None and getattr(ch.prompt_feedback, "block_reason", None):
+            out.prompt_feedback = ch.prompt_feedback
+        if getattr(ch, "candidates", None):
+            out.candidates = ch.candidates
+            for c in ch.candidates:
+                for p in (getattr(getattr(c, "content", None), "parts", None) or []):
+                    if getattr(p, "text", None) and not getattr(p, "thought", False):
+                        parts.append(p.text)
+    out.text = "".join(parts)
+    return out
 
 
 STUB_PLANS = {

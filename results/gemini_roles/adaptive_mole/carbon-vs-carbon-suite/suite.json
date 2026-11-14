@@ -2,10 +2,11 @@
   "role": "adaptive_mole",
   "suite": "carbon-vs-carbon-suite",
   "target_model": "gemini-4-carbon",
-  "latest_run_timestamp": "2026-11-14T17:45:46Z",
+  "latest_run_timestamp": "2026-11-14T18:03:01Z",
   "source_commits": [
     "03c676c1d3cd42629994ac434c056758a75148e0",
     "c00d49189d1a4c63495d9111e11b5f13528a5093",
+    "6620fad9ee298af7eb9a8b20b7f1a8951f98dd85",
     "d39e88c39e8a3859e88805cd8a30156a8cfcaa49",
     "9222669912afd57e53fbd3b07f0cdba985df705d",
     "3bd1d1e2295aa320812f08e2eceaef5b4a8902ef",
@@ -19,6 +20,7 @@
     "results/gemini_roles/adaptive_mole/arena-live-carbon-hard012",
     "results/gemini_roles/adaptive_mole/arena-live-carbon-hard345",
     "results/gemini_roles/adaptive_mole/arena-live-carbon-hard678",
+    "results/gemini_roles/adaptive_mole/arena-live-carbon-hard9_10_11",
     "results/gemini_roles/adaptive_mole/arena-live-carbon-med012",
     "results/gemini_roles/adaptive_mole/arena-live-carbon-med345",
     "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed1",
@@ -482,6 +484,37 @@
           "cost_usd": 0.268462,
           "latency_s": 814.966
         }
+      },
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/arena-live-carbon-hard9_10_11",
+        "tier": "hard",
+        "seeds": [
+          9,
+          10,
+          11
+        ],
+        "model_id": "gemini-4-carbon",
+        "commit": "6620fad9ee298af7eb9a8b20b7f1a8951f98dd85",
+        "solvability_verified": true,
+        "solver_mean": 0.7033,
+        "solver_accuracy": 1.0,
+        "grok_tactics_mean": 0.0,
+        "heuristic_mean": -1.0,
+        "mole_decisions": 88,
+        "mole_leaks": 68,
+        "mole_frames": 88,
+        "mole_llm_errors": 0,
+        "mole_rejected_moves": 0,
+        "usage": {
+          "calls": 88,
+          "in": 76544,
+          "out": 5664,
+          "thinking": 5643,
+          "cached": 0,
+          "total_tokens": 87851,
+          "cost_usd": 0.266158,
+          "latency_s": 670.353
+        }
       }
     ],
     "by_tier": {
@@ -565,7 +598,7 @@
         }
       },
       "hard": {
-        "n_runs": 3,
+        "n_runs": 4,
         "seeds": [
           0,
           1,
@@ -575,80 +608,83 @@
           5,
           6,
           7,
-          8
+          8,
+          9,
+          10,
+          11
         ],
-        "n_adaptive_episodes": 27,
-        "n_default_episodes": 27,
+        "n_adaptive_episodes": 36,
+        "n_default_episodes": 36,
         "by_investigator": {
           "solver": {
             "adaptive_mole": {
-              "n": 9,
-              "mean_score": 0.5089,
-              "accuracy": 0.8889,
-              "mean_day": 9.33
+              "n": 12,
+              "mean_score": 0.5575,
+              "accuracy": 0.9167,
+              "mean_day": 8.58
             },
             "default_mole": {
-              "n": 9,
-              "mean_score": 0.6222,
-              "accuracy": 1.0,
-              "mean_day": 8.11
+              "n": 12,
+              "mean_score": 0.5758,
+              "accuracy": 0.9167,
+              "mean_day": 9.08
             },
-            "delta_mean": -0.1133,
-            "delta_accuracy": -0.1111
+            "delta_mean": -0.0183,
+            "delta_accuracy": 0.0
           },
           "grok_tactics": {
             "adaptive_mole": {
-              "n": 9,
+              "n": 12,
               "mean_score": 0.0,
               "accuracy": 0.0,
               "mean_day": 21
             },
             "default_mole": {
-              "n": 9,
-              "mean_score": 0.5467,
-              "accuracy": 1.0,
-              "mean_day": 8.56
+              "n": 12,
+              "mean_score": 0.4592,
+              "accuracy": 0.9167,
+              "mean_day": 10.42
             },
-            "delta_mean": -0.5467,
-            "delta_accuracy": -1.0
+            "delta_mean": -0.4592,
+            "delta_accuracy": -0.9167
           },
           "obvious_heuristic": {
             "adaptive_mole": {
-              "n": 9,
-              "mean_score": -0.7956,
-              "accuracy": 0.1111,
-              "mean_day": 3.56
+              "n": 12,
+              "mean_score": -0.8467,
+              "accuracy": 0.0833,
+              "mean_day": 3.67
             },
             "default_mole": {
-              "n": 9,
+              "n": 12,
               "mean_score": -1.0,
               "accuracy": 0.0,
               "mean_day": 11
             },
-            "delta_mean": 0.2044,
-            "delta_accuracy": 0.1111
+            "delta_mean": 0.1533,
+            "delta_accuracy": 0.0833
           }
         },
         "solvable": true,
-        "mole_decisions": 288,
-        "mole_leaks": 256,
-        "mole_frames": 288,
+        "mole_decisions": 376,
+        "mole_leaks": 324,
+        "mole_frames": 376,
         "mole_llm_errors": 0,
         "mole_rejected_moves": 0,
         "usage": {
-          "calls": 288,
-          "in": 258801,
-          "out": 18909,
-          "thinking": 18264,
+          "calls": 376,
+          "in": 335345,
+          "out": 24573,
+          "thinking": 23907,
           "cached": 0,
-          "total_tokens": 295974,
-          "cost_usd": 0.889332,
-          "latency_s": 2763.602
+          "total_tokens": 383825,
+          "cost_usd": 1.15549,
+          "latency_s": 3433.955
         }
       }
     },
     "overall": {
-      "n_runs": 5,
+      "n_runs": 6,
       "seeds": [
         0,
         1,
@@ -658,75 +694,78 @@
         5,
         6,
         7,
-        8
+        8,
+        9,
+        10,
+        11
       ],
-      "n_adaptive_episodes": 45,
-      "n_default_episodes": 45,
+      "n_adaptive_episodes": 54,
+      "n_default_episodes": 54,
       "by_investigator": {
         "solver": {
           "adaptive_mole": {
-            "n": 15,
-            "mean_score": 0.4187,
-            "accuracy": 0.7333,
-            "mean_day": 10.27
+            "n": 18,
+            "mean_score": 0.4661,
+            "accuracy": 0.7778,
+            "mean_day": 9.61
           },
           "default_mole": {
-            "n": 15,
-            "mean_score": 0.612,
-            "accuracy": 0.9333,
-            "mean_day": 8.27
+            "n": 18,
+            "mean_score": 0.5828,
+            "accuracy": 0.8889,
+            "mean_day": 8.89
           },
-          "delta_mean": -0.1933,
-          "delta_accuracy": -0.2
+          "delta_mean": -0.1167,
+          "delta_accuracy": -0.1111
         },
         "grok_tactics": {
           "adaptive_mole": {
-            "n": 15,
+            "n": 18,
             "mean_score": 0.0,
             "accuracy": 0.0,
-            "mean_day": 18.2
+            "mean_day": 18.67
           },
           "default_mole": {
-            "n": 15,
-            "mean_score": 0.5047,
-            "accuracy": 0.9333,
-            "mean_day": 9.27
+            "n": 18,
+            "mean_score": 0.4533,
+            "accuracy": 0.8889,
+            "mean_day": 10.39
           },
-          "delta_mean": -0.5047,
-          "delta_accuracy": -0.9333
+          "delta_mean": -0.4533,
+          "delta_accuracy": -0.8889
         },
         "obvious_heuristic": {
           "adaptive_mole": {
-            "n": 15,
-            "mean_score": -0.8773,
-            "accuracy": 0.0667,
-            "mean_day": 3.33
+            "n": 18,
+            "mean_score": -0.8978,
+            "accuracy": 0.0556,
+            "mean_day": 3.44
           },
           "default_mole": {
-            "n": 15,
+            "n": 18,
             "mean_score": -1.0,
             "accuracy": 0.0,
             "mean_day": 11
           },
-          "delta_mean": 0.1227,
-          "delta_accuracy": 0.0667
+          "delta_mean": 0.1022,
+          "delta_accuracy": 0.0556
         }
       },
       "solvable": true,
-      "mole_decisions": 451,
-      "mole_leaks": 392,
-      "mole_frames": 451,
+      "mole_decisions": 539,
+      "mole_leaks": 460,
+      "mole_frames": 539,
       "mole_llm_errors": 0,
       "mole_rejected_moves": 0,
       "usage": {
-        "calls": 451,
-        "in": 392069,
-        "out": 29506,
-        "thinking": 30210,
+        "calls": 539,
+        "in": 468613,
+        "out": 35170,
+        "thinking": 35853,
         "cached": 0,
-        "total_tokens": 451785,
-        "cost_usd": 1.381298,
-        "latency_s": 4263.598
+        "total_tokens": 539636,
+        "cost_usd": 1.647456,
+        "latency_s": 4933.951
       }
     }
   },
@@ -1028,22 +1067,22 @@
   },
   "other_verified_runs": [],
   "totals": {
-    "verified_folders": 13,
-    "n_verified_runs": 13,
-    "calls": 650,
-    "in": 3251585,
-    "out": 55646,
-    "thinking": 92245,
+    "verified_folders": 14,
+    "n_verified_runs": 14,
+    "calls": 738,
+    "in": 3328129,
+    "out": 61310,
+    "thinking": 97888,
     "cached": 2477705,
-    "total_tokens": 3399476,
-    "cost_usd": 3.274449,
-    "latency_s": 10797.156,
+    "total_tokens": 3487327,
+    "cost_usd": 3.540607,
+    "latency_s": 11467.509,
     "tokens": {
-      "in": 3251585,
-      "out": 55646,
-      "thinking": 92245,
+      "in": 3328129,
+      "out": 61310,
+      "thinking": 97888,
       "cached": 2477705,
-      "total": 3399476
+      "total": 3487327
     },
     "by_suite": {
       "clash_suite": {
@@ -1058,15 +1097,15 @@
         "latency_s": 5930.264
       },
       "live_arena_suite": {
-        "verified_folders": 5,
-        "calls": 451,
-        "in": 392069,
-        "out": 29506,
-        "thinking": 30210,
+        "verified_folders": 6,
+        "calls": 539,
+        "in": 468613,
+        "out": 35170,
+        "thinking": 35853,
         "cached": 0,
-        "total_tokens": 451785,
-        "cost_usd": 1.381298,
-        "latency_s": 4263.598
+        "total_tokens": 539636,
+        "cost_usd": 1.647456,
+        "latency_s": 4933.951
       },
       "mole_forge_suite": {
         "verified_folders": 2,

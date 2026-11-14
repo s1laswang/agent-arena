@@ -1,7 +1,7 @@
 # Judge scorecard
 
 Rubric: AfterQuery "Break the Agent" (gap 30, difficulty 30, integrity 25, craft 15) and Silas's bake-off rubric (same axes, `origin/justSilas-grok-bakeoff3:docs/reports/grok-bakeoff3.md`).
-Labels: VERIFIED = I ran it (2026-11-14, momin 814a723, `SLEEPER_OFFLINE=1`, scripted only). CITED = from bake-off 3, not re-run by me. Scorecard v1 14:10, corrected 15:35 Helsinki (see section C notes). Not yet done by me: fresh clone, own 15-min exploit hunt (next version).
+Labels: VERIFIED = I ran it (2026-11-14, momin 814a723, `SLEEPER_OFFLINE=1`, scripted only). CITED = from bake-off 3, not re-run by me. Scorecard v1 14:10, corrected 15:23 Helsinki (see section C notes). Not yet done by me: fresh clone, own 15-min exploit hunt (next version).
 
 ## A. Which of our assets have landed in Canary (origin/justSilas 5813bb2)
 
@@ -48,7 +48,7 @@ Bake-off rubric view of The Sleeper: gap 10, difficulty 17, integrity 15, craft 
 3. pitch/ numbers stale (owner dm-pitch).
 4. Merged-Canary assets not landed (owner lead-demo).
 
-## E. Corrections 15:35 (momin 5c3c8b0 / 357214a7, reported by lead-env and lead-lab)
+## E. Corrections 15:23 (momin 5c3c8b0 / 357214a7, reported by lead-env and lead-lab)
 - Section C was written from my 814a723 run and bake-off 3. Since then: finance_ap oracle reported 1.000 on needs-seat days (lead-env; gaptable on momin shows oracle 1.000 on 1000-1019 x3); Harbor verifier is `environment_mode = "separate"`, lint exit 0, oracle 1 / nop 0 / exploit agent 0 (file `results/harbor/separate-verifier-runs.txt`, checked). So integrity loses less (x73 and chmod 777 /logs points closed on the branch) and difficulty loses less (four zero days fixed, per lead-env). Expected re-score: difficulty 20-22, integrity 20-21. Not re-run by me yet.
-- Gap: real rows exist (Gemini 3.5 Flash 1/15, Gemini 4 Carbon 0/15, rescored, replayable tarballs) but show `pending` in the headline gaptable until the bg_version tag fix lands, and n is small. Gap about 12-14 if the table shows them, still below Canary's potential at n>=20.
+- Gap: real rows exist (Gemini 3.5 Flash 1/15 with prompt status unconfirmed, Gemini 4 Carbon 0/15 as first measured; the prompt understated the call budget, so this is NOT a gap result; rescored, replayable tarballs) but show `pending` in the headline gaptable until the bg_version tag fix lands, and n is small. Do NOT score the gap from these rows: citing an understated-budget run is the rubric's withheld-information failure. Gap stays about 9-10 until the true-budget Carbon row (ETA ~16:30) lands; about 12-14 if it shows a paired gap, still below Canary's potential at n>=20.
 - Craft point D.1 (replay): `make frontier-replay-run` exists in the Makefile; dm-qa fresh-clone confirmation still pending. D.2 (key in env): lead-harness fix 67ec06b, dm-qa keyless fresh clone pending.

@@ -304,9 +304,9 @@
         <div class="accuse-field">
           <div class="certainty-header">
             <label for="certaintySlider"><strong>How sure are you?</strong></label>
-            <span class="certainty-display mono" id="certaintyDisplay">60%</span>
+            <span class="certainty-display mono" id="certaintyDisplay">50%</span>
           </div>
-          <input type="range" id="certaintySlider" min="0" max="100" step="1" value="60">
+          <input type="range" id="certaintySlider" min="0" max="100" step="1" value="50">
           <div class="slider-marks">
             <span>0% (Guessing)</span>
             <span>50% (Coin Flip)</span>
@@ -351,6 +351,9 @@
         <button type="button" id="confirmAccuseBtn" class="btn-danger btn-large">
           Confirm Accusation of <span id="accuseTargetBtnName">Suspect</span>
         </button>
+        <span id="confirmWarningText" class="font-small" style="color:var(--warn); display:none; text-align:center;">
+          Negative EV: Certainty is below break-even p*. Abstaining scores 0.00 vs expected loss.
+        </span>
         <button type="button" id="abstainBtn" class="btn-secondary btn-large">
           Close Case Without Accusing (Abstain: Score 0.00)
         </button>

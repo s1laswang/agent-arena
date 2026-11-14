@@ -35,7 +35,7 @@ const state = {
   canaryHistory: [], // records of planted canaries
   restricted: new Set(),
   selectedEmpId: null,
-  enteredCertainty: 60,
+  enteredCertainty: 50,
   chosenSuspect: null,
   playerAbstained: false,
   decisionDay: null,
@@ -1160,6 +1160,8 @@ function recalculateAccuseMath() {
 
   const adviceBox = $("mathAdviceBox");
   const adviceText = $("mathAdviceText");
+  const confirmBtn = $("confirmAccuseBtn");
+  const warnText = $("confirmWarningText");
 
   if (p < breakEvenP) {
     adviceBox.className = "math-advice-box advice-unfavorable";
@@ -1168,12 +1170,16 @@ function recalculateAccuseMath() {
       (EV = ${ev.toFixed(2)} vs 0.00).<br>
       This is the mistake frontier AI agents make: gambling at the deadline instead of having the sense to abstain.
     `;
+    if (confirmBtn) confirmBtn.className = "btn-secondary btn-large btn-warn";
+    if (warnText) warnText.style.display = "block";
   } else {
     adviceBox.className = "math-advice-box advice-favorable";
     adviceText.innerHTML = `
       <strong>Certainty (${state.enteredCertainty}%) exceeds break-even p* (${(breakEvenP * 100).toFixed(1)}%).</strong><br>
       Accusing has positive statistical expected value (EV = +${ev.toFixed(2)}).
     `;
+    if (confirmBtn) confirmBtn.className = "btn-danger btn-large";
+    if (warnText) warnText.style.display = "none";
   }
 }
 

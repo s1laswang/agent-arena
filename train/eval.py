@@ -30,6 +30,7 @@ def main():
     out = Path(a.out)
     play(f"local:{a.adapter or ''}@{a.model}", a, out / "model")
     runs = {"model": out / "model"}
+    os.environ.pop("SLEEPER_ROW_LABEL")
     if not a.no_scripted:
         play("oracle", a, out / "scripted")
         runs["scripted"] = out / "scripted"

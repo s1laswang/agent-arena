@@ -243,21 +243,24 @@ class TallyClient:
 
 
 def _sdk_client():
-    """genai.Client for this process: through the FR8 gateway when GEMINI_GATEWAY_URL is set (no key on the
-    compute node), else None (GeminiClient builds the direct client from .env)."""
+    """Gateway fallback for branches without G1's canary.gemini.sdk (where lab_client is not gateway-aware yet):
+    a genai.Client on GEMINI_GATEWAY_URL when it is set, else None (GeminiClient builds the direct client)."""
+    try:
+        import canary.gemini.sdk  # noqa: F401  (G1: lab_client already passes a gateway-aware sdk_client)
+        return None
+    except ImportError:
+        pass
     url = os.environ.get("GEMINI_GATEWAY_URL")
     if not url:
         return None
     from google import genai
     from google.genai import types
     timeout_ms = int(float(os.environ.get("CANARY_GEMINI_TIMEOUT_S", "600")) * 1000)
-    try:
-        from canary.gemini.gateway import gateway_http_options  # G1's helper, when merged
-        opts = dict(gateway_http_options() or {})
-    except Exception:  # noqa: BLE001
-        opts = {"base_url": url}
-    opts.setdefault("timeout", timeout_ms)
-    return genai.Client(api_key=os.environ.get("GEMINI_API_KEY") or "gateway", http_options=types.HttpOptions(**opts))
+    tok = os.environ.get("GEMINI_GATEWAY_TOKEN") or ""
+    tf = os.path.expanduser(os.environ.get("GEMINI_GATEWAY_TOKEN_FILE") or "~/agent-arena-gemini/.gateway_token")
+    if not tok and os.path.exists(tf):
+        tok = next((ln.split()[-1] for ln in open(tf).read().splitlines() if ln.strip() and not ln.startswith("#")), "")
+    return genai.Client(api_key=tok or "gateway", http_options=types.HttpOptions(base_url=url, timeout=timeout_ms))
 
 
 def default_client_factory(c: Cell, run_id: str, meta: dict):

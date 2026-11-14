@@ -125,3 +125,9 @@
 ## 03:35 (real clock, from `date`) correction
 - The CEO entries headed "03:45" and "04:40" were actually written at about 03:25 and 03:33. From now on, CEO timestamps come from `date`. v1.3 merged around 03:30 real time.
 - J3 v2 (v1.3 solver data, 20k+2k, correct-only) is staged on FR8 for the Saturday training v2. J4 44200 has run 1h10m, still in the pilot tokenization.
+
+## 03:41 tick
+- justSilas e411cf1, 476 passed (last verified 3e31c20). Power on AC.
+- FR8: J4 44200 running 1h17m (pilot tokenization; training ~03:55-06:50, eval until 08:24). Sky 43143_4 still paused (requeuehold).
+- AGENTS: official v1.3 gpt-5.5 run in progress (20 medium + 20 hard, started ~03:33, 8 workers). Spend cap $150/night without Silas.
+- Forge: the evolved moles are not harder for gpt-5.5 (7/7 correct on 2 seeds). Framing: "a solver-constrained pipeline works; LLM-in-the-loop fitness is the morning step". J5b runs on v1.3.

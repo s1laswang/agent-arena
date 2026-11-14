@@ -232,7 +232,7 @@ def test_all_9_single_bias_variants_and_fr8_adapter():
 
 
 def test_gemini_chatter_dispatch_fallback_and_item_reject(monkeypatch):
-    monkeypatch.delitem(sys.modules, "canary.social.gemini_chatter", raising=False)
+    monkeypatch.setitem(sys.modules, "canary.social.gemini_chatter", None)
     p_gem = get_provider("v16-gemini:v1_anchoring_authority_confirmation")
     p_stub = get_provider("v16-gemini-stub:v1_anchoring_authority_confirmation")
     p_tpl = get_provider("v16:v1_anchoring_authority_confirmation")

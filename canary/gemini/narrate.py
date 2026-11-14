@@ -64,6 +64,10 @@ def say_score(x: float) -> str:
 # ------------------------------------------------------------- placeholder values
 def values(results_dir: Path, ledger: list) -> dict[str, str]:
     v: dict[str, str] = {}
+    if list(ledger) == ["committed"]:
+        ledger = dash.committed_ledgers(results_dir)
+    elif list(ledger) == ["auto"]:
+        ledger = dash.discover_ledgers()
     rows = dash.load_ledger(ledger)
     if rows:
         s = dash.summarize(rows)
@@ -123,6 +127,16 @@ def values(results_dir: Path, ledger: list) -> dict[str, str]:
             rate = ha["agree"] / ha["total"]
         if rate is not None:
             v["agreement"] = say_pct(rate)
+    B = dash.slim_atlas_blind(dash.load_json(results_dir / "atlas_blind.json"))
+    if B:
+        v["blind_recovered"] = str(B["tags_recovered"])
+        if B.get("n_tags") is not None:
+            v["blind_tags"] = str(B["n_tags"])
+        v["blind_new"] = str(len(B.get("novel") or []))
+        if B.get("regret_share_covered") is not None:
+            v["blind_regret_covered"] = say_pct(B["regret_share_covered"])
+        if B.get("episodes") is not None:
+            v["blind_episodes"] = f"{int(B['episodes']):,}"
     S = R.get("swarm")
     if S and S.get("attempts"):
         at = S["attempts"]
@@ -256,7 +270,8 @@ def main(argv=None) -> int:
     ap.add_argument("--video", default=str(ROOT / "docs" / "gemini" / "VIDEO.md"))
     ap.add_argument("--out", default=str(ROOT / "docs" / "gemini" / "assets" / "narration"))
     ap.add_argument("--results", default=str(dash.DEFAULT_RESULTS))
-    ap.add_argument("--ledger", nargs="*", default=[str(dash.DEFAULT_LEDGER)])
+    ap.add_argument("--ledger", nargs="*", default=["committed"],
+                    help="ledger files/dirs, or 'committed' (default: results/gemini ledgers only) or 'auto'")
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--voice", default=DEFAULT_VOICE)
     ap.add_argument("--voices", default="", help="comma list: audition voices, writes <id>.<voice>.wav")

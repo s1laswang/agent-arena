@@ -39,3 +39,19 @@ def test_spoken_formats_and_wav(tmp_path):
     with wave.open(buf, "wb") as w:
         w.setnchannels(1), w.setsampwidth(2), w.setframerate(24000), w.writeframes(b"\0\0" * 12000)
     assert narrate.write_wav(tmp_path / "b.wav", buf.getvalue(), 0) == pytest.approx(0.5)
+
+
+def test_blind_atlas_and_committed_ledger_values(tmp_path):
+    import gzip
+    import json
+    import shutil
+    res = tmp_path / "results"
+    shutil.copytree(FX / "results", res)
+    (res / "atlas_blind.json").write_text(json.dumps({"corpus": {"episodes": 153}, "modes": [{"id": "n", "name": "N"}],
+        "recovery": {"tags": {}, "tags_recovered": ["a", "b", "c"], "n_tags": 5, "novel_modes": ["n"], "regret_share_covered": 0.21}}))
+    row = {"ts": 1.0, "feature": "x", "model": "m", "in": 10, "out": 1, "ok": True, "pid": 1, "host": "h"}
+    with gzip.open(res / "usage_ledger.jsonl.gz", "wt") as f:
+        f.write(json.dumps(row) + "\n")
+    v = narrate.values(res, ["committed"])
+    assert (v["blind_recovered"], v["blind_tags"], v["blind_new"], v["blind_regret_covered"]) == ("3", "5", "1", "21 percent")
+    assert v["calls"] == "1"

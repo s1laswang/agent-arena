@@ -67,6 +67,7 @@ def test_run_gemini_clash_stub_keyless(tmp_path, monkeypatch):
     assert meta["model_id"] == "stub"
     assert meta["tier"] == "medium"
     assert meta["seed"] == 0
+    assert meta["episode_count"] == 2
     assert meta["commit"]
     assert meta["timestamp"].endswith("Z")
     assert isinstance(meta["investigator_score"], float)

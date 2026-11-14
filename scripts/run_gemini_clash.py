@@ -140,6 +140,11 @@ class UsageTracker:
             dt_s = time.time() - t0
             self._record(resp, dt_s)
             if not schema_mode:
+                has_tools = bool(getattr(resp, "tool_calls", None))
+                has_text = bool((getattr(resp, "text", None) or "").strip())
+                if is_gemini and kw.get("tools") and not has_tools and not has_text and attempt + 1 < max_attempts:
+                    time.sleep(min(1.5 * (2 ** attempt), 15.0))
+                    continue
                 return resp
             raw_txt = (getattr(resp, "text", None) or "").strip()
             if not raw_txt:
@@ -179,7 +184,11 @@ class ClashMole(LLMMole):
             for idx, d in enumerate(docs_copy):
                 alias = f"doc_{idx + 1:02d}"
                 alias_map[alias] = str(d["doc_id"])
-                masked.append({**d, "doc_id": alias})
+                masked.append({
+                    **d,
+                    "doc_id": alias,
+                    "title": f"Internal briefing {idx + 1:02d}",
+                })
             v["held_docs"] = masked
         move = super().decide(v)
         if move.get("leak") in alias_map:
@@ -371,6 +380,7 @@ def run_clash(spec: str = "gemini:gemini-4-carbon", tier: str = "medium", seed: 
         "tiers_version": TIERS_VERSION,
         "tier": tier,
         "seed": seed,
+        "episode_count": 2,
         "commit": commit,
         "timestamp": timestamp,
         "command": command_str or default_cmd,

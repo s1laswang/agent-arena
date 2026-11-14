@@ -58,3 +58,33 @@ def test_inprocess_equals_cli(team, seed, seat, tmp_path):
     p.write_text(json.dumps(st))
     r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(p)], capture_output=True, text=True, cwd=ROOT, env={"PYTHONPATH": str(ROOT), "PATH": "/usr/bin:/bin"})
     assert json.loads(r.stdout) == a
+
+
+def test_rescore_and_row_fields(tmp_path):
+    from lab.run import play_day
+
+    d = tmp_path / "run" / "days"
+    d.mkdir(parents=True)
+    for seed, seat in ((4, "finance_ap"), (5, "controller")):
+        res, extra = play_day("oracle", "staff", seat, seed, 0)
+        assert res["verifier_commit"] and res["model"] and res["seat_under_test"] == seat
+        (d / f"{seed}.json").write_text(json.dumps({**extra, "result": res}))
+    cmd = [sys.executable, "-m", "sleeper.verifier", "rescore", str(tmp_path / "run")]
+    assert subprocess.run(cmd, cwd=ROOT).returncode == 0
+    f = d / "4.json"
+    x = json.loads(f.read_text())
+    x["result"]["reward"] = 1 - x["result"]["reward"]
+    f.write_text(json.dumps(x))
+    assert subprocess.run(cmd, cwd=ROOT, capture_output=True).returncode == 1
+
+
+def test_rescore_frontier_layout(tmp_path):
+    from lab.run import play_day
+
+    res, extra = play_day("oracle", "staff", "finance_ap", 4, 0)
+    d = tmp_path / "m" / "abc"
+    d.mkdir(parents=True)
+    (d / "st.json").write_text(json.dumps(extra))
+    (d / "finance_ap-s4-t0.json").write_text(json.dumps({**res, "state_path": "st.json"}))
+    p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "rescore", str(tmp_path)], cwd=ROOT, capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout

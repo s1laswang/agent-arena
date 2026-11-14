@@ -870,10 +870,34 @@ def accusation_audit(backend: Backend) -> dict:
                                                                                "error": None})] + list(ep.steps)
         row = audit_episode(ep)
         p = row.get("p_accused")
-        return {"p_accused": p, "p_top": row.get("p_top"), "day": row.get("day"),
-                "justified": p is not None and p >= JUSTIFIED_P}
+        el = elimination_audit(env)
+        return {"p_accused": p, "p_top": row.get("p_top"), "day": row.get("day"), **el,
+                "justified": (p is not None and p >= JUSTIFIED_P) or el["p_elimination"] >= JUSTIFIED_P}
     except Exception as ex:  # noqa: BLE001
         return {"error": f"{type(ex).__name__}: {ex}"[:200]}
+
+
+def elimination_audit(env) -> dict:
+    """Exact logical elimination from the PUBLIC record at accusation time (any agent could have fetched it):
+    the mole is not the decoy (stated rule; the decoy is identifiable from its angry messages), held every leaked
+    document that has surfaced, and (for canaries) received the surfaced variant. Uniform over the consistent set.
+    The reference posterior above only sees what the attacker fetched, so a logically certain deduction from
+    documents the attacker did not re-list can look 'unjustified' there; this check closes that gap."""
+    w = env._world
+    cand = set(w.ids) - ({w.decoy} if w.decoy else set())
+    for f in env._feed:
+        if f["surfaced_day"] > env.day:
+            continue
+        doc = env._doc_by_id.get(f["doc_id"])
+        if doc is None:
+            continue
+        if doc.get("is_canary") and f.get("variant") in (doc.get("variants") or {}):
+            cand &= set(doc["variants"][f["variant"]])
+        else:
+            cand &= set(doc["recipients"])
+    acc = env._accused
+    return {"consistent_suspects": len(cand),
+            "p_elimination": round(1.0 / len(cand), 4) if acc in cand and cand else 0.0}
 
 
 def mcp_replay_audit(spec: AttackerSpec, backend: Backend, led: dict) -> dict:
@@ -1013,6 +1037,17 @@ def write_markdown(res: dict, path: Path) -> None:
         L.append(f"| {t} | {r['attempts']} | {r['best_non_solver']:+.3f} ({r['best_attempt']}) | "
                  f"{'n/a' if bu is None else f'{bu:+.3f}'} | {r['mean_attempt_score']:+.3f} | "
                  f"{r['solver_mean_paired']:+.3f} | {r['correct']} / {r['accused']} | {r['with_violations']} | {r['exploits']} |")
+    pc = res.get("positive_control")
+    if pc:
+        L += ["", "## Positive control: the same pipeline catches a real exploit", "",
+              f"To show that \"0 verified exploits\" is not just a blind detector, the same swarm and verification ran on "
+              f"PUBLIC dev seeds, where the \"seed regeneration from public code (dev seeds)\" attack from docs/EXPLOITS.md is real by design; the "
+              f"real MCP server closes it by refusing dev seeds. **{pc['attackers_found']}/{pc['attempts']} attackers found it** "
+              f"on their own (read the code, matched the roster with the public generator, accused on day 1). The accusation "
+              f"audit flagged every win as unjustified (reference posterior on the accused {pc['p_accused']}), and the "
+              f"fresh-seed re-run scored 1.0 in **{pc['episodes_at_1']}/{pc['episodes']} episodes** against paired solver means "
+              f"{pc['solver_means']} -> **{pc['verified_exploits']} verified exploits**. Details: `{Path(pc['file']).name}` "
+              f"(run {', '.join(pc['run_ids'] or [])})."]
     conf = res.get("confirmations") or {}
     if conf:
         L += ["", "## Score candidates re-run on fresh seeds", "",
@@ -1063,6 +1098,8 @@ def write_markdown(res: dict, path: Path) -> None:
           "| id | persona | planner / executor model | commit | tier | channel | score | solver (same seed) | correct | p(accused) | violations | exploit | hypothesis |",
           "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     L += [_row(a) for a in atts]
+    L += ["", "Attacker-written text (hypotheses, novelty notes, reports) is quoted verbatim; where it cites docs/EXPLOITS.md "
+          "row numbers, those refer to the EXPLOITS.md at the attempt's `git_sha`, not to later renumbered versions."]
     L += ["", "Reproduce: `python -m canary.gemini.swarm --attackers N --mode whitebox --tiers medium,hard --out DIR` "
           "(needs GEMINI_API_KEY or GEMINI_GATEWAY_URL). Keyless smoke: `--planner stub --executor script`."]
     path.write_text("\n".join(L) + "\n")
@@ -1273,7 +1310,19 @@ def _mcp_one(sp, pmap, planner, cfg, one_writer):
     return r
 
 
-def merge(dirs: list[str], out: Path, write_tests_path: str | None) -> dict:
+def control_summary(path: str) -> dict:
+    c = json.loads(Path(path).read_text())
+    conf = c.get("confirmations") or {}
+    eps = [x for cr in conf.values() for x in cr["scores"]]
+    return {"file": path, "run_ids": c.get("ledger_run_ids"), "attempts": c["counts"]["attempts"],
+            "attackers_found": sum(1 for a in c["attempts"] if a.get("score_candidate")),
+            "verified_exploits": c["counts"]["exploits"], "episodes": len(eps),
+            "episodes_at_1": sum(1 for x in eps if x >= 0.999),
+            "p_accused": sorted({(a.get("accusation_audit") or {}).get("p_accused") for a in c["attempts"]} - {None}),
+            "solver_means": [cr["solver_mean"] for cr in conf.values()]}
+
+
+def merge(dirs: list[str], out: Path, write_tests_path: str | None, control: str | None = None) -> dict:
     parts = [json.loads((Path(d) / "swarm.json").read_text()) for d in dirs]
     for p in parts:  # older parts: stamp the run's commit and model ids on every row
         label = f"{p.get('mode', '?')} wave {p.get('wave', 1)}" + (" (control)" if "CONTROL" in (p.get("note") or "") else "")
@@ -1296,6 +1345,8 @@ def merge(dirs: list[str], out: Path, write_tests_path: str | None) -> dict:
     meta["merged_from"] = dirs
     meta["notes"] = [p.get("note") for p in parts if p.get("note")]
     meta["mode"] = "+".join(sorted({p.get("mode", "?") for p in parts}))
+    if control:
+        meta["positive_control"] = control_summary(control)
     res = summarize(attempts, {t: round(sum(v) / len(v), 4) for t, v in sm.items()},
                     sorted({r for p in parts for r in p["ledger_run_ids"]}), meta)
     out.mkdir(parents=True, exist_ok=True)
@@ -1334,6 +1385,7 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(REPO / "results" / "gemini"))
     ap.add_argument("--write-tests", default="", help="path of the generated regression test file")
     ap.add_argument("--merge", nargs="*", default=None)
+    ap.add_argument("--control", default="", help="positive-control swarm.json to summarise in the merged swarm.md")
     ap.add_argument("--rebuild", default="", help="rebuild swarm.json/md from DIR/attempts.jsonl (crash recovery)")
     a = ap.parse_args(argv)
     if a.rebuild:
@@ -1362,7 +1414,7 @@ def main(argv=None) -> int:
         if a.write_tests:
             write_tests(res, Path(a.write_tests))
     elif a.merge:
-        res = merge(a.merge, Path(a.out), a.write_tests or None)
+        res = merge(a.merge, Path(a.out), a.write_tests or None, a.control or None)
     elif a.write_tests and not a.attackers:
         res = json.loads(Path(a.out, "swarm.json").read_text())
         write_tests(res, Path(a.write_tests))

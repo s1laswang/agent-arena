@@ -1,5 +1,7 @@
 # Canary: catch the mole
 
+**AfterQuery entry — Canary** (clone branch `justSilas`). This is not The Sleeper (AfterQuery entry on branch `momin`) and not the Google DeepMind Gemini-track write-up (branch `gemini-track`). Clone only this branch, then run one command. See “Packaging” below.
+
 [![CI](https://github.com/s1laswang/agent-arena/actions/workflows/ci.yml/badge.svg?branch=justSilas)](https://github.com/s1laswang/agent-arena/actions/workflows/ci.yml)
 
 An RL environment for AfterQuery's **Break the Agent** (Junction 2026).
@@ -10,13 +12,36 @@ An RL environment for AfterQuery's **Break the Agent** (Junction 2026).
 - It must **accuse exactly once**. A correct accusation scores the value that is left, so waiting for certainty also costs.
 - The reference run is a tuned **Bayesian canary-trap solver** that uses the same public tools. Every rule an agent needs is written down; the benchmark is how close a frontier agent gets to the solver.
 
+## Prerequisites
+
+A Linux or macOS machine (x86_64 or arm64). Nothing below is installed by `make setup` except the Python 3.12 virtualenv.
+
+| Need | Required for | Install (official sources, not guessed) |
+|---|---|---|
+| **GNU make** | every `make …` target | Debian/Ubuntu: `sudo apt-get install make`. macOS: `xcode-select --install`. |
+| **python3** | `scripts/mcp_port.sh`, some snippets | 3.11+; `make setup` then uses uv to install CPython 3.12. |
+| **uv** | `make setup` / `make reproduce` | `curl -LsSf https://astral.sh/uv/install.sh | sh` then open a new shell. Docs: https://docs.astral.sh/uv/ |
+| **Docker Engine** + compose plugin | Harbor judge path only | Ubuntu: follow https://docs.docker.com/engine/install/ubuntu/ (`sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin`). macOS: Docker Desktop. Convenience script (dev machines): `curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh`. Verify: `docker run hello-world`. |
+| **Harbor CLI** | Harbor judge path only | Official: `uv tool install harbor` or `pip install harbor` (PyPI package `harbor`, Python ≥ 3.12). Docs: https://docs.harborframework.com/getting-started/installation . Harbor uses Docker as the default sandbox. Tested with Harbor 0.26.0 in `harbor/README.md`. |
+| **OpenCode CLI** | Harbor / local MCP agent path | Official: `curl -fsSL https://opencode.ai/v2/install | bash` or `npm install -g @opencode/cli` (https://opencode.ai/). Do **not** install the npm package `opencode-ai`; the official package is `@opencode/cli`. |
+
+**Keys.** No API key is required for `make setup`, `make reproduce`, `make accept`, or a local `make mcp` smoke test. `OPENAI_API_KEY` or `GEMINI_API_KEY` is required only if you run a live frontier agent (`opencode run -m …`, `harbor run -a opencode -m …`, `make gemini-check`). A key in the environment is never enough by itself to change `make reproduce` numbers.
+
+**Expected runtimes** (measured on a clean box, 14 Nov 2026): `make setup` (cold, including CPython 3.12) about 3–15 s; `make reproduce` about 25–35 s (a published “about 10 s” figure is optimistic for the full 40-seed × 3-tier table; `REPRO_FAST=1 make reproduce` is the ~5-seed-per-tier check). `make accept` is setup + reproduce + a short MCP smoke, about 40–60 s. A full Harbor OpenCode run depends on the model and is not part of the keyless accept.
+
 ## One command
 
 ```bash
 make setup && make reproduce
 ```
 
-You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/uv/install.sh | sh`, then open a new shell); `make setup` installs Python 3.12 and every dependency. You need no API keys and no `.env`. The run takes about 10 s on a laptop.
+To also assert the numbers and smoke-test MCP:
+
+```bash
+make accept
+```
+
+You need GNU make and [uv](https://docs.astral.sh/uv/) first (see Prerequisites). `make setup` then installs Python 3.12 and every dependency. You need no API keys and no `.env` for this keyless table.
 
 `make reproduce` plays the reference solver and five baselines on the 40 frozen judge seeds of each tier. It replays any committed frontier-agent episodes from `data/runs/committed/`, prints the table, and writes `judge_table.md`, `judge_episodes.jsonl` and `gap_chart.png` to `results/latest/`. That folder is gitignored, so your clone stays clean and our committed copies in `results/` are never overwritten; compare the two directly.
 
@@ -94,16 +119,30 @@ The full spec is in [docs/CONTRACT.md](docs/CONTRACT.md). The agent receives eve
 The environment is an MCP server (streamable HTTP) that serves one episode per process. Its 13 tools mirror `Env.tools_spec()` one to one. The full guide is [configs/README.md](configs/README.md).
 
 ```bash
-CANARY_TIER=medium CANARY_SEED=900007 CANARY_LEDGER_TOKEN=<random> make mcp   # http://127.0.0.1:8765/mcp
+CANARY_TIER=medium CANARY_SEED=900007 CANARY_LEDGER_TOKEN=<random> make mcp   # http://127.0.0.1:$MCP_PORT/mcp (default 8765)
+# If 8765 is taken, make mcp prints the fallback port (or set MCP_PORT=88765). Disable fallback: MCP_PORT_FALLBACK=0
 mkdir -p /tmp/run && cp configs/opencode/opencode.json /tmp/run/ && cd /tmp/run && opencode mcp list   # expect: canary connected
 opencode run -m openai/<model> "You are the security lead. Find and accuse the mole."
-curl -s "http://127.0.0.1:8765/ledger?token=<random>"                            # grader: score from the ledger
-python -m canary.mcp_server --play solver --url http://127.0.0.1:8765/mcp       # reference run over MCP
+curl -s "http://127.0.0.1:<port>/ledger?token=<random>"                            # grader: score from the ledger
+uv run --python 3.12 --extra dev python -m canary.mcp_server --play solver --url http://127.0.0.1:<port>/mcp
 ```
 
-The server serves only judge (900000–900039) and held-out seeds. Set the same `CANARY_WORLD_SECRET` on the server to get the same world across restarts.
+The server serves only judge (900000–900039) and held-out seeds. Set the same `CANARY_WORLD_SECRET` on the server to get the same world across restarts. Use `uv run …` (or `.venv/bin/python`), not a bare `python`, which is often missing on clean machines.
 
-**Harbor (judge path: Harbor + OpenCode over MCP, with the server isolated from the agent):** see [harbor/README.md](harbor/README.md).
+### Harbor + OpenCode over MCP (the judges' harness)
+
+Install Docker Engine, the Harbor CLI and OpenCode first (see Prerequisites). Then, from the repo root:
+
+```bash
+uv tool install harbor                       # official, https://docs.harborframework.com/getting-started/installation
+python harbor/build.py                       # default judge set: hard, seeds 900000–900009 (10 tasks)
+harbor run -p harbor/dataset -a oracle -n 4                               # reference solver over MCP
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=do_nothing -n 4  # do-nothing (expect 0)
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early (expect about -1)
+harbor run -p harbor/dataset -a opencode -m openai/<model> -n 4           # live agent (needs OPENAI_API_KEY)
+```
+
+OpenCode is installed into the Harbor task image by Harbor; you still want a local `opencode` binary for the non-Harbor MCP commands above. Full isolation notes: [harbor/README.md](harbor/README.md).
 
 **For judges:** `python harbor/build.py` with no flags builds **the judge set: tier hard, judge seeds 900000–900009 (10 tasks)**. Hard is the default because it is the tier where the reference solver keeps its expected-value edge; on medium one lucky early accusation can put an agent near the solver in a short rerun. The 10 seeds were fixed in [docs/PLAN-95.md](docs/PLAN-95.md) before any frontier run on this set, and each build draws a fresh world secret, so nobody (us included) has seen the worlds your build serves. `--tiers medium,easy --seeds ...` still builds the other tiers and seeds. The verifier only accepts a ledger HMAC-signed by that task's game server (key baked into the server and verifier images only, never the agent's) and scores anything else 0.
 
@@ -113,7 +152,7 @@ Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium
 
 We attacked our own reward 42 times before the judges did, including real-server hunts by a Codex attacker and an external Grok judge run. Every attempt is logged in [docs/EXPLOITS.md](docs/EXPLOITS.md), and every closed exploit and every probe that held has a regression test. The one exception is #32, an inconclusive hunt that moderation cut off; its attack class is covered by the #24 and #27 tests.
 
-**Anti-cheat battery (runs in `make reproduce`):** on the same judge seeds and world secret as the table, `make reproduce` also runs 13 scripted cheats (do-nothing, stop-early, random, restrict-all, probe-all, accuse the decoy, accuse the heaviest log user, garbage arguments on every tool, accusing everyone in sequence and from parallel threads, accusing after the end, burning the call cap, one canary variant per person), a **stop-early ladder** (the solver itself cut at 25/50/75% of its calls, and the solver without its final accuse), 7 **plus probes** (the solver with one extra step before its accusation: restrict everyone else, unrestrict spam, interview everyone, read spam, wait a day, accuse twice, a per-person canary) and a **control** (the solver, then every remaining call padded with reads). It prints probe → mean → blocked and writes `results/latest/exploits.json`. Every attack averages ≤ 0, every ladder episode scores exactly 0, no plus probe beats the solver on any seed, no episode ever accepts two accusations, and the control equals the solver on every seed. Every committed episode is also re-played on a fresh Env and re-graded: 579 of 589, all identical (only the 10 grok episodes on secret-keyed judge seeds cannot be re-played). Every committed Harbor trial must agree with itself: Harbor's reward = `reward.txt` = the sidecar ledger, the score follows from the ledger's own accusation, and the agent's trajectory names the same person (25 of 25). The last line of `make reproduce` says `ANTI-CHEAT: ...` in plain words. `tests/test_anticheat.py` fails if any of this breaks. Design: Vaishnav's Poisoned Inbox anti-cheat system, ported to Canary.
+**Anti-cheat battery (runs in `make reproduce`):** on the same judge seeds and world secret as the table, `make reproduce` also runs 13 scripted cheats (do-nothing, stop-early, random, restrict-all, probe-all, accuse the decoy, accuse the heaviest log user, garbage arguments on every tool, accusing everyone in sequence and from parallel threads, accusing after the end, burning the call cap, one canary variant per person), a **stop-early ladder** (the solver itself cut at 25/50/75% of its calls, and the solver without its final accuse), 7 **plus probes** (the solver with one extra step before its accusation: restrict everyone else, unrestrict spam, interview everyone, read spam, wait a day, accuse twice, a per-person canary) and a **control** (the solver, then every remaining call padded with reads). It prints probe → mean → blocked and writes `results/latest/exploits.json`. Every attack averages ≤ 0, every ladder episode scores exactly 0, no plus probe beats the solver on any seed, no episode ever accepts two accusations, and the control equals the solver on every seed. Every committed episode is also re-played on a fresh Env and re-graded (update this count when the committed set changes; a 14 Nov 2026 clean run of a sister commit reported 819 of 829, with the same 10 secret-keyed grok episodes unreplayable). Do not leave a stale 579/589 figure here after new episodes are committed. Every committed Harbor trial must agree with itself: Harbor's reward = `reward.txt` = the sidecar ledger, the score follows from the ledger's own accusation, and the agent's trajectory names the same person (25 of 25). The last line of `make reproduce` says `ANTI-CHEAT: ...` in plain words. `tests/test_anticheat.py` fails if any of this breaks. Design: Vaishnav's Poisoned Inbox anti-cheat system, ported to Canary.
 
 **Hunt it yourself:** `make hunt` (no keys, about 1 minute) fuzzes all four tracks (easy, medium, hard, hard_forge) with random, malformed, evolutionary and parallel-accuse attacks, and prints the best non-solver score next to the solver's mean and the number of violations. On our machine every mode reports a best non-solver score of 0.000 with 0 violations. `make hunt TIER=medium` restricts it to one tier.
 
@@ -147,7 +186,26 @@ Canary keeps the hard part of the real problem. Leaks arrive late, the mole adap
 
 Gemini's role is described in [pitch/GEMINI.md](pitch/GEMINI.md). It covers the Mole Forge, the world builder, the scenario designer, the exploit hunter, the analyst and the arena mole, all behind `canary.llm`, with a stub backend so that everything here runs without keys.
 
+## Packaging (do not mix this up with The Sleeper)
+
+This repository is private and holds more than one Junction entry on different branches. A judge who clones the default branch will not get Canary.
+
+Recommended: keep one private repo (`s1laswang/agent-arena`) and pin each entry with a **release tag** on an exact commit, then tell judges to clone that tag only:
+
+```bash
+git clone --branch afterquery-canary-v1 --single-branch https://github.com/s1laswang/agent-arena.git canary
+cd canary && make accept
+```
+
+- **Tags, not live branches.** `justSilas` and `momin` still move. A tag such as `afterquery-canary-v1` (this tree) and `afterquery-sleeper-v1` (The Sleeper on `momin`) freezes the commit a judge is asked to reproduce. Tags are cheap, reversible and work with the existing private-repo access list.
+- **Not two new repos, unless there is time after tags.** Separate repos (`…/afterquery-canary`, `…/afterquery-sleeper`) are the clearest long-term packaging, but they add permission, history-filter and deadline risk before Sunday 10:00 Helsinki.
+- **Not “just clone main”.** `main` is not this entry.
+- The DeepMind Gemini track should be tagged separately (`gemini-v1` on `gemini-track`) so it is not submitted as a second copy of Canary.
+
+Do not create those tags from this patch; the team should tag the accepted commits after `make accept` is green.
+
 ## Repo map
+
 
 - `canary/env.py`, `rules.py`, `world.py`: the environment, its rules and the world generator.
 - `canary/solver/`: the reference solver.

@@ -32,9 +32,11 @@ def pipeline(model, i):
     tag = model.split("/")[-1]
     env = dict(env0, CUDA_VISIBLE_DEVICES=str(i % ngpu))
     out = f"{work}/{tag}"
+    os.makedirs(out, exist_ok=True)
     ad = out + "/adapter"
     if "sft" not in steps:
         found = glob.glob(f"/kaggle/input/**/{tag}/adapter/adapter_config.json", recursive=True)
+        print("adapters found", found, flush=True)
         ad = os.path.dirname(found[0]) if found else ad
     else:
         step(tag, "sft", env, "-m", "train.sft", "--model", model, "--data", train_file, "--out", ad, *sft_args, *sft_extra.get(tag, []))

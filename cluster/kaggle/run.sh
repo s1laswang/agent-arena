@@ -18,6 +18,7 @@ for d in code data; do
   else
     $KG datasets create -p $W/$d -r zip
   fi
+  until [ "$($KG datasets status $U/sleeper-$d 2>&1 | tail -1)" = ready ]; do sleep 5; done
 done
 K=$W/kernel
 cp -r cluster/kaggle/train $K
@@ -26,6 +27,7 @@ if [ -n "$ADAPTERS_DIR" ]; then
   for d in $ADAPTERS_DIR/*/adapter; do t=$(basename $(dirname $d)); mkdir -p $W/adapters/$t; cp -r $d $W/adapters/$t/adapter; done
   printf '{"title":"sleeper-adapters","id":"%s/sleeper-adapters","licenses":[{"name":"CC0-1.0"}]}' $U > $W/adapters/dataset-metadata.json
   if $KG datasets status $U/sleeper-adapters >/dev/null 2>&1; then $KG datasets version -p $W/adapters -m adapters -r zip; else $KG datasets create -p $W/adapters -r zip; fi
+  until [ "$($KG datasets status $U/sleeper-adapters 2>&1 | tail -1)" = ready ]; do sleep 5; done
   python3 -c "import json,sys;p=sys.argv[1]+'/kernel-metadata.json';m=json.load(open(p));m['dataset_sources'].append('$U/sleeper-adapters');json.dump(m,open(p,'w'))" $K
 fi
 $KG kernels push -p $K

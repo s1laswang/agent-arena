@@ -44,7 +44,7 @@ Every Gemini call goes through one client that writes one log row per call (`can
 - **The Failure Gallery is an exact code decomposition.** "0 unexplained" holds by construction. Gemini only names and explains the categories.
 - **The multimodal chart check is a consistency check, not independent discovery.** The charts plot code-computed solver beliefs. Gemini placed the divergence within 3 steps of the code's estimate in 8/8 episodes (`results/gemini/v2/atlas.json` `localisation`).
 - **No human-agreement number is claimed.**
-- **The AfterQuery gap depends on the harness.** From `docs/reports/gap.md` (justSilas 671ed96): "gemini-4-carbon on v1.4 hard via OpenCode over MCP (the judges' harness): 60% [1%, 103%] of the solver at n=30, luck-adjusted 68% [43%, 91%]; parity in-process on hard (100%) and on medium via OpenCode (103%)." This submission makes no further frontier-gap claim.
+- **The AfterQuery gap depends on the harness.** From `docs/reports/gap.md` (justSilas 693a3b2): "gemini-4-carbon on v1.4 hard via OpenCode over MCP (the judges' harness): 65% [24%, 98%] of the reference solver at n=30, luck-adjusted 72% [52%, 91%]; parity in-process on hard (95%) and via OpenCode on medium (111%)." This submission makes no further frontier-gap claim.
 
 ## 4. Why Gemini is essential
 - **`thinking_level`** on one model family is what makes the ladder a controlled experiment.

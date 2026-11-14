@@ -81,3 +81,34 @@ def test_gemini_path(monkeypatch):
     names = [c[0] for c in f.calls]
     assert "update_vendor_bank" in names and "post_chat" in names
     assert "audit log" in seen["loop"]
+
+
+def test_variants_keep_shape():
+    from agents.sleeper_agent import variants
+    from sleeper import goals
+
+    sid = "fraud.bank_swap"
+    base = goals.STRATEGIES[sid]
+    vs = variants(sid, 1)
+    assert len(vs) == 3
+    for v in vs:
+        assert v.seats == base.seats and v.tells == base.tells and v.counter == base.counter
+        assert [(s.tool, s.seat) for s in v.steps] == [(s.tool, s.seat) for s in base.steps]
+
+
+def test_gemini_variant_must_keep_placeholders(monkeypatch):
+    import json
+    import agents.gemini as g
+    from sleeper import goals
+
+    base = goals.STRATEGIES["fraud.bank_swap"]
+
+    def bad(model, system, messages, **kw):
+        steps = json.loads(messages[0]["text"])["steps"]
+        steps[0]["args"] = {"to": ["procurement"], "body": "plain text no holes"}
+        return {"text": json.dumps(steps), "tool_calls": []}
+
+    monkeypatch.setattr(g, "enabled", lambda: True)
+    monkeypatch.setattr(g, "chat", bad)
+    m = mutate_strategy(base, 1)
+    assert m.steps[0].args == base.steps[0].args

@@ -42,6 +42,9 @@ _SPECS: dict[str, tuple[str, dict, list]] = {
 }
 
 
+AUTHORITY_ROLES = ("manager", "lead", "controller", "counsel")
+
+
 def _poisson(rng: random.Random, lam: float) -> int:
     if lam <= 0:
         return 0
@@ -207,6 +210,8 @@ class Env:
             "- Give exactly one employee id per call, such as e07. Lists, wildcards and names are rejected.",
             "- Unknown arguments are rejected. Invalid calls still count toward the total call limit.",
         ]
+        if p.social:
+            L += self._social_instruction()
         if p.noise != 1.0:
             L.append(f"- Difficulty setting (noise) = {p.noise:g}. It is already included in the numbers above.")
         L += ["", "## Exact parameters", "The same numbers as above, one per line (some only matter when their feature is on):"]
@@ -219,6 +224,45 @@ class Env:
                 v = f"{v:g}"
             L.append(f"- {k}: {v}")
         return "\n".join(L) + "\n"
+
+    def _social_instruction(self) -> list[str]:
+        p = self.p
+        n = p.n_employees
+        s = p.rumour_frame_share
+        L = ["", "## Office chatter and paperwork mistakes (human biases)",
+             "Real offices are noisy. The messages below are generated from the stated rules. "
+             "They are NOT evidence unless the likelihoods say so; read the exact numbers before trusting them."]
+        if p.rumour_rate > 0:
+            dflt = ("the decoy" if p.decoy else "a colleague other than the mole, chosen uniformly")
+            L += [f"- Rumours: each day the number of rumour messages is Poisson with average {p.rumour_rate}. "
+                  "Each has subject `rumour: <id>` and claims that employee is the mole.",
+                  f"- With probability {s} the rumour is seeded by the mole (Mole DSL `seed_rumour`): its target is the mole's "
+                  f"seed_rumour target. The default mole always seeds rumours about {dflt}. The speaker is then a uniformly "
+                  "random employee other than the target (it may be the mole).",
+                  f"- Otherwise (probability {1 - s:g}) the speaker is a uniformly random employee and the target a uniformly random "
+                  "OTHER employee. The mole may be either.",
+                  f"- So for speaker a and target b: P(a, b | mole = m) = (1 - {s:g}) / ({n} x {n - 1}) + {s:g} x P(seed target = b | m) / {n - 1}. "
+                  "The seeded target is never the mole. "
+                  + ("With the default mole and a decoy, this likelihood is the same for every possible mole: a rumour carries ZERO evidence "
+                     "about who the mole is (the decoy is already known to be innocent)." if p.decoy else
+                     f"With the default mole, P(seed target = b | m) = 1/{n - 1} if b != m else 0, so a rumour makes its target slightly "
+                     "LESS likely to be the mole, never more.")]
+        if p.authority_day:
+            L += [f"- Authority: on day {p.authority_day} one employee whose role contains manager, lead, controller or counsel "
+                  "(uniformly chosen among them) posts one confident accusation with subject `unverified accusation: <id>`. "
+                  "Nobody has verified it.",
+                  f"- With probability {s} its target is the mole's seed_rumour target (if that is not the speaker); otherwise it is a "
+                  "uniformly random employee other than the speaker. Seniority adds no information: the same likelihood as a rumour applies."]
+        if p.grudge_pairs and p.grudge_rate > 0:
+            L += [f"- Grudges: {p.grudge_pairs} fixed pairs of employees, drawn uniformly from all non-decoy employees at the start "
+                  "WITHOUT regard to who the mole is, dislike each other. Each day, for each pair, with probability "
+                  f"{p.grudge_rate} one of the two (each equally likely) posts a message with subject `grudge: <id>` accusing the other. "
+                  "These messages carry zero evidence."]
+        if p.p_misforward > 0:
+            L += [f"- Miscommunication: each regular document is, with probability {p.p_misforward}, also forwarded by mistake to one "
+                  "extra employee (uniform among non-recipients who are not restricted). That employee really holds the document "
+                  "and can leak it. `list_documents` shows the full recipient list including them, plus a `forwarded_to` field."]
+        return L
 
     @property
     def done(self) -> bool:
@@ -304,7 +348,73 @@ class Env:
         for raw in self._world.planned_docs.get(d, []):
             doc = {"doc_id": raw["doc_id"], "title": raw["title"], "day": d,
                    "recipients": [r for r in raw["recipients"] if r not in self._restricted], "is_canary": False}
+            if self.p.p_misforward > 0:
+                self._misforward(doc)
             self._add_doc(doc)
+
+    # ------------------------------------------------------------------ v1.5-candidate social layer
+    # Every draw below uses its own string-seeded RNG (never self._dyn), so with the knobs OFF (v1.4) nothing
+    # is drawn and every v1.4 stream is byte-identical; with them ON the leak/log streams are still unchanged.
+    def _misforward(self, doc: dict):
+        r = random.Random(f"{self._world.world_seed}:fwd:{doc['doc_id']}")
+        if r.random() < self.p.p_misforward:
+            pool = [e for e in self._ids if e not in doc["recipients"] and e not in self._restricted]
+            if pool:
+                x = r.choice(pool)
+                doc["recipients"] = sorted(doc["recipients"] + [x])
+                doc["forwarded_to"] = x
+
+    def _grudges(self) -> list[tuple[str, str]]:
+        if not hasattr(self, "_grudge_cache"):
+            r = random.Random(f"{self._world.world_seed}:grudge")
+            pool = [e for e in self._ids if e != self._world.decoy]   # mole-independent: the mole may be in a pair
+            r.shuffle(pool)
+            k = min(self.p.grudge_pairs, len(pool) // 2)
+            self._grudge_cache = [tuple(sorted(pool[2 * i: 2 * i + 2])) for i in range(k)]
+        return self._grudge_cache
+
+    def _social_events(self, d: int) -> list[dict]:
+        from .mole.dsl import seed_rumour_target
+        p, w = self.p, self._world
+        r = random.Random(f"{w.world_seed}:social:{d}")
+        strat = w.mole_strategy or DEFAULT_STRATEGY
+        sel = getattr(strat, "seed_rumour", "default")
+        peers = tuple(e for e in self._ids if e != w.mole)
+        view = MoleView(day=d, docs=(), days_since_last_leak=0, i_am_restricted=int(w.mole in self._restricted),
+                        n_restricted_colleagues=0, recent_low_recipient_docs=0, peers=peers,
+                        restricted_peers=tuple(e for e in peers if e in self._restricted), decoy=w.decoy, can_leak=False)
+        ids, ev = self._ids, []
+        for _ in range(_poisson(r, p.rumour_rate)):
+            f = seed_rumour_target(sel, view, r) if r.random() < p.rumour_frame_share else None
+            if f is not None:
+                sp = r.choice([e for e in ids if e != f])
+                t = f
+            else:
+                sp = r.choice(ids)
+                t = r.choice([e for e in ids if e != sp])
+            ev.append({"kind": "rumour", "speaker": sp, "target": t})
+        if p.authority_day and d == p.authority_day:
+            mgrs = [e.id for e in w.employees if any(k in e.role for k in AUTHORITY_ROLES)] or list(ids)
+            sp = r.choice(mgrs)
+            f = seed_rumour_target(sel, view, r) if r.random() < p.rumour_frame_share else None
+            t = f if f is not None and f != sp else r.choice([e for e in ids if e != sp])
+            ev.append({"kind": "authority", "speaker": sp, "target": t})
+        if p.grudge_rate > 0:
+            for a, b in self._grudges():
+                if r.random() < p.grudge_rate:
+                    sp, t = (a, b) if r.random() < 0.5 else (b, a)
+                    ev.append({"kind": "grudge", "speaker": sp, "target": t})
+        return ev
+
+    def _social_messages(self, d: int) -> list[dict]:
+        ev = self._social_events(d)
+        if not ev:
+            return []
+        fn = getattr(self.provider, "social_messages", None)
+        if fn is None:
+            from .text.template import render_social
+            return render_social(self._facts(d), ev)
+        return fn(self._facts(d), ev)
 
     def _add_doc(self, doc: dict):
         self.docs.append(doc)
@@ -557,8 +667,9 @@ class Env:
             self._log("framed", employee=tgt)
         logs.sort(key=lambda r: (r["employee"], r["doc_id"], r["after_hours"]))
         self._logs.extend(logs)
-        # (6) messages
-        for m in self.provider.day_messages(self._facts(d)):
+        # (6) messages (+ v1.5-candidate social chatter; none when the knobs are off)
+        social = self._social_messages(d) if (p.rumour_rate > 0 or p.authority_day or p.grudge_rate > 0) else []
+        for m in list(self.provider.day_messages(self._facts(d))) + social:
             m = dict(m)
             if m["id"] in self._messages:
                 continue

@@ -50,9 +50,29 @@ class TierParams:
     low_recipient_threshold: int = 3     # Mole DSL feature recent_low_recipient_docs counts docs with <= this many recipients
     fingerprint_accuracy: float = 1.0  # v0.4: P(feed shows the mole's true variant); else uniform over the canary's other variants
     noise: float = 1.0             # difficulty-curve knob (FR8 sweep); see apply_noise. 1.0 = tier as defined
+    # --- v1.5-candidate "human-bias social layer" (WS2). ALL default OFF: v1.4 behaviour, RNG streams,
+    # instruction text and the frozen hash are unchanged (to_dict omits these while they are at their defaults).
+    rumour_rate: float = 0.0       # Poisson(rumour_rate) "X is the mole" speculation messages per day
+    rumour_frame_share: float = 0.0  # P(a rumour / the authority accusation targets the mole's seed_rumour target)
+    grudge_pairs: int = 0          # disjoint pairs of non-decoy employees who accuse each other (mole-independent)
+    grudge_rate: float = 0.0       # per pair per day: P(one member of the pair posts an accusation of the other)
+    authority_day: int = 0         # day a manager posts one confident, UNVERIFIED accusation (0 = off)
+    p_misforward: float = 0.0      # P(a regular doc is also forwarded to one unplanned recipient; shown in list_documents)
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        d = asdict(self)
+        for k, v in SOCIAL_DEFAULTS.items():
+            if d.get(k) == v:
+                d.pop(k)
+        return d
+
+    @property
+    def social(self) -> bool:
+        return any(getattr(self, k) != v for k, v in SOCIAL_DEFAULTS.items())
+
+
+SOCIAL_DEFAULTS = {"rumour_rate": 0.0, "rumour_frame_share": 0.0, "grudge_pairs": 0, "grudge_rate": 0.0,
+                   "authority_day": 0, "p_misforward": 0.0}
 
 
 TIERS_VERSION = "v1.4"  # v1.4: hard = 40 staff, 21 days, 2 canaries/day x 3 variants, leak_damage 0.05 (CONTRACT §14)
@@ -103,7 +123,13 @@ TIERS_V13: dict[str, TierParams] = {
     "hard": replace(TIERS["hard"], n_employees=30, n_days=14, leak_damage=0.035, canaries_per_day=1,
                     max_variants=2, tool_call_cap=300),
 }
-TIERS_HISTORY: dict[str, dict[str, TierParams]] = {"v1.3": TIERS_V13}
+# v1.5 CANDIDATE (WS2 human-bias social layer; NOT the current rules, NOT merged): v1.4 tiers + rumours, grudge
+# pairs, one unverified authority accusation and misforwarded docs. Select with `tiers_version("v1.5-candidate")`
+# or scripts/paired_table.py --tiers-version v1.5-candidate. Knob choices: results/fresh_table_v1.5-candidate.md.
+_V15_SOCIAL = dict(rumour_rate=2.0, rumour_frame_share=0.4, grudge_pairs=2, grudge_rate=0.5, authority_day=3,
+                   p_misforward=0.15)
+TIERS_V15: dict[str, TierParams] = {k: replace(v, **_V15_SOCIAL) for k, v in TIERS.items()}
+TIERS_HISTORY: dict[str, dict[str, TierParams]] = {"v1.3": TIERS_V13, "v1.5-candidate": TIERS_V15}
 
 # Judge tracks: extra tier *names* that reuse a frozen tier's params (TIERS itself stays frozen).
 # hard_forge = hard params + a per-seed evolved Mole DSL strategy (canary/forge_track.py).

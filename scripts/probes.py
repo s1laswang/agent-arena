@@ -117,15 +117,15 @@ PROBES = list(BASE) + [f"stop_ref@{c}" for c in CUTS] + list(FNS) + ["control_pa
 def play(a):
     probe, mode, d = a
     key = probe if probe in BASE else "p_" + probe
-    seat = "finance_ap" if mode == "seat" else None
+    seat = mode[5:] if mode.startswith("seat:") else None
     MODE[0] = mode
     r, x = run.play_day("oracle" if seat else key, key, seat, d, 0)
-    return probe, mode, d, r["reward"], x
+    return probe, mode, d, None if any(h.startswith("config:") for h in r["harm"]) else r["reward"], x
 
 
 def ref_calls(a):
     mode, d = a
-    seat = "finance_ap" if mode == "seat" else None
+    seat = mode[5:] if mode.startswith("seat:") else None
     _, x = run.play_day("oracle", "oracle", seat, d, 0)
     out = {}
     for st in x["steps"]:
@@ -135,29 +135,18 @@ def ref_calls(a):
 
 
 def replay(root="results"):
-    from sleeper.models import Action
-    from sleeper.company import Company, seed_company
-    from sleeper.verifier import score
+    from pathlib import Path
 
-    n = bad = 0
-    out = []
-    for f in sorted(glob.glob(root + "/**/days/*.json", recursive=True)):
-        try:
-            d = json.load(open(f))
-            res = d["result"]
-            seat = res.get("seat_under_test")
-            day, *_ = run.day_for(res["day_id"] if isinstance(res["day_id"], int) else res["seed"], seat)
-            r = score(day, seed_company(day.seed), Company.model_validate(d["company"]), [Action.model_validate(x) for x in d["ledger"]], seat_under_test=seat)
-        except Exception as e:
-            out.append(f"{f}: replay error {type(e).__name__}")
-            bad += 1
-            n += 1
-            continue
-        n += 1
-        if r.reward != res["reward"]:
-            bad += 1
-            out.append(f"{f}: stored {res['reward']} rescored {r.reward}")
-    return n, bad, out
+    from sleeper.verifier import rescore
+
+    r = Path(root)
+    dirs = {p.parent.parent for p in r.rglob("days/*.json")} | {p.parent for p in r.rglob("*-s*-t*.json") if "days" not in p.parts}
+    n, out = 0, []
+    for d in sorted(dirs):
+        k, bad = rescore(d)
+        n += k
+        out += [f"{d}: {b}" for b in bad]
+    return n, len(out), out
 
 
 def table(days=DAYS, jobs=4):
@@ -167,7 +156,7 @@ def table(days=DAYS, jobs=4):
             run.FACTORIES["p_" + p] = (team_of(p), "scripted")
     run.TEAMS[:] = list(run.FACTORIES)
     ctx = multiprocessing.get_context("fork")
-    modes = ("seat", "team")
+    modes = tuple("seat:" + x for x in (SEATS if os.environ.get("SLEEPER_SLOW") == "1" else ("finance_ap",))) + ("team",)
     with ctx.Pool(jobs) as pool:
         for mode, d, c in pool.map(ref_calls, [(m, d) for m in modes for d in days]):
             for s, k in c.items():
@@ -182,30 +171,33 @@ def table(days=DAYS, jobs=4):
     for p in PROBES:
         row = {"probe": p, "commit": commit}
         for m in modes:
-            rs = [r for q, mm, d, r, _ in res if q == p and mm == m]
-            row[m] = {"n": len(rs), "reward_mean": round(sum(rs) / len(rs), 3)}
+            rs = [r for q, mm, d, r, _ in res if q == p and mm == m and r is not None]
+            row[m] = {"n": len(rs), "reward_mean": round(sum(rs) / len(rs), 3) if rs else None}
         rows.append(row)
     return rows
 
 
 def md(rows):
-    ls = ["| probe | finance_ap n | finance_ap reward | team n | team reward | commit |", "|---|---|---|---|---|---|"]
-    ls += [f"| {r['probe']} | {r['seat']['n']} | {r['seat']['reward_mean']} | {r['team']['n']} | {r['team']['reward_mean']} | {r['commit']} |" for r in rows]
+    ms = [m for m in rows[0] if m not in ("probe", "commit")]
+    ls = ["| probe | " + " | ".join(f"{m} n | {m} reward" for m in ms) + " | commit |", "|---|" + "---|---|" * len(ms) + "---|"]
+    ls += [f"| {r['probe']} | " + " | ".join(f"{r[m]['n']} | {r[m]['reward_mean']}" for m in ms) + f" | {r['commit']} |" for r in rows]
     return "\n".join(ls)
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("--days", type=int, default=len(DAYS))
+    ap.add_argument("--days", type=int, default=20 if os.environ.get("SLEEPER_SLOW") == "1" else len(DAYS))
     ap.add_argument("--start", type=int, default=1000)
     a = ap.parse_args(argv)
     rows = table(tuple(range(a.start, a.start + a.days)))
     n, bad, out = replay()
     print(md(rows))
-    print(f"\nreplay: {n} committed run files rescored, {bad} mismatches")
+    nz = [f"{r['probe']}@{m}={r[m]['reward_mean']}" for r in rows if r["probe"] != "control_pad" for m in r if m not in ("probe", "commit") and r[m]["reward_mean"]]
+    print("\nNONZERO probe cells (accuse_decoy in seat mode is a lone vote, quarantine needs 2; stop_ref can leave non-load-bearing trailing calls):", nz or "none")
+    print(f"\nreplay: {n} runs replayed, {bad} mismatches")
     print(*out, sep="\n")
     os.makedirs("results", exist_ok=True)
-    open("results/probes.md", "w").write(md(rows) + f"\n\nreplay: {n} rescored, {bad} mismatches\n")
+    open("results/probes.md", "w").write(md(rows) + f"\n\nreplay: {n} runs replayed, {bad} mismatches\nnonzero: {nz or 'none'}\n")
     json.dump(rows, open("results/probes.json", "w"), indent=1)
 
 

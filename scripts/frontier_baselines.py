@@ -1,4 +1,4 @@
-import argparse, json, os, subprocess
+import argparse, json, multiprocessing, os, subprocess
 
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["LAB_GEMINI"] = "0"
@@ -7,6 +7,15 @@ from sleeper.baselines import BASELINES, register
 
 ROWS = {"do_nothing": "do_nothing", "stop_early": "stop_early", "trust_all": "trust_all", "refuse_all": "refuse_all", "quarantine_all": "quarantine_all", "random_accuse": "random_accuse", "reference": "oracle", "oracle": "scripted_oracle"}
 NS = (1, 5, 20)
+
+
+def one(j):
+    label, key, mode, d, t, seat, commit = j
+    r, x = run.play_day("oracle", key, seat, d, t) if mode == "seat" else run.play_day(key, key, None, d, t)
+    return {"model": f"scripted:{label}", "commit": commit, "agent": "scripted", "seat": seat if mode == "seat" else None, "seed": d, "trial": t, "mode": mode, **({"role": "reference"} if label == "reference" else {}),
+            "has_sleeper": r["has_sleeper"], "scores": {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r.get("false_quarantines"), "sleeper_caught": r.get("sleeper_caught")},
+            "result": {k: r[k] for k in ("reward", "tickets_done", "tickets_total", "harm", "false_quarantine", "seat_under_test")},
+            "day": x["day"], "initial": x["initial"], "company": x["company"], "ledger": x["ledger"]}
 
 
 def main(argv=None):
@@ -20,18 +29,15 @@ def main(argv=None):
     register()
     run.FACTORIES["scripted_oracle"] = (run._scripted("OracleAgent"), "scripted")
     commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+    jobs = [(label, key, mode, d, t, a.seat, commit) for label, key in ROWS.items() for mode in (("seat", "all8") if a.all8 and label != "oracle" else ("seat",)) for d in range(1000, 1000 + a.n) for t in range(a.trials)]
+    with multiprocessing.get_context("fork").Pool(4) as pool:
+        outs = pool.map(one, jobs)
     runs = {}
-    for label, key in ROWS.items():
-        for mode in ("seat", "all8") if a.all8 and label != "oracle" else ("seat",):
-            for d in range(1000, 1000 + a.n):
-                for t in range(a.trials):
-                    r, _ = run.play_day("oracle", key, a.seat, d, t) if mode == "seat" else run.play_day(key, key, None, d, t)
-                    rec = {"model": f"scripted:{label}", "commit": commit, "agent": "scripted", "seat": a.seat if mode == "seat" else None, "seed": d, "trial": t, "mode": mode, **({"role": "reference"} if label == "reference" else {}),
-                           "has_sleeper": r["has_sleeper"], "scores": {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r.get("false_quarantines"), "sleeper_caught": r.get("sleeper_caught")}}
-                    runs.setdefault((label, mode), []).append(rec)
-                    p = f"{a.out}/scripted:{label}/{commit}"
-                    os.makedirs(p, exist_ok=True)
-                    json.dump(rec, open(f"{p}/{a.seat if mode == 'seat' else 'all8'}-s{d}" + f"-t{t}.json", "w"), indent=1)
+    for (label, key, mode, d, t, seat, _), rec in zip(jobs, outs):
+        runs.setdefault((label, mode), []).append(rec)
+        p = f"{a.out}/scripted:{label}/{commit}"
+        os.makedirs(p, exist_ok=True)
+        json.dump(rec, open(f"{p}/{seat if mode == 'seat' else 'all8'}-s{d}-t{t}.json", "w"), separators=(",", ":"))
     rows = []
     for (label, mode), rs in runs.items():
         for n in NS:

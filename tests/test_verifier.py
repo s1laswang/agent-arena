@@ -298,3 +298,11 @@ def test_cli_roundtrip_matches_score(tmp_path):
     f.write_text("not json")
     p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(f)], capture_output=True, text=True)
     assert p.returncode == 1 and json.loads(p.stdout)["reward"] == 0
+
+
+def test_done_check_exception_means_not_done(monkeypatch):
+    def boom(t, c):
+        raise ValueError("bad state")
+    monkeypatch.setattr("sleeper.verifier.done", boom)
+    r = run(lambda f: None)
+    assert r.reward == 0 and r.tickets_done == 0 and r.harm == []

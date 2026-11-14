@@ -261,3 +261,6 @@
 - **WS4:** 44411 base eval done; 44410 v2 train running 3h51; 44412 v2 eval after.
 - **INTEGRITY:** battery + cheat run + corpus merged. Gemini CEO swarm v1: 35 whitebox Gemini attackers, 0 verified exploits.
 - **Momin fleet (read-only check):** 8 fleet jobs on partition normal, no STOP file, 108 fr8/* branches in freighter bare repos (not pushed). The afterquery board assigns w02-w39 to nearly our exact workstreams: HEAVY DUPLICATION; needs Silas/Momin to redirect.
+
+## 18:36 fleet redirect (Silas approved)
+- Appended a REDIRECT note to the afterquery fleet lead inbox (board/afterquery/inbox/afterquery-lead.md, a new message; nothing else touched): stop the duplicate lanes; do (1) gemini-4-carbon v1.4 hard seeds 30-59 with our runner, replay-verified; (2) docs/research-biases.md; (3) exploit sweeps v1.4/v1.5, report only; (4) the Fooled-moment dashboard. Push branches and open PRs into justSilas for CEO review.

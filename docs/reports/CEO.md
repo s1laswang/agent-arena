@@ -65,3 +65,9 @@
   - freeze v1.2 ~07:00, then the official 20+20 gpt-5.5 run + OpenCode gpt-5.6-sol 5+5.
 - Secrets: no committed SALT. Reproduce uses one random secret per invocation (paired within a run); Harbor uses a build-time secret in the server image only. README numbers are stated as mean +/- CI over secrets. #25 (/proc environ leak, found by the Grok judge run): *_FILE 0600 interface + sidecar; the mcp-server engineer was resumed for it.
 - HARNESS review: a rare solver blow-up (>4 min, 1.9 GB on one world) -> ENV must-fix guard; public env.verdict() requested.
+
+## 02:41 (real clock) correction
+- The CEO log entries headed 03:35, 04:10, 04:35 and 06:00 were mislabelled. The real times were about 02:00-02:35 EET. Corrected schedule: tier freeze v1.2 at 04:30 EET; official frontier runs 04:30-06:30; Forge + hint ablations until 08:00; Grok dress rehearsal ~07:15; MORNING.md 08:30.
+- ENV merged 3c46a20: Env.verdict(), canary.world.set_world_secret(), SolverPolicy(behaviour_weight) with act() guards. The reported 4-min solver blow-up did not reproduce in 1,800 timed episodes (max 0.09 s per act).
+- Hard-tier root cause (AGENTS): the solver canaries cover ~20/30 staff, so the careful mole leaks them at x0.33; gpt-5.5 uses ~6-person groups (x0.8) with fresh labels. Fix: choose k to maximise (1-k/N)*H(split), plus the exact fingerprint-noise likelihood.
+- J4: the tokenization patch is deployed (6 processes, cached; budget clamped to the job end 08:24). Train ~03:55-06:50, then eval.

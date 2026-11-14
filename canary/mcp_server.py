@@ -12,6 +12,15 @@ Environment variables:
     CANARY_LEDGER_TOKEN         token for GET /ledger?token=... (grader). Unset => /ledger always 403.
     CANARY_ADMIN_TOKEN          token for POST /admin/reset?token=... body {"tier","seed"}. Unset => disabled.
 
+Secret files (EXPLOITS #25: a same-uid process can read the exec-time environment via /proc/<pid>/environ
+or `ps eww`, so judge runs must not put the seed, world secret or tokens in env vars). Each names a 0600 file
+read once at startup; a *_FILE var wins over its plain counterpart, which is then not needed:
+    CANARY_EPISODE_FILE         JSON {"tier": ..., "seed": ...}
+    CANARY_WORLD_SECRET_FILE    world secret for judge/held-out seeds (handed to canary.world in-process)
+    CANARY_LEDGER_TOKEN_FILE    grader token
+    CANARY_ADMIN_TOKEN_FILE     admin token
+The plain env vars keep working for local dev.
+
 Design notes:
 - Built on the SDK's low-level `mcp.server.Server` (mcp 2.x; FastMCP is now MCPServer and derives tool
   schemas from Python signatures and validates arguments with pydantic). The low-level server lets us
@@ -49,6 +58,57 @@ INTERNAL_ERROR = "invalid arguments"  # an unexpected exception maps to a fixed 
 
 class SeedNotAllowed(ValueError):
     pass
+
+
+class ConfigError(ValueError):
+    pass
+
+
+def _read_file_var(var: str, environ) -> str | None:
+    """Contents of the file named by env var `var` (stripped), or None if `var` is unset. Never logs contents."""
+    path = environ.get(var)
+    if not path:
+        return None
+    try:
+        mode = os.stat(path).st_mode
+        with open(path) as fh:
+            text = fh.read().strip()
+    except OSError as exc:
+        raise ConfigError(f"{var}: cannot read file ({type(exc).__name__})") from None
+    if mode & 0o077:
+        log.warning("%s is readable by group/others; chmod 600 it", var)
+    if not text:
+        raise ConfigError(f"{var}: file is empty")
+    return text
+
+
+def load_config(environ=None) -> dict:
+    """Server config from env vars and/or 0600 secret files (files win)."""
+    environ = os.environ if environ is None else environ
+    tier, seed = environ.get("CANARY_TIER", "easy"), environ.get("CANARY_SEED", "900000")
+    ep_text = _read_file_var("CANARY_EPISODE_FILE", environ)
+    if ep_text is not None:
+        try:
+            obj = json.loads(ep_text)
+            tier, seed = obj["tier"], obj["seed"]
+        except Exception:
+            raise ConfigError("CANARY_EPISODE_FILE: expected JSON {\"tier\": ..., \"seed\": ...}") from None
+    try:
+        seed = int(seed)
+    except (TypeError, ValueError):
+        raise ConfigError("episode seed must be an integer") from None
+    secret = _read_file_var("CANARY_WORLD_SECRET_FILE", environ)
+    return {"tier": str(tier), "seed": seed,
+            "world_secret": secret.encode() if secret is not None else None,
+            "ledger_token": _read_file_var("CANARY_LEDGER_TOKEN_FILE", environ) or environ.get("CANARY_LEDGER_TOKEN") or None,
+            "admin_token": _read_file_var("CANARY_ADMIN_TOKEN_FILE", environ) or environ.get("CANARY_ADMIN_TOKEN") or None}
+
+
+def apply_world_secret(secret: bytes) -> None:
+    """Hand the file secret to world generation in-process (never exported to os.environ / children).
+    canary.world checks it before CANARY_WORLD_SECRET and SALT; it must be >= 16 bytes."""
+    from .world import set_world_secret
+    set_world_secret(secret)
 
 
 def seed_allowed(seed: int) -> bool:
@@ -93,9 +153,11 @@ class Episode:
     def ledger_payload(self) -> dict:
         with self._lock:
             env = self.env
-            return {"score": env.score(), "done": env.done, "end_reason": env._end_reason,
-                    "accused": env._accused, "accused_correct": bool(env._correct) if env._accused else False,
-                    "tier": env.tier, "final_day": env.day, "V": env.V, "episode": self.token, "ledger": [asdict(e) for e in env.ledger()]}
+            out = dict(env.verdict())  # public server-side outcome (HEAD-ENV)
+            out.setdefault("tier", env.tier)
+            out["episode"] = self.token
+            out["ledger"] = [asdict(e) for e in env.ledger()]
+            return out
 
 
 def _token_ok(given: str | None, expected: str | None) -> bool:
@@ -190,13 +252,13 @@ def main(argv: list[str] | None = None) -> int:
     import uvicorn
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
-    tier = os.environ.get("CANARY_TIER", "easy")
-    seed = int(os.environ.get("CANARY_SEED", "900000"))
-    ledger_token = os.environ.get("CANARY_LEDGER_TOKEN") or None
-    admin_token = os.environ.get("CANARY_ADMIN_TOKEN") or None
     try:
-        ep = Episode(tier, seed, os.environ.get("CANARY_PROVIDER", "template"))
-    except SeedNotAllowed as exc:
+        cfg = load_config()
+        if cfg["world_secret"] is not None:
+            apply_world_secret(cfg["world_secret"])
+        tier, ledger_token, admin_token = cfg["tier"], cfg["ledger_token"], cfg["admin_token"]
+        ep = Episode(tier, cfg["seed"], os.environ.get("CANARY_PROVIDER", "template"))
+    except (SeedNotAllowed, ConfigError, ValueError) as exc:
         print(f"canary.mcp_server: refusing to start: {exc}", file=sys.stderr)
         return 2
     if not ledger_token:

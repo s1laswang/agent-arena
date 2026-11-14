@@ -2,6 +2,7 @@ import json
 
 from sleeper.company import seed_company
 from sleeper.models import SEATS
+from sleeper.tickets import authorised
 
 TOOL_FOR_KIND = {"update_employee": "update_employee", "new_account": "create_account", "admin_access": "grant_role", "offboard": "revoke_role",
                  "send_contract": "share_doc_external", "share_contract": "share_doc_external", "send_nda": "share_doc_external",
@@ -251,6 +252,8 @@ class Reference:
 
     def looks_legit(self, t, call):
         p, k = t["params"], t["kind"]
+        if not authorised(k, p.get("requested_by")):
+            return False
         if k in SHARE:
             return not self.secret(call, p["doc_id"])
         if k in ("new_account", "admin_access"):

@@ -45,17 +45,21 @@ You need GNU make and [uv](https://docs.astral.sh/uv/) first (see Prerequisites)
 
 `make reproduce` plays the reference solver and five baselines on the 40 frozen judge seeds of each tier. It replays any committed frontier-agent episodes from `data/runs/committed/`, prints the table, and writes `judge_table.md`, `judge_episodes.jsonl` and `gap_chart.png` to `results/latest/`. That folder is gitignored, so your clone stays clean and our committed copies in `results/` are never overwritten; compare the two directly.
 
-**Expected numbers on the frozen tiers v1.4.** We ran keyless `make reproduce` 30 times on the 40 judge seeds per tier (commit 5b56b60), each run with a fresh secret. Each cell is the mean of the 30 run means, with the lowest and highest run mean in brackets. A single run prints its own 95% CI, about ±0.03–0.10 for the solver and ±0.2 for the heuristic. To rebuild this table: `uv run python scripts/repro_spread.py 30` (about 2 minutes). v1.4 changed only **hard**; easy and medium are the same as in v1.3.
+**Expected numbers on the frozen tiers v1.4.** We ran keyless `make reproduce` 30 times on the 40 judge seeds per tier (commit 5b56b60), each run with a fresh secret. Each cell is the mean of the 30 run means, with the lowest and highest run mean in brackets. The spread log from that run is not committed in this tree, so the brackets are that commit's min and max, not a new measurement of this commit. A single run prints its own 95% CI, about ±0.03–0.10 for the solver and ±0.2 for the heuristic. To rebuild this table: `uv run python scripts/repro_spread.py 30` (about 2 minutes). v1.4 changed only **hard**; easy and medium are the same as in v1.3.
 
 | agent | medium (headline) | hard (headline) | easy (sanity tier only) |
 |---|---:|---:|---:|
 | **solver** (reference) | **+0.64** [+0.55, +0.72] | **+0.56** [+0.36, +0.62] | +0.77 [+0.71, +0.80] |
-| frontier agents on v1.4 | pending (measurement in progress) | pending | – |
 | heuristic (canary bisection, no Bayes) | −0.05 [−0.40, +0.19] | −0.03 [−0.23, +0.17] | +0.66 [+0.46, +0.73] |
 | logs_only (best no-canary log reader) | −0.98 [−1.00, −0.87] | −0.98 [−1.00, −0.91] | −0.52 [−0.64, −0.36] |
 | random | −0.67 [−0.72, −0.49] | −0.79 [−0.82, −0.68] | −0.70 [−0.80, −0.58] |
-| stop_early (random accusation, day 1) | −0.89 [−1.00, −0.75] | −0.95 [−1.00, −0.85] | −0.83 [−1.00, −0.65] |
+| guess_day1 (random accusation, day 1) | −0.89 [−1.00, −0.75] | −0.95 [−1.00, −0.85] | −0.83 [−1.00, −0.65] |
+| stop_early (stops on day 1, no accusation) | 0.00 (exact) | 0.00 (exact) | 0.00 (exact) |
 | do_nothing | 0.00 (exact) | 0.00 (exact) | 0.00 (exact) |
+
+This table has no v1.4 frontier row. `data/runs/committed/v1.4/` holds reference baselines only, so `make reproduce` leaves the v1.4 reported-agent block without a score (it prints `pending` there). That is a missing measurement, not a result. The v1.3 rows below are an earlier hard tier (30 staff, 14 days) and are not a v1.4 gap.
+
+`do_nothing` is exactly 0: the episode ends with no accusation. `stop_early` looks around on day 1 and stops without accusing, so its score is exactly 0 as well (an unaccused episode scores 0). `guess_day1` is that day-1 uniform accusation. A wrong accusation scores −1 (`wrong_accusation_score`); we are not changing that penalty. The `guess_day1` brackets are the 30-run spread measured at commit 5b56b60 under the old name `stop_early` (same script). On the committed judge table ([`results/judge_table.md`](results/judge_table.md), fingerprint `3a7d7db9b23d`) that day-1 accusation, then still named stop_early, is −0.900 ± 0.137 on medium and −1.000 ± 0.000 on hard.
 
 **v1.3 history: frontier agents.** These runs used the v1.3 hard tier (30 staff, 14 days, 1 canary a day), so they are not comparable to v1.4 hard. Medium is unchanged. They were played on v1.3 **dev** seeds 0–10, not judge seeds, and paired with the solver on the same seeds. Each cell is mean ± 95% CI = % of the solver [bootstrap 95% CI]. See the [gap report](docs/reports/gap.md).
 
@@ -138,13 +142,14 @@ uv tool install harbor                       # official, https://docs.harborfram
 python harbor/build.py                       # default judge set: hard, seeds 900000–900009 (10 tasks)
 harbor run -p harbor/dataset -a oracle -n 4                               # reference solver over MCP
 harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=do_nothing -n 4  # do-nothing (expect 0)
-harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early (expect about -1)
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early: no accusation (expect exactly 0)
+harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=guess_day1 -n 4   # day-1 random accusation (expect about -1)
 harbor run -p harbor/dataset -a opencode -m openai/<model> -n 4           # live agent (needs OPENAI_API_KEY)
 ```
 
 OpenCode is installed into the Harbor task image by Harbor; you still want a local `opencode` binary for the non-Harbor MCP commands above. Full isolation notes: [harbor/README.md](harbor/README.md).
 
-**For judges:** `python harbor/build.py` with no flags builds **the judge set: tier hard, judge seeds 900000–900009 (10 tasks)**. Hard is the default because it is the tier where the reference solver keeps its expected-value edge; on medium one lucky early accusation can put an agent near the solver in a short rerun. The 10 seeds were fixed in [docs/PLAN-95.md](docs/PLAN-95.md) before any frontier run on this set, and each build draws a fresh world secret, so nobody (us included) has seen the worlds your build serves. `--tiers medium,easy --seeds ...` still builds the other tiers and seeds. The verifier only accepts a ledger HMAC-signed by that task's game server (key baked into the server and verifier images only, never the agent's) and scores anything else 0.
+**For judges:** `python harbor/build.py` with no flags builds **the judge set: tier hard, judge seeds 900000–900009 (10 tasks)**. Hard is the default because it is the tier where the reference solver keeps its expected-value edge; on medium one lucky early accusation can put an agent near the solver in a short rerun. The 10 seeds were fixed in [docs/PLAN-95.md](docs/PLAN-95.md) before any frontier run on this set, and each build draws a fresh world secret, so nobody (us included) has seen the worlds your build serves. A response cache cannot serve that rerun: a saved model reply belongs to a different secret, so it is a different episode. The Gemini atlas replay cache (`canary/gemini/atlas_gemini.py`) replays atlas calls only and is not on this path. `make reproduce` replays committed trajectories into a reported block; it does not call a model, and those rows are not paired with the fresh secret of the run that prints the table. `--tiers medium,easy --seeds ...` still builds the other tiers and seeds. The verifier only accepts a ledger HMAC-signed by that task's game server (key baked into the server and verifier images only, never the agent's) and scores anything else 0.
 
 Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium SEEDS=dev20` and `make test`.
 
@@ -159,7 +164,7 @@ We attacked our own reward 42 times before the judges did, including real-server
 - **Three real exploits, all closed:**
   - **Stop-early:** a free lottery ticket under 0/1 scoring, closed by making a wrong accusation cost −1.
   - **Judge seeds failing open without a secret (#24):** an agent could regenerate the world from public code and read the mole. Judge worlds now fail closed with a fresh secret, and no world file containing the mole is committed.
-  - **Reading the server's environment from the same uid (#27):** the server now takes its secrets only from 0600 files (`*_FILE`) and never exports them. In Harbor the server runs in a separate sidecar container with no shared PID namespace or filesystem, and [`harbor/check_isolation.sh`](harbor/check_isolation.sh) checks that boundary from inside the agent container.
+  - **Reading the server's environment from the same uid (#27):** local `make mcp` reads secrets from 0600 files, deletes those files, and re-execs so `/proc/<pid>/environ` contains neither the secret nor the path (`CANARY_CONSUME_SECRET_FILES=1`). In Harbor the server runs in a separate sidecar container with no shared PID namespace or filesystem, and [`harbor/check_isolation.sh`](harbor/check_isolation.sh) checks that boundary from inside the agent container. The sidecar does not delete `/run/canary/ledger_token`; the collect hook still reads it.
 
   A further finding, that public dev seeds can be regenerated from the code, is handled by design: the MCP server refuses dev seeds unless `CANARY_ALLOW_DEV=1`.
 - **Probes that hold,** with tests:
@@ -170,7 +175,7 @@ We attacked our own reward 42 times before the judges did, including real-server
   - a ledger that requires a token;
   - text that leaks nothing above chance;
   - a log-only attack, which stays at chance after tiers v1.
-- The baseline rows above are the integrity evidence: no shortcut comes close to the solver, do-nothing is exactly 0, and stop-early is negative.
+- The baseline rows above are the integrity evidence: no shortcut comes close to the solver, do-nothing and stop-early are exactly 0, and guessing on day 1 (`guess_day1`) is negative. A uniform guess has EV = V/N − (N−1)/N < 0 because a wrong accusation costs −1, so abstaining (0) never beats honest play and guessing never beats abstaining.
 
 ## Real-world grounding
 

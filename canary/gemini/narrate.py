@@ -62,18 +62,32 @@ def say_score(x: float) -> str:
 
 
 # ------------------------------------------------------------- placeholder values
-def values(results_dir: Path, ledger: list) -> dict[str, str]:
-    v: dict[str, str] = {}
+def usage_summary(results_dir: Path, ledger: list) -> dict | None:
+    """The dashboard's usage summary: same ledger sources, same repricing (ladder.json prices), same summarize()."""
     if list(ledger) == ["committed"]:
         ledger = dash.committed_ledgers(results_dir)
     elif list(ledger) == ["auto"]:
         ledger = dash.discover_ledgers()
     rows = dash.load_ledger(ledger)
-    if rows:
-        s = dash.summarize(rows)
+    if not rows:
+        return None
+    lad = dash.load_json(Path(results_dir) / "ladder.json") or {}
+    dash.reprice(rows, lad.get("prices_usd_per_1m") if isinstance(lad.get("prices_usd_per_1m"), dict) else None)
+    return dash.summarize(rows)
+
+
+def say_usd(x: float) -> str:
+    return f"{round(float(x))} dollars"
+
+
+def values(results_dir: Path, ledger: list) -> dict[str, str]:
+    v: dict[str, str] = {}
+    s = usage_summary(results_dir, ledger)
+    if s:
         t = s["totals"]
         v.update(calls=f"{t['calls']:,}", tokens=say_tokens(t["tokens"]), thinking=say_tokens(t["thinking"]),
-                 cache_share=say_pct(s["cache"]["hit_share"]), models=str(t["n_models"]), features=str(t["n_features"]))
+                 cache_share=say_pct(s["cache"]["hit_share"]), models=str(t["n_models"]), features=str(t["n_features"]),
+                 cost=say_usd(t["cost_usd"]))
     R = dash.load_results(results_dir)
     L = R.get("ladder")
     if L and (L.get("rows") or L.get("cells")):

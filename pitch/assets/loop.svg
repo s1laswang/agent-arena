@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 188" role="img" aria-labelledby="loopTitle">
+  <title id="loopTitle">Investigation loop: observe, plant canaries, advance the day, read the delayed leak feed, update the belief, accuse once</title>
+  <desc>Six steps. A note under the row says to go around again until the single accusation is worth it.</desc>
+  <style>
+    .box { fill: #101a2c; stroke: #2c4d66; stroke-width: 1.5; }
+    .last { fill: #1c1708; stroke: #f5c542; stroke-width: 1.75; }
+    .h { font-family: "Liberation Sans", "DejaVu Sans", sans-serif; font-size: 15px; font-weight: 700; fill: #e7eef8; }
+    .s { font-family: "Liberation Sans", "DejaVu Sans", sans-serif; font-size: 12px; fill: #93a4bc; }
+    .badge { fill: #f5c542; }
+    .bn { font-family: "Liberation Sans", "DejaVu Sans", sans-serif; font-size: 11px; font-weight: 700; fill: #1a1404; }
+    .note { font-family: "Liberation Sans", "DejaVu Sans", sans-serif; font-size: 14px; fill: #c5d2e4; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1.2 L 8.5 5 L 0 8.8 z" fill="#5ad0e6"/>
+    </marker>
+  </defs>
+  <g id="steps">
+    <g>
+      <rect class="box" x="16" y="16" width="158" height="118" rx="10"/>
+      <circle class="badge" cx="34" cy="34" r="10"/>
+      <text class="bn" x="34" y="38" text-anchor="middle">1</text>
+      <text class="h" x="95" y="68" text-anchor="middle">Observe</text>
+      <text class="s" x="95" y="90" text-anchor="middle">logs, messages</text>
+    </g>
+    <g>
+      <rect class="box" x="198" y="16" width="158" height="118" rx="10"/>
+      <circle class="badge" cx="216" cy="34" r="10"/>
+      <text class="bn" x="216" y="38" text-anchor="middle">2</text>
+      <text class="h" x="277" y="68" text-anchor="middle">Plant canaries</text>
+      <text class="s" x="277" y="90" text-anchor="middle">a variant per group</text>
+    </g>
+    <g>
+      <rect class="box" x="380" y="16" width="158" height="118" rx="10"/>
+      <circle class="badge" cx="398" cy="34" r="10"/>
+      <text class="bn" x="398" y="38" text-anchor="middle">3</text>
+      <text class="h" x="459" y="68" text-anchor="middle">Advance the day</text>
+      <text class="s" x="459" y="90" text-anchor="middle">then wait out delay</text>
+    </g>
+    <g>
+      <rect class="box" x="562" y="16" width="158" height="118" rx="10"/>
+      <circle class="badge" cx="580" cy="34" r="10"/>
+      <text class="bn" x="580" y="38" text-anchor="middle">4</text>
+      <text class="h" x="641" y="68" text-anchor="middle">Read the feed</text>
+      <text class="s" x="641" y="90" text-anchor="middle">fragments, delayed</text>
+    </g>
+    <g>
+      <rect class="box" x="744" y="16" width="158" height="118" rx="10"/>
+      <circle class="badge" cx="762" cy="34" r="10"/>
+      <text class="bn" x="762" y="38" text-anchor="middle">5</text>
+      <text class="h" x="823" y="68" text-anchor="middle">Update belief</text>
+      <text class="s" x="823" y="90" text-anchor="middle">exact posterior</text>
+    </g>
+    <g>
+      <rect class="last" x="926" y="16" width="158" height="118" rx="10"/>
+      <circle class="badge" cx="944" cy="34" r="10"/>
+      <text class="bn" x="944" y="38" text-anchor="middle">6</text>
+      <text class="h" x="1005" y="68" text-anchor="middle">Accuse once</text>
+      <text class="s" x="1005" y="90" text-anchor="middle">score is V or 0</text>
+    </g>
+  </g>
+  <g fill="none" stroke="#5ad0e6" stroke-width="2" marker-end="url(#arrow)">
+    <line x1="176" y1="75" x2="192" y2="75"/>
+    <line x1="358" y1="75" x2="374" y2="75"/>
+    <line x1="540" y1="75" x2="556" y2="75"/>
+    <line x1="722" y1="75" x2="738" y2="75"/>
+    <line x1="904" y1="75" x2="920" y2="75"/>
+  </g>
+  <text class="note" x="550" y="166" text-anchor="middle">Go around again while the accusation is not worth it. You only get one.</text>
+</svg>

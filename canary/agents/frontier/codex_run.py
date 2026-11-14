@@ -29,6 +29,7 @@ def build_cmd(workdir: Path, prompt: str, model: str, mcp_url: str, allow_shell:
            "-c", f"mcp_servers.canary.url={_toml_str(mcp_url)}",
            "-c", "mcp_servers.canary.enabled=true",
            "-c", "mcp_servers.canary.tool_timeout_sec=120",
+           "-c", 'mcp_servers.canary.default_tools_approval_mode="approve"',
            "-c", 'approval_policy="never"',
            "-c", 'web_search="disabled"']
     if not allow_shell:
@@ -43,7 +44,8 @@ def _default() -> str:
 
 def main(argv=None):
     ap = base_args("Codex frontier runner", _default())
-    ap.add_argument("--allow-shell", action="store_true")
+    # DEBUGGING ONLY: never use for official runs (re-enables codex shell/exec tools).
+    ap.add_argument("--allow-shell", action="store_true", help="debugging only; not for official runs")
     a = ap.parse_args(argv)
     spec = spec_from(a, f"codex:{a.model}")
     build = lambda wd, prompt, url: build_cmd(wd, prompt, a.model, url, a.allow_shell)  # noqa: E731

@@ -64,8 +64,10 @@ class Server:
     def base(self) -> str:
         return f"http://127.0.0.1:{self.port}"
 
-    def start(self, timeout: float = 60.0, log_dir: Path | None = None) -> "Server":
-        self.port = self.port or free_port()
+    port_file: Path | None = None
+
+    def start(self, timeout: float = 60.0, log_dir: Path | None = None, port_dir: Path | None = None) -> "Server":
+        self.port = self.port or free_port()  # bind-tested free port, unique per server
         self.token = secrets.token_hex(16)
         env = dict(os.environ, CANARY_TIER=self.tier, CANARY_SEED=str(self.seed), CANARY_LEDGER_TOKEN=self.token,
                    CANARY_ALLOW_DEV="1", CANARY_PORT=str(self.port), CANARY_HOST="127.0.0.1")
@@ -73,8 +75,13 @@ class Server:
         if log_dir:
             self.log_path = Path(log_dir) / f"server-{self.tier}-{self.seed}.log"
             log = self.log_path.open("w")
+        # Own session: avoids process-group signals reaching the server. Plainly visible as canary.mcp_server.
         self.proc = subprocess.Popen([sys.executable, "-m", "canary.mcp_server"], cwd=str(REPO_ROOT), env=env,
-                                     stdout=log, stderr=subprocess.STDOUT)
+                                     stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+        if port_dir:
+            Path(port_dir).mkdir(parents=True, exist_ok=True)
+            self.port_file = Path(port_dir) / f"{self.tier}-{self.seed}.port"
+            self.port_file.write_text(json.dumps({"port": self.port, "pid": self.proc.pid}))
         t0 = time.time()
         while time.time() - t0 < timeout:
             if self.proc.poll() is not None:
@@ -88,15 +95,20 @@ class Server:
         raise TimeoutError("MCP server did not come up")
 
     def ledger(self) -> dict:
+        if self.proc is not None and self.proc.poll() is not None:
+            raise RuntimeError(f"MCP server died during the episode (rc={self.proc.returncode}; see {self.log_path})")
         return http(f"{self.base}/ledger?token={self.token}", timeout=10)
 
     def stop(self) -> None:
+        """Stops only our own recorded child (by its pid via the Popen handle); never by name/pattern."""
         if self.proc and self.proc.poll() is None:
             self.proc.terminate()
             try:
                 self.proc.wait(10)
             except subprocess.TimeoutExpired:
                 self.proc.kill()
+        if self.port_file:
+            self.port_file.unlink(missing_ok=True)
 
 
 def http(url: str, method: str = "GET", timeout: float = 10.0) -> Any:
@@ -220,16 +232,18 @@ class RunSpec:
     out: Path
     timeout_s: int = 2400
     jobs: int = 1
+    retries: int = 1
     extra: dict = field(default_factory=dict)
 
 
 def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str]], files: set[str],
-            w: RunWriter, lock: threading.Lock, runner=subprocess.run, server_factory=Server) -> EpisodeResult:
+            w: RunWriter, lock: threading.Lock, runner=subprocess.run, server_factory=Server,
+            write: bool = True) -> EpisodeResult:
     t0 = time.time()
     srv = server_factory(spec.tier, seed)
     wd = None
     try:
-        srv.start(log_dir=spec.out / "transcripts")
+        srv.start(log_dir=spec.out / "transcripts", port_dir=spec.out / "servers")
         prompt = episode_prompt(spec.tier, seed)
         wd = make_clean_workdir()
         argv = build(wd, prompt, srv.url)
@@ -258,17 +272,32 @@ def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str
         if wd:
             shutil.rmtree(wd, ignore_errors=True)
     with lock:
-        w.episode(res)
+        if write:
+            w.episode(res)
         print(f"[{spec.agent} {spec.tier}] seed {seed}: score={res.score:+.3f} correct={res.correct} accused={res.accused} "
               f"end={res.end_reason} day={res.final_day} steps={len(res.steps)} wall={res.meta.get('wall_s')}s", flush=True)
     return res
 
 
 def run_seeds(spec: RunSpec, build, files: set[str], runner=subprocess.run, server_factory=Server) -> list[EpisodeResult]:
+    """Infra errors (server died / unreachable before a ledger was read) are retried up to spec.retries times;
+    only the final attempt per seed is written to episodes.jsonl."""
     w = RunWriter(spec.out)
     lock = threading.Lock()
+
+    def one(seed: int) -> EpisodeResult:
+        for attempt in range(spec.retries + 1):
+            res = run_one(spec, seed, build, files, w, lock, runner, server_factory, write=False)
+            if "error" not in (res.meta or {}) or attempt == spec.retries:
+                break
+            print(f"seed {seed}: infra error ({res.meta['error'][:120]}); retry {attempt + 1}/{spec.retries}", flush=True)
+        res.meta["attempts"] = attempt + 1
+        with lock:
+            w.episode(res)
+        return res
+
     with ThreadPoolExecutor(max_workers=max(1, spec.jobs)) as ex:
-        results = list(ex.map(lambda s: run_one(spec, s, build, files, w, lock, runner, server_factory), spec.seeds))
+        results = list(ex.map(one, spec.seeds))
     provider, _, model = spec.agent.partition(":")
     w.meta({"agent": spec.agent, "model": model, "provider": provider, "git_sha": git_sha(), "tier": spec.tier,
             "seeds": spec.seeds, "hint": None, "usage": None, "harness": "frontier-cli+mcp_server",
@@ -285,6 +314,7 @@ def base_args(desc: str, default_model: str) -> argparse.ArgumentParser:
     ap.add_argument("--out", default=None)
     ap.add_argument("--jobs", type=int, default=1, help="parallel episodes (one server each)")
     ap.add_argument("--timeout", type=int, default=2400, help="seconds per episode")
+    ap.add_argument("--retries", type=int, default=1, help="retries per seed on infra errors (server died)")
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     return ap
@@ -292,4 +322,4 @@ def base_args(desc: str, default_model: str) -> argparse.ArgumentParser:
 
 def spec_from(a, agent: str) -> RunSpec:
     out = Path(a.out) if a.out else REPO_ROOT / a.root / run_id(agent, a.tier)
-    return RunSpec(agent, a.tier, parse_seeds(a.seeds), out, a.timeout, a.jobs, extra={"smoke": bool(a.smoke)})
+    return RunSpec(agent, a.tier, parse_seeds(a.seeds), out, a.timeout, a.jobs, a.retries, extra={"smoke": bool(a.smoke)})

@@ -196,3 +196,15 @@ def test_prompt_matches_llm_policy():
     from canary.agents.llm_policy import build_system_prompt
     from canary.env import Env
     assert episode_prompt("hard", 0) == build_system_prompt(Env("hard", 0).instruction())
+
+
+def test_server_port_file_and_stop(tmp_path):
+    from canary.agents.frontier.common import Server
+    srv = Server("easy", 0).start(port_dir=tmp_path / "servers")
+    try:
+        info = json.loads((tmp_path / "servers" / "easy-0.port").read_text())
+        assert info == {"port": srv.port, "pid": srv.proc.pid}
+        assert srv.ledger()["done"] is False
+    finally:
+        srv.stop()
+    assert not (tmp_path / "servers" / "easy-0.port").exists() and srv.proc.poll() is not None

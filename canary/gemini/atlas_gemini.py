@@ -86,6 +86,7 @@ class AtlasOps:
         self.stats = {"calls": 0, "replayed": 0, "in": 0, "out": 0, "thinking": 0, "cached": 0, "cost_usd": 0.0,
                       "by_kind": {}}
         self.source_run_ids: set[str] = set()
+        self.last_batch: dict = {}
 
     # ------------------------------------------------------------------ plumbing
     @property
@@ -194,7 +195,7 @@ class AtlasOps:
             def stream():
                 # streaming keeps long calls alive: non-streamed ~800k-token calls on gemini-4-carbon were cut by
                 # the server after ~9 min ("Server disconnected without sending a response")
-                texts, um = [], None
+                texts, um, mv = [], None, None
                 for ch in self.client.models.generate_content_stream(
                         model=model, contents=[types.Content(role="user", parts=parts)],
                         config=types.GenerateContentConfig(**cfg)):
@@ -205,10 +206,11 @@ class AtlasOps:
                         pass
                     if getattr(ch, "usage_metadata", None) is not None:
                         um = ch.usage_metadata
-                return "".join(texts), um
-            (text, um), t0 = self._retry(stream, model, "generate", meta)
-            self._ledger(model, "generate", um, t0, meta=meta)
-            out = {"text": text, "usage": _usage_dict(um)}
+                    mv = getattr(ch, "model_version", None) or mv
+                return "".join(texts), um, mv
+            (text, um, mv), t0 = self._retry(stream, model, "generate", meta)
+            self._ledger(model, "generate", um, t0, meta={**meta, "model_version": mv})
+            out = {"text": text, "usage": _usage_dict(um), "model_version": mv}
             if schema is not None:
                 try:
                     json.loads(text)
@@ -340,6 +342,7 @@ class AtlasOps:
         if st != "JOB_STATE_SUCCEEDED":
             raise RuntimeError(f"batch {name} ended {st}: {getattr(job, 'error', '')}")
         out: list[dict | None] = [None] * len(prompts)
+        errors: list[str] = []
         inl = (job.dest.inlined_responses if job.dest else None) or []
         for j, ir in enumerate(inl):
             idx = j
@@ -348,6 +351,9 @@ class AtlasOps:
                 idx = int(md["i"])
             resp = getattr(ir, "response", None)
             if resp is None or idx >= len(out):
+                err = getattr(ir, "error", None)
+                if err is not None:
+                    errors.append(f"{getattr(err, 'code', '')}: {getattr(err, 'message', '')}"[:120])
                 continue
             um = getattr(resp, "usage_metadata", None)
             # one ledger row per labelled request; kind=batch applies the 50% price
@@ -364,6 +370,14 @@ class AtlasOps:
             except Exception:  # noqa: BLE001
                 text = ""
             out[idx] = {"text": text, "usage": u}
+        self.last_batch = {"job": name, "n": len(prompts), "ok": sum(o is not None for o in out),
+                           "errors": dict(__import__("collections").Counter(errors).most_common(3))}
+        if not any(out):  # nothing usable (e.g. every request RESOURCE_EXHAUSTED): forget the job, record nothing
+            if state_file and Path(state_file).exists():
+                st = json.loads(Path(state_file).read_text())
+                st.pop(key, None)
+                Path(state_file).write_text(json.dumps(st))
+            raise RuntimeError(f"batch {name}: 0/{len(prompts)} responses; errors {self.last_batch['errors']}")
         self._store(key, {"responses": out, "job": name})
         self.source_run_ids.add(self.run_id)
         return out

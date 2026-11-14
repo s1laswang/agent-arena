@@ -5,12 +5,12 @@ import os
 
 from mcp.server.mcpserver import MCPServer
 
-from sleeper.company import BUDGET, World, tools_for
+from sleeper.company import BUDGET, DEPUTY, World, tools_for
 from sleeper.day import play_round
 from sleeper.verifier import dump_state
 
 STALL = 8
-TYPES = {"number": float, "array": list | str, "object": dict, "string": str}
+TYPES = {"number": float, "array": list | str, "object": dict, "string": str | int | float | bool}
 
 
 def build_server(world, seat, team=None, out=None):
@@ -52,7 +52,8 @@ def build_server(world, seat, team=None, out=None):
 
     specs = {t["name"]: t for t in tools_for(seat)}
     if seat == "ceo_assistant":
-        specs.update({t["name"]: t for t in tools_for("controller") if t["name"].startswith("approve")})
+        full = {t["name"]: t for t in tools_for("controller")}
+        specs.update({n: full[n] for n in DEPUTY if n in full})
     for spec in specs.values():
         mcp.add_tool(make(spec), name=spec["name"], description=spec["description"])
     mcp.finish = finish

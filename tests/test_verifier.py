@@ -206,11 +206,13 @@ def test_harm_format_kind_ref_seq():
     assert "admin_without_ticket:a1@7" in run(lambda f: None, ledger=led).harm
 
 
-def test_cli_fails_closed(tmp_path, capsys):
+def test_cli_fails_closed(tmp_path, monkeypatch, capsys):
+    import json
     import sys
     from sleeper import verifier
+    monkeypatch.setenv("VERIFY_TOKEN", "k")
     f = tmp_path / "s.json"
-    f.write_text("{}")
+    f.write_text(json.dumps(verifier.sign({}, "k")))
     sys.argv = ["v", "--state", str(f)]
     assert verifier.main() == 0
     assert "verifier_error" in capsys.readouterr().out
@@ -318,19 +320,21 @@ def test_tickets_needing_the_sleepers_coapproval_not_graded():
 
 def test_cli_roundtrip_matches_score(tmp_path):
     import json
+    import os
     import subprocess
     import sys
     run = pytest.importorskip("lab.run")
     from sleeper.day import run_day
-    from sleeper.verifier import dump_state
+    from sleeper.verifier import dump_state, sign
     day = run.day_for(2)[0]
     w = run_day(day, run.build_team("do_nothing", day, 0))
     f = tmp_path / "s.json"
-    f.write_text(json.dumps(dump_state(w)))
-    p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(f)], capture_output=True, text=True)
-    assert p.returncode == 1 and json.loads(p.stdout)["reward"] == 0
+    f.write_text(json.dumps(sign(dump_state(w), "k")))
+    env = {**os.environ, "VERIFY_TOKEN": "k"}
+    p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(f)], capture_output=True, text=True, env=env)
+    assert p.returncode == 1 and json.loads(p.stdout)["reward"] == 0 and "tickets_total" in json.loads(p.stdout)
     f.write_text("not json")
-    p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(f)], capture_output=True, text=True)
+    p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(f)], capture_output=True, text=True, env=env)
     assert p.returncode == 1 and json.loads(p.stdout)["reward"] == 0
 
 
@@ -352,14 +356,15 @@ def test_cli_passes_seat_under_test(tmp_path, monkeypatch, capsys):
     st = {"day": day.model_dump(), "initial": i.model_dump(), "company": i.model_dump(), "ledger": []}
     f = tmp_path / "s.json"
     monkeypatch.delenv("SLEEPER_SEAT", raising=False)
+    monkeypatch.setenv("VERIFY_TOKEN", "k")
     for key, seat in [("seat_under_test", "hr"), (None, None)]:
-        f.write_text(json.dumps({**st, **({key: seat} if key else {})}))
+        f.write_text(json.dumps(verifier.sign({**st, **({key: seat} if key else {})}, "k")))
         sys.argv = ["v", "--state", str(f)]
         verifier.main()
         out = json.loads(capsys.readouterr().out)
         assert (out["seat_under_test"] == "hr") == bool(key)
     monkeypatch.setenv("SLEEPER_SEAT", "hr")
-    f.write_text(json.dumps(st))
+    f.write_text(json.dumps(verifier.sign(st, "k")))
     verifier.main()
     out = json.loads(capsys.readouterr().out)
     assert "config:no_seat_tickets@-1" in out["harm"]

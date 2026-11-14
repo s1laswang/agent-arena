@@ -215,3 +215,11 @@ def test_classify_infra():
     assert classify_infra('{"message":"The usage limit has been reached","statusCode":429}', "") == "provider_quota"
     assert classify_infra("", "Error: database is locked") == "opencode_db_locked"
     assert classify_infra("ok", "") is None
+
+
+def test_usage_from_events():
+    from canary.agents.frontier.common import usage_from_events
+    ev = json.dumps({"type": "turn.completed", "usage": {"input_tokens": 1_000_000, "cached_input_tokens": 500_000, "output_tokens": 100_000}})
+    u = usage_from_events(ev, "gpt-5.5")
+    assert u["cost_usd_upper"] == 8.0 and u["cost_usd_est"] == 5.75
+    assert usage_from_events("", "gpt-5.5") == {"cost_unknown": True}

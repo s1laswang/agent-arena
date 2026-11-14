@@ -224,6 +224,33 @@ def classify_infra(stdout: str, stderr: str) -> str | None:
     return None
 
 
+def usage_from_events(stdout: str, model: str) -> dict:
+    """Token usage from Codex `turn.completed` events -> ESTIMATED cost at canary.llm.pricing list prices.
+    cost_usd_est bills cached input at 10% of the input price; cost_usd_upper bills all input at full price."""
+    tin = cached = tout = 0
+    for line in stdout.splitlines():
+        try:
+            ev = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(ev, dict) and ev.get("type") == "turn.completed":
+            u = ev.get("usage") or {}
+            tin += u.get("input_tokens", 0) or 0
+            cached += u.get("cached_input_tokens", 0) or 0
+            tout += u.get("output_tokens", 0) or 0
+    if not (tin or tout):
+        return {"cost_unknown": True}
+    from canary.llm.pricing import PRICES
+    pin, pout = PRICES.get(model.split("/")[-1], (None, None))
+    out = {"in": tin, "cached_in": cached, "out": tout}
+    if pin is None:
+        return {**out, "cost_unknown": True}
+    out["cost_usd_est"] = round(((tin - cached) * pin + cached * pin * 0.1 + tout * pout) / 1e6, 4)
+    out["cost_usd_upper"] = round((tin * pin + tout * pout) / 1e6, 4)
+    out["cost_note"] = "estimate from codex turn.completed usage at canary.llm.pricing list prices"
+    return out
+
+
 # ---------- conversion
 def to_episode(tier: str, seed: int, agent: str, ledger: dict, steps: list[Step], extra_meta: dict | None = None) -> EpisodeResult:
     meta = dict(extra_meta or {})
@@ -277,6 +304,7 @@ def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str
         steps = steps_from_events(out)
         meta = {"rc": rc, "wall_s": round(time.time() - t0, 1), "steps_source": "agent_transcript",
                 "n_ledger_tool_calls": None}
+        meta["usage"] = usage_from_events(out, spec.agent.partition(":")[2])
         infra = classify_infra(out, err)
         if infra and not ledger.get("done"):
             meta["error"] = f"infra:{infra}"

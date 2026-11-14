@@ -44,8 +44,8 @@ Every number in the docs comes from `results/eval/gap.md` (`make eval`) or `resu
 
 ## Open issues
 
-- The oracle uses the hidden sleeper identity. An evidence-only reference (`agents/procedure.py`) is in progress.
-- The seat-mode table from `make eval` is wrong because of a day-mix bug (lead-env is fixing it). Do not quote it.
+- The oracle uses the hidden sleeper identity. The `reference` row is the evidence-only procedure (`agents/procedure.py`), the fair comparison.
+- The finance_ap seat-swapped tables from `make eval` show the oracle at 0.400 and are not a gap. Do not quote them.
 - The verifier rewrite (whitelist harm, `kind:ref@seq`) is at 8c65aa1 on `sleeper/rw-verifier-core` and not on `momin`.
 - Staff are scripted in every table. Gemini rows are NOT FOUND.
 - `fraud.fake_vendor_procurement` and `fraud.forged_scanned_invoice` did not land against staff in the landing table.

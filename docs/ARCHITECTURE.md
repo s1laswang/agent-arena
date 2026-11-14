@@ -34,7 +34,7 @@ A day is a pure function of `(seed, sleeper_seat or none, sleeper_goal or none, 
 | Sleeper agent | `agents/sleeper_agent.py` | built | The covert agent. |
 | Honest staff | `agents/staff.py` | built | The 8 role-prompted employees, scripted or Gemini. |
 | Reference and oracle | `agents/reference.py` | built | Reference team and the scripted oracle team. The oracle uses the hidden sleeper identity. |
-| Evidence-only reference | `agents/procedure.py` | planned | A reference that works only from logs and records. In progress. |
+| Evidence-only reference | `agents/procedure.py` | built | A reference that works only from logs and records. |
 | Runner | `lab/run.py`, `lab/results.py` | built | Runs a team over days and trials, writes `results/runs/<run_id>/`. |
 | Eval | `lab/eval.py` | built | What `make eval` calls. Writes `results/eval/summary.json` and `gap.md`. |
 | Failure analysis | `lab/analyse.py` | built | Labels failures from transcripts. |

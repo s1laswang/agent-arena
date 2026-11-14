@@ -28,8 +28,17 @@ def get_client(spec: str, **kw) -> LLMClient:
         return StubClient(script=model or None, **kw)
     if provider == "openai":
         from .openai_backend import OpenAIClient
-        return OpenAIClient(model=model or "gpt-4o-mini", **kw)
+        return OpenAIClient(model=model or default_openai_model(), **kw)
     if provider == "gemini":
         from .gemini_backend import GeminiClient
         return GeminiClient(model=model or None, **kw)
     raise LLMError(f"unknown LLM spec {spec!r}; use stub, stub:<script>, openai:<model> or gemini[:<model>]")
+
+
+FRONTIER_OPENAI_DEFAULT = "gpt-5.5"  # strongest chat-completions model on our key (checked 02:20)
+
+
+def default_openai_model() -> str:
+    """The frontier model under test: $CANARY_OPENAI_MODEL, else gpt-5.5. Small models = smoke tests only."""
+    import os
+    return os.environ.get("CANARY_OPENAI_MODEL") or FRONTIER_OPENAI_DEFAULT

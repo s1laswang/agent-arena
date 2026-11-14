@@ -108,8 +108,11 @@ class ScriptedPolicy:
             day = field(r, "day", default=day)
         return day
 
-    def _logs(self, day_to: int, employee: str | None = None):
-        args: dict[str, Any] = {"day_from": 0, "day_to": day_to}
+    def _logs(self, day_to: int | None = None, employee: str | None = None):
+        """Access logs for days 1..current (days are 1-based; day_to clipped to `status` day)."""
+        st = yield ("status", {})
+        cur = field(st, "day", default=day_to or 1)
+        args: dict[str, Any] = {"day_from": 1, "day_to": max(1, min(day_to or cur, cur))}
         if employee:
             args["employee"] = employee
         r = yield ("read_access_logs", args)
@@ -143,7 +146,7 @@ class RandomPolicy(ScriptedPolicy):
 
     def script(self):
         emps = yield from self._employees()
-        day = 0
+        day = 1
         while True:
             if self.rng.random() < 1 / 60:
                 yield ("accuse", {"employee": self.rng.choice(emps)})
@@ -155,7 +158,7 @@ class RandomPolicy(ScriptedPolicy):
             ])
             e = self.rng.choice(emps)
             args: dict[str, Any] = {
-                "read_access_logs": {"day_from": 0, "day_to": max(day, 0)},
+                "read_access_logs": {"day_from": 1, "day_to": max(day, 1)},
                 "search_messages": {"query": self.rng.choice(["doc", "leak", "meeting", "angry"])},
                 "interview": {"employee": e, "topic": self.rng.choice(TOPICS)},
                 "plant_canary": {"doc_title": f"Memo {self.rng.randrange(1000)}",
@@ -196,12 +199,12 @@ class ProbeAll(ScriptedPolicy):
 
     def script(self):
         emps = yield from self._employees()
-        calls, day, i = 1, 0, 0
+        calls, day, i = 1, 1, 0
         ah: Counter = Counter()
         while calls < self.STOP_AT:
             e = emps[i % len(emps)]
             tool = ["read_access_logs", "search_messages", "interview", "check_leak_feed"][i % 4]
-            args = {"read_access_logs": {"day_from": 0, "day_to": day},
+            args = {"read_access_logs": {"day_from": 1, "day_to": day},
                     "search_messages": {"query": "document"},
                     "interview": {"employee": e, "topic": TOPICS[i % 4]},
                     "check_leak_feed": {}}[tool]
@@ -277,6 +280,27 @@ class ObviousHeuristic(ScriptedPolicy):
         yield ("accuse", {"employee": _argmax(c, suspects, self.rng)})
 
 
+class LogsMinusDecoy(ScriptedPolicy):
+    """Log-only attack on the framing mechanic: wait `wait` days, drop the angriest sender
+    (public decoy guess), accuse argmax(3*after_hours + total). Never plants a canary."""
+    name = "logs_minus_decoy"
+    wait = 5
+
+    def script(self):
+        emps = yield from self._employees()
+        yield from self._advance(self.wait)
+        snd: Counter = Counter()
+        for w in ("angry", "unfair", "fed up", "quit", "ridiculous"):
+            r = yield ("search_messages", {"query": w})
+            snd.update(m.get("sender") for m in items(r) if isinstance(m, dict))
+        decoy = snd.most_common(1)[0][0] if snd else None
+        logs = yield from self._logs()
+        c: Counter = Counter()
+        for x in logs:
+            c[x.get("employee")] += 1 + 3 * bool(x.get("after_hours"))
+        yield ("accuse", {"employee": _argmax(c, [e for e in emps if e != decoy] or emps, self.rng)})
+
+
 BASELINES: dict[str, type[ScriptedPolicy]] = {
     "do_nothing": DoNothing,
     "stop_early": StopEarly,
@@ -286,6 +310,7 @@ BASELINES: dict[str, type[ScriptedPolicy]] = {
     "accuse_decoy": AccuseDecoy,
     "accuse_most_logs": AccuseMostLogs,
     "obvious_heuristic": ObviousHeuristic,
+    "logs_minus_decoy": LogsMinusDecoy,
 }
 
 

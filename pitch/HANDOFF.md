@@ -8,7 +8,7 @@ Number source used below: `make eval` run by dm-pitch on make eval, momin 814a72
 
 Every `NOT FOUND (lead-lab pending)` in pitch/ is listed here with its count. When lead-lab publishes a run, grep the string, replace each with the figure plus (model id, date, run id), then delete the line here. `tests/test_pitch_labels.py` fails if a count here is wrong.
 
-- pitch/GEMINI.md: 17
+- pitch/GEMINI.md: 13
 - pitch/MULTIMODEL.md: 28
 - pitch/SCRIPT.md: 2
 - pitch/SLIDES.md: 1

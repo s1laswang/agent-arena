@@ -68,7 +68,8 @@ Status as of 14 Nov, from what is on momin. Verify each "have" before submitting
 | What is innovative | have: pitch/GEMINI.md section 3 | dm-pitch |
 | Why Gemini is essential | have as argument. Evidence needs live numbers: NOT FOUND | dm-pitch, humans |
 | A live run proving it (staff, reference, analyst) | missing: HANDOFF.md section 2 steps 2 to 5 | humans |
-| Multimodal invoices and Gemini exploit hunter | CUT: image rendering is not used by any day, no exploit-hunter code (see pitch/GEMINI.md role audit) | dm-pitch |
+| Multimodal invoices | pending (lead-attack): image rendering is not used by any day yet | lead-attack |
+| Gemini exploiter | real run exists on branch sleeper/rw-exploit-live; held out of this text until lead-reward says it is on momin with a run dir | lead-reward |
 | Cached replay without a key | missing: `data/gemini_cache.tar.gz` does not exist | hn-gemini |
 | Cost and usage numbers | missing: NOT FOUND until step 5 | humans |
 | Form text and demo | partial: text above, demo NOT FOUND | humans |

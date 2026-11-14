@@ -76,21 +76,20 @@ To run the Gemini path: `GEMINI_API_KEY` and `LAB_GEMINI=1` (the key alone leave
 - The reward counts final company state with canary tokens, so one leaked byte is visible.
 - Deterministic and reproducible: a day is a pure function of seed, sleeper seat and goal, and agent config, with cached model responses.
 
-## Role audit (code at momin, checked by dm-pitch; real-API column from code and results only)
+## Role table (one deliberate, labelled real run per role is the target)
 
-REAL-API = ran against the live API. Today: no (lead-lab pending), no run id exists in `results/runs`. Facts from hn-gemini and lead-harness replace these when they answer.
+REAL means model id, date and run id printed. Accidental calls from pytest or play_day do not count. Sources: hn-gemini, lead-reward, lead-demo, 14 Nov. Anything not in a cell is NOT FOUND (lead-lab pending).
 
-| Role claimed | File | Real-API run | Status |
-|---|---|---|---|
-| staff | `agents/staff.py` GeminiStaff | no, NOT FOUND (lead-lab pending) | BUILT, offline fake model only |
-| reference | `agents/gemini_reference.py` | no, NOT FOUND (lead-lab pending) | BUILT, offline fake model only |
-| sleeper | `agents/sleeper_agent.py` `_gemini_turn` | no, NOT FOUND (lead-lab pending) | BUILT, offline |
-| strategy mutation | `agents/sleeper_agent.py` `mutate_strategy`, used by `sleeper/regret.py mutate_round` | no, NOT FOUND (lead-lab pending) | BUILT, falls back to seeded scripted variant when no key |
-| failure analyst | `agents/analyst.py`, `lab/analyse.py refine` (only with `--gemini`) | no, NOT FOUND (lead-lab pending) | BUILT, rule-based labels otherwise |
-| multimodal forged invoices | `agents/images.py render_invoice`; `image_lines` in `sleeper/goals/fraud.py` | no | CUT as a claim: `render_invoice` is called nowhere outside tests, so no model reads an image in a real day. Plumbing only |
-| exploit hunter | none (`lab/eval.py` exploit teams are scripted) | no | CUT: no Gemini code |
+| Role | File | REAL run or pending owner |
+|---|---|---|
+| staff | `agents/staff.py`, `scripts/gemini_seat.py` | pending (hn-gemini). One 60-call gemini-4-carbon finance_ap seed 0 run on 2026-11-14 was discarded (clean day, not a valid sleeper day). Valid day ids 1000 to 1002 in progress, branch sleeper/hn-gemini-live. No result yet |
+| reference | `agents/gemini_reference.py` | pending (lead-harness). No real run reported |
+| sleeper and strategy mutation | `agents/sleeper_agent.py` | pending (lead-attack, atk-gen). No real run reported |
+| failure analyst | `agents/analyst.py`, `lab/analyse.py --gemini` | pending (lab-analyst). No real run reported |
+| exploiter | `redteam/gemini_exploiter.py` | REAL gemini-3.5-flash, 2026-11-14, branch sleeper/rw-exploit-live 034e4ec (not on momin yet), 200 calls, 3 seat-days got a live attack (finance_ap seed 0, 1000, 1001), reward 0 on all, harm flagged and scored 0. The other 8 of 11 hit the call budget at 22 steps and are not counted. Cost: NOT FOUND (only an estimate at assumed prices). Transcripts cached, not committed |
+| multimodal invoices | `agents/images.py`, `sleeper/goals/fraud.py` | pending (lead-attack). Today `render_invoice` is called nowhere outside tests and hn-gemini passed no image in any run |
 
-Claude and Codex staff seats (`lab/frontier.py`): rows NOT FOUND (lead-lab pending).
+Claude and Codex staff seats (`lab/frontier.py`): NOT FOUND (lead-lab pending).
 
 ## 4. Why Gemini is essential
 
@@ -102,6 +101,6 @@ The claim we make, with slots to fill from a real run (model id, date, run id):
 - A model rewrites the sleeper's plan so a day cannot be memorised (`mutate_strategy`). Whether it kept days winnable on a real run: NOT FOUND (lead-lab pending).
 - A model explains each failed day (`lab/analyse.py --gemini`). Output: NOT FOUND (lead-lab pending).
 
-Cut, not claimed: forged invoice images (plumbing only), exploit hunting by Gemini (no code), long-context transcript reading as a measured benefit (no run). Cost and scale: NOT FOUND (lead-lab pending).
+Not claimed yet: forged invoice images (pending lead-attack, plumbing only today) and long-context transcript reading as a measured benefit (no run). One real piece exists: a gemini-3.5-flash exploiter found no reward on 3 live seat-days (table above). Cost and scale: NOT FOUND (lead-lab pending).
 
 Fallback if no real run finishes: "Offline tests of the Gemini path ran with a fake model; no real Gemini run finished, so we claim no Gemini result."

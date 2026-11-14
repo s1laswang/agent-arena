@@ -44,7 +44,9 @@ const S = {
   day: 1, V: 1, vHist: [[1, 1]], asof: null, used: [], burnt: false,
   staff: [], byId: {}, restricted: new Set(), canaries: [], leaks: new Map(),
   marks: {}, sel: null, tool: null, assign: {}, last: {}, over: false,
+  draft: {}, wrongScore: -1, certainty: 50, trueVScore: false,
 };
+const LABELS = ["A", "B", "C", "D", "E"];
 
 // ------------------------------------------------------------------ boot
 function bootStep(text, cls) {
@@ -70,7 +72,7 @@ async function boot() {
     }
     S.py.runPython("import sys; sys.path.insert(0, '/home/pyodide'); import canary_game");
     b.className = "done";
-    try { S.reference = await (await fetch("reference.json")).json(); } catch (_) { S.reference = {}; }
+    try { const r = await fetch("reference.json"); S.reference = r.ok ? await r.json() : {}; } catch (_) { S.reference = {}; }
     bootStep("ready", "done");
     $("bootState").textContent = "ready";
     $("startBtn").disabled = false;
@@ -87,6 +89,8 @@ function parseRules(text) {
   S.nDays = num(/lasts at most (\d+) days/, 14);
   S.perDay = num(/one of your (\d+) actions per day/, 8);
   S.maxVariants = num(/Use at most (\d+) different labels/, 3);
+  S.wrongScore = num(/If you accuse an innocent employee, your score is (-?\d+(?:\.\d+)?)/, -1);
+  S.trueVScore = /Your score uses the true V/.test(text);
   const m = text.match(/^- (.+?) each use one of your \d+ actions per day/m);
   S.costed = new Set(m ? m[1].replace(/`/g, "").split(/,\s*/).map((s) => s.trim()) : []);
 }
@@ -151,13 +155,13 @@ function absorb(tool, args, res) {
       S.staff = d.employees || [];
       S.byId = Object.fromEntries(S.staff.map((e) => [e.id, e]));
       break;
-    case "restrict_access": S.restricted.add(d.restricted || args.employee); break;
+    case "restrict_access": S.restricted.add(d.restricted || args.employee); delete S.assign[d.restricted || args.employee]; break;
     case "unrestrict_access": S.restricted.delete(d.unrestricted || args.employee); break;
     case "plant_canary": {
       const groups = {};
       for (const [pid, lab] of Object.entries(args.assignment || {})) (groups[lab] = groups[lab] || []).push(pid);
       S.canaries.push({ id: d.canary_id, title: args.doc_title, day: S.day, groups });
-      S.assign = {};
+      S.assign = {}; S.draft.doc_title = "";
       break;
     }
     case "check_leak_feed":
@@ -243,7 +247,7 @@ function renderRoster() {
   }
   if (S.tool === "plant_canary") head.append(h("span", { class: "mono" }, "assign A / B / C"));
   const rows = h("div", { class: "rows" });
-  const labels = ["A", "B", "C", "D", "E"].slice(0, S.maxVariants);
+  const labels = LABELS.slice(0, S.maxVariants);
   for (const e of S.staff) {
     const mark = S.marks[e.id];
     const tags = h("span", { class: "tags" });
@@ -340,14 +344,22 @@ function renderForm() {
       f.append(lab("Topic", h("select", { name: "topic" }, Object.entries(TOPICS).map(([k, v]) => h("option", { value: k }, v)))));
       break;
     case "plant_canary": {
-      f.append(lab("Document title", h("input", { name: "doc_title", value: last.doc_title || "", placeholder: "Q3 board memo", class: "wide" })));
+      const title = h("input", { name: "doc_title", value: S.draft.doc_title || "", placeholder: "Q3 board memo", class: "wide", maxlength: 120 });
+      title.addEventListener("input", () => {
+        S.draft.doc_title = title.value;
+        const b = f.querySelector(".run");
+        if (b) b.disabled = S.over || !title.value.trim() || !Object.keys(S.assign).length || !S.staff.length;
+      });
+      f.append(lab("Document title", title));
       const groups = {};
       for (const [p, l] of Object.entries(S.assign)) (groups[l] = groups[l] || []).push(p);
       const gl = h("div", { class: "groups" });
       if (!Object.keys(groups).length) gl.append(h("span", { class: "note" }, "Assign people in the staff list: press A, B or C on each row."));
       for (const l of Object.keys(groups).sort()) gl.append(h("span", {}, h("b", {}, l), groups[l].sort().join(" ")));
       f.append(gl);
-      ready = Object.keys(S.assign).length > 0;
+      if (S.staff.length) f.append(h("button", { class: "ghost", type: "button", disabled: S.over, onclick: evenSplit,
+        title: `Assign ${labels3()} in turn to the people assigned now, or to all staff if nobody is` }, "Even split"));
+      ready = Object.keys(S.assign).length > 0 && !!(S.draft.doc_title || "").trim();
       if (!S.staff.length) { f.append(h("span", { class: "warn" }, "Pull the staff list first.")); ready = false; }
       break;
     }
@@ -360,13 +372,9 @@ function renderForm() {
       break;
     case "accuse": {
       const sel = staffSelect("employee", false, S.sel);
-      const armed = h("input", { name: "_arm", placeholder: "type the id", autocomplete: "off" });
-      f.append(lab("Employee", sel), h("label", { class: "arm" }, h("span", { class: "lbl" }, "Type the id to arm"), armed),
-               h("span", { class: "warn" }, "This ends the case. There is no second accusation."));
-      const btn = h("button", { class: "danger run", type: "submit", disabled: true }, "Accuse");
-      const check = () => { btn.disabled = !sel.value || armed.value.trim() !== sel.value; };
-      armed.addEventListener("input", check); sel.addEventListener("change", check);
-      f.append(btn);
+      f.append(lab("Employee", sel), h("span", { class: "warn" }, "This ends the case. There is no second accusation."));
+      f.append(h("button", { class: "danger run", type: "button", disabled: S.over,
+        onclick: () => openAccuse(sel.value.trim()) }, "Accuse…"));
       return;
     }
     default:
@@ -421,7 +429,7 @@ function addEntry(tool, args, res, call, day) {
 
 function body(tool, args, res) {
   if (!res.ok) {
-    const hint = res.error === "invalid arguments" ? " Check the fields: one employee id such as e07, and days within the days so far." : "";
+    const hint = res.error === "invalid arguments" ? " " + badHint(tool, args) : "";
     return h("p", {}, h("b", {}, "Rejected: "), res.error + "." + hint);
   }
   const d = res.data || {};
@@ -512,6 +520,88 @@ function body(tool, args, res) {
   }
 }
 
+/** The engine answers every bad call with the same constant, so name the field from the arguments that were sent. */
+function badHint(tool, args) {
+  const ids = new Set(S.staff.map((e) => e.id));
+  const emp = args.employee;
+  if (emp !== undefined && S.staff.length && !ids.has(emp)) return `Employee: “${emp}” is not an id on the staff list (e.g. e07).`;
+  if ("day_from" in args && "day_to" in args && args.day_from > args.day_to) return "Days: “from” is after “to”.";
+  for (const k of ["day_from", "day_to"]) if (k in args && !(args[k] >= 1 && args[k] <= S.nDays)) return `Days: must be 1 to ${S.nDays}.`;
+  switch (tool) {
+    case "plant_canary": {
+      const asg = args.assignment || {};
+      if (!(args.doc_title || "").trim()) return "Document title: it is empty.";
+      if (args.doc_title.length > 120) return "Document title: 120 characters at most.";
+      if (!Object.keys(asg).length) return "Assignment: give at least one person a variant.";
+      const r = Object.keys(asg).filter((p) => S.restricted.has(p));
+      if (r.length) return `Assignment: ${r.join(" ")} restricted, and restricted staff cannot receive a canary.`;
+      if (new Set(Object.values(asg)).size > S.maxVariants) return `Assignment: ${S.maxVariants} variants at most.`;
+      return "Check the document title and the assignment.";
+    }
+    case "search_messages": return "Keyword: it is required, without * and at most 200 characters.";
+    case "read_message": return "Message id: no message has that id (open one from a search result).";
+    case "interview": return "Employee and topic: both are required.";
+    case "read_access_logs": return "Days: both are required.";
+    case "restrict_access": return "Employee: already restricted.";
+    case "unrestrict_access": return "Employee: not restricted.";
+    case "accuse": return "Employee: pick one id from the staff list.";
+    default: return "Check the fields.";
+  }
+}
+
+function labels3() { return LABELS.slice(0, S.maxVariants).join(" / "); }
+
+/** Even split: A, B, C in turn over the people assigned now (or all staff if nobody is), in staff-list order. */
+function evenSplit() {
+  const labels = LABELS.slice(0, S.maxVariants);
+  const picked = Object.keys(S.assign).length ? S.staff.filter((e) => e.id in S.assign) : S.staff;
+  const pool = picked.filter((e) => !S.restricted.has(e.id));
+  S.assign = {};
+  pool.forEach((e, i) => { S.assign[e.id] = labels[i % labels.length]; });
+  renderRoster(); renderForm();
+}
+
+// ------------------------------------------------------------------ accusation dialog
+// The certainty is the player's own estimate. It stays on this page and is never sent to the game.
+function openAccuse(preset) {
+  const dlg = $("accuseDlg");
+  if (!dlg || S.over) return;
+  const sel = $("accWho"), arm = $("accArm"), slider = $("accP");
+  sel.textContent = "";
+  sel.append(h("option", { value: "" }, "choose…"));
+  for (const e of S.staff) sel.append(h("option", { value: e.id }, `${e.id} · ${e.name}`));
+  if (!S.staff.length && preset) sel.append(h("option", { value: preset }, preset));
+  sel.value = preset && [...sel.options].some((o) => o.value === preset) ? preset : "";
+  arm.value = "";
+  slider.value = String(S.certainty);
+  $("accFine").textContent = `Right: the company's ${S.trueVScore ? "true value at this moment, which also counts leaks that have not surfaced yet" : "value at this moment"}. `
+    + `Wrong: ${fmt(S.wrongScore)}. No accusation by the last day: 0. There is no second accusation.`;
+  updateAccuse();
+  dlg.showModal();
+  (sel.value ? arm : sel).focus();
+}
+
+function updateAccuse() {
+  const sel = $("accWho"), arm = $("accArm"), slider = $("accP");
+  const p = Number(slider.value) / 100, V = Number(S.V), w = S.wrongScore;
+  S.certainty = Number(slider.value);
+  const pStar = -w / (V - w);
+  const ev = p * V + (1 - p) * w;
+  const evR = Math.round(ev * 100) / 100;
+  $("accPOut").textContent = `${slider.value}%`;
+  $("accV").textContent = V.toFixed(2);
+  $("accVAsof").textContent = S.asof ? `as of day ${pad2(S.asof.day)} · call #${S.asof.call}` : "start value, no reading yet";
+  $("accBE").textContent = `${(100 * pStar).toFixed(1)}%`;
+  $("accEV").textContent = evR === 0 ? "0.00" : fmt(ev);
+  const verdict = $("accVerdict");
+  verdict.textContent = evR === 0 ? "Accusing at this certainty is break-even on average."
+    : `Accusing at this certainty ${evR > 0 ? "gains" : "loses"} value on average.`;
+  verdict.classList.toggle("neg", evR < 0);
+  const who = S.byId[sel.value];
+  $("accGo").textContent = sel.value ? `Accuse ${sel.value}${who ? " · " + who.name : ""}` : "Accuse";
+  $("accGo").disabled = S.over || !sel.value || arm.value.trim() !== sel.value;
+}
+
 // ------------------------------------------------------------------ case closed
 function finish() {
   S.over = true;
@@ -590,10 +680,25 @@ $("openCase").addEventListener("submit", start);
 $("cmdform").addEventListener("submit", (ev) => {
   ev.preventDefault();
   if (S.over || !S.tool) return;
-  if (S.tool === "plant_canary" && !Object.keys(S.assign).length) return;
+  if (S.tool === "accuse") { openAccuse(($("cmdform").querySelector("[name=employee]") || {}).value || ""); return; }
+  if (S.tool === "plant_canary" && (!Object.keys(S.assign).length || !(S.draft.doc_title || "").trim())) return;
   run(S.tool, readForm());
 });
 $("agentBtn").addEventListener("click", () => setAgent(!document.body.classList.contains("agent")));
 $("rulesBtn").addEventListener("click", () => $("rulesDlg").showModal());
 $("rulesClose").addEventListener("click", () => $("rulesDlg").close());
+if ($("accuseDlg")) {
+  for (const id of ["accWho", "accArm", "accP"]) $(id).addEventListener("input", updateAccuse);
+  $("accWho").addEventListener("change", updateAccuse);
+  $("accClose").addEventListener("click", () => $("accuseDlg").close());
+  $("accCancel").addEventListener("click", () => $("accuseDlg").close());
+  $("accForm").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const e = $("accWho").value;
+    if (S.over || !e || $("accArm").value.trim() !== e) return;
+    $("accuseDlg").close();
+    S.tool = "accuse";
+    run("accuse", { employee: e });
+  });
+}
 boot();

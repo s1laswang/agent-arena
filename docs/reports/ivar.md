@@ -168,7 +168,7 @@ call) and the agents resumed. Rule for later rounds: never touch `blindspot/` wh
 are in flight.
 
 ### Tests
-95 passed (new: play replay, cost table, 4 expert tests, 3 ambiguity guards).
+94 passed (new: play replay, cost table, 4 expert tests, 3 ambiguity guards).
 
 ### Blind frontier results so far (all in `results/frontier_claude_blind/`)
 

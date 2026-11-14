@@ -76,6 +76,36 @@ class FakeEnv:
         return {"ok": True, "data": {}}
 
 
+class EnvShim:
+    """Real canary.env.Env behind the fake transport (`--server envshim`): real game logic,
+    NOT the real canary.mcp_server transport/locking."""
+
+    def __init__(self, tier: str, seed: int):
+        from canary.env import Env
+        self.env = Env(tier=tier, seed=seed)
+
+    def tools_spec(self):
+        return self.env.tools_spec()
+
+    @property
+    def done(self):
+        return self.env.done
+
+    def score(self):
+        return self.env.score()
+
+    def ledger(self):
+        from dataclasses import asdict
+        return [asdict(e) for e in self.env.ledger()]
+
+    def call(self, tool, args):
+        from dataclasses import asdict
+        try:
+            return asdict(self.env.call(tool, args))
+        except Exception as e:  # noqa: BLE001  surfaced as a finding (crash), not swallowed silently
+            return {"ok": False, "data": {}, "error": f"server exception {type(e).__name__}"}
+
+
 def make_server(host: str, port: int, token: str, env: FakeEnv) -> ThreadingHTTPServer:
     lock = threading.Lock()
 
@@ -138,7 +168,8 @@ def make_server(host: str, port: int, token: str, env: FakeEnv) -> ThreadingHTTP
 
 def main():
     e = os.environ
-    env = FakeEnv(e.get("CANARY_TIER", "easy"), int(e.get("CANARY_SEED", "0")))
+    cls = EnvShim if e.get("CANARY_FAKE_BACKEND") == "env" else FakeEnv
+    env = cls(e.get("CANARY_TIER", "easy"), int(e.get("CANARY_SEED", "0")))
     srv = make_server(e.get("CANARY_HOST", "127.0.0.1"), int(e["CANARY_PORT"]), e["CANARY_LEDGER_TOKEN"], env)
     srv.serve_forever()
 

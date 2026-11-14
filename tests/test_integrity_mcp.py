@@ -2,6 +2,7 @@
 
 Parametrised over two servers:
   * real -> canary.mcp_server (skipped until HEAD-HARNESS lands it)
+  * envshim -> real canary.env.Env behind our stdlib transport (real game logic, NOT real server locking)
   * fake -> canary.redteam.fake_mcp, PLUMBING ONLY (proves the test harness works, says nothing about the env)
 """
 from __future__ import annotations
@@ -18,7 +19,7 @@ from canary.redteam.mcp_client import MCPClient, http_get
 TIER, SEED = "easy", 7
 
 
-@pytest.fixture(params=["real", "fake"])
+@pytest.fixture(params=["real", "envshim", "fake"])
 def server(request, tmp_path):
     if request.param == "real":
         if importlib.util.find_spec("canary.mcp_server") is None:
@@ -26,7 +27,7 @@ def server(request, tmp_path):
         module = "canary.mcp_server"
     else:
         module = "canary.redteam.fake_mcp"
-    srv = Server(module, TIER, SEED, tmp_path / "server.log")
+    srv = Server(module, TIER, SEED, tmp_path / "server.log", backend_env=request.param == "envshim")
     srv.kind = request.param
     yield srv
     srv.stop()
@@ -68,7 +69,7 @@ def test_ledger_token(server):
 
 def test_tool_names_match_spec(server):
     names = {t["name"] for t in client(server).list_tools()}
-    if server.kind == "real":
+    if server.kind != "fake":
         from tests.integrity_helpers import make_env
         spec = {t["name"] for t in make_env(TIER, SEED).tools_spec()}
     else:

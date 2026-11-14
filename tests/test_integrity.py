@@ -354,7 +354,6 @@ def test_v03_path_is_active():
     assert wrong_score() == declared == -1.0, (wrong_score(), declared)
 
 
-@pytest.mark.xfail(strict=False, reason="tiers v1: solver 100 seeds easy 0.80, medium 0.50 < hard 0.53; ENV retuning for monotone tiers")
 def test_solver_tier_ordering():
     """Difficulty must be monotone across tiers: solver mean easy > medium > hard (100 dev seeds).
     Guards future retunes from silently inverting the tier ladder."""

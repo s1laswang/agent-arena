@@ -34,3 +34,14 @@ def test_summarize_and_alert(tmp_path):
 def test_tag_counts():
     c = tag_counts([ep("a", 0, 0, False)], attribute=lambda e: [{"regret": 0.1, "tags": ["decoy_chase"]}])
     assert c["a"]["decoy_chase"] == 1 and abs(c["a#regret"]["decoy_chase"] - 0.1) < 1e-9
+
+
+def test_accuse_audit_on_real_env():
+    from canary.analysis.accuse import audit_episode
+    from canary.baselines import StopEarly, play
+    from canary.env import Env
+    env = Env("medium", 3)
+    play(env, StopEarly(seed=3))
+    r = audit_episode(env.result("stop_early"))
+    assert r["p_accused"] is not None and r["p_accused"] < 0.6
+    assert r["verdict"] in ("lucky", "premature-wrong")

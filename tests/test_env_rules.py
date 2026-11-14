@@ -28,3 +28,23 @@ def test_fingerprint_accuracy_flips_variants():
                 total += 1; wrong += it["variant"] != lab
     assert total > 50 and 0.3 < wrong / total < 0.7
     assert "probability 0.5" in env.instruction()
+
+
+def test_verdict_public():
+    from canary.env import Env
+    env = Env("easy", 3)
+    v0 = env.verdict()
+    assert v0["done"] is False and v0["accused"] is None and v0["score"] == 0.0 and v0["final_day"] == 1
+    env.call("accuse", {"employee": env._world.mole})
+    v = env.verdict()
+    assert v["done"] and v["correct"] and v["accused"] == env._world.mole and v["score"] > 0 and v["end_reason"] == "accused"
+
+
+def test_set_world_secret_first():
+    import canary.world as W
+    try:
+        W.set_world_secret(b"x" * 32); a = W.world_seed("easy", 900_001)
+        W.set_world_secret(b"y" * 32); b = W.world_seed("easy", 900_001)
+        assert a != b and W.world_seed("easy", 7) == W.world_seed("easy", 7)
+    finally:
+        W.set_world_secret(None)

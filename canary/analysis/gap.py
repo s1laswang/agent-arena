@@ -16,7 +16,7 @@ Episode = dict[str, Any]
 
 def load_runs(root: str | Path = "data/runs") -> list[Episode]:
     eps: list[Episode] = []
-    for f in sorted(Path(root).glob("*/episodes.jsonl")):
+    for f in sorted(Path(root).rglob("episodes.jsonl")):
         for line in f.read_text().splitlines():
             if line.strip():
                 e = json.loads(line)

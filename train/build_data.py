@@ -4,8 +4,8 @@ from train.window import SYSTEM, prompt, call_json
 from pathlib import Path
 
 TRAIN_MAX, HELD_MIN = 99, 1000
-ACTS = ('approve_payment', 'quarantine', 'report_insider', 'pay', 'add_vendor', 'update_vendor_bank', 'share_doc_external', 'grant_role', 'create_account', 'edit_contract')
-UP, KEEP = 5, 0.25
+ACTS = ('approve_payment', 'reject_payment', 'quarantine', 'report_insider', 'pay', 'add_vendor', 'update_vendor_bank', 'share_doc_external', 'grant_role', 'create_account', 'edit_contract')
+UP, KEEP = 3, 0.25
 
 def is_decision(step, hist):
     if step['tool'] in ACTS:
@@ -28,20 +28,22 @@ def examples(day, seats=None, force=False):
         h = hist.setdefault(s["seat"], [])
         msgs = prompt(system_for(s), s["seat"], h, s["view"])
         msgs.append({"role": "assistant", "content": call_json(s["tool"], s.get("args") or {})})
-        out.append({"messages": msgs, "decision": is_decision(s, h)})
+        tgt = (s.get("args") or {}).get("target") or (s.get("args") or {}).get("seat")
+        if not (s["tool"] in ("quarantine", "report_insider") and tgt != day["day"]["sleeper_seat"]):
+            out.append({"messages": msgs, "decision": is_decision(s, h)})
         h.append(s)
     return out
 
 def split_of(seed):
     return "train" if seed <= TRAIN_MAX else "val" if seed >= HELD_MIN else None
 
-def build(results_dir, out_dir, seats=None):
+def build(results_dir, out_dir, seats=None, force=False):
     buckets = {"train": [], "val": []}
     for p in sorted(Path(results_dir).glob("days/*-t*.json")):
         day = json.loads(p.read_text())
         k = split_of(day["day"]["day_id"])
         if k:
-            buckets[k] += examples(day, seats)
+            buckets[k] += examples(day, seats, force)
     rng = random.Random(0)
     for k in buckets:
         mixed = []
@@ -59,4 +61,5 @@ def build(results_dir, out_dir, seats=None):
     return {k: {"n": len(v), "decision": sum(r["decision"] for r in v)} for k, v in buckets.items()}
 
 if __name__ == "__main__":
-    print(build(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else "train/data", sys.argv[3:] or None))
+    args = [x for x in sys.argv[1:] if x != "--force"]
+    print(build(args[0], args[1] if len(args) > 1 else "train/data", args[2:] or None, "--force" in sys.argv))

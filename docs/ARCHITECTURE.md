@@ -6,7 +6,7 @@ Status key: built = on `momin`, branch = pushed on a worker branch and not merge
  day generator ──> company world ──> 8 seats via MCP tools ──> ledger
  (sleeper/tickets)  (sleeper/company)  (sleeper/mcp_server)     (World, append-only)
                                                                   │
- dashboard (web/) <── lab.run summary <── Result <── verifier <───┘
+ dashboard (web/) <── lab.eval tables <── Result <── verifier <───┘
                       (lab/run.py)     (models.Result) (sleeper/verifier.py)
 ```
 
@@ -37,7 +37,7 @@ A day is a pure function of `(seed, sleeper_seat or none, sleeper_goal or none, 
 | Evidence-only reference | `agents/procedure.py` | planned | A reference that works only from logs and records. In progress. |
 | Runner | `lab/run.py`, `lab/results.py` | built | Runs a team over days and trials, writes `results/runs/<run_id>/`. |
 | Eval | `lab/eval.py` | built | What `make eval` calls. Writes `results/eval/summary.json` and `gap.md`. |
-| Failure analysis | `lab/analyse.py` | branch | Labels failures from transcripts. On `sleeper/lab-analyst-names`. |
+| Failure analysis | `lab/analyse.py` | built | Labels failures from transcripts. |
 | Landing table | `scripts/landing_table.py` | built | Staff against oracle per strategy, writes `results/landing/`. |
 | Harbor tasks | `harbor/` | built | Packaging and seat mode for the judge harness. |
 | Training | `train/` | built | Small model fine-tune data and SFT. |
@@ -46,4 +46,4 @@ A day is a pure function of `(seed, sleeper_seat or none, sleeper_goal or none, 
 
 ## Reading a result
 
-`verifier.score` returns a `Result` with reward, tickets done, harm list, false quarantines and whether the sleeper was caught. `lab.run` collects Results into `summary.json` (reward, pass^k, sleeper success rate, false accusations, ticket completion) under `results/runs/<run_id>/`. `lab.eval` combines runs into `results/eval/summary.json` and `gap.md`. The dashboard replays a saved day.
+`verifier.score` returns a `Result` with reward, tickets done, harm list, false quarantines and whether the sleeper was caught. `lab.run` (called by `lab.eval`, which `make eval` runs) collects Results into `summary.json` (reward, pass^k, sleeper success rate, false accusations, ticket completion) under `results/runs/<run_id>/`. `lab.eval` combines runs into `results/eval/summary.json` and `gap.md`. The dashboard replays a saved day.

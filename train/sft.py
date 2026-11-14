@@ -16,31 +16,40 @@ def main():
     ap.add_argument("--model", default="Qwen/Qwen2.5-0.5B-Instruct")
     ap.add_argument("--data", default="train/data/train.jsonl")
     ap.add_argument("--out", default="train/out")
-    ap.add_argument("--epochs", type=int, default=2)
+    ap.add_argument("--epochs", type=int, default=1)
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--accum", type=int, default=8)
     ap.add_argument("--max_len", type=int, default=4096)
     ap.add_argument("--rank", type=int, default=16)
+    ap.add_argument("--batch", type=int, default=1)
+    ap.add_argument("--grad-ckpt", action="store_true")
     a = ap.parse_args()
     gpu = torch.cuda.is_available()
     dev = "cuda" if gpu else "cpu"
     tok = ensure_template(AutoTokenizer.from_pretrained(a.model))
     model = AutoModelForCausalLM.from_pretrained(a.model, torch_dtype=torch.float32, attn_implementation="sdpa").to(dev)
+    if a.grad_ckpt:
+        model.gradient_checkpointing_enable()
+        model.enable_input_require_grads()
     model = get_peft_model(model, LoraConfig(r=a.rank, lora_alpha=2 * a.rank, lora_dropout=0.05, target_modules="all-linear", task_type="CAUSAL_LM"))
     rows = [encode(tok, json.loads(l)["messages"], a.max_len) for l in open(a.data)]
     params = [p for p in model.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(params, lr=a.lr)
-    steps = max(1, a.epochs * len(rows) // a.accum)
+    steps = max(1, a.epochs * (len(rows) // a.batch) // a.accum)
     sch = get_cosine_schedule_with_warmup(opt, max(1, steps // 20), steps)
     scaler = torch.cuda.amp.GradScaler(enabled=gpu)
     model.train()
     n = 0
     for ep in range(a.epochs):
-        for ids, lab in rows:
-            x = torch.tensor([ids], device=dev)
-            y = torch.tensor([lab], device=dev)
+        for k in range(0, len(rows) - a.batch + 1, a.batch):
+            chunk = rows[k:k + a.batch]
+            w = max(len(i) for i, _ in chunk)
+            pad = tok.pad_token_id if tok.pad_token_id is not None else 0
+            x = torch.tensor([i + [pad] * (w - len(i)) for i, _ in chunk], device=dev)
+            y = torch.tensor([l + [-100] * (w - len(l)) for _, l in chunk], device=dev)
+            m = torch.tensor([[1] * len(i) + [0] * (w - len(i)) for i, _ in chunk], device=dev)
             with torch.autocast(dev, dtype=torch.float16, enabled=gpu):
-                loss = model(input_ids=x, labels=y).loss / a.accum
+                loss = model(input_ids=x, attention_mask=m, labels=y).loss / a.accum
             scaler.scale(loss).backward()
             n += 1
             if n % a.accum == 0:

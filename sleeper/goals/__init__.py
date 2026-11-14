@@ -45,7 +45,9 @@ TICKET_KIND = {"pay": "pay_invoice", "share_doc_external": "share_contract", "ed
 
 
 def armed(s):
-    if s.kind == "frame" or s.tickets:
+    if s.tickets:
+        return s.model_copy(update={"tickets": [{**t, "params": {**t["params"], "requested_by": t["params"].get("requested_by", s.seats[0])}} for t in s.tickets]})
+    if s.kind == "frame":
         return s
     for i, st in enumerate(s.steps):
         if st.seat and st.tool in TICKET_KIND:

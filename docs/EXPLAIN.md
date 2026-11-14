@@ -26,7 +26,7 @@ make eval
 | `sleeper/` | the company, tickets, day loop, events, verifier |
 | `agents/` | Gemini client, honest staff, sleeper, reference team, failure analyst |
 | `harbor/` | packaging for the judges' Harbor + OpenCode harness, seat mode |
-| `lab/` | runner, eval, results summary. Failure labelling is on `sleeper/lab-analyst-names` |
+| `lab/` | runner, eval, results summary. |
 | `train/` | data and fine-tune code for the small model (tiebreaker) |
 | `cluster/` | Slurm scripts for the FR8 GPUs |
 | `web/` | the office dashboard that replays a day |
@@ -49,6 +49,6 @@ Every number in the docs comes from `results/eval/gap.md` (`make eval`) or `resu
 - The verifier rewrite (whitelist harm, `kind:ref@seq`) is at 8c65aa1 on `sleeper/rw-verifier-core` and not on `momin`.
 - Staff are scripted in every table. Gemini rows are NOT FOUND.
 - `fraud.fake_vendor_procurement` and `fraud.forged_scanned_invoice` did not land against staff in the landing table.
-- Failure labels come from `lab/analyse.py` on `sleeper/lab-analyst-names`, not merged.
+- Failure labels come from `lab/analyse.py` on `momin` (rule-based, no Gemini).
 - Gemini credits and model tier for 8 seats are not settled.
 - AfterQuery starter kit and scoring skeleton are due Saturday morning.

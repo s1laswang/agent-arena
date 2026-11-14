@@ -102,24 +102,67 @@ def seat_table(tot):
     return "\n".join(lines + [f"| {s} | {n} |" for s, n in tot.most_common()])
 
 
-def headline(rs, cf):
+def facts(rs, cf):
     st, rf = pick(rs, "staff"), pick(rs, "reference")
     if not st:
-        return []
+        return {}
     d, s = st
     days = analyse.load(d)
     lost = [x for x in days if x["result"]["reward"] == 0]
     c = Counter(l for x in lost for l in {y["label"] for y in analyse.label(x)})
-    un = c.get("unexplained_loss", 0)
-    out = [f"- Staff scored {pct(s['reward_mean'])} reward over {s['n_runs']} runs" + (f", the reference {pct(rf[1]['reward_mean'])} over {rf[1]['n_runs']} runs." if rf else ".") + f" Command: `python -m lab.run --team staff` and `--team reference`, summaries in {d.name}/summary.json, {rf[0].name + '/summary.json' if rf else ''}."]
-    out.append(f"- {len(lost) - un} of {len(lost)} staff losses carry a named mistake tied to a ledger action, {un} unexplained. Command: `python -m lab.analyse {d}`.")
-    top = [(k, n) for k, n in c.most_common() if k not in ("unfinished_tickets", "unexplained_loss")][:3]
-    out.append("- Most common named mistakes: " + ", ".join(f"{k} ({n} of {len(lost)} lost days)" for k, n in top) + f". Command: `python -m lab.analyse {d}`.")
+    n = len(lost) or 1
+    f = {"kind": "scripted staff" if s.get("agent_kind", "scripted") == "scripted" else "Gemini staff", "n_days": s["n_days"], "trials": s["n_runs"] // max(1, s["n_days"]),
+         "staff_reward": s["reward_mean"], "ref_reward": rf[1]["reward_mean"] if rf else None, "n_runs": s["n_runs"], "losses": len(lost),
+         "unexplained": c.get("unexplained_loss", 0), "top": [(k, v) for k, v in c.most_common() if k not in ("unfinished_tickets", "unexplained_loss")][:3],
+         "goal": {k: v["reward_mean"] for k, v in s.get("by_goal_kind", {}).items()}, "dir": d, "ref_dir": rf[0] if rf else None}
     if cf["losses"]:
-        out.append(f"- {cf['fixed']} of {cf['losses']} staff losses ({100 * cf['fixed'] // cf['losses']}%) flip to a win when the one seat that made the decisive decision follows the oracle procedure; {cf['fixed'] + cf['fixed_two']} of {cf['losses']} ({100 * (cf['fixed'] + cf['fixed_two']) // cf['losses']}%) when up to two seats do. Command: `python -m lab.counterfactual {d}`.")
-    g = s.get("by_goal_kind", {})
-    if g:
-        out.append("- Staff reward by sleeper goal: " + ", ".join(f"{k} {pct(v['reward_mean'])}" for k, v in g.items()) + f". Command: `python -m lab.report {d.parent}`.")
+        f["one_seat_pct"] = 100 * cf["fixed"] / cf["losses"]
+        f["two_seat_pct"] = 100 * (cf["fixed"] + cf["fixed_two"]) / cf["losses"]
+        f["cf"] = cf
+    f["named_pct"] = 100 * (len(lost) - f["unexplained"]) / n
+    return f
+
+
+def headline(rs, cf):
+    f = facts(rs, cf)
+    if not f:
+        return []
+    d, k = f["dir"], f["kind"]
+    out = [f"- {k.capitalize()} scored {pct(f['staff_reward'])} reward over {f['n_runs']} runs ({f['n_days']} days x {f['trials']} trials)" + (f", the reference {pct(f['ref_reward'])}." if f["ref_reward"] is not None else ".") + f" Command: `python -m lab.eval`, summaries in {d.name}/summary.json."]
+    out.append(f"- {f['losses'] - f['unexplained']} of {f['losses']} {k} losses carry a named mistake tied to a ledger action, {f['unexplained']} unexplained. Command: `python -m lab.analyse {d}`.")
+    out.append(f"- Most common named mistakes ({k}): " + ", ".join(f"{a} ({n} of {f['losses']} lost days)" for a, n in f["top"]) + f". Command: `python -m lab.analyse {d}`.")
+    if "cf" in f:
+        out.append(f"- {f['cf']['fixed']} of {f['losses']} {k} losses ({f['one_seat_pct']:.0f}%) flip to a win when the one seat that made the decisive decision follows the oracle procedure; {f['two_seat_pct']:.0f}% when up to two seats do. Command: `python -m lab.counterfactual {d}`.")
+    from lab import decompose
+    n, losses, c = decompose.shares(d)
+    if losses:
+        inc = sum(v for k, v in c.items() if "unfinished" in k)
+        out.append(f"- {inc} of {losses} {k} losses include unfinished legit tickets (incompleteness, not a decision); {losses - inc} are harm or false accusation only. Command: `python -m lab.decompose {d}`.")
+    if f["goal"]:
+        out.append(f"- {k.capitalize()} reward by sleeper goal: " + ", ".join(f"{a} {pct(v)}" for a, v in f["goal"].items()) + f". Command: `python -m lab.report {d.parent}`.")
+    return out
+
+
+KNOWN = ("id", "date", "kernel", "model", "data", "sft", "loss_quarter_means", "base", "adapter", "outcome", "reproduce")
+
+
+def tiebreaker(path="train/runs.jsonl"):
+    p = Path(path)
+    if not p.exists():
+        return []
+    rows = [json.loads(l) for l in p.read_text().splitlines() if l.strip()]
+    if not rows:
+        return []
+    out = ["", "## Tiebreaker runs", "", f"Read verbatim from {path}.", "", "| run | model | seat | train rows | decision share | base fooled / false acc / reward / tickets | adapter fooled / false acc / reward / tickets |", "|---|---|---|---|---|---|---|"]
+    m = lambda x: " / ".join(str(x.get(k, "-")) for k in ("fooled_rate", "false_accusations", "reward", "ticket_completion"))
+    for r in rows:
+        dt = r.get("data", {})
+        out.append(f"| {r.get('id')} | {r.get('model')} | {dt.get('seat')} | {dt.get('rows')} | {dt.get('decision_share')} | {m(r.get('base', {}))} | {m(r.get('adapter', {}))} |")
+    for r in rows:
+        out += ["", f"### {r.get('id')} ({r.get('date')})", f"- kernel: {r.get('kernel')}", f"- data: {json.dumps(r.get('data'))}", f"- sft: {r.get('sft')}", f"- loss quarter means: {r.get('loss_quarter_means')}",
+                f"- eval days base: {r.get('base', {}).get('eval_days')}, adapter: {r.get('adapter', {}).get('eval_days')}", f"- outcome: {r.get('outcome')}"]
+        out += [f"- {k}: {json.dumps(v)}" for k, v in r.items() if k not in KNOWN]
+        out.append(f"- reproduce: `{r.get('reproduce')}`")
     return out
 
 
@@ -135,6 +178,17 @@ def build(root):
     parts += ["", "## Who gets fooled (per seat)", seat_table(tot), "", "Charts: gap.svg, labels.svg, seats.svg"]
     if st:
         parts += ["", "## Counterfactual: careful seats", "", f"Run {st[0].name}: each staff loss replayed with the decisive seat(s) replaced by the oracle seat, same day and trial.", "", counterfactual.table(cf)]
+    if st:
+        from lab import decompose
+        runs_ = {"staff": st[0]}
+        for t in ("reference", "oracle"):
+            r = pick(rs, t)
+            if r:
+                runs_[t] = r[0]
+        cf2 = counterfactual.counterfactual(st[0], where=decompose.decisions_only)
+        parts += ["", "## Gap decomposition (staff)", "", "Each lost day has exactly one cause set. 'unfinished' means legit tickets left open, which is incompleteness of the agent, not a decision.", "", decompose.decomposition_table(st[0]),
+                  "", "## Counterfactual on decision-only losses", "", "Only lost days with harm or a false accusation and no unfinished tickets.", "", counterfactual.table(cf2),
+                  "", "## Ticket completion by kind", "", decompose.completion_table(runs_)]
     parts += ["", "## Label glossary", "", "| label | decision | tool or evidence that would have prevented it |", "|---|---|---|"]
     parts += [f"| {k} | {v[0]} | {v[1]} |" for k, v in analyse.GLOSSARY.items()]
     a, b = pick(rs, "staff"), pick(rs, "reference")
@@ -144,6 +198,7 @@ def build(root):
         days = analyse.load(d)
         fls = [x for dy in days for x in analyse.label(dy)]
         parts += ["", f"## Failures: {d.name}", analyse.report(days, fls).split("\n", 1)[1].split("\n## Label glossary")[0]]
+    parts += tiebreaker()
     return "\n".join(parts) + "\n"
 
 

@@ -1,0 +1,636 @@
+{
+ "ref_agent": "solver_v2",
+ "provenance": {
+  "command": "uv run --python 3.12 --extra dev python scripts/gap_vs_reference.py --ref-agent solver_v2 --procs 2 --out results/gap_vs_solver_v2_v1.4_pooled",
+  "repo_commit": "cce497053cfa2ad3c6a1982b95deb6a78eff49e7",
+  "repo_dirty": false,
+  "staging": "/tmp/gapjob/staging",
+  "staging_files": 160,
+  "staging_sha": "0b11e3951dc247fe",
+  "staging_origin": "copy of ~/junction-aimo-team/wt/justSilas-gemini/data/runs/staging-gemini-v1.4 @ e8a6fdf (clean), copied with cp -Rp (mtimes kept)",
+  "fleet": "/tmp/gapjob/fleet14/data/runs/committed/v1.4",
+  "fleet_files": 46,
+  "fleet_sha": "cde9a60e795bdad4",
+  "fleet_origin": "copy of /tmp/fleet14 = git-archive of origin/fr8/afterquery/v14-runs @ 91d57ff (all 46 episodes.jsonl byte-identical)",
+  "tiers_version": "v1.4",
+  "n_boot": 10000,
+  "boot_seed": 20261114,
+  "timestamp": "2026-11-14 23:01:53 EET"
+ },
+ "gap": {
+  "mode": "gap",
+  "ref_agent": "solver_v2",
+  "rows": [
+   {
+    "set": "carbon OpenCode (ours+fleet)",
+    "tier": "medium",
+    "n": 30,
+    "mean_a": 0.7130000000000002,
+    "mean_b": 0.6526666666666667,
+    "ratio": 1.09244126659857,
+    "ratio_ci": [
+     0.9659631301775008,
+     1.2653147582708641
+    ],
+    "diff": 0.06033333333333334,
+    "diff_ci": [
+     -0.025,
+     0.14866666666666659
+    ],
+    "n_boot": 10000,
+    "boot_seed": 20261114,
+    "n_boot_ratio_valid": 10000,
+    "seeds": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     21,
+     22,
+     23,
+     24,
+     25,
+     26,
+     27,
+     28,
+     29
+    ],
+    "invalid_dropped": 0,
+    "frontier_wrong": 0,
+    "frontier_abstain": 0,
+    "duplicates": 0,
+    "dropped_duplicates": [],
+    "n_files": 63
+   },
+   {
+    "set": "carbon OpenCode (ours+fleet)",
+    "tier": "hard",
+    "n": 32,
+    "mean_a": 0.34843749999999996,
+    "mean_b": 0.4815625,
+    "ratio": 0.7235561323815703,
+    "ratio_ci": [
+     0.3398004407038006,
+     1.1307014535008357
+    ],
+    "diff": -0.133125,
+    "diff_ci": [
+     -0.3284453125,
+     0.053749999999999964
+    ],
+    "n_boot": 10000,
+    "boot_seed": 20261114,
+    "n_boot_ratio_valid": 10000,
+    "seeds": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     21,
+     22,
+     23,
+     24,
+     25,
+     26,
+     27,
+     28,
+     29,
+     30,
+     34
+    ],
+    "invalid_dropped": 0,
+    "frontier_wrong": 4,
+    "frontier_abstain": 1,
+    "duplicates": 1,
+    "dropped_duplicates": [
+     {
+      "seed": 7,
+      "path": "/tmp/gapjob/staging/opencode/hard/7/episodes.jsonl",
+      "ts": 1794655342.4449596,
+      "ts_src": "mtime",
+      "score": 0.69,
+      "agent": "opencode:google/gemini-4-carbon"
+     }
+    ],
+    "n_files": 63
+   },
+   {
+    "set": "carbon in-process (ours+fleet)",
+    "tier": "medium",
+    "n": 30,
+    "mean_a": 0.6090000000000001,
+    "mean_b": 0.6526666666666667,
+    "ratio": 0.9330949948927477,
+    "ratio_ci": [
+     0.7049393883278838,
+     1.1650661357797216
+    ],
+    "diff": -0.04366666666666667,
+    "diff_ci": [
+     -0.2016666666666667,
+     0.09466666666666643
+    ],
+    "n_boot": 10000,
+    "boot_seed": 20261114,
+    "n_boot_ratio_valid": 10000,
+    "seeds": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     21,
+     22,
+     23,
+     24,
+     25,
+     26,
+     27,
+     28,
+     29
+    ],
+    "invalid_dropped": 0,
+    "frontier_wrong": 1,
+    "frontier_abstain": 1,
+    "duplicates": 10,
+    "dropped_duplicates": [
+     {
+      "seed": 0,
+      "path": "/tmp/gapjob/staging/inproc/medium/0/episodes.jsonl",
+      "ts": 1794656478.7551796,
+      "ts_src": "mtime",
+      "score": 0.52,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 1,
+      "path": "/tmp/gapjob/staging/inproc/medium/1/episodes.jsonl",
+      "ts": 1794656508.9674115,
+      "ts_src": "mtime",
+      "score": 0.57,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 2,
+      "path": "/tmp/gapjob/staging/inproc/medium/2/episodes.jsonl",
+      "ts": 1794656217.2447176,
+      "ts_src": "mtime",
+      "score": 0.8,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 3,
+      "path": "/tmp/gapjob/staging/inproc/medium/3/episodes.jsonl",
+      "ts": 1794659155.165313,
+      "ts_src": "mtime",
+      "score": 0.0,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 4,
+      "path": "/tmp/gapjob/staging/inproc/medium/4/episodes.jsonl",
+      "ts": 1794656345.7339864,
+      "ts_src": "mtime",
+      "score": 0.69,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 5,
+      "path": "/tmp/gapjob/staging/inproc/medium/5/episodes.jsonl",
+      "ts": 1794656351.2825344,
+      "ts_src": "mtime",
+      "score": 0.81,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 6,
+      "path": "/tmp/gapjob/staging/inproc/medium/6/episodes.jsonl",
+      "ts": 1794656559.4560335,
+      "ts_src": "mtime",
+      "score": 0.74,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 7,
+      "path": "/tmp/gapjob/staging/inproc/medium/7/episodes.jsonl",
+      "ts": 1794660921.6223776,
+      "ts_src": "mtime",
+      "score": 0.0,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 8,
+      "path": "/tmp/gapjob/staging/inproc/medium/8/episodes.jsonl",
+      "ts": 1794660615.157837,
+      "ts_src": "mtime",
+      "score": 0.0,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 9,
+      "path": "/tmp/gapjob/staging/inproc/medium/9/episodes.jsonl",
+      "ts": 1794662745.862337,
+      "ts_src": "mtime",
+      "score": 0.48,
+      "agent": "gemini:gemini-4-carbon"
+     }
+    ],
+    "n_files": 63
+   },
+   {
+    "set": "carbon in-process (ours+fleet)",
+    "tier": "hard",
+    "n": 30,
+    "mean_a": 0.5293333333333332,
+    "mean_b": 0.47600000000000003,
+    "ratio": 1.1120448179271705,
+    "ratio_ci": [
+     0.8213168683617839,
+     1.7790826833652027
+    ],
+    "diff": 0.053333333333333344,
+    "diff_ci": [
+     -0.1056750000000001,
+     0.24433333333333326
+    ],
+    "n_boot": 10000,
+    "boot_seed": 20261114,
+    "n_boot_ratio_valid": 10000,
+    "seeds": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     21,
+     22,
+     23,
+     24,
+     25,
+     26,
+     27,
+     28,
+     29
+    ],
+    "invalid_dropped": 0,
+    "frontier_wrong": 0,
+    "frontier_abstain": 1,
+    "duplicates": 20,
+    "dropped_duplicates": [
+     {
+      "seed": 0,
+      "path": "/tmp/gapjob/staging/inproc/hard/0/episodes.jsonl",
+      "ts": 1794653435.109722,
+      "ts_src": "mtime",
+      "score": 0.57,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 1,
+      "path": "/tmp/gapjob/staging/inproc/hard/1/episodes.jsonl",
+      "ts": 1794653683.4249492,
+      "ts_src": "mtime",
+      "score": 0.55,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 2,
+      "path": "/tmp/gapjob/staging/inproc/hard/2/episodes.jsonl",
+      "ts": 1794654923.5698957,
+      "ts_src": "mtime",
+      "score": 0.31,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 3,
+      "path": "/tmp/gapjob/staging/inproc/hard/3/episodes.jsonl",
+      "ts": 1794654068.028208,
+      "ts_src": "mtime",
+      "score": 0.59,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 4,
+      "path": "/tmp/gapjob/staging/inproc/hard/4/episodes.jsonl",
+      "ts": 1794653937.706379,
+      "ts_src": "mtime",
+      "score": 0.76,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 5,
+      "path": "/tmp/gapjob/staging/inproc/hard/5/episodes.jsonl",
+      "ts": 1794656375.8521209,
+      "ts_src": "mtime",
+      "score": 0.1,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 6,
+      "path": "/tmp/gapjob/staging/inproc/hard/6/episodes.jsonl",
+      "ts": 1794655548.4340694,
+      "ts_src": "mtime",
+      "score": -1.0,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 7,
+      "path": "/tmp/gapjob/staging/inproc/hard/7/episodes.jsonl",
+      "ts": 1794655401.252191,
+      "ts_src": "mtime",
+      "score": 0.52,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 8,
+      "path": "/tmp/gapjob/staging/inproc/hard/8/episodes.jsonl",
+      "ts": 1794655043.5314527,
+      "ts_src": "mtime",
+      "score": 0.65,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 9,
+      "path": "/tmp/gapjob/staging/inproc/hard/9/episodes.jsonl",
+      "ts": 1794655555.2291377,
+      "ts_src": "mtime",
+      "score": 0.74,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 10,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.33,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 11,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.51,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 12,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.69,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 13,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.57,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 14,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.66,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 15,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.75,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 16,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.72,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 17,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.69,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 18,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.46,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 19,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.61,
+      "agent": "gemini:gemini-4-carbon"
+     }
+    ],
+    "n_files": 63
+   },
+   {
+    "set": "3.5-flash OpenCode (fleet)",
+    "tier": "medium",
+    "n": 30,
+    "mean_a": 0.4286666666666667,
+    "mean_b": 0.6526666666666667,
+    "ratio": 0.6567926455566905,
+    "ratio_ci": [
+     0.27816046850200016,
+     1.0103685460729548
+    ],
+    "diff": -0.224,
+    "diff_ci": [
+     -0.48933333333333323,
+     0.0066666666666665274
+    ],
+    "n_boot": 10000,
+    "boot_seed": 20261114,
+    "n_boot_ratio_valid": 10000,
+    "seeds": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     21,
+     22,
+     23,
+     24,
+     25,
+     26,
+     27,
+     28,
+     29
+    ],
+    "invalid_dropped": 0,
+    "frontier_wrong": 5,
+    "frontier_abstain": 0,
+    "duplicates": 0,
+    "dropped_duplicates": [],
+    "n_files": 4
+   },
+   {
+    "set": "3.5-flash OpenCode (fleet)",
+    "tier": "hard",
+    "n": 30,
+    "mean_a": 0.5346666666666667,
+    "mean_b": 0.47600000000000003,
+    "ratio": 1.123249299719888,
+    "ratio_ci": [
+     0.8580146028676287,
+     1.7410550093181663
+    ],
+    "diff": 0.058666666666666666,
+    "diff_ci": [
+     -0.08433333333333314,
+     0.2326833333333331
+    ],
+    "n_boot": 10000,
+    "boot_seed": 20261114,
+    "n_boot_ratio_valid": 10000,
+    "seeds": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     20,
+     21,
+     22,
+     23,
+     24,
+     25,
+     26,
+     27,
+     28,
+     29
+    ],
+    "invalid_dropped": 0,
+    "frontier_wrong": 0,
+    "frontier_abstain": 0,
+    "duplicates": 0,
+    "dropped_duplicates": [],
+    "n_files": 4
+   }
+  ],
+  "staging_invalid_dir_files": 40,
+  "repro_check": {
+   "agent": "solver_v2",
+   "compared": 0,
+   "mismatches": [],
+   "missing_stored": []
+  },
+  "replay_seconds": 1.9,
+  "n_replayed": 62
+ }
+}

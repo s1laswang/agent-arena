@@ -25,12 +25,12 @@ from .fitness import make_env
 from .mutate import default_strategy_json
 
 
-def load_moles(hof_path: str, top: int) -> list[tuple[str, dict, dict]]:
+def load_moles(hof_path: str, top: int, include_default: bool = True) -> list[tuple[str, dict, dict]]:
     moles = [("default", default_strategy_json(), {})]
     rows = [json.loads(l) for l in Path(hof_path).read_text().splitlines() if l.strip()]
     seen = set()
     for h in rows:
-        if len(moles) > top:
+        if len(moles) > top:  # (default counted at index 0)
             break
         sig = json.dumps([h.get("fitness"), h.get("solver_score"), h.get("per_investigator")], sort_keys=True)
         if sig in seen:  # behaviourally identical on the forge seeds (e.g. dead rules): skip, save budget
@@ -38,7 +38,7 @@ def load_moles(hof_path: str, top: int) -> list[tuple[str, dict, dict]]:
         seen.add(sig)
         moles.append((f"hof{h.get('rank', len(moles))}", h["strategy_json"],
                       {k: h.get(k) for k in ("fitness", "solver_score", "per_investigator")}))
-    return moles
+    return moles if include_default else moles[1:]
 
 
 def _episode(name, strat, seed, agent, tier, client_factory):
@@ -104,9 +104,10 @@ def main(argv=None, client_factory=None):
     ap.add_argument("--tier", default="hard")
     ap.add_argument("--budget", type=float, default=25.0)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--no-default", action="store_true", help="skip the default-mole arm")
     ap.add_argument("--parallel", type=int, default=2, help="concurrent episodes (rate limits)")
     a = ap.parse_args(argv)
-    rep = validate(load_moles(a.hof, a.top), a.agent, parse_seeds(a.seeds), a.tier, a.budget, client_factory,
+    rep = validate(load_moles(a.hof, a.top, not a.no_default), a.agent, parse_seeds(a.seeds), a.tier, a.budget, client_factory,
                    parallel=a.parallel)
     out = Path(a.out) if a.out else Path(a.hof).with_name(f"validate_{a.agent.replace(':', '_')}_{a.tier}.json")
     out.write_text(json.dumps(rep, indent=1))

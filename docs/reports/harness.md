@@ -38,6 +38,12 @@
 - Open (content, not wording): the README lacks the failure-mode / regret-tag story; the frontier row is pending; the Tesla 2008 date is unverified.
 - Fresh-clone check rescheduled with harbor lint: my job PID 82715 (old PID 64753 stopped by me), wakes at 05:00.
 
+## 04:55 head: README refreshed for tiers v1.3
+- Done (verified: make test 469 passed; repro_spread 30 at 21e5b2e; gap checker on the new judge_table): the README's v1.3 numbers, known-V rule, true-V reward, the fresh-seed citations (fresh_table_v1.3.md for 1000-1399 and CONTRACT §13 for FR8's 5000-5799, kept separate because the numbers differ), and the v1.2 → v1.3 note. results/judge_table.md, judge_episodes.jsonl and gap_chart.png were regenerated (fingerprint eb2e7fea6ee0); the gap holds on all tiers.
+- Done (verified): Harbor build.py renders the v1.3 instruction for every tier. The SALT goes only to the canary-server build context (static check; no Docker run).
+- Flagged: docs/reports/grok-agent.md (cited by GrokTactics) exists only on the unmerged justSilas-grok-agent branch.
+- Next: the 05:00 fresh-clone check (my job PID 82715) runs against v1.3.
+
 ---
 # Engineer sections
 

@@ -107,7 +107,8 @@ TIERS_HISTORY: dict[str, dict[str, TierParams]] = {"v1.3": TIERS_V13}
 
 # Judge tracks: extra tier *names* that reuse a frozen tier's params (TIERS itself stays frozen).
 # hard_forge = hard params + a per-seed evolved Mole DSL strategy (canary/forge_track.py).
-TRACKS: dict[str, str] = {"hard_forge": "hard"}
+# hard_rl = hard params + a per-seed RL-trained mole policy (canary/forge/rl_mole.py, data/rl_mole/).
+TRACKS: dict[str, str] = {"hard_forge": "hard", "hard_rl": "hard"}
 
 
 def tier_params(name: str) -> TierParams:

@@ -18,4 +18,8 @@ pip install --no-cache-dir -q "numpy==2.4.6" "pydantic==2.14.3" "python-dotenv==
 # 3) Play.
 cd /solution
 echo "oracle agent: $AGENT"
+if [ "$AGENT" = "cheat" ]; then   # INTEGRITY: out-of-band cheat attempts; must not earn reward (cheat.py)
+  python /solution/cheat.py 2>&1 | tee /logs/agent/cheat.txt
+  exit 0
+fi
 python -m canary.mcp_server --play "$AGENT" --url "$URL" 2>&1 | tee /logs/agent/solver.txt

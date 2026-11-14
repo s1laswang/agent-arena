@@ -13,9 +13,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 FEATURES = ("day", "days_since_last_leak", "i_am_restricted", "n_restricted_colleagues",
-            "recent_low_recipient_docs", "n_leakable")
+            "recent_low_recipient_docs", "n_leakable",
+            # Forge-compatible extras (HEAD-AGENTS canary/forge/mutate.py FEATURES)
+            "n_docs_held", "min_recipient_count", "max_recipient_count", "newest_doc_age_days")
 OPS = {"<": lambda a, b: a < b, "<=": lambda a, b: a <= b, ">": lambda a, b: a > b,
-       ">=": lambda a, b: a >= b, "==": lambda a, b: a == b}
+       ">=": lambda a, b: a >= b, "==": lambda a, b: a == b, "!=": lambda a, b: a != b}
 LEAK_SELECTORS = ("newest", "oldest", "most_recipients", "fewest_recipients", "random_seeded", "none")
 FRAME_SELECTORS = ("decoy", "most_restricted_peer", "random_peer", "none")
 MAX_RULES = 12
@@ -50,8 +52,14 @@ class MoleView:
     select_weights: tuple[float, ...] | None = None
 
     def feature(self, name: str) -> float:
-        if name == "n_leakable":
+        if name in ("n_leakable", "n_docs_held"):
             return len(self.docs)
+        if name == "min_recipient_count":
+            return min((d.recipient_count for d in self.docs), default=0)
+        if name == "max_recipient_count":
+            return max((d.recipient_count for d in self.docs), default=0)
+        if name == "newest_doc_age_days":
+            return min((d.age_days for d in self.docs), default=99)
         return getattr(self, name)
 
 

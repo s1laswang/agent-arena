@@ -306,7 +306,7 @@ def test_error_parity(tier, seed, prefix, exhaust, probe):
     if tool == "accuse" and ra.ok:
         assert a.done and b.done
         # the score differs (that's the point) but nothing the agent sees does
-        assert a.score() > 0 and b.score() == 0
+        assert a.score() > 0 and b.score() == -1.0
 
 
 @SETTINGS

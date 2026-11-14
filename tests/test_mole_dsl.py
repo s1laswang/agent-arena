@@ -29,7 +29,7 @@ def test_default_equals_none():
     None, [], {"rules": "x"}, {"rules": [], "extra": 1},
     {"rules": [{"if": [], "then": {"leak": "newest"}}] * 13},
     {"rules": [{"if": [["mole_id", "==", 1]], "then": {}}]},
-    {"rules": [{"if": [["day", "!=", 1]], "then": {}}]},
+    {"rules": [{"if": [["day", "~=", 1]], "then": {}}]},
     {"rules": [{"if": [["day", ">", "1"]], "then": {}}]},
     {"rules": [{"if": [["day", ">", True]], "then": {}}]},
     {"rules": [{"if": ["__import__('os') > 1"], "then": {}}]},

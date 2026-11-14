@@ -32,7 +32,7 @@ def canonical(strategy: dict) -> str:
 
 
 def _local_validate(obj: Any) -> dict:
-    if not isinstance(obj, dict) or set(obj) - {"rules", "default"}:
+    if not isinstance(obj, dict) or set(obj) - {"rules", "default", "name"}:
         raise ValueError("strategy must be an object with keys rules, default")
     rules = obj.get("rules", [])
     if not isinstance(rules, list) or len(rules) > MAX_RULES:

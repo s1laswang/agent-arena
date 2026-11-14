@@ -55,9 +55,9 @@ def test_accuse_twice_only_first_counts():
     mole = true_mole(env)
     inn = next(i for i in ids if i != mole)
     r1 = env.call("accuse", {"employee": inn})
-    assert r1.ok and env.done and env.score() == 0
+    assert r1.ok and env.done and env.score() == -1.0
     r2 = env.call("accuse", {"employee": mole})
-    assert not r2.ok and env.score() == 0
+    assert not r2.ok and env.score() == -1.0
     assert sum(1 for e in env.ledger() if e.event == "accused") == 1
 
 

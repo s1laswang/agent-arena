@@ -30,17 +30,18 @@ class ReplayMiss(RuntimeError):
 
 
 def sdk_client():
-    """google-genai client: G1's gateway-aware factory when present, else a plain client from .env."""
-    try:
-        from canary.gemini.sdk import genai_client  # type: ignore
-        return genai_client()
-    except ImportError:
-        pass
+    """google-genai client on API v1beta (google-genai 3.x defaults to v1, where cachedContents is a bare 404).
+    Goes through the Canary Lab gateway (G1's canary.gemini.sdk) when GEMINI_GATEWAY_URL is set."""
     from google import genai
     from google.genai import types
-
+    try:
+        from canary.gemini.sdk import gateway_http_options, gateway_token  # type: ignore
+        opts = gateway_http_options(900)
+        if opts:
+            return genai.Client(api_key=gateway_token(), http_options=types.HttpOptions(**opts, api_version="v1beta"))
+    except ImportError:
+        pass
     from canary.llm.base import require_key
-    # api_version v1beta: google-genai 3.x defaults to v1, where cachedContents returns a bare 404
     return genai.Client(api_key=require_key("GEMINI_API_KEY"),
                         http_options=types.HttpOptions(timeout=900_000, api_version="v1beta"))
 

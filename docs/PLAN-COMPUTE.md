@@ -2,7 +2,7 @@
 
 **Revision 00:25 (reality check):** Verda has had near-zero capacity all night, so the 4 A100s don't exist.
 - Held: H100 (v3-4k s0, then v3-8k s0) and one A100-80G spot (v3-8k s1).
-- S7's 7B pipeline runs on 3 FR8 V100s *if Momin frees them* (Silas is asking). Otherwise S7 is dropped and the tiebreaker is v3-4k plus v3-8k (2 seeds).
+- **00:50: S7 is dropped on FR8.** FR8 has no disk (/home 98% full), no vLLM on Volta and no free cores. S7 runs only if Verda A100s appear by 02:00. The tiebreaker is v3-4k plus v3-8k (2 seeds).
 - Meta's A100 waits for Verda capacity.
 - The tables below are the original plan.
 

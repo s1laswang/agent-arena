@@ -141,7 +141,7 @@ async function init(){
   const q=new URLSearchParams(location.search);
   if(+q.get("speed")>0)speed=+q.get("speed");
   const man=q.get("day")?[]:await (await fetch("days/index.json")).json();
-  const other=r=>["procedure","oracle"].map(t=>man.find(o=>o.seed===r.seed&&o.team===t)).find(Boolean);
+  const other=r=>["procedure","oracle"].map(t=>man.find(o=>o.seed===r.seed&&o.team===t&&(t!=="procedure"||o.reward===1))).find(Boolean);
   const pair=man.find(r=>r.team==="staff"&&other(r));
   const ids=q.get("day")?[q.get("day")]:pair?[pair.id,other(pair).id]:[man[0].id];
   if(q.get("vs"))ids.push(q.get("vs"));

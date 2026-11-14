@@ -30,3 +30,15 @@
 - AGENTS: default frontier model is gpt-5.5 (probed); exact model ids are recorded in meta.json.
 - FR8: partition normal is congested (orthodim array; compute06 is mix- planned), so CPU work moves to the Mac.
 - GPU: Silas authorised pausing one sky run. Worst = 43143_4 (w0625-c1, best mAP50-95 0.484; the others are 0.51-0.56). sky_yolo.py resumes from last.pt, so `scontrol requeuehold 43143_4` = pause; `scontrol release 43143_4` resumes. The CEO executes it when FR8 submits J4.
+
+## 03:35 GAP ALERT -> contract v0.4
+- AGENTS: gpt-5.5 (in-process, real Env, no hints) on medium seeds 0-1 scores 0.795 vs solver 0.775 (103%). It uses canary bisection, which is a well-known algorithm. Solver over medium seeds 0-9: 0.777 +/- 0.046; heuristic 0.496. Confirmation run (10 medium + hard) in progress.
+- Decision, v0.4 (additive, documented):
+  - `fingerprint_accuracy`: a leaked canary variant is reported correctly with probability q, else a random other variant (hard 0.8, medium 0.9);
+  - higher leak_damage (0.06-0.08);
+  - actions_per_day 5;
+  - careful mole + delay 1-3 in medium.
+  - Rationale: the gap must come from Bayesian accumulation of noisy, delayed evidence plus the -1 penalty, not from knowing the canary trap.
+- Story: medium = "fair tier, frontier ~ reference"; the headline gap is on hard + Forge-evolved moles (difficulty curve).
+- FR8 J1 sweeps fingerprint_accuracy x leak_damage. J5 forge (stub) runs pop 24 x 500 gens; its moles must be re-validated after the freeze.
+- OpenCode login only accepts gpt-5.6-sol, so it is used for the harness-shape runs (labelled). Morning: Silas adds OpenCode API-key auth for gpt-5.5 parity.

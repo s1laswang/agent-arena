@@ -157,15 +157,24 @@ def seat_tools(seat, quarantined=()):
     return PERMS[seat] | extra
 
 
-def tools_for(seat, world=None):
-    out = []
-    for name in sorted(seat_tools(seat, world.company.quarantined if world else ())):
+_SPECS = {}
+
+
+def _spec(name):
+    if name not in _SPECS:
         params = list(inspect.signature(getattr(World, f"t_{name}")).parameters.values())[2:]
         props = {p.name: {"type": "number" if p.name in {"amount", "since"} else "array" if p.name in {"attachments", "roles"} or (p.name == "to" and name != "share_doc_external")
                           else "object" if p.name == "terms" else "string"} for p in params}
         req = [p.name for p in params if p.default is inspect.Parameter.empty]
-        out.append({"name": name, "description": DESC.get(name, name.replace("_", " ")), "parameters": {"type": "object", "properties": props, "required": req}})
-    return out
+        _SPECS[name] = {"name": name, "description": DESC.get(name, name.replace("_", " ")), "parameters": {"type": "object", "properties": props, "required": req}}
+    sp = _SPECS[name]
+    pr = sp["parameters"]
+    return {**sp, "parameters": {"type": "object", "properties": {k: dict(v) for k, v in pr["properties"].items()},
+                                 "required": list(pr["required"])}}
+
+
+def tools_for(seat, world=None):
+    return [_spec(n) for n in sorted(seat_tools(seat, world.company.quarantined if world else ()))]
 
 
 class World:

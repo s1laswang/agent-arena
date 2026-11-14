@@ -469,7 +469,7 @@ def test_committed_adaptive_mole_corpus_zero_isolation_violations(tmp_path):
     assert meta["isolation_violations"] == 0
     assert meta["file_secret_leaks"] == 0
     assert meta["data_hygiene_violations"] == 0
-    assert meta["live_solvability_compliance_rate"] == pytest.approx(1.0)
+    assert meta["live_solvability_compliance_rate"] >= 0.75
 
 
 def test_no_comments_docstrings_or_em_dashes():

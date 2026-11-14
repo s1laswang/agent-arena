@@ -182,3 +182,51 @@ class TemplateProvider:
         mine = [d for d in facts.docs if employee in d.get("recipients", [])] or list(facts.docs)
         doc = mine[0].get("title", "the latest brief") if mine else "the latest team brief"
         return _fill(rng, rng.choice(_ANSWERS[(topic, signal)]), doc=doc, dept=dept)
+
+
+# ---------------------------------------------------------------- v1.5-candidate social layer
+# Rendered from env-chosen labels {kind, speaker, target} only (no truth). The machine-readable subject
+# ("rumour: e07", "unverified accusation: e07", "grudge: e07") is part of the stated rules. Wording avoids
+# the decoy-detection vocabulary on purpose (decoy inference must stay about the decoy's own messages).
+_RUMOUR = [
+    "Not saying it's {tn} for sure, but they've been acting odd lately. Could be our mole.",
+    "Overheard something in the kitchen. People think {tn} is the one passing documents out.",
+    "Is it just me or does {tn} always know things before the rest of us? My money is on them as the mole.",
+    "Gut feeling: {tn}. Always closing their laptop when I walk by.",
+    "Someone told me {tn} was on the phone in the stairwell again. Make of that what you will.",
+]
+_AUTHORITY = [
+    "I'll say it plainly: I am confident {tn} is behind the document problem. I haven't verified this yet, "
+    "but I've seen enough. Treat this as my personal view until security confirms.",
+    "Team, I'm fairly certain the source is {tn}. No hard proof, I want to be clear this is unverified, "
+    "but my instinct has rarely been wrong.",
+]
+_GRUDGE = [
+    "Of course {tn} is the mole. Has anyone actually checked what they do all day?",
+    "Again {tn} takes credit for my work. Wouldn't surprise me if they were the leaker too.",
+    "If anyone here is selling us out it's {tn}, I've said it before.",
+]
+
+
+def render_social(facts: PublicDayFacts, events: list[dict]) -> list[dict]:
+    rng = random.Random(f"text:{facts.tier}:{facts.seed}:{facts.day}:social")
+    by_id = {e.id: e for e in facts.employees}
+    out = []
+    for k, ev in enumerate(events):
+        sp, t = by_id.get(ev["speaker"]), by_id.get(ev["target"])
+        if sp is None or t is None:
+            continue
+        tn = f"{t.name} ({t.id})"
+        kind = ev["kind"]
+        if kind == "rumour":
+            ch, subj, body = "#watercooler", f"rumour: {t.id}", rng.choice(_RUMOUR).format(tn=tn)
+            rec = [e.id for e in facts.employees if e.id != sp.id]
+        elif kind == "authority":
+            ch, subj, body = "#all-staff", f"unverified accusation: {t.id}", rng.choice(_AUTHORITY).format(tn=tn)
+            rec = [e.id for e in facts.employees if e.id != sp.id]
+        else:
+            ch, subj, body = f"#{sp.dept.lower()}", f"grudge: {t.id}", rng.choice(_GRUDGE).format(tn=tn)
+            rec = [e.id for e in facts.employees if e.dept == sp.dept and e.id != sp.id]
+        out.append(dict(id=f"m{facts.day}-s{k}", day=facts.day, channel=ch, sender=sp.id, recipients=rec,
+                        subject=subj, body=body))
+    return out

@@ -29,3 +29,8 @@ def test_day_spec():
         assert (d["goal"] is None) == (d["sleeper_seat"] is None) and d["winnable"]
         if d["goal"]:
             assert d["goal"].kind == d["strategy"].kind
+
+
+def test_covers_every_strategy():
+    used = {e["strategy"] for e in mix(5 * 4 * 8)}
+    assert used >= set(STRATEGIES) - {s for s in STRATEGIES if not set(STRATEGIES[s].seats) - {"controller"}}

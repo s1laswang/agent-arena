@@ -1,0 +1,782 @@
+{
+ "generated_at": "2026-11-14T21:30:00+02:00",
+ "git_sha": "fixture",
+ "ledger_run_ids": [
+  "ladder-*"
+ ],
+ "synthetic": true,
+ "solver": {
+  "medium": 0.633,
+  "hard": 0.556
+ },
+ "cells": [
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "minimal",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.061,
+   "solver_mean": 0.633,
+   "pct_solver": 0.096,
+   "pct_solver_ci95": [
+    -0.024,
+    0.216
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.572
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "low",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.122,
+   "solver_mean": 0.633,
+   "pct_solver": 0.193,
+   "pct_solver_ci95": [
+    0.073,
+    0.313
+   ],
+   "thinking_tokens_per_episode": 65000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.511
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "medium",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.157,
+   "solver_mean": 0.633,
+   "pct_solver": 0.248,
+   "pct_solver_ci95": [
+    0.128,
+    0.368
+   ],
+   "thinking_tokens_per_episode": 182000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.476
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "high",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.163,
+   "solver_mean": 0.633,
+   "pct_solver": 0.257,
+   "pct_solver_ci95": [
+    0.137,
+    0.377
+   ],
+   "thinking_tokens_per_episode": 416000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.47
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "minimal",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.168,
+   "solver_mean": 0.633,
+   "pct_solver": 0.265,
+   "pct_solver_ci95": [
+    0.145,
+    0.385
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.465
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "low",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.194,
+   "solver_mean": 0.633,
+   "pct_solver": 0.306,
+   "pct_solver_ci95": [
+    0.186,
+    0.426
+   ],
+   "thinking_tokens_per_episode": 65000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.439
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "medium",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.212,
+   "solver_mean": 0.633,
+   "pct_solver": 0.336,
+   "pct_solver_ci95": [
+    0.216,
+    0.456
+   ],
+   "thinking_tokens_per_episode": 182000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.421
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "high",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.274,
+   "solver_mean": 0.633,
+   "pct_solver": 0.433,
+   "pct_solver_ci95": [
+    0.313,
+    0.553
+   ],
+   "thinking_tokens_per_episode": 416000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.359
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "minimal",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.204,
+   "solver_mean": 0.633,
+   "pct_solver": 0.322,
+   "pct_solver_ci95": [
+    0.202,
+    0.442
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 1.4625,
+   "regret_mean": 0.429
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "low",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.266,
+   "solver_mean": 0.633,
+   "pct_solver": 0.42,
+   "pct_solver_ci95": [
+    0.3,
+    0.54
+   ],
+   "thinking_tokens_per_episode": 65000,
+   "cost_usd_per_episode": 1.7063,
+   "regret_mean": 0.367
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "medium",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.338,
+   "solver_mean": 0.633,
+   "pct_solver": 0.534,
+   "pct_solver_ci95": [
+    0.414,
+    0.654
+   ],
+   "thinking_tokens_per_episode": 182000,
+   "cost_usd_per_episode": 2.145,
+   "regret_mean": 0.295
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "high",
+   "tier": "medium",
+   "n": 10,
+   "score_mean": 0.38,
+   "solver_mean": 0.633,
+   "pct_solver": 0.6,
+   "pct_solver_ci95": [
+    0.48,
+    0.72
+   ],
+   "thinking_tokens_per_episode": 416000,
+   "cost_usd_per_episode": 3.0225,
+   "regret_mean": 0.253
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "minimal",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.225,
+   "solver_mean": 0.633,
+   "pct_solver": 0.356,
+   "pct_solver_ci95": [
+    0.236,
+    0.476
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 2.7495,
+   "regret_mean": 0.408
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "low",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.302,
+   "solver_mean": 0.633,
+   "pct_solver": 0.477,
+   "pct_solver_ci95": [
+    0.357,
+    0.597
+   ],
+   "thinking_tokens_per_episode": 84500,
+   "cost_usd_per_episode": 3.3832,
+   "regret_mean": 0.331
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "medium",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.405,
+   "solver_mean": 0.633,
+   "pct_solver": 0.64,
+   "pct_solver_ci95": [
+    0.52,
+    0.76
+   ],
+   "thinking_tokens_per_episode": 236600,
+   "cost_usd_per_episode": 4.524,
+   "regret_mean": 0.228
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "high",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.419,
+   "solver_mean": 0.633,
+   "pct_solver": 0.663,
+   "pct_solver_ci95": [
+    0.543,
+    0.783
+   ],
+   "thinking_tokens_per_episode": 540800,
+   "cost_usd_per_episode": 6.8055,
+   "regret_mean": 0.214
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "minimal",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.275,
+   "solver_mean": 0.633,
+   "pct_solver": 0.434,
+   "pct_solver_ci95": [
+    0.314,
+    0.554
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 3.666,
+   "regret_mean": 0.358
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "low",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.383,
+   "solver_mean": 0.633,
+   "pct_solver": 0.606,
+   "pct_solver_ci95": [
+    0.486,
+    0.726
+   ],
+   "thinking_tokens_per_episode": 84500,
+   "cost_usd_per_episode": 4.511,
+   "regret_mean": 0.25
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "medium",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.444,
+   "solver_mean": 0.633,
+   "pct_solver": 0.701,
+   "pct_solver_ci95": [
+    0.581,
+    0.821
+   ],
+   "thinking_tokens_per_episode": 236600,
+   "cost_usd_per_episode": 6.032,
+   "regret_mean": 0.189
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "high",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.507,
+   "solver_mean": 0.633,
+   "pct_solver": 0.802,
+   "pct_solver_ci95": [
+    0.682,
+    0.922
+   ],
+   "thinking_tokens_per_episode": 540800,
+   "cost_usd_per_episode": 9.074,
+   "regret_mean": 0.126
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "minimal",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.331,
+   "solver_mean": 0.633,
+   "pct_solver": 0.523,
+   "pct_solver_ci95": [
+    0.403,
+    0.643
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 3.666,
+   "regret_mean": 0.302
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "low",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.4,
+   "solver_mean": 0.633,
+   "pct_solver": 0.632,
+   "pct_solver_ci95": [
+    0.512,
+    0.752
+   ],
+   "thinking_tokens_per_episode": 84500,
+   "cost_usd_per_episode": 4.511,
+   "regret_mean": 0.233
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "medium",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.516,
+   "solver_mean": 0.633,
+   "pct_solver": 0.815,
+   "pct_solver_ci95": [
+    0.695,
+    0.935
+   ],
+   "thinking_tokens_per_episode": 236600,
+   "cost_usd_per_episode": 6.032,
+   "regret_mean": 0.117
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "high",
+   "tier": "medium",
+   "n": 6,
+   "score_mean": 0.562,
+   "solver_mean": 0.633,
+   "pct_solver": 0.888,
+   "pct_solver_ci95": [
+    0.768,
+    1.008
+   ],
+   "thinking_tokens_per_episode": 540800,
+   "cost_usd_per_episode": 9.074,
+   "regret_mean": 0.071
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "minimal",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.045,
+   "solver_mean": 0.556,
+   "pct_solver": 0.082,
+   "pct_solver_ci95": [
+    -0.038,
+    0.202
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.511
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "low",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.113,
+   "solver_mean": 0.556,
+   "pct_solver": 0.203,
+   "pct_solver_ci95": [
+    0.083,
+    0.323
+   ],
+   "thinking_tokens_per_episode": 65000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.443
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "medium",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.117,
+   "solver_mean": 0.556,
+   "pct_solver": 0.21,
+   "pct_solver_ci95": [
+    0.09,
+    0.33
+   ],
+   "thinking_tokens_per_episode": 182000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.439
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "high",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.12,
+   "solver_mean": 0.556,
+   "pct_solver": 0.215,
+   "pct_solver_ci95": [
+    0.095,
+    0.335
+   ],
+   "thinking_tokens_per_episode": 416000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.436
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "minimal",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.135,
+   "solver_mean": 0.556,
+   "pct_solver": 0.243,
+   "pct_solver_ci95": [
+    0.123,
+    0.363
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.421
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "low",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.125,
+   "solver_mean": 0.556,
+   "pct_solver": 0.224,
+   "pct_solver_ci95": [
+    0.104,
+    0.344
+   ],
+   "thinking_tokens_per_episode": 65000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.431
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "medium",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.191,
+   "solver_mean": 0.556,
+   "pct_solver": 0.344,
+   "pct_solver_ci95": [
+    0.224,
+    0.464
+   ],
+   "thinking_tokens_per_episode": 182000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.365
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "high",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.174,
+   "solver_mean": 0.556,
+   "pct_solver": 0.313,
+   "pct_solver_ci95": [
+    0.193,
+    0.433
+   ],
+   "thinking_tokens_per_episode": 416000,
+   "cost_usd_per_episode": 1.04,
+   "regret_mean": 0.382
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "minimal",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.175,
+   "solver_mean": 0.556,
+   "pct_solver": 0.314,
+   "pct_solver_ci95": [
+    0.194,
+    0.434
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 1.4625,
+   "regret_mean": 0.381
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "low",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.236,
+   "solver_mean": 0.556,
+   "pct_solver": 0.425,
+   "pct_solver_ci95": [
+    0.305,
+    0.545
+   ],
+   "thinking_tokens_per_episode": 65000,
+   "cost_usd_per_episode": 1.7063,
+   "regret_mean": 0.32
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "medium",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.249,
+   "solver_mean": 0.556,
+   "pct_solver": 0.448,
+   "pct_solver_ci95": [
+    0.328,
+    0.568
+   ],
+   "thinking_tokens_per_episode": 182000,
+   "cost_usd_per_episode": 2.145,
+   "regret_mean": 0.307
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "high",
+   "tier": "hard",
+   "n": 10,
+   "score_mean": 0.259,
+   "solver_mean": 0.556,
+   "pct_solver": 0.466,
+   "pct_solver_ci95": [
+    0.346,
+    0.586
+   ],
+   "thinking_tokens_per_episode": 416000,
+   "cost_usd_per_episode": 3.0225,
+   "regret_mean": 0.297
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "minimal",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.176,
+   "solver_mean": 0.556,
+   "pct_solver": 0.317,
+   "pct_solver_ci95": [
+    0.197,
+    0.437
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 2.7495,
+   "regret_mean": 0.38
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "low",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.227,
+   "solver_mean": 0.556,
+   "pct_solver": 0.409,
+   "pct_solver_ci95": [
+    0.289,
+    0.529
+   ],
+   "thinking_tokens_per_episode": 84500,
+   "cost_usd_per_episode": 3.3832,
+   "regret_mean": 0.329
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "medium",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.28,
+   "solver_mean": 0.556,
+   "pct_solver": 0.503,
+   "pct_solver_ci95": [
+    0.383,
+    0.623
+   ],
+   "thinking_tokens_per_episode": 236600,
+   "cost_usd_per_episode": 4.524,
+   "regret_mean": 0.276
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "high",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.328,
+   "solver_mean": 0.556,
+   "pct_solver": 0.59,
+   "pct_solver_ci95": [
+    0.47,
+    0.71
+   ],
+   "thinking_tokens_per_episode": 540800,
+   "cost_usd_per_episode": 6.8055,
+   "regret_mean": 0.228
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "minimal",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.193,
+   "solver_mean": 0.556,
+   "pct_solver": 0.348,
+   "pct_solver_ci95": [
+    0.228,
+    0.468
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 3.666,
+   "regret_mean": 0.363
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "low",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.288,
+   "solver_mean": 0.556,
+   "pct_solver": 0.517,
+   "pct_solver_ci95": [
+    0.397,
+    0.637
+   ],
+   "thinking_tokens_per_episode": 84500,
+   "cost_usd_per_episode": 4.511,
+   "regret_mean": 0.268
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "medium",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.34,
+   "solver_mean": 0.556,
+   "pct_solver": 0.611,
+   "pct_solver_ci95": [
+    0.491,
+    0.731
+   ],
+   "thinking_tokens_per_episode": 236600,
+   "cost_usd_per_episode": 6.032,
+   "regret_mean": 0.216
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "high",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.394,
+   "solver_mean": 0.556,
+   "pct_solver": 0.709,
+   "pct_solver_ci95": [
+    0.589,
+    0.829
+   ],
+   "thinking_tokens_per_episode": 540800,
+   "cost_usd_per_episode": 9.074,
+   "regret_mean": 0.162
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "minimal",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.232,
+   "solver_mean": 0.556,
+   "pct_solver": 0.418,
+   "pct_solver_ci95": [
+    0.298,
+    0.538
+   ],
+   "thinking_tokens_per_episode": 0,
+   "cost_usd_per_episode": 3.666,
+   "regret_mean": 0.324
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "low",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.279,
+   "solver_mean": 0.556,
+   "pct_solver": 0.503,
+   "pct_solver_ci95": [
+    0.383,
+    0.623
+   ],
+   "thinking_tokens_per_episode": 84500,
+   "cost_usd_per_episode": 4.511,
+   "regret_mean": 0.277
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "medium",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.39,
+   "solver_mean": 0.556,
+   "pct_solver": 0.701,
+   "pct_solver_ci95": [
+    0.581,
+    0.821
+   ],
+   "thinking_tokens_per_episode": 236600,
+   "cost_usd_per_episode": 6.032,
+   "regret_mean": 0.166
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "high",
+   "tier": "hard",
+   "n": 6,
+   "score_mean": 0.443,
+   "solver_mean": 0.556,
+   "pct_solver": 0.796,
+   "pct_solver_ci95": [
+    0.676,
+    0.916
+   ],
+   "thinking_tokens_per_episode": 540800,
+   "cost_usd_per_episode": 9.074,
+   "regret_mean": 0.113
+  }
+ ]
+}

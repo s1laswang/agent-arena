@@ -77,6 +77,12 @@ def main():
     a = ap.parse_args()
     if a.sleeper_seat == a.seat:
         ap.error("seat under test cannot be the sleeper")
+    if a.team == "procedure":
+        from scripts.frontier_day import build_day
+        world, team, _ = build_day(a.seat, a.day)
+        srv = build_server(world, a.seat, team, a.out)
+        atexit.register(srv.finish)
+        return srv.run(transport=a.transport)
     world = World(make_day(a.day, a.sleeper_seat, a.goal))
     team = None
     if a.team == "staff":

@@ -49,8 +49,9 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     out_dir.mkdir(parents=True, exist_ok=True)
     gemini.CACHE = out_dir / "cache"
     gemini.reset_usage()
-    world = World(make_day(seed))
-    srv = build_server(world, seat, make_procedure_team(world.day, seed), str(out_dir / f"{seat}-s{seed}-t{trial}.state.json"))
+    from scripts.frontier_day import build_day
+    world, team, strategy = build_day(seat, seed)
+    srv = build_server(world, seat, team, str(out_dir / f"{seat}-s{seed}-t{trial}.state.json"))
     tools = [{"name": t.name, "description": t.description or "", "parameters": t.input_schema} for t in asyncio.run(srv.list_tools())]
     st = {"calls": 0, "abort": None}
     mcp = []
@@ -91,7 +92,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     srv.finish()
     p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(state)], cwd=ROOT, capture_output=True, text=True, env={**os.environ, "SLEEPER_SEAT": seat})
     r = json.loads(p.stdout.strip().splitlines()[-1])
-    out = {"model": model, "commit": com, "agent": agent, "seat": seat, "seed": seed, "trial": trial, "mode": mode,
+    out = {"model": model, "commit": com, "agent": agent, "seat": seat, "seed": seed, "trial": trial, "mode": mode, "day_source": "day_for", "strategy": getattr(strategy, "id", None),
            "seat_under_test": seat, "state_path": str(state.relative_to(out_dir.parent.parent)), "transcript_path": f"{model}/{com}/{seat}-s{seed}-t{trial}.json", "scores": {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r.get("false_quarantine", []), "sleeper_caught": r.get("sleeper_caught", False),
                       "tickets_done": r.get("tickets_done", 0), "tickets_total": r.get("tickets_total", 0)},
            "calls": st["calls"], "api_retries": gemini.usage()["retries"], "api_errors": gemini.usage()["api_errors"], "aborted": st["abort"], **usage_total(gemini.CACHE), "wall_s": wall, "mcp_calls": mcp, "transcript": log}

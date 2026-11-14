@@ -18,7 +18,7 @@ def commit():
 
 
 def server_argv(seat, seed, out):
-    return [PY, "-m", "sleeper.mcp_server", "--seat", seat, "--day", str(seed), "--team", "oracle", "--out", out]
+    return [PY, "-m", "sleeper.mcp_server", "--seat", seat, "--day", str(seed), "--team", "procedure", "--out", out]
 
 
 def score_state(out, seat, model):
@@ -64,6 +64,11 @@ def parse_codex(lines):
     return calls
 
 
+def strat(seat, seed):
+    from scripts.frontier_day import build_day
+    return getattr(build_day(seat, seed)[2], "id", None)
+
+
 def run_seat(agent, model, seat, seed, days=1, max_turns=60):
     tmp = tempfile.mkdtemp(prefix="cliseat_")
     out = os.path.join(tmp, "state.json")
@@ -96,30 +101,42 @@ def run_seat(agent, model, seat, seed, days=1, max_turns=60):
     calls = (parse_claude if agent == "claude" else parse_codex)(lines)
     if not os.path.exists(out):
         asyncio.run(_finish(calls[:0], seat, seed, out))
-    return {"model": model, "commit": commit(), "agent": agent, "seat": seat, "seed": seed,
+    return {"model": model, "commit": commit(), "agent": agent, "seat": seat, "seed": seed, "trial": 0, "mode": "seat", "day_source": "day_for", "strategy": strat(seat, seed),
             "scores": score_state(out, seat, model), "calls": len(calls), "wall_s": round(wall, 1),
             "mcp_calls": calls, "transcript": lines, "stderr": p.stderr[-2000:]}
 
 
-async def _replay(calls, seat, seed, out):
+async def _replay(calls, seat, seed, out, src="oracle"):
     from sleeper.company import World
     from sleeper.mcp_server import build_server
     from sleeper.scripted import OracleAgent, make_team
     from sleeper.tickets import make_day
-    w = World(make_day(seed))
-    srv = build_server(w, seat, make_team(OracleAgent), out)
+    if src == "day_for":
+        from scripts.frontier_day import build_day
+        w, bg, _ = build_day(seat, seed)
+    elif src == "procedure":
+        from agents.procedure import make_procedure_team
+        w = World(make_day(seed))
+        bg = make_procedure_team(w.day, seed)
+    else:
+        w = World(make_day(seed))
+        bg = make_team(OracleAgent)
+    srv = build_server(w, seat, bg, out)
     for c in calls:
-        await srv.call_tool(c["tool"], c["args"])
+        try:
+            await srv.call_tool(c["tool"], c["args"] or {})
+        except Exception:
+            pass
     srv.finish()
 
 
 async def _finish(calls, seat, seed, out):
-    await _replay(calls, seat, seed, out)
+    await _replay(calls, seat, seed, out, "day_for")
 
 
 def rescore(rec):
     out = tempfile.mkdtemp(prefix="replay_") + "/state.json"
-    asyncio.run(_replay(rec["mcp_calls"], rec["seat"], rec["seed"], out))
+    asyncio.run(_replay(rec["mcp_calls"], rec["seat"], rec["seed"], out, rec.get("day_source") or ("procedure" if rec.get("agent") == "gemini" else "oracle")))
     return score_state(out, rec["seat"], rec["model"])
 
 

@@ -83,3 +83,7 @@
 ## 04:20 status (heartbeat)
 - No ENV/MCP code changes. New: Forge J5b hall_of_fame_v1.3 (3 evolved moles). Integrity check per mole (hard, 40 seeds): solver +0.554, do_nothing 0, stop_early/logs_only/restrict_all ≈ −1, fuzz 0.000 / 0 violations → holds (EXPLOITS #40).
 - Flag: the 3 "distinct" HoF moles produce identical leak traces (seeds 6000/6001) and identical solver means → likely behaviourally equivalent; "3 distinct survivors" claim needs a dedup check (sent to FR8/CEO).
+
+## 04:50 status (heartbeat)
+- No ENV/MCP code changes. FR8 deduped HoF by outcome: v1.2 and v1.3 = 1 evolved mole each (gap.md corrected). Re-checked the surviving moles on the merged tip (hard, 30 seeds + fuzz 20 seeds): holds (see EXPLOITS #40).
+- justSilas green. Waiting on: Grok judge re-run ~07:15, Gemini key.

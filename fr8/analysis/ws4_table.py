@@ -2,9 +2,10 @@
 
 Every row is the model playing FULL episodes on its own (train.eval_hf: run_capped(env, policy)); no solver
 continuation at eval time. Per model and tier: n, mean score ± 95% CI, accused / correct / abstain rates, valid
-tool-call rate, and the paired difference vs base on the seeds both models played (mean ± 95% CI).
+tool-call rate, and the paired difference vs each --pair reference (default base) on the seeds both models played
+(mean ± 95% CI).
 
-    python -m fr8.analysis.ws4_table base=DIR v1=DIR[,DIR] v2=DIR v3s0=DIR ... [--out fr8/analysis/out/ws4_table.md]
+    python -m fr8.analysis.ws4_table base=DIR v1=DIR[,DIR] v2=DIR v3s0=DIR ... [--pair base,v2] [--out OUT.md]
 A DIR is an eval_hf run dir (contains episodes.jsonl); comma-join dirs to pool runs of one model.
 """
 from __future__ import annotations
@@ -60,26 +61,33 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("runs", nargs="+", help="label=dir[,dir]")
     ap.add_argument("--out", default=None)
+    ap.add_argument("--pair", default="base", help="comma list of reference labels for paired Δ columns")
     a = ap.parse_args(argv)
     models = {}
     for spec in a.runs:
         label, dirs = spec.split("=", 1)
         models[label] = load(dirs)
-    base = {(e["tier"], e["seed"]): e["score"] for e in models.get("base", [])}
+    refs = [r for r in a.pair.split(",") if r in models]
+    ref_scores = {r: {(e["tier"], e["seed"]): e["score"] for e in models[r]} for r in refs}
     tiers = sorted({e["tier"] for eps in models.values() for e in eps}, key=["easy", "medium", "hard"].index)
-    lines = ["| model | tier | n | score ± 95% CI | accused | correct | abstain | valid calls | Δ vs base (paired n) |",
-             "|---|---|---|---|---|---|---|---|---|"]
+    lines = ["| model | tier | n | score ± 95% CI | accused | correct | abstain | valid calls | "
+             + " | ".join(f"Δ vs {r} (paired n)" for r in refs) + " |",
+             "|---|---|---|---|---|---|---|---|" + "---|" * len(refs)]
     for label, eps in models.items():
         for tier in tiers + ["all"]:
             sub = [e for e in eps if tier == "all" or e["tier"] == tier]
             if not sub:
                 continue
             r = row(sub)
-            d = [e["score"] - base[(e["tier"], e["seed"])] for e in sub if (e["tier"], e["seed"]) in base]
-            dm, dh = mci(d)
-            delta = "–" if label == "base" or not d else f"{dm:+.3f} ± {fmt(dh)} ({len(d)})"
+            deltas = []
+            for ref in refs:
+                rs = ref_scores[ref]
+                d = [e["score"] - rs[(e["tier"], e["seed"])] for e in sub if (e["tier"], e["seed"]) in rs]
+                dm, dh = mci(d)
+                deltas.append("–" if label == ref or not d else f"{dm:+.3f} ± {fmt(dh)} ({len(d)})")
             lines.append(f"| {label} | {tier} | {r['n']} | {fmt(r['score'])} ± {fmt(r['ci'])} | {fmt(r['accused'], 2)} | "
-                         f"{fmt(r['correct'], 2)} | {fmt(r['abstain'], 2)} | {fmt(r['valid'], 2)} | {delta} |")
+                         f"{fmt(r['correct'], 2)} | {fmt(r['abstain'], 2)} | {fmt(r['valid'], 2)} | "
+                         + " | ".join(deltas) + " |")
     txt = "\n".join(lines) + ("\n\nEval: each model plays full held-out episodes alone (train.eval_hf, greedy, "
                               "KV reuse, call cap 120). v3 TRAINING used solver rollouts for credit assignment "
                               "(decision-point GRPO); evaluation never does.\n")

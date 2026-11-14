@@ -57,6 +57,13 @@ def _scrub_dashes(text: str) -> str:
     return s
 
 
+def _safe_print(text: str) -> None:
+    try:
+        print(text, flush=True)
+    except OSError:
+        pass
+
+
 def sanitize_for_storage(obj: Any, key_name: str | None = None) -> Any:
     if isinstance(obj, dict):
         return {str(k): sanitize_for_storage(v, str(k)) for k, v in obj.items()}
@@ -849,11 +856,13 @@ def run_ablation(
         warm_keys = [
             clean_facts_by_key[(tier, ws_by_seed[s], d)]
             for s in seed_list
-            for d in range(1, 11)
+            for d in range(1, 15)
             if (tier, ws_by_seed[s], d) in clean_facts_by_key
+            and (tier, ws_by_seed[s], d) not in biased_provider._cache
         ]
-        with ThreadPoolExecutor(max_workers=workers) as pool:
-            list(pool.map(biased_provider.day_messages, warm_keys))
+        if warm_keys:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                list(pool.map(biased_provider.day_messages, warm_keys))
 
     episode_map: dict[tuple[int, str, str], dict[str, Any]] = {}
     investigator_usages: list[dict[str, Any]] = []
@@ -892,11 +901,10 @@ def run_ablation(
                 )
                 episode_map[(s, w_key, p_key)] = ep_metrics
                 if not quiet:
-                    print(
+                    _safe_print(
                         f"[{p_key}:{w_key}] seed={s} score={ep_metrics['score']:+.3f} "
                         f"correct={ep_metrics['correct']} accused={ep_metrics['accused']} "
-                        f"day={ep_metrics['final_day']} rt_distract={ep_metrics['rumor_target_distraction_calls']}",
-                        flush=True,
+                        f"day={ep_metrics['final_day']} rt_distract={ep_metrics['rumor_target_distraction_calls']}"
                     )
 
     def _run_carbon_cell(cell: tuple[int, str]) -> tuple[tuple[int, str, str], dict[str, Any]]:
@@ -962,11 +970,10 @@ def run_ablation(
             transcript_file=transcript_rel,
         )
         if not quiet:
-            print(
+            _safe_print(
                 f"[carbon:{w_key}] seed={s} score={ep_metrics['score']:+.3f} "
                 f"correct={ep_metrics['correct']} accused={ep_metrics['accused']} "
-                f"day={ep_metrics['final_day']} rt_distract={ep_metrics['rumor_target_distraction_calls']}",
-                flush=True,
+                f"day={ep_metrics['final_day']} rt_distract={ep_metrics['rumor_target_distraction_calls']}"
             )
         return (s, w_key, "carbon"), ep_metrics
 
@@ -1144,7 +1151,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         quiet=bool(args.quiet),
     )
     if not args.quiet:
-        print(
+        _safe_print(
             json.dumps(
                 {
                     "out": str(args.out),
@@ -1155,8 +1162,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "carbon_template_mean": meta["carbon_template_mean"],
                     "usage": meta["usage"],
                 }
-            ),
-            flush=True,
+            )
         )
     return 0
 

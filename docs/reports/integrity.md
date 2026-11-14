@@ -24,3 +24,11 @@
 - **FINDING #10 (open, ENV):** access logs alone name the mole: LogsMinusDecoy (no canaries) is correct 71% easy / 33% medium / 19% hard at wait=9 (chance 8/5/3%) and beats the canary heuristic on easy+medium. Hurts "meaningful difficulty" (canaries optional). Proposed fix sent to ENV.
 - FR8 J2 sbatch ready (untested on FR8), handed to FR8 head.
 - Next 45 min: v0.3 + props round 2 merged; text probe; MCP exploit hunt once MCP lands.
+
+## 03:10 status
+- Done (verified: `make test` 230 passed / 4 skipped / 11 xfailed on justSilas f0ad3b2): props round 2 merged (score properties valid under v0 and v0.3), `logs_only` baseline + `test_logs_only_bound` (CEO bound easy ≤40%, medium/hard ≤2× chance; xfail until ENV recalibrates).
+- Text probe, medium: stub 200 seeds 14/200 = 0.07 vs fair bar 0.074 (p=0.62); gpt-4o-mini 0/50 → no text leak.
+- EXPLOITS rows 0–14: 12 hold, #10 open (ENV), #1 fixed by v0.3 (pending merge).
+- Monotonicity: random 0.009 < most_logs 0.017 < heuristic 0.036 (medium, 50 seeds; CIs overlap). Solver/hinted LLM missing → plot incomplete.
+- Blocked: MCP server not on justSilas yet → MCP hunt + Codex hunter waiting (HARNESS).
+- Next: re-run full fuzz + bounds after ENV v0.3 + recalibration; MCP hunt the moment HARNESS lands.

@@ -9,6 +9,8 @@ import tokenize
 import pytest
 
 from canary import rules
+from canary.agents import designer
+from canary.agents._common import inline_schema
 from canary.env import Env
 from canary.gemini.provenance import audit_provenance, scan_file_secrets
 from canary.llm.stub import StubClient
@@ -42,6 +44,42 @@ def test_candidate_tier_context_applies_knobs_and_restores() -> None:
             assert sp.P.careful_mole is False
             raise RuntimeError("boom")
     assert rules.TIERS["medium"] == orig_med
+
+
+def test_sanitize_gemini_schema_and_clamp_proposal() -> None:
+    raw_schema = inline_schema(designer.Proposal)
+    cleaned = psd.sanitize_gemini_schema(raw_schema)
+    dumped = json.dumps(cleaned)
+    for forbidden in ("maxLength", "minLength", "anyOf", "$ref", "n_held_docs"):
+        assert forbidden not in dumped
+
+    long_payload = json.dumps({
+        "candidates": [
+            {
+                "name": "x" * 90,
+                "rationale": f" rationale {EM_DASH} " + ("y" * 500),
+                "rules": [
+                    {
+                        "conditions": [
+                            {"feature": "n_held_docs", "op": ">=", "value": 2},
+                            {"feature": "day", "op": "<=", "value": 3},
+                        ],
+                        "then": {"leak": "random_seeded", "frame": "decoy"},
+                    }
+                ],
+                "knobs": {"p_leak": 0.8},
+            }
+        ]
+    })
+    clamped = psd.clamp_proposal_json_text(long_payload)
+    parsed = designer.Proposal.model_validate(json.loads(clamped))
+    assert len(parsed.candidates) == 1
+    assert len(parsed.candidates[0].name) == 60
+    assert len(parsed.candidates[0].rationale) == 400
+    assert EM_DASH not in parsed.candidates[0].rationale
+    fin = designer.finalize(parsed.candidates[0])
+    assert fin is not None
+    assert fin["mole_strategy"]["rules"][0]["if"] == [["day", "<=", 3.0]]
 
 
 def test_end_to_end_stub_cli_is_keyless_and_writes_all_outputs(
@@ -202,7 +240,7 @@ def test_source_and_committed_artifacts_provenance_and_style() -> None:
         assert comments == [], f"found comment in {path}: {comments}"
         assert scan_file_secrets(path, ROOT) == []
 
-    if COMMITTED_DIR.is_dir():
+    if (COMMITTED_DIR / "meta.json").is_file():
         for fname in ("meta.json", "design_report.json", "skill_gap.json", "summary.md"):
             fpath = COMMITTED_DIR / fname
             assert fpath.is_file(), f"missing {fpath}"

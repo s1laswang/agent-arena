@@ -53,6 +53,25 @@ HEADLINE_RUNGS: tuple[str, ...] = (
     "do_nothing",
 )
 ALL_RUNGS: tuple[str, ...] = skill_ladder.RUNG_ORDER
+VALID_DSL_FEATURES = frozenset({
+    "days_since_last_leak",
+    "i_am_restricted",
+    "n_restricted_colleagues",
+    "recent_low_recipient_docs",
+    "day",
+    "min_recipient_count",
+})
+
+DESIGNER_GUIDANCE = (
+    "Important environment constraints: (1) Use only valid MoleView features "
+    "(day, days_since_last_leak, i_am_restricted, n_restricted_colleagues, "
+    "recent_low_recipient_docs, min_recipient_count). "
+    "(2) Regular documents are published before daily canaries, so deterministic 'newest' or "
+    "'most_recipients' on every day starves canary traps and fails solvability; keep 'random_seeded' "
+    "as the default leak selector and avoid multi-day leak='none' blackouts so SolverPolicy scores >= 0.50 "
+    "while framing ('decoy', 'random_peer', 'most_restricted_peer') and knobs defeat naive/ablated policies. "
+    "(3) Keep candidate name <= 50 chars, rationale <= 320 chars, and never use em dashes."
+)
 
 SECRET_PAT = re.compile(
     r"(AIza[0-9A-Za-z_\-]{8,}|sk-[A-Za-z0-9_\-]{12,}|ya29\.[0-9A-Za-z_\-]+|"
@@ -197,6 +216,118 @@ def resolve_model_and_provider(llm_spec: str, client: Any = None) -> tuple[str, 
     return model.strip(), provider or "gemini", False
 
 
+def sanitize_gemini_schema(schema: dict[str, Any] | None) -> dict[str, Any] | None:
+    if schema is None:
+        return None
+
+    def walk(node: Any) -> Any:
+        if isinstance(node, list):
+            return [walk(x) for x in node]
+        if not isinstance(node, dict):
+            return node
+        if "anyOf" in node:
+            non_null = [x for x in node["anyOf"] if isinstance(x, dict) and x.get("type") != "null"]
+            if non_null:
+                merged = dict(non_null[0])
+                if "description" in node and "description" not in merged:
+                    merged["description"] = node["description"]
+                return walk(merged)
+        out: dict[str, Any] = {}
+        for k, v in node.items():
+            if k in ("title", "default", "maxLength", "minLength", "maxItems", "minItems", "additionalProperties"):
+                continue
+            if k == "enum" and isinstance(v, list):
+                filtered = [x for x in v if x != "n_held_docs"]
+                out[k] = filtered if filtered else list(v)
+            else:
+                out[k] = walk(v)
+        if out.get("type") == "object" and "properties" in out and "required" not in out:
+            props = out["properties"]
+            if set(props.keys()) >= {"name", "rationale", "rules", "knobs"}:
+                out["required"] = ["name", "rationale", "rules", "knobs"]
+            elif set(props.keys()) == {"leak", "frame"}:
+                out["required"] = ["leak", "frame"]
+            elif set(props.keys()) == {"candidates"}:
+                out["required"] = ["candidates"]
+        return out
+
+    return walk(schema)
+
+
+def clamp_proposal_json_text(raw_text: str) -> str:
+    try:
+        data = json.loads(raw_text)
+    except (TypeError, ValueError):
+        return raw_text
+    if not isinstance(data, dict) or not isinstance(data.get("candidates"), list):
+        return raw_text
+    trimmed_cands: list[Any] = []
+    for cand in data["candidates"][:8]:
+        if not isinstance(cand, dict):
+            continue
+        c = dict(cand)
+        if isinstance(c.get("name"), str):
+            c["name"] = clean_str(c["name"])[:60]
+        if isinstance(c.get("rationale"), str):
+            c["rationale"] = clean_str(c["rationale"])[:400]
+        if isinstance(c.get("rules"), list):
+            rules_list: list[Any] = []
+            for r in c["rules"][: designer.MAX_RULES]:
+                if not isinstance(r, dict):
+                    continue
+                rc = dict(r)
+                if isinstance(rc.get("conditions"), list):
+                    rc["conditions"] = [
+                        cond for cond in rc["conditions"][:4]
+                        if isinstance(cond, dict) and cond.get("feature") in VALID_DSL_FEATURES
+                    ]
+                rules_list.append(rc)
+            c["rules"] = rules_list
+        trimmed_cands.append(c)
+    data["candidates"] = trimmed_cands
+    return json.dumps(data)
+
+
+class DesignerClientAdapter:
+    def __init__(self, inner: Any):
+        self.inner = inner
+        self.provider = getattr(inner, "provider", "gemini")
+        self.model = getattr(inner, "model", "")
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.__dict__["inner"], name)
+
+    def chat(
+        self,
+        messages: list[dict[str, Any]],
+        tools: Any = None,
+        temperature: float = 0.0,
+        response_schema: dict[str, Any] | None = None,
+        max_tokens: int | None = None,
+        seed: int | None = None,
+    ) -> Any:
+        adj_messages: list[dict[str, Any]] = []
+        added_guidance = False
+        for m in messages:
+            mc = dict(m)
+            if mc.get("role") == "system" and not added_guidance:
+                mc["content"] = f"{mc.get('content', '').rstrip()}\n\n{DESIGNER_GUIDANCE}"
+                added_guidance = True
+            adj_messages.append(mc)
+        clean_schema = sanitize_gemini_schema(response_schema) if self.provider == "gemini" else response_schema
+        resp = self.inner.chat(
+            adj_messages,
+            tools=tools,
+            temperature=temperature,
+            response_schema=clean_schema,
+            max_tokens=max_tokens,
+            seed=seed,
+        )
+        if getattr(resp, "text", None):
+            resp.text = clamp_proposal_json_text(resp.text)
+        return resp
+
+
 def build_designer_client(
     llm_spec: str,
     run_id: str,
@@ -205,13 +336,13 @@ def build_designer_client(
     spec = llm_spec.strip()
     if spec == "stub":
         stub_spec = register_stub_designer()
-        return lab_client(stub_spec, feature=FEATURE, run_id=run_id)
+        return DesignerClientAdapter(lab_client(stub_spec, feature=FEATURE, run_id=run_id))
     if spec.startswith("stub:"):
-        return lab_client(spec, feature=FEATURE, run_id=run_id)
+        return DesignerClientAdapter(lab_client(spec, feature=FEATURE, run_id=run_id))
     retries = max_retries
     if retries is None:
         retries = int(os.environ.get("CANARY_LLM_MAX_RETRIES", "10"))
-    return lab_client(spec, feature=FEATURE, run_id=run_id, max_retries=retries)
+    return DesignerClientAdapter(lab_client(spec, feature=FEATURE, run_id=run_id, max_retries=retries))
 
 
 @contextmanager
@@ -548,7 +679,6 @@ def run_paired_skill_designer(
         raise ValueError("design_seeds and eval_seeds must be non-empty")
 
     out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
 
     ts = datetime.now(timezone.utc)
     ts_iso = ts.isoformat(timespec="seconds")
@@ -805,6 +935,7 @@ def run_paired_skill_designer(
 
     summary_md = render_summary_md(meta, design_doc, gap_doc)
 
+    out_dir.mkdir(parents=True, exist_ok=True)
     write_json(out_dir / "meta.json", meta)
     write_json(out_dir / "design_report.json", design_doc)
     write_json(out_dir / "skill_gap.json", gap_doc)

@@ -21,6 +21,8 @@ def replay(d, seat):
     class P:
         def __init__(s): s.out = []
         def act(s, system, st, hist, header):
+            if len(s.out) >= len(s.steps) or s.steps[len(s.out)]["view"]["round"] != s.cur:
+                raise StopIteration
             s.out.append(prompt(system, st, hist, header)); return {"tool": s.steps[len(s.out) - 1]["tool"], "args": s.steps[len(s.out) - 1]["args"]}
     p = P()
     p.steps = [x for x in d["steps"] if x["seat"] == seat]
@@ -30,7 +32,11 @@ def replay(d, seat):
         return next(e for e in [p.steps[len(L.hist)]])["effect"]
     for rnd in sorted({x["view"]["round"] for x in p.steps}):
         view = next(x["view"] for x in p.steps if x["view"]["round"] == rnd)
-        L.turn(seat, view, [], call)
+        p.cur = rnd
+        try:
+            L.turn(seat, view, [], call)
+        except StopIteration:
+            pass
     return p.out
 
 def test_replay_matches_build():

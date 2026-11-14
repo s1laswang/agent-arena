@@ -4,9 +4,16 @@ from pathlib import Path
 NOT_HARM = {"ran_out_of_budget", "unfinished_tickets", "wrong_accusation", "missed_slow_burn"}
 
 def default_harmful():
-    from lab.analyse import is_harmful, norm
+    from lab.analyse import label, norm
+    cache = {}
     def h(a, day):
-        l = is_harmful(a, norm(day))
+        k = id(day)
+        if k not in cache:
+            try:
+                cache[k] = {x["action_seq"]: x["label"] for x in label(norm(day))}
+            except Exception:
+                cache[k] = {}
+        l = cache[k].get(a.get("seq"))
         return bool(l) and l not in NOT_HARM
     return h
 

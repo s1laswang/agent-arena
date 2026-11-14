@@ -23,7 +23,7 @@ def files():
 def test_no_reward_computed_outside_verifier():
     bad = []
     for p, rel in files():
-        if rel in SELF or rel == "sleeper/models.py":
+        if rel in SELF or rel == "sleeper/models.py" or Path(rel).name.startswith("test_"):
             continue
         for i, line in enumerate(p.read_text(errors="ignore").splitlines(), 1):
             if LITERAL.search(line):

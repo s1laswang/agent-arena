@@ -12,36 +12,40 @@ pip install -r requirements.txt
 make eval
 ```
 
-`make eval` runs `python -m lab.eval`: the oracle, reference, staff, do-nothing, stop-early, quarantine-all, refuse-all and trust-all teams over 20 days (start seed 1000), 3 trials, then writes `results/runs/<run_id>/` and `results/eval/` (`summary.json`, `gap.md`). It takes about 2 minutes (1 min 52 s per lead-lab, 1 min 44 s to 3 min 7 s in my runs depending on load) and ends with a SUMMARY block: read that first, the full table is `results/eval/gap.md`. `make eval-full` is the older long run and also runs `python -m sleeper.baselines`. Without a key every agent is scripted and everything still runs. The Gemini path needs `GEMINI_API_KEY` and `python -m lab.eval --gemini`; plain `make eval` has no Gemini rows. No live Gemini run has happened yet: NOT FOUND. Setup for the key: [docs/GEMINI.md](docs/GEMINI.md).
+`make eval` runs `python -m lab.eval`: the oracle, reference, staff, do-nothing, stop-early, quarantine-all, refuse-all and trust-all teams over 20 days (start seed 1000), 3 trials, then writes `results/runs/<run_id>/` and `results/eval/` (`summary.json`, `gap.md`). It takes about 2 minutes (1 min 52 s per lead-lab, 1 min 44 s to 3 min 7 s in my runs depending on load) and ends with a SUMMARY block: read that first, the full table is `results/eval/gap.md`. `make eval-full` is the older long run and also runs `python -m sleeper.baselines`. Observed once on this machine: plain `make eval` (no `data/gemini_cache.tar.gz`, `SLEEPER_OFFLINE` unset, no key) sat at 0% CPU for 24 minutes with no output, while `SLEEPER_OFFLINE=1 python -m lab.eval` finished normally; cause not diagnosed, so run it with `SLEEPER_OFFLINE=1` until lead-lab confirms. Without a key every agent is scripted and everything still runs. The Gemini path needs `GEMINI_API_KEY` and `python -m lab.eval --gemini`; plain `make eval` has no Gemini rows. No live Gemini run has happened yet: NOT FOUND. Setup for the key: [docs/GEMINI.md](docs/GEMINI.md).
 
 `make test`: not green. My run at 5634505 had 5 failed, 1721 passed (the failures were `tests/test_sleeper_real.py::test_seat_is_the_gate` cases) and took 29 minutes under heavy machine load; dm-qa saw 4 failures. Not rerun at c55f7d3; lead-attack is fixing. Do not read a green test run into these docs until dm-qa confirms it.
 
 ## Results
 
-Source: `make eval` on momin c55f7d3, 20 days (start seed 1000), 3 trials, table "Team plays all 8 seats" in `results/eval/gap.md`. All teams are scripted. Gemini rows: NOT FOUND.
+Source: `make eval` on momin 814a723, 20 days (start seed 1000), 3 trials, table "Team plays all 8 seats" in `results/eval/gap.md`. All teams are scripted. Gemini rows: NOT FOUND.
 
 | team | reward | sleeper success | false accusation | tickets done |
 |---|---|---|---|---|
 | oracle (scripted, knows the sleeper, hidden identity: not a fair comparison) | 1.000 | 0.000 | 0.000 | 1.000 |
 | reference (scripted, evidence-only procedure) | 0.550 | 0.562 | 0.000 | 1.000 |
 | staff (scripted) | 0.250 | 0.938 | 0.150 | 0.961 |
-| do_nothing | 0.000 | 0.125 | 0.000 | 0.000 |
-| stop_early | 0.000 | 0.625 | 0.000 | 0.126 |
+| do_nothing | 0.000 | 0.062 | 0.000 | 0.000 |
+| stop_early | 0.000 | 0.562 | 0.000 | 0.126 |
 | quarantine_all | 0.000 | 0.000 | 1.000 | 0.000 |
-| refuse_all | 0.000 | 0.125 | 0.000 | 0.000 |
+| refuse_all | 0.000 | 0.062 | 0.000 | 0.000 |
 | trust_all | 0.000 | 0.812 | 0.000 | 0.666 |
 
 The comparison to read is staff against the evidence-only reference (0.250 against 0.550). The oracle reads `day.sleeper_seat`, so it only proves each day is winnable.
 
-Open risk: the judge seat (finance_ap). `make eval` warns that the oracle scores 0.400 there (0.250 on the days that need that seat); lead-env is fixing the seat-mode background. Do not quote the seat-swapped tables until the oracle is 1.000 there.
+Open risk: the judge seat (finance_ap). `make eval` at 814a723 warns that the oracle scores 0.800 there (0.750 on the 16 days that need that seat), reference 0.400 (0.250), staff 0.200 (0.000). The oracle should be 1.000, so do not quote the seat-swapped tables as a gap.
 
 The earlier do_nothing hole (seat mode, seats with no graded tickets scoring 1, for example seed 1006) was fixed with a verifier backstop. do_nothing is 0.000 in every table above.
 
-Known issues at c55f7d3:
-- `make eval` warns `oracle reward 0.400 < 1.0 on winnable days (finance_ap seat ...)`. The finance_ap seat-swapped tables (oracle 0.400 all days, 0.250 on the 16 sleeper days) are not a gap, do not quote them.
-- `make eval` prints `WARN trust_all 0.800 > staff 0.300: too easy to just trust everything` for its exploit-baseline set, while trust_all is 0.000 in the table above. Two different day sets, not reconciled yet.
+Known issues at 814a723:
+- `make eval` warns `oracle reward 0.800 < 1.0 on winnable days (finance_ap seat, all days)` and `0.750` on the days that need the seat. Not a gap.
+- The older `WARN trust_all 0.800 > staff 0.300` line is not printed any more; the self-check `trust_all <= staff` prints PASS.
 
 Named failure modes and what each was tied to: [docs/FAILURES.md](docs/FAILURES.md).
+
+## Real frontier runs
+
+NOT FOUND. No real model (Gemini or other) has played a seat yet, so every row above is scripted. The real gap table will be read from `web/results/frontier/gaptable.json` (fixture: `web/fixtures/gaptable.json`). Until lead-lab fills that file, quote no frontier number.
 
 ## What is real vs scripted
 

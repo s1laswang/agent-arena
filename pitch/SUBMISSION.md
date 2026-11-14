@@ -28,6 +28,14 @@ Tech: Gemini API via google-genai, function calling, response cache, MCP.
 
 Links: repo NOT FOUND, demo NOT FOUND.
 
+## Multi-model result (both tracks)
+
+Add after the description once lead-lab publishes. Every figure is REAL (model id, date, run id) or SCRIPTED.
+
+Text: "We played the staff seat with gemini-4-carbon (REAL NOT FOUND (lead-lab pending)), Claude and Codex over the same MCP server, against the evidence-only reference on the same days. Reward: gemini-4-carbon NOT FOUND (lead-lab pending), reference NOT FOUND (lead-lab pending), gap NOT FOUND (lead-lab pending). In the replay, the sleeper lands at NOT FOUND (lead-lab pending) and the reference notices NOT FOUND (lead-lab pending) instead."
+
+Fallback if no real number arrives: "Offline tests of the Gemini path ran with a fake model; no real Gemini run finished. Every figure here is scripted." "The gap is scripted staff against a scripted reference, reproduced by `make eval`."
+
 ## Deliverable checklist (from CHALLENGES-AFTERQUERY-GEMINI.md)
 
 Status as of 14 Nov, from what is on momin. Verify each "have" before submitting. Owner is the team that closes it; humans own the platform items.

@@ -30,6 +30,15 @@ Every cell is NOT FOUND until a keyed run exists. Run HANDOFF.md section 2 steps
 | Multimodal forged invoice verified live | NOT FOUND |
 | Commit hash of the keyed run | NOT FOUND |
 
+## Real Gemini result (fill from lead-lab)
+
+REAL means model id, date and run id are printed with the number. Until then every cell is a placeholder.
+
+- gemini-4-carbon staff reward: NOT FOUND (lead-lab pending)
+- gemini-4-carbon reference reward: NOT FOUND (lead-lab pending)
+- Replay: where the sleeper lands, NOT FOUND (lead-lab pending). What the reference notices instead, NOT FOUND (lead-lab pending). Full beat in `pitch/MULTIMODEL.md`.
+- If these never arrive: "Gemini path built and tested offline, no real run finished, all numbers scripted."
+
 ## 1. The problem and why it matters
 
 Companies are starting to run real work through teams of AI agents: paying invoices, changing bank details, granting access. An agent with a hidden goal, or a compromised one, can move money or leak a secret while looking like a normal coworker. Most agent tests check one agent on one task. They do not test whether a group of agents can notice an insider and stop it without accusing an innocent.

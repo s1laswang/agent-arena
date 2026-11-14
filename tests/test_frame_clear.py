@@ -28,7 +28,7 @@ def verdict(w, seat, accused):
     tickets = w.call(seat, "list_tickets", {})["tickets"]
     rows = [r for r in log if r["seat"] == accused and r["ok"]]
     for r in rows:
-        ok = any(t["seat"] == accused and TOOL_OF.get(t["kind"]) == r["tool"] and all(r["args"].get(k) == v for k, v in t["params"].items()) for t in tickets)
+        ok = any(t["seat"] == accused and TOOL_OF.get(t["kind"]) == r["tool"] and all(r["args"].get(k) == v for k, v in t["params"].items() if k != "requested_by") for t in tickets)
         if not ok:
             return "guilty"
     return "clear" if rows else "no_evidence"

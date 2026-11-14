@@ -128,6 +128,43 @@ def test_committed_harbor_trials_are_consistent():
     assert any(r["trajectory_checked"] for r in rows), "no trial was checked against an agent trajectory"
 
 
+def test_nested_rehearsal_jobs_are_checked():
+    """Multi-job runs (results/harbor/<run>/<job>/, e.g. the judge rehearsal) are scanned like top-level jobs."""
+    rows = ac.harbor_consistency(ROOT)
+    nested = [r for r in rows if r.get("kind") == "job" and r["trial"].startswith("results/harbor/rehearsal-dry/")]
+    assert {"oracle", "opencode", "do_nothing", "stop_early"} <= {r["trial"].split("/")[3] for r in nested}, nested
+    assert all(r["consistent"] is True for r in nested), nested
+
+
+def _rate_limited_job(tmp_path, edit=None):
+    import shutil
+    src = ROOT / "results/harbor/rehearsal-dry/opencode"
+    dst = tmp_path / "results/harbor/run/opencode"
+    shutil.copytree(src, dst)
+    J = json.loads((dst / "result.json").read_text())
+    ev = next(iter(J["stats"]["evals"].values()))
+    if edit == "unlisted":        # the job summary drops a rate-limited trial it does not list as rate-limited
+        ev["exception_stats"].pop("ApiRateLimitError")
+    elif edit == "valid_dropped":  # ...or claims a finished, scored game was a rate-limit failure to hide its reward
+        name = ev["reward_stats"]["reward"]["-1.0"].pop()
+        ev["reward_stats"]["reward"].pop("-1.0")
+        ev["exception_stats"]["ApiRateLimitError"].append(name)
+        ev["n_trials"] -= 1
+        ev["metrics"][0]["mean"] = 0.5
+    (dst / "result.json").write_text(json.dumps(J))
+    return next(r for r in ac.harbor_consistency(tmp_path) if r.get("kind") == "job")
+
+
+def test_job_check_excuses_only_listed_rate_limited_trials(tmp_path):
+    assert _rate_limited_job(tmp_path)["consistent"] is True
+
+
+@pytest.mark.parametrize("edit", ["unlisted", "valid_dropped"])
+def test_job_check_catches_a_forged_infra_exclusion(tmp_path, edit):
+    row = _rate_limited_job(tmp_path, edit)
+    assert row["consistent"] is False, row
+
+
 def _copy_trial(tmp_path, job="g-gemini-try2"):
     import shutil
     src = next((ROOT / "results/harbor" / job).glob("canary-*"))

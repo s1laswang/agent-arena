@@ -177,3 +177,7 @@
 - BUG found by the CEO: the reproduce "Reported agent runs" block pools v1.2 + v1.3 runs and includes committed/superseded/ (medium openai:gpt-5.5 n=29 is mixed; solver n=60 includes superseded). Sent to HARNESS (P0): group by tiers_version, exclude superseded.
 - The AGENTS and ENV sessions have ended (their work is done). FR8, INTEGRITY and HARNESS are live. J4 44397 has trained 2h09m (training ends ~06:50).
 - Paired hard (this invocation, fresh secret): solver +0.526 (acc .75), heuristic -0.34, stop_early -1.0, do_nothing 0.
+
+## 06:35 tick
+- HARNESS stayed "waiting" and did not pick up the reproduce version-pooling P0, so the CEO launched an engineer (branch justSilas-repro-group): group replayed runs by tiers_version, exclude superseded, refresh the committed results.
+- J4 44397 at 2h42m (training ends ~06:50, then eval). Sky 43143_4 held.

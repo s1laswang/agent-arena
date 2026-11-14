@@ -441,7 +441,7 @@ def backfill_provenance(out: Path, sha_for: list[tuple[str, str]], log=print) ->
     n = 0
     for f in sorted(Path(out).glob("*/*/*/*/meta.json")):
         m = json.loads(f.read_text())
-        if m.get("tiers_version") or not m.get("thinking_level"):
+        if (m.get("tiers_version") and not m.get("provenance_backfilled")) or not m.get("thinking_level"):
             continue
         model = f.parent.relative_to(out).parts[0]
         sha = lookup(sha_for, model)

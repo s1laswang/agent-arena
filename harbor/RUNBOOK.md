@@ -22,9 +22,11 @@ The five judge runs, all on the same `harbor/tasks`:
 
        harbor run -p harbor/tasks -a nop
 
-4. Stop-early (calls `my_tickets` and `end_turn` once, then stops):
+4. Stop-early (calls `my_tickets` and `end_turn` once, then stops). Our `harbor/` package shadows Harbor's, so the agent lives outside it (harbor/opencode/judge_agents/stop_early.py, needs `capabilities = AgentCapabilities(mcp_servers=True)`):
 
-       harbor run -p harbor/tasks --agent-import-path harbor.agents.stop_early:StopEarlyAgent
+       PYTHONPATH=harbor/opencode/judge_agents harbor run -p harbor/tasks --agent-import-path stop_early:StopEarlyAgent
+
+All five in one go: `bash harbor/opencode/judge_runs.sh`.
 
 Expected: reference 1 on winnable days, do-nothing 0, stop-early 0, agent runs below the reference. Rewards are in each trial's `/logs/verifier/reward.txt` and the job summary.
 

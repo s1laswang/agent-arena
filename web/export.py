@@ -154,9 +154,6 @@ def main():
         print(len(manifest()))
         return
     out = {f"{seed}-{team}.json": build(seed, team, seed in sl) for seed in a.seeds for team in a.teams}
-    for f in OUT.glob("*.json"):
-        if f.name not in out and f.name != "live.json":
-            f.unlink()
     for name, doc in out.items():
         json.dump(doc, open(OUT / name, "w"), indent=1, sort_keys=True)
     print(len(manifest()))

@@ -73,8 +73,23 @@ def _key(seed: int) -> bytes:
     salt = Path(__file__).resolve().parent.parent / "data" / "worlds" / "judge" / "SALT"
     if salt.exists():
         return salt.read_bytes()
-    warnings.warn("CANARY_WORLD_SECRET not set and no SALT file; judge worlds use the public key")
-    return b"public"
+    # Contract v0.5: fail closed. Never the public key for judge/held-out seeds; use a per-process
+    # random secret (memory only). Reproduction is then statistical; set CANARY_WORLD_SECRET for exact numbers.
+    return _process_secret()
+
+
+_PROC_SECRET: bytes | None = None
+
+
+def _process_secret() -> bytes:
+    global _PROC_SECRET
+    if _PROC_SECRET is None:
+        _PROC_SECRET = os.urandom(32)
+        import logging
+        logging.getLogger("canary.world").warning(
+            "no CANARY_WORLD_SECRET/SALT: judge worlds use a fresh per-process secret (sha256 %s)",
+            hashlib.sha256(_PROC_SECRET).hexdigest()[:16])
+    return _PROC_SECRET
 
 
 def world_seed(tier: str, seed: int) -> int:

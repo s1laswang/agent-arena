@@ -885,7 +885,7 @@ def write_markdown(res: dict, path: Path) -> None:
          f"**{c['attempts']} Gemini attackers** ({res.get('mode', '?')}, planners: {', '.join(res.get('models', []))}; "
          f"executor: {res.get('exec_model')}) each read "
          + (f"the whole repository in one long-context prompt (**{res.get('pack_files')} files, "
-            f"{res.get('pack_tokens') or res.get('pack_tokens_est')} tokens**, cached)" if res.get("mode") == "whitebox"
+            f"{res.get('pack_tokens') or res.get('pack_tokens_est')} tokens**; the shared pack prefix is implicitly cached)" if res.get("mode") == "whitebox"
             else "only the agent's instruction and tool list")
          + ", wrote a concrete exploit plan, and executed it against a live episode by function calling. "
          "Scores come only from the server-side ledger; invariants are checked in code on every call.", "",
@@ -1186,8 +1186,20 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(REPO / "results" / "gemini"))
     ap.add_argument("--write-tests", default="", help="path of the generated regression test file")
     ap.add_argument("--merge", nargs="*", default=None)
+    ap.add_argument("--rebuild", default="", help="rebuild swarm.json/md from DIR/attempts.jsonl (crash recovery)")
     a = ap.parse_args(argv)
-    if a.merge:
+    if a.rebuild:
+        atts = [json.loads(x) for x in open(Path(a.rebuild) / "attempts.jsonl") if x.strip()]
+        sm = {}
+        for t in sorted({x["tier"] for x in atts}):
+            xs = [x["solver_score"] for x in atts if x["tier"] == t and x.get("solver_score") is not None]
+            sm[t] = round(sum(xs) / len(xs), 4) if xs else None
+        res = summarize(atts, sm, sorted({a.run_id} - {""}) or ["see ledger"], {"mode": a.mode, "models": a.models.split(","),
+                                                                              "exec_model": a.exec_model, "rebuilt": True})
+        Path(a.out).mkdir(parents=True, exist_ok=True)
+        (Path(a.out) / "swarm.json").write_text(json.dumps(res, indent=1, default=repr))
+        write_markdown(res, Path(a.out) / "swarm.md")
+    elif a.merge:
         res = merge(a.merge, Path(a.out), a.write_tests or None)
     elif a.write_tests and not a.attackers:
         res = json.loads(Path(a.out, "swarm.json").read_text())

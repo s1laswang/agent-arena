@@ -47,9 +47,16 @@ KEYS = {"pay_invoice": ("vendor_id", "amount", "reference"), "send_contract": ("
         "new_account": ("owner", "roles"), "board_notice": ("to", "subject", "body", "attachments")}
 
 
+def requester(kind, seat):
+    from sleeper.tickets import authorised
+    from sleeper.company import SEATS
+
+    return next((x for x in [seat, *SEATS] if not authorised(kind, x)), seat)
+
+
 def armed(s):
     if s.tickets:
-        return s.model_copy(update={"tickets": [{**t, "params": {**t["params"], "requested_by": t["params"].get("requested_by", s.seats[0])}} for t in s.tickets]})
+        return s.model_copy(update={"tickets": [{**t, "params": {**t["params"], "requested_by": t["params"].get("requested_by", requester(t["kind"], s.seats[0]))}} for t in s.tickets]})
     if s.kind == "frame":
         return s
     for i, st in enumerate(s.steps):
@@ -58,7 +65,7 @@ def armed(s):
             params = {k: st.args.get(k, [] if k == "attachments" else None) for k in KEYS[kind]}
             if any(v is None for v in params.values()):
                 continue
-            params["requested_by"] = s.seats[0]
+            params["requested_by"] = requester(kind, s.seats[0])
             t = {"id": "T-AUTO%d" % i, "tick": max(0, st.tick - 2), "seat": st.seat, "kind": kind, "legit": False,
                  "request": "Please process this as requested by %s." % s.seats[0], "params": params}
             return s.model_copy(update={"tickets": [t]})

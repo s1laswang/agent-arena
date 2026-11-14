@@ -110,7 +110,7 @@ class Env:
             f"Scoring: accuse(employee) ends the episode; score = V at that moment if correct; if you accuse an innocent employee the score is {p.wrong_accusation_score:g} (you fired an innocent and the mole keeps leaking). Correctness is not revealed. Not accusing at all scores 0, so only accuse when P(correct)*V - (1-P(correct)) > 0. If day {p.n_days} closes without an accusation, score = 0.",
             f"Documents: each day {min(p.docs_per_day)}-{max(p.docs_per_day)} (uniform over {list(p.docs_per_day)}) regular docs are published; recipients are one whole department (60%) or the union of two departments (40%). Restricted employees receive no new docs.",
             f"Leaks: when a day closes, if the mole holds at least one leakable doc (received in the last {p.leak_window_days} days incl. today, not yet leaked) it leaks one with probability {p.p_leak}, chosen uniformly among leakable docs." + (" Careful mole: a canary's weight is multiplied by (1 - share of all employees who received any variant of it)." if p.careful_mole else ""),
-            f"Each leak costs V -{p.leak_damage} immediately and surfaces in the leak feed after a delay uniform over {list(p.delay_choices)} days. Leaked canaries show the variant label the mole received. A restricted mole can still leak docs it already holds.",
+            f"Each leak costs V -{p.leak_damage} immediately and surfaces in the leak feed after a delay uniform over {list(p.delay_choices)} days. Leaked canaries show the variant label the mole received" + (f" with probability {p.fingerprint_accuracy}; otherwise (fingerprint recovery from a rewritten leak is imperfect) one of the OTHER variant labels planted for that canary, chosen uniformly" if p.fingerprint_accuracy < 1.0 else "") + ". A restricted mole can still leak docs it already holds.",
             f"Canaries: plant_canary costs V -{p.canary_cost}, at most {p.canaries_per_day} per day, at most {p.max_variants} distinct variant labels, at least 1 recipient, no restricted recipients. Recipients are exactly the assignment keys; it counts as received today." + (f" Recipients must have clearance >= the canary level (canaries are level {p.canary_level}; every employee has clearance >= 1)." if p.access_constraints else ""),
             f"Restriction: each restricted employee costs V -{p.restrict_cost_per_day} per closed day.",
             f"Access logs (closed days only): every employee makes Poisson(rate) accesses per day to random docs it holds; innocent rate {p.log_rate_benign}, mole rate {p.log_rate_mole}. Each access is after_hours with prob {p.p_after_hours_benign} (innocent) or {p.p_after_hours_mole} (mole).",
@@ -389,7 +389,13 @@ class Env:
             delta = rng.choice(p.delay_choices)
             item = {"surfaced_day": d + delta, "doc_id": leak, "title": doc["title"]}
             if doc["is_canary"]:
-                item["variant"] = next(k for k, v in doc["variants"].items() if w.mole in v)
+                true_v = next(k for k, v in doc["variants"].items() if w.mole in v)
+                others = sorted(k for k in doc["variants"] if k != true_v)
+                # v0.4: imperfect fingerprint recovery (no RNG draw when accuracy is 1.0 -> v0 determinism)
+                if p.fingerprint_accuracy < 1.0 and others and rng.random() >= p.fingerprint_accuracy:
+                    item["variant"] = rng.choice(others)
+                else:
+                    item["variant"] = true_v
             self._leaked.add(leak)
             self._feed.append(item)
             self._charge(p.leak_damage)

@@ -52,7 +52,44 @@ def _from_param_block(text: str) -> TierParams | None:
     return TierParams(**upd)
 
 
+def _from_exact_block(text: str) -> TierParams | None:
+    """Parse the instruction's 'Exact parameters' block (one `- key: value` per line)."""
+    i = (text or "").find("Exact parameters")
+    if i < 0:
+        return None
+    from dataclasses import fields
+    kv = dict(re.findall(r"^- (\w+): (.+)$", text[i:], flags=re.M))
+    name = kv.get("name")
+    if name not in TIERS:
+        return None
+    base = TIERS[name]
+    upd = {}
+    for f in fields(TierParams):
+        if f.name not in kv or f.name == "name":
+            continue
+        raw, cur = kv[f.name].strip(), getattr(base, f.name)
+        try:
+            if isinstance(cur, bool):
+                upd[f.name] = raw.lower() in ("on", "true", "1", "yes")
+            elif isinstance(cur, tuple):
+                upd[f.name] = tuple(int(x) for x in raw.split(","))
+            elif isinstance(cur, int):
+                upd[f.name] = int(float(raw))
+            elif isinstance(cur, float):
+                upd[f.name] = float(raw)
+        except ValueError:
+            pass
+    return replace(base, **upd)
+
+
 def params_from_instruction(text: str) -> TierParams | None:
+    p = _from_exact_block(text)
+    if p is not None:
+        return p
+    return _params_from_prose(text)
+
+
+def _params_from_prose(text: str) -> TierParams | None:
     blk = _from_param_block(text)
     if blk is not None:
         return blk

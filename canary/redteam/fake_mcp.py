@@ -131,6 +131,8 @@ def make_server(host: str, port: int, token: str, env: FakeEnv) -> ThreadingHTTP
                     return self._send(403, {"error": "forbidden"})
                 with lock:
                     return self._send(200, {"score": env.score(), "done": env.done, "ledger": env.ledger()})
+            if u.path == "/healthz":
+                return self._send(200, {"ok": True})
             self._send(405 if u.path == "/mcp" else 404, {"error": "no"})
 
         def do_DELETE(self):
@@ -163,6 +165,8 @@ def make_server(host: str, port: int, token: str, env: FakeEnv) -> ThreadingHTTP
                 return self._send(200, {"jsonrpc": "2.0", "id": mid, "result": {}})
             self._send(200, {"jsonrpc": "2.0", "id": mid, "error": {"code": -32601, "message": "method not found"}})
 
+    ThreadingHTTPServer.request_queue_size = 128  # stub/tests open 16 connections at once
+    ThreadingHTTPServer.daemon_threads = True
     return ThreadingHTTPServer((host, port), H)
 
 
@@ -171,6 +175,10 @@ def main():
     cls = EnvShim if e.get("CANARY_FAKE_BACKEND") == "env" else FakeEnv
     env = cls(e.get("CANARY_TIER", "easy"), int(e.get("CANARY_SEED", "0")))
     srv = make_server(e.get("CANARY_HOST", "127.0.0.1"), int(e["CANARY_PORT"]), e["CANARY_LEDGER_TOKEN"], env)
+    pf = e.get("CANARY_PORT_FILE")
+    if pf:  # report the kernel-chosen port (CANARY_PORT=0) after listen(), so no free-port race
+        with open(pf, "w") as f:
+            f.write(str(srv.server_address[1]))
     srv.serve_forever()
 
 

@@ -48,3 +48,26 @@
 - AGENTS accusation audit: every gpt-5.5 accusation on the old tiers had P(accused)=1.00 under the solver belief; it accused ~1.5 days earlier than the solver on hard. ENV is diagnosing (certainty day vs accuse day): tuned tau + EV guard + daily pipelined canaries, ETA ~05:10. The solver robustness to random DSL moles dropped to 70% on medium (test relaxed to 0.65 until that fix).
 - gpt-5.5 on tiers v1 (10 medium + 10 hard, dev seeds) started.
 - HARNESS head still idle; a CEO-launched mcp-server engineer is building eval.run_episode + mcp_server.
+
+## 04:35 GPU
+- Per Silas, paused sky task 43143_4 (w0625-c1, the worst run, mAP50-95 0.484; it was at epoch 50/149) with `scontrol requeuehold 43143_4`. It resumes from last.pt. **To resume: `ssh freighter scontrol release 43143_4`** (the CEO does this when J4 ends, or at 08:30).
+- sleeper-pilot 43478 took the freed GPU first (10-min limit). J4 44200 (canary-j4: LoRA SFT Qwen2.5-1.5B, fp16, 6 h limit) is next. J3 data: 20k+2k solver episodes on tiers v1 (pre-stopping-fix solver), 1.1 GB.
+- The MCP server + eval.run_episode are merged (f2931d4, CEO-launched engineer): 338 passed. The CEO launched two more engineers in place of the idle HARNESS head: reproduce + README + CI, and Harbor task + isolation check (colima only with small resources, given memory pressure).
+
+## 06:00 hard-tier gap failing, freeze moved to ~07:00
+- AGENTS, tiers v1 partials (pre-fix solver, dev seeds 0-9):
+  - HARD: gpt-5.5 n=4 0.719 acc 1.00 day 9.2 vs solver 0.638 acc .90 day 10.2 (113%); every accusation justified (P>=.96).
+  - MEDIUM: gpt-5.5 n=3 0.067 (one forced P=.50 accusation at the horizon -> -1) vs solver .475.
+- Solver fix + tiers v1.1 merged (b875386): solver .79/.63/.60, monotone; diagnosis: weak evidence, not a late stopping rule.
+- Actions:
+  - ENV solver studies the gpt-5.5 hard transcripts and adopts its strategies; check whether clearances make hard easier;
+  - FR8 co-tune now includes fingerprint_accuracy (hard 0.8-1.0, medium 0.9-1.0) x behaviour_weight x framing;
+  - freeze v1.2 ~07:00, then the official 20+20 gpt-5.5 run + OpenCode gpt-5.6-sol 5+5.
+- Secrets: no committed SALT. Reproduce uses one random secret per invocation (paired within a run); Harbor uses a build-time secret in the server image only. README numbers are stated as mean +/- CI over secrets. #25 (/proc environ leak, found by the Grok judge run): *_FILE 0600 interface + sidecar; the mcp-server engineer was resumed for it.
+- HARNESS review: a rare solver blow-up (>4 min, 1.9 GB on one world) -> ENV must-fix guard; public env.verdict() requested.
+
+## 02:41 (real clock) correction
+- The CEO log entries headed 03:35, 04:10, 04:35 and 06:00 were mislabelled. The real times were about 02:00-02:35 EET. Corrected schedule: tier freeze v1.2 at 04:30 EET; official frontier runs 04:30-06:30; Forge + hint ablations until 08:00; Grok dress rehearsal ~07:15; MORNING.md 08:30.
+- ENV merged 3c46a20: Env.verdict(), canary.world.set_world_secret(), SolverPolicy(behaviour_weight) with act() guards. The reported 4-min solver blow-up did not reproduce in 1,800 timed episodes (max 0.09 s per act).
+- Hard-tier root cause (AGENTS): the solver canaries cover ~20/30 staff, so the careful mole leaks them at x0.33; gpt-5.5 uses ~6-person groups (x0.8) with fresh labels. Fix: choose k to maximise (1-k/N)*H(split), plus the exact fingerprint-noise likelihood.
+- J4: the tokenization patch is deployed (6 processes, cached; budget clamped to the job end 08:24). Train ~03:55-06:50, then eval.

@@ -284,36 +284,32 @@ class GeminiWorldTextProvider:
 
 
 def _make_social_v2(spec: str, **kw):
-    from canary.social.engine import SocialV2Provider
-    cache_dir = kw.get("cache_dir")
-    client = kw.get("client")
+    from canary.social.engine import make_v16_provider
+    if spec.startswith(("v16:", "v16-gemini:", "v16-gemini-stub:")):
+        return make_v16_provider(spec, **kw)
     head, _, rest = spec.partition(":")
-    stub = head.endswith("-stub")
-    tpl = head.endswith("-template")
-    prefix = "social-v2" if head.startswith("social-v2") else "v16"
-    variant = "all"
-    model = "gemini-4-carbon"
-    if rest:
-        if rest.startswith("gemini-"):
-            model = rest
-        elif ":" in rest:
-            variant, model = rest.split(":", 1)
-        else:
-            variant = rest
-    if stub and client is None:
-        from canary.llm import get_client
-        client = get_client("stub")
-    return SocialV2Provider(variant=variant, model=model, cache_dir=cache_dir, client=client,
-                            template_only=tpl, name_prefix=prefix)
+    variant = rest.strip() if rest.strip() and not rest.strip().startswith("gemini-") else "v5_full9_cocktail"
+    if head in ("v16", "v16-template", "social-v2-template"):
+        mode_prefix = "v16"
+    elif head in ("v16-stub", "social-v2-stub"):
+        mode_prefix = "v16-gemini-stub"
+    elif head == "social-v2":
+        mode_prefix = "v16-gemini"
+    else:
+        mode_prefix = "v16"
+    prov = make_v16_provider(f"{mode_prefix}:{variant}", **kw)
+    if head.startswith("social-v2"):
+        prov.name = "social-v2" if not rest.strip() or rest.strip().startswith("gemini-") else f"social-v2:{rest.strip()}"
+    return prov
 
 
 def get_provider(spec: str | None, **kw):
-    """'template' | 'social-v2[:variant]' | 'v16[:variant[:model]]' | 'gemini' | 'gemini:<model>' | 'stub'
-    | 'gemini-world' | 'gemini-world:<model>' | 'gemini-world-stub'."""
+    """'template' | 'social-v2[:variant]' | 'v16[:variant]' | 'v16-gemini:<variant>' | 'gemini' | 'gemini:<model>'
+    | 'stub' | 'gemini-world' | 'gemini-world:<model>' | 'gemini-world-stub'."""
     if spec in (None, "", "template"):
         return TemplateProvider()
     if spec in ("social-v2", "social-v2-stub", "social-v2-template", "v16", "v16-stub", "v16-template") or spec.startswith(
-        ("social-v2:", "social-v2-stub:", "social-v2-template:", "v16:", "v16-stub:", "v16-template:")
+        ("social-v2:", "social-v2-stub:", "social-v2-template:", "v16:", "v16-gemini:", "v16-gemini-stub:", "v16-stub:", "v16-template:")
     ):
         return _make_social_v2(spec, **kw)
     if spec == "gemini-social-stub":

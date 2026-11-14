@@ -17,7 +17,7 @@ from canary.gemini.provenance import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-ROLES_DOC_PATH = REPO_ROOT / "docs" / "gemini" / "SIX_ROLES_INDEX.md"
+ROLES_DOC_PATH = REPO_ROOT / "docs" / "gemini" / "SIX_ROLES_MATRIX.md"
 SUBMISSION_DOC_PATH = REPO_ROOT / "docs" / "gemini" / "SIX_ROLES_SUBMISSION.md"
 PITCH_DOC_PATH = REPO_ROOT / "pitch" / "GEMINI_SIX_ROLES.md"
 ALL_DOC_PATHS = (ROLES_DOC_PATH, SUBMISSION_DOC_PATH, PITCH_DOC_PATH)

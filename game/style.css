@@ -1121,7 +1121,7 @@ input[type="range"] {
 }
 .assignment-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 4px;
   max-height: 250px;
   overflow-y: auto;
@@ -1143,6 +1143,16 @@ input[type="range"] {
   user-select: none;
 }
 .wizard-emp-chip:hover { border-color: var(--accent); }
+.chip-untagged-label {
+  font-size: 9.5px;
+  color: var(--warn);
+  line-height: 1.1;
+}
+.chip-tagged-label {
+  font-size: 9.5px;
+  color: var(--muted);
+  line-height: 1.1;
+}
 .wizard-emp-chip.assign-a {
   background: var(--canary-a-bg);
   border-color: var(--canary-a);

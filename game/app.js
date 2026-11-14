@@ -28,10 +28,12 @@ const state = {
   leaksCount: 0,
   checkedLeaksToday: false,
   seenLeakDocIds: new Set(),
+  leakedItems: [],
   docTitles: {},
   employees: [], // populated ONLY after player triggers list_employees
   userTags: {}, // client-side notes: { [empId]: "suspect" | "cleared" | "unsure" }
   canaryAssignments: {}, // { [empId]: "A" | "B" | "C" }
+  wizardAssignments: {},
   canaryHistory: [], // records of planted canaries
   restricted: new Set(),
   selectedEmpId: null,
@@ -349,10 +351,12 @@ function startGame(customSeed = null) {
   state.leaksCount = 0;
   state.checkedLeaksToday = false;
   state.seenLeakDocIds.clear();
+  state.leakedItems = [];
   state.docTitles = {};
   state.employees = [];
   state.userTags = {};
   state.canaryAssignments = {};
+  state.wizardAssignments = {};
   state.canaryHistory = [];
   state.restricted.clear();
   state.selectedEmpId = null;
@@ -447,6 +451,7 @@ function syncStateFromData(tool, args, data) {
   if (tool === "check_leak_feed") {
     const items = data.items || [];
     state.leaksCount = items.length;
+    state.leakedItems = items;
     state.checkedLeaksToday = true;
     for (const item of items) {
       if (item.doc_id && item.title) {
@@ -566,6 +571,18 @@ function refreshHUD() {
   updateGuidance();
 }
 
+function getUntaggedEmployees() {
+  const taggedIds = new Set();
+  for (const h of state.canaryHistory) {
+    if (h.assignment) {
+      for (const [id, v] of Object.entries(h.assignment)) {
+        if (v && v !== "–") taggedIds.add(id);
+      }
+    }
+  }
+  return state.employees.filter(e => !taggedIds.has(e.id) && !state.restricted.has(e.id));
+}
+
 function updateGuidance() {
   const el = $("hudGuidanceText");
   if (!el) return;
@@ -605,8 +622,21 @@ function updateGuidance() {
   }
 
   if (state.leaksCount > 0) {
-    el.textContent = "Leaks detected! Match the leaked variant to assigned cohorts, interview suspects, or Accuse [A].";
-    return;
+    const hasVariantLeak = (state.leakedItems || []).some(item => !!item.variant);
+    if (hasVariantLeak) {
+      el.textContent = "Leaks detected! Match the leaked variant to assigned cohorts, interview suspects, or Accuse [A].";
+      return;
+    }
+
+    const untagged = getUntaggedEmployees();
+    if (untagged.length > 0) {
+      const names = untagged.map(e => e.name).join(", ");
+      el.textContent = `Leaks keep arriving with no canary variant — the mole probably isn't among the people who got canaries. Plant canaries to the employees who haven't had one: ${names}.`;
+      return;
+    } else {
+      el.textContent = "Leaks keep arriving with no canary variant — all active personnel have received canaries. Review access logs, interview suspects, or Accuse [A].";
+      return;
+    }
   }
 
   el.textContent = "Canaries are out in the field. Review access logs, interview suspects, or advance to tomorrow [N].";
@@ -1030,12 +1060,11 @@ function openCanaryWizard() {
   ];
   $("canaryDocTitle").value = sampleTitles[(canaryNum - 1) % sampleTitles.length];
 
-  const hasAssignments = Object.values(state.canaryAssignments).some(v => !!v);
-  if (!hasAssignments) {
-    wizardSplitSolver();
+  const untagged = getUntaggedEmployees();
+  if (state.canaryHistory.length > 0 && untagged.length > 0) {
+    wizardCoverUntagged();
   } else {
-    renderWizardEmployees();
-    updateWholeCompanyWarning();
+    wizardSplitSolver();
   }
   $("canaryModal").hidden = false;
 }
@@ -1044,27 +1073,51 @@ function closeCanaryWizard() {
   $("canaryModal").hidden = true;
 }
 
+function wizardCoverUntagged() {
+  const untagged = getUntaggedEmployees();
+  state.wizardAssignments = {};
+  for (const emp of state.employees) {
+    state.wizardAssignments[emp.id] = "";
+  }
+
+  if (untagged.length === 0) {
+    showInPageHint("All active personnel have already received canaries.");
+    renderWizardEmployees();
+    updateWholeCompanyWarning();
+    return;
+  }
+
+  const variants = untagged.length === 2 ? ["A", "B"] : ["A", "B", "C"];
+  untagged.forEach((emp, idx) => {
+    state.wizardAssignments[emp.id] = variants[idx % variants.length];
+  });
+
+  renderWizardEmployees();
+  updateWholeCompanyWarning();
+}
+
 function wizardSplitSolver() {
   // Solver style: balance cohorts across variants (A, B, C) while leaving a control group unassigned.
   // In Medium tier, careful moles will never leak a document sent to the whole company!
   const suspects = state.employees.filter(e => state.userTags[e.id] === "suspect" && !state.restricted.has(e.id));
   const pool = suspects.length >= 2 ? suspects : state.employees.filter(e => !state.restricted.has(e.id));
 
+  state.wizardAssignments = {};
   for (const emp of state.employees) {
-    state.canaryAssignments[emp.id] = "";
+    state.wizardAssignments[emp.id] = "";
   }
 
   const variants = ["A", "B", "C"];
   if (suspects.length >= 2) {
     suspects.forEach((emp, idx) => {
-      state.canaryAssignments[emp.id] = variants[idx % variants.length];
+      state.wizardAssignments[emp.id] = variants[idx % variants.length];
     });
   } else {
     // 8-9 staff across A/B/C (~40-45% of workforce), leaving control group
     const targetCount = Math.min(pool.length, Math.max(3, Math.min(9, Math.floor(pool.length * 0.45))));
     const selected = pool.slice(0, targetCount);
     selected.forEach((emp, idx) => {
-      state.canaryAssignments[emp.id] = variants[idx % variants.length];
+      state.wizardAssignments[emp.id] = variants[idx % variants.length];
     });
   }
 
@@ -1076,30 +1129,40 @@ function renderWizardEmployees() {
   const grid = $("wizardEmpGrid");
   grid.innerHTML = "";
 
+  const untaggedSet = new Set(getUntaggedEmployees().map(e => e.id));
+
   for (const emp of state.employees) {
     const chip = document.createElement("div");
     chip.className = "wizard-emp-chip";
     chip.dataset.id = emp.id;
 
-    const currentVar = state.canaryAssignments[emp.id] || "";
+    const currentVar = state.wizardAssignments[emp.id] || "";
     if (currentVar) chip.classList.add(`assign-${currentVar.toLowerCase()}`);
 
+    const isUntagged = untaggedSet.has(emp.id);
+    const tagSub = isUntagged
+      ? `<span class="chip-untagged-label">Untagged</span>`
+      : `<span class="chip-tagged-label">Prior canary</span>`;
+
     chip.innerHTML = `
-      <span><strong>${emp.name}</strong></span>
+      <div style="display:flex; flex-direction:column; gap:1px; overflow:hidden;">
+        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><strong>${emp.name}</strong></span>
+        ${state.canaryHistory.length > 0 ? tagSub : ''}
+      </div>
       <span class="mono font-small chip-var">${currentVar || '–'}</span>
     `;
 
     chip.addEventListener("click", () => {
       // Cycle: "" -> "A" -> "B" -> "C" -> ""
       const variants = ["", "A", "B", "C"];
-      const cur = state.canaryAssignments[emp.id] || "";
+      const cur = state.wizardAssignments[emp.id] || "";
       const nextIdx = (variants.indexOf(cur) + 1) % variants.length;
       const nextVar = variants[nextIdx];
 
       chip.classList.remove("assign-a", "assign-b", "assign-c");
       if (nextVar) chip.classList.add(`assign-${nextVar.toLowerCase()}`);
       chip.querySelector(".chip-var").textContent = nextVar || "–";
-      state.canaryAssignments[emp.id] = nextVar;
+      state.wizardAssignments[emp.id] = nextVar;
       updateWholeCompanyWarning();
     });
 
@@ -1117,7 +1180,7 @@ function updateWholeCompanyWarning() {
 
   const unique = new Set(assigned);
   const warn = $("wholeCoWarning");
-  if (assigned.length === state.employees.length && state.employees.length > 0 && unique.size === 1) {
+  if (assigned.length === state.employees.length && state.employees.length > 0) {
     warn.style.display = "block";
     warn.innerHTML = "<strong>Warning:</strong> All employees are receiving this canary. Careful moles will not leak a full-company document. Leave some staff unassigned as a control group.";
   } else if (assigned.length > 0 && unique.size === 1) {
@@ -1136,7 +1199,7 @@ function wizardSplit(numWays) {
     c.classList.remove("assign-a", "assign-b", "assign-c");
     c.classList.add(`assign-${v.toLowerCase()}`);
     c.querySelector(".chip-var").textContent = v;
-    state.canaryAssignments[c.dataset.id] = v;
+    state.wizardAssignments[c.dataset.id] = v;
   });
   updateWholeCompanyWarning();
 }
@@ -1156,7 +1219,7 @@ function wizardSplitByDept() {
     c.classList.remove("assign-a", "assign-b", "assign-c");
     c.classList.add(`assign-${v.toLowerCase()}`);
     c.querySelector(".chip-var").textContent = v;
-    state.canaryAssignments[c.dataset.id] = v;
+    state.wizardAssignments[c.dataset.id] = v;
   });
   updateWholeCompanyWarning();
 }
@@ -1172,13 +1235,13 @@ function submitCanaryWizard() {
   });
 
   if (Object.keys(assignment).length === 0) {
-    alert("Please assign at least one employee to a canary variant.");
+    showInPageHint("Please assign at least one employee to a canary variant.");
     return;
   }
 
   const uniqueVariants = new Set(Object.values(assignment));
   if (uniqueVariants.size > 3) {
-    alert("Maximum of 3 variants (A, B, C) allowed in medium tier.");
+    showInPageHint("Maximum of 3 variants (A, B, C) allowed in medium tier.");
     return;
   }
 
@@ -1777,6 +1840,7 @@ function setupGlobalEventListeners() {
 
   // Canary Wizard Events
   $("closeCanaryModalBtn").addEventListener("click", closeCanaryWizard);
+  $("wizardCoverUntaggedBtn")?.addEventListener("click", wizardCoverUntagged);
   $("wizardSplitSolverBtn")?.addEventListener("click", wizardSplitSolver);
   $("wizardSplitEvenBtn")?.addEventListener("click", wizardSplitSolver);
   $("wizardSplitTwoBtn")?.addEventListener("click", () => wizardSplit(2));
@@ -1785,7 +1849,7 @@ function setupGlobalEventListeners() {
     document.querySelectorAll(".wizard-emp-chip").forEach(c => {
       c.classList.remove("assign-a", "assign-b", "assign-c");
       c.querySelector(".chip-var").textContent = "–";
-      state.canaryAssignments[c.dataset.id] = "";
+      state.wizardAssignments[c.dataset.id] = "";
     });
     updateWholeCompanyWarning();
   });

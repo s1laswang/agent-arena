@@ -19,3 +19,5 @@ Produced by (offline, `GEMINI_API_KEY=`), days 1000-1019, trial 0, commit a44ca5
 accomplices(strategy) == {seat} reproduces the controller harm days exactly; it is wrong for procurement (accomplices include finance_ap, yet procurement alone suffices). Selecting days by the baseline's outcome would be circular. Fix (owned by lead-attack/atk-regret): per-strategy decisive_seat, gate seat-mode days on it, then pin trust_all == 0 and oracle == 1 on every gated day.
 
 Gullible (follows the strategy's steps for its seat) was verified to issue the right steps; it still cannot land chains whose other links are defenders. A team of gullible defenders made oracle-in-seat score 0 on every controller day, so that variant is not usable.
+
+Note: raw win counts from this run are controller 13/20 and procurement 12/20; REWARD.md's 0.562/0.500 come from lab/baselines table runs (3 trials, ungraded config days excluded), so the day lists above explain the cause but the means are not recomputed here.

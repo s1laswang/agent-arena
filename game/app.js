@@ -260,8 +260,8 @@ async function boot() {
   } else {
     state.seed = 3000;
   }
-  $("seedInput").value = state.seed;
-  $("headerSeedDisplay").textContent = state.seed;
+  if ($("seedInput")) $("seedInput").value = state.seed;
+  if ($("headerSeedDisplay")) $("headerSeedDisplay").textContent = state.seed;
 
   setupGlobalEventListeners();
 
@@ -297,8 +297,8 @@ async function boot() {
 
     updateLoader(100, "Benchmark runtime ready. Start investigation.");
     $("playBtn").disabled = false;
-    $("playBtn").textContent = "Start Investigation";
-    $("startTutorialBtn").disabled = false;
+    $("playBtn").textContent = "Play";
+    if ($("startTutorialBtn")) $("startTutorialBtn").disabled = false;
   } catch (err) {
     $("loadMsg").textContent = "Failed to load engine: " + err.message;
     $("playBtn").textContent = "Engine Initialization Failed";
@@ -316,13 +316,14 @@ function updateLoader(percent, message) {
 // GAME START & RESET
 // -----------------------------------------------------------------------------
 function startGame(customSeed = null) {
-  const seedVal = customSeed !== null ? customSeed : parseInt($("seedInput").value.trim(), 10);
+  const seedInputVal = $("seedInput") ? parseInt($("seedInput").value.trim(), 10) : NaN;
+  const seedVal = customSeed !== null ? customSeed : (!isNaN(seedInputVal) ? seedInputVal : state.seed);
   if (isNaN(seedVal) || seedVal < 3000 || seedVal > 9999) {
-    alert("Please enter a valid public dev seed between 3000 and 9999.");
-    return;
+    state.seed = 3000;
+  } else {
+    state.seed = seedVal;
   }
-  state.seed = seedVal;
-  $("headerSeedDisplay").textContent = state.seed;
+  if ($("headerSeedDisplay")) $("headerSeedDisplay").textContent = state.seed;
 
   try {
     game = py.runPython(`canary_game.Game(${state.seed})`);
@@ -335,7 +336,7 @@ function startGame(customSeed = null) {
   const spec = JSON.parse(game.spec_json());
   state.tier = spec.tier;
   state.tiersVersion = spec.tiers_version;
-  $("tierChip").textContent = (spec.tier.charAt(0).toUpperCase() + spec.tier.slice(1)) + " Tier";
+  if ($("tierChip")) $("tierChip").textContent = (spec.tier.charAt(0).toUpperCase() + spec.tier.slice(1)) + " Tier";
 
   // Reset episode state
   callsSpent = 0;
@@ -1241,8 +1242,6 @@ function recalculateAccuseMath() {
 
   $("mathVDisplay").textContent = `V = ${V.toFixed(3)}`;
   $("mathBreakEvenDisplay").textContent = `p* = ${(breakEvenP * 100).toFixed(1)}%`;
-  $("mathEVDisplay").textContent = (ev >= 0 ? "+" : "") + ev.toFixed(2);
-  $("mathEVDisplay").style.color = ev >= 0 ? "var(--ok)" : "var(--warn)";
 
   const adviceBox = $("mathAdviceBox");
   const adviceText = $("mathAdviceText");
@@ -1250,20 +1249,13 @@ function recalculateAccuseMath() {
   const warnText = $("confirmWarningText");
 
   if (p < breakEvenP) {
-    adviceBox.className = "math-advice-box advice-unfavorable";
-    adviceText.innerHTML = `
-      <strong>At this certainty (${state.enteredCertainty}%), not accusing scores better on average</strong>
-      (EV = ${ev.toFixed(2)} vs 0.00).<br>
-      This is the mistake frontier AI agents make: gambling at the deadline instead of having the sense to abstain.
-    `;
+    if (adviceBox) adviceBox.className = "math-advice-box advice-unfavorable";
+    if (adviceText) adviceText.textContent = "Accusing now loses value on average.";
     if (confirmBtn) confirmBtn.className = "btn-secondary btn-large btn-warn";
-    if (warnText) warnText.style.display = "block";
+    if (warnText) warnText.style.display = "none";
   } else {
-    adviceBox.className = "math-advice-box advice-favorable";
-    adviceText.innerHTML = `
-      <strong>Certainty (${state.enteredCertainty}%) exceeds break-even p* (${(breakEvenP * 100).toFixed(1)}%).</strong><br>
-      Accusing has positive statistical expected value (EV = +${ev.toFixed(2)}).
-    `;
+    if (adviceBox) adviceBox.className = "math-advice-box advice-favorable";
+    if (adviceText) adviceText.textContent = "Accusing now gains value on average.";
     if (confirmBtn) confirmBtn.className = "btn-danger btn-large";
     if (warnText) warnText.style.display = "none";
   }
@@ -1272,7 +1264,7 @@ function recalculateAccuseMath() {
 function confirmAccusation() {
   const empId = $("accuseSuspectSelect").value;
   if (!empId) {
-    alert("Please select the suspect you wish to accuse.");
+    showInPageHint("Please select the suspect you wish to accuse.");
     return;
   }
   state.decisionDay = state.day;
@@ -1358,19 +1350,25 @@ function showEndScreen() {
   const icon = $("endVerdictIcon");
   const title = $("endVerdictTitle");
   const sub = $("endVerdictSub");
+  if (icon) icon.textContent = "";
 
   if (isWin) {
-    icon.textContent = "";
-    title.textContent = "INVESTIGATION SUCCESSFUL: MOLE CAPTURED";
-    sub.textContent = `You accurately identified ${moleDisplayName} as the corporate mole and preserved ${Math.round(reveal.you.score * 100)}% of company value.`;
+    title.textContent = "INVESTIGATION SUCCESSFUL";
+    sub.textContent = `You correctly identified ${moleName} as the mole and preserved company value.`;
   } else if (isAbstain) {
-    icon.textContent = "";
     title.textContent = "INVESTIGATION CLOSED: ABSTAINED";
-    sub.textContent = `You closed the investigation without an accusation, preserving 0.00 score and avoiding the catastrophic -1.00 penalty.`;
+    sub.textContent = `You closed the investigation without an accusation, preserving 0.00 score and avoiding the -1.00 false accusation penalty.`;
   } else {
-    icon.textContent = "";
-    title.textContent = "INVESTIGATION FAILED: FALSE ACCUSATION";
-    sub.textContent = `You accused ${getEmployeeDisplayName(reveal.you.accused)}, but the real mole was ${moleDisplayName}. A false accusation imposes a -1.00 penalty.`;
+    title.textContent = "INVESTIGATION FAILED";
+    const accusedName = getEmployeeDisplayName(reveal.you.accused);
+    sub.textContent = `You accused ${accusedName}, but the real mole was ${moleName}. False accusations incur a -1.00 penalty.`;
+  }
+
+  // Score Display
+  const scoreDisplay = $("endScoreDisplay");
+  if (scoreDisplay) {
+    const scoreColor = reveal.you.score > 0 ? "var(--ok)" : reveal.you.score < 0 ? "var(--err)" : "inherit";
+    scoreDisplay.innerHTML = `<span class="muted font-small">Final Score: </span><span class="mono" style="color:${scoreColor}; font-weight:700; font-size:20px;">${fmt(reveal.you.score)}</span>`;
   }
 
   // Flipping Mole Card
@@ -1379,10 +1377,12 @@ function showEndScreen() {
   $("moleMetaDisplay").textContent = `${moleEmp.dept} · ${moleEmp.role}`;
 
   const flipCard = $("moleFlipCard");
-  flipCard.classList.remove("revealed");
-  setTimeout(() => {
-    flipCard.classList.add("revealed");
-  }, 400);
+  if (flipCard) {
+    flipCard.classList.remove("revealed");
+    setTimeout(() => {
+      flipCard.classList.add("revealed");
+    }, 400);
+  }
 
   const decisionDay = state.decisionDay || reveal.you.final_day || state.day;
   const decisionV = state.decisionV !== null ? state.decisionV : (reveal.you.score > 0 ? reveal.you.score : state.knownV);
@@ -1390,118 +1390,125 @@ function showEndScreen() {
 
   // Scoreboard Table (Honest Labeling)
   const scoreboard = $("scoreboardBody");
-  scoreboard.innerHTML = "";
+  if (scoreboard) {
+    scoreboard.innerHTML = "";
 
-  const refEntries = referenceData[String(reveal.seed)] || [];
-  const rows = [
-    {
-      who: "You (Human Operator)",
-      score: reveal.you.score,
-      telemetry: `${reveal.you.end_reason === "accused" ? "accused " + getEmployeeDisplayName(reveal.you.accused) + (reveal.you.correct ? " (CORRECT)" : " (WRONG)") : "abstained"}, day ${decisionDay}, ${reveal.you.tool_calls} calls`,
-      isPlayer: true
-    },
-    {
-      who: "Reference Solver (Bayes Policy)",
-      score: reveal.solver.score,
-      telemetry: `${reveal.solver.correct ? "correct" : "abstained"}, accused day ${reveal.solver.final_day}, ${reveal.solver.tool_calls} calls (live on this seed)`,
-      isPlayer: false
-    }
-  ];
+    const refEntries = referenceData[String(reveal.seed)] || [];
+    const rows = [
+      {
+        who: "You (Human Operator)",
+        score: reveal.you.score,
+        telemetry: `${reveal.you.end_reason === "accused" ? "accused " + getEmployeeDisplayName(reveal.you.accused) + (reveal.you.correct ? " (CORRECT)" : " (WRONG)") : "abstained"}, day ${decisionDay}, ${reveal.you.tool_calls} calls`,
+        isPlayer: true
+      },
+      {
+        who: "Reference Solver (Bayes Policy)",
+        score: reveal.solver.score,
+        telemetry: `${reveal.solver.correct ? "correct" : "abstained"}, accused day ${reveal.solver.final_day}, ${reveal.solver.tool_calls} calls (live on this seed)`,
+        isPlayer: false
+      }
+    ];
 
-  if (refEntries.length > 0) {
-    for (const r of refEntries) {
+    if (refEntries.length > 0) {
+      for (const r of refEntries) {
+        rows.push({
+          who: r.agent,
+          score: r.score,
+          telemetry: r.note || "benchmark average",
+          isPlayer: false
+        });
+      }
+    } else {
       rows.push({
-        who: r.agent,
-        score: r.score,
-        telemetry: r.note || "benchmark average",
+        who: "gemini-4-carbon (benchmark avg)",
+        score: 0.503,
+        telemetry: "Harbor v1.4 judge benchmark mean (oracle: 0.757, gap: -0.253)",
+        isPlayer: false
+      });
+      rows.push({
+        who: "codex:gpt-5.5 (benchmark avg)",
+        score: 0.401,
+        telemetry: "v1.3 judges-harness shape (55% of solver, n=11)",
+        isPlayer: false
+      });
+      rows.push({
+        who: "heuristic baseline",
+        score: 0.650,
+        telemetry: "Canary bisection reference",
+        isPlayer: false
+      });
+      rows.push({
+        who: "logs_only baseline",
+        score: -1.000,
+        telemetry: "Audit logs only, no canaries (fooled by framing: -1.00)",
         isPlayer: false
       });
     }
-  } else {
-    rows.push({
-      who: "gemini-4-carbon (benchmark avg)",
-      score: 0.503,
-      telemetry: "Harbor v1.4 judge benchmark mean (oracle: 0.757, gap: -0.253)",
-      isPlayer: false
-    });
-    rows.push({
-      who: "codex:gpt-5.5 (benchmark avg)",
-      score: 0.401,
-      telemetry: "v1.3 judges-harness shape (55% of solver, n=11)",
-      isPlayer: false
-    });
-    rows.push({
-      who: "heuristic baseline",
-      score: 0.650,
-      telemetry: "Canary bisection reference",
-      isPlayer: false
-    });
-    rows.push({
-      who: "logs_only baseline",
-      score: -1.000,
-      telemetry: "Audit logs only, no canaries (fooled by framing: -1.00)",
-      isPlayer: false
-    });
-  }
 
-  for (const row of rows) {
-    const tr = document.createElement("tr");
-    if (row.isPlayer) tr.className = "player-row";
+    for (const row of rows) {
+      const tr = document.createElement("tr");
+      if (row.isPlayer) tr.className = "player-row";
 
-    const scoreColor = row.score > 0 ? "var(--ok)" : row.score < 0 ? "var(--err)" : "inherit";
-    tr.innerHTML = `
-      <td>${row.who}</td>
-      <td class="mono" style="color:${scoreColor}; font-weight:700;">${fmt(row.score)}</td>
-      <td class="muted font-small">${row.telemetry}</td>
-    `;
-    scoreboard.appendChild(tr);
+      const scoreColor = row.score > 0 ? "var(--ok)" : row.score < 0 ? "var(--err)" : "inherit";
+      tr.innerHTML = `
+        <td>${row.who}</td>
+        <td class="mono" style="color:${scoreColor}; font-weight:700;">${fmt(row.score)}</td>
+        <td class="muted font-small">${row.telemetry}</td>
+      `;
+      scoreboard.appendChild(tr);
+    }
   }
 
   // "You Were Fooled" Callout
   const fooledBox = $("fooledCallout");
-  const moleTag = state.userTags[moleId];
-  if (moleTag === "cleared") {
-    fooledBox.hidden = false;
-    $("fooledHeading").textContent = "Investigator Note";
-    $("fooledMessage").textContent = `During the investigation, you tagged ${moleDisplayName} as 'Cleared'. The mole successfully maintained a low profile and deflected your suspicion.`;
-  } else if (!isWin && reveal.you.accused) {
-    fooledBox.hidden = false;
-    const accusedEmp = state.employees.find(e => e.id === reveal.you.accused);
-    const accusedDisp = accusedEmp ? accusedEmp.name : getEmployeeDisplayName(reveal.you.accused);
-    $("fooledHeading").textContent = "Investigator Note";
-    $("fooledMessage").textContent = `You accused ${accusedDisp}. The true mole planted fabricated after-hours access logs and exploited delayed leaks to frame colleagues.`;
-  } else {
-    fooledBox.hidden = true;
+  if (fooledBox) {
+    const moleTag = state.userTags[moleId];
+    if (moleTag === "cleared") {
+      fooledBox.hidden = false;
+      $("fooledHeading").textContent = "Investigator Note";
+      $("fooledMessage").textContent = `During the investigation, you tagged ${moleDisplayName} as 'Cleared'. The mole successfully maintained a low profile and deflected your suspicion.`;
+    } else if (!isWin && reveal.you.accused) {
+      fooledBox.hidden = false;
+      const accusedEmp = state.employees.find(e => e.id === reveal.you.accused);
+      const accusedDisp = accusedEmp ? accusedEmp.name : getEmployeeDisplayName(reveal.you.accused);
+      $("fooledHeading").textContent = "Investigator Note";
+      $("fooledMessage").textContent = `You accused ${accusedDisp}. The true mole planted fabricated after-hours access logs and exploited delayed leaks to frame colleagues.`;
+    } else {
+      fooledBox.hidden = true;
+    }
   }
 
   // "Your Call" Regret Analysis
   const regretBox = $("regretAnalysisText");
-
-  regretBox.innerHTML = `
-    <p>You estimated certainty at <strong>${state.enteredCertainty}%</strong>. At the decision on Day ${decisionDay} (V = ${decisionV.toFixed(3)}), the break-even threshold was <strong>p* = ${(breakEvenP * 100).toFixed(1)}%</strong>.</p>
-    <p>${
-      isWin
-        ? `Certainty (${state.enteredCertainty}%) exceeded break-even p*, making the accusation on Day ${decisionDay} optimal (+${reveal.you.score.toFixed(3)}).`
-        : isAbstain
-        ? `Closing the case on Day ${decisionDay} preserved 0.00 score. Frontier models lose 1.00 by gambling at deadlines; abstaining when p < p* is the dominant play.`
-        : `At ${state.enteredCertainty}% certainty, accusing on Day ${decisionDay} resulted in a wrong accusation (-1.00). Closing the case (0.00) prevents devastating false accusations.`
-    }</p>
-  `;
+  if (regretBox) {
+    regretBox.innerHTML = `
+      <p>You estimated certainty at <strong>${state.enteredCertainty}%</strong>. At the decision on Day ${decisionDay} (V = ${decisionV.toFixed(3)}), the break-even threshold was <strong>p* = ${(breakEvenP * 100).toFixed(1)}%</strong>.</p>
+      <p>${
+        isWin
+          ? `Certainty (${state.enteredCertainty}%) exceeded break-even p*, making the accusation on Day ${decisionDay} optimal (+${reveal.you.score.toFixed(3)}).`
+          : isAbstain
+          ? `Closing the case on Day ${decisionDay} preserved 0.00 score. Frontier models lose 1.00 by gambling at deadlines; abstaining when p < p* is the dominant play.`
+          : `At ${state.enteredCertainty}% certainty, accusing on Day ${decisionDay} resulted in a wrong accusation (-1.00). Closing the case (0.00) prevents devastating false accusations.`
+      }</p>
+    `;
+  }
 
   // Action Replay Timeline
-  $("solverAccuseDayChip").textContent = `Reference Solver accused Day ${reveal.solver.final_day}`;
+  if ($("solverAccuseDayChip")) $("solverAccuseDayChip").textContent = `Reference Solver accused Day ${reveal.solver.final_day}`;
   const replayBox = $("replayTimeline");
-  replayBox.innerHTML = "";
+  if (replayBox) {
+    replayBox.innerHTML = "";
 
-  for (const act of state.actionHistory) {
-    const entry = document.createElement("div");
-    entry.className = "replay-entry";
-    const plainWords = formatActionPlainWords(act.tool, act.args);
-    entry.innerHTML = `
-      <span class="mono muted font-small">Day ${act.day}</span>
-      <strong>${plainWords}</strong>
-    `;
-    replayBox.appendChild(entry);
+    for (const act of state.actionHistory) {
+      const entry = document.createElement("div");
+      entry.className = "replay-entry";
+      const plainWords = formatActionPlainWords(act.tool, act.args);
+      entry.innerHTML = `
+        <span class="mono muted font-small">Day ${act.day}</span>
+        <strong>${plainWords}</strong>
+      `;
+      replayBox.appendChild(entry);
+    }
   }
 
   // Reveal End Screen

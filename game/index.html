@@ -17,14 +17,11 @@
       <span class="canary-icon" aria-hidden="true" style="display:none;"></span>
       <div>
         <h1>Canary: Catch the Mole</h1>
-        <p class="sub">Head of Security Simulator · Real RL Benchmark in Pyodide</p>
+        <p class="sub">Head of Security Simulator</p>
       </div>
     </div>
     <div class="header-meta">
-      <span class="chip" id="tierChip" title="Medium Tier: 20 employees, 1 active mole, 14 days horizon, delayed exfiltrations, fabricated after-hours logs.">Medium Tier</span>
       <span class="chip" id="seedChip">Seed <strong id="headerSeedDisplay">3000</strong></span>
-      <button type="button" id="helpShortcutBtn" class="chip chip-btn" title="Help & Shortcuts [?]">Shortcuts [?]</button>
-      <button type="button" id="demoToggleBtn" class="chip chip-btn" title="Toggle large presentation view">Demo View</button>
     </div>
   </div>
 </header>
@@ -48,24 +45,10 @@
       </div>
     </div>
 
-    <!-- Seed Selection & Launch Buttons -->
     <div class="title-actions-card">
-      <div class="seed-selection-row">
-        <div class="seed-input-group">
-          <label for="seedInput">Seed (3000–9999)</label>
-          <div class="seed-input-controls">
-            <input id="seedInput" type="number" min="3000" max="9999" step="1" value="3000">
-          </div>
-        </div>
-        <div class="launch-buttons-group">
-          <button type="button" id="playBtn" class="btn-primary btn-large" disabled>
-            Start Game
-          </button>
-          <button type="button" id="startTutorialBtn" class="btn-secondary btn-large" disabled>
-            Tutorial
-          </button>
-        </div>
-      </div>
+      <button type="button" id="playBtn" class="btn-primary btn-large" disabled>
+        Loading...
+      </button>
     </div>
   </section>
 
@@ -337,10 +320,6 @@
             </div>
           </div>
 
-          <div class="math-formula muted mono font-small">
-            EV(accuse) = p · V - (1 - p) · 1.00 &nbsp;|&nbsp; Break-even p* = 1 / (1 + V)
-          </div>
-
           <!-- Dynamic Advice Callout -->
           <div id="mathAdviceBox" class="math-advice-box advice-favorable">
             <span id="mathAdviceText">Certainty exceeds the break-even threshold (EV > 0.00).</span>
@@ -406,10 +385,13 @@
     <div class="end-header">
       <span class="end-icon" id="endVerdictIcon" style="display:none;"></span>
       <div>
-        <h2 id="endVerdictTitle">INVESTIGATION COMPLETE: MOLE APPREHENDED</h2>
-        <p id="endVerdictSub" class="muted">The true mole leaking corporate documents has been unmasked.</p>
+        <h2 id="endVerdictTitle">INVESTIGATION COMPLETE</h2>
+        <p id="endVerdictSub" class="muted"></p>
       </div>
     </div>
+
+    <!-- Score Display -->
+    <div id="endScoreDisplay" class="end-score-display"></div>
 
     <!-- Revealed Mole Card -->
     <div class="flip-section">
@@ -419,25 +401,15 @@
             <div class="mole-badge">CONFIRMED MOLE</div>
             <h3 id="moleNameDisplay">Marcus Vance</h3>
             <div class="mono font-small" id="moleMetaDisplay">Engineering · Level 2</div>
-            <p class="mole-note">Exfiltrated company memos to rival firm.</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- "You Were Fooled" Callout (if applicable) -->
-    <div id="fooledCallout" class="card fooled-box" hidden>
-      <div class="fooled-icon" style="display:none;"></div>
-      <div class="fooled-content">
-        <h4 id="fooledHeading">Investigator Note</h4>
-        <p id="fooledMessage" class="muted font-small"></p>
-      </div>
-    </div>
-
-    <!-- Benchmark Scoreboard -->
-    <div class="scoreboard-section">
-      <h3>Benchmark Showdown: You vs. Bayesian Solver vs. Frontier AI</h3>
-      <div class="scoreboard-table-wrap">
+    <!-- Collapsible Benchmark Comparison Table -->
+    <details class="benchmark-details" style="margin: 16px 0;">
+      <summary class="muted font-small" style="cursor: pointer; font-weight: 600;">Compare to AI agents</summary>
+      <div class="scoreboard-table-wrap" style="margin-top: 8px;">
         <table>
           <thead>
             <tr>
@@ -449,25 +421,7 @@
           <tbody id="scoreboardBody"></tbody>
         </table>
       </div>
-      <p class="benchmark-honesty-note muted font-small">
-        * Note: gemini-4-carbon and codex:gpt-5.5 numbers are benchmark averages over judge seeds, not individual seed scores. The Bayesian solver score is computed live on this exact seed.
-      </p>
-    </div>
-
-    <!-- Decision Regret & Math -->
-    <div class="card regret-card">
-      <h4>"Your Call": Decision Regret & Mathematics Analysis</h4>
-      <div id="regretAnalysisText" class="font-small muted line-height-relaxed"></div>
-    </div>
-
-    <!-- Player Action Replay Timeline -->
-    <div class="card replay-card">
-      <div class="replay-head">
-        <h4>Investigation Replay</h4>
-        <span class="chip" id="solverAccuseDayChip">Solver accused on Day –</span>
-      </div>
-      <div class="replay-timeline" id="replayTimeline"></div>
-    </div>
+    </details>
 
     <!-- Post-Game Navigation Actions -->
     <div class="end-actions">
@@ -536,13 +490,6 @@
   </div>
 
 </main>
-
-<footer class="muted">
-  <div class="footer-inner">
-    <span>Canary · Junction 2026 · AfterQuery "Break the Agent" & DeepMind "Gemini API" Challenge</span>
-    <span>Runs real <code>canary</code> benchmark package v1.4 with Pyodide sandbox parity.</span>
-  </div>
-</footer>
 
 <script src="app.js"></script>
 </body>

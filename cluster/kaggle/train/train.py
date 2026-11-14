@@ -21,21 +21,33 @@ oracle = work + "/oracle"
 if has_decide:
     run(env0, "-m", "lab.run", "--team", "oracle", "--day-start", "1000", "--days", "40", "--trials", "1", "--out", oracle)
 sft_extra = cfg.get("sft_extra", {})
+steps = cfg.get("steps", ["sft", "decide", "eval"])
+errs = []
+def step(tag, name, env, *a):
+    try:
+        run(env, *a)
+    except Exception as e:
+        errs.append((tag, name, repr(e)))
 def pipeline(model, i):
     tag = model.split("/")[-1]
     env = dict(env0, CUDA_VISIBLE_DEVICES=str(i % ngpu))
-    ad, out = f"{work}/{tag}/adapter", f"{work}/{tag}"
-    run(env, "-m", "train.sft", "--model", model, "--data", train_file, "--out", ad, *sft_args, *sft_extra.get(tag, []))
+    out = f"{work}/{tag}"
+    ad = out + "/adapter"
+    if "sft" not in steps:
+        found = glob.glob(f"/kaggle/input/**/{tag}/adapter/adapter_config.json", recursive=True)
+        ad = os.path.dirname(found[0]) if found else ad
+    else:
+        step(tag, "sft", env, "-m", "train.sft", "--model", model, "--data", train_file, "--out", ad, *sft_args, *sft_extra.get(tag, []))
     for name, a in (("base", []), ("adapter", ["--adapter", ad])):
-        if has_decide:
-            run(env, "-m", "train.decide", "--model", model, *a, "--run", oracle, "--min-day", "1000", "--out", f"{out}/decide_{name}.json", *decide_args)
-        run(env, "-m", "train.eval", "--model", model, *a, "--out", f"{out}/eval_{name}", *eval_args)
-errs = []
+        if has_decide and "decide" in steps:
+            step(tag, "decide_" + name, env, "-m", "train.decide", "--model", model, *a, "--run", oracle, "--min-day", "1000", "--out", f"{out}/decide_{name}.json", *decide_args)
+        if "eval" in steps:
+            step(tag, "eval_" + name, env, "-m", "train.eval", "--model", model, *a, "--out", f"{out}/eval_{name}", *eval_args)
 def guard(m, i):
     try:
         pipeline(m, i)
     except Exception as e:
-        errs.append((m, repr(e)))
+        errs.append((m, "pipeline", repr(e)))
 if ngpu > 1:
     ts = [threading.Thread(target=guard, args=(m, i)) for i, m in enumerate(models)]
     [t.start() for t in ts]; [t.join() for t in ts]

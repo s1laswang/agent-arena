@@ -132,3 +132,24 @@ def test_pack_deterministic(tmp_path):
     os.utime(script)
     subprocess.run([sys.executable, script, "pack", str(b)], check=True)
     assert a.read_bytes() == b.read_bytes()
+
+
+def test_cache_check_flags_secrets(tmp_path):
+    import importlib.util
+    import os
+    spec = importlib.util.spec_from_file_location("gc", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "gemini_cache.py"))
+    gc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gc)
+    (tmp_path / "a.json").write_text(json.dumps({"text": "fine", "tool_calls": []}))
+    assert gc.check(tmp_path)[0] == []
+    (tmp_path / "b.json").write_text(json.dumps({"text": "my api_key is x", "tool_calls": []}))
+    (tmp_path / "c.json").write_text(json.dumps({"text": "AIza" + "x" * 35, "tool_calls": []}))
+    assert gc.check(tmp_path)[0] == ["b.json", "c.json"]
+
+
+def test_image_path_not_in_cache_key(tmp_path):
+    a, b = tmp_path / "x.png", tmp_path / "y.png"
+    a.write_bytes(b"same")
+    b.write_bytes(b"same")
+    mk = lambda p: [{"role": "user", "tool_results": [{"name": "read_doc", "result": {"image": str(p)}}]}]
+    assert gemini.cache_key("m", "s", mk(a), None, 0, 0) == gemini.cache_key("m", "s", mk(b), None, 0, 0)

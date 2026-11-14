@@ -150,3 +150,32 @@ def test_sleeper_agent_gemini_path_still_executes_plan(monkeypatch):
     w = run_day(day, team)
     assert fm.calls > 0
     assert any(a.seat == "finance_ap" and a.tool == "update_vendor_bank" for a in w.ledger)
+
+
+def _fake_generate(model, system, messages, tools, temperature, seed):
+    from types import SimpleNamespace as N
+    n = sum(1 for m in messages if m["role"] == "assistant")
+    name = "my_tickets" if n == 0 else "end_turn"
+    part = N(function_call=N(name=name, args={}), text=None)
+    return N(candidates=[N(content=N(parts=[part]))], usage_metadata=None)
+
+
+def test_offline_replay_identical_days(monkeypatch, tmp_path):
+    from lab import run as R
+    monkeypatch.setattr(gemini, "CACHE", tmp_path / "cache")
+    monkeypatch.setenv("LAB_GEMINI", "1")
+    monkeypatch.setenv("GEMINI_API_KEY", "fake")
+    monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
+    monkeypatch.setattr(gemini, "_generate", _fake_generate)
+    R.run("staff", 2, 1, out=str(tmp_path / "live"))
+    assert list((tmp_path / "cache").glob("*.json"))
+    monkeypatch.delenv("GEMINI_API_KEY")
+    monkeypatch.setenv("SLEEPER_OFFLINE", "1")
+    monkeypatch.setattr(gemini, "_generate", lambda *a: 1 / 0)
+    outs = []
+    for i in (1, 2):
+        R.run("staff", 2, 1, out=str(tmp_path / ("r%d" % i)))
+        outs.append(next((tmp_path / ("r%d" % i)).iterdir()))
+    a, b = (o / "days.jsonl" for o in outs)
+    assert a.read_bytes() == b.read_bytes()
+    assert a.read_bytes() == (next((tmp_path / "live").iterdir()) / "days.jsonl").read_bytes()

@@ -84,11 +84,23 @@ def _mime(path):
     return {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(Path(path).suffix.lower(), "image/png")
 
 
+def _fhash(path):
+    p = Path(path)
+    return hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else str(path)
+
+
 def _hashed(messages):
     out = []
     for m in messages:
         if m.get("images"):
-            m = {**m, "images": [hashlib.sha256(Path(i).read_bytes()).hexdigest() for i in m["images"]]}
+            m = {**m, "images": [_fhash(i) for i in m["images"]]}
+        if m.get("tool_results"):
+            rs = []
+            for r in m["tool_results"]:
+                if isinstance(r.get("result"), dict) and r["result"].get("image"):
+                    r = {**r, "result": {**r["result"], "image": _fhash(r["result"]["image"])}}
+                rs.append(r)
+            m = {**m, "tool_results": rs}
         out.append(m)
     return out
 

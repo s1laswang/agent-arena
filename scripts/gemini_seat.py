@@ -46,6 +46,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     model = model or os.environ.get("SLEEPER_MODEL_STAFF") or "gemini-4-carbon"
     com = com or commit()
     out_dir = Path(base or ROOT / "results" / "frontier") / model / com
+    out_dir.mkdir(parents=True, exist_ok=True)
     gemini.CACHE = out_dir / "cache"
     gemini.reset_usage()
     world = World(make_day(seed))

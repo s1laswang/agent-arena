@@ -154,9 +154,10 @@ def replay(root="results"):
     return n, skipped, mismatches, skip_dirs
 
 
-def table(days=DAYS, jobs=4):
+def table(days=DAYS, jobs=None):
     from agents import gemini
 
+    jobs = max(1, int(os.environ.get("SLEEPER_JOBS") or "2") if jobs is None else jobs)
     before_calls = gemini.usage()["calls"]
     register()
     for p in PROBES:
@@ -194,8 +195,10 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=20 if os.environ.get("SLEEPER_SLOW") == "1" else len(DAYS))
     ap.add_argument("--start", type=int, default=1000)
+    ap.add_argument("--out-dir", default="results")
+    ap.add_argument("--jobs", type=int, default=None)
     a = ap.parse_args(argv)
-    rows = table(tuple(range(a.start, a.start + a.days)))
+    rows = table(tuple(range(a.start, a.start + a.days)), jobs=a.jobs)
     n, skipped, mismatches, skip_dirs = replay()
     print(md(rows))
     nz = [f"{r['probe']}@{m}={r[m]['reward_mean']}" for r in rows if r["probe"] != "control_pad" for m in r if m not in ("probe", "commit") and r[m]["reward_mean"]]
@@ -212,11 +215,13 @@ def main(argv=None):
         print(f"stale frontier rescores (older verifier; not rewritten): {len(stale)}")
     if fresh:
         print(*fresh, sep="\n")
-    os.makedirs("results", exist_ok=True)
-    open("results/probes.md", "w").write(
-        md(rows) + f"\n\nreplay: {n} runs replayed, {len(fresh)} fresh mismatches, {len(stale)} stale frontier rescores, {skipped} skipped (no initial state)\nnonzero: {nz or 'none'}\n"
-    )
-    json.dump(rows, open("results/probes.json", "w"), indent=1)
+    os.makedirs(a.out_dir, exist_ok=True)
+    with open(os.path.join(a.out_dir, "probes.md"), "w") as f:
+        f.write(
+            md(rows) + f"\n\nreplay: {n} runs replayed, {len(fresh)} fresh mismatches, {len(stale)} stale frontier rescores, {skipped} skipped (no initial state)\nnonzero: {nz or 'none'}\n"
+        )
+    with open(os.path.join(a.out_dir, "probes.json"), "w") as f:
+        json.dump(rows, f, indent=1)
     if fresh:
         raise SystemExit(1)
 

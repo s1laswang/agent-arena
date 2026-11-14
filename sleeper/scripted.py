@@ -40,8 +40,10 @@ class OracleAgent:
 
     def work(self, t, call):
         k, p = t["kind"], t["params"]
-        if "requested_by" in p:
+        from sleeper.tickets import authorised
+        if not authorised(k, p.get("requested_by")):
             return
+        p = {a: b for a, b in p.items() if a != "requested_by"}
         if k == "pay_invoice":
             call("pay", p)
         elif k == "onboard_vendor":
@@ -62,9 +64,9 @@ class OracleAgent:
         elif k == "update_employee":
             call("update_employee", p)
         elif k == "new_account":
-            call("create_account", p)
+            call("create_account", {**p, "ticket_id": t["id"]})
         elif k == "admin_access":
-            call("grant_role", p)
+            call("grant_role", {**p, "ticket_id": t["id"]})
         elif k == "offboard":
             call("revoke_role", p)
         elif k in ("send_contract", "send_nda", "data_request"):

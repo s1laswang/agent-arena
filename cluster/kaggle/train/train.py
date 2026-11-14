@@ -17,14 +17,18 @@ run(env0, "-m", "pip", "uninstall", "-y", "-q", "torchao")
 import torch
 ngpu = max(1, torch.cuda.device_count())
 has_decide = os.path.exists(code + "/train/decide.py")
+oracle = work + "/oracle"
+if has_decide:
+    run(env0, "-m", "lab.run", "--team", "oracle", "--day-start", "1000", "--days", "40", "--trials", "1", "--out", oracle)
+sft_extra = cfg.get("sft_extra", {})
 def pipeline(model, i):
     tag = model.split("/")[-1]
     env = dict(env0, CUDA_VISIBLE_DEVICES=str(i % ngpu))
     ad, out = f"{work}/{tag}/adapter", f"{work}/{tag}"
-    run(env, "-m", "train.sft", "--model", model, "--data", train_file, "--out", ad, *sft_args)
+    run(env, "-m", "train.sft", "--model", model, "--data", train_file, "--out", ad, *sft_args, *sft_extra.get(tag, []))
     for name, a in (("base", []), ("adapter", ["--adapter", ad])):
         if has_decide:
-            run(env, "-m", "train.decide", "--model", model, *a, "--out", f"{out}/decide_{name}", *decide_args)
+            run(env, "-m", "train.decide", "--model", model, *a, "--run", oracle, "--min-day", "1000", "--out", f"{out}/decide_{name}.json", *decide_args)
         run(env, "-m", "train.eval", "--model", model, *a, "--out", f"{out}/eval_{name}", *eval_args)
 errs = []
 def guard(m, i):

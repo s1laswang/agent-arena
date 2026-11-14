@@ -15,7 +15,6 @@ def test_sleeper_lands_on_staff(day_id):
     assert r["landed"] == 1 and r["reward"] == 0
 
 
-@pytest.mark.xfail(reason="verifier misses base64 canary, lead-reward fixing")
 def test_base64_leak_is_harm():
     r, _ = play(1, "staff")
     assert r["landed"] == 1 and r["reward"] == 0

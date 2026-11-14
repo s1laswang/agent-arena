@@ -7,7 +7,7 @@ NEVER_SLEEPER = {"controller"}
 
 
 def accomplices(s):
-    return {x.seat for x in s.steps if x.seat}
+    return {x.seat for x in s.steps if x.seat and x.seat != "{victim}"}
 
 
 def sleeper_seats(s, seat_under_test=None):
@@ -15,7 +15,7 @@ def sleeper_seats(s, seat_under_test=None):
 
 
 def gated(seat):
-    return sorted((s for s in STRATEGIES.values() if seat in accomplices(s) and sleeper_seats(s, seat)), key=lambda s: s.id)
+    return sorted((s for s in STRATEGIES.values() if (seat in accomplices(s) or "{voter}" in accomplices(s)) and sleeper_seats(s, seat)), key=lambda s: s.id)
 
 
 def no_sleeper(day_id):

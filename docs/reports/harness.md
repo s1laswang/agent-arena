@@ -61,6 +61,11 @@
 - Friction (minor): `make reproduce` overwrites the tracked results/ files, so a fresh clone shows 3 modified files afterwards. Watch: medium under secret A cleared by only 0.046 between CIs.
 - Cleaned up: the /tmp clone, which had a SALT in its Harbor build, is deleted.
 
+## 06:10 head: results/latest fix merged; review of the version-grouping fix
+- Done (merged by CEO as be68285): `make reproduce` writes to gitignored results/latest/; `make reproduce-update` / `--update-committed` refreshes the committed results/. Verified: git status stays clean after reproduce, and CI uploads results/latest/.
+- Review of justSilas-repro-group (already merged; make test 527 passed, 4 skipped): grouping by tier version is correct (v1.4 first, v1.3/v1.2 history), superseded/ is excluded, and n, seeds and sha are shown per row.
+- BUG (sent to CEO; their engineer owns reproduce.py): hard v1.2 `codex:gpt-5.5` pools a smoke run with the full run, so seed 0 counts twice (n=6 over 5 seeds). Fix: move the smoke dir to superseded/ and/or dedupe per seed, plus a test that n == distinct seeds.
+
 ---
 # Engineer sections
 

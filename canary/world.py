@@ -118,7 +118,7 @@ def generate_world(tier: str, seed: int, p: TierParams) -> World:
     ws = world_seed(tier, seed)
     rng = random.Random(ws)
     n = p.n_employees
-    depts = DEPTS[: 5 if tier == "hard" else 4]
+    depts = DEPTS[: 5 if tier in ("hard", "hard_forge") else 4]
     company = rng.choice(COMPANIES)
     names: set[str] = set()
     emps = []

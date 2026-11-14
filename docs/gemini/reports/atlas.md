@@ -1,6 +1,24 @@
 # G3 Failure Atlas: report (newest first)
 
-## Sat 14:50
+## Sat 14:47 (EET, `date`)
+
+**Done**
+- Run 1 (14:30) lost its one-shot gemini-4-carbon discovery call: a non-streamed request over 793k tokens was cut by
+  the server after 527 s (`RemoteProtocolError: Server disconnected`, nothing billed). The run fell back to the
+  deterministic taxonomy, labelled 404/404 steps against it on the flash cache, and submitted a batch. **I stopped that
+  process myself (pkill, 14:43) and cancelled its batch job** (`batches/vp4lpi7a...`, JOB_STATE_CANCELLED): both were
+  built on the fallback taxonomy, which must never be published, so resuming the batch would have paid for useless
+  labels. Run 1 cost $1.73 (cache creation $0.60 + 12 cached questions).
+- Fixes (pushed): discovery is now a one-shot question over the whole corpus on the explicit 3.8-flash context
+  cache; gemini-4-carbon re-reads the corpus independently in <=250k-token shards + one merge call (`--crosscheck`),
+  mapped onto the taxonomy by flash; every generate call streams; a failed discovery exits without writing
+  atlas.json (`--allow-fallback` only for drafts); the batch job runs concurrently with the cached questions.
+- Merged gemini-track (133f546, fast-forward); all 60 gemini tests green. Atlas tests: 12.
+- Ladder data loads: 44 episodes so far, tiers version now inferred from `ladder-v14`; dev seeds, so true moles known.
+
+**Running:** run 2 (nohup, pid 91027, log `data/gemini/scratch/full2.log`), started 14:45.
+
+## Sat ~14:30 (first entry; timestamp corrected)
 
 **Done**
 - `canary/gemini/atlas.py` + helpers (`atlas_data`, `atlas_gemini`, `atlas_schema`, `atlas_charts`, `atlas_report`,

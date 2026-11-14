@@ -948,7 +948,8 @@ def write_markdown(res: dict, path: Path) -> None:
          f"- Score candidates (unjustified correct accusation at solver level): {c['score_candidates']}; each is re-run "
          "on fresh seeds and only counts if the mean holds up with no evidence-justified wins.",
          f"- Tool calls executed: {c['tool_calls']} · attempts through the real MCP server: {c['mcp_attempts']} · "
-         f"planner errors: {c['planner_errors']} · errors: {c['errors']}", "",
+         f"planner failures (input filter block, timeout or token cap; the executor then improvised without a plan, "
+         f"still ledger-verified): {c['planner_errors']} · errors: {c['errors']}", "",
          "## Scoreboard (per tier)", "",
          "| tier | attempts | best attacker score | mean attacker score | solver mean (paired seeds) | correct / accused | with violations | exploits |",
          "|---|---|---|---|---|---|---|---|"]

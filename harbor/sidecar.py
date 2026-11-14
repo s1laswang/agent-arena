@@ -16,30 +16,39 @@ DAY_SPACE = 1 << 62  # was 100000: the whole space enumerated in ~2 min and the 
 
 def effective_id(seed, seat=None, salt=None):
     import hashlib
-    salt = os.environ.get("SLEEPER_SALT", "") if salt is None else salt
+    from sleeper.secrets import get_secret
+    if salt is None:
+        salt = get_secret("SLEEPER_SALT", "") or ""
     return int(hashlib.sha256(f"{salt}:{seed}".encode()).hexdigest(), 16) % DAY_SPACE if salt else seed
 
 
-def make_world_and_team(seed, seat, salt=None):
+def make_world_and_team(seed, seat, salt=None, team_name=None):
+    import contextlib
     import inspect
     import random
     from lab.run import build_team, day_for
-    day_id = effective_id(seed, salt=salt)
-    day, strategy, _, _ = day_for(day_id, seat)
-    name = os.environ.get("SLEEPER_TEAM", "procedure")
-    if name in ("procedure", "seat"):
-        from sleeper.scripted import seat_team
-        return day_id, World(day), seat_team(day, seat, day_id, strategy)
-    team = build_team(name, day, 0)
-    if day.sleeper_seat and strategy:
-        from agents.sleeper_agent import SleeperAgent
-        kw = {"ticks": day.ticks} if "ticks" in inspect.signature(SleeperAgent).parameters else {}
-        team[day.sleeper_seat] = SleeperAgent(day.sleeper_seat, day.goal, strategy, random.Random(day_id), **kw)
-    return day_id, World(day), team
+    from sleeper.secrets import get_secret, scoped_secrets
+    eff_salt = (get_secret("SLEEPER_SALT", "") or "") if salt is None else salt
+    day_id = effective_id(seed, seat, salt=eff_salt)
+    ctx = scoped_secrets(SLEEPER_SALT=eff_salt) if "SLEEPER_SALT" not in os.environ else contextlib.nullcontext()
+    with ctx:
+        day, strategy, _, _ = day_for(day_id, seat)
+        world = World(day)
+        name = team_name or os.environ.get("SLEEPER_TEAM", "procedure")
+        if name in ("procedure", "seat"):
+            from sleeper.scripted import seat_team
+            return day_id, world, seat_team(day, seat, day_id, strategy)
+        team = build_team(name, day, 0)
+        if day.sleeper_seat and strategy:
+            from agents.sleeper_agent import SleeperAgent
+            kw = {"ticks": day.ticks} if "ticks" in inspect.signature(SleeperAgent).parameters else {}
+            team[day.sleeper_seat] = SleeperAgent(day.sleeper_seat, day.goal, strategy, random.Random(day_id), **kw)
+        return day_id, world, team
 
 
 def reward(srv, out, token=None):
-    token = token or os.environ["VERIFY_TOKEN"]
+    from sleeper.secrets import get_secret
+    token = token or get_secret("VERIFY_TOKEN", None) or os.environ["VERIFY_TOKEN"]
     srv.finish()
     r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", out], capture_output=True, text=True,
                        env={**os.environ, "VERIFY_TOKEN": token})
@@ -74,15 +83,26 @@ def make_httpd(srv, out, token, port):
     return HTTPServer(("0.0.0.0", port), H)
 
 
-def main():
-    from sleeper.secrets import take
-    sec = take("VERIFY_TOKEN", "SLEEPER_SALT", "SLEEPER_SEED")
-    seed = int(sec["SLEEPER_SEED"])
-    seat = os.environ["SLEEPER_SEAT"]
-    out = os.environ.get("SLEEPER_OUT", "/srv/state.json")
-    token = sec["VERIFY_TOKEN"]
+def main(argv=None):
+    import argparse
+    from sleeper.secrets import set_secret, take
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--secrets-file", default=None)
+    a = ap.parse_args(argv)
+    sec = take("VERIFY_TOKEN", "SLEEPER_SALT", "SLEEPER_SEED", secrets_file=a.secrets_file)
+    token = (sec.get("VERIFY_TOKEN") or "").strip()
     if not token:
         sys.exit("VERIFY_TOKEN is required")
+    salt = (sec.get("SLEEPER_SALT") or "").strip()
+    if not salt:
+        sys.exit("SLEEPER_SALT is required")
+    seed_raw = (sec.get("SLEEPER_SEED") or "").strip()
+    if not seed_raw:
+        sys.exit("SLEEPER_SEED is required")
+    seed = int(seed_raw)
+    set_secret(SLEEPER_SALT=salt)
+    seat = os.environ["SLEEPER_SEAT"]
+    out = os.environ.get("SLEEPER_OUT", "/srv/state.json")
     if os.path.isdir(out):
         sys.exit(f"SLEEPER_OUT must be a file path, got a directory: {out}")
     rport = int(os.environ.get("SIDECAR_REWARD_PORT", "8001"))
@@ -91,7 +111,7 @@ def main():
         with socket.socket() as t:
             if t.connect_ex(("127.0.0.1", p)) == 0:
                 sys.exit(f"port {p} already in use (stale sidecar? pkill -f harbor.sidecar)")
-    _, world, team = make_world_and_team(seed, seat, salt=sec["SLEEPER_SALT"] or "")
+    _, world, team = make_world_and_team(seed, seat, salt=salt)
     srv = build_server(world, seat, team, out, token=token)
     atexit.register(srv.finish)
     httpd = make_httpd(srv, out, token, rport)

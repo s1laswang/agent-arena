@@ -122,7 +122,10 @@ FIELDS = ("ts", "feature", "model", "kind", "in", "out", "thinking", "cached", "
           "cost_unknown", "ok", "error", "run_id", "host")
 
 
-def load_ledger(paths: list[str | Path]) -> list[dict]:
+EXPORT_FIELDS = FIELDS + ("pid",)  # pid is part of the dedupe key, so an exported copy still dedupes against its sources
+
+
+def load_ledger(paths: list[str | Path], fields: tuple = FIELDS, normalize: bool = True) -> list[dict]:
     """Read ledger JSONL from files or directories (recursive). Only whitelisted fields are kept."""
     files: list[str] = []
     for p in paths:
@@ -150,7 +153,10 @@ def load_ledger(paths: list[str | Path]) -> list[dict]:
                 if key in seen:  # the same row synced into two ledger dirs (Mac + FR8 copies) counts once
                     continue
                 seen.add(key)
-                rows.append({k: r.get(k) for k in FIELDS})
+                rows.append({k: r.get(k) for k in fields})
+    if not normalize:
+        rows.sort(key=lambda r: float(r.get("ts") or 0.0))
+        return rows
     for r in rows:
         for k in ("in", "out", "thinking", "cached"):
             r[k] = int(r.get(k) or 0)
@@ -165,6 +171,23 @@ def load_ledger(paths: list[str | Path]) -> list[dict]:
     return rows
 
 
+def committed_ledgers(results: Path | None = None) -> list[str]:
+    """--ledger committed: only ledgers committed under results/gemini (usage_ledger.jsonl.gz is the whitelisted export
+    of every local ledger, see --export-ledger), so the usage numbers can be rebuilt from the repo alone."""
+    res = Path(results) if results else ROOT / "results" / "gemini"
+    return sorted(glob.glob(str(res / "*ledger*.jsonl.gz"))) + sorted(glob.glob(str(res / "roles" / "*" / "ledger.jsonl")))
+
+
+def export_ledger(sources: list[str], out: Path) -> int:
+    """Write the deduped union of `sources` as gzip JSONL with whitelisted fields only (no prompts, no meta)."""
+    rows = load_ledger(sources, fields=EXPORT_FIELDS, normalize=False)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(out, "wt") as f:
+        for r in rows:
+            f.write(json.dumps(r, sort_keys=True) + "\n")
+    return len(rows)
+
+
 def discover_ledgers() -> list[str]:
     """--ledger auto: every ledger JSONL we can see on this machine (dedupe makes overlaps safe).
     Looks in data/gemini/ledger, $CANARY_GEMINI_LEDGER_DIR, ~/agent-arena-data/gemini/**/_ledger (ladder/FR8 pulls) and
@@ -173,8 +196,7 @@ def discover_ledgers() -> list[str]:
     if os.environ.get("CANARY_GEMINI_LEDGER_DIR"):
         roots.append(Path(os.environ["CANARY_GEMINI_LEDGER_DIR"]))
     roots += sorted(ROOT.parent.glob("gemini-*/data/gemini"))
-    files: list[str] = sorted(glob.glob(str(ROOT / "results" / "gemini" / "*ledger*.jsonl.gz")))  # committed ledgers
-    files += sorted(glob.glob(str(ROOT / "results" / "gemini" / "roles" / "*" / "ledger.jsonl")))
+    files: list[str] = committed_ledgers()
     for r in roots:
         for f in glob.glob(str(r / "**" / "*.jsonl"), recursive=True):
             if any("ledger" in part for part in Path(f).relative_to(r).parts[:-1]) or "ledger" in r.parts:
@@ -304,8 +326,9 @@ def summarize(rows: list[dict]) -> dict:
         caps.append("generate")
     if tot["cached"] or kinds.get("cache"):
         caps.append("context caching")
-    for k, label in (("batch", "batch API"), ("embed", "embeddings"), ("tts", "TTS"), ("live", "Live API"),
-                     ("count", "token counting")):
+    if any(r["kind"] == "batch" and r["ok"] and (r["in"] + r["out"]) > 0 for r in rows):
+        caps.append("batch API")  # attempted-but-failed batch calls (quota on our key) are not a capability
+    for k, label in (("embed", "embeddings"), ("tts", "TTS"), ("live", "Live API"), ("count", "token counting")):
         if kinds.get(k):
             caps.append(label)
     if any(r["in"] >= 200_000 for r in rows):
@@ -346,6 +369,23 @@ def _thumb(results_dir: Path, rel: Any, budget: list[int]) -> str:
 
 def _num(x) -> float | None:
     return float(x) if isinstance(x, (int, float)) and not isinstance(x, bool) and x == x else None
+
+
+def slim_atlas_blind(B: dict | None) -> dict | None:
+    """G3's blind re-run (atlas_blind.json): only the code-scored recovery numbers the page shows."""
+    if not isinstance(B, dict) or not isinstance(B.get("recovery"), dict):
+        return None
+    rc, q, c = B["recovery"], B.get("quotes") or {}, B.get("corpus") or {}
+    names = {m.get("id"): m.get("name") for m in B.get("modes") or [] if isinstance(m, dict)}
+    return {"generated_at": B.get("generated_at"), "git_sha": B.get("git_sha"), "model": B.get("model"),
+            "blind": bool(B.get("blind")), "episodes": c.get("episodes"), "tokens": c.get("tokens"),
+            "tags_recovered": len(rc.get("tags_recovered") or []), "n_tags": rc.get("n_tags"),
+            "novel": [names.get(m) or m for m in rc.get("novel_modes") or []],
+            "cited_steps": rc.get("cited_steps"), "regret_share_covered": rc.get("regret_share_covered"),
+            "high_regret_recall": rc.get("high_regret_recall"),
+            "tags": [{"tag": t, "steps": v.get("steps"), "recall": v.get("recall")} for t, v in (rc.get("tags") or {}).items()
+                     if isinstance(v, dict)],
+            "quotes_checked": q.get("checked"), "quotes_verified": q.get("verified_agent_text")}
 
 
 def slim_atlas(A: dict, results_dir: Path) -> dict:
@@ -404,6 +444,23 @@ def _plan_text(plan) -> str:
     return ""
 
 
+def slim_leaderboard(L: dict | None) -> dict | None:
+    """results/gemini/leaderboard_v14_hard.json (canary.gemini.leaderboard): rows exactly as the source file states them.
+    Only scalar fields and [lo, hi] pairs are kept; nothing is renamed, rescaled or relabelled."""
+    if not isinstance(L, dict):
+        return None
+    src = L.get("source_json") if L.get("kind") == "leaderboard" else L
+    rows = src if isinstance(src, list) else next((src.get(k) for k in ("rows", "entries", "leaderboard", "results")
+                                                   if isinstance(src, dict) and isinstance(src.get(k), list)), [])
+
+    def keep(v):
+        return v is None or isinstance(v, (str, int, float, bool)) or (
+            isinstance(v, list) and len(v) == 2 and all(isinstance(x, (int, float)) for x in v))
+    rows = [{k: v for k, v in r.items() if keep(v)} for r in rows if isinstance(r, dict)]
+    return {"kind": L.get("kind"), "source": L.get("source"), "source_sha": L.get("source_sha"),
+            "note": L.get("note"), "generated_at": L.get("generated_at"), "rows": rows}
+
+
 def slim_swarm(S: dict) -> dict:
     """Normalise G4's swarm.json (or the TEAM.md minimal shape) to what the page renders."""
     at = []
@@ -435,9 +492,32 @@ def slim_swarm(S: dict) -> dict:
         solver = pt.get("solver_mean_paired", pt.get("solver_mean_ref"))
     # G4 >= 18:20: a correct accusation the public evidence already justified is detective work, not a hack, so the
     # headline is the best *unjustified* score (per tier, against that tier's paired solver mean)
-    bu = [(v.get("best_unjustified"), v.get("solver_mean_paired", v.get("solver_mean_ref")), t)
-          for t, v in (S.get("per_tier") or {}).items() if isinstance(v, dict) and v.get("best_unjustified") is not None]
+    # in-run score candidates (confirmations) and their later review (G4 >= 21:15): a flag overturned on review is shown
+    # as "flagged -> overturned", never as a clean number, and never as the headline
+    tier_of = {a["id"]: a["tier"] for a in at}
+    persona_of = {a["id"]: a["persona"] for a in at}
+    reviews = {r.get("attempt"): r for r in S.get("reviews") or [] if isinstance(r, dict)}
+    cands = []
+    for aid, c in (S.get("confirmations") or {}).items():
+        if not isinstance(c, dict):
+            continue
+        r = reviews.get(aid)
+        rv = ({"n": r.get("n") or len(r.get("scores") or []), "mean": _num(r.get("mean")), "solver_mean": _num(r.get("solver_mean")),
+               "confirmed": bool(r.get("confirmed")), "file": r.get("file")} if r else None)
+        verdict = ("overturned on review" if c.get("confirmed") and rv and not rv["confirmed"] else
+                   "confirmed" if c.get("confirmed") and (not rv or rv["confirmed"]) else "not confirmed on re-run")
+        cands.append({"attempt": aid, "tier": tier_of.get(aid) or (r or {}).get("tier"), "persona": persona_of.get(aid) or (r or {}).get("persona"),
+                      "in_run": {"n": len(c.get("scores") or []), "mean": _num(c.get("mean")), "solver_mean": _num(c.get("solver_mean")),
+                                 "confirmed": bool(c.get("confirmed"))},
+                      "review": rv, "verdict": verdict})
+    overturned = {c["attempt"] for c in cands if c["verdict"] == "overturned on review"}
+    per_tier = [{"tier": t, "best_unjustified": _num(v.get("best_unjustified")), "attempt": v.get("best_unjustified_attempt"),
+                 "solver": _num(v.get("solver_mean_paired", v.get("solver_mean_ref"))),
+                 "overturned": v.get("best_unjustified_attempt") in overturned}
+                for t, v in sorted((S.get("per_tier") or {}).items()) if isinstance(v, dict) and v.get("best_unjustified") is not None]
+    bu = [(p["best_unjustified"], p["solver"], p["tier"]) for p in per_tier if not p["overturned"]]
     best_unj = max(bu, key=lambda x: x[0] - (x[1] or 0)) if bu else None
+    pc = S.get("positive_control") if isinstance(S.get("positive_control"), dict) else None
     counts = S.get("counts") or {}
     tests = S.get("tests_written")
     found = ROOT / "tests" / "test_gemini_lab_swarm_found.py"
@@ -454,6 +534,8 @@ def slim_swarm(S: dict) -> dict:
             "best_unjustified": _num(best_unj[0]) if best_unj else None,
             "best_unjustified_solver": _num(best_unj[1]) if best_unj else None,
             "best_unjustified_tier": best_unj[2] if best_unj else None,
+            "per_tier": per_tier, "candidates_review": cands,
+            "positive_control": {k: pc.get(k) for k in ("attempts", "attackers_found", "verified_exploits", "episodes", "episodes_at_1")} if pc else None,
             "honest_wins": counts.get("high_score_justified", sum(1 for a in at if a["justified"])),
             "tiers": sorted(tiers),
             "exploits": counts.get("exploits", sum(1 for a in at if a["exploit"] and a["ledger_verified"])),
@@ -482,6 +564,7 @@ def load_results(results_dir: Path) -> dict:
     out["ladder"] = redact(ladder) if ladder else None
     atlas = load_json(results_dir / "atlas.json")
     out["atlas"] = redact(slim_atlas(atlas, results_dir)) if atlas else None
+    out["atlas_blind"] = redact(slim_atlas_blind(load_json(results_dir / "atlas_blind.json")))
     swarm = load_json(results_dir / "swarm.json")
     out["swarm"] = redact(slim_swarm(swarm)) if swarm else None
     gb = load_json(results_dir / "gateway_bench.json")
@@ -496,8 +579,9 @@ def load_results(results_dir: Path) -> dict:
     else:
         out["gateway_bench"] = None
     ri = load_json(results_dir / "roles" / "index.json")
+    out["leaderboard"] = slim_leaderboard(load_json(results_dir / "leaderboard_v14_hard.json"))
     out["roles"] = redact({"generated_at": ri.get("generated_at"), "roles": [
-        {k: r.get(k) for k in ("role", "key", "run", "model", "thinking", "commit", "generated_at", "n", "headline")}
+        {k: r.get(k) for k in ("role", "key", "run", "model", "thinking", "commit", "generated_at", "n", "headline", "caveats")}
         for r in ri.get("roles") or [] if isinstance(r, dict)]}) if ri else None
     figs = {}
     budget = [3_000_000]
@@ -525,7 +609,10 @@ def render_html(payload: dict) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--ledger", nargs="*", default=None,
-                    help="ledger dirs/files (default data/gemini/ledger); 'auto' = every ledger found on this machine")
+                    help="ledger dirs/files (default data/gemini/ledger); 'auto' = every ledger found on this machine; "
+                         "'committed' = only ledgers committed under results/gemini")
+    ap.add_argument("--export-ledger", metavar="OUT.jsonl.gz",
+                    help="write the deduped, whitelisted union of the --ledger sources to OUT and exit")
     ap.add_argument("--results", default=str(DEFAULT_RESULTS))
     ap.add_argument("--out", default=str(DEFAULT_RESULTS / "dashboard.html"))
     ap.add_argument("--json", action="store_true", help="print the aggregated usage summary and exit")
@@ -533,6 +620,12 @@ def main(argv: list[str] | None = None) -> int:
     sources = a.ledger or [str(DEFAULT_LEDGER)]
     if sources == ["auto"]:
         sources = discover_ledgers()
+    elif sources == ["committed"]:
+        sources = committed_ledgers(Path(a.results))
+    if a.export_ledger:
+        n = export_ledger(sources, Path(a.export_ledger))
+        print(f"wrote {a.export_ledger} ({n} ledger rows from {len(sources)} files)")
+        return 0
     rows = load_ledger(sources)
     lad = load_json(Path(a.results) / "ladder.json") or {}
     reprice(rows, lad.get("prices_usd_per_1m") if isinstance(lad.get("prices_usd_per_1m"), dict) else None)
@@ -550,7 +643,7 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError:
             rel.append(Path(s).name)
     if len(sources) > 6:
-        rel = [f"{len(sources)} ledger files (--ledger auto)"]
+        rel = [f"{len(sources)} ledger files ({' '.join(a.ledger or [])})"]
     html = render_html(build_payload(rows, Path(a.results), rel))
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -589,6 +682,7 @@ HTML = """<!doctype html>
   <section id="p-atlas" class="panel" data-panel="atlas"></section>
   <section id="p-swarm" class="panel" data-panel="swarm"></section>
   <section id="p-roles" class="panel" data-panel="roles"></section>
+  <section id="p-leaderboard" class="panel" data-panel="leaderboard"></section>
 </main>
 <footer class="foot" id="foot"></footer>
 <div id="tip" role="tooltip" hidden></div>
@@ -666,6 +760,7 @@ button:focus-visible, .cell:focus-visible, [tabindex]:focus-visible { outline: 2
 .tile { background: var(--surface); padding: 14px 16px; min-width: 0; }
 .tile .lab { color: var(--muted); font-size: 12px; }
 .tile .val { font: 600 22px/1.2 system-ui, -apple-system, sans-serif; margin-top: 4px; letter-spacing: -.01em; }
+ol.caveats { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .tile .note { color: var(--muted); font-size: 11.5px; line-height: 1.35; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .caps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .chip { font: 500 11.5px/1 ui-monospace, "SF Mono", Menlo, monospace; padding: 6px 9px; border-radius: 999px;
@@ -787,6 +882,7 @@ function usd(n) { n = +n || 0; return n >= 100 ? '$' + nf.format(Math.round(n)) 
 function pctf(x, d) { return (x * 100).toFixed(d == null ? 0 : d) + '%'; }
 function secs(s) { return s >= 60 ? (s / 60).toFixed(1) + ' min' : s >= 10 ? s.toFixed(0) + ' s' : s.toFixed(1) + ' s'; }
 function short(m) { return String(m).replace(/^gemini-/, ''); }
+function sgn(x, d) { return x == null ? '?' : (x >= 0 ? '+' : '') + (+x).toFixed(d == null ? 3 : d); }
 function hhmm(t) { const d = new Date(t * 1000); return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 function day(t) { const d = new Date(t * 1000); return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }); }
 
@@ -1238,6 +1334,21 @@ function renderAtlas() {
     'Gemini reads the whole trajectory corpus in one long, cached context. Every quote is checked verbatim against the transcript in code; regret shares come from the reference solver, never from Gemini.');
   if (!A || !(A.modes || []).length) { sec.appendChild(pending('Atlas', 'python -m canary.gemini.atlas --runs <dirs> → results/gemini/atlas.json')); return; }
   const g = h('div', { class: 'grid' });
+  const B = R.atlas_blind;
+  if (B) {
+    const nt = B.n_tags != null ? B.n_tags : (B.tags || []).length;
+    g.appendChild(tilesRow([['Blind: code modes recovered', B.tags_recovered + ' / ' + nt, '≥30% of a code tag’s steps cited; scored in code'],
+      ['Blind: new modes named', String((B.novel || []).length), (B.novel || []).join(' · ')],
+      ['Blind: regret covered', B.regret_share_covered != null ? pctf(B.regret_share_covered) : '—', (B.cited_steps != null ? B.cited_steps + ' steps cited · ' : '') + 'coverage is weak'],
+      ['Blind: high-regret steps cited', B.high_regret_recall != null ? pctf(B.high_regret_recall) : '—', 'of all high-regret steps'],
+      ['Blind: quotes verbatim', B.quotes_checked != null ? B.quotes_verified + ' / ' + B.quotes_checked : '—', 'in the agents’ own words']]));
+    const tb = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['code tag', 'tagged steps', 'recall (blind)'].map((c, i) => h('th', { class: i ? 'num' : '', text: c })))]),
+      h('tbody', {}, (B.tags || []).map(t => h('tr', {}, [h('td', {}, [h('code', { text: t.tag })]), h('td', { class: 'num', text: t.steps != null ? String(t.steps) : '–' }),
+        h('td', { class: 'num', text: t.recall != null ? pctf(t.recall) : '–' })])))]);
+    g.appendChild(card('c12', 'Blind re-run: what Gemini finds without our labels',
+      `${short(B.model || '')} saw only the agents’ tool calls, results, own words and outcome (${B.episodes != null ? nf.format(B.episodes) + ' episodes, ' : ''}${B.tokens != null ? compact(B.tokens) + ' tokens, ' : ''}no regret, tags, beliefs or true mole). results/gemini/atlas_blind.md · ${B.git_sha || ''}`,
+      [tb, h('p', { class: 'sub', style: 'margin-top:10px', text: 'Atlas v1 below is not blind: its corpus showed Gemini our code-computed regret tags and solver beliefs, so v1 organises and explains failures the code had already attributed.' })]));
+  }
   const C = A.corpus || {}, HA = A.human_agreement, V = A.verification, LO = A.localisation;
   const quotes = A.modes.flatMap(m => m.quotes || []);
   const tiles = [['Episodes read', C.episodes != null ? nf.format(C.episodes) : '—', A.model ? 'by ' + short(A.model) + ' in one prompt' : ''],
@@ -1247,7 +1358,7 @@ function renderAtlas() {
     LO ? ['Chart reading', LO.agree + ' / ' + LO.n, 'divergence step found within 3 steps (multimodal)'] : ['Failure modes', String(A.modes.length), 'ranked by regret share'],
     ['Human agreement', HA && HA.rate != null ? pctf(HA.rate) : 'pending', HA && HA.rate != null ? (HA.n ? HA.n + ' claims labelled by a teammate' : 'human–Gemini agreement') : 'labels in docs/gemini/validation.md']];
   g.appendChild(tilesRow(tiles));
-  if (A.summary) g.appendChild(card('c12', 'What Gemini found', null, [h('p', { class: 'summary', text: A.summary })]));
+  if (A.summary) g.appendChild(card('c12', B ? 'What Gemini found (v1, not blind)' : 'What Gemini found', null, [h('p', { class: 'summary', text: A.summary })]));
   const modes = A.modes.slice().sort((a, b) => (b.regret_share || 0) - (a.regret_share || 0));
   const list = h('div', { class: 'modes' }, modes.slice(0, 6).map((m, i) => {
     const bar = h('div', { class: 'share' }, [h('div')]); bar.firstChild.style.width = Math.max(0, Math.min(100, (m.regret_share || 0) * 100)) + '%';
@@ -1262,7 +1373,7 @@ function renderAtlas() {
       h('div', { class: 'facts' }, [h('span', {}, [h('b', { text: pctf(m.regret_share || 0) }), ' of all regret']), m.episodes != null ? h('span', {}, [h('b', { text: String(m.episodes) }), ' episodes']) : null,
         m.steps != null ? h('span', {}, [h('b', { text: String(m.steps) }), ' decisions']) : null, m.decision ? h('span', {}, ['decision ', h('b', { text: m.decision })]) : null]), bar]).concat(qs_)), thumb]);
   }));
-  g.appendChild(card('c12', 'Top failure modes', 'bar = share of all solver regret attributed to the mode', [synthBadge(A), list]));
+  g.appendChild(card('c12', B ? 'Top failure modes (v1, not blind)' : 'Top failure modes', 'bar = share of all solver regret attributed to the mode', [synthBadge(A), list]));
   const co = (C.cohorts || []).filter(c => c.cohort);
   if (co.length) {
     const tb = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['cohort (model / harness / rules)', 'episodes', 'mean score', 'accuracy', 'mean regret'].map((c, i) => h('th', { class: i ? 'num' : '', text: c })))]),
@@ -1287,9 +1398,11 @@ function renderSwarm() {
   const tiles = [['Attacks', nf.format(at.length), [S.mode, (S.tiers && S.tiers.length ? S.tiers.join(' + ') : S.tier)].filter(Boolean).join(' · ') + (S.tool_calls ? ' · ' + nf.format(S.tool_calls) + ' tool calls' : '')],
     ['Personas', String(personas), S.model ? String(S.model).split(',').map(short).join(', ') : ''],
     S.best_unjustified != null
-      ? ['Best unjustified score', (S.best_unjustified >= 0 ? '+' : '') + S.best_unjustified.toFixed(3), (S.best_unjustified_tier || '') + ' · solver ' + (S.best_unjustified_solver != null ? '+' + S.best_unjustified_solver.toFixed(3) : '?') + ' · ' + (S.honest_wins || 0) + ' honest ' + (S.honest_wins === 1 ? 'win' : 'wins') + ' excluded']
+      ? ['Best unjustified score', sgn(S.best_unjustified, 2), (S.best_unjustified_tier || '') + ' · solver ' + (S.best_unjustified_solver != null ? sgn(S.best_unjustified_solver, 2) : '?') +
+          (S.per_tier || []).filter(p => p.overturned).map(p => ' · ' + p.tier + ' ' + sgn(p.best_unjustified, 2) + ' overturned on review').join('')]
       : ['Best non-solver score', best != null ? (best >= 0 ? '+' : '') + best.toFixed(3) : '—', solver != null ? 'solver ' + (solver >= 0 ? '+' : '') + solver.toFixed(3) + ' on the same seeds' : ''],
-    ['Verified exploits', String(S.exploits || 0), (S.exploits ? 'invariant broken, ledger-verified' : 'no invariant broken') + (S.candidates ? ' · ' + S.candidates + ' score candidates' : '')],
+    ['Verified exploits', String(S.exploits || 0), (S.violations != null ? S.violations + ' invariant violations' : (S.exploits ? 'invariant broken, ledger-verified' : 'no invariant broken')) +
+      (S.positive_control ? ' · positive control ' + S.positive_control.attackers_found + '/' + S.positive_control.attempts : '')],
     ['Regression tests', S.tests_written != null ? String(S.tests_written) : '—', 'written from the attacks']];
   const g = h('div', { class: 'grid' });
   g.appendChild(tilesRow(tiles));
@@ -1301,6 +1414,15 @@ function renderSwarm() {
     h('tbody', {}, top.map(a => h('tr', {}, [h('td', { class: 'nw', text: a.persona }), h('td', { class: 'plan', text: String(a.plan || '').slice(0, 90) + (String(a.plan || '').length > 90 ? '…' : '') }), h('td', { class: 'num', text: (a.score >= 0 ? '+' : '') + a.score.toFixed(3) }),
       h('td', {}, [h('span', { class: 'badge ' + (a.ledger_verified ? 'ok' : 'no'), text: a.justified ? '✓ honest win' : a.ledger_verified ? '✓ verified' : '✗ claim only' })])])))]);
   g.appendChild(card('c5', 'Top attacks', 'highest verified scores first', [tbl]));
+  const CR = S.candidates_review || [];
+  if (CR.length) {
+    const ms = (x, n) => x ? sgn(x.mean, 2) + ' vs solver ' + sgn(x.solver_mean, 2) + ' (n=' + x.n + ')' : '–';
+    const ct = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['attempt', 'tier', 'in-run re-run (fresh seeds)', 'review (same seeds, current audit)', 'verdict'].map(c => h('th', { text: c })))]),
+      h('tbody', {}, CR.map(c => h('tr', {}, [h('td', { class: 'nw', text: c.attempt }), h('td', { text: c.tier || '' }),
+        h('td', { class: 'nw', text: ms(c.in_run) + (c.in_run.confirmed ? ' · flagged' : '') }), h('td', { class: 'nw', text: ms(c.review) }),
+        h('td', {}, [h('span', { class: 'badge ' + (c.verdict === 'confirmed' ? 'no' : 'ok'), text: c.verdict === 'overturned on review' ? 'flagged → overturned on review' : c.verdict })])])))]);
+    g.appendChild(card('c12', 'Score candidates: flagged in-run → reviewed', 'an unjustified correct accusation at solver level is re-run on fresh seeds; a flag only stands if it survives review (results/gemini/swarm.md)', [ct]));
+  }
   const vk = Object.entries(S.violation_kinds || {});
   if (S.findings.length || vk.length) {
     const kids = [];
@@ -1351,8 +1473,32 @@ function renderRoles() {
   const tb = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['role', 'model (thinking)', 'commit', 'size', 'headline'].map(c => h('th', { text: c })))]),
     h('tbody', {}, RO.roles.map(r => h('tr', {}, [h('td', {}, [h('b', { text: r.role }), h('div', { class: 'sub', style: 'margin:2px 0 0;font-size:11px', text: r.run || '' })]),
       h('td', { class: 'plan', text: (r.model || '') + (r.thinking ? ' (' + r.thinking + ')' : '') }), h('td', { class: 'nw', text: r.commit || '' }),
-      h('td', { class: 'plan', text: r.n || '' }), h('td', { text: r.headline || '' })])))]);
+      h('td', { class: 'plan', text: r.n || '' }), h('td', {}, [r.headline || ''].concat((r.caveats || []).length ? [h('ol', { class: 'caveats' },
+        r.caveats.map(c => h('li', { text: c })))] : []))])))]);
   sec.appendChild(h('div', { class: 'grid' }, [card('c12', null, null, [tb])]));
+}
+
+// ---- leaderboard (v1.4 hard): every cell is the source file's own value; pct/ci fields shown as percent
+function renderLeaderboard() {
+  const sec = document.getElementById('p-leaderboard'); sec.replaceChildren();
+  const LB = R.leaderboard;
+  panelHead(sec, '07', { kicker: 'Leaderboard', h: 'v1.4 hard: trained open model vs Gemini vs the solver' },
+    'Every value is read as-is from ' + (LB && LB.source ? LB.source : 'results/leaderboard_v14_hard.json') + (LB && LB.source_sha ? ' @ ' + String(LB.source_sha).slice(0, 7) : '') + ', with n and CI; compute is labelled exactly as the file states it.');
+  if (!LB || !(LB.rows || []).length) { sec.appendChild(pending('Leaderboard', 'python -m canary.gemini.leaderboard → results/gemini/leaderboard_v14_hard.json')); return; }
+  const pref = ['name', 'model', 'agent', 'stage', 'round', 'harness', 'n', 'score', 'mean', 'score_ci', 'ci', 'pct_solver', 'pct_solver_ci', 'luck_adjusted_pct_solver', 'luck_adjusted_pct_solver_ci', 'compute', 'gpu_hours', 'eur', 'cost_eur'];
+  const keys = []; LB.rows.forEach(r => Object.keys(r).forEach(k => { if (!keys.includes(k)) keys.push(k); }));
+  const cols = pref.filter(k => keys.includes(k)).concat(keys.filter(k => !pref.includes(k)));
+  // a *_ci column takes its unit from the value column it qualifies (x_ci -> x), so a ratio CI is never shown raw
+  const isPct = k => /pct|ratio|share/.test(k) || (/_ci$/.test(k) && keys.some(o => o !== k && o.startsWith(k.slice(0, -3)) && /pct|ratio|share/.test(o)));
+  const fmt = (k, v) => {
+    if (v == null) return k === 'compute' ? 'not stated' : '–';
+    if (Array.isArray(v)) return '[' + v.map(x => isPct(k) ? pctf(x) : (+x).toFixed(3)).join(', ') + ']';
+    if (typeof v === 'number') return isPct(k) ? pctf(v) : Number.isInteger(v) ? String(v) : (+v).toFixed(3);
+    return String(v);
+  };
+  const tb = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, cols.map(c => h('th', { text: c })))]),
+    h('tbody', {}, LB.rows.map(r => h('tr', {}, cols.map(c => h('td', { class: typeof r[c] === 'number' ? 'num' : '', text: fmt(c, r[c]) })))))]);
+  sec.appendChild(h('div', { class: 'grid' }, [card('c12', null, LB.note || null, [tb])]));
 }
 
 function renderFoot() {
@@ -1366,7 +1512,7 @@ function renderFoot() {
 }
 
 function renderAll() {
-  renderHeadline(); renderUsage(); renderLadder(); renderAtlas(); renderSwarm(); renderRoles(); renderFoot();
+  renderHeadline(); renderUsage(); renderLadder(); renderAtlas(); renderSwarm(); renderRoles(); renderLeaderboard(); renderFoot();
 }
 const focus = qs.get('panel');
 if (focus) { document.body.classList.add('focus'); focus.split(',').forEach(p => { const e = document.querySelector('[data-panel="' + p + '"]'); if (e) e.classList.add('on'); }); }

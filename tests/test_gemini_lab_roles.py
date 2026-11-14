@@ -53,3 +53,7 @@ def test_index_and_roles_md_from_result_files(tmp_path):
     assert [r["key"] for r in idx] == ["frontier", "analyst", "swarm", "mole"]
     text = md.read_text()
     assert "paired -0.20" in text and "Mole Forge" in text and "| Role |" in text
+    # addendum: arena label, n and seed span, three caveats
+    assert "arena mode, not the judged env" in text and "n=2: medium dev seeds 0\u20131" in text
+    assert "flat per leak" in text and "scripted moles" in text and "watermarking" in text
+    assert idx[-1]["caveats"] == roles.MOLE_CAVEATS

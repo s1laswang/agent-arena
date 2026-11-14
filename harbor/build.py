@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SEATS = "ceo_assistant finance_ap controller hr it_admin procurement sales legal".split()
-COPY = ["sleeper", "agents", "harbor", "requirements.txt"]
+COPY = ["sleeper", "agents", "lab", "harbor", "requirements.txt"]
 
 TOML = '''schema_version = "1.1"
 artifacts = []

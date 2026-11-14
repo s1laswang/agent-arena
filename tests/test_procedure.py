@@ -93,7 +93,7 @@ def play_seat(seed, sid, tested, kind):
         team[tested] = make_oracle_seat(day, tested)
     elif kind == "procedure":
         from agents.procedure import make_procedure_team
-        team[tested] = make_procedure_team(scrub(day), seed=seed)[tested]
+        team[tested] = make_procedure_team(scrub(day), seed=seed, quarantine=False)[tested]
     team[seat] = SleeperAgent(seat, goal, st, random.Random(seed))
     w = run_day(day, team)
     r = score(day, w.initial, w.company, w.ledger, agent=kind, seat_under_test=tested)

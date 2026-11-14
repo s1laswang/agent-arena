@@ -16,7 +16,7 @@ def test_abort_still_scores(tmp_path, monkeypatch):
     monkeypatch.setenv("SLEEPER_OFFLINE", "1")
     seq = iter([{"text": "", "tool_calls": [{"name": "read_chat", "args": {}}]}] * 10)
     monkeypatch.setattr(gemini, "chat", lambda *a, **k: next(seq))
-    row, p = gs.run_seat("gemini", "m", max_calls=3, com="t", base=tmp_path)
+    row, p = gs.run_seat("gemini", "m", seed=1000, max_calls=3, com="t", base=tmp_path)
     assert row["aborted"] == "max_calls" and row["calls"] == 3 and row["scores"]["reward"] == 0
     assert json.loads(p.read_text())["model"] == "m"
 

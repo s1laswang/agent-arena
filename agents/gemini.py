@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / ".cache" / "gemini"
+USAGE_FILE = "usage.jsonl"
 DEFAULT_MODEL = "gemini-2.5-flash"
 _usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0, "api_errors": 0}
 _client = None
@@ -20,7 +21,7 @@ class OfflineCacheMiss(Exception):
     pass
 
 
-def _load_env():
+def load_env():
     for p in (Path.home() / "arena-agents" / ".env", ROOT / ".env"):
         if p.is_file():
             for line in p.read_text().splitlines():
@@ -30,7 +31,10 @@ def _load_env():
                     os.environ.setdefault(k.strip(), v.strip().strip("\"'"))
 
 
-_load_env()
+def enable_live():
+    load_env()
+    os.environ["SLEEPER_LIVE"] = "1"
+    return enabled()
 
 
 ARENA_ROLE = {"staff": "DEFENDER", "defender": "DEFENDER", "sleeper": "ATTACKER", "attacker": "ATTACKER", "reference": "REFERENCE", "procedure": "REFERENCE"}
@@ -49,7 +53,7 @@ def temp_for(role):
 
 
 def enabled():
-    return bool(os.environ.get("GEMINI_API_KEY")) or os.environ.get("SLEEPER_OFFLINE") == "1"
+    return (os.environ.get("SLEEPER_LIVE") == "1" and bool(os.environ.get("GEMINI_API_KEY"))) or os.environ.get("SLEEPER_OFFLINE") == "1"
 
 
 def usage():
@@ -202,7 +206,7 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
         _usage["in_tokens"] += um.prompt_token_count or 0
         _usage["out_tokens"] += um.candidates_token_count or 0
         CACHE.mkdir(parents=True, exist_ok=True)
-        with open(CACHE / "usage.jsonl", "a") as f:
+        with open(CACHE / USAGE_FILE, "a") as f:
             f.write(json.dumps({"model": model, "in": um.prompt_token_count or 0, "out": um.candidates_token_count or 0}) + "\n")
     out = _parse(resp)
     CACHE.mkdir(parents=True, exist_ok=True)

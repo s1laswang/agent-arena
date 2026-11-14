@@ -101,7 +101,7 @@ def run_seat(agent, model, seat, seed, days=1, max_turns=60):
     calls = (parse_claude if agent == "claude" else parse_codex)(lines)
     os.path.exists(out) and os.remove(out)
     asyncio.run(_finish(calls, seat, seed, out))
-    return {"model": model, "commit": commit(), "agent": agent, "seat": seat, "seed": seed, "trial": 0, "mode": "seat", "day_source": "day_for", "strategy": strat(seat, seed),
+    return {"model": model, "commit": commit(), "agent": agent, "seat": seat, "seed": seed, "trial": 0, "mode": "seat", "day_source": "day_for", "team": "procedure", "sleeper": "scripted", "strategy": strat(seat, seed),
             "scores": score_state(out, seat, model), "calls": len(calls), "wall_s": round(wall, 1),
             "mcp_calls": calls, "transcript": lines, "stderr": p.stderr[-2000:]}
 

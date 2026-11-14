@@ -62,6 +62,7 @@ def run(model, seat="finance_ap", day_id=0, max_calls=150, max_usd=2.0, com=None
 
 
 def main():
+    gemini.enable_live()
     ap = argparse.ArgumentParser()
     ap.add_argument("--seat", default="finance_ap")
     ap.add_argument("--seed", type=int, default=0)

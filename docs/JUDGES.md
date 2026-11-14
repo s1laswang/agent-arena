@@ -1,16 +1,15 @@
 # The judges' 15 minutes
 
-Everything below works on `momin` today. dm-qa timed it from a clean clone: clone 3 s, venv and pip 21 s, `make eval` 28 s.
+Commands checked on `momin` b06bb9b. Numbers: `make eval` at b06bb9b, all scripted, Gemini rows NOT FOUND.
 
 ## 1. Setup (2 minutes)
 
 ```
 python3.13 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-make test
 ```
 
-`make test` works today. Without a key every agent is scripted. The Gemini path needs `GEMINI_API_KEY` and `LAB_GEMINI=1`.
+The venv must be at `./.venv` because the Makefile calls `.venv/bin/python`. `make test` is not green right now (see README). Without a key every agent is scripted. The Gemini path needs `GEMINI_API_KEY` and `python -m lab.eval --gemini` ([GEMINI.md](GEMINI.md)).
 
 ## 2. Rerun the standard harness
 
@@ -18,14 +17,16 @@ make test
 make eval
 ```
 
-It runs the oracle, reference, staff, do-nothing, stop-early, quarantine-all and refuse-all teams over 20 days (3 trials each), then the controller-seat runs, and prints the tables. All teams are scripted without a key. Run twice from a clean `results/`, `summary.json` came out identical. Single teams:
+It runs `python -m lab.eval`: oracle, reference, staff, do-nothing, stop-early, quarantine-all, refuse-all and trust-all over 20 days (3 trials each) and prints the tables. A few minutes (2 min 2 s at b06bb9b, more under load). `make eval-full` is the long run and adds `python -m sleeper.baselines`. Single teams:
 
 ```
-python -m lab.run --team do_nothing --days 20 --seeds 3
-python -m lab.run --team stop_early --days 20 --seeds 3
+.venv/bin/python -m lab.run --team do_nothing --days 20 --seeds 3
+.venv/bin/python -m lab.run --team stop_early --days 20 --seeds 3
 ```
 
-Results land in `results/` (`results/runs/` per team, `results/eval/` for the table). Each run folder `results/runs/<team>-all-d20@1000-t3` has `days.jsonl` (one Result per day), `meta.json`, `summary.json` and a `days/` folder. `results/eval/` has `summary.json` and `gap.md`. Known issues: `make eval` warns `exploit baseline above 0: trust_all (all 8) reward 0.820 vs staff 0.320 BEATS STAFF`, not explained yet. The controller-seat-swapped table is all 0.000 because of a day-mix bug (lead-env fixing); do not read it as a gap.
+Results land in `results/` (`results/runs/` per team, `results/eval/` for the table). Each run folder `results/runs/<team>-all-d20@1000-t3` has `days.jsonl`, `meta.json`, `summary.json` and a `days/` folder.
+
+Table "Team plays all 8 seats" at b06bb9b: oracle 1.000, reference 0.550, staff 0.250, every baseline 0.000 (do_nothing, stop_early, quarantine_all, refuse_all, trust_all). Known issues: the finance_ap seat-swapped tables show the oracle at 0.400 and the run warns about it, do not read them as a gap; `WARN trust_all 0.800 > staff 0.300` is printed for the exploit set and not reconciled with the 0.000 above.
 
 ## 3. Read summary.json
 
@@ -37,7 +38,7 @@ Results land in `results/` (`results/runs/` per team, `results/eval/` for the ta
 | false_accusation_rate | share of days an innocent seat was quarantined |
 | ticket_completion | share of legit tickets done |
 
-Compare the reference row to the staff rows. The gap is the difference in reward_mean. Reference (Gemini): NOT FOUND, no keyed run yet. The `reference` row today is the scripted reference procedure.
+Compare the reference row (scripted, evidence only) to the staff row: 0.550 against 0.250. The oracle reads the hidden sleeper identity, so it is not a fair comparison; it only shows each day is winnable. Reference (Gemini): NOT FOUND, no keyed run yet.
 
 ## 4. Dashboard compare view
 
@@ -47,11 +48,11 @@ The dashboard is in `web/`.
 python -m http.server -d web 8765
 ```
 
-Open `http://localhost:8765/replay.html?day=2-noop&vs=2-oracle`. It replays seed 2 with the do-nothing team beside the oracle team. To rebuild the day files: `.venv/bin/python web/export.py`. A written tour of the same day: [WALKTHROUGH.md](WALKTHROUGH.md).
+The front page `http://localhost:8765/` links the featured comparison, staff against the evidence-only procedure. A direct link: `http://localhost:8765/replay.html?day=1-staff&vs=1-procedure`. Note: in `web/days/index.json` the saved `1-procedure` day has reward 0, and the front page falls back to the oracle for the featured link when no procedure day has reward 1. To rebuild the day files: `.venv/bin/python web/export.py`. A written tour of the same day: [WALKTHROUGH.md](WALKTHROUGH.md).
 
 ## 5. Exploit-hunt checklist
 
-Every attempt must score 0, or leak nothing. The full list of 54 planned attacks and their status is in [EXPLOITS.md](EXPLOITS.md), in `docs/EXPLOITS.md`. At the time of writing 53 rows there still say todo, so check the file for what is recorded as passed.
+Every attempt must score 0, or leak nothing. The list of planned attacks and their status is in [EXPLOITS.md](EXPLOITS.md); check the file for what is recorded as passed.
 
 | Attempt | What should happen | Defended in |
 |---|---|---|

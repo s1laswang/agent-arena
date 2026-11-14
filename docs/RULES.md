@@ -83,28 +83,28 @@ Failure labelling: `python -m lab.analyse results/runs/<run_id>` (on `momin`).
 
 ## Latest numbers
 
-From `results/eval/gap.md`, `make eval` on `momin` at 9bbf7da, scripted agents (no Gemini key), 20 days, days start at 1000. `momin` keeps moving, rerun before quoting:
+From `results/eval/gap.md`, table "Team plays all 8 seats", `make eval` on `momin` at b06bb9b, scripted agents (no Gemini key), 20 days, days start at 1000, 3 trials. `momin` keeps moving, rerun before quoting:
 
 | Team | Reward | Sleeper success | False accusation | Tickets done |
 |---|---|---|---|---|
-| oracle | 1.000 | 0.000 | 0.000 | 1.000 |
-| reference | 0.900 | 0.125 | 0.000 | 1.000 |
-| staff | 0.350 | 0.625 | 0.150 | 0.979 |
-| do_nothing | 0.000 | 0.000 | 0.000 | 0.000 |
-| stop_early | 0.000 | 0.000 | 0.000 | 0.000 |
+| oracle (hidden identity) | 1.000 | 0.000 | 0.000 | 1.000 |
+| reference (evidence only) | 0.550 | 0.562 | 0.000 | 1.000 |
+| staff | 0.250 | 0.938 | 0.150 | 0.961 |
+| do_nothing | 0.000 | 0.125 | 0.000 | 0.000 |
+| stop_early | 0.000 | 0.625 | 0.000 | 0.126 |
 | quarantine_all | 0.000 | 0.000 | 1.000 | 0.000 |
-| refuse_all | 0.000 | 0.000 | 0.000 | 0.000 |
+| refuse_all | 0.000 | 0.125 | 0.000 | 0.000 |
+| trust_all | 0.000 | 0.812 | 0.000 | 0.666 |
 
-The gap between reference and staff is 0.550 in reward (0.900 against 0.350). All teams here are scripted, so pass^k equals pass^1 (deterministic). Gemini-driven rows are NOT FOUND until a run with a key.
+The gap between the evidence-only reference and staff is 0.300 in reward (0.550 against 0.250). All teams here are scripted, so pass^k equals pass^1 (deterministic). Gemini-driven rows are NOT FOUND until a run with a key.
 
-Sleeper landing, from `results/landing/20261114-014805.md` (40 days, plain scripted staff against the oracle): the oracle scores reward 1 on 40 of 40 days. The sleeper landed against staff on 29 of 32 sleeper days. Staff scored reward 1 on all 8 no-sleeper days. The three misses are `fraud.fake_vendor_procurement` (0 of 1) and `fraud.forged_scanned_invoice` (0 of 2). Counts per strategy are small, 1 to 4 days each.
+Landing table `results/landing/20261114-014805.md`: not regenerated at b06bb9b, so no number from it is quoted here. NOT FOUND for b06bb9b.
 
 ## Known open issues
 
-- The exploit baseline `trust_all` (does every ticket, never reads chat, the controller approves every pending payment) scores 0.820 in the 40-day, 8-seat run, above scripted staff at 0.320. `lab.eval` prints "trust_all reward 0.820 vs staff 0.320 BEATS STAFF". Blind diligence should lose, so this is a bug in the day mix, not a result. lead-attack is adding ticket-borne attacks to fix it. Do not cite the staff-over-baselines gap as proof of anything until trust_all is below staff.
-
-- The oracle uses the hidden sleeper identity. On seed 1 its controller and CEO assistant vote to quarantine `finance_ap` at tick 0, before anything has happened. The `reference` row is a separate scripted team (`Reference` in `agents/reference.py`) that is built from the seat only, not from the sleeper identity, and scores 0.900. Treat the oracle row as a perfect-information check and the reference row as the comparison.
-- The seat-mode table in `gap.md` is wrong. The controller-seat rows show reward 0.000 for the oracle, and `lab.eval` warns "oracle reward 0.000 < 1.0 on winnable days". lead-env is fixing a day-mix bug. Do not quote those rows.
+- `make eval` prints `WARN trust_all 0.800 > staff 0.300: too easy to just trust everything` for its exploit-baseline set, but trust_all is 0.000 in the all-8 table above. Two different day sets, not reconciled. Do not cite the staff-over-baselines gap as proof until they agree.
+- The oracle uses the hidden sleeper identity (`day.sleeper_seat`), so it is not a fair comparison. The `reference` row is a separate scripted team built from the seat and the evidence only. Compare staff to the reference.
+- The finance_ap seat-swapped tables in `gap.md` show the oracle at 0.400 (all days) and 0.250 (16 sleeper days), and `lab.eval` warns "oracle reward 0.400 < 1.0 on winnable days". Do not quote those rows as a gap.
 
 ## Why it cannot be gamed
 
@@ -127,9 +127,9 @@ AfterQuery scores 100 points. Each clause below points to where it is met.
 
 ### The gap (30)
 
-- Frontier agent: plain Gemini staff, each doing its own job. Reference: the same model inside a stronger procedure (enforced two-person checks, audit log read before approving, out of band verification), plus the scripted oracle.
+- Frontier agent: plain Gemini staff, each doing its own job. Reference: the same model inside a stronger procedure (enforced two-person checks, audit log read before approving, out of band verification), plus the scripted oracle, which reads the hidden sleeper identity and only proves each day is winnable.
 - Both are run by `make eval`, with pass^k per seed, from fixed seeds and cached model responses.
-- Numbers: README results table, from `make eval` (momin 9bbf7da).
+- Numbers: README results table, from `make eval` (momin b06bb9b).
 
 ### Meaningful difficulty (30)
 
@@ -151,6 +151,6 @@ AfterQuery scores 100 points. Each clause below points to where it is met.
 
 ## Assumptions
 
-- The judge harness plays one seat, default `controller`. Any seat works as the seat under test.
+- The judge harness plays one seat, default `controller` (`make harbor` uses `SLEEPER_SEAT`, else `finance_ap`). Any seat works as the seat under test.
 - Without a Gemini key all agents are scripted. Gemini numbers appear only when a key is set.
 - The 10000 EUR limit and the 60 call budget are fixed in the contract.

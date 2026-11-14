@@ -19,3 +19,5 @@ Capacity: Verda A100/A6000/L40S on-demand and spot have been near zero all night
 Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only as capacity appears (or FR8 V100s if Momin releases fleet GPUs).
 
 00:24: cap raised to **€300** (Silas, confirmed to the Arena CEO directly). An H100 spot appeared at 00:23 → v3-8k seed 2. Burn now €8.19/h (H100 4.74 + A100 spot 1.08 + H100 spot 2.37) → projected ≈ €66 total by 07:30.
+
+00:40: Meta glasses CEO finished on 3bb74f5a: YOLOv8n fine-tune in /root/meta-glasses, train 22:16:13Z → ~22:25Z (80 epochs, 513 s), eval + ONNX export ~22:30Z; 5.6 GB GPU memory, ≤8 workers, ≈0.15 GPU-h, no extra cost (shared H100). Results copied off by Meta; nothing of theirs is still running. It slowed v3 s0 by ~12% for ~10 min.

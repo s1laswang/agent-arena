@@ -1,0 +1,33 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "carbon_v14_trajectory_forensics",
+  "model_id": "gemini-4-carbon",
+  "commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+  "git_sha": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+  "source_runs_dir": "data/runs/committed/v1.4",
+  "source_runs_branch": "HEAD",
+  "source_runs_commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+  "timestamp": "2026-11-14T23:06:40+00:00",
+  "command": "CANARY_LLM_MAX_RETRIES=10 PYTHONPATH=. /tmp/fleet-root/shared/agent-arena-venv/bin/python scripts/run_carbon_trajectory_forensics.py --runs-dir data/runs/committed/v1.4 --n-wrong 4 --n-high 8 --model gemini-4-carbon --out results/gemini_roles/multimodal_evidence/carbon-trajectory-forensics-v14-expanded",
+  "tiers_version": "v1.4",
+  "ledger_run_id": "carbon-trajectory-forensics-20261114T230640Z",
+  "fake_env": false,
+  "smoke": false,
+  "n_charts_analyzed": 12,
+  "n_images_read_by_model": 12,
+  "visual_threshold_accuracy": 1.0,
+  "accuse_day_within_1_accuracy": 1.0,
+  "accuse_day_exact_accuracy": 1.0,
+  "hidden_bleed_gap_accuracy": 1.0,
+  "entropy_lag_accuracy": 1.0,
+  "outcome_pattern_accuracy": 1.0,
+  "usage": {
+    "calls": 12,
+    "in": 27588,
+    "out": 3996,
+    "thinking": 8159,
+    "cached": 0,
+    "cost_usd": 0.176726,
+    "latency_s": 183.881
+  }
+}

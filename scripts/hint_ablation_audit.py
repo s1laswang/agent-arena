@@ -70,6 +70,22 @@ def git_ref_commit(repo_root: Path, git_ref: str) -> str | None:
     return sha or None
 
 
+def git_subpath_commit(repo_root: Path, git_ref: str, subpath: str) -> str | None:
+    try:
+        proc = subprocess.run(
+            ["git", "log", "-1", "--format=%H", git_ref, "--", subpath],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return proc.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return git_ref_commit(repo_root, git_ref)
+
+
 def git_ablation_available(
     repo_root: Path,
     git_ref: str,
@@ -176,7 +192,7 @@ def load_ablation_raw(
         }
         return arm_eps, arm_meta, source
 
-    sha = git_ref_commit(repo_root, git_ref)
+    sha = git_subpath_commit(repo_root, git_ref, ablate_subpath)
     if sha is None:
         raise RuntimeError(f"git ref not found locally: {git_ref}")
     for arm in ARMS:

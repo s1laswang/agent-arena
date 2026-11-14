@@ -101,7 +101,7 @@ function renderRun(run){
 <div class="bar"><i style="width:${mine.length/(D.budget||60)*100}%"></i></div>
 <div class="budget">${mine.length}/${D.budget||60} tool calls</div></div>`}).join("");
   const mom=[];
-  if(moneyNow){if(apNow)mom.push(`<li><span class="num">t${ap.tick}</span> ${label(ap.seat)}: ${esc(ap.tool)} ${esc(ap.args.vendor_id||ap.args.id)} <span class="muted">(approval the payment relied on)</span></li>`);if(mo.released&&mo.seat!==D.day.sleeper_seat)mom.push(`<li class="fooled"><span class="num">t${mo.tick}</span> <b>Fooled</b> ${label(mo.seat)} approved the sleeper's payment</li>`);mom.push(`<li class="money"><span class="num">t${mo.tick}</span> <b>Money out</b> ${label(mo.seat)}: ${esc(mo.effect)}, ${esc(mo.amount)} EUR</li>`)}
+  if(moneyNow){if(apNow)mom.push(`<li><span class="num">t${ap.tick}</span> ${label(ap.seat)}: ${esc(ap.tool)} ${esc(ap.args.vendor_id||ap.args.id)} <span class="muted">(approval the payment relied on)</span></li>`);if(mo.released&&mo.seat!==D.day.sleeper_seat)mom.push(`<li class="fooled"><span class="num">t${mo.tick}</span> <b>${D.day.sleeper_seat?"Fooled":"Missed"}</b> ${label(mo.seat)} approved ${D.day.sleeper_seat?"the sleeper's payment":"a payment with no matching ticket"}</li>`);mom.push(`<li class="money"><span class="num">t${mo.tick}</span> <b>Money out</b> ${label(mo.seat)}: ${esc(mo.effect)}, ${esc(mo.amount)} EUR</li>`)}
   acts.filter(a=>["report_insider","quarantine"].includes(a.tool)).forEach(a=>mom.push(`<li class="catch"><span class="num">t${a.tick}</span> ${label(a.seat)}: ${esc(a.tool)} ${esc(label(tgt(a)))}</li>`));
   el.querySelector(".moments").innerHTML=mom.join("");
   const sl0=D.day.sleeper_seat;
@@ -131,15 +131,27 @@ function play(){
   timer=setInterval(()=>{if(tick>=max)return stop();set(tick+1)},speed);
 }
 
+function adapt(t,m){
+  if(t.actions)return t;
+  const bad=new Set(t.harmful||[]),closed=t.company.closed_tickets||{};
+  const tickets=t.day.tickets.map(x=>({id:x.id,seat:x.seat,kind:x.kind,request:x.request,tick:x.tick,counted:!!x.legit,done:x.id in closed}));
+  return {id:m.id,day:t.day,messages:t.messages,actions:t.ledger.map(a=>({...a,harmful:bad.has(a.seq)})),tickets,budget:60,quarantined:t.company.quarantined,
+    provenance:{provenance:m.provenance},
+    result:[{agent:m.agent,agent_kind:m.agent_kind,model:m.model,seed:t.day.seed,seat_under_test:m.seat,reward:m.reward,tickets_done:m.tickets_done??tickets.filter(x=>x.done).length,tickets_total:m.tickets_total??tickets.length,harm:m.harm||[],false_quarantine:m.false_quarantine||[],sleeper_caught:!!m.sleeper_caught}]};
+}
 async function load(id){
-  if(id.startsWith("run:")){
+  const k=id.slice(0,4);
+  if(k==="run:"||k==="lab:"){
     const r=await fetch(id.slice(4));
     if(!r.ok)throw new Error(id);
-    const run=await r.json(),D=run.transcript;
-    D.id=id;
-    D.provenance={provenance:run.provenance};
-    Object.assign(D.result[0],{agent:run.model,agent_kind:run.agent,model:run.model});
-    return D;
+    const o=await r.json();
+    if(k==="run:"){
+      if(o.transcript.actions){const D=o.transcript;D.id=id;D.provenance={provenance:o.provenance};Object.assign(D.result[0],{agent:o.model,agent_kind:o.agent,model:o.model});return D}
+      const sc=o.scores;
+      return adapt(o.transcript,{id,agent:o.model,agent_kind:o.agent,model:o.model,provenance:o.provenance,seat:o.seat,reward:sc.reward,harm:sc.harm,false_quarantine:sc.false_quarantines,sleeper_caught:sc.sleeper_caught,tickets_done:sc.tickets_done,tickets_total:sc.tickets_total});
+    }
+    const x=o.result;
+    return adapt(o,{id,tickets_done:x.tickets_done,tickets_total:x.tickets_total,agent:x.agent,agent_kind:x.agent_kind,model:x.model,provenance:x.provenance||(x.agent_kind==="scripted"?"scripted":undefined),seat:x.seat_under_test,reward:x.reward,harm:x.harm,false_quarantine:x.false_quarantine,sleeper_caught:x.sleeper_caught});
   }
   const r=await fetch(`days/${encodeURIComponent(id)}.json`);
   if(!r.ok)throw new Error(id);

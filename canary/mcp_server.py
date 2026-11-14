@@ -24,6 +24,12 @@ read once at startup; a *_FILE var wins over its plain counterpart, which is the
     CANARY_LEDGER_KEY_FILE      ledger signing key (Harbor: build-time, sidecar + verifier only; PLAN-95 C1)
 The plain env vars keep working for local dev.
 
+CANARY_CONSUME_SECRET_FILES=1 (make mcp, the frontier runner, the hunter; not the Harbor sidecar)
+reads those files, deletes them, and re-execs. /proc/<pid>/environ is the block from exec time, so
+clearing os.environ cannot remove a path; the re-exec is what drops it. The Harbor sidecar must not
+set this flag: collect still reads /run/canary/ledger_token. Mid-episode GET /ledger omits leak events
+and true V unless CANARY_LEDGER_LIVE=1.
+
 Design notes:
 - Built on the SDK's low-level `mcp.server.Server` (mcp 2.x; FastMCP is now MCPServer and derives tool
   schemas from Python signatures and validates arguments with pydantic). The low-level server lets us
@@ -37,6 +43,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import hashlib
 import hmac
 import json
@@ -107,6 +114,86 @@ def load_config(environ=None) -> dict:
             "ledger_token": _read_file_var("CANARY_LEDGER_TOKEN_FILE", environ) or environ.get("CANARY_LEDGER_TOKEN") or None,
             "admin_token": _read_file_var("CANARY_ADMIN_TOKEN_FILE", environ) or environ.get("CANARY_ADMIN_TOKEN") or None,
             "ledger_key": _read_file_var("CANARY_LEDGER_KEY_FILE", environ) or environ.get("CANARY_LEDGER_KEY") or None}
+
+
+# Paths a same-uid reader could open out of /proc/<pid>/environ. Values cross a re-exec in an
+# anonymous memfd (closed before the server listens), never in the new environ.
+SECRET_FILE_VARS = ("CANARY_EPISODE_FILE", "CANARY_WORLD_SECRET_FILE", "CANARY_LEDGER_TOKEN_FILE",
+                    "CANARY_ADMIN_TOKEN_FILE", "CANARY_LEDGER_KEY_FILE")
+PLAIN_SECRET_VARS = ("CANARY_TIER", "CANARY_SEED", "CANARY_LEDGER_TOKEN", "CANARY_ADMIN_TOKEN",
+                     "CANARY_WORLD_SECRET", "CANARY_LEDGER_KEY")
+BOOT_FD = 73
+
+
+def consume_secret_files(environ=None) -> list[str]:
+    """Unlink 0600 secret files named by SECRET_FILE_VARS. Returns the vars whose files were removed."""
+    environ = os.environ if environ is None else environ
+    gone = []
+    for var in SECRET_FILE_VARS:
+        path = environ.get(var)
+        if path and os.path.isfile(path):
+            try:
+                os.unlink(path)
+                gone.append(var)
+            except OSError:
+                pass
+    return gone
+
+
+def _cfg_to_boot(cfg: dict) -> bytes:
+    secret = cfg.get("world_secret")
+    payload = {"tier": cfg["tier"], "seed": int(cfg["seed"]),
+               "world_secret_b64": base64.b64encode(secret).decode("ascii") if secret else None,
+               "ledger_token": cfg.get("ledger_token"), "admin_token": cfg.get("admin_token"),
+               "ledger_key": cfg.get("ledger_key")}
+    return json.dumps(payload).encode()
+
+
+def _cfg_from_boot(raw: bytes) -> dict:
+    obj = json.loads(raw.decode())
+    b64 = obj.get("world_secret_b64")
+    return {"tier": str(obj["tier"]), "seed": int(obj["seed"]),
+            "world_secret": base64.b64decode(b64) if b64 else None,
+            "ledger_token": obj.get("ledger_token"), "admin_token": obj.get("admin_token"),
+            "ledger_key": obj.get("ledger_key")}
+
+
+def _read_boot_fd() -> dict:
+    chunks = []
+    while True:
+        block = os.read(BOOT_FD, 65536)
+        if not block:
+            break
+        chunks.append(block)
+    os.close(BOOT_FD)
+    return _cfg_from_boot(b"".join(chunks))
+
+
+def _reexec_without_secret_paths() -> None:
+    """Replace this process so the exec-time environment has no secret values and no secret-file paths."""
+    try:
+        cfg = load_config()
+    except (SeedNotAllowed, ConfigError, ValueError) as exc:
+        print(f"canary.mcp_server: refusing to start: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+    consume_secret_files()
+    fd = os.memfd_create("canary-cfg", 0)
+    os.write(fd, _cfg_to_boot(cfg))
+    os.lseek(fd, 0, os.SEEK_SET)
+    if fd != BOOT_FD:
+        os.dup2(fd, BOOT_FD)
+        os.close(fd)
+    os.set_inheritable(BOOT_FD, True)
+    drop = set(SECRET_FILE_VARS) | set(PLAIN_SECRET_VARS) | {"CANARY_CONSUME_SECRET_FILES"}
+    env = {k: v for k, v in os.environ.items() if k not in drop}
+    env["CANARY_BOOTSTRAPPED"] = "1"
+    override = os.environ.get("CANARY_TIERS_OVERRIDE")
+    if override:
+        wrapper = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts", "with_tiers.py")
+        argv = [sys.executable, wrapper, override, "-m", "canary.mcp_server", *sys.argv[1:]]
+    else:
+        argv = [sys.executable, "-m", "canary.mcp_server", *sys.argv[1:]]
+    os.execve(sys.executable, argv, env)
 
 
 def write_secret_files(tier: str, seed: int, ledger_token: str | None = None, directory=None) -> dict[str, str]:
@@ -190,6 +277,14 @@ class Episode:
             out = dict(env.verdict())  # public server-side outcome (HEAD-ENV)
             out.setdefault("tier", env.tier)
             out["episode"] = self.token
+            if not out.get("done") and os.environ.get("CANARY_LEDGER_LIVE") != "1":
+                # Mid-episode: a stolen grader token must not show unsurfaced leaks or true V.
+                # Score of an unfinished episode is already 0. CANARY_LEDGER_LIVE=1 keeps the full payload.
+                for k in ("V", "final_day", "accused", "correct", "accused_correct"):
+                    out.pop(k, None)
+                out["ledger"] = []
+                out["redacted"] = "episode in progress"
+                return out
             out["ledger"] = [asdict(e) for e in env.ledger()]
             return out
 
@@ -317,7 +412,13 @@ def main(argv: list[str] | None = None) -> int:
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     try:
-        cfg = load_config()
+        if os.environ.get("CANARY_BOOTSTRAPPED") == "1":
+            cfg = _read_boot_fd()
+        elif os.environ.get("CANARY_CONSUME_SECRET_FILES") == "1":
+            _reexec_without_secret_paths()  # does not return
+            cfg = {}
+        else:
+            cfg = load_config()
         if cfg["world_secret"] is not None:
             apply_world_secret(cfg["world_secret"])
         tier, ledger_token, admin_token, ledger_key = cfg["tier"], cfg["ledger_token"], cfg["admin_token"], cfg["ledger_key"]

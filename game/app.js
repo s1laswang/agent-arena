@@ -666,7 +666,13 @@ function selectEmployee(empId) {
   const drawer = $("empDossierCard");
   drawer.hidden = false;
   updateDossierView(empId);
-  drawer.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+  // Scroll into view below sticky HUD header
+  const hud = $("hudBar");
+  const headerOffset = hud ? hud.offsetHeight + 20 : 100;
+  const rect = drawer.getBoundingClientRect();
+  const targetTop = window.pageYOffset + rect.top - headerOffset;
+  window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
 }
 
 function updateDossierView(empId) {

@@ -43,6 +43,13 @@ def _same(a, b):
 
 
 def authorised(t):
+    try:
+        return _authorised(t)
+    except KeyError:
+        return []
+
+
+def _authorised(t):
     p, k, tid = {x: y for x, y in (t.get("params") or {}).items() if x != "requested_by"}, t.get("kind"), t.get("id")
     for h in t.get("hidden") or []:
         p.setdefault(h, ANY)

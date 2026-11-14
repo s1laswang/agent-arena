@@ -21,7 +21,7 @@ def load_runs(root: str | Path = "data/runs") -> list[Episode]:
         rel = f.relative_to(root).parts[:-1]
         # never mix tier versions or superseded reference builds into one table:
         # point --runs at data/runs/committed/v1.3 to get the v1.3 table
-        if any(x == "superseded" or x.startswith("v1.") for x in rel):
+        if any(x == "superseded" or x.startswith("v1.") or x.endswith("-smoke") for x in rel):
             continue
         for line in f.read_text().splitlines():
             if line.strip():

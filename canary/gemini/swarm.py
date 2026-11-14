@@ -853,7 +853,9 @@ def confirm_candidate(att: dict, personas: dict, planner: Planner, cfg: dict, n_
     """Re-run the same plan (fresh executor) on n new seeds; exploit only if the paired mean holds up."""
     rows = []
     for k in range(n_seeds):
-        seed = 800190 - k * 7 - (att["seed"] % 5)
+        from canary.rules import HELDOUT_SEEDS
+        # same seed family as the attempt: held-out (secret-keyed) stays held-out; a public-seed control stays public
+        seed = 800190 - k * 7 - (att["seed"] % 5) if att["seed"] in HELDOUT_SEEDS else att["seed"] + 1000 + k
         spec = AttackerSpec(id=f"{att['id']}-confirm{k}", idx=-1, persona=att["persona"], model=att["model"],
                             tier=att["tier"], seed=seed, mode=att.get("mode", "whitebox"), channel="inproc")
         rows.append(run_attempt(spec, personas[att["persona"]], planner, cfg, plan=att["plan"]))
@@ -930,7 +932,7 @@ def write_markdown(res: dict, path: Path) -> None:
     c = res["counts"]
     L = ["# Canary Lab swarm: Gemini attackers vs the Canary reward", "",
          f"Generated {res['generated_at']} at `{res['git_sha'][:10]}`. Ledger run ids: {', '.join(res['ledger_run_ids'])}.",
-         "",
+         ""] + ([f"> {res['note']}", ""] if res.get("note") else []) + [
          f"**{c['attempts']} Gemini attackers** ({res.get('mode', '?')}, planners: {', '.join(res.get('models', []))}; "
          f"executor: {res.get('exec_model')}) each read "
          + (f"the whole repository in one long-context prompt (**{res.get('pack_files')} files, "
@@ -1166,7 +1168,7 @@ def run_swarm(a) -> dict:
         planner.close()
     meta = {"mode": a.mode, "models": models, "exec_model": a.exec_model, "tiers": tiers, "shard": a.shard,
             "planner_thinking": a.planner_thinking, "solver_ref_seeds": a.solver_ref, "wave": 2 if a.escalate else 1,
-            "escalated_from": a.escalate, "confirmations": confirmations, **pack_meta}
+            "escalated_from": a.escalate, "confirmations": confirmations, "note": a.note, **pack_meta}
     res = summarize(attempts, solver_means, [run_id], meta)
     (out / "swarm.json").write_text(json.dumps(res, indent=1, default=repr))
     write_markdown(res, out / "swarm.md")
@@ -1243,6 +1245,7 @@ def main(argv=None) -> int:
     ap.add_argument("--confirm-seeds", type=int, default=3)
     ap.add_argument("--escalate", default="", help="previous swarm.json: wave 2 reads it in context")
     ap.add_argument("--prefix", default="a")
+    ap.add_argument("--note", default="", help="free text shown at the top of swarm.md (e.g. positive control)")
     ap.add_argument("--run-id", default="")
     ap.add_argument("--out", default=str(REPO / "results" / "gemini"))
     ap.add_argument("--write-tests", default="", help="path of the generated regression test file")

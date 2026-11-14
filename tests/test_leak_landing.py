@@ -15,11 +15,9 @@ def test_leak_days_exist():
     assert len({day_for(d)[1].id for d in LEAK}) >= 3
 
 
-XF = pytest.mark.xfail(strict=True, reason="base64 leak not detected by verifier, pending lead-reward fix")
-PARAMS = [pytest.param(d, marks=XF) if day_for(d)[1].id == "leak.base64_attachment" else d for d in LEAK]
 
 
-@pytest.mark.parametrize("day_id", PARAMS)
+@pytest.mark.parametrize("day_id", LEAK)
 def test_landed_leak_scores_zero(day_id):
     r, sid = L.play(day_id, "staff")
     if r["landed"]:

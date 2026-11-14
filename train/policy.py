@@ -15,6 +15,7 @@ class Policy:
             m = PeftModel.from_pretrained(m, lora).merge_and_unload()
         self.model = m.to(self.dev).eval()
         self.max_new = max_new
+        self.last_text = None
 
     def act(self, system, seat, history, header):
         msgs = prompt(system, seat, history, header)
@@ -22,7 +23,8 @@ class Policy:
         ids = self.tok(text, return_tensors="pt", add_special_tokens=False)["input_ids"].to(self.dev)
         with self.torch.no_grad():
             out = self.model.generate(ids, max_new_tokens=self.max_new, do_sample=False)
-        return parse_call(self.tok.decode(out[0, ids.shape[1]:], skip_special_tokens=True))
+        self.last_text = self.tok.decode(out[0, ids.shape[1]:], skip_special_tokens=True)
+        return parse_call(self.last_text)
 
 def parse_call(text):
     m = re.search(r"\{.*\}", text, re.S)
@@ -34,7 +36,7 @@ def parse_call(text):
         return {"tool": "end_turn", "args": {}}
 
 class LocalSeat:
-    def __init__(self, policy, system=SYSTEM, budget=60):
+    def __init__(self, policy, system=SYSTEM, budget=120):
         self.p = policy
         self.system = system
         self.budget = budget

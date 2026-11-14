@@ -1,3 +1,6 @@
+import os
+
+os.environ["GEMINI_API_KEY"] = ""
 import argparse
 import json
 import math
@@ -6,6 +9,7 @@ from pathlib import Path
 
 from agents import procedure as P
 from agents.staff import SEATS, ScriptedStaff
+from sleeper.events import fill_hidden
 
 RULES = [
     ("L0", "do nothing", None),
@@ -17,6 +21,7 @@ RULES = [
     ("L6", "report and quarantine with audit evidence (rule 9)", ()),
 ]
 TOP = len(RULES) - 1
+CONTEXT = ["do_nothing", "trust_all", "staff", "reference", "oracle"]
 
 
 class LadderStaff(P.ProcedureStaff):
@@ -38,7 +43,7 @@ class LadderStaff(P.ProcedureStaff):
                 return r
             out = call(name, args or {})
             if name == "my_tickets":
-                cache["tickets"] = out.get("tickets", [])
+                cache["tickets"] = [fill_hidden({**t, "params": t.get("params") or {}}, call) for t in out.get("tickets", [])]
             elif name in ("update_vendor_bank", "add_vendor"):
                 cache.pop("vendors", None)
                 self.ev.vlist = None
@@ -51,6 +56,33 @@ class LadderStaff(P.ProcedureStaff):
         if self.level >= 3 and seat in ("finance_ap", "procurement") and "list_vendors" in names and tick % 4 == 0:
             self.repair(seat, call, cache)
         return res
+
+
+    def audit(self, seat, call, cache):
+        log = call("read_audit_log", {}).get("log", [])
+
+        def wrapped(name, args=None):
+            r = call(name, args or {})
+            if name == "list_tickets" and r.get("ok"):
+                r = {**r, "tickets": [x for t in r["tickets"] for x in fill_from_log(t, log)]}
+            return r
+
+        super().audit(seat, wrapped, cache)
+
+
+def fill_from_log(t, rows):
+    hidden = t.get("hidden") or []
+    if not hidden:
+        return [t]
+    out = []
+    for r in rows:
+        if r["seat"] != t.get("seat") or not r.get("ok", True):
+            continue
+        a = r.get("args") or {}
+        f = {**t, "params": {**(t.get("params") or {}), **{k: a[k] for k in hidden if k in a}}}
+        if any(tool == r["tool"] and P._same(a, {k: v for k, v in exp.items() if not k.startswith("@")}) for tool, exp in P.authorised(f)):
+            out.append(f)
+    return out or [t]
 
 
 def make_team(level, day=None, trial=0):
@@ -76,38 +108,46 @@ def ci(xs):
     return m, 1.96 * sd / math.sqrt(n)
 
 
-def evaluate(team, days, seat, start, trial=0):
+def _one(args):
     from lab import run
 
-    rows = []
-    for d in range(start, start + days):
-        r, _ = run.play_day("reference" if seat else team, team, seat, d, trial)
-        rows.append(r)
-    return rows
+    team, seat, d = args
+    r, _ = run.play_day("reference" if seat else team, team, seat, d, 0)
+    from agents import gemini
+
+    assert not gemini.enabled(), "gemini key present"
+    return float(r["reward"]), bool(r["harm"])
 
 
-def table(days=20, start=1000, seat=None, names=None):
+def table(days=20, start=1000, seat=None, jobs=4):
     register()
-    names = names or ["ladder%d" % i for i in range(len(RULES))] + ["reference"]
+    from multiprocessing import Pool
+
+    names = ["ladder%d" % i for i in range(len(RULES))] + CONTEXT
     out = []
-    for n in names:
-        rows = evaluate(n, days, seat, start)
-        rw = [float(r["reward"]) for r in rows]
-        m, h = ci(rw)
-        out.append({"team": n, "rewards": rw, "mean": m, "ci": h, "harm_rate": sum(1 for r in rows if r["harm"]) / len(rows)})
+    with Pool(jobs, initializer=register) as pool:
+        for n in names:
+            rows = pool.map(_one, [(n, seat, d) for d in range(start, start + days)], chunksize=4)
+            rw = [r for r, _ in rows]
+            m, h = ci(rw)
+            out.append({"team": n, "rewards": rw, "mean": m, "ci": h, "harm_rate": sum(h for _, h in rows) / len(rows)})
     return out
 
 
-def paired(a, b):
+def paired(a, b, n=2000):
+    import random
+
     d = [y - x for x, y in zip(a["rewards"], b["rewards"])]
-    return ci(d)
+    rng = random.Random(0)
+    ms = sorted(sum(rng.choice(d) for _ in d) / len(d) for _ in range(n))
+    return sum(d) / len(d), ms[int(0.025 * n)], ms[int(0.975 * n)]
 
 
 def render(t, seat, commit):
-    lines = ["seat: %s, commit %s" % (seat or "all", commit), "", "| level | rule added | mean | CI95 | harm rate | step vs previous (paired CI) |", "|---|---|---|---|---|---|"]
+    lines = ["seat: %s, commit %s, n=%d days" % (seat or "all", commit, len(t[0]["rewards"])), "", "| level | rule added | mean | CI95 | harm rate | delta vs previous (bootstrap CI95) |", "|---|---|---|---|---|---|"]
     for i, r in enumerate(t):
-        desc = RULES[i][:2] if i < len(RULES) else ("ref", "reference team")
-        step = "" if i == 0 else "%+.3f ± %.3f" % paired(t[i - 1], r)
+        desc = RULES[i][:2] if i < len(RULES) else (r["team"], "context row")
+        step = "" if i == 0 or i >= len(RULES) else "%+.3f [%+.3f, %+.3f]" % paired(t[i - 1], r)
         lines.append("| %s | %s | %.3f | ±%.3f | %.2f | %s |" % (desc[0], desc[1], r["mean"], r["ci"], r["harm_rate"], step))
     return "\n".join(lines) + "\n"
 
@@ -117,13 +157,17 @@ def main(argv=None):
     p.add_argument("--days", type=int, default=20)
     p.add_argument("--start", type=int, default=1000)
     p.add_argument("--out", default="results")
+    p.add_argument("--jobs", type=int, default=4)
     a = p.parse_args(argv)
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
     res, md = {}, ""
     for seat in ("finance_ap", None):
-        t = table(a.days, a.start, seat)
+        t = table(a.days, a.start, seat, a.jobs)
         res[seat or "all"] = t
         md += render(t, seat, commit) + "\n"
+    from agents import gemini
+
+    assert gemini.usage()["calls"] == 0, "gemini was called"
     Path(a.out).mkdir(exist_ok=True)
     Path(a.out, "ladder.json").write_text(json.dumps({"commit": commit, "days": a.days, "start": a.start, "tables": res}, indent=1))
     Path(a.out, "ladder.md").write_text(md)

@@ -59,8 +59,8 @@ def harmful(day, ledger, harm):
     return out
 
 
-def pack(did, day, world, team_name, extra=None):
-    r = score(day, world.initial, world.company, world.ledger, agent=team_name)
+def pack(did, day, world, team_name, extra=None, seat=None):
+    r = score(day, world.initial, world.company, world.ledger, agent=team_name, seat_under_test=seat)
     r.day_id = did
     r.transcript_path = f"web/days/{did}.json"
     bad = harmful(day, world.ledger, r.harm)
@@ -134,6 +134,22 @@ def build_landing(seed, team_kind, sid, ticks=None, shift=0):
     return pack(f"{seed}-{team_kind}", day, world, team_kind, {"strategy": sid, "goal_success": bool(goal.success(world.company, world.ledger))})
 
 
+def build_seat(seed, seat):
+    import inspect
+    from agents.procedure import make_procedure_team
+    from agents.staff import ScriptedStaff
+    from lab.run import day_for
+
+    day, strategy, _, meta = day_for(seed, seat)
+    team = make_procedure_team(day, seed=seed, quarantine=True)
+    team[seat] = ScriptedStaff(seat)
+    if day.sleeper_seat and strategy:
+        kw = {"ticks": day.ticks} if "ticks" in inspect.signature(SleeperAgent).parameters else {}
+        team[day.sleeper_seat] = SleeperAgent(day.sleeper_seat, day.goal, strategy, random.Random(seed), **kw)
+    world = run_day(day, team)
+    return pack(f"{seed}-seat-{seat}", day, world, "staff", {"strategy": meta.get("strategy"), "background": "procedure"}, seat=seat)
+
+
 def manifest():
     rows = []
     for f in sorted(OUT.glob("*.json")):
@@ -153,6 +169,7 @@ def main():
     ap.add_argument("--teams", nargs="+", default=["oracle", "noop"])
     ap.add_argument("--landing", help="strategy id, e.g. fraud.bank_swap, writes <seed>-staff and <seed>-oracle")
     ap.add_argument("--landing-teams", nargs="+", default=["staff", "procedure", "oracle"])
+    ap.add_argument("--seat", help="seat under test, other seats are procedure background, writes <seed>-seat-<seat>")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--live", action="store_true")
     ap.add_argument("--sleeper-seeds", type=int, nargs="*", default=None)
@@ -161,6 +178,11 @@ def main():
     OUT.mkdir(exist_ok=True)
     if a.live:
         build(a.seeds[0], a.teams[0], a.seeds[0] in sl, OUT / "live.json")
+        return
+    if a.seat:
+        for seed in a.seeds:
+            json.dump(build_seat(seed, a.seat), open(OUT / f"{seed}-seat-{a.seat}.json", "w"), indent=1, sort_keys=True)
+        print(len(manifest()))
         return
     if a.landing:
         for seed in a.seeds:

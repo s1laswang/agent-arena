@@ -44,12 +44,13 @@ function strip(){
 }
 
 function ticketsPanel(D){
+  const sut=res(D).seat_under_test;
   if(!D.tickets||tick<max)return "";
   const by={};
   D.tickets.filter(t=>t.counted).forEach(t=>{(by[t.seat]=by[t.seat]||[]).push(t)});
   const rows=SEATS.filter(x=>by[x]).map(x=>{
     const list=by[x],open=list.filter(t=>!t.done);
-    return `<div class="row trow"><span>${label(x)}</span><span class="num">${list.length-open.length}/${list.length}</span><span class="muted">${open.map(t=>`${esc(t.id)} ${esc(t.kind)}`).join(", ")||"all done"}</span><span></span></div>`}).join("");
+    return `<div class="row trow${x===sut?" sut":""}"><span>${label(x)}${x===sut?" (under test)":sut?" (background)":""}</span><span class="num">${list.length-open.length}/${list.length}</span><span class="muted">${open.map(t=>`${esc(t.id)} ${esc(t.kind)}`).join(", ")||"all done"}</span><span></span></div>`}).join("");
   return `<h2>Tickets at day end (what the reward reads)</h2>${rows}`;
 }
 
@@ -94,9 +95,10 @@ function renderRun(run){
     const mine=acts.filter(a=>a.seat===s);
     const work=mine.filter(a=>a.tool!=="end_turn");const l=work[work.length-1];
     const sl=revealed&&s===D.day.sleeper_seat;
-    return `<div class="desk${moneyNow&&mo.seat===s?" money":""}${apNow&&ap.seat===s?" approver":""}${sl?" sleeper":""}${out.has(s)?" out":""}${last&&last.seat===s?" active":""}">
+    const sut=r.seat_under_test,role=sut?(s===sut?'<div class="role sut">seat under test</div>':'<div class="role">background (scripted procedure)</div>'):"";
+    return `<div class="desk${s===sut?" sut":sut?" bg":""}${moneyNow&&mo.seat===s?" money":""}${apNow&&ap.seat===s?" approver":""}${sl?" sleeper":""}${out.has(s)?" out":""}${last&&last.seat===s?" active":""}">
 <div class="top">${ICON}${label(s)}${moneyNow&&mo.seat===s?'<span class="tag">MONEY OUT</span>':apNow&&ap.seat===s?'<span class="tag amber">APPROVED IT</span>':sl?'<span class="tag">SLEEPER</span>':out.has(s)?'<span class="tag q">OUT</span>':""}</div>
-<div class="tool${l&&!l.ok?" fail":""}">${l?esc(l.tool)+(l.ok?"":" (blocked)"):"idle"}</div>
+${role}<div class="tool${l&&!l.ok?" fail":""}">${l?esc(l.tool)+(l.ok?"":" (blocked)"):"idle"}</div>
 <div class="eff">${l?esc(l.effect):""}</div>
 <div class="bar"><i style="width:${mine.length/(D.budget||60)*100}%"></i></div>
 <div class="budget">${mine.length}/${D.budget||60} tool calls</div></div>`}).join("");
@@ -109,7 +111,8 @@ function renderRun(run){
   el.querySelector(".count").textContent=fm.length>FEED_MAX?`newest ${FEED_MAX} of ${fm.length}`:`${fm.length}`;
   el.querySelector(".feed").innerHTML=fm.slice(0,FEED_MAX).map(m=>{
     const ext=m.to.some(t=>t.startsWith("external:"));
-    return `<li class="${ext?"ext":""}"><div class="h"><span class="num">t${m.tick}</span> ${label(m.sender_seat)} to ${m.to.map(t=>esc(label(t))).join(", ")} <span class="ch">${m.channel}</span></div>${esc(m.body)}</li>`}).join("")||'<li class="muted">No messages yet</li>';
+    const mine=m.sender_seat===r.seat_under_test;
+    return `<li class="${ext?"ext":""}${mine?" sut":""}"><div class="h"><span class="num">t${m.tick}</span> ${label(m.sender_seat)} to ${m.to.map(t=>esc(label(t))).join(", ")} <span class="ch">${m.channel}</span></div>${esc(m.body)}</li>`}).join("")||'<li class="muted">No messages yet</li>';
   const p=el.querySelector(".panel");
   p.hidden=!(done||(revealed&&D.result.length));
   if(!p.hidden)p.innerHTML=panel(D,r);
@@ -141,7 +144,7 @@ async function init(){
   const q=new URLSearchParams(location.search);
   if(q.get("speed")==="slow")speed=1500;else if(+q.get("speed")>0)speed=+q.get("speed");
   const man=q.get("day")?[]:await (await fetch("days/index.json")).json();
-  const other=r=>["procedure","oracle"].map(t=>man.find(o=>o.seed===r.seed&&o.team===t&&true)).find(Boolean);
+  const other=r=>["procedure","oracle"].map(t=>man.find(o=>o.seed===r.seed&&o.team===t)).find(Boolean);
   const pair=man.find(r=>r.team==="staff"&&other(r));
   const ids=q.get("day")?[q.get("day")]:pair?[pair.id,other(pair).id]:[man[0].id];
   if(q.get("vs"))ids.push(q.get("vs"));

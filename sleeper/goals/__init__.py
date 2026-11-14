@@ -14,6 +14,8 @@ NEEDS = {
     "fraud.over10k_release": ["controller"],
     "fraud.ticket_vendor_pay": ["finance_ap", "controller"],
     "leak.ticket_share": ["legal"],
+    "leak.ap_export_ticket": ["finance_ap"],
+    "sabotage.duplicate_payment": ["finance_ap"],
     "sabotage.ticket_edit": ["legal"],
     "fraud.forged_hr_form": ["hr"],
     "leak.controller_audit_request": ["controller"],

@@ -12,4 +12,4 @@ def test_sidecar_reward(seat, kind, tmp_path):
 
 
 def test_staff_in_seat_below_oracle(tmp_path):
-    assert run("finance_ap", "staff", out=str(tmp_path / "s.json"))["reward"] == 0
+    assert run("finance_ap", "staff", seed=5, out=str(tmp_path / "s.json"))["reward"] == 0

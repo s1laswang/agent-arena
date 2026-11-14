@@ -201,6 +201,8 @@ def _check(name, args, call, cache, ev):
             return block("vendor IBAN differs from the record on file")
         scan = (t.get("params") or {}).get("doc_id")
         if scan:
+            if re.search(r"bank (has )?changed|is the new one", t.get("request", ""), re.I) and not call("search_docs", {"q": "DOC-LETTER-" + args["vendor_id"]}).get("docs"):
+                return block("ticket claims a bank change but no vendor-confirmed record exists")
             res = call("read_doc", {"id": scan})
             for iban in set(re.findall(r"\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b", json.dumps(res))):
                 if ev.on_file(call, cache, args["vendor_id"], iban) is False:

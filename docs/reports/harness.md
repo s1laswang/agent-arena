@@ -80,7 +80,11 @@
     - logs_only: medium −0.98, hard −1.00;
     - do_nothing is exactly 0 in every run.
   - After merging 92459d3 (solver: exact fingerprint likelihood), the results are byte-identical to 849e652 with a fixed secret (`cmp`), so the README numbers still hold.
-  - **These numbers must be refreshed after the v1.2 freeze.**
+  - **After the tiers v1.2 freeze (f85f21c), which are the README numbers now:**
+    - solver: medium **+0.64** [+0.52, +0.71], hard **+0.62** [+0.51, +0.72], easy +0.77;
+    - heuristic: medium +0.00 [−0.32, +0.27], hard −0.22 [−0.50, +0.04];
+    - logs_only: medium −0.97, hard −1.00 (all 30 runs);
+    - do_nothing is exactly 0.
 - **Full-size determinism:** with `CANARY_WORLD_SECRET=det-full-check`, two separate `--reproduce` processes (40 seeds × 3 tiers) gave a byte-identical `judge_episodes.jsonl` (`cmp`).
   - **Caveat for ENV:** `SolverPolicy(act_budget=0.3)` caps the canary-split search by wall clock (`perf_counter`). On a much slower machine (CI, a judge laptop) the budget could bind and change the solver's choices, so bit-for-bit equality across machines is not guaranteed. Suggestion: make the cap count-based (nodes or iterations), or keep it far above the observed search time.
 - **Secret handling (after ENV's `world.set_world_secret`):** a keyless reproduce now installs its `os.urandom(32)` secret in-process via `set_world_secret`, so it is never in `os.environ` (cf. #25). Any earlier in-process secret is cleared while an explicit `CANARY_WORLD_SECRET` is in use, then restored (test added).

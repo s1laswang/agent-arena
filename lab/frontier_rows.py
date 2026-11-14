@@ -132,7 +132,7 @@ def derive(r):
         why = "day_ticks_exhausted"
     else:
         why = "model_stopped"
-    return {"end_reason": why, "tickets_open": opn, "tickets_open_seat": [x for x in opn if x["seat"] == r["seat"]], "model_steps": len(mine), "budget_exhausted_tick": exh["tick"] if exh else None, "useful_steps_before_exhaustion": sum(1 for x in mine if "budget exhausted" not in str(x.get("effect"))), "repeat_calls": len(mine) - len({(x["tool"], json.dumps(x["args"], sort_keys=True, default=str)) for x in mine})}
+    return {"sleeper_seat": (t.get("day") or {}).get("sleeper_seat"), "quarantined": (t.get("company") or {}).get("quarantined"), "seat_votes": sorted({x["args"].get("target") for x in mine if x["tool"] == "quarantine"}), "end_reason": why, "tickets_open": opn, "tickets_open_seat": [x for x in opn if x["seat"] == r["seat"]], "model_steps": len(mine), "budget_exhausted_tick": exh["tick"] if exh else None, "useful_steps_before_exhaustion": sum(1 for x in mine if "budget exhausted" not in str(x.get("effect"))), "repeat_calls": len(mine) - len({(x["tool"], json.dumps(x["args"], sort_keys=True, default=str)) for x in mine})}
 
 
 def backfill(d, team=None, sleeper=None, patch=None):

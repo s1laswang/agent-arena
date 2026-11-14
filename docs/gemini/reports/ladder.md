@@ -2,6 +2,32 @@
 
 Branch `gemini-ladder`. Newest entry first.
 
+## Sun 00:09 (`date`: Sun Nov 15 00:09 EET 2026): Gemini grid complete; Gemma rungs running; frontier chart
+
+- **Gemini grid finished by itself**, no kills:
+  - g4 finished 100/100 at 23:57; c2 finished at 23:14.
+  - Results: 320/320 ladder cells at 10 seeds each, 0 infra-invalid.
+  - Refresh 32137a5c: 357 valid episodes, 34 cells, $147.98 list price. On hard, carbon-high is 106% [94, 126]
+    at $1.93 per episode.
+- **Gemma 4 (hosted Gemma via the Gemini API, not self-hosted, not Verda):**
+  - Probe: native function calling works on both models (1 ledgered call each).
+  - Smoke: gemma-4-31b-it hard seed 0 made a correct accusation (0.63, 18 calls). Seed 1 hit
+    `429 RESOURCE_EXHAUSTED`, which is classed infra-invalid and re-queued.
+  - Gemma quota on our key is tight, so hard seeds 2–9 run at 1 episode per model (pid 81651).
+  - Run dir: `gemma-v14`; recordings go to `data/gemini/replay-ladder-gemma`.
+  - Section: "Open-weight Gemma" in ladder.md via `ladder_report --gemma-runs`, which `bin/refresh.sh` adds
+    automatically. No list price, so no $/ep.
+  - Code fingerprint 1f370abe vs 06ea9b6a for the Gemini cells. The diff (env.py/rules.py/eval.py from the
+    gemini-track merge) does not touch the hard tier: it adds the hard_rl track text, v1.2 history, and marks
+    crashed episodes invalid.
+- **frontier.png / frontier_medium.png / frontier.json** (CEO's headline chart), embedded in ladder.md:
+  - Axes: % of solver (paired 95% CI) against list-price USD per episode (log).
+  - One line per Gemini model through its thinking levels, the imported carbon default as a hollow diamond, and
+    Gemma in a "no list price" strip.
+  - Title says "competence-per-dollar" because the costs are USD list prices.
+- **Verda/Nemotron:** cancelled by the CEO. The key gate was not met anyway: .env has only cloud client
+  credentials, no inference key.
+
 ## Sat 23:16 (`date`: Sat Nov 14 23:16 EET 2026): 00:45 deliverable pushed (78748bc); grid left running for 05:00
 
 - **Adopted, not restarted:** g4 process (ladder pid 62083, argon + carbon, conc 8, carbon ≤ 5) and phase-4 carbon c2

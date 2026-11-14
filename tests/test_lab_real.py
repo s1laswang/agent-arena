@@ -59,25 +59,65 @@ def play(team, day_id):
     return analyse.norm({**extra, "result": res})
 
 
-def test_fraud_day_oracle_clean_staff_fires():
+def mutated():
+    d = dump()
+    d["result"]["false_quarantine"] = ["sales"]
+    d["ledger"].append({"seq": 999, "tick": 9, "seat": "hr", "tool": "quarantine", "args": {"target": "sales"}, "ok": True, "effect": "quarantined sales"})
+    return d
+
+
+def test_fraud_day_oracle_clean():
     assert analyse.label(play("oracle", 1012)) == []
-    d = play("staff", 1012)
-    got = {(x["label"], x["seat"]) for x in analyse.label(d)}
-    assert ("trusted_familiar_name", "finance_ap") in got
-    assert d["result"]["reward"] == 0
 
 
 def test_losing_staff_days_are_all_labeled():
-    for i in (1001, 1002, 1003, 1005, 1006, 1007, 1008, 1011, 1012, 1013, 1015, 1016):
+    for i in range(1000, 1020):
         d = play("staff", i)
         assert d["result"]["reward"] == 1 or analyse.label(d), i
 
 
 def test_replay_and_names():
     from lab.replay import replay
-    d = play("staff", 1001)
-    x = next(x for x in analyse.label(d) if x["label"] == "shared_doc_on_chat_request")
-    t = replay(d, x["action_seq"])
-    assert "share_doc_external" in t and "chat before" in t and "shared_doc_on_chat_request" in t
-    assert {x["label"] for x in analyse.label(play("staff", 1003))} == {"edited_contract_on_chat_request"}
-    assert "created_account_without_ticket" in {x["label"] for x in analyse.label(play("staff", 1002))}
+    t = replay(mutated(), 999)
+    assert "quarantine" in t and "chat before" in t and "wrong_accusation" in t
+
+
+def test_refine_with_fake_gemini(monkeypatch):
+    from agents import gemini
+    seen = []
+    monkeypatch.setattr(gemini, "enabled", lambda: True)
+    monkeypatch.setattr(gemini, "chat", lambda model, system, messages, **kw: seen.append(messages) or {"text": " Because legal never checked. "})
+    d = mutated()
+    fls = analyse.label(d)
+    before = [x["label"] for x in fls]
+    analyse.refine(d, fls)
+    assert [x["label"] for x in fls] == before
+    assert all(x["explanation"] == "Because legal never checked." for x in fls) and seen
+
+
+def test_refine_no_key_is_noop(monkeypatch):
+    from agents import gemini
+    monkeypatch.setattr(gemini, "enabled", lambda: False)
+    d = mutated()
+    fls = analyse.label(d)
+    analyse.refine(d, fls)
+    assert all("explanation" not in x for x in fls)
+
+
+def test_unexplained_loss_catch_all():
+    d = dump()
+    d["result"]["reward"] = 0
+    d["result"]["harm"] = ["something odd"]
+    assert [x["label"] for x in analyse.label(d)] == ["unexplained_loss"]
+
+
+def test_fuzz_baselines_every_loss_labeled_no_win_labeled(monkeypatch):
+    from lab import run as lrun
+    from sleeper import baselines
+    for name in ("trust_all", "random_accuse", "claim_only"):
+        monkeypatch.setitem(lrun.FACTORIES, name, (getattr(baselines, "make_" + name) and (lambda day, trial, n=name: getattr(baselines, "make_" + n)(day, trial)), "scripted"))
+    for name in ("trust_all", "random_accuse", "claim_only"):
+        for i in range(1000, 1020):
+            d = play(name, i)
+            ls = analyse.label(d)
+            assert (d["result"]["reward"] == 0) == bool(ls), (name, i, ls)

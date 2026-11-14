@@ -2,20 +2,20 @@
  "ref_agent": "solver",
  "provenance": {
   "command": "uv run --python 3.12 --extra dev python scripts/gap_vs_reference.py --ref-agent solver --procs 2",
-  "repo_commit": "633047c713d60448573a99b149ca8f28c0752386",
+  "repo_commit": "c78618c3e618ce28a02463e9c979e983bc9e6de0",
   "repo_dirty": false,
   "staging": "/tmp/gapjob/staging",
   "staging_files": 160,
   "staging_sha": "0b11e3951dc247fe",
-  "staging_origin": "copy of ~/junction-aimo-team/wt/justSilas-gemini/data/runs/staging-gemini-v1.4 @ e8a6fdf (clean)",
+  "staging_origin": "copy of ~/junction-aimo-team/wt/justSilas-gemini/data/runs/staging-gemini-v1.4 @ e8a6fdf (clean), copied with cp -Rp (mtimes kept)",
   "fleet": "/tmp/gapjob/fleet14/data/runs/committed/v1.4",
   "fleet_files": 46,
   "fleet_sha": "cde9a60e795bdad4",
-  "fleet_origin": "copy of /tmp/fleet14 (git-archive of fleet v1.4 runs)",
+  "fleet_origin": "copy of /tmp/fleet14 = git-archive of origin/fr8/afterquery/v14-runs @ 91d57ff (all 46 episodes.jsonl byte-identical)",
   "tiers_version": "v1.4",
   "n_boot": 10000,
   "boot_seed": 20261114,
-  "timestamp": "2026-11-14 22:30:09 EET"
+  "timestamp": "2026-11-14 22:32:34 EET"
  },
  "gap": {
   "mode": "gap",
@@ -76,6 +76,7 @@
     "frontier_wrong": 0,
     "frontier_abstain": 0,
     "duplicates": 0,
+    "dropped_duplicates": [],
     "n_files": 63
    },
    {
@@ -135,6 +136,16 @@
     "frontier_wrong": 4,
     "frontier_abstain": 1,
     "duplicates": 1,
+    "dropped_duplicates": [
+     {
+      "seed": 7,
+      "path": "/tmp/gapjob/staging/opencode/hard/7/episodes.jsonl",
+      "ts": 1794655342.4449596,
+      "ts_src": "mtime",
+      "score": 0.69,
+      "agent": "opencode:google/gemini-4-carbon"
+     }
+    ],
     "n_files": 63
    },
    {
@@ -192,23 +203,105 @@
     "frontier_wrong": 1,
     "frontier_abstain": 1,
     "duplicates": 10,
+    "dropped_duplicates": [
+     {
+      "seed": 0,
+      "path": "/tmp/gapjob/staging/inproc/medium/0/episodes.jsonl",
+      "ts": 1794656478.7551796,
+      "ts_src": "mtime",
+      "score": 0.52,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 1,
+      "path": "/tmp/gapjob/staging/inproc/medium/1/episodes.jsonl",
+      "ts": 1794656508.9674115,
+      "ts_src": "mtime",
+      "score": 0.57,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 2,
+      "path": "/tmp/gapjob/staging/inproc/medium/2/episodes.jsonl",
+      "ts": 1794656217.2447176,
+      "ts_src": "mtime",
+      "score": 0.8,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 3,
+      "path": "/tmp/gapjob/staging/inproc/medium/3/episodes.jsonl",
+      "ts": 1794659155.165313,
+      "ts_src": "mtime",
+      "score": 0.0,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 4,
+      "path": "/tmp/gapjob/staging/inproc/medium/4/episodes.jsonl",
+      "ts": 1794656345.7339864,
+      "ts_src": "mtime",
+      "score": 0.69,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 5,
+      "path": "/tmp/gapjob/staging/inproc/medium/5/episodes.jsonl",
+      "ts": 1794656351.2825344,
+      "ts_src": "mtime",
+      "score": 0.81,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 6,
+      "path": "/tmp/gapjob/staging/inproc/medium/6/episodes.jsonl",
+      "ts": 1794656559.4560335,
+      "ts_src": "mtime",
+      "score": 0.74,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 7,
+      "path": "/tmp/gapjob/staging/inproc/medium/7/episodes.jsonl",
+      "ts": 1794660921.6223776,
+      "ts_src": "mtime",
+      "score": 0.0,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 8,
+      "path": "/tmp/gapjob/staging/inproc/medium/8/episodes.jsonl",
+      "ts": 1794660615.157837,
+      "ts_src": "mtime",
+      "score": 0.0,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 9,
+      "path": "/tmp/gapjob/staging/inproc/medium/9/episodes.jsonl",
+      "ts": 1794662745.862337,
+      "ts_src": "mtime",
+      "score": 0.48,
+      "agent": "gemini:gemini-4-carbon"
+     }
+    ],
     "n_files": 63
    },
    {
     "set": "carbon in-process (ours+fleet)",
     "tier": "hard",
     "n": 30,
-    "mean_a": 0.5456666666666667,
+    "mean_a": 0.5293333333333332,
     "mean_b": 0.499,
-    "ratio": 1.0935203740814965,
+    "ratio": 1.0607882431529723,
     "ratio_ci": [
-     0.8514545351709055,
-     1.5680999818382837
+     0.8294692731690526,
+     1.5092750347775084
     ],
-    "diff": 0.046666666666666676,
+    "diff": 0.030333333333333337,
     "diff_ci": [
-     -0.0866666666666666,
-     0.20900833333333327
+     -0.10000833333333349,
+     0.18700000000000003
     ],
     "n_boot": 10000,
     "boot_seed": 20261114,
@@ -249,6 +342,168 @@
     "frontier_wrong": 0,
     "frontier_abstain": 1,
     "duplicates": 20,
+    "dropped_duplicates": [
+     {
+      "seed": 0,
+      "path": "/tmp/gapjob/staging/inproc/hard/0/episodes.jsonl",
+      "ts": 1794653435.109722,
+      "ts_src": "mtime",
+      "score": 0.57,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 1,
+      "path": "/tmp/gapjob/staging/inproc/hard/1/episodes.jsonl",
+      "ts": 1794653683.4249492,
+      "ts_src": "mtime",
+      "score": 0.55,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 2,
+      "path": "/tmp/gapjob/staging/inproc/hard/2/episodes.jsonl",
+      "ts": 1794654923.5698957,
+      "ts_src": "mtime",
+      "score": 0.31,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 3,
+      "path": "/tmp/gapjob/staging/inproc/hard/3/episodes.jsonl",
+      "ts": 1794654068.028208,
+      "ts_src": "mtime",
+      "score": 0.59,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 4,
+      "path": "/tmp/gapjob/staging/inproc/hard/4/episodes.jsonl",
+      "ts": 1794653937.706379,
+      "ts_src": "mtime",
+      "score": 0.76,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 5,
+      "path": "/tmp/gapjob/staging/inproc/hard/5/episodes.jsonl",
+      "ts": 1794656375.8521209,
+      "ts_src": "mtime",
+      "score": 0.1,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 6,
+      "path": "/tmp/gapjob/staging/inproc/hard/6/episodes.jsonl",
+      "ts": 1794655548.4340694,
+      "ts_src": "mtime",
+      "score": -1.0,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 7,
+      "path": "/tmp/gapjob/staging/inproc/hard/7/episodes.jsonl",
+      "ts": 1794655401.252191,
+      "ts_src": "mtime",
+      "score": 0.52,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 8,
+      "path": "/tmp/gapjob/staging/inproc/hard/8/episodes.jsonl",
+      "ts": 1794655043.5314527,
+      "ts_src": "mtime",
+      "score": 0.65,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 9,
+      "path": "/tmp/gapjob/staging/inproc/hard/9/episodes.jsonl",
+      "ts": 1794655555.2291377,
+      "ts_src": "mtime",
+      "score": 0.74,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 10,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.33,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 11,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.51,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 12,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.69,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 13,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.57,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 14,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.66,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 15,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.75,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 16,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.72,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 17,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.69,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 18,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.46,
+      "agent": "gemini:gemini-4-carbon"
+     },
+     {
+      "seed": 19,
+      "path": "/tmp/gapjob/fleet14/data/runs/committed/v1.4/inproc-gemini-4-carbon/hard-10-19/episodes.jsonl",
+      "ts": 1794657447.0,
+      "ts_src": "meta.timestamp",
+      "score": 0.61,
+      "agent": "gemini:gemini-4-carbon"
+     }
+    ],
     "n_files": 63
    },
    {
@@ -306,6 +561,7 @@
     "frontier_wrong": 5,
     "frontier_abstain": 0,
     "duplicates": 0,
+    "dropped_duplicates": [],
     "n_files": 4
    },
    {
@@ -363,6 +619,7 @@
     "frontier_wrong": 0,
     "frontier_abstain": 0,
     "duplicates": 0,
+    "dropped_duplicates": [],
     "n_files": 4
    }
   ],
@@ -373,7 +630,7 @@
    "mismatches": [],
    "missing_stored": []
   },
-  "replay_seconds": 2.5,
+  "replay_seconds": 4.3,
   "n_replayed": 62
  }
 }

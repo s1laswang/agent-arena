@@ -40,7 +40,6 @@ REPLAYABLE_MAX_SEED = 899_999  # judge seeds (900000+) are secret-keyed; not rep
 
 # --------------------------------------------------------------------------- parsing
 def iter_episodes(paths):
-    # NOTE: order matters (last valid episode per (tier, seed) wins); keep gapcalc's glob order.
     for f in paths:
         with open(f) as fh:
             for line in fh:
@@ -55,18 +54,68 @@ def is_invalid(e: dict) -> bool:
     return e.get("valid") is False or e.get("end_reason") == "error" or e.get("score") is None
 
 
-def collect(paths):
-    """(tier, seed) -> episode (last valid one wins, like gapcalc); also count dropped invalid lines."""
-    d, invalid, seen = {}, 0, {}
-    for _, e in iter_episodes(paths):
+# Team dedup rule (reproduce-table fix): per (agent, tier, version, seed) keep the NEWEST run by the
+# run's own start timestamp in its metadata; fall back to file mtime only when there is none.
+# Read order never matters (ties broken by path). With --fleet-git, fleet files without a metadata
+# timestamp use the git commit time of that file instead of mtime (archive extraction resets mtime).
+TS_KEYS = ("started_at", "start_time", "timestamp")
+FLEET_GIT = None  # (repo, ref, fleet_root, prefix_in_repo)
+
+
+def run_timestamp(path: str) -> tuple[float, str]:
+    from datetime import datetime
+    meta = Path(path).with_name("meta.json")
+    if meta.exists():
+        try:
+            m = json.loads(meta.read_text())
+            for k in TS_KEYS:
+                if m.get(k):
+                    return datetime.fromisoformat(str(m[k]).replace("Z", "+00:00")).timestamp(), f"meta.{k}"
+        except Exception:
+            pass
+    if FLEET_GIT and str(path).startswith(FLEET_GIT[2]):
+        rel = FLEET_GIT[3] + str(path)[len(FLEET_GIT[2]):]
+        t = sh("git", "-C", FLEET_GIT[0], "log", "-1", "--format=%ct", FLEET_GIT[1], "--", rel)
+        if t:
+            return float(t), "git-commit"
+    return os.path.getmtime(path), "mtime"
+
+
+def collect(paths, version: str = TIERS_VERSION):
+    """(tier, seed) -> newest valid episode (team rule, order-independent).
+
+    Sets collect.duplicates = {(tier, seed): [dropped {path, ts, ts_src, score, agent}, ...]}.
+    """
+    cand, invalid = {}, 0
+    ts_cache = {}
+    for f, e in iter_episodes(paths):
         if is_invalid(e):
             invalid += 1
             continue
-        k = (e["tier"], int(e["seed"]))
-        seen[k] = seen.get(k, 0) + 1
-        d[k] = e
-    collect.duplicates = {k: v for k, v in seen.items() if v > 1}
-    return d, invalid
+        if f not in ts_cache:
+            ts_cache[f] = run_timestamp(f)
+        ts, src = ts_cache[f]
+        k = (e.get("agent"), e["tier"], e.get("tiers_version", version), int(e["seed"]))
+        cand.setdefault(k, []).append((ts, f, src, e))
+    d, dups = {}, {}
+    for (agent, tier, ver, seed), lst in cand.items():
+        lst.sort(key=lambda x: (x[0], x[1]))
+        keep = lst[-1]
+        pk = (tier, seed)
+        if pk in d:  # same seed under another agent string in one set: still keep the newest
+            prev = d[pk]
+            if (prev[0], prev[1]) > (keep[0], keep[1]):
+                lst, keep = lst + [keep], prev
+            else:
+                lst = lst + [prev]
+        d[pk] = keep
+        dropped = [x for x in lst if x is not keep]
+        if dropped:
+            dups[pk] = dups.get(pk, []) + [{"path": x[1], "ts": x[0], "ts_src": x[2], "score": x[3]["score"],
+                                            "agent": x[3].get("agent")} for x in dropped]
+            dups[pk] = [x for x in dups[pk] if x["path"] != keep[1]]
+    collect.duplicates = dups
+    return {k: v[3] for k, v in d.items()}, invalid
 
 
 def stored_refs(fleet: str, agent: str = "solver"):
@@ -226,6 +275,7 @@ def run_gap(args):
                          "frontier_wrong": sum(1 for k in ks if g[k].get("accused") and not g[k].get("correct")),
                          "frontier_abstain": sum(1 for k in ks if not g[k].get("accused")),
                          "duplicates": sum(1 for k in dups if k[0] == t),
+                         "dropped_duplicates": [{"seed": k[1], **x} for k, v in sorted(dups.items()) if k[0] == t for x in v],
                          "n_files": len(paths)})
     return {"mode": "gap", "ref_agent": args.ref_agent, "rows": rows,
             "staging_invalid_dir_files": len(inv_dir), "repro_check": check,
@@ -294,7 +344,9 @@ def to_md(out):
         L += [f"Invalid (infra) episodes: dropped by gapcalc's rule (valid is False, end_reason error, or score None) "
               f"in the 'invalid dropped' column; plus {g['staging_invalid_dir_files']} episode files the gemini runner "
               "had already moved to staging/invalid/ (never globbed, same as gapcalc). 'dup' = seeds with more than one "
-              "valid episode; the last one in gapcalc's glob order wins (same as gapcalc).", ""]
+              "valid episode; team rule keeps the NEWEST run per (agent, tier, version, seed) by metadata start "
+              "timestamp, else git commit time (fleet, --fleet-git), else file mtime; read order never matters. "
+              "gapcalc instead keeps the last file in glob order, which can differ (see dropped list below).", ""]
         L += ["| set | tier | n | seeds | frontier | ref | ratio [95% CI] | Δ frontier−ref [95% CI] | invalid dropped | dup | wrong | abstain |",
               "|---|---|---|---|---|---|---|---|---|---|---|---|"]
         for r in g["rows"]:
@@ -302,6 +354,12 @@ def to_md(out):
                      f"{pct(r['ratio'])} [{pct(r['ratio_ci'][0])}, {pct(r['ratio_ci'][1])}] | "
                      f"{r['diff']:+.3f} [{r['diff_ci'][0]:+.3f}, {r['diff_ci'][1]:+.3f}] | {r['invalid_dropped']} | {r['duplicates']} | "
                      f"{r['frontier_wrong']} | {r['frontier_abstain']} |")
+        L.append("")
+        L += ["### Dropped duplicates", ""]
+        for r in g["rows"]:
+            for x in r["dropped_duplicates"]:
+                L.append(f"- {r['set']} {r['tier']} seed {x['seed']}: dropped score {x['score']} "
+                         f"({x['ts_src']} {time.strftime('%H:%M:%S', time.localtime(x['ts']))}) `{x['path']}`")
         L.append("")
     f = out.get("fresh")
     if f:
@@ -323,8 +381,8 @@ def main(argv=None):
     ap.add_argument("--ref-agent", default="solver")
     ap.add_argument("--staging", default="/tmp/gapjob/staging")
     ap.add_argument("--fleet", default="/tmp/gapjob/fleet14/data/runs/committed/v1.4")
-    ap.add_argument("--staging-origin", default="copy of ~/junction-aimo-team/wt/justSilas-gemini/data/runs/staging-gemini-v1.4 @ e8a6fdf (clean)")
-    ap.add_argument("--fleet-origin", default="copy of /tmp/fleet14 (git-archive of fleet v1.4 runs)")
+    ap.add_argument("--staging-origin", default="copy of ~/junction-aimo-team/wt/justSilas-gemini/data/runs/staging-gemini-v1.4 @ e8a6fdf (clean), copied with cp -Rp (mtimes kept)")
+    ap.add_argument("--fleet-origin", default="copy of /tmp/fleet14 = git-archive of origin/fr8/afterquery/v14-runs @ 91d57ff (all 46 episodes.jsonl byte-identical)")
     ap.add_argument("--tiers", default="medium,hard")
     ap.add_argument("--procs", type=int, default=2)
     ap.add_argument("--fresh", type=int, default=0)
@@ -332,8 +390,14 @@ def main(argv=None):
     ap.add_argument("--skip-gap", action="store_true", help="only run (b)")
     ap.add_argument("--check-solver", action="store_true", help="also replay solver and check it vs stored runs")
     ap.add_argument("--out", default=None)
+    ap.add_argument("--fleet-git", default="~/junction-aimo-team/agent-arena:origin/fr8/afterquery/v14-runs",
+                    help="REPO:REF the fleet archive came from (commit time = run time fallback); '' to disable")
     args = ap.parse_args(argv)
     args.procs = max(1, min(args.procs, 2))
+    global FLEET_GIT
+    if args.fleet_git:
+        repo, ref = args.fleet_git.rsplit(":", 1)
+        FLEET_GIT = (os.path.expanduser(repo), ref, args.fleet.rstrip("/"), "data/runs/committed/v1.4")
     out = {"ref_agent": args.ref_agent, "provenance": provenance(args)}
     if not args.skip_gap:
         out["gap"] = run_gap(args)

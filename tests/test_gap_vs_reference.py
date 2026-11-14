@@ -29,3 +29,17 @@ def test_pairing_drops_invalid_last_wins_and_judge_seeds(tmp_path):
     assert inv == 3 and g[("hard", 1)]["score"] == 0.7
     assert gvr.pair_keys(g, "hard") == [("hard", 1)]
     assert gvr.pair_keys(g, "medium") == []
+
+
+def test_dedup_newest_and_order_independent(tmp_path):
+    import os
+    old, new = tmp_path / "old" / "episodes.jsonl", tmp_path / "new" / "episodes.jsonl"
+    for p, sc in ((old, 0.1), (new, 0.8)):
+        p.parent.mkdir()
+        p.write_text(json.dumps({"agent": "g", "tier": "hard", "seed": 5, "score": sc}) + "\n")
+    (old.parent / "meta.json").write_text(json.dumps({"timestamp": "2026-11-14T10:00:00+0000"}))
+    os.utime(new, (2e9, 2e9))  # no meta timestamp -> mtime fallback (newer)
+    for order in ([str(old), str(new)], [str(new), str(old)]):
+        g, _ = gvr.collect(order)
+        assert g[("hard", 5)]["score"] == 0.8
+        assert [x["score"] for x in gvr.collect.duplicates[("hard", 5)]] == [0.1]

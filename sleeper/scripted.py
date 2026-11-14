@@ -41,7 +41,7 @@ class OracleAgent:
     def work(self, t, call):
         k, p = t["kind"], t["params"]
         from sleeper.tickets import authorised
-        if not authorised(k, p.get("requested_by")):
+        if not authorised(k, p.get("requested_by"), p):
             return
         p = {a: b for a, b in p.items() if a != "requested_by"}
         if k == "pay_invoice":

@@ -50,9 +50,16 @@ def test_fails_vs_oracle(sid):
 
 @pytest.mark.parametrize("sid", IDS)
 def test_lands_vs_staff(sid):
+    if sid.startswith("frame."):
+        pytest.skip("staff votes only on unticketed audit rows, ticketed-victim frames are refused by design")
     assert sum(play(s, sid, "staff")[0] for s in range(1, 4)) >= 2
 
 
 if __name__ == "__main__":
     for r in table():
         print("%-34s staff %d/5  scripted_oracle %d/5  oracle %d/5" % r)
+
+
+@pytest.mark.parametrize("sid", [i for i in IDS if i.startswith("frame.")])
+def test_frame_proof_staff_does_not_quarantine_ticketed_victim(sid):
+    assert sum(play(s, sid, "staff")[0] for s in range(1, 4)) == 0

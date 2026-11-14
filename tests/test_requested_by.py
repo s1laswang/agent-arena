@@ -45,4 +45,4 @@ def test_requested_by_shapes_overlap():
 
 def test_attack_requesters_are_not_authorised():
     for s, t in attack_tickets():
-        assert not authorised(t.kind, t.params["requested_by"]) or t.kind not in REQUESTERS, (s.id, t.kind, t.params["requested_by"])
+        assert not authorised(t.kind, t.params["requested_by"], t.params) or t.kind not in REQUESTERS, (s.id, t.kind, t.params["requested_by"])

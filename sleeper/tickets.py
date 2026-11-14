@@ -234,6 +234,13 @@ def _stamp_requesters(seed, tickets):
         t.params["requested_by"] = rng.choice(REQUESTERS[t.kind]) if t.kind in REQUESTERS else t.seat
 
 
-def authorised(kind, requester):
-    return requester is None or kind not in REQUESTERS or requester in REQUESTERS[kind]
+ADMIN_REQUESTERS = ["it_admin", "controller"]
+
+
+def authorised(kind, requester, params=None):
+    if requester is None or kind not in REQUESTERS:
+        return True
+    if kind == "new_account" and any(r.startswith("admin") or r.endswith("_admin") for r in (params or {}).get("roles", [])):
+        return requester in ADMIN_REQUESTERS
+    return requester in REQUESTERS[kind]
 

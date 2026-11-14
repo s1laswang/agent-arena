@@ -434,13 +434,17 @@ def test_synthetic_multi_shard_consolidation_and_determinism(
     assert clash["by_tier"]["medium"]["n_shards"] == 2
     assert clash["by_tier"]["medium"]["n_episodes"] == 4
     assert clash["by_tier"]["medium"]["investigator_accuracy"] == pytest.approx(1.0)
+    assert clash["by_tier"]["medium"]["investigator_accuracy_ci95"][1] == pytest.approx(1.0)
     assert clash["by_tier"]["medium"]["investigator_mean_score"] == pytest.approx(0.58)
+    assert clash["by_tier"]["medium"]["investigator_mean_ci95"] == [0.50, 0.66]
     assert clash["by_tier"]["medium"]["solver_mean_score"] == pytest.approx(0.50)
     assert clash["by_tier"]["medium"]["mean_regret"] == pytest.approx(-0.08)
+    assert clash["by_tier"]["medium"]["mean_regret_ci95"] == [-0.26, 0.10]
     assert clash["overall"]["n_shards"] == 3
     assert clash["overall"]["n_episodes"] == 6
     assert clash["overall"]["investigator_accuracy"] == pytest.approx(0.6667, abs=1e-4)
     assert clash["overall"]["solvable_rate"] == pytest.approx(1.0)
+    assert clash["overall"]["solvable_rate_ci95"][1] == pytest.approx(1.0)
     assert clash["overall"]["mole_total_leaks"] == 27
     assert clash["overall"]["mole_total_frames"] == 12
     assert clash["overall"]["mole_total_errors"] == 0
@@ -457,7 +461,10 @@ def test_synthetic_multi_shard_consolidation_and_determinism(
     assert arena["by_tier"]["hard"]["by_investigator"]["solver"]["adaptive_mole"]["mean_score"] == pytest.approx(0.60)
     assert arena["overall"]["by_investigator"]["solver"]["adaptive_mole"]["mean_score"] == pytest.approx(0.45)
     assert arena["overall"]["by_investigator"]["solver"]["default_mole"]["mean_score"] == pytest.approx(0.65)
+    assert arena["overall"]["by_investigator"]["solver"]["n_paired"] == 4
     assert arena["overall"]["by_investigator"]["solver"]["delta_mean"] == pytest.approx(-0.20)
+    delta_ci = arena["overall"]["by_investigator"]["solver"]["delta_mean_ci95"]
+    assert delta_ci[0] <= -0.20 <= delta_ci[1]
     assert arena["overall"]["by_investigator"]["grok_tactics"]["adaptive_mole"]["mean_score"] == pytest.approx(0.0)
     assert arena["overall"]["by_investigator"]["grok_tactics"]["default_mole"]["mean_score"] == pytest.approx(0.55)
     assert arena["overall"]["by_investigator"]["grok_tactics"]["delta_mean"] == pytest.approx(-0.55)
@@ -521,6 +528,9 @@ def test_real_repo_consolidation_and_provenance_parity(tmp_path: Path) -> None:
     assert recomputed["live_arena_suite"]["overall"]["mole_llm_errors"] == 0
     assert recomputed["mole_forge_suite"]["overall"]["n_runs"] >= 1
     assert recomputed["paired_designer_suite"]["overall"]["n_runs"] >= 4
+    assert isinstance(recomputed["catchability_audit"], dict)
+    assert recomputed["catchability_audit"]["isolation_violations"] == 0
+    assert recomputed["catchability_audit"]["zero_privileged_canary_awareness_confirmed"] is True
 
 
 def test_no_comments_unicode_dashes_or_secrets() -> None:

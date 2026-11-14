@@ -99,3 +99,12 @@ Without a key opencode cannot call a model, so there is no offline OpenCode run;
 `harbor/oracle_run.py` plays the seat with `agents.reference.make_oracle_seat(day, seat)` through the MCP tools (needs the real day, so the task's `solution/` ships `day.json`, `sleeper/`, `agents/`; solution/ is hidden from the agent). `harbor/opencode/oracle_build.patch` is the build.py change (git apply on harbor/build.py; env-harbor's file).
 
 Observed in a scratch merge of momin + hn-reference-landing (3 conflicting files taken from landing): it runs end to end through Harbor without crashing, but reward is 0 on the new 46-ticket days (s0 finance_ap: 17/47 tickets with SLEEPER_TEAM=staff or oracle). Even in-process, `build_team("oracle")` over `World` on that day gives reward 0 (43/47 tickets), so this is the oracle/day mix on landing, not the harness. Needs hn-reference to confirm the oracle wins landing days before the Harbor reference run can be 1 on them.
+
+## OpenCode seat, real Harbor run without a Gemini key (2026-11-14, finance_ap seed 0, day d55750)
+
+`harbor/opencode/mock_llm.py` is a scripted OpenAI-compatible server (my_tickets, end_turn, then "done"). Run it on the host (`python harbor/opencode/mock_llm.py 8899`), then:
+
+    harbor run -p harbor/tasks/sleeper-s0-finance_ap -a opencode -m scripted/scripted --ak version=latest --ak 'opencode_config={"provider":{"scripted":{"npm":"@ai-sdk/openai-compatible","options":{"baseURL":"http://host.docker.internal:8899/v1","apiKey":"x"},"models":{"scripted":{"name":"scripted","tools":true}}}}}' --yes
+
+Result: opencode installed in the image, saw 30 `sleeper_*` MCP tools, called my_tickets and end_turn, exited; verifier wrote reward 0 (1/43 tickets). 383s wall.
+Fixed: `harbor/build.py` did not ship `sleeper/tickets.py` in `solution/`, so the oracle crashed (reward 0). After the fix the oracle plays all 43 tickets but scores 0 on d55750 with harm `vendor_new:V011` (day/oracle issue, not harness).

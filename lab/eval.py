@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import shutil
 
 from lab.results import load_days, summarise
 from lab.run import run, setup_gemini
@@ -9,7 +10,7 @@ GEMINI_SEAT_RUNS = 46
 DAYS = 20
 JOBS = min(4, os.cpu_count() or 1)
 ORDER = ["oracle", "reference", "staff", "do_nothing", "stop_early", "quarantine_all", "refuse_all", "trust_all"]
-SECONDS_PER_TASK = 3.0
+SECONDS_PER_TASK = 0.85
 EXPLOIT = ["do_nothing", "stop_early", "quarantine_all", "refuse_all", "trust_all", "random_accuse", "claim_only", "quarantine_only_then_work"]
 SEAT_AGENTS = ["staff", "reference", "oracle", "do_nothing"]
 HEAD = ["| team | kind | model | n winnable days | reward | reward on sleeper days | pass^1 | pass^k | sleeper success | false accusation | tickets | gap vs reference |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
@@ -126,7 +127,7 @@ def main(argv=None, runner=None):
     n = (len(ORDER) + len(SEAT_AGENTS)) * a.days * a.trials
     if a.full:
         n += (len(EXPLOIT) * 2 + 4) * (a.exploit_days or a.days) * a.trials + len(SEAT_AGENTS) * a.days * a.trials
-    print(f"expected runtime ~{max(1, round(n * SECONDS_PER_TASK / max(a.jobs, 1) / 60))} min ({n} day runs, {a.jobs} jobs, {'full' if a.full else 'reported set'}; slower when the machine is loaded)", flush=True)
+    print(f"expected runtime ~{max(1, round(n * SECONDS_PER_TASK / max(a.jobs, 1) / 60 * 2) / 2)} min ({n} day runs, {a.jobs} jobs, {'full' if a.full else 'reported set'}; slower when the machine is loaded)", flush=True)
     setup_gemini(a.gemini, a.budget_calls, a.jobs)
     if a.gemini:
         from agents import gemini
@@ -136,6 +137,8 @@ def main(argv=None, runner=None):
     kw = {"runner": runner} if runner else {}
     kw["jobs"] = a.jobs
     runs = os.path.join(a.out, "runs")
+    for sub in ("runs", "eval"):
+        shutil.rmtree(os.path.join(a.out, sub), ignore_errors=True)
     wins = lambda r: r.get("winnable", True)
     full = {t: attempt(t, a.days, a.trials, day_start=a.day_start, out=runs, **kw) for t in ORDER}
     seatruns = {g: attempt("staff", a.days, a.trials, a.seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}
@@ -214,6 +217,14 @@ def main(argv=None, runner=None):
         print("self-checks skipped: lab.check missing")
     except Exception as ex:
         print(f"self-checks skipped: {type(ex).__name__}: {ex}")
+    r = lambda s_: f"{s_['reward_mean']:.3f}" if s_ else "n/a"
+    npass = sum(str(x).startswith("PASS") for x in lines)
+    print(f"\nSUMMARY ({a.days} days x {a.trials} trials)\n"
+          f"all 8 seats: oracle {r(summaries['oracle'])}  reference {r(summaries['reference'])}  staff {r(summaries['staff'])}\n"
+          f"do_nothing {r(summaries['do_nothing'])}  stop_early {r(summaries['stop_early'])}\n"
+          f"{a.seat} seat, needs-seat days: oracle {r(need['oracle'])}  staff {r(need['staff'])}\n"
+          f"self-checks: {npass} PASS, {sum(str(x).startswith('WARN') for x in lines)} WARN, {sum(str(x).startswith('FAIL') for x in lines)} FAIL\n"
+          f"full table: {os.path.join(d, 'gap.md')}", flush=True)
     if a.strict and any(str(x).startswith("FAIL") for x in lines):
         raise SystemExit(1)
     return summaries, seat

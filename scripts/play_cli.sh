@@ -18,8 +18,8 @@ case $CLIENT in
     cat >"$O/mcp.json" <<J
 {"mcpServers":{"sleeper":{"command":"$PY","args":$ARGS,"env":{"PYTHONPATH":"$PWD","SLEEPER_SEAT":"$SEAT"}}}}
 J
-    run claude -p "$PROMPT" --mcp-config "$O/mcp.json" --strict-mcp-config --allowedTools "mcp__sleeper__*" \
-      --output-format stream-json --verbose >"$O/transcript" 2>"$O/stderr";;
+    cd "$O" && run claude -p "$PROMPT" --tools "" --mcp-config "$O/mcp.json" --strict-mcp-config --allowedTools "mcp__sleeper__*" \
+      --output-format stream-json --verbose >"$O/transcript" 2>"$O/stderr"; cd - >/dev/null;;
   codex)
     run codex exec --json --skip-git-repo-check -s read-only \
       -c "mcp_servers.sleeper.command=\"$PY\"" -c "mcp_servers.sleeper.args=$ARGS" \

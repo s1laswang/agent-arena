@@ -1,5 +1,18 @@
 # Gemini CEO log (newest first)
 
+## Sat 18:40: tick 5 (results v1 complete for PR 1)
+- gemini-track 2ccaf7a: everything merged, 75 lab tests green.
+- **Atlas v1** (real, not the fallback):
+  - 153 episodes from 9 cohorts, 792,862 tokens, in one 3.8-flash context cache.
+  - 98% of 470 quotes verbatim; multimodal 8/8.
+  - Top failure mode: premature accusation, 61% of all regret.
+  - Human agreement pending.
+- **Ladder v1**: 134 episodes in 31 cells, $49.85 list. Headline: 3.5-flash medium/high ≈ the solver on hard at about 30% of carbon-high's cost; flash-lite fails at every level.
+- **Swarm v1**: 35 audited whitebox attacks, 0 exploits, 0 invariant violations.
+- **Dashboard**: 11,187 calls, $88.75. The Live API commentator clip and TTS narration are done.
+- SUBMISSION.md v1 filled from the committed files. Pending: human agreement and final refresh.
+- FR8: 10 jobs running, all Momin's fleet plus Silas's ws4 GPU job. None are ours. The fleet's fr8/gemini/main builds on our canary/gemini (roles runs). Merge owner is a question for Silas.
+
 ## Sat 18:20: tick 4
 - No new pushes from G2, G3 or G4 since 15:30. Their resumes only took effect around 18:19, and all 4 engineers are running now.
 - Live: 2 ladder processes, a new atlas full run (full5, started 18:19), and uncommitted atlas_cache. The swarm wave is NOT running and swarm.py has uncommitted edits; G4 has just restarted.

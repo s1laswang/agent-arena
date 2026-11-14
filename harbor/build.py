@@ -89,34 +89,47 @@ ENV PYTHONPATH=/app
 CMD ["python", "-m", "harbor.sidecar"]
 '''
 
-TEST = '''#!/bin/bash
-for i in 1 2 3 4 5; do /usr/local/bin/python -I -c "
-import os, signal, pwd
+KILL = """/usr/local/bin/python -I -c "
+import os, pwd, signal, time
 u = pwd.getpwnam('agent').pw_uid
-n = 0
-for p in os.listdir('/proc'):
-    if p.isdigit() and os.stat('/proc/' + p).st_uid == u:
-        os.kill(int(p), signal.SIGKILL); n += 1
-raise SystemExit(n)
-" && break; sleep 1; done
-[ -L /logs/verifier ] && rm -f /logs/verifier
+clean = 0
+for _ in range(100):
+    n = 0
+    for p in os.listdir('/proc'):
+        if p.isdigit():
+            try:
+                if os.stat('/proc/' + p).st_uid != 0:
+                    os.kill(int(p), signal.SIGKILL); n += 1
+            except OSError:
+                pass
+    clean = clean + 1 if n == 0 else 0
+    if clean >= 3:
+        break
+    time.sleep(0.1)
+"
+"""
+
+TEST = '''#!/bin/bash
+''' + KILL + '''[ -L /logs/verifier ] && rm -f /logs/verifier
 mkdir -p /logs/verifier
 chown root:root /logs/verifier; chmod 755 /logs/verifier
 rm -rf /logs/verifier/reward.txt
 echo 0 > /logs/verifier/reward.txt
 /usr/local/bin/python -I - <<'PY'
-import json, urllib.request
+import hmac, json, urllib.request
 req = urllib.request.Request("http://sleeper-server:8001/reward", headers={{"X-Verify-Token": "{token}"}})
 try:
     r = json.loads(urllib.request.urlopen(req, timeout=120).read())
     print(r)
-    ok = r.get("reward") == 1
+    body = {{k: v for k, v in r.items() if k != "sig"}}
+    good = hmac.new(b"{token}", json.dumps(body, sort_keys=True).encode(), "sha256").hexdigest()
+    ok = r.get("reward") == 1 and hmac.compare_digest(str(r.get("sig", "")), good)
 except Exception as e:
     print("verifier error", repr(e))
     ok = False
 open("/logs/verifier/reward.txt", "w").write("1" if ok else "0")
 PY
-chmod 444 /logs/verifier/reward.txt
+''' + KILL + '''chmod 444 /logs/verifier/reward.txt
 '''
 
 SOLVE = '''#!/bin/bash

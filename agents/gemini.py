@@ -11,6 +11,16 @@ USAGE_FILE = "usage.jsonl"
 DEFAULT_MODEL = "gemini-2.5-flash"
 _usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0, "api_errors": 0}
 _client = None
+PRICES = json.loads((ROOT / "agents" / "prices.json").read_text())
+
+
+def price_for(model):
+    i = os.environ.get("SLEEPER_PRICE_IN_PER_M")
+    o = os.environ.get("SLEEPER_PRICE_OUT_PER_M")
+    if i and o:
+        return float(i), float(o), "env override"
+    p = PRICES.get(model)
+    return (p["in"], p["out"], p["source"] + " " + p["checked"]) if p else (2.0, 12.0, "assumed: model not in agents/prices.json")
 
 
 class GeminiUnavailable(Exception):

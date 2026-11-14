@@ -19,22 +19,22 @@ from sleeper.mcp_server import build_server
 from scripts import frontier_day
 from sleeper.tickets import make_day
 
-PRICE = {"in": float(os.environ.get("SLEEPER_PRICE_IN_PER_M") or 2.0), "out": float(os.environ.get("SLEEPER_PRICE_OUT_PER_M") or 12.0)}
 
 
 def commit():
     return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip() or "nogit"
 
 
-def usage_total(cache, fn=None):
+def usage_total(cache, fn=None, model=None):
     i = o = 0
     models = set()
+    pr = gemini.price_for(model)
     p = cache / (fn or gemini.USAGE_FILE)
     for line in p.read_text().splitlines() if p.is_file() else []:
         d = json.loads(line)
         i, o = i + d["in"], o + d["out"]
         models.add(d["model"])
-    return {"in_tokens": i, "out_tokens": o, "usd": round((i * PRICE["in"] + o * PRICE["out"]) / 1e6, 4), "models_sent": sorted(models)}
+    return {"in_tokens": i, "out_tokens": o, "usd": round((i * pr[0] + o * pr[1]) / 1e6, 4), "models_sent": sorted(models), "price_per_m": [pr[0], pr[1]], "price_source": pr[2]}
 
 
 class FrontierAgent:
@@ -63,7 +63,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     gemini.USAGE_FILE = name + ".usage.jsonl"
     t0 = time.time()
     fa = FrontierAgent(model, seat, seed, trial)
-    state, st, mcp, _ = frontier_day.play(seat, seed, lambda d, s: fa, out_dir, max_calls, max_usd, lambda: usage_total(gemini.CACHE)["usd"], name)
+    state, st, mcp, _ = frontier_day.play(seat, seed, lambda d, s: fa, out_dir, max_calls, max_usd, lambda: usage_total(gemini.CACHE, model=model)["usd"], name)
     wf = out_dir / f"{name}.wall"
     if os.environ.get("SLEEPER_OFFLINE") == "1" and wf.is_file():
         wall = float(wf.read_text())
@@ -79,7 +79,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
            "scores": {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r.get("false_quarantine", []), "sleeper_caught": r.get("sleeper_caught", False),
                       "tickets_done": r.get("tickets_done", 0), "tickets_total": r.get("tickets_total", 0)},
            "calls": st["calls"], "api_retries": gemini.usage()["retries"], "api_errors": gemini.usage()["api_errors"], "aborted": st["abort"],
-           **usage_total(gemini.CACHE), "wall_s": wall, "mcp_calls": mcp, "transcript": fa.log}
+           **usage_total(gemini.CACHE, model=model), "wall_s": wall, "mcp_calls": mcp, "transcript": fa.log}
     pj = out_dir / f"{name}.json"
     pj.write_text(json.dumps(out, sort_keys=True, indent=1, default=str))
     return out, pj

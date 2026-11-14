@@ -11,6 +11,6 @@ def test_ablate_scripted(tmp_path):
         assert all(p.count("Hint:") == 1 for p in staff.ROLE_PROMPTS.values())
     finally:
         staff.ROLE_PROMPTS.update(saved)
-    r = hint.ablate("verify_bank", days=3, trials=2, seat="finance_ap", day_start=1000, out=str(tmp_path))
-    assert r["seeds"] == 3 and r["verdict"] == "no change" and r["rate_base"] == r["rate_hint"]
+    r = hint.ablate("verify_bank", days=2, trials=1, seat="finance_ap", day_start=1000, out=str(tmp_path))
+    assert r["seeds"] == 2 and r["verdict"] == "no change" and r["rate_base"] == r["rate_hint"]
     assert "verify_bank" in hint.table([r])

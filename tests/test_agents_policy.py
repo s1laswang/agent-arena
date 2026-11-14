@@ -54,7 +54,7 @@ def test_nudge_then_fallback():
     res = run_episode(env, pol, "stub")
     assert [s.tool for s in res.steps] == ["list_employees", "status", "accuse"]
     assert sum(1 for m in pol.transcript if m.get("content") == NUDGE) == 2
-    assert not res.correct and res.score == 0.0
+    assert not res.correct and res.score == -1.0
 
 
 def test_multi_tool_queue():

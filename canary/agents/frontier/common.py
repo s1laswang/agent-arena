@@ -189,7 +189,7 @@ def run_seeds(spec: RunSpec, build, written_files: set[str], fetch: bool = True,
     provider, _, model = spec.agent.partition(":")
     w.meta({"agent": spec.agent, "model": model, "provider": provider, "git_sha": git_sha(), "tier": spec.tier,
             "seeds": spec.seeds, "hint": None, "usage": None, "mcp_url": spec.server.mcp_url,
-            "harness": "frontier-cli", **spec.extra})
+            "harness": "frontier-cli", "smoke": False, **spec.extra})
     return spec.out
 
 
@@ -207,6 +207,7 @@ def base_args(desc: str, default_model: str) -> argparse.ArgumentParser:
     ap.add_argument("--instruction-url", default="")
     ap.add_argument("--timeout", type=int, default=1800, help="seconds per episode")
     ap.add_argument("--no-fetch", action="store_true", help="skip ledger fetch (smoke test of the CLI only)")
+    ap.add_argument("--smoke", action="store_true", help="tag meta.json smoke=true")
     ap.add_argument("--dry-run", action="store_true", help="print the command and exit")
     return ap
 
@@ -214,4 +215,4 @@ def base_args(desc: str, default_model: str) -> argparse.ArgumentParser:
 def spec_from(a, agent: str) -> RunSpec:
     sv = ServerCfg(a.mcp_url, a.token, a.ledger_url, a.history_url, a.reset_url, a.instruction_url)
     out = Path(a.out) if a.out else REPO_ROOT / "data" / "runs" / run_id(agent, a.tier)
-    return RunSpec(agent, a.tier, parse_seeds(a.seeds), out, sv, a.timeout)
+    return RunSpec(agent, a.tier, parse_seeds(a.seeds), out, sv, a.timeout, extra={"smoke": bool(a.smoke)})

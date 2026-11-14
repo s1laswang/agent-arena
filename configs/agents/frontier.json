@@ -1,8 +1,19 @@
 {
-  "_note": "Models verified to run under the stored ChatGPT logins on 2026-11-14 (opencode rejects gpt-5-mini, gpt-5.4*, gpt-5.5 on a ChatGPT account).",
-  "opencode": {"models": ["openai/gpt-5.6-sol", "openai/gpt-6-sol"]},
-  "codex": {"models": ["gpt-5-mini"]},
-  "mcp_url": "http://127.0.0.1:8765/mcp",
-  "ledger_url": "{base}/ledger?token={token}",
-  "history_url": "{base}/history?token={token}"
+ "_note": "Default model = canary.llm.default_openai_model() (gpt-5.5). On 2026-11-14 opencode with the stored ChatGPT login REJECTED gpt-5.5 / gpt-5.4* / gpt-5-mini (400 'not supported when using Codex with a ChatGPT account'); openai/gpt-5.6-sol and openai/gpt-6-sol worked. codex exec worked with gpt-5-mini (smoke).",
+ "opencode": {
+  "default": "openai/gpt-5.5",
+  "verified_on_chatgpt_login": [
+   "openai/gpt-5.6-sol",
+   "openai/gpt-6-sol"
+  ]
+ },
+ "codex": {
+  "default": "gpt-5.5",
+  "verified_smoke": [
+   "gpt-5-mini"
+  ]
+ },
+ "mcp_url": "http://127.0.0.1:8765/mcp",
+ "ledger_url": "{base}/ledger?token={token}",
+ "history_url": "{base}/history?token={token}"
 }

@@ -25,7 +25,7 @@ class FakeEnv:
         return [{"name": n, "description": f"fake {n}", "input_schema": {"type": "object", "properties": {}}} for n in TOOLS]
 
     def instruction(self) -> str:
-        return "FAKE INSTRUCTION: find the mole among e00..e19 and accuse exactly once."
+        return "FAKE INSTRUCTION: find the mole among e00..e19 and accuse exactly once. Correct: score = V; wrong: score = -1.0."
 
     @property
     def done(self) -> bool:
@@ -36,7 +36,9 @@ class FakeEnv:
         return self._history
 
     def score(self) -> float:
-        return self.v if self._accused == self.mole else 0.0
+        if self._accused is None:
+            return 0.0
+        return self.v if self._accused == self.mole else -1.0  # contract v0.3
 
     def ledger(self) -> list[LedgerEntry]:
         return list(self._ledger)

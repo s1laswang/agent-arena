@@ -1,6 +1,6 @@
 """Codex CLI over MCP, judges' harness shape. LIVE PATH UNTESTED (needs HARNESS MCP server).
 
-    python -m canary.agents.frontier.codex_run --model gpt-5-mini --tier medium --seeds 0-2 \
+    python -m canary.agents.frontier.codex_run --model gpt-5.5 --tier medium --seeds 0-2 \
         --mcp-url http://127.0.0.1:8765/mcp --token T
 
 MCP is configured ONLY via -c overrides (codex >= 0.167 supports mcp_servers.<n>.url for streamable
@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from canary.llm import default_openai_model
 from canary.agents.frontier.common import base_args, run_seeds, spec_from
 
 FILES: set[str] = set()  # codex needs no files in the workdir
@@ -37,8 +38,12 @@ def build_cmd(workdir: Path, prompt: str, model: str, mcp_url: str, allow_shell:
     return cmd + [prompt]
 
 
+def _default() -> str:
+    return default_openai_model()
+
+
 def main(argv=None):
-    ap = base_args("Codex frontier runner", "gpt-5-mini")
+    ap = base_args("Codex frontier runner", _default())
     ap.add_argument("--allow-shell", action="store_true")
     a = ap.parse_args(argv)
     spec = spec_from(a, f"codex:{a.model}")

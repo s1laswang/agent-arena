@@ -13,6 +13,14 @@ from canary.agents.loop import run_episode
 from canary.agents.runlog import RunWriter, git_sha, parse_seeds, run_id, split_spec
 
 
+def resolve_agent(agent: str | None) -> str:
+    """Fill in the frontier default model so meta.json always records the exact model id."""
+    if agent in (None, "", "openai", "openai:"):
+        from canary.llm import default_openai_model
+        return f"openai:{default_openai_model()}"
+    return agent
+
+
 def make_env(tier: str, seed: int, fake: bool):
     if fake:
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tests"))
@@ -24,15 +32,17 @@ def make_env(tier: str, seed: int, fake: bool):
 
 def main(argv=None, client=None) -> Path:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--agent", required=True)
+    ap.add_argument("--agent", default=None, help="openai:<model> (default openai:<canary.llm.default_openai_model()>), gemini:<model>, stub")
     ap.add_argument("--tier", default="medium")
     ap.add_argument("--seeds", default="0-9")
     ap.add_argument("--out", default=None)
     ap.add_argument("--hint", default=None)
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--max-turns", type=int, default=40)
+    ap.add_argument("--smoke", action="store_true", help="tag meta.json smoke=true (small models / quick checks)")
     ap.add_argument("--fake", action="store_true", help="use tests/fake_env.FakeEnv (testing only)")
     a = ap.parse_args(argv)
+    a.agent = resolve_agent(a.agent)
     seeds = parse_seeds(a.seeds)
     out = Path(a.out) if a.out else Path("data/runs") / run_id(a.agent, a.tier)
     w = RunWriter(out)
@@ -54,7 +64,7 @@ def main(argv=None, client=None) -> Path:
             total[k] += pol.usage.get(k, 0)
         print(f"seed {seed}: score={res.score:.3f} correct={res.correct} accused={res.accused} day={res.final_day}")
     w.meta({"agent": a.agent, "model": model, "provider": provider, "git_sha": git_sha(), "tier": a.tier,
-            "seeds": seeds, "hint": a.hint, "usage": total, "fake_env": a.fake})
+            "seeds": seeds, "hint": a.hint, "usage": total, "fake_env": a.fake, "smoke": bool(a.smoke or a.fake)})
     print(f"wrote {out}")
     return out
 

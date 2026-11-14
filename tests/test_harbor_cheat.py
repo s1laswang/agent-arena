@@ -53,7 +53,8 @@ def test_cheat_finds_no_hole_and_scores_zero(tmp_path):
            if n.startswith(("ledger", "reset")) and a["status"] not in (307, 403, 404, 405)}
     assert not bad, bad
     assert not [n for n, a in rep["attempts"]["accuse"].items() if a["hole"]]
-    assert led["accused"] is None and led["score"] == 0.0, led
+    assert led.get("accused") is None and led["score"] == 0.0, led
+    assert led.get("ledger") == [] and led.get("redacted") == "episode in progress"
 
 
 def test_cheat_turns_a_leaked_token_into_reward(tmp_path):

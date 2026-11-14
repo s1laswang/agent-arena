@@ -1,0 +1,70 @@
+{
+ "opencode:google/gemini-4-carbon": {
+  "episodes": 60,
+  "tiers": {
+   "hard": 30,
+   "medium": 30
+  },
+  "regret_total": 6.4637,
+  "tags": {
+   "premature_accusation": {
+    "count": 3,
+    "episodes_with": 3,
+    "regret_sum": 0.9612,
+    "worst": {
+     "run_id": "hard",
+     "seed": 23,
+     "t": 175,
+     "day": 21,
+     "tool": "accuse",
+     "args": {
+      "employee": "e29"
+     },
+     "regret": 0.4218,
+     "p_best": 0.4517,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.45 < 0.6)"
+    },
+    "rate": 0.05
+   },
+   "budget_waste": {
+    "count": 64,
+    "episodes_with": 56,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 0,
+     "t": 3,
+     "day": 1,
+     "tool": "search_messages",
+     "args": {
+      "day_to": 1,
+      "day_from": 1,
+      "query": " "
+     },
+     "regret": 0.0,
+     "p_best": 0.025,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 0.933
+   },
+   "no_accusation": {
+    "count": 1,
+    "episodes_with": 1,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 11,
+     "t": 212,
+     "day": 21,
+     "tool": "(no accusation)",
+     "args": {},
+     "regret": 0.0,
+     "p_best": 0.2191,
+     "why": "episode ended without an accusation (best belief 0.22)"
+    },
+    "rate": 0.017
+   }
+  },
+  "score_mean": 0.5177
+ }
+}

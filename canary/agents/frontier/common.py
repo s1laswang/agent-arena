@@ -73,7 +73,8 @@ class Server:
         from canary.mcp_server import clean_launch_env, write_secret_files
         # INTEGRITY item 2: the seed and ledger token go in 0600 files, never in the server's environment.
         env = dict(clean_launch_env(), **write_secret_files(self.tier, self.seed, self.token),
-                   CANARY_ALLOW_DEV="1", CANARY_PORT=str(self.port), CANARY_HOST="127.0.0.1")
+                   CANARY_ALLOW_DEV="1", CANARY_PORT=str(self.port), CANARY_HOST="127.0.0.1",
+                   CANARY_CONSUME_SECRET_FILES="1")
         if os.environ.get("CANARY_TIERS_OVERRIDE"):
             env["CANARY_TIERS_OVERRIDE"] = os.environ["CANARY_TIERS_OVERRIDE"]
         log = subprocess.DEVNULL

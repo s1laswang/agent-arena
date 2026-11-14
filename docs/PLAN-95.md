@@ -4,10 +4,11 @@
 CEO estimate: gap 22/30, difficulty 26/30, integrity 24/25, craft 14/15 ≈ 86. On top of that the tiebreaker is currently a loss (the small model scores −0.15 against the base's 0.00) and the Gemini prize is about 7/10. A true 100 isn't something we control: the judges' 3 agent runs have variance. The realistic target is **93–96, with nothing a judge can knock down in 15 minutes**. Every action below is ranked by points per hour and has to land before its slot. Feature freeze for rules/env/solver: 20:00 (Gate B).
 
 ## Where the points are lost (honest diagnosis)
-1. **Gap (−8). The gap is real but noisy, and it lives only on hard.**
-   - gemini-4-carbon on hard: 59% [11, 99] of the solver, n=26.
-   - gemini-4-carbon on medium: 108% (no gap).
-   - Codex hard v1.3: 106%.
+1. **Gap. A v1.4 frontier gap is not established.** Do not tell judges one is.
+   - In-process bake-off, rules v1.4, paired seeds, n=10 per tier (21:26): gemini-4-carbon matches or beats the solver. Medium solver +0.734±0.050 vs carbon +0.680±0.085. Hard solver +0.433±0.324 vs carbon +0.509±0.136. Smaller Gemini models sat below the solver.
+   - The tiebreaker's notes gain is the generic hint (notes minus hint −0.039±0.204).
+   - Codex hard v1.3: 106% of the solver. That is an earlier tier, not a v1.4 gap.
+   - Earlier carbon ratios (59% n=26, ladder 66% [5%, 117%] n=10) are not this bake-off. The 59% episodes were not committed. The 66% interval includes parity.
    - One lucky gamble at P=0.45 scores the same as a correct inference, so a judge rerun of 3 runs could land near parity.
    - The rubric says the gap must be "consistent" and "reproducible across repeated runs". We haven't shown repeated runs of the judge path.
 2. **Difficulty (−4). We have the failure story (premature accusation, never abstaining, ignoring delays) but no causal proof.** Nothing yet shows the info was sufficient and the decision was the failure. Gallery tags are incomplete, and there's no human baseline.
@@ -129,3 +130,11 @@ Never print keys. Never touch other users' jobs.
 (1) C2: write EXPLOITS.md at the repo root. One row per attack (13 battery probes, Harbor cheat runs, the never-accuse probe, Momin's 129-row corpus, the 35-attacker Gemini swarm, the fleet probes: control_pad, sidecar key, ledger trust), with result, mitigation and the test that enforces it. Add a "Residual risks" section.
 (2) B4: run an instruction audit (one Gemini pass, gemini-4-carbon) for trick wording, hidden info or broken tools. Answer or fix the findings in docs/DIFFICULTY.md; rules changes go to the CEO only.
 (3) C3 at 02:00 on the tagged candidate: rerun `make hunt` and the Gemini swarm, and run the 15-minute judge-protocol hunt with Vaishnav. Report to docs/reports/integrity.md.
+
+## Update 15 Nov ~00:20
+- **Verda cloud GPU** (Silas approved, cap $30): overflow GPU for the tiebreaker, so v3 seed 0 no longer waits for FR8 GPUs held by the fleet. **FR8 is the only Verda owner.** Other heads route GPU requests to FR8 with a GPU-hours estimate. Instances are deleted as soon as results are pulled; spend goes in docs/reports/fr8.md.
+- **Gap gate at 01:40** (reviewer guardrails adopted):
+  - Track 1 solver_v2: same tools and instruction; tuned off seeds 0–29 and 900000+; reported on fresh and judge seeds; v1 rows kept.
+  - Track 2 expert tier: headline or Harbor default only with n ≥ 30 replay-verified OpenCode episodes by 06:00, otherwise addendum only.
+- **v1.4 headline committed** (docs/reports/gap.md): OpenCode hard 60% [1, 103], luck-adjusted 68% [43, 91]. Pre-registered seed rule: the staged set is primary, fleet reruns are a replication.
+- **Tag `afterquery-final` by ~07:00.** The rehearsal (oracle, 3× OpenCode, do_nothing, stop_early) runs on that exact SHA, and the SHA goes to the reviewer for main's landing page.

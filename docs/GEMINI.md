@@ -2,9 +2,9 @@
 
 Nothing here has been run with a real key. Commands come from the branches hn-gemini read. No Gemini number is in these docs until a live run has produced it. Do not claim multimodal or any Gemini result before step 5.
 
-Status on `momin` at the time of writing: `scripts/gemini_smoke.py` and `scripts/gemini_cache.py` are present. `scripts/gemini_budget.py` and `data/gemini_cache.tar.gz` are not present yet, so steps 4 and 7 wait for them.
+Status on `momin` at the time of writing: `scripts/gemini_smoke.py` and `scripts/gemini_cache.py` are present. `scripts/gemini_budget.py` is present; `data/gemini_cache.tar.gz` is not yet, so step 7 waits for it.
 
-1. Key. Put `GEMINI_API_KEY` in `~/arena-agents/.env` (gitignored). Model ids come from `SLEEPER_MODEL_STAFF`, `SLEEPER_MODEL_SLEEPER` and `SLEEPER_MODEL_REFERENCE` (default `gemini-2.5-flash`). Never commit the key.
+1. Key. Put `GEMINI_API_KEY` in `~/arena-agents/.env` (gitignored). Model ids come from `ARENA_MODEL_DEFENDER` (staff), `ARENA_MODEL_ATTACKER` (sleeper) and `ARENA_MODEL_REFERENCE` (reference/procedure) in the same `.env`; `SLEEPER_MODEL_STAFF|SLEEPER_MODEL_SLEEPER|SLEEPER_MODEL_REFERENCE` override them (default `gemini-2.5-flash`). Check the key and models with `PYTHONPATH=. .venv/bin/python scripts/key_check.py` (one call, prints what each role resolves to). Never commit the key.
 2. Smoke, about 10 seconds: `PYTHONPATH=. .venv/bin/python scripts/gemini_smoke.py`. It makes one call with one tool and prints usage. It fails an assertion if the model returns no tool call.
 3. One day, staff then reference: `python -m lab.run --team staff --days 1 --trials 1 --gemini`, then the same with `--team reference --gemini`. Check `agent_kind` is "gemini" in `results/*/days.jsonl` and read `gemini_usage` in `results/*/summary.json`. Gemini is on only with `--gemini`. A key alone does not turn scripted runs into Gemini rows.
 4. Budget before the big run: `PYTHONPATH=. .venv/bin/python scripts/gemini_budget.py DAYS TRIALS TEAMS`. It prints estimated calls (an upper bound of seats x rounds x steps) and, once step 3 has logged live calls to `.cache/gemini/usage.jsonl`, measured tokens per call. Set `SLEEPER_MAX_CALLS` as a hard cap. For costs set `SLEEPER_PRICE_IN_PER_M` and `SLEEPER_PRICE_OUT_PER_M` from Google's price page, because usage reports cost only when you set them.

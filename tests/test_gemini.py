@@ -177,3 +177,14 @@ def test_loop_elides_old_results(monkeypatch):
     out = gemini.run_tool_loop("m", "s", "v", [], lambda n, a: {"messages": [{"body": "y" * 300}] * 5})
     rs = [m["tool_results"][0]["result"] for m in out["messages"] if m.get("tool_results")]
     assert "elided" in rs[0] and "elided" not in rs[-1]
+
+
+def test_model_for_arena_env(monkeypatch):
+    for k in ("SLEEPER_MODEL_STAFF", "SLEEPER_MODEL_SLEEPER", "SLEEPER_MODEL_REFERENCE"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("ARENA_MODEL_DEFENDER", "d")
+    monkeypatch.setenv("ARENA_MODEL_ATTACKER", "a")
+    monkeypatch.setenv("ARENA_MODEL_REFERENCE", "r")
+    assert [gemini.model_for(x) for x in ("staff", "sleeper", "reference", "procedure")] == ["d", "a", "r", "r"]
+    monkeypatch.setenv("SLEEPER_MODEL_STAFF", "s")
+    assert gemini.model_for("staff") == "s"

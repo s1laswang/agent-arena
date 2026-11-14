@@ -89,7 +89,7 @@ def play(seed, kind):
 
 def tiny():
     print("models: " + " ".join("%s=%s" % (r, gemini.model_for(r)) for r in ("staff", "sleeper", "reference")))
-    if not gemini.enabled():
+    if not gemini.enable_live():
         print("key-check: no GEMINI_API_KEY set, nothing to check. Everything runs scripted/offline. Set the key and rerun.")
         return 0
     os.environ["SLEEPER_MAX_CALLS"] = "1"

@@ -25,7 +25,7 @@ class OfflineCacheMiss(Exception):
     pass
 
 
-def _load_env():
+def load_env():
     for p in (Path.home() / "arena-agents" / ".env", ROOT / ".env"):
         if p.is_file():
             for line in p.read_text().splitlines():
@@ -35,7 +35,10 @@ def _load_env():
                     os.environ.setdefault(k.strip(), v.strip().strip("\"'"))
 
 
-_load_env()
+def enable_live():
+    load_env()
+    os.environ["SLEEPER_LIVE"] = "1"
+    return enabled()
 
 
 ARENA_ROLE = {"staff": "DEFENDER", "defender": "DEFENDER", "sleeper": "ATTACKER", "attacker": "ATTACKER", "reference": "REFERENCE", "procedure": "REFERENCE"}
@@ -54,7 +57,7 @@ def temp_for(role):
 
 
 def enabled():
-    return bool(os.environ.get("GEMINI_API_KEY")) or os.environ.get("SLEEPER_OFFLINE") == "1"
+    return (os.environ.get("SLEEPER_LIVE") == "1" and bool(os.environ.get("GEMINI_API_KEY"))) or os.environ.get("SLEEPER_OFFLINE") == "1"
 
 
 def usage():

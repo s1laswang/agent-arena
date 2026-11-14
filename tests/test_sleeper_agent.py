@@ -71,6 +71,8 @@ def test_gemini_path(monkeypatch):
         return {"text": "", "messages": []}
 
     monkeypatch.setattr(g, "enabled", lambda: True)
+
+    monkeypatch.setenv("SLEEPER_LIVE_SLEEPER", "1")
     monkeypatch.setattr(g, "chat", fake_chat)
     monkeypatch.setattr(g, "run_tool_loop", fake_loop)
     m = mutate_strategy(strat(), 3)
@@ -109,6 +111,8 @@ def test_gemini_variant_must_keep_placeholders(monkeypatch):
         return {"text": json.dumps(steps), "tool_calls": []}
 
     monkeypatch.setattr(g, "enabled", lambda: True)
+
+    monkeypatch.setenv("SLEEPER_LIVE_SLEEPER", "1")
     monkeypatch.setattr(g, "chat", bad)
     m = mutate_strategy(base, 1)
     assert m.steps[0].args == base.steps[0].args

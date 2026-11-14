@@ -45,3 +45,9 @@
 - #23 (open, HARNESS): dev/train seeds are public by design → MCP server must only serve keyed seeds to agents.
 - Codex hunts: black-box (3 runs, envshim) 0 score, 0 flags; OpenAI moderation truncates many codex runs.
 - Next: get #24 fixed and verified; real MCP hunt once mcp_server lands.
+
+## 04:30 status
+- Done (verified on justSilas 54e1fa4 + f2931d4): #10 FIXED (logs_only 28/1/3% over 100 seeds, CEO bounds met) and #24 FIXED (v0.5 fail-closed): xfails removed → strict tests. Full fuzz on tiers v1: 0 violations, best non-solver 0.000 vs solver 0.80/0.44/0.51.
+- Note for CEO/ENV: on tiers v1 the solver scores lower on medium (0.44) than hard (0.51).
+- Flaky test found: test_stub_hunt_fake_server_plumbing (~1/6 full runs); hunter engineer fixing (port 0 + health poll). Merges gated with pipefail.
+- Real MCP server landed: hunter engineer running [real] MCP tests + codex black/white-box vs real server.

@@ -71,12 +71,31 @@ def test_exact_mode_is_bit_for_bit(tmp_path, monkeypatch):
     assert a["header"]["mode"] == "exact" and a["header"]["fingerprint"] == b["header"]["fingerprint"]
 
 
+def test_env_secret_not_shadowed_by_earlier_in_process_secret(tmp_path, monkeypatch):
+    from canary import world
+    if not hasattr(world, "set_world_secret"):
+        pytest.skip("canary.world has no set_world_secret")
+    monkeypatch.setenv("CANARY_WORLD_SECRET", "same-secret")
+    a = _run(tmp_path / "a")
+    world.set_world_secret(b"x" * 32)  # e.g. left behind by an MCP server test
+    try:
+        b = _run(tmp_path / "b")
+        assert getattr(world, "_SET_SECRET", None) == b"x" * 32  # restored afterwards
+    finally:
+        world.set_world_secret(None)
+    assert ((tmp_path / "a" / "results" / "judge_episodes.jsonl").read_text()
+            == (tmp_path / "b" / "results" / "judge_episodes.jsonl").read_text())
+    assert a["header"]["fingerprint"] == b["header"]["fingerprint"]
+
+
 @pytest.mark.skipif(SALT.exists(), reason="a local SALT file forces exact mode")
 def test_keyless_run_is_statistical_and_never_leaks_the_secret(tmp_path, monkeypatch, capsys):
     monkeypatch.delenv("CANARY_WORLD_SECRET", raising=False)
     out = R.reproduce(2, tmp_path / "results", root=tmp_path, quiet=False)
     assert out["header"]["mode"] == "statistical"
-    assert "CANARY_WORLD_SECRET" not in os.environ  # generated secret removed again
+    assert "CANARY_WORLD_SECRET" not in os.environ  # the secret never enters the environment
+    from canary import world
+    assert getattr(world, "_SET_SECRET", None) is None  # in-process secret cleared again
     printed = capsys.readouterr().out
     assert "statistical reproduction; set CANARY_WORLD_SECRET for exact numbers" in printed and "CANARY_WORLD_SECRET=<any string>" in printed
     files = printed + "".join(p.read_text() for p in (tmp_path / "results").glob("*.[jm]*"))

@@ -20,7 +20,6 @@ import hashlib
 import json
 import math
 import os
-import secrets
 import signal
 import threading
 import time
@@ -81,20 +80,46 @@ def seeds_per_tier(cli: int | None = None) -> list[int]:
 
 
 def world_secret_mode() -> tuple[str, str, bool]:
-    """Returns (mode, fingerprint, generated). Sets CANARY_WORLD_SECRET for this process if absent.
+    """Returns (mode, fingerprint, generated) and installs this invocation's judge-world secret.
 
-    mode = "exact" (secret given by the user / SALT) or "statistical" (fresh random secret).
+    mode = "exact" (CANARY_WORLD_SECRET / SALT) or "statistical" (one fresh os.urandom secret,
+    installed in-process with world.set_world_secret, never put in the environment or printed).
     The fingerprint is a sha256 prefix: safe to print, identifies the secret, reveals nothing.
+    Call restore_world_secret() afterwards.
     """
+    from . import world
+    global _PREV_SET_SECRET
+    _PREV_SET_SECRET = getattr(world, "_SET_SECRET", None)
+    has_set = hasattr(world, "set_world_secret")
     env = os.environ.get("CANARY_WORLD_SECRET")
-    if env:
-        return "exact", hashlib.sha256(env.encode()).hexdigest()[:12], False
     salt = ROOT / "data" / "worlds" / "judge" / "SALT"
-    if salt.exists():
+    if env or salt.exists():
+        if has_set:
+            world.set_world_secret(None)  # an earlier in-process secret must not shadow the user's
+        if env:
+            return "exact", hashlib.sha256(env.encode()).hexdigest()[:12], False
         return "exact (SALT file)", hashlib.sha256(salt.read_bytes()).hexdigest()[:12], False
-    fresh = secrets.token_hex(32)
-    os.environ["CANARY_WORLD_SECRET"] = fresh
-    return "statistical", hashlib.sha256(fresh.encode()).hexdigest()[:12], True
+    fresh = os.urandom(32)
+    if has_set:
+        world.set_world_secret(fresh)
+    else:  # older canary.world without the in-process setter
+        os.environ["CANARY_WORLD_SECRET"] = fresh.hex()
+        fresh = fresh.hex().encode()
+    return "statistical", hashlib.sha256(fresh).hexdigest()[:12], True
+
+
+_PREV_SET_SECRET: bytes | None = None
+
+
+def restore_world_secret(generated: bool, prev_env: str | None) -> None:
+    from . import world
+    if hasattr(world, "set_world_secret"):
+        world.set_world_secret(_PREV_SET_SECRET)
+    if generated and not hasattr(world, "set_world_secret"):
+        if prev_env is None:
+            os.environ.pop("CANARY_WORLD_SECRET", None)
+        else:
+            os.environ["CANARY_WORLD_SECRET"] = prev_env
 
 
 # --------------------------------------------------------------------------- stats
@@ -356,12 +381,8 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = "results",
     try:
         episodes: list[dict] = []
         rows = run_in_process(tiers, seeds, episodes_out=episodes)
-    finally:  # never leak a generated secret into the rest of this process (tests, MCP, ...)
-        if generated:
-            if prev is None:
-                os.environ.pop("CANARY_WORLD_SECRET", None)
-            else:
-                os.environ["CANARY_WORLD_SECRET"] = prev
+    finally:  # never leak this invocation's secret into the rest of the process (tests, MCP, ...)
+        restore_world_secret(generated, prev)
     committed, files = load_committed(root)
     tiers = list(tiers)
     committed = [r for r in committed if r.tier in tiers]

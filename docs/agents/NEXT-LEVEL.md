@@ -70,7 +70,8 @@ Every frontier agent we measured shares one robust, explainable failure: **it ne
    - commit the logs and outputs to `results/harbor/` and summarise them in `harbor/README.md`. Judges can't see this today.
 2. **Reproduce table fix:**
    - drop `valid:false` episodes from the reported-run means (show them as a separate `invalid n` column, with reasons);
-   - add a test.
+   - dedupe per (agent, tier, version, seed), keeping the newest run, and warn when n ≠ the number of distinct seeds (the Codex smoke double count is already fixed by moving that run to superseded/);
+   - add tests for both.
 3. **Then the gemini-4-carbon Harbor run:** `harbor run -p harbor/dataset -a opencode -m google/gemini-4-carbon` on 3 hard + 3 medium v1.4 tasks (OpenCode reads GEMINI_API_KEY from the host env). This is the exact judge path with a real frontier model. Commit the results.
 4. **Before submission:** rerun `scripts/repro_spread.py 30` on the final commit and refresh the README band; a fresh-clone check; CI green.
 

@@ -22,6 +22,21 @@ What to fill: gemini-4-carbon staff and reference reward, sleeper landed, false 
 
 Real vs scripted: seed 1 bank_swap and trust_all are SCRIPTED, no model ran.
 
+## 0b. Which beats survive a merged-Canary pitch (from docs/scorecard.md section A, 14:10)
+
+Today none of our assets are in Canary (justSilas 5813bb2): no company or seats, no leak detector, no rescore or cheat corpus, no dashboard, no failure gallery. Until they land, a merged-Canary pitch is plain Canary and only the framing beats below carry over. Waiting for the chief's direction, nothing rewritten.
+
+Survive without our code:
+- The multi-model gap table structure (MULTIMODEL.md). Rows would be Canary's frontier runs; Canary's own gap is inconclusive (Codex 1.06x solver on hard, n=11, CITED), so say so.
+- The REAL vs SCRIPTED label rule and the fallback lines.
+- WHY-SLEEPER.md contrast, rewritten as "why merge".
+- Reward-integrity beat in general: do_nothing 0 (Canary harness2 do_nothing 0, stop_early -1, CITED).
+- Named-failure beat: Canary says premature accusation is 97 to 99% of value lost (CITED).
+
+Survive only if landed in Canary: the 8-seat company and replay (needs dashboard and seats), seed 1 bank_swap and trust_all stories (SCRIPTED, our company), cheat probes and `make probes`, the Gemini exploiter row (`redteam/`), the canary-token leak detector, failure gallery, skill ladder.
+
+Cut in a merged pitch: finance_ap seat-mode numbers and the oracle-below-1.0 risk, unless the seat-mode env lands.
+
 ## 1. What is real vs scripted
 
 Labels: real-model = a Gemini call, scripted = plain Python, hidden-info = reads the sleeper identity that honest players never see.

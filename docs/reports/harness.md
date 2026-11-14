@@ -50,7 +50,7 @@
   - **Per-episode timeout guard:** SIGALRM, 60 s by default (`REPRO_EPISODE_TIMEOUT`). A timed-out episode scores 0, is listed in the table header, and is tagged `end_reason=timeout`. None fired in any run.
   - **Seed control:** `REPRO_FAST=1` gives 5 seeds/tier and is labelled FAST MODE; `REPRO_SEEDS=N` and `--repro-seeds N` also work.
 - **`make setup`** prints a uv install hint (exit 127) when uv is missing, and installs `--extra plot`. `make reproduce` no longer prints TODO.
-- **tests/test_reproduce.py: 11 tests**, all passing.
+- **tests/test_reproduce.py: 12 tests**, all passing.
   - Outputs, every agent on every tier, and the do_nothing/stop_early invariants.
   - Pending frontier rows; a replay with repeated runs gives pass^3; the reported block is separate.
   - Exact mode is bit-for-bit in-process, and **two subprocesses with a fixed secret give identical judge_episodes.jsonl** (CEO request).
@@ -58,12 +58,16 @@
   - The timeout guard; the seed-count env vars; the chart is skipped without matplotlib; the CLI.
 - **Variance across secrets:** 30 keyless runs (`/tmp/canary_spread.py 30`).
   - At 33f4454: solver medium +0.51 [+0.40, +0.59], hard +0.56.
-  - After merging the solver fix + tiers v1.1 (9c36218), which are the README "expected" numbers:
-    - solver mean-of-means: medium **+0.63** [+0.57, +0.71], hard **+0.60** [+0.47, +0.71], easy +0.77 [+0.73, +0.80];
-    - heuristic: medium −0.02 [−0.36, +0.14], hard −0.24 [−0.50, +0.01];
-    - logs_only: medium −0.99, hard −1.00;
+  - At 9c36218 (solver fix + tiers v1.1): solver medium +0.63, hard +0.60.
+  - At 849e652 (plus the bounded-DP solver and Env.verdict), which are the README "expected" numbers:
+    - solver mean-of-means: medium **+0.63** [+0.56, +0.71], hard **+0.62** [+0.54, +0.69], easy +0.78 [+0.75, +0.82];
+    - heuristic: medium −0.03 [−0.22, +0.22], hard −0.21 [−0.42, −0.06];
+    - logs_only: medium −0.98, hard −1.00;
     - do_nothing is exactly 0 in every run.
   - **These numbers must be refreshed after the v1.2 freeze.**
+- **Full-size determinism:** with `CANARY_WORLD_SECRET=det-full-check`, two separate `--reproduce` processes (40 seeds × 3 tiers) gave a byte-identical `judge_episodes.jsonl` (`cmp`).
+  - **Caveat for ENV:** `SolverPolicy(act_budget=0.3)` caps the canary-split search by wall clock (`perf_counter`). On a much slower machine (CI, a judge laptop) the budget could bind and change the solver's choices, so bit-for-bit equality across machines is not guaranteed. Suggestion: make the cap count-based (nodes or iterations), or keep it far above the observed search time.
+- **Secret handling (after ENV's `world.set_world_secret`):** a keyless reproduce now installs its `os.urandom(32)` secret in-process via `set_world_secret`, so it is never in `os.environ` (cf. #25). Any earlier in-process secret is cleared while an explicit `CANARY_WORLD_SECRET` is in use, then restored (test added).
 - **README rewrite:**
   - the 5-line pitch, the one command `make setup && make reproduce` (uv prerequisite stated) and expected numbers with ranges;
   - why the numbers are statistical, plus exact-match instructions;

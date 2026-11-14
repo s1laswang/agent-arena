@@ -295,7 +295,7 @@ async function boot() {
       referenceData = {};
     }
 
-    updateLoader(100, "Benchmark runtime ready. Start investigation.");
+    updateLoader(100, "Benchmark runtime ready.");
     $("playBtn").disabled = false;
     $("playBtn").textContent = "Play";
     if ($("startTutorialBtn")) $("startTutorialBtn").disabled = false;

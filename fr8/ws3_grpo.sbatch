@@ -7,7 +7,7 @@
 #SBATCH --time=06:00:00
 #SBATCH -o /home/silas/agent-arena-data/ws3/slurm-%j.out
 # WS3 LLM mole: TRL GRPO on Qwen2.5-0.5B (then 1.5B), fp16 on V100 (no bf16/FA2/vLLM).
-# Needs train/grpo_mole.py (AGENTS/Momin) and fr8/ws3_trl_setup.sh run once on the login node.
+# Needs train/grpo_mole.py (merged 28a0033); models via fr8/grpo_mole_setup.sh (login node). BACKEND=torch default (no TRL).
 # FR8 head submits, e.g. (up to 3 jobs, one GPU each, different SEED):
 #   sbatch --time=06:00:00 --export=ALL,SIZE=0.5B,SEED=0 fr8/ws3_grpo.sbatch
 # Env: SIZE (0.5B|1.5B) SEED GRPO_ARGS (passed through) CHECK_ONLY=1 (import + CUDA check, exits)
@@ -24,11 +24,11 @@ export PYTHONPATH=$CODE:$HOME/agent-arena-data/pylib-trl PYTHONUNBUFFERED=1 HF_H
 PY="pytorch-exec python"
 cd "$CODE"
 echo "[ws3] $(date) host=$(hostname) size=$SIZE seed=${SEED:-0} out=$OUT"
-$PY -c "import torch,trl;print('cuda',torch.cuda.is_available(),torch.cuda.get_device_name(0) if torch.cuda.is_available() else '','trl',trl.__version__)"
+$PY -c "import torch,transformers,peft;print('cuda',torch.cuda.is_available(),torch.cuda.get_device_name(0) if torch.cuda.is_available() else '','tf',transformers.__version__,'peft',peft.__version__)"
 [ "${CHECK_ONLY:-0}" = 1 ] && { echo "[ws3] CHECK OK"; exit 0; }
 [ -d "$MODEL" ] || { echo "[ws3] missing $MODEL (download on login node)"; exit 2; }
 [ -f train/grpo_mole.py ] || { echo "[ws3] train/grpo_mole.py not synced yet"; exit 2; }
 [ -n "${SLURM_JOB_ID:-}" ] && date -d "$(squeue -j $SLURM_JOB_ID -h -o %e)" +%s > "$OUT/deadline.txt" || true
 $PY -m train.grpo_mole --model "$MODEL" --out "$OUT" --seed "${SEED:-0}" --fp16 \
-    --workers $(( ${SLURM_CPUS_PER_TASK:-6} - 1 )) ${GRPO_ARGS:-}
+    --workers $(( ${SLURM_CPUS_PER_TASK:-6} - 1 )) --backend "${BACKEND:-torch}" ${GRPO_ARGS:-}
 echo "[ws3] done $(date)"

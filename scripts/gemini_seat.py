@@ -26,9 +26,9 @@ def commit():
     return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip() or "nogit"
 
 
-def usage_total(cache):
+def usage_total(cache, fn=None):
     i = o = 0
-    p = cache / "usage.jsonl"
+    p = cache / (fn or gemini.USAGE_FILE)
     for line in p.read_text().splitlines() if p.is_file() else []:
         d = json.loads(line)
         i, o = i + d["in"], o + d["out"]
@@ -58,6 +58,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
     gemini.CACHE = out_dir / "cache"
     gemini.reset_usage()
     name = f"{seat}-s{seed}-t{trial}"
+    gemini.USAGE_FILE = name + ".usage.jsonl"
     t0 = time.time()
     fa = FrontierAgent(model, seat, seed, trial)
     state, st, mcp, _ = frontier_day.play(seat, seed, lambda d, s: fa, out_dir, max_calls, max_usd, lambda: usage_total(gemini.CACHE)["usd"], name)

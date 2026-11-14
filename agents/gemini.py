@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / ".cache" / "gemini"
+USAGE_FILE = "usage.jsonl"
 DEFAULT_MODEL = "gemini-2.5-flash"
 _usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0, "api_errors": 0}
 _client = None
@@ -202,7 +203,7 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
         _usage["in_tokens"] += um.prompt_token_count or 0
         _usage["out_tokens"] += um.candidates_token_count or 0
         CACHE.mkdir(parents=True, exist_ok=True)
-        with open(CACHE / "usage.jsonl", "a") as f:
+        with open(CACHE / USAGE_FILE, "a") as f:
             f.write(json.dumps({"model": model, "in": um.prompt_token_count or 0, "out": um.candidates_token_count or 0}) + "\n")
     out = _parse(resp)
     CACHE.mkdir(parents=True, exist_ok=True)

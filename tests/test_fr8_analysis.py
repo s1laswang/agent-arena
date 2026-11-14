@@ -150,7 +150,7 @@ def test_forge_validate_feasibility(monkeypatch):
                 "canon": sid, "behaviour": "B" if sid in ("hof#1", "hof#4") else sid}
     fake["hof#4"] = fake["hof#1"]
     monkeypatch.setattr(fv, "eval_strategy", ev)
-    rows = fv.validate([{"rank": i, "strategy_json": {}} for i in (1, 2, 3, 4)], "hard", list(range(10)), workers=1)
+    rows = fv.validate([{"rank": i, "strategy_json": {}} for i in (1, 2, 3, 4)], "hard", list(range(10)), workers=1, min_acc=0.85)
     by = {r["strategy"]: r for r in rows}
     assert by["hof#1"]["feasible"] and by["hof#1"]["judge_candidate"]
     assert not by["hof#2"]["feasible"]          # 0.3 < 0.5 x 0.8
@@ -186,10 +186,31 @@ def test_real_hof_v12_file_schema():
     from pathlib import Path
     from canary.mole.dsl import MoleStrategy
     from fr8.analysis import forge_validate as fv
-    p = Path(__file__).resolve().parents[1] / "data/forge/hall_of_fame_v1.2.jsonl"
-    if not p.exists():
+    files = [Path(__file__).resolve().parents[1] / f"data/forge/hall_of_fame_v{v}.jsonl" for v in ("1.2", "1.3")]
+    files = [p for p in files if p.exists()]
+    if not files:
         pytest.skip("not generated yet")
-    for i, l in enumerate(p.read_text().splitlines(), 1):
+    for i, l in ((i, l) for p in files for i, l in enumerate(p.read_text().splitlines(), 1)):
         h = json.loads(l)
         assert list(h) == fv.HOF_KEYS and h["rank"] == i
         MoleStrategy.from_json(h["strategy_json"])
+
+
+def test_forge_validate_two_investigators(monkeypatch):
+    from fr8.analysis import forge_validate as fv
+
+    def ev(args):
+        sid = args[0]
+        acc = {"default": .9, "hof#1": .8, "hof#2": .9}[sid]
+        return {"strategy": sid, "n": 10, "solver_score": .7, "solver_ci": .01, "solver_acc": acc, "solver_none": 0.,
+                "heur_score": -.5, "heur_acc": .2, "hinted_heuristic_score": .1, "hinted_heuristic_acc": .3,
+                "regret[heuristic]": 1.2, "regret_ci[heuristic]": .1,
+                "regret[hinted_heuristic]": .6, "regret_ci[hinted_heuristic]": .1,
+                "strongest": "hinted_heuristic", "regret": .6, "regret_ci": .1, "canon": sid, "behaviour": sid}
+    monkeypatch.setattr(fv, "eval_strategy", ev)
+    rows = fv.validate([{"rank": i, "strategy_json": {}} for i in (1, 2)], "hard", list(range(10)), 1, min_acc=.75)
+    by = {r["strategy"]: r for r in rows}
+    assert by["hof#1"]["feasible"] and not by["hof#1"]["strict_s7"] and by["hof#2"]["strict_s7"]
+    out = fv.survivors(rows, [{"rank": i, "strategy_json": {"rules": []}} for i in (1, 2)])
+    assert set(out[0]["per_investigator"]) == {"heuristic", "hinted_heuristic"} and out[0]["fitness"] == .6
+    assert "hinted_heuristic_score" in fv.to_markdown(rows, "r", "hard", list(range(10)), {})

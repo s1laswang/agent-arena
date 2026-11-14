@@ -26,7 +26,10 @@ export PYTHONPATH=$CODE PYTHONUNBUFFERED=1 HF_HOME=$HOME/agent-arena-data/cache 
        HF_HUB_OFFLINE=1 TOKENIZERS_PARALLELISM=false OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-4}
 PY="pytorch-exec python"
 cd "$CODE"
-echo "[j4] $(date) host=$(hostname) run=$RUN stages=$STAGES"
+echo "[j4] $(date) host=$(hostname) run=$RUN stages=$STAGES max_episodes=${MAX_EPISODES:-all}"
+# deadline file for lora_sft's time budget (squeue is not visible inside the container)
+[ -n "${SLURM_JOB_ID:-}" ] && date -d "$(squeue -j $SLURM_JOB_ID -h -o %e)" +%s > "$D/deadline-$SLURM_JOB_ID.txt" || true
+EPI=${MAX_EPISODES:+--max-episodes $MAX_EPISODES}
 $PY -c "import torch;print('cuda',torch.cuda.is_available(),torch.cuda.get_device_name(0) if torch.cuda.is_available() else '')"
 
 if [ "${SMOKE:-0}" = 1 ]; then
@@ -39,10 +42,10 @@ fi
 
 for s in $STAGES; do case $s in
   pilot)
-    $PY -m train.lora_sft --data "$DATA" --out "$RUN/pilot" --model "$MODEL" --pilot \
+    $PY -m train.lora_sft --data "$DATA" --out "$RUN/pilot" --model "$MODEL" --pilot $EPI \
         --pilot-steps 5 --epochs "${EPOCHS:-1}" --max-steps "${MAX_STEPS:-0}" ;;
   train)
-    $PY -m train.lora_sft --data "$DATA" --out "$RUN/lora" --model "$MODEL" \
+    $PY -m train.lora_sft --data "$DATA" --out "$RUN/lora" --model "$MODEL" $EPI \
         --epochs "${EPOCHS:-1}" --max-steps "${MAX_STEPS:-0}" --max-hours "${TRAIN_HOURS:-3.5}" ;;
   eval)
     for m in base "$RUN/lora"; do

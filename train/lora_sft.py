@@ -47,17 +47,22 @@ def _init_tok(model_path):
     _TOK = AutoTokenizer.from_pretrained(model_path)
 
 
+def _np_windows(ws):
+    import numpy as np
+    return [(np.asarray(i, dtype=np.int32), np.asarray(l, dtype=np.int32)) for i, l in ws]
+
+
 def _rec_windows(args):
     rec, max_len = args
     from train.windows import record_windows
-    return record_windows(rec, _TOK, max_len)
+    return _np_windows(record_windows(rec, _TOK, max_len))
 
 
 def build_windows(recs, model_path, tok, max_len, workers):
     """Tokenize episodes into windows; parallel across `workers` processes (order preserved)."""
     from train.windows import record_windows
     if workers <= 1 or len(recs) < 64:
-        return [w for r in recs for w in record_windows(r, tok, max_len)]
+        return [w for r in recs for w in _np_windows(record_windows(r, tok, max_len))]
     import multiprocessing as mp
     with mp.get_context("spawn").Pool(workers, initializer=_init_tok, initargs=(model_path,)) as pool:
         parts = pool.map(_rec_windows, [(r, max_len) for r in recs], chunksize=32)
@@ -170,7 +175,7 @@ def main(argv=None):
             os.replace(cache + ".tmp", cache)
     random.Random(1).shuffle(windows)
     n_tok = sum(len(w[0]) for w in windows)
-    n_lab = sum(sum(1 for x in w[1] if x != -100) for w in windows)
+    n_lab = sum(int((w[1] != -100).sum()) for w in windows)
     print(f"[data] episodes={len(recs)} windows={len(windows)} tokens={n_tok} "
           f"loss_tokens={n_lab} max_window={max((len(w[0]) for w in windows), default=0)} "
           f"tokenize_s={time.time() - t0:.1f}", flush=True)
@@ -208,8 +213,8 @@ def main(argv=None):
         for _ in range(a.grad_accum):
             inp, lab = windows[wi % len(windows)]
             wi += 1
-            x = torch.tensor([inp], device=device)
-            y = torch.tensor([lab], device=device)
+            x = torch.as_tensor(inp, dtype=torch.long, device=device).unsqueeze(0)
+            y = torch.as_tensor(lab, dtype=torch.long, device=device).unsqueeze(0)
             with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=use_amp):
                 loss = model(input_ids=x, labels=y).loss / a.grad_accum
             scaler.scale(loss).backward()

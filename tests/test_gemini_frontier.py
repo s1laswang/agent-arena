@@ -107,6 +107,27 @@ def test_parallel_calls_and_api_ids_roundtrip():
     assert [p.function_response.id for p in last_user.parts] == ["a1", "a2"]   # one user turn, API ids kept
 
 
+@pytest.mark.parametrize("tier", ["medium", "hard"])
+def test_gemini_request_parity_with_mcp_prompt_and_tools(tier, monkeypatch):
+    """What the in-process Gemini loop sends == the OpenCode task prompt + the MCP tools (byte-identical text)."""
+    monkeypatch.setenv("CANARY_ALLOW_DEV", "1")
+    from canary.agents.frontier.common import episode_prompt
+    from canary.env import Env
+    from canary.llm.gemini_backend import GeminiClient
+    env = Env(tier, 0)
+    sdk = FakeSDK([_resp(_fc("status", {}))])
+    pol = LLMPolicy("gemini:gemini-4-carbon", client=GeminiClient("gemini-4-carbon", sdk_client=sdk))
+    pol.reset(env.tools_spec(), env.instruction())
+    pol.act([])
+    cfg = sdk.requests[0]["config"]
+    assert cfg.system_instruction.encode() == episode_prompt(tier, 0).encode()
+    fds = cfg.tools[0].function_declarations
+    sent = [{"name": f.name, "description": f.description, "input_schema": f.parameters_json_schema} for f in fds]
+    want = [{"name": t["name"], "description": t.get("description", ""), "input_schema": t.get("input_schema") or t.get("parameters")}
+            for t in env.tools_spec()]
+    assert json.dumps(sent, sort_keys=True) == json.dumps(want, sort_keys=True) and len(sent) == 13
+
+
 def test_empty_model_turn_is_not_sent_as_empty_part():
     from canary.llm.gemini_backend import to_gemini_contents
     _, contents = to_gemini_contents([{"role": "user", "content": "go"}, {"role": "assistant", "content": ""},

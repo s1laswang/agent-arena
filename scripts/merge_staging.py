@@ -24,11 +24,17 @@ def main(argv=None) -> int:
     ap.add_argument("--root", default="data/runs/committed/v1.3")
     ap.add_argument("--planned", default="0-9", help="the approved plan's seeds; others are budget extensions")
     ap.add_argument("--extension", default=None, help="extension seed range attempted as budget allowed, e.g. 10-19")
+    ap.add_argument("--map", default=None, help="harness=target,... (default: the v1.3 Codex/gpt-5.5 mapping)")
+    ap.add_argument("--tiers-version", default="v1.3")
+    ap.add_argument("--pricing", default=PRICING)
+    ap.add_argument("--provenance", default="scripts/budget_runner.py (one episode per process, budget-guarded), "
+                                            "merged by scripts/merge_staging.py")
     a = ap.parse_args(argv)
+    targets = dict(kv.split("=", 1) for kv in a.map.split(",")) if a.map else TARGET
     lo, hi = (int(x) for x in a.planned.split("-"))
     planned = list(range(lo, hi + 1))
     staging, root = Path(a.staging), Path(a.root)
-    for harness, target in TARGET.items():
+    for harness, target in targets.items():
         for tier in ("medium", "hard"):
             src = staging / harness / tier
             if not src.exists():
@@ -67,17 +73,19 @@ def main(argv=None) -> int:
             if a.extension:
                 elo, ehi = (int(x) for x in a.extension.split("-"))
                 ext = list(range(elo, ehi + 1))
-            meta = {k: m0.get(k) for k in ("agent", "model", "provider", "harness", "steps_source", "context",
-                                           "reasoning_effort", "reasoning_effort_source", "api") if m0.get(k) is not None}
-            meta.update({"tier": tier, "tiers_version": "v1.3", "seeds": seeds, "planned_seeds": planned,
-                         "status": ("complete" if not missing else f"INCOMPLETE: seeds {missing} not run (budget stop)")
+            meta = {k: m0.get(k) for k in ("agent", "model", "model_id", "provider", "harness", "steps_source", "context",
+                                           "reasoning_effort", "reasoning_effort_source", "api", "provider_settings",
+                                           "opencode_version", "opencode_permission") if m0.get(k) is not None}
+            meta.update({"tier": tier, "tiers_version": a.tiers_version, "seeds": seeds, "planned_seeds": planned,
+                         "status": ("complete" if not missing else f"INCOMPLETE: seeds {missing} have no valid episode")
                          + (f"; extension seeds {ext[0]}-{ext[-1]} as budget allowed: ran {[s for s in seeds if s in ext]}"
                             if ext else ""),
                          "git_sha": shas[0] if shas else None, "git_shas": shas, "smoke": False, "hint": None,
-                         "usage": usage, "pricing": PRICING,
-                         "provenance": "scripts/budget_runner.py (one episode per process, budget-guarded), "
-                                       "merged by scripts/merge_staging.py",
-                         "invalid_episodes": [e["seed"] for e in eps if (e.get("meta") or {}).get("valid") is False]})
+                         "usage": usage, "pricing": a.pricing, "provenance": a.provenance,
+                         "invalid_episodes": [e["seed"] for e in eps if (e.get("meta") or {}).get("valid") is False],
+                         "infra_invalid_attempts_excluded": sorted(
+                             f"{p.name}: {(p / 'INVALID.txt').read_text().strip()[:200] if (p / 'INVALID.txt').exists() else ''}"
+                             for p in (staging / "invalid").glob(f"{harness}-{tier}-*")) if (staging / "invalid").exists() else []})
             (out / "meta.json").write_text(json.dumps(meta, indent=1, default=str) + "\n")
             print(f"{out}: n={len(eps)} seeds={seeds} est=${usage['cost_usd_est']:.2f} upper=${usage['cost_usd_upper']:.2f}"
                   f" {meta['status']}")

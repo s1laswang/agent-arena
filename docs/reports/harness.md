@@ -79,6 +79,7 @@
     - heuristic: medium −0.03 [−0.22, +0.22], hard −0.21 [−0.42, −0.06];
     - logs_only: medium −0.98, hard −1.00;
     - do_nothing is exactly 0 in every run.
+  - After merging 92459d3 (solver: exact fingerprint likelihood), the results are byte-identical to 849e652 with a fixed secret (`cmp`), so the README numbers still hold.
   - **These numbers must be refreshed after the v1.2 freeze.**
 - **Full-size determinism:** with `CANARY_WORLD_SECRET=det-full-check`, two separate `--reproduce` processes (40 seeds × 3 tiers) gave a byte-identical `judge_episodes.jsonl` (`cmp`).
   - **Caveat for ENV:** `SolverPolicy(act_budget=0.3)` caps the canary-split search by wall clock (`perf_counter`). On a much slower machine (CI, a judge laptop) the budget could bind and change the solver's choices, so bit-for-bit equality across machines is not guaranteed. Suggestion: make the cap count-based (nodes or iterations), or keep it far above the observed search time.

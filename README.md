@@ -77,13 +77,15 @@ Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium
 
 ## Reward integrity
 
-We attacked our own reward 26 times before the judges did. Every attempt is logged in [docs/EXPLOITS.md](docs/EXPLOITS.md) with a regression test.
+We attacked our own reward 33 times before the judges did, including real-server hunts by a Codex attacker and an external Grok judge run. Every attempt is logged in [docs/EXPLOITS.md](docs/EXPLOITS.md) with a regression test.
 
 - **Two real exploits, both closed:**
   - **Stop-early:** a free lottery ticket under 0/1 scoring, closed by making a wrong accusation cost −1.
   - **Judge seeds failing open without a secret:** an agent could regenerate the world from public code and read the mole. Judge worlds now fail closed with a fresh secret, and no world file containing the mole is committed.
 
   A third finding, that public dev seeds can be regenerated from the code, is handled by design: the MCP server refuses dev seeds unless `CANARY_ALLOW_DEV=1`.
+
+  One finding is still being closed: a process with the same uid could read the server's environment (#27). The server now takes its secrets from 0600 files (`*_FILE`), and the Harbor sidecar keeps it out of the agent's PID namespace.
 - **Probes that hold,** with tests:
   - fuzzing (malformed, homoglyph and list ids, accusing after the episode ends, a parallel accuse race);
   - error and length side channels between the mole and innocents;

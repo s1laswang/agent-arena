@@ -1,6 +1,6 @@
 """Episode runner + eval CLI (CONTRACT §5, §6). Owner: HARNESS.
 
-    python -m canary.eval --agent <baseline|solver> --tier easy|medium|hard|all --seeds N|dev20|judge|a-b|a,b,c --provider template
+    python -m canary.eval --agent <baseline|solver> --tier easy|medium|hard|all --seeds dev20|judge|n:N|N|a-b|a,b,c --provider template
 
 Writes data/runs/<run_id>/episodes.jsonl (one types.EpisodeResult per line) and meta.json,
 then prints mean score ± 95% CI, accuracy and mean accusation day per tier.
@@ -75,23 +75,54 @@ def make_policy_factory(agent: str) -> Callable[[int], Any]:
     raise AgentUnavailable(f"unknown agent '{agent}'. Known: {', '.join(names)}")
 
 
+MAX_COUNT_SPEC = 1000      # a bare integer <= this is a count (0..N-1); above it, a single seed
+MAX_EPISODES = 10_000      # refuse any seed (x tier) expansion larger than this
+
+
 def parse_seeds(spec: str) -> list[int]:
+    """Seed spec -> list of seeds.
+
+    dev20 | judge | n:N (count: 0..N-1) | N (count if N <= 1000, else the single seed N, e.g. 900003)
+    | a-b (inclusive range) | a,b,c (lists; parts may be ranges). Raises ValueError on a bad spec or
+    an expansion over MAX_EPISODES seeds.
+    """
     spec = str(spec).strip()
     if spec == "dev20":
         return list(range(20))
     if spec == "judge":
         from .rules import JUDGE_SEEDS
         return list(JUDGE_SEEDS)
-    if spec.isdigit():
-        return list(range(int(spec)))
-    out: list[int] = []
-    for part in spec.split(","):
-        part = part.strip()
-        if "-" in part:
-            a, b = part.split("-", 1)
-            out.extend(range(int(a), int(b) + 1))
-        elif part:
-            out.append(int(part))
+
+    def _count(n: int) -> list[int]:
+        if n > MAX_EPISODES:
+            raise ValueError(f"--seeds: {n} seeds is over the {MAX_EPISODES} limit")
+        return list(range(n))
+
+    try:
+        if spec.startswith("n:"):
+            return _count(int(spec[2:]))
+        if spec.isdigit():
+            n = int(spec)
+            return _count(n) if n <= MAX_COUNT_SPEC else [n]
+        out: list[int] = []
+        for part in spec.split(","):
+            part = part.strip()
+            if "-" in part:
+                a, b = (int(x) for x in part.split("-", 1))
+                if b < a:
+                    raise ValueError(f"--seeds: empty range '{part}'")
+                if len(out) + (b - a + 1) > MAX_EPISODES:
+                    raise ValueError(f"--seeds: '{spec}' expands to more than {MAX_EPISODES} seeds")
+                out.extend(range(a, b + 1))
+            elif part:
+                out.append(int(part))
+    except ValueError as exc:
+        if str(exc).startswith("--seeds"):
+            raise
+        raise ValueError(f"--seeds: cannot parse '{spec}' "
+                         "(use dev20 | judge | n:N | N | a-b | a,b,c)") from exc
+    if not out:
+        raise ValueError(f"--seeds: '{spec}' selects no seeds")
     return out
 
 
@@ -167,7 +198,7 @@ def main(argv: list[str] | None = None) -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--agent", default="solver")
     ap.add_argument("--tier", default="all", choices=[*TIERS, "all"])
-    ap.add_argument("--seeds", default="dev20", help="N (0..N-1) | dev20 | judge | a-b | a,b,c")
+    ap.add_argument("--seeds", default="dev20", help="dev20 | judge | n:N (count) | N (count if <=1000, else one seed) | a-b | a,b,c")
     ap.add_argument("--provider", default="template")
     ap.add_argument("--out", default="data/runs")
     ap.add_argument("--reproduce", action="store_true",
@@ -182,7 +213,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     tiers = list(TIERS) if a.tier == "all" else [a.tier]
     try:
-        out, by_tier = run_eval(a.agent, tiers, parse_seeds(a.seeds), a.provider, a.out, a.seeds)
+        seeds = parse_seeds(a.seeds)
+        if len(seeds) * len(tiers) > MAX_EPISODES:
+            raise ValueError(f"--seeds/--tier: {len(seeds)} seeds x {len(tiers)} tiers = "
+                             f"{len(seeds) * len(tiers)} episodes is over the {MAX_EPISODES} limit")
+    except ValueError as exc:
+        print(f"canary.eval: {exc}", file=sys.stderr)
+        return 2
+    try:
+        out, by_tier = run_eval(a.agent, tiers, seeds, a.provider, a.out, a.seeds)
     except AgentUnavailable as exc:
         print(f"canary.eval: {exc}", file=sys.stderr)
         return 2

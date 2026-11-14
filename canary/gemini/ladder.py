@@ -312,8 +312,8 @@ def default_client_factory(c: Cell, run_id: str, meta: dict):
 # cell, so a cell's code is pinned even if HEAD moves while a long run is in flight.
 CODE_FILES = ("canary/env.py", "canary/rules.py", "canary/world.py", "canary/types.py", "canary/eval.py",
               "canary/mole/dsl.py", "canary/agents/llm_policy.py", "canary/agents/play.py", "canary/agents/loop.py",
-              "canary/agents/runlog.py", "canary/llm/base.py", "canary/llm/gemini_backend.py",
-              "canary/gemini/ledger.py")   # ladder.py itself is orchestration only (scheduling, labels)
+              "canary/agents/runlog.py", "canary/llm/base.py", "canary/llm/gemini_backend.py")
+# not included: canary/gemini/{ladder,ledger,sdk}.py (scheduling, labels, usage logging, gateway routing)
 
 
 def code_fingerprint() -> str:

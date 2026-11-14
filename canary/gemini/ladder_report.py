@@ -481,7 +481,7 @@ def main(argv=None) -> int:
     ap.add_argument("--runs", required=True)
     ap.add_argument("--import-cell", action="append", default=[], help="<model>:<level>=<data/runs dir> (read-only)")
     ap.add_argument("--ledger", action="append", default=[])
-    ap.add_argument("--probe", default=str(ROOT / "data" / "gemini" / "ladder" / "probe" / "_probe.json"))
+    ap.add_argument("--probe", default=str(ROOT / "results" / "gemini" / "ladder_probe.json"))
     ap.add_argument("--out", default=str(ROOT / "results" / "gemini"))
     ap.add_argument("--bootstrap", type=int, default=10000)
     ap.add_argument("--no-tags", action="store_true")

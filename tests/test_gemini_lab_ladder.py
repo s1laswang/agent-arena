@@ -170,3 +170,25 @@ def test_second_process_skips_cells_held_by_a_live_process(tmp_path, monkeypatch
     r = ladder.run_grid(tmp_path / "out", cells, concurrency=2, client_factory=stub_factory(accuse_script),
                         log=lambda m: None)
     assert r["ran"] == 1 and not ladder.is_done(tmp_path / "out", cells[0]) and ladder.is_done(tmp_path / "out", cells[1])
+
+
+def test_showcase_cell_replays_keyless(tmp_path):
+    """A real gemini-3.1-flash-lite/high/medium/0 episode recorded through the gateway replays exactly, no key."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    env = {k: v for k, v in os.environ.items() if k not in ("GEMINI_API_KEY", "GOOGLE_API_KEY")}
+    env.update(CANARY_LLM_MAX_RETRIES="0", CANARY_GEMINI_LEDGER=str(tmp_path / "l.jsonl"))
+    r = subprocess.run([sys.executable, "-m", "canary.gemini.with_gateway", "--replay",
+                        str(root / "results/gemini/replay_ladder"), "--", sys.executable, "-m", "canary.gemini.ladder",
+                        "--out", str(tmp_path / "out"), "--models", "gemini-3.1-flash-lite", "--levels", "high",
+                        "--tiers", "medium", "--seeds", "0", "--max-attempts", "1"],
+                       cwd=root, env=env, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stdout[-2000:] + r.stderr[-2000:]
+    want = json.loads((root / "results/gemini/ladder_showcase/gemini-3.1-flash-lite/high/medium/0/episodes.jsonl").read_text())
+    got = json.loads((tmp_path / "out/gemini-3.1-flash-lite/high/medium/0/episodes.jsonl").read_text())
+    assert [(s["tool"], s["args"], s["result"]) for s in got["steps"]] == \
+        [(s["tool"], s["args"], s["result"]) for s in want["steps"]]
+    assert got["score"] == want["score"] and len(got["steps"]) == 70

@@ -541,6 +541,9 @@ def behaviour_stats(eps: list[Episode]) -> dict[str, dict]:
             "p_accused_mean": round(sum(p_acc) / len(p_acc), 3) if p_acc else None,
             "accused_below_0.6": sum(1 for p in p_acc if p < 0.6),
             "wrong_accusations": sum(1 for e in es if e.accused and not e.correct),
+            # wrong accusations the solver's own posterior also backed (>= 0.5): bad luck, not an agent error
+            "wrong_but_evidence_backed": sum(1 for e in es if e.accused and not e.correct and any(
+                s.tool == "accuse" and (s.p_accusee or 0) >= 0.5 for s in e.steps)),
             "no_accusation": sum(1 for e in es if not e.accused),
         }
     return out

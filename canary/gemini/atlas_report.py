@@ -80,12 +80,13 @@ def render_md(r: dict) -> str:
     if beh:
         out += ["Decision statistics per cohort (computed in code from the trajectories):", "",
                 "| cohort | steps/ep | canaries/ep | recipients/canary | canary regret/ep | interviews/ep | "
-                "restrictions/ep | mean P(accused) at accusation | accusations below 0.6 | wrong | none |",
+                "restrictions/ep | mean P(accused) at accusation | accusations below 0.6 | wrong (evidence-backed) | none |",
                 "|---|---|---|---|---|---|---|---|---|---|---|"]
         for co, d in beh.items():
             out.append(f"| {co} | {d['steps_per_episode']} | {d['canaries_per_episode']} | {d['canary_recipients_mean']} | "
                        f"{d['canary_regret_per_episode']} | {d['interviews_per_episode']} | {d['restrictions_per_episode']} | "
-                       f"{d['p_accused_mean']} | {d['accused_below_0.6']} | {d['wrong_accusations']} | {d['no_accusation']} |")
+                       f"{d['p_accused_mean']} | {d['accused_below_0.6']} | {d['wrong_accusations']} "
+                       f"({d.get('wrong_but_evidence_backed', 0)}) | {d['no_accusation']} |")
         out.append("")
     if comp:
         out += [f"**Cross-family finding (Gemini's reading, checked against the table above):** "
@@ -118,7 +119,9 @@ def render_md(r: dict) -> str:
             g = row.get("gemini_t")
             out += [f"**`{row['episode']}`** ({row['cohort']}, {'correct' if row['correct'] else 'wrong/none'}, "
                     f"score {row['score']:.2f}): Gemini t={g}, code t={row['code_t']}"
-                    f"{' (agree)' if row.get('agrees') else ''}. {row.get('what_chart_shows', '')}", "",
+                    f"{' (agree)' if row.get('agrees') else ''}. {row.get('what_chart_shows', '')}"
+                    + (" *The solver's own posterior backed this wrong accusation (>= 0.5): misleading evidence, "
+                       "not an agent error.*" if row.get("evidence_backed_wrong") else ""), "",
                     f"![{row['episode']}]({row['chart']})", ""]
     cl = r.get("clusters")
     if cl:

@@ -377,7 +377,10 @@ class Atlas:
                  "belief supports, describe what the chart shows there, and quote the agent verbatim.\n\n"
                  + ex[:60000])
             d = self._gen(self.cache_model, [{"image": png, "mime": "image/png"}, q], Divergence, f"localise:{ep.id}")
+            acc = [s for s in ep.steps if s.tool == "accuse"]
+            backed = bool(acc and not ep.correct and (acc[-1].p_accusee or 0) >= 0.5)
             row = {"episode": ep.id, "chart": f"atlas_charts/{ep.id.replace('#', '_')}.png", "code_t": ct,
+                   "evidence_backed_wrong": backed,
                    "cohort": ep.cohort, "correct": ep.correct, "score": ep.score}
             if d:
                 v = self.verifier.check(ep.id, None, d.quote, context="localise")

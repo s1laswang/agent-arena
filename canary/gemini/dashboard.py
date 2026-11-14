@@ -19,6 +19,7 @@ import datetime as dt
 import glob
 import json
 import math
+import os
 import re
 import subprocess
 import sys
@@ -40,6 +41,11 @@ LEVEL_ORDER = ["minimal", "low", "medium", "high"]
 SECRET_RE = re.compile(r"(AIza[0-9A-Za-z_\-]{8,}|sk-[A-Za-z0-9_\-]{12,}|ya29\.[0-9A-Za-z_\-]+|"
                        r"(?i:api[_-]?key|key|token|secret)\s*[=:]\s*\S+)")
 MAX_THUMB_BYTES = 400_000
+# USD / 1M (input, output incl. thinking, cached input) for models canary.llm.pricing lacks. Same source and values as
+# G2's ladder_report.PRICES (aistudio.google.com/docs/pricing, checked 2026-11-14 14:20 EET). Rows the ledger marked
+# cost_unknown are repriced from this table (and from ladder.json "prices_usd_per_1m" when present); the page says so.
+EXTRA_PRICES: dict[str, tuple[float, float, float]] = {
+    "gemini-3.1-flash-lite": (0.25, 1.50, 0.025), "gemini-3.5-flash": (0.75, 3.75, 0.075)}
 
 
 # ---------------------------------------------------------------- helpers
@@ -89,8 +95,13 @@ def _price(model: str, table: dict):
 
 
 def cache_saving_usd(model: str, cached: int) -> float:
+    if not cached:
+        return 0.0
+    ex = _price(model, EXTRA_PRICES)
+    if ex and not _price(model, PRICES):
+        return cached * (ex[0] - ex[2]) / 1e6
     p = _price(model, PRICES)
-    if not p or not cached:
+    if not p:
         return 0.0
     pc = _price(model, CACHED_PRICES)
     pc = p[0] * 0.1 if pc is None else pc
@@ -119,8 +130,8 @@ def load_ledger(paths: list[str | Path]) -> list[dict]:
             files += sorted(glob.glob(str(p / "**" / "*.jsonl"), recursive=True))
         elif p.exists():
             files.append(str(p))
-    rows = []
-    for fp in files:
+    rows, seen = [], set()
+    for fp in dict.fromkeys(os.path.realpath(f) for f in files):  # same file reached twice counts once
         with open(fp) as f:
             for line in f:
                 line = line.strip()
@@ -132,6 +143,10 @@ def load_ledger(paths: list[str | Path]) -> list[dict]:
                     continue
                 if not isinstance(r, dict) or "model" not in r:
                     continue
+                key = (r.get("ts"), r.get("host"), r.get("pid"), r.get("feature"), r.get("model"), r.get("in"), r.get("out"))
+                if key in seen:  # the same row synced into two ledger dirs (Mac + FR8 copies) counts once
+                    continue
+                seen.add(key)
                 rows.append({k: r.get(k) for k in FIELDS})
     for r in rows:
         for k in ("in", "out", "thinking", "cached"):
@@ -163,6 +178,23 @@ def _bin_seconds(span: float) -> int:
     return 86400
 
 
+def reprice(rows: list[dict], extra: dict | None = None) -> int:
+    """Fill cost_usd for cost_unknown rows whose model has a known price. Returns how many rows were repriced."""
+    table = {**EXTRA_PRICES, **{k: tuple(v) for k, v in (extra or {}).items() if isinstance(v, (list, tuple)) and len(v) == 3}}
+    n = 0
+    for r in rows:
+        if not r.get("cost_unknown"):
+            continue
+        p = _price(r["model"], table)
+        if not p:
+            continue
+        usd = ((r["in"] - r["cached"]) * p[0] + r["cached"] * p[2] + (r["out"] + r["thinking"]) * p[1]) / 1e6
+        r["cost_usd"] = round(usd * (0.5 if r["kind"] == "batch" else 1.0), 6)
+        r["cost_unknown"], r["repriced"] = False, True
+        n += 1
+    return n
+
+
 def summarize(rows: list[dict]) -> dict:
     """Aggregate ledger rows into the dashboard's usage summary (JSON-serialisable, no prompts)."""
     tot = _agg(rows)
@@ -175,6 +207,7 @@ def summarize(rows: list[dict]) -> dict:
         "models": models, "features": features, "n_models": len(models), "n_features": len(features),
         "p50_latency_s": round(pct(gen_lat, 0.5), 2), "p95_latency_s": round(pct(gen_lat, 0.95), 2),
         "cost_unknown_calls": sum(bool(r.get("cost_unknown")) for r in rows),
+        "repriced_calls": sum(bool(r.get("repriced")) for r in rows),
         "hosts": len({r.get("host") for r in rows if r.get("host")}),
         "run_ids": len({r.get("run_id") for r in rows if r.get("run_id")}),
         "start": rows[0]["ts"] if rows else None, "end": rows[-1]["ts"] if rows else None,
@@ -308,7 +341,7 @@ def load_results(results_dir: Path) -> dict:
     out["swarm"] = redact(swarm) if swarm else None
     figs = {}
     budget = [3_000_000]
-    for name in ("ladder.png",):
+    for name in ("ladder.png", "ladder_tags.png"):
         src = _thumb(results_dir, name, budget)
         if src:
             figs[name] = src
@@ -338,6 +371,8 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     sources = a.ledger or [str(DEFAULT_LEDGER)]
     rows = load_ledger(sources)
+    lad = load_json(Path(a.results) / "ladder.json") or {}
+    reprice(rows, lad.get("prices_usd_per_1m") if isinstance(lad.get("prices_usd_per_1m"), dict) else None)
     if a.json:
         s = summarize(rows)
         s.pop("timeline", None)
@@ -624,7 +659,9 @@ function bindTip(node, fn) {
 const FEATURE_SLOT = { ladder: 1, atlas: 2, swarm: 3, forge: 5, narrate: 6, world: 7, commentator: 8 };
 const MODEL_SLOT = { 'gemini-3.1-flash-lite': 1, 'gemini-3.5-flash': 2, 'gemini-3.8-flash': 3,
   'gemini-4-hydrogen': 4, 'gemini-4-argon': 5, 'gemini-4-carbon': 6 };
-function featColor(f) { return FEATURE_SLOT[f] ? css('--s' + FEATURE_SLOT[f]) : css('--other'); }
+const FEATURE_SLOT_PREFIX = { gateway: 4 };
+function fslot(f) { return FEATURE_SLOT[f] || FEATURE_SLOT_PREFIX[String(f).split(/[-_]/)[0]] || 0; }
+function featColor(f) { return fslot(f) ? css('--s' + fslot(f)) : css('--other'); }
 function modelColor(m) { return MODEL_SLOT[m] ? css('--s' + MODEL_SLOT[m]) : css('--other'); }
 
 // sequential blue ramp (palette steps 100..700); light end recedes toward the surface
@@ -690,7 +727,7 @@ function hbars(items, opt) {
 // stacked columns over time (calls per bin, by feature)
 function timelineChart() {
   const T = U.timeline; if (!T.bins.length) return h('p', { class: 'sub', text: 'No ledger rows yet.' });
-  const feats = U.totals.features.filter(f => FEATURE_SLOT[f]).sort((a, b) => FEATURE_SLOT[a] - FEATURE_SLOT[b]);
+  const feats = U.totals.features.filter(f => fslot(f)).sort((a, b) => fslot(a) - fslot(b));
   const series = feats.slice(0, 7); const hasOther = U.totals.features.some(f => !series.includes(f));
   const keys = hasOther ? series.concat(['other']) : series;
   const W = 780, H = 240, L = 40, Rr = 8, Tp = 8, B = 26;
@@ -769,6 +806,8 @@ function xyChart(series, opt) {
   xt.forEach(t => svg.appendChild(s('text', { x: X(t), y: H - 12, 'text-anchor': 'middle', text: opt.xfmt ? opt.xfmt(t) : compact(t) })));
   svg.appendChild(s('line', { class: 'baseline', x1: L, x2: W - Rr, y1: Y(Math.max(y0, 0)), y2: Y(Math.max(y0, 0)) }));
   if (opt.xlabel) svg.appendChild(s('text', { x: W - Rr, y: H - 0, 'text-anchor': 'end', text: opt.xlabel }));
+  (opt.refs || []).forEach(r => { if (r.y < y0 || r.y > y1) return; svg.appendChild(s('line', { x1: L, x2: W - Rr, y1: Y(r.y), y2: Y(r.y), stroke: css('--axis'), 'stroke-width': 1 }));
+    svg.appendChild(s('text', { x: L + 6, y: Y(r.y) - 5, class: 'halo', text: r.l + ' ' + pctf(r.y) })); });
   if (opt.ref) { svg.appendChild(s('line', { x1: L, x2: W - Rr, y1: Y(opt.ref.y), y2: Y(opt.ref.y), stroke: css('--ink2'), 'stroke-width': 1 }));
     svg.appendChild(s('text', { x: W - Rr, y: Y(opt.ref.y) - 6, 'text-anchor': 'end', class: 'ink2', text: opt.ref.l })); }
   const surf = css('--surface');
@@ -810,7 +849,7 @@ function renderHeadline() {
     ['Output tokens', compact(T.out), 'excludes thinking'],
     ['Thinking tokens', compact(T.thinking), pctf(T.thinking_share) + ' of generated tokens'],
     ['Cached tokens', compact(T.cached), pctf(U.cache.hit_share) + ' of input served from cache'],
-    ['Cost', usd(T.cost_usd), T.cost_unknown_calls ? T.cost_unknown_calls + ' calls without a list price' : 'list price, all calls priced'],
+    ['Cost', usd(T.cost_usd), T.cost_unknown_calls ? 'list price · ' + nf.format(T.cost_unknown_calls) + ' calls unpriced' : 'list price, every call priced'],
     ['Models', String(T.n_models), T.models.map(short).slice(0, 3).join(', ') + (T.n_models > 3 ? '…' : '')],
     ['Features', String(T.n_features), T.features.slice(0, 4).join(', ') + (T.n_features > 4 ? '…' : '')],
     ['Error rate', pctf(T.error_rate, 1), nf.format(T.errors) + ' failed calls'],
@@ -889,11 +928,13 @@ function latencyChart(models) {
 // ---- ladder
 function lget(c, keys, dflt) { for (const k of keys) if (c[k] != null) return c[k]; return dflt; }
 function ladderCells(L) {
-  return (L.cells || []).map(c => ({ model: c.model, level: String(lget(c, ['level', 'thinking_level'], '')).toLowerCase(), tier: c.tier,
-    n: lget(c, ['n', 'episodes'], null), pct: lget(c, ['pct_solver', 'frac_solver', 'score_vs_solver'], null),
-    ci: lget(c, ['pct_solver_ci95', 'ci95'], null), score: lget(c, ['score_mean', 'score'], null), solver: lget(c, ['solver_mean', 'solver'], null),
-    think: lget(c, ['thinking_tokens_per_episode', 'thinking_per_episode', 'thinking_tokens'], null),
-    cost: lget(c, ['cost_usd_per_episode', 'cost_per_episode', 'cost_usd'], null), regret: lget(c, ['regret_mean', 'regret'], null) }))
+  return (L.rows || L.cells || []).map(c => ({ model: c.model, level: String(lget(c, ['level', 'thinking_level'], '')).toLowerCase(), tier: c.tier,
+    n: lget(c, ['n', 'episodes'], null), pct: lget(c, ['ratio', 'pct_solver', 'frac_solver', 'score_vs_solver'], null),
+    ci: lget(c, ['pct_solver_ci95', 'ci95'], c.ratio_lo != null && c.ratio_hi != null ? [c.ratio_lo, c.ratio_hi] : null),
+    score: lget(c, ['mean', 'score_mean', 'score'], null), solver: lget(c, ['solver_same_seeds', 'solver_mean', 'solver'], null),
+    think: lget(c, ['thinking_per_ep', 'thinking_tokens_per_episode', 'thinking_per_episode', 'thinking_tokens'], null),
+    est: !!c.thinking_is_estimate, acc: lget(c, ['accuracy'], null), day: lget(c, ['accuse_day'], null),
+    cost: lget(c, ['cost_per_ep', 'cost_usd_per_episode', 'cost_per_episode', 'cost_usd'], null), regret: lget(c, ['regret_mean', 'regret'], null) }))
     .map(c => { if (c.pct == null && c.score != null && c.solver) c.pct = c.score / c.solver; return c; })
     .filter(c => c.model && c.tier && c.pct != null);
 }
@@ -902,36 +943,47 @@ const MORDER = ['gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash',
 function morder(a, b) { const i = MORDER.indexOf(a), j = MORDER.indexOf(b); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || (a < b ? -1 : 1); }
 function lorder(a, b) { const i = LEVELS.indexOf(a), j = LEVELS.indexOf(b); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j); }
 
+function refLines(L, tier) {
+  // reference agents (G2 "reference" rows) as % of the solver on the same seeds
+  const ref = (L.reference || []).filter(r => r.tier === tier);
+  const sol = ref.find(r => r.agent === 'solver');
+  if (!sol || !(sol.mean > 0)) return [];
+  return ref.filter(r => r.agent !== 'solver' && r.agent !== 'do_nothing' && r.mean != null).map(r => ({ y: r.mean / sol.mean, l: r.agent.replace('_', ' ') }));
+}
 function renderLadder() {
   const sec = document.getElementById('p-ladder'); sec.replaceChildren();
   const L = R.ladder; const cells = L ? ladderCells(L) : [];
   const tiers = [...new Set(cells.map(c => c.tier))].sort((a, b) => ['easy', 'medium', 'hard'].indexOf(a) - ['easy', 'medium', 'hard'].indexOf(b));
   let tier = sec.dataset.tier && tiers.includes(sec.dataset.tier) ? sec.dataset.tier : (tiers.includes('hard') ? 'hard' : tiers[0]);
-  const seg = tiers.length ? h('div', { class: 'seg', role: 'group', 'aria-label': 'Tier' }, tiers.map(t => { const b = h('button', { type: 'button', 'aria-pressed': String(t === tier), text: t });
+  const seg = tiers.length > 1 ? h('div', { class: 'seg', role: 'group', 'aria-label': 'Tier' }, tiers.map(t => { const b = h('button', { type: 'button', 'aria-pressed': String(t === tier), text: t });
     b.addEventListener('click', () => { sec.dataset.tier = t; renderLadder(); }); return b; })) : null;
+  const eps = cells.reduce((a, c) => a + (c.n || 0), 0);
   panelHead(sec, '03', { kicker: 'Ladder', h: 'How much thinking buys how much of the gap?' },
-    'Gemini models × thinking levels against the Bayesian reference solver, paired on the same seeds. 100% = solver parity.', seg);
+    'Gemini models × thinking levels against the Bayesian reference solver, paired on the same seeds. 100% = solver parity.' + (eps ? ' ' + nf.format(eps) + ' episodes in ' + cells.length + ' cells.' : ''), seg);
   if (!cells.length) { sec.appendChild(pending('Ladder', 'python -m canary.gemini.ladder_report --runs <dir> → results/gemini/ladder.json')); return; }
   const tc = cells.filter(c => c.tier === tier);
   const models = [...new Set(tc.map(c => c.model))].sort(morder), levels = [...new Set(tc.map(c => c.level))].sort(lorder);
   const at = (m, l) => tc.find(c => c.model === m && c.level === l);
+  const cellTip = c => { const r = [{ v: pctf(c.pct), l: 'of solver score, same seeds' }];
+    if (c.ci && c.ci[0] != null) r.push({ v: '[' + pctf(c.ci[0]) + ', ' + pctf(c.ci[1]) + ']', l: 'paired 95% CI' });
+    if (c.score != null) r.push({ v: c.score.toFixed(3), l: 'mean score (solver ' + (c.solver != null ? c.solver.toFixed(3) : '?') + ')' });
+    if (c.n != null) r.push({ v: String(c.n), l: 'episodes' });
+    if (c.acc != null) r.push({ v: pctf(c.acc), l: 'correct accusations' });
+    if (c.day != null) r.push({ v: c.day.toFixed(1), l: 'mean accuse day' });
+    if (c.think != null) r.push({ v: compact(c.think) + (c.est ? '*' : ''), l: 'thinking tokens / episode' + (c.est ? ' (*incl. output)' : '') });
+    if (c.cost != null) r.push({ v: usd(c.cost), l: 'per episode' }); return r; };
   const g = h('div', { class: 'grid' });
   const hm = heatMatrix(models, levels, (m, l) => { const c = at(m, l); return c ? c.pct : null; }, v => pctf(v), { min: 0, max: 1, labW: 120, rowLabel: short,
-    corner: 'model ↓ thinking →', loLabel: '≤0%', hiLabel: '≥100% of solver',
-    tip: (m, l) => { const c = at(m, l); const r = [{ v: pctf(c.pct), l: 'of solver score' }];
-      if (c.ci) r.push({ v: '[' + pctf(c.ci[0]) + ', ' + pctf(c.ci[1]) + ']', l: '95% CI' });
-      if (c.score != null) r.push({ v: c.score.toFixed(3), l: 'mean score (solver ' + (c.solver != null ? c.solver.toFixed(3) : '?') + ')' });
-      if (c.n != null) r.push({ v: String(c.n), l: 'paired seeds' }); if (c.think != null) r.push({ v: compact(c.think), l: 'thinking tokens / episode' });
-      if (c.cost != null) r.push({ v: usd(c.cost), l: 'per episode' }); return r; } });
-  g.appendChild(card('c5', 'Score as % of solver · ' + tier, 'model × thinking level', [synthBadge(L), hm]));
+    corner: 'model ↓ thinking →', loLabel: '≤0%', hiLabel: '≥100% of solver', tip: (m, l) => cellTip(at(m, l)) });
+  g.appendChild(card('c5', 'Score as % of solver · ' + tier, 'model × thinking level · hover for CI, accuracy, cost', [synthBadge(L), hm]));
+  const refs = refLines(L, tier);
   const series = models.map(m => ({ name: short(m), c: modelColor(m), pts: tc.filter(c => c.model === m && c.think != null).map(c => ({ x: Math.max(c.think, 10), y: c.pct,
-    title: short(m) + ' · ' + c.level, tip: [{ v: pctf(c.pct), l: 'of solver' }, { v: compact(c.think), l: 'thinking tokens / episode' }].concat(c.cost != null ? [{ v: usd(c.cost), l: 'per episode' }] : []) })) }))
-    .filter(sr => sr.pts.length);
+    title: short(m) + ' · ' + c.level, tip: cellTip(c) })) })).filter(sr => sr.pts.length);
   if (series.length) {
-    const ys = series.flatMap(s => s.pts.map(p => p.y));
-    g.appendChild(card('c7', 'Score vs thinking tokens · ' + tier, 'thinking tokens per episode (log) · one line per model, minimal → high',
+    const ys = series.flatMap(s => s.pts.map(p => p.y)).concat(refs.map(r => r.y));
+    g.appendChild(card('c7', 'Score vs thinking tokens · ' + tier, 'mean thinking tokens per episode (log) · one line per model, through its thinking levels',
       [legend(series.map(s => ({ c: s.c, l: s.name })), true), xyChart(series, { logx: true, xfloor: 10, ymin: Math.min(0, ...ys), ymax: Math.max(1.1, ...ys), yticks: [0, .25, .5, .75, 1],
-        yfmt: v => pctf(v), xfmt: v => v <= 10 ? '≤10' : compact(v), ref: { y: 1, l: 'solver' }, W: 680, H: 320, aria: 'score vs thinking tokens' })]));
+        yfmt: v => pctf(v), xfmt: v => v <= 10 ? '≤10' : compact(v), ref: { y: 1, l: 'solver' }, refs, W: 680, H: 320, aria: 'score vs thinking tokens' })]));
   }
   const cc = tc.filter(c => c.cost != null && c.cost > 0);
   if (cc.length) {
@@ -941,20 +993,35 @@ function renderLadder() {
     const blue = css('--s1'), grey = css('--other');
     const pts = cc.map(c => ({ x: c.cost, y: c.pct, c: fset.has(c) ? blue : grey, r: fset.has(c) ? 5 : 3.5,
       label: fset.has(c) ? short(c.model) + ' · ' + c.level : null, title: short(c.model) + ' · ' + c.level,
-      tip: [{ v: usd(c.cost), l: 'per episode' }, { v: pctf(c.pct), l: 'of solver' }].concat(fset.has(c) ? [{ v: 'frontier', l: 'nothing cheaper scores higher' }] : []) }));
-    const ys = cc.map(c => c.pct);
+      tip: cellTip(c).concat(fset.has(c) ? [{ v: 'frontier', l: 'nothing cheaper scores higher' }] : []) }));
+    const ys = cc.map(c => c.pct).concat(refs.map(r => r.y));
     g.appendChild(card('c12', 'Cost frontier · ' + tier, 'list-price $ per episode (log) vs % of solver · blue = Pareto frontier (nothing cheaper scores higher)',
-      [frontierChart(front, pts, ys)]));
+      [frontierChart(front, pts, ys, refs)]));
   }
-  if (R.figures && R.figures['ladder.png']) g.appendChild(card('c12', 'Ladder report figure', 'results/gemini/ladder.png', [h('img', { src: R.figures['ladder.png'], alt: 'ladder figure', style: 'width:100%;border-radius:8px' })]));
+  const tg = L.tags && L.tags.pooled;
+  if (tg) {
+    const lv = ['low', 'medium', 'high'].filter(l => tg[l + '|' + tier]);
+    if (lv.length >= 2) {
+      const tagSet = {}; lv.forEach(l => Object.entries(tg[l + '|' + tier].tags || {}).forEach(([k, v]) => { tagSet[k] = Math.max(tagSet[k] || 0, v.regret_per_ep || 0); }));
+      const tags = Object.keys(tagSet).sort((a, b) => tagSet[b] - tagSet[a]).slice(0, 8);
+      if (tags.length) {
+        const get = (tag, l) => { const d = (tg[l + '|' + tier].tags || {})[tag]; return d ? d.regret_per_ep : 0; };
+        const mx = Math.max(1e-9, ...tags.flatMap(tag => lv.map(l => get(tag, l))));
+        const hm2 = heatMatrix(tags, lv, get, v => v.toFixed(3), { min: 0, max: mx, labW: 170, corner: 'failure tag ↓ thinking →', loLabel: '0', hiLabel: mx.toFixed(3) + ' regret / episode',
+          tip: (tag, l) => { const d = (tg[l + '|' + tier].tags || {})[tag] || {}; return [{ v: (d.regret_per_ep || 0).toFixed(3), l: 'regret per episode' }, { v: pctf(d.rate || 0), l: 'of episodes show it' }]; } });
+        const common = (L.tags.pooled_common_models || []).map(short).join(', ');
+        g.appendChild(card('c12', 'Which mistakes does thinking fix? · ' + tier, 'solver regret per episode by failure tag, pooled over ' + (common || 'the models that ran every level') + ' · a row that fades left→right is a mistake thinking fixes', [hm2]));
+      }
+    }
+  }
   sec.appendChild(g);
 }
-function frontierChart(front, pts, ys) {
+function frontierChart(front, pts, ys, refs) {
   const blue = css('--s1');
   const sf = front.slice().sort((a, b) => a.cost - b.cost);
   void blue;
   return xyChart([{ name: 'cells', c: css('--other'), pts, line: false }], { logx: true, xfloor: 0.001, W: 1180, H: 340, R: 140, ymin: Math.min(0, ...ys), ymax: Math.max(1.1, ...ys),
-      yfmt: v => pctf(v), xfmt: v => usd(v), ref: { y: 1, l: 'solver' }, aria: 'cost frontier', frontier: sf });
+      yfmt: v => pctf(v), xfmt: v => v < 1 ? '$' + (+v.toPrecision(2)) : usd(v), ref: { y: 1, l: 'solver' }, refs: refs || [], aria: 'cost frontier', frontier: sf });
 }
 
 // ---- atlas

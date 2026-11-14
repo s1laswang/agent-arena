@@ -49,7 +49,7 @@ def test_renders_all_panels_from_fixtures(tmp_path):
         assert f'id="{pid}"' in html
     p = _payload(html)
     assert p["usage"]["totals"]["calls"] > 1500
-    assert p["results"]["ladder"]["cells"] and p["results"]["atlas"]["modes"] and p["results"]["swarm"]["attempts"]
+    assert p["results"]["ladder"]["rows"] and p["results"]["atlas"]["modes"] and p["results"]["swarm"]["attempts"]
     # self-contained: no network fetches
     assert not re.search(r'(src|href)="https?://', html)
     assert "@import" not in html and "fetch(" not in html
@@ -95,3 +95,12 @@ def test_error_type_reduction():
     assert dash.error_type("TimeoutError: read timed out") == "TimeoutError"
     assert dash.error_type("weird message with key=abc") == "other"
     assert dash.redact("x AIzaSyABCDEFGHIJKLMN y") == "x [redacted] y"
+
+
+def test_duplicate_ledger_copies_count_once(tmp_path):
+    a, b = tmp_path / "a", tmp_path / "b"
+    a.mkdir(), b.mkdir()
+    src = (FX / "ledger" / "fixture.jsonl").read_text().splitlines()[:50]
+    (a / "x.jsonl").write_text("\n".join(src) + "\n")
+    (b / "copy.jsonl").write_text("\n".join(src[:30]) + "\n{broken\n")
+    assert len(dash.load_ledger([a, b, a / "x.jsonl"])) == 50

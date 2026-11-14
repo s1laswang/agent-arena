@@ -72,13 +72,19 @@ def values(results_dir: Path, ledger: list) -> dict[str, str]:
                  cache_share=say_pct(s["cache"]["hit_share"]), models=str(t["n_models"]), features=str(t["n_features"]))
     R = dash.load_results(results_dir)
     L = R.get("ladder")
-    if L and L.get("cells"):
-        cells = [c for c in L["cells"] if c.get("pct_solver") is not None or (c.get("score_mean") is not None and c.get("solver_mean"))]
-        for c in cells:
-            if c.get("pct_solver") is None:
-                c["pct_solver"] = c["score_mean"] / c["solver_mean"]
+    if L and (L.get("rows") or L.get("cells")):
+        cells = []
+        for c in L.get("rows") or L.get("cells"):  # G2 rows (ratio, cost_per_ep) or the older cells shape
+            c = dict(c)
+            pct = c.get("ratio", c.get("pct_solver"))
+            if pct is None and c.get("score_mean") is not None and c.get("solver_mean"):
+                pct = c["score_mean"] / c["solver_mean"]
+            if pct is None:
+                continue
+            c["pct_solver"] = pct
             c.setdefault("level", c.get("thinking_level", ""))
-            c.setdefault("cost_usd_per_episode", c.get("cost_per_episode"))
+            c["cost_usd_per_episode"] = c.get("cost_per_ep", c.get("cost_usd_per_episode", c.get("cost_per_episode")))
+            cells.append(c)
         if cells:
             v["ladder_models"] = str(len({c["model"] for c in cells}))
             v["ladder_levels"] = str(len({c["level"] for c in cells}))

@@ -99,8 +99,9 @@ def ledger(rng: random.Random) -> list[dict]:
 
 
 def ladder(rng: random.Random) -> dict:
+    """G2's ladder_report.py shape: rows / reference / tags / prices_usd_per_1m."""
     solver = {"medium": 0.633, "hard": 0.556}
-    cells = []
+    rows = []
     for tier in ("medium", "hard"):
         for m in LADDER_MODELS:
             for lv in LEVELS:
@@ -109,17 +110,31 @@ def ladder(rng: random.Random) -> dict:
                 pct = max(-0.2, min(1.08, pct + rng.uniform(-0.05, 0.05)))
                 n = 10 if "4-" not in m else 6
                 think = int(THINK[lv] * 260 * (1.3 if "4-" in m else 1.0))
-                steps = 260
-                tin = 15000 * steps
-                c = cost(m, tin, think + 120 * steps, int(tin * 0.6))
-                cells.append({"model": m, "level": lv, "tier": tier, "n": n,
-                              "score_mean": round(pct * solver[tier], 3), "solver_mean": solver[tier],
-                              "pct_solver": round(pct, 3), "pct_solver_ci95": [round(pct - 0.12, 3), round(pct + 0.12, 3)],
-                              "thinking_tokens_per_episode": think,
-                              "cost_usd_per_episode": round(c.get("cost_usd_est", c.get("cost_usd", 0.0)) or 0.004 * steps, 4),
-                              "regret_mean": round((1 - pct) * solver[tier], 3)})
-    return {"generated_at": "2026-11-14T21:30:00+02:00", "git_sha": "fixture", "ledger_run_ids": ["ladder-*"],
-            "synthetic": True, "solver": solver, "cells": cells}
+                tin = 15000 * 260
+                c = cost(m, tin, think + 120 * 260, int(tin * 0.6))
+                usd = c.get("cost_usd_est", c.get("cost_usd", 0.0)) or 0.0015 * 260
+                rows.append({"model": m, "level": lv, "tier": tier, "n": n, "seeds": list(range(900000, 900000 + n)),
+                             "source": "ladder", "mean": round(pct * solver[tier], 3), "ci": 0.08,
+                             "accuracy": round(min(1.0, 0.4 + 0.6 * pct), 2), "accused_rate": 1.0,
+                             "accuse_day": round(9 - 3 * pct, 1), "solver_same_seeds": solver[tier],
+                             "ratio": round(pct, 3), "ratio_lo": round(pct - 0.12, 3), "ratio_hi": round(pct + 0.12, 3),
+                             "diff": round((pct - 1) * solver[tier], 3), "diff_ci": 0.08,
+                             "thinking_per_ep": think, "thinking_is_estimate": False, "calls_per_ep": 260,
+                             "in_per_ep": tin, "cost_per_ep": round(usd, 4), "wall_min_per_ep": 12.0, "run_ids": []})
+    ref = [{"agent": a, "tier": t, "n": 10, "mean": v, "ci": 0.05, "accuracy": 0.9}
+           for t, s in solver.items() for a, v in (("solver", s), ("grok_tactics", s - 0.18), ("heuristic", -0.03))]
+    tags = {"pooled_common_models": LADDER_MODELS[2:], "per_cell": {}, "pooled": {}}
+    for tier in ("medium", "hard"):
+        for i, lv in enumerate(("low", "medium", "high")):
+            tags["pooled"][f"{lv}|{tier}"] = {"episodes": 24, "score_mean": 0.3, "regret_per_ep": 0.3,
+                "tags": {"late_commit": {"rate": 0.6 - 0.15 * i, "regret_per_ep": round(0.14 - 0.04 * i, 4), "worst": []},
+                         "wrong_accusation": {"rate": 0.3 - 0.08 * i, "regret_per_ep": round(0.12 - 0.05 * i, 4), "worst": []},
+                         "wide_canary": {"rate": 0.4, "regret_per_ep": 0.05, "worst": []},
+                         "decoy_restrict": {"rate": 0.2 - 0.05 * i, "regret_per_ep": round(0.04 - 0.01 * i, 4), "worst": []}}}
+    return {"generated_at": "2026-11-14T21:30:00+0200", "git_sha": "fixture", "runs": "fixture",
+            "ledger_run_ids": ["ladder-fixture"], "synthetic": True, "episodes": sum(r["n"] for r in rows),
+            "prices_usd_per_1m": {"gemini-3.1-flash-lite": [0.25, 1.5, 0.025], "gemini-3.5-flash": [0.75, 3.75, 0.075]},
+            "rows": rows, "reference": ref, "tags": tags, "probe": None, "figures": []}
 
 
 def atlas() -> dict:

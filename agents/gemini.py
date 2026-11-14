@@ -299,7 +299,7 @@ def run_tool_loop(model, system, view_text, tools, call, max_steps=60, temperatu
             results.append({"name": c["name"], "result": blocked if blocked is not None else call(c["name"], c["args"])})
             if log:
                 log({"role": "tool", **results[-1]})
-        imgs = [x["result"]["image"] for x in results if isinstance(x["result"], dict) and x["result"].get("image")]
+        imgs = [x["result"]["image"] for x in results if isinstance(x["result"], dict) and isinstance(x["result"].get("image"), str) and Path(x["result"]["image"][:1024]).is_file()]
         messages.append({"role": "user", "tool_results": [{**x, "result": compact_result(x["name"], x["result"])} for x in results], **({"images": imgs} if imgs else {})})
         _elide(messages)
         if done:

@@ -40,7 +40,7 @@ NO room for the conversation, so use 4096 (or shorten the instruction) for dense
 # j3v2 data from the frozen tiers (Mac, 3 procs), then rsync to freighter:~/agent-arena-data/j3v2/
 python -m train.export_sft --split train --tier all --n 6667 --workers 3 --out data/j3v2/train
 ssh freighter 'cd ~/agent-arena && sbatch --export=ALL,DATA="$HOME/agent-arena-data/j3v2/train/train-*.jsonl",\
-TRAIN_ARGS="--window-mode dense --max-len 4096",MAX_EPISODES=800,TRAIN_HOURS=4 fr8/j4_train.sbatch'
+TRAIN_ARGS="--window-mode dense --max-len 4096 --oversample-endings 3",MAX_EPISODES=800,TRAIN_HOURS=4 fr8/j4_train.sbatch'
 ```
 Throughput math (estimates; check the pilot's `[data]` line): per 4096 window ~2.8k header +
 ~1.3k body; tokens per episode ~ (episode body tokens / ~1.0k effective stride) x 4.1k.
@@ -48,6 +48,22 @@ If an episode body is ~12k tokens -> ~12 windows ~ 50k tokens/episode (vs ~96k i
 and the loss share rises to roughly 6-10% (the header is the floor; shortening the instruction
 or a 2048 window after shortening it gets past 10%). At 1.4k tok/s: 4 h = 20M tokens ~ 400
 episodes/epoch-equivalent; so set `--max-episodes` ~ 400-800 for >= 1 pass in 4-8 h.
+
+### Fixing "never accuses" (J4: valid calls .98, agreement .94, but 0 accusations)
+Accuse turns are ~1/70 of assistant turns. Two knobs (both default off, so J4 is unchanged):
+- `--accuse-weight W`: weighted token CE, W on accuse-turn tokens, normalised by the dataset's
+  mean loss weight, so the overall loss scale / effective LR stays the same.
+- `--oversample-endings K`: K extra windows per episode with max context ending at the accuse
+  turn, with loss on the last 2 assistant turns.
+
+**Pick `--oversample-endings 3`.** The failure is a *decision* problem: the model doesn't
+recognise "the evidence is in, stop now". Ending windows show that decision with the full
+context that justifies it (and the turn before it), 4 times per episode. A 20x token weight in
+a window that may not contain the evidence pushes the model to accuse without
+conditioning on the evidence, which could cause premature accusations, and a score of 0 is worse than
+a late correct one. Cost: about 3 extra 4k windows per episode (roughly +25% tokens in dense
+mode). If the eval still shows no accusations, add `--accuse-weight 5` on top. Check the
+`[data] accuse_loss_share=... -> weighted ...` line.
 
 ## Demo the trained model (J4 LoRA -> MLX, local)
 mlx-lm cannot load PEFT adapters directly (different adapter format), so merge then convert.

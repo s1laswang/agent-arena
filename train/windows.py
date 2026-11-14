@@ -32,7 +32,7 @@ def char_spans(msgs: list[dict], render: Callable[[list[dict], bool], str]):
 
 def make_windows(ids: list[int], offsets: list[tuple[int, int]], header_end: int,
                  bounds: list[tuple[int, int]], asst: list[tuple[int, int]], max_len: int,
-                 mode: str = "prefix", overlap: int = 256):
+                 mode: str = "prefix", overlap: int = 256, return_start: bool = False):
     """Returns list of (input_ids, labels).
 
     mode="prefix": each window starts as EARLY as fits (max context; many overlapping windows).
@@ -81,7 +81,7 @@ def make_windows(ids: list[int], offsets: list[tuple[int, int]], header_end: int
         for s, e in a_tok[k:j + 1]:
             for t in range(max(s, covered), e):
                 lab[h + t - ws] = ids[t]
-        out.append((inp, lab))
+        out.append((inp, lab, ws) if return_start else (inp, lab))
         covered, k = we, j + 1
     return out
 
@@ -97,3 +97,61 @@ def record_windows(rec: dict, tokenizer, max_len: int, mode: str = "prefix", ove
     enc = tokenizer(full, add_special_tokens=False, return_offsets_mapping=True)
     return make_windows(enc["input_ids"], [tuple(o) for o in enc["offset_mapping"]],
                         header_end, bounds, asst, max_len, mode, overlap)
+
+
+def is_accuse(msg: dict) -> bool:
+    return any(c.get("function", {}).get("name") == "accuse" for c in msg.get("tool_calls") or [])
+
+
+def windows_ex(ids, offsets, header_end, bounds, asst, accuse_flags, max_len,
+               mode="prefix", overlap=256, oversample_endings=0):
+    """make_windows + a per-token accuse mask, + optional ending oversampling.
+
+    Returns list of (input_ids, labels, accuse_mask) where accuse_mask[i] is True iff token i
+    lies in an assistant turn whose tool call is `accuse`. With oversample_endings=0 the
+    (input_ids, labels) are exactly make_windows(...)'s. oversample_endings=K appends K copies of
+    one extra window (max context, prefix-style) labelling only the last 2 assistant turns.
+    """
+    def tok_at(ch):
+        lo, hi = 0, len(offsets)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if offsets[mid][0] < ch:
+                lo = mid + 1
+            else:
+                hi = mid
+        return lo
+
+    h = tok_at(header_end)
+    acc = [False] * len(ids)
+    for (s, e), f in zip(asst, accuse_flags):
+        if f:
+            for t in range(tok_at(s), tok_at(e)):
+                acc[t] = True
+    base = make_windows(ids, offsets, header_end, bounds, asst, max_len, mode, overlap, True)
+    if oversample_endings > 0 and asst:
+        tail = make_windows(ids, offsets, header_end, bounds, asst[-2:], max_len, "prefix", 0, True)
+        base += [tail[-1]] * oversample_endings if tail else []
+    return [(inp, lab, [False] * h + acc[ws:ws + len(inp) - h]) for inp, lab, ws in base]
+
+
+def record_windows_ex(rec: dict, tokenizer, max_len: int, mode: str = "prefix",
+                      overlap: int = 256, oversample_endings: int = 0):
+    tools = rec.get("tools")
+
+    def render(m, gen):
+        return tokenizer.apply_chat_template(m, tools=tools, tokenize=False,
+                                             add_generation_prompt=gen)
+    msgs = rec["messages"]
+    full, header_end, bounds, asst = char_spans(msgs, render)
+    flags = [is_accuse(m) for m in msgs[2:] if m["role"] == "assistant"]
+    enc = tokenizer(full, add_special_tokens=False, return_offsets_mapping=True)
+    return windows_ex(enc["input_ids"], [tuple(o) for o in enc["offset_mapping"]], header_end,
+                      bounds, asst, flags, max_len, mode, overlap, oversample_endings)
+
+
+def token_weights(labels, accuse_mask, accuse_weight: float):
+    """Per-token weights: accuse_weight on loss tokens inside accuse turns, 1 on other loss
+    tokens, 0 elsewhere."""
+    return [0.0 if l == IGNORE else (accuse_weight if a else 1.0)
+            for l, a in zip(labels, accuse_mask)]

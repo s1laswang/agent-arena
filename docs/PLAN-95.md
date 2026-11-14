@@ -130,3 +130,11 @@ Never print keys. Never touch other users' jobs.
 (1) C2: write EXPLOITS.md at the repo root. One row per attack (13 battery probes, Harbor cheat runs, the never-accuse probe, Momin's 129-row corpus, the 35-attacker Gemini swarm, the fleet probes: control_pad, sidecar key, ledger trust), with result, mitigation and the test that enforces it. Add a "Residual risks" section.
 (2) B4: run an instruction audit (one Gemini pass, gemini-4-carbon) for trick wording, hidden info or broken tools. Answer or fix the findings in docs/DIFFICULTY.md; rules changes go to the CEO only.
 (3) C3 at 02:00 on the tagged candidate: rerun `make hunt` and the Gemini swarm, and run the 15-minute judge-protocol hunt with Vaishnav. Report to docs/reports/integrity.md.
+
+## Update Sat 14 Nov ~22:50
+- **Verda cloud GPU** (Silas approved, cap $30): overflow GPU for the tiebreaker, so v3 seed 0 no longer waits for FR8 GPUs held by the fleet. **FR8 is the only Verda owner.** Other heads route GPU requests to FR8 with a GPU-hours estimate. Instances are deleted as soon as results are pulled; spend goes in docs/reports/fr8.md.
+- **Gap gate at 01:40** (reviewer guardrails adopted):
+  - Track 1 solver_v2: same tools and instruction; tuned off seeds 0–29 and 900000+; reported on fresh and judge seeds; v1 rows kept.
+  - Track 2 expert tier: headline or Harbor default only with n ≥ 30 replay-verified OpenCode episodes by 06:00, otherwise addendum only.
+- **v1.4 headline committed** (docs/reports/gap.md): OpenCode hard 60% [1, 103], luck-adjusted 68% [43, 91]. Pre-registered seed rule: the staged set is primary, fleet reruns are a replication.
+- **Tag `afterquery-final` by ~07:00.** The rehearsal (oracle, 3× OpenCode, do_nothing, stop_early) runs on that exact SHA, and the SHA goes to the reviewer for main's landing page.

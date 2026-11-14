@@ -191,9 +191,12 @@ PY
     tail -20 /tmp/canary-mcp-accept.log 2>/dev/null | sed 's/^/    /'
     record FAIL "MCP server binds" "server did not listen on port $port (see /tmp/canary-mcp-accept.log)"
   fi
-  kill "$mcp_pid" 2>/dev/null || true
+  # Stop ONLY the server this script started: walk mcp_pid's descendants (make -> uv -> python) by PID.
+  # Never pkill by pattern: other sessions on the same machine run their own canary.mcp_server.
+  _descendants() { local c; for c in $(pgrep -P "$1" 2>/dev/null); do _descendants "$c"; echo "$c"; done; }
+  _kids=$(_descendants "$mcp_pid")
+  kill $_kids "$mcp_pid" 2>/dev/null || true
   wait "$mcp_pid" 2>/dev/null || true
-  pkill -f "canary.mcp_server" 2>/dev/null || true
 fi
 
 if command -v docker >/dev/null 2>&1 && command -v harbor >/dev/null 2>&1; then

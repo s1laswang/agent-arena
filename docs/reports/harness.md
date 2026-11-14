@@ -147,7 +147,20 @@ Branch `justSilas-harness-harbor`. Files: `harbor/README.md` (Harbor research (a
     - logs_only: medium −0.98, hard −1.00;
     - do_nothing is exactly 0 in every run.
   - After merging 92459d3 (solver: exact fingerprint likelihood), the results are byte-identical to 849e652 with a fixed secret (`cmp`), so the README numbers still hold.
-  - **These numbers must be refreshed after the v1.2 freeze.**
+  - **After the tiers v1.2 freeze (f85f21c), which are the README numbers now:**
+    - solver: medium **+0.64** [+0.52, +0.71], hard **+0.62** [+0.51, +0.72], easy +0.77;
+    - heuristic: medium +0.00 [−0.32, +0.27], hard −0.22 [−0.50, +0.04];
+    - logs_only: medium −0.97, hard −1.00 (all 30 runs);
+    - do_nothing is exactly 0.
+  - **FINAL, frozen v1.2 (db104c9: hard fingerprint .95, framing 2.0), merged as edffdac. The README now shows:**
+    - **The committed run** (fingerprint d7e45dc56304), mean ± CI:
+      - medium: solver **+0.648 ± 0.074** (acc .90), heuristic +0.046 ± 0.242, logs_only −0.958, random −0.588, stop_early −0.950, do_nothing 0;
+      - hard: solver **+0.624 ± 0.079** (acc .88), heuristic −0.262 ± 0.256, logs_only −0.865, random −0.800, stop_early −0.850, do_nothing 0;
+      - easy: solver +0.774 ± 0.045.
+    - **Spread over 30 fresh secrets:**
+      - solver means: medium +0.62 [+0.52, +0.68], hard +0.55 [+0.39, +0.65], easy +0.78;
+      - heuristic: medium −0.01 [−0.32, +0.37], hard −0.27 [−0.55, 0.00].
+    - **Note for the CEO:** across secrets, the heuristic's best medium run (+0.37) comes within the solver's worst run (+0.52) by a margin smaller than either CI. The medium gap rests on the mean, not on every draw.
 - **Full-size determinism:** with `CANARY_WORLD_SECRET=det-full-check`, two separate `--reproduce` processes (40 seeds × 3 tiers) gave a byte-identical `judge_episodes.jsonl` (`cmp`).
   - **Caveat for ENV:** `SolverPolicy(act_budget=0.3)` caps the canary-split search by wall clock (`perf_counter`). On a much slower machine (CI, a judge laptop) the budget could bind and change the solver's choices, so bit-for-bit equality across machines is not guaranteed. Suggestion: make the cap count-based (nodes or iterations), or keep it far above the observed search time.
 - **Secret handling (after ENV's `world.set_world_secret`):** a keyless reproduce now installs its `os.urandom(32)` secret in-process via `set_world_secret`, so it is never in `os.environ` (cf. #25). Any earlier in-process secret is cleared while an explicit `CANARY_WORLD_SECRET` is in use, then restored (test added).
@@ -173,8 +186,19 @@ Branch `justSilas-harness-harbor`. Files: `harbor/README.md` (Harbor research (a
 ### Commands run
 `make setup`; `make test`; `make reproduce` (×4); `uv run ... pytest -q tests/test_reproduce.py`; `python /tmp/canary_spread.py 10` and `... 30`; `CANARY_WORLD_SECRET=cmp-secret` CLI vs in-process comparison (identical); `bash /tmp/canary_fresh_clone.sh`; `bash /tmp/canary_cold_setup.sh`.
 
+- **parse_seeds fix (CEO request):**
+  - A bare N ≤ 1000 is a count; a larger N is a single seed (`900003` → `[900003]`). `n:N` is an explicit count, and `a-b` / `a,b` work as before.
+  - Expansions over 10,000 seeds, or seeds × tiers over 10,000 in the CLI, are rejected with exit 2 and a clear message.
+  - 3 new tests in tests/test_eval.py (12 cases).
+- **Merged to justSilas** at b17d269 (fast-forward). `make test`: 385 passed, 3 skipped (exit 0).
+- **Final merge on frozen v1.2:** justSilas at 093ed1b (fast-forward), with README and results on frozen v1.2, the fresh-seed table cited, and easy marked as a sanity tier. `make test`: 390 passed, 3 skipped (exit 0).
+  - **Fresh clone of justSilas at 093ed1b** (no .env, no keys): clone 1.3 s; `make setup` 0.4 s (warm cache); `make reproduce` exit 0 in 5.5 s.
+  - Solver: medium +0.661 ± 0.067, hard +0.452 ± 0.196 (39/40 accused, 82% correct), easy +0.774 ± 0.046. All three are inside the 30-secret ranges in the README; hard sits near the low end.
+- **CI verified on GitHub.**
+  - The first runs appeared a few minutes after the push; the API reported 0 at first. Run 43538261675 on justSilas at 50f4074 (contains this work): **success in 1m33s** (`make setup`, `make test`, `REPRO_FAST=1 make reproduce`, artifact upload). A PR run (justSilas-grok-pitch) also succeeded.
+  - Fix: `cancel-in-progress` cancelled every push run on the busy justSilas branch (7 cancelled in a row). It now cancels only on PRs, so push runs queue and finish.
+
 ### Untested / open
-- CI on GitHub (first run on the push to justSilas). A Linux-only failure in another department's tests is possible.
 - No committed frontier runs yet. AGENTS should write `data/runs/committed/<run_id>/episodes.jsonl` (EpisodeResult lines; steps may be empty), ideally on judge seeds. The table marks non-judge seeds.
 - The README numbers must be refreshed whenever ENV changes the solver or the tiers: run `python /tmp/canary_spread.py 30`, or just `make reproduce` and use its CI.
 - `test_integrity_hunter.py::test_stub_hunt_fake_server_plumbing` still fails intermittently under load (INTEGRITY's code).

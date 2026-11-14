@@ -8,7 +8,7 @@ An RL environment for AfterQuery's **Break the Agent** (Junction 2026).
 - The agent is the **head of security**. It can read access logs and messages, interview staff and restrict access.
 - Its sharpest tool is the **canary trap**: send different variants of a document to different groups, then watch the **leak feed** to see which variant surfaces.
 - It must **accuse exactly once**. A correct accusation scores the value that is left, so waiting for certainty also costs.
-- The reference run is a tuned **Bayesian canary-trap solver** that uses the same public tools. Frontier agents score below it, and every rule they need is written down.
+- The reference run is a tuned **Bayesian canary-trap solver** that uses the same public tools. Every rule an agent needs is written down; the benchmark is how close a frontier agent gets to the solver.
 
 ## One command
 
@@ -20,17 +20,21 @@ You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/u
 
 `make reproduce` plays the reference solver and five baselines on the 40 frozen judge seeds of each tier. It replays any committed frontier-agent episodes from `data/runs/committed/`, prints the table, and writes `results/judge_table.md`, `results/judge_episodes.jsonl` and `results/gap_chart.png`.
 
-**Expected numbers (mean score, expected ± CI).** Each value is the mean over 30 keyless runs of `make reproduce` at commit 849e652 (solver fix + bounded DP, tiers v1.1; 40 seeds per tier, a fresh secret for each run), with the lowest-to-highest range across those 30 runs in brackets. A single run also prints its own 95% CI, about ±0.07–0.10 for the solver and up to ±0.26 for the heuristic. The tiers freeze at v1.2, and the numbers will be refreshed then. The committed [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one such run.
+**Expected numbers (mean score, expected ± CI) on the frozen tiers v1.2.** We ran keyless `make reproduce` 30 times on the 40 judge seeds per tier (commit edffdac), each run with a fresh secret. Each cell is the mean of the 30 run means, with their range in brackets. A single run prints its own 95% CI, about ±0.07–0.08 for the solver and ±0.25 for the heuristic.
 
-| agent | medium (headline) | hard (headline) | easy (sanity) |
+| agent | medium (headline) | hard (headline) | easy (sanity tier only) |
 |---|---:|---:|---:|
-| **solver** (reference) | **+0.63** [+0.56, +0.71] | **+0.62** [+0.54, +0.69] | +0.78 [+0.75, +0.82] |
+| **solver** (reference) | **+0.62** [+0.52, +0.68] | **+0.55** [+0.39, +0.65] | +0.78 [+0.74, +0.81] |
 | frontier agents (gpt-5.5, gpt-5.6-sol) | pending (AGENTS commit runs to `data/runs/committed/`) | pending | – |
-| heuristic (canary bisection, no Bayes) | −0.03 [−0.22, +0.22] | −0.21 [−0.42, −0.06] | +0.65 [+0.54, +0.74] |
-| logs_only (best no-canary log reader) | −0.98 [−1.00, −0.91] | −1.00 [−1.00, −0.96] | −0.47 [−0.72, −0.24] |
-| random | −0.66 [−0.73, −0.46] | −0.81 [−0.85, −0.76] | −0.69 [−0.80, −0.54] |
-| stop_early (random accusation, day 1) | −0.89 [−1.00, −0.70] | −0.95 [−1.00, −0.80] | −0.85 [−0.95, −0.70] |
+| heuristic (canary bisection, no Bayes) | −0.01 [−0.32, +0.37] | −0.27 [−0.55, 0.00] | +0.65 [+0.47, +0.70] |
+| logs_only (best no-canary log reader) | −0.98 [−1.00, −0.91] | −0.97 [−1.00, −0.86] | −0.52 [−0.76, −0.24] |
+| random | −0.66 [−0.73, −0.51] | −0.79 [−0.85, −0.61] | −0.70 [−0.80, −0.55] |
+| stop_early (random accusation, day 1) | −0.91 [−1.00, −0.75] | −0.93 [−1.00, −0.80] | −0.83 [−1.00, −0.70] |
 | do_nothing | 0.00 (exact) | 0.00 (exact) | 0.00 (exact) |
+
+- **Committed run.** [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one of these runs (secret fingerprint `d7e45dc56304`). Solver: medium **+0.65 ± 0.07** (90% correct), hard **+0.62 ± 0.08** (88% correct). Heuristic: medium +0.05 ± 0.24, hard −0.26 ± 0.26.
+- **Fresh seeds.** [`results/fresh_table_v1.2.md`](results/fresh_table_v1.2.md) is ENV's table on 400 dev seeds per tier that were never used for tuning (`scripts/fresh_table.py 1000 1400`). Solver: medium +0.66 ± 0.02, hard +0.54 ± 0.04. Heuristic: medium −0.04 ± 0.08, hard −0.27 ± 0.08. On hard the solver is honest rather than perfect: **81.5% correct, 5% wrong, 13.5% abstain** (no accusation, score 0).
+- **Easy is a sanity tier, not a headline.** The solver (+0.76 ± 0.01 on fresh seeds) and the heuristic (+0.64 ± 0.03) are close there, by design: the gap comes from the noise and adversaries in medium and hard.
 
 **Why the numbers are statistical.** The world behind a judge seed is derived with HMAC from a secret ([CONTRACT §8, §11](docs/CONTRACT.md)). The secret behind our Harbor image is not published, because it would reveal the judge-world moles. Without `CANARY_WORLD_SECRET`, `make reproduce` draws one fresh random secret and shares it across every agent in that run. The comparison is therefore paired, and the run prints only the secret's SHA-256 fingerprint. Each mean lands inside its CI rather than matching ours bit for bit. Committed frontier-agent runs were played on the team's own worlds, so they appear in a separate, unpaired "reported agent runs" block with their own CI. **For exact numbers**, run `CANARY_WORLD_SECRET=<any string> make reproduce`: the same string always produces an identical `results/judge_episodes.jsonl`. For a fast check use `REPRO_FAST=1 make reproduce` (5 seeds per tier, which CI runs), or `make test` for the full test suite.
 
@@ -71,7 +75,7 @@ python -m canary.mcp_server --play solver --url http://127.0.0.1:8765/mcp       
 
 The server serves only judge (900000–900039) and held-out seeds. Set the same `CANARY_WORLD_SECRET` on the server to get the same world across restarts.
 
-**Harbor (judge path: Harbor + OpenCode over MCP, with the server isolated from the agent):** see [harbor/README.md](harbor/README.md). Another engineer is building it.
+**Harbor (judge path: Harbor + OpenCode over MCP, with the server isolated from the agent):** see [harbor/README.md](harbor/README.md).
 
 Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium SEEDS=dev20` and `make test`.
 

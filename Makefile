@@ -5,7 +5,7 @@ TIER ?= all
 SEEDS ?= dev20
 UV := uv run --python 3.12 --extra dev --extra llm --extra plot
 
-.PHONY: setup test eval reproduce worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 fr8-pull mcp
+.PHONY: play setup test eval reproduce worlds clash gemini-check fr8-sync fr8-setup fr8-j1 fr8-j3 fr8-j5 fr8-pull mcp
 
 setup:            ## install deps (needs uv: curl -LsSf https://astral.sh/uv/install.sh | sh)
 	@command -v uv >/dev/null 2>&1 || { echo "make setup: uv not found. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh  (then open a new shell)"; exit 127; }
@@ -49,3 +49,6 @@ fr8-j5:           ## [FR8] J5 Mole Forge, stub LLM (8 cores)
 
 fr8-pull:         ## [FR8] make fr8-pull JOB=j1 -> data/fr8/j1/
 	bash fr8/pull.sh $(JOB)
+
+play:             ## [ENV] human playtest: make play TIER=medium NAME=alice SEED=3000
+	$(UV) python -m canary.play --tier $(if $(filter all,$(TIER)),medium,$(TIER)) --name $(or $(NAME),human) --seed "$(SEED)"

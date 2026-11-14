@@ -141,3 +141,17 @@ def test_params_exact_block_fingerprint():
     txt = "Exact parameters\n- name: hard\n- fingerprint_accuracy: 0.85\n- delay_choices: 2, 3\n- careful_mole: on\n"
     p = _from_exact_block(txt)
     assert p.fingerprint_accuracy == 0.85 and p.delay_choices == (2, 3) and p.careful_mole
+
+
+def test_regret_report_runs(tmp_path):
+    import json, subprocess, sys
+    from canary.env import Env
+    ep = _run_local(Env("medium", 3), SolverPolicy(None))
+    from dataclasses import asdict
+    f = tmp_path / "episodes.jsonl"
+    f.write_text(json.dumps(asdict(ep)) + "\n")
+    r = subprocess.run([sys.executable, "scripts/regret_report.py", str(f), "--out", str(tmp_path), "--name", "t"],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    d = json.loads((tmp_path / "regret_t.json").read_text())
+    assert "medium" in d["agent"] and "decoy_chase" in d["agent"]["medium"]["tags"]

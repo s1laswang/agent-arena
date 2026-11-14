@@ -12,7 +12,7 @@ from mcp.types import CallToolResult, TextContent
 
 from sleeper.company import BUDGET, DEPUTY, World, tools_for
 from sleeper.day import play_round
-from sleeper.verifier import dump_state
+from sleeper.verifier import dump_state, sign
 
 STALL = 8
 TYPES = {"number": float, "array": list | str, "object": dict, "string": str | int | float | bool}
@@ -35,11 +35,11 @@ def build_server(world, seat, team=None, out=None):
         os.replace(tmp, out)
 
     def finish():
-        st["done"] = True
-        dump()
-
-    if text:
-        mcp.add_prompt(Prompt.from_function(lambda: text, name="seat_instruction", description="Your job this day"))
+        if not st["done"]:
+            st["done"] = True
+            with open(out, "w") as f:
+                st_ = dump_state(world)
+                json.dump(sign(st_, os.environ["VERIFY_TOKEN"]) if os.environ.get("VERIFY_TOKEN") else st_, f)
 
     def make(spec):
         name = spec["name"]
@@ -118,7 +118,7 @@ def main():
     if a.sleeper_seat == a.seat:
         ap.error("seat under test cannot be the sleeper")
     strategy = None
-    if a.day_source == "make_day" or (a.day_source == "auto" and (a.sleeper_seat or a.goal)):
+    if a.sleeper_seat or a.goal:
         day = make_day(a.day, a.sleeper_seat, a.goal)
     else:
         from lab.run import day_for

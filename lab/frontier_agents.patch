@@ -1,0 +1,40 @@
+diff --git a/agents/gemini.py b/agents/gemini.py
+index f0e1dc7..3d9d8f3 100644
+--- a/agents/gemini.py
++++ b/agents/gemini.py
+@@ -142,7 +142,7 @@ def _get_client():
+     if _client is None:
+         from google import genai
+ 
+-        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
++        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 300000})
+     return _client
+ 
+ 
+@@ -152,7 +152,7 @@ def _generate(model, system, messages, tools, temperature, seed):
+     cfg = types.GenerateContentConfig(
+         system_instruction=system or None,
+         temperature=temperature,
+-        seed=seed,
++        seed=None if seed is None else seed % 2147483647,
+         tools=[types.Tool(function_declarations=to_declarations(tools))] if tools else None,
+         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+     )
+diff --git a/agents/staff.py b/agents/staff.py
+index 1160db9..b4f02e5 100644
+--- a/agents/staff.py
++++ b/agents/staff.py
+@@ -307,7 +307,12 @@ class GeminiStaff:
+         text = str(view)
+         if self.notes:
+             text = "Your notes from earlier turns:\n" + "\n".join(self.notes[-3:]) + "\n\n" + text
+-        r = run_tool_loop(model_for("staff"), ROLE_PROMPTS[seat], text, tools, call, max_steps=BUDGET, temperature=float(os.environ.get("SLEEPER_TEMP_STAFF", "0.7")), seed=self.seed, log=self.log.append)
++        try:
++            r = run_tool_loop(model_for("staff"), ROLE_PROMPTS[seat], text, tools, call, max_steps=BUDGET, temperature=float(os.environ.get("SLEEPER_TEMP_STAFF", "0.7")), seed=self.seed, log=self.log.append)
++        except Exception as e:
++            if type(e).__name__ == "GeminiUnavailable" and "MAX_CALLS" in str(e):
++                return None
++            raise
+         if isinstance(r, dict) and r.get("text"):
+             self.notes.append(r["text"][:500])
+         return r

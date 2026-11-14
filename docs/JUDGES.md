@@ -1,6 +1,6 @@
 # The judges' 15 minutes
 
-Commands checked on `momin` c55f7d3. Numbers: `make eval` at c55f7d3, all scripted, Gemini rows NOT FOUND.
+Commands checked on `momin` 814a723. Numbers: `make eval` at 814a723, all scripted, Gemini rows NOT FOUND.
 
 ## 1. Setup (2 minutes)
 
@@ -26,7 +26,7 @@ It runs `python -m lab.eval`: oracle, reference, staff, do-nothing, stop-early, 
 
 Results land in `results/` (`results/runs/` per team, `results/eval/` for the table). Each run folder `results/runs/<team>-all-d20@1000-t3` has `days.jsonl`, `meta.json`, `summary.json` and a `days/` folder.
 
-Table "Team plays all 8 seats" at c55f7d3: oracle 1.000, reference 0.550, staff 0.250, every baseline 0.000 (do_nothing, stop_early, quarantine_all, refuse_all, trust_all). Known issues: the finance_ap seat-swapped tables show the oracle at 0.400 and the run warns about it, do not read them as a gap; `WARN trust_all 0.800 > staff 0.300` is printed for the exploit set and not reconciled with the 0.000 above.
+Table "Team plays all 8 seats" at 814a723: oracle 1.000, reference 0.550, staff 0.250, every baseline 0.000 (do_nothing, stop_early, quarantine_all, refuse_all, trust_all). Known issues: the finance_ap seat-swapped tables show the oracle at 0.800 and the run warns about it, do not read them as a gap; the older `WARN trust_all` line is no longer printed.
 
 ## 3. Read summary.json
 

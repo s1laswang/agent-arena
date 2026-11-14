@@ -1,0 +1,1567 @@
+{
+  "role": "investigators",
+  "subrole": "hint_ablation",
+  "model_id": "gemini-4-carbon",
+  "agent": "gemini:gemini-4-carbon+hint:premature_accusation,ignored_delay",
+  "tier": "medium",
+  "tiers_version": "v1.4",
+  "seeds": [
+    0,
+    1
+  ],
+  "hint": "premature_accusation,ignored_delay",
+  "commit": "361fbab16b9c1016f72480d4550bb200dc7f5d60",
+  "timestamp": "2026-11-14T14:05:45Z",
+  "n_episodes": 2,
+  "mean_score": 0.63,
+  "accuracy": 1.0,
+  "regret_total": 0.035156,
+  "mean_regret_per_episode": 0.017578,
+  "tags": {
+    "premature_accusation": {
+      "count": 0,
+      "episodes_with": 0,
+      "rate": 0.0,
+      "regret_sum": 0
+    },
+    "ignored_delay": {
+      "count": 0,
+      "episodes_with": 0,
+      "rate": 0.0,
+      "regret_sum": 0
+    },
+    "decoy_chase": {
+      "count": 0,
+      "episodes_with": 0,
+      "rate": 0.0,
+      "regret_sum": 0
+    },
+    "uninformative_canary": {
+      "count": 0,
+      "episodes_with": 0,
+      "rate": 0.0,
+      "regret_sum": 0
+    },
+    "over_restriction": {
+      "count": 0,
+      "episodes_with": 0,
+      "rate": 0.0,
+      "regret_sum": 0
+    },
+    "budget_waste": {
+      "count": 2,
+      "episodes_with": 2,
+      "rate": 1.0,
+      "regret_sum": 0.0
+    },
+    "no_accusation": {
+      "count": 0,
+      "episodes_with": 0,
+      "rate": 0.0,
+      "regret_sum": 0
+    }
+  },
+  "tag_report": {
+    "gemini:gemini-4-carbon+hint:premature_accusation,ignored_delay": {
+      "episodes": 2,
+      "tiers": {
+        "medium": 2
+      },
+      "regret_total": 0.0352,
+      "tags": {
+        "budget_waste": {
+          "count": 2,
+          "episodes_with": 2,
+          "regret_sum": 0.0,
+          "worst": {
+            "run_id": "hint-ablation-carbon-med01",
+            "seed": 0,
+            "t": 2,
+            "day": 1,
+            "tool": "search_messages",
+            "args": {
+              "query": " ",
+              "day_to": 1,
+              "day_from": 1
+            },
+            "regret": 0.0,
+            "p_best": 0.05,
+            "why": "repeated or failed call that used budget without new information"
+          },
+          "rate": 1.0
+        }
+      },
+      "score_mean": 0.63
+    }
+  },
+  "episodes": [
+    {
+      "tier": "medium",
+      "seed": 0,
+      "agent": "gemini:gemini-4-carbon+hint:premature_accusation,ignored_delay",
+      "score": 0.61,
+      "accused": "e05",
+      "correct": true,
+      "final_day": 10,
+      "end_reason": "accused",
+      "n_steps": 99,
+      "total_regret": 0.023515,
+      "p_accused": 1.0,
+      "tags_present": [
+        "budget_waste"
+      ],
+      "tag_counts": {
+        "premature_accusation": 0,
+        "ignored_delay": 0,
+        "decoy_chase": 0,
+        "uninformative_canary": 0,
+        "over_restriction": 0,
+        "budget_waste": 1,
+        "no_accusation": 0
+      },
+      "tagged_steps": [
+        {
+          "t": 2,
+          "day": 1,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": [
+            "budget_waste"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "t": 0,
+          "day": 1,
+          "action": "list_employees",
+          "regret": 0.0,
+          "p_best": null,
+          "tags": []
+        },
+        {
+          "t": 1,
+          "day": 1,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": []
+        },
+        {
+          "t": 2,
+          "day": 1,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": [
+            "budget_waste"
+          ]
+        },
+        {
+          "t": 3,
+          "day": 1,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": []
+        },
+        {
+          "t": 4,
+          "day": 1,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": []
+        },
+        {
+          "t": 5,
+          "day": 1,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": []
+        },
+        {
+          "t": 6,
+          "day": 1,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": []
+        },
+        {
+          "t": 7,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": []
+        },
+        {
+          "t": 8,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0501,
+          "tags": []
+        },
+        {
+          "t": 9,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0502,
+          "tags": []
+        },
+        {
+          "t": 10,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0503,
+          "tags": []
+        },
+        {
+          "t": 11,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0505,
+          "tags": []
+        },
+        {
+          "t": 12,
+          "day": 1,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.0506,
+          "tags": []
+        },
+        {
+          "t": 13,
+          "day": 2,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.0506,
+          "tags": []
+        },
+        {
+          "t": 14,
+          "day": 2,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.0506,
+          "tags": []
+        },
+        {
+          "t": 15,
+          "day": 2,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.0518,
+          "tags": []
+        },
+        {
+          "t": 16,
+          "day": 2,
+          "action": "plant_canary",
+          "regret": 0.002336,
+          "p_best": 0.058,
+          "tags": []
+        },
+        {
+          "t": 17,
+          "day": 2,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.058,
+          "tags": []
+        },
+        {
+          "t": 18,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.058,
+          "tags": []
+        },
+        {
+          "t": 19,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0582,
+          "tags": []
+        },
+        {
+          "t": 20,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0583,
+          "tags": []
+        },
+        {
+          "t": 21,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0585,
+          "tags": []
+        },
+        {
+          "t": 22,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0586,
+          "tags": []
+        },
+        {
+          "t": 23,
+          "day": 2,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.0587,
+          "tags": []
+        },
+        {
+          "t": 24,
+          "day": 3,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.065,
+          "tags": []
+        },
+        {
+          "t": 25,
+          "day": 3,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1567,
+          "tags": []
+        },
+        {
+          "t": 26,
+          "day": 3,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1567,
+          "tags": []
+        },
+        {
+          "t": 27,
+          "day": 3,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.168,
+          "tags": []
+        },
+        {
+          "t": 28,
+          "day": 3,
+          "action": "plant_canary",
+          "regret": 0.00518,
+          "p_best": 0.168,
+          "tags": []
+        },
+        {
+          "t": 29,
+          "day": 3,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.168,
+          "tags": []
+        },
+        {
+          "t": 30,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.168,
+          "tags": []
+        },
+        {
+          "t": 31,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1615,
+          "tags": []
+        },
+        {
+          "t": 32,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1627,
+          "tags": []
+        },
+        {
+          "t": 33,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1638,
+          "tags": []
+        },
+        {
+          "t": 34,
+          "day": 3,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1648,
+          "tags": []
+        },
+        {
+          "t": 35,
+          "day": 4,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.1648,
+          "tags": []
+        },
+        {
+          "t": 36,
+          "day": 4,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1648,
+          "tags": []
+        },
+        {
+          "t": 37,
+          "day": 4,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1648,
+          "tags": []
+        },
+        {
+          "t": 38,
+          "day": 4,
+          "action": "plant_canary",
+          "regret": 0.005545,
+          "p_best": 0.1584,
+          "tags": []
+        },
+        {
+          "t": 39,
+          "day": 4,
+          "action": "status",
+          "regret": 0.0,
+          "p_best": 0.1584,
+          "tags": []
+        },
+        {
+          "t": 40,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1584,
+          "tags": []
+        },
+        {
+          "t": 41,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1594,
+          "tags": []
+        },
+        {
+          "t": 42,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1605,
+          "tags": []
+        },
+        {
+          "t": 43,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1616,
+          "tags": []
+        },
+        {
+          "t": 44,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1627,
+          "tags": []
+        },
+        {
+          "t": 45,
+          "day": 4,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1636,
+          "tags": []
+        },
+        {
+          "t": 46,
+          "day": 5,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1636,
+          "tags": []
+        },
+        {
+          "t": 47,
+          "day": 5,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1636,
+          "tags": []
+        },
+        {
+          "t": 48,
+          "day": 5,
+          "action": "plant_canary",
+          "regret": 0.005933,
+          "p_best": 0.1628,
+          "tags": []
+        },
+        {
+          "t": 49,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1628,
+          "tags": []
+        },
+        {
+          "t": 50,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1565,
+          "tags": []
+        },
+        {
+          "t": 51,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1575,
+          "tags": []
+        },
+        {
+          "t": 52,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1586,
+          "tags": []
+        },
+        {
+          "t": 53,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1597,
+          "tags": []
+        },
+        {
+          "t": 54,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1608,
+          "tags": []
+        },
+        {
+          "t": 55,
+          "day": 5,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1616,
+          "tags": []
+        },
+        {
+          "t": 56,
+          "day": 6,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1616,
+          "tags": []
+        },
+        {
+          "t": 57,
+          "day": 6,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1616,
+          "tags": []
+        },
+        {
+          "t": 58,
+          "day": 6,
+          "action": "plant_canary",
+          "regret": 0.004521,
+          "p_best": 0.1669,
+          "tags": []
+        },
+        {
+          "t": 59,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1669,
+          "tags": []
+        },
+        {
+          "t": 60,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1631,
+          "tags": []
+        },
+        {
+          "t": 61,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.164,
+          "tags": []
+        },
+        {
+          "t": 62,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1652,
+          "tags": []
+        },
+        {
+          "t": 63,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1665,
+          "tags": []
+        },
+        {
+          "t": 64,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.165,
+          "tags": []
+        },
+        {
+          "t": 65,
+          "day": 6,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1661,
+          "tags": []
+        },
+        {
+          "t": 66,
+          "day": 7,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1661,
+          "tags": []
+        },
+        {
+          "t": 67,
+          "day": 7,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1661,
+          "tags": []
+        },
+        {
+          "t": 68,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1638,
+          "tags": []
+        },
+        {
+          "t": 69,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1601,
+          "tags": []
+        },
+        {
+          "t": 70,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.161,
+          "tags": []
+        },
+        {
+          "t": 71,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1621,
+          "tags": []
+        },
+        {
+          "t": 72,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1633,
+          "tags": []
+        },
+        {
+          "t": 73,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1641,
+          "tags": []
+        },
+        {
+          "t": 74,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1627,
+          "tags": []
+        },
+        {
+          "t": 75,
+          "day": 7,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1638,
+          "tags": []
+        },
+        {
+          "t": 76,
+          "day": 8,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.1638,
+          "tags": []
+        },
+        {
+          "t": 77,
+          "day": 8,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.571,
+          "tags": []
+        },
+        {
+          "t": 78,
+          "day": 8,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.571,
+          "tags": []
+        },
+        {
+          "t": 79,
+          "day": 8,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.5951,
+          "tags": []
+        },
+        {
+          "t": 80,
+          "day": 8,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5951,
+          "tags": []
+        },
+        {
+          "t": 81,
+          "day": 8,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5838,
+          "tags": []
+        },
+        {
+          "t": 82,
+          "day": 8,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5723,
+          "tags": []
+        },
+        {
+          "t": 83,
+          "day": 8,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5609,
+          "tags": []
+        },
+        {
+          "t": 84,
+          "day": 8,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5723,
+          "tags": []
+        },
+        {
+          "t": 85,
+          "day": 8,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.5838,
+          "tags": []
+        },
+        {
+          "t": 86,
+          "day": 9,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.5838,
+          "tags": []
+        },
+        {
+          "t": 87,
+          "day": 9,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.5838,
+          "tags": []
+        },
+        {
+          "t": 88,
+          "day": 9,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.5838,
+          "tags": []
+        },
+        {
+          "t": 89,
+          "day": 9,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.6122,
+          "tags": []
+        },
+        {
+          "t": 90,
+          "day": 9,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.601,
+          "tags": []
+        },
+        {
+          "t": 91,
+          "day": 9,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5897,
+          "tags": []
+        },
+        {
+          "t": 92,
+          "day": 9,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5784,
+          "tags": []
+        },
+        {
+          "t": 93,
+          "day": 9,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5897,
+          "tags": []
+        },
+        {
+          "t": 94,
+          "day": 9,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.601,
+          "tags": []
+        },
+        {
+          "t": 95,
+          "day": 9,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.6122,
+          "tags": []
+        },
+        {
+          "t": 96,
+          "day": 10,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.6122,
+          "tags": []
+        },
+        {
+          "t": 97,
+          "day": 10,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 1.0,
+          "tags": []
+        },
+        {
+          "t": 98,
+          "day": 10,
+          "action": "accuse",
+          "regret": 0.0,
+          "p_best": 1.0,
+          "tags": [],
+          "p_accused": 1.0
+        }
+      ]
+    },
+    {
+      "tier": "medium",
+      "seed": 1,
+      "agent": "gemini:gemini-4-carbon+hint:premature_accusation,ignored_delay",
+      "score": 0.65,
+      "accused": "e02",
+      "correct": true,
+      "final_day": 8,
+      "end_reason": "accused",
+      "n_steps": 74,
+      "total_regret": 0.011641,
+      "p_accused": 1.0,
+      "tags_present": [
+        "budget_waste"
+      ],
+      "tag_counts": {
+        "premature_accusation": 0,
+        "ignored_delay": 0,
+        "decoy_chase": 0,
+        "uninformative_canary": 0,
+        "over_restriction": 0,
+        "budget_waste": 1,
+        "no_accusation": 0
+      },
+      "tagged_steps": [
+        {
+          "t": 2,
+          "day": 1,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": [
+            "budget_waste"
+          ]
+        }
+      ],
+      "steps": [
+        {
+          "t": 0,
+          "day": 1,
+          "action": "list_employees",
+          "regret": 0.0,
+          "p_best": null,
+          "tags": []
+        },
+        {
+          "t": 1,
+          "day": 1,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": []
+        },
+        {
+          "t": 2,
+          "day": 1,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": [
+            "budget_waste"
+          ]
+        },
+        {
+          "t": 3,
+          "day": 1,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": []
+        },
+        {
+          "t": 4,
+          "day": 1,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": []
+        },
+        {
+          "t": 5,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.05,
+          "tags": []
+        },
+        {
+          "t": 6,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0501,
+          "tags": []
+        },
+        {
+          "t": 7,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0502,
+          "tags": []
+        },
+        {
+          "t": 8,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0503,
+          "tags": []
+        },
+        {
+          "t": 9,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0505,
+          "tags": []
+        },
+        {
+          "t": 10,
+          "day": 1,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.0506,
+          "tags": []
+        },
+        {
+          "t": 11,
+          "day": 1,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.0507,
+          "tags": []
+        },
+        {
+          "t": 12,
+          "day": 2,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.0507,
+          "tags": []
+        },
+        {
+          "t": 13,
+          "day": 2,
+          "action": "search_messages",
+          "regret": 0.0,
+          "p_best": 0.1075,
+          "tags": []
+        },
+        {
+          "t": 14,
+          "day": 2,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.1075,
+          "tags": []
+        },
+        {
+          "t": 15,
+          "day": 2,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.1161,
+          "tags": []
+        },
+        {
+          "t": 16,
+          "day": 2,
+          "action": "plant_canary",
+          "regret": 0.001254,
+          "p_best": 0.1161,
+          "tags": []
+        },
+        {
+          "t": 17,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1161,
+          "tags": []
+        },
+        {
+          "t": 18,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1165,
+          "tags": []
+        },
+        {
+          "t": 19,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1171,
+          "tags": []
+        },
+        {
+          "t": 20,
+          "day": 2,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.1124,
+          "tags": []
+        },
+        {
+          "t": 21,
+          "day": 2,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.1129,
+          "tags": []
+        },
+        {
+          "t": 22,
+          "day": 3,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.1129,
+          "tags": []
+        },
+        {
+          "t": 23,
+          "day": 3,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.208,
+          "tags": []
+        },
+        {
+          "t": 24,
+          "day": 3,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.208,
+          "tags": []
+        },
+        {
+          "t": 25,
+          "day": 3,
+          "action": "plant_canary",
+          "regret": 0.005065,
+          "p_best": 0.2065,
+          "tags": []
+        },
+        {
+          "t": 26,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2065,
+          "tags": []
+        },
+        {
+          "t": 27,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2083,
+          "tags": []
+        },
+        {
+          "t": 28,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2087,
+          "tags": []
+        },
+        {
+          "t": 29,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2107,
+          "tags": []
+        },
+        {
+          "t": 30,
+          "day": 3,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2046,
+          "tags": []
+        },
+        {
+          "t": 31,
+          "day": 3,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.2065,
+          "tags": []
+        },
+        {
+          "t": 32,
+          "day": 4,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.2065,
+          "tags": []
+        },
+        {
+          "t": 33,
+          "day": 4,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.2065,
+          "tags": []
+        },
+        {
+          "t": 34,
+          "day": 4,
+          "action": "plant_canary",
+          "regret": 0.005322,
+          "p_best": 0.2246,
+          "tags": []
+        },
+        {
+          "t": 35,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2246,
+          "tags": []
+        },
+        {
+          "t": 36,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2265,
+          "tags": []
+        },
+        {
+          "t": 37,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2286,
+          "tags": []
+        },
+        {
+          "t": 38,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2307,
+          "tags": []
+        },
+        {
+          "t": 39,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2329,
+          "tags": []
+        },
+        {
+          "t": 40,
+          "day": 4,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.2246,
+          "tags": []
+        },
+        {
+          "t": 41,
+          "day": 4,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.2265,
+          "tags": []
+        },
+        {
+          "t": 42,
+          "day": 5,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.2265,
+          "tags": []
+        },
+        {
+          "t": 43,
+          "day": 5,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.5248,
+          "tags": []
+        },
+        {
+          "t": 44,
+          "day": 5,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.5248,
+          "tags": []
+        },
+        {
+          "t": 45,
+          "day": 5,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.5248,
+          "tags": []
+        },
+        {
+          "t": 46,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5248,
+          "tags": []
+        },
+        {
+          "t": 47,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5131,
+          "tags": []
+        },
+        {
+          "t": 48,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5248,
+          "tags": []
+        },
+        {
+          "t": 49,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5131,
+          "tags": []
+        },
+        {
+          "t": 50,
+          "day": 5,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5248,
+          "tags": []
+        },
+        {
+          "t": 51,
+          "day": 5,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.5131,
+          "tags": []
+        },
+        {
+          "t": 52,
+          "day": 6,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.5131,
+          "tags": []
+        },
+        {
+          "t": 53,
+          "day": 6,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.5131,
+          "tags": []
+        },
+        {
+          "t": 54,
+          "day": 6,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.5131,
+          "tags": []
+        },
+        {
+          "t": 55,
+          "day": 6,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.5378,
+          "tags": []
+        },
+        {
+          "t": 56,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5378,
+          "tags": []
+        },
+        {
+          "t": 57,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5261,
+          "tags": []
+        },
+        {
+          "t": 58,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5378,
+          "tags": []
+        },
+        {
+          "t": 59,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5261,
+          "tags": []
+        },
+        {
+          "t": 60,
+          "day": 6,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5378,
+          "tags": []
+        },
+        {
+          "t": 61,
+          "day": 6,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.5261,
+          "tags": []
+        },
+        {
+          "t": 62,
+          "day": 7,
+          "action": "list_documents",
+          "regret": 0.0,
+          "p_best": 0.5261,
+          "tags": []
+        },
+        {
+          "t": 63,
+          "day": 7,
+          "action": "read_access_logs",
+          "regret": 0.0,
+          "p_best": 0.5261,
+          "tags": []
+        },
+        {
+          "t": 64,
+          "day": 7,
+          "action": "plant_canary",
+          "regret": 0.0,
+          "p_best": 0.5508,
+          "tags": []
+        },
+        {
+          "t": 65,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5508,
+          "tags": []
+        },
+        {
+          "t": 66,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5392,
+          "tags": []
+        },
+        {
+          "t": 67,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5508,
+          "tags": []
+        },
+        {
+          "t": 68,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5392,
+          "tags": []
+        },
+        {
+          "t": 69,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5508,
+          "tags": []
+        },
+        {
+          "t": 70,
+          "day": 7,
+          "action": "interview",
+          "regret": 0.0,
+          "p_best": 0.5392,
+          "tags": []
+        },
+        {
+          "t": 71,
+          "day": 7,
+          "action": "advance_day",
+          "regret": 0.0,
+          "p_best": 0.5508,
+          "tags": []
+        },
+        {
+          "t": 72,
+          "day": 8,
+          "action": "check_leak_feed",
+          "regret": 0.0,
+          "p_best": 0.5508,
+          "tags": []
+        },
+        {
+          "t": 73,
+          "day": 8,
+          "action": "accuse",
+          "regret": 0.0,
+          "p_best": 1.0,
+          "tags": [],
+          "p_accused": 1.0
+        }
+      ]
+    }
+  ]
+}

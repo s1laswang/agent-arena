@@ -24,7 +24,7 @@ with open(d / "merged.csv", "w", newline="") as fh:
 by = defaultdict(lambda: defaultdict(dict))  # cell -> agent -> seed -> (score, correct)
 meta = {}
 for r in rows:
-    by[r["cell"]][r["agent"]][r["seed"]] = (float(r["score"]), int(r["correct"]))
+    by[r["cell"]][r["agent"]][r["seed"]] = (float(r["score"]), int(r["correct"]), int(r.get("wrong", 0)))
     meta[r["cell"]] = {"tier": r["tier"], **{k: r[k] for k in GRID}}
 summ = []
 for c, ag in by.items():
@@ -32,6 +32,7 @@ for c, ag in by.items():
     for a, sd in ag.items():
         row[f"{a}_score"] = st.mean(v[0] for v in sd.values())
         row[f"{a}_acc"] = st.mean(v[1] for v in sd.values())
+        row[f"{a}_wrong"] = st.mean(v[2] for v in sd.values())
         row[f"{a}_n"] = len(sd)
     row["gap"] = row.get("solver_score", 0) - row.get("heuristic_score", 0)
     summ.append(row)
@@ -52,7 +53,7 @@ for tier in rules.TIERS:
     diff = [s[k][0] - h.get(k, (0, 0))[0] for k in s]
     n_ci = int((1.96 * st.stdev(diff) / (b["gap"] / 3)) ** 2) + 1 if b["gap"] > 0 and len(diff) > 1 else None
     rec[tier] = {"cell": b["cell"], "params": {k: b[k] for k in GRID}, "solver_acc": b["solver_acc"],
-                 "heuristic_acc": b.get("heuristic_acc"), "random_acc": b.get("random_acc"),
+                 "heuristic_acc": b.get("heuristic_acc"), "solver_wrong": b.get("solver_wrong"), "random_acc": b.get("random_acc"),
                  "gap": b["gap"], "seeds_for_ci": n_ci, "n_cells_ok": len(ok)}
 (d / "recommend.json").write_text(json.dumps(rec, indent=2))
 print(json.dumps(rec, indent=2))

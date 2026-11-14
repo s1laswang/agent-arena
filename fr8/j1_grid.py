@@ -33,23 +33,21 @@ def cells():
 
 
 def load_policy(name: str, seed: int):
-    """Resolve a policy factory. Tries the module layout from docs/agents/ENV.md."""
+    """solver -> canary.solver.policy.SolverPolicy; heuristic -> baselines 'obvious_heuristic'; else BASELINES[name]."""
     if name == "solver":
         return importlib.import_module("canary.solver.policy").SolverPolicy()
-    b = importlib.import_module("canary.baselines")
-    for attr in (f"make_{name}", "make", "get_policy"):
-        f = getattr(b, attr, None)
-        if f is not None:
-            try:
-                return f(seed=seed) if attr.startswith("make_") else f(name, seed=seed)
-            except TypeError:
-                return f() if attr.startswith("make_") else f(name)
-    cls = "".join(p.capitalize() for p in name.split("_")) + "Policy"
-    C = getattr(b, cls)
+    from canary.baselines import BASELINES
+    return BASELINES["obvious_heuristic" if name == "heuristic" else name](seed=seed)
+
+
+def run(env, policy, agent):
     try:
-        return C(seed=seed)
-    except TypeError:
-        return C()
+        from canary.eval import run_episode
+    except ImportError:  # eval not merged yet: baselines.play drives the same public tool loop
+        from canary.baselines import play
+        play(env, policy)
+        return env.result(agent)
+    return run_episode(env, policy)
 
 
 def main():
@@ -73,19 +71,18 @@ def main():
     path = out / f"cell{a.task:04d}.csv"
     base = rules.TIERS[tier]
     rules.TIERS[tier] = dataclasses.replace(base, **params)
-    cols = ["cell", "tier", "n_employees", *GRID, "agent", "seed", "score", "correct", "final_day", "end_reason", "secs"]
+    cols = ["cell", "tier", "n_employees", *GRID, "agent", "seed", "score", "correct", "wrong", "accused", "final_day", "end_reason", "secs"]
     with open(path, "w", newline="") as fh:
         w = csv.DictWriter(fh, cols); w.writeheader()
         if a.dry:
             print(f"DRY cell {a.task}/{len(all_cells)} tier={tier} {params} -> {path}"); return
         from canary.env import Env
-        from canary.eval import run_episode
         for agent in a.agents.split(","):
             for s in seeds:
                 t0 = time.time()
-                r = run_episode(Env(tier=tier, seed=s), load_policy(agent, s))
+                r = run(Env(tier=tier, seed=s), load_policy(agent, s), agent)
                 w.writerow({"cell": a.task, "tier": tier, "n_employees": base.n_employees, **{k: json.dumps(v) if isinstance(v, tuple) else v for k, v in params.items()},
-                            "agent": agent, "seed": s, "score": r.score, "correct": int(r.correct),
+                            "agent": agent, "seed": s, "score": r.score, "correct": int(r.correct), "wrong": int(r.accused is not None and not r.correct), "accused": r.accused or "",
                             "final_day": r.final_day, "end_reason": r.end_reason, "secs": round(time.time() - t0, 3)})
             fh.flush()
     print(f"done cell {a.task} -> {path}")

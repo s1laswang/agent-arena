@@ -54,6 +54,8 @@ class TierParams:
         return asdict(self)
 
 
+TIERS_VERSION = "v1.2"  # FROZEN 02:50 EET 14 Nov (FR8 co-tune, 800 fresh seeds). Bug fixes only.
+
 TIERS: dict[str, TierParams] = {
     # tiers v1.1 (bayes-solver): medium max_variants 2->3, hard framing_rate 1.5->3.0 (monotone easy>medium>hard)
     # tiers v1 (04:40): FR8 J1 recommendation (153k episodes, v0.3 scoring), fr8/analysis/out/j1_recommendation.md

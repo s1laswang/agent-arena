@@ -137,4 +137,16 @@ def test_counterfactual_flips_one_seat_fix(tmp_path):
     (tmp_path / "days" / f"{i}-t0.json").write_text(json.dumps(d))
     c = counterfactual.counterfactual(tmp_path)
     assert c["losses"] == 1 and c["fixed"] == 1
-    assert "100%" in counterfactual.table(c)
+    assert "1 of 1 lost days flip with one careful seat" in counterfactual.table(c)
+
+
+def test_headline_block(tmp_path):
+    for team, noop in (("staff", True), ("reference", False)):
+        d = tmp_path / f"{team}-all-d1@1-t1"
+        (d / "days").mkdir(parents=True)
+        x = dump(NoopAgent if noop else OracleAgent)
+        x["result"].update(team=team, day_id=1)
+        (d / "days" / "1-t0.json").write_text(json.dumps(x))
+        (d / "summary.json").write_text(json.dumps({"team": team, "n_runs": 1, "reward_mean": x["result"]["reward"], "pass^1": x["result"]["reward"], "sleeper_success_rate": 0.0, "false_accusation_rate": 0.0, "ticket_completion": 1.0, "by_goal_kind": {}}))
+    t = report.build(tmp_path)
+    assert "## Headline facts" in t and "Staff scored 0.00 reward over 1 runs, the reference 1.00" in t and "Command:" in t

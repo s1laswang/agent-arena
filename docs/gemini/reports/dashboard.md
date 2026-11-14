@@ -1,0 +1,102 @@
+# G5 Dashboard + demo assets: report
+
+## Sat 18:25: dashboard rebuilt on ladder v1 + swarm, screenshots refreshed (CEO 18:55 ask)
+
+**Done**
+- Background loop checked after the 15:35–17:30 outage: it survived and exited on its timer at 17:38. Rebuilt by hand at 18:23.
+- `results/gemini/dashboard.html` (122 KB) built from the real ledger (`--ledger auto`, 11,187 calls) + G2 `ladder.json` (18:21, 125 episodes / 29 cells)
+  + G4 `swarm.json` (18:20, 35 attacks) + G1 `gateway_bench.json`. Atlas has no committed `atlas.json` yet, so it shows "pending".
+- Ledger totals at 18:23: 11,187 calls, 251M input / 0.49M output / 4.39M thinking / 204M cached tokens, $88.75 list, 0.77% errors,
+  p50 3.0 s / p95 25 s, 10 models, 8 features.
+- Swarm panel follows G4's new semantics. The headline is the **best unjustified score** (+0.000 on hard vs solver +0.602), and the 1 honest
+  detective win (+0.90 on medium, accusation justified by public evidence) is shown hollow and excluded. The strip plots score − solver on
+  the same seed, so hard and medium share one axis. 0 exploits; 5 regression tests.
+- Screenshots (1600 px, light): docs/gemini/assets/dashboard-{headline,usage,ladder,swarm}.png. Assets total 3.1 MB.
+
+**Next** (after 19:30): atlas panel when G3 commits atlas.json; narrate.py to use best_unjustified; narration v1; dark + atlas screenshots.
+
+## Sat 15:00 — PR-1 ready; G2 ladder + G1 gateway bench live in the dashboard
+
+**Done**
+- **Ready for PR 1 now** (CEO deadline 18:30): branch `gemini-dashboard` has gemini-track merged in; all `tests/test_gemini_lab_*.py`
+  pass (61 in 11 s with the teammates' tests); full suite earlier 575 passed / 6 skipped. New `make lab-dashboard` (ARGS="--ledger auto").
+- Dashboard renders G2's committed `ladder.json` (14:50, 64 episodes / 24 cells, smoke-sized n=2): diverging heatmap (red = worse than
+  doing nothing, grey = 0, blue → solver), thinking curve, cost frontier, "which mistakes does thinking fix" matrix, reference lines.
+- Gateway throughput card from G1's `gateway_bench.json` (3.8-flash ~1.6k req/min at 64 clients; carbon saturates ~175).
+- Phone width: 16 px gutters, smaller type, matrix scrolls inside its card (checked at 520 px; headless Chrome floors the window at ~500).
+- VIDEO.md hook now opens on the Live commentator's day-5 call (29.0–38.5 s of commentator-demo.wav), VO shortened to 45 words.
+- How I build: `/tmp`-staged read-only copies of each teammate's committed `results/gemini/*` (owner branch or gemini-track, whichever
+  is newer) + `--ledger auto`; results/gemini/dashboard.html is refreshed and committed when results change or hourly.
+
+**Next**: atlas/swarm panels as soon as G3/G4 commit JSON; narration v1 at M2 once numbers are final enough to speak.
+
+## Sat 14:50 — dashboard v1 on the real ledger, VIDEO.md, narrate.py, Live commentator clip (ahead of M2)
+
+**Done**
+- **Merge-ready for PR 1** (`canary/gemini/{dashboard,shoot,narrate,commentator}.py`, fixtures, 4 test files): `make test`
+  equivalent green on this branch (575 passed, 6 skipped, 6.4 min); lab tests 13 passed in 0.3 s, keyless.
+- **v1 from real data**: `python -m canary.gemini.dashboard --ledger auto` finds every ledger on this Mac (data/gemini/ledger,
+  ~/agent-arena-data/gemini/**/_ledger, sibling gemini-* worktrees), dedupes rows that were synced twice, and writes
+  `results/gemini/dashboard.html` (committed, 70 KB). At 14:43: **5,502 Gemini calls**, 8 features, 10 models, 73M input / 1M thinking /
+  58M cached tokens, $21.10 list price, 0.6% errors, p50 2.7 s / p95 13 s. Ladder/atlas/swarm panels show "pending" until their JSON lands.
+- Reads the **real result shapes** now: G2 `ladder.json` (`rows` with ratio/CI/thinking_per_ep/cost_per_ep, `reference`, `tags.pooled`
+  → a "Which mistakes does thinking fix?" matrix, solver/grok_tactics/heuristic reference lines), G3 `atlas.json` (verification
+  pass rate, multimodal localisation, cohorts, summary, mechanism/solver_would, step-verified quotes, chart thumbnails),
+  G4 `swarm.json` (per_tier paired solver mean, counts, plan.hypothesis, violation kinds, `tests/test_gemini_lab_swarm_found.py` count).
+  Large fields (tool calls, per-episode lists, seeds) are dropped before embedding. Fixtures regenerated in these shapes.
+- Unpriced flash rows (3.1-flash-lite, 3.5-flash) are repriced with the same table G2 uses (and `prices_usd_per_1m` from
+  ladder.json); the cost tile counts what is still unpriced (embedding/TTS/Live).
+- Screenshots (real data): `docs/gemini/assets/dashboard-headline.png`, `dashboard-usage.png` (1600 px). Fixture screenshot removed.
+- `docs/gemini/VIDEO.md`: 3:00 storyboard, shot list, asset table and `VO[id]` narration lines with `{placeholders}`.
+- `canary/gemini/narrate.py`: fills placeholders from results + ledger (refuses to speak a missing number unless `--allow-pending`),
+  one `gemini-3.8-flash-tts` call per clip, `--voices` auditions, `--check` = Gemini 3.8 Flash transcribes each clip and scores recall
+  against the script. Findings: the SDK default API version rejects `speech_config` for 3.8 TTS (400 "Unknown name speechConfig") →
+  we force `v1beta`; the model returns `audio/wav`; style prefixes ("Say in a … voice:") are **read aloud** by most voices and
+  `system_instruction` is rejected, so the voice carries the style. Auditions on the hook: Kore 25.1 s (≈150 wpm, matches the budget,
+  default), Charon 18.8, Puck 21.6, Algieba 23.4, Zephyr 21.7, Orus 20.7; transcript recall 94–98%.
+- **Stretch done early**: `canary/gemini/commentator.py`, a Live API (`gemini-3.8-live`) sportscaster. Streams one text turn per game
+  day of the committed gemini-4-carbon hard seed 9 (correct accusation, +0.74) and records audio + output transcription.
+  Clip: `docs/gemini/assets/narration/commentator-demo.wav` (50.6 s) + `.json` (events, commentary). Guarded against inventing leaks
+  (first take called a V drop "a leak"; the system prompt now forbids that and the second take is accurate).
+
+**Next**: rebuild as G2/G3/G4 results land (target 19:00 v1 with ladder); narration clips once the numbers exist (22:00);
+final screenshots incl. dark + ladder/atlas figures (Sun 05:00).
+
+**Asks**: CEO, for the published page run `python -m canary.gemini.dashboard --ledger auto` (or point `--ledger` at the synced FR8
+ledger dir). `canary/llm/pricing.py` still lacks 3.1-flash-lite / 3.5-flash (the dashboard reprices them itself).
+
+## Sat 14:25 — M1 (dashboard v0 from fixtures) done
+
+**Done**
+- `canary/gemini/dashboard.py`: `python -m canary.gemini.dashboard [--ledger DIR|FILE ...] [--results results/gemini] [--out results/gemini/dashboard.html] [--json]`.
+  One self-contained HTML file (inline CSS/JS/SVG, no network, light + dark + a theme toggle, `?panel=<name>` focus mode for screenshots).
+  Panels: 01 headline (calls hero + 10 tiles + capability chips), 02 usage (feature × model heat matrix with calls/tokens/cost toggle,
+  calls-over-time stacked by feature, thinking share by model, cache + batch savings, latency p50/p95 by model, table view, error types),
+  03 ladder (heatmap % of solver by model × level per tier, score vs thinking tokens, cost Pareto frontier), 04 atlas (corpus tiles,
+  ranked modes with regret share, verified quotes, chart thumbnails embedded as data URIs, human agreement), 05 swarm (tiles, strip plot
+  of every attack vs the solver line, top attempts, findings). Every panel shows a "pending" state when its JSON is missing or broken.
+- `--json` prints the aggregated usage summary (totals, by_feature, by_model, cache, batch, kinds, errors, capabilities).
+- Privacy: only whitelisted ledger fields are read, `meta` is never embedded, error strings are reduced to `429 RESOURCE_EXHAUSTED`-style
+  types, and key-shaped strings in results JSON are redacted.
+- `canary/gemini/shoot.py`: headless-Chrome panel screenshots (1600 px, cropped), no playwright.
+- Fixtures: `tests/fixtures/gemini_lab/` (generator + 2,094-row synthetic ledger + ladder/atlas/swarm JSON, all marked `synthetic: true`,
+  and the page shows a "SYNTHETIC FIXTURE" badge on any panel fed by them).
+- Tests: `tests/test_gemini_lab_dashboard.py`, 7 tests, 0.2 s keyless (renders from fixtures, no network refs, planted fake key never
+  reaches the HTML, missing/broken JSON → pending, `--json`).
+- Screenshot: `docs/gemini/assets/dashboard-v0-fixture-ladder.png` (fixture data, not citable).
+
+**Result JSON shapes the dashboard reads** (tolerant; G2/G4 please match or tell me):
+- `ladder.json`: `{generated_at, git_sha, ledger_run_ids, solver:{tier:score}, cells:[{model, level, tier, n, score_mean, solver_mean,
+  pct_solver, pct_solver_ci95:[lo,hi], thinking_tokens_per_episode, cost_usd_per_episode, regret_mean}]}`.
+  Aliases accepted: `thinking_level`, `episodes`, `frac_solver`, `ci95`, `score`, `solver`, `thinking_per_episode`, `cost_per_episode`.
+  If `pct_solver` is missing it is computed from `score_mean / solver_mean`. Optional `results/gemini/ladder.png` is embedded.
+- `atlas.json`: TEAM.md shape; `chart` is a path relative to `results/gemini/` (PNG/SVG ≤ 400 KB embedded). `human_agreement` may be a
+  number or `{agree, total, rate}`.
+- `swarm.json`: TEAM.md shape plus optional `solver_score`, `findings:[{title, verified, test}]`, `tests_written`, `model`, `mode`, `tier`.
+  `best_non_solver` may be a number or an object with `score`.
+
+**Next**: v1 on the real ledger (data/gemini/ledger) + whatever results exist by 19:00; then VIDEO.md, narrate.py, screenshots.
+
+**Blockers / asks**
+- `canary/llm/pricing.py` has no list price for `gemini-3.5-flash`, `gemini-3.1-flash-lite`, `gemini-embedding-2` or the TTS/Live
+  models, so their ledger rows cost $0 (`cost_unknown`); the dashboard flags the count. CEO: add prices if we want exact $ totals.

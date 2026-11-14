@@ -117,5 +117,10 @@ def lab_client(spec: str, feature: str, run_id: str = "", meta: dict | None = No
     every call goes through the Canary Lab gateway; otherwise direct with GEMINI_API_KEY."""
     if spec.partition(":")[0] == "gemini" and kw.get("sdk_client") is None:
         from .sdk import genai_client
-        kw["sdk_client"] = genai_client()
+        tag = None
+        if meta:  # one logical run (e.g. a ladder cell) -> a stable replay tag for the gateway's record/replay
+            import hashlib
+            tag = hashlib.sha256(json.dumps({"feature": feature, "meta": meta}, sort_keys=True,
+                                            default=str).encode()).hexdigest()[:16]
+        kw["sdk_client"] = genai_client(replay_tag=tag)
     return LedgeredClient(get_client(spec, **kw), feature=feature, run_id=run_id, meta=meta)

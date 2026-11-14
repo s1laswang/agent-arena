@@ -16,7 +16,7 @@ from canary.gemini.provenance import audit_provenance, scan_file_secrets
 from canary.llm.stub import StubClient
 from canary.solver.policy import SolverPolicy
 from scripts import run_paired_skill_designer as psd
-from scripts import skill_ladder
+from scripts import paired_skill_rungs as skill_ladder
 
 ROOT = Path(__file__).resolve().parents[1]
 COMMITTED_DIR = ROOT / "results" / "gemini_roles" / "adaptive_mole" / "paired-solvable-scenarios-carbon"

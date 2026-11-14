@@ -17,7 +17,28 @@ HINTS: dict[str, str] = {
     "over_restriction": "Each restriction costs company value every day it stays in place.",
     "budget_waste": "Tool calls and daily actions are limited; spend them on informative actions.",
     "no_accusation": "The episode scores zero unless you accuse someone before it ends.",
+    # PLAN-95 B1 (text fixed by the CEO, checked by head-env against instruction() v1.4). Opt-in only.
+    "ev_delay": "Accusing has positive expected value only if P(correct) > 1/(1+V), where V is your score if correct "
+                "(true V, which can be below the shown V while leaks are still in transit); otherwise abstaining "
+                "(score 0) is better. Leaks reach the feed 1\u20133 days (medium) / 2\u20133 days (hard) after they "
+                "happen, uniformly.",
 }
+# v2 (hint ablation, NEXT-LEVEL HEAD-AGENTS 3): one sentence per failure mode, restating ONLY facts already on the
+# instruction page (so a tag drop shows the information suffices, not that we leaked new information).
+HINTS_V2: dict[str, str] = {
+    "premature_accusation": "Before accusing, estimate P(correct) from the evidence: accusing is only worth it if "
+                            "P x V - (1 - P) > 0; otherwise keep investigating, or end without accusing (score 0).",
+    "decoy_chase": "After-hours accesses are partly faked by the mole (framing), half of them onto the angry decoy, "
+                   "so logs and anger are weak evidence; leaked canary variants are strong evidence.",
+    "ignored_delay": "A leak appears in the feed 2 or 3 days after it happens, so canaries planted in the last "
+                     "3 days may not have surfaced yet.",
+    "uninformative_canary": "A canary only helps if different suspects receive different variants; split the "
+                            "remaining suspects into groups of similar probability.",
+    "over_restriction": "Each restriction costs company value every day it stays in place.",
+    "budget_waste": "Tool calls and daily actions are limited; spend them on informative actions.",
+    "no_accusation": "The episode scores zero unless you accuse someone before it ends.",
+}
+HINT_SETS = {"v1": HINTS, "v2": HINTS_V2}
 NUDGE = "Please call a tool now (for example status, or accuse when you are confident)."
 TOOL_RESULT_CHARS = 2000   # only used by context="window"
 WINDOW_TURNS = 40          # only used by context="window"
@@ -33,12 +54,13 @@ def _get_client(spec: str, **kw):
     return get_client(spec, **kw)
 
 
-def build_system_prompt(instruction: str, hint: str | None = None) -> str:
+def build_system_prompt(instruction: str, hint: str | None = None, hint_set: str = "v1") -> str:
+    hints = HINT_SETS[hint_set]
     parts = [instruction.rstrip(), "", GENERIC]
     for tag in [h.strip() for h in (hint or "").split(",") if h.strip()]:
-        if tag not in HINTS:
-            raise ValueError(f"unknown hint tag {tag!r}; known: {sorted(HINTS)}")
-        parts.append(HINTS[tag])
+        if tag not in hints:
+            raise ValueError(f"unknown hint tag {tag!r}; known: {sorted(hints)}")
+        parts.append(hints[tag])
     return "\n".join(parts)
 
 
@@ -46,7 +68,7 @@ class LLMPolicy:
     def __init__(self, spec: str, hint: str | None = None, temperature: float = 0.0,
                  max_turns: int = WINDOW_TURNS, client: Any = None, max_tokens: int | None = None,
                  context: str = "full", reasoning_effort: str | None = DEFAULT_REASONING_EFFORT,
-                 api: str | None = None):
+                 api: str | None = None, hint_set: str = "v1"):
         """context="full" (default): the whole transcript, every tool result in full.
         context="window": legacy lossy mode (system + last `max_turns` assistant turns, older tool
         results cut to TOOL_RESULT_CHARS). reasoning_effort/api are passed to openai:* clients only."""
@@ -54,6 +76,9 @@ class LLMPolicy:
             raise ValueError(f"context must be one of {CONTEXTS}")
         self.spec, self.hint, self.temperature, self.max_turns, self.max_tokens = spec, hint, temperature, max_turns, max_tokens
         self.context, self.reasoning_effort, self.api = context, reasoning_effort, api
+        if hint_set not in HINT_SETS:
+            raise ValueError(f"hint_set must be one of {sorted(HINT_SETS)}")
+        self.hint_set = hint_set
         self.name = spec if not hint else f"{spec}+hint:{hint}"
         self._client = client
         self.reset([], "")
@@ -71,7 +96,7 @@ class LLMPolicy:
 
     def reset(self, tools_spec: list[dict], instruction: str) -> None:
         self.tools = tools_spec
-        self.system = {"role": "system", "content": build_system_prompt(instruction, self.hint)}
+        self.system = {"role": "system", "content": build_system_prompt(instruction, self.hint, self.hint_set)}
         self.transcript: list[dict] = [self.system, {"role": "user", "content": "Begin the investigation."}]
         self.usage = {"in": 0, "out": 0, "cost_usd": 0.0, "calls": 0}
         self._queue: deque = deque()

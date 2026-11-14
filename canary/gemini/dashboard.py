@@ -19,6 +19,7 @@ import datetime as dt
 import glob
 import json
 import math
+import os
 import re
 import subprocess
 import sys
@@ -40,6 +41,11 @@ LEVEL_ORDER = ["minimal", "low", "medium", "high"]
 SECRET_RE = re.compile(r"(AIza[0-9A-Za-z_\-]{8,}|sk-[A-Za-z0-9_\-]{12,}|ya29\.[0-9A-Za-z_\-]+|"
                        r"(?i:api[_-]?key|key|token|secret)\s*[=:]\s*\S+)")
 MAX_THUMB_BYTES = 400_000
+# USD / 1M (input, output incl. thinking, cached input) for models canary.llm.pricing lacks. Same source and values as
+# G2's ladder_report.PRICES (aistudio.google.com/docs/pricing, checked 2026-11-14 14:20 EET). Rows the ledger marked
+# cost_unknown are repriced from this table (and from ladder.json "prices_usd_per_1m" when present); the page says so.
+EXTRA_PRICES: dict[str, tuple[float, float, float]] = {
+    "gemini-3.1-flash-lite": (0.25, 1.50, 0.025), "gemini-3.5-flash": (0.75, 3.75, 0.075)}
 
 
 # ---------------------------------------------------------------- helpers
@@ -89,8 +95,13 @@ def _price(model: str, table: dict):
 
 
 def cache_saving_usd(model: str, cached: int) -> float:
+    if not cached:
+        return 0.0
+    ex = _price(model, EXTRA_PRICES)
+    if ex and not _price(model, PRICES):
+        return cached * (ex[0] - ex[2]) / 1e6
     p = _price(model, PRICES)
-    if not p or not cached:
+    if not p:
         return 0.0
     pc = _price(model, CACHED_PRICES)
     pc = p[0] * 0.1 if pc is None else pc
@@ -119,8 +130,8 @@ def load_ledger(paths: list[str | Path]) -> list[dict]:
             files += sorted(glob.glob(str(p / "**" / "*.jsonl"), recursive=True))
         elif p.exists():
             files.append(str(p))
-    rows = []
-    for fp in files:
+    rows, seen = [], set()
+    for fp in dict.fromkeys(os.path.realpath(f) for f in files):  # same file reached twice counts once
         with open(fp) as f:
             for line in f:
                 line = line.strip()
@@ -132,6 +143,10 @@ def load_ledger(paths: list[str | Path]) -> list[dict]:
                     continue
                 if not isinstance(r, dict) or "model" not in r:
                     continue
+                key = (r.get("ts"), r.get("host"), r.get("pid"), r.get("feature"), r.get("model"), r.get("in"), r.get("out"))
+                if key in seen:  # the same row synced into two ledger dirs (Mac + FR8 copies) counts once
+                    continue
+                seen.add(key)
                 rows.append({k: r.get(k) for k in FIELDS})
     for r in rows:
         for k in ("in", "out", "thinking", "cached"):
@@ -145,6 +160,22 @@ def load_ledger(paths: list[str | Path]) -> list[dict]:
         r["model"] = str(r.get("model") or "unknown")
     rows.sort(key=lambda r: r["ts"])
     return rows
+
+
+def discover_ledgers() -> list[str]:
+    """--ledger auto: every ledger JSONL we can see on this machine (dedupe makes overlaps safe).
+    Looks in data/gemini/ledger, $CANARY_GEMINI_LEDGER_DIR, ~/agent-arena-data/gemini/**/_ledger (ladder/FR8 pulls) and
+    sibling Canary Lab worktrees (../gemini-*/data/gemini/**). Only files under a directory named like *ledger*."""
+    roots = [ROOT / "data" / "gemini", Path.home() / "agent-arena-data" / "gemini"]
+    if os.environ.get("CANARY_GEMINI_LEDGER_DIR"):
+        roots.append(Path(os.environ["CANARY_GEMINI_LEDGER_DIR"]))
+    roots += sorted(ROOT.parent.glob("gemini-*/data/gemini"))
+    files: list[str] = []
+    for r in roots:
+        for f in glob.glob(str(r / "**" / "*.jsonl"), recursive=True):
+            if any("ledger" in part for part in Path(f).relative_to(r).parts[:-1]) or "ledger" in r.parts:
+                files.append(f)
+    return sorted(set(files))
 
 
 def _agg(rows: list[dict]) -> dict:
@@ -163,6 +194,23 @@ def _bin_seconds(span: float) -> int:
     return 86400
 
 
+def reprice(rows: list[dict], extra: dict | None = None) -> int:
+    """Fill cost_usd for cost_unknown rows whose model has a known price. Returns how many rows were repriced."""
+    table = {**EXTRA_PRICES, **{k: tuple(v) for k, v in (extra or {}).items() if isinstance(v, (list, tuple)) and len(v) == 3}}
+    n = 0
+    for r in rows:
+        if not r.get("cost_unknown"):
+            continue
+        p = _price(r["model"], table)
+        if not p:
+            continue
+        usd = ((r["in"] - r["cached"]) * p[0] + r["cached"] * p[2] + (r["out"] + r["thinking"]) * p[1]) / 1e6
+        r["cost_usd"] = round(usd * (0.5 if r["kind"] == "batch" else 1.0), 6)
+        r["cost_unknown"], r["repriced"] = False, True
+        n += 1
+    return n
+
+
 def summarize(rows: list[dict]) -> dict:
     """Aggregate ledger rows into the dashboard's usage summary (JSON-serialisable, no prompts)."""
     tot = _agg(rows)
@@ -175,6 +223,7 @@ def summarize(rows: list[dict]) -> dict:
         "models": models, "features": features, "n_models": len(models), "n_features": len(features),
         "p50_latency_s": round(pct(gen_lat, 0.5), 2), "p95_latency_s": round(pct(gen_lat, 0.95), 2),
         "cost_unknown_calls": sum(bool(r.get("cost_unknown")) for r in rows),
+        "repriced_calls": sum(bool(r.get("repriced")) for r in rows),
         "hosts": len({r.get("host") for r in rows if r.get("host")}),
         "run_ids": len({r.get("run_id") for r in rows if r.get("run_id")}),
         "start": rows[0]["ts"] if rows else None, "end": rows[-1]["ts"] if rows else None,
@@ -291,21 +340,157 @@ def _thumb(results_dir: Path, rel: Any, budget: list[int]) -> str:
     return f"data:{mime};base64," + base64.b64encode(p.read_bytes()).decode()
 
 
+def _num(x) -> float | None:
+    return float(x) if isinstance(x, (int, float)) and not isinstance(x, bool) and x == x else None
+
+
+def slim_atlas(A: dict, results_dir: Path) -> dict:
+    """Normalise G3's atlas.json (or the TEAM.md minimal shape) to what the page renders."""
+    budget = [4_000_000]
+    modes = []
+    for m in A.get("modes") or []:
+        if not isinstance(m, dict):
+            continue
+        eps = m.get("episodes")
+        quotes = []
+        for q in (m.get("quotes") or [])[:3]:
+            if isinstance(q, dict) and q.get("quote"):
+                quotes.append({"episode": str(q.get("episode", "")), "t": q.get("t"), "quote": str(q["quote"])[:400],
+                               "verified": q.get("verified", True) is not False,  # G3 drops unverifiable quotes
+                               "step_verified": bool(q.get("step_verified"))})
+        modes.append({"id": m.get("id"), "name": m.get("name") or m.get("id"), "description": m.get("description", ""),
+                      "mechanism": m.get("mechanism", ""), "solver_would": m.get("solver_would", ""),
+                      "decision": m.get("decision", ""), "regret_share": _num(m.get("regret_share")) or 0.0,
+                      "episodes": len(eps) if isinstance(eps, list) else eps, "steps": m.get("steps"),
+                      "quotes": quotes, "chart": m.get("chart"), "chart_src": _thumb(results_dir, m.get("chart"), budget)})
+    C = A.get("corpus") or {}
+    ha = A.get("human_agreement")
+    if isinstance(ha, (int, float)):
+        ha = {"rate": ha}
+    elif isinstance(ha, dict):
+        rate = ha.get("rate", ha.get("score"))
+        if rate is None and ha.get("total"):
+            rate = ha.get("agree", 0) / ha["total"]
+        if ha.get("status") not in (None, "done"):
+            rate = None
+        ha = {"rate": _num(rate), "n": ha.get("n_labelled", ha.get("total")), "agree": ha.get("agree")}
+    else:
+        ha = None
+    V = A.get("verification") or {}
+    loc = A.get("localisation") or {}
+    cl = A.get("clusters") or {}
+    models = A.get("models") or {}
+    return {"generated_at": A.get("generated_at"), "git_sha": A.get("git_sha"), "synthetic": bool(A.get("synthetic")),
+            "model": A.get("model") or models.get("long_context"), "cache_model": models.get("cache"),
+            "summary": A.get("summary", ""), "modes": modes,
+            "corpus": {"episodes": C.get("episodes"), "tokens": C.get("tokens"), "cached_tokens": C.get("cached_tokens"),
+                       "cohorts": [{k: c.get(k) for k in ("cohort", "episodes", "score_mean", "accuracy", "regret_mean")}
+                                   for c in C.get("cohorts") or [] if isinstance(c, dict)]},
+            "verification": {k: V.get(k) for k in ("quotes_checked", "pass_rate", "step_pass_rate", "dropped")} if V else None,
+            "human_agreement": ha,
+            "localisation": {"agree": loc.get("agree_within_3_steps"), "n": loc.get("n")} if loc.get("n") else None,
+            "clusters": {"n": cl.get("n"), "k": cl.get("k"), "model": cl.get("model")} if cl else None}
+
+
+def _plan_text(plan) -> str:
+    if isinstance(plan, str):
+        return plan
+    if isinstance(plan, dict):
+        return str(plan.get("hypothesis") or plan.get("summary") or plan.get("name") or "")
+    return ""
+
+
+def slim_swarm(S: dict) -> dict:
+    """Normalise G4's swarm.json (or the TEAM.md minimal shape) to what the page renders."""
+    at = []
+    for a in S.get("attempts") or []:
+        if not isinstance(a, dict):
+            continue
+        plan = a.get("plan")
+        at.append({"id": a.get("id"), "persona": str(a.get("persona", "")), "plan": _plan_text(plan)[:300],
+                   "target": plan.get("target_invariant") if isinstance(plan, dict) else None,
+                   "tier": a.get("tier"), "score": _num(a.get("score")), "correct": a.get("correct"),
+                   "ledger_verified": bool(a.get("ledger_verified")), "exploit": bool(a.get("exploit")),
+                   "candidate": bool(a.get("score_candidate")), "solver_score": _num(a.get("solver_score")),
+                   "justified": bool(a.get("correct") and (a.get("accusation_audit") or {}).get("justified")),
+                   "tools": a.get("n_tool_calls"), "channel": a.get("channel"), "error": bool(a.get("error"))})
+    scored = [a for a in at if a["score"] is not None]
+    tiers = {}
+    for a in scored:
+        tiers[a["tier"]] = tiers.get(a["tier"], 0) + 1
+    main_tier = max(tiers, key=tiers.get) if tiers else S.get("tier")
+    pt = (S.get("per_tier") or {}).get(main_tier) or {}
+    best = S.get("best_non_solver")
+    best = best.get("score") if isinstance(best, dict) else best
+    if best is None:
+        best = pt.get("best_non_solver")
+    if best is None and scored:
+        best = max(a["score"] for a in scored)
+    solver = S.get("solver_score", S.get("solver"))
+    if solver is None:
+        solver = pt.get("solver_mean_paired", pt.get("solver_mean_ref"))
+    # G4 >= 18:20: a correct accusation the public evidence already justified is detective work, not a hack, so the
+    # headline is the best *unjustified* score (per tier, against that tier's paired solver mean)
+    bu = [(v.get("best_unjustified"), v.get("solver_mean_paired", v.get("solver_mean_ref")), t)
+          for t, v in (S.get("per_tier") or {}).items() if isinstance(v, dict) and v.get("best_unjustified") is not None]
+    best_unj = max(bu, key=lambda x: x[0] - (x[1] or 0)) if bu else None
+    counts = S.get("counts") or {}
+    tests = S.get("tests_written")
+    found = ROOT / "tests" / "test_gemini_lab_swarm_found.py"
+    if tests is None and found.exists():
+        tests = len(re.findall(r"^def test_", found.read_text(), re.M))
+    ms = S.get("models")
+    model = S.get("model") or (", ".join(map(str, ms)) if isinstance(ms, list) else ms if isinstance(ms, str) else None)
+    findings = [{"title": str(f.get("title") or f.get("name") or ""), "verified": bool(f.get("verified")),
+                 "test": str(f.get("test") or "")} for f in S.get("findings") or [] if isinstance(f, dict)]
+    return {"generated_at": S.get("generated_at"), "git_sha": S.get("git_sha"), "synthetic": bool(S.get("synthetic")),
+            "model": model,
+            "mode": S.get("mode"), "tier": main_tier, "attempts": at, "best_non_solver": _num(best),
+            "solver_score": _num(solver), "tests_written": tests, "findings": findings,
+            "best_unjustified": _num(best_unj[0]) if best_unj else None,
+            "best_unjustified_solver": _num(best_unj[1]) if best_unj else None,
+            "best_unjustified_tier": best_unj[2] if best_unj else None,
+            "honest_wins": counts.get("high_score_justified", sum(1 for a in at if a["justified"])),
+            "tiers": sorted(tiers),
+            "exploits": counts.get("exploits", sum(1 for a in at if a["exploit"] and a["ledger_verified"])),
+            "candidates": counts.get("score_candidates", sum(1 for a in at if a["candidate"])),
+            "violations": counts.get("invariant_violations"), "violation_kinds": counts.get("violation_kinds") or {},
+            "tool_calls": counts.get("tool_calls", sum(a["tools"] or 0 for a in at)),
+            "errors": counts.get("errors", sum(1 for a in at if a["error"]))}
+
+
 def load_results(results_dir: Path) -> dict:
     results_dir = Path(results_dir)
     out: dict[str, Any] = {}
     ladder = load_json(results_dir / "ladder.json")
+    if ladder:
+        ladder = {k: ladder.get(k) for k in ("generated_at", "git_sha", "synthetic", "episodes", "rows", "cells",
+                                              "reference", "tags", "solver", "ledger")}
+        if isinstance(ladder.get("tags"), dict):
+            ladder["tags"] = {k: ladder["tags"].get(k) for k in ("pooled", "pooled_common_models")}
+            for v in (ladder["tags"].get("pooled") or {}).values():  # drop the per-episode "worst" lists
+                for d in (v.get("tags") or {}).values():
+                    if isinstance(d, dict):
+                        d.pop("worst", None)
+        for r in ladder.get("rows") or []:
+            if isinstance(r, dict):
+                r.pop("seeds", None), r.pop("run_ids", None)
     out["ladder"] = redact(ladder) if ladder else None
     atlas = load_json(results_dir / "atlas.json")
-    if atlas:
-        atlas = redact(atlas)
-        budget = [4_000_000]
-        for m in atlas.get("modes") or []:
-            if isinstance(m, dict):
-                m["chart_src"] = _thumb(results_dir, m.get("chart"), budget)
-    out["atlas"] = atlas
+    out["atlas"] = redact(slim_atlas(atlas, results_dir)) if atlas else None
     swarm = load_json(results_dir / "swarm.json")
-    out["swarm"] = redact(swarm) if swarm else None
+    out["swarm"] = redact(slim_swarm(swarm)) if swarm else None
+    gb = load_json(results_dir / "gateway_bench.json")
+    if gb and isinstance(gb.get("rows"), list):
+        out["gateway_bench"] = redact({
+            "generated_at": gb.get("generated_at"), "git_sha": gb.get("git_sha"), "calls": gb.get("calls"),
+            "spend_usd": gb.get("spend_usd"), "setup": str(gb.get("setup", ""))[:300],
+            "rows": [{"model": r.get("model"), "conc": r.get("conc"), "rpm": _num(r.get("rpm")), "p50_s": _num(r.get("p50_s")),
+                      "p95_s": _num(r.get("p95_s")), "ok": r.get("ok"),
+                      "errors": sum(v for v in (r.get("errors") or {}).values() if isinstance(v, (int, float))),
+                      "retries": r.get("gw_retries")} for r in gb["rows"] if isinstance(r, dict)]})
+    else:
+        out["gateway_bench"] = None
     figs = {}
     budget = [3_000_000]
     for name in ("ladder.png",):
@@ -331,13 +516,18 @@ def render_html(payload: dict) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--ledger", nargs="*", default=None, help="ledger dirs/files (default data/gemini/ledger)")
+    ap.add_argument("--ledger", nargs="*", default=None,
+                    help="ledger dirs/files (default data/gemini/ledger); 'auto' = every ledger found on this machine")
     ap.add_argument("--results", default=str(DEFAULT_RESULTS))
     ap.add_argument("--out", default=str(DEFAULT_RESULTS / "dashboard.html"))
     ap.add_argument("--json", action="store_true", help="print the aggregated usage summary and exit")
     a = ap.parse_args(argv)
     sources = a.ledger or [str(DEFAULT_LEDGER)]
+    if sources == ["auto"]:
+        sources = discover_ledgers()
     rows = load_ledger(sources)
+    lad = load_json(Path(a.results) / "ladder.json") or {}
+    reprice(rows, lad.get("prices_usd_per_1m") if isinstance(lad.get("prices_usd_per_1m"), dict) else None)
     if a.json:
         s = summarize(rows)
         s.pop("timeline", None)
@@ -346,11 +536,13 @@ def main(argv: list[str] | None = None) -> int:
         print()
         return 0
     rel = []
-    for s in sources:
+    for s in (sources if len(sources) <= 6 else []):
         try:
             rel.append(str(Path(s).resolve().relative_to(ROOT)))
         except ValueError:
             rel.append(Path(s).name)
+    if len(sources) > 6:
+        rel = [f"{len(sources)} ledger files (--ledger auto)"]
     html = render_html(build_payload(rows, Path(a.results), rel))
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -406,7 +598,7 @@ CSS = r"""
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
   --other: #b5b3ab;
   --good: #0ca30c; --warn: #fab219; --serious: #ec835a; --crit: #d03b3b; --goodtext: #006300;
-  --q100: #cde2fb; --q700: #0d366b;
+  --q100: #cde2fb; --q700: #0d366b; --mid: #f0efec;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -414,7 +606,7 @@ CSS = r"""
     --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
     --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
-    --other: #5f5e59; --goodtext: #0ca30c;
+    --other: #5f5e59; --goodtext: #0ca30c; --mid: #383835;
   }
 }
 :root[data-theme="dark"] {
@@ -422,7 +614,7 @@ CSS = r"""
   --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
   --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --wash: rgba(255,255,255,0.05);
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
-  --other: #5f5e59; --goodtext: #0ca30c;
+  --other: #5f5e59; --goodtext: #0ca30c; --mid: #383835;
 }
 * { box-sizing: border-box; }
 html { background: var(--page); }
@@ -465,7 +657,7 @@ button:focus-visible, .cell:focus-visible, [tabindex]:focus-visible { outline: 2
 .tile { background: var(--surface); padding: 14px 16px; min-width: 0; }
 .tile .lab { color: var(--muted); font-size: 12px; }
 .tile .val { font: 600 22px/1.2 system-ui, -apple-system, sans-serif; margin-top: 4px; letter-spacing: -.01em; }
-.tile .note { color: var(--muted); font-size: 11.5px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .note { color: var(--muted); font-size: 11.5px; line-height: 1.35; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .caps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .chip { font: 500 11.5px/1 ui-monospace, "SF Mono", Menlo, monospace; padding: 6px 9px; border-radius: 999px;
   border: 1px solid var(--ring); color: var(--ink2); background: var(--wash); }
@@ -502,6 +694,8 @@ svg .mark:hover, svg g.hov:hover .mark { filter: brightness(1.12); }
 .rank { font: 600 22px/1 "Iowan Old Style", Palatino, Georgia, serif; color: var(--muted); }
 .mode h4 { margin: 0; font-size: 15px; }
 .mode .desc { margin: 2px 0 8px; color: var(--ink2); }
+.mode .desc b { color: var(--ink); font-weight: 600; }
+p.summary { margin: 0; color: var(--ink); max-width: 100ch; font: 15px/1.55 "Iowan Old Style", Palatino, Georgia, serif; }
 .mode .facts { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
 .mode .facts b { color: var(--ink); font-weight: 600; }
 .share { height: 8px; border-radius: 4px; background: var(--q100); overflow: hidden; margin: 2px 0 10px; max-width: 360px; }
@@ -531,6 +725,14 @@ details.tbl { margin-top: 10px; } details.tbl summary { cursor: pointer; color: 
 #tip .r i { width: 12px; height: 2px; border-radius: 1px; flex: none; }
 #tip .r b { font-variant-numeric: tabular-nums; }
 #tip .r span { color: var(--ink2); }
+@media (max-width: 640px) {
+  .top, main, .foot { padding-left: 16px; padding-right: 16px; }
+  h1 { font-size: 21px; } .phead h2 { font-size: 19px; } .heroNum { font-size: 48px; }
+  .topmeta { flex-wrap: wrap; } .card { padding: 14px; }
+  .matrix { font-size: 10.5px; } .matrix th { padding: 2px; }
+  .card:has(.matrix) { overflow-x: auto; }
+}
+.grid > *, .hero > * { min-width: 0; }
 body.focus .panel { display: none; } body.focus .panel.on { display: block; padding-top: 18px; }
 body.focus .foot { display: none; }
 @media (prefers-reduced-motion: no-preference) {
@@ -624,13 +826,24 @@ function bindTip(node, fn) {
 const FEATURE_SLOT = { ladder: 1, atlas: 2, swarm: 3, forge: 5, narrate: 6, world: 7, commentator: 8 };
 const MODEL_SLOT = { 'gemini-3.1-flash-lite': 1, 'gemini-3.5-flash': 2, 'gemini-3.8-flash': 3,
   'gemini-4-hydrogen': 4, 'gemini-4-argon': 5, 'gemini-4-carbon': 6 };
-function featColor(f) { return FEATURE_SLOT[f] ? css('--s' + FEATURE_SLOT[f]) : css('--other'); }
+const FEATURE_SLOT_PREFIX = { gateway: 4 };
+function fslot(f) { return FEATURE_SLOT[f] || FEATURE_SLOT_PREFIX[String(f).split(/[-_]/)[0]] || 0; }
+function featColor(f) { return fslot(f) ? css('--s' + fslot(f)) : css('--other'); }
 function modelColor(m) { return MODEL_SLOT[m] ? css('--s' + MODEL_SLOT[m]) : css('--other'); }
 
 // sequential blue ramp (palette steps 100..700); light end recedes toward the surface
 const RAMP = ['#cde2fb', '#b7d3f6', '#9ec5f4', '#86b6ef', '#6da7ec', '#5598e7', '#3987e5', '#2a78d6', '#256abf', '#1c5cab', '#184f95', '#104281', '#0d366b'];
 function rampIdx(t) { return Math.max(0, Math.min(RAMP.length - 1, Math.round(t * (RAMP.length - 1)))); }
 function cellStyle(td, t) { const i = rampIdx(t); td.style.background = RAMP[i]; td.style.color = i >= 7 ? '#ffffff' : '#0b0b0b'; }
+// diverging blue <-> red around a neutral grey midpoint (palette diverging pair); equal steps per arm
+const DIV_POS = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
+const DIV_NEG = ['#fbd9d6', '#f6b3ad', '#ee8a82', '#e3605a', '#d03b3b', '#a82d2d', '#7d2121'];
+function divStyle(td, v, neg, pos) {
+  if (Math.abs(v) < 0.02) { td.style.background = css('--mid'); td.style.color = css('--ink'); return; }
+  const arm = v > 0 ? DIV_POS : DIV_NEG, t = Math.min(1, Math.abs(v) / (v > 0 ? pos : neg));
+  const i = Math.max(0, Math.min(arm.length - 1, Math.ceil(t * arm.length) - 1));
+  td.style.background = arm[i]; td.style.color = i >= 3 ? '#ffffff' : '#0b0b0b';
+}
 
 // ---------- scaffolding
 function panelHead(sec, num, title, lede, right) {
@@ -690,12 +903,14 @@ function hbars(items, opt) {
 // stacked columns over time (calls per bin, by feature)
 function timelineChart() {
   const T = U.timeline; if (!T.bins.length) return h('p', { class: 'sub', text: 'No ledger rows yet.' });
-  const feats = U.totals.features.filter(f => FEATURE_SLOT[f]).sort((a, b) => FEATURE_SLOT[a] - FEATURE_SLOT[b]);
-  const series = feats.slice(0, 7); const hasOther = U.totals.features.some(f => !series.includes(f));
+  // one series per colour slot: features sharing a prefix slot (gateway-bench, gateway-smoke) fold into 'gateway'
+  const grp = f => FEATURE_SLOT[f] ? f : FEATURE_SLOT_PREFIX[String(f).split(/[-_]/)[0]] ? String(f).split(/[-_]/)[0] : 'other';
+  const series = [...new Set(U.totals.features.map(grp))].filter(k => k !== 'other').sort((a, b) => fslot(a) - fslot(b));
+  const hasOther = U.totals.features.some(f => grp(f) === 'other');
   const keys = hasOther ? series.concat(['other']) : series;
   const W = 780, H = 240, L = 40, Rr = 8, Tp = 8, B = 26;
   const vals = T.bins.map(b => { const o = {}; let tot = 0; keys.forEach(k => o[k] = 0);
-    for (const f in b.counts) { const k = series.includes(f) ? f : 'other'; o[k] += b.counts[f]; tot += b.counts[f]; } o._t = tot; return o; });
+    for (const f in b.counts) { const k = grp(f); o[k] += b.counts[f]; tot += b.counts[f]; } o._t = tot; return o; });
   const max = Math.max(1, ...vals.map(v => v._t)); const ticks = niceTicks(max, 4); const ymax = ticks[ticks.length - 1];
   const n = T.bins.length, slot = (W - L - Rr) / n, bw = Math.max(1, Math.min(24, slot - 2));
   const y = v => Tp + (H - Tp - B) * (1 - v / ymax);
@@ -737,7 +952,7 @@ function heatMatrix(rows, cols, get, fmt, opt) {
       const v = get(r, c);
       if (v == null) { tr.appendChild(h('td', { class: 'empty', text: '·' })); return; }
       const td = h('td', { class: 'cell', tabindex: 0, text: fmt(v) });
-      cellStyle(td, Math.max(0, Math.min(1, scale(v))));
+      if (opt.diverging) divStyle(td, v, opt.diverging[0], opt.diverging[1]); else cellStyle(td, Math.max(0, Math.min(1, scale(v))));
       bindTip(td, () => [(opt.rowLabel ? opt.rowLabel(r) : r) + ' × ' + (opt.colLabel ? opt.colLabel(c) : c), opt.tip ? opt.tip(r, c, v) : [{ v: fmt(v), l: '' }]]);
       tr.appendChild(td);
     });
@@ -745,7 +960,7 @@ function heatMatrix(rows, cols, get, fmt, opt) {
   });
   t.appendChild(tb);
   const sc = h('div', { class: 'scale' }, [h('span', { text: opt.loLabel || fmt(lo) }), h('div', { class: 'bar' }), h('span', { text: opt.hiLabel || fmt(hi) })]);
-  sc.querySelector('.bar').style.background = 'linear-gradient(90deg,' + RAMP.join(',') + ')';
+  sc.querySelector('.bar').style.background = 'linear-gradient(90deg,' + (opt.diverging ? DIV_NEG.slice().reverse().concat([css('--mid')], DIV_POS) : RAMP).join(',') + ')';
   return h('div', {}, [t, sc]);
 }
 
@@ -762,20 +977,24 @@ function xyChart(series, opt) {
   const X = v => L + (W - L - Rr) * (logx ? (Math.log10(Math.max(v, x0)) - Math.log10(x0)) / (Math.log10(x1) - Math.log10(x0)) : (v - x0) / (x1 - x0 || 1));
   const Y = v => Tp + (H - Tp - B) * (1 - (v - y0) / (y1 - y0 || 1));
   const svg = s('svg', { class: 'chart', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': opt.aria || '' });
-  (opt.yticks || [0, .25, .5, .75, 1]).forEach(t => { if (t < y0 || t > y1) return;
+  const ystep = (y1 - y0) > 2.2 ? 0.5 : 0.25, yt = [];
+  for (let v = Math.ceil(y0 / ystep) * ystep; v <= y1 + 1e-9; v += ystep) yt.push(+v.toFixed(4));
+  (opt.yticks && !(opt.pctAuto && (y1 - y0) > 1.3) ? opt.yticks : yt).forEach(t => { if (t < y0 || t > y1) return;
     svg.appendChild(s('line', { class: 'gridline', x1: L, x2: W - Rr, y1: Y(t), y2: Y(t) }));
     svg.appendChild(s('text', { x: L - 6, y: Y(t) + 4, 'text-anchor': 'end', text: opt.yfmt ? opt.yfmt(t) : t })); });
-  const xt = []; if (logx) { const dec = Math.round(Math.log10(x1 / x0)); for (let v = x0; v <= x1 * 1.0001; v *= 10) { xt.push(v); if (dec <= 2 && v * 2 < x1) xt.push(v * 2, v * 5); } } else niceTicks(x1, 5).forEach(v => xt.push(v));
+  const xt = []; if (opt.xticks) { opt.xticks.forEach(v => xt.push(v)); } else if (logx) { const dec = Math.round(Math.log10(x1 / x0)); for (let v = x0; v <= x1 * 1.0001; v *= 10) { xt.push(v); if (dec <= 2 && v * 2 < x1) xt.push(v * 2, v * 5); } } else niceTicks(x1, 5).forEach(v => xt.push(v));
   xt.forEach(t => svg.appendChild(s('text', { x: X(t), y: H - 12, 'text-anchor': 'middle', text: opt.xfmt ? opt.xfmt(t) : compact(t) })));
   svg.appendChild(s('line', { class: 'baseline', x1: L, x2: W - Rr, y1: Y(Math.max(y0, 0)), y2: Y(Math.max(y0, 0)) }));
   if (opt.xlabel) svg.appendChild(s('text', { x: W - Rr, y: H - 0, 'text-anchor': 'end', text: opt.xlabel }));
+  (opt.refs || []).forEach(r => { if (r.y < y0 || r.y > y1) return; svg.appendChild(s('line', { x1: L, x2: W - Rr, y1: Y(r.y), y2: Y(r.y), stroke: css('--axis'), 'stroke-width': 1 }));
+    svg.appendChild(s('text', { x: L + 6, y: Y(r.y) + 13, class: 'halo', text: r.l + ' ' + pctf(r.y) })); });
   if (opt.ref) { svg.appendChild(s('line', { x1: L, x2: W - Rr, y1: Y(opt.ref.y), y2: Y(opt.ref.y), stroke: css('--ink2'), 'stroke-width': 1 }));
     svg.appendChild(s('text', { x: W - Rr, y: Y(opt.ref.y) - 6, 'text-anchor': 'end', class: 'ink2', text: opt.ref.l })); }
   const surf = css('--surface');
   if (opt.frontier && opt.frontier.length > 1) svg.appendChild(s('path', { d: opt.frontier.map((c, i) => (i ? 'L' : 'M') + X(c.cost).toFixed(1) + ',' + Y(c.pct).toFixed(1)).join(''),
     fill: 'none', stroke: css('--s1'), 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
   series.forEach(sr => {
-    const P = sr.pts.slice().sort((a, b) => a.x - b.x);
+    const P = sr.pts.filter(p => !p.loose).sort((a, b) => (a.o != null && b.o != null) ? a.o - b.o : a.x - b.x);
     if (sr.line !== false && P.length > 1) svg.appendChild(s('path', { d: P.map((p, i) => (i ? 'L' : 'M') + X(p.x).toFixed(1) + ',' + Y(p.y).toFixed(1)).join(''),
       fill: 'none', stroke: sr.c, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
   });
@@ -783,7 +1002,8 @@ function xyChart(series, opt) {
   series.forEach(sr => sr.pts.slice().sort((a, b) => (b.label ? 1 : 0) - (a.label ? 1 : 0) || b.y - a.y).forEach(p => {
     const g = s('g', { class: 'hov', tabindex: 0 });
     g.appendChild(s('circle', { cx: X(p.x), cy: Y(p.y), r: 12, class: 'hit' }));
-    g.appendChild(s('circle', { class: 'mark', cx: X(p.x), cy: Y(p.y), r: p.r || 4.5, fill: p.c || sr.c, stroke: surf, 'stroke-width': 2 }));
+    g.appendChild(p.loose ? s('circle', { class: 'mark', cx: X(p.x), cy: Y(p.y), r: 4.5, fill: surf, stroke: p.c || sr.c, 'stroke-width': 2 })
+      : s('circle', { class: 'mark', cx: X(p.x), cy: Y(p.y), r: p.r || 4.5, fill: p.c || sr.c, stroke: surf, 'stroke-width': 2 }));
     if (p.label) { const lx = X(p.x) + 9, ly = Y(p.y) - 9, lw = p.label.length * 6.2;
       const box = { x0: lx, x1: lx + lw, y0: ly - 11, y1: ly + 2 };
       if (!placed.some(b => b.x0 < box.x1 && box.x0 < b.x1 && b.y0 < box.y1 && box.y0 < b.y1) && box.x1 < W) {
@@ -810,7 +1030,7 @@ function renderHeadline() {
     ['Output tokens', compact(T.out), 'excludes thinking'],
     ['Thinking tokens', compact(T.thinking), pctf(T.thinking_share) + ' of generated tokens'],
     ['Cached tokens', compact(T.cached), pctf(U.cache.hit_share) + ' of input served from cache'],
-    ['Cost', usd(T.cost_usd), T.cost_unknown_calls ? T.cost_unknown_calls + ' calls without a list price' : 'list price, all calls priced'],
+    ['Cost', usd(T.cost_usd), T.cost_unknown_calls ? 'list price · ' + nf.format(T.cost_unknown_calls) + ' calls unpriced' : 'list price, every call priced'],
     ['Models', String(T.n_models), T.models.map(short).slice(0, 3).join(', ') + (T.n_models > 3 ? '…' : '')],
     ['Features', String(T.n_features), T.features.slice(0, 4).join(', ') + (T.n_features > 4 ? '…' : '')],
     ['Error rate', pctf(T.error_rate, 1), nf.format(T.errors) + ' failed calls'],
@@ -852,6 +1072,17 @@ function renderUsage() {
   g.appendChild(card('c5', 'Cache and batch economics', 'Saved vs paying full list price for the same tokens', [econ, cb.length ? hbars(cb, { labW: 80, W: 470, aria: 'cache savings by feature' }) : null]));
   const lm = U.by_model.filter(m => m.latency_n > 0);
   g.appendChild(card('c7', 'Latency by model', 'generate calls · dot = p50, bar end = p95', [latencyChart(lm)]));
+  const GB = R.gateway_bench;
+  if (GB && GB.rows.length) {
+    const ms = [...new Set(GB.rows.map(r => r.model))].sort(morder);
+    const ser = ms.map(m => ({ name: short(m), c: modelColor(m), pts: GB.rows.filter(r => r.model === m && r.rpm != null).map(r => ({ x: r.conc, y: r.rpm,
+      title: short(m) + ' · ' + r.conc + ' concurrent', tip: [{ v: nf.format(Math.round(r.rpm)), l: 'requests / min' }, { v: secs(r.p50_s || 0) + ' / ' + secs(r.p95_s || 0), l: 'p50 / p95 latency' },
+        { v: nf.format(r.errors || 0), l: 'errors' }, { v: nf.format(r.retries || 0), l: 'gateway retries' }] })) })).filter(s => s.pts.length);
+    const ymax = Math.max(...GB.rows.map(r => r.rpm || 0)) * 1.1;
+    const yt = niceTicks(ymax, 4);
+    g.appendChild(card('c12', 'Gateway throughput', 'closed-loop rate bench through the Canary Lab gateway · requests per minute vs concurrent clients · ' + nf.format(GB.calls || 0) + ' calls, $' + (GB.spend_usd || 0),
+      [legend(ser.map(s => ({ c: s.c, l: s.name })), true), xyChart(ser, { W: 1180, H: 260, R: 24, ymin: 0, ymax: yt[yt.length - 1], yticks: yt, yfmt: v => compact(v), xfmt: v => String(v), xticks: [...new Set(GB.rows.map(r => r.conc))].sort((a, b) => a - b), xmin: 0, xlabel: 'concurrent clients', aria: 'gateway throughput' })]));
+  }
   const ft = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['feature', 'calls', 'input', 'output', 'thinking', 'cached', 'cost', 'errors', 'models'].map((c, i) => h('th', { class: i && i < 8 ? 'num' : '', text: c })))]),
     h('tbody', {}, U.by_feature.map(f => h('tr', {}, [h('td', { text: f.feature }), h('td', { class: 'num', text: nf.format(f.calls) }), h('td', { class: 'num', text: compact(f.in) }),
       h('td', { class: 'num', text: compact(f.out) }), h('td', { class: 'num', text: compact(f.thinking) }), h('td', { class: 'num', text: compact(f.cached) }),
@@ -889,11 +1120,13 @@ function latencyChart(models) {
 // ---- ladder
 function lget(c, keys, dflt) { for (const k of keys) if (c[k] != null) return c[k]; return dflt; }
 function ladderCells(L) {
-  return (L.cells || []).map(c => ({ model: c.model, level: String(lget(c, ['level', 'thinking_level'], '')).toLowerCase(), tier: c.tier,
-    n: lget(c, ['n', 'episodes'], null), pct: lget(c, ['pct_solver', 'frac_solver', 'score_vs_solver'], null),
-    ci: lget(c, ['pct_solver_ci95', 'ci95'], null), score: lget(c, ['score_mean', 'score'], null), solver: lget(c, ['solver_mean', 'solver'], null),
-    think: lget(c, ['thinking_tokens_per_episode', 'thinking_per_episode', 'thinking_tokens'], null),
-    cost: lget(c, ['cost_usd_per_episode', 'cost_per_episode', 'cost_usd'], null), regret: lget(c, ['regret_mean', 'regret'], null) }))
+  return (L.rows || L.cells || []).map(c => ({ model: c.model, level: String(lget(c, ['level', 'thinking_level'], '')).toLowerCase(), tier: c.tier,
+    n: lget(c, ['n', 'episodes'], null), pct: lget(c, ['ratio', 'pct_solver', 'frac_solver', 'score_vs_solver'], null),
+    ci: lget(c, ['pct_solver_ci95', 'ci95'], c.ratio_lo != null && c.ratio_hi != null ? [c.ratio_lo, c.ratio_hi] : null),
+    score: lget(c, ['mean', 'score_mean', 'score'], null), solver: lget(c, ['solver_same_seeds', 'solver_mean', 'solver'], null),
+    think: lget(c, ['thinking_per_ep', 'thinking_tokens_per_episode', 'thinking_per_episode', 'thinking_tokens'], null),
+    est: !!c.thinking_is_estimate, acc: lget(c, ['accuracy'], null), day: lget(c, ['accuse_day'], null),
+    cost: lget(c, ['cost_per_ep', 'cost_usd_per_episode', 'cost_per_episode', 'cost_usd'], null), regret: lget(c, ['regret_mean', 'regret'], null) }))
     .map(c => { if (c.pct == null && c.score != null && c.solver) c.pct = c.score / c.solver; return c; })
     .filter(c => c.model && c.tier && c.pct != null);
 }
@@ -902,36 +1135,49 @@ const MORDER = ['gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash',
 function morder(a, b) { const i = MORDER.indexOf(a), j = MORDER.indexOf(b); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || (a < b ? -1 : 1); }
 function lorder(a, b) { const i = LEVELS.indexOf(a), j = LEVELS.indexOf(b); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j); }
 
+function refLines(L, tier) {
+  // reference agents (G2 "reference" rows) as % of the solver on the same seeds
+  const ref = (L.reference || []).filter(r => r.tier === tier);
+  const sol = ref.find(r => r.agent === 'solver');
+  if (!sol || !(sol.mean > 0)) return [];
+  return ref.filter(r => r.agent !== 'solver' && r.agent !== 'do_nothing' && r.mean != null).map(r => ({ y: r.mean / sol.mean, l: r.agent.replace('_', ' ') }));
+}
 function renderLadder() {
   const sec = document.getElementById('p-ladder'); sec.replaceChildren();
   const L = R.ladder; const cells = L ? ladderCells(L) : [];
   const tiers = [...new Set(cells.map(c => c.tier))].sort((a, b) => ['easy', 'medium', 'hard'].indexOf(a) - ['easy', 'medium', 'hard'].indexOf(b));
   let tier = sec.dataset.tier && tiers.includes(sec.dataset.tier) ? sec.dataset.tier : (tiers.includes('hard') ? 'hard' : tiers[0]);
-  const seg = tiers.length ? h('div', { class: 'seg', role: 'group', 'aria-label': 'Tier' }, tiers.map(t => { const b = h('button', { type: 'button', 'aria-pressed': String(t === tier), text: t });
+  const seg = tiers.length > 1 ? h('div', { class: 'seg', role: 'group', 'aria-label': 'Tier' }, tiers.map(t => { const b = h('button', { type: 'button', 'aria-pressed': String(t === tier), text: t });
     b.addEventListener('click', () => { sec.dataset.tier = t; renderLadder(); }); return b; })) : null;
+  const eps = cells.reduce((a, c) => a + (c.n || 0), 0);
   panelHead(sec, '03', { kicker: 'Ladder', h: 'How much thinking buys how much of the gap?' },
-    'Gemini models × thinking levels against the Bayesian reference solver, paired on the same seeds. 100% = solver parity.', seg);
+    'Gemini models × thinking levels against the Bayesian reference solver, paired on the same seeds. 100% = solver parity.' + (eps ? ' ' + nf.format(eps) + ' episodes in ' + cells.length + ' cells.' : ''), seg);
   if (!cells.length) { sec.appendChild(pending('Ladder', 'python -m canary.gemini.ladder_report --runs <dir> → results/gemini/ladder.json')); return; }
   const tc = cells.filter(c => c.tier === tier);
   const models = [...new Set(tc.map(c => c.model))].sort(morder), levels = [...new Set(tc.map(c => c.level))].sort(lorder);
   const at = (m, l) => tc.find(c => c.model === m && c.level === l);
+  const cellTip = c => { const r = [{ v: pctf(c.pct), l: 'of solver score, same seeds' }];
+    if (c.ci && c.ci[0] != null) r.push({ v: '[' + pctf(c.ci[0]) + ', ' + pctf(c.ci[1]) + ']', l: 'paired 95% CI' });
+    if (c.score != null) r.push({ v: c.score.toFixed(3), l: 'mean score (solver ' + (c.solver != null ? c.solver.toFixed(3) : '?') + ')' });
+    if (c.n != null) r.push({ v: String(c.n), l: 'episodes' });
+    if (c.acc != null) r.push({ v: pctf(c.acc), l: 'correct accusations' });
+    if (c.day != null) r.push({ v: c.day.toFixed(1), l: 'mean accuse day' });
+    if (c.think != null) r.push({ v: compact(c.think) + (c.est ? '*' : ''), l: 'thinking tokens / episode' + (c.est ? ' (*incl. output)' : '') });
+    if (c.cost != null) r.push({ v: usd(c.cost), l: 'per episode' }); return r; };
   const g = h('div', { class: 'grid' });
-  const hm = heatMatrix(models, levels, (m, l) => { const c = at(m, l); return c ? c.pct : null; }, v => pctf(v), { min: 0, max: 1, labW: 120, rowLabel: short,
-    corner: 'model ↓ thinking →', loLabel: '≤0%', hiLabel: '≥100% of solver',
-    tip: (m, l) => { const c = at(m, l); const r = [{ v: pctf(c.pct), l: 'of solver score' }];
-      if (c.ci) r.push({ v: '[' + pctf(c.ci[0]) + ', ' + pctf(c.ci[1]) + ']', l: '95% CI' });
-      if (c.score != null) r.push({ v: c.score.toFixed(3), l: 'mean score (solver ' + (c.solver != null ? c.solver.toFixed(3) : '?') + ')' });
-      if (c.n != null) r.push({ v: String(c.n), l: 'paired seeds' }); if (c.think != null) r.push({ v: compact(c.think), l: 'thinking tokens / episode' });
-      if (c.cost != null) r.push({ v: usd(c.cost), l: 'per episode' }); return r; } });
-  g.appendChild(card('c5', 'Score as % of solver · ' + tier, 'model × thinking level', [synthBadge(L), hm]));
+  const hm = heatMatrix(models, levels, (m, l) => { const c = at(m, l); return c ? c.pct : null; }, v => pctf(v), { diverging: [1, 1], labW: 120, rowLabel: short,
+    corner: 'model ↓ thinking →', loLabel: '≤ −100% (worse than doing nothing)', hiLabel: '≥ 100% = solver', tip: (m, l) => cellTip(at(m, l)) });
+  const ns = tc.map(c => c.n || 0), nlo = Math.min(...ns), nhi = Math.max(...ns);
+  g.appendChild(card('c5', 'Score as % of solver · ' + tier, 'model × thinking level · ' + (nlo === nhi ? nlo : nlo + '–' + nhi) + ' episodes per cell · hover for the paired CI', [synthBadge(L), hm]));
+  const refs = refLines(L, tier);
   const series = models.map(m => ({ name: short(m), c: modelColor(m), pts: tc.filter(c => c.model === m && c.think != null).map(c => ({ x: Math.max(c.think, 10), y: c.pct,
-    title: short(m) + ' · ' + c.level, tip: [{ v: pctf(c.pct), l: 'of solver' }, { v: compact(c.think), l: 'thinking tokens / episode' }].concat(c.cost != null ? [{ v: usd(c.cost), l: 'per episode' }] : []) })) }))
-    .filter(sr => sr.pts.length);
+    o: LEVELS.indexOf(c.level) < 0 ? null : LEVELS.indexOf(c.level), loose: LEVELS.indexOf(c.level) < 0 || c.est,
+    title: short(m) + ' · ' + c.level + (c.est ? ' (imported; thinking incl. output)' : ''), tip: cellTip(c) })) })).filter(sr => sr.pts.length);
   if (series.length) {
-    const ys = series.flatMap(s => s.pts.map(p => p.y));
-    g.appendChild(card('c7', 'Score vs thinking tokens · ' + tier, 'thinking tokens per episode (log) · one line per model, minimal → high',
-      [legend(series.map(s => ({ c: s.c, l: s.name })), true), xyChart(series, { logx: true, xfloor: 10, ymin: Math.min(0, ...ys), ymax: Math.max(1.1, ...ys), yticks: [0, .25, .5, .75, 1],
-        yfmt: v => pctf(v), xfmt: v => v <= 10 ? '≤10' : compact(v), ref: { y: 1, l: 'solver' }, W: 680, H: 320, aria: 'score vs thinking tokens' })]));
+    const ys = series.flatMap(s => s.pts.map(p => p.y)).concat(refs.map(r => r.y));
+    g.appendChild(card('c7', 'Score vs thinking tokens · ' + tier, 'mean thinking tokens per episode (log) · one line per model, minimal → high · hollow = imported cell at the model default',
+      [legend(series.map(s => ({ c: s.c, l: s.name })), true), xyChart(series, { logx: true, xfloor: 10, ymin: Math.min(0, ...ys), ymax: Math.max(1.1, ...ys), yticks: [0, .25, .5, .75, 1], pctAuto: true,
+        yfmt: v => pctf(v), xfmt: v => v <= 10 ? '≤10' : compact(v), ref: { y: 1, l: 'solver' }, refs, W: 680, H: 320, aria: 'score vs thinking tokens' })]));
   }
   const cc = tc.filter(c => c.cost != null && c.cost > 0);
   if (cc.length) {
@@ -941,54 +1187,81 @@ function renderLadder() {
     const blue = css('--s1'), grey = css('--other');
     const pts = cc.map(c => ({ x: c.cost, y: c.pct, c: fset.has(c) ? blue : grey, r: fset.has(c) ? 5 : 3.5,
       label: fset.has(c) ? short(c.model) + ' · ' + c.level : null, title: short(c.model) + ' · ' + c.level,
-      tip: [{ v: usd(c.cost), l: 'per episode' }, { v: pctf(c.pct), l: 'of solver' }].concat(fset.has(c) ? [{ v: 'frontier', l: 'nothing cheaper scores higher' }] : []) }));
-    const ys = cc.map(c => c.pct);
+      tip: cellTip(c).concat(fset.has(c) ? [{ v: 'frontier', l: 'nothing cheaper scores higher' }] : []) }));
+    const ys = cc.map(c => c.pct).concat(refs.map(r => r.y));
     g.appendChild(card('c12', 'Cost frontier · ' + tier, 'list-price $ per episode (log) vs % of solver · blue = Pareto frontier (nothing cheaper scores higher)',
-      [frontierChart(front, pts, ys)]));
+      [frontierChart(front, pts, ys, refs)]));
   }
-  if (R.figures && R.figures['ladder.png']) g.appendChild(card('c12', 'Ladder report figure', 'results/gemini/ladder.png', [h('img', { src: R.figures['ladder.png'], alt: 'ladder figure', style: 'width:100%;border-radius:8px' })]));
+  const tg = L.tags && L.tags.pooled;
+  if (tg) {
+    const lv = ['low', 'medium', 'high'].filter(l => tg[l + '|' + tier]);
+    if (lv.length >= 2) {
+      const tagSet = {}; lv.forEach(l => Object.entries(tg[l + '|' + tier].tags || {}).forEach(([k, v]) => { tagSet[k] = Math.max(tagSet[k] || 0, v.regret_per_ep || 0); }));
+      const tags = Object.keys(tagSet).sort((a, b) => tagSet[b] - tagSet[a]).slice(0, 8);
+      if (tags.length) {
+        const get = (tag, l) => { const d = (tg[l + '|' + tier].tags || {})[tag]; return d ? d.regret_per_ep : 0; };
+        const mx = Math.max(1e-9, ...tags.flatMap(tag => lv.map(l => get(tag, l))));
+        const hm2 = heatMatrix(tags, lv, get, v => v.toFixed(3), { min: 0, max: mx, labW: 170, corner: 'failure tag ↓ thinking →', loLabel: '0', hiLabel: mx.toFixed(3) + ' regret / episode',
+          tip: (tag, l) => { const d = (tg[l + '|' + tier].tags || {})[tag] || {}; return [{ v: (d.regret_per_ep || 0).toFixed(3), l: 'regret per episode' }, { v: pctf(d.rate || 0), l: 'of episodes show it' }]; } });
+        const common = (L.tags.pooled_common_models || []).map(short).join(', ');
+        g.appendChild(card('c12', 'Which mistakes does thinking fix? · ' + tier, 'solver regret per episode by failure tag, pooled over ' + (common || 'the models that ran every level') + ' · a row that fades left→right is a mistake thinking fixes', [hm2]));
+      }
+    }
+  }
   sec.appendChild(g);
 }
-function frontierChart(front, pts, ys) {
+function frontierChart(front, pts, ys, refs) {
   const blue = css('--s1');
   const sf = front.slice().sort((a, b) => a.cost - b.cost);
   void blue;
   return xyChart([{ name: 'cells', c: css('--other'), pts, line: false }], { logx: true, xfloor: 0.001, W: 1180, H: 340, R: 140, ymin: Math.min(0, ...ys), ymax: Math.max(1.1, ...ys),
-      yfmt: v => pctf(v), xfmt: v => usd(v), ref: { y: 1, l: 'solver' }, aria: 'cost frontier', frontier: sf });
+      yfmt: v => pctf(v), xfmt: v => v < 1 ? '$' + (+v.toPrecision(2)) : usd(v), ref: { y: 1, l: 'solver' }, refs: refs || [], aria: 'cost frontier', frontier: sf });
 }
 
 // ---- atlas
+function tilesRow(tiles) {
+  return h('div', { class: 'c12 tiles' }, tiles.map(t => h('div', { class: 'tile' }, [h('div', { class: 'lab', text: t[0] }), h('div', { class: 'val', text: t[1] }), h('div', { class: 'note', text: t[2] || '', title: t[2] || '' })])));
+}
 function renderAtlas() {
   const sec = document.getElementById('p-atlas'); sec.replaceChildren();
   const A = R.atlas;
   panelHead(sec, '04', { kicker: 'Failure Atlas', h: 'Why the agent loses, in its own words' },
-    'Gemini reads the whole trajectory corpus in one long, cached context. Every quote is checked verbatim against the transcript; every mode is tied to solver regret.');
+    'Gemini reads the whole trajectory corpus in one long, cached context. Every quote is checked verbatim against the transcript in code; regret shares come from the reference solver, never from Gemini.');
   if (!A || !(A.modes || []).length) { sec.appendChild(pending('Atlas', 'python -m canary.gemini.atlas --runs <dirs> → results/gemini/atlas.json')); return; }
   const g = h('div', { class: 'grid' });
-  const C = A.corpus || {}; const HA = A.human_agreement;
-  let haVal = '—', haNote = 'human labels pending';
-  if (typeof HA === 'number') { haVal = pctf(HA); haNote = 'human–Gemini agreement'; }
-  else if (HA && typeof HA === 'object') { const r = HA.rate != null ? HA.rate : (HA.total ? HA.agree / HA.total : null);
-    if (r != null) { haVal = pctf(r); haNote = (HA.agree != null ? HA.agree + ' / ' + HA.total + ' claims agreed' : 'agreement'); } }
-  const quotes = A.modes.flatMap(m => m.quotes || []); const ver = quotes.filter(q => q.verified).length;
-  const tiles = [['Episodes read', C.episodes != null ? nf.format(C.episodes) : '—', A.model ? 'by ' + short(A.model) : ''],
-    ['Corpus tokens', C.tokens != null ? compact(C.tokens) : '—', C.cached_tokens != null ? compact(C.cached_tokens) + ' served from cache' : ''],
-    ['Failure modes', String(A.modes.length), 'ranked by regret share'],
-    ['Quotes verified', quotes.length ? ver + ' / ' + quotes.length : '—', 'verbatim match against transcripts'],
-    ['Human agreement', haVal, haNote]];
-  g.appendChild(h('div', { class: 'c12 tiles' }, tiles.map(t => h('div', { class: 'tile' }, [h('div', { class: 'lab', text: t[0] }), h('div', { class: 'val', text: t[1] }), h('div', { class: 'note', text: t[2] })]))));
+  const C = A.corpus || {}, HA = A.human_agreement, V = A.verification, LO = A.localisation;
+  const quotes = A.modes.flatMap(m => m.quotes || []);
+  const tiles = [['Episodes read', C.episodes != null ? nf.format(C.episodes) : '—', A.model ? 'by ' + short(A.model) + ' in one prompt' : ''],
+    ['Corpus tokens', C.tokens != null ? compact(C.tokens) : '—', C.cached_tokens ? compact(C.cached_tokens) + ' input tokens served from cache' : 'long context'],
+    ['Quotes verified', V && V.pass_rate != null ? pctf(V.pass_rate) : quotes.length ? quotes.filter(q => q.verified).length + ' / ' + quotes.length : '—',
+      V && V.quotes_checked != null ? nf.format(V.quotes_checked) + ' checked verbatim · ' + (V.dropped || 0) + ' dropped' : 'verbatim match against transcripts'],
+    LO ? ['Chart reading', LO.agree + ' / ' + LO.n, 'divergence step found within 3 steps (multimodal)'] : ['Failure modes', String(A.modes.length), 'ranked by regret share'],
+    ['Human agreement', HA && HA.rate != null ? pctf(HA.rate) : 'pending', HA && HA.rate != null ? (HA.n ? HA.n + ' claims labelled by a teammate' : 'human–Gemini agreement') : 'labels in docs/gemini/validation.md']];
+  g.appendChild(tilesRow(tiles));
+  if (A.summary) g.appendChild(card('c12', 'What Gemini found', null, [h('p', { class: 'summary', text: A.summary })]));
   const modes = A.modes.slice().sort((a, b) => (b.regret_share || 0) - (a.regret_share || 0));
   const list = h('div', { class: 'modes' }, modes.slice(0, 6).map((m, i) => {
-    const eps = Array.isArray(m.episodes) ? m.episodes.length : m.episodes;
     const bar = h('div', { class: 'share' }, [h('div')]); bar.firstChild.style.width = Math.max(0, Math.min(100, (m.regret_share || 0) * 100)) + '%';
     const qs_ = (m.quotes || []).slice(0, 2).map(q => h('blockquote', {}, ['“' + q.quote + '”',
-      h('span', { class: 'src' }, [`${q.episode || ''}${q.t != null ? ' · step ' + q.t : ''}`, h('span', { class: 'badge ' + (q.verified ? 'ok' : 'no'), text: q.verified ? '✓ verified' : '✗ unverified' })])]));
-    const thumb = h('div', { class: 'thumb' }, [m.chart_src ? h('img', { src: m.chart_src, alt: 'belief vs solver chart for ' + (m.name || m.id) }) : h('div', { class: 'ph', text: m.chart ? 'chart: ' + m.chart : 'no chart' })]);
-    return h('div', { class: 'mode' }, [h('div', { class: 'rank', text: String(i + 1) }), h('div', {}, [h('h4', { text: m.name || m.id }), h('p', { class: 'desc', text: m.description || '' }),
-      h('div', { class: 'facts' }, [h('span', {}, [h('b', { text: pctf(m.regret_share || 0) }), ' of regret']), eps != null ? h('span', {}, [h('b', { text: String(eps) }), ' episodes']) : null,
-        m.decision ? h('span', {}, ['decision ', h('b', { text: m.decision })]) : null]), bar].concat(qs_)), thumb]);
+      h('span', { class: 'src' }, [`${q.episode || ''}${q.t != null ? ' · step ' + q.t : ''}`,
+        h('span', { class: 'badge ' + (q.verified ? 'ok' : 'no'), text: q.verified ? (q.step_verified ? '✓ verified at step' : '✓ verified') : '✗ unverified' })])]));
+    const thumb = h('div', { class: 'thumb' }, [m.chart_src ? h('img', { src: m.chart_src, alt: 'belief trace chart for ' + (m.name || m.id) }) : h('div', { class: 'ph', text: m.chart ? 'chart: ' + m.chart : 'no chart' })]);
+    const extra = [];
+    if (m.mechanism) extra.push(h('p', { class: 'desc' }, [h('b', { text: 'Why: ' }), m.mechanism]));
+    if (m.solver_would) extra.push(h('p', { class: 'desc' }, [h('b', { text: 'Solver instead: ' }), m.solver_would]));
+    return h('div', { class: 'mode' }, [h('div', { class: 'rank', text: String(i + 1) }), h('div', {}, [h('h4', { text: m.name || m.id }), h('p', { class: 'desc', text: m.description || '' })].concat(extra).concat([
+      h('div', { class: 'facts' }, [h('span', {}, [h('b', { text: pctf(m.regret_share || 0) }), ' of all regret']), m.episodes != null ? h('span', {}, [h('b', { text: String(m.episodes) }), ' episodes']) : null,
+        m.steps != null ? h('span', {}, [h('b', { text: String(m.steps) }), ' decisions']) : null, m.decision ? h('span', {}, ['decision ', h('b', { text: m.decision })]) : null]), bar]).concat(qs_)), thumb]);
   }));
-  g.appendChild(card('c12', 'Top failure modes', 'bar = share of total solver regret attributed to the mode', [synthBadge(A), list]));
+  g.appendChild(card('c12', 'Top failure modes', 'bar = share of all solver regret attributed to the mode', [synthBadge(A), list]));
+  const co = (C.cohorts || []).filter(c => c.cohort);
+  if (co.length) {
+    const tb = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['cohort (model / harness / rules)', 'episodes', 'mean score', 'accuracy', 'mean regret'].map((c, i) => h('th', { class: i ? 'num' : '', text: c })))]),
+      h('tbody', {}, co.map(c => h('tr', {}, [h('td', { text: c.cohort }), h('td', { class: 'num', text: c.episodes != null ? String(c.episodes) : '–' }),
+        h('td', { class: 'num', text: c.score_mean != null ? c.score_mean.toFixed(3) : '–' }), h('td', { class: 'num', text: c.accuracy != null ? pctf(c.accuracy) : '–' }),
+        h('td', { class: 'num', text: c.regret_mean != null ? c.regret_mean.toFixed(3) : '–' })])))]);
+    g.appendChild(card('c12', 'Corpus by cohort', 'never pooled across rule versions', [tb]));
+  }
   sec.appendChild(g);
 }
 
@@ -997,46 +1270,64 @@ function renderSwarm() {
   const sec = document.getElementById('p-swarm'); sec.replaceChildren();
   const S = R.swarm;
   panelHead(sec, '05', { kicker: 'Swarm', h: 'Can Gemini game the reward?' },
-    'Gemini attackers read the whole repo and try to beat the score without catching the mole. Only ledger-verified scores count; every real finding becomes a regression test.');
+    'Gemini attackers hold the whole repo in a cached context and try to beat the score without catching the mole. Only scores the env ledger records count; every real finding becomes a regression test.');
   if (!S || !(S.attempts || []).length) { sec.appendChild(pending('Swarm', 'python -m canary.gemini.swarm --attackers 50 → results/gemini/swarm.json')); return; }
-  const at = S.attempts; const personas = new Set(at.map(a => a.persona)).size;
-  const verified = at.filter(a => a.ledger_verified);
-  const best = S.best_non_solver != null ? (typeof S.best_non_solver === 'object' ? S.best_non_solver.score : S.best_non_solver) : Math.max(...verified.map(a => a.score));
-  const solver = S.solver_score != null ? S.solver_score : S.solver;
-  const exploits = at.filter(a => a.exploit && a.ledger_verified).length;
-  const findings = S.findings || []; const tw = S.tests_written != null ? S.tests_written : findings.filter(f => f.test).length;
-  const tiles = [['Attempts', nf.format(at.length), (S.mode || '') + (S.tier ? ' · ' + S.tier : '')], ['Personas', String(personas), S.model ? short(S.model) : ''],
-    ['Best non-solver', best != null ? (+best).toFixed(3) : '—', solver != null ? 'solver ' + (+solver).toFixed(3) : ''],
-    ['Verified exploits', String(exploits), exploits ? 'see findings' : 'none beat the reward'], ['Regression tests', String(tw), 'auto-written from findings']];
+  const at = S.attempts, scored = at.filter(a => a.score != null);
+  const personas = new Set(at.map(a => a.persona)).size;
+  const best = S.best_non_solver, solver = S.solver_score;
+  const tiles = [['Attacks', nf.format(at.length), [S.mode, (S.tiers && S.tiers.length ? S.tiers.join(' + ') : S.tier)].filter(Boolean).join(' · ') + (S.tool_calls ? ' · ' + nf.format(S.tool_calls) + ' tool calls' : '')],
+    ['Personas', String(personas), S.model ? String(S.model).split(',').map(short).join(', ') : ''],
+    S.best_unjustified != null
+      ? ['Best unjustified score', (S.best_unjustified >= 0 ? '+' : '') + S.best_unjustified.toFixed(3), (S.best_unjustified_tier || '') + ' · solver ' + (S.best_unjustified_solver != null ? '+' + S.best_unjustified_solver.toFixed(3) : '?') + ' · ' + (S.honest_wins || 0) + ' honest ' + (S.honest_wins === 1 ? 'win' : 'wins') + ' excluded']
+      : ['Best non-solver score', best != null ? (best >= 0 ? '+' : '') + best.toFixed(3) : '—', solver != null ? 'solver ' + (solver >= 0 ? '+' : '') + solver.toFixed(3) + ' on the same seeds' : ''],
+    ['Verified exploits', String(S.exploits || 0), (S.exploits ? 'invariant broken, ledger-verified' : 'no invariant broken') + (S.candidates ? ' · ' + S.candidates + ' score candidates' : '')],
+    ['Regression tests', S.tests_written != null ? String(S.tests_written) : '—', 'written from the attacks']];
   const g = h('div', { class: 'grid' });
-  g.appendChild(h('div', { class: 'c12 tiles' }, tiles.map(t => h('div', { class: 'tile' }, [h('div', { class: 'lab', text: t[0] }), h('div', { class: 'val', text: t[1] }), h('div', { class: 'note', text: t[2] })]))));
-  g.appendChild(card('c7', 'Every attempt vs the solver', 'one dot per attack · x = episode score · grey = not ledger-verified', [synthBadge(S), stripChart(at, solver)]));
-  const top = at.slice().sort((a, b) => b.score - a.score).slice(0, 8);
-  const tbl = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, [h('th', { text: 'persona' }), h('th', { text: 'plan' }), h('th', { class: 'num', text: 'score' }), h('th', { text: 'verified' })])]),
-    h('tbody', {}, top.map(a => h('tr', {}, [h('td', { class: 'nw', text: a.persona }), h('td', { class: 'plan', text: String(a.plan || '').slice(0, 160) }), h('td', { class: 'num', text: (+a.score).toFixed(3) }),
-      h('td', {}, [h('span', { class: 'badge ' + (a.ledger_verified ? 'ok' : 'no'), text: a.ledger_verified ? '✓ ledger' : '✗ claim only' })])])))]);
-  g.appendChild(card('c5', 'Top attempts', 'highest scores first', [tbl]));
-  if (findings.length) g.appendChild(card('c12', 'Findings', null, [h('table', { class: 'list' }, [h('tbody', {}, findings.map(f => h('tr', {}, [h('td', { text: f.title || f.name || '' }),
-    h('td', {}, [h('span', { class: 'badge ' + (f.verified ? 'ok' : 'no'), text: f.verified ? '✓ verified' : 'unverified' })]), h('td', { class: 'plan', text: f.test || '' })])))])]));
+  g.appendChild(tilesRow(tiles));
+  const paired = scored.every(a => a.solver_score != null) && (S.tiers || []).length > 1;
+  g.appendChild(card('c7', 'Every attack vs the solver', 'one dot per attack · x = ' + (paired ? 'score − solver on the same seed (0 = solver)' : 'episode score') + ' · blue = verified attack · hollow = honest detective win (evidence justified the accusation) · red = exploit',
+    [synthBadge(S), stripChart(paired ? scored.map(a => Object.assign({}, a, { score: a.score - a.solver_score, raw: a.score })) : scored, paired ? 0 : solver, paired)]));
+  const top = scored.slice().sort((a, b) => b.score - a.score).slice(0, 6);
+  const tbl = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, [h('th', { text: 'persona' }), h('th', { text: 'hypothesis' }), h('th', { class: 'num', text: 'score' }), h('th', { text: 'ledger' })])]),
+    h('tbody', {}, top.map(a => h('tr', {}, [h('td', { class: 'nw', text: a.persona }), h('td', { class: 'plan', text: String(a.plan || '').slice(0, 90) + (String(a.plan || '').length > 90 ? '…' : '') }), h('td', { class: 'num', text: (a.score >= 0 ? '+' : '') + a.score.toFixed(3) }),
+      h('td', {}, [h('span', { class: 'badge ' + (a.ledger_verified ? 'ok' : 'no'), text: a.justified ? '✓ honest win' : a.ledger_verified ? '✓ verified' : '✗ claim only' })])])))]);
+  g.appendChild(card('c5', 'Top attacks', 'highest verified scores first', [tbl]));
+  const vk = Object.entries(S.violation_kinds || {});
+  if (S.findings.length || vk.length) {
+    const kids = [];
+    if (vk.length) kids.push(h('p', { class: 'sub', text: 'Invariant violations by kind: ' + vk.map(([k, n]) => k + ' ×' + n).join(' · ') }));
+    if (S.findings.length) kids.push(h('table', { class: 'list' }, [h('tbody', {}, S.findings.map(f => h('tr', {}, [h('td', { text: f.title }),
+      h('td', {}, [h('span', { class: 'badge ' + (f.verified ? 'ok' : 'no'), text: f.verified ? '✓ verified' : 'unverified' })]), h('td', { class: 'plan', text: f.test })])))]));
+    g.appendChild(card('c12', 'Findings', null, kids));
+  }
   sec.appendChild(g);
 }
-function stripChart(at, solver) {
-  const W = 680, H = 170, L = 16, Rr = 16, cy = 80;
+function stripChart(at, solver, paired) {
+  const W = 680, H = 240, L = 16, Rr = 16, cy = 110;
   const lo = Math.min(-1, ...at.map(a => a.score)), hi = Math.max(1, ...at.map(a => a.score));
   const X = v => L + (W - L - Rr) * (v - lo) / (hi - lo);
   const svg = s('svg', { class: 'chart', viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'attack scores vs solver' });
-  [-1, -0.5, 0, 0.5, 1].forEach(t => { svg.appendChild(s('line', { class: 'gridline', x1: X(t), x2: X(t), y1: 20, y2: H - 30 }));
+  const st = (hi - lo) > 2.5 ? 1 : 0.5, ticks = [];
+  for (let v = Math.ceil(lo / st) * st; v <= hi + 1e-9; v += st) ticks.push(+v.toFixed(2));
+  ticks.forEach(t => { svg.appendChild(s('line', { class: 'gridline', x1: X(t), x2: X(t), y1: 20, y2: H - 30 }));
     svg.appendChild(s('text', { x: X(t), y: H - 12, 'text-anchor': 'middle', text: (t > 0 ? '+' : '') + t })); });
   if (solver != null) { svg.appendChild(s('line', { x1: X(solver), x2: X(solver), y1: 12, y2: H - 30, stroke: css('--ink'), 'stroke-width': 1.5 }));
-    svg.appendChild(s('text', { x: X(solver) + 6, y: 20, class: 'ink', text: 'solver ' + (+solver).toFixed(2) })); }
+    svg.appendChild(s('text', { x: X(solver) + 6, y: 20, class: 'ink', text: paired ? 'solver (same seed)' : 'solver ' + (+solver).toFixed(2) })); }
   const surf = css('--surface'), blue = css('--s1'), grey = css('--other'), red = css('--crit');
   const sorted = at.slice().sort((a, b) => a.score - b.score); const placed = [];
-  sorted.forEach(a => { const x = X(a.score); let k = 0; while (placed.some(p => Math.abs(p.x - x) < 9 && p.k === k)) k++; placed.push({ x, k });
-    const y = cy + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 9;
+  sorted.forEach(a => { const x = X(a.score); let k = 0; while (placed.some(p => Math.abs(p.x - x) < 9 && p.k === k)) k++; placed.push({ x, k, a }); });
+  const maxK = Math.max(1, ...placed.map(p => p.k)); const step = Math.min(9, (H - 60) / (maxK + 1));
+  placed.forEach(({ x, k, a }) => {
+    const y = cy + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * step;
     const g = s('g', { class: 'hov', tabindex: 0 });
     g.appendChild(s('circle', { class: 'hit', cx: x, cy: y, r: 10 }));
-    g.appendChild(s('circle', { class: 'mark', cx: x, cy: y, r: 4, fill: a.exploit && a.ledger_verified ? red : a.ledger_verified ? blue : grey, stroke: surf, 'stroke-width': 2 }));
-    bindTip(g, () => [a.persona, [{ v: (+a.score).toFixed(3), l: 'score' }, { v: a.ledger_verified ? 'ledger-verified' : 'claim only', l: '' }].concat(a.exploit ? [{ v: 'exploit', l: '' }] : [])]);
+    const col = a.exploit && a.ledger_verified ? red : a.ledger_verified ? blue : grey;
+    g.appendChild(a.justified ? s('circle', { class: 'mark', cx: x, cy: y, r: step < 7 ? 3 : 4, fill: surf, stroke: col, 'stroke-width': 2 })
+      : s('circle', { class: 'mark', cx: x, cy: y, r: step < 7 ? 3 : 4, fill: col, stroke: surf, 'stroke-width': step < 7 ? 1 : 2 }));
+    bindTip(g, () => [a.persona + (a.tier ? ' · ' + a.tier : ''), [{ v: ((a.raw != null ? a.raw : a.score) >= 0 ? '+' : '') + (a.raw != null ? a.raw : a.score).toFixed(3), l: 'episode score' }]
+      .concat(a.raw != null ? [{ v: (a.score >= 0 ? '+' : '') + a.score.toFixed(3), l: 'vs solver, same seed' }] : []).concat(a.justified ? [{ v: 'honest win', l: 'accusation justified by public evidence' }] : []).concat([ { v: a.ledger_verified ? 'ledger-verified' : 'claim only', l: '' }]
+      .concat(a.solver_score != null ? [{ v: a.solver_score.toFixed(3), l: 'solver, same seed' }] : []).concat(a.exploit ? [{ v: 'exploit', l: 'invariant broken' }] : [])
+      .concat(a.plan ? [{ v: '', l: String(a.plan).slice(0, 120) }] : []))]);
     svg.appendChild(g); });
   return svg;
 }

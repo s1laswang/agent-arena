@@ -15,10 +15,13 @@ eval-full:
 harbor:
 	$(PY) -m harbor.build --seeds 0..19 --seat $(SEAT)
 
-.PHONY: test eval eval-full harbor exploits key-check
+.PHONY: frontier-replay test eval eval-full harbor exploits key-check
 
 exploits:
 	$(PY) -m redteam.report
 
 key-check:
 	PYTHONPATH=. $(PY) scripts/key_check.py
+
+frontier-replay:
+	$(PY) -m scripts.frontier_replay

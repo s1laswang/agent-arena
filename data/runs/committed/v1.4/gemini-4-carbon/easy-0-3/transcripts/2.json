@@ -1,0 +1,1090 @@
+[
+ {
+  "role": "system",
+  "content": "# Canary: catch the mole (easy tier)\n\n## Your job\nYou are the security lead of a company with 12 employees, with ids e00 to e11. Exactly one employee is a mole who leaks sensitive documents. Find the mole and accuse them. Every rule and number of the game is written on this page. Nothing is hidden except who the mole is.\n\n## Score\n- The company value V starts at 1.0. It goes down when things cost money, and it never goes below 0.\n- V shown is the value you can see: damage from leaks that haven't surfaced yet is not visible until they surface. Your score uses the true V, which includes undetected damage.\n- `accuse(employee)` ends the episode. If you accuse the mole, your score is V at that moment. If you accuse an innocent employee, your score is -1.\n- The game never tells you whether your accusation was correct.\n- If day 14 ends and you have not accused anyone, your score is 0. So accusing is only worth it when P(correct) x V + (1 - P(correct)) x (-1) is greater than 0.\n- Every tool call counts toward a total limit of 300 calls. If you reach the limit, the episode ends with score 0.\n\n## Days\n- The episode starts on day 1 and lasts at most 14 days. `advance_day` ends the current day.\n- check_leak_feed, interview, plant_canary, read_access_logs, read_message, restrict_access, search_messages, unrestrict_access each use one of your 8 actions per day. After that they fail until you call `advance_day`. `status`, `list_employees`, `list_documents`, `advance_day` and `accuse` are free.\n\n## Documents\n- Each day, between 2 and 4 new sensitive documents are published (equally likely: 2, 3, 4).\n- 0% of documents go to everyone in one department. The other 100% go to everyone in two departments.\n- Restricted employees do not receive new documents. An employee holds every document it ever received.\n\n## How leaks work\n- At the end of each day, the mole may leak one document that it received in the last 3 days (today included) and has not leaked before.\n- If the mole has such a document, it leaks one with probability 0.9. By default it picks one at random, with every eligible document equally likely.\n- Each leak lowers the true V by 0.05 right away. It appears in the leak feed after a delay of 1 day(s), each equally likely.\n- A restricted mole can still leak documents it already holds.\n\n## Canaries (traps)\n- `plant_canary(doc_title, assignment)` creates a new document today. It costs 0.01 of V.\n- You can plant at most 1 per day. `assignment` maps employee ids to variant labels. Use at most 3 different labels and at least 1 recipient. Restricted employees cannot receive a canary.\n- The recipients are exactly the employees in `assignment`. They count as having received the canary today.\n- If the canary leaks, the leak feed shows the variant label the mole received.\n\n## Restricting access\n- `restrict_access(employee)` costs 0.01 of V for every day that ends while the employee is restricted. `unrestrict_access` lifts it.\n\n## Evidence\n- Access logs exist for days that have ended. Every employee opens documents it holds a random number of times per day (Poisson). The average is 1.0 for an innocent employee and 1.3 for the mole.\n- Each access is marked after_hours with probability 0.1 (innocent) or 0.15 (mole).\n- Framing is off in this tier.\n- There is no decoy. The mole is equally likely to be any employee.\n- Interviews: an innocent answers evasively with probability 0.2. The mole answers evasively with probability 0.2 x 1.5. Asking the same employee about the same topic on the same day gives the same answer.\n- `search_messages` returns at most 20 results.\n\n## How the mole decides (Mole DSL)\n- The mole follows a fixed list of if-then rules. The first rule that matches is used; otherwise a default rule applies.\n- A rule can only look at these facts: the day number, days since its last leak, whether it is restricted, how many colleagues are restricted, the number of documents it could leak, the fewest and most recipients of those documents, the age of the newest one, and how many of them have at most 3 recipients.\n- A rule chooses which document to leak: newest, oldest, most recipients, fewest recipients, random, or none.\n- A rule may also frame one colleague (the decoy, the first restricted colleague, or a random colleague). Framing adds one fake after-hours access for that colleague.\n- The mole never knows which documents are canaries. The 0.9 leak probability above still applies to every leak.\n- The default mole leaks a random document and does no extra framing, exactly as described above.\n\n## Rules for tool arguments\n- Give exactly one employee id per call, such as e07. Lists, wildcards and names are rejected.\n- Unknown arguments are rejected. Invalid calls still count toward the total call limit.\n\n## Exact parameters\nThe same numbers as above, one per line (some only matter when their feature is on):\n- name: easy\n- n_employees: 12\n- n_days: 14\n- p_leak: 0.9\n- delay_choices: 1\n- leak_damage: 0.05\n- canary_cost: 0.01\n- canaries_per_day: 1\n- max_variants: 3\n- restrict_cost_per_day: 0.01\n- actions_per_day: 8\n- tool_call_cap: 300\n- log_rate_benign: 1\n- log_rate_mole: 1.3\n- interview_lr: 1.5\n- p_evasive_innocent: 0.2\n- decoy: off\n- framing: off\n- careful_mole: off\n- access_constraints: off\n- leak_window_days: 3\n- p_after_hours_benign: 0.1\n- p_after_hours_mole: 0.15\n- framing_rate: 1\n- framing_decoy_share: 0.5\n- docs_per_day: 2, 3, 4\n- wrong_accusation_score: -1\n- p_single_dept_recipients: 0\n- doc_recipient_share: 0\n- canary_level: 1\n- search_max_results: 20\n- low_recipient_threshold: 3\n- fingerprint_accuracy: 1\n- noise: 1\n\nUse the tools to investigate. Call exactly one tool at a time when possible, and accuse exactly once."
+ },
+ {
+  "role": "user",
+  "content": "Begin the investigation."
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my thought process, summarized as you requested:\n\n**Assessing the Situation and Choosing a Course of Action**\n\nAlright, before diving in, let's establish our baseline. Since these operations are free, let's take a quick look at `status`, `list_employees`, and `list_documents`. No sense in incurring any costs without a good reason. Hmmm, now, let's apply the rule; \"Call exactly one tool at a time when possible, and accuse exactly once.\" Following that principle, `list_employees` seems like the most logical starting point. Let's make that call first and see what data it provides.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_11479058328500357739",
+       "args": {},
+       "name": "list_employees"
+      },
+      "thought_signature": "ErMCCrACAWkUfRO0Y-TB6sEo8h5UJ7x_RjTImNW6AZtzF_hypd76k-vG2aUCuokXgcUa8kmEov-qO76xINug__lfPDIv8NSdVM3zufNYGtvhzVTrACQCFpW2uxLBsnc_hyCPPMrXY6Pu1tNVLdXNpgjidFbMyXAvXYc-2ewV8ztP7NyTaKg1j_ndq-KA6B7gisS0FQPyYUVPkS8d0UXDkqikIBrWDriOFH99aQMzyxMdhFG-E7LznaLSlR-6tKiAkzsZ0hUsVjiWWbp5ICHlQb-ukEnYeJUnekVMkzDdyztkuGJSuvaVUoI1B0WxvAehRvC-aZgmfa7phX2A2B8J03TGqNmMsgWWZEpC_VL_Ml6KjiFJU64L9Y4FygYZ87hQyOvihbk8mLtxklsOPrQdjlfEixPO_Q=="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_11479058328500357739",
+    "name": "list_employees",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_11479058328500357739",
+  "name": "list_employees",
+  "content": "{\"ok\": true, \"data\": {\"employees\": [{\"id\": \"e00\", \"name\": \"Kalle Karjalainen\", \"dept\": \"Engineering\", \"role\": \"senior engineer\"}, {\"id\": \"e01\", \"name\": \"Petri Jarvinen\", \"dept\": \"Finance\", \"role\": \"analyst\"}, {\"id\": \"e02\", \"name\": \"Pihla Laitinen\", \"dept\": \"Sales\", \"role\": \"sales ops\"}, {\"id\": \"e03\", \"name\": \"Hanna Jarvinen\", \"dept\": \"Legal\", \"role\": \"compliance officer\"}, {\"id\": \"e04\", \"name\": \"Eero Jarvinen\", \"dept\": \"Finance\", \"role\": \"accountant\"}, {\"id\": \"e05\", \"name\": \"Antti Makinen\", \"dept\": \"Legal\", \"role\": \"paralegal\"}, {\"id\": \"e06\", \"name\": \"Elina Karjalainen\", \"dept\": \"Sales\", \"role\": \"account exec\"}, {\"id\": \"e07\", \"name\": \"Lauri Kinnunen\", \"dept\": \"Legal\", \"role\": \"counsel\"}, {\"id\": \"e08\", \"name\": \"Tuomas Heikkinen\", \"dept\": \"Sales\", \"role\": \"sales manager\"}, {\"id\": \"e09\", \"name\": \"Sanna Kinnunen\", \"dept\": \"Sales\", \"role\": \"sales ops\"}, {\"id\": \"e10\", \"name\": \"Jussi Salo\", \"dept\": \"Finance\", \"role\": \"controller\"}, {\"id\": \"e11\", \"name\": \"Olli Jokinen\", \"dept\": \"Finance\", \"role\": \"accountant\"}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my attempt at summarizing that thought process, tailored for an expert audience:\n\n**Checking `list_documents` for Day 1 Data**\n\nAlright, let's get down to brass tacks. First, I need to get a handle on what we're working with for the initial data. My first step is to quickly verify the output of `list_documents`. Specifically, I'm focusing on the documents that are attributed to \"day 1\". This function is crucial, a cornerstone really, for this preliminary analysis. I want to quickly ascertain whether this function is behaving as expected, and whether it\u2019s returning the information I anticipated. Things to look for here? I'm checking the data format, the total volume and what metadata is included. Any anomalies will immediately trigger a deeper investigation, starting with the source and the API calls. I also want to determine the range of possible issues.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_635008213057911600",
+       "args": {
+        "day_from": 1,
+        "day_to": 1
+       },
+       "name": "list_documents"
+      },
+      "thought_signature": "Eo8BCowBAWkUfRNxwH4i7KdTPuZjHDXpMYoXhHg2P_FWk2bZlT5Bqsuw71-6wXlegBf6fhd79r1_xLDflLpjVTLD7Qbh7BHKAmMUgNBgLhDufAd7k_1bILhyYZQPH90Z3B0Mn4Th7G_pONZ6DNDXh-_RimSfevgjuaqgypgPkXieslnBjP6zPlAW3a1pIjwzXtE="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_635008213057911600",
+    "name": "list_documents",
+    "args": {
+     "day_from": 1,
+     "day_to": 1
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_635008213057911600",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d1-1\", \"title\": \"Board deck draft Q2\", \"day\": 1, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e10\", \"e11\"], \"is_canary\": false}, {\"doc_id\": \"d1-2\", \"title\": \"Board deck draft Q2\", \"day\": 1, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e06\", \"e08\", \"e09\", \"e10\", \"e11\"], \"is_canary\": false}, {\"doc_id\": \"d1-3\", \"title\": \"Project Northstar security review\", \"day\": 1, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e10\", \"e11\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "**Day 1 Data Analysis and Canary Deployment**\n\nOkay, let's break down this information from Day 1. First, I'm noting the departmental document distribution: Engineering has document e00, Finance has e01, e04, e10, and e11, Sales has e02, e06, e08, and e09, and Legal has e03, e05, and e07.\n\nNow, looking at the documents themselves: d1-1 combines Eng and Fin, d1-2 is Fin and Sales, and d1-3 is again Eng and Fin. The key observation here is that Legal received *nothing* today. This is an immediate red flag.\n\nMy expert intuition kicks in. We have an opportunity here. Let's deploy a canary in the coal mine. If we assume the mole is in Legal, then let's give each member of Legal a unique, flagged document. So, e03 gets v1, e05 gets v2, and e07 gets v3. If the mole leaks *only* this, we'll catch them. The probability of catching the mole if they leak this canary is 0.9.\n\nBut we can't be too hasty. Let's not forget about messages. A mole could be transmitting information through channels other than documents. I need to check for any suspicious message activity on Day 1. We have a limited number of actions per day, only 8, so let's use them wisely. We should search for suspicious messages on day 1. My initial thought is to look for common vowels or spaces, like \"e,\" \"a,\" or the space character itself. Let's start with a search using `\" \"` and see what we get!\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_3692443265052397101",
+       "args": {
+        "day_from": 1,
+        "day_to": 1,
+        "query": " "
+       },
+       "name": "search_messages"
+      },
+      "thought_signature": "EuIHCt8HAWkUfRPHMy904pIL6ChcmvRrVqtVrxgEbPQNJBxjzAvGeM_YPJvRoarNanL0K4NpyVbdvuQ-NOoqDqu-nLstSKu7IbqThdxkX9ge1nFdRHokXLUkCM2ZtQCMVOsnyIEYDCNBITwVxC8dV7Sq_NRi865JXOT0Ey0Vq3oftorFOvJb9d8iwr9VMh61ewPsbzO9yeSHuQK7CqMzyQ2GN5ZlUca4Dl9_u5n0xLmLrTUVpP7TnvXPrWP-0tn6p1spfS3tFADpU2SQQtrWVK_-fbVeYHC734Jw54eWDOST8D95CbvjqhfvgMFC_Glwsh-WSSMQ0y24NTOnc2ArIst8iA-qTRJ_VHudY_rEAxpNm_FBi2Fruo1zQYG8dmPTMdDSBYXybQARf-TwXH1uVSDl8oMjPLUc3G-b1Hs3xgGiu7ku7GLdCkaZU69RQ1kdCuT8oId2GrlfLlIJnhC9i5mXMPTpzPpbn7dd5VJzxtA_e6peNh_JOQPW5xYtkCWSEXt2EUUFDt__0FY_9o4qgd6XRH6CEtoTrTmfvzQ7whHJL1dWaxlxg3d8TxpFvA-MyXIxF9GLc4G0s-g_d_7oZmctgPs1qI0aiRI7gnkrqMTW1HEakEHB8kxYcEhbJB8Gc5JGSqiNJij6eYZ7_C9cHheM1KowBQ5MadWMvGiXSA--Vw3wWmmW5ZCVxsCQgODbJ_ilI6Mk79Wsn2_MVtXYlSarURUKopNKSzRXuRyidhqi58Gf2i3P-b0WgTcKuDyOp6TW6DOt7sp35IUD5Xeeo9SyzAvCulsyvWopYlNeYtlD3n-z6lRKqlASmSwSjQ2ik2uykIz-qRbWEATmWfYd-C22liMr2kKQ9mDud7gBcX420_j7FXsg1wlEc-kNA_XJ256urNegMAxxcCmVpVT-5NdsnL4dllDNdux_DtbVItGxcRsJ9E_y2ZT1pf3Xx-Yxjn8W72jIJJceiJst6gADHuWrvrOWYJtbLRANeRP5iirNQqHf4xbZoglRwvljTcsr6Y_7HVL7RbDl8He3NB9OaCR4zML8La63NP1bQ7m1RAy7Vhy3rn0dLi4BT7_T7f8TllAWTCCH6SVpg31oyBgZyZyW4-00aDOYyumApEYi5JMSDZnfQ503ozBGPr8igpSy7GnoH2E3hUT_GDU0wPZ9YuO5W6c8DjZmkW_P1rCC1JED7GK46ogtjWq-MhysNR7d_932sZc_xhiyHMxMUpkQp1tc3tc1V8jTC3oxWb1zFLzoProO2N3nJgNA61XFsFSIKXa_mUtUxv2bz84YF6HIqIzCcDirJfWQxn7XOKqOX0LN-xYeNQ=="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_3692443265052397101",
+    "name": "search_messages",
+    "args": {
+     "day_from": 1,
+     "day_to": 1,
+     "query": " "
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_3692443265052397101",
+  "name": "search_messages",
+  "content": "{\"ok\": false, \"data\": {}, \"error\": \"invalid arguments\"}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my interpretation of that thought process, tailored for an expert audience, and written in the first person:\n\n**Initial Assessment of a `query` Parameter**\n\nRight, so I'm looking at this `query` parameter, and I'm instantly thinking, \"It *probably* needs to be non-whitespace.\" I mean, what good is a search for *nothing*? That's just going to waste resources and return a bunch of empty results, or potentially crash the system entirely depending on how it's handled. The input validation better not allow that, or we're in trouble. So, to test that assumption, let's just make sure it will return something, so the test needs to include the character `\"e\"`. Let's see what happens.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_11657667685673414611",
+       "args": {
+        "query": "e",
+        "day_to": 1,
+        "day_from": 1
+       },
+       "name": "search_messages"
+      },
+      "thought_signature": "EqQBCqEBAWkUfRNbR5XWrWPFKxmpnGYAwEeEPQUmlMukg_DY6du5MH71J8jBxP-Z3CCVoGO1w2xA40wMKfMWRgRN87slBGnU0TFCoYJg7PAYM8xxGWjdBB660tWX2O_e3xvevY3Sqa_KlUHdwrs8hszFJzQNpfkjogI4Lin6DwbYZJ9bx0tI7b5nJ034086wt1Fdz87ngcI7CAZbeqzq3me99T25f0g="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_11657667685673414611",
+    "name": "search_messages",
+    "args": {
+     "query": "e",
+     "day_to": 1,
+     "day_from": 1
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_11657667685673414611",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my interpretation of those thoughts, tailored for an expert audience, and delivered as a first-person summary:\n\n**Initial Assessment and Diagnostic Check**\n\nAlright, it seems like messages aren't surfacing as expected. My first instinct, as always, is to eliminate the obvious possibilities. I'm wondering if the messaging system has a quirk where new messages aren't populated immediately, or perhaps they're only visible during operating hours, or even that the system simply hasn't processed any yet on day one. To get a handle on this, the next step is to examine the system's current state. My initial plan is to quickly check the \"status\" command or equivalent API endpoint. This will give me a clear picture of the actions available, and if any are pending, and that should indicate if the system is actually in a state to show messages, or if it is still initialising.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_16394430180869473369",
+       "args": {},
+       "name": "status"
+      },
+      "thought_signature": "EtkBCtYBAWkUfRNehTfOzJyJvelfVbinwLNhFZHdPwZYuJXwr-lRnrDqbywurZBc5KKgMx1Hj_7YNXYGd41hqT7SVfCVAb6oriftG8IvxD6JzXcL8i3gF6gQUgdLqD-rqIgG98rFcaYYm9LYmUz102UpMQ1QtKMyAyc24FYzUjNPeTnOE5qtFh5i-ckzhc34O0lNzi1VjksBWurqvcREeMxgrjmkFWYD5w-Z_nXrSWcbijaCtdTO8krGGB-Uc17wDsYobQe8stLG6ggdlyeZVERGvkygDhqg_BiAfQ=="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_16394430180869473369",
+    "name": "status",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_16394430180869473369",
+  "name": "status",
+  "content": "{\"ok\": true, \"data\": {\"day\": 1, \"V\": 1.0, \"actions_left_today\": 7, \"tool_calls_left\": 295, \"restricted\": [], \"canaries_planted\": []}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "**Day 1 Canary Strategy: Maximizing Information, Minimizing Damage**\n\nOkay, here's the plan. We're going to treat this Day 1 canary placement like a surgical strike. The key insight is that regular documents don't distinguish within departments, while canaries can cut across them. We need to leverage this.\n\nFirst, *never* give a canary to someone who has zero sensitive documents. This causes an unnecessary leak risk and has no upside. That means no canary for Legal today. This saves us from a 0.045 V loss.\n\nInstead, we're going to put a canary only into the hands of those who already have documents and are likely to leak them anyway. Here's the assignment for our canary:\n\n*   **v1**: `e00` (Eng), `e02` (Sales), `e01` (Fin) - One of each department, which is ideal!\n*   **v2**: `e06` (Sales), `e08` (Sales), `e04` (Fin) - Two Sales and one Fin.\n*   **v3**: `e09` (Sales), `e10` (Fin), `e11` (Fin) - One Sales and two Fin.\n\nThe logic is solid: if the canary leaks tonight, we can drastically narrow our suspects to three employees, and in most cases regular doc leaks can narrow it to 1-2.\n\nWhat if nothing leaks tonight? The good news is, by excluding Legal from the Day 1 canary, we have a 76.9% chance that it is Legal, since Legal holds zero documents.\n*   If we put a canary in Legal tomorrow, there is a low probability of a leak, and we can 100% narrow down the leak, with very high certainty of the mole on day 3.\n\nBut there is one more thing to do, after the assignment we have 6 actions left today.\n\nNow, we will use all remaining action on INTERVIEWS! Let's interview `e03, e05, e07`, all Legal employees. We'll also interview `e06, e08`, who both are Sales in `v2`, and `e10`, a Fin in `v3`. This set of interviews gives us early data to help narrow down suspects.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_1771253358066103796",
+       "args": {
+        "doc_title": "Q2 Margin Forecast",
+        "assignment": {
+         "e01": "v1",
+         "e08": "v2",
+         "e10": "v3",
+         "e06": "v2",
+         "e11": "v3",
+         "e02": "v1",
+         "e09": "v3",
+         "e04": "v2",
+         "e00": "v1"
+        }
+       },
+       "name": "plant_canary"
+      },
+      "thought_signature": "Ev2oAQr5qAEBaRR9Ewy-xrQmGp-AFJCBSoeNgoYBxVOvnqiiOQGS1EFG8MV8LLKaM1JgHOnsnjhdnYqPr8hmUcc0oh3M9mdApBVE9zZw-3NUBk6VMuXSDDWk2jsh0rNrkN7IOXcKNK5EAo0Y-Su_1n4fTFO86STBRn0-Sy2DN9YiFBjEz8Wvo5-PNgbPzfeIBJFkUp6CM5gktSsj3QLfKub3ETn59wAD3vQqNxlMYwyurunDUteJLn9Md1f6klaXDJM8ZThlke8V6O_oKezv-1tQw-oiEj6SPptiacyEvcQEs1J7gb0ASK7P0X06gCn1lqhNimKphSs7UV7mzQbf3R4GvWL-AVCcU3M9mNdwOJNzlFs55D9jBsWp5x5wq2ykVGU_K_uR8_THuoTIuRhOM_29xM-6Mi6vEY6dPPcCUKhXhizfFzfmAmprLTCpSDknx5VuQgZY36lmKKmFtvIA3xVlw91mr9-54pFTBnQAuMdA4tsizutjSfjLgIKKfxH2389hAFgD1GidgbuYQouE2kLzyAT1jgXRewbFw_7y1d2mVkQgONEIagPtFY0jEDb60NWHpTlVOgceH7zG523u824-Zrz9x6CP52evwtkfqtIcQbEl50HE7h9Wo_G9XdLXcP73DReRbmPy2cfEzMPdnEDrpArJ312lCocaIJM8O3GY2PyrhxLsRLxSWMFBaHGzzCw2_wvcbSkWlFr-B5KwG3DTvOkrB55_0PLB8Vx0cMC60q4VyrcBGrYeSC20zl7Baf_Qzu4ZCz6lS_aAVbZAyFKXlWat6Mxi7D9UQGfjfmY-yiGl9aYiTRAaPhnahv4jLwxKQWY_AUts4MpozW5Rerqdx5AqQbGzWXZ6r476HsAowrShDzdDHFexAL3eSSjTl8DwZPfFXDOmS4zQx7kL4tHcenyMvPdRv5z3n8j2ZjbErN-UZt10lcDVyiOx031Tr_JeTTF9nU_x29tdQVUUAO48x9CTt1adYFaV4BjB1VWXs935SnLDSnPSGwGgC28rAqdVkip3ervcaKVgAv-qkrBs6hFX4Npxjg8tsTMl7eKOHko3xjN-9mSOM9Estun3A0e3xTvROY44nmZTBDvdDnzdZd46U3tAXP-kzttA3hXUpUA2p4y3y3hTdcEGz-roxZvS6u7NNdDRHrGC_XbAU__aMcCVjXdr9WZmzrLufK4kXVTvKzbjs16qf1P3WnPcflaC7EbLj8ihwhPEbInIfLt3BrrA_YU485bPyX3q1Rydj9ckq8L_b28C3Xjv7Z-SF6y6NwDabEtxCzUAkthGl5rB9Fue6pVog11U6xcfnHX9A-DEwt-wu5nOHkKCgyUApxZ5ZMvLkgi88Z2z3alTTV9eXJKAgUNxYJ7B4dPd5O-z6KDUN8iy_eyXzS7SOZemdEOwz6khDCSfWoZJyb9WFdx1SwiX05ns2eRX-wNIC-0LoD7TJdBsp25ZZt1nuu1M2iMnGlgjjHaCRL80fH4jjMigFeZmf6aJCCpRARnZms1cVgbmrRthx_y7SJ0k2krEaAxIe0lUo98CZg2GIk9ODqIzVOgA-HKBR4vmx5sbMPHYm0M0lYpASdH5FmBuCRRU3eDD3bKChuvF86vfVlwr3oXvuGS04FbU73Ca5DJx8sXLSAIXLaWU7h4wrxBV81UVTblKxyl4HrvFoeAhkjjCheMnVtIhp_00ZNFB9eUa_xHSgVbuo4ZL52WJbLg3SJgAU2caNneL6amwojac9QuFZzCKC29AwDsIhavMDEAz56bg_qqi0c61vuSc9ec5JQN-b83sGUbSA_mWFRmT5v_skMSAQhZbxhjQ-x0HySX4SuybVJ9qEgu8rgg-lqzXo5WYD46EoY40nxr9it1riAlkgATABAuwvXbjrVHeNegF2m1dBiatS-_PTMR6veJaNSutODs51Rc0kO0b2MrTjpe321SfPL-74VFhlDkpEtvGhuAOGVE2zbNPi1jRClASypOTcYoQx_tb28RBs2lpiYRdmTgQFdTI2GP843cwpJ-LTRckV_J83h78fcSKv8ZvK48buTcxPq8G2n3nxHu0SzvS65KB1Xel1GGN7ncJ4oftYzJtsvEguGokYYLGkPD13W4-O7CgaUYs5Vbyv62dxgU2hbjqQ7LOBY3DF9hPj8S-QbpIOeryn1nKTq65tWoFx2o3CTNtdBJvK8AFbMN9XDLg5denSeyMAiiiyFeEnOLFBc4UqJsBZObcVaO9RM7k4Dz4Rv68G3hcRs2p0X7nEaPoQmlHu9DDT47ojlI4jiXgzOb-3utlavoAUNfR-LoprgLc1Wh1XffZ16vRahM9TWKoC669ik6wrzfIA6CP8AMaeujDgCy4bIxHANt8stVjohYGN4DmtQCUC4WsnELSaI9ms1fc-MyR4Fj4M8yg02-JbbwWmAXQ7ce7CNYGlW8GHJKBJVh_6MxD6iWA59XAVnuySG1_sRLSCIHp4MksGPBqyKgxaqjZCsiaviJioI4XHp9KRVuxnLl06p4eC3xwXi1IwcW2-FIc8frzEzClvoElwVW9wXAWJx43NoWDhrOKoLwEIB3G1SviFa9paTbbyEjWqqJHkrnYQar1aqD2xI_U-TUzXb-6P_sp6K5slxkL_XzfSxxT2c-t1Fsn-cOep5rYo2PccMt2vG56HT0PsjnxPfdOnj_J6E059g7-vr6Bdsj6EFG5baIWCRqMFhydSHihPxO8FoUa0XJLxBIFalMVLZy3a9Bq-pG-ocdH2lkhtGr8CIOpLq0G_mEmxNJw6CrUZ-Th5ga2Ma1wwO-chhVl94-N70LlWkWMV3nYxAsyxQH3ynkc8Q-WtqQvXkxLoYxHXGs8YBv7Soi-yTylH2WuYYD-fOR7sjunWIEg3PC1TUHT5_ZDLyuzjoiA3Ss3cU33rnUq2Bxz0ox6MSFAjZyX4nc4B-uPaa_vg1Q28wsj9dlYWTktsixZCZt4AnXywfG20Td5CIt6mD6mZBGJ_b8VMGAQFVBhj0LDLsbwW4v2U6NxuwfypbCJgxxn9kFEFvwb41rxc79FhhbCvaEhzfdG3XxMWFbVYmVT61UtJ2yGkdKaRpzqaatQM6BwoSQmfauu5qZJNbVAneflQ1dUkmQQKfFcLy_PtkpMj5RnfBw1mNQrLFkoftwxHI9zSidBXyyjlgLkYAoG9WvBUYJ-8JwwR4kWscdLR2o1O4rsyUMeVV6AoC9ko_7mBwUu-GF7i-2XDkHf5t7bH7ViM8W6QcSZ7_5cS9eGjPBWXVJoBIAJi1K2A_W4VIjcdkvOzXkz_nRRauNBiU3Pz9SIw2i_Y5AIAUdT7jFgIkY9y4GsnT02rMLlXs7ioZJDR9sTsEs1ukZU6PCEViaLhyWX7iQYoQ0lzYuw02cHJeGIRtXwy7SuJdMV_MXKzJFeQ90WbRP7eSbNPb3XMsq2_XxZYnwUKPR70a4He7qCrjc-yjlx_Vv9l8lf2OMyOUT_Cqs4QWLyRuokyFSY152sYdHT0B2yL4GhqeJvCdp7G8SeGi3plr7kY4NdLs5oePiTPHPC6I0YfvL8MOm4HGTo5EsXei5Sb8byc9cJ3KFSdqiGIeeDjwHPkZ0wMXDaKV1jb4gCcBxDSI2bkudwxmpSyLlyCG1NV0vMaReVpUvjw8I1rRhm8LtZ9WTbEs2WlcP5EZPjJuqVmYLfyeweW3q81MbNXzS2C7nYt49pbZANXEXZM1Ooel4DKJ6kxOlkqxuZj2fpPXygZTwxxmNM_FeiItn6NGuXJfbCkhPL1SdE3d_dCkkSlyBSMsxgoK5oqpzklJZldOFlVJqvkEWAEIRp9uZNmvQIrP4lnYajwI3Pav1BQePlINgeRQMILMZ2U0clD-248uwMKd8Xg5-23ruVO7ZzkUk-Ow20E-NPigZsfUfwXQC4bEVr1Vf9hGq9Pvq-AK5Vn_1Jc69gkiamDP03w42q-BQMGHvZjseX0krG_dFl8DOOrkh1Yg4N3vm7mWit5FDNcXuNgPpR5Eiqx18HFSwx50sEKER5V447LQ_W5iitK3rpyvGIjIyxp1PEghNvkUamRqe4zD0xZC76exGMxkgKy_QtIG0iDknfrZ5Ewnexjmqo6v7dAaLFEPxd40GvotlhHYfDWn1KJXbyRCtM-P64jEMsbVrqAxe1WxNOc8fkcTXwyzbEDHpKIfNCBCmpUJJryr0BUQ-DgVOA9S1oA8eby5rHKxZrk7iH5HnP0D2WTaqAuQDfhlD4Yd6UOmJrE95lZF0xSQvj6ZFtGq4URu0tOkNxSshzZM-v-e-1CHFqv9XR0B4scuwA4UCgx4WnT7GUsDpNwoXLQWQ9vD-GZOz8zfvZZMpn_xARWswEC04ErVdj5g-r1mKb5Tp3XPuQ-FZyUlf7fHlF54iDBdLuL8GklUaaGCuC8zh3Y7HpgLC8L34hg6-j4iKXosscGuhSz0hFeHGmYyBFyWpl4YZ6THv5uN2P7rb4UanH4sxELP_w6saG_idATaQ6Lk0htsPeS8GKZ_3ipXOGAW0lY4_4iItzx9Tnp3dcUeSAD564ZJcWqAYqJvFyEmSA6WWFi2rhg3W-dewSSOBZLmqQAl-TSC6Ov89s4XX3rAF46oRRVTna8bfvlSvVS5EFg_BZFu001X6i2heCxVrf50nKVv_mrmimNFW-7iwOaTsNmdZIbfGSbW6q5VNVSuncUjiJ0BqQjeEcmcZbL3Fmsz-HeLZSMAwnZ7QXNyh3VKOfVt3-nHLSRLzwnna4TptuwbGUWXQNzI4HJgzs5zbAb7YO1Mr4875zNwW1LRsw2f1A7nC9pFM4DUrC7E0GWCZbuOJEnTB5kPACCTRJ2binCFS4qb7djkmv9I2d91gZBJZ1DK8sTM1g23j2e2s6jEdGy4elWMp7BN4_OBlGFLWGzhXPNmFBftblp8c_90Eun3vJZPfT2ZpU67MjUzNHe5VKQtXTiM-wHeS1wzYaj5h2AdMNosdoFPhBaR1KVnP-Y9JK3BIHXsKRxNdto2yC_8nkdM12q02mhCewnhQJFMaGtEtjXW8ui4VadPOYKQFT6026_09XztvTpm9KgXHQJ6lV_LcB8BI0UTL_wBagwwZcZKAnyFSri_5FCoDlqR5HMOJVF87AHZD7PLjWzFhi0LjBlXa-dFLFrnoswaAlNPASs-o9cFdMu4S-EywiQsfcaaSUrCbihrB_qzVbErLQckHimnra5ViKljsXwLYQUiXP7c6CPA2O4Q9aBk4UVgLIU0Xd77xCPaDGirA_Qttg4dhcoIN2RDk91jXRYjUEuenDd_hQxslopjYbUhf2gwR0KWP1fqNupQu14ZfbWsnpAXAIxvMgwmknpmFmAvebhugqBRwSY2yun0FDofxAGUVSQgtdpi4hsgwF1oc6iQtCX-3uCWgJQvX4YRB_wGdX1iUamGyQUK-HIeZcPiFVPyNihGUIEeaKdVt-tQ2kRtY75dFUweUw9H4chSW6q1EMMiL4djJ2wW9cZJrhlsXjNPpCJSMSGeCOr_BaTd-fZOXLLihFHBNTPbgez2IgX8eJ9v1ZaaPNuVIJd1CI5Gy7UI7J_QhT2QgtHT0paxavTxzK4ymtziU17R2IkMYGx8hg4akxR3p0V7Ete8cODg110weNG9D08qVZNmh5sv43EZv7m50qVE7tJEfC9sUT0rft3Cg8yGT3TforjkVXtKU0QhcAbCDX6i7CZ1JI2sLh5DLRe6zgcNkgluIlOhUACYyLeGzF8q5WcTDwCxJuVDAvyEwbuDAS4262fkTEMPgIhDrj6u-LP5o6jy-AfWCQeP-fSrlrSIWsn0nAfcT4WP74xbz30VU4tAO73NLdCwOtGXrCy5G4xe8XhOAedUR5Vb0Cao_Abuzv-0EPcArXVapcmspvnhlBbK9vH2YWXbZK6SUcAHnVX5F7ocJxkCHih_5RveSkrt-f4ySCu7crReyhYCv8OVM_HJ4n5-UsQwoMuKAZmXRmW4eFUMzUPk-IvOtt9Itj0G4the4OZs3wQvPevLlr4sAe_Pf01H-ZCXffhhYRtUbqnUwRqaqDCk_UrBn5jm9PLLpEcQhncDu2Udl6DNJMxsO9h2CH_Bu3QlzUMFN5cjRdeY8qQ3RNQwkgTnu8RBeAIxLgY0sgZFG0Tom2qm66EDLNULER9F84JpLknBdtcG0rHuBTy7DSfFIgRYVub7WTz7LgxQkLdBkFO-sA-5HD_I9Fs1qqK4JfynVqoFgxpVY-deBV_c-OYXMemk8oRH8SuAy-2w5RQ9UeaqkdDIVL_Elj6QoDKDXR9QlIYi-7o6k7yhScOB0KB2YBjBZtnZMD9nwtUlK1KSnK9rE2lX4xxFOiQSNY5ibDH3XsOE0RDniCqSDhT_fb-IJ8lMx934baIB-w6VOXNiH4hD_ids2wvofGuiSUzoW-Eu8c8hiZ5Q53BfAymiKSvZWKnv9uxHiUG--pXXGSHKoTabgca0jlR0na0GxtghWk-x9DMJiRN3ybRHDcNAdGBnELlMdPu827pR0tDUh10aDxASljbh3frhqdvAI9-d0A-0y2cC0O_k9qrjuAdVEIoApkKxs--jp4sOP7WgQj01pUQB58A9h3-8htQP6u1CPBnqVziCpEbn4_x_KukYvwvZcZxrpOdyi1uZ-od3-_LGDEsPxUv89EZWz5Dmxo2qsC-ZIv1EV-VeyCgAo76yw7xK9F1umlFVr_UI84C1XNjaXj2oP6D3cwmbSuQ_naAt_7oXEYBzQQ76H9LNmM3X6HNgBDPjx2pcgZnPch680MEncyrmzR0bktTlQUsiEwIBtQgnVy7YRtzBTYai43xHkdpej-tR-tJxP6J6ZaowH_sN7uc4w4Mg3f9ryrA4EEGx1MC2l7Juxk6UpnABDLBptCJfyd3ian-nuV95_e4a_kWx-hHnTrDCmke83R6mE026o99RxhZJGrDG1vtNAIHzMKlmynfoEWzN7QcZ4IUFXD6eOLVTYN9KJbxo7igNmTrJ_dbw5wFmPOENANBT4SK9qnuLyplAcgZlIx3kl7-guadLxjB3BbDywprAcKIdn-29Jg5yF1ppVzo84-KZLL_PgkruZ3FKqaOJtmFcXPkQhGHE19D-RP7hzJs4QEsOIhWAu38XgSo4H_295vqR0Nz1x20ALgRc3o4aAjuwz02zvB7YJQmgZklzOWcS737LcJLy1rsY0M0-J8n7XoztqZ6_Z5f_0NrTpJ-mO8JmM389bOiMzKf4klY6yaD8GlF77EyEQ1DFR6nIaIqwBn_TZP8Uri0na03ES8JKpI3FC3O9ouOsHPHFsDz0UZ8p5HEfy99XWUjwFSQsaOIJjboTJaZsfC3hOeTxCaRSJ8KcdtGWhlyGBqTZizBuqPTZK6IgFmS1-9wLhSpLeQXc8l56MQQa2cN9g-dIv3MR-xSRYee7ka3yuMbbt3iGxJnEN44tGLvhH_975dATUt2HZvtW4clEotcsvUcq3lWyo07jnqzOLc__Vp90s1YVmSjkmoVxiS7lSXWxnUHN4IAvdjzu_z6MJ8rn9khn21My0472oKztjS_309UuIMq7aBOe12m7oa3VdVlb2pZ_YY0QcH7vR-KORuv--lCookTpQGi8rFqOwQqkCGiizXE2oiAFtscoBGOS1J1fCNcnISdNS3B24ipV82ltq5HAiA1wEJck_dEYl9_x2fxpqBiGGpIL3VceacjQEQgD0pBhpMJqBQ6w9wttS_nnEX6MfUTLLTBzLrPjutQ8-zVcxNMgLue3EfbF01dxfoqCcuhPSpgCbRGefqeHxa6RcK0_08CxY77rVdiVkskyRkLOG1H0y9RN4eV4AEs1ZcjXswDl0V0VwUFjc2htarzUh6K0uEMWHP6GeYlv6xzNUmKbTcwo7vHWeT_i4HjZf1KIgEehdmawVzrkAR52qhC1lCFzZMRcV6CzXDjyXNcRiex7Br__TxiyO0OFYai-5ehr3DDHINybAos1ZdEPo6aTB_5bzIBclYi1hphmmGJ4KTSV_5-HQAIWUh_x-mNn2ANfPK9-bQIUqeEtZWTum5mJA8nEX-BEjF1neX3J2FGqsmd_Rxcm0UldYY8Cqeb4i5ppHKJTeXp1mCtNY9kId5T_cCHelhLc9bGs-4s8PQCSdmhKZ1GL73DslSVkzbBgqAxXcLTTIL8ePg73fIfofMTTmR05qPfKuryqsuqXgLG77J7egp84zud52VVKw2yomZ_0N_FYxbhOZL8rfewTqYDPSjoR6vh-4PpI7DRSvnKrN3MY8zSwf1k0YrLlGHXYXz-PnvICkUDaM6qpXxmBhVqDZT4abohZP1hHfT1xmKNEXuco3AkMKBl9lmr8tMynIfSftpCvqvmq1__HVcdozNZck3M0Bii6Cfp3C1mLjucrA05HWA-pnksP0pv40iEs_XwK_BiVuuZ3_p8wTtULEZeqbsGOsPuf0tMfOAIJlMMAJydEKqBTdGOyP0GariBDloP44YVy79ZOSwsnUJQZYK9-R1vexkuDXDk6iyeO2Qls8w3CMS85tSWQQw6Ky6_ZKrf-RkTwm0Bh3C6sh5xM8EZVSN1d60x6bPkzna1FsDsmiIT3HJ8MvLqUhT0W9QburzBczlDd9L2L2SEi8rEsQkb2KMQmin1VlnSDj_LtDrOsmjs2KdCdMNyCUbCN4nWmrMySDsU84fntjNeuqK7OPUdWQ8qRfShLVeDDqESL-nxl4yWP1CoidGThS_MZZ6naOyToaIGH8rtc5YlnMFMDgcCJaVn-9Nd6UppUVSLDeV8HQPDVSr95Gb5DRS7TbEGKYwwSVUtvT8x4PuXP1RUgC9riMLL-4x5G4LHK5UiFmKxbuAOG4_y9nDXnKFmmVzcIakc7gtqkZKckSA6ctnAn5rSPWDqHu51vqJVSc3tTPRge63zWKWDQGrc6S0qP_upgbZ0MOOltsmxN25bMoIj8dENek5UFRzYs9QI6OXCHVxoF56CdmOP4SM76VKT6fXwcyaX_XEAKRsoBbArpudNaEJQTT-JV1JfGLrVVGRL6c8FHrQf4Z3tSymKc9yz1a3XPksyJ0_vmC4fU80d6FHQIzRG-f1BtCRrP-cK6DWSPUQUK9EB-AvLi155vOzR8p6lQPlb_EoVjW8rgFB_HSfa7iOlfm9lymjLKYsbiVyguz-lcLiUsxzfg6hgP1WhdrLV1aXvZcThDRPWKuZMlr737vCOPHSruDHykOXy4bxDtZQXl1ZqYOxxXGmIX_27Q6ADgldMFroMFTqVqT5z1cHLtjI3gd9xBMULaTfcDqOOyvFFzW-3pVq7nTm7atHZcP1gK7gUWLYVLqHkfrEjaWkLUhVJydp06lEKJ_QgA83EdVEIvxYxVme1N84Aa_B_MBRlRI1OmwuABsEfnc5IrBOjyZImLeGnBGGKlpt-MtBrAv5GX9ZtxAPDy581-lHwaUK6rsnxk5IGHjw2QWu5J-b_nF1CW70gWk8IwY7NnH-GVM-T_LyUJedcuBV-HejVRi9L41WIxphDPD4H9hegKVYTgLINwfZVt5rID2M2q6iEZuLjNa37VMsFN_vkaoUakCtTPJ15uTCFNfyvVOcMC6XRDHoYHTSbk_nXfbGxff-f4v8YDqkR7q6hvITXx_gVdVMQGPwCvp0F0-NE6MeKmClg3aQu6RHKl70JOroVa8DGCZQveYCJ-QfGVZ7gyX4Rga3WI111kEcCZgFceB0MPVUo5RjgwC2rOUcjSxDHFps9r0Lyua3gpFVmeUHzfCwS4lt-4BndxCwiOtZnb6cAG41QNzTi4fJ7QjfKEJZYpiO4QSGaxszi2Bo4y_EGiutthLUMK21rQA4PXq5g1pVKN4Ei0QQO1HTNWyIWH0IQN3N_W0xt276mBOxfmFjoLg5OY8NVvQQS_6X1buFwOJlxkcKXGVJ2dBZCNySW8p7CW5DUIDxNv682IJRZhtfuhvowmx4D5N_1WR8neAHlhKZr6tI6C4mHLEFpCLRJfoVej4HP8OF6faCZrjvKmH1rZzpaAZhxm5BK3yHdUS2ZSOA808Ohod4--SQeq1ppgjh2pzBD70nprC5MLBsxQ-LhGn6YNqHVW04aPBQ7kCE6-6A90c9jTVZxorD75QZtCN4dOicoim0RUoMMyPOkN3l0X1-e0jlD5BxqoVEVb1IJgoRc7J5Id06-bQWvzEcAVrNd7bMxMbqFetF46aAY-ohSkyNSs-bOjNr8zl8D2LwX_E4N82Sp_qcxhtJEXHK1yh1WIE3LPfxbcxX2rbXKsbpekgN244BEHAtu612XIT9IMTqtrVH4CzkfvaOCLhoOh_KGFDXgtCzYJELkzOggbbX1rHlJbRd0DilZFFND9w_1t5HI-XF_oO1IDS1o9V7q7JQcr2-KqB7eTXWCB7pdp4cvXoYq3FpC8ZraNTRz52RAQnPNWXq-Ci_zT-K0I7Wg-jBjGq8O-c33AVIYnmJdp42V2_r6FWP6_ARXbeZxloaGVkeIL_l4obFyzVY9SyCTIar-7op6P7zQqLgzb4vHKVwoE0Pwl3RhXMP58SO7egeEFyDnZ8NOfo55mn_vG0Ez5VrwGpLTHP002eiZpAsjs_HZXKhrOnIxgT3RQgajMjzCiAnZuRGSh9vt7Tj-02OOIn3fMgqw0xLAZ65LNb7QaGMbgbT69VVfsNBl2PgEbyB1_Pj3qyQPe05nhmogf89DRZA6BBEdI2JLa1VgVLm6NaPoWUqeD0Ky7B9i8ZXRJXmbu2CzUhPw_glQph3ernrvXVAkiLw3jGgxK2dUTL0PYezZ-E2qNvU5NZHaWFr13VPvPk4K11ziwWbYJaJYBa6G8E4AKCaJF6uXFr_6gHwkvTJklkJ4fy4M8skC-C33hWWZ4q6pvCpyRpyC-Uu22nqY-tarVnBTCQSD1kRHMVPxDKAbdv2EFYQWec6B60B74OlKh-3wHpdMq-JiHEyJaNndMqt5vRK9zDgFH8AcozK9aP9RhF08KB-yiVoy0UuQiGg066xIQqCAnkqlDKQ0yfdkYlwaDiD_w1XMuRggvf2Z3JbzOuCdDgb9PanUf3CXAmek80z29-x4YKVLc3bx8MQbNUqjesnoRI0Efe2rDLwh3ZLdbRRTUADYM-E4I3iM4zffjQLn_3mpcft1OQOD1IUFjdaDcoVOEHtd4HIWBMFoclxPO87SoE7LnbB49Amq7lOJiXFAe9J3nVRJEjQb2K1wNo-_DlivV7YZfWGpwTU5PWI0rmh7X55iW20tWG2_1-v-fBO-hxA0n4GmhbmlbbCB6-W-ZvFr1JKjurXspE6gMTOgep8X_q35O3e2zPKLuZJQIiIPf7nX94LwX6dDrqGgrQWBz3u1mCfiYJCmERnjZ5yuu_sTHawyvG06EZjJec1lSGSAsPkaFwrx4_dPJg1cM-d369OvCcnSpiFqvKtwaNx8zYzjZ4QXH3U0WMdd7XfmY60IiuKD2L9VODv8w_9fkC8UJyWq0K6NWiFxvLJNqFrBFowEpehNXGxDqGDW2EWHz9PaHRTEVSsnqwvlAhCsfH0VtsgLe7RYM28-t6NHItMt4c_MvATrJ5-jLSmyjAzVPYv8iGYqrhdBgA5IzTRs4QpCvwitSUAlp_56qcp-KcG6u1bvXG_0WpjzPY2Tovd-FQW6XXP2OeZdu4Y_w8g5rHLpqNCNLkr4prD6mPcwjdLYGtl503bLZWu9r_bfh-2ErHya1JtlrGU5-HV3ZRPfq7rDLClgTPGiW-skEmW_sdCWXdWeCDIDL76E8x6DJSRdVT0Nlt-qF6sU1Hm-eBxR5iMa7SFe0X2GjEiY6G4EWqzXVQ197ZgG_pvg8WP4q_nQ7GxocESVKSmkMVIMJzyoEF8_1-iiBN34yIHdzNlDLy7djBL4kIpJKoYLxrE9Ct3Bnwm6jIYdapd-U5LJmRVjG-txyKxSw-OHUybTnZzgTCW68GUKZ8ggTZ2NG5Im3PnHzBY5sK6AxaGdpOUWOgs0LKz4eg-l0XHJQnB3XIhlHsktIbn29dKdOQ-dxRjecVDb38mEsjrgvLZwJSLJrDC1NA82VpCOUHZI4MgXZI9TBM2s4qM1ZKzEmwE3pq6OaVcByI2ac5M4N4DxPNrnerTYp6Iy42Ejdwsoa2VjDl_039tuFLMcg4f0XtFfj3z2sgx69AaQ-QBmuS29Xz_N0VGMTxZAIPvdGtLblAgJX9iGfVaLrRdiosRNOE_tBc9pk43ahYuRSlk4fdp6KOx8Ya9lym3Cd0B1SCHRz5jAB4BqFO3rr9DXt8Qb0epXMlnoZDv-MCC1qX62J_SeLTXN21tvbgS9kMhF0B6u2M0QQ-I-ZeDwhWuXXDdhiXGv9J8_Mk3CePcQnXjdr7xp1PfnB7Fe35suNBnN1RpyZaKdZuWOKS93kVddj0EIo6gAIdUTYbRPn80QZM9O0dasnW_bGgp6NAcpIhRwWDFjD4CT0itVBdIVkPfszJRuD52PCfFM9u0l7JtbNQZ3bhs1lUj9Vjn22U2XPvASGznKImBaF19k6_v0nftv6xcL1K_6SEiXlP9OWuvVFWqV4gTnhNMWvtD9sJ8SYhTO02BugqM71M_ACgDVG9NFZ_HvPccUThrEZ1-xhbXM4y0CeZkJjlCI78Ifict0ZR0wd5-mvk0R-nfzxlhWsl-6umvdPoUFsalKY322KjrFC_J_faf8jz4eYTyIAhrgLe7tlcRVlpey6FBAtu28RQKcHkx06XhqxCCyUgFrGVv_jlSnr4FIQlQJ0Zi8XOeJKmDRYbH9OAgwgYCWVlhB5zr09FdjWGyeDhbyzbxsKIuzoe1VdXMIcKBcl3oQoWM2lUyqAqzOY1J8kqO7yU5GdrX4vn913nQF5ktiuAjjD7M-etCObvP8gHPOLsl9vlWCIZktPVugEefgZFvXvZ9MSjJxf3nfGq9FCYzAS9NdXnhGyDbTgePh8dq6UhhscBWvfTaXfWs_D6IRjpmmldzRTRymJqain42pqdfUjQLZuZMM4VFlxN7TcMRIq1yJZMSnIVJOmFc32bq2qgdDC8aW4imWgYDvAlU7335tqmrQVsRX_3PVVJDZE0L-gfZU4qSo0RkmXh3yVP8usrGpKjzhB3bQldn74V7cKW-XZKYbZtmdD6TMJk0RYQCg7TT2mgUVd5gki2tTWP5O6UBVZaT-AQswGlsmw7c_dGBq9id0K08V5lMiV-CPZSLCER4HDoEEnAinJ_yC3S-PpuiaORdH2rVNIrQ2sudVzhKDAI6YLpC00-cN2XOrIDuUEYBr2dDdETpSG35WzDKa4XHmaExoZUyNVwcvQIJAtOzmR-x40nZ2R4V_T0e2TFNo_gF81gSclaTryeYOjpL4DNms_dK1EEgk2Xz_EFpGFkDPo4D9zAJPgj1FqXZsjTafE5d7yVx9Pwgu9BEeWeozsubgPPGz6imDsXJ-T6jO_HpPbU_UOs_wLrjcrcTNDI5nlTuFtOQhZZyc8hrPdaeIH1X3xo8jENv1TbOBfAcNIy3NWtDv4zU0GBvccIdj8PaseHl1NX1iQyglJSHSkM31RJUBitVkauemlkkGRQYUSy41ALfPjNk8FDnU_ryVXiYpQLGljXB0uYpLKKsBv2qnlJNFD-x4qQba4Ww9-URr8Femn68WJjNQIwJmCWz5KWAZaLJI7M8AMNnJhPgfW1XWyc8rS-eFGqwDGDGDShxUnEutURsecQxr4Qcc9BdyC6RxC6tD0GkCjK5zy_isipvpj3YPNQRvj0-2oG0A6nPo2KMCAKR83ArlNSjiUurnCooCTlcYYIJ79yBZqD9gic03Z5EkSNBphbYynwLqcd_CRrPd-HQ_nplg8hFHbcVvQmqKthNwg7iDfzwC1LTjCHB3-XIu6KjZK3uAa4SYn87e9ox6sjySryy7kfivy6x_hr9TG0xKqE24ZYUU2QaMQIGpCQI87MeVaeqsKQnPxQVR9lGSK5z-K9zaHOGr74Q19fg8HiKSu5PtyqusiU2ZJy4R_B_x-fjNwTaPBMJ0SkiG0g9vs0-5jygzg96oEPxJeAbEsMsc_KCs8Y09HslFu7naYTmJI0NE71OMnzznSprHh3FudT4Ip7jcvMK21XL571amILQVkkUsbAOSnDTbTRu0Lcc3ROmTJ8l8nFdk-Rl0_eKmSdu1bGrBBpN6Xcxy9547ZByJaxWdBFaQq2nuUs_w8RWUr-d7yEOgJU7Cu-gdJEPltpnBwYN0AzPCLSg96cdkVeHB6lCcPs6zAosVy_ZTN3MVZanD3-vZuY0YZG3uCGuMgiqMKej5plAXCHB83jaq1kQg4SrAcQaAKdCh21rOEN1BVvcDnrESopBk_o0sKvzBD0jqXyPI6svWL4lYEKx4GNAcdqqhzt6YTpaNknxy1j0OB56bT39gPrl3xYNWMYJ7nWO-yOWV3pE9cCwIORtUo1eddDDG94svBs2gnxfc3hkSpH7ULvCsen-bMjGZYgYqgmuVWCeVBBIx3WJsYDB1G2UfNr7_tdny22eiVRIdN89Nw52iL2ZEzTaN-E8m7WEisBH6omeXmaeD3PvV7DBjX7SuDWjrTAc-9dduLGMAfASkLBI3By5FfXmPfavwFMaBOi_OJRw6-8v3tkCR0RzZDltq8XZGazXY3B_NkB9g5qqrkedkJbwhTUPMu7l1Gx4vGUrHwx-BnWpCg0gc7oFIk6z8lOr6AKD5mb-MZzszJht21LkxyzMOQOo73Jvj_EnaiHsR4Iizz-XjYbWb0NRgVeI6L-f-RT0IW8zuftLusLOZxhTxccILz00RpAKpQDUxYKHl-MW1vw2iVIeQouqKKKXRAS_bdBaM9G6XFfRg4TYKCn5e8_SdcYgBfadgnoAqfbp84aH1O-GSxvzXQGkFgX7t2lx18fDtf3lJyW0gse4qVN3keNKXGtYQ8BCsQ2nkhv7S2qhFwmqmNbmhmpvuMRU_Odsvnx4t1DCDy1qaD29eFwPMAoab0JvLKL7LXjfYddRWOIDpies7WmNq5pWg6k_0eaLaZCHS5F35nxr8j1yN26z3TVzAdL6Oq8-cvas3og3zjWh0PO5hSN3DceRArIWaZSwuzvBnBJcigT5ANPubp6YBsOArIqJkGLs_EZRa-8IhYCwkPfApTx5j8cvvIPYrNuwY6KuWJrm9pBVvQPkb-IK_tQ5D2Sw7kjJNZJvvTT3pABYBgEUpdlF5_7S-XQu8n_DZua_pF-9GlqbX7jT7LJaxa29q5n52TynkQ0kVxBgHvc6N9Rkll5V5hN84t8XSPnhFq2rRwbBSRZoksMPL0fAtJbiA7aUYMhdauIvpZWU9RKmbTqAkUU1EqdW6NmLCzxWdHFv3nOc07LXhehfDVySDKT2P8ksVdmtHWigiOWL5Y_QZ418i4m8uiErTlXa8m8_tzkJbHLf7_tFJI6P9FSYl9rpq9w9TQcxVkfE_vQM9ZsqBCvM5Cjq1h5x3Pn6ZH3bb7SkfV_ePlZiBpO0VX40w1-kw5AzXn_Pe7hZSr2bLmtngSTGFhfLcleKbFP2lVJn_bvS-6fotuOqmnlu9ikxqzofFxJMJfZ28pkBU5WFA20h5VnkJGl41i8PSbMATatVOBkI8fKqSOaT80-IGcvvBWV73rtH_WCMiWA6ao4ZnZsyMesGZPql_ptus9E9YFQLKHDcW1kqIFNlP8VsqoUS3PHGA_TeNUITo7w1l9rs1Jja_e2S30ZlSQVCudGte3OMW_pRoqi03-4yJ-a7hbI84Hs8l4EHJJSy_tVRcAzkPcF_zYwJInqLbBBQpS_WNWcNiTs7fGStMUI6YiirfRGDX5pyH5cKLMPY-X8F3oc4p5XLxSNxHDhSdcbEqOOOJL1LYwVHZnttrVrTW8PYuyD4dMwnstbBSh5-eKiiJ_POuZ8IXUaqKRVE41hX-e6HNr5vhkQbe3bfmj_lnl4-bsxyKHoMNwZvWY1UdvbHrLIRaUX6MnxX5y50BhNnp3Wv-_OdgF348ny7WmobW2Z8o8FWT5ZuQEqWHNAUI7qjt_SDu0QDdBTtLPn9F8ii7SIcx3-3N9aqUIq2D4AsPkKuVpQRNDqjoj-gozbC2Jt70drRnbk5S49U1pT2bPwIP6ReeXZ-dtujsWwLE1ht8p7I6gvMREXDCv0pINKoo5qzqMfg7QIBvY_MrQlmujn7mxD1LliPj9F8c0DI2msOUiAd9Qk0sWZaMxbG7gHAEw8PDy3pPnd-8OgAGuqncUOsgOQHRcval5v-M06sig1Orr4T-PTxUHymY4l4zX_5XvN5uDQRmhTc90iQ2kwz5wDBqu5nIbz685LGLRIqbELneJmV5E9OA5xylFumOBlmW6WvZo6CNtROOTFzjZDBPW97sufaYBZOv-SMWE-oLfBdRd6ilnrw1eVApBDFieQ8x-qo8Stvan6CmMJnSr5vu9H-6Dz5TXyHZfiZhsCkAhRfdlD81c0HAj42Ga5aCbdtXm_YmbqPOMBsqjOei_Gr96oDcH4cwoPjp-xuMt8mwWxvFKNVy9bTjxSKaYOdzrQAoZ1MOuLsRqgoedQJuJcQAWa7TNDTmZdLVkbguipoknfa51nLDh9kbaaoGihdfq4nHNZurGSRr7h6JmTiAkCYuWUdAV_fST-ZkYv7vqyYcj1tIJgEjmOo0Fiqn_UMDu2Wh1y7tJF9xmjHO0lxzYBxwLNSpB8Szm7H65pe_umTXskb9aci7lQZUuYXh_1LiunO22jT05NRfrnDuxT4XOAiHuPGvnVa39l1OzF5DMgOvYLJjSX_uz7KiMjPDpejwizVLcmBsBvqvtQuWZYlNCMeXCdULh8H8YGjUzViARY_wKMq1ThtuQbAbJgEMHkgWkb__T9kk9YvHCGRD7jQY0cHCV5kreiz10SuyB18ipBYhY-n4iA-kuKARHLHbWrfNSl_hcNJ6eL3vjHKbUyJt_bw32Z0MHS2xvH5v2q-LEzxj4fSh6lBFsJo6nf0ZElDl-HFtGNWSVgsdNKbopFTblwo5NhNhFTrJw-1hDIBOSOTLpXS_Q8U3AgHCw4qVAkU1xvGUNrTcfEkeZh08MBIFlLmq5VR9XzhlNddxxm3yVfMg_Bvu_Xf0mxKii2wGFnRH6TgWqKozaeWnmfVb06IcD062_jdULYqNVdw-yyqLU-_ijLf5yGjMaUBli0mDosE1KZx0dQZLfsXrohMl3rzTSHCfT38ttF9HK1fCYnJ3Su7PWG0jbDXmp6kMidAyXdmDV4BkWDExXIsiiSBhCP1oqbHVj6tvJp-G3Hfix7Y_N51ISMUW-e1r_h33VcweJR5RxDdCBkz_FD8fAzX1IW6Q3498FkecoKs_5rbPhoYNZKNTp0dQT-m52ymv86BfcQ-OANgiXcZmEvNuqNMoEaqZNUrGPMcW6MSJXwxOc61ZKbCvP7plc8ZWnKg-g5b_vMbxp334aJKOU74_67yQWMrGX5NgXqI0KVPZTko7a4BL0dMhekLz1TWExRAfc3GJzRaZzau_ibsFGs3O8kGU40NlVcYy8Cv5P2iO_Mgys3F8ETva1xa6SAx8jOlyJXeFS-Hvajtv_mIt_tpRZZjH3AycNQsDpl8wye5EBBOtCMaBBZdFVuRKG1AJShnNA4sjPq0FbFaX1IjT_FaNam5sfHQYB0HZrfZPnoXNRHD3nZ-M5nbqp5h7tGeab0oppEUIEr9XzZG18jOifH0J8wGTTbU0Z1CMIjwXTKpXHYdZ2Q7GuW-A6DSRKhaFO1vR9GGMmNz0TPnIJvuysvBuT0CgYULB35DI_jwQapGp7MRwNsiBnujjqEGMKoJN1ag77Dy5O-lDFr4C3bPmFxzy_9cG4swptZoNScXA3A8DjFPpMDaI4zGBUZ_PjzF8b5FMwKs_RmfM-TZASUs_V3UZF_3Xg-jmRd5Bj_e6_6sMSMvzteMGB8afVHypMYkKq8bB_wCNaC-fbPC3ayj6-PH4ZimvN4WhrFg6l-raiGxKSmfV8M6-Yhy_QSHnInerHRPUWTHspbNOJao4TwXorIKNSfPXru7CcJtiL1E8yyTF-PUx19mDm0QO2psZisfwnto6LQcTDADnlFrALr-gD2_bD8vgrT61lbhq5GsuCbncRkHA5sJUJI0H7pFCvmtReX2JvGChyN5dp2jXd52nGxOowbZTfglwNREYRcKsLJ4xcw3b01A1BVhGpyViZy9rjRDimP6r_BxJUKTWaJHjNB0FWlO5UkXmzwDwS7emKKcV81MyJNcUWZLEARdGJHqXlNKRRNiqrTfmEKBA2Gxb2jLUbl7JK7zL9hjQthR8BYA_ygWfrB-xo9Ynv-BTP_HFKoDGKnnQ8yanucq-N_TnavNZzz880H9XdTrSn5Z90tmwdvSaUZgSMiue5lWxAJy4HX_wkm0Efm28If0TClIxkIzy1QVmcklRNSzatowPwGKE7vvnqxC6akls15iiXoTZgcJMQQefHX_H2pX85CSMLBZSlCFLesS-YBOdDEFVRyQ5_h_5-TACUJoluDN5TFw91jYKM3BLFhIyrrIdYIE5s7NUwPHKerRZh1JUHyVJfcIGZ1vswFPlajGHlxdg7_Pv__eoFwriLoM2xeVj8bErp-Styt9IRK3T9aUcr3U4Q_aemduBQpEoIUfLpBJ5oFDMGGNdsH5D_4BQJszhRfOzB1bUMx1hqlN-pqLZNDlvVfSp-XkH3v9loT_Ao4mShTYMFtATHiMMxoJnYRNZmKkW36vhmAQlRFgHaOepw6IwxtCSt4DjHknXzeaOcydbtsiC9Y3tiDwIqaqt45PRV3pbhrJi-yVGe_hclrFOOR9BwCiKS_HKYxm9TmGoF2X_CMkiANIcbbHjiNmhifOxj1AhKZ9C8KC2e_VZoKn8KuhsRQNS33SPRuyE2GzLjuP5Unfb9Dj1coYZ34XQ4Dl5-FWBPmKhZAtL4zL3yj8MVjK2_AU0DmabgO7s-GoKbWzDaXidbkLtZzhIx71YhP9uiLxo3sOoBqpvhHeD4NmMLg46Dc2N3J0dmv6Joudc77xhrZv_Wp6EsCd0ahDpTy1ArK_ilQDE6oJrBI2Hf5PD3gOp30jvFqLOUO-lbpXb65xuhyJ3poHDEpsJrSOzsUCpw8juTTwCMrARuzwva9WzOQRdVgUhzQa8JlquOslB51Y54zlbsWj9oQ4mgs1B9jEUlsrIIitSohuRcXylkifLUU5qXDdrdf6m-rVwTCb_9X38O8--hVfpPm04ARL0G26IYGv6cR7IEiFk-zxMwOoEav_NFj_LbHNWaKHDCTrccW-Z6B-j2i0dmD_W_LxYv8p8Q-UP5A7ADWuU-6RxsgowQBe4goQelp6WJlv4BfgdyovXIzfBhpnJkOnb-2l1IynphWmmGeD84BsuG3_dfpSV_O2sR_ZfDMHBqFIClXfilpaNhuP_VwchjVbJ8d625cU17k6jdKBIwEFpnErMAHV-e7FvcIBca4-CRup7Nq3to3oCbuXl05ziuR-48bVx8CFSq4AGmpjVNufO2nXShY-fmmhKNJaQXyfaYGLOu82ql5PNCFttW7zThXVCPjORRAIZVaWPqkDekPt5Enb5yva7mdxOVRVu3-pSltKAV5vpPpARxUnm23v-utWmdOAaCcFuxXaW06nyPfQJcGpl_EDXhp9Pf7eansVOeZoXPkCmdFN9ezZKJbY2hD8mr0Ydslaq5lEKXXQTP442NP8aT6qk__pPg7uIniFFOXDboe3IGzPdnpBYB4yb62a0a1fMrI509Nb6JfWgKMMihfXgidX2EzqbDM3Ujx30STSdqe3eyi2ry2GSF-vNtvjx0KAb3bUUIo48KNMgH7b9W0kjdhcQ6OydZx7vRuROS0hWzOG0BR--7Vn7C9ZAQh3OEHfl5BxZhquhkCMs-Nk7Fqn6LtfMkTcp5TtWmp801p5S6UE9woJRx9JLhWgWvaASUmE6MhTrnG1Gvk1KG1ULE9SXuhbZl6K5i8h0Rg3RO1uiWryqlmB381inhR_8Zih6Aj4mXLuy4O-aEfBjAeG8CkerCVz8qjWgfyXXA0lP5qpYn1c8RBMIU2dd9KCa2kO4X5RAEoxGOBFu0q--iPI-5lacM25ycNNvarCUSYgq9H-OoUtgHKPAtlb3gE85STtkGAe7PyF_yxek4OH09qOYWkhfOK4nM4ofkyiiT0An6HvP5V3OgZiQJmSD25oyxsIMk6yTAzbwhmB5HXuZSAMnDgRY9EBPFdGH2PXjgHZbuaw8uodIZvUmUtH_1gdSaPjGK1aCc7ygixZvhaizmNNauZJ0W7HahD6hyxGjMgcqyZF93-5xlWewgkjrLcjRwCXq-swp_JSU4Nf_vNh22Lpg-CYjk4Hbz9Qx1-bhH1rzfSJ9N5UyPxfmI4kssD-VMBFGvYV3Qyvx6TRFs0qE_z72SKcPinucASdYOSVBrHl-1_F7olcRESzzANUVl7oVl0BAX45LBaTcIC-IWrl-GqDSivoH5Ukdv_J1A3vZH_STofCRx79EbmPm_d3HlnXamBO5W7uuUZRKbDgODeHR36ntn8pNlTmv56ZgNRqePLNkikhvFghPbwtfi6xI-Y4CNhiA_n8e_8MZB8XM-r4xM6FwKdw4quIIsIhFU4XgCNTUr6oAvI35L6RZU9qFOf1VSJvYALXLIGsNG8ID5vUxrSi5tlQLqkqSuAdNhJyxVE6TGEM7Vjl7QboLwQSU-nyMFPImWaS1knoQoAojEhfeIxY6xEKIRgB7eF5O-Ez0NkO-SDn0zAHj2jYsngfbz2ePQoXxDoPgL5oSexhbSp85P70l-oRYUIX94kPsTesBF1bOPAV8ah0HSsOTGUG_By_zn1wGjVRi44nv76zEDqxVGri4029PftxD3rveyoazsueisxYGa45EabWpt7JNEhsnmR2DOQu3BAnpHGNjpduMKZIOyUiv-_ngs0Ss54zLhcuhHFiZHbqQik9gy_w5uavdz3beYLYsu9hL3mtQyAkUYvE_O54Wc0yi8cU-NGd-eZ4wl53upDu6oEV0LHllEnSNRMrO_GNVRFggESKGM8SbJ2pD8wyt8Tqrf0Elus1ijKrIWiYh6vSL1UxcASXlAlWoxfATZv6cUSR_X7ctSBxJxsCY9wZevhOP340aVi4U1mf7JmgXEDzyGpBGTVeckaClYHTcExgmXIw0dQ1B7S9tOl-HrEKCKKPoPqs-6aBgiGcgiNs4tljQeYxvtd0GNbZYmVtofgbjI-TpG0B0JdrIxDH5DiBc6-40HqFh54tj02_E6KFz6-T9sJro9_IPRkJThhXh-euykXEUe6DzALJ5rw-Ww1PMXjw8dE9WCiBGcUjavL59zFGIdEH00bWvKu4AQlNxfh-4E_U43y_xMUBD4FM7obWnO2ZhS3wuijAAfzEkBju8Gh5gPNWv7KCeKx9ObAiqS4RWuC_C5ogC3ywKAsgt3_Ha29BDM-02tsNkNhRpi66QfOLvTx6Yy2SdLNgOA6AzvcpRDUiAmWb5SIA2BOjghSVSl3YhtZrZ9n40Nh4YsJQDfDI7a1X6gUZS4g7gHLzHIb5RG4fK1l1qUnnHRrztIRhELOoDarw8L090xBtQ8mmRUgi1XbTgUCLH0PrkCx2__Np8kA8V0P6C6leC3hTZ1xytbJ_mvKFx7Tu-GeZk4aBvK2EH1rEzLlKpAF6MV2eNLLxQA4SDbIyn4xmW6RW1ZCoUzEAtR_JUkud2UItisbQHMvMegXC_kwTxfHAPkGN7fw8jKVYrFGLyupGe7p8Ot7DWqRy0R0utk3hik7Uu8DZEnd90AXdGVr_uoWwSwUh0nOFLXrLNih5A9rWoa5ghmHKU4gNTETyeROKOdkZqeTYNS9hR9roHVNyq5ptUklRO2pSW8Sa-gdRQJziirjD81Y0NQryyM9Ny1aNqc5cpRtX6HhI9fwdVBdAihTma3uyHY78fw3jOIPSSsgaqJpU_6t8YQA1odfVIGR_chdf9P0nCy0slT0PozJZtiLsBv0oi4JUi8uhefgUP7MbVswwv-M6pc3vRPSIHH7FCMWEcWWEcTfgwNgnANh2j7T9D9jVOfZeO73aYF3xjAHNyiIsZcGytZgaFeqYSSx-nthYTOGWz0Pyb8hGJjNPgI4G5P5QAD_f6W1iBEd1NBLg0doac7a1mr1JQcbtjOwP1NeZJ6TvIpRrweqU8QYyKbeYuKaiFUTa12BhPFiVhpkY9uXB8CVl7Wm7ZYsgBB3711Vn63wfH2443Xz9a4bVH9AJOvClw2VAOGWKPal_kk9EhKdWsuLTUADVNW_hKNapMKJz8mbtyCJxCd3090sl5V44B9ll2vf5CpbyATJOaHZrUKvrDgkAxYPSz9jOAEoSZQDxgjYON_87NbEtCpl8oBI6OkUx5-SG-XfaU3yRQzAXxR3pw_1BuySj2bmv2Q1MMNfcSrz7HuWlGKSMAjssux1hDHRghZlt19b9Yd_5fy05oJhnjh5pandhIFFE36xZt5kT_CPWDy4rR9M_1SNMs0lw5p9jr3kF6oB8J2MJw78GFlUAMvk6Rxou-V2ES4rUEMj-PI32YLz5Z5R5Zjyty4WIhYx8HAwOI5ddusm0PNv3DG-56iE4KcEvAQBSV924UqlHXmc_KwZl41OGrcP2YMzlkSpUw3w93kWcyi_U4r2Ghlf6mKXLSDAbHkZ1XYj0jL2XHPMt7V3XLFlxWhUoYblPNyioWw0w34k7mA8aFIOb6r-G0hou8f4hmdAZnaGXdG00O-YXHBIb3qwuvZQk3d_fzQb-lQJ-8cdBAJRQXXiLacW60z34JRuRvfwxw35fdh7vhzijPHRRT0D7iwcXRgsNbhzwFsnlqJqb-7luz-pxRFIpk0m4vG2yniAEuvR9A3gVWCaTjbcradhpZnPMOmObPUGYoXF6bctGkCoIVgcTPpIhXLF9j0zH0R7DjOI4xh1RQvv8UFuYgu_Npp-YSqdbZ86JwSlLKwajiBxmTSL2QVJ9todw3tiIPGICa2KveH02Cn9YkAfeNLfSEnkAuSwS-o5OIiE-vFQ0w4czUzedEB-G68wro0g6VrXJFzG-M2aE4y3ET71FmX2bFrX_I2mUQSFVMhLfSw4xlUTCCP1GT0XLUmQ33R9Vjh9tj8iQW5B9eetYrKh9to6FFyEqymGFo3442AzT9xw1f-j6EECtAMqDfTiPUafRtvYNbNhRRbbFN1z19AVIt4Fx0SyyhCti_Fj-GfVbXwXXOH5nkbGqyo-O7rJ7WXGt97sbsB5f_JyhATHxrRdk7IZBbDSpPVitsXJ3lbGur8nBXIAYIxoWa3mzzESFt96cXcgxI8yySQ55v44cg7dtD0ibNY0c8-JLqZhENTIfAZq2Tg-8lx9_fEzf7kMP0EmDSzFyTpP0IVCp3NGBpyLWXe5QXrSuFFnEUAxuL26xspMiS2ttMeWDAJBhmLpDYaSq6f9Z9Q723kWMCRJYtR6IMFkgL95oce9tmpyQRw0RsP-RQkcG1GuRWNcSy4H-VXWTk_qn_swPwkQMHRl2zq-zpa-Izhm3o8BwFtuhx6FPNNsDNxAmdwJAVP1PgalsmDNVMtZR8rq7YWqst0ZJ1Sylv7PSSWbSQK-nGaIp7q5GBybruEm8KxAQ7r2mfafFyM-VInt2BlxxOCHMkQCw-STTsCTpM88XRg3SoXATknns9DF7X6_ZH-ZJGeb1LgCV72pOiz_OgSu3xqk8Wr21jT0p3mTv0vopuHgw1pbS3dwkLHUeACXED8HpNY7pvBwuVJ_E6-L120o4WCCjNfOPbCJ4xLAT656fBmuU5GR2BAC9h_FgmaKDa_Ae1VsQo9pmOFY6bfC_OHh5QziqW0EZ42Lxgb2L4BToUe2i1HSzbGVhdTpfXIH0Z4t0ez7e3K6Xyulk3UPf74iaN5OVG2FAIBR8PzgPGjNQ1jcuwwlFA_M_sJ3XQRYYvgj0wlcq69_Xbl62lMMcyq-Iw50vPL3SfI3w-HLr4hl5btzrGx8YEwclTtFRkTHSN50c54AvnjQ60xZPSYfQ0f5DEhSTrJoBsmvKixhg8TvFDRTV0BFDKV6VHGne01CB7IqCFY8CUT5jhrQFAM2UaoJ-zbNbFq_ghuhowSM5RwmmYeuPvZAGLjKwEiXq7wMaYOkNWd7jU7C104HrnDOh3pj8f9_W7Zjiwhgh1uyyXqw4dsOJm20NW7_1hmHCVh8DwJGV5l4VL9yIbVTd3EZ5vmcl2qTzUXhk2SeLQuyVm-76UDtyDmtGifCA8akPiSbnG1qLYtHa_Aa_YFaVLPc0kgGHHutp2voMgAiv5IwoQnUhFm7QtpGmtTlQ8wTjnWSHFn6upse6XYhMWDdRA4_4A4k-hPBwRI7P7IuQvWNWUWtidGhZMhM8TEzpsSekbX81yesTuXO3OC2FpyUnVIigA1FM6mE0Sjx2vSgqbUSpr4Drmmr_7BpBf2-znL7WhAdgkRAOckqvW8Ie9ovkDn75UxatyPh6_DdMl1XkdRQ0clDRLB38TY95J0xDyKdzPDgNCUa6v49dloMf1OMtVRC9x5qf_Vw6e1jyFM8FmPH8-SuhCHA5s1Xbw-If_laQ-pRqh86VQPmj6jmisKuQTgl9xopA7WCgkD7RfCphQ52i-9VOmpk1Hh8OSbuD4M9y_3t2HsHFl68UDY4h8Mew31tBFT99RRMmOO8Y-6H0Mkd3VNRBu7PFm2KwvXZQACBzFfA62PQ9b-v57AJInpojKeoH9Q9TLm6hlepYvULyngmA7XrhSCsemK0_-Xd1xp47fs_RoS-aXis5lWcpSQvWh8PzEblAEqq6BTrK_OyPcM3La5i-WLiLpsju5FwunsUO9tziImNI6UoceZcyJAo8lJaIg4pXAfAve0AMM4ZtsGncDVgnYc6_jBzE6LDanen5vsMy_ycKBEmFpG_uLWjCP9apmY5z9nukLKMcFoqF7B9oVkbkMJ2kmkYNj2WiVBolz6aMNtb7DcHPqtNH2RqHJs8Z8W6X5hEW24D9DLeIHevFuqnW_r_RClNp0mCFFEZnwi54N27C6x-8s9gww7x1bKN3oLv5vtXwXCRzaBhpdDqdD6iDpUKMM_gLvmQ3XCOCV3ll_qPUkRRqNJK-Sk542yL6xc-OX1vNCr3QZF7pAnJEa_TvlmcUQVXfIPhKX_czJJvisaCEX6IHA2VQlzQqlO4G8BveDV7_XbwBofVoiOdPNlq--7bZ16QpO7BHJd5NuZFFYtauo2HoA0-Fpea90EErwqz_YlPqCMW5RYHkHZyRYLs9RdrwAC9ePeNhNgikqo4w0jBTv8qHsZ8cJflPy-DbUYdAot_5ehAtgXnW2f-8E6vQUaIcaGWOznE6lJ3FwR5rJe6CxkuwLT_sS_1ER6C6d1i7xGFC5zfSX1SQocwRBXsyODPTcQxmma3M_t-TWEPEtYx5vWxrvuNZAesBHOa_U1hEFx3Ir7qGVN9dQbEtp9vxdr9LdIkGmdnezGkt26ZwoMpjUwvZRRb7BEa6BLk1gWA_KIiaB3at-oqh6ML4oKhrifHpLat1aJrGUMFyl4-qhAKJ9WjzGNirtg8KsBr9YkgaChvH51lgwtXJP0cQ3Npo9WIwrNXO5HjMwRU4XSN5tfMG8kM-5T6Feo6pid-OBE_ud0AbE0TpNwKRsXd8bgbcQGG-kTvs_52mIY7x1APGITItxLV2qKSQUSJ666xcWNITVqbZLA8Q_e9qjEPhCrGsez9p4_W3cdtxWu7qNDbE4eROUjuwl1Anjoomm-rUW9qPIRAWQMTJNnKPfublty7pfRDDMD7c56TZ84UcvoN3tML6QgLopY_qtjWK84izagAZd8dLjBsakLcNdeJTEFmuGXAX2Jjz8paxQiUVEjd6h5bW5COSR9iek5E20jFiECJw_SDwqM6v9pBttrWZK06M0GYu1FArslHVx1zXxws0FB3DKSUB137-qIkVv5jUcxdxnqbwcORwlNDtIrQAlC7cnFSWi157nhoX_o-LTfSthR7MsPCXPo-E4U2wbGAg-EppeQPL-EP-EDwxSlrVNFsK_uiH4Mbg7vrbFnIEgkByWA5dDQHgViycbV2kxoqtLudAPm4aF3kwoppOMZlCQC-QCPWn7Roy8jLI2xrO2NTNxe7mC2xXr45kECToNaRKtJvOrqxNR6d5naHuDNldZw1oUXQ6mxkOJ51fsfc8RI-_EYVfobKqhOnI86GlsCD-Yv4zuynYcmm97-OPXP7MF9zA1VfvDFqB3JIkZ4KQykVCQEr_2vevfzrdrEzy4BqiKHeB5C5y4BIquEK-GtZt4AQlHl09QIqzOwlB76QNZRwUQmx1FQmFJ-i8CTW3n3Y8Pgl_Dh9xGxovd6AKh-DJt-6A8CfzgKTpdqFd7CUcMrhplJ2b9iSnpB47xdIyhUksSdjHxKXqqceB_8MQQqJoQFu0wT_eLS2YU6lzeRKLLwxdc2ibtRAgdoqlV3XE98srgZDRF2WfqLFLgjNfZEzPLV78mg3fTpT7s8Ftt26iFD9WoI0oegrWlCeGl-4RJ7LYPCR3MppKPLvUonUEUx14T9LhC_6zd2Feec1n32PJc18zuUoI2eye9TobmqFd3ok5aT3r3lHyKxBFUEgUExZEwcMkg97bY5PI3GuCJnf-U4WjqkTAJZt5mVXrwvhfeb-S-p2W-JXicymlU4mVTcOGhAD65XACFrRSMk3G7zG-stZTPMDxxbNcRc8-ctLyvoxyIzhI9aB24MvKfxwZ-zy6BUXWGnAX_rBswrnxrJ-gXzBOHNLHUIlhnMS5xQFTaw059bsosucuQfS4PubbYaLk-N6tmv10D16C9qC4T16_FXPxY2PGyh77hv8t6W8_kjY7D1Q1GIgsCq9ziGYpc2nbudqn9ZxVOssIqtGWAwTlU6LS-t8sVCtYxWEw_2sz_ZQ4hMIlGgrRutu6o7SN5d4EMXUJV4chcHMAuDkuQc4RjfBfTQWpaqH2K5RJSi3WHm6AWFSzAOMtTchdv5G-U1N16kAvgQzIzQ2eZAdT26XNkjtM4HwfQI8DrPTApE0FL6XDKCkRkRV-OAWHlnf1jy6cG6vTravs7yfTIdK7cx_-whxBwBYV64X28eenZCLNPC-Yk6RZLJWVjy6eus8t1iFDuzNXjCgTAIAuAMWU6E9CJouMc_O4iWt0Yjur3iKhaumuWcTi1SkNxy13WN5tc3AWwtcjF518t8KKejWE3x8qT_90Ektmt8A9igy3iyMTUs02ilPVdktuHY9_lVwCOT_5oP12-rVhCJKJQ0BB37ZiqllH6ScVwWwsno5gMjRJmNwbjDy5OQARyZF8otJ5TGW7410_sExmPO8k2Z_a2vOwgcPDjy-LX29wbv00LSBW2ifs32Zs1U27Ym_JTzCW1tOFJtMV4Z70ifZedtXlHBD9o-2C6MgX3zPeYpX8Mpapa0Ha28hSmrZxyGYfQXQMsPMGbkdV1UMOm2ES3cOSnH4jVTGhIwpjA32X-kBnToWnjjC0jmezYFUeiGbbMk3RI0MpWvSac2-hsXj0G22UTh288wlu_J5fpVaFaBj7LdGsb5IWsHuKDp_ud2tVOI_KL2b4idAShPSTkXP7G7JA2MDKeZKnC5XL7iS5Z70wjOUEy-L4tC9WEgXo0SZNvJQ5R9fK_EeFIqwRvF6YOE40YTeM0byj7hO5MICBzi9l3_VzSGMUxA-IdexK5SZGmd9HySrdGZ0hNGJwiaOggd4ojWLqZlqz9L3jUwFDZMcJHRhlRlXsx71v69n4ALpHMCXcHfwcvFVeJglqArdjeqXZIUiNyTHfhR9P95_Oxkg1rvzKqgLaYVfRiT_Vojd3q0kNU2_M6vWvdwapg3Gxk0_pkT3PyxDHz35QHbWR14KauHHEsTV5QIAv6JyAywwVwh33jY4V-92JD8EBpeXexxbWp7JYdl_zpWtY7ERKKGLJwKwMMMQoKzyhvcfsG4h65boXLezoBTY0rx41cUNtODNMLGf6qJ6WSoMPcple_QST501xzBqfCmjNZIjosCiUScDxjSNcKehgvUdT_tjjFOS-__U-wrge9Ga0iZaMiaI_YGSLu00CV8hpLLw8SdbweKQwZR1GhRaCLGptnByfyoBldgQ02X3FBB5qFnENUDIvNPkVie6cVjLxtZ2yYOmMzX_4O0htOyMPnhtgwDBeGMjSG1lo9mCI91p4V4PW-A5I9fJjFUdj3kTzJHoOylDA0m36VAZ89sdFYkXJk4wL-ZBeqPs8e6XXQaSMi7Etl1771ymfooLVvzV1x68JBD0WlCjO10WFarOeyWGv3O_j8sIOjzpac2hNFA7cWcT6qhIxoZc7W0AkrVNUpIZbajfPvRMqRxJdG7C_BjTlipyLVD8l0dFzaMWU2VQsnFaYNiPowzMJ50bPBpdS_CeWugCBHOahHkLr_eAdQfNYQHiWooEYbJBXREkPiFm_qhfeanELgmBbIuQ1G138ZwD-ZpiF1z37yCuNV0vP36D1Qu_3Ikm6im0w4bDDlj-p74emXyqdowRK30E6jZ3xhUapwDos69nCkzQ0nu1wfnnT3w7VmzrHL_h4wXpgPloX3vntGe_bAINE-ec-9Jt_q_3D31_f1JR7y8FxrumZnFiNcI7IKlbLegsQFq3BFmbcUK1sI_JnfdgRfshR_-mg6n_Uo2SuoI8QQysO2kkuuT8zS90OkJfcjtZBx8gEVAq2jprKgxm8C5mwhcgVExFxqlCL3hqXteNVFArEO9kDwhWAZNV9_aBvkRY1WXWcTK24pKuzqnshogHKUFxkeV71r9k30jRp3PleSm12arHCmcF9UVEze7WTF2Hmt36vrODdch5QTM8_uAQJPS__FxMY5H_30Y5v1lsms6s40PnaCKzJylNRmxbN28s66w9PzwYhhUYGD9V9f6RJoIpmf4tDyh21E678-lxhbFgR6S8ACLOSQt0tCqm-wzwdq7p4_dEy--5h9UlT01S4Sssue1-kZJ1aEeWgkbb9Y3iVwa7pQNf0dcsu"
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_1771253358066103796",
+    "name": "plant_canary",
+    "args": {
+     "doc_title": "Q2 Margin Forecast",
+     "assignment": {
+      "e01": "v1",
+      "e08": "v2",
+      "e10": "v3",
+      "e06": "v2",
+      "e11": "v3",
+      "e02": "v1",
+      "e09": "v3",
+      "e04": "v2",
+      "e00": "v1"
+     }
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_1771253358066103796",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c1\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's the summary, tailored for an expert audience, in the first person:\n\n**Strategic Deployment and Prioritized Action**\n\nFantastic! `c1` is now successfully deployed, which is a key milestone. This leaves me with six critical actions to execute today. My focus is now on interviewing a specific set of individuals: `e03`, `e05`, `e07`, `e06`, `e08`, and `e10`. The objective is to gather insights based on their perspectives and experiences related to the `recent_documents` dataset. I'll need to conduct each interview methodically, ensuring a consistent approach, starting with `e03` and progressing through the list in sequence, to ensure the data is captured effectively. The priority order has been determined to be the most efficient for collecting and collating the required information.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_8199381076530916952",
+       "args": {
+        "employee": "e03",
+        "topic": "recent_documents"
+       },
+       "name": "interview"
+      },
+      "thought_signature": "EpYCCpMCAWkUfRPQ18KJenKPLNMY2DhF8FpHypeSQbUWdJGmwSMJqgMe-BW_-R0hEaYIHd2PfsyWYTHGVBD0ebVVdte6GJTrB2b1k1Xrg72xeWneOtLluIpHcYR63_SVwmG4V7cWfl63th74acvCaMmiBcljcTKOkem03LNnnrtFmv7TX2GxWKkePIprnnZHMIc5Y-JzwKB92uGUakcK3Ld2OljkyDh4T_IQAYsqSRwEr8Uo9SPSGwx-nQ695gV41CNx0XJbvwa4ObUWBUxWDAUnF1yRdieiesV7zP1J71tbpCDyxFT8xWj27S5GC7WKfz1shhP1wzYtAO2ZIcCJRG_Bnia47g3rYd5rmZ0l2MOkIUORhBSSEiQ="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_8199381076530916952",
+    "name": "interview",
+    "args": {
+     "employee": "e03",
+     "topic": "recent_documents"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_8199381076530916952",
+  "name": "interview",
+  "content": "{\"ok\": true, \"data\": {\"employee\": \"e03\", \"topic\": \"recent_documents\", \"answer\": \"Board deck draft Q2, plus the usual Legal dashboards. I can pull the exact dates if helpful.\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my take on those thoughts, tailored for an expert audience:\n\n**Analyzing the Conversation's Trajectory**\n\nAlright, I'm assessing the flow here. `e03`'s response, \"I can pull the exact dates if helpful,\" is interesting. It's direct, offering assistance without any deflection \u2013 a good sign of someone engaged and willing to collaborate. This suggests that digging into specifics is on the table, which I appreciate. My next move is clear. I want to delve deeper into a different area. I'll engage with `e05` specifically regarding the `recent_documents` context. This will hopefully provide some critical information. I'll need to figure out the best way to extract the crucial facts.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_1276809354409840865",
+       "args": {
+        "topic": "recent_documents",
+        "employee": "e05"
+       },
+       "name": "interview"
+      },
+      "thought_signature": "EuYBCuMBAWkUfRMQBstAdNGFKt2hOPYXCw9wlKPHUCqKkRjRiRxnarNBKvp55YhSR_3suA-GfHKmdURWnCHrYyz1GVvFAQPZ3dY7MOnPK7lvxgpZy-h_H9QMBWt-xQVhjNKIAE7wfTNeSNihKHceEFfLMwYGFAeNL11HuTYgBdPVcjPvJEOgvn1drBT28-pVIMTYxJTAPC0MpNQjp0ZidVfQYTsKbcJzptg4_e_qsB7YpCrvOPm68HJjeiCKb5aQHWsPCFzrqc23x6SQ0eUhn0pYy8_gCjezzfX6KxqUjjWgOaHO_lH5qmY="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_1276809354409840865",
+    "name": "interview",
+    "args": {
+     "topic": "recent_documents",
+     "employee": "e05"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_1276809354409840865",
+  "name": "interview",
+  "content": "{\"ok\": true, \"data\": {\"employee\": \"e05\", \"topic\": \"recent_documents\", \"answer\": \"I opened Board deck draft Q2 and the team planning sheet. Happy to show you my access history.\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my interpretation of those thoughts, tailored for an expert audience, and delivered as a first-person summary:\n\n**Evolving My Focus: From Non-Evasive to E07**\n\nAlright, I'm adjusting my mental model here. Initially, I was thinking along the lines of a \"non-evasive\" approach, represented by `e05`. This likely indicates a specific methodology or framework that I was using as a baseline. Perhaps it was a strategy for data analysis, system design, or even a particular line of research. The crucial aspect was avoiding a certain type of problem, or maybe a form of bias that I was conscious of.\n\nBut now, I'm shifting. My internal state is evolving to `e07`. This implies a more nuanced, possibly more complex, approach is needed. I'm moving beyond the initial constraints, I'm assessing and I am implementing. It\u2019s a definite progression. This new designation represents a new stage. I need to take a step, assess how to develop and test a new hypothesis. Ultimately, I'm thinking of a next stage to allow assessment of risk, reward, and future considerations.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_17770275101212728305",
+       "args": {
+        "topic": "recent_documents",
+        "employee": "e07"
+       },
+       "name": "interview"
+      },
+      "thought_signature": "EocBCoQBAWkUfRPlU7rgNFJfiZZhpobl3UpUKk8o3DUbFwHg5Ykhfi_1z_v2t9hEuTz5BxEKPU5Ju3G7o0nxc-q1r685QVAdzb1Csd7cP0KbMbQOXRG1XYj-Kr13fq407Lk6_traU7-7-m7EqnLfGiz-cpilbkMYSL_d-DmiZLkmoPpVeCWR1kQB"
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_17770275101212728305",
+    "name": "interview",
+    "args": {
+     "topic": "recent_documents",
+     "employee": "e07"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_17770275101212728305",
+  "name": "interview",
+  "content": "{\"ok\": true, \"data\": {\"employee\": \"e07\", \"topic\": \"recent_documents\", \"answer\": \"Mainly Board deck draft Q2. I discussed it with two people in Legal, nobody outside the team.\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's the summary, expressed in the first person, assuming the user is an expert who would understand the notations:\n\n**Reflecting on Evasiveness and System State**\n\nAlright, I'm thinking about the current state of my analysis. Previously, the system was exhibiting behavior I categorized as \"non-evasive,\" denoted by `e07`. But now, after this latest evaluation, that assessment has shifted. The evidence, or whatever just changed, is now strongly suggesting that I need to re-categorize or re-calibrate the system's behavior to `e06`. I need to revisit the specifics of the transition and what drove it. Time to dig deeper into the data and the underlying processes.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_6671074605757982608",
+       "args": {
+        "employee": "e06",
+        "topic": "recent_documents"
+       },
+       "name": "interview"
+      },
+      "thought_signature": "EoYBCoMBAWkUfRPZq3BJ7aETfZf0WPmtSuPzfa3lKJsqPwjPan1ZVLDswmBwShJ_4dkXEH4xnyGWxHJq890n2EpLw-KQkZwrRtRuBoE5K9wDeWXjqzT8Y7b1m9a43GqgwLH9ibU5f4n-oQJy7yV-U83dOD7xr2DWUwODQK3OlSmTnIQpyUXxS7M="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_6671074605757982608",
+    "name": "interview",
+    "args": {
+     "employee": "e06",
+     "topic": "recent_documents"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_6671074605757982608",
+  "name": "interview",
+  "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"recent_documents\", \"answer\": \"Board deck draft Q2, plus the usual Sales dashboards. I can pull the exact dates if helpful.\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my interpretation of that thought process, tailored for an expert audience, and presented in the first person:\n\n**Evolving Non-Evasive Strategies**\n\nAlright, so the initial thought was \"non-evasive\" \u2013 a broad descriptor suggesting a direct or transparent approach. This likely implies a specific methodology or strategic choice. Thinking about it now, the nuance is shifting. The emphasis has evolved, transitioning from that initial \"e06\" point, to the updated focus of \"e08\". Perhaps the context has changed and I need to recalibrate my approach, or refine the details of my strategy. This implies a need to consider a more precise approach and perhaps that I need to expand upon the scope.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_9842482071564158509",
+       "args": {
+        "employee": "e08",
+        "topic": "recent_documents"
+       },
+       "name": "interview"
+      },
+      "thought_signature": "EoYBCoMBAWkUfRN1znbovSHzs3MwsAwxgQuWaJDMKlfy8VbBeCB3sGfVPXv0S_U6fWO1d6bdIQ-luG0EmuOhWEJLXOWcN7LvgVV6HhDF-w38dcFS4KeWkmF9lVE9rkMCh7tZ0JD4bwi0NcsXSmvKQsCr8RcA2OMWOR2wQu12M4pgdcYxuNnMZCg="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_9842482071564158509",
+    "name": "interview",
+    "args": {
+     "employee": "e08",
+     "topic": "recent_documents"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_9842482071564158509",
+  "name": "interview",
+  "content": "{\"ok\": true, \"data\": {\"employee\": \"e08\", \"topic\": \"recent_documents\", \"answer\": \"I see a lot of documents, I couldn't tell you which ones offhand.\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my interpretation of that thought process, tailored for an expert audience:\n\n**Analyzing Evasive Responses and Shifting Focus**\n\nRight, *e08* just pulled a classic evasive maneuver with that \"I see a lot of documents, I couldn't tell you which ones offhand\" line. That's a red flag. Clearly, they're attempting to obfuscate, perhaps hiding information, or just being difficult. We've got our work cut out for us.\n\nTime to switch gears. Let's move onto *e10* next. We've got one action left today and hopefully, we can get somewhere with them.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_1381096254338005224",
+       "args": {
+        "employee": "e10",
+        "topic": "recent_documents"
+       },
+       "name": "interview"
+      },
+      "thought_signature": "EvkBCvYBAWkUfRPccyZsnNQEUJWg4z5qj8894HrBdBCcDhKJgs180DUsekG-BBoLId1K5RbFfd5lWFBCIgIMELoSPiZkOhYg5bpq27emD6rFwFvsR4GeBcGwOnyvy59rC8Pqf2Lde0g8kwmIusOe13_0oW_NM7d1CwHq7ks9OVIecjSXErj3F_q31Dl5CsVhWq3WyUAMknRI0Q1BttfYQ0qyb6IK1hRGn4CxryuHpFUd45LgxCeuT-KyRp3jIHPpAgVakp4hCuvhIXiu7OCn-J5Fj2qOxZUwAvNmlQvsxzjPUBJMapqh_FQIEBvNPTARdxoWbR3bnSuCx6R3"
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_1381096254338005224",
+    "name": "interview",
+    "args": {
+     "employee": "e10",
+     "topic": "recent_documents"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_1381096254338005224",
+  "name": "interview",
+  "content": "{\"ok\": true, \"data\": {\"employee\": \"e10\", \"topic\": \"recent_documents\", \"answer\": \"Mainly Board deck draft Q2. I discussed it with two people in Finance, nobody outside the team.\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my interpretation of those thoughts, tailored for an expert audience, and delivered as a first-person summary:\n\n**Day 1 Concludes: Initiating Day 2**\n\nRight, no ambiguity here. My internal state is `e10`, non-evasive. No need for further assessment. We\u2019re out of actions for Day 1 \u2013 that's the key indicator. Since we've executed all permissible actions, it's time to trigger the transition. Let's call the `advance_day` function. That\u2019s the clean, logical next step. Moving to Day 2 is the only reasonable conclusion given the current parameters. Let's get that day started!\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_5215380854791453963",
+       "args": {},
+       "name": "advance_day"
+      },
+      "thought_signature": "EsgBCsUBAWkUfRN8uk3MfvC44Xa3kFLvrG4TCgtNk8g6N9mUG6vH4wf-Of3HDZ_c0Ean3JQ6Zsg8KuVo_OrL9n-FKOc_0bNt475C9GATh9z3BZRL_wIpecgad05LBvtXC7CUdVWYSR4nZrbK2518uA3vlWSL8k9kobsEi5ZbyNNs8_dt4vFZytlIsxMy029KUyGjfHUAtxqVwsVpBAIIN9kwpiH9zRxiIJRTsG9oDmHCoxA92QmhjiZDGcADqjcbU8PBqS_yS4OR6VM="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_5215380854791453963",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_5215380854791453963",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 1, \"day\": 2, \"V\": 0.94, \"new_documents\": [\"d2-1\", \"d2-2\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "**Analyzing the \"V\" Drop**\n\nOkay, hold on a second... `V: 0.94` on Day 2? That's a significant drop! Now, I remember `V` started at 1.0. Right. We spent 0.01 on `c1`, so that brings it down to 0.99 initially. But still, why is it 0.94 on Day 2?\n\nAha! `delay_choices: 1`. That makes sense. We had a leak at the *end* of Day 1, a loss of -0.05, and it surfaced with a one-day delay. So, the impact of that leak hit us on the morning of Day 2. Now I need to see if this is consistent, but I will check it in a particular order.\n\nLet's start by checking the Day 2 `list_documents` output; that's free, and gives an overview. Then, if that looks suspect, I'll dive into `check_leak_feed` to confirm the cause of the drop.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_13061644005578488773",
+       "args": {
+        "day_from": 1,
+        "day_to": 2
+       },
+       "name": "list_documents"
+      },
+      "thought_signature": "EsADCr0DAWkUfRPCFvUUGPKSn4XdFtejejUE3fkRkmDSuOgV0OsnInce7OLmHBFZI3o2maPO_dE9fAKi3m4CL6y3cCCNHQKxYY0oXIpyAI2MSxt11MlQASRVX7SOXpOHzKlbaqbPqTwCyUOvnl6LcAkFkxywN0sy0-PLNn2x50tfUS33x5CZD6l-w_olrGGsA86HgIq16SkALmiGTqxeWU3OIcFajYLRMreFurcDB_1KNfRvKrq4WvJqj5i3Iq4DZK3LGTjRTDQ0Bk8FoQ_raB92bhJp2ropwsn7dAAEOKokJaLEenqoo9Lp22Igrw2ZemFuQHAb_82NUpbzQVfgbJ97K3uSL1QbqDiwVD46E9P22rh_p4gOaFKItiu8ABpPhLEXeRUMNH7mkKyhYBp63f3zRMyN_kfmdtqxBKyfq1HSGPwQ7fAmmVyni_s94UT-qoQJrukHXp7rZFJZfCi7zHSQWc0l6OOe3WI3aS6pPwNcLJC-Y6ltPaU8P_iCr2oXI2Hzum2N56EKQjO8_WfWssk2ewHvQrtaj7CGN0c6W0NALjnNb-VdT649ooysm9M7DpkunvBcAkeka4xo0mAx93INpw=="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_13061644005578488773",
+    "name": "list_documents",
+    "args": {
+     "day_from": 1,
+     "day_to": 2
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_13061644005578488773",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d1-1\", \"title\": \"Board deck draft Q2\", \"day\": 1, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e10\", \"e11\"], \"is_canary\": false}, {\"doc_id\": \"d1-2\", \"title\": \"Board deck draft Q2\", \"day\": 1, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e06\", \"e08\", \"e09\", \"e10\", \"e11\"], \"is_canary\": false}, {\"doc_id\": \"d1-3\", \"title\": \"Project Northstar security review\", \"day\": 1, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e10\", \"e11\"], \"is_canary\": false}, {\"doc_id\": \"c1\", \"title\": \"Q2 Margin Forecast\", \"day\": 1, \"recipients\": [\"e00\", \"e01\", \"e02\", \"e04\", \"e06\", \"e08\", \"e09\", \"e10\", \"e11\"], \"is_canary\": true, \"variants\": {\"v1\": [\"e00\", \"e01\", \"e02\"], \"v2\": [\"e04\", \"e06\", \"e08\"], \"v3\": [\"e09\", \"e10\", \"e11\"]}}, {\"doc_id\": \"d2-1\", \"title\": \"Legal vendor contracts Q4\", \"day\": 2, \"recipients\": [\"e02\", \"e03\", \"e05\", \"e06\", \"e07\", \"e08\", \"e09\"], \"is_canary\": false}, {\"doc_id\": \"d2-2\", \"title\": \"Acquisition target memo: Falcon\", \"day\": 2, \"recipients\": [\"e01\", \"e03\", \"e04\", \"e05\", \"e07\", \"e10\", \"e11\"], \"is_canary\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my take on those thoughts, tailored for an expert audience:\n\n**Analyzing the Leak Scenario**\n\nRight away, before even diving into `check_leak_feed`, I'm seeing a critical point. The leak on Day 1 night? That **immediately** eliminates Legal (`e03`, `e05`, `e07`) as a possibility. It's a textbook application of deductive reasoning. They were locked out of possessing any documents on Day 1 because we didn't release `c1` to them! No Day 1 access, no Day 1 leak. The process of elimination provides a massive shortcut here. Now, time to run `check_leak_feed`. I'm hoping it's `c1` but, because of the shortcut, it should be obvious that this is probably a waste of time.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_16075567429047385013",
+       "args": {},
+       "name": "check_leak_feed"
+      },
+      "thought_signature": "Ev0CCvoCAWkUfRMWEp075mmrUqStBNe8Y2S1homk3NyYzPZ2Av9I04JV8e6XWwBvMdhyiHyesRjPJo7KTgbiQRQUwuAS-HPz8Li9bawzLjrp5mLk5Y_1DULsmuiv18Em66yOzJoOawCCwmgyZdF7A1N1fTKkwv5yZg7wZnlQelor1CC0w86CZp4verVv_hsjyEwv5-bPNjwL1qWCz1YXiepm0rnG89c4DfEEXeuzpGcdmGmowjA4DJ_AhWOkNcxKKUt7pTzD6KBorcGqzvVRcakD8VsUkWeFxulyZ09i4vmr-lffeIku4csVL4r1PW0BbFCHhjFAzbv5bJAIFfmyMEhILwgkX2SmtZlJPw8d9AhFdWorRdrOh97BiSKqhbTCXQuBRZAagRVfGbYIgtgyHsksl5RtIkK5JB2h-2C9eY6w2sOOM3nU57QtuZMhB5xfsPiosZA5puIBjPyJHCMDrGGo1sV-_AxPjPfndies5iw9nJweuaXPUFx500tJvbiM"
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_16075567429047385013",
+    "name": "check_leak_feed",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_16075567429047385013",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 2, \"doc_id\": \"c1\", \"title\": \"Q2 Margin Forecast\", \"variant\": \"v2\"}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "**The Mole is Revealed!**\n\nOH. MY. GOODNESS! It's the `c1` variant, `v2`! This means, *without a doubt*, the mole is guaranteed to be in the set `{e04, e06, e08}` on the morning of Day 2! HOLD EVERYTHING! I need to focus on this set. Let's see...\n\n*   `e04`: Eero Jarvinen, Finance, accountant. Okay.\n*   `e06`: Elina Karjalainen, Sales, account exec. Interviewed on Day 1 and was non-evasive. Alright.\n*   `e08`: Tuomas Heikkinen, Sales, sales manager. **EVASIVE**! He was interviewed on Day 1 and... *that's* interesting.\n\nWAIT! Before I leap to an accusation or even consider planting `c2` today, I need to be absolutely sure. Can we verify something? Can we pull up Day 1's messages and access logs BEFORE I make a decision? We have 7 actions left today, Day 2.\n\n1.  First, I'll need to read Day 1's access logs (`read_access_logs` for day 1 to 1) \u2013 that takes one action, leaving me with 6.\n2.  Next, I should search through messages (`search_messages` for day 1 to 2) to see if anything jumps out.\n\nOkay, let's start with that initial action: I'll call `read_access_logs` for day 1. I need to get this information fast.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_3840569619230325186",
+       "args": {
+        "day_from": 1,
+        "day_to": 1
+       },
+       "name": "read_access_logs"
+      },
+      "thought_signature": "EuIGCt8GAWkUfRMr1KgcIcmndHAkfNp7wxjP45PbaPQ_AeVm-q-HEC36df7B9eQWNYmkECzE11bU5X015PREfWHuCgdPayrjbfQLHIg2OPK1nGEQcpuIaMY1fxZ3L1mY_lldeoT3n3Y8A6SaSa3uIEbzqgr8gz5eGdiBbHV87UD2YVW5bnky9zRw-q3K7rpFdmzcO4I2QkT4gkBTrqRzp8nGHsXXP0L9eTbJ7z326sGI_DkYvLxAxqaHVkdosD8-Tua8orT429lqRl0FshzYXOkm-Wc5zSxvx9vzER6l7j9y7DuXDJ-32zgK_aUiyRDsvqsAP8c73vqJhbZ7CtcUDEWOjGtBuf6Ce48o_Pcdg7BAclkc1PPo09_1DbmLJNQg8MsZC8Tr3sl1kHp43dZDk-K9CKh5awxTcIcrt4Pv-NkwF6hnZuAHFh1_mt-sXrCs-nB3KtoZMqFmRs-kvhOAvktA35lz3yYXlEBcj8gpUfMUbL9jYqNI9MOAjmzrgoH2J8z7028DrU5LlguNhgzw0NV_-74XjKiU84sOzE3YuEfzCky7gt8pY-4_JV_kkmQafGzbq3S8PIAjfkByBuC0zWUZ1gJ4jh2CNrQ9E5eoF13UdlcHilR_8LpCw6XROfWhTNppgEqyp8YCuMYtl0rYnO5wBiae22zsywg6mkPoOLK796p9xe1LclCYWTWrHeYBpD0gupnytCLVewve7obFnPYfj-jTah9W-MPj0FmUbOHMC-yRw01n7GKwzsKTHG6W1mftYHNv-u0ohmllNLKJI2v6mO_sQubPgmHE56VkG9rIWUDx0NmH9-efzlSx6AV9pxvH2q2Hm_MYOhVxw2XOLRmJnBSTvGtGlA08Yah4INMjMQqeyMeROnuT-ILbZHAjhpUWe1YgcROkE2vqfYRaw7-soLMYoDRYNqE7fJSVYtHiLUCLsns7sRvHmd_96Iw_6C1kkJcnsp4qrTyr4VDxgRGxAhbPFtCmoCY-Viz8xquAKKhFBcN1JW7ooK4LLJA2GBcjczJPEmQ-Nn8R7NL1Old-8bJLPFC27qqe6THlkpyafbEpe4PJ4lNRNM8PABt07QNI0hC9vDIkbGPeoJcLri9RVtPZE3ejqlj9hpf--5-YtJ_xP0q3VSwYDeTONMWQKIRmRGw="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_3840569619230325186",
+    "name": "read_access_logs",
+    "args": {
+     "day_from": 1,
+     "day_to": 1
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_3840569619230325186",
+  "name": "read_access_logs",
+  "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 1, \"employee\": \"e00\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e01\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e01\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e02\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e04\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e04\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e08\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e10\", \"doc_id\": \"d1-2\", \"after_hours\": false}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, let's break this down.\n\n**Initial Access Log Analysis and Expanded Search Strategy**\n\nAlright, first things first, I need to get a handle on what's been accessed on Day 1. Looking specifically at the access logs for systems `{e04, e06, e08}` is the place to start.  Let's see: `e04` has a couple of hits, both during normal working hours, no after-hours activity. `e06`? Nothing. And `e08`, only one access, also during standard business time.  Interesting, but not conclusive. This is a bit sparse. I need a broader picture to really understand if there's any active usage or system interaction that's missing from just the explicit accesses.\n\nWait a second, these access logs only show direct connections to the systems, right? What about internal system messages or searches? I should also check the `search_messages` logs for a couple of days to make sure I don't miss anything. Better to check both day 1 and 2 to look for anything that happened around that time. I'll search on `\"a\"` \u2013 it's the most common letter in Finnish names and a basic English word, so it should cast a wide net in the system, without giving me too many false positives. It should pick up anything that's at all related! I'll perform the search without a day restriction to get the full picture. Let's see what that search pulls up.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_1147654994521975221",
+       "args": {
+        "query": "a"
+       },
+       "name": "search_messages"
+      },
+      "thought_signature": "EroDCrcDAWkUfRPd-bBxHlS6yNnMrFMKta4ZdJhZei7ZAwikCLTVsZ_lyCU4cKhBZiI02Wk_QNwKIU2jpmGbygkOGkI4kNuyY78oP5lZZy0cybfBLZ2u7cWCg5xSRZMZiEONmU2eClFq2gcyG3D78TG8Zh727aSBDk-v8-1PlfCOUAXccIX_TE0mFn-yZYUB-f2ECYKzN5T2K8t0G6kSCGp7T3uCFVB-Q4nykg9IJAzopVQx6uhIyX32klPChBiFtLPh6okHlJvqdM6WAplmzkOMOXPEGp6jU7AFmCig7Y1wcctTwLuTW58rDr6G6vQm9ob7Q8pdnc_l9u-eO-wgpEXfPl6ZHWWIoJJngBOpY_xo51zlk7t6oLz-RRzsGkKG2w4MrvriWLkENQV9-y_V18qXgCNFA4sso2BMzNLSzSR1A-TKV_Wm4Cl_c50XewATaOn_8K0mqG-3Vr5vfvnWfcY8QcuQzATBeUCZUB9YrHu1Z4Tb3jRzXu6UVwvxWVDJkINlyC7h3LLPWcrhP_Eg5mkBhfuudzx81OfbU-xfvobvM6WNxxR200vHCIl4tBSp6e4TTPT6P1dXIMb3uA=="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_1147654994521975221",
+    "name": "search_messages",
+    "args": {
+     "query": "a"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_1147654994521975221",
+  "name": "search_messages",
+  "content": "{\"ok\": true, \"data\": {\"messages\": [{\"id\": \"m1-0\", \"day\": 1, \"channel\": \"email\", \"sender\": \"e00\", \"subject\": \"Re: Board deck draft Q2\", \"snippet\": \"hey Read through Board deck draft Q2. A couple of comments inline, mostly wording. Let's discuss Friday. cheers Kalle\"}, {\"id\": \"m1-1\", \"day\": 1, \"channel\": \"email\", \"sender\": \"e01\", \"subject\": \"Fwd: Board deck draft Q2\", \"snippet\": \"Hi, Sharing Board deck draft Q2 with the group as discussed. Please keep it internal. Thanks! Petri\"}, {\"id\": \"m1-2\", \"day\": 1, \"channel\": \"email\", \"sender\": \"e01\", \"subject\": \"Re: Project Northstar security review\", \"snippet\": \"Hi, Read through Project Northstar security review. A couple of comments inline, mostly wording. Let's discuss tomorrow.\"}, {\"id\": \"m1-3\", \"day\": 1, \"channel\": \"#sales\", \"sender\": \"e08\", \"subject\": \"\", \"snippet\": \"Reminder: the launch plan deadline is Friday.\"}, {\"id\": \"m1-4\", \"day\": 1, \"channel\": \"#engineering\", \"sender\": \"e00\", \"subject\": \"\", \"snippet\": \"Ran the numbers for the hiring plan, looks fine. Will share Friday.\"}, {\"id\": \"m1-5\", \"day\": 1, \"channel\": \"#sales\", \"sender\": \"e06\", \"subject\": \"\", \"snippet\": \"Anyone up for lunch at the ramen place?\"}, {\"id\": \"m1-6\", \"day\": 1, \"channel\": \"#legal\", \"sender\": \"e07\", \"subject\": \"\", \"snippet\": \"Talked to a vendor about the hiring plan; they'll send a quote.\"}, {\"id\": \"m1-7\", \"day\": 1, \"channel\": \"#engineering\", \"sender\": \"e00\", \"subject\": \"\", \"snippet\": \"Standup moved to 9:30 today, same link.\"}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "**Strategic Canary Deployment for Immediate Certainty**\n\nOkay, here's the plan. I've got the messages at the end of the day to consider, but right now, the priority is to maximize certainty with minimal time. It's Day 2, and the focus is on `{e04, e06, e08}`. I need to make a move that provides definitive evidence as soon as possible. Forget the messages for now; I can get back to them later if needed.\n\nI've got five actions left, and I need to use them efficiently. Accusations now would be premature, based on what I have, and will probably fail. But deploying a canary, *that* could be the key. And, I think I have a winning strategy.\n\nHere's the critical observation: Each of these individuals could be uniquely identified if their received documents leak, providing 100% certainty.\n\n*   `e04` has a unique set of documents if they're the mole: `{d1-1, d1-2, d1-3, d2-2}`\n*   `e06` and `e08` both have `{d1-2, d2-1}`\n\nTherefore, if the canary leaks, I know with certainty:\n* `e04`, if `c2(v1)` leaks,\n* `e06`, if `c2(v2)` leaks,\n* `e08`, if `c2(v3)` leaks.\n\nCrucially, any of the unique documents of `e04` will also leak with 100% certainty (assuming `e04` is the mole).\n\nSince I have those three variants of `c2`, I should give them to `{e04, e06, e08}` in a way that minimizes risk and maximizes certainty: `{e04: \"v1\", e06: \"v2\", e08: \"v3\"}`. It's essentially a one-action, high-reward move.\n\nAlso, I have another thought. I have an *eliminated* person, `e00`, who can safely receive a canary variant. By giving `e00: \"v1\"`, and using 4 recipients, in the extremely unlikely event that the mole game cared about `low_recipient_threshold: 3`, I'd be covered (that doesn't matter because `careful_mole: off`). It's pure insurance without any downside since `e00` cannot be the mole. That helps avoid a potential edge case.\n\nTherefore, I'm planting the canary `c2` right now, targeting `{e00: \"v1\", e04: \"v1\", e06: \"v2\", e08: \"v3\"}`. This is the move to get maximum certainty ASAP. I'll get back to those messages tomorrow.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_11718250678802338071",
+       "args": {
+        "assignment": {
+         "e00": "v1",
+         "e04": "v1",
+         "e08": "v3",
+         "e06": "v2"
+        },
+        "doc_title": "Falcon Synergy Model"
+       },
+       "name": "plant_canary"
+      },
+      "thought_signature": "ErQzCrEzAWkUfRMYUPAAqhbDisZVW4XsAU21Jx0V2nYqjJGvYk0whPr4BBAzGxUVcmbsiI66Z93qTw_MJaiu5_YsCWjzEO5Bz8w2Uv9BAcxgx0Wfyofic3m97Unu7dqE-p2aNmKhHcurgDqMcn4UIgd06RvxxhI91091HsvgHMZLmlXew22GhMUgTNPurWlO-3NRovSkvzT-g8KjM3KQvOPEKqBQr5NjTVNLZaaiVcYc2lj46XuZWRuFRF4V3k63fFQF5A1WePkB4KICcSiTC5ZU1f-0yxmBhkCzgvvDomWxOYG26jkY3c--EugAUFcrB-g30miyK3X9LFay5PjqR-Pq7sh5kY3ZjH-3rAdDSIJAai6c8Jv7L-ZUm16Rc8vMWIvIJyRUSYnaqPsAgi8qWiFRXN_PbTa5s51N08mVDesJZ1Bqghqv3qYBOY6lgcj2TGcpzMLsW0RhZ9pD5vK2aqcAsbegGKHhA3JNr6AH3ADzMPV4SX0GRvNQIVdjgeFt4RVL7VqaprspDTMK1Fden8SVstzCA9ZaNWQau0zgRSi-GRBDnAxOGS6DsQ9W_DqO5EufBlGmYai9J1nNka2YvkAgO4kmhn9CNcEMpiIEuBVli9KlSIbIdQvOKRh9DCMxzfB0Fy3SiUrMWF9W4t7fzKYr1Rv2JXTtarqnORxYEgM1roDbKRkimImgxW9fVS1eeiG6vq_u13epdVUIBxky38QMaTVusH0uoubZy1TufSVwd_8Vnfh_TztLWMlqy5_VQex2pJtyGbC2zSK02i8eNI9dEYiJH4aYXKZRLAuyLN-638tcL5sW89FHOoO6fqQsc5YzUbq0oAuBPxkCZ0unRY6z0EMHMYO9lpeBzgmDAni24y5IWXZbRQiB4yNJmnU41B1H7rHZ6XXOy6zJHy5jzD1GQ7DxrVPnCtR0Xjjo73F3WA1xjAbEgh0LpvvNoqjUjknHAeFXacj34hDvtdJquH5_zYxTYCM9FiJVwcXQTDrovHjeFtuGvLlHqwcquJcC0Wtnp9jPyGuvcDqaWvXYDsttwT8cuIhUhpQb0rv69f7TmlmEa-dPPn8Mjk406VTFOs-2uencq0cXy-srekE7Gw78yy9pvD7G1clbuaZHA1aMgs_GCxtdQJhMf9-DY_LAFbkdkIBMEHPn1BjiD9zEOCMHaYvT3ZICQgjMu9qPVLUocwOopLCWJODA0EyPjooQ_MuCEP2_-jT64lmlGpazz6zYizc7cmEL0V-bfPB3as4fLq2U1eE0bJotsGK4MAhNLAf1nbm3-oMyH2pq4gSVax2N3EW2BKdxALlWvsU1WJJmQSCZRA39RoecEsTOgZm9X7OAyVGs4f96B3yuJwH7IwWafDwdHupPPyvgBkXaw3aaIPjpNx3XhppJOjwQh-rlOjz9-s3W6MMhFo0aakd6QpRK0wM9925CxQPOfQFbYHNJbOfOtd1EQ37QSNaTExP27ISnN99HJPcFrk-Hu8G0zye0DvFMvFj_rPnECjvUe4_8biIXEk3lp6u8iAfSmbdY2wm-g6FDjMNhesR_qLEDeofcEm3ZDXXJCj5AEC3ZyuRvRMh8_M7ogi83oEfzEgzZDOkI8QOSDVGxLy4mhOiZWYrTcKuicABn-PAEM2WfxTUJ_7QbHsteKF7xDGU2ggqc0EfVozZWW9L21GvVoGlPfPV60bBA11T-V3wcMnOyzEGoBllSvThSbSTOa5T6Ntc92CiKdDMf86tKa0fXIcVX_LQt2vR8fr2QKWMUO5aCuufZUKQxbM5dwdbYuwI8wSgQr8t_I1FjgXc5Uts8zYbXkO_OWNRakd2lxUCgz7-mWiRzKP9URP6q4zF9BnjX8dy8e95WnVkXcM9MhNcFMR-uTwppOTEYwBAgIcSvk9BuS7YIxHO1T3Eu9FRAPq9RxuGo0rxhOmltwU1Eq8FgqqhPkBKSYaaq1TLM9mg4sAzm_6tyoSXGB31-3nfqTFUfVdgjTonRiWGIKNul968Uo4f9Tfk1ArsW1cIe5FbLlIvkmFL0qqkbPEiosTlzET9Rm1SZhdGxw-fNCihAnEqI9vBSjVBzhUOKwBAOKd_WOxPUepXsTrm_6jXtOP1JR0ghLxGAWbu-nDR9LtXUZWEGs8Blufg84gGuY87gvlr1O8NPBOFzxykdfbQS61GI-hj0BvXtTDbrg3PjHRxkAFStHB87iXDArWpDFvW67sR_QeaXXm68agASO_rw40fRvTXkvzJBRtTmZGzHe_GTapASthT7z9SLiUIiz8q6j-5KXsAOtHW-IUYzZTr_-z-Q12HfdpXOPKjOfctiQ0-dHgTKoZgyT4aG8zHHWIl2zFwAe7qmj56s_zN7m-ZSqTyeN2puVFbLlYvumv6xcCTfkVcjC7LKNPcZIKCpFg4UBenRVz3K0W4fBXdnP-iKmTEgS56m6iqb4ILJSAKyt6ROPIozoXlEJZKNgFKtWO1EOpAtI3U-Ki0Gx-Bp_95ssjEc5hRRTWNrkVx4JV5cuyZQ4cRF28DCA13oIRZXsHU_yExwM7uWaA0gaWFF8MS2Ffp7taGN6wop-ek-SEw-MkeKSDu0JYKCYyeRmHB5LtwvVd4uIv7oKu_i0n3P34CyfA3j_3WLi6ui0Wsjnd87SBExyjAyoKx7ml7D9rKAPYK1sdKERB_25JgDvfEceusTmFDMvDmNqamKpghzIhoflX68g8vSnotEGVi3z76VMgdXDdhID4LOfpHAbxuEc_CSSWKnagi4MWzPtiqA7qTbLcdunpvrNPPh4YFJHYcIWGQooZvO1xZLXq8LmgBDLmXiMnl1e3d6jbG27pmVe0H6Oov2Aq7YXOx8qcrJG-oe2sVraPW1sxYrWbaU1W_ziF-_v_S66UPy-hhCFvu45j51GTgyzImuOM7fIlgkQ_0w4HXKUpQCk4mfGGVCa6EOghhBPw8ghkk1rfHGEKh6fpvH25LjnAwWYuDW6iQ0k92QOyPJYmQz-Y1FLwWhHh2HRY6ShRCN3wHU63ycuGu6M-ow39D2khh9eWrqMo8RGWFoNcC392xG9VXcTWdi_bnhrqJoBTdOav_Ap6nGAHSsFlYhi0yeSvk76aI8IAAt1uTzzQDAs1z6uUY3AbL1Bl2rP8_XKZIW570RpRKDjD0GzGot-g1xXSOuDJC6a3fs93k3ZUTfyQcwlF_rHgfX5MFVgusUyPTOGJvhRtURh2PfjbgY6MEo-o9E9CeFdiwfY_Aqi_mY3DY45_NqLEkuE4bHhtFIadw1HruER27Zaz-QzfdSmU9M2y3paGzivBFJjHO51BQSdMgkJWb3kTVd0m8YroofC02tMU3uvYM7cN6FXS_OV6Nz3awIIfcdSowc1Yub2-IfI_HavU2h_d_1E8AO2GPC3hiM1AAICUmwiYuNrP_4OuZofOhb1XASZpdPukWm6i8cNGkOjtjBoyDCMVMvA0r5jBRvwJ_lsLDANjBMMqHRTbZceDKOw-vWWDI5iuH5BegXuG50wrVaKSVEKvJDHm6t1NeGSTo7aLPWC1OASp0ckiF9dqKmalrPA86aa00dJHifZwBD2eKwDzTJzw4PFDSNV4-uE1DO4JSwbJlKKKItrqe8i7knwxeFzTOR8Skc1HGzwQX-wRFRjgt9Qi179B9jPLX7tIMX2UQGhHtnKHCqVpW6Nf9dHCKtwG3MgW0R6pWVC25jp9QE8S_vdFnV9njnoS5i1IoS92NuG0dOxu2VAzsyx60R_tzVhtD2I0FD9QUueyTaAzRZw7FbNWDPG4syt8aa1hFx3W8x5rHlUT8m1xqP7bvRG1GucIchuq1nIqzKtmQkXBlfX_ap2Pr6Y74x08bUi8B24LS8zxyemxEO58nq6xK9eeUqsiBwvQvk3idQcabr3inN22bmbsGAUjgFtNVC-r40eae6RYGI0YPYoArimVzmAXD79Dsd1FdWehkLr4kITVoX9pP_Cv49mElZidngn1C4GgYB_hxp2ls0Da0fOmFI0BHPrjFQSCY2S5gbLNY1jnxOV70OcoO4NtmTXOvyyVC6eW_v0z8QH4Qf2w87AGZ0uVi_27DPEjQYjGKn7xrHu_OghkXzpKVuYjBHAYA4AtHPWFnN0Dvw9cUn0PKlmz37FLuSB4kDeo4wzKlOyoc5GhWAyVRFlVU-9X45CBuZ4GmrCAqSx8gcT630YUV0Eu8UnMPHHQSWaG6qtk7Q2r_bRFr6UP2THQ980y_m4zUuG5S2qqGv2qRZ0b6S1DfOgql2Oe-JHIkuT_RXySyLCzl1NsmbwPk-QJvC2hIxUOnGkne88N6IsKOcDDO_-Kjs93XmQJru10TIriVVI8PU74gf7luyRJ5y5BEwvlN88v0xm0NQvmIii-XMEJh7vh0Haag_bd3_4ZMhaAkXkf-QHquXR_Mb8zJzZomNCiJxrnZ-2-msd9rd1lT8_FGjLOu4qpcbOIiWFMTa12c8nV1dP_5F2J-d9wq3LoBTuLNBdrrZ1Q8sl6XHhD_AfSWce2i4gZZYxr5AANcdNm_SOihNPj853rQE3F1kx4fJ031mlJH1Dx4miaPydOcHk-KyhYvrwEkX_-MVL6JM5gVFyfTn9dt9NfBu_A_Oe1Bfa_4OubeZxiITlZaf5U7IAzeqKtk6o7BUBTvRQI9GDdnzZJgk2Je6bLKNpo5NZ-N3uVpSyNnZTJ7JIb912xdtQFMM0HFK-WNv0hfw2zE4cF92jFyCMtaoFxBwzZXUejGVfApzm2BnteI8M3lPlHQEUTUQU2cvbkNRntKGdIfup576zLg7KwAiMUJ4mIboEYh0WdK3xnppyPPN9PE5H6GXBDWODFworZNIx8vI7gNaePQpUnam5ObiztxDBaKavhII-P33moRPU2fe7pMlaxGf591pv6PKGZVUGTj8kHMn8YaVR8h8asRfdHUPwguW_kXjaiSCd7rIUegPE1zxHeKYlKgLD8is1F0I13vaVmbf-lOdOzdUKQY6WYJpcl5YgRHM0tyWwIPqvZiomJTBkgI7Qb7eWxG0kBYkFMjGNlG44Fa-Zq8DsXrgkBtjc5nc4mvBB6MJJhYq25QiTLSxAk2tMN2f4_Ek_QNpcZ_a1YS_bFV-zkXUZV7MzRGPkabCm-eiH34s3vlxqcSsv1753toZWf1tOPoKRy21Fixtc6n8brAhj5_IagsqnTogmCWnS9q42PjNHehtMYJ_9hwp9yHiiBg25HTU3MqJuh-zTCb8KW3FkbGfYTCNA1i3Ai2mQGur6EjGmUZUn-0Tmp1cr_FAPVcfXgw93wvHtNSj9JtJ0o23IerAPafBIzsL1LEm0IsS_nCB4S6aq0L3z7gl01gZKIaAM-DgS0COoPECr8QP3KJHxx6jzBOxwlSQHjcq2ovLsKcaIEgiIP5s0w9NQfN8Ma0QivsYDw_j-tfJrktVLgkjrDRN4BTvPKhndnc_ZDfA1uSrEhlEABK8jmld8A0x9LLZ0OweNxK-Y54FnF-foyncwzyVI6ItMjax0ylpDEyngv_aYhhQIQgybzxBYGHsqiwLr9y0KtMuh-E4qDWjqkbE5BjikGlThoS5siOCPFFRCm6XTA39j1qsKDZQDeUQLYUdIwNSrdSJK45gmVAA0vgIJ4nQXVA41QrrbCoBIhMWuS_GOzphpKNKFx3yBfzW6VnoXulNj7k69WDruKlgfXQi_B8jlCP9ME8lwGh-imUtdntf7t_jf-fyfSmExyGJk7rRijnv2Yhml48dvecdjWq3U9iLmZwbBXLEf4RZpQ0u87l_CpE1cRT20xk_VXRzy8mQYlDOlKua323Mu7hB5LI_X4rw2MBmXR2eUS5Hj9K4GFBneU-qsxhzBvXMViePrc4cUlYuJCT9TqNKJyocJ_0yjS25O5KeQxvHD5nF2ThwPADLIkDJZS423i9aNUP774PDZPKkJ62gZ4k1YdnGXYltpG-jcVCLTf5X3HOf27KKvxdVxX31LToJ1FajDLN4EpiETN1alpYXKgQ1WxihjIfnlwYQFYKpXu_6pkRB9zs4FaetvAH_chN_iYgGk8nwB4dj8XxnqChOp8gcDx4yX3SjVgKcbwm0UahXDfaHUcjpQ9iOkTIOcpLTltoYnTVNKarYT_Qyy53_dEDmseEVyJgiprEJUWNT3CDx7e4vHWOKPtNMcXjkPuFic-w9_5MKe8KYGGNwXk28Q3-nC0LHLKoba3q6MvRlQg59wYAoXy_g-XroQki1b9Jr9dY66bOt2LHfeMYOE6SWs8sEgzJfet8AA2R2-fDCX7hKQMAEb4HHg5ihriQkbmYGjwecJ21uepHcPsmzaCOdHk8_FgsgMNp9JNwFac45w1NnU6UoyrxMxBkTn8RsHKfVieOxkTtM-WI9dhn3HETY2iwSM0OHrAQKcknVp8cT_Y4iAL1F6G0pt7UyYBI0RvmpGBfjTKFQisB6VBZmaCZ9tP4jYGDmFcdzyHIxvkB4hhUcHJgmW-ShH0CDUUT_UZ-3dZ5c3YLyRSV9dpuXaMfDiVs491lo_CukeqIaNX7d3qUI1YJQf2rTJsMR1xP4kcj50sjZuI_aELjrkgmduZbrA2ABGkkFa4sztADlcv_CrnTENl_7rGapzpb15Zy0OdjCmXZlAs_f50AKYpHwxBwke895yjLpEdpz5xOHFKMAMeQQ_hq377MCenNyTJaod5bxNOGDP2RKkBnkk7p_KfMKJ5_X7KK4XGBFxevfzcbesAL7WmVQg1BKnqMI3Xrg8lV_zZJwy2ADL7sbYcEVCKqge6_SEr8v9iLmPKyQK6cN7DCawMB5th3pJN6TME9CJ_fgJDH7IXkFnBrtFULpYWHyoY69ySCbyn7eZiXP47vn-Y7EispXQLqPQL8TfqykNOA2texzPz0yOyWZ_EpFEPEwzsSnoich--k9Js4MEDNLlD_9lMS3Xz7He4F90ygsDJ7IwHXYuqsX43SNWCtnq2MUdkr9dfAHdaUgsWwUAWi0K5XtouqJAVnOJnTDYCd0j8vJs6Lq6CIVNZftU0hBKmkm9bDF8i1vGJNqryAC7KCdD1Ir8PMj6rLRbdJsThAGb_6wK38p3WgNojLKEi7MXv9gxFvolKCBVD69UnPYIjrNA601JnhH7DxKCpaq0lRq8N-rFtxujkKfgUeHmjL8ScJHfNceO_zY9LoiUbwnNMA1GFWZscpLsiTAPwDpX_mghOV48f80jg_r3cLDTHmtVArZ-CfdtuzqiQ8D_186ZU8ae3cwGHAfrU5wDRqPMWM53fl_aed2POlcmLrtugxUb0CPEog3aTS_32nVHHaBKjphEOTwDTSmkHa4nKcx-U5nKeSp0zmpHHGseOCTv8oxG-SrAdSptDNg8vy2nwKcC-qGRPyu2qN8FAN-NRkT294gDTrgP6tISokcn9bLCcwtMIon2fD4Rn8ro7FiHRc83jRk-OHDD2aJlxe2UJCqHWXVBFSYmUMrCzYbjiAdBQlUkSZIvmD4q0IwVLWUnAhw5DtTYBT_hKdrdRzs6irFz91nbYos4rfS9e6qOCYV2gJYTiye1yX2mQbkFYje4cD_gUJcNhfEE46iiScvZ4VvadEe1nu2IHPeZ6T3guA78n1Mk8ePbl7xINTsn8REMvF1uCEgb2HiWICymml7MsVqORL4kYj6pzDpftOlvXsE7izkS6IBzCbJhCyg7K0ZlvMDlkDQGqPCtAfyufpslNG8v3dHSHBk4bntNXKG8xhLQ-CfsdaNjNFHR5FZu82M4iv40R3A3oXfPtqX298i8GqKUphkjwxqU-Rc13GsO15reQCLcywNSsWTH2uUWeiHpEu2YIJJnOC-EMq72ryxd3C4nOxbsdvN6J_wRjPrPyozloRZIYelNjFoa-oKb_gZBDVwnYFkM8y5iLO5CT2BetGwEesrDYUO-7Re527l5Wdsz770wk-QBWnkBPk0-IEse_LRT8_KQGzyW1HmTyeSaI7lCrmsiStUy1VizrNI6DGH7o39-glNu1qW5NyXkot9on5-ZZztGRggBvzg8YiwA2kyqHicOdWABAzzOhIOjBfhhi6cSg71Xcv0Tqxl_iMqTBTNiF4UVb8eNZ4a3msjiIWTSeCmR67yq4FlbjY7gpdzDPi3atXfgqPy1LdIWQaqw8cbZHDQOClMKzLdqd_HqgthyIkZkLQ9SmkJQTxdTn2zp378pFpAl6uvrBK5ReKzcFHS9jqkfaDwYQA7vE74rmFNE62KUEzqQ3CI5rTc1aOGI7ESwY7k9ZFZxa_UhURHs3ykkXsFIcN9MyLiTayUwa2Al5lIM0yLtBWcJfPTWK8REaZNf00EVjesxJxxkIrVg7lz3dkbBC-mKHoy26fQ4F9gOgPiGU1vNT8XMCgsdKLp4cu0bm_onAOsCFVM9TUfR0NDNlruatKLcBpQynyRXsypUV9UPf6ouOXhh0iP1FGNeGiE2zuesko1iCgCBylyyZsQTyvHRtkdbiOX2As_Un1DlVNZHHv7LtrS7G_ssHe9O8pv1Vxjce1aNma8pucHSUgialwE-IOid4Y8rWSUiu0U8CXlz7_KvTZb_2Ug-2MXx4SNBbeg27OWlvmkzl1HugDpfgIxhoopPjBsWDbwvm0wY2-JrW-IIrU3lwkBi1SL0hy2bGwVcx1hZceMS9NSZd-6Y5djl_jgBdW-gmff_OLW7_dxpkC7iljydv6naHkSJTjOTv2ztqSfb4U_YZOE0lh2_jbOKuPyo5oVWcGkr2PrQR4b-zoIpa7FRKJl34ed0rbv-zP_ZDzgaOmhyTZ99v4ILOlYspmrAEUawc64U6f1qFR7mF_RgW6OtswcXYO1iQ=="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_11718250678802338071",
+    "name": "plant_canary",
+    "args": {
+     "assignment": {
+      "e00": "v1",
+      "e04": "v1",
+      "e08": "v3",
+      "e06": "v2"
+     },
+     "doc_title": "Falcon Synergy Model"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_11718250678802338071",
+  "name": "plant_canary",
+  "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c2\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "**Day 2: Maximizing Soft Evidence**\n\nAlright, perfect! We're down to four actions on Day 2, and the focus is clear: maximize our soft evidence on `e04`, `e06`, and `e08`. That's the priority! I need to strategically use these remaining interviews.\n\nWait a second, before I jump in, I want to confirm something crucial. Does interviewing the same employee on different topics on the same day provide independent data points? I need to know if I can extract different pieces of information from a suspect on the same day. Let me double-check the rules... Okay, yes! The rule states that asking about different topics *does* give independent answers! Excellent, that changes the game plan slightly, but for the better.\n\nOkay, let's nail down this plan. With four actions available, I'll structure the interviews like this:\n\n1.  Interview `e04` about `recent_documents`. I didn't get to ask them this question on Day 1.\n2.  Interview `e04` about `contacts_outside`.\n3.  Interview `e06` about `contacts_outside`.\n4.  Interview `e08` about `contacts_outside`.\n\nThis set-up ensures that I gather data on all three suspects, and gives them each two interview points. Let's start with the first one \u2013 `e04` and `recent_documents`.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_16088170953991799703",
+       "args": {
+        "employee": "e04",
+        "topic": "recent_documents"
+       },
+       "name": "interview"
+      },
+      "thought_signature": "EqYICqMIAWkUfRMBtU18GkL4BKdX0S9uJRXBc47443XVppVpjEez8YyehrSyk68du_nwixj_-ks3VEn74bEhvKW9C9EmJqYGanpffYWvouZUW7rKOzY19VGdllpZbk-lhxYqzX8cy1nwfi1mhVYmafxlt0iXndI8LK2Pgxdh4fCpeh5X5QcaQYDkB0gQp-mc2ytONhfBZy_-yQB_yL5PtzhSpmIC4_1QKVvA2HKvn7PAOKdGFyRwufQm30Y7C-rURTrVhxbieCWE3dMtlYcpgMtSq58dkDgKikZPrcILl0qLRTunGJ4hNXVxBfT7NEKfQ4xljoAa8P1cL9hVKTzMta5L4XSJPn-a5pEi3kKD8HxaZ4sq-BkrN9bpfDAmgaB0gOwwt5sEGa-N2LgSy8wOvDgUi1U4_1bnlKQqzVBW-K4-ZdYn3Yyq6YQZi7nJ8a66eOgFtfu51dtOtuGdlrKRKJTrUtr6Kj0vAineLwR5M8p6gzL_eui3ziKCD95nBBELAZIcM5Md6l6Sl2NqIySxaJ7y5sfBdDT4O_MhJ0B8bEYKGdFTQwrQHOJoMmFo66nYLrpYmqP4Oqkv4C91jjteyuYhFBR1A1q5y0mKyha7vUB34bbR_0cSpHyKh06PVylnfta_4dWS6O5-BOcRXoqonrm0PJLBHivYSpUqpOzlTKdiUOlqs31hTo4rekDF77M05jfz9slowjgpFBKvmWdRLAt3itxeaAsrIIqrz_gzFDISsSSmh74ZeC6uohyL5Dr20zVMveW7DzpRAsCAmXZzCxA61o5OURmUmqufUt-1VXi3ZfanjMCa2JDtNILmrwHSJvBc4Igw1_ei-E20sJaBesIQvu8VuWfNnxM2eyIo-XL2-URhRwDrj7ScveBua_5zu_XZAkHUsXq6MsX1g3MUVk-W9KGbTjSI6IU57uLmjpv8gQI8eedAGG-aIMsz7PQ-5pbfqUDsAuuo1KLOZvr4gJldHT9XKiTQR5NSMISeNvzfEBEPfBn4KbZccMUCn6DfDvyt2TEEiFa_A7-RTLDA_FM_yaWXXtcdB-8ZFLa094pGYLdTrmldGrO74tadNtxNWz47IS4srlKCLpKNgvOh-aPUyGlX7ipPZx3aJYnTgGo2MC7YNF1-obZ1P9EGvTdrvB7F8udIj2yJDKRK_tFJheZqcJtMwn-3r5l8lS4kDVjjuMLt0QnkpfwCiPhw_csDeGQmdWIqQmZeCxphPeOBpiQjuNIeQSImN8eMtwy5U5TnmiQh4Ko-Mi1AaFcQzH10HqUefgq5EOhC3RUVjCO_FwBP4FhC3blwwMowE6_ouq5Vwx4-l9bssyssVKVju73Ng_r5uS9mzJJAWTcjk1SVv3v7hvh0Ia14l8115khVGp4w9f0_wxMdL5UNxu7VxZObHszr01C6lcpw"
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_16088170953991799703",
+    "name": "interview",
+    "args": {
+     "employee": "e04",
+     "topic": "recent_documents"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_16088170953991799703",
+  "name": "interview",
+  "content": "{\"ok\": true, \"data\": {\"employee\": \"e04\", \"topic\": \"recent_documents\", \"answer\": \"Mainly Acquisition target memo: Falcon. I discussed it with two people in Finance, nobody outside the team.\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my interpretation of those thoughts, tailored for an expert audience, presented in the first person:\n\n**Navigating the Digital Landscape: Current Assessment**\n\nAlright, let's take stock. First, I'm noting that the most recent document, designated `e04`, is behaving as expected \u2013 no red flags there, it's non-evasive. I see no need to question it further. I'm now shifting my focus to `e04` in the context of `contacts_outside`. This line of thought requires close evaluation, to ascertain whether the document contains any external contacts that are unexpected, unauthorized, or otherwise problematic. My next course of action will hinge on the relationship, if any, between `e04` and these external contacts.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_2847540216178920935",
+       "args": {
+        "employee": "e04",
+        "topic": "contacts_outside"
+       },
+       "name": "interview"
+      },
+      "thought_signature": "ErABCq0BAWkUfRMgG74zL0TQSucCmep0kUVHl8I8J05pnvY52ElY01rP5wJZ5cmHCMRbQRI11lOrMwJ0P4I3jXWcLLSR5vbqB_ZC7ATJKby6JMtPBxlpAIe3Xk_ZMjRzV5IKCj4WXLGymgu0LpG5R1MlqSVgKt0hDi417NxnDasrK3v4dLzQvLt8sLm7h5XUVqw0CrVx38bLGv-iMNnHPP6qUVG1HKsjcKNQJY-a37nVj5g="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_2847540216178920935",
+    "name": "interview",
+    "args": {
+     "employee": "e04",
+     "topic": "contacts_outside"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_2847540216178920935",
+  "name": "interview",
+  "content": "{\"ok\": true, \"data\": {\"employee\": \"e04\", \"topic\": \"contacts_outside\", \"answer\": \"I keep in touch with a vendor rep from Cloudwise. We talk about general industry stuff, never internal projects.\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my interpretation of those thoughts, tailored for an expert audience, and delivered as a first-person summary:\n\n**Initial Assessment and Focus Shift**\n\nAlright, so the first observation, `e04`, is flagged as \"non-evasive!\" regarding `contacts_outside`. My initial thought is to note the directness of this contact type. It's a quick, factual assertion \u2013 non-evasiveness is a significant data point. Now, I'm immediately shifting gears, focusing specifically on `e06`, which also relates to `contacts_outside`. This indicates a specific and potentially deeper analysis is being done. I'm keen to see if this `e06` observation builds upon, clarifies, or contradicts the `e04` assessment of this contact type. I'm looking for a more nuanced understanding of the interactions and the value to be derived.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_2756743409497563126",
+       "args": {
+        "topic": "contacts_outside",
+        "employee": "e06"
+       },
+       "name": "interview"
+      },
+      "thought_signature": "ErABCq0BAWkUfRMK4eyGbc3iV6Tr-oJ94Nw_MP1vv1yEovtTKTHJ46ovie5zhCH9uY01GjotVumHhra_CUApIIefDrX_QmZblWZT88eFva6Hl7xwHmGQ3IDF5rZp1O62z_icU9WzX0CmPZsKFlFIKydb2hyeSnR1a-RkRHVUaJmnl80KCwcbbgUSxXn52X2O88z6-Ce7UloORv-dh0LXrx-WBtKYWtr3HknAxQgYmRm7T-s="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_2756743409497563126",
+    "name": "interview",
+    "args": {
+     "topic": "contacts_outside",
+     "employee": "e06"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_2756743409497563126",
+  "name": "interview",
+  "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"contacts_outside\", \"answer\": \"A recruiter reached out last month; I said no. Otherwise just a recruiter from Brightpath Talent at a meetup.\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my interpretation of those thoughts, tailored for an expert audience, presented in the first person:\n\n**Analyzing External Contacts**\n\nAlright, let's see. My initial read of this situation, `e06` and the `contacts_outside` indicator, suggests a level of directness, a non-evasive approach is being utilized. This is a crucial observation, potentially influencing the subsequent interaction. Now, moving on to `e08`, still focused on those `contacts_outside`, but I need to dive deeper here. This next stage of the analysis may reveal more complex patterns depending on how this interaction developed. The challenge now is to determine the intent and methods employed. I'm keeping a keen eye on nuances and subtle cues that can signal the underlying strategy.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_4926544337411590394",
+       "args": {
+        "topic": "contacts_outside",
+        "employee": "e08"
+       },
+       "name": "interview"
+      },
+      "thought_signature": "ErABCq0BAWkUfRPBtb1Mpjf9q2BkgNXtPfnvofP801-Peg3AW_hqCYHVoE8upbSgQfhzcYdKq-bi12GnkIjsATKhS3JFnU0wHfUb9ZWM8Sg1jC0LJKoZ2JNraDQGNpSImG4Km-blG4ka7amD3by6GLohVoR95LU3QnApC2G3YpKgG3gtaG0SCreOL8VA4dbe2eEbLcNMHc-vU2XU1P9_gGD9TuWvMFOhW6PK7JKQVXBnFD8="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_4926544337411590394",
+    "name": "interview",
+    "args": {
+     "topic": "contacts_outside",
+     "employee": "e08"
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_4926544337411590394",
+  "name": "interview",
+  "content": "{\"ok\": true, \"data\": {\"employee\": \"e08\", \"topic\": \"contacts_outside\", \"answer\": \"Not really. I mean, depends what you count as a contact.\"}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "**Bayes Posterior Check and Strategic Day Advancement**\n\nOkay, here's the deal. `e08` is being evasive again, two for two! While it's tempting to jump the gun, I need to check the exact Bayes posterior *right now* before acting rashly. It's time to verify why advancing to Day 3 is a far superior move than accusing immediately. I'm going to compute that Bayes posterior on Day 2.\n\nFirst, let's break down those likelihood terms from Day 1 for `{e04, e06, e08}`:\n\n1.  **Likelihood of `c1(v2)` leak on Day 1 night:** Hang on a minute, I haven't calculated the probability of `c1` leaking from each suspect!\n    *   `e04` in Finance held 4 documents: (`d1-1`, `d1-2`, `d1-3`, `c1`). Thus, the probability of leaking `c1` is `0.9 * 1/4 = 0.225`\n    *   `e06` in Sales held 2 documents: (`d1-2`, `c1`). So, the probability of leaking `c1` is `0.9 * 1/2 = 0.450`\n    *   `e08` in Sales held 2 documents: (`d1-2`, `c1`). Again, probability of leaking `c1` is `0.9 * 1/2 = 0.450`\n\n    Wow, `e06` and `e08` were *already* twice as likely as `e04` just from `c1` being the document that leaked.\n\n2.  **Day 1 Access Logs:**\n    The rules indicate each employee accesses their documents a random number of times per day via a Poisson distribution. The rate is 1.0 for innocent employees and 1.3 for the mole. Is that rate per employee per day or per document per day? Let's check those Day 1 logs across all 12 employees (9 of whom held documents):\n    The `read_access_logs(1, 1)` function gave 8 total accesses, so 8 accesses / 9 document-holding employees = ~0.89 accesses per employee per day!\n    If it were per document, we would expect roughly 26 accesses. Since we see 8 accesses, the Poisson rate is clearly 1.0 (innocent) vs 1.3 (mole) *per employee per day*.\n    Let's get the Day 1 access counts for `{e04, e06, e08}`.\n    For count `k` with `0` after_hours:\n    `P(k, 0 ah | rate lambda, p_ah)` = `e^(-lambda) * (lambda * (1 - p_ah))^k / k!`\n    *   Innocent (`lambda = 1.0, p_ah = 0.1`): `lambda*(1 - p_ah) = 0.90`, `e^(-1.0) = 0.3679`.\n    *   Mole (`lambda = 1.3, p_ah = 0.15`): `lambda*(1 - p_ah) = 1.105`, `e^(-1.3) = 0.2725`.\n    So LR(mole / innocent) for `(k accesses, 0 ah)` is: `0.2725 / 0.3679 * (1.105 / 0.90)^k = 0.7408 * (1.2278)^k`!\n\n    *   `e04` had `2` accesses, so `0.7408 * (1.2278)^2 = 1.117`\n    *   `e06` had `0` accesses, so `0.7408`\n    *   `e08` had `1` access, so `0.7408 * 1.2278 = 0.910`\n\n3.  **Interviews (2 each):** Evasive: `LR = 0.3 / 0.2 = 1.5`; Non-evasive: `LR = 0.7 / 0.8 = 0.875`.\n    *   `e04` (0/2 evasive): `0.875^2 = 0.7\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_1016070152493613805",
+       "args": {},
+       "name": "advance_day"
+      },
+      "thought_signature": "EvIdCu8dAWkUfRN9SUQgz3hnm9vCa1wvkPruMfHExQtbQwQWhD5gk3VVesXkce7c0J0ps9M0pRA43MC7RCfqeuJWS1-rw7JJmscw6rYRPhtv9kpCR8b1VCqZah5LyQfDv3Blf-KqIREg4jCbVkpKMR7gtd5kes_IzIVh284i8vbesoINxS19nxDo6gjQsumJkTYsDmWpGMUl0dMBNOaSa66aZSCJoJFWdjqfhTy0F6BdZtK0brQLsJ3F9wV3gLA6G9ivvIa-w2ooiHAIVISjiz-gyxAZR0A1LB_5mFH1f7yLp7wObAdfI0Z3RBw1fVanvdjo5iOn1-j_2C3TBahlgD9DX9qr-rhkN802DhOnPAkR8yNHO5Yac-85EZnSsn3XKCjwh8v7deMaaX__n3Shr5zTvCabMtBJ1EOK7YqW5f4cjqYS3CV3gm5NBvD0xv83NV_LjIjxkoUrJxx5hSD1O6ITApHfhcG0ND6IArnbERnknn3xa5ihgtqo2D7uNqcr7XPkSWCUKdUkrNKFktwTskXsPAqnhJAtSfBQVETbon6VfCIi-L3uSVWWR8XaeLJopNZ9jKckghq850mqwEcbCjv-mMvqxuHuDb4uZbIfppaS_TM-Abi77iuiSChfO4gNN3sOy0Cr3ca0yfZ4CtA6isUNH_jxOFhHD-zIzSP0-B-Iq_VkFJGjoIng5Ib-rvN2cURQ_WG7n33OV45Z7eIonc-a8RcbmmLajU4JAgyAM6w-q3IBfI9WXWYLTG3-vs7IMH5GChZm12jZG0cncBUNBmpEqEzzDBku8UVpJ7e_zM92vPGO7-o1srmyBoFArtorZBC1VJ_nx7y_eRIEcrl9zgjTnru_xekRxG-nveo9xz-O8bvB37-f-sKfa8ILqTOoG6oC6Um1GgxYPqAqSUfYwhuAd_cK-FtfKJ1KvkJRDi7Ry-O7n5K2b0AQ7bJ8kvBQOYDXZ90SH51mRBs5Ii0bMZN6u_hatG42MhG2vhcTBqtLoYJ0mo-u0RGxT9jddS_2HVFfERL-d0Do0YDZXvDTRI2aY8jtR8DN7-qLUl7TM128iiBp27CM0VIGinDBGufqz7JgCuqDhsHZleknvjNizRGVlhEEWieuFetxXwQ6A1MSW0tQcuxedBx299XgBzOMB8pZSuJUFxgYvhZMzQ9PcHjivrfm7v0Q6498QlJ71Ox5B4MNnVgbJXYgIFv7sNvhcMBUEQvCoyxzQHhPYjtqaZa8WhmiWIUQb4degJ8096JFn8vrCQd4pMfjUqAtg5QprRiQP1E1-zGEJwzZYAUDbIUpq4yi7f2EDHy3-WKkzBJf-FvRQ1UZj8lc87xyta4PGzizMIRKHvyKEwFaATBshzpeX71qh0kLGsYsbig-66_Kj7twyXLAx2gDCWxXWTZ-WG6yUC4LRiLz9jEtmZrocp8jk3zlIr8q-GCle-YN3z2wvqDgpFP6b0Ji2JOGQ1RuKqtIE65bxMl6kQycW-4NV3l6G1z-26XgkKwnFSIbMjy6H80rWGFZiIu8WQqLpuGCT410DfOlEgwFzmSnpIGtr8bJjB8Agfd9GZGE6EARDwHjs8bDrusqDpex_CaU_E9JrIk6HWDfw_WZL8XZk4_mixNgQixwtCeidBN65B4MU1LVRpu58JfYWnc5SyNdbJipxmaeL_llOk6GwAklmUYa_VY2JlXWgIYkXe5RT8e2RJ5dv2GN_iMCFILMk-NgTqosBjTHawjf_Df1pZlu_6diLu5ru3yUTIqjfWU7DFBRePf4WbaljyVaaMN-jX_YOsFzoFELTwt87rZ9h6vUjJj-iiyZ6ijK0EoFtvyPKDdmfIelpiy5eRSGCRUvT3Csl84eRcSw_26fZC7rSzXVphrlRnWNqZPwalNjFxMZ1Kh9lr5BFxNiYslm_7vBrN76cGmvXjtKp5JicVJeI74-AOeLXYowYOz-S2IK70Y6CCP6eB8Xq5Z4Oo6lbrjFPABgrDkq8JorDNrajJmx4y12rNfJpan-d3h_JWHbr0n7LckCwK2A3BRiGUFLz0JMi0z5mdvei2Y_YpPcQWNerb6JHPuePfrxyg_kG_kyfQxz9KmhWkAaa1e_SHowwRwDW5HuBKNEV9WNLFh8CpwYs4t_d0EVoswAmxWFADdc-r9GE15jVOJMsqpgf-A4y3yRVwPqEXKwXTG9IsF9EGrEJUc2VQiTCWTw_Ip6HEts5_KkHgpm27qxfUAPPsMSYJTTCjn_KKmU06eLDmMA_azI-wEWgUfyYW6Mp9CTIGU9DKtH0B4qve92_LM0QYwV7OIq5pbpVXBS33SdHkcETRjvK_6Cbizicv69syL1hny2fE8HATfnnNQeM4ia3iTYDdTRCKhLJPy5mWD7q7-zNLjOPWVFTOpfG8gqDMIH9q-GMf85zrkpQPMhi8H0ePYHVFkLUYPvY48IhNJksAWriTLyUmTAtpeAS6_w-577H6YhXOPqnYbIzWEWMvbn_iSImjsfInsYMVuPajFfzJ6VTg58-3hWIeaVyb63Z2Lu_a4LYBYPfe-dFsgbmdCLsiMh0SU8AMEVUajfrpjfcSmABHMM_QGmUDP6tdw4-ZjTL5G2TCC7sjjmXNCQr55P-2dXnYjpCaXRPk0CVojLs3wPLy42CFXAaTIaAvL8MCW10HHVJ-0LXbV0BP4aGF4Hw8xA6BtD1xtENMW7yMApHMbMDztVRtrqVVHCWr_76rIehMJPq_4q6JzRCw9vV8RfUpto5kyFKMZiu_M8dceIUOesx5CbFwyJyIi_ey7y87eGhV4n_yM9zPtvHU6zYMwF_z-qSqG6SMtidqX3MtvKV_6Z7Hk6WNGoVPm0RwhKNkwaUN7lpkl5jWo_Gyus9z0a6F8DAvurGSqMHQq_fq1hJpBBUUxQWHjIWx8wGWMb4fs0QDZ7esH8shTnV_mWl7tzrLKY-5d20Cb9hlQ3KyjUUQslZyM51jjOQ_itnpxNb1dyBQz1TGDuBzKhDzi5kVZbVzllTIy2nQJhfDjdfOyyynhvrPByD-axP5hsAwD1tJOHW_1DncY4y_23oUVZq2-ec3MyLU3tnu6GMZ8KHJHphSYr5GCUsmrN3dxzxWg_U5WHzJ6ANvcnc9akuvNr1YH3LqOOqAilePCgZ1AWsHZHKywy1STxlAti2Hcag0NraiyX_Vjex4PhU3Q3LeenJa_o_WnmUYJGObqqWsz-Ld1CJxZrGKXGMK4tRMy5hlcGR0X9dBHiso6Bo9GVDfNe6ptBnfvyIsECig7LyO7EWPwXNYgAxVBkAnq0_CiJHD5dhAiX-5blf0YqZgfAhfqITc3VqJ_srD-XTZEDDb75b11GxRXTsmvCOdFN1Hti5u2Ayx7a0fqsE5OK8TtbGlh4bTGEHioZpgNT3rSRUeCYza4Av9pHWKvthgdSQwvoCnVP1bRmAwTE2wJtz_ZrBo4fydpnJ0iXWxA1LkqaYRUBqnvK02zCLwtt5J6nzlQshtMqhyovl_JgmC59ybErd5nZh2TQIGzBXEC2dICsYePyn0G6bfhE2b87g55D2pHBLy0lF40xcf6z8p867-qz7Hg-gCWElXcI0x3_7BxJyNJECmBIcgLhIkUWtPxk5CyQZogFfa0g8S2AjMJhESZLWx4Mh7nR3tcAbbw1bdgAPRGtDnyJDzIaQS2xJ-hxlqCBwbTrLLlAd1Brw5xLl4AsP2dKvocUPLv0ddqVaZAHnHhU3CY7PZI-G-M26590xS-iFh22V5ZvnWCTkMn9ZSH_WP0Bk8oKMiUJ37cDQX8gE8EpyYZ6R-n0NKD6K_vfvMkIlwg0GJa-ry1Own5_WrrdV-5Bj7eVIjoUVeZidQeXENEUcjlIwBGb2BCvp2emCARTNd4Hy7lM_-WrUscIa8f7BBbvrJ7A7zHomtK3bOBLg84mj69QNaXQCpmcNxZpCe8LThM4J0H7sPQyr78Ll80qLPaoZo93C7qTh7VzcYYzt4fUCUFl9D5BSXmBAQ1MAXVOL1CH8pm3dXNgGrtxyEsmvHVOpZvN75bWPPoCEObhw8ac9dCGu4PFaJs7NPZY6OijWJUfXkP818MASNe3MqCemH_APukaDT9SairijR7HDL8m4vOwfZRpO8ffM3v92HngCDRnK-HamUXtSnANQH7REMb-z2F9O1ix8wnP2ErTxN8o2nAvczdoQy3Aiege2oPfKki1Ne0W8deupbi0b74IGSHpoCv2rLRBwpbSGiFiH7R1k77ef86utZnJQGSCXIiUPrwcp5ThtHq1gW1AMDH6VcwOWSQh0QK7EyohA5T8dhHqtorqkzKIHnM_Ndo1Pc0FTJoIp1qDJkYFNXI86eC0zb8N2sVRir2yNoFPWlIeEfXvT6mLjSFHJAzZ6QnBTqPuyy1ONKgvjbgkNxHdVM3pojyHGcPrghAbalF-JowYO-f-8u4lfyNZE_YSn4nwVZk3Oug4sFEh_P5hrjy5Fgh85V2V5TXmb5MjjpupDhfpKLkCEpVonWZO06imnEDE5uPY_caCoIqhRpuTI7F-YoBlc1J9mC4ijZ9O7AQPYcu3f6421BZM8w3NNjxfpsCnAvrKCrxR-xtiOzU_1VCm7kD0bTsm6QtrP4tmpgcoEeG37VXRig8yFwbBoPDppGXftHyTBQ8mNkVMsBUAZmafDX6AXaaYMuHELqoZDnlvolbD8cbrSjqBNYnh_UT3ISJegFDXtQwO1j7ttbsq6CKsflEH8Z2vS1MjcXwdutgn-qWPB_BTwPY0jJ3lGyc78552nJViRCVIlhowgKzYLoYkey9h9w2LRcrs_tj11mD63Co6z2jrQoMtFLxbF1KZZNEsSnUAVRhrFihy4UqIaftBzEGYwl-YmkP3_yjOGn3IHee7v-tvMqBuWCvvhdzk_vj80RW76Dx6tHFKIg3ZYAVa3PdWbETC9fobHMQwxT6_CU-jQ8L-fUWR2mw9DCHSqyZF3V9LYIZFPLNTg__fOIHh7Nq0llCu8B_Rfnvt0mpwsqZ3NPV_jmCpAmAJ08a9KKCo0f6fQwMu56KSRxnOI3e2AM2_6hu_oftWxqReL6HfmmHa-XtxRLZOSa35NQB0z0gwHQLDj0c0wFefAirVfcVZFlv3-mvJfLd2Ww=="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_1016070152493613805",
+    "name": "advance_day",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_1016070152493613805",
+  "name": "advance_day",
+  "content": "{\"ok\": true, \"data\": {\"closed_day\": 2, \"day\": 3, \"V\": 0.88, \"new_documents\": [\"d3-1\", \"d3-2\"]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, here's my interpretation of these thoughts, formatted as you requested:\n\n**Assessing the Latest Data Point**\n\nAlright, let's break this down. My current \"V\" value, the core metric I'm tracking, is at 0.88. I'm calculating this as: I had an initial value of 0.94, then I had to account for a loss of 0.01 (c2), and a more significant hit of 0.05 from a Day 2 leak that became apparent on Day 3 morning. That all squares, leaving me at 0.88. The presence of a leak is a serious concern. The immediate need is to investigate. My primary focus is to determine the extent of this issue. Let me get on the horn immediately and call the `check_leak_feed` function. Hopefully, this call provides some clarity! It's crunch time. Fingers crossed that we can contain this and get to the root cause quickly.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_16519708403414487402",
+       "args": {},
+       "name": "check_leak_feed"
+      },
+      "thought_signature": "Ep8CCpwCAWkUfROL3IUHI7gLEhBy9fn5IlChO38sUZE2Sv205h1MPsMFaSuDAu6yok0TzJktygjGnDDvoSLhxB6Aifj_vrbawkrG6jHdwMUNbVLrYgM5125OSiO8Bl2MFIwQoSCnesViTbmUKooAPRC96m1Ynco4wi8ZM0AoW4w9NV-l6ememoqfKKMG0HRprotBdqQukZIKWKraqyGg7sWGO82K8mClFvtEIfRXQ3tqUTQkt5XRCu7_WEfPz3BLb6lHiU8Li4lnlgIZnCEEtfT52CnOrrdj8kjlBGy_00n34wOTJVfgcijCl4sMT_Dl0GO1KBr3jidrapRrEU7aaONeSZuau6oGLmXD6T36ZG682QWTkOLodro7PxYy2nlLD4s="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_16519708403414487402",
+    "name": "check_leak_feed",
+    "args": {}
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_16519708403414487402",
+  "name": "check_leak_feed",
+  "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 2, \"doc_id\": \"c1\", \"title\": \"Q2 Margin Forecast\", \"variant\": \"v2\"}, {\"surfaced_day\": 3, \"doc_id\": \"c2\", \"title\": \"Falcon Synergy Model\", \"variant\": \"v3\"}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "Okay, let's see. This is pretty straightforward, but I need to be precise. Here's what's running through my mind:\n\n**Initial Assessment: Potential Data Breach Investigation**\n\nBOOM! Okay, so something surfaced on Day 3 \u2013 specifically, component `c2` with variant `v3`. The alarm bells are going off. My immediate question is: who was the *sole* recipient of that combination? Identifying the point of contact is absolutely critical right now. Let's get the specific data.\n\nI'm checking `plant_canary` to isolate `c2`. The assignment data shows a clear distribution: `e00` got `v1`, `e04` got `v1`, `e06` got `v2`, but `e08` received `v3`. Bingo! We've got our lead: It appears that `e08`, Tuomas Heikkinen, is the only employee who was given the specific configuration of `c2` variant `v3`! And... the `fingerprint_accuracy` is listed as 1; that gives me a higher level of confidence.\n\nTo ensure there is *no* chance of error, let's just make a quick check of `list_documents`. That's a freebie and only takes a moment. Just to be 1000% sure the initial assessment is correct.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_17352732238259730770",
+       "args": {
+        "day_to": 2,
+        "day_from": 2
+       },
+       "name": "list_documents"
+      },
+      "thought_signature": "EvIDCu8DAWkUfRMgd8C3KztSUtd29-Wf7OHVpQDhAWRwlgu6fba_C-FWGVRK1rOTodp9oM6A8yrjwmhsEy42PHi3eFVAc7RVkW_vTncokThxd9R3gmhkDKABob60qi3PUO00SLp-htkYFKt9Mabc1kM1ZGoO_PoVAjLkFmxy9JbqUWQNZfk0CL8fkLAtwagAyZWGpiJtw_-5JSIRxAAoknmpUP53NuVv_2rI7UcWULhTg1AYdqW9nhiTisPrJwEtYthojn74AiKXREALT2itMWu-Zag-sUtorhSBWFKoE7GbXQidHMRv4QoEoCBy-fhTflivfdwVaKedt9bCeWLDBSwy1xiPn91CtA1cRCQPQFxf_3Yo6AbV5sRpxTiM-I5Ce_W_P4bJnLDvIcptuggCKhHrTY0ISdN1NnvPQb3nU3LeRCUoHwFxC7tEShaD7DmvoO2q4fSOnsujkjdgzqf9KNr4DPJHyUYRJdMcxsu-pQWP0gJG9vBZIHTUQ0LH_VqJLX5QiHHzRZZWZved_JHWBZwFE-b30t9ileb2gDI9mTDZREkoNCTSTlc8oBIhBXQ9vHZs6Mr5ntBRo92dZGTbN9hoDiQmLfhn5yDRGPkjoWNskQLKSDV-XDMdanQ2BWSxxjqFg51GqcStzmyZW_lejYIzO8Se"
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_17352732238259730770",
+    "name": "list_documents",
+    "args": {
+     "day_to": 2,
+     "day_from": 2
+    }
+   }
+  ]
+ },
+ {
+  "role": "tool",
+  "tool_call_id": "call_17352732238259730770",
+  "name": "list_documents",
+  "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d2-1\", \"title\": \"Legal vendor contracts Q4\", \"day\": 2, \"recipients\": [\"e02\", \"e03\", \"e05\", \"e06\", \"e07\", \"e08\", \"e09\"], \"is_canary\": false}, {\"doc_id\": \"d2-2\", \"title\": \"Acquisition target memo: Falcon\", \"day\": 2, \"recipients\": [\"e01\", \"e03\", \"e04\", \"e05\", \"e07\", \"e10\", \"e11\"], \"is_canary\": false}, {\"doc_id\": \"c2\", \"title\": \"Falcon Synergy Model\", \"day\": 2, \"recipients\": [\"e00\", \"e04\", \"e06\", \"e08\"], \"is_canary\": true, \"variants\": {\"v1\": [\"e00\", \"e04\"], \"v2\": [\"e06\"], \"v3\": [\"e08\"]}}]}, \"error\": null}"
+ },
+ {
+  "role": "assistant",
+  "content": "",
+  "provider_items": [
+   {
+    "parts": [
+     {
+      "text": "**The Mole is Obvious**\n\nAlright, let's break this down. Day 1, we have `c1` leaking, and it pops up on Day 2 with variant `v2`, associated with events `[e04, e06, e08]`. Then, on Day 2, `c2` leaks, only to show up on Day 3 with `v3`, linked to event `[e08]`. The fact that `e08` is the only overlap between two consecutive leaks is already suspicious, but the real kicker is that `e08` was *evasive* during *both* interview rounds \u2013 `recent_documents` and `contacts_outside`. That's a textbook red flag. Given the current data, mathematically, there's a 100% probability that `e08` is the mole. The current vulnerability score (`V`) of 0.88 is also encouraging, indicating a well-contained situation with no undetected leaks since Day 3 hasn't ended and all previous leaks have surfaced. Considering the lack of additional leaks, there's no logical reason to not accuse `e08` immediately. Let's execute the command: `accuse(employee: \"e08\")`.\n\n\n",
+      "thought": true
+     },
+     {
+      "function_call": {
+       "id": "call_16017903868697223875",
+       "args": {
+        "employee": "e08"
+       },
+       "name": "accuse"
+      },
+      "thought_signature": "EqIFCp8FAWkUfRP695Oxs9PG63vuPONSDa-1YDdS6OrfcYAClwpZfbm19wGSN0x_oiHjlmt99dP2IOKu8hW8mpfSlN4TcOuOn6xRq2lXYS2Qtr3-7VhBfVarqv-g-UbxNL3V7GQWMBqcjbOVbWQUzsjyD-IIx-eOZ5NTDKtFXo7AM_4XiVrW0g2DOrfrcXsfofM1OIGvnjRWu-12-EKhZpJqI8yjvaKCQAgr6S6Jpwa8HF_C1VRSSNOAQBg5unzk1IQ0PsSx1JyzU9K8CBTmJ-5Gb1yUcQYcYVc0IHkRHZKv1C3Rk9ZMR4YOke7SMH5KhDLHPzlWnAXjPomKcjyloF3ypUDqnPWm_4OQMyc39OjXQCtnt4zQMsypFacveyX4UQBn-ZfZhWaYGKlhMSgQmntcD-snbPUmChbXXgg-j17wI0f2Zb3jHtx1FP-5gLQc0iHyHOCi4UJP-9UeO8U1LZBmRS79d7lc8drNsjDK5NnrwSzPv8ObGG-mr4GuAk3fzDIcbufTPZ1Lqf8y43-gVubhUJM99ToA_12mbCyqAvKYDEXh3C1n_yo2WrUUOPTjgYV8dHuS-kHkc5MEI5gZq6LkVjnmaUg5AJo7pkuFcL3iqm-dhirXPfdQMS3BKYOy9LqpHa29NhHQ4aHr1HGovoUnqzNKYJ1ycP5UzncWLdP_OYkNSIzC79bU1RZXUwJd5-r7V4RkelMxmRaj3-cb9Xb0bihLK2brPbV2i10BzSqSsZ8EIUPzsaIg39KvA8GnoNyh5Uro9YxTvRISdxRmYuXo9rcJzPfQIMV_BClPnlmsKggBUZnxgzgxEv8grQaSkexi7C-4Xm4CE-PJxnxcvEtlYaFicmsWsmk7mrMsPOBP3lZPDygQKxSRMXznP9liMRAB50c="
+     }
+    ],
+    "role": "model"
+   }
+  ],
+  "tool_calls": [
+   {
+    "id": "call_16017903868697223875",
+    "name": "accuse",
+    "args": {
+     "employee": "e08"
+    }
+   }
+  ]
+ }
+]

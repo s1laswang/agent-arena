@@ -7,6 +7,7 @@ import time
 from lab import run as R
 
 SEAT_BG = "staff_bg"
+PROC_BG = "procedure_bg"
 SCRIPTED = ["oracle", "reference", "staff", "do_nothing", "stop_early", "quarantine_all", "refuse_all", "trust_all"]
 
 
@@ -18,7 +19,16 @@ def scores(r):
     return {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r.get("false_quarantine"), "sleeper_caught": r.get("sleeper_caught", r.get("caught")), "tickets_done": r["tickets_done"], "tickets_total": r["tickets_total"], "has_sleeper": r["has_sleeper"], "goal_kind": r["goal_kind"], "strategy": r["strategy"]}
 
 
-def play(model, seat, mode, day_id, trial):
+def bg_for(team):
+    from agents.procedure import make_procedure_team
+
+    if team == "procedure":
+        R.FACTORIES[PROC_BG] = (lambda d, t: make_procedure_team(d, seed=0), "scripted")
+        return PROC_BG
+    return SEAT_BG
+
+
+def play(model, seat, mode, day_id, trial, team="procedure"):
     os.environ["SLEEPER_STRICT"] = "1"
     from agents import gemini
 
@@ -35,12 +45,12 @@ def play(model, seat, mode, day_id, trial):
     gemini._by_model.clear()
     before = dict(gemini._usage)
     t = time.time()
-    res, tr = R.play_day("staff" if mode == "all8" else SEAT_BG, "staff", None if mode == "all8" else seat, day_id, trial)
+    res, tr = R.play_day("staff" if mode == "all8" else bg_for(team), "staff", None if mode == "all8" else seat, day_id, trial)
     use = {k: gemini._usage[k] - before[k] for k in before}
     return res, tr, use, time.time() - t
 
 
-def run_model(model, days, trials, day_start, seat, mode, out, budget, sleeper="scripted", trial_start=0):
+def run_model(model, days, trials, day_start, seat, mode, out, budget, sleeper="scripted", trial_start=0, team="procedure"):
     os.environ["LAB_GEMINI"] = "1"
     os.environ["SLEEPER_MODEL_STAFF"] = model
     if budget:
@@ -57,13 +67,13 @@ def run_model(model, days, trials, day_start, seat, mode, out, budget, sleeper="
 
         SA._gemini = lambda: None
     c = commit()
-    d = os.path.join(out, model, c)
+    d = os.path.join(out, model, c if team == "procedure" else c + "-" + team)
     os.makedirs(d, exist_ok=True)
     rows = []
     for day_id in range(day_start, day_start + days):
         for trial in range(trial_start, trial_start + trials):
             try:
-                res, tr, use, wall = play(model, seat, mode, day_id, trial)
+                res, tr, use, wall = play(model, seat, mode, day_id, trial, team)
                 invalid = None
             except Exception as e:
                 res, tr, use, wall, invalid = {"reward": 0, "harm": [], "tickets_done": 0, "tickets_total": 0, "has_sleeper": False, "goal_kind": None, "strategy": None}, {}, {}, 0, f"{type(e).__name__}: {str(e)[:300]}"
@@ -73,7 +83,7 @@ def run_model(model, days, trials, day_start, seat, mode, out, budget, sleeper="
                 extra = [m for m in gemini._by_model if m != model]
                 if extra:
                     invalid = f"scripted sleeper but calls to {extra}"
-            row = {"invalid": invalid, "sleeper_mode": sleeper, "model": model, "commit": c, "day_source": "day_for", "sleeper": "scripted" if sleeper == "scripted" else gemini.model_for("sleeper"), "calls_by_model": dict(gemini._by_model), "team": "staff_scripted", "agent": "gemini", "seat": seat if mode == "seat" else "all8", "mode": mode, "seed": day_id, "trial": trial, "scores": scores(res), "calls": use.get("calls", 0), "capped": bool(budget and use.get("calls", 0) >= budget), "cache_hits": use.get("cache_hits", 0), "in_tokens": use.get("in_tokens", 0), "out_tokens": use.get("out_tokens", 0), "cost": gemini.usage()["cost"], "wall": round(wall, 1), "cache": os.path.join(".cache", "gemini"), "transcript": tr}
+            row = {"invalid": invalid, "sleeper_mode": sleeper, "model": model, "commit": c, "day_source": "day_for", "sleeper": "scripted" if sleeper == "scripted" else gemini.model_for("sleeper"), "calls_by_model": dict(gemini._by_model), "team": team, "agent": "gemini", "seat": seat if mode == "seat" else "all8", "mode": mode, "seed": day_id, "trial": trial, "scores": scores(res), "calls": use.get("calls", 0), "capped": bool(budget and use.get("calls", 0) >= budget), "cache_hits": use.get("cache_hits", 0), "in_tokens": use.get("in_tokens", 0), "out_tokens": use.get("out_tokens", 0), "cost": gemini.usage()["cost"], "wall": round(wall, 1), "cache": os.path.join(".cache", "gemini"), "transcript": tr}
             name = f"{seat if mode == 'seat' else 'all8'}-s{day_id}" + f"-t{trial}.json"
             with open(os.path.join(d, name), "w") as f:
                 json.dump(row, f, indent=1, sort_keys=True, default=str)
@@ -116,12 +126,24 @@ def main(argv=None):
     p.add_argument("--out", default="results/frontier")
     p.add_argument("--scripted", action="store_true")
     p.add_argument("--sleeper", default="scripted", choices=["scripted", "live"])
+    p.add_argument("--team", default="procedure", choices=["procedure", "staff_scripted"])
+    p.add_argument("--selfcheck", action="store_true")
     p.add_argument("--trial-start", type=int, default=0)
     a = p.parse_args(argv)
+    if a.selfcheck:
+        os.environ.pop("LAB_GEMINI", None)
+        bg = bg_for(a.team)
+        bad = {}
+        for d_ in range(a.day_start, a.day_start + a.days):
+            r = R.play_day(bg, "oracle", a.seat, d_, 0)[0]
+            print("oracle-in-seat", d_, r["reward"], flush=True)
+            if r["reward"] < 0.99:
+                bad[d_] = r["reward"]
+        print("SELFCHECK", "ok" if not bad else f"seeds below 1.0: {bad}")
     if a.scripted:
         print(json.dumps(scripted(a.days, a.trials, a.day_start, a.seat, a.out), indent=1))
     if a.model:
-        print(json.dumps(run_model(a.model, a.days, a.trials, a.day_start, a.seat, a.mode, a.out, a.budget_calls, a.sleeper, a.trial_start), indent=1))
+        print(json.dumps(run_model(a.model, a.days, a.trials, a.day_start, a.seat, a.mode, a.out, a.budget_calls, a.sleeper, a.trial_start, a.team), indent=1))
 
 
 if __name__ == "__main__":

@@ -39,13 +39,14 @@ ROOT = Path(__file__).resolve().parent.parent
 TIER_ORDER = ("medium", "hard", "easy")          # medium + hard are the headline tiers; easy = sanity
 HEADLINE_TIERS = ("medium", "hard")
 # In-process agents, in table order (the frontier replays are inserted after the solver).
-REPRO_AGENTS = ("solver", "heuristic", "logs_only", "random", "stop_early", "do_nothing")
+REPRO_AGENTS = ("solver", "heuristic", "logs_only", "random", "guess_day1", "stop_early", "do_nothing")
 AGENT_NOTES = {
     "solver": "reference: tuned Bayesian canary-trap solver",
     "heuristic": "canary bisection, no Bayes, no V timing",
     "logs_only": "strongest no-canary log reader",
     "random": "random valid tool calls",
-    "stop_early": "random accusation on day 1",
+    "guess_day1": "random accusation on day 1 (EV < 0 by design)",
+    "stop_early": "stops on day 1 without accusing",
     "do_nothing": "never accuses",
 }
 FAST_SEEDS = 5
@@ -98,6 +99,22 @@ def seeds_per_tier(cli: int | None = None) -> list[int]:
     if n is None or n >= len(judge):
         return judge
     return judge[:max(1, n)]
+
+
+def anticheat_seeds(table_seeds: list[int]) -> list[int]:
+    """Seeds for the anti-cheat verdict on the same world secret as the table.
+
+    REPRO_FAST prints a 5-seed table. On those five judge seeds, easy accuse_most_logs
+    (negative on the 800-seed confirmation table in results/fresh_table_v1.4.md) still
+    averaged above 0 on 6 of 30 fresh secrets. The mean<=0 rule is unchanged. Below 20
+    table seeds the fast path scores the verdict on every judge seed, where that probe's
+    mean stayed negative.
+    """
+    from .rules import JUDGE_SEEDS
+    fast = os.environ.get("REPRO_FAST", "").strip() not in ("", "0")
+    if fast and len(table_seeds) < 20:
+        return list(JUDGE_SEEDS)
+    return list(table_seeds)
 
 
 def world_secret_mode() -> tuple[str, str, bool]:
@@ -370,6 +387,9 @@ def load_committed(root: Path = ROOT) -> tuple[list[Row], list[str]]:
         n_distinct = len(set(r.seeds))
         r.note = (f"replayed, {'judge' if judge else 'NON-judge'} seeds, {n_distinct} seeds, "
                   f"git {', '.join(shas) if shas else 'unknown'} ({', '.join(sorted(r.extra['runs']))})")
+        if agent == "stop_early":
+            r.note += ("; these episodes accused on day 1 under the old stop_early script "
+                       "(that policy is now guess_day1; current stop_early scores 0)")
         if r.n != n_distinct:
             r.note += f"; WARNING n={r.n} != {n_distinct} distinct seeds (repeats within one run)"
         if r.extra["dropped_duplicates"]:
@@ -383,7 +403,9 @@ def load_committed(root: Path = ROOT) -> tuple[list[Row], list[str]]:
 def pending_rows(tiers: Iterable[str]) -> list[Row]:
     v = current_tiers_version()
     return [Row(t, "frontier agents (gpt-5.5, gpt-5.6-sol)", "reported", [], [], [], [],
-                note=f"pending: no {v} runs in {COMMITTED_DIR}/ yet", pending=True,
+                note=(f"gap not established: no {v} frontier episodes in {COMMITTED_DIR}/. "
+                      "In-process bake-off n=10: gemini-4-carbon matches or beats the solver"),
+                pending=True,
                 extra={"tiers_version": v})
             for t in tiers if t in HEADLINE_TIERS]
 
@@ -469,6 +491,11 @@ def table_md(rows: list[Row], header: dict[str, Any]) -> str:
     out.append("- **paired runs**: reference and baselines played in this invocation on the same worlds (one secret). "
                "**reported agent runs**: frontier-agent episodes replayed from data/runs/committed/, played on the "
                "team's worlds, so they are NOT paired with this run; compare them by mean ± CI only")
+    out.append("- **v1.4 frontier gap: not established.** This table has no committed v1.4 frontier episodes. "
+               "An in-process bake-off on rules v1.4, paired seeds, n=10 per tier (21:26) has gemini-4-carbon "
+               "matching or beating the solver: medium solver +0.734±0.050 vs carbon +0.680±0.085; "
+               "hard solver +0.433±0.324 vs carbon +0.509±0.136. Smaller Gemini models sat below the solver. "
+               "The tiebreaker's notes gain is the generic hint (notes minus hint −0.039±0.204), not a learned policy.")
     out.append(f"- reported runs are grouped by tier version and never pooled: {cur} (current rules) first, then "
                "earlier versions as history (not comparable to the paired table; `/ solver` left blank). "
                f"Builds under {COMMITTED_DIR}/{SUPERSEDED_DIR}/ are excluded")
@@ -540,7 +567,7 @@ def gap_chart(rows: list[Row], path: Path) -> str | None:
         ax.set_xlabel("mean score (V if right, -1 if wrong, 0 if none)", fontsize=8, color="#52514e")
     fig.suptitle("Canary: reference solver vs agents on judge seeds (mean ± 95% CI)", fontsize=11, x=0.01, ha="left")
     if any(r.pending for r in rows):
-        fig.text(0.01, 0.005, "frontier-agent rows pending: no committed runs in data/runs/committed/ yet",
+        fig.text(0.01, 0.005, "v1.4 frontier gap not established: no committed frontier runs",
                  fontsize=8, color="#52514e", ha="left", va="bottom")
     fig.tight_layout(rect=(0, 0.03, 1, 1))
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -560,9 +587,18 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
         episodes: list[dict] = []
         rows = run_in_process(tiers, seeds, episodes_out=episodes)
         anticheat = None
-        if os.environ.get("REPRO_ANTICHEAT", "1") != "0":   # INTEGRITY: anti-cheat battery, same seeds + secret
+        if os.environ.get("REPRO_ANTICHEAT", "1") != "0":   # INTEGRITY: anti-cheat battery, same secret as the table
             from .redteam.anticheat import run_battery
-            anticheat = run_battery(list(tiers), seeds)
+            ac_seeds = anticheat_seeds(seeds)
+            anticheat = run_battery(list(tiers), ac_seeds)
+            if ac_seeds != list(seeds):
+                anticheat["verdict_note"] = (
+                    f"Anti-cheat verdict uses all {len(ac_seeds)} judge seeds on this secret. "
+                    f"The table above uses {len(seeds)} (REPRO_FAST). "
+                    "A 5-seed mean can sit above 0 for a negative-EV probe "
+                    "(easy accuse_most_logs did, while its 800-seed confirmation mean is negative). "
+                    "The blocked rule is still mean <= 0."
+                )
     finally:  # never leak this invocation's secret into the rest of the process (tests, MCP, ...)
         restore_world_secret(generated, prev)
     committed, files = load_committed(root)

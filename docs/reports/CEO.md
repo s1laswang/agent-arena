@@ -230,3 +230,37 @@
 - Decisions: Canary base + Vaishnav anti-cheat + Momin parts; biased-employee layer = v1.5 candidate gated at 20:00; RL mole (light CPU now, GRPO LLM mole on GPU); static Pyodide browser game; Momin pauses sky for the GPUs (FR8 authorised for WS4 + WS3 jobs).
 - Gates: A 17:00 (gemini-4-carbon v1.4 n>=20, v1.5 solver numbers, RL curve); B 20:00 (ship or drop v1.5 + feature freeze).
 - The CEO measurement engineer resumed (WS1). HARNESS got WS6 game build support. FR8/ENV/AGENTS/INTEGRITY need relaunching (briefs in NEXT-LEVEL.md).
+
+## 14:32 FR8 back, sky paused by Momin
+- freighter reachable again; Silas has no jobs in the queue; compute03/04 have 8 V100s idle. FR8 told to submit WS4 (investigator v2 train + evals) now and WS3 GRPO when train/grpo_mole.py lands (<=3 GPUs).
+- Harbor gemini-4-carbon judge-path demo merged (77fd402): 6 tasks, Gemini mean 0.50 vs oracle 0.76, below the oracle on 6/6 (a demonstration, n=6).
+
+## 14:38 merges + WS status
+- Merged the INTEGRITY anti-cheat battery (bd446c6): 13 attack probes + a stop-early ladder (solver cut at 25/50/75% and minus the final accuse, exactly 0) + the control (= solver) + replay of 299 v1.3 episodes, all consistent; runs in make reproduce (+15 s). 571 passed.
+- FR8 WS4 jobs: 44410 train (running), 44411 base eval (running), 44412 v2 eval (afterok). v2 eval ~22:00.
+- AGENTS WS3: grpo_mole.py matches the FR8 CLI (CPU stub OK, GPU untested); the light RL mole is at iter 76/80 (min regret ~0.26, solver acc 0.83); hard_rl track built, not yet in reproduce. Priority after: hint ablations > Forge-with-Gemini.
+- HARNESS session ended; INTEGRITY owns colima for the cheat run (2 GB, Mac memory ~4.9 GB free).
+
+## 15:24 interim gemini-4-carbon v1.4 (CEO-computed; engineer hit the Claude usage limit until 19:00, its drivers keep running)
+- Computed from staging (copied to /tmp; not committed), paired with the solver on the same seeds:
+  - **HARD, OpenCode (judges shape), n=26: 0.288 vs solver 0.485 -> 59% [11, 99]; luck-adjusted 67% [44, 88]**; acc 0.81; mean P(accused) at accusation 0.87.
+  - Alternative (empty replies counted as 0): 52% [14, 84].
+  - In-process hard n=10: 66% [5, 117].
+  - gemini-3.5-flash hard n=10: 84% [57, 116].
+  - MEDIUM OpenCode n=29: 108% [98, 123], no gap (as expected; medium is unchanged since v1.3).
+- => the v1.4 hard gap holds in the judges harness with a CI excluding parity. Headline candidate.
+
+## 18:25 GATE A (fired late)
+- justSilas ca5e0ae: make test 612 passed.
+- **gemini-4-carbon v1.4 interim (CEO, from staging; the engineer is paused by the Claude usage limit until 19:00, drivers keep running):**
+  - HARD OpenCode n=26: 59% [11, 99] of solver; luck-adjusted 67% [44, 88].
+  - HARD in-process n=11: 73% [14, 126].
+  - MEDIUM OpenCode n=29: 108% (no gap).
+- **v1.5 candidate (ENV):** solver unaffected (medium .641, hard .571); only chatter-trusting policies drop. Gemini v1.5 hard spot check: 11 episodes staged (due 19:40).
+- **WS3 GRPO mole (FR8 44424-6, 400 steps, done):** final reward -0.14 / -0.29 / +0.34 from -1.0 at the start; valid 0 -> 0.97-1.0; BUT each policy collapsed to one action (none/decoy or newest/decoy). Light RL mole held-out: harder for all investigators, solver acc 0.75 (borderline); kept out of reproduce.
+- **WS4:** 44411 base eval done; 44410 v2 train running 3h51; 44412 v2 eval after.
+- **INTEGRITY:** battery + cheat run + corpus merged. Gemini CEO swarm v1: 35 whitebox Gemini attackers, 0 verified exploits.
+- **Momin fleet (read-only check):** 8 fleet jobs on partition normal, no STOP file, 108 fr8/* branches in freighter bare repos (not pushed). The afterquery board assigns w02-w39 to nearly our exact workstreams: HEAVY DUPLICATION; needs Silas/Momin to redirect.
+
+## 18:36 fleet redirect (Silas approved)
+- Appended a REDIRECT note to the afterquery fleet lead inbox (board/afterquery/inbox/afterquery-lead.md, a new message; nothing else touched): stop the duplicate lanes; do (1) gemini-4-carbon v1.4 hard seeds 30-59 with our runner, replay-verified; (2) docs/research-biases.md; (3) exploit sweeps v1.4/v1.5, report only; (4) the Fooled-moment dashboard. Push branches and open PRs into justSilas for CEO review.

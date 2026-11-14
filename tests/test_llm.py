@@ -214,3 +214,11 @@ def test_openai_live():
     r = c.chat([{"role": "user", "content": "Call the status tool."}], tools=TOOLS)
     assert r.tool_calls and r.tool_calls[0].name == "status"
     assert c.total_usage["in"] > 0
+
+
+def test_openai_default_is_frontier(monkeypatch):
+    from canary.llm import default_openai_model
+    monkeypatch.delenv("CANARY_OPENAI_MODEL", raising=False)
+    assert default_openai_model() == "gpt-5.5"
+    monkeypatch.setenv("CANARY_OPENAI_MODEL", "gpt-5.6-sol")
+    assert default_openai_model() == "gpt-5.6-sol"

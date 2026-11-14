@@ -154,3 +154,7 @@
   - **v1.3 (n=9+5, spend-capped): medium .319 vs .717 (44%); hard -.003 vs .592 (~0%)**. The reference barely moves; gpt-5.5 collapses.
 - Why: all 4 wrong v1.3 accusations are day-14 gambles at P .18-.43; premature_accusation = 36% of episodes, >90% of regret. It never abstains though EV<0 (Grok did abstain once, so the information is available).
 - Spend ~ $260 est. total; all API runs stopped. Morning: approve ~$60-90 for v1.3 20+20, or use Gemini free credits.
+
+## 03:58 v1.3 regret (1a650df) + CAVEAT
+- Paired on gpt-5.5 seeds: medium solver .670 vs gpt .319 (48%), hard .553 vs -.003; dominant tag premature_accusation.
+- **CAVEAT:** Codex gpt-5.5 over MCP (judges-like harness, n=3) scored .59 hard / .53 medium, much closer to the reference. The in-process scaffold may handicap the model. Morning priority #1: a judges-shape (OpenCode/Codex over MCP) v1.3 measurement at n>=10/tier, plus a scaffold-parity check. Keep the v1.4 contingency (longer horizon + pipelined canaries) in reserve.

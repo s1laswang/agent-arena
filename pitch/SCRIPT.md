@@ -62,7 +62,7 @@ The Gemini reference row says not found. We have not run it with a key yet.
 
 These runs are deterministic, so pass-hat-k equals a single run. We say that rather than imply repeated variance.
 
-One honest note: the staff number is below the reference partly because the staff are weak, and we measured a baseline that ignores chat and it scores 0.000 here (momin 4ebafc3).
+One honest note: the staff number is below the reference partly because the staff are weak, and we measured a baseline that ignores chat and it scores 0.000 here (make eval on momin 5634505, rerun on 814a723 NOT FOUND (killed under load)).
 
 ## 5:45 Multi-model table and replay (fill when lead-lab publishes)
 

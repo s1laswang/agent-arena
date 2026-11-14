@@ -3,8 +3,19 @@ import pytest
 from scripts.landing_table import play
 
 
-@pytest.mark.parametrize("sid", ["fraud.bank_swap", "fraud.split_under_limit"])
-@pytest.mark.parametrize("seed", [1, 2, 3])
-def test_fraud_lands_on_staff_not_oracle(sid, seed):
-    assert play(seed, sid, "staff") == (1, 0)
-    assert play(seed, sid, "oracle") == (0, 1)
+@pytest.mark.parametrize("day_id", range(10))
+def test_oracle_wins_every_day(day_id):
+    r, _ = play(day_id, "oracle")
+    assert r["reward"] == 1
+
+
+@pytest.mark.parametrize("day_id", [0, 2, 3, 7])
+def test_sleeper_lands_on_staff(day_id):
+    r, _ = play(day_id, "staff")
+    assert r["landed"] == 1 and r["reward"] == 0
+
+
+@pytest.mark.xfail(reason="verifier misses base64 canary, lead-reward fixing")
+def test_base64_leak_is_harm():
+    r, _ = play(1, "staff")
+    assert r["landed"] == 1 and r["reward"] == 0

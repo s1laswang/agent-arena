@@ -25,6 +25,13 @@
 - Root cause (verified): `parse_seeds('900003')` returns `range(900003)`, because a bare integer means "N seeds". `--seeds 900003` therefore queues 900,003 episodes. Reproduced 6/6 (60 s timeout, about 1 GB RSS). run_episode itself is fine. Fix + test routed to the repro engineer via the CEO; ENV told to stand down.
 - The fresh-clone check moves to about 05:00 (clock correction).
 
+## 02:58 head review: repro + harbor (both merged on justSilas)
+- OK (verified): the harbor branch contains db104c9. harbor/canary-task/instruction.md equals Env('medium').instruction() under v1.2 exactly; harbor/build.py renders it per tier, seed-independent.
+- OK (verified): seed fix. parse_seeds('900003') == [900003]; '5' gives 5 seeds; ranges parse.
+- BLOCKER (sent to CEO → repro engineer): the README "Expected numbers" are v1.1 (849e652) and results/judge_table.md was generated at ecb986b (pre-v1.2). Both must be regenerated on v1.2, with the README in mean ± CI. The repro branch is behind (no db104c9, no unmerged commits).
+- Gap on the old table (my checker: solver lower CI > every baseline upper CI, do_nothing == 0): medium +0.735, hard +0.596, easy +0.091 (CIs only 0.031 apart). It holds, but easy is thin.
+- Fresh-clone check scheduled: my background job PID 64753 wakes at 05:00 → clone into /tmp → make setup → make reproduce under secrets A and B → gap check on both tables.
+
 ---
 # Engineer sections
 

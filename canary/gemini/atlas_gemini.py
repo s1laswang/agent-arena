@@ -147,8 +147,9 @@ class AtlasOps:
                 msg = f"{type(e).__name__}: {str(e)[:180]}"
                 self._ledger(model, kind, None, t0, ok=False, error=msg, meta=meta)
                 transient = any(s in msg for s in ("429", "RESOURCE_EXHAUSTED", "503", "500", "UNAVAILABLE",
-                                                   "DEADLINE", "Timeout", "timed out", "ServerError"))
-                timeout = any(s in msg for s in ("Timeout", "timed out", "DEADLINE"))
+                                                   "DEADLINE", "Timeout", "timed out", "ServerError",
+                                                   "RemoteProtocolError", "disconnected"))
+                timeout = any(s in msg for s in ("Timeout", "timed out", "DEADLINE", "disconnected"))
                 if not transient or attempt == self.max_retries or (timeout and attempt >= 1):
                     raise
                 time.sleep(min(60.0, delay) * (0.5 + random.random()))
@@ -184,12 +185,23 @@ class AtlasOps:
                 cfg["cached_content"] = cn
             if thinking_level:
                 cfg["thinking_config"] = types.ThinkingConfig(thinking_level=thinking_level.upper())
-            r, t0 = self._retry(lambda: self.client.models.generate_content(
-                model=model, contents=[types.Content(role="user", parts=parts)],
-                config=types.GenerateContentConfig(**cfg)), model, "generate", meta)
-            um = getattr(r, "usage_metadata", None)
+            def stream():
+                # streaming keeps long calls alive: non-streamed ~800k-token calls on gemini-4-carbon were cut by
+                # the server after ~9 min ("Server disconnected without sending a response")
+                texts, um = [], None
+                for ch in self.client.models.generate_content_stream(
+                        model=model, contents=[types.Content(role="user", parts=parts)],
+                        config=types.GenerateContentConfig(**cfg)):
+                    try:
+                        if ch.text:
+                            texts.append(ch.text)
+                    except Exception:  # noqa: BLE001  (chunks with only thought parts)
+                        pass
+                    if getattr(ch, "usage_metadata", None) is not None:
+                        um = ch.usage_metadata
+                return "".join(texts), um
+            (text, um), t0 = self._retry(stream, model, "generate", meta)
             self._ledger(model, "generate", um, t0, meta=meta)
-            text = r.text if getattr(r, "text", None) is not None else ""
             return {"text": text, "usage": _usage_dict(um)}
         return self._cached("generate", model, payload, call)
 

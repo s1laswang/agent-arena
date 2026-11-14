@@ -110,6 +110,16 @@ class ClusterNames(BaseModel):
     clusters: list[ClusterName]
 
 
+class ModePair(BaseModel):
+    second_id: str
+    primary_id: str = Field(description="a PRIMARY mode id, or 'none'")
+    note: str = Field(default="", description="one short sentence")
+
+
+class ModeMap(BaseModel):
+    pairs: list[ModePair]
+
+
 class ThinkingFinding(BaseModel):
     model: str
     effect: str = Field(description="what changes in the agent's decisions as thinking level rises")

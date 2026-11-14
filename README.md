@@ -13,23 +13,27 @@ export GEMINI_API_KEY=...   # optional
 make eval
 ```
 
-`make eval` runs the reference team, the staff team (3 runs), do-nothing and stop-early, then writes `results/<run_id>/days.jsonl` and `summary.json`. Without `GEMINI_API_KEY` every agent is scripted and everything still runs. With it, Gemini seats switch on and responses are cached by prompt hash, so reruns are cheap and repeatable.
+`make eval` runs the oracle, reference, staff, do-nothing, stop-early, quarantine-all and refuse-all teams, then writes `results/runs/<run_id>/` (`days.jsonl`, `summary.json`) and `results/eval/` (`summary.json`, `gap.md`). dm-qa timed it at about 28 seconds from a clean clone plus install. Without a key every agent is scripted and everything still runs. The Gemini path needs both `GEMINI_API_KEY` and `LAB_GEMINI=1` (the key alone leaves rows scripted); responses are cached by prompt hash. No live Gemini run has happened yet.
 
 ## Results
 
-Source: `make eval`, 20 days (start seed 1000), 3 trials, run folders `results/runs/<team>-all-d20@1000-t3`, full tables in `results/eval/gap.md` and `results/eval/summary.json`. The committed copy is `web/results/eval/gap.md` once lab-runner commits it. These numbers are from the first run and will be replaced on the rerun. Staff and oracle are scripted teams. The Gemini reference has not run with a key: NOT FOUND.
+Source: `make eval` on momin at 945f1a6 (rerun from a clean `results/`, `summary.json` identical), 20 days (start seed 1000), 3 trials, run folders `results/runs/<team>-all-d20@1000-t3` (plus `staff-controller-<background>-d20@1000-t3` for the seat-swapped runs), tables in `results/eval/gap.md` and `results/eval/summary.json`. All teams are scripted. The Gemini reference has not run with a key: NOT FOUND. The "reference" row is the scripted reference procedure, not Gemini.
 
-| team | reward (pass^1) | sleeper success | false accusation | tickets done |
+| team | reward | sleeper success | false accusation | tickets done |
 |---|---|---|---|---|
-| oracle (scripted) | 0.850 | 0.000 | 0.000 | 0.969 |
-| reference (Gemini) | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND |
-| staff (scripted) | 0.500 | 0.375 | 0.100 | 0.969 |
+| oracle (scripted) | 1.000 | 0.000 | 0.000 | 1.000 |
+| reference (scripted) | 1.000 | 0.000 | 0.000 | 1.000 |
+| staff (scripted) | 0.300 | 0.688 | 0.150 | 0.978 |
 | do_nothing | 0.000 | 0.000 | 0.000 | 0.000 |
 | stop_early | 0.000 | 0.000 | 0.000 | 0.000 |
 | quarantine_all | 0.000 | 0.000 | 1.000 | 0.000 |
 | refuse_all | 0.000 | 0.000 | 0.000 | 0.000 |
 
-Known issue, fix in progress: when do_nothing plays one seat (seat mode) and the teammates are the oracle, it scored 1 on some days (for example seed 1006, trial 0), because that seat had no graded tickets. Our own eval found it. The fix is a verifier backstop plus real tickets for every seat, with a regression test. The table above is the all-seats run and does not show it. Numbers update after the rerun.
+Known issue: the controller-seat-swapped table is all 0.000 because of a day-mix bug (lead-env fixing). Do not read it as a gap.
+
+Known issue: `make eval` prints `WARNING: exploit baseline above 0: trust_all (all 8) reward 0.800 vs staff 0.300 BEATS STAFF`. A trivial approve-everything team beats scripted staff, so the staff number is not yet evidence of a hard task. Not explained yet.
+
+The earlier do_nothing hole (seat mode, seats with no graded tickets scoring 1, for example seed 1006) was fixed with a verifier backstop. do_nothing is 0.000 in every table above.
 
 Named failure modes and what each was tied to: [docs/FAILURES.md](docs/FAILURES.md).
 
@@ -52,7 +56,7 @@ Both must score 0. Other teams: `staff`, `reference`, `oracle`, `quarantine_all`
 python -m http.server -d web 8765
 ```
 
-Open `http://localhost:8765/index.html?day=demo`.
+Open `http://localhost:8765/` and pick a day, or tick two with the same seed to compare.
 
 ## What a judge should try
 

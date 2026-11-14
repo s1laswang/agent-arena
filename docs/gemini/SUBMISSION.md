@@ -55,17 +55,17 @@ Every Gemini call goes through one client that writes one log row per call (`can
 
 ## Gemini across the team (breadth)
 Gemini is used in all three of our Junction challenges, most heavily here.
-- **Valio Aimo** (github.com/s1laswang/junction-aimo-agents, `docs/GEMINI.md`):
+- **Valio Aimo** (github.com/s1laswang/junction-aimo-agents, [`docs/GEMINI.md`](https://github.com/s1laswang/junction-aimo-agents/blob/main/docs/GEMINI.md)):
   - The buyer agent uses function calling on gemini-3.8-flash and escalates 19% of steps to gemini-4-hydrogen at high thinking.
   - gemini-embedding-2 drives catalog substitution.
   - Compacting the tool results the agent re-sends with each call cut cost per order by 59%.
   - All 6 of 6 scenarios in the live demo montage pass.
-- **Meta glasses: HoldUp** (github.com/s1laswang/junction-meta-glasses), a hands-free label checker for blind and low-vision users:
-  - The Live API with function calling mid-stream;
-  - schema-constrained label verification with per-field confidence;
+- **Meta glasses: HoldUp** (github.com/s1laswang/junction-meta-glasses, [`GEMINI.md`](https://github.com/s1laswang/junction-meta-glasses/blob/main/GEMINI.md)), a hands-free label checker for blind and low-vision users:
+  - the Live API with function calling mid-stream;
+  - schema-constrained label verification;
   - box_2d spatial grounding;
-  - speculative verification that cut question-to-first-audio from 5.8 s to 0.8–1.8 s;
-  - a 1,740-image eval with Wilson CIs.
+  - speculative verification, which cut question-to-first-audio from 5.8 s to 0.7–1.75 s with real speech;
+  - a 1,740-image eval (172 Gemini-written specs): 0/754 confident-wrong strength reads (upper bound 0.4%), and end-to-end unsafe reassurance 1.0% (49/4,730, Wilson 0.78–1.37%, measured before the allergen gate).
 
 ## Reproduce
 ```bash

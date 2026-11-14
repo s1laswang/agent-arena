@@ -203,3 +203,10 @@
 
 ## 10:25 Silas APPROVED $93 for the v1.3 frontier measurement
 - The CEO launched a measurement engineer (branch justSilas-measure). Order: smoke (~$3) -> Codex gpt-5.5 over MCP, v1.3 dev seeds 0-9 medium+hard (judges-shape priority, ~$45) -> in-process fixed loop on the same seeds with the remaining budget. Hard stop at $90 projected. Paired analysis + regret, then gap.md, the README frontier row and the committed results get updated.
+
+## 11:25 spend validated + official v1.3 result
+- Silas: OpenAI dashboard TOTAL (overnight + morning) is ~$170, below our summed estimates, so the cached-input pricing is confirmed (conservative).
+- OFFICIAL v1.3 (paired, dev seeds 0-9; ratio with bootstrap 95% CI):
+  - Codex gpt-5.5 over MCP (judges shape): HARD 97% [89, 107] (0.657 vs 0.678, 10/10 correct); MEDIUM 50% [-19, 103] (0.364, 8/10; the gap comes from 2 early wrong accusations).
+  - In-process fixed loop: medium 90% [77, 105] (n=8), hard 29% [-44, 100] (n=7).
+- => **v1.4 contingency TRIGGERED on hard.** Spend today $47.46 discounted; all further spend held pending the v1.4 decision with Silas.

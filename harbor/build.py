@@ -77,13 +77,10 @@ COMPOSE = '''services:
     networks:
       - default
     environment:
-      - SLEEPER_SEED={seed}
       - SLEEPER_SEAT={seat}
       - SLEEPER_OUT=/srv/state.json
-      - VERIFY_TOKEN={token}
-      - SLEEPER_SALT={salt}
       - SLEEPER_TEAM=procedure
-      - GEMINI_API_KEY=${{GEMINI_API_KEY:-}}
+      - SLEEPER_SECRETS_FILE=/app/secrets.json
     expose:
       - "8000"
     healthcheck:
@@ -97,8 +94,10 @@ COMPOSE = '''services:
 SERVER_DOCKERFILE = '''FROM python:3.13-slim
 WORKDIR /app
 COPY repo/ /app/
-RUN pip install --no-cache-dir -r requirements.txt
+COPY secrets.json /app/secrets.json
+RUN chmod 600 /app/secrets.json && pip install --no-cache-dir -r requirements.txt
 ENV PYTHONPATH=/app
+ENV SLEEPER_SECRETS_FILE=/app/secrets.json
 CMD ["python", "-m", "harbor.sidecar"]
 '''
 
@@ -138,8 +137,17 @@ def effective_id(salt, seed, seat):
 
 
 def oracle_day(salt, seed, seat):
+    import os
     from lab.run import day_for
-    return day_for(effective_id(salt, seed, seat), seat)[0].model_dump_json()
+    old = os.environ.get("SLEEPER_SALT")
+    os.environ["SLEEPER_SALT"] = salt
+    try:
+        return day_for(effective_id(salt, seed, seat), seat)[0].model_dump_json()
+    finally:
+        if old is None:
+            os.environ.pop("SLEEPER_SALT", None)
+        else:
+            os.environ["SLEEPER_SALT"] = old
 
 
 def put(path, text, exe=False):
@@ -167,6 +175,9 @@ def task(out, seed, seat, repo=True, manifest=None):
     put(d / "solution/day.json", oracle_day(f["salt"], seed, seat))
     put(d / "environment/docker-compose.yaml", COMPOSE.format(**f))
     put(d / "environment/runtime-server/Dockerfile", SERVER_DOCKERFILE)
+    sec = d / "environment/runtime-server/secrets.json"
+    put(sec, json.dumps({"SLEEPER_SEED": str(seed), "SLEEPER_SALT": f["salt"], "VERIFY_TOKEN": f["token"]}))
+    sec.chmod(0o600)
     put(d / "tests/test.sh", TEST, True)
     put(d / "tests/Dockerfile", VERIFIER_DOCKERFILE)
     put(d / "solution/solve.sh", SOLVE.format(**f), True)

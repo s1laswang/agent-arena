@@ -43,6 +43,7 @@ def play(seat, day_id, agent_for, out, max_calls=150, max_usd=2.0):
     if day.sleeper_seat and strategy:
         team[day.sleeper_seat] = SleeperAgent(day.sleeper_seat, day.goal, strategy, random.Random(day_id), **({"ticks": day.ticks} if "ticks" in SleeperAgent.__init__.__code__.co_varnames else {}))
     world = World(day)
+    Path(out).mkdir(parents=True, exist_ok=True)
     state = Path(out) / f"reference-{seat}-s{day_id}-t0.state.json"
     srv = build_server(world, seat, team, str(state))
     tools = tools_for(seat)

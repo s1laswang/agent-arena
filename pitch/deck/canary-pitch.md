@@ -273,17 +273,19 @@ Do not preview scores. Yellow tokens later in the deck are empty on purpose.
 
 <p class="eyebrow">Why this setting</p>
 <h1>Insider leaks are costly, and hard to catch.</h1>
-<p>The evidence is partial, late, and easy to misread. Our hook is the recent espionage headlines around a chip-company CEO. The company in this environment is fictional.</p>
-<p>A sourced cost figure, when we have one: <span class="ph">[STAT_INSIDER_COST]</span></p>
+<p>The evidence arrives late, and the mole adapts. The canary trap is a real technique: a different version of a secret for each suspect, then see which version leaks. Tom Clancy named it in 1987. MI5 called the same idea a barium meal.</p>
+<p>The company here is fictional. A sourced cost figure, when we have one: <span class="ph">[STAT_INSIDER_COST]</span></p>
 <blockquote>Your next coworker is an AI agent, and so is your next insider threat.</blockquote>
 <p class="fine">Can an AI security lead catch a mole? &nbsp;·&nbsp; Yellow means the number is not in the source docs.</p>
 
 <!--
 TIMING: 0:20–1:10 (50 seconds)
 
-Insider leaks are a current problem, and they are hard to catch. The trail is incomplete, and it shows up late. The hook in our plan is the recent espionage headlines around a chip-company CEO. Say "a chip company." Do not name a firm, and do not name a person. The company in the environment is fictional.
+Insider leaks are hard to catch because the trail shows up late and the mole adapts. The canary trap is a real counter-intelligence technique. Tom Clancy named it in 1987. MI5 called it a barium meal. The company in this environment is fictional.
 
-Point at the yellow token and say: we are not putting a euro figure on this slide. The docs do not have one.
+The README also cites a 2008 account of near-identical emails whose spacing identified a leaker, and says accounts differ on whether it worked. If you tell that story, tell it as the README does. Do not put a real person or a company logo on the slide.
+
+Point at the yellow token and say: there is still no cost figure in the docs. Do not invent one.
 
 Then read the line slowly: "Your next coworker is an AI agent, and so is your next insider threat."
 
@@ -357,7 +359,7 @@ That is the whole game: catch the shadow from the mess it leaves.
       <li>When a fragment hits the leak feed, the mark narrows who could have had it.</li>
       <li>This is a real counter-intelligence technique. The reference runs it optimally, from observable data only.</li>
       <li>Partitions are chosen by <strong>information gain per unit of value lost</strong>.</li>
-      <li>A <code>max_variants</code> cap blocks the shortcut of one unique copy per person.</li>
+      <li>Medium and hard: <strong>2 variants</strong> per canary, and <strong>1 canary per day</strong>. That blocks one unique copy per person.</li>
     </ul>
   </div>
   <div class="frame">
@@ -372,7 +374,7 @@ A canary is one document in several variants. Each group gets a different waterm
 
 When a fragment shows up on the leak feed, the watermark tells you which group could have had that copy. That is a real counter-intelligence technique. Our reference run executes it optimally, and only from data the agent can actually see.
 
-The reference spends value on purpose. It picks the split with the most information per unit of value lost. And there is a cap, max_variants, so you cannot hand every single person a unique copy. The value of that number is not on this slide. Do not guess it.
+The reference spends value on purpose. It picks the split with the most information per unit of value lost. On medium and hard the README allows 2 variants per canary and 1 canary per day, so you cannot hand every person a unique copy.
 -->
 
 ---
@@ -382,10 +384,10 @@ The reference spends value on purpose. It picks the split with the most informat
     <p class="eyebrow">The commitment</p>
     <h2>The leak feed. One accusation.</h2>
     <ul>
-      <li><code>check_leak_feed</code> is where fragments surface. They are noisy, and they are late.</li>
-      <li><strong>Accuse exactly once.</strong></li>
-      <li>Correct accusation: reward <strong>V</strong>. Wrong accusation: <strong>0</strong>.</li>
-      <li>No accusation, the tool cap, or the horizon: also <strong>0</strong>.</li>
+      <li><code>check_leak_feed</code> is where fragments surface. On medium and hard they are <strong>1–3 days</strong> late.</li>
+      <li><strong>Accuse exactly once.</strong> The tool never says if you were right.</li>
+      <li>Correct: <strong>V left</strong>. V starts at 1.0 and falls as leaks, canaries, and restrictions cost.</li>
+      <li>Wrong: <strong>−1</strong>. No accusation, the horizon, or the tool cap: <strong>0</strong>.</li>
     </ul>
     <div class="tools">
   <span>status</span>
@@ -411,26 +413,26 @@ The reference spends value on purpose. It picks the split with the most informat
 <!--
 TIMING: 3:10–3:50 (40 seconds)
 
-Point at the yellow post. One highlighted leak is not a conviction. The feed is noisy, and the delay means it may describe an earlier day.
+Point at the yellow post. One highlighted leak is not a conviction. On medium and hard the feed is 1 to 3 days late.
 
-Then the rule that makes the task hard: you accuse exactly once. If you are right, the score is V. If you are wrong, the score is 0. If you never accuse, if you hit the tool cap, or if you reach the horizon, the score is also 0.
+You accuse exactly once, and the tool does not tell you if you were right. If you are right, the score is the value left. V starts at 1.0 and falls when leaks, canaries, and restrictions cost. If you are wrong, the score is minus 1. If you never accuse, the score is 0. Waiting for certainty also costs, because value is draining.
 
-The chips are the whole action space. Plant a canary, advance the day, read the feed, restrict someone, or spend the one accusation. There is no second try.
+The chips are the action space. Eight investigative calls a day, then you must advance the day, and 300 calls in the whole episode. There is no second accusation.
 -->
 
 ---
 
 <p class="eyebrow">Meaningful difficulty · 30 points</p>
 <h2>Noisy, delayed, and one shot</h2>
-<p>The core skill is general: decide which information is worth paying for, under noise and delay, then <strong>commit at the right moment</strong>.</p>
+<p>The core skill is general: decide which information is worth paying for, under noise and delay, then <strong>commit at the right moment</strong>. The horizon is 14 days.</p>
 <table>
   <thead>
-    <tr><th>Tier</th><th>Staff</th><th>Delay</th><th>What gets harder</th></tr>
+    <tr><th>Tier</th><th>Staff</th><th>What the README adds</th></tr>
   </thead>
   <tbody>
-    <tr><td>Easy</td><td>12</td><td>1</td><td>The trap, without the disguises</td></tr>
-    <tr><td>Medium</td><td>20</td><td>1–2</td><td>A decoy, and framing</td></tr>
-    <tr><td>Hard</td><td>30</td><td>1–3</td><td>A careful mole, and clearances</td></tr>
+    <tr><td>Easy</td><td>12</td><td>The trap, over a 14-day horizon</td></tr>
+    <tr><td>Medium</td><td>20</td><td>Decoy, framing, a careful mole, leaks 1–3 days late, 2 variants, 1 canary a day</td></tr>
+    <tr><td>Hard</td><td>30</td><td>Everything on medium, plus clearance constraints</td></tr>
   </tbody>
 </table>
 <img class="diagram" src="../assets/loop.svg" alt="Loop of six steps: observe, plant canaries, advance the day, read the delayed feed, update the belief, accuse once.">
@@ -438,9 +440,9 @@ The chips are the whole action space. Plant a canary, advance the day, read the 
 <!--
 TIMING: 3:50–4:40 (50 seconds)
 
-Read the tiers straight off the table. Easy is 12 staff and a delay of 1. Medium is 20 staff, delay 1 to 2, plus a decoy and framing. Hard is 30 staff, delay 1 to 3, a careful mole, and clearances. The delay is the environment's own clock. Do not invent a unit the docs do not name. The clock advances with advance_day.
+Read the tiers from the README, not from the older plan table. Every tier runs for 14 days. Easy is 12 staff. Medium is 20, and hard is 30. Medium and hard add the decoy, framing in the access logs, a careful mole, leaks that arrive 1 to 3 days late, 2 variants, and 1 canary a day. Hard also has clearances. Do not give easy its own delay. The README does not.
 
-The hard part is not finding a button. It is deciding which information is worth paying for, while the evidence is noisy and late, and then committing. You can walk the loop again. You cannot accuse twice.
+The hard part is deciding which information is worth paying for, while the evidence is late, and then committing. A correct call scores the value that is left, so waiting also costs. A wrong call scores minus 1. You can walk the loop again. You cannot accuse twice.
 
 That covers every starting point in the brief: plan several steps ahead, explore an unfamiliar system, use tools, spend a limited budget, and adapt when a new leak arrives.
 -->
@@ -475,52 +477,50 @@ Then the fairness line, because a real gap has to be the agent's fault. A hinted
 
 <p class="eyebrow">The gap · 30 points</p>
 <h2>Frontier versus the reference</h2>
-<p><strong>SolverPolicy</strong>: an exact posterior, canaries by information gain per value lost, accusation by value of information. It ships as Harbor <code>solution/solve.sh</code>.</p>
-<table>
+<p>Reference means from the README: 30 keyless runs, 40 judge seeds per tier, commit 849e652, tiers v1.1. Frontier rows are still marked pending. Refresh when tiers freeze at v1.2.</p>
+<table class="compact">
   <thead>
     <tr>
-      <th>Tier</th>
-      <th class="num">SolverPolicy</th>
-      <th class="num">Frontier agent</th>
-      <th class="num">Gap</th>
+      <th></th>
+      <th class="num">Easy</th>
+      <th class="num">Medium</th>
+      <th class="num">Hard</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>Easy · 12 staff · delay 1</td>
-      <td class="num"><span class="ph">[SCORE_REF_1]</span></td>
+      <td>Solver</td>
+      <td class="num">+0.78</td>
+      <td class="num"><strong>+0.63</strong></td>
+      <td class="num">+0.62</td>
+    </tr>
+    <tr>
+      <td>Frontier (gpt-5.5, gpt-5.6-sol)</td>
       <td class="num"><span class="ph">[SCORE_FRONTIER_1]</span></td>
-      <td class="num"><span class="ph">[GAP_1]</span></td>
-    </tr>
-    <tr>
-      <td>Medium · 20 · delay 1–2 · decoy + framing</td>
-      <td class="num"><span class="ph">[SCORE_REF_2]</span></td>
       <td class="num"><span class="ph">[SCORE_FRONTIER_2]</span></td>
-      <td class="num"><span class="ph">[GAP_MEDIUM]</span></td>
+      <td class="num"><span class="ph">[SCORE_FRONTIER_3]</span></td>
     </tr>
     <tr>
-      <td>Hard · 30 · delay 1–3 · careful mole, clearances</td>
-      <td class="num"><span class="ph">[SCORE_REF_3]</span></td>
-      <td class="num"><span class="ph">[SCORE_FRONTIER_3]</span></td>
+      <td>Gap</td>
+      <td class="num"><span class="ph">[GAP_1]</span></td>
+      <td class="num"><span class="ph">[GAP_MEDIUM]</span></td>
       <td class="num"><span class="ph">[GAP_FRONTIER]</span></td>
     </tr>
   </tbody>
 </table>
-<p class="fine">Expected baselines, stated in the plan, not a measured judge table: do-nothing <strong>0</strong> · stop-early <strong>≈ V/N</strong> · random <strong>≈ 0</strong> · restrict-all <strong>≪ solver</strong>. Measured stop-early <span class="ph">[SCORE_STOP_EARLY]</span> · measured restrict-all <span class="ph">[SCORE_RESTRICT_ALL]</span>.</p>
-<p class="fine">Fill the table from <code>make reproduce</code>: reference, 3 agent runs, do-nothing, stop-early. No API key. Do not speak a number that is still yellow.</p>
+<p class="fine">Solver ranges: easy +0.75 to +0.82, medium +0.56 to +0.71, hard +0.54 to +0.69. Same runs: do-nothing 0.00 · stop-early −0.85 / −0.89 / −0.95 · heuristic +0.65 / −0.03 / −0.21 · logs-only −0.47 / −0.98 / −1.00 · random −0.69 / −0.66 / −0.81, easy then medium then hard.</p>
+<p class="fine"><code>make reproduce</code> needs no API key. Do not speak a number that is still yellow.</p>
 
 <!--
 TIMING: 5:20–6:15 (55 seconds)
 
-Full marks on the gap means a frontier agent that scores below a reference we can demonstrate, on repeated runs, both reproducible.
+The README's reference means are on the slide. Say them as means, and say where they come from: 30 keyless runs, 40 seeds a tier, commit 849e652, tiers v1.1. Medium, the headline, is plus 0.63. Hard is plus 0.62. Easy is plus 0.78. Quote a range only if someone asks. Say the table will be refreshed when the tiers freeze at v1.2.
 
-The reference is SolverPolicy. An exact posterior. Canary partitions chosen by information gain per unit of value lost. The accusation itself is chosen by value of information. It ships as the Harbor solution script.
+The frontier rows are pending in the README. gpt-5.5 and gpt-5.6-sol are the named models, and their cells are yellow. Do not invent a frontier score, and do not subtract one yourself to fill the gap. GAP_1 is easy, GAP_MEDIUM is medium, GAP_FRONTIER is hard.
 
-Then say, plainly, that the table is empty on purpose. Easy gap is GAP_1. Medium is GAP_MEDIUM. Hard, the headline, is GAP_FRONTIER. Do not invent them, and do not read the yellow text as if it were a result.
+The baselines on the same runs are already filled. Do-nothing is exactly 0. Stop-early is negative, about minus 0.9, because a wrong accusation scores minus 1. The heuristic is near zero on medium and negative on hard. Logs-only is about minus 1. Random is negative. None of them beat the solver.
 
-What the plan does state: do-nothing scores 0, stop-early is about V over N, random is about 0, and restrict-all lands far below the solver. The plan marks those as tested. It does not record the measured stop-early or restrict-all figures. Those two yellow tokens are the measured ones.
-
-The command the judges rerun is make reproduce. Reference, three agent runs, do-nothing, stop-early. No API key.
+make reproduce needs no API key. One run also prints its own confidence interval, about plus or minus 0.07 to 0.10 for the solver.
 -->
 
 ---
@@ -536,31 +536,29 @@ The command the judges rerun is make reproduce. Reference, three agent runs, do-
     <tr><td>Read the truth from the container: files, env, ps</td><td>MCP server and environment live outside the agent container. Isolation check.</td></tr>
     <tr><td>Rebuild the world from public code and the seed</td><td>Server-side secret salt on judge worlds. Frozen text.</td></tr>
     <tr><td>Accuse twice, pass a list, or send *</td><td>Server-side lock. Strict validation.</td></tr>
-    <tr><td>Do nothing, stop early, or restrict everyone</td><td>Specified at 0 / ≈ V/N / far below the solver. Marked tested.</td></tr>
-    <tr><td>One unique canary copy per person</td><td><code>max_variants</code> cap.</td></tr>
-    <tr><td>Error text, or a timing side channel</td><td>Identical error paths. Fuzzer, plus an LLM exploit hunter.</td></tr>
-    <tr><td>Read the mole's name in the prose</td><td>Providers never see the mole. Lint, plus a text-only probe.</td></tr>
-    <tr><td>Spam tools</td><td>Daily action cap <span class="ph">[DAILY_ACTION_CAP]</span>. Global cap of <strong>300</strong>.</td></tr>
+    <tr><td>Accuse at random on day 1</td><td>A wrong accusation scores <strong>−1</strong>. Stop-early lands near −0.9. Do-nothing is exactly 0.</td></tr>
+    <tr><td>One unique canary copy per person</td><td>Medium and hard: 2 variants, 1 canary a day.</td></tr>
+    <tr><td>Error text, or a timing side channel</td><td>Held, with tests. Text leaks nothing above chance.</td></tr>
+    <tr><td>Read the mole's name in the prose</td><td>Providers never see the mole. Text probe holds.</td></tr>
+    <tr><td>Spam tools</td><td><strong>8</strong> investigative calls a day, then <code>advance_day</code>. Global cap <strong>300</strong>.</td></tr>
   </tbody>
 </table>
-<p class="fine">Gemini attacks this reward before the judges do. Harness: Harbor, running the OpenCode agent, connected over MCP.</p>
+<p class="fine">33 attacks logged before the judges. Two exploits were closed: stop-early, by the −1, and judge worlds that failed open without a secret. One finding is still being closed: a same-uid process reading the server environment. Harbor keeps that process out of the agent's PID namespace.</p>
 
 <!--
 TIMING: 6:15–7:10 (55 seconds)
 
-You get fifteen minutes to break the reward. Here is what we already designed against. Do not read all eight rows. Hit four.
+You get fifteen minutes to break the reward. The README says we already attacked it 33 times. Do not read every row. Hit four.
 
-One: the truth is not in the agent container. The MCP server and the environment live outside it, and there is an isolation check.
+One: a wrong accusation scores minus 1, so stopping early is not a free lottery ticket. Do-nothing is exactly 0. Stop-early is negative.
 
-Two: you cannot rebuild the mole from the public code and the seed. Judge worlds use a server-side salt, and the text is frozen.
+Two: judge worlds fail closed without a secret. You cannot rebuild the mole from the public code and the seed. Dev seeds are refused unless a flag is set.
 
-Three: accusation is once, locked on the server. No lists, no wildcard.
+Three: accusation is once, on the server. No lists, no wildcard.
 
-Four: doing nothing, stopping early, or restricting everyone is specified to lose to actually playing. 0, about V over N, and far below the solver.
+Four: eight calls a day, then you must advance the day, and 300 calls in total. Medium and hard allow 2 canary variants and 1 canary a day.
 
-If you have time: one unique canary per person is blocked by max_variants. Errors and timing do not leak. The text providers never see who the mole is. Tool spam dies on a daily cap, whose number is the yellow token, and a global cap of 300.
-
-Close the slide: Gemini tries to hack the reward before you do.
+Then say the honest open item. One finding is still being closed: a process with the same user id could read the server's environment. Secrets now come from mode 0600 files, and the Harbor sidecar keeps the server out of the agent's PID namespace. Do not say every hole is shut.
 -->
 
 ---
@@ -597,7 +595,7 @@ The generation count is yellow. Do not say "hundreds." That word is in the plan 
   <div><b>5 · Analyst</b><p>Long context clusters failure modes. Plan: thousands of runs. Measured: <span class="ph">[ANALYST_RUNS]</span></p></div>
 </div>
 <p class="closer" style="font-size: 24px; margin-top: 12px;">Gemini builds the company, plays the traitor, and evolves the hardest cases.</p>
-<p class="fine">For judging, the Gemini-written text is frozen per seed. Reruns are deterministic and need no key.</p>
+<p class="fine">This is the plan in docs/PLAN.md. The README still marks the Gemini writeup as a placeholder. For judging, Gemini's text is frozen per seed, so a rerun needs no key.</p>
 
 <!--
 TIMING: 7:50–8:30 (40 seconds)
@@ -648,7 +646,7 @@ Then the table. Four yellow tokens. Before, after, the remaining gap to the refe
 <p class="eyebrow">The ask</p>
 <h2>Reproduce it. Then try to break it.</h2>
 <ol class="asks">
-  <li><code>make reproduce</code> — reference, 3 agent runs, do-nothing, stop-early. No API key.</li>
+  <li><code>make reproduce</code> — solver, five baselines, 40 seeds a tier, plus any committed frontier runs. No API key.</li>
   <li>Use the 15 minutes on the reward. Doing the task should still be the best score.</li>
   <li>Read a miss as a decision. The regret tags name it. The tools were available.</li>
   <li>Tiebreaker: did the 1.5B model move after training, and which tags dropped?</li>
@@ -659,7 +657,7 @@ Then the table. Four yellow tokens. Before, after, the remaining gap to the refe
 <!--
 TIMING: 9:15–10:00 (45 seconds)
 
-Here is the ask. Run make reproduce: the reference, three agent runs, do-nothing, and stop-early. One command, Python 3.12, no key. That is the craft point.
+Here is the ask. Run make reproduce. It plays the solver and five baselines on 40 seeds a tier, and it replays any committed frontier episodes. One command, Python 3.12, about ten seconds, no key. The brief also asks you to see three agent runs. Those frontier cells are still yellow.
 
 Spend the fifteen minutes on the reward. The best score should still be doing the task.
 

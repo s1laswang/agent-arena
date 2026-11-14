@@ -70,20 +70,27 @@ npx --yes @marp-team/marp-cli@4.2.3 --no-stdin --allow-local-files \
 
 | Token | What belongs there |
 | --- | --- |
-| `[STAT_INSIDER_COST]` | A sourced figure for the cost or scale of insider leaks. The docs only say the problem is real and current. |
-| `[SCORE_REF_1]` `[SCORE_REF_2]` `[SCORE_REF_3]` | SolverPolicy mean score on easy, medium, hard. |
-| `[SCORE_FRONTIER_1]` `[SCORE_FRONTIER_2]` `[SCORE_FRONTIER_3]` | Frontier-agent mean score on easy, medium, hard. |
-| `[GAP_1]` | Easy-tier gap, reference minus frontier. |
-| `[GAP_MEDIUM]` | Medium-tier gap. |
-| `[GAP_FRONTIER]` | Hard-tier gap. This is the headline gap. |
-| `[SCORE_STOP_EARLY]` | Measured stop-early score. The plan's expectation is ≈ V/N. |
-| `[SCORE_RESTRICT_ALL]` | Measured restrict-all score. The plan's expectation is far below the solver. |
-| `[HUMAN_SCORE]` | Human playtest scores. The plan says to report them. |
-| `[DAILY_ACTION_CAP]` | The daily action cap. The docs state that a daily cap exists, and that the global cap is 300. They do not give the daily number. |
-| `[MOLE_GENERATIONS]` | Measured Mole Forge generations. |
-| `[ANALYST_RUNS]` | Measured runs the Gemini analyst actually clustered. The plan says thousands. |
+| `[STAT_INSIDER_COST]` | A sourced figure for the cost or scale of insider leaks. The docs give the technique's history, not a cost. |
+| `[SCORE_FRONTIER_1]` `[SCORE_FRONTIER_2]` `[SCORE_FRONTIER_3]` | Frontier mean score on easy, medium, hard. The README names gpt-5.5 and gpt-5.6-sol and marks these cells pending. |
+| `[GAP_1]` | Easy-tier gap, solver minus frontier. |
+| `[GAP_MEDIUM]` | Medium-tier gap. Medium is the README's headline tier. |
+| `[GAP_FRONTIER]` | Hard-tier gap. |
+| `[HUMAN_SCORE]` | Human playtest scores. The plan says to report them. None are in the docs. |
+| `[MOLE_GENERATIONS]` | Measured Mole Forge generations. The plan's pitch line says "hundreds." That is not a measured count. |
+| `[ANALYST_RUNS]` | Measured runs the analyst clustered. The plan says thousands. |
 | `[SCORE_SMALL_BEFORE]` `[SCORE_SMALL_AFTER]` | Qwen2.5-1.5B-Instruct held-out score before and after LoRA. |
-| `[GAP_SMALL]` | Remaining gap of that trained 1.5B model to SolverPolicy. |
+| `[GAP_SMALL]` | Remaining gap of that trained 1.5B model to the solver. |
 | `[TAGS_DROPPED]` | Which regret tags dropped after training. |
 
-These are specified in the docs and are not placeholders: tier sizes (12 / 20 / 30 staff), delays (1 / 1–2 / 1–3), the premature-accusation threshold (P(correct) under 0.6), the global tool cap (300), the training plan (Qwen2.5-1.5B-Instruct, LoRA, fp16, one V100, 20k solver trajectories, 200 held-out seeds per tier), and the judge command (`make reproduce`: reference, 3 agent runs, do-nothing, stop-early, no API key).
+Filled from `README.md` on `justSilas` at `bca5406` (30 keyless runs, 40 seeds per tier, commit `849e652`, tiers v1.1; refresh when tiers freeze at v1.2). This pitch branch does not contain that README edit. It only adds `pitch/`.
+
+| | Easy | Medium | Hard |
+| --- | --- | --- | --- |
+| Solver | +0.78 | +0.63 | +0.62 |
+| Stop-early | −0.85 | −0.89 | −0.95 |
+| Heuristic | +0.65 | −0.03 | −0.21 |
+| Logs only | −0.47 | −0.98 | −1.00 |
+| Random | −0.69 | −0.66 | −0.81 |
+| Do-nothing | 0.00 | 0.00 | 0.00 |
+
+Also from that README, and not placeholders: V starts at 1.0; a correct accusation scores V left; a wrong accusation scores −1; no accusation scores 0; horizon 14 days; 8 investigative calls a day and 300 in total; medium and hard use 2 canary variants and 1 canary a day, with leaks 1–3 days late. The small-model plan (Qwen2.5-1.5B-Instruct, LoRA, fp16, one V100, 20k solver trajectories, 200 held-out seeds per tier) and the regret tags, including P(correct) under 0.6, are from `docs/PLAN.md`. `docs/PLAN.md` still describes an older reward (wrong accusation scores 0) and an older tier split. The deck follows the README where they disagree.

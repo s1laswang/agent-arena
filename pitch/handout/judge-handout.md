@@ -11,42 +11,23 @@ paginate: false
   <p class="sub">An RL environment for AfterQuery's Break the Agent, with Gemini at the core. Yellow marks a number the source docs do not contain.</p>
 </div>
 
-<div class="strip">
-  <figure>
-    <img src="../assets/office-floorplan.jpg" alt="Office floor plan with employees and AI-agent avatars.">
-    <figcaption>The company</figcaption>
-  </figure>
-  <figure>
-    <img src="../assets/mole.jpg" alt="Hooded figure whose shadow is a mole.">
-    <figcaption>The mole</figcaption>
-  </figure>
-  <figure>
-    <img src="../assets/canary-documents.jpg" alt="Four canary documents with different watermarks.">
-    <figcaption>Canary variants</figcaption>
-  </figure>
-  <figure>
-    <img src="../assets/leak-feed.jpg" alt="Leak feed with one flagged post.">
-    <figcaption>One flagged leak</figcaption>
-  </figure>
-</div>
-
 <div class="cols">
   <div>
     <h2>What it is</h2>
     <p>A fictional company is leaking secrets to a rival, and every leak costs company value. The agent under test is the <strong>head of security</strong>. The reference run is a <strong>Bayesian canary-trap solver</strong>: the real technique, executed optimally from observable data only.</p>
-    <p>The hook is the recent espionage headlines around a chip-company CEO. The company here is fictional. No cost figure is in the source docs. <span class="ph">[STAT_INSIDER_COST]</span></p>
+    <p>The canary trap is real: Clancy named it in 1987; MI5 called it a barium meal. The company here is fictional. No cost figure is in the docs. <span class="ph">[STAT_INSIDER_COST]</span></p>
     <h2>How the environment works</h2>
     <p><strong>Goal.</strong> Identify the mole while preserving as much value as possible.</p>
     <p><strong>Observations.</strong> Tool results only. Company text is public facts and signals, never the truth.</p>
     <p><strong>Actions.</strong> <code>status</code>, <code>list_employees</code>, <code>list_documents</code>, <code>read_access_logs</code>, <code>search_messages</code>, <code>read_message</code>, <code>interview</code>, <code>plant_canary</code>, <code>check_leak_feed</code>, restrict / unrestrict access, <code>advance_day</code>, <code>accuse</code> once.</p>
-    <p><strong>Canaries.</strong> Different document variants go to different groups. A fragment on the leak feed narrows who could have had it. <code>max_variants</code> blocks one unique copy per person.</p>
-    <p><strong>Reward.</strong> V if the accusation is correct, otherwise 0. No accusation, the tool cap, or the horizon also scores 0.</p>
+    <p><strong>Canaries.</strong> Different variants go to different groups. Medium and hard: 2 variants per canary, 1 canary a day. Leaks arrive 1–3 days late.</p>
+    <p><strong>Reward.</strong> V starts at 1.0. Correct accusation scores V left. Wrong scores <strong>−1</strong>. No accusation scores 0. Horizon is 14 days. Budget: 8 investigative calls a day, 300 in total.</p>
     <table>
-      <thead><tr><th>Tier</th><th>Staff</th><th>Delay</th><th>Added pressure</th></tr></thead>
+      <thead><tr><th>Tier</th><th>Staff</th><th>Added on this tier</th></tr></thead>
       <tbody>
-        <tr><td>Easy</td><td>12</td><td>1</td><td>—</td></tr>
-        <tr><td>Medium</td><td>20</td><td>1–2</td><td>Decoy + framing</td></tr>
-        <tr><td>Hard</td><td>30</td><td>1–3</td><td>Careful mole, clearances</td></tr>
+        <tr><td>Easy</td><td>12</td><td>The trap</td></tr>
+        <tr><td>Medium</td><td>20</td><td>Decoy, framing, careful mole, late leaks, 2 variants</td></tr>
+        <tr><td>Hard</td><td>30</td><td>All of medium, plus clearances</td></tr>
       </tbody>
     </table>
     <h2>Why it is hard</h2>
@@ -64,11 +45,12 @@ paginate: false
       <li>Read the truth from the container (files, env, ps): MCP server and environment live outside it, with an isolation check.</li>
       <li>Rebuild the world from public code and the seed: server-side secret salt; frozen text.</li>
       <li>Repeat an accusation, pass a list, or send <code>*</code>: server-side lock and strict validation.</li>
-      <li>Do nothing / stop early / restrict all: specified at <strong>0 / ≈ V/N / far below the solver</strong>, and marked tested.</li>
-      <li>One unique canary per person: the <code>max_variants</code> cap.</li>
+      <li>Do nothing is exactly 0. Stop-early is negative (about −0.9), because a wrong accusation scores −1.</li>
+      <li>One unique canary per person: medium and hard allow 2 variants and 1 canary a day.</li>
       <li>Error text or timing: identical error paths; a fuzzer and an LLM exploit hunter.</li>
       <li>Read the mole in the prose: providers never see the mole; lint plus a text-only probe.</li>
-      <li>Spam tools: daily cap <span class="ph">[DAILY_ACTION_CAP]</span>; global cap of <strong>300</strong>.</li>
+      <li>Spam tools: 8 investigative calls a day, then <code>advance_day</code>; global cap of <strong>300</strong>.</li>
+      <li>Still open: a same-uid process could read the server environment. Secrets now come from mode 0600 files; Harbor keeps the server out of the agent's PID namespace.</li>
     </ul>
     <h2>Gemini's role</h2>
     <p>Essential. For judging, Gemini's text is <strong>frozen per seed</strong>, so a rerun is deterministic and needs no key.</p>
@@ -86,14 +68,14 @@ paginate: false
     <table>
       <thead><tr><th>Tier</th><th>Reference</th><th>Frontier</th><th>Gap</th></tr></thead>
       <tbody>
-        <tr><td>Easy</td><td><span class="ph">[SCORE_REF_1]</span></td><td><span class="ph">[SCORE_FRONTIER_1]</span></td><td><span class="ph">[GAP_1]</span></td></tr>
-        <tr><td>Medium</td><td><span class="ph">[SCORE_REF_2]</span></td><td><span class="ph">[SCORE_FRONTIER_2]</span></td><td><span class="ph">[GAP_MEDIUM]</span></td></tr>
-        <tr><td>Hard</td><td><span class="ph">[SCORE_REF_3]</span></td><td><span class="ph">[SCORE_FRONTIER_3]</span></td><td><span class="ph">[GAP_FRONTIER]</span></td></tr>
+        <tr><td>Easy</td><td>+0.78</td><td><span class="ph">[SCORE_FRONTIER_1]</span></td><td><span class="ph">[GAP_1]</span></td></tr>
+        <tr><td>Medium</td><td>+0.63</td><td><span class="ph">[SCORE_FRONTIER_2]</span></td><td><span class="ph">[GAP_MEDIUM]</span></td></tr>
+        <tr><td>Hard</td><td>+0.62</td><td><span class="ph">[SCORE_FRONTIER_3]</span></td><td><span class="ph">[GAP_FRONTIER]</span></td></tr>
       </tbody>
     </table>
-    <p>Expected baselines, from the plan: do-nothing <strong>0</strong>, stop-early <strong>≈ V/N</strong>, random <strong>≈ 0</strong>, restrict-all <strong>≪ solver</strong>. Measured stop-early <span class="ph">[SCORE_STOP_EARLY]</span>. Measured restrict-all <span class="ph">[SCORE_RESTRICT_ALL]</span>.</p>
+    <p>README means, 30 keyless runs, 40 seeds, tiers v1.1, commit 849e652. Refresh at v1.2. Frontier (gpt-5.5, gpt-5.6-sol) is pending. Same runs, easy / medium / hard: do-nothing 0; stop-early −0.85 / −0.89 / −0.95; heuristic +0.65 / −0.03 / −0.21; logs-only −0.47 / −0.98 / −1.00; random −0.69 / −0.66 / −0.81.</p>
     <h2>Reproduce</h2>
-    <p><code>make setup</code> (uv, Python 3.12). <code>make reproduce</code> is the judge table: reference, 3 agent runs, do-nothing, stop-early. No API keys. Rubric: gap 30, meaningful difficulty 30, reward integrity 25, craft 15. One command from the README reproduces the reported results.</p>
+    <p><code>make setup</code> (uv, Python 3.12, about 10 s, no key). <code>make reproduce</code> plays the solver and five baselines on 40 seeds a tier, plus committed frontier runs. Rubric: gap 30, difficulty 30, integrity 25, craft 15.</p>
   </div>
 </div>
 

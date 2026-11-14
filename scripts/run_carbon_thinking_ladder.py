@@ -662,6 +662,9 @@ def write_level_dir(
     ep_file = level_dir / "episodes.jsonl"
     if ep_file.exists():
         ep_file.unlink()
+    stale_meta = level_dir / "meta.json"
+    if stale_meta.exists():
+        stale_meta.unlink()
     writer = RunWriter(level_dir)
     records_sorted = sorted(records, key=lambda r: r["seed"])
     for r in records_sorted:
@@ -669,7 +672,7 @@ def write_level_dir(
         writer.episode(ep_dict)
         writer.transcript(r["seed"], r["transcript"])
     prefix = "stub" if level_summary["stub"] else "gemini"
-    writer.meta(nan_to_none({
+    level_meta = nan_to_none({
         "role": "investigators",
         "subrole": "thinking_level_ablation",
         "agent": f"{prefix}:{level_summary['model_id']}+think:{level}",
@@ -681,6 +684,7 @@ def write_level_dir(
         "tiers_version": TIERS_VERSION,
         "tier": level_summary["tier"],
         "seeds": level_summary["seeds"],
+        "n_episodes": level_summary["n"],
         "git_sha": commit_sha,
         "commit": commit_sha,
         "timestamp": timestamp,
@@ -695,7 +699,8 @@ def write_level_dir(
             "regret_per_episode": level_summary["regret_per_episode"],
             "tag_counts": level_summary["tag_counts"],
         },
-    }))
+    })
+    (level_dir / "level_meta.json").write_text(json.dumps(level_meta, indent=2, allow_nan=False) + "\n")
 
 
 def build_comparison(
@@ -1058,6 +1063,7 @@ def run_experiment(
             "tier": tier,
             "seeds": list(seeds),
             "levels": list(levels),
+            "n_episodes": len(all_records),
             "commit": commit_sha,
             "timestamp": timestamp,
             "command": command_str,

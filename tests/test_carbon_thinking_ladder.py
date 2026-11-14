@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import io
 import json
 import sys
+import tokenize
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,6 +17,8 @@ from canary.analysis.gap import load_runs
 from canary.env import Env
 from canary.eval import run_episode
 from canary.gemini.ledger import LedgeredClient, read_ledger
+from canary.gemini.provenance import audit_provenance, scan_file_secrets
+from canary.gemini.roles_dashboard import collect_roles_data
 from canary.llm import MissingKeyError
 from canary.llm.gemini_backend import GeminiClient
 from canary.solver.policy import SolverPolicy
@@ -54,6 +58,7 @@ def test_stub_end_to_end_ladder(tmp_path, monkeypatch):
     assert meta["tier"] == "medium"
     assert meta["seeds"] == [0, 1]
     assert meta["levels"] == ["low", "high"]
+    assert meta["n_episodes"] == 4
     assert isinstance(meta["commit"], str) and len(meta["commit"]) >= 7
     assert isinstance(meta["timestamp"], str) and "T" in meta["timestamp"]
     assert "--stub" in meta["command"]
@@ -72,7 +77,8 @@ def test_stub_end_to_end_ladder(tmp_path, monkeypatch):
     for lv in ("low", "high"):
         lv_dir = out_dir / lv
         assert (lv_dir / "episodes.jsonl").exists()
-        assert (lv_dir / "meta.json").exists()
+        assert (lv_dir / "level_meta.json").exists()
+        assert not (lv_dir / "meta.json").exists()
         for s in (0, 1):
             tr_file = lv_dir / "transcripts" / f"{s}.json"
             assert tr_file.exists()
@@ -197,12 +203,14 @@ def test_committed_artifact_schema_if_present():
     assert meta["tier"] == "medium"
     assert meta["seeds"] == [0, 1]
     assert meta["levels"] == ["low", "high"]
+    assert meta["n_episodes"] == 4
     assert meta["usage"]["episodes"] == 4
     assert meta["usage"]["calls"] > 0
     assert meta["usage"]["thinking"] > 0
     for lv in ("low", "high"):
         assert (artifact / lv / "episodes.jsonl").exists()
-        assert (artifact / lv / "meta.json").exists()
+        assert (artifact / lv / "level_meta.json").exists()
+        assert not (artifact / lv / "meta.json").exists()
         eps = [json.loads(x) for x in (artifact / lv / "episodes.jsonl").read_text().splitlines() if x.strip()]
         assert len(eps) == 2
         assert all(e["end_reason"] != "error" for e in eps)
@@ -211,3 +219,36 @@ def test_committed_artifact_schema_if_present():
             txt = p.read_text()
             assert "\u2014" not in txt and "\u2013" not in txt
             assert "AIza" not in txt
+            assert scan_file_secrets(p, ROOT) == []
+
+    prov = audit_provenance(ROOT)
+    ladder_prov = [
+        r for r in prov["runs"]
+        if r["run_dir"].startswith("results/gemini_roles/investigators/thinking-ladder-carbon-med01")
+    ]
+    assert len(ladder_prov) == 1
+    assert ladder_prov[0]["verified"] is True
+    assert ladder_prov[0]["count"] == 4
+
+    dash = collect_roles_data(ROOT)
+    ladder_dash = [
+        r for r in dash["runs"]
+        if r["run_folder"].startswith("results/gemini_roles/investigators/thinking-ladder-carbon-med01")
+    ]
+    assert len(ladder_dash) == 1
+    assert ladder_dash[0]["verified"] is True
+    assert "low" in ladder_dash[0]["key_metric"] and "high" in ladder_dash[0]["key_metric"]
+
+
+def test_source_files_have_no_comments_em_dashes_or_keys():
+    for path in (
+        ROOT / "scripts" / "run_carbon_thinking_ladder.py",
+        ROOT / "tests" / "test_carbon_thinking_ladder.py",
+    ):
+        text = path.read_text(encoding="utf-8")
+        assert "\u2014" not in text
+        assert "\u2013" not in text
+        tokens = list(tokenize.generate_tokens(io.StringIO(text).readline))
+        comments = [tok for tok in tokens if tok.type == tokenize.COMMENT]
+        assert comments == []
+        assert scan_file_secrets(path, ROOT) == []

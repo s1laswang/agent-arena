@@ -101,6 +101,25 @@ def test_committed_episodes_replay_consistently():
     assert "Replay coverage:" in line and "NOTHING" not in line
 
 
+def test_frontier_runs_are_replayed():
+    """v1.2 is frozen in rules.TIERS_HISTORY, so the committed frontier runs (gpt-5.5, codex, opencode) are
+    re-played and re-graded too, not skipped. Only secret-keyed judge seeds (grok) stay out."""
+    rows = ac.replay_committed(ROOT)
+    c = ac.replay_counts(rows)
+    assert c["replayed"] >= 0.95 * c["n"], c
+    for r in rows:
+        if "/v1.3/" not in r["file"].replace("\\", "/") and any(m in r["file"] for m in ("gpt-5.5", "opencode")):
+            assert r["replayed"] == r["n"] and r["replay_consistent"] is True, r
+
+
+def test_tiers_version_restores_known_v_mode():
+    from canary import rules
+    before, before_v = rules.KNOWN_V_MODE, rules.TIERS_VERSION
+    with rules.tiers_version("v1.2"):
+        assert rules.KNOWN_V_MODE is False and rules.TIERS_VERSION == "v1.2"
+    assert rules.KNOWN_V_MODE == before and rules.TIERS_VERSION == before_v
+
+
 def test_coverage_line_flags_an_empty_replay():
     rows = [{"n": 5, "replayed": 0, "consistent": 0, "not_replayable": 5, "replay_consistent": None}]
     assert "NOTHING was re-played" in ac.coverage_line(rows)

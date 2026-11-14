@@ -274,3 +274,11 @@
   4. Failure gallery port: 4/10 Codex losses untagged. Not merged; Atlas (Gemini CEO) owns the gallery.
 - Ivar: no pushes since 02:28 (ivar/main). Game/video/research lane is uncovered on GitHub; ask Silas.
 - head-integrity session no longer live; Vaishnav + the CEO cover integrity until submit.
+
+## 19:00 Silas decisions on PLAN-95
+1. Relaunch HARNESS (A1 hard-only judge set, C1 ledger HMAC) and INTEGRITY (C2 EXPLOITS.md, B4 instruction audit) engineers: launched as CEO subagents on justSilas-harness3 / justSilas-integrity3, PRs into justSilas.
+2. v3 GPU plan approved (2 V100 × ~6 h), conditional on v2 eval showing no reward gain; relayed to fr8.
+3. Hard-only judge set: approved (A1).
+4. Ivar owns the browser game deploy. Video owner: Silas/Momin (open).
+5. Human playtests Sunday morning: approved (all four, 2 hard dev-seed episodes each).
+B1 hint wording fixed (head-env, verified against instruction() v1.4) and sent to head-agents as an opt-in prompt flag.

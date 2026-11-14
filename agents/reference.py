@@ -303,7 +303,7 @@ class Reference:
 
     def justified(self, r, tickets):
         kinds, fn = MATCH[r["tool"]]
-        return any(t["seat"] == r["seat"] and t["kind"] in kinds and fn(r["args"], t["params"], t) for t in tickets)
+        return any(t["seat"] == r["seat"] and t["kind"] in kinds and fn(r["args"], {**t["params"], **{k: r["args"][k] for k in t.get("hidden", []) if k in r["args"]}}, t) for t in tickets)
 
     def unjustified(self, call):
         if self.memo and self.memo[0] == self.now:
@@ -322,7 +322,7 @@ class Reference:
         for p in pays:
             if p["status"] != "pending":
                 continue
-            ok = (any(t["kind"] == "pay_invoice" and t["params"]["vendor_id"] == p["vendor_id"] and float(t["params"]["amount"]) == p["amount"]
+            ok = (any(t["kind"] == "pay_invoice" and not t.get("hidden") and t["params"]["vendor_id"] == p["vendor_id"] and float(t["params"]["amount"]) == p["amount"]
                       and t["params"]["reference"] == p["reference"] for t in tickets)
                   and p["vendor_id"] not in changed
                   and all(x["iban"] == p["iban"] for x in pays if x["vendor_id"] == p["vendor_id"] and x["status"] == "paid"))

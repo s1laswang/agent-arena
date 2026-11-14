@@ -188,12 +188,16 @@ def _val(s):
         return s
 
 
-def fill_hidden(t, call):
+def inbox(call):
+    return [m for tool in ("read_email", "read_chat") for m in call(tool, {}).get("messages", [])]
+
+
+def fill_hidden(t, call, msgs=None):
     if not t.get("hidden"):
         return t
     found = {}
-    for tool in ("read_email", "read_chat"):
-        for m in call(tool, {}).get("messages", []):
+    if True:
+        for m in (inbox(call) if msgs is None else msgs):
             body = m.get("body", "")
             if f"For ticket {t['id']}:" not in body:
                 continue

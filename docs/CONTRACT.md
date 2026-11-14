@@ -139,7 +139,7 @@ Validation is strict: one employee id per call (no lists, no `*`, no names in pl
 - Judge/held-out seeds never use the public key. With no `CANARY_WORLD_SECRET` and no `data/worlds/judge/SALT`, a fresh 32-byte secret is generated per process (memory only; logs its sha256 prefix). Keyless `make reproduce` is statistical (mean ± CI); the secret reproduces exact numbers.
 - Only non-truth artifacts are committed: Forge mole strategies and truth-independent text banks. No world.json with the mole.
 
-## 12. Tiers v1.2 FROZEN (02:50 EET 14 Nov)
-- `rules.TIERS_VERSION = "v1.2"`, values pinned by `tests/test_env_frozen.py` (hash 59d8875fa5b98d0a). Bug fixes only after this; judge set, training data v2 and frontier runs use v1.2.
-- From FR8 final co-tune (solver efcbe53, 800 fresh dev seeds 200-999): medium solver .639±.017 acc .894 no-accuse .105; hard .603±.023 acc .858 no-accuse .124; medium−hard paired .036±.029. Easy .793 acc .995. Hard heuristic −.235, logs_only .005, stop_early −.95, random −.667.
-- behaviour_weight 0.6; fingerprint_accuracy 1.0 on all tiers (noise <1 failed replication on hard).
+## 12. Tiers v1.2 FROZEN (02:55 EET 14 Nov)
+- `rules.TIERS_VERSION = "v1.2"`, values pinned by `tests/test_env_frozen.py` (hash eb77b13554f366aa). Bug fixes only after this; judge set, training data v2 and frontier runs use v1.2.
+- CEO pick from FR8 final co-tune: easy/medium unchanged (fingerprint 1.0); HARD fingerprint_accuracy 0.95, framing_rate 2.0; solver behaviour_weight 0.6.
+- FR8 800-fresh-seed check of this cell: hard acc .841, no-accusation .126, medium−hard .070±.032. Fresh-seed table (seeds 1000-1399) in docs/reports/env.md.

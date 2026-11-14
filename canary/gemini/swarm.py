@@ -138,8 +138,9 @@ def expand(n: int, personas: list[Persona], models: list[str], tiers: list[str],
     P, M, T = len(personas), len(models), len(tiers)
     for i in range(n):
         p = personas[i % P]
-        m = models[(i // P) % M]          # each round of personas meets the next model
-        t = tiers[(i + i // P) % T]       # and alternates tier, so persona x model x tier all vary
+        r = i // P                        # round: every persona once per round
+        m = models[(i % P + r) % M]       # models rotate within a round and per persona across rounds
+        t = tiers[(i + r) % T]            # tiers alternate too, so persona x model x tier all vary
         out.append(AttackerSpec(id=f"{prefix}{i:03d}-{p.id}", idx=i, persona=p.id, model=m, tier=t,
                                 seed=seed_base + i, mode=mode,
                                 channel="mcp" if p.id == "ledger_guesser" else "inproc"))
@@ -601,15 +602,21 @@ class Planner:
         else:
             contents = [prompt]
         last_err = None
-        for attempt in range(4):
+        for attempt in range(3):
             t0 = time.time()
             try:
                 r = self.sdk().models.generate_content(model=model, contents=contents,
                                                        config=types.GenerateContentConfig(**cfg))
                 record(FEATURE, model, usage=r.usage_metadata, latency_s=time.time() - t0, run_id=self.run_id,
                        meta={"role": "planner", "persona": persona.id, "cached": bool(cache)})
+                block = getattr(getattr(r, "prompt_feedback", None), "block_reason", None)
+                if block:
+                    raise RuntimeError(f"prompt blocked: {block}")
                 txt = (r.text or "").strip()
                 txt = re.sub(r"^```(?:json)?|```$", "", txt).strip()
+                if not txt:
+                    fr = getattr(r.candidates[0], "finish_reason", None) if r.candidates else None
+                    raise RuntimeError(f"empty plan (finish_reason={fr})")
                 plan = json.loads(txt)
                 um = r.usage_metadata
                 return plan, {"planner": model, "cached": bool(cache),

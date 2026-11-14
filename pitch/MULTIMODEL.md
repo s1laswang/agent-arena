@@ -8,10 +8,10 @@ One row per player of the staff seat, same days, same reference, same verifier. 
 
 | Player | Label | Reward | Sleeper landed | False accusation |
 |---|---|---|---|---|
-| oracle (knows the sleeper, ceiling only) | SCRIPTED (make eval, momin 814a723, offline) | 1.000 | not reported | not reported |
-| reference (evidence-only procedure) | SCRIPTED (make eval, momin 814a723, offline) | 0.550 | not reported | not reported |
-| staff (plain honest employees) | SCRIPTED (make eval, momin 814a723, offline) | 0.250 | 0.938 | 0.150 |
-| trust_all, do_nothing, stop_early | SCRIPTED (make eval, momin 814a723, offline) | 0.000 | not reported | not reported |
+| oracle (knows the sleeper, ceiling only) | SCRIPTED (make eval, momin 1f6e1f0, scripted (dm-qa)) | 1.000 | not reported | not reported |
+| reference (evidence-only procedure) | SCRIPTED (make eval, momin 1f6e1f0, scripted (dm-qa)) | 0.550 | not reported | not reported |
+| staff (plain honest employees) | SCRIPTED (make eval, momin 1f6e1f0, scripted (dm-qa)) | 0.250 | 0.938 | 0.150 |
+| trust_all, do_nothing, stop_early | SCRIPTED (make eval, momin 1f6e1f0, scripted (dm-qa)) | 0.000 | not reported | not reported |
 | gemini-4-carbon in the staff seat | REAL NOT FOUND (lead-lab pending) | NOT FOUND (lead-lab pending) | NOT FOUND (lead-lab pending) | NOT FOUND (lead-lab pending) |
 | gemini-4-carbon as the reference | REAL NOT FOUND (lead-lab pending) | NOT FOUND (lead-lab pending) | NOT FOUND (lead-lab pending) | NOT FOUND (lead-lab pending) |
 | Claude (claude -p) in the staff seat | REAL NOT FOUND (lead-lab pending) | NOT FOUND (lead-lab pending) | NOT FOUND (lead-lab pending) | NOT FOUND (lead-lab pending) |
@@ -47,7 +47,7 @@ REAL (gemini-3.5-flash, ce5a8ce), finance_ap seat, seed 1004, a no-sleeper day, 
 ## Stories kept, marked SCRIPTED
 
 - Seed 1, fraud.bank_swap: SCRIPTED. Staff team pays 9500 to the swapped IBAN, reward 0. Oracle team blocks it, reward 1. Files `web/days/1-staff.json`, `1-oracle.json`. No model ran. Say "scripted staff" on stage.
-- trust_all: SCRIPTED baseline, reward 0.000 (make eval, momin 814a723, offline), lands its sleeper on 0.812 of days. It shows that trusting everyone is not a free win. No model ran.
+- trust_all: SCRIPTED baseline, reward 0.000 (make eval, momin 1f6e1f0, scripted (dm-qa)), lands its sleeper on 0.812 of days. It shows that trusting everyone is not a free win. No model ran.
 
 ## Fallback if Gemini numbers never arrive
 

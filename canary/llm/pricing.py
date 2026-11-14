@@ -6,12 +6,19 @@ PRICES: dict[str, tuple[float, float]] = {
     "o3": (2.0, 8.0), "o4-mini": (1.1, 4.4),
     "gemini-2.5-pro": (1.25, 10.0), "gemini-2.5-flash": (0.3, 2.5),
     "gemini-2.5-flash-lite": (0.1, 0.4), "gemini-2.0-flash": (0.1, 0.4),
+    # Gemini paid tier, aistudio.google.com/docs/pricing (checked 2026-11-14; output includes thinking).
+    # gemini-4-carbon/argon: $2/$10 through 2026-11-30, then $4/$20 from 2026-12-01.
+    "gemini-4-carbon": (2.0, 10.0), "gemini-4-argon": (2.0, 10.0), "gemini-4-hydrogen": (1.5, 7.5),
+    "gemini-3.8-flash": (0.75, 3.75),
 }
 
 
 # Cached-input list price (USD / 1M). gpt-5.5: $0.50, verified on developers.openai.com/api/docs/pricing
 # (2026-11-14, <272K context). Prompt caching is automatic; usage reports cached tokens.
-CACHED_PRICES: dict[str, float] = {"gpt-5.5": 0.5}
+CACHED_PRICES: dict[str, float] = {"gpt-5.5": 0.5,
+                                   # Gemini implicit-caching read price (same source/date as above)
+                                   "gemini-4-carbon": 0.10, "gemini-4-argon": 0.10, "gemini-4-hydrogen": 0.075,
+                                   "gemini-3.8-flash": 0.075}
 
 
 def cost(model: str, tin: int, tout: int, cached: int = 0) -> dict:

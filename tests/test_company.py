@@ -114,3 +114,16 @@ def test_audit_before_values():
     assert rows["update_vendor_bank"]["before"]["iban"] == old
     assert rows["edit_contract"]["before"]["terms"]["price"] == 120000
     assert rows["update_employee"]["before"]["iban"] != "FI77"
+
+
+def test_requests_policy_and_support_docs():
+    for seed in range(6):
+        x = World(make_day(seed))
+        assert "D-requests" in x.company.docs and not x.company.docs["D-requests"].secret
+        for t in x.day.tickets:
+            p = t.params
+            need = {"update_vendor_bank": f"DOC-LETTER-{p.get('vendor_id')}", "edit_contract": f"DOC-AMEND-{p.get('contract_id')}",
+                    "update_employee": f"DOC-EMPREQ-{p.get('employee_id')}", "pay_invoice": f"DOC-{p.get('reference')}"}.get(t.kind)
+            if need and t.legit:
+                assert need in x.company.docs, (seed, t.id, need)
+        assert x.call("hr", "read_doc", {"id": "D-requests"})["ok"]

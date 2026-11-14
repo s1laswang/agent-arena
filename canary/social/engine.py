@@ -320,11 +320,18 @@ def parse_v16_spec(spec_or_variant: str, mode: str | None = None) -> tuple[str, 
     raw = str(spec_or_variant or "").strip()
     if not raw:
         raise ValueError("empty v16 provider spec")
-    if raw.startswith("v16:"):
+    if raw in ("social-v2", "social-v2-gemini"):
+        parsed_mode, variant = "gemini", "v5_full9_cocktail"
+    elif raw in ("social-v2-template", "v16", "v16-template"):
+        parsed_mode, variant = "template", "v5_full9_cocktail"
+    elif raw in ("social-v2-stub", "v16-stub"):
+        parsed_mode, variant = "gemini-stub", "v5_full9_cocktail"
+    elif raw.startswith(("v16:", "v16-template:", "social-v2-template:")):
         parsed_mode, variant = "template", raw.split(":", 1)[1].strip()
-    elif raw.startswith("v16-gemini:"):
-        parsed_mode, variant = "gemini", raw.split(":", 1)[1].strip()
-    elif raw.startswith("v16-gemini-stub:"):
+    elif raw.startswith(("v16-gemini:", "social-v2:", "social-v2-gemini:")):
+        rest = raw.split(":", 1)[1].strip()
+        parsed_mode, variant = "gemini", ("v5_full9_cocktail" if rest.startswith("gemini-") else rest)
+    elif raw.startswith(("v16-gemini-stub:", "v16-stub:", "social-v2-stub:")):
         parsed_mode, variant = "gemini-stub", raw.split(":", 1)[1].strip()
     else:
         parsed_mode, variant = (mode or "template"), raw

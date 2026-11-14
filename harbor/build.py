@@ -49,7 +49,7 @@ url = "http://sleeper-server:8000/mcp"
 
 DOCKERFILE = '''FROM python:3.13-slim
 WORKDIR /app
-RUN pip install --no-cache-dir mcp pydantic && useradd -m agent && mkdir -p /logs && chmod 777 /logs
+RUN pip install --no-cache-dir mcp pydantic && useradd -m agent && mkdir -p /logs/verifier && chmod 1777 /logs && chown root:root /logs/verifier && chmod 755 /logs/verifier
 COPY oracle_client.py /opt/oracle_client.py
 '''
 
@@ -90,8 +90,19 @@ CMD ["python", "-m", "harbor.sidecar"]
 '''
 
 TEST = '''#!/bin/bash
+for i in 1 2 3 4 5; do /usr/local/bin/python -I -c "
+import os, signal, pwd
+u = pwd.getpwnam('agent').pw_uid
+n = 0
+for p in os.listdir('/proc'):
+    if p.isdigit() and os.stat('/proc/' + p).st_uid == u:
+        os.kill(int(p), signal.SIGKILL); n += 1
+raise SystemExit(n)
+" && break; sleep 1; done
+[ -L /logs/verifier ] && rm -f /logs/verifier
 mkdir -p /logs/verifier
-rm -f /logs/verifier/reward.txt
+chown root:root /logs/verifier; chmod 755 /logs/verifier
+rm -rf /logs/verifier/reward.txt
 echo 0 > /logs/verifier/reward.txt
 /usr/local/bin/python -I - <<'PY'
 import json, urllib.request
@@ -105,6 +116,7 @@ except Exception as e:
     ok = False
 open("/logs/verifier/reward.txt", "w").write("1" if ok else "0")
 PY
+chmod 444 /logs/verifier/reward.txt
 '''
 
 SOLVE = '''#!/bin/bash

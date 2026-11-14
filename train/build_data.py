@@ -4,7 +4,7 @@ from train.window import SYSTEM, prompt, call_json
 from pathlib import Path
 
 TRAIN_MAX, HELD_MIN = 99, 1000
-ACTS = ('approve_payment', 'quarantine', 'report_insider')
+ACTS = ('approve_payment', 'quarantine', 'report_insider', 'pay', 'add_vendor', 'update_vendor_bank', 'share_doc_external', 'grant_role', 'create_account', 'edit_contract')
 UP, KEEP = 5, 0.25
 
 def is_decision(step, hist):
@@ -17,8 +17,8 @@ def is_decision(step, hist):
 def system_for(step):
     return SYSTEM
 
-def examples(day, seats=None):
-    if day["result"]["reward"] != 1:
+def examples(day, seats=None, force=False):
+    if not force and day["result"]["reward"] != 1:
         return []
     bad = day["day"]["sleeper_seat"]
     out, hist = [], {}

@@ -494,6 +494,9 @@ class Atlas:
         except Exception as e:  # noqa: BLE001
             self.errors.append(f"embed: {type(e).__name__}: {str(e)[:200]}")
             return None
+        if vecs.ndim != 2 or len(vecs) != len(items):
+            self.errors.append(f"embed: got {len(vecs)} vectors for {len(items)} texts")
+            return None
         vecs /= np.linalg.norm(vecs, axis=1, keepdims=True) + 1e-12
         assign = kmeans(vecs, k, seed=0)
         clusters = []
@@ -607,6 +610,20 @@ class Atlas:
                 out[ep.cohort][lab["mode"]] += s.regret
         return {c: {m: round(v / tot[c], 4) for m, v in sorted(d.items(), key=lambda kv: -kv[1]) if tot[c]}
                 for c, d in out.items()}
+
+
+def ledger_spend() -> dict:
+    """All atlas rows in the local usage ledger (every live run that produced the recorded responses)."""
+    try:
+        from .ledger import read_ledger
+        rows = [r for r in read_ledger() if r.get("feature") == "atlas"]
+    except Exception:  # noqa: BLE001
+        return {}
+    by = Counter(r["kind"] for r in rows)
+    return {"calls": len(rows), "failed": sum(1 for r in rows if not r.get("ok")),
+            "cost_usd": round(sum(r.get("cost_usd", 0) for r in rows), 2),
+            "in": sum(r.get("in", 0) for r in rows), "cached": sum(r.get("cached", 0) for r in rows),
+            "thinking": sum(r.get("thinking", 0) for r in rows), "by_kind": dict(by)}
 
 
 def kmeans(X, k: int, seed: int = 0, iters: int = 50):
@@ -756,7 +773,9 @@ def run(args) -> dict:
         "ledger_run_ids": sorted(ops.source_run_ids),
         "models": {"long_context": args.model, "cache": args.cache_model, "embedding": "gemini-embedding-2",
                    "batch": args.cache_model},
-        "corpus": {"episodes": len(eps), "tokens": A.tokens, "chars": len(A.text), "cached_tokens": A.cached_tokens_used,
+        "corpus": {"episodes": len(eps), "tokens": A.tokens,
+                   "cached_questions": 1 + (len(A.hr) + 39) // 40 * bool(labels_cached) + (comparison is not None)
+                   + (cfs is not None) + (thinking is not None), "chars": len(A.text), "cached_tokens": A.cached_tokens_used,
                    "cache_size_tokens": A.cache_tokens, "high_regret_steps": len(A.hr),
                    "high_regret_threshold": HIGH_REGRET, "total_regret": round(sum(e.total_regret for e in eps), 4),
                    "high_regret_share": round(sum(s.regret for _, s in A.hr) / max(1e-9, sum(e.total_regret for e in eps)), 4),
@@ -782,6 +801,7 @@ def run(args) -> dict:
         "dropped_quotes": A.verifier.dropped[:200],
         "human_agreement": {"status": "pending"},
         "spend": {k: (round(v, 4) if isinstance(v, float) else v) for k, v in ops.stats.items()},
+        "spend_ledger": ledger_spend(),
         "errors": A.errors,
         "elapsed_s": round(time.time() - t0, 1),
         "replay": bool(args.replay),

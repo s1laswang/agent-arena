@@ -268,21 +268,23 @@ class AtlasOps:
 
     def embed(self, texts: list[str], model: str = "gemini-embedding-2", dim: int = 256,
               task_type: str = "CLUSTERING") -> list[list[float]]:
-        payload = {"texts": texts, "dim": dim, "task": task_type}
+        payload = {"texts": texts, "dim": dim, "task": task_type, "v": 2}
 
         def call():
+            from concurrent.futures import ThreadPoolExecutor
             from google.genai import types
-            vecs: list[list[float]] = []
-            for i in range(0, len(texts), 100):
-                chunk = texts[i:i + 100]
+            cfg = types.EmbedContentConfig(output_dimensionality=dim, task_type=task_type)
+
+            def one(t):
+                # one Content per request: gemini-embedding-2 merges a list of strings into ONE embedding
                 r, t0 = self._retry(lambda: self.client.models.embed_content(
-                    model=model, contents=chunk,
-                    config=types.EmbedContentConfig(output_dimensionality=dim, task_type=task_type)),
+                    model=model, contents=[types.Content(parts=[types.Part(text=t)])], config=cfg),
                     model, "embed", {"op": "embed"})
-                n_tok = sum(max(1, len(t) // 4) for t in chunk)  # API returns no usage for embeddings; estimate
-                self._ledger(model, "embed", None, t0, meta={"op": "embed", "n": len(chunk), "tokens_estimated": True},
-                             tokens={"in": n_tok, "out": 0})
-                vecs += [[round(x, 5) for x in e.values] for e in r.embeddings]
+                self._ledger(model, "embed", None, t0, meta={"op": "embed", "n": 1, "tokens_estimated": True},
+                             tokens={"in": max(1, len(t) // 4), "out": 0})
+                return [round(x, 5) for x in r.embeddings[0].values]
+            with ThreadPoolExecutor(max_workers=8) as ex:
+                vecs = list(ex.map(one, texts))
             return {"vectors": vecs}
         return self._cached("embed", model, payload, call)["vectors"]
 

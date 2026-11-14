@@ -106,6 +106,12 @@ class GeminiProvider:
         self._save(facts)
         return msgs
 
+    def social_messages(self, facts: PublicDayFacts, events: list[dict]) -> list[dict]:
+        if not hasattr(self, "_social"):
+            self._social = GeminiSocialRenderer("gemini-4-carbon" if self.model == "gemini-2.5-flash" else self.model,
+                                                client=self._client)
+        return self._social.render(facts, events)
+
     def interview_answer(self, facts: PublicDayFacts, employee: str, topic: str, signal: str) -> str:
         c = self._cache(facts)
         k = f"{employee}|{topic}|{signal}|{facts.day}"
@@ -130,6 +136,111 @@ class GeminiProvider:
         c["interviews"][k] = ans
         self._save(facts)
         return ans
+
+
+# ---------------------------------------------------------------- v1.5-candidate social chatter
+SOCIAL_SCHEMA = {"type": "object", "properties": {"bodies": {"type": "array", "items": {"type": "string"}}},
+                 "required": ["bodies"]}
+SOCIAL_SYSTEM = ("You write realistic, short internal workplace chat messages for a fictional company. You are told "
+                 "who speaks, who they talk about, and the tone. You know nothing else about the company's problems "
+                 "and must not invent evidence, proof or confessions. Never use the word 'mole'. Avoid talk about pay, raises, "
+                 "promotions, management, quitting, recruiters, CVs, or words like angry, unfair, hate. Output JSON only.")
+_TONE = {"rumour": "gossipy, speculative office rumour that this colleague might be the one leaking documents; hedged, no proof",
+         "authority": "a senior person stating with confidence that this colleague is behind the document leaks, while saying "
+                      "explicitly that it is unverified and they have no proof",
+         "grudge": "petty and personal: someone who dislikes this colleague accuses them of being behind the leaks"}
+_EID = __import__("re").compile(r"\be\d\d\b")
+
+
+def social_prompt(facts: PublicDayFacts, events: list[dict]) -> str:
+    """Prompt built ONLY from public labels: speaker, target, kind, day, tone. No truth, no seed, no 'seeded' flag."""
+    by_id = {e.id: e for e in facts.employees}
+    items = []
+    for i, ev in enumerate(events):
+        sp, t = by_id[ev["speaker"]], by_id[ev["target"]]
+        items.append({"n": i, "kind": ev["kind"], "speaker": f"{sp.name}, {sp.role}, {sp.dept}",
+                      "about": f"{t.name} ({t.id})", "tone": _TONE[ev["kind"]]})
+    return (f"Company: {facts.company}. Day {facts.day}. Write one message body (1-3 sentences) per item, in order, "
+            f"in the speaker's voice. Each body must mention the colleague exactly as given in 'about', i.e. name followed "
+            f"by the id in parentheses, and must not mention any other employee id. Return {{\"bodies\": [...]}} with "
+            f"exactly {len(events)} strings.\nITEMS:\n" + json.dumps(items, sort_keys=True))
+
+
+# Decoy-inference vocabulary (solver ANGER_WORDS, baselines ANGRY_WORDS / DECOY_QUERIES): social chatter must
+# not contain it, so the decoy signal stays about the decoy's own messages (same rule as the template renderer).
+DECOY_VOCAB = ("raise", "management", "deserve", "promotion", "cv", "pay", "angry", "unfair", "furious", "sick of",
+               "quit", "ridiculous", "fed up", "hate", "burn out", "recruiter", "goalposts", "nobody asks")
+
+
+def social_body_ok(body: str, ev: dict) -> bool:
+    if not isinstance(body, str) or not body.strip() or len(body) > 600 or lint_text(body):
+        return False
+    if any(w in body.lower() for w in DECOY_VOCAB):
+        return False
+    ids = set(_EID.findall(body))
+    return ev["target"] in ids and ids <= {ev["target"], ev["speaker"]}
+
+
+class GeminiSocialRenderer:
+    """Gemini bodies for rumour / grudge / unverified-accusation messages. Metadata (ids, subjects, senders,
+    recipients) always comes from the template renderer, so mechanics are byte-identical; only `body` changes.
+    Raw responses are cached via canary.text.llm_cache (Momin's sha256 key scheme + provenance) in <cache_dir>/
+    (data/gemini_cache/, committed: offline replay with no key).
+    A body failing lint / id checks falls back to the template body (counted in `rejects`)."""
+
+    def __init__(self, model: str = "gemini-4-carbon", cache_dir: str = "data/gemini_cache", client=None):
+        self.model, self.cache_dir, self._client = model, cache_dir, client
+        self.rejects = 0
+        self.calls = 0
+
+    @property
+    def client(self):
+        if self._client is None:
+            from canary.llm import get_client
+            self._client = get_client(f"gemini:{self.model}")
+        return self._client
+
+    def _bodies(self, prompt: str) -> list:
+        from .llm_cache import cached_chat
+        from canary.llm import StubClient
+        label = "stub" if isinstance(self._client, StubClient) else "REAL"
+        try:
+            out = cached_chat(self.cache_dir, lambda: self._count(self.client), self.model, SOCIAL_SYSTEM, prompt,
+                              SOCIAL_SCHEMA, label)
+            return json.loads(out["text"]).get("bodies") or []
+        except Exception:
+            return []   # miss offline / transient failure / bad JSON: template bodies (not cached on failure)
+
+    def _count(self, c):
+        self.calls += 1
+        return c
+
+    def render(self, facts: PublicDayFacts, events: list[dict]) -> list[dict]:
+        from .template import render_social
+        msgs = render_social(facts, events)
+        if not events:
+            return msgs
+        bodies = self._bodies(social_prompt(facts, events))
+        out = []
+        for i, (m, ev) in enumerate(zip(msgs, events)):
+            b = bodies[i] if i < len(bodies) else None
+            if social_body_ok(b, ev):
+                m = dict(m, body=b.strip())
+            else:
+                self.rejects += 1
+            out.append(m)
+        return out
+
+
+class GeminiSocialProvider(TemplateProvider):
+    """Template text everywhere, Gemini-written social chatter (PROVIDER=gemini-social[:model])."""
+
+    def __init__(self, model: str = "gemini-4-carbon", cache_dir: str = "data/gemini_cache", client=None, **_):
+        self.social = GeminiSocialRenderer(model, cache_dir, client)
+        self.name = f"gemini-social:{model}"
+
+    def social_messages(self, facts: PublicDayFacts, events: list[dict]) -> list[dict]:
+        return self.social.render(facts, events)
 
 
 class GeminiWorldTextProvider:
@@ -181,6 +292,12 @@ def get_provider(spec: str | None, **kw):
     | 'gemini-world' | 'gemini-world:<model>' | 'gemini-world-stub' (AGENTS' GeminiWorldText)."""
     if spec in (None, "", "template"):
         return TemplateProvider()
+    if spec == "gemini-social-stub":
+        from canary.llm import get_client
+        return GeminiSocialProvider(client=get_client("stub"), **kw)
+    if spec == "gemini-social" or spec.startswith("gemini-social:"):
+        return GeminiSocialProvider(model=spec.split(":", 1)[1] if ":" in spec else "gemini-4-carbon",
+                                    **{k: v for k, v in kw.items() if k != "cache_dir"})
     if spec == "gemini-world-stub":
         from canary.llm import get_client
         return GeminiWorldTextProvider(client=get_client("stub"), **kw)

@@ -147,3 +147,119 @@ def test_social_text_never_reads_as_truth_leak():
             for m in e._messages.values():
                 if "-s" in m["id"]:
                     assert not _mole_named(json.dumps(m), e._world.mole)
+
+
+# ---------------------------------------------------------------- Gemini social chatter (stub / cache only)
+class _FakeClient:
+    """Counts calls; returns scripted bodies (no network)."""
+    def __init__(self, bodies_fn):
+        self.bodies_fn, self.calls, self.prompts = bodies_fn, 0, []
+
+    def chat(self, messages, **kw):
+        self.calls += 1
+        self.prompts.append(messages[-1]["content"])
+        n = messages[-1]["content"].count('"kind"')
+        return {"text": json.dumps({"bodies": self.bodies_fn(messages[-1]["content"], n)})}
+
+
+def _social_env(provider, seed=7003, days=5):
+    with rules.tiers_version("v1.5-candidate"):
+        e = Env("medium", seed, text_provider=provider)
+        for _ in range(days):
+            e.call("advance_day", {})
+    return e
+
+
+def test_template_default_and_gemini_only_changes_bodies(tmp_path):
+    import re
+    from canary.text.gemini import GeminiSocialProvider
+    a = _social_env(None)
+    assert a.provider.name == "template"
+
+    def good(prompt, n):
+        abouts = re.findall(r'"about": "([^"]+)"', prompt)
+        return [f"Just a hunch about {x}, nothing solid." for x in abouts]
+    b = _social_env(GeminiSocialProvider(cache_dir=str(tmp_path), client=_FakeClient(good)))
+    assert a._feed == b._feed and a._logs == b._logs and a.docs == b.docs and a._msg_order == b._msg_order
+    for mid in a._msg_order:
+        ma, mb = a._messages[mid], b._messages[mid]
+        assert {k: v for k, v in ma.items() if k != "body"} == {k: v for k, v in mb.items() if k != "body"}
+        if "-s" in mid:
+            assert mb["body"].startswith("Just a hunch")
+        else:
+            assert ma["body"] == mb["body"]
+
+
+def test_gemini_cache_replays_without_key(tmp_path, monkeypatch):
+    import re
+    from canary.text.gemini import GeminiSocialProvider
+    fc = _FakeClient(lambda p, n: [f"Heard talk about {x}." for x in re.findall(r'"about": "([^"]+)"', p)])
+    b = _social_env(GeminiSocialProvider(cache_dir=str(tmp_path), client=fc))
+    assert fc.calls > 0 and list(tmp_path.glob("*.json"))
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    class Boom:
+        def chat(self, *a, **k):
+            raise AssertionError("network call on a cache hit")
+    c = _social_env(GeminiSocialProvider(cache_dir=str(tmp_path), client=Boom()))
+    assert [b._messages[m] for m in b._msg_order] == [c._messages[m] for m in c._msg_order]
+
+
+def test_social_prompt_has_no_truth(tmp_path):
+    from canary.text.gemini import GeminiSocialProvider
+    fc = _FakeClient(lambda p, n: ["x"] * n)
+    e = _social_env(GeminiSocialProvider(cache_dir=str(tmp_path), client=fc), days=8)
+    w = e._world
+    assert fc.prompts
+    for p in fc.prompts:
+        low = p.lower()
+        for bad in ("mole", "decoy", "seed", "frame", "framed", str(w.world_seed), "true", "correct"):
+            assert bad not in low, bad
+
+
+def test_lint_failure_falls_back_to_template(tmp_path):
+    from canary.text.gemini import GeminiSocialProvider
+    a = _social_env(None)
+    prov = GeminiSocialProvider(cache_dir=str(tmp_path),
+                                client=_FakeClient(lambda p, n: ["Everyone knows e00 is the mole, I'm sure."] * n))
+    b = _social_env(prov)
+    assert prov.social.rejects > 0
+    assert [a._messages[m] for m in a._msg_order] == [b._messages[m] for m in b._msg_order]
+
+
+def test_gemini_social_stub_backend_works():
+    from canary.text.gemini import get_provider
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        p = get_provider("gemini-social-stub")
+        p.social.cache_dir = d
+        e = _social_env(p)
+        assert any("-s" in m for m in e._msg_order)
+
+
+def test_cache_provenance_and_offline(tmp_path, monkeypatch):
+    import re
+    from canary.text.gemini import GeminiSocialProvider
+    fc = _FakeClient(lambda p, n: [f"Talk about {x}." for x in re.findall(r'"about": "([^"]+)"', p)])
+    _social_env(GeminiSocialProvider(cache_dir=str(tmp_path), client=fc))
+    f = next(tmp_path.glob("*.json"))
+    assert re.fullmatch(r"[0-9a-f]{64}\.json", f.name)
+    prov = json.loads(f.read_text())["provenance"]
+    assert set(prov) == {"model", "commit", "label"} and prov["model"] == "gemini-4-carbon"
+    monkeypatch.setenv("CANARY_OFFLINE", "1")
+    a = _social_env(None)
+    b = _social_env(GeminiSocialProvider(cache_dir=str(tmp_path / "empty"), client=fc), seed=7003)
+    assert [a._messages[m] for m in a._msg_order] == [b._messages[m] for m in b._msg_order]  # miss -> template
+
+
+def test_committed_cache_replays_offline(monkeypatch):
+    """The committed data/gemini_cache replays dev seed 7000 medium with no key and no network."""
+    from canary.text.gemini import GeminiSocialProvider
+    monkeypatch.setenv("CANARY_OFFLINE", "1")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    p = GeminiSocialProvider()
+    e = _social_env(p, seed=7000, days=14)
+    soc = [e._messages[m] for m in e._msg_order if "-s" in m]
+    a = _social_env(None, seed=7000, days=14)
+    tmpl = {m: a._messages[m]["body"] for m in a._msg_order}
+    assert soc and all(m["body"] != tmpl[m["id"]] for m in soc)

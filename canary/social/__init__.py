@@ -22,7 +22,14 @@ from .biases import (
     validate_social_message,
 )
 from .engine import EpisodeSocialState, V16SocialProvider, make_v16_provider, parse_v16_spec
-from .variants import VARIANTS, get_variant_spec, parse_variant_biases, register_fr8_variant, run_variant_day
+from .variants import (
+    HORIZON_DAYS,
+    VARIANTS,
+    get_variant_spec,
+    parse_variant_biases,
+    register_fr8_variant,
+    run_variant_day,
+)
 
 BIASES = BIAS_TYPES
 SocialV2Provider = V16SocialProvider
@@ -35,6 +42,7 @@ __all__ = [
     "BIAS_TYPES",
     "DECOY_VOCAB",
     "EpisodeSocialState",
+    "HORIZON_DAYS",
     "SALIENCE_TERMS",
     "SocialDayContext",
     "SocialV2Provider",

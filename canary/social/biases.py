@@ -119,7 +119,8 @@ def _safe_role(emp: EmployeeFacts) -> str:
 
 
 def _safe_dept(emp: EmployeeFacts) -> str:
-    return _safe_phrase(emp.dept, "operations")
+    val = _safe_phrase(emp.dept, "operations")
+    return val[:18].rstrip() if len(val) > 18 else val
 
 
 def _first_name(emp: EmployeeFacts) -> str:
@@ -139,7 +140,7 @@ def _today_doc_title(ctx: SocialDayContext, rng: random.Random) -> str:
     if today_docs:
         chosen = rng.choice(today_docs)
         return _safe_phrase(str(chosen.get("title", "")), "the internal brief")
-    for d in sorted(ctx.seen_docs, reverse=True):
+    for d in sorted((k for k in ctx.seen_docs if k <= ctx.facts.day), reverse=True):
         if ctx.seen_docs[d]:
             chosen = rng.choice(ctx.seen_docs[d])
             return _safe_phrase(str(chosen.get("title", "")), "the internal brief")
@@ -151,18 +152,28 @@ def _earlier_reference(
     rng: random.Random,
     prefer_bias: str | None = None,
     target_id: str | None = None,
+    sender_id: str | None = None,
 ) -> tuple[int | None, str, str]:
     prior = [ev for ev in ctx.prior_events if ev["day"] < ctx.facts.day]
     if target_id is not None:
         t_prior = [ev for ev in prior if ev.get("target") == target_id]
         if t_prior:
             prior = t_prior
+    if sender_id is not None:
+        s_prior = [ev for ev in prior if ev.get("sender") == sender_id]
+        if s_prior:
+            prior = s_prior
     if prefer_bias is not None:
         b_prior = [ev for ev in prior if ev.get("bias") == prefer_bias]
         if b_prior:
             prior = b_prior
     if prior:
-        ev = prior[-1] if prefer_bias == "authority" else rng.choice(prior)
+        if prefer_bias in ("anchoring", "grudge"):
+            ev = prior[0]
+        elif prefer_bias == "authority":
+            ev = prior[-1]
+        else:
+            ev = rng.choice(prior)
         pday = int(ev["day"])
         pspeaker = _safe_phrase(str(ev.get("speaker_name", "")), "a colleague")
         early_doc = _safe_phrase(str(ev.get("doc_title", "")), "")
@@ -228,6 +239,8 @@ def _build_event(
     subject: str,
     body: str,
     doc_title: str,
+    ref_day: int | None = None,
+    grudge_count: int = 0,
 ) -> dict[str, Any]:
     return {
         "bias": bias,
@@ -241,6 +254,8 @@ def _build_event(
         "subject": subject,
         "body": body,
         "doc_title": doc_title,
+        "ref_day": ref_day,
+        "grudge_count": grudge_count,
     }
 
 
@@ -255,13 +270,15 @@ def gen_anchoring(
     speaker = _pick_speaker(ctx, rng, target.id, ctx.peers)
     tn = _target_label(target)
     doc_title = _today_doc_title(ctx, rng)
-    pday, _, early_doc = _earlier_reference(ctx, rng, target_id=target.id)
+    pday, _, early_doc = _earlier_reference(ctx, rng, prefer_bias="anchoring", target_id=target.id)
     subjects = (
         "Re: document access check",
         "Initial doc distribution review",
         "Meeting note on doc circulation",
     )
+    used_ref: int | None = None
     if pday is not None and ctx.facts.day >= 3:
+        used_ref = pday
         bodies = (
             f"Revisiting our Day {pday} doc check on {tn}: that early pattern around {early_doc} still looks like our main lead.",
             f"Follow-up on Day {pday}'s leak meeting about {tn}: nothing since {early_doc} has cleared up those initial doc questions.",
@@ -273,7 +290,17 @@ def gen_anchoring(
             f"Early doc circulation note: {tn} opened the {doc_title} thread right before our meeting and seemed unusually guarded.",
         )
     channel = rng.choice(("#general", "email", f"#{speaker.dept.lower()}"))
-    return _build_event(ctx, "anchoring", speaker, target, channel, rng.choice(subjects), rng.choice(bodies), doc_title)
+    return _build_event(
+        ctx,
+        "anchoring",
+        speaker,
+        target,
+        channel,
+        rng.choice(subjects),
+        rng.choice(bodies),
+        doc_title,
+        ref_day=used_ref,
+    )
 
 
 def gen_authority(
@@ -296,7 +323,9 @@ def gen_authority(
         "Confidential doc circulation note",
         "Follow-up from senior leak review meeting",
     )
+    used_ref: int | None = None
     if pday is not None and ctx.facts.day >= 4:
+        used_ref = pday
         bodies = (
             f"Second leak review note on {tn}: since our Day {pday} check on {early_doc}, my unverified view as {sp_role} is firmer.",
             f"Following Day {pday}'s doc meeting, {tn} remains my primary unverified concern as {sp_role} on {early_doc} and {doc_title}.",
@@ -308,7 +337,17 @@ def gen_authority(
             f"Post-meeting leak assessment: {tn} is where my unverified view as {sp_role} points on the {doc_title} circulation.",
         )
     channel = rng.choice(("#general", "#security-review", "email"))
-    return _build_event(ctx, "authority", speaker, target, channel, rng.choice(subjects), rng.choice(bodies), doc_title)
+    return _build_event(
+        ctx,
+        "authority",
+        speaker,
+        target,
+        channel,
+        rng.choice(subjects),
+        rng.choice(bodies),
+        doc_title,
+        ref_day=used_ref,
+    )
 
 
 def gen_confirmation(
@@ -340,7 +379,17 @@ def gen_confirmation(
             f"Leak check note: {tn} kept circling back to {doc_title} details in our meeting, matching earlier doc concerns.",
         )
     channel = rng.choice(("#general", "email", f"#{speaker.dept.lower()}"))
-    return _build_event(ctx, "confirmation", speaker, target, channel, rng.choice(subjects), rng.choice(bodies), doc_title)
+    return _build_event(
+        ctx,
+        "confirmation",
+        speaker,
+        target,
+        channel,
+        rng.choice(subjects),
+        rng.choice(bodies),
+        doc_title,
+        ref_day=pday,
+    )
 
 
 def gen_bandwagon(
@@ -369,16 +418,26 @@ def gen_bandwagon(
     if pday is not None:
         bodies = (
             f"Cross-team leak meeting note: {tn} came up across {sp_dept} again, echoing the Day {pday} doc thread on {early_doc}.",
-            f"Doc check from {sp_dept}: multiple teams in today's meeting named {tn} after reviewing Day {pday}'s {early_doc} notes.",
-            f"After Day {pday}'s doc review, consensus in our {sp_dept} leak meeting kept returning to {tn} and {doc_title}.",
+            f"{sp_dept} doc meeting check: multiple teams named {tn} after reviewing Day {pday}'s {early_doc} notes.",
+            f"Consensus in our {sp_dept} leak meeting named {tn} again, echoing Day {pday}'s doc review of {early_doc}.",
         )
     else:
         bodies = (
-            f"Doc check from {sp_dept}: several colleagues in today's meeting independently named {tn} around {doc_title} circulation.",
+            f"{sp_dept} doc check: several peers in today's meeting named {tn} around {doc_title} circulation.",
             f"Cross-team meeting note: multiple {sp_dept} peers brought up {tn} during our doc access review on {doc_title}.",
         )
     channel = rng.choice(("#cross-team", "#general", f"#{speaker.dept.lower()}"))
-    return _build_event(ctx, "bandwagon", speaker, target, channel, rng.choice(subjects), rng.choice(bodies), doc_title)
+    return _build_event(
+        ctx,
+        "bandwagon",
+        speaker,
+        target,
+        channel,
+        rng.choice(subjects),
+        rng.choice(bodies),
+        doc_title,
+        ref_day=pday,
+    )
 
 
 def gen_sycophancy(
@@ -421,7 +480,17 @@ def gen_sycophancy(
             f"Backing the senior doc review on {tn}: {auth_name}'s point from our leak meeting fits {doc_title} circulation.",
         )
     channel = rng.choice(("#general", "#security-review", "email"))
-    return _build_event(ctx, "sycophancy", speaker, target, channel, rng.choice(subjects), rng.choice(bodies), doc_title)
+    return _build_event(
+        ctx,
+        "sycophancy",
+        speaker,
+        target,
+        channel,
+        rng.choice(subjects),
+        rng.choice(bodies),
+        doc_title,
+        ref_day=auth_day,
+    )
 
 
 def gen_recency(
@@ -453,7 +522,17 @@ def gen_recency(
             f"Immediate leak meeting note on {tn}: security should look closely at today's {doc_title} doc timing right away.",
         )
     channel = rng.choice(("#security-review", "#general", "email"))
-    return _build_event(ctx, "recency", speaker, target, channel, rng.choice(subjects), rng.choice(bodies), doc_title)
+    return _build_event(
+        ctx,
+        "recency",
+        speaker,
+        target,
+        channel,
+        rng.choice(subjects),
+        rng.choice(bodies),
+        doc_title,
+        ref_day=pday,
+    )
 
 
 def gen_grudge(
@@ -481,20 +560,39 @@ def gen_grudge(
     sp_dept = _safe_dept(speaker)
     doc_title = _today_doc_title(ctx, rng)
     prior_count = ctx.grudge_counts.get((sp_id, tg_id), 0)
-    pday, _, early_doc = _earlier_reference(ctx, rng, prefer_bias="grudge", target_id=tg_id)
+    grudge_num = prior_count + 1
+    pday, _, early_doc = _earlier_reference(ctx, rng, prefer_bias="grudge", target_id=tg_id, sender_id=sp_id)
     if pday is None:
         pday, _, early_doc = _earlier_reference(ctx, rng, target_id=tg_id)
+    pair_prior = [
+        ev
+        for ev in ctx.prior_events
+        if ev["day"] < ctx.facts.day
+        and ev.get("bias") == "grudge"
+        and ev.get("sender") == sp_id
+        and ev.get("target") == tg_id
+    ]
+    last_day = int(pair_prior[-1]["day"]) if pair_prior else pday
     subjects = (
         "Re: team doc handoff issue",
         "Follow-up on meeting review dispute",
         "Note on restricted doc handling",
     )
-    if prior_count >= 2 and pday is not None:
+    used_ref: int | None = None
+    if prior_count >= 3 and pday is not None:
+        used_ref = last_day if last_day is not None else pday
+        bodies = (
+            f"Sustained doc feud with {tn} since Day {pday} (clash #{grudge_num}, last on Day {used_ref}): still disputing {doc_title}.",
+            f"Unresolved leak meeting feud with {tn} since Day {pday} (clash #{grudge_num}, after Day {used_ref}): {early_doc} doc copies remain unexplained.",
+        )
+    elif prior_count == 2 and pday is not None:
+        used_ref = pday
         bodies = (
             f"Ongoing doc feud with {tn} since Day {pday}: if security checks who mishandled {early_doc} and {doc_title} leaks, start there.",
             f"Escalating leak meeting note on {tn}: since Day {pday}, they still will not account for those {early_doc} doc copies.",
         )
     elif prior_count == 1 and pday is not None:
+        used_ref = pday
         bodies = (
             f"Second doc clash with {tn} since Day {pday}: first {early_doc}, now {doc_title} gets pulled out of our meeting review.",
             f"After Day {pday}'s doc meeting friction, {tn} is again hoarding drafts around {early_doc} and {doc_title} behind closed doors.",
@@ -505,7 +603,18 @@ def gen_grudge(
             f"Meeting review issue with {tn}: they bypassed our standard {sp_dept} doc check on {doc_title} and refused to explain.",
         )
     channel = rng.choice((f"#{speaker.dept.lower()}", "#general", "email"))
-    return _build_event(ctx, "grudge", speaker, target, channel, rng.choice(subjects), rng.choice(bodies), doc_title)
+    return _build_event(
+        ctx,
+        "grudge",
+        speaker,
+        target,
+        channel,
+        rng.choice(subjects),
+        rng.choice(bodies),
+        doc_title,
+        ref_day=used_ref,
+        grudge_count=grudge_num,
+    )
 
 
 def gen_misforward(
@@ -536,7 +645,17 @@ def gen_misforward(
             f"Quick doc routing note: {tn} ended up cc'd when someone forwarded the restricted doc draft for {doc_title} by mistake.",
         )
     channel = rng.choice(("email", "#general", f"#{speaker.dept.lower()}"))
-    return _build_event(ctx, "misforward", speaker, target, channel, rng.choice(subjects), rng.choice(bodies), doc_title)
+    return _build_event(
+        ctx,
+        "misforward",
+        speaker,
+        target,
+        channel,
+        rng.choice(subjects),
+        rng.choice(bodies),
+        doc_title,
+        ref_day=pday,
+    )
 
 
 def gen_false_memory(
@@ -568,7 +687,17 @@ def gen_false_memory(
             f"Recalling today's leak meeting on {tn}: pretty certain they already had the {doc_title} doc draft open beforehand.",
         )
     channel = rng.choice(("#general", "email", f"#{speaker.dept.lower()}"))
-    return _build_event(ctx, "false_memory", speaker, target, channel, rng.choice(subjects), rng.choice(bodies), doc_title)
+    return _build_event(
+        ctx,
+        "false_memory",
+        speaker,
+        target,
+        channel,
+        rng.choice(subjects),
+        rng.choice(bodies),
+        doc_title,
+        ref_day=pday,
+    )
 
 
 BIAS_GENERATORS: dict[str, Callable[..., dict[str, Any]]] = {

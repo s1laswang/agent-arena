@@ -28,7 +28,18 @@ class EpisodeSocialState:
     peers: tuple[str, ...]
     seen_docs: dict[int, tuple[dict[str, Any], ...]] = field(default_factory=dict)
     events_by_day: dict[int, tuple[dict[str, Any], ...]] = field(default_factory=dict)
+    grudge_counts: dict[tuple[str, str], int] = field(default_factory=dict)
     rendered_by_day: dict[tuple[Any, ...], list[dict[str, Any]]] = field(default_factory=dict)
+    events_by_sig: dict[tuple[Any, ...], tuple[dict[str, Any], ...]] = field(default_factory=dict)
+
+    def grudge_counts_through(self, day: int) -> dict[tuple[str, str], int]:
+        counts: dict[tuple[str, str], int] = {}
+        for d_k in sorted(k for k in self.events_by_day if k <= day):
+            for ev in self.events_by_day[d_k]:
+                if ev.get("bias") == "grudge":
+                    pair = (str(ev.get("sender", "")), str(ev.get("target", "")))
+                    counts[pair] = counts.get(pair, 0) + 1
+        return counts
 
 
 def _regular_docs(facts: PublicDayFacts) -> list[dict[str, Any]]:
@@ -218,20 +229,15 @@ class V16SocialProvider:
 
         ep_key = (facts.tier, facts.seed)
         state = self._states.get(ep_key)
-        if state is None:
+        if state is None or (facts.day == 1 and 1 not in state.seen_docs):
             state = _init_episode_state(self.variant, facts)
             self._states[ep_key] = state
+        elif facts.day == 1:
+            for stale_day in [k for k in state.seen_docs if k > 1]:
+                del state.seen_docs[stale_day]
+            for stale_day in [k for k in state.events_by_day if k > 1]:
+                del state.events_by_day[stale_day]
 
-        doc_sig = tuple(
-            (str(d.get("doc_id", "")), str(d.get("title", "")), tuple(d.get("recipients", ())))
-            for d in facts.docs
-        )
-        day_sig = (facts.day, doc_sig, facts.decoy, facts.decoy_mood, facts.restricted)
-        if day_sig in state.rendered_by_day:
-            return _clone_messages(state.rendered_by_day[day_sig])
-
-        by_id = {e.id: e for e in facts.employees}
-        valid_ids = set(by_id)
         reg_docs = tuple(
             {
                 "doc_id": str(d.get("doc_id", "")),
@@ -241,18 +247,43 @@ class V16SocialProvider:
             }
             for d in _regular_docs(facts)
         )
-        state.seen_docs[facts.day] = reg_docs
-
         prior_events = tuple(
             ev
             for d_prev in sorted(k for k in state.events_by_day if k < facts.day)
             for ev in state.events_by_day[d_prev]
         )
-        grudge_counts: dict[tuple[str, str], int] = {}
-        for ev in prior_events:
-            if ev.get("bias") == "grudge":
-                pair = (str(ev.get("sender", "")), str(ev.get("target", "")))
-                grudge_counts[pair] = grudge_counts.get(pair, 0) + 1
+        prior_sig = tuple(
+            (
+                int(ev["day"]),
+                str(ev.get("bias", "")),
+                str(ev.get("sender", "")),
+                str(ev.get("target", "")),
+                str(ev.get("body", "")),
+            )
+            for ev in prior_events
+        )
+        doc_sig = tuple(
+            (str(d.get("doc_id", "")), str(d.get("title", "")), tuple(d.get("recipients", ())))
+            for d in facts.docs
+        )
+        day_sig = (facts.day, doc_sig, facts.decoy, facts.decoy_mood, facts.restricted, prior_sig)
+        if day_sig in state.rendered_by_day:
+            state.seen_docs[facts.day] = reg_docs
+            if day_sig in state.events_by_sig:
+                state.events_by_day[facts.day] = state.events_by_sig[day_sig]
+            state.grudge_counts = state.grudge_counts_through(max(state.events_by_day, default=facts.day))
+            return _clone_messages(state.rendered_by_day[day_sig])
+
+        for stale_day in [k for k in state.seen_docs if k > facts.day]:
+            del state.seen_docs[stale_day]
+        for stale_day in [k for k in state.events_by_day if k > facts.day]:
+            del state.events_by_day[stale_day]
+
+        by_id = {e.id: e for e in facts.employees}
+        valid_ids = set(by_id)
+        state.seen_docs[facts.day] = reg_docs
+        visible_docs = {d_k: docs_v for d_k, docs_v in state.seen_docs.items() if d_k <= facts.day}
+        grudge_counts = state.grudge_counts_through(facts.day - 1)
 
         ctx = SocialDayContext(
             facts=facts,
@@ -262,7 +293,7 @@ class V16SocialProvider:
             authority_speakers=state.authority_speakers,
             grudge_pairs=state.grudge_pairs,
             peers=state.peers,
-            seen_docs=dict(state.seen_docs),
+            seen_docs=visible_docs,
             prior_events=prior_events,
             today_events=(),
             grudge_counts=grudge_counts,
@@ -297,7 +328,10 @@ class V16SocialProvider:
             social_msgs.append(msg)
             kept_events.append(ev)
 
-        state.events_by_day[facts.day] = tuple(kept_events)
+        kept_tuple = tuple(kept_events)
+        state.events_by_day[facts.day] = kept_tuple
+        state.events_by_sig[day_sig] = kept_tuple
+        state.grudge_counts = state.grudge_counts_through(max(state.events_by_day, default=facts.day))
         social_msgs = self._maybe_gemini(facts, social_msgs, kept_events, by_id)
 
         base_raw = self.template.day_messages(facts)

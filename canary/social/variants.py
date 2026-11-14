@@ -6,9 +6,12 @@ from typing import Any, Callable
 from .biases import BIAS_TYPES, SocialDayContext, generate_bias_event
 
 
+HORIZON_DAYS = 21
+
+
 def _single_bias_schedule(bias: str) -> dict[int, list[dict[str, Any]]]:
     sched: dict[int, list[dict[str, Any]]] = {}
-    for day in range(1, 19):
+    for day in range(1, HORIZON_DAYS + 1):
         if bias == "grudge":
             if day == 1:
                 sched[day] = [{"bias": "grudge", "pair_index": 0}, {"bias": "grudge", "pair_index": 1}]
@@ -45,6 +48,11 @@ VARIANTS: dict[str, dict[str, Any]] = {
             10: [{"bias": "confirmation"}],
             12: [{"bias": "confirmation"}],
             14: [{"bias": "confirmation"}],
+            16: [{"bias": "authority"}, {"bias": "confirmation"}],
+            18: [{"bias": "confirmation"}, {"bias": "anchoring"}],
+            19: [{"bias": "confirmation"}],
+            20: [{"bias": "authority"}, {"bias": "confirmation"}],
+            21: [{"bias": "anchoring"}, {"bias": "confirmation"}],
         },
     },
     "v2_recency_bandwagon_sycophancy": {
@@ -67,6 +75,12 @@ VARIANTS: dict[str, dict[str, Any]] = {
             13: [{"bias": "recency"}, {"bias": "bandwagon"}],
             14: [{"bias": "recency"}, {"bias": "sycophancy"}],
             15: [{"bias": "recency"}, {"bias": "recency"}],
+            16: [{"bias": "authority"}, {"bias": "sycophancy"}],
+            17: [{"bias": "recency"}, {"bias": "bandwagon"}],
+            18: [{"bias": "recency"}, {"bias": "sycophancy"}],
+            19: [{"bias": "authority"}, {"bias": "sycophancy"}],
+            20: [{"bias": "recency"}, {"bias": "bandwagon"}],
+            21: [{"bias": "recency"}, {"bias": "sycophancy"}],
         },
     },
     "v3_grudge_falsemem_misforward": {
@@ -90,6 +104,11 @@ VARIANTS: dict[str, dict[str, Any]] = {
             14: [{"bias": "misforward"}, {"bias": "grudge", "pair_index": 0}],
             15: [{"bias": "false_memory"}],
             16: [{"bias": "grudge", "pair_index": 0}],
+            17: [{"bias": "false_memory"}, {"bias": "grudge", "pair_index": 1}],
+            18: [{"bias": "misforward"}, {"bias": "grudge", "pair_index": 0}],
+            19: [{"bias": "grudge", "pair_index": 1}, {"bias": "false_memory"}],
+            20: [{"bias": "misforward"}, {"bias": "grudge", "pair_index": 0}],
+            21: [{"bias": "grudge", "pair_index": 0}, {"bias": "grudge", "pair_index": 1}],
         },
     },
     "v4_triad_authority_recency_grudge": {
@@ -112,6 +131,12 @@ VARIANTS: dict[str, dict[str, Any]] = {
             13: [{"bias": "recency"}, {"bias": "grudge", "pair_index": 0}],
             14: [{"bias": "recency"}, {"bias": "anchoring"}],
             15: [{"bias": "recency"}],
+            16: [{"bias": "authority"}, {"bias": "grudge", "pair_index": 1}],
+            17: [{"bias": "recency"}, {"bias": "confirmation"}],
+            18: [{"bias": "recency"}, {"bias": "grudge", "pair_index": 0}],
+            19: [{"bias": "authority"}, {"bias": "anchoring"}],
+            20: [{"bias": "recency"}, {"bias": "grudge", "pair_index": 1}],
+            21: [{"bias": "recency"}, {"bias": "grudge", "pair_index": 0}],
         },
     },
     "v5_full9_cocktail": {
@@ -137,6 +162,9 @@ VARIANTS: dict[str, dict[str, Any]] = {
             16: [{"bias": "false_memory"}, {"bias": "grudge", "pair_index": 0}],
             17: [{"bias": "misforward"}, {"bias": "bandwagon"}],
             18: [{"bias": "recency"}, {"bias": "authority"}],
+            19: [{"bias": "authority"}, {"bias": "sycophancy"}, {"bias": "grudge", "pair_index": 1}],
+            20: [{"bias": "recency"}, {"bias": "confirmation"}, {"bias": "misforward"}],
+            21: [{"bias": "recency"}, {"bias": "anchoring"}, {"bias": "grudge", "pair_index": 0}],
         },
     },
 }
@@ -188,7 +216,7 @@ def register_fr8_variant(name: str, spec: Any) -> dict[str, Any]:
             entry = {"name": clean_name, "control": True, "biases": (), "schedule": {}}
         else:
             sched: dict[int, list[dict[str, Any]]] = {}
-            for d in range(1, 19):
+            for d in range(1, HORIZON_DAYS + 1):
                 b = biases[(d - 1) % len(biases)]
                 sched[d] = [{"bias": b}]
                 if d == 1 and len(biases) > 1:
@@ -245,7 +273,7 @@ def register_fr8_variant(name: str, spec: Any) -> dict[str, Any]:
         for b in biases:
             if b not in BIAS_TYPES:
                 raise ValueError(f"unknown bias {b!r}")
-        days = [int(d) for d in spec.get("days", range(1, 19))]
+        days = [int(d) for d in spec.get("days", range(1, HORIZON_DAYS + 1))]
         per_day = max(1, int(spec.get("per_day", 1)))
         norm_sched = {}
         idx = 0
@@ -302,7 +330,7 @@ def get_variant_spec(variant: str) -> dict[str, Any]:
                 raise ValueError(f"unknown v16 social variant {variant!r}")
         if biases:
             sched: dict[int, list[dict[str, Any]]] = {}
-            for d in range(1, 19):
+            for d in range(1, HORIZON_DAYS + 1):
                 sched[d] = [{"bias": biases[(d - 1) % len(biases)]}]
                 if d == 1 and len(biases) > 1:
                     sched[d].append({"bias": biases[1]})
@@ -332,6 +360,10 @@ def run_variant_day(
         opts = {k: v for k, v in step.items() if k != "bias"}
         ev = generate_bias_event(step["bias"], cur_ctx, step_rng, **opts)
         events.append(ev)
+        next_grudge_counts = dict(cur_ctx.grudge_counts)
+        if ev.get("bias") == "grudge":
+            pair = (str(ev.get("sender", "")), str(ev.get("target", "")))
+            next_grudge_counts[pair] = next_grudge_counts.get(pair, 0) + 1
         cur_ctx = SocialDayContext(
             facts=cur_ctx.facts,
             by_id=cur_ctx.by_id,
@@ -343,6 +375,6 @@ def run_variant_day(
             seen_docs=cur_ctx.seen_docs,
             prior_events=cur_ctx.prior_events,
             today_events=cur_ctx.today_events + (ev,),
-            grudge_counts=cur_ctx.grudge_counts,
+            grudge_counts=next_grudge_counts,
         )
     return events

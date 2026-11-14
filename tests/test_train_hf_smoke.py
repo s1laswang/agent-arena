@@ -18,3 +18,4 @@ def test_tiny_lora_two_steps(tmp_path):
     main(["--data", str(tmp_path / "d"), "--out", str(tmp_path / "o"), "--model", TOK,
           "--tiny", "--max-steps", "2", "--grad-accum", "2", "--max-len", "512"])
     assert (tmp_path / "o" / "adapter_config.json").exists()
+

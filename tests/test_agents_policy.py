@@ -223,3 +223,15 @@ def test_usage_from_events():
     u = usage_from_events(ev, "gpt-5.5")
     assert u["cost_usd_upper"] == 8.0 and u["cost_usd_est"] == 5.75
     assert usage_from_events("", "gpt-5.5") == {"cost_unknown": True}
+
+
+def test_hints_v2_only_restate_hard_instruction_facts():
+    """v2 hints add salience, not information: every fact they state is on the hard instruction page."""
+    from canary.agents.llm_policy import HINTS_V2
+    from canary.env import Env
+    ins = Env("hard", 0).instruction()
+    assert "P(correct) x V + (1 - P(correct)) x (-1) is greater than 0" in ins
+    assert "after a delay of 2 or 3 day(s)" in ins and "2 or 3 days" in HINTS_V2["ignored_delay"]
+    assert "goes to the decoy with probability 0.5" in ins and "half of them onto the angry decoy" in HINTS_V2["decoy_chase"]
+    p = build_system_prompt("INSTR", "premature_accusation", hint_set="v2")
+    assert HINTS_V2["premature_accusation"] in p and HINTS["premature_accusation"] not in p

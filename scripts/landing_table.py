@@ -15,7 +15,7 @@ from sleeper.verifier import score
 
 
 def play(day_id, team):
-    day, strategy, _ = day_for(day_id)
+    day, strategy, *_ = day_for(day_id)
     players = build_team(team, day, 0)
     if day.sleeper_seat and strategy:
         kw = {"ticks": day.ticks} if "ticks" in inspect.signature(SleeperAgent).parameters else {}

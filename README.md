@@ -105,6 +105,8 @@ The server serves only judge (900000–900039) and held-out seeds. Set the same 
 
 **Harbor (judge path: Harbor + OpenCode over MCP, with the server isolated from the agent):** see [harbor/README.md](harbor/README.md).
 
+**For judges:** `python harbor/build.py` with no flags builds **the judge set: tier hard, judge seeds 900000–900009 (10 tasks)**. Hard is the default because it is the tier where the reference solver keeps its expected-value edge; on medium one lucky early accusation can put an agent near the solver in a short rerun. The 10 seeds were fixed in [docs/PLAN-95.md](docs/PLAN-95.md) before any frontier run on this set, and each build draws a fresh world secret, so nobody (us included) has seen the worlds your build serves. `--tiers medium,easy --seeds ...` still builds the other tiers and seeds. The verifier only accepts a ledger HMAC-signed by that task's game server (key baked into the server and verifier images only, never the agent's) and scores anything else 0.
+
 Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium SEEDS=dev20` and `make test`.
 
 ## Reward integrity

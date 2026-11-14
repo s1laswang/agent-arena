@@ -21,6 +21,7 @@ thinkingLevel (=> the model default, medium), temperature unset; thought signatu
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 from pathlib import Path
 
@@ -69,6 +70,18 @@ def child_env_extra(model: str):
     return make
 
 
+def opencode_google_settings(model: str) -> dict:
+    """What OpenCode 1.18.29 sends for a Google model (read from its bundled provider transform)."""
+    mid = model.split("/", 1)[-1]
+    gemini3 = "gemini-3" in mid
+    sampling = bool(re.search(r"gemini-2[.-]5(?:[.-]|$)|gemini-3-(?:flash|pro)(?:[.-]|$)|gemini-3[.-]1(?:[.-]|$)|"
+                              r"gemini-3[.-]5-flash(?!-lite)(?:[.-]|$)", mid))
+    return {"thinking": "includeThoughts, thinkingLevel=high (OpenCode sets high for gemini-3* ids)" if gemini3
+            else "includeThoughts, no thinkingLevel (model default; gemini-4-carbon: medium)",
+            "temperature": "1.0, topP 0.95 (OpenCode defaults for this id)" if sampling
+            else "not set (API default)"}
+
+
 def opencode_version() -> str | None:
     import subprocess
     try:
@@ -84,10 +97,7 @@ def main(argv=None):
     spec.child_env_extra = child_env_extra(model)
     spec.extra.update({"harness": "opencode-cli+mcp_server", "opencode_version": opencode_version(),
                        "model_id": model.split("/", 1)[1], "opencode_permission": PERMISSION,
-                       "provider_settings": {"thinking": "OpenCode default for gemini-4: includeThoughts, no "
-                                                         "thinkingLevel (model default: medium)",
-                                             "temperature": "OpenCode default (not set for gemini-4)"}
-                       if model.startswith("google/") else None})
+                       "provider_settings": opencode_google_settings(model) if model.startswith("google/") else None})
     build = lambda wd, prompt, url: build_cmd(wd, prompt, model, url)  # noqa: E731
     if a.dry_run:
         print(build(make_clean_workdir(), "<prompt>", "http://127.0.0.1:0/mcp"))

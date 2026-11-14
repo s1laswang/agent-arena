@@ -134,6 +134,8 @@ def main(argv=None) -> int:
     ap.add_argument("--harnesses", default="opencode,inproc")
     ap.add_argument("--max-attempts", type=int, default=4)
     ap.add_argument("--timeout", type=int, default=3600, help="seconds per OpenCode episode")
+    ap.add_argument("--harness-first", action="store_true",
+                    help="queue every job of the first harness before the second (prioritise the headline path)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args(argv)
     from canary.rules import TIERS_VERSION
@@ -149,6 +151,8 @@ def main(argv=None) -> int:
     tiers = a.tiers.split(",")
     # interleave: seed-major, then tier, then harness -> both harnesses and tiers progress together
     alljobs = [Job(h, t, s, staging, a.model, a.timeout) for s in seeds for t in tiers for h in hs]
+    if a.harness_first:
+        alljobs.sort(key=lambda j: hs.index(j.harness))  # stable: seed/tier order kept within a harness
 
     def log(msg: str) -> None:
         print(time.strftime("%H:%M:%S"), msg, flush=True)

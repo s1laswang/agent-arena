@@ -80,6 +80,31 @@ def say_usd(x: float) -> str:
     return f"{round(float(x))} dollars"
 
 
+FRONTIER_MIN_N = 8  # a spoken ladder claim needs at least this many paired episodes in the cell
+
+
+def frontier_values(cells: list[dict], tier: str) -> dict[str, str]:
+    """The best-scoring ladder cell with n >= FRONTIER_MIN_N on `tier`, with its CI, against the cost per episode of
+    gemini-4-carbon's largest-n cell on the same tier. Small-n cells are never spoken."""
+    big = [c for c in cells if c["tier"] == tier and int(c.get("n") or 0) >= FRONTIER_MIN_N
+           and (c.get("cost_usd_per_episode") or 0) > 0 and c["model"] != "gemini-4-carbon"]
+    ref = [c for c in cells if c["tier"] == tier and c["model"] == "gemini-4-carbon" and (c.get("cost_usd_per_episode") or 0) > 0]
+    if not big or not ref:
+        return {}
+    f = max(big, key=lambda c: c["pct_solver"])
+    r = max(ref, key=lambda c: int(c.get("n") or 0))
+    served = [m for m in (f.get("model_versions") or []) if m and m != f["model"]]
+    out = {"frontier_model": say_model(f["model"]) + (f", served as {say_model(served[0])}," if len(served) == 1 else ""),
+           "frontier_level": str(f["level"]), "frontier_tier": tier, "frontier_n": str(int(f["n"])),
+           "frontier_pct": say_pct(f["pct_solver"]),
+           "frontier_cost_share": say_pct(f["cost_usd_per_episode"] / r["cost_usd_per_episode"]),
+           "frontier_ref": say_model(r["model"]) + (f" at {r['level']}" if r.get("level") not in (None, "", "default") else " at its default"),
+           "frontier_ref_n": str(int(r.get("n") or 0))}
+    if f.get("ratio_lo") is not None and f.get("ratio_hi") is not None:
+        out["frontier_ci"] = f"{say_pct(f['ratio_lo'])} to {say_pct(f['ratio_hi'])}"
+    return out
+
+
 def values(results_dir: Path, ledger: list) -> dict[str, str]:
     v: dict[str, str] = {}
     s = usage_summary(results_dir, ledger)
@@ -124,6 +149,7 @@ def values(results_dir: Path, ledger: list) -> dict[str, str]:
                              value_pct_of_best=say_pct(val["pct_solver"] / best["pct_solver"]),
                              value_cost_share=say_pct(val["cost_usd_per_episode"] / best["cost_usd_per_episode"]),
                              best_model=say_model(best["model"]), best_level=str(best["level"]))
+            v.update(frontier_values(cells, tier))
     A = R.get("atlas")
     if A and A.get("modes"):
         C = A.get("corpus") or {}
@@ -173,6 +199,15 @@ def values(results_dir: Path, ledger: list) -> dict[str, str]:
         else:
             v["exploit_sentence"] = (f"{ex} found a real exploit." +
                                      (f" Each one is now a regression test." if tw and tw >= ex else ""))
+        # the dashboard's reading (slim_swarm): best score the evidence can't justify, skipping flags overturned on review
+        if S.get("best_unjustified") is not None:
+            v["swarm_best_unjustified"] = say_score(float(S["best_unjustified"]))
+            v["swarm_best_tier"] = str(S.get("best_unjustified_tier") or "")
+            if S.get("best_unjustified_solver") is not None:
+                v["swarm_best_solver"] = say_score(float(S["best_unjustified_solver"]))
+        pc = S.get("positive_control") or {}
+        if pc.get("attempts"):
+            v["pc_found"], v["pc_attempts"] = str(pc.get("attackers_found")), str(pc["attempts"])
     return v
 
 

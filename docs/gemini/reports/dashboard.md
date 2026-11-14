@@ -1,5 +1,19 @@
 # G5 Dashboard + demo assets: report
 
+## Sun 00:45: 00:30 rebuild pushed; VIDEO.md final shot list; leaderboard panel
+- **00:30 rebuild** (b43a859b): gemini-track had nothing new. Usage ledger re-exported: **24,855 calls, 678M input, 85.3% cached,
+  9.39M thinking, $226.34 list**. The committed-only build and `auto` match. All 7 screenshots and ROLES re-shot; 106 lab tests pass.
+- **07 Leaderboard** (473c27a6, Arena CEO ask via ceo lite). `canary.gemini.leaderboard` copies justSilas
+  `results/leaderboard_v14_hard.json` verbatim with its commit SHA. That file isn't committed yet, so for now the panel shows the
+  Gemini + solver rows parsed from gap.md (a52dde2, numbers unchanged): carbon OpenCode/MCP hard n=30 65% [24%, 98%], luck-adjusted
+  72% [52%, 91%]; solver 0.499 (n=30). Compute shows "not stated", because gap.md doesn't state it.
+- **VIDEO.md final shot list** (the 3-min long cut; the submitted cut is VIDEO-2MIN.md). Stale lines rewritten so every number
+  comes from a committed file: the hook drops the ladder percentage (PLAN's revised hook); 02-frontier speaks only cells with n ≥ 8 and
+  their CI (3.5-flash served as 3.6-flash, high, hard: 102% [84%, 129%], n=8, 22% of carbon-default's cost per episode); 03-modes
+  says v1 saw our tags, then gives the blind result (3/5, 2 new, 21%); 04-swarm says best unjustified 0.38 on hard vs solver 0.53,
+  positive control 4/4; 06-close drops "batch". Dry run: 395 words, about 158 s, nothing pending. TTS clips get made at 04:30
+  on the final numbers.
+
 ## Sun 00:00: swarm panel on the final swarm.json (6e848135, CEO ask)
 - Merged origin/gemini-track and origin/gemini-swarm (905cdd9). gemini-bakeoff-fixes was not needed: the panel reads only swarm.json.
 - Headline: **best unjustified +0.38 on hard** (solver +0.53). Medium's per_tier best_unjustified (+0.72) is w2b-008. It was flagged

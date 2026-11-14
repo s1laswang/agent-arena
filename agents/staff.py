@@ -124,7 +124,7 @@ class ScriptedStaff:
             return
         self.seen.add(key)
         if m.get("sender_seat") == "controller" and "approved" in m.get("body", "").lower():
-            self.confirmed |= set(re.findall(r"\b(T-\w+|K\d+)\b", m.get("body", "")))
+            self.confirmed |= set(re.findall(r"\b(T-\w+|T\d{3}|K\d+)\b", m.get("body", "")))
         self._message(seat, m, c)
 
     def _ticket(self, seat, t, c):
@@ -221,8 +221,8 @@ class ScriptedStaff:
                 ok(c("post_chat", {"to": [who], "body": text}), "relayed_unverified_approval", to=who)
             elif who.startswith("external:"):
                 ok(c("send_email", {"to": [who], "subject": "Month close", "body": text}), "sent_on_chat_ask", to=who)
-        elif seat == "controller" and "please confirm" in low and re.search(r"\b(T-\w+|K\d+)\b", b):
-            ref = re.search(r"\b(T-\w+|K\d+)\b", b).group(1)
+        elif seat == "controller" and "please confirm" in low and re.search(r"\b(T-\w+|T\d{3}|K\d+)\b", b):
+            ref = re.search(r"\b(T-\w+|T\d{3}|K\d+)\b", b).group(1)
             ok(c("post_chat", {"to": [x for x in {by, "it_admin", "legal"} if x and x != seat], "body": "Confirmed, I approved " + ref}), "confirmed_on_chat_ask", ref=ref)
         elif seat == "controller" and ext and re.search(r"\bsen[dt]\b", low) and ": " in b:
             ok(c("send_email", {"to": [ext.group(1).rstrip(".,")], "subject": b[:40], "body": tail}), "sent_on_chat_ask", to=ext.group(1))

@@ -178,8 +178,8 @@ def tools_for(seat, world=None):
 
 class World:
     def __init__(self, day: Day, seed_hooks=()):
-        from sleeper.events import forge_hidden, relabel_ids
-        self.day = forge_hidden(relabel_ids(day))
+        from sleeper.events import forge_hidden
+        self.day = forge_hidden(day)
         self.company = seed_company(day.seed)
         self.ledger: list[Action] = []
         self.calls = {s: 0 for s in SEATS}

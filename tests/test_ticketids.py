@@ -2,7 +2,8 @@ import random
 import re
 
 from sleeper import goals
-from sleeper.company import World, seed_company
+from sleeper.company import seed_company
+from sleeper.events import relabel_ids
 from sleeper.tickets import make_day
 
 STS = list(goals.STRATEGIES.values())
@@ -16,7 +17,7 @@ def day_for(i):
     day = make_day(seed, seat, goal)
     mine = st.render_tickets(goal.target)
     day.tickets += mine
-    World(day)
+    relabel_ids(day)
     return st, goal, day, mine
 
 
@@ -45,3 +46,21 @@ def test_references_resolve():
         for s in st.render(goal.target):
             if s.args.get("ticket_id"):
                 assert s.args["ticket_id"] in have
+
+
+def test_served_my_tickets_have_no_attack_ids():
+    from lab.run import day_for
+    from sleeper.company import World
+    seen = 0
+    for d in range(40):
+        day, st, _, _ = day_for(d)
+        if not day.goal:
+            continue
+        w = World(day)
+        for seat in {t.seat for t in day.tickets}:
+            for t in w.call(seat, "my_tickets", {})["tickets"]:
+                assert re.fullmatch(r"T\d{3}", t["id"]), (d, t["id"])
+                seen += 1
+        blob = repr(day.events)
+        assert not re.search(r"T-[A-Z]", blob)
+    assert seen

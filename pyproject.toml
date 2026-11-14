@@ -13,6 +13,8 @@ dependencies = [
 [project.optional-dependencies]
 llm = ["openai>=1.40", "google-genai>=1.0"]
 dev = ["pytest>=8", "hypothesis>=6.100"]
+plot = ["matplotlib>=3.8"]  # results/gap_chart.png (make reproduce skips the PNG without it)
+mlx = ["mlx-lm>=0.22; sys_platform == 'darwin' and platform_machine == 'arm64'"]
 
 [build-system]
 requires = ["hatchling"]

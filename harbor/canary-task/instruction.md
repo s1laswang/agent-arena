@@ -1,0 +1,92 @@
+# Canary: catch the mole (medium tier)
+
+## Your job
+You are the security lead of a company with 20 employees, with ids e00 to e19. Exactly one employee is a mole who leaks sensitive documents. Find the mole and accuse them. Every rule and number of the game is written on this page. Nothing is hidden except who the mole is.
+
+## Score
+- The company value V starts at 1.0. It goes down when things cost money, and it never goes below 0.
+- `accuse(employee)` ends the episode. If you accuse the mole, your score is V at that moment. If you accuse an innocent employee, your score is -1.
+- The game never tells you whether your accusation was correct.
+- If day 14 ends and you have not accused anyone, your score is 0. So accusing is only worth it when P(correct) x V + (1 - P(correct)) x (-1) is greater than 0.
+- Every tool call counts toward a total limit of 300 calls. If you reach the limit, the episode ends with score 0.
+
+## Days
+- The episode starts on day 1 and lasts at most 14 days. `advance_day` ends the current day.
+- check_leak_feed, interview, plant_canary, read_access_logs, read_message, restrict_access, search_messages, unrestrict_access each use one of your 8 actions per day. After that they fail until you call `advance_day`. `status`, `list_employees`, `list_documents`, `advance_day` and `accuse` are free.
+
+## Documents
+- Each day, between 2 and 4 new sensitive documents are published (equally likely: 2, 3, 4).
+- 0% of documents go to everyone in one department. The other 100% go to everyone in two departments.
+- Restricted employees do not receive new documents. An employee holds every document it ever received.
+
+## How leaks work
+- At the end of each day, the mole may leak one document that it received in the last 3 days (today included) and has not leaked before.
+- If the mole has such a document, it leaks one with probability 0.75. By default it picks one at random, with every eligible document equally likely. This mole is careful: for a canary, the chance of being picked is multiplied by (1 - the share of all employees who received any variant of that canary).
+- Each leak lowers V by 0.04 right away. It appears in the leak feed after a delay of 1 or 2 or 3 day(s), each equally likely.
+- A restricted mole can still leak documents it already holds.
+
+## Canaries (traps)
+- `plant_canary(doc_title, assignment)` creates a new document today. It costs 0.01 of V.
+- You can plant at most 1 per day. `assignment` maps employee ids to variant labels. Use at most 3 different labels and at least 1 recipient. Restricted employees cannot receive a canary.
+- The recipients are exactly the employees in `assignment`. They count as having received the canary today.
+- If the canary leaks, the leak feed shows the variant label the mole received.
+
+## Restricting access
+- `restrict_access(employee)` costs 0.01 of V for every day that ends while the employee is restricted. `unrestrict_access` lifts it.
+
+## Evidence
+- Access logs exist for days that have ended. Every employee opens documents it holds a random number of times per day (Poisson). The average is 1.0 for an innocent employee and 1.15 for the mole.
+- Each access is marked after_hours with probability 0.1 (innocent) or 0.15 (mole).
+- Framing is on in this tier. Each day the mole adds fake after-hours accesses for other employees (Poisson, average 1.5). Each fake access goes to the decoy with probability 0.5, and otherwise to a random employee who is neither the mole nor the decoy.
+- There is a decoy: one innocent, unhappy employee who writes angry messages. The mole is equally likely to be any other employee.
+- Interviews: an innocent answers evasively with probability 0.2. The mole answers evasively with probability 0.2 x 1.3. Asking the same employee about the same topic on the same day gives the same answer.
+- `search_messages` returns at most 20 results.
+
+## How the mole decides (Mole DSL)
+- The mole follows a fixed list of if-then rules. The first rule that matches is used; otherwise a default rule applies.
+- A rule can only look at these facts: the day number, days since its last leak, whether it is restricted, how many colleagues are restricted, the number of documents it could leak, the fewest and most recipients of those documents, the age of the newest one, and how many of them have at most 3 recipients.
+- A rule chooses which document to leak: newest, oldest, most recipients, fewest recipients, random, or none.
+- A rule may also frame one colleague (the decoy, the first restricted colleague, or a random colleague). Framing adds one fake after-hours access for that colleague.
+- The mole never knows which documents are canaries. The 0.75 leak probability above still applies to every leak.
+- The default mole leaks a random document and does no extra framing, exactly as described above.
+
+## Rules for tool arguments
+- Give exactly one employee id per call, such as e07. Lists, wildcards and names are rejected.
+- Unknown arguments are rejected. Invalid calls still count toward the total call limit.
+
+## Exact parameters
+The same numbers as above, one per line (some only matter when their feature is on):
+- name: medium
+- n_employees: 20
+- n_days: 14
+- p_leak: 0.75
+- delay_choices: 1, 2, 3
+- leak_damage: 0.04
+- canary_cost: 0.01
+- canaries_per_day: 1
+- max_variants: 3
+- restrict_cost_per_day: 0.01
+- actions_per_day: 8
+- tool_call_cap: 300
+- log_rate_benign: 1
+- log_rate_mole: 1.15
+- interview_lr: 1.3
+- p_evasive_innocent: 0.2
+- decoy: on
+- framing: on
+- careful_mole: on
+- access_constraints: off
+- leak_window_days: 3
+- p_after_hours_benign: 0.1
+- p_after_hours_mole: 0.15
+- framing_rate: 1.5
+- framing_decoy_share: 0.5
+- docs_per_day: 2, 3, 4
+- wrong_accusation_score: -1
+- p_single_dept_recipients: 0
+- doc_recipient_share: 0
+- canary_level: 1
+- search_max_results: 20
+- low_recipient_threshold: 3
+- fingerprint_accuracy: 1
+- noise: 1

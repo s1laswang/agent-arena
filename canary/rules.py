@@ -43,42 +43,52 @@ class TierParams:
     docs_per_day: tuple[int, ...] = (2, 3, 4)  # regular docs published per day, uniform
     wrong_accusation_score: float = -1.0  # v0.3: firing an innocent costs a full company value
     p_single_dept_recipients: float = 0.6  # share of regular docs sent to one dept (else union of two)
+    doc_recipient_share: float = 0.0  # v0.3 calib: regular docs also go to random extra staff until >= this share of all employees
     canary_level: int = 1          # canary min clearance (access_constraints); clearance is 1..3 so all qualify
     search_max_results: int = 20   # search_messages result cap
     low_recipient_threshold: int = 3     # Mole DSL feature recent_low_recipient_docs counts docs with <= this many recipients
+    fingerprint_accuracy: float = 1.0  # v0.4: P(feed shows the mole's true variant); else uniform over the canary's other variants
     noise: float = 1.0             # difficulty-curve knob (FR8 sweep); see apply_noise. 1.0 = tier as defined
 
     def to_dict(self) -> dict:
         return asdict(self)
 
 
+TIERS_VERSION = "v1.2"  # FROZEN 02:55 EET 14 Nov (CEO pick from FR8 co-tune: hard fp .95, framing 2.0). Bug fixes only.
+
 TIERS: dict[str, TierParams] = {
+    # tiers v1.1 (bayes-solver): medium max_variants 2->3, hard framing_rate 1.5->3.0 (monotone easy>medium>hard)
+    # tiers v1 (04:40): FR8 J1 recommendation (153k episodes, v0.3 scoring), fr8/analysis/out/j1_recommendation.md
     "easy": TierParams(
         name="easy", n_employees=12, n_days=14, p_leak=0.9, delay_choices=(1,),
         leak_damage=0.05, canary_cost=0.01, canaries_per_day=1, max_variants=3,
         restrict_cost_per_day=0.01, actions_per_day=8, tool_call_cap=300,
-        log_rate_benign=1.0, log_rate_mole=1.6, interview_lr=1.5, p_evasive_innocent=0.2,
+        log_rate_benign=1.0, log_rate_mole=1.3, interview_lr=1.5, p_evasive_innocent=0.2,
         decoy=False, framing=False, careful_mole=False, access_constraints=False,
+        framing_rate=1.0, p_after_hours_mole=0.15, p_single_dept_recipients=0.0,
     ),
     "medium": TierParams(
-        name="medium", n_employees=20, n_days=14, p_leak=0.75, delay_choices=(1, 2),
-        leak_damage=0.04, canary_cost=0.01, canaries_per_day=1, max_variants=2,
+        name="medium", n_employees=20, n_days=14, p_leak=0.75, delay_choices=(1, 2, 3),
+        leak_damage=0.04, canary_cost=0.01, canaries_per_day=1, max_variants=3,
         restrict_cost_per_day=0.01, actions_per_day=8, tool_call_cap=300,
-        log_rate_benign=1.0, log_rate_mole=1.4, interview_lr=1.3, p_evasive_innocent=0.2,
-        decoy=True, framing=True, careful_mole=False, access_constraints=False,
+        log_rate_benign=1.0, log_rate_mole=1.15, interview_lr=1.3, p_evasive_innocent=0.2,
+        decoy=True, framing=True, careful_mole=True, access_constraints=False,
+        framing_rate=1.5, p_after_hours_mole=0.15, p_single_dept_recipients=0.0,
     ),
     "hard": TierParams(
-        name="hard", n_employees=30, n_days=14, p_leak=0.65, delay_choices=(1, 2, 3),
+        name="hard", n_employees=30, n_days=14, p_leak=0.65, delay_choices=(2, 3),
         leak_damage=0.035, canary_cost=0.01, canaries_per_day=1, max_variants=2,
         restrict_cost_per_day=0.01, actions_per_day=8, tool_call_cap=300,
-        log_rate_benign=1.0, log_rate_mole=1.3, interview_lr=1.2, p_evasive_innocent=0.2,
+        log_rate_benign=1.0, log_rate_mole=1.0, interview_lr=1.2, p_evasive_innocent=0.2,
         decoy=True, framing=True, careful_mole=True, access_constraints=True,
+        framing_rate=2.0, p_after_hours_mole=0.3, p_single_dept_recipients=0.0,
+        fingerprint_accuracy=0.95,  # v1.2 CEO decision: small fingerprint noise on hard
     ),
 }
 
 # Seed hygiene: tune ONLY on dev seeds. Judge seeds are frozen and committed under data/worlds/judge/.
 DEV_SEEDS = range(0, 10_000)
-JUDGE_SEEDS = range(900_000, 900_030)   # 30 per tier
+JUDGE_SEEDS = range(900_000, 900_040)   # 40 per tier (CI half-width < gap/3, FR8 J1)
 TRAIN_SEEDS = range(100_000, 200_000)   # small-model training data; disjoint from judge seeds
 HELDOUT_SEEDS = range(800_000, 800_200) # small-model held-out eval
 

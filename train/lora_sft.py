@@ -38,6 +38,62 @@ def load_records(data: str, max_episodes: int | None = None, split: str = "train
     return recs[:max_episodes] if max_episodes else recs
 
 
+_TOK = None
+
+
+def _init_tok(model_path):
+    global _TOK
+    from transformers import AutoTokenizer
+    _TOK = AutoTokenizer.from_pretrained(model_path)
+
+
+def _rec_windows(args):
+    rec, max_len = args
+    from train.windows import record_windows
+    return record_windows(rec, _TOK, max_len)
+
+
+def build_windows(recs, model_path, tok, max_len, workers):
+    """Tokenize episodes into windows; parallel across `workers` processes (order preserved)."""
+    from train.windows import record_windows
+    if workers <= 1 or len(recs) < 64:
+        return [w for r in recs for w in record_windows(r, tok, max_len)]
+    import multiprocessing as mp
+    with mp.get_context("spawn").Pool(workers, initializer=_init_tok, initargs=(model_path,)) as pool:
+        parts = pool.map(_rec_windows, [(r, max_len) for r in recs], chunksize=32)
+    return [w for part in parts for w in part]
+
+
+def tok_cache_path(cache_dir, data, max_len, max_episodes, model_path):
+    import hashlib
+    files = sorted(glob.glob(os.path.join(data, "train-*.jsonl")) if os.path.isdir(data) else glob.glob(data))
+    sig = json.dumps([[f, os.path.getsize(f), int(os.path.getmtime(f))] for f in files]
+                     + [max_len, max_episodes, os.path.basename(model_path.rstrip("/"))])
+    return os.path.join(cache_dir, hashlib.sha1(sig.encode()).hexdigest()[:16] + ".pkl")
+
+
+def slurm_budget_hours(reserve_min: float) -> float | None:
+    """Hours left in this Slurm job minus `reserve_min`; None outside Slurm or if unknown."""
+    jid = os.environ.get("SLURM_JOB_ID")
+    if not jid:
+        return None
+    import subprocess
+    from datetime import datetime
+    try:
+        end = subprocess.run(["squeue", "-j", jid, "-h", "-o", "%e"], capture_output=True,
+                             text=True, timeout=20).stdout.strip()
+        left = (datetime.strptime(end, "%Y-%m-%dT%H:%M:%S") - datetime.now()).total_seconds()
+    except Exception:
+        left = None
+    if left is None:  # squeue unavailable (e.g. inside the container): use a deadline file
+        fn = os.path.expanduser(f"~/agent-arena-data/j4/deadline-{jid}.txt")
+        try:
+            left = float(open(fn).read().split()[0]) - time.time()
+        except Exception:
+            return None
+    return max(0.05, (left - 60 * reserve_min) / 3600)
+
+
 def build_model(args, torch, device):
     from transformers import AutoModelForCausalLM
     from peft import LoraConfig, get_peft_model
@@ -82,6 +138,11 @@ def main(argv=None):
     ap.add_argument("--tiny", action="store_true")
     ap.add_argument("--max-hours", type=float, default=0, help="stop + save after this long")
     ap.add_argument("--save-every", type=int, default=200)
+    ap.add_argument("--tok-workers", type=int, default=int(os.environ.get("SLURM_CPUS_PER_TASK", "1")))
+    ap.add_argument("--tok-cache", default=os.path.expanduser("~/agent-arena-data/j4/tok"),
+                    help="dir for cached tokenized windows ('' disables)")
+    ap.add_argument("--reserve-min", type=float, default=90,
+                    help="in Slurm: clamp --max-hours to job end minus this (eval reserve)")
     a = ap.parse_args(argv)
 
     import torch
@@ -93,7 +154,20 @@ def main(argv=None):
 
     recs = load_records(a.data, a.max_episodes or None)
     t0 = time.time()
-    windows = [w for r in recs for w in record_windows(r, tok, a.max_len)]
+    cache = tok_cache_path(a.tok_cache, a.data, a.max_len, a.max_episodes, a.model) if a.tok_cache else None
+    if cache and os.path.exists(cache):
+        import pickle
+        with open(cache, "rb") as f:
+            windows = pickle.load(f)
+        print(f"[data] loaded tokenized cache {cache}", flush=True)
+    else:
+        windows = build_windows(recs, a.model, tok, a.max_len, a.tok_workers)
+        if cache:
+            import pickle
+            os.makedirs(a.tok_cache, exist_ok=True)
+            with open(cache + ".tmp", "wb") as f:
+                pickle.dump(windows, f, protocol=pickle.HIGHEST_PROTOCOL)
+            os.replace(cache + ".tmp", cache)
     random.Random(1).shuffle(windows)
     n_tok = sum(len(w[0]) for w in windows)
     n_lab = sum(sum(1 for x in w[1] if x != -100) for w in windows)
@@ -103,6 +177,12 @@ def main(argv=None):
     if not windows:
         raise SystemExit("no training windows")
 
+    if not a.pilot:
+        budget = slurm_budget_hours(a.reserve_min)
+        if budget is not None and (not a.max_hours or budget < a.max_hours):
+            print(f"[train] clamping max_hours {a.max_hours} -> {budget:.2f} (job end - {a.reserve_min} min)",
+                  flush=True)
+            a.max_hours = budget
     steps_per_epoch = math.ceil(len(windows) / a.grad_accum)
     total_steps = a.max_steps or max(1, int(steps_per_epoch * a.epochs))
     if a.pilot:

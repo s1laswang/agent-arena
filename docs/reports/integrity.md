@@ -38,3 +38,29 @@
 - #10 partially: log-alone vs canary heuristic now OK on medium/hard; logs_only CEO bound still xfail on all tiers pending ENV recalibration.
 - In progress: exploit-hunter (codex plumbing; MCP from CEO's mcp engineer ETA 04:00); monotonicity re-plot with solver.
 - Next: MCP hunt the moment it lands; re-run bounds after recalibration.
+
+## 03:50 status
+- Done (verified: make test 305 passed / 8 skipped / 7 xfailed / 2 xpassed): exploit-hunter merged (codex hunter, stdlib MCP client, envshim server, MCP tests incl. 16-thread parallel accuse + ledger token, passing on envshim; real-server variants skip until canary/mcp_server lands). Props round 3: monotonicity medium random −0.66 < most_logs −0.49 < heuristic +0.64 < solver +0.74 (100 seeds); hard solver +0.73 vs heuristic +0.02; results/monotonicity.png.
+- **CRITICAL #24 (open, ENV+HARNESS):** judge seeds fail OPEN: with no CANARY_WORLD_SECRET and no SALT file (= a fresh clone, i.e. what judges run), `_key()` warns and uses the public key; mole recoverable from public code (verified: seed 900003 → e03 both served and recovered). Found by codex white-box. Fix: fail closed + ship frozen judge worlds.
+- #23 (open, HARNESS): dev/train seeds are public by design → MCP server must only serve keyed seeds to agents.
+- Codex hunts: black-box (3 runs, envshim) 0 score, 0 flags; OpenAI moderation truncates many codex runs.
+- Next: get #24 fixed and verified; real MCP hunt once mcp_server lands.
+
+## 04:30 status
+- Done (verified on justSilas 54e1fa4 + f2931d4): #10 FIXED (logs_only 28/1/3% over 100 seeds, CEO bounds met) and #24 FIXED (v0.5 fail-closed): xfails removed → strict tests. Full fuzz on tiers v1: 0 violations, best non-solver 0.000 vs solver 0.80/0.44/0.51.
+- Note for CEO/ENV: on tiers v1 the solver scores lower on medium (0.44) than hard (0.51).
+- Flaky test found: test_stub_hunt_fake_server_plumbing (~1/6 full runs); hunter engineer fixing (port 0 + health poll). Merges gated with pipefail.
+- Real MCP server landed: hunter engineer running [real] MCP tests + codex black/white-box vs real server.
+
+## 05:00 status
+- Done (verified: make test 352 passed / 3 skipped / 1 xfailed on justSilas): test_solver_tier_ordering strict (ENV b875386: .79 > .63 > .60); #24 verified fixed; FR8 J2 (4M evolve, hard, pre-v1): 0 violations, best non-solver 0.000.
+- External Grok judge run reviewed: re-found #24 (fixed) and NEW #25 HIGH: server secrets readable via same-uid /proc/<pid>/environ / `ps eww` → 1.0. Regression test tests/test_integrity_secrets.py (xfail strict) + attacker-primitive sanity test (passes on macOS). Interface CEO-approved: CANARY_*_FILE 0600 files, no plain secrets in exec env, Harbor sidecar primary. Owners: mcp-server + harbor engineers.
+- In progress: exploit-hunter → flake fix (port 0 + health poll, 20 green runs), [real] MCP tests, codex black/white-box vs real server.
+- Next: verify #25 when mcp_server lands *_FILE; re-run the Grok judge prompt on the tip; FR8 J2 rerun on tiers v1.
+
+## 04:45 status (post-freeze, tiers v1.2 @ db104c9)
+- Done (verified: make test 386 passed / 3 skipped on db104c9 merge): fuzz all modes, 100 seeds, 50k budget, all tiers → 0 violations, best non-solver 0.000. Baselines × 100 seeds: do_nothing 0; every other baseline mean ≤ 0 (stop_early −0.86/−0.88/−0.92, logs_only −0.55/−0.98/−0.98, heuristic −0.35/−0.88/−1.00); solver +0.79/+0.63/+0.60.
+- #25 fixed server-side (50022ab, test passes); Harbor sidecar remains boundary (HARNESS).
+- Flake fixed at root (20/20). FR8 J2 on v1.1: 0 findings; final v1.2 run requested. parallel_accuse summary now reports race count (it was never a no-op).
+- Canary-surfacing question closed: canaries do surface on medium (verified directly).
+- Next: Grok judge re-run ~07:15 on final tip; Gemini hunter when key arrives.

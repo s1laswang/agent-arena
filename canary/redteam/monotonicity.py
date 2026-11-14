@@ -82,50 +82,66 @@ def mean_ci(xs: list[float]) -> tuple[float, float]:
     return m, 1.96 * sd / math.sqrt(n)
 
 
-def main(argv=None) -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--tier", default="medium", choices=sorted(TIERS))
-    ap.add_argument("--seeds", default="0-49")
-    ap.add_argument("--llm", default=None, help="e.g. openai:gpt-4o-mini (hinted LLM policy)")
-    a = ap.parse_args(argv)
+def measure(tier: str, seeds: list[int], llm: str | None = None) -> list[tuple]:
+    """[(policy, mean, ci95, n)] in skill order, skipping unavailable policies."""
     from canary.env import Env
-    seeds = parse_seeds(a.seeds)
     rows = []
-    for name, factory in policies(a.llm).items():
+    for name, factory in policies(llm).items():
         if factory is None:
             print(f"skip {name}: not available")
             continue
+        scores = [run_episode(Env(tier=tier, seed=s), _instantiate(factory, s)) for s in seeds]
+        m, h = mean_ci(scores)
+        rows.append((name, m, h, len(scores)))
+        print(f"{tier:6s} {name:18s} {m:+.3f} ± {h:.3f} (n={len(scores)})")
+    return rows
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--tier", default="medium", help="comma list, e.g. medium,hard")
+    ap.add_argument("--seeds", default="0-49")
+    ap.add_argument("--llm", default=None, help="e.g. openai:gpt-4o-mini (hinted LLM policy)")
+    a = ap.parse_args(argv)
+    seeds = parse_seeds(a.seeds)
+    tiers = a.tier.split(",")
+    OUT.mkdir(exist_ok=True)
+    results, monotone = {}, True
+    for tier in tiers:
         try:
-            scores = [run_episode(Env(tier=a.tier, seed=s), _instantiate(factory, s)) for s in seeds]
+            rows = measure(tier, seeds, a.llm)
         except NotImplementedError:
             print("canary.env.Env not implemented yet")
             return 2
-        m, h = mean_ci(scores)
-        rows.append((name, m, h, len(scores)))
-        print(f"{name:12s} {m:.3f} ± {h:.3f} (n={len(scores)})")
-    OUT.mkdir(exist_ok=True)
-    with (OUT / f"monotonicity-{a.tier}.csv").open("w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["policy", "mean", "ci95", "n"])
-        w.writerows(rows)
-    means = [r[1] for r in rows]
-    monotone = len(means) >= 2 and all(x < y for x, y in zip(means, means[1:]))
-    if len(means) < 2:
-        print("INSUFFICIENT: fewer than 2 policies available; nothing to compare")
-        return 2
-    print("MONOTONE" if monotone else "NOT MONOTONE: reward does not rank skill as expected")
+        if len(rows) < 2:
+            print("INSUFFICIENT: fewer than 2 policies available; nothing to compare")
+            return 2
+        results[tier] = rows
+        with (OUT / f"monotonicity-{tier}.csv").open("w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["policy", "mean", "ci95", "n"])
+            w.writerows(rows)
+        means = [r[1] for r in rows]
+        ok = all(x < y for x, y in zip(means, means[1:]))
+        monotone &= ok
+        print(f"{tier}: " + ("MONOTONE" if ok else "NOT MONOTONE: reward does not rank skill"))
     try:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except ImportError:
-        print(f"matplotlib missing: wrote {OUT}/monotonicity-{a.tier}.csv only")
+        print(f"matplotlib missing: wrote CSVs in {OUT}/ only")
         return 0 if monotone else 1
-    fig, ax = plt.subplots(figsize=(6, 3.5))
-    ax.bar([r[0] for r in rows], means, yerr=[r[2] for r in rows], color="#4C78A8", capsize=4)
-    ax.set_ylabel("mean score (V at correct accusation)")
-    ax.set_title(f"Reward monotonicity, {a.tier}, n={len(seeds)} dev seeds")
-    ax.spines[["top", "right"]].set_visible(False)
+    fig, axes = plt.subplots(1, len(tiers), figsize=(5.5 * len(tiers), 3.8), squeeze=False)
+    for ax, tier in zip(axes[0], tiers):
+        rows = results[tier]
+        ax.bar([r[0].replace("_", "\n") for r in rows], [r[1] for r in rows],
+               yerr=[r[2] for r in rows], color="#4C78A8", capsize=4)
+        ax.axhline(0, color="#888", lw=0.8)
+        ax.set_title(f"{tier}, n={len(seeds)} dev seeds")
+        ax.spines[["top", "right"]].set_visible(False)
+    axes[0][0].set_ylabel("mean score (V if correct, -1 if wrong)")
+    fig.suptitle("Reward monotonicity: score ranks investigator skill")
     fig.tight_layout()
     fig.savefig(OUT / "monotonicity.png", dpi=150)
     print(f"wrote {OUT}/monotonicity.png")

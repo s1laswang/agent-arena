@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
+import math
 import random
 import warnings
 from pathlib import Path
@@ -63,17 +64,45 @@ class World:
         return [e.id for e in self.employees]
 
 
+_SET_SECRET: bytes | None = None
+
+
+def set_world_secret(secret: bytes | None) -> None:
+    """In-process judge-world secret (checked before CANARY_WORLD_SECRET and SALT). None clears it."""
+    global _SET_SECRET
+    if secret is not None and (not isinstance(secret, (bytes, bytearray)) or len(secret) < 16):
+        raise ValueError("world secret must be >= 16 bytes")
+    _SET_SECRET = bytes(secret) if secret is not None else None
+
+
 def _key(seed: int) -> bytes:
     if seed not in JUDGE_SEEDS and seed not in HELDOUT_SEEDS:
         return b"public"
+    if _SET_SECRET is not None:
+        return _SET_SECRET
     env = os.environ.get("CANARY_WORLD_SECRET")
     if env:
         return env.encode()
     salt = Path(__file__).resolve().parent.parent / "data" / "worlds" / "judge" / "SALT"
     if salt.exists():
         return salt.read_bytes()
-    warnings.warn("CANARY_WORLD_SECRET not set and no SALT file; judge worlds use the public key")
-    return b"public"
+    # Contract v0.5: fail closed. Never the public key for judge/held-out seeds; use a per-process
+    # random secret (memory only). Reproduction is then statistical; set CANARY_WORLD_SECRET for exact numbers.
+    return _process_secret()
+
+
+_PROC_SECRET: bytes | None = None
+
+
+def _process_secret() -> bytes:
+    global _PROC_SECRET
+    if _PROC_SECRET is None:
+        _PROC_SECRET = os.urandom(32)
+        import logging
+        logging.getLogger("canary.world").warning(
+            "no CANARY_WORLD_SECRET/SALT: judge worlds use a fresh per-process secret (sha256 %s)",
+            hashlib.sha256(_PROC_SECRET).hexdigest()[:16])
+    return _PROC_SECRET
 
 
 def world_seed(tier: str, seed: int) -> int:
@@ -116,6 +145,9 @@ def generate_world(tier: str, seed: int, p: TierParams) -> World:
             else:
                 ds = rng.sample(depts, 2)
             rec = sorted(set(x for d in ds for x in by_dept[d]))
+            need = math.ceil(p.doc_recipient_share * len(ids)) - len(rec)
+            if need > 0:
+                rec = sorted(set(rec) | set(rng.sample([i for i in ids if i not in rec], need)))
             doc = {"doc_id": f"d{day}-{j}", "title": _title(rng, ds[0]), "day": day, "recipients": rec}
             if p.access_constraints:
                 doc["min_clearance"] = rng.randint(1, 3)

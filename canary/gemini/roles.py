@@ -392,14 +392,24 @@ def build_index(res: Path) -> list[dict]:
     if A:
         c, v, m = A.get("corpus", {}), A.get("verification", {}), (A.get("modes") or [{}])[0]
         ha = A.get("human_agreement") or {}
+        v1 = (f"top failure mode \"{m.get('name')}\" = {_pct(m.get('regret_share'))} of all solver regret; "
+              f"{v.get('quotes_verified')}/{v.get('quotes_checked')} quotes verbatim ({_pct(v.get('pass_rate'))}); "
+              f"human agreement {_pct(ha.get('score')) if ha.get('status') == 'done' else 'pending'}")
+        B = _load(res / "atlas_blind.json")
+        rc, bq = (B or {}).get("recovery") or {}, (B or {}).get("quotes") or {}
+        blind = (f"Blind re-run (atlas_blind.json, {B.get('model')}, {str(B.get('git_sha', ''))[:7]}): recovered "
+                 f"{len(rc.get('tags_recovered') or [])}/{rc.get('n_tags')} code-defined failure modes and named "
+                 f"{len(rc.get('novel_modes') or [])} new ones; cited steps cover {_pct(rc.get('regret_share_covered'))} of solver regret "
+                 f"(weak coverage); {bq.get('verified_agent_text')}/{bq.get('checked')} quotes verbatim. "
+                 f"v1 (not blind: it saw our regret tags and solver beliefs): ") if B and rc else ""
         rows.append({"role": "Analyst (Failure Atlas)", "key": "analyst",
-                     "run": "results/gemini/atlas.json (+ atlas.md, atlas_charts/)",
-                     "model": ", ".join(f"{k}: {v_}" for k, v_ in (A.get("models") or {}).items()), "thinking": "model default",
+                     "run": "results/gemini/atlas.json (+ atlas.md, atlas_charts/)" + (", atlas_blind.json (+ atlas_blind.md)" if blind else ""),
+                     # the batch slot is omitted: Batch API calls failed on our key (quota), so it did no work
+                     "model": ", ".join(f"{k}: {v_}" for k, v_ in (A.get("models") or {}).items() if k != "batch"),
+                     "thinking": "model default",
                      "commit": str(A.get("git_sha", ""))[:10], "generated_at": A.get("generated_at"),
                      "n": f"{c.get('episodes')} episodes, {c.get('tokens'):,} tokens in one prompt" if c.get("tokens") else "",
-                     "headline": (f"top failure mode \"{m.get('name')}\" = {_pct(m.get('regret_share'))} of all solver regret; "
-                                  f"{v.get('quotes_verified')}/{v.get('quotes_checked')} quotes verbatim ({_pct(v.get('pass_rate'))}); "
-                                  f"human agreement {_pct(ha.get('score')) if ha.get('status') == 'done' else 'pending'}")})
+                     "headline": blind + v1})
     S = _load(res / "swarm.json")
     if S:
         cnt = S.get("counts", {})

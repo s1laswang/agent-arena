@@ -105,3 +105,36 @@ def test_duplicate_ledger_copies_count_once(tmp_path):
     (a / "x.jsonl").write_text("\n".join(src) + "\n")
     (b / "copy.jsonl").write_text("\n".join(src[:30]) + "\n{broken\n")
     assert len(dash.load_ledger([a, b, a / "x.jsonl"])) == 50
+
+
+def test_export_ledger_roundtrip_and_dedupes_against_sources(tmp_path):
+    """--export-ledger writes whitelisted rows (no meta) that dedupe against their own sources; --ledger committed reads it."""
+    res = tmp_path / "results"
+    (res / "roles" / "mole").mkdir(parents=True)
+    exp = res / "usage_ledger.jsonl.gz"
+    assert dash.main(["--ledger", str(FX / "ledger"), "--export-ledger", str(exp)]) == 0
+    src = dash.load_ledger([FX / "ledger"])
+    back = dash.load_ledger([exp])
+    assert len(back) == len(src) > 0
+    assert sum(r["cost_usd"] for r in back) == pytest.approx(sum(r["cost_usd"] for r in src))
+    import gzip
+    assert '"meta"' not in gzip.open(exp, "rt").read()
+    assert len(dash.load_ledger([exp, FX / "ledger"])) == len(src)  # export + its sources count once
+    assert dash.committed_ledgers(res) == [str(exp)]
+
+
+def test_failed_batch_calls_are_not_a_capability():
+    row = {"ts": 1.0, "feature": "x", "model": "m", "kind": "batch", "in": 0, "out": 0, "thinking": 0, "cached": 0,
+           "latency_s": 0.1, "cost_usd": 0.0, "cost_unknown": False, "ok": False, "error": "quota", "run_id": "", "host": "h"}
+    assert "batch API" not in dash.summarize([row])["capabilities"]
+    assert "batch API" in dash.summarize([dict(row, ok=True, **{"in": 10})])["capabilities"]
+
+
+def test_blind_atlas_slimmed_from_committed_json():
+    B = {"model": "gemini-3.8-flash", "git_sha": "abc", "blind": True, "corpus": {"episodes": 3, "tokens": 9},
+         "modes": [{"id": "n1", "name": "New one"}], "quotes": {"checked": 4, "verified_agent_text": 3},
+         "recovery": {"tags": {"t1": {"steps": 2, "recall": 0.5}}, "tags_recovered": ["t1"], "n_tags": 2,
+                      "novel_modes": ["n1"], "cited_steps": 7, "regret_share_covered": 0.2, "high_regret_recall": 0.04}}
+    s = dash.slim_atlas_blind(B)
+    assert s["tags_recovered"] == 1 and s["n_tags"] == 2 and s["novel"] == ["New one"] and s["quotes_verified"] == 3
+    assert dash.slim_atlas_blind(None) is None and dash.slim_atlas_blind({"x": 1}) is None

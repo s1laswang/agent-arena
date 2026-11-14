@@ -122,7 +122,10 @@ FIELDS = ("ts", "feature", "model", "kind", "in", "out", "thinking", "cached", "
           "cost_unknown", "ok", "error", "run_id", "host")
 
 
-def load_ledger(paths: list[str | Path]) -> list[dict]:
+EXPORT_FIELDS = FIELDS + ("pid",)  # pid is part of the dedupe key, so an exported copy still dedupes against its sources
+
+
+def load_ledger(paths: list[str | Path], fields: tuple = FIELDS, normalize: bool = True) -> list[dict]:
     """Read ledger JSONL from files or directories (recursive). Only whitelisted fields are kept."""
     files: list[str] = []
     for p in paths:
@@ -150,7 +153,10 @@ def load_ledger(paths: list[str | Path]) -> list[dict]:
                 if key in seen:  # the same row synced into two ledger dirs (Mac + FR8 copies) counts once
                     continue
                 seen.add(key)
-                rows.append({k: r.get(k) for k in FIELDS})
+                rows.append({k: r.get(k) for k in fields})
+    if not normalize:
+        rows.sort(key=lambda r: float(r.get("ts") or 0.0))
+        return rows
     for r in rows:
         for k in ("in", "out", "thinking", "cached"):
             r[k] = int(r.get(k) or 0)
@@ -165,6 +171,23 @@ def load_ledger(paths: list[str | Path]) -> list[dict]:
     return rows
 
 
+def committed_ledgers(results: Path | None = None) -> list[str]:
+    """--ledger committed: only ledgers committed under results/gemini (usage_ledger.jsonl.gz is the whitelisted export
+    of every local ledger, see --export-ledger), so the usage numbers can be rebuilt from the repo alone."""
+    res = Path(results) if results else ROOT / "results" / "gemini"
+    return sorted(glob.glob(str(res / "*ledger*.jsonl.gz"))) + sorted(glob.glob(str(res / "roles" / "*" / "ledger.jsonl")))
+
+
+def export_ledger(sources: list[str], out: Path) -> int:
+    """Write the deduped union of `sources` as gzip JSONL with whitelisted fields only (no prompts, no meta)."""
+    rows = load_ledger(sources, fields=EXPORT_FIELDS, normalize=False)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(out, "wt") as f:
+        for r in rows:
+            f.write(json.dumps(r, sort_keys=True) + "\n")
+    return len(rows)
+
+
 def discover_ledgers() -> list[str]:
     """--ledger auto: every ledger JSONL we can see on this machine (dedupe makes overlaps safe).
     Looks in data/gemini/ledger, $CANARY_GEMINI_LEDGER_DIR, ~/agent-arena-data/gemini/**/_ledger (ladder/FR8 pulls) and
@@ -173,8 +196,7 @@ def discover_ledgers() -> list[str]:
     if os.environ.get("CANARY_GEMINI_LEDGER_DIR"):
         roots.append(Path(os.environ["CANARY_GEMINI_LEDGER_DIR"]))
     roots += sorted(ROOT.parent.glob("gemini-*/data/gemini"))
-    files: list[str] = sorted(glob.glob(str(ROOT / "results" / "gemini" / "*ledger*.jsonl.gz")))  # committed ledgers
-    files += sorted(glob.glob(str(ROOT / "results" / "gemini" / "roles" / "*" / "ledger.jsonl")))
+    files: list[str] = committed_ledgers()
     for r in roots:
         for f in glob.glob(str(r / "**" / "*.jsonl"), recursive=True):
             if any("ledger" in part for part in Path(f).relative_to(r).parts[:-1]) or "ledger" in r.parts:
@@ -304,8 +326,9 @@ def summarize(rows: list[dict]) -> dict:
         caps.append("generate")
     if tot["cached"] or kinds.get("cache"):
         caps.append("context caching")
-    for k, label in (("batch", "batch API"), ("embed", "embeddings"), ("tts", "TTS"), ("live", "Live API"),
-                     ("count", "token counting")):
+    if any(r["kind"] == "batch" and r["ok"] and (r["in"] + r["out"]) > 0 for r in rows):
+        caps.append("batch API")  # attempted-but-failed batch calls (quota on our key) are not a capability
+    for k, label in (("embed", "embeddings"), ("tts", "TTS"), ("live", "Live API"), ("count", "token counting")):
         if kinds.get(k):
             caps.append(label)
     if any(r["in"] >= 200_000 for r in rows):
@@ -346,6 +369,23 @@ def _thumb(results_dir: Path, rel: Any, budget: list[int]) -> str:
 
 def _num(x) -> float | None:
     return float(x) if isinstance(x, (int, float)) and not isinstance(x, bool) and x == x else None
+
+
+def slim_atlas_blind(B: dict | None) -> dict | None:
+    """G3's blind re-run (atlas_blind.json): only the code-scored recovery numbers the page shows."""
+    if not isinstance(B, dict) or not isinstance(B.get("recovery"), dict):
+        return None
+    rc, q, c = B["recovery"], B.get("quotes") or {}, B.get("corpus") or {}
+    names = {m.get("id"): m.get("name") for m in B.get("modes") or [] if isinstance(m, dict)}
+    return {"generated_at": B.get("generated_at"), "git_sha": B.get("git_sha"), "model": B.get("model"),
+            "blind": bool(B.get("blind")), "episodes": c.get("episodes"), "tokens": c.get("tokens"),
+            "tags_recovered": len(rc.get("tags_recovered") or []), "n_tags": rc.get("n_tags"),
+            "novel": [names.get(m) or m for m in rc.get("novel_modes") or []],
+            "cited_steps": rc.get("cited_steps"), "regret_share_covered": rc.get("regret_share_covered"),
+            "high_regret_recall": rc.get("high_regret_recall"),
+            "tags": [{"tag": t, "steps": v.get("steps"), "recall": v.get("recall")} for t, v in (rc.get("tags") or {}).items()
+                     if isinstance(v, dict)],
+            "quotes_checked": q.get("checked"), "quotes_verified": q.get("verified_agent_text")}
 
 
 def slim_atlas(A: dict, results_dir: Path) -> dict:
@@ -482,6 +522,7 @@ def load_results(results_dir: Path) -> dict:
     out["ladder"] = redact(ladder) if ladder else None
     atlas = load_json(results_dir / "atlas.json")
     out["atlas"] = redact(slim_atlas(atlas, results_dir)) if atlas else None
+    out["atlas_blind"] = redact(slim_atlas_blind(load_json(results_dir / "atlas_blind.json")))
     swarm = load_json(results_dir / "swarm.json")
     out["swarm"] = redact(slim_swarm(swarm)) if swarm else None
     gb = load_json(results_dir / "gateway_bench.json")
@@ -497,7 +538,7 @@ def load_results(results_dir: Path) -> dict:
         out["gateway_bench"] = None
     ri = load_json(results_dir / "roles" / "index.json")
     out["roles"] = redact({"generated_at": ri.get("generated_at"), "roles": [
-        {k: r.get(k) for k in ("role", "key", "run", "model", "thinking", "commit", "generated_at", "n", "headline")}
+        {k: r.get(k) for k in ("role", "key", "run", "model", "thinking", "commit", "generated_at", "n", "headline", "caveats")}
         for r in ri.get("roles") or [] if isinstance(r, dict)]}) if ri else None
     figs = {}
     budget = [3_000_000]
@@ -525,7 +566,10 @@ def render_html(payload: dict) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--ledger", nargs="*", default=None,
-                    help="ledger dirs/files (default data/gemini/ledger); 'auto' = every ledger found on this machine")
+                    help="ledger dirs/files (default data/gemini/ledger); 'auto' = every ledger found on this machine; "
+                         "'committed' = only ledgers committed under results/gemini")
+    ap.add_argument("--export-ledger", metavar="OUT.jsonl.gz",
+                    help="write the deduped, whitelisted union of the --ledger sources to OUT and exit")
     ap.add_argument("--results", default=str(DEFAULT_RESULTS))
     ap.add_argument("--out", default=str(DEFAULT_RESULTS / "dashboard.html"))
     ap.add_argument("--json", action="store_true", help="print the aggregated usage summary and exit")
@@ -533,6 +577,12 @@ def main(argv: list[str] | None = None) -> int:
     sources = a.ledger or [str(DEFAULT_LEDGER)]
     if sources == ["auto"]:
         sources = discover_ledgers()
+    elif sources == ["committed"]:
+        sources = committed_ledgers(Path(a.results))
+    if a.export_ledger:
+        n = export_ledger(sources, Path(a.export_ledger))
+        print(f"wrote {a.export_ledger} ({n} ledger rows from {len(sources)} files)")
+        return 0
     rows = load_ledger(sources)
     lad = load_json(Path(a.results) / "ladder.json") or {}
     reprice(rows, lad.get("prices_usd_per_1m") if isinstance(lad.get("prices_usd_per_1m"), dict) else None)
@@ -550,7 +600,7 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError:
             rel.append(Path(s).name)
     if len(sources) > 6:
-        rel = [f"{len(sources)} ledger files (--ledger auto)"]
+        rel = [f"{len(sources)} ledger files ({' '.join(a.ledger or [])})"]
     html = render_html(build_payload(rows, Path(a.results), rel))
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -666,6 +716,7 @@ button:focus-visible, .cell:focus-visible, [tabindex]:focus-visible { outline: 2
 .tile { background: var(--surface); padding: 14px 16px; min-width: 0; }
 .tile .lab { color: var(--muted); font-size: 12px; }
 .tile .val { font: 600 22px/1.2 system-ui, -apple-system, sans-serif; margin-top: 4px; letter-spacing: -.01em; }
+ol.caveats { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .tile .note { color: var(--muted); font-size: 11.5px; line-height: 1.35; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .caps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .chip { font: 500 11.5px/1 ui-monospace, "SF Mono", Menlo, monospace; padding: 6px 9px; border-radius: 999px;
@@ -1238,6 +1289,21 @@ function renderAtlas() {
     'Gemini reads the whole trajectory corpus in one long, cached context. Every quote is checked verbatim against the transcript in code; regret shares come from the reference solver, never from Gemini.');
   if (!A || !(A.modes || []).length) { sec.appendChild(pending('Atlas', 'python -m canary.gemini.atlas --runs <dirs> → results/gemini/atlas.json')); return; }
   const g = h('div', { class: 'grid' });
+  const B = R.atlas_blind;
+  if (B) {
+    const nt = B.n_tags != null ? B.n_tags : (B.tags || []).length;
+    g.appendChild(tilesRow([['Blind: code modes recovered', B.tags_recovered + ' / ' + nt, '≥30% of a code tag’s steps cited; scored in code'],
+      ['Blind: new modes named', String((B.novel || []).length), (B.novel || []).join(' · ')],
+      ['Blind: regret covered', B.regret_share_covered != null ? pctf(B.regret_share_covered) : '—', (B.cited_steps != null ? B.cited_steps + ' steps cited · ' : '') + 'coverage is weak'],
+      ['Blind: high-regret steps cited', B.high_regret_recall != null ? pctf(B.high_regret_recall) : '—', 'of all high-regret steps'],
+      ['Blind: quotes verbatim', B.quotes_checked != null ? B.quotes_verified + ' / ' + B.quotes_checked : '—', 'in the agents’ own words']]));
+    const tb = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['code tag', 'tagged steps', 'recall (blind)'].map((c, i) => h('th', { class: i ? 'num' : '', text: c })))]),
+      h('tbody', {}, (B.tags || []).map(t => h('tr', {}, [h('td', {}, [h('code', { text: t.tag })]), h('td', { class: 'num', text: t.steps != null ? String(t.steps) : '–' }),
+        h('td', { class: 'num', text: t.recall != null ? pctf(t.recall) : '–' })])))]);
+    g.appendChild(card('c12', 'Blind re-run: what Gemini finds without our labels',
+      `${short(B.model || '')} saw only the agents’ tool calls, results, own words and outcome (${B.episodes != null ? nf.format(B.episodes) + ' episodes, ' : ''}${B.tokens != null ? compact(B.tokens) + ' tokens, ' : ''}no regret, tags, beliefs or true mole). results/gemini/atlas_blind.md · ${B.git_sha || ''}`,
+      [tb, h('p', { class: 'sub', style: 'margin-top:10px', text: 'Atlas v1 below is not blind: its corpus showed Gemini our code-computed regret tags and solver beliefs, so v1 organises and explains failures the code had already attributed.' })]));
+  }
   const C = A.corpus || {}, HA = A.human_agreement, V = A.verification, LO = A.localisation;
   const quotes = A.modes.flatMap(m => m.quotes || []);
   const tiles = [['Episodes read', C.episodes != null ? nf.format(C.episodes) : '—', A.model ? 'by ' + short(A.model) + ' in one prompt' : ''],
@@ -1247,7 +1313,7 @@ function renderAtlas() {
     LO ? ['Chart reading', LO.agree + ' / ' + LO.n, 'divergence step found within 3 steps (multimodal)'] : ['Failure modes', String(A.modes.length), 'ranked by regret share'],
     ['Human agreement', HA && HA.rate != null ? pctf(HA.rate) : 'pending', HA && HA.rate != null ? (HA.n ? HA.n + ' claims labelled by a teammate' : 'human–Gemini agreement') : 'labels in docs/gemini/validation.md']];
   g.appendChild(tilesRow(tiles));
-  if (A.summary) g.appendChild(card('c12', 'What Gemini found', null, [h('p', { class: 'summary', text: A.summary })]));
+  if (A.summary) g.appendChild(card('c12', B ? 'What Gemini found (v1, not blind)' : 'What Gemini found', null, [h('p', { class: 'summary', text: A.summary })]));
   const modes = A.modes.slice().sort((a, b) => (b.regret_share || 0) - (a.regret_share || 0));
   const list = h('div', { class: 'modes' }, modes.slice(0, 6).map((m, i) => {
     const bar = h('div', { class: 'share' }, [h('div')]); bar.firstChild.style.width = Math.max(0, Math.min(100, (m.regret_share || 0) * 100)) + '%';
@@ -1262,7 +1328,7 @@ function renderAtlas() {
       h('div', { class: 'facts' }, [h('span', {}, [h('b', { text: pctf(m.regret_share || 0) }), ' of all regret']), m.episodes != null ? h('span', {}, [h('b', { text: String(m.episodes) }), ' episodes']) : null,
         m.steps != null ? h('span', {}, [h('b', { text: String(m.steps) }), ' decisions']) : null, m.decision ? h('span', {}, ['decision ', h('b', { text: m.decision })]) : null]), bar]).concat(qs_)), thumb]);
   }));
-  g.appendChild(card('c12', 'Top failure modes', 'bar = share of all solver regret attributed to the mode', [synthBadge(A), list]));
+  g.appendChild(card('c12', B ? 'Top failure modes (v1, not blind)' : 'Top failure modes', 'bar = share of all solver regret attributed to the mode', [synthBadge(A), list]));
   const co = (C.cohorts || []).filter(c => c.cohort);
   if (co.length) {
     const tb = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['cohort (model / harness / rules)', 'episodes', 'mean score', 'accuracy', 'mean regret'].map((c, i) => h('th', { class: i ? 'num' : '', text: c })))]),
@@ -1351,7 +1417,8 @@ function renderRoles() {
   const tb = h('table', { class: 'list' }, [h('thead', {}, [h('tr', {}, ['role', 'model (thinking)', 'commit', 'size', 'headline'].map(c => h('th', { text: c })))]),
     h('tbody', {}, RO.roles.map(r => h('tr', {}, [h('td', {}, [h('b', { text: r.role }), h('div', { class: 'sub', style: 'margin:2px 0 0;font-size:11px', text: r.run || '' })]),
       h('td', { class: 'plan', text: (r.model || '') + (r.thinking ? ' (' + r.thinking + ')' : '') }), h('td', { class: 'nw', text: r.commit || '' }),
-      h('td', { class: 'plan', text: r.n || '' }), h('td', { text: r.headline || '' })])))]);
+      h('td', { class: 'plan', text: r.n || '' }), h('td', {}, [r.headline || ''].concat((r.caveats || []).length ? [h('ol', { class: 'caveats' },
+        r.caveats.map(c => h('li', { text: c })))] : []))])))]);
   sec.appendChild(h('div', { class: 'grid' }, [card('c12', null, null, [tb])]));
 }
 

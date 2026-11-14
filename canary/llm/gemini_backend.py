@@ -89,7 +89,11 @@ class GeminiClient(LLMClient):
         super().__init__(model=model or os.environ.get("CANARY_GEMINI_MODEL") or DEFAULT_MODEL, **kw)
         if sdk_client is None:
             from google import genai
-            sdk_client = genai.Client(api_key=require_key("GEMINI_API_KEY"))
+            from google.genai import types
+            # per-request timeout (ms) so a hung connection becomes a retryable error instead of a stalled episode
+            timeout_ms = int(float(os.environ.get("CANARY_GEMINI_TIMEOUT_S", "600")) * 1000)
+            sdk_client = genai.Client(api_key=require_key("GEMINI_API_KEY"),
+                                      http_options=types.HttpOptions(timeout=timeout_ms))
         self.sdk = sdk_client
         self.thinking_budget = int(os.environ.get("CANARY_GEMINI_THINKING", "1024"))
         level = thinking_level or os.environ.get("CANARY_GEMINI_THINKING_LEVEL") or None

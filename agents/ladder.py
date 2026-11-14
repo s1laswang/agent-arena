@@ -200,11 +200,11 @@ def _one(args):
     return float(r["reward"]), bool(r["harm"])
 
 
-def table(days=20, start=1000, seat=None, jobs=4):
+def table(days=20, start=1000, seat=None, jobs=4, context=None):
     register()
     from multiprocessing import Pool
 
-    names = ["ladder%d" % i for i in range(len(RULES))] + CONTEXT
+    names = ["ladder%d" % i for i in range(len(RULES))] + (CONTEXT if context is None else context)
     out = []
     with Pool(jobs, initializer=register) as pool:
         for n in names:
@@ -235,14 +235,37 @@ def render(t, seat, commit):
     return "\n".join(lines) + "\n"
 
 
+def seat_matrix(days, start, jobs, commit):
+    tabs = {x: table(days, start, x, jobs, ["tell_only", "oracle"]) for x in SEATS}
+    head = "| level | " + " | ".join(SEATS) + " |"
+    lines = ["per-seat ladder, commit %s, n=%d days, command: python -m agents.ladder --per-seat" % (commit, days), "", "mean reward; * = rule not exercised in this seat (paired delta CI is exactly 0)", "", head, "|---" * (len(SEATS) + 1) + "|"]
+    for i in range(len(tabs[SEATS[0]])):
+        cells = []
+        for x in SEATS:
+            t = tabs[x]
+            flag = "*" if 0 < i < len(RULES) and paired(t[i - 1], t[i])[1:] == (0.0, 0.0) else ""
+            cells.append("%.3f%s" % (t[i]["mean"], flag))
+        name = RULES[i][0] if i < len(RULES) else tabs[SEATS[0]][i]["team"]
+        lines.append("| %s | %s |" % (name, " | ".join(cells)))
+    return tabs, "\n".join(lines) + "\n"
+
+
 def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--days", type=int, default=20)
     p.add_argument("--start", type=int, default=1000)
     p.add_argument("--out", default="results")
     p.add_argument("--jobs", type=int, default=4)
+    p.add_argument("--per-seat", action="store_true")
     a = p.parse_args(argv)
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+    if a.per_seat:
+        tabs, md = seat_matrix(a.days, a.start, a.jobs, commit)
+        Path(a.out).mkdir(exist_ok=True)
+        Path(a.out, "ladder_seats.json").write_text(json.dumps({"commit": commit, "days": a.days, "start": a.start, "tables": tabs}, indent=1))
+        Path(a.out, "ladder_seats.md").write_text(md)
+        print(md)
+        return
     res, md = {}, ""
     for seat in ("finance_ap", None):
         t = table(a.days, a.start, seat, a.jobs)

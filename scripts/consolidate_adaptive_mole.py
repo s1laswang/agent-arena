@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import random
 import statistics
 import sys
 from pathlib import Path
@@ -48,6 +49,46 @@ def sanitize_obj(obj: Any) -> Any:
 
 def _is_num(val: Any) -> bool:
     return isinstance(val, (int, float)) and not isinstance(val, bool) and math.isfinite(float(val))
+
+
+def wilson_ci95(successes: int, total: int) -> list[float]:
+    if total <= 0:
+        return [0.0, 0.0]
+    k = max(0, min(int(successes), int(total)))
+    n = float(total)
+    z = 1.959963984540054
+    z2 = z * z
+    phat = k / n
+    denom = 1.0 + z2 / n
+    center = (phat + z2 / (2.0 * n)) / denom
+    radicand = max(0.0, (phat * (1.0 - phat) + z2 / (4.0 * n)) / n)
+    half = (z * math.sqrt(radicand)) / denom
+    return [round(max(0.0, center - half), 4), round(min(1.0, center + half), 4)]
+
+
+def bootstrap_mean_ci95(
+    values: list[float],
+    n_boot: int = 2000,
+    seed: int = 104729,
+) -> list[float]:
+    if not values:
+        return [0.0, 0.0]
+    clean_vals = [float(v) for v in values]
+    if len(clean_vals) == 1:
+        single = round(clean_vals[0], 4)
+        return [single, single]
+    if min(clean_vals) == max(clean_vals):
+        const = round(clean_vals[0], 4)
+        return [const, const]
+    rng = random.Random(seed)
+    n = len(clean_vals)
+    boot_means = sorted(
+        sum(clean_vals[rng.randrange(n)] for _ in range(n)) / n
+        for _ in range(n_boot)
+    )
+    lo_idx = int(0.025 * (n_boot - 1))
+    hi_idx = int(0.975 * (n_boot - 1))
+    return [round(boot_means[lo_idx], 4), round(boot_means[hi_idx], 4)]
 
 
 def _truthy(val: Any) -> bool:
@@ -293,11 +334,17 @@ def _aggregate_clash_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "n_episodes": 0,
             "seeds": [],
             "investigator_accuracy": 0.0,
+            "investigator_accuracy_ci95": [0.0, 0.0],
             "investigator_mean_score": 0.0,
+            "investigator_mean_ci95": [0.0, 0.0],
             "solver_accuracy": 0.0,
+            "solver_accuracy_ci95": [0.0, 0.0],
             "solver_mean_score": 0.0,
+            "solver_mean_ci95": [0.0, 0.0],
             "solvable_rate": 0.0,
+            "solvable_rate_ci95": [0.0, 0.0],
             "mean_regret": 0.0,
+            "mean_regret_ci95": [0.0, 0.0],
             "mole_total_leaks": 0,
             "mole_total_frames": 0,
             "mole_total_errors": 0,
@@ -311,16 +358,28 @@ def _aggregate_clash_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
             },
         }
     n = len(rows)
+    inv_k = sum(1 for r in rows if r["investigator_correct"])
+    sol_k = sum(1 for r in rows if r["solver_correct"])
+    solv_k = sum(1 for r in rows if r["solvable"])
+    inv_scores = [float(r["investigator_score"]) for r in rows]
+    sol_scores = [float(r["solver_score"]) for r in rows]
+    regrets = [float(r["regret"]) for r in rows]
     return {
         "n_shards": n,
         "n_episodes": sum(int(r["episode_count"]) for r in rows),
         "seeds": [int(r["seed"]) for r in rows],
-        "investigator_accuracy": round(sum(1 for r in rows if r["investigator_correct"]) / n, 4),
-        "investigator_mean_score": round(statistics.mean(float(r["investigator_score"]) for r in rows), 4),
-        "solver_accuracy": round(sum(1 for r in rows if r["solver_correct"]) / n, 4),
-        "solver_mean_score": round(statistics.mean(float(r["solver_score"]) for r in rows), 4),
-        "solvable_rate": round(sum(1 for r in rows if r["solvable"]) / n, 4),
-        "mean_regret": round(statistics.mean(float(r["regret"]) for r in rows), 4),
+        "investigator_accuracy": round(inv_k / n, 4),
+        "investigator_accuracy_ci95": wilson_ci95(inv_k, n),
+        "investigator_mean_score": round(statistics.mean(inv_scores), 4),
+        "investigator_mean_ci95": bootstrap_mean_ci95(inv_scores),
+        "solver_accuracy": round(sol_k / n, 4),
+        "solver_accuracy_ci95": wilson_ci95(sol_k, n),
+        "solver_mean_score": round(statistics.mean(sol_scores), 4),
+        "solver_mean_ci95": bootstrap_mean_ci95(sol_scores),
+        "solvable_rate": round(solv_k / n, 4),
+        "solvable_rate_ci95": wilson_ci95(solv_k, n),
+        "mean_regret": round(statistics.mean(regrets), 4),
+        "mean_regret_ci95": bootstrap_mean_ci95(regrets),
         "mole_total_leaks": sum(int(r["mole_clash_leaks"]) for r in rows),
         "mole_total_frames": sum(int(r["mole_clash_frames"]) for r in rows),
         "mole_total_errors": sum(int(r["mole_clash_errors"]) for r in rows),
@@ -411,16 +470,53 @@ def _build_clash_suite(records: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _summarize_episode_slice(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if not rows:
-        return {"n": 0, "mean_score": 0.0, "accuracy": 0.0, "mean_day": 0.0}
+        return {
+            "n": 0,
+            "mean_score": 0.0,
+            "mean_score_ci95": [0.0, 0.0],
+            "accuracy": 0.0,
+            "accuracy_ci95": [0.0, 0.0],
+            "mean_day": 0.0,
+        }
     scores = [float(r.get("score", 0.0) or 0.0) for r in rows]
-    acc = sum(1 for r in rows if bool(r.get("correct"))) / len(rows)
+    k_corr = sum(1 for r in rows if bool(r.get("correct")))
+    acc = k_corr / len(rows)
     days = [int(r.get("final_day", 0) or 0) for r in rows]
     return {
         "n": len(rows),
         "mean_score": round(statistics.mean(scores), 4),
+        "mean_score_ci95": bootstrap_mean_ci95(scores),
         "accuracy": round(acc, 4),
+        "accuracy_ci95": wilson_ci95(k_corr, len(rows)),
         "mean_day": round(statistics.mean(days), 2),
     }
+
+
+def _paired_episode_diffs(
+    adaptive_rows: list[dict[str, Any]],
+    default_rows: list[dict[str, Any]],
+) -> list[float]:
+    default_map: dict[tuple[str, int], float] = {}
+    for row in default_rows:
+        seed_val = row.get("seed")
+        if isinstance(seed_val, int) and not isinstance(seed_val, bool):
+            key = (clean_str(row.get("tier") or ""), seed_val)
+            default_map[key] = float(row.get("score", 0.0) or 0.0)
+    diffs: list[float] = []
+    for row in sorted(
+        adaptive_rows,
+        key=lambda r: (
+            TIER_RANK.get(clean_str(r.get("tier") or ""), 99),
+            clean_str(r.get("tier") or ""),
+            int(r.get("seed", 0) or 0),
+        ),
+    ):
+        seed_val = row.get("seed")
+        if isinstance(seed_val, int) and not isinstance(seed_val, bool):
+            key = (clean_str(row.get("tier") or ""), seed_val)
+            if key in default_map:
+                diffs.append(float(row.get("score", 0.0) or 0.0) - default_map[key])
+    return diffs
 
 
 def _aggregate_arena_batches(batches: list[dict[str, Any]]) -> dict[str, Any]:
@@ -440,10 +536,13 @@ def _aggregate_arena_batches(batches: list[dict[str, Any]]) -> dict[str, Any]:
         d_rows = [e for e in default_eps if e.get("investigator") == inv]
         a_sum = _summarize_episode_slice(a_rows)
         d_sum = _summarize_episode_slice(d_rows)
+        p_diffs = _paired_episode_diffs(a_rows, d_rows)
         by_inv[inv] = {
             "adaptive_mole": a_sum,
             "default_mole": d_sum,
+            "n_paired": len(p_diffs),
             "delta_mean": round(a_sum["mean_score"] - d_sum["mean_score"], 4),
+            "delta_mean_ci95": bootstrap_mean_ci95(p_diffs),
             "delta_accuracy": round(a_sum["accuracy"] - d_sum["accuracy"], 4),
         }
 
@@ -598,6 +697,19 @@ def _build_mole_forge_suite(records: list[dict[str, Any]]) -> dict[str, Any]:
             if _is_num(g.get("hof_best_fitness", g.get("best_fitness")))
         ]
         tier = clean_str(meta.get("tier") or (gen_doc.get("tier") if isinstance(gen_doc, dict) else "") or "unknown")
+        holdout_doc = _load_json(run_dir / "holdout_generalization.json")
+        has_holdout = isinstance(holdout_doc, dict)
+        hold_summary = (
+            holdout_doc.get("summary")
+            if has_holdout and isinstance(holdout_doc.get("summary"), dict)
+            else {}
+        )
+        hold_splits = (
+            holdout_doc.get("splits")
+            if has_holdout and isinstance(holdout_doc.get("splits"), dict)
+            else {}
+        )
+        confirm_seeds = hold_splits.get("confirm_seeds") if isinstance(hold_splits.get("confirm_seeds"), list) else []
         runs.append(
             {
                 "run_dir": rec["rel_dir"],
@@ -613,6 +725,15 @@ def _build_mole_forge_suite(records: list[dict[str, Any]]) -> dict[str, Any]:
                 "fresh_solver_accuracy": _opt_round(meta.get("fresh_solver_accuracy"), 4),
                 "fresh_min_regret": _opt_round(meta.get("fresh_min_regret"), 4),
                 "default_fresh_min_regret": _opt_round(meta.get("default_fresh_min_regret"), 4),
+                "has_holdout_generalization": has_holdout,
+                "n_confirm_seeds": len(confirm_seeds),
+                "top1_confirm_solver_acc": _opt_round(hold_summary.get("top1_confirm_solver_acc"), 4),
+                "top1_confirm_min_regret": _opt_round(hold_summary.get("top1_confirm_min_regret"), 4),
+                "all_evolved_solvable_confirm": (
+                    bool(hold_summary["all_evolved_solvable_confirm"])
+                    if isinstance(hold_summary.get("all_evolved_solvable_confirm"), bool)
+                    else None
+                ),
                 "generations_recorded": len(gen_rows),
                 "hof_fitness_trajectory": traj,
                 "usage": dict(rec["usage"]),
@@ -741,6 +862,59 @@ def _fmt_pct(val: float | None) -> str:
     return f"{val * 100.0:.2f}%"
 
 
+def _fmt_ci95(ci: Any, signed: bool = True) -> str:
+    if not isinstance(ci, list) or len(ci) != 2:
+        return "n/a"
+    lo, hi = float(ci[0]), float(ci[1])
+    if signed:
+        return f"[{lo:+.4f}, {hi:+.4f}]"
+    return f"[{lo:.4f}, {hi:.4f}]"
+
+
+def _fmt_pct_ci95(ci: Any) -> str:
+    if not isinstance(ci, list) or len(ci) != 2:
+        return "n/a"
+    lo, hi = float(ci[0]) * 100.0, float(ci[1]) * 100.0
+    return f"[{lo:.1f}%, {hi:.1f}%]"
+
+
+def _build_catchability_audit_summary(other_recs: list[dict[str, Any]]) -> dict[str, Any] | None:
+    audit_recs = [
+        r
+        for r in other_recs
+        if clean_str(r["meta"].get("subrole") or "") == "catchability_isolation_audit"
+        or r["name"] == "catchability-audit-carbon"
+    ]
+    if not audit_recs:
+        return None
+    rec = sorted(audit_recs, key=lambda x: (str(x["meta"].get("timestamp") or ""), x["rel_dir"]))[-1]
+    meta = rec["meta"]
+    n_pass = int(meta.get("n_catchability_passed", 0) or 0)
+    n_targ = int(meta.get("n_catchability_targets", 0) or 0)
+    comp_rate = _opt_round(meta.get("catchability_compliance_rate"), 4)
+    return {
+        "run_dir": rec["rel_dir"],
+        "commit": rec["commit"],
+        "n_runs_audited": int(meta.get("n_runs_audited", 0) or 0),
+        "n_strategies_audited": int(meta.get("n_strategies_audited", 0) or 0),
+        "n_decisions_audited": int(meta.get("n_decisions_audited", 0) or 0),
+        "n_views_checked": int(meta.get("n_views_checked", 0) or 0),
+        "isolation_violations": int(meta.get("isolation_violations", 0) or 0),
+        "file_secret_leaks": int(meta.get("file_secret_leaks", 0) or 0),
+        "data_hygiene_violations": int(meta.get("data_hygiene_violations", 0) or 0),
+        "n_catchability_passed": n_pass,
+        "n_catchability_targets": n_targ,
+        "catchability_compliance_rate": comp_rate,
+        "catchability_compliance_ci95": wilson_ci95(n_pass, n_targ),
+        "live_solvability_compliance_rate": _opt_round(meta.get("live_solvability_compliance_rate"), 4),
+        "forensic_cross_check_agreement_rate": _opt_round(meta.get("forensic_cross_check_agreement_rate"), 4),
+        "zero_privileged_canary_awareness_confirmed": bool(
+            meta.get("zero_privileged_canary_awareness_confirmed", False)
+        ),
+        "usage": dict(rec["usage"]),
+    }
+
+
 def render_summary_md(suite: dict[str, Any]) -> str:
     tot = suite["totals"]
     clash = suite["clash_suite"]
@@ -748,6 +922,7 @@ def render_summary_md(suite: dict[str, Any]) -> str:
     forge = suite["mole_forge_suite"]
     paired = suite["paired_designer_suite"]
     other_runs = suite["other_verified_runs"]
+    catch_audit = suite.get("catchability_audit")
 
     lines: list[str] = [
         "# Role 2 Consolidated Suite: Adaptive Gemini Mole (`gemini-4-carbon`)",
@@ -765,23 +940,32 @@ def render_summary_md(suite: dict[str, Any]) -> str:
         "",
         "## 1. Head-to-Head Carbon-vs-Carbon Clash Suite (`clash_suite`)",
         "",
-        "| Slice | Shards | Episodes | Investigator Acc | Investigator Mean | Solver Acc | Solver Mean | Solvable Rate | Mean Regret | Mole Leaks | Mole Frames | Mole Errors | Combined Tokens (in/out/think) | Inv Cost | Mole Cost | Total Cost |",
+        "| Slice | Shards | Episodes | Investigator Acc (95% CI) | Investigator Mean (95% CI) | Solver Acc | Solver Mean (95% CI) | Solvable Rate (95% CI) | Mean Regret (95% CI) | Mole Leaks | Mole Frames | Mole Errors | Combined Tokens (in/out/think) | Inv Cost | Mole Cost | Total Cost |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: |",
     ]
 
-    for label, row in [
+    clash_rows_to_render = (
+        [("easy", clash["by_tier"]["easy"])]
+        if "easy" in clash["by_tier"] and clash["by_tier"]["easy"]["n_shards"] > 0
+        else []
+    ) + [
         ("medium", clash["by_tier"]["medium"]),
         ("hard", clash["by_tier"]["hard"]),
         ("overall", clash["overall"]),
-    ]:
+    ]
+    for label, row in clash_rows_to_render:
         cu = row["usage"]["combined"]
         iu = row["usage"]["clash_investigator"]
         mu = row["usage"]["clash_mole"]
         tok_str = f"{cu['in']:,}/{cu['out']:,}/{cu['thinking']:,}"
         lines.append(
-            f"| `{label}` | {row['n_shards']} | {row['n_episodes']} | {_fmt_pct(row['investigator_accuracy'])} | "
-            f"{row['investigator_mean_score']:+.4f} | {_fmt_pct(row['solver_accuracy'])} | "
-            f"{row['solver_mean_score']:+.4f} | {_fmt_pct(row['solvable_rate'])} | {row['mean_regret']:+.4f} | "
+            f"| `{label}` | {row['n_shards']} | {row['n_episodes']} | "
+            f"{_fmt_pct(row['investigator_accuracy'])} {_fmt_pct_ci95(row['investigator_accuracy_ci95'])} | "
+            f"{row['investigator_mean_score']:+.4f} {_fmt_ci95(row['investigator_mean_ci95'])} | "
+            f"{_fmt_pct(row['solver_accuracy'])} | "
+            f"{row['solver_mean_score']:+.4f} {_fmt_ci95(row['solver_mean_ci95'])} | "
+            f"{_fmt_pct(row['solvable_rate'])} {_fmt_pct_ci95(row['solvable_rate_ci95'])} | "
+            f"{row['mean_regret']:+.4f} {_fmt_ci95(row['mean_regret_ci95'])} | "
             f"{row['mole_total_leaks']} | {row['mole_total_frames']} | {row['mole_total_errors']} | "
             f"`{tok_str}` | ${iu['cost_usd']:.4f} | ${mu['cost_usd']:.4f} | ${cu['cost_usd']:.4f} |"
         )
@@ -810,22 +994,31 @@ def render_summary_md(suite: dict[str, Any]) -> str:
             "",
             "## 2. Live Arena Adaptive Mole Suite (`live_arena_suite`)",
             "",
-            "| Slice | Investigator | Adaptive Mole Mean | Adaptive Mole Acc | Default Mole Mean | Default Mole Acc | Delta Mean (Adaptive - Default) |",
+            "| Slice | Investigator | Adaptive Mole Mean (95% CI) | Adaptive Mole Acc (95% CI) | Default Mole Mean (95% CI) | Default Mole Acc | Paired Delta Mean (95% CI) |",
             "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
-    for slice_label, slice_obj in [
+    arena_rows_to_render = (
+        [("easy", arena["by_tier"]["easy"])]
+        if "easy" in arena["by_tier"] and arena["by_tier"]["easy"]["n_runs"] > 0
+        else []
+    ) + [
         ("medium", arena["by_tier"]["medium"]),
         ("hard", arena["by_tier"]["hard"]),
         ("overall", arena["overall"]),
-    ]:
+    ]
+    for slice_label, slice_obj in arena_rows_to_render:
         for inv in INVESTIGATOR_ORDER:
             ir = slice_obj["by_investigator"][inv]
             am = ir["adaptive_mole"]
             dm = ir["default_mole"]
             lines.append(
-                f"| `{slice_label}` (n={am['n']}) | `{inv}` | {am['mean_score']:+.4f} | {_fmt_pct(am['accuracy'])} | "
-                f"{dm['mean_score']:+.4f} | {_fmt_pct(dm['accuracy'])} | {ir['delta_mean']:+.4f} |"
+                f"| `{slice_label}` (n={am['n']}) | `{inv}` | "
+                f"{am['mean_score']:+.4f} {_fmt_ci95(am['mean_score_ci95'])} | "
+                f"{_fmt_pct(am['accuracy'])} {_fmt_pct_ci95(am['accuracy_ci95'])} | "
+                f"{dm['mean_score']:+.4f} {_fmt_ci95(dm['mean_score_ci95'])} | "
+                f"{_fmt_pct(dm['accuracy'])} | "
+                f"{ir['delta_mean']:+.4f} {_fmt_ci95(ir['delta_mean_ci95'])} |"
             )
 
     if arena["runs"]:
@@ -852,17 +1045,22 @@ def render_summary_md(suite: dict[str, Any]) -> str:
             "",
             "## 3. Mole Forge Evolutionary DSL Suite (`mole_forge_suite`)",
             "",
-            "| Run Folder | Tier | Gens | Valid LLM Children | Best Fitness | Default Dev Fitness | Fresh Solver Acc | Fresh Min Regret | Default Fresh Min Regret | Calls | Cost (USD) |",
-            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| Run Folder | Tier | Gens | Valid LLM Children | Best Fitness | Default Dev Fitness | Fresh Solver Acc | Fresh Min Regret | Default Fresh Min Regret | Confirm Holdout Acc | Calls | Cost (USD) |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         ]
     )
     for fr in forge["runs"]:
         fu = fr["usage"]
+        conf_str = (
+            f"{_fmt_pct(fr['top1_confirm_solver_acc'])} (n={fr['n_confirm_seeds']})"
+            if fr.get("has_holdout_generalization") and fr.get("top1_confirm_solver_acc") is not None
+            else "n/a"
+        )
         lines.append(
             f"| `{fr['run_dir']}` | `{fr['tier']}` | {fr['gens']} | {fr['n_valid_llm_children']} | "
             f"{_fmt_opt(fr['best_fitness'], signed=False)} | {_fmt_opt(fr['default_dev_fitness'], signed=False)} | "
             f"{_fmt_pct(fr['fresh_solver_accuracy'])} | {_fmt_opt(fr['fresh_min_regret'], signed=False)} | "
-            f"{_fmt_opt(fr['default_fresh_min_regret'], signed=False)} | {fu['calls']} | ${fu['cost_usd']:.4f} |"
+            f"{_fmt_opt(fr['default_fresh_min_regret'], signed=False)} | {conf_str} | {fu['calls']} | ${fu['cost_usd']:.4f} |"
         )
 
     lines.extend(
@@ -882,6 +1080,20 @@ def render_summary_md(suite: dict[str, Any]) -> str:
             f"{_fmt_opt(pr['solver_mean'])} | {_fmt_opt(pr['heuristic_mean'])} | "
             f"{_fmt_opt(pr['eval_full_solver_mean'])} | {_fmt_opt(pr['eval_heuristic_mean'])} | "
             f"{scen} | {pu['calls']} | ${pu['cost_usd']:.4f} |"
+        )
+
+    if isinstance(catch_audit, dict):
+        lines.extend(
+            [
+                "",
+                "## Catchability & Secret-Isolation Audit (`catchability_audit`)",
+                "",
+                f"- Audit folder: `{catch_audit['run_dir']}` (commit `{catch_audit['commit'][:10]}`)",
+                f"- Runs / strategies / live decisions / MoleViews checked: `{catch_audit['n_runs_audited']}` / `{catch_audit['n_strategies_audited']}` / `{catch_audit['n_decisions_audited']}` / `{catch_audit['n_views_checked']}`",
+                f"- Privileged-state isolation violations: `{catch_audit['isolation_violations']}` (file secret leaks: `{catch_audit['file_secret_leaks']}`)",
+                f"- Catchability compliance: `{catch_audit['n_catchability_passed']}/{catch_audit['n_catchability_targets']}` (`{_fmt_pct(catch_audit['catchability_compliance_rate'])}` {_fmt_pct_ci95(catch_audit['catchability_compliance_ci95'])})",
+                f"- Zero privileged canary awareness confirmed by `gemini-4-carbon`: `{catch_audit['zero_privileged_canary_awareness_confirmed']}`",
+            ]
         )
 
     if other_runs:
@@ -959,6 +1171,7 @@ def consolidate_adaptive_mole(
     live_arena_suite = _build_live_arena_suite(buckets["live_arena"])
     mole_forge_suite = _build_mole_forge_suite(buckets["mole_forge"])
     paired_designer_suite = _build_paired_designer_suite(buckets["paired_designer"])
+    catchability_audit = _build_catchability_audit_summary(buckets["other"])
 
     other_verified_runs = [
         {
@@ -1023,6 +1236,7 @@ def consolidate_adaptive_mole(
             "live_arena_suite": live_arena_suite,
             "mole_forge_suite": mole_forge_suite,
             "paired_designer_suite": paired_designer_suite,
+            "catchability_audit": catchability_audit,
             "other_verified_runs": other_verified_runs,
             "totals": totals,
         }

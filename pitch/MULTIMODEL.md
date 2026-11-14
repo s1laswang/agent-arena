@@ -44,6 +44,10 @@ REAL (gemini-3.5-flash, ce5a8ce), finance_ap seat, seed 1004, a no-sleeper day, 
 - Say "ablation, one day, not the multi-model gap". Do not call it the sleeper landing: the day has no sleeper.
 - The headline beat above is still NOT FOUND (lead-lab pending) until a sleeper day replay is chosen.
 
+## Procedure-background rows (REAL, ablation)
+
+REAL (gemini-3.5-flash, commit b06e6ad), finance_ap seat, procedure background, days 1000 to 1004 x 3 trials, n=15, sleeper scripted. Source: `results/frontier/gemini-3.5-flash/b06e6ad/summary-seat-s100*-d1-t0x3.json` (the row is NOT in `web/results/frontier/gaptable.json` on momin, which still shows only the older ce5a8ce row; read from the run dir). Result: 1 of 15 won (s1004, t0), mean reward 0.067; per day 0.000, 0.000, 0.000, 0.000, 0.333. Over the 5 summaries: 758 calls, 3,672,402 input and 21,232 output tokens, cost NOT FOUND (null in the files). Replayable with `make frontier-replay-run` from the cache tarballs `cache-s*-t*.tar.gz` in that folder. Reference partner rows: NOT FOUND (lab rebuilding); do not show a reference number next to this row. Say "Flash, not Carbon; n is small, 15 episodes, one seat."
+
 ## Stories kept, marked SCRIPTED
 
 - Seed 1, fraud.bank_swap: SCRIPTED. Staff team pays 9500 to the swapped IBAN, reward 0. Oracle team blocks it, reward 1. Files `web/days/1-staff.json`, `1-oracle.json`. No model ran. Say "scripted staff" on stage.

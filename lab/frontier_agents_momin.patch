@@ -1,0 +1,39 @@
+diff --git a/agents/gemini.py b/agents/gemini.py
+index 4b01efe..4a3f1cb 100644
+--- a/agents/gemini.py
++++ b/agents/gemini.py
+@@ -140,7 +140,7 @@ def _get_client():
+     if _client is None:
+         from google import genai
+ 
+-        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
++        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 300000})
+     return _client
+ 
+ 
+@@ -150,7 +150,7 @@ def _generate(model, system, messages, tools, temperature, seed):
+     cfg = types.GenerateContentConfig(
+         system_instruction=system or None,
+         temperature=temperature,
+-        seed=seed,
++        seed=None if seed is None else seed % 2147483647,
+         tools=[types.Tool(function_declarations=to_declarations(tools))] if tools else None,
+         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+     )
+diff --git a/agents/staff.py b/agents/staff.py
+index d1ca029..b42dcdc 100644
+--- a/agents/staff.py
++++ b/agents/staff.py
+@@ -314,7 +314,11 @@ class GeminiStaff:
+             return r
+         except OfflineCacheMiss:
+             raise
+-        except Exception:
++        except Exception as e:
++            if os.environ.get("SLEEPER_STRICT") == "1":
++                if type(e).__name__ == "GeminiUnavailable" and "MAX_CALLS" in str(e):
++                    return None
++                raise
+             return self.fallback.turn(seat, view, tools, call)
+ 
+ 

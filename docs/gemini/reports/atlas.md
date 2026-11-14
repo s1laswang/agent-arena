@@ -1,0 +1,105 @@
+# G3 Failure Atlas: report (newest first)
+
+## Sat 18:27 (EET, `date`): atlas v1 committed
+
+**Done (verified)**
+- **atlas v1 results committed**: `results/gemini/atlas.{json,md}`, 8 charts (292 KB), `results/gemini/atlas_cache/`
+  (1.1 MB: response cache plus corpus snapshot). Commit e4c68e4.
+- **Discovery came from Gemini, not the fallback**: gemini-3.8-flash read the whole corpus in one sitting from an
+  explicit context cache: 153 episodes, 9 cohorts, 792,862 tokens by count_tokens, 797,920 tokens cached. 13 further
+  structured questions ran against the same cache: 11 label chunks, the cohort comparison and the solver
+  counterfactuals. 3.99M input tokens were served from cache.
+- **Failure modes, by share of all solver regret** (computed in code):
+  - premature accusation on a sub-threshold posterior: 61%, 50 episodes;
+  - narrow, uninformative canaries: 15%, 74 episodes;
+  - costly early restriction: 9%;
+  - accusing a decoy or framed innocent: 2%;
+  - budget waste: 0%;
+  - other: 3%.
+  The labelled steps cover 90% of all regret (404 steps at regret >= 0.01).
+- **Cross-family comparison** (by code; different rule versions, so not pooled):
+  - Premature accusation is the top regret source for almost every cohort.
+  - Grok (v1.2) loses most to restrictions (46%).
+  - gemini-4-carbon inproc (v1.4) has the lowest premature share (41%), but 23% of its regret comes from one framed
+    innocent (h6). That accusation was evidence-backed (bad luck).
+  - Gemini's own reading: carbon runs about 50 interviews per episode and uses 3-variant canaries; GPT and Grok
+    lean on restrictions and on accusing below 0.6. Gemini states the version caveat itself.
+- **Verification**: 461/470 Gemini quotes verbatim (98.1%), 449 at the named step (95.5%); 9 dropped and listed in
+  atlas.json.
+- **Multimodal**: 8/8 divergence steps match the code's step. Honest caveat: the excerpt shown with the chart
+  includes the per-step REGRET, so this agreement is partly given away. For v2, hide regret in the excerpt.
+- **Embeddings**: 84 agent-rationale snippets, k=6, clusters named by Gemini. Purity vs the taxonomy labels 0.64
+  (NMI 0.37).
+- **Keyless replay**: `python -m canary.gemini.atlas --replay --charts 8 --embed` makes 0 live calls, uses 25
+  recorded responses and rebuilds the same atlas.
+- **Validation sheet** pushed: `docs/gemini/validation.md`, 30 claims (10 mode evidence, 12 step labels,
+  5 counterfactuals, 3 localisations), plus `docs/gemini/validation_context.md` with the steps around each claim. For
+  Ivar.
+- **Fixes along the way**:
+  - All generate calls stream. A non-streamed carbon call over 793k tokens was cut after 527 s.
+  - max_output_tokens is set at the model ceiling. Discovery truncated at 32k after 31k thinking tokens.
+  - Invalid structured output is never recorded for replay.
+  - New cached questions think at "medium". Default thinking took 63k thinking tokens and ~8 min per question.
+  - One SDK client, created under a lock (a racing second client was being closed).
+  - Embeddings use one Content per text. gemini-embedding-2 merged a list of strings into ONE vector.
+  - A failed discovery exits without writing atlas.json.
+
+**Not in v1**
+- Batch API labels: the batch job I cancelled was built on the fallback taxonomy.
+- The carbon cross-check: 2 of 3 shards were truncated at default thinking, and the retry hit the client bug.
+  Both are fixed in code and run in v2.
+
+**Spend**: $9.54 across 157 atlas ledger calls, including every failed attempt; 21.8M of 27.0M input tokens were
+cached.
+
+**Next**: v2 with the ladder episodes (thinking-level question), the Batch API labels and the carbon cross-check.
+**Blockers**: none.
+
+## Sat 14:47 (EET, `date`)
+
+**Done**
+- Run 1 (14:30) lost its one-shot gemini-4-carbon discovery call: a non-streamed request over 793k tokens was cut by
+  the server after 527 s (`RemoteProtocolError: Server disconnected`, nothing billed). The run fell back to the
+  deterministic taxonomy, labelled 404/404 steps against it on the flash cache, and submitted a batch. **I stopped that
+  process myself (pkill, 14:43) and cancelled its batch job** (`batches/vp4lpi7a...`, JOB_STATE_CANCELLED): both were
+  built on the fallback taxonomy, which must never be published, so resuming the batch would have paid for useless
+  labels. Run 1 cost $1.73 (cache creation $0.60 + 12 cached questions).
+- Fixes (pushed): discovery is now a one-shot question over the whole corpus on the explicit 3.8-flash context
+  cache; gemini-4-carbon re-reads the corpus independently in <=250k-token shards + one merge call (`--crosscheck`),
+  mapped onto the taxonomy by flash; every generate call streams; a failed discovery exits without writing
+  atlas.json (`--allow-fallback` only for drafts); the batch job runs concurrently with the cached questions.
+- Merged gemini-track (133f546, fast-forward); all 60 gemini tests green. Atlas tests: 12.
+- Ladder data loads: 44 episodes so far, tiers version now inferred from `ladder-v14`; dev seeds, so true moles known.
+
+**Running:** run 2 (nohup, pid 91027, log `data/gemini/scratch/full2.log`), started 14:45.
+
+## Sat ~14:30 (first entry; timestamp corrected)
+
+**Done**
+- `canary/gemini/atlas.py` + helpers (`atlas_data`, `atlas_gemini`, `atlas_schema`, `atlas_charts`, `atlas_report`,
+  `atlas_agreement`). Pipeline: long-context discovery (one prompt, `models.count_tokens`), explicit context cache
+  (`caches.create`) for the per-step labels / cohort comparison / solver counterfactuals / thinking-level question,
+  belief-trace PNGs + multimodal localisation, gemini-embedding-2 clusters, Batch API labels, pydantic structured
+  output everywhere, verbatim quote verification in code. Every response is stored gzip under
+  `results/gemini/atlas_cache/` together with a corpus snapshot, so `python -m canary.gemini.atlas --replay` rebuilds
+  the atlas keyless.
+- Tests: `tests/test_gemini_lab_atlas.py`, 11 tests, keyless fake client, ~2-8 s (packing, transcript alignment,
+  quote verification, schema, full pipeline with a fake Gemini, replay with zero live calls, deterministic fallback,
+  agreement sheet round trip).
+- Live smoke (12 episodes, gemini-3.8-flash for both roles): 83/83 quotes verbatim (96% at the named step), cache hit
+  74k tokens per question, multimodal localisation agreed with the code's divergence step 2/2, $0.16.
+- Corpus: 153 committed frontier episodes (gemini-4-carbon in-process + OpenCode v1.4, gemini-3.5-flash OpenCode v1.4,
+  gpt-5.5 in-process v1.2/v1.3, Codex gpt-5.5 v1.2/v1.3, OpenCode gpt-5.6-sol v1.2, Grok replayed v1.2) =
+  **793k tokens** (count_tokens, gemini-4-carbon): fits one prompt, no sharding yet.
+
+**Gotchas** (also in the playbook): google-genai 3.x defaults to API `v1`, where `cachedContents` is a bare 404; use
+`api_version="v1beta"`. gemini-4-* have no explicit caching (batch only), so caching runs on gemini-3.8-flash.
+
+**Note on luck (no bug):** in `g4carbon.in.v14.h6` (v1.4 hard seed 6) the canary `c4-2` surfaced with variant Z at
+t=64, which the reference solver's own posterior (replayed from the agent's observations) reads as evidence against
+the true mole e34 (P 0.06 -> 0.002) and for the innocent e18 (~0.65). The agent's wrong accusation is what the
+evidence supported; the atlas shows such episodes as "the solver was misled too" rather than as an agent failure.
+
+**Next:** full run on all 153 episodes with gemini-4-carbon discovery (running), validation sheet, commit results.
+
+**Blockers:** none. **Spend so far:** ~$0.5 (probes + smoke).

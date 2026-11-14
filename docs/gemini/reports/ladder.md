@@ -2,6 +2,52 @@
 
 Branch `gemini-ladder`. Newest entry first.
 
+## Sat 15:28 (`date`: Sat Nov 14 15:28:32 EET 2026): report v1 committed, provenance on every cell, subset tool
+
+**Done (verified how)**
+- **Ladder report v1:** `results/gemini/ladder.{md,json}` and 4 figures from 119 valid episodes in 29 cells
+  (commit b3f7dba). Every flash cell has 4–6 seeds per tier; the first gemini-4 cells have 1–2 seeds. Ledger:
+  6,547 calls, 0 errors, 0 infra-invalid episodes, $41 at list price.
+- **Labelled real runs:** every cell's `meta.json` and `episode.meta.ladder` record `model_id`, `thinking_level`,
+  `tiers_version` (v1.4), `launch_git_sha`, and a `code_fingerprint`. The fingerprint is a sha256 of the
+  env/rules/world/harness/Gemini-client files. Because play.py's `git_sha` is HEAD at write time, it can move
+  during a long run; the fingerprint pins the actual code. The two Mac processes predate this (they launched at
+  2786c00 and 107c485). Their cells were backfilled with `--backfill-sha`, which first checks that
+  `git diff <sha> -- <code files>` is empty, so the code is byte-identical (all 104 cells now carry fingerprint
+  06ea9b6a0f68d1dc), and marks them `provenance_backfilled`. New launches record the API-served
+  `model_version` too.
+- **Showcase tooling:** `canary/gemini/ladder_subset.py` cuts a committable store out of a big recording. It
+  replays the chosen cells through a proxy that computes the gateway's replay key (tag + request) and copies the
+  matching responses, then writes a `lab_replay` manifest, so `make lab-replay` checks it. Tested by cutting 1
+  episode out of G1's 4-episode store: `REPLAY OK`, and the manifest is identical to G1's. My pre-tag store and
+  test are removed; G1's `lab_replay` is the one replay path.
+- Merged gemini-track 8f0e028. Ladder tests: 10 passed in 1.9 s.
+
+**First findings (small n: 4–6 paired seeds per flash cell; CIs are wide; read them as directions)**
+- **gemini-3.1-flash-lite cannot do the task at any thinking level.** At minimal it accuses wrongly in 8/8
+  episodes (−1.0). At low, medium and high it is right in 25–50% of episodes, so its mean is below 0, the score
+  of doing nothing.
+- **gemini-3.5-flash (served as 3.6-flash) is the surprise.** At medium it scores 126% [98, 179] of the solver
+  on medium and 99% [72, 139] on hard, for about $0.20–0.47 per episode. That puts it on the cost frontier next
+  to gemini-4-argon/high.
+- **gemini-3.8-flash** needs high thinking on medium (92% [76, 121], 6/6 correct), but on hard it stays at
+  17–30%.
+- **Which mistakes does thinking fix?** Pooled over the three flash models, low → high cuts
+  `premature_accusation` regret per episode by 0.19 on medium and 0.12 on hard, and cuts wrong accusations on
+  hard (`other:accuse`) by 0.06. Canary design does not improve: `uninformative_canary` regret on hard rises
+  from 0.002 to 0.038, with 54% of high-thinking episodes affected. So thinking buys better commit timing, not
+  better experiments.
+- The first gemini-4 cells (n = 1–2) are at about the solver on hard (carbon/high 102%, carbon/low 97%,
+  argon/high 99%). The imported carbon-default cell is 66% [5, 117] with n = 10.
+
+**Next:** when the flash grid finishes (≈ 16:35), its 8 Mac slots go to (a) a second gemini-4 process wrapped in
+`with_gateway --record data/gemini/replay-ladder-full --model-limit gemini-4-carbon=8`, run-name ladder-v14, and
+(b) a recorded showcase: one cell per model at high thinking, medium, seed 0 (6 episodes, ≈ 3 MB). That goes to
+`results/gemini/replay-ladder-showcase` by 18:30, using `lab_replay --record` directly. The two running processes
+are not restarted. The Mac stays at ≤ 16 concurrent episodes, carbon ≤ 8.
+
+**Spend so far:** $41 at list price (ledger rows for feature=ladder).
+
 ## Sat 14:50: M1 met; projection; keyless record/replay of a ladder episode works
 
 **Done (verified how)**

@@ -12,8 +12,10 @@ RUN=${2:-forge_${MUTATOR//:/_}_${SLURM_JOB_ID:-local}}
 OUT=$HOME/agent-arena-data/forge/$RUN
 mkdir -p "$OUT"
 cd "$HOME/agent-arena"
-# investigators: canary.baselines.Heuristic + canary.forge.investigators.HintedHeuristic; solver = SolverPolicy (feasibility)
+# J5b: investigators = canary.baselines.Heuristic + canary.forge.investigators.HintedHeuristic (Bayesian canary bisection);
+# fitness = solver - max_i investigator (FITNESS=min), feasible iff solver >= 0.5 x default and acc >= MIN_ACC (0.75)
 # resumable: re-submitting with the same RUN continues from log.jsonl
 uv run --python 3.12 --extra llm python -m canary.forge.evolve \
   --mutator "$MUTATOR" --tier "${TIER:-hard}" --pop 16 --gens 50 --seeds 0-19 \
+  --fitness "${FITNESS:-min}" --min-solver-acc "${MIN_ACC:-0.75}" \
   --workers "${SLURM_CPUS_PER_TASK:-8}" --out "$OUT" 2>&1 | tee -a "$OUT/stdout.log"

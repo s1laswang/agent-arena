@@ -570,30 +570,36 @@ function updateGuidance() {
   if (!el) return;
 
   if (state.employees.length === 0) {
-    el.textContent = "Survey office personnel to index staff across departments (1 action).";
+    if (state.actionsLeftToday === 0) {
+      el.textContent = "All daily actions spent. Press Next Day [N] to advance time.";
+    } else {
+      el.textContent = "Survey office personnel to index staff across departments (1 action).";
+    }
     return;
   }
+
+  const totalCanaries = state.canaryHistory.length;
+  const plantedToday = state.canaryHistory.some(c => c.day === state.day);
 
   if (state.actionsLeftToday === 0) {
-    el.textContent = "All 8 actions spent today. Press Next Day [N] to advance time and let leaks surface.";
-    return;
-  }
-
-  const plantedToday = state.canaryHistory.some(c => c.day === state.day);
-  const totalCanaries = state.canaryHistory.length;
-
-  if (plantedToday) {
-    el.textContent = "Canaries planted. Leaks take 1–3 days, so press Next Day [N] and check the leak feed.";
-    return;
-  }
-
-  if (state.day > 1 && !state.checkedLeaksToday) {
-    el.textContent = `Day ${state.day} began. Press Check Leaks to see if any planted canaries surfaced at rival firm.`;
+    el.textContent = totalCanaries > 0
+      ? "All daily actions spent. Press Next Day [N] to advance time and let leaks surface."
+      : "All daily actions spent. Press Next Day [N] to advance time.";
     return;
   }
 
   if (totalCanaries === 0) {
     el.textContent = "No canaries active yet. Press Plant Canaries [P] to distribute marked memos across cohorts.";
+    return;
+  }
+
+  if (plantedToday) {
+    el.textContent = "Canary planted today. Leaks take 1–3 days to surface, so investigate suspects or advance to tomorrow [N].";
+    return;
+  }
+
+  if (state.day > 1 && !state.checkedLeaksToday) {
+    el.textContent = `Day ${state.day} began. Check the leak feed to see if any planted canaries surfaced at rival firm.`;
     return;
   }
 

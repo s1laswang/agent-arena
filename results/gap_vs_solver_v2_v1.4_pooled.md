@@ -1,6 +1,6 @@
 # Gap vs reference `solver_v2` (rules v1.4)
 
-Generated 2026-11-14 23:01:53 EET at repo commit `cce497053c`.
+Generated 2026-11-14 23:12:23 EET at repo commit `ad72771328`.
 
 Command:
 
@@ -16,18 +16,18 @@ Inputs:
 
 ## (a) Frontier / reference, paired on the frontier's own seeds
 
-Reference replayed in-process on 62 (tier, seed) pairs in 1.9 s (canary.eval.make_env template provider + run_episode; judge seeds excluded).
+Reference replayed in-process on 62 (tier, seed) pairs in 14.5 s (canary.eval.make_env template provider + run_episode; judge seeds excluded).
 
 Invalid (infra) episodes: dropped by gapcalc's rule (valid is False, end_reason error, or score None) in the 'invalid dropped' column; plus 40 episode files the gemini runner had already moved to staging/invalid/ (never globbed, same as gapcalc). 'dup' = seeds with more than one valid episode; team rule keeps the NEWEST run per (agent, tier, version, seed) by metadata start timestamp, else git commit time (fleet, --fleet-git), else file mtime; read order never matters. gapcalc instead keeps the last file in glob order, which can differ (see dropped list below).
 
 | set | tier | n | seeds | frontier | ref | ratio [95% CI] | Δ frontier−ref [95% CI] | invalid dropped | dup | wrong | abstain |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| carbon OpenCode (ours+fleet) | medium | 30 | 0–29 | +0.713 | +0.653 | 109% [97%, 127%] | +0.060 [-0.025, +0.149] | 0 | 0 | 0 | 0 |
-| carbon OpenCode (ours+fleet) | hard | 32 | 0–34 | +0.348 | +0.482 | 72% [34%, 113%] | -0.133 [-0.328, +0.054] | 0 | 1 | 4 | 1 |
-| carbon in-process (ours+fleet) | medium | 30 | 0–29 | +0.609 | +0.653 | 93% [70%, 117%] | -0.044 [-0.202, +0.095] | 0 | 10 | 1 | 1 |
-| carbon in-process (ours+fleet) | hard | 30 | 0–29 | +0.529 | +0.476 | 111% [82%, 178%] | +0.053 [-0.106, +0.244] | 0 | 20 | 0 | 1 |
-| 3.5-flash OpenCode (fleet) | medium | 30 | 0–29 | +0.429 | +0.653 | 66% [28%, 101%] | -0.224 [-0.489, +0.007] | 0 | 0 | 5 | 0 |
-| 3.5-flash OpenCode (fleet) | hard | 30 | 0–29 | +0.535 | +0.476 | 112% [86%, 174%] | +0.059 [-0.084, +0.233] | 0 | 0 | 0 | 0 |
+| carbon OpenCode (ours+fleet) | medium | 30 | 0–29 | +0.713 | +0.651 | 110% [97%, 126%] | +0.062 [-0.021, +0.147] | 0 | 0 | 0 | 0 |
+| carbon OpenCode (ours+fleet) | hard | 32 | 0–34 | +0.348 | +0.537 | 65% [28%, 103%] | -0.188 [-0.405, +0.015] | 0 | 1 | 4 | 1 |
+| carbon in-process (ours+fleet) | medium | 30 | 0–29 | +0.609 | +0.651 | 94% [71%, 117%] | -0.042 [-0.200, +0.095] | 0 | 10 | 1 | 1 |
+| carbon in-process (ours+fleet) | hard | 30 | 0–29 | +0.529 | +0.535 | 99% [79%, 136%] | -0.005 [-0.129, +0.148] | 0 | 20 | 0 | 1 |
+| 3.5-flash OpenCode (fleet) | medium | 30 | 0–29 | +0.429 | +0.651 | 66% [28%, 101%] | -0.222 [-0.486, +0.006] | 0 | 0 | 5 | 0 |
+| 3.5-flash OpenCode (fleet) | hard | 30 | 0–29 | +0.535 | +0.535 | 100% [83%, 134%] | +0.000 [-0.107, +0.138] | 0 | 0 | 0 | 0 |
 
 ### Dropped duplicates
 

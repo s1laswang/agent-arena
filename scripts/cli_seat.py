@@ -69,7 +69,8 @@ def strategy(seat, seed, day_source):
     if day_source != "day_for":
         return None
     from scripts.frontier_day import build_day
-    return build_day(seat, seed)[2]
+    st = build_day(seat, seed)[2]
+    return st.id if st else None
 
 
 def run_seat(agent, model, seat, seed, days=1, max_turns=60, trial=0, mode="seat", day_source="day_for"):

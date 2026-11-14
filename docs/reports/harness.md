@@ -44,6 +44,23 @@
 - Flagged: docs/reports/grok-agent.md (cited by GrokTactics) exists only on the unmerged justSilas-grok-agent branch.
 - Next: the 05:00 fresh-clone check (my job PID 82715) runs against v1.3.
 
+## 05:05 head: fresh-clone check on tiers v1.3 (PASS)
+- Fresh clone of justSilas @57e6f4b into /tmp, run by my job PID 82715 (exited 0):
+  - clone 2 s; `make setup` <1 s (warm uv cache; a judge's first run will be slower);
+  - `harbor/build.py --tiers medium --seeds 900000` OK, and `harbor lint` on it passes with no output;
+  - `make reproduce` with secret A took 5 s, with secret B 2 s; both rc 0.
+- Gap holds under BOTH secrets (my checker: per tier, solver lower CI > every baseline upper CI, do_nothing == 0):
+
+  | tier | secret A | secret B |
+  |---|---|---|
+  | medium | solver +0.586±0.090 vs heuristic +0.239±0.211 (gap +0.347) | +0.610±0.078 vs −0.037±0.248 (+0.647) |
+  | hard | +0.635±0.105, every baseline ≤ 0 (+0.635) | +0.624±0.111, every baseline ≤ 0 (+0.624) |
+  | easy | +0.761±0.046 vs +0.663±0.041 (+0.098) | +0.815±0.022 vs +0.680±0.039 (+0.135) |
+
+- Exact mode verified: rerunning secret A twice gives byte-identical judge_episodes.jsonl, and the table matches the 05:00 run (excluding timestamp lines). Secret B differs, as it should.
+- Friction (minor): `make reproduce` overwrites the tracked results/ files, so a fresh clone shows 3 modified files afterwards. Watch: medium under secret A cleared by only 0.046 between CIs.
+- Cleaned up: the /tmp clone, which had a SALT in its Harbor build, is deleted.
+
 ---
 # Engineer sections
 

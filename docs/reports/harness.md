@@ -1,5 +1,46 @@
 # HARNESS report
 
+## 03:05 head summary (HEAD-HARNESS, reviewer/QA role)
+- Tiers v1.2 FROZEN (db104c9). The fresh-clone check (~05:00), the reproduce/README numbers and Harbor instruction.md must all use v1.2 and the regenerated instruction.md (relayed to the repro and harbor branches).
+- The repro branch already has the parse_seeds fix (a73b283): bare N > 1000 is one seed, plus a 10k cap. Review pending.
+## 02:30 status
+- Head was blocked on a permission prompt from 01:55 to 02:25. CEO reassigned the build work: eval.py and mcp_server.py are merged (f2931d4); repro/README/CI is on justSilas-harness-repro; Harbor and isolation are on justSilas-harness-harbor (engineers in the CEO session).
+- Head role from now on: review and QA of eval/MCP (issues go to the CEO), a fresh-clone reproduce at about 06:30, and this summary.
+- Blockers: none.
+- Next 45 min: review canary/eval.py and canary/mcp_server.py, run make test, report issues.
+
+## 02:45 status
+- Done (verified: ran): `make test` 338 passed. Live MCP server medium/900003 + `--play solver` over MCP → accused correctly, ledger score 0.64; /ledger 403 without/with wrong token; second session gets "episode over".
+- Finding P0 (sent to CEO): no committed SALT / CANARY_WORLD_SECRET → judge worlds re-randomise per process (solver medium/900003: 0.65, 0.43, 0.79, 0.0 in separate runs). `make reproduce` can't give exact numbers until SALT is committed and reproduce fails closed.
+- Finding P1: one in-process solver episode ran >4 min / 1.9 GB before I killed it (others 0.02 s) → solver needs a guard.
+- Finding P2: `--reproduce` still a stub (repro engineer); LLM agents only via MCP; ledger_payload uses Env private attrs.
+- Next: review the harbor/repro branches as they land; fresh-clone reproduce at about 06:30.
+
+## 02:55 decisions (CEO)
+- SALT will NOT be committed (public repo + internet in agent containers = answer key). `make reproduce` uses one random secret per invocation shared by all its runs (paired comparison; statistical repro, exact with CANARY_WORLD_SECRET) → repro engineer, plus a fixed-secret two-subprocess determinism test. Harbor bakes a build-time secret into the server image only (harbor/build.py, never committed) → harbor engineer.
+- Solver guard + 1.9 GB root-cause → ENV. Public env.verdict() → ENV.
+- QA follow-up for me: the README must state expected numbers as mean ± CI (not exact), and the fresh-clone check must verify the gap holds across two different secrets.
+
+## 02:55 P1 resolved (not a solver bug)
+- Root cause (verified): `parse_seeds('900003')` returns `range(900003)`, because a bare integer means "N seeds". `--seeds 900003` therefore queues 900,003 episodes. Reproduced 6/6 (60 s timeout, about 1 GB RSS). run_episode itself is fine. Fix + test routed to the repro engineer via the CEO; ENV told to stand down.
+- The fresh-clone check moves to about 05:00 (clock correction).
+
+## 02:58 head review: repro + harbor (both merged on justSilas)
+- OK (verified): the harbor branch contains db104c9. harbor/canary-task/instruction.md equals Env('medium').instruction() under v1.2 exactly; harbor/build.py renders it per tier, seed-independent.
+- OK (verified): seed fix. parse_seeds('900003') == [900003]; '5' gives 5 seeds; ranges parse.
+- BLOCKER (sent to CEO → repro engineer): the README "Expected numbers" are v1.1 (849e652) and results/judge_table.md was generated at ecb986b (pre-v1.2). Both must be regenerated on v1.2, with the README in mean ± CI. The repro branch is behind (no db104c9, no unmerged commits).
+- Gap on the old table (my checker: solver lower CI > every baseline upper CI, do_nothing == 0): medium +0.735, hard +0.596, easy +0.091 (CIs only 0.031 apart). It holds, but easy is thin.
+- Fresh-clone check scheduled: my background job PID 64753 wakes at 05:00 → clone into /tmp → make setup → make reproduce under secrets A and B → gap check on both tables.
+
+## 03:20 head: CEO tasks 1-3
+- Done (verified: ran): scripts/repro_spread.py committed + referenced in the README. An independent 30-secret run agrees with the README within 0.04 on every mean.
+- Done (verified: make test 449 passed): README wording + two factual rule fixes vs rules.py v1.2 (variants per tier, canaries/day, delays); no numbers changed. Merge into justSilas requested from the CEO.
+- Open (content, not wording): the README lacks the failure-mode / regret-tag story; the frontier row is pending; the Tesla 2008 date is unverified.
+- Fresh-clone check rescheduled with harbor lint: my job PID 82715 (old PID 64753 stopped by me), wakes at 05:00.
+
+---
+# Engineer sections
+
 ## 02:37 status (mcp-server engineer, filling in for HEAD-HARNESS)
 
 ### Done (verified)
@@ -191,12 +232,14 @@ Branch `justSilas-harness-harbor`. Files: `harbor/README.md` (Harbor research (a
   - Expansions over 10,000 seeds, or seeds × tiers over 10,000 in the CLI, are rejected with exit 2 and a clear message.
   - 3 new tests in tests/test_eval.py (12 cases).
 - **Merged to justSilas** at b17d269 (fast-forward). `make test`: 385 passed, 3 skipped (exit 0).
+- **Final merge on frozen v1.2:** justSilas at 093ed1b (fast-forward), with README and results on frozen v1.2, the fresh-seed table cited, and easy marked as a sanity tier. `make test`: 390 passed, 3 skipped (exit 0).
+  - **Fresh clone of justSilas at 093ed1b** (no .env, no keys): clone 1.3 s; `make setup` 0.4 s (warm cache); `make reproduce` exit 0 in 5.5 s.
+  - Solver: medium +0.661 ± 0.067, hard +0.452 ± 0.196 (39/40 accused, 82% correct), easy +0.774 ± 0.046. All three are inside the 30-secret ranges in the README; hard sits near the low end.
+- **CI verified on GitHub.**
+  - The first runs appeared a few minutes after the push; the API reported 0 at first. Run 43538261675 on justSilas at 50f4074 (contains this work): **success in 1m33s** (`make setup`, `make test`, `REPRO_FAST=1 make reproduce`, artifact upload). A PR run (justSilas-grok-pitch) also succeeded.
+  - Fix: `cancel-in-progress` cancelled every push run on the busy justSilas branch (7 cancelled in a row). It now cancels only on PRs, so push runs queue and finish.
 
 ### Untested / open
-- **CI has never run on GitHub.** After the push to justSilas (b17d269), `gh api repos/s1laswang/agent-arena/actions/workflows` and `.../actions/runs` both report total_count 0, although Actions show as enabled.
-  - Possible causes: a private repo with no Actions minutes or billing, or a workflow that must also be on the default branch (`main`, which we must not touch).
-  - Silas should check Settings → Actions / Billing.
-  - The workflow file itself is untested on GitHub.
 - No committed frontier runs yet. AGENTS should write `data/runs/committed/<run_id>/episodes.jsonl` (EpisodeResult lines; steps may be empty), ideally on judge seeds. The table marks non-judge seeds.
 - The README numbers must be refreshed whenever ENV changes the solver or the tiers: run `python /tmp/canary_spread.py 30`, or just `make reproduce` and use its CI.
 - `test_integrity_hunter.py::test_stub_hunt_fake_server_plumbing` still fails intermittently under load (INTEGRITY's code).

@@ -113,7 +113,7 @@ def test_opencode_cmd_and_hygiene():
     assert cmd[:4] == ["opencode", "run", "--model", "openai/gpt-5.6-sol"] and cmd[-1] == "PROMPT"
     cfg = json.loads((wd / "opencode.json").read_text())
     assert cfg["$schema"] == "https://opencode.ai/config.json"
-    assert cfg["mcp"]["canary"] == {"type": "remote", "url": "http://127.0.0.1:8765/mcp", "enabled": True}
+    assert cfg["mcp"]["canary"]["url"] == "http://127.0.0.1:8765/mcp" and cfg["mcp"]["canary"]["type"] == "remote"
     assert cfg["permission"]["bash"] == "deny"
     assert_clean(wd, opencode_run.FILES)
     assert REPO_ROOT not in wd.parents
@@ -140,30 +140,78 @@ def test_child_env_strips_keys(monkeypatch):
     assert "OPENAI_API_KEY" not in child_env()
 
 
-def test_to_episode_shapes():
+def test_to_episode_from_ledger():
     from canary.agents.frontier.common import to_episode
-    ledger = [{"t": 0, "day": 1, "event": "leak", "detail": {}},
-              {"t": 5, "day": 3, "event": "accused", "detail": {"employee": "e04"}},
-              {"t": 5, "day": 3, "event": "episode_end", "detail": {"reason": "accused", "score": 0.8, "correct": True}}]
-    hist = [{"t": 0, "day": 1, "tool": "status", "args": {}, "result": {"ok": True}}]
-    r = to_episode("easy", 1, "codex:m", ledger, hist)
-    assert (r.accused, r.correct, r.score, r.end_reason, r.final_day, len(r.steps)) == ("e04", True, 0.8, "accused", 3, 1)
-    full = {"score": 0.5, "end_reason": "accused", "accused": "e01", "correct": True, "final_day": 2, "steps": hist}
-    assert to_episode("easy", 1, "a", full, []).score == 0.5
-    assert to_episode("easy", 1, "a", [], []).end_reason == "error"
+    from canary.types import Step
+    led = {"score": 0.8, "done": True, "end_reason": "accused", "accused": "e04", "accused_correct": True,
+           "tier": "hard", "final_day": 6, "V": 0.8, "episode": "x", "ledger": [{"event": "leak"}]}
+    r = to_episode("hard", 0, "opencode:openai/m", led, [Step(0, 1, "status", {}, {"ok": True})])
+    assert (r.score, r.accused, r.correct, r.end_reason, r.final_day, len(r.steps)) == (0.8, "e04", True, "accused", 6, 1)
+    r2 = to_episode("hard", 0, "a", {"score": 0.0, "done": False, "end_reason": None}, [])
+    assert r2.end_reason == "error" and "no accusation" in r2.meta["note"]
 
 
-def test_run_seeds_fake_runner(tmp_path):
+def test_steps_from_events():
+    from canary.agents.frontier.common import steps_from_events
+    oc = json.dumps({"type": "tool_use", "part": {"type": "tool", "tool": "canary_advance_day",
+                     "state": {"status": "completed", "input": {}, "output": json.dumps({"ok": True, "data": {"day": 2}})}}})
+    cx = json.dumps({"type": "item.completed", "item": {"type": "mcp_tool_call", "server": "canary", "tool": "accuse",
+                     "arguments": {"employee": "e01"}, "result": {"content": [{"type": "text", "text": json.dumps({"ok": True, "data": {}})}]}}})
+    st = steps_from_events("noise\n" + oc + "\n" + cx)
+    assert [s.tool for s in st] == ["advance_day", "accuse"] and st[1].day == 2 and st[1].args == {"employee": "e01"}
+    assert st[1].result["ok"] is True
+
+
+def test_run_seeds_fake_server_and_runner(tmp_path):
     from canary.agents.frontier import opencode_run
-    from canary.agents.frontier.common import RunSpec, ServerCfg, run_seeds
+    from canary.agents.frontier.common import RunSpec, run_seeds
     seen = []
 
-    def runner(argv, cwd, **kw):
-        seen.append(sorted(p.name for p in Path(cwd).iterdir()))
-        return type("P", (), {"returncode": 0, "stdout": "{}", "stderr": ""})()
+    class FakeServer:
+        def __init__(self, tier, seed):
+            self.tier, self.seed, self.token, self.url = tier, seed, "SECRETTOKEN", f"http://127.0.0.1:1/mcp"
+        def start(self, **kw):
+            return self
+        def ledger(self):
+            return {"score": 0.5, "done": True, "end_reason": "accused", "accused": "e01", "accused_correct": True,
+                    "tier": self.tier, "final_day": 3, "V": 0.5, "ledger": []}
+        def stop(self):
+            seen.append("stopped")
 
-    spec = RunSpec("opencode:openai/m", "easy", [0, 1], tmp_path / "r", ServerCfg())
-    out = run_seeds(spec, lambda wd, p: opencode_run.build_cmd(wd, p, "openai/m", spec.server.mcp_url),
-                    opencode_run.FILES, fetch=False, runner=runner)
-    assert seen == [["opencode.json"], ["opencode.json"]]
-    assert (out / "transcripts" / "0.txt").exists() and json.loads((out / "meta.json").read_text())["provider"] == "opencode"
+    def runner(argv, cwd, env, **kw):
+        seen.append(sorted(p.name for p in Path(cwd).iterdir()))
+        assert "SECRETTOKEN" not in " ".join(argv) and "CANARY_LEDGER_TOKEN" not in env and "OPENAI_API_KEY" not in env
+        return type("P", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    spec = RunSpec("opencode:openai/m", "easy", [0, 1], tmp_path / "r", jobs=2)
+    res = run_seeds(spec, lambda wd, p, url: opencode_run.build_cmd(wd, p, "openai/m", url), opencode_run.FILES,
+                    runner=runner, server_factory=FakeServer)
+    assert [r.score for r in res] == [0.5, 0.5] and seen.count("stopped") == 2 and seen.count(["opencode.json"]) == 2
+    lines = (tmp_path / "r" / "episodes.jsonl").read_text().splitlines()
+    assert len(lines) == 2 and json.loads((tmp_path / "r" / "meta.json").read_text())["agent"] == "opencode:openai/m"
+
+
+def test_prompt_matches_llm_policy():
+    from canary.agents.frontier.common import episode_prompt
+    from canary.agents.llm_policy import build_system_prompt
+    from canary.env import Env
+    assert episode_prompt("hard", 0) == build_system_prompt(Env("hard", 0).instruction())
+
+
+def test_server_port_file_and_stop(tmp_path):
+    from canary.agents.frontier.common import Server
+    srv = Server("easy", 0).start(port_dir=tmp_path / "servers")
+    try:
+        info = json.loads((tmp_path / "servers" / "easy-0.port").read_text())
+        assert info == {"port": srv.port, "pid": srv.proc.pid}
+        assert srv.ledger()["done"] is False
+    finally:
+        srv.stop()
+    assert not (tmp_path / "servers" / "easy-0.port").exists() and srv.proc.poll() is not None
+
+
+def test_classify_infra():
+    from canary.agents.frontier.common import classify_infra
+    assert classify_infra('{"message":"The usage limit has been reached","statusCode":429}', "") == "provider_quota"
+    assert classify_infra("", "Error: database is locked") == "opencode_db_locked"
+    assert classify_infra("ok", "") is None

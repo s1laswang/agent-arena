@@ -20,6 +20,8 @@ def load_runs(root: str | Path = "data/runs") -> list[Episode]:
         for line in f.read_text().splitlines():
             if line.strip():
                 e = json.loads(line)
+                if (e.get("meta") or {}).get("valid") is False:
+                    continue  # infra failure (quota, killed server): excluded, reported separately
                 e.setdefault("meta", {})["run_id"] = f.parent.name
                 eps.append(e)
     return eps

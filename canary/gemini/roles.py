@@ -367,6 +367,11 @@ def _pct(x) -> str:
     return "–" if x is None else f"{100 * x:.0f}%"
 
 
+def _commit(m: dict) -> str:
+    c = m.get("code_commit")
+    return f"{c} (launched at {m['git_sha'][:7]})" if c else m["git_sha"][:10]
+
+
 def build_index(res: Path) -> list[dict]:
     """One row per Gemini role, every number read from a committed results file (none typed by hand)."""
     rows = []
@@ -409,14 +414,15 @@ def build_index(res: Path) -> list[dict]:
     W, WP = _load(res / "roles" / "worldtext" / "meta.json"), _load(res / "roles" / "worldtext" / "lint_probe.json")
     if W and WP:
         pl, ps = WP["probe_llm_gemini_text"], WP["probe_stub_gemini_text"]
-        rows.append({"role": "World-text renderer", "key": "worldtext",
+        rows.append({"role": "World-text renderer (demo/research layer, v1.5 candidate, not judged)", "key": "worldtext",
                      "run": "results/gemini/roles/worldtext/ (worlds/, lint_probe.json, meta.json, ledger.jsonl)",
-                     "model": W["model"], "thinking": str(W.get("thinking_level")), "commit": W["git_sha"][:10],
+                     "model": W["model"], "thinking": str(W.get("thinking_level")), "commit": _commit(W),
                      "generated_at": W["finished_at"], "n": f"{len(W['seeds'])} dev seeds ({W['tier']})",
                      "headline": (f"{WP['gemini_personas']} Gemini personas ({WP['fallback_personas']} fallbacks); lint clean on "
-                                  f"{WP['lint_clean_seeds']}/{len(WP['rows'])} seeds; text-only investigators "
-                                  f"{ps['correct']}/{ps['n']} (keyword) and {pl['correct']}/{pl['n']} ({W.get('probe_model')}) "
-                                  f"vs fair bar {_pct(WP['fair_bar'])}: {WP['verdict']}")})
+                                  f"{WP['lint_clean_seeds']}/{len(WP['rows'])} seeds; text-only investigators named the mole "
+                                  f"{ps['correct']}/{ps['n']} (keyword, p={ps['p_value_vs_fair_bar']:.2f}) and {pl['correct']}/{pl['n']} "
+                                  f"({W.get('probe_model')}, p={pl['p_value_vs_fair_bar']:.2f}) vs fair bar {_pct(WP['fair_bar'])}: "
+                                  f"{WP['verdict']}")})
     M, MS = _load(res / "roles" / "mole" / "meta.json"), _load(res / "roles" / "mole" / "summary.json")
     if M and MS:
         parts = []
@@ -428,7 +434,7 @@ def build_index(res: Path) -> list[dict]:
                          f"caught {s['gemini_mole_caught']}/{s['n']} vs {s.get('default_mole_caught', '?')}/{s['n']}{leaks}")
         rows.append({"role": "Adaptive mole (arena)", "key": "mole",
                      "run": "results/gemini/roles/mole/ (episodes.jsonl per-day decisions, summary.json, meta.json, ledger.jsonl)",
-                     "model": M["model"], "thinking": str(M.get("thinking_level")), "commit": M["git_sha"][:10],
+                     "model": M["model"], "thinking": str(M.get("thinking_level")), "commit": _commit(M),
                      "generated_at": M["finished_at"], "n": f"{len(M['seeds'])} dev seeds x {len(M['investigators'])} investigators ({M['tier']})",
                      "headline": "; ".join(parts)})
     return rows
@@ -443,6 +449,12 @@ Dev seeds only for the two new roles: no judge world or judge mole is rendered o
 | Role | Committed run | Model (thinking) | Commit | Size | Headline (real numbers) |
 |---|---|---|---|---|---|
 {rows}
+
+The world-text renderer is a **demo/research layer (v1.5 candidate)**, not part of the judged environment: the judged
+environment stays v1.4 and this layer does not change any score. Gemini both writes the office gossip and, as the
+investigator, sees through it: on v1.5-candidate hard (dev seeds 0-9, OpenCode harness) the AfterQuery measurement has
+gemini-4-carbon at 108% [96, 122] of the solver vs 61% [3, 104] on v1.4, same seeds (justSilas `docs/reports/CEO.md`,
+`docs/reports/env.md`).
 
 Not listed: the Mole Forge. Its committed hall of fame (data/forge/hall_of_fame_v1.*) was evolved with the **stub** mutator
 (`canary.forge.evolve --mutator stub`), so there is no real Gemini Forge run to cite.

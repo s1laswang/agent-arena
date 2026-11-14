@@ -87,3 +87,7 @@
 ## 04:50 status (heartbeat)
 - No ENV/MCP code changes. FR8 deduped HoF by outcome: v1.2 and v1.3 = 1 evolved mole each (gap.md corrected). Re-checked the surviving moles on the merged tip (hard, 30 seeds + fuzz 20 seeds): holds (see EXPLOITS #40).
 - justSilas green. Waiting on: Grok judge re-run ~07:15, Gemini key.
+
+## 05:19 status (heartbeat)
+- No ENV/MCP/baselines code changes since 04:50 (new: HARNESS fresh-clone check on v1.3 PASS, reports). No re-run needed. justSilas green.
+- EXPLOITS: 40 rows, none open on our side. Waiting on: Grok judge re-run ~07:15, Gemini key.

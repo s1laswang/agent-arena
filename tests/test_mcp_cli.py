@@ -54,7 +54,11 @@ def spawn(out):
     env = dict(os.environ, PYTHONPATH=os.getcwd())
     p = subprocess.Popen([sys.executable, "-m", "sleeper.mcp_server", "--seat", "finance_ap", "--day", "0", "--out", str(out)],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env)
-    time.sleep(4)
+    for _ in range(100):
+        if out.exists():
+            break
+        time.sleep(0.3)
+    out.unlink()
     return p
 
 

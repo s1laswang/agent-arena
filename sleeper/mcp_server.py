@@ -139,6 +139,7 @@ def main():
 
     signal.signal(signal.SIGTERM, bye)
     signal.signal(signal.SIGINT, bye)
+    srv.dump()
     try:
         srv.run(transport=a.transport)
     finally:

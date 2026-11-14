@@ -1,3 +1,4 @@
+import pytest
 import json
 
 from lab import analyse, report

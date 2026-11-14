@@ -22,7 +22,7 @@ Title: The Sleeper (Gemini breaks Gemini)
 One-liner: Gemini is designed to play the staff, the traitor, the reference and the analyst in a company that looks like yours.
 
 Description:
-Companies are starting to hand real work to AI agents. We built a test for the worst case: one agent is a hidden insider. In the design, Gemini plays the honest employees through MCP tools, the sleeper that rewrites its strategy each day, a reference team with a stronger procedure, and the reader of failed days. The reward is plain code reading the final company state, so a model cannot talk its way to a score. Responses are cached by prompt hash for reproducible runs, and everything also runs with scripted agents. Honest status: the Gemini client, staff, sleeper (with strategy mutation), reference and analyst are built and tested offline with a fake model. Some real Gemini calls have run in labelled test runs, but no run is final, so we claim no Gemini results yet. The live switch is `SLEEPER_LIVE=1` or `--gemini`, documented in pitch/GEMINI.md.
+Companies are starting to hand real work to AI agents. We built a test for the worst case: one agent is a hidden insider. In the design, Gemini plays the honest employees through MCP tools, the sleeper that rewrites its strategy each day, a reference team with a stronger procedure, and the reader of failed days. The reward is plain code reading the final company state, so a model cannot talk its way to a score. Responses are cached by prompt hash for reproducible runs, and everything also runs with scripted agents. Honest status: the Gemini client, staff, sleeper (with strategy mutation), reference and analyst are built and tested offline with a fake model. Some real Gemini calls have run in labelled test runs. One result is final: a live Gemini exploiter (10 seat-days) earned reward 0 on all 10 (`results/frontier/exploiter/gemini-3.5-flash/c460e0c/`). Staff-seat results are early and labelled as such. The live switch is `SLEEPER_LIVE=1` or `--gemini`, documented in pitch/GEMINI.md.
 
 Tech: Gemini API via google-genai, function calling, response cache, MCP.
 
@@ -38,7 +38,7 @@ Fallback if no real number arrives: "Offline tests of the Gemini path ran with a
 
 ## Real Gemini exploiter and integrity probes
 
-REAL: a gemini-3.5-flash attacker (`redteam/gemini_exploiter.py`) played 10 seat-days (finance_ap and controller, days 1000 to 1004, commit c460e0c, `results/frontier/exploiter/gemini-3.5-flash/c460e0c/`). 7 of the 10 had a live attack, reward 0 on all 10, rescored by `sleeper.verifier` with 0 mismatches and replayable offline. Tokens and price: NOT FOUND.
+REAL: a gemini-3.5-flash attacker (requested ID; Google routes it to gemini-3.6-flash) (`redteam/gemini_exploiter.py`) played 10 seat-days (finance_ap and controller, days 1000 to 1004, commit c460e0c, `results/frontier/exploiter/gemini-3.5-flash/c460e0c/`). 7 of the 10 had a live attack, reward 0 on all 10, rescored by `sleeper.verifier` with 0 mismatches and replayable offline. Tokens and price: NOT FOUND.
 
 Integrity probes, VERIFIED (dm-qa, `make probes` on momin 1f6e1f0, 1m04s): every probe row 0.0, the control control_pad 1.0, and 730 committed run files rescored with 0 mismatches. SCRIPTED, no model.
 

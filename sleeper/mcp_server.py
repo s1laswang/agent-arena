@@ -5,16 +5,16 @@ import os
 
 from mcp.server.mcpserver import MCPServer
 
-from sleeper.company import BUDGET, DEPUTY, World, tools_for
+from sleeper.company import BUDGET, DEPUTY, STALL, World, tools_for
 from sleeper.day import play_round
 from sleeper.verifier import dump_state, sign
 
-STALL = 8
 TYPES = {"number": float, "array": list | str, "object": dict, "string": str | int | float | bool}
 
 
-def build_server(world, seat, team=None, out=None):
+def build_server(world, seat, team=None, out=None, token=None):
     out = out or os.environ.get("SLEEPER_OUT", "/tmp/sleeper_state.json")
+    token = token if token is not None else os.environ.get("VERIFY_TOKEN")
     mcp = MCPServer("sleeper-" + seat)
     st = {"done": False, "n": 0}
 
@@ -23,7 +23,7 @@ def build_server(world, seat, team=None, out=None):
             st["done"] = True
             with open(out, "w") as f:
                 st_ = dump_state(world)
-                json.dump(sign(st_, os.environ["VERIFY_TOKEN"]) if os.environ.get("VERIFY_TOKEN") else st_, f)
+                json.dump(sign(st_, token) if token else st_, f)
 
     def make(spec):
         name = spec["name"]
@@ -33,7 +33,8 @@ def build_server(world, seat, team=None, out=None):
         def fn(**kw):
             if st["done"]:
                 return {"ok": False, "error": "day over"}
-            kw = {k: [v] if isinstance(v, str) and props[k]["type"] == "array" else v for k, v in kw.items()}
+            # omitted optional args arrive as None: drop them so the World method's own default applies
+            kw = {k: [v] if isinstance(v, str) and props[k]["type"] == "array" else v for k, v in kw.items() if v is not None}
             res = world.call(seat, name, kw)
             st["n"] = 0 if name == "end_turn" else st["n"] + 1
             if team is not None and (name == "end_turn" or st["n"] >= STALL):
@@ -66,10 +67,14 @@ def main():
 
     from sleeper.tickets import make_day
 
+    from sleeper.secrets import take
+    # Seed, salt and the signing token must not stay in this process's environment
+    # (/proc/<pid>/environ). Read them once; the day id still uses the salt the way harbor.sidecar does.
+    sec = take("VERIFY_TOKEN", "SLEEPER_SALT", "SLEEPER_SEED")
     e = os.environ.get
     ap = argparse.ArgumentParser()
     ap.add_argument("--seat", default=e("SLEEPER_SEAT", "finance_ap"))
-    ap.add_argument("--day", type=int, default=int(e("SLEEPER_SEED", "0")))
+    ap.add_argument("--day", type=int, default=int(sec.get("SLEEPER_SEED") or "0"))
     ap.add_argument("--team", default=e("SLEEPER_TEAM", "procedure"))
     ap.add_argument("--transport", default=e("SLEEPER_TRANSPORT", "stdio"))
     ap.add_argument("--sleeper-seat", default=e("SLEEPER_SLEEPER_SEAT") or None)
@@ -83,7 +88,8 @@ def main():
         day = make_day(a.day, a.sleeper_seat, a.goal)
     else:
         from lab.run import day_for
-        day, strategy, _, _ = day_for(a.day, a.seat)
+        from harbor.sidecar import effective_id
+        day, strategy, _, _ = day_for(effective_id(a.day, salt=sec["SLEEPER_SALT"]), a.seat)
     world = World(day)
     if a.team == "oracle":
         from sleeper.scripted import OracleAgent, make_team
@@ -91,7 +97,7 @@ def main():
     else:
         from sleeper.scripted import seat_team
         team = seat_team(day, a.seat, a.day, strategy)
-    srv = build_server(world, a.seat, team, a.out)
+    srv = build_server(world, a.seat, team, a.out, token=sec["VERIFY_TOKEN"])
     atexit.register(srv.finish)
     srv.run(transport=a.transport)
 

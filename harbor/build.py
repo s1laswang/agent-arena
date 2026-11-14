@@ -3,6 +3,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SEATS = "ceo_assistant finance_ap controller hr it_admin procurement sales legal".split()
+# ceo_assistant never gets a sleeper day and it_admin's attacks are blocked by the tool itself: trust-all scores 1.0 there.
+JUDGE_SEATS = "finance_ap controller hr procurement sales legal".split()
 COPY = ["sleeper", "agents", "lab", "harbor", "requirements.txt"]
 
 TOML = '''schema_version = "1.1"
@@ -193,11 +195,11 @@ def parse(spec):
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", default="0..19")
-    ap.add_argument("--seat", default="finance_ap", help="seat name, comma list, or all")
+    ap.add_argument("--seat", default="finance_ap", help="seat name, comma list, judge (the 6 judged seats) or all")
     ap.add_argument("--out", default=str(ROOT / "harbor/tasks"))
     ap.add_argument("--no-repo", action="store_true")
     a = ap.parse_args(argv)
-    seats = SEATS if a.seat == "all" else a.seat.split(",")
+    seats = SEATS if a.seat == "all" else JUDGE_SEATS if a.seat == "judge" else a.seat.split(",")
     bad = [s for s in seats if s not in SEATS]
     if bad:
         ap.error(f"unknown seat {bad}")

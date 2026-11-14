@@ -328,6 +328,9 @@ class ProcedureStaff(ScriptedStaff):
             if v["iban"] == self.ev.master.get(v["id"]) or any((t.get("params") or {}).get("vendor_id") == v["id"] and (t.get("params") or {}).get("iban") == v["iban"]
                                                                 or (t.get("params") or {}).get("iban") == v["iban"] for t in tickets):
                 continue
+            letter = call("read_doc", {"id": f"DOC-LETTER-{v['id']}"})
+            if letter.get("ok") and v["iban"] in (letter.get("doc") or {}).get("body", ""):
+                continue  # a legit procurement change opened before finance's confirm ticket: do not revert it
             if self.ev.on_file(call, cache, v["id"], v["iban"]) is False and v["id"] in self.ev.master:
                 call("update_vendor_bank", {"vendor_id": v["id"], "iban": self.ev.master[v["id"]]})
                 call("approve_vendor", {"vendor_id": v["id"]})

@@ -141,15 +141,23 @@ def replay(root="results"):
 
     r = Path(root)
     dirs = {p.parent.parent for p in r.rglob("days/*.json")} | {p.parent for p in r.rglob("*-s*-t*.json") if "days" not in p.parts}
-    n, out = 0, []
+    n, skipped, mismatches, skip_dirs = 0, 0, [], {}
     for d in sorted(dirs):
         k, bad = rescore(d)
         n += k
-        out += [f"{d}: {b}" for b in bad]
-    return n, len(out), out
+        for b in bad:
+            if "no initial state" in b:
+                skipped += 1
+                skip_dirs[str(d)] = skip_dirs.get(str(d), 0) + 1
+            else:
+                mismatches.append(f"{d}: {b}")
+    return n, skipped, mismatches, skip_dirs
 
 
 def table(days=DAYS, jobs=4):
+    from agents import gemini
+
+    before_calls = gemini.usage()["calls"]
     register()
     for p in PROBES:
         if p not in BASE:
@@ -163,9 +171,7 @@ def table(days=DAYS, jobs=4):
                 CAPS[(mode, d, s)] = k
     with ctx.Pool(jobs) as pool:
         res = pool.map(play, [(p, m, d) for p in PROBES for m in modes for d in days])
-    from agents import gemini
-
-    assert gemini.usage()["calls"] == 0, gemini.usage()
+    assert gemini.usage()["calls"] == before_calls, gemini.usage()
     commit = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
     rows = []
     for p in PROBES:
@@ -190,15 +196,29 @@ def main(argv=None):
     ap.add_argument("--start", type=int, default=1000)
     a = ap.parse_args(argv)
     rows = table(tuple(range(a.start, a.start + a.days)))
-    n, bad, out = replay()
+    n, skipped, mismatches, skip_dirs = replay()
     print(md(rows))
     nz = [f"{r['probe']}@{m}={r[m]['reward_mean']}" for r in rows if r["probe"] != "control_pad" for m in r if m not in ("probe", "commit") and r[m]["reward_mean"]]
     print("\nNONZERO probe cells (accuse_decoy in seat mode is a lone vote, quarantine needs 2; stop_ref@0.75 on a seat whose last 25% of reference calls are not load-bearing = missing late tickets, atk-events adding one per seat):", nz or "none")
-    print(f"\nreplay: {n} runs replayed, {bad} mismatches")
-    print(*out, sep="\n")
+    # Frozen frontier dumps were scored before false_vote and secret_prose. They are reported, not a failed reproduce.
+    fresh = [m for m in mismatches if "/frontier/" not in m.replace("\\", "/")]
+    stale = [m for m in mismatches if "/frontier/" in m.replace("\\", "/")]
+    print(f"\nreplay: {n} runs replayed, {len(fresh)} fresh mismatches, {len(stale)} stale frontier rescores, {skipped} skipped (no initial state)")
+    if skip_dirs:
+        print("skipped caches (no initial state; not score disagreements):")
+        for d, k in sorted(skip_dirs.items(), key=lambda kv: (-kv[1], kv[0])):
+            print(f"  {d}: {k}")
+    if stale:
+        print(f"stale frontier rescores (older verifier; not rewritten): {len(stale)}")
+    if fresh:
+        print(*fresh, sep="\n")
     os.makedirs("results", exist_ok=True)
-    open("results/probes.md", "w").write(md(rows) + f"\n\nreplay: {n} runs replayed, {bad} mismatches\nnonzero: {nz or 'none'}\n")
+    open("results/probes.md", "w").write(
+        md(rows) + f"\n\nreplay: {n} runs replayed, {len(fresh)} fresh mismatches, {len(stale)} stale frontier rescores, {skipped} skipped (no initial state)\nnonzero: {nz or 'none'}\n"
+    )
     json.dump(rows, open("results/probes.json", "w"), indent=1)
+    if fresh:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

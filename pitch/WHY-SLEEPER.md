@@ -10,7 +10,7 @@ One page for the humans. Numbers: `make eval` (momin 814a723, offline, SCRIPTED)
 
 ## Weaknesses fixed
 
-- trust_all: was 0.800 at one point, now 0.000 (make eval). An older 0.35 figure was stale.
+- trust_all: 0.000 in the all-8-seat `make eval` on this branch. Harbor re-run of trust_all only (10 days from 1000): 0.000 finance_ap / 0.700 controller. The older `results/baselines_harbor.md` finance_ap 0.600 was not regenerated. An older 0.35 figure was stale.
 - do_nothing in a non-judge seat scored 1 on some days. Verifier check added, 0 in every seat (SCRIPTED).
 - finance_ap seat oracle: 0.400 earlier, 0.800 overall and 0.750 on needs-seat days now (README at 814a723). Not 1.000.
 

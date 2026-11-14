@@ -36,7 +36,7 @@ Here is the staff team. [Step through.] The change comes in. It looks routine. T
 
 Reward for this day: zero.
 
-Now the same day with the oracle team. [Scrub back, step through.] Same tools, same information, same chat. This team checks the audit log before it approves. It sees the bank change was not asked for by anyone with the right. The payment is blocked, the work still gets done.
+Now the same day with the oracle team. [Scrub back, step through.] It knows who the sleeper is, so it only proves the day is winnable. Same tools, same chat. This team checks the audit log before it approves. It sees the bank change was not asked for by anyone with the right. The payment is blocked, the work still gets done.
 
 Reward: one.
 

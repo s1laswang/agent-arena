@@ -25,10 +25,12 @@ def test_replay_rescore_matches_and_detects_tamper(tmp_path):
     d.mkdir(parents=True)
     f = d / "1000-t0.json"
     f.write_text(json.dumps({**x, "result": res}))
-    assert probes.replay(str(tmp_path))[:2] == (1, 0)
+    n, skipped, mismatches, _dirs = probes.replay(str(tmp_path))
+    assert (n, skipped, len(mismatches)) == (1, 0, 0)
     res["reward"] = 1 - res["reward"]
     f.write_text(json.dumps({**x, "result": res}))
-    assert probes.replay(str(tmp_path))[:2] == (1, 1)
+    n, skipped, mismatches, _dirs = probes.replay(str(tmp_path))
+    assert (n, skipped, len(mismatches)) == (1, 0, 1)
 
 
 def test_rescore_reads_gzipped_state(tmp_path):

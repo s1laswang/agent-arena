@@ -11,17 +11,20 @@ from sleeper.company import World
 from sleeper.mcp_server import build_server
 
 
-def effective_id(seed, seat=None):
+DAY_SPACE = 1 << 62  # was 100000: the whole space enumerated in ~2 min and the tick-0 tickets pinned the day
+
+
+def effective_id(seed, seat=None, salt=None):
     import hashlib
-    salt = os.environ.get("SLEEPER_SALT", "")
-    return int(hashlib.sha256(f"{salt}:{seed}".encode()).hexdigest(), 16) % 100000 if salt else seed
+    salt = os.environ.get("SLEEPER_SALT", "") if salt is None else salt
+    return int(hashlib.sha256(f"{salt}:{seed}".encode()).hexdigest(), 16) % DAY_SPACE if salt else seed
 
 
-def make_world_and_team(seed, seat):
+def make_world_and_team(seed, seat, salt=None):
     import inspect
     import random
     from lab.run import build_team, day_for
-    day_id = effective_id(seed)
+    day_id = effective_id(seed, salt=salt)
     day, strategy, _, _ = day_for(day_id, seat)
     name = os.environ.get("SLEEPER_TEAM", "procedure")
     if name in ("procedure", "seat"):
@@ -35,16 +38,18 @@ def make_world_and_team(seed, seat):
     return day_id, World(day), team
 
 
-def reward(srv, out):
+def reward(srv, out, token=None):
+    token = token or os.environ["VERIFY_TOKEN"]
     srv.finish()
-    r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", out], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", out], capture_output=True, text=True,
+                       env={**os.environ, "VERIFY_TOKEN": token})
     try:
         d = json.loads(r.stdout)
     except ValueError:
         return "{}"
     d["seat_under_test"] = os.environ["SLEEPER_SEAT"]
     from sleeper.verifier import sign
-    return json.dumps(sign(d, os.environ["VERIFY_TOKEN"]))
+    return json.dumps(sign(d, token))
 
 
 def serve_reward(srv, out, token, httpd):
@@ -58,7 +63,7 @@ def make_httpd(srv, out, token, port):
                 self.send_response(404)
                 self.end_headers()
                 return
-            body = reward(srv, out).encode()
+            body = reward(srv, out, token).encode()
             self.send_response(200)
             self.end_headers()
             self.wfile.write(body)
@@ -70,10 +75,14 @@ def make_httpd(srv, out, token, port):
 
 
 def main():
-    seed = int(os.environ["SLEEPER_SEED"])
+    from sleeper.secrets import take
+    sec = take("VERIFY_TOKEN", "SLEEPER_SALT", "SLEEPER_SEED")
+    seed = int(sec["SLEEPER_SEED"])
     seat = os.environ["SLEEPER_SEAT"]
     out = os.environ.get("SLEEPER_OUT", "/srv/state.json")
-    token = os.environ["VERIFY_TOKEN"]
+    token = sec["VERIFY_TOKEN"]
+    if not token:
+        sys.exit("VERIFY_TOKEN is required")
     if os.path.isdir(out):
         sys.exit(f"SLEEPER_OUT must be a file path, got a directory: {out}")
     rport = int(os.environ.get("SIDECAR_REWARD_PORT", "8001"))
@@ -82,8 +91,8 @@ def main():
         with socket.socket() as t:
             if t.connect_ex(("127.0.0.1", p)) == 0:
                 sys.exit(f"port {p} already in use (stale sidecar? pkill -f harbor.sidecar)")
-    _, world, team = make_world_and_team(seed, seat)
-    srv = build_server(world, seat, team, out)
+    _, world, team = make_world_and_team(seed, seat, salt=sec["SLEEPER_SALT"] or "")
+    srv = build_server(world, seat, team, out, token=token)
     atexit.register(srv.finish)
     httpd = make_httpd(srv, out, token, rport)
     threading.Thread(target=serve_reward, args=(srv, out, token, httpd), daemon=True).start()

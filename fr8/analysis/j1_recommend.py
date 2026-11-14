@@ -188,8 +188,12 @@ def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description="J1 param recommendation")
     ap.add_argument("csv", nargs="+"); ap.add_argument("--out"); ap.add_argument("--closest", type=int, default=3)
     a = ap.parse_args(argv)
-    rows = [r for c in a.csv for r in read_rows(c)]
-    md = to_markdown(rows, a.csv, a.closest)
+    paths = []
+    for c in a.csv:   # a directory = J1 parts dir: only cells with a .done marker
+        d = Path(c)
+        paths += sorted(str(x) for x in d.glob("*.csv") if x.with_suffix(".done").exists()) if d.is_dir() else [c]
+    rows = [r for c in paths for r in read_rows(c)]
+    md = to_markdown(rows, [f"{a.csv} ({len(paths)} cell files)"], a.closest)
     if a.out:
         Path(a.out).parent.mkdir(parents=True, exist_ok=True); Path(a.out).write_text(md)
     print(md)

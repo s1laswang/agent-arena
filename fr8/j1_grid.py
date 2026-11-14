@@ -36,11 +36,17 @@ _V04 = {
     "framing_rate": [1.5],
     "actions_per_day": [5],
 }
-TIER_GRID = {  # 120 medium, 120 hard, 18 easy = 258 cells
+TIER_GRID_V04 = {  # 120 medium, 120 hard, 18 easy = 258 cells
     "medium": {**_V04, "delay_choices": [(1, 2, 3)]},
     "hard": {**_V04, "delay_choices": [(2, 3)]},
     "easy": dict(_COMMON),
 }
+TIER_GRID_V03 = {  # 144 medium, 144 hard, 18 easy = 306 cells (J1 first pass + j1v1 rerun)
+    "medium": {**_COMMON, "delay_choices": [(1, 2), (1, 2, 3)], "careful_mole": [False, True], "framing_rate": [0.5, 1.5]},
+    "hard": {**_COMMON, "delay_choices": [(1, 2, 3), (2, 3)], "careful_mole": [False, True], "framing_rate": [0.5, 1.5]},
+    "easy": dict(_COMMON),
+}
+TIER_GRID = {"v03": TIER_GRID_V03, "v04": TIER_GRID_V04}[os.environ.get("J1_GRID", "v03")]
 GRID = list(dict.fromkeys(k for g in TIER_GRID.values() for k in g))  # CSV param columns
 AGENTS = ["solver", "heuristic", "logs_only", "stop_early", "random"]
 
@@ -91,7 +97,7 @@ def main():
     path = out / f"cell{a.task:04d}.csv"
     base = rules.TIERS[tier]
     rules.TIERS[tier] = dataclasses.replace(base, **params)
-    cols = ["cell", "tier", "n_employees", *GRID, "agent", "seed", "score", "correct", "wrong", "accused", "final_day", "end_reason", "secs"]
+    cols = ["cell", "tier", "n_employees", *GRID, "agent", "seed", "score", "correct", "none", "wrong", "accused", "final_day", "end_reason", "secs"]
     with open(path, "w", newline="") as fh:
         w = csv.DictWriter(fh, cols); w.writeheader()
         if a.dry:
@@ -102,7 +108,7 @@ def main():
                 t0 = time.time()
                 r = run(Env(tier=tier, seed=s), load_policy(agent, s), agent)
                 w.writerow({"cell": a.task, "tier": tier, "n_employees": base.n_employees, **{k: json.dumps(v) if isinstance(v, tuple) else v for k, v in ((k, params.get(k, getattr(base, k))) for k in GRID)},
-                            "agent": agent, "seed": s, "score": r.score, "correct": int(r.correct), "wrong": int(r.accused is not None and not r.correct), "accused": r.accused or "",
+                            "agent": agent, "seed": s, "score": r.score, "correct": int(r.correct), "none": int(r.accused is None), "wrong": int(r.accused is not None and not r.correct), "accused": r.accused or "",
                             "final_day": r.final_day, "end_reason": r.end_reason, "secs": round(time.time() - t0, 3)})
             fh.flush()
     print(f"done cell {a.task} -> {path}")

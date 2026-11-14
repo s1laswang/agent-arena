@@ -65,8 +65,8 @@ You need GNU make and [uv](https://docs.astral.sh/uv/) first (see Prerequisites)
 | in-process gpt-5.5, fixed loop (full history, Responses API + reasoning replay), n=9 / 8 | +0.67 ± 0.10 = 92% [80%, 106%] | +0.26 ± 0.54 = 38% [−51%, 99%] |
 
 - **Committed run.** [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one keyless run on v1.4 (secret fingerprint `3a7d7db9b23d`), written with `make reproduce-update`. The committed v1.3 and v1.2 frontier runs appear there as labelled history. In replayed runs, episodes lost to infrastructure (provider quota, a crashed MCP server) are left out of the mean and counted in a separate `invalid` column with their reasons, and each seed counts once: if two runs cover the same seed, only the newest counts.
-  - Solver: medium **+0.63 ± 0.08** (90% correct), hard **+0.57 ± 0.09** (95% correct).
-  - Heuristic: medium +0.01 ± 0.25, hard −0.03 ± 0.18.
+  - Solver: medium **+0.673 ± 0.060** (95% correct), hard **+0.613 ± 0.040** (100% correct).
+  - Heuristic: medium +0.132 ± 0.233, hard −0.012 ± 0.183.
 - **Fresh seeds.** On seeds never used for tuning, the gap holds and is measured paired (same seed, agent − solver):
   - **v1.4:** [`results/fresh_table_v1.4.md`](results/fresh_table_v1.4.md) covers 800 confirmation seeds per tier (5000–5799) and every baseline.
     - Solver easy/medium/hard **+0.779 / +0.633 / +0.556**, accuracy 99.6 / 88.8 / 94.9%.

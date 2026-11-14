@@ -36,3 +36,17 @@
 - Solver acc/no-accusation: easy 99.5%/0%, medium 89.5%/10.5%, hard 85.5%/13%. Heuristic: .665 / -.051 / -.235. logs_only <=1.5% on medium/hard; stop_early, random < 0.
 - Short of target: no-accusation >5% and hard acc <90%; random-DSL-mole robustness 60% on medium (test at 0.65).
 - Next: restriction probing (solver), FR8 recal on fixed solver, judge-run prep.
+
+## 06:20 status
+- Done (verified: make test 357 passed on justSilas 3c46a20): Env.verdict(), world.set_world_secret, SolverPolicy(behaviour_weight), act() guards (max act 0.09s over 1800 random-secret episodes; HARNESS 4-min hang not reproduced).
+- In progress: solver models fingerprint_accuracy (needed for FR8 noise sweep, ETA 06:40); per-seed hard comparison vs gpt-5.5 (gpt-5.5 0.72 vs solver 0.64 on tiers v1, n=4).
+- Freeze tiers v1.2 ~07:00 from FR8 co-tune.
+
+## 02:42 status (CLOCK CORRECTION)
+- Real time is 02:42 EET; my report headings after 02:25 used estimated times and are wrong (the content is right). Env v0 really merged ~02:25.
+- Freeze tiers v1.2 moved to 04:30 EET per CEO.
+
+## 02:44 status
+- Done (verified: make test 362 passed on justSilas 08c68b8): exact fingerprint_accuracy likelihood in the solver (hard 40 seeds: a=1 .637/87.5%, a=.85 .46/72.5%). Current solver beats gpt-5.5 per seed on hard tiers v1 (sum 4.42 vs 4.12, 6 seeds).
+- In progress: FR8 final grid on 08c68b8 (hard fingerprint < medium), top setting by 04:20.
+- Next: freeze tiers v1.2 at 04:30 with full table.

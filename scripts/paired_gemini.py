@@ -6,7 +6,9 @@ Rows: OpenCode + Gemini over MCP (judges' shape) and the in-process Gemini loop 
 data/runs/committed/<version>/{opencode,inproc}-<model>/, the earlier gpt-5.5 rows for context (v1.3 only), the
 reference solver and baselines from data/runs/committed/<version>/reference/. Each row is restricted to the seeds it
 shares with the solver: frontier/solver = mean_F / mean_S with a paired bootstrap 95% CI over seeds (10,000
-resamples), the paired difference, the solver posterior P(accused) at the accusation and the luck-adjusted score.
+resamples), the paired difference, the solver posterior P(accused) at the accusation and the luck-adjusted score:
+each accusation scored as P*V - (1-P) under the solver's exact posterior at that step (0 without an accusation),
+paired with the solver's own luck-adjusted score on the same seeds (ratio with a paired bootstrap 95% CI).
 """
 from __future__ import annotations
 
@@ -43,6 +45,9 @@ def groups(version: str, model: str) -> list[tuple[str, str, str]]:
     g = [(f"OpenCode + {model} over MCP (judges' shape)", f"{version}/opencode-{model}", f"opencode:google/{model}"),
          (ALT_LABEL, f"{version}/opencode-{model}", f"opencode:google/{model}"),
          (f"in-process {model} (full history, thought-signature replay)", f"{version}/inproc-{model}", f"gemini:{model}")]
+    if version == "v1.4":
+        g += [("OpenCode + gemini-3.5-flash over MCP (second Gemini family; the API reports modelVersion "
+               "gemini-3.6-flash for this id)", "v1.4/opencode-gemini-3.5-flash", "opencode:google/gemini-3.5-flash")]
     if version == "v1.3":
         g += [("Codex gpt-5.5 over MCP (earlier official run)", "v1.3/codex-gpt-5.5-full", "codex:gpt-5.5"),
               ("in-process gpt-5.5, fixed loop (earlier official run)", "v1.3/gpt-5.5-full", "openai:gpt-5.5")]
@@ -82,7 +87,10 @@ def rows_for(root: Path, version: str, model: str, seeds: set[int]) -> list[dict
             ps = [x for x in (p_acc(e) for e in es if e.get("accused")) if x is not None]
             pe = [post_expected(e) for e in paired]
             pe_s = [post_expected(solver[(tier, e["seed"])]) for e in paired]
-            pe_ratio = (sum(pe) / sum(pe_s)) if pe and None not in pe + pe_s and sum(pe_s) > 0 else float("nan")
+            pe_ok = bool(pe) and None not in pe + pe_s
+            pe_ratio = (sum(pe) / sum(pe_s)) if pe_ok and sum(pe_s) > 0 else float("nan")
+            pe_lo, pe_hi = (boot_ratio(pe, pe_s) if pe_ok and len(pe) > 1 and agent != "solver"
+                            else (float("nan"), float("nan")))
             lo, hi = boot_ratio(f, s) if len(f) > 1 and agent != "solver" else (float("nan"), float("nan"))
             out.append(dict(label=label, group=sub, agent=agent, tier=tier, n=len(es), seeds=[e["seed"] for e in es],
                             mean=m, ci=h, accuracy=sum(bool(e["correct"]) for e in es) / len(es),
@@ -93,14 +101,23 @@ def rows_for(root: Path, version: str, model: str, seeds: set[int]) -> list[dict
                             solver_same_seeds=ms, ratio=(sum(f) / len(f) / ms) if f and ms > 0 else float("nan"),
                             ratio_lo=lo, ratio_hi=hi, diff=dm, diff_ci=dh,
                             post_expected=(sum(pe) / len(pe)) if pe and None not in pe else float("nan"),
-                            post_expected_ratio=pe_ratio))
+                            post_expected_ratio=pe_ratio, post_expected_lo=pe_lo, post_expected_hi=pe_hi,
+                            solver_post_expected=(sum(pe_s) / len(pe_s)) if pe_ok else float("nan")))
     return out
+
+
+def _luck(r: dict) -> str:
+    if r["agent"] == "solver" or r["post_expected_ratio"] != r["post_expected_ratio"]:
+        return "–"
+    if r["post_expected_lo"] != r["post_expected_lo"]:
+        return f"{r['post_expected_ratio']:.0%}"
+    return f"**{r['post_expected_ratio']:.0%} [{r['post_expected_lo']:.0%}, {r['post_expected_hi']:.0%}]**"
 
 
 def to_md(rows: list[dict], version: str, model: str) -> str:
     order = [g[0] for g in groups(version, model)]
     out = ["| tier | run | n | score ± 95% CI | accuracy | accused | mean accuse day | mean P(accused) at accusation | "
-           "solver, same seeds | **frontier / solver [95% CI]** | paired diff ± CI | luck-adjusted score | luck-adj. / solver |",
+           "solver, same seeds | **frontier / solver [95% CI]** | paired diff ± CI | luck-adjusted score | **luck-adj. / solver's luck-adj. [95% CI]** |",
            "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in sorted(rows, key=lambda r: (r["tier"] != "medium", order.index(r["label"]))):
         solver = r["agent"] == "solver"
@@ -113,7 +130,7 @@ def to_md(rows: list[dict], version: str, model: str) -> str:
         out.append(f"| {r['tier']} | {r['label']} | {r['n']} | {_f(r['mean'])} ± {_f(r['ci'])} | {r['accuracy']:.2f} | "
                    f"{r['accused_rate']:.2f} | {r['accuse_day']:.1f} | {_f(r['p_accused'], 2)} | {_f(r['solver_same_seeds'])} | "
                    f"{ratio} | {'–' if solver else _f(r['diff']) + ' ± ' + _f(r['diff_ci'])} | {_f(r['post_expected'])} | "
-                   f"{'–' if solver or r['post_expected_ratio'] != r['post_expected_ratio'] else format(r['post_expected_ratio'], '.0%')} |")
+                   f"{_luck(r)} |")
     return "\n".join(out)
 
 

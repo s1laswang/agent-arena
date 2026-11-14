@@ -38,7 +38,7 @@ def seeds_for(name: str):
 
 def build_one(tier: str, seed: int, provider_spec: str, out: str, max_steps: int = 1000) -> str:
     from canary.env import Env
-    kw = {"cache_dir": os.path.join(out, "_gemini_cache")} if provider_spec != "template" else {}
+    kw = {"cache_dir": os.path.join(out, "_gemini_cache")} if provider_spec not in ("template", "", None) else {}
     rec = Recorder(get_provider(provider_spec, **kw))
     env = Env(tier, seed, text_provider=rec)
     for _ in range(max_steps):

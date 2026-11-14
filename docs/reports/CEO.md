@@ -186,3 +186,8 @@
 - Replayed runs are grouped by tiers_version, superseded runs are excluded, and history rows show no solver ratio. The committed results were refreshed (fingerprint f4cacdb8537b); README line 35 now matches it: solver medium +0.65 +/-0.07, hard +0.60 +/-0.10; heuristic +0.04 / -0.50. The CEO accepts the refreshed numbers (consistent with the committed file).
 - v1.3 reported (n small): medium gpt-5.5 .319 (n=9) vs solver .717; hard -.003 (n=5) vs .592; codex gpt-5.5 v1.3 n=1-2 is close to the solver.
 - Note: the v1.3 heuristic/random/stop_early/do_nothing rows equal their v1.2 rows. That is expected, since those policies do not read V and dev-seed worlds are identical.
+
+## 07:15 tick
+- Grok deliverables are on origin: site (presentation dossier, offline, 9 sections), viewer, pitch deck + judge handout (PDF), research grounding, bake-off, agent eval.
+- The Grok BAKE-OFF (written at ~02:34, BEFORE reproduce/Harbor/gap.md/v1.3) scored Blind Spot (Ivar) 69, Canary 56, Sleeper 43, and recommends shipping Blind Spot. Many of its Canary deductions have since been fixed (make reproduce, Harbor sidecar + isolation, gap.md with frontier runs, #25 server side, CONTRACT v1.3). Its remaining valid points: the gap evidence is small-n / scaffold-caveated, and Gemini is not essential to the judge path. Ivar has since added "blind frontier results" (78038e3). -> For 09:00: re-run the bake-off on the current tips.
+- J4 eval running (ends <=08:17); then release sky 43143_4.

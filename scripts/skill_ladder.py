@@ -450,14 +450,16 @@ def plot_skill_ladder(doc: dict[str, Any], out_png: Path) -> None:
         ax_top.axvline(ref_mean, color="#0b6e4f", ls=":", lw=1.0)
         ax_top.set_yticks(y_pos, labels, fontsize=8.5)
         ax_top.invert_yaxis()
-        ax_top.set_xlim(-1.15, 0.92)
+        ax_top.set_xlim(-1.26, 0.98)
         ax_top.set_xlabel("Mean episode score", fontsize=9)
         ax_top.set_title(f"{tier} tier (n={trows[0]['n']}): ladder scores", fontsize=10.5, fontweight="bold")
         ax_top.grid(axis="x", alpha=0.25)
-        for y, m_val in zip(y_pos, raw_means):
-            offset = 0.03 if m_val >= 0 else -0.03
-            ha = "left" if m_val >= 0 else "right"
-            ax_top.text(m_val + offset, y - 0.14, f"{m_val:+.3f}", va="center", ha=ha, fontsize=7.5, color="#1a1a1a")
+        for y, m_val, ci_val in zip(y_pos, raw_means, raw_cis):
+            if m_val >= 0:
+                x_txt, ha = m_val + ci_val + 0.02, "left"
+            else:
+                x_txt, ha = m_val - ci_val - 0.02, "right"
+            ax_top.text(x_txt, y - 0.14, f"{m_val:+.3f}", va="center", ha=ha, fontsize=7.5, color="#1a1a1a")
         if col == 0:
             ax_top.legend(loc="lower left", fontsize=7.5, framealpha=0.92)
 
@@ -469,7 +471,7 @@ def plot_skill_ladder(doc: dict[str, Any], out_png: Path) -> None:
 
         ax_bot.errorbar(
             [r["paired_diff"] for r in abl_rows],
-            [y - 0.12 for y in ay],
+            [y - 0.14 for y in ay],
             xerr=[r["paired_diff_ci95"] for r in abl_rows],
             fmt="o",
             ms=5.5,
@@ -479,7 +481,7 @@ def plot_skill_ladder(doc: dict[str, Any], out_png: Path) -> None:
         )
         ax_bot.errorbar(
             [r["luck_adjusted_diff"] for r in abl_rows],
-            [y + 0.12 for y in ay],
+            [y + 0.14 for y in ay],
             xerr=[r["luck_adjusted_diff_ci95"] for r in abl_rows],
             fmt="D",
             ms=5.0,
@@ -490,13 +492,14 @@ def plot_skill_ladder(doc: dict[str, Any], out_png: Path) -> None:
         ax_bot.axvline(0.0, color="#0b6e4f", ls="--", lw=1.0, label="full_solver parity (0.0)")
         ax_bot.set_yticks(ay, alabels, fontsize=8.5)
         ax_bot.invert_yaxis()
-        ax_bot.set_xlim(-0.82, 0.18)
+        ax_bot.set_xlim(-0.85, 0.25)
         ax_bot.set_xlabel("Paired score delta vs full_solver", fontsize=9)
         ax_bot.set_title(f"{tier} tier: paired component ablation deltas", fontsize=10.5, fontweight="bold")
         ax_bot.grid(axis="x", alpha=0.25)
         for y, r in enumerate(abl_rows):
+            x_lbl = r["luck_adjusted_diff"] + r["luck_adjusted_diff_ci95"] + 0.015
             ax_bot.text(
-                min(0.16, max(-0.80, r["luck_adjusted_diff"])) + 0.015,
+                x_lbl,
                 y + 0.14,
                 f"luck {r['luck_adjusted_diff']:+.3f}",
                 va="center",
@@ -506,13 +509,14 @@ def plot_skill_ladder(doc: dict[str, Any], out_png: Path) -> None:
             )
         if hb_row is not None:
             note = (
-                f"Off-scale baseline: heuristic_bisection paired diff = "
+                f"Off-scale: heuristic_bisection = "
                 f"{hb_row['paired_diff']:+.3f} +/- {hb_row['paired_diff_ci95']:.3f}"
             )
-            ax_bot.text(0.02, 0.03, note, transform=ax_bot.transAxes, fontsize=7.5, color="#444444",
+            ax_bot.text(0.98, 0.04, note, transform=ax_bot.transAxes, ha="right", va="bottom",
+                        fontsize=7.3, color="#444444",
                         bbox={"boxstyle": "round,pad=0.25", "facecolor": "#f7f7f7", "edgecolor": "#cccccc"})
         if col == 0:
-            ax_bot.legend(loc="lower left", fontsize=7.5, framealpha=0.92)
+            ax_bot.legend(loc="center left", bbox_to_anchor=(0.01, 0.50), fontsize=7.3, framealpha=0.92)
 
     fig.suptitle(
         f"Canary {doc['tiers_version']} Solver Skill Ladder | Seeds {doc['seed_start']}..{doc['seed_end']} "
@@ -546,9 +550,9 @@ def main(argv: list[str] | None = None) -> int:
     prefix = Path(args.out_prefix)
     prefix.parent.mkdir(parents=True, exist_ok=True)
 
-    md_path = prefix.with_suffix(".md")
-    json_path = prefix.with_suffix(".json")
-    png_path = prefix.with_suffix(".png")
+    md_path = Path(f"{prefix}.md")
+    json_path = Path(f"{prefix}.json")
+    png_path = Path(f"{prefix}.png")
 
     md_text = render_markdown(doc)
     md_path.write_text(md_text)

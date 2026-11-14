@@ -182,7 +182,7 @@ def test_parse_seeds_hygiene_and_end_to_end_cli(tmp_path: Path) -> None:
         with pytest.raises(ValueError):
             skill_ladder.parse_seeds(bad)
 
-    prefix = tmp_path / "ladder_test"
+    prefix = tmp_path / "skill_ladder_v1.4"
     rc = skill_ladder.main([
         "--seeds", "5000-5001",
         "--tiers", "medium,hard",
@@ -190,9 +190,9 @@ def test_parse_seeds_hygiene_and_end_to_end_cli(tmp_path: Path) -> None:
         "--out-prefix", str(prefix),
     ])
     assert rc == 0
-    md_path = prefix.with_suffix(".md")
-    json_path = prefix.with_suffix(".json")
-    png_path = prefix.with_suffix(".png")
+    md_path = Path(f"{prefix}.md")
+    json_path = Path(f"{prefix}.json")
+    png_path = Path(f"{prefix}.png")
     assert md_path.exists() and json_path.exists() and png_path.exists()
     assert png_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 

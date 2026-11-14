@@ -57,3 +57,20 @@
 - External Grok judge run reviewed: re-found #24 (fixed) and NEW #25 HIGH: server secrets readable via same-uid /proc/<pid>/environ / `ps eww` → 1.0. Regression test tests/test_integrity_secrets.py (xfail strict) + attacker-primitive sanity test (passes on macOS). Interface CEO-approved: CANARY_*_FILE 0600 files, no plain secrets in exec env, Harbor sidecar primary. Owners: mcp-server + harbor engineers.
 - In progress: exploit-hunter → flake fix (port 0 + health poll, 20 green runs), [real] MCP tests, codex black/white-box vs real server.
 - Next: verify #25 when mcp_server lands *_FILE; re-run the Grok judge prompt on the tip; FR8 J2 rerun on tiers v1.
+
+## 04:45 status (post-freeze, tiers v1.2 @ db104c9)
+- Done (verified: make test 386 passed / 3 skipped on db104c9 merge): fuzz all modes, 100 seeds, 50k budget, all tiers → 0 violations, best non-solver 0.000. Baselines × 100 seeds: do_nothing 0; every other baseline mean ≤ 0 (stop_early −0.86/−0.88/−0.92, logs_only −0.55/−0.98/−0.98, heuristic −0.35/−0.88/−1.00); solver +0.79/+0.63/+0.60.
+- #25 fixed server-side (50022ab, test passes); Harbor sidecar remains boundary (HARNESS).
+- Flake fixed at root (20/20). FR8 J2 on v1.1: 0 findings; final v1.2 run requested. parallel_accuse summary now reports race count (it was never a no-op).
+- Canary-surfacing question closed: canaries do surface on medium (verified directly).
+- Next: Grok judge re-run ~07:15 on final tip; Gemini hunter when key arrives.
+
+## 03:22 status (heartbeat; clock per CEO correction)
+- No ENV/MCP changes since last sweep (frozen tiers v1.2). justSilas green: 456 passed / 5 skipped.
+- Done since 04:45 entry: FR8 J2 final on frozen v1.2 (4M evolve hard+medium): 0 findings. peek_status/verdict unreachable by agents + `make play` refuses judge seeds (tests/test_integrity_peek.py). mcp_server SIGTERMs investigated: not integrity (a local Grok eval bot's pkill); codex hunters now run in read-only sandbox. v1.3 known-V tests ready (skip until shipped).
+- EXPLOITS.md: 38 rows; open: none on our side (#27 residual = Harbor sidecar, HARNESS).
+- Next: re-run fuzz + property tests when ENV ships v1.3; Grok re-run ~07:15; Gemini hunter when key arrives.
+
+## 03:45 status (tiers v1.3 known-V @ 0933805)
+- Done (verified: make test green after merge): fuzz all modes on easy/medium/hard (100 seeds, 50k) + hard_forge (50 seeds, 20k): 0 violations, best non-solver 0.000. Known V: 665 hidden-leak states, status/advance_day never equal true V, never rise (tests added). Calibration policies < solver on all 4 tracks (grok_tactics closest: easy .71 vs .79). peek_status unchanged & covered.
+- EXPLOITS rows 38–40 (correction: earlier 03:22 entry said 38 rows; it was 37).

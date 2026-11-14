@@ -90,12 +90,15 @@ def main(argv=None):
     ap.add_argument("--ctemper", type=float, default=None)
     ap.add_argument("--ntemper", type=float, default=None)
     ap.add_argument("--design", default=None)
+    ap.add_argument("--vdrops", default=None, choices=["on", "off"])
+    ap.add_argument("--seed0", type=int, default=0)
     a = ap.parse_args(argv)
     kw = {k: v for k, v in dict(threshold=a.threshold, behaviour_temper=a.btemper,
-                                choice_temper=a.ctemper, noleak_temper=a.ntemper, design=a.design).items() if v is not None}
+                                choice_temper=a.ctemper, noleak_temper=a.ntemper, design=a.design,
+                                use_v_drops=None if a.vdrops is None else a.vdrops == "on").items() if v is not None}
     t0 = time.time()
     tiers, agents = a.tiers.split(","), a.agents.split(",")
-    res = run(tiers, agents, range(a.seeds), a.procs, a.random_moles, **kw)
+    res = run(tiers, agents, range(a.seed0, a.seed0 + a.seeds), a.procs, a.random_moles, **kw)
     print("| tier | agent | acc | accused | score | ±95% | day |\n|---|---|---|---|---|---|---|")
     for t in tiers:
         for ag in agents:

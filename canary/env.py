@@ -12,7 +12,7 @@ import random
 from dataclasses import asdict
 from typing import Any
 
-from .rules import TIERS
+from .rules import TIERS, TRACKS, tier_params
 from .text.facts import EmployeeFacts, PublicDayFacts
 from .types import INVESTIGATIVE_TOOLS, EpisodeResult, LedgerEntry, Step, ToolResult
 from .mole.dsl import DEFAULT_STRATEGY, MoleDoc, MoleView, MoleStrategy
@@ -60,10 +60,13 @@ def _default_provider():
 
 class Env:
     def __init__(self, tier: str, seed: int, text_provider=None, mole_strategy=None):
-        if tier not in TIERS:
+        if tier not in TIERS and tier not in TRACKS:
             raise ValueError(f"unknown tier {tier}")
-        self.tier, self.seed, self.p = tier, seed, TIERS[tier]
+        self.tier, self.seed, self.p = tier, seed, tier_params(tier)
         self._world = generate_world(tier, seed, self.p)
+        if tier in TRACKS and mole_strategy is None:
+            from .forge_track import strategy_for
+            mole_strategy = strategy_for(tier, seed)
         if mole_strategy is not None:
             if isinstance(mole_strategy, dict):
                 mole_strategy = MoleStrategy.from_json(mole_strategy)
@@ -74,6 +77,7 @@ class Env:
         self._idset = set(self._ids)
         self.day = 1
         self.V = 1.0
+        self._costs = 0.0                    # canary + restriction costs (agent-known)
         self._done = False
         self._end_reason: str | None = None
         self._accused: str | None = None
@@ -109,7 +113,7 @@ class Env:
         ws = p.wrong_accusation_score
         single = round(100 * p.p_single_dept_recipients)
         L = [
-            f"# Canary: catch the mole ({p.name} tier)",
+            f"# Canary: catch the mole ({p.name} tier)" if self.tier not in TRACKS else f"# Canary: catch the mole ({self.tier} track, {p.name} tier rules)",
             "",
             "## Your job",
             f"You are the security lead of a company with {n} employees, with ids e00 to e{n-1:02d}. "
@@ -118,6 +122,9 @@ class Env:
             "",
             "## Score",
             "- The company value V starts at 1.0. It goes down when things cost money, and it never goes below 0.",
+            ("- V shown is the value you can see: damage from leaks that haven't surfaced yet is not visible until they surface. "
+             "Your score uses the true V, which includes undetected damage." if self._visibility() == "known"
+             else "- V shown in status is the true V, including damage from leaks that have not surfaced yet."),
             f"- `accuse(employee)` ends the episode. If you accuse the mole, your score is V at that moment. "
             f"If you accuse an innocent employee, your score is {ws:g}.",
             "- The game never tells you whether your accusation was correct.",
@@ -146,7 +153,7 @@ class Env:
             "By default it picks one at random, with every eligible document equally likely."
             + (" This mole is careful: for a canary, the chance of being picked is multiplied by "
                "(1 - the share of all employees who received any variant of that canary)." if p.careful_mole else ""),
-            f"- Each leak lowers V by {p.leak_damage} right away. It appears in the leak feed after a delay of "
+            f"- Each leak lowers the true V by {p.leak_damage} right away. It appears in the leak feed after a delay of "
             f"{' or '.join(map(str, p.delay_choices))} day(s), each equally likely.",
             "- A restricted mole can still leak documents it already holds.",
             "",
@@ -190,7 +197,11 @@ class Env:
             "- A rule may also frame one colleague (the decoy, the first restricted colleague, or a random colleague). "
             "Framing adds one fake after-hours access for that colleague.",
             f"- The mole never knows which documents are canaries. The {p.p_leak} leak probability above still applies to every leak.",
-            "- The default mole leaks a random document and does no extra framing, exactly as described above.",
+            ("- The default mole leaks a random document and does no extra framing, exactly as described above."
+             if self.tier not in TRACKS else
+             "- In this track the mole does NOT use the default strategy. It follows one evolved Mole DSL strategy, "
+             "built from exactly the facts and choices listed here. You are not told which one. "
+             "All other rules and numbers are the same as in the hard tier."),
             "",
             "## Rules for tool arguments",
             "- Give exactly one employee id per call, such as e07. Lists, wildcards and names are rejected.",
@@ -212,6 +223,11 @@ class Env:
     @property
     def done(self) -> bool:
         return self._done
+
+    def peek_status(self) -> dict:
+        """Same data as the `status` tool, without counting a call (UIs only; never an MCP tool)."""
+        with self._lock:
+            return dict(self._t_status({}).data)
 
     def verdict(self) -> dict:
         """Server-side outcome for the grader/ledger (never an MCP tool)."""
@@ -267,6 +283,22 @@ class Env:
 
     def _charge(self, x: float):
         self.V = max(0.0, self.V - x)
+
+    def _cost(self, x: float):
+        """A cost the agent knows about (canary, restriction)."""
+        self._costs += x
+        self._charge(x)
+
+    def _visibility(self) -> str:
+        from . import rules
+        return "known" if rules.KNOWN_V_MODE else "true"
+
+    def visible_V(self) -> float:
+        """V as shown to the agent. v1.3 'known': excludes damage of leaks not yet surfaced."""
+        if self._visibility() == "true":
+            return round(self.V, 10)
+        n = sum(1 for f in self._feed if f["surfaced_day"] <= self.day)
+        return round(max(0.0, 1.0 - self.p.leak_damage * n - self._costs), 10)
 
     def _publish_day(self, d: int):
         for raw in self._world.planned_docs.get(d, []):
@@ -329,7 +361,7 @@ class Env:
 
     # ------------------------------------------------------------------ tools
     def _t_status(self, a):
-        return ToolResult(True, {"day": self.day, "V": round(self.V, 10),
+        return ToolResult(True, {"day": self.day, "V": self.visible_V(),
                                  "actions_left_today": self.p.actions_per_day - self._actions_today,
                                  "tool_calls_left": self.p.tool_call_cap - len(self._history) - 1,
                                  "restricted": sorted(self._restricted), "canaries_planted": list(self._canary_ids)})
@@ -413,7 +445,7 @@ class Env:
         self._add_doc(doc)
         self._canaries_today += 1
         self._canary_ids.append(cid)
-        self._charge(self.p.canary_cost)
+        self._cost(self.p.canary_cost)
         self._log("canary_planted", canary_id=cid, variants=variants, V=self.V)
         return ToolResult(True, {"canary_id": cid})
 
@@ -498,7 +530,7 @@ class Env:
             self._log("leak", doc_id=leak, surfaces_on=d + delta, V=self.V)
         # (4) restriction cost
         if self._restricted:
-            self._charge(p.restrict_cost_per_day * len(self._restricted))
+            self._cost(p.restrict_cost_per_day * len(self._restricted))
         # (5) access logs
         logs = []
         for e in self._ids:
@@ -541,5 +573,5 @@ class Env:
         for f in self._feed:
             if f["surfaced_day"] == self.day:
                 self._log("leak_surfaced", doc_id=f["doc_id"])
-        return ToolResult(True, {"closed_day": d, "day": self.day, "V": round(self.V, 10),
+        return ToolResult(True, {"closed_day": d, "day": self.day, "V": self.visible_V(),
                                  "new_documents": [x["doc_id"] for x in self.docs if x["day"] == self.day]})

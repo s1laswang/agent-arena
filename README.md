@@ -8,7 +8,7 @@ An RL environment for AfterQuery's **Break the Agent** (Junction 2026).
 - The agent is the **head of security**. It can read access logs and messages, interview staff and restrict access.
 - Its sharpest tool is the **canary trap**: send different variants of a document to different groups, then watch the **leak feed** to see which variant surfaces.
 - It must **accuse exactly once**. A correct accusation scores the value that is left, so waiting for certainty also costs.
-- The reference run is a tuned **Bayesian canary-trap solver** that uses the same public tools. Frontier agents score below it, and every rule they need is written down.
+- The reference run is a tuned **Bayesian canary-trap solver** that uses the same public tools. Every rule an agent needs is written down; the benchmark is how close a frontier agent gets to the solver.
 
 ## One command
 
@@ -20,17 +20,21 @@ You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/u
 
 `make reproduce` plays the reference solver and five baselines on the 40 frozen judge seeds of each tier. It replays any committed frontier-agent episodes from `data/runs/committed/`, prints the table, and writes `results/judge_table.md`, `results/judge_episodes.jsonl` and `results/gap_chart.png`.
 
-**Expected numbers (mean score, expected ± CI).** Each value is the mean over 30 keyless runs of `make reproduce` at commit 849e652 (solver fix + bounded DP, tiers v1.1; 40 seeds per tier, a fresh secret for each run), with the lowest-to-highest range across those 30 runs in brackets. A single run also prints its own 95% CI, about ±0.07–0.10 for the solver and up to ±0.26 for the heuristic. The tiers freeze at v1.2, and the numbers will be refreshed then. The committed [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one such run.
+**Expected numbers on the frozen tiers v1.2.** We ran keyless `make reproduce` 30 times on the 40 judge seeds per tier (commit edffdac), each run with a fresh secret. Each cell is the mean of the 30 run means, with the lowest and highest run mean in brackets. A single run prints its own 95% CI, about ±0.07–0.08 for the solver and ±0.25 for the heuristic. To rebuild this table: `uv run python scripts/repro_spread.py 30` (about 5 minutes).
 
-| agent | medium (headline) | hard (headline) | easy (sanity) |
+| agent | medium (headline) | hard (headline) | easy (sanity tier only) |
 |---|---:|---:|---:|
-| **solver** (reference) | **+0.63** [+0.56, +0.71] | **+0.62** [+0.54, +0.69] | +0.78 [+0.75, +0.82] |
+| **solver** (reference) | **+0.62** [+0.52, +0.68] | **+0.55** [+0.39, +0.65] | +0.78 [+0.74, +0.81] |
 | frontier agents (gpt-5.5, gpt-5.6-sol) | pending (AGENTS commit runs to `data/runs/committed/`) | pending | – |
-| heuristic (canary bisection, no Bayes) | −0.03 [−0.22, +0.22] | −0.21 [−0.42, −0.06] | +0.65 [+0.54, +0.74] |
-| logs_only (best no-canary log reader) | −0.98 [−1.00, −0.91] | −1.00 [−1.00, −0.96] | −0.47 [−0.72, −0.24] |
-| random | −0.66 [−0.73, −0.46] | −0.81 [−0.85, −0.76] | −0.69 [−0.80, −0.54] |
-| stop_early (random accusation, day 1) | −0.89 [−1.00, −0.70] | −0.95 [−1.00, −0.80] | −0.85 [−0.95, −0.70] |
+| heuristic (canary bisection, no Bayes) | −0.01 [−0.32, +0.37] | −0.27 [−0.55, 0.00] | +0.65 [+0.47, +0.70] |
+| logs_only (best no-canary log reader) | −0.98 [−1.00, −0.91] | −0.97 [−1.00, −0.86] | −0.52 [−0.76, −0.24] |
+| random | −0.66 [−0.73, −0.51] | −0.79 [−0.85, −0.61] | −0.70 [−0.80, −0.55] |
+| stop_early (random accusation, day 1) | −0.91 [−1.00, −0.75] | −0.93 [−1.00, −0.80] | −0.83 [−1.00, −0.70] |
 | do_nothing | 0.00 (exact) | 0.00 (exact) | 0.00 (exact) |
+
+- **Committed run.** [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one of these runs (secret fingerprint `d7e45dc56304`). Solver: medium **+0.65 ± 0.07** (90% correct), hard **+0.62 ± 0.08** (88% correct). Heuristic: medium +0.05 ± 0.24, hard −0.26 ± 0.26.
+- **Fresh seeds.** [`results/fresh_table_v1.2.md`](results/fresh_table_v1.2.md) is ENV's table on 400 dev seeds per tier that were never used for tuning (`scripts/fresh_table.py 1000 1400`). Solver: medium +0.66 ± 0.02, hard +0.54 ± 0.04. Heuristic: medium −0.04 ± 0.08, hard −0.27 ± 0.08. On hard the solver is honest rather than perfect: **81.5% correct, 5% wrong, 13.5% abstain** (no accusation, score 0).
+- **Easy is a sanity tier, not a headline.** The solver (+0.76 ± 0.01 on fresh seeds) and the heuristic (+0.64 ± 0.03) are close there, by design: the gap comes from the noise and adversaries in medium and hard.
 
 **Why the numbers are statistical.** The world behind a judge seed is derived with HMAC from a secret ([CONTRACT §8, §11](docs/CONTRACT.md)). The secret behind our Harbor image is not published, because it would reveal the judge-world moles. Without `CANARY_WORLD_SECRET`, `make reproduce` draws one fresh random secret and shares it across every agent in that run. The comparison is therefore paired, and the run prints only the secret's SHA-256 fingerprint. Each mean lands inside its CI rather than matching ours bit for bit. Committed frontier-agent runs were played on the team's own worlds, so they appear in a separate, unpaired "reported agent runs" block with their own CI. **For exact numbers**, run `CANARY_WORLD_SECRET=<any string> make reproduce`: the same string always produces an identical `results/judge_episodes.jsonl`. For a fast check use `REPRO_FAST=1 make reproduce` (5 seeds per tier, which CI runs), or `make test` for the full test suite.
 
@@ -38,14 +42,13 @@ You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/u
 
 The full spec is in [docs/CONTRACT.md](docs/CONTRACT.md). The agent receives every rate and rule as the MCP instructions.
 
-- **Tiers.** Easy has 12 employees, medium 20 and hard 30, over a horizon of 14 days. Medium and hard add the following:
+- **Tiers.** Easy has 12 employees, medium 20 and hard 30, over a horizon of 14 days. Every tier allows one canary per day. In easy, a leak surfaces the next day and a canary can have up to 3 variants. Medium and hard add the following:
   - an innocent decoy who writes angry messages;
   - a mole that frames others in the access logs;
   - a careful mole that avoids widely distributed canaries;
-  - leaks that surface in the feed 1–3 days late;
-  - only 2 variants per canary and 1 canary per day.
+  - leaks that surface in the feed late: 1–3 days on medium, 2–3 days on hard.
 
-  Hard also has clearance constraints.
+  Hard also allows only 2 variants per canary and adds clearance constraints. The exact values live in [`canary/rules.py`](canary/rules.py) (`TIERS_VERSION = "v1.2"`).
 - **Budget.** The agent gets 8 investigative calls per day (then it must `advance_day`) and 300 tool calls in total.
 - **Reward,** computed server-side from the ledger, never from agent text:
 
@@ -63,7 +66,7 @@ The environment is an MCP server (streamable HTTP) that serves one episode per p
 
 ```bash
 CANARY_TIER=medium CANARY_SEED=900007 CANARY_LEDGER_TOKEN=<random> make mcp   # http://127.0.0.1:8765/mcp
-cp configs/opencode/opencode.json /tmp/run/ && cd /tmp/run && opencode mcp list   # expect: canary connected
+mkdir -p /tmp/run && cp configs/opencode/opencode.json /tmp/run/ && cd /tmp/run && opencode mcp list   # expect: canary connected
 opencode run -m openai/<model> "You are the security lead. Find and accuse the mole."
 curl -s "http://127.0.0.1:8765/ledger?token=<random>"                            # grader: score from the ledger
 python -m canary.mcp_server --play solver --url http://127.0.0.1:8765/mcp       # reference run over MCP
@@ -71,7 +74,7 @@ python -m canary.mcp_server --play solver --url http://127.0.0.1:8765/mcp       
 
 The server serves only judge (900000–900039) and held-out seeds. Set the same `CANARY_WORLD_SECRET` on the server to get the same world across restarts.
 
-**Harbor (judge path: Harbor + OpenCode over MCP, with the server isolated from the agent):** see [harbor/README.md](harbor/README.md). Another engineer is building it.
+**Harbor (judge path: Harbor + OpenCode over MCP, with the server isolated from the agent):** see [harbor/README.md](harbor/README.md).
 
 Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium SEEDS=dev20` and `make test`.
 
@@ -79,13 +82,12 @@ Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium
 
 We attacked our own reward 33 times before the judges did, including real-server hunts by a Codex attacker and an external Grok judge run. Every attempt is logged in [docs/EXPLOITS.md](docs/EXPLOITS.md) with a regression test.
 
-- **Two real exploits, both closed:**
+- **Three real exploits, all closed:**
   - **Stop-early:** a free lottery ticket under 0/1 scoring, closed by making a wrong accusation cost −1.
-  - **Judge seeds failing open without a secret:** an agent could regenerate the world from public code and read the mole. Judge worlds now fail closed with a fresh secret, and no world file containing the mole is committed.
+  - **Judge seeds failing open without a secret (#24):** an agent could regenerate the world from public code and read the mole. Judge worlds now fail closed with a fresh secret, and no world file containing the mole is committed.
+  - **Reading the server's environment from the same uid (#27):** the server now takes its secrets only from 0600 files (`*_FILE`) and never exports them. In Harbor the server runs in a separate sidecar container with no shared PID namespace or filesystem, and [`harbor/check_isolation.sh`](harbor/check_isolation.sh) checks that boundary from inside the agent container.
 
-  A third finding, that public dev seeds can be regenerated from the code, is handled by design: the MCP server refuses dev seeds unless `CANARY_ALLOW_DEV=1`.
-
-  One finding is still being closed: a process with the same uid could read the server's environment (#27). The server now takes its secrets from 0600 files (`*_FILE`), and the Harbor sidecar keeps it out of the agent's PID namespace.
+  A further finding, that public dev seeds can be regenerated from the code, is handled by design: the MCP server refuses dev seeds unless `CANARY_ALLOW_DEV=1`.
 - **Probes that hold,** with tests:
   - fuzzing (malformed, homoglyph and list ids, accusing after the episode ends, a parallel accuse race);
   - error and length side channels between the mole and innocents;
@@ -108,7 +110,7 @@ Canary keeps the hard part of the real problem. Leaks arrive late, the mole adap
 
 ## Gemini
 
-Placeholder: see [pitch/GEMINI.md](pitch/GEMINI.md) (owned by AGENTS). It covers the Mole Forge, the world builder, the scenario designer, the exploit hunter, the analyst and the arena mole, all behind `canary.llm`, with a stub backend so that everything here runs without keys.
+Gemini's role is described in [pitch/GEMINI.md](pitch/GEMINI.md). It covers the Mole Forge, the world builder, the scenario designer, the exploit hunter, the analyst and the arena mole, all behind `canary.llm`, with a stub backend so that everything here runs without keys.
 
 ## Repo map
 

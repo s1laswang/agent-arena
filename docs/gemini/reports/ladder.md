@@ -2,6 +2,23 @@
 
 Branch `gemini-ladder`. Newest entry first.
 
+## Sat 23:16 (`date`: Sat Nov 14 23:16 EET 2026): 00:45 deliverable pushed (78748bc); grid left running for 05:00
+
+- **Adopted, not restarted:** g4 process (ladder pid 62083, argon + carbon, conc 8, carbon ≤ 5) and phase-4 carbon c2
+  (pid 16405, conc 3, carbon ≤ 3). Both ledgers are fresh (≤ 1 min). The flash processes had already finished
+  (flash2 80/80 at 19:06, f3 140/140 at 19:54). Attempts: 310, infra-invalid: 0, so nothing needed re-queuing.
+- **Headline cells, 10/10 paired seeds on both tiers:** 3.5-flash (served as 3.6-flash) medium/high and
+  3.8-flash low/high. Carbon low/high on hard: 8 + 9 (target n ≥ 4 met).
+- **Report** (`results/gemini/ladder.{md,json}` + 4 figures + keyless exports): 350 valid episodes, 34 cells, $144.51
+  list price. The headline now names the served model.
+  - 3.5-flash medium/high on hard: 98% [82, 119] and 109% [90, 139] of the solver, 20/20 correct,
+    $0.33–0.37 per episode against $1.68 for carbon-high.
+  - flash-lite is below 0 in 8/8 cells.
+  - 3.8-flash low → high: medium −2% → 92%; hard 3% → 31% (CIs overlap).
+- **Showcase replay committed** (1889696, 2.5 MB). `lab_replay --only ladder-showcase` reproduces it keyless:
+  REPLAY OK, 6/6 step for step.
+- Tests: 90 passed. Next: `bin/refresh.sh` at 05:00, push, then stop pids 62083/16405 and their gateways.
+
 ## Sat 19:01 (`date`: Sat Nov 14 19:00 EET 2026): headline cells on track; compute re-prioritised
 
 - **Headline cells (need ≥ 6 paired seeds on both tiers), finished episodes at 18:57:**

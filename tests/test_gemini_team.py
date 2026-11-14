@@ -179,3 +179,61 @@ def test_offline_replay_identical_days(monkeypatch, tmp_path):
     a, b = (o / "days.jsonl" for o in outs)
     assert a.read_bytes() == b.read_bytes()
     assert a.read_bytes() == (next((tmp_path / "live").iterdir()) / "days.jsonl").read_bytes()
+
+
+def _load_key_check():
+    import importlib.util
+    import os
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    spec = importlib.util.spec_from_file_location("key_check", os.path.join(root, "scripts", "key_check.py"))
+    kc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(kc)
+    return kc
+
+
+def _kc_env(monkeypatch, tmp_path, gen):
+    monkeypatch.setattr(gemini, "CACHE", tmp_path / "c")
+    monkeypatch.setenv("GEMINI_API_KEY", "fake")
+    monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
+    monkeypatch.setattr(gemini, "_generate", gen)
+    monkeypatch.setattr(gemini, "chat", gemini.chat)
+    monkeypatch.setenv("SLEEPER_MAX_CALLS", "1000")
+
+
+def test_key_check_all_paths_ok(monkeypatch, tmp_path, capsys):
+    kc = _load_key_check()
+    monkeypatch.setattr(kc, "STATS", {})
+    monkeypatch.setattr(kc, "STOP", {"cost": False})
+    _kc_env(monkeypatch, tmp_path, lambda *a: _fake_generate_tool(*a))
+    assert kc.main(1) == 0
+    out = capsys.readouterr().out
+    assert "FAIL" not in out and all(n in out for n in ("smoke", "staff", "sleeper", "procedure"))
+
+
+def _fake_generate_tool(model, system, messages, tools, temperature, seed):
+    from types import SimpleNamespace as N
+    n = sum(1 for m in messages if m["role"] == "assistant")
+    name = ("get_number" if tools and tools[0]["name"] == "get_number" else "my_tickets") if n == 0 else "end_turn"
+    part = N(function_call=N(name=name, args={}), text=None)
+    return N(candidates=[N(content=N(parts=[part]))], usage_metadata=N(prompt_token_count=100, candidates_token_count=10))
+
+
+def test_key_check_flags_fallback(monkeypatch, tmp_path, capsys):
+    kc = _load_key_check()
+    monkeypatch.setattr(kc, "STATS", {})
+    monkeypatch.setattr(kc, "STOP", {"cost": False})
+
+    def boom(*a):
+        raise RuntimeError("boom")
+
+    _kc_env(monkeypatch, tmp_path, boom)
+    assert kc.main(1) == 1
+    out = capsys.readouterr().out
+    assert "FAIL" in out and "boom" in out
+
+
+def test_key_check_needs_key(monkeypatch, capsys):
+    kc = _load_key_check()
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
+    assert kc.main(1) == 2

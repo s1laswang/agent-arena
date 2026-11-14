@@ -1,0 +1,41 @@
+name: Protected paths
+
+# Fails a PR into justSilas that touches a path in .github/protected-paths.txt,
+# unless the PR carries the `protected-ok` label. The list is read from the base
+# branch, so a PR cannot loosen the guard that checks it.
+on:
+  pull_request:
+    branches: [justSilas]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  protected-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check changed files against the protected list
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'protected-ok') }}
+        run: |
+          git show "$BASE_SHA:.github/protected-paths.txt" > /tmp/protected.txt
+          git diff --name-only "$BASE_SHA...$HEAD_SHA" > /tmp/changed.txt
+          hits=""
+          while IFS= read -r p; do
+            case "$p" in ''|'#'*) continue ;; esac
+            while IFS= read -r f; do
+              case "$p" in
+                */) case "$f" in "$p"*) hits="$hits$f"$'\n' ;; esac ;;
+                *)  [ "$f" = "$p" ] && hits="$hits$f"$'\n' ;;
+              esac
+            done < /tmp/changed.txt
+          done < /tmp/protected.txt
+          hits=$(printf '%s' "$hits" | sort -u)
+          if [ -z "$hits" ]; then echo "No protected paths changed."; exit 0; fi
+          echo "This PR changes protected paths:"; printf '  %s\n' $hits
+          if [ "$APPROVED" = "true" ]; then echo "protected-ok label present: allowed."; exit 0; fi
+          echo "::error::Protected Canary paths changed. Silas must review and add the 'protected-ok' label."
+          exit 1

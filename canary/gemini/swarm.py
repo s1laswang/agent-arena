@@ -3,6 +3,7 @@
     python -m canary.gemini.swarm --attackers 50 --models gemini-3.8-flash,gemini-4-hydrogen,gemini-4-carbon \
         --mode whitebox --tiers medium,hard [--shard i/n] [--concurrency 8] [--mcp-top 5] --out results/gemini
     python -m canary.gemini.swarm --merge DIR1 DIR2 ... --out results/gemini        # combine shards
+    python -m canary.gemini.swarm --merge DIR:label:planned ... --control C.json --review R.json --out results/gemini
     python -m canary.gemini.swarm --escalate results/gemini/swarm.json ...          # wave 2 (reads wave 1 in context)
 
 Per attacker (persona x planner model x tier):
@@ -870,10 +871,34 @@ def accusation_audit(backend: Backend) -> dict:
                                                                                "error": None})] + list(ep.steps)
         row = audit_episode(ep)
         p = row.get("p_accused")
-        return {"p_accused": p, "p_top": row.get("p_top"), "day": row.get("day"),
-                "justified": p is not None and p >= JUSTIFIED_P}
+        el = elimination_audit(env)
+        return {"p_accused": p, "p_top": row.get("p_top"), "day": row.get("day"), **el,
+                "justified": (p is not None and p >= JUSTIFIED_P) or el["p_elimination"] >= JUSTIFIED_P}
     except Exception as ex:  # noqa: BLE001
         return {"error": f"{type(ex).__name__}: {ex}"[:200]}
+
+
+def elimination_audit(env) -> dict:
+    """Exact logical elimination from the PUBLIC record at accusation time (any agent could have fetched it):
+    the mole is not the decoy (stated rule; the decoy is identifiable from its angry messages), held every leaked
+    document that has surfaced, and (for canaries) received the surfaced variant. Uniform over the consistent set.
+    The reference posterior above only sees what the attacker fetched, so a logically certain deduction from
+    documents the attacker did not re-list can look 'unjustified' there; this check closes that gap."""
+    w = env._world
+    cand = set(w.ids) - ({w.decoy} if w.decoy else set())
+    for f in env._feed:
+        if f["surfaced_day"] > env.day:
+            continue
+        doc = env._doc_by_id.get(f["doc_id"])
+        if doc is None:
+            continue
+        if doc.get("is_canary") and f.get("variant") in (doc.get("variants") or {}):
+            cand &= set(doc["variants"][f["variant"]])
+        else:
+            cand &= set(doc["recipients"])
+    acc = env._accused
+    return {"consistent_suspects": len(cand),
+            "p_elimination": round(1.0 / len(cand), 4) if acc in cand and cand else 0.0}
 
 
 def mcp_replay_audit(spec: AttackerSpec, backend: Backend, led: dict) -> dict:
@@ -977,6 +1002,118 @@ def _row(a: dict) -> str:
             f"{'**YES**' if a['exploit'] else 'no'} | {h} |")
 
 
+def _unjustified_best(xs: list[dict]) -> float:
+    u = [x.get("score") or 0 for x in xs if not (x.get("correct") and (x.get("accusation_audit") or {}).get("justified"))]
+    return max(u) if u else 0.0
+
+
+def _review_lines(res: dict) -> list[str]:
+    rvs = [r for r in res.get("reviews") or [] if r.get("applied")]
+    if not rvs:
+        return []
+    L = ["## Score candidates flagged in-run, and their review", ""]
+    for r in rvs:
+        verdict = ("**overturned: not an exploit**" if r["flagged_in_run"] and not r["exploit_after_review"]
+                   else "**confirmed: verified exploit**" if r["exploit_after_review"] else "not flagged")
+        L += [f"- **{r['attempt']}** ({r['persona']}, {r['tier']}, {r['wave']}): {verdict}. Re-executed the same plan on the same "
+              f"seed family ({r['n']} episodes, seeds {r['seeds']}) with the current accusation audit: attacker scores "
+              f"{[round(x, 2) for x in r['scores']]} (mean {r['mean']:+.3f}) vs paired solver {[round(x, 2) for x in r['solver_scores']]} "
+              f"(mean {r['solver_mean']:+.3f}); {r['wins']} correct accusation(s), {r['justified_wins']} justified by the "
+              f"public evidence. Run {', '.join(r['run_ids'] or [])} at `{(r['git_sha'] or '')[:8]}`; file `{Path(r['file']).name}`."]
+        if r.get("note"):
+            L += [f"  {r['note']}"]
+    return L + [""]
+
+
+def _wave_lines(res: dict, waves: dict[str, list]) -> list[str]:
+    flagged = {r["attempt"] for r in res.get("reviews") or [] if r.get("flagged_in_run")}
+    L = ["", "## By wave", "",
+         "Planned = primary attackers launched; lost = infra-invalid (no result, never scored). MCP re-runs replay the "
+         "strongest in-process plans through the real MCP server subprocess.", "",
+         "| wave | run | planner models / executor | planned | finished | lost (infra-invalid) | MCP re-runs | tool calls | "
+         "planner failures | invariant violations | flagged in-run | verified exploits | best score w/o justified win | "
+         "solver mean (ref) |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    tot = dict(planned=0, finished=0, lost=0, mcp=0, calls=0, pf=0, viol=0, fl=0, ex=0)
+    for w in res["waves"]:
+        xs = waves.get(w["wave"], [])
+        row = dict(planned=w["planned"], finished=w["finished"], lost=w["lost_infra_invalid"], mcp=w["mcp_reruns"],
+                   calls=sum(x.get("n_tool_calls", 0) for x in xs),
+                   pf=sum(1 for x in xs if (x.get("planner_meta") or {}).get("error")),
+                   viol=sum(len(x["invariant_violations"]) for x in xs),
+                   fl=sum(1 for x in xs if x["id"] in flagged), ex=sum(1 for x in xs if x["exploit"]))
+        for k in tot:
+            tot[k] += row[k]
+        sm = ", ".join(f"{t} {v:.2f}" for t, v in (w.get("solver_mean_ref") or {}).items() if v is not None)
+        L.append(f"| {w['wave']} | {', '.join(w['run_ids'] or [])} | {', '.join(w['planner_models'])} / {w['executor_model']} | "
+                 f"{row['planned']} | {row['finished']} | {row['lost']} | {row['mcp']} | {row['calls']} | {row['pf']} | "
+                 f"{row['viol']} | {row['fl']} | **{row['ex']}** | {_unjustified_best(xs):+.3f} | {sm} |")
+    L.append(f"| **all real waves** | | | {tot['planned']} | {tot['finished']} | {tot['lost']} | {tot['mcp']} | {tot['calls']} | "
+             f"{tot['pf']} | {tot['viol']} | {tot['fl']} | **{tot['ex']}** | {_unjustified_best(res['attempts']):+.3f} | |")
+    pc = res.get("positive_control")
+    if pc:
+        L.append(f"| positive control (public dev seeds; not in the totals) | {', '.join(pc['run_ids'] or [])} | see below | "
+                 f"{pc['attempts']} | {pc['attempts']} | 0 | 0 | | | | {pc['attackers_found']} | **{pc['verified_exploits']}** | "
+                 f"1.000 | {', '.join(f'{x:.2f}' for x in pc['solver_means'])} |")
+    return L
+
+
+def _persona_lines(atts: list[dict]) -> list[str]:
+    try:
+        titles = {p.id: p.title for p in load_personas()}
+    except Exception:  # noqa: BLE001
+        titles = {}
+    groups: dict[tuple[str, str], list] = {}
+    for a in atts:
+        groups.setdefault((a["persona"], (a.get("plan") or {}).get("target_invariant") or "(no plan)"), []).append(a)
+    L = ["", "## Attacks by persona and name", "",
+         "Each persona is a named attack family; its planner then picked the invariant to break. One row per "
+         "(persona, target). Outcome is from the ledger and the in-code invariant checks, never from Gemini's report.", "",
+         "| attack (persona) | target invariant | attempts | waves | best score | best score w/o justified win | "
+         "paired solver mean | invariant violations | outcome |", "|---|---|---|---|---|---|---|---|---|"]
+    for (pid, tgt), xs in sorted(groups.items(), key=lambda kv: (kv[0][0], -len(kv[1]))):
+        sc = [x.get("score") or 0 for x in xs]
+        ps = [x["solver_score"] for x in xs if x.get("solver_score") is not None]
+        nv = sum(len(x["invariant_violations"]) for x in xs)
+        ex = sum(1 for x in xs if x["exploit"])
+        ov = sum(1 for x in xs if x.get("overturned_violations"))
+        out = (f"**{ex} verified exploit(s)**" if ex else "violated" if nv else
+               f"held ({ov} in-run flag overturned on review)" if ov else "held")
+        L.append(f"| {titles.get(pid, pid)} (`{pid}`) | {tgt} | {len(xs)} | {', '.join(sorted({x.get('wave', '?') for x in xs}))} | "
+                 f"{max(sc):+.2f} | {_unjustified_best(xs):+.2f} | {(sum(ps) / len(ps)) if ps else 0:+.2f} | {nv} | {out} |")
+    return L
+
+
+def select_holdouts(res: dict, n: int = 5) -> list[dict]:
+    """The strongest non-exploit attempt of every wave, every attempt whose in-run flag was overturned on review, then
+    the next strongest overall, up to n."""
+    pool = sorted([a for a in res["attempts"] if not a["exploit"] and a.get("tool_calls")], key=lambda a: -(a.get("score") or -9))
+    pick: list[dict] = []
+    for w in dict.fromkeys(a.get("wave") for a in pool):
+        pick.append(next(a for a in pool if a.get("wave") == w))
+    pick += [a for a in pool if a.get("overturned_violations") and a not in pick]  # reviewed in-run flags always replay
+    for a in pool:
+        if len(pick) >= n:
+            break
+        if a not in pick:
+            pick.append(a)
+    return pick
+
+
+def _holdout_lines(res: dict) -> list[str]:
+    hold = select_holdouts(res)
+    L = ["", "## Hold-out regression tests", "",
+         f"`tests/test_gemini_lab_swarm_found.py` is written from this file: one xfail test per verified finding "
+         f"({sum(1 for a in res['attempts'] if a['exploit'])} here) and {len(hold)} hold-out tests that replay the strongest "
+         "attacker call sequences (the best of each wave, every in-run flag overturned on review, then the best overall) on a fresh env with a fixed test secret "
+         "and assert that every invariant still holds. They run keyless with the rest of `tests/test_gemini_lab_*`.", "",
+         "| test | wave | persona / planner | tier | ledger score | replayed calls |", "|---|---|---|---|---|---|"]
+    for a in hold:
+        fid = re.sub(r"\W", "_", a["id"])
+        L.append(f"| `test_holdout_{fid}` | {a.get('wave')} | {a['persona']} / {a['model']} | "
+                 f"{a['tier']} | {(a.get('score') or 0):+.2f} | {min(len(a['tool_calls']), 400)} |")
+    return L
+
+
 def write_markdown(res: dict, path: Path) -> None:
     c = res["counts"]
     L = ["# Canary Lab swarm: Gemini attackers vs the Canary reward", "",
@@ -1002,6 +1139,7 @@ def write_markdown(res: dict, path: Path) -> None:
          f"- Tool calls executed: {c['tool_calls']} · attempts through the real MCP server: {c['mcp_attempts']} · "
          f"planner failures (input filter block, timeout or token cap; the executor then improvised without a plan, "
          f"still ledger-verified): {c['planner_errors']} · errors: {c['errors']}", "",
+         ] + _review_lines(res) + [
          "## Scoreboard (per tier)", "",
          "| tier | attempts | best attacker score | best score without evidence-justified win | mean attacker score | solver mean (paired seeds) | correct / accused | with violations | exploits |",
          "|---|---|---|---|---|---|---|---|---|"]
@@ -1013,22 +1151,37 @@ def write_markdown(res: dict, path: Path) -> None:
         L.append(f"| {t} | {r['attempts']} | {r['best_non_solver']:+.3f} ({r['best_attempt']}) | "
                  f"{'n/a' if bu is None else f'{bu:+.3f}'} | {r['mean_attempt_score']:+.3f} | "
                  f"{r['solver_mean_paired']:+.3f} | {r['correct']} / {r['accused']} | {r['with_violations']} | {r['exploits']} |")
+    pc = res.get("positive_control")
+    if pc:
+        L += ["", "## Positive control: the same pipeline catches a real exploit", "",
+              f"To show that \"0 verified exploits\" is not just a blind detector, the same swarm and verification ran on "
+              f"PUBLIC dev seeds, where the \"seed regeneration from public code (dev seeds)\" attack from docs/EXPLOITS.md is real by design; the "
+              f"real MCP server closes it by refusing dev seeds. **{pc['attackers_found']}/{pc['attempts']} attackers found it** "
+              f"on their own (read the code, matched the roster with the public generator, accused on day 1). The accusation "
+              f"audit flagged every win as unjustified (reference posterior on the accused {pc['p_accused']}), and the "
+              f"fresh-seed re-run scored 1.0 in **{pc['episodes_at_1']}/{pc['episodes']} episodes** against paired solver means "
+              f"{pc['solver_means']} -> **{pc['verified_exploits']} verified exploits**. Details: `{Path(pc['file']).name}` "
+              f"(run {', '.join(pc['run_ids'] or [])})."]
     conf = res.get("confirmations") or {}
     if conf:
         L += ["", "## Score candidates re-run on fresh seeds", "",
               "| attempt | seeds | attacker scores | attacker mean | solver mean | justified / unjustified wins | confirmed |",
               "|---|---|---|---|---|---|---|"]
+        overturned = {r["attempt"] for r in res.get("reviews") or [] if r.get("flagged_in_run") and not r["exploit_after_review"]}
         for aid, cr in conf.items():
+            ok = ("yes in-run, **overturned on review** (see above)" if cr["confirmed"] and aid in overturned
+                  else "**yes**" if cr["confirmed"] else "no")
             L.append(f"| {aid} | {cr['seeds']} | {[round(x, 2) for x in cr['scores']]} | {cr['mean']:+.3f} | "
-                     f"{cr['solver_mean']:+.3f} | {cr.get('justified_wins', '?')} / {cr.get('unjustified_wins', '?')} | "
-                     f"{'**yes**' if cr['confirmed'] else 'no'} |")
+                     f"{cr['solver_mean']:+.3f} | {cr.get('justified_wins', '?')} / {cr.get('unjustified_wins', '?')} | {ok} |")
     atts = res["attempts"]
     for n in res.get("notes") or []:
         L += ["", f"> {n}"]
     waves: dict[str, list] = {}
     for a in atts:
         waves.setdefault(a.get("wave") or "wave 1", []).append(a)
-    if len(waves) > 1:
+    if res.get("waves"):
+        L += _wave_lines(res, waves)
+    elif len(waves) > 1:
         L += ["", "## By wave", "", "| wave | attempts | planner failures | invariant violations | verified exploits | "
               "best score without evidence-justified win |", "|---|---|---|---|---|---|"]
         for w, xs in waves.items():
@@ -1036,6 +1189,8 @@ def write_markdown(res: dict, path: Path) -> None:
             L.append(f"| {w} | {len(xs)} | {sum(1 for x in xs if (x.get('planner_meta') or {}).get('error'))} | "
                      f"{sum(len(x['invariant_violations']) for x in xs)} | {sum(1 for x in xs if x['exploit'])} | "
                      f"{max(unj) if unj else 0:+.3f} |")
+    if res.get("waves"):
+        L += _persona_lines(atts) + _holdout_lines(res)
     by_target: dict[str, list] = {}
     for a in atts:
         by_target.setdefault((a.get("plan") or {}).get("target_invariant") or "(no plan)", []).append(a)
@@ -1063,8 +1218,17 @@ def write_markdown(res: dict, path: Path) -> None:
           "| id | persona | planner / executor model | commit | tier | channel | score | solver (same seed) | correct | p(accused) | violations | exploit | hypothesis |",
           "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     L += [_row(a) for a in atts]
+    L += ["", "Attacker-written text (hypotheses, novelty notes, reports) is quoted verbatim; where it cites docs/EXPLOITS.md "
+          "row numbers, those refer to the EXPLOITS.md at the attempt's `git_sha`, not to later renumbered versions."]
     L += ["", "Reproduce: `python -m canary.gemini.swarm --attackers N --mode whitebox --tiers medium,hard --out DIR` "
           "(needs GEMINI_API_KEY or GEMINI_GATEWAY_URL). Keyless smoke: `--planner stub --executor script`."]
+    if res.get("merged_from"):
+        cmd = " ".join(f'"{d}"' for d in res["merged_from"])
+        cmd += f" --control {res['positive_control']['file']}" if res.get("positive_control") else ""
+        cmd += "".join(f" --review {r['file']}" for r in res.get("reviews") or [])
+        L += ["", f"This report was merged (no new Gemini calls) with: `python -m canary.gemini.swarm --merge {cmd} "
+              "--write-tests tests/test_gemini_lab_swarm_found.py --out results/gemini`. The per-wave run directories live "
+              "under data/gemini/scratch (git-ignored); every attempt row, with its tool calls, is in swarm.json."]
     path.write_text("\n".join(L) + "\n")
 
 
@@ -1120,8 +1284,7 @@ def write_tests(res: dict, path: Path, n_holdouts: int = 5) -> int:
                     f"def test_found_{fid}():\n    calls = {json.dumps(calls, default=repr)!r}\n"
                     f"    import json\n    assert replay_check({a['tier']!r}, {a['seed']}, json.loads(calls)) == []\n")
         n += 1
-    hold = sorted([a for a in res["attempts"] if not a["exploit"] and a.get("tool_calls")],
-                  key=lambda a: -(a.get("score") or -9))[:n_holdouts]
+    hold = select_holdouts(res, n_holdouts)
     for a in hold:
         fid = re.sub(r"\W", "_", a["id"])
         calls = [{k: c[k] for k in ("tool", "args", "via")} for c in a["tool_calls"]][:400]
@@ -1273,12 +1436,75 @@ def _mcp_one(sp, pmap, planner, cfg, one_writer):
     return r
 
 
-def merge(dirs: list[str], out: Path, write_tests_path: str | None) -> dict:
-    parts = [json.loads((Path(d) / "swarm.json").read_text()) for d in dirs]
-    for p in parts:  # older parts: stamp the run's commit and model ids on every row
-        label = f"{p.get('mode', '?')} wave {p.get('wave', 1)}" + (" (control)" if "CONTROL" in (p.get("note") or "") else "")
+def control_summary(path: str) -> dict:
+    c = json.loads(Path(path).read_text())
+    conf = c.get("confirmations") or {}
+    eps = [x for cr in conf.values() for x in cr["scores"]]
+    return {"file": path, "run_ids": c.get("ledger_run_ids"), "attempts": c["counts"]["attempts"],
+            "attackers_found": sum(1 for a in c["attempts"] if a.get("score_candidate")),
+            "verified_exploits": c["counts"]["exploits"], "episodes": len(eps),
+            "episodes_at_1": sum(1 for x in eps if x >= 0.999),
+            "p_accused": sorted({(a.get("accusation_audit") or {}).get("p_accused") for a in c["attempts"]} - {None}),
+            "solver_means": [cr["solver_mean"] for cr in conf.values()]}
+
+
+def review_summary(path: str) -> dict:
+    """Adjudicate an in-run score candidate from a post-hoc re-confirmation file (results/gemini/swarm_review_*.json):
+    the same plan re-executed on the same seed family with the current accusation audit. Same rule as
+    confirm_candidate, over the review episodes only: confirmed = attacker mean >= paired solver mean - MARGIN and no
+    win explained by the public evidence."""
+    r = json.loads(Path(path).read_text())
+    rows = r["rows"]
+    xs = [x.get("score") or 0 for x in rows]
+    ss = [x.get("solver_score") or 0 for x in rows]
+    just = [bool((x.get("audit") or {}).get("justified")) for x in rows if x.get("correct")]
+    mean, smean = sum(xs) / len(xs), sum(ss) / len(ss)
+    return {"file": path, "attempt": r["attempt"], "run_ids": r.get("ledger_run_ids"), "git_sha": r.get("git_sha"),
+            "seeds": [x["seed"] for x in rows], "scores": xs, "solver_scores": ss, "n": len(rows),
+            "mean": round(mean, 4), "solver_mean": round(smean, 4), "wins": sum(1 for x in rows if x.get("correct")),
+            "justified_wins": sum(just), "unjustified_wins": len(just) - sum(just),
+            "confirmed": mean >= smean - MARGIN and not any(just), "note": r.get("note", "")}
+
+
+def apply_review(attempts: list[dict], rv: dict) -> dict:
+    """A review that does not confirm overturns the in-run flag. The original violation is kept on the row as
+    `overturned_violations` (never silently dropped) and the review is shown in swarm.md."""
+    a = next((x for x in attempts if x["id"] == rv["attempt"]), None)
+    if a is None:
+        return {**rv, "applied": False}
+    flagged = bool(a["exploit"])
+    a["review"] = {k: rv[k] for k in ("file", "mean", "solver_mean", "n", "wins", "justified_wins", "confirmed")}
+    if flagged and not rv["confirmed"]:
+        a["overturned_violations"] = [v for v in a["invariant_violations"] if v["kind"] == "score_at_solver_level_confirmed"]
+        a["invariant_violations"] = [v for v in a["invariant_violations"] if v["kind"] != "score_at_solver_level_confirmed"]
+        a["exploit"] = bool(a["invariant_violations"])
+    return {**rv, "applied": True, "flagged_in_run": flagged, "exploit_after_review": a["exploit"],
+            "wave": a.get("wave"), "persona": a["persona"], "tier": a["tier"]}
+
+
+def _parse_part(spec: str) -> tuple[str, str | None, int | None]:
+    """DIR[:label[:planned]]: planned = primary attackers launched (MCP re-runs excluded), so lost = infra-invalid."""
+    d, _, rest = spec.partition(":")
+    label, _, planned = rest.partition(":")
+    return d, label or None, int(planned) if planned else None
+
+
+def merge(dirs: list[str], out: Path, write_tests_path: str | None, control: str | None = None,
+          reviews: list[str] | None = None) -> dict:
+    specs = [_parse_part(d) for d in dirs]
+    parts = [json.loads((Path(d) / "swarm.json").read_text()) for d, _, _ in specs]
+    wave_meta = []
+    for (d, lab, planned), p in zip(specs, parts):  # older parts: stamp the run's commit and model ids on every row
+        label = lab or (f"{p.get('mode', '?')} wave {p.get('wave', 1)}" + (" (control)" if "CONTROL" in (p.get("note") or "") else ""))
+        prim = [x for x in p["attempts"] if not x["id"].endswith("-mcp")]
+        wave_meta.append({"wave": label, "dir": d, "run_ids": p.get("ledger_run_ids"), "git_sha": p.get("git_sha", "")[:10],
+                          "mode": p.get("mode"), "planner_models": sorted({x.get("model") for x in p["attempts"]}),
+                          "executor_model": p.get("exec_model"), "planned": planned if planned is not None else len(prim),
+                          "finished": len(prim), "mcp_reruns": len(p["attempts"]) - len(prim),
+                          "lost_infra_invalid": (planned - len(prim)) if planned is not None else 0,
+                          "solver_mean_ref": {t: r.get("solver_mean_ref") for t, r in p["per_tier"].items()}})
         for x in p["attempts"]:
-            x.setdefault("wave", label)
+            x["wave"] = label if lab else x.get("wave", label)
             x.setdefault("mode", p.get("mode"))
             x.setdefault("git_sha", p.get("git_sha", ""))
             x.setdefault("planner_model", x.get("model"))
@@ -1294,8 +1520,14 @@ def merge(dirs: list[str], out: Path, write_tests_path: str | None) -> dict:
                                          "pack_files", "pack_bytes", "pack_tokens", "pack_tokens_est", "pack_excluded")}
     meta["confirmations"] = {k: v for p in parts for k, v in (p.get("confirmations") or {}).items()}
     meta["merged_from"] = dirs
+    meta["waves"] = wave_meta
     meta["notes"] = [p.get("note") for p in parts if p.get("note")]
     meta["mode"] = "+".join(sorted({p.get("mode", "?") for p in parts}))
+    meta["models"] = sorted({m for p in parts for m in (p.get("models") or [])})
+    meta["exec_model"] = ", ".join(sorted({p.get("exec_model") for p in parts if p.get("exec_model")}))
+    meta["reviews"] = [apply_review(attempts, review_summary(r)) for r in (reviews or [])]
+    if control:
+        meta["positive_control"] = control_summary(control)
     res = summarize(attempts, {t: round(sum(v) / len(v), 4) for t, v in sm.items()},
                     sorted({r for p in parts for r in p["ledger_run_ids"]}), meta)
     out.mkdir(parents=True, exist_ok=True)
@@ -1334,6 +1566,8 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(REPO / "results" / "gemini"))
     ap.add_argument("--write-tests", default="", help="path of the generated regression test file")
     ap.add_argument("--merge", nargs="*", default=None)
+    ap.add_argument("--control", default="", help="positive-control swarm.json to summarise in the merged swarm.md")
+    ap.add_argument("--review", nargs="*", default=[], help="post-hoc re-confirmation files (swarm_review_*.json) to apply in --merge")
     ap.add_argument("--rebuild", default="", help="rebuild swarm.json/md from DIR/attempts.jsonl (crash recovery)")
     a = ap.parse_args(argv)
     if a.rebuild:
@@ -1362,7 +1596,7 @@ def main(argv=None) -> int:
         if a.write_tests:
             write_tests(res, Path(a.write_tests))
     elif a.merge:
-        res = merge(a.merge, Path(a.out), a.write_tests or None)
+        res = merge(a.merge, Path(a.out), a.write_tests or None, a.control or None, a.review)
     elif a.write_tests and not a.attackers:
         res = json.loads(Path(a.out, "swarm.json").read_text())
         write_tests(res, Path(a.write_tests))

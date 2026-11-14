@@ -1,47 +1,176 @@
-# Paste prompts for separate Claude sessions (Sat 14 Nov, ~20:20)
+# Paste prompts for separate Claude sessions (v2, Sat 14 Nov ~23:00 Helsinki)
 
-Silas: sub-agents cost too many tokens, so open these as normal Claude Code sessions instead. One terminal each, started from `~/junction-aimo-team/wt/<worktree>`. Each prompt is self-contained. Each session reports to "Arena · CEO" via SendMessage. Rules for all of them:
-- Gemini only, never OpenAI/Codex;
-- never print keys;
-- never touch other users' FR8 jobs;
-- end commits with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+One terminal per session, each in its own worktree. No sub-agents: each session does its work itself, so usage stays low. Every session reports to "Arena · CEO" via SendMessage.
 
----
+Shared rules (already in every prompt):
+- Gemini only, never OpenAI or Codex. Never print keys. Never touch other users' FR8 jobs.
+- Rules v1.4 are frozen; v1.6 "expert" is a candidate (head-agents) and solver_v2 is a candidate (head-env); the gate is at 01:40.
+- Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
-## 1. MEASUREMENT session (worktree `~/junction-aimo-team/wt/justSilas-gemini`, branch `justSilas-gemini`)
-
-```
-You are the MEASUREMENT engineer for Canary (repo s1laswang/agent-arena, Junction 2026 AfterQuery "Break the Agent"). Work in ~/junction-aimo-team/wt/justSilas-gemini on branch justSilas-gemini. First merge origin/justSilas into it. Read docs/PLAN-95.md, docs/PLAN.md (scoring checklist) and docs/reports/gap.md. Rules are frozen at v1.4; v1.5 was dropped at Gate B (gemini-4-carbon scored 108% of the solver on v1.5 vs 61% on v1.4 on the same seeds; keep that as a labelled negative result in gap.md).
-
-State at handover: gemini-4-carbon v1.4 via OpenCode over MCP is at n=30 on hard and medium. In-process was at hard 22/30, medium 15/30; its driver may still be running (check staging under data/runs/staging-gemini-v1.4*/ and running python processes you own; kill only your own PIDs, never by pattern). The v1.5 spot check is committed under data/runs/committed/v1.5-candidate/.
-
-Tasks, in order:
-1. Finalize v1.4. Run scripts/gemini_finalize.sh and scripts/verify_replay on every episode. Paired tables per tier: ratio + paired bootstrap CI, luck-adjusted ratio, accuracy, accuse/abstain rate, mean P at accusation. Commit to data/runs/committed/v1.4/, update docs/reports/gap.md (note: the v1.4 seed-1 miss at P=0.988 was luck), make test green, merge into justSilas and push. Send the final numbers to "Gemini CEO" (it owns pitch/GEMINI.md; don't edit that file).
-2. Judge rehearsal (A2). Pull justSilas: PR #7 is merged, so `python harbor/build.py` with no flags builds the judge set, hard × 900000–900009, with an HMAC-signed ledger. Colima is already running. Run Harbor + OpenCode + gemini-4-carbon (--api-key-name GOOGLE_GENERATIVE_AI_API_KEY): 3 independent runs × 10 tasks, plus the oracle, do-nothing and stop-early on the SAME build → results/harbor/rehearsal/ with per-task rewards, each run's mean vs the oracle, and the spread. Commit and merge.
-3. Hint ablation (B1): `python scripts/gemini_runner.py --tiers-version v1.4 --tiers hard --seeds <20 seeds> --hint ev_delay` against the same seeds without --hint (reuse baseline episodes). Report the paired diff, premature-accusation tag rate and abstain rate.
-4. A4: gemini-3.5-flash v1.4 hard to n ≥ 30.
-Report each milestone to "Arena · CEO".
-```
+Already running (don't duplicate):
+- head-env (solver_v2, oracle range)
+- head-agents (expert tier + Gemini check)
+- fr8 (v3 small model, Verda)
+- Gemini CEO (Gemini submission)
 
 ---
 
-## 2. INTEGRITY session (worktree: create `~/junction-aimo-team/wt/justSilas-integrity3` from origin/justSilas)
+## S1. REHEARSAL: judge rehearsal + Gemini data hygiene
+Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/s1-rehearsal -b s1-rehearsal origin/justSilas`
 
 ```
-You are the INTEGRITY engineer for Canary (repo s1laswang/agent-arena, Junction 2026 AfterQuery "Break the Agent"). Scoring: correct accusation = V, wrong = −1, none = 0. Judges spend 15 minutes hunting reward exploits. Run `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/justSilas-integrity3 -b justSilas-integrity3 origin/justSilas`, then work there.
+You are the REHEARSAL engineer for Canary (s1laswang/agent-arena, AfterQuery "Break the Agent"; judges rerun with Harbor + OpenCode over MCP: reference run, 3 agent runs, do-nothing, stop-early). Work in ~/junction-aimo-team/wt/s1-rehearsal (branch s1-rehearsal off origin/justSilas). Do everything yourself; do NOT spawn sub-agents. Read docs/PLAN.md (scoring checklist), docs/PLAN-95.md (end section), docs/reports/gap.md, harbor/README.md.
 
-Read docs/PLAN-95.md (items C2, B4, C3), tests/test_anticheat.py, docs/reports/integrity.md and docs/reports/CEO.md (18:40 entry: the fleet findings). PR #7 is merged: the HMAC-signed ledger, a verifier that fails closed, and docs/EXPLOITS.md updated to 25 of 25.
-
-A previous engineer left UNCOMMITTED drafts at ~/junction-aimo-team/agent-arena/.claude/worktrees/agent-a96efd00d9a86f599/EXPLOITS.md and .../docs/DIFFICULTY.md. Copy them in as a starting point, then reconcile with the existing docs/EXPLOITS.md (keep ONE exploit ledger; the root EXPLOITS.md may just point to docs/EXPLOITS.md or replace it, your call, but no duplicates).
+State: v1.4 gemini-4-carbon runs are committed and replay-verified (data/runs/committed/v1.4/, paired table paired_table_gemini.md). Headline: OpenCode hard 65% [24, 98], luck-adjusted 72% [52, 91]. `python harbor/build.py` (no flags) builds the judge set (hard × 900000–900009) with a signed ledger. Colima runs on this Mac. GEMINI_API_KEY is in ~/junction-aimo-team/wt/justSilas/.env: copy .env into your worktree, never print it.
 
 Tasks:
-1. C2. The exploit ledger judges read first: one row per attack class (13 battery probes, Harbor cheat runs −1/−1 and never-accuse 0/0, do-nothing and stop-early, replay consistency, secrets via 0600 *_FILE, isolation, the HMAC ledger with its tamper negative control in results/harbor_negative/, `make hunt`, Momin's 129-row corpus, the 51-attacker Gemini swarm, the fleet probes). Each row gives the result number, the mitigation and the enforcing test (file::test). Numbers come from repo files only. Residual risks section. Linked from README.
-2. B4. Instruction audit: render canary.text.instruction for each tier; audit it yourself, then one gemini-4-carbon pass (the key is in ~/junction-aimo-team/wt/justSilas/.env; copy .env, never print it). Write docs/DIFFICULTY.md. Do NOT change rules/env/solver/instruction (frozen); send proposals to the CEO.
-3. `make test` and `make hunt` green. Push, open a PR into justSilas, report to "Arena · CEO".
-4. C3 at 02:00 on the tagged candidate: rerun make hunt + the Gemini swarm, then a 15-minute judge-protocol hunt with Vaishnav. Report in docs/reports/integrity.md.
+1. NOW, a dry run of the judges' sequence on the CURRENT justSilas: build the default set; run the oracle, do_nothing and stop_early (harbor -a oracle with ORACLE_POLICY), then 1 OpenCode run with gemini-4-carbon (--api-key-name GOOGLE_GENERATIVE_AI_API_KEY) on all 10 tasks. Fix any harness breakage you hit (report harbor/ or core changes to the CEO first). Save to results/harbor/rehearsal-dry/.
+2. Fix the gemini-3.5-flash v1.4 runs: they are in ~/junction-aimo-team/wt/justSilas-gemini/data/runs/staging-gemini-3.5-flash-v1.4 (also merged copy held at /tmp/hold/opencode-gemini-3.5-flash). Score replay passes but tests/test_anticheat.py::test_frontier_runs_are_replayed (step-level) fails for them. Find why (likely MCP error wrapping in the recorded steps), fix it in the replay unwrapping or document it as an exclusion, then commit them under data/runs/committed/v1.4/opencode-gemini-3.5-flash/ with make test green.
+3. AFTER the CEO sends the tag `afterquery-final` (~07:00): the full rehearsal on exactly that SHA: oracle, 3 independent OpenCode gemini-4-carbon runs × 10 tasks, do_nothing, stop_early → results/harbor/rehearsal/ with per-task rewards, each run's mean vs the oracle, and the run-to-run spread. Commit and send the table to the CEO.
+Report each step to "Arena · CEO".
 ```
 
 ---
 
-## Later (only when needed)
-- **D1 fresh clone (02:00):** the CEO hands it to the integrity session, or to FR8 for an sbatch on a `normal` node with `--time 1:00:00`.
+## S2. DIFFICULTY: the v1.4 failure analysis (Meaningful difficulty, 30 pts)
+Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/s2-difficulty -b s2-difficulty origin/justSilas`
+
+```
+You are the DIFFICULTY analyst for Canary (s1laswang/agent-arena). Rubric line: "explain the agent's main mistakes, tied to decisions in the task; the info and tools to do better are available; no withheld info, trick wording, impossible timing, broken tools" (30 pts). Work in ~/junction-aimo-team/wt/s2-difficulty. Do everything yourself; no sub-agents. Read docs/reports/gap.md, results/skill_ladder_v1.4.md, canary/analysis/ (tags.py, accuse.py), docs/EXPLOITS.md.
+
+Data: data/runs/committed/v1.4/opencode-gemini-4-carbon/{hard,medium} and inproc-gemini-4-carbon/, paired with reference/solver-* on the same seeds 0–29.
+
+Tasks:
+1. Write docs/reports/failure_analysis_v1.4.md from the 30 OpenCode hard episodes vs the solver on the same seeds, all computed in code (scripts/failure_analysis_v14.py, committed):
+   - canaries planted (reviewer: Gemini ~8.5 vs solver ~14.1);
+   - accusation day (~13.4 vs ~10.6), and the V lost to waiting;
+   - the solver posterior at Gemini's accusation;
+   - wrong accusations, and the solver posterior at each one (reviewer: all 4 at 0.63–0.99, so luck, not gambling; say so honestly);
+   - abstain rate; how often Gemini accuses on a single canary hit.
+   Then rank the mistakes by V lost. The likely story: under-exploration (fewer canaries) → slower identification → V drains, not reckless gambling. Tie each mistake to the tool or decision that would have avoided it, and show that the information was available (the solver used the same observations). Two annotated example episodes.
+2. Instruction audit → docs/DIFFICULTY.md. Render canary.text.instruction for each tier and check it for trick wording, hidden info, impossible timing and broken tools. Do one pass yourself and one gemini-4-carbon pass (key in ~/junction-aimo-team/wt/justSilas/.env; copy it, never print it). A previous draft is at ~/junction-aimo-team/agent-arena/.claude/worktrees/agent-a96efd00d9a86f599/docs/DIFFICULTY.md; start from it. Don't change rules or instruction text; propose changes to the CEO.
+3. make test green; push; open a PR into justSilas; report to "Arena · CEO". Coordinate with "Gemini CEO" (its atlas failure gallery): yours is the v1.4 judged-tier analysis, so cross-link, don't duplicate.
+```
+
+---
+
+## S3. INTEGRITY: one exploit ledger + the final hunt (Reward integrity, 25 pts)
+Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/s3-integrity -b s3-integrity origin/justSilas`
+
+```
+You are the INTEGRITY engineer for Canary (s1laswang/agent-arena). Judges spend 15 minutes trying to reward-hack it; do-nothing and stop-early must score ~0 (stop_early now stops without accusing and scores exactly 0; guess_day1 is the day-1 random accusation). Work in ~/junction-aimo-team/wt/s3-integrity. Do everything yourself; no sub-agents. Teammate Vaishnav designed the anti-cheat battery; credit him.
+
+Read: docs/EXPLOITS.md, tests/test_anticheat.py, canary/redteam/anticheat.py, results/anticheat/exploits.md, harbor/README.md (signed ledger, PR #7), docs/reports/CEO.md (fleet findings 18:40).
+
+Tasks:
+1. ONE exploit ledger. docs/EXPLOITS.md is canonical. A previous draft EXPLOITS.md sits at ~/junction-aimo-team/agent-arena/.claude/worktrees/agent-a96efd00d9a86f599/EXPLOITS.md; merge anything new from it into docs/EXPLOITS.md. Add a short top section, "Judges: start here", listing the attack classes with result, mitigation and enforcing test. Cover:
+   - the HMAC ledger, with the tamper negative control in results/harbor_negative/;
+   - the cheat_probe 0/0 and the cheat run −1;
+   - isolation;
+   - the 51-attacker Gemini swarm;
+   - Momin's 129-row corpus.
+   Add Residual risks:
+   - the sidecar holds the Gemini key;
+   - check_leak_feed spends daily budget;
+   - published retired keys can't catch re-signed forgeries.
+   Numbers come from repo files only.
+2. If the expert tier (branch justSilas-expert) is merged at the 01:40 gate: rerun make hunt plus the anti-cheat battery on it and add its rows.
+3. At the tag `afterquery-final` (the CEO sends the SHA, ~07:00): run a 15-minute judge-protocol hunt yourself, plus make hunt and `REPRO_FAST=0 make reproduce`, on that SHA. Report in docs/reports/integrity.md.
+Push, PR into justSilas, report to "Arena · CEO".
+```
+
+---
+
+## S4. CRAFT: README first screen + fresh clone + tag (Craft, 15 pts)
+Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/s4-craft -b s4-craft origin/justSilas`
+
+```
+You are the CRAFT engineer for Canary (s1laswang/agent-arena). Rubric: "rules make sense for the setting; ONE command from the README reproduces our reported results". Repo is public; main's landing page sends judges to branch justSilas. Work in ~/junction-aimo-team/wt/s4-craft. Do everything yourself; no sub-agents.
+
+Tasks:
+1. README first screen (the reviewer counted 22 KB of version history as a minus):
+   - one claim;
+   - one v1.4 table (solver / gemini-4-carbon OpenCode / do_nothing / stop_early on hard, with numbers from docs/reports/gap.md);
+   - one command (`make setup && make reproduce`, then `make accept`);
+   - the Harbor judge block with the oracle's expected range from harbor/README.md;
+   - links to docs/EXPLOITS.md, docs/reports/gap.md and docs/gemini/SUBMISSION.md.
+   Move everything else (version history, v1.2/v1.3 stories) into docs/HISTORY.md. Keep every number traceable to a committed file.
+2. Fresh-clone check on macOS: clone the public repo into /tmp, `git clone -b justSilas`, then `make setup && make reproduce && make accept`. Time it and fix anything that breaks: zip-download test skips (test_salt_never_tracked needs .git), Linux-only bits. Commit the log to results/fresh_clone/.
+3. Repo hygiene: list what in results/ (11 MB, 691 files) is stale and propose deletions to the CEO; don't delete committed run data.
+4. When the CEO says go (~07:00): re-run make test + make accept on the final merge, create an annotated tag `afterquery-final`, push it, and send the SHA to "Arena · CEO".
+Push, PR into justSilas, report to "Arena · CEO".
+```
+
+---
+
+## S5. DEMO: 10-minute demo + video storyboard (peer review / best overall)
+Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/s5-demo -b s5-demo origin/justSilas`
+
+```
+You are the DEMO producer for Canary (s1laswang/agent-arena). Judging: a 10-minute demo; overall winner = peer-review top 5, then a jury. Work in ~/junction-aimo-team/wt/s5-demo. Do everything yourself; no sub-agents. Read docs/PLAN.md (the "Demo (10 min)" section maps minutes to rubric points), docs/reports/gap.md, origin/ivar/aq-game-ux (docs/VIDEO-SCRIPT.md, docs/research-biases.md, game/), game/ (browser game, make game-serve), the viewer branches (justSilas-grok-viewer), pitch/.
+
+Tasks:
+1. docs/DEMO.md: a minute-by-minute script for the live 10-minute demo, with exact commands and expected outputs:
+   - `make reproduce`;
+   - a solver vs gemini-4-carbon replay on one hard seed where Gemini under-explores, picked from the committed v1.4 runs, with the "Fooled"/slow moment timestamped;
+   - the gap table;
+   - EXPLOITS;
+   - the small-model result (leave a placeholder until fr8 reports ~07:00);
+   - the Gemini roles;
+   - the game link.
+   Dry-run every command and note its runtime.
+2. Merge-readiness review of Ivar's branch origin/ivar/aq-game-ux (game fixes, research, video script): check that `make game-serve` works and that the score matches Python on one seed, then list issues for Ivar. Don't merge yourself; send the verdict to the CEO.
+3. A video storyboard (≤ 10 min) from Ivar's VIDEO-SCRIPT.md with only committed numbers; mark every number with its source file. No ElevenLabs unless Silas provides a key.
+Push, PR into justSilas, report to "Arena · CEO".
+```
+
+---
+
+## S6. VERDA: Compute Track submission (owner: Arena CEO; this session executes)
+Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/s6-verda -b s6-verda origin/justSilas`
+
+```
+You are the VERDA engineer for Canary (s1laswang/agent-arena). We are entering the Verda Compute Track (25% each: Ambition, Fit = right Verda product and why, Working prototype + documented process, Path to scale). Read ~/junction-aimo-team/VERDA-TRACK.md first. HONESTY RULE: never claim FR8 freighter work ran on Verda; label every number with where it ran. Work in ~/junction-aimo-team/wt/s6-verda. Do everything yourself; no sub-agents. Verda GPU instances are owned by the "fr8 relaunch gpu audit" session: never launch a GPU instance yourself; ask it.
+
+Facts already true:
+- REAL Verda workload: v3 small-model GRPO (seed 0) on a Verda H100 80GB instance (1H100.80S.32V, FIN-02, €4.742/h), started 23:32 after two setup failures (the first instance 3bb74f5a started 22:46). About 12 s/step vs ~78 s on the FR8 V100 (6.5×). The training plus held-out eval ends ~02:45, with a hard-stop reaper at 03:23. Spend so far ~€3.6, cap $30. Get instance ids, logs, step counts, cost and the eval table from the fr8 session (docs/reports/fr8.md on branch justSilas-fr8).
+- Freighter scale this weekend (for Ambition, labelled FR8): Momin's Gemini agent fleet on Slurm CPU, 813+ v1.4 frontier episodes, ~1,000 replay-verified committed episodes, the GRPO mole jobs, the J4/v2 SFT runs. Count GPU-hours and episodes from the repo and docs/reports/fr8.md.
+
+Tasks:
+1. A second Verda product, with no GPU setup: the Verda Inference API, or the NVIDIA Nemotron endpoint, as an open-weight Canary investigator.
+   - Point OpenCode (or the in-process runner canary.agents.play, which has an OpenAI-compatible client path) at the Verda endpoint.
+   - Run v1.4 hard dev seeds 0–9 (more if fast), replay-verify, and pair with the solver using scripts/paired_gemini.py or scripts/gap_vs_reference.py.
+   - That gives a third model family on the judged tier (the reviewer asked for a non-Gemini model) and real Verda Fit. If it needs a key we don't have, write the exact ask under "Questions for Silas" in docs/PLAN.md and stop that task.
+2. Write VERDA.md at the repo root:
+   - the idea → prototype timeline;
+   - the products used and why (GPU instance for GRPO: 6.5× V100 throughput, on-demand; Inference API/Nemotron for open-weight agents);
+   - small-model before/after (base / v1 / v2 / v3, from the fr8 table; placeholder until ~03:00);
+   - freighter vs Verda numbers, clearly labelled;
+   - cost and duration;
+   - the scale path: Instant Clusters for multi-node GRPO over thousands of rollouts, batch jobs for nightly eval sweeps, auto-scaling containers to serve the Canary MCP env to labs as an eval-as-a-service.
+3. PR into justSilas; report to "Arena · CEO" via SendMessage. Never print keys (the Verda creds are in agent-arena/.env as VERDA_CLIENT_ID / VERDA_CLIENT_SECRET). Commits end with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>".
+```
+
+---
+
+## S7. OPEN-7B: train an open model on Canary experience (the big compute bet)
+Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/s7-open7b -b s7-open7b origin/justSilas`
+
+```
+You are the OPEN-MODEL engineer for Canary (s1laswang/agent-arena). Read docs/PLAN-COMPUTE.md first. That is your plan. Goal by 08:30: a replay-verified chart on v1.4 hard held-out seeds (n=30 each) for Qwen2.5-7B-Instruct base → SFT → expert iteration, next to gemini-4-carbon (0.322) and the solver (0.499). Work in ~/junction-aimo-team/wt/s7-open7b. Do everything yourself; no sub-agents. GPUs: 4 Verda A100-40G plus an H100, provisioned ONLY by the "fr8 relaunch gpu audit" session. Send it exact job specs (command, GPU, hours) and never create instances yourself. Never touch Momin's FR8 jobs; never pkill by pattern.
+
+Reuse what exists:
+- train/ (SFT/LoRA pipeline, eval_hf, j4/v2 scripts);
+- train/grpo_investigator.py (the v3 GRPO, decision-point states);
+- canary.agents.play / LLMPolicy (OpenAI-compatible tool-calling loop, so point it at a vLLM server);
+- canary.eval (solver episodes on CPU);
+- scripts/paired_gemini.py or scripts/gap_vs_reference.py (pairing).
+Diagnosis to fix: the 1.5B/4k model accuses at the right time but at the wrong person (v2: accused 51%, correct 6%), because the evidence falls outside its window. Use FULL history (16k-32k context).
+
+Steps:
+1. (00:30-01:30) vLLM OpenAI server with Qwen2.5-7B-Instruct on one A100 (tool calling on), then 1 episode end-to-end with LLMPolicy on v1.4 hard dev seed. Then the base eval: n=30 held-out (HELDOUT seeds, v1.4 hard), run in parallel.
+2. Generate ~3,000 v1.4 solver episodes on CPU (train seeds only, never judge/held-out), render them as full-history chat transcripts in the exact LLMPolicy format, and run SFT with LoRA on 7B at 16k context (A100 #3). Eval n=30.
+3. Expert iteration: sample K=4 episodes per train seed from the SFT model via vLLM (A100 #1-2), keep the episodes that beat 0 / match the solver's accusation, SFT again (EI-1), eval n=30. EI-2 only if EI-1 improved.
+4. Write results/leaderboard_v14_hard.json (rows: agent, n, mean ± CI, accuracy, abstain rate, GPU-hours, €) and docs/reports/open7b.md (honest, a null result included). Commit episodes under data/runs/committed/v1.4/open7b-*/ and replay-verify them.
+Kill criteria are in PLAN-COMPUTE.md. Report every milestone to "Arena · CEO". Commits end with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>".
+```

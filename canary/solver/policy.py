@@ -46,12 +46,13 @@ class SolverPolicy:
     name = "solver"
 
     def __init__(self, params: TierParams | str | None = None, threshold: float | None = None,
-                 behaviour_temper: float = 0.3, choice_temper: float = 1.0,
+                 behaviour_temper: float = 0.3, choice_temper: float = 0.5, noleak_temper: float = 0.5,
                  none_group: bool = True, read_logs: bool = True):
         self._given = params
         self.threshold = threshold
         self.behaviour_temper = behaviour_temper
         self.choice_temper = choice_temper
+        self.noleak_temper = noleak_temper
         self.none_group = none_group
         self.read_logs = read_logs
         self.reset([], "")
@@ -162,7 +163,7 @@ class SolverPolicy:
 
     # ---------------------------------------------------------------- planning
     def belief(self) -> dict[str, float]:
-        return posterior(self.obs, self.P, self.behaviour_temper, self.choice_temper)
+        return posterior(self.obs, self.P, self.behaviour_temper, self.choice_temper, self.noleak_temper)
 
     def default_threshold(self) -> float:
         return {"easy": 0.9, "medium": 0.9, "hard": 0.85}.get(self.P.name, 0.9)

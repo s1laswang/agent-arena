@@ -69,3 +69,20 @@ def test_regret_tags_and_solver_low_regret():
         n = attribute(_run_local(Env("medium", s), DoNothing(seed=s)))
         assert "no_accusation" in n[-1]["tags"]
     assert tot_solver < tot_early
+
+
+def test_solver_robust_to_random_dsl_moles():
+    """CONTRACT §7: canary-first inference; 20 random strategies on medium (episodes where the
+    mole never leaks are unsolvable by evidence and excluded)."""
+    import random
+    from canary.env import Env
+    from canary.mole.dsl import random_strategy
+    ok = n = 0
+    for s in range(20):
+        env = Env("medium", s, mole_strategy=random_strategy(random.Random(f"bench-mole:{s}")))
+        r = _run_local(env, SolverPolicy(None))
+        if not any(e.event == "leak" for e in env.ledger()):
+            continue
+        n += 1
+        ok += r.correct
+    assert n >= 15 and ok / n >= 0.85, (ok, n)

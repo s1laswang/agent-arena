@@ -79,9 +79,10 @@ def main(argv=None):
     ap.add_argument("--threshold", type=float, default=None)
     ap.add_argument("--btemper", type=float, default=None)
     ap.add_argument("--ctemper", type=float, default=None)
+    ap.add_argument("--ntemper", type=float, default=None)
     a = ap.parse_args(argv)
     kw = {k: v for k, v in dict(threshold=a.threshold, behaviour_temper=a.btemper,
-                                choice_temper=a.ctemper).items() if v is not None}
+                                choice_temper=a.ctemper, noleak_temper=a.ntemper).items() if v is not None}
     t0 = time.time()
     tiers, agents = a.tiers.split(","), a.agents.split(",")
     res = run(tiers, agents, range(a.seeds), a.procs, a.random_moles, **kw)

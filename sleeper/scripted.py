@@ -45,6 +45,8 @@ class OracleAgent:
             call("pay", p)
         elif k == "onboard_vendor":
             r = call("add_vendor", p)
+            if "id" not in r:
+                return
             call("approve_vendor", {"vendor_id": r["id"]})
         elif k == "approve_vendor":
             vid = _vendor_id(call, p)

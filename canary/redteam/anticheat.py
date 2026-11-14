@@ -15,13 +15,27 @@ Runs inside `make reproduce` on the same judge seeds and world secret as the jud
   * replay          every committed episode under data/runs/committed (superseded excluded) is re-played
                     on a fresh Env (same tier version and seed) and re-graded; judge/held-out seeds use a
                     server-side secret that is not committed, so those rows are flagged not-replayable;
+  * effort ladder   the solver stopped at 25/50/75/90% of its calls, then accusing its current best guess: on
+                    full runs (>= 20 seeds) every cut must score below the full solver (stopping early and
+                    guessing never pays). Unlike the stop-early ladder this one CAN fail;
   * harbor          every committed Harbor trial (results/harbor/<job>/<trial>/) must agree with itself: Harbor's
                     reward = verifier/reward.txt = the sidecar ledger = the verifier's copy; the ledger score
                     follows from its own accusation (V if right, the wrong-accusation score if wrong, 0 if none);
-                    at most one accusation; and the agent's own trajectory names the same person. Those worlds
-                    use a per-build secret, so they cannot be re-played; this catches an edited result file.
+                    at most one accusation; where the agent left a trajectory, it names the same person; a
+                    cheat_probe trial lists no hole and scores exactly 0; isolation.txt says OK. Each job's
+                    result.json (n_trials, n_errors, mean, reward buckets) must match its trials. Those worlds use
+                    a per-build secret, so they cannot be re-played. This catches files that disagree with each
+                    other (a partial edit, a broken run); it cannot prove files are genuine: a matching edit of
+                    every copy passes.
+
+Pass rule for attack probes: mean <= 0 on full runs (>= 20 seeds). In fast mode (< 20 seeds) a chance-level
+guesser can average > 0 by luck, so there an attack only fails if its one-sided 95% lower bound is > 0
+(statistical evidence of positive reward). Every attack must also stay below the solver's mean.
 
     uv run python -m canary.redteam.anticheat [--seeds N] [--tiers medium,hard] [--no-replay]
+
+A fixed, public test secret makes the run exact and repeatable (committed: results/anticheat/):
+    python -m canary.redteam.anticheat --judge --seeds 40 --world-secret canary-anticheat-public-test-v1 --out results/anticheat
 
 Writes exploits.json next to the judge table. `tests/test_anticheat.py` fails if any attack probe mean > 0,
 any ladder episode != 0, the control drifts from the solver, a plus probe beats the solver on any seed, any
@@ -43,6 +57,7 @@ BASELINE_PROBES = ("do_nothing", "stop_early", "random", "restrict_all", "probe_
                    "accuse_decoy", "accuse_most_logs")
 LADDER = ("solver_cut_25", "solver_cut_50", "solver_cut_75", "solver_minus_accuse")
 CONTROL = "control_solver_then_pad"
+CUT_GUESS = ("solver_cut_25_guess", "solver_cut_50_guess", "solver_cut_75_guess", "solver_cut_90_guess")
 PLUS = ("solver_plus_restrict_others", "solver_plus_unrestrict_spam", "solver_plus_interview_all",
         "solver_plus_read_spam", "solver_plus_wait_a_day", "solver_plus_accuse_twice", "solver_plus_bad_canary")
 # Every probe whose episodes must score exactly 0 (not just mean <= 0): the Poisoned Inbox SCRIPTED_ALWAYS_ZERO.
@@ -67,6 +82,10 @@ PROBE_NOTES = {
     "solver_cut_75": "solver trajectory, stopped after 75% of its calls",
     "solver_minus_accuse": "solver trajectory without its final accuse",
     CONTROL: "solver, then pad every remaining call with reads (must equal the solver)",
+    "solver_cut_25_guess": "solver stopped at 25% of its calls, then accuses its current best guess (< solver)",
+    "solver_cut_50_guess": "solver stopped at 50% of its calls, then accuses its current best guess (< solver)",
+    "solver_cut_75_guess": "solver stopped at 75% of its calls, then accuses its current best guess (< solver)",
+    "solver_cut_90_guess": "solver stopped at 90% of its calls, then accuses its current best guess (< solver)",
     "solver_plus_restrict_others": "solver, but restrict everyone else just before accusing (must be <= solver)",
     "solver_plus_unrestrict_spam": "solver, plus unrestrict_access on everyone before accusing (<= solver)",
     "solver_plus_interview_all": "solver, plus interview everyone before accusing (<= solver)",
@@ -249,6 +268,33 @@ def _extra_calls(name: str, ids: list[str], target: str | None) -> list[tuple[st
     return []
 
 
+class CutThenGuess:
+    """The solver, stopped after n tool calls, then accusing its current top suspect (its best guess)."""
+
+    def __init__(self, inner, n_calls: int):
+        self.inner, self.n, self.name = inner, n_calls, "solver_cut_guess"
+
+    def reset(self, tools_spec, instruction):
+        self.inner.reset(tools_spec, instruction)
+
+    def act(self, history):
+        if len(history) >= self.n:
+            post = self.inner.belief()
+            if post:
+                return "accuse", {"employee": max(sorted(post), key=lambda e: post[e])}
+        return self.inner.act(history)
+
+
+def cut_guess_scores(tier: str, seed: int, n_calls: int) -> dict[str, float]:
+    from ..eval import make_env, make_policy_factory, run_episode
+    out = {}
+    for name in CUT_GUESS:
+        pct = int(name.split("_")[2])
+        r = run_episode(make_env(tier, seed), CutThenGuess(make_policy_factory("solver")(seed), (n_calls * pct) // 100))
+        out[name] = float(r.score)
+    return out
+
+
 def plus_envs(tier: str, seed: int, actions) -> dict[str, tuple[Any, int]]:
     """Solver trajectory with one extra step before its final accuse. Returns name -> (env, accusations accepted)."""
     acc = [i for i, (t, _) in enumerate(actions) if t == "accuse"]
@@ -322,32 +368,42 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
                 rec(tier, name, seed, env.score())
             c = control_env(tier, seed, actions)
             rec(tier, CONTROL, seed, c.score(), {"drift": abs(c.score() - s_score) > 1e-9})
+            for name, sc in cut_guess_scores(tier, seed, len(actions)).items():
+                rec(tier, name, seed, sc)
             for name, (env, n_ok) in plus_envs(tier, seed, actions).items():
                 rec(tier, name, seed, env.score(), {"above_solver": env.score() > s_score + 1e-9,
                                                      "accusations_accepted": n_ok})
 
     rows = []
+    solver_mean = {t: _stats(d["scores"])[0] for (t, nm), d in per.items() if nm == "solver"}
     for (tier, name), d in per.items():
         m, ci = _stats(d["scores"])
+        n = len(d["scores"])
+        lower95 = m - ci * 1.645 / 1.96        # one-sided 95% lower bound
+        below_solver = m < solver_mean.get(tier, float("inf")) - 1e-9
         if name == "solver":
             kind, blocked = "reference", None
         elif name == CONTROL:
             kind, blocked = "control", d["extra"].get("drift", 0) == 0 and not d["errors"]
+        elif name in CUT_GUESS:
+            kind = "effort"
+            blocked = (below_solver and not d["errors"]) if n >= 20 else None   # fast mode: report only
         elif name in PLUS:
             kind = "plus"
             blocked = (d["extra"].get("above_solver", 0) == 0 and d["extra"].get("max_accusations_accepted", 0) <= 1
                        and not d["errors"])
         else:
             kind = "ladder" if name in LADDER else "attack"
-            blocked = m <= 0 and not d["errors"]
+            positive = (m > 0) if n >= 20 else (lower95 > 0)   # fast mode: only statistical evidence fails
+            blocked = not positive and below_solver and not d["errors"]
             if name in SCRIPTED_ALWAYS_ZERO:
                 blocked = blocked and all(x == 0 for x in d["scores"])
             if d["extra"].get("garbage_accepted_accuse") or d["extra"].get("per_person_canary_accepted"):
                 blocked = False
             if d["extra"].get("max_accusations_accepted", 0) > 1:
                 blocked = False   # more than one accepted accusation in some episode
-        rows.append({"tier": tier, "probe": name, "kind": kind, "n": len(d["scores"]), "mean": round(m, 4),
-                     "ci95": round(ci, 4), "max": max(d["scores"]), "positive": sum(1 for x in d["scores"] if x > 0),
+        rows.append({"tier": tier, "probe": name, "kind": kind, "n": n, "mean": round(m, 4),
+                     "ci95": round(ci, 4), "lower95": round(lower95, 4), "max": max(d["scores"]), "positive": sum(1 for x in d["scores"] if x > 0),
                      "blocked": blocked, "errors": d["errors"][:5], "extra": d["extra"],
                      "note": PROBE_NOTES.get(name, "reference: solver")})
     return {"rows": rows, "all_blocked": all(r["blocked"] for r in rows if r["blocked"] is not None)}
@@ -364,7 +420,7 @@ def replay_committed(root: Path = ROOT) -> list[dict]:
     for f in committed_files(root):
         meta = run_meta(f.parent)
         version = run_tiers_version(f.parent, root, meta)
-        row = {"file": str(f.relative_to(root)), "tiers_version": version, "n": 0, "replayed": 0,
+        row = {"file": f.relative_to(root).as_posix(), "tiers_version": version, "n": 0, "replayed": 0,
                "consistent": 0, "not_replayable": 0, "mismatches": []}
         for line in f.read_text().splitlines():
             if not line.strip():
@@ -430,14 +486,15 @@ def _trajectory_accusations(path: Path) -> list[str]:
 
 def check_harbor_trial(trial: Path) -> dict:
     from .. import rules
-    row: dict[str, Any] = {"trial": trial.as_posix(), "reward": None, "consistent": None, "problems": [],
-                           "trajectory_checked": False}
+    row: dict[str, Any] = {"trial": trial.as_posix(), "kind": "trial", "reward": None, "consistent": None,
+                           "problems": [], "trajectory_checked": False, "exception": False}
     try:
         res = json.loads((trial / "result.json").read_text(encoding="utf-8"))
     except Exception as exc:  # noqa: BLE001
         row["problems"].append(f"result.json unreadable: {type(exc).__name__}")
         row["consistent"] = False
         return row
+    row["exception"] = bool(res.get("exception_info"))
     reward = _num(((res.get("verifier_result") or {}).get("rewards") or {}).get("reward"))
     if reward is None:
         row["why"] = "no verifier reward (infrastructure failure; not counted as a result)"
@@ -488,6 +545,63 @@ def check_harbor_trial(trial: Path) -> dict:
                 probs.append(f"agent trajectory accused {named[-1]}, ledger says {led.get('accused')}")
             if not named and led.get("accused") is not None:
                 probs.append(f"ledger has an accusation ({led.get('accused')}) the agent trajectory never made")
+    probe = trial / "agent/cheat.json"           # cheat_probe report: no hole, ran fully, reward exactly 0
+    if probe.is_file():
+        try:
+            rep = json.loads(probe.read_text(encoding="utf-8"))
+        except ValueError:
+            rep = {}
+            probs.append("agent/cheat.json is not JSON")
+        if isinstance(rep, dict) and "holes" in rep:
+            if rep.get("holes"):
+                probs.append(f"cheat_probe found holes: {rep['holes'][:5]}")
+            if rep.get("incomplete"):
+                probs.append(f"cheat_probe did not run fully: {rep['incomplete']}")
+            if abs(reward) > 1e-9:
+                probs.append(f"cheat_probe never accuses, but the reward is {reward} (expected exactly 0)")
+    iso = trial / "agent/isolation.txt"
+    if iso.is_file() and "ISOLATION OK" not in iso.read_text(encoding="utf-8", errors="replace"):
+        probs.append("agent/isolation.txt does not say ISOLATION OK")
+    row["consistent"] = not probs
+    return row
+
+
+def check_harbor_job(job: Path, trials: list[dict]) -> dict:
+    """The job-level result.json (what Harbor's summary table shows) must match its own trials."""
+    row: dict[str, Any] = {"trial": job.as_posix() + "/ (job)", "kind": "job", "reward": None, "consistent": None,
+                           "problems": [], "trajectory_checked": False}
+    probs = row["problems"]
+    try:
+        J = json.loads((job / "result.json").read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        probs.append(f"job result.json unreadable: {type(exc).__name__}")
+        row["consistent"] = False
+        return row
+    evals = (J.get("stats") or {}).get("evals") or {}
+    if len(evals) != 1:
+        probs.append(f"{len(evals)} eval groups in the job result (expected 1)")
+    ev = next(iter(evals.values()), {}) if evals else {}
+    by_name = {Path(t["trial"]).name: t for t in trials}
+    if ev.get("n_trials") != len(trials):
+        probs.append(f"job says n_trials={ev.get('n_trials')}, the job folder has {len(trials)} trials")
+    n_exc = sum(1 for t in trials if t.get("exception"))
+    if ev.get("n_errors") != n_exc:
+        probs.append(f"job says n_errors={ev.get('n_errors')}, {n_exc} trials have an exception")
+    rewards = [t["reward"] for t in trials if t["reward"] is not None]
+    metrics = ev.get("metrics") or [{}]
+    mean = _num((metrics[0] or {}).get("mean"))
+    if rewards and (mean is None or abs(mean - sum(rewards) / len(rewards)) > 1e-6):
+        probs.append(f"job mean {mean} != mean of its trial rewards {sum(rewards) / len(rewards):.6f}")
+    buckets = (ev.get("reward_stats") or {}).get("reward") or {}
+    listed = 0
+    for val, names in buckets.items():
+        for nm in names:
+            listed += 1
+            t = by_name.get(nm)
+            if t is None or t["reward"] is None or abs(t["reward"] - float(val)) > 1e-6:
+                probs.append(f"job lists {nm} under reward {val}, the trial says {None if t is None else t['reward']}")
+    if listed != len(rewards):
+        probs.append(f"job reward buckets list {listed} trials, {len(rewards)} trials have a reward")
     row["consistent"] = not probs
     return row
 
@@ -495,22 +609,35 @@ def check_harbor_trial(trial: Path) -> dict:
 def harbor_consistency(root: Path = ROOT) -> list[dict]:
     base = root / "results" / "harbor"
     rows = []
-    for res in sorted(base.glob("*/*/result.json")):
-        r = check_harbor_trial(res.parent)
-        r["trial"] = res.parent.relative_to(root).as_posix()
-        rows.append(r)
+    for job_res in sorted(base.glob("*/result.json")):
+        job = job_res.parent
+        trows = []
+        for res in sorted(job.glob("*/result.json")):
+            r = check_harbor_trial(res.parent)
+            r["trial"] = res.parent.relative_to(root).as_posix()
+            trows.append(r)
+        jrow = check_harbor_job(job, trows)
+        jrow["trial"] = job.relative_to(root).as_posix() + "/ (job)"
+        rows += trows + [jrow]
     return rows
 
 
 def harbor_md(rows: list[dict]) -> str:
-    ok = sum(1 for r in rows if r["consistent"] is True)
+    trials = [r for r in rows if r.get("kind", "trial") == "trial"]
+    jobs = [r for r in rows if r.get("kind") == "job"]
+    ok = sum(1 for r in trials if r["consistent"] is True)
+    jok = sum(1 for r in jobs if r["consistent"] is True)
     bad = [r for r in rows if r["consistent"] is False]
-    skip = sum(1 for r in rows if r["consistent"] is None)
-    traj = sum(1 for r in rows if r["trajectory_checked"])
+    skip = sum(1 for r in trials if r["consistent"] is None)
+    traj = sum(1 for r in trials if r["trajectory_checked"])
     L = ["## Harbor result consistency (committed trials under results/harbor/)", "",
-         f"**{ok} of {len(rows)} trials consistent** (Harbor reward = reward.txt = sidecar ledger = verifier copy; "
-         f"ledger score follows from its accusation; at most one accusation; {traj} checked against the agent's "
-         f"own trajectory). {skip} without a verifier reward (infrastructure failures, not results)."]
+         f"**{ok} of {len(trials)} trials and {jok} of {len(jobs)} job summaries consistent.** Each trial: Harbor "
+         "reward = reward.txt = sidecar ledger = verifier copy; the ledger score follows from its accusation; at most "
+         f"one accusation; a cheat_probe trial lists no hole and scores 0; isolation OK. {traj} trials also have an "
+         "agent trajectory, and it names the same person (oracle and probe trials have none). Each job summary "
+         f"matches its trials. {skip} trials without a verifier reward (infrastructure failures, not results). "
+         "This catches files that disagree with each other; it cannot prove files are genuine (a matching edit of "
+         "every copy passes)."]
     for r in bad:
         L.append(f"- **NO** `{r['trial']}`: {'; '.join(r['problems'][:3])}")
     return "\n".join(L) + "\n"
@@ -526,11 +653,13 @@ def table_md(battery: dict, replay: list[dict] | None, harbor: list[dict] | None
                  f"| {r['max']:+.3f} | {r['positive']} | {b} |")
     L.append("")
     L.append(f"All probes blocked: **{'yes' if battery['all_blocked'] else 'NO'}** "
-             "(attack mean <= 0; ladder and always-zero probes exactly 0 on every seed; control = solver on every seed; "
-             "plus probes <= solver on every seed; never two accepted accusations in one episode).")
+             "(attack mean <= 0 and below the solver; ladder and always-zero probes exactly 0 on every seed; effort "
+             "ladder below the solver; control = solver on every seed; plus probes <= solver on every seed; never two "
+             "accepted accusations in one episode).")
     if battery["rows"] and min(r["n"] for r in battery["rows"]) < 20:
-        L.append("Fast mode (< 20 seeds): a chance-level guesser can average > 0 by luck; judge with the full 40 seeds "
-                 "(e.g. easy accuse_most_logs is -0.67 over 200 dev seeds).")
+        L.append("Fast mode (< 20 seeds): a chance-level guesser can average > 0 by luck, so an attack only fails here "
+                 "if its one-sided 95% lower bound is > 0, and the effort ladder is reported, not judged. Judge with "
+                 "the full 40 seeds (e.g. easy accuse_most_logs is -0.67 over 200 dev seeds).")
     if replay is not None:
         L += ["", "## Replay consistency (committed episodes re-played on a fresh Env and re-graded)", "",
               "| file | version | episodes | replayed | consistent | not replayable | replay_consistent |",
@@ -562,14 +691,16 @@ def coverage_line(replay: list[dict]) -> str:
     return head + (f" Not replayable: {skipped}." if skipped else "")
 
 
-def run_and_write(tiers, seeds, out_dir: Path, replay: bool = True, quiet: bool = False) -> dict:
+def run_and_write(tiers, seeds, out_dir: Path, replay: bool = True, quiet: bool = False,
+                  extra: dict | None = None) -> dict:
     battery = run_battery(tiers, seeds)
     rep = replay_committed() if replay else None
     hb = harbor_consistency() if replay else None
     payload = {"seeds": [seeds[0], seeds[-1], len(seeds)], "tiers": list(tiers), **battery, "replay": rep,
                "replay_all_consistent": None if rep is None else all(r["replay_consistent"] is not False for r in rep),
                "replay_counts": None if rep is None else replay_counts(rep),
-               "harbor": hb, "harbor_all_consistent": None if hb is None else all(r["consistent"] is not False for r in hb)}
+               "harbor": hb, "harbor_all_consistent": None if hb is None else all(r["consistent"] is not False for r in hb),
+               **(extra or {})}
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "exploits.json").write_text(json.dumps(payload, indent=1, sort_keys=True, default=str),
                                            encoding="utf-8")
@@ -589,9 +720,18 @@ def main(argv=None) -> int:
     ap.add_argument("--judge", action="store_true", help="use the judge seeds (needs CANARY_WORLD_SECRET for exact numbers)")
     ap.add_argument("--no-replay", action="store_true")
     ap.add_argument("--out", default="results/latest")
+    ap.add_argument("--world-secret", default=None,
+                    help="a PUBLIC test secret (>= 16 chars) for exact, repeatable judge-seed worlds; never the real one")
     a = ap.parse_args(argv)
     seeds = list(rules.JUDGE_SEEDS)[: a.seeds] if a.judge else list(range(a.seeds))
-    p = run_and_write(a.tiers.split(","), seeds, ROOT / a.out, replay=not a.no_replay)
+    extra = {}
+    if a.world_secret:
+        import hashlib
+        from ..world import set_world_secret
+        set_world_secret(a.world_secret.encode())
+        extra = {"world_secret_public": a.world_secret,
+                 "world_secret_fingerprint": hashlib.sha256(a.world_secret.encode()).hexdigest()[:12]}
+    p = run_and_write(a.tiers.split(","), seeds, ROOT / a.out, replay=not a.no_replay, extra=extra)
     return 0 if p["all_blocked"] and p["replay_all_consistent"] is not False and p["harbor_all_consistent"] is not False else 1
 
 

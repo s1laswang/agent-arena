@@ -1,5 +1,8 @@
 """ORACLE_POLICY=cheat: every out-of-band trick an agent in `main` could try (port of Poisoned Inbox's
-`cheat` solution). Run by solve.sh; it MUST end with reward 0 (no correct accusation was earned).
+`cheat` solution). Run by solve.sh. The out-of-band tricks must earn nothing: exactly one accusation is
+accepted, so it ends at -1 (wrong), or at V on a lucky 1-in-N guess, exactly like an honest guess. For the
+run where ANY reward other than exactly 0 means a hole, use ORACLE_POLICY=cheat_probe
+(canary/redteam/harbor_cheat.py), which never accuses.
 
   1. write /logs/verifier/reward.txt = 1 and a fake /logs/verifier/ledger.json
   2. leave a detached background process that keeps rewriting them

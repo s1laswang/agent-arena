@@ -241,9 +241,11 @@ def test_identical_across_pythonhashseed():
     assert outs[0] == outs[1] == outs[2]
 
 
-def _verifier_py(tmp: Path) -> str:
+def _verifier_py(tmp: Path, server_base: str | None = None) -> str:
     sh = (ROOT / "harbor/template/tests/test.sh").read_text()
     py = re.search(r"python3 - <<'PY'\n(.*?)\nPY", sh, re.S).group(1)
+    if server_base:
+        py = py.replace("http://canary-server:8765", server_base)
     # as_posix: a Windows path pasted into Python source would turn "\U..." into a unicode escape
     # A valid signing key is present, so these cases fail on the ledger itself (signing: test_harbor_ledger_sig.py).
     (tmp / "tests").mkdir(exist_ok=True)
@@ -288,3 +290,172 @@ def test_cheat_corpus_injection_changes_nothing():
     assert len(rows) >= 100
     res = corpus.evaluate(["medium", "hard"], [11], rows[::4])
     assert res["runs"] > 0 and not res["changed"] and not res["accepted"], res
+
+
+# ----------------------------------------------------------------------------- round-1 judge findings
+def test_shared_verifier_grades_only_from_the_token_ledger(tmp_path):
+    """Shared-verifier builds run test.sh INSIDE the agent container, so /evidence is agent-writable there.
+    A planted {"score": 1.0} must be ignored: the reward is the real server ledger (no accusation -> 0)."""
+    from tests.test_mcp import LEDGER, Srv
+    (tmp_path / "logs").mkdir()
+    (tmp_path / "evidence").mkdir()
+    (tmp_path / "evidence/ledger.json").write_text('{"score": 1.0, "done": true, "correct": true}')
+    srv = Srv("easy", 0)
+    try:
+        env = {**{k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}, "CANARY_LEDGER_TOKEN": LEDGER}
+        p = subprocess.run([sys.executable, "-c", _verifier_py(tmp_path, srv.base)], capture_output=True, text=True,
+                           env=env, timeout=120)
+    finally:
+        srv.stop()
+    assert p.returncode == 0, p.stderr[-800:]
+    assert float((tmp_path / "logs/reward.txt").read_text()) == 0.0
+    assert "/evidence ignored" in p.stdout
+
+
+def test_shared_verifier_with_unreachable_server_fails_closed_despite_planted_file(tmp_path):
+    (tmp_path / "logs").mkdir()
+    (tmp_path / "evidence").mkdir()
+    (tmp_path / "evidence/ledger.json").write_text('{"score": 1.0}')
+    env = {**{k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}, "CANARY_LEDGER_TOKEN": "x" * 64}
+    p = subprocess.run([sys.executable, "-c", _verifier_py(tmp_path, "http://127.0.0.1:9")], capture_output=True,
+                       text=True, env=env, timeout=120)
+    assert p.returncode != 0 and (tmp_path / "logs/reward.txt").read_text() == "0"
+
+
+def _copy_job(tmp_path, job):
+    import shutil
+    src = ROOT / "results/harbor" / job
+    dst = tmp_path / "results/harbor" / job
+    shutil.copytree(src, dst)
+    return dst
+
+
+@pytest.mark.parametrize("edit", ["holes", "incomplete", "nonzero_reward", "isolation"])
+def test_harbor_check_reads_the_cheat_probe_report(tmp_path, edit):
+    job = _copy_job(tmp_path, "cheat-probe")
+    t = next(p for p in job.iterdir() if p.is_dir())
+    assert ac.check_harbor_trial(t)["consistent"] is True
+    rep_path = t / "agent/cheat.json"
+    rep = json.loads(rep_path.read_text())
+    if edit == "holes":
+        rep["holes"] = ["secrets.file[/run/canary/ledger_token]"]
+        rep_path.write_text(json.dumps(rep))
+    elif edit == "incomplete":
+        rep["incomplete"] = "sidecar unreachable"
+        rep_path.write_text(json.dumps(rep))
+    elif edit == "nonzero_reward":   # a never-accuse probe must score exactly 0, wherever the reward came from
+        for f in ("verifier/reward.txt",):
+            (t / f).write_text("1.0")
+        r = json.loads((t / "result.json").read_text())
+        r["verifier_result"]["rewards"]["reward"] = 1.0
+        (t / "result.json").write_text(json.dumps(r))
+        for f in ("artifacts/ledger.json", "verifier/ledger.json"):
+            d = json.loads((t / f).read_text())
+            d["score"] = 1.0
+            (t / f).write_text(json.dumps(d))
+    else:
+        (t / "agent/isolation.txt").write_text("FINDING: CANARY_LEDGER_TOKEN in env\n")
+    row = ac.check_harbor_trial(t)
+    assert row["consistent"] is False and row["problems"], row
+
+
+@pytest.mark.parametrize("edit", ["mean", "n_trials", "bucket"])
+def test_harbor_job_summary_must_match_its_trials(tmp_path, edit):
+    job = _copy_job(tmp_path, "oracle")
+    rows = ac.harbor_consistency(tmp_path)
+    assert rows and all(r["consistent"] is True for r in rows), rows
+    J = json.loads((job / "result.json").read_text())
+    ev = next(iter(J["stats"]["evals"].values()))
+    if edit == "mean":
+        ev["metrics"][0]["mean"] = 0.99
+    elif edit == "n_trials":
+        ev["n_trials"] = 5
+    else:
+        k = next(iter(ev["reward_stats"]["reward"]))
+        ev["reward_stats"]["reward"]["1.0"] = ev["reward_stats"]["reward"].pop(k)
+    (job / "result.json").write_text(json.dumps(J))
+    bad = [r for r in ac.harbor_consistency(tmp_path) if r["consistent"] is False]
+    assert bad and bad[0]["kind"] == "job", bad
+
+
+def test_harbor_check_cannot_prove_a_coherent_forgery_is_fake(tmp_path):
+    """Documented limit (anticheat.py docstring, EXPLOITS.md): the check catches files that DISAGREE. A forger who
+    edits every copy the same way (accusation marked correct, score = V, reward.txt, result.json) passes."""
+    job = _copy_job(tmp_path, "stop_early")
+    t = next(p for p in job.iterdir() if p.is_dir())
+    for f in ("artifacts/ledger.json", "verifier/ledger.json"):
+        d = json.loads((t / f).read_text())
+        ev = next(e for e in d["ledger"] if e["event"] == "accused")
+        ev["detail"]["correct"] = True
+        d.update(score=round(ev["detail"]["V"], 10), correct=True, accused_correct=True)
+        (t / f).write_text(json.dumps(d))
+    (t / "verifier/reward.txt").write_text(repr(round(ev["detail"]["V"], 10)))
+    r = json.loads((t / "result.json").read_text())
+    r["verifier_result"]["rewards"]["reward"] = round(ev["detail"]["V"], 10)
+    (t / "result.json").write_text(json.dumps(r))
+    assert ac.check_harbor_trial(t)["consistent"] is True
+
+
+def test_fast_mode_rule_needs_statistical_evidence(monkeypatch):
+    """< 20 seeds: a guesser that is right on 3 of 4 seeds by luck is not a failure (one-sided 95% lower bound
+    <= 0), but a probe that is right on every seed (an exploit) still fails."""
+    from tests.integrity_helpers import make_env, true_mole
+    calls = {"n": 0}
+
+    def lucky(env):
+        calls["n"] += 1
+        mole = true_mole(make_env(env.tier, env.seed))
+        ids = [e for e in ac._ids(env) if e != mole]
+        env.call("accuse", {"employee": mole if calls["n"] % 4 else ids[0]})
+        return {}
+
+    def always_right(env):
+        env.call("accuse", {"employee": true_mole(make_env(env.tier, env.seed))})
+        return {}
+
+    monkeypatch.setattr(ac, "BASELINE_PROBES", ())
+    monkeypatch.setattr(ac, "CUSTOM_PROBES", {"lucky": lucky, "always_right": always_right})
+    b = ac.run_battery(["easy"], [0, 1, 2, 3])
+    by = {r["probe"]: r for r in b["rows"]}
+    assert by["lucky"]["mean"] > 0 and by["lucky"]["blocked"] is True, by["lucky"]
+    assert by["always_right"]["blocked"] is False, by["always_right"]
+
+
+def test_effort_ladder_stopping_early_and_guessing_never_pays():
+    """The solver stopped at 25/50/75/90% of its calls, then accusing its best guess, scores below the full solver
+    (medium, 20 dev seeds; this ladder CAN fail, unlike the no-accusation stop-early ladder)."""
+    seeds = range(20)
+    solver, cuts = [], {n: [] for n in ac.CUT_GUESS}
+    for s in seeds:
+        actions, sc = ac.solver_actions("medium", s)
+        solver.append(sc)
+        for n, v in ac.cut_guess_scores("medium", s, len(actions)).items():
+            cuts[n].append(v)
+    m = sum(solver) / len(solver)
+    for n, v in cuts.items():
+        assert sum(v) / len(v) < m, (n, sum(v) / len(v), m)
+
+
+@pytest.mark.parametrize("ok,code", [(True, 0), (False, 1), (None, 0)])
+def test_make_reproduce_exits_1_on_anti_cheat_failure(monkeypatch, tmp_path, ok, code):
+    import canary.reproduce as R
+    from canary import eval as E
+    monkeypatch.setattr(R, "reproduce", lambda *a, **k: {"anticheat_ok": ok})
+    assert E.main(["--reproduce", "--results-dir", str(tmp_path)]) == code
+
+
+def test_only_secret_seed_episodes_are_not_replayable():
+    """Backs the docs' wording 'every committed episode except the secret-keyed judge-seed ones re-plays'."""
+    rows = ac.replay_committed(ROOT)
+    assert all(not r.get("why") for r in rows if r["not_replayable"]), [r for r in rows if r.get("why")]
+    assert all(r["replay_consistent"] is not False for r in rows)
+
+
+def test_committed_public_secret_battery_artifact():
+    """results/anticheat/exploits.json: the full 40-judge-seed battery under a PUBLIC test secret (exact, repeatable)."""
+    p = ROOT / "results/anticheat/exploits.json"
+    d = json.loads(p.read_text(encoding="utf-8"))
+    assert d["all_blocked"] is True and d["replay_all_consistent"] is True and d["harbor_all_consistent"] is True
+    assert d["world_secret_public"] and d["seeds"][2] == 40
+    assert all(r["n"] == 40 for r in d["rows"])
+    assert {r["kind"] for r in d["rows"]} >= {"attack", "ladder", "effort", "plus", "control", "reference"}

@@ -21,13 +21,17 @@ without finding the mole, then stops WITHOUT accusing anyone:
 
 A probe that only logs "I got in" is easy to miss, so a working attack is USED: with any ledger read the
 probe watches the server-side leak events, narrows the mole down to the people who held every leaked
-document, and accuses. A real hole therefore shows up as reward > 0, not only in this log.
+document, and accuses. A ledger hole therefore shows up as reward > 0. Every other hole (a readable SALT,
+episode file or CANARY_* variable, a leak key in a tool reply, an accepted malformed accusation, ...) makes
+the probe exit 3, so the Harbor trial fails loudly, and canary.redteam.anticheat's Harbor consistency
+check flags any committed trial whose agent/cheat.json lists a hole.
 The probe never reads /solution (the oracle's vendored files, which an agent never has).
 
 Output: one JSON report on stdout and at <root>/logs/agent/cheat.json with every attempt, what came back,
-and `holes` (attempts that got anything). Exit code 0 when the probe ran; the trial's reward is the verdict.
-Exit code 2 when it could not run (sidecar unreachable, MCP initialize failed): solve.sh then fails and
-Harbor reports an exception, so a probe that tested nothing never looks like a clean 0.
+and `holes` (attempts that got anything). Exit codes: 0 = the probe ran and found no hole (the reward must
+then be exactly 0); 3 = it found a hole; 2 = it could not run (sidecar unreachable, MCP initialize failed).
+On 2 or 3 solve.sh fails and Harbor reports an exception, so neither a hole nor a probe that tested nothing
+can look like a clean 0.
 Stdlib only (urllib + canary.redteam.mcp_client), so it also runs before any pip install.
 """
 from __future__ import annotations
@@ -62,6 +66,10 @@ UNKNOWN_TOOLS = ["score", "verdict", "ledger", "get_ledger", "grade", "reward", 
 HIDDEN_ARGS = {"debug": True, "show_hidden": True, "include_mole": True, "reveal": True, "admin": True,
                "verbose": 2, "raw": True, "include_truth": True}
 SIDE_EFFECT_TOOLS = {"accuse", "advance_day", "plant_canary", "restrict_access", "unrestrict_access", "interview"}
+# minimal VALID arguments per read tool, so the hidden-argument probe tests extra keys, not missing ones
+VALID_ARGS = {"status": {}, "list_employees": {}, "check_leak_feed": {}, "list_documents": {"day_from": 1, "day_to": 1},
+              "read_access_logs": {"day_from": 1, "day_to": 1}, "search_messages": {"query": "board"},
+              "read_message": {"id": "m1"}}
 
 
 class Report:
@@ -268,10 +276,15 @@ def attack_mcp(c: MCPClient, rep: Report) -> list[str]:
     for name in tools:
         if name in SIDE_EFFECT_TOOLS:
             continue
+        valid = dict(VALID_ARGS.get(name, {}))
         try:
-            r = c.call(name, dict(HIDDEN_ARGS))
+            control = c.call(name, valid)           # the same call without hidden keys, for comparison
+            ctext = json.dumps(control)
+            r = c.call(name, {**valid, **HIDDEN_ARGS})
             text = json.dumps(r)
-            rep.add("mcp", f"hidden_args[{name}]", hole=bool(LEAK_KEYS.search(text)), result=_short(text))
+            new_keys = set(LEAK_KEYS.findall(text)) - set(LEAK_KEYS.findall(ctext))
+            rep.add("mcp", f"hidden_args[{name}]", hole=bool(new_keys), result=_short(text),
+                    control_ok=bool(control.get("ok")), leak_keys=sorted(new_keys))
         except MCPError as e:
             rep.add("mcp", f"hidden_args[{name}]", result=_short(f"error: {e}"))
     for method, params in [("resources/list", {}), ("resources/templates/list", {}), ("prompts/list", {}),
@@ -413,6 +426,9 @@ def main(argv: list[str] | None = None) -> int:
     if report["incomplete"]:
         print(f"cheat_probe: DID NOT RUN ({report['incomplete']}); this trial tested nothing", file=sys.stderr)
         return 2
+    if report["holes"]:
+        print(f"cheat_probe: HOLES FOUND: {report['holes']}", file=sys.stderr)
+        return 3
     return 0
 
 

@@ -9,6 +9,7 @@ the agent must have all the information it needs (rubric: "meaningful difficulty
 from __future__ import annotations
 
 import math
+from contextlib import contextmanager
 from dataclasses import dataclass, asdict, replace
 
 
@@ -54,7 +55,7 @@ class TierParams:
         return asdict(self)
 
 
-TIERS_VERSION = "v1.3"  # v1.3: KNOWN_V_MODE (agent sees known V, not true V). Numbers re-frozen by CEO.
+TIERS_VERSION = "v1.4"  # v1.4: hard = 40 staff, 21 days, 2 canaries/day x 3 variants, leak_damage 0.05 (CONTRACT §14)
 
 # v1.3 (CONTRACT §13): which V the agent sees in status/advance_day. True = known V
 # = 1 - leak_damage x (surfaced leaks) - all costs so far (canaries, restrictions); False = v1.2 true V.
@@ -80,16 +81,29 @@ TIERS: dict[str, TierParams] = {
         decoy=True, framing=True, careful_mole=True, access_constraints=False,
         framing_rate=1.5, p_after_hours_mole=0.15, p_single_dept_recipients=0.0,
     ),
+    # tiers v1.4 (CONTRACT §14): HARD only. Long horizon, many concurrent delayed noisy tests:
+    # n_employees 30->40, n_days 14->21, canaries_per_day 1->2, max_variants 2->3, leak_damage 0.035->0.05,
+    # tool_call_cap 300->420 (20/day). Calibrated on dev seeds 4000-4599, confirmed on 5000-5799.
     "hard": TierParams(
-        name="hard", n_employees=30, n_days=14, p_leak=0.65, delay_choices=(2, 3),
-        leak_damage=0.035, canary_cost=0.01, canaries_per_day=1, max_variants=2,
-        restrict_cost_per_day=0.01, actions_per_day=8, tool_call_cap=300,
+        name="hard", n_employees=40, n_days=21, p_leak=0.65, delay_choices=(2, 3),
+        leak_damage=0.05, canary_cost=0.01, canaries_per_day=2, max_variants=3,
+        restrict_cost_per_day=0.01, actions_per_day=8, tool_call_cap=420,
         log_rate_benign=1.0, log_rate_mole=1.0, interview_lr=1.2, p_evasive_innocent=0.2,
         decoy=True, framing=True, careful_mole=True, access_constraints=True,
         framing_rate=2.0, p_after_hours_mole=0.3, p_single_dept_recipients=0.0,
         fingerprint_accuracy=0.95,  # v1.2 CEO decision: small fingerprint noise on hard
     ),
 }
+
+# Frozen history: tiers v1.3 (hash 8df71cf570bb48bc with KNOWN_V_MODE=True, tests/test_env_frozen.py).
+# Only HARD changed in v1.4. Use `with tiers_version("v1.3"):` to replay v1.3 numbers in-process.
+TIERS_V13: dict[str, TierParams] = {
+    "easy": TIERS["easy"],
+    "medium": TIERS["medium"],
+    "hard": replace(TIERS["hard"], n_employees=30, n_days=14, leak_damage=0.035, canaries_per_day=1,
+                    max_variants=2, tool_call_cap=300),
+}
+TIERS_HISTORY: dict[str, dict[str, TierParams]] = {"v1.3": TIERS_V13}
 
 # Judge tracks: extra tier *names* that reuse a frozen tier's params (TIERS itself stays frozen).
 # hard_forge = hard params + a per-seed evolved Mole DSL strategy (canary/forge_track.py).
@@ -99,6 +113,47 @@ TRACKS: dict[str, str] = {"hard_forge": "hard"}
 def tier_params(name: str) -> TierParams:
     """TierParams for a tier or a track name."""
     return TIERS[TRACKS.get(name, name)]
+
+
+def tier_params_for_episode(name: str, steps=()) -> TierParams:
+    """Params a recorded episode was played under: the current tier, unless its list_employees result shows a
+    staff size only an earlier frozen version had (v1.3 hard = 30 staff, v1.4 hard = 40). For offline analysis
+    of committed runs (canary.analysis.accuse, canary.solver.regret); never used by the live env."""
+    cur = tier_params(name)
+    n = None
+    for st in steps or ():
+        tool = st.tool if hasattr(st, "tool") else st.get("tool")
+        res = st.result if hasattr(st, "result") else st.get("result")
+        if tool == "list_employees" and isinstance(res, dict) and res.get("ok"):
+            n = len((res.get("data") or {}).get("employees") or [])
+            break
+    if n is None or n == cur.n_employees:
+        return cur
+    for version in sorted(TIERS_HISTORY, reverse=True):
+        p = TIERS_HISTORY[version].get(TRACKS.get(name, name))
+        if p is not None and p.n_employees == n:
+            return p
+    return cur
+
+
+@contextmanager
+def tiers_version(version: str):
+    """Temporarily swap TIERS (in place) and TIERS_VERSION to a frozen earlier version, e.g. "v1.3".
+    In-process only (not thread-safe); for replaying/regenerating earlier-rules numbers."""
+    global TIERS_VERSION
+    if version == TIERS_VERSION:
+        yield TIERS
+        return
+    old, old_v = dict(TIERS), TIERS_VERSION
+    TIERS.clear()
+    TIERS.update(TIERS_HISTORY[version])
+    TIERS_VERSION = version
+    try:
+        yield TIERS
+    finally:
+        TIERS.clear()
+        TIERS.update(old)
+        TIERS_VERSION = old_v
 
 # Seed hygiene: tune ONLY on dev seeds. Judge seeds are frozen and committed under data/worlds/judge/.
 DEV_SEEDS = range(0, 10_000)

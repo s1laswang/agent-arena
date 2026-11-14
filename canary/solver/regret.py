@@ -15,7 +15,7 @@ from __future__ import annotations
 import math
 from collections import Counter
 
-from ..rules import TIERS, tier_params
+from ..rules import TIERS, tier_params, tier_params_for_episode
 from ..types import EpisodeResult
 from .params import params_from_instruction
 from .policy import SolverPolicy, accuse_value
@@ -41,7 +41,7 @@ def _gini(post, assignment):
 
 def attribute(episode: EpisodeResult, instruction: str | None = None) -> list[dict]:
     P = params_from_instruction(instruction) if instruction else None
-    P = P or tier_params(episode.tier)
+    P = P or tier_params_for_episode(episode.tier, episode.steps)
     sp = SolverPolicy(P)
     decoy = (episode.meta or {}).get("decoy")
     out: list[dict] = []

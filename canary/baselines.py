@@ -336,9 +336,13 @@ class Heuristic:
     (or on day `deadline`, the most-frequent leak recipient). Ignores logs/interviews/V timing.
     """
     name = "heuristic"
-    def __init__(self, seed: int = 0, deadline: int = 12):
-        self.seed, self.deadline = seed, deadline
+    def __init__(self, seed: int = 0, deadline: int | None = None):
+        self.seed, self._deadline = seed, deadline
     def reset(self, tools_spec, instruction):
+        P = _params_from_instruction(instruction)
+        # v1.4: deadline = n_days - 2 (= 12 on the 14-day v1.3 tiers), canaries_per_day splits a day
+        self.deadline = self._deadline if self._deadline is not None else int(P.get("n_days", 14)) - 2
+        self.cpd = int(P.get("canaries_per_day", 1))
         self.rng = random.Random(f"heuristic:{self.seed}")
         self.day_done: set[tuple[int, str]] = set()
         self.docs: dict[str, dict] = {}
@@ -383,9 +387,15 @@ class Heuristic:
             return "accuse", {"employee": ranked[0] if len(ranked) == 1 else self.rng.choice(ranked)}
         if once("canary") and len(ranked) >= 2:
             self.rng.shuffle(ranked)
+            self.today_order = list(ranked)
             half = len(ranked) // 2
             assign = {e: ("A" if i < half else "B") for i, e in enumerate(ranked)}
             return "plant_canary", {"doc_title": f"Board update {day}", "assignment": assign}
+        # canaries_per_day >= 2: a second split orthogonal to the first (alternate members of each half)
+        if self.cpd >= 2 and len(ranked) >= 4 and once("canary2"):
+            order = [e for e in getattr(self, "today_order", ranked) if e in suspects] or ranked
+            assign = {e: ("A" if i % 2 == 0 else "B") for i, e in enumerate(order)}
+            return "plant_canary", {"doc_title": f"Board update {day} (2)", "assignment": assign}
         return "advance_day", {}
 
 
@@ -424,6 +434,7 @@ class GrokTactics:
         self.canary_cost = f("canary_cost", 0.01)
         self.restrict_cost = f("restrict_cost_per_day", 0.01)
         self.max_delay = max(int(x) for x in P.get("delay_choices", "1, 2, 3").split(","))
+        self.cpd = int(f("canaries_per_day", 1))
         self.rng = random.Random(f"grok_tactics:{self.seed}")
         self.queue: list[tuple[str, dict]] = []
         self.pending: str | None = None
@@ -535,13 +546,17 @@ class GrokTactics:
     def _plan_actions(self) -> None:
         pool = sorted(self.suspects - {self.decoy} - self.restricted)
         # (c) tiny canary: 1 recipient per variant, 2 variants, highest-weight suspects first
+        # v1.4: canaries_per_day > 1 -> one tiny canary per pair of the next highest-weight suspects
         if len(pool) >= 2 and not self.hard:
             self.rng.shuffle(pool)
             pool.sort(key=lambda e: -self.w[e])
-            a, b = pool[0], pool[1]
-            title = f"Restricted memo {self.day}-{self.rng.randrange(1000)}"
-            self.canaries[title] = {"A": [a], "B": [b]}
-            self.queue.append(("plant_canary", {"doc_title": title, "assignment": {a: "A", b: "B"}}))
+            for i in range(self.cpd):
+                if len(pool) < 2 * i + 2:
+                    break
+                a, b = pool[2 * i], pool[2 * i + 1]
+                title = f"Restricted memo {self.day}-{self.rng.randrange(1000)}" + (f"-{i + 1}" if i else "")
+                self.canaries[title] = {"A": [a], "B": [b]}
+                self.queue.append(("plant_canary", {"doc_title": title, "assignment": {a: "A", b: "B"}}))
         # (b) start a probe once narrowing stalls
         live = sorted(self.suspects - {self.decoy})
         if (not self.probe and not self.probe_done and not self.hard and 4 <= len(live) <= 10
@@ -586,7 +601,7 @@ class GrokTactics:
 CALIBRATION_POLICIES = {"heuristic": Heuristic, "grok_tactics": GrokTactics}
 
 
-def play(env, policy, max_steps: int = 400):
+def play(env, policy, max_steps: int = 1000):
     """Minimal runner (canary.eval.run_episode may supersede it). Returns env.score()."""
     policy.reset(env.tools_spec(), env.instruction() if hasattr(env, "instruction") else "")
     for _ in range(max_steps):

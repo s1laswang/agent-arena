@@ -33,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
         with tempfile.TemporaryDirectory() as d:
             out = R.reproduce(a.seeds, d, quiet=True)
         for r in out["rows"]:
-            if not r.pending:
+            if not r.pending and r.kind != "reported":  # paired rows only (replayed agent runs share agent names)
                 means[(r.tier, r.agent)].append(R.mean(r.scores))
         print(f"run {i + 1}/{a.runs} done", file=sys.stderr)
 

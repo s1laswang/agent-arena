@@ -18,6 +18,13 @@ PRICING = ("gpt-5.5 list prices per 1M tokens: input $5.00, cached input $0.50, 
            "$0.50; the upper bound bills all input at $5.00.")
 
 
+def _current_tiers_version() -> str:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from canary.rules import TIERS_VERSION
+    return TIERS_VERSION
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--staging", default="data/runs/staging-v1.3")
@@ -25,7 +32,7 @@ def main(argv=None) -> int:
     ap.add_argument("--planned", default="0-9", help="the approved plan's seeds; others are budget extensions")
     ap.add_argument("--extension", default=None, help="extension seed range attempted as budget allowed, e.g. 10-19")
     ap.add_argument("--map", default=None, help="harness=target,... (default: the v1.3 Codex/gpt-5.5 mapping)")
-    ap.add_argument("--tiers-version", default="v1.3")
+    ap.add_argument("--tiers-version", default=_current_tiers_version(), help="rules.TIERS_VERSION the runs were played under")
     ap.add_argument("--pricing", default=PRICING)
     ap.add_argument("--provenance", default="scripts/budget_runner.py (one episode per process, budget-guarded), "
                                             "merged by scripts/merge_staging.py")

@@ -15,7 +15,7 @@ from multiprocessing import Pool
 DEFAULT_AGENTS = "solver,heuristic,obvious_heuristic,logs_only,random,stop_early,do_nothing"
 
 
-def _run_local(env, policy, max_calls=400):
+def _run_local(env, policy, max_calls=1000):
     """Private runner (canary.eval.run_episode is HARNESS's)."""
     policy.reset(env.tools_spec(), env.instruction())
     n = 0

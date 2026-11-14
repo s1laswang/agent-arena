@@ -1,6 +1,6 @@
 import glob, json, os, subprocess, sys, threading
 code = glob.glob("/kaggle/input/**/train/sft.py", recursive=True)[0].rsplit("/train/", 1)[0]
-data = os.path.dirname(glob.glob("/kaggle/input/**/*.jsonl", recursive=True)[0])
+data = os.path.dirname((glob.glob("/kaggle/input/**/run.json", recursive=True) or glob.glob("/kaggle/input/**/train.jsonl", recursive=True))[0])
 work = "/kaggle/working"
 os.chdir(code)
 cfgp = data + "/run.json"

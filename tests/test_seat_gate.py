@@ -35,9 +35,12 @@ def test_cli_seat_scoring_and_fail_closed(tmp_path):
     from lab.run import day_for
     from sleeper.verifier import dump_state, legit_tickets
     from sleeper.mcp_server import World
-    day = day_for(1000, "controller")[0]
-    seats = {t.seat for t in legit_tickets(day)}
-    assert len(seats) > 1
+    def pick(d):
+        day = day_for(d, "controller")[0]
+        seats = {t.seat for t in legit_tickets(day)}
+        return day, seats, [s for s in SEATS if s not in seats]
+
+    day, seats, free = next(pick(d) for d in range(1000, 1040) if len(pick(d)[1]) > 1 and pick(d)[2])
     st = dump_state(World(day))
 
     def run(seat):
@@ -47,7 +50,7 @@ def test_cli_seat_scoring_and_fail_closed(tmp_path):
         p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", str(f)], capture_output=True, text=True, env=env)
         return json.loads(p.stdout), p.returncode
 
-    none_seat = next(s for s in SEATS if s not in seats and s != day.sleeper_seat)
+    none_seat = free[0]
     has_seat = next(iter(seats))
     r, _ = run(none_seat)
     assert r["reward"] == 0 and "config:no_seat_tickets@-1" in r["harm"]

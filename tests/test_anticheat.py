@@ -178,3 +178,13 @@ def test_harbor_verifier_ignores_symlinked_evidence(tmp_path):
     env = {k: v for k, v in os.environ.items() if k != "CANARY_LEDGER_TOKEN"}
     p = subprocess.run([sys.executable, "-c", _verifier_py(tmp_path)], capture_output=True, text=True, env=env)
     assert p.returncode != 0 and (tmp_path / "logs/reward.txt").read_text() == "0"
+
+
+def test_cheat_corpus_injection_changes_nothing():
+    """Momin's cheat corpus (data/redteam/corpus.jsonl), injected mid-episode into the solver: no call is accepted
+    and the solver's score is exactly unchanged. Full sweep: `python -m canary.redteam.corpus eval`."""
+    from canary.redteam import corpus
+    rows = corpus.load()
+    assert len(rows) >= 100
+    res = corpus.evaluate(["medium", "hard"], [11], rows[::4])
+    assert res["runs"] > 0 and not res["changed"] and not res["accepted"], res

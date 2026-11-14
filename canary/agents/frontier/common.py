@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import os
 import secrets
 import shutil
@@ -218,8 +219,32 @@ INFRA_PATTERNS = {
 }
 
 
+INFRA_EVENT_TYPES = ("error", "turn.failed")
+KILL_RE = re.compile(r"\b(pkill|killall|kill\s+-\w+|kill\s+\d+|kill\s+%)|lsof\s+-t", re.I)
+
+
+def _infra_blob(stdout: str, stderr: str) -> str:
+    """Only harness-level text: stderr plus stdout JSON events of an error type. The agent's own messages and
+    tool outputs never count (INTEGRITY item 4: an agent writing "database is locked" must not void its run)."""
+    keep = [stderr or ""]
+    for line in (stdout or "").splitlines():
+        try:
+            ev = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(ev, dict) and (ev.get("type") in INFRA_EVENT_TYPES or
+                                     ("type" not in ev and ("error" in ev or "statusCode" in ev))):
+            keep.append(line)
+    return "\n".join(keep)
+
+
+def agent_touched_server(stdout: str) -> bool:
+    """True if the agent's transcript contains a process-kill command (it may have killed its own MCP server)."""
+    return bool(KILL_RE.search(stdout or ""))
+
+
 def classify_infra(stdout: str, stderr: str) -> str | None:
-    blob = (stdout or "") + "\n" + (stderr or "")
+    blob = _infra_blob(stdout, stderr)
     for kind, pats in INFRA_PATTERNS.items():
         if any(p in blob for p in pats):
             return kind
@@ -314,8 +339,11 @@ def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str
         with lock:
             w.transcript(seed, f"$ {' '.join(argv[:-1])} <prompt>\n--- rc={rc}\n--- stdout\n{out}\n--- stderr\n{err[-20000:]}", "txt")
     except Exception as e:
-        res = EpisodeResult(spec.tier, seed, spec.agent, [], 0.0, None, False, 0, "error",
-                            {"error": repr(e), "wall_s": round(time.time() - t0, 1)})
+        meta = {"error": repr(e), "wall_s": round(time.time() - t0, 1)}
+        if agent_touched_server(locals().get("out") or ""):
+            # INTEGRITY item 4: a server the agent may have killed is the agent's failure (score 0), not infra.
+            meta = {"note": f"agent_killed_server: {repr(e)[:200]}", "wall_s": meta["wall_s"]}
+        res = EpisodeResult(spec.tier, seed, spec.agent, [], 0.0, None, False, 0, "error", meta)
     finally:
         srv.stop()
         if wd:

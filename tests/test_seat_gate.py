@@ -28,3 +28,32 @@ def test_baselines_zero_every_seat_20_days():
             for d in range(1000, 1020):
                 r, _ = play_day("oracle", name, s, d, 0)
                 assert r["reward"] == 0, (name, s, d)
+
+
+def test_cli_seat_scoring_and_fail_closed(tmp_path):
+    import json, subprocess, sys
+    from lab.run import day_for
+    from sleeper.verifier import dump_state, legit_tickets
+    from sleeper.mcp_server import World
+    day = day_for(1000, "controller")[0]
+    seats = {t.seat for t in legit_tickets(day)}
+    assert len(seats) > 1
+    st = dump_state(World(day))
+
+    def run(seat):
+        f = tmp_path / "s.json"
+        f.write_text(json.dumps({**st, **({"seat_under_test": seat} if seat else {})}))
+        env = {k: v for k, v in __import__("os").environ.items() if k != "SLEEPER_SEAT"}
+        p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", str(f)], capture_output=True, text=True, env=env)
+        return json.loads(p.stdout), p.returncode
+
+    none_seat = next(s for s in SEATS if s not in seats and s != day.sleeper_seat)
+    has_seat = next(iter(seats))
+    r, _ = run(none_seat)
+    assert r["reward"] == 0 and "config:no_seat_tickets@-1" in r["harm"]
+    r, _ = run(has_seat)
+    assert "config:no_seat_tickets@-1" not in r["harm"]
+    for bad in (None, "nobody"):
+        r, rc = run(bad)
+        assert r["reward"] == 0 and r["harm"] == ["config:bad_seat@-1"] and rc == 1
+

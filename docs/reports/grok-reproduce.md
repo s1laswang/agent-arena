@@ -2,7 +2,17 @@
 
 Role: hackathon judge. The only project document used to decide what to run was `README.md` at commit `54e1fa4fac3065af5182837336b7a949beb82550` (subject: `Merge justSilas-env: tiers v1, JUDGE_SEEDS 40, contract v0.5 fail-closed, solver v0.3`, authored 2026-11-14 02:19:44 +0200). No other file, comment, or prior context was used to fill gaps. When the README was ambiguous, the guess is recorded below and the run continued.
 
-**Headline:** reproduction of the advertised judge table did **not** succeed. `make reproduce` exits 0 and prints `TODO: --reproduce (judge table on frozen judge seeds) is not implemented yet`. There is no table and no numeric claim in the README to compare against.
+**Headline:** reproduction of the advertised judge table did **not** succeed. `make reproduce` exits 0 and prints `TODO: --reproduce (judge table on frozen judge seeds) is not implemented yet`. There is no table and no numeric claim in the README to compare against. The same stub is what `4d572ef` prints (see the revision note).
+
+**Revision note.** The clean-machine run is commit `54e1fa4` (`justSilas` at clone time, 2026-11-14T00:20:17Z). `origin/justSilas` then fast-forwarded twice before this report was finished. The README blob stayed `caf3c7f2ed03885455b9575794f6920625c9619c`. `Makefile` did not change.
+
+| Tip | When (commit author date) | Subject | `make test` |
+| --- | --- | --- | --- |
+| `54e1fa4` | 2026-11-14 02:19:44 +0200 | Merge justSilas-env | 321 passed, 8 skipped, 1 xfailed, 8 xpassed, 2 warnings, 30.00 s |
+| `4d572ef` | 2026-11-14 02:24:26 +0200 | Merge justSilas-fr8 | 338 passed, 3 skipped, 1 xfailed, 8 xpassed, 2 warnings, 39.24 s |
+| `6869c5b` | 2026-11-14 02:26:01 +0200 | Merge justSilas-integrity | 348 passed, 3 skipped, 34.43 s (no xfail, no xpass, no warnings) |
+
+Eval stayed **+0.458 ± 0.155**, accuracy **0.65**, n=20, on every run. `make reproduce` stayed the TODO on every run. The second and third passes reused the uv install and, for `6869c5b`, the worktree venv. They are not extra cold starts. The README names none of these counts.
 
 **Setup + reproduce wall clock**
 
@@ -14,7 +24,7 @@ Role: hackathon judge. The only project document used to decide what to run was 
 | `make reproduce` immediately after that setup | 0.056 s | 0, stub |
 | Later, one shell chain `make setup && make reproduce` with the venv already installed | 0.068 s | 0, stub |
 
-A judge who stops at the README commands, after spending about a second installing `uv`, gets a green exit and no results. The full README sequence (`setup` + `test` + `eval` + `reproduce`) took **31.881 s** of command wall clock once `uv` was installed (dominated by `make test` at 30.814 s).
+A judge who stops at the README commands, after spending about a second installing `uv`, gets a green exit and no results. The full README sequence (`setup` + `test` + `eval` + `reproduce`) took **31.881 s** of command wall clock on `54e1fa4` once `uv` was installed (dominated by `make test` at 30.814 s). On `4d572ef`, with a warm uv cache and a new venv, the same sequence was **40.809 s**. On `6869c5b`, same worktree venv, it was **35.345 s** (setup 0.016 + test 34.951 + eval 0.321 + reproduce 0.057).
 
 Clone used for the run: fresh `git clone --branch justSilas --single-branch https://github.com/s1laswang/agent-arena` into `/tmp/judge-20261114T002017Z/agent-arena` (0.572 s). Nothing was installed from the workspace checkout.
 
@@ -274,6 +284,165 @@ Checked 52 packages in 0.32ms
 
 Reproduce printed the same TODO as step 7. Exit 0.
 
+### 9. Same four commands on `4d572ef` — README unchanged, test count moved
+
+Worktree `/tmp/judge-rerun-20261114`, detached at `4d572ef49906aa5c6f3697c79362eeacabf4f443`. `uv` 0.13.8 already on `PATH`. Not a cold machine: the wheel cache from step 4 was reused. No `.env`.
+
+`make setup`, `2026-11-14T00:26:02Z`, wall 0.324 s, exit 0.
+
+stdout:
+
+```text
+uv sync --python 3.12 --extra dev --extra llm
+```
+
+stderr (complete). No download lines this time; 51 of 52 packages came from the local cache (`Prepared 1 package`):
+
+```text
+Using CPython 3.12.3 interpreter at: /usr/bin/python3.12
+Creating virtual environment at: .venv
+Resolved 79 packages in 1ms
+   Building canary @ file:///tmp/judge-rerun-20261114
+      Built canary @ file:///tmp/judge-rerun-20261114
+Prepared 1 package in 253ms
+Installed 52 packages in 38ms
+ + annotated-types==0.8.0
+ + anyio==4.16.0
+ + attrs==26.1.0
+ + canary==0.0.1 (from file:///tmp/judge-rerun-20261114)
+ + certifi==2026.10.23
+ + cffi==2.1.1
+ + charset-normalizer==3.5.2
+ + click==8.5.1
+ + cryptography==50.0.2
+ + distro==1.9.0
+ + google-auth==2.62.2
+ + google-genai==3.3.0
+ + h11==0.16.0
+ + httpcore2==2.16.0
+ + httpx2==2.16.0
+ + hypothesis==6.170.15
+ + idna==3.20
+ + iniconfig==2.3.1
+ + jiter==0.19.0
+ + jsonschema==4.26.0
+ + jsonschema-specifications==2025.9.1
+ + mcp==2.3.0
+ + mcp-types==2.3.0
+ + numpy==2.5.4
+ + openai==3.51.0
+ + opentelemetry-api==1.45.2
+ + packaging==26.3
+ + pluggy==1.7.0
+ + pyasn1==0.6.5
+ + pyasn1-modules==0.4.2
+ + pycparser==3.12
+ + pydantic==2.14.3
+ + pydantic-core==2.50.4
+ + pygments==2.21.0
+ + pyjwt==2.15.1
+ + pytest==9.2.0
+ + python-dotenv==1.2.4
+ + python-multipart==0.0.33
+ + referencing==0.37.0
+ + requests==2.34.2
+ + rpds-py==2026.9.1
+ + sniffio==1.3.1
+ + sortedcontainers==2.4.0
+ + sse-starlette==3.7.0
+ + starlette==1.10.0
+ + tenacity==9.1.4
+ + truststore==0.10.5
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.5
+ + urllib3==2.8.0
+ + uvicorn==0.54.0
+ + websockets==17.4
+```
+
+`make test`, wall 40.112 s, exit 0. stderr empty. stdout (complete):
+
+```text
+uv run --python 3.12 --extra dev --extra llm pytest -q
+......................................s................................. [ 20%]
+........................................................................ [ 41%]
+.......................................................................X [ 61%]
+xXXX...XXX.................X...................................s........ [ 82%]
+.............................................................            [100%]
+=============================== warnings summary ===============================
+tests/test_llm.py::test_missing_keys
+  /tmp/judge-rerun-20261114/.venv/lib/python3.12/site-packages/google/genai/types.py:18308: SyntaxWarning: invalid escape sequence '\/'
+    description="""Output only. The original name of the uploaded file, taken from the `Content-Disposition` header on upload. Between 1 and 255 characters. Control characters and the characters `<>:"|?*\/` are not accepted.""",
+
+tests/test_llm.py::test_missing_keys
+  /tmp/judge-rerun-20261114/.venv/lib/python3.12/site-packages/google/genai/types.py:18346: SyntaxWarning: invalid escape sequence '\/'
+    """Output only. The original name of the uploaded file, taken from the `Content-Disposition` header on upload. Between 1 and 255 characters. Control characters and the characters `<>:"|?*\/` are not accepted."""
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+338 passed, 3 skipped, 1 xfailed, 8 xpassed, 2 warnings in 39.24s
+```
+
+`make eval AGENT=solver TIER=medium`, wall 0.319 s, exit 0. stderr empty. Same score line as step 6. stdout:
+
+```text
+uv run --python 3.12 --extra dev --extra llm python -m canary.eval --agent solver --provider template --tier medium --seeds dev20
+tier    agent                 n     score ± 95% CI  accuracy  accused  accuse day
+medium  solver               20     +0.458 ± 0.155      0.65       13         8.4
+
+wrote data/runs/solver-medium-20261114-002642/episodes.jsonl and meta.json
+```
+
+`make reproduce`, wall 0.054 s, exit 0. stderr empty. stdout:
+
+```text
+uv run --python 3.12 --extra dev --extra llm python -m canary.eval --reproduce
+TODO: --reproduce (judge table on frozen judge seeds) is not implemented yet
+```
+
+`git diff --stat 54e1fa4 4d572ef` is 14 files, +971/−16, none of them `README.md` or `Makefile`. The test-count change arrived with that diff. Those files were not read to decide what to run.
+
+### 10. Same commands on `6869c5b` — xfail/xpass gone, count moved again
+
+Same worktree, `git checkout --detach 6869c5bf83d44dbb2236805341b17daf99329a4f`. Venv already present, so setup did not reinstall. `2026-11-14T00:27:51Z`.
+
+`make setup`, wall 0.016 s, exit 0. stdout: `uv sync --python 3.12 --extra dev --extra llm`. stderr:
+
+```text
+Resolved 79 packages in 1ms
+Checked 52 packages in 0.31ms
+```
+
+`make test`, wall 34.951 s, exit 0. stderr empty. stdout (complete):
+
+```text
+uv run --python 3.12 --extra dev --extra llm pytest -q
+......................................s................................. [ 20%]
+........................................................................ [ 41%]
+........................................................................ [ 61%]
+................................................................s....... [ 82%]
+..............................................................           [100%]
+348 passed, 3 skipped in 34.43s
+```
+
+`make eval AGENT=solver TIER=medium`, wall 0.321 s, exit 0. stderr empty. stdout:
+
+```text
+uv run --python 3.12 --extra dev --extra llm python -m canary.eval --agent solver --provider template --tier medium --seeds dev20
+tier    agent                 n     score ± 95% CI  accuracy  accused  accuse day
+medium  solver               20     +0.458 ± 0.155      0.65       13         8.4
+
+wrote data/runs/solver-medium-20261114-002826/episodes.jsonl and meta.json
+```
+
+`make reproduce`, wall 0.057 s, exit 0. stderr empty. stdout:
+
+```text
+uv run --python 3.12 --extra dev --extra llm python -m canary.eval --reproduce
+TODO: --reproduce (judge table on frozen judge seeds) is not implemented yet
+```
+
+`git diff --stat 4d572ef 6869c5b` is 4 files (`docs/EXPLOITS.md`, `docs/reports/integrity.md`, `tests/test_integrity_baselines.py`, `tests/test_integrity_hunter.py`), +47/−9. README and Makefile still untouched. Those files were not read to decide what to run.
+
 ## Claimed vs observed
 
 The README states no expected score, accuracy, seed count, or row values. "Claimed" below is only what the README text says.
@@ -281,13 +450,13 @@ The README states no expected score, accuracy, seed count, or row values. "Claim
 | What | Claimed in README | Observed |
 | --- | --- | --- |
 | `make setup` | Comment: `uv, Python 3.12`. No install instructions, no success criterion. | First run fails: `uv` missing (make exit 2 / recipe 127). After installing uv 0.13.8 outside the README: exit 0 in 0.692 s, CPython 3.12.3, 52 packages, venv at `.venv`. |
-| `make test` | Nothing. The target is named and not described. | Exit 0 in 30.814 s. `321 passed, 8 skipped, 1 xfailed, 8 xpassed, 2 warnings in 30.00s`. |
-| `make eval AGENT=solver TIER=medium` | Nothing numeric. Does not mention provider or seeds. | Exit 0 in 0.319 s and again in 0.308 s. Recipe adds `--provider template --seeds dev20`. Table: n=20, score **+0.458 ± 0.155**, accuracy **0.65**, accused **13**, accuse day **8.4**. Identical on the second run. |
-| `make reproduce` | "judge table: reference, 3 agent runs, do-nothing, stop-early (no API keys needed)" | Exit 0 in 0.056 s (0.068 s chained with a warm setup). stdout is only `TODO: --reproduce (judge table on frozen judge seeds) is not implemented yet`. No rows for reference, agents, do-nothing, or stop-early. No API key prompt. |
+| `make test` | Nothing. The target is named and not described. | Exit 0 on all three tips. `54e1fa4`: 30.814 s, `321 passed, 8 skipped, 1 xfailed, 8 xpassed, 2 warnings in 30.00s`. `4d572ef`: 40.112 s, `338 passed, 3 skipped, 1 xfailed, 8 xpassed, 2 warnings in 39.24s`. `6869c5b`: 34.951 s, `348 passed, 3 skipped in 34.43s` (the xfail/xpass/warnings are gone). |
+| `make eval AGENT=solver TIER=medium` | Nothing numeric. Does not mention provider or seeds. | Exit 0 in 0.319 s and 0.308 s on `54e1fa4`, 0.319 s on `4d572ef`, 0.321 s on `6869c5b`. Recipe adds `--provider template --seeds dev20`. Table: n=20, score **+0.458 ± 0.155**, accuracy **0.65**, accused **13**, accuse day **8.4**. All four runs matched. |
+| `make reproduce` | "judge table: reference, 3 agent runs, do-nothing, stop-early (no API keys needed)" | Exit 0 in 0.056 s on `54e1fa4` (0.068 s chained with a warm setup), 0.054 s on `4d572ef`, 0.057 s on `6869c5b`. stdout is only `TODO: --reproduce (judge table on frozen judge seeds) is not implemented yet`. No rows for reference, agents, do-nothing, or stop-early. No API key prompt. |
 | Gemini "at its core" | Opening sentence: the environment has "Gemini at its core." | The only scored command that runs does not ask for `GEMINI_API_KEY` and passes `--provider template`. No Gemini result was produced. Whether `template` is a non-LLM stand-in is an inference from the flag name, the empty key, and the 0.3 s runtime. The README does not say. |
 | API keys | Reproduce: "no API keys needed". No other key guidance. | Correct for the stub. Also none needed for `make test` or the template eval. `.env.example` documents two keys the README never mentions. Not a blocker for the commands that exist today. |
 | Harbor / OpenCode | Not in the README. | Not run. |
-| Runtime warning | Status calls the branch an "overnight build". No runtime estimate for the make targets. | Once `uv` exists, the whole README sequence is ~32 s. The overnight wording describes the build status, not the judge runtime. The missing piece is the stub, not a long job. |
+| Runtime warning | Status calls the branch an "overnight build". No runtime estimate for the make targets. | Once `uv` exists, the whole README sequence is about 32–41 s on these three tips. The overnight wording describes the build status, not the judge runtime. The missing piece is the stub, not a long job. |
 
 ## Unclear or wrong README sentences
 
@@ -321,7 +490,7 @@ Quoted in full.
 
 - **False green.** An unimplemented judge command that exits 0 will pass a "did `make reproduce` work?" check. This is the costliest polish failure in the README path.
 - **Commit subject vs command line, neither in the README.** `git log -1` says `JUDGE_SEEDS 40`. `make eval` printed `--seeds dev20`. The README says neither. This was not used to change the run.
-- **Test hygiene.** 8 xpassed, 1 xfailed, 8 skipped, and a `SyntaxWarning` in `google-genai` during `tests/test_llm.py::test_missing_keys`. The suite is green only if xfail/xpass is acceptable. The README does not say that it is.
+- **Test count is not pinned, and it moved during this session.** Same README bytes: 321 passed (`54e1fa4`), 338 passed (`4d572ef`), 348 passed (`6869c5b`). The 8 xpassed, 1 xfailed, and the `google-genai` `SyntaxWarning` were real on the first two tips and are gone on `6869c5b` (`348 passed, 3 skipped`). A judge who clones later cannot tell which of those summaries the README considers success.
 - **Undocumented entry points a clone listing shows immediately.** `harbor/` at repo root, `.env.example`, `docs/reports/env.md`, and several other `docs/reports/*.md` files. None are linked from the README. Easy for a judge to wonder which one is authoritative.
 - **OpenCode is in `git log`, not in the README.** `git log --oneline` includes `frontier: OpenCode default model openai/gpt-5.6-sol`. The README never says OpenCode. It was not run. Same for Harbor: the directory is there, the README is silent. A judge following only `README.md` will not execute either.
 - **No broken doc links** among the five README links. Checked by file presence only.
@@ -406,12 +575,14 @@ Replace "lands by Saturday morning" with a date, a timezone, and the current fac
 
 ```markdown
 make test
-# Expect a zero exit. On 2026-11-14 / Python 3.12.3:
-#   321 passed, 8 skipped, 1 xfailed, 8 xpassed, 2 warnings in ~30s.
-# The warnings are SyntaxWarning in google-genai (invalid escape) during tests/test_llm.py::test_missing_keys.
+# Expect a zero exit. Pin the summary in this README and change it in the same commit as the tests.
+# Observed 2026-11-14 / Python 3.12.3, identical README bytes:
+#   54e1fa4: 321 passed, 8 skipped, 1 xfailed, 8 xpassed, 2 warnings in 30.00s
+#   4d572ef: 338 passed, 3 skipped, 1 xfailed, 8 xpassed, 2 warnings in 39.24s
+#   6869c5b: 348 passed, 3 skipped in 34.43s
 ```
 
-Better than documenting `xpassed` forever: remove stale `xfail` marks, or list the one remaining expected failure by name. Eight unexpected passes should not be the steady state of a judge-facing suite.
+`6869c5b` cleared the xfail/xpass/warning noise. The remaining gap is that the README still does not say which summary is the expected one, so the next test-only commit will move the number again with no doc change.
 
 ### Medium — seeds are undocumented and the commit subject disagrees with the eval flag
 
@@ -438,6 +609,6 @@ One prerequisite bullet is enough: "Targets call `python` inside `uv run`. A sys
 
 ## Bottom line for scoring
 
-`make test` and the offline solver eval do run, quickly, with no secrets, and the eval number was stable across two runs (+0.458 ± 0.155, accuracy 0.65, n=20). That part is real.
+`make test` and the offline solver eval do run, with no secrets. The eval number was stable across four runs and three tips (+0.458 ± 0.155, accuracy 0.65, n=20). The test summary was not: 321, then 338, then 348 passed, same README, over about eight minutes of `justSilas` moving. That part is real, and it is not pinned.
 
 The command the README labels as the judge path does not reproduce anything. It exits 0 on a TODO. Combined with no published expected numbers, a second judge cannot confirm a result, only confirm that the stub is still a stub. That is the issue to fix before craft points for the judge experience.

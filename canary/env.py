@@ -13,6 +13,7 @@ from typing import Any
 from .rules import TIERS
 from .text.facts import EmployeeFacts, PublicDayFacts
 from .types import INVESTIGATIVE_TOOLS, EpisodeResult, LedgerEntry, Step, ToolResult
+from .mole.dsl import DEFAULT_STRATEGY, MoleDoc, MoleView, MoleStrategy
 from .world import generate_world
 
 TOPICS = ("recent_documents", "contacts_outside", "workload", "access_needs")
@@ -62,6 +63,8 @@ class Env:
         self.tier, self.seed, self.p = tier, seed, TIERS[tier]
         self._world = generate_world(tier, seed, self.p)
         if mole_strategy is not None:
+            if isinstance(mole_strategy, dict):
+                mole_strategy = MoleStrategy.from_json(mole_strategy)
             self._world.mole_strategy = mole_strategy
         self._dyn = random.Random(self._world.world_seed ^ 1)
         self.provider = text_provider if text_provider is not None else _default_provider()
@@ -87,6 +90,7 @@ class Env:
         self._history: list[Step] = []
         self._ledger: list[LedgerEntry] = []
         self._canary_ids: list[str] = []
+        self._last_leak_day = 0
         self._publish_day(1)
 
     # ------------------------------------------------------------------ public API
@@ -104,13 +108,14 @@ class Env:
             f"Documents: each day {min(p.docs_per_day)}-{max(p.docs_per_day)} (uniform over {list(p.docs_per_day)}) regular docs are published; recipients are one whole department (60%) or the union of two departments (40%). Restricted employees receive no new docs.",
             f"Leaks: when a day closes, if the mole holds at least one leakable doc (received in the last {p.leak_window_days} days incl. today, not yet leaked) it leaks one with probability {p.p_leak}, chosen uniformly among leakable docs." + (" Careful mole: a canary's weight is multiplied by (1 - share of all employees who received any variant of it)." if p.careful_mole else ""),
             f"Each leak costs V -{p.leak_damage} immediately and surfaces in the leak feed after a delay uniform over {list(p.delay_choices)} days. Leaked canaries show the variant label the mole received. A restricted mole can still leak docs it already holds.",
-            f"Canaries: plant_canary costs V -{p.canary_cost}, at most {p.canaries_per_day} per day, at most {p.max_variants} distinct variant labels, at least 1 recipient, no restricted recipients. Recipients are exactly the assignment keys; it counts as received today." + (" Recipients must have clearance >= the canary level (canaries are level 1, so every employee qualifies)." if p.access_constraints else ""),
+            f"Canaries: plant_canary costs V -{p.canary_cost}, at most {p.canaries_per_day} per day, at most {p.max_variants} distinct variant labels, at least 1 recipient, no restricted recipients. Recipients are exactly the assignment keys; it counts as received today." + (f" Recipients must have clearance >= the canary level (canaries are level {p.canary_level}; every employee has clearance >= 1)." if p.access_constraints else ""),
             f"Restriction: each restricted employee costs V -{p.restrict_cost_per_day} per closed day.",
             f"Access logs (closed days only): every employee makes Poisson(rate) accesses per day to random docs it holds; innocent rate {p.log_rate_benign}, mole rate {p.log_rate_mole}. Each access is after_hours with prob {p.p_after_hours_benign} (innocent) or {p.p_after_hours_mole} (mole).",
             (f"Framing: the mole adds Poisson({p.framing_rate}) fake after-hours accesses per day attributed to another employee: the decoy with prob {p.framing_decoy_share}, otherwise uniform over the other non-mole employees." if p.framing else "No framing in this tier."),
             ("A decoy exists: one innocent, disgruntled employee writes angry messages. The mole is uniform among the other employees." if p.decoy else "No decoy in this tier; the mole is uniform among all employees."),
             f"Interviews: answer is evasive with probability {p.p_evasive_innocent} for innocents and {p.p_evasive_innocent} x {p.interview_lr} for the mole; repeating the same (employee, topic) on the same day gives the same answer.",
             f"Caps: investigative tools ({', '.join(sorted(INVESTIGATIVE_TOOLS))}) are limited to {p.actions_per_day} per day; status, list_*, advance_day and accuse are free. Every call counts toward a global cap of {p.tool_call_cap}; reaching it ends the episode with score 0.",
+            f"Mole behaviour: the mole follows a rule strategy (Mole DSL). It may condition only on: day, days_since_last_leak, i_am_restricted, n_restricted_colleagues, recent_low_recipient_docs (leakable docs with <= {p.low_recipient_threshold} recipients), n_leakable; it chooses which leakable doc to leak (newest, oldest, most_recipients, fewest_recipients, random_seeded, none) and may frame one colleague (decoy, most_restricted_peer, random_peer, none) by adding one fake after-hours access. It never knows which docs are canaries. p_leak still gates every leak. The default strategy is random_seeded with no extra framing (the rules above).",
             "Arguments are validated strictly: one employee id per call, no lists, wildcards or names.",
         ])
 
@@ -261,7 +266,7 @@ class Env:
             if lo <= m["day"] <= hi and (q in m["subject"].lower() or q in m["body"].lower()):
                 out.append({"id": m["id"], "day": m["day"], "channel": m["channel"], "sender": m["sender"],
                             "subject": m["subject"], "snippet": m["body"][:120]})
-                if len(out) >= 20:
+                if len(out) >= self.p.search_max_results:
                     break
         return ToolResult(True, {"messages": out})
 
@@ -337,30 +342,30 @@ class Env:
         return ToolResult(True, {"accused": e, "episode_over": True})
 
     # ------------------------------------------------------------------ dynamics
-    def _mole_view(self, d: int) -> dict:
-        lo = d - self.p.leak_window_days + 1
-        mole = self._world.mole
-        leakable = [x for x in self._held[mole] if x not in self._leaked and lo <= self._doc_by_id[x]["day"] <= d]
-        return {"day": d, "leakable": leakable}
+    def _mole_view(self, d: int) -> MoleView:
+        p, w = self.p, self._world
+        lo = d - p.leak_window_days + 1
+        mole = w.mole
+        leakable = [self._doc_by_id[x] for x in self._held[mole]
+                    if x not in self._leaked and lo <= self._doc_by_id[x]["day"] <= d]
+        # p_leak gate: drawn only when something is leakable (v0 RNG order)
+        can_leak = bool(leakable) and self._dyn.random() < p.p_leak
+        weights = None
+        if p.careful_mole:
+            weights = tuple(1.0 - len(x["recipients"]) / p.n_employees if x["is_canary"] else 1.0 for x in leakable)
+        peers = tuple(e for e in self._ids if e != mole)
+        rpeers = tuple(e for e in peers if e in self._restricted)
+        return MoleView(
+            day=d,
+            docs=tuple(MoleDoc(x["doc_id"], x["title"], len(x["recipients"]), d - x["day"]) for x in leakable),
+            days_since_last_leak=d - self._last_leak_day if self._last_leak_day else d,
+            i_am_restricted=int(mole in self._restricted), n_restricted_colleagues=len(rpeers),
+            recent_low_recipient_docs=sum(1 for x in leakable if len(x["recipients"]) <= p.low_recipient_threshold),
+            peers=peers, restricted_peers=rpeers, decoy=w.decoy, can_leak=can_leak, select_weights=weights)
 
-    def _mole_decide(self, view: dict) -> dict:
-        """Default v0 mole. Mole DSL (world.mole_strategy) plugs in here later."""
-        if self._world.mole_strategy is not None and hasattr(self._world.mole_strategy, "decide"):
-            return self._world.mole_strategy.decide(view)
-        leakable = view["leakable"]
-        if not leakable or self._dyn.random() >= self.p.p_leak:
-            return {"leak": None, "frame": None}
-        n = self.p.n_employees
-        weights = []
-        for x in leakable:
-            doc = self._doc_by_id[x]
-            w = 1.0
-            if self.p.careful_mole and doc["is_canary"]:
-                w *= 1.0 - len(doc["recipients"]) / n
-            weights.append(w)
-        if sum(weights) <= 0:
-            return {"leak": None, "frame": None}
-        return {"leak": self._dyn.choices(leakable, weights=weights)[0], "frame": None}
+    def _mole_decide(self, view: MoleView) -> dict:
+        strat = self._world.mole_strategy or DEFAULT_STRATEGY
+        return strat.decide(view, self._dyn)
 
     def _t_advance_day(self, a):
         p, w, d, rng = self.p, self._world, self.day, self._dyn
@@ -376,6 +381,7 @@ class Env:
             self._leaked.add(leak)
             self._feed.append(item)
             self._charge(p.leak_damage)
+            self._last_leak_day = d
             self._log("leak", doc_id=leak, surfaces_on=d + delta, V=self.V)
         # (4) restriction cost
         if self._restricted:
@@ -399,6 +405,10 @@ class Env:
                     tgt = rng.choice(others)
                 if self._held[tgt]:
                     logs.append({"day": d, "employee": tgt, "doc_id": rng.choice(self._held[tgt]), "after_hours": True})
+        tgt = dec.get("frame")
+        if tgt is not None and tgt in self._idset and tgt != w.mole and self._held[tgt]:
+            logs.append({"day": d, "employee": tgt, "doc_id": rng.choice(self._held[tgt]), "after_hours": True})
+            self._log("framed", employee=tgt)
         logs.sort(key=lambda r: (r["employee"], r["doc_id"], r["after_hours"]))
         self._logs.extend(logs)
         # (6) messages

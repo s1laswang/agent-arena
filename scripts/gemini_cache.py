@@ -7,18 +7,29 @@ import tarfile
 from pathlib import Path
 
 CACHE = Path(__file__).resolve().parent.parent / ".cache" / "gemini"
-SECRET = re.compile(r"AIza[0-9A-Za-z_\-]{30,}|api[_-]?key", re.I)
+SECRET = re.compile(r"(?<![0-9A-Za-z+/_\-])AIza[0-9A-Za-z_\-]{35}(?![0-9A-Za-z+/=_\-])|api[_-]?key", re.I)
 LIMIT_MB = 25
 
 
+def _keys():
+    ks = {os.environ.get("GEMINI_API_KEY", "")}
+    for env in (CACHE.parent.parent / ".env", Path.home() / "arena-agents" / ".env"):
+        try:
+            for line in env.read_text().splitlines():
+                if line.strip().startswith("GEMINI_API_KEY="):
+                    ks.add(line.split("=", 1)[1].strip().strip("'\""))
+        except OSError:
+            pass
+    return [k for k in ks if len(k) > 8]
+
+
 def check(cache=CACHE):
-    bad, size = [], 0
+    bad, size, keys = [], 0, _keys()
     for f in sorted(cache.glob("*.json")):
         b = f.read_bytes()
         size += len(b)
         t = b.decode("utf8", "replace")
-        key = os.environ.get("GEMINI_API_KEY")
-        if SECRET.search(t) or (key and key in t):
+        if SECRET.search(t) or any(k in t for k in keys):
             bad.append(f.name)
     return bad, size
 

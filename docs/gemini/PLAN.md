@@ -23,7 +23,7 @@ These files live in `docs/gemini/` (not `docs/PLAN.md`) so they never conflict w
 ## Decision: the Gemini entry is Canary, extended into "Canary Lab"
 
 Candidates compared:
-- **Canary / agent-arena (chosen).** It already has a real benchmark: a Bayesian reference solver, frozen tiers, reward integrity work and reproducible numbers. Gemini is already the frontier agent under test (gemini-4-carbon is at about the solver on medium and 56–79% of the solver on hard). This is the only candidate where Gemini can be the agent, the adversary, the auditor and the analyst at once, with numbers to show for it.
+- **Canary / agent-arena (chosen).** It already has a real benchmark: a Bayesian reference solver, frozen tiers, reward integrity work and reproducible numbers. Gemini is already the frontier agent under test (gemini-4-carbon was measured at about the solver on medium and 56–79% of it on hard early on Saturday. The later v1.4 bake-off (n=10 per tier) shows parity, so we make no frontier-gap claim). This is the only candidate where Gemini can be the agent, the adversary, the auditor and the analyst at once, with numbers to show for it.
 - **Meta glasses.** Strong for Gemini Live/multimodal, but that is the Meta CEO's product and it would split our focus. I advise them through the playbook.
 - **Valio Aimo.** Function calling plus catalog matching. It is solid, but judges see that pattern often.
 
@@ -67,7 +67,7 @@ Already on `justSilas` (the AfterQuery team owns these, and we credit them in th
 
 ## Demo script (3 min video, 10 min live)
 
-1. **0:00 Hook.** "Gemini 4 Carbon catches the mole as well as a Bayesian solver on medium. On hard it falls to about 60%. Why?" Show the browser game with one Gemini episode replayed and Gemini TTS commentary.
+1. **0:00 Hook.** (Revised Sat 22:00 after the v1.4 bake-off showed parity, not a frontier gap.) "One mole, one accusation. Gemini plays, explains and attacks its own benchmark." The Live commentator clip plays over a Gemini episode replay. The final cut is docs/gemini/VIDEO-2MIN.md.
 2. **0:30 Ladder.** The heatmap and curve: score vs thinking level for 6 Gemini models. Then the cost frontier: "3.8-flash-high gets X% of carbon's score for Y% of the cost."
 3. **1:15 Atlas.** "Gemini read all N trajectories, about 3M tokens across the cached corpus, in one sitting." It shows the top 3 failure modes with verified quotes and regret, a belief-chart thumbnail, and the human agreement score.
 4. **2:00 Swarm.** "Fifty Gemini attackers read our whole codebase and tried to break the reward." Show the scoreboard: attempts, best non-solver score, regression tests written.

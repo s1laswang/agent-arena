@@ -7,7 +7,7 @@ Project: The Sleeper. Status key: BUILT means merged into `momin` with a test; P
 - Every team in every table is scripted. Staff, oracle, reference, sleeper and all baselines are Python, not Gemini. `agent_kind` is `scripted` in every row.
 - A key exists and real calls have happened, but only through labelled runs listed in the role table below. A day-run or pytest can also call live Gemini by accident, because `agents/gemini.py` loads the key from `~/arena-agents/.env` at import (lead-demo counted 784 accidental calls in pytest). Accidental calls are not results. No Gemini reward, gap or reference number is final: NOT FOUND (lead-lab pending).
 - Gemini code that exists and is tested offline only, with a scripted fake model that proves the wiring and nothing about how the real model behaves: the client with cache (`agents/gemini.py`), Gemini staff (`agents/staff.py` `GeminiStaff`), Gemini sleeper (`agents/sleeper_agent.py`), Gemini reference (`agents/gemini_reference.py`), failure explanations (`lab/analyse.py --gemini`), invoice images (`agents/images.py`, image plumbing only).
-- The live switch is in flux. At momin 63dede0 the code reads `LAB_GEMINI=1` (`lab/run.py`, `lab/analyse.py`) or a `--gemini` runner flag. lead-harness is changing it to `SLEEPER_LIVE=1`: NOT FOUND on momin yet, recheck before quoting. Run tests and offline evals with `GEMINI_API_KEY=` empty and `SLEEPER_OFFLINE=1`.
+- Live switch, momin (lead-harness, 67ec06b; `agents/gemini.py enabled()`): real calls need `SLEEPER_LIVE=1` and `GEMINI_API_KEY`, or a `--gemini` runner flag (which sets `SLEEPER_LIVE=1`). `SLEEPER_OFFLINE=1` replays the cache. A bare key no longer turns on live calls. `LAB_GEMINI=1` is the old switch. Run tests and offline evals with `GEMINI_API_KEY=` empty.
 - `SLEEPER_OFFLINE=1` never calls the API. Staff and reference raise on a cache miss. The sleeper agent and the analyst explanation fall back to scripted instead, so an offline rerun can quietly use the scripted sleeper there.
 - The "reference" is a scripted evidence-only team: `Reference` in `agents/reference.py` (lines 187 to 353) has no reference to `day.sleeper_seat`, `goal` or ticket `legit` flags, and `make_reference_team` ignores the day. The oracle does use the hidden sleeper identity, so it is a perfect-information check, not the reference.
 
@@ -47,7 +47,7 @@ The Sleeper is an environment for that. Eight AI employees run a simulated compa
 
 ## 2. How the Gemini API is integrated
 
-Live switch: see the first section, it is changing from `LAB_GEMINI=1` to `SLEEPER_LIVE=1` and is NOT FOUND on momin yet. Offline wiring is verified with a scripted fake model (`tests/test_gemini_team.py`), which proves the plumbing and nothing about the real model. Real runs are only those in the role table. Under `SLEEPER_OFFLINE=1`, a cache miss raises for staff and reference but the sleeper agent and analyst explanation fall back to scripted.
+Live switch: `SLEEPER_LIVE=1` plus a key, or `--gemini` (see the first section). Offline wiring is verified with a scripted fake model (`tests/test_gemini_team.py`), which proves the plumbing and nothing about the real model. Real runs are only those in the role table. Under `SLEEPER_OFFLINE=1`, a cache miss raises for staff and reference but the sleeper agent and analyst explanation fall back to scripted.
 
 
 - BUILT, in `momin`, tested offline with a fake model. Real-API status per role is in the role table, not here:

@@ -17,10 +17,16 @@ eval-full:
 harbor:
 	$(PY) -m harbor.build --seeds 0..19 --seat $(SEAT)
 
-.PHONY: test eval eval-full harbor exploits key-check
+.PHONY: test eval eval-full harbor exploits key-check cheat-corpus
 
 exploits:
 	$(PY) -m redteam.report
 
 key-check:
 	PYTHONPATH=. $(PY) scripts/key_check.py
+
+cheat-corpus:
+	GEMINI_API_KEY= PYTHONPATH=. $(PY) -m redteam.cheat_corpus $(ARGS)
+
+cheat-eval:
+	GEMINI_API_KEY= PYTHONPATH=. $(PY) -m redteam.cheat_eval

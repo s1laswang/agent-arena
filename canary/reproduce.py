@@ -21,8 +21,11 @@ import json
 import math
 import os
 import secrets
+import signal
+import threading
 import time
 from collections import defaultdict
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
@@ -41,6 +44,7 @@ AGENT_NOTES = {
     "do_nothing": "never accuses",
 }
 FAST_SEEDS = 5
+EPISODE_TIMEOUT_S = 60.0   # per-episode guard (env REPRO_EPISODE_TIMEOUT); a timed-out episode scores 0 and is reported
 COMMITTED_GLOB = "data/runs/committed/**/episodes.jsonl"
 
 
@@ -48,7 +52,7 @@ COMMITTED_GLOB = "data/runs/committed/**/episodes.jsonl"
 class Row:
     tier: str
     agent: str
-    kind: str                      # reference | frontier | baseline
+    kind: str                      # reference | baseline | reported (replayed agent runs)
     scores: list[float]
     correct: list[bool]
     accuse_days: list[int]
@@ -119,9 +123,41 @@ def pass_k(row: Row) -> tuple[int, float] | None:
 
 
 # --------------------------------------------------------------------------- runs
+class EpisodeTimeout(BaseException):
+    """BaseException so run_episode's `except Exception` (policy crash) cannot swallow it."""
+
+
+def episode_timeout_s() -> float:
+    v = os.environ.get("REPRO_EPISODE_TIMEOUT", "").strip()
+    return float(v) if v else EPISODE_TIMEOUT_S
+
+
+@contextmanager
+def time_limit(seconds: float):
+    """SIGALRM wall-clock guard (POSIX main thread); a no-op elsewhere."""
+    usable = (seconds > 0 and hasattr(signal, "setitimer")
+              and threading.current_thread() is threading.main_thread())
+    if not usable:
+        yield
+        return
+
+    def _raise(signum, frame):
+        raise EpisodeTimeout()
+
+    old = signal.signal(signal.SIGALRM, _raise)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, old)
+
+
 def run_in_process(tiers: Iterable[str], seeds: list[int], agents: Iterable[str] = REPRO_AGENTS,
-                   episodes_out: list[dict] | None = None) -> list[Row]:
+                   episodes_out: list[dict] | None = None, timeout_s: float | None = None) -> list[Row]:
+    """Paired runs: every agent plays the same (tier, seed) worlds under this process's secret."""
     from .eval import make_env, make_policy_factory, run_episode
+    limit = episode_timeout_s() if timeout_s is None else timeout_s
     rows: list[Row] = []
     for tier in tiers:
         for agent in agents:
@@ -129,17 +165,25 @@ def run_in_process(tiers: Iterable[str], seeds: list[int], agents: Iterable[str]
             row = Row(tier, agent, "reference" if agent == "solver" else "baseline",
                       [], [], [], [], note=AGENT_NOTES.get(agent, ""))
             for seed in seeds:
-                res = run_episode(make_env(tier, seed), factory(seed))
-                row.scores.append(float(res.score))
-                row.correct.append(bool(res.correct))
+                try:
+                    with time_limit(limit):
+                        res = run_episode(make_env(tier, seed), factory(seed))
+                    rec = {"score": float(res.score), "correct": bool(res.correct), "accused": res.accused,
+                           "final_day": res.final_day, "end_reason": res.end_reason, "tool_calls": len(res.steps)}
+                except EpisodeTimeout:
+                    rec = {"score": 0.0, "correct": False, "accused": None, "final_day": None,
+                           "end_reason": "timeout", "tool_calls": None}
+                    row.extra.setdefault("timeouts", []).append(seed)
+                row.scores.append(rec["score"])
+                row.correct.append(rec["correct"])
                 row.seeds.append(seed)
-                if res.end_reason == "accused":
-                    row.accuse_days.append(res.final_day)
+                if rec["end_reason"] == "accused":
+                    row.accuse_days.append(rec["final_day"])
                 if episodes_out is not None:
                     episodes_out.append({"tier": tier, "agent": agent, "seed": seed,
-                                         "score": round(float(res.score), 6), "correct": bool(res.correct),
-                                         "accused": res.accused, "final_day": res.final_day,
-                                         "end_reason": res.end_reason, "tool_calls": len(res.steps)})
+                                         **rec, "score": round(rec["score"], 6)})
+            if row.extra.get("timeouts"):
+                row.note += f"; TIMEOUT (> {limit:g} s, scored 0) on seeds {row.extra['timeouts']}"
             rows.append(row)
     return rows
 
@@ -156,7 +200,7 @@ def load_committed(root: Path = ROOT) -> tuple[list[Row], list[str]]:
             e = json.loads(line)
             key = (e["tier"], e["agent"])
             if key not in groups:
-                groups[key] = Row(e["tier"], e["agent"], "frontier", [], [], [], [], note="replayed")
+                groups[key] = Row(e["tier"], e["agent"], "reported", [], [], [], [], note="replayed")
             r = groups[key]
             r.scores.append(float(e["score"]))
             r.correct.append(bool(e["correct"]))
@@ -166,12 +210,13 @@ def load_committed(root: Path = ROOT) -> tuple[list[Row], list[str]]:
             r.extra.setdefault("runs", set()).add(str(f.parent.relative_to(root)))
     for r in groups.values():
         judge = all(s in JUDGE_SEEDS for s in r.seeds)
-        r.note = f"replayed, {'judge' if judge else 'non-judge'} seeds, {len(set(r.seeds))} seeds"
+        r.note = (f"replayed, {'judge' if judge else 'NON-judge'} seeds, {len(set(r.seeds))} seeds "
+                  f"({', '.join(sorted(r.extra['runs']))})")
     return list(groups.values()), [str(f.relative_to(root)) for f in files]
 
 
 def pending_rows(tiers: Iterable[str]) -> list[Row]:
-    return [Row(t, "frontier agents (gpt-5.5, gpt-5.6-sol)", "frontier", [], [], [], [],
+    return [Row(t, "frontier agents (gpt-5.5, gpt-5.6-sol)", "reported", [], [], [], [],
                 note=f"pending: no {COMMITTED_GLOB} yet", pending=True)
             for t in tiers if t in HEADLINE_TIERS]
 
@@ -184,10 +229,28 @@ def _f(x: float, nd: int = 3, sign: bool = False) -> str:
 
 
 def order_rows(rows: list[Row]) -> list[Row]:
-    rank = {"reference": 0, "frontier": 1, "baseline": 2}
+    rank = {"reference": 0, "baseline": 1, "reported": 2}
     base = {a: i for i, a in enumerate(REPRO_AGENTS)}
     return sorted(rows, key=lambda r: (TIER_ORDER.index(r.tier) if r.tier in TIER_ORDER else 9,
                                        rank[r.kind], base.get(r.agent, 0), r.agent))
+
+
+COLS = ("| agent | kind | n | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |\n"
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---|")
+
+
+def _row_md(r: Row, solver_mean: float | None) -> str:
+    if r.pending:
+        return f"| {r.agent} | {r.kind} | 0 | pending | – | – | – | – | – | {r.note} |"
+    m, h = mean_ci(r.scores)
+    if r.agent == "solver" and r.kind == "reference":
+        norm = 1.0
+    else:
+        norm = m / solver_mean if solver_mean and solver_mean > 0 else float("nan")
+    pk = pass_k(r)
+    return (f"| {r.agent} | {r.kind} | {r.n} | {_f(m, sign=True)} ± {_f(h)} | {_f(mean(r.correct), 2)} | "
+            f"{len(r.accuse_days)}/{r.n} | {_f(mean(r.accuse_days), 1)} | {_f(norm, 2)} | "
+            f"{f'pass^{pk[0]}={pk[1]:.2f}' if pk else '–'} | {r.note} |")
 
 
 def table_md(rows: list[Row], header: dict[str, Any]) -> str:
@@ -196,44 +259,50 @@ def table_md(rows: list[Row], header: dict[str, Any]) -> str:
     out.append("")
     out.append(f"- seeds: {header['n_seeds']} judge seeds per tier ({header['seed_range']})"
                + ("  **[FAST MODE: not the reported numbers]**" if header["fast"] else ""))
-    out.append(f"- judge-world secret: {header['mode']} (sha256 prefix `{header['fingerprint']}`)")
+    note = ("statistical reproduction; set CANARY_WORLD_SECRET for exact numbers" if header.get("generated")
+            else "exact: same secret, same numbers")
+    out.append(f"- judge-world secret: {header['mode']}, sha256 fingerprint `{header['fingerprint']}` ({note})")
     out.append(f"- git: `{header['git_sha'][:12]}`, generated {header['timestamp']}, {header['seconds']:.1f} s")
     out.append("- reward: V at accusation if correct (V starts at 1.0 and drops with every leak), "
                "-1 if wrong, 0 if no accusation")
-    out.append("- accuracy = correct accusations / episodes; accused = episodes that ended in an accusation\n"
-               "- `/ solver` = agent mean / solver mean on the same tier (ratio of means); "
+    out.append("- accuracy = correct accusations / episodes; accused = episodes that ended in an accusation")
+    out.append("- `/ solver` = agent mean / solver mean on the same tier (ratio of means); "
                "`pass^k` only for agents with k repeated runs per seed")
-    sol = {r.tier: mean(r.scores) for r in rows if r.agent == "solver"}
+    out.append("- **paired runs**: reference and baselines played in this invocation on the same worlds (one secret). "
+               "**reported agent runs**: frontier-agent episodes replayed from data/runs/committed/, played on the "
+               "team's worlds, so they are NOT paired with this run; compare them by mean ± CI only")
+    timeouts = [(r.tier, r.agent, s) for r in rows for s in r.extra.get("timeouts", [])]
+    out.append(f"- per-episode timeout guard: {header.get('timeout_s', EPISODE_TIMEOUT_S):g} s; "
+               + (f"**{len(timeouts)} timed out (scored 0)**: "
+                  + ", ".join(f"{t}/{a}/{s}" for t, a, s in timeouts) if timeouts else "no episode timed out"))
+    sol = {r.tier: mean(r.scores) for r in rows if r.agent == "solver" and r.kind == "reference"}
     for tier in TIER_ORDER:
-        trs = [r for r in rows if r.tier == tier]
-        if not trs:
+        paired = [r for r in rows if r.tier == tier and r.kind != "reported"]
+        reported = [r for r in rows if r.tier == tier and r.kind == "reported"]
+        if not paired and not reported:
             continue
         label = "headline" if tier in HEADLINE_TIERS else "sanity tier"
-        out += ["", f"## {tier} ({label})", "",
-                "| agent | kind | n | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |",
-                "|---|---|---:|---:|---:|---:|---:|---:|---:|---|"]
-        for r in trs:
-            if r.pending:
-                out.append(f"| {r.agent} | {r.kind} | 0 | pending | – | – | – | – | – | {r.note} |")
-                continue
-            m, h = mean_ci(r.scores)
-            norm = m / sol[tier] if sol.get(tier, 0) > 0 and r.agent != "solver" else (1.0 if r.agent == "solver" else float("nan"))
-            pk = pass_k(r)
-            out.append(f"| {r.agent} | {r.kind} | {r.n} | {_f(m, sign=True)} ± {_f(h)} | "
-                       f"{_f(mean(r.correct), 2)} | {len(r.accuse_days)}/{r.n} | {_f(mean(r.accuse_days), 1)} | {_f(norm, 2)} | "
-                       f"{f'pass^{pk[0]}={pk[1]:.2f}' if pk else '–'} | {r.note} |")
+        out += ["", f"## {tier} ({label})"]
+        if paired:
+            out += ["", "Paired runs (this invocation, same worlds):", "", COLS]
+            out += [_row_md(r, sol.get(tier)) for r in paired]
+        if reported:
+            out += ["", "Reported agent runs (replayed, unpaired, own CI):", "", COLS]
+            out += [_row_md(r, sol.get(tier)) for r in reported]
     return "\n".join(out) + "\n"
 
 
-def exact_match_text(mode: str, generated: bool) -> str:
+def exact_match_text(mode: str, generated: bool, fingerprint: str = "") -> str:
     if generated:
-        return ("Reproducibility: no CANARY_WORLD_SECRET was set, so this run used a fresh random judge-world\n"
-                "secret (CONTRACT v0.5, fail-closed). The numbers are statistically reproducible: expect each\n"
-                "mean inside the published ± 95% CI, not bit-for-bit equality. For exact, repeatable numbers:\n"
-                "    CANARY_WORLD_SECRET=<any string> make reproduce   # same string -> identical judge_table\n"
-                "(the secret behind our published numbers stays private: it would reveal the judge-world moles).")
-    return (f"Reproducibility: judge-world secret mode = {mode}. Rerunning with the same secret gives\n"
-            "identical per-episode results (results/judge_episodes.jsonl) and an identical table.")
+        return (f"Statistical reproduction; set CANARY_WORLD_SECRET for exact numbers.\n"
+                f"No CANARY_WORLD_SECRET was set, so this invocation drew ONE fresh random judge-world secret\n"
+                f"(sha256 fingerprint {fingerprint}; the secret itself is never printed or written) and used it for\n"
+                "every agent, so the comparison is paired. Expect each mean inside the published ± 95% CI, not\n"
+                "bit-for-bit equality. For exact, repeatable numbers:\n"
+                "    CANARY_WORLD_SECRET=<any string> make reproduce   # same string -> identical judge_episodes.jsonl\n"
+                "(the secret behind the team's Harbor worlds stays private: it would reveal the judge-world moles).")
+    return (f"Exact reproduction: judge-world secret mode = {mode} (fingerprint {fingerprint}). Rerunning with the\n"
+            "same secret gives identical per-episode results (results/judge_episodes.jsonl) and the same table.")
 
 
 def gap_chart(rows: list[Row], path: Path) -> str | None:
@@ -245,7 +314,7 @@ def gap_chart(rows: list[Row], path: Path) -> str | None:
     except ImportError:
         return "matplotlib not installed (uv sync --extra plot); skipped results/gap_chart.png"
     tiers = [t for t in TIER_ORDER if any(r.tier == t and not r.pending for r in rows)]
-    colors = {"reference": "#2a78d6", "frontier": "#eb6834", "baseline": "#9a9893"}
+    colors = {"reference": "#2a78d6", "reported": "#eb6834", "baseline": "#9a9893"}
     fig, axes = plt.subplots(1, len(tiers), figsize=(4.6 * len(tiers), 3.9), sharey=False, squeeze=False)
     for ax, tier in zip(axes[0], tiers):
         trs = [r for r in rows if r.tier == tier and not r.pending]
@@ -302,6 +371,7 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = "results",
     from .rules import JUDGE_SEEDS
     header = {"n_seeds": len(seeds), "seed_range": f"{seeds[0]}..{seeds[-1]}",
               "fast": len(seeds) < len(JUDGE_SEEDS), "mode": mode, "fingerprint": fingerprint,
+              "generated": generated, "timeout_s": episode_timeout_s(),
               "git_sha": git_sha(), "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
               "seconds": time.time() - t0}
     out = Path(results_dir)
@@ -319,7 +389,7 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = "results",
         print(md)
         print(f"committed agent episode files: {len(files)}" + ("".join(f"\n  {f}" for f in files) if files else
               f" (frontier rows pending until {COMMITTED_GLOB} exists)"))
-        print(exact_match_text(mode, generated))
+        print(exact_match_text(mode, generated, fingerprint))
         print(f"\nwrote {out / 'judge_table.md'}, {out / 'judge_episodes.jsonl'}"
               + (f"\nNOTE: {skip}" if skip else f", {out / 'gap_chart.png'}"))
         print(f"total {header['seconds']:.1f} s")

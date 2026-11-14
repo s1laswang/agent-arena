@@ -78,7 +78,7 @@ def test_keyless_run_is_statistical_and_never_leaks_the_secret(tmp_path, monkeyp
     assert out["header"]["mode"] == "statistical"
     assert "CANARY_WORLD_SECRET" not in os.environ  # generated secret removed again
     printed = capsys.readouterr().out
-    assert "statistically reproducible" in printed and "CANARY_WORLD_SECRET=<any string>" in printed
+    assert "statistical reproduction; set CANARY_WORLD_SECRET for exact numbers" in printed and "CANARY_WORLD_SECRET=<any string>" in printed
     files = printed + "".join(p.read_text() for p in (tmp_path / "results").glob("*.[jm]*"))
     assert not re.search(r"[0-9a-f]{64}", files)  # the 32-byte hex secret is never written
 
@@ -97,10 +97,51 @@ def test_committed_agent_runs_are_replayed_with_pass_k(tmp_path, monkeypatch):
     (run / "episodes.jsonl").write_text("\n".join(lines) + "\n")
     out = _run(tmp_path)
     (row,) = _rows(out, "medium", "openai:gpt-5.5")
-    assert row.kind == "frontier" and row.n == 6
+    assert row.kind == "reported" and row.n == 6
     assert R.pass_k(row) == (3, 0.5)  # seed 900000 always right, 900001 fails once
     assert not [r for r in out["rows"] if r.pending]
-    assert "pass^3=0.50" in out["markdown"] and "replayed, judge seeds" in out["markdown"]
+    md = out["markdown"]
+    assert "pass^3=0.50" in md and "replayed, judge seeds" in md
+    medium = md.split("## medium")[1].split("## hard")[0]
+    # reported runs sit in their own unpaired block, after the paired block
+    assert medium.index("Paired runs") < medium.index("Reported agent runs") < medium.index("openai:gpt-5.5")
+
+
+def test_timeout_guard_scores_zero_and_is_reported(tmp_path, monkeypatch):
+    monkeypatch.setenv("CANARY_WORLD_SECRET", "test-reproduce")
+    import canary.eval as E
+
+    real = E.run_episode
+
+    def slow(env, policy, *a, **k):
+        if getattr(policy, "name", "") == "random":
+            import time
+            time.sleep(5)
+        return real(env, policy, *a, **k)
+
+    monkeypatch.setattr(E, "run_episode", slow)
+    eps: list[dict] = []
+    rows = R.run_in_process(["easy"], [900000], agents=("do_nothing", "random"), episodes_out=eps, timeout_s=0.3)
+    by = {r.agent: r for r in rows}
+    assert by["random"].extra["timeouts"] == [900000] and by["random"].scores == [0.0]
+    assert "TIMEOUT" in by["random"].note and "timeouts" not in by["do_nothing"].extra
+    assert [e["end_reason"] for e in eps] == ["horizon", "timeout"]
+    md = R.table_md(rows, {"n_seeds": 1, "seed_range": "900000..900000", "fast": True, "mode": "exact",
+                           "fingerprint": "x", "git_sha": "abc", "timestamp": "t", "seconds": 0.0, "timeout_s": 0.3})
+    assert "1 timed out" in md and "easy/random/900000" in md
+
+
+def test_determinism_two_subprocesses_fixed_secret(tmp_path):
+    """CEO requirement: with a fixed CANARY_WORLD_SECRET, two separate processes give identical scores."""
+    import subprocess
+    env = {**os.environ, "CANARY_WORLD_SECRET": "determinism-check", "REPRO_SEEDS": "2"}
+    outs = []
+    for name in ("a", "b"):
+        d = tmp_path / name
+        subprocess.run([sys.executable, "-m", "canary.eval", "--reproduce", "--results-dir", str(d)],
+                       cwd=R.ROOT, env=env, check=True, capture_output=True, timeout=300)
+        outs.append((d / "judge_episodes.jsonl").read_text())
+    assert outs[0] == outs[1] and len(outs[0].splitlines()) == 3 * len(R.REPRO_AGENTS) * 2
 
 
 def test_seed_count_controls(monkeypatch):

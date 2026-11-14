@@ -20,21 +20,25 @@ You need [uv](https://docs.astral.sh/uv/) first (`curl -LsSf https://astral.sh/u
 
 `make reproduce` plays the reference solver and five baselines on the 40 frozen judge seeds of each tier. It replays any committed frontier-agent episodes from `data/runs/committed/`, prints the table, and writes `results/judge_table.md`, `results/judge_episodes.jsonl` and `results/gap_chart.png`.
 
-**Expected numbers on the frozen tiers v1.2.** We ran keyless `make reproduce` 30 times on the 40 judge seeds per tier (commit edffdac), each run with a fresh secret. Each cell is the mean of the 30 run means, with the lowest and highest run mean in brackets. A single run prints its own 95% CI, about ±0.07–0.08 for the solver and ±0.25 for the heuristic. To rebuild this table: `uv run python scripts/repro_spread.py 30` (about 5 minutes).
+**Expected numbers on the frozen tiers v1.3.** We ran keyless `make reproduce` 30 times on the 40 judge seeds per tier (commit 21e5b2e), each run with a fresh secret. Each cell is the mean of the 30 run means, with the lowest and highest run mean in brackets. A single run prints its own 95% CI, about ±0.03–0.12 for the solver and ±0.25 for the heuristic. To rebuild this table: `uv run python scripts/repro_spread.py 30` (about 5 minutes).
 
 | agent | medium (headline) | hard (headline) | easy (sanity tier only) |
 |---|---:|---:|---:|
-| **solver** (reference) | **+0.62** [+0.52, +0.68] | **+0.55** [+0.39, +0.65] | +0.78 [+0.74, +0.81] |
+| **solver** (reference) | **+0.64** [+0.58, +0.69] | **+0.55** [+0.40, +0.66] | +0.77 [+0.74, +0.82] |
 | frontier agents (gpt-5.5, gpt-5.6-sol) | pending (AGENTS commit runs to `data/runs/committed/`) | pending | – |
-| heuristic (canary bisection, no Bayes) | −0.01 [−0.32, +0.37] | −0.27 [−0.55, 0.00] | +0.65 [+0.47, +0.70] |
-| logs_only (best no-canary log reader) | −0.98 [−1.00, −0.91] | −0.97 [−1.00, −0.86] | −0.52 [−0.76, −0.24] |
-| random | −0.66 [−0.73, −0.51] | −0.79 [−0.85, −0.61] | −0.70 [−0.80, −0.55] |
-| stop_early (random accusation, day 1) | −0.91 [−1.00, −0.75] | −0.93 [−1.00, −0.80] | −0.83 [−1.00, −0.70] |
+| heuristic (canary bisection, no Bayes) | −0.06 [−0.39, +0.14] | −0.30 [−0.58, −0.09] | +0.64 [+0.56, +0.72] |
+| logs_only (best no-canary log reader) | −0.98 [−1.00, −0.91] | −0.99 [−1.00, −0.91] | −0.51 [−0.76, −0.28] |
+| random | −0.68 [−0.72, −0.58] | −0.81 [−0.85, −0.72] | −0.69 [−0.80, −0.58] |
+| stop_early (random accusation, day 1) | −0.90 [−1.00, −0.75] | −0.95 [−1.00, −0.85] | −0.84 [−0.95, −0.60] |
 | do_nothing | 0.00 (exact) | 0.00 (exact) | 0.00 (exact) |
 
-- **Committed run.** [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one of these runs (secret fingerprint `d7e45dc56304`). Solver: medium **+0.65 ± 0.07** (90% correct), hard **+0.62 ± 0.08** (88% correct). Heuristic: medium +0.05 ± 0.24, hard −0.26 ± 0.26.
-- **Fresh seeds.** [`results/fresh_table_v1.2.md`](results/fresh_table_v1.2.md) is ENV's table on 400 dev seeds per tier that were never used for tuning (`scripts/fresh_table.py 1000 1400`). Solver: medium +0.66 ± 0.02, hard +0.54 ± 0.04. Heuristic: medium −0.04 ± 0.08, hard −0.27 ± 0.08. On hard the solver is honest rather than perfect: **81.5% correct, 5% wrong, 13.5% abstain** (no accusation, score 0).
-- **Easy is a sanity tier, not a headline.** The solver (+0.76 ± 0.01 on fresh seeds) and the heuristic (+0.64 ± 0.03) are close there, by design: the gap comes from the noise and adversaries in medium and hard.
+- **Committed run.** [`results/judge_table.md`](results/judge_table.md) and [`results/gap_chart.png`](results/gap_chart.png) come from one keyless run on v1.3 (secret fingerprint `eb2e7fea6ee0`). Solver: medium **+0.61 ± 0.09** (85% correct), hard **+0.62 ± 0.11** (90% correct). Heuristic: medium +0.12 ± 0.23, hard −0.05 ± 0.26.
+- **Fresh seeds.** On seeds never used for tuning, the gap holds and is measured paired (same seed, agent − solver):
+  - [`results/fresh_table_v1.3.md`](results/fresh_table_v1.3.md), 400 dev seeds per tier (1000–1399): solver easy/medium/hard **+0.760 / +0.639 / +0.559**, accuracy 99.2 / 89.2 / 83.5%. The strongest scripted baseline, `grok_tactics` (a scripted replay of a strong Grok agent's tactics: the agent's runs and transcripts are in [docs/reports/grok-agent.md](docs/reports/grok-agent.md), the replay is `GrokTactics` in [`canary/baselines.py`](canary/baselines.py)), trails the solver by **0.070 ± 0.021 / 0.180 ± 0.040 / 0.252 ± 0.058**; the heuristic by 0.125 / 0.674 / 0.831.
+  - FR8's recalibration on 800 more seeds per tier (5000–5799, [CONTRACT §13](docs/CONTRACT.md)): solver **.779 / .632 / .575**, accuracy 99.6 / 88.7 / 84.8%; solver − grok_tactics **+.089 ± .016 / +.174 ± .025 / +.233 ± .040**.
+  - On hard the solver is honest rather than perfect: it abstains (no accusation, score 0) in about 12% of episodes instead of guessing.
+- **Easy is a sanity tier, not a headline.** The solver and the scripted baselines are close there, by design: the gap comes from the noise and adversaries in medium and hard.
+- **v1.2 → v1.3: why `status` no longer shows the true V.** On v1.2, `status` showed the true company value, so a same-day drop in V told the agent a leak had just happened, before it surfaced in the feed. Frontier agents read those same-day drops to time leaks. In its own report the Grok agent writes that leaks were "visible immediately as 0.04 V drops" and used "day-1 V drops" to narrow the suspects ([docs/reports/grok-agent.md](docs/reports/grok-agent.md)). That made the leak delay meaningless and the task easier than the real problem. v1.3 shows only *known* damage (surfaced leaks plus the agent's own costs); undetected damage still counts in the score. Set `rules.KNOWN_V_MODE = False` to get the v1.2 behaviour back.
 
 **Why the numbers are statistical.** The world behind a judge seed is derived with HMAC from a secret ([CONTRACT §8, §11](docs/CONTRACT.md)). The secret behind our Harbor image is not published, because it would reveal the judge-world moles. Without `CANARY_WORLD_SECRET`, `make reproduce` draws one fresh random secret and shares it across every agent in that run. The comparison is therefore paired, and the run prints only the secret's SHA-256 fingerprint. Each mean lands inside its CI rather than matching ours bit for bit. Committed frontier-agent runs were played on the team's own worlds, so they appear in a separate, unpaired "reported agent runs" block with their own CI. **For exact numbers**, run `CANARY_WORLD_SECRET=<any string> make reproduce`: the same string always produces an identical `results/judge_episodes.jsonl`. For a fast check use `REPRO_FAST=1 make reproduce` (5 seeds per tier, which CI runs), or `make test` for the full test suite.
 
@@ -48,13 +52,14 @@ The full spec is in [docs/CONTRACT.md](docs/CONTRACT.md). The agent receives eve
   - a careful mole that avoids widely distributed canaries;
   - leaks that surface in the feed late: 1–3 days on medium, 2–3 days on hard.
 
-  Hard also allows only 2 variants per canary and adds clearance constraints. The exact values live in [`canary/rules.py`](canary/rules.py) (`TIERS_VERSION = "v1.2"`).
+  Hard also allows only 2 variants per canary and adds clearance constraints. The exact values live in [`canary/rules.py`](canary/rules.py) (`TIERS_VERSION = "v1.3"`).
+- **What V you see (v1.3, known V).** `status` shows the value the company *knows* it has lost: damage from leaks that have already surfaced in the feed, plus the canary and restriction costs the agent itself paid. Damage from a leak that hasn't surfaced yet is invisible until it surfaces. The score uses the **true** V, which includes that undetected damage, so waiting still costs even when the shown V doesn't move. The agent is told this in the instructions ([CONTRACT §13](docs/CONTRACT.md)).
 - **Budget.** The agent gets 8 investigative calls per day (then it must `advance_day`) and 300 tool calls in total.
 - **Reward,** computed server-side from the ledger, never from agent text:
 
   | outcome | score |
   |---|---|
-  | correct accusation | **V**, the company value left (1.0 minus leak damage, canary and restriction costs) |
+  | correct accusation | **true V** at that moment: 1.0 minus all leak damage (surfaced or not), canary and restriction costs |
   | wrong accusation | **−1** |
   | no accusation (horizon or tool cap) | **0** |
 

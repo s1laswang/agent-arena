@@ -124,3 +124,53 @@ def test_hof_round_trips_through_dsl(tmp_path):
     for h in hof:
         s = MoleStrategy.from_json(h["strategy_json"])
         assert validate_strategy(s.to_json()) == h["strategy_json"]
+
+
+def test_hinted_heuristic_beats_heuristic_on_hard():
+    from canary.baselines import Heuristic, play
+    from canary.env import Env
+    from canary.forge.fitness import default_investigators
+    from canary.forge.investigators import HintedHeuristic
+    assert set(default_investigators()) == {"heuristic", "hinted_heuristic"}
+    h = sum(play(Env("hard", s), Heuristic(seed=s)) for s in range(8))
+    hh = sum(play(Env("hard", s), HintedHeuristic(seed=s)) for s in range(8))
+    assert hh > h
+
+
+def test_validate_with_stub_llm(tmp_path):
+    from canary.forge import validate as V
+    from canary.llm.stub import StubClient
+    hof = tmp_path / "hall_of_fame.jsonl"
+    s = {"rules": [], "default": {"leak": "random_seeded", "frame": "decoy"}}
+    hof.write_text(json.dumps({"rank": 1, "fitness": 0.5, "strategy_json": s}) + "\n")
+
+    def factory():
+        return StubClient(script=[{"tool_calls": [{"name": "accuse", "args": {"employee": "e00"}}]}])
+    rep = V.main(["--hof", str(hof), "--top", "1", "--agent", "stub", "--seeds", "0-1", "--tier", "hard",
+                  "--out", str(tmp_path / "v.json")], client_factory=factory)
+    assert [m["mole"] for m in rep["moles"]] == ["default", "hof1"]
+    for m in rep["moles"]:
+        assert m["solver_acc"] >= 0.5 and all(e["error"] is None for e in m["episodes"])
+        assert m["agent_score"] in (-1.0, ) or m["agent_score"] <= 1.0
+    assert (tmp_path / "v.json").exists()
+
+
+def test_min_fitness_and_acc_floor():
+    from canary.forge.fitness import tier_defaults
+    s = validate_strategy({"rules": [], "default": {"leak": "fewest_recipients", "frame": "decoy"}})
+    m = evaluate(s, INV, fake_factory, range(10), "hard", runner=fake_runner, fitness_mode="mean")
+    n = evaluate(s, INV, fake_factory, range(10), "hard", runner=fake_runner, fitness_mode="min")
+    assert n["fitness"] == min(v["regret"] for v in n["per_investigator"].values()) <= m["fitness"]
+    assert n["fitness"] == n["solver_score"] - max(v["score"] for v in n["per_investigator"].values()) or \
+        abs(n["fitness"] - (n["solver_score"] - max(v["score"] for v in n["per_investigator"].values()))) < 1e-9
+    strict = evaluate(s, INV, fake_factory, range(10), "hard", runner=fake_runner, min_solver_acc=1.01)
+    assert not strict["feasible"] and strict["fitness"] == -math.inf
+    assert tier_defaults("hard") == {"fitness_mode": "min", "min_solver_acc": 0.75}
+    assert tier_defaults("medium")["fitness_mode"] == "mean"
+
+
+def test_cli_fitness_flags(tmp_path):
+    assert E.main(["--fake", "--gens", "1", "--pop", "4", "--seeds", "0-3", "--workers", "1", "--tier", "hard",
+                   "--fitness", "mean", "--min-solver-acc", "0.9", "--out", str(tmp_path)]) == 0
+    ev = json.loads((tmp_path / "log.jsonl").read_text().splitlines()[0])["best_eval"]
+    assert ev["fitness_mode"] == "mean" and ev["min_solver_acc"] == 0.9

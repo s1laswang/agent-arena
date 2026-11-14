@@ -116,3 +116,34 @@
 - Go v1.3: known-V + a stronger solver + a grok_tactics baseline; FR8 recal; merge ~04:45; official gpt-5.5 20+20 + Codex 5+5 on v1.3. v1.2 is kept as the "clean evidence" record and before-picture.
 - Contingency v1.4 (only if v1.3 frontier >= 85%): 2 moles on hard, or a longer horizon with pipelined canaries.
 - Grok runs imported to data/runs/committed/grok (not replay-verified: per-process secret).
+
+## 04:40 v1.3 merged (0933805, 469 passed)
+- Known-V mechanics; solver v1.3 (latent leak days, decoy inference, tiny canaries, EV with expected true V; restriction probing off).
+- 800 fresh seeds: solver .779/.632/.575, acc 99.6/88.7/84.8%, no-accusation .3/11.3/11.4%. Paired solver - grok_tactics: +.089/+.174/+.233.
+- In flight: AGENTS official gpt-5.5 v1.3 run, FR8 J3 v2, INTEGRITY fuzz, HARNESS README refresh to v1.3.
+
+## 03:35 (real clock, from `date`) correction
+- The CEO entries headed "03:45" and "04:40" were actually written at about 03:25 and 03:33. From now on, CEO timestamps come from `date`. v1.3 merged around 03:30 real time.
+- J3 v2 (v1.3 solver data, 20k+2k, correct-only) is staged on FR8 for the Saturday training v2. J4 44200 has run 1h10m, still in the pilot tokenization.
+
+## 03:41 tick
+- justSilas e411cf1, 476 passed (last verified 3e31c20). Power on AC.
+- FR8: J4 44200 running 1h17m (pilot tokenization; training ~03:55-06:50, eval until 08:24). Sky 43143_4 still paused (requeuehold).
+- AGENTS: official v1.3 gpt-5.5 run in progress (20 medium + 20 hard, started ~03:33, 8 workers). Spend cap $150/night without Silas.
+- Forge: the evolved moles are not harder for gpt-5.5 (7/7 correct on 2 seeds). Framing: "a solver-constrained pipeline works; LLM-in-the-loop fitness is the morning step". J5b runs on v1.3.
+
+## 03:50 SPEND OVERRUN (for Silas)
+- OpenAI API spend tonight is about $195, above the CEO cap of $150 (set at about 03:30; AGENTS had not been tracking spend before that).
+  - v1.2 official gpt-5.5 20+20: $121.46 (~$3/episode)
+  - v1 directional: $24.4
+  - Forge HOF validation: ~$22.4
+  - killed/unlogged runs: ~$20-25
+  - Codex API: a few $.
+- All API-billed runs are stopped after their in-flight episodes (~10-12 v1.3 episodes). No further API spend without Silas.
+- Zero-marginal-cost path: Codex CLI on the ChatGPT login (only if its auth mode is verified); Gemini free credits in the morning.
+- v1.2 OFFICIAL FINAL (efef43b): medium gpt-5.5 .600 vs solver .690 (87%); hard .500 vs .584 (86%); Grok 97%/97%.
+
+## 03:49 spend + reference
+- The reference is consistent (9c236b3): v1.2 numbers = episodes played at db104c9; v1.3 numbers = solver at 0933805. The re-run rows are kept under committed/superseded/.
+- Codex gpt-5.5 over MCP, v1.2 5+5: medium .714 (5/5, 104% of solver); hard -0.02 (3/5; two wrong accusations at -1). Hard is high-variance for frontier agents under the -1 rule.
+- SPEND estimate now ~$220 (Codex cached-input assumption; worst case ~$340 if caching is not discounted). All API runs stopped except ~3 in-flight v1.3 episodes (~14 v1.3 episodes total). **Silas: check the OpenAI billing dashboard.**

@@ -288,7 +288,8 @@ def table_md(rows: list[Row], header: dict[str, Any]) -> str:
             else "exact: same secret, same numbers")
     out.append(f"- judge-world secret: {header['mode']}, sha256 fingerprint `{header['fingerprint']}` ({note})")
     out.append(f"- git: `{header['git_sha'][:12]}`, generated {header['timestamp']}, {header['seconds']:.1f} s")
-    out.append("- reward: V at accusation if correct (V starts at 1.0 and drops with every leak), "
+    out.append("- reward: true V at accusation if correct (V starts at 1.0 and drops with every leak, "
+               "including leaks that have not surfaced yet; v1.3 `status` shows only surfaced damage), "
                "-1 if wrong, 0 if no accusation")
     out.append("- accuracy = correct accusations / episodes; accused = episodes that ended in an accusation")
     out.append("- `/ solver` = agent mean / solver mean on the same tier (ratio of means); "

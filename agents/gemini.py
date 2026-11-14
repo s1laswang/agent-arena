@@ -13,8 +13,19 @@ if os.environ.get("SLEEPER_USED_FILE"):
 
     atexit.register(lambda: Path(os.environ["SLEEPER_USED_FILE"]).write_text("\n".join(sorted(_used))))
 DEFAULT_MODEL = "gemini-2.5-flash"
-_usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0}
+_usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0, "api_errors": 0}
+USAGE_FILE = "usage.jsonl"
 _client = None
+PRICES = json.loads((ROOT / "agents" / "prices.json").read_text())
+
+
+def price_for(model):
+    i = os.environ.get("SLEEPER_PRICE_IN_PER_M")
+    o = os.environ.get("SLEEPER_PRICE_OUT_PER_M")
+    if i and o:
+        return float(i), float(o), "env override"
+    p = PRICES.get(model)
+    return (p["in"], p["out"], p["source"] + " " + p["checked"]) if p else (2.0, 12.0, "assumed: model not in agents/prices.json")
 
 
 class GeminiUnavailable(Exception):
@@ -148,8 +159,9 @@ def _get_client():
     global _client
     if _client is None:
         from google import genai
+        from google.genai import types
 
-        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options=types.HttpOptions(timeout=300000))
     return _client
 
 
@@ -159,21 +171,24 @@ def _generate(model, system, messages, tools, temperature, seed):
     cfg = types.GenerateContentConfig(
         system_instruction=system or None,
         temperature=temperature,
-        seed=seed,
+        seed=None if seed is None else seed % 2**31,
         tools=[types.Tool(function_declarations=to_declarations(tools))] if tools else None,
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )
     delay = 1.0
-    for attempt in range(6):
+    att = int(os.environ.get("SLEEPER_RETRIES") or 6)
+    for attempt in range(att):
         try:
             return _get_client().models.generate_content(model=model, contents=_contents(messages), config=cfg)
-        except errors.APIError as e:
+        except Exception as e:
+            transient = type(e).__name__ in ("ReadTimeout", "ConnectTimeout", "ConnectError", "RemoteProtocolError", "ReadError", "TimeoutException", "ServerError")
             code = getattr(e, "code", 0) or 0
-            if (code == 429 or code >= 500) and attempt < 5:
+            if (transient or code == 429 or code >= 500) and attempt < att - 1:
                 _usage["retries"] += 1
                 time.sleep(delay)
                 delay = min(delay * 2, 30)
                 continue
+            _usage["api_errors"] += 1
             raise
 
 
@@ -210,7 +225,7 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
         _usage["in_tokens"] += um.prompt_token_count or 0
         _usage["out_tokens"] += um.candidates_token_count or 0
         CACHE.mkdir(parents=True, exist_ok=True)
-        with open(CACHE / "usage.jsonl", "a") as f:
+        with open(CACHE / USAGE_FILE, "a") as f:
             f.write(json.dumps({"model": model, "in": um.prompt_token_count or 0, "out": um.candidates_token_count or 0}) + "\n")
     out = _parse(resp)
     CACHE.mkdir(parents=True, exist_ok=True)

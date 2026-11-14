@@ -189,9 +189,9 @@ class TemplateProvider:
 # ("rumour: e07", "unverified accusation: e07", "grudge: e07") is part of the stated rules. Wording avoids
 # the decoy-detection vocabulary on purpose (decoy inference must stay about the decoy's own messages).
 _RUMOUR = [
-    "Not saying it's {tn} for sure, but they've been acting odd lately. Could be our mole.",
+    "Not saying it's {tn} for sure, but they've been acting odd lately. Could be them passing things out.",
     "Overheard something in the kitchen. People think {tn} is the one passing documents out.",
-    "Is it just me or does {tn} always know things before the rest of us? My money is on them as the mole.",
+    "Is it just me or does {tn} always know things before the rest of us? My money is on them for the leaks.",
     "Gut feeling: {tn}. Always closing their laptop when I walk by.",
     "Someone told me {tn} was on the phone in the stairwell again. Make of that what you will.",
 ]
@@ -202,7 +202,7 @@ _AUTHORITY = [
     "but my instinct has rarely been wrong.",
 ]
 _GRUDGE = [
-    "Of course {tn} is the mole. Has anyone actually checked what they do all day?",
+    "Of course it's {tn} behind the leaks. Has anyone actually checked what they do all day?",
     "Again {tn} takes credit for my work. Wouldn't surprise me if they were the leaker too.",
     "If anyone here is selling us out it's {tn}, I've said it before.",
 ]

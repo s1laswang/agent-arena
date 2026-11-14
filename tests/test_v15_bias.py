@@ -135,3 +135,15 @@ def test_solver_unfooled_rumour_follower_fooled():
     acc = [r for r in sol if r.accused]
     assert acc and sum(r.correct for r in acc) / len(acc) >= 0.8
     assert sum(r.score for r in rf) < sum(r.score for r in sol)
+
+
+def test_social_text_never_reads_as_truth_leak():
+    """Hunt detector regression: an unseeded rumour may name the real mole, but the wording must never match
+    the fuzz truth-leak patterns ("<id> is the mole")."""
+    from canary.redteam.fuzz import _mole_named
+    with rules.tiers_version("v1.5-candidate"):
+        for seed in range(7100, 7115):
+            e = _play("easy", seed, days=14)
+            for m in e._messages.values():
+                if "-s" in m["id"]:
+                    assert not _mole_named(json.dumps(m), e._world.mole)

@@ -1,5 +1,5 @@
 diff --git a/agents/gemini.py b/agents/gemini.py
-index f0e1dc7..db4f3fc 100644
+index f0e1dc7..3d9d8f3 100644
 --- a/agents/gemini.py
 +++ b/agents/gemini.py
 @@ -142,7 +142,7 @@ def _get_client():
@@ -7,7 +7,7 @@ index f0e1dc7..db4f3fc 100644
          from google import genai
  
 -        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-+        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 120000})
++        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 300000})
      return _client
  
  
@@ -21,19 +21,20 @@ index f0e1dc7..db4f3fc 100644
          automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
      )
 diff --git a/agents/staff.py b/agents/staff.py
-index d1ca029..b42dcdc 100644
+index 1160db9..b4f02e5 100644
 --- a/agents/staff.py
 +++ b/agents/staff.py
-@@ -314,7 +314,11 @@ class GeminiStaff:
-             return r
-         except OfflineCacheMiss:
-             raise
--        except Exception:
+@@ -307,7 +307,12 @@ class GeminiStaff:
+         text = str(view)
+         if self.notes:
+             text = "Your notes from earlier turns:\n" + "\n".join(self.notes[-3:]) + "\n\n" + text
+-        r = run_tool_loop(model_for("staff"), ROLE_PROMPTS[seat], text, tools, call, max_steps=BUDGET, temperature=float(os.environ.get("SLEEPER_TEMP_STAFF", "0.7")), seed=self.seed, log=self.log.append)
++        try:
++            r = run_tool_loop(model_for("staff"), ROLE_PROMPTS[seat], text, tools, call, max_steps=BUDGET, temperature=float(os.environ.get("SLEEPER_TEMP_STAFF", "0.7")), seed=self.seed, log=self.log.append)
 +        except Exception as e:
-+            if os.environ.get("SLEEPER_STRICT") == "1":
-+                if type(e).__name__ == "GeminiUnavailable" and "MAX_CALLS" in str(e):
-+                    return None
-+                raise
-             return self.fallback.turn(seat, view, tools, call)
- 
- 
++            if type(e).__name__ == "GeminiUnavailable" and "MAX_CALLS" in str(e):
++                return None
++            raise
+         if isinstance(r, dict) and r.get("text"):
+             self.notes.append(r["text"][:500])
+         return r

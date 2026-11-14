@@ -77,6 +77,8 @@ class Server:
                    CANARY_CONSUME_SECRET_FILES="1")
         if os.environ.get("CANARY_TIERS_OVERRIDE"):
             env["CANARY_TIERS_OVERRIDE"] = os.environ["CANARY_TIERS_OVERRIDE"]
+        if os.environ.get("CANARY_PROVIDER"):
+            env["CANARY_PROVIDER"] = os.environ["CANARY_PROVIDER"]
         log = subprocess.DEVNULL
         if log_dir:
             self.log_path = Path(log_dir) / f"server-{self.tier}-{self.seed}.log"

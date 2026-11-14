@@ -150,6 +150,41 @@ def to_markdown(rows, run, tier, seeds, tier_params: dict, code_sha="?", tiers_v
     return "\n".join(out) + "\n"
 
 
+OUTCOME_EVENTS = ("leak", "framed")
+OUTCOME_AGENTS = ("do_nothing", "solver")
+
+
+def outcome_trace(strat: dict, tier: str, seeds, agents=OUTCOME_AGENTS) -> list[tuple]:
+    """World-level mole events (leak doc_id / frame target, by day) under fixed investigators."""
+    from canary.env import Env
+    from canary.eval import make_policy_factory, run_episode
+    from canary.mole.dsl import MoleStrategy
+    out = []
+    for ag in agents:
+        fac = make_policy_factory(ag)
+        for s in seeds:
+            env = Env(tier, s, mole_strategy=MoleStrategy.from_json(strat))
+            run_episode(env, fac(s))
+            out += [(ag, s, e.day, e.event, e.detail.get("doc_id") or e.detail.get("employee"))
+                    for e in env.ledger() if e.event in OUTCOME_EVENTS]
+    return out
+
+
+def _outcome_task(args):
+    sid, strat, tier, seeds = args
+    import hashlib
+    tr = outcome_trace(strat, tier, seeds)
+    return sid, hashlib.sha256(json.dumps(tr).encode()).hexdigest()[:10]
+
+
+def outcome_hashes(hof: list[dict], tier: str, seeds, workers: int = 1) -> dict[str, str]:
+    tasks = [(f"hof#{h.get('rank', i + 1)}", h["strategy_json"], tier, list(seeds)) for i, h in enumerate(hof)]
+    if workers > 1:
+        with ProcessPoolExecutor(max_workers=workers) as ex:
+            return dict(ex.map(_outcome_task, tasks))
+    return dict(map(_outcome_task, tasks))
+
+
 HOF_KEYS = ["rank", "fitness", "solver_score", "solver_acc", "per_investigator", "strategy_json"]  # evolve._write_hof
 
 
@@ -172,9 +207,10 @@ def survivors(rows: list[dict], hof: list[dict]) -> list[dict]:
     for r in rows:
         if r["strategy"] == "default" or str(r["feasible"]) not in ("True", "1", "true"):
             continue
-        b = best.get(r["behaviour"])
+        key = r.get("outcome") or r["behaviour"]   # outcome-level dedupe when available
+        b = best.get(key)
         if b is None or float(r["regret"]) > float(b["regret"]):
-            best[r["behaviour"]] = r
+            best[key] = r
     keep = sorted(best.values(), key=lambda r: -float(r["regret"]))
     return [{"rank": i + 1, "fitness": float(r["regret"]), "solver_score": float(r["solver_score"]),
              "solver_acc": float(r["solver_acc"]),
@@ -192,12 +228,27 @@ def write_survivors(rows, hof, path: str, meta: dict) -> list[dict]:
     return out
 
 
+def outcome_md(rows, groups, seeds) -> str:
+    by = {r["strategy"]: r for r in rows}
+    f = lambda v: f"{float(v):.3f}"
+    out = [f"# Outcome-level dedupe", "",
+           f"**Distinct moles by outcome: {len(groups)}** (from {sum(map(len, groups.values()))} hall-of-fame entries). "
+           f"Outcome = leak/frame ledger events (day, doc_id / frame target) under do_nothing and solver, hard seeds {seeds}.",
+           "", "| outcome group | members | behaviour groups inside | solver score | regret (strongest) |", "|---|---|---|---|---|"]
+    for h, mem in groups.items():
+        r = by[mem[0]]
+        out.append(f"| {h} | {', '.join(mem)} | {len({by[m]['behaviour'] for m in mem})} | "
+                   f"{f(r['solver_score'])} | {f(r['regret'])} |")
+    return "\n".join(out) + "\n"
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="forge HoF re-validation")
     ap.add_argument("run"); ap.add_argument("--tier", default="hard"); ap.add_argument("--seeds", default="2000:2200")
     ap.add_argument("--workers", type=int, default=2); ap.add_argument("--out", required=True)
     ap.add_argument("--limit", type=int)
     ap.add_argument("--hof-out", help="write survivors (evolve HoF format) here, e.g. data/forge/hall_of_fame_v1.2.jsonl")
+    ap.add_argument("--outcome-seeds", help="a:b; adds outcome-level dedupe (leak/frame trace under do_nothing+solver)")
     ap.add_argument("--from-csv", help="skip evaluation; reuse rows from a previous --out CSV")
     a = ap.parse_args(argv)
     from canary.rules import TIERS
@@ -218,8 +269,26 @@ def main(argv=None):
     dirty = subprocess.run(["git", "status", "--porcelain", "--", "canary"], capture_output=True, text=True).stdout.strip()
     logp = Path(a.run) / "log.jsonl"
     gen = json.loads(logp.read_text().splitlines()[-1])["gen"] if logp.exists() else "?"
+    groups_out = None
+    if a.outcome_seeds:
+        olo, ohi = (int(x) for x in a.outcome_seeds.split(":"))
+        oh = outcome_hashes(hof, a.tier, range(olo, ohi), a.workers)
+        for r in rows:
+            r["outcome"] = oh.get(r["strategy"], "default")
+        groups_out = {}
+        for r in rows:
+            if r["strategy"] != "default":
+                groups_out.setdefault(r["outcome"], []).append(r["strategy"])
+        write_rows(a.out + ".csv", rows)
+        Path(a.out + ".outcome.md").write_text(outcome_md(rows, groups_out, a.outcome_seeds))
+        print(Path(a.out + ".outcome.md").read_text())
     if a.hof_out:
         write_survivors(rows, hof, a.hof_out, {
+            **({"dedupe_method": f"outcome: sha of (agent, seed, day, event, doc_id|frame target) for leak/framed ledger "
+                                 f"events under do_nothing and solver on hard seeds {a.outcome_seeds}; best v1.x-fitness "
+                                 f"(regret) member kept per group",
+                "outcome_groups": {v[0]: v for v in groups_out.values()}} if groups_out else
+               {"dedupe_method": "behaviour: sha of all mole decide() outputs on eval episodes"}),
             "code_sha": sha + ("+dirty" if dirty else ""), "tiers_version": TIERS_VERSION, "tier": a.tier,
             "seeds": f"{lo}:{hi}", "hof_source": str(Path(a.run) / "hall_of_fame.jsonl"), "hof_generation": gen,
             "command": "python -m fr8.analysis.forge_validate " + " ".join(argv if argv is not None else __import__("sys").argv[1:]),

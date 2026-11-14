@@ -48,3 +48,7 @@
 - The strongest investigator is hinted_heuristic for every mole. Regret vs the strongest investigator on fresh seeds is 0.467–0.470 ± 0.079, versus 0.735 in-run on seeds 0–39. That suggests overfitting to the dev seeds; fresh-seed regret is still +0.14 above the default mole's 0.326.
 - Groups hof#8 and hof#13 have identical outcomes but different decision traces. hof#1 differs only marginally from them. On these numbers the 3 groups are effectively 1–2 practically distinct moles.
 - The default mole passes strict §7 on v1.3 hard (solver acc 0.855).
+
+## Outcome-level dedupe (supersedes the behaviour count above)
+**Distinct moles by outcome: 1.** All 20 entries produce identical leak/frame event traces (day, doc_id / frame target) under do_nothing and the solver on hard seeds 6000–6019 (`forge_v13_validation.outcome.md`). The 3 "behaviour groups" differ only in decisions that never change the world under those investigators. `data/forge/hall_of_fame_v1.3.jsonl` now has 1 entry: the best-regret member, hof#8, with regret vs strongest 0.470 ± 0.079.
+- hof#1's HintedHeuristic score (.172 vs .169) comes from a real but marginal difference. hof#1's rule 2 (`n_restricted_colleagues > 4 and day < 12`) leaks fewest_recipients with no frame, while hof#8 leaks newest and frames most_restricted_peer. That rule fires only when the investigator has restricted more than 4 people, which do_nothing and the solver never do. Under HintedHeuristic the traces differ on 1 seed of 200 (6059), which accounts for the 0.003 difference.

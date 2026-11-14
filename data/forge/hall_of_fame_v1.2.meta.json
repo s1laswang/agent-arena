@@ -6,7 +6,7 @@
   "hof_source": "J5 run-v1-0224 final hall_of_fame.jsonl (copy: fr8/analysis/out/forge_v12_hof_source_gen500.jsonl)",
   "hof_generation": "499 (last of 500 gens, 0-based; final)",
   "feasibility": "solver_score >= 0.5 x default-mole solver score AND solver_acc >= 0.85; deduped by behaviour",
-  "n_survivors": 2,
+  "n_survivors": 1,
   "source_strategies": [
     "hof#1",
     "hof#2",
@@ -30,5 +30,34 @@
     "hof#20"
   ],
   "write_command": "python -m fr8.analysis.forge_validate /tmp/j5final/run-v1-0224 --tier hard --seeds 2000:2200 --workers 3 --out fr8/analysis/out/forge_v12_validation --hof-out data/forge/hall_of_fame_v1.2.jsonl",
-  "note": "default mole fails the 0.85 accuracy bar on v1.2 hard (solver acc 0.79); survivors have solver acc 0.855"
+  "note": "default mole fails the 0.85 accuracy bar on v1.2 hard (solver acc 0.79); survivors have solver acc 0.855",
+  "dedupe_method": "outcome: sha of (agent, seed, day, event, doc_id|frame target) for leak/framed ledger events under do_nothing and solver on hard seeds 6000:6020; best v1.x-fitness (regret) member kept per group (outcome hashes computed at code ef6efe0, tiers v1.3; hard params unchanged v1.2->v1.3)",
+  "outcome_groups": {
+    "hof#1": [
+      "hof#1",
+      "hof#2",
+      "hof#3",
+      "hof#4",
+      "hof#5",
+      "hof#6",
+      "hof#7",
+      "hof#8",
+      "hof#9",
+      "hof#10",
+      "hof#11",
+      "hof#12",
+      "hof#13",
+      "hof#14",
+      "hof#15",
+      "hof#16",
+      "hof#17",
+      "hof#18",
+      "hof#19",
+      "hof#20"
+    ]
+  },
+  "outcome_dedupe_command": "python -m fr8.analysis.forge_validate /tmp/v12run --tier hard --seeds 2000:2200 --workers 3 --out fr8/analysis/out/forge_v12_validation --from-csv fr8/analysis/out/forge_v12_validation.csv --outcome-seeds 6000:6020 --hof-out /tmp/v12_candidate.jsonl",
+  "group_sizes": {
+    "hof#1": 20
+  }
 }

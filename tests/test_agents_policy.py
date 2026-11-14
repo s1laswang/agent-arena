@@ -99,3 +99,71 @@ def test_run_id():
     from canary.agents.runlog import run_id, parse_seeds
     assert ":" not in run_id("openai:gpt-5-mini", "medium") and run_id("a:b", "easy").startswith("a_b-easy-")
     assert parse_seeds("0-2,7") == [0, 1, 2, 7]
+
+
+# ---------------- frontier runners (command construction + hygiene only; live path untested)
+from pathlib import Path
+
+
+def test_opencode_cmd_and_hygiene():
+    from canary.agents.frontier import opencode_run
+    from canary.agents.frontier.common import REPO_ROOT, assert_clean, make_clean_workdir
+    wd = make_clean_workdir()
+    cmd = opencode_run.build_cmd(wd, "PROMPT", "gpt-5.6-sol", "http://127.0.0.1:8765/mcp")
+    assert cmd[:4] == ["opencode", "run", "--model", "openai/gpt-5.6-sol"] and cmd[-1] == "PROMPT"
+    cfg = json.loads((wd / "opencode.json").read_text())
+    assert cfg["$schema"] == "https://opencode.ai/config.json"
+    assert cfg["mcp"]["canary"] == {"type": "remote", "url": "http://127.0.0.1:8765/mcp", "enabled": True}
+    assert cfg["permission"]["bash"] == "deny"
+    assert_clean(wd, opencode_run.FILES)
+    assert REPO_ROOT not in wd.parents
+    (wd / "env.py").write_text("x")
+    with pytest.raises(AssertionError):
+        assert_clean(wd, opencode_run.FILES | {"env.py"})
+
+
+def test_codex_cmd():
+    from canary.agents.frontier import codex_run
+    from canary.agents.frontier.common import make_clean_workdir
+    wd = make_clean_workdir()
+    cmd = codex_run.build_cmd(wd, "P", "gpt-5-mini", "http://h:1/mcp")
+    s = " ".join(cmd)
+    assert cmd[:2] == ["codex", "exec"] and "--skip-git-repo-check" in cmd and "--ignore-user-config" in cmd
+    assert 'mcp_servers.canary.url="http://h:1/mcp"' in cmd
+    assert cmd[cmd.index("--cd") + 1] == str(wd) and "--disable shell_tool" in s
+    assert "config.toml" not in s and list(wd.iterdir()) == []
+
+
+def test_child_env_strips_keys(monkeypatch):
+    from canary.agents.frontier.common import child_env
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-x")
+    assert "OPENAI_API_KEY" not in child_env()
+
+
+def test_to_episode_shapes():
+    from canary.agents.frontier.common import to_episode
+    ledger = [{"t": 0, "day": 1, "event": "leak", "detail": {}},
+              {"t": 5, "day": 3, "event": "accused", "detail": {"employee": "e04"}},
+              {"t": 5, "day": 3, "event": "episode_end", "detail": {"reason": "accused", "score": 0.8, "correct": True}}]
+    hist = [{"t": 0, "day": 1, "tool": "status", "args": {}, "result": {"ok": True}}]
+    r = to_episode("easy", 1, "codex:m", ledger, hist)
+    assert (r.accused, r.correct, r.score, r.end_reason, r.final_day, len(r.steps)) == ("e04", True, 0.8, "accused", 3, 1)
+    full = {"score": 0.5, "end_reason": "accused", "accused": "e01", "correct": True, "final_day": 2, "steps": hist}
+    assert to_episode("easy", 1, "a", full, []).score == 0.5
+    assert to_episode("easy", 1, "a", [], []).end_reason == "error"
+
+
+def test_run_seeds_fake_runner(tmp_path):
+    from canary.agents.frontier import opencode_run
+    from canary.agents.frontier.common import RunSpec, ServerCfg, run_seeds
+    seen = []
+
+    def runner(argv, cwd, **kw):
+        seen.append(sorted(p.name for p in Path(cwd).iterdir()))
+        return type("P", (), {"returncode": 0, "stdout": "{}", "stderr": ""})()
+
+    spec = RunSpec("opencode:openai/m", "easy", [0, 1], tmp_path / "r", ServerCfg())
+    out = run_seeds(spec, lambda wd, p: opencode_run.build_cmd(wd, p, "openai/m", spec.server.mcp_url),
+                    opencode_run.FILES, fetch=False, runner=runner)
+    assert seen == [["opencode.json"], ["opencode.json"]]
+    assert (out / "transcripts" / "0.txt").exists() and json.loads((out / "meta.json").read_text())["provider"] == "opencode"

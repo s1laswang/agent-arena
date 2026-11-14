@@ -28,7 +28,8 @@ def test_status_shows_known_v_never_unsurfaced():
             assert st.data["V"] == _expected(env)
             if any(f["surfaced_day"] > env.day for f in env._feed):
                 hidden_seen += 1
-                assert st.data["V"] > round(env.V, 10)
+                # strictly higher unless the known V is already clamped at 0 (possible over 21 days of costs)
+                assert st.data["V"] > round(env.V, 10) or st.data["V"] == 0.0
             r = env.call("advance_day", {})
             if r.ok and "V" in r.data:
                 assert r.data["V"] == _expected(env)

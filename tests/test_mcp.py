@@ -129,7 +129,8 @@ def test_list_tools_matches_env_spec(srv):
 
 
 @pytest.mark.parametrize("policy_cls,tier,seed", [(DoNothing, "easy", 5), (StopEarly, "medium", 7),
-                                                  (StopEarly, "easy", 1), (SolverPolicy, "hard", 3)])
+                                                  (StopEarly, "easy", 1), (SolverPolicy, "hard", 3),
+                                                  (DoNothing, "hard", 2), (SolverPolicy, "hard", 11)])  # v1.4: 21 days, 2 canaries/day
 def test_episode_over_mcp_matches_in_process(srv, policy_cls, tier, seed):
     srv.reset(tier, seed)
     mk = (lambda: policy_cls()) if policy_cls is SolverPolicy else (lambda: policy_cls(seed=seed))

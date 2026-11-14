@@ -18,12 +18,20 @@ PRICING = ("gpt-5.5 list prices per 1M tokens: input $5.00, cached input $0.50, 
            "$0.50; the upper bound bills all input at $5.00.")
 
 
+def _current_tiers_version() -> str:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from canary.rules import TIERS_VERSION
+    return TIERS_VERSION
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--staging", default="data/runs/staging-v1.3")
     ap.add_argument("--root", default="data/runs/committed/v1.3")
     ap.add_argument("--planned", default="0-9", help="the approved plan's seeds; others are budget extensions")
     ap.add_argument("--extension", default=None, help="extension seed range attempted as budget allowed, e.g. 10-19")
+    ap.add_argument("--tiers-version", default=_current_tiers_version(), help="rules.TIERS_VERSION the runs were played under")
     a = ap.parse_args(argv)
     lo, hi = (int(x) for x in a.planned.split("-"))
     planned = list(range(lo, hi + 1))
@@ -69,7 +77,7 @@ def main(argv=None) -> int:
                 ext = list(range(elo, ehi + 1))
             meta = {k: m0.get(k) for k in ("agent", "model", "provider", "harness", "steps_source", "context",
                                            "reasoning_effort", "reasoning_effort_source", "api") if m0.get(k) is not None}
-            meta.update({"tier": tier, "tiers_version": "v1.3", "seeds": seeds, "planned_seeds": planned,
+            meta.update({"tier": tier, "tiers_version": a.tiers_version, "seeds": seeds, "planned_seeds": planned,
                          "status": ("complete" if not missing else f"INCOMPLETE: seeds {missing} not run (budget stop)")
                          + (f"; extension seeds {ext[0]}-{ext[-1]} as budget allowed: ran {[s for s in seeds if s in ext]}"
                             if ext else ""),

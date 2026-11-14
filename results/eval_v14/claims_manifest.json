@@ -1,0 +1,456 @@
+{
+  "schema_version": "eval_claims_manifest_v2",
+  "tiers_version": "v1.4",
+  "float_tolerance": 1e-09,
+  "overall_passed": true,
+  "gates": [
+    {
+      "gate": "gate1_headline_and_gap_table_numbers",
+      "passed": true,
+      "violation_count": 0,
+      "warning_count": 1
+    },
+    {
+      "gate": "gate2_replay_cache_completeness_and_step_consistency",
+      "passed": true,
+      "violation_count": 0,
+      "warning_count": 0
+    },
+    {
+      "gate": "gate3_baselines_and_judge_spread_bands",
+      "passed": true,
+      "violation_count": 0,
+      "warning_count": 0
+    },
+    {
+      "gate": "gate4_version_and_preregistration_hygiene",
+      "passed": true,
+      "violation_count": 0,
+      "warning_count": 0
+    },
+    {
+      "gate": "gate5_protected_paths_and_secret_hygiene",
+      "passed": true,
+      "violation_count": 0,
+      "warning_count": 0
+    }
+  ],
+  "paired_headline_claims": {
+    "opencode_gemini_4_carbon_hard": {
+      "n": 30,
+      "mean": 0.322333333333,
+      "ci": 0.198895372191,
+      "accuracy": 0.833333333333,
+      "accused_rate": 0.966666666667,
+      "p_accused": 0.881827586207,
+      "solver_same_seeds": 0.499,
+      "ratio": 0.645958583834,
+      "ratio_lo": 0.238195912615,
+      "ratio_hi": 0.983396226415,
+      "post_expected": 0.359545,
+      "solver_post_expected": 0.499296666667,
+      "post_expected_ratio": 0.720102944809,
+      "post_expected_lo": 0.517302597347,
+      "post_expected_hi": 0.912062275385,
+      "score_ci": "+0.322 +/- 0.199",
+      "raw_ratio_ci": "65% [24%, 98%]",
+      "luck_adjusted_ratio_ci": "72% [52%, 91%]",
+      "solver_same_seeds_score_ci": "+0.499 +/- 0.119"
+    },
+    "opencode_gemini_4_carbon_medium": {
+      "n": 30,
+      "mean": 0.713,
+      "ci": 0.041975822926,
+      "accuracy": 1.0,
+      "accused_rate": 1.0,
+      "p_accused": 0.9615,
+      "solver_same_seeds": 0.645,
+      "ratio": 1.105426356589,
+      "ratio_lo": 0.993330157218,
+      "ratio_hi": 1.269821757837,
+      "post_expected": 0.651838666667,
+      "solver_post_expected": 0.645,
+      "post_expected_ratio": 1.010602583979,
+      "post_expected_lo": 0.853216456288,
+      "post_expected_hi": 1.186430730479,
+      "score_ci": "+0.713 +/- 0.042",
+      "raw_ratio_ci": "111% [99%, 127%]",
+      "luck_adjusted_ratio_ci": "101% [85%, 119%]",
+      "solver_same_seeds_score_ci": "+0.645 +/- 0.087"
+    },
+    "inproc_gemini_4_carbon_hard": {
+      "n": 30,
+      "mean": 0.473,
+      "ci": 0.117773156046,
+      "accuracy": 0.933333333333,
+      "accused_rate": 0.966666666667,
+      "p_accused": 0.929827586207,
+      "solver_same_seeds": 0.499,
+      "ratio": 0.947895791583,
+      "ratio_lo": 0.622128174123,
+      "ratio_hi": 1.4,
+      "post_expected": 0.421033333333,
+      "solver_post_expected": 0.499296666667,
+      "post_expected_ratio": 0.843252842332,
+      "post_expected_lo": 0.649911460209,
+      "post_expected_hi": 1.057789935204,
+      "score_ci": "+0.473 +/- 0.118",
+      "raw_ratio_ci": "95% [62%, 140%]",
+      "luck_adjusted_ratio_ci": "84% [65%, 106%]",
+      "solver_same_seeds_score_ci": "+0.499 +/- 0.119"
+    },
+    "inproc_gemini_4_carbon_medium": {
+      "n": 30,
+      "mean": 0.530333333333,
+      "ci": 0.138320200878,
+      "accuracy": 0.833333333333,
+      "accused_rate": 0.866666666667,
+      "p_accused": 0.928576923077,
+      "solver_same_seeds": 0.645,
+      "ratio": 0.822222222222,
+      "ratio_lo": 0.563854310742,
+      "ratio_hi": 1.076013513514,
+      "post_expected": 0.479186,
+      "solver_post_expected": 0.645,
+      "post_expected_ratio": 0.742924031008,
+      "post_expected_lo": 0.517420454545,
+      "post_expected_hi": 0.990730545877,
+      "score_ci": "+0.530 +/- 0.138",
+      "raw_ratio_ci": "82% [56%, 108%]",
+      "luck_adjusted_ratio_ci": "74% [52%, 99%]",
+      "solver_same_seeds_score_ci": "+0.645 +/- 0.087"
+    },
+    "opencode_gemini_3_5_flash_hard": {
+      "n": 30,
+      "mean": 0.373,
+      "ci": 0.176578012351,
+      "accuracy": 0.9,
+      "accused_rate": 1.0,
+      "p_accused": 0.709533333333,
+      "solver_same_seeds": 0.499,
+      "ratio": 0.74749498998,
+      "ratio_lo": 0.358616101131,
+      "ratio_hi": 1.228313671062,
+      "post_expected": 0.109887666667,
+      "solver_post_expected": 0.499296666667,
+      "post_expected_ratio": 0.220084919453,
+      "post_expected_lo": -0.226317083604,
+      "post_expected_hi": 0.632275217882,
+      "score_ci": "+0.373 +/- 0.177",
+      "raw_ratio_ci": "75% [36%, 123%]",
+      "luck_adjusted_ratio_ci": "22% [-23%, 63%]",
+      "solver_same_seeds_score_ci": "+0.499 +/- 0.119",
+      "in_committed_paired_table": false
+    }
+  },
+  "solver_paired_reference": {
+    "hard": {
+      "n": 30,
+      "mean": 0.499,
+      "ci": 0.119297492107,
+      "score_ci": "+0.499 +/- 0.119",
+      "post_expected": 0.499296666667
+    },
+    "medium": {
+      "n": 30,
+      "mean": 0.645,
+      "ci": 0.087142317207,
+      "score_ci": "+0.645 +/- 0.087",
+      "post_expected": 0.645
+    }
+  },
+  "committed_paired_rows_verified": 14,
+  "tiers_version_runtime": "v1.4",
+  "frontier_v14_runs": [
+    {
+      "run_dir": "v1.4/opencode-gemini-4-carbon/medium",
+      "tier": "medium",
+      "agent": "opencode:google/gemini-4-carbon",
+      "n_total": 30,
+      "n_valid": 30,
+      "n_invalid": 0,
+      "duplicate_seed_count": 0,
+      "valid_timeout_or_error": 0,
+      "seeds_exact_match": true,
+      "seed_min": 0,
+      "seed_max": 29,
+      "replay_matched": 30,
+      "replay_agreement_rate": 1.0,
+      "mean_score": 0.713
+    },
+    {
+      "run_dir": "v1.4/opencode-gemini-4-carbon/hard",
+      "tier": "hard",
+      "agent": "opencode:google/gemini-4-carbon",
+      "n_total": 30,
+      "n_valid": 30,
+      "n_invalid": 0,
+      "duplicate_seed_count": 0,
+      "valid_timeout_or_error": 0,
+      "seeds_exact_match": true,
+      "seed_min": 0,
+      "seed_max": 29,
+      "replay_matched": 30,
+      "replay_agreement_rate": 1.0,
+      "mean_score": 0.322333
+    },
+    {
+      "run_dir": "v1.4/inproc-gemini-4-carbon/medium",
+      "tier": "medium",
+      "agent": "gemini:gemini-4-carbon",
+      "n_total": 30,
+      "n_valid": 30,
+      "n_invalid": 0,
+      "duplicate_seed_count": 0,
+      "valid_timeout_or_error": 0,
+      "seeds_exact_match": true,
+      "seed_min": 0,
+      "seed_max": 29,
+      "replay_matched": 30,
+      "replay_agreement_rate": 1.0,
+      "mean_score": 0.530333
+    },
+    {
+      "run_dir": "v1.4/inproc-gemini-4-carbon/hard",
+      "tier": "hard",
+      "agent": "gemini:gemini-4-carbon",
+      "n_total": 30,
+      "n_valid": 30,
+      "n_invalid": 0,
+      "duplicate_seed_count": 0,
+      "valid_timeout_or_error": 0,
+      "seeds_exact_match": true,
+      "seed_min": 0,
+      "seed_max": 29,
+      "replay_matched": 30,
+      "replay_agreement_rate": 1.0,
+      "mean_score": 0.473
+    },
+    {
+      "run_dir": "v1.4/opencode-gemini-3.5-flash/hard",
+      "tier": "hard",
+      "agent": "opencode:google/gemini-3.5-flash",
+      "n_total": 30,
+      "n_valid": 30,
+      "n_invalid": 0,
+      "duplicate_seed_count": 0,
+      "valid_timeout_or_error": 0,
+      "seeds_exact_match": true,
+      "seed_min": 0,
+      "seed_max": 29,
+      "replay_matched": 30,
+      "replay_agreement_rate": 1.0,
+      "mean_score": 0.373
+    }
+  ],
+  "solver_v14_runs": [
+    {
+      "run_dir": "v1.4/reference/solver:medium",
+      "tier": "medium",
+      "agent": "solver",
+      "n_total": 30,
+      "n_valid": 30,
+      "n_invalid": 0,
+      "duplicate_seed_count": 0,
+      "valid_timeout_or_error": 0,
+      "seeds_exact_match": true,
+      "seed_min": 0,
+      "seed_max": 29,
+      "replay_matched": 30,
+      "replay_agreement_rate": 1.0,
+      "mean_score": 0.645
+    },
+    {
+      "run_dir": "v1.4/reference/solver:hard",
+      "tier": "hard",
+      "agent": "solver",
+      "n_total": 30,
+      "n_valid": 30,
+      "n_invalid": 0,
+      "duplicate_seed_count": 0,
+      "valid_timeout_or_error": 0,
+      "seeds_exact_match": true,
+      "seed_min": 0,
+      "seed_max": 29,
+      "replay_matched": 30,
+      "replay_agreement_rate": 1.0,
+      "mean_score": 0.499
+    }
+  ],
+  "ladder_summary": {
+    "file": "results/gemini/ladder_episodes.jsonl.gz",
+    "present": true,
+    "native_valid_episodes": 320,
+    "native_invalid_episodes": 0,
+    "imported_inproc_valid_episodes": 37,
+    "total_ladder_episodes": 357,
+    "valid_error_or_timeout_episodes": 0,
+    "invariant_violations": 0,
+    "min_score": -1.0,
+    "max_score": 0.95
+  },
+  "judge_episode_baselines": {
+    "do_nothing": {
+      "easy": {
+        "n": 40,
+        "mean": 0.0,
+        "max_abs": 0.0
+      },
+      "medium": {
+        "n": 40,
+        "mean": 0.0,
+        "max_abs": 0.0
+      },
+      "hard": {
+        "n": 40,
+        "mean": 0.0,
+        "max_abs": 0.0
+      }
+    },
+    "stop_early": {
+      "easy": {
+        "n": 40,
+        "mean": 0.0,
+        "max_abs": 0.0
+      },
+      "medium": {
+        "n": 40,
+        "mean": 0.0,
+        "max_abs": 0.0
+      },
+      "hard": {
+        "n": 40,
+        "mean": 0.0,
+        "max_abs": 0.0
+      }
+    },
+    "guess_day1": {
+      "easy": {
+        "n": 40,
+        "mean": -0.85
+      },
+      "medium": {
+        "n": 40,
+        "mean": -0.95
+      },
+      "hard": {
+        "n": 40,
+        "mean": -0.95
+      }
+    }
+  },
+  "baseline_zeros": {
+    "easy": {
+      "do_nothing": "+0.000 +/- 0.000",
+      "stop_early": "+0.000 +/- 0.000"
+    },
+    "medium": {
+      "do_nothing": "+0.000 +/- 0.000",
+      "stop_early": "+0.000 +/- 0.000"
+    },
+    "hard": {
+      "do_nothing": "+0.000 +/- 0.000",
+      "stop_early": "+0.000 +/- 0.000"
+    }
+  },
+  "guess_day1_spreads": {
+    "easy": {
+      "builds": 300,
+      "mean": -0.8385,
+      "sd": 0.090480416034,
+      "p5": -0.95,
+      "p95": -0.7,
+      "max": -0.55
+    },
+    "medium": {
+      "builds": 300,
+      "mean": -0.906166666667,
+      "sd": 0.064426766563,
+      "p5": -1.0,
+      "p95": -0.8,
+      "max": -0.7
+    },
+    "hard": {
+      "builds": 300,
+      "mean": -0.952833333333,
+      "sd": 0.0447995038,
+      "p5": -1.0,
+      "p95": -0.85,
+      "max": -0.8
+    }
+  },
+  "solver_spreads": {
+    "easy": {
+      "builds": 300,
+      "mean": 0.774321666667,
+      "sd": 0.020372212382,
+      "p5": 0.74145,
+      "p95": 0.8040125
+    },
+    "medium": {
+      "builds": 300,
+      "mean": 0.630275,
+      "sd": 0.03977129696,
+      "p5": 0.5603875,
+      "p95": 0.6869125
+    },
+    "hard": {
+      "builds": 300,
+      "mean": 0.567380833333,
+      "sd": 0.049658080149,
+      "p5": 0.485225,
+      "p95": 0.6397625
+    }
+  },
+  "oracle_band": {
+    "source": "results/oracle_range_v1.4.json",
+    "tier": "hard",
+    "k": 10,
+    "builds": 200,
+    "p5_exact": 0.393,
+    "p95_exact": 0.67805,
+    "mean_exact": 0.56938,
+    "sd_exact": 0.094468923395,
+    "p5": "+0.39",
+    "p95": "+0.68",
+    "mean": "+0.569",
+    "sd": "0.094"
+  },
+  "version_hygiene": {
+    "paired_groups_checked": 14,
+    "judge_table_v14_rows_checked": 17,
+    "v14_meta_files_checked": 19,
+    "preregistered_frontier_cohorts": 5,
+    "preregistration_rule_verified": true,
+    "active_docs_checked": [
+      "README.md",
+      "docs/DEMO.md",
+      "docs/DIFFICULTY.md",
+      "docs/EXPLOITS.md",
+      "docs/reports/gap.md",
+      "results/judge_table.md"
+    ],
+    "historical_disclosures_allowed": [
+      "docs/DEMO.md:56 (frontier_gap_not_established: historical/disclosed)",
+      "docs/DEMO.md:146 (frontier_gap_not_established: historical/disclosed)",
+      "docs/reports/gap.md:13 (superseded_60_ci: historical/disclosed)"
+    ]
+  },
+  "protected_path_rules_count": 15,
+  "secret_pattern_rules_count": 7,
+  "warnings": [
+    {
+      "code": "PENDING_PROTECTED_TABLE_REFRESH",
+      "severity": "WARN",
+      "run_dir": "v1.4/opencode-gemini-3.5-flash/hard",
+      "agent": "opencode:google/gemini-3.5-flash",
+      "tier": "hard",
+      "n": 30,
+      "score_ci": "+0.373 +/- 0.177",
+      "raw_ratio_ci": "75% [36%, 123%]",
+      "luck_adjusted_ratio_ci": "22% [-23%, 63%]",
+      "judge_table_replayed": true,
+      "message": "opencode-gemini-3.5-flash/hard (n=30, raw 75% [36%, 123%], luck-adjusted 22% [-23%, 63%]) is committed in data/runs/committed/v1.4/ and replayed in results/judge_table.md (+0.373 +/- 0.177), ready for Silas to refresh into paired_table_gemini.md and paired_table_gemini.json (protected path)."
+    }
+  ]
+}

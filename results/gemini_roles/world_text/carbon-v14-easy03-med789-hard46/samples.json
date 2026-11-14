@@ -1,0 +1,3575 @@
+{
+  "model_id": "gemini-4-carbon",
+  "n_worlds": 10,
+  "role": "world_text",
+  "subrole": "company_personas_chatter",
+  "tiers_version": "v1.4",
+  "worlds": [
+    {
+      "company": "Nordlys Systems",
+      "gemini_provider": {
+        "day1_messages": [
+          {
+            "body": "Hey team, the staging build finished green this morning. Also, has anyone else been getting spammed on LinkedIn by external tech recruiters lately? I got three messages before 9 AM.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e06",
+              "e09"
+            ],
+            "sender": "e00",
+            "subject": "Morning deployment check"
+          },
+          {
+            "body": "Hi Kalle and Sanna, please take a look at both the Legal reorg proposal and the Q2 Legal budget forecast before our afternoon sync. Let me know if the headcount numbers match your notes.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e07",
+              "e11"
+            ],
+            "sender": "e03",
+            "subject": "Reviewing Legal reorg proposal and Q2 Legal budget forecast"
+          },
+          {
+            "body": "Good news, facilities fixed the espresso machine on the third floor. On a work note, my contact at our external tax advisory firm sent over the updated calendar if anyone needs it.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e04",
+              "e05"
+            ],
+            "sender": "e01",
+            "subject": "Espresso machine and audit prep"
+          },
+          {
+            "body": "Hi everyone, I just read through the Q4 pricing strategy document. Can we meet tomorrow at 10:00 to align our enterprise tier discounts with Finance?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-3",
+            "recipients": [
+              "e01",
+              "e08",
+              "e10"
+            ],
+            "sender": "e02",
+            "subject": "Notes on Q4 pricing strategy"
+          },
+          {
+            "body": "Quick heads up that I am jumping on a call with my old colleague from Helsinki Logistics to discuss their renewal. Also, Kaisa, a headhunter called the main desk asking for directory info, so I just hung up.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-4",
+            "recipients": [
+              "e02",
+              "e10"
+            ],
+            "sender": "e08",
+            "subject": "Client follow-ups"
+          },
+          {
+            "body": "Sanna and Antti, please check section three of the Q1 pricing strategy. We should verify that our rate-limiting infrastructure supports the new base tier quotas.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-5",
+            "recipients": [
+              "e00",
+              "e09"
+            ],
+            "sender": "e06",
+            "subject": "Technical tier limits in Q1 pricing strategy"
+          }
+        ],
+        "day2_messages": [
+          {
+            "body": "Morning team, coffee machine on floor 3 is broken again. Also, did anyone else get pinged on LinkedIn by that persistent recruiter from Helsinki Talent Group today? Three messages before 9 AM.",
+            "channel": "#engineering",
+            "day": 2,
+            "id": "m2-0",
+            "recipients": [
+              "e00",
+              "e09"
+            ],
+            "sender": "e06",
+            "subject": ""
+          },
+          {
+            "body": "Hi Noora, Antti, and Ville, I reviewed both the Project Saimaa roadmap and the Engineering reorg proposal this morning. Let us sync briefly at 2 PM to make sure our Q3 staffing aligns with the proposed squad shifts.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-1",
+            "recipients": [
+              "e06",
+              "e09",
+              "e03"
+            ],
+            "sender": "e00",
+            "subject": "Notes on Project Saimaa roadmap and Engineering reorg proposal"
+          },
+          {
+            "body": "Hey Markus and Sanna, are we still ordering Thai food for lunch? I need a break from reconciling the quarterly vendor invoices.",
+            "channel": "#finance",
+            "day": 2,
+            "id": "m2-2",
+            "recipients": [
+              "e04",
+              "e05"
+            ],
+            "sender": "e01",
+            "subject": ""
+          },
+          {
+            "body": "Hi Olli, Sanna, and Ville, I went through the Acquisition target memo: Glacier and noticed a minor discrepancy in the EBITDA multiples on page four. Can we double check those against the latest audit report before tomorrow?",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-3",
+            "recipients": [
+              "e01",
+              "e05",
+              "e03"
+            ],
+            "sender": "e04",
+            "subject": "Valuation figures in Acquisition target memo: Glacier"
+          },
+          {
+            "body": "Quick update: I had coffee with an old industry contact from my previous job this morning, and they mentioned several logistics firms are expanding IT budgets next quarter. Good timing for our pipeline.",
+            "channel": "#sales",
+            "day": 2,
+            "id": "m2-4",
+            "recipients": [
+              "e02",
+              "e10"
+            ],
+            "sender": "e08",
+            "subject": ""
+          },
+          {
+            "body": "Team and Kalle, please review the Project Lumi roadmap before we finalize the Q4 pitch deck. We want to ensure we only promise features to enterprise prospects that are locked in for this year.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-5",
+            "recipients": [
+              "e08",
+              "e10",
+              "e07"
+            ],
+            "sender": "e02",
+            "subject": "Client pitch alignment with Project Lumi roadmap"
+          },
+          {
+            "body": "Just a heads up that I am stepping out at noon for a dentist appointment. Also, another outside legal headhunter called my desk phone directly today - reception must be forwarding everything through.",
+            "channel": "#legal",
+            "day": 2,
+            "id": "m2-6",
+            "recipients": [
+              "e03",
+              "e11"
+            ],
+            "sender": "e07",
+            "subject": ""
+          }
+        ],
+        "fallbacks": 0,
+        "interviews": {
+          "cooperative": {
+            "answer": "Happy to walk through my access logs from today. I reviewed the Q1 pricing strategy and Q4 pricing strategy files to double-check tier thresholds for our upcoming billing service deployment, and I opened the Legal reorg proposal and Q2 Legal budget forecast while troubleshooting a search indexing issue reported by the Legal team. I can share the corresponding Jira ticket IDs right now if that helps with your review.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "Everyone in Finance maintains external industry contacts, especially when we are reviewing market data for things like the Glacier memo. It is just standard networking, so I am not sure why you are asking me about it now.",
+            "day": 2,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "provider_name": "gemini:gemini-4-carbon"
+      },
+      "integrity": {
+        "lint_errors": [],
+        "lint_violations": 0,
+        "truth_errors": [],
+        "truth_leak_violations": 0
+      },
+      "public_input_summary": {
+        "day1_docs": [
+          "Q1 pricing strategy",
+          "Legal reorg proposal",
+          "Q2 Legal budget forecast",
+          "Q4 pricing strategy"
+        ],
+        "day2_docs": [
+          "Project Saimaa roadmap",
+          "Engineering reorg proposal",
+          "Acquisition target memo: Glacier",
+          "Project Lumi roadmap"
+        ],
+        "depts": [
+          "Engineering",
+          "Finance",
+          "Legal",
+          "Sales"
+        ],
+        "n_employees": 12
+      },
+      "seed": 0,
+      "solver_verification": {
+        "accused": "e01",
+        "clean_run": true,
+        "correct": true,
+        "end_reason": "accused",
+        "final_day": 5,
+        "messages_rendered_in_env": 25,
+        "provider": "gemini-world:gemini-4-carbon",
+        "score": 0.76,
+        "score_delta": 0.0,
+        "steps_count": 33,
+        "template_baseline_score": 0.76
+      },
+      "tier": "easy",
+      "usage": {
+        "cached": 0,
+        "calls": 5,
+        "cost_usd": 0.06306,
+        "in": 4660,
+        "latency_s": 150.307,
+        "out": 2316,
+        "thinking": 3058,
+        "total_tokens": 10034
+      },
+      "world_builder": {
+        "company_blurb": "Nordlys Systems builds cloud infrastructure management tools for enterprise clients across Northern Europe. Headquartered in Helsinki, the company values steady engineering, clear documentation, and a balanced work week.",
+        "departments": [
+          {
+            "culture": "Engineering prioritizes system stability, peer code reviews, and uninterrupted focus blocks. Discussions happen mostly in async threads, and release schedules are planned well in advance to avoid late nights.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance operates on predictable monthly cycles, clean spreadsheets, and cross-departmental check-ins. The team values accuracy over speed and shares an appreciation for quiet afternoons and good coffee.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal maintains a calm, structured environment focused on clear contract language and regulatory compliance. Documentation is rigorously versioned, and requests are handled through a steady queue.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Sales balances active client outreach with collaborative pipeline reviews. Rather than high-pressure tactics, the team emphasizes thorough product demos, steady follow-ups, and accurate forecasting.",
+            "dept": "Sales"
+          }
+        ],
+        "error": null,
+        "llm_ok": true,
+        "n_chatter_templates": 10,
+        "n_departments": 4,
+        "n_fallback_personas": 0,
+        "n_llm_personas": 12,
+        "n_personas": 12,
+        "sample_chatter_templates": [
+          "Hi {colleague}, did you get a chance to review {doc_title} {when}?",
+          "{sender} here - just letting {dept} know that the updates to {doc_title} are saved in the folder.",
+          "Hey {colleague}, do you have five minutes {when} to sync on the {dept} numbers?",
+          "Could someone in {dept} confirm if {doc_title} is finalized for the meeting {when}?",
+          "Thanks {colleague} for the quick notes on {doc_title}, looks good from my side."
+        ],
+        "sample_personas": [
+          {
+            "bio": "Sanna Hamalainen guides backend architecture decisions as a tech lead in Engineering. She prefers clear specs, quiet mornings, and cycling to the office regardless of the weather.",
+            "employee_id": "e00",
+            "tone": "terse"
+          },
+          {
+            "bio": "Olli Korhonen builds revenue models and tracks quarterly metrics in Finance. Outside of spreadsheets, he enjoys roasting coffee beans and organizing the office board game nights.",
+            "employee_id": "e01",
+            "tone": "upbeat"
+          },
+          {
+            "bio": "Kaisa Virtanen coordinates regional enterprise accounts as a sales manager. She focuses on long-term client relationships and keeps team meetings brisk and structured.",
+            "employee_id": "e02",
+            "tone": "blunt"
+          }
+        ],
+        "sample_rendered_day1_messages": [
+          {
+            "body": "Kaisa Virtanen here - just letting Sales know that the updates to Legal reorg proposal are saved in the folder.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e02",
+              "e08",
+              "e10"
+            ],
+            "sender": "e02",
+            "subject": "Kaisa Virtanen here - just letting Sales"
+          },
+          {
+            "body": "Hi Sanna Hamalainen, Antti Rantanen mentioned you might have the latest version of Q4 pricing strategy.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e00",
+              "e06",
+              "e09"
+            ],
+            "sender": "e09",
+            "subject": "Hi Sanna Hamalainen, Antti Rantanen ment"
+          },
+          {
+            "body": "Thanks Olli Korhonen for the quick notes on Q4 pricing strategy, looks good from my side.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e01",
+              "e04",
+              "e05"
+            ],
+            "sender": "e05",
+            "subject": "Thanks Olli Korhonen for the quick notes"
+          }
+        ]
+      }
+    },
+    {
+      "company": "Kestrel Labs",
+      "gemini_provider": {
+        "day1_messages": [
+          {
+            "body": "Morning team. The staging build is green after yesterday's patch. Also, is anyone else getting spammed by tech recruiters on LinkedIn today? I got three messages before 9 AM.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e11"
+            ],
+            "sender": "e09",
+            "subject": "Morning sync and staging"
+          },
+          {
+            "body": "Hi Sanna and Petri, I went through the Project Saimaa security review this morning. Everything looks compliant from Legal's side for your upcoming client discussions.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e02",
+              "e06"
+            ],
+            "sender": "e03",
+            "subject": "Notes on Project Saimaa security review"
+          },
+          {
+            "body": "Quick heads up, my external contact from the logistics summit asked if Kestrel Labs is attending next month. Also, reminder to update your pipeline numbers before 4 PM!",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e02",
+              "e06",
+              "e08"
+            ],
+            "sender": "e05",
+            "subject": "Conference contact and CRM"
+          },
+          {
+            "body": "Team, please take a look at section four of the Project Northstar security review when you have a moment. We need to verify that the third-party audit fees align with our Q2 forecast.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-3",
+            "recipients": [
+              "e01",
+              "e07",
+              "e10"
+            ],
+            "sender": "e04",
+            "subject": "Cost items in Project Northstar security review"
+          },
+          {
+            "body": "Heading downstairs for coffee in five minutes if anyone wants to join. Side note, a finance headhunter somehow got my direct desk extension this morning - straight to voicemail.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-4",
+            "recipients": [
+              "e04",
+              "e07",
+              "e10"
+            ],
+            "sender": "e01",
+            "subject": "Coffee run"
+          },
+          {
+            "body": "Hi Laura and Lauri, I will be away from my desk between 12:00 and 1:15 today to grab lunch with an old university friend visiting town. Ping my mobile if anything urgent comes up.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-5",
+            "recipients": [
+              "e09",
+              "e11"
+            ],
+            "sender": "e00",
+            "subject": "Out for lunch today"
+          }
+        ],
+        "day2_messages": [
+          {
+            "body": "Hi team, please review the Finance reorg proposal before our afternoon sync. I want to make sure the new territory mappings work well for everyone in Sales and Finance.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-0",
+            "recipients": [
+              "e01",
+              "e02",
+              "e05",
+              "e06",
+              "e07",
+              "e08",
+              "e10"
+            ],
+            "sender": "e04",
+            "subject": "Feedback on Finance reorg proposal"
+          },
+          {
+            "body": "Tuomas and Mikko, thanks for sharing the Q2 Legal budget forecast. Can we set aside fifteen minutes tomorrow to check the outside counsel retainer assumptions?",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-1",
+            "recipients": [
+              "e04",
+              "e07",
+              "e01",
+              "e10"
+            ],
+            "sender": "e03",
+            "subject": "Questions regarding Q2 Legal budget forecast"
+          },
+          {
+            "body": "Heads up that staging builds are taking twice as long this morning. Lauri and Riikka, let me know if you see any runner timeouts on your branches.",
+            "channel": "#engineering",
+            "day": 2,
+            "id": "m2-2",
+            "recipients": [
+              "e00",
+              "e11"
+            ],
+            "sender": "e09",
+            "subject": "Build pipeline latency"
+          },
+          {
+            "body": "Just a reminder to log your Q2 prospect calls by Friday. Also, funny side note - a persistent headhunter on LinkedIn messaged three of us today pitching startup roles.",
+            "channel": "#sales",
+            "day": 2,
+            "id": "m2-3",
+            "recipients": [
+              "e02",
+              "e05",
+              "e08"
+            ],
+            "sender": "e06",
+            "subject": "CRM cleanup and external outreach"
+          },
+          {
+            "body": "Whoever fixed the third floor espresso machine deserves a medal. On a work note, I finished reconciling the cloud hosting invoices with an external billing contact this morning.",
+            "channel": "#finance",
+            "day": 2,
+            "id": "m2-4",
+            "recipients": [
+              "e01",
+              "e04",
+              "e07"
+            ],
+            "sender": "e10",
+            "subject": "Coffee machine and vendor invoices"
+          },
+          {
+            "body": "Hey Laura, did that agency recruiter reach out to you too about backend lead positions in Helsinki? I politely declined, just wondering if our team directory is making the rounds.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-5",
+            "recipients": [
+              "e09"
+            ],
+            "sender": "e00",
+            "subject": "Tech recruiter spam"
+          },
+          {
+            "body": "Hello Finance folks, dropping a quick note here that our external counsel sent over minor wording tweaks for the standard vendor NDA. Let me know if you need the PDF.",
+            "channel": "#legal",
+            "day": 2,
+            "id": "m2-6",
+            "recipients": [
+              "e04",
+              "e07"
+            ],
+            "sender": "e03",
+            "subject": "Updated vendor NDA template"
+          }
+        ],
+        "fallbacks": 0,
+        "interviews": {
+          "cooperative": {
+            "answer": "Today I pulled up both the Project Saimaa security review and the Project Northstar security review from our shared engineering repository. I was comparing their authentication architectures to make sure our upcoming sprint tasks align with the approved encryption standards. Let me know if you want me to walk you through my notes or the specific tickets tied to those reviews.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "I keep in touch with a few former colleagues and standard industry peers, just like anyone else in Finance. Right now my focus is entirely on the Q2 Legal budget forecast and the Finance reorg proposal, so I barely have time for external networking anyway.",
+            "day": 2,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "provider_name": "gemini:gemini-4-carbon"
+      },
+      "integrity": {
+        "lint_errors": [],
+        "lint_violations": 0,
+        "truth_errors": [],
+        "truth_leak_violations": 0
+      },
+      "public_input_summary": {
+        "day1_docs": [
+          "Project Saimaa security review",
+          "Project Northstar security review"
+        ],
+        "day2_docs": [
+          "Finance reorg proposal",
+          "Q2 Legal budget forecast"
+        ],
+        "depts": [
+          "Engineering",
+          "Finance",
+          "Legal",
+          "Sales"
+        ],
+        "n_employees": 12
+      },
+      "seed": 1,
+      "solver_verification": {
+        "accused": "e10",
+        "clean_run": true,
+        "correct": true,
+        "end_reason": "accused",
+        "final_day": 5,
+        "messages_rendered_in_env": 23,
+        "provider": "gemini-world:gemini-4-carbon",
+        "score": 0.81,
+        "score_delta": 0.0,
+        "steps_count": 33,
+        "template_baseline_score": 0.81
+      },
+      "tier": "easy",
+      "usage": {
+        "cached": 0,
+        "calls": 5,
+        "cost_usd": 0.05992,
+        "in": 4380,
+        "latency_s": 96.4,
+        "out": 2238,
+        "thinking": 2878,
+        "total_tokens": 9496
+      },
+      "world_builder": {
+        "company_blurb": "Kestrel Labs builds reliable cloud telemetry and data routing software for Nordic enterprises. Headquartered in Helsinki, the company values practical engineering, steady growth, and clear documentation across teams.",
+        "departments": [
+          {
+            "culture": "The Engineering group values readable code, thorough peer reviews, and sustainable on-call rotations. Discussions center on system reliability, latency metrics, and keeping technical debt manageable through steady iteration.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance operates on predictable monthly cycles, accurate reconciliations, and clear audit trails. Team members collaborate quietly and expect budget requests from other groups to arrive with complete documentation.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal prioritizes clarity, risk mitigation, and adherence to European data and commercial standards. Work revolves around careful contract redlines, vendor assessments, and keeping internal policies practical and current.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Sales balances ambitious quarterly targets with a cooperative approach to account planning. Representatives regularly trade product demo tips, coordinate closely with operations, and keep pipeline updates timely.",
+            "dept": "Sales"
+          }
+        ],
+        "error": null,
+        "llm_ok": true,
+        "n_chatter_templates": 10,
+        "n_departments": 4,
+        "n_fallback_personas": 0,
+        "n_llm_personas": 12,
+        "n_personas": 12,
+        "sample_chatter_templates": [
+          "Hi {colleague}, did you get a chance to look over {doc_title} {when}?",
+          "Quick heads up from {dept}: {sender} updated the notes on {doc_title}.",
+          "Hey {colleague}, let me know if {dept} needs anything else before we wrap up {when}.",
+          "Can someone confirm whether {doc_title} is finalized for the {dept} sync?",
+          "Thanks {colleague} for walking me through {doc_title} {when}, that cleared things up."
+        ],
+        "sample_personas": [
+          {
+            "bio": "Riikka Makinen is a senior engineer who focuses on backend stability and database tuning. Outside of work, she enjoys winter cycling and restoring vintage mechanical keyboards.",
+            "employee_id": "e00",
+            "tone": "dry"
+          },
+          {
+            "bio": "Aleksi Lehtonen builds revenue forecasts and tracks departmental budgets as a financial analyst. He appreciates clean spreadsheets, quiet mornings, and strong filter coffee.",
+            "employee_id": "e01",
+            "tone": "dry"
+          },
+          {
+            "bio": "Sanna Rantanen manages mid-market enterprise accounts across Finland and Sweden. She brings steady enthusiasm to client onboarding calls and organizes the office running club.",
+            "employee_id": "e02",
+            "tone": "upbeat"
+          }
+        ],
+        "sample_rendered_day1_messages": [
+          {
+            "body": "Hi Sanna Rantanen, do you have five minutes tomorrow to align on the Sales deliverables?",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e02",
+              "e05",
+              "e06",
+              "e08"
+            ],
+            "sender": "e06",
+            "subject": "Hi Sanna Rantanen, do you have five minu"
+          },
+          {
+            "body": "If anyone in Finance is looking for Project Northstar security review, Mikko Korhonen just shared the latest link.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e01",
+              "e04",
+              "e07",
+              "e10"
+            ],
+            "sender": "e07",
+            "subject": "If anyone in Finance is looking for Proj"
+          },
+          {
+            "body": "Thanks Lauri Jokinen for walking me through Project Northstar security review Friday, that cleared things up.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e00",
+              "e09",
+              "e11"
+            ],
+            "sender": "e09",
+            "subject": "Thanks Lauri Jokinen for walking me thro"
+          }
+        ]
+      }
+    },
+    {
+      "company": "Halcyon Metrics",
+      "gemini_provider": {
+        "day1_messages": [
+          {
+            "body": "Morning team, please make sure all Q1 expense reconciliations are logged before 3 PM today so we have clean baselines.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e01",
+              "e04",
+              "e11"
+            ],
+            "sender": "e10",
+            "subject": ""
+          },
+          {
+            "body": "Hi everyone, I reviewed Board deck draft Q2 this morning. Can sales ops double check slide 9 to ensure all closed enterprise accounts from March are reflected accurately?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e02",
+              "e06",
+              "e09",
+              "e10"
+            ],
+            "sender": "e08",
+            "subject": "Pipeline figures in Board deck draft Q2"
+          },
+          {
+            "body": "Has anyone else gotten three messages from tech recruiters this week? Anyway, I am wrapping up the standard NDA templates with our external counsel before noon.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e05",
+              "e07"
+            ],
+            "sender": "e03",
+            "subject": ""
+          },
+          {
+            "body": "Petri and Jussi, I went through the Project Northstar security review document. The proposed cloud logging upgrades will add a minor compute cost for Q2, happy to walk through the numbers.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-3",
+            "recipients": [
+              "e01",
+              "e10"
+            ],
+            "sender": "e00",
+            "subject": "Follow-up on Project Northstar security review"
+          },
+          {
+            "body": "Quick heads up that an outside contact from the Helsinki SaaS meetup introduced me to their VP of Ops. Putting the notes into the CRM as soon as the sync lag clears up.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-4",
+            "recipients": [
+              "e02",
+              "e08",
+              "e09"
+            ],
+            "sender": "e06",
+            "subject": ""
+          },
+          {
+            "body": "Another headhunter called my desk line asking if Halcyon Metrics is hiring senior analysts. Also, a few of us are grabbing sandwiches around 12:15 if anyone wants to join.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-5",
+            "recipients": [
+              "e01",
+              "e10",
+              "e11"
+            ],
+            "sender": "e04",
+            "subject": ""
+          }
+        ],
+        "day2_messages": [
+          {
+            "body": "Morning team, please make sure all Q4 opportunity stages are updated in CRM before Friday afternoon. Also, yet another persistent tech recruiter pinged me on LinkedIn today asking if our ops folks are looking, just ignored it.",
+            "channel": "#sales",
+            "day": 2,
+            "id": "m2-0",
+            "recipients": [
+              "e02",
+              "e06",
+              "e09"
+            ],
+            "sender": "e08",
+            "subject": "Q4 pipeline cleanup"
+          },
+          {
+            "body": "Hi everyone, I have gone through the Legal vendor contracts Q4 packet. Sales ops, please double check the renewal dates on page four so we do not miss any auto-renewal windows next month.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-1",
+            "recipients": [
+              "e02",
+              "e03",
+              "e05",
+              "e06",
+              "e08",
+              "e09"
+            ],
+            "sender": "e07",
+            "subject": "Reviewing Legal vendor contracts Q4"
+          },
+          {
+            "body": "Quick reminder to clear out the pending travel receipts in the queue before noon. Eero and Olli, let me know if the new vendor tax forms came in from our external audit contact.",
+            "channel": "#finance",
+            "day": 2,
+            "id": "m2-2",
+            "recipients": [
+              "e01",
+              "e04",
+              "e11"
+            ],
+            "sender": "e10",
+            "subject": "Expense approvals"
+          },
+          {
+            "body": "Hi team, following up on Acquisition target memo: Falcon, I cross-checked the historical revenue figures against public filings. Everything aligns well so far, though I have two minor questions on working capital for Legal and Finance to discuss tomorrow.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-3",
+            "recipients": [
+              "e03",
+              "e04",
+              "e05",
+              "e07",
+              "e10",
+              "e11"
+            ],
+            "sender": "e01",
+            "subject": "Notes on Acquisition target memo: Falcon"
+          },
+          {
+            "body": "Antti and Lauri, our outside trademark contact moved our afternoon check-in to 3 PM. Anyone want to grab sandwiches from the place down the street around 12:15?",
+            "channel": "#legal",
+            "day": 2,
+            "id": "m2-4",
+            "recipients": [
+              "e05",
+              "e07"
+            ],
+            "sender": "e03",
+            "subject": "Lunch order and outside counsel call"
+          },
+          {
+            "body": "Just a heads up that the espresso machine on the third floor is finally fixed. Also, Kalle helped me sort out that dashboard export bug earlier, so our weekly metrics sheet is ready.",
+            "channel": "#sales",
+            "day": 2,
+            "id": "m2-5",
+            "recipients": [
+              "e00",
+              "e02",
+              "e08",
+              "e09"
+            ],
+            "sender": "e06",
+            "subject": "Coffee machine status"
+          }
+        ],
+        "fallbacks": 0,
+        "interviews": {
+          "cooperative": {
+            "answer": "I opened the Project Northstar security review this morning to check the authentication requirements for our upcoming sprint. Regarding the Board deck draft Q2, my director asked me to verify the engineering uptime metrics on slide 12, and I pulled it up a second time to double-check a latency figure after closing my browser tab too early. I am happy to share the Slack thread where they requested those numbers if that helps with your review.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "In Finance, routine outside communication is standard, especially when reconciling items like the Legal vendor contracts Q4. I have been focused on the Falcon memo all morning, so I cannot give you specifics offhand. You should probably check with Legal if you are auditing external threads.",
+            "day": 2,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "provider_name": "gemini:gemini-4-carbon"
+      },
+      "integrity": {
+        "lint_errors": [],
+        "lint_violations": 0,
+        "truth_errors": [],
+        "truth_leak_violations": 0
+      },
+      "public_input_summary": {
+        "day1_docs": [
+          "Board deck draft Q2",
+          "Board deck draft Q2",
+          "Project Northstar security review"
+        ],
+        "day2_docs": [
+          "Legal vendor contracts Q4",
+          "Acquisition target memo: Falcon"
+        ],
+        "depts": [
+          "Engineering",
+          "Finance",
+          "Legal",
+          "Sales"
+        ],
+        "n_employees": 12
+      },
+      "seed": 2,
+      "solver_verification": {
+        "accused": "e08",
+        "clean_run": true,
+        "correct": true,
+        "end_reason": "accused",
+        "final_day": 6,
+        "messages_rendered_in_env": 25,
+        "provider": "gemini-world:gemini-4-carbon",
+        "score": 0.75,
+        "score_delta": 0.0,
+        "steps_count": 40,
+        "template_baseline_score": 0.75
+      },
+      "tier": "easy",
+      "usage": {
+        "cached": 0,
+        "calls": 5,
+        "cost_usd": 0.061696,
+        "in": 4468,
+        "latency_s": 113.231,
+        "out": 2145,
+        "thinking": 3131,
+        "total_tokens": 9744
+      },
+      "world_builder": {
+        "company_blurb": "Halcyon Metrics builds enterprise analytics software in Helsinki, helping mid-market teams track operational performance and forecast quarterly growth with clear, reliable dashboards.",
+        "departments": [
+          {
+            "culture": "Engineering values clean architecture, thorough code reviews, and uninterrupted focus blocks. Team members communicate asynchronously via tickets and prefer practical solutions over flashy tooling.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance operates on predictable monthly cycles, accuracy, and clear documentation. Meetings start on time, spreadsheets are versioned carefully, and forecasts are grounded in conservative assumptions.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal prioritizes clarity, risk mitigation, and structured review workflows. The team collaborates closely with other units to turn complex regulations into straightforward operational guidelines.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Sales is energetic, goal-oriented, and collaborative. Representatives celebrate closed renewals together, share notes from prospect calls, and rely heavily on clean operational data.",
+            "dept": "Sales"
+          }
+        ],
+        "error": null,
+        "llm_ok": true,
+        "n_chatter_templates": 10,
+        "n_departments": 4,
+        "n_fallback_personas": 0,
+        "n_llm_personas": 12,
+        "n_personas": 12,
+        "sample_chatter_templates": [
+          "Hi {colleague}, did you get a chance to review {doc_title} {when}?",
+          "Quick heads up from {dept}: {sender} updated the timeline for {doc_title}.",
+          "Hey {colleague}, can we sync {when} about the notes in {doc_title}?",
+          "{sender} here - please leave your comments on {doc_title} before we wrap up {when}.",
+          "Thanks {colleague} for helping {dept} finalize the numbers in {doc_title}."
+        ],
+        "sample_personas": [
+          {
+            "bio": "Kalle maintains core data pipelines and enjoys refactoring legacy backend services while drinking strong black coffee.",
+            "employee_id": "e00",
+            "tone": "dry"
+          },
+          {
+            "bio": "Petri builds revenue forecast models and enjoys spotting subtle seasonal trends in customer usage spreadsheets.",
+            "employee_id": "e01",
+            "tone": "dry"
+          },
+          {
+            "bio": "Pihla keeps the CRM tidy, automates territory routing, and loves organizing team trivia every Friday afternoon.",
+            "employee_id": "e02",
+            "tone": "upbeat"
+          }
+        ],
+        "sample_rendered_day1_messages": [
+          {
+            "body": "Hi Lauri Kinnunen, did you get a chance to review Project Northstar security review Monday?",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e03",
+              "e05",
+              "e07"
+            ],
+            "sender": "e03",
+            "subject": "Hi Lauri Kinnunen, did you get a chance "
+          },
+          {
+            "body": "Great work Tuomas Heikkinen, the Sales section of Project Northstar security review looks ready to go.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e02",
+              "e06",
+              "e08",
+              "e09"
+            ],
+            "sender": "e09",
+            "subject": "Great work Tuomas Heikkinen, the Sales s"
+          },
+          {
+            "body": "Sanna Kinnunen, let me know tomorrow you are free to walk through Board deck draft Q2.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e02",
+              "e06",
+              "e08",
+              "e09"
+            ],
+            "sender": "e06",
+            "subject": "Sanna Kinnunen, let me know tomorrow you"
+          }
+        ]
+      }
+    },
+    {
+      "company": "Kestrel Labs",
+      "gemini_provider": {
+        "day1_messages": [
+          {
+            "body": "Morning Ville, did you see the CI pipeline stalled on the test runner again? I also got pinged by two agency recruiters on LinkedIn before 9am asking if we need external contractors.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00"
+            ],
+            "sender": "e11",
+            "subject": "CI build times"
+          },
+          {
+            "body": "Hi team, I reviewed the Patent filing notes: Lumi document this morning. Can someone confirm if the filing fee accruals should hit Q1 or Q2 in our ledger?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e01",
+              "e04",
+              "e08",
+              "e09",
+              "e10"
+            ],
+            "sender": "e05",
+            "subject": "Questions on Patent filing notes: Lumi"
+          },
+          {
+            "body": "Hey Sanna, are we updating the territory fields today? An old industry contact from Helsinki reached out asking about our standard enterprise pricing tiers.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e06"
+            ],
+            "sender": "e02",
+            "subject": "CRM pipeline sync"
+          },
+          {
+            "body": "Maria, Noora, Ville - I went through both Acquisition target memo: Lumi and Patent filing notes: Saimaa. Let us schedule thirty minutes tomorrow to align on the IP clauses before speaking with outside counsel.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-3",
+            "recipients": [
+              "e00",
+              "e03",
+              "e11"
+            ],
+            "sender": "e07",
+            "subject": "Reviewing Acquisition target memo: Lumi and Saimaa notes"
+          },
+          {
+            "body": "Whoever descaled the espresso machine on the third floor, thank you! Also a reminder to get expense receipts uploaded by Friday afternoon.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-4",
+            "recipients": [
+              "e01",
+              "e05",
+              "e08",
+              "e09",
+              "e10"
+            ],
+            "sender": "e04",
+            "subject": "Kitchen coffee machine"
+          },
+          {
+            "body": "Hi all, looking at the Engineering headcount plan, we should coordinate with our external recruiting partner next week so Sales knows when the new backend support capacity comes online.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-5",
+            "recipients": [
+              "e00",
+              "e02",
+              "e06"
+            ],
+            "sender": "e11",
+            "subject": "Re: Engineering headcount plan"
+          },
+          {
+            "body": "Mikko, quick check - are we still using the v4 mutual NDA template for software vendors, or did we switch over to v5?",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-6",
+            "recipients": [
+              "e07"
+            ],
+            "sender": "e03",
+            "subject": "Vendor NDA template"
+          }
+        ],
+        "day2_messages": [
+          {
+            "body": "Hey Ville, the staging pipeline finished green this morning. Also, did that persistent tech recruiter from Helsinki message you on LinkedIn again? Three pings in two days for me.",
+            "channel": "#engineering",
+            "day": 2,
+            "id": "m2-0",
+            "recipients": [
+              "e00"
+            ],
+            "sender": "e11",
+            "subject": "Morning build check"
+          },
+          {
+            "body": "Hi team, I went through the Project Glacier security review document. Maria and I flagged two vendor audit items on page four that need sign-off from Sales Ops before Friday.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-1",
+            "recipients": [
+              "e02",
+              "e03",
+              "e06"
+            ],
+            "sender": "e07",
+            "subject": "Notes on Project Glacier security review"
+          },
+          {
+            "body": "Reminder to get all travel receipts uploaded before 4 PM today. Whoever left oat milk on the counter overnight, please toss it before lunch.",
+            "channel": "#finance",
+            "day": 2,
+            "id": "m2-2",
+            "recipients": [
+              "e01",
+              "e04",
+              "e08",
+              "e09",
+              "e10"
+            ],
+            "sender": "e05",
+            "subject": "Expense cutoff and kitchen notice"
+          },
+          {
+            "body": "Hi Noora and Ville, Sanna and I reviewed the Project Ember roadmap. Can we confirm if the Q3 milestone dates are firm enough to share high-level timing with prospective enterprise accounts?",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-3",
+            "recipients": [
+              "e00",
+              "e06",
+              "e11"
+            ],
+            "sender": "e02",
+            "subject": "Timeline check: Project Ember roadmap"
+          },
+          {
+            "body": "Tuomas, I updated the territory tags in the dashboard. By the way, an outside contact I know from last year's SaaS summit asked to grab coffee downtown next week to swap general market notes.",
+            "channel": "#sales",
+            "day": 2,
+            "id": "m2-4",
+            "recipients": [
+              "e02"
+            ],
+            "sender": "e06",
+            "subject": "CRM cleanup and conference chat"
+          },
+          {
+            "body": "Hi Janne and Iida, I cross-checked the margin tables in the Q4 pricing strategy against the R&D fee estimates listed in Patent filing notes: Tundra. Everything reconciles cleanly.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-5",
+            "recipients": [
+              "e05",
+              "e10"
+            ],
+            "sender": "e01",
+            "subject": "Numbers in Q4 pricing strategy and Patent filing notes: Tundra"
+          },
+          {
+            "body": "Mikko, I blocked off 2 PM for us to organize the NDA archive. Funny enough, another legal recruiter called the front desk asking for our department directory today - I politely declined.",
+            "channel": "#legal",
+            "day": 2,
+            "id": "m2-6",
+            "recipients": [
+              "e07"
+            ],
+            "sender": "e03",
+            "subject": "Afternoon calendar"
+          }
+        ],
+        "fallbacks": 0,
+        "interviews": {
+          "cooperative": {
+            "answer": "I opened both 'Patent filing notes: Lumi' and 'Patent filing notes: Saimaa' this morning to cross-reference the technical claims before our upcoming legal sync. While checking the Lumi directory, I also pulled up 'Acquisition target memo: Lumi' to verify how their system architecture overlaps with ours, and looked over the 'Engineering headcount plan' to check staffing allocations for the integration. Let me know if it helps to walk through my access logs or project tickets together.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "Everyone in finance keeps up with industry peers, there is nothing unusual about that. Honestly, I am just focused on getting the Q4 pricing strategy wrapped up today. If there is some new rule about professional networking, nobody mentioned it to our team.",
+            "day": 2,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "provider_name": "gemini:gemini-4-carbon"
+      },
+      "integrity": {
+        "lint_errors": [],
+        "lint_violations": 0,
+        "truth_errors": [],
+        "truth_leak_violations": 0
+      },
+      "public_input_summary": {
+        "day1_docs": [
+          "Patent filing notes: Lumi",
+          "Engineering headcount plan",
+          "Acquisition target memo: Lumi",
+          "Patent filing notes: Saimaa"
+        ],
+        "day2_docs": [
+          "Project Glacier security review",
+          "Patent filing notes: Tundra",
+          "Project Ember roadmap",
+          "Q4 pricing strategy"
+        ],
+        "depts": [
+          "Engineering",
+          "Finance",
+          "Legal",
+          "Sales"
+        ],
+        "n_employees": 12
+      },
+      "seed": 3,
+      "solver_verification": {
+        "accused": "e06",
+        "clean_run": true,
+        "correct": true,
+        "end_reason": "accused",
+        "final_day": 3,
+        "messages_rendered_in_env": 10,
+        "provider": "gemini-world:gemini-4-carbon",
+        "score": 0.88,
+        "score_delta": 0.0,
+        "steps_count": 19,
+        "template_baseline_score": 0.88
+      },
+      "tier": "easy",
+      "usage": {
+        "cached": 0,
+        "calls": 5,
+        "cost_usd": 0.05669,
+        "in": 4640,
+        "latency_s": 98.215,
+        "out": 2476,
+        "thinking": 2265,
+        "total_tokens": 9381
+      },
+      "world_builder": {
+        "company_blurb": "Kestrel Labs is a Helsinki-based software and hardware studio building industrial telemetry tools and edge-computing platforms for Nordic logistics and energy firms. Known for steady execution, clean engineering, and practical operations, the team balances technical ambition with careful financial planning.",
+        "departments": [
+          {
+            "culture": "Engineering values clean code, peer review, and pragmatic problem solving. Developers keep mornings quiet for deep focus, gather for brisk afternoon standups, and document architectural tradeoffs openly before shipping updates.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance operates on predictable rhythms, crisp spreadsheets, and transparent cost tracking. As the largest group on the floor, the team collaborates closely during month-end close while maintaining calm, methodical habits.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal is a compact, detail-oriented pair focused on intellectual property filings, clear contract language, and regulatory readiness. They favor early reviews and practical guidance that keeps other teams moving smoothly.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Sales blends friendly persistence with clean pipeline hygiene. The team focuses on long-term industrial accounts, clear territory planning, and tight coordination with technical leads before promising custom timelines.",
+            "dept": "Sales"
+          }
+        ],
+        "error": null,
+        "llm_ok": true,
+        "n_chatter_templates": 10,
+        "n_departments": 4,
+        "n_fallback_personas": 0,
+        "n_llm_personas": 12,
+        "n_personas": 12,
+        "sample_chatter_templates": [
+          "Hey {colleague}, did you get a chance to review {doc_title} before the {dept} sync {when}?",
+          "Quick heads-up from {sender}: {doc_title} is updated and ready for {dept} sign-off {when}.",
+          "Hi {colleague}, can we grab ten minutes {when} to align on the {dept} numbers?",
+          "{sender} here - just left a few formatting notes on {doc_title} for {colleague}.",
+          "Morning {colleague}! Coffee in the kitchen {when} after the {dept} standup?"
+        ],
+        "sample_personas": [
+          {
+            "bio": "Ville Niemi has spent eight years at Kestrel Labs designing embedded firmware and mentoring newer developers. Outside work, he restores vintage bicycles and enjoys quiet weekend hikes.",
+            "employee_id": "e00",
+            "tone": "dry"
+          },
+          {
+            "bio": "Kalle Hamalainen builds forecasting models and tracks quarterly spend across product lines. He brings a structured mindset from his statistics background and runs local five-kilometer races.",
+            "employee_id": "e01",
+            "tone": "formal"
+          },
+          {
+            "bio": "Tuomas Karjalainen manages mid-market client relationships across Northern Europe. Energetic and organized, he enjoys hosting customer workshops and cooking big dinners for friends.",
+            "employee_id": "e02",
+            "tone": "upbeat"
+          }
+        ],
+        "sample_rendered_day1_messages": [
+          {
+            "body": "Hey Kaisa Laine, are we still meeting tomorrow to finalize Patent filing notes: Lumi?",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e01",
+              "e04",
+              "e05",
+              "e08",
+              "e09",
+              "e10"
+            ],
+            "sender": "e09",
+            "subject": "Hey Kaisa Laine, are we still meeting to"
+          },
+          {
+            "body": "Checking in on Engineering headcount plan - Venla Lehtinen, let me know if Finance needs anything else tomorrow.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e01",
+              "e04",
+              "e05",
+              "e08",
+              "e09",
+              "e10"
+            ],
+            "sender": "e10",
+            "subject": "Checking in on Engineering headcount pla"
+          },
+          {
+            "body": "Hi Janne Virtanen, can we grab ten minutes Monday to align on the Finance numbers?",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e01",
+              "e04",
+              "e05",
+              "e08",
+              "e09",
+              "e10"
+            ],
+            "sender": "e09",
+            "subject": "Hi Janne Virtanen, can we grab ten minut"
+          }
+        ]
+      }
+    },
+    {
+      "company": "Nordlys Systems",
+      "gemini_provider": {
+        "day1_messages": [
+          {
+            "body": "Heads up that I am restarting the staging cluster around 2 PM today to test the new database indexing patch. Also, is anyone else getting spammed on LinkedIn by that tech recruiter from Helsinki Talent Partners this week? Three messages in two days is a bit much.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e10"
+            ],
+            "sender": "e14",
+            "subject": "Staging environment refresh"
+          },
+          {
+            "body": "Hi team, please review the Q2 pricing strategy document before our afternoon sync. Pay close attention to the enterprise tier discount thresholds so we are aligned when pitching new accounts next month.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e02",
+              "e07",
+              "e11",
+              "e13",
+              "e18"
+            ],
+            "sender": "e04",
+            "subject": "Feedback on Q2 pricing strategy"
+          },
+          {
+            "body": "Another quarter of management dumping last-minute contract reviews on our desks without adding headcount. Meanwhile leadership acts surprised when people complain that our pay bands have barely moved since last year.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e08",
+              "e16",
+              "e17"
+            ],
+            "sender": "e03",
+            "subject": "Workload and compensation review"
+          },
+          {
+            "body": "Hello everyone, I just went through the Board deck draft Q4 and noticed a minor rounding discrepancy on slide six regarding operating expenses. Can someone from the analyst side cross-check the Q4 ledger export before 4 PM?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-3",
+            "recipients": [
+              "e01",
+              "e05",
+              "e09",
+              "e12",
+              "e15",
+              "e19"
+            ],
+            "sender": "e06",
+            "subject": "Numbers check for Board deck draft Q4"
+          },
+          {
+            "body": "I am stepping out at noon to grab coffee with an old industry contact who works over at Nordic Cloud Consulting now. I have updated all my pipeline notes in the CRM for the morning deals we closed.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-4",
+            "recipients": [
+              "e02",
+              "e04",
+              "e07",
+              "e13",
+              "e18"
+            ],
+            "sender": "e11",
+            "subject": "Partner coffee catch-up and CRM notes"
+          },
+          {
+            "body": "Kaisa, did you see the timeline management set for reviewing the Board deck draft Q4? They expect instant turnarounds from Legal while keeping annual raises below inflation. Honestly makes me tempted to actually reply to the external recruiters in my inbox.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-5",
+            "recipients": [
+              "e08"
+            ],
+            "sender": "e03",
+            "subject": "Compliance sign-off on Board deck draft Q4"
+          },
+          {
+            "body": "There are extra cinnamon buns in the third-floor break room left over from the morning vendor meeting. Grab them before Engineering finds out!",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-6",
+            "recipients": [
+              "e05",
+              "e06",
+              "e09",
+              "e12",
+              "e15",
+              "e19"
+            ],
+            "sender": "e01",
+            "subject": "Kitchen pastry alert"
+          }
+        ],
+        "day2_messages": [
+          {
+            "body": "Hey team, staging is green again after the morning patch. Also, did anyone else get three LinkedIn messages from that tech headhunter in Helsinki today? They are getting relentless.",
+            "channel": "#engineering",
+            "day": 2,
+            "id": "m2-0",
+            "recipients": [
+              "e00",
+              "e10"
+            ],
+            "sender": "e14",
+            "subject": "Staging deployment and recruiter spam"
+          },
+          {
+            "body": "Hi everyone, please review the regional targets in the Q1 Sales budget forecast before noon. We need to align our travel numbers with the enterprise deals we booked last month.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-1",
+            "recipients": [
+              "e02",
+              "e07",
+              "e13"
+            ],
+            "sender": "e04",
+            "subject": "Notes on Q1 Sales budget forecast"
+          },
+          {
+            "body": "Another week goes by with zero updates from leadership on our cost-of-living adjustments. Management expects us to clear double the contract volume while keeping our pay bands stuck in 2022.",
+            "channel": "#legal",
+            "day": 2,
+            "id": "m2-2",
+            "recipients": [
+              "e08",
+              "e16",
+              "e17"
+            ],
+            "sender": "e03",
+            "subject": "Compensation review delays"
+          },
+          {
+            "body": "Team, I took a first pass at the Acquisition target memo: Northstar. Can someone verify the regulatory filing timeline in section four before we send feedback to Engineering?",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-3",
+            "recipients": [
+              "e03",
+              "e16",
+              "e17"
+            ],
+            "sender": "e08",
+            "subject": "Compliance check - Acquisition target memo: Northstar"
+          },
+          {
+            "body": "Quick heads up that facilities is descaling the espresso machine on three. If you need caffeine before the afternoon close meeting, head down to the second floor kitchen.",
+            "channel": "#finance",
+            "day": 2,
+            "id": "m2-4",
+            "recipients": [
+              "e01",
+              "e05",
+              "e09",
+              "e12",
+              "e15",
+              "e19"
+            ],
+            "sender": "e06",
+            "subject": "Third floor coffee machine"
+          },
+          {
+            "body": "I looked over the compliance sign-off items for the Finance headcount plan. Funny how executive management finds budget for new roles when existing staff cannot even get a fair merit raise.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-5",
+            "recipients": [
+              "e06",
+              "e19"
+            ],
+            "sender": "e03",
+            "subject": "Re: Finance headcount plan"
+          },
+          {
+            "body": "Has anyone checked slide twelve of the Board deck draft Q3 yet? I want to make sure my pipeline chart matches ops. On another note, an old contact from my university days invited me to a SaaS networking dinner tonight if anyone wants to tag along.",
+            "channel": "#sales",
+            "day": 2,
+            "id": "m2-6",
+            "recipients": [
+              "e02",
+              "e04",
+              "e07",
+              "e13",
+              "e18"
+            ],
+            "sender": "e11",
+            "subject": "Slide metrics and industry mixer"
+          }
+        ],
+        "fallbacks": 0,
+        "interviews": {
+          "cooperative": {
+            "answer": "I opened the Q2 pricing strategy document this morning to verify the new tier limits for the billing service update I am currently coding. Later, I accessed the Board deck draft Q4 twice to double-check that the platform uptime metrics our team provided were copied accurately onto the engineering slides. I am happy to share the Jira tickets tied to both of those tasks if that helps your review.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "Everyone in finance networks occasionally, so I really couldn't give you a rundown of casual industry chats. My focus today has strictly been on the Q1 Sales budget forecast and the Finance headcount plan. I'm not sure why my routine professional connections are suddenly an issue.",
+            "day": 2,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "provider_name": "gemini:gemini-4-carbon"
+      },
+      "integrity": {
+        "lint_errors": [],
+        "lint_violations": 0,
+        "truth_errors": [],
+        "truth_leak_violations": 0
+      },
+      "public_input_summary": {
+        "day1_docs": [
+          "Q2 pricing strategy",
+          "Board deck draft Q4",
+          "Board deck draft Q4"
+        ],
+        "day2_docs": [
+          "Q1 Sales budget forecast",
+          "Acquisition target memo: Northstar",
+          "Finance headcount plan",
+          "Board deck draft Q3"
+        ],
+        "depts": [
+          "Engineering",
+          "Finance",
+          "Legal",
+          "Sales"
+        ],
+        "n_employees": 20
+      },
+      "seed": 7,
+      "solver_verification": {
+        "accused": "e09",
+        "clean_run": true,
+        "correct": true,
+        "end_reason": "accused",
+        "final_day": 8,
+        "messages_rendered_in_env": 51,
+        "provider": "gemini-world:gemini-4-carbon",
+        "score": 0.77,
+        "score_delta": -0.05,
+        "steps_count": 62,
+        "template_baseline_score": 0.82
+      },
+      "tier": "medium",
+      "usage": {
+        "cached": 0,
+        "calls": 6,
+        "cost_usd": 0.099802,
+        "in": 7131,
+        "latency_s": 142.22,
+        "out": 2970,
+        "thinking": 5584,
+        "total_tokens": 15685
+      },
+      "world_builder": {
+        "company_blurb": "Nordlys Systems builds cloud infrastructure and workflow automation tools for Nordic enterprises. Headquartered in Helsinki, the company balances steady engineering craftsmanship with practical commercial growth across regional markets.",
+        "departments": [
+          {
+            "culture": "Engineering values reliable code, peer reviews, and quiet focus blocks. The small team favors practical solutions over hype, documenting architecture choices clearly and keeping afternoon standups brief.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance runs on structured calendars, clean reconciliations, and collaborative forecasting. Even during busy monthly closes, the group maintains a supportive rhythm and shares clear numbers with leadership.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal focuses on practical compliance, clear contract standards, and steady risk management. The officers work closely together to give consistent, timely guidance to commercial and technical teams.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Sales combines energetic outreach with disciplined pipeline tracking. Managers and reps openly discuss client feedback, refine pitch decks together, and coordinate closely with Finance and Legal on renewals.",
+            "dept": "Sales"
+          }
+        ],
+        "error": null,
+        "llm_ok": true,
+        "n_chatter_templates": 10,
+        "n_departments": 4,
+        "n_fallback_personas": 0,
+        "n_llm_personas": 20,
+        "n_personas": 20,
+        "sample_chatter_templates": [
+          "Hey {colleague}, did you finish reviewing {doc_title} for the {dept} sync {when}?",
+          "{sender} here - leaving comments on {doc_title} before our check-in {when}.",
+          "Can someone in {dept} confirm if {doc_title} has the latest numbers from {colleague}?",
+          "Thanks {colleague}, I updated {doc_title} and shared a note with {dept} {when}.",
+          "Quick heads-up from {sender}: {dept} needs final sign-off on {doc_title} {when}."
+        ],
+        "sample_personas": [
+          {
+            "bio": "Tuomas Salminen maintains backend services and deployment pipelines in Engineering. He enjoys refactoring legacy modules and cycling year-round regardless of Helsinki weather.",
+            "employee_id": "e00",
+            "tone": "dry"
+          },
+          {
+            "bio": "Emma Makinen builds revenue forecasts and tracks quarterly variance in Finance. She brings positive energy to budget reviews and organizes Friday pastry runs.",
+            "employee_id": "e01",
+            "tone": "upbeat"
+          },
+          {
+            "bio": "Jussi Salonen manages CRM hygiene, territory routing, and pipeline reporting for Sales. He prefers clean spreadsheets over long meetings.",
+            "employee_id": "e02",
+            "tone": "terse"
+          }
+        ],
+        "sample_rendered_day1_messages": [
+          {
+            "body": "Wrapped up my section of Q2 pricing strategy Monday; Venla Kinnunen, over to you for the Sales review.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e02",
+              "e04",
+              "e07",
+              "e11",
+              "e13",
+              "e18"
+            ],
+            "sender": "e11",
+            "subject": "Wrapped up my section of Q2 pricing stra"
+          },
+          {
+            "body": "Jussi Laine here - leaving comments on Q2 pricing strategy before our check-in after lunch.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e02",
+              "e04",
+              "e07",
+              "e11",
+              "e13",
+              "e18"
+            ],
+            "sender": "e11",
+            "subject": "Jussi Laine here - leaving comments on Q"
+          },
+          {
+            "body": "Hey Tuomas Rantanen, did you finish reviewing Board deck draft Q4 for the Legal sync tomorrow?",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e03",
+              "e08",
+              "e16",
+              "e17"
+            ],
+            "sender": "e16",
+            "subject": "Hey Tuomas Rantanen, did you finish revi"
+          }
+        ]
+      }
+    },
+    {
+      "company": "Kestrel Labs",
+      "gemini_provider": {
+        "day1_messages": [
+          {
+            "body": "Heads up team, I am restarting the staging cluster in ten minutes to clear out stuck test runners. Also whoever brought those cardamom buns to the fourth floor kitchen is a hero.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e04",
+              "e08",
+              "e19"
+            ],
+            "sender": "e07",
+            "subject": "Staging environment maintenance"
+          },
+          {
+            "body": "Hi everyone, I just read through the Project Lumi security review document shared today. Can we schedule thirty minutes tomorrow morning to walk through the authentication token rotation timeline before sprint planning?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e00",
+              "e04",
+              "e07",
+              "e19"
+            ],
+            "sender": "e08",
+            "subject": "Questions on Project Lumi security review"
+          },
+          {
+            "body": "Love how leadership keeps pushing back the timeline for salary adjustments while piling on extra reporting cycles every month. At this rate inflation is going to eat any raise before they even approve the budget.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e05",
+              "e10",
+              "e12",
+              "e14",
+              "e16"
+            ],
+            "sender": "e01",
+            "subject": "Comp review timeline"
+          },
+          {
+            "body": "Team, please take a look at the Finance headcount plan before our afternoon check-in. Please verify that the Q2 contractor allocations match what we discussed last Thursday.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-3",
+            "recipients": [
+              "e01",
+              "e05",
+              "e12",
+              "e14",
+              "e16"
+            ],
+            "sender": "e10",
+            "subject": "Reviewing the Finance headcount plan"
+          },
+          {
+            "body": "Did you see they cut one of the junior analyst openings in the Finance headcount plan? Management expects us to absorb all that extra reconciliation work for zero extra pay. Honestly it is tempting to reply to that fintech recruiter who messaged me on LinkedIn this morning.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-4",
+            "recipients": [
+              "e05"
+            ],
+            "sender": "e01",
+            "subject": "Re: Reviewing the Finance headcount plan"
+          },
+          {
+            "body": "Quick reminder to log your notes from last week's conference in the CRM today. An outside contact from NordCloud reached out asking for a product walkthrough next Tuesday, so Jussi I routed that intro to your queue.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-5",
+            "recipients": [
+              "e09",
+              "e17"
+            ],
+            "sender": "e02",
+            "subject": "Nordic SaaS Summit contacts"
+          },
+          {
+            "body": "I uploaded the refreshed vendor onboarding checklist to our shared drive. On a more important note, Aino and I are ordering Thai food at noon if anyone wants to join the group order.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-6",
+            "recipients": [
+              "e03",
+              "e11",
+              "e13",
+              "e15",
+              "e18"
+            ],
+            "sender": "e06",
+            "subject": "Standard NDA redlines and lunch"
+          }
+        ],
+        "day2_messages": [
+          {
+            "body": "Hi team, I just finished reading the Engineering reorg proposal from this morning. Let us sync before 3 PM to map out how the squad transitions affect our Q3 sprint commitments.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-0",
+            "recipients": [
+              "e07",
+              "e19",
+              "e04"
+            ],
+            "sender": "e08",
+            "subject": "Feedback on Engineering reorg proposal"
+          },
+          {
+            "body": "Hello everyone, please add any final technical clarifications to Patent filing notes: Falcon by end of day. I have a call scheduled tomorrow morning with our outside patent attorney in Helsinki to finalize the claims.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-1",
+            "recipients": [
+              "e11",
+              "e18",
+              "e00",
+              "e07"
+            ],
+            "sender": "e06",
+            "subject": "Reviewing Patent filing notes: Falcon"
+          },
+          {
+            "body": "Management wants three extra variance decks by Friday on top of normal close tasks, yet somehow our annual pay adjustments are still under review. Makes total sense.",
+            "channel": "slack:#finance",
+            "day": 2,
+            "id": "m2-2",
+            "recipients": [
+              "e05",
+              "e10",
+              "e12",
+              "e14",
+              "e16"
+            ],
+            "sender": "e01",
+            "subject": "Q2 closing schedule"
+          },
+          {
+            "body": "Heads up that I am restarting the staging cluster in ten minutes to apply the memory patch. Ping me if anyone is running integration tests right now.",
+            "channel": "slack:#engineering",
+            "day": 2,
+            "id": "m2-3",
+            "recipients": [
+              "e00",
+              "e07",
+              "e08",
+              "e19"
+            ],
+            "sender": "e04",
+            "subject": "Staging environment reboot"
+          },
+          {
+            "body": "Has anyone else had three different tech recruiters message them on LinkedIn today? Anyway, Nea, I moved the Nordic logistics demo to Thursday afternoon so their procurement lead can join.",
+            "channel": "slack:#sales",
+            "day": 2,
+            "id": "m2-4",
+            "recipients": [
+              "e02",
+              "e17"
+            ],
+            "sender": "e09",
+            "subject": "Enterprise pipeline check"
+          },
+          {
+            "body": "Are you grabbing lunch at noon? Between leadership piling on last-minute spreadsheet audits and keeping analyst salaries flat since last year, I honestly considered replying to that headhunter who emailed me yesterday.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-5",
+            "recipients": [
+              "e05"
+            ],
+            "sender": "e01",
+            "subject": "Lunch and workload"
+          },
+          {
+            "body": "Good afternoon team, I cleared the four priority vendor NDAs from the shared inbox. Also, whoever brought the blueberry pastries to the fourth floor kitchen, thank you.",
+            "channel": "slack:#legal",
+            "day": 2,
+            "id": "m2-6",
+            "recipients": [
+              "e06",
+              "e11",
+              "e13",
+              "e15",
+              "e18"
+            ],
+            "sender": "e03",
+            "subject": "Vendor compliance queue"
+          }
+        ],
+        "fallbacks": 0,
+        "interviews": {
+          "cooperative": {
+            "answer": "I reviewed the Project Lumi security review earlier today to verify the updated authentication requirements for our upcoming sprint. Right after that, I opened the Finance headcount plan from a shared folder link just to see how many new backend roles were approved for our team next quarter. Let me know if you want me to pull up the exact timestamps or folder paths from my browser history.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "I talk to external vendors and market analysts occasionally for standard Finance benchmarking, nothing out of the ordinary. Right now my focus is strictly internal, mostly running numbers on the Engineering reorg proposal and the Patent filing notes: Falcon. Procurement would honestly have a much better log of outside communications than I do.",
+            "day": 2,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "provider_name": "gemini:gemini-4-carbon"
+      },
+      "integrity": {
+        "lint_errors": [],
+        "lint_violations": 0,
+        "truth_errors": [],
+        "truth_leak_violations": 0
+      },
+      "public_input_summary": {
+        "day1_docs": [
+          "Project Lumi security review",
+          "Finance headcount plan"
+        ],
+        "day2_docs": [
+          "Engineering reorg proposal",
+          "Patent filing notes: Falcon"
+        ],
+        "depts": [
+          "Engineering",
+          "Finance",
+          "Legal",
+          "Sales"
+        ],
+        "n_employees": 20
+      },
+      "seed": 8,
+      "solver_verification": {
+        "accused": "e02",
+        "clean_run": true,
+        "correct": true,
+        "end_reason": "accused",
+        "final_day": 5,
+        "messages_rendered_in_env": 30,
+        "provider": "gemini-world:gemini-4-carbon",
+        "score": 0.88,
+        "score_delta": 0.0,
+        "steps_count": 41,
+        "template_baseline_score": 0.88
+      },
+      "tier": "medium",
+      "usage": {
+        "cached": 0,
+        "calls": 5,
+        "cost_usd": 0.071332,
+        "in": 5261,
+        "latency_s": 108.697,
+        "out": 2837,
+        "thinking": 3244,
+        "total_tokens": 11342
+      },
+      "world_builder": {
+        "company_blurb": "Kestrel Labs builds cloud workflow tools and analytics platforms for mid-market enterprises across Northern Europe. Known for steady product releases and practical engineering, the company balances technical ambition with careful operational planning.",
+        "departments": [
+          {
+            "culture": "Engineering values pragmatic architecture, peer code reviews, and calm incident response. Teams favor written design proposals and steady iteration over flashiness, keeping meetings short so builders have long stretches of focus time.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance operates on accuracy, predictable close calendars, and transparent forecasting. Colleagues collaborate closely with department leads on resource planning while maintaining disciplined documentation and clear approval trails.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal balances thorough risk management with practical business support. Counsel and compliance officers work side by side with product and commercial staff to keep contracts clear, audits smooth, and standards consistent.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Sales thrives on structured pipeline habits, responsive client care, and open sharing of market insights. Account executives and managers celebrate signed agreements together and keep tight feedback loops with technical teams.",
+            "dept": "Sales"
+          }
+        ],
+        "error": null,
+        "llm_ok": true,
+        "n_chatter_templates": 10,
+        "n_departments": 4,
+        "n_fallback_personas": 0,
+        "n_llm_personas": 20,
+        "n_personas": 20,
+        "sample_chatter_templates": [
+          "Hey {colleague}, did you get a chance to review {doc_title} before our sync {when}?",
+          "{sender} here - dropping a reminder that {dept} updates for {doc_title} are due {when}.",
+          "Hi {colleague}, could you double-check the numbers in {doc_title} when you have a moment {when}?",
+          "Quick heads-up from {dept}: {colleague} and I finished the latest pass on {doc_title} {when}.",
+          "Morning {colleague}, let me know if {dept} needs any extra context on {doc_title} {when}."
+        ],
+        "sample_personas": [
+          {
+            "bio": "Petri Salo maintains backend services and automated deployment pipelines in Engineering. Outside of code reviews, he enjoys winter cycling and repairing vintage audio gear.",
+            "employee_id": "e00",
+            "tone": "terse"
+          },
+          {
+            "bio": "Mikko Salonen models quarterly revenue scenarios and tracks SaaS unit economics in Finance. He appreciates clean spreadsheets, quiet mornings, and strong filter coffee.",
+            "employee_id": "e01",
+            "tone": "dry"
+          },
+          {
+            "bio": "Nea Rantanen leads regional account strategy and mentors representatives in Sales. She brings high energy to pipeline reviews and organizes company running clubs.",
+            "employee_id": "e02",
+            "tone": "upbeat"
+          }
+        ],
+        "sample_rendered_day1_messages": [
+          {
+            "body": "Thanks Mikko Korhonen for helping Noora Laitinen wrap up the notes on Finance headcount plan tomorrow.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e04",
+              "e07",
+              "e08",
+              "e19"
+            ],
+            "sender": "e04",
+            "subject": "Thanks Mikko Korhonen for helping Noora "
+          },
+          {
+            "body": "Quick heads-up from Legal: Eero Korhonen and I finished the latest pass on Finance headcount plan Friday.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e03",
+              "e06",
+              "e11",
+              "e13",
+              "e15",
+              "e18"
+            ],
+            "sender": "e15",
+            "subject": "Quick heads-up from Legal: Eero Korhonen"
+          },
+          {
+            "body": "All set on my end, Eero Lehtonen; Legal signed off on Finance headcount plan tomorrow.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e03",
+              "e06",
+              "e11",
+              "e13",
+              "e15",
+              "e18"
+            ],
+            "sender": "e03",
+            "subject": "All set on my end, Eero Lehtonen; Legal "
+          }
+        ]
+      }
+    },
+    {
+      "company": "Kestrel Labs",
+      "gemini_provider": {
+        "day1_messages": [
+          {
+            "body": "Morning team - I pushed the hotfix to staging so CI should be green again. Also, has everyone else been getting pinged on LinkedIn by that Helsinki tech recruiter this week? Three messages in two days is a bit much.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e11"
+            ],
+            "sender": "e05",
+            "subject": "Staging deploy and recruiter spam"
+          },
+          {
+            "body": "Hi all, I finished reading through the Project Tundra security review this morning. Can we schedule twenty minutes tomorrow to clarify the vendor access controls section before we sign off on compliance?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e00",
+              "e03",
+              "e13"
+            ],
+            "sender": "e06",
+            "subject": "Notes on Project Tundra security review"
+          },
+          {
+            "body": "Another urgent compliance queue dropped on us with zero extra headcount. Leadership loves talking about growth targets, yet annual pay adjustments barely cover half of inflation. Hard to feel valued right now.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e03",
+              "e06",
+              "e12",
+              "e14",
+              "e15"
+            ],
+            "sender": "e13",
+            "subject": "Workload vs compensation"
+          },
+          {
+            "body": "Hello Janne and Pihla, after reviewing the Acquisition target memo: Tundra, I noticed their Q3 recurring revenue assumptions look optimistic. Let us sync this afternoon to check how their renewal rates were calculated.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-3",
+            "recipients": [
+              "e01",
+              "e02",
+              "e09"
+            ],
+            "sender": "e04",
+            "subject": "Question regarding Acquisition target memo: Tundra"
+          },
+          {
+            "body": "Anyone grabbing lunch downstairs around noon? Before I forget, my old colleague from an outside consulting firm asked if Kestrel Labs is hiring account execs, so I pointed him to our public careers page.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-4",
+            "recipients": [
+              "e02",
+              "e17",
+              "e18",
+              "e19"
+            ],
+            "sender": "e07",
+            "subject": "Lunch and external demo prep"
+          },
+          {
+            "body": "Hi Olli and Kaisa, I went through the Acquisition target memo: Saimaa and pulled the hosting cost estimates into a spreadsheet. Could Engineering confirm if their current cloud architecture aligns with our stack?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-5",
+            "recipients": [
+              "e00",
+              "e04",
+              "e10"
+            ],
+            "sender": "e09",
+            "subject": "Follow-up on Acquisition target memo: Saimaa"
+          },
+          {
+            "body": "Antti, did you see the latest calendar invite from upper management? Another hour-long alignment meeting while they stall on our salary band review. Honestly makes me tempted to actually reply to the headhunters in my inbox.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-6",
+            "recipients": [
+              "e12"
+            ],
+            "sender": "e13",
+            "subject": "Management priorities"
+          }
+        ],
+        "day2_messages": [
+          {
+            "body": "Hi Joonas and Nea, I reviewed the Legal headcount plan this morning. Can we sync briefly tomorrow to confirm the Q4 budget allocations for the proposed compliance hires?",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-0",
+            "recipients": [
+              "e06",
+              "e14"
+            ],
+            "sender": "e04",
+            "subject": "Questions on Legal headcount plan"
+          },
+          {
+            "body": "Hi Maria and Venla, thanks for sending over the Legal vendor contracts Q4 summary. Before we finalize our regional software renewals, can you confirm if our external analytics vendor agreement includes a sixty-day notice period?",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-1",
+            "recipients": [
+              "e03",
+              "e15"
+            ],
+            "sender": "e02",
+            "subject": "Follow-up: Legal vendor contracts Q4"
+          },
+          {
+            "body": "It is amazing how leadership expects us to clear twice as many compliance audits this quarter while claiming there is zero budget for cost-of-living raises. Management really has no idea how thin this team is stretched.",
+            "channel": "#legal",
+            "day": 2,
+            "id": "m2-2",
+            "recipients": [
+              "e03",
+              "e06",
+              "e12",
+              "e14",
+              "e15"
+            ],
+            "sender": "e13",
+            "subject": "Management priorities"
+          },
+          {
+            "body": "Hey team, I pushed the patch for the timeout issue on PR 412 whenever someone has ten minutes to review. Side note, did anyone else get pinged by three different outside recruiters this morning? LinkedIn is relentless this week.",
+            "channel": "#engineering",
+            "day": 2,
+            "id": "m2-3",
+            "recipients": [
+              "e00",
+              "e11"
+            ],
+            "sender": "e05",
+            "subject": "PR 412 review and recruiter spam"
+          },
+          {
+            "body": "Heading out around 2 PM to grab coffee with an old industry contact from my previous job who is visiting town. All of my Q4 pipeline notes are updated in the tracker if you need anything while I am away.",
+            "channel": "#sales",
+            "day": 2,
+            "id": "m2-4",
+            "recipients": [
+              "e02",
+              "e17",
+              "e18",
+              "e19"
+            ],
+            "sender": "e07",
+            "subject": "Out for coffee at 2 PM"
+          },
+          {
+            "body": "Antti, looking at the Legal headcount plan just makes me more annoyed with upper management. They will happily approve market rates for external candidates while keeping current staff frozen in outdated pay bands for another year.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-5",
+            "recipients": [
+              "e12"
+            ],
+            "sender": "e13",
+            "subject": "Pay bands and new hires"
+          },
+          {
+            "body": "Friendly reminder to get all remaining travel receipts uploaded before Thursday afternoon so we can wrap up the monthly ledger cleanly. Also, building maintenance finally fixed the espresso grinder on floor three.",
+            "channel": "#finance",
+            "day": 2,
+            "id": "m2-6",
+            "recipients": [
+              "e01",
+              "e04",
+              "e09",
+              "e10",
+              "e16"
+            ],
+            "sender": "e08",
+            "subject": "Receipt reminders and third floor coffee"
+          }
+        ],
+        "fallbacks": 0,
+        "interviews": {
+          "cooperative": {
+            "answer": "Yes, I pulled up the Project Tundra security review this morning to check the infrastructure requirements for our upcoming architecture sync. While looking into the technical scope, I also opened Acquisition target memo: Tundra and Acquisition target memo: Saimaa from the shared engineering drive to compare how both platforms handle data storage. I am happy to walk you through my access logs or the notes I took if that helps clarify what our team is evaluating.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "I keep in touch with a few peers in accounting, nothing out of the ordinary. Honestly, I have just had my head down reviewing the Legal headcount plan and those Q4 Legal vendor contracts today. If there is a specific policy update on external networking, you might want to clarify that with management.",
+            "day": 2,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "provider_name": "gemini:gemini-4-carbon"
+      },
+      "integrity": {
+        "lint_errors": [],
+        "lint_violations": 0,
+        "truth_errors": [],
+        "truth_leak_violations": 0
+      },
+      "public_input_summary": {
+        "day1_docs": [
+          "Project Tundra security review",
+          "Acquisition target memo: Tundra",
+          "Acquisition target memo: Saimaa"
+        ],
+        "day2_docs": [
+          "Legal headcount plan",
+          "Legal vendor contracts Q4"
+        ],
+        "depts": [
+          "Engineering",
+          "Finance",
+          "Legal",
+          "Sales"
+        ],
+        "n_employees": 20
+      },
+      "seed": 9,
+      "solver_verification": {
+        "accused": "e15",
+        "clean_run": true,
+        "correct": true,
+        "end_reason": "accused",
+        "final_day": 5,
+        "messages_rendered_in_env": 27,
+        "provider": "gemini-world:gemini-4-carbon",
+        "score": 0.8,
+        "score_delta": 0.0,
+        "steps_count": 41,
+        "template_baseline_score": 0.8
+      },
+      "tier": "medium",
+      "usage": {
+        "cached": 0,
+        "calls": 5,
+        "cost_usd": 0.07164,
+        "in": 5365,
+        "latency_s": 113.959,
+        "out": 2817,
+        "thinking": 3274,
+        "total_tokens": 11456
+      },
+      "world_builder": {
+        "company_blurb": "Kestrel Labs builds cloud infrastructure and enterprise analytics tools for Nordic and European clients. Known for steady growth and pragmatic engineering, the company balances fast product cycles with strict regulatory standards across four core departments.",
+        "departments": [
+          {
+            "culture": "Engineering values reliable systems, peer code reviews, and uninterrupted focus blocks. Discussions stay grounded in metrics and benchmarks, with a shared appreciation for automation and clean documentation.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance operates on predictable cadences, clean audit trails, and disciplined forecasting. Team members collaborate closely during month-end close while maintaining a calm, detail-oriented atmosphere.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal balances thorough risk management with practical business support. Counsel and compliance officers work side by side to review contracts and policies clearly, keeping cross-departmental approvals smooth.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Sales thrives on fast communication, shared pipeline goals, and customer feedback. Account executives and operations staff trade notes constantly, celebrating renewals and refining pitches together.",
+            "dept": "Sales"
+          }
+        ],
+        "error": null,
+        "llm_ok": true,
+        "n_chatter_templates": 10,
+        "n_departments": 4,
+        "n_fallback_personas": 0,
+        "n_llm_personas": 20,
+        "n_personas": 20,
+        "sample_chatter_templates": [
+          "Hey {colleague}, did you get a chance to review {doc_title} before the {dept} sync {when}?",
+          "{sender} here - just uploaded my notes on {doc_title} for the {dept} team.",
+          "Can someone in {dept} confirm if {colleague} signed off on {doc_title} {when}?",
+          "Quick heads-up for {dept}: {colleague} and I are finalizing {doc_title} {when}.",
+          "Hi {colleague}, let me know when you have five minutes {when} to chat about {doc_title}."
+        ],
+        "sample_personas": [
+          {
+            "bio": "Olli Korhonen guides architecture decisions in Engineering as tech lead. He prefers clean code, quiet mornings, and concise technical specs over long status meetings.",
+            "employee_id": "e00",
+            "tone": "terse"
+          },
+          {
+            "bio": "Lauri Jarvinen manages monthly reconciliations and vendor ledgers in Finance. He enjoys cycling to work and keeping spreadsheets spotless.",
+            "employee_id": "e01",
+            "tone": "formal"
+          },
+          {
+            "bio": "Janne Salonen leads regional pipeline strategy as sales manager. Energetic and goal-oriented, he motivates the team with celebratory coffee runs after big renewals.",
+            "employee_id": "e02",
+            "tone": "upbeat"
+          }
+        ],
+        "sample_rendered_day1_messages": [
+          {
+            "body": "Hey Hanna Laitinen, did you get a chance to review Acquisition target memo: Tundra before the Finance sync tomorrow?",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e01",
+              "e04",
+              "e08",
+              "e09",
+              "e10",
+              "e16"
+            ],
+            "sender": "e09",
+            "subject": "Hey Hanna Laitinen, did you get a chance"
+          },
+          {
+            "body": "Reminder for Legal: please send any feedback on Acquisition target memo: Saimaa to Venla Lehtonen Friday.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e03",
+              "e06",
+              "e12",
+              "e13",
+              "e14",
+              "e15"
+            ],
+            "sender": "e06",
+            "subject": "Reminder for Legal: please send any feed"
+          },
+          {
+            "body": "Just pinged Emma Rantanen about the latest version of Project Tundra security review for Sales.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e02",
+              "e07",
+              "e17",
+              "e18",
+              "e19"
+            ],
+            "sender": "e18",
+            "subject": "Just pinged Emma Rantanen about the late"
+          }
+        ]
+      }
+    },
+    {
+      "company": "Aurora Freight",
+      "gemini_provider": {
+        "day1_messages": [
+          {
+            "body": "Hi team, I just finished reading through the Project Glacier security review. Before we finalize the monthly ledger adjustments, we should check if Research needs extra budget allocated for the hardware upgrades mentioned in section three.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e01",
+              "e15"
+            ],
+            "sender": "e23",
+            "subject": "Follow-up on Project Glacier security review"
+          },
+          {
+            "body": "Hello both, please take a look at the Q4 pricing strategy document distributed today. We need to verify that the proposed volume discount tiers align with our standard freight carrier terms before Sales starts drafting client renewals.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e12",
+              "e17"
+            ],
+            "sender": "e03",
+            "subject": "Compliance notes: Q4 pricing strategy"
+          },
+          {
+            "body": "Did anyone else see the new ops queue assignments? Management keeps piling more CRM cleanup onto our plates every quarter, yet whenever comp reviews come up we hear there is zero room to adjust base pay. Really frustrating.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e16",
+              "e28"
+            ],
+            "sender": "e31",
+            "subject": "Another territory reshuffle"
+          },
+          {
+            "body": "Staging build 4.12 is green and ready for testing. Side note, did our team directory get scraped again? Three different tech recruiters have messaged me this morning asking to grab coffee and chat about backend roles.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-3",
+            "recipients": [
+              "e07",
+              "e11",
+              "e24"
+            ],
+            "sender": "e00",
+            "subject": "Staging deploy and recruiter spam"
+          },
+          {
+            "body": "I caught up with an old university contact from the Nordic logistics consortium yesterday. She pointed me toward a public benchmark paper on cold-chain battery degradation that might save us two weeks of lab calibration.",
+            "channel": "#research",
+            "day": 1,
+            "id": "m1-4",
+            "recipients": [
+              "e04",
+              "e19",
+              "e32"
+            ],
+            "sender": "e09",
+            "subject": "Thermal sensor specs"
+          },
+          {
+            "body": "I updated the spreadsheet for your region. Honestly, leadership has no idea how long manual data entry takes when they refuse to pay for proper tooling or fair overtime. An external headhunter reached out to me on LinkedIn yesterday and I am half tempted to reply just to see what normal companies pay ops folks.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-5",
+            "recipients": [
+              "e14"
+            ],
+            "sender": "e31",
+            "subject": "Re: Account handoff"
+          },
+          {
+            "body": "The espresso grinder in the third floor breakroom is jammed again and flashing an error code. Facilities has a ticket open, so I am walking over to the corner bakery in ten minutes if anyone wants me to grab them a cup.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-6",
+            "recipients": [
+              "e10",
+              "e13",
+              "e30"
+            ],
+            "sender": "e08",
+            "subject": "Third floor coffee machine"
+          }
+        ],
+        "day2_messages": [
+          {
+            "body": "Hi Kalle and Hanna, I reviewed the Project Northstar roadmap this morning. The Q1 lab testing milestones look realistic, though we should double check the equipment allocation numbers with Finance before Friday.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-0",
+            "recipients": [
+              "e04",
+              "e15"
+            ],
+            "sender": "e09",
+            "subject": "Re: Project Northstar roadmap"
+          },
+          {
+            "body": "Olli, Eero - take a look at slide 14 of the Board deck draft Q4 when you have a minute. I think we need to clarify the uptime metrics for our routing platform so the directors get the full picture.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-1",
+            "recipients": [
+              "e24",
+              "e11"
+            ],
+            "sender": "e00",
+            "subject": "Feedback on Board deck draft Q4"
+          },
+          {
+            "body": "Management just pushed our ops compensation review back another quarter while asking us to rebuild all territory dashboards manually. Funny how there is always budget for executive retreats but never for cost-of-living adjustments.",
+            "channel": "slack:#sales",
+            "day": 2,
+            "id": "m2-2",
+            "recipients": [
+              "e16",
+              "e28"
+            ],
+            "sender": "e31",
+            "subject": "comp review delays"
+          },
+          {
+            "body": "Is the staging pipeline hanging for anyone else? Also, has everyone else gotten three messages this week from that logistics tech headhunter in Helsinki? They must be scraping our team directory again.",
+            "channel": "slack:#engineering",
+            "day": 2,
+            "id": "m2-3",
+            "recipients": [
+              "e29",
+              "e38"
+            ],
+            "sender": "e18",
+            "subject": "staging builds and recruiter spam"
+          },
+          {
+            "body": "Quick heads up that I have a call at 14:00 with our outside trade consultants at Nordic Maritime Advisory to review the new port tariff filings. Let me know if you want me to raise the vendor contract questions.",
+            "channel": "slack:#legal",
+            "day": 2,
+            "id": "m2-4",
+            "recipients": [
+              "e12",
+              "e21"
+            ],
+            "sender": "e03",
+            "subject": "external customs counsel call"
+          },
+          {
+            "body": "Here are the updated quota sheets you asked for, Kaisa. Honestly, leadership keeps changing the reporting rules every Tuesday and still pays sales ops below market rate, so let me know if the formulas break again.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-5",
+            "recipients": [
+              "e20"
+            ],
+            "sender": "e31",
+            "subject": "Territory quota sheets"
+          },
+          {
+            "body": "Whoever finished the oat milk on 3, please grab another carton from the pantry! Also a friendly reminder to drop your expense accruals into the shared folder before 16:00 today.",
+            "channel": "slack:#finance",
+            "day": 2,
+            "id": "m2-6",
+            "recipients": [
+              "e01",
+              "e08",
+              "e10"
+            ],
+            "sender": "e23",
+            "subject": "3rd floor coffee machine and month-end"
+          }
+        ],
+        "fallbacks": 0,
+        "interviews": {
+          "cooperative": {
+            "answer": "Today I opened the Project Glacier security review to verify the database encryption requirements for our upcoming backend deployment. I also checked the Q4 pricing strategy document because my team is implementing the usage quota logic for the new enterprise tiers. Let me know if you need the Jira ticket numbers for that feature work, and I can pull them right up for you.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "Everyone in Finance speaks with external auditors and vendors occasionally, so I am not sure what specific interactions you mean. I have mostly kept my head down reviewing numbers for the Board deck draft Q4, and any outside emails are just standard accounting business.",
+            "day": 2,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "provider_name": "gemini:gemini-4-carbon"
+      },
+      "integrity": {
+        "lint_errors": [],
+        "lint_violations": 0,
+        "truth_errors": [],
+        "truth_leak_violations": 0
+      },
+      "public_input_summary": {
+        "day1_docs": [
+          "Project Glacier security review",
+          "Q4 pricing strategy"
+        ],
+        "day2_docs": [
+          "Project Northstar roadmap",
+          "Board deck draft Q4"
+        ],
+        "depts": [
+          "Engineering",
+          "Finance",
+          "Legal",
+          "Research",
+          "Sales"
+        ],
+        "n_employees": 40
+      },
+      "seed": 4,
+      "solver_verification": {
+        "accused": "e11",
+        "clean_run": true,
+        "correct": true,
+        "end_reason": "accused",
+        "final_day": 5,
+        "messages_rendered_in_env": 32,
+        "provider": "gemini-world:gemini-4-carbon",
+        "score": 0.73,
+        "score_delta": 0.0,
+        "steps_count": 44,
+        "template_baseline_score": 0.73
+      },
+      "tier": "hard",
+      "usage": {
+        "cached": 0,
+        "calls": 6,
+        "cost_usd": 0.102366,
+        "in": 10093,
+        "latency_s": 162.031,
+        "out": 3599,
+        "thinking": 4619,
+        "total_tokens": 18311
+      },
+      "world_builder": {
+        "company_blurb": "Aurora Freight builds automated routing software and cold-chain logistics hardware for Nordic and Baltic shipping corridors. Founded in Helsinki, the firm balances steady freight operations with applied materials testing and fleet telemetry.",
+        "departments": [
+          {
+            "culture": "Pragmatic and reliability-focused, the Engineering team values clear architecture docs, reproducible builds, and calm post-release check-ins. Discussions center on latency budgets, telemetry uptime, and practical fixes rather than flashy rewrites.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Methodical and deadline-driven, Finance keeps Aurora Freight grounded with structured month-end closes, transparent cost tracking, and sober margin analysis. Colleagues appreciate tidy spreadsheets, early heads-up on spend changes, and punctual meetings.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Measured and approachable, Legal translates maritime rules, software terms, and compliance checklists into plain language. The team prizes thorough version history, well-organized repositories, and early collaboration before commercial commitments are signed.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Curious and empirical, Research blends hands-on environmental chamber testing with careful sensor data logging. Staff share bench time cooperatively, debate test tolerances openly, and take pride in cold-chain hardware that survives harsh weather.",
+            "dept": "Research"
+          },
+          {
+            "culture": "Energetic and relationship-oriented, Sales focuses on steady shipping partnerships, accurate capacity quotes, and smooth handoffs to operations. Weekly pipeline syncs stay brisk, practical, and centered on long-term client retention.",
+            "dept": "Sales"
+          }
+        ],
+        "error": null,
+        "llm_ok": true,
+        "n_chatter_templates": 10,
+        "n_departments": 5,
+        "n_fallback_personas": 0,
+        "n_llm_personas": 40,
+        "n_personas": 40,
+        "sample_chatter_templates": [
+          "Hey {colleague}, did you finish looking over {doc_title} before the {dept} sync {when}?",
+          "{sender} here - dropping a reminder that {dept} notes on {doc_title} are due {when}.",
+          "Morning {colleague}, can we grab ten minutes {when} to align on {doc_title}?",
+          "Thanks {colleague}! I updated the {dept} folder after reading {doc_title} {when}.",
+          "Quick question from {sender}: is {colleague} still owning the {dept} review for {doc_title}?"
+        ],
+        "sample_personas": [
+          {
+            "bio": "Lauri Rantanen maintains core routing services in Engineering and mentors junior staff on distributed queue stability and clean deployment habits.",
+            "employee_id": "e00",
+            "tone": "dry"
+          },
+          {
+            "bio": "Kaisa Niemi manages carrier ledger reconciliations and monthly freight accruals in Finance, keeping audit trails tidy across regional accounts.",
+            "employee_id": "e01",
+            "tone": "formal"
+          },
+          {
+            "bio": "Teemu Niemi handles mid-market shipping accounts in Sales, focusing on seasonal freight renewals and clear onboarding timelines for new clients.",
+            "employee_id": "e02",
+            "tone": "upbeat"
+          }
+        ],
+        "sample_rendered_day1_messages": [
+          {
+            "body": "Lauri Rantanen here - dropping a reminder that Engineering notes on Project Glacier security review are due Monday.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e00",
+              "e07",
+              "e11",
+              "e18",
+              "e24",
+              "e29",
+              "e33",
+              "e35",
+              "e38"
+            ],
+            "sender": "e00",
+            "subject": "Lauri Rantanen here - dropping a reminde"
+          },
+          {
+            "body": "All set on my side, Iida Laine; Legal signed off on the routine items in Q4 pricing strategy Friday.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e03",
+              "e12",
+              "e17",
+              "e21",
+              "e25"
+            ],
+            "sender": "e03",
+            "subject": "All set on my side, Iida Laine; Legal si"
+          },
+          {
+            "body": "Hi Sanna Jokinen, Joonas Virtanen again - let me know if Project Glacier security review needs any formatting edits Monday.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e01",
+              "e08",
+              "e10",
+              "e13",
+              "e15",
+              "e23",
+              "e30",
+              "e34"
+            ],
+            "sender": "e08",
+            "subject": "Hi Sanna Jokinen, Joonas Virtanen again "
+          }
+        ]
+      }
+    },
+    {
+      "company": "Borealis Dynamics",
+      "gemini_provider": {
+        "day1_messages": [
+          {
+            "body": "Heads up everyone, Kalle and I are restarting the staging cluster at 14:00 today. Grab coffee early if your tests depend on the shared database.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e05",
+              "e11",
+              "e13",
+              "e16",
+              "e21",
+              "e30"
+            ],
+            "sender": "e00",
+            "subject": "Staging environment maintenance"
+          },
+          {
+            "body": "Hi team, I just read through the Sales headcount plan. Before we meet tomorrow, can ops verify if the two Nordic territory openings are budgeted for early Q2 or pushed to summer?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e15",
+              "e18",
+              "e33"
+            ],
+            "sender": "e07",
+            "subject": "Notes on Sales headcount plan"
+          },
+          {
+            "body": "Love how management expects us to cover extra calibration shifts while keeping lab analyst pay bands frozen for another cycle. Priorities around here make zero sense.",
+            "channel": "#research",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e06",
+              "e17",
+              "e35",
+              "e36",
+              "e37",
+              "e39"
+            ],
+            "sender": "e04",
+            "subject": "Lab coverage and compensation"
+          },
+          {
+            "body": "Hello all, please take thirty minutes today to review the Finance reorg proposal. I want to consolidate our questions on the controller reporting structure before Friday.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-3",
+            "recipients": [
+              "e10",
+              "e12",
+              "e26",
+              "e38"
+            ],
+            "sender": "e14",
+            "subject": "Feedback: Finance reorg proposal"
+          },
+          {
+            "body": "Has anyone else gotten three messages from that Helsinki tech recruiter on LinkedIn this morning? Separate note, I am meeting an old industry contact from Tampere for lunch to talk logistics trends.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-4",
+            "recipients": [
+              "e02",
+              "e07",
+              "e15",
+              "e23",
+              "e31"
+            ],
+            "sender": "e22",
+            "subject": "Headhunters active this week"
+          },
+          {
+            "body": "Team, looking at Research vendor contracts Q1, the consumables renewal rate seems steeper than expected. Sofia, did our external account rep send over the updated volume discount sheet yet?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-5",
+            "recipients": [
+              "e04",
+              "e06",
+              "e17"
+            ],
+            "sender": "e36",
+            "subject": "Follow-up on Research vendor contracts Q1"
+          },
+          {
+            "body": "A biotech recruiter reached out to me yesterday quoting base salaries twenty percent above what Borealis Dynamics pays us. Leadership keeps talking about retention but refuses to adjust our compensation.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-6",
+            "recipients": [
+              "e06",
+              "e37"
+            ],
+            "sender": "e04",
+            "subject": "Recruiter call and management"
+          }
+        ],
+        "day2_messages": [
+          {
+            "body": "Management expects us to cover double bench rotations again this week while keeping base pay flat for another quarter. It is getting really frustrating watching leadership add extra tasks without adjusting compensation.",
+            "channel": "#research",
+            "day": 2,
+            "id": "m2-0",
+            "recipients": [
+              "e06",
+              "e37",
+              "e39"
+            ],
+            "sender": "e04",
+            "subject": "Lab shift coverage"
+          },
+          {
+            "body": "Hi team, I just read through the Project Saimaa roadmap distributed today. Before we brief our external distribution contacts next month, can Legal confirm if the Q4 delivery milestones need additional compliance sign-off?",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-1",
+            "recipients": [
+              "e15",
+              "e20",
+              "e02"
+            ],
+            "sender": "e07",
+            "subject": "Timeline review for Project Saimaa roadmap"
+          },
+          {
+            "body": "Tuomas, Emma, and Iida, I reviewed the Research headcount plan this morning. Let us meet at 14:00 to map the proposed lab analyst requisitions against our updated Q3 department forecast.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-2",
+            "recipients": [
+              "e36",
+              "e12",
+              "e38"
+            ],
+            "sender": "e14",
+            "subject": "Budget alignment: Research headcount plan"
+          },
+          {
+            "body": "Heads up that staging builds are taking twenty minutes right now. Also, did an outside tech recruiter scrape our team directory? Three of us got the exact same LinkedIn pitch during standup.",
+            "channel": "#engineering",
+            "day": 2,
+            "id": "m2-3",
+            "recipients": [
+              "e00",
+              "e13",
+              "e30"
+            ],
+            "sender": "e16",
+            "subject": "CI runners and external spam"
+          },
+          {
+            "body": "Sofia, did you hear anything new about our salary band adjustments? Upper management keeps pushing the review date back, and honestly, when an outside staffing recruiter messaged me yesterday about open lab roles in Espoo, I was tempted to reply just to see current market rates.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-4",
+            "recipients": [
+              "e06"
+            ],
+            "sender": "e04",
+            "subject": "Annual pay review delays"
+          },
+          {
+            "body": "Quick reminder that our outside logistics contact from Nordic Freight is joining us for lunch at 12:15 in Lobby B. Please also update your Q2 renewal notes in the portal before Friday afternoon.",
+            "channel": "#sales",
+            "day": 2,
+            "id": "m2-5",
+            "recipients": [
+              "e07",
+              "e22",
+              "e31"
+            ],
+            "sender": "e23",
+            "subject": "Vendor lunch and CRM cleanup"
+          },
+          {
+            "body": "I uploaded the revised supplier NDA forms to the shared folder. Heading downstairs for coffee in ten minutes if anyone wants an espresso or a cinnamon bun.",
+            "channel": "#legal",
+            "day": 2,
+            "id": "m2-6",
+            "recipients": [
+              "e03",
+              "e20",
+              "e24",
+              "e28"
+            ],
+            "sender": "e19",
+            "subject": "Template archive and coffee run"
+          }
+        ],
+        "fallbacks": 0,
+        "interviews": {
+          "cooperative": {
+            "answer": "I accessed the Sales headcount plan, Finance reorg proposal, and Research vendor contracts Q1 this morning while validating our updated document search indexer. My team is currently verifying cross-departmental permission filters in production, and I clicked through those specific results to confirm the metadata rendered properly. I can gladly share my Jira ticket number and terminal logs if you want to cross-reference the timestamps.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "Everyone in Finance talks to external vendors and industry peers occasionally, so you will need to be more specific. Today I have just had my head down reviewing budgets for the Research headcount plan and the Project Saimaa roadmap. If this is a routine compliance check, everything relevant is already on file.",
+            "day": 2,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "provider_name": "gemini:gemini-4-carbon"
+      },
+      "integrity": {
+        "lint_errors": [],
+        "lint_violations": 0,
+        "truth_errors": [],
+        "truth_leak_violations": 0
+      },
+      "public_input_summary": {
+        "day1_docs": [
+          "Sales headcount plan",
+          "Finance reorg proposal",
+          "Research vendor contracts Q1"
+        ],
+        "day2_docs": [
+          "Project Saimaa roadmap",
+          "Project Saimaa roadmap",
+          "Research headcount plan"
+        ],
+        "depts": [
+          "Engineering",
+          "Finance",
+          "Legal",
+          "Research",
+          "Sales"
+        ],
+        "n_employees": 40
+      },
+      "seed": 5,
+      "solver_verification": {
+        "accused": "e27",
+        "clean_run": true,
+        "correct": true,
+        "end_reason": "accused",
+        "final_day": 9,
+        "messages_rendered_in_env": 57,
+        "provider": "gemini-world:gemini-4-carbon",
+        "score": 0.52,
+        "score_delta": 0.0,
+        "steps_count": 74,
+        "template_baseline_score": 0.52
+      },
+      "tier": "hard",
+      "usage": {
+        "cached": 0,
+        "calls": 5,
+        "cost_usd": 0.09597,
+        "in": 7960,
+        "latency_s": 151.923,
+        "out": 3582,
+        "thinking": 4423,
+        "total_tokens": 15965
+      },
+      "world_builder": {
+        "company_blurb": "Borealis Dynamics builds rugged environmental sensors and autonomous telemetry hardware for cold-weather industries. Headquartered in Helsinki, the company pairs disciplined Nordic engineering with steady commercial growth across European utility and maritime markets.",
+        "departments": [
+          {
+            "culture": "Engineering values rugged reliability, clean schematics, and reproducible test runs. Teams collaborate closely between software desks and hardware benches, keeping meetings practical so everyone has uninterrupted hours for deep technical work.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance operates with calm precision and predictable monthly rhythms. Colleagues pride themselves on balanced ledgers, clear audit trails, and helping other groups plan realistic budgets well ahead of quarterly deadlines.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal maintains a steady, methodical environment focused on clear vendor agreements and regulatory compliance. The team favors well-organized templates, careful version control, and timely guidance that keeps commercial deals moving smoothly.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Research blends patient experimentation with practical field testing. Scientists and analysts share calibration duties in the cold chambers, document findings rigorously, and debate sensor physics constructively over afternoon coffee.",
+            "dept": "Research"
+          },
+          {
+            "culture": "Sales thrives on structured territory planning, long-term utility relationships, and transparent pipeline reviews. Account managers and operations specialists work side by side to keep client proposals accurate and renewal timelines on track.",
+            "dept": "Sales"
+          }
+        ],
+        "error": null,
+        "llm_ok": true,
+        "n_chatter_templates": 8,
+        "n_departments": 5,
+        "n_fallback_personas": 0,
+        "n_llm_personas": 40,
+        "n_personas": 40,
+        "sample_chatter_templates": [
+          "Hi {colleague}, {sender} here - do you have a minute {when} to check the latest draft of {doc_title}?",
+          "Morning {colleague}, {dept} is wrapping up comments on {doc_title} {when} if you want a quick look.",
+          "Hey {colleague}, could you confirm whether {dept} signed off on {doc_title} {when}?",
+          "Quick heads-up from {sender}: I updated the shared notes for {doc_title} {when}, let me know if {dept} needs edits.",
+          "{colleague}, are we still meeting {when} with {dept} to walk through {doc_title}?"
+        ],
+        "sample_personas": [
+          {
+            "bio": "Tuomas Heinonen leads firmware architecture in Engineering. He enjoys winter cycling, clean code reviews, and keeping sprint scopes realistic for his team.",
+            "employee_id": "e00",
+            "tone": "dry"
+          },
+          {
+            "bio": "Antti Hamalainen manages accounts payable in Finance. Known for tidy spreadsheets and punctual reconciliations, he spends weekends restoring vintage wooden boats.",
+            "employee_id": "e01",
+            "tone": "formal"
+          },
+          {
+            "bio": "Emma Tuominen coordinates CRM workflows in Sales. She loves organizing pipeline dashboards and bringing fresh cinnamon buns to Monday morning standups.",
+            "employee_id": "e02",
+            "tone": "upbeat"
+          }
+        ],
+        "sample_rendered_day1_messages": [
+          {
+            "body": "Coffee Friday, Kaisa Tuominen? We can sync on Sales priorities and finish reviewing Finance reorg proposal.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e02",
+              "e07",
+              "e15",
+              "e18",
+              "e22",
+              "e23",
+              "e31",
+              "e33"
+            ],
+            "sender": "e22",
+            "subject": "Coffee Friday, Kaisa Tuominen? We can sy"
+          },
+          {
+            "body": "Hi Iida Tuominen, Janne Laitinen here - do you have a minute tomorrow to check the latest draft of Finance reorg proposal?",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e01",
+              "e08",
+              "e09",
+              "e10",
+              "e12",
+              "e14",
+              "e25",
+              "e26",
+              "e27",
+              "e29",
+              "e32",
+              "e34",
+              "e38"
+            ],
+            "sender": "e29",
+            "subject": "Hi Iida Tuominen, Janne Laitinen here - "
+          },
+          {
+            "body": "Hi Riikka Koskinen, Research asked about timelines for Research vendor contracts Q1 after lunch - should Pihla Jarvinen send over the summary?",
+            "channel": "#research",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e04",
+              "e06",
+              "e17",
+              "e35",
+              "e36",
+              "e37",
+              "e39"
+            ],
+            "sender": "e37",
+            "subject": "Hi Riikka Koskinen, Research asked about"
+          }
+        ]
+      }
+    },
+    {
+      "company": "Kestrel Labs",
+      "gemini_provider": {
+        "day1_messages": [
+          {
+            "body": "Hi team, please review the Legal reorg proposal before tomorrow afternoon so we can align contract review queues with the Sales managers. Let me know if the new routing tiers look workable.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e27",
+              "e30",
+              "e06"
+            ],
+            "sender": "e03",
+            "subject": "Follow-up on Legal reorg proposal"
+          },
+          {
+            "body": "Hi all, I just finished reading the Legal reorg proposal. Can we clarify who in compliance will handle lab vendor agreements for Research once the new structure takes effect next month?",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e31",
+              "e18",
+              "e26"
+            ],
+            "sender": "e04",
+            "subject": "Questions regarding Legal reorg proposal"
+          },
+          {
+            "body": "Funny how leadership has endless energy to draft another Legal reorg proposal, yet zero budget when annual pay reviews come around. Moving boxes on an org chart will not fix our workload.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e14",
+              "e16",
+              "e23"
+            ],
+            "sender": "e20",
+            "subject": "Another restructuring deck"
+          },
+          {
+            "body": "Got another message from an external legal recruiter this morning offering twenty percent above our current band. Honestly hard to ignore when management keeps stalling on cost-of-living adjustments here.",
+            "channel": "email",
+            "day": 1,
+            "id": "m1-3",
+            "recipients": [
+              "e14"
+            ],
+            "sender": "e20",
+            "subject": "Recruiter outreach and comp"
+          },
+          {
+            "body": "Staging build 412 is green and ready for QA checks. Also, whoever left the oat milk out on the third floor counter again, please toss it and grab a fresh carton from the fridge.",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-4",
+            "recipients": [
+              "e00",
+              "e07",
+              "e21"
+            ],
+            "sender": "e05",
+            "subject": "Staging build and kitchen notice"
+          },
+          {
+            "body": "Met with two procurement leads from an outside logistics group at breakfast today and booked a demo for Thursday. Also, heads up that a headhunter from Helsinki Talent has been cold-calling our desk phones all week.",
+            "channel": "#sales",
+            "day": 1,
+            "id": "m1-5",
+            "recipients": [
+              "e02",
+              "e27",
+              "e33"
+            ],
+            "sender": "e38",
+            "subject": "Nordic conference contacts"
+          },
+          {
+            "body": "Friendly reminder to upload any remaining taxi and lunch receipts to the portal before Friday at 4 PM so we can wrap up the preliminary ledger reconciliation on schedule.",
+            "channel": "#finance",
+            "day": 1,
+            "id": "m1-6",
+            "recipients": [
+              "e01",
+              "e13",
+              "e19"
+            ],
+            "sender": "e11",
+            "subject": "Month-end receipt reminders"
+          }
+        ],
+        "day2_messages": [
+          {
+            "body": "Hi Laura and Janne, I just finished reading Acquisition target memo: Northstar. Their lab capabilities look promising on paper, though we should verify their equipment calibration logs before Friday's sync. Let me know when you both have twenty minutes to compare notes.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-0",
+            "recipients": [
+              "e18",
+              "e31"
+            ],
+            "sender": "e04",
+            "subject": "Notes on Acquisition target memo: Northstar"
+          },
+          {
+            "body": "Team, following the distribution of Project Tundra roadmap today, I started mapping the Q3 resource allocations against our current ledger. Could everyone check rows 14 through 28 in the shared worksheet before tomorrow afternoon?",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-1",
+            "recipients": [
+              "e11",
+              "e19",
+              "e32"
+            ],
+            "sender": "e01",
+            "subject": "Cost estimates for Project Tundra roadmap"
+          },
+          {
+            "body": "Hey folks, I went over Project Lumi security review this morning. Most of the certificate pinning recommendations are straightforward, and Maria already patched two of the staging endpoints. Let us review the remaining items at standup.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-2",
+            "recipients": [
+              "e00",
+              "e07",
+              "e21",
+              "e25"
+            ],
+            "sender": "e05",
+            "subject": "Action items from Project Lumi security review"
+          },
+          {
+            "body": "Another week, another sudden reorganization of our review queue from upper management with zero extra headcount. It is pretty frustrating that leadership expects faster turnarounds while keeping our compensation bands frozen for another cycle.",
+            "channel": "#legal",
+            "day": 2,
+            "id": "m2-3",
+            "recipients": [
+              "e03",
+              "e06",
+              "e14"
+            ],
+            "sender": "e20",
+            "subject": "Contract queue and management priorities"
+          },
+          {
+            "body": "Heads up that staging build 412 is green. On an unrelated note, has anyone else been contacted by three different external tech recruiters this week alone? I keep ignoring the messages, though at least someone outside Kestrel Labs thinks my Java skills are exciting. Also, the third-floor espresso machine needs descaling again.",
+            "channel": "#engineering",
+            "day": 2,
+            "id": "m2-4",
+            "recipients": [
+              "e00",
+              "e09",
+              "e10",
+              "e39"
+            ],
+            "sender": "e08",
+            "subject": "Staging deploy and LinkedIn spam"
+          },
+          {
+            "body": "Good push on the renewals this morning, everyone. I am grabbing lunch tomorrow with an outside contact from my previous logistics vendor to hear how hardware procurement budgets are trending across Helsinki this quarter. Please make sure your Q2 deal stages are updated in the portal by 4 PM.",
+            "channel": "#sales",
+            "day": 2,
+            "id": "m2-5",
+            "recipients": [
+              "e02",
+              "e30",
+              "e33",
+              "e38"
+            ],
+            "sender": "e27",
+            "subject": "Nordic summit prep and pipeline"
+          },
+          {
+            "body": "Hi Kalle and Lauri, I am taking over the SaaS vendor redlines since leadership shifted the schedule again without asking us. Honestly, with the way pay adjustments were brushed aside in last month's town hall, I am half tempted to actually reply to the recruiter who messaged me yesterday. Anyway, send over your markup files when ready.",
+            "channel": "email",
+            "day": 2,
+            "id": "m2-6",
+            "recipients": [
+              "e16",
+              "e23"
+            ],
+            "sender": "e20",
+            "subject": "Vendor redlines and career gripe"
+          }
+        ],
+        "fallbacks": 0,
+        "interviews": {
+          "cooperative": {
+            "answer": "Sure, I opened the Legal reorg proposal twice today, once this morning and again right after lunch. My team is preparing the upcoming Active Directory and Jira permission updates, so I needed to double-check the proposed sub-department reporting lines. Happy to share the engineering ticket tracking that access review if it helps your audit.",
+            "day": 1,
+            "employee": "e00",
+            "signal": "cooperative",
+            "topic": "recent_documents"
+          },
+          "evasive": {
+            "answer": "I keep up with a few former colleagues in the finance sector, which is just standard professional networking. Between reviewing the Northstar memo and checking numbers for the Project Tundra roadmap, I barely have time for outside chats anyway. If there is some new policy on external networking, HR has not mentioned it to our team.",
+            "day": 2,
+            "employee": "e01",
+            "signal": "evasive",
+            "topic": "contacts_outside"
+          }
+        },
+        "provider_name": "gemini:gemini-4-carbon"
+      },
+      "integrity": {
+        "lint_errors": [],
+        "lint_violations": 0,
+        "truth_errors": [],
+        "truth_leak_violations": 0
+      },
+      "public_input_summary": {
+        "day1_docs": [
+          "Legal reorg proposal",
+          "Legal reorg proposal"
+        ],
+        "day2_docs": [
+          "Acquisition target memo: Northstar",
+          "Project Tundra roadmap",
+          "Project Lumi security review"
+        ],
+        "depts": [
+          "Engineering",
+          "Finance",
+          "Legal",
+          "Research",
+          "Sales"
+        ],
+        "n_employees": 40
+      },
+      "seed": 6,
+      "solver_verification": {
+        "accused": "e34",
+        "clean_run": true,
+        "correct": true,
+        "end_reason": "accused",
+        "final_day": 6,
+        "messages_rendered_in_env": 36,
+        "provider": "gemini-world:gemini-4-carbon",
+        "score": 0.71,
+        "score_delta": 0.0,
+        "steps_count": 52,
+        "template_baseline_score": 0.71
+      },
+      "tier": "hard",
+      "usage": {
+        "cached": 0,
+        "calls": 5,
+        "cost_usd": 0.09415,
+        "in": 7790,
+        "latency_s": 171.69,
+        "out": 4058,
+        "thinking": 3799,
+        "total_tokens": 15647
+      },
+      "world_builder": {
+        "company_blurb": "Kestrel Labs is a Helsinki-based industrial optics and precision sensor company. Across five departments, teams design hardware, test photonic materials, and deliver reliable measurement tools to enterprise partners across Europe.",
+        "departments": [
+          {
+            "culture": "Engineering values reproducible builds, thorough peer reviews, and practical problem solving. Teams split their time between firmware benches and quiet coding blocks, gathering mostly for brief standups and Friday hardware demos.",
+            "dept": "Engineering"
+          },
+          {
+            "culture": "Finance operates on predictable monthly cycles, clean audit trails, and conservative forecasting. Colleagues keep meetings structured and appreciate advance notice whenever other teams adjust project budgets.",
+            "dept": "Finance"
+          },
+          {
+            "culture": "Legal balances commercial speed with strict European regulatory compliance. Counsels and compliance officers collaborate closely on shared templates, prizing clear version history and precise language.",
+            "dept": "Legal"
+          },
+          {
+            "culture": "Research blends academic curiosity with industrial rigor inside temperature-controlled optics labs. Scientists and analysts log every bench run methodically and debate calibration results over afternoon coffee.",
+            "dept": "Research"
+          },
+          {
+            "culture": "Sales is an energetic, target-driven group focused on long-term industrial client partnerships. Account leads and operations specialists coordinate constantly on contract timelines, demos, and quarterly renewals.",
+            "dept": "Sales"
+          }
+        ],
+        "error": null,
+        "llm_ok": true,
+        "n_chatter_templates": 10,
+        "n_departments": 5,
+        "n_fallback_personas": 0,
+        "n_llm_personas": 40,
+        "n_personas": 40,
+        "sample_chatter_templates": [
+          "Hey {colleague}, did you get a chance to review {doc_title} {when}?",
+          "{sender} here - dropping a reminder for {dept} to wrap up comments on {doc_title} {when}.",
+          "Can someone in {dept} confirm if {colleague} updated {doc_title} {when}?",
+          "Quick heads-up from {sender}: {colleague} and I synced on {doc_title} {when}.",
+          "Coffee run in five! Also {colleague}, let us chat about {doc_title} {when}."
+        ],
+        "sample_personas": [
+          {
+            "bio": "Mikko leads backend firmware architecture in Engineering and prefers clean code reviews over long status meetings. Outside work, he restores vintage bicycles.",
+            "employee_id": "e00",
+            "tone": "terse"
+          },
+          {
+            "bio": "Eero tracks quarterly departmental budgets and builds forecasting spreadsheets in Finance. He enjoys winter swimming and organized spreadsheets.",
+            "employee_id": "e01",
+            "tone": "dry"
+          },
+          {
+            "bio": "Aleksi manages CRM workflows and territory data in Sales, keeping pipeline dashboards tidy for the team. He is known for bringing fresh cardamom buns on Fridays.",
+            "employee_id": "e02",
+            "tone": "upbeat"
+          }
+        ],
+        "sample_rendered_day1_messages": [
+          {
+            "body": "Thanks Lauri Nieminen for organizing the notes on Legal reorg proposal Monday, super helpful for Legal.",
+            "channel": "#legal",
+            "day": 1,
+            "id": "m1-0",
+            "recipients": [
+              "e03",
+              "e06",
+              "e14",
+              "e16",
+              "e17",
+              "e20",
+              "e23",
+              "e26",
+              "e28",
+              "e35",
+              "e37"
+            ],
+            "sender": "e37",
+            "subject": "Thanks Lauri Nieminen for organizing the"
+          },
+          {
+            "body": "Hey Janne Jokinen, did you get a chance to review Legal reorg proposal Friday?",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-1",
+            "recipients": [
+              "e00",
+              "e05",
+              "e07",
+              "e08",
+              "e09",
+              "e10",
+              "e21",
+              "e25",
+              "e39"
+            ],
+            "sender": "e09",
+            "subject": "Hey Janne Jokinen, did you get a chance "
+          },
+          {
+            "body": "Hey Jussi Salo, did you get a chance to review Legal reorg proposal after lunch?",
+            "channel": "#engineering",
+            "day": 1,
+            "id": "m1-2",
+            "recipients": [
+              "e00",
+              "e05",
+              "e07",
+              "e08",
+              "e09",
+              "e10",
+              "e21",
+              "e25",
+              "e39"
+            ],
+            "sender": "e09",
+            "subject": "Hey Jussi Salo, did you get a chance to "
+          }
+        ]
+      }
+    }
+  ]
+}

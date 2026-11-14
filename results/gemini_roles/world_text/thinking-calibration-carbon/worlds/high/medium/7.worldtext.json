@@ -1,0 +1,166 @@
+{
+  "chatter_templates": [
+    "Hi {colleague}, did {dept} finish adding comments to {doc_title} before {when}?",
+    "{colleague}, I just updated the figures in {doc_title} for {dept} review {when}.",
+    "Quick heads-up from {sender}: staging checks are green, so please open a ticket if {dept} sees any lag {when}.",
+    "Hey {colleague}, can we grab ten minutes {when} to align {dept} notes on {doc_title}?",
+    "Sharing the latest version of {doc_title} here so {colleague} and the {dept} channel have the same copy {when}.",
+    "{colleague}, please drop your {dept} sign-off on {doc_title} in the shared folder by {when}.",
+    "Coffee machine on the third floor is back up - {sender} and {colleague} are heading over after the {dept} sync {when}.",
+    "Could someone in {dept} confirm whether {colleague} locked the formatting on {doc_title} {when}?",
+    "{sender} left two clarifying questions in {doc_title} for {colleague} ahead of the {dept} check-in {when}.",
+    "Thanks {colleague}! Once {dept} wraps up the table check {when}, {doc_title} is ready to archive."
+  ],
+  "company_blurb": "Nordlys Systems is a Helsinki-based B2B software company building grid-telemetry and load-forecasting platforms for regional utilities across Northern Europe. Its teams coordinate cloud releases, utility licensing, financial planning, and energy compliance.",
+  "departments": [
+    {
+      "culture": "Engineering runs on predictable two-week release cycles, peer code reviews, and automated staging checks for telemetry pipelines. Team members document architecture changes in shared RFCs, track latency dashboards closely, and favor calm, ticket-driven fixes over ad-hoc changes.",
+      "dept": "Engineering"
+    },
+    {
+      "culture": "Finance operates around structured monthly closes, rolling cash-flow forecasts, and disciplined variance reviews tied to annual utility billings. Analysts, accountants, and controllers cross-check ledger entries in shared workbooks and prepare board reporting packets well ahead of leadership deadlines.",
+      "dept": "Finance"
+    },
+    {
+      "culture": "Legal maintains contract playbooks, data-processing addenda, and Nordic grid-compliance checklists for utility agreements. Compliance officers review vendor terms and procurement clauses methodically, keeping clear audit logs and practical guidance for commercial and technical teams.",
+      "dept": "Legal"
+    },
+    {
+      "culture": "Sales focuses on municipal tenders, multi-year renewals, and consultative demos for regional utility buyers. Managers, account executives, and sales ops keep CRM pipeline stages current, align quotes with pricing tiers, and coordinate clean handoffs after contract signature.",
+      "dept": "Sales"
+    }
+  ],
+  "meta": {
+    "cell_usage": {
+      "cached": 0,
+      "calls": 4,
+      "cost_usd": 0.21868,
+      "in": 3955,
+      "latency_s": 254.166,
+      "out": 2456,
+      "thinking": 18621,
+      "total_tokens": 25032
+    },
+    "error": null,
+    "llm_ok": true,
+    "model_id": "gemini-4-carbon",
+    "n_fallback_personas": 0,
+    "n_llm_personas": 20,
+    "thinking_level": "high"
+  },
+  "model_id": "gemini-4-carbon",
+  "personas": [
+    {
+      "bio": "Tuomas Salminen builds ingestion services for substation meter feeds in Engineering. He maintains Kafka consumer benchmarks, writes concise runbooks for on-call handoffs, and reviews database migration scripts.",
+      "employee_id": "e00",
+      "tone": "dry"
+    },
+    {
+      "bio": "Emma Makinen models quarterly ARR cohorts and utility usage tiers in Finance. She maintains unit-economics dashboards for commercial planning and partners with Sales to validate seat-expansion assumptions.",
+      "employee_id": "e01",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Jussi Salonen administers CRM territory rules, quote approval workflows, and pipeline hygiene reports in Sales. He reconciles weekly deal-stage snapshots and maintains standard order-form templates.",
+      "employee_id": "e02",
+      "tone": "terse"
+    },
+    {
+      "bio": "Tuomas Rantanen oversees ISO 27001 control attestations and municipal tender questionnaires in Legal. He tracks subprocessor registries, updates retention schedules, and archives signed vendor assessments.",
+      "employee_id": "e03",
+      "tone": "formal"
+    },
+    {
+      "bio": "Nea Lehtinen leads mid-market utility accounts across Finland and Sweden in Sales. She coaches account executives through discovery workshops, reviews multi-year renewal proposals, and runs weekly forecast calls.",
+      "employee_id": "e04",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Aleksi Makinen tracks cloud infrastructure spend and departmental budget variances in Finance. He builds sensitivity tables for board reporting packages and reconciles hosting invoices with Engineering.",
+      "employee_id": "e05",
+      "tone": "dry"
+    },
+    {
+      "bio": "Aino Hamalainen manages revenue recognition under multi-year utility contracts and leads month-end close reviews in Finance. She approves journal adjustments and coordinates external statutory audit schedules.",
+      "employee_id": "e06",
+      "tone": "formal"
+    },
+    {
+      "bio": "Venla Kinnunen manages district-heating commercial accounts in Norway and Denmark for Sales. She aligns enterprise pricing proposals with regional targets and coordinates executive sponsor briefings.",
+      "employee_id": "e07",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Kaisa Laitinen handles GDPR data-processing agreements and cross-border hosting reviews in Legal. She runs privacy onboarding sessions for new hires and helps product teams map telemetry retention rules.",
+      "employee_id": "e08",
+      "tone": "warm"
+    },
+    {
+      "bio": "Petri Jokinen processes accounts payable batches, supplier tax forms, and corporate card reconciliations in Finance. He enforces receipt cutoffs before monthly close and tracks prepaid software schedules.",
+      "employee_id": "e09",
+      "tone": "blunt"
+    },
+    {
+      "bio": "Sofia Salonen develops front-end operator consoles and grid-alert visualizations in Engineering. She pairs with product designers on accessibility checks, maintains UI component tests, and demos sprint builds.",
+      "employee_id": "e10",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Jussi Laine manages municipal energy prospects and expansion renewals in Sales. He coordinates technical proof-of-value trials with Engineering and prepares tailored ROI summaries for procurement committees.",
+      "employee_id": "e11",
+      "tone": "warm"
+    },
+    {
+      "bio": "Antti Saarinen manages customer billing schedules, VAT filings, and bank reconciliations in Finance. He tracks overdue utility invoices, posts deferred revenue entries, and maintains clean subledger balances.",
+      "employee_id": "e12",
+      "tone": "terse"
+    },
+    {
+      "bio": "Joonas Makinen oversees strategic grid-operator bids and partner channel targets in Sales. He reviews redlined commercial terms with Legal, sets quarterly quota pacing, and chairs Monday pipeline reviews.",
+      "employee_id": "e13",
+      "tone": "blunt"
+    },
+    {
+      "bio": "Tuomas Korhonen leads platform architecture and release readiness in Engineering. He chairs weekly RFC reviews, coordinates staging cutovers for forecasting services, and tracks service-level error budgets.",
+      "employee_id": "e14",
+      "tone": "terse"
+    },
+    {
+      "bio": "Laura Niemi handles payroll accounting, travel expense audits, and intercompany ledger entries in Finance. She answers employee reimbursement questions and prepares monthly accruals for Nordic entities.",
+      "employee_id": "e15",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Aleksi Karjalainen reviews critical-infrastructure regulatory filings and SLA liability caps in Legal. He maintains standard procurement riders and verifies insurance certificates for municipal contracts.",
+      "employee_id": "e16",
+      "tone": "dry"
+    },
+    {
+      "bio": "Laura Karjalainen manages export-control screening, licensing compliance, and policy attestations in Legal. She updates annual governance checklists and coordinates contract archive audits with Finance.",
+      "employee_id": "e17",
+      "tone": "formal"
+    },
+    {
+      "bio": "Elina Saarinen runs outbound discovery and renewal scoping for regional water and heat utilities in Sales. She schedules live telemetry walkthroughs and keeps prospect stakeholder notes current in the CRM.",
+      "employee_id": "e18",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Iida Jokinen oversees cash-flow reporting, treasury balances, and quarterly budget rollups in Finance. She partners with department leads on headcount tracking and reviews draft slides for board updates.",
+      "employee_id": "e19",
+      "tone": "warm"
+    }
+  ],
+  "provider": "gemini-world:gemini-4-carbon:high",
+  "thinking_level": "high",
+  "usage": {
+    "cached": 0,
+    "calls": 4,
+    "cost_usd": 0.21868,
+    "in": 3955,
+    "latency_s": 254.166,
+    "out": 2456,
+    "thinking": 18621,
+    "total_tokens": 25032
+  }
+}

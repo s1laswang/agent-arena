@@ -1,0 +1,166 @@
+{
+  "chatter_templates": [
+    "Hey {colleague}, did {dept} finish checking the figures in {doc_title} {when}, or should I wait for the afternoon sync?",
+    "Quick heads-up from {dept}: {sender} updated the lane assumptions in {doc_title} {when}. Please refresh before commenting.",
+    "{colleague}, could you open a ticket if the Vuosaari EDI feed lags again {when}? {dept} is tracking terminal delays today.",
+    "I left two notes on {doc_title} {when}. Let me know if {colleague} from {dept} wants to walk through the tariff tables.",
+    "Morning {colleague}, {sender} here - do we have final sign-off from {dept} on {doc_title} before the Turku ferry cutoff?",
+    "Thanks {colleague}! The numbers from {dept} lined up cleanly {when}, so {doc_title} is ready for our next review pass.",
+    "Can someone in {dept} confirm whether {colleague} locked the latest version of {doc_title} {when}?",
+    "{sender} booked the third-floor room {when} so {dept} and {colleague} can align on {doc_title} before Friday close.",
+    "Hi {colleague}, Baltic weather pushed two vessel slots {when}, so {dept} may adjust the timeline noted in {doc_title}.",
+    "Just checked with {colleague} {when} - {dept} already reconciled the surcharge schedule referenced in {doc_title}."
+  ],
+  "company_blurb": "Aurora Freight is a Helsinki-based multimodal logistics carrier operating Nordic road, rail, and Baltic short-sea corridors. Across port hubs in Vuosaari and Turku, its teams coordinate container routing, customs compliance, fleet telemetry, and enterprise freight contracts for industrial shippers.",
+  "departments": [
+    {
+      "culture": "Engineering builds and maintains route optimization services, EDI integrations, and container telemetry pipelines. Developers favor concise RFCs, automated deployment checks, and blameless postmortems when port feeds lag. Cross-team reviews happen every Tuesday before scheduled platform releases.",
+      "dept": "Engineering"
+    },
+    {
+      "culture": "Finance manages carrier settlement ledgers, fuel surcharge models, bunker hedging reconciliations, and monthly close cycles. The team values clean audit trails, punctual variance reports, and structured spreadsheet conventions, keeping calm even during compressed quarter-end board reporting.",
+      "dept": "Finance"
+    },
+    {
+      "culture": "Legal oversees cross-border customs compliance, maritime liability clauses, vendor MSAs, and transport safety regulations across Baltic and EU jurisdictions. Colleagues work methodically through clause redlines and regulatory checklists, prioritizing clear guidance that keeps cargo moving.",
+      "dept": "Legal"
+    },
+    {
+      "culture": "Sales manages industrial shipper accounts, seasonal lane tenders, and volume rate proposals across Nordic manufacturing corridors. Account executives and sales operations collaborate closely in CRM pipelines to align lane capacity with Engineering timelines and Finance margin targets.",
+      "dept": "Sales"
+    }
+  ],
+  "meta": {
+    "cell_usage": {
+      "cached": 0,
+      "calls": 4,
+      "cost_usd": 0.236698,
+      "in": 4079,
+      "latency_s": 301.774,
+      "out": 2801,
+      "thinking": 20053,
+      "total_tokens": 26933
+    },
+    "error": null,
+    "llm_ok": true,
+    "model_id": "gemini-4-carbon",
+    "n_fallback_personas": 0,
+    "n_llm_personas": 20,
+    "thinking_level": "high"
+  },
+  "model_id": "gemini-4-carbon",
+  "personas": [
+    {
+      "bio": "Tuomas Saarinen maintains the vessel-slot booking API and EDI 315 status parsers in Engineering. He tracks carrier webhook latencies from Vuosaari terminals and documents edge cases in sober, detailed runbooks.",
+      "employee_id": "e00",
+      "tone": "dry"
+    },
+    {
+      "bio": "Teemu Koskinen processes Nordic subcontractor haulage invoices and port tariff accruals in Finance. He reconciles weekly drayage statements against dispatch logs and helps terminal clerks resolve billing code mismatches.",
+      "employee_id": "e01",
+      "tone": "warm"
+    },
+    {
+      "bio": "Elina Turunen manages forestry and paper mill freight accounts in Sales, structuring annual Baltic Ro-Ro lane tenders. She coordinates quarterly business reviews and aligns seasonal container allocations with dispatch.",
+      "employee_id": "e02",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Tuomas Salo oversees EU customs transit guarantees and dual-use cargo screening protocols in Legal. He reviews carrier onboarding documentation and updates standard operating procedures for cross-border manifest filings.",
+      "employee_id": "e03",
+      "tone": "formal"
+    },
+    {
+      "bio": "Venla Tuominen leads database tuning and event-stream reliability for fleet GPS ingestion in Engineering. She maintains PostgreSQL partitioning jobs for Project Northstar telemetry and trims slow queries before peak hours.",
+      "employee_id": "e04",
+      "tone": "terse"
+    },
+    {
+      "bio": "Petri Nieminen handles hazardous-goods transport certifications and ADR compliance audits in Legal. He stays in regular contact with warehouse supervisors and port agents to keep safety declarations accurate before sailing.",
+      "employee_id": "e05",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Joonas Saarinen reviews shipper master service agreements, cargo insurance riders, and data-processing addenda in Legal. He maintains the contract clause library and tracks statutory notice windows for carrier renewals.",
+      "employee_id": "e06",
+      "tone": "formal"
+    },
+    {
+      "bio": "Elina Tuominen serves as tech lead for core routing and customer portal services in Engineering. She runs sprint architecture reviews, coordinates infrastructure changes for Project Saimaa, and signs off on release plans.",
+      "employee_id": "e07",
+      "tone": "terse"
+    },
+    {
+      "bio": "Teemu Tuominen administers CRM territory rules, tender pricing calculators, and win-rate dashboards in Sales. He cleans historical lane volume tables each Friday so account teams quote off verified transit cost baselines.",
+      "employee_id": "e08",
+      "tone": "dry"
+    },
+    {
+      "bio": "Hanna Salo manages accounts receivable, customer credit limits, and multi-currency SEK-EUR cash application in Finance. She works with account executives to clarify demurrage line items before monthly statements go out.",
+      "employee_id": "e09",
+      "tone": "warm"
+    },
+    {
+      "bio": "Teemu Nieminen oversees corridor margin analysis, bunker surcharge models, and rolling quarterly forecasts in Finance. He compiles financial tables for board packages and validates cost-center allocations across hubs.",
+      "employee_id": "e10",
+      "tone": "formal"
+    },
+    {
+      "bio": "Sanna Virtanen manages corporate filings, power-of-attorney registries for customs brokers, and signed NDA archives in Legal. She coordinates signature routing across departments and tracks carrier certificate expirations.",
+      "employee_id": "e11",
+      "tone": "warm"
+    },
+    {
+      "bio": "Tuomas Heinonen leads regional commercial pipelines, Q4 pricing reviews, and enterprise tender bids in Sales. He runs Monday forecast calls, checks lane contribution margins, and sets clear targets for contract renewals.",
+      "employee_id": "e12",
+      "tone": "blunt"
+    },
+    {
+      "bio": "Elina Kinnunen handles automotive parts and machinery accounts in Sales, negotiating time-definite intermodal schedules. She checks in often with dispatchers and clients whenever weather shifts Baltic ferry arrival windows.",
+      "employee_id": "e13",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Joonas Heikkinen directs monthly ledger close, capital expenditure tracking for trailer leases, and statutory reporting in Finance. He reviews journal entries and variance notes to keep audit schedules strictly on track.",
+      "employee_id": "e14",
+      "tone": "dry"
+    },
+    {
+      "bio": "Antti Salo builds frontend shipment-tracking views and webhook retry workers in Engineering. He pairs with support specialists to reproduce customer portal bugs and writes integration tests for carrier milestone updates.",
+      "employee_id": "e15",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Maria Niemi handles terminal stevedoring payables, customs duty clearing accounts, and expense audits in Finance. She follows up promptly with hub managers on missing receipts so weekly payment runs clear on schedule.",
+      "employee_id": "e16",
+      "tone": "chatty"
+    },
+    {
+      "bio": "Kalle Jokinen maintains CI/CD pipelines, container cluster policies, and staging environments in Engineering. He monitors build queue times, rotates expired service certificates, and flags flaky tests during standup.",
+      "employee_id": "e17",
+      "tone": "blunt"
+    },
+    {
+      "bio": "Riikka Lehtinen coordinates RFP response templates, lane rate cards, and contract handoff checklists in Sales. She tracks deal desk approvals across Finance and Legal so signed accounts onboard smoothly into dispatch.",
+      "employee_id": "e18",
+      "tone": "upbeat"
+    },
+    {
+      "bio": "Ville Lehtonen designs customs-manifest XML generators and rate-calculation microservices in Engineering. He benchmarks service throughput before tariff updates and keeps API schema documentation synchronized in Git.",
+      "employee_id": "e19",
+      "tone": "terse"
+    }
+  ],
+  "provider": "gemini-world:gemini-4-carbon:high",
+  "thinking_level": "high",
+  "usage": {
+    "cached": 0,
+    "calls": 4,
+    "cost_usd": 0.236698,
+    "in": 4079,
+    "latency_s": 301.774,
+    "out": 2801,
+    "thinking": 20053,
+    "total_tokens": 26933
+  }
+}

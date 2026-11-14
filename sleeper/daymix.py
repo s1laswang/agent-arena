@@ -36,18 +36,21 @@ def entry(day_id, seat_under_test=None):
     if day_id % 5 == 4:
         return no_sleeper(day_id)
     k = day_id // 5 * 4 + day_id % 5
-    if seat_under_test:
-        kinds = [x for x in KINDS if any(s.kind == x for s in gated(seat_under_test))]
-        if not kinds:
-            return no_sleeper(day_id)
-        kind = kinds[k % len(kinds)]
-        pick = [s for s in gated(seat_under_test) if s.kind == kind]
-        s = pick[k // len(kinds) % len(pick)]
-    else:
-        kind = KINDS[k % len(KINDS)]
-        pick = [s for s in sorted(get(kind), key=lambda s: s.id) if sleeper_seats(s)]
-        s = pick[k // len(KINDS) % len(pick)]
-    seat = random.Random(f"mix-{day_id}").choice(sleeper_seats(s, seat_under_test))
+    pool = gated(seat_under_test) if seat_under_test else sorted(STRATEGIES.values(), key=lambda s: s.id)
+    seats = sorted({x for s in pool for x in sleeper_seats(s, seat_under_test)})
+    if not seats:
+        return no_sleeper(day_id)
+    seat = seats[k % len(seats)]
+    cand = [s for s in pool if seat in sleeper_seats(s, seat_under_test)]
+    support = {x: len({y for s in pool if s.kind == x for y in sleeper_seats(s, seat_under_test)}) for x in KINDS}
+    seen = {}
+    key = {}
+    for x in sorted(cand, key=lambda x: x.id):
+        key[x.id] = seen.get(x.kind, 0)
+        seen[x.kind] = key[x.id] + 1
+    cand.sort(key=lambda x: (key[x.id], support[x.kind], x.kind, x.id))
+    s = cand[k // len(seats) % len(cand)]
+    kind = s.kind
     return {"day_id": day_id, "seed": day_id, "sleeper_seat": seat, "goal": kind, "strategy": s.id, "needs_tested_seat": bool(seat_under_test)}
 
 

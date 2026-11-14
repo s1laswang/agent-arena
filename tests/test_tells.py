@@ -84,7 +84,6 @@ def test_surface_patterns_do_not_reveal_the_sleeper():
             assert acc <= prior + MARGIN, (name, len(applies), acc, prior, report)
 
 
-@pytest.mark.xfail(reason="daymix picks the sleeper seat from a skewed pool: ceo_assistant and sales dominate", strict=False)
 def test_sleeper_seat_prior_is_near_uniform():
     ds = days()
     share = max(Counter(d.sleeper_seat for d in ds).values()) / len(ds)

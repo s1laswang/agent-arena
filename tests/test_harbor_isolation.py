@@ -36,16 +36,23 @@ def test_separate_mode_layout(tdir):
     assert 'environment_mode = "separate"' in toml and "[[verifier.collect]]" in toml and 'source = "/srv/state.json"' in toml
     assert (d / "tests/Dockerfile").exists()
     assert tok not in (d / "tests/test.sh").read_text()
-    assert "8001" not in (d / "environment/docker-compose.yaml").read_text()
-    main = (d / "environment/docker-compose.yaml").read_text().split("sleeper-server:\n    build")[0]
-    assert tok not in main and "VERIFY_TOKEN" not in main
+    comp = (d / "environment/docker-compose.yaml").read_text()
+    assert "8001" not in comp
+    assert tok not in comp
+    for bad in ("VERIFY_TOKEN", "SLEEPER_SALT", "SLEEPER_SEED"):
+        assert bad not in comp, bad
 
 
 def test_token_only_in_verifier_env_and_sidecar(tdir):
     d, tok = tdir
     assert len(tok) == 32
+    sec = json.loads((d / "environment/runtime-server/secrets.json").read_text())
+    salt = sec["SLEEPER_SALT"]
+    assert sec["VERIFY_TOKEN"] == tok and len(salt) == 32
     hits = {str(f.relative_to(d)) for f in d.rglob("*") if f.is_file() and tok in f.read_text(errors="ignore")}
-    assert hits == {"task.toml", "environment/docker-compose.yaml"}, hits
+    assert hits == {"task.toml", "environment/runtime-server/secrets.json"}, hits
+    salt_hits = {str(f.relative_to(d)) for f in d.rglob("*") if f.is_file() and salt in f.read_text(errors="ignore")}
+    assert salt_hits == {"environment/runtime-server/secrets.json"}, salt_hits
 
 
 @needs_docker

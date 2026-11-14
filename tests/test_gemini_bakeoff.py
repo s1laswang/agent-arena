@@ -117,6 +117,9 @@ def test_dotenv_file_fills_only_when_unset_and_does_not_override(gb, tmp_path):
 
 
 def test_gitignore_covers_dotenv():
+    if subprocess.run(["git", "rev-parse"], cwd=ROOT, capture_output=True).returncode != 0:
+        assert ".env" in (ROOT / ".gitignore").read_text().split()  # zip download: no .git to ask
+        return
     out = subprocess.run(["git", "check-ignore", "-v", ".env"], cwd=ROOT, capture_output=True, text=True)
     assert out.returncode == 0
     assert ".gitignore" in out.stdout and ".env" in out.stdout

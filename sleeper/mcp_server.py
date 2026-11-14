@@ -111,13 +111,14 @@ def main():
     ap.add_argument("--team", default=e("SLEEPER_TEAM", "procedure"))
     ap.add_argument("--transport", default=e("SLEEPER_TRANSPORT", "stdio"))
     ap.add_argument("--sleeper-seat", default=e("SLEEPER_SLEEPER_SEAT") or None)
+    ap.add_argument("--day-source", choices=["auto", "make_day", "day_for"], default=e("SLEEPER_DAY_SOURCE", "auto"))
     ap.add_argument("--goal", default=e("SLEEPER_GOAL") or None)
     ap.add_argument("--out", default=e("SLEEPER_OUT", "/tmp/sleeper_state.json"))
     a = ap.parse_args()
     if a.sleeper_seat == a.seat:
         ap.error("seat under test cannot be the sleeper")
     strategy = None
-    if a.sleeper_seat or a.goal:
+    if a.day_source == "make_day" or (a.day_source == "auto" and (a.sleeper_seat or a.goal)):
         day = make_day(a.day, a.sleeper_seat, a.goal)
     else:
         from lab.run import day_for

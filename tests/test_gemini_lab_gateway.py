@@ -416,3 +416,39 @@ def test_tcprelay_forwards_to_gateway(upstream, tmp_path):
         assert _gen(url, key=None).status_code == 401
     finally:
         g.close()
+
+
+def test_adaptive_limit_halves_on_429_and_regrows():
+    from canary.gemini.gateway import AdaptiveLimit
+
+    async def go():
+        lim = AdaptiveLimit(8, grow_after=2, cooldown_s=0.0)
+        await lim.throttled()
+        assert lim.limit == 4
+        await lim.throttled()
+        await lim.throttled()
+        await lim.throttled()
+        assert lim.limit == 1
+        for _ in range(4):
+            await lim.succeeded()
+        assert lim.limit == 3
+        await lim.acquire()
+        await lim.acquire()
+        await lim.acquire()
+        waiter = asyncio.create_task(lim.acquire())
+        await asyncio.sleep(0.01)
+        assert not waiter.done()  # at the limit: queued
+        await lim.release()
+        await asyncio.wait_for(waiter, 1)
+    asyncio.run(go())
+
+
+def test_429_shrinks_model_limit(upstream, tmp_path):
+    upstream.fail_first = 1
+    g = _gw(upstream, tmp_path, max_concurrency=8)
+    try:
+        assert _gen(g.url, model="gemini-4-carbon").status_code == 200
+        lim = httpx.get(g.url + "/healthz").json()["model_limits"]["gemini-4-carbon"]
+        assert lim[0] == 4 and lim[1] == 8
+    finally:
+        g.close()

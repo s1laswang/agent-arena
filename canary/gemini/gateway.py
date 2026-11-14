@@ -12,6 +12,9 @@ Relays everything under /v1beta, /v1, /v1alpha and /upload (generateContent, str
 incl. alt=sse, countTokens, embedContent, caches, files incl. resumable upload, batches, models).
 Not relayed: the Live API (WebSocket bidiGenerateContent).
 
+Rate limiting: a global in-flight cap plus a per-model cap (--per-model, --model-limit M=N); requests beyond it
+  queue. The per-model cap adapts (AIMD): halved on an upstream 429, +1 per 20 successes back up to the cap.
+  429/5xx/transport errors are retried with exponential backoff + jitter (Retry-After honoured).
 Security:
 - every request needs a valid token (`x-goog-api-key` header or `key=` query param); tokens come from a
   0600 file (one token per line, or `name token` lines for per-client tokens). Anything else -> 401.
@@ -195,6 +198,43 @@ def decode_body(e: dict) -> bytes:
     return base64.b64decode(e["body_b64"]) if "body_b64" in e else e.get("body", "").encode("utf-8")
 
 
+class AdaptiveLimit:
+    """Per-model concurrency limit with AIMD: halve on an upstream 429 (at most once per `cooldown_s`),
+    +1 after every `grow_after` successes, never above the configured cap or below 1."""
+
+    def __init__(self, cap: int, grow_after: int = 20, cooldown_s: float = 5.0):
+        self.cap = self.limit = max(1, cap)
+        self.inflight = 0
+        self.ok_streak = 0
+        self.grow_after, self.cooldown_s = grow_after, cooldown_s
+        self.last_cut = 0.0
+        self.cond = asyncio.Condition()
+
+    async def acquire(self) -> None:
+        async with self.cond:
+            await self.cond.wait_for(lambda: self.inflight < self.limit)
+            self.inflight += 1
+
+    async def release(self) -> None:
+        async with self.cond:
+            self.inflight -= 1
+            self.cond.notify_all()
+
+    async def throttled(self) -> None:
+        now = time.time()
+        if now - self.last_cut >= self.cooldown_s:
+            self.limit = max(1, self.limit // 2)
+            self.last_cut, self.ok_streak = now, 0
+
+    async def succeeded(self) -> None:
+        self.ok_streak += 1
+        if self.limit < self.cap and self.ok_streak >= self.grow_after:
+            async with self.cond:
+                self.limit += 1
+                self.ok_streak = 0
+                self.cond.notify_all()
+
+
 # ----------------------------------------------------------------------------------------- gateway
 class Gateway:
     def __init__(self, tokens: dict[str, str], real_key: str | None, upstream: str = UPSTREAM,
@@ -215,7 +255,7 @@ class Gateway:
         self.max_concurrency = max_concurrency
         self.per_model = per_model or max_concurrency
         self.model_limits = dict(model_limits or {})
-        self.model_sems: dict[str, asyncio.Semaphore] = {}
+        self.model_sems: dict[str, AdaptiveLimit] = {}
         self.max_retries, self.backoff_base, self.backoff_max = max_retries, backoff_base, backoff_max
         self.inflight = 0
         self.waiting = 0
@@ -237,10 +277,10 @@ class Gateway:
                 trust_env=True)
         return self.client
 
-    def _model_sem(self, model: str) -> asyncio.Semaphore:
+    def _model_sem(self, model: str) -> AdaptiveLimit:
         s = self.model_sems.get(model)
         if s is None:
-            s = self.model_sems[model] = asyncio.Semaphore(self.model_limits.get(model, self.per_model))
+            s = self.model_sems[model] = AdaptiveLimit(self.model_limits.get(model, self.per_model))
         return s
 
     def auth(self, headers: dict[str, str], query: list[tuple[str, str]]) -> str | None:
@@ -290,6 +330,8 @@ class Gateway:
         if path in ("/healthz", "/health"):
             return await self._json(send, 200, {"ok": True, "mode": self.mode, "inflight": self.inflight,
                                                 "waiting": self.waiting, "served": self.served,
+                                                "model_limits": {m: [lim.limit, lim.cap, lim.inflight]
+                                                                 for m, lim in self.model_sems.items()},
                                                 "uptime_s": round(t0 - self.started)})
         client = self.auth(headers, query_all)
         if client is None:
@@ -330,25 +372,25 @@ class Gateway:
         # live / record: queue for a slot, then forward with retries
         self.waiting += 1
         msem = self._model_sem(model)
-        try:
-            await self.global_sem.acquire()
+        try:  # model slot first, so a throttled model waits without holding global slots
+            await msem.acquire()
             try:
-                await msem.acquire()
+                await self.global_sem.acquire()
             except BaseException:
-                self.global_sem.release()
+                await msem.release()
                 raise
         finally:
             self.waiting -= 1
         queued_s = time.time() - t0
         self.inflight += 1
         try:
-            await self._forward(scope, send, method, path, query, headers, body, rkey, base, t0, queued_s)
+            await self._forward(scope, send, method, path, query, headers, body, rkey, base, t0, queued_s, msem)
         finally:
             self.inflight -= 1
-            msem.release()
+            await msem.release()
             self.global_sem.release()
 
-    async def _forward(self, scope, send, method, path, query, headers, body, rkey, base, t0, queued_s):
+    async def _forward(self, scope, send, method, path, query, headers, body, rkey, base, t0, queued_s, limiter):
         import httpx2 as httpx
         fwd_headers = [(k, v) for k, v in headers.items() if k not in HOP and not k.startswith("x-forwarded")]
         fwd_headers.append(("x-goog-api-key", self._key))
@@ -368,6 +410,8 @@ class Gateway:
                 self.stat(**base, status=502, latency_s=round(time.time() - t0, 3), queued_s=round(queued_s, 3),
                           bytes_out=0, retries=retries, error=type(ex).__name__)
                 return await self._error(send, 502, "UNAVAILABLE", f"gateway: upstream {type(ex).__name__}")
+            if resp.status_code == 429:
+                await limiter.throttled()
             if resp.status_code in RETRY_STATUS and retries < self.max_retries:
                 ra = resp.headers.get("retry-after")
                 await resp.aread()
@@ -405,6 +449,8 @@ class Gateway:
         finally:
             await resp.aclose()
         self.served += 1
+        if resp.status_code < 400:
+            await limiter.succeeded()
         cache = None
         if self.mode == "record" and resp.status_code < 500 and resp.status_code != 429:
             # recorded response headers: content-type + upload headers only (never anything secret)

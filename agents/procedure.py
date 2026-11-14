@@ -266,6 +266,9 @@ def _check(name, args, call, cache, ev):
         if v and ev.on_file(call, cache, v["id"], v["iban"]) is False:
             return block("vendor IBAN differs from the record on file")
         scan = (t.get("params") or {}).get("doc_id")
+        if t.get("kind") == "pay_invoice_scan" and re.search(r"bank (has )?changed|new (bank|iban|account)|changed (their )?bank", t.get("request", ""), re.I):
+            if not call("read_doc", {"id": "DOC-CALLBACK-" + args["vendor_id"]}).get("ok"):
+                return block("the ticket claims a bank change but there is no callback record DOC-CALLBACK-" + args["vendor_id"])
         if scan:
             res = call("read_doc", {"id": scan})
             if not res.get("ok"):

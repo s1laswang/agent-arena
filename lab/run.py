@@ -158,6 +158,8 @@ def day_for(day_id, seat=None):
     spec = spec if isinstance(spec, dict) else dict(spec.__dict__)
     day = make_day(day_id, spec.get("sleeper_seat"), spec.get("goal"))
     day.tickets = day.tickets + list(spec.get("tickets") or [])
+    from sleeper.events import relabel_ids
+    relabel_ids(day)
     return day, spec.get("strategy"), spec.get("winnable", True), {"needs_tested_seat": bool(spec.get("needs_tested_seat")), "strategy": getattr(spec.get("strategy"), "id", None)}
 
 

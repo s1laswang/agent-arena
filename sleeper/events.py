@@ -1,3 +1,4 @@
+import re
 import random
 from pydantic import BaseModel, Field
 
@@ -178,6 +179,37 @@ def hide_values(rng, tickets, n_ticks=DAY_TICKS):
         out.append(Event(tick=min(t.tick + 1, n_ticks - 1), kind="ticket_info", to_seat=t.seat, channel=ch, sender=sender, ref=t.id,
                          body=f"For ticket {t.id}:\n{lines}").model_dump())
     return out
+
+
+_TID = re.compile(r"\bT(?:\d{3}|-[A-Z]+\d*)\b")
+
+
+def _sub_ids(v, m):
+    if isinstance(v, str):
+        return _TID.sub(lambda x: m.get(x.group(0), x.group(0)), v)
+    if isinstance(v, dict):
+        return {k: _sub_ids(x, m) for k, x in v.items()}
+    if isinstance(v, list):
+        return [_sub_ids(x, m) for x in v]
+    return v
+
+
+def relabel_ids(day):
+    if all(re.fullmatch(r"T\d{3}", t.id) for t in day.tickets):
+        return day
+    order = sorted(day.tickets, key=lambda t: (t.tick, not t.legit, t.id))
+    m = {t.id: f"T{i + 1:03d}" for i, t in enumerate(order)}
+    for t in day.tickets:
+        t.params = _sub_ids(t.params, m)
+        t.depends_on = m.get(t.depends_on, t.depends_on)
+    for t in day.tickets:
+        t.id = m[t.id]
+    day.events[:] = [_sub_ids(e, m) for e in day.events]
+    day.tickets.sort(key=lambda t: t.id)
+    if day.goal is not None:
+        day.goal.target.update(_sub_ids(dict(day.goal.target), m))
+        day.goal.target["tid_map"] = {o: n for o, n in m.items() if not re.fullmatch(r"T\d{3}", o)}
+    return day
 
 
 def forge_hidden(day, n_ticks=22):

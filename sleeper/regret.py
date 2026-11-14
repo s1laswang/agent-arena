@@ -121,6 +121,8 @@ def run_day(seed, team, sleeper_seat=None, goal=None, strategy=None, run=0):
     day = make_day(seed, sleeper_seat, g)
     if st:
         day.tickets = day.tickets + st.render_tickets(g.target)
+        from sleeper.events import relabel_ids
+        relabel_ids(day)
     players = build_team(team, day, run)
     if st:
         players[sleeper_seat] = SleeperAgent(sleeper_seat, g, st, random.Random(seed), ticks=day.ticks)

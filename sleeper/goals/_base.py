@@ -33,6 +33,9 @@ class Strategy(BaseModel):
     def render(self, target: dict) -> list[Step]:
         return [s.model_copy(update={"tool": _fill(s.tool, target), "args": _fill(s.args, target), "why": _fill(s.why, target), "seat": _fill(s.seat, target)}) for s in self.steps]
 
+    def render_tells(self, target: dict) -> list[str]:
+        return _fill(self.tells, target)
+
     def render_docs(self, target: dict) -> list[dict]:
         return [_fill(d, target) for d in self.docs]
 
@@ -40,12 +43,17 @@ class Strategy(BaseModel):
         return [Ticket(**_fill(t, target)) for t in self.tickets]
 
 
+def _ids(s, t):
+    m = t.get("tid_map")
+    return re.sub(r"\bT-[A-Z]+\d*\b", lambda x: m.get(x.group(0), x.group(0)), s) if m else s
+
+
 def _fill(v, t):
     if isinstance(v, str):
         m = re.fullmatch(r"\{(\w+)\}", v)
         if m:
             return t[m.group(1)]
-        return re.sub(r"\{(\w+)\}", lambda m: str(t[m.group(1)]), v)
+        return _ids(re.sub(r"\{(\w+)\}", lambda m: str(t[m.group(1)]), v), t)
     if isinstance(v, dict) and list(v) == ["$"]:
         return t[v["$"]]
     if isinstance(v, dict):

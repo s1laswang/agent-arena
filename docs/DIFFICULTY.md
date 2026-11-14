@@ -7,7 +7,34 @@ This page has two parts:
 1. **Why agents lose.** The full analysis is [`docs/reports/failure_analysis_v1.4.md`](reports/failure_analysis_v1.4.md), every number computed by `scripts/failure_analysis_v14.py`. A summary is below.
 2. **The instruction audit (PLAN-95 B4).** One pass by hand plus mechanical checks, and one gemini-4-carbon pass, over the exact text the agent receives. Every claim is checked against the code.
 
-Nothing on this page changes a rule or the instruction text. Text changes are **proposed to the CEO** (P0–P12 below).
+Nothing on this page changes a rule or the instruction text. **CEO decision (before the 07:00 tag): the judged text stays identical to the text every committed frontier run played, so none of P1–P12 is applied.** P0 is a Harbor config change and has been applied (512836b9: agent timeout 3,600 s → 10,800 s).
+
+> ### Known wording issues (disclosed, not fixed)
+> The judged text is frozen, so these stay as written. Each one is answered here so that a reader who spots it finds the answer.
+>
+> **W1. "The mole never knows which documents are canaries" vs the careful-mole weight** (medium and hard; D3, P3). Read side by side, these sentences contradict each other: how can a mole that never knows down-weight canaries? What the code does:
+> - **What the mole knows.** Its decision inputs (`MoleView` in `canary/mole/dsl.py`) list each leakable document by id, title, recipient count and age. There is no canary flag, so no mole rule can condition on whether a document is a canary.
+> - **What the env does.** The careful weight is applied by the env, not the mole, and only in the default random pick (`env._mole_view` → `dsl._select_leak`). After the p_leak gate passes, every eligible document has weight 1, a canary has weight 1 − (share of all staff who received any variant of it), and one document is drawn in proportion to the weights. If every weight is 0, nothing leaks. So "the mole never knows" is true of the mole's *rules*, and the careful sentence describes a *tier mechanic*. The numbers an agent needs (the multiplier, p_leak, the leak window) are all printed.
+> - **Does any measured Gemini loss hinge on it? No.** All numbers below come from `scripts/careful_mole_check.py` over the 30 OpenCode hard episodes (seeds 0–29) and the solver on the same seeds.
+>
+> | | canaries | mean share of staff per canary (largest) | mean careful weight | canary leaks / canaries planted | expected canary leaks on its own trajectory: careful vs weight 1 |
+> |---|---|---|---|---|---|
+> | Gemini (OpenCode/MCP) | 254 | 0.26 (0.60) | 0.74 | 55/254 = 0.22 | 65.8 vs 76.7 (keeps 86%) |
+> | solver (models the weight) | 424 | 0.24 (0.55) | 0.76 | 64/424 = 0.15 | 70.5 vs 79.2 (keeps 89%) |
+>
+>   Gemini sized its canaries like the solver, which models the weight exactly. Its canaries leaked *more* often per plant, and the careful rule cost it about the same share of canary leaks (14% vs 11%). So whichever way Gemini read the sentence, its canary design is indistinguishable from the solver's.
+>
+>   The loss seeds, one by one (failure analysis §3, §5):
+>   - **Seeds 1 and 26:** fingerprint flips. Their canaries leaked 3 and 2 times.
+>   - **Seeds 15 and 18:** canary *assignments* that never separated the last 2–4 suspects. The issue was who got which label, not whether canaries leaked.
+>   - **Seed 11 (the abstention):** its 12 canaries never leaked, against 4.4 expected leaks with the careful weights and 5.0 without. Zero was unlikely either way (≈ 1.3% vs ≈ 0.7%, Poisson approximation), so the weight did not cause it.
+>
+>   Gemini's visible text in the transcripts (`data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/transcripts/`; the reasoning itself is encrypted) is its final summary. None of the 30 summaries mentions the careful rule, or attributes a missing leak to the mole avoiding canaries.
+> - **Fix if the text is ever unfrozen:** P3 below.
+>
+> **W2. "The mole follows a fixed list of if-then rules" on base tiers that use only the default rule** (D2, P2). On easy, medium and hard the list is empty, and the default applies: a weighted random leak with no extra framing. The text's last DSL bullet says so ("The default mole leaks a random document and does no extra framing"). Only the `hard_forge` and `hard_rl` tracks use other policies, and their text says that explicitly.
+>
+> **W3. The order of events within a day is derivable but scattered** (D8, P6). The exact order is in D8 below. A leak at the end of day d with delay k shows in the feed from day d+k.
 
 ---
 
@@ -50,12 +77,12 @@ The other 1.11 V of the raw gap is bad luck. Two of the four wrong accusations w
 |---|---|---|
 | **No withheld info** | No hidden rule changes who the mole is or what an action does. Several mechanics are **under-specified**, though the code settles them: order of events within a day (D8), the access-log model (D6), the careful-mole normalisation (D3), and message content (D9). An agent can still play them correctly by reading the numbers. The solver plays from the same text-level facts | D1–D11, D20–D22; solver 0.564 on hard (n = 400, `results/skill_ladder_v1.4.md`) |
 | **No trick wording** | Two sentences invite a wrong reading: "the mole never knows which documents are canaries" next to the careful-mole weight (D3), and the fixed list of if-then rules on base tiers that only use the default rule (D2). Neither hides a number. Both have proposed rewordings | D2, D3, D20 |
-| **No impossible timing** | **In-game: feasible.** Hard gives 168 investigative actions under a 420-call cap, and a canary planted by day 19 can still surface. **Wall clock: one real risk.** Harbor's agent timeout is 3,600 s and is not stated anywhere the agent reads. 5 of the 30 committed OpenCode hard episodes took longer (3,632–6,592 s), mostly because of provider latency | D17, **D19** |
+| **No impossible timing** | **In-game: feasible.** Hard gives 168 investigative actions under a 420-call cap, and a canary planted by day 19 can still surface. **Wall clock: one real risk.** Harbor's agent timeout is 3,600 s and is not stated anywhere the agent reads. 5 of the 30 committed OpenCode hard episodes took longer (3,632–6,592 s), mostly because of provider latency. **Fixed by P0:** the timeout is now 10,800 s | D17, **D19** |
 | **No broken tools** | 39/39 smoke calls ok. Invalid calls are rejected without costing a daily action (they count toward the call cap, as stated) | D18, `results/audit/instruction_checks.md` |
 
 ### Findings
 
-"Status" is one of three values. **By design** comes with the reason. **Proposed to CEO** means a text change we have not made. **Fixed** applies to none of the findings. The `G#` ids refer to the Gemini pass.
+"Status" is one of three values. **By design** comes with the reason. **Proposed to CEO** means a text change we have not made. **Fixed** applies only to D19 (P0). The `G#` ids refer to the Gemini pass.
 
 | # | Finding (source) | What the code actually does | Severity | Status |
 |---|---|---|---|---|
@@ -77,15 +104,15 @@ The other 1.11 V of the raw gap is bad luck. Two of the four wrong accusations w
 | D16 | Is the call that reaches the cap executed? | Yes. The call runs, and if it was not an accusation the episode then ends at 0, so an `accuse` as the last call counts | low | **proposed to CEO (P10)** |
 | D17 | Impossible in-game timing? | Hard: 21 days, delay 2–3, a 3-day leak window. A canary planted on day d can leak at the end of days d..d+2. Plants up to day 19 can still surface by the horizon. Budget: 8 × 21 = 168 investigative actions under a 420-call cap | none (feasible) | **by design:** the solver wins on the same clock (0.564 on hard) |
 | D18 | Broken tools? | All 13 tools return `ok` with documented fields on all three tiers (`results/audit/instruction_checks.md`) | none | **by design:** nothing to fix |
-| **D19** | **Unstated wall-clock limit (new, pass 1).** Harbor's `[agent] timeout_sec = 3600` (`harbor/template/task.toml`) appears nowhere the agent reads | In the committed v1.4 OpenCode runs (local runner, no 3,600 s cap), 5 of 30 hard episodes (seeds 5, 11, 19, 24, 29) and 1 of 30 medium episodes ran longer than 3,600 s. Seed 29 took 6,592 s with only 104 LLM calls, which points to provider latency rather than agent behaviour. Under the judges' Harbor run, such an episode may be cut off before it accuses (score 0). The committed Harbor gemini trials took 608–1,985 s | **medium** (this is the one "impossible timing" risk; it is not a rule of the game, but it can score a slow-but-correct agent 0) | **proposed to CEO (P0):** raise `[agent] timeout_sec` to 10800 in `harbor/template/task.toml` (no rules change), or state the limit in the preface |
+| **D19** | **Unstated wall-clock limit (new, pass 1).** Harbor's `[agent] timeout_sec = 3600` (`harbor/template/task.toml`) appears nowhere the agent reads | In the committed v1.4 OpenCode runs (local runner, no 3,600 s cap), 5 of 30 hard episodes (seeds 5, 11, 19, 24, 29) and 1 of 30 medium episodes ran longer than 3,600 s. Seed 29 took 6,592 s with only 104 LLM calls, which points to provider latency rather than agent behaviour. Under the judges' Harbor run, such an episode may be cut off before it accuses (score 0). The committed Harbor gemini trials took 608–1,985 s | **medium** (this is the one "impossible timing" risk; it is not a rule of the game, but it can score a slow-but-correct agent 0) | **fixed (P0, 512836b9):** `[agent] timeout_sec` raised to 10800 in `harbor/template/task.toml` (no rules change) |
 | **D20** | **"Give exactly one employee id per call" vs `plant_canary`'s multi-employee `assignment`, and the optional `employee` of `read_access_logs`** (new, G9.1) | The rule is enforced only on tools whose `employee` argument is a single string. `assignment` maps many ids, as its own sentence says. `read_access_logs` without `employee` returns every employee's logs for the range in one action | low (a literal reading would make an agent waste actions on per-employee log reads) | **proposed to CEO (P11)** |
 | **D21** | **Defaults of the optional day arguments; `read_access_logs` on an unclosed day** (new, G9.2) | `list_documents`: days 1..today. `search_messages`: 1..horizon. `read_access_logs` needs both days. A range ending today silently returns no entries for today ("logs exist for days that have ended"). `day_to` beyond the horizon, or `day_from` > `day_to`, is rejected without costing a daily action | low | **proposed to CEO (P12)** |
 | **D22** | Interview answers are prose, not a flag, and the solver reads none of them | The template provider's phrase banks are disjoint (16 evasive and 16 cooperative phrases, no overlap). The reference solver does not interview at all, so nothing about the solver's score depends on parsing them | none | **by design** |
 
-### Proposed changes, for the CEO (not applied)
+### Proposed changes, for the CEO (P0 applied; P1–P12 not applied by CEO decision: the judged text stays frozen)
 All of these are wording changes to `Env.instruction()` or the tool descriptions, plus one Harbor config value (P0). None changes a rule, a number, the solver or any score. After a text change, regenerate `harbor/canary-task/instruction.md` (`tests/test_env_docs.py::test_instruction_md_matches_generator`). Changing the text also changes what the committed v1.4 runs were played on, so the CEO should weigh applying it before any further judged run against leaving the measured text frozen.
 
-- **P0 (D19, Harbor only, highest priority):** `harbor/template/task.toml` `[agent] timeout_sec = 3600.0` → `10800.0`. Alternatively, add to the Harbor preface: "Your agent has 60 minutes of wall-clock time in total; an episode that has not accused by then scores 0."
+- **P0 (D19, Harbor only) — APPLIED in 512836b9:** `harbor/template/task.toml` `[agent] timeout_sec = 3600.0` → `10800.0`. Alternatively, add to the Harbor preface: "Your agent has 60 minutes of wall-clock time in total; an episode that has not accused by then scores 0."
 - **P1 (D1, hard):** after "Canaries are level 1, so every employee may receive one.", add "Clearance has no other effect."
 - **P2 (D2, base tiers):** replace "The default mole leaks a random document and does no extra framing, exactly as described above." with "In this tier the mole uses only the default rule: it leaks a random eligible document (weighted as above) and does no extra framing."
 - **P3 (D3, careful tiers):** replace the careful sentence with "This mole is careful: each eligible document has weight 1, except a canary, whose weight is 1 − (the share of all employees who received any variant of it); it picks one document in proportion to these weights. A canary sent to everyone is never picked." Replace "The mole never knows which documents are canaries." with "Apart from that weight, canaries are treated like any other document."
@@ -93,7 +120,7 @@ All of these are wording changes to `Env.instruction()` or the tool descriptions
 - **P5 (D6):** "Every employee who holds documents makes a random number of accesses per day in total, not per document (Poisson, average X for an innocent employee and Y for the mole); each access is to a random document it holds."
 - **P6 (D8):** add under Days: "Order of events: day d's new documents go out at the start of day d. When you call `advance_day` on day d: (1) the mole may leak a document it received on days d−2..d; (2) restriction costs are charged; (3) day d's access logs and messages are created; then day d+1 starts. A leak at the end of day d with delay k appears in the feed from day d+k on."
 - **P7 (D9, D15):** change the `list_documents` description to "List published documents with their recipients (and variants for canaries) in an inclusive day range." Change `search_messages` to "... (the first 20 matches in day order)". Add `minLength: 1` to `query`. Add "Messages for a day appear when that day ends."
-- **P8 (D10):** when `p_single_dept_recipients` is 0, print "Every regular document goes to everyone in two randomly chosen departments." Annotate `noise: 1 (no change)` and `doc_recipient_share: 0 (off)`.
+- **P8 (D10):** when `p_single_dept_recipients` is 0, print "Every regular document goes to everyone in two randomly chosen departments." Explain `noise` and `doc_recipient_share` in the prose only. **Do not annotate the "Exact parameters" lines:** `canary/solver/params.py` parses each value with `float()`, so `noise: 1 (no change)` would break the solver when it runs over MCP.
 - **P9 (D11):** "Different topics, or the same topic on different days, are independent draws with the same probabilities. The decoy answers like any innocent employee."
 - **P10 (D12, D16):** write "true V" in the EV formula, and use "Your Nth call is your last; unless it is `accuse`, the episode then ends with score 0."
 - **P11 (D20):** "Tools that take an `employee` argument take exactly one id, such as e07. `plant_canary`'s `assignment` maps several ids to labels. `read_access_logs` without `employee` returns every employee's logs for the range."

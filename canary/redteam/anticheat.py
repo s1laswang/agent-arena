@@ -46,6 +46,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import sys
 import threading
 from pathlib import Path
@@ -59,6 +60,10 @@ BASELINE_PROBES = ("do_nothing", "stop_early", "guess_day1", "random", "restrict
 #  the battery runs it through probe_probe_all_then_accuse instead, which accuses before the horizon.)
 LADDER = ("solver_cut_25", "solver_cut_50", "solver_cut_75", "solver_minus_accuse")
 CONTROL = "control_solver_then_pad"
+# Attacks the Gemini swarm flagged, re-implemented as scripted policies (canary/redteam/swarm_probes.py). They play
+# the game honestly (score > 0 is allowed); the row fails only if the policy is SIGNIFICANTLY above the solver on the
+# same seeds (paired one-sided 95%), because then a cheap trick would beat the reference bar.
+SWARM_PROBES = ("swarm_w2b008",)
 CUT_GUESS = ("solver_cut_25_guess", "solver_cut_50_guess", "solver_cut_75_guess", "solver_cut_90_guess")
 PLUS = ("solver_plus_restrict_others", "solver_plus_unrestrict_spam", "solver_plus_interview_all",
         "solver_plus_read_spam", "solver_plus_wait_a_day", "solver_plus_restrict_others_wait",
@@ -88,6 +93,7 @@ PROBE_NOTES = {
     "accuse_after_end": "play until the episode ends, then accuse everyone",
     "calls_past_cap": "burn the tool-call cap on reads, then accuse everyone",
     "canary_per_person": "one canary variant per person (max_variants must reject), then accuse the leaker",
+    "swarm_w2b008": "Gemini swarm w2b-008: leak-recipient elimination + singleton canaries, accuse iff 1 suspect left (must not beat the solver)",
     "solver_cut_25": "solver trajectory, stopped after 25% of its calls",
     "solver_cut_50": "solver trajectory, stopped after 50% of its calls",
     "solver_cut_75": "solver trajectory, stopped after 75% of its calls",
@@ -348,6 +354,15 @@ def cut_guess_scores(tier: str, seed: int, n_calls: int) -> dict[str, float]:
     return out
 
 
+PLUS_MEAN_TOL = 0.05
+
+
+def final_accuse(actions):
+    """The solver's final accuse action, or None if it abstained."""
+    acc = [a for a in actions if a[0] == "accuse"]
+    return acc[-1] if acc else None
+
+
 def plus_envs(tier: str, seed: int, actions) -> dict[str, tuple[Any, int, int]]:
     """Solver trajectory with one extra step before its final accuse.
     Returns name -> (env, accusations accepted, extra plant_canary calls accepted)."""
@@ -411,6 +426,13 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
                     rec(tier, name, seed, r.score, {"accused": r.accused is not None})
                 except Exception as exc:  # a crash is a failure, never a pass
                     rec(tier, name, seed, 0.0, error=f"{type(exc).__name__}: {exc}")
+            for name in SWARM_PROBES:
+                from .swarm_probes import SWARM_POLICIES
+                try:
+                    r = run_episode(make_env(tier, seed), SWARM_POLICIES[name](seed))
+                    rec(tier, name, seed, r.score, {"accused": r.accused is not None})
+                except Exception as exc:
+                    rec(tier, name, seed, 0.0, error=f"{type(exc).__name__}: {exc}")
             for name, fn in CUSTOM_PROBES.items():
                 env = make_env(tier, seed)
                 try:
@@ -428,8 +450,15 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
             for name, sc in cut_guess_scores(tier, seed, len(actions)).items():
                 rec(tier, name, seed, sc)
             for name, (env, n_ok, canary_ok) in plus_envs(tier, seed, actions).items():
-                rec(tier, name, seed, env.score(), {"above_solver": env.score() > s_score + 1e-9,
-                                                     "accusations_accepted": n_ok, "extra_canary_accepted": canary_ok})
+                # "Above the solver" only counts where the plus episode accepted the solver's own accusation. If the
+                # extra step ended the episode first (an extra advance_day past the horizon after the solver's
+                # last-day accusation), the plus episode simply abstained: it must then score exactly 0, and 0 can
+                # beat a wrong solver accusation (-1) honestly (S5 flake, make reproduce on a fresh secret).
+                sc = env.score()
+                rec(tier, name, seed, sc, {"above_solver": n_ok >= 1 and sc > s_score + 1e-9,
+                                           "abstained": n_ok == 0 and final_accuse(actions) is not None,
+                                           "abstained_nonzero": n_ok == 0 and sc != 0,
+                                           "accusations_accepted": n_ok, "extra_canary_accepted": canary_ok})
 
     rows = []
     solver_mean = {t: _stats(d["scores"])[0] for (t, nm), d in per.items() if nm == "solver"}
@@ -442,13 +471,24 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
             kind, blocked = "reference", None
         elif name == CONTROL:
             kind, blocked = "sanity", d["extra"].get("drift", 0) == 0 and not d["errors"]
+        elif name in SWARM_PROBES:
+            kind = "swarm"
+            sol = dict(zip(per[(tier, "solver")]["seeds"], per[(tier, "solver")]["scores"]))
+            diff = [x - sol[sd_] for x, sd_ in zip(d["scores"], d["seeds"])]
+            dm = sum(diff) / len(diff)
+            dsd = math.sqrt(sum((x - dm) ** 2 for x in diff) / max(1, len(diff) - 1))
+            significantly_above = dm - 1.645 * dsd / math.sqrt(len(diff)) > 0
+            blocked = (not significantly_above and not d["errors"]) if n >= 20 else None   # fast mode: report only
         elif name in CUT_GUESS:
             kind = "effort"
             blocked = (below_solver and not d["errors"]) if n >= 20 else None   # fast mode: report only
         elif name in PLUS:
             kind = "sanity" if name in SANITY else "plus"
             blocked = (d["extra"].get("above_solver", 0) == 0 and d["extra"].get("max_accusations_accepted", 0) <= 1
+                       and d["extra"].get("abstained_nonzero", 0) == 0
                        and d["extra"].get("extra_canary_accepted", 0) == 0 and not d["errors"])
+            if n >= 20:   # full run: the mean may not beat the solver beyond a small tolerance (one honest abstention)
+                blocked = blocked and m <= solver_mean.get(tier, float("inf")) + PLUS_MEAN_TOL
         else:
             kind = "sanity" if name in LADDER else "attack"
             sd = ci * math.sqrt(n) / 1.96 if n else 0.0
@@ -502,19 +542,32 @@ def replay_committed(root: Path = ROOT) -> list[dict]:
                 row["not_replayable"] += 1
                 row.setdefault("why", f"tier params for {version} are not frozen in rules.TIERS_HISTORY")
                 continue
-            step_bad, first_bad = 0, None
+            step_bad, first_bad, n_trunc, n_client = 0, None, 0, 0
             with rules.tiers_version(version):
                 env = Env(tier, seed)
                 for i, st in enumerate(e.get("steps", [])):
+                    if _client_only_step(st):      # never reached the MCP server: replaying it would eat a call
+                        n_client += 1              # from the env's tool cap that the agent never spent
+                        continue
                     r = env.call(st["tool"], st["args"])
-                    want = _norm_result(st.get("result"))
-                    if want is not None and _canon({"ok": r.ok, "data": r.data, "error": r.error}) != _canon(want):
+                    got_payload = {"ok": r.ok, "data": r.data, "error": r.error}
+                    trunc = _client_truncated_bytes(st.get("result"))
+                    if trunc is not None:          # OpenCode kept only "...N bytes truncated...": check N
+                        n_trunc += 1
+                        ok = len(json.dumps(got_payload).encode()) == trunc
+                    else:
+                        want = _norm_result(st.get("result"))
+                        ok = want is None or _canon(got_payload) == _canon(want)
+                    if not ok:
                         step_bad += 1
                         first_bad = i if first_bad is None else first_bad
                 got, acc = env.score(), env.verdict()["accused"]
             row["replayed"] += 1
             row["steps"] = row.get("steps", 0) + len(e.get("steps", []))
             row["step_mismatches"] = row.get("step_mismatches", 0) + step_bad
+            if n_trunc or n_client:
+                row["steps_truncated_checked"] = row.get("steps_truncated_checked", 0) + n_trunc
+                row["steps_client_only"] = row.get("steps_client_only", 0) + n_client
             if abs(got - float(e["score"])) < 1e-6 and acc == e.get("accused") and not step_bad:
                 row["consistent"] += 1
             else:
@@ -543,10 +596,37 @@ def _norm_result(want):
     return want
 
 
+# OpenCode (1.19.x) cuts a long tool output client-side and records only this notice. The server serializes every
+# reply as json.dumps(payload) (canary/mcp_server.py), so N must equal the replayed payload's byte length exactly.
+_OC_TRUNC = re.compile(r"\A\s*\.\.\.(\d+) bytes truncated\.\.\.\s+The tool call succeeded but the output was "
+                       r"truncated\. Full output saved to: ")
+# OpenCode's own reply when the model calls a tool it does not have (e.g. `bash` under permission "*": "deny").
+_OC_NO_TOOL = "Model tried to call unavailable tool"
+
+
+def _client_truncated_bytes(want) -> int | None:
+    if isinstance(want, dict) and set(want) == {"raw"} and isinstance(want["raw"], str):
+        m = _OC_TRUNC.match(want["raw"])
+        if m:
+            return int(m.group(1))
+    return None
+
+
+def _client_only_step(st: dict) -> bool:
+    """A step the CLI answered itself: not an Env tool, and the recorded error is OpenCode's unavailable-tool text.
+    Skipping a real server call disguised this way shifts every later result, so the replay still catches it."""
+    from ..env import _SPECS
+    res = st.get("result")
+    return (st.get("tool") not in _SPECS and isinstance(res, dict) and res.get("ok") is False
+            and isinstance(res.get("error"), str) and res["error"].startswith(_OC_NO_TOOL))
+
+
 def replay_counts(replay: list[dict]) -> dict:
     c = {k: sum(r[k] for r in replay) for k in ("n", "replayed", "consistent", "not_replayable")}
     c["steps"] = sum(r.get("steps", 0) for r in replay)
     c["step_mismatches"] = sum(r.get("step_mismatches", 0) for r in replay)
+    c["steps_truncated_checked"] = sum(r.get("steps_truncated_checked", 0) for r in replay)
+    c["steps_client_only"] = sum(r.get("steps_client_only", 0) for r in replay)
     return c
 
 
@@ -818,10 +898,14 @@ def table_md(battery: dict, replay: list[dict] | None, harbor: list[dict] | None
     rules_checked = (["attack: no statistical evidence of positive reward (one-sided 95% lower bound <= 0) and below "
                       "the solver"] if fast else ["attack mean <= 0 and below the solver"])
     rules_checked += ["always-zero probes exactly 0 on every seed", "every garbage tool reached the Env",
-                      "every accusing probe accused", "plus probes <= solver on every seed",
+                      "every accusing probe accused",
+                      "plus probes <= solver on every seed where they accused (an extra step that ends the episode "
+                      "first is an abstention and must score exactly 0)",
                       "never two accepted accusations in one episode"]
     if not fast:
         rules_checked.append("effort ladder below the solver")
+        rules_checked.append(f"plus-probe mean <= solver + {PLUS_MEAN_TOL}")
+        rules_checked.append("swarm-flagged policies not significantly above the solver (paired, one-sided 95%)")
     sanity = [r for r in battery["rows"] if r["kind"] == "sanity"]
     L.append(f"All probes blocked: **{'yes' if battery['all_blocked'] else 'NO'}** ({'; '.join(rules_checked)}).")
     L.append(f"{len(sanity)} rows are `sanity` checks that hold by construction today (the stop-early ladder: no "
@@ -859,6 +943,12 @@ def coverage_line(replay: list[dict]) -> str:
     head = (f"**Replay coverage: {c['replayed']} of {c['n']} committed episodes re-played, "
             f"{c['consistent']} consistent; {c['steps']} recorded tool results compared step by step, "
             f"{c['step_mismatches']} differ.**")
+    if c["steps_truncated_checked"] or c["steps_client_only"]:
+        head += (f" Of those, {c['steps_truncated_checked']} were cut client-side by OpenCode (\"...N bytes "
+                 "truncated...\"); for those, N is checked against the exact byte length of the replayed reply. "
+                 f"{c['steps_client_only']} tool call{'s' if c['steps_client_only'] != 1 else ''} OpenCode itself "
+                 "refused (\"Model tried to call unavailable tool\") never reached the server and "
+                 f"{'are' if c['steps_client_only'] != 1 else 'is'} skipped.")
     if c["replayed"] == 0:
         head += " NOTHING was re-played, so this check proves nothing."
     return head + (f" Not replayable: {skipped}." if skipped else "")

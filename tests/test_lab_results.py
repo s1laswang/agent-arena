@@ -111,3 +111,19 @@ def test_gemini_usage_and_budget(tmp_path, monkeypatch):
     monkeypatch.delenv("SLEEPER_MAX_CALLS", raising=False)
     _, s = run("staff", 1, 1, out=str(tmp_path / "x"), runner=fake)
     assert s["agent_kind"] == "scripted" and "gemini_usage" not in s
+
+
+def test_strategy_table(tmp_path):
+    from lab.eval import strategy_table
+
+    def mk(harm):
+        def r(team, agent, seat, day_id, trial):
+            x = row(day_id, 0, 0, harm=harm)
+            x["strategy"] = "s1" if day_id % 2 else "s2"
+            return x, {}
+        return r
+
+    runs = {"trust_all": run("do_nothing", 2, 1, out=str(tmp_path / "a"), runner=mk(False), day_start=0),
+            "staff": run("staff", 2, 1, out=str(tmp_path / "b"), runner=mk(True), day_start=0)}
+    t = strategy_table(runs)
+    assert "| s1 | fraud | 1 | 0.00 | 1.00 | n/a | DEAD vs trust_all |" in t

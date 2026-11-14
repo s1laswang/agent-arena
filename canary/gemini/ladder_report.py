@@ -478,6 +478,7 @@ def to_md(doc: dict) -> str:
                 L.append(f"| {t} | " + " | ".join(f"{v:.3f} ({r:.0%} eps)" for v, r in zip(vals, rates))
                          + f" | {_f(delta)} |")
             L.append("")
+    L += gemma_md(doc.get("gemma"))
     if doc.get("probe"):
         acc = defaultdict(list)
         for r in doc["probe"]:
@@ -488,6 +489,41 @@ def to_md(doc: dict) -> str:
              [f"| {m} | {', '.join(v)} |" for m, v in acc.items()] + [""]
     L += [f"Figures: {', '.join(doc['figures'])}. Data: ladder.json (rows, tags, ledger run ids).", ""]
     return "\n".join(L)
+
+
+GEMMA_LABEL = "via Gemini API (hosted Gemma)"
+
+
+def gemma_md(g: dict | None) -> list[str]:
+    """The open-weight Gemma section: same LLMPolicy, same v1.4 dev seeds and solver pairing as the Gemini cells."""
+    if not g or not g.get("rows"):
+        return []
+    ids = g["ledger_run_ids"]
+    L = ["## Open-weight Gemma (hosted Gemma via the Gemini API)", "",
+         "Gemma 4 open-weight models served by Google's hosted Gemini API (not self-hosted), played by the same "
+         "`LLMPolicy` with native function calling on the same v1.4 dev seeds; ratios are paired against the solver "
+         f"on the same seeds. Gemma gets no thinking config (level `default`). {g['episodes']} valid episodes from "
+         f"`{g['runs']}`; ledger: {g['ledger']['calls']} calls, {g['ledger']['errors']} errors, {len(ids)} run ids "
+         f"(e.g. {', '.join(ids[:2]) or '–'}). $/ep is not shown: our price table has no hosted-Gemma list price.", ""]
+    for tier in TIERS:
+        tr = [r for r in g["rows"] if r["tier"] == tier]
+        if not tr:
+            continue
+        L += [f"**{tier}**", "", "| model | n | score ± 95% CI | acc. | accuse day | solver, same seeds | "
+              "**score / solver [95% CI]** | paired diff ± CI | luck-adj. / solver | calls/ep | min/ep |",
+              "|---|---|---|---|---|---|---|---|---|---|---|"]
+        for r in tr:
+            L.append(f"| {r['model']} {GEMMA_LABEL} | {r['n']} | {_f(r['mean'])} ± {_f(r['ci'], 2)} | "
+                     f"{r['accuracy']:.2f} | {_f(r['accuse_day'], 1)} | {_f(r['solver_same_seeds'])} | "
+                     f"**{_pct(r, 'ratio')}** | {_f(r['diff'])} ± {_f(r['diff_ci'], 2)} | {_pct(r, 'luck_adj_ratio')} | "
+                     f"{_f(r['calls_per_ep'], 0)} | {_f(r['wall_min_per_ep'], 1)} |")
+        L.append("")
+    fps = sorted({t for r in g["rows"] for t in r["code_fingerprints"] if t})
+    mv = sorted({t for r in g["rows"] for t in r["model_versions"]})
+    shas = sorted({t for r in g["rows"] for t in r["launch_git_shas"] if t})
+    L += [f"Gemma provenance: launch commits {', '.join(x[:10] for x in shas)}; code fingerprints {', '.join(fps)}; "
+          f"API-served model versions {', '.join(mv) or '–'}.", ""]
+    return L
 
 
 def _pc(r) -> str:
@@ -569,6 +605,10 @@ def main(argv=None) -> int:
     ap.add_argument("--no-figures", action="store_true")
     ap.add_argument("--export", default=None, help="also write <dir>/ladder_episodes.jsonl.gz and ladder_ledger.jsonl.gz "
                     "(valid ladder episodes + feature=ladder ledger rows; --runs/--ledger can read them back)")
+    ap.add_argument("--gemma-runs", default=None,
+                    help="open-weight Gemma cells (hosted Gemma via the Gemini API; a ladder dir or exported "
+                    "ladder_gemma_episodes.jsonl.gz), reported in their own section against the same solver seeds")
+    ap.add_argument("--gemma-ledger", action="append", default=[])
     ap.add_argument("--headline", default=None,
                     help="hand-written findings block for the top of ladder.md (default: generated from the table)")
     a = ap.parse_args(argv)
@@ -585,7 +625,13 @@ def main(argv=None) -> int:
                 fh.write(json.dumps({k: v for k, v in e.items() if k != "_cell"}, sort_keys=True) + "\n")
     for spec in a.import_cell:
         eps += load_import(spec)
-    pairs = {(e["_cell"]["tier"], e["_cell"]["seed"]) for e in eps}
+    g_runs = Path(a.gemma_runs).expanduser() if a.gemma_runs else None
+    g_eps = load_ladder(g_runs) if g_runs else []
+    if a.export and g_runs:
+        with gzip.open(ex / "ladder_gemma_episodes.jsonl.gz", "wt") as fh:
+            for e in g_eps:
+                fh.write(json.dumps({k: v for k, v in e.items() if k != "_cell"}, sort_keys=True) + "\n")
+    pairs = {(e["_cell"]["tier"], e["_cell"]["seed"]) for e in eps + g_eps}
     ref = reference_episodes(pairs)
     solver = {(e["tier"], e["seed"]): e for e in ref if e["agent"] == "solver"}
     rows = cell_rows(eps, solver, B=a.bootstrap)
@@ -609,6 +655,18 @@ def main(argv=None) -> int:
     doc = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "git_sha": git_sha(), "runs": str(a.runs).replace(str(Path.home()), "~"),
            "imports": [x.replace(str(Path.home()), "~") for x in a.import_cell], "ledger_run_ids": run_ids, "ledger": led_sum, "prices_usd_per_1m": PRICES,
            "episodes": len(eps), "headline_file": a.headline, "rows": rows, "reference": ref_rows, "tags": tags, "probe": probe, "figures": []}
+    if g_runs:
+        g_led = load_ledger(g_runs, a.gemma_ledger)
+        if a.export:
+            with gzip.open(Path(a.export) / "ladder_gemma_ledger.jsonl.gz", "wt") as fh:
+                for r in g_led:
+                    fh.write(json.dumps(r, sort_keys=True) + "\n")
+        doc["gemma"] = {"runs": str(a.gemma_runs).replace(str(Path.home()), "~"), "episodes": len(g_eps),
+                        "rows": cell_rows(g_eps, solver, B=a.bootstrap),
+                        "ledger_run_ids": sorted({r.get("run_id", "") for r in g_led if r.get("run_id")}),
+                        "ledger": {"calls": len(g_led), "errors": sum(not r.get("ok", True) for r in g_led),
+                                   "cost_usd_ledger": round(sum(r.get("cost_usd", 0) for r in g_led), 2),
+                                   "cost_unknown_calls": sum(bool(r.get("cost_unknown")) for r in g_led)}}
     doc["figures"] = [] if a.no_figures else figures(rows, ref_rows, tags, out)
     clean = _nan_to_none(json.loads(json.dumps(doc, default=str)))
     (out / "ladder.json").write_text(json.dumps(clean, indent=1) + "\n")

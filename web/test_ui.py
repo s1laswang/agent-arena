@@ -1,4 +1,5 @@
 import re
+from conftest import launch
 import subprocess
 import sys
 import time
@@ -17,7 +18,7 @@ def test_ui():
     time.sleep(1)
     try:
         with sync_playwright() as p:
-            b = p.chromium.launch(executable_path="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+            b = launch(p)
             pg = b.new_page()
             pg.goto("http://localhost:8766/replay.html?day=2-noop&vs=2-oracle")
             pg.wait_for_selector(".desk")
@@ -43,7 +44,7 @@ def test_ui():
             assert pg.is_visible(".tag:has-text('SLEEPER')")
             assert pg.locator(".pill").count() == 0 or "post_chat" not in pg.inner_text(".panel")
             pg.goto("http://localhost:8766/index.html")
-            pg.wait_for_selector("tbody tr")
+            pg.wait_for_selector("#days tbody tr")
             boxes = pg.locator("input[type=checkbox]")
             pg.locator("input[value='2-noop']").check()
             pg.locator("input[value='2-oracle']").check()
@@ -51,7 +52,7 @@ def test_ui():
             pg.click("#cmp")
             pg.wait_for_selector(".compare")
             pg.goto("http://localhost:8766/results.html")
-            pg.wait_for_selector("tbody tr")
+            pg.wait_for_selector("#gap tbody tr")
             assert pg.locator("tbody tr").count() >= 1
             assert "FIXTURE" in pg.inner_text("#flag") or pg.inner_text("#flag") == ""
             pg.goto("http://localhost:8766/replay.html")

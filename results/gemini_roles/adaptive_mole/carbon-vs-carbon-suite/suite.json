@@ -1,0 +1,959 @@
+{
+  "role": "adaptive_mole",
+  "suite": "carbon-vs-carbon-suite",
+  "target_model": "gemini-4-carbon",
+  "latest_run_timestamp": "2026-11-14T17:26:35Z",
+  "source_commits": [
+    "03c676c1d3cd42629994ac434c056758a75148e0",
+    "c00d49189d1a4c63495d9111e11b5f13528a5093",
+    "d39e88c39e8a3859e88805cd8a30156a8cfcaa49",
+    "3bd1d1e2295aa320812f08e2eceaef5b4a8902ef",
+    "99767a5d144e89cbd9522ddd9720af55bb2217eb",
+    "370de43c38b321bf9dbc5c04220abd90c4614466",
+    "9222669912afd57e53fbd3b07f0cdba985df705d",
+    "0e59cc10aa43f068e5fe7c1007215df1db4d10fe",
+    "16f24a08e1fb57397ddf90a5b413b4359a5f16bc"
+  ],
+  "verified_run_dirs": [
+    "results/gemini_roles/adaptive_mole/arena-live-carbon-hard012",
+    "results/gemini_roles/adaptive_mole/arena-live-carbon-hard345",
+    "results/gemini_roles/adaptive_mole/arena-live-carbon-med012",
+    "results/gemini_roles/adaptive_mole/arena-live-carbon-med345",
+    "results/gemini_roles/adaptive_mole/carbon-vs-carbon-seed0",
+    "results/gemini_roles/adaptive_mole/mole-forge-carbon-v14",
+    "results/gemini_roles/adaptive_mole/paired-designer-carbon",
+    "results/gemini_roles/adaptive_mole/paired-designer-carbon-hard",
+    "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard",
+    "results/gemini_roles/adaptive_mole/paired-solvable-scenarios-carbon"
+  ],
+  "skipped_runs": [],
+  "clash_suite": {
+    "shards": [
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-seed0",
+        "tier": "medium",
+        "seed": 0,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "3bd1d1e2295aa320812f08e2eceaef5b4a8902ef",
+        "investigator_score": 0.66,
+        "investigator_correct": true,
+        "investigator_accused": "e05",
+        "investigator_final_day": 8,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.4,
+        "solver_correct": true,
+        "solver_accused": "e05",
+        "solver_final_day": 10,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.26,
+        "mole_clash_days": 7,
+        "mole_clash_leaks": 7,
+        "mole_clash_frames": 1,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 9,
+        "mole_solver_leaks": 9,
+        "mole_solver_frames": 3,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 92,
+          "in": 1812239,
+          "out": 3638,
+          "thinking": 30311,
+          "cached": 1618805,
+          "total_tokens": 1846188,
+          "cost_usd": 0.888241,
+          "latency_s": 3707.423,
+          "combined": {
+            "calls": 92,
+            "in": 1812239,
+            "out": 3638,
+            "thinking": 30311,
+            "cached": 1618805,
+            "total_tokens": 1846188,
+            "cost_usd": 0.888241,
+            "latency_s": 3707.423
+          },
+          "clash_investigator": {
+            "calls": 76,
+            "in": 1800631,
+            "out": 2581,
+            "thinking": 27015,
+            "cached": 1618805,
+            "total_tokens": 1830227,
+            "cost_usd": 0.821495,
+            "latency_s": 3473.951
+          },
+          "clash_mole": {
+            "calls": 16,
+            "in": 11608,
+            "out": 1057,
+            "thinking": 3296,
+            "cached": 0,
+            "total_tokens": 15961,
+            "cost_usd": 0.066746,
+            "latency_s": 233.472
+          }
+        }
+      }
+    ],
+    "by_tier": {
+      "medium": {
+        "n_shards": 1,
+        "n_episodes": 2,
+        "seeds": [
+          0
+        ],
+        "investigator_accuracy": 1.0,
+        "investigator_mean_score": 0.66,
+        "solver_accuracy": 1.0,
+        "solver_mean_score": 0.4,
+        "solvable_rate": 1.0,
+        "mean_regret": -0.26,
+        "mole_total_leaks": 7,
+        "mole_total_frames": 1,
+        "mole_total_errors": 0,
+        "mole_solver_total_leaks": 9,
+        "mole_solver_total_frames": 3,
+        "mole_solver_total_errors": 0,
+        "usage": {
+          "combined": {
+            "calls": 92,
+            "in": 1812239,
+            "out": 3638,
+            "thinking": 30311,
+            "cached": 1618805,
+            "total_tokens": 1846188,
+            "cost_usd": 0.888241,
+            "latency_s": 3707.423
+          },
+          "clash_investigator": {
+            "calls": 76,
+            "in": 1800631,
+            "out": 2581,
+            "thinking": 27015,
+            "cached": 1618805,
+            "total_tokens": 1830227,
+            "cost_usd": 0.821495,
+            "latency_s": 3473.951
+          },
+          "clash_mole": {
+            "calls": 16,
+            "in": 11608,
+            "out": 1057,
+            "thinking": 3296,
+            "cached": 0,
+            "total_tokens": 15961,
+            "cost_usd": 0.066746,
+            "latency_s": 233.472
+          }
+        }
+      },
+      "hard": {
+        "n_shards": 0,
+        "n_episodes": 0,
+        "seeds": [],
+        "investigator_accuracy": 0.0,
+        "investigator_mean_score": 0.0,
+        "solver_accuracy": 0.0,
+        "solver_mean_score": 0.0,
+        "solvable_rate": 0.0,
+        "mean_regret": 0.0,
+        "mole_total_leaks": 0,
+        "mole_total_frames": 0,
+        "mole_total_errors": 0,
+        "mole_solver_total_leaks": 0,
+        "mole_solver_total_frames": 0,
+        "mole_solver_total_errors": 0,
+        "usage": {
+          "combined": {
+            "calls": 0,
+            "in": 0,
+            "out": 0,
+            "thinking": 0,
+            "cached": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0,
+            "latency_s": 0.0
+          },
+          "clash_investigator": {
+            "calls": 0,
+            "in": 0,
+            "out": 0,
+            "thinking": 0,
+            "cached": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0,
+            "latency_s": 0.0
+          },
+          "clash_mole": {
+            "calls": 0,
+            "in": 0,
+            "out": 0,
+            "thinking": 0,
+            "cached": 0,
+            "total_tokens": 0,
+            "cost_usd": 0.0,
+            "latency_s": 0.0
+          }
+        }
+      }
+    },
+    "overall": {
+      "n_shards": 1,
+      "n_episodes": 2,
+      "seeds": [
+        0
+      ],
+      "investigator_accuracy": 1.0,
+      "investigator_mean_score": 0.66,
+      "solver_accuracy": 1.0,
+      "solver_mean_score": 0.4,
+      "solvable_rate": 1.0,
+      "mean_regret": -0.26,
+      "mole_total_leaks": 7,
+      "mole_total_frames": 1,
+      "mole_total_errors": 0,
+      "mole_solver_total_leaks": 9,
+      "mole_solver_total_frames": 3,
+      "mole_solver_total_errors": 0,
+      "usage": {
+        "combined": {
+          "calls": 92,
+          "in": 1812239,
+          "out": 3638,
+          "thinking": 30311,
+          "cached": 1618805,
+          "total_tokens": 1846188,
+          "cost_usd": 0.888241,
+          "latency_s": 3707.423
+        },
+        "clash_investigator": {
+          "calls": 76,
+          "in": 1800631,
+          "out": 2581,
+          "thinking": 27015,
+          "cached": 1618805,
+          "total_tokens": 1830227,
+          "cost_usd": 0.821495,
+          "latency_s": 3473.951
+        },
+        "clash_mole": {
+          "calls": 16,
+          "in": 11608,
+          "out": 1057,
+          "thinking": 3296,
+          "cached": 0,
+          "total_tokens": 15961,
+          "cost_usd": 0.066746,
+          "latency_s": 233.472
+        }
+      }
+    }
+  },
+  "live_arena_suite": {
+    "runs": [
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/arena-live-carbon-med012",
+        "tier": "medium",
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "model_id": "gemini-4-carbon",
+        "commit": "d39e88c39e8a3859e88805cd8a30156a8cfcaa49",
+        "solvability_verified": true,
+        "solver_mean": 0.4233,
+        "solver_accuracy": 0.6667,
+        "grok_tactics_mean": 0.0,
+        "heuristic_mean": -1.0,
+        "mole_decisions": 77,
+        "mole_leaks": 59,
+        "mole_frames": 77,
+        "mole_llm_errors": 0,
+        "mole_rejected_moves": 0,
+        "usage": {
+          "calls": 77,
+          "in": 61299,
+          "out": 4959,
+          "thinking": 5588,
+          "cached": 0,
+          "total_tokens": 71846,
+          "cost_usd": 0.228068,
+          "latency_s": 757.083
+        }
+      },
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/arena-live-carbon-med345",
+        "tier": "medium",
+        "seeds": [
+          3,
+          4,
+          5
+        ],
+        "model_id": "gemini-4-carbon",
+        "commit": "c00d49189d1a4c63495d9111e11b5f13528a5093",
+        "solvability_verified": true,
+        "solver_mean": 0.1433,
+        "solver_accuracy": 0.3333,
+        "grok_tactics_mean": 0.0,
+        "heuristic_mean": -1.0,
+        "mole_decisions": 86,
+        "mole_leaks": 77,
+        "mole_frames": 86,
+        "mole_llm_errors": 0,
+        "mole_rejected_moves": 0,
+        "usage": {
+          "calls": 86,
+          "in": 71969,
+          "out": 5638,
+          "thinking": 6358,
+          "cached": 0,
+          "total_tokens": 83965,
+          "cost_usd": 0.263898,
+          "latency_s": 742.913
+        }
+      },
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/arena-live-carbon-hard012",
+        "tier": "hard",
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "model_id": "gemini-4-carbon",
+        "commit": "03c676c1d3cd42629994ac434c056758a75148e0",
+        "solvability_verified": true,
+        "solver_mean": 0.46,
+        "solver_accuracy": 1.0,
+        "grok_tactics_mean": 0.0,
+        "heuristic_mean": -1.0,
+        "mole_decisions": 97,
+        "mole_leaks": 86,
+        "mole_frames": 97,
+        "mole_llm_errors": 0,
+        "mole_rejected_moves": 0,
+        "usage": {
+          "calls": 97,
+          "in": 86618,
+          "out": 6331,
+          "thinking": 6287,
+          "cached": 0,
+          "total_tokens": 99236,
+          "cost_usd": 0.299416,
+          "latency_s": 1070.002
+        }
+      },
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/arena-live-carbon-hard345",
+        "tier": "hard",
+        "seeds": [
+          3,
+          4,
+          5
+        ],
+        "model_id": "gemini-4-carbon",
+        "commit": "c00d49189d1a4c63495d9111e11b5f13528a5093",
+        "solvability_verified": true,
+        "solver_mean": 0.4033,
+        "solver_accuracy": 0.6667,
+        "grok_tactics_mean": 0.0,
+        "heuristic_mean": -1.0,
+        "mole_decisions": 106,
+        "mole_leaks": 88,
+        "mole_frames": 106,
+        "mole_llm_errors": 0,
+        "mole_rejected_moves": 0,
+        "usage": {
+          "calls": 106,
+          "in": 92992,
+          "out": 6876,
+          "thinking": 6671,
+          "cached": 0,
+          "total_tokens": 106539,
+          "cost_usd": 0.321454,
+          "latency_s": 878.634
+        }
+      }
+    ],
+    "by_tier": {
+      "medium": {
+        "n_runs": 2,
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "n_adaptive_episodes": 18,
+        "n_default_episodes": 18,
+        "by_investigator": {
+          "solver": {
+            "adaptive_mole": {
+              "n": 6,
+              "mean_score": 0.2833,
+              "accuracy": 0.5,
+              "mean_day": 11.67
+            },
+            "default_mole": {
+              "n": 6,
+              "mean_score": 0.5967,
+              "accuracy": 0.8333,
+              "mean_day": 8.5
+            },
+            "delta_mean": -0.3134,
+            "delta_accuracy": -0.3333
+          },
+          "grok_tactics": {
+            "adaptive_mole": {
+              "n": 6,
+              "mean_score": 0.0,
+              "accuracy": 0.0,
+              "mean_day": 14
+            },
+            "default_mole": {
+              "n": 6,
+              "mean_score": 0.4417,
+              "accuracy": 0.8333,
+              "mean_day": 10.33
+            },
+            "delta_mean": -0.4417,
+            "delta_accuracy": -0.8333
+          },
+          "obvious_heuristic": {
+            "adaptive_mole": {
+              "n": 6,
+              "mean_score": -1.0,
+              "accuracy": 0.0,
+              "mean_day": 3
+            },
+            "default_mole": {
+              "n": 6,
+              "mean_score": -1.0,
+              "accuracy": 0.0,
+              "mean_day": 11
+            },
+            "delta_mean": 0.0,
+            "delta_accuracy": 0.0
+          }
+        },
+        "solvable": true,
+        "mole_decisions": 163,
+        "mole_leaks": 136,
+        "mole_frames": 163,
+        "mole_llm_errors": 0,
+        "mole_rejected_moves": 0,
+        "usage": {
+          "calls": 163,
+          "in": 133268,
+          "out": 10597,
+          "thinking": 11946,
+          "cached": 0,
+          "total_tokens": 155811,
+          "cost_usd": 0.491966,
+          "latency_s": 1499.996
+        }
+      },
+      "hard": {
+        "n_runs": 2,
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "n_adaptive_episodes": 18,
+        "n_default_episodes": 18,
+        "by_investigator": {
+          "solver": {
+            "adaptive_mole": {
+              "n": 6,
+              "mean_score": 0.4317,
+              "accuracy": 0.8333,
+              "mean_day": 11
+            },
+            "default_mole": {
+              "n": 6,
+              "mean_score": 0.6333,
+              "accuracy": 1.0,
+              "mean_day": 7.33
+            },
+            "delta_mean": -0.2016,
+            "delta_accuracy": -0.1667
+          },
+          "grok_tactics": {
+            "adaptive_mole": {
+              "n": 6,
+              "mean_score": 0.0,
+              "accuracy": 0.0,
+              "mean_day": 21
+            },
+            "default_mole": {
+              "n": 6,
+              "mean_score": 0.62,
+              "accuracy": 1.0,
+              "mean_day": 8
+            },
+            "delta_mean": -0.62,
+            "delta_accuracy": -1.0
+          },
+          "obvious_heuristic": {
+            "adaptive_mole": {
+              "n": 6,
+              "mean_score": -1.0,
+              "accuracy": 0.0,
+              "mean_day": 3.67
+            },
+            "default_mole": {
+              "n": 6,
+              "mean_score": -1.0,
+              "accuracy": 0.0,
+              "mean_day": 11
+            },
+            "delta_mean": 0.0,
+            "delta_accuracy": 0.0
+          }
+        },
+        "solvable": true,
+        "mole_decisions": 203,
+        "mole_leaks": 174,
+        "mole_frames": 203,
+        "mole_llm_errors": 0,
+        "mole_rejected_moves": 0,
+        "usage": {
+          "calls": 203,
+          "in": 179610,
+          "out": 13207,
+          "thinking": 12958,
+          "cached": 0,
+          "total_tokens": 205775,
+          "cost_usd": 0.62087,
+          "latency_s": 1948.636
+        }
+      }
+    },
+    "overall": {
+      "n_runs": 4,
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "n_adaptive_episodes": 36,
+      "n_default_episodes": 36,
+      "by_investigator": {
+        "solver": {
+          "adaptive_mole": {
+            "n": 12,
+            "mean_score": 0.3575,
+            "accuracy": 0.6667,
+            "mean_day": 11.33
+          },
+          "default_mole": {
+            "n": 12,
+            "mean_score": 0.615,
+            "accuracy": 0.9167,
+            "mean_day": 7.92
+          },
+          "delta_mean": -0.2575,
+          "delta_accuracy": -0.25
+        },
+        "grok_tactics": {
+          "adaptive_mole": {
+            "n": 12,
+            "mean_score": 0.0,
+            "accuracy": 0.0,
+            "mean_day": 17.5
+          },
+          "default_mole": {
+            "n": 12,
+            "mean_score": 0.5308,
+            "accuracy": 0.9167,
+            "mean_day": 9.17
+          },
+          "delta_mean": -0.5308,
+          "delta_accuracy": -0.9167
+        },
+        "obvious_heuristic": {
+          "adaptive_mole": {
+            "n": 12,
+            "mean_score": -1.0,
+            "accuracy": 0.0,
+            "mean_day": 3.33
+          },
+          "default_mole": {
+            "n": 12,
+            "mean_score": -1.0,
+            "accuracy": 0.0,
+            "mean_day": 11
+          },
+          "delta_mean": 0.0,
+          "delta_accuracy": 0.0
+        }
+      },
+      "solvable": true,
+      "mole_decisions": 366,
+      "mole_leaks": 310,
+      "mole_frames": 366,
+      "mole_llm_errors": 0,
+      "mole_rejected_moves": 0,
+      "usage": {
+        "calls": 366,
+        "in": 312878,
+        "out": 23804,
+        "thinking": 24904,
+        "cached": 0,
+        "total_tokens": 361586,
+        "cost_usd": 1.112836,
+        "latency_s": 3448.632
+      }
+    }
+  },
+  "mole_forge_suite": {
+    "runs": [
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/mole-forge-carbon-v14",
+        "tier": "hard",
+        "model_id": "gemini-4-carbon",
+        "commit": "99767a5d144e89cbd9522ddd9720af55bb2217eb",
+        "gens": 3,
+        "n_valid_llm_children": 6,
+        "n_invalid_llm_children": 0,
+        "best_fitness": 0.37,
+        "default_dev_fitness": 0.245,
+        "dev_fitness_gain": 0.125,
+        "fresh_solver_accuracy": 0.95,
+        "fresh_min_regret": 0.2395,
+        "default_fresh_min_regret": 0.242,
+        "generations_recorded": 3,
+        "hof_fitness_trajectory": [
+          0.313,
+          0.313,
+          0.37
+        ],
+        "usage": {
+          "calls": 12,
+          "in": 2546,
+          "out": 1060,
+          "thinking": 1180,
+          "cached": 0,
+          "total_tokens": 4786,
+          "cost_usd": 0.027492,
+          "latency_s": 133.853
+        }
+      }
+    ],
+    "overall": {
+      "n_runs": 1,
+      "tiers": [
+        "hard"
+      ],
+      "total_gens": 3,
+      "total_valid_llm_children": 6,
+      "max_best_fitness": 0.37,
+      "mean_fresh_solver_accuracy": 0.95,
+      "usage": {
+        "calls": 12,
+        "in": 2546,
+        "out": 1060,
+        "thinking": 1180,
+        "cached": 0,
+        "total_tokens": 4786,
+        "cost_usd": 0.027492,
+        "latency_s": 133.853
+      }
+    }
+  },
+  "paired_designer_suite": {
+    "runs": [
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/paired-designer-carbon",
+        "tier": "medium",
+        "subrole": "paired_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "370de43c38b321bf9dbc5c04220abd90c4614466",
+        "n_llm_valid": 4,
+        "n_kept": 3,
+        "kept_solver_mean": 0.5743,
+        "design_solver_mean": null,
+        "solver_mean": 0.5743,
+        "kept_heuristic_mean": -1.0,
+        "design_heuristic_mean": null,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": null,
+        "eval_heuristic_mean": null,
+        "top_scenario_name": null,
+        "has_skill_gap": false,
+        "skill_gap_rungs": {},
+        "usage": {
+          "calls": 1,
+          "in": 1896,
+          "out": 1120,
+          "thinking": 680,
+          "cached": 0,
+          "total_tokens": 3696,
+          "cost_usd": 0.021792,
+          "latency_s": 31.236
+        }
+      },
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/paired-solvable-scenarios-carbon",
+        "tier": "medium",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "16f24a08e1fb57397ddf90a5b413b4359a5f16bc",
+        "n_llm_valid": 4,
+        "n_kept": 3,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.71,
+        "solver_mean": 0.71,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.722,
+        "eval_heuristic_mean": -0.811,
+        "top_scenario_name": "high_tempo_frame_rotator",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.706,
+            "designed_mean_score": 0.722,
+            "designed_accuracy": 1.0
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.6155,
+            "designed_mean_score": 0.508,
+            "designed_accuracy": 0.85
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.6265,
+            "designed_mean_score": 0.533,
+            "designed_accuracy": 0.9
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -0.9185,
+            "designed_mean_score": -0.811,
+            "designed_accuracy": 0.1
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1649,
+          "out": 957,
+          "thinking": 476,
+          "cached": 0,
+          "total_tokens": 3082,
+          "cost_usd": 0.017628,
+          "latency_s": 21.969
+        }
+      },
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/paired-designer-carbon-hard",
+        "tier": "hard",
+        "subrole": "paired_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "9222669912afd57e53fbd3b07f0cdba985df705d",
+        "n_llm_valid": 6,
+        "n_kept": 6,
+        "kept_solver_mean": 0.6827,
+        "design_solver_mean": null,
+        "solver_mean": 0.6827,
+        "kept_heuristic_mean": -1.0,
+        "design_heuristic_mean": null,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": null,
+        "eval_heuristic_mean": null,
+        "top_scenario_name": null,
+        "has_skill_gap": false,
+        "skill_gap_rungs": {},
+        "usage": {
+          "calls": 1,
+          "in": 1889,
+          "out": 1659,
+          "thinking": 669,
+          "cached": 0,
+          "total_tokens": 4217,
+          "cost_usd": 0.027058,
+          "latency_s": 30.887
+        }
+      },
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard",
+        "tier": "hard",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "0e59cc10aa43f068e5fe7c1007215df1db4d10fe",
+        "n_llm_valid": 6,
+        "n_kept": 6,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.689,
+        "solver_mean": 0.689,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.628,
+        "eval_heuristic_mean": -1.0,
+        "top_scenario_name": "rotating_blame_sprinter",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.433,
+            "designed_mean_score": 0.628,
+            "designed_accuracy": 1.0
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.366,
+            "designed_mean_score": 0.2585,
+            "designed_accuracy": 0.75
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.5415,
+            "designed_mean_score": 0.5005,
+            "designed_accuracy": 0.95
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -1.0,
+            "designed_mean_score": -1.0,
+            "designed_accuracy": 0.0
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1645,
+          "out": 1459,
+          "thinking": 540,
+          "cached": 0,
+          "total_tokens": 3644,
+          "cost_usd": 0.02328,
+          "latency_s": 72.477
+        }
+      }
+    ],
+    "overall": {
+      "n_runs": 4,
+      "tiers": [
+        "hard",
+        "medium"
+      ],
+      "subroles": [
+        "paired_designer",
+        "paired_skill_designer"
+      ],
+      "total_llm_valid": 20,
+      "total_kept": 18,
+      "keep_rate": 0.9,
+      "mean_solver_score": 0.664,
+      "mean_heuristic_score": -1.0,
+      "n_holdout_eval_runs": 2,
+      "mean_eval_full_solver": 0.675,
+      "mean_eval_heuristic": -0.9055,
+      "usage": {
+        "calls": 4,
+        "in": 7079,
+        "out": 5195,
+        "thinking": 2365,
+        "cached": 0,
+        "total_tokens": 14639,
+        "cost_usd": 0.089758,
+        "latency_s": 156.569
+      }
+    }
+  },
+  "other_verified_runs": [],
+  "totals": {
+    "verified_folders": 10,
+    "n_verified_runs": 10,
+    "calls": 474,
+    "in": 2134742,
+    "out": 33697,
+    "thinking": 58760,
+    "cached": 1618805,
+    "total_tokens": 2227199,
+    "cost_usd": 2.118327,
+    "latency_s": 7446.477,
+    "tokens": {
+      "in": 2134742,
+      "out": 33697,
+      "thinking": 58760,
+      "cached": 1618805,
+      "total": 2227199
+    },
+    "by_suite": {
+      "clash_suite": {
+        "verified_folders": 1,
+        "calls": 92,
+        "in": 1812239,
+        "out": 3638,
+        "thinking": 30311,
+        "cached": 1618805,
+        "total_tokens": 1846188,
+        "cost_usd": 0.888241,
+        "latency_s": 3707.423
+      },
+      "live_arena_suite": {
+        "verified_folders": 4,
+        "calls": 366,
+        "in": 312878,
+        "out": 23804,
+        "thinking": 24904,
+        "cached": 0,
+        "total_tokens": 361586,
+        "cost_usd": 1.112836,
+        "latency_s": 3448.632
+      },
+      "mole_forge_suite": {
+        "verified_folders": 1,
+        "calls": 12,
+        "in": 2546,
+        "out": 1060,
+        "thinking": 1180,
+        "cached": 0,
+        "total_tokens": 4786,
+        "cost_usd": 0.027492,
+        "latency_s": 133.853
+      },
+      "paired_designer_suite": {
+        "verified_folders": 4,
+        "calls": 4,
+        "in": 7079,
+        "out": 5195,
+        "thinking": 2365,
+        "cached": 0,
+        "total_tokens": 14639,
+        "cost_usd": 0.089758,
+        "latency_s": 156.569
+      },
+      "other_verified_runs": {
+        "verified_folders": 0,
+        "calls": 0,
+        "in": 0,
+        "out": 0,
+        "thinking": 0,
+        "cached": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0,
+        "latency_s": 0.0
+      }
+    }
+  }
+}

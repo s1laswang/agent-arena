@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import os
@@ -120,7 +121,8 @@ def _contents(messages):
         for img in m.get("images") or []:
             parts.append(types.Part.from_bytes(data=Path(img).read_bytes(), mime_type=_mime(img)))
         for c in m.get("tool_calls") or []:
-            parts.append(types.Part.from_function_call(name=c["name"], args=c.get("args") or {}))
+            sig = base64.b64decode(c["sig"]) if c.get("sig") else b"skip_thought_signature_validator"
+            parts.append(types.Part(function_call=types.FunctionCall(name=c["name"], args=c.get("args") or {}), thought_signature=sig))
         for r in m.get("tool_results") or []:
             parts.append(types.Part.from_function_response(name=r["name"], response={"result": r["result"]}))
         role = "model" if m["role"] in ("assistant", "model") else "user"
@@ -171,7 +173,8 @@ def _parse(resp):
     for cand in (resp.candidates or [])[:1]:
         for p in (cand.content.parts if cand.content and cand.content.parts else []):
             if getattr(p, "function_call", None):
-                calls.append({"name": p.function_call.name, "args": dict(p.function_call.args or {})})
+                sig = getattr(p, "thought_signature", None)
+                calls.append({"name": p.function_call.name, "args": dict(p.function_call.args or {}), **({"sig": base64.b64encode(sig).decode()} if sig else {})})
             elif getattr(p, "text", None):
                 text += p.text
     return {"text": text, "tool_calls": calls}

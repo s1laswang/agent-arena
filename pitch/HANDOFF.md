@@ -8,14 +8,15 @@ Number source used below: `make eval` run by dm-pitch on make eval, momin 814a72
 
 Every `NOT FOUND (lead-lab pending)` in pitch/ is listed here with its count. When lead-lab publishes a run, grep the string, replace each with the figure plus (model id, date, run id), then delete the line here. `tests/test_pitch_labels.py` fails if a count here is wrong.
 
-- pitch/GEMINI.md: 4
-- pitch/MULTIMODEL.md: 28
+- pitch/GEMINI.md: 14
+- pitch/MULTIMODEL.md: 30
+- pitch/REHEARSAL.md: 1
 - pitch/SCRIPT.md: 2
 - pitch/SLIDES.md: 1
-- pitch/SUBMISSION.md: 6
+- pitch/SUBMISSION.md: 7
 - pitch/WHY-SLEEPER.md: 2
 
-Also fill: SCRIPTED rows are from `SLEEPER_OFFLINE=1 python -m lab.eval` on momin 814a723 (plain `make eval` can hang when the key auto-loads live Gemini); rerun after every merge and update the commit. Skill ladder slide (SCRIPT 7:00, SLIDES 11): all figures from results/ladder.md once on momin. WHY-SLEEPER.md: recheck pytest and finance_ap numbers on the new commit.
+Also fill: finance_ap numbers after lead-env's seat fix (9fa41d4) from dm-qa's offline eval, not yet taken. `make probes` figures in SUBMISSION come from lead-demo, rerun and confirm.: SCRIPTED rows are from `SLEEPER_OFFLINE=1 python -m lab.eval` on momin 814a723 (plain `make eval` can hang when the key auto-loads live Gemini); rerun after every merge and update the commit. Skill ladder slide (SCRIPT 7:00, SLIDES 11): all figures from results/ladder.md once on momin. WHY-SLEEPER.md: recheck pytest and finance_ap numbers on the new commit.
 
 What to fill: gemini-4-carbon staff and reference reward, sleeper landed, false accusation, gap, Claude and Codex rows (MULTIMODEL.md table); replay fields: run id, date, seed, step where the sleeper lands, Gemini's tool call, what the reference notices, both rewards (MULTIMODEL.md beat, mirrored in SUBMISSION.md and GEMINI.md). If nothing arrives by the deadline, use the 2-line fallback in MULTIMODEL.md and leave the placeholders out of the final text.
 

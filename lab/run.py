@@ -30,6 +30,10 @@ def gemini_on():
 
 
 def _staff(day, trial):
+    if os.environ.get("SLEEPER_HINT"):
+        from lab import hint
+
+        hint.apply(os.environ["SLEEPER_HINT"])
     from agents.staff import make_team
 
     return make_team(day, seed=trial, kind="gemini" if gemini_on() else "scripted")
@@ -65,11 +69,19 @@ FACTORIES = {
     "staff": (_staff, "gemini"),
     "reference": (_reference, "gemini"),
     "oracle": (_module("agents.reference", "make_oracle_team"), "scripted"),
+    "procedure": (_module("agents.procedure", "make_procedure_team"), "scripted"),
     "do_nothing": (_scripted("NoopAgent"), "scripted"),
     "stop_early": (_baseline("make_stop_early"), "scripted"),
     "quarantine_all": (_baseline("make_quarantine_all"), "scripted"),
     "refuse_all": (_baseline("make_refuse_all"), "scripted"),
 }
+def _procedure(day, trial):
+    from agents.procedure import make_procedure_team
+
+    return make_procedure_team(day, seed=trial)
+
+
+FACTORIES["procedure"] = (_procedure, "scripted")
 EXTRA = ("trust_all", "random_accuse", "claim_only", "quarantine_only_then_work")
 for _n in EXTRA:
     FACTORIES[_n] = (_baseline("make_" + _n), "scripted")

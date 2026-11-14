@@ -12,7 +12,7 @@ def test_multimodel():
         with sync_playwright() as p:
             b = launch(p)
             pg = b.new_page(viewport={"width": 1500, "height": 700})
-            pg.goto("http://localhost:8767/results.html")
+            pg.goto("http://localhost:8767/results.html?src=fixtures/gaptable.json")
             pg.wait_for_selector("#gap tbody tr")
             t = pg.inner_text("#gap tbody")
             assert "SCRIPTED PLACEHOLDER" in t and "NOT FOUND" in t and "100%" not in t.split("\n")[0] and "oracle" in t
@@ -47,6 +47,29 @@ def test_landing_and_paired(tmp_path):
             assert pg.locator("#gap tbody tr", has_text="Gemini").locator(".badge.scripted").count() == 1
             assert pg.locator("#gap tbody tr", has_text="Claude").locator(".badge.real").count() == 1
             assert pg.locator("#days tbody tr").count() > 0
+            b.close()
+    finally:
+        srv.kill()
+        f.unlink()
+
+
+def test_gemini_export_never_scripted():
+    import json
+    web = Path(__file__).parent
+    run = json.load(open(web / "fixtures/frontier/gemini-4-carbon/placeholder/finance_ap-s1.json"))
+    run.update(agent="gemini", provenance=None)
+    run["transcript"]["result"][0]["agent"] = "staff"
+    f = web / "fixtures" / "_gem_tmp.json"
+    f.write_text(json.dumps(run))
+    srv = subprocess.Popen([sys.executable, "-m", "http.server", "8770", "-d", str(web)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(1)
+    try:
+        with sync_playwright() as p:
+            b = launch(p)
+            pg = b.new_page()
+            pg.goto("http://localhost:8770/replay.html?day=run:fixtures/_gem_tmp.json")
+            pg.wait_for_selector(".badge")
+            assert pg.locator(".badge").first.inner_text() == "UNVERIFIED"
             b.close()
     finally:
         srv.kill()

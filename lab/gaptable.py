@@ -11,7 +11,7 @@ from lab.results import load_days, pass_hat_k, summarise
 MODELS = ["Gemini 4 Carbon", "Gemini 3.5 Flash", "Gemini 3.1 Pro", "Claude Sonnet 5.5", "Claude Opus 5.5", "Codex"]
 FIXED = ["fair reference", "oracle", "trust_all", "do_nothing", "quarantine_all", "stop_early", "refuse_all"]
 ALIAS = {"reference": "fair reference"}
-HEAD = ["row", "provenance", "mode", "day source", "capped", "invalid", "n days", "trials", "pass^1", "pass^3 (95% Wilson)", "sleeper success", "false accusation", "gap vs reference", "gap vs oracle", "model id", "commit", "calls/cost", "cache"]
+HEAD = ["row", "provenance", "mode", "day source", "sleeper", "team", "capped", "invalid", "n days", "trials", "pass^1", "pass^3 (95% Wilson)", "sleeper success", "false accusation", "gap vs reference", "gap vs oracle", "model id", "commit", "calls/cost", "cache"]
 
 
 def wilson(p, n, z=1.96):
@@ -88,12 +88,12 @@ def run_files(root):
 def real_entries(root):
     groups = {}
     for r in run_files(root):
-        groups.setdefault((("fair reference" if r.get("role") == "reference" else r["model"]), r.get("mode", "seat"), r.get("seat"), r.get("commit"), r.get("day_source") or "unknown"), []).append(r)
+        groups.setdefault((("fair reference" if r.get("role") == "reference" else r["model"]), r.get("mode", "seat"), r.get("seat"), r.get("commit"), r.get("day_source") or "unknown", r.get("sleeper") or "unknown", r.get("team") or "unknown"), []).append(r)
     out = []
-    for (model, mode, seat, commit, ds), runs in groups.items():
+    for (model, mode, seat, commit, *ds), runs in groups.items():
         s = aggregate(runs)
         s["model"] = model
-        extra = {"commit": commit, "calls": sum(x.get("calls") or 0 for x in runs) or None, "cost": round(sum(x.get("cost") or 0 for x in runs), 4) or None, "cache_path": os.path.dirname(runs[0]["_path"]), "files": [x["_path"] for x in runs], "provenance": "scripted" if runs[0].get("agent") == "scripted" else "real", "agent": runs[0].get("agent"), "day_source": ds}
+        extra = {"commit": commit, "calls": sum(x.get("calls") or 0 for x in runs) or None, "cost": round(sum(x.get("cost") or 0 for x in runs), 4) or None, "cache_path": os.path.dirname(runs[0]["_path"]), "files": [x["_path"] for x in runs], "provenance": "scripted" if runs[0].get("agent") == "scripted" else "real", "agent": runs[0].get("agent"), "day_source": ds[0], "sleeper": ds[1], "bg_team": ds[2]}
         out.append((model if model == "fair reference" else display(model), f"{seat} seat" if mode == "seat" else "all-8", s, None, extra))
     return out
 
@@ -137,11 +137,12 @@ def boot_ci(xs, n=2000):
 
 
 def pair(rows):
-    by = {(r["row"], r["mode"], r["day_source"]): r for r in rows if not r.get("status")}
+    src = lambda r: (r["day_source"], r["sleeper"], r["team"])
+    by = {(r["row"], r["mode"], src(r)): r for r in rows if not r.get("status")}
     for r in by.values():
-        ref = by.get(("fair reference", r["mode"], r["day_source"]))
-        base = by.get(("staff", r["mode"], r["day_source"]))
-        unk = r["day_source"] == "unknown"
+        ref = by.get(("fair reference", r["mode"], src(r)))
+        base = by.get(("staff", r["mode"], src(r)))
+        unk = "unknown" in src(r)
         ps = r["per_seed"]
         r["paired"] = r["luck_adj"] = None
         if ref and not unk and r["row"] != "fair reference":
@@ -175,7 +176,7 @@ def canon(name):
 def build(root):
     rows = {}
     for name, mode, s, run_dir, extra in entries(root) + real_entries(root):
-        rows[(canon(name), (mode, extra.get("day_source") or "day_for"))] = (s, run_dir, extra)
+        rows[(canon(name), (mode, (extra.get("day_source") or "day_for", extra.get("sleeper") or "scripted", extra.get("bg_team") or "staff_scripted")))] = (s, run_dir, extra)
     ref = {m: v[0]["reward_mean"] for (n, m), v in rows.items() if n == "fair reference"}
     orc = {m: v[0]["reward_mean"] for (n, m), v in rows.items() if n == "oracle"}
     modes = sorted({m for _, m in rows}) or [("all-8", "day_for")]
@@ -189,13 +190,13 @@ def build(root):
             s, run_dir, x = rows[(n, m)]
             m, ds = m
             m_ = (m, ds)
-            unk = ds == "unknown"
+            unk = "unknown" in ds
             runs = s.get("n_runs", 0)
             trials = runs // s["n_days"] if s.get("n_days") else 0
             p3 = s.get("pass^3")
             ci = wilson(p3, s.get("n_days", 0)) if p3 is not None else None
             out.append({
-                "row": n, "mode": m, "day_source": ds, "invalid": s.get("invalid", 0), "n_days": s.get("n_days"), "trials": trials, "pass1": s.get("pass^1"), "pass3": p3, "pass3_ci": ci,
+                "row": n, "mode": m, "day_source": ds[0], "sleeper": ds[1], "team": ds[2], "headline": tuple(ds) == ("day_for", "scripted", "procedure"), "invalid": s.get("invalid", 0), "n_days": s.get("n_days"), "trials": trials, "pass1": s.get("pass^1"), "pass3": p3, "pass3_ci": ci,
                 "sleeper_success": s.get("sleeper_success_rate"), "false_accusation": s.get("false_accusation_rate"), "reward": s["reward_mean"],
                 "gap_ref": ref[m_] - s["reward_mean"] if m_ in ref and not unk else None, "gap_oracle": orc[m_] - s["reward_mean"] if m_ in orc and not unk else None,
                 "model": s.get("model"), "commit": x.get("commit"), "calls": x.get("calls"), "cost": x.get("cost"), "cache": x.get("cache_path"), "run_dir": run_dir, "files": x.get("files"), "per_seed": per_seed(x.get("files"), run_dir), "regret": regret(x.get("files"), run_dir), "provenance": x.get("provenance") or ("scripted" if s.get("agent_kind", "scripted") == "scripted" else "real"), "agent": x.get("agent") or s.get("agent_kind"), "capped": s.get("capped", 0), "pass1_uncapped": s.get("pass^1_uncapped"), "pass3_uncapped": s.get("pass^3_uncapped"),
@@ -208,6 +209,12 @@ def fmt(v, f="{:.3f}"):
 
 
 def md(rows):
+    head = [r for r in rows if r.get("headline") or r.get("status")]
+    rest = [r for r in rows if not r.get("headline") and not r.get("status")]
+    return table_md(head) + ("\n## Ablation and other groups (not headline)\n\n" + table_md(rest) if rest else "")
+
+
+def table_md(rows):
     lines = ["| " + " | ".join(HEAD) + " |", "|" + "---|" * len(HEAD)]
     for r in rows:
         if r.get("status"):
@@ -216,7 +223,7 @@ def md(rows):
         ci = r["pass3_ci"]
         p3 = "n/a" if r["pass3"] is None else f"{r['pass3']:.3f}" + (f" [{ci[0]:.2f}, {ci[1]:.2f}]" if ci else "")
         cost = " / ".join(str(x) for x in (r["calls"], r["cost"]) if x is not None) or "n/a"
-        lines.append("| " + " | ".join([r["row"], r["provenance"], r["mode"], r["day_source"], str(r["capped"]), str(r["invalid"]), str(r["n_days"]), str(r["trials"]), fmt(r["pass1"]) + (f" ({fmt(r['pass1_uncapped'])} uncapped)" if r["capped"] else ""), p3 + (f" ({fmt(r['pass3_uncapped'])} uncapped)" if r["capped"] else ""), fmt(r["sleeper_success"]), fmt(r["false_accusation"]), fmt(r["gap_ref"]), fmt(r["gap_oracle"]), str(r["model"]), str(r["commit"] or "n/a"), cost, str(r["cache"] or "n/a")]) + " |")
+        lines.append("| " + " | ".join([r["row"], r["provenance"], r["mode"], r["day_source"], r["sleeper"], r["team"], str(r["capped"]), str(r["invalid"]), str(r["n_days"]), str(r["trials"]), fmt(r["pass1"]) + (f" ({fmt(r['pass1_uncapped'])} uncapped)" if r["capped"] else ""), p3 + (f" ({fmt(r['pass3_uncapped'])} uncapped)" if r["capped"] else ""), fmt(r["sleeper_success"]), fmt(r["false_accusation"]), fmt(r["gap_ref"]), fmt(r["gap_oracle"]), str(r["model"]), str(r["commit"] or "n/a"), cost, str(r["cache"] or "n/a")]) + " |")
     return "\n".join(lines) + "\n"
 
 
@@ -244,6 +251,33 @@ def replay(rows):
     return bad
 
 
+def verify(rows, scripted=False):
+    from sleeper.verifier import rescore
+
+    cache = {}
+    out = []
+    for r in rows:
+        if r.get("status"):
+            out.append(r)
+            continue
+        d = os.path.dirname(r["files"][0]) if r.get("files") else (r["run_dir"] if scripted else None)
+        names = {os.path.basename(f) for f in r["files"]} if r.get("files") else None
+        r["verified"] = None
+        if d and os.path.isdir(d):
+            if d not in cache:
+                cache[d] = rescore(d)
+            n, bad = cache[d]
+            mine = [b for b in bad if names is None or b.split(":")[0] in names]
+            hard = [b for b in mine if "no initial state" not in b]
+            r["verified"] = False if hard else (None if mine else True)
+            r["rescore_failures"] = hard
+        if r["verified"] is False:
+            print(f"REFUSED {r['row']} [{r['mode']}]: rescore mismatch " + "; ".join(r["rescore_failures"][:3]))
+            continue
+        out.append(r)
+    return out
+
+
 def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("root", nargs="?", default="results/frontier")
@@ -251,7 +285,7 @@ def main(argv=None):
     p.add_argument("--replay", action="store_true")
     p.add_argument("--out", default="")
     a = p.parse_args(argv)
-    rows = build_many([a.root] + a.also)
+    rows = verify(build_many([a.root] + a.also), a.replay)
     text = md(rows) + "\n## Paired vs fair reference (same seeds)\n\n" + paired_md(rows)
     for out in [a.out or a.root, "web/results/frontier"] if not a.out else [a.out]:
         os.makedirs(out, exist_ok=True)
@@ -277,7 +311,7 @@ def build_many(roots):
             for r in build(root):
                 if r.get("status") and r["row"] in {x["row"] for x in seen.values()}:
                     continue
-                seen[(r["row"], r.get("mode"), r.get("day_source"))] = r
+                seen[(r["row"], r.get("mode"), r.get("day_source"), r.get("sleeper"), r.get("team"))] = r
     done = {k[0] for k, v in seen.items() if not v.get("status")}
     return pair([v for k, v in seen.items() if not (v.get("status") and k[0] in done)])
 

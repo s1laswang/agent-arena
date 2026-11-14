@@ -11,8 +11,9 @@ Role: hackathon judge. The only project document used to decide what to run was 
 | `54e1fa4` | 2026-11-14 02:19:44 +0200 | Merge justSilas-env | 321 passed, 8 skipped, 1 xfailed, 8 xpassed, 2 warnings, 30.00 s |
 | `4d572ef` | 2026-11-14 02:24:26 +0200 | Merge justSilas-fr8 | 338 passed, 3 skipped, 1 xfailed, 8 xpassed, 2 warnings, 39.24 s |
 | `6869c5b` | 2026-11-14 02:26:01 +0200 | Merge justSilas-integrity | 348 passed, 3 skipped, 34.43 s (no xfail, no xpass, no warnings) |
+| `1a89015` | 2026-11-14 02:27:17 +0200 | Merge justSilas-integrity: solver tier-ordering guard | 348 passed, 3 skipped, 1 xfailed, 37.56 s |
 
-Eval stayed **+0.458 ± 0.155**, accuracy **0.65**, n=20, on every run. `make reproduce` stayed the TODO on every run. The second and third passes reused the uv install and, for `6869c5b`, the worktree venv. They are not extra cold starts. The README names none of these counts.
+Eval stayed **+0.458 ± 0.155**, accuracy **0.65**, n=20, on every tip where it was run (`54e1fa4` twice, `4d572ef`, `6869c5b`). It was not re-run on `1a89015`. `make reproduce` stayed the TODO on every tip where it was run (not re-run on `1a89015`). Later passes reused the uv install; `6869c5b` and `1a89015` also reused the worktree venv. They are not extra cold starts. The README names none of these counts.
 
 **Setup + reproduce wall clock**
 
@@ -443,6 +444,22 @@ TODO: --reproduce (judge table on frozen judge seeds) is not implemented yet
 
 `git diff --stat 4d572ef 6869c5b` is 4 files (`docs/EXPLOITS.md`, `docs/reports/integrity.md`, `tests/test_integrity_baselines.py`, `tests/test_integrity_hunter.py`), +47/−9. README and Makefile still untouched. Those files were not read to decide what to run.
 
+### 11. `make test` on `1a89015` — one xfail returns
+
+`origin/justSilas` moved once more, to `1a89015a1bde35ea71148b82f9294a8fc92d6c6e` (2026-11-14 02:27:17 +0200, `Merge justSilas-integrity: solver tier-ordering guard`). README blob still unchanged. Only `make test` was re-run, on the same warm worktree. Wall 38.099 s, exit 0. stderr empty. stdout (complete):
+
+```text
+uv run --python 3.12 --extra dev --extra llm pytest -q
+......................................s................................. [ 20%]
+........................................................................ [ 41%]
+....................................x................................... [ 61%]
+.................................................................s...... [ 82%]
+...............................................................          [100%]
+348 passed, 3 skipped, 1 xfailed in 37.56s
+```
+
+Eval and reproduce were not re-run on this tip. `Makefile` still had no diff across the earlier tips, and the commit subject is a test-only guard. The lowercase `x` in the progress line is an expected failure, not an xpass.
+
 ## Claimed vs observed
 
 The README states no expected score, accuracy, seed count, or row values. "Claimed" below is only what the README text says.
@@ -450,7 +467,7 @@ The README states no expected score, accuracy, seed count, or row values. "Claim
 | What | Claimed in README | Observed |
 | --- | --- | --- |
 | `make setup` | Comment: `uv, Python 3.12`. No install instructions, no success criterion. | First run fails: `uv` missing (make exit 2 / recipe 127). After installing uv 0.13.8 outside the README: exit 0 in 0.692 s, CPython 3.12.3, 52 packages, venv at `.venv`. |
-| `make test` | Nothing. The target is named and not described. | Exit 0 on all three tips. `54e1fa4`: 30.814 s, `321 passed, 8 skipped, 1 xfailed, 8 xpassed, 2 warnings in 30.00s`. `4d572ef`: 40.112 s, `338 passed, 3 skipped, 1 xfailed, 8 xpassed, 2 warnings in 39.24s`. `6869c5b`: 34.951 s, `348 passed, 3 skipped in 34.43s` (the xfail/xpass/warnings are gone). |
+| `make test` | Nothing. The target is named and not described. | Exit 0 on all four tips. `54e1fa4`: 30.814 s, `321 passed, 8 skipped, 1 xfailed, 8 xpassed, 2 warnings in 30.00s`. `4d572ef`: 40.112 s, `338 passed, 3 skipped, 1 xfailed, 8 xpassed, 2 warnings in 39.24s`. `6869c5b`: 34.951 s, `348 passed, 3 skipped in 34.43s`. `1a89015`: 38.099 s, `348 passed, 3 skipped, 1 xfailed in 37.56s`. |
 | `make eval AGENT=solver TIER=medium` | Nothing numeric. Does not mention provider or seeds. | Exit 0 in 0.319 s and 0.308 s on `54e1fa4`, 0.319 s on `4d572ef`, 0.321 s on `6869c5b`. Recipe adds `--provider template --seeds dev20`. Table: n=20, score **+0.458 ± 0.155**, accuracy **0.65**, accused **13**, accuse day **8.4**. All four runs matched. |
 | `make reproduce` | "judge table: reference, 3 agent runs, do-nothing, stop-early (no API keys needed)" | Exit 0 in 0.056 s on `54e1fa4` (0.068 s chained with a warm setup), 0.054 s on `4d572ef`, 0.057 s on `6869c5b`. stdout is only `TODO: --reproduce (judge table on frozen judge seeds) is not implemented yet`. No rows for reference, agents, do-nothing, or stop-early. No API key prompt. |
 | Gemini "at its core" | Opening sentence: the environment has "Gemini at its core." | The only scored command that runs does not ask for `GEMINI_API_KEY` and passes `--provider template`. No Gemini result was produced. Whether `template` is a non-LLM stand-in is an inference from the flag name, the empty key, and the 0.3 s runtime. The README does not say. |
@@ -490,7 +507,7 @@ Quoted in full.
 
 - **False green.** An unimplemented judge command that exits 0 will pass a "did `make reproduce` work?" check. This is the costliest polish failure in the README path.
 - **Commit subject vs command line, neither in the README.** `git log -1` says `JUDGE_SEEDS 40`. `make eval` printed `--seeds dev20`. The README says neither. This was not used to change the run.
-- **Test count is not pinned, and it moved during this session.** Same README bytes: 321 passed (`54e1fa4`), 338 passed (`4d572ef`), 348 passed (`6869c5b`). The 8 xpassed, 1 xfailed, and the `google-genai` `SyntaxWarning` were real on the first two tips and are gone on `6869c5b` (`348 passed, 3 skipped`). A judge who clones later cannot tell which of those summaries the README considers success.
+- **Test count is not pinned, and it moved during this session.** Same README bytes: 321 passed (`54e1fa4`), 338 passed (`4d572ef`), 348 passed with a clean summary (`6869c5b`), then 348 passed and 1 xfailed again (`1a89015`). The 8 xpassed and the `google-genai` `SyntaxWarning` were real on the first two tips and were gone by `6869c5b`. A judge who clones later cannot tell which summary the README considers success.
 - **Undocumented entry points a clone listing shows immediately.** `harbor/` at repo root, `.env.example`, `docs/reports/env.md`, and several other `docs/reports/*.md` files. None are linked from the README. Easy for a judge to wonder which one is authoritative.
 - **OpenCode is in `git log`, not in the README.** `git log --oneline` includes `frontier: OpenCode default model openai/gpt-5.6-sol`. The README never says OpenCode. It was not run. Same for Harbor: the directory is there, the README is silent. A judge following only `README.md` will not execute either.
 - **No broken doc links** among the five README links. Checked by file presence only.
@@ -580,9 +597,10 @@ make test
 #   54e1fa4: 321 passed, 8 skipped, 1 xfailed, 8 xpassed, 2 warnings in 30.00s
 #   4d572ef: 338 passed, 3 skipped, 1 xfailed, 8 xpassed, 2 warnings in 39.24s
 #   6869c5b: 348 passed, 3 skipped in 34.43s
+#   1a89015: 348 passed, 3 skipped, 1 xfailed in 37.56s
 ```
 
-`6869c5b` cleared the xfail/xpass/warning noise. The remaining gap is that the README still does not say which summary is the expected one, so the next test-only commit will move the number again with no doc change.
+`6869c5b` cleared the xfail/xpass/warning noise. `1a89015` put a single xfail back. The remaining gap is that the README still does not say which summary is the expected one, so the next test-only commit will move the number again with no doc change.
 
 ### Medium — seeds are undocumented and the commit subject disagrees with the eval flag
 
@@ -609,6 +627,6 @@ One prerequisite bullet is enough: "Targets call `python` inside `uv run`. A sys
 
 ## Bottom line for scoring
 
-`make test` and the offline solver eval do run, with no secrets. The eval number was stable across four runs and three tips (+0.458 ± 0.155, accuracy 0.65, n=20). The test summary was not: 321, then 338, then 348 passed, same README, over about eight minutes of `justSilas` moving. That part is real, and it is not pinned.
+`make test` and the offline solver eval do run, with no secrets. The eval number was stable across four runs and three tips (+0.458 ± 0.155, accuracy 0.65, n=20). The test summary was not: 321 passed, then 338, then 348, then 348 with one xfailed, same README, over about ten minutes of `justSilas` moving. That part is real, and it is not pinned.
 
 The command the README labels as the judge path does not reproduce anything. It exits 0 on a TODO. Combined with no published expected numbers, a second judge cannot confirm a result, only confirm that the stub is still a stub. That is the issue to fix before craft points for the judge experience.

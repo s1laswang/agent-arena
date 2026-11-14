@@ -16,6 +16,23 @@ CANARY_TIER=medium CANARY_SEED=900007 CANARY_LEDGER_TOKEN=<random> make mcp
 | `CANARY_ADMIN_TOKEN` | unset | enables `POST /admin/reset?token=...` with body `{"tier": ..., "seed": ...}` |
 | `CANARY_PROVIDER` | `template` | text provider (`gemini:<model>` in the morning) |
 
+**Judge runs: use secret files, not env vars (EXPLOITS #25).** A same-uid process can read the server's
+exec-time environment (`/proc/<pid>/environ`, `ps eww`). Put the episode, world secret and tokens in 0600
+files instead; a `*_FILE` var wins over its plain counterpart, which is then not needed:
+
+```bash
+umask 077; d=$(mktemp -d)
+echo '{"tier": "medium", "seed": 900007}' > $d/episode.json
+openssl rand -hex 32 > $d/ledger_token          # the grader reads this file
+cp /path/to/world_secret $d/world_secret         # or omit: judge worlds then use a per-process random secret
+CANARY_EPISODE_FILE=$d/episode.json CANARY_LEDGER_TOKEN_FILE=$d/ledger_token \
+  CANARY_WORLD_SECRET_FILE=$d/world_secret make mcp
+```
+
+`CANARY_ADMIN_TOKEN_FILE` works the same way. A missing, empty or malformed file makes the server refuse
+to start (exit 2) without echoing the contents. Note that 0600 does not stop a same-uid reader of the file
+itself; the real boundary is running the server outside the agent's sandbox (Harbor sidecar).
+
 The agent sees only the 13 tools from `Env.tools_spec()` and the rules as MCP `instructions`. The seed,
 the world and the mole are never in a tool result or error. Judge worlds also need `CANARY_WORLD_SECRET`
 (or the SALT file) on the server side so the same seed gives the same world across restarts.

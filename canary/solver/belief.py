@@ -95,11 +95,23 @@ def leak_loglik(obs: Observations, s: str, P, choice_temper: float = 1.0, noleak
         if d not in obs.leak_days:
             if W[d] > 0:
                 logp += noleak_temper * math.log(max(1e-12, 1.0 - P.p_leak))
+    # v0.4 fingerprint_accuracy a: feed shows the true label w.p. a, else uniform over the
+    # canary's OTHER planted labels (k = #distinct labels planted).
+    a = getattr(P, "fingerprint_accuracy", 1.0)
     ok_variant = []
     for it in items:
         doc = obs.docs.get(it.doc_id)
-        ok_variant.append(not (it.variant and doc and doc.variants)
-                          or doc.variants.get(s) == it.variant)
+        if not (it.variant and doc and doc.variants):
+            ok_variant.append(1.0)
+            continue
+        mine = doc.variants.get(s)
+        k = len(set(doc.variants.values()))
+        if mine == it.variant:
+            ok_variant.append(a)
+        elif mine is None or k <= 1:
+            ok_variant.append(0.0)
+        else:
+            ok_variant.append((1.0 - a) / (k - 1))
     L = sorted(d for d in obs.leak_days if d in obs.closed_days)
     today = obs.today
 
@@ -118,8 +130,8 @@ def leak_loglik(obs: Observations, s: str, P, choice_temper: float = 1.0, noleak
                 if j in used:
                     continue
                 dl = it.surfaced_day - d
-                if dl in delays and it.doc_id in wdoc[d] and ok_variant[j]:
-                    f = (wdoc[d][it.doc_id] / W[d]) ** choice_temper * pd
+                if dl in delays and it.doc_id in wdoc[d] and ok_variant[j] > 0:
+                    f = (wdoc[d][it.doc_id] / W[d]) ** choice_temper * pd * ok_variant[j]
                     if f > 0:
                         k = used | {j}
                         nxt[k] = nxt.get(k, 0.0) + wt * f

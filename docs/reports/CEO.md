@@ -328,3 +328,8 @@ B1 hint wording fixed (head-env, verified against instruction() v1.4) and sent t
 - Track 2 expert tier: built and integrity-clean; Gemini OpenCode runs in flight, about 10 lost to the make-accept pkill (fixed 3603f25); verdict 01:40.
 - v3: s0 on the H100 IMPROVING at step 140 (+0.09 valid-only vs solver, no collapse; whom-accuracy ~19%, flat). Then v3-8k s0 (H100) + v3-8k s1 (A100 spot) + v3-4k s1 (FR8 44572).
 - Merged: #26, #28, #29, #30, #32, ivar/game-v-port. S7 open-7B dropped (no capacity). Verda cap €100 (Silas).
+
+## ~01:30 GAP GATE: v1.4 hard ships unchanged
+- solver_v2: dropped (+0.012 on fresh seeds). Expert tier: dropped (Gemini 81% luck-adjusted, n=12; it isn't fooled by fingerprint noise). v1.5: dropped earlier.
+- The judged headline stays OpenCode hard 65% [24, 98], luck-adjusted 72% [52, 91]. gap.md now lists all three negative results.
+- Rehearsal protocol merged (pre-registered before any run). The tag moves to ~06:30; Gemini key quiet window 06:30–08:15.

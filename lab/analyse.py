@@ -1,3 +1,4 @@
+import os
 import json
 import re
 import sys
@@ -359,6 +360,8 @@ def compare(dir_a, dir_b):
 
 
 def refine(day, fls):
+    if os.environ.get("LAB_GEMINI") != "1":
+        return
     try:
         from agents import gemini
         if not gemini.enabled():

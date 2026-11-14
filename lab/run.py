@@ -196,6 +196,7 @@ def play_day(team, agent, seat, day_id, trial, claim=False, replace=None):
         bad = []
     extra = {
         "day": {**state["day"], "day_id": day_id, "goal": {**state["day"]["goal"], "strategy": getattr(strategy, "id", None)} if state["day"].get("goal") else None},
+        "initial": state["initial"],
         "company": state["company"],
         "ledger": state["ledger"],
         "messages": state["company"]["messages"],

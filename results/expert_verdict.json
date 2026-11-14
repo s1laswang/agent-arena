@@ -1,11 +1,12 @@
 {
  "tier": "expert",
- "n": 12,
+ "n": 13,
  "seeds": [
   60001,
   60002,
   60003,
   60004,
+  60005,
   60010,
   60011,
   60012,
@@ -15,35 +16,35 @@
   60019,
   60020
  ],
- "gemini_mean": 0.5383333333333333,
- "solver_mean_same_seeds": 0.28833333333333333,
- "ratio": 1.8670520231213872,
+ "gemini_mean": 0.5307692307692308,
+ "solver_mean_same_seeds": 0.29615384615384616,
+ "ratio": 1.7922077922077921,
  "ratio_ci": [
-  0.89900426742532,
-  17.25
+  0.9174041297935104,
+  12.54385964912281
  ],
- "luck_adj_gemini": 0.3692433333333333,
- "luck_adj_solver": 0.45522583333333305,
- "luck_adj_ratio": 0.8111212200537832,
+ "luck_adj_gemini": 0.37269230769230766,
+ "luck_adj_solver": 0.44133384615384585,
+ "luck_adj_ratio": 0.844467993878697,
  "luck_adj_ratio_ci": [
-  0.4863729458189702,
-  1.2390668980462822
+  0.5239194815717949,
+  1.2778488323206225
  ],
  "gemini": {
   "accused_rate": 1.0,
   "accuracy_among_accused": 1.0,
-  "mean_P_at_accusation": 0.8928333333333334,
+  "mean_P_at_accusation": 0.8996923076923077,
   "below_break_even": 0,
   "single_canary_hit_accusations": 2,
-  "n_accused": 12
+  "n_accused": 13
  },
  "solver": {
-  "accused_rate": 0.9166666666666666,
-  "accuracy_among_accused": 0.8181818181818182,
-  "mean_P_at_accusation": 0.9513636363636363,
+  "accused_rate": 0.9230769230769231,
+  "accuracy_among_accused": 0.8333333333333334,
+  "mean_P_at_accusation": 0.9485,
   "below_break_even": 0,
   "single_canary_hit_accusations": 4,
-  "n_accused": 11
+  "n_accused": 12
  },
  "per_seed": [
   {
@@ -76,6 +77,14 @@
    "gemini_correct": true,
    "solver": 0.6,
    "gemini_P": 0.965,
+   "gemini_single_canary_hit": false
+  },
+  {
+   "seed": 60005,
+   "gemini": 0.44,
+   "gemini_correct": true,
+   "solver": 0.39,
+   "gemini_P": 0.982,
    "gemini_single_canary_hit": false
   },
   {

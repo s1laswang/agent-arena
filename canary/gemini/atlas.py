@@ -28,6 +28,7 @@ import argparse
 import hashlib
 import json
 import random
+import re
 import subprocess
 import sys
 import time
@@ -149,6 +150,7 @@ class Atlas:
                  max_tokens: int = 900_000, log=None):
         self.eps, self.ops, self.model, self.cache_model, self.out = eps, ops, model, cache_model, Path(out)
         self.max_tokens = max_tokens
+        self.blind = False
         self.log = log or (lambda *a: print(*a, flush=True))
         self.by_id = {e.id: e for e in eps}
         self.text, self.blocks = pack_corpus(eps)
@@ -455,13 +457,24 @@ class Atlas:
         shows = pick_showcase(self.eps, n)
 
         def one(ep):
-            png = render_belief_chart(ep, chart_dir / f"{ep.id.replace('#', '_')}.png")
+            png = render_belief_chart(ep, chart_dir / f"{ep.id.replace('#', '_')}.png")  # atlas copy, with regret
             ct = code_divergence_t(ep)
-            ex = "\n".join(step_line(s) + (f"\n   says: {s.rationale[:400]}" if s.rationale else "")
-                           for s in ep.steps if s.regret >= 0.001 or s.tool in ("accuse", "plant_canary", "check_leak_feed"))
+            if self.blind:
+                # Gemini's copy shows belief curves only and the excerpt has no regret numbers, so agreement with
+                # the code's highest-regret step is not given away
+                png = render_belief_chart(ep, None, show_regret=False)
+                ex = "\n".join(re.sub(r" \| REGRET [0-9.]+( \[[^\]]*\])?", "", step_line(s))
+                               + (f"\n   says: {s.rationale[:400]}" if s.rationale else "")
+                               for s in ep.steps if s.tool in ("accuse", "plant_canary", "check_leak_feed",
+                                                               "restrict_access", "advance_day"))
+            else:  # v1 (recorded): chart with regret panel, excerpt with regret
+                ex = "\n".join(step_line(s) + (f"\n   says: {s.rationale[:400]}" if s.rationale else "")
+                               for s in ep.steps if s.regret >= 0.001 or s.tool in ("accuse", "plant_canary",
+                                                                                    "check_leak_feed"))
             q = (f"{SYSTEM}\n\nThe image is the belief trace of episode {ep.id}: the reference solver's posterior over "
                  "time (blue = true mole, orange = the employee the agent accused if innocent, gray = solver's top "
-                 "suspect), canaries as violet triangles, regret per step in the lower panel. Below are the key steps "
+                 "suspect), canaries as violet triangles" + ("" if self.blind else ", regret per step in the lower panel")
+                 + ". Below are the key steps "
                  "of the episode. TASK: localise the step t where the agent's course departs from what the solver's "
                  "belief supports, describe what the chart shows there, and quote the agent verbatim.\n\n"
                  + ex[:60000])
@@ -612,6 +625,26 @@ class Atlas:
                 for c, d in out.items()}
 
 
+def fit_budget(eps: list[Episode], budget_tokens: int, chars_per_token: float = 2.52) -> list[Episode]:
+    """Cap episodes per cohort (lowest seeds kept, tiers balanced) until the packed corpus fits the budget; the
+    atlas reports the corpus it actually read."""
+    by: dict[str, list[Episode]] = defaultdict(list)
+    for e in eps:
+        by[e.cohort].append(e)
+    for c in by:  # interleave tiers so a cap keeps both
+        tiers = sorted({e.tier for e in by[c]})
+        lists = [sorted((e for e in by[c] if e.tier == t), key=lambda e: e.seed) for t in tiers]
+        by[c] = [e for grp in __import__("itertools").zip_longest(*lists) for e in grp if e is not None]
+    size = {e.id: len(pack_corpus([e])[0]) / chars_per_token for e in eps}
+    cap = max(len(v) for v in by.values())
+    while cap > 1:
+        keep = [e for c in by for e in by[c][:cap]]
+        if sum(size[e.id] for e in keep) <= budget_tokens:
+            return sorted(keep, key=lambda e: e.id)
+        cap -= 1
+    return sorted([e for c in by for e in by[c][:1]], key=lambda e: e.id)
+
+
 def ledger_spend() -> dict:
     """All atlas rows in the local usage ledger (every live run that produced the recorded responses)."""
     try:
@@ -685,6 +718,10 @@ def run(args) -> dict:
     else:
         runs = [str(ROOT / r) if not Path(r).is_absolute() else r for r in args.runs]
         eps = load_corpus([r for r in runs if Path(r).exists()])
+    if getattr(args, "exclude", None):
+        eps = [e for e in eps if not any(x in e.cohort for x in args.exclude)]
+    if getattr(args, "budget_tokens", 0) and not (args.replay and snap.exists()):
+        eps = fit_budget(eps, args.budget_tokens)
     if args.limit:
         random.Random(0).shuffle(eps)
         eps = sorted(eps[:args.limit], key=lambda e: e.id)
@@ -692,6 +729,7 @@ def run(args) -> dict:
         save_snapshot(eps, snap)
     ops = AtlasOps(replay=args.replay, cache_dir=cache_dir)
     A = Atlas(eps, ops, args.model, args.cache_model, out, max_tokens=args.max_tokens)
+    A.blind = bool(getattr(args, "blind_localise", False))
     A.count()
     if not args.no_cache:
         A.open_cache()
@@ -843,6 +881,11 @@ def main(argv=None) -> int:
     ap.add_argument("--crosscheck", action="store_true",
                     help="independent --model reading in <= --shard-tokens shards + merge, mapped onto the taxonomy")
     ap.add_argument("--shard-tokens", type=int, default=250_000)
+    ap.add_argument("--blind-localise", action="store_true",
+                    help="multimodal localisation without regret in the chart/excerpt (v2)")
+    ap.add_argument("--exclude", nargs="*", default=[], help="drop cohorts whose id contains any of these")
+    ap.add_argument("--budget-tokens", type=int, default=0,
+                    help="cap episodes per cohort so the corpus fits (one cache holds <= ~1M tokens)")
     ap.add_argument("--allow-fallback", action="store_true",
                     help="write a deterministic (non-Gemini) atlas if discovery fails (never publish it)")
     a = ap.parse_args(argv)

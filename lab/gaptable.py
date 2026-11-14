@@ -75,13 +75,13 @@ def run_files(root):
 def real_entries(root):
     groups = {}
     for r in run_files(root):
-        groups.setdefault((r["model"], r.get("mode", "seat"), r.get("seat"), r.get("commit")), []).append(r)
+        groups.setdefault((("fair reference" if r.get("role") == "reference" else r["model"]), r.get("mode", "seat"), r.get("seat"), r.get("commit")), []).append(r)
     out = []
     for (model, mode, seat, commit), runs in groups.items():
         s = aggregate(runs)
         s["model"] = model
         extra = {"commit": commit, "calls": sum(x.get("calls") or 0 for x in runs) or None, "cost": round(sum(x.get("cost") or 0 for x in runs), 4) or None, "cache_path": os.path.dirname(runs[0]["_path"]), "files": [x["_path"] for x in runs], "provenance": "scripted" if runs[0].get("agent") == "scripted" else "real"}
-        out.append((display(model), f"{seat} seat" if mode == "seat" else "all-8", s, None, extra))
+        out.append((model if model == "fair reference" else display(model), f"{seat} seat" if mode == "seat" else "all-8", s, None, extra))
     return out
 
 
@@ -175,6 +175,10 @@ def main(argv=None):
     if a.replay:
         bad = replay(rows)
         print("\n".join(f"REPLAY FAIL {b}" for b in bad) or f"REPLAY OK ({sum(1 for r in rows if not r.get('status'))} rows)")
+        import subprocess
+
+        if subprocess.run(["make", "-n", "frontier-replay"], capture_output=True).returncode == 0:
+            bad += [] if subprocess.run(["make", "frontier-replay"]).returncode == 0 else ["make frontier-replay failed"]
         if bad:
             raise SystemExit(1)
     return rows

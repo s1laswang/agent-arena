@@ -48,32 +48,56 @@ def _init_tok(model_path):
 
 
 def _np_windows(ws):
+    """(input_ids, labels, accuse_mask) -> numpy (int32, int32, bool)."""
     import numpy as np
-    return [(np.asarray(i, dtype=np.int32), np.asarray(l, dtype=np.int32)) for i, l in ws]
+    return [(np.asarray(i, dtype=np.int32), np.asarray(l, dtype=np.int32),
+             np.asarray(m, dtype=bool)) for i, l, m in ws]
+
+
+def _win(rec, tok, max_len, wopts):
+    from train.windows import record_windows_ex
+    mode, overlap, oversample = wopts
+    return _np_windows(record_windows_ex(rec, tok, max_len, mode, overlap, oversample))
 
 
 def _rec_windows(args):
-    rec, max_len = args
-    from train.windows import record_windows
-    return _np_windows(record_windows(rec, _TOK, max_len))
+    rec, max_len, wopts = args
+    return _win(rec, _TOK, max_len, wopts)
 
 
-def build_windows(recs, model_path, tok, max_len, workers):
-    """Tokenize episodes into windows; parallel across `workers` processes (order preserved)."""
-    from train.windows import record_windows
+def build_windows(recs, model_path, tok, max_len, workers, wopts=("prefix", 256, 0)):
+    """Tokenize episodes into windows; parallel across `workers` processes (order preserved).
+    wopts = (window_mode, overlap, oversample_endings)."""
     if workers <= 1 or len(recs) < 64:
-        return [w for r in recs for w in _np_windows(record_windows(r, tok, max_len))]
+        return [w for r in recs for w in _win(r, tok, max_len, wopts)]
     import multiprocessing as mp
     with mp.get_context("spawn").Pool(workers, initializer=_init_tok, initargs=(model_path,)) as pool:
-        parts = pool.map(_rec_windows, [(r, max_len) for r in recs], chunksize=32)
+        parts = pool.map(_rec_windows, [(r, max_len, wopts) for r in recs], chunksize=32)
     return [w for part in parts for w in part]
 
 
-def tok_cache_path(cache_dir, data, max_len, max_episodes, model_path):
+def weighted_ce(logits, labels, weights, norm: float):
+    """Token-level CE with per-token weights (causal shift applied here).
+
+    loss = sum_i w_i * CE_i / (n_loss_tokens_in_window * norm), norm = mean weight over ALL loss
+    tokens in the dataset. So with every w=1 it equals the usual mean CE, and up-weighting accuse
+    tokens shifts gradient toward them without inflating the overall loss scale / effective LR.
+    """
+    import torch.nn.functional as F
+    lg = logits[:, :-1].float()
+    y = labels[:, 1:]
+    w = weights[:, 1:]
+    ce = F.cross_entropy(lg.reshape(-1, lg.size(-1)), y.reshape(-1), ignore_index=-100,
+                         reduction="none")
+    n = (y != -100).sum().clamp(min=1)
+    return (ce * w.reshape(-1)).sum() / (n * norm)
+
+
+def tok_cache_path(cache_dir, data, max_len, max_episodes, model_path, wopts=("prefix", 256, 0)):
     import hashlib
     files = sorted(glob.glob(os.path.join(data, "train-*.jsonl")) if os.path.isdir(data) else glob.glob(data))
     sig = json.dumps([[f, os.path.getsize(f), int(os.path.getmtime(f))] for f in files]
-                     + [max_len, max_episodes, os.path.basename(model_path.rstrip("/"))])
+                     + [max_len, max_episodes, os.path.basename(model_path.rstrip("/")), "v3", list(wopts)])
     return os.path.join(cache_dir, hashlib.sha1(sig.encode()).hexdigest()[:16] + ".pkl")
 
 
@@ -135,6 +159,10 @@ def main(argv=None):
     ap.add_argument("--max-steps", type=int, default=0, help="optimizer steps; 0 = from epochs")
     ap.add_argument("--max-len", type=int, default=None, help="default 4096 prefix / 2048 dense")
     ap.add_argument("--window-mode", choices=["prefix", "dense"], default="prefix")
+    ap.add_argument("--accuse-weight", type=float, default=1.0,
+                    help="loss weight on accuse-turn tokens (1 = plain CE, J4 behaviour)")
+    ap.add_argument("--oversample-endings", type=int, default=0,
+                    help="K extra windows per episode on the last 2 assistant turns")
     ap.add_argument("--overlap", type=int, default=256, help="dense: token overlap between chunks")
     ap.add_argument("--grad-accum", type=int, default=8)
     ap.add_argument("--lr", type=float, default=2e-4)
@@ -163,14 +191,15 @@ def main(argv=None):
 
     recs = load_records(a.data, a.max_episodes or None)
     t0 = time.time()
-    cache = tok_cache_path(a.tok_cache, a.data, a.max_len, a.max_episodes, a.model) if a.tok_cache else None
+    wopts = (a.window_mode, a.overlap, a.oversample_endings)
+    cache = tok_cache_path(a.tok_cache, a.data, a.max_len, a.max_episodes, a.model, wopts) if a.tok_cache else None
     if cache and os.path.exists(cache):
         import pickle
         with open(cache, "rb") as f:
             windows = pickle.load(f)
         print(f"[data] loaded tokenized cache {cache}", flush=True)
     else:
-        windows = build_windows(recs, a.model, tok, a.max_len, a.tok_workers)
+        windows = build_windows(recs, a.model, tok, a.max_len, a.tok_workers, wopts)
         if cache:
             import pickle
             os.makedirs(a.tok_cache, exist_ok=True)
@@ -180,6 +209,13 @@ def main(argv=None):
     random.Random(1).shuffle(windows)
     n_tok = sum(len(w[0]) for w in windows)
     n_lab = sum(int((w[1] != -100).sum()) for w in windows)
+    n_acc = sum(int(((w[1] != -100) & w[2]).sum()) for w in windows)
+    W = a.accuse_weight
+    w_sum = n_lab - n_acc + W * n_acc
+    norm = w_sum / max(n_lab, 1)  # mean weight over loss tokens
+    print(f"[data] accuse_loss_share={n_acc / max(n_lab, 1):.4f} -> weighted "
+          f"{W * n_acc / max(w_sum, 1e-9):.4f} (accuse_weight={W}, "
+          f"oversample_endings={a.oversample_endings}, norm={norm:.3f})", flush=True)
     print(f"[data] episodes={len(recs)} windows={len(windows)} tokens={n_tok} "
           f"loss_tokens={n_lab} loss_frac={n_lab / max(n_tok, 1):.3f} mode={a.window_mode} "
           f"max_len={a.max_len} max_window={max((len(w[0]) for w in windows), default=0)} "
@@ -224,12 +260,18 @@ def main(argv=None):
     while step < total_steps:
         loss_acc = 0.0
         for _ in range(a.grad_accum):
-            inp, lab = windows[wi % len(windows)]
+            inp, lab, amask = windows[wi % len(windows)]
             wi += 1
             x = torch.as_tensor(inp, dtype=torch.long, device=device).unsqueeze(0)
             y = torch.as_tensor(lab, dtype=torch.long, device=device).unsqueeze(0)
             with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=use_amp):
-                loss = model(input_ids=x, labels=y).loss / a.grad_accum
+                if W == 1.0:  # exactly the J4 path
+                    loss = model(input_ids=x, labels=y).loss / a.grad_accum
+                else:
+                    wt = torch.ones(y.shape, dtype=torch.float32, device=device)
+                    wt[torch.as_tensor(amask, device=device).unsqueeze(0)] = W
+                    logits = model(input_ids=x).logits
+                    loss = weighted_ce(logits, y, wt, norm) / a.grad_accum
             scaler.scale(loss).backward()
             loss_acc += float(loss)
             tok_seen += len(inp)

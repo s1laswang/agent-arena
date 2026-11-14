@@ -87,3 +87,50 @@ def test_dense_has_higher_loss_fraction_than_prefix():
         ws = make_windows(ids, offs, he, bounds, asst, max_len=he + 700, mode=mode)
         frac[mode] = sum(sum(x != IGNORE for x in l) for _, l in ws) / sum(len(i) for i, _ in ws)
     assert frac["dense"] > 1.5 * frac["prefix"]
+
+
+from train.windows import windows_ex, is_accuse, token_weights
+
+
+def _setup(n_turns=12):
+    from canary.types import Step
+    steps = [Step(i, 1, "read_access_logs", {"day_from": i}, {"ok": True, "data": {"r": "x" * 60}, "error": None})
+             for i in range(n_turns)]
+    steps.append(Step(n_turns, 2, "accuse", {"employee": "e07"}, {"ok": True, "data": {"episode_over": True}, "error": None}))
+    msgs = render_messages("rules", steps)
+    full, he, bounds, asst = char_spans(msgs, fake_render)
+    flags = [is_accuse(m) for m in msgs[2:] if m["role"] == "assistant"]
+    ids, offs = char_tok(full)
+    return full, he, bounds, asst, flags, ids, offs
+
+
+@pytest.mark.parametrize("mode", ["prefix", "dense"])
+def test_default_flags_reproduce_old_windows(mode):
+    full, he, bounds, asst, flags, ids, offs = _setup()
+    old = make_windows(ids, offs, he, bounds, asst, he + 400, mode)
+    new = windows_ex(ids, offs, he, bounds, asst, flags, he + 400, mode)
+    assert [(i, l) for i, l, _ in new] == old
+
+
+@pytest.mark.parametrize("mode", ["prefix", "dense"])
+def test_accuse_weights_land_on_accuse_tokens_only(mode):
+    full, he, bounds, asst, flags, ids, offs = _setup()
+    acc_text = full[asst[-1][0]:asst[-1][1]]
+    assert "accuse" in acc_text and flags[-1] and not any(flags[:-1])
+    got = ""
+    for inp, lab, m in windows_ex(ids, offs, he, bounds, asst, flags, he + 400, mode):
+        w = token_weights(lab, m, 20.0)
+        assert all((wi == 20.0) == (l != IGNORE and mi) for wi, l, mi in zip(w, lab, m))
+        got += "".join(chr(l) for l, wi in zip(lab, w) if wi == 20.0)
+    assert got == acc_text
+
+
+def test_oversample_endings_adds_k_tail_windows():
+    full, he, bounds, asst, flags, ids, offs = _setup()
+    base = windows_ex(ids, offs, he, bounds, asst, flags, he + 400, "dense")
+    more = windows_ex(ids, offs, he, bounds, asst, flags, he + 400, "dense", oversample_endings=3)
+    assert len(more) == len(base) + 3
+    for inp, lab, m in more[-3:]:
+        lab_text = "".join(chr(x) for x in lab if x != IGNORE)
+        assert lab_text == "".join(full[s:e] for s, e in asst[-2:]) or lab_text == full[asst[-1][0]:asst[-1][1]]
+        assert any(m) and len(inp) <= he + 400 and inp[:he] == ids[:he]

@@ -19,8 +19,9 @@ def _calib(path, sd=0.1, gap=0.2, n=40):
                     base = rng.gauss(0.5, 0.2)
                     g = gap if pl == 0.9 else gap / 2
                     w.writerow([tier, ne, pl, "solver", s, base + g + rng.gauss(0, sd), 1, 5])
-                    w.writerow([tier, ne, pl, "heuristic", s, base, int(rng.random() < .5), 8])
+                    w.writerow([tier, ne, pl, "obvious_heuristic", s, base, int(rng.random() < .5), 8])
                     w.writerow([tier, ne, pl, "random", s, 0.0, int(rng.random() < 1 / ne), 2])
+                    w.writerow([tier, ne, pl, "stop_early", s, -1.0 if s % 2 else 0.0, 0, 1])
     return path
 
 
@@ -45,6 +46,15 @@ def test_j1_recommend_picks_bigger_gap(tmp_path):
     rec = j1_recommend.recommend(read_rows(_calib(tmp_path / "c.csv")), rand_tol=0.2)
     assert "p_leak=0.9" in rec["easy"]["params"]
     assert "p_leak=0.9" in rec["hard"]["params"]
+    assert rec["easy"]["solver_ci_lo"] > 0 and rec["easy"]["stop_early_mean"] < 0
+    assert 0 <= rec["easy"]["heur_wrong_rate"] <= 1
+
+
+def test_j1_rejects_when_stop_early_nonnegative(tmp_path):
+    rows = [r for r in read_rows(_calib(tmp_path / "c.csv")) if r["agent"] != "stop_early"]
+    for r in rows[:]:
+        rows.append({**r, "agent": "stop_early", "score": 0.0})
+    assert all(c is None for c in j1_recommend.recommend(rows, rand_tol=0.2).values())
 
 
 def test_sweep_aggregate_and_cli_params(capsys):

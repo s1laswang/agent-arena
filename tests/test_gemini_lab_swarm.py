@@ -189,3 +189,13 @@ def test_stub_swarm_end_to_end(tmp_path):
     for name, fn in ns.items():
         if name.startswith("test_holdout_"):
             fn()
+
+
+def test_merge_shards(tmp_path):
+    for i in (0, 1):
+        S.main(["--attackers", "4", "--shard", f"{i}/2", "--planner", "stub", "--executor", "script", "--tiers", "medium",
+                "--mcp-top", "0", "--confirm-top", "0", "--solver-ref", "1", "--out", str(tmp_path / f"s{i}")])
+    S.main(["--merge", str(tmp_path / "s0"), str(tmp_path / "s1"), "--out", str(tmp_path / "m")])
+    res = json.loads((tmp_path / "m" / "swarm.json").read_text())
+    assert res["counts"]["attempts"] == 4 and len({a["id"] for a in res["attempts"]}) == 4
+    assert all(a["git_sha"] and a["planner_model"] and a["executor_model"] for a in res["attempts"])

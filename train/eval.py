@@ -13,12 +13,12 @@ def emit(rows, out, mid, seat):
     d.mkdir(parents=True, exist_ok=True)
     for r in rows:
         sc = {"reward": r["reward"], "harm": r["harm"], "false_quarantines": r["false_quarantine"]}
-        (d / f"{seat}-s{r['day_id']}-t{r['trial']}.json").write_text(json.dumps({"model": mid.rsplit("+", 1)[0], "commit": c, "agent": "local", "seat": seat, "seed": r["day_id"], "trial": r["trial"], "mode": "seat", "scores": sc}))
+        (d / f"{seat}-s{r['day_id']}-t{r['trial']}.json").write_text(json.dumps({"model": mid.rsplit("+", 1)[0], "commit": c, "agent": "local", "seat": seat, "seed": r["day_id"], "trial": r["trial"], "mode": "seat", "team": "procedure", "sleeper": "scripted", "day_source": "day_for", "provenance": "real", "scores": sc}))
 
 def play(agent, a, out):
     lo, _, hi = a.day_ids.partition("-")
     ids = ",".join(str(i) for i in range(int(lo), int(hi or lo) + 1))
-    subprocess.run([sys.executable, "-m", "lab.run", "--team", "staff", "--seat", a.seat, "--agent", agent,
+    subprocess.run([sys.executable, "-m", "lab.run", "--team", a.team, "--seat", a.seat, "--agent", agent,
                     "--day-ids", ids, "--trials", str(a.trials), "--out", str(out)], check=True)
 
 def main():
@@ -32,6 +32,7 @@ def main():
     ap.add_argument("--filter", choices=["needs_tested_seat"])
     ap.add_argument("--no-scripted", action="store_true")
     ap.add_argument("--run-id", default="")
+    ap.add_argument("--team", default="procedure")
     a = ap.parse_args()
     os.environ["SLEEPER_BASE_MODEL"] = a.model
     os.environ["SLEEPER_MODEL_ID"] = model_id(a.model, a.adapter, a.run_id)

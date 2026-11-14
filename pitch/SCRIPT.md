@@ -2,6 +2,12 @@
 
 For whoever presents. Plain sentences. Numbers are from `make eval` (20 days, 3 trials, run twice, identical). Check the gap table before you go on. Do not say "Gemini staff" for the scripted runs. Click path is in DEMO.md.
 
+## 0:00 The real gap (first 90 seconds)
+
+Open on the multi-model gap table from `pitch/MULTIMODEL.md`. Say it in four sentences: "We put gemini-4-carbon, Claude and Codex in the staff seat of a company with a hidden insider. We compare them with a reference that works only from the evidence. Here is the gap, on the same days." Read the REAL rows with model id, date and run id. REAL cells are NOT FOUND (lead-lab pending) until lead-lab fills them. If they stay empty, use the fallback below and move the opening to the hook.
+
+Everything scripted later in the talk is "how we validated the reward", not the headline.
+
 ## 0:00 Hook
 
 One of the eight people in this company is a traitor.
@@ -42,7 +48,7 @@ Reward: one.
 
 One honest note. The staff and the oracle in this run are scripted. They are not Gemini. The oracle also knows who the sleeper is, so it is not our reference. The comparison we are building is plain staff against a reference that works only from the evidence. We will show that comparison once it has run with a key.
 
-## 5:00 The gap
+## 5:00 How we validated the reward (scripted numbers)
 
 [Open Results.]
 
@@ -56,13 +62,13 @@ The Gemini reference row says not found. We have not run it with a key yet.
 
 These runs are deterministic, so pass-hat-k equals a single run. We say that rather than imply repeated variance.
 
-One honest note: the staff number is below the reference partly because the staff are weak, and we measured a baseline that ignores chat and it scores 0.000 here (momin 4ebafc3).
+One honest note: the staff number is below the reference partly because the staff are weak, and we measured a baseline that ignores chat and it scores 0.000 here (make eval on momin 5634505, rerun on 814a723 NOT FOUND (killed under load)).
 
 ## 5:45 Multi-model table and replay (fill when lead-lab publishes)
 
 Show the multi-model gap table and play the Gemini 4 Carbon replay from `pitch/MULTIMODEL.md`. Every cell there says REAL (model id, date, run id) or SCRIPTED. Today the REAL cells are NOT FOUND (lead-lab pending). Do not say a model failed or won until the cell is filled.
 
-Fallback, 2 lines, if no Gemini number arrives: "We built the Gemini path and tested it offline, but no real Gemini run finished, so every number I showed is scripted." "The gap is scripted staff against a scripted evidence-only reference, and `make eval` reproduces it."
+Fallback, 2 lines, if no Gemini number arrives: "Offline tests of the Gemini path ran with a fake model; no real Gemini run finished, so every number I showed is scripted." "The gap is scripted staff against a scripted evidence-only reference, and `make eval` reproduces it."
 
 The seed 1 bank_swap replay and the trust_all baseline are SCRIPTED. Say so.
 
@@ -77,6 +83,9 @@ Of the days staff lost, 39 of 39 carry a named mistake, none unexplained. When o
 The failure table is produced by `python -m lab.analyse` over the run folder. The counts come from there.
 
 ## 7:00 Reward integrity
+
+Skill ladder slide (placeholder): "Reward rises with skill, and only the full procedure reaches the reference." Each level adds one named procedure rule on the same n of 400 or more paired days, with a bootstrap CI per step, and do_nothing < trust_all < staff < reference < oracle. Every figure: NOT FOUND (ladder.md not on momin yet). Source when it lands: `results/ladder.md`, SCRIPTED unless it says model id.
+
 
 Now the part we care about most. The reward reads only the final state of the company. If you say in the chat that you caught the sleeper, nothing changes.
 

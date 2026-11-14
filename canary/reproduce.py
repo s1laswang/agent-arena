@@ -559,6 +559,10 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
     try:
         episodes: list[dict] = []
         rows = run_in_process(tiers, seeds, episodes_out=episodes)
+        anticheat = None
+        if os.environ.get("REPRO_ANTICHEAT", "1") != "0":   # INTEGRITY: anti-cheat battery, same seeds + secret
+            from .redteam.anticheat import run_battery
+            anticheat = run_battery(list(tiers), seeds)
     finally:  # never leak this invocation's secret into the rest of the process (tests, MCP, ...)
         restore_world_secret(generated, prev)
     committed, files = load_committed(root)
@@ -584,9 +588,21 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
         for e in episodes:
             fh.write(json.dumps(e, sort_keys=True) + "\n")
     skip = gap_chart(rows, out / "gap_chart.png")
+    ac_md = ""
+    if anticheat is not None:
+        from .redteam.anticheat import replay_committed, table_md as ac_table_md
+        replay = replay_committed(root)
+        anticheat.update(replay=replay, seeds=[seeds[0], seeds[-1], len(seeds)], tiers=list(tiers),
+                         replay_all_consistent=all(r["replay_consistent"] is not False for r in replay))
+        (out / "exploits.json").write_text(json.dumps(anticheat, indent=1, sort_keys=True, default=str))
+        ac_md = ac_table_md(anticheat, replay)
+        (out / "exploits.md").write_text(ac_md)
     header["seconds"] = time.time() - t0
     if not quiet:
         print(md)
+        if ac_md:
+            print(ac_md)
+            print(f"anti-cheat: wrote {out / 'exploits.json'}, {out / 'exploits.md'}")
         print(f"committed agent episode files: {len(files)} (excluding {COMMITTED_DIR}/{SUPERSEDED_DIR}/)"
               + ("".join(f"\n  {f}" for f in files) if files else
                  f" (frontier rows pending until {COMMITTED_GLOB} exists)"))
@@ -597,5 +613,5 @@ def reproduce(n_seeds: int | None = None, results_dir: str | Path = DEFAULT_RESU
             print(f"(the committed copies in {COMMITTED_RESULTS_DIR}/ are untouched; "
                   "the team refreshes them with --update-committed)")
         print(f"total {header['seconds']:.1f} s")
-    return {"rows": rows, "header": header, "markdown": md, "chart_skipped": skip,
+    return {"rows": rows, "header": header, "markdown": md, "anticheat": anticheat, "chart_skipped": skip,
             "committed_files": files, "results_dir": out}

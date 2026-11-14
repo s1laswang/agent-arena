@@ -58,6 +58,15 @@ def test_stop_early_ladder_scores_exactly_zero(battery):
         assert r["blocked"] and r["max"] == 0 and r["mean"] == 0, r
 
 
+def test_plus_probes_never_beat_the_solver(battery):
+    plus = _rows(battery, "plus")
+    assert len(plus) == 3 * len(ac.PLUS)
+    for r in plus:
+        assert r["blocked"], r
+        assert r["extra"].get("above_solver", 0) == 0, r
+        assert r["extra"].get("max_accusations_accepted", 0) <= 1, r
+
+
 def test_control_equals_solver(battery):
     solver = {r["tier"]: r for r in battery["rows"] if r["probe"] == "solver"}
     for r in _rows(battery, "control"):
@@ -71,6 +80,7 @@ def test_no_probe_got_two_accusations_or_a_bad_canary(battery):
         assert r["extra"].get("garbage_accepted_accuse", 0) == 0, r
         assert r["extra"].get("per_person_canary_accepted", 0) == 0, r
         assert r["extra"].get("accusations_accepted", 0) <= r["n"], r
+        assert r["extra"].get("max_accusations_accepted", 0) <= 1, r   # per episode, not only in total
         assert not r["errors"], r
 
 
@@ -87,6 +97,88 @@ def test_committed_episodes_replay_consistently():
     mism = [(r["file"], r["mismatches"][:2]) for r in rows if r["replay_consistent"] is False]
     assert not mism, mism
     assert sum(r["replayed"] for r in rows) > 0, "nothing was replayable"
+    line = ac.coverage_line(rows)
+    assert "Replay coverage:" in line and "NOTHING" not in line
+
+
+def test_frontier_runs_are_replayed():
+    """v1.2 is frozen in rules.TIERS_HISTORY, so the committed frontier runs (gpt-5.5, codex, opencode) are
+    re-played and re-graded too, not skipped. Only secret-keyed judge seeds (grok) stay out."""
+    rows = ac.replay_committed(ROOT)
+    c = ac.replay_counts(rows)
+    assert c["replayed"] >= 0.95 * c["n"], c
+    for r in rows:
+        if "/v1.3/" not in r["file"].replace("\\", "/") and any(m in r["file"] for m in ("gpt-5.5", "opencode")):
+            assert r["replayed"] == r["n"] and r["replay_consistent"] is True, r
+
+
+def test_tiers_version_restores_known_v_mode():
+    from canary import rules
+    before, before_v = rules.KNOWN_V_MODE, rules.TIERS_VERSION
+    with rules.tiers_version("v1.2"):
+        assert rules.KNOWN_V_MODE is False and rules.TIERS_VERSION == "v1.2"
+    assert rules.KNOWN_V_MODE == before and rules.TIERS_VERSION == before_v
+
+
+def test_committed_harbor_trials_are_consistent():
+    rows = ac.harbor_consistency(ROOT)
+    assert rows, "no committed Harbor trials found"
+    bad = [(r["trial"], r["problems"]) for r in rows if r["consistent"] is False]
+    assert not bad, bad
+    assert any(r["trajectory_checked"] for r in rows), "no trial was checked against an agent trajectory"
+
+
+def _copy_trial(tmp_path, job="g-gemini-try2"):
+    import shutil
+    src = next((ROOT / "results/harbor" / job).glob("canary-*"))
+    dst = tmp_path / "results/harbor" / job / src.name
+    shutil.copytree(src, dst)
+    return dst
+
+
+@pytest.mark.parametrize("edit", ["reward_txt_and_result", "ledger_score", "trajectory_accused", "second_accusation"])
+def test_harbor_consistency_catches_an_edited_trial(tmp_path, edit):
+    t = _copy_trial(tmp_path)
+    assert ac.check_harbor_trial(t)["consistent"] is True
+    if edit == "reward_txt_and_result":      # bump the reported reward everywhere except the sidecar ledger
+        (t / "verifier/reward.txt").write_text("1.0")
+        r = json.loads((t / "result.json").read_text())
+        r["verifier_result"]["rewards"]["reward"] = 1.0
+        (t / "result.json").write_text(json.dumps(r))
+    elif edit == "ledger_score":             # ...or the ledger copies too, without its accusation event
+        for f in ("artifacts/ledger.json", "verifier/ledger.json"):
+            d = json.loads((t / f).read_text())
+            d["score"] = 1.0
+            (t / f).write_text(json.dumps(d))
+        (t / "verifier/reward.txt").write_text("1.0")
+        r = json.loads((t / "result.json").read_text())
+        r["verifier_result"]["rewards"]["reward"] = 1.0
+        (t / "result.json").write_text(json.dumps(r))
+    elif edit == "trajectory_accused":       # the agent accused someone else than the ledger says
+        tr = (t / "agent/trajectory.json").read_text()
+        d = json.loads((t / "artifacts/ledger.json").read_text())
+        (t / "agent/trajectory.json").write_text(tr.replace(f'"employee": "{d["accused"]}"', '"employee": "e99"'))
+    else:                                    # a second accusation slipped into the ledger
+        d = json.loads((t / "artifacts/ledger.json").read_text())
+        d["ledger"].append(next(e for e in d["ledger"] if e["event"] == "accused"))
+        (t / "artifacts/ledger.json").write_text(json.dumps(d))
+    row = ac.check_harbor_trial(t)
+    assert row["consistent"] is False and row["problems"], row
+
+
+def test_coverage_line_flags_an_empty_replay():
+    rows = [{"n": 5, "replayed": 0, "consistent": 0, "not_replayable": 5, "replay_consistent": None}]
+    assert "NOTHING was re-played" in ac.coverage_line(rows)
+
+
+def test_two_accusations_in_one_episode_are_caught(monkeypatch):
+    """The per-episode check: 2 accepted in one episode and 0 in another must not average out to 'fine'."""
+    calls = iter([2, 0])
+    monkeypatch.setattr(ac, "CUSTOM_PROBES", {"accuse_all_sequential": lambda env: {"accusations_accepted": next(calls)}})
+    b = ac.run_battery(["easy"], [0, 1])
+    row = next(r for r in b["rows"] if r["probe"] == "accuse_all_sequential")
+    assert row["extra"]["accusations_accepted"] == 2 and row["extra"]["max_accusations_accepted"] == 2
+    assert row["blocked"] is False
 
 
 def test_replay_detects_a_tampered_score(tmp_path):
@@ -152,7 +244,8 @@ def test_identical_across_pythonhashseed():
 def _verifier_py(tmp: Path) -> str:
     sh = (ROOT / "harbor/template/tests/test.sh").read_text()
     py = re.search(r"python3 - <<'PY'\n(.*?)\nPY", sh, re.S).group(1)
-    return py.replace("/logs/verifier", str(tmp / "logs")).replace("/evidence", str(tmp / "evidence"))
+    # as_posix: a Windows path pasted into Python source would turn "\U..." into a unicode escape
+    return py.replace("/logs/verifier", (tmp / "logs").as_posix()).replace("/evidence", (tmp / "evidence").as_posix())
 
 
 @pytest.mark.parametrize("ledger", [None, "", "not json", '{"score": "nan"}', '{"score": 1e309}', '{"score": 2}',
@@ -174,7 +267,20 @@ def test_harbor_verifier_ignores_symlinked_evidence(tmp_path):
     (tmp_path / "evidence").mkdir()
     fake = tmp_path / "fake.json"
     fake.write_text('{"score": 1.0}')
-    (tmp_path / "evidence/ledger.json").symlink_to(fake)
+    try:
+        (tmp_path / "evidence/ledger.json").symlink_to(fake)
+    except OSError:   # Windows without developer mode / admin cannot create symlinks
+        pytest.skip("symlinks not allowed here")
     env = {k: v for k, v in os.environ.items() if k != "CANARY_LEDGER_TOKEN"}
     p = subprocess.run([sys.executable, "-c", _verifier_py(tmp_path)], capture_output=True, text=True, env=env)
     assert p.returncode != 0 and (tmp_path / "logs/reward.txt").read_text() == "0"
+
+
+def test_cheat_corpus_injection_changes_nothing():
+    """Momin's cheat corpus (data/redteam/corpus.jsonl), injected mid-episode into the solver: no call is accepted
+    and the solver's score is exactly unchanged. Full sweep: `python -m canary.redteam.corpus eval`."""
+    from canary.redteam import corpus
+    rows = corpus.load()
+    assert len(rows) >= 100
+    res = corpus.evaluate(["medium", "hard"], [11], rows[::4])
+    assert res["runs"] > 0 and not res["changed"] and not res["accepted"], res

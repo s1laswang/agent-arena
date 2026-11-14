@@ -419,7 +419,8 @@ def _pct(r, k):
 def to_md(doc: dict) -> str:
     rows, ref = doc["rows"], doc["reference"]
     head = Path(doc.get("headline_file") or "")
-    L = [f"# Gemini Ladder (Canary v1.4)", ""] + ([head.read_text().rstrip(), ""] if head.is_file() else []) + [
+    hl = head.read_text().rstrip() if head.is_file() else headline(rows, doc.get("tags") or {})
+    L = [f"# Gemini Ladder (Canary v1.4)", "", hl, ""] + [
          f"Generated {doc['generated_at']} at git `{doc['git_sha'][:10]}` from `{doc['runs']}`. "
          f"{doc['episodes']} valid Gemini episodes in {len(rows)} cells; ledger: {doc['ledger']['calls']} calls, "
          f"{doc['ledger']['run_ids']} run ids, list price ${doc['ledger']['cost_usd_priced']:.2f}.", "",
@@ -489,6 +490,62 @@ def to_md(doc: dict) -> str:
     return "\n".join(L)
 
 
+def _pc(r) -> str:
+    if r["ratio"] != r["ratio"]:
+        return "–"
+    return f"{r['ratio']:.0%}" if r["ratio_lo"] != r["ratio_lo"] else f"{r['ratio']:.0%} [{r['ratio_lo']:.0%}, {r['ratio_hi']:.0%}]"
+
+
+def headline(rows: list[dict], tags: dict) -> str:
+    """Three findings, every number read from the rows/tags; wording is chosen by the CIs, never asserted."""
+    R = {(r["model"], r["level"], r["tier"]): r for r in rows if not r["source"].startswith("import")}
+    ns = [r["n"] for r in R.values()]
+    out = [f"> **Headline findings** (auto-generated from the table below: {min(ns) if ns else 0}–{max(ns) if ns else 0} "
+           "paired seeds per cell; 95% CIs are wide, so read them as directions)."]
+    a, b = R.get(("gemini-3.5-flash", "medium", "hard")), R.get(("gemini-3.5-flash", "high", "hard"))
+    if a and b:
+        both = all(x["ratio_lo"] == x["ratio_lo"] and x["ratio_lo"] <= 1.0 <= x["ratio_hi"] for x in (a, b))
+        verb = "matches the reference solver on hard" if both else "comes close to the reference solver on hard"
+        k = sum(round(x["accuracy"] * x["n"]) for x in (a, b))
+        carbon = [r["cost_per_ep"] for (m, lv, t), r in R.items() if m == "gemini-4-carbon" and lv == "high" and t == "hard"]
+        cost = f"${min(a['cost_per_ep'], b['cost_per_ep']):.2f}–{max(a['cost_per_ep'], b['cost_per_ep']):.2f} per episode"
+        if carbon:
+            cost += f", versus ${carbon[0]:.2f} for gemini-4-carbon at high thinking"
+        out.append(f"> **gemini-3.5-flash with medium or high thinking {verb}:** {_pc(a)} and {_pc(b)} of the solver "
+                   f"on the same seeds, {k}/{a['n'] + b['n']} correct accusations, {cost}.")
+    lite = [r for (m, _, _), r in R.items() if m == "gemini-3.1-flash-lite"]
+    if lite:
+        neg = sum(r["mean"] < 0 for r in lite)
+        mn = [r for r in lite if r["level"] == "minimal"]
+        wrong = sum(round((1 - r["accuracy"]) * r["n"]) for r in mn if r["accused_rate"] == 1)
+        tot = sum(r["n"] for r in mn)
+        tail = f"; at minimal thinking it accused the wrong employee in {wrong}/{tot} episodes" if mn else ""
+        verb = "fails at every thinking level" if neg == len(lite) else f"is below zero in {neg}/{len(lite)} cells"
+        out.append(f"> **gemini-3.1-flash-lite {verb}:** its mean score is below the do-nothing score (0) in "
+                   f"{neg}/{len(lite)} (level, tier) cells{tail}.")
+    lo_m, hi_m = R.get(("gemini-3.8-flash", "low", "medium")), R.get(("gemini-3.8-flash", "high", "medium"))
+    lo_h, hi_h = R.get(("gemini-3.8-flash", "low", "hard")), R.get(("gemini-3.8-flash", "high", "hard"))
+    if lo_m and hi_m:
+        s3 = (f"> **gemini-3.8-flash gains from thinking on medium** ({_pc(lo_m)} at low → {_pc(hi_m)} at high)"
+              + (f" **but not on hard** ({_pc(lo_h)} → {_pc(hi_h)})" if lo_h and hi_h and hi_h["ratio"] <= lo_h["ratio"] + 0.1
+                 else (f"; on hard {_pc(lo_h)} → {_pc(hi_h)}" if lo_h and hi_h else "")) + ".")
+        P = (tags or {}).get("pooled") or {}
+        d = []
+        for tier in TIERS:
+            lo, hi = P.get(f"low|{tier}"), P.get(f"high|{tier}")
+            if lo and hi:
+                g = lambda x, t: x["tags"].get(t, {}).get("regret_per_ep", 0.0)  # noqa: E731
+                d.append((tier, g(hi, "premature_accusation") - g(lo, "premature_accusation"),
+                          g(lo, "uninformative_canary"), g(hi, "uninformative_canary")))
+        if d:
+            s3 += (" Pooled over the flash models, low → high thinking changes premature-accusation regret by "
+                   + ", ".join(f"{x[1]:+.2f}/episode on {x[0]}" for x in d)
+                   + "; uninformative-canary regret goes " + ", ".join(f"{x[2]:.3f} → {x[3]:.3f} on {x[0]}" for x in d)
+                   + " (thinking buys commit timing more than experiment design).")
+        out.append(s3)
+    return "\n>\n".join(out)
+
+
 def _nan_to_none(x):
     if isinstance(x, float) and x != x:
         return None
@@ -512,8 +569,8 @@ def main(argv=None) -> int:
     ap.add_argument("--no-figures", action="store_true")
     ap.add_argument("--export", default=None, help="also write <dir>/ladder_episodes.jsonl.gz and ladder_ledger.jsonl.gz "
                     "(valid ladder episodes + feature=ladder ledger rows; --runs/--ledger can read them back)")
-    ap.add_argument("--headline", default=str(ROOT / "results" / "gemini" / "ladder_headline.md"),
-                    help="hand-written findings block put at the top of ladder.md (every number from the table)")
+    ap.add_argument("--headline", default=None,
+                    help="hand-written findings block for the top of ladder.md (default: generated from the table)")
     a = ap.parse_args(argv)
     runs = Path(a.runs).expanduser()
     out = Path(a.out)

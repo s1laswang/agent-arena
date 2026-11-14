@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-11-14T18:29:32+0200",
- "git_sha": "270a43fa4df35feed23b9d8a9648ad36117356f0",
+ "generated_at": "2026-11-14T18:30:28+0200",
+ "git_sha": "083726928a806e8f17ffc4cc3293119789237860",
  "runs": "~/agent-arena-data/gemini/ladder/ladder-v14",
  "imports": [
   "gemini-4-carbon:default=~/junction-aimo-team/wt/justSilas-gemini/data/runs/committed/v1.4/inproc-gemini-4-carbon"
@@ -127,6 +127,7 @@
   "ladder:ladder-v14:gemini-4-argon/high/medium/1",
   "ladder:ladder-v14:gemini-4-argon/low/hard/0",
   "ladder:ladder-v14:gemini-4-argon/low/hard/1",
+  "ladder:ladder-v14:gemini-4-argon/low/medium/0",
   "ladder:ladder-v14:gemini-4-argon/medium/hard/0",
   "ladder:ladder-v14:gemini-4-argon/medium/hard/1",
   "ladder:ladder-v14:gemini-4-argon/medium/medium/0",
@@ -141,13 +142,13 @@
   "ladder:ladder-v14:gemini-4-carbon/low/medium/1"
  ],
  "ledger": {
-  "calls": 7552,
+  "calls": 7642,
   "errors": 0,
-  "run_ids": 133,
-  "tokens_in": 212657590,
-  "tokens_thinking": 2311001,
-  "cost_usd_ledger": 34.56,
-  "cost_usd_priced": 49.12
+  "run_ids": 134,
+  "tokens_in": 216483012,
+  "tokens_thinking": 2336143,
+  "cost_usd_ledger": 35.29,
+  "cost_usd_priced": 49.85
  },
  "prices_usd_per_1m": {
   "gemini-3.1-flash-lite": [
@@ -181,8 +182,8 @@
    0.1
   ]
  },
- "episodes": 133,
- "headline_file": "/Users/silaswang/junction-aimo-team/wt/gemini-ladder/results/gemini/ladder_headline.md",
+ "episodes": 134,
+ "headline_file": null,
  "rows": [
   {
    "model": "gemini-3.1-flash-lite",
@@ -1453,6 +1454,51 @@
   },
   {
    "model": "gemini-4-argon",
+   "level": "low",
+   "tier": "hard",
+   "n": 1,
+   "seeds": [
+    0
+   ],
+   "source": "ladder",
+   "mean": 0.75,
+   "ci": 0.0,
+   "accuracy": 1.0,
+   "accused_rate": 1.0,
+   "accuse_day": 7.0,
+   "solver_same_seeds": 0.64,
+   "ratio": 1.171875,
+   "ratio_lo": null,
+   "ratio_hi": null,
+   "diff": 0.10999999999999999,
+   "diff_ci": 0.0,
+   "luck_adj_ratio": 1.1844848659141565,
+   "luck_adj_lo": null,
+   "luck_adj_hi": null,
+   "thinking_per_ep": 0.0,
+   "thinking_is_estimate": false,
+   "calls_per_ep": 21.0,
+   "in_per_ep": 238307.0,
+   "cost_per_ep": 0.142908,
+   "wall_min_per_ep": 2.8,
+   "run_ids": [
+    "ladder:ladder-v14:gemini-4-argon/low/hard/0"
+   ],
+   "tiers_versions": [
+    "v1.4"
+   ],
+   "launch_git_shas": [
+    "8fa04b33915d54583ffd2f280d1013f2c93ef911"
+   ],
+   "code_fingerprints": [
+    "06ea9b6a0f68d1dc"
+   ],
+   "model_versions": [
+    "gemini-4-argon"
+   ]
+  },
+  {
+   "model": "gemini-4-argon",
    "level": "medium",
    "tier": "hard",
    "n": 2,
@@ -2192,6 +2238,20 @@
      }
     }
    },
+   "gemini-4-argon@low|hard": {
+    "episodes": 1,
+    "regret_per_ep": 0.1832,
+    "tags": {
+     "other:plant_canary": {
+      "regret_per_ep": 0.116,
+      "rate": 1.0
+     },
+     "other:accuse": {
+      "regret_per_ep": 0.0672,
+      "rate": 1.0
+     }
+    }
+   },
    "gemini-4-argon@medium|hard": {
     "episodes": 2,
     "regret_per_ep": 0.1998,
@@ -2280,92 +2340,93 @@
   "pooled_common_models": [
    "gemini-3.1-flash-lite",
    "gemini-3.5-flash",
-   "gemini-3.8-flash"
+   "gemini-3.8-flash",
+   "gemini-4-argon"
   ],
   "pooled": {
    "high|hard": {
-    "episodes": 15,
-    "regret_per_ep": 0.5013,
+    "episodes": 17,
+    "regret_per_ep": 0.463,
     "tags": {
      "premature_accusation": {
-      "regret_per_ep": 0.3132,
-      "rate": 0.333
-     },
-     "ignored_delay": {
-      "regret_per_ep": 0.0492,
-      "rate": 0.067
+      "regret_per_ep": 0.2764,
+      "rate": 0.294
      },
      "other:accuse": {
-      "regret_per_ep": 0.0454,
-      "rate": 0.467
+      "regret_per_ep": 0.0573,
+      "rate": 0.529
+     },
+     "ignored_delay": {
+      "regret_per_ep": 0.0434,
+      "rate": 0.059
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0343,
-      "rate": 0.933
+      "regret_per_ep": 0.0337,
+      "rate": 0.941
      },
      "uninformative_canary": {
-      "regret_per_ep": 0.0326,
-      "rate": 0.467
+      "regret_per_ep": 0.0288,
+      "rate": 0.412
      },
      "other:restrict_access": {
-      "regret_per_ep": 0.0266,
-      "rate": 0.133
+      "regret_per_ep": 0.0235,
+      "rate": 0.118
      }
     }
    },
    "high|medium": {
-    "episodes": 17,
-    "regret_per_ep": 0.5527,
+    "episodes": 18,
+    "regret_per_ep": 0.5221,
     "tags": {
      "premature_accusation": {
-      "regret_per_ep": 0.4703,
-      "rate": 0.529
+      "regret_per_ep": 0.4441,
+      "rate": 0.5
      },
      "ignored_delay": {
-      "regret_per_ep": 0.0483,
-      "rate": 0.059
+      "regret_per_ep": 0.0456,
+      "rate": 0.056
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0201,
-      "rate": 0.824
+      "regret_per_ep": 0.0191,
+      "rate": 0.833
      },
      "other:restrict_access": {
-      "regret_per_ep": 0.0093,
-      "rate": 0.118
+      "regret_per_ep": 0.0088,
+      "rate": 0.111
      },
      "over_restriction": {
-      "regret_per_ep": 0.0048,
-      "rate": 0.059
+      "regret_per_ep": 0.0046,
+      "rate": 0.056
      }
     }
    },
    "low|hard": {
-    "episodes": 14,
-    "regret_per_ep": 0.5903,
+    "episodes": 15,
+    "regret_per_ep": 0.5632,
     "tags": {
      "premature_accusation": {
-      "regret_per_ep": 0.4358,
-      "rate": 0.357
+      "regret_per_ep": 0.4068,
+      "rate": 0.333
      },
      "other:accuse": {
-      "regret_per_ep": 0.082,
-      "rate": 0.643
+      "regret_per_ep": 0.081,
+      "rate": 0.667
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0513,
+      "regret_per_ep": 0.0556,
       "rate": 1.0
      },
      "over_restriction": {
-      "regret_per_ep": 0.0097,
-      "rate": 0.071
+      "regret_per_ep": 0.0091,
+      "rate": 0.067
      },
      "other:restrict_access": {
-      "regret_per_ep": 0.0093,
-      "rate": 0.071
+      "regret_per_ep": 0.0087,
+      "rate": 0.067
      },
      "uninformative_canary": {
-      "regret_per_ep": 0.0022,
-      "rate": 0.071
+      "regret_per_ep": 0.002,
+      "rate": 0.067
      }
     }
    },
@@ -2396,54 +2457,54 @@
     }
    },
    "medium|hard": {
-    "episodes": 16,
-    "regret_per_ep": 0.5848,
+    "episodes": 18,
+    "regret_per_ep": 0.542,
     "tags": {
      "premature_accusation": {
-      "regret_per_ep": 0.504,
-      "rate": 0.5
+      "regret_per_ep": 0.448,
+      "rate": 0.444
      },
      "other:accuse": {
-      "regret_per_ep": 0.0315,
-      "rate": 0.375
+      "regret_per_ep": 0.0425,
+      "rate": 0.444
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0307,
-      "rate": 0.875
+      "regret_per_ep": 0.0349,
+      "rate": 0.889
      },
      "uninformative_canary": {
-      "regret_per_ep": 0.017,
-      "rate": 0.375
+      "regret_per_ep": 0.0151,
+      "rate": 0.333
      },
      "other:advance_day": {
-      "regret_per_ep": 0.0016,
-      "rate": 0.062
+      "regret_per_ep": 0.0014,
+      "rate": 0.056
      }
     }
    },
    "medium|medium": {
-    "episodes": 16,
-    "regret_per_ep": 0.5015,
+    "episodes": 18,
+    "regret_per_ep": 0.4509,
     "tags": {
      "premature_accusation": {
-      "regret_per_ep": 0.4676,
-      "rate": 0.5
+      "regret_per_ep": 0.4157,
+      "rate": 0.444
      },
      "other:plant_canary": {
-      "regret_per_ep": 0.0173,
-      "rate": 0.812
+      "regret_per_ep": 0.0205,
+      "rate": 0.833
      },
      "other:restrict_access": {
-      "regret_per_ep": 0.0069,
-      "rate": 0.125
+      "regret_per_ep": 0.0061,
+      "rate": 0.111
      },
      "over_restriction": {
-      "regret_per_ep": 0.005,
-      "rate": 0.062
+      "regret_per_ep": 0.0044,
+      "rate": 0.056
      },
      "uninformative_canary": {
-      "regret_per_ep": 0.0047,
-      "rate": 0.125
+      "regret_per_ep": 0.0042,
+      "rate": 0.111
      }
     }
    }

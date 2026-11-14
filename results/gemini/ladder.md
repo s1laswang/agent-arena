@@ -1,14 +1,14 @@
 # Gemini Ladder (Canary v1.4)
 
-> **Headline findings (preliminary: 4–6 paired seeds per flash cell, 1–2 per gemini-4 cell; 95% CIs are wide, so read them as directions).**
+> **Headline findings** (auto-generated from the table below: 1–7 paired seeds per cell; 95% CIs are wide, so read them as directions).
 >
-> **gemini-3.5-flash with medium or high thinking matches the reference solver on hard.** It scores 91% [71%, 120%] and 102% [73%, 150%] of the solver on the same seeds, with 5/5 correct accusations in each cell, at $0.36–0.44 per episode. That is less than a third of a gemini-4-carbon episode on hard ($1.30–1.57).
+> **gemini-3.5-flash with medium or high thinking matches the reference solver on hard:** 97% [76%, 126%] and 106% [82%, 145%] of the solver on the same seeds, 12/12 correct accusations, $0.35–0.41 per episode, versus $1.30 for gemini-4-carbon at high thinking.
 >
-> **gemini-3.1-flash-lite fails at every thinking level.** Its mean score is below the do-nothing score of 0 in all 8 cells, and at minimal thinking it accused the wrong employee in 8/8 episodes.
+> **gemini-3.1-flash-lite fails at every thinking level:** its mean score is below the do-nothing score (0) in 8/8 (level, tier) cells; at minimal thinking it accused the wrong employee in 8/8 episodes.
 >
-> **gemini-3.8-flash improves from low to high thinking on medium, but not on hard.** On medium it goes from −52% [−181%, 46%] to 92% [76%, 121%] of the solver; on hard it is 30% → 28%. Pooled over the flash models, low → high thinking mainly cuts premature-accusation regret (−0.16 per episode on medium, −0.10 on hard). Canary design does not improve: uninformative-canary regret on hard rises from 0.002 to 0.035.
+> **gemini-3.8-flash gains from thinking on medium** (-52% [-181%, 46%] at low → 94% [79%, 117%] at high) **but not on hard** (30% [-58%, 91%] → 28% [-79%, 87%]). Pooled over the flash models, low → high thinking changes premature-accusation regret by -0.25/episode on medium, -0.13/episode on hard; uninformative-canary regret goes 0.003 → 0.000 on medium, 0.002 → 0.029 on hard (thinking buys commit timing more than experiment design).
 
-Generated 2026-11-14T18:29:32+0200 at git `270a43fa4d` from `~/agent-arena-data/gemini/ladder/ladder-v14`. 133 valid Gemini episodes in 30 cells; ledger: 7552 calls, 133 run ids, list price $49.12.
+Generated 2026-11-14T18:30:28+0200 at git `083726928a` from `~/agent-arena-data/gemini/ladder/ladder-v14`. 134 valid Gemini episodes in 31 cells; ledger: 7642 calls, 134 run ids, list price $49.85.
 
 Every cell is one (model, thinking level, tier) played by the in-process `LLMPolicy` (full history, thought-signature replay) through `canary.agents.play`, the frontier measurement's own runner, on v1.4 dev seeds. The solver and baselines are replayed on exactly the same worlds. **ratio** = mean score / solver's mean on the same seeds, with a paired bootstrap 95% CI over seeds; **luck-adj.** scores each accusation as P·V − (1−P) under the solver's exact posterior at that step.
 
@@ -48,6 +48,7 @@ Reference on the union of these seeds: solver +0.686 ± 0.11 (n=7, acc 1.00); gr
 | gemini-3.8-flash | low | 6 | +0.170 ± 0.49 | 0.83 | 12.7 | +0.573 | **30% [-58%, 91%]** | -0.403 ± 0.51 | 47% [17%, 73%] | 0 | 69 | 0.18 | 2.6 |
 | gemini-3.8-flash | medium | 6 | +0.025 ± 0.64 | 0.67 | 13.0 | +0.573 | **4% [-111%, 92%]** | -0.548 ± 0.58 | 46% [-13%, 91%] | 27,899 | 60 | 0.44 | 10.9 |
 | gemini-3.8-flash | high | 5 | +0.166 ± 0.58 | 0.80 | 16.8 | +0.584 | **28% [-79%, 87%]** | -0.418 ± 0.58 | 12% [-87%, 84%] | 50,463 | 86 | 0.80 | 15.2 |
+| gemini-4-argon | low | 1 | +0.750 ± 0.00 | 1.00 | 7.0 | +0.640 | **117%** | +0.110 ± 0.00 | 118% | 0 | 21 | 0.14 | 2.8 |
 | gemini-4-argon | medium | 2 | +0.560 ± 0.08 | 1.00 | 14.5 | +0.665 | **84% [81%, 87%]** | -0.105 ± 0.03 | 67% [49%, 81%] | 14,829 | 32 | 0.50 | 23.1 |
 | gemini-4-argon | high | 2 | +0.665 ± 0.03 | 1.00 | 11.5 | +0.665 | **100% [99%, 102%]** | +0.000 ± 0.02 | 80% [73%, 89%] | 34,159 | 95 | 1.14 | 47.3 |
 | gemini-4-carbon | low | 1 | +0.620 ± 0.00 | 1.00 | 9.0 | +0.640 | **97%** | -0.020 ± 0.00 | 98% | 0 | 47 | 0.31 | 23.4 |
@@ -63,32 +64,32 @@ Provenance: tiers v1.4, v1.4 (imported dir); launch commits 107c485, 2786c00, 49
 
 ## Which mistakes does thinking fix?
 
-Solver regret per episode by failure tag (`canary.solver.regret.attribute`), pooled over the models that ran low, medium and high: gemini-3.1-flash-lite, gemini-3.5-flash, gemini-3.8-flash. Δ = high − low (negative = thinking fixes it).
+Solver regret per episode by failure tag (`canary.solver.regret.attribute`), pooled over the models that ran low, medium and high: gemini-3.1-flash-lite, gemini-3.5-flash, gemini-3.8-flash, gemini-4-argon. Δ = high − low (negative = thinking fixes it).
 
 **medium**
 
-| tag | low (n=13) | medium (n=16) | high (n=17) | Δ high−low |
+| tag | low (n=13) | medium (n=18) | high (n=18) | Δ high−low |
 |---|---|---|---|---|
-| ignored_delay | 0.000 (0% eps) | 0.000 (0% eps) | 0.048 (6% eps) | +0.048 |
+| ignored_delay | 0.000 (0% eps) | 0.000 (0% eps) | 0.046 (6% eps) | +0.046 |
 | other:accuse | 0.048 (8% eps) | 0.000 (0% eps) | 0.000 (0% eps) | -0.048 |
-| other:plant_canary | 0.027 (85% eps) | 0.017 (81% eps) | 0.020 (82% eps) | -0.006 |
-| other:restrict_access | 0.000 (0% eps) | 0.007 (12% eps) | 0.009 (12% eps) | +0.009 |
-| over_restriction | 0.008 (8% eps) | 0.005 (6% eps) | 0.005 (6% eps) | -0.003 |
-| premature_accusation | 0.690 (62% eps) | 0.468 (50% eps) | 0.470 (53% eps) | -0.220 |
-| uninformative_canary | 0.003 (8% eps) | 0.005 (12% eps) | 0.000 (0% eps) | -0.003 |
+| other:plant_canary | 0.027 (85% eps) | 0.021 (83% eps) | 0.019 (83% eps) | -0.007 |
+| other:restrict_access | 0.000 (0% eps) | 0.006 (11% eps) | 0.009 (11% eps) | +0.009 |
+| over_restriction | 0.008 (8% eps) | 0.004 (6% eps) | 0.005 (6% eps) | -0.003 |
+| premature_accusation | 0.690 (62% eps) | 0.416 (44% eps) | 0.444 (50% eps) | -0.246 |
+| uninformative_canary | 0.003 (8% eps) | 0.004 (11% eps) | 0.000 (0% eps) | -0.003 |
 
 **hard**
 
-| tag | low (n=14) | medium (n=16) | high (n=15) | Δ high−low |
+| tag | low (n=15) | medium (n=18) | high (n=17) | Δ high−low |
 |---|---|---|---|---|
-| ignored_delay | 0.000 (0% eps) | 0.000 (0% eps) | 0.049 (7% eps) | +0.049 |
-| other:accuse | 0.082 (64% eps) | 0.032 (38% eps) | 0.045 (47% eps) | -0.037 |
-| other:advance_day | 0.000 (0% eps) | 0.002 (6% eps) | 0.000 (0% eps) | +0.000 |
-| other:plant_canary | 0.051 (100% eps) | 0.031 (88% eps) | 0.034 (93% eps) | -0.017 |
-| other:restrict_access | 0.009 (7% eps) | 0.000 (0% eps) | 0.027 (13% eps) | +0.017 |
-| over_restriction | 0.010 (7% eps) | 0.000 (0% eps) | 0.000 (0% eps) | -0.010 |
-| premature_accusation | 0.436 (36% eps) | 0.504 (50% eps) | 0.313 (33% eps) | -0.123 |
-| uninformative_canary | 0.002 (7% eps) | 0.017 (38% eps) | 0.033 (47% eps) | +0.030 |
+| ignored_delay | 0.000 (0% eps) | 0.000 (0% eps) | 0.043 (6% eps) | +0.043 |
+| other:accuse | 0.081 (67% eps) | 0.043 (44% eps) | 0.057 (53% eps) | -0.024 |
+| other:advance_day | 0.000 (0% eps) | 0.001 (6% eps) | 0.000 (0% eps) | +0.000 |
+| other:plant_canary | 0.056 (100% eps) | 0.035 (89% eps) | 0.034 (94% eps) | -0.022 |
+| other:restrict_access | 0.009 (7% eps) | 0.000 (0% eps) | 0.024 (12% eps) | +0.015 |
+| over_restriction | 0.009 (7% eps) | 0.000 (0% eps) | 0.000 (0% eps) | -0.009 |
+| premature_accusation | 0.407 (33% eps) | 0.448 (44% eps) | 0.276 (29% eps) | -0.130 |
+| uninformative_canary | 0.002 (7% eps) | 0.015 (33% eps) | 0.029 (41% eps) | +0.027 |
 
 ## Thinking levels each model accepts (probe)
 

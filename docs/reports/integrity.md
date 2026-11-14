@@ -38,3 +38,10 @@
 - #10 partially: log-alone vs canary heuristic now OK on medium/hard; logs_only CEO bound still xfail on all tiers pending ENV recalibration.
 - In progress: exploit-hunter (codex plumbing; MCP from CEO's mcp engineer ETA 04:00); monotonicity re-plot with solver.
 - Next: MCP hunt the moment it lands; re-run bounds after recalibration.
+
+## 03:50 status
+- Done (verified: make test 305 passed / 8 skipped / 7 xfailed / 2 xpassed): exploit-hunter merged (codex hunter, stdlib MCP client, envshim server, MCP tests incl. 16-thread parallel accuse + ledger token, passing on envshim; real-server variants skip until canary/mcp_server lands). Props round 3: monotonicity medium random −0.66 < most_logs −0.49 < heuristic +0.64 < solver +0.74 (100 seeds); hard solver +0.73 vs heuristic +0.02; results/monotonicity.png.
+- **CRITICAL #24 (open, ENV+HARNESS):** judge seeds fail OPEN: with no CANARY_WORLD_SECRET and no SALT file (= a fresh clone, i.e. what judges run), `_key()` warns and uses the public key; mole recoverable from public code (verified: seed 900003 → e03 both served and recovered). Found by codex white-box. Fix: fail closed + ship frozen judge worlds.
+- #23 (open, HARNESS): dev/train seeds are public by design → MCP server must only serve keyed seeds to agents.
+- Codex hunts: black-box (3 runs, envshim) 0 score, 0 flags; OpenAI moderation truncates many codex runs.
+- Next: get #24 fixed and verified; real MCP hunt once mcp_server lands.

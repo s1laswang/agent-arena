@@ -43,18 +43,25 @@ def test_n_needed_formula():
 
 
 def test_j1_recommend_picks_bigger_gap(tmp_path):
-    rec = j1_recommend.recommend(read_rows(_calib(tmp_path / "c.csv")), rand_tol=0.2)
+    rows = read_rows(_calib(tmp_path / "c.csv"))
+    for r in list(rows):
+        if r["agent"] == "solver":
+            r["correct"] = True
+            if r["tier"] == "hard":
+                rows.append({**r, "agent": "logs_only", "score": 0.0, "correct": False})
+    rec = j1_recommend.recommend(rows)
     assert "p_leak=0.9" in rec["easy"]["params"]
     assert "p_leak=0.9" in rec["hard"]["params"]
-    assert rec["easy"]["solver_ci_lo"] > 0 and rec["easy"]["stop_early_mean"] < 0
-    assert 0 <= rec["easy"]["heur_wrong_rate"] <= 1
+    assert rec["easy"]["stop_early_mean"] < 0 and rec["easy"]["feasible"]
+    assert "Recommend" in j1_recommend.to_markdown(rows, ["x"])
 
 
-def test_j1_rejects_when_stop_early_nonnegative(tmp_path):
+def test_j1_reports_binding_constraint(tmp_path):
     rows = [r for r in read_rows(_calib(tmp_path / "c.csv")) if r["agent"] != "stop_early"]
-    for r in rows[:]:
-        rows.append({**r, "agent": "stop_early", "score": 0.0})
-    assert all(c is None for c in j1_recommend.recommend(rows, rand_tol=0.2).values())
+    rows += [{**r, "agent": "stop_early", "score": 0.0} for r in rows if r["agent"] == "random"]
+    assert all(c is None for c in j1_recommend.recommend(rows).values())
+    md = j1_recommend.to_markdown(rows, ["x"])
+    assert "No feasible cell" in md and "stop_early>=0" in md
 
 
 def test_sweep_aggregate_and_cli_params(capsys):
@@ -77,3 +84,20 @@ def test_forge_report(tmp_path):
     md = forge_report.report(tmp_path, top=2)
     assert "generations: 5" in md and "violation: none" in md
     assert md.index("0.4") < md.index("0.2") and "leak=oldest" in md
+
+
+def test_j1_fp_curve():
+    rows = []
+    for fp in (1.0, 0.9, 0.8):
+        for s in range(10):
+            rows.append({"tier": "hard", FPK: str(fp), "agent": "solver", "seed": s,
+                         "score": .5, "correct": fp >= 0.9 or s < 5})
+            rows.append({"tier": "hard", FPK: str(fp), "agent": "heuristic", "seed": s,
+                         "score": .1, "correct": s < 2})
+    pts = j1_recommend.fp_curve(rows)["hard"]
+    assert [p["fp"] for p in pts] == [1.0, 0.9, 0.8]
+    assert j1_recommend.lowest_fp(pts) == 0.9
+    assert "lowest fingerprint_accuracy" in "\n".join(j1_recommend.fp_markdown(rows))
+
+
+FPK = "fingerprint_accuracy"

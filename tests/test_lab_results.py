@@ -200,6 +200,6 @@ def test_eval_strict(tmp_path, monkeypatch):
 def test_eval_extra_seat(tmp_path):
     from lab.eval import main as ev
 
-    ev(["--days", "1", "--trials", "1", "--exploit-days", "1", "--out", str(tmp_path), "--web-out", "", "--no-report", "--extra-seat", "controller"], runner=fake)
+    ev(["--days", "1", "--trials", "1", "--exploit-days", "1", "--out", str(tmp_path), "--web-out", "", "--no-report", "--full"], runner=fake)
     md = open(tmp_path / "eval/gap.md").read()
     assert "finance_ap seat swapped" in md and "controller seat swapped" in md

@@ -14,7 +14,7 @@ Branch `justSilas` · `make test` **517 passed**, 4 skipped · CEO log: `docs/re
    - whether **negative rewards are OK** (we score −1 for a wrong accusation);
    - whether a scripted solver counts as the "stronger reference run".
 6. **09:00 bake-off:** the Grok bake-off (`origin/justSilas-grok-bakeoff`) scored Blind Spot (Ivar) 69, Canary 56 and Sleeper 43. It was written at ~02:30, **before** we shipped `make reproduce`, the Harbor sidecar, the gap report, v1.3 and #25. **Re-run the Grok bake-off prompt on the current tips before deciding.** Ivar has added "blind frontier results" since.
-7. **Sky run:** your `sky` task **43143_4** (`w0625-c1`, the worst run) is paused (`requeuehold`) for our training job. I release it when J4 ends (≤08:17). If it's still held: `ssh freighter scontrol release 43143_4`.
+7. **Sky run:** ✅ your `sky` task **43143_4** (`w0625-c1`) was paused from 02:24 to 08:20 for our training job. It has been **released and is RUNNING again** on compute04, resuming from `last.pt`. FR8 holds no cluster jobs.
 
 ## 2. The gap (rubric 30)
 Scoring: correct = remaining company value V, wrong = −1, no accusation = 0.
@@ -72,16 +72,17 @@ Baselines (v1.3, 30 fresh secrets, README): solver medium +0.64 / hard +0.55; he
   - `research` (fact-checked grounding).
 
 ## 6. Small model (tiebreaker)
-J4: LoRA of Qwen2.5-1.5B on a V100, 450 steps (≈5% of an epoch, time-boxed), trained on v1.3 solver episodes. Preview (n=1 episode per model, descriptive only):
+J4: LoRA of Qwen2.5-1.5B on a V100, 450 steps (≈5% of an epoch, time-boxed), trained on v1.3 solver episodes. **Final** table (held-out v1.3 seeds; tiny n, descriptive only; `fr8/analysis/out/j4_proxy.md`):
 
-| | base | LoRA |
+| | base (n=2) | LoRA (n=17) |
 |---|---|---|
-| valid tool-call rate | .15 | **.98** |
-| behaviour | repeats one call, stuck on day 1 | full 14 days in the solver's rhythm |
-| solver action-type agreement | 0.00 | **.94** |
-| accuses | no | **no** (score 0) |
+| valid tool-call rate | .08 | **.99** |
+| behaviour | repeats one call, stuck on day 1, hits the 300-call cap | full 14 days in the solver's rhythm, 0 repeats |
+| solver action-type agreement | .00 | **.85** (easy .94, medium .82, hard .83) |
+| accused | 0/2 | 4/17 (1 correct, 3 wrong) |
+| score | 0.00 | **≈ −0.15** |
 
-It learned the protocol and the investigation rhythm, not the commit decision (accuse turns are ~1/70 of the training tokens). **Saturday v2 (approved):** dense 4k windows plus upweighted accuse turns; the J3 v2 data (v1.3) is ready on FR8. The final J4 table is in `docs/reports/fr8.md` (eval ended ≤08:17). The adapter is synced to `data/fr8/j4/`.
+**Plain reading:** a big behaviour improvement (it learned the protocol and the investigation rhythm), but **no reward improvement yet**. The commit decision is untrained (accuse turns are ~1/70 of the training tokens), and when it does accuse it's mostly wrong. **Saturday v2 (approved, code merged):** dense 4k windows plus `--oversample-endings 3`, on the J3 v2 data (v1.3) staged on FR8. The adapter and episodes are on the Mac in `data/fr8/j4/run-44397/`; the MLX demo path is in `train/README.md`.
 
 ## 7. Gemini switch-on (prize: Gemini essential)
 After pasting `GEMINI_API_KEY` (all Gemini calls run on the **Mac**; FR8 compute nodes have no internet):

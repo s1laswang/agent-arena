@@ -191,3 +191,8 @@
 - Grok deliverables are on origin: site (presentation dossier, offline, 9 sections), viewer, pitch deck + judge handout (PDF), research grounding, bake-off, agent eval.
 - The Grok BAKE-OFF (written at ~02:34, BEFORE reproduce/Harbor/gap.md/v1.3) scored Blind Spot (Ivar) 69, Canary 56, Sleeper 43, and recommends shipping Blind Spot. Many of its Canary deductions have since been fixed (make reproduce, Harbor sidecar + isolation, gap.md with frontier runs, #25 server side, CONTRACT v1.3). Its remaining valid points: the gap evidence is small-n / scaffold-caveated, and Gemini is not essential to the judge path. Ivar has since added "blind frontier results" (78038e3). -> For 09:00: re-run the bake-off on the current tips.
 - J4 eval running (ends <=08:17); then release sky 43143_4.
+
+## 08:21 J4 final + sky released
+- J4 44397 TIMEOUT at its 4:25 limit during eval (planned). Final: base n=2 (valid .08, 0 accusations, score 0); LoRA n=17 (valid .99, solver agreement .85, 4/17 accused, 1 correct, score ~ -0.15). Behaviour learned, commit decision not; Saturday v2 adds --oversample-endings.
+- **Released sky 43143_4** (`scontrol release`); RUNNING on compute04, resuming from last.pt. FR8 holds no jobs.
+- MORNING.md final (integrity corrections from INTEGRITY folded in).

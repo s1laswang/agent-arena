@@ -105,20 +105,10 @@ def load_config(environ=None) -> dict:
 
 
 def apply_world_secret(secret: bytes) -> None:
-    """Hand the file secret to world generation in-process (never exported to os.environ / children)."""
-    from . import world
-    setter = getattr(world, "set_world_secret", None)
-    if setter is not None:  # public API requested from HEAD-ENV
-        setter(secret)
-        return
-    # Fallback until set_world_secret lands: world._key() uses the per-process secret only when neither
-    # CANARY_WORLD_SECRET nor the SALT file is present, so refuse ambiguous setups instead of guessing.
-    if os.environ.get("CANARY_WORLD_SECRET"):
-        raise ConfigError("set CANARY_WORLD_SECRET_FILE or CANARY_WORLD_SECRET, not both")
-    salt = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(world.__file__))), "data", "worlds", "judge", "SALT")
-    if os.path.exists(salt):
-        raise ConfigError("CANARY_WORLD_SECRET_FILE given but data/worlds/judge/SALT exists and would take precedence")
-    world._PROC_SECRET = secret
+    """Hand the file secret to world generation in-process (never exported to os.environ / children).
+    canary.world checks it before CANARY_WORLD_SECRET and SALT; it must be >= 16 bytes."""
+    from .world import set_world_secret
+    set_world_secret(secret)
 
 
 def seed_allowed(seed: int) -> bool:
@@ -163,12 +153,7 @@ class Episode:
     def ledger_payload(self) -> dict:
         with self._lock:
             env = self.env
-            if hasattr(env, "verdict"):  # public API (HEAD-ENV)
-                out = dict(env.verdict())
-            else:
-                out = {"score": env.score(), "done": env.done, "end_reason": env._end_reason,
-                       "accused": env._accused, "accused_correct": bool(env._correct) if env._accused else False,
-                       "final_day": env.day, "V": env.V}
+            out = dict(env.verdict())  # public server-side outcome (HEAD-ENV)
             out.setdefault("tier", env.tier)
             out["episode"] = self.token
             out["ledger"] = [asdict(e) for e in env.ledger()]

@@ -35,8 +35,8 @@ def _png(w, h, rows):
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 0, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b"")
 
 
-def render_invoice(lines, path, scale=3):
-    lines = [str(l).upper() for l in lines]
+def render_bytes(lines, scale=3):
+    lines = [str(l).upper() for l in lines] or [" "]
     cw, ch, pad = 6 * scale, 9 * scale, 4 * scale
     w = max(len(l) for l in lines) * cw + 2 * pad
     h = len(lines) * ch + 2 * pad
@@ -51,6 +51,10 @@ def render_invoice(lines, path, scale=3):
                             y = pad + li * ch + gy * scale + dy
                             x = pad + ci * cw + gx * scale
                             rows[y][x:x + scale] = b"\x20" * scale
+    return _png(w, h, [bytes(r) for r in rows])
+
+
+def render_invoice(lines, path, scale=3):
     with open(path, "wb") as f:
-        f.write(_png(w, h, [bytes(r) for r in rows]))
+        f.write(render_bytes(lines, scale=scale))
     return path

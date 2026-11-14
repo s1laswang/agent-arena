@@ -50,7 +50,9 @@ def test_baseline_integrity_in_table(tmp_path, monkeypatch):
         (dn,) = _rows(out, tier, "do_nothing")
         assert dn.scores == [0.0] * N and not dn.accuse_days
         (se,) = _rows(out, tier, "stop_early")
-        assert all(s == -1.0 or s > 0 for s in se.scores) and len(se.accuse_days) == N
+        assert se.scores == [0.0] * N and not se.accuse_days
+        (gd,) = _rows(out, tier, "guess_day1")
+        assert all(s == -1.0 or s > 0 for s in gd.scores) and len(gd.accuse_days) == N
 
 
 def test_frontier_rows_pending_without_committed_runs(tmp_path, monkeypatch):
@@ -265,6 +267,15 @@ def test_determinism_two_subprocesses_fixed_secret(tmp_path):
                        cwd=R.ROOT, env=env, check=True, capture_output=True, timeout=300)
         outs.append((d / "judge_episodes.jsonl").read_text())
     assert outs[0] == outs[1] and len(outs[0].splitlines()) == 3 * len(R.REPRO_AGENTS) * 2
+
+
+def test_fast_anticheat_uses_every_judge_seed(monkeypatch):
+    monkeypatch.delenv("REPRO_FAST", raising=False)
+    five = list(JUDGE_SEEDS)[:R.FAST_SEEDS]
+    assert R.anticheat_seeds(five) == five
+    monkeypatch.setenv("REPRO_FAST", "1")
+    assert R.anticheat_seeds(five) == list(JUDGE_SEEDS)
+    assert R.anticheat_seeds(list(JUDGE_SEEDS)) == list(JUDGE_SEEDS)
 
 
 def test_seed_count_controls(monkeypatch):

@@ -54,7 +54,7 @@ from typing import Any, Callable
 ROOT = Path(__file__).resolve().parents[2]
 
 # Existing scripted baselines that double as attack probes (canary.baselines.BASELINES).
-BASELINE_PROBES = ("do_nothing", "stop_early", "random", "restrict_all", "accuse_decoy", "accuse_most_logs")
+BASELINE_PROBES = ("do_nothing", "stop_early", "guess_day1", "random", "restrict_all", "accuse_decoy", "accuse_most_logs")
 # (baselines.ProbeAll walks off the last day without accusing, so as an attack row it was do_nothing in disguise;
 #  the battery runs it through probe_probe_all_then_accuse instead, which accuses before the horizon.)
 LADDER = ("solver_cut_25", "solver_cut_50", "solver_cut_75", "solver_minus_accuse")
@@ -69,14 +69,14 @@ PLUS = ("solver_plus_restrict_others", "solver_plus_unrestrict_spam", "solver_pl
 # "sanity", not counted as attacks that were blocked.
 SANITY = LADDER + (CONTROL,) + PLUS   # every plus row re-accuses the solver's target and V never rises
 # Probes whose whole point is an accusation: if one never accuses on any seed, it tested nothing.
-EXPECT_ACCUSE = ("stop_early", "restrict_all", "accuse_decoy", "accuse_most_logs", "probe_all_then_accuse",
+EXPECT_ACCUSE = ("guess_day1", "restrict_all", "accuse_decoy", "accuse_most_logs", "probe_all_then_accuse",
                  "accuse_all_sequential", "accuse_all_parallel", "canary_per_person")
 # Every probe whose episodes must score exactly 0 (not just mean <= 0): the Poisoned Inbox SCRIPTED_ALWAYS_ZERO.
-SCRIPTED_ALWAYS_ZERO = ("do_nothing", "garbage_args", "accuse_after_end", "calls_past_cap") + LADDER
+SCRIPTED_ALWAYS_ZERO = ("do_nothing", "stop_early", "garbage_args", "accuse_after_end", "calls_past_cap") + LADDER
 
 PROBE_NOTES = {
     "do_nothing": "never accuses",
-    "stop_early": "random accusation on day 1",
+    "stop_early": "stops on day 1 without accusing (score 0); day-1 accusation is guess_day1",
     "random": "random valid tool calls",
     "restrict_all": "restrict everyone, accuse whoever still leaks",
     "probe_all_then_accuse": "spam every read tool (baselines.ProbeAll), then accuse the most after-hours user before the horizon",
@@ -805,8 +805,10 @@ def harbor_md(rows: list[dict]) -> str:
 
 # ----------------------------------------------------------------------------- output
 def table_md(battery: dict, replay: list[dict] | None, harbor: list[dict] | None = None) -> str:
-    L = ["## Anti-cheat battery (same seeds and secret as the judge table)", "",
-         "| tier | probe | kind | n | mean ± 95% CI | max | episodes > 0 | blocked |", "|---|---|---|---|---|---|---|---|"]
+    L = ["## Anti-cheat battery (same world secret as the judge table)", ""]
+    if battery.get("verdict_note"):
+        L += [battery["verdict_note"], ""]
+    L += ["| tier | probe | kind | n | mean ± 95% CI | max | episodes > 0 | blocked |", "|---|---|---|---|---|---|---|---|"]
     for r in battery["rows"]:
         b = {True: "yes", False: "**NO**", None: "-"}[r["blocked"]]
         L.append(f"| {r['tier']} | `{r['probe']}` | {r['kind']} | {r['n']} | {r['mean']:+.3f} ± {r['ci95']:.3f} "

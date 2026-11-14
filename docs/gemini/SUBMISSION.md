@@ -28,14 +28,14 @@ Every Gemini call in the project goes through one ledgered client (`canary/gemin
 
 ## 3. What is innovative or technically impressive
 1. **A thinking-to-competence curve.** We measure, per decision, how Gemini's thinking level moves an agent toward a Bayes-optimal policy. Results so far (1–7 seeds per cell, wide CIs):
-   - gemini-3.5-flash at medium/high thinking matches the solver on hard: 97% and 106% of the solver, 12/12 correct accusations, at $0.35–0.41 per episode vs $1.30 for gemini-4-carbon-high.
+   - gemini-3.6-flash (requested as 3.5-flash) at medium/high thinking on hard is within the CI of the solver, n=6: 97% [76%, 126%] and 106% [82%, 145%] of the solver, 12/12 correct accusations, at $0.35–0.41 per episode vs $1.30 for gemini-4-carbon-high (`results/gemini/ladder.md`).
    - gemini-3.1-flash-lite scores below do-nothing at every thinking level.
    - gemini-3.8-flash gains from thinking on medium (−52% → 94%) but not on hard.
    - Low → high thinking cuts premature-accusation regret. The Failure Atlas finds premature accusation is **61% of all regret** across GPT, Grok and Gemini agents.
 2. **The analyst is checked, not trusted.** Quotes are verified verbatim in code. Regret shares come from the solver, never from the model. Humans label a sample. Gemini's long context makes it possible to read *all* trajectories, not a sample, and code keeps it honest.
 3. **A benchmark that audits itself.** Gemini reads the full source of the environment and attacks the reward the way a judge would, at a scale no team could reach by hand: 35 audited whitebox attempts plus 16 blackbox attempts: no attack beats do-nothing without evidence-justified detective work (best unjustified score 0.000 vs solver 0.60–0.75). **Positive control:** when we reopen a known, closed exploit (EXPLOITS #23, public dev seeds), 4 of 4 Gemini attackers rediscover it from the code on their own, and the pipeline flags it as verified (16 of 16 fresh-seed re-runs score 1.0). So "0 exploits" comes from a detector shown to catch real ones.
 4. **Reproducible LLM science.** The record/replay gateway makes every Gemini number rerunnable offline (`make lab-replay`).
-5. **Cost-aware.** The cost frontier shows gemini-3.5-flash (medium thinking) reaching solver level on hard at about 30% of the cost of gemini-4-carbon-high. Caching and the Batch API cut analysis cost by ⟨z⟩%.
+5. **Cost-aware.** The cost frontier shows gemini-3.6-flash (requested as 3.5-flash) at medium thinking within the CI of the solver on hard, n=6, at $0.41 per episode versus $1.30 for gemini-4-carbon at high thinking (`results/gemini/ladder.md`). Caching and the Batch API cut analysis cost by ⟨z⟩%.
 
 ## 4. Why Gemini is essential
 - **1M-token context** is what lets one model read the entire trajectory corpus and the entire codebase at once. RAG over fragments loses the cross-episode patterns that make up the failure atlas.

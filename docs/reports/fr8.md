@@ -130,3 +130,10 @@
   - All three are logged in OURS.txt. FR8 data: 8.6 GB of 10.
 - **WS3:** waiting for AGENTS' `train/grpo_mole.py` (CLI contract passed on by the CEO); then the TRL setup, a `CHECK_ONLY=1` job and up to 3 GRPO jobs.
 - 14:36 (verified in slurm-44410.out): v2 data = 800 episodes → 14,176 dense windows, 53.3M tokens, 1.46M loss tokens (**2.7%**, up from J4's 1.6%; below the 6–10% estimate because the header is 2,842 of the 4,096 tokens). Accuse-turn share of the loss is 5.0% with oversample-endings 3. At J4's 1.41k tok/s, 5 h ≈ 25M tokens ≈ 0.47 epoch. 44411 base eval is loading the model.
+
+## 15:10 status
+- **WS3 smoke = 44423 COMPLETED** (verified: slurm log + `ws3/run-44423/curve.jsonl`): Qwen2.5-0.5B, torch GRPO backend, fp16 on a V100; transformers 5.16.1 / peft 0.20.0 in pytorch-volta. Real env rewards: step0 −1.0 (valid 0), step1 −0.84 (valid .125), ~3 s/step; LoRA saved.
+- **WS3 submitted:** **44424 / 44425 / 44426** = canary-ws3-grpo-s0/1/2 (0.5B, 400 steps, group 8 × 4 prompts, lr 1e-5, save every 100, 6 cores each, `--time 2h`), PENDING (Priority) at 15:10. Logged in OURS.txt.
+- **WS4:** 44410 train and 44411 base eval running; 44412 waits for 44410 to finish OK.
+- **Disk (needs Silas):** after the 0.5B download, `~/agent-arena-data` = 11 GB (cap 10), /home 97%. The CEO-requested `rm` of `j3/` (unused, 1.1 GB) + J4 ckpt-200/400 (142 MB) was **denied by the session's permission classifier**, so nothing was deleted. sbatch suggests `/data/<user>`, but `/data/silas` is absent on the login node.
+- Fleet jobs (`fleet-*`) are Momin's; untouched.

@@ -69,7 +69,9 @@ class Server:
     def start(self, timeout: float = 60.0, log_dir: Path | None = None, port_dir: Path | None = None) -> "Server":
         self.port = self.port or free_port()  # bind-tested free port, unique per server
         self.token = secrets.token_hex(16)
-        env = dict(os.environ, CANARY_TIER=self.tier, CANARY_SEED=str(self.seed), CANARY_LEDGER_TOKEN=self.token,
+        from canary.mcp_server import clean_launch_env, write_secret_files
+        # INTEGRITY item 2: the seed and ledger token go in 0600 files, never in the server's environment.
+        env = dict(clean_launch_env(), **write_secret_files(self.tier, self.seed, self.token),
                    CANARY_ALLOW_DEV="1", CANARY_PORT=str(self.port), CANARY_HOST="127.0.0.1")
         log = subprocess.DEVNULL
         if log_dir:

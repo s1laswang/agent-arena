@@ -106,8 +106,17 @@
 ### Commands run
 `make setup`; `make test`; `make reproduce` (×4); `uv run ... pytest -q tests/test_reproduce.py`; `python /tmp/canary_spread.py 10` and `... 30`; `CANARY_WORLD_SECRET=cmp-secret` CLI vs in-process comparison (identical); `bash /tmp/canary_fresh_clone.sh`; `bash /tmp/canary_cold_setup.sh`.
 
+- **parse_seeds fix (CEO request):**
+  - A bare N ≤ 1000 is a count; a larger N is a single seed (`900003` → `[900003]`). `n:N` is an explicit count, and `a-b` / `a,b` work as before.
+  - Expansions over 10,000 seeds, or seeds × tiers over 10,000 in the CLI, are rejected with exit 2 and a clear message.
+  - 3 new tests in tests/test_eval.py (12 cases).
+- **Merged to justSilas** at b17d269 (fast-forward). `make test`: 385 passed, 3 skipped (exit 0).
+
 ### Untested / open
-- CI on GitHub (first run on the push to justSilas). A Linux-only failure in another department's tests is possible.
+- **CI has never run on GitHub.** After the push to justSilas (b17d269), `gh api repos/s1laswang/agent-arena/actions/workflows` and `.../actions/runs` both report total_count 0, although Actions show as enabled.
+  - Possible causes: a private repo with no Actions minutes or billing, or a workflow that must also be on the default branch (`main`, which we must not touch).
+  - Silas should check Settings → Actions / Billing.
+  - The workflow file itself is untested on GitHub.
 - No committed frontier runs yet. AGENTS should write `data/runs/committed/<run_id>/episodes.jsonl` (EpisodeResult lines; steps may be empty), ideally on judge seeds. The table marks non-judge seeds.
 - The README numbers must be refreshed whenever ENV changes the solver or the tiers: run `python /tmp/canary_spread.py 30`, or just `make reproduce` and use its CI.
 - `test_integrity_hunter.py::test_stub_hunt_fake_server_plumbing` still fails intermittently under load (INTEGRITY's code).

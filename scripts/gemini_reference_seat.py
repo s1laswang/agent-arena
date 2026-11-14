@@ -66,7 +66,11 @@ def play(seat, day_id, agent_for, out, max_calls=150, max_usd=2.0):
 
     agent = agent_for(day, seat)
     try:
-        agent.turn(seat, {"tick": 0, "seat": seat, "round": 0}, tools, call)
+        while world.tick < world.last_tick and not st["abort"]:
+            t = world.tick
+            agent.turn(seat, {"tick": t, "seat": seat, "round": t}, tools, call)
+            if world.tick == t:
+                call("end_turn", {})
     except Abort:
         pass
     srv.finish()

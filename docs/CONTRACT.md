@@ -118,3 +118,15 @@ Validation is strict: one employee id per call (no lists, no `*`, no names in pl
   - Outputs: `data/forge/<run>/hall_of_fame.jsonl` and a per-generation `log.jsonl` (for the "500 generations" chart).
   - The investigator population: the heuristic policy, the hinted heuristic, and (when available) the LLM policies.
 - **Solver requirement (ENV):** inference must be **robust to any DSL strategy**. Canary and leak evidence (a leaked variant implies the mole is in that variant's group) is strategy-independent and primary. Behavioural signals (logs, timing) are down-weighted and treated as optional. Solvability is verified per evolved mole.
+
+---
+
+## 8. v0.2 (02:30): judge-world integrity
+- World seed = `int.from_bytes(HMAC-SHA256(key, f"{tier}:{seed}")[:8], "big")`; key = `b"public"` for dev/train; for judge and held-out seeds, `CANARY_WORLD_SECRET`, else `data/worlds/judge/SALT` (server image only).
+- The seed is never exposed (status, tool results, text). `accuse` returns an identical payload for every valid id. All errors come from one fixed set (`env.ERRORS`) and never vary by target.
+- `env._world.mole` is the server-only test accessor. `Env.call` is serialised by a lock.
+
+## 9. v0.3 (03:00): wrong accusation = −1
+- Score = V if the accusation is correct; **−1.0 (`rules.wrong_accusation_score`) if wrong**; 0 for no accusation, horizon or tool cap. Stated in `instruction()`.
+- Consequence: stop-early and random have negative expected score; accusing is a decision (accuse only if P·V − (1−P) beats waiting).
+- Mole DSL (§7) shipped in `canary/mole/dsl.py`; extra feature `n_leakable`; `Env(..., mole_strategy=MoleStrategy|dict)`.

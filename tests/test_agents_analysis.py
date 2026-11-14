@@ -45,3 +45,13 @@ def test_accuse_audit_on_real_env():
     r = audit_episode(env.result("stop_early"))
     assert r["p_accused"] is not None and r["p_accused"] < 0.6
     assert r["verdict"] in ("lucky", "premature-wrong")
+
+
+def test_import_report_parse_and_dev_replay(tmp_path):
+    import json as _j
+    from canary.analysis.import_transcript import parse_report, replay
+    rep = parse_report("| medium | 900002 | 0.800 | e04 | yes | 5 | 34 | x |\n| hard | 900000 | 0.000 | (none) | n/a | 14 | 91 | y |")
+    assert rep[("medium", 900002)] == dict(score=0.8, accused="e04", correct=True, final_day=5)
+    assert rep[("hard", 900000)]["accused"] is None
+    r = replay("medium", 3, [{"tool": "status", "args": {}}, {"tool": "accuse", "args": {"employee": "e01"}}], "x")
+    assert r.end_reason == "accused" and r.accused == "e01"

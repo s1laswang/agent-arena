@@ -105,8 +105,11 @@ class LLMPolicy:
         return out
 
     def _call_model(self):
+        import time as _t
+        t0 = _t.time()
         resp = self.client.chat(self._context(), tools=self.tools or None, temperature=self.temperature,
                                 max_tokens=self.max_tokens)
+        self._last_call_s = round(_t.time() - t0, 1)
         u = getattr(resp, "usage", None) or {}
         for k in ("in", "out", "cost_usd"):
             self.usage[k] += u.get(k, 0) or 0
@@ -147,6 +150,7 @@ class LLMPolicy:
         self._pending_id = call["id"]
         if _PROGRESS:  # CANARY_PROGRESS=1: one line per tool call on stderr (long live runs)
             import sys
-            print(f"[llm_policy] step {len(history)} calls={self.usage['calls']} -> {call['name']} "
+            print(f"[llm_policy] step {len(history)} calls={self.usage['calls']} last_call={getattr(self, '_last_call_s', None)}s "
+                  f"-> {call['name']} "
                   f"{json.dumps(call['args'])[:120]}", file=sys.stderr, flush=True)
         return call["name"], call["args"]

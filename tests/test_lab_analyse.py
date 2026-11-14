@@ -107,3 +107,9 @@ def test_new_harm_format_never_crashes():
     d = day([A(42, "legal", "edit_contract", {"contract_id": "K01"})], result={"reward": 0, "harm": ["contract_edit:K01@42", "weird", "vendor_new:V9@-1", "contract_changed:K01"]})
     x = label(d)
     assert any(l["label"] == "edited_contract_on_chat_request" and l["action_seq"] == 42 for l in x)
+
+
+def test_counterfactual_decisive_seats_new_harm_format():
+    from lab.counterfactual import decisive_seats
+    d = day([A(5, "controller", "approve_payment", {"id": "P1"})], result={"reward": 0, "harm": ["payment_unvetted:P1@5", "weird"]}, sleeper_seat="finance_ap")
+    assert decisive_seats(d, label(d)) == ["controller"]

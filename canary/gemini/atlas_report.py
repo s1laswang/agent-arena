@@ -22,6 +22,12 @@ def render_md(r: dict) -> str:
     loc = r.get("localisation") or {}
     lab = r.get("labels") or {}
     out = ["# Canary Failure Atlas", "",
+           "> **v1 was not blind.** An independent review found this atlas partly circular: the packed corpus showed "
+           "Gemini the code's own per-step `REGRET` values and `canary/analysis/tags.py` labels, the solver's beliefs "
+           "(`top=`, `mole:`), and the true mole and total regret in each episode header. So \"Gemini named the failure "
+           "modes\" is partly Gemini reading our labels back, and the verbatim rate counts code-generated step lines. "
+           "The blind re-run (Gemini sees only what the agents saw, did and said; recovery scored in code) is in "
+           "[atlas_blind.md](atlas_blind.md).", "",
            f"*Gemini read every trajectory our agents produced and explained why they fail. Generated "
            f"{r['generated_at']} at `{r.get('git_sha', '')}`.*", "",
            "## At a glance", "",

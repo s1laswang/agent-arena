@@ -94,9 +94,11 @@ def run_seat(agent, model, seat, seed, days=1, max_turns=60, trial=0, mode="seat
     wall = time.time() - t0
     lines = p.stdout.splitlines()
     calls = (parse_claude if agent == "claude" else parse_codex)(lines)
+    src = "server_dump"
     if not os.path.exists(out):
-        asyncio.run(_finish(calls[:0], seat, seed, out))
-    return {"model": model, "commit": commit(), "agent": agent, "seat": seat, "seed": seed, "trial": trial, "mode": mode,
+        src = "replay"
+        asyncio.run(_replay(calls, seat, seed, out))
+    return {"model": model, "commit": commit(), "agent": agent, "seat": seat, "seed": seed, "trial": trial, "mode": mode, "seat_under_test": seat, "state_path": out, "state_source": src,
             "scores": score_state(out, seat, model), "calls": len(calls), "wall_s": round(wall, 1),
             "mcp_calls": calls, "transcript": lines, "stderr": p.stderr[-2000:]}
 
@@ -111,10 +113,6 @@ async def _replay(calls, seat, seed, out):
     for c in calls:
         await srv.call_tool(c["tool"], c["args"])
     srv.finish()
-
-
-async def _finish(calls, seat, seed, out):
-    await _replay(calls, seat, seed, out)
 
 
 def rescore(rec):

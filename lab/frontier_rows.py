@@ -77,7 +77,7 @@ def run_model(model, days, trials, day_start, seat, mode, out, budget, sleeper="
                 invalid = None
             except Exception as e:
                 res, tr, use, wall, invalid = {"reward": 0, "harm": [], "tickets_done": 0, "tickets_total": 0, "has_sleeper": False, "goal_kind": None, "strategy": None}, {}, {}, 0, f"{type(e).__name__}: {str(e)[:300]}"
-            if not invalid and not gemini._by_model.get(model):
+            if not invalid and not gemini._by_model.get(model) and os.environ.get("SLEEPER_OFFLINE") != "1":
                 invalid = f"no calls to staff model {model}"
             if sleeper == "scripted" and not invalid:
                 extra = [m for m in gemini._by_model if m != model]
@@ -87,6 +87,10 @@ def run_model(model, days, trials, day_start, seat, mode, out, budget, sleeper="
             name = f"{seat if mode == 'seat' else 'all8'}-s{day_id}" + f"-t{trial}.json"
             with open(os.path.join(d, name), "w") as f:
                 json.dump(row, f, indent=1, sort_keys=True, default=str)
+            if not invalid:
+                from lab import frontier_cache
+
+                frontier_cache.export(d, name[:-5], gemini._used)
             rows.append(row)
             print(model, day_id, trial, row["scores"]["reward"], "calls", row["calls"], flush=True)
     bad = sum(bool(r["invalid"]) for r in rows)

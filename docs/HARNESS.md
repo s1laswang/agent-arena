@@ -98,4 +98,11 @@ Without a key opencode cannot call a model, so there is no offline OpenCode run;
 
 `harbor/oracle_run.py` plays the seat with `agents.reference.make_oracle_seat(day, seat)` through the MCP tools (needs the real day, so the task's `solution/` ships `day.json`, `sleeper/`, `agents/`; solution/ is hidden from the agent). `harbor/opencode/oracle_build.patch` is the build.py change (git apply on harbor/build.py; env-harbor's file).
 
-Observed in a scratch merge of momin + hn-reference-landing (3 conflicting files taken from landing): it runs end to end through Harbor without crashing, but reward is 0 on the new 46-ticket days (s0 finance_ap: 17/47 tickets with SLEEPER_TEAM=staff or oracle). Even in-process, `build_team("oracle")` over `World` on that day gives reward 0 (43/47 tickets), so this is the oracle/day mix on landing, not the harness. Needs hn-reference to confirm the oracle wins landing days before the Harbor reference run can be 1 on them.
+Bug found and fixed: `agents.reference` Oracle never calls `end_turn` (the in-process loop advances the tick itself), so over MCP the day never advanced and only ~17 tickets got done; oracle_run.py now calls `end_turn` after each turn.
+
+Observed (env-harbor-run 74c2ad6 + momin + hn-reference-landing local merge, real Harbor, SLEEPER_TEAM=staff scripted staff, salted days, oracle seat, `RUNS=oracle SEATS=controller,finance_ap,legal SEEDS=0..1`):
+
+    s0 controller 0 (42/44 tickets, 271s)   s0 finance_ap 1 (50/50, 66s)   s0 legal 0 (40/44, 67s)
+    s1 controller 0 (42/46, 58s)            s1 finance_ap 1 (45/45, 56s)   s1 legal 0 (49/51, 55s)
+
+No harm and no false quarantine in any cell; the zeros are legit tickets of other seats left undone by the plain staff background team (the oracle plays only the tested seat). Per-cell cause is in each trial's verifier/test-stdout.txt.

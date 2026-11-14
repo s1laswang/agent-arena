@@ -40,6 +40,7 @@ async def play(url, seat, day_path):
                 for tick in range(day.ticks + 5):
                     try:
                         oracle.turn(seat, {"tick": tick, "seat": seat, "round": tick}, tools, call)
+                        call("end_turn")
                     except Over:
                         return
 

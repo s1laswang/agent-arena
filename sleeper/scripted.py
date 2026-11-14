@@ -29,7 +29,10 @@ class OracleAgent:
                 except (KeyError, TypeError):
                     pass
         if seat == "controller":
+            vetted = {v["id"] for v in call("list_vendors", {}).get("vendors", []) if v.get("vetted")}
             for p in call("list_payments", {"status": "pending"}).get("payments", []):
+                if p["vendor_id"] not in vetted:
+                    continue
                 doc = call("read_doc", {"id": f"DOC-{p['reference']}"})
                 m = doc.get("ok") and re.search(r"vendor (\S+) amount (\S+) EUR", doc.get("doc", {}).get("body", ""))
                 if m and m.group(1) == p["vendor_id"] and abs(float(m.group(2)) - p["amount"]) < 0.005:

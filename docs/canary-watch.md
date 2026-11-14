@@ -48,3 +48,18 @@ Weaknesses we can beat:
 Our own gaps this watch exposes (from bake-off 2, still true until fixed): no real frontier run, finance_ap oracle 0.75, shared verifier + chmod 777 /logs, 20 failing tests.
 
 Routing sent: chief, lead-lab (numbers, hint ablation), lead-reward (ladder, integrity), lead-env (Harbor boot, rules freeze), lead-attack (nothing new), lead-demo.
+
+## Tick 2, 2026-11-14 13:16 Helsinki
+
+Last-seen SHAs (changed ones marked *): justSilas* cca3cb8 (was 8970ead), justSilas-harness2* 4c60e11 (was 11f1b4e), justSilas-grok-bakeoff3* 72b32cf (new branch, 10:43 UTC).
+Unchanged: harness 11f1b4e, fr8 9600a62, fr8-trainer 285735f, fr8-analyst 54f5544, fr8-ops f7b0124, v14 8f87ed1, measure 11fe514, integrity 013cf9f, agents 51d540b, grok-bakeoff2 3f91fe4, vaishnav/poisoned-inbox 9068b16. Not on origin yet: justSilas-gemini (the gemini-4-carbon runs), env2, agents2, integrity2.
+
+New facts:
+- Bake-off 3 (`docs/reports/grok-bakeoff3.md`, run on Canary f56cc1d, Sleeper 07e17ee): Poisoned Inbox 64, Canary 62 (gap 8, difficulty 20, integrity 22, craft 12), Blind Spot 61, The Sleeper 51 (gap 10, difficulty 17, integrity 15, craft 9). Canary fell from 70 to 62 because the official v1.3 Codex run is 1.06x solver on hard and v1.4 hard shows the heuristic at 90% accuracy, +0.196 vs solver +0.516 (they say v1.4 did not restore the collapse). v1.4 has no frontier runs. Its recommendation is still "ship Canary as an unfinished measurement". The judge there did not boot Docker.
+- Harbor booted for real (harness2 17ba746, 4c60e11, `results/harbor/`): oracle medium 0.78 / hard 0.66 = in-process solver, do_nothing 0/0, stop_early -1/-1, check_isolation 11/11 OK, 6-task v1.4 build all equal the solver. This closes their bake-off risk 3.
+- NEXT-LEVEL.md (cca3cb8): top priority is an anti-cheat port from Poisoned Inbox into Canary: a probe battery inside `make reproduce` (do_nothing, stop_early, random, restrict_all, probe_all, accuse_decoy, malformed args, parallel accuse, calls past cap) plus a control that must keep the solver score, a stop-early ladder (solver cut at 25/50/75% = 0), replay consistency of every committed episode, and a Harbor `ORACLE_POLICY=cheat` run that tries to rewrite reward.txt and hit /ledger and /admin. Vaishnav is the human owner.
+
+Beats us: their Harbor boot with committed logs; their anti-cheat battery will be in the one command. Our equivalents: `make exploits` and docs/EXPLOITS.md, but no Harbor boot logs and shared verifier + chmod 777 /logs.
+Beats them: they have no v1.4 frontier run and no Gemini run yet; their frontier gap on v1.3 hard is above the reference. Whoever lands a real, repeated frontier-below-reference number first on the judge seat wins the gap axis.
+Ideas to copy (idea only): anti-cheat probe table printed by the one command; stop-early ladder on the reference itself; replay consistency flag; Harbor cheat solution; booting Harbor via colima and committing logs.
+Routing: chief, lead-lab, lead-reward, lead-env, lead-harness, lead-demo.

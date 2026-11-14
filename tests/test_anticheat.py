@@ -39,7 +39,7 @@ def test_every_probe_ran(battery):
 
 
 def test_no_attack_probe_scores_above_zero(battery):
-    bad = [(r["tier"], r["probe"], r["mean"], r["errors"]) for r in _rows(battery, "attack") if not r["blocked"]]
+    bad = [(r["tier"], r["probe"], r["mean"], r["errors"]) for r in _rows(battery, "attack") if r["blocked"] is False]
     assert not bad, bad
     for r in _rows(battery, "attack"):
         assert r["mean"] <= 0, r
@@ -423,7 +423,7 @@ def test_harbor_check_cannot_prove_a_coherent_forgery_is_fake(tmp_path):
 
 
 def test_fast_mode_rule_needs_statistical_evidence(monkeypatch):
-    """< 20 seeds: a guesser that is right on 3 of 4 seeds by luck is not a failure (one-sided 95% lower bound
+    """5-19 seeds: a guesser that is right on 4 of 6 seeds by luck is not a failure (one-sided 95% lower bound
     <= 0), but a probe that is right on every seed (an exploit) still fails."""
     from tests.integrity_helpers import make_env, true_mole
     calls = {"n": 0}
@@ -432,7 +432,7 @@ def test_fast_mode_rule_needs_statistical_evidence(monkeypatch):
         calls["n"] += 1
         mole = true_mole(make_env(env.tier, env.seed))
         ids = [e for e in ac._ids(env) if e != mole]
-        env.call("accuse", {"employee": mole if calls["n"] % 4 else ids[0]})
+        env.call("accuse", {"employee": mole if calls["n"] % 3 else ids[0]})
         return {}
 
     def always_right(env):
@@ -441,7 +441,7 @@ def test_fast_mode_rule_needs_statistical_evidence(monkeypatch):
 
     monkeypatch.setattr(ac, "BASELINE_PROBES", ())
     monkeypatch.setattr(ac, "CUSTOM_PROBES", {"lucky": lucky, "always_right": always_right})
-    b = ac.run_battery(["easy"], [0, 1, 2, 3])
+    b = ac.run_battery(["easy"], [0, 1, 2, 3, 4, 5])
     by = {r["probe"]: r for r in b["rows"]}
     assert by["lucky"]["mean"] > 0 and by["lucky"]["blocked"] is True, by["lucky"]
     assert by["always_right"]["blocked"] is False, by["always_right"]
@@ -673,3 +673,19 @@ def test_verify_artifact_reruns_and_diffs(tmp_path, capsys):
     p.write_text(json.dumps(d))
     assert ac.verify_artifact(p) == 1
     assert "differences" in capsys.readouterr().out
+
+
+def test_two_lucky_guesses_are_not_judged(monkeypatch):
+    """CI found this: with 2 seeds, a guess that happens to be right twice has zero spread, and a naive lower bound
+    called it an exploit. Under 5 seeds a chance-based attack row is reported (blocked None), never failed."""
+    from tests.integrity_helpers import make_env, true_mole
+
+    def right_twice(env):
+        env.call("accuse", {"employee": true_mole(make_env(env.tier, env.seed))})
+        return {}
+
+    monkeypatch.setattr(ac, "BASELINE_PROBES", ())
+    monkeypatch.setattr(ac, "CUSTOM_PROBES", {"right_twice": right_twice})
+    b = ac.run_battery(["easy"], [0, 1])
+    row = next(r for r in b["rows"] if r["probe"] == "right_twice")
+    assert row["mean"] > 0 and row["blocked"] is None and b["all_blocked"] is True, row

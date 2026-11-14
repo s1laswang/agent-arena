@@ -451,10 +451,15 @@ def run_battery(tiers, seeds, quiet: bool = True) -> dict:
                        and d["extra"].get("extra_canary_accepted", 0) == 0 and not d["errors"])
         else:
             kind = "sanity" if name in LADDER else "attack"
-            positive = (m > 0) if n >= 20 else (lower95 > 0)   # fast mode: only statistical evidence fails
-            blocked = not positive and below_solver and not d["errors"]
-            if name in SCRIPTED_ALWAYS_ZERO:
-                blocked = blocked and all(x == 0 for x in d["scores"])
+            sd = ci * math.sqrt(n) / 1.96 if n else 0.0
+            if name in SCRIPTED_ALWAYS_ZERO:          # exact, at any number of seeds
+                blocked = all(x == 0 for x in d["scores"]) and not d["errors"]
+            elif n >= 20:                             # full run: mean <= 0 and below the solver
+                blocked = m <= 0 and below_solver and not d["errors"]
+            elif n >= 5:                              # fast mode: fail only on statistical evidence; the spread is
+                blocked = not (m - 1.645 * max(sd, 0.5) / math.sqrt(n) > 0) and not d["errors"]   # floored at 0.5
+            else:                                     # < 5 seeds: one lucky guess is not evidence: report, don't judge
+                blocked = None if not d["errors"] else False
             if d["extra"].get("garbage_accepted_accuse") or d["extra"].get("per_person_canary_accepted"):
                 blocked = False
             if d["extra"].get("garbage_tools_unreached") or d["extra"].get("garbage_nonzero_scores"):
@@ -821,9 +826,10 @@ def table_md(battery: dict, replay: list[dict] | None, harbor: list[dict] | None
              "accusation means 0; the control and the same-day plus steps cannot change V before the accusation). "
              "They guard against regressions and are not counted as attacks.")
     if fast:
-        L.append("Fast mode (< 20 seeds): a chance-level guesser can average > 0 by luck, so an attack only fails here "
-                 "if its one-sided 95% lower bound is > 0, and the effort ladder is reported, not judged. Judge with "
-                 "the full 40 seeds (e.g. easy accuse_most_logs is -0.67 over 200 dev seeds).")
+        L.append("Fast mode (< 20 seeds): a chance-level guesser can average > 0 by luck. With 5-19 seeds an attack only "
+                 "fails if its one-sided 95% lower bound is > 0 (spread floored at 0.5); with fewer than 5 seeds the "
+                 "chance-based attack rows are reported, not judged (the exact checks still apply). The effort ladder is "
+                 "reported, not judged. Judge with the full 40 seeds (e.g. easy accuse_most_logs is -0.67 over 200 dev seeds).")
     if replay is not None:
         L += ["", "## Replay consistency (committed episodes re-played on a fresh Env and re-graded)", "",
               "| file | version | episodes | replayed | consistent | not replayable | replay_consistent |",

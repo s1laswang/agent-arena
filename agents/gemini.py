@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import os
@@ -5,7 +6,12 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CACHE = ROOT / ".cache" / "gemini"
+CACHE = Path(os.environ.get("SLEEPER_CACHE_DIR") or ROOT / ".cache" / "gemini")
+_used = set()
+if os.environ.get("SLEEPER_USED_FILE"):
+    import atexit
+
+    atexit.register(lambda: Path(os.environ["SLEEPER_USED_FILE"]).write_text("\n".join(sorted(_used))))
 DEFAULT_MODEL = "gemini-2.5-flash"
 _usage = {"calls": 0, "cache_hits": 0, "in_tokens": 0, "out_tokens": 0, "retries": 0}
 _client = None
@@ -19,7 +25,7 @@ class OfflineCacheMiss(Exception):
     pass
 
 
-def _load_env():
+def load_env():
     for p in (Path.home() / "arena-agents" / ".env", ROOT / ".env"):
         if p.is_file():
             for line in p.read_text().splitlines():
@@ -29,7 +35,10 @@ def _load_env():
                     os.environ.setdefault(k.strip(), v.strip().strip("\"'"))
 
 
-_load_env()
+def enable_live():
+    load_env()
+    os.environ["SLEEPER_LIVE"] = "1"
+    return enabled()
 
 
 ARENA_ROLE = {"staff": "DEFENDER", "defender": "DEFENDER", "sleeper": "ATTACKER", "attacker": "ATTACKER", "reference": "REFERENCE", "procedure": "REFERENCE"}
@@ -48,7 +57,7 @@ def temp_for(role):
 
 
 def enabled():
-    return bool(os.environ.get("GEMINI_API_KEY")) or os.environ.get("SLEEPER_OFFLINE") == "1"
+    return (os.environ.get("SLEEPER_LIVE") == "1" and bool(os.environ.get("GEMINI_API_KEY"))) or os.environ.get("SLEEPER_OFFLINE") == "1"
 
 
 def usage():
@@ -67,6 +76,7 @@ def estimate_calls(seats=8, rounds=3, steps=10):
 
 
 def reset_usage():
+    _used.clear()
     for k in _usage:
         _usage[k] = 0
 
@@ -120,7 +130,8 @@ def _contents(messages):
         for img in m.get("images") or []:
             parts.append(types.Part.from_bytes(data=Path(img).read_bytes(), mime_type=_mime(img)))
         for c in m.get("tool_calls") or []:
-            parts.append(types.Part.from_function_call(name=c["name"], args=c.get("args") or {}))
+            sig = base64.b64decode(c["sig"]) if c.get("sig") else b"skip_thought_signature_validator"
+            parts.append(types.Part(function_call=types.FunctionCall(name=c["name"], args=c.get("args") or {}), thought_signature=sig))
         for r in m.get("tool_results") or []:
             parts.append(types.Part.from_function_response(name=r["name"], response={"result": r["result"]}))
         role = "model" if m["role"] in ("assistant", "model") else "user"
@@ -171,7 +182,8 @@ def _parse(resp):
     for cand in (resp.candidates or [])[:1]:
         for p in (cand.content.parts if cand.content and cand.content.parts else []):
             if getattr(p, "function_call", None):
-                calls.append({"name": p.function_call.name, "args": dict(p.function_call.args or {})})
+                sig = getattr(p, "thought_signature", None)
+                calls.append({"name": p.function_call.name, "args": dict(p.function_call.args or {}), **({"sig": base64.b64encode(sig).decode()} if sig else {})})
             elif getattr(p, "text", None):
                 text += p.text
     return {"text": text, "tool_calls": calls}
@@ -180,6 +192,7 @@ def _parse(resp):
 def chat(model, system, messages, tools=None, temperature=0, seed=None):
     key = cache_key(model, system, messages, tools, temperature, seed)
     path = CACHE / (key + ".json")
+    _used.add(key)
     if path.is_file():
         _usage["cache_hits"] += 1
         return json.loads(path.read_text())

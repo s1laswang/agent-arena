@@ -1,3 +1,4 @@
+import gzip
 import argparse
 import functools
 import hmac
@@ -349,7 +350,7 @@ def rescore(run_dir):
         ref = next((d[k] for k in ("state", "state_path", "state_dump") if isinstance(d.get(k), str)), None)
         if ref:
             sp = Path(ref) if Path(ref).is_absolute() else (p.parent / ref if (p.parent / ref).exists() else Path(ref))
-            d = json.load(open(sp))
+            d = json.load(gzip.open(sp, "rt") if sp.suffix == ".gz" else open(sp))
         if "initial" not in d:
             bad.append(f"{p.name}: no initial state saved")
             continue

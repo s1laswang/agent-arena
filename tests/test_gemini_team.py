@@ -56,6 +56,8 @@ def test_agent_kind(monkeypatch):
     r.turn("hr", {}, [], None)
     assert r.agent_kind == "scripted"
     monkeypatch.setenv("GEMINI_API_KEY", "x")
+    monkeypatch.setenv("SLEEPER_LIVE", "1")
+    monkeypatch.setenv("SLEEPER_LIVE_SLEEPER", "1")
     assert GeminiReference("hr").agent_kind == "gemini"
 
 
@@ -165,6 +167,8 @@ def test_offline_replay_identical_days(monkeypatch, tmp_path):
     monkeypatch.setattr(gemini, "CACHE", tmp_path / "cache")
     monkeypatch.setenv("LAB_GEMINI", "1")
     monkeypatch.setenv("GEMINI_API_KEY", "fake")
+    monkeypatch.setenv("SLEEPER_LIVE", "1")
+    monkeypatch.setenv("SLEEPER_LIVE_SLEEPER", "1")
     monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
     monkeypatch.setattr(gemini, "_generate", _fake_generate)
     R.run("staff", 2, 1, out=str(tmp_path / "live"))
@@ -194,6 +198,8 @@ def _load_key_check():
 def _kc_env(monkeypatch, tmp_path, gen):
     monkeypatch.setattr(gemini, "CACHE", tmp_path / "c")
     monkeypatch.setenv("GEMINI_API_KEY", "fake")
+    monkeypatch.setenv("SLEEPER_LIVE", "1")
+    monkeypatch.setenv("SLEEPER_LIVE_SLEEPER", "1")
     monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
     monkeypatch.setattr(gemini, "_generate", gen)
     monkeypatch.setattr(gemini, "chat", gemini.chat)

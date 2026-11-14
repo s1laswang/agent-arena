@@ -41,7 +41,7 @@ memory_mb = 2048
 storage_mb = 10240
 gpus = 0
 network_mode = "allowlist"
-allowed_hosts = ["sleeper-server"]
+allowed_hosts = ["sleeper-server", "generativelanguage.googleapis.com", "api.anthropic.com", "api.openai.com", "openrouter.ai", "models.dev", "registry.npmjs.org", "github.com", "deb.debian.org", "security.debian.org", "opencode.ai", "objects.githubusercontent.com", "raw.githubusercontent.com", "nodejs.org"]
 
 [[environment.mcp_servers]]
 name = "sleeper"
@@ -80,7 +80,7 @@ COMPOSE = '''services:
       - SLEEPER_OUT=/srv/state.json
       - VERIFY_TOKEN={token}
       - SLEEPER_SALT={salt}
-      - SLEEPER_TEAM=staff
+      - SLEEPER_TEAM=procedure
       - GEMINI_API_KEY=${{GEMINI_API_KEY:-}}
     expose:
       - "8000"
@@ -111,7 +111,7 @@ RUN chmod 755 /tests/test.sh
 
 TEST = '''#!/bin/bash
 mkdir -p /logs/verifier
-if python -m sleeper.verifier --state /srv/state.json > /logs/verifier/result.json; then echo 1 > /logs/verifier/reward.txt; else echo 0 > /logs/verifier/reward.txt; fi
+if python -m sleeper.verifier --require-seat --state /srv/state.json > /logs/verifier/result.json; then echo 1 > /logs/verifier/reward.txt; else echo 0 > /logs/verifier/reward.txt; fi
 '''
 
 SOLVE = '''#!/bin/bash

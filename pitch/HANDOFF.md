@@ -2,24 +2,40 @@
 
 Written by dm-pitch, Sat 14 Nov, on branch sleeper/dm-pitch-draft rebased on origin/momin 5634505. Rule: every number comes from `make eval` output with a commit hash, else NOT FOUND.
 
-Number source used below: `make eval` run by dm-pitch on make eval, momin 814a723, offline, 20 days x 3 trials, all 8 seats, all scripted, self-checks all PASS (results/eval/gap.md). dm-qa's 5634505 rehearsal agrees on oracle 1.000 / reference 0.550 / staff 0.250, sleeper-day rewards 1.000 / 0.438 / 0.062.
+Number source used below: `make eval` run by dm-pitch on make eval, momin 1f6e1f0, scripted (dm-qa), 20 days x 3 trials, all 8 seats, all scripted, self-checks all PASS (results/eval/gap.md). dm-qa's 5634505 rehearsal agrees on oracle 1.000 / reference 0.550 / staff 0.250, sleeper-day rewards 1.000 / 0.438 / 0.062.
 
 ## 0. Placeholder register (multi-model, 5 minute fill)
 
 Every `NOT FOUND (lead-lab pending)` in pitch/ is listed here with its count. When lead-lab publishes a run, grep the string, replace each with the figure plus (model id, date, run id), then delete the line here. `tests/test_pitch_labels.py` fails if a count here is wrong.
 
-- pitch/GEMINI.md: 4
-- pitch/MULTIMODEL.md: 28
+- pitch/GEMINI.md: 14
+- pitch/MULTIMODEL.md: 29
+- pitch/REHEARSAL.md: 1
 - pitch/SCRIPT.md: 2
 - pitch/SLIDES.md: 1
-- pitch/SUBMISSION.md: 6
+- pitch/SUBMISSION.md: 7
 - pitch/WHY-SLEEPER.md: 2
 
-Also fill: SCRIPTED rows are from `SLEEPER_OFFLINE=1 python -m lab.eval` on momin 814a723 (plain `make eval` can hang when the key auto-loads live Gemini); rerun after every merge and update the commit. Skill ladder slide (SCRIPT 7:00, SLIDES 11): all figures from results/ladder.md once on momin. WHY-SLEEPER.md: recheck pytest and finance_ap numbers on the new commit.
+Also fill: pitch/MERGED.md tokens `NOT FOUND (Silas pending)` (Canary runs: gemini-4-carbon, Claude, fairness probe, ladder, forge, small model, repro command) and `NOT FOUND (landing pending)` (each Sleeper asset, after docs/canary-landing.md). These are not in the register test.: finance_ap numbers after lead-env's seat fix (9fa41d4) from dm-qa's offline eval, not yet taken. `make probes` figures in SUBMISSION come from lead-demo, rerun and confirm.: SCRIPTED rows are from `SLEEPER_OFFLINE=1 python -m lab.eval` on momin 814a723 (plain `make eval` can hang when the key auto-loads live Gemini); rerun after every merge and update the commit. Skill ladder slide (SCRIPT 7:00, SLIDES 11): all figures from results/ladder.md once on momin. WHY-SLEEPER.md: recheck pytest and finance_ap numbers on the new commit.
 
 What to fill: gemini-4-carbon staff and reference reward, sleeper landed, false accusation, gap, Claude and Codex rows (MULTIMODEL.md table); replay fields: run id, date, seed, step where the sleeper lands, Gemini's tool call, what the reference notices, both rewards (MULTIMODEL.md beat, mirrored in SUBMISSION.md and GEMINI.md). If nothing arrives by the deadline, use the 2-line fallback in MULTIMODEL.md and leave the placeholders out of the final text.
 
 Real vs scripted: seed 1 bank_swap and trust_all are SCRIPTED, no model ran.
+
+## 0b. Which beats survive a merged-Canary pitch (from docs/scorecard.md section A, 14:10)
+
+Today none of our assets are in Canary (justSilas 5813bb2): no company or seats, no leak detector, no rescore or cheat corpus, no dashboard, no failure gallery. Until they land, a merged-Canary pitch is plain Canary and only the framing beats below carry over. Waiting for the chief's direction, nothing rewritten.
+
+Survive without our code:
+- The multi-model gap table structure (MULTIMODEL.md). Rows would be Canary's frontier runs; Canary's own gap is inconclusive (Codex 1.06x solver on hard, n=11, CITED), so say so.
+- The REAL vs SCRIPTED label rule and the fallback lines.
+- WHY-SLEEPER.md contrast, rewritten as "why merge".
+- Reward-integrity beat in general: do_nothing 0 (Canary harness2 do_nothing 0, stop_early -1, CITED).
+- Named-failure beat: Canary says premature accusation is 97 to 99% of value lost (CITED).
+
+Survive only if landed in Canary: the 8-seat company and replay (needs dashboard and seats), seed 1 bank_swap and trust_all stories (SCRIPTED, our company), cheat probes and `make probes`, the Gemini exploiter row (`redteam/`), the canary-token leak detector, failure gallery, skill ladder.
+
+Cut in a merged pitch: finance_ap seat-mode numbers and the oracle-below-1.0 risk, unless the seat-mode env lands.
 
 ## 1. What is real vs scripted
 
@@ -65,10 +81,10 @@ Paste into the write-up (`pitch/SUBMISSION.md`, `pitch/GEMINI.md`) only after st
 
 ## 3. Open risks
 
-1. trust_all vs staff. At make eval, momin 814a723, offline trust_all scores 0.000 and the eval self-check `trust_all <= staff` passes (lead-demo forwarded 0.35 from the 5634505 rehearsal, which does not match this run). The hole was real earlier (0.800), so keep rereading the WARNING lines after every merge. Note trust_all still lands its sleeper on 0.812 of days and finishes only 0.666 of tickets.
-2. Seat mode. Judges run ONE seat, default finance_ap. At make eval, momin 814a723, offline the oracle scores 0.800 overall there and 0.750 on the 16 days that need the seat (WARNING lines in gap.md), reference 0.400 and 0.250, staff 0.200 and 0.000. Should be 1.000. Fix in progress. Show only the all-8 table until then.
-3. The oracle uses the hidden identity. It is the "winnable" proof, not the reference. The fair reference is the evidence-only one: 0.550 at make eval, momin 814a723, offline.
-4. Staff at make eval, momin 814a723, offline: per-split rewards on sleeper and no-sleeper days: NOT FOUND (not in README or docs/RULES.md at 814a723). Earlier (lead-demo, 5634505): 45 of 45 losses labelled, 36 pure decision mistakes (missed_slow_burn 12, edited_contract_on_chat_request 9, wrong_accusation 9). Not recomputed here.
+1. trust_all vs staff. At make eval, momin 1f6e1f0, scripted (dm-qa) trust_all scores 0.000 and the eval self-check `trust_all <= staff` passes (lead-demo forwarded 0.35 from the 5634505 rehearsal, which does not match this run). The hole was real earlier (0.800), so keep rereading the WARNING lines after every merge. Note trust_all still lands its sleeper on 0.812 of days and finishes only 0.666 of tickets.
+2. Seat mode. Judges run ONE seat, default finance_ap. At make eval, momin 1f6e1f0, scripted (dm-qa) the oracle scores 0.800 overall there and 0.750 on the 16 days that need the seat (WARNING lines in gap.md), reference 0.400 and 0.250, staff 0.200 and 0.000. Should be 1.000. Fix in progress. Show only the all-8 table until then.
+3. The oracle uses the hidden identity. It is the "winnable" proof, not the reference. The fair reference is the evidence-only one: 0.550 at make eval, momin 1f6e1f0, scripted (dm-qa).
+4. Staff at make eval, momin 1f6e1f0, scripted (dm-qa): per-split rewards on sleeper and no-sleeper days: NOT FOUND (not in README or docs/RULES.md at 814a723). Earlier (lead-demo, 5634505): 45 of 45 losses labelled, 36 pure decision mistakes (missed_slow_burn 12, edited_contract_on_chat_request 9, wrong_accusation 9). Not recomputed here.
 5. make eval runtime: 1m52s (lead-demo, with a SUMMARY block; my run was before that and not timed). Baselines are moving to `make eval-full`. Fresh-clone timing: NOT FOUND.
 6. No Gemini number anywhere. #1 gap for both prizes. Judges also want a real Docker `harbor run` of OpenCode: the Gemini line of `harbor/opencode/judge_runs.sh` has never run.
 7. Harbor: sleeper-in-sidecar and hidden SLEEPER_SALT were still open at 04:45 (chief notes). The small-model tiebreaker: run 1 worse, run 2 possibly teacher imitation, run 3 pending.
@@ -86,7 +102,7 @@ On stage (full script in `pitch/DEMO.md`, minute by minute):
 - 0:00 hook, dashboard title, no names flagged.
 - 1:00 the company: 8 seats, two-person rules.
 - 2:00 replay seed 1: staff (`1-staff.json`) pays 9500 to the swapped IBAN, reward 0. Then oracle (`1-oracle.json`), reward 1. Say "oracle knows who the traitor is, that is the ceiling, not the reference". Show `1-procedure.json` as the fair reference only if it scores 1.
-- 5:00 the gap table from `make eval` with the commit hash on the slide: oracle 1.000, reference 0.550, staff 0.250, trust_all and trivial baselines 0.000 (make eval, momin 814a723, offline). Gemini row: NOT FOUND until step 5 of section 2 has run.
+- 5:00 the gap table from `make eval` with the commit hash on the slide: oracle 1.000, reference 0.550, staff 0.250, trust_all and trivial baselines 0.000 (make eval, momin 1f6e1f0, scripted (dm-qa)). Gemini row: NOT FOUND until step 5 of section 2 has run.
 - 6:00 reward integrity: `make exploits` and `results/baselines/table.md`, do_nothing and stop_early 0.
 - 8:00 repro: one command, `make eval`. Judges' commands: `make harbor`, `bash harbor/opencode/judge_runs.sh`.
 - 9:00 Gemini role and close (`pitch/GEMINI.md`). Only say Gemini numbers if section 2 produced them.

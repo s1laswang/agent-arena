@@ -14,6 +14,7 @@ ORDER = ["oracle", "reference", "staff", "do_nothing", "stop_early", "quarantine
 SECONDS_PER_TASK = 0.85
 EXPLOIT = ["do_nothing", "stop_early", "quarantine_all", "refuse_all", "trust_all", "random_accuse", "claim_only", "quarantine_only_then_work"]
 SEAT_AGENTS = ["staff", "reference", "oracle", "do_nothing"]
+BG = "procedure"
 HEAD = ["| team | kind | model | n winnable days | reward | reward on sleeper days | pass^1 | pass^k | sleeper success | false accusation | tickets | gap vs reference |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
 
 
@@ -123,6 +124,7 @@ def main(argv=None, runner=None):
     p.add_argument("--max-turns", type=int, default=60)
     p.add_argument("--max-seconds", type=int, default=900)
     p.add_argument("--replay-only", action="store_true")
+    p.add_argument("--hint", default="")
     p.add_argument("--no-report", action="store_true")
     p.add_argument("--strict", action="store_true")
     p.add_argument("--budget-calls", type=int, default=0)
@@ -148,6 +150,10 @@ def main(argv=None, runner=None):
         n += (len(EXPLOIT) * 2 + 4) * (a.exploit_days or a.days) * a.trials + len(SEAT_AGENTS) * a.days * a.trials
     print(f"expected runtime ~{max(1, round(n * SECONDS_PER_TASK / max(a.jobs, 1) / 60 * 2) / 2)} min ({n} day runs, {a.jobs} jobs, {'full' if a.full else 'reported set'}; slower when the machine is loaded)", flush=True)
     setup_gemini(a.gemini, a.budget_calls, a.jobs)
+    if a.hint:
+        from lab import hint
+
+        return hint.main(a.hint, days=a.days, trials=a.trials, seat=a.seat, day_start=a.day_start, jobs=a.jobs, out=os.path.join(a.out, "hint"))
     if a.gemini:
         from agents import gemini
 
@@ -160,7 +166,7 @@ def main(argv=None, runner=None):
         shutil.rmtree(os.path.join(a.out, sub), ignore_errors=True)
     wins = lambda r: r.get("winnable", True)
     full = {t: attempt(t, a.days, a.trials, day_start=a.day_start, out=runs, **kw) for t in ORDER}
-    seatruns = {g: attempt("staff", a.days, a.trials, a.seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}
+    seatruns = {g: attempt(BG, a.days, a.trials, a.seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}
     summaries = {t: (v[1] if v else None) for t, v in full.items()}
     need = {g: subset(v, lambda r: r.get("needs_tested_seat")) for g, v in seatruns.items()}
     alld = {g: (v[1] if v else None) for g, v in seatruns.items()}
@@ -174,10 +180,10 @@ def main(argv=None, runner=None):
     split = dict(summaries)
     if a.full:
         xall = {t: attempt(t, xd, a.trials, day_start=a.day_start, out=runs, **kw) for t in EXPLOIT}
-        xseat = {t: attempt("staff", xd, a.trials, a.seat, t, a.day_start, out=runs, **kw) for t in EXPLOIT}
+        xseat = {t: attempt(BG, xd, a.trials, a.seat, t, a.day_start, out=runs, **kw) for t in EXPLOIT}
         oracle_x = attempt("oracle", xd, a.trials, day_start=a.day_start, out=runs, **kw)
         staff_all = attempt("staff", xd, a.trials, day_start=a.day_start, out=runs, **kw)
-        staff_seat = attempt("staff", xd, a.trials, a.seat, "staff", a.day_start, out=runs, **kw)
+        staff_seat = attempt(BG, xd, a.trials, a.seat, "staff", a.day_start, out=runs, **kw)
         strat_sec = f"\n## Sleeper success per strategy ({xd} days, all 8 seats, harm landed)\n\n" + strategy_table({"trust_all": xall["trust_all"], "staff": staff_all, "oracle": oracle_x})
         ref_x = attempt("reference", xd, a.trials, day_start=a.day_start, out=runs, **kw)
         split = {"staff": staff_all, "oracle": oracle_x, "reference": ref_x}
@@ -201,12 +207,12 @@ def main(argv=None, runner=None):
         json.dump({"all_seats": summaries, "seat": {a.seat: seat}, "exploit": exploit}, f, indent=2, sort_keys=True)
     extra = ""
     if a.full and a.extra_seat and a.extra_seat != a.seat:
-        runs2 = {g: attempt("staff", a.days, a.trials, a.extra_seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}
+        runs2 = {g: attempt(BG, a.days, a.trials, a.extra_seat, g, a.day_start, out=runs, **kw) for g in SEAT_AGENTS}
         need2 = {g: subset(v, lambda r: r.get("needs_tested_seat")) for g, v in runs2.items()}
         seat2 = {f"{g} [needs {a.extra_seat}, n={need2[g]['n_days'] if need2[g] else 0}]": need2[g] for g in SEAT_AGENTS}
         seat2.update({f"{g} [all days, n={v[1]['n_days']}]" if v else f"{g} [all days]": (v[1] if v else None) for g, v in runs2.items()})
-        extra = f"\n## Staff background, {a.extra_seat} seat swapped\n\n" + table(seat2)
-    md = warns + xw + ("\n" if warns or xw else "") + "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Staff background, {a.seat} seat swapped\n\n" + table(seat) + extra + exploit_sec + strat_sec
+        extra = f"\n## Procedure background, {a.extra_seat} seat swapped\n\n" + table(seat2)
+    md = warns + xw + ("\n" if warns or xw else "") + "## Team plays all 8 seats\n\n" + table(summaries) + f"\n## Procedure background, {a.seat} seat swapped\n\n" + table(seat) + extra + exploit_sec + strat_sec
     md += f"\n## Reward by day type ({xd if a.full else a.days} days, all 8 seats)\n\n" + day_type_table(split) + f"\n## Reward by sleeper seat ({xd if a.full else a.days} days, all 8 seats)\n\n" + seat_split_table(split)
     with open(os.path.join(d, "gap.md"), "w") as f:
         f.write(md)

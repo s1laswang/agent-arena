@@ -8,7 +8,7 @@ def test_structure(tmp_path):
     assert dirs == ["sleeper-s0-controller", "sleeper-s0-legal", "sleeper-s1-controller", "sleeper-s1-legal"]
     d = tmp_path / "sleeper-s1-legal"
     t_ = (d / "tests/test.sh").read_text()
-    assert "/logs/verifier/reward.txt" in t_ and "sleeper.verifier --state /srv/state.json" in t_ and "8001" not in t_
+    assert "/logs/verifier/reward.txt" in t_ and "sleeper.verifier --require-seat --state /srv/state.json" in t_ and "8001" not in t_
     assert not (d / "environment/runtime-server/repo").exists()
     cfg = tomllib.loads((d / "task.toml").read_text())
     m = cfg["environment"]["mcp_servers"][0]
@@ -25,7 +25,7 @@ def test_structure(tmp_path):
     assert cfg["verifier"]["environment_mode"] == "separate" and (d / "tests/Dockerfile").exists()
     assert cfg["verifier"]["collect"][0]["service"] == "sleeper-server" and cfg["artifacts"][0]["service"] == "sleeper-server"
     assert "VERIFY_TOKEN" not in (d / "environment/Dockerfile").read_text() + (d / "instruction.md").read_text()
-    t = (d / "task.toml").read_text(); assert "allow_internet = true" not in t and "network_mode = \"allowlist\"" in t and "allowed_hosts = [\"sleeper-server\"]" in t
+    t = (d / "task.toml").read_text(); assert "allow_internet = true" not in t and "network_mode = \"allowlist\"" in t and "allowed_hosts = [\"sleeper-server\", \"generativelanguage.googleapis.com\"" in t
     assert "1" not in cfg["task"]["description"].replace("1 ", "")
     assert not any(w in (d / "instruction.md").read_text().lower() for w in ["is the sleeper", "traitor is"])
 
@@ -73,7 +73,7 @@ def test_sidecar_end_to_end(tmp_path, oracle, seat):
             subprocess.run([sys.executable, str(root / "harbor/oracle_client.py"), f"http://127.0.0.1:{mp}/mcp", seat], env=env, cwd=root, check=True, timeout=400)
         r = json.loads(urllib.request.urlopen(urllib.request.Request(url, headers={"X-Verify-Token": tok})).read())
         assert r["reward"] == (1 if oracle else 0), r
-        v = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(tmp_path / "s.json")], env={"SLEEPER_SEAT": seat, "VERIFY_TOKEN": tok, "PYTHONPATH": str(root)}, cwd=root, capture_output=True)
+        v = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", str(tmp_path / "s.json")], env={"SLEEPER_SEAT": seat, "VERIFY_TOKEN": tok, "PYTHONPATH": str(root)}, cwd=root, capture_output=True)
         assert (v.returncode == 0) == bool(oracle), v.stdout
     finally:
         p.kill()
@@ -115,7 +115,7 @@ def test_x66_salt_not_in_agent_container(tmp_path):
 def test_x66_internet_off_and_no_seed_in_text(tmp_path):
     main(["--seeds", "3", "--seat", "finance_ap", "--out", str(tmp_path), "--no-repo"])
     d = tmp_path / "sleeper-s3-finance_ap"
-    t = (d / "task.toml").read_text(); assert "allow_internet = true" not in t and "network_mode = \"allowlist\"" in t and "allowed_hosts = [\"sleeper-server\"]" in t
+    t = (d / "task.toml").read_text(); assert "allow_internet = true" not in t and "network_mode = \"allowlist\"" in t and "allowed_hosts = [\"sleeper-server\", \"generativelanguage.googleapis.com\"" in t
     assert "SLEEPER_SEED" not in (d / "instruction.md").read_text()
 
 

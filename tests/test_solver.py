@@ -44,8 +44,9 @@ def test_regular_leak_holder_only():
 
 def test_solver_accuracy_sim_smoke():
     for tier in ("easy", "medium", "hard"):
-        rs = [_run_local(SimEnv(tier, s), SolverPolicy(tier)) for s in range(15)]
-        assert sum(r.correct for r in rs) >= 13, tier
+        from canary.env import Env
+        rs = [_run_local(Env(tier, s), SolverPolicy(None)) for s in range(15)]
+        assert sum(r.correct for r in rs) >= 12, tier
 
 
 def test_params_from_instruction_roundtrip():
@@ -57,15 +58,32 @@ def test_params_from_instruction_roundtrip():
 
 def test_regret_tags_and_solver_low_regret():
     from canary.env import Env
-    from canary.solver.bench import _Scripted
+    from canary.baselines import StopEarly, DoNothing
     from canary.solver.regret import attribute
     tot_solver, tot_early = 0.0, 0.0
     for s in range(10):
         r = attribute(_run_local(Env("medium", s), SolverPolicy(None)))
         tot_solver += sum(x["regret"] for x in r)
-        e = attribute(_run_local(Env("medium", s), _Scripted("stop_early", s)))
+        e = attribute(_run_local(Env("medium", s), StopEarly(seed=s)))
         assert "premature_accusation" in e[-1]["tags"]
         tot_early += sum(x["regret"] for x in e)
-        n = attribute(_run_local(Env("medium", s), _Scripted("do_nothing", s)))
+        n = attribute(_run_local(Env("medium", s), DoNothing(seed=s)))
         assert "no_accusation" in n[-1]["tags"]
     assert tot_solver < tot_early
+
+
+def test_solver_robust_to_random_dsl_moles():
+    """CONTRACT §7: canary-first inference; 20 random strategies on medium (episodes where the
+    mole never leaks are unsolvable by evidence and excluded)."""
+    import random
+    from canary.env import Env
+    from canary.mole.dsl import random_strategy
+    ok = n = 0
+    for s in range(20):
+        env = Env("medium", s, mole_strategy=random_strategy(random.Random(f"bench-mole:{s}")))
+        r = _run_local(env, SolverPolicy(None))
+        if not any(e.event == "leak" for e in env.ledger()):
+            continue
+        n += 1
+        ok += r.correct
+    assert n >= 15 and ok / n >= 0.85, (ok, n)

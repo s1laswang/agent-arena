@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
+import math
 import random
 import warnings
 from pathlib import Path
@@ -116,6 +117,9 @@ def generate_world(tier: str, seed: int, p: TierParams) -> World:
             else:
                 ds = rng.sample(depts, 2)
             rec = sorted(set(x for d in ds for x in by_dept[d]))
+            need = math.ceil(p.doc_recipient_share * len(ids)) - len(rec)
+            if need > 0:
+                rec = sorted(set(rec) | set(rng.sample([i for i in ids if i not in rec], need)))
             doc = {"doc_id": f"d{day}-{j}", "title": _title(rng, ds[0]), "day": day, "recipients": rec}
             if p.access_constraints:
                 doc["min_clearance"] = rng.randint(1, 3)

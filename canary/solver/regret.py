@@ -4,7 +4,7 @@ and score the agent's action against the solver's choice under one value estimat
     attribute(episode: EpisodeResult) -> list[{t, day, action, regret, p_best, tags}]
 
 Value estimate (v1, heuristic but shared by agent and solver):
-  Q_accuse(e)  = V * P(e)
+  Q_accuse(e)  = V * P(e) + (1-P(e)) * wrong_accusation_score
   Q_continue   = 0.98 * max(0, V - c_day * days_needed)   with
                  c_day = p_leak*leak_damage + canary_cost,
                  days_needed = log(n_eff) / (log(max_variants+1) * p_leak * 0.6), n_eff = 1/sum p^2
@@ -18,7 +18,7 @@ from collections import Counter
 from ..rules import TIERS
 from ..types import EpisodeResult
 from .params import params_from_instruction
-from .policy import SolverPolicy
+from .policy import SolverPolicy, accuse_value
 
 
 def q_continue(post, V, P, days_left):
@@ -62,7 +62,7 @@ def attribute(episode: EpisodeResult, instruction: str | None = None) -> list[di
         best = max(post, key=post.get)
         days_left = P.n_days - st.day
         qc = q_continue(post, V, P, days_left)
-        vstar = max(V * post[best], qc)
+        vstar = max(accuse_value(post[best], V, P), qc, 0.0)
         tags: list[str] = []
         regret = 0.0
         if st.day != last_day:
@@ -74,7 +74,7 @@ def attribute(episode: EpisodeResult, instruction: str | None = None) -> list[di
         if st.tool == "accuse":
             e = st.args.get("employee")
             pe = post.get(e, 0.0)
-            regret = max(0.0, vstar - V * pe)
+            regret = max(0.0, vstar - accuse_value(pe, V, P))
             if pe < 0.6:
                 tags.append("premature_accusation")
             if decoy and e == decoy:
@@ -85,7 +85,7 @@ def attribute(episode: EpisodeResult, instruction: str | None = None) -> list[di
             if pending and pe < 0.9:
                 tags.append("ignored_delay")
         elif st.tool == "advance_day":
-            regret = max(0.0, V * post[best] - qc)
+            regret = max(0.0, accuse_value(post[best], V, P) - max(qc, 0.0))
         elif st.tool == "plant_canary" and ok:
             asg = st.args.get("assignment") or {}
             g_agent = _gini(post, asg)
@@ -108,7 +108,7 @@ def attribute(episode: EpisodeResult, instruction: str | None = None) -> list[di
         for prev in steps[sp.seen:]:
             sp._ingest(prev)
         post = sp.belief() if sp.obs.employees else {}
-        best_v = max(post.values()) * sp.V if post else 0.0
+        best_v = max(0.0, accuse_value(max(post.values()), sp.V, P)) if post else 0.0
         out.append(dict(t=len(steps), day=episode.final_day, action="(no accusation)",
                         regret=round(best_v, 6), p_best=round(max(post.values()), 4) if post else None,
                         tags=["no_accusation"]))

@@ -56,6 +56,9 @@ def _text(x: Any) -> str:
     if isinstance(x, str):
         return x
     if isinstance(x, dict):
+        if isinstance(x.get("message"), dict):
+            m = x["message"]
+            return f"{m.get('subject', '')}: {m.get('body', '')}"
         for k in ("answer", "text", "body", "content"):
             if isinstance(x.get(k), str):
                 return x[k]
@@ -77,20 +80,24 @@ def collect(tier: str, seed: int) -> dict:
     interviews: dict[str, list[str]] = {e: [] for e in ids}
     for d in range(1, days + 1):
         used = 0
-        for q in ("", "the", "a"):
-            sr = env.call("search_messages", {"query": q, "day_from": d, "day_to": d})
+        hits = []
+        # a day's messages are rendered when it closes: read yesterday's
+        for q in ("e", "a", "the"):
+            if d == 1:
+                break
+            sr = env.call("search_messages", {"query": q, "day_from": d - 1, "day_to": d - 1})
             used += 1
             if sr.ok:
+                hits = _rows(sr.data, "messages")
                 break
-        hits = _rows(sr.data, "messages") if sr.ok else []
         for m in hits[:MSGS_READ_PER_DAY]:
             mr = env.call("read_message", {"id": m["id"]})
             used += 1
             if mr.ok:
-                messages[str(m["id"])] = {"day": d, "sender": m.get("sender"),
+                messages[str(m["id"])] = {"day": d - 1, "sender": m.get("sender"),
                                           "text": _text(mr.data)}
         for m in hits[MSGS_READ_PER_DAY:]:
-            messages.setdefault(str(m["id"]), {"day": d, "sender": m.get("sender"),
+            messages.setdefault(str(m["id"]), {"day": d - 1, "sender": m.get("sender"),
                                                "text": m.get("snippet", "")})
         while todo and used < p.actions_per_day:
             e, t = todo.pop(0)

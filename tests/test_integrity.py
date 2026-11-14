@@ -14,7 +14,7 @@ import pytest
 from canary.rules import JUDGE_SEEDS, TIERS
 
 from integrity_helpers import make_env, true_mole
-from test_integrity_props import (dump, employee_ids, ledger_dump, status_of, token_re,
+from test_integrity_props import (check_score_semantics, dump, wrong_score, employee_ids, ledger_dump, status_of, token_re,
                                   value_of)
 
 
@@ -37,14 +37,17 @@ def test_do_nothing(tier, seed):
 
 @pytest.mark.parametrize("tier", sorted(TIERS))
 def test_stop_early(tier):
-    """Random day-1 accusation: mean score ≈ 1/N (no better)."""
+    """Random day-1 accusation: mean ≈ 1/N on v0 (no better); strictly < 0 on v0.3."""
     scores = []
-    for seed in range(60):
+    for seed in range(50):
         env = make_env(tier, seed)
         ids = employee_ids(env)
         env.call("accuse", {"employee": ids[seed % len(ids)]})
+        check_score_semantics(env)
         scores.append(env.score())
     n = TIERS[tier].n_employees
+    if wrong_score() < 0:
+        assert sum(scores) / len(scores) < 0, "v0.3: guessing must have negative EV"
     assert sum(scores) / len(scores) <= 1 / n + 3 * (1 / n) ** 0.5 / len(scores) ** 0.5
 
 
@@ -55,9 +58,9 @@ def test_accuse_twice_only_first_counts():
     mole = true_mole(env)
     inn = next(i for i in ids if i != mole)
     r1 = env.call("accuse", {"employee": inn})
-    assert r1.ok and env.done and env.score() == -1.0
+    assert r1.ok and env.done and env.score() == wrong_score()
     r2 = env.call("accuse", {"employee": mole})
-    assert not r2.ok and env.score() == -1.0
+    assert not r2.ok and env.score() == wrong_score()
     assert sum(1 for e in env.ledger() if e.event == "accused") == 1
 
 

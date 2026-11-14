@@ -2,7 +2,14 @@
 
 ## Sat 15:40: gateway, sdk, lab_client hook, record/replay and FR8 scripts are done. **Blocker: no ssh to FR8 from here**
 
-**Blocker:** `ssh freighter` times out on TCP 22 from this Mac (14:45–15:40, every retry). ICMP ping to freighter.fr8.so works (3 ms), and TCP 22, 443 and 2222 time out (public IP 194.157.9.46). The likely causes are the venue network filtering outbound 22 or an FR8 firewall or fail2ban rate limit after many agent ssh connections. The FR8 smoke (compute node → gateway → Gemini) is **not done yet**. All the scripts are written and ready to run once ssh works. The `ssh -R` fallback needs ssh too, so the only other route is a different network (phone hotspot or VPN). **Silas: please check whether `ssh freighter hostname` works from your terminal.**
+**Blocker: ssh to FR8 fails, cause found.** The Mac is on the venue LAN `192.168.8.0/24` (gateway `unifi.local.fr8.so`). Its public IP is **194.157.9.46, the same address that `freighter.fr8.so` resolves to**. FR8 sits behind the same NAT, and the router does not hairpin TCP 22 (ping answers from the router itself). The internal name `freighter-mgmt01.local.fr8.so` → 10.10.172.201 resolves, but the guest LAN does not route to it (TCP 22 times out). GitHub ssh works, so outbound 22 in general is fine.
+- This blocks every FR8 step: deploy, gateway_up, smoke, worker arrays and the `ssh -R` fallback.
+- Fixes, any one of them:
+  - (a) Put the Mac on a different uplink, such as a phone hotspot.
+  - (b) Turn on Tailscale with an exit node. It is installed but stopped. **This changes the network for every agent on this Mac**, so it is Silas's call.
+  - (c) Ask FR8 staff for a route or port forward from the venue LAN to 10.10.172.201:22.
+- The scripts take `FR8_HOST=...` to point at another ssh alias.
+- **Silas: please pick one.** Until then, FR8 work cannot start. Gemini runs work from the Mac through a local gateway: at C=64 on flash it handles about 1,600 req/min, which is enough for the ladder.
 
 Done (verified):
 - `canary/gemini/gateway.py`: a pure ASGI app on uvicorn with httpx2 for upstream (both already in the lock, so no new deps).

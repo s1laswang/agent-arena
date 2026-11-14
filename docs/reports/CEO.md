@@ -147,3 +147,10 @@
 - The reference is consistent (9c236b3): v1.2 numbers = episodes played at db104c9; v1.3 numbers = solver at 0933805. The re-run rows are kept under committed/superseded/.
 - Codex gpt-5.5 over MCP, v1.2 5+5: medium .714 (5/5, 104% of solver); hard -0.02 (3/5; two wrong accusations at -1). Hard is high-variance for frontier agents under the -1 rule.
 - SPEND estimate now ~$220 (Codex cached-input assumption; worst case ~$340 if caching is not discounted). All API runs stopped except ~3 in-flight v1.3 episodes (~14 v1.3 episodes total). **Silas: check the OpenAI billing dashboard.**
+
+## 03:55 GAP OPENS ON v1.3 (small n)
+- gap.md final for the night (f4fd1f6):
+  - v1.2 (n=20+20): gpt-5.5 87%/86% of the solver;
+  - **v1.3 (n=9+5, spend-capped): medium .319 vs .717 (44%); hard -.003 vs .592 (~0%)**. The reference barely moves; gpt-5.5 collapses.
+- Why: all 4 wrong v1.3 accusations are day-14 gambles at P .18-.43; premature_accusation = 36% of episodes, >90% of regret. It never abstains though EV<0 (Grok did abstain once, so the information is available).
+- Spend ~ $260 est. total; all API runs stopped. Morning: approve ~$60-90 for v1.3 20+20, or use Gemini free credits.

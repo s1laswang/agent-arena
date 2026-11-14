@@ -17,6 +17,11 @@ from .belief import Doc, FeedItem, Observations, posterior
 LABELS = "ABCDEFGH"
 
 
+def accuse_value(p: float, V: float, P) -> float:
+    """Expected score of accusing someone with posterior p now (v0.3: wrong = wrong_accusation_score)."""
+    return p * V + (1 - p) * getattr(P, "wrong_accusation_score", 0.0)
+
+
 def _items(data: dict, *keys):
     if isinstance(data, list):
         return data
@@ -186,7 +191,8 @@ class SolverPolicy:
             thr = self.threshold if self.threshold is not None else self.default_threshold()
             last = o.today >= self.P.n_days
             self.trace.append({"day": o.today, "post": dict(post)})
-            if post[best] >= thr or last:
+            ev = accuse_value(post[best], self.V, self.P)
+            if ev > 0 and (post[best] >= thr or last):
                 self.queue = [("accuse", {"employee": best})]
                 return
             q = []

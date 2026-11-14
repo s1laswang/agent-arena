@@ -19,6 +19,7 @@ _PATS = {
     "framing_rate": rf"adds Poisson\({_F}\) fake",
     "framing_decoy_share": rf"the decoy with prob {_F}",
     "p_evasive_innocent": rf"evasive with probability {_F} for innocents",
+    "wrong_accusation_score": r"innocent employee the score is (-?[0-9]*\.?[0-9]+)",
     "interview_lr": rf"for the mole[^0-9]*{_F} x {_F}",
 }
 _INTS = {"n_days": r"at most (\d+) days", "canaries_per_day": r"at most (\d+) per day",

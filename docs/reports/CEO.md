@@ -264,3 +264,27 @@
 
 ## 18:36 fleet redirect (Silas approved)
 - Appended a REDIRECT note to the afterquery fleet lead inbox (board/afterquery/inbox/afterquery-lead.md, a new message; nothing else touched): stop the duplicate lanes; do (1) gemini-4-carbon v1.4 hard seeds 30-59 with our runner, replay-verified; (2) docs/research-biases.md; (3) exploit sweeps v1.4/v1.5, report only; (4) the Fooled-moment dashboard. Push branches and open PRs into justSilas for CEO review.
+
+## 18:40 teammate check
+- Vaishnav: vaishnav/canary-cheat merged (5a61a78): never-accuse Harbor cheat 0/0, Harbor result consistency 19/19, v1.2 frozen for replay. 626 tests pass.
+- Momin's fleet (read-only review of origin/momin + sleeper/*): docs/canary-landing.md, canary-watch.md, gap/badge PNGs, plus probe branches. Useful findings, none scoring above the rules:
+  1. Harbor verifier trusts the sidecar ledger's score field (a forged ledger would score 1.0, but only with a compromised sidecar, which the isolation tests cover). The verifier can't recompute `correct` without the seed and mole, and exposing those would leak judge seeds. Decision: residual risk, documented in the exploit list, no change after the freeze.
+  2. The sidecar receives GEMINI_API_KEY (needed for the gemini text provider only). The agent container can't read it. Low.
+  3. control_pad: check_leak_feed is not a harmless read (it spends the daily budget). Our anticheat control pads after the episode ends, so it's unaffected; noted.
+  4. Failure gallery port: 4/10 Codex losses untagged. Not merged; Atlas (Gemini CEO) owns the gallery.
+- Ivar: no pushes since 02:28 (ivar/main). Game/video/research lane is uncovered on GitHub; ask Silas.
+- head-integrity session no longer live; Vaishnav + the CEO cover integrity until submit.
+
+## 19:00 Silas decisions on PLAN-95
+1. Relaunch HARNESS (A1 hard-only judge set, C1 ledger HMAC) and INTEGRITY (C2 EXPLOITS.md, B4 instruction audit) engineers: launched as CEO subagents on justSilas-harness3 / justSilas-integrity3, PRs into justSilas.
+2. v3 GPU plan approved (2 V100 × ~6 h), conditional on v2 eval showing no reward gain; relayed to fr8.
+3. Hard-only judge set: approved (A1).
+4. Ivar owns the browser game deploy. Video owner: Silas/Momin (open).
+5. Human playtests Sunday morning: approved (all four, 2 hard dev-seed episodes each).
+B1 hint wording fixed (head-env, verified against instruction() v1.4) and sent to head-agents as an opt-in prompt flag.
+
+## 19:50 GATE B: v1.5 dropped, v1.4 is the judged env; feature freeze 20:00
+- gemini-4-carbon via OpenCode, hard, dev seeds 0-9, same seeds on both versions: v1.4 61% [3, 104] of the solver (luck-adj 56% [21, 80]); v1.5-candidate 108% [96, 122] (luck-adj 98%, 10/10 correct, mean P 0.94). Gemini treats seeded rumours as evidence AGAINST the person rumoured; no rumour-following.
+- The ship criterion (ratio drops vs v1.4) failed, so v1.5 stays on justSilas-v15 as a documented negative result, not a judged tier. Gemini's world-text role is labelled demo/research.
+- v1.4 seed-1 miss: accused at P=0.988, lost to the 5% fingerprint misread. That's luck, which is why the luck-adjusted ratio is reported alongside.
+- Freeze from 20:00: canary/rules.py, env.py, solver/ change only via the CEO. Harbor/verifier hardening (A1, C1), docs and analysis continue.

@@ -1,0 +1,58 @@
+{
+ "cmd": [
+  "python",
+  "-m",
+  "canary.gemini.ladder",
+  "--models",
+  "gemini-3.1-flash-lite,gemini-3.8-flash",
+  "--levels",
+  "low",
+  "--tiers",
+  "easy",
+  "--seeds",
+  "0-1",
+  "--out",
+  "{out}",
+  "--concurrency",
+  "4",
+  "--run-name",
+  "replay-showcase"
+ ],
+ "episodes": {
+  "gemini-3.1-flash-lite/low/easy/0/episodes.jsonl": [
+   {
+    "score": -1.0,
+    "seed": 0,
+    "steps_sha256": "fb2fb0a071292627d49aef125bbc0a888cd3d961dff564b288dd0a06b077e606",
+    "tier": "easy"
+   }
+  ],
+  "gemini-3.1-flash-lite/low/easy/1/episodes.jsonl": [
+   {
+    "score": 0.79,
+    "seed": 1,
+    "steps_sha256": "4be37f25d2552f74edf05bd234457c26471003468f002f4df0f1bd4de3fa83df",
+    "tier": "easy"
+   }
+  ],
+  "gemini-3.8-flash/low/easy/0/episodes.jsonl": [
+   {
+    "score": 0.63,
+    "seed": 0,
+    "steps_sha256": "a2c1f2d53925b5b5c8a98048f08133677f8950669b20e061c6ce4a45d7a53641",
+    "tier": "easy"
+   }
+  ],
+  "gemini-3.8-flash/low/easy/1/episodes.jsonl": [
+   {
+    "score": 0.88,
+    "seed": 1,
+    "steps_sha256": "e980e720eec1b79610d00b5002ccf4b8b383b8971fff6f0cfb65fc92df8e31d5",
+    "tier": "easy"
+   }
+  ]
+ },
+ "git_sha": "f923c9f",
+ "name": "ladder",
+ "recorded_at": "2026-11-14T14:49:28+0200"
+}

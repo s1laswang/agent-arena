@@ -5,6 +5,8 @@
 #                                    the agent image). canary/world.py reads it as <pkg>/../data/worlds/judge/SALT,
 #                                    so the secret is a 0600 file owned by the server uid, not an env var.
 #   ./episode.json                   {"tier", "seed"} for CANARY_EPISODE_FILE (0600; the seed is not in env)
+#   ./ledger_key                     build-time HMAC-SHA256 key for CANARY_LEDGER_KEY_FILE (0600): the server signs
+#                                    every /ledger payload; only this image and the verifier image hold the key
 FROM python:3.12-slim-bookworm
 
 # Pinned to uv.lock.
@@ -19,7 +21,8 @@ COPY entrypoint.sh collect.py /opt/canary-server/
 # (no COPY --chmod: Harbor may build with the classic builder, which lacks BuildKit features)
 COPY --chown=canary:canary data/worlds/judge/SALT /opt/canary-server/data/worlds/judge/SALT
 COPY --chown=canary:canary episode.json /opt/canary-server/episode.json
-RUN chmod 0600 /opt/canary-server/data/worlds/judge/SALT /opt/canary-server/episode.json
+COPY --chown=canary:canary ledger_key /opt/canary-server/ledger_key
+RUN chmod 0600 /opt/canary-server/data/worlds/judge/SALT /opt/canary-server/episode.json /opt/canary-server/ledger_key
 ENV PYTHONPATH=/opt/canary-server PYTHONUNBUFFERED=1
 
 USER canary

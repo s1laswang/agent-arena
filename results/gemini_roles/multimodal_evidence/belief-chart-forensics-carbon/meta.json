@@ -1,0 +1,24 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "belief_chart_forensics",
+  "model_id": "gemini-4-carbon",
+  "commit": "42341129d027e54e5bf58e44f3e64690295b75c5",
+  "timestamp": "2026-11-14T13:22:00+00:00",
+  "command": "CANARY_LLM_MAX_RETRIES=10 PYTHONPATH=. /tmp/fleet-silas/canary-venv/bin/python scripts/run_multimodal_forensics.py",
+  "tiers_version": "v1.3",
+  "ledger_run_id": "multimodal-forensics-20261114T132200Z",
+  "n_charts_analyzed": 6,
+  "visual_threshold_accuracy": 1.0,
+  "accuse_day_within_1_accuracy": 1.0,
+  "accuse_day_exact_accuracy": 1.0,
+  "hidden_bleed_gap_accuracy": 1.0,
+  "usage": {
+    "calls": 6,
+    "in": 10812,
+    "out": 1295,
+    "thinking": 2065,
+    "cached": 0,
+    "cost_usd": 0.055224,
+    "latency_s": 114.71
+  }
+}

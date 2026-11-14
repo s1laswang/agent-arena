@@ -1,0 +1,308 @@
+[
+  {
+    "episode_index": 0,
+    "cohort": "wrong_or_premature",
+    "chart_path": "charts/ep_0.png",
+    "chart_bytes_len": 231021,
+    "chart_sha256": "f14646d8d63999f5de097fbb1444f03311c6a4f399d7c8d40aab6a8f10e88134",
+    "source_episode": {
+      "source_file": "data/runs/committed/v1.3/codex-gpt-5.5-full/medium/episodes.jsonl",
+      "tier": "medium",
+      "seed": 0,
+      "agent": "codex:gpt-5.5"
+    },
+    "ground_truth": {
+      "actual_accuse_day": 6,
+      "accused_employee": "e02",
+      "correct": false,
+      "score": -1.0,
+      "end_reason": "accused",
+      "top_posterior_at_accuse": 0.183411,
+      "accused_posterior_at_accuse": 0.183411,
+      "known_v_at_accuse": 0.87,
+      "true_v_at_accuse": 0.83,
+      "ev_threshold_at_accuse": 0.546448,
+      "accused_below_ev_threshold": true,
+      "hidden_bleed_gap_present": true,
+      "max_bleed_gap": 0.04,
+      "total_canaries_planted": 5
+    },
+    "gemini_diagnosis": {
+      "accused_below_ev_threshold": true,
+      "estimated_accuse_day": 6,
+      "hidden_bleed_gap_present": true,
+      "visual_diagnosis": "In Panel 1, the Bayesian posterior remains weakly distributed across roughly seven suspects (e02, e05, e06, e11, e15, e16, and e18) through Day 6 rather than concentrating on a single mole. Panel 2 shows consistent daily canary deployments from Day 1 to Day 5 alongside moderate value decay and intermittent shaded hidden bleed gaps on Days 2-3 and Days 5-6 where known_V exceeds true_V. In Panel 3, the agent triggers an early accusation on Day 6 at a posterior probability near 0.18, lying far below the rational EV break-even threshold of roughly 0.55 despite ample remaining horizon.",
+      "primary_failure_pattern": "premature_early_accusation"
+    },
+    "scoring": {
+      "threshold_match": true,
+      "day_abs_error": 0,
+      "day_within_1": true,
+      "day_exact": true,
+      "bleed_gap_match": true
+    },
+    "usage": {
+      "in": 1802,
+      "out": 225,
+      "thinking": 407,
+      "cached": 0,
+      "cost_usd": 0.009924,
+      "latency_s": 17.656
+    }
+  },
+  {
+    "episode_index": 1,
+    "cohort": "wrong_or_premature",
+    "chart_path": "charts/ep_1.png",
+    "chart_bytes_len": 252404,
+    "chart_sha256": "a4dfa5b890a31c003c110ca56173d4d922737f2ac06c2c6ae5a099faebe8a9f1",
+    "source_episode": {
+      "source_file": "data/runs/committed/v1.3/codex-gpt-5.5-full/medium/episodes.jsonl",
+      "tier": "medium",
+      "seed": 4,
+      "agent": "codex:gpt-5.5"
+    },
+    "ground_truth": {
+      "actual_accuse_day": 14,
+      "accused_employee": "e07",
+      "correct": false,
+      "score": -1.0,
+      "end_reason": "accused",
+      "top_posterior_at_accuse": 0.330215,
+      "accused_posterior_at_accuse": 0.330215,
+      "known_v_at_accuse": 0.56,
+      "true_v_at_accuse": 0.52,
+      "ev_threshold_at_accuse": 0.657895,
+      "accused_below_ev_threshold": true,
+      "hidden_bleed_gap_present": true,
+      "max_bleed_gap": 0.04,
+      "total_canaries_planted": 12
+    },
+    "gemini_diagnosis": {
+      "accused_below_ev_threshold": true,
+      "estimated_accuse_day": 14,
+      "hidden_bleed_gap_present": true,
+      "visual_diagnosis": "In Panel 1, posterior probability remains split across four remaining candidates (e07, e13, e15, and e17) from Day 7 onward, peaking near 0.33 without isolating a single mole. Panel 2 shows steady canary deployments from Day 1 through Day 12 alongside gradual value decay from 0.99 to 0.52 and small intermittent hidden bleed gaps where known_V exceeds true_V. In Panel 3, the agent reaches the final Day 14 horizon and makes an accusation at P(accused) near 0.33, well below the rational EV threshold 1/(1+V) near 0.66.",
+      "primary_failure_pattern": "horizon_forced_guess"
+    },
+    "scoring": {
+      "threshold_match": true,
+      "day_abs_error": 0,
+      "day_within_1": true,
+      "day_exact": true,
+      "bleed_gap_match": true
+    },
+    "usage": {
+      "in": 1802,
+      "out": 234,
+      "thinking": 324,
+      "cached": 0,
+      "cost_usd": 0.009184,
+      "latency_s": 34.022
+    }
+  },
+  {
+    "episode_index": 2,
+    "cohort": "wrong_or_premature",
+    "chart_path": "charts/ep_2.png",
+    "chart_bytes_len": 264679,
+    "chart_sha256": "5b2644a81f5b24286dc37826d6a1104e00d3f8a8c6ae0b60feef68c484d1b854",
+    "source_episode": {
+      "source_file": "data/runs/committed/v1.3/gpt-5.5-full/hard/episodes.jsonl",
+      "tier": "hard",
+      "seed": 4,
+      "agent": "openai:gpt-5.5"
+    },
+    "ground_truth": {
+      "actual_accuse_day": 14,
+      "accused_employee": "e26",
+      "correct": false,
+      "score": -1.0,
+      "end_reason": "accused",
+      "top_posterior_at_accuse": 0.498416,
+      "accused_posterior_at_accuse": 0.498416,
+      "known_v_at_accuse": 0.6,
+      "true_v_at_accuse": 0.565,
+      "ev_threshold_at_accuse": 0.638978,
+      "accused_below_ev_threshold": true,
+      "hidden_bleed_gap_present": true,
+      "max_bleed_gap": 0.07,
+      "total_canaries_planted": 12
+    },
+    "gemini_diagnosis": {
+      "accused_below_ev_threshold": true,
+      "estimated_accuse_day": 14,
+      "hidden_bleed_gap_present": true,
+      "visual_diagnosis": "Panel 1 shows the Bayesian posterior splitting mainly between suspects e26 and e28 from Day 5 onward without fully resolving a single culprit by Day 14. In Panel 2, frequent canary deployments across Days 1 through 12 keep known_V relatively close to true_V, though small shaded hidden bleed gaps still appear as company value steadily erodes below 0.60. Panel 3 shows the top-suspect posterior plateauing near 0.50 and failing to cross the rising 1/(1+V) rational EV threshold, resulting in a sub-threshold accusation forced at the Day 14 horizon.",
+      "primary_failure_pattern": "horizon_forced_guess"
+    },
+    "scoring": {
+      "threshold_match": true,
+      "day_abs_error": 0,
+      "day_within_1": true,
+      "day_exact": true,
+      "bleed_gap_match": true
+    },
+    "usage": {
+      "in": 1802,
+      "out": 205,
+      "thinking": 453,
+      "cached": 0,
+      "cost_usd": 0.010184,
+      "latency_s": 20.697
+    }
+  },
+  {
+    "episode_index": 3,
+    "cohort": "high_scoring",
+    "chart_path": "charts/ep_3.png",
+    "chart_bytes_len": 224933,
+    "chart_sha256": "a0007e3663d056e2ffe6e151ad24fe867de3785656635c074d531aca9a52e8d7",
+    "source_episode": {
+      "source_file": "data/runs/committed/v1.3/codex-gpt-5.5-full/medium/episodes.jsonl",
+      "tier": "medium",
+      "seed": 1,
+      "agent": "codex:gpt-5.5"
+    },
+    "ground_truth": {
+      "actual_accuse_day": 5,
+      "accused_employee": "e02",
+      "correct": true,
+      "score": 0.84,
+      "end_reason": "accused",
+      "top_posterior_at_accuse": 1.0,
+      "accused_posterior_at_accuse": 1.0,
+      "known_v_at_accuse": 0.84,
+      "true_v_at_accuse": 0.84,
+      "ev_threshold_at_accuse": 0.543478,
+      "accused_below_ev_threshold": false,
+      "hidden_bleed_gap_present": false,
+      "max_bleed_gap": 0.0,
+      "total_canaries_planted": 4
+    },
+    "gemini_diagnosis": {
+      "accused_below_ev_threshold": false,
+      "estimated_accuse_day": 5,
+      "hidden_bleed_gap_present": false,
+      "visual_diagnosis": "In Panel 1, Bayesian posterior probability progressively narrows across subsets of suspects before concentrating entirely on suspect e02 at 1.0 by Day 5. Panel 2 shows consistent canary deployments across Days 1 through 4, with known_V and true_V coinciding completely at every step from 0.99 down to 0.84 without any hidden bleed gap. In Panel 3, the accusation occurs on Day 5 just as the accused posterior hits certainty at 1.0, sitting well above the rational EV threshold curve near 0.54.",
+      "primary_failure_pattern": "none_justified_accusation"
+    },
+    "scoring": {
+      "threshold_match": true,
+      "day_abs_error": 0,
+      "day_within_1": true,
+      "day_exact": true,
+      "bleed_gap_match": true
+    },
+    "usage": {
+      "in": 1802,
+      "out": 191,
+      "thinking": 171,
+      "cached": 0,
+      "cost_usd": 0.007224,
+      "latency_s": 9.468
+    }
+  },
+  {
+    "episode_index": 4,
+    "cohort": "high_scoring",
+    "chart_path": "charts/ep_4.png",
+    "chart_bytes_len": 226845,
+    "chart_sha256": "b435a7645b0cdbfdb2ade7e4b0dfbad9aa11097973c7d2b025f14c5647fb68a6",
+    "source_episode": {
+      "source_file": "data/runs/committed/v1.3/gpt-5.5-full/medium/episodes.jsonl",
+      "tier": "medium",
+      "seed": 2,
+      "agent": "openai:gpt-5.5"
+    },
+    "ground_truth": {
+      "actual_accuse_day": 6,
+      "accused_employee": "e09",
+      "correct": true,
+      "score": 0.83,
+      "end_reason": "accused",
+      "top_posterior_at_accuse": 1.0,
+      "accused_posterior_at_accuse": 1.0,
+      "known_v_at_accuse": 0.83,
+      "true_v_at_accuse": 0.83,
+      "ev_threshold_at_accuse": 0.546448,
+      "accused_below_ev_threshold": false,
+      "hidden_bleed_gap_present": false,
+      "max_bleed_gap": 0.0,
+      "total_canaries_planted": 5
+    },
+    "gemini_diagnosis": {
+      "accused_below_ev_threshold": false,
+      "estimated_accuse_day": 6,
+      "hidden_bleed_gap_present": false,
+      "visual_diagnosis": "Panel 1 shows Bayesian posterior probability progressively narrowing across days 3 to 5 before concentrating completely on suspect e09 at day 6. In Panel 2, canaries are deployed consistently from day 1 through day 5, keeping known_V and true_V completely aligned with zero hidden bleed gap as company value declines from 0.99 to 0.83. Panel 3 confirms a justified accusation on day 6, where the accused suspect posterior reaches 1.0 and sits well above the rational EV threshold of roughly 0.55.",
+      "primary_failure_pattern": "none_justified_accusation"
+    },
+    "scoring": {
+      "threshold_match": true,
+      "day_abs_error": 0,
+      "day_within_1": true,
+      "day_exact": true,
+      "bleed_gap_match": true
+    },
+    "usage": {
+      "in": 1802,
+      "out": 203,
+      "thinking": 186,
+      "cached": 0,
+      "cost_usd": 0.007494,
+      "latency_s": 12.118
+    }
+  },
+  {
+    "episode_index": 5,
+    "cohort": "high_scoring",
+    "chart_path": "charts/ep_5.png",
+    "chart_bytes_len": 248363,
+    "chart_sha256": "6a283bd72543317edc68c6191d8514a92dd45cc8b981cf5383a0433bd553e7da",
+    "source_episode": {
+      "source_file": "data/runs/committed/v1.3/gpt-5.5-full/hard/episodes.jsonl",
+      "tier": "hard",
+      "seed": 5,
+      "agent": "openai:gpt-5.5"
+    },
+    "ground_truth": {
+      "actual_accuse_day": 11,
+      "accused_employee": "e19",
+      "correct": true,
+      "score": 0.735,
+      "end_reason": "accused",
+      "top_posterior_at_accuse": 0.852414,
+      "accused_posterior_at_accuse": 0.852414,
+      "known_v_at_accuse": 0.77,
+      "true_v_at_accuse": 0.735,
+      "ev_threshold_at_accuse": 0.576369,
+      "accused_below_ev_threshold": false,
+      "hidden_bleed_gap_present": true,
+      "max_bleed_gap": 0.07,
+      "total_canaries_planted": 9
+    },
+    "gemini_diagnosis": {
+      "accused_below_ev_threshold": false,
+      "estimated_accuse_day": 11,
+      "hidden_bleed_gap_present": true,
+      "visual_diagnosis": "In Panel 1, Bayesian posterior probability narrows onto suspects e15 and e19 by Day 5 before concentrating strongly above 0.80 on suspect e19 from Day 8 through Day 11. Panel 2 shows consistent canary deployments from Day 1 to Day 9 alongside intermittent shaded hidden bleed gaps on Days 3 to 5, Days 7 to 8, and Day 11 as company value declines to roughly 0.74. In Panel 3, the top-suspect posterior crosses the rational EV threshold 1/(1+V) on Day 6, resulting in a well-supported accusation on Day 11 with P(accused) near 0.85 and clearly above the ~0.58 break-even threshold.",
+      "primary_failure_pattern": "none_justified_accusation"
+    },
+    "scoring": {
+      "threshold_match": true,
+      "day_abs_error": 0,
+      "day_within_1": true,
+      "day_exact": true,
+      "bleed_gap_match": true
+    },
+    "usage": {
+      "in": 1802,
+      "out": 237,
+      "thinking": 524,
+      "cached": 0,
+      "cost_usd": 0.011214,
+      "latency_s": 20.749
+    }
+  }
+]

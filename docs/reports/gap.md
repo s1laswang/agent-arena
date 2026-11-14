@@ -1,5 +1,20 @@
 # Gap report: frontier agents vs the reference solver
 
+## v1.4 headline (committed 8fd4dec; table: `data/runs/committed/v1.4/paired_table_gemini.md`)
+gemini-4-carbon, rules v1.4, dev seeds 0-29 per tier, every episode replay-verified, paired with the reference solver on the same seeds:
+
+| harness | tier | n | frontier / solver [95% CI] | luck-adjusted / solver [95% CI] |
+|---|---|---|---|---|
+| **OpenCode over MCP (the judges' harness)** | hard | 30 | **60% [1%, 103%]** | **68% [43%, 91%]** |
+| OpenCode over MCP | medium | 30 | 103% [95%, 112%] | 99% [84%, 111%] |
+| in-process (full history, thought-signature replay) | hard | 30 | 100% [53%, 185%] | 91% [68%, 115%] |
+| in-process | medium | 30 | 64% [33%, 89%] | 57% [32%, 82%] |
+
+Honest reading: a gap on hard in the judges' harness (clearest after removing luck); parity in-process on hard and in OpenCode on medium. Infra-invalid attempts (CLI error events, empty model replies, provider unavailable) were excluded and retried; the table's "alternative" rows count them as 0 instead.
+
+**Pre-registered seed rule (written 15 Nov ~00:15, before any rerun landed):** the set above (seeds 0-29, staged by the measurement engineer) is the PRIMARY result. Any later OpenCode reruns on the same seeds (e.g. the fleet's `--timeout 3600` reruns) are reported separately as a REPLICATION, never swapped in or cherry-picked. Fleet PR #3 episodes that timed out at 900 s were never part of this set.
+
+
 ## Official v1.3 measurement (approved, 2026-11-14 10:30–11:21)
 
 > **v1.4 contingency triggered on hard (Codex 97%).** In the judges' harness shape (Codex CLI gpt-5.5 over MCP), the frontier agent scores **97% of the reference solver on hard** on the planned seeds 0–9 (95% CI 89–107%, 10/10 correct). With the one extension seed that finished it scores **106%** (n=11, CI 91–136%). So **the v1.3 gap does not hold on hard in the judges' shape.** On medium, Codex scores **50%** of the solver (n=10, CI −19% to 103%; 55% with seed 10). That gap comes entirely from 2 early wrong accusations out of 10, and the CI reaches parity, so medium is inconclusive rather than a demonstrated gap. The fixed in-process loop is **92% of the solver on medium** (n=9, CI 80–106%), which is also above the 85% line.

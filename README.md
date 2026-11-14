@@ -1,6 +1,6 @@
 # Canary: catch the mole
 
-**AfterQuery entry — Canary** (clone branch `justSilas`). This is not The Sleeper (AfterQuery entry on branch `momin`) and not the Google DeepMind Gemini-track write-up (branch `gemini-track`). Clone only this branch, then run one command. See “Packaging” below.
+**AfterQuery entry: Canary** (this branch, `justSilas`). Clone it and run one command (below). **Google DeepMind Gemini entry:** [docs/gemini/SUBMISSION.md](docs/gemini/SUBMISSION.md).
 
 [![CI](https://github.com/s1laswang/agent-arena/actions/workflows/ci.yml/badge.svg?branch=justSilas)](https://github.com/s1laswang/agent-arena/actions/workflows/ci.yml)
 

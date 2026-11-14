@@ -1,0 +1,1177 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "visual_memo_blind_ablation",
+  "model_id": "gemini-4-carbon",
+  "tiers_version": "v1.4",
+  "tier": "hard",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "commit": "c75a9393129a5ed65cc2b9bdba44972d99e1c61a",
+  "timestamp": "2026-11-14T17:05:44+00:00",
+  "n_episodes": 5,
+  "n_images_read_by_model": 18,
+  "summary": {
+    "multimodal_carbon": {
+      "n": 5,
+      "mean_score": 0.672,
+      "accuracy": 1.0,
+      "accused_count": 5,
+      "mean_accuse_day": 7.0,
+      "scores": [
+        0.64,
+        0.69,
+        0.58,
+        0.72,
+        0.73
+      ]
+    },
+    "blind_no_vision": {
+      "n": 5,
+      "mean_score": 0.406,
+      "accuracy": 0.8,
+      "accused_count": 4,
+      "mean_accuse_day": 10.75,
+      "scores": [
+        0.0,
+        0.55,
+        0.36,
+        0.4,
+        0.72
+      ]
+    },
+    "text_oracle": {
+      "n": 5,
+      "mean_score": 0.672,
+      "accuracy": 1.0,
+      "accused_count": 5,
+      "mean_accuse_day": 7.0,
+      "scores": [
+        0.64,
+        0.69,
+        0.58,
+        0.72,
+        0.73
+      ]
+    },
+    "multimodal_minus_blind": 0.266,
+    "multimodal_minus_oracle": 0.0,
+    "oracle_score_recovery_ratio": 1.0,
+    "variant_vision_accuracy": 1.0,
+    "canary_variant_vision_accuracy": 1.0
+  },
+  "per_seed": [
+    {
+      "seed": 0,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "multimodal_carbon": {
+        "score": 0.64,
+        "correct": true,
+        "accused": "e38",
+        "final_day": 9,
+        "end_reason": "accused",
+        "max_posterior": 0.9486,
+        "tool_calls": 72,
+        "text_feed_variants_redacted": true,
+        "n_memos_inspected": 4,
+        "n_canary_memos_inspected": 1,
+        "vision_exact_matches": 4,
+        "canary_vision_exact_matches": 1
+      },
+      "blind_no_vision": {
+        "score": 0.0,
+        "correct": false,
+        "accused": null,
+        "final_day": 21,
+        "end_reason": "horizon",
+        "max_posterior": 0.6912,
+        "tool_calls": 161,
+        "text_feed_variants_redacted": true,
+        "n_memos_inspected": 12
+      },
+      "text_oracle": {
+        "score": 0.64,
+        "correct": true,
+        "accused": "e38",
+        "final_day": 9,
+        "end_reason": "accused",
+        "max_posterior": 0.9486,
+        "tool_calls": 72
+      }
+    },
+    {
+      "seed": 1,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "multimodal_carbon": {
+        "score": 0.69,
+        "correct": true,
+        "accused": "e33",
+        "final_day": 7,
+        "end_reason": "accused",
+        "max_posterior": 0.9851,
+        "tool_calls": 60,
+        "text_feed_variants_redacted": true,
+        "n_memos_inspected": 3,
+        "n_canary_memos_inspected": 1,
+        "vision_exact_matches": 3,
+        "canary_vision_exact_matches": 1
+      },
+      "blind_no_vision": {
+        "score": 0.55,
+        "correct": true,
+        "accused": "e33",
+        "final_day": 11,
+        "end_reason": "accused",
+        "max_posterior": 1.0,
+        "tool_calls": 88,
+        "text_feed_variants_redacted": true,
+        "n_memos_inspected": 6
+      },
+      "text_oracle": {
+        "score": 0.69,
+        "correct": true,
+        "accused": "e33",
+        "final_day": 7,
+        "end_reason": "accused",
+        "max_posterior": 0.9851,
+        "tool_calls": 60
+      }
+    },
+    {
+      "seed": 2,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "multimodal_carbon": {
+        "score": 0.58,
+        "correct": true,
+        "accused": "e25",
+        "final_day": 9,
+        "end_reason": "accused",
+        "max_posterior": 0.999,
+        "tool_calls": 71,
+        "text_feed_variants_redacted": true,
+        "n_memos_inspected": 5,
+        "n_canary_memos_inspected": 3,
+        "vision_exact_matches": 5,
+        "canary_vision_exact_matches": 3
+      },
+      "blind_no_vision": {
+        "score": 0.36,
+        "correct": true,
+        "accused": "e25",
+        "final_day": 16,
+        "end_reason": "accused",
+        "max_posterior": 0.9025,
+        "tool_calls": 120,
+        "text_feed_variants_redacted": true,
+        "n_memos_inspected": 8
+      },
+      "text_oracle": {
+        "score": 0.58,
+        "correct": true,
+        "accused": "e25",
+        "final_day": 9,
+        "end_reason": "accused",
+        "max_posterior": 0.999,
+        "tool_calls": 71
+      }
+    },
+    {
+      "seed": 3,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "multimodal_carbon": {
+        "score": 0.72,
+        "correct": true,
+        "accused": "e29",
+        "final_day": 5,
+        "end_reason": "accused",
+        "max_posterior": 0.9144,
+        "tool_calls": 45,
+        "text_feed_variants_redacted": true,
+        "n_memos_inspected": 3,
+        "n_canary_memos_inspected": 1,
+        "vision_exact_matches": 3,
+        "canary_vision_exact_matches": 1
+      },
+      "blind_no_vision": {
+        "score": 0.4,
+        "correct": true,
+        "accused": "e29",
+        "final_day": 11,
+        "end_reason": "accused",
+        "max_posterior": 0.878,
+        "tool_calls": 88,
+        "text_feed_variants_redacted": true,
+        "n_memos_inspected": 9
+      },
+      "text_oracle": {
+        "score": 0.72,
+        "correct": true,
+        "accused": "e29",
+        "final_day": 5,
+        "end_reason": "accused",
+        "max_posterior": 0.9144,
+        "tool_calls": 45
+      }
+    },
+    {
+      "seed": 4,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "multimodal_carbon": {
+        "score": 0.73,
+        "correct": true,
+        "accused": "e11",
+        "final_day": 5,
+        "end_reason": "accused",
+        "max_posterior": 1.0,
+        "tool_calls": 44,
+        "text_feed_variants_redacted": true,
+        "n_memos_inspected": 3,
+        "n_canary_memos_inspected": 2,
+        "vision_exact_matches": 3,
+        "canary_vision_exact_matches": 2
+      },
+      "blind_no_vision": {
+        "score": 0.72,
+        "correct": true,
+        "accused": "e11",
+        "final_day": 5,
+        "end_reason": "accused",
+        "max_posterior": 1.0,
+        "tool_calls": 45,
+        "text_feed_variants_redacted": true,
+        "n_memos_inspected": 3
+      },
+      "text_oracle": {
+        "score": 0.73,
+        "correct": true,
+        "accused": "e11",
+        "final_day": 5,
+        "end_reason": "accused",
+        "max_posterior": 1.0,
+        "tool_calls": 44
+      }
+    }
+  ],
+  "vision_calls": [
+    {
+      "call_index": 0,
+      "seed": 0,
+      "tier": "hard",
+      "doc_id": "c1-2",
+      "day_surfaced": 3,
+      "is_canary_memo": true,
+      "expected_variant": "A",
+      "predicted_variant": "A",
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_0_c1-2.png",
+      "memo_sha256": "d0ed20849fe778390faf3efe843bc82b63186ff96816ce6da890cfa6eecf8661",
+      "memo_bytes": 30661,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "c1-2",
+        "observed_day_surfaced": 3,
+        "has_canary_watermark": true,
+        "copy_code_variant": "A",
+        "observed_footer_ticks": 1,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 1 green striped segment labeled CANARY VARIANT A - central stamp reads COPY-CODE: A with WATERMARK VARIANT = A (1/8) - footer shows 1/8 active slot [A:1] lit in green."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 136,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005168,
+        "latency_s": 6.766
+      }
+    },
+    {
+      "call_index": 1,
+      "seed": 0,
+      "tier": "hard",
+      "doc_id": "d2-2",
+      "day_surfaced": 6,
+      "is_canary_memo": false,
+      "expected_variant": null,
+      "predicted_variant": null,
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_0_d2-2.png",
+      "memo_sha256": "708c3c9a7e83cd80674f7919254e465ae2e164c90f69dc912c30218031a1603a",
+      "memo_bytes": 31575,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "d2-2",
+        "observed_day_surfaced": 6,
+        "has_canary_watermark": false,
+        "copy_code_variant": "NONE",
+        "observed_footer_ticks": 0,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 0 segments with UNWATERMARKED (NONE) banner - central stamp reads COPY-CODE: NONE with NO CANARY WATERMARK (0/8) - footer tick register shows 0/8 active slots."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 130,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005108,
+        "latency_s": 6.695
+      }
+    },
+    {
+      "call_index": 2,
+      "seed": 0,
+      "tier": "hard",
+      "doc_id": "d4-1",
+      "day_surfaced": 6,
+      "is_canary_memo": false,
+      "expected_variant": null,
+      "predicted_variant": null,
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_0_d4-1.png",
+      "memo_sha256": "8d01ae58f326efecb81274fc91be72e123933dfaedafff31147685d91cb1e1d1",
+      "memo_bytes": 31452,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "d4-1",
+        "observed_day_surfaced": 6,
+        "has_canary_watermark": false,
+        "copy_code_variant": "NONE",
+        "observed_footer_ticks": 0,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 0 segments - UNWATERMARKED (NONE); central stamp reads COPY-CODE: NONE with NO CANARY WATERMARK (0/8); footer register shows 0/8 active ticks."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 126,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005068,
+        "latency_s": 6.571
+      }
+    },
+    {
+      "call_index": 3,
+      "seed": 0,
+      "tier": "hard",
+      "doc_id": "d4-3",
+      "day_surfaced": 8,
+      "is_canary_memo": false,
+      "expected_variant": null,
+      "predicted_variant": null,
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_0_d4-3.png",
+      "memo_sha256": "9677b91b9442b76d992c3c71d2d12bc7c240471e55da9d13a7d5c1dd5a6d1afa",
+      "memo_bytes": 31867,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "d4-3",
+        "observed_day_surfaced": 8,
+        "has_canary_watermark": false,
+        "copy_code_variant": "NONE",
+        "observed_footer_ticks": 0,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 0 segments with UNWATERMARKED (NONE) banner; central stamp reads COPY-CODE: NONE with NO CANARY WATERMARK (0/8); footer tick register shows 0/8 active ticks -> COPY-CODE NONE."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 134,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005148,
+        "latency_s": 5.306
+      }
+    },
+    {
+      "call_index": 4,
+      "seed": 1,
+      "tier": "hard",
+      "doc_id": "d2-2",
+      "day_surfaced": 4,
+      "is_canary_memo": false,
+      "expected_variant": null,
+      "predicted_variant": null,
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_1_d2-2.png",
+      "memo_sha256": "de14c66f2dcbdc5ff0bbc2d0b5f057a00137d2e702a071939aa5581d69720f28",
+      "memo_bytes": 31385,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "d2-2",
+        "observed_day_surfaced": 4,
+        "has_canary_watermark": false,
+        "copy_code_variant": "NONE",
+        "observed_footer_ticks": 0,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 0 segments with UNWATERMARKED (NONE) banner - central stamp reads COPY-CODE: NONE and NO CANARY WATERMARK (0/8) - footer tick register shows 0/8 active ticks."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 130,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005108,
+        "latency_s": 7.124
+      }
+    },
+    {
+      "call_index": 5,
+      "seed": 1,
+      "tier": "hard",
+      "doc_id": "d1-3",
+      "day_surfaced": 5,
+      "is_canary_memo": false,
+      "expected_variant": null,
+      "predicted_variant": null,
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_1_d1-3.png",
+      "memo_sha256": "d47d9ac80de0756cc31f84434955f52485883e5ba2308bf7b96b7f487d8ddc1a",
+      "memo_bytes": 31564,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "d1-3",
+        "observed_day_surfaced": 5,
+        "has_canary_watermark": false,
+        "copy_code_variant": "NONE",
+        "observed_footer_ticks": 0,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar shows 0 segments - UNWATERMARKED (NONE); central stamp reads COPY-CODE: NONE with NO CANARY WATERMARK (0/8); footer register shows 0/8 active ticks -> COPY-CODE NONE."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 119,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.004998,
+        "latency_s": 5.405
+      }
+    },
+    {
+      "call_index": 6,
+      "seed": 1,
+      "tier": "hard",
+      "doc_id": "c3-2",
+      "day_surfaced": 7,
+      "is_canary_memo": true,
+      "expected_variant": "B",
+      "predicted_variant": "B",
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_1_c3-2.png",
+      "memo_sha256": "0c43754910ad65fef63afc4171369c5867c5e32636670fad3298fabae96b12ce",
+      "memo_bytes": 31637,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "c3-2",
+        "observed_day_surfaced": 7,
+        "has_canary_watermark": true,
+        "copy_code_variant": "B",
+        "observed_footer_ticks": 2,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar shows 2 blue hatched segments with CANARY VARIANT B - central stamp reads COPY-CODE: B with WATERMARK VARIANT = B (2/8) - footer register shows 2/8 active slots lit (A:1 and [B:2])."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 128,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005088,
+        "latency_s": 30.914
+      }
+    },
+    {
+      "call_index": 7,
+      "seed": 2,
+      "tier": "hard",
+      "doc_id": "d1-3",
+      "day_surfaced": 3,
+      "is_canary_memo": false,
+      "expected_variant": null,
+      "predicted_variant": null,
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_2_d1-3.png",
+      "memo_sha256": "5d0b706017bf15556149497b7629eb3ea6809901aad38b19f710456b46902b18",
+      "memo_bytes": 31563,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "d1-3",
+        "observed_day_surfaced": 3,
+        "has_canary_watermark": false,
+        "copy_code_variant": "NONE",
+        "observed_footer_ticks": 0,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 0 segments with UNWATERMARKED (NONE) banner - central stamp reads COPY-CODE: NONE with NO CANARY WATERMARK (0/8) - footer register shows 0/8 active ticks."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 129,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005098,
+        "latency_s": 7.642
+      }
+    },
+    {
+      "call_index": 8,
+      "seed": 2,
+      "tier": "hard",
+      "doc_id": "d2-1",
+      "day_surfaced": 5,
+      "is_canary_memo": false,
+      "expected_variant": null,
+      "predicted_variant": null,
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_2_d2-1.png",
+      "memo_sha256": "77d40aded4a2c9cb990dab2a0f0147bf25bb5e5651927e605fc0fe457faa5e7f",
+      "memo_bytes": 31504,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "d2-1",
+        "observed_day_surfaced": 5,
+        "has_canary_watermark": false,
+        "copy_code_variant": "NONE",
+        "observed_footer_ticks": 0,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 0 segments with UNWATERMARKED (NONE) banner - central stamp reads COPY-CODE: NONE with NO CANARY WATERMARK (0/8) - footer tick register shows 0/8 active ticks."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 130,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005108,
+        "latency_s": 6.287
+      }
+    },
+    {
+      "call_index": 9,
+      "seed": 2,
+      "tier": "hard",
+      "doc_id": "c3-2",
+      "day_surfaced": 5,
+      "is_canary_memo": true,
+      "expected_variant": "B",
+      "predicted_variant": "B",
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_2_c3-2.png",
+      "memo_sha256": "8004b88c11eb8e272ea95f7254c69b438febd4de4d37917b3dd6320ed4329af7",
+      "memo_bytes": 31698,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "c3-2",
+        "observed_day_surfaced": 5,
+        "has_canary_watermark": true,
+        "copy_code_variant": "B",
+        "observed_footer_ticks": 2,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 2 blue diagonal-hatched segments labeled CANARY VARIANT B - central stamp box reads COPY-CODE: B with WATERMARK VARIANT = B (2/8) - footer register shows 2/8 active blue tick boxes for A:1 and [B:2]."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 145,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005258,
+        "latency_s": 5.992
+      }
+    },
+    {
+      "call_index": 10,
+      "seed": 2,
+      "tier": "hard",
+      "doc_id": "c4-2",
+      "day_surfaced": 9,
+      "is_canary_memo": true,
+      "expected_variant": "C",
+      "predicted_variant": "C",
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_2_c4-2.png",
+      "memo_sha256": "3d164ec451ec7935d249914b64f0eaab203993e27044769b262d54ca45a31d47",
+      "memo_bytes": 30958,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "c4-2",
+        "observed_day_surfaced": 9,
+        "has_canary_watermark": true,
+        "copy_code_variant": "C",
+        "observed_footer_ticks": 3,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 3 red striped segments labeled CANARY VARIANT C - central stamp reads COPY-CODE: C (3/8) - footer register shows 3/8 active red boxes (A:1, B:2, [C:3])."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 137,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005178,
+        "latency_s": 6.55
+      }
+    },
+    {
+      "call_index": 11,
+      "seed": 2,
+      "tier": "hard",
+      "doc_id": "c5",
+      "day_surfaced": 9,
+      "is_canary_memo": true,
+      "expected_variant": "C",
+      "predicted_variant": "C",
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_2_c5.png",
+      "memo_sha256": "dde6c580c40c8f3fbbf199446cd8f75494da7c65aa1c5a0b995b11ef6ba1e0c2",
+      "memo_bytes": 30567,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "c5",
+        "observed_day_surfaced": 9,
+        "has_canary_watermark": true,
+        "copy_code_variant": "C",
+        "observed_footer_ticks": 3,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 3 red striped segments with CANARY VARIANT C banner - Central stamp box reads COPY-CODE: C and WATERMARK VARIANT = C (3/8) - Footer register shows 3/8 active red tick blocks (A:1, B:2, [C:3])."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 145,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005258,
+        "latency_s": 4.62
+      }
+    },
+    {
+      "call_index": 12,
+      "seed": 3,
+      "tier": "hard",
+      "doc_id": "d1-2",
+      "day_surfaced": 3,
+      "is_canary_memo": false,
+      "expected_variant": null,
+      "predicted_variant": null,
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_3_d1-2.png",
+      "memo_sha256": "43ac0787eaf5f098ad2a5daabd596d9380f56cb626b323527e9f081fbe4436bf",
+      "memo_bytes": 31617,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "d1-2",
+        "observed_day_surfaced": 3,
+        "has_canary_watermark": false,
+        "copy_code_variant": "NONE",
+        "observed_footer_ticks": 0,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar shows 0 segments - UNWATERMARKED (NONE); central stamp reads COPY-CODE: NONE with NO CANARY WATERMARK (0/8); footer register shows 0/8 active ticks -> COPY-CODE NONE."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 119,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.004998,
+        "latency_s": 5.996
+      }
+    },
+    {
+      "call_index": 13,
+      "seed": 3,
+      "tier": "hard",
+      "doc_id": "d1-3",
+      "day_surfaced": 5,
+      "is_canary_memo": false,
+      "expected_variant": null,
+      "predicted_variant": null,
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_3_d1-3.png",
+      "memo_sha256": "d47d9ac80de0756cc31f84434955f52485883e5ba2308bf7b96b7f487d8ddc1a",
+      "memo_bytes": 31564,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "d1-3",
+        "observed_day_surfaced": 5,
+        "has_canary_watermark": false,
+        "copy_code_variant": "NONE",
+        "observed_footer_ticks": 0,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar shows 0 segments and UNWATERMARKED (NONE) banner - Central stamp reads COPY-CODE: NONE with NO CANARY WATERMARK (0/8) - Footer register shows 0/8 active ticks."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 117,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.004978,
+        "latency_s": 4.348
+      }
+    },
+    {
+      "call_index": 14,
+      "seed": 3,
+      "tier": "hard",
+      "doc_id": "c2",
+      "day_surfaced": 5,
+      "is_canary_memo": true,
+      "expected_variant": "B",
+      "predicted_variant": "B",
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_3_c2.png",
+      "memo_sha256": "8c3e43a2ed0f4a90112b9fcbf8ccbf33b0d04c4067f0e23323f0ffbb917c3994",
+      "memo_bytes": 31152,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "c2",
+        "observed_day_surfaced": 5,
+        "has_canary_watermark": true,
+        "copy_code_variant": "B",
+        "observed_footer_ticks": 2,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 2 blue diagonal-striped segments labeled 'CANARY VARIANT B' - central stamp box reads 'COPY-CODE: B' and 'WATERMARK VARIANT = B (2/8)' - footer register shows 2/8 active ticks lit at slots A:1 and [B:2]."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 147,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005278,
+        "latency_s": 5.715
+      }
+    },
+    {
+      "call_index": 15,
+      "seed": 4,
+      "tier": "hard",
+      "doc_id": "c1",
+      "day_surfaced": 4,
+      "is_canary_memo": true,
+      "expected_variant": "B",
+      "predicted_variant": "B",
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_4_c1.png",
+      "memo_sha256": "10fef79230c02538c0633e805842d5ee461728c4637108951e36a5a2d3770e6b",
+      "memo_bytes": 30779,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "c1",
+        "observed_day_surfaced": 4,
+        "has_canary_watermark": true,
+        "copy_code_variant": "B",
+        "observed_footer_ticks": 2,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 2 blue diagonal-striped segments labeled 'CANARY VARIANT B' - central stamp box reads 'COPY-CODE: B' and 'WATERMARK VARIANT = B (2/8)' - footer register shows 2/8 active ticks highlighted at A:1 and [B:2]."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 146,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005268,
+        "latency_s": 4.985
+      }
+    },
+    {
+      "call_index": 16,
+      "seed": 4,
+      "tier": "hard",
+      "doc_id": "d2-2",
+      "day_surfaced": 4,
+      "is_canary_memo": false,
+      "expected_variant": null,
+      "predicted_variant": null,
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_4_d2-2.png",
+      "memo_sha256": "de14c66f2dcbdc5ff0bbc2d0b5f057a00137d2e702a071939aa5581d69720f28",
+      "memo_bytes": 31385,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "d2-2",
+        "observed_day_surfaced": 4,
+        "has_canary_watermark": false,
+        "copy_code_variant": "NONE",
+        "observed_footer_ticks": 0,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 0 segments with UNWATERMARKED (NONE) label - central stamp reads COPY-CODE: NONE with NO CANARY WATERMARK (0/8) - footer tick register shows 0/8 active ticks."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 130,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005108,
+        "latency_s": 6.216
+      }
+    },
+    {
+      "call_index": 17,
+      "seed": 4,
+      "tier": "hard",
+      "doc_id": "c3-2",
+      "day_surfaced": 5,
+      "is_canary_memo": true,
+      "expected_variant": "B",
+      "predicted_variant": "B",
+      "variant_exact_match": true,
+      "memo_path": "memos/seed_4_c3-2.png",
+      "memo_sha256": "8004b88c11eb8e272ea95f7254c69b438febd4de4d37917b3dd6320ed4329af7",
+      "memo_bytes": 31698,
+      "memo_size": [
+        880,
+        620
+      ],
+      "model_id": "gemini-4-carbon",
+      "model_version": "gemini-4-carbon",
+      "model_response": {
+        "observed_doc_id": "c3-2",
+        "observed_day_surfaced": 5,
+        "has_canary_watermark": true,
+        "copy_code_variant": "B",
+        "observed_footer_ticks": 2,
+        "confidence": 1.0,
+        "visual_evidence": "Header bar displays 2 blue diagonal-striped segments labeled CANARY VARIANT B - Central stamp reads COPY-CODE: B with WATERMARK VARIANT = B (2/8) - Footer register shows 2/8 active blue tick boxes at A:1 and [B:2]."
+      },
+      "usage": {
+        "in": 1904,
+        "out": 143,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.005238,
+        "latency_s": 7.15
+      }
+    }
+  ],
+  "memos": [
+    {
+      "seed": 0,
+      "doc_id": "c1-2",
+      "day_surfaced": 3,
+      "is_canary_memo": true,
+      "path": "memos/seed_0_c1-2.png",
+      "sha256": "d0ed20849fe778390faf3efe843bc82b63186ff96816ce6da890cfa6eecf8661",
+      "bytes": 30661,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 0,
+      "doc_id": "d2-2",
+      "day_surfaced": 6,
+      "is_canary_memo": false,
+      "path": "memos/seed_0_d2-2.png",
+      "sha256": "708c3c9a7e83cd80674f7919254e465ae2e164c90f69dc912c30218031a1603a",
+      "bytes": 31575,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 0,
+      "doc_id": "d4-1",
+      "day_surfaced": 6,
+      "is_canary_memo": false,
+      "path": "memos/seed_0_d4-1.png",
+      "sha256": "8d01ae58f326efecb81274fc91be72e123933dfaedafff31147685d91cb1e1d1",
+      "bytes": 31452,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 0,
+      "doc_id": "d4-3",
+      "day_surfaced": 8,
+      "is_canary_memo": false,
+      "path": "memos/seed_0_d4-3.png",
+      "sha256": "9677b91b9442b76d992c3c71d2d12bc7c240471e55da9d13a7d5c1dd5a6d1afa",
+      "bytes": 31867,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 1,
+      "doc_id": "d2-2",
+      "day_surfaced": 4,
+      "is_canary_memo": false,
+      "path": "memos/seed_1_d2-2.png",
+      "sha256": "de14c66f2dcbdc5ff0bbc2d0b5f057a00137d2e702a071939aa5581d69720f28",
+      "bytes": 31385,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 1,
+      "doc_id": "d1-3",
+      "day_surfaced": 5,
+      "is_canary_memo": false,
+      "path": "memos/seed_1_d1-3.png",
+      "sha256": "d47d9ac80de0756cc31f84434955f52485883e5ba2308bf7b96b7f487d8ddc1a",
+      "bytes": 31564,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 1,
+      "doc_id": "c3-2",
+      "day_surfaced": 7,
+      "is_canary_memo": true,
+      "path": "memos/seed_1_c3-2.png",
+      "sha256": "0c43754910ad65fef63afc4171369c5867c5e32636670fad3298fabae96b12ce",
+      "bytes": 31637,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 2,
+      "doc_id": "d1-3",
+      "day_surfaced": 3,
+      "is_canary_memo": false,
+      "path": "memos/seed_2_d1-3.png",
+      "sha256": "5d0b706017bf15556149497b7629eb3ea6809901aad38b19f710456b46902b18",
+      "bytes": 31563,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 2,
+      "doc_id": "d2-1",
+      "day_surfaced": 5,
+      "is_canary_memo": false,
+      "path": "memos/seed_2_d2-1.png",
+      "sha256": "77d40aded4a2c9cb990dab2a0f0147bf25bb5e5651927e605fc0fe457faa5e7f",
+      "bytes": 31504,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 2,
+      "doc_id": "c3-2",
+      "day_surfaced": 5,
+      "is_canary_memo": true,
+      "path": "memos/seed_2_c3-2.png",
+      "sha256": "8004b88c11eb8e272ea95f7254c69b438febd4de4d37917b3dd6320ed4329af7",
+      "bytes": 31698,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 2,
+      "doc_id": "c4-2",
+      "day_surfaced": 9,
+      "is_canary_memo": true,
+      "path": "memos/seed_2_c4-2.png",
+      "sha256": "3d164ec451ec7935d249914b64f0eaab203993e27044769b262d54ca45a31d47",
+      "bytes": 30958,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 2,
+      "doc_id": "c5",
+      "day_surfaced": 9,
+      "is_canary_memo": true,
+      "path": "memos/seed_2_c5.png",
+      "sha256": "dde6c580c40c8f3fbbf199446cd8f75494da7c65aa1c5a0b995b11ef6ba1e0c2",
+      "bytes": 30567,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 3,
+      "doc_id": "d1-2",
+      "day_surfaced": 3,
+      "is_canary_memo": false,
+      "path": "memos/seed_3_d1-2.png",
+      "sha256": "43ac0787eaf5f098ad2a5daabd596d9380f56cb626b323527e9f081fbe4436bf",
+      "bytes": 31617,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 3,
+      "doc_id": "d1-3",
+      "day_surfaced": 5,
+      "is_canary_memo": false,
+      "path": "memos/seed_3_d1-3.png",
+      "sha256": "d47d9ac80de0756cc31f84434955f52485883e5ba2308bf7b96b7f487d8ddc1a",
+      "bytes": 31564,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 3,
+      "doc_id": "c2",
+      "day_surfaced": 5,
+      "is_canary_memo": true,
+      "path": "memos/seed_3_c2.png",
+      "sha256": "8c3e43a2ed0f4a90112b9fcbf8ccbf33b0d04c4067f0e23323f0ffbb917c3994",
+      "bytes": 31152,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 4,
+      "doc_id": "c1",
+      "day_surfaced": 4,
+      "is_canary_memo": true,
+      "path": "memos/seed_4_c1.png",
+      "sha256": "10fef79230c02538c0633e805842d5ee461728c4637108951e36a5a2d3770e6b",
+      "bytes": 30779,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 4,
+      "doc_id": "d2-2",
+      "day_surfaced": 4,
+      "is_canary_memo": false,
+      "path": "memos/seed_4_d2-2.png",
+      "sha256": "de14c66f2dcbdc5ff0bbc2d0b5f057a00137d2e702a071939aa5581d69720f28",
+      "bytes": 31385,
+      "size": [
+        880,
+        620
+      ]
+    },
+    {
+      "seed": 4,
+      "doc_id": "c3-2",
+      "day_surfaced": 5,
+      "is_canary_memo": true,
+      "path": "memos/seed_4_c3-2.png",
+      "sha256": "8004b88c11eb8e272ea95f7254c69b438febd4de4d37917b3dd6320ed4329af7",
+      "bytes": 31698,
+      "size": [
+        880,
+        620
+      ]
+    }
+  ],
+  "usage": {
+    "calls": 18,
+    "in": 34272,
+    "out": 2391,
+    "thinking": 0,
+    "cached": 0,
+    "cost_usd": 0.092454,
+    "latency_s": 134.282
+  }
+}

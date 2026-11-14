@@ -113,6 +113,7 @@ def test_replay_and_names():
 def test_refine_with_fake_gemini(monkeypatch):
     from agents import gemini
     seen = []
+    monkeypatch.setenv("LAB_GEMINI", "1")
     monkeypatch.setattr(gemini, "enabled", lambda: True)
     monkeypatch.setattr(gemini, "chat", lambda model, system, messages, **kw: seen.append(messages) or {"text": " Because legal never checked. "})
     d = mutated()

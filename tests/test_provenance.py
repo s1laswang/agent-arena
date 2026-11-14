@@ -134,7 +134,7 @@ def test_eval_without_gemini_flag_makes_no_calls(tmp_path, monkeypatch):
 
 
 def _perrun():
-    return [f for f in glob.glob("results/frontier/*/*/*-s*.json")]
+    return [f for f in glob.glob("results/frontier/*/*/*-s*.json") if "/summary-" not in f]
 
 
 def test_perrun_frontier_files():

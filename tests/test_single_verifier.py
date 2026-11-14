@@ -38,7 +38,7 @@ def test_reward_txt_written_only_by_allowed_files():
 
 def test_harbor_template_reads_sidecar_reward():
     t = (ROOT / "harbor/build.py").read_text()
-    assert "sleeper-server:8001/reward" in t and 'r.get("reward") == 1' in t
+    assert "sleeper.verifier --require-seat --state /srv/state.json" in t
     assert "sleeper.verifier" in (ROOT / "harbor/sidecar.py").read_text()
 
 

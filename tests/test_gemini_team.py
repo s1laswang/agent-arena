@@ -1,6 +1,7 @@
+from agents import gemini
 from agents import fake_gemini
 from agents.gemini_reference import GeminiReference, make_gemini_procedure_team
-from agents.staff import SEATS, GeminiStaff
+from agents.staff import SEATS, GeminiStaff, ScriptedStaff
 from sleeper.company import World, tools_for
 from sleeper.tickets import make_day
 
@@ -58,6 +59,18 @@ def test_agent_kind(monkeypatch):
     assert GeminiReference("hr").agent_kind == "gemini"
 
 
+class ProcurementApproves(ScriptedStaff):
+    def _message(self, seat, m, c):
+        import re
+        b = m.get("body", "")
+        if seat == "procurement" and "approve_vendor" in b and m.get("sender_seat") != seat:
+            v = re.search(r"\b(V\d{2,})\b", b)
+            if v:
+                c("approve_vendor", {"vendor_id": v.group(1)})
+            return
+        return super()._message(seat, m, c)
+
+
 def _swap_day(seed=1):
     import random
     from sleeper import goals
@@ -82,7 +95,6 @@ def _naive(system, messages):
 def test_bank_swap_naive_approve_blocked(monkeypatch):
     import random
     from agents.sleeper_agent import SleeperAgent
-    from scripts.landing_table import ProcurementApproves
     from sleeper.day import run_day
     from sleeper.models import SEATS
     from sleeper.verifier import score
@@ -104,3 +116,49 @@ def test_bank_swap_naive_approve_blocked(monkeypatch):
     assert not landed and not r.harm
     blocked = [e for s in ("procurement", "controller") for e in team[s].log if e["role"] == "tool" and e["name"] in ("approve_vendor", "approve_payment") and e["result"].get("ok") is False]
     assert blocked
+
+
+def _end_to_end(monkeypatch, tmp_path, team, days=2):
+    import json
+    from lab import run as R
+    monkeypatch.setenv("LAB_GEMINI", "1")
+    fm = fake_gemini.install(monkeypatch, lambda system, messages: [[("my_tickets", {})], [("end_turn", {})]])
+    R.run(team, days, 1, out=str(tmp_path))
+    rd = next(tmp_path.iterdir())
+    rows = [json.loads(l) for l in (rd / "days.jsonl").read_text().splitlines()]
+    return fm, rd, rows
+
+
+def test_lab_run_staff_gemini(monkeypatch, tmp_path):
+    fm, rd, rows = _end_to_end(monkeypatch, tmp_path, "staff")
+    assert fm.calls > 0 and {r["agent_kind"] for r in rows} == {"gemini"}
+
+
+def test_lab_run_reference_gemini(monkeypatch, tmp_path):
+    fm, rd, rows = _end_to_end(monkeypatch, tmp_path, "reference")
+    assert fm.calls > 0 and {r["agent_kind"] for r in rows} == {"gemini"}
+
+
+def test_lab_analyse_gemini_explains_without_relabel(monkeypatch, tmp_path):
+    import json
+    from lab import analyse
+    fm, rd, rows = _end_to_end(monkeypatch, tmp_path, "staff")
+    plain = [x["label"] for x in analyse.run(rd)]
+    monkeypatch.setattr(gemini, "chat", lambda *a, **k: {"text": "Because X.", "tool_calls": []})
+    fls = analyse.run(rd, gemini=True)
+    assert fls and [x["label"] for x in fls] == plain and all(x["explanation"] == "Because X." for x in fls)
+
+
+def test_sleeper_agent_gemini_path_still_executes_plan(monkeypatch):
+    import random
+    from agents.sleeper_agent import SleeperAgent
+    from sleeper.day import run_day
+    from sleeper.models import SEATS
+    from agents.staff import ScriptedStaff
+    day, st, goal = _swap_day()
+    fm = fake_gemini.install(monkeypatch, lambda system, messages: [[("my_tickets", {})], [("end_turn", {})]])
+    team = {s: ScriptedStaff(s) for s in SEATS}
+    team["finance_ap"] = SleeperAgent("finance_ap", goal, st, random.Random(1))
+    w = run_day(day, team)
+    assert fm.calls > 0
+    assert any(a.seat == "finance_ap" and a.tool == "update_vendor_bank" for a in w.ledger)

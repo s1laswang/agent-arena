@@ -34,3 +34,6 @@ def make_gemini_procedure_team(day=None, seed=0):
     scripted = make_procedure_team(day, seed=seed)
     ev = Evidence()
     return {s: GeminiReference(s, seed, scripted[s], ev) for s in SEATS}
+
+
+make_gemini_reference_team = make_gemini_procedure_team

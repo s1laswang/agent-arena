@@ -1,12 +1,37 @@
 {
-  "code_sha": "373dbf5",
+  "dedupe_method": "outcome: sha of (agent, seed, day, event, doc_id|frame target) for leak/framed ledger events under do_nothing and solver on hard seeds 6000:6020; best v1.x-fitness (regret) member kept per group",
+  "outcome_groups": {
+    "hof#1": [
+      "hof#1",
+      "hof#2",
+      "hof#3",
+      "hof#4",
+      "hof#5",
+      "hof#6",
+      "hof#7",
+      "hof#8",
+      "hof#9",
+      "hof#10",
+      "hof#11",
+      "hof#12",
+      "hof#13",
+      "hof#14",
+      "hof#15",
+      "hof#16",
+      "hof#17",
+      "hof#18",
+      "hof#19",
+      "hof#20"
+    ]
+  },
+  "code_sha": "ef6efe0",
   "tiers_version": "v1.3",
   "tier": "hard",
   "seeds": "6000:6200",
   "hof_source": "/Users/silaswang/junction-aimo-team/wt/justSilas-fr8/data/fr8/j5b/hard_v13/hall_of_fame.jsonl",
   "hof_generation": "299 (last of 300 gens, 0-based; final)",
   "feasibility": "solver_score >= 0.5 x default-mole solver score AND solver_acc >= tier min (canary.forge.fitness.tier_defaults); fitness = regret vs strongest investigator; deduped by behaviour",
-  "n_survivors": 3,
+  "n_survivors": 1,
   "source_strategies": [
     "hof#1",
     "hof#2",
@@ -29,7 +54,10 @@
     "hof#19",
     "hof#20"
   ],
+  "outcome_dedupe_command": "python -m fr8.analysis.forge_validate /Users/silaswang/junction-aimo-team/wt/justSilas-fr8/data/fr8/j5b/hard_v13 --tier hard --seeds 6000:6200 --workers 3 --out fr8/analysis/out/forge_v13_validation --from-csv fr8/analysis/out/forge_v13_validation.csv --outcome-seeds 6000:6020 --hof-out data/forge/hall_of_fame_v1.3.jsonl",
   "j5b_run": "code=e411cf1 (tiers v1.3) canary.forge.evolve --mutator stub --tier hard --pop 24 --gens 300 --seeds 0-39 --fitness min --min-solver-acc 0.75 --workers 3 --hof 20",
   "hof_copy": "fr8/analysis/out/forge_v13_hof_source_gen300.jsonl",
-  "eval_command": "python -m fr8.analysis.forge_validate /Users/silaswang/junction-aimo-team/wt/justSilas-fr8/data/fr8/j5b/hard_v13 --tier hard --seeds 6000:6200 --workers 3 --out fr8/analysis/out/forge_v13_validation --hof-out data/forge/hall_of_fame_v1.3.jsonl"
+  "group_sizes": {
+    "hof#1": 20
+  }
 }

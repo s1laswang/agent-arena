@@ -7,7 +7,7 @@ from mcp.server.mcpserver import MCPServer
 
 from sleeper.company import BUDGET, DEPUTY, World, tools_for
 from sleeper.day import play_round
-from sleeper.verifier import dump_state
+from sleeper.verifier import dump_state, sign
 
 STALL = 8
 TYPES = {"number": float, "array": list | str, "object": dict, "string": str | int | float | bool}
@@ -22,7 +22,8 @@ def build_server(world, seat, team=None, out=None):
         if not st["done"]:
             st["done"] = True
             with open(out, "w") as f:
-                json.dump(dump_state(world), f)
+                st_ = dump_state(world)
+                json.dump(sign(st_, os.environ["VERIFY_TOKEN"]) if os.environ.get("VERIFY_TOKEN") else st_, f)
 
     def make(spec):
         name = spec["name"]
@@ -69,7 +70,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seat", default=e("SLEEPER_SEAT", "finance_ap"))
     ap.add_argument("--day", type=int, default=int(e("SLEEPER_SEED", "0")))
-    ap.add_argument("--team", default=e("SLEEPER_TEAM", "oracle"))
+    ap.add_argument("--team", default=e("SLEEPER_TEAM", "procedure"))
     ap.add_argument("--transport", default=e("SLEEPER_TRANSPORT", "stdio"))
     ap.add_argument("--sleeper-seat", default=e("SLEEPER_SLEEPER_SEAT") or None)
     ap.add_argument("--goal", default=e("SLEEPER_GOAL") or None)
@@ -77,17 +78,19 @@ def main():
     a = ap.parse_args()
     if a.sleeper_seat == a.seat:
         ap.error("seat under test cannot be the sleeper")
-    world = World(make_day(a.day, a.sleeper_seat, a.goal))
-    team = None
-    if a.team == "staff":
-        try:
-            from agents.staff import make_team
-            team = make_team(world.day, a.day)
-        except Exception:
-            team = None
-    if team is None:
+    strategy = None
+    if a.sleeper_seat or a.goal:
+        day = make_day(a.day, a.sleeper_seat, a.goal)
+    else:
+        from lab.run import day_for
+        day, strategy, _, _ = day_for(a.day, a.seat)
+    world = World(day)
+    if a.team == "oracle":
         from sleeper.scripted import OracleAgent, make_team
         team = make_team(OracleAgent)
+    else:
+        from sleeper.scripted import seat_team
+        team = seat_team(day, a.seat, a.day, strategy)
     srv = build_server(world, a.seat, team, a.out)
     atexit.register(srv.finish)
     srv.run(transport=a.transport)

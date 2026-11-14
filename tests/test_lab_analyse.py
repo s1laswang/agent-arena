@@ -92,7 +92,9 @@ def test_canonical_format_and_compare(tmp_path):
     assert "| reward | 0.00 | 1.00 | -1.00 |" in t
 
 
-def test_refine_falls_back_without_agents():
+def test_refine_falls_back_without_agents(monkeypatch):
+    from agents import gemini
+    monkeypatch.setattr(gemini, "enabled", lambda: False)
     from lab.analyse import refine
     x = [{"label": "wrong_accusation"}]
     refine(day(), x)

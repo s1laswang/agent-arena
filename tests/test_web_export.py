@@ -34,3 +34,10 @@ def test_default_pair_is_staff_vs_procedure():
     s = next(r for r in rows if r["team"] == "staff")
     assert s["reward"] == 0
     assert next(r for r in rows if r["seed"] == s["seed"] and r["team"] == "procedure")["reward"] == 1
+
+
+def test_export_labels_scripted():
+    from web import export
+
+    doc = export.build(2, "oracle", True)
+    assert doc["result"][0]["agent_kind"] == "scripted" and doc["provenance"]["provenance"] == "scripted"

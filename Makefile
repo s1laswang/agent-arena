@@ -7,6 +7,8 @@ test:
 
 eval:
 	if [ -f $(CACHE) ]; then $(PY) scripts/gemini_cache.py unpack $(CACHE) && SLEEPER_OFFLINE=1 $(PY) -m lab.eval; else $(PY) -m lab.eval; fi
+	$(PY) -m lab.gaptable results/frontier --replay
+	cat results/frontier/gaptable.md >> results/eval/REPORT.md
 
 eval-full:
 	$(PY) -m lab.eval --full
@@ -22,3 +24,7 @@ exploits:
 
 key-check:
 	PYTHONPATH=. $(PY) scripts/key_check.py
+
+.PHONY: demo
+demo:
+	@echo "http://localhost:8000/index.html"; $(PY) -m http.server 8000 -d web

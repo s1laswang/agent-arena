@@ -53,3 +53,19 @@ def test_params_from_instruction_roundtrip():
     from canary.solver.params import params_from_instruction
     for t in ("easy", "medium", "hard"):
         assert params_from_instruction(Env(t, 0).instruction()) == TIERS[t]
+
+
+def test_regret_tags_and_solver_low_regret():
+    from canary.env import Env
+    from canary.solver.bench import _Scripted
+    from canary.solver.regret import attribute
+    tot_solver, tot_early = 0.0, 0.0
+    for s in range(10):
+        r = attribute(_run_local(Env("medium", s), SolverPolicy(None)))
+        tot_solver += sum(x["regret"] for x in r)
+        e = attribute(_run_local(Env("medium", s), _Scripted("stop_early", s)))
+        assert "premature_accusation" in e[-1]["tags"]
+        tot_early += sum(x["regret"] for x in e)
+        n = attribute(_run_local(Env("medium", s), _Scripted("do_nothing", s)))
+        assert "no_accusation" in n[-1]["tags"]
+    assert tot_solver < tot_early

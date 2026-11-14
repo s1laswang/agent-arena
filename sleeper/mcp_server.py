@@ -92,6 +92,14 @@ def main():
         from sleeper.scripted import seat_team
         team = seat_team(day, a.seat, a.day, strategy)
     srv = build_server(world, a.seat, team, a.out)
+    prior = os.environ.get("SLEEPER_PRIOR")
+    if prior and os.path.exists(prior):
+        import asyncio
+        for c in json.load(open(prior)):
+            try:
+                asyncio.run(srv.call_tool(c["tool"], c["args"] or {}))
+            except Exception:
+                pass
     atexit.register(srv.finish)
     srv.run(transport=a.transport)
 

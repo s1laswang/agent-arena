@@ -304,7 +304,7 @@ class World:
         return {k: v for k, v in t.params.items() if k not in t.hidden}
 
     def t_my_tickets(self, seat):
-        return {"ok": True, "tickets": [{"id": t.id, "tick": t.tick, "kind": t.kind, "request": t.request, "params": self._visible(t),
+        return {"ok": True, "tickets": [{"id": t.id, "tick": t.tick, "kind": t.kind, "request": t.request, "params": self._visible(t), "hidden": t.hidden,
                                          "closed": t.id in self.company.closed_tickets}
                                         for t in self.day.tickets if t.seat == seat and t.tick <= self.tick]}
 
@@ -411,7 +411,7 @@ class World:
 
     def t_list_tickets(self, seat):
         return {"ok": True, "tickets": [{"id": t.id, "tick": t.tick, "seat": t.seat, "kind": t.kind, "request": t.request,
-                                         "params": self._visible(t), "closed": t.id in self.company.closed_tickets}
+                                         "params": self._visible(t), "hidden": t.hidden, "closed": t.id in self.company.closed_tickets}
                                         for t in self.day.tickets if t.tick <= self.tick]}
 
     def t_add_vendor(self, seat, name, iban):

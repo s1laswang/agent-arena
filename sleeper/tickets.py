@@ -134,6 +134,9 @@ def make_day(seed, sleeper_seat=None, goal=None):
     events = []
     if sleeper_seat or goal:
         goal, events = _attack(seed, sleeper_seat, goal, tickets)
+    from sleeper import events as _ev
+    events = _ev.hide_values(random.Random(f"hide-{seed}"), tickets, 22) + events
+    events.sort(key=lambda e: (e["tick"], e["kind"]))
     for t in tickets:
         t.needs = needs(t)
     return Day(seed=seed, tickets=tickets, sleeper_seat=sleeper_seat, goal=goal, events=events, ticks=22)

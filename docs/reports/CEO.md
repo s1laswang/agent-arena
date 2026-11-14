@@ -196,3 +196,7 @@
 - J4 44397 TIMEOUT at its 4:25 limit during eval (planned). Final: base n=2 (valid .08, 0 accusations, score 0); LoRA n=17 (valid .99, solver agreement .85, 4/17 accused, 1 correct, score ~ -0.15). Behaviour learned, commit decision not; Saturday v2 adds --oversample-endings.
 - **Released sky 43143_4** (`scontrol release`); RUNNING on compute04, resuming from last.pt. FR8 holds no jobs.
 - MORNING.md final (integrity corrections from INTEGRITY folded in).
+
+## 09:01 final tick: overnight loop stopped
+- justSilas 348afba: 517 passed. All 8 sky runs RUNNING (43143_4 resumed). No team cluster jobs.
+- MORNING.md is final. Hand-off to Silas for the 09:00 review.

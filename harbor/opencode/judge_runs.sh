@@ -1,7 +1,7 @@
 #!/bin/bash
 set -u
 cd "$(dirname "$0")/../.."
-SEATS=${SEATS:-${SEAT:-controller}}
+SEATS=${SEATS:-${SEAT:-finance_ap}}
 SEEDS=${SEEDS:-${SEED:-0}}
 RUNS=${RUNS:-"oracle do_nothing stop_early exploit"}
 HARBOR=${HARBOR:-harbor}

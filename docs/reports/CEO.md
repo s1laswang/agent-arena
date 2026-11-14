@@ -200,3 +200,6 @@
 ## 09:01 final tick: overnight loop stopped
 - justSilas 348afba: 517 passed. All 8 sky runs RUNNING (43143_4 resumed). No team cluster jobs.
 - MORNING.md is final. Hand-off to Silas for the 09:00 review.
+
+## 10:25 Silas APPROVED $93 for the v1.3 frontier measurement
+- The CEO launched a measurement engineer (branch justSilas-measure). Order: smoke (~$3) -> Codex gpt-5.5 over MCP, v1.3 dev seeds 0-9 medium+hard (judges-shape priority, ~$45) -> in-process fixed loop on the same seeds with the remaining budget. Hard stop at $90 projected. Paired analysis + regret, then gap.md, the README frontier row and the committed results get updated.

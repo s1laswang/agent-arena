@@ -59,9 +59,18 @@ def summarize(rows):
     return m, ci, acc, (statistics.mean(days) if days else float("nan")), len(days) / len(rows)
 
 
-def run(tiers, agents, seeds, procs=6, random_mole=False, **kw):
+def _init(overrides):
+    """Apply TierParams overrides inside a worker (calibration sweeps)."""
+    if overrides:
+        from dataclasses import replace
+        from .. import rules
+        for t, ov in overrides.items():
+            rules.TIERS[t] = replace(rules.TIERS[t], **ov)
+
+
+def run(tiers, agents, seeds, procs=6, random_mole=False, overrides=None, **kw):
     jobs = [(t, a, s, random_mole, kw) for t in tiers for a in agents for s in seeds]
-    with Pool(procs) as pool:
+    with Pool(procs, initializer=_init, initargs=(overrides,)) as pool:
         res = pool.map(_one, jobs, chunksize=8)
     out = {}
     for r in res:

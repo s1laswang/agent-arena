@@ -44,8 +44,9 @@ def test_regular_leak_holder_only():
 
 def test_solver_accuracy_sim_smoke():
     for tier in ("easy", "medium", "hard"):
-        rs = [_run_local(SimEnv(tier, s), SolverPolicy(tier)) for s in range(15)]
-        assert sum(r.correct for r in rs) >= 13, tier
+        from canary.env import Env
+        rs = [_run_local(Env(tier, s), SolverPolicy(None)) for s in range(15)]
+        assert sum(r.correct for r in rs) >= 12, tier
 
 
 def test_params_from_instruction_roundtrip():

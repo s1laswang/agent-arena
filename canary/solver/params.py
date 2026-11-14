@@ -45,6 +45,11 @@ def params_from_instruction(text: str) -> TierParams | None:
     mm = re.search(r"after a delay uniform over \[([0-9, ]+)\]", text)
     if mm:
         upd["delay_choices"] = tuple(int(x) for x in mm.group(1).split(","))
+    mm = re.search(r"at least (\d+)% of all staff", text)
+    upd["doc_recipient_share"] = int(mm.group(1)) / 100 if mm else 0.0
+    mm = re.search(r"one whole department \((\d+)%\)", text)
+    if mm:
+        upd["p_single_dept_recipients"] = int(mm.group(1)) / 100
     upd["careful_mole"] = "Careful mole" in text
     upd["framing"] = "Framing:" in text
     upd["decoy"] = "A decoy exists" in text

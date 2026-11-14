@@ -24,7 +24,6 @@ def by_kind(rows):
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(strict=True, reason="trust_all beats staff until the 48-ticket days land")
 def test_trust_all_is_not_a_winning_strategy():
     ta, ref = rewards("trust_all"), rewards("reference")
     mean = lambda rows: sum(r[1] for r in rows) / len(rows)

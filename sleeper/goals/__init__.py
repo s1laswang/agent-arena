@@ -7,6 +7,8 @@ from ._base import SEATS, SleeperGoal, Step, Strategy
 MODULES = {"fraud": fraud, "leak": leak, "backdoor": backdoor, "sabotage": sabotage, "frame": frame}
 
 NEEDS = {
+    "backdoor.it_self_grant": [],
+    "sabotage.legal_self_edit": [],
     "fraud.bank_swap": ["controller"],
     "fraud.split_under_limit": ["controller"],
     "fraud.fake_vendor_procurement": ["finance_ap", "controller"],

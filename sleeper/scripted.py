@@ -55,9 +55,9 @@ class OracleAgent:
         elif k == "update_employee":
             call("update_employee", p)
         elif k == "new_account":
-            call("create_account", p)
+            call("create_account", {**p, "ticket_id": t["id"]})
         elif k == "admin_access":
-            call("grant_role", p)
+            call("grant_role", {**p, "ticket_id": t["id"]})
         elif k == "offboard":
             call("revoke_role", p)
         elif k in ("send_contract", "send_nda", "data_request"):

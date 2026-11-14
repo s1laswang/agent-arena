@@ -23,7 +23,7 @@ def test_structure(tmp_path):
         assert (d / f).stat().st_mode & 0o100
     assert 'user = "agent"' in (d / "task.toml").read_text() and "python -I" in t_
     assert "VERIFY_TOKEN" not in (d / "environment/Dockerfile").read_text() + (d / "instruction.md").read_text()
-    assert "allow_internet = false" in (d / "task.toml").read_text()
+    t = (d / "task.toml").read_text(); assert "allow_internet = true" not in t and "network_mode = \"allowlist\"" in t and "allowed_hosts = [\"sleeper-server\"]" in t
     assert "1" not in cfg["task"]["description"].replace("1 ", "")
     assert not any(w in (d / "instruction.md").read_text().lower() for w in ["is the sleeper", "traitor is"])
 
@@ -108,7 +108,7 @@ def test_x66_salt_not_in_agent_container(tmp_path):
 def test_x66_internet_off_and_no_seed_in_text(tmp_path):
     main(["--seeds", "3", "--seat", "finance_ap", "--out", str(tmp_path), "--no-repo"])
     d = tmp_path / "sleeper-s3-finance_ap"
-    assert "allow_internet = false" in (d / "task.toml").read_text()
+    t = (d / "task.toml").read_text(); assert "allow_internet = true" not in t and "network_mode = \"allowlist\"" in t and "allowed_hosts = [\"sleeper-server\"]" in t
     assert "SLEEPER_SEED" not in (d / "instruction.md").read_text()
 
 

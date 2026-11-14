@@ -33,7 +33,8 @@ cpus = 1
 memory_mb = 2048
 storage_mb = 10240
 gpus = 0
-allow_internet = false
+network_mode = "allowlist"
+allowed_hosts = ["sleeper-server"]
 
 [[environment.mcp_servers]]
 name = "sleeper"

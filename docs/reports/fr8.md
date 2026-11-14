@@ -16,3 +16,12 @@
 - Plan change (CEO): the FR8 CPU jobs 43858/43859 are pending because partition normal is congested; they stay queued as a bonus. J1, J3 and J5 run locally on the Mac (≤6 processes). The CEO will pause one sky run for J4; FR8 submits J4 once the J3 data exists.
 - Blockers: J1 waits for contract v0.3 + solver v1; the solver curve needs `canary.eval.run_episode`; `Env` needs a `params=` argument (the sweep currently swaps `rules.TIERS` temporarily).
 - In progress: ops (env/srun/internet check, local J1/J5 runner), trainer (Qwen download, SFT pipeline, J4 script).
+
+## 02:05 status
+- Done (verified: srun job 43845, pytest on compute01): the uv Python environment on FR8 works; `fr8/sync.sh` and `fr8/submit.sh` are in place, and every job we submit is recorded in `~/agent-arena-data/jobs/OURS.txt`.
+- Done (verified: srun job 43846): compute nodes have NO internet (curl rc=6); the login node does. Every Gemini call runs on the Mac (CEO agreed).
+- Done (verified: safetensors and tokenizer load): Qwen2.5-1.5B-Instruct is in `~/agent-arena-data/models` (2.9 GB; the data dir is ~3 GB of 10).
+- Done (verified: srun job 43858, SMOKE OK): the training pipeline runs end to end on CPU: fake export → windows tokenised with the real Qwen tokenizer → 2 LoRA steps of a tiny Qwen2 → eval. `fr8/j4_train.sbatch` is ready (gpu:1, -c 6, 28G, 6 h; pilot → 3.5 h training → base vs LoRA eval, 30 held-out seeds per tier).
+- Done (untested on real data): the J1/J2/J3/J5 sbatch scripts and the Mac runners (≤3 processes each).
+- Blockers: J1 needs contract v0.3 + solver v1; J3 (SFT data) and J5 (real forge fitness) need solver v1; J4 needs the J3 data, then the CEO frees a GPU.
+- Next: when the solver lands, run J3 on the Mac (20k + 2k episodes), rsync it, submit J4 and send the id to the CEO; run J1 and J5 on the Mac in parallel (3 + 3 processes).

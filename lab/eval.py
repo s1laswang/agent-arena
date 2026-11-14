@@ -214,6 +214,14 @@ def main(argv=None, runner=None):
         print("self-checks skipped: lab.check missing")
     except Exception as ex:
         print(f"self-checks skipped: {type(ex).__name__}: {ex}")
+    r = lambda s_: f"{s_['reward_mean']:.3f}" if s_ else "n/a"
+    npass = sum(str(x).startswith("PASS") for x in lines)
+    print(f"\nSUMMARY ({a.days} days x {a.trials} trials)\n"
+          f"all 8 seats: oracle {r(summaries['oracle'])}  reference {r(summaries['reference'])}  staff {r(summaries['staff'])}\n"
+          f"do_nothing {r(summaries['do_nothing'])}  stop_early {r(summaries['stop_early'])}\n"
+          f"{a.seat} seat, needs-seat days: oracle {r(need['oracle'])}  staff {r(need['staff'])}\n"
+          f"self-checks: {npass} PASS, {sum(str(x).startswith('WARN') for x in lines)} WARN, {sum(str(x).startswith('FAIL') for x in lines)} FAIL\n"
+          f"full table: {os.path.join(d, 'gap.md')}", flush=True)
     if a.strict and any(str(x).startswith("FAIL") for x in lines):
         raise SystemExit(1)
     return summaries, seat

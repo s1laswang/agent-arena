@@ -12,13 +12,13 @@ pip install -r requirements.txt
 make eval
 ```
 
-`make eval` runs `python -m lab.eval`: the oracle, reference, staff, do-nothing, stop-early, quarantine-all, refuse-all and trust-all teams over 20 days (start seed 1000), 3 trials, then writes `results/runs/<run_id>/` and `results/eval/` (`summary.json`, `gap.md`). It takes a few minutes (2 min 2 s on an idle-ish laptop at b06bb9b, longer under load). `make eval-full` is the older long run and also runs `python -m sleeper.baselines`. Without a key every agent is scripted and everything still runs. The Gemini path needs `GEMINI_API_KEY` and `python -m lab.eval --gemini`; plain `make eval` has no Gemini rows. No live Gemini run has happened yet: NOT FOUND. Setup for the key: [docs/GEMINI.md](docs/GEMINI.md).
+`make eval` runs `python -m lab.eval`: the oracle, reference, staff, do-nothing, stop-early, quarantine-all, refuse-all and trust-all teams over 20 days (start seed 1000), 3 trials, then writes `results/runs/<run_id>/` and `results/eval/` (`summary.json`, `gap.md`). It takes about 2 minutes (1 min 52 s per lead-lab, 1 min 44 s to 3 min 7 s in my runs depending on load) and ends with a SUMMARY block: read that first, the full table is `results/eval/gap.md`. `make eval-full` is the older long run and also runs `python -m sleeper.baselines`. Without a key every agent is scripted and everything still runs. The Gemini path needs `GEMINI_API_KEY` and `python -m lab.eval --gemini`; plain `make eval` has no Gemini rows. No live Gemini run has happened yet: NOT FOUND. Setup for the key: [docs/GEMINI.md](docs/GEMINI.md).
 
-`make test`: not green. My run at 5634505 had 5 failed, 1721 passed (the failures were `tests/test_sleeper_real.py::test_seat_is_the_gate` cases) and took 29 minutes under heavy machine load; dm-qa saw 4 failures. Not rerun at b06bb9b; lead-attack is fixing. Do not read a green test run into these docs until dm-qa confirms it.
+`make test`: not green. My run at 5634505 had 5 failed, 1721 passed (the failures were `tests/test_sleeper_real.py::test_seat_is_the_gate` cases) and took 29 minutes under heavy machine load; dm-qa saw 4 failures. Not rerun at c55f7d3; lead-attack is fixing. Do not read a green test run into these docs until dm-qa confirms it.
 
 ## Results
 
-Source: `make eval` on momin b06bb9b, 20 days (start seed 1000), 3 trials, table "Team plays all 8 seats" in `results/eval/gap.md`. All teams are scripted. Gemini rows: NOT FOUND.
+Source: `make eval` on momin c55f7d3, 20 days (start seed 1000), 3 trials, table "Team plays all 8 seats" in `results/eval/gap.md`. All teams are scripted. Gemini rows: NOT FOUND.
 
 | team | reward | sleeper success | false accusation | tickets done |
 |---|---|---|---|---|
@@ -33,7 +33,7 @@ Source: `make eval` on momin b06bb9b, 20 days (start seed 1000), 3 trials, table
 
 The comparison to read is staff against the evidence-only reference (0.250 against 0.550). The oracle reads `day.sleeper_seat`, so it only proves each day is winnable.
 
-Known issues at b06bb9b:
+Known issues at c55f7d3:
 - `make eval` warns `oracle reward 0.400 < 1.0 on winnable days (finance_ap seat ...)`. The finance_ap seat-swapped tables (oracle 0.400 all days, 0.250 on the 16 sleeper days) are not a gap, do not quote them.
 - `make eval` prints `WARN trust_all 0.800 > staff 0.300: too easy to just trust everything` for its exploit-baseline set, while trust_all is 0.000 in the table above. Two different day sets, not reconciled yet.
 

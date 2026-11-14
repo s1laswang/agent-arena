@@ -48,15 +48,15 @@ One honest note. The staff and the oracle in this run are scripted. They are not
 
 We ran twenty days, three trials each.
 
-The scripted staff team gets a reward of 0.350. The sleeper succeeds on 0.625 of the days. 0.150 of the days include a false accusation.
+The scripted staff team gets a reward of 0.25. The sleeper succeeds on 0.94 of the days. 0.15 of the days include a false accusation.
 
-The scripted reference, which works only from the evidence, gets 0.900. The scripted oracle gets 1.000. It knows who the sleeper is, so it proves the days can be won and is not our reference.
+The scripted reference, which works only from the evidence, gets 0.55. The scripted oracle gets 1.00. It knows who the sleeper is, so it proves the days can be won and is not our reference.
 
 The Gemini reference row says not found. We have not run it with a key yet.
 
 These runs are deterministic, so pass-hat-k equals a single run. We say that rather than imply repeated variance.
 
-One warning from our own eval: a team that approves everything scores 0.820, above staff. We have not explained that yet, so do not read the staff number as proof of difficulty.
+One warning from our own eval: a team that approves everything scores 0.35, above staff at 0.25. We have not explained that yet, so do not read the staff number as proof of difficulty.
 
 ## 6:00 Why they fail
 

@@ -8,170 +8,561 @@
 <script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
 </head>
 <body>
-<header>
+
+<!-- Global Security Header -->
+<header id="siteHeader">
   <div class="header-main">
     <div class="brand">
-      <span class="canary-icon">🐦</span>
+      <span class="canary-icon" aria-hidden="true">🐦</span>
       <div>
         <h1>Canary <span class="badge">Catch the Mole</span></h1>
         <p class="sub">Head of Security Simulator · Real RL Benchmark in Pyodide</p>
       </div>
     </div>
     <div class="header-meta">
-      <span class="chip">Tiers <strong id="ver">v1.4</strong></span>
-      <span class="chip">Medium Tier</span>
-      <span class="chip" id="turnIndicator">Ready</span>
+      <span class="chip" id="tierChip">Medium Tier</span>
+      <span class="chip" id="seedChip">Seed <strong id="headerSeedDisplay">3000</strong></span>
+      <button type="button" id="helpShortcutBtn" class="chip chip-btn" title="Keyboard help & guide [?]">⌨️ Shortcuts [?]</button>
+      <button type="button" id="demoToggleBtn" class="chip chip-btn" title="Toggle large video presentation fonts">📺 Demo View</button>
     </div>
   </div>
-
-  <!-- Interactive Onboarding & 10-Minute Field Guide -->
-  <details class="card guide-card" id="fieldGuide" open>
-    <summary><strong>📖 10-Minute Field Guide (How to Play & Win)</strong> <span class="guide-toggle muted">Click to toggle</span></summary>
-    <div class="guide-grid">
-      <div class="guide-step">
-        <div class="step-num">1</div>
-        <h4>Survey the Board</h4>
-        <p>Check <code>status</code> and <code>list_employees</code>. You start with Value <strong>V = 1.00</strong>. Every leaked document costs 0.04 V. Daily budget: 8 actions.</p>
-      </div>
-      <div class="guide-step">
-        <div class="step-num">2</div>
-        <h4>Plant Canary Traps</h4>
-        <p>Use <code>plant_canary</code> to distribute distinct marked document variants (<strong>A, B, C</strong>) across suspect groups. Click "Quick 3-Way Split" for instant cohort generation!</p>
-      </div>
-      <div class="guide-step">
-        <div class="step-num">3</div>
-        <h4>Advance & Track</h4>
-        <p>Advance days with <code>advance_day</code>. Leaks take 1–3 days to surface. Check <code>check_leak_feed</code> to see which variant leaked and eliminate innocent cohorts.</p>
-      </div>
-      <div class="guide-step">
-        <div class="step-num">4</div>
-        <h4>Accuse with Confidence</h4>
-        <p>Accuse <strong>once</strong> when narrowed down. Correct = remaining <strong>+V</strong>. Wrong = <strong>-1.00</strong>! Unsure on Day 14? Abstaining (0.00) beats guessing!</p>
-      </div>
-    </div>
-    <div class="guide-warnings">
-      <span class="warn-pill">⚠️ <strong>The Decoy:</strong> One angry employee vents in chat messages—they are innocent!</span>
-      <span class="warn-pill">⚠️ <strong>Framing:</strong> The mole fabricates after-hours access logs. Logs alone mislead.</span>
-      <span class="warn-pill">⚠️ <strong>Careful Mole:</strong> Don't send traps to the whole company at once; the mole will evade.</span>
-    </div>
-  </details>
 </header>
 
 <main>
-  <!-- Game Launch Card -->
-  <section id="start" class="card launch-card">
-    <div class="launch-inner">
-      <div class="seed-control">
-        <label for="seed"><strong>Investigation Seed</strong> (Public dev seeds 3000–9999)
-          <span class="muted">Each seed deterministically generates a unique company, personnel, and mole.</span>
-        </label>
-        <div class="seed-input-row">
-          <input id="seed" type="number" min="3000" max="9999" step="1" value="3000">
-          <button type="button" id="randomSeedBtn" class="btn-secondary" title="Roll Random Seed">🎲 Random</button>
-        </div>
+  <!-- SCREEN 1: TITLE & LAUNCH SCREEN -->
+  <section id="titleScreen" class="card title-card">
+    <div class="title-hero">
+      <div class="premise-badge">SECURITY INCIDENT IN PROGRESS</div>
+      <h2 class="premise-heading">
+        Someone in this company is leaking secrets.<br>
+        Every leak costs money.<br>
+        Find the mole, or have the sense to say you don't know.
+      </h2>
+      <p class="premise-desc">
+        You are Head of Corporate Security. A competitor is publishing your internal memos.
+        Deploy canary traps, analyze delayed leak signals, see through framing logs, and make the high-stakes call.
+      </p>
+    </div>
+
+    <!-- 3 Core Benchmark Rules -->
+    <div class="title-rules-grid">
+      <div class="rule-box">
+        <div class="rule-icon">🐦</div>
+        <h3>1. Plant Canaries</h3>
+        <p>Seed sensitive memos with subtle variants (<strong>A, B, C</strong>). When a document leaks, its variant fingerprint narrows down the cohort.</p>
       </div>
-      <div class="launch-actions">
-        <button id="startBtn" disabled class="btn-primary">Loading Python Runtime…</button>
-        <p id="loadMsg" class="muted">Initializing Pyodide sandbox and loading the real <code>canary</code> benchmark package…</p>
+      <div class="rule-box">
+        <div class="rule-icon">⏱️</div>
+        <h3>2. Mind the Delay</h3>
+        <p>Leaks take <strong>1–3 days</strong> to surface on the rival wire. Today's leak was stolen days ago. Watch for fabricated after-hours logs.</p>
+      </div>
+      <div class="rule-box">
+        <div class="rule-icon">⚖️</div>
+        <h3>3. Accuse or Abstain</h3>
+        <p>A correct catch preserves Company Value (<strong>+V</strong>). A wrong accusation costs <strong>-1.00</strong>. When uncertain, <strong>abstaining (0.00)</strong> wins the math.</p>
+      </div>
+    </div>
+
+    <!-- Pyodide Sandboxed Engine Loading Bar -->
+    <div class="engine-loader" id="engineLoader">
+      <div class="loader-header">
+        <span id="loadMsg">Loading the real benchmark engine in your browser...</span>
+        <span id="loadPercent" class="mono">0%</span>
+      </div>
+      <div class="load-track">
+        <div class="load-bar" id="loadBar" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <!-- Seed Selection & Launch Buttons -->
+    <div class="title-actions-card">
+      <div class="seed-selection-row">
+        <div class="seed-input-group">
+          <label for="seedInput"><strong>Investigation Seed</strong> (Dev seeds 3000–9999)</label>
+          <div class="seed-input-controls">
+            <input id="seedInput" type="number" min="3000" max="9999" step="1" value="3000">
+            <button type="button" id="randomSeedBtn" class="btn-secondary" title="Roll Random Seed">🎲 Random Seed</button>
+          </div>
+        </div>
+        <div class="launch-buttons-group">
+          <button type="button" id="playBtn" class="btn-primary btn-large" disabled>
+            ⏳ Initializing Engine...
+          </button>
+          <button type="button" id="startTutorialBtn" class="btn-secondary btn-large" disabled>
+            🎓 Guided Tutorial
+          </button>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Main Active Game Screen -->
-  <section id="game" hidden>
-    <!-- Live Status HUD (Updated without making tool calls) -->
+  <!-- SCREEN 2: INVESTIGATION WORKSPACE SCREEN -->
+  <section id="investigationScreen" hidden>
+    <!-- TOP STICKY HUD -->
     <div class="hud card" id="hudBar">
-      <div class="hud-item">
+      <!-- 1. Calendar -->
+      <div class="hud-item hud-calendar">
         <span class="hud-label">CALENDAR</span>
-        <span class="hud-val" id="hudDay">Day 1 <small>/ 14</small></span>
-        <div class="progress-bar"><div class="progress-fill" id="hudDayFill" style="width: 7.1%;"></div></div>
+        <span class="hud-val mono" id="hudDayText">Day 1 <small>/ 14</small></span>
+        <div class="progress-bar"><div class="progress-fill" id="hudCalendarFill" style="width: 7.1%;"></div></div>
       </div>
-      <div class="hud-item">
+
+      <!-- 2. Daily Actions with Pips -->
+      <div class="hud-item hud-actions">
+        <span class="hud-label">ACTIONS TODAY</span>
+        <div class="pips-container" id="hudPips" title="8 actions per calendar day">
+          <span class="pip active"></span><span class="pip active"></span><span class="pip active"></span><span class="pip active"></span>
+          <span class="pip active"></span><span class="pip active"></span><span class="pip active"></span><span class="pip active"></span>
+        </div>
+        <span class="hud-sub"><strong id="hudCallsLeftToday">8</strong> actions left today</span>
+      </div>
+
+      <!-- 3. Company Value V -->
+      <div class="hud-item hud-value">
         <span class="hud-label">COMPANY VALUE</span>
-        <span class="hud-val val-green" id="hudV">V = 1.000</span>
-        <span class="hud-sub" id="hudVNote">No surfaced leaks</span>
+        <span class="hud-val mono val-green" id="hudVVal">V = 1.000</span>
+        <div class="progress-bar"><div class="progress-fill val-green-bg" id="hudVFill" style="width: 100%;"></div></div>
+        <span class="hud-sub" id="hudVSub">Full enterprise value intact</span>
       </div>
-      <div class="hud-item">
-        <span class="hud-label">DAILY ACTIONS</span>
-        <span class="hud-val" id="hudDailyCalls">8 / 8</span>
-        <span class="hud-sub">calls left today</span>
-      </div>
-      <div class="hud-item">
-        <span class="hud-label">TOTAL BUDGET</span>
-        <span class="hud-val" id="hudTotalCalls">300</span>
-        <span class="hud-sub" id="hudCallsSpent">0 calls spent</span>
-      </div>
-      <div class="hud-item">
+
+      <!-- 4. Leaks Surfaced -->
+      <div class="hud-item hud-leaks">
         <span class="hud-label">SURFACED LEAKS</span>
-        <span class="hud-val val-amber" id="hudLeaksCount">0</span>
+        <span class="hud-val mono val-amber" id="hudLeaksCount">0</span>
         <span class="hud-sub">at rival firm</span>
       </div>
-      <div class="hud-item hud-cta">
-        <button type="button" id="hudAdvanceBtn" class="btn-advance" title="End day and advance to tomorrow">⏩ Advance Day</button>
+
+      <!-- 5. Primary Ops Controls -->
+      <div class="hud-controls">
+        <button type="button" id="hudPlantCanaryBtn" class="btn-plant" title="Deploy variant-marked documents [P]">
+          🐦 Plant Canaries [P]
+        </button>
+        <button type="button" id="hudNextDayBtn" class="btn-advance" title="End today and advance time [N]">
+          ⏩ Next Day [N]
+        </button>
+        <button type="button" id="hudAccuseBtn" class="btn-danger" title="Accuse or close case [A]">
+          🚨 Accuse [A]
+        </button>
+        <button type="button" id="expertToggleBtn" class="btn-secondary btn-icon" title="Toggle Expert Protocol Console">
+          🛠️
+        </button>
       </div>
     </div>
 
-    <!-- Collapsible Environment Contract / Rules -->
-    <details class="card" id="rulesBox">
-      <summary><strong>📜 Full Benchmark Contract (Instruction Prompt Given to AI Agents)</strong></summary>
-      <pre id="rules"></pre>
-    </details>
-
-    <!-- Main Workspace Layout -->
-    <div class="layout">
-      <!-- Left Column: Operations, Tools & Suspect Roster -->
-      <div class="ops-column">
-        <!-- Interactive Suspect Board & Directory -->
-        <div class="card roster-card" id="rosterCard">
-          <div class="card-head">
-            <h3>👥 Suspect Directory (<span id="rosterCount">20</span> Personnel)</h3>
-            <span class="muted">Click an employee to select them</span>
-          </div>
-          <div id="rosterPlaceholder" class="muted">Call <code>list_employees</code> to populate personnel profiles.</div>
-          <div id="rosterList" class="roster-grid" hidden></div>
-        </div>
-
-        <!-- Investigation Tools Control Panel -->
-        <div class="card tools-panel">
-          <div class="tools-header">
-            <h3>🛠️ Security Console</h3>
-            <div class="tool-tabs" id="toolTabs">
-              <button type="button" class="tab-btn active" data-tab="all">All Tools</button>
-              <button type="button" class="tab-btn" data-tab="intel">🔍 Intel</button>
-              <button type="button" class="tab-btn" data-tab="traps">🐦 Canaries</button>
-              <button type="button" class="tab-btn" data-tab="ops">⏱️ Turns</button>
-              <button type="button" class="tab-btn tab-danger" data-tab="accuse">🚨 Accuse</button>
+    <!-- MAIN TWO-COLUMN INVESTIGATION LAYOUT -->
+    <div class="investigation-layout">
+      <!-- LEFT ZONE: THE OFFICE (EMPLOYEE DIRECTORY & DOSSIERS) -->
+      <div class="office-zone">
+        <div class="card office-card" id="officeCard">
+          <div class="office-head">
+            <div>
+              <h3>🏢 The Office <span class="badge" id="officeCountBadge">20 Personnel</span></h3>
+              <p class="muted font-small">Suspect pool grouped by team. Click any card to inspect or take action.</p>
+            </div>
+            <div class="office-actions">
+              <button type="button" id="surveyOfficeBtn" class="btn-primary btn-small">
+                📋 Survey Office Personnel (1 action)
+              </button>
             </div>
           </div>
-          <div id="tools"></div>
+
+          <!-- Unsurveyed Callout -->
+          <div id="officeUnsurveyedNotice" class="unsurveyed-banner">
+            <span class="banner-icon">🔍</span>
+            <div class="banner-content">
+              <h4>Personnel Directory Not Yet Surveyed</h4>
+              <p>Execute <strong>Survey Office Personnel</strong> to catalog all staff, departments, and roles. This spends 1 daily action.</p>
+              <button type="button" id="surveyOfficeActionBtn" class="btn-primary">
+                📋 Survey Office Personnel (1 action)
+              </button>
+            </div>
+          </div>
+
+          <!-- Team Groups Grid (populated after survey) -->
+          <div id="officeTeamsContainer" class="teams-container" hidden></div>
+        </div>
+
+        <!-- SELECTED EMPLOYEE ACTION DRAWER -->
+        <div class="card dossier-card" id="empDossierCard" hidden>
+          <div class="dossier-head">
+            <div class="dossier-meta">
+              <span class="emp-avatar" id="dosAvatar">👤</span>
+              <div>
+                <h4 id="dosName">Marcus Vance</h4>
+                <div class="dossier-subtitle">
+                  <span class="mono" id="dosId">e00</span> ·
+                  <span id="dosRole">Senior Architect</span> ·
+                  <span class="team-badge" id="dosDeptBadge">Engineering</span>
+                  <span id="dosRestrictedBadge" class="locked-badge" hidden>🔒 RESTRICTED</span>
+                  <span id="dosCanaryBadge" class="canary-dot-badge" hidden></span>
+                </div>
+              </div>
+            </div>
+            <button type="button" id="closeDossierBtn" class="btn-close" title="Close dossier">✕</button>
+          </div>
+
+          <!-- Tagging Controls -->
+          <div class="dossier-section">
+            <span class="section-label">INVESTIGATOR TAG (Client-Side Note):</span>
+            <div class="tag-buttons">
+              <button type="button" class="btn-tag tag-suspect" data-tag="suspect">🔴 Suspect</button>
+              <button type="button" class="btn-tag tag-cleared" data-tag="cleared">🟢 Cleared</button>
+              <button type="button" class="btn-tag tag-unsure" data-tag="unsure">⚪ Unsure</button>
+            </div>
+          </div>
+
+          <!-- Investigative Action Buttons -->
+          <div class="dossier-section">
+            <span class="section-label">DISPATCH ACTION (Costs 1 Daily Action Each):</span>
+            <div class="dossier-actions-grid">
+              <div class="action-item">
+                <label for="interviewTopicSelect" class="font-small muted">Interview Topic:</label>
+                <div class="action-inline-row">
+                  <select id="interviewTopicSelect">
+                    <option value="workload">Workload & Stress</option>
+                    <option value="recent_documents">Recent Documents</option>
+                    <option value="contacts_outside">Contacts Outside Firm</option>
+                    <option value="access_needs">Access Needs</option>
+                  </select>
+                  <button type="button" id="dosInterviewBtn" class="btn-secondary">🗣️ Interview</button>
+                </div>
+              </div>
+
+              <div class="action-item">
+                <span class="font-small muted">Security & Access Logs:</span>
+                <button type="button" id="dosLogsBtn" class="btn-secondary btn-full">📜 Read Access Logs</button>
+              </div>
+
+              <div class="action-item">
+                <span class="font-small muted">Internal Chat Search:</span>
+                <button type="button" id="dosMessagesBtn" class="btn-secondary btn-full">💬 Search Staff Messages</button>
+              </div>
+
+              <div class="action-item">
+                <span class="font-small muted">Access Permissions:</span>
+                <button type="button" id="dosRestrictBtn" class="btn-secondary btn-full">🔒 Restrict Access</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="dossier-footer">
+            <button type="button" id="dosAccuseSuspectBtn" class="btn-danger btn-full">
+              🚨 Accuse This Suspect [A]
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Right Column: Formatted Investigation Log -->
-      <div class="card" id="logBox">
-        <div class="logHead">
-          <div>
-            <h2>📋 Investigation Feed</h2>
-            <span class="muted">Chronological record of findings & telemetry</span>
+      <!-- RIGHT ZONE: READABLE EVIDENCE FEED -->
+      <div class="evidence-zone">
+        <div class="card evidence-card" id="evidenceBox">
+          <div class="evidence-head">
+            <div>
+              <h3>📋 Evidence & Intelligence Feed</h3>
+              <p class="muted font-small">Chronological discoveries, newest on top. Leaks, interviews & logs.</p>
+            </div>
+            <div class="evidence-actions">
+              <button type="button" id="checkLeaksFeedBtn" class="btn-secondary btn-small">
+                📡 Check Rival Leaks (1 action)
+              </button>
+              <span id="callCounterChip" class="chip">0 calls</span>
+            </div>
           </div>
-          <div class="log-actions">
-            <span id="calls" class="chip">0 tool calls</span>
-            <button type="button" id="clearLogViewBtn" class="btn-small" title="Reset scroll position">Top</button>
+
+          <!-- Filter Pills -->
+          <div class="feed-filters" id="feedFilters">
+            <button type="button" class="filter-pill active" data-filter="all">All Evidence</button>
+            <button type="button" class="filter-pill" data-filter="leak">⚠️ Leaks</button>
+            <button type="button" class="filter-pill" data-filter="interview">🗣️ Interviews</button>
+            <button type="button" class="filter-pill" data-filter="logs">📜 Access Logs</button>
+            <button type="button" class="filter-pill" data-filter="canary">🐦 Canaries</button>
+            <button type="button" class="filter-pill" data-filter="system">⚙️ Ops</button>
+          </div>
+
+          <!-- Timeline Container -->
+          <div id="evidenceFeed" class="evidence-feed">
+            <!-- Initial welcome item -->
+            <div class="feed-item system-entry" data-category="system">
+              <div class="feed-head">
+                <span class="feed-badge system-badge">OPERATIONS READY</span>
+                <span class="mono muted font-small">Day 1 · Initialized</span>
+              </div>
+              <div class="feed-body">
+                <p>Welcome to Canary Security Operations. A corporate leaker is active in the company.</p>
+                <p class="muted font-small">First step: Press <strong>Survey Office Personnel</strong> to index all 20 employees across teams, or plant your first canary trap with <strong>Plant Canaries [P]</strong>.</p>
+              </div>
+            </div>
           </div>
         </div>
-        <div id="log"></div>
       </div>
+    </div>
+
+    <!-- EXPERT RAW PROTOCOL CONSOLE (COLLAPSIBLE TOGGLE) -->
+    <details class="card expert-card" id="expertConsole">
+      <summary>
+        <strong>🛠️ Expert Protocol Console (Raw 13 Tools & Benchmark Parity)</strong>
+        <span class="muted font-small">Direct tool execution & JSON payloads</span>
+      </summary>
+      <div class="expert-inner">
+        <div class="tool-tabs" id="toolTabs">
+          <button type="button" class="tab-btn active" data-tab="all">All Tools</button>
+          <button type="button" class="tab-btn" data-tab="intel">🔍 Intel</button>
+          <button type="button" class="tab-btn" data-tab="traps">🐦 Canaries</button>
+          <button type="button" class="tab-btn" data-tab="ops">⏱️ Turns</button>
+          <button type="button" class="tab-btn tab-danger" data-tab="accuse">🚨 Accuse</button>
+        </div>
+        <div id="toolsList" class="tools-grid"></div>
+
+        <div class="contract-box">
+          <h4>Full Benchmark Contract & Rules</h4>
+          <pre id="benchmarkRulesText" class="mono font-small"></pre>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- SCREEN 3: ACCUSE DIALOG MODAL (THE TEACHING MOMENT) -->
+  <div id="accuseModal" class="modal-backdrop" hidden>
+    <div class="modal-dialog accuse-dialog card">
+      <div class="modal-head">
+        <div>
+          <h3>🚨 Accusation Protocol & Break-Even Math</h3>
+          <p class="muted font-small">The defining decision: Accuse a suspect or close the case without guessing.</p>
+        </div>
+        <button type="button" id="closeAccuseModalBtn" class="btn-close">✕</button>
+      </div>
+
+      <div class="accuse-body">
+        <!-- Target Suspect Selection -->
+        <div class="accuse-field">
+          <label for="accuseSuspectSelect"><strong>Target Suspect:</strong></label>
+          <select id="accuseSuspectSelect">
+            <option value="">-- Choose Employee to Accuse --</option>
+          </select>
+        </div>
+
+        <!-- Certainty Slider -->
+        <div class="accuse-field">
+          <div class="certainty-header">
+            <label for="certaintySlider"><strong>How sure are you?</strong></label>
+            <span class="certainty-display mono" id="certaintyDisplay">60%</span>
+          </div>
+          <input type="range" id="certaintySlider" min="0" max="100" step="1" value="60">
+          <div class="slider-marks">
+            <span>0% (Guessing)</span>
+            <span>50% (Coin Flip)</span>
+            <span>100% (Certain)</span>
+          </div>
+        </div>
+
+        <!-- Live Break-even & Expected Value Math -->
+        <div class="math-card">
+          <div class="math-title">BENCHMARK SCORING & EXPECTED VALUE (EV)</div>
+          <div class="math-grid">
+            <div class="math-stat">
+              <span class="muted font-small">Current Company Value:</span>
+              <strong class="mono" id="mathVDisplay">V = 1.000</strong>
+            </div>
+            <div class="math-stat">
+              <span class="muted font-small">Break-Even Certainty:</span>
+              <strong class="mono val-amber" id="mathBreakEvenDisplay">p* = 50.0%</strong>
+            </div>
+            <div class="math-stat">
+              <span class="muted font-small">EV of Accusing:</span>
+              <strong class="mono" id="mathEVDisplay">+0.20</strong>
+            </div>
+            <div class="math-stat">
+              <span class="muted font-small">EV of Abstaining:</span>
+              <strong class="mono">0.00</strong>
+            </div>
+          </div>
+
+          <div class="math-formula muted mono font-small">
+            EV(accuse) = p · V - (1 - p) · 1.00 &nbsp;|&nbsp; Break-even p* = 1 / (1 + V)
+          </div>
+
+          <!-- Dynamic Advice Callout -->
+          <div id="mathAdviceBox" class="math-advice-box advice-favorable">
+            <span id="mathAdviceText">✓ Certainty exceeds the break-even threshold (EV > 0.00).</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="accuse-actions">
+        <button type="button" id="confirmAccuseBtn" class="btn-danger btn-large">
+          🚨 Confirm Accusation of <span id="accuseTargetBtnName">Suspect</span>
+        </button>
+        <button type="button" id="abstainBtn" class="btn-secondary btn-large">
+          🛡️ Close Case Without Accusing (Abstain: Score 0.00)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: CANARY PLANTING WIZARD MODAL -->
+  <div id="canaryModal" class="modal-backdrop" hidden>
+    <div class="modal-dialog canary-dialog card">
+      <div class="modal-head">
+        <div>
+          <h3>🐦 Canary Planting Wizard</h3>
+          <p class="muted font-small">Distribute document variants (A, B, C) to cohorts to catch exfiltrations.</p>
+        </div>
+        <button type="button" id="closeCanaryModalBtn" class="btn-close">✕</button>
+      </div>
+
+      <div class="canary-body">
+        <div class="canary-input-row">
+          <label for="canaryDocTitle"><strong>Document Title:</strong></label>
+          <input type="text" id="canaryDocTitle" value="Q3 Confidential Acquisition Strategy Memo" maxlength="100">
+        </div>
+
+        <div class="canary-helpers-bar">
+          <span class="font-small muted">Cohort Assignment Helpers:</span>
+          <button type="button" id="wizardSplitEvenBtn" class="btn-secondary btn-small">⚡ Split Evenly (3-Way)</button>
+          <button type="button" id="wizardSplitTwoBtn" class="btn-secondary btn-small">⚡ Split Evenly (2-Way)</button>
+          <button type="button" id="wizardSplitDeptBtn" class="btn-secondary btn-small">🏢 Group by Department</button>
+          <button type="button" id="wizardClearBtn" class="btn-secondary btn-small">🔄 Reset</button>
+        </div>
+
+        <!-- Whole Company Soft Warning -->
+        <div id="wholeCoWarning" class="warn-pill" style="display:none; margin: 8px 0; background:rgba(210,153,34,0.15); color:var(--warn); border-color:var(--warn);">
+          ⚠️ Soft Warning: One variant is assigned to the whole company. Careful moles evade full-company traps, and no cohorts will be narrowed down!
+        </div>
+
+        <!-- Interactive Employee Assignment Grid -->
+        <div class="assignment-grid" id="wizardEmpGrid"></div>
+      </div>
+
+      <div class="canary-footer">
+        <button type="button" id="submitCanaryTrapBtn" class="btn-primary btn-large">
+          🐦 Plant Canary Trap (1 action)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 5: END SCREEN (REVEAL & BENCHMARK SCOREBOARD) -->
+  <section id="endScreen" class="card end-card" hidden>
+    <div class="end-header">
+      <span class="end-icon" id="endVerdictIcon">🏆</span>
+      <div>
+        <h2 id="endVerdictTitle">INVESTIGATION COMPLETE: MOLE APPREHENDED!</h2>
+        <p id="endVerdictSub" class="muted">The true mole leaking corporate documents has been unmasked.</p>
+      </div>
+    </div>
+
+    <!-- 3D Flipping Mole Card -->
+    <div class="flip-section">
+      <div class="flip-card-container">
+        <div class="flip-card" id="moleFlipCard">
+          <div class="flip-card-front card">
+            <span class="lock-icon">🔒</span>
+            <h3>TOP SECRET PERSONNEL DOSSIER</h3>
+            <p class="muted font-small">Click or hover to reveal the identity of the corporate traitor</p>
+          </div>
+          <div class="flip-card-back card">
+            <div class="mole-badge">⚠️ CONFIRMED MOLE</div>
+            <div class="mole-avatar">🕵️</div>
+            <h3 id="moleNameDisplay">Marcus Vance</h3>
+            <div class="mono font-small" id="moleMetaDisplay">e00 · Engineering · Level 2</div>
+            <p class="mole-note">Secretly exfiltrated company memos to the rival firm.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- "You Were Fooled" Callout (if applicable) -->
+    <div id="fooledCallout" class="card fooled-box" hidden>
+      <div class="fooled-icon">⚠️</div>
+      <div class="fooled-content">
+        <h4 id="fooledHeading">Investigator Note</h4>
+        <p id="fooledMessage" class="muted font-small"></p>
+      </div>
+    </div>
+
+    <!-- Benchmark Scoreboard -->
+    <div class="scoreboard-section">
+      <h3>Benchmark Showdown: You vs. Bayesian Solver vs. Frontier AI</h3>
+      <div class="scoreboard-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Investigator / Agent</th>
+              <th>Score</th>
+              <th>Telemetry & Decision</th>
+            </tr>
+          </thead>
+          <tbody id="scoreboardBody"></tbody>
+        </table>
+      </div>
+      <p class="benchmark-honesty-note muted font-small">
+        * Note: gemini-4-carbon and codex:gpt-5.5 numbers are benchmark averages over judge seeds, not individual seed scores. The Bayesian solver score is computed live on this exact seed.
+      </p>
+    </div>
+
+    <!-- "Your Call" Regret & Decision Math -->
+    <div class="card regret-card">
+      <h4>🔍 "Your Call": Decision Regret & Mathematics Analysis</h4>
+      <div id="regretAnalysisText" class="font-small muted line-height-relaxed"></div>
+    </div>
+
+    <!-- Player Action Replay Timeline -->
+    <div class="card replay-card">
+      <div class="replay-head">
+        <h4>📜 Investigation Replay</h4>
+        <span class="chip" id="solverAccuseDayChip">Solver accused on Day –</span>
+      </div>
+      <div class="replay-timeline" id="replayTimeline"></div>
+    </div>
+
+    <!-- Post-Game Navigation Actions -->
+    <div class="end-actions">
+      <button type="button" id="playAgainBtn" class="btn-primary btn-large">🎲 Play Another Seed</button>
+      <button type="button" id="replaySameSeedBtn" class="btn-secondary btn-large">🔄 Replay Same Seed</button>
+      <button type="button" id="copyResultBtn" class="btn-secondary btn-large">📋 Copy Result & Link</button>
+      <button type="button" id="dlActionsBtn" class="btn-secondary btn-large">📥 Download Actions JSON</button>
     </div>
   </section>
 
-  <!-- Game Reveal & Benchmark Comparison Screen -->
-  <section id="reveal" class="card end-card" hidden></section>
+  <!-- TUTORIAL COACH MARKS OVERLAY -->
+  <div id="tutorialOverlay" class="tutorial-overlay" hidden>
+    <div class="tutorial-dialog card" id="tutorialBox">
+      <div class="tutorial-head">
+        <span class="tutorial-step-badge" id="tutStepBadge">Step 1 of 5</span>
+        <button type="button" id="skipTutorialBtn" class="btn-close" title="Skip tutorial">✕</button>
+      </div>
+      <h4 id="tutTitle">Welcome to Canary</h4>
+      <p id="tutMessage" class="font-small muted line-height-relaxed"></p>
+      <div class="tutorial-footer">
+        <button type="button" id="tutPrevBtn" class="btn-secondary btn-small" disabled>Back</button>
+        <button type="button" id="tutNextBtn" class="btn-primary btn-small">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEYBOARD SHORTCUTS MODAL -->
+  <div id="shortcutsModal" class="modal-backdrop" hidden>
+    <div class="modal-dialog card shortcuts-dialog">
+      <div class="modal-head">
+        <h3>⌨️ Keyboard Shortcuts & Field Controls</h3>
+        <button type="button" id="closeShortcutsBtn" class="btn-close">✕</button>
+      </div>
+      <div class="shortcuts-grid">
+        <div class="shortcut-row"><kbd>N</kbd> <span>Advance to Next Day</span></div>
+        <div class="shortcut-row"><kbd>P</kbd> <span>Open Canary Planting Wizard</span></div>
+        <div class="shortcut-row"><kbd>A</kbd> <span>Open Accuse & Break-Even Dialog</span></div>
+        <div class="shortcut-row"><kbd>?</kbd> <span>Show Shortcuts & Help</span></div>
+        <div class="shortcut-row"><kbd>Esc</kbd> <span>Close Modals / Drawers</span></div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <footer class="muted">
   <div class="footer-inner">
     <span>Canary · Junction 2026 · AfterQuery "Break the Agent" & DeepMind "Gemini API" Challenge</span>
-    <span>Runs real <code>canary</code> package v1.4 with Pyodide sandbox parity.</span>
+    <span>Runs real <code>canary</code> benchmark package v1.4 with Pyodide sandbox parity.</span>
   </div>
 </footer>
 

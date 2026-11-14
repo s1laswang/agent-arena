@@ -232,7 +232,8 @@ def _infra_blob(stdout: str, stderr: str) -> str:
             ev = json.loads(line)
         except (json.JSONDecodeError, ValueError):
             continue
-        if isinstance(ev, dict) and ev.get("type") in INFRA_EVENT_TYPES:
+        if isinstance(ev, dict) and (ev.get("type") in INFRA_EVENT_TYPES or
+                                     ("type" not in ev and ("error" in ev or "statusCode" in ev))):
             keep.append(line)
     return "\n".join(keep)
 

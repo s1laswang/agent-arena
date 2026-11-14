@@ -84,6 +84,7 @@ def run_seat(agent="gemini", model=None, seat="finance_ap", seed=0, days=1, max_
 
 
 def main():
+    gemini.enable_live()
     ap = argparse.ArgumentParser()
     ap.add_argument("--seat", default="finance_ap")
     ap.add_argument("--seed", type=int, default=0)

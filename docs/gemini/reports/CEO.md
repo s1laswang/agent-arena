@@ -24,9 +24,9 @@
   - 98% of 470 quotes verbatim; multimodal 8/8.
   - Top failure mode: premature accusation, 61% of all regret.
   - Human agreement pending.
-- **Ladder v1**: 134 episodes in 31 cells, $49.85 list. Headline: 3.5-flash medium/high ≈ the solver on hard at about 30% of carbon-high's cost; flash-lite fails at every level.
-- **Swarm v1**: 35 audited whitebox attacks, 0 exploits, 0 invariant violations.
-- **Dashboard**: 11,187 calls, $88.75. The Live API commentator clip and TTS narration are done.
+- **Ladder**: committed `results/gemini/ladder.md` (18:47): 157 episodes in 34 cells. On hard, n=8, gemini-3.6-flash (requested as 3.5-flash) is 92% [76%, 113%] and 102% [84%, 129%] of the solver (within those CIs), 16/16 correct, at $0.34–$0.39 per episode versus $1.30 for gemini-4-carbon at high (n=2). Flash-lite fails at every level.
+- **Swarm v1**: 35 audited whitebox attacks (32 in-process, 3 via MCP), 0 exploits, 0 invariant violations.
+- **Dashboard**: `results/gemini/dashboard.html` embeds 15,757 calls and $146.02 (cost_usd 146.0212). Quote those. The 18:23 build log's 11,187 calls and $88.75 is not this file. TTS and Live narration are demo only.
 - SUBMISSION.md v1 filled from the committed files. Pending: human agreement and final refresh.
 - FR8: 10 jobs running, all Momin's fleet plus Silas's ws4 GPU job. None are ours. The fleet's fr8/gemini/main builds on our canary/gemini (roles runs). Merge owner is a question for Silas.
 

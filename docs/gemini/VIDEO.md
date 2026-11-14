@@ -40,7 +40,7 @@ leak feed lights up with variant B twice, Gemini accuses Riikka Heinonen and is 
 sportscaster, `assets/narration/commentator-demo.wav` from 29.0 s to 38.5 s (the day-5 call: "Another leak! Variant B surfaces, and Gemini 4 Carbon strikes …")
 (see `commentator-demo.json` for the per-day cut points), music bed under it. 0:12–0:30: the VO over the same replay; at 0:24 hard cut
 to the dashboard ladder heatmap with the hard-tier carbon row highlighted.
-**Lower third.** "Canary: catch the mole. An RL environment with a Bayes-optimal reference solver." At 0:02: "Live commentary: Gemini Live API (gemini-3.8-live)".
+**Lower third.** "Canary: catch the mole. An RL environment with a tuned Bayesian reference solver." At 0:02: "Live commentary: Gemini Live API (gemini-3.8-live)".
 
 > VO[01-hook]: One mole is leaking a company's documents. The agent catches them with canary traps: different versions of a document to different people, then watch which one leaks. On hard, Gemini 4 Carbon reaches {carbon_hard_pct} of a Bayesian reference solver. Why not all of it?
 
@@ -51,7 +51,7 @@ minimal column to the high column. 0:50–1:05: the score-vs-thinking-tokens cur
 with the value cell circled.
 **Lower third.** "{ladder_models} Gemini models × {ladder_levels} thinking levels × 2 tiers · {ladder_episodes} paired episodes"
 
-> VO[02-ladder]: First, the Gemini Ladder. We ran {ladder_models} Gemini models at every thinking level on the same seeds as the solver: {ladder_episodes} paired episodes, fanned out over our cluster through one Gemini gateway. Thinking control is the knob. Each row shows how much of the gap to the solver that extra thinking buys.
+> VO[02-ladder]: First, the Gemini Ladder. We ran {ladder_models} Gemini models at up to four thinking levels on the same seeds as the solver: {ladder_episodes} paired episodes, fanned out over our cluster through one Gemini gateway. Thinking control is the knob. Each row shows how much of the gap to the solver that extra thinking buys.
 
 > VO[02-frontier]: And here is the price of it. {value_model} at {value_level} thinking keeps {value_pct_of_best} of the top score, {best_model} at {best_level} thinking, for {value_cost_share} of the cost per episode.
 

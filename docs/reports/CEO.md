@@ -171,3 +171,9 @@
 - HARNESS 05:00 fresh-clone check on v1.3 PASSED: two secrets, the gap holds on every tier (solver lower CI > every baseline upper CI; do_nothing 0), exact mode byte-identical, harbor lint OK. Fix in progress: reproduce writes to a gitignored dir so a clone stays clean.
 - INTEGRITY: HoF v1.3 holds (#41), but its 3 survivors behave identically; FR8 dedups before any claim.
 - NOTE: the HEAD-ENV session is no longer running (it ended after finishing its work). Relaunch it in the morning only if ENV work is needed (prompt in docs/agents/ENV.md).
+
+## 06:05 tick
+- Merged the HARNESS results/latest fix (be68285): reproduce leaves the clone clean; 503 passed.
+- BUG found by the CEO: the reproduce "Reported agent runs" block pools v1.2 + v1.3 runs and includes committed/superseded/ (medium openai:gpt-5.5 n=29 is mixed; solver n=60 includes superseded). Sent to HARNESS (P0): group by tiers_version, exclude superseded.
+- The AGENTS and ENV sessions have ended (their work is done). FR8, INTEGRITY and HARNESS are live. J4 44397 has trained 2h09m (training ends ~06:50).
+- Paired hard (this invocation, fresh secret): solver +0.526 (acc .75), heuristic -0.34, stop_early -1.0, do_nothing 0.

@@ -956,6 +956,7 @@ def run_experiment(
 
     temp_ledger_path: str | None = None
     prev_ledger = os.environ.get("CANARY_GEMINI_LEDGER")
+    prev_retries = os.environ.get("CANARY_LLM_MAX_RETRIES")
     if stub and not prev_ledger:
         fd, temp_ledger_path = tempfile.mkstemp(prefix="canary_stub_ledger_", suffix=".jsonl")
         os.close(fd)
@@ -1092,6 +1093,10 @@ def run_experiment(
         (out / "summary.md").write_text(summary_md)
         return meta
     finally:
+        if prev_retries is None:
+            os.environ.pop("CANARY_LLM_MAX_RETRIES", None)
+        else:
+            os.environ["CANARY_LLM_MAX_RETRIES"] = prev_retries
         if temp_ledger_path is not None:
             if prev_ledger is None:
                 os.environ.pop("CANARY_GEMINI_LEDGER", None)

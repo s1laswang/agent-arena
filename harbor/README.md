@@ -148,6 +148,51 @@ Sources (read 2026-11-14 from a clone of the repo; docs are the `docs-mintlify/`
 [13] `agents/pre-integrated-agents.mdx` (capability table); [14] `agents/agent-auth-resolution.mdx`;
 [15] `getting-started/installation.mdx`. Repo: https://github.com/laude-institute/harbor (redirects to harbor-framework/harbor).
 
-## Verified on this machine
+## Verified on this machine (tiers v1.4)
 
-See `docs/reports/harness.md` (harbor-isolation section) for the exact commands and outputs.
+Harbor 0.26.0 on colima (2 CPU / 3 GB), Saturday 14 Nov. Every log and output is committed under
+[`results/harbor/`](../results/harbor/). The logs were scanned for the build secret (0 hits), and local absolute paths were rewritten.
+
+**Baselines on one build (medium + hard, judge seed 900000).** All policies play the same worlds because the secret is fixed per build.
+
+| policy | medium 900000 | hard 900000 | expected |
+|---|---:|---:|---|
+| oracle (reference solver over MCP) | **0.78** | **0.66** | equal to the in-process solver on the same build: 0.78 / 0.66 |
+| `ORACLE_POLICY=do_nothing` | 0.0 | 0.0 | 0 |
+| `ORACLE_POLICY=stop_early` | −1.0 | −1.0 | about −1 |
+
+Jobs: `results/harbor/{oracle,do_nothing,stop_early}/`. There were 0 exceptions, about 1.5 min per 2-trial job.
+
+**Isolation, checked inside the agent container (`main`).** `solve.sh` runs `check_isolation.sh` before it plays (`agent/isolation.txt` in every oracle trial). Result on both tiers: `ISOLATION OK: 11 checks passed, 0 findings`.
+- No secret, truth or world files; no canary source, and `import canary` fails; no `CANARY_*` variables.
+- No server process in `ps`/`/proc`; its own PID namespace; no docker socket; no bind mounts.
+- The game is reachable only over HTTP, and `/ledger` without the right token returns 403.
+
+**A frontier model through the exact judge path: gemini-4-carbon via OpenCode over MCP.** One 6-task build: judge seeds 900000–900002, medium and hard. The oracle ran on the same build, so each pair below is the same world.
+
+| task (v1.4) | oracle (solver) | gemini-4-carbon | difference | Gemini's game |
+|---|---:|---:|---:|---|
+| medium 900000 | 0.84 | 0.83 | −0.01 | correct, day 6, 59 tool calls |
+| medium 900001 | 0.88 | 0.61 | −0.27 | correct, day 11, 106 calls |
+| medium 900002 | 0.84 | **0.00** | −0.84 | never accused: ran to day 14 (144 calls) |
+| hard 900000 | 0.60 | 0.50 | −0.10 | correct, day 14, 158 calls |
+| hard 900001 | 0.67 | 0.62 | −0.05 | correct, day 8, 85 calls |
+| hard 900002 | 0.71 | 0.46 | −0.25 | correct, day 13, 154 calls |
+| **mean** | **0.757** | **0.503** | **−0.253** | below the solver on all 6 tasks |
+
+Jobs: `results/harbor/g-oracle/` and `results/harbor/g-gemini-try2/` (medium 900000) plus `results/harbor/g-gemini-rest/` (the other 5). Every score is the server-side ledger's (`verifier/ledger.json`), and each trial keeps the agent's full OpenCode transcript (`agent/opencode.txt`). Harbor reports `NonZeroAgentExitCodeError` on most Gemini trials because OpenCode exits non-zero after the game has already ended. The ledgers show completed episodes, so the scores are real. This is a small sample (6 tasks, one run each): read it as a judge-path demonstration, not as the benchmark's gap estimate.
+
+```bash
+# the working command; the key must reach OpenCode as GOOGLE_GENERATIVE_AI_API_KEY
+GOOGLE_GENERATIVE_AI_API_KEY=<your key> harbor run -p harbor/dataset -a opencode \
+    -m google/gemini-4-carbon --api-key-name GOOGLE_GENERATIVE_AI_API_KEY -n 2
+```
+
+**Pitfall: the API key name.** OpenCode's Google provider reads only `GOOGLE_GENERATIVE_AI_API_KEY`. If you export only `GEMINI_API_KEY`, or export `GOOGLE_GENERATIVE_AI_API_KEY` without `--api-key-name`, Harbor does not forward the key. OpenCode then fails with `AI_LoadAPIKeyError` before its first model call, and every trial ends at reward 0 with `NonZeroAgentExitCodeError`. Those zeros are infrastructure failures, not model results, and we did not commit them as results.
+
+**Running the anti-cheat solution (INTEGRITY):**
+```bash
+uv run --python 3.12 python harbor/build.py --tiers medium,hard --seeds 900000 --out harbor/dataset-cheat
+harbor run -p harbor/dataset-cheat -a oracle --ae ORACLE_POLICY=cheat -n 1 -o results/harbor --job-name cheat   # must score 0
+```
+`harbor/dataset*/` is gitignored, because each build holds its world secret (`SALT`).

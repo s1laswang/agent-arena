@@ -66,6 +66,14 @@
 - Review of justSilas-repro-group (already merged; make test 527 passed, 4 skipped): grouping by tier version is correct (v1.4 first, v1.3/v1.2 history), superseded/ is excluded, and n, seeds and sha are shown per row.
 - BUG (sent to CEO; their engineer owns reproduce.py): hard v1.2 `codex:gpt-5.5` pools a smoke run with the full run, so seed 0 counts twice (n=6 over 5 seeds). Fix: move the smoke dir to superseded/ and/or dedupe per seed, plus a test that n == distinct seeds.
 
+## 14:25 head: NEXT-LEVEL HARNESS (branch justSilas-harness2)
+- Done (verified: make test 535 passed): reproduce now drops invalid (infra) episodes from reported means, with an `invalid` column and reasons, and dedupes per seed (newest run wins, by meta timestamp). Merged by the CEO as 8970ead.
+- Done (verified on colima 2 CPU / 3 GB, harbor 0.26.0, v1.4): oracle = in-process solver exactly on 8/8 tasks; do_nothing 0; stop_early -1; check_isolation.sh in `main` 11/11 OK. Logs are in results/harbor/.
+- Done (verified): gemini-4-carbon via Harbor + OpenCode over MCP on 3 medium + 3 hard tasks. Oracle 0.757 vs Gemini 0.503 (-0.253), Gemini below on 6/6; medium 900002 never accused. Fix needed: GOOGLE_GENERATIVE_AI_API_KEY + --api-key-name (the first attempt was 6 invalid auth zeros, not committed). Summary is in harbor/README.md. colima stopped afterwards.
+- Done (verified: Pyodide parity tests + headless Chrome): WS6 browser game in game/ (make game-serve). It runs the real canary package in Pyodide, bit-identical to CPython. Pages workflow is manual only.
+- Decision needed (Silas): publish the game on GitHub Pages? The repo is private and Pages is not enabled; the site would be public.
+- Open: INTEGRITY's ORACLE_POLICY=cheat Harbor run (solution not landed; command handed over); the final repro_spread + fresh-clone check on the submit commit.
+
 ---
 # Engineer sections
 

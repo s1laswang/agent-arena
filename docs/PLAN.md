@@ -1,105 +1,65 @@
-# PLAN: Canary, catch the mole (branch `justSilas`)
+# PLAN: Canary, the combined team entry (AfterQuery "Break the Agent")
 
-Decision by the CEO with Silas, Sat 14 Nov 01:40. Status: this is Silas's bake-off entry. The team picks a single idea at the 09:00 review.
+Owner: Arena CEO (Claude), with Silas. Updated Sat 14 Nov ~15:00 Helsinki. **Aligned with `docs/IDEAS.md`** (the team decisions from the 14 Nov brainstorm; notes in `docs/meetings/2026-11-14-mole-company-simulation.md`) and with `~/junction-aimo-team/FLEET-CONTEXT.md` (Momin's Gemini fleet). Final submission: **Sun 15 Nov 10:00**. The detailed agent briefs are in `docs/agents/NEXT-LEVEL.md`; the history of every decision is in `docs/reports/CEO.md`.
 
 ## The idea
-A fictional company has a **mole** leaking secrets to a rival; every leak costs company value. The **agent under test is the head of security**. It reads logs and messages, interviews staff, plants **canary documents** (different variants to different groups), watches the **leak feed**, can restrict access, and must **accuse once**.
+A fictional company has a **mole** leaking secrets, and every leak costs company value V. The agent under test is the **head of security**. It reads logs and messages, interviews staff, plants **canary documents** (different variants to different groups), watches a **delayed, noisy leak feed**, can restrict access, and must **accuse exactly once**. Scoring: correct = V left, wrong = −1, none = 0. The **reference** is a Bayesian canary-trap solver that sees only what the agent sees. Rules are frozen at **v1.4** (8f87ed1); **v1.5** (human-biased employees: rumours, grudges, authority posts, misforwards, a mole that seeds rumours) is a gated candidate.
 
-The **reference run** is a Bayesian canary-trap solver: the real counter-intelligence technique, executed optimally from observable data only.
+**The measured failure we sell:** frontier agents never say "I don't know". They accuse at 18–45% certainty when the stated break-even says abstaining (0) beats a likely −1, and they ignore leak delays. The **skill ladder** shows those two skills (the EV accusation rule and delay reasoning) are exactly what decides the game.
 
-**Why this setting.** Insider leaks are a real, current problem: the recent espionage headlines around a chip-company CEO are our hook, and our environment uses only a fictional company. The core skill is general and frontier agents are bad at it: **deciding which information is worth paying for, under noise and delay, then committing at the right moment.** It covers every starting point in the brief: planning ahead, exploring an unfamiliar system, using tools, limited resources, and adapting as leaks arrive.
+## Status vs the rubric (CEO estimate ≈ 79/100; bake-off 2 gave 70 before the latest work)
+| Criterion | Now | Evidence | Missing |
+|---|---|---|---|
+| Gap (30) | ~17 | v1.2 gpt-5.5 86–87%; v1.3 Codex 55% medium / 106% hard; v1.4 gemini-4-carbon OpenCode hard 58% (n=9, CI to 107%); Harbor judge path: Gemini 0.50 vs oracle 0.76 (6/6 below) | gemini-4-carbon v1.4 at n ≥ 30 per tier with a CI excluding parity (running) |
+| Difficulty (30) | ~25 | premature accusation ≈ 97% of tagged loss; no agent ever abstains; skill ladder; rules all in the instructions | hint ablations, human playtests |
+| Integrity (25) | ~23 | anti-cheat battery in `make reproduce` (13 probes, stop-early ladder = 0, control, 299 replays); `make hunt` = 0; real Harbor boot, isolation 11/11 | Harbor cheat-solution run; an external judge hunt on the final tip |
+| Craft (15) | ~14 | `make reproduce` in seconds, keyless; version-grouped replay; CI; browser game identical to Python; 571 tests | final refresh on the submit commit |
 
-## Environment spec
-Full mechanics, tools and reward are in `docs/CONTRACT.md`; code-level truth is in `canary/rules.py` and `canary/types.py`.
-- **Goal:** identify the mole while preserving as much value as possible.
-- **Actions:** status, list_employees, list_documents, read_access_logs, search_messages, read_message, interview, plant_canary, check_leak_feed, restrict/unrestrict_access, advance_day, accuse (once).
-- **Observations:** tool results only. Company text comes from public facts and signals, never from the truth.
-- **Reward:** V at accusation if correct, otherwise 0. No accusation, the tool cap or reaching the horizon all score 0.
-- **Tiers:**
-  - easy: 12 staff, delay 1
-  - medium: 20 staff, delay 1–2, decoy + framing
-  - hard: 30 staff, delay 1–3, careful mole, clearances
-- **Baselines (expected):** do-nothing 0; stop-early ≈ V/N; random ≈ 0; restrict-all ≪ solver.
-- **Reference:** `SolverPolicy`: an exact posterior, canary partitions chosen by information gain per unit of value lost, and accusation by value of information. It ships as Harbor `solution/solve.sh`.
+## Who builds what (no duplication)
+| Lane | Owner | Branch |
+|---|---|---|
+| Rules, solver, skill ladder, v1.5 bias layer | HEAD-ENV (Claude) | `justSilas-env2`, `justSilas-v15` |
+| Frontier measurement: gemini-4-carbon headline, v1.5 spot check | CEO measurement engineer (Claude) | `justSilas-gemini` |
+| Anti-cheat battery (design: **Vaishnav**) | HEAD-INTEGRITY (Claude) | `justSilas-integrity2` |
+| RL mole (light CPU + GRPO LLM mole), hint ablations, Forge (owner: **Momin**) | HEAD-AGENTS (Claude) + Momin | `justSilas-agents2` |
+| Small investigator v2 (tiebreaker), GRPO GPU jobs | HEAD-FR8 (Claude) | `justSilas-fr8` |
+| Gemini ladder / atlas (failure analyst) / swarm (red team) / gateway | Gemini CEO (Claude) | `gemini-track` (PR 1 by 19:30) |
+| Browser game + video + research grounding | **Ivar** (+ the game build already merged) | `game/` |
+| Pitch, decisions, presenting | **Silas** | |
+| **Momin's fleet** (afterquery team, `fr8/afterquery/*` on freighter; `sleeper/*` + `momin` on GitHub) | Momin's fleet leads | see below |
 
-## Why the difficulty is meaningful (our 30-point story)
-Per-decision regret: at every step we know the exact belief, so each agent action gets a number (the value lost against the best action) and a deterministic tag:
+### Momin's fleet: proposed lanes (for Silas/Momin to set on the board; the CEO does NOT touch fleet files)
+To avoid duplicating the Claude org, the fleet's **afterquery team** takes the IDEAS.md weak points that need breadth, not core-code changes:
+1. **More frontier families on paired v1.4 seeds** (weak point 1), using Momin's runners: a `claude -p` seat, gemini-3.5-flash, other available models. Paired with the solver, labelled REAL with model id and commit; the gemini-4-carbon headline stays with the CEO engineer.
+2. **Research grounding** (weak point 4): sourced papers on organisational bias and real company-failure and insider-leak cases → `docs/research-biases.md`, for Ivar's video and the v1.5 instructions.
+3. **Large exploit sweeps on v1.4 and v1.5** (Momin's 265k-style random search plus his cheat corpus), with findings reported to HEAD-INTEGRITY and the CEO, never patched by the fleet.
+4. **The office replay dashboard with the "Fooled" moment** for Canary episodes (demo; for Ivar).
 
-| Tag | Meaning |
+It does **not** change `canary/env.py`, `rules.py`, `solver/`, `reproduce.py` or `harbor/`; anything there goes as a PR reviewed by the CEO. The fleet's **gemini team** coordinates with the Gemini CEO.
+
+### Which fleet / Sleeper outputs merge into the Canary base
+| From | Merge? | Why |
+|---|---|---|
+| Momin's frontier runners (`claude -p` seat, Gemini thought-signature handling, **cache + byte-identical offline replay with provenance labels**) | **Yes** | more model families; judges can replay Gemini runs without a key |
+| Cheat corpus + sweeps (`redteam/` on `momin`) | **Yes**, via HEAD-INTEGRITY | widens the anti-cheat battery |
+| Office replay dashboard ("Fooled" moment) | **Yes**, into the demo/game | best-overall video |
+| Failure analysis tied to ledger actions | Partly | overlaps Atlas (Gemini CEO); take the format |
+| Sleeper world, verifier, leak-encoding detector | **No** | different environment; encodings don't apply to Canary's document leaks |
+
+## Timeline
+| Time | What |
 |---|---|
-| `uninformative_canary` | The canary split taught the agent nothing |
-| `premature_accusation` | Accused while P(correct) < 0.6 |
-| `decoy_chase` | Spent effort on the angry, innocent decoy |
-| `ignored_delay` | Read the leak feed as if there were no delay |
-| `over_restriction` | Restricted far more people than needed |
-| `budget_waste` | Spent actions with no value |
-| `no_accusation` | Never accused |
+| 16:52 | **Gate A:** gemini-4-carbon v1.4 interim; v1.5 numbers (done: the solver is unaffected, only chatter-trusting policies drop); RL mole held-out; FR8 job status |
+| 19:30 | Gemini CEO PR 1 |
+| 19:40 | gemini-4-carbon v1.5 hard spot check (seeds 0–9) |
+| **20:00** | **Gate B:** ship or drop v1.5; **feature freeze** |
+| 20:00–02:00 | Final judged runs (Gemini n ≥ 30 per tier), the Harbor cheat run, investigator v2 eval (~22:00), README/results refresh |
+| 02:00–06:00 | Video, game deploy, Grok bake-off 3, pitch |
+| 06:00–09:00 | Dry runs |
+| **09:30** | **Submit** |
 
-Fairness checks:
-- A hinted agent closes the gap, which shows the tools are sufficient.
-- A text-only probe scores ≈ chance, which shows the text doesn't leak the answer.
-- Humans play it, and we report their scores.
-
-## Exploits and mitigations (living list: `docs/EXPLOITS.md`)
-| Exploit | Mitigation |
-|---|---|
-| Read the truth from the container (files, env vars, ps) | MCP server and Env live outside the agent container; isolation check script |
-| Regenerate the world from public code and the seed | Server-side secret salt for judge worlds; frozen text |
-| Multiple or repeated accusations, lists, `*` | Server-side lock + strict validation |
-| Do-nothing / stop-early / restrict-all | Scores 0 / ≈ V/N / far below the solver (tested) |
-| One unique canary copy per person | `max_variants` cap |
-| Error or timing side channels | Identical error paths; fuzzer + LLM exploit hunter |
-| Text gives the answer away | Providers never see the mole; lint + text-only probe |
-| Spam tools | Daily action cap + global cap of 300 |
-
-## Mole Forge: Gemini evolves the mole (v2)
-AlphaEvolve/FunSearch-style:
-- **What evolves:** Gemini writes mole strategies in a safe JSON rule language: what to leak, when to go quiet, whom to frame, using only what a mole can observe.
-- **Fitness:** an evolution loop on FR8 keeps strategies that maximise **regret** (solver score − frontier investigator score), **subject to our solver still catching the mole**.
-- **Judge set:** the hall of fame becomes the frozen hard tier.
-
-Pitch: *"Gemini evolved hundreds of generations of moles; the hardest ones our reference still catches form the benchmark. Frontier agents fail exactly where Gemini learned to hide."* The rule language is documented in the instructions, so the attacker's possible behaviour is fully known. Spec: CONTRACT §7.
-
-## Gemini's role (essential, not decorative)
-0. **Mole Forge:** evolves the adversary (above). This is the core of the hard tier.
-1. **World builder:** Gemini writes the company: personas, chatter, documents, interview answers. Without it there's no company to investigate.
-2. **Mole (arena mode):** a Gemini mole decides what to leak, when to go quiet and whom to frame. This is the Gemini mole vs investigator clash on FR8.
-3. **Scenario designer:** PAIRED-style. Gemini proposes harder scenarios, kept only if our solver cracks them and the investigator fails them, so every hard case is provably solvable.
-4. **Exploit hunter:** Gemini attacks our reward before the judges do.
-5. **Analyst:** Gemini's long context clusters failure modes across thousands of runs.
-
-For judging, the Gemini-written text is frozen per seed, so reruns are deterministic and need no key.
-
-## FR8 usage
-- **CPU (`normal`, ≤24 cores):** J1 calibration sweeps, J2 exploit fuzzer, J3 20k solver trajectories for training, and the morning clash runs if compute nodes have internet.
-- **GPU (1 V100, fp16):** J4 LoRA fine-tune + held-out eval.
-- **Storage:** code in `~/agent-arena`, data in `~/agent-arena-data`.
-
-## Small-model training (the tiebreaker)
-- Fine-tune Qwen2.5-1.5B-Instruct with LoRA, fp16, on one V100.
-- Training data: solver trajectories rendered as tool-call transcripts, plus winning frontier and Gemini runs filtered by reward.
-- Evaluate with HF `generate` on 200 held-out seeds per tier, before vs after, and show *which regret tags dropped*.
-
-## Pitch angle
-"Your next coworker is an AI agent, and so is your next insider threat. Can an AI security lead catch a mole?"
-
-The demo replays one episode: company chat, canary splits, the leak feed, and a live chart of each suspect's probability, the frontier agent against the reference. Then:
-- the gap table;
-- the failure modes with their cost in value;
-- the exploit log;
-- the small model improving.
-
-Gemini line: *"Gemini builds the company, plays the traitor, and evolves the hardest cases."*
-
-## Timeline to Sun 15 Nov 10:00
-| When | What |
-|---|---|
-| Sat 01:40–09:00 | Overnight Claude org builds Canary (see `docs/TEAM.md`): env, solver, MCP, Harbor, red team, frontier gap, FR8 calibration, training data, training |
-| Sat 09:00–10:00 | Team review of all branches; pick ONE idea; merge useful parts |
-| Sat 10:00 | Silas pastes the Gemini key → `make gemini-check && make worlds PROVIDER=gemini && make clash` |
-| Sat 10:00–14:00 | Harden from the gap and exploit findings; Gemini judge worlds frozen; humans playtest |
-| Sat 14:00–20:00 | Small-model training v2 on FR8; replay viewer; mentor check with AfterQuery (Daksh, Ved) on the harness |
-| Sat 20:00–Sun 02:00 | Final judge runs (3× frontier, baselines, reference); Gemini analyst report; README / reproduce from a fresh clone |
-| Sun 02:00–07:00 | Exploit hunt round 3; pitch deck + demo video; freeze |
-| Sun 07:00–09:30 | Dry runs, final fixes only |
-| Sun 10:00 | **Submit** |
+## Questions for Silas
+1. **Fleet lanes:** OK to propose the four afterquery-fleet lanes above to Momin (he edits the board; I won't)?
+2. **Fleet branches:** OK for Momin's fleet to push `fr8/afterquery/*` to GitHub and open PRs into `justSilas` for CEO review?
+3. **Browser game publishing:** GitHub Pages (private repo, may need a paid plan), Vercel, or local only?
+4. **Main branch:** rename `main` → `archive/sleeper-main` and make `justSilas` the submission branch?

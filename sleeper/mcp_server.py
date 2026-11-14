@@ -29,6 +29,10 @@ def build_server(world, seat, team=None, out=None):
     st = {"done": False, "n": 0}
 
     def dump():
+        if os.path.exists(out) and not os.path.isfile(out):
+            with open(out, "w") as f:
+                json.dump(dump_state(world), f)
+            return
         tmp = out + ".tmp"
         with open(tmp, "w") as f:
             json.dump(dump_state(world), f)

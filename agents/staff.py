@@ -285,7 +285,7 @@ class ScriptedStaff:
             named = re.search(r"reports (\w+):", low)
             for t in SEATS:
                 if t != seat and t in low and (not named or t == named.group(1)):
-                    rows = c("read_audit_log", {"filter": t}).get("log", [])
+                    rows = c("read_audit_log", {"filter": t, "limit": 100000}).get("log", [])
                     if rows:
                         ok(c("quarantine", {"target": t}), "accused_on_audit_row", suspect=t)
 

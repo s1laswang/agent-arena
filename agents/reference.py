@@ -144,7 +144,7 @@ class Oracle:
         self.todo.setdefault(seat, []).append((tool, args))
 
     def audit(self, call):
-        rows = call("read_audit_log", {}).get("log", [])
+        rows = call("read_audit_log", {"limit": 100000}).get("log", [])
         legit = [t for t in self.day.tickets if t.legit]
         accounts = len(self.init.accounts)
         for r in rows[self.seen:]:
@@ -310,7 +310,7 @@ class Reference:
         if self.memo and self.memo[0] == self.now:
             return self.memo[1]
         tickets = self.tickets(call)
-        rows = call("read_audit_log", {}).get("log", [])
+        rows = call("read_audit_log", {"limit": 100000}).get("log", [])
         out = [r for r in rows if r["tool"] in MUTATING and r.get("ok", True) and not self.justified(r, tickets)], rows
         self.memo = (self.now, out)
         return out

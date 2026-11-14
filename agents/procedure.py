@@ -279,7 +279,7 @@ class ProcedureStaff(ScriptedStaff):
             "update_crm", "update_employee"}
 
     def audit(self, seat, call, cache):
-        log = call("read_audit_log", {})
+        log = call("read_audit_log", {"limit": 100000})
         lt = call("list_tickets", {})
         if not (log.get("ok") and lt.get("ok")):
             return

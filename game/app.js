@@ -193,7 +193,7 @@ function fmt(x) {
 // BOOT & PYODIDE INITIALIZATION
 // -----------------------------------------------------------------------------
 async function boot() {
-  const urlParams = new URLSearchParams(location.search);
+  const urlParams = new URLSearchParams(window.location.search);
   const paramSeed = urlParams.get("seed");
   const isDemo = urlParams.get("demo") === "1" || urlParams.get("demo") === "true";
 
@@ -203,8 +203,12 @@ async function boot() {
     if (demoBtn) demoBtn.textContent = "Standard View";
   }
 
-  const initialSeed = paramSeed ? parseInt(paramSeed, 10) : randomSeed();
-  state.seed = (initialSeed >= 3000 && initialSeed <= 9999) ? initialSeed : 3000;
+  if (paramSeed) {
+    const parsed = parseInt(paramSeed.trim(), 10);
+    state.seed = (!isNaN(parsed) && parsed >= 3000 && parsed <= 9999) ? parsed : 3000;
+  } else {
+    state.seed = 3000;
+  }
   $("seedInput").value = state.seed;
   $("headerSeedDisplay").textContent = state.seed;
 
@@ -1520,6 +1524,22 @@ function setupGlobalEventListeners() {
   // Title Launch buttons
   $("playBtn").addEventListener("click", () => startGame());
   $("startTutorialBtn").addEventListener("click", () => startTutorial());
+
+  $("seedInput")?.addEventListener("input", (e) => {
+    const s = parseInt(e.target.value.trim(), 10);
+    if (!isNaN(s)) {
+      state.seed = s;
+      $("headerSeedDisplay").textContent = s;
+    }
+  });
+
+  $("seedInput")?.addEventListener("change", (e) => {
+    const s = parseInt(e.target.value.trim(), 10);
+    if (!isNaN(s) && s >= 3000 && s <= 9999) {
+      state.seed = s;
+      $("headerSeedDisplay").textContent = s;
+    }
+  });
 
   $("randomSeedBtn")?.addEventListener("click", () => {
     const s = randomSeed();

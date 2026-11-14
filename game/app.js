@@ -26,6 +26,7 @@ const state = {
   dailyCallsMax: 8,
   totalCallsLeft: 300,
   leaksCount: 0,
+  checkedLeaksToday: false,
   employees: [], // populated ONLY after player triggers list_employees
   userTags: {}, // client-side notes: { [empId]: "suspect" | "cleared" | "unsure" }
   canaryAssignments: {}, // { [empId]: "A" | "B" | "C" }
@@ -246,6 +247,7 @@ function startGame(customSeed = null) {
   state.dailyCallsMax = 8;
   state.totalCallsLeft = 300;
   state.leaksCount = 0;
+  state.checkedLeaksToday = false;
   state.employees = [];
   state.userTags = {};
   state.canaryAssignments = {};
@@ -276,10 +278,18 @@ function startGame(customSeed = null) {
       </div>
       <div class="feed-body">
         <p>Investigation initiated. Someone in the company is leaking secrets to rival firm.</p>
-        <p class="muted font-small">First action: Survey personnel with <strong>Survey Office Personnel (1 action)</strong> or deploy marked traps via <strong>Plant Canaries [P]</strong>.</p>
+        <p class="muted font-small">First action: Survey personnel with <strong>Survey Office (1 action)</strong> or deploy marked traps via <strong>Plant Canaries [P]</strong>.</p>
       </div>
     </div>
   `;
+
+  // Auto-offer tutorial on first visit
+  try {
+    if (!localStorage.getItem("canary_tutorial_offered")) {
+      localStorage.setItem("canary_tutorial_offered", "1");
+      setTimeout(() => startTutorial(), 400);
+    }
+  } catch (_) {}
 }
 
 // -----------------------------------------------------------------------------
@@ -326,11 +336,13 @@ function syncStateFromData(tool, args, data) {
   if (tool === "advance_day") {
     // Reset daily actions for new day
     state.actionsLeftToday = state.dailyCallsMax;
+    state.checkedLeaksToday = false;
   }
 
   if (tool === "check_leak_feed") {
     const items = data.items || [];
     state.leaksCount = items.length;
+    state.checkedLeaksToday = true;
   }
 
   if (tool === "list_employees") {
@@ -425,6 +437,48 @@ function refreshHUD() {
   } else {
     nextBtn.title = `All actions spent. Advance to Day ${state.day + 1} [N]`;
   }
+
+  updateGuidance();
+}
+
+function updateGuidance() {
+  const el = $("hudGuidanceText");
+  if (!el) return;
+
+  if (state.employees.length === 0) {
+    el.textContent = "Survey office personnel to index staff across departments (1 action).";
+    return;
+  }
+
+  if (state.actionsLeftToday === 0) {
+    el.textContent = "All 8 actions spent today. Press Next Day [N] to advance time and let leaks surface.";
+    return;
+  }
+
+  const plantedToday = state.canaryHistory.some(c => c.day === state.day);
+  const totalCanaries = state.canaryHistory.length;
+
+  if (plantedToday) {
+    el.textContent = "Canaries planted. Leaks take 1–3 days, so press Next Day [N] and check the leak feed.";
+    return;
+  }
+
+  if (state.day > 1 && !state.checkedLeaksToday) {
+    el.textContent = `Day ${state.day} began. Press Check Leaks to see if any planted canaries surfaced at rival firm.`;
+    return;
+  }
+
+  if (totalCanaries === 0) {
+    el.textContent = "No canaries active yet. Press Plant Canaries [P] to distribute marked memos across cohorts.";
+    return;
+  }
+
+  if (state.leaksCount > 0) {
+    el.textContent = "Leaks detected! Match the leaked variant to assigned cohorts, interview suspects, or Accuse [A].";
+    return;
+  }
+
+  el.textContent = "Canaries are out in the field. Review access logs, interview suspects, or advance to tomorrow [N].";
 }
 
 // -----------------------------------------------------------------------------

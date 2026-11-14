@@ -294,6 +294,28 @@ h1 .badge {
   flex-wrap: wrap;
 }
 
+/* Contextual Guidance Bar */
+.hud-guidance-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 12px;
+  padding: 6px 12px;
+  background: var(--panel-elevated);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--ink);
+}
+.guidance-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
 /* Action Pips */
 .pips-container {
   display: flex;

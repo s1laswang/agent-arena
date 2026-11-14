@@ -16,6 +16,8 @@ import os
 from pathlib import Path
 
 DEFAULT_TOKEN_FILE = "~/agent-arena-gemini/.gateway_token"
+# google-genai 3.x defaults to API v1, where caches.create (and other preview surfaces) 404: pin v1beta.
+API_VERSION = "v1beta"
 
 
 def gateway_url() -> str | None:
@@ -55,7 +57,7 @@ def gateway_http_options(timeout_s: float | None = None) -> dict | None:
     url = gateway_url()
     if not url:
         return None
-    return {"base_url": url, "timeout": _timeout_ms(timeout_s)}
+    return {"base_url": url, "timeout": _timeout_ms(timeout_s), "api_version": API_VERSION}
 
 
 def genai_client(timeout_s: float | None = None):
@@ -67,7 +69,7 @@ def genai_client(timeout_s: float | None = None):
         return genai.Client(api_key=gateway_token(), http_options=types.HttpOptions(**opts))
     from canary.llm.base import require_key
     return genai.Client(api_key=require_key("GEMINI_API_KEY"),
-                        http_options=types.HttpOptions(timeout=_timeout_ms(timeout_s)))
+                        http_options=types.HttpOptions(timeout=_timeout_ms(timeout_s), api_version=API_VERSION))
 
 
 def smoke(model: str = "gemini-3.1-flash-lite") -> dict:

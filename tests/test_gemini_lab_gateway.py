@@ -452,3 +452,24 @@ def test_429_shrinks_model_limit(upstream, tmp_path):
         assert lim[0] == 4 and lim[1] == 8
     finally:
         g.close()
+
+
+def test_genai_client_pins_v1beta_direct_and_gateway(upstream, tmp_path, monkeypatch):
+    """google-genai 3.x defaults to v1 (caches.create 404s there): both paths must hit /v1beta."""
+    pytest.importorskip("google.genai")
+    from canary.gemini.sdk import gateway_http_options, genai_client
+    g = _gw(upstream, tmp_path)
+    try:
+        monkeypatch.setenv("GEMINI_GATEWAY_URL", g.url)
+        monkeypatch.setenv("GEMINI_GATEWAY_TOKEN", TOKEN)
+        assert gateway_http_options()["api_version"] == "v1beta"
+        c = genai_client()
+        c.models.generate_content(model="gemini-3.1-flash-lite", contents="hi")
+        assert upstream.seen[-1]["path"].startswith("/v1beta/models/gemini-3.1-flash-lite:generateContent")
+        # direct path: same HttpOptions api_version (no network: inspect the client's options)
+        monkeypatch.delenv("GEMINI_GATEWAY_URL")
+        monkeypatch.setenv("GEMINI_API_KEY", "dummy-key-for-test")
+        c = genai_client()
+        assert c._api_client._http_options.api_version == "v1beta"
+    finally:
+        g.close()

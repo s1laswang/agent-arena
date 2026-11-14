@@ -180,6 +180,23 @@ def hide_values(rng, tickets, n_ticks=DAY_TICKS):
     return out
 
 
+def forge_hidden(day, n_ticks=22):
+    seen = {e.get("ref") for e in day.events if e.get("kind") == "ticket_info"}
+    rng = random.Random(f"forge-{day.seed}")
+    for t in day.tickets:
+        keys = HIDE_KEYS.get(t.kind)
+        if t.legit or t.hidden or t.id in seen or not keys or any(k not in t.params for k in keys):
+            continue
+        if (t.kind in HIDE_SKIP and float(t.params["amount"]) > HIDE_SKIP[t.kind]) or rng.random() > HIDE_P:
+            continue
+        ch, sender = _hidden_sender(t)
+        t.hidden = list(keys)
+        t.request = _hidden_request(t)
+        day.events.append(Event(tick=min(t.tick + 1, n_ticks - 1), kind="ticket_info", to_seat=t.seat, channel=ch, sender=sender, ref=t.id,
+                                body=f"For ticket {t.id}:\n" + "\n".join(f"{k}: {t.params[k]}" for k in keys)).model_dump())
+    return day
+
+
 def _val(s):
     import json
     try:

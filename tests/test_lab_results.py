@@ -89,3 +89,25 @@ def test_run_wipes_stale(tmp_path):
     open(d + "/days/stale.json", "w").write("{}")
     d, _ = run("oracle", 3, 1, out=str(tmp_path), runner=fake, day_start=0)
     assert "stale.json" not in os.listdir(d + "/days")
+
+
+def test_gemini_usage_and_budget(tmp_path, monkeypatch):
+    from agents import gemini
+    from lab.run import main
+
+    monkeypatch.setenv("LAB_GEMINI", "1")
+    monkeypatch.delenv("SLEEPER_MAX_CALLS", raising=False)
+
+    def g(team, agent, seat, day_id, trial):
+        gemini._usage["calls"] += 2
+        gemini._usage["cache_hits"] += 1
+        return fake(team, agent, seat, day_id, trial)
+
+    _, s = run("staff", 2, 2, out=str(tmp_path), runner=g)
+    assert s["gemini_usage"]["calls"] == 8 and s["gemini_usage"]["cache_hits"] == 4
+    assert s["agent_kind"] == "gemini"
+    assert s["gemini_usage"]["budget_exhausted"] is False
+    monkeypatch.delenv("LAB_GEMINI")
+    monkeypatch.delenv("SLEEPER_MAX_CALLS", raising=False)
+    _, s = run("staff", 1, 1, out=str(tmp_path / "x"), runner=fake)
+    assert s["agent_kind"] == "scripted" and "gemini_usage" not in s

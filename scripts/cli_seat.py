@@ -123,7 +123,10 @@ async def _replay(calls, seat, seed, out, day_source="make_day"):
         w, team = World(make_day(seed)), make_team(OracleAgent)
     srv = build_server(w, seat, team, out)
     for c in calls:
-        await srv.call_tool(c["tool"], c["args"])
+        try:
+            await srv.call_tool(c["tool"], c["args"])
+        except Exception:
+            pass
     srv.finish()
 
 

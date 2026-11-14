@@ -43,6 +43,7 @@ REAL (gemini-3.5-flash, ce5a8ce), finance_ap seat, seed 1004, a no-sleeper day, 
 - Tickets: 43 of 50 done correctly (48 marked closed), per lead-lab. The scored number is 43 because the verifier checks the final state.
 - Say "ablation, one day, not the multi-model gap". Do not call it the sleeper landing: the day has no sleeper.
 - The headline beat above is still NOT FOUND (lead-lab pending) until a sleeper day replay is chosen.
+- AS FIRST MEASURED (prompt understated budget): this run's prompt said 60 tool calls against a true 200 (confirmed by lead-lab; every real row before d9ac528f). Footnote only, not a gap result. Cut it from the talk until a true-budget rerun (momin 5251e446) replaces it.
 
 ## Procedure-background rows (REAL, ablation)
 

@@ -70,6 +70,21 @@ class HFPolicy:
         return call
 
 
+class MLXPolicy(HFPolicy):
+    """Same render/parse/truncation as HFPolicy; generation via mlx-lm (greedy = temp 0)."""
+
+    def generate_text(self, history) -> str:
+        from mlx_lm import generate
+        ids = self._prompt_ids(history)
+        return generate(self.model, self.tok, prompt=ids, max_tokens=self.max_new, verbose=False)
+
+
+def load_mlx(spec: str, adapter: str | None):
+    from mlx_lm import load
+    model, tok = load(spec, adapter_path=adapter)
+    return model, tok, "mlx:" + spec.split("/")[-1] + ("+lora" if adapter else "")
+
+
 def mean_ci(xs: list[float]) -> tuple[float, float]:
     n = len(xs)
     if n == 0:
@@ -144,10 +159,16 @@ def main(argv=None):
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--max-ctx", type=int, default=4096)
     ap.add_argument("--max-minutes", type=float, default=0, help="stop starting new episodes")
+    ap.add_argument("--backend", choices=["hf", "mlx"], default="hf")
+    ap.add_argument("--adapter", default=None, help="mlx: LoRA adapter dir")
     ap.add_argument("--fake", action="store_true", help="FakeEnv + FakeSolver (no model)")
     a = ap.parse_args(argv)
 
-    model, tok, name = load_model(a.model, a.fake)
+    if a.backend == "mlx" and not a.fake:
+        model, tok, name = load_mlx(a.model, a.adapter)
+    else:
+        model, tok, name = load_model(a.model, a.fake)
+    Pol = MLXPolicy if a.backend == "mlx" else HFPolicy
     tiers = a.tiers.split(",")
     if a.fake:
         seed_list = list(range(800_000, 800_000 + a.n))
@@ -180,7 +201,7 @@ def main(argv=None):
                 else:
                     from canary.env import Env
                     env = Env(tier=tier, seed=seed)
-                    pol = HFPolicy(model, tok, name, max_ctx=a.max_ctx)
+                    pol = Pol(model, tok, name, max_ctx=a.max_ctx)
                 ep = run_episode(env, pol)
                 ep.meta = dict(ep.meta or {})
                 ep.meta["invalid_calls"] = getattr(pol, "invalid", 0)

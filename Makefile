@@ -67,11 +67,10 @@ play:             ## [ENV] human playtest: make play TIER=medium NAME=alice SEED
 	$(UV) python -m canary.play --tier $(if $(filter all,$(TIER)),medium,$(TIER)) --name $(or $(NAME),human) --seed "$(SEED)"
 
 # Canary Lab (Gemini)
-lab-replay:       ## [GEMINI] keyless: replay the recorded Gemini showcase through a local gateway (results/gemini/replay)
-	$(UV) python -m canary.gemini.with_gateway --replay results/gemini/replay --ledger data/gemini/replay-check/ledger.jsonl -- \
-	  python -m canary.gemini.showcase --check results/gemini/replay/showcase.json
+lab-replay:       ## [GEMINI] keyless: replay every recorded Gemini run (results/gemini/replay*) through a local gateway
+	$(UV) python -m canary.gemini.lab_replay
 
-lab-record:       ## [GEMINI] re-record the showcase via a local gateway (needs GEMINI_API_KEY, ~6 calls on flash-lite)
+lab-record:       ## [GEMINI] re-record the showcase (needs GEMINI_API_KEY, 6 calls). Ladder: python -m canary.gemini.lab_replay --record NAME -- <cmd {out}>
 	rm -rf results/gemini/replay && $(UV) python -m canary.gemini.with_gateway --record results/gemini/replay -- \
 	  python -m canary.gemini.showcase --write results/gemini/replay/showcase.json
 

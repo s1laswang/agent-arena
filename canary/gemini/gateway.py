@@ -23,7 +23,7 @@ Security:
 Stats: one JSON line per request in --stats-dir (default data/gemini/gateway/stats-<host>-<pid>.jsonl):
   {ts, client, model, method, op, status, latency_s, queued_s, bytes_in, bytes_out, retries, mode, cache}.
   No bodies, no keys. Clients write the usage ledger themselves (no double counting).
-Record/replay: key = sha256(method + path-without-key + canonical JSON body). --record forwards and stores
+Record/replay: key = sha256([x-canary-replay-tag] + method + path-without-key + canonical JSON body). --record forwards and stores
   <DIR>/<h[:2]>/<h>.json.gz (repeat identical requests -> <h>.1.json.gz, ...); --replay serves them in order
   (the last one again once exhausted) and answers 404 on a miss. Replay needs no real key.
 """
@@ -55,7 +55,9 @@ DEFAULT_TOKEN_FILE = Path(os.path.expanduser("~/agent-arena-gemini/.gateway_toke
 PREFIXES = ("/v1beta/", "/v1/", "/v1alpha/", "/upload/")
 RETRY_STATUS = {429, 500, 502, 503, 504}
 HOP = {"host", "content-length", "connection", "keep-alive", "transfer-encoding", "te", "trailer", "upgrade",
-       "proxy-authorization", "proxy-authenticate", "accept-encoding", "x-goog-api-key", "authorization"}
+       "proxy-authorization", "proxy-authenticate", "accept-encoding", "x-goog-api-key", "authorization",
+       "x-canary-replay-tag"}
+REPLAY_TAG = "x-canary-replay-tag"  # optional client label (e.g. one ladder episode) folded into the replay key
 RESP_DROP = {"content-length", "content-encoding", "transfer-encoding", "connection", "keep-alive",
              "alt-svc", "server", "date"}
 _MODEL_RE = re.compile(r"/(?:tunedModels|models)/([^/:?]+)")
@@ -124,9 +126,12 @@ def canonical_body(body: bytes) -> bytes:
         return body
 
 
-def request_key(method: str, path: str, query: list[tuple[str, str]], body: bytes) -> str:
+def request_key(method: str, path: str, query: list[tuple[str, str]], body: bytes, tag: str = "") -> str:
+    """Identical requests from different episodes (e.g. the first turn of every seed) are told apart by `tag`."""
     q = urlencode(sorted(query))
     h = hashlib.sha256()
+    if tag:
+        h.update(f"tag:{tag}\n".encode())
     h.update(f"{method.upper()}\n{path}?{q}\n".encode())
     h.update(canonical_body(body))
     return h.hexdigest()
@@ -350,7 +355,7 @@ class Gateway:
         body = bytes(body)
         query = strip_key(query_raw)
         model, op = model_of(path), op_of(path)
-        rkey = request_key(method, path, query, body)
+        rkey = request_key(method, path, query, body, headers.get(REPLAY_TAG, ""))
         base = dict(client=client, model=model, method=method, op=op, bytes_in=len(body), mode=self.mode)
 
         if self.mode == "replay":

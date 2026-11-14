@@ -1,8 +1,57 @@
 # G1 Gateway + FR8 ops: report (newest first)
 
-## Sat 15:40: gateway, sdk, lab_client hook, record/replay and FR8 scripts are done. **Blocker: no ssh to FR8 from here**
+## Sat 15:00: ladder runs are replayable keyless; FR8 is still unreachable from this Mac (I keep retrying until 17:30)
 
-**Blocker:** `ssh freighter` times out on TCP 22 from this Mac (14:45–15:40, every retry). ICMP ping to freighter.fr8.so works (3 ms), and TCP 22, 443 and 2222 time out (public IP 194.157.9.46). The likely causes are the venue network filtering outbound 22 or an FR8 firewall or fail2ban rate limit after many agent ssh connections. The FR8 smoke (compute node → gateway → Gemini) is **not done yet**. All the scripts are written and ready to run once ssh works. The `ssh -R` fallback needs ssh too, so the only other route is a different network (phone hotspot or VPN). **Silas: please check whether `ssh freighter hostname` works from your terminal.**
+Done (verified):
+- **The replay tag** fixes a real bug. When cells run concurrently, every seed sends the identical first request, so the replay order became ambiguous, the episodes diverged and lookups missed. `lab_client` now derives a stable tag from `feature + meta` (the ladder's meta is model/level/tier/seed/run) and sends it through the gateway only, as `x-canary-replay-tag`. The gateway folds the tag into the replay key and never forwards it upstream. Calls without meta, such as the showcase, keep the old keys.
+- **Committed `results/gemini/replay-ladder/`** (336 KB, 82 responses, manifest): 4 G2 ladder episodes recorded at `--concurrency 4` on easy seeds 0–1, scores −1.0 / 0.79 (flash-lite low) and 0.63 / 0.88 (3.8-flash low). `make lab-replay` → `ladder: REPLAY OK, 4 episodes reproduced step for step` plus the showcase, keyless, twice in a row. A test covers it (about 1.6 s). Secret scan of every committed recording: clean.
+- FR8: the CEO's constraints are noted (hands off ~/momin/fleet, sleeper/*, fr8/*, momin; no scancel). The read-only question about how the fleet reaches Gemini is **unanswered**, because I cannot get in.
+
+### Runbook (gateway up, use, down, cleanup)
+| Step | Command | Notes |
+|---|---|---|
+| Deploy | `bash fr8/gemini/deploy.sh` | rsync code; `.gateway.env` and `.gateway_token` (0600); `uv sync` on login (niced); srun import check |
+| Up | `bash fr8/gemini/gateway_up.sh [--max-hours 8] [--model-limit gemini-4-carbon=8]` | Login node, nice 19, setsid/nohup; binds the internal IP toward compute01, port 8787; URL in `~/agent-arena-gemini/run/gateway.url` |
+| Smoke | `bash fr8/gemini/smoke.sh` | 5-minute srun: one ledgered call from a compute node |
+| Run | `bash fr8/gemini/submit.sh --array 0-N --time HH:MM:SS -c 2 -- python -m canary.gemini.ladder ... --shard {i}/{n}` | Job ids go into `~/agent-arena-data/jobs/OURS.txt` |
+| Pull | `bash fr8/gemini/pull.sh` | ledger → `data/gemini/ledger/fr8/`, the rest → `data/gemini/fr8/` |
+| Down | `bash fr8/gemini/gateway_down.sh` | SIGTERM by our pidfile only, SIGKILL after 10 s; removes `run/gateway.{pid,url}`, lists leftover `canary.gemini.gateway` processes and prints a stats summary |
+| Self-stop | automatic | `--max-hours` (default 8) ends the process even if nobody runs Down |
+| Full cleanup | `ssh freighter 'rm -rf ~/agent-arena-gemini/run'` (keep the code and data); to retire the key: `ssh freighter 'shred -u ~/agent-arena-gemini/.gateway.env'` | Rotate the token with `rm .gateway_token` + deploy |
+| Fallback | `bash fr8/gemini/tunnel_up.sh` / `--down` | Mac gateway + `ssh -R` + login-node byte relay |
+| Local | `python -m canary.gemini.with_gateway [--record DIR] -- <cmd>` | Throwaway gateway on 127.0.0.1 with a temp token; the command never sees the key |
+
+## Sat 14:50: merge-ready for PR 1. FR8 smoke still blocked: this Mac's ssh to freighter times out
+
+**FR8 status.** The CEO's session reaches `freighter`, but every connection from this agent times out at TCP connect to 194.157.9.46:22. That holds inside and outside the Claude sandbox, and with ControlMaster. It is not a rate limit: `ssh -v` never gets past `connect()`. **The CEO (or Silas) can run the smoke** with the commands below. Every script now uses one multiplexed ssh session (ControlMaster auto, ControlPersist 10m, ControlPath `~/.ssh/cm-%r@%h:%p`).
+```
+bash fr8/gemini/deploy.sh          # rsync -> ~/agent-arena-gemini; .gateway.env + .gateway_token (0600); uv sync; srun import check
+bash fr8/gemini/gateway_up.sh      # login node, nice 19, --max-hours 8, carbon cap 8; prints /healthz, no-token -> 401, ps key check
+bash fr8/gemini/smoke.sh           # srun -p normal --time=00:05:00: compute node -> gateway -> gemini-3.1-flash-lite (1 call, ledgered)
+bash fr8/gemini/gateway_down.sh    # stop + stats summary (policy: take it down after the smoke)
+```
+M2 array test: `bash fr8/gemini/submit.sh --array 0-3 --time 00:10:00 -c 1 -- python -m canary.gemini.sdk` (4 tasks, one call each).
+
+Done since 14:15 (verified):
+- **Merged gemini-track** (all 5 branches) into gemini-gateway. 61 lab tests pass in about 11 s; `make test` is green (581 passed, 6 skipped).
+- `genai_client()` pins `api_version="v1beta"` on both the direct and the gateway path. This is G3's finding: google-genai 3.x defaults to v1, where caches 404. There is a test for it (the request path seen upstream is `/v1beta/...`). The showcase was re-recorded on v1beta (the old recording used `/v1` paths).
+- Adaptive per-model limit (AIMD): halved on an upstream 429, +1 per 20 successes back up to the cap. The model slot is taken before the global slot, so a throttled model never holds global slots. `/healthz` shows `[limit, cap, inflight]` per model. Tests cover it.
+- `canary/gemini/lab_replay.py`. `make lab-replay` now replays **every** `results/gemini/replay*` store keyless: the showcase plus manifest stores. `python -m canary.gemini.lab_replay --record NAME -- <cmd with {out}>` records any run, for example the ladder, through a recording gateway and writes a manifest with each episode's score and the sha256 of its step list. Replay reruns the command against a replay gateway and requires identical step lists.
+  - Verified on a G2 ladder cell (flash-lite, low, easy, seed 0, 14 calls). The live run took 39 s; the replay is **step-for-step identical** in 0 s, without a key.
+- `make lab-replay` from a fresh `git clone` with no `.env` → `REPLAY OK`.
+
+**Proposal for G2/CEO:** run the real ladder grid on the Mac through a recording gateway: `python -m canary.gemini.with_gateway --record data/gemini/replay-ladder-full --max-concurrency 64 --model-limit gemini-4-carbon=8 -- python -m canary.gemini.ladder ...`. That costs nothing extra (about 4 KB of gzip per call), and we can then commit the subset of cells the submission cites, so judges can replay the actual table.
+
+## Sat 14:15: gateway, sdk, lab_client hook, record/replay and FR8 scripts are done. **Blocker: no ssh to FR8 from here**
+
+**Blocker: ssh to FR8 fails, cause found.** The Mac is on the venue LAN `192.168.8.0/24` (gateway `unifi.local.fr8.so`). Its public IP is **194.157.9.46, the same address that `freighter.fr8.so` resolves to**. FR8 sits behind the same NAT, and the router does not hairpin TCP 22 (ping answers from the router itself). The internal name `freighter-mgmt01.local.fr8.so` → 10.10.172.201 resolves, but the guest LAN does not route to it (TCP 22 times out). GitHub ssh works, so outbound 22 in general is fine.
+- This blocks every FR8 step: deploy, gateway_up, smoke, worker arrays and the `ssh -R` fallback.
+- Fixes, any one of them:
+  - (a) Put the Mac on a different uplink, such as a phone hotspot.
+  - (b) Turn on Tailscale with an exit node. It is installed but stopped. **This changes the network for every agent on this Mac**, so it is Silas's call.
+  - (c) Ask FR8 staff for a route or port forward from the venue LAN to 10.10.172.201:22.
+- The scripts take `FR8_HOST=...` to point at another ssh alias.
+- **Silas: please pick one.** Until then, FR8 work cannot start. Gemini runs work from the Mac through a local gateway: at C=64 on flash it handles about 1,600 req/min, which is enough for the ladder.
 
 Done (verified):
 - `canary/gemini/gateway.py`: a pure ASGI app on uvicorn with httpx2 for upstream (both already in the lock, so no new deps).

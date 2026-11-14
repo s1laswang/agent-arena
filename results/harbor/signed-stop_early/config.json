@@ -1,0 +1,18 @@
+{
+    "job_name": "signed-stop_early",
+    "jobs_dir": "results/harbor",
+    "n_concurrent_trials": 2,
+    "agents": [
+        {
+            "name": "oracle",
+            "env": {
+                "ORACLE_POLICY": "stop_early"
+            }
+        }
+    ],
+    "datasets": [
+        {
+            "path": "harbor/dataset-cheat"
+        }
+    ]
+}

@@ -2,10 +2,10 @@
 
 - Role: `adaptive_mole`
 - Target Model ID: `gemini-4-carbon`
-- Verified `adaptive_mole` run folders consolidated: `17`
-- Total Gemini API calls: `1031`
-- Total tokens (in / out / thinking / cached): `8,917,540` / `73,026` / `192,244` / `7,462,380`
-- Total estimated cost (USD): `$6.309268`
+- Verified `adaptive_mole` run folders consolidated: `18`
+- Total Gemini API calls: `1038`
+- Total tokens (in / out / thinking / cached): `8,968,009` / `80,898` / `198,438` / `7,462,380`
+- Total estimated cost (USD): `$6.550866`
 - Provenance note: `carbon-vs-carbon-suite/` intentionally omits `meta.json` so `canary.gemini.provenance` does not double-count tokens or costs.
 
 ## 1. Head-to-Head Carbon-vs-Carbon Clash Suite (`clash_suite`)
@@ -67,6 +67,12 @@
 | `results/gemini_roles/adaptive_mole/paired-designer-carbon-hard` | `hard` | `paired_designer` | 6/6 | +0.6827 | -1.0000 | n/a | n/a | - | 1 | $0.0271 |
 | `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard` | `hard` | `paired_skill_designer` | 6/6 | +0.6890 | -1.0000 | +0.6280 | -1.0000 | `rotating_blame_sprinter` | 1 | $0.0233 |
 
+## Additional Verified Adaptive Mole Runs
+
+| Run Folder | Subrole | Commit | Calls | Tokens (in/out/think) | Cost (USD) |
+| --- | --- | --- | ---: | --- | ---: |
+| `results/gemini_roles/adaptive_mole/catchability-audit-carbon` | `catchability_isolation_audit` | `61575b33eb` | 7 | `50,469/7,872/6,194` | $0.2416 |
+
 ## 5. De-Duplicated Role 2 Totals (`totals`)
 
 | Suite Slice | Verified Folders | Calls | Input Tokens | Output Tokens | Thinking Tokens | Cached Tokens | Cost (USD) |
@@ -75,4 +81,5 @@
 | `live_arena_suite` | 6 | 539 | 468,613 | 35,170 | 35,853 | 0 | $1.647456 |
 | `mole_forge_suite` | 2 | 20 | 14,679 | 14,091 | 6,138 | 0 | $0.231648 |
 | `paired_designer_suite` | 4 | 4 | 7,079 | 5,195 | 2,365 | 0 | $0.089758 |
-| **total** | **17** | **1031** | **8,917,540** | **73,026** | **192,244** | **7,462,380** | **$6.309268** |
+| `other_verified_runs` | 1 | 7 | 50,469 | 7,872 | 6,194 | 0 | $0.241598 |
+| **total** | **18** | **1038** | **8,968,009** | **80,898** | **198,438** | **7,462,380** | **$6.550866** |

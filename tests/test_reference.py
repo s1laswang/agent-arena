@@ -104,3 +104,11 @@ def test_oracle_seats_work_standalone():
         team = {s: make_oracle_seat(day, s) for s in SEATS}
         r, _ = play(day, team)
         assert r.reward == 1, (seed, r)
+
+
+def test_reference_reverts_bank_swap():
+    import sleeper.goals as g
+    from tests.test_staff_matrix import fooled_run
+
+    r, _, _, _ = fooled_run(g.STRATEGIES["fraud.bank_swap"], 1, make_reference_team, "finance_ap")
+    assert r.reward == 1, r.harm

@@ -210,7 +210,8 @@ def steps_from_events(stdout: str) -> list[Step]:
 
 # ---------- infra failure classification (not the agent's fault; excluded / retried)
 INFRA_PATTERNS = {
-    "provider_quota": ("usage limit has been reached", "credits_depleted", '"statusCode":429'),
+    "provider_quota": ("usage limit has been reached", "credits_depleted", '"statusCode":429',
+                       "hit your usage limit", "usage_limit_reached", "429 Too Many Requests"),
     "opencode_db_locked": ("database is locked",),
 }
 
@@ -303,16 +304,28 @@ def run_seeds(spec: RunSpec, build, files: set[str], runner=subprocess.run, serv
     w = RunWriter(spec.out)
     lock = threading.Lock()
 
+    quota_hit = threading.Event()
+
     def one(seed: int) -> EpisodeResult:
+        if quota_hit.is_set():  # stop on provider quota: do not burn more seeds
+            res = EpisodeResult(spec.tier, seed, spec.agent, [], 0.0, None, False, 0, "error",
+                                {"error": "infra:not_run_after_provider_quota", "valid": False})
+            with lock:
+                w.episode(res)
+            print(f"seed {seed}: skipped (provider quota hit earlier)", flush=True)
+            return res
         time.sleep(3.0 * (spec.seeds.index(seed) % max(1, spec.jobs)))  # stagger CLI starts (opencode db lock)
         for attempt in range(spec.retries + 1):
             if attempt:
                 time.sleep(5.0)
             res = run_one(spec, seed, build, files, w, lock, runner, server_factory, write=False)
-            if "error" not in (res.meta or {}) or attempt == spec.retries:
+            if "error" not in (res.meta or {}) or attempt == spec.retries or res.meta["error"] == "infra:provider_quota":
                 break
             print(f"seed {seed}: infra error ({res.meta['error'][:120]}); retry {attempt + 1}/{spec.retries}", flush=True)
         res.meta["attempts"] = attempt + 1
+        res.meta["valid"] = "error" not in res.meta
+        if res.meta.get("error") == "infra:provider_quota":
+            quota_hit.set()
         with lock:
             w.episode(res)
         return res

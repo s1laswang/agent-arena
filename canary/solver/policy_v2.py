@@ -17,9 +17,42 @@ from .policy import SolverPolicy
 class SolverV2Policy(SolverPolicy):
     name = "solver_v2"
 
-    def __init__(self, params=None, max_pending: int = 12, joint_single: bool = True, **kw):
+    def __init__(self, params=None, max_pending: int = 12, joint_single: bool = True,
+                 split: bool = True, split_mass: float = 0.8, split_k: int = 2, split_min_day: int = 3,
+                 split_release: float = 0.03, **kw):
         self.joint_single = joint_single
+        self.split, self.split_mass, self.split_k = split, split_mass, split_k
+        self.split_min_day, self.split_release = split_min_day, split_release
         super().__init__(params, max_pending=max_pending, **kw)
+
+    def probe_actions(self, post):
+        q = self._split_actions(post)
+        for tool, a in q:   # today's canaries are planned right after: they must see the new restriction set
+            (self.restricted.add if tool == "restrict_access" else self.restricted.discard)(a["employee"])
+        return q
+
+    def _split_actions(self, post):
+        """Restriction split test (the rules state it: a restricted employee gets no new documents, so a restricted
+        mole runs out of leakable documents after leak_window_days). When the posterior has concentrated on a
+        few suspects but stalls below the bar (e.g. two people in the same department, whom regular leaks cannot
+        separate), restrict the top suspect: continued leaks clear them, silence convicts them. The belief already
+        models it (documents list the actual recipients). Released when the restricted suspect is cleared."""
+        if not self.split:
+            return []
+        o, P = self.obs, self.P
+        q = [("unrestrict_access", {"employee": e}) for e in sorted(self.restricted)
+             if post.get(e, 0.0) < self.split_release]
+        if any(e not in {a["employee"] for _, a in q} for e in self.restricted):
+            return q
+        if o.today < self.split_min_day or o.today > P.n_days - P.leak_window_days:
+            return q
+        top = sorted(post, key=lambda e: (-post[e], e))
+        if sum(post[e] for e in top[: self.split_k]) < self.split_mass:
+            return q
+        cand = top[0]
+        if cand in self.restricted:
+            return q
+        return q + [("restrict_access", {"employee": cand})]
 
     def plan_canaries(self, post):
         P = self.P

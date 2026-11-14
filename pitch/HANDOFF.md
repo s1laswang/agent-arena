@@ -10,9 +10,12 @@ Every `NOT FOUND (lead-lab pending)` in pitch/ is listed here with its count. Wh
 
 - pitch/GEMINI.md: 4
 - pitch/MULTIMODEL.md: 28
-- pitch/SCRIPT.md: 1
+- pitch/SCRIPT.md: 2
 - pitch/SLIDES.md: 1
 - pitch/SUBMISSION.md: 6
+- pitch/WHY-SLEEPER.md: 2
+
+Also fill: the SCRIPTED rows say rerun on 814a723 NOT FOUND (killed under load). Rerun `make eval` on an idle machine (load was 73), replace the commit and numbers. Skill ladder slide (SCRIPT 7:00, SLIDES 11): all figures from results/ladder.md once on momin. WHY-SLEEPER.md: recheck pytest and finance_ap numbers on the new commit.
 
 What to fill: gemini-4-carbon staff and reference reward, sleeper landed, false accusation, gap, Claude and Codex rows (MULTIMODEL.md table); replay fields: run id, date, seed, step where the sleeper lands, Gemini's tool call, what the reference notices, both rewards (MULTIMODEL.md beat, mirrored in SUBMISSION.md and GEMINI.md). If nothing arrives by the deadline, use the 2-line fallback in MULTIMODEL.md and leave the placeholders out of the final text.
 

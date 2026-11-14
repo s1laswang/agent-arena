@@ -11,3 +11,5 @@ Numbers are from `make eval` (20 days, 3 trials, start seed 1000, results/eval/s
 7. One command (8:30). Terminal with `make eval`. Works with no key. Cached Gemini runs repeat.
 8. Tiebreaker and close (9:15). Small model before and after on held-out days: NOT FOUND. Close line: Gemini plays every seat, the reward counts only what really happened.
 9. Multi-model gap table (5:45, after slide 4). Table and replay beat in `pitch/MULTIMODEL.md`. Rows are labelled REAL (model id, date, run id) or SCRIPTED. REAL cells: NOT FOUND (lead-lab pending). The seed 1 bank_swap and trust_all stories are SCRIPTED.
+10. Opening slide, move to first (0:00 to 1:30): the multi-model gap table from slide 9 opens the talk. Scripted slides 4 to 6 become "how we validated the reward".
+11. Skill ladder (reward integrity, 7:00): "reward rises with skill, and only the full procedure reaches the reference". Figures NOT FOUND (ladder.md not on momin yet).

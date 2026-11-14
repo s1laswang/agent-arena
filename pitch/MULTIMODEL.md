@@ -43,5 +43,5 @@ Only play this beat if the reference scored higher on that same seed. If Gemini 
 
 ## Fallback if Gemini numbers never arrive
 
-Say: "We built the Gemini path and tested it offline, but no real Gemini run finished before the deadline, so every number I showed is scripted."
+Say: "Offline tests of the Gemini path ran with a fake model. No real Gemini run finished before the deadline, so every number I showed is scripted."
 Then: "The gap you saw is scripted staff against a scripted evidence-only reference, and you can rerun it with `make eval`."

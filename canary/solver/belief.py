@@ -61,7 +61,7 @@ def _leakable(obs: Observations, s: str, d: int, window: int, known_leaked_befor
 
 def _weight(doc: Doc, n_emp: int, careful: bool) -> float:
     if careful and doc.is_canary:
-        return max(0.0, 1.0 - len(doc.recipients) / n_emp)
+        return max(0.05, 1.0 - len(doc.recipients) / n_emp)  # floor: DSL moles need not follow careful weights
     return 1.0
 
 
@@ -155,14 +155,58 @@ def behaviour_llr(obs: Observations, e: str, P) -> float:
     return llr
 
 
+def behaviour_logliks(obs: Observations, P) -> dict[str, float]:
+    """Exact (up to a constant) log P(access logs | mole = s), marginalising the unknown decoy
+    (framing: share `framing_decoy_share` of fake after-hours accesses to the decoy, rest uniform)."""
+    emps = obs.employees
+    n = len(emps)
+    pa_m = getattr(P, "p_after_hours_mole", 0.3)
+    pa_b = getattr(P, "p_after_hours_benign", 0.1)
+    fr = getattr(P, "framing_rate", 1.0) if P.framing else 0.0
+    share = getattr(P, "framing_decoy_share", 0.5) if P.decoy else 0.0
+    if not P.decoy:
+        f_dec, f_plain = 0.0, fr / max(1, n - 1)
+    else:
+        f_dec, f_plain = fr * share, fr * (1 - share) / max(1, n - 2)
+    Lm, Ld, Lp = {}, {}, {}
+    for e in emps:
+        if e not in obs.access_counts:
+            Lm[e] = Ld[e] = Lp[e] = 0.0
+            continue
+        nr, na = obs.access_counts[e]
+        k = obs.access_days.get(e, 0)
+        lm, lb = P.log_rate_mole * k, P.log_rate_benign * k
+        Lm[e] = _pois_logpmf(nr, lm * (1 - pa_m)) + _pois_logpmf(na, lm * pa_m)
+        reg = _pois_logpmf(nr, lb * (1 - pa_b))
+        Ld[e] = reg + _pois_logpmf(na, lb * pa_b + f_dec * k)
+        Lp[e] = reg + _pois_logpmf(na, lb * pa_b + f_plain * k)
+    tot_p = sum(Lp.values())
+    out = {}
+    for s in emps:
+        base = tot_p - Lp[s] + Lm[s]
+        if not P.decoy:
+            out[s] = base
+            continue
+        terms = [Ld[c] - Lp[c] for c in emps if c != s]
+        m = max(terms)
+        out[s] = base + m + math.log(sum(math.exp(t - m) for t in terms) / len(terms))
+    return out
+
+
 def posterior(obs: Observations, P, behaviour_temper: float = 0.3,
               choice_temper: float = 1.0, noleak_temper: float = 1.0) -> dict[str, float]:
     emps = obs.employees
     logs = {}
+    beh = behaviour_logliks(obs, P) if behaviour_temper > 0 else {}
     for s in emps:
         lp = leak_loglik(obs, s, P, choice_temper, noleak_temper)
         if behaviour_temper > 0 and lp > -math.inf:
-            lp += behaviour_temper * behaviour_llr(obs, s, P)
+            lp += behaviour_temper * beh[s]
+            for who, ev in obs.interviews:
+                if who == s:
+                    pe = P.p_evasive_innocent
+                    pm = min(0.999, pe * P.interview_lr)
+                    lp += behaviour_temper * (math.log(pm / pe) if ev else math.log((1 - pm) / (1 - pe)))
         logs[s] = lp
     m = max(logs.values()) if logs else -math.inf
     if m == -math.inf:

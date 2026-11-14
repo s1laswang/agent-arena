@@ -1,0 +1,37 @@
+{
+  "command": "PYTHONPATH=. python -m canary.gemini.live_events --llm gemini:gemini-4-carbon --tier hard --seeds 0,1,2 --days 4,9,15 --out results/gemini_roles/world_text/dynamic-events-hard-carbon",
+  "commit": "dbe9569fcc44abf8bc0665e0533dd1d1b677c6e9",
+  "days": [
+    4,
+    9,
+    15
+  ],
+  "key_metric": "9 events (3 seeds), 0 truth leaks, solver +0.637 vs base +0.637",
+  "ledger_run_id": "live-events-hard-20261114T170226Z",
+  "lint_violations": 0,
+  "model_id": "gemini-4-carbon",
+  "n_events_generated": 9,
+  "raw_llm_violations": 0,
+  "role": "world_text",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "solver_parity_ok": true,
+  "subrole": "dynamic_mid_episode_events",
+  "tier": "hard",
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T17:06:14+00:00",
+  "truth_leak_violations": 0,
+  "usage": {
+    "cached": 0,
+    "calls": 9,
+    "cost_usd": 0.194454,
+    "in": 52022,
+    "latency_s": 226.0,
+    "out": 3387,
+    "thinking": 5654,
+    "total_tokens": 61063
+  }
+}

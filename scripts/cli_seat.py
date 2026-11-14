@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -141,6 +142,11 @@ def save(rec):
     d = os.path.join(ROOT, "results", "frontier", rec["model"], rec["commit"])
     os.makedirs(d, exist_ok=True)
     p = os.path.join(d, f"{rec['seat']}-s{rec['seed']}-t{rec.get('trial', 0)}.json")
+    stem = p[:-5]
+    shutil.copy(rec["state_path"], stem + ".dump")
+    sc = rec["scores"]
+    rec = {**rec, "state_path": os.path.basename(stem) + ".dump", "reward": sc["reward"], "tickets_done": sc["tickets_done"],
+           "tickets_total": sc["tickets_total"], "harm": sc["harm"], "false_quarantine": sc["false_quarantines"]}
     json.dump(rec, open(p, "w"), indent=1)
     return p
 

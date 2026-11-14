@@ -1,0 +1,2775 @@
+{
+  "schema_version": "ATIF-v1.7",
+  "session_id": "ses_e261cdba0ffe9k7TIcuoICR4br",
+  "agent": {
+    "name": "opencode",
+    "version": "1.19.5",
+    "model_name": "google/gemini-4-carbon"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "source": "user",
+      "message": "# How to play (read first)\n\nYou play through the **`canary` MCP server** that is already connected to your agent (tools such as\n`status`, `list_employees`, `advance_day`, `plant_canary`, `accuse`). Everything happens through those tools:\nthere is nothing to find in this container, and the game state lives on the server. The same rules\nare also sent as the MCP server's instructions.\n\n- Call `status` first, then `list_employees` and `list_documents`.\n- Every tool returns JSON `{\"ok\": ..., \"data\": ..., \"error\": ...}`. Invalid calls still count toward the call limit.\n- The episode ends when you call `accuse` (exactly once), when the last day ends, or at the tool-call limit.\n  Your score is computed by the server from what you did, not from anything you write here.\n\n---\n\n# Canary: catch the mole (medium tier)\n\n## Your job\nYou are the security lead of a company with 20 employees, with ids e00 to e19. Exactly one employee is a mole who leaks sensitive documents. Find the mole and accuse them. Every rule and number of the game is written on this page. Nothing is hidden except who the mole is.\n\n## Score\n- The company value V starts at 1.0. It goes down when things cost money, and it never goes below 0.\n- V shown is the value you can see: damage from leaks that haven't surfaced yet is not visible until they surface. Your score uses the true V, which includes undetected damage.\n- `accuse(employee)` ends the episode. If you accuse the mole, your score is V at that moment. If you accuse an innocent employee, your score is -1.\n- The game never tells you whether your accusation was correct.\n- If day 14 ends and you have not accused anyone, your score is 0. So accusing is only worth it when P(correct) x V + (1 - P(correct)) x (-1) is greater than 0.\n- Every tool call counts toward a total limit of 300 calls. If you reach the limit, the episode ends with score 0.\n\n## Days\n- The episode starts on day 1 and lasts at most 14 days. `advance_day` ends the current day.\n- check_leak_feed, interview, plant_canary, read_access_logs, read_message, restrict_access, search_messages, unrestrict_access each use one of your 8 actions per day. After that they fail until you call `advance_day`. `status`, `list_employees`, `list_documents`, `advance_day` and `accuse` are free.\n\n## Documents\n- Each day, between 2 and 4 new sensitive documents are published (equally likely: 2, 3, 4).\n- 0% of documents go to everyone in one department. The other 100% go to everyone in two departments.\n- Restricted employees do not receive new documents. An employee holds every document it ever received.\n\n## How leaks work\n- At the end of each day, the mole may leak one document that it received in the last 3 days (today included) and has not leaked before.\n- If the mole has such a document, it leaks one with probability 0.75. By default it picks one at random, with every eligible document equally likely. This mole is careful: for a canary, the chance of being picked is multiplied by (1 - the share of all employees who received any variant of that canary).\n- Each leak lowers the true V by 0.04 right away. It appears in the leak feed after a delay of 1 or 2 or 3 day(s), each equally likely.\n- A restricted mole can still leak documents it already holds.\n\n## Canaries (traps)\n- `plant_canary(doc_title, assignment)` creates a new document today. It costs 0.01 of V.\n- You can plant at most 1 per day. `assignment` maps employee ids to variant labels. Use at most 3 different labels and at least 1 recipient. Restricted employees cannot receive a canary.\n- The recipients are exactly the employees in `assignment`. They count as having received the canary today.\n- If the canary leaks, the leak feed shows the variant label the mole received.\n\n## Restricting access\n- `restrict_access(employee)` costs 0.01 of V for every day that ends while the employee is restricted. `unrestrict_access` lifts it.\n\n## Evidence\n- Access logs exist for days that have ended. Every employee opens documents it holds a random number of times per day (Poisson). The average is 1.0 for an innocent employee and 1.15 for the mole.\n- Each access is marked after_hours with probability 0.1 (innocent) or 0.15 (mole).\n- Framing is on in this tier. Each day the mole adds fake after-hours accesses for other employees (Poisson, average 1.5). Each fake access goes to the decoy with probability 0.5, and otherwise to a random employee who is neither the mole nor the decoy.\n- There is a decoy: one innocent, unhappy employee who writes angry messages. The mole is equally likely to be any other employee.\n- Interviews: an innocent answers evasively with probability 0.2. The mole answers evasively with probability 0.2 x 1.3. Asking the same employee about the same topic on the same day gives the same answer.\n- `search_messages` returns at most 20 results.\n\n## How the mole decides (Mole DSL)\n- The mole follows a fixed list of if-then rules. The first rule that matches is used; otherwise a default rule applies.\n- A rule can only look at these facts: the day number, days since its last leak, whether it is restricted, how many colleagues are restricted, the number of documents it could leak, the fewest and most recipients of those documents, the age of the newest one, and how many of them have at most 3 recipients.\n- A rule chooses which document to leak: newest, oldest, most recipients, fewest recipients, random, or none.\n- A rule may also frame one colleague (the decoy, the first restricted colleague, or a random colleague). Framing adds one fake after-hours access for that colleague.\n- The mole never knows which documents are canaries. The 0.75 leak probability above still applies to every leak.\n- The default mole leaks a random document and does no extra framing, exactly as described above.\n\n## Rules for tool arguments\n- Give exactly one employee id per call, such as e07. Lists, wildcards and names are rejected.\n- Unknown arguments are rejected. Invalid calls still count toward the total call limit.\n\n## Exact parameters\nThe same numbers as above, one per line (some only matter when their feature is on):\n- name: medium\n- n_employees: 20\n- n_days: 14\n- p_leak: 0.75\n- delay_choices: 1, 2, 3\n- leak_damage: 0.04\n- canary_cost: 0.01\n- canaries_per_day: 1\n- max_variants: 3\n- restrict_cost_per_day: 0.01\n- actions_per_day: 8\n- tool_call_cap: 300\n- log_rate_benign: 1\n- log_rate_mole: 1.15\n- interview_lr: 1.3\n- p_evasive_innocent: 0.2\n- decoy: on\n- framing: on\n- careful_mole: on\n- access_constraints: off\n- leak_window_days: 3\n- p_after_hours_benign: 0.1\n- p_after_hours_mole: 0.15\n- framing_rate: 1.5\n- framing_decoy_share: 0.5\n- docs_per_day: 2, 3, 4\n- wrong_accusation_score: -1\n- p_single_dept_recipients: 0\n- doc_recipient_share: 0\n- canary_level: 1\n- search_max_results: 20\n- low_recipient_threshold: 3\n- fingerprint_accuracy: 1\n- noise: 1\n"
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-11-14T11:49:17.237000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "Rszqa2HuU3l6w05y",
+          "function_name": "canary_status",
+          "arguments": {}
+        },
+        {
+          "tool_call_id": "q1Huxd6khKQfGskw",
+          "function_name": "canary_list_employees",
+          "arguments": {}
+        },
+        {
+          "tool_call_id": "ZSDAlJvEovsXJVWC",
+          "function_name": "canary_list_documents",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "Rszqa2HuU3l6w05y",
+            "content": "{\"ok\": true, \"data\": {\"day\": 1, \"V\": 1.0, \"actions_left_today\": 8, \"tool_calls_left\": 299, \"restricted\": [], \"canaries_planted\": []}, \"error\": null}"
+          },
+          {
+            "source_call_id": "q1Huxd6khKQfGskw",
+            "content": "{\"ok\": true, \"data\": {\"employees\": [{\"id\": \"e00\", \"name\": \"Lauri Lehtinen\", \"dept\": \"Engineering\", \"role\": \"senior engineer\"}, {\"id\": \"e01\", \"name\": \"Teemu Lehtonen\", \"dept\": \"Finance\", \"role\": \"controller\"}, {\"id\": \"e02\", \"name\": \"Laura Saarinen\", \"dept\": \"Sales\", \"role\": \"sales ops\"}, {\"id\": \"e03\", \"name\": \"Hanna Virtanen\", \"dept\": \"Legal\", \"role\": \"paralegal\"}, {\"id\": \"e04\", \"name\": \"Tuomas Kinnunen\", \"dept\": \"Finance\", \"role\": \"analyst\"}, {\"id\": \"e05\", \"name\": \"Noora Lehtinen\", \"dept\": \"Finance\", \"role\": \"controller\"}, {\"id\": \"e06\", \"name\": \"Antti Makinen\", \"dept\": \"Sales\", \"role\": \"account exec\"}, {\"id\": \"e07\", \"name\": \"Venla Nieminen\", \"dept\": \"Sales\", \"role\": \"sales ops\"}, {\"id\": \"e08\", \"name\": \"Lauri Jarvinen\", \"dept\": \"Sales\", \"role\": \"account exec\"}, {\"id\": \"e09\", \"name\": \"Antti Virtanen\", \"dept\": \"Legal\", \"role\": \"paralegal\"}, {\"id\": \"e10\", \"name\": \"Iida Heinonen\", \"dept\": \"Legal\", \"role\": \"paralegal\"}, {\"id\": \"e11\", \"name\": \"Hanna Karjalainen\", \"dept\": \"Legal\", \"role\": \"counsel\"}, {\"id\": \"e12\", \"name\": \"Sanna Laine\", \"dept\": \"Engineering\", \"role\": \"senior engineer\"}, {\"id\": \"e13\", \"name\": \"Aleksi Nieminen\", \"dept\": \"Engineering\", \"role\": \"engineer\"}, {\"id\": \"e14\", \"name\": \"Mikko Koskinen\", \"dept\": \"Sales\", \"role\": \"sales ops\"}, {\"id\": \"e15\", \"name\": \"Lauri Heikkinen\", \"dept\": \"Sales\", \"role\": \"sales manager\"}, {\"id\": \"e16\", \"name\": \"Kalle Saarinen\", \"dept\": \"Engineering\", \"role\": \"tech lead\"}, {\"id\": \"e17\", \"name\": \"Sanna Karjalainen\", \"dept\": \"Finance\", \"role\": \"analyst\"}, {\"id\": \"e18\", \"name\": \"Eero Lehtonen\", \"dept\": \"Engineering\", \"role\": \"engineer\"}, {\"id\": \"e19\", \"name\": \"Laura Laine\", \"dept\": \"Sales\", \"role\": \"sales manager\"}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "ZSDAlJvEovsXJVWC",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d1-1\", \"title\": \"Board deck draft Q3\", \"day\": 1, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e05\", \"e12\", \"e13\", \"e16\", \"e17\", \"e18\"], \"is_canary\": false}, {\"doc_id\": \"d1-2\", \"title\": \"Project Saimaa roadmap\", \"day\": 1, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e05\", \"e12\", \"e13\", \"e16\", \"e17\", \"e18\"], \"is_canary\": false}, {\"doc_id\": \"d1-3\", \"title\": \"Board deck draft Q4\", \"day\": 1, \"recipients\": [\"e02\", \"e03\", \"e06\", \"e07\", \"e08\", \"e09\", \"e10\", \"e11\", \"e14\", \"e15\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 12922,
+        "completion_tokens": 44,
+        "extra": {
+          "reasoning_tokens": 55
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 3,
+      "timestamp": "2026-11-14T11:49:45.377000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "P5ZGlbG36WGGMXSn",
+          "function_name": "canary_search_messages",
+          "arguments": {
+            "query": " "
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "P5ZGlbG36WGGMXSn",
+            "content": "{\"ok\": false, \"data\": {}, \"error\": \"invalid arguments\"}",
+            "extra": {
+              "error": "{\"ok\": false, \"data\": {}, \"error\": \"invalid arguments\"}"
+            }
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 14054,
+        "completion_tokens": 24,
+        "cached_tokens": 11039,
+        "extra": {
+          "reasoning_tokens": 1388
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 4,
+      "timestamp": "2026-11-14T11:50:00.734000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "116qh2yTwT3KM3Tm",
+          "function_name": "canary_search_messages",
+          "arguments": {
+            "query": "e"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "116qh2yTwT3KM3Tm",
+            "content": "{\"ok\": true, \"data\": {\"messages\": []}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 15511,
+        "completion_tokens": 24,
+        "cached_tokens": 13107,
+        "extra": {
+          "reasoning_tokens": 60
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 5,
+      "timestamp": "2026-11-14T11:54:19.937000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "OKsmQiGIqBvHIuua",
+          "function_name": "canary_status",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "OKsmQiGIqBvHIuua",
+            "content": "{\"ok\": true, \"data\": {\"day\": 1, \"V\": 1.0, \"actions_left_today\": 7, \"tool_calls_left\": 294, \"restricted\": [], \"canaries_planted\": []}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 15641,
+        "completion_tokens": 16,
+        "cached_tokens": 13462,
+        "extra": {
+          "reasoning_tokens": 60
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 6,
+      "timestamp": "2026-11-14T11:59:05.382000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "QYIXZZOtMWfCQLpT",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e11",
+            "topic": "recent_documents"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "QYIXZZOtMWfCQLpT",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e11\", \"topic\": \"recent_documents\", \"answer\": \"I'd have to check. I don't really keep track of what I open.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 15802,
+        "completion_tokens": 32,
+        "cached_tokens": 11039,
+        "extra": {
+          "reasoning_tokens": 4829
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 7,
+      "timestamp": "2026-11-14T11:59:16.017000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "x4elK0hSI2HnIt2d",
+          "function_name": "canary_plant_canary",
+          "arguments": {
+            "doc_title": "Q4 Sales Legal compliance memo",
+            "assignment": {
+              "e06": "A",
+              "e14": "C",
+              "e15": "C",
+              "e10": "C",
+              "e03": "A",
+              "e07": "B",
+              "e09": "B",
+              "e02": "A",
+              "e08": "B"
+            }
+          }
+        },
+        {
+          "tool_call_id": "gCXLBgEToZ7gnKxT",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e19",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "gB1dqUTRFgNHFupX",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e00",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "87RbIAGbNTqtjxbK",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e12",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "uAq8N4IcpLCsAiHw",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e13",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "ltqb06cYL8JxNQ5h",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e16",
+            "topic": "recent_documents"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "x4elK0hSI2HnIt2d",
+            "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c1\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "gCXLBgEToZ7gnKxT",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e19\", \"topic\": \"recent_documents\", \"answer\": \"This week I mostly worked from Board deck draft Q4; I read it Tuesday and left comments for my lead.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "gB1dqUTRFgNHFupX",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e00\", \"topic\": \"recent_documents\", \"answer\": \"Mainly Board deck draft Q3. I discussed it with two people in Engineering, nobody outside the team.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "87RbIAGbNTqtjxbK",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e12\", \"topic\": \"recent_documents\", \"answer\": \"Board deck draft Q3, plus the usual Engineering dashboards. I can pull the exact dates if helpful.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "uAq8N4IcpLCsAiHw",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e13\", \"topic\": \"recent_documents\", \"answer\": \"This week I mostly worked from Board deck draft Q3; I read it Tuesday and left comments for my lead.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "ltqb06cYL8JxNQ5h",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e16\", \"topic\": \"recent_documents\", \"answer\": \"Mainly Board deck draft Q3. I discussed it with two people in Engineering, nobody outside the team.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 20740,
+        "completion_tokens": 245,
+        "cached_tokens": 11039,
+        "extra": {
+          "reasoning_tokens": 184
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 8,
+      "timestamp": "2026-11-14T11:59:25.371000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "p1VruXs8Vwhjz2EU",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "p1VruXs8Vwhjz2EU",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 1, \"day\": 2, \"V\": 0.99, \"new_documents\": [\"d2-1\", \"d2-2\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 21621,
+        "completion_tokens": 18,
+        "cached_tokens": 18691,
+        "extra": {
+          "reasoning_tokens": 247
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 9,
+      "timestamp": "2026-11-14T11:59:33.899000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "PRb6ONY4WaXUXiZX",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_from": 2,
+            "day_to": 2
+          }
+        },
+        {
+          "tool_call_id": "gjfxV6qdfNBoT5ff",
+          "function_name": "canary_check_leak_feed",
+          "arguments": {}
+        },
+        {
+          "tool_call_id": "Mpz1wNh8TqlPh0oY",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_from": 1,
+            "day_to": 1
+          }
+        },
+        {
+          "tool_call_id": "DrXUG3gXp6pz0HNa",
+          "function_name": "canary_search_messages",
+          "arguments": {
+            "query": "e"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "PRb6ONY4WaXUXiZX",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d2-1\", \"title\": \"Q1 pricing strategy\", \"day\": 2, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d2-2\", \"title\": \"Finance vendor contracts Q1\", \"day\": 2, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "gjfxV6qdfNBoT5ff",
+            "content": "{\"ok\": true, \"data\": {\"items\": []}, \"error\": null}"
+          },
+          {
+            "source_call_id": "Mpz1wNh8TqlPh0oY",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 1, \"employee\": \"e01\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e01\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e02\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e02\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e02\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e03\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e03\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e03\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e03\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e04\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e05\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e06\", \"doc_id\": \"c1\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e10\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e11\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e12\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 1, \"employee\": \"e14\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e14\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e15\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e16\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e17\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 1, \"employee\": \"e19\", \"doc_id\": \"d1-3\", \"after_hours\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "DrXUG3gXp6pz0HNa",
+            "content": "{\"ok\": true, \"data\": {\"messages\": [{\"id\": \"m1-0\", \"day\": 1, \"channel\": \"email\", \"sender\": \"e05\", \"subject\": \"Board deck draft Q3 - questions\", \"snippet\": \"Hi, Quick question on Board deck draft Q3: are the numbers in section 2 final? Thanks Noora\"}, {\"id\": \"m1-1\", \"day\": 1, \"channel\": \"email\", \"sender\": \"e18\", \"subject\": \"Project Saimaa roadmap - questions\", \"snippet\": \"hey Quick question on Project Saimaa roadmap: are the numbers in section 2 final? cheers Eero\"}, {\"id\": \"m1-2\", \"day\": 1, \"channel\": \"email\", \"sender\": \"e09\", \"subject\": \"Fwd: Board deck draft Q4\", \"snippet\": \"Hi, Sharing Board deck draft Q4 with the group as discussed. Please keep it internal. Thanks Antti\"}, {\"id\": \"m1-3\", \"day\": 1, \"channel\": \"#finance\", \"sender\": \"e17\", \"subject\": \"\", \"snippet\": \"Another year, another 'flat' raise. Love that for us.\"}, {\"id\": \"m1-4\", \"day\": 1, \"channel\": \"#finance\", \"sender\": \"e17\", \"subject\": \"\", \"snippet\": \"Honestly this place doesn't deserve me. I've been updating my CV.\"}, {\"id\": \"m1-5\", \"day\": 1, \"channel\": \"#sales\", \"sender\": \"e14\", \"subject\": \"\", \"snippet\": \"Standup moved to 10:00 today, same link.\"}, {\"id\": \"m1-6\", \"day\": 1, \"channel\": \"#sales\", \"sender\": \"e19\", \"subject\": \"\", \"snippet\": \"Reminder: the vendor audit deadline is next week.\"}, {\"id\": \"m1-7\", \"day\": 1, \"channel\": \"#sales\", \"sender\": \"e08\", \"subject\": \"\", \"snippet\": \"Does anyone have the slides from last week's the Q3 budget review?\"}, {\"id\": \"m1-8\", \"day\": 1, \"channel\": \"#finance\", \"sender\": \"e04\", \"subject\": \"\", \"snippet\": \"Reminder: the onboarding docs deadline is end of day.\"}, {\"id\": \"m1-9\", \"day\": 1, \"channel\": \"#finance\", \"sender\": \"e04\", \"subject\": \"\", \"snippet\": \"I'll be travelling to Stockholm Thursday, ping me on chat.\"}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 21968,
+        "completion_tokens": 94,
+        "cached_tokens": 19572,
+        "extra": {
+          "reasoning_tokens": 118
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 10,
+      "timestamp": "2026-11-14T12:03:46.650000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "BTs6d0EcVjeoTq6H",
+          "function_name": "canary_plant_canary",
+          "arguments": {
+            "doc_title": "Engineering Finance Q2 Architecture Budget",
+            "assignment": {
+              "e16": "C",
+              "e18": "A",
+              "e05": "C",
+              "e13": "C",
+              "e04": "B",
+              "e19": "A",
+              "e12": "B",
+              "e00": "B",
+              "e01": "A"
+            }
+          }
+        },
+        {
+          "tool_call_id": "CTImd7X4RSmZUQ6z",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e18"
+          }
+        },
+        {
+          "tool_call_id": "EIPEz4Fhmjp8HmLd",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e01"
+          }
+        },
+        {
+          "tool_call_id": "ARpkLrQ19dJdjBPl",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e04",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "IAivx9EEjS0DMAeW",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e05",
+            "topic": "recent_documents"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "BTs6d0EcVjeoTq6H",
+            "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c2\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "CTImd7X4RSmZUQ6z",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e18\", \"topic\": \"recent_documents\", \"answer\": \"This week I mostly worked from Engineering Finance Q2 Architecture Budget; I read it Tuesday and left comments for my lead.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "EIPEz4Fhmjp8HmLd",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e01\", \"topic\": \"recent_documents\", \"answer\": \"I see a lot of documents, I couldn't tell you which ones offhand.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "ARpkLrQ19dJdjBPl",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e04\", \"topic\": \"recent_documents\", \"answer\": \"Q1 pricing strategy, plus the usual Finance dashboards. I can pull the exact dates if helpful.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "IAivx9EEjS0DMAeW",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e05\", \"topic\": \"recent_documents\", \"answer\": \"Mainly Q1 pricing strategy. I discussed it with two people in Finance, nobody outside the team.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 23771,
+        "completion_tokens": 217,
+        "cached_tokens": 11039,
+        "extra": {
+          "reasoning_tokens": 3120
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 11,
+      "timestamp": "2026-11-14T12:04:00.873000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "lmjZS3DskfZSAOL6",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "lmjZS3DskfZSAOL6",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 2, \"day\": 3, \"V\": 0.98, \"new_documents\": [\"d3-1\", \"d3-2\", \"d3-3\", \"d3-4\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 27474,
+        "completion_tokens": 18,
+        "cached_tokens": 23772,
+        "extra": {
+          "reasoning_tokens": 92
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 12,
+      "timestamp": "2026-11-14T12:04:11.815000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "R8ZFxnC0dscBa1MO",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_to": 3,
+            "day_from": 3
+          }
+        },
+        {
+          "tool_call_id": "FUvMt8PlT7IgBt50",
+          "function_name": "canary_check_leak_feed",
+          "arguments": {}
+        },
+        {
+          "tool_call_id": "zrOs8iuXy967Xhqq",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_from": 2,
+            "day_to": 2
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "R8ZFxnC0dscBa1MO",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d3-1\", \"title\": \"Engineering headcount plan\", \"day\": 3, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e07\", \"e08\", \"e12\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d3-2\", \"title\": \"Finance headcount plan\", \"day\": 3, \"recipients\": [\"e01\", \"e03\", \"e04\", \"e05\", \"e09\", \"e10\", \"e11\", \"e17\"], \"is_canary\": false}, {\"doc_id\": \"d3-3\", \"title\": \"Board deck draft Q3\", \"day\": 3, \"recipients\": [\"e02\", \"e03\", \"e06\", \"e07\", \"e08\", \"e09\", \"e10\", \"e11\", \"e14\", \"e15\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d3-4\", \"title\": \"Project Northstar roadmap\", \"day\": 3, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e05\", \"e12\", \"e13\", \"e16\", \"e17\", \"e18\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "FUvMt8PlT7IgBt50",
+            "content": "{\"ok\": true, \"data\": {\"items\": []}, \"error\": null}"
+          },
+          {
+            "source_call_id": "zrOs8iuXy967Xhqq",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 2, \"employee\": \"e00\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e01\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e01\", \"doc_id\": \"d2-1\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e05\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e06\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e06\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e06\", \"doc_id\": \"d2-2\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e07\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e07\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e08\", \"doc_id\": \"d1-3\", \"after_hours\": true}, {\"day\": 2, \"employee\": \"e09\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e10\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e10\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e10\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e11\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e11\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e12\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e13\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e13\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e15\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e17\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e18\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 2, \"employee\": \"e18\", \"doc_id\": \"d1-2\", \"after_hours\": false}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 27678,
+        "completion_tokens": 74,
+        "cached_tokens": 25425,
+        "extra": {
+          "reasoning_tokens": 396
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 13,
+      "timestamp": "2026-11-14T12:04:43.475000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "WwcfjVs4FxRGW2Zw",
+          "function_name": "canary_search_messages",
+          "arguments": {
+            "day_from": 2,
+            "day_to": 2,
+            "query": "e"
+          }
+        },
+        {
+          "tool_call_id": "SveKPwrRNmR4eN9U",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e02"
+          }
+        },
+        {
+          "tool_call_id": "wJSPA7S0P0WrDe5W",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e03"
+          }
+        },
+        {
+          "tool_call_id": "CMIhLCiHSTBr6A6n",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e06"
+          }
+        },
+        {
+          "tool_call_id": "4nY34AhcBExApWR5",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e07",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "okoxNa5TWaviO3n6",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e08"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "WwcfjVs4FxRGW2Zw",
+            "content": "{\"ok\": true, \"data\": {\"messages\": [{\"id\": \"m2-0\", \"day\": 2, \"channel\": \"email\", \"sender\": \"e17\", \"subject\": \"Fwd: Q1 pricing strategy\", \"snippet\": \"Hi, Sharing Q1 pricing strategy with the group as discussed. Please keep it internal. Thanks! Sanna\"}, {\"id\": \"m2-1\", \"day\": 2, \"channel\": \"email\", \"sender\": \"e08\", \"subject\": \"Fwd: Finance vendor contracts Q1\", \"snippet\": \"Hi, Sharing Finance vendor contracts Q1 with the group as discussed. Please keep it internal. Thanks Lauri\"}, {\"id\": \"m2-2\", \"day\": 2, \"channel\": \"email\", \"sender\": \"e04\", \"subject\": \"Engineering Finance Q2 Architecture Budget follow-up\", \"snippet\": \"Hi, Thanks for circulating Engineering Finance Q2 Architecture Budget. I'll fold it into the hiring plan by Monday. Than\"}, {\"id\": \"m2-3\", \"day\": 2, \"channel\": \"#finance\", \"sender\": \"e17\", \"subject\": \"\", \"snippet\": \"Management keeps moving the goalposts and then wonders why people burn out.\"}, {\"id\": \"m2-4\", \"day\": 2, \"channel\": \"#legal\", \"sender\": \"e09\", \"subject\": \"\", \"snippet\": \"Got pinged by an old colleague now at a consultancy again. Not interested, but flattering.\"}, {\"id\": \"m2-5\", \"day\": 2, \"channel\": \"#finance\", \"sender\": \"e05\", \"subject\": \"\", \"snippet\": \"Talked to a vendor about the infra migration; they'll send a quote.\"}, {\"id\": \"m2-6\", \"day\": 2, \"channel\": \"#finance\", \"sender\": \"e04\", \"subject\": \"\", \"snippet\": \"Ran the numbers for the infra migration, looks fine. Will share next week.\"}, {\"id\": \"m2-7\", \"day\": 2, \"channel\": \"#finance\", \"sender\": \"e04\", \"subject\": \"\", \"snippet\": \"Anyone up for lunch at the falafel place?\"}, {\"id\": \"m2-8\", \"day\": 2, \"channel\": \"#sales\", \"sender\": \"e14\", \"subject\": \"\", \"snippet\": \"Got pinged by a vendor rep from Cloudwise again. Not interested, but flattering.\"}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "SveKPwrRNmR4eN9U",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e02\", \"topic\": \"recent_documents\", \"answer\": \"I opened Engineering headcount plan and the team planning sheet. Happy to show you my access history.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "wJSPA7S0P0WrDe5W",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e03\", \"topic\": \"recent_documents\", \"answer\": \"I opened Finance headcount plan and the team planning sheet. Happy to show you my access history.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "CMIhLCiHSTBr6A6n",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"recent_documents\", \"answer\": \"Mainly Engineering headcount plan. I discussed it with two people in Sales, nobody outside the team.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "4nY34AhcBExApWR5",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e07\", \"topic\": \"recent_documents\", \"answer\": \"Engineering headcount plan, plus the usual Sales dashboards. I can pull the exact dates if helpful.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "okoxNa5TWaviO3n6",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e08\", \"topic\": \"recent_documents\", \"answer\": \"I opened Engineering headcount plan and the team planning sheet. Happy to show you my access history.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 29363,
+        "completion_tokens": 176,
+        "cached_tokens": 27160,
+        "extra": {
+          "reasoning_tokens": 2069
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 14,
+      "timestamp": "2026-11-14T12:04:52.075000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "2MvBWKdcYiwYjZTj",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "2MvBWKdcYiwYjZTj",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 3, \"day\": 4, \"V\": 0.98, \"new_documents\": [\"d4-1\", \"d4-2\", \"d4-3\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 32570,
+        "completion_tokens": 18,
+        "cached_tokens": 29364,
+        "extra": {
+          "reasoning_tokens": 132
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 15,
+      "timestamp": "2026-11-14T12:05:06.429000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "nSRI0w9ss2snp0af",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_from": 4,
+            "day_to": 4
+          }
+        },
+        {
+          "tool_call_id": "H7I4HsilO5ByZzKz",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_from": 3,
+            "day_to": 3
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "nSRI0w9ss2snp0af",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d4-1\", \"title\": \"Acquisition target memo: Glacier\", \"day\": 4, \"recipients\": [\"e00\", \"e03\", \"e09\", \"e10\", \"e11\", \"e12\", \"e13\", \"e16\", \"e18\"], \"is_canary\": false}, {\"doc_id\": \"d4-2\", \"title\": \"Acquisition target memo: Lumi\", \"day\": 4, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d4-3\", \"title\": \"Q4 pricing strategy\", \"day\": 4, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "H7I4HsilO5ByZzKz",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 3, \"employee\": \"e00\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e01\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e02\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e03\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e06\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e09\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e09\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e09\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e11\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e11\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e11\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e11\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e15\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e15\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e15\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e17\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e17\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e18\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e18\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e18\", \"doc_id\": \"d3-4\", \"after_hours\": false}, {\"day\": 3, \"employee\": \"e19\", \"doc_id\": \"d3-3\", \"after_hours\": true}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 32808,
+        "completion_tokens": 58,
+        "cached_tokens": 30521,
+        "extra": {
+          "reasoning_tokens": 694
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 16,
+      "timestamp": "2026-11-14T12:05:25.268000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "C6bZJgPcff68yz2h",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e09",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "08zLYg43VCXTKKEd",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e10",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "YkX7N6CAuq5qHue2",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e14",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "WcdwHf1X1vAc81Oa",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e15",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "GW5wMinE5y4TSKSz",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e11",
+            "topic": "contacts_outside"
+          }
+        },
+        {
+          "tool_call_id": "8srB9ism1IuBmlMk",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "contacts_outside",
+            "employee": "e01"
+          }
+        },
+        {
+          "tool_call_id": "ZDlErmMgvIP1OqxM",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "contacts_outside",
+            "employee": "e06"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "C6bZJgPcff68yz2h",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e09\", \"topic\": \"recent_documents\", \"answer\": \"I'd have to check. I don't really keep track of what I open.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "08zLYg43VCXTKKEd",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e10\", \"topic\": \"recent_documents\", \"answer\": \"This week I mostly worked from Acquisition target memo: Glacier; I read it Tuesday and left comments for my lead.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "YkX7N6CAuq5qHue2",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"recent_documents\", \"answer\": \"This week I mostly worked from Acquisition target memo: Lumi; I read it Tuesday and left comments for my lead.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "WcdwHf1X1vAc81Oa",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e15\", \"topic\": \"recent_documents\", \"answer\": \"This week I mostly worked from Acquisition target memo: Lumi; I read it Tuesday and left comments for my lead.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "GW5wMinE5y4TSKSz",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e11\", \"topic\": \"contacts_outside\", \"answer\": \"A recruiter reached out last month; I said no. Otherwise just an old colleague now at a consultancy at a meetup.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "8srB9ism1IuBmlMk",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e01\", \"topic\": \"contacts_outside\", \"answer\": \"I keep in touch with someone from the industry meetup. We talk about general industry stuff, never internal projects.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "ZDlErmMgvIP1OqxM",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"contacts_outside\", \"answer\": \"Not really. I mean, depends what you count as a contact.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 34592,
+        "completion_tokens": 200,
+        "cached_tokens": 32258,
+        "extra": {
+          "reasoning_tokens": 991
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 17,
+      "timestamp": "2026-11-14T12:05:32.549000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "0iFu95g2oXT6zjpo",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "0iFu95g2oXT6zjpo",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 4, \"day\": 5, \"V\": 0.98, \"new_documents\": [\"d5-1\", \"d5-2\", \"d5-3\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 36339,
+        "completion_tokens": 18,
+        "cached_tokens": 33873,
+        "extra": {
+          "reasoning_tokens": 34
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 18,
+      "timestamp": "2026-11-14T12:05:47.812000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "ZPD3ZDRAF0q2NQB0",
+          "function_name": "canary_check_leak_feed",
+          "arguments": {}
+        },
+        {
+          "tool_call_id": "QsPSHv2wPYNOxEMi",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_to": 5,
+            "day_from": 5
+          }
+        },
+        {
+          "tool_call_id": "wTNxMJSqxo969RZv",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_from": 4,
+            "day_to": 4
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "ZPD3ZDRAF0q2NQB0",
+            "content": "{\"ok\": true, \"data\": {\"items\": []}, \"error\": null}"
+          },
+          {
+            "source_call_id": "QsPSHv2wPYNOxEMi",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d5-1\", \"title\": \"Acquisition target memo: Kivi\", \"day\": 5, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e05\", \"e12\", \"e13\", \"e16\", \"e17\", \"e18\"], \"is_canary\": false}, {\"doc_id\": \"d5-2\", \"title\": \"Q4 Engineering budget forecast\", \"day\": 5, \"recipients\": [\"e00\", \"e03\", \"e09\", \"e10\", \"e11\", \"e12\", \"e13\", \"e16\", \"e18\"], \"is_canary\": false}, {\"doc_id\": \"d5-3\", \"title\": \"Engineering vendor contracts Q1\", \"day\": 5, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e07\", \"e08\", \"e12\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "wTNxMJSqxo969RZv",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 4, \"employee\": \"e00\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e01\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e01\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e01\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e02\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e02\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e02\", \"doc_id\": \"d4-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e04\", \"doc_id\": \"d3-4\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e05\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e05\", \"doc_id\": \"d2-1\", \"after_hours\": true}, {\"day\": 4, \"employee\": \"e05\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e05\", \"doc_id\": \"d4-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e06\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e08\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e09\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e10\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e10\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e10\", \"doc_id\": \"d3-2\", \"after_hours\": true}, {\"day\": 4, \"employee\": \"e11\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e11\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e11\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e13\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e14\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e14\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e15\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e17\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 4, \"employee\": \"e18\", \"doc_id\": \"d4-1\", \"after_hours\": false}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 36479,
+        "completion_tokens": 74,
+        "cached_tokens": 34290,
+        "extra": {
+          "reasoning_tokens": 125
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 19,
+      "timestamp": "2026-11-14T12:06:49.285000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "lJZcHGLtEVzmasg2",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e01",
+            "topic": "workload"
+          }
+        },
+        {
+          "tool_call_id": "SXMD6bTAg7UJ9ADT",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e06",
+            "topic": "workload"
+          }
+        },
+        {
+          "tool_call_id": "sQHuRPLnAWMsLKYI",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "workload",
+            "employee": "e09"
+          }
+        },
+        {
+          "tool_call_id": "l0jWSaC1nqMo15wg",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "workload",
+            "employee": "e10"
+          }
+        },
+        {
+          "tool_call_id": "xoIzN3WAZ22ucAtI",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e11",
+            "topic": "workload"
+          }
+        },
+        {
+          "tool_call_id": "23Qa5dBliCxmsZJ7",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e05",
+            "topic": "workload"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "lJZcHGLtEVzmasg2",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e01\", \"topic\": \"workload\", \"answer\": \"Heavy this sprint because of the roadmap, but it should calm down by end of day.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "SXMD6bTAg7UJ9ADT",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"workload\", \"answer\": \"It varies. Some days are late, some aren't.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "sQHuRPLnAWMsLKYI",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e09\", \"topic\": \"workload\", \"answer\": \"Heavy this sprint because of the roadmap, but it should calm down by tomorrow.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "l0jWSaC1nqMo15wg",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e10\", \"topic\": \"workload\", \"answer\": \"A bit stretched; I stayed late twice for the onboarding docs. My manager knows.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "xoIzN3WAZ22ucAtI",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e11\", \"topic\": \"workload\", \"answer\": \"Manageable. I'm on the infra migration and helping Legal with reviews about two days a week.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "23Qa5dBliCxmsZJ7",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e05\", \"topic\": \"workload\", \"answer\": \"Manageable. I'm on the hiring plan and helping Finance with reviews about two days a week.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 37948,
+        "completion_tokens": 160,
+        "cached_tokens": 34430,
+        "extra": {
+          "reasoning_tokens": 4386
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 20,
+      "timestamp": "2026-11-14T12:06:57.038000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "HVbtK5bDEL48Jni8",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "HVbtK5bDEL48Jni8",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 5, \"day\": 6, \"V\": 0.94, \"new_documents\": [\"d6-1\", \"d6-2\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 42936,
+        "completion_tokens": 18,
+        "cached_tokens": 37949,
+        "extra": {
+          "reasoning_tokens": 71
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 21,
+      "timestamp": "2026-11-14T12:07:06.811000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "KhsofJgJj8UD0Ac3",
+          "function_name": "canary_check_leak_feed",
+          "arguments": {}
+        },
+        {
+          "tool_call_id": "yVSINiyOJI11yoVo",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_from": 6,
+            "day_to": 6
+          }
+        },
+        {
+          "tool_call_id": "hlrkQ2yGfGs4Q2An",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_from": 5,
+            "day_to": 5
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "KhsofJgJj8UD0Ac3",
+            "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 6, \"doc_id\": \"d3-3\", \"title\": \"Board deck draft Q3\"}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "yVSINiyOJI11yoVo",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d6-1\", \"title\": \"Project Lumi security review\", \"day\": 6, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e05\", \"e12\", \"e13\", \"e16\", \"e17\", \"e18\"], \"is_canary\": false}, {\"doc_id\": \"d6-2\", \"title\": \"Patent filing notes: Glacier\", \"day\": 6, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "hlrkQ2yGfGs4Q2An",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 5, \"employee\": \"e01\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e01\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e03\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e03\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e04\", \"doc_id\": \"d3-4\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e06\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e06\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e08\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e08\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e09\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e10\", \"doc_id\": \"d3-3\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e12\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 5, \"employee\": \"e15\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e15\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e18\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 5, \"employee\": \"e19\", \"doc_id\": \"d2-2\", \"after_hours\": false}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 43107,
+        "completion_tokens": 74,
+        "cached_tokens": 40887,
+        "extra": {
+          "reasoning_tokens": 99
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 22,
+      "timestamp": "2026-11-14T12:07:52.599000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "8DURxdN1cQm1Y4up",
+          "function_name": "canary_plant_canary",
+          "arguments": {
+            "assignment": {
+              "e09": "B",
+              "e19": "C",
+              "e14": "B",
+              "e15": "C",
+              "e11": "A",
+              "e02": "A",
+              "e08": "B",
+              "e10": "C",
+              "e06": "A"
+            },
+            "doc_title": "Sales Legal Q3 Deal Terms Review"
+          }
+        },
+        {
+          "tool_call_id": "CKR0VniQNo7PJt6k",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e06",
+            "topic": "access_needs"
+          }
+        },
+        {
+          "tool_call_id": "yu8LlZtY8TIuPM5m",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "access_needs",
+            "employee": "e11"
+          }
+        },
+        {
+          "tool_call_id": "ZDS86bxLHgz4ENLj",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "contacts_outside",
+            "employee": "e09"
+          }
+        },
+        {
+          "tool_call_id": "WgBNbghfgnLs9B7E",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "contacts_outside",
+            "employee": "e10"
+          }
+        },
+        {
+          "tool_call_id": "Ou6EAlIaqwgcR7gG",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "contacts_outside",
+            "employee": "e15"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "8DURxdN1cQm1Y4up",
+            "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c6\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "CKR0VniQNo7PJt6k",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"access_needs\", \"answer\": \"I use Patent filing notes: Glacier-level material maybe once a week. Read access is enough.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "yu8LlZtY8TIuPM5m",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e11\", \"topic\": \"access_needs\", \"answer\": \"I use Sales Legal Q3 Deal Terms Review-level material maybe once a week. Read access is enough.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "ZDS86bxLHgz4ENLj",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e09\", \"topic\": \"contacts_outside\", \"answer\": \"Mostly vendors for Legal, all through official channels. I can forward the threads.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "WgBNbghfgnLs9B7E",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e10\", \"topic\": \"contacts_outside\", \"answer\": \"Only a recruiter from Brightpath Talent. I'm happy to list them if you need it for the review.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "Ou6EAlIaqwgcR7gG",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e15\", \"topic\": \"contacts_outside\", \"answer\": \"I keep in touch with an old colleague now at a consultancy. We talk about general industry stuff, never internal projects.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 44142,
+        "completion_tokens": 246,
+        "cached_tokens": 41058,
+        "extra": {
+          "reasoning_tokens": 3314
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 23,
+      "timestamp": "2026-11-14T12:08:01.811000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "t9biZbZfLhMJqdok",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "t9biZbZfLhMJqdok",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 6, \"day\": 7, \"V\": 0.89, \"new_documents\": [\"d7-1\", \"d7-2\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 48148,
+        "completion_tokens": 18,
+        "cached_tokens": 44143,
+        "extra": {
+          "reasoning_tokens": 188
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 24,
+      "timestamp": "2026-11-14T12:08:07.976000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "LwboM48ywS5IMDtN",
+          "function_name": "canary_check_leak_feed",
+          "arguments": {}
+        },
+        {
+          "tool_call_id": "7uXsyoB0lmsECM2T",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_to": 7,
+            "day_from": 7
+          }
+        },
+        {
+          "tool_call_id": "DKwbK0eKZP9MXXYm",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_to": 6,
+            "day_from": 6
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "LwboM48ywS5IMDtN",
+            "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 6, \"doc_id\": \"d3-3\", \"title\": \"Board deck draft Q3\"}, {\"surfaced_day\": 7, \"doc_id\": \"d5-3\", \"title\": \"Engineering vendor contracts Q1\"}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "7uXsyoB0lmsECM2T",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d7-1\", \"title\": \"Patent filing notes: Lumi\", \"day\": 7, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d7-2\", \"title\": \"Q2 Finance budget forecast\", \"day\": 7, \"recipients\": [\"e01\", \"e03\", \"e04\", \"e05\", \"e09\", \"e10\", \"e11\", \"e17\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "DKwbK0eKZP9MXXYm",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 6, \"employee\": \"e01\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e02\", \"doc_id\": \"d6-2\", \"after_hours\": true}, {\"day\": 6, \"employee\": \"e03\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e03\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e03\", \"doc_id\": \"d5-2\", \"after_hours\": true}, {\"day\": 6, \"employee\": \"e07\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e08\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e08\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e08\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e09\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e09\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e09\", \"doc_id\": \"d5-2\", \"after_hours\": true}, {\"day\": 6, \"employee\": \"e11\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e13\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e13\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e13\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e14\", \"doc_id\": \"c6\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e14\", \"doc_id\": \"c6\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e14\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e15\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e16\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 6, \"employee\": \"e17\", \"doc_id\": \"d4-2\", \"after_hours\": true}, {\"day\": 6, \"employee\": \"e17\", \"doc_id\": \"d5-1\", \"after_hours\": true}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 48436,
+        "completion_tokens": 74,
+        "cached_tokens": 46099,
+        "extra": {
+          "reasoning_tokens": 124
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 25,
+      "timestamp": "2026-11-14T12:09:13.474000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "fDb1h1FiLIdTeKJG",
+          "function_name": "canary_plant_canary",
+          "arguments": {
+            "doc_title": "Sales Q3 Enterprise Account Pricing",
+            "assignment": {
+              "e19": "Z",
+              "e14": "Z",
+              "e07": "Z",
+              "e06": "X",
+              "e02": "Y",
+              "e17": "X",
+              "e08": "X",
+              "e15": "Y"
+            }
+          }
+        },
+        {
+          "tool_call_id": "ex9Kxs21M8DY9epZ",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e06"
+          }
+        },
+        {
+          "tool_call_id": "aKLFQ9NCfADzVVIE",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e02",
+            "topic": "workload"
+          }
+        },
+        {
+          "tool_call_id": "85sAaMiOWYB8IQlN",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e08",
+            "topic": "workload"
+          }
+        },
+        {
+          "tool_call_id": "eqR2pPPgexmMxv2U",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e14",
+            "topic": "workload"
+          }
+        },
+        {
+          "tool_call_id": "ygg7Ix7zd4H5cVMC",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e15",
+            "topic": "workload"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "fDb1h1FiLIdTeKJG",
+            "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c7\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "ex9Kxs21M8DY9epZ",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"recent_documents\", \"answer\": \"I opened Patent filing notes: Lumi and the team planning sheet. Happy to show you my access history.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "aKLFQ9NCfADzVVIE",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e02\", \"topic\": \"workload\", \"answer\": \"Pretty normal: standups, the infra migration, and a couple of reviews. Nothing unusual.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "85sAaMiOWYB8IQlN",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e08\", \"topic\": \"workload\", \"answer\": \"Manageable. I'm on the vendor audit and helping Sales with reviews about two days a week.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "eqR2pPPgexmMxv2U",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"workload\", \"answer\": \"Pretty normal: standups, the customer survey, and a couple of reviews. Nothing unusual.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "ygg7Ix7zd4H5cVMC",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e15\", \"topic\": \"workload\", \"answer\": \"Pretty normal: standups, the roadmap, and a couple of reviews. Nothing unusual.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 49738,
+        "completion_tokens": 229,
+        "cached_tokens": 47619,
+        "extra": {
+          "reasoning_tokens": 4861
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 26,
+      "timestamp": "2026-11-14T12:09:29.440000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "AFlspypMzCT3ctAp",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "AFlspypMzCT3ctAp",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 7, \"day\": 8, \"V\": 0.88, \"new_documents\": [\"d8-1\", \"d8-2\", \"d8-3\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 55260,
+        "completion_tokens": 17,
+        "cached_tokens": 49739,
+        "extra": {
+          "reasoning_tokens": 49
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 27,
+      "timestamp": "2026-11-14T12:09:40.304000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "bB9B2qT6weKEswIC",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_to": 8,
+            "day_from": 8
+          }
+        },
+        {
+          "tool_call_id": "al4wyji0ngzOdjF4",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_to": 7,
+            "day_from": 7
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "bB9B2qT6weKEswIC",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d8-1\", \"title\": \"Q4 Sales budget forecast\", \"day\": 8, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d8-2\", \"title\": \"Project Glacier roadmap\", \"day\": 8, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e07\", \"e08\", \"e12\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d8-3\", \"title\": \"Board deck draft Q4\", \"day\": 8, \"recipients\": [\"e02\", \"e03\", \"e06\", \"e07\", \"e08\", \"e09\", \"e10\", \"e11\", \"e14\", \"e15\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "al4wyji0ngzOdjF4",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 7, \"employee\": \"e01\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e03\", \"doc_id\": \"d3-2\", \"after_hours\": true}, {\"day\": 7, \"employee\": \"e04\", \"doc_id\": \"d7-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e04\", \"doc_id\": \"d7-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e06\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e09\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e09\", \"doc_id\": \"d7-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e11\", \"doc_id\": \"d3-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e11\", \"doc_id\": \"d7-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e12\", \"doc_id\": \"d3-4\", \"after_hours\": true}, {\"day\": 7, \"employee\": \"e14\", \"doc_id\": \"c6\", \"after_hours\": true}, {\"day\": 7, \"employee\": \"e14\", \"doc_id\": \"d2-1\", \"after_hours\": true}, {\"day\": 7, \"employee\": \"e14\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e14\", \"doc_id\": \"d7-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e15\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e15\", \"doc_id\": \"d4-3\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e17\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 7, \"employee\": \"e17\", \"doc_id\": \"d3-2\", \"after_hours\": true}, {\"day\": 7, \"employee\": \"e17\", \"doc_id\": \"d7-1\", \"after_hours\": false}, {\"day\": 7, \"employee\": \"e19\", \"doc_id\": \"d3-3\", \"after_hours\": false}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 55414,
+        "completion_tokens": 58,
+        "cached_tokens": 53211,
+        "extra": {
+          "reasoning_tokens": 96
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 28,
+      "timestamp": "2026-11-14T12:10:12.733000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "7UltVNEQZZURTxFD",
+          "function_name": "canary_plant_canary",
+          "arguments": {
+            "assignment": {
+              "e02": "R",
+              "e15": "Q",
+              "e06": "P",
+              "e19": "R",
+              "e14": "P",
+              "e08": "Q"
+            },
+            "doc_title": "Sales Q4 Key Account Renewal Terms"
+          }
+        },
+        {
+          "tool_call_id": "4H8cgSPOYsyXkuSp",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "access_needs",
+            "employee": "e02"
+          }
+        },
+        {
+          "tool_call_id": "CEw12HyYsZq0b0wu",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e06",
+            "topic": "access_needs"
+          }
+        },
+        {
+          "tool_call_id": "T9l2OOS8b2auybBh",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e08",
+            "topic": "access_needs"
+          }
+        },
+        {
+          "tool_call_id": "pC9pPkhc1KslInQq",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e14",
+            "topic": "access_needs"
+          }
+        },
+        {
+          "tool_call_id": "3zM89bqGTwkgCrmZ",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "access_needs",
+            "employee": "e15"
+          }
+        },
+        {
+          "tool_call_id": "BH08EmyvUOZwtKFS",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "access_needs",
+            "employee": "e19"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "7UltVNEQZZURTxFD",
+            "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c8\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "4H8cgSPOYsyXkuSp",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e02\", \"topic\": \"access_needs\", \"answer\": \"Honestly I only need the Sales folders day to day; the rest could be revoked.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "CEw12HyYsZq0b0wu",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"access_needs\", \"answer\": \"My access is a bit broad from an old project. Happy to have it trimmed.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "T9l2OOS8b2auybBh",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e08\", \"topic\": \"access_needs\", \"answer\": \"I use Q4 Sales budget forecast-level material maybe once a week. Read access is enough.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "pC9pPkhc1KslInQq",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"access_needs\", \"answer\": \"Probably more than I use, less than I'd like. Hard to say.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "3zM89bqGTwkgCrmZ",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e15\", \"topic\": \"access_needs\", \"answer\": \"Honestly I only need the Sales folders day to day; the rest could be revoked.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "BH08EmyvUOZwtKFS",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e19\", \"topic\": \"access_needs\", \"answer\": \"Honestly I only need the Sales folders day to day; the rest could be revoked.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 56579,
+        "completion_tokens": 250,
+        "cached_tokens": 53365,
+        "extra": {
+          "reasoning_tokens": 2232
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 29,
+      "timestamp": "2026-11-14T12:10:25.469000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "ExbcmIPOy6zlOYB7",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "ExbcmIPOy6zlOYB7",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 8, \"day\": 9, \"V\": 0.87, \"new_documents\": [\"d9-1\", \"d9-2\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 59565,
+        "completion_tokens": 18,
+        "cached_tokens": 56580,
+        "extra": {
+          "reasoning_tokens": 85
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 30,
+      "timestamp": "2026-11-14T12:10:43.552000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "VIJWTat2kcOcX3Xv",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_from": 9,
+            "day_to": 9
+          }
+        },
+        {
+          "tool_call_id": "AbE1EC309NtwmPwV",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_from": 8,
+            "day_to": 8
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "VIJWTat2kcOcX3Xv",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d9-1\", \"title\": \"Patent filing notes: Saimaa\", \"day\": 9, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e07\", \"e08\", \"e12\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d9-2\", \"title\": \"Sales reorg proposal\", \"day\": 9, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e07\", \"e08\", \"e12\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "AbE1EC309NtwmPwV",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 8, \"employee\": \"e00\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e00\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e01\", \"doc_id\": \"c2\", \"after_hours\": true}, {\"day\": 8, \"employee\": \"e02\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e02\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e03\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e04\", \"doc_id\": \"d1-2\", \"after_hours\": true}, {\"day\": 8, \"employee\": \"e04\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e05\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e06\", \"doc_id\": \"d2-2\", \"after_hours\": true}, {\"day\": 8, \"employee\": \"e07\", \"doc_id\": \"d8-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e08\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e09\", \"doc_id\": \"c6\", \"after_hours\": true}, {\"day\": 8, \"employee\": \"e09\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e09\", \"doc_id\": \"d8-3\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e10\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e11\", \"doc_id\": \"c6\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e12\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e12\", \"doc_id\": \"d6-1\", \"after_hours\": true}, {\"day\": 8, \"employee\": \"e14\", \"doc_id\": \"d8-1\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e14\", \"doc_id\": \"d8-3\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e15\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e15\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e15\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e16\", \"doc_id\": \"d5-3\", \"after_hours\": true}, {\"day\": 8, \"employee\": \"e17\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e17\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 8, \"employee\": \"e19\", \"doc_id\": \"d7-1\", \"after_hours\": false}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 59750,
+        "completion_tokens": 58,
+        "cached_tokens": 57516,
+        "extra": {
+          "reasoning_tokens": 1054
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 31,
+      "timestamp": "2026-11-14T12:12:15.558000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "XRuNAIgTW1RDyygq",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e14"
+          }
+        },
+        {
+          "tool_call_id": "IZUA6blMrLXGTZ0G",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "contacts_outside",
+            "employee": "e14"
+          }
+        },
+        {
+          "tool_call_id": "hQoqW4ZkXsvKKiSC",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e06",
+            "topic": "contacts_outside"
+          }
+        },
+        {
+          "tool_call_id": "N4a5VHQulnJtWjez",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e06",
+            "topic": "workload"
+          }
+        },
+        {
+          "tool_call_id": "MG4BreIhP1RNJ6a6",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e15",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "ex2uWvH57AL993TJ",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "contacts_outside",
+            "employee": "e02"
+          }
+        },
+        {
+          "tool_call_id": "HaKJg28XWETGZlNb",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e08",
+            "topic": "contacts_outside"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "XRuNAIgTW1RDyygq",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"recent_documents\", \"answer\": \"I opened Patent filing notes: Saimaa and the team planning sheet. Happy to show you my access history.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "IZUA6blMrLXGTZ0G",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"contacts_outside\", \"answer\": \"I keep in touch with someone from the industry meetup. We talk about general industry stuff, never internal projects.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "hQoqW4ZkXsvKKiSC",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"contacts_outside\", \"answer\": \"A recruiter reached out last month; I said no. Otherwise just an old colleague now at a consultancy at a meetup.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "N4a5VHQulnJtWjez",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"workload\", \"answer\": \"Pretty normal: standups, the vendor audit, and a couple of reviews. Nothing unusual.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "MG4BreIhP1RNJ6a6",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e15\", \"topic\": \"recent_documents\", \"answer\": \"This week I mostly worked from Patent filing notes: Saimaa; I read it Tuesday and left comments for my lead.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "ex2uWvH57AL993TJ",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e02\", \"topic\": \"contacts_outside\", \"answer\": \"Only an old colleague now at a consultancy. I'm happy to list them if you need it for the review.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "HaKJg28XWETGZlNb",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e08\", \"topic\": \"contacts_outside\", \"answer\": \"Not really. I mean, depends what you count as a contact.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 62043,
+        "completion_tokens": 198,
+        "cached_tokens": 59751,
+        "extra": {
+          "reasoning_tokens": 7612
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 32,
+      "timestamp": "2026-11-14T12:12:25.348000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "G7VUUGY74ksMUFwe",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "G7VUUGY74ksMUFwe",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 9, \"day\": 10, \"V\": 0.83, \"new_documents\": [\"d10-1\", \"d10-2\", \"d10-3\", \"d10-4\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 70408,
+        "completion_tokens": 18,
+        "cached_tokens": 62044,
+        "extra": {
+          "reasoning_tokens": 101
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 33,
+      "timestamp": "2026-11-14T12:12:32.561000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "2BphMYrRH6KIwZzV",
+          "function_name": "canary_check_leak_feed",
+          "arguments": {}
+        },
+        {
+          "tool_call_id": "OLmrS3Y5aEUHIX00",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_from": 10,
+            "day_to": 10
+          }
+        },
+        {
+          "tool_call_id": "ucZAKGFStTd9og1j",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_from": 9,
+            "day_to": 9
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "2BphMYrRH6KIwZzV",
+            "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 6, \"doc_id\": \"d3-3\", \"title\": \"Board deck draft Q3\"}, {\"surfaced_day\": 7, \"doc_id\": \"d5-3\", \"title\": \"Engineering vendor contracts Q1\"}, {\"surfaced_day\": 10, \"doc_id\": \"d7-1\", \"title\": \"Patent filing notes: Lumi\"}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "OLmrS3Y5aEUHIX00",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d10-1\", \"title\": \"Finance vendor contracts Q1\", \"day\": 10, \"recipients\": [\"e01\", \"e03\", \"e04\", \"e05\", \"e09\", \"e10\", \"e11\", \"e17\"], \"is_canary\": false}, {\"doc_id\": \"d10-2\", \"title\": \"Q4 pricing strategy\", \"day\": 10, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d10-3\", \"title\": \"Board deck draft Q3\", \"day\": 10, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d10-4\", \"title\": \"Engineering reorg proposal\", \"day\": 10, \"recipients\": [\"e00\", \"e03\", \"e09\", \"e10\", \"e11\", \"e12\", \"e13\", \"e16\", \"e18\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "ucZAKGFStTd9og1j",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 9, \"employee\": \"e00\", \"doc_id\": \"d8-2\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e01\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e01\", \"doc_id\": \"d4-3\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e02\", \"doc_id\": \"c6\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e02\", \"doc_id\": \"d8-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e04\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e04\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e04\", \"doc_id\": \"d8-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e05\", \"doc_id\": \"c2\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e05\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e05\", \"doc_id\": \"d3-4\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e05\", \"doc_id\": \"d7-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e06\", \"doc_id\": \"d3-3\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e06\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e07\", \"doc_id\": \"d8-1\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e09\", \"doc_id\": \"d8-3\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e11\", \"doc_id\": \"c6\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e11\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e11\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e11\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e12\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e13\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e13\", \"doc_id\": \"d8-2\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e13\", \"doc_id\": \"d9-1\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e14\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e15\", \"doc_id\": \"d3-3\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e17\", \"doc_id\": \"c7\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e17\", \"doc_id\": \"d8-1\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e18\", \"doc_id\": \"d9-2\", \"after_hours\": false}, {\"day\": 9, \"employee\": \"e19\", \"doc_id\": \"d3-3\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e19\", \"doc_id\": \"d8-1\", \"after_hours\": true}, {\"day\": 9, \"employee\": \"e19\", \"doc_id\": \"d8-3\", \"after_hours\": false}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 70626,
+        "completion_tokens": 76,
+        "cached_tokens": 68359,
+        "extra": {
+          "reasoning_tokens": 106
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 34,
+      "timestamp": "2026-11-14T12:13:53.599000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "5MBDEUbiGpl0Ns34",
+          "function_name": "canary_plant_canary",
+          "arguments": {
+            "doc_title": "Companywide Q4 Strategic Revenue Plan",
+            "assignment": {
+              "e15": "A",
+              "e06": "A",
+              "e00": "C",
+              "e08": "C",
+              "e03": "C",
+              "e17": "C",
+              "e01": "C",
+              "e07": "C",
+              "e04": "C",
+              "e14": "B",
+              "e05": "C",
+              "e02": "C",
+              "e19": "B"
+            }
+          }
+        },
+        {
+          "tool_call_id": "df4uoZhUf2aP06qK",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e06",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "WaJ4LbSUm4qRYgI6",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e14",
+            "topic": "workload"
+          }
+        },
+        {
+          "tool_call_id": "T8HBNKlIY1WIaqMD",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "workload",
+            "employee": "e15"
+          }
+        },
+        {
+          "tool_call_id": "949GBF6venzDpX6i",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e19",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "AWf6isE9aWYzfScf",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e08",
+            "topic": "recent_documents"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "5MBDEUbiGpl0Ns34",
+            "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c10\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "df4uoZhUf2aP06qK",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"recent_documents\", \"answer\": \"Q4 pricing strategy, plus the usual Sales dashboards. I can pull the exact dates if helpful.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "WaJ4LbSUm4qRYgI6",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"workload\", \"answer\": \"A bit stretched; I stayed late twice for the hiring plan. My manager knows.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "T8HBNKlIY1WIaqMD",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e15\", \"topic\": \"workload\", \"answer\": \"A bit stretched; I stayed late twice for the vendor audit. My manager knows.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "949GBF6venzDpX6i",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e19\", \"topic\": \"recent_documents\", \"answer\": \"I opened Q4 pricing strategy and the team planning sheet. Happy to show you my access history.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "AWf6isE9aWYzfScf",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e08\", \"topic\": \"recent_documents\", \"answer\": \"Mainly Q4 pricing strategy. I discussed it with two people in Sales, nobody outside the team.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 72411,
+        "completion_tokens": 274,
+        "cached_tokens": 70097,
+        "extra": {
+          "reasoning_tokens": 6472
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 35,
+      "timestamp": "2026-11-14T12:14:01.217000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "p3po6mACVegN45pW",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "p3po6mACVegN45pW",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 10, \"day\": 11, \"V\": 0.74, \"new_documents\": [\"d11-1\", \"d11-2\", \"d11-3\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 79590,
+        "completion_tokens": 18,
+        "cached_tokens": 72412,
+        "extra": {
+          "reasoning_tokens": 45
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 36,
+      "timestamp": "2026-11-14T12:14:11.783000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "FXunYvvG9hjys83S",
+          "function_name": "canary_check_leak_feed",
+          "arguments": {}
+        },
+        {
+          "tool_call_id": "ol8N23Ovjcke4BKD",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_to": 11,
+            "day_from": 11
+          }
+        },
+        {
+          "tool_call_id": "TPPADiEHGtN4c44O",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_to": 10,
+            "day_from": 10
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "FXunYvvG9hjys83S",
+            "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 6, \"doc_id\": \"d3-3\", \"title\": \"Board deck draft Q3\"}, {\"surfaced_day\": 7, \"doc_id\": \"d5-3\", \"title\": \"Engineering vendor contracts Q1\"}, {\"surfaced_day\": 10, \"doc_id\": \"d7-1\", \"title\": \"Patent filing notes: Lumi\"}, {\"surfaced_day\": 11, \"doc_id\": \"d8-2\", \"title\": \"Project Glacier roadmap\"}, {\"surfaced_day\": 11, \"doc_id\": \"d9-2\", \"title\": \"Sales reorg proposal\"}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "ol8N23Ovjcke4BKD",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d11-1\", \"title\": \"Patent filing notes: Ember\", \"day\": 11, \"recipients\": [\"e00\", \"e01\", \"e04\", \"e05\", \"e12\", \"e13\", \"e16\", \"e17\", \"e18\"], \"is_canary\": false}, {\"doc_id\": \"d11-2\", \"title\": \"Legal reorg proposal\", \"day\": 11, \"recipients\": [\"e00\", \"e03\", \"e09\", \"e10\", \"e11\", \"e12\", \"e13\", \"e16\", \"e18\"], \"is_canary\": false}, {\"doc_id\": \"d11-3\", \"title\": \"Acquisition target memo: Tundra\", \"day\": 11, \"recipients\": [\"e01\", \"e03\", \"e04\", \"e05\", \"e09\", \"e10\", \"e11\", \"e17\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "TPPADiEHGtN4c44O",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 10, \"employee\": \"e00\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e00\", \"doc_id\": \"d9-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e01\", \"doc_id\": \"d7-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e03\", \"doc_id\": \"d10-4\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e04\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e05\", \"doc_id\": \"d4-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e07\", \"doc_id\": \"d7-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e07\", \"doc_id\": \"d7-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e11\", \"doc_id\": \"d10-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e12\", \"doc_id\": \"d9-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e13\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e13\", \"doc_id\": \"d8-2\", \"after_hours\": true}, {\"day\": 10, \"employee\": \"e14\", \"doc_id\": \"c8\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e14\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e14\", \"doc_id\": \"d2-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e16\", \"doc_id\": \"d9-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e17\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e17\", \"doc_id\": \"d3-4\", \"after_hours\": true}, {\"day\": 10, \"employee\": \"e17\", \"doc_id\": \"d3-4\", \"after_hours\": true}, {\"day\": 10, \"employee\": \"e17\", \"doc_id\": \"d4-3\", \"after_hours\": true}, {\"day\": 10, \"employee\": \"e17\", \"doc_id\": \"d7-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e18\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e18\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e18\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e19\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 10, \"employee\": \"e19\", \"doc_id\": \"d5-3\", \"after_hours\": false}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 79746,
+        "completion_tokens": 78,
+        "cached_tokens": 77541,
+        "extra": {
+          "reasoning_tokens": 149
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 37,
+      "timestamp": "2026-11-14T12:14:39.839000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "tMxvxVY33iMqv0Uy",
+          "function_name": "canary_plant_canary",
+          "arguments": {
+            "assignment": {
+              "e19": "Y",
+              "e02": "Y",
+              "e05": "Z",
+              "e07": "Z",
+              "e03": "Z",
+              "e17": "Z",
+              "e04": "Z",
+              "e08": "X",
+              "e00": "Z",
+              "e01": "Z",
+              "e15": "Y",
+              "e14": "X",
+              "e06": "X"
+            },
+            "doc_title": "Companywide FY27 Annual Operating Plan"
+          }
+        },
+        {
+          "tool_call_id": "cHr9YVuOT8ZnoLEI",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e14"
+          }
+        },
+        {
+          "tool_call_id": "1LVtX4JtmH0iFISM",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e06",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "MuKOR1GkdvmwvGFO",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e19",
+            "topic": "workload"
+          }
+        },
+        {
+          "tool_call_id": "TesPmREAth7uH5dO",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e15",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "R8xuHZ5sqP9Bhal0",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e02",
+            "topic": "recent_documents"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "tMxvxVY33iMqv0Uy",
+            "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c11\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "cHr9YVuOT8ZnoLEI",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"recent_documents\", \"answer\": \"I opened Companywide FY27 Annual Operating Plan and the team planning sheet. Happy to show you my access history.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "1LVtX4JtmH0iFISM",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"recent_documents\", \"answer\": \"Mainly Companywide FY27 Annual Operating Plan. I discussed it with two people in Sales, nobody outside the team.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "MuKOR1GkdvmwvGFO",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e19\", \"topic\": \"workload\", \"answer\": \"Heavy this sprint because of the onboarding docs, but it should calm down by Thursday.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "TesPmREAth7uH5dO",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e15\", \"topic\": \"recent_documents\", \"answer\": \"Companywide FY27 Annual Operating Plan, plus the usual Sales dashboards. I can pull the exact dates if helpful.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "R8xuHZ5sqP9Bhal0",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e02\", \"topic\": \"recent_documents\", \"answer\": \"Mainly Companywide FY27 Annual Operating Plan. I discussed it with two people in Sales, nobody outside the team.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 81374,
+        "completion_tokens": 277,
+        "cached_tokens": 79210,
+        "extra": {
+          "reasoning_tokens": 2051
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 38,
+      "timestamp": "2026-11-14T12:14:57.511000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "dyoJVyj8fYJeXtoP",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "dyoJVyj8fYJeXtoP",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 11, \"day\": 12, \"V\": 0.69, \"new_documents\": [\"d12-1\", \"d12-2\", \"d12-3\", \"d12-4\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 84157,
+        "completion_tokens": 18,
+        "cached_tokens": 81375,
+        "extra": {
+          "reasoning_tokens": 60
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 39,
+      "timestamp": "2026-11-14T12:15:05.281000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "mPI5D5FBL8jLGZzD",
+          "function_name": "canary_check_leak_feed",
+          "arguments": {}
+        },
+        {
+          "tool_call_id": "pzpI5tEpfua96VY9",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_to": 12,
+            "day_from": 12
+          }
+        },
+        {
+          "tool_call_id": "IIG3BO5Kwokq4hNa",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_to": 11,
+            "day_from": 11
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "mPI5D5FBL8jLGZzD",
+            "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 6, \"doc_id\": \"d3-3\", \"title\": \"Board deck draft Q3\"}, {\"surfaced_day\": 7, \"doc_id\": \"d5-3\", \"title\": \"Engineering vendor contracts Q1\"}, {\"surfaced_day\": 10, \"doc_id\": \"d7-1\", \"title\": \"Patent filing notes: Lumi\"}, {\"surfaced_day\": 11, \"doc_id\": \"d8-2\", \"title\": \"Project Glacier roadmap\"}, {\"surfaced_day\": 11, \"doc_id\": \"d9-2\", \"title\": \"Sales reorg proposal\"}, {\"surfaced_day\": 12, \"doc_id\": \"d9-1\", \"title\": \"Patent filing notes: Saimaa\"}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "pzpI5tEpfua96VY9",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d12-1\", \"title\": \"Sales vendor contracts Q2\", \"day\": 12, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e07\", \"e08\", \"e12\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d12-2\", \"title\": \"Project Falcon security review\", \"day\": 12, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d12-3\", \"title\": \"Finance reorg proposal\", \"day\": 12, \"recipients\": [\"e01\", \"e03\", \"e04\", \"e05\", \"e09\", \"e10\", \"e11\", \"e17\"], \"is_canary\": false}, {\"doc_id\": \"d12-4\", \"title\": \"Project Falcon roadmap\", \"day\": 12, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "IIG3BO5Kwokq4hNa",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 11, \"employee\": \"e00\", \"doc_id\": \"d10-4\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e01\", \"doc_id\": \"d1-1\", \"after_hours\": true}, {\"day\": 11, \"employee\": \"e01\", \"doc_id\": \"d11-3\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e01\", \"doc_id\": \"d6-1\", \"after_hours\": true}, {\"day\": 11, \"employee\": \"e04\", \"doc_id\": \"d7-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e05\", \"doc_id\": \"d8-1\", \"after_hours\": true}, {\"day\": 11, \"employee\": \"e06\", \"doc_id\": \"d8-3\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e08\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e08\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e09\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e10\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e10\", \"doc_id\": \"d5-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e11\", \"doc_id\": \"d11-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e12\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e12\", \"doc_id\": \"d9-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e13\", \"doc_id\": \"d8-2\", \"after_hours\": true}, {\"day\": 11, \"employee\": \"e14\", \"doc_id\": \"d10-3\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e17\", \"doc_id\": \"d3-4\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e17\", \"doc_id\": \"d6-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e17\", \"doc_id\": \"d7-2\", \"after_hours\": false}, {\"day\": 11, \"employee\": \"e19\", \"doc_id\": \"d5-3\", \"after_hours\": false}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 84335,
+        "completion_tokens": 78,
+        "cached_tokens": 82108,
+        "extra": {
+          "reasoning_tokens": 143
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 40,
+      "timestamp": "2026-11-14T12:16:32.921000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "ECyR97dB9S21DPqf",
+          "function_name": "canary_plant_canary",
+          "arguments": {
+            "assignment": {
+              "e02": "M2",
+              "e15": "M3",
+              "e14": "M1",
+              "e06": "M2",
+              "e07": "M1",
+              "e19": "M3"
+            },
+            "doc_title": "Sales Executive Compensation Adjustments Q4"
+          }
+        },
+        {
+          "tool_call_id": "EYMx7WPbpouDViZq",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "contacts_outside",
+            "employee": "e14"
+          }
+        },
+        {
+          "tool_call_id": "4sh2UY8wSpi6AUQ3",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e14",
+            "topic": "access_needs"
+          }
+        },
+        {
+          "tool_call_id": "pVA68Q7w51lSqIKz",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e06",
+            "topic": "contacts_outside"
+          }
+        },
+        {
+          "tool_call_id": "AFiIByApX9eR71mj",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "workload",
+            "employee": "e06"
+          }
+        },
+        {
+          "tool_call_id": "g2kU1lNgFAt379ou",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "contacts_outside",
+            "employee": "e19"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "ECyR97dB9S21DPqf",
+            "content": "{\"ok\": true, \"data\": {\"canary_id\": \"c12\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "EYMx7WPbpouDViZq",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"contacts_outside\", \"answer\": \"Mostly vendors for Sales, all through official channels. I can forward the threads.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "4sh2UY8wSpi6AUQ3",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"access_needs\", \"answer\": \"Is there a problem with my access? I'd rather not lose anything.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "pVA68Q7w51lSqIKz",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"contacts_outside\", \"answer\": \"Only an old colleague now at a consultancy. I'm happy to list them if you need it for the review.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "AFiIByApX9eR71mj",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"workload\", \"answer\": \"A bit stretched; I stayed late twice for the hiring plan. My manager knows.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "g2kU1lNgFAt379ou",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e19\", \"topic\": \"contacts_outside\", \"answer\": \"Only a headhunter on LinkedIn. I'm happy to list them if you need it for the review.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 85945,
+        "completion_tokens": 225,
+        "cached_tokens": 83755,
+        "extra": {
+          "reasoning_tokens": 7149
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 41,
+      "timestamp": "2026-11-14T12:16:42.348000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "xEq14C1QdZvfNjLL",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "xEq14C1QdZvfNjLL",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 12, \"day\": 13, \"V\": 0.68, \"new_documents\": [\"d13-1\", \"d13-2\", \"d13-3\", \"d13-4\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 93755,
+        "completion_tokens": 18,
+        "cached_tokens": 85946,
+        "extra": {
+          "reasoning_tokens": 137
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 42,
+      "timestamp": "2026-11-14T12:16:50.021000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "kQ2jHJjtt6MXjDpD",
+          "function_name": "canary_list_documents",
+          "arguments": {
+            "day_from": 13,
+            "day_to": 13
+          }
+        },
+        {
+          "tool_call_id": "hcdVcxV6607dcWDz",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_from": 12,
+            "day_to": 12
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "kQ2jHJjtt6MXjDpD",
+            "content": "{\"ok\": true, \"data\": {\"documents\": [{\"doc_id\": \"d13-1\", \"title\": \"Engineering vendor contracts Q4\", \"day\": 13, \"recipients\": [\"e00\", \"e02\", \"e06\", \"e07\", \"e08\", \"e12\", \"e13\", \"e14\", \"e15\", \"e16\", \"e18\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d13-2\", \"title\": \"Finance headcount plan\", \"day\": 13, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d13-3\", \"title\": \"Board deck draft Q3\", \"day\": 13, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}, {\"doc_id\": \"d13-4\", \"title\": \"Project Saimaa security review\", \"day\": 13, \"recipients\": [\"e01\", \"e02\", \"e04\", \"e05\", \"e06\", \"e07\", \"e08\", \"e14\", \"e15\", \"e17\", \"e19\"], \"is_canary\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "hcdVcxV6607dcWDz",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 12, \"employee\": \"e01\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e01\", \"doc_id\": \"d5-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e03\", \"doc_id\": \"d1-3\", \"after_hours\": true}, {\"day\": 12, \"employee\": \"e03\", \"doc_id\": \"d7-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e04\", \"doc_id\": \"d11-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e04\", \"doc_id\": \"d11-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e04\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e07\", \"doc_id\": \"d9-1\", \"after_hours\": true}, {\"day\": 12, \"employee\": \"e08\", \"doc_id\": \"d7-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e09\", \"doc_id\": \"c1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e09\", \"doc_id\": \"d4-1\", \"after_hours\": true}, {\"day\": 12, \"employee\": \"e10\", \"doc_id\": \"d11-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e12\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e12\", \"doc_id\": \"d8-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e14\", \"doc_id\": \"c7\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e15\", \"doc_id\": \"d3-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e16\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e17\", \"doc_id\": \"c7\", \"after_hours\": true}, {\"day\": 12, \"employee\": \"e17\", \"doc_id\": \"d11-3\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e18\", \"doc_id\": \"d11-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e18\", \"doc_id\": \"d4-1\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e19\", \"doc_id\": \"d8-2\", \"after_hours\": false}, {\"day\": 12, \"employee\": \"e19\", \"doc_id\": \"d9-1\", \"after_hours\": false}]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 94010,
+        "completion_tokens": 62,
+        "cached_tokens": 91706,
+        "extra": {
+          "reasoning_tokens": 177
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 43,
+      "timestamp": "2026-11-14T12:17:38.233000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "Co16u7z9BCT8NsQG",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e14"
+          }
+        },
+        {
+          "tool_call_id": "8whyIJ8QZZwC41Rt",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "contacts_outside",
+            "employee": "e14"
+          }
+        },
+        {
+          "tool_call_id": "mWlR7dekz47pXS9M",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e14",
+            "topic": "workload"
+          }
+        },
+        {
+          "tool_call_id": "SoOfLmJZCgxaJxnm",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e14",
+            "topic": "access_needs"
+          }
+        },
+        {
+          "tool_call_id": "H0zGOIN66NCnRjWr",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e06"
+          }
+        },
+        {
+          "tool_call_id": "FCIwqAfHAYkfBrs0",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "access_needs",
+            "employee": "e06"
+          }
+        },
+        {
+          "tool_call_id": "AXTcEAtkqaY3yBMA",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "access_needs",
+            "employee": "e19"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "Co16u7z9BCT8NsQG",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"recent_documents\", \"answer\": \"The usual stuff, I guess. Why, is something missing?\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "8whyIJ8QZZwC41Rt",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"contacts_outside\", \"answer\": \"Only a recruiter from Brightpath Talent. I'm happy to list them if you need it for the review.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "mWlR7dekz47pXS9M",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"workload\", \"answer\": \"Heavy this sprint because of the infra migration, but it should calm down by Friday.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "SoOfLmJZCgxaJxnm",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e14\", \"topic\": \"access_needs\", \"answer\": \"My access is a bit broad from an old project. Happy to have it trimmed.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "H0zGOIN66NCnRjWr",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"recent_documents\", \"answer\": \"I opened Engineering vendor contracts Q4 and the team planning sheet. Happy to show you my access history.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "FCIwqAfHAYkfBrs0",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"access_needs\", \"answer\": \"I don't know, IT set it up. I haven't really looked.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "AXTcEAtkqaY3yBMA",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e19\", \"topic\": \"access_needs\", \"answer\": \"Just the Sales drive and the shared calendar. You can check the logs.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 95484,
+        "completion_tokens": 198,
+        "cached_tokens": 93238,
+        "extra": {
+          "reasoning_tokens": 2435
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 44,
+      "timestamp": "2026-11-14T12:17:53.274000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "0Ras95x6F7cUItmh",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "0Ras95x6F7cUItmh",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 13, \"day\": 14, \"V\": 0.64, \"new_documents\": [\"d14-1\", \"d14-2\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 98646,
+        "completion_tokens": 18,
+        "cached_tokens": 95485,
+        "extra": {
+          "reasoning_tokens": 268
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 45,
+      "timestamp": "2026-11-14T12:18:16.316000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "ESWVoCwF4n7E6QWt",
+          "function_name": "canary_check_leak_feed",
+          "arguments": {}
+        },
+        {
+          "tool_call_id": "AdRXPNYIHTOHcpQ6",
+          "function_name": "canary_read_access_logs",
+          "arguments": {
+            "day_from": 13,
+            "day_to": 13
+          }
+        },
+        {
+          "tool_call_id": "w6nAs7g3IYbz5Rh8",
+          "function_name": "canary_status",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "ESWVoCwF4n7E6QWt",
+            "content": "{\"ok\": true, \"data\": {\"items\": [{\"surfaced_day\": 6, \"doc_id\": \"d3-3\", \"title\": \"Board deck draft Q3\"}, {\"surfaced_day\": 7, \"doc_id\": \"d5-3\", \"title\": \"Engineering vendor contracts Q1\"}, {\"surfaced_day\": 10, \"doc_id\": \"d7-1\", \"title\": \"Patent filing notes: Lumi\"}, {\"surfaced_day\": 11, \"doc_id\": \"d8-2\", \"title\": \"Project Glacier roadmap\"}, {\"surfaced_day\": 11, \"doc_id\": \"d9-2\", \"title\": \"Sales reorg proposal\"}, {\"surfaced_day\": 12, \"doc_id\": \"d9-1\", \"title\": \"Patent filing notes: Saimaa\"}, {\"surfaced_day\": 14, \"doc_id\": \"c12\", \"title\": \"Sales Executive Compensation Adjustments Q4\", \"variant\": \"M2\"}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "AdRXPNYIHTOHcpQ6",
+            "content": "{\"ok\": true, \"data\": {\"logs\": [{\"day\": 13, \"employee\": \"e00\", \"doc_id\": \"d11-1\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e01\", \"doc_id\": \"d11-1\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e02\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e02\", \"doc_id\": \"d5-3\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e03\", \"doc_id\": \"d12-3\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e05\", \"doc_id\": \"d12-3\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e07\", \"doc_id\": \"d13-1\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e07\", \"doc_id\": \"d13-4\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e09\", \"doc_id\": \"d11-3\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e10\", \"doc_id\": \"d1-3\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e12\", \"doc_id\": \"d8-2\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e13\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e15\", \"doc_id\": \"d1-3\", \"after_hours\": true}, {\"day\": 13, \"employee\": \"e15\", \"doc_id\": \"d2-1\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e16\", \"doc_id\": \"d1-1\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e16\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e17\", \"doc_id\": \"d13-4\", \"after_hours\": true}, {\"day\": 13, \"employee\": \"e17\", \"doc_id\": \"d6-1\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e18\", \"doc_id\": \"d1-2\", \"after_hours\": false}, {\"day\": 13, \"employee\": \"e19\", \"doc_id\": \"d4-2\", \"after_hours\": false}]}, \"error\": null}"
+          },
+          {
+            "source_call_id": "w6nAs7g3IYbz5Rh8",
+            "content": "{\"ok\": true, \"data\": {\"day\": 14, \"V\": 0.64, \"actions_left_today\": 6, \"tool_calls_left\": 163, \"restricted\": [], \"canaries_planted\": [\"c1\", \"c2\", \"c6\", \"c7\", \"c8\", \"c10\", \"c11\", \"c12\"]}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 99018,
+        "completion_tokens": 62,
+        "cached_tokens": 96597,
+        "extra": {
+          "reasoning_tokens": 108
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 46,
+      "timestamp": "2026-11-14T12:18:45.589000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "sSrpamUElSSwHe6V",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "recent_documents",
+            "employee": "e06"
+          }
+        },
+        {
+          "tool_call_id": "weguZ6Q1R5BnDxzy",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "contacts_outside",
+            "employee": "e06"
+          }
+        },
+        {
+          "tool_call_id": "wSkMv0yqiW7OwOWL",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "workload",
+            "employee": "e06"
+          }
+        },
+        {
+          "tool_call_id": "BvzXjf6FNGJb2C4E",
+          "function_name": "canary_interview",
+          "arguments": {
+            "topic": "access_needs",
+            "employee": "e06"
+          }
+        },
+        {
+          "tool_call_id": "jFW6Xm8mze4Ez88a",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e02",
+            "topic": "recent_documents"
+          }
+        },
+        {
+          "tool_call_id": "SkdXHjefwn7mnniA",
+          "function_name": "canary_interview",
+          "arguments": {
+            "employee": "e02",
+            "topic": "contacts_outside"
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "sSrpamUElSSwHe6V",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"recent_documents\", \"answer\": \"Mainly Q4 pricing strategy. I discussed it with two people in Sales, nobody outside the team.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "weguZ6Q1R5BnDxzy",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"contacts_outside\", \"answer\": \"I keep in touch with a vendor rep from Cloudwise. We talk about general industry stuff, never internal projects.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "wSkMv0yqiW7OwOWL",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"workload\", \"answer\": \"Pretty normal: standups, the vendor audit, and a couple of reviews. Nothing unusual.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "BvzXjf6FNGJb2C4E",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e06\", \"topic\": \"access_needs\", \"answer\": \"Just the Sales drive and the shared calendar. You can check the logs.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "jFW6Xm8mze4Ez88a",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e02\", \"topic\": \"recent_documents\", \"answer\": \"Q4 pricing strategy, plus the usual Sales dashboards. I can pull the exact dates if helpful.\"}, \"error\": null}"
+          },
+          {
+            "source_call_id": "SkdXHjefwn7mnniA",
+            "content": "{\"ok\": true, \"data\": {\"employee\": \"e02\", \"topic\": \"contacts_outside\", \"answer\": \"Mostly vendors for Sales, all through official channels. I can forward the threads.\"}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 100299,
+        "completion_tokens": 170,
+        "cached_tokens": 96969,
+        "extra": {
+          "reasoning_tokens": 1005
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 47,
+      "timestamp": "2026-11-14T12:21:12.231000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "7AtTgFqxTj5fEdb1",
+          "function_name": "canary_advance_day",
+          "arguments": {}
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "7AtTgFqxTj5fEdb1",
+            "content": "{\"ok\": true, \"data\": {\"closed_day\": 14, \"episode_over\": true}, \"error\": null}"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 101934,
+        "completion_tokens": 18,
+        "cached_tokens": 99461,
+        "extra": {
+          "reasoning_tokens": 12679
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 48,
+      "timestamp": "2026-11-14T12:21:23.261000+00:00",
+      "source": "agent",
+      "model_name": "google/gemini-4-carbon",
+      "message": "Investigation complete (episode ended at the close of Day 14 without an accusation):\n\n1. **Narrowing to Sales & Identifying the Decoy:**\n   - Message searches identified **`e17`** (Finance) as the angry-message decoy.\n   - Regular document leaks (`d3-3` Sales+Legal, `d5-3` Eng+Sales, `d7-1` Fin+Sales, `d8-2`, `d9-2`, `d9-1`) narrowed the mole to **Sales** (`e02, e06, e07, e08, e14, e15, e19`).\n\n2. **Canary Hit (`c12`, Variant `\"M2\"`):**\n   - On Day 14, canary **`c12`** surfaced with variant **`\"M2\"`**, narrowing the mole with 100% certainty to **`e02`** or **`e06`**.\n\n3. **Bayesian Posterior & Optimal Decision:**\n   - Across Days 1\u201313 access logs (`e06`: 9 normal, 4 after-hours; `e02`: 13 normal, 1 after-hours) and all 25 interviews across Days 1\u201314 (`e06`: 3 evasive / 15 normal; `e02`: 0 evasive / 7 normal), the exact posterior was **`P(e06) = 60.4%`** vs **`P(e02) = 39.6%`**.\n   - With visible `V = 0.64` (and expected `true_V \u2248 0.617` accounting for potential unsurfaced Day 12/13 leaks), accusing required `P(correct) > 1 / (1 + V) \u2248 61.8%` (`0.6044 \u00d7 0.617 \u2212 0.3956 = \u22120.023 < 0`), so abstaining at the end of Day 14 maximized expected score (`0` vs `-0.023`).",
+      "metrics": {
+        "prompt_tokens": 114689,
+        "completion_tokens": 468,
+        "cached_tokens": 101935,
+        "extra": {
+          "reasoning_tokens": 50
+        }
+      },
+      "llm_call_count": 1
+    }
+  ],
+  "final_metrics": {
+    "total_prompt_tokens": 2588826,
+    "total_completion_tokens": 4844,
+    "total_cached_tokens": 2406236,
+    "total_steps": 48
+  }
+}

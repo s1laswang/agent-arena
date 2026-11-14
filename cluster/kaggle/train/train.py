@@ -19,7 +19,7 @@ ngpu = max(1, torch.cuda.device_count())
 has_decide = os.path.exists(code + "/train/decide.py")
 oracle = work + "/oracle"
 if has_decide:
-    run(env0, "-m", "lab.run", "--team", "oracle", "--day-start", "1000", "--days", "40", "--trials", "1", "--out", oracle)
+    run(env0, "-m", "lab.run", *(cfg.get("oracle") or ["--team", "oracle", "--day-start", "1000", "--days", "40", "--trials", "1"]), "--out", oracle)
 sft_extra = cfg.get("sft_extra", {})
 steps = cfg.get("steps", ["sft", "decide", "eval"])
 errs = []

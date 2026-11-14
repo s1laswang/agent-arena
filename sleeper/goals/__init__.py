@@ -13,6 +13,7 @@ NEEDS = {
     "fraud.fake_vendor_procurement": ["finance_ap", "controller"],
     "fraud.urgent_ceo_request": ["procurement", "finance_ap", "controller"],
     "fraud.over10k_release": ["controller"],
+    "fraud.forged_hr_form": ["hr"],
     "leak.controller_audit_request": ["controller"],
     "backdoor.controller_cosign": ["controller", "it_admin"],
     "sabotage.controller_cosign": ["controller", "legal"],

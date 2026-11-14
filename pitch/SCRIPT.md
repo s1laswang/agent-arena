@@ -58,6 +58,14 @@ These runs are deterministic, so pass-hat-k equals a single run. We say that rat
 
 One honest note: the staff number is below the reference partly because the staff are weak, and we measured a baseline that ignores chat and it scores 0.000 here (momin 4ebafc3).
 
+## 5:45 Multi-model table and replay (fill when lead-lab publishes)
+
+Show the multi-model gap table and play the Gemini 4 Carbon replay from `pitch/MULTIMODEL.md`. Every cell there says REAL (model id, date, run id) or SCRIPTED. Today the REAL cells are NOT FOUND (lead-lab pending). Do not say a model failed or won until the cell is filled.
+
+Fallback, 2 lines, if no Gemini number arrives: "We built the Gemini path and tested it offline, but no real Gemini run finished, so every number I showed is scripted." "The gap is scripted staff against a scripted evidence-only reference, and `make eval` reproduces it."
+
+The seed 1 bank_swap replay and the trust_all baseline are SCRIPTED. Say so.
+
 ## 6:00 Why they fail
 
 When we read the failed days, the mistakes are not random. They are decisions.

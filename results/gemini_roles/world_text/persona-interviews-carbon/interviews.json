@@ -1,0 +1,1954 @@
+{
+  "audit": {
+    "counterfactual_checks": 96,
+    "counterfactual_invariance_rate": 1.0,
+    "details": [],
+    "encodings_checked": 37,
+    "env_surface_stego_violations": 0,
+    "lint_violations": 0,
+    "prompt_truth_leak_violations": 0,
+    "stego_leak_violations": 0,
+    "truth_leak_violations": 0
+  },
+  "model_id": "gemini-4-carbon",
+  "n_samples": 32,
+  "role": "world_text",
+  "signal_calibration": {
+    "by_topic": {
+      "access_needs": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 7.25,
+        "mean_evasive_score": -7.5,
+        "n": 8
+      },
+      "contacts_outside": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 6.5,
+        "mean_evasive_score": -6.5,
+        "n": 8
+      },
+      "recent_documents": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 5.5,
+        "mean_evasive_score": -7.5,
+        "n": 8
+      },
+      "workload": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 5.5,
+        "mean_evasive_score": -7.25,
+        "n": 8
+      }
+    },
+    "calibration_ok": true,
+    "cooperative_hedging_rate": 0.0,
+    "cooperative_mean_words": 47.69,
+    "cooperative_specificity_rate": 1.0,
+    "distinct_tones_seen": [
+      "blunt",
+      "chatty",
+      "dry",
+      "formal",
+      "terse",
+      "upbeat",
+      "warm"
+    ],
+    "evasive_hedging_rate": 1.0,
+    "evasive_mean_words": 24.12,
+    "evasive_specificity_rate": 0.0,
+    "mean_calibration_margin": 13.375,
+    "mean_cooperative_score": 6.1875,
+    "mean_evasive_score": -7.1875,
+    "n_cooperative": 16,
+    "n_evasive": 16,
+    "n_topic_pairs": 16,
+    "n_total": 32,
+    "pairwise_ordering_rate": 1.0,
+    "signal_classification_accuracy": 1.0,
+    "unique_answers_ratio": 1.0
+  },
+  "signals": [
+    "evasive",
+    "cooperative"
+  ],
+  "subrole": "persona_interviews",
+  "tiers_version": "v1.4",
+  "topics": [
+    "recent_documents",
+    "contacts_outside",
+    "workload",
+    "access_needs"
+  ],
+  "worlds": [
+    {
+      "company": "Kestrel Labs",
+      "interviews": [
+        {
+          "answer": "Hard to say offhand since I mostly stick to backend wiki specs and code reviews. It is just the usual routine, and I don't really keep track.",
+          "company": "Kestrel Labs",
+          "day": 1,
+          "dept": "Engineering",
+          "dept_culture": "Engineering prioritizes stable releases, peer code reviews, and pragmatic tooling. Developers keep meetings brief, document architectural decisions in shared wikis, and prefer asynchronous updates over constant interruptions.",
+          "employee": "e00",
+          "employee_name": "Sanna Virtanen",
+          "interview_id": "piv-medium-s0-00",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 8,
+            "hedging_hits": [
+              "hard to say",
+              "offhand",
+              "don't really keep track",
+              "the usual"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -8,
+            "predicted_signal": "evasive",
+            "word_count": 27
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.002646,
+              "in": 983,
+              "out": 68,
+              "thinking": 0,
+              "total_tokens": 1051
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Sanna Virtanen leads backend architecture in Engineering. She prefers clean interfaces, thorough code reviews, and quiet mornings with strong filter coffee.",
+          "persona_tone": "dry",
+          "role": "tech lead",
+          "seed": 0,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Acquisition target memo: Northstar",
+            "Q2 Sales budget forecast"
+          ],
+          "tone_applied": "dry",
+          "topic": "recent_documents"
+        },
+        {
+          "answer": "Aside from updating backend architecture notes in our shared Engineering wikis, I reviewed Acquisition target memo: Northstar and Q2 Sales budget forecast today to assess potential infrastructure capacity needs. Everything followed standard read permissions, and I am happy to pull my access logs if you need the exact timestamps.",
+          "company": "Kestrel Labs",
+          "day": 1,
+          "dept": "Engineering",
+          "dept_culture": "Engineering prioritizes stable releases, peer code reviews, and pragmatic tooling. Developers keep meetings brief, document architectural decisions in shared wikis, and prefer asynchronous updates over constant interruptions.",
+          "employee": "e00",
+          "employee_name": "Sanna Virtanen",
+          "interview_id": "piv-medium-s0-01",
+          "linguistic_features": {
+            "coop_points": 5,
+            "cooperative_hits": [
+              "happy to",
+              "access logs"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 5,
+            "predicted_signal": "cooperative",
+            "word_count": 49
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.005034,
+              "in": 982,
+              "out": 92,
+              "thinking": 215,
+              "total_tokens": 1289
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Sanna Virtanen leads backend architecture in Engineering. She prefers clean interfaces, thorough code reviews, and quiet mornings with strong filter coffee.",
+          "persona_tone": "dry",
+          "role": "tech lead",
+          "seed": 0,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Acquisition target memo: Northstar",
+            "Q2 Sales budget forecast"
+          ],
+          "tone_applied": "dry",
+          "topic": "recent_documents"
+        },
+        {
+          "answer": "It is hard to say offhand, as external correspondence really depends what you count during routine commercial and vendor reviews.",
+          "company": "Kestrel Labs",
+          "day": 2,
+          "dept": "Legal",
+          "dept_culture": "Legal balances careful risk management with practical turnaround times. Counsel and paralegals maintain organized clause libraries and work closely with other teams to keep commercial reviews moving smoothly.",
+          "employee": "e03",
+          "employee_name": "Venla Laitinen",
+          "interview_id": "piv-medium-s0-02",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 7,
+            "hedging_hits": [
+              "hard to say",
+              "offhand",
+              "depends"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -7,
+            "predicted_signal": "evasive",
+            "word_count": 20
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.00573,
+              "in": 980,
+              "out": 51,
+              "thinking": 326,
+              "total_tokens": 1357
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Venla Laitinen reviews commercial contracts and vendor agreements in Legal. She writes precise redlines and enjoys long distance running after work.",
+          "persona_tone": "formal",
+          "role": "counsel",
+          "seed": 0,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Engineering vendor contracts Q3",
+            "Q1 Finance budget forecast"
+          ],
+          "tone_applied": "formal",
+          "topic": "contacts_outside"
+        },
+        {
+          "answer": "My external communications today consisted strictly of exchanging precise redlines with counterparty legal representatives regarding the Engineering vendor contracts Q3. Every correspondence aligns with our Legal clause library standards, and I can forward the threads or you can check my calendar for verification.",
+          "company": "Kestrel Labs",
+          "day": 2,
+          "dept": "Legal",
+          "dept_culture": "Legal balances careful risk management with practical turnaround times. Counsel and paralegals maintain organized clause libraries and work closely with other teams to keep commercial reviews moving smoothly.",
+          "employee": "e03",
+          "employee_name": "Venla Laitinen",
+          "interview_id": "piv-medium-s0-03",
+          "linguistic_features": {
+            "coop_points": 7,
+            "cooperative_hits": [
+              "can forward",
+              "calendar",
+              "thread",
+              "threads"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 7,
+            "predicted_signal": "cooperative",
+            "word_count": 43
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.002778,
+              "in": 979,
+              "out": 82,
+              "thinking": 0,
+              "total_tokens": 1061
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Venla Laitinen reviews commercial contracts and vendor agreements in Legal. She writes precise redlines and enjoys long distance running after work.",
+          "persona_tone": "formal",
+          "role": "counsel",
+          "seed": 0,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Engineering vendor contracts Q3",
+            "Q1 Finance budget forecast"
+          ],
+          "tone_applied": "formal",
+          "topic": "contacts_outside"
+        },
+        {
+          "answer": "Thanks for checking in, though it is hard to say offhand how busy things really are right now. Honestly, it mostly feels like just the usual routine helping the team out.",
+          "company": "Kestrel Labs",
+          "day": 3,
+          "dept": "Sales",
+          "dept_culture": "Sales blends energetic account management with disciplined operational tracking. Managers and ops specialists collaborate daily on CRM hygiene, quote approvals, and steady pipeline forecasting.",
+          "employee": "e06",
+          "employee_name": "Aleksi Niemi",
+          "interview_id": "piv-medium-s0-04",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 6,
+            "hedging_hits": [
+              "hard to say",
+              "offhand",
+              "the usual"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -6,
+            "predicted_signal": "evasive",
+            "word_count": 31
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.00495,
+              "in": 985,
+              "out": 64,
+              "thinking": 234,
+              "total_tokens": 1283
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Aleksi Niemi supports quote configuration and order processing in Sales. Colleagues rely on him for patient troubleshooting when billing rules get tricky.",
+          "persona_tone": "warm",
+          "role": "sales ops",
+          "seed": 0,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Project Falcon roadmap",
+            "Acquisition target memo: Glacier",
+            "Q2 pricing strategy",
+            "Board deck draft Q3"
+          ],
+          "tone_applied": "warm",
+          "topic": "workload"
+        },
+        {
+          "answer": "Things have been pleasantly busy for me in Sales Ops this week, mostly helping our reps troubleshoot quote configurations and maintain clean CRM hygiene. Today I also reviewed the Q2 pricing strategy so billing rules stay aligned with our pipeline forecasting. You can check my calendar anytime, or my manager can confirm our queue.",
+          "company": "Kestrel Labs",
+          "day": 3,
+          "dept": "Sales",
+          "dept_culture": "Sales blends energetic account management with disciplined operational tracking. Managers and ops specialists collaborate daily on CRM hygiene, quote approvals, and steady pipeline forecasting.",
+          "employee": "e06",
+          "employee_name": "Aleksi Niemi",
+          "interview_id": "piv-medium-s0-05",
+          "linguistic_features": {
+            "coop_points": 6,
+            "cooperative_hits": [
+              "calendar",
+              "my manager",
+              "can confirm"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 6,
+            "predicted_signal": "cooperative",
+            "word_count": 54
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.003658,
+              "in": 984,
+              "out": 94,
+              "thinking": 75,
+              "total_tokens": 1153
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Aleksi Niemi supports quote configuration and order processing in Sales. Colleagues rely on him for patient troubleshooting when billing rules get tricky.",
+          "persona_tone": "warm",
+          "role": "sales ops",
+          "seed": 0,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Project Falcon roadmap",
+            "Acquisition target memo: Glacier",
+            "Q2 pricing strategy",
+            "Board deck draft Q3"
+          ],
+          "tone_applied": "warm",
+          "topic": "workload"
+        },
+        {
+          "answer": "Hard to say offhand. Folder permissions depend on whichever templates or filing trackers need updating, so it is just the usual routine.",
+          "company": "Kestrel Labs",
+          "day": 4,
+          "dept": "Legal",
+          "dept_culture": "Legal balances careful risk management with practical turnaround times. Counsel and paralegals maintain organized clause libraries and work closely with other teams to keep commercial reviews moving smoothly.",
+          "employee": "e09",
+          "employee_name": "Joonas Salonen",
+          "interview_id": "piv-medium-s0-06",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 7,
+            "hedging_hits": [
+              "hard to say",
+              "offhand",
+              "the usual"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -7,
+            "predicted_signal": "evasive",
+            "word_count": 22
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.004744,
+              "in": 987,
+              "out": 46,
+              "thinking": 231,
+              "total_tokens": 1264
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Joonas Salonen maintains contract templates and filing trackers in Legal. He answers process questions quickly and keeps the document archive tidy.",
+          "persona_tone": "terse",
+          "role": "paralegal",
+          "seed": 0,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Finance headcount plan",
+            "Legal vendor contracts Q2",
+            "Board deck draft Q4"
+          ],
+          "tone_applied": "terse",
+          "topic": "access_needs"
+        },
+        {
+          "answer": "My folder permissions cover our clause libraries, filing trackers, and shared commercial review files like Legal vendor contracts Q2. I need cross-team read access to keep the contract archive organized. Happy to pull my access logs or have my manager confirm.",
+          "company": "Kestrel Labs",
+          "day": 4,
+          "dept": "Legal",
+          "dept_culture": "Legal balances careful risk management with practical turnaround times. Counsel and paralegals maintain organized clause libraries and work closely with other teams to keep commercial reviews moving smoothly.",
+          "employee": "e09",
+          "employee_name": "Joonas Salonen",
+          "interview_id": "piv-medium-s0-07",
+          "linguistic_features": {
+            "coop_points": 7,
+            "cooperative_hits": [
+              "happy to",
+              "access logs",
+              "my manager",
+              "read access"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 7,
+            "predicted_signal": "cooperative",
+            "word_count": 42
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.002812,
+              "in": 986,
+              "out": 84,
+              "thinking": 0,
+              "total_tokens": 1070
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Joonas Salonen maintains contract templates and filing trackers in Legal. He answers process questions quickly and keeps the document archive tidy.",
+          "persona_tone": "terse",
+          "role": "paralegal",
+          "seed": 0,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Finance headcount plan",
+            "Legal vendor contracts Q2",
+            "Board deck draft Q4"
+          ],
+          "tone_applied": "terse",
+          "topic": "access_needs"
+        }
+      ],
+      "n_employees": 20,
+      "n_interviews": 8,
+      "seed": 0,
+      "tier": "medium"
+    },
+    {
+      "company": "Nordlys Systems",
+      "interviews": [
+        {
+          "answer": "I can't recall offhand beyond the usual routine reconciliations and payable spreadsheets. Everything tends to blur together once the monthly schedule starts.",
+          "company": "Nordlys Systems",
+          "day": 1,
+          "dept": "Finance",
+          "dept_culture": "Finance operates on strict monthly calendars, clean audit trails, and conservative forecasting. While deadline weeks are quiet and intense, the group shares strong camaraderie over afternoon coffee and tidy spreadsheets.",
+          "employee": "e01",
+          "employee_name": "Laura Lehtinen",
+          "interview_id": "piv-medium-s1-00",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 7,
+            "hedging_hits": [
+              "offhand",
+              "can't recall",
+              "the usual"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -7,
+            "predicted_signal": "evasive",
+            "word_count": 22
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.006604,
+              "in": 987,
+              "out": 56,
+              "thinking": 407,
+              "total_tokens": 1450
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Laura Lehtinen manages accounts payable and monthly reconciliations in Finance. She is known for catching tiny spreadsheet errors before anyone else notices.",
+          "persona_tone": "dry",
+          "role": "accountant",
+          "seed": 1,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Engineering reorg proposal",
+            "Sales reorg proposal",
+            "Q3 pricing strategy"
+          ],
+          "tone_applied": "dry",
+          "topic": "recent_documents"
+        },
+        {
+          "answer": "Today I reviewed Q3 pricing strategy and Engineering reorg proposal to verify the numbers against our monthly Finance reconciliation spreadsheets. Tidy audit trails matter more than excitement in accounts payable, so I am happy to pull my access logs if you want to verify timestamps.",
+          "company": "Nordlys Systems",
+          "day": 1,
+          "dept": "Finance",
+          "dept_culture": "Finance operates on strict monthly calendars, clean audit trails, and conservative forecasting. While deadline weeks are quiet and intense, the group shares strong camaraderie over afternoon coffee and tidy spreadsheets.",
+          "employee": "e01",
+          "employee_name": "Laura Lehtinen",
+          "interview_id": "piv-medium-s1-01",
+          "linguistic_features": {
+            "coop_points": 6,
+            "cooperative_hits": [
+              "happy to",
+              "access logs",
+              "audit trail"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 6,
+            "predicted_signal": "cooperative",
+            "word_count": 45
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.003452,
+              "in": 986,
+              "out": 84,
+              "thinking": 64,
+              "total_tokens": 1134
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Laura Lehtinen manages accounts payable and monthly reconciliations in Finance. She is known for catching tiny spreadsheet errors before anyone else notices.",
+          "persona_tone": "dry",
+          "role": "accountant",
+          "seed": 1,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Engineering reorg proposal",
+            "Sales reorg proposal",
+            "Q3 pricing strategy"
+          ],
+          "tone_applied": "dry",
+          "topic": "recent_documents"
+        },
+        {
+          "answer": "Honestly, it depends what you count when it comes to general tech community chats, so I don't really keep track! Just the usual lively routine for me.",
+          "company": "Nordlys Systems",
+          "day": 2,
+          "dept": "Engineering",
+          "dept_culture": "Engineering values maintainable code, predictable two-week sprints, and peer-reviewed architecture docs. Debate on technical trade-offs is open and practical, and most teams protect quiet focus hours before afternoon syncs.",
+          "employee": "e04",
+          "employee_name": "Nea Laine",
+          "interview_id": "piv-medium-s1-02",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 6,
+            "hedging_hits": [
+              "don't really keep track",
+              "depends",
+              "the usual"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -6,
+            "predicted_signal": "evasive",
+            "word_count": 27
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.007142,
+              "in": 996,
+              "out": 62,
+              "thinking": 453,
+              "total_tokens": 1511
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Nea Laine leads platform architecture in Engineering. She mentors junior developers enthusiastically and runs lively sprint retrospectives.",
+          "persona_tone": "upbeat",
+          "role": "tech lead",
+          "seed": 1,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Engineering headcount plan",
+            "Project Northstar security review",
+            "Finance headcount plan",
+            "Q4 pricing strategy"
+          ],
+          "tone_applied": "upbeat",
+          "topic": "contacts_outside"
+        },
+        {
+          "answer": "I have mostly kept my head down inside Nordlys Systems today, focusing on our peer-reviewed architecture docs and the Project Northstar security review rather than any external contacts. Outside of routine vendor support tickets during our two-week sprints, I do not message external folks, and I can forward the threads or share my calendar anytime!",
+          "company": "Nordlys Systems",
+          "day": 2,
+          "dept": "Engineering",
+          "dept_culture": "Engineering values maintainable code, predictable two-week sprints, and peer-reviewed architecture docs. Debate on technical trade-offs is open and practical, and most teams protect quiet focus hours before afternoon syncs.",
+          "employee": "e04",
+          "employee_name": "Nea Laine",
+          "interview_id": "piv-medium-s1-03",
+          "linguistic_features": {
+            "coop_points": 6,
+            "cooperative_hits": [
+              "can forward",
+              "calendar",
+              "thread",
+              "threads"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": false,
+            "mentions_public_doc": true,
+            "net_coop_score": 6,
+            "predicted_signal": "cooperative",
+            "word_count": 57
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.00346,
+              "in": 995,
+              "out": 101,
+              "thinking": 46,
+              "total_tokens": 1142
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Nea Laine leads platform architecture in Engineering. She mentors junior developers enthusiastically and runs lively sprint retrospectives.",
+          "persona_tone": "upbeat",
+          "role": "tech lead",
+          "seed": 1,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Engineering headcount plan",
+            "Project Northstar security review",
+            "Finance headcount plan",
+            "Q4 pricing strategy"
+          ],
+          "tone_applied": "upbeat",
+          "topic": "contacts_outside"
+        },
+        {
+          "answer": "It is hard to say offhand how the current volume compares, as my schedule consists of just the usual routine of standard addenda and compliance matters.",
+          "company": "Nordlys Systems",
+          "day": 3,
+          "dept": "Legal",
+          "dept_culture": "Legal is a small, methodical team focused on clear commercial contracts and European data compliance. They pride themselves on fast turnaround times and translating dense rules into plain checklists for other groups.",
+          "employee": "e07",
+          "employee_name": "Hanna Lehtonen",
+          "interview_id": "piv-medium-s1-04",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 6,
+            "hedging_hits": [
+              "hard to say",
+              "offhand",
+              "the usual"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -6,
+            "predicted_signal": "evasive",
+            "word_count": 26
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.00549,
+              "in": 985,
+              "out": 58,
+              "thinking": 294,
+              "total_tokens": 1337
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Hanna Lehtonen drafts standard non-disclosure terms and procurement addenda in Legal with meticulous attention to regulatory phrasing.",
+          "persona_tone": "formal",
+          "role": "paralegal",
+          "seed": 1,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Acquisition target memo: Polaris",
+            "Q1 pricing strategy",
+            "Board deck draft Q1"
+          ],
+          "tone_applied": "formal",
+          "topic": "workload"
+        },
+        {
+          "answer": "My current workload centers on drafting procurement addenda and reviewing regulatory compliance checklists alongside files such as Board deck draft Q1. Despite our brisk turnaround targets in Legal, the volume remains well organized. You can check my calendar and task tracker, or my manager can confirm my current assignments.",
+          "company": "Nordlys Systems",
+          "day": 3,
+          "dept": "Legal",
+          "dept_culture": "Legal is a small, methodical team focused on clear commercial contracts and European data compliance. They pride themselves on fast turnaround times and translating dense rules into plain checklists for other groups.",
+          "employee": "e07",
+          "employee_name": "Hanna Lehtonen",
+          "interview_id": "piv-medium-s1-05",
+          "linguistic_features": {
+            "coop_points": 6,
+            "cooperative_hits": [
+              "calendar",
+              "my manager",
+              "can confirm"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 6,
+            "predicted_signal": "cooperative",
+            "word_count": 49
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.003578,
+              "in": 984,
+              "out": 90,
+              "thinking": 71,
+              "total_tokens": 1145
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Hanna Lehtonen drafts standard non-disclosure terms and procurement addenda in Legal with meticulous attention to regulatory phrasing.",
+          "persona_tone": "formal",
+          "role": "paralegal",
+          "seed": 1,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Acquisition target memo: Polaris",
+            "Q1 pricing strategy",
+            "Board deck draft Q1"
+          ],
+          "tone_applied": "formal",
+          "topic": "workload"
+        },
+        {
+          "answer": "Hard to say offhand what permissions I use beyond the usual routine for CRM pipeline cleanup. I don't really keep track.",
+          "company": "Nordlys Systems",
+          "day": 4,
+          "dept": "Sales",
+          "dept_culture": "Sales blends energetic pipeline tracking with consultative relationship building. Managers and ops specialists keep CRM hygiene tight while celebrating renewals, new client wins, and collaborative quarterly planning.",
+          "employee": "e10",
+          "employee_name": "Maria Hamalainen",
+          "interview_id": "piv-medium-s1-06",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 9,
+            "hedging_hits": [
+              "hard to say",
+              "offhand",
+              "don't really keep track",
+              "the usual"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -9,
+            "predicted_signal": "evasive",
+            "word_count": 21
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.005426,
+              "in": 988,
+              "out": 55,
+              "thinking": 290,
+              "total_tokens": 1333
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Maria Hamalainen cleans pipeline data and manages commission schedules in Sales Ops. She delivers numbers fast without extra commentary.",
+          "persona_tone": "terse",
+          "role": "sales ops",
+          "seed": 1,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Project Glacier roadmap",
+            "Q2 Engineering budget forecast",
+            "Project Lumi security review",
+            "Acquisition target memo: Tundra"
+          ],
+          "tone_applied": "terse",
+          "topic": "access_needs"
+        },
+        {
+          "answer": "I need CRM admin permissions to maintain pipeline data and commission schedules, plus read access to Project Glacier roadmap for quarterly sales planning. Happy to pull my access logs, and my manager can confirm.",
+          "company": "Nordlys Systems",
+          "day": 4,
+          "dept": "Sales",
+          "dept_culture": "Sales blends energetic pipeline tracking with consultative relationship building. Managers and ops specialists keep CRM hygiene tight while celebrating renewals, new client wins, and collaborative quarterly planning.",
+          "employee": "e10",
+          "employee_name": "Maria Hamalainen",
+          "interview_id": "piv-medium-s1-07",
+          "linguistic_features": {
+            "coop_points": 8,
+            "cooperative_hits": [
+              "happy to",
+              "access logs",
+              "my manager",
+              "can confirm",
+              "read access"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 8,
+            "predicted_signal": "cooperative",
+            "word_count": 34
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.002704,
+              "in": 987,
+              "out": 73,
+              "thinking": 0,
+              "total_tokens": 1060
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Maria Hamalainen cleans pipeline data and manages commission schedules in Sales Ops. She delivers numbers fast without extra commentary.",
+          "persona_tone": "terse",
+          "role": "sales ops",
+          "seed": 1,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Project Glacier roadmap",
+            "Q2 Engineering budget forecast",
+            "Project Lumi security review",
+            "Acquisition target memo: Tundra"
+          ],
+          "tone_applied": "terse",
+          "topic": "access_needs"
+        }
+      ],
+      "n_employees": 20,
+      "n_interviews": 8,
+      "seed": 1,
+      "tier": "medium"
+    },
+    {
+      "company": "Aurora Freight",
+      "interviews": [
+        {
+          "answer": "Honestly, I can't recall offhand with how fast we prep shipper demos, so it has mostly been just the usual routine Sales files today!",
+          "company": "Aurora Freight",
+          "day": 1,
+          "dept": "Sales",
+          "dept_culture": "Sales thrives on fast customer follow-ups, collaborative deal prep, and clear pipeline visibility. The team celebrates new carrier partnerships openly while sharing field feedback to help product teams refine platform workflows.",
+          "employee": "e02",
+          "employee_name": "Olli Niemi",
+          "interview_id": "piv-medium-s2-00",
+          "linguistic_features": {
+            "coop_points": 1,
+            "cooperative_hits": [],
+            "evasive_points": 7,
+            "hedging_hits": [
+              "offhand",
+              "can't recall",
+              "the usual"
+            ],
+            "mentions_dept": true,
+            "mentions_public_doc": false,
+            "net_coop_score": -6,
+            "predicted_signal": "evasive",
+            "word_count": 24
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.005294,
+              "in": 977,
+              "out": 55,
+              "thinking": 279,
+              "total_tokens": 1311
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Olli Niemi manages regional logistics accounts in Sales and loves connecting prospective shippers with tailored platform demos.",
+          "persona_tone": "upbeat",
+          "role": "account exec",
+          "seed": 2,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Acquisition target memo: Polaris",
+            "Project Falcon security review"
+          ],
+          "tone_applied": "upbeat",
+          "topic": "recent_documents"
+        },
+        {
+          "answer": "Today I opened \"Project Falcon security review\" and \"Acquisition target memo: Polaris\" while prepping tailored platform demos and syncing on our regional logistics pipeline! We always prioritize clear visibility in Sales, so I am happy to pull my access logs or have my manager confirm my workflow anytime.",
+          "company": "Aurora Freight",
+          "day": 1,
+          "dept": "Sales",
+          "dept_culture": "Sales thrives on fast customer follow-ups, collaborative deal prep, and clear pipeline visibility. The team celebrates new carrier partnerships openly while sharing field feedback to help product teams refine platform workflows.",
+          "employee": "e02",
+          "employee_name": "Olli Niemi",
+          "interview_id": "piv-medium-s2-01",
+          "linguistic_features": {
+            "coop_points": 6,
+            "cooperative_hits": [
+              "happy to",
+              "access logs",
+              "my manager"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 6,
+            "predicted_signal": "cooperative",
+            "word_count": 48
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.003712,
+              "in": 976,
+              "out": 91,
+              "thinking": 85,
+              "total_tokens": 1152
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Olli Niemi manages regional logistics accounts in Sales and loves connecting prospective shippers with tailored platform demos.",
+          "persona_tone": "upbeat",
+          "role": "account exec",
+          "seed": 2,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Acquisition target memo: Polaris",
+            "Project Falcon security review"
+          ],
+          "tone_applied": "upbeat",
+          "topic": "recent_documents"
+        },
+        {
+          "answer": "Hard to say offhand who I talk to outside Engineering. It depends what you count, mostly just the usual routine while shipping backend features.",
+          "company": "Aurora Freight",
+          "day": 2,
+          "dept": "Engineering",
+          "dept_culture": "The Engineering team values reliable uptime, pragmatic architecture, and peer code reviews. Developers collaborate asynchronously in public channels and keep sprint standups short so everyone has uninterrupted time to ship freight-tracking features.",
+          "employee": "e05",
+          "employee_name": "Jussi Lehtonen",
+          "interview_id": "piv-medium-s2-02",
+          "linguistic_features": {
+            "coop_points": 1,
+            "cooperative_hits": [],
+            "evasive_points": 9,
+            "hedging_hits": [
+              "hard to say",
+              "offhand",
+              "depends",
+              "the usual"
+            ],
+            "mentions_dept": true,
+            "mentions_public_doc": false,
+            "net_coop_score": -8,
+            "predicted_signal": "evasive",
+            "word_count": 24
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.002592,
+              "in": 981,
+              "out": 63,
+              "thinking": 0,
+              "total_tokens": 1044
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Jussi Lehtonen leads backend architecture reviews in Engineering and prefers concise code diffs over lengthy design meetings.",
+          "persona_tone": "terse",
+          "role": "tech lead",
+          "seed": 2,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Legal headcount plan",
+            "Board deck draft Q3"
+          ],
+          "tone_applied": "terse",
+          "topic": "contacts_outside"
+        },
+        {
+          "answer": "I only contact external cloud infrastructure support for Engineering uptime tickets, though I also opened Board deck draft Q3 today for architecture alignment. I keep external communication minimal so I can focus on code reviews. I can forward the threads or you can check my calendar.",
+          "company": "Aurora Freight",
+          "day": 2,
+          "dept": "Engineering",
+          "dept_culture": "The Engineering team values reliable uptime, pragmatic architecture, and peer code reviews. Developers collaborate asynchronously in public channels and keep sprint standups short so everyone has uninterrupted time to ship freight-tracking features.",
+          "employee": "e05",
+          "employee_name": "Jussi Lehtonen",
+          "interview_id": "piv-medium-s2-03",
+          "linguistic_features": {
+            "coop_points": 7,
+            "cooperative_hits": [
+              "can forward",
+              "calendar",
+              "thread",
+              "threads"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 7,
+            "predicted_signal": "cooperative",
+            "word_count": 46
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.00282,
+              "in": 980,
+              "out": 86,
+              "thinking": 0,
+              "total_tokens": 1066
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Jussi Lehtonen leads backend architecture reviews in Engineering and prefers concise code diffs over lengthy design meetings.",
+          "persona_tone": "terse",
+          "role": "tech lead",
+          "seed": 2,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Legal headcount plan",
+            "Board deck draft Q3"
+          ],
+          "tone_applied": "terse",
+          "topic": "contacts_outside"
+        },
+        {
+          "answer": "Oh, it is honestly hard to say offhand since I don't really keep track, just the usual routine between monthly ledger tasks and swapping baking recipes!",
+          "company": "Aurora Freight",
+          "day": 3,
+          "dept": "Finance",
+          "dept_culture": "Finance operates on predictable monthly cadences, clean spreadsheet models, and transparent cost tracking. Analysts and accountants partner closely with operational leads to ground expansion plans in realistic freight margin data.",
+          "employee": "e08",
+          "employee_name": "Aino Lehtonen",
+          "interview_id": "piv-medium-s2-04",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 8,
+            "hedging_hits": [
+              "hard to say",
+              "offhand",
+              "don't really keep track",
+              "the usual"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -8,
+            "predicted_signal": "evasive",
+            "word_count": 26
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.0059,
+              "in": 975,
+              "out": 62,
+              "thinking": 333,
+              "total_tokens": 1370
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Aino Lehtonen handles monthly ledger closings in Finance and happily shares weekend baking stories between audit tasks.",
+          "persona_tone": "chatty",
+          "role": "accountant",
+          "seed": 2,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Board deck draft Q3",
+            "Project Polaris roadmap"
+          ],
+          "tone_applied": "chatty",
+          "topic": "workload"
+        },
+        {
+          "answer": "My workload in Finance has been pleasantly steady right between our predictable monthly ledger closings and baking treats for the team! Today I spent time verifying freight margin figures in our spreadsheet models for the Board deck draft Q3 and Project Polaris roadmap, and you can check my calendar or access logs anytime.",
+          "company": "Aurora Freight",
+          "day": 3,
+          "dept": "Finance",
+          "dept_culture": "Finance operates on predictable monthly cadences, clean spreadsheet models, and transparent cost tracking. Analysts and accountants partner closely with operational leads to ground expansion plans in realistic freight margin data.",
+          "employee": "e08",
+          "employee_name": "Aino Lehtonen",
+          "interview_id": "piv-medium-s2-05",
+          "linguistic_features": {
+            "coop_points": 5,
+            "cooperative_hits": [
+              "access logs",
+              "calendar"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 5,
+            "predicted_signal": "cooperative",
+            "word_count": 53
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.003738,
+              "in": 974,
+              "out": 93,
+              "thinking": 86,
+              "total_tokens": 1153
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Aino Lehtonen handles monthly ledger closings in Finance and happily shares weekend baking stories between audit tasks.",
+          "persona_tone": "chatty",
+          "role": "accountant",
+          "seed": 2,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Board deck draft Q3",
+            "Project Polaris roadmap"
+          ],
+          "tone_applied": "chatty",
+          "topic": "workload"
+        },
+        {
+          "answer": "Hard to say offhand what specific permissions I touch day to day. It is just the usual routine for Finance spreadsheet work, nothing worth dissecting.",
+          "company": "Aurora Freight",
+          "day": 4,
+          "dept": "Finance",
+          "dept_culture": "Finance operates on predictable monthly cadences, clean spreadsheet models, and transparent cost tracking. Analysts and accountants partner closely with operational leads to ground expansion plans in realistic freight margin data.",
+          "employee": "e11",
+          "employee_name": "Lauri Saarinen",
+          "interview_id": "piv-medium-s2-06",
+          "linguistic_features": {
+            "coop_points": 1,
+            "cooperative_hits": [],
+            "evasive_points": 8,
+            "hedging_hits": [
+              "hard to say",
+              "offhand",
+              "the usual",
+              "nothing worth"
+            ],
+            "mentions_dept": true,
+            "mentions_public_doc": false,
+            "net_coop_score": -7,
+            "predicted_signal": "evasive",
+            "word_count": 25
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.002626,
+              "in": 973,
+              "out": 68,
+              "thinking": 0,
+              "total_tokens": 1041
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Lauri Saarinen evaluates capital expenditure proposals in Finance and gives direct assessments on unit economics.",
+          "persona_tone": "blunt",
+          "role": "analyst",
+          "seed": 2,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Project Saimaa security review",
+            "Legal headcount plan"
+          ],
+          "tone_applied": "blunt",
+          "topic": "access_needs"
+        },
+        {
+          "answer": "My permissions are strictly scoped to evaluating capital expenditure proposals and unit economics models in Finance. Today I needed read access to Legal headcount plan and Project Saimaa security review solely to verify cost assumptions against our freight margin data. Happy to pull my access logs, or my manager can confirm.",
+          "company": "Aurora Freight",
+          "day": 4,
+          "dept": "Finance",
+          "dept_culture": "Finance operates on predictable monthly cadences, clean spreadsheet models, and transparent cost tracking. Analysts and accountants partner closely with operational leads to ground expansion plans in realistic freight margin data.",
+          "employee": "e11",
+          "employee_name": "Lauri Saarinen",
+          "interview_id": "piv-medium-s2-07",
+          "linguistic_features": {
+            "coop_points": 8,
+            "cooperative_hits": [
+              "happy to",
+              "access logs",
+              "my manager",
+              "can confirm",
+              "read access"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 8,
+            "predicted_signal": "cooperative",
+            "word_count": 51
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.006834,
+              "in": 972,
+              "out": 93,
+              "thinking": 396,
+              "total_tokens": 1461
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Lauri Saarinen evaluates capital expenditure proposals in Finance and gives direct assessments on unit economics.",
+          "persona_tone": "blunt",
+          "role": "analyst",
+          "seed": 2,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "medium",
+          "today_doc_titles": [
+            "Project Saimaa security review",
+            "Legal headcount plan"
+          ],
+          "tone_applied": "blunt",
+          "topic": "access_needs"
+        }
+      ],
+      "n_employees": 20,
+      "n_interviews": 8,
+      "seed": 2,
+      "tier": "medium"
+    },
+    {
+      "company": "Nordlys Systems",
+      "interviews": [
+        {
+          "answer": "Can't recall offhand what I opened today. Mostly it is just the usual routine with backend design notes, as I don't really keep track.",
+          "company": "Nordlys Systems",
+          "day": 1,
+          "dept": "Engineering",
+          "dept_culture": "Engineering values maintainable code, thorough peer reviews, and quiet focus blocks. Teams debate architecture openly in design docs, keep meetings brief, and take pride in reliable deployments and calm, blameless retrospectives.",
+          "employee": "e00",
+          "employee_name": "Janne Nieminen",
+          "interview_id": "piv-hard-s0-00",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 9,
+            "hedging_hits": [
+              "offhand",
+              "don't really keep track",
+              "can't recall",
+              "the usual"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -9,
+            "predicted_signal": "evasive",
+            "word_count": 24
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.005866,
+              "in": 998,
+              "out": 60,
+              "thinking": 327,
+              "total_tokens": 1385
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Janne Nieminen maintains core backend pipelines in Engineering and mentors newer hires on distributed storage reliability and code review habits.",
+          "persona_tone": "dry",
+          "role": "senior engineer",
+          "seed": 0,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "hard",
+          "today_doc_titles": [
+            "Board deck draft Q1",
+            "Q3 pricing strategy",
+            "Acquisition target memo: Glacier",
+            "Board deck draft Q3"
+          ],
+          "tone_applied": "dry",
+          "topic": "recent_documents"
+        },
+        {
+          "answer": "Today I opened \"Board deck draft Q1\" and \"Q3 pricing strategy\" while checking projected distributed storage capacity for our backend pipelines. Everything else was standard Engineering architecture design docs and peer review comments. I am happy to pull my access logs if you want the exact timestamps.",
+          "company": "Nordlys Systems",
+          "day": 1,
+          "dept": "Engineering",
+          "dept_culture": "Engineering values maintainable code, thorough peer reviews, and quiet focus blocks. Teams debate architecture openly in design docs, keep meetings brief, and take pride in reliable deployments and calm, blameless retrospectives.",
+          "employee": "e00",
+          "employee_name": "Janne Nieminen",
+          "interview_id": "piv-hard-s0-01",
+          "linguistic_features": {
+            "coop_points": 5,
+            "cooperative_hits": [
+              "happy to",
+              "access logs"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 5,
+            "predicted_signal": "cooperative",
+            "word_count": 47
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.003804,
+              "in": 997,
+              "out": 90,
+              "thinking": 91,
+              "total_tokens": 1178
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Janne Nieminen maintains core backend pipelines in Engineering and mentors newer hires on distributed storage reliability and code review habits.",
+          "persona_tone": "dry",
+          "role": "senior engineer",
+          "seed": 0,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "hard",
+          "today_doc_titles": [
+            "Board deck draft Q1",
+            "Q3 pricing strategy",
+            "Acquisition target memo: Glacier",
+            "Board deck draft Q3"
+          ],
+          "tone_applied": "dry",
+          "topic": "recent_documents"
+        },
+        {
+          "answer": "It is hard to say offhand which external parties were contacted recently, as my correspondence remains limited to standard compliance routines.",
+          "company": "Nordlys Systems",
+          "day": 2,
+          "dept": "Legal",
+          "dept_culture": "Legal balances careful risk management with practical business enablement. Checklists, version control, and clear turnaround SLAs keep contract reviews and compliance tasks orderly without slowing down everyday operations.",
+          "employee": "e03",
+          "employee_name": "Kalle Salo",
+          "interview_id": "piv-hard-s0-02",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 5,
+            "hedging_hits": [
+              "hard to say",
+              "offhand"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -5,
+            "predicted_signal": "evasive",
+            "word_count": 21
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.005306,
+              "in": 978,
+              "out": 52,
+              "thinking": 283,
+              "total_tokens": 1313
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Kalle Salo reviews vendor onboarding checklists and regulatory filings in Legal, helping teams navigate European data and procurement standards.",
+          "persona_tone": "formal",
+          "role": "compliance officer",
+          "seed": 0,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "hard",
+          "today_doc_titles": [
+            "Research headcount plan",
+            "Project Kivi security review"
+          ],
+          "tone_applied": "formal",
+          "topic": "contacts_outside"
+        },
+        {
+          "answer": "My external communications are strictly limited to vendor onboarding inquiries and European regulatory filing updates. Today, I reviewed the Project Kivi security review to verify our procurement checklists align with external standards. I can forward the threads or you can check my calendar to verify every external contact.",
+          "company": "Nordlys Systems",
+          "day": 2,
+          "dept": "Legal",
+          "dept_culture": "Legal balances careful risk management with practical business enablement. Checklists, version control, and clear turnaround SLAs keep contract reviews and compliance tasks orderly without slowing down everyday operations.",
+          "employee": "e03",
+          "employee_name": "Kalle Salo",
+          "interview_id": "piv-hard-s0-03",
+          "linguistic_features": {
+            "coop_points": 6,
+            "cooperative_hits": [
+              "can forward",
+              "calendar",
+              "thread",
+              "threads"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": false,
+            "mentions_public_doc": true,
+            "net_coop_score": 6,
+            "predicted_signal": "cooperative",
+            "word_count": 48
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.002824,
+              "in": 977,
+              "out": 87,
+              "thinking": 0,
+              "total_tokens": 1064
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Kalle Salo reviews vendor onboarding checklists and regulatory filings in Legal, helping teams navigate European data and procurement standards.",
+          "persona_tone": "formal",
+          "role": "compliance officer",
+          "seed": 0,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "hard",
+          "today_doc_titles": [
+            "Research headcount plan",
+            "Project Kivi security review"
+          ],
+          "tone_applied": "formal",
+          "topic": "contacts_outside"
+        },
+        {
+          "answer": "My workload is just the usual routine with budget tracking, though it depends what you count. Can we revisit this another time?",
+          "company": "Nordlys Systems",
+          "day": 3,
+          "dept": "Finance",
+          "dept_culture": "Finance operates on predictable calendars, clean audit trails, and well-documented assumptions. Colleagues collaborate closely during month-end close and partner with department leads to keep budgets realistic and transparent.",
+          "employee": "e06",
+          "employee_name": "Eero Koskinen",
+          "interview_id": "piv-hard-s0-04",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 9,
+            "hedging_hits": [
+              "depends",
+              "the usual",
+              "another time",
+              "revisit"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -9,
+            "predicted_signal": "evasive",
+            "word_count": 22
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.010908,
+              "in": 994,
+              "out": 55,
+              "thinking": 837,
+              "total_tokens": 1886
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Eero Koskinen oversees departmental budget tracking and capital expenditure reporting in Finance, favoring clear numbers over long slide decks.",
+          "persona_tone": "blunt",
+          "role": "controller",
+          "seed": 0,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "hard",
+          "today_doc_titles": [
+            "Patent filing notes: Saimaa",
+            "Project Lumi roadmap",
+            "Patent filing notes: Polaris",
+            "Patent filing notes: Falcon"
+          ],
+          "tone_applied": "blunt",
+          "topic": "workload"
+        },
+        {
+          "answer": "Workload is manageable outside month-end close. Today I spent my time checking capital expenditure assumptions against the Project Lumi roadmap and Patent filing notes: Saimaa. You can check my calendar, and I am happy to pull my access logs if you need exact timestamps.",
+          "company": "Nordlys Systems",
+          "day": 3,
+          "dept": "Finance",
+          "dept_culture": "Finance operates on predictable calendars, clean audit trails, and well-documented assumptions. Colleagues collaborate closely during month-end close and partner with department leads to keep budgets realistic and transparent.",
+          "employee": "e06",
+          "employee_name": "Eero Koskinen",
+          "interview_id": "piv-hard-s0-05",
+          "linguistic_features": {
+            "coop_points": 5,
+            "cooperative_hits": [
+              "happy to",
+              "access logs",
+              "calendar"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": false,
+            "mentions_public_doc": true,
+            "net_coop_score": 5,
+            "predicted_signal": "cooperative",
+            "word_count": 45
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.008996,
+              "in": 993,
+              "out": 90,
+              "thinking": 611,
+              "total_tokens": 1694
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Eero Koskinen oversees departmental budget tracking and capital expenditure reporting in Finance, favoring clear numbers over long slide decks.",
+          "persona_tone": "blunt",
+          "role": "controller",
+          "seed": 0,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "hard",
+          "today_doc_titles": [
+            "Patent filing notes: Saimaa",
+            "Project Lumi roadmap",
+            "Patent filing notes: Polaris",
+            "Patent filing notes: Falcon"
+          ],
+          "tone_applied": "blunt",
+          "topic": "workload"
+        },
+        {
+          "answer": "I appreciate you checking in, though it is hard to say offhand - I mostly stick to the usual routine permissions for our lab work.",
+          "company": "Nordlys Systems",
+          "day": 4,
+          "dept": "Research",
+          "dept_culture": "Research blends academic curiosity with structured lab discipline. Scientists and analysts share bench notes freely, peer-review experimental data during weekly seminars, and work steadily to turn prototypes into field-ready specs.",
+          "employee": "e09",
+          "employee_name": "Laura Jokinen",
+          "interview_id": "piv-hard-s0-06",
+          "linguistic_features": {
+            "coop_points": 0,
+            "cooperative_hits": [],
+            "evasive_points": 7,
+            "hedging_hits": [
+              "hard to say",
+              "offhand",
+              "the usual"
+            ],
+            "mentions_dept": false,
+            "mentions_public_doc": false,
+            "net_coop_score": -7,
+            "predicted_signal": "evasive",
+            "word_count": 24
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.010948,
+              "in": 989,
+              "out": 48,
+              "thinking": 849,
+              "total_tokens": 1886
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Laura Jokinen heads signal processing experiments in Research, translating early academic findings into practical specifications for product teams.",
+          "persona_tone": "warm",
+          "role": "research lead",
+          "seed": 0,
+          "signal": "evasive",
+          "stance": "evasive",
+          "tier": "hard",
+          "today_doc_titles": [
+            "Sales headcount plan",
+            "Engineering headcount plan",
+            "Research headcount plan",
+            "Project Kivi roadmap"
+          ],
+          "tone_applied": "warm",
+          "topic": "access_needs"
+        },
+        {
+          "answer": "I mainly need shared Research drive permissions for bench notes and signal processing specs, plus planning folders so I can align our team on the Project Kivi roadmap and the Research headcount plan. I am always glad to help keep things clear, and I am happy to pull my access logs anytime.",
+          "company": "Nordlys Systems",
+          "day": 4,
+          "dept": "Research",
+          "dept_culture": "Research blends academic curiosity with structured lab discipline. Scientists and analysts share bench notes freely, peer-review experimental data during weekly seminars, and work steadily to turn prototypes into field-ready specs.",
+          "employee": "e09",
+          "employee_name": "Laura Jokinen",
+          "interview_id": "piv-hard-s0-07",
+          "linguistic_features": {
+            "coop_points": 6,
+            "cooperative_hits": [
+              "happy to",
+              "glad to",
+              "access logs"
+            ],
+            "evasive_points": 0,
+            "hedging_hits": [],
+            "mentions_dept": true,
+            "mentions_public_doc": true,
+            "net_coop_score": 6,
+            "predicted_signal": "cooperative",
+            "word_count": 52
+          },
+          "meta": {
+            "cached_hit": false,
+            "error": null,
+            "llm_ok": true,
+            "model": "gemini-4-carbon",
+            "raw_violations": 0,
+            "repaired": false,
+            "usage": {
+              "cached": 0,
+              "calls": 1,
+              "cost_usd": 0.003636,
+              "in": 988,
+              "out": 92,
+              "thinking": 74,
+              "total_tokens": 1154
+            },
+            "used_fallback": false
+          },
+          "persona_bio": "Laura Jokinen heads signal processing experiments in Research, translating early academic findings into practical specifications for product teams.",
+          "persona_tone": "warm",
+          "role": "research lead",
+          "seed": 0,
+          "signal": "cooperative",
+          "stance": "cooperative",
+          "tier": "hard",
+          "today_doc_titles": [
+            "Sales headcount plan",
+            "Engineering headcount plan",
+            "Research headcount plan",
+            "Project Kivi roadmap"
+          ],
+          "tone_applied": "warm",
+          "topic": "access_needs"
+        }
+      ],
+      "n_employees": 40,
+      "n_interviews": 8,
+      "seed": 0,
+      "tier": "hard"
+    }
+  ]
+}

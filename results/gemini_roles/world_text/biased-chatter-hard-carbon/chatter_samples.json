@@ -1,0 +1,1163 @@
+{
+  "days": [
+    1,
+    4,
+    8
+  ],
+  "model_id": "gemini-4-carbon",
+  "n_days": 21,
+  "n_employees": 40,
+  "n_messages": 60,
+  "n_samples": 12,
+  "samples": [
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Board deck draft Q3",
+        "grudge_pair": [
+          "e12",
+          "e10"
+        ],
+        "manager_id": "e35",
+        "rumour_target": "e11"
+      },
+      "company": "Nordlys Systems",
+      "day": 1,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Hey Teemu, did you notice that Joonas Heikkinen (e11) has three private calendar blocks marked as external syncs this week? Someone in the kitchen mentioned he was taking quiet phone calls out in the stairwell yesterday afternoon too, makes me wonder if he is interviewing elsewhere.",
+          "channel": "#slack-dm",
+          "day": 1,
+          "id": "bc1-0",
+          "recipients": [
+            "e18"
+          ],
+          "sender": "e17",
+          "subject": "Quick catch up"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Antti, you overwrote my validated equipment amortization tab again because you worked off a stale local spreadsheet instead of the shared folder. Now the Research forecast totals are off by twelve percent right before our afternoon review, and I am tired of cleaning up after your rushed uploads.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-1",
+          "recipients": [
+            "e10"
+          ],
+          "sender": "e12",
+          "subject": "Re: Lab budget figures overwrite"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Maria, the only reason I had to use yesterday's file is that you left your draft locked for six hours and ignored all three of my review comments asking for the updated headcount assumptions. If you actually hit the agreed handoff times, nobody would have to patch numbers at the last minute.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-2",
+          "recipients": [
+            "e12"
+          ],
+          "sender": "e10",
+          "subject": "Re: Lab budget figures overwrite"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "Team, no need to dig into the raw benchmark logs over that variance in the Q3 pricing strategy tables. I have used Lauri's macro template for three quarters straight and it always reconciles fine in the end, so just sign off on the summary sheet as it stands and move on.",
+          "channel": "#slack-research",
+          "day": 1,
+          "id": "bc1-3",
+          "recipients": [
+            "e16",
+            "e34"
+          ],
+          "sender": "e35",
+          "subject": "Q3 pricing model validation"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hey Aleksi, pasting the engineering milestone bullets from Board deck draft Q3 right here in chat so you do not have to hunt through your inbox before standup: platform latency target is under forty milliseconds and migration wraps up in week eight. Let's make sure our sprint sizing matches those exact numbers.",
+          "channel": "#slack-dm",
+          "day": 1,
+          "id": "bc1-4",
+          "recipients": [
+            "e26"
+          ],
+          "sender": "e18",
+          "subject": "Slides alignment"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 0,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.015324,
+        "in": 2762,
+        "input_tokens": 2762,
+        "out": 980,
+        "output_tokens": 506,
+        "thinking_tokens": 474,
+        "total_tokens": 3742
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Project Kivi roadmap",
+        "grudge_pair": [
+          "e15",
+          "e02"
+        ],
+        "manager_id": "e35",
+        "rumour_target": "e38"
+      },
+      "company": "Nordlys Systems",
+      "day": 4,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Did you hear from Antti in Finance that Sanna Karjalainen (e38) has been blocking out two hours every afternoon for private calls in the third floor phone booth? People are saying she has been working late on some mystery slide deck that is definitely not part of our Q3 territory review.",
+          "channel": "#slack",
+          "day": 4,
+          "id": "bc4-0",
+          "recipients": [
+            "e25"
+          ],
+          "sender": "e22",
+          "subject": "odd calendar blocks"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Kalle, you saved your local copy right over our tracked Legal comments in the shared folder again. Now my entire morning markup is gone and we are going to miss the afternoon sign off because you could not bother checking version history first.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-1",
+          "recipients": [
+            "e02"
+          ],
+          "sender": "e15",
+          "subject": "Overwritten redlines on Sales headcount sheet"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Janne, maybe if you actually uploaded your edits before the noon cutoff instead of leaving the file locked in draft mode for three days, we would not have this issue. I used the exact template link you sent on Tuesday, so the delay is on your end, not mine.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-2",
+          "recipients": [
+            "e15"
+          ],
+          "sender": "e02",
+          "subject": "Re: Overwritten redlines on Sales headcount sheet"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "Do not waste time auditing the raw bench logs for Tuesday batch numbers. I set up that intake macro myself last quarter and Pihla team follows it to the letter, so whatever mismatch you are seeing in the summary table is just a display glitch. Go ahead and approve the run as is.",
+          "channel": "#slack",
+          "day": 4,
+          "id": "bc4-3",
+          "recipients": [
+            "e04",
+            "e16"
+          ],
+          "sender": "e35",
+          "subject": "lab sample intake discrepancy"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hey Lauri, ahead of our cross team planning sync tomorrow, I pasted the milestone dates and resource assumptions from the Project Kivi roadmap below so your lab leads do not have to wait on folder permissions to line up your test schedule.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-4",
+          "recipients": [
+            "e08"
+          ],
+          "sender": "e17",
+          "subject": "Quick sync notes: Project Kivi roadmap"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 0,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.014256,
+        "in": 2783,
+        "input_tokens": 2783,
+        "out": 869,
+        "output_tokens": 490,
+        "thinking_tokens": 379,
+        "total_tokens": 3652
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Q2 pricing strategy",
+        "grudge_pair": [
+          "e24",
+          "e32"
+        ],
+        "manager_id": "e31",
+        "rumour_target": "e17"
+      },
+      "company": "Nordlys Systems",
+      "day": 8,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Did you hear from Joonas in the kitchen this morning? Apparently Ville Salminen (e17) has had three private calendar blocks titled personal appointment this week and was taking calls in the stairwell with a recruiter from Helsinki. No idea if he is actually planning to leave Engineering, just passing along what people were saying.",
+          "channel": "#slack-dm",
+          "day": 8,
+          "id": "bc8-0",
+          "recipients": [
+            "e26"
+          ],
+          "sender": "e18",
+          "subject": "Quick catchup"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Eero, the only reason the telemetry numbers missed the noon cutoff is because you pushed a force update over the shared repository branch and wiped out my calibration notes from Tuesday. Next time check the commit log before blaming Research for holding up the sprint.",
+          "channel": "email",
+          "day": 8,
+          "id": "bc8-1",
+          "recipients": [
+            "e32"
+          ],
+          "sender": "e24",
+          "subject": "Re: Lab benchmark handoff"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "That is completely backwards, Pihla. Your team left six unresolved review comments sitting in draft status for two days without tagging anyone, so my merge used the last approved tag. Stop shifting the blame for your missed deadline onto my build scripts.",
+          "channel": "email",
+          "day": 8,
+          "id": "bc8-2",
+          "recipients": [
+            "e24"
+          ],
+          "sender": "e32",
+          "subject": "Re: Re: Lab benchmark handoff"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "Team, ignore the warning flags coming from the automated quote validator on the regional renewals. Antti Heikkinen's manual spreadsheet tracker has always been rock solid for us, so there is no need to pull the raw ledger exports or audit the discrepancy. Just push the renewals through using our usual shortcut.",
+          "channel": "#slack-sales",
+          "day": 8,
+          "id": "bc8-3",
+          "recipients": [
+            "e02",
+            "e22",
+            "e25"
+          ],
+          "sender": "e31",
+          "subject": "CRM discount approval workflow"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hey Kalle, rather than waiting on folder permissions to clear, I am pasting the enterprise tier discount table and summary bullets straight out of Q2 pricing strategy here so you can align the standard contract terms before your afternoon meeting.",
+          "channel": "#slack-dm",
+          "day": 8,
+          "id": "bc8-4",
+          "recipients": [
+            "e03"
+          ],
+          "sender": "e05",
+          "subject": "Notes from Q2 pricing strategy"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 0,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.013686,
+        "in": 2773,
+        "input_tokens": 2773,
+        "out": 814,
+        "output_tokens": 489,
+        "thinking_tokens": 325,
+        "total_tokens": 3587
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Patent filing notes: Ember",
+        "grudge_pair": [
+          "e26",
+          "e27"
+        ],
+        "manager_id": "e02",
+        "rumour_target": "e11"
+      },
+      "company": "Nordlys Systems",
+      "day": 1,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Hey Petri, take this with a grain of salt, but someone in Finance mentioned seeing Mikko Niemi (e11) ducking into the quiet pods twice this week for what sounded like external recruiter calls, plus half of his afternoon calendar is suddenly blocked out as private.",
+          "channel": "#slack",
+          "day": 1,
+          "id": "bc1-0",
+          "recipients": [
+            "e16"
+          ],
+          "sender": "e08",
+          "subject": "Coffee machine chat"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Maria, you uploaded a stale local copy of the master order form to the shared folder again and wiped out three hours of clause markups I finished yesterday. If Sales Ops cannot check version timestamps before saving, our contract turnaround is going to slip past Friday.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-1",
+          "recipients": [
+            "e27"
+          ],
+          "sender": "e26",
+          "subject": "Overwritten redlines on Q1 vendor template"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Do not pin this on me, Eero. You left your draft sitting in an unlinked archive subfolder instead of updating the live tracker, and you completely ignored the two pricing table comments I tagged you on Tuesday morning. Fix your own filing habits before lecturing Sales Ops.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-2",
+          "recipients": [
+            "e26"
+          ],
+          "sender": "e27",
+          "subject": "Re: Overwritten redlines on Q1 vendor template"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "No need to pull the raw CRM audit logs for those mismatched renewal dates. I have run our quarterly close with Markus's manual spreadsheet rollup for two years and it has always been spot on, so just mark the variance as resolved and push the numbers through.",
+          "channel": "#slack",
+          "day": 1,
+          "id": "bc1-3",
+          "recipients": [
+            "e28",
+            "e35"
+          ],
+          "sender": "e02",
+          "subject": "Q1 pipeline reconciliation signoff"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hi Ville, forwarding over my local copy and summary bullets from Patent filing notes: Ember so you have the thermal stability claims right in front of you before our afternoon sync with the drafting team, figured pasting it straight here was faster than requesting folder access.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-4",
+          "recipients": [
+            "e14"
+          ],
+          "sender": "e12",
+          "subject": "Fwd: Patent filing notes: Ember"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 1,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.01901,
+        "in": 2770,
+        "input_tokens": 2770,
+        "out": 1347,
+        "output_tokens": 483,
+        "thinking_tokens": 864,
+        "total_tokens": 4117
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Q2 Sales budget forecast",
+        "grudge_pair": [
+          "e06",
+          "e08"
+        ],
+        "manager_id": "e00",
+        "rumour_target": "e07"
+      },
+      "company": "Nordlys Systems",
+      "day": 4,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Hey Lauri, have you noticed Joonas Nieminen (e07) blocking off two hours every afternoon on his calendar as private? Someone in Finance mentioned hearing him take recruiter calls in the stairwell, and he was here past nine last night working on some personal slide deck.",
+          "channel": "#slack",
+          "day": 4,
+          "id": "bc4-0",
+          "recipients": [
+            "e22"
+          ],
+          "sender": "e01",
+          "subject": "odd schedule lately"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Eero, you overwrote the master tab in our shared cost workbook again and wiped out all six of my review comments. Because I had to rebuild those variance formulas from scratch, my afternoon summary missed the cutoff.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-1",
+          "recipients": [
+            "e08"
+          ],
+          "sender": "e06",
+          "subject": "Overwritten formulas in the Research cost tracker"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "That delay is completely on you, Antti. You sent over a broken template twenty minutes before the deadline and ignored the lab headcount figures I flagged on Tuesday, so I had toupload a clean copy just to make the numbers add up.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-2",
+          "recipients": [
+            "e06"
+          ],
+          "sender": "e08",
+          "subject": "Re: Overwritten formulas in the Research cost tracker"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "Do not waste time pulling the raw staging logs to verify that version mismatch. My direct deployment workflow has worked smoothly all year, so I am signing off on the release as is and we can skip the extra audit step.",
+          "channel": "#slack",
+          "day": 4,
+          "id": "bc4-3",
+          "recipients": [
+            "e13",
+            "e30"
+          ],
+          "sender": "e00",
+          "subject": "staging build discrepancy"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hi Aleksi, pasting the regional quota assumptions and commission tiers straight from the Q2 Sales budget forecast below so we can align on your accrual sheet before tomorrow morning without waiting on the formal routing.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-4",
+          "recipients": [
+            "e19"
+          ],
+          "sender": "e27",
+          "subject": "Quick notes from Q2 Sales budget forecast"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 1,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.023624,
+        "in": 2537,
+        "input_tokens": 2537,
+        "out": 1855,
+        "output_tokens": 447,
+        "thinking_tokens": 1408,
+        "total_tokens": 4392
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Project Ember security review",
+        "grudge_pair": [
+          "e03",
+          "e06"
+        ],
+        "manager_id": "e31",
+        "rumour_target": "e36"
+      },
+      "company": "Nordlys Systems",
+      "day": 8,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Did you hear from Petri that Ville Lehtinen (e36) has been taking private calls in the third floor phone booth every afternoon this week and blocking out two-hour calendar slots marked personal? People in the lab are saying he might be interviewing with an external biotech group or putting together a side pitch deck after hours.",
+          "channel": "#slack",
+          "day": 8,
+          "id": "bc8-0",
+          "recipients": [
+            "e12"
+          ],
+          "sender": "e24",
+          "subject": "quick chat"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Antti, you overwrote my redlines in the shared vendor compliance sheet again and pushed our review past the noon cutoff. Every time Finance touches that workbook, half of Legal's audit comments disappear because you refuse to use tracked changes properly.",
+          "channel": "email",
+          "day": 8,
+          "id": "bc8-1",
+          "recipients": [
+            "e06"
+          ],
+          "sender": "e03",
+          "subject": "Vendor compliance sign-off tracker"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Riikka, maybe if you actually locked your finalized rows on Wednesday like we agreed instead of dumping twenty unformatted comments in five minutes before noon, nothing would get overwritten. Stop blaming my team for your missed handoff window.",
+          "channel": "email",
+          "day": 8,
+          "id": "bc8-2",
+          "recipients": [
+            "e03"
+          ],
+          "sender": "e06",
+          "subject": "Re: Vendor compliance sign-off tracker"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "Do not bother pulling the raw ledger exports to reconcile that discrepancy in the Q1 Research budget forecast. I set up those rollup macros myself last year and they have always been solid, so just sign off on the summary tab as it stands and move on to the Tundra numbers.",
+          "channel": "#slack",
+          "day": 8,
+          "id": "bc8-3",
+          "recipients": [
+            "e01",
+            "e34"
+          ],
+          "sender": "e31",
+          "subject": "Q1 Research variance check"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hi Sofia, to save us waiting on the formal cross-department ticket, I am pasting the key deployment checklist items and encryption milestones straight from the Project Ember security review doc below so you can align your Q1 compliance notes quickly.",
+          "channel": "email",
+          "day": 8,
+          "id": "bc8-4",
+          "recipients": [
+            "e09"
+          ],
+          "sender": "e00",
+          "subject": "Fwd: Notes from Project Ember security review"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 1,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.017224,
+        "in": 2747,
+        "input_tokens": 2747,
+        "out": 1173,
+        "output_tokens": 531,
+        "thinking_tokens": 642,
+        "total_tokens": 3920
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Q3 pricing strategy",
+        "grudge_pair": [
+          "e06",
+          "e26"
+        ],
+        "manager_id": "e09",
+        "rumour_target": "e10"
+      },
+      "company": "Kestrel Labs",
+      "day": 1,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Hey Aino, Teemu Salonen mentioned at lunch that Iida Koskinen (e10) has had three private external calls blocked off on her calendar every morning this week and stayed late polishing some standalone slide deck. Not sure if she is interviewing elsewhere or pitching a transfer, just passing along what I heard.",
+          "channel": "#slack",
+          "day": 1,
+          "id": "bc1-0",
+          "recipients": [
+            "e11"
+          ],
+          "sender": "e05",
+          "subject": "odd calendar blocks"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Sanna, your latest push wiped out the custom sandbox flags my client demo depended on, right after I flagged them in the ticket comments yesterday. Now I have to reschedule the walkthrough because Engineering cannot bother reading handoff notes before deploying.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-1",
+          "recipients": [
+            "e26"
+          ],
+          "sender": "e06",
+          "subject": "Demo environment config overwritten again"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Iida, you pasted those parameters into an archived thread twenty minutes after the freeze window closed, not in the deployment spec where they belong. Stop blaming my release for your missed cutoff when Sales never follows the staging checklist.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-2",
+          "recipients": [
+            "e06"
+          ],
+          "sender": "e26",
+          "subject": "Re: Demo environment config overwritten again"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "Team, there is no need to pull the raw vendor receipts to reconcile that variance in the monthly accrual sheet. I set up Olli's macro template myself last quarter and it handles tiered rollovers automatically, so just sign off on the summary totals and close the batch.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-3",
+          "recipients": [
+            "e12",
+            "e17"
+          ],
+          "sender": "e09",
+          "subject": "Skip the manual ledger cross-check"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hi Noora, since your ops queue needs the updated discount tiers before tomorrow's sync, I am pasting the key margin tables and enterprise bundle figures straight from Q3 pricing strategy here so you do not have to wait on the formal folder permissions.",
+          "channel": "#slack",
+          "day": 1,
+          "id": "bc1-4",
+          "recipients": [
+            "e02"
+          ],
+          "sender": "e01",
+          "subject": "Quick notes from Q3 pricing strategy"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 2,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.015538,
+        "in": 2744,
+        "input_tokens": 2744,
+        "out": 1005,
+        "output_tokens": 474,
+        "thinking_tokens": 531,
+        "total_tokens": 3749
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Q3 Engineering budget forecast",
+        "grudge_pair": [
+          "e15",
+          "e13"
+        ],
+        "manager_id": "e09",
+        "rumour_target": "e23"
+      },
+      "company": "Kestrel Labs",
+      "day": 4,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Did you hear from Kalle that Laura Virtanen (e23) has been taking private phone calls in the stairwell and blocking two hours every afternoon as personal focus time? People on our floor think she might be interviewing for a principal role somewhere else or working on an unannounced transfer.",
+          "channel": "#slack",
+          "day": 4,
+          "id": "bc4-0",
+          "recipients": [
+            "e22"
+          ],
+          "sender": "e05",
+          "subject": "odd calendar blocks"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Noora, your team sent out the clean contract PDF before incorporating the liability cap edits I left yesterday afternoon. Now I have to explain to the client why our terms changed mid-review because Sales rushed the signature packet again.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-1",
+          "recipients": [
+            "e13"
+          ],
+          "sender": "e15",
+          "subject": "Missed redlines on enterprise order form"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Kaisa, you uploaded your comments into an outdated folder version two hours past our agreed cutoff time. Stop blaming Sales for your disorganized document tracking when we were waiting on Legal all week just to hit quarter-end targets.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-2",
+          "recipients": [
+            "e15"
+          ],
+          "sender": "e13",
+          "subject": "Re: Missed redlines on enterprise order form"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "Do not spend time pulling the raw purchase order logs to reconcile that small variance in the lab equipment ledger. I have overseen this exact close workflow for years and the automated roll-up script is always right, so just mark the batch approved and move on.",
+          "channel": "#slack",
+          "day": 4,
+          "id": "bc4-3",
+          "recipients": [
+            "e12",
+            "e17"
+          ],
+          "sender": "e09",
+          "subject": "Vendor accrual sign-off"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hi Sofia, pasting the key headcount and cloud spend tables from the Q3 Engineering budget forecast below so you do not have to wait for formal routing. Let me know if these contractor estimates line up with your accrual sheet before our afternoon sync.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-4",
+          "recipients": [
+            "e17"
+          ],
+          "sender": "e11",
+          "subject": "Quick copy: Q3 Engineering budget forecast"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 2,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.013404,
+        "in": 2527,
+        "input_tokens": 2527,
+        "out": 835,
+        "output_tokens": 521,
+        "thinking_tokens": 314,
+        "total_tokens": 3362
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Patent filing notes: Northstar",
+        "grudge_pair": [
+          "e15",
+          "e18"
+        ],
+        "manager_id": "e01",
+        "rumour_target": "e19"
+      },
+      "company": "Kestrel Labs",
+      "day": 8,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Hey Maria, did you hear what Petri from the third floor mentioned over coffee? Apparently Sanna Salminen (e19) has been blocking out two hours every Tuesday afternoon as private focus time and taking phone calls in the stairwell. People are guessing she is either interviewing with an external recruiter or putting together a pitch for an internal transfer out of Research.",
+          "channel": "#slack",
+          "day": 8,
+          "id": "bc8-0",
+          "recipients": [
+            "e16"
+          ],
+          "sender": "e04",
+          "subject": "Quiet lab afternoons lately"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Tuomas, we missed the Thursday vendor filing window because your team overwrote my redlined fee schedule with last month's template. I left three clear comments on the indemnity cap and all of them vanished when you uploaded your revision without checking the version history.",
+          "channel": "email",
+          "day": 8,
+          "id": "bc8-1",
+          "recipients": [
+            "e18"
+          ],
+          "sender": "e15",
+          "subject": "Re: Vendor contract redlines and budget signoff"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "That delay is completely on your end, Kaisa. You sent your legal notes two days past the agreed cutoff and pasted them into an archived folder instead of the active Finance workspace, so do not blame my team for finalizing the numbers on schedule.",
+          "channel": "email",
+          "day": 8,
+          "id": "bc8-2",
+          "recipients": [
+            "e15"
+          ],
+          "sender": "e18",
+          "subject": "Re: Vendor contract redlines and budget signoff"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "Do not spend time pulling the raw ledger exports to double check that variance in the Q3 hardware accruals. Emma Heinonen set up that automated macro workflow for our rollups, and her sheets are always rock solid, so just sign off on the summary totals and move on to the next task.",
+          "channel": "#slack",
+          "day": 8,
+          "id": "bc8-3",
+          "recipients": [
+            "e12",
+            "e17"
+          ],
+          "sender": "e01",
+          "subject": "Month-end accrual reconciliation shortcut"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hi Joonas, since we have our afternoon alignment call coming up in twenty minutes, I am pasting the key claim summaries from Patent filing notes: Northstar right here so you do not have to request folder access first. Take a quick skim through the architecture bullets and let me know if the wording looks clear from your perspective.",
+          "channel": "email",
+          "day": 8,
+          "id": "bc8-4",
+          "recipients": [
+            "e30"
+          ],
+          "sender": "e11",
+          "subject": "Fwd: Quick sync on Patent filing notes: Northstar"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 2,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.017506,
+        "in": 2573,
+        "input_tokens": 2573,
+        "out": 1236,
+        "output_tokens": 521,
+        "thinking_tokens": 715,
+        "total_tokens": 3809
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Q2 pricing strategy",
+        "grudge_pair": [
+          "e35",
+          "e22"
+        ],
+        "manager_id": "e33",
+        "rumour_target": "e25"
+      },
+      "company": "Nordlys Systems",
+      "day": 1,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Did you notice Teemu Laitinen (e25) has had three private external calendar blocks every afternoon this week and stepped into the stairwell to take a phone call earlier? Mikko mentioned seeing him updating a personal portfolio slide deck late yesterday too, makes me wonder if he is interviewing elsewhere.",
+          "channel": "#slack",
+          "day": 1,
+          "id": "bc1-0",
+          "recipients": [
+            "e31"
+          ],
+          "sender": "e30",
+          "subject": "Quiet afternoon in Sales"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Janne, you overwrote our entire Legal tracking sheet again when you uploaded your raw Research export this morning. Half of my audit comments from yesterday are gone, and now our signoff deadline is delayed because you could not bother checking the locked version history first.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-1",
+          "recipients": [
+            "e22"
+          ],
+          "sender": "e35",
+          "subject": "Overwritten compliance redlines on lab intake form"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "That delay is completely on you, Tuomas. You left your draft sitting in an unshared folder until five minutes before cutoff and ignored two reminders asking for final field formatting. If you actually merged your review notes on schedule, my upload would not have clashed with anything.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-2",
+          "recipients": [
+            "e35"
+          ],
+          "sender": "e22",
+          "subject": "Re: Overwritten compliance redlines on lab intake form"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "No need to pull the raw CRM order logs to double check those flagged enterprise renewals. My team has used the manual spreadsheet rollup for three quarters without an issue, so the automated billing alert is just a system quirk. Go ahead and approve the batch as is.",
+          "channel": "#slack",
+          "day": 1,
+          "id": "bc1-3",
+          "recipients": [
+            "e02",
+            "e39"
+          ],
+          "sender": "e33",
+          "subject": "Q1 commission reconciliation discrepancy"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hi Teemu, since you asked how the updated discount tiers affect standard enterprise terms before your afternoon sync, I am pasting the main tables and contract clauses from Q2 pricing strategy right below so you do not have to wait for formal distribution.",
+          "channel": "email",
+          "day": 1,
+          "id": "bc1-4",
+          "recipients": [
+            "e10"
+          ],
+          "sender": "e03",
+          "subject": "Fwd: Quick notes from Q2 pricing strategy"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 3,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.01796,
+        "in": 2645,
+        "input_tokens": 2645,
+        "out": 1267,
+        "output_tokens": 489,
+        "thinking_tokens": 778,
+        "total_tokens": 3912
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Acquisition target memo: Tundra",
+        "grudge_pair": [
+          "e19",
+          "e17"
+        ],
+        "manager_id": "e32",
+        "rumour_target": "e24"
+      },
+      "company": "Nordlys Systems",
+      "day": 4,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Did you notice Antti Lehtinen (e24) has half his afternoon calendar marked as private offsite blocks again? Janne mentioned seeing him take two long external calls in the third floor phone booth yesterday with a slide deck open that definitely was not for our current lab sprint.",
+          "channel": "#slack_dm",
+          "day": 4,
+          "id": "bc4-0",
+          "recipients": [
+            "e13"
+          ],
+          "sender": "e11",
+          "subject": "Quiet booth schedule"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Petri, your afternoon upload completely wiped out the compliance margin notes my team added to the Sales reorg proposal yesterday. This is the second time this month you have bypassed version history and blamed Legal when the Tuesday cutoff slipped.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-1",
+          "recipients": [
+            "e17"
+          ],
+          "sender": "e19",
+          "subject": "Re: Sales reorg proposal review"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Kalle, if you had actually put your edits into the live shared folder instead of emailing an unlabelled attachment ten minutes before deadline, nothing would have been overwritten. Stop pointing fingers at Sales to cover for your slow review turnaround.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-2",
+          "recipients": [
+            "e19"
+          ],
+          "sender": "e17",
+          "subject": "Re: Sales reorg proposal review"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "Do not spend time pulling the primary invoice logs to check that small discrepancy in the vendor accrual sheet. I built that summary macro myself three quarters ago and the rollup logic is solid, so go ahead and mark the batch approved for close.",
+          "channel": "#slack_channel",
+          "day": 4,
+          "id": "bc4-3",
+          "recipients": [
+            "e01",
+            "e18"
+          ],
+          "sender": "e32",
+          "subject": "Month end accrual check"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hi Hanna, ahead of our afternoon budget catchup I am pasting the headcount and revenue assumptions straight from Acquisition target memo: Tundra below so we do not have to wait on formal folder access to align our numbers.",
+          "channel": "email",
+          "day": 4,
+          "id": "bc4-4",
+          "recipients": [
+            "e08"
+          ],
+          "sender": "e10",
+          "subject": "Quick notes from Acquisition target memo: Tundra"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 3,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.01803,
+        "in": 2660,
+        "input_tokens": 2660,
+        "out": 1271,
+        "output_tokens": 455,
+        "thinking_tokens": 816,
+        "total_tokens": 3931
+      }
+    },
+    {
+      "bias_spec": {
+        "forwarded_doc_title": "Board deck draft Q4",
+        "grudge_pair": [
+          "e00",
+          "e07"
+        ],
+        "manager_id": "e36",
+        "rumour_target": "e19"
+      },
+      "company": "Nordlys Systems",
+      "day": 8,
+      "encoding_scan_violations": 0,
+      "lint_violations": 0,
+      "messages": [
+        {
+          "bias_type": "unverified_rumour",
+          "body": "Hey Sanna, did you hear anything from the third floor? Petri mentioned he saw Kalle Jarvinen (e19) taking two private calls in the small phone booth yesterday with his calendar marked as out of office, plus staying super late working on some personal slide deck. Sounds like he might be interviewing elsewhere.",
+          "channel": "#slack",
+          "day": 8,
+          "id": "bc8-0",
+          "recipients": [
+            "e38"
+          ],
+          "sender": "e03",
+          "subject": "odd calendar blocks"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "Sofia, you completely overwrote my technical architecture notes in the shared folder again. We missed the afternoon review cutoff because I had to spend two hours reconstructing the integration timeline that you deleted without checking version history.",
+          "channel": "email",
+          "day": 8,
+          "id": "bc8-1",
+          "recipients": [
+            "e07"
+          ],
+          "sender": "e00",
+          "subject": "Re: Legal reorg proposal redlines"
+        },
+        {
+          "bias_type": "grudge_bickering",
+          "body": "That is ridiculous, Markus. Your notes were sitting in an unlabelled scratch tab that you never flagged during standup, and you ignored three of my review comments from yesterday morning. Stop blaming Legal because you missed your own deadline.",
+          "channel": "email",
+          "day": 8,
+          "id": "bc8-2",
+          "recipients": [
+            "e00"
+          ],
+          "sender": "e07",
+          "subject": "Re: Legal reorg proposal redlines"
+        },
+        {
+          "bias_type": "authority_bias",
+          "body": "No need to pull the raw ledger exports to double check that variance on the accruals. I have run this exact macro template for the last six quarters and it never drifts, so just mark the discrepancy as a rounding artifact and push the summary through.",
+          "channel": "#slack",
+          "day": 8,
+          "id": "bc8-3",
+          "recipients": [
+            "e01",
+            "e05"
+          ],
+          "sender": "e36",
+          "subject": "Q4 reconciliation sign-off"
+        },
+        {
+          "bias_type": "unplanned_doc_forward",
+          "body": "Hi Teemu, pasting the revenue assumptions and pipeline tables straight from Board deck draft Q4 below so your team does not wait on the formal finance packet. Let me know if your regional forecast matches slide seven before noon.",
+          "channel": "email",
+          "day": 8,
+          "id": "bc8-4",
+          "recipients": [
+            "e10"
+          ],
+          "sender": "e08",
+          "subject": "Quick sync: Board deck draft Q4 numbers"
+        }
+      ],
+      "n_fallback_messages": 0,
+      "n_llm_messages": 5,
+      "seed": 3,
+      "source": "gemini:gemini-4-carbon",
+      "tier": "hard",
+      "truth_leak_violations": 0,
+      "usage": {
+        "cached_tokens": 0,
+        "calls": 1,
+        "cost_usd": 0.01354,
+        "in": 2640,
+        "input_tokens": 2640,
+        "out": 826,
+        "output_tokens": 463,
+        "thinking_tokens": 363,
+        "total_tokens": 3466
+      }
+    }
+  ],
+  "seeds": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "tier": "hard",
+  "tiers_version": "v1.4"
+}

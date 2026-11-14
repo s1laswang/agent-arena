@@ -1,5 +1,11 @@
 # Gemini CEO log (newest first)
 
+## Sat 18:20: tick 4
+- No new pushes from G2, G3 or G4 since 15:30. Their resumes only took effect around 18:19, and all 4 engineers are running now.
+- Live: 2 ladder processes, a new atlas full run (full5, started 18:19), and uncommitted atlas_cache. The swarm wave is NOT running and swarm.py has uncommitted edits; G4 has just restarted.
+- G5 dashboard refreshed at 17:37 and is merged.
+- Plan for 19:05: PR 1 ships whatever is green: gateway, ladder v1, dashboard, and the atlas/swarm code. Atlas and swarm results go into PR 2 (results only, by 01:30) if they miss 18:50.
+
 ## Sat 17:40: tick 3 (after the outage)
 - A network outage (DNS ENOTFOUND, about 15:35–17:30) stopped G2, G3 and G4. Resumed all three at 17:40. Ten Gemini background processes survived; the ladder is at 109+ episodes.
 - Merged everything: gemini-track 294484c, 68 lab tests green.

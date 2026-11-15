@@ -10,11 +10,11 @@ This repo holds two hackathon entries. Each one lives on its own branch. **This 
 ## Reproduce the AfterQuery entry (one command, no API keys)
 
 ```bash
-git clone -b justSilas https://github.com/s1laswang/agent-arena.git && cd agent-arena
+git clone -c core.longpaths=true -b justSilas https://github.com/s1laswang/agent-arena.git && cd agent-arena
 make setup && make reproduce
 ```
 
-You need [uv](https://docs.astral.sh/uv/) and `make`. The Harbor + OpenCode/MCP instructions are in that branch's README.
+You need [uv](https://docs.astral.sh/uv/) and `make`. The Harbor + OpenCode/MCP instructions are in that branch's README. `-c core.longpaths=true` only matters on Windows, where some committed Harbor run folders are deeper than the default 260-character path limit; macOS and Linux ignore it.
 
 ## Same team, other challenges
 

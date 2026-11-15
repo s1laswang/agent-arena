@@ -288,6 +288,14 @@ def test_frontier_replication_v14_readme_and_committed_g1_replay(monkeypatch):
         "7/7 episodes replay-verified",
     ):
         assert required in readme_text
+    for selection_ref in (
+        "../../../../docs/reports/frontier_ext30to59_selection_sensitivity.md",
+        "../../../../scripts/analyze_ext30to59_selection.py",
+        "python scripts/analyze_ext30to59_selection.py --check",
+    ):
+        assert selection_ref in readme_text
+    assert (EXT_ROOT / "../../../../docs/reports/frontier_ext30to59_selection_sensitivity.md").resolve().is_file()
+    assert (EXT_ROOT / "../../../../scripts/analyze_ext30to59_selection.py").resolve().is_file()
 
     committed_ext_path = COMMITTED_EXT_HARD / "episodes.jsonl"
     committed_eps = _read_jsonl(committed_ext_path)

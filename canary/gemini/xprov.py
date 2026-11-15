@@ -164,6 +164,9 @@ def summarize(eps: list[dict], solver: dict[tuple[str, int], float], B: int = 10
                      "accused": sum(e["accused"] for e in es), "solver_same_seeds": ms,
                      "pct_solver": (mean(f) / ms) if f and ms > 0 else float("nan"), "pct_lo": lo, "pct_hi": hi,
                      "cost_per_ep": mean([e.get("cost_usd") for e in es]),
+                     "cost_per_correct": (sum(e.get("cost_usd") or 0.0 for e in es) / sum(e["correct"] for e in es))
+                     if sum(e["correct"] for e in es) and all(e.get("cost_usd") == e.get("cost_usd") and e.get("cost_usd") is not None for e in es)
+                     else float("nan"),
                      "in_per_ep": mean([e.get("in_tok") for e in es]),
                      "cached_share": (sum(e.get("cached_tok") or 0 for e in es) / sum(e.get("in_tok") or 0 for e in es))
                      if sum(e.get("in_tok") or 0 for e in es) else float("nan"),
@@ -375,6 +378,8 @@ def to_md(doc: dict) -> str:
           "reasoning/thinking tokens), priced at list prices with cached input at the cached price. GPT-5.5: $5 / $0.50 "
           "cached / $30 per 1M tokens (`canary/llm/pricing.py`; the per-episode figure recorded with the run). Gemini: "
           "the ladder's price table (`canary/gemini/ladder_report.py`). Token counts per episode are in the tables.",
+          "- **$ per correct accusation** = all the money a row spent, wrong and unfinished episodes included, divided by "
+          "its correct accusations.",
           "- **Effort.** GPT-5.5 ran at its default reasoning effort (medium). Gemini rows show thinking level medium "
           "(the matched setting) and high. The two dials are not the same mechanism; treat 'medium vs medium' as nominal.",
           f"- **Checks.** Replay: {doc['checks']['replay']['replay_verified']}/{doc['checks']['replay']['n']} Gemini episodes "
@@ -387,11 +392,11 @@ def to_md(doc: dict) -> str:
         if not rows:
             continue
         L += [f"## {tier}", "",
-              "| agent | harness | n | mean score | correct | % of solver [95% CI] | $/episode | input tok/ep (cached) | output tok/ep |",
-              "|---|---|---|---|---|---|---|---|---|"]
+              "| agent | harness | n | mean score | correct | % of solver [95% CI] | $/episode | $ per correct accusation | input tok/ep (cached) | output tok/ep |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
         for r in rows:
             L.append(f"| {r['label']} | {r['harness']} | {r['n']} | {r['score_mean']:+.3f} | {r['correct']}/{r['n']} | "
-                     f"**{_pct(r['pct_solver'])}** [{_pct(r['pct_lo'])}, {_pct(r['pct_hi'])}] | {_money(r['cost_per_ep'])} | "
+                     f"**{_pct(r['pct_solver'])}** [{_pct(r['pct_lo'])}, {_pct(r['pct_hi'])}] | {_money(r['cost_per_ep'])} | {_money(r['cost_per_correct'])} | "
                      f"{_tok(r['in_per_ep'])} ({_pct(r['cached_share'])}) | {_tok(r['out_per_ep'])} |")
         if small:
             L += ["", "Incomplete cells (fewer than " + str(MIN_ROW_N) + " episodes; not tabulated or plotted): "

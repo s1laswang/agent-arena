@@ -1,0 +1,903 @@
+{
+  "committed_transcripts": {
+    "cohorts": [
+      {
+        "cohort": "opencode:google/gemini-4-carbon (medium, 0..29)",
+        "day1_accusations": 0,
+        "episodes_with_canary": 30,
+        "episodes_with_leak_feed": 30,
+        "mean_canaries": 5.8333,
+        "mean_final_day": 7.9667,
+        "n": 30,
+        "path": "data/runs/committed/v1.4/opencode-gemini-4-carbon/medium/episodes.jsonl",
+        "zero_canary_accusations": 0
+      },
+      {
+        "cohort": "opencode:google/gemini-4-carbon (hard, 0..29)",
+        "day1_accusations": 0,
+        "episodes_with_canary": 30,
+        "episodes_with_leak_feed": 30,
+        "mean_canaries": 8.4667,
+        "mean_final_day": 13.4333,
+        "n": 30,
+        "path": "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl",
+        "zero_canary_accusations": 0
+      },
+      {
+        "cohort": "opencode:google/gemini-4-carbon-ext (hard, 30..59)",
+        "day1_accusations": 0,
+        "episodes_with_canary": 2,
+        "episodes_with_leak_feed": 2,
+        "mean_canaries": 5.5,
+        "mean_final_day": 5.5,
+        "n": 2,
+        "path": "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard/episodes.jsonl",
+        "zero_canary_accusations": 0
+      },
+      {
+        "cohort": "opencode:google/gemini-3.5-flash (hard, 0..29)",
+        "day1_accusations": 0,
+        "episodes_with_canary": 30,
+        "episodes_with_leak_feed": 30,
+        "mean_canaries": 12.4333,
+        "mean_final_day": 12.7,
+        "n": 30,
+        "path": "data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard/episodes.jsonl",
+        "zero_canary_accusations": 0
+      },
+      {
+        "cohort": "inproc:google/gemini-4-carbon (medium, 0..29)",
+        "day1_accusations": 0,
+        "episodes_with_canary": 30,
+        "episodes_with_leak_feed": 30,
+        "mean_canaries": 6.9333,
+        "mean_final_day": 9.7,
+        "n": 30,
+        "path": "data/runs/committed/v1.4/inproc-gemini-4-carbon/medium/episodes.jsonl",
+        "zero_canary_accusations": 0
+      },
+      {
+        "cohort": "inproc:google/gemini-4-carbon (hard, 0..29)",
+        "day1_accusations": 0,
+        "episodes_with_canary": 30,
+        "episodes_with_leak_feed": 30,
+        "mean_canaries": 8.5667,
+        "mean_final_day": 12.9667,
+        "n": 30,
+        "path": "data/runs/committed/v1.4/inproc-gemini-4-carbon/hard/episodes.jsonl",
+        "zero_canary_accusations": 0
+      }
+    ],
+    "passed": true,
+    "total_day1_accusations": 0,
+    "total_episodes": 152,
+    "total_zero_canary_accusations": 0
+  },
+  "config": {
+    "feed_episodes": 60,
+    "judge_seeds": 40,
+    "scan_seeds": 200,
+    "tiers_version": "v1.4",
+    "timing_episodes": 60,
+    "tracks": [
+      "easy",
+      "medium",
+      "hard",
+      "hard_forge"
+    ],
+    "train_seeds": 120,
+    "world_secret": "canary-anticheat-public-test-v1"
+  },
+  "h2_template_wording": {
+    "lens": "H2_template_wording",
+    "lint_failures": 0,
+    "mole_swap_diffs": 0,
+    "passed": true,
+    "public_facts_has_mole": false,
+    "tiers": {
+      "easy": {
+        "angry_from_non_decoy": 0,
+        "decoy_template_counts": {},
+        "innocent_doc_recip_rate": 0.4952,
+        "innocent_mean_slot_pos": 0.5002,
+        "innocent_msg_len_ci95": 0.7119,
+        "innocent_msg_mean_len": 79.2495,
+        "innocent_msgs_per_emp_ep": 2.8655,
+        "innocent_template_counts": {
+          "dept_chatter": 3856,
+          "doc_mail": 2448
+        },
+        "iv_subtemplate_chi2": 32.386,
+        "iv_subtemplate_df": 24,
+        "iv_subtemplate_p_value": 0.117429,
+        "iv_unmatched": 0,
+        "loso_msg_clf": {
+          "accuracy": 0.09,
+          "chance_bar": 0.083333,
+          "ci95": [
+            0.057687,
+            0.137767
+          ],
+          "hits": 18,
+          "leak_detected": false,
+          "n": 200,
+          "p_value_vs_chance": 0.402433
+        },
+        "mole_doc_recip_rate": 0.499,
+        "mole_mean_slot_pos": 0.4978,
+        "mole_msg_len_ci95": 2.3076,
+        "mole_msg_mean_len": 79.2536,
+        "mole_msgs_per_emp_ep": 3.115,
+        "mole_template_counts": {
+          "dept_chatter": 384,
+          "doc_mail": 239
+        },
+        "passed": true,
+        "scan_seeds": 200,
+        "unmatched_non_decoy": 0
+      },
+      "hard": {
+        "angry_from_non_decoy": 0,
+        "decoy_template_counts": {
+          "angry_decoy": 1502,
+          "dept_chatter": 73,
+          "doc_mail": 66
+        },
+        "innocent_doc_recip_rate": 0.4014,
+        "innocent_mean_slot_pos": 0.4852,
+        "innocent_msg_len_ci95": 0.7934,
+        "innocent_msg_mean_len": 84.0987,
+        "innocent_msgs_per_emp_ep": 0.6876,
+        "innocent_template_counts": {
+          "dept_chatter": 2687,
+          "doc_mail": 2539
+        },
+        "iv_subtemplate_chi2": 27.7505,
+        "iv_subtemplate_df": 24,
+        "iv_subtemplate_p_value": 0.270407,
+        "iv_unmatched": 0,
+        "loso_msg_clf": {
+          "accuracy": 0.03,
+          "chance_bar": 0.025641,
+          "ci95": [
+            0.01382,
+            0.063895
+          ],
+          "hits": 6,
+          "leak_detected": false,
+          "n": 200,
+          "p_value_vs_chance": 0.406807
+        },
+        "mole_doc_recip_rate": 0.4024,
+        "mole_mean_slot_pos": 0.4927,
+        "mole_msg_len_ci95": 5.6437,
+        "mole_msg_mean_len": 82.1984,
+        "mole_msgs_per_emp_ep": 0.63,
+        "mole_template_counts": {
+          "dept_chatter": 65,
+          "doc_mail": 61
+        },
+        "passed": true,
+        "scan_seeds": 200,
+        "unmatched_non_decoy": 0
+      },
+      "medium": {
+        "angry_from_non_decoy": 0,
+        "decoy_template_counts": {
+          "angry_decoy": 1473,
+          "dept_chatter": 156,
+          "doc_mail": 166
+        },
+        "innocent_doc_recip_rate": 0.4991,
+        "innocent_mean_slot_pos": 0.4876,
+        "innocent_msg_len_ci95": 0.8077,
+        "innocent_msg_mean_len": 83.3334,
+        "innocent_msgs_per_emp_ep": 1.3764,
+        "innocent_template_counts": {
+          "dept_chatter": 2586,
+          "doc_mail": 2369
+        },
+        "iv_subtemplate_chi2": 31.3971,
+        "iv_subtemplate_df": 24,
+        "iv_subtemplate_p_value": 0.142345,
+        "iv_unmatched": 0,
+        "loso_msg_clf": {
+          "accuracy": 0.055,
+          "chance_bar": 0.052632,
+          "ci95": [
+            0.030985,
+            0.095788
+          ],
+          "hits": 11,
+          "leak_detected": false,
+          "n": 200,
+          "p_value_vs_chance": 0.484263
+        },
+        "mole_doc_recip_rate": 0.4932,
+        "mole_mean_slot_pos": 0.5,
+        "mole_msg_len_ci95": 3.2423,
+        "mole_msg_mean_len": 82.6416,
+        "mole_msgs_per_emp_ep": 1.395,
+        "mole_template_counts": {
+          "dept_chatter": 151,
+          "doc_mail": 128
+        },
+        "passed": true,
+        "scan_seeds": 200,
+        "unmatched_non_decoy": 0
+      }
+    },
+    "world_builder_truth_leaks": 0,
+    "world_builder_unique_tone_flags": 5
+  },
+  "h3_format_and_order": {
+    "lens": "H3_format_and_order",
+    "passed": true,
+    "tracks": {
+      "easy": {
+        "canary_schema_mismatches": 0,
+        "doc_schema_mismatches": 0,
+        "expected_emp_keys": [
+          "id",
+          "name",
+          "dept",
+          "role"
+        ],
+        "feed_episodes": 60,
+        "feed_items_total": 700,
+        "feed_order_inversions": 0,
+        "feed_schema_mismatches": 0,
+        "feed_unknown_docs": 0,
+        "innocent_mean_name_len": 13.5623,
+        "mole_mean_name_len": 13.805,
+        "passed": true,
+        "roster_id_mismatches": 0,
+        "roster_key_mismatches": 0,
+        "roster_vocab_mismatches": 0,
+        "scan_seeds": 200
+      },
+      "hard": {
+        "canary_schema_mismatches": 0,
+        "doc_schema_mismatches": 0,
+        "expected_emp_keys": [
+          "id",
+          "name",
+          "dept",
+          "role",
+          "clearance"
+        ],
+        "feed_episodes": 60,
+        "feed_items_total": 648,
+        "feed_order_inversions": 0,
+        "feed_schema_mismatches": 0,
+        "feed_unknown_docs": 0,
+        "innocent_mean_name_len": 13.5835,
+        "mole_mean_name_len": 13.67,
+        "passed": true,
+        "roster_id_mismatches": 0,
+        "roster_key_mismatches": 0,
+        "roster_vocab_mismatches": 0,
+        "scan_seeds": 200
+      },
+      "hard_forge": {
+        "canary_schema_mismatches": 0,
+        "doc_schema_mismatches": 0,
+        "expected_emp_keys": [
+          "id",
+          "name",
+          "dept",
+          "role",
+          "clearance"
+        ],
+        "feed_episodes": 60,
+        "feed_items_total": 217,
+        "feed_order_inversions": 0,
+        "feed_schema_mismatches": 0,
+        "feed_unknown_docs": 0,
+        "innocent_mean_name_len": 13.5918,
+        "mole_mean_name_len": 13.6,
+        "passed": true,
+        "roster_id_mismatches": 0,
+        "roster_key_mismatches": 0,
+        "roster_vocab_mismatches": 0,
+        "scan_seeds": 200
+      },
+      "medium": {
+        "canary_schema_mismatches": 0,
+        "doc_schema_mismatches": 0,
+        "expected_emp_keys": [
+          "id",
+          "name",
+          "dept",
+          "role"
+        ],
+        "feed_episodes": 60,
+        "feed_items_total": 524,
+        "feed_order_inversions": 50,
+        "feed_schema_mismatches": 0,
+        "feed_unknown_docs": 0,
+        "innocent_mean_name_len": 13.5934,
+        "mole_mean_name_len": 13.625,
+        "passed": true,
+        "roster_id_mismatches": 0,
+        "roster_key_mismatches": 0,
+        "roster_vocab_mismatches": 0,
+        "scan_seeds": 200
+      }
+    }
+  },
+  "h4_actor_and_timing": {
+    "dsl_numeric_only": true,
+    "known_v_mode": true,
+    "lens": "H4_actor_and_timing",
+    "mole_doc_fields": [
+      "doc_id",
+      "title",
+      "recipient_count",
+      "age_days"
+    ],
+    "mole_doc_hides_canary": true,
+    "passed": true,
+    "tracks": {
+      "easy": {
+        "counterfactual_tail_framed_days": 0,
+        "hidden_leak_states": 0,
+        "intra_pair_ah_inversions": 0,
+        "known_v_leaks": 0,
+        "log_key_mismatches": 0,
+        "n_episodes": 60,
+        "passed": true,
+        "total_closed_days": 780,
+        "total_log_rows": 9364,
+        "unsorted_days": 0
+      },
+      "hard": {
+        "counterfactual_tail_framed_days": 1198,
+        "hidden_leak_states": 884,
+        "intra_pair_ah_inversions": 0,
+        "known_v_leaks": 0,
+        "log_key_mismatches": 0,
+        "n_episodes": 60,
+        "passed": true,
+        "total_closed_days": 1200,
+        "total_log_rows": 49708,
+        "unsorted_days": 0
+      },
+      "hard_forge": {
+        "counterfactual_tail_framed_days": 1198,
+        "hidden_leak_states": 340,
+        "intra_pair_ah_inversions": 0,
+        "known_v_leaks": 0,
+        "log_key_mismatches": 0,
+        "n_episodes": 60,
+        "passed": true,
+        "total_closed_days": 1200,
+        "total_log_rows": 49771,
+        "unsorted_days": 0
+      },
+      "medium": {
+        "counterfactual_tail_framed_days": 755,
+        "hidden_leak_states": 473,
+        "intra_pair_ah_inversions": 0,
+        "known_v_leaks": 0,
+        "log_key_mismatches": 0,
+        "n_episodes": 60,
+        "passed": true,
+        "total_closed_days": 780,
+        "total_log_rows": 16797,
+        "unsorted_days": 0
+      }
+    }
+  },
+  "h5_priors_and_probes": {
+    "lens": "H5_priors_and_probes",
+    "passed": true,
+    "tracks": {
+      "easy": {
+        "d1_doc_chi2": 0.43,
+        "d1_doc_counts": {
+          "2": 64,
+          "3": 65,
+          "4": 71
+        },
+        "d1_doc_p_value": 0.807699,
+        "decoy_collisions": 0,
+        "error_parity_mismatches": 0,
+        "judge_mole_id_chi2": 8.6,
+        "judge_mole_id_p_value": 0.65985,
+        "judge_public_matches": 0,
+        "judge_seeds": 40,
+        "max_mole_id": "e01",
+        "max_mole_id_share": 0.105,
+        "mole_clearance_counts": {},
+        "mole_dept_chi2": 1.0,
+        "mole_dept_p_value": 0.803585,
+        "mole_id_chi2": 8.8,
+        "mole_id_df": 11,
+        "mole_id_in_innocent_error": 0,
+        "mole_id_p_value": 0.641397,
+        "non_constant_errors": 0,
+        "passed": true,
+        "scan_seeds": 200,
+        "uniform_id_share": 0.0833
+      },
+      "hard": {
+        "d1_doc_chi2": 0.79,
+        "d1_doc_counts": {
+          "2": 61,
+          "3": 71,
+          "4": 68
+        },
+        "d1_doc_p_value": 0.679212,
+        "decoy_collisions": 0,
+        "error_parity_mismatches": 0,
+        "judge_mole_id_chi2": 62.0,
+        "judge_mole_id_p_value": 0.011034,
+        "judge_public_matches": 0,
+        "judge_seeds": 40,
+        "max_mole_id": "e37",
+        "max_mole_id_share": 0.045,
+        "mole_clearance_counts": {
+          "1": 75,
+          "2": 59,
+          "3": 66
+        },
+        "mole_dept_chi2": 4.45,
+        "mole_dept_p_value": 0.348571,
+        "mole_id_chi2": 36.0,
+        "mole_id_df": 39,
+        "mole_id_in_innocent_error": 0,
+        "mole_id_p_value": 0.607689,
+        "non_constant_errors": 0,
+        "passed": true,
+        "scan_seeds": 200,
+        "uniform_id_share": 0.025
+      },
+      "hard_forge": {
+        "d1_doc_chi2": 6.07,
+        "d1_doc_counts": {
+          "2": 83,
+          "3": 60,
+          "4": 57
+        },
+        "d1_doc_p_value": 0.046787,
+        "decoy_collisions": 0,
+        "error_parity_mismatches": 0,
+        "judge_mole_id_chi2": 44.0,
+        "judge_mole_id_p_value": 0.267952,
+        "judge_public_matches": 0,
+        "judge_seeds": 40,
+        "max_mole_id": "e30",
+        "max_mole_id_share": 0.06,
+        "mole_clearance_counts": {
+          "1": 57,
+          "2": 77,
+          "3": 66
+        },
+        "mole_dept_chi2": 1.4,
+        "mole_dept_p_value": 0.845429,
+        "mole_id_chi2": 54.4,
+        "mole_id_df": 39,
+        "mole_id_in_innocent_error": 0,
+        "mole_id_p_value": 0.051581,
+        "non_constant_errors": 0,
+        "passed": true,
+        "scan_seeds": 200,
+        "uniform_id_share": 0.025
+      },
+      "medium": {
+        "d1_doc_chi2": 1.09,
+        "d1_doc_counts": {
+          "2": 66,
+          "3": 73,
+          "4": 61
+        },
+        "d1_doc_p_value": 0.585574,
+        "decoy_collisions": 0,
+        "error_parity_mismatches": 0,
+        "judge_mole_id_chi2": 17.0,
+        "judge_mole_id_p_value": 0.590331,
+        "judge_public_matches": 0,
+        "judge_seeds": 40,
+        "max_mole_id": "e11",
+        "max_mole_id_share": 0.095,
+        "mole_clearance_counts": {},
+        "mole_dept_chi2": 1.16,
+        "mole_dept_p_value": 0.765863,
+        "mole_id_chi2": 23.2,
+        "mole_id_df": 19,
+        "mole_id_in_innocent_error": 0,
+        "mole_id_p_value": 0.22824,
+        "non_constant_errors": 0,
+        "passed": true,
+        "scan_seeds": 200,
+        "uniform_id_share": 0.05
+      }
+    }
+  },
+  "map": [
+    {
+      "canary_invariant": "PublicDayFacts omits mole identity; non-decoy messages share identical template pools, sender rates, slot positions, and interview sub-templates.",
+      "canary_surface": "Inbox day_messages (templates, sender volume, slot order, length, lexical LOSO) and interview_answer across TemplateProvider, MinimalProvider, and GeminiWorldText",
+      "id": "H2",
+      "sleeper_finding": "Attack tickets used distinct wording templates, extra per-day message counts, and fixed arrival slots; regex allowlists scored 1.000 without security checks.",
+      "sleeper_script": "redteam/hunt/template_clf.py + tmplagent.py + sleeper/detell.py"
+    },
+    {
+      "canary_invariant": "Uniform e00..e{N-1} IDs, identical dict key order and public name/role pools on mole vs innocents, sorted document recipients, and fixed leak-feed item keys.",
+      "canary_surface": "World list_employees, list_documents (incl. v1.4 multi-canary c1/c1-2), and check_leak_feed schemas, key ordering, ID patterns, name/role pools, and clearance fields",
+      "id": "H3",
+      "sleeper_finding": "Attack amounts were integers, refs had 5 digits, IBANs began with XX, vendor IDs used V04..V07, and requested_by sat at a distinct dict key index.",
+      "sleeper_script": "redteam/hunt/tell_scan.py + policies.py (intfilter) + fraud V04..V07"
+    },
+    {
+      "canary_invariant": "Each closed day sorts logs by (employee, doc_id, after_hours) erasing framed-row tail tells; KNOWN_V_MODE hides unsurfaced leak drops; MoleDoc omits is_canary.",
+      "canary_surface": "read_access_logs row ordering under framing, status/advance_day visible V under leak delay, and MoleView canary blindness",
+      "id": "H4",
+      "sleeper_finding": "Scripted sleeper closed every ticket with literal note 'Handled per request.' on off-poll ticks, naming the sleeper on 83/83 days.",
+      "sleeper_script": "redteam/hunt/tell_study.py + tellagent.py + legal_study.py + swap_in"
+    },
+    {
+      "canary_invariant": "Mole is drawn uniformly over non-decoy IDs after roster generation; day-1 doc count is Uniform(2, 3, 4); invalid tool calls return fixed ERRORS and target-symmetric details.",
+      "canary_surface": "Mole/decoy seat, department, and clearance priors across dev and salted judge seeds; day-1 doc counts; tool error constants and data.detail target parity",
+      "id": "H5",
+      "sleeper_finding": "Daymix gave sales a 100% ceo_assistant sleeper prior, and probing close_ticket on T049..T053 leaked ticket count at tick 0.",
+      "sleeper_script": "redteam/hunt/prior.py + count_probe.py + Panel Fix D (1bc3e281)"
+    },
+    {
+      "canary_invariant": "Every surface-tell policy earns mean score <= 0 (strictly below do_nothing=0 on accusing policies and far below SolverPolicy across all 4 tracks).",
+      "canary_surface": "Five zero-canary surface-tell policies evaluated through Env.call on salted JUDGE_SEEDS against do_nothing and SolverPolicy",
+      "id": "BENCH",
+      "sleeper_finding": "Zero-verification surface-tell policies matched or beat the evidence-based reference agent on Sleeper v1.",
+      "sleeper_script": "redteam/hunt/seat_eval.py (tmplonly, intfilter, telltrust vs reference, do_nothing)"
+    }
+  ],
+  "passed": true,
+  "planted_controls": {
+    "controls": {
+      "planted_h2_mole_wording_tell": {
+        "detected": true,
+        "loso_accuracy": 1.0,
+        "unmatched_non_decoy": 200
+      },
+      "planted_h3_mole_key_order_tell": {
+        "detected": true,
+        "roster_key_mismatches": 20
+      },
+      "planted_h4_unsorted_framed_logs": {
+        "detected": true,
+        "unsorted_days": 107
+      },
+      "planted_h5_error_parity_leak": {
+        "detected": true,
+        "error_parity_mismatches": 120
+      }
+    },
+    "passed": true
+  },
+  "policy_benchmark": {
+    "judge_seeds": 40,
+    "lens": "Policy_benchmark",
+    "passed": true,
+    "tracks": {
+      "easy": {
+        "do_nothing": {
+          "accuracy": 0.0,
+          "accused": 0,
+          "blocked": true,
+          "ci95": 0.0,
+          "episodes_gt_zero": 0,
+          "hits": 0,
+          "max_score": 0.0,
+          "mean_score": 0.0,
+          "n": 40
+        },
+        "solver": {
+          "accuracy": 0.975,
+          "accused": 39,
+          "blocked": true,
+          "ci95": 0.0511,
+          "episodes_gt_zero": 39,
+          "hits": 39,
+          "max_score": 0.88,
+          "mean_score": 0.765,
+          "n": 40
+        },
+        "surface_angry_tell": {
+          "accuracy": 0.075,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.1585,
+          "episodes_gt_zero": 3,
+          "hits": 3,
+          "max_score": 0.95,
+          "mean_score": -0.8562,
+          "n": 40
+        },
+        "surface_iv_subtemplate": {
+          "accuracy": 0.075,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.1612,
+          "episodes_gt_zero": 3,
+          "hits": 3,
+          "max_score": 0.95,
+          "mean_score": -0.8538,
+          "n": 40
+        },
+        "surface_log_tail_probe": {
+          "accuracy": 0.225,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.2411,
+          "episodes_gt_zero": 9,
+          "hits": 9,
+          "max_score": 0.9,
+          "mean_score": -0.5862,
+          "n": 40
+        },
+        "surface_msg_template_clf": {
+          "accuracy": 0.1,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.1754,
+          "episodes_gt_zero": 4,
+          "hits": 4,
+          "max_score": 0.9,
+          "mean_score": -0.8137,
+          "n": 40
+        },
+        "surface_roster_prior": {
+          "accuracy": 0.05,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.1368,
+          "episodes_gt_zero": 2,
+          "hits": 2,
+          "max_score": 1.0,
+          "mean_score": -0.9,
+          "n": 40
+        }
+      },
+      "hard": {
+        "do_nothing": {
+          "accuracy": 0.0,
+          "accused": 0,
+          "blocked": true,
+          "ci95": 0.0,
+          "episodes_gt_zero": 0,
+          "hits": 0,
+          "max_score": 0.0,
+          "mean_score": 0.0,
+          "n": 40
+        },
+        "solver": {
+          "accuracy": 0.925,
+          "accused": 38,
+          "blocked": true,
+          "ci95": 0.0976,
+          "episodes_gt_zero": 37,
+          "hits": 37,
+          "max_score": 0.84,
+          "mean_score": 0.5453,
+          "n": 40
+        },
+        "surface_angry_tell": {
+          "accuracy": 0.0,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.0,
+          "episodes_gt_zero": 0,
+          "hits": 0,
+          "max_score": -1.0,
+          "mean_score": -1.0,
+          "n": 40
+        },
+        "surface_iv_subtemplate": {
+          "accuracy": 0.05,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.1317,
+          "episodes_gt_zero": 2,
+          "hits": 2,
+          "max_score": 0.95,
+          "mean_score": -0.9037,
+          "n": 40
+        },
+        "surface_log_tail_probe": {
+          "accuracy": 0.025,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.0906,
+          "episodes_gt_zero": 1,
+          "hits": 1,
+          "max_score": 0.85,
+          "mean_score": -0.9537,
+          "n": 40
+        },
+        "surface_msg_template_clf": {
+          "accuracy": 0.05,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.13,
+          "episodes_gt_zero": 2,
+          "hits": 2,
+          "max_score": 0.95,
+          "mean_score": -0.905,
+          "n": 40
+        },
+        "surface_roster_prior": {
+          "accuracy": 0.05,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.1368,
+          "episodes_gt_zero": 2,
+          "hits": 2,
+          "max_score": 1.0,
+          "mean_score": -0.9,
+          "n": 40
+        }
+      },
+      "hard_forge": {
+        "do_nothing": {
+          "accuracy": 0.0,
+          "accused": 0,
+          "blocked": true,
+          "ci95": 0.0,
+          "episodes_gt_zero": 0,
+          "hits": 0,
+          "max_score": 0.0,
+          "mean_score": 0.0,
+          "n": 40
+        },
+        "solver": {
+          "accuracy": 0.875,
+          "accused": 37,
+          "blocked": true,
+          "ci95": 0.1274,
+          "episodes_gt_zero": 35,
+          "hits": 35,
+          "max_score": 0.81,
+          "mean_score": 0.4555,
+          "n": 40
+        },
+        "surface_angry_tell": {
+          "accuracy": 0.0,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.0,
+          "episodes_gt_zero": 0,
+          "hits": 0,
+          "max_score": -1.0,
+          "mean_score": -1.0,
+          "n": 40
+        },
+        "surface_iv_subtemplate": {
+          "accuracy": 0.05,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.1334,
+          "episodes_gt_zero": 2,
+          "hits": 2,
+          "max_score": 0.95,
+          "mean_score": -0.9025,
+          "n": 40
+        },
+        "surface_log_tail_probe": {
+          "accuracy": 0.075,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.1599,
+          "episodes_gt_zero": 3,
+          "hits": 3,
+          "max_score": 1.0,
+          "mean_score": -0.855,
+          "n": 40
+        },
+        "surface_msg_template_clf": {
+          "accuracy": 0.025,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.0955,
+          "episodes_gt_zero": 1,
+          "hits": 1,
+          "max_score": 0.95,
+          "mean_score": -0.9512,
+          "n": 40
+        },
+        "surface_roster_prior": {
+          "accuracy": 0.025,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.098,
+          "episodes_gt_zero": 1,
+          "hits": 1,
+          "max_score": 1.0,
+          "mean_score": -0.95,
+          "n": 40
+        }
+      },
+      "medium": {
+        "do_nothing": {
+          "accuracy": 0.0,
+          "accused": 0,
+          "blocked": true,
+          "ci95": 0.0,
+          "episodes_gt_zero": 0,
+          "hits": 0,
+          "max_score": 0.0,
+          "mean_score": 0.0,
+          "n": 40
+        },
+        "solver": {
+          "accuracy": 0.925,
+          "accused": 37,
+          "blocked": true,
+          "ci95": 0.0683,
+          "episodes_gt_zero": 37,
+          "hits": 37,
+          "max_score": 0.9,
+          "mean_score": 0.6707,
+          "n": 40
+        },
+        "surface_angry_tell": {
+          "accuracy": 0.0,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.0,
+          "episodes_gt_zero": 0,
+          "hits": 0,
+          "max_score": -1.0,
+          "mean_score": -1.0,
+          "n": 40
+        },
+        "surface_iv_subtemplate": {
+          "accuracy": 0.075,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.1631,
+          "episodes_gt_zero": 3,
+          "hits": 3,
+          "max_score": 1.0,
+          "mean_score": -0.852,
+          "n": 40
+        },
+        "surface_log_tail_probe": {
+          "accuracy": 0.05,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.1314,
+          "episodes_gt_zero": 2,
+          "hits": 2,
+          "max_score": 0.96,
+          "mean_score": -0.904,
+          "n": 40
+        },
+        "surface_msg_template_clf": {
+          "accuracy": 0.025,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.0902,
+          "episodes_gt_zero": 1,
+          "hits": 1,
+          "max_score": 0.84,
+          "mean_score": -0.954,
+          "n": 40
+        },
+        "surface_roster_prior": {
+          "accuracy": 0.05,
+          "accused": 40,
+          "blocked": true,
+          "ci95": 0.1368,
+          "episodes_gt_zero": 2,
+          "hits": 2,
+          "max_score": 1.0,
+          "mean_score": -0.9,
+          "n": 40
+        }
+      }
+    },
+    "train_seeds": 120,
+    "world_secret_label": "canary-anticheat-public-test-v1"
+  }
+}

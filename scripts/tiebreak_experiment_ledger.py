@@ -40,7 +40,8 @@ HISTORICAL_RUN_IDS: tuple[str, ...] = (
     "WS4-v3-8k-s1-ac58",
     "WS4-v3-8k-s2-dbd0",
     "WS4-v3-8k-s3-f437",
-    "WS4-dagger-r1-verda",
+    "WS4-dagger-r1-8k-verda",
+    "WS4-dagger-r1-4k-verda",
     "Verda-base-backup-18ac",
 )
 
@@ -1665,7 +1666,7 @@ def _load_ws4_v3_4k_s0_ctx8k() -> dict[str, Any]:
             "gate4_paired_ci95_positive": False,
             "all_passed": False,
             "reasons": [
-                "shared secret 1ca0c2a64d is paired with WS4-v3-8k-s0-3bb7, WS4-v3-8k-s3-f437, and WS4-dagger-r1-verda, but untrained base never ran under 1ca0c2a64d",
+                "shared secret 1ca0c2a64d is paired with WS4-v3-8k-s0-3bb7, WS4-v3-8k-s3-f437, WS4-dagger-r1-8k-verda, and WS4-dagger-r1-4k-verda, but untrained base never ran under 1ca0c2a64d",
                 "inference-length confound: raising eval max_ctx from 4096 to 8192 flipped medium/hard accusations from 0.00/0.03 to 0.80/0.90 (0 correct)",
                 "severe held-out regression (-0.716 +/- 0.105, n=90; two-sample -0.568 +/- 0.123 vs 4k inference)",
             ],
@@ -2141,7 +2142,7 @@ def _load_ws4_v3_8k_s3_f437(repo_root: Path) -> dict[str, Any]:
     }
 
 
-def _load_ws4_dagger_r1_verda(repo_root: Path) -> dict[str, Any]:
+def _load_ws4_dagger_r1_8k_verda(repo_root: Path) -> dict[str, Any]:
     sft_steps = 250
     sft_examples = 4000
     sft_tokens = 25709119
@@ -2155,13 +2156,13 @@ def _load_ws4_dagger_r1_verda(repo_root: Path) -> dict[str, Any]:
         sft_seconds = int(ds.get("seconds", 3331))
 
     return {
-        "run_id": "WS4-dagger-r1-verda",
+        "run_id": "WS4-dagger-r1-8k-verda",
         "source": "historical",
-        "model": "Qwen2.5-1.5B-Instruct LoRA (DAgger r1, 250 SFT steps from v3-4k s0, shared secret)",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (DAgger r1, 250 SFT steps, inf 8k cap 256, shared secret)",
         "method": (
-            "On-policy DAgger round 1: 300 vLLM rollouts on TRAIN 170000..170099 (24,074 relabelled states, "
-            "2,603/2,603 solver match) -> 250 SFT steps on 4,000 own-policy states at 8k ctx "
-            "(Verda A100-40 e9ea8b2e + A100-80 68bbe201; max_new_tokens=256, shared secret 1ca0c2a64d)"
+            "On-policy DAgger round 1 evaluated at max_ctx=8192, max_new_tokens=256 (cap 96 truncated plant_canary): "
+            "300 vLLM rollouts on TRAIN 170000..170099 (24,074 relabelled states, 2,603/2,603 solver match) -> "
+            "250 SFT steps on 4,000 own-policy states (Verda A100-40 e9ea8b2e + A100-80 68bbe201; shared secret 1ca0c2a64d)"
         ),
         "tiers_version": "v1.4",
         "tiers": ["easy", "medium", "hard"],
@@ -2179,7 +2180,7 @@ def _load_ws4_dagger_r1_verda(repo_root: Path) -> dict[str, Any]:
         "after_world_secret_tag": "1ca0c2a64d",
         "replay_verified": False,
         "verified_improvement": False,
-        "status": "NEGATIVE_DAGGER_INTERIM_BELOW_BASE",
+        "status": "NEGATIVE_DAGGER_HONEST_NULL",
         "details": {
             "verda_train_instance": "e9ea8b2e",
             "verda_eval_instance": "68bbe201",
@@ -2195,35 +2196,120 @@ def _load_ws4_dagger_r1_verda(repo_root: Path) -> dict[str, Any]:
             "sft_examples": sft_examples,
             "sft_tokens": sft_tokens,
             "sft_seconds": sft_seconds,
+            "train_context_len": 8192,
+            "eval_context_len": 8192,
             "max_new_tokens": 256,
+            "cap96_truncated_plant_canary": True,
             "shared_world_secret_tag": "1ca0c2a64d",
             "heldout_seed_range": "800000..800026",
             "by_tier_n": {"easy": 18, "medium": 17, "hard": 15},
-            "inf8k_heldout_n": 50,
-            "inf8k_mean_score": -0.542,
-            "inf8k_mean_score_short": -0.54,
-            "inf8k_ci95": 0.214,
-            "inf8k_accused_count": 46,
-            "inf8k_accused_rate": 0.92,
-            "inf8k_correct_count": 10,
-            "inf8k_accuracy": 0.20,
-            "inf8k_precision_when_accused": 0.22,
-            "inf8k_abstain_rate": 0.08,
-            "inf4k_heldout_n": 41,
-            "inf4k_mean_score": -0.101,
-            "inf4k_mean_score_short": -0.10,
-            "inf4k_ci95": 0.112,
-            "inf4k_accused_count": 6,
-            "inf4k_accused_rate": 0.15,
-            "inf4k_correct_count": 1,
-            "inf4k_accuracy": 0.02,
-            "inf4k_abstain_rate": 0.85,
-            "paired_vs_4k_ctx8k_cap256_mean_delta": 0.242,
-            "paired_vs_4k_ctx8k_cap256_ci95": 0.304,
-            "paired_vs_4k_ctx8k_cap256_n": 43,
-            "paired_vs_4k_ctx4k_cap256_mean_delta": -0.031,
-            "paired_vs_4k_ctx4k_cap256_ci95": 0.139,
-            "paired_vs_4k_ctx4k_cap256_n": 32,
+            "accused_count": 46,
+            "accused_rate": 0.92,
+            "correct_count": 10,
+            "accuracy": 0.20,
+            "precision_when_accused": 0.22,
+            "whom_precision_ratio": "10/46",
+            "abstain_count": 4,
+            "abstain_rate": 0.08,
+            "paired_v3_4k_s0_ctx8k_cap256_mean_score": -0.754,
+            "paired_v3_4k_s0_ctx8k_cap256_ci95": 0.177,
+            "paired_vs_v3_4k_s0_ctx8k_cap256_mean_delta": 0.242,
+            "paired_vs_v3_4k_s0_ctx8k_cap256_ci95": 0.304,
+            "paired_vs_v3_4k_s0_ctx8k_cap256_n": 43,
+            "two_sample_delta_vs_v3_4k_s0_mean": -0.395,
+            "two_sample_delta_vs_v3_4k_s0_ci95": 0.223,
+            "partial_due_to_reaper_deletion": True,
+            "reaper_lost_approx_episodes": 40,
+        },
+        "gates": {
+            "gate1_seed_hygiene": True,
+            "gate2_paired_world_secret": False,
+            "gate3_sample_and_replay": False,
+            "gate4_paired_ci95_positive": False,
+            "all_passed": False,
+            "reasons": [
+                "unpaired vs untrained FR8 base; partial held-out n=50 pulled ~05:35 before 08:00 reaper deleted e9ea8b2e (~40 remaining episodes lost)",
+                "honest null below base 0.000 (-0.542 +/- 0.214, accused 0.92, correct 0.20, whom-precision 10/46 = 0.22, abstain 0.08)",
+                "paired delta vs v3-4k s0 @8k cap=256 (-0.754 +/- 0.177, n=43) under shared secret 1ca0c2a64d was +0.242 +/- 0.304 (n=43, CI includes 0)",
+            ],
+        },
+        "evidence": [
+            "README.md",
+            "VERDA.md",
+            "origin/x2-dagger:docs/reports/dagger.md",
+            "origin/x2-dagger:fr8/analysis/out/ws4_table_x2_dagger.md",
+            "origin/x2-dagger:fr8/analysis/out/x2_dagger_8k_paired.md",
+            "origin/x2-dagger:data/x2/dagger-r1/lora/dagger_summary.json",
+        ],
+        "notes": (
+            "Verda A100-40 e9ea8b2e DAgger round 1 at 8k inference (250 SFT steps on 4,000 solver-labelled "
+            "own-policy states from 300 vLLM rollouts / 24,074 relabelled states, 2,603/2,603 solver match; "
+            "max_new_tokens=256 since cap=96 truncated plant_canary) scored -0.542 +/- 0.214 on partial held-out "
+            "n=50 under 1ca0c2a64d (accused 0.92, correct 0.20, whom 10/46 = 0.22, abstain 0.08; paired "
+            "+0.242 +/- 0.304 vs v3-4k s0 @8k cap=256 -0.754 +/- 0.177 on n=43; reaper deleted remaining ~40 eps)."
+        ),
+    }
+
+
+def _load_ws4_dagger_r1_4k_verda(repo_root: Path) -> dict[str, Any]:
+    sft_steps = 250
+    sft_examples = 4000
+    ds_file = repo_root / "data" / "x2" / "dagger-r1" / "lora" / "dagger_summary.json"
+    if ds_file.is_file():
+        ds = json.loads(ds_file.read_text(encoding="utf-8"))
+        sft_steps = int(ds.get("steps", 250))
+        sft_examples = int(ds.get("examples", 4000))
+
+    return {
+        "run_id": "WS4-dagger-r1-4k-verda",
+        "source": "historical",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (DAgger r1 same adapter, inf 4k cap 256, shared secret)",
+        "method": (
+            "Same 250-step DAgger round 1 adapter evaluated at max_ctx=4096, max_new_tokens=256 on Verda A100-80 "
+            "68bbe201 under shared secret 1ca0c2a64d (paired against v3-4k s0 @4k cap=256)"
+        ),
+        "tiers_version": "v1.4",
+        "tiers": ["easy", "medium", "hard"],
+        "context_len": 4096,
+        "heldout_n": 41,
+        "before_mean_score": 0.0,
+        "after_mean_score": -0.101,
+        "after_ci95": 0.112,
+        "paired_mean_delta": -0.101,
+        "paired_ci95_low": -0.213,
+        "paired_ci95_high": 0.011,
+        "before_valid_call_rate": 0.03,
+        "after_valid_call_rate": 1.00,
+        "before_world_secret_tag": None,
+        "after_world_secret_tag": "1ca0c2a64d",
+        "replay_verified": False,
+        "verified_improvement": False,
+        "status": "NEGATIVE_DAGGER_HONEST_NULL",
+        "details": {
+            "verda_train_instance": "e9ea8b2e",
+            "verda_eval_instance": "68bbe201",
+            "dagger_seed_range": "170000..170099",
+            "sft_steps": sft_steps,
+            "sft_examples": sft_examples,
+            "train_context_len": 8192,
+            "eval_context_len": 4096,
+            "max_new_tokens": 256,
+            "shared_world_secret_tag": "1ca0c2a64d",
+            "heldout_seed_range": "800000..800024",
+            "by_tier_n": {"easy": 15, "medium": 14, "hard": 12},
+            "accused_count": 6,
+            "accused_rate": 0.15,
+            "correct_count": 1,
+            "accuracy": 0.02,
+            "precision_when_accused": 0.17,
+            "whom_precision_ratio": "1/6",
+            "abstain_count": 35,
+            "abstain_rate": 0.85,
+            "paired_v3_4k_s0_ctx4k_cap256_mean_score": -0.094,
+            "paired_v3_4k_s0_ctx4k_cap256_ci95": 0.103,
+            "paired_vs_v3_4k_s0_ctx4k_cap256_mean_delta": -0.031,
+            "paired_vs_v3_4k_s0_ctx4k_cap256_ci95": 0.139,
+            "paired_vs_v3_4k_s0_ctx4k_cap256_n": 32,
             "partial_due_to_reaper_deletion": True,
         },
         "gates": {
@@ -2233,24 +2319,21 @@ def _load_ws4_dagger_r1_verda(repo_root: Path) -> dict[str, Any]:
             "gate4_paired_ci95_positive": False,
             "all_passed": False,
             "reasons": [
-                "unpaired vs untrained FR8 base; partial held-out n=50 at 8k and n=41 at 4k pulled ~05:35 before 07:30/08:00 reapers deleted 68bbe201 and e9ea8b2e",
-                "interim held-out scores remained below base 0.000 at both 8k (-0.542 +/- 0.214, ~-0.54, 92% accused) and 4k (-0.101 +/- 0.112, ~-0.10, 85% abstain)",
-                "paired deltas vs v3-4k-s0 under shared secret 1ca0c2a64d crossed zero (+0.242 +/- 0.304 on n=43 at 8k; -0.031 +/- 0.139 on n=32 at 4k)",
+                "unpaired vs untrained FR8 base; partial held-out n=41 pulled ~05:35 before 07:30 reaper deleted 68bbe201",
+                "honest null below base 0.000 (-0.101 +/- 0.112, accused 0.15, correct 0.02 = 1/6, abstain 0.85)",
+                "paired delta vs v3-4k s0 @4k cap=256 (-0.094 +/- 0.103, n=32) under shared secret 1ca0c2a64d was -0.031 +/- 0.139 (n=32, level with v3-4k)",
             ],
         },
         "evidence": [
             "README.md",
-            "VERDA.md",
             "origin/x2-dagger:docs/reports/dagger.md",
             "origin/x2-dagger:fr8/analysis/out/ws4_table_x2_dagger.md",
-            "origin/x2-dagger:data/x2/dagger-r1/lora/dagger_summary.json",
+            "origin/x2-dagger:fr8/analysis/out/x2_dagger_4k_paired.md",
         ],
         "notes": (
-            "Verda A100-40 e9ea8b2e + A100-80 68bbe201 DAgger round 1 (250 SFT steps on 4,000 solver-labelled "
-            "own-policy states from 300 vLLM rollouts / 24,074 relabelled states, 2,603/2,603 solver match) "
-            "doubled 8k whom-precision (0.10 -> 0.22) and state agreement (43% -> 68%) but stayed below base "
-            "under shared secret 1ca0c2a64d: interim -0.542 +/- 0.214 (-0.54, partial n=50) at 8k and "
-            "-0.101 +/- 0.112 (-0.10, partial n=41) at 4k."
+            "Same DAgger r1 adapter evaluated at 4k context (max_new_tokens=256) on Verda A100-80 68bbe201 under "
+            "shared secret 1ca0c2a64d scored -0.101 +/- 0.112 on partial held-out n=41 (accused 0.15, correct "
+            "0.02 = 1/6, abstain 0.85; paired -0.031 +/- 0.139 vs v3-4k s0 @4k cap=256 -0.094 +/- 0.103 on n=32)."
         ),
     }
 
@@ -2338,7 +2421,8 @@ def load_historical_runs(
         _load_ws4_v3_8k_s1_ac58(repo_root),
         _load_ws4_v3_8k_s2_dbd0(repo_root),
         _load_ws4_v3_8k_s3_f437(repo_root),
-        _load_ws4_dagger_r1_verda(repo_root),
+        _load_ws4_dagger_r1_8k_verda(repo_root),
+        _load_ws4_dagger_r1_4k_verda(repo_root),
         _load_verda_base_backup_18ac(),
     ]
 
@@ -2555,18 +2639,18 @@ def render_markdown_report(ledger: dict[str, Any]) -> str:
         f"{h2} 1. Architecture Diagnosis: Why Raw-Transcript Open-Weight LLM Runs Failed the Bar",
         "",
         f"Across all `{counts['historical_runs']}` historical FR8 V100 and Verda A100/H100 open-weight "
-        "`Qwen2.5-1.5B-Instruct` runs (`0 / 18` open-weight LLM runs above base `0.000`: `2` untrained base "
+        "`Qwen2.5-1.5B-Instruct` runs (`0 / 19` open-weight LLM runs above base `0.000`: `2` untrained base "
         "entries pooling to `n=36` at `0.000`, `J4-v1-44397` on v1.3 plus `7` v1.4 trained `v2`/`v3` models in "
-        "`ws4_table_final.md` logged across `8` entries, `1` same-weights `ctx8k` confound eval, `1` on-policy "
-        "DAgger r1 interim run, and `5` `n=0` failed/reaper-lost/spot-preempted/OOM/zero-var runs), LoRA SFT and "
-        "decision-point GRPO mastered protocol syntax (`0.03 -> 1.00` valid tool calls) and fixed `v2`'s reckless "
-        "accusations (`+0.310 +/- 0.107` to `+0.408 +/- 0.099` two-sample vs `v2`), **yet no autonomous "
-        "open-weight LLM run met the tiebreaker bar** (held-out mean `> 0.0` above pooled untrained base `0.000` "
-        "on `n=36` with 95% CI excluding `0`): `v3-4k-s0` scored `-0.147 +/- 0.063` (`n=180`), finalized FR8 V100 "
-        "`v3-4k-s1` (`44572`) `-0.209 +/- 0.094` (`n=82`), `v3-8k-s0` `-0.060 +/- 0.054` (`n=90`), `v3-8k-s2` "
-        "`-0.050 +/- 0.049` (`n=90`), `v3-8k-s1` `-0.777 +/- 0.118` (`n=90`), `v3-8k-s3` `-0.788 +/- 0.117` "
-        "(`n=90`), and interim DAgger r1 `-0.542 +/- 0.214` (`-0.54`, `n=50`) at 8k and `-0.101 +/- 0.112` "
-        "(`-0.10`, `n=41`) at 4k. Forensics isolate five findings:",
+        "`ws4_table_final.md` logged across `8` entries, `1` same-weights `ctx8k` confound eval, `2` on-policy "
+        "DAgger r1 held-out evals at `8k` and `4k` context, and `5` `n=0` failed/reaper-lost/spot-preempted/OOM/"
+        "zero-var runs), LoRA SFT and decision-point GRPO mastered protocol syntax (`0.03 -> 1.00` valid tool "
+        "calls) and fixed `v2`'s reckless accusations (`+0.310 +/- 0.107` to `+0.408 +/- 0.099` two-sample vs "
+        "`v2`), **yet no autonomous open-weight LLM run met the tiebreaker bar** (held-out mean `> 0.0` above "
+        "pooled untrained base `0.000` on `n=36` with 95% CI excluding `0`): `v3-4k-s0` scored `-0.147 +/- 0.063` "
+        "(`n=180`), finalized FR8 V100 `v3-4k-s1` (`44572`) `-0.209 +/- 0.094` (`n=82`), `v3-8k-s0` "
+        "`-0.060 +/- 0.054` (`n=90`), `v3-8k-s2` `-0.050 +/- 0.049` (`n=90`), `v3-8k-s1` `-0.777 +/- 0.118` "
+        "(`n=90`), `v3-8k-s3` `-0.788 +/- 0.117` (`n=90`), and DAgger r1 honest null `-0.542 +/- 0.214` (`n=50`) "
+        "at 8k and `-0.101 +/- 0.112` (`n=41`) at 4k. Forensics isolate five findings:",
         "",
         f"{h3} 1.1 Header Tax and Evidence Truncation (`2,842 / 4,096` Tokens)",
         "",
@@ -2630,17 +2714,21 @@ def render_markdown_report(ledger: dict[str, Any]) -> str:
         "4k-trained at 8k inference) of **`-0.073 +/- 0.173`** (`n=90`), confirming 8k off-policy GRPO adds zero "
         "gain at 8k inference.",
         "",
-        f"{h3} 1.4 On-Policy DAgger Round 1 Honest Null (`WS4-dagger-r1-verda`)",
+        f"{h3} 1.4 On-Policy DAgger Round 1 Honest Null (`WS4-dagger-r1-8k-verda` and `WS4-dagger-r1-4k-verda`)",
         "",
         "- On Verda A100-40 `e9ea8b2e` + A100-80 `68bbe201`, DAgger round 1 rolled out `v3-4k-s0` via vLLM across "
         "`300` `TRAIN_SEEDS` episodes (`170000..170099`), relabelled `24,074` states with the reference solver "
         "(verified `2,603/2,603` exact step match on `45` solver episodes), and ran `250` LoRA SFT steps on `4,000` "
-        "own-policy states at `8k` context (`max_new_tokens=256`).",
+        "own-policy states at `8k` context (`--max-new-tokens 256`, required because `cap=96` truncated multi-"
+        "employee `plant_canary` calls).",
         "- DAgger improved own-state solver agreement (`43% -> 68%`) and doubled 8k held-out whom-precision "
-        "(`0.10 -> 0.22`), but premature commitment persisted (`92%` accused at 8k): interim held-out readouts "
-        "pulled before the `07:30`/`08:00` reapers scored **`-0.542 +/- 0.214` (`-0.54`, partial `n=50`)** at `8k` "
-        "(paired `+0.242 +/- 0.304` vs `v3-4k-s0@8k`, `n=43`) and **`-0.101 +/- 0.112` (`-0.10`, partial `n=41`)** "
-        "at `4k` (paired `-0.031 +/- 0.139`, `n=32`) under shared secret `1ca0c2a64d`, remaining below base `0.000`.",
+        "(`10/46 = 0.22` vs `4/40 = 0.10`), but premature commitment persisted (`0.92` accused at 8k): partial "
+        "held-out readouts under shared secret `1ca0c2a64d` (pulled before the `07:30`/`08:00` reapers deleted the "
+        "remaining ~40 episodes) ended as an **honest null** (`NEGATIVE_DAGGER_HONEST_NULL`): **`-0.542 +/- 0.214` "
+        "(`n=50`)** at `8k` (`WS4-dagger-r1-8k-verda`, paired `+0.242 +/- 0.304` vs `v3-4k s0 @8k cap=256` "
+        "`-0.754 +/- 0.177`, `n=43`) and **`-0.101 +/- 0.112` (`n=41`)** at `4k` (`WS4-dagger-r1-4k-verda`, "
+        "`0.15` accused, `0.02` = `1/6` correct, `0.85` abstain; paired `-0.031 +/- 0.139` vs `v3-4k s0 @4k "
+        "cap=256` `-0.094 +/- 0.103`, `n=32`).",
         "",
         f"{h3} 1.5 World-Secret Pairing Hygiene and Seed-Split Disclosure (Panel Fix A)",
         "",
@@ -2649,7 +2737,8 @@ def render_markdown_report(ledger: dict[str, Any]) -> str:
         "`404f83e6a15c3f1c` (`44584` in `WS4-base-pooled`), and `09f8bc6443018b18` (`WS4-v3-4k-s1-44572`) vs "
         "`c86b9c8a54f8b269` (`WS4-v2-44412`). Unshared runs therefore admit only two-sample comparisons, whereas "
         "shared-secret runs (`1ca0c2a64d` across `WS4-v3-4k-s0-ctx8k`, `WS4-v3-8k-s0-3bb7`, `WS4-v3-8k-s3-f437`, "
-        "and `WS4-dagger-r1-verda`, plus `sha256:ebf2f09716cf76d3` for squad runs) support exact world-paired CIs.",
+        "`WS4-dagger-r1-8k-verda`, and `WS4-dagger-r1-4k-verda`, plus `sha256:ebf2f09716cf76d3` for squad runs) "
+        "support exact world-paired CIs.",
         "- `DEV_SEEDS` (`0..9999`) use the public key in `canary/world.py`; where dev seeds `0..29` appear in "
         "frontier or secondary diagnostic tables, that slice is **post-hoc locked** right after episode commitment "
         "(not pre-registered). All tiebreaker training strictly uses `TRAIN_SEEDS` (`100000..199999`) and primary "
@@ -2660,14 +2749,14 @@ def render_markdown_report(ledger: dict[str, Any]) -> str:
         "To keep claims unambiguous, we separate open-weight LLM runs from structured compact policies, while "
         "dynamically discovering every squad `results/tiebreak/*/summary.json` artifact under the same 4 gates:",
         "",
-        "1. **Open-Weight Autoregressive LLM Track (`Qwen2.5-1.5B` / `Qwen2.5-0.5B`)**: across all `18` logged "
-        "historical open-weight runs (`J4-*`, `WS4-*`, `Verda-base-backup-18ac`), **the tiebreaker bar is not met "
-        "(`0 / 18` open-weight LLM runs above base `0.000`, `0 / 18` `VERIFIED_IMPROVEMENT`)**. Compact working-"
-        "memory rendering (`train/compact_render.py`, `<900` tokens retaining employee clearances, `(doc_id, "
-        "variant -> recipients)` maps, leak feed hits, `known_v`, and breakeven `1 / (1 + known_v)`) plus "
-        "calibrated SFT/DPO/DAgger (`train/export_calibrated_sft.py`) remove the `2,842`-token header tax for "
-        "squad `Qwen2.5-0.5B` / `1.5B` runs in `results/tiebreak/*/summary.json`, automatically audited by the "
-        "same 4 strict gates.",
+        f"1. **Open-Weight Autoregressive LLM Track (`Qwen2.5-1.5B` / `Qwen2.5-0.5B`)**: across all "
+        f"`{counts['historical_runs']}` logged historical open-weight runs (`J4-*`, `WS4-*`, "
+        "`Verda-base-backup-18ac`), **the tiebreaker bar is not met (`0 / 19` open-weight LLM runs above base "
+        "`0.000`, `0 / 19` `VERIFIED_IMPROVEMENT`)**. Compact working-memory rendering (`train/compact_render.py`, "
+        "`<900` tokens retaining employee clearances, `(doc_id, variant -> recipients)` maps, leak feed hits, "
+        "`known_v`, and breakeven `1 / (1 + known_v)`) plus calibrated SFT/DPO/DAgger "
+        "(`train/export_calibrated_sft.py`) remove the `2,842`-token header tax for squad `Qwen2.5-0.5B` / `1.5B` "
+        "runs in `results/tiebreak/*/summary.json`, automatically audited by the same 4 strict gates.",
         "2. **Structured Compact Policy Track (`EmpiricalBayesPolicy`, `TinyMLPPolicy`)**: non-LLM compact "
         f"policies act on lossless summary statistics rather than raw JSON transcripts (`{counts['discovered_runs']}` "
         f"squad summary artifact(s) currently discovered, `{counts['verified_improvements']}` passing all 4 strict "

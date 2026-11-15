@@ -91,6 +91,12 @@ OPTIONAL_FILENAMES: tuple[str, ...] = (
     "tiebreak_interview_vs_canary_ev_audit.py",
     "tiebreak_careful_mole_adaptation_audit.py",
     "tiebreak_value_decay_pacing_audit.py",
+    "tiebreak_forge_rl_mole_transfer_audit.py",
+    "tiebreak_v13_v14_curriculum_transfer_audit.py",
+    "tiebreak_difficulty_noise_curve_audit.py",
+    "tiebreak_compact_distillation_quantization_audit.py",
+    "tiebreak_online_hyperprior_adaptation_audit.py",
+    "tiebreak_sequential_sprt_martingale_audit.py",
 )
 
 PREREG_RE = re.compile(r"\bpre[-\s]?regist(?:er(?:ed|ing|s)?|ration)\b", re.IGNORECASE)

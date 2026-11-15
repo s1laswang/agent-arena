@@ -7,7 +7,7 @@
 set -euo pipefail
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 OUT=${1:-fr8/analysis/out/ws4_table_v3.md}
-W=data/fr8/ws4; V=data/fr8/verda/runs; J=data/fr8/j4/run-44397/runs
+W=data/fr8/ws4; V=data/fr8/verda/runs; E=data/fr8/verda/evalbox-68bb; J=data/fr8/j4/run-44397/runs
 have() { [ -s "$1/episodes.jsonl" ]; }
 pool() { local out=""; for d in "$@"; do have "$d" && out="${out:+$out,}$d"; done; echo "$out"; }
 ARGS=(); INFO=()
@@ -15,8 +15,8 @@ add() { local label=$1 info=$2; shift 2; local dirs; dirs=$(pool "$@"); [ -n "$d
         ARGS+=("$label=$dirs"); INFO+=(--info "$label=$info"); }
 add base     "V100 · Qwen2.5-1.5B-Instruct, 0 steps · 4k"          $W/ws4-base-v14
 add v1       "V100 · J4 SFT LoRA 44397 · 4k"                        $J/eval-lora $J/eval-lora-par
-add v2       "V100 SFT LoRA 44410 (eval V100 + H100 off30) · 4k"    $W/ws4-v2-44410 $V/v2-off30
-add v3-4k-s0 "H100 · ${S0_STEPS:-609} GRPO steps · 4k"              $V/v3-verda-s0 $V/v3-4k-s0-off30
+add v2       "V100 SFT LoRA 44410 (eval V100 + A100 68bbe201 off30) · 4k" $W/ws4-v2-44410 $E/v2-off30 $V/v2-off30
+add v3-4k-s0 "H100 · ${S0_STEPS:-609} GRPO steps · 4k"              $V/v3-verda-s0 $E/v3-4k-s0-off30 $V/v3-4k-s0-off30
 [ -n "${FR8_S1_DIR:-}" ] && add v3-4k-s1 "V100 (FR8 44572) · ${S1_STEPS:-?} GRPO steps · 4k · partial" "$FR8_S1_DIR"
 add v3-8k-s1 "${K8S1_GPU:-A100-80} · ${K8S1_STEPS:-?} GRPO steps · 8k" $V/v3-verda-8k-s1
 add v3-8k-s2 "${K8S2_GPU:-H100} · ${K8S2_STEPS:-?} GRPO steps · 8k"    $V/v3-verda-8k-s2

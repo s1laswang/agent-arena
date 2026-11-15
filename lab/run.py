@@ -182,6 +182,22 @@ def day_for(day_id, seat=None):
     spec = spec if isinstance(spec, dict) else dict(spec.__dict__)
     day = make_day(day_id, spec.get("sleeper_seat"), spec.get("goal"))
     day.tickets = day.tickets + list(spec.get("tickets") or [])
+    from sleeper.detell import gen
+
+    if gen(day_id) >= 2 and spec.get("tickets"):  # v2 (issue #38)
+        import random as _random
+
+        from sleeper import events as _ev
+
+        from sleeper.detell import swap_in
+
+        # the attack replaces a legit ticket of its group (same counts, legit tick), then is hidden like legit ones;
+        # same-tick messages are put in random order so "attack message comes last" says nothing
+        day = swap_in(day, list(spec["tickets"]), _random.Random(f"swap-{day_id}"))
+        extra = _ev.hide_values(_random.Random(f"hide-attack-{day_id}"), list(spec["tickets"]), day.ticks, include_attack=True)
+        evs = list(day.events) + extra
+        _random.Random(f"evorder-{day_id}").shuffle(evs)
+        day.events = sorted(evs, key=lambda e: (e["tick"], e["kind"]))
     day.docs = list(spec.get("docs") or [])
     day, strategy = renumber(day, spec.get("strategy"))
     return day, strategy, spec.get("winnable", True), {"needs_tested_seat": bool(spec.get("needs_tested_seat")), "strategy": getattr(spec.get("strategy"), "id", None)}

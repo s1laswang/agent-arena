@@ -12,6 +12,14 @@ def make_goal(day_rng, company, sleeper_seat=None):
         "project": pick(day_rng, ["data migration", "Q4 audit prep", "CRM cleanup"]),
     }
 
+    from sleeper.detell import gen
+
+    if gen(company.seed) >= 2:  # v2 (issue #38)
+        from sleeper.detell import legit_names
+        from sleeper.tickets import HIRES
+
+        used = legit_names(company.seed)["new_account"]
+        target["owner"] = pick(day_rng, [n for n in HIRES if n not in used])
     return build(new_id(day_rng, "backdoor"), target)
 
 

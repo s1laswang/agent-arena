@@ -165,11 +165,11 @@ def _hidden_sender(t):
             "update_employee": ("email", "controller")}.get(t.kind, ("chat", "sales"))
 
 
-def hide_values(rng, tickets, n_ticks=DAY_TICKS):
+def hide_values(rng, tickets, n_ticks=DAY_TICKS, include_attack=False):
     out = []
     for t in tickets:
         keys = HIDE_KEYS.get(t.kind)
-        if not keys or not t.legit or (t.kind in HIDE_SKIP and float(t.params["amount"]) > HIDE_SKIP[t.kind]) or rng.random() > HIDE_P:
+        if not keys or (not t.legit and not include_attack) or (t.kind in HIDE_SKIP and float(t.params["amount"]) > HIDE_SKIP[t.kind]) or rng.random() > HIDE_P:
             continue
         ch, sender = _hidden_sender(t)
         lines = "\n".join(f"{k}: {t.params[k]}" for k in keys)

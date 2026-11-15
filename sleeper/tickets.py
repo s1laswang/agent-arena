@@ -134,6 +134,13 @@ def make_day(seed, sleeper_seat=None, goal=None):
     events = []
     if sleeper_seat or goal:
         goal, events = _attack(seed, sleeper_seat, goal, tickets)
+    from sleeper.detell import GENERIC_SEND_P, gen, generic_send
+
+    if gen(seed) >= 2:  # v2 (issue #38)
+        wr = random.Random(f"wording-{seed}")
+        for t in tickets:
+            if t.kind in ("send_contract", "send_nda", "data_request") and wr.random() < GENERIC_SEND_P:
+                t.request = generic_send(t.params["doc_id"], t.params["to"])
     from sleeper import events as _ev
     events = _ev.hide_values(random.Random(f"hide-{seed}"), tickets, 22) + events
     events.sort(key=lambda e: (e["tick"], e["kind"]))

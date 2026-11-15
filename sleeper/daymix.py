@@ -53,4 +53,13 @@ def day_spec(day_id, seat_under_test=None):
         return {**e, "goal": None, "strategy": None, "tickets": [], "winnable": True}
     s = STRATEGIES[e["strategy"]]
     goal = make_goal(s.kind, random.Random(e["seed"]), seed_company(e["seed"]), sleeper_seat=e["sleeper_seat"], voter=seat_under_test)
-    return {**e, "goal": goal, "strategy": s, "tickets": s.render_tickets(goal.target), "docs": s.render_docs(goal.target), "winnable": True}
+    tickets, docs = s.render_tickets(goal.target), s.render_docs(goal.target)
+    from sleeper.detell import gen
+
+    if gen(day_id) >= 2:  # v2 (issue #38): legit wording and formats; no scan doc that only attack days have
+        from sleeper.detell import tickets as detell
+        from sleeper.models import Ticket
+
+        tickets = [Ticket(**x) for x in detell([t.model_dump() for t in tickets], goal.target)]
+        docs = []
+    return {**e, "goal": goal, "strategy": s, "tickets": tickets, "docs": docs, "winnable": True}

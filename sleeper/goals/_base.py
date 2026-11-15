@@ -120,5 +120,9 @@ def new_id(rng, p):
     return f"{p}_{rng.getrandbits(24):06x}"
 
 
-def fake_iban(rng):
+def fake_iban(rng, seed=None):
+    from sleeper.detell import gen
+
+    if gen(seed) >= 2:  # v2: same FI + 16 digits as every legit IBAN (issue #38)
+        return "FI" + "".join(str(rng.randrange(10)) for _ in range(16))
     return "XX" + "".join(str(rng.randrange(10)) for _ in range(18))

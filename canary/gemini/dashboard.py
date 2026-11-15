@@ -122,6 +122,7 @@ FIELDS = ("ts", "feature", "model", "kind", "in", "out", "thinking", "cached", "
           "cost_unknown", "ok", "error", "run_id", "host")
 
 
+ID_FIELDS = ("response_id", "request_id")  # API ids, when a ledger row carries one (our ledger.py does not write them)
 EXPORT_FIELDS = FIELDS + ("pid",)  # pid is part of the dedupe key, so an exported copy still dedupes against its sources
 
 
@@ -150,9 +151,14 @@ def load_ledger(paths: list[str | Path], fields: tuple = FIELDS, normalize: bool
                 if not isinstance(r, dict) or "model" not in r:
                     continue
                 key = (r.get("ts"), r.get("host"), r.get("pid"), r.get("feature"), r.get("model"), r.get("in"), r.get("out"))
-                if key in seen:  # the same row synced into two ledger dirs (Mac + FR8 copies) counts once
+                rid = next((r[k] for k in ID_FIELDS if r.get(k)), None)
+                # the same row synced into two ledger dirs (Mac + FR8 copies) or exported counts once: by the composite
+                # key always, and by the API response/request id too when a copy carries one
+                if key in seen or (rid is not None and ("id", rid) in seen):
                     continue
                 seen.add(key)
+                if rid is not None:
+                    seen.add(("id", rid))
                 rows.append({k: r.get(k) for k in fields})
     if not normalize:
         rows.sort(key=lambda r: float(r.get("ts") or 0.0))
@@ -175,7 +181,10 @@ def committed_ledgers(results: Path | None = None) -> list[str]:
     """--ledger committed: only ledgers committed under results/gemini (usage_ledger.jsonl.gz is the whitelisted export
     of every local ledger, see --export-ledger), so the usage numbers can be rebuilt from the repo alone."""
     res = Path(results) if results else ROOT / "results" / "gemini"
-    return sorted(glob.glob(str(res / "*ledger*.jsonl.gz"))) + sorted(glob.glob(str(res / "roles" / "*" / "ledger.jsonl")))
+    # every committed ledger at any depth (scale/**, ablations_*/, roles/*/ ...): a file whose name contains "ledger"
+    files = glob.glob(str(res / "**" / "*ledger*.jsonl.gz"), recursive=True) + \
+        glob.glob(str(res / "**" / "*ledger*.jsonl"), recursive=True)
+    return sorted(set(files))
 
 
 def export_ledger(sources: list[str], out: Path) -> int:

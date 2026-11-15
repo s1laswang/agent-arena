@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import ast
 from contextlib import contextmanager
+from dataclasses import replace
+from html.parser import HTMLParser
 import http.client
 import importlib.util
 import io
@@ -48,8 +50,22 @@ GATE_BANNER_RE = re.compile(
     r"<section\b[^>]*\bdata-testid=['\"]gate-b-banner['\"][^>]*>(.*?)</section>",
     re.I | re.S,
 )
-PRIOR_DAY_CALLBACK_RE = re.compile(r"\bday\s+([1-9]|1\d|20)\b", re.I)
+PRIOR_DAY_CALLBACK_RE = re.compile(r"\bday\s+([1-9]|1\d|2[01])\b", re.I)
 EMP_ID_RE = re.compile(r"\be\d{2,3}\b", re.I)
+MOLE_WORD_RE = re.compile(r"\bmole\b", re.I)
+JS_NETWORK_APIS = (
+    "fetch(",
+    "XMLHttpRequest",
+    "WebSocket(",
+    "EventSource(",
+    "navigator.sendBeacon",
+)
+FALSE_GATE_CLAIMS = (
+    "gate b is met",
+    "passed gate b",
+    "passes gate b",
+    "met gate b",
+)
 
 FORBIDDEN_MOLE_TRUTH_KEYS = frozenset({
     "mole",
@@ -175,6 +191,8 @@ def validate_gate_b_negative_disclosure(html_text: str, payload: dict[str, Any])
     assert "v1.4" in banner_low
     assert "gemini-4-carbon" in banner_low
     assert "offline" in banner_low or "0 live api" in banner_low or "0 api" in banner_low
+    for bad_claim in FALSE_GATE_CLAIMS:
+        assert bad_claim not in banner_low, f"false Gate B claim in banner: {bad_claim}"
 
     prov = payload.get("provenance")
     assert isinstance(prov, dict), "payload missing provenance dict"
@@ -402,6 +420,8 @@ def test_builder_zero_api_calls_100pct_cache_hit_and_solver_invariance(
 
     orig_cached_chat = llm_cache.cached_chat
     cache_calls: list[dict[str, Any]] = []
+    unique_cache_keys: set[str] = set()
+    cache_misses: list[str] = []
 
     def _counting_cached_chat(
         cache_dir_arg: Any,
@@ -412,18 +432,24 @@ def test_builder_zero_api_calls_100pct_cache_hit_and_solver_invariance(
         response_schema: dict[str, Any] | None = None,
         label: str = "REAL",
     ) -> dict[str, Any]:
-        res = orig_cached_chat(
-            cache_dir_arg,
-            client,
-            model,
-            system,
-            user,
-            response_schema=response_schema,
-            label=label,
-        )
+        key = llm_cache.cache_key(model, system, [{"role": "user", "content": user}], None, 0, None)
+        try:
+            res = orig_cached_chat(
+                cache_dir_arg,
+                client,
+                model,
+                system,
+                user,
+                response_schema=response_schema,
+                label=label,
+            )
+        except Exception as exc:
+            cache_misses.append(f"{key[:12]}:{exc}")
+            raise
         assert res.get("provenance", {}).get("label") == "REAL"
         assert res.get("provenance", {}).get("model") == "gemini-4-carbon"
-        cache_calls.append({"model": model, "label": label})
+        cache_calls.append({"model": model, "label": label, "key": key})
+        unique_cache_keys.add(key)
         return res
 
     monkeypatch.setattr(llm_cache, "cached_chat", _counting_cached_chat)
@@ -439,8 +465,9 @@ def test_builder_zero_api_calls_100pct_cache_hit_and_solver_invariance(
 
     assert isinstance(payload, dict)
     assert payload.get("schema_version") == "canary.living_office_demo.v16.v1"
+    assert cache_misses == []
     assert len(cache_calls) >= 54
-    assert len(cache_calls) % 18 == 0
+    assert len(unique_cache_keys) == 54
 
     seeds_data = payload.get("seeds")
     assert isinstance(seeds_data, list) and len(seeds_data) == 3
@@ -510,3 +537,427 @@ def test_committed_living_office_html_self_contained_and_check_clean(
     with offline_zero_api_guard(monkeypatch, CACHE_DIR):
         rc = builder.main(["--check"])
     assert rc == 0
+
+
+class _SelfContainedHTMLAuditor(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=False)
+        self.has_doctype = False
+        self.external_attrs: list[tuple[str, str, str]] = []
+        self.gate_banners: list[dict[str, Any]] = []
+        self.json_scripts: dict[str, str] = {}
+        self.inline_scripts: list[str] = []
+        self.inline_styles: list[str] = []
+        self.html_comments: list[str] = []
+        self._active_tag: str | None = None
+        self._active_attrs: dict[str, str | None] = {}
+        self._buf: list[str] = []
+        self._banner_depth = 0
+        self._banner_buf: list[str] = []
+        self._banner_attrs: dict[str, str | None] = {}
+
+    def handle_decl(self, decl: str) -> None:
+        if decl.strip().lower().startswith("doctype html"):
+            self.has_doctype = True
+
+    def handle_comment(self, data: str) -> None:
+        self.html_comments.append(data)
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        t = tag.lower()
+        attr_map = {k.lower(): v for k, v in attrs}
+        for attr_name in ("src", "href", "action", "poster", "data", "srcset"):
+            val = attr_map.get(attr_name)
+            if val is None:
+                continue
+            sval = val.strip()
+            if t in ("script", "link"):
+                self.external_attrs.append((t, attr_name, sval))
+            elif sval.startswith(("http:", "https:", "//", "ws:", "wss:", "ftp:")):
+                self.external_attrs.append((t, attr_name, sval))
+
+        if attr_map.get("data-testid") == "gate-b-banner" and self._banner_depth == 0:
+            self._banner_depth = 1
+            self._banner_buf = []
+            self._banner_attrs = dict(attr_map)
+        elif self._banner_depth > 0 and t not in ("br", "hr", "img", "input", "meta", "link"):
+            self._banner_depth += 1
+
+        if t in ("script", "style"):
+            self._active_tag = t
+            self._active_attrs = attr_map
+            self._buf = []
+
+    def handle_endtag(self, tag: str) -> None:
+        t = tag.lower()
+        if self._active_tag == t:
+            content = "".join(self._buf)
+            if t == "script":
+                sid = self._active_attrs.get("id") or ""
+                stype = (self._active_attrs.get("type") or "").strip().lower()
+                if stype == "application/json" or sid == "living-office-data":
+                    self.json_scripts[sid] = content
+                else:
+                    self.inline_scripts.append(content)
+            elif t == "style":
+                self.inline_styles.append(content)
+            self._active_tag = None
+            self._active_attrs = {}
+            self._buf = []
+
+        if self._banner_depth > 0:
+            self._banner_depth -= 1
+            if self._banner_depth == 0:
+                self.gate_banners.append({
+                    "attrs": self._banner_attrs,
+                    "text": " ".join("".join(self._banner_buf).split()),
+                })
+                self._banner_buf = []
+                self._banner_attrs = {}
+
+    def handle_data(self, data: str) -> None:
+        if self._active_tag is not None:
+            self._buf.append(data)
+        if self._banner_depth > 0:
+            self._banner_buf.append(data)
+
+
+def audit_html_dom_and_js_isolation(html_text: str) -> list[str]:
+    auditor = _SelfContainedHTMLAuditor()
+    auditor.feed(html_text)
+    auditor.close()
+    issues: list[str] = []
+    if not auditor.has_doctype:
+        issues.append("missing_doctype")
+    if auditor.external_attrs:
+        issues.append("external_dom_attrs")
+    if auditor.html_comments:
+        issues.append("html_comments")
+    for css in auditor.inline_styles:
+        low_css = css.lower()
+        if "@import" in low_css or "url(" in low_css:
+            issues.append("external_css_ref")
+    for js in auditor.inline_scripts:
+        for net_api in JS_NETWORK_APIS:
+            if net_api in js:
+                issues.append(f"js_network_api:{net_api}")
+    if len(auditor.gate_banners) != 1:
+        issues.append("missing_or_duplicate_gate_banner")
+    else:
+        b = auditor.gate_banners[0]
+        if "hidden" in b["attrs"]:
+            issues.append("hidden_gate_banner_attr")
+        b_style = (b["attrs"].get("style") or "").replace(" ", "").lower()
+        if "display:none" in b_style or "visibility:hidden" in b_style:
+            issues.append("hidden_gate_banner_style")
+        b_low = b["text"].lower()
+        for bad_claim in FALSE_GATE_CLAIMS:
+            if bad_claim in b_low:
+                issues.append(f"false_gate_claim:{bad_claim}")
+    banner_pos = html_text.find('data-testid="gate-b-banner"')
+    if banner_pos < 0:
+        banner_pos = html_text.find("data-testid='gate-b-banner'")
+    main_pos = html_text.lower().find("<main")
+    if banner_pos > 0 and main_pos > 0 and banner_pos > main_pos:
+        issues.append("banner_after_main")
+    if "living-office-data" not in auditor.json_scripts:
+        issues.append("missing_living_office_data_script")
+    return issues
+
+
+def find_future_day_callback_violations(days: list[dict[str, Any]]) -> list[str]:
+    problems: list[str] = []
+    for d_rec in days:
+        d_num = int(d_rec["day"])
+        for key_name in ("social_events", "rumours", "gossip", "chat_feed", "messages", "events"):
+            seq = d_rec.get(key_name)
+            if not isinstance(seq, list):
+                continue
+            for idx, item in enumerate(seq):
+                if not isinstance(item, dict):
+                    continue
+                if key_name == "messages" and not (
+                    item.get("is_social") or "-s" in str(item.get("id", ""))
+                ):
+                    continue
+                text_blob = f"{item.get('subject', '')}\n{item.get('body', '')}\n{item.get('text', '')}"
+                for m in PRIOR_DAY_CALLBACK_RE.finditer(text_blob):
+                    ref_d = int(m.group(1))
+                    if ref_d > d_num:
+                        problems.append(f"day_{d_num}_{key_name}[{idx}]_refs_future_day_{ref_d}")
+                for carry_key in ("carried_from_day", "origin_day", "from_day", "since_day"):
+                    c_val = item.get(carry_key)
+                    if isinstance(c_val, int) and (c_val < 1 or c_val > d_num):
+                        problems.append(f"day_{d_num}_{key_name}[{idx}]_bad_{carry_key}_{c_val}")
+    return problems
+
+
+def test_dom_auditor_and_causal_carryover_unit_guards() -> None:
+    good_html = (
+        "<!doctype html><html><head><style>body{margin:0}</style></head><body>"
+        "<section class='gate-banner' data-testid='gate-b-banner'>"
+        "OFF-BY-DEFAULT v1.6 PREVIEW: Did NOT pass Gate B gap gate; v1.4 remains judged benchmark; "
+        "100% offline cached gemini-4-carbon chatter (0 live API calls)."
+        "</section>"
+        "<main><div id='app'></div></main>"
+        "<script id='living-office-data' type='application/json'>{\"seeds\":[]}</script>"
+        "<script>const x = document.getElementById('living-office-data').textContent;</script>"
+        "</body></html>"
+    )
+    assert audit_html_dom_and_js_isolation(good_html) == []
+
+    hidden_html = good_html.replace(
+        "data-testid='gate-b-banner'",
+        "data-testid='gate-b-banner' style='display: none'",
+    )
+    assert "hidden_gate_banner_style" in audit_html_dom_and_js_isolation(hidden_html)
+
+    fetch_html = good_html.replace("const x =", "fetch('/api'); const x =")
+    assert "js_network_api:fetch(" in audit_html_dom_and_js_isolation(fetch_html)
+
+    comment_open = "<" + "!--"
+    comment_close = "--" + ">"
+    commented_html = good_html.replace("<main>", f"{comment_open} note {comment_close}<main>")
+    assert "html_comments" in audit_html_dom_and_js_isolation(commented_html)
+
+    false_claim_html = good_html.replace("Did NOT pass Gate B", "Passed Gate B")
+    assert any(
+        x.startswith("false_gate_claim:") for x in audit_html_dom_and_js_isolation(false_claim_html)
+    )
+
+    clean_days = [
+        {"day": 1, "social_events": [{"body": "Initial doc note on e01."}]},
+        {"day": 4, "social_events": [{"body": "Following Day 1 meeting on e01.", "carried_from_day": 1}]},
+    ]
+    assert find_future_day_callback_violations(clean_days) == []
+
+    bad_days = [
+        {"day": 3, "social_events": [{"body": "Following Day 9 leak review on e01."}]},
+        {"day": 4, "rumours": [{"text": "Carry check", "carried_from_day": 7}]},
+    ]
+    bad_hits = find_future_day_callback_violations(bad_days)
+    assert len(bad_hits) == 2
+
+
+def test_sha256_prompt_key_recomputation_canary_invariance_and_offline_miss(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _require_demo_branch()
+    from canary.env import Env
+    from canary.social import make_v16_provider
+    from canary.social.gemini_chatter import SOCIAL_SCHEMA, SOCIAL_SYSTEM, build_social_prompt
+    from canary.text.llm_cache import OfflineCacheMiss, cache_key, cached_chat
+
+    builder = _load_builder_module()
+    seeds = [int(s) for s in builder.DEFAULT_SEEDS]
+    files = sorted(CACHE_DIR.glob("*.json"))
+    by_stem = {fp.stem: fp for fp in files}
+
+    for fp in files:
+        inner = json.loads(json.loads(fp.read_text(encoding="utf-8"))["text"])
+        for body_txt in inner["bodies"]:
+            assert MOLE_WORD_RE.search(body_txt) is None, f"mole word leaked in {fp.name}"
+
+    with offline_zero_api_guard(monkeypatch, CACHE_DIR):
+        recomputed_keys: set[str] = set()
+        for seed in seeds:
+            prov_tpl = make_v16_provider("v5_full9_cocktail", mode="template")
+            env = Env("hard", seed=seed, text_provider=prov_tpl)
+            seed_day_hits = 0
+            for day in range(1, 22):
+                facts = env._facts(day)
+                msgs_tpl = prov_tpl.day_messages(facts)
+                social_tpl = [m for m in msgs_tpl if "-s" in str(m.get("id", ""))]
+                if social_tpl:
+                    st = prov_tpl.episode_state(facts.tier, facts.seed)
+                    assert st is not None
+                    raw_evs = st.events_by_day[day]
+                    prompt_items = []
+                    for idx, m in enumerate(social_tpl):
+                        item = dict(m)
+                        if idx < len(raw_evs):
+                            item["target"] = str(raw_evs[idx]["target"])
+                            item["meta"] = {
+                                "bias": str(raw_evs[idx]["bias"]),
+                                "target": str(raw_evs[idx]["target"]),
+                            }
+                        prompt_items.append(item)
+                    prompt_clean = build_social_prompt(facts, prompt_items)
+                    prompt_canary = build_social_prompt(
+                        replace(
+                            facts,
+                            docs=tuple(facts.docs)
+                            + (
+                                {
+                                    "doc_id": f"c{day}-probe",
+                                    "title": "Planted Canary Variant",
+                                    "day": day,
+                                    "recipients": [facts.employees[0].id],
+                                },
+                            ),
+                        ),
+                        prompt_items,
+                    )
+                    assert prompt_clean == prompt_canary
+                    key = cache_key("gemini-4-carbon", SOCIAL_SYSTEM, [{"role": "user", "content": prompt_clean}])
+                    assert key in by_stem, f"missing committed cache file for seed={seed} day={day}"
+                    recomputed_keys.add(key)
+                    seed_day_hits += 1
+                if day < 21:
+                    assert env.call("advance_day", {}).ok
+            assert seed_day_hits == 18
+        assert len(recomputed_keys) == 54
+
+    empty_cache = tmp_path / "empty_cache"
+    empty_cache.mkdir()
+    with offline_zero_api_guard(monkeypatch, empty_cache):
+        with pytest.raises(OfflineCacheMiss):
+            cached_chat(
+                empty_cache,
+                None,
+                "gemini-4-carbon",
+                SOCIAL_SYSTEM,
+                "unseen-living-office-offline-miss-check",
+                response_schema=SOCIAL_SCHEMA,
+                label="REAL",
+            )
+
+
+def test_multiday_causality_grudge_persistence_decoy_scrub_and_arm_divergence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _require_demo_branch()
+    from canary.env import Env
+    from canary.social.biases import ANGER_WORDS, DECOY_VOCAB
+    from canary.text.template import TemplateProvider
+
+    builder = _load_builder_module()
+    with offline_zero_api_guard(monkeypatch, CACHE_DIR):
+        payload = builder.build_living_office_payload(cache_dir=CACHE_DIR)
+
+    for seed_entry in payload["seeds"]:
+        seed = int(seed_entry["seed"])
+        days = seed_entry["days"]
+        assert find_future_day_callback_violations(days) == []
+
+        emp_ids = {str(e["id"]) for e in seed_entry["employees"]}
+        decoy_id = Env("hard", seed=seed, text_provider=TemplateProvider())._facts(1).decoy
+        assert decoy_id in emp_ids
+
+        seen_targets: set[str] = set()
+        grudge_days: set[int] = set()
+        strict_prior_callbacks = 0
+
+        for d_rec in days:
+            d_num = int(d_rec["day"])
+            social_evs = d_rec.get("social_events") or d_rec.get("rumours") or []
+            for ev in social_evs:
+                if not isinstance(ev, dict):
+                    continue
+                sender = str(ev.get("sender") or ev.get("from") or "")
+                target = str(ev.get("target") or ev.get("about") or ev.get("to") or "")
+                bias = str(ev.get("bias") or ev.get("bias_type") or "")
+                text_blob = f"{ev.get('subject', '')}\n{ev.get('body', '')}\n{ev.get('text', '')}"
+                if sender:
+                    assert sender in emp_ids and sender != decoy_id
+                if target:
+                    assert target in emp_ids and target != decoy_id
+                    if d_num >= 3:
+                        assert target in seen_targets, f"seed {seed} day {d_num} target {target} not seeded earlier"
+                    seen_targets.add(target)
+                if bias == "grudge":
+                    grudge_days.add(d_num)
+                for m in PRIOR_DAY_CALLBACK_RE.finditer(text_blob):
+                    if int(m.group(1)) < d_num:
+                        strict_prior_callbacks += 1
+
+            msgs = d_rec.get("messages") or d_rec.get("chat_feed") or []
+            for msg in msgs:
+                if not isinstance(msg, dict):
+                    continue
+                m_sender = str(msg.get("sender") or msg.get("from") or "")
+                m_low = f"{msg.get('subject', '')}\n{msg.get('body', '')}\n{msg.get('text', '')}".lower()
+                if m_sender and m_sender != decoy_id:
+                    assert not any(aw in m_low for aw in ANGER_WORDS)
+                if bool(msg.get("is_social")) or "-s" in str(msg.get("id", "")):
+                    assert m_sender != decoy_id
+                    assert not any(dv in m_low for dv in DECOY_VOCAB)
+                    for m in PRIOR_DAY_CALLBACK_RE.finditer(m_low):
+                        if int(m.group(1)) < d_num:
+                            strict_prior_callbacks += 1
+
+        assert len(grudge_days) >= 4 or len(seed_entry["grudge_ledger"]) >= 2
+        assert strict_prior_callbacks >= 10
+
+        solver_arm = seed_entry["solver_arm"]
+        rf_arm = seed_entry["rumour_follower_arm"]
+        if "accused" in solver_arm and "accused" in rf_arm:
+            assert rf_arm["accused"] != solver_arm["accused"]
+        if "score" in solver_arm and "score" in rf_arm:
+            assert float(rf_arm["score"]) < float(solver_arm["score"])
+
+
+def test_keyless_subprocess_cli_dom_audit_and_ast_world_isolation(
+    tmp_path: Path,
+) -> None:
+    _require_demo_branch()
+    from canary import rules
+
+    assert rules.TIERS_VERSION == "v1.4"
+    assert audit_html_dom_and_js_isolation(DEMO_HTML.read_text(encoding="utf-8")) == []
+
+    tree = ast.parse(BUILDER_SCRIPT.read_text(encoding="utf-8"), filename=str(BUILDER_SCRIPT))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute):
+            assert node.attr not in ("_world", "mole"), f"forbidden private attr {node.attr}"
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            assert "world" not in node.module, f"forbidden world import {node.module}"
+
+    out_html = tmp_path / "subproc_living_office_v16.html"
+    out_json = tmp_path / "subproc_living_office_v16.json"
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(ROOT)
+    env["CANARY_OFFLINE"] = "1"
+    env["SLEEPER_OFFLINE"] = "1"
+    env["CANARY_GEMINI_CACHE_DIR"] = str(CACHE_DIR)
+    for key_name in (
+        "GOOGLE_GENERATIVE_AI_API_KEY",
+        "GEMINI_API_KEY",
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "OPENROUTER_API_KEY",
+    ):
+        env[key_name] = ""
+
+    proc_build = subprocess.run(
+        [
+            sys.executable,
+            str(BUILDER_SCRIPT),
+            "--out",
+            str(out_html),
+            "--json-out",
+            str(out_json),
+        ],
+        cwd=str(ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=True,
+    )
+    assert proc_build.returncode == 0
+    assert out_html.is_file() and out_json.is_file()
+    assert out_html.read_text(encoding="utf-8") == DEMO_HTML.read_text(encoding="utf-8")
+
+    proc_check = subprocess.run(
+        [sys.executable, str(BUILDER_SCRIPT), "--check"],
+        cwd=str(ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=True,
+    )
+    assert proc_check.returncode == 0
+

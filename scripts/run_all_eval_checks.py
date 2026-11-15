@@ -90,11 +90,14 @@ OPTIONAL_VERIFIER_NAMES: tuple[str, ...] = (
     "verify_harbor_rehearsal",
     "eval_candidate_tiers",
     "build_eval_charts_v14",
+    "build_eval_dashboard_v14",
     "harbor_luck_adjusted_v14",
     "ladder_pareto_v14",
     "version_evolution_v14",
     "version_evolution_audit",
     "paired_seed_diagnostics_v14",
+    "eval_statistical_robustness_v14",
+    "eval_decision_forensics_v14",
 )
 
 SECRET_AND_LEAK_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (

@@ -46,6 +46,29 @@
           "out": 191726,
           "thinking": 168412
         }
+      },
+      {
+        "carbon_biased_mean": 0.515,
+        "carbon_template_mean": 0.32,
+        "commit": "361fbab16b",
+        "episode_count": 12,
+        "obvious_biased_mean": -1.0,
+        "run_dir": "results/gemini/roles_carbon/world_text/biased-chatter-ablation-hard23",
+        "seeds": [
+          2,
+          3
+        ],
+        "solver_biased_mean": 0.5,
+        "solver_template_mean": 0.43,
+        "tier": "hard",
+        "usage": {
+          "cached": 25504871,
+          "calls": 511,
+          "cost_usd": 7.977066,
+          "in": 26888048,
+          "out": 266022,
+          "thinking": 235669
+        }
       }
     ],
     "chatter_batches": [
@@ -100,46 +123,46 @@
         }
       }
     ],
-    "n_ablation_batches": 2,
+    "n_ablation_batches": 3,
     "n_chatter_batches": 2,
     "paired_slices": {
       "hard": {
         "carbon": {
           "biased_accuracy": 1.0,
           "biased_accuracy_ci95": [
-            0.3424,
+            0.5101,
             1.0
           ],
           "biased_ci95": [
-            0.58,
-            0.66
+            0.515,
+            0.6275
           ],
           "biased_distraction_ci95": [
-            0.3424,
-            1.0
+            0.15,
+            0.85
           ],
-          "biased_distraction_rate": 1.0,
-          "biased_mean": 0.62,
+          "biased_distraction_rate": 0.5,
+          "biased_mean": 0.5675,
           "biased_rumor_accused_rate": 0.0,
-          "n_paired_seeds": 2,
+          "n_paired_seeds": 4,
           "paired_delta_ci95": [
-            -0.17,
-            0.12
+            -0.0975,
+            0.2575
           ],
-          "paired_delta_mean": -0.025,
+          "paired_delta_mean": 0.085,
           "template_accuracy": 1.0,
           "template_ci95": [
-            0.54,
-            0.75
+            0.27,
+            0.6775
           ],
           "template_distraction_rate": 0.0,
-          "template_mean": 0.645
+          "template_mean": 0.4825
         },
         "obvious_heuristic": {
           "biased_accuracy": 0.0,
           "biased_accuracy_ci95": [
             0.0,
-            0.6576
+            0.4899
           ],
           "biased_ci95": [
             -1.0,
@@ -147,12 +170,12 @@
           ],
           "biased_distraction_ci95": [
             0.0,
-            0.6576
+            0.4899
           ],
           "biased_distraction_rate": 0.0,
           "biased_mean": -1.0,
-          "biased_rumor_accused_rate": 0.5,
-          "n_paired_seeds": 2,
+          "biased_rumor_accused_rate": 0.25,
+          "n_paired_seeds": 4,
           "paired_delta_ci95": [
             0.0,
             0.0
@@ -169,33 +192,33 @@
         "solver": {
           "biased_accuracy": 1.0,
           "biased_accuracy_ci95": [
-            0.3424,
+            0.5101,
             1.0
           ],
           "biased_ci95": [
-            0.64,
-            0.69
+            0.3825,
+            0.705
           ],
           "biased_distraction_ci95": [
             0.0,
-            0.6576
+            0.4899
           ],
           "biased_distraction_rate": 0.0,
-          "biased_mean": 0.665,
+          "biased_mean": 0.5825,
           "biased_rumor_accused_rate": 0.0,
-          "n_paired_seeds": 2,
+          "n_paired_seeds": 4,
           "paired_delta_ci95": [
             0.0,
-            0.0
+            0.105
           ],
-          "paired_delta_mean": 0.0,
+          "paired_delta_mean": 0.035,
           "template_accuracy": 1.0,
           "template_ci95": [
-            0.64,
-            0.69
+            0.37,
+            0.665
           ],
           "template_distraction_rate": 0.0,
-          "template_mean": 0.665
+          "template_mean": 0.5475
         }
       },
       "medium": {
@@ -297,39 +320,39 @@
         "carbon": {
           "biased_accuracy": 1.0,
           "biased_accuracy_ci95": [
-            0.5101,
+            0.6097,
             1.0
           ],
           "biased_ci95": [
-            0.6,
-            0.7325
+            0.545,
+            0.69
           ],
           "biased_distraction_ci95": [
-            0.5101,
-            1.0
+            0.3,
+            0.9032
           ],
-          "biased_distraction_rate": 1.0,
-          "biased_mean": 0.6625,
+          "biased_distraction_rate": 0.6667,
+          "biased_mean": 0.6133,
           "biased_rumor_accused_rate": 0.0,
-          "n_paired_seeds": 4,
+          "n_paired_seeds": 6,
           "paired_delta_ci95": [
-            -0.1075,
-            0.1025
+            -0.0433,
+            0.2
           ],
-          "paired_delta_mean": 0.02,
+          "paired_delta_mean": 0.0783,
           "template_accuracy": 1.0,
           "template_ci95": [
-            0.57,
-            0.715
+            0.37,
+            0.665
           ],
-          "template_distraction_rate": 0.5,
-          "template_mean": 0.6425
+          "template_distraction_rate": 0.3333,
+          "template_mean": 0.535
         },
         "obvious_heuristic": {
           "biased_accuracy": 0.0,
           "biased_accuracy_ci95": [
             0.0,
-            0.4899
+            0.3903
           ],
           "biased_ci95": [
             -1.0,
@@ -337,12 +360,12 @@
           ],
           "biased_distraction_ci95": [
             0.0,
-            0.4899
+            0.3903
           ],
           "biased_distraction_rate": 0.0,
           "biased_mean": -1.0,
-          "biased_rumor_accused_rate": 0.25,
-          "n_paired_seeds": 4,
+          "biased_rumor_accused_rate": 0.1667,
+          "n_paired_seeds": 6,
           "paired_delta_ci95": [
             0.0,
             0.0
@@ -359,39 +382,39 @@
         "solver": {
           "biased_accuracy": 1.0,
           "biased_accuracy_ci95": [
-            0.5101,
+            0.6097,
             1.0
           ],
           "biased_ci95": [
-            0.6525,
-            0.8025
+            0.4817,
+            0.7567
           ],
           "biased_distraction_ci95": [
             0.0,
-            0.4899
+            0.3903
           ],
           "biased_distraction_rate": 0.0,
-          "biased_mean": 0.715,
+          "biased_mean": 0.6433,
           "biased_rumor_accused_rate": 0.0,
-          "n_paired_seeds": 4,
+          "n_paired_seeds": 6,
           "paired_delta_ci95": [
             0.0,
-            0.0
+            0.07
           ],
-          "paired_delta_mean": 0.0,
+          "paired_delta_mean": 0.0233,
           "template_accuracy": 1.0,
           "template_ci95": [
-            0.6525,
-            0.8025
+            0.4667,
+            0.74
           ],
           "template_distraction_rate": 0.0,
-          "template_mean": 0.715
+          "template_mean": 0.62
         }
       }
     },
     "total_biased_messages": 70,
     "total_llm_biased_messages": 70,
-    "unique_ablation_episodes": 24
+    "unique_ablation_episodes": 36
   },
   "by_subrole_totals": {
     "biased_chatter": {
@@ -413,13 +436,13 @@
       "verified_folders": 1
     },
     "biased_chatter_investigator_ablation": {
-      "cached": 25358784,
-      "calls": 806,
-      "cost_usd": 10.525358,
-      "in": 27351811,
-      "out": 400343,
-      "thinking": 352497,
-      "verified_folders": 2
+      "cached": 50863655,
+      "calls": 1317,
+      "cost_usd": 18.502424,
+      "in": 54239859,
+      "out": 666365,
+      "thinking": 588166,
+      "verified_folders": 3
     },
     "company_personas_chatter": {
       "cached": 0,
@@ -830,7 +853,7 @@
     "secret_leaks_detected": 0,
     "stego_encoding_violations": 0,
     "truth_leak_violations": 0,
-    "verified_folders_audited": 15
+    "verified_folders_audited": 16
   },
   "model_id": "gemini-4-carbon",
   "persona_interviews_suite": {
@@ -1084,17 +1107,18 @@
     "total_calibrated_worlds": 6
   },
   "totals": {
-    "cached": 25362601,
-    "calls": 1126,
-    "cost_usd": 14.751282,
-    "in": 27867443,
-    "out": 525975,
-    "thinking": 555696,
-    "verified_folders": 15
+    "cached": 50867472,
+    "calls": 1637,
+    "cost_usd": 22.728348,
+    "in": 54755491,
+    "out": 791997,
+    "thinking": 791365,
+    "verified_folders": 16
   },
   "verified_run_folders": [
     "results/gemini/roles_carbon/world_text/biased-chatter-ablation-carbon",
     "results/gemini/roles_carbon/world_text/biased-chatter-ablation-hard01",
+    "results/gemini/roles_carbon/world_text/biased-chatter-ablation-hard23",
     "results/gemini/roles_carbon/world_text/biased-chatter-carbon",
     "results/gemini/roles_carbon/world_text/biased-chatter-hard-carbon",
     "results/gemini/roles_carbon/world_text/carbon-v14-easy03-med789-hard46",

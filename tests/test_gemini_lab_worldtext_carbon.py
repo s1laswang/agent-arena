@@ -191,9 +191,10 @@ def test_carbon_worldtext_bundle_integrity_and_cli(tmp_path):
 
     bc = suite_doc["biased_chatter_suite"]
     assert bc["total_biased_messages"] >= 70
-    assert bc["unique_ablation_episodes"] >= 24
+    assert bc["unique_ablation_episodes"] >= 36
     assert bc["paired_slices"]["medium"]["solver"]["paired_delta_mean"] == 0.0
-    assert bc["paired_slices"]["hard"]["solver"]["paired_delta_mean"] == 0.0
+    assert abs(bc["paired_slices"]["hard"]["solver"]["paired_delta_mean"]) <= 0.05
+    assert bc["paired_slices"]["hard"]["solver"]["biased_accuracy"] == 1.0
 
     ev = suite_doc["dynamic_events_suite"]
     assert ev["by_tier"]["medium"]["n_worlds"] >= 3

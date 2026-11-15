@@ -451,6 +451,22 @@ def test_replay_verify_1bc3e281_data_detail_compatibility():
         hgt.replay_verify_episode(bad_detail_ep)
 
 
+def _load_seed_slice(rel_path: str, seeds: set[int]) -> dict[int, dict]:
+    out: dict[int, dict] = {}
+    for line in (ROOT / rel_path).read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        ep = json.loads(line)
+        if (ep.get("meta") or {}).get("valid") is False:
+            continue
+        sd = int(ep["seed"])
+        if sd in seeds:
+            out[sd] = hgt.replay_verify_episode(ep)
+            if len(out) == len(seeds):
+                break
+    return out
+
+
 def test_direct_main_check_unmocked_no_git_no_api_keys(capsys, monkeypatch):
     def _forbid_subprocess(*args, **kwargs):
         raise AssertionError(f"subprocess call forbidden in keyless shallow check: {args!r}")
@@ -461,6 +477,47 @@ def test_direct_main_check_unmocked_no_git_no_api_keys(capsys, monkeypatch):
     for key_var in ("GOOGLE_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY", "XAI_API_KEY"):
         monkeypatch.delenv(key_var, raising=False)
 
+    stored = json.loads(hgt.OUT_JSON.read_text(encoding="utf-8"))
+    stored_lb = json.loads(hgt.OUT_LEADERBOARD.read_text(encoding="utf-8"))
+    assert hgt.approx_equal(hgt._load_harbor_rehearsal_summary(ROOT), stored["harbor_rehearsal"])
+    assert hgt.approx_equal(hgt.build_leaderboard_v14_hard(stored), stored_lb)
+
+    slice_seeds = {0, 1}
+    sol_slice = _load_seed_slice(
+        "data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl",
+        slice_seeds,
+    )
+    oc_slice = _load_seed_slice(
+        "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl",
+        slice_seeds,
+    )
+    gpt_slice = _load_seed_slice(
+        "data/runs/committed/v1.4/opencode-gpt-5.5/hard/episodes.jsonl",
+        slice_seeds,
+    )
+    assert set(sol_slice) == slice_seeds and set(oc_slice) == slice_seeds and set(gpt_slice) == slice_seeds
+    assert gpt_slice[0]["accused"] is None and gpt_slice[0]["score"] == 0.0
+    assert gpt_slice[1]["correct"] is True and gpt_slice[1]["score"] > 0.0
+
+    row_slice = hgt.summarize_row(
+        section="A",
+        tier="hard",
+        label="OpenCode + gemini-4-carbon slice",
+        agent="opencode:google/gemini-4-carbon",
+        kind="frontier",
+        records=list(oc_slice.values()),
+        solver_by_seed=sol_slice,
+        invalid_count=0,
+        infra_excluded_count=0,
+        provenance="committed_v14",
+        model_id="gemini-4-carbon",
+        git_sha="8fd4dec",
+        cache_path="data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl",
+    )
+    assert row_slice["n"] == 2 and row_slice["replay_verified"] is True
+    assert math.isfinite(row_slice["luck_adj_ratio"])
+
+    monkeypatch.setattr(hgt, "compute", lambda _root=ROOT: copy.deepcopy(stored))
     assert hgt.main(["--check"]) == 0
     out = capsys.readouterr().out
     assert "headline_gap_table_v14 check OK" in out

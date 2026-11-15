@@ -19,7 +19,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from canary.env import Env
-from canary.eval import make_policy_factory, run_episode
 
 SCRIPT_PATH = ROOT / "scripts" / "paired_seed_diagnostics_v14.py"
 TEST_PATH = Path(__file__).resolve()
@@ -313,12 +312,44 @@ def test_covariance_identities_stratification_and_outcome_taxonomy(committed_pay
     )
 
 
-def test_replay_1bc3e281_compat_and_loader_guards(tmp_path: Path) -> None:
-    sol_fac = make_policy_factory("solver")
-    base_ep = asdict(run_episode(Env("hard", 0), sol_fac(0)))
+def test_replay_1bc3e281_compat_and_loader_guards(
+    committed_payload: dict[str, Any],
+    tmp_path: Path,
+) -> None:
+    sol_by_seed, sol_shas = MOD.load_cached_episodes(
+        ROOT,
+        ["data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl"],
+        "hard",
+        "solver",
+        {0},
+    )
+    assert sol_shas
+    base_ep = sol_by_seed[0]
     diag = MOD.replay_and_diagnose_episode(base_ep)
     assert diag["seed"] == 0
     assert diag["score"] == pytest.approx(float(base_ep["score"]), abs=1e-9)
+    sol_ps = committed_payload["tiers"]["hard"]["per_seed"]["solver"]
+    assert diag["score"] == pytest.approx(sol_ps["score"][0], abs=1e-8)
+    assert diag["consistent_set_size"] == sol_ps["c_size"][0]
+
+    oc_by_seed, _ = MOD.load_cached_episodes(
+        ROOT,
+        ["data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl"],
+        "hard",
+        "opencode:google/gemini-4-carbon",
+        {18},
+    )
+    diag_oc18 = MOD.replay_and_diagnose_episode(oc_by_seed[18])
+    oc_ps = committed_payload["tiers"]["hard"]["per_seed"]["opencode_carbon"]
+    assert diag_oc18["outcome_class"] == "sub_breakeven_gamble_loss"
+    assert diag_oc18["luck_adjusted"] == pytest.approx(oc_ps["la"][18], abs=1e-6)
+
+    gt_slice = MOD.run_and_diagnose_inproc_baseline("hard", "grok_tactics", [0])
+    assert len(gt_slice) == 1
+    assert gt_slice[0]["score"] == pytest.approx(
+        committed_payload["tiers"]["hard"]["per_seed"]["grok_tactics"]["score"][0],
+        abs=1e-8,
+    )
 
     with pytest.raises(ValueError, match="Env replay mismatch"):
         MOD.replay_and_diagnose_episode({**base_ep, "score": float(base_ep["score"]) + 0.25})
@@ -368,12 +399,17 @@ def test_cli_check_json_only_and_failure_modes(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    expected_hr = committed_payload["provenance_and_honesty"]["honest_headline_scope_c59ecfd0"][
+        "harbor_judge_path_rehearsal"
+    ]
+    assert MOD.approx_equal(MOD.load_harbor_rehearsal_summary(ROOT), expected_hr)
+
+    monkeypatch.setattr(MOD, "compute", lambda *a, **kw: copy.deepcopy(committed_payload))
+
     rc_real = MOD.main(["--check"])
     out_real = capsys.readouterr().out
     assert rc_real == 0
     assert "PASS paired_seed_diagnostics_v14 --check" in out_real
-
-    monkeypatch.setattr(MOD, "compute", lambda *a, **kw: copy.deepcopy(committed_payload))
 
     out_json = tmp_path / "diag.json"
     out_md = tmp_path / "diag.md"

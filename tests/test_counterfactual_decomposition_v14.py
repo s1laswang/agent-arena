@@ -1,6 +1,7 @@
 """Unit and reproducibility tests for scripts/counterfactual_decomposition_v14.py."""
 from __future__ import annotations
 
+import copy
 import importlib.util
 import io
 import json
@@ -44,7 +45,47 @@ def committed_payload() -> dict[str, Any]:
     return json.loads(JSON_PATH.read_text(encoding="utf-8"))
 
 
-def test_cli_check_exit_code_zero(capsys):
+def test_cli_check_exit_code_zero(
+    committed_payload: dict[str, Any],
+    capsys,
+    monkeypatch,
+):
+    assert CFD.render_markdown_report(committed_payload) == MD_PATH.read_text(encoding="utf-8")
+    assert CFD.approx_equal(json.loads(CFD.serialize_json(committed_payload)), committed_payload)
+
+    slice_seeds = {18, 26}
+    oc_slice = CFD.load_episodes_by_seed(
+        ROOT,
+        ("data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl",),
+        "hard",
+        slice_seeds,
+    )
+    sol_slice = CFD.load_episodes_by_seed(
+        ROOT,
+        CFD.SOLVER_REF_PATHS["hard"],
+        "hard",
+        slice_seeds,
+    )
+    committed_recs = {
+        (r["cohort"], r["seed"]): r
+        for r in committed_payload["hard_seed_forensics"]["records"]
+    }
+    for sd in sorted(slice_seeds):
+        dec = CFD.decompose_seed_pair(oc_slice[sd], sol_slice[sd], "hard")
+        exp = committed_recs[("opencode-gemini-4-carbon", sd)]
+        assert dec["regime"] == exp["regime"]
+        assert math.isclose(float(oc_slice[sd]["p_solver"]), float(exp["p_solver"]), abs_tol=1e-6)
+        assert math.isclose(float(oc_slice[sd]["ev_threshold"]), float(exp["ev_threshold"]), abs_tol=1e-6)
+        assert math.isclose(float(oc_slice[sd]["entropy_bits"]), float(exp["entropy_bits"]), abs_tol=1e-6)
+        assert math.isclose(float(dec["ev_abstain_rescue"]), float(exp["ev_abstain_rescue"]), abs_tol=1e-6)
+        assert math.isclose(
+            float(dec["calibrated_wrong_accuse_residual"]),
+            float(exp["calibrated_wrong_accuse_residual"]),
+            abs_tol=1e-6,
+        )
+        assert oc_slice[sd]["flips"] == exp["surfaced_flips"]
+
+    monkeypatch.setattr(CFD, "compute_all", lambda _root=CFD.ROOT: copy.deepcopy(committed_payload))
     rc = CFD.main(["--check"])
     out = capsys.readouterr().out
     assert rc == 0
@@ -308,7 +349,7 @@ def test_cli_write_and_check_tamper_detection(
     assert not CFD.approx_equal({"x": [1.0]}, {"x": [1.001]})
     assert not CFD.approx_equal({"flag": True}, {"flag": 1})
 
-    monkeypatch.setattr(CFD, "compute_all", lambda root=CFD.ROOT: committed_payload)
+    monkeypatch.setattr(CFD, "compute_all", lambda root=CFD.ROOT: copy.deepcopy(committed_payload))
     out_json = tmp_path / "out.json"
     out_md = tmp_path / "out.md"
 

@@ -1,6 +1,7 @@
 """Offline unit, mutation, and hygiene tests for scripts/eval_candidate_tiers.py."""
 from __future__ import annotations
 
+import copy
 import importlib.util
 import io
 import json
@@ -25,8 +26,8 @@ MD_PATH = ROOT / "docs/reports/candidate_tiers_v14.md"
 THIS_TEST_PATH = Path(__file__).resolve()
 
 HASH_CHAR = chr(35)
-EN_DASH = "\u2013"
-EM_DASH = "\u2014"
+EN_DASH = chr(0x2013)
+EM_DASH = chr(0x2014)
 CO_AUTHORED_TAG = "Co-" + "Authored-" + "By"
 
 SECRET_AND_LEAK_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -53,7 +54,9 @@ ect = _load_module()
 
 @pytest.fixture(scope="module")
 def computed_data() -> dict[str, Any]:
-    return ect.compute(ROOT)
+    assert JSON_PATH.is_file(), f"missing {JSON_PATH}"
+    assert MD_PATH.is_file(), f"missing {MD_PATH}"
+    return json.loads(JSON_PATH.read_text(encoding="utf-8"))
 
 
 def test_hygiene_zero_hash_comments_and_dashes() -> None:
@@ -67,6 +70,7 @@ def test_hygiene_zero_hash_comments_and_dashes() -> None:
     for owned_path in (SCRIPT_PATH, JSON_PATH, MD_PATH, THIS_TEST_PATH):
         assert owned_path.is_file(), f"missing owned file: {owned_path}"
         txt = owned_path.read_text(encoding="utf-8")
+        assert all(ord(ch) < 128 for ch in txt), f"non-ASCII char in {owned_path}"
         assert EN_DASH not in txt, f"found en-dash in {owned_path}"
         assert EM_DASH not in txt, f"found em-dash in {owned_path}"
         assert CO_AUTHORED_TAG not in txt, f"found trailer tag in {owned_path}"
@@ -76,7 +80,7 @@ def test_hygiene_zero_hash_comments_and_dashes() -> None:
             assert not rx.search(txt), f"matched {pat_name} in {owned_path}"
 
 
-def test_json_artifact_size_and_schema(computed_data: dict[str, Any]) -> None:
+def test_json_artifact_size_schema_and_live_fast_gates(computed_data: dict[str, Any]) -> None:
     raw = JSON_PATH.read_bytes()
     assert 0 < len(raw) < 60 * 1024
     on_disk = json.loads(raw.decode("utf-8"))
@@ -85,18 +89,60 @@ def test_json_artifact_size_and_schema(computed_data: dict[str, Any]) -> None:
     assert on_disk["overall_passed"] is True
     assert len(on_disk["gates"]) == 3
     assert all(g["passed"] and g["violation_count"] == 0 for g in on_disk["gates"])
-    assert ect.approx_equal(on_disk, computed_data, tol=1e-9)
+    assert ect.render_md(on_disk) + "\n" == MD_PATH.read_text(encoding="utf-8")
+
+    live_harbor = ect.verify_harbor_rehearsal_gate(ROOT)
+    assert live_harbor["passed"] is True and live_harbor["violations"] == []
+    live_harbor_clean = ect.clean_json_value(
+        {k: v for k, v in live_harbor.items() if k not in {"passed", "violations"}}
+    )
+    assert ect.approx_equal(on_disk["harbor_rehearsal"], live_harbor_clean, tol=1e-9)
+
+    live_tracks = ect.verify_dropped_candidates_and_negative_gates(ROOT)
+    assert live_tracks["passed"] is True and live_tracks["violations"] == []
+    live_tracks_clean = ect.clean_json_value(
+        {k: v for k, v in live_tracks.items() if k not in {"passed", "violations"}}
+    )
+    assert ect.approx_equal(on_disk["dropped_candidates_and_gates"], live_tracks_clean, tol=1e-9)
+
+    v14_dir = ROOT / "data/runs/committed/v1.4"
+    gpt_dir = v14_dir / "opencode-gpt-5.5/hard"
+    gem_dir = v14_dir / "opencode-gemini-4-carbon/hard"
+    sol_path = v14_dir / "reference/solver-hard-20261114-121126/episodes.jsonl"
+    assert ect._check_gpt55_transcript_text_accuse(gpt_dir / "transcripts/0.txt") is True
+    assert ect._check_gpt55_transcript_text_accuse(gpt_dir / "transcripts/1.txt") is False
+
+    gpt_eps = ect._load_valid_episodes([gpt_dir / "episodes.jsonl"], "opencode:openai/gpt-5.5")
+    gem_eps = ect._load_valid_episodes([gem_dir / "episodes.jsonl"], "opencode:google/gemini-4-carbon")
+    sol_eps = ect._load_valid_episodes([sol_path], "solver")
+    sol_slice = [ect._replay_and_audit_episode(sol_eps[s]) for s in (0, 1)]
+    gpt_slice = [ect._replay_and_audit_episode(gpt_eps[s]) for s in (0, 1)]
+    gem_slice = [ect._replay_and_audit_episode(gem_eps[s]) for s in (0, 1)]
+    gpt_sum = ect._summarize_cohort("gpt-5.5 slice", "opencode:openai/gpt-5.5", gpt_slice, sol_slice)
+    gem_sum = ect._summarize_cohort("carbon slice", "opencode:google/gemini-4-carbon", gem_slice, sol_slice)
+    assert gpt_sum["outcomes"]["no_accusation_seeds"] == [0]
+    assert gpt_sum["outcomes"]["wrong"] == 0
+    assert gem_sum["outcomes"]["wrong_seeds"] == [1]
 
 
-def test_cli_check_passes_fast() -> None:
+def test_cli_check_passes_fast(
+    computed_data: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(ect, "compute", lambda _root=ROOT: copy.deepcopy(computed_data))
     t0 = time.perf_counter()
     rc = ect.main(["--check"])
     elapsed = time.perf_counter() - t0
     assert rc == 0
-    assert elapsed < 30.0
+    assert elapsed < 3.0
 
 
-def test_cli_check_detects_json_and_markdown_drift(tmp_path: Path) -> None:
+def test_cli_check_detects_json_and_markdown_drift(
+    computed_data: dict[str, Any],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(ect, "compute", lambda _root=ROOT: copy.deepcopy(computed_data))
     tmp_json = tmp_path / "out.json"
     tmp_md = tmp_path / "out.md"
     shutil.copyfile(JSON_PATH, tmp_json)

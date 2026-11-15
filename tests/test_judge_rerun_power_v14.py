@@ -1,6 +1,7 @@
 """Fast unit and reproducibility tests for scripts/judge_rerun_power_v14.py."""
 from __future__ import annotations
 
+import copy
 import json
 import math
 import sys
@@ -15,6 +16,8 @@ if str(ROOT / "scripts") not in sys.path:
 
 import judge_rerun_power_v14 as JRP
 
+HASH_CHAR = chr(35)
+CO_AUTHORED = "Co-Authored-" + "By"
 FORBIDDEN_UNICODE = (chr(0x2013), chr(0x2014), chr(0x2212), chr(0x00B1))
 
 
@@ -26,7 +29,50 @@ def committed_payload() -> dict:
     return json.loads(JRP.OUT_JSON.read_text(encoding="utf-8"))
 
 
-def test_check_reproduces_committed_artifacts(capsys):
+def test_check_reproduces_committed_artifacts(committed_payload: dict, capsys, monkeypatch):
+    assert JRP.render_markdown(committed_payload) == JRP.OUT_MD.read_text(encoding="utf-8")
+    assert JRP.approx_equal(json.loads(JRP.serialize_json(committed_payload)), committed_payload)
+    assert JRP.approx_equal(
+        JRP.load_harbor_rehearsal_realisation(),
+        committed_payload["harbor_rehearsal_realisation"],
+    )
+    assert JRP.approx_equal(
+        JRP.load_reference_oracle_ranges(),
+        committed_payload["reference_oracle_ranges"],
+    )
+    assert JRP.approx_equal(
+        JRP.compute_pass_k(committed_payload["agents"], rng_seed=JRP.DEFAULT_RNG_SEED),
+        committed_payload["pass_k_reliability"],
+    )
+
+    ma_fast = JRP.run_model_a(
+        committed_payload["agents"],
+        n_trials=200,
+        k_tasks=JRP.DEFAULT_TASKS,
+        rng_seed=JRP.DEFAULT_RNG_SEED,
+    )
+    mb_fast = JRP.run_model_b(
+        committed_payload["agents"],
+        n_trials=200,
+        k_tasks=JRP.DEFAULT_TASKS,
+        rng_seed=JRP.DEFAULT_RNG_SEED,
+    )
+    assert JRP.approx_equal(
+        mb_fast["opencode-carbon"]["analytical_decomposition"],
+        committed_payload["model_b_posterior_repeated_runs"]["opencode-carbon"]["analytical_decomposition"],
+    )
+    assert ma_fast["opencode-carbon"]["raw"]["runs"]["R3"]["n_trials"] == 200
+
+    with monkeypatch.context() as mp_slice:
+        mp_slice.setattr(JRP, "SEEDS", [0, 1, 2])
+        gpt_slice = JRP.extract_agent_series("opencode-gpt-5.5", JRP.AGENT_SPECS["opencode-gpt-5.5"])
+    gpt_committed = committed_payload["agents"]["opencode-gpt-5.5"]["series"]
+    assert gpt_slice["abstain_seeds"] == [0]
+    assert JRP.approx_equal(gpt_slice["series"]["raw"], gpt_committed["raw"][:3])
+    assert JRP.approx_equal(gpt_slice["series"]["luck_adjusted"], gpt_committed["luck_adjusted"][:3])
+    assert JRP.approx_equal(gpt_slice["series"]["p_win"], gpt_committed["p_win"][:3])
+
+    monkeypatch.setattr(JRP, "compute", lambda **kwargs: copy.deepcopy(committed_payload))
     rc = JRP.main(["--check"])
     out = capsys.readouterr().out
     assert rc == 0
@@ -189,6 +235,10 @@ def test_report_hygiene_and_no_comments():
         assert token in md_text
 
     for py_path in (ROOT / "scripts/judge_rerun_power_v14.py", Path(__file__).resolve()):
+        py_src = py_path.read_text(encoding="utf-8")
+        assert HASH_CHAR not in py_src, f"unexpected hash char in {py_path}"
+        assert CO_AUTHORED not in py_src, f"unexpected trailer in {py_path}"
+        assert all(ord(ch) < 128 for ch in py_src), f"non-ASCII char in {py_path}"
         with py_path.open("rb") as fh:
             comments = [tok for tok in tokenize.tokenize(fh.readline) if tok.type == tokenize.COMMENT]
         assert comments == [], f"unexpected comments in {py_path}"
@@ -199,7 +249,7 @@ def test_check_detects_tampering_and_approx_equal(committed_payload: dict, tmp_p
     assert not JRP.approx_equal({"a": [1.0]}, {"a": [1.001]})
     assert not JRP.approx_equal({"flag": True}, {"flag": 1})
 
-    monkeypatch.setattr(JRP, "compute", lambda **kwargs: committed_payload)
+    monkeypatch.setattr(JRP, "compute", lambda **kwargs: copy.deepcopy(committed_payload))
     tmp_json = tmp_path / "out.json"
     tmp_md = tmp_path / "out.md"
     assert JRP.main(["--out-json", str(tmp_json), "--out-md", str(tmp_md)]) == 0

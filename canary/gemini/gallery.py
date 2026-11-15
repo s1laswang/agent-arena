@@ -99,6 +99,9 @@ def same_result(rec: Any, rep: dict) -> bool:
     if rec == rep:
         return True
     if isinstance(rec, dict) and rec.get("ok") is False and rep.get("ok") is False:
+        if (rec.get("error") == rep.get("error") and not rec.get("data")
+                and set(rep.get("data") or {}) == {"detail"}):
+            return True   # recorded before error details existed (15 Nov): same error, no detail field
         err = rec.get("error")
         try:
             inner = json.loads(err) if isinstance(err, str) and err.startswith("{") else None

@@ -109,7 +109,8 @@ def test_wrong_accusation_negative():
 def test_validation(tool, args):
     env = Env("easy", 2)
     r = env.call(tool, args)
-    assert not r.ok and r.data == {} and "mole" not in (r.error or "")
+    assert not r.ok and (r.data == {} or set(r.data) == {"detail"}) and "mole" not in (r.error or "")
+    assert "mole" not in str(r.data).lower()
     assert not env.done
 
 
@@ -185,3 +186,34 @@ def test_error_parity_and_no_seed():
             r = Env("medium", seed).call("restrict_access", {"employee": e + "x"})
             errs.add(r.error)
     assert errs <= ERRORS
+
+
+def test_invalid_arguments_carry_a_specific_detail():
+    """The error string is unchanged (committed episodes replay); data.detail says what was wrong."""
+    env = Env("hard", 3)
+    r = env.call("interview", {"employee": "e01", "topic": "leaks"})
+    assert not r.ok and r.error == "invalid arguments" and "topic must be one of" in r.data["detail"]
+    r = env.call("interview", {"employee": "e01"})
+    assert r.error == "invalid arguments" and "missing required" in r.data["detail"]
+    r = env.call("status", {"x": 1})
+    assert "unknown argument" in r.data["detail"]
+    r = env.call("read_access_logs", {"day_from": 3, "day_to": 2})
+    assert "day_from must not be after day_to" in r.data["detail"]
+    r = env.call("accuse", {"employee": "nobody"})
+    assert "list_employees" in r.data["detail"] and not env.done
+
+
+def test_error_detail_does_not_depend_on_who_the_mole_is():
+    """Same call shape against the mole and an innocent: identical detail apart from the id itself."""
+    env = Env("medium", 4)
+    mole = env._world.mole
+    innocent = next(e for e in env._world.ids if e != mole)
+    out = {}
+    for e in (mole, innocent):
+        assert env.call("restrict_access", {"employee": e}).ok
+        r = env.call("restrict_access", {"employee": e})
+        assert not r.ok and r.error == "invalid arguments"
+        out[e] = r.data["detail"].replace(e, "<id>")
+        r = env.call("plant_canary", {"doc_title": "t", "assignment": {e: "A"}})
+        out[e] += " | " + r.data["detail"].replace(e, "<id>")
+    assert out[mole] == out[innocent]

@@ -209,3 +209,21 @@ def test_report_export_roundtrip(tmp_path, monkeypatch):
     a, b = (json.loads((tmp_path / d / "ladder.json").read_text()) for d in ("a", "b"))
     strip = lambda rows: [{k: v for k, v in r.items() if k != "source"} for r in rows]  # noqa: E731
     assert strip(a["rows"]) == strip(b["rows"]) and a["ledger"] == b["ledger"]
+
+
+def test_report_multiple_runs_dedupes_per_cell(tmp_path, monkeypatch):
+    from canary.gemini import ladder_report
+    d1, d2 = tmp_path / "run1", tmp_path / "run2"
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(d1 / "_ledger" / "x.jsonl"))
+    ladder.run_grid(d1, ladder.expand_grid(["gemini-3.8-flash"], ["low", "high"], ["hard"], [0, 1]),
+                    concurrency=2, client_factory=stub_factory(accuse_script), log=lambda m: None)
+    monkeypatch.setenv("CANARY_GEMINI_LEDGER", str(d2 / "_ledger" / "y.jsonl"))
+    ladder.run_grid(d2, ladder.expand_grid(["gemini-3.8-flash"], ["low", "high"], ["hard"], [1, 2]),
+                    concurrency=2, client_factory=stub_factory(accuse_script), log=lambda m: None)
+    rep = tmp_path / "rep"
+    assert ladder_report.main(["--runs", str(d1), "--runs", str(d2), "--out", str(rep), "--bootstrap", "100",
+                               "--probe", str(tmp_path / "none.json"), "--no-figures", "--no-tags"]) == 0
+    doc = json.loads((rep / "ladder.json").read_text())
+    assert doc["episodes"] == 6
+    assert len(doc["rows"]) == 2 and all(r["n"] == 3 and r["seeds"] == [0, 1, 2] for r in doc["rows"])
+    assert doc["ledger"]["calls"] == 16

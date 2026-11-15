@@ -13,6 +13,11 @@ The results and table are added below this protocol after the run. The protocol 
   - `stop_early`: `-a oracle --ae ORACLE_POLICY=stop_early`.
 - **Harbor 0.26.0 on colima (4 CPU / 8 GB).** The three OpenCode jobs run concurrently at `-n 3`, with `--agent-setup-timeout-multiplier 4`. The dry run lost all 10 trials at the default 360 s setup limit.
 - **Launcher:** `scripts/rehearsal_run.sh`.
+- **Scheduling amendment** (Sun 15 Nov ~01:50, before any run; this changes no scoring): the shared Gemini key's limit fell to 2M input tokens/min. A trial averages about 0.16M tokens/min, so about 6 OpenCode trials run at once:
+  - `opencode-1` and `opencode-2` start at `-n 3`;
+  - `opencode-3` starts at `-n 4` once runs 1 and 2 have 2 trials left.
+
+  If time runs out before all 30 trials finish, the complete runs are reported, plus the finished trials of run 3, stated plainly. The infra rule below still applies to every trial.
 
 ## Infrastructure failures (fixed before the run)
 1. **Automatic retries:** `--max-retries 2 --retry-include ApiRateLimitError --retry-include AgentSetupTimeoutError`. These are only infrastructure exceptions. `NonZeroAgentExitCodeError` is **not** retried, because OpenCode raises it after finished games too.

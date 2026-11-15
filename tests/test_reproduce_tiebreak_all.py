@@ -123,6 +123,9 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_compact_ensemble_gate.py",
         "tiebreak_representation_bottleneck_audit.py",
         "tiebreak_action_budget_horizon_audit.py",
+        "tiebreak_restriction_containment_audit.py",
+        "tiebreak_covariate_shift_audit.py",
+        "tiebreak_prior_sensitivity_audit.py",
     )
     assert rta.OPTIONAL_FILENAMES == expected_optional_files
 
@@ -210,6 +213,9 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_compact_ensemble_gate.py",
         "tiebreak_representation_bottleneck_audit.py",
         "tiebreak_action_budget_horizon_audit.py",
+        "tiebreak_restriction_containment_audit.py",
+        "tiebreak_covariate_shift_audit.py",
+        "tiebreak_prior_sensitivity_audit.py",
     ]
     assert payload_ok["gates_passed"] == 3
     assert payload_ok["gates_total"] == 3

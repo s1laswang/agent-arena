@@ -349,3 +349,7 @@ B1 hint wording fixed (head-env, verified against instruction() v1.4) and sent t
 - Tiebreak final (FR8 08:55): no trained small model above the base; Verda spend €104.46, all instances deleted.
 - Merged: #57, #88 (VERDA.md), #74 (1,034-attack red-team sweep, 0 exploits), #68 (key-less test fix). Not merged before the deadline: #81 (argon 103%, hydrogen 115%; cited), #92 (causal hint n=2), fleet PRs.
 - The CEO session was stalled by a usage limit from ~05:50 to 08:50.
+
+## 09:35 Sun 15 Nov: correction to the 09:00 entry (this log is append-only)
+- The 09:00 entry says the rehearsal's Gemini runs were "93%, 116%, 153% (partial)". The third figure was an 08:52 snapshot. Final (s1-rehearsal-final, d0ead011): **93%, 116%, 131%**; run 3 has 9 valid trials, 5 of them after the 08:30 cut-off, 1 infra-excluded. No gap in the judge path, as before.
+- Tags: `afterquery-submit` (9225f2ad) carries the snapshot; `afterquery-submit-2` (aa1c679e) carries the final numbers and is what main's landing page pins.

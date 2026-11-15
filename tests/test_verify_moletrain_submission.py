@@ -10,13 +10,25 @@ import sys
 import time
 from pathlib import Path
 
+_REPO_ROOT = str(Path(__file__).resolve().parents[1])
+if sys.path[:1] != [_REPO_ROOT]:
+    if _REPO_ROOT in sys.path:
+        sys.path.remove(_REPO_ROOT)
+    sys.path.insert(0, _REPO_ROOT)
+for _mod_name in [
+    k for k in list(sys.modules) if k in {"canary", "train"} or k.startswith(("canary.", "train."))
+]:
+    _mod_file = str(getattr(sys.modules[_mod_name], "__file__", "") or "")
+    if not _mod_file.startswith(_REPO_ROOT):
+        sys.modules.pop(_mod_name, None)
+
 import pytest
 
 from canary.forge import rl_mole_v2
 from canary.forge.rl_mole_v2 import RLMoleV2, warm_start_params
 from train import eval_mole, qwen_diverse_mole
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(_REPO_ROOT)
 SCRIPT_PATH = ROOT / "scripts" / "verify_moletrain_submission.py"
 BRIEF_PATH = ROOT / "docs" / "reports" / "moletrain_submission_brief.md"
 TEST_PATH = Path(__file__).resolve()
@@ -81,13 +93,15 @@ def _populate_clean_tree(root: Path) -> None:
 def test_source_files_have_zero_hash_emdash_coauthor_and_no_torch_import():
     hash_ch = chr(35)
     em_dash = chr(0x2014)
+    en_dash = chr(0x2013)
     co_author = "co-authored" + "-by"
-    forbidden_imports = {"torch", "transformers", "peft", "trl"}
+    forbidden_imports = {"torch", "transformers", "peft", "trl", "openai", "google"}
 
     for path in (SCRIPT_PATH, TEST_PATH):
         text = path.read_text(encoding="utf-8")
         assert hash_ch not in text
         assert em_dash not in text
+        assert en_dash not in text
         assert co_author not in text.lower()
         tree = ast.parse(text)
         for node in ast.walk(tree):
@@ -142,15 +156,6 @@ def test_real_repo_passes_all_four_gates_and_reproducible_output(tmp_path):
             str(out_shallow),
             "--check",
         ]
-    )
-    assert rc_shallow == 0
-    shallow_payload = json.loads(out_shallow.read_text(encoding="utf-8"))
-    assert shallow_payload["all_passed"] is True
-    assert "train/eval_mole.py" in shallow_payload["gates"]["gate_2_hygiene"]["checked_py_files"]
-
-    out_shallow = tmp_path / "gate_shallow.json"
-    rc_shallow = V.main(
-        ["--root", str(ROOT), "--base-ref", "origin/nonexistent", "--out", str(out_shallow), "--check"]
     )
     assert rc_shallow == 0
     shallow_payload = json.loads(out_shallow.read_text(encoding="utf-8"))
@@ -230,6 +235,26 @@ def test_gate1_protected_paths_git_diff_and_shallow_fallbacks(tmp_path):
     assert res_shallow_dirty["passed"] is False
     assert "harbor/build.py" in res_shallow_dirty["protected_hits"]
 
+    depth1_src = tmp_path / "depth1_origin"
+    depth1_files = {
+        ".github/protected-paths.txt": prot_txt,
+        "harbor/build.py": "H = 1\n",
+    }
+    for rel in V.MOLETRAIN_PY_FILES:
+        depth1_files[rel] = "x = 1\n"
+    _init_git_repo(depth1_src, depth1_files, branch="main")
+    depth1_clone = tmp_path / "depth1_clone"
+    subprocess.run(
+        ["git", "clone", "-q", "--depth", "1", "--no-tags", f"file://{depth1_src}", str(depth1_clone)],
+        check=True,
+    )
+    res_depth1_g1 = V.check_gate1_protected_paths(depth1_clone, base_ref="origin/justSilas")
+    assert res_depth1_g1["passed"] is True
+    assert res_depth1_g1["mode"] == "fallback_working_tree"
+    res_depth1_g2 = V.check_gate2_hygiene(depth1_clone, base_ref="origin/justSilas")
+    assert res_depth1_g2["passed"] is True
+    assert res_depth1_g2["auto_discovered_py_files"] == []
+
     archive_dir = tmp_path / "archive_no_git"
     (archive_dir / ".github").mkdir(parents=True)
     (archive_dir / ".github" / "protected-paths.txt").write_text(prot_txt, encoding="utf-8")
@@ -304,34 +329,79 @@ def test_gate2_auto_discovers_changed_branch_py_files_and_catches_hygiene(tmp_pa
     base_files = {
         ".github/protected-paths.txt": (ROOT / ".github" / "protected-paths.txt").read_text(encoding="utf-8"),
         "train/grpo_mole.py": chr(35) + " pre-existing Silas comment\ny = 2\n",
+        "canary/forge/rl_mole.py": chr(35) + " pre-existing Silas forge comment\nz = 3\n",
     }
     for rel in V.MOLETRAIN_PY_FILES:
         base_files[rel] = "x = 1\n"
     _init_git_repo(repo, base_files, branch="justSilas")
 
-    subprocess.run(["git", "checkout", "-q", "-b", "moletrain-feature"], cwd=repo, check=True)
+    subprocess.run(["git", "checkout", "-q", "-b", "main-merged"], cwd=repo, check=True)
+    cross_squad_py = (
+        "canary/forge/frontier_proxies.py",
+        "canary/forge/proxy_ensemble.py",
+        "canary/mole/adaptive.py",
+        "canary/mole/hof_v14.py",
+        "canary/mole/trap_sim.py",
+        "train/compact_render.py",
+        "train/qwen15b_dpo_dagger.py",
+        "scripts/other_tool.py",
+        "scripts/frontier_mole_stratified_gap.py",
+        "scripts/integrity_mole_hof_and_rl_audit.py",
+        "scripts/tiebreak_cross_mole_generalization.py",
+        "scripts/benchmark_research_moles.py",
+        "scripts/benchmark_mole_strategies.py",
+        "tests/test_frontier_mole_stratified_gap.py",
+        "tests/test_integrity_mole_hof_and_rl_audit.py",
+        "tests/test_tiebreak_cross_mole_generalization.py",
+        "tests/test_benchmark_research_moles.py",
+        "tests/test_mole_adaptive.py",
+        "tests/test_mole_strategies.py",
+        "tests/test_mole_trap_sim.py",
+        "tests/test_qwen15b_dpo_dagger.py",
+    )
+    for rel in cross_squad_py:
+        fp = repo / rel
+        fp.parent.mkdir(parents=True, exist_ok=True)
+        fp.write_text(chr(35) + " other squad file\nz = 3\n", encoding="utf-8")
+    for rel_md in (
+        "docs/reports/frontier_mole_stratified_gap_v14.md",
+        "docs/reports/mole_strategies_v14_benchmark.md",
+    ):
+        fp_md = repo / rel_md
+        fp_md.parent.mkdir(parents=True, exist_ok=True)
+        fp_md.write_text("Other squad report with " + chr(0x2014) + " dash.\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "merge cross-squad modules"], cwd=repo, check=True)
+
+    g2_cross = V.check_gate2_hygiene(repo, base_ref="justSilas")
+    assert g2_cross["passed"] is True
+    assert g2_cross["auto_discovered_py_files"] == []
+    assert g2_cross["checked_report_markdowns"] == []
+    for rel in cross_squad_py:
+        assert rel not in g2_cross["checked_py_files"]
+
     new_scoped = (
-        "canary/forge/new_mole_helper.py",
-        "canary/mole/extra_selector.py",
-        "train/extra_trainer.py",
+        "canary/forge/rl_mole_v3.py",
+        "canary/mole/distill_extra.py",
+        "train/extra_mole_trainer.py",
         "scripts/custom_mole_probe.py",
         "tests/test_custom_mole_probe.py",
+        "tests/test_qwen3_mole_probe.py",
     )
     for rel in new_scoped:
         fp = repo / rel
         fp.parent.mkdir(parents=True, exist_ok=True)
         fp.write_text("val = 42\n", encoding="utf-8")
-    unrelated = repo / "scripts" / "other_tool.py"
-    unrelated.write_text(chr(35) + " unrelated non-mole script\nz = 3\n", encoding="utf-8")
     subprocess.run(["git", "add", "."], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-q", "-m", "add new moletrain modules"], cwd=repo, check=True)
 
     g2_clean = V.check_gate2_hygiene(repo, base_ref="justSilas")
     assert g2_clean["passed"] is True
+    assert g2_clean["auto_discovered_py_files"] == sorted(new_scoped)
     for rel in new_scoped:
-        assert rel in g2_clean["auto_discovered_py_files"]
         assert rel in g2_clean["checked_py_files"]
-    assert "scripts/other_tool.py" not in g2_clean["checked_py_files"]
+    for rel in cross_squad_py:
+        assert rel not in g2_clean["checked_py_files"]
 
     (repo / "scripts" / "custom_mole_probe.py").write_text(
         "val = 42  " + chr(35) + " bad comment\n",

@@ -12,7 +12,7 @@ Final submission package, 15 November 2026. The measured environment remains v1.
 
 **Repository:** https://github.com/s1laswang/agent-arena/tree/afterquery-final-v2
 
-**Demo:** [Three-minute click script](DEMO.md). The committed [Canary Lab video](gemini/assets/canary-lab-2min.mp4) demonstrates the benchmark's Gemini layer; it is the separate Gemini entry's video, not a recording of the AfterQuery judge rehearsal.
+**Demo video:** https://github.com/s1laswang/agent-arena/raw/afterquery-final-v2/docs/demo/canary_demo.mp4 — a 75-second browser-game and recorded-episode walkthrough, not a live judge rehearsal. Its final audit card shows the earlier 100-attack snapshot; the completed campaign below contains 1,034. [Live demonstration script](DEMO.md).
 
 **Challenge:** AfterQuery — Break the Agent. The Gemini entry has its [own submission](gemini/SUBMISSION.md).
 
@@ -69,6 +69,6 @@ The final clean-copy acceptance run passed 20 checks. The local regression repor
 
 ## Tiebreak and limits
 
-The small-model training did not establish a held-out reward gain over the abstaining base model. GRPO recovered part of the supervised model's loss; the v3-4k s0 result was −0.147 ± 0.063 over 180 episodes, versus base zero. Later 8k replicates and DAgger work are documented in [VERDA.md](../VERDA.md); no unfinished evaluation is claimed as a success.
+The small-model training did not establish a held-out reward gain over the abstaining base model. GRPO recovered part of the supervised model's loss; the v3-4k s0 result was −0.147 ± 0.063 over 180 episodes, versus base zero. The recovered DAgger round scored −0.542 ± 0.214 on 50 completed held-out episodes; the paired change against v3-4k at 8k inference was +0.242 ± 0.304 (n=43), which includes zero. Final outputs were partly lost when the compute instance was deleted; the partial sample and context-length confound are disclosed in [the DAgger report](reports/dagger.md). Compute provenance and later replicates are in [VERDA.md](../VERDA.md). No tiebreak improvement over base is claimed.
 
 The headline gap is narrow, confidence intervals are wide, the Harbor rehearsal is incomplete, and the reference is not an upper bound. No broader claim that all frontier agents fail is made.

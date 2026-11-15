@@ -52,7 +52,7 @@ def groups(version: str, model: str) -> list[tuple[str, str, str]]:
         g += [("Codex gpt-5.5 over MCP (earlier official run)", "v1.3/codex-gpt-5.5-full", "codex:gpt-5.5"),
               ("in-process gpt-5.5, fixed loop (earlier official run)", "v1.3/gpt-5.5-full", "openai:gpt-5.5")]
     g += [("reference solver", f"{version}/reference", "solver"), ("heuristic", f"{version}/reference", "heuristic"),
-          ("do_nothing", f"{version}/reference", "do_nothing"), ("stop_early", f"{version}/reference", "stop_early")]
+          ("do_nothing", f"{version}/reference", "do_nothing"), ("day-1 guess (recorded under the pre-2bb6729 name stop_early; today's stop_early stops without accusing and scores 0, see results/judge_table.md)", f"{version}/reference", "stop_early")]
     return g
 
 

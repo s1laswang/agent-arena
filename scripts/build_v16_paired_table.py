@@ -50,9 +50,17 @@ DEFAULT_BOOTSTRAP_SEED = 0
 DEFAULT_V14_DIR = REPO_ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gemini-4-carbon"
 DEFAULT_REFERENCE_DIR = REPO_ROOT / "data" / "runs" / "committed" / "v1.4" / "reference"
 DEFAULT_V16_ROOT = REPO_ROOT / "results" / "v16_social" / "opencode_v16"
+DEFAULT_REF_30_49_JSON = REPO_ROOT / "results" / "v16_social" / "reference_seeds_30_49.json"
 DEFAULT_OUT_JSON = REPO_ROOT / "results" / "v16_social" / "paired_v14_vs_v16_0_9.json"
 DEFAULT_OUT_MD = REPO_ROOT / "results" / "v16_social" / "paired_v14_vs_v16_0_9.md"
 DEFAULT_OUT_GATE_MD = REPO_ROOT / "docs" / "reports" / "v16_social_gate.md"
+
+AZURE_RELAYED_SCORES: tuple[tuple[str, tuple[tuple[int, float], ...]], ...] = (
+    ("v0_v14_control", ((30, 0.54), (31, 0.55), (32, 0.48))),
+    ("v5_full9_cocktail", ((30, 0.50), (31, 0.64), (32, 0.71))),
+    ("v1_anchoring_authority_confirmation", ((30, 0.65),)),
+    ("v3_grudge_falsemem_misforward", ((30, 0.65), (31, 0.64))),
+)
 
 DEFAULT_STAGING_GLOBS: tuple[str, ...] = (
     "/localscratch/fleet-silas/v16-eval-staging*",
@@ -1583,6 +1591,39 @@ def format_paired_table_md(payload: dict[str, Any]) -> str:
                     f"{_fmt_f(r.get('ratio_of_solver'))} | {'PASS' if r['replay_verified'] else 'FAIL'} |"
                 )
 
+    az = payload.get("azure_relayed_30_44")
+    if isinstance(az, dict) and az.get("variants"):
+        lines.extend([
+            "",
+            f"{H2} Relayed Azure In-Process Checkpoints (Hard Seeds 30-32, Labelled Non-Local Checkpoint)",
+            "",
+            f"- Source: `{az['source_note']}`",
+            f"- Plain verdict (shared seeds 30-32): {az['plain_statement']}",
+            f"- Reference solver context (`results/v16_social/reference_seeds_30_49.json`): 20-seed hard 30-49 raw mean `{_fmt_f(az['solver_30_49_raw_mean'])}`; "
+            f"on seeds `[30, 31, 32]` raw mean is `{_fmt_f(az['solver_30_32_raw_mean'])}` (wrong high-confidence accusations on seeds 30 and 32) and luck-adjusted mean is `{_fmt_f(az['solver_30_32_luck_adj_mean'])}`.",
+            "",
+            "| variant | shared seeds | n_valid | gemini mean | solver raw mean | solver luck-adj mean | ratio vs solver (30-49 ref) | ratio vs solver (luck-adj) | paired v1.6 / v1.4 ratio | v1.6 > v1.4? |",
+            "|---|---|---:|---:|---:|---:|---:|---:|---:|---|",
+        ])
+        for vr in az["variants"]:
+            lines.append(
+                f"| {vr['variant']} | {vr['seeds']} | {vr['n_valid']} | {_fmt_f(vr['gemini_mean'])} | "
+                f"{_fmt_f(vr['solver_raw_mean'])} | {_fmt_f(vr['solver_luck_adj_mean'])} | "
+                f"{_fmt_f(vr['ratio_vs_solver_30_49'])} | {_fmt_f(vr['ratio_vs_solver_luck_adj'])} | "
+                f"{_fmt_f(vr['paired_ratio_vs_v14_control'])} | {vr['higher_than_v14_label']} |"
+            )
+        lines.extend([
+            "",
+            "| variant | seed | gemini score | solver raw score | solver luck-adj | ratio vs solver (luck-adj) | paired v1.6 / v1.4 seed ratio | v1.6 > v1.4? |",
+            "|---|---:|---:|---:|---:|---:|---:|---|",
+        ])
+        for sr in az["per_seed"]:
+            lines.append(
+                f"| {sr['variant']} | {sr['seed']} | {_fmt_f(sr['gemini_score'])} | {_fmt_f(sr['solver_raw_score'])} | "
+                f"{_fmt_f(sr['solver_luck_adj_score'])} | {_fmt_f(sr['ratio_vs_solver_luck_adj'])} | "
+                f"{_fmt_f(sr['paired_ratio_vs_v14_seed'])} | {sr['higher_than_v14_label']} |"
+            )
+
     lines.extend(["", f"{H2} Ship-Gate Reasons", ""])
     for reason in sg["reasons"]:
         lines.append(f"- {reason}")
@@ -1592,8 +1633,119 @@ def format_paired_table_md(payload: dict[str, Any]) -> str:
     return out
 
 
+def build_azure_relayed_summary(ref_30_49_path: Path = DEFAULT_REF_30_49_JSON) -> dict[str, Any]:
+    ref_by_seed: dict[int, dict[str, Any]] = {}
+    ref_all_raw: list[float] = []
+    if ref_30_49_path.is_file():
+        raw_doc = json.loads(ref_30_49_path.read_text(encoding="utf-8"))
+        for row in raw_doc.get("seeds") or []:
+            s_id = int(row["seed"])
+            ref_by_seed[s_id] = row
+            ref_all_raw.append(float(row["solver_score"]))
+
+    for s_req in (30, 31, 32):
+        if s_req not in ref_by_seed:
+            r_sol = run_episode(make_env("hard", s_req, "template"), SolverPolicy())
+            sol_dict = _ep_obj_to_dict(r_sol, "solver")
+            _, luck_v = compute_posterior_and_luck(sol_dict, fallback_v=float(r_sol.score) if r_sol.correct else None)
+            ref_by_seed[s_req] = {
+                "seed": s_req,
+                "solver_score": float(r_sol.score),
+                "solver_luck_adj": float(luck_v),
+            }
+
+    sol_30_49_mean = (sum(ref_all_raw) / len(ref_all_raw)) if ref_all_raw else None
+    ctrl_by_seed = dict(AZURE_RELAYED_SCORES[0][1])
+    sol_30_32_raw = sum(float(ref_by_seed[s]["solver_score"]) for s in (30, 31, 32)) / 3.0
+    sol_30_32_luck = sum(float(ref_by_seed[s]["solver_luck_adj"]) for s in (30, 31, 32)) / 3.0
+
+    variant_rows: list[dict[str, Any]] = []
+    seed_rows: list[dict[str, Any]] = []
+    for var_name, pairs in AZURE_RELAYED_SCORES:
+        s_ids = [int(s) for s, _ in pairs]
+        g_vals = [float(v) for _, v in pairs]
+        c_vals = [float(ctrl_by_seed[s]) for s in s_ids]
+        sr_vals = [float(ref_by_seed[s]["solver_score"]) for s in s_ids]
+        sl_vals = [float(ref_by_seed[s]["solver_luck_adj"]) for s in s_ids]
+        n_v = len(s_ids)
+        g_m = sum(g_vals) / n_v
+        c_m = sum(c_vals) / n_v
+        sr_m = sum(sr_vals) / n_v
+        sl_m = sum(sl_vals) / n_v
+        rat_ref = (g_m / sol_30_49_mean) if (sol_30_49_mean and sol_30_49_mean > 0.0) else None
+        rat_luck = (g_m / sl_m) if sl_m > 0.0 else None
+        rat_ctrl = (g_m / c_m) if c_m > 0.0 else None
+        if var_name == "v0_v14_control":
+            hi_lbl = "CONTROL (baseline)"
+            is_hi = False
+        else:
+            diff_m = g_m - c_m
+            is_hi = diff_m > 1e-12
+            hi_lbl = f"YES ({diff_m:+.3f})" if is_hi else f"NO ({diff_m:+.3f})"
+        variant_rows.append({
+            "variant": var_name,
+            "seeds": s_ids,
+            "n_valid": n_v,
+            "gemini_mean": round(g_m, 6),
+            "v14_control_mean_same_seeds": round(c_m, 6),
+            "solver_raw_mean": round(sr_m, 6),
+            "solver_luck_adj_mean": round(sl_m, 6),
+            "ratio_vs_solver_30_49": _round_or_none(rat_ref),
+            "ratio_vs_solver_luck_adj": _round_or_none(rat_luck),
+            "paired_ratio_vs_v14_control": _round_or_none(rat_ctrl),
+            "v16_higher_than_v14": bool(is_hi),
+            "higher_than_v14_label": hi_lbl,
+        })
+        for s, g_sc in pairs:
+            sr_sc = float(ref_by_seed[int(s)]["solver_score"])
+            sl_sc = float(ref_by_seed[int(s)]["solver_luck_adj"])
+            c_sc = float(ctrl_by_seed[int(s)])
+            r_sl = (float(g_sc) / sl_sc) if sl_sc > 0.0 else None
+            r_c = (float(g_sc) / c_sc) if c_sc > 0.0 else None
+            if var_name == "v0_v14_control":
+                s_lbl = "CONTROL"
+            else:
+                d_s = float(g_sc) - c_sc
+                s_lbl = f"YES ({d_s:+.3f})" if d_s > 1e-12 else (f"NO ({d_s:+.3f})" if d_s < -1e-12 else "TIE (+0.000)")
+            seed_rows.append({
+                "variant": var_name,
+                "seed": int(s),
+                "gemini_score": round(float(g_sc), 6),
+                "solver_raw_score": round(sr_sc, 6),
+                "solver_luck_adj_score": round(sl_sc, 6),
+                "ratio_vs_solver_luck_adj": _round_or_none(r_sl),
+                "paired_ratio_vs_v14_seed": _round_or_none(r_c),
+                "higher_than_v14_label": s_lbl,
+            })
+
+    plain_stmt = (
+        "With n=3 shared seeds (30-32) in the relayed Azure in-process gemini-4-carbon evaluation, "
+        "v1.6 (v5_full9_cocktail mean 0.617) scores HIGHER for Gemini than v1.4 "
+        "(v0_v14_control mean 0.523, paired v1.6/v1.4 ratio 1.178), and v1 (n=1, 0.650 vs 0.540) "
+        "and v3 (n=2, 0.645 vs 0.545) likewise score higher than v1.4 on the same seeds; the gate is NOT met."
+    )
+    return {
+        "labelled_non_replay_relayed": True,
+        "source_note": "Relayed from Azure VM /tmp/fleet-momin/shared/v16_runs (in-process gemini-4-carbon, hard seeds 30-44, jobs=1; solver scores verified locally from results/v16_social/reference_seeds_30_49.json)",
+        "gate_met": False,
+        "v16_higher_than_v14_on_n3": True,
+        "plain_statement": plain_stmt,
+        "solver_30_49_raw_mean": _round_or_none(sol_30_49_mean),
+        "solver_30_32_raw_mean": round(sol_30_32_raw, 6),
+        "solver_30_32_luck_adj_mean": round(sol_30_32_luck, 6),
+        "variants": variant_rows,
+        "per_seed": seed_rows,
+    }
+
+
 def format_gate_report_md(payload: dict[str, Any]) -> str:
     sg = payload["paired_comparison"]["ship_gate"]
+    az = payload.get("azure_relayed_30_44") or {}
+    az_line = (
+        f"- Relayed Azure shared-seed summary (hard seeds 30-32, n=3): {az['plain_statement']}"
+        if az.get("plain_statement")
+        else "- Relayed Azure shared-seed summary: n/a"
+    )
     header = [
         f"{H1} Canary V1.6 Social Layer Gate Report",
         "",
@@ -1612,7 +1764,8 @@ def format_gate_report_md(payload: dict[str, Any]) -> str:
         "",
         f"{H2} Current Gate Verdict: {sg['verdict']}",
         "",
-        f"- Plain shared-seed summary: {sg['shared_direction_statement']}",
+        f"- Plain shared-seed summary (OpenCode hard 0-9): {sg['shared_direction_statement']}",
+        az_line,
         f"- Reproduce offline: `python scripts/build_v16_paired_table.py`",
         f"- Machine-readable artifact: `results/v16_social/paired_v14_vs_v16_0_9.json`",
         f"- Paired table artifact: `results/v16_social/paired_v14_vs_v16_0_9.md`",
@@ -1785,6 +1938,7 @@ def build_paired_table(
                 "v1.6": v16_summary,
             },
             "extra_variants": extra_variant_summaries,
+            "azure_relayed_30_44": build_azure_relayed_summary(),
             "paired_comparison": paired_comp,
         }
 

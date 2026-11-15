@@ -296,3 +296,17 @@ def test_committed_v16_paired_artifacts_and_code_hygiene():
     assert data["data_rule"]["all_pass"] is True
     assert data["replay_verification"]["all_pass"] is True
     assert data["arms"]["v1.4"]["n_valid"] == 10
+    az = data["azure_relayed_30_44"]
+    assert az["labelled_non_replay_relayed"] is True
+    assert az["gate_met"] is False
+    assert az["v16_higher_than_v14_on_n3"] is True
+    assert "HIGHER for Gemini than v1.4" in az["plain_statement"]
+    assert "gate is NOT met" in az["plain_statement"]
+    by_var = {row["variant"]: row for row in az["variants"]}
+    assert abs(by_var["v0_v14_control"]["gemini_mean"] - 0.523333) < 1e-5
+    assert abs(by_var["v5_full9_cocktail"]["gemini_mean"] - 0.616667) < 1e-5
+    assert abs(by_var["v5_full9_cocktail"]["paired_ratio_vs_v14_control"] - 1.178344) < 1e-5
+    assert by_var["v5_full9_cocktail"]["v16_higher_than_v14"] is True
+    assert by_var["v1_anchoring_authority_confirmation"]["n_valid"] == 1
+    assert by_var["v3_grudge_falsemem_misforward"]["n_valid"] == 2
+

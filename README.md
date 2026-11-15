@@ -18,8 +18,9 @@ A simulated company has one **mole** who leaks documents to a rival. Every leak 
 | stop_early (stops on day 1, no accusation) | +0.000 ± 0.000 | 0% | 40 |
 
 - **Sources.**
-  - Solver and Gemini: paired on the same dev seeds 0–29, with every episode replay-verified, in [`data/runs/committed/v1.4/paired_table_gemini.md`](data/runs/committed/v1.4/paired_table_gemini.md). The seed set was pre-registered and is explained in [docs/reports/gap.md](docs/reports/gap.md).
+  - Solver and Gemini: paired on the same dev seeds 0–29, with every episode replay-verified, in [`data/runs/committed/v1.4/paired_table_gemini.md`](data/runs/committed/v1.4/paired_table_gemini.md). The seed set was locked right after those episodes were committed (a post-hoc lock against reruns and cherry-picking), explained in [docs/reports/gap.md](docs/reports/gap.md).
   - do_nothing and stop_early: 40 judge seeds, [`results/judge_table.md`](results/judge_table.md).
+  - The solver reference for seeds 0-29 is two committed run dirs: seeds 0-19 in `data/runs/committed/v1.4/reference/solver-hard-20261114-121126/` and seeds 20-29 in `reference/solver-hard-seeds20to29/`. The paired table uses all 30.
   - *Luck-adjusted* scores each accusation by its expected value under the solver's posterior, so it separates decisions from luck.
 - **Honest reading.** The same model run in-process reaches 95% [62%, 140%] on hard, and OpenCode reaches 111% on medium. The gap is on hard, in the judges' harness. A random accusation on day 1 (`guess_day1`) averages −0.95 on hard ([`results/solver_range/guess_day1_hard_judge40.md`](results/solver_range/guess_day1_hard_judge40.md)).
 - **Infra retries, disclosed.** Some OpenCode attempts ended on an empty model reply (a Gemini/OpenCode client failure, not a decision). Those attempts were retried and never counted. If they are instead scored 0, OpenCode hard is 56% [19%, 87%] of the solver (luck-adjusted 55% [34%, 77%]): the gap widens, so retrying is the conservative choice. Source: the "alternative" row in the paired table.
@@ -32,7 +33,7 @@ make setup && make reproduce    # about 1 min; needs uv and make (Linux or macOS
 make accept                     # asserts the baselines, MCP smoke test; exit 0 = pass
 ```
 
-- **What `make reproduce` does.** It replays every committed episode. In the printed judge table the replayed OpenCode hard row pools all 32 committed episodes (+0.349 ± 0.190): the pre-registered seeds 0–29 plus the two extension seeds 34 and 37 (`data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/`). The headline uses the pre-registered n=30 only, and the last line, `HEADLINE`, recomputes it: +0.322 vs +0.499, 65% [24%, 98%]. It plays the solver and six baselines on the 40 frozen judge seeds, then runs the anti-cheat battery. It prints `ANTI-CHEAT: every probe blocked ...` (exit 1 if any cheat gets through), then the `HEADLINE` line: the 65% [24%, 98%] row above, recomputed from the committed episodes and diffed against the committed paired table (exit 1 on any difference). A `slow act()` line on stderr is a timing note from the solver, not an error.
+- **What `make reproduce` does.** It replays every committed episode. In the printed judge table the replayed OpenCode hard row pools all 32 committed episodes (+0.349 ± 0.190): the locked seeds 0–29 plus the two extension seeds 34 and 37 (`data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/`). The replayed solver row likewise pools seeds 0–59 (+0.498 ± 0.097, n=60). The headline uses the locked n=30 only, and the last line, `HEADLINE`, recomputes it: +0.322 vs +0.499, 65% [24%, 98%]. It plays the solver and six baselines on the 40 frozen judge seeds, then runs the anti-cheat battery. It prints `ANTI-CHEAT: every probe blocked ...` (exit 1 if any cheat gets through), then the `HEADLINE` line: the 65% [24%, 98%] row above, recomputed from the committed episodes and diffed against the committed paired table (exit 1 on any difference). A `slow act()` line on stderr is a timing note from the solver, not an error.
 - **Run-to-run variation.** Each run draws a fresh world secret, so the solver's judge-seed row moves between runs: hard +0.553 ± 0.093 in the committed [`results/judge_table.md`](results/judge_table.md), +0.643 ± 0.087 in our fresh-clone run. The spread over 300 fresh secrets is in [`results/solver_range/`](results/solver_range/), and `make accept` checks against it. do_nothing and stop_early are always exactly 0. `CANARY_WORLD_SECRET=<any string> make reproduce` gives bit-identical output.
 - **Speed knobs.** `REPRO_ANTICHEAT=0` prints only the table (about 25–75 s on a laptop). `REPRO_FAST=1` shrinks the table to 5 seeds per tier, but it is not much faster: the anti-cheat verdict still uses all 40 judge seeds, because a 5-seed verdict raised false alarms.
 - **Where things go.** Output goes to `results/latest/`, which is gitignored. A timed fresh clone of this branch on macOS is in [`results/fresh_clone/`](results/fresh_clone/).
@@ -51,6 +52,20 @@ GOOGLE_GENERATIVE_AI_API_KEY=<key> harbor run -p harbor/dataset -a opencode -m g
 
 **Oracle expected range:** a 10-task hard rerun of the oracle should land in about **+0.39 to +0.68** (90% of builds; mean +0.569, sd 0.094), and do_nothing, stop_early and cheat_probe score exactly 0 on every build. This was measured over 200 simulated builds: [harbor/README.md](harbor/README.md#expected-oracle-range-for-a-judge-rerun), [`results/oracle_range_v1.4.md`](results/oracle_range_v1.4.md). One wrong accusation (−1) moves a 10-task mean by more than 0.1. Each build draws a new secret, so nobody (us included) has seen the worlds your build serves. The reward is the game server's HMAC-signed ledger, and the agent container holds nothing that reveals the mole. Full details and the isolation proof: [harbor/README.md](harbor/README.md). If agent setup times out on a slow network or at high `-n`, add `--agent-setup-timeout-multiplier 3`: those trials are infrastructure failures, not scores.
 
+## Tiebreak: a small model trained on Canary experience (honest result)
+Qwen2.5-1.5B with LoRA, held-out seeds, the model plays every episode alone; full readout in [docs/reports/fr8.md](docs/reports/fr8.md) ("04:45 WS4 readout").
+
+| model | held-out score ± 95% CI | n |
+|---|---:|---:|
+| base (untrained) | 0.000 (it cannot play: 3% valid tool calls) | 36 |
+| v2 (SFT on solver play) | −0.457 ± 0.086 | 172 |
+| v3-4k (GRPO on the environment's reward, Verda H100) | −0.147 ± 0.063 | 180 |
+| v3-8k seed 2 (GRPO, 8k context, Verda H100 spot) | −0.050 ± 0.049 | 90 |
+
+- **What was learned:** reward training fixed v2's reckless accusations (v3-4k vs v2: +0.310 ± 0.107, two-sample). It learned to play the protocol (100% valid calls), and on training states it learned to name the mole from evidence (0.19 → 0.89).
+- **What was not:** the bar (above the untrained base, with the CI excluding 0) is **not met**. The model never learned to gather evidence in its own games: the same decision gemini-4-carbon gets wrong (fewer canaries, earlier commitment; [failure analysis](docs/reports/failure_analysis_v1.4.md)).
+- **In progress:** a DAgger run trained on the model's own states may be added as an addendum.
+
 ## Links
 
 - **Break it:** [docs/EXPLOITS.md](docs/EXPLOITS.md) lists every attack we tried, and the regression test that guards each one. `make hunt` fuzzes it yourself, with no keys, in a few minutes.
@@ -68,7 +83,7 @@ The full spec is [docs/CONTRACT.md](docs/CONTRACT.md); the agent receives every 
 - **Tiers.**
   - **Easy** (sanity tier): 12 employees, 14 days, one canary per day with up to 3 variants. A leak surfaces the next day.
   - **Medium:** 20 employees, 14 days, one canary per day with up to 3 variants. A leak costs 0.04 of V.
-  - **Hard:** 40 employees, 21 days, two canaries per day with up to 3 variants each. A leak costs 0.05 of V. Hard adds clearance constraints and fingerprint noise: the feed shows the true variant 95% of the time.
+  - **Hard:** 40 employees, 21 days, two canaries per day with up to 3 variants each. A leak costs 0.05 of V. Hard adds fingerprint noise: the feed shows the true variant 95% of the time. (Hard also lists a clearance rule for canaries, but it never binds; see docs/DIFFICULTY.md W4.)
 - **Medium and hard also add:**
   - an innocent decoy who writes angry messages;
   - a mole who frames others in the access logs;

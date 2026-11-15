@@ -31,13 +31,54 @@ def test_swarm_numbers(tmp_path: Path):
     assert len(s["waves"]) == 4 and s["whitebox"] == 75 and s["pc"] == (4, 4)
 
 
-def test_plan_lands_inside_two_minutes():
-    if not all((vc.NARR / f"{i}.wav").exists() for i in vc.VO_IDS):
+def _silent_wav(path: Path, seconds: float, rate: int = 24000) -> None:
+    import wave
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
+        w.writeframes(b"\0\0" * int(seconds * rate))
+
+
+def test_layout_lengths_follow_clips():
+    shots = [vc.Shot("a", "a", lead=0.5, min_dur=20.0), vc.Shot("b", "b"), vc.Shot("c", fixed=5.9), vc.Shot("d", "d", tail=2.2)]
+    slots = vc.layout(shots, 1.0, {"a": 10.0, "b": 8.0, "d": 4.0})
+    assert [round(s.t1 - s.t0, 2) for s in slots] == [20.0, 8.45, 5.9, 6.43]
+    assert all(s.t1 == n.t0 for s, n in zip(slots, slots[1:]))                    # contiguous
+    assert slots[0].vs == 0.5 and slots[2].vs == slots[2].t0                    # VO-less shot has no VO window
+
+
+def test_plan_speeds_up_only_when_over_budget(tmp_path: Path):
+    for k, d in {"a": 10.0, "b": 60.0}.items():
+        _silent_wav(tmp_path / f"{k}.wav", d)
+    shots = [vc.Shot("a", "a", min_dur=20.0), vc.Shot("b", "b", tail=2.2)]
+    tempo, slots = vc.plan(shots, max_total=200.0, narr=tmp_path)
+    assert tempo == 1.0 and slots[-1].t1 < 200
+    tempo, slots = vc.plan(shots, max_total=70.0, narr=tmp_path)
+    assert tempo > 1.0 and abs(slots[-1].t1 - 70.0) < 1e-3 and slots[0].t1 == 20.0
+
+
+def test_v2_plan_fits_spec():
+    shots = vc.shots_v2(vc.xprov_available())
+    if not all((vc.NARR / f"{s.vo}.wav").exists() for s in shots if s.vo):
         pytest.skip("narration clips not generated")
-    tempo, starts, ends = vc.plan()
-    assert tempo >= 1.0 and starts[0] > vc.COMMENTATOR_CUT
-    assert all(b > a for a, b in zip(ends, starts[1:]))          # no overlapping lines
-    assert ends[-1] <= vc.TOTAL - vc.END_HOLD + 1e-6
+    tempo, slots = vc.plan(shots)
+    by = {s.shot.key: s for s in slots}
+    assert tempo >= 1.0 and slots[-1].t1 <= 140.0
+    assert slots[0].shot.key == "holdup" and slots[0].t1 - slots[0].t0 >= vc.HOLDUP_SECONDS
+    assert "problem" not in by and by["live"].t0 < by["ladder"].t0
+    vo = [s for s in slots if s.shot.vo]
+    assert all(b.vs > a.ve for a, b in zip(vo, vo[1:]))                          # no overlapping lines
+    assert all(s.t0 <= s.vs and s.ve <= s.t1 for s in vo)                       # each line inside its shot
+
+
+def test_ladder_numbers_parse_committed_table():
+    L = vc.ladder_numbers()
+    assert L["episodes"] > 0
+    for k in ("carbon", "flash"):
+        assert L[k]["n"] > 0 and L[k]["usd"] > 0 and "%" in L[k]["ratio"] and "[" in L[k]["ratio"]
+
+
+def test_holdup_segment_is_committed_and_short():
+    assert vc.HOLDUP_CLIP.exists() and vc.HOLDUP_CLIP.stat().st_size < 15e6
 
 
 def test_gallery_numbers_sum():
@@ -51,4 +92,7 @@ def test_resolved_script_has_no_placeholders(tmp_path: Path):
         pytest.skip("narration index not generated")
     out = vc.resolved_script(vc.ROOT / "docs/gemini/VIDEO-2MIN.md", tmp_path / "s.md")
     vo = [l for l in out.read_text().splitlines() if l.startswith("> VO[")]
-    assert len(vo) == len(vc.VO_IDS) and not any("{" in l for l in vo)
+    ids = [l[5:l.index("]")] for l in vo]
+    want = [s.vo for s in vc.shots_v2(vc.xprov_available()) if s.vo]
+    assert ids == want and not any("{" in l for l in vo)
+    assert "seven hundred fifty-four" in vo[0] and "strength" in vo[0]

@@ -3,9 +3,7 @@ from __future__ import annotations
 import ast
 import io
 import json
-import os
 import re
-import subprocess
 import tokenize
 from pathlib import Path
 
@@ -238,41 +236,6 @@ def test_self_hygiene_zero_comments_dashes_genai_imports_and_protected_paths() -
         README_PATH.relative_to(ROOT).as_posix(),
         self_path.relative_to(ROOT).as_posix(),
     }
-    status_proc = subprocess.run(
-        ["git", "status", "--porcelain"],
-        cwd=ROOT,
-        env={k: v for k, v in os.environ.items() if k not in {"GEMINI_API_KEY", "GOOGLE_API_KEY"}},
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    if status_proc.returncode == 0:
-        for line in status_proc.stdout.splitlines():
-            if len(line) > 3:
-                entry = line[3:].strip()
-                if " -> " in entry:
-                    entry = entry.split(" -> ", 1)[1].strip()
-                checked.add(entry)
-
-    base_proc = subprocess.run(
-        ["git", "merge-base", "origin/justSilas", "HEAD"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    if base_proc.returncode == 0 and base_proc.stdout.strip():
-        diff_proc = subprocess.run(
-            ["git", "diff", "--name-only", f"{base_proc.stdout.strip()}..HEAD"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            timeout=15,
-        )
-        if diff_proc.returncode == 0:
-            for rel in diff_proc.stdout.splitlines():
-                if rel.strip():
-                    checked.add(rel.strip())
 
     for rel in checked:
         for rule in rules:

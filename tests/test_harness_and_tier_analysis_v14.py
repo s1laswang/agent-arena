@@ -214,6 +214,95 @@ def test_decompositions_and_helper_functions(committed_data: dict):
     assert not MOD.approx_equal({"b": True}, {"b": 1})
 
 
+def test_cross_family_hard_gpt55_and_harbor_harness(committed_data: dict):
+    cf = committed_data["cross_family_hard_gpt55"]
+    g = cf["summary"]
+    bcm = cf["behaviour_compare_metrics"]
+    pvc = cf["paired_vs_carbon_opencode"]
+    ps_gpt = cf["per_seed"]
+    ps_oc = committed_data["per_seed"]["hard_opencode"]
+
+    assert cf["agent"] == "opencode:openai/gpt-5.5"
+    assert cf["preregistration_commit"] == "cf394894"
+    assert cf["run_commit"] == "ca0a0dc0"
+    assert cf["n"] == 30 and cf["infra_failures"] == 0 and cf["replay_mismatches"] == 0
+    assert cf["completed_meta_V_final_populated_count"] == 28
+
+    assert g["n"] == 30
+    assert g["accused_count"] == 28 and g["correct_count"] == 28 and g["wrong_count"] == 0
+    assert g["abstained_count"] == 2 and g["abstained_seeds"] == [0, 17]
+    assert math.isclose(g["raw_mean"], 0.503667, abs_tol=1e-6)
+    assert math.isclose(g["raw_ci95_norm"], 0.063789, abs_tol=1e-5)
+    assert math.isclose(g["vs_solver_raw_ratio"], 1.009352, abs_tol=1e-5)
+    assert math.isclose(g["luck_adjusted_mean"], 0.41762, abs_tol=1e-5)
+    assert math.isclose(g["vs_solver_luck_adjusted_ratio"], 0.836415, abs_tol=1e-5)
+    assert math.isclose(g["accuse_day_accused_mean"], 10.25, abs_tol=1e-6)
+    assert math.isclose(bcm["gpt55_plant_canary_calls_mean"], 17.166667, abs_tol=1e-5)
+    assert math.isclose(g["canaries_before_accuse_mean"], 17.133333, abs_tol=1e-5)
+    assert math.isclose(g["interviews_mean"], 4.166667, abs_tol=1e-5)
+    assert math.isclose(bcm["gpt55_interview_call_share"], 0.060241, abs_tol=1e-5)
+    assert math.isclose(bcm["carbon_interview_call_share"], 0.531372, abs_tol=1e-5)
+    assert g["consistent_eq_0_at_accuse"] == 1
+    assert len(cf["flip_episodes"]) == 1 and cf["flip_episodes"][0]["seed"] == 18 and cf["flip_episodes"][0]["correct"] is True
+
+    ab = cf["abstained_prose_only_episodes"]
+    assert [r["seed"] for r in ab] == [0, 17]
+    assert all(r["accused"] is None and r["score"] == 0.0 and r["meta_V_final"] is None for r in ab)
+    assert [r["replayed_day"] for r in ab] == [8, 9]
+    assert [r["consistent_size_end"] for r in ab] == [1, 1]
+    assert ab[0]["effective_V_final"] > 0.6 and ab[1]["effective_V_final"] > 0.6
+
+    re_raw = MOD.paired_contrast(ps_gpt["score"], ps_oc["score"])
+    re_la = MOD.paired_contrast(ps_gpt["luck_adjusted"], ps_oc["luck_adjusted"])
+    re_can = MOD.paired_contrast(
+        [float(x) for x in ps_gpt["canaries_before"]],
+        [float(x) for x in ps_oc["canaries_before"]],
+    )
+    re_int = MOD.paired_contrast(
+        [float(x) for x in ps_gpt["interviews"]],
+        [float(x) for x in ps_oc["interviews"]],
+    )
+    assert MOD.approx_equal(re_raw, pvc["raw_score"], tol=2e-5)
+    assert MOD.approx_equal(re_la, pvc["luck_adjusted_score"], tol=2e-5)
+    assert MOD.approx_equal(re_can, pvc["canaries_before_accuse"], tol=1e-6)
+    assert MOD.approx_equal(re_int, pvc["interviews"], tol=1e-6)
+    assert pvc["canaries_before_accuse"]["boot_ci95"][0] > 6.5
+    assert pvc["interviews"]["boot_ci95"][1] < -55.0 and pvc["interviews"]["seed_wins_neg"] == 30
+
+    for dec_obj in (pvc["decomposition"], cf["paired_vs_solver"]["decomposition"]):
+        t = dec_obj["terms_sum_30_seeds"]
+        la_sum = (
+            t["posterior_commitment_quality"]
+            + t["a_only_accused_gain"]
+            + t["a_abstained_loss"]
+            + t["leak_timing_value"]
+            + t["canary_cost_value"]
+            + t["restriction_cost_value"]
+        )
+        assert math.isclose(dec_obj["luck_adjusted_diff_sum"], la_sum, abs_tol=1e-5)
+        assert math.isclose(dec_obj["raw_diff_sum"], dec_obj["luck_adjusted_diff_sum"] + t["luck_diff"], abs_tol=1e-5)
+
+    hb = committed_data["harbor_container_harness"]
+    assert hb["tag"] == "afterquery-final"
+    assert hb["build_sha_short"] == "1bc3e281"
+    assert hb["correction_commits"] == ["aa1c679e", "5f9b3297"]
+    assert hb["gap_reproduced_in_harbor"] is False
+    hc = hb["harness_matrix"]["harbor_container_opencode_carbon"]
+    assert hc["shell_allowed"] is True
+    assert hc["shell_used_trials"] == 20 and hc["shell_audited_trials"] == 28
+    assert hc["valid_accusations_correct"] == 28 and hc["valid_accusations_total"] == 29
+    assert math.isclose(hc["oracle_mean_10_tasks"], 0.506, abs_tol=1e-6)
+    assert hc["do_nothing_mean"] == 0.0 and hc["stop_early_mean"] == 0.0
+    assert [r["mean"] for r in hc["runs"]] == [0.472, 0.585, 0.626]
+    assert [r["ratio_pct"] for r in hc["runs"]] == [93, 116, 131]
+    assert hc["runs"][2]["n_valid"] == 9 and math.isclose(hc["runs"][2]["oracle_same_tasks"], 0.477778, abs_tol=1e-5)
+
+    md_txt = MD_PATH.read_text(encoding="utf-8")
+    assert "6. Cross-Family Hard Comparison" in md_txt
+    assert "7. Harbor Judge-Container Harness vs Local MCP-Only OpenCode" in md_txt
+    assert "did not reproduce in the Harbor judge container" in md_txt
+
+
 def test_artifact_size_and_strict_hygiene():
     assert JSON_PATH.stat().st_size < 80 * 1024
     assert JSON_PATH.stat().st_size < 80000
@@ -225,9 +314,11 @@ def test_artifact_size_and_strict_hygiene():
         comment_tokens = [tok for tok in tokens if tok.type == tokenize.COMMENT]
         assert not comment_tokens, f"found comment token in {py_path}"
         assert chr(35) not in src, f"found hash char in {py_path}"
+        assert ("import " + "subprocess") not in src, f"found subprocess import in {py_path}"
 
     mole_dump_rx = re.compile(r'"(?:mole|mole_id|true_mole)"\s*:\s*"e\d{2}"')
     for path in (SCRIPT_PATH, TEST_PATH, JSON_PATH, MD_PATH):
         txt = path.read_text(encoding="utf-8")
         assert "\u2013" not in txt and "\u2014" not in txt, f"found em/en dash in {path}"
+        assert "\u00b1" not in txt, f"found plus-minus symbol in {path}"
         assert not mole_dump_rx.search(txt), f"found world_mole_dump pattern in {path}"

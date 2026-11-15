@@ -79,6 +79,8 @@ OPTIONAL_INFERENCE_MODULES: tuple[str, ...] = (
     "train/compact_lora_sft.py",
     "train/qwen15b_compact_dagger.py",
     "train/frugal_raw_dagger.py",
+    "train/compact_dagger_ablation.py",
+    "train/qwen15b_dpo_dagger.py",
 )
 
 MODULES_REQUIRING_POLICY_CLASS: frozenset[str] = frozenset({
@@ -664,6 +666,13 @@ def _audit_policy_module_ast(rel_label: str, path: Path) -> tuple[list[str], lis
                                 if isinstance(h_item, (ast.FunctionDef, ast.AsyncFunctionDef)):
                                     worklist.append(("method", helper_cls.name, h_item.name))
 
+    companion_drivers = (
+        "train/eval_compact_hf.py",
+        "train/qwen15b_dpo_dagger.py",
+        "train/qwen15b_compact_dagger.py",
+        "train/compact_lora_sft.py",
+        "train/frugal_raw_dagger.py",
+    )
     if rel_label == "train/eval_compact_hf.py" and "run_compact_eval" in top_funcs:
         rce = top_funcs["run_compact_eval"]
         for inner in ast.walk(rce):
@@ -680,6 +689,18 @@ def _audit_policy_module_ast(rel_label: str, path: Path) -> tuple[list[str], lis
                     errors.append(
                         f"{rel_label}:run_compact_eval: line {inner.lineno} calls {callee} directly"
                     )
+    elif not policy_classes and rel_label in companion_drivers:
+        for fn_name, fn_node in top_funcs.items():
+            for inner in ast.walk(fn_node):
+                if isinstance(inner, ast.Call):
+                    callee = _dotted_attr_name(inner.func) or ""
+                    if callee.endswith(("CompactHFPolicy", "HFPolicy")):
+                        arg_leaks = _scan_ast_block_for_leaks(
+                            list(inner.args) + [kw.value for kw in inner.keywords],
+                            tainted_top,
+                            f"{rel_label}:{fn_name}->{callee}",
+                        )
+                        errors.extend(arg_leaks)
 
     return errors, checked_classes
 
@@ -1705,6 +1726,11 @@ def check_hygiene_and_panel_fix_a(
     else:
         errors.append("missing docs/reports/tiebreak_small_model.md")
 
+    for opt_md_name in ("tiebreak_vs_frontier.md", "tiebreak_panel_e_addendum.md"):
+        opt_md = root / "docs" / "reports" / opt_md_name
+        if opt_md.is_file():
+            md_targets.append(opt_md)
+
     tiebreak_dir = root / "results" / "tiebreak"
     if tiebreak_dir.is_dir():
         md_targets.extend(sorted(tiebreak_dir.rglob("*.md")))
@@ -1772,8 +1798,12 @@ def check_hygiene_and_panel_fix_a(
     owned_py = (
         root / "scripts" / "verify_tiebreak_submission.py",
         root / "scripts" / "tiebreak_scaling_calibration.py",
+        root / "scripts" / "tiebreak_addendum_pack.py",
+        root / "scripts" / "tiebreak_vs_frontier_comparison.py",
         root / "tests" / "test_verify_tiebreak_submission.py",
         root / "tests" / "test_tiebreak_scaling_calibration.py",
+        root / "tests" / "test_tiebreak_addendum_pack.py",
+        root / "tests" / "test_tiebreak_vs_frontier.py",
     )
     for py_path in owned_py:
         if py_path.is_file():

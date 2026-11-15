@@ -181,6 +181,36 @@ def test_check2_ast_inference_isolation_optional_pass_and_leak_rejections(tmp_pa
     ok_res = gate.check_ast_inference_isolation(root=syn, strict=True)
     assert ok_res.passed is True
     assert "train/neural_mlp_tiebreak.py:TinyMLPPolicy" in ok_res.metrics["policy_classes_checked"]
+    assert "train/compact_dagger_ablation.py" in gate.OPTIONAL_INFERENCE_MODULES
+    assert "train/qwen15b_dpo_dagger.py" in gate.OPTIONAL_INFERENCE_MODULES
+
+    clean_ablation = syn / "train" / "compact_dagger_ablation.py"
+    clean_ablation.write_text(
+        "class CompactLinearDAggerPolicy:\n"
+        "    def reset(self, tools_spec, instruction):\n"
+        "        self.ready = True\n"
+        "    def act(self, history):\n"
+        "        return ('status', {})\n",
+        encoding="utf-8",
+    )
+    clean_dpo = syn / "train" / "qwen15b_dpo_dagger.py"
+    clean_dpo.write_text(
+        "from canary.solver.policy import SolverPolicy\n"
+        "def relabel_train_step(sp):\n"
+        "    return sp.belief()\n"
+        "class Qwen15BDpoPolicy:\n"
+        "    def reset(self, tools_spec, instruction):\n"
+        "        self.ready = True\n"
+        "    def act(self, history):\n"
+        "        return ('status', {})\n",
+        encoding="utf-8",
+    )
+    reg_res = gate.check_ast_inference_isolation(root=syn, strict=True)
+    assert reg_res.passed is True
+    assert "train/compact_dagger_ablation.py:CompactLinearDAggerPolicy" in reg_res.metrics["policy_classes_checked"]
+    assert "train/qwen15b_dpo_dagger.py:Qwen15BDpoPolicy" in reg_res.metrics["policy_classes_checked"]
+    clean_ablation.unlink()
+    clean_dpo.unlink()
 
     leak_snippets = [
         (

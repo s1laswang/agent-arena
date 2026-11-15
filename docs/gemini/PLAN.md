@@ -5,6 +5,16 @@ These files live in `docs/gemini/` (not `docs/PLAN.md`) so they never conflict w
 
 ## Questions for Silas
 
+**NEW, Sat 22:45 (after the independent review, about 65 → 78 if these land):**
+- **A. Default branch.** GitHub's default is `main` (14:44, with no Gemini doc). Before 10:00, either fast-forward `main` to the final justSilas tip or set the default branch to justSilas, so judges land on README → docs/gemini/SUBMISSION.md.
+- **B. Launch 2 sessions** (briefs in docs/gemini/sessions/):
+  - `atlas-blind.md` (about 3 h, about $15): fixes the atlas circularity, so it is worth about +5.
+  - `ladder.md`: more hard seeds.
+
+  Swarm and dashboard sessions are optional.
+- **C. The 2-minute video** (docs/gemini/VIDEO-2MIN.md has the script, plus Gemini TTS narration and a Live commentator clip). Who records it, and by when? Proposal: Momin screen-records Sun 06:00–08:00.
+- **D. Ivar's validation sheet:** the human-agreement claim has been removed. If Ivar fills docs/gemini/validation.md by 05:00, we add the score back.
+
 1. **Gemini gateway on the FR8 login node.** FR8 compute nodes have no internet (checked again 14:00, curl rc=6); the login node does. To fan Gemini episodes out over the cluster, I want to run one light process on the login node: an asyncio relay (about 1% CPU, one port, bound to the cluster-internal interface) that forwards to `generativelanguage.googleapis.com`, holds the key, rate-limits and logs usage. Compute nodes never see the key. **Default if you don't answer by 16:00:** I run it on the login node with `nice -n 19` and a hard `--time`-style self-exit after 8 h. The fallback is the same relay on the Mac, exposed to the cluster with `ssh -R`, which only works while the Mac is awake.
 2. **Merge path (agreed with the Arena CEO, 15:00):** PR 1 (code plus first results) by **Sat 19:30**, PR 2 (results and docs only) by Sun 01:30. ~~Original proposal: at 05:00 Sunday I open a PR from `gemini-track` into `justSilas`. It is additive: a new package `canary/gemini/`, new `docs/gemini/`, new tests and new Makefile targets, with no edits to env, reward or reproduce. The AfterQuery CEO merges it into `main`.~~
 3. **Which project is the Gemini entry?** I chose **Canary** (agent-arena), see below. Override only if you strongly prefer another.
@@ -16,10 +26,14 @@ These files live in `docs/gemini/` (not `docs/PLAN.md`) so they never conflict w
    - I will not touch `~/momin/fleet`, `fr8/*`, `momin` or `sleeper/*`. I read them only.
 5. **How do the fleet's compute-node jobs reach Gemini?** Our compute-node test returned no internet. If the fleet already has a proxy, our ladder and swarm use the same route, and our gateway stays local and only does record/replay.
 
+6. **ElevenLabs:** not requested for the Gemini entry. The judges reward Gemini being essential, so the demo voice is Gemini TTS (gemini-3.8-flash-tts) and the live commentator is the Gemini Live API (gemini-3.8-live), both already working. Using another vendor's voice here would weaken the "why Gemini" story. ElevenLabs fits the Meta glasses entry much better.
+
+7. **Which project(s) go to the DeepMind Gemini track?** It is a stackable tech challenge, and its rules don't say whether one team may enter several projects. **HoldUp (Meta glasses)** has a strong, very visual Gemini story: Live native audio with mid-stream tool calls, schema-constrained multimodal extraction, spatial box_2d grounding, and speculative verify cutting question → first audio from 5.8 s to 0.8–1.8 s. **Canary Lab** has the depth and rigour story. **Recommendation:** submit Canary Lab as the team's Gemini entry. If the platform allows one Gemini submission per project, also tag HoldUp. If only one is allowed, Canary Lab, unless you prefer the live-demo appeal of HoldUp. Please check the platform's form or ask at the DeepMind booth.
+
 ## Decision: the Gemini entry is Canary, extended into "Canary Lab"
 
 Candidates compared:
-- **Canary / agent-arena (chosen).** It already has a real benchmark: a Bayesian reference solver, frozen tiers, reward integrity work and reproducible numbers. Gemini is already the frontier agent under test (gemini-4-carbon is at about the solver on medium and 56–79% of the solver on hard). This is the only candidate where Gemini can be the agent, the adversary, the auditor and the analyst at once, with numbers to show for it.
+- **Canary / agent-arena (chosen).** It already has a real benchmark: a Bayesian reference solver, frozen tiers, reward integrity work and reproducible numbers. Gemini is already the frontier agent under test (gemini-4-carbon was measured at about the solver on medium and 56–79% of it on hard early on Saturday. The later v1.4 bake-off (n=10 per tier) shows parity, so we make no frontier-gap claim). This is the only candidate where Gemini can be the agent, the adversary, the auditor and the analyst at once, with numbers to show for it.
 - **Meta glasses.** Strong for Gemini Live/multimodal, but that is the Meta CEO's product and it would split our focus. I advise them through the playbook.
 - **Valio Aimo.** Function calling plus catalog matching. It is solid, but judges see that pattern often.
 
@@ -63,7 +77,7 @@ Already on `justSilas` (the AfterQuery team owns these, and we credit them in th
 
 ## Demo script (3 min video, 10 min live)
 
-1. **0:00 Hook.** "Gemini 4 Carbon catches the mole as well as a Bayesian solver on medium. On hard it falls to about 60%. Why?" Show the browser game with one Gemini episode replayed and Gemini TTS commentary.
+1. **0:00 Hook.** (Revised Sat 22:00 after the v1.4 bake-off showed parity, not a frontier gap.) "One mole, one accusation. Gemini plays, explains and attacks its own benchmark." The Live commentator clip plays over a Gemini episode replay. The final cut is docs/gemini/VIDEO-2MIN.md.
 2. **0:30 Ladder.** The heatmap and curve: score vs thinking level for 6 Gemini models. Then the cost frontier: "3.8-flash-high gets X% of carbon's score for Y% of the cost."
 3. **1:15 Atlas.** "Gemini read all N trajectories, about 3M tokens across the cached corpus, in one sitting." It shows the top 3 failure modes with verified quotes and regret, a belief-chart thumbnail, and the human agreement score.
 4. **2:00 Swarm.** "Fifty Gemini attackers read our whole codebase and tried to break the reward." Show the scoreboard: attempts, best non-solver score, regression tests written.
@@ -88,6 +102,27 @@ Already on `justSilas` (the AfterQuery team owns these, and we credit them in th
 - The gemini-4-carbon **default-thinking** headline (n≥30 per tier) belongs to their measurement engineer (`justSilas-gemini`). Our ladder covers the other models and explicit thinking levels, reuses their runners, and runs paired with the solver on the same v1.4 dev seeds.
 - The atlas and the swarm are ours. Exploits go to the Arena CEO immediately, with a ledger-verified repro.
 - The gateway runs only when FR8 actually needs Gemini. It is token-gated, keeps the key out of world-readable files and command lines, and has a hard stop.
+
+## Scoring checklist (official DeepMind criteria, JUDGING.md, read Sat 19:10)
+There is no weighted rubric. Judges want a "meaningful, innovative, technically impressive use of Gemini, beyond simply adding an LLM", and the write-up must answer 4 questions. Overall winner: peer review picks 5, then a grand jury. A clear 3-minute story matters as much as depth.
+
+| # | Criterion | Our evidence (committed file) | Status |
+|---|---|---|---|
+| Q1 | Problem and why it matters | SUBMISSION.md §1: agents doing irreversible, budgeted decisions; benchmarks give one number with no "why" | ✅ draft v1 |
+| Q2 | How Gemini is integrated | SUBMISSION.md §2 table: 6 roles × named API capabilities; one ledger row per call (dashboard: 11k+ calls) | ✅ draft v1; refresh numbers at 05:00 |
+| Q3 | Innovative or technically impressive | Thinking-to-competence ladder (results/gemini/ladder.md); 793k-token one-cache atlas with 98% verified quotes (atlas.md); self-auditing red team with positive control (swarm_control.md); keyless replay of Gemini runs (`make lab-replay`) | ✅ v1; ladder needs more seeds per cell |
+| Q4 | Why Gemini is essential | 1M context (whole corpus, whole repo), thinking levels on one family (a controlled experiment), caching economics, multimodal charts, embeddings, TTS and Live, all on one API | ✅ v1; add measured cache saving (204M of 251M input tokens cached) |
+| D1 | "Beyond adding an LLM": Gemini does work no single prompt could | Atlas tags 404 decisions and explains 61% of regret; swarm runs 100 ledger-verified attacks (4 waves); ladder runs 134+ paired episodes | ✅ |
+| D2 | Breadth of Gemini API surface, used for real | function calling, thinking levels, thought signatures, structured output, explicit and implicit caching, embeddings, multimodal input, TTS, Live API, count_tokens | ✅ all used in committed runs. The Batch API was attempted, but every request on our key returned "resource exhausted" (job reported SUCCEEDED); we claim no Batch use |
+| D3 | Rigor and honesty (credibility with technical judges) | Code-verified quotes, solver-computed regret, paired CIs, human validation sheet, positive control, infra-invalid episodes excluded | ⏳ human agreement pending (Ivar) |
+| D4 | Demo lands in 3 minutes | VIDEO.md storyboard plus Gemini TTS narration plus Live commentator clip; dashboard screenshots | ⏳ final cut Sun 08:00 |
+| D5 | Reproducible | `make reproduce` (env), `make lab-replay` (Gemini runs keyless), `make lab-dashboard` | ✅ |
+
+**Optimisations from the rubric:**
+1. Lead the video and the write-up with ONE striking finding: "premature accusation is 61% of all lost value across GPT, Grok and Gemini, and thinking cuts it", then the cost result (3.5-flash at solver level on hard for about 30% of carbon-high's cost).
+2. Every Gemini capability claim links to a committed run, labelled with model id and commit (ROLES.md, PLAN-95 F).
+3. Keep honesty visible (small-n CIs, the positive control): technical judges reward it.
+4. Before 06:00, the ladder needs at least 6 seeds in the headline cells (3.5-flash medium/high and 3.8-flash low/high on both tiers).
 
 ## Fleet coordination (added 14:55 after FLEET-CONTEXT.md)
 - **`sleeper/*` and `momin`** are "The Sleeper", a different environment with its own analyst (`agents/analyst.py`), exploiter (`redteam/gemini_exploiter.py`) and dashboard. Under docs/IDEAS.md its best parts are folded into Canary. Our Canary Lab modules target Canary and don't duplicate it. The submission credits both. If Sleeper parts merge into Canary with Gemini runs, our ladder, atlas and dashboard can read those runs.

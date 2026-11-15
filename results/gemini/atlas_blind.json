@@ -1,0 +1,527 @@
+{
+ "generated_at": "2026-11-14T22:59:16+0200",
+ "git_sha": "aed53f2",
+ "ledger_run_ids": [
+  "atlas-20261114-223741",
+  "atlas-20261114-224929"
+ ],
+ "model": "gemini-3.8-flash",
+ "model_version": "gemini-3.8-flash",
+ "blind": true,
+ "blind_pack": "tool calls, tool results as the agent saw them, the agent's own words, final outcome; no regret, tags, solver beliefs, true mole or solver scores (tests/test_gemini_lab_atlas.py)",
+ "corpus": {
+  "episodes": 153,
+  "tokens": 751088,
+  "cache_tokens": 751211,
+  "sha256": "83aaddc9d003ba277b4a6ef08d057881225265e366d822521f69dfedb82c73f4"
+ },
+ "summary": "Analysis of canary investigation runs reveals recurring strategic and operational failure modes that cost agents substantial company value or result in incorrect accusations. Primary drivers of failure include over-relying on framed access logs and decoys, treating imperfect canary variant fingerprints as absolute ground truth, burning daily action budgets on low-signal interviews, passively waiting for delayed leaks until company value is depleted, and executing malformed tool calls that trigger validation errors.",
+ "modes": [
+  {
+   "id": "overweighting_noisy_logs_and_framing",
+   "name": "Over-relying on access log framing and decoy noise",
+   "description": "Agents treat after-hours access counts and high-volume access logs as strong signals of guilt, falling victim to decoy framing mechanics and tie-breaking against innocent employees instead of relying on ground-truth document intersection or clean canary signals.",
+   "why": "Agents assume after-hours activity is an unambiguous indicator of mole behavior, rationalizing accusations based on small discrepancies in access frequency while failing to account for intentional framing of innocent colleagues.",
+   "examples": [
+    {
+     "mode": "overweighting_noisy_logs_and_framing",
+     "episode": "g4carbon.in.v14.h6",
+     "t": 150,
+     "quote": "Six after-hours accesses compared to only eight daytime accesses, a staggering 42.9% after-hours rate.",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    },
+    {
+     "mode": "overweighting_noisy_logs_and_framing",
+     "episode": "gpt5.5.co.v12.h1",
+     "t": 84,
+     "quote": "inside that A group `e06` is the one with an after-hours access to `c4` on the very day it leaked.",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    },
+    {
+     "mode": "overweighting_noisy_logs_and_framing",
+     "episode": "gpt5.5.in.v13.m0",
+     "t": 52,
+     "quote": "within that pool e02 is the only person with a repeated after-hours trail across the leaked docs and planted canaries.",
+     "verified": false,
+     "step_verified": false,
+     "empty": false
+    },
+    {
+     "mode": "overweighting_noisy_logs_and_framing",
+     "episode": "gpt5.5.in.v13.m4",
+     "t": 89,
+     "quote": "The strongest remaining case is `e07`: Legal department intersection, `e03` as decoy, highest non-decoy access volume, highest after-hours count among remaining suspects",
+     "verified": false,
+     "step_verified": false,
+     "empty": false
+    },
+    {
+     "mode": "overweighting_noisy_logs_and_framing",
+     "episode": "g4carbon.in.v14.h6",
+     "t": 66,
+     "quote": "That `e18` is looking *very* suspicious. Two after-hours accesses on Day 6, plus one on Day 3? That's three out of a total six!",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    },
+    {
+     "mode": "overweighting_noisy_logs_and_framing",
+     "episode": "gpt5.5.co.v13.h8",
+     "t": 70,
+     "quote": "The decisive piece is not a single after-hours access; it\u2019s the repeated pattern for `e13` across the narrowed Legal-only candidate set",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    }
+   ],
+   "cited_steps": 13,
+   "invalid_citations": 0,
+   "precision_high_regret": 0.6923,
+   "precision_tagged": 0.6154,
+   "regret": 5.9108,
+   "top_tag": "premature_accusation",
+   "top_tag_share": 0.6154,
+   "novel": false
+  },
+  {
+   "id": "canary_fingerprint_misattribution",
+   "name": "Treating noisy canary fingerprints as infallible ground truth",
+   "description": "In tiers where canary fingerprint accuracy is 95% rather than 100%, agents treat surfaced variant labels as deterministic proof, prematurely eliminating the true mole and zeroing out their posterior probability upon a single variant misattribution.",
+   "why": "Agents ignore or discount the 5% error rate in canary fingerprints, calculating posterior probabilities that collapse the hypothesis space prematurely and falsely concluding guilt with purported mathematical certainty.",
+   "examples": [
+    {
+     "mode": "canary_fingerprint_misattribution",
+     "episode": "gpt5.5.co.v12.h0",
+     "t": 84,
+     "quote": "Their intersection is `e05`; allowing for the 5% fingerprint error, `e05` is now far above the accusation threshold.",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    },
+    {
+     "mode": "canary_fingerprint_misattribution",
+     "episode": "g4carbon.op.v14.h1",
+     "t": 177,
+     "quote": "Assigned `e39` uniquely to `v1` and `e33` to `v2`; `v1` surfaced on Day 19.",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    },
+    {
+     "mode": "canary_fingerprint_misattribution",
+     "episode": "gpt5.5.co.v12.h1",
+     "t": 33,
+     "quote": "With fingerprint accuracy 95%, the main line is now `e01,e04,e06,e07,e08,e11,e12`; I\u2019m splitting just those seven next",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    },
+    {
+     "mode": "canary_fingerprint_misattribution",
+     "episode": "gpt5.5.co.v12.h0",
+     "t": 77,
+     "quote": "The canary finally hit: `c6` surfaced with variant `B`, which points hard at `e05` or `e25` over `e02`/`e22`.",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    },
+    {
+     "mode": "canary_fingerprint_misattribution",
+     "episode": "g4carbon.in.v14.h0",
+     "t": 64,
+     "quote": "I've got the six primary suspects in my sights: `e02, e38` are looking strong at ~45% each, with `e05, e25, e22, e31` holding about 10% combined",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    }
+   ],
+   "cited_steps": 7,
+   "invalid_citations": 0,
+   "precision_high_regret": 0.2857,
+   "precision_tagged": 0.1429,
+   "regret": 0.1998,
+   "top_tag": "premature_accusation",
+   "top_tag_share": 0.1429,
+   "novel": true
+  },
+  {
+   "id": "over_interviewing_and_action_exhaustion",
+   "name": "Action exhaustion via low-information interviews",
+   "description": "Agents consume their daily action quotas by running repetitive interviews that yield minimal Bayesian leverage, hitting the daily action limit and blocking critical investigations or canary deployments.",
+   "why": "Agents treat interviews as free information-gathering tools, underestimating the opportunity cost of daily action caps and repeatedly encountering daily action limit errors.",
+   "examples": [
+    {
+     "mode": "over_interviewing_and_action_exhaustion",
+     "episode": "g4carbon.in.v14.h1",
+     "t": 6,
+     "quote": "Burning a significant number of tool calls to screen 40 random in",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    },
+    {
+     "mode": "over_interviewing_and_action_exhaustion",
+     "episode": "g4carbon.in.v14.h2",
+     "t": 7,
+     "quote": "it appears we have ample capacity, even if we burn actions every day on `interview`. This is huge!",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    },
+    {
+     "mode": "over_interviewing_and_action_exhaustion",
+     "episode": "g3.5flash.op.v14.h0",
+     "t": 96,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "over_interviewing_and_action_exhaustion",
+     "episode": "g3.5flash.op.v14.h2",
+     "t": 75,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "over_interviewing_and_action_exhaustion",
+     "episode": "g3.5flash.op.v14.h8",
+     "t": 37,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "over_interviewing_and_action_exhaustion",
+     "episode": "gpt5.5.in.v12.h11",
+     "t": 33,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "over_interviewing_and_action_exhaustion",
+     "episode": "gpt5.5.co.v13.h8",
+     "t": 68,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    }
+   ],
+   "cited_steps": 29,
+   "invalid_citations": 1,
+   "precision_high_regret": 0.1379,
+   "precision_tagged": 0.8276,
+   "regret": 0.0068,
+   "top_tag": "budget_waste",
+   "top_tag_share": 0.8276,
+   "novel": false
+  },
+  {
+   "id": "passive_delay_value_depletion",
+   "name": "Value bleed from excessive delay and horizon timeout",
+   "description": "Agents repeatedly advance days without taking decisive trapping or restriction actions, allowing recurring leaks to severely degrade company value V, sometimes reaching the final day horizon without making any accusation.",
+   "why": "Agents over-prioritize certainty over expected value, failing to recognize that waiting multiple days for delayed leak confirmation costs far more company value than acting on high-probability posteriors.",
+   "examples": [
+    {
+     "mode": "passive_delay_value_depletion",
+     "episode": "grok.re.v12.h900000",
+     "t": 90,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "passive_delay_value_depletion",
+     "episode": "g4carbon.in.v14.h5",
+     "t": 182,
+     "quote": "Time to advance to Day 19 with the `advance_day` function. This is critical. Day 19 is where the rubber meets the road.",
+     "verified": true,
+     "step_verified": true,
+     "empty": false
+    },
+    {
+     "mode": "passive_delay_value_depletion",
+     "episode": "gpt5.5.co.v12.h2",
+     "t": 121,
+     "quote": "I\u2019m going to give the separator one last chance instead of accusing on a merely good hunch.",
+     "verified": false,
+     "step_verified": false,
+     "empty": false
+    },
+    {
+     "mode": "passive_delay_value_depletion",
+     "episode": "g3.5flash.op.v14.h0",
+     "t": 87,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "passive_delay_value_depletion",
+     "episode": "g4carbon.op.v14.h3",
+     "t": 115,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "passive_delay_value_depletion",
+     "episode": "g4carbon.op.v14.h5",
+     "t": 185,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    }
+   ],
+   "cited_steps": 30,
+   "invalid_citations": 0,
+   "precision_high_regret": 0.0,
+   "precision_tagged": 0.0,
+   "regret": 0.0,
+   "top_tag": null,
+   "top_tag_share": 0.0,
+   "novel": true
+  },
+  {
+   "id": "invalid_tool_syntax_and_parameter_errors",
+   "name": "Malformed tool calls and parameter schema violations",
+   "description": "Agents attempt invalid tool calls\u2014including empty search strings, whitespace-only queries, invalid canary syntax exceeding variant limits, or calling non-existent system tools like bash\u2014wasting opportunities and sometimes causing fatal tool execution crashes.",
+   "why": "Agents hallucinate tool capabilities outside the Canary environment or fail to validate arguments against schema constraints such as maximum variant limits and non-whitespace string requirements.",
+   "examples": [
+    {
+     "mode": "invalid_tool_syntax_and_parameter_errors",
+     "episode": "g4carbon.in.v14.h0",
+     "t": 3,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "invalid_tool_syntax_and_parameter_errors",
+     "episode": "g3.5flash.op.v14.h3",
+     "t": 14,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "invalid_tool_syntax_and_parameter_errors",
+     "episode": "g4carbon.in.v14.h2",
+     "t": 69,
+     "quote": "I will run a Python script to parse the access log output file and compute the after-hours access statistics for all Finance department employees.",
+     "verified": false,
+     "step_verified": false,
+     "empty": false
+    },
+    {
+     "mode": "invalid_tool_syntax_and_parameter_errors",
+     "episode": "g4carbon.op.v14.h0",
+     "t": 57,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "invalid_tool_syntax_and_parameter_errors",
+     "episode": "gpt5.5.in.v12.h8",
+     "t": 18,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "invalid_tool_syntax_and_parameter_errors",
+     "episode": "g4carbon.in.v14.h7",
+     "t": 2,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    },
+    {
+     "mode": "invalid_tool_syntax_and_parameter_errors",
+     "episode": "gpt5.5.in.v12.m1",
+     "t": 36,
+     "quote": "",
+     "verified": false,
+     "step_verified": false,
+     "empty": true
+    }
+   ],
+   "cited_steps": 49,
+   "invalid_citations": 0,
+   "precision_high_regret": 0.0204,
+   "precision_tagged": 0.9184,
+   "regret": 0.0189,
+   "top_tag": "budget_waste",
+   "top_tag_share": 0.9184,
+   "novel": false
+  }
+ ],
+ "recovery": {
+  "tolerance_steps": 1,
+  "tags": {
+   "premature_accusation": {
+    "steps": 25,
+    "high_regret_steps": 25,
+    "recall": 0.44,
+    "recall_high_regret": 0.44,
+    "best_mode": "overweighting_noisy_logs_and_framing",
+    "best_mode_recall": 0.32,
+    "regret": 13.7243
+   },
+   "ignored_delay": {
+    "steps": 2,
+    "high_regret_steps": 2,
+    "recall": 1.0,
+    "recall_high_regret": 1.0,
+    "best_mode": "overweighting_noisy_logs_and_framing",
+    "best_mode_recall": 1.0,
+    "regret": 1.6094
+   },
+   "uninformative_canary": {
+    "steps": 67,
+    "high_regret_steps": 41,
+    "recall": 0.0,
+    "recall_high_regret": 0.0,
+    "best_mode": null,
+    "best_mode_recall": 0.0,
+    "regret": 1.0147
+   },
+   "over_restriction": {
+    "steps": 5,
+    "high_regret_steps": 5,
+    "recall": 0.0,
+    "recall_high_regret": 0.0,
+    "best_mode": null,
+    "best_mode_recall": 0.0,
+    "regret": 0.3676
+   },
+   "budget_waste": {
+    "steps": 152,
+    "high_regret_steps": 0,
+    "recall": 0.4605,
+    "recall_high_regret": null,
+    "best_mode": "invalid_tool_syntax_and_parameter_errors",
+    "best_mode_recall": 0.2895,
+    "regret": 0.0
+   }
+  },
+  "modes": {
+   "overweighting_noisy_logs_and_framing": {
+    "cited_steps": 13,
+    "precision_high_regret": 0.6923,
+    "precision_tagged": 0.6154,
+    "regret": 5.9108,
+    "top_tag": "premature_accusation",
+    "top_tag_share": 0.6154,
+    "novel": false
+   },
+   "canary_fingerprint_misattribution": {
+    "cited_steps": 7,
+    "precision_high_regret": 0.2857,
+    "precision_tagged": 0.1429,
+    "regret": 0.1998,
+    "top_tag": "premature_accusation",
+    "top_tag_share": 0.1429,
+    "novel": true
+   },
+   "over_interviewing_and_action_exhaustion": {
+    "cited_steps": 29,
+    "precision_high_regret": 0.1379,
+    "precision_tagged": 0.8276,
+    "regret": 0.0068,
+    "top_tag": "budget_waste",
+    "top_tag_share": 0.8276,
+    "novel": false
+   },
+   "passive_delay_value_depletion": {
+    "cited_steps": 30,
+    "precision_high_regret": 0.0,
+    "precision_tagged": 0.0,
+    "regret": 0.0,
+    "top_tag": null,
+    "top_tag_share": 0.0,
+    "novel": true
+   },
+   "invalid_tool_syntax_and_parameter_errors": {
+    "cited_steps": 49,
+    "precision_high_regret": 0.0204,
+    "precision_tagged": 0.9184,
+    "regret": 0.0189,
+    "top_tag": "budget_waste",
+    "top_tag_share": 0.9184,
+    "novel": false
+   }
+  },
+  "cited_steps": 127,
+  "precision_high_regret": 0.1181,
+  "precision_tagged": 0.6063,
+  "regret_share_covered": 0.2056,
+  "high_regret_steps": 404,
+  "high_regret_recall": 0.0371,
+  "tags_recovered": [
+   "premature_accusation",
+   "ignored_delay",
+   "budget_waste"
+  ],
+  "n_tags": 5,
+  "novel_modes": [
+   "canary_fingerprint_misattribution",
+   "passive_delay_value_depletion"
+  ]
+ },
+ "recovery_pass1_by_mode_only": {
+  "tags_recovered": [
+   "premature_accusation",
+   "ignored_delay",
+   "budget_waste"
+  ],
+  "precision_high_regret": 0.1129,
+  "regret_share_covered": 0.205,
+  "high_regret_recall": 0.0347,
+  "cited_steps": 124
+ },
+ "quotes": {
+  "checked": 16,
+  "verified_agent_text": 12,
+  "verified_at_step": 12,
+  "empty": 15,
+  "rule": "a quote counts only if it appears verbatim in the agent's own words"
+ },
+ "errors": [],
+ "replay": false,
+ "spend": {
+  "calls": 14,
+  "replayed": 8,
+  "in": 10524146,
+  "out": 3167,
+  "thinking": 378745,
+  "cached": 9765743,
+  "cost_usd": 2.7334,
+  "by_kind": {
+   "cache": 1,
+   "generate": 13
+  }
+ },
+ "elapsed_s": 598.7
+}

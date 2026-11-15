@@ -62,14 +62,57 @@ def say_score(x: float) -> str:
 
 
 # ------------------------------------------------------------- placeholder values
+def usage_summary(results_dir: Path, ledger: list) -> dict | None:
+    """The dashboard's usage summary: same ledger sources, same repricing (ladder.json prices), same summarize()."""
+    if list(ledger) == ["committed"]:
+        ledger = dash.committed_ledgers(results_dir)
+    elif list(ledger) == ["auto"]:
+        ledger = dash.discover_ledgers()
+    rows = dash.load_ledger(ledger)
+    if not rows:
+        return None
+    lad = dash.load_json(Path(results_dir) / "ladder.json") or {}
+    dash.reprice(rows, lad.get("prices_usd_per_1m") if isinstance(lad.get("prices_usd_per_1m"), dict) else None)
+    return dash.summarize(rows)
+
+
+def say_usd(x: float) -> str:
+    return f"{round(float(x))} dollars"
+
+
+FRONTIER_MIN_N = 8  # a spoken ladder claim needs at least this many paired episodes in the cell
+
+
+def frontier_values(cells: list[dict], tier: str) -> dict[str, str]:
+    """The best-scoring ladder cell with n >= FRONTIER_MIN_N on `tier`, with its CI, against the cost per episode of
+    gemini-4-carbon's largest-n cell on the same tier. Small-n cells are never spoken."""
+    big = [c for c in cells if c["tier"] == tier and int(c.get("n") or 0) >= FRONTIER_MIN_N
+           and (c.get("cost_usd_per_episode") or 0) > 0 and c["model"] != "gemini-4-carbon"]
+    ref = [c for c in cells if c["tier"] == tier and c["model"] == "gemini-4-carbon" and (c.get("cost_usd_per_episode") or 0) > 0]
+    if not big or not ref:
+        return {}
+    f = max(big, key=lambda c: c["pct_solver"])
+    r = max(ref, key=lambda c: int(c.get("n") or 0))
+    served = [m for m in (f.get("model_versions") or []) if m and m != f["model"]]
+    out = {"frontier_model": say_model(f["model"]) + (f", served as {say_model(served[0])}," if len(served) == 1 else ""),
+           "frontier_level": str(f["level"]), "frontier_tier": tier, "frontier_n": str(int(f["n"])),
+           "frontier_pct": say_pct(f["pct_solver"]),
+           "frontier_cost_share": say_pct(f["cost_usd_per_episode"] / r["cost_usd_per_episode"]),
+           "frontier_ref": say_model(r["model"]) + (f" at {r['level']}" if r.get("level") not in (None, "", "default") else " at its default"),
+           "frontier_ref_n": str(int(r.get("n") or 0))}
+    if f.get("ratio_lo") is not None and f.get("ratio_hi") is not None:
+        out["frontier_ci"] = f"{say_pct(f['ratio_lo'])} to {say_pct(f['ratio_hi'])}"
+    return out
+
+
 def values(results_dir: Path, ledger: list) -> dict[str, str]:
     v: dict[str, str] = {}
-    rows = dash.load_ledger(ledger)
-    if rows:
-        s = dash.summarize(rows)
+    s = usage_summary(results_dir, ledger)
+    if s:
         t = s["totals"]
         v.update(calls=f"{t['calls']:,}", tokens=say_tokens(t["tokens"]), thinking=say_tokens(t["thinking"]),
-                 cache_share=say_pct(s["cache"]["hit_share"]), models=str(t["n_models"]), features=str(t["n_features"]))
+                 cache_share=say_pct(s["cache"]["hit_share"]), models=str(t["n_models"]), features=str(t["n_features"]),
+                 cost=say_usd(t["cost_usd"]))
     R = dash.load_results(results_dir)
     L = R.get("ladder")
     if L and (L.get("rows") or L.get("cells")):
@@ -106,6 +149,7 @@ def values(results_dir: Path, ledger: list) -> dict[str, str]:
                              value_pct_of_best=say_pct(val["pct_solver"] / best["pct_solver"]),
                              value_cost_share=say_pct(val["cost_usd_per_episode"] / best["cost_usd_per_episode"]),
                              best_model=say_model(best["model"]), best_level=str(best["level"]))
+            v.update(frontier_values(cells, tier))
     A = R.get("atlas")
     if A and A.get("modes"):
         C = A.get("corpus") or {}
@@ -123,6 +167,16 @@ def values(results_dir: Path, ledger: list) -> dict[str, str]:
             rate = ha["agree"] / ha["total"]
         if rate is not None:
             v["agreement"] = say_pct(rate)
+    B = dash.slim_atlas_blind(dash.load_json(results_dir / "atlas_blind.json"))
+    if B:
+        v["blind_recovered"] = str(B["tags_recovered"])
+        if B.get("n_tags") is not None:
+            v["blind_tags"] = str(B["n_tags"])
+        v["blind_new"] = str(len(B.get("novel") or []))
+        if B.get("regret_share_covered") is not None:
+            v["blind_regret_covered"] = say_pct(B["regret_share_covered"])
+        if B.get("episodes") is not None:
+            v["blind_episodes"] = f"{int(B['episodes']):,}"
     S = R.get("swarm")
     if S and S.get("attempts"):
         at = S["attempts"]
@@ -145,6 +199,15 @@ def values(results_dir: Path, ledger: list) -> dict[str, str]:
         else:
             v["exploit_sentence"] = (f"{ex} found a real exploit." +
                                      (f" Each one is now a regression test." if tw and tw >= ex else ""))
+        # the dashboard's reading (slim_swarm): best score the evidence can't justify, skipping flags overturned on review
+        if S.get("best_unjustified") is not None:
+            v["swarm_best_unjustified"] = say_score(float(S["best_unjustified"]))
+            v["swarm_best_tier"] = str(S.get("best_unjustified_tier") or "")
+            if S.get("best_unjustified_solver") is not None:
+                v["swarm_best_solver"] = say_score(float(S["best_unjustified_solver"]))
+        pc = S.get("positive_control") or {}
+        if pc.get("attempts"):
+            v["pc_found"], v["pc_attempts"] = str(pc.get("attackers_found")), str(pc["attempts"])
     return v
 
 
@@ -256,7 +319,8 @@ def main(argv=None) -> int:
     ap.add_argument("--video", default=str(ROOT / "docs" / "gemini" / "VIDEO.md"))
     ap.add_argument("--out", default=str(ROOT / "docs" / "gemini" / "assets" / "narration"))
     ap.add_argument("--results", default=str(dash.DEFAULT_RESULTS))
-    ap.add_argument("--ledger", nargs="*", default=[str(dash.DEFAULT_LEDGER)])
+    ap.add_argument("--ledger", nargs="*", default=["committed"],
+                    help="ledger files/dirs, or 'committed' (default: results/gemini ledgers only) or 'auto'")
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--voice", default=DEFAULT_VOICE)
     ap.add_argument("--voices", default="", help="comma list: audition voices, writes <id>.<voice>.wav")

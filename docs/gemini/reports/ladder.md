@@ -2,6 +2,94 @@
 
 Branch `gemini-ladder`. Newest entry first.
 
+## Sun 02:35 (`date`: Sun Nov 15 02:35 EET 2026): 20-seed headline cells; headline wording tightened; carbon stopped
+
+- **Phase 5 (CEO 00:45), dev seeds 10–19:**
+  - Launched at flash 6 + carbon 6. The 24/32 launch was denied by this session's permission classifier (the
+    16-slot rule).
+  - Flash finished: 3.5-flash (served as 3.6-flash) medium/high and 3.8-flash high are at n=20 on hard AND medium.
+- **Hard at n=20:**
+  - 3.6-flash medium 78% [28, 151], high 71% [11, 158]; 35/40 correct; $0.42–0.43 per episode.
+  - Seeds 10–19 brought 5 wrong accusations (mean 0.17 / 0.04 vs 0.56 / 0.63 on 0–9).
+  - `headline_verb` now requires both lower bounds ≥ 80% for "matches". Otherwise it names the wide CIs (tested).
+- **Carbon-high extension stopped** at 02:30 (exact PIDs). In 100 min each episode reached only ~25 calls, at
+  162 s per call, with one call at 1,127 s and 20 min of silence: the shared carbon key is saturated. Carbon-high
+  stays at n=10 (106% [94, 126], $1.93). The headline states that the n and the seed sets differ.
+- **Gemma:**
+  - 31b: n=4 valid (38% [−155, 96]); 429s are infra-invalid.
+  - 26b: 0 valid, since every attempt hits ReadTimeout on the hosted API; no row.
+  - Smoke stack stopped (exact PIDs). Main Gemma pid 81651 runs until 04:45.
+- Refresh 815de818 (417 valid episodes, $181.17) now commits `frontier*.png` + `frontier.json`. `refresh.sh`
+  stages `results/gemini/frontier*`.
+
+## Sun 00:09 (`date`: Sun Nov 15 00:09 EET 2026): Gemini grid complete; Gemma rungs running; frontier chart
+
+- **Gemini grid finished by itself**, no kills:
+  - g4 finished 100/100 at 23:57; c2 finished at 23:14.
+  - Results: 320/320 ladder cells at 10 seeds each, 0 infra-invalid.
+  - Refresh 32137a5c: 357 valid episodes, 34 cells, $147.98 list price. On hard, carbon-high is 106% [94, 126]
+    at $1.93 per episode.
+- **Gemma 4 (hosted Gemma via the Gemini API, not self-hosted, not Verda):**
+  - Probe: native function calling works on both models (1 ledgered call each).
+  - Smoke: gemma-4-31b-it hard seed 0 made a correct accusation (0.63, 18 calls). Seed 1 hit
+    `429 RESOURCE_EXHAUSTED`, which is classed infra-invalid and re-queued.
+  - Gemma quota on our key is tight, so hard seeds 2–9 run at 1 episode per model (pid 81651).
+  - Run dir: `gemma-v14`; recordings go to `data/gemini/replay-ladder-gemma`.
+  - Section: "Open-weight Gemma" in ladder.md via `ladder_report --gemma-runs`, which `bin/refresh.sh` adds
+    automatically. No list price, so no $/ep.
+  - Code fingerprint 1f370abe vs 06ea9b6a for the Gemini cells. The diff (env.py/rules.py/eval.py from the
+    gemini-track merge) does not touch the hard tier: it adds the hard_rl track text, v1.2 history, and marks
+    crashed episodes invalid.
+- **frontier.png / frontier_medium.png / frontier.json** (CEO's headline chart), embedded in ladder.md:
+  - Axes: % of solver (paired 95% CI) against list-price USD per episode (log).
+  - One line per Gemini model through its thinking levels, the imported carbon default as a hollow diamond, and
+    Gemma in a "no list price" strip.
+  - Title says "competence-per-dollar" because the costs are USD list prices.
+- **Verda/Nemotron:** cancelled by the CEO. The key gate was not met anyway: .env has only cloud client
+  credentials, no inference key.
+
+## Sat 23:16 (`date`: Sat Nov 14 23:16 EET 2026): 00:45 deliverable pushed (78748bc); grid left running for 05:00
+
+- **Adopted, not restarted:** g4 process (ladder pid 62083, argon + carbon, conc 8, carbon ≤ 5) and phase-4 carbon c2
+  (pid 16405, conc 3, carbon ≤ 3). Both ledgers are fresh (≤ 1 min). The flash processes had already finished
+  (flash2 80/80 at 19:06, f3 140/140 at 19:54). Attempts: 310, infra-invalid: 0, so nothing needed re-queuing.
+- **Headline cells, 10/10 paired seeds on both tiers:** 3.5-flash (served as 3.6-flash) medium/high and
+  3.8-flash low/high. Carbon low/high on hard: 8 + 9 (target n ≥ 4 met).
+- **Report** (`results/gemini/ladder.{md,json}` + 4 figures + keyless exports): 350 valid episodes, 34 cells, $144.51
+  list price. The headline now names the served model.
+  - 3.5-flash medium/high on hard: 98% [82, 119] and 109% [90, 139] of the solver, 20/20 correct,
+    $0.33–0.37 per episode against $1.68 for carbon-high.
+  - flash-lite is below 0 in 8/8 cells.
+  - 3.8-flash low → high: medium −2% → 92%; hard 3% → 31% (CIs overlap).
+- **Showcase replay committed** (1889696, 2.5 MB). `lab_replay --only ladder-showcase` reproduces it keyless:
+  REPLAY OK, 6/6 step for step.
+- Tests: 90 passed. Next: `bin/refresh.sh` at 05:00, push, then stop pids 62083/16405 and their gateways.
+
+## Sat 19:01 (`date`: Sat Nov 14 19:00 EET 2026): headline cells on track; compute re-prioritised
+
+- **Headline cells (need ≥ 6 paired seeds on both tiers), finished episodes at 18:57:**
+  - 3.5-flash/medium: 8 + 8.
+  - 3.5-flash/high: 8 + 9, plus 3 running.
+  - 3.8-flash/high: 10 + 10.
+  - 3.8-flash/low: 5 (medium) + 6 (hard). The medium cell gets its 6th+ seeds next, in phase 4.
+- **Carbon low/high on hard:** 2 + 2, with 2 high running. g4c (argon + carbon, carbon ≤ 5) continues.
+- **Phase 4** (armed in `bin/phase4.sh`; it fires when the priority flash process exits, keeping the Mac at 16 and
+  carbon ≤ 8). Both launches are recorded:
+  - (a) 3.8-flash low first, then the rest of the flash grid (3.5-flash minimal/low, flash-lite) at concurrency 3;
+  - (b) a second carbon-only process (low/high, hard first) at concurrency 3.
+- **Headline now generated from the table** (`ladder_report.headline`). The wording is gated on the CIs, for
+  example "matches" only if both CIs contain 100%. It stays correct as seeds land. At 18:47:
+  - 3.5-flash medium/high on hard: 92% [76, 113] and 102% [84, 129], 16/16 correct, $0.34–0.39 per episode
+    against $1.30 for carbon-high;
+  - flash-lite is below 0 in 8/8 cells;
+  - 3.8-flash, low → high: medium −52% → 93% [80, 112]; hard 30% → 17%.
+- **Keyless:** `results/gemini/ladder_episodes.jsonl.gz` and `ladder_ledger.jsonl.gz` (0.65 MB) are committed,
+  and the report regenerates from them with `--runs results/gemini/ladder_episodes.jsonl.gz --ledger
+  results/gemini/ladder_ledger.jsonl.gz` (round-trip test). `bin/refresh.sh` re-exports and commits.
+- **Showcase:** carbon/high/medium/0 is recorded (105 calls); the other 5 cells are running. ETA about 19:45.
+  Committed as `results/gemini/replay-ladder-showcase` when `lab_replay` writes its manifest.
+- **Deadlines:** final report and figures by 00:45; the grid keeps running for the 06:00 refresh.
+
 ## Sat 18:23 (`date`: Sat Nov 14 18:22:05 EET 2026): after the outage, grid relaunched on the priorities, report v1.1 with headline findings
 
 **Outage check (verified):**

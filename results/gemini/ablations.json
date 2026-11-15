@@ -1,0 +1,807 @@
+{
+ "generated_at": "2026-11-15T02:44:46+0200",
+ "thought_signatures": {
+  "cell": {
+   "model": "gemini-3.8-flash",
+   "thinking_level": "medium",
+   "tier": "hard"
+  },
+  "on": {
+   "source": "results/gemini/ladder.json row + ladder_episodes.jsonl.gz + ladder_ledger.jsonl.gz",
+   "valid_episodes": 10,
+   "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+   ],
+   "api_calls": 628,
+   "api_errors": 0,
+   "api_error_rate": 0.0,
+   "api_error_rate_ci95": [
+    0.0,
+    0.0061
+   ],
+   "invalid_tool_calls": 0,
+   "tool_calls": 628,
+   "invalid_tool_call_rate": 0.0,
+   "invalid_tool_call_rate_ci95": [
+    0.0,
+    0.0061
+   ],
+   "invalid_tool_calls_per_episode": {
+    "n": 10,
+    "mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ]
+   },
+   "accuracy": 0.7,
+   "accuracy_ci95": [
+    0.3968,
+    0.8922
+   ],
+   "score": {
+    "n": 10,
+    "mean": 0.079,
+    "ci95": [
+     -0.3872,
+     0.5452
+    ]
+   },
+   "pct_of_solver_same_seeds": 0.1372,
+   "pct_of_solver_ci95": [
+    -0.7143,
+    0.8523
+   ],
+   "solver_same_seeds_mean": 0.576
+  },
+  "off": {
+   "source": "results/gemini/ablations_sig_off/ (ladder --no-thought-signatures, run ablation-sig-off)",
+   "episodes_attempted": 10,
+   "valid_episodes": 0,
+   "infra_invalid_episodes": 10,
+   "api_calls": 20,
+   "api_errors": 10,
+   "api_error_rate": 0.5,
+   "api_error_rate_ci95": [
+    0.2993,
+    0.7007
+   ],
+   "first_call_ok": 10,
+   "second_call_rejected_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+   ],
+   "rejection_rate_of_function_call_turns": 1.0,
+   "rejection_rate_ci95": [
+    0.7225,
+    1.0
+   ],
+   "error_class": "google.genai.errors.ClientError 400 INVALID_ARGUMENT",
+   "error_message": "Function call is missing a thought_signature in functionCall parts. This is required for tools to work correctly, and missing thought_signature may lead to degraded model performance. Additional data, function call `default_api:status` , position 2. Please refer to https://aistudio.google.com/docs/thought-signatures for more details.",
+   "invalid_tool_calls": null,
+   "accuracy": null,
+   "score": null,
+   "pct_of_solver_same_seeds": null,
+   "note": "No episode gets past its first tool result: the 2nd request (the 1st that replays a model function_call) is rejected on every seed, so accuracy/score/% of solver are undefined (not 0). Infra-invalid, never scored. The arm was stopped after the first attempt of all 10 seeds."
+  }
+ },
+ "explicit_cache": {
+  "method": "Per ledger row: paid = canary.llm.pricing.cost(...)['cost_usd_est'] (cached tokens at CACHED_PRICES; models without an entry use 10% of input); counterfactual = 'cost_usd' (all input at the full price). Batch rows at 50%. Explicit-cache storage (per token-hour) is not in the ledger and is not included. Gallery = the atlas-feature runs whose run_id the gallery_cache records.",
+  "atlas": {
+   "calls": 455,
+   "input_tokens": 64359208,
+   "cached_tokens": 54584568,
+   "cached_share": 0.8481,
+   "usd_paid": 21.6,
+   "usd_if_uncached": 58.45,
+   "usd_saved": 36.84,
+   "pct_saved": 63.0
+  },
+  "gallery": {
+   "calls": 9,
+   "input_tokens": 36651,
+   "cached_tokens": 0,
+   "cached_share": 0.0,
+   "usd_paid": 0.12,
+   "usd_if_uncached": 0.12,
+   "usd_saved": 0.0,
+   "pct_saved": 0.0
+  },
+  "atlas_plus_gallery": {
+   "calls": 464,
+   "input_tokens": 64395859,
+   "cached_tokens": 54584568,
+   "cached_share": 0.8476,
+   "usd_paid": 21.72,
+   "usd_if_uncached": 58.56,
+   "usd_saved": 36.84,
+   "pct_saved": 62.9
+  },
+  "programme": {
+   "calls": 29150,
+   "input_tokens": 860488544,
+   "cached_tokens": 744897721,
+   "cached_share": 0.8657,
+   "usd_paid": 214.89,
+   "usd_if_uncached": 893.08,
+   "usd_saved": 678.19,
+   "pct_saved": 75.9
+  },
+  "by_feature": {
+   "atlas": {
+    "calls": 464,
+    "input_tokens": 64395859,
+    "cached_tokens": 54584568,
+    "cached_share": 0.8476,
+    "usd_paid": 21.72,
+    "usd_if_uncached": 58.56,
+    "usd_saved": 36.84,
+    "pct_saved": 62.9
+   },
+   "commentator": {
+    "calls": 17,
+    "input_tokens": 33083,
+    "cached_tokens": 0,
+    "cached_share": 0.0,
+    "usd_paid": 0.0,
+    "usd_if_uncached": 0.0,
+    "usd_saved": 0.0,
+    "pct_saved": null
+   },
+   "gateway-bench": {
+    "calls": 2617,
+    "input_tokens": 85558,
+    "cached_tokens": 0,
+    "cached_share": 0.0,
+    "usd_paid": 0.56,
+    "usd_if_uncached": 0.56,
+    "usd_saved": 0.0,
+    "pct_saved": 0.0
+   },
+   "gateway-smoke": {
+    "calls": 1,
+    "input_tokens": 7,
+    "cached_tokens": 0,
+    "cached_share": 0.0,
+    "usd_paid": 0.0,
+    "usd_if_uncached": 0.0,
+    "usd_saved": 0.0,
+    "pct_saved": null
+   },
+   "ladder": {
+    "calls": 23564,
+    "input_tokens": 756729942,
+    "cached_tokens": 678203501,
+    "cached_share": 0.8962,
+    "usd_paid": 136.67,
+    "usd_if_uncached": 766.5,
+    "usd_saved": 629.83,
+    "pct_saved": 82.2
+   },
+   "ladder-gemma-probe": {
+    "calls": 2,
+    "input_tokens": 194,
+    "cached_tokens": 0,
+    "cached_share": 0.0,
+    "usd_paid": 0.0,
+    "usd_if_uncached": 0.0,
+    "usd_saved": 0.0,
+    "pct_saved": null
+   },
+   "mole": {
+    "calls": 64,
+    "input_tokens": 48117,
+    "cached_tokens": 0,
+    "cached_share": 0.0,
+    "usd_paid": 0.31,
+    "usd_if_uncached": 0.31,
+    "usd_saved": 0.0,
+    "pct_saved": 0.0
+   },
+   "narrate": {
+    "calls": 50,
+    "input_tokens": 7557,
+    "cached_tokens": 0,
+    "cached_share": 0.0,
+    "usd_paid": 0.05,
+    "usd_if_uncached": 0.05,
+    "usd_saved": 0.0,
+    "pct_saved": 0.0
+   },
+   "showcase": {
+    "calls": 15,
+    "input_tokens": 1748,
+    "cached_tokens": 0,
+    "cached_share": 0.0,
+    "usd_paid": 0.0,
+    "usd_if_uncached": 0.0,
+    "usd_saved": 0.0,
+    "pct_saved": null
+   },
+   "swarm": {
+    "calls": 2342,
+    "input_tokens": 39141437,
+    "cached_tokens": 12109652,
+    "cached_share": 0.3094,
+    "usd_paid": 55.32,
+    "usd_if_uncached": 66.83,
+    "usd_saved": 11.51,
+    "pct_saved": 17.2
+   },
+   "video_qa": {
+    "calls": 1,
+    "input_tokens": 11500,
+    "cached_tokens": 0,
+    "cached_share": 0.0,
+    "usd_paid": 0.02,
+    "usd_if_uncached": 0.02,
+    "usd_saved": 0.0,
+    "pct_saved": 0.0
+   },
+   "worldtext": {
+    "calls": 6,
+    "input_tokens": 7680,
+    "cached_tokens": 0,
+    "cached_share": 0.0,
+    "usd_paid": 0.16,
+    "usd_if_uncached": 0.16,
+    "usd_saved": 0.0,
+    "pct_saved": 0.0
+   },
+   "worldtext-probe": {
+    "calls": 6,
+    "input_tokens": 25257,
+    "cached_tokens": 0,
+    "cached_share": 0.0,
+    "usd_paid": 0.09,
+    "usd_if_uncached": 0.09,
+    "usd_saved": 0.0,
+    "pct_saved": 0.0
+   },
+   "x": {
+    "calls": 1,
+    "input_tokens": 605,
+    "cached_tokens": 0,
+    "cached_share": 0.0,
+    "usd_paid": 0.0,
+    "usd_if_uncached": 0.0,
+    "usd_saved": 0.0,
+    "pct_saved": null
+   }
+  }
+ },
+ "thinking_sweep": [
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "minimal",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": -110,
+   "ci95": [
+    -153,
+    -53
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 0,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.033
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "low",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": -33,
+   "ci95": [
+    -110,
+    48
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 4290,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.044
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "medium",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": -90,
+   "ci95": [
+    -133,
+    -22
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 1686,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.059
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "high",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": -88,
+   "ci95": [
+    -129,
+    -16
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 5544,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.06
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "minimal",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": 73,
+   "ci95": [
+    22,
+    108
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 0,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.116
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "low",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": 3,
+   "ci95": [
+    -69,
+    73
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 7269,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.266
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "medium",
+   "tier": "medium",
+   "n": 20,
+   "pct_of_solver": 89,
+   "ci95": [
+    60,
+    109
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 15033,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.289
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "high",
+   "tier": "medium",
+   "n": 20,
+   "pct_of_solver": 75,
+   "ci95": [
+    39,
+    104
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 21513,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.386
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "low",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": -2,
+   "ci95": [
+    -77,
+    62
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 0,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.122
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "medium",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": 65,
+   "ci95": [
+    18,
+    93
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 33837,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.549
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "high",
+   "tier": "medium",
+   "n": 20,
+   "pct_of_solver": 69,
+   "ci95": [
+    33,
+    97
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 45240,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.618
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "low",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": 102,
+   "ci95": [
+    88,
+    120
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 0,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.152
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "medium",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": 82,
+   "ci95": [
+    62,
+    100
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 9711,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.37
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "high",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": 52,
+   "ci95": [
+    -17,
+    105
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 34846,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 1.128
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "low",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": 86,
+   "ci95": [
+    71,
+    107
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 530,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.388
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "high",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": 88,
+   "ci95": [
+    72,
+    99
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 50290,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 1.469
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "default",
+   "tier": "medium",
+   "n": 15,
+   "pct_of_solver": 78,
+   "ci95": [
+    55,
+    100
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 36812,
+   "thinking_is_estimate": true,
+   "usd_per_ep": 1.14
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "minimal",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": -174,
+   "ci95": [
+    -215,
+    -150
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 0,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.03
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "low",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": -79,
+   "ci95": [
+    -164,
+    17
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 5543,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.056
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "medium",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": -174,
+   "ci95": [
+    -215,
+    -150
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 1666,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.041
+  },
+  {
+   "model": "gemini-3.1-flash-lite",
+   "level": "high",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": -82,
+   "ci95": [
+    -167,
+    11
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 5679,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.064
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "minimal",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": -32,
+   "ci95": [
+    -124,
+    34
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 0,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.248
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "low",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": 46,
+   "ci95": [
+    -37,
+    104
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 8531,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.275
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "medium",
+   "tier": "hard",
+   "n": 20,
+   "pct_of_solver": 78,
+   "ci95": [
+    28,
+    151
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 20151,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.419
+  },
+  {
+   "model": "gemini-3.5-flash",
+   "level": "high",
+   "tier": "hard",
+   "n": 20,
+   "pct_of_solver": 71,
+   "ci95": [
+    11,
+    158
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 26547,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.425
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "low",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": 3,
+   "ci95": [
+    -82,
+    68
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 0,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.162
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "medium",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": 14,
+   "ci95": [
+    -71,
+    85
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 28300,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.455
+  },
+  {
+   "model": "gemini-3.8-flash",
+   "level": "high",
+   "tier": "hard",
+   "n": 20,
+   "pct_of_solver": 51,
+   "ci95": [
+    -5,
+    123
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 50732,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.779
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "low",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": 102,
+   "ci95": [
+    83,
+    130
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 0,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.175
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "medium",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": 41,
+   "ci95": [
+    -35,
+    108
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 17346,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.639
+  },
+  {
+   "model": "gemini-4-argon",
+   "level": "high",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": 45,
+   "ci95": [
+    -34,
+    99
+   ],
+   "ci_excludes_100": true,
+   "thinking_tokens_per_ep": 44695,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 1.61
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "low",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": 80,
+   "ci95": [
+    62,
+    107
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 289,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.523
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "high",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": 106,
+   "ci95": [
+    94,
+    126
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 63171,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 1.931
+  },
+  {
+   "model": "gemini-4-carbon",
+   "level": "default",
+   "tier": "hard",
+   "n": 22,
+   "pct_of_solver": 108,
+   "ci95": [
+    62,
+    189
+   ],
+   "ci_excludes_100": false,
+   "thinking_tokens_per_ep": 48351,
+   "thinking_is_estimate": true,
+   "usd_per_ep": 1.501
+  }
+ ],
+ "section4": [
+  "**Thought signatures are load-bearing:** with signature replay stripped, the API rejected the first function-call replay on 10/10 hard-tier episodes of gemini-3.8-flash (400 INVALID_ARGUMENT, \"Function call is missing a thought_signature\"; Wilson 95% CI [72.2, 100.0]), so 0 episodes were playable, versus 10/10 played with replay on (0/628 API errors, accuracy 70.0%, CI [39.7, 89.2]).",
+  "**Explicit context caching** cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 75.9% ($678.19 of $893.08) across all 29,150 ledgered calls in the programme.",
+  "**`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, gemini-3.5-flash goes from -32% [-124, 34] at minimal (n=10, 0 thinking tok, $0.25/ep) to 78% [28, 151] at medium (n=20, 20,151 thinking tok, $0.42/ep) of the solver on the same seeds, while gemini-4-argon is non-monotone (102% [83, 130] at low (n=10, 0 thinking tok, $0.17/ep) vs 45% [-34, 99] at high (n=10, 44,695 thinking tok, $1.61/ep)); across all 34 cells the 95% CI excludes solver parity in 17."
+ ]
+}

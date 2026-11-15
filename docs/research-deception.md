@@ -1,8 +1,9 @@
 # Deception Research Grounding for Canary: Empirical Literature, Quantitative Audit, and Concrete Proposals
 
 **Squad:** `research` (`canary-research-lead` and `canary-research-w1..w9`)  
-**Baseline:** `origin/justSilas@dcd8c372` (rules `v1.4`, frozen hash `a8f99c2537c91d72`)  
+**Baseline:** `origin/justSilas@cf394894` (rules `v1.4`, frozen hash `a8f99c2537c91d72`)  
 **Deep-Dive Monographs:** [01. Deception Detection](research/01_deception_detection.md) | [04. Social Engineering & Cheap Talk](research/04_social_engineering_cheap_talk.md) | [07. Human-Bias Social Layer & Gate B Post-Mortem](research/07_v15_bias_layer_proposals.md)  
+**Companion Case Studies:** [Organisational Biases & 44 Cases](research-biases.md) | [Failure Research Dataset](FAILURE-RESEARCH.md)  
 **Primary Benchmark Evidence:** [Gap Report](reports/gap.md) | [Failure Analysis v1.4](reports/failure_analysis_v1.4.md) | [Reference Optimality](reports/reference_optimality.md) | [Difficulty Design](DIFFICULTY.md) | [Exploit & Fairness Audit](EXPLOITS.md)
 
 ---
@@ -22,6 +23,7 @@ Across six empirical research traditions - **deception detection, insider-threat
 
 | Investigative Channel (`v1.4` Hard, $N=40$, $T=21$) | Action Cost | Mole vs Innocent Signal Parameters | Info Gain (`KL` / `MI`) | `SolverPolicy` Usage/Ep | `gemini-4-carbon` Usage/Ep | Primary Research Anchor |
 |---|---:|---|---:|---:|---:|---|
+| `list_employees` `clearance` (`1-3`, `DIFFICULTY.md` W4) | `0` (roster) | `canary_level = 1` & 2-dept reg docs (`access_constraints` never binds) | **`0.00000` nats** | Ignored (`0` weight) | Checked as red herring | Stajano & Wilson (2011) distraction; Tversky & Kahneman (1974) |
 | `search_messages` / `read_message` (non-decoy chat) | `1` action | Pure `PublicDayFacts` (`I(Msg; Mole) = 0`) | **`0.00000` nats** | `0.0` (after decoy ID) | `4.40` calls | Crawford & Sobel (1982); Hauch et al. (2015) |
 | `interview` (passive ungrounded questioning) | `1` action | `p_inn = 0.20`, `p_mole = 0.24` (`LR = 1.20`, `d = 0.097`) | **`0.00477` nats** | `0.0` calls | **`68.03` calls** | DePaulo et al. (2003); Bond & DePaulo (2006); Hartwig & Bond (2011) |
 | `read_access_logs` (`after_hours` with `framing=True`) | `1` action | Mole `0.30/d`, decoy `1.10/d`, plain inn `0.1263/d` (`PPV = 4.84%`) | **`0.10990` nats/d** | Passive log parse | `12.27` calls | Axelsson (2000); Sommer & Paxson (2010) |
@@ -278,7 +280,7 @@ Across six empirical research traditions - **deception detection, insider-threat
 
 *Canary Grounding:* Grounds cross-departmental blame across Canary's $5$ departments (`8` staff each) whenever a 2-department regular document (`16` recipients) leaks (Proposal **P6.1**).
 
-- **Nine Core `v1.6` Bias Anchors (Verified in [Section 2 of Monograph 07](research/07_v15_bias_layer_proposals.md)):**  
+- **Nine Core `v1.6` Bias Anchors (Verified in [Section 2 of Monograph 07](research/07_v15_bias_layer_proposals.md) and cross-referenced with the 44 sourced corporate failure incidents in [docs/research-biases.md](research-biases.md) and [docs/FAILURE-RESEARCH.md](FAILURE-RESEARCH.md): `P-FEAR`, `P-DIFFUSION`, `P-DEVIANCE`, `P-ALERTS`, `P-SOD`):**  
   1. *Rumour intensity & sharpening:* **Allport & Postman (1947)** (`R ~ i x a`, https://archive.org/details/psychology_of_rumor) and **Bordia & DiFonzo (2004)** (https://doi.org/10.1177/019027250406700105).  
   2. *Institutional authority:* **Milgram (1963)** (`26/40` full obedience, https://doi.org/10.1037/h0040525).  
   3. *Pre-decisional sycophancy:* **Lerner & Tetlock (1999)** (conformity to known audience views, https://doi.org/10.1037/0033-2909.125.2.255).  
@@ -336,7 +338,10 @@ Every proposal below respects four hard Canary invariants:
 
 ### 9.2 Mole & V100 RL/GRPO Proposals (`canary/mole/dsl.py`, `canary/forge/`, `train/grpo_mole.py`)
 
-Verified baseline benchmark on `v1.4` hard (`seeds 2000-2059`, $n = 60$, computed via `canary.forge.fitness.evaluate`): `DEFAULT_STRATEGY` (`default_v0`) achieves `feasible = True`, `SolverPolicy = 0.5212` (`accuracy = 93.3% >= 85.0%`), `grok_tactics = 0.3693` (`86.7%`), `hinted_heuristic = 0.3758` (`86.7%`), `heuristic = 0.0348` (`78.3%`), yielding `min_regret = +0.1453` and `mean_regret = +0.2612`. Crucially, our code audit of `canary/env.py` proves that unconditional `leak = "most_recipients"` deterministically selects 16-recipient regular documents over narrow 3-recipient pinpoint canaries, starving `SolverPolicy` below the `85%` catchability bar if applied on every day. Effective moles must therefore combine **mixed/conditional canary evasion** with **salience-aligned framing**:
+Verified baseline benchmark on `v1.4` hard (`seeds 2000-2059`, $n = 60$, computed via `canary.forge.fitness.evaluate`): `DEFAULT_STRATEGY` (`default_v0`) achieves `feasible = True`, `SolverPolicy = 0.5212` (`accuracy = 93.3% >= 85.0%`), `grok_tactics = 0.3693` (`86.7%`), `hinted_heuristic = 0.3758` (`86.7%`), `heuristic = 0.0348` (`78.3%`), yielding `min_regret = +0.1453` and `mean_regret = +0.2612`. Crucially, our code audit of `canary/env.py` and the `moletrain` evaluation artifacts (`origin/fr8/canary/moletrain:results/moletrain/rl_mole_v2_heldout.json` and `d52fe7d5` `qwen_mole_summary.json`) demonstrate three empirical regularities that confirm Tessler et al. (2019) and Shao et al. (2024):
+1. **Unconstrained policy-gradient collapse (`14` vanilla GRPO runs):** Across `3` FR8 `Qwen2.5-0.5B` runs (`400` steps) and `11` Verda `Qwen2.5-0.5B`/`1.5B`/`3B` runs (`200` steps), vanilla GRPO without KL anchor or primal-dual catchability constraint collapses `>= 99.4%` greedily onto single deterministic actions (`none/decoy` on `0.5B`, `random_seeded/none` or `random_seeded/decoy` on `1.5B`), producing zero stronger held-out moles.
+2. **Trap-gated catchability restoration (`RLMole` v1 vs `RLMoleV2`):** Unconstrained CPU `RLMole` v1 (`data/rl_mole/policy_final.json`) emits `18.2%` voluntary `leak = "none"` on top of `p_leak = 0.65`, dropping `SolverPolicy` accuracy to `75.0% [63.3%, 85.0%]` (`< 85.0%` contract floor). Disallowing voluntary silence on wide unrestricted states in `RLMoleV2` (`wide_unrestricted_none_rate = 0.0%`) restores catchability on both disjoint held-out sets (`ws3_heldout` `200000-200059`, $n = 60$: `SolverPolicy` accuracy **96.7% [91.7%, 100.0%]**, `min_regret = +0.2937` vs `+0.2322` default; `rules_heldout` `800000-800059`, $n = 60$: `SolverPolicy` accuracy **95.0% [88.3%, 100.0%]**, `min_regret = +0.2095` vs `+0.1766` default, with $n = 60$ paired per-investigator regret CIs vs default spanning zero).
+3. **Regularized V100 `Qwen3-1.7B` & `Qwen3-0.6B` SFT + Horizon-3 GRPO solves WS3 collapse on held-out seeds (`2ea3585c`):** Adding trap-capped SFT distillation, `beta_kl = 0.05`, token entropy `0.015`, frequency penalty, and dual `lam_catch` (`0.89 >= 0.85`) preserves multi-action diversity (`k = 4-5` actions, `H(A) = 1.00-1.05` nats vs `0.00` nats in vanilla GRPO) and passes the `>= 85%` catchability gate on both held-out splits: `Qwen3-1.7B` (`grpo_step80`) achieves `SolverPolicy` accuracy **97.5%** (`min_regret = +0.1905` vs `+0.2456` default) on `800000-800039` ($n = 40$) and **95.0%** (`min_regret = +0.4559` vs `+0.2350` default; `+22.5pp [+7.5pp, +37.5pp]` catchability gain over `RLMole` v1) on `200000-200039` ($n = 40$), while `Qwen3-0.6B` (`grpo_step80`) achieves **97.5%** (`min_regret = +0.1333` vs `+0.0372` default) on `800k` and **95.0%** (`min_regret = +0.3695` vs `+0.2350` default) on `200k` (with $n = 40$ paired worst-case regret CIs vs `DEFAULT_STRATEGY` honestly spanning zero). Effective moles must therefore combine **mixed/conditional canary evasion** with **salience-aligned framing**:
 
 | ID | Target Surface | Research Mechanism | Exact Specification & Catchability Guarantee |
 |---|---|---|---|

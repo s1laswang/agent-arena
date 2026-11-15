@@ -326,6 +326,35 @@ def test_ui_ascii_em_dashes_and_js_css_comments(arena_tmp: Path) -> None:
         assert any(expected in d for d in res.details), (case_id, res.details)
 
 
+def test_pyodide_verbatim_canary_mirror_exempted(arena_tmp: Path) -> None:
+    section_sign = chr(0x00A7)
+    repo = _make_clean_arena_repo(arena_tmp / "pyodide_mirror_ok")
+    _write_files(
+        repo,
+        {
+            "docs/arena/py/canary/world.py": (
+                "import os\n"
+                "def _key():\n"
+                f'    return os.environ.get("{TOK_WORLD_SECRET}")\n'
+            ),
+            "docs/arena/py/canary/rules.py": f'DOC = "Rule {section_sign}1.4 {EM_DASH} hard"\n',
+        },
+    )
+    results = arena_hygiene.audit_arena_hygiene(repo)
+    assert all(r.status == "PASS" for r in results), [r.details for r in results]
+
+    leaked_repo = _make_clean_arena_repo(arena_tmp / "pyodide_mirror_leak")
+    _write_files(
+        leaked_repo,
+        {
+            "docs/arena/py/canary/world.py": f'{TOK_WORLD_SECRET} = "leaked_secret_value_99"\n',
+        },
+    )
+    res_leak = arena_hygiene.check_arena_secrets(leaked_repo)
+    assert res_leak.status == "FAIL"
+    assert any("docs/arena/py/canary/world.py" in d for d in res_leak.details), res_leak.details
+
+
 def test_size_budget_under_and_over_limit(
     arena_tmp: Path,
     capsys: pytest.CaptureFixture[str],

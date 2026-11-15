@@ -1,9 +1,9 @@
 # 12. Paired Replay Forensics of `seed 6` (`Caught`) vs `seed 26` (`Fooled`): Horstein-Burnashev Confirmation Dynamics and Zero-Leakage Proposals
 
 **Squad:** `research` (`canary-research-w1`)  
-**Baseline commit:** `9da5b4e1` (`origin/fr8/canary/research`, synced with `origin/justSilas@5f9b3297`; rules `v1.4`, frozen hash `a8f99c2537c91d72`)  
+**Baseline commit:** `e849a697` (`origin/fr8/canary/research`, synced with `origin/justSilas@5f9b3297`; rules `v1.4`, frozen hash `a8f99c2537c91d72`)  
 **Executable Forensic Harness:** `scripts/audit_seed6_seed26_forensics.py` and `tests/test_audit_seed6_seed26_forensics.py` (`0` API calls, `~0.4 s` deterministic CPU replay across `6` trajectories, `0` protected paths touched)  
-**Companion Monographs:** [Master Synthesis](../research-deception.md) | [01. Deception Detection](01_deception_detection.md) | [03. Leak Hunts, Canary Traps & Group Testing](03_leak_hunts_canary_traps_group_testing.md) | [07. Human-Bias Social Layer](07_v15_bias_layer_proposals.md) | [08. Stackelberg Games & Constrained Mole RL](08_mole_rl_stackelberg_and_catchability.md) | [11. Empirical Transcript Bias Forensics](11_empirical_transcript_bias_forensics.md) | [13. Blackwell Channel Capacity & Lindley EIG](13_blackwell_channel_capacity_and_eig.md) | [17. Red-Team Swarms & Benchmark Integrity](17_redteam_reward_gaming_and_benchmark_integrity.md)  
+**Companion Monographs:** [Master Synthesis](../research-deception.md) | [01. Deception Detection](01_deception_detection.md) | [03. Leak Hunts, Canary Traps & Group Testing](03_leak_hunts_canary_traps_group_testing.md) | [07. Human-Bias Social Layer](07_v15_bias_layer_proposals.md) | [08. Stackelberg Games & Constrained Mole RL](08_mole_rl_stackelberg_and_catchability.md) | [11. Empirical Transcript Bias Forensics](11_empirical_transcript_bias_forensics.md) | [13. Blackwell Channel Capacity & Lindley EIG](13_blackwell_channel_capacity_and_eig.md) | [17. Red-Team Swarms & Benchmark Integrity](17_redteam_reward_gaming_and_benchmark_integrity.md) | [20. Judge Q&A & Proposal Scorecard](20_judge_qa_and_proposal_scorecard.md)  
 **Primary Benchmark Evidence:** [Submission Overview](../SUBMISSION.md) | [Failure Analysis v1.4](../reports/failure_analysis_v1.4.md) | [Gap Report](../reports/gap.md) | [Difficulty Audit](../DIFFICULTY.md)
 
 ---

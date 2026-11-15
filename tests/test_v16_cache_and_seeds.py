@@ -1,6 +1,7 @@
 """Tests for V1.6 SHA-256 LLM social cache, Gemini social chatter validation, and seeds 30..49 reference."""
 from __future__ import annotations
 
+from dataclasses import replace
 import hashlib
 import json
 import re
@@ -8,16 +9,23 @@ from pathlib import Path
 
 import pytest
 
+import canary.text.llm_cache as llm_cache
+from canary.env import Env
 from canary.social.gemini_chatter import (
     DECOY_VOCAB,
     SOCIAL_SCHEMA,
+    SOCIAL_SYSTEM,
+    build_social_prompt,
     render_with_gemini,
     validate_social_body,
 )
 from canary.text.facts import EmployeeFacts, PublicDayFacts
+from canary.text.gemini import get_provider
+from canary.text.lint import lint_messages
 from canary.text.llm_cache import (
     DEFAULT_SHARED_CACHE_DIR,
     OfflineCacheMiss,
+    REPO_COMMITTED_CACHE_DIR,
     cache_key,
     cached_chat,
     default_cache_dir,
@@ -159,7 +167,9 @@ def test_cached_chat_secret_guards(monkeypatch, tmp_path):
     assert list(tmp_path.glob("*.json")) == []
 
 
-def test_render_with_gemini_stub_and_prompt_hygiene(tmp_path):
+def test_render_with_gemini_stub_and_prompt_hygiene(monkeypatch, tmp_path):
+    monkeypatch.delenv("CANARY_OFFLINE", raising=False)
+    monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
     facts = _sample_facts()
     drafts = _sample_drafts()
     out = render_with_gemini(facts, drafts, cache_dir=tmp_path, stub=True, extra_unused_kw="ignored")
@@ -185,6 +195,8 @@ def test_render_with_gemini_stub_and_prompt_hygiene(tmp_path):
 
 
 def test_validate_social_body_all_constraints_and_fallback(monkeypatch, tmp_path):
+    monkeypatch.delenv("CANARY_OFFLINE", raising=False)
+    monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
     facts = _sample_facts()
     draft = _sample_drafts()[0]
 
@@ -237,7 +249,9 @@ def test_validate_social_body_all_constraints_and_fallback(monkeypatch, tmp_path
     assert offline_res == mixed_drafts
 
 
-def test_reference_seeds_30_49_artifact_and_cli(tmp_path):
+def test_reference_seeds_30_49_artifact_and_cli(monkeypatch, tmp_path):
+    monkeypatch.delenv("CANARY_OFFLINE", raising=False)
+    monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
     assert REF_PATH.is_file()
     raw = REF_PATH.read_text(encoding="utf-8")
     v16_prepare_seeds.assert_zero_truth_leak(raw)
@@ -319,3 +333,180 @@ def test_reference_seeds_30_49_artifact_and_cli(tmp_path):
             _sys.modules.pop("canary.social.engine", None)
         else:
             _sys.modules["canary.social.engine"] = prev_mod
+
+
+def test_repo_committed_real_cache_not_shadowed_by_shared_stub(monkeypatch, tmp_path):
+    monkeypatch.delenv("CANARY_OFFLINE", raising=False)
+    monkeypatch.delenv("SLEEPER_OFFLINE", raising=False)
+    monkeypatch.delenv("CANARY_GEMINI_CACHE_DIR", raising=False)
+
+    shared_dir = tmp_path / "shared_cache"
+    repo_dir = tmp_path / "repo_cache"
+    monkeypatch.setattr(llm_cache, "DEFAULT_SHARED_CACHE_DIR", str(shared_dir))
+    monkeypatch.setattr(llm_cache, "REPO_COMMITTED_CACHE_DIR", repo_dir)
+
+    stub_out = cached_chat(
+        shared_dir,
+        _RecordingClient({"bodies": ["stub-version"]}),
+        "gemini-4-carbon",
+        SOCIAL_SYSTEM,
+        "shared-vs-repo-prompt",
+        SOCIAL_SCHEMA,
+        "stub",
+    )
+    real_out = cached_chat(
+        repo_dir,
+        _RecordingClient({"bodies": ["real-version"]}),
+        "gemini-4-carbon",
+        SOCIAL_SYSTEM,
+        "shared-vs-repo-prompt",
+        SOCIAL_SCHEMA,
+        "REAL",
+    )
+    assert stub_out["provenance"]["label"] == "stub"
+    assert real_out["provenance"]["label"] == "REAL"
+
+    class _NeverCall:
+        def chat(self, *_a, **_k):
+            raise AssertionError("unexpected live client call")
+
+    monkeypatch.setenv("CANARY_OFFLINE", "1")
+    got_none = cached_chat(
+        None,
+        _NeverCall(),
+        "gemini-4-carbon",
+        SOCIAL_SYSTEM,
+        "shared-vs-repo-prompt",
+        SOCIAL_SCHEMA,
+        "REAL",
+    )
+    assert got_none == real_out
+
+    got_default_path = cached_chat(
+        shared_dir,
+        _NeverCall(),
+        "gemini-4-carbon",
+        SOCIAL_SYSTEM,
+        "shared-vs-repo-prompt",
+        SOCIAL_SCHEMA,
+        "REAL",
+    )
+    assert got_default_path == real_out
+
+    with pytest.raises(OfflineCacheMiss):
+        cached_chat(
+            shared_dir,
+            _NeverCall(),
+            "gemini-4-carbon",
+            SOCIAL_SYSTEM,
+            "shared-only-stub-prompt",
+            SOCIAL_SCHEMA,
+            "REAL",
+        )
+
+
+def test_committed_gemini_cache_offline_replay_invariance(monkeypatch):
+    cache_dir = ROOT / "data" / "gemini_cache"
+    assert cache_dir == REPO_COMMITTED_CACHE_DIR
+    cache_files = sorted(cache_dir.glob("*.json"))
+    assert len(cache_files) == 256
+    for fp in cache_files:
+        entry = json.loads(fp.read_text(encoding="utf-8"))
+        assert entry["provenance"]["label"] == "REAL"
+        assert entry["provenance"]["model"] == "gemini-4-carbon"
+
+    monkeypatch.setenv("CANARY_OFFLINE", "1")
+    monkeypatch.setenv("CANARY_GEMINI_CACHE_DIR", str(cache_dir))
+
+    class _NeverCall:
+        def chat(self, *_a, **_k):
+            raise AssertionError("network client must never run during offline cache replay")
+
+    total_hits = 0
+    for seed in (0, 1, 2):
+        prov_tpl = get_provider("v16:v5_full9_cocktail")
+        prov_gem = get_provider("v16-gemini:v5_full9_cocktail", client=_NeverCall())
+        prov_canary = get_provider("v16-gemini:v5_full9_cocktail", client=_NeverCall())
+        env = Env("hard", seed, text_provider=prov_gem)
+        env_canary = Env("hard", seed, text_provider=prov_canary)
+        seed_hits = 0
+
+        for day in range(1, 22):
+            if day in (1, 2, 3):
+                asg = {env_canary._world.employees[i].id: ("A", "B", "C")[i] for i in range(3)}
+                rc = env_canary.call("plant_canary", {"doc_title": f"Day {day} Canary Split", "assignment": asg})
+                assert rc.ok
+
+            facts = env._facts(day)
+            facts_canary = env_canary._facts(day)
+            if day in (1, 2, 3):
+                assert any(str(d.get("doc_id", "")).startswith("c") for d in facts_canary.docs)
+
+            msgs_tpl = prov_tpl.day_messages(facts)
+            social_tpl = [m for m in msgs_tpl if "-s" in m["id"]]
+            if social_tpl:
+                st = prov_tpl.episode_state("hard", facts.seed)
+                assert st is not None
+                raw_evs = st.events_by_day[day]
+                prompt_items = []
+                for idx, m in enumerate(social_tpl):
+                    item = dict(m)
+                    if idx < len(raw_evs):
+                        item["target"] = str(raw_evs[idx]["target"])
+                        item["meta"] = {
+                            "bias": str(raw_evs[idx]["bias"]),
+                            "target": str(raw_evs[idx]["target"]),
+                        }
+                    prompt_items.append(item)
+
+                prompt_clean = build_social_prompt(facts, prompt_items)
+                prompt_with_canary = build_social_prompt(
+                    replace(
+                        facts,
+                        docs=tuple(facts.docs) + ({"doc_id": f"c{day}-extra", "title": "Planted Trap", "day": day, "recipients": ["e00"]},),
+                    ),
+                    prompt_items,
+                )
+                assert prompt_clean == prompt_with_canary
+                k_clean = cache_key("gemini-4-carbon", SOCIAL_SYSTEM, [{"role": "user", "content": prompt_clean}])
+                k_canary = cache_key("gemini-4-carbon", SOCIAL_SYSTEM, [{"role": "user", "content": prompt_with_canary}])
+                assert k_clean == k_canary
+
+                hit = cached_chat(
+                    None,
+                    _NeverCall(),
+                    "gemini-4-carbon",
+                    SOCIAL_SYSTEM,
+                    prompt_clean,
+                    response_schema=SOCIAL_SCHEMA,
+                    label="REAL",
+                )
+                assert hit["provenance"]["label"] == "REAL"
+                seed_hits += 1
+                total_hits += 1
+
+            msgs_gem = prov_gem.day_messages(facts)
+            msgs_canary = prov_canary.day_messages(facts_canary)
+            assert lint_messages(msgs_gem) == []
+            assert lint_messages(msgs_canary) == []
+            for m in msgs_gem:
+                if m["sender"] != facts.decoy:
+                    low_text = f"{m.get('subject', '')}\n{m.get('body', '')}".lower()
+                    assert not any(term in low_text for term in DECOY_VOCAB)
+
+            social_gem = [m for m in msgs_gem if "-s" in m["id"]]
+            social_canary = [m for m in msgs_canary if "-s" in m["id"]]
+            assert social_gem == social_canary
+            if social_tpl:
+                assert any(a["body"] != b["body"] for a, b in zip(social_gem, social_tpl))
+
+            if day < 21:
+                env._publish_day(day + 1)
+                env.day = day + 1
+                assert env_canary.call("advance_day", {}).ok
+
+        assert seed_hits == 18
+        assert prov_gem.rejects == 0
+        assert prov_canary.rejects == 0
+
+    assert total_hits == 54

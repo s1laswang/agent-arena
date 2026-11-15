@@ -8,7 +8,7 @@
       "gate": "gate1_headline_and_gap_table_numbers",
       "passed": true,
       "violation_count": 0,
-      "warning_count": 1
+      "warning_count": 0
     },
     {
       "gate": "gate2_replay_cache_completeness_and_step_consistency",
@@ -140,7 +140,7 @@
       "raw_ratio_ci": "75% [36%, 123%]",
       "luck_adjusted_ratio_ci": "22% [-23%, 63%]",
       "solver_same_seeds_score_ci": "+0.499 +/- 0.119",
-      "in_committed_paired_table": false
+      "in_committed_paired_table": true
     }
   },
   "solver_paired_reference": {
@@ -159,7 +159,7 @@
       "post_expected": 0.645
     }
   },
-  "committed_paired_rows_verified": 14,
+  "committed_paired_rows_verified": 15,
   "tiers_version_runtime": "v1.4",
   "frontier_v14_runs": [
     {
@@ -175,6 +175,7 @@
       "seed_min": 0,
       "seed_max": 29,
       "replay_matched": 30,
+      "step_mismatches": 0,
       "replay_agreement_rate": 1.0,
       "mean_score": 0.713
     },
@@ -191,6 +192,7 @@
       "seed_min": 0,
       "seed_max": 29,
       "replay_matched": 30,
+      "step_mismatches": 0,
       "replay_agreement_rate": 1.0,
       "mean_score": 0.322333
     },
@@ -207,6 +209,7 @@
       "seed_min": 0,
       "seed_max": 29,
       "replay_matched": 30,
+      "step_mismatches": 0,
       "replay_agreement_rate": 1.0,
       "mean_score": 0.530333
     },
@@ -223,6 +226,7 @@
       "seed_min": 0,
       "seed_max": 29,
       "replay_matched": 30,
+      "step_mismatches": 0,
       "replay_agreement_rate": 1.0,
       "mean_score": 0.473
     },
@@ -239,8 +243,28 @@
       "seed_min": 0,
       "seed_max": 29,
       "replay_matched": 30,
+      "step_mismatches": 0,
       "replay_agreement_rate": 1.0,
       "mean_score": 0.373
+    }
+  ],
+  "frontier_extension_v14_runs": [
+    {
+      "run_dir": "v1.4/opencode-gemini-4-carbon-ext/hard",
+      "tier": "hard",
+      "agent": "opencode:google/gemini-4-carbon",
+      "n_total": 2,
+      "n_valid": 2,
+      "n_invalid": 0,
+      "duplicate_seed_count": 0,
+      "valid_timeout_or_error": 0,
+      "seeds_exact_match": true,
+      "seed_min": 34,
+      "seed_max": 37,
+      "replay_matched": 2,
+      "step_mismatches": 0,
+      "replay_agreement_rate": 1.0,
+      "mean_score": 0.745
     }
   ],
   "solver_v14_runs": [
@@ -257,6 +281,7 @@
       "seed_min": 0,
       "seed_max": 29,
       "replay_matched": 30,
+      "step_mismatches": 0,
       "replay_agreement_rate": 1.0,
       "mean_score": 0.645
     },
@@ -264,26 +289,27 @@
       "run_dir": "v1.4/reference/solver:hard",
       "tier": "hard",
       "agent": "solver",
-      "n_total": 30,
-      "n_valid": 30,
+      "n_total": 60,
+      "n_valid": 60,
       "n_invalid": 0,
       "duplicate_seed_count": 0,
       "valid_timeout_or_error": 0,
       "seeds_exact_match": true,
       "seed_min": 0,
-      "seed_max": 29,
-      "replay_matched": 30,
+      "seed_max": 59,
+      "replay_matched": 60,
+      "step_mismatches": 0,
       "replay_agreement_rate": 1.0,
-      "mean_score": 0.499
+      "mean_score": 0.4985
     }
   ],
   "ladder_summary": {
     "file": "results/gemini/ladder_episodes.jsonl.gz",
     "present": true,
-    "native_valid_episodes": 320,
+    "native_valid_episodes": 550,
     "native_invalid_episodes": 0,
     "imported_inproc_valid_episodes": 37,
-    "total_ladder_episodes": 357,
+    "total_ladder_episodes": 587,
     "valid_error_or_timeout_episodes": 0,
     "invariant_violations": 0,
     "min_score": -1.0,
@@ -327,7 +353,7 @@
     "guess_day1": {
       "easy": {
         "n": 40,
-        "mean": -0.85
+        "mean": -0.75
       },
       "medium": {
         "n": 40,
@@ -335,7 +361,7 @@
       },
       "hard": {
         "n": 40,
-        "mean": -0.95
+        "mean": -1.0
       }
     }
   },
@@ -417,10 +443,14 @@
     "sd": "0.094"
   },
   "version_hygiene": {
-    "paired_groups_checked": 14,
+    "paired_groups_checked": 15,
     "judge_table_v14_rows_checked": 17,
-    "v14_meta_files_checked": 19,
-    "preregistered_frontier_cohorts": 5,
+    "v14_meta_files_checked": 21,
+    "posthoc_locked_primary_frontier_cohorts": 5,
+    "preregistered_extension_frontier_cohorts": 1,
+    "preregistered_frontier_cohorts": 1,
+    "seed_lock_rule_verified": true,
+    "preregistered_extensions_verified": true,
     "preregistration_rule_verified": true,
     "active_docs_checked": [
       "README.md",
@@ -438,19 +468,5 @@
   },
   "protected_path_rules_count": 15,
   "secret_pattern_rules_count": 7,
-  "warnings": [
-    {
-      "code": "PENDING_PROTECTED_TABLE_REFRESH",
-      "severity": "WARN",
-      "run_dir": "v1.4/opencode-gemini-3.5-flash/hard",
-      "agent": "opencode:google/gemini-3.5-flash",
-      "tier": "hard",
-      "n": 30,
-      "score_ci": "+0.373 +/- 0.177",
-      "raw_ratio_ci": "75% [36%, 123%]",
-      "luck_adjusted_ratio_ci": "22% [-23%, 63%]",
-      "judge_table_replayed": true,
-      "message": "opencode-gemini-3.5-flash/hard (n=30, raw 75% [36%, 123%], luck-adjusted 22% [-23%, 63%]) is committed in data/runs/committed/v1.4/ and replayed in results/judge_table.md (+0.373 +/- 0.177), ready for Silas to refresh into paired_table_gemini.md and paired_table_gemini.json (protected path)."
-    }
-  ]
+  "warnings": []
 }

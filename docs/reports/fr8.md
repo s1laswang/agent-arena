@@ -209,3 +209,25 @@ Found by the WS4 readout session: without CANARY_WORLD_SECRET/SALT, each `eval_h
 - **8k training adds nothing at 8k inference (05:20, truly paired):** v3-8k s3 (A100-80, 344 steps, 8k) ran on the same shared secret as X2's v3-4k-s0@8k, verified with 60/60 identical step-0 rosters. Paired on identical worlds (n=90): 8k-trained minus 4k-trained, both at 8k inference = **−0.073 ± 0.173**. 8k s3 alone: −0.788 ± 0.117, accused .96, correct .09. Over three 8k seeds: the two ~350-step A100 seeds over-accuse (−0.777, −0.788) and the 693-step H100 seed abstains (−0.050). That's suggestive only (n=3 seeds, with step count and GPU confounded).
 - Not yet in: v3-8k s0 and s3 (Verda, ~06:00–06:40) and X2 DAgger (~07:30).
 - Reproduce: `FR8_S1_DIR=data/fr8/ws4/v3-s1-44572 S1_STEPS=192 K8S1_GPU="A100-80 spot" K8S1_STEPS=371 K8S2_GPU="H100 spot" K8S2_STEPS=693 bash fr8/analysis/ws4_v3_readout.sh` (inputs are local, gitignored `data/fr8/**/*.jsonl`).
+
+## 08:55 FINAL: WS4 tiebreaker (held-out; each model plays full episodes alone; Δ two-sample unless marked)
+Table: `fr8/analysis/out/ws4_table_final.md`; shared-secret paired: `fr8/analysis/out/ws4_table_8k_shared_secret_paired.md`.
+
+| model | GPU · GRPO steps | n | score ± 95% CI | accused | correct |
+|---|---|---|---|---|---|
+| base (never accuses) | – | 36 | 0.000 ± 0.000 | 0 | 0 |
+| v1 (J4 SFT) | V100 | 12 | −0.250 ± 0.256 | .25 | 0 |
+| v2 (SFT, oversample endings) | V100 | 172 | −0.457 ± 0.086 | .55 | .05 |
+| v3-4k s0 | H100 · 609 | 180 | −0.147 ± 0.063 | .21 | .03 |
+| v3-4k s1 (FR8) | V100 · ~191 | 82 | −0.209 ± 0.094 | .23 | .01 |
+| v3-8k s0 (shared secret) | H100 · 637 | 90 | −0.060 ± 0.054 | .08 | .01 |
+| v3-8k s1 | A100 · 371 | 90 | −0.777 ± 0.118 | .94 | .09 |
+| v3-8k s2 | H100 spot · 693 | 90 | −0.050 ± 0.049 | .07 | .01 |
+| v3-8k s3 (shared secret) | A100 · 344 | 90 | −0.788 ± 0.117 | .96 | .09 |
+
+- **No variant beats base** (best: v3-8k s2 −0.050 ± 0.049, s0 −0.060 ± 0.054; CIs just exclude 0).
+- **GRPO beats SFT**: v3-4k s0 vs v2 +0.310 ± 0.107; v3-8k s0/s2 vs v2 ≈ +0.40 ± 0.10.
+- **8k splits by training length**: both ~650-step H100 seeds abstain (−0.05/−0.06); both ~350-step A100 seeds over-accuse (−0.78). Paired on the same worlds: 8k s0 − 8k s3 = **+0.728 ± 0.134**. n = 2 per group; step count and GPU are confounded.
+- **Inference context drives accusing** (X2, shared secret): v3-4k s0 at 8k ctx = −0.716 ± 0.105 (accuses .78) vs −0.147 at 4k.
+- Training used solver rollouts for credit assignment (decision-point GRPO, 3/8 forced-accuse exploration); evaluation never does.
+- Verda: €104.46 spent; J1-lite and the backup base eval were lost at reaper time (not pulled). Details in fr8/verda/README.md.

@@ -82,3 +82,10 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 04:47 (X2): DAgger r1 SFT DONE on e9ea8b2e (250 steps, 55.5 min, 4,000 examples, from v3-4k s0, 8k ctx). Shared-secret held-out v3-4k s0 @8k ctx (68bbe201, seeds 0–29/tier): −0.716 ± 0.105 n=90, accused .78, whom 3/70. Same model at 4k ctx (own worlds): −0.147 ± 0.063 n=180, so the INFERENCE context length alone flips it to over-accusing (explains most of the 8k failure). Running (all shared secret 1ca0c2a64d): e9ea8b2e dagger-r1-ctx8k-off{0,10,20}; 68bbe201 dagger-r1-ctx4k-off{0,10,20} + v3-4k-s0-ctx4k-off{0,10,20} (4k paired baseline) + 90-ep vLLM dev rollout on TRAIN seeds. ETA ~06:15. X2 GPU use: e9ea8b2e from 03:05, 68bbe201 from 03:35.
 
 05:05: v3-8k s3 (A100-80 on-demand f4378173, 344 GRPO steps, 3.0 h, 8k; Meta PaliGemma shared the GPU 23:35–00:12Z) eval pulled, SHARED SECRET (no per-process warning): −0.788 ± 0.117 n=90 (accused .96, correct .09). Like 8k s1 (A100, 371 steps, −0.777); 8k s2 (H100, 693 steps, −0.050) is the outlier: the ~350-step A100 seeds over-accuse, the 2× steps H100 seed abstains (n=3 seeds, suggestive only). Deleted f4378173 05:08.
+
+## FINAL (08:52, CLI capture data/fr8/verda/instances-final.txt)
+All instances deleted; balance **€95.54 → €104.46 spent** of the €300 cap (€200 account credit).
+- Deleted by FR8 after pulling: ac58df04 03:50, dbd083ca 04:20, f4378173 05:06. Spot preempted: 714d8144 (~03:00, no result).
+- Deleted by the on-instance reapers (planned 07:30; X2 box e9ea8b2e 08:00; exact times not captured because the session was idle): 3bb74f5a, 924e81d8, 18acfa5d, 68bbe201, e9ea8b2e.
+- LOST at reaper time (not pulled before 07:30): Gemini J1-lite (capped hard run; no DONE marker before deletion, nothing pulled), the backup base eval on 18acfa5d (not in the puller list). X2 said it would copy its own outputs by 07:00.
+- Pulled: v2 off30, v3-4k s0 (0–29 + 30–59), v3-8k s0/s1/s2/s3, FR8 base 44584 + FR8 v3 s1 44572/44573.

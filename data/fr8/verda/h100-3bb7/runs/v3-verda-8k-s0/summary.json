@@ -1,0 +1,88 @@
+{
+  "run_id": "v3-verda-8k-s0",
+  "agent": "hf-lora:lora",
+  "seconds": 3395.2,
+  "by_tier": {
+    "easy": {
+      "n": 30,
+      "mean_score": -0.0333,
+      "ci95": 0.0653,
+      "accuracy": 0.0,
+      "mean_final_day": 8.2,
+      "end_reasons": {
+        "eval_cap": 16,
+        "horizon": 13,
+        "accused": 1
+      },
+      "eval_cap_rate": 0.5333,
+      "invalid_call_rate": 0.0564,
+      "regret_tags": {
+        "budget_waste": 30,
+        "no_accusation": 29,
+        "premature_accusation": 19,
+        "uninformative_canary": 2,
+        "ignored_delay": 1
+      }
+    },
+    "hard": {
+      "n": 30,
+      "mean_score": -0.0813,
+      "ci95": 0.1173,
+      "accuracy": 0.0333,
+      "mean_final_day": 13.47,
+      "end_reasons": {
+        "eval_cap": 26,
+        "accused": 4
+      },
+      "eval_cap_rate": 0.8667,
+      "invalid_call_rate": 0.0089,
+      "regret_tags": {
+        "budget_waste": 30,
+        "no_accusation": 26,
+        "uninformative_canary": 23,
+        "premature_accusation": 16
+      }
+    },
+    "medium": {
+      "n": 30,
+      "mean_score": -0.0667,
+      "ci95": 0.0908,
+      "accuracy": 0.0,
+      "mean_final_day": 12.2,
+      "end_reasons": {
+        "eval_cap": 26,
+        "horizon": 2,
+        "accused": 2
+      },
+      "eval_cap_rate": 0.8667,
+      "invalid_call_rate": 0.0,
+      "regret_tags": {
+        "budget_waste": 30,
+        "premature_accusation": 29,
+        "no_accusation": 28,
+        "uninformative_canary": 1
+      }
+    },
+    "all": {
+      "n": 90,
+      "mean_score": -0.0604,
+      "ci95": 0.0536,
+      "accuracy": 0.0111,
+      "mean_final_day": 11.29,
+      "end_reasons": {
+        "eval_cap": 68,
+        "horizon": 15,
+        "accused": 7
+      },
+      "eval_cap_rate": 0.7556,
+      "invalid_call_rate": 0.0216,
+      "regret_tags": {
+        "budget_waste": 90,
+        "no_accusation": 83,
+        "premature_accusation": 64,
+        "uninformative_canary": 26,
+        "ignored_delay": 1
+      }
+    }
+  }
+}

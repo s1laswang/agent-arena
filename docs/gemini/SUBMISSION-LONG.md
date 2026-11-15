@@ -4,7 +4,7 @@
 *Google DeepMind "Best Use of Gemini API", Junction 2026. Code: github.com/s1laswang/agent-arena (`canary/gemini/`). Every number below links to a committed file. Model ids are as listed by the Gemini API (`models.list`) on our key on 14 Nov 2026. When we request `gemini-3.5-flash`, the API serves **`gemini-3.6-flash`** (recorded per call in the ladder provenance), so this text says "3.6-flash".*
 
 ## Short version (≤ 600 chars)
-Before shipping an agent that makes irreversible calls on a budget, a team must pick a model and a thinking level. Canary Lab measures that choice on an insider-threat RL environment scored against a Bayesian reference solver. On hard, gemini-4-carbon at high thinking reaches 106% [94, 126] of the solver (n=10); 3.6-flash is 4.5× cheaper but far less certain (71% [11, 158], n=20). 100 Gemini red-team attacks found 0 verified exploits, with the detector validated 4/4 on a reopened one. Blind, Gemini recovers 3 of 5 failure modes. 24,855 calls, all logged.
+Before shipping an agent that makes irreversible calls on a budget, a team must pick a model and a thinking level. Canary Lab measures that choice on an insider-threat RL environment scored against a Bayesian reference solver. On hard, gemini-4-carbon at high thinking reaches 106% [94, 126] of the solver (n=10); 3.6-flash at high thinking reaches 88% [51, 138] (n=40) at 4.3× lower cost, with a wider CI. 100 Gemini red-team attacks found 0 verified exploits, with the detector validated 4/4 on a reopened one. Blind, Gemini recovers 3 of 5 failure modes. 24,855 calls, all logged.
 
 ![Score vs cost per episode on hard, per model and thinking level](../../results/gemini/frontier.png)
 *Competence per dollar (USD list price) on hard (`results/gemini/frontier.png`, data in `frontier.json`, generated with `results/gemini/ladder.md`).*
@@ -12,7 +12,7 @@ Before shipping an agent that makes irreversible calls on a budget, a team must 
 ## 1. The problem
 **Who it is for:** the team about to ship an agent that makes irreversible decisions under uncertainty with a budget (security triage, insider risk, procurement). Before launch they must pick a model and a `thinking_level`, and trust that the benchmark they tuned on can't be gamed.
 
-**What is at stake:** in our environment, as in those jobs, a wrong accusation is the worst outcome (score −1), and every day of waiting leaks value. The model and thinking-level choice is a real cost decision on hard: gemini-4-carbon at high thinking reaches 106% [94, 126] of the solver at $1.93 per episode (n=10); 3.6-flash at high thinking costs $0.43 (about 4.5× less) but scores 71% [11, 158] (n=20), with far wider uncertainty (`results/gemini/ladder.md`).
+**What is at stake:** in our environment, as in those jobs, a wrong accusation is the worst outcome (score −1), and every day of waiting leaks value. The model and thinking-level choice is a real cost decision on hard: gemini-4-carbon at high thinking reaches 106% [94, 126] of the solver at $1.93 per episode (n=10); 3.6-flash at high thinking costs $0.45 (4.3× less) and scores 88% [51, 138] (n=40), with wider uncertainty (`results/gemini/ladder.md`).
 
 A benchmark gives one number per model. It can't tell you whether more thinking would help, what that costs, or whether the score can be gamed. Answering that needs controlled experiments and an adversarial audit, at a scale nobody does by hand.
 
@@ -21,7 +21,7 @@ Every Gemini call goes through one client that writes one log row per call (`can
 
 | Role | Gemini-specific capability | Result (committed) |
 |---|---|---|
-| **Player: the Ladder** (`ladder.py`) | `thinking_level` as the only changed factor; thought-signature replay across function-calling turns (13 MCP tools) | 417 paired episodes, 34 cells (5 models × levels × 2 tiers), same worlds as the solver (`results/gemini/ladder.md`) |
+| **Player: the Ladder** (`ladder.py`) | `thinking_level` as the only changed factor; thought-signature replay across function-calling turns (13 MCP tools) | 587 paired episodes, 42 cells (models × thinking levels × 2 tiers), same worlds as the solver (`results/gemini/ladder.md`) |
 | **Attacker: the Red-team Swarm** (`swarm.py`) | The whole repo in one long-context prompt (about 183k tokens), function calling against the env | 100 ledger-verified attacks: 91 attackers over 4 waves (75 whitebox, 16 blackbox) plus 9 re-runs of the strongest plans through the real MCP server; 5 more were lost to a DNS outage and never scored: **0 verified exploits**. Detector validated on a reopened exploit: 4/4 caught (`results/gemini/swarm.md`) |
 | **Analyst: Atlas and Gallery** (`atlas.py`, `gallery.py`) | 793k-token corpus in one explicit context cache on 3.8-flash; multimodal belief charts; embeddings | Blind discovery recovers 3 of 5 code-defined failure modes and names 2 new ones (`results/gemini/atlas_blind.md`). Explains the code-attributed failures (`atlas.md`, `docs/reports/failure_gallery.md`). See the honesty notes |
 | **Adversary: the arena mole** (`roles.py`) | gemini-4-carbon plays the mole live | Finds the canary trap's blind spot (§3.3) |
@@ -29,11 +29,11 @@ Every Gemini call goes through one client that writes one log row per call (`can
 | **Demo only** | TTS (3.8-flash-tts), Live API (3.8-live) | Narration and a live commentator clip. Not part of any measurement |
 
 ## 3. What is innovative
-1. **Thinking as a controlled variable on a solver-referenced benchmark** (`results/gemini/ladder.md`). Each cell has 10–20 paired seeds, so the 95% paired-bootstrap CIs are wide; read these as directions.
-   - On hard, gemini-4-carbon at high thinking reaches 106% [94, 126] of the Bayesian solver (n=10, $1.93 per episode, 10/10 correct accusations). The cheaper 3.6-flash is 78% [28, 151] at medium and 71% [11, 158] at high thinking (n=20 each, $0.42–0.43 per episode, 35/40 correct): about 4.5× cheaper, with far wider uncertainty. The ladder's CI gate calls it "not distinguishable from the solver on hard, but the CIs are wide".
+1. **Thinking as a controlled variable on a solver-referenced benchmark** (`results/gemini/ladder.md`). Each cell has 10–40 paired seeds, so the 95% paired-bootstrap CIs are wide; read these as directions.
+   - On hard, gemini-4-carbon at high thinking reaches 106% [94, 126] of the Bayesian solver (n=10, $1.93 per episode, 10/10 correct accusations). The cheaper 3.6-flash is 87% [50, 147] at medium and 88% [51, 138] at high thinking (n=40 each, $0.42–0.45 per episode, 73/80 correct): 4.3× cheaper at high thinking, with wider uncertainty. The ladder's CI gate calls it "not distinguishable from the solver on hard, but the CIs are wide".
    - 3.1-flash-lite scores below do-nothing in all 8 (thinking level, tier) cells.
    - 3.8-flash improves with thinking on medium (−2% [−77, 62] at low → 69% [33, 97] at high) and on hard (3% → 51% [−5, 123]), with wide CIs.
-   - Hosted Gemma 4 (gemma-4-31b-it via the Gemini API) is exploratory only: 38% [−155, 96] of the solver, n=4.
+   - Hosted Gemma 4 (gemma-4-31b-it via the Gemini API) is exploratory only: −4% [−155, 94] of the solver, n=5.
    - These are real Gemini-only controls (`thinking_level`, thought signatures), not a swappable LLM slot. The OpenAI backend in the repo is used only for the AfterQuery comparison runs.
 2. **A red team with a validated detector** (`results/gemini/swarm.md`, `swarm_control.md`).
    - Gemini attackers read the full source (whitebox) or only the agent's instructions and tools (blackbox) and attack the reward. Scores come only from the server's ledger, and every correct accusation is audited against what the attacker had seen, so detective work is not mistaken for an exploit.
@@ -58,7 +58,7 @@ Every Gemini call goes through one client that writes one log row per call (`can
 ## 4. Why Gemini is essential (measured, `results/gemini/ablations.md`)
 - **Thought signatures are load-bearing:** with signature replay stripped, the API rejected the first function-call replay on 10/10 hard-tier episodes of gemini-3.8-flash (400 INVALID_ARGUMENT, "Function call is missing a thought_signature"; Wilson 95% CI [72.2, 100.0]), so 0 episodes were playable, versus 10/10 played with replay on (0/628 API errors, accuracy 70.0% [39.7, 89.2]).
 - **Explicit context caching** cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 75.9% ($678.19 of $893.08) across all 29,150 ledgered calls. These figures leave out explicit-cache storage cost, which the ledger does not record.
-- **`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, 3.6-flash (requested as 3.5-flash) goes from −32% [−124, 34] at minimal (n=10, 0 thinking tokens, $0.25/episode) to 78% [28, 151] at medium (n=20, 20,151 thinking tokens, $0.42/episode) of the solver on the same seeds, while gemini-4-argon is non-monotone (102% [83, 130] at low, n=10, $0.17/episode, vs 45% [−34, 99] at high, n=10, $1.61/episode). Across all 34 cells the 95% CI excludes solver parity in 17.
+- **`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, 3.6-flash (requested as 3.5-flash) goes from −32% [−124, 34] at minimal (n=10, 0 thinking tokens, $0.25/episode) to 87% [50, 147] at medium (n=40, 20,275 thinking tokens, $0.42/episode) of the solver on the same seeds (`results/gemini/ladder.md`). Across all 42 ladder cells the 95% CI excludes solver parity in 18.
 - **1M-token context** fits the whole trajectory corpus or the whole repo in one request; **Live, TTS, multimodal and embeddings** sit on the same API and key.
 
 ## Gemini across the team (breadth)

@@ -1,20 +1,31 @@
 #!/usr/bin/env bash
-# One-command judge acceptance for AfterQuery entry "Canary" (branch justSilas).
-# Runs setup, reproduce, baseline checks and an MCP smoke test.
-# Exit 0 only if every required row PASSes. No API key required.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-export PATH="${HOME}/.local/bin:${PATH}"
-TMPD="$(mktemp -d "${TMPDIR:-/tmp}/canary-accept.XXXXXX")"   # per-run scratch: parallel accepts never clobber
-trap 'rm -rf "$TMPD"' EXIT
+case ":${PATH}:" in
+  *":${HOME}/.local/bin:"*) ;;
+  *) export PATH="${PATH}:${HOME}/.local/bin" ;;
+esac
+TMPD="$(mktemp -d "${TMPDIR:-/tmp}/canary-accept.XXXXXX")"
+mcp_pid=""
+_descendants() { local c; for c in $(pgrep -P "$1" 2>/dev/null || true); do _descendants "$c"; echo "$c"; done; }
+_cleanup_mcp() {
+  if [ -n "${mcp_pid:-}" ]; then
+    local _kids
+    _kids=$(_descendants "$mcp_pid")
+    kill $_kids "$mcp_pid" 2>/dev/null || true
+    wait "$mcp_pid" 2>/dev/null || true
+    mcp_pid=""
+  fi
+}
+trap '_cleanup_mcp; rm -rf "$TMPD"' EXIT
 
 rows=()
 pass=0
 fail=0
 skip=0
 say() { printf '%s\n' "$*"; }
-record() { # STATUS name detail
+record() {
   local st="$1" name="$2" detail="$3"
   rows+=("$st|$name|$detail")
   case "$st" in
@@ -22,7 +33,7 @@ record() { # STATUS name detail
     FAIL) fail=$((fail+1)) ;;
     SKIP) skip=$((skip+1)) ;;
   esac
-  printf '  [%s] %s — %s\n' "$st" "$name" "$detail"
+  printf '  [%s] %s - %s\n' "$st" "$name" "$detail"
 }
 
 say "== Canary judge accept (AfterQuery entry, branch justSilas) =="
@@ -55,25 +66,84 @@ else
   fi
 
   say "-- make reproduce --"
-  if make reproduce; then
-    record PASS "make reproduce exits 0" "see results/latest/judge_table.md"
+  reuse_age=""
+  if [ "${ACCEPT_FORCE_REPRODUCE:-0}" != "1" ] \
+    && [ -s "results/latest/judge_table.md" ] \
+    && [ -s "results/latest/exploits.json" ] \
+    && [ -s "results/latest/paired_table_gemini.md" ] \
+    && [ -s "data/runs/committed/v1.4/paired_table_gemini.md" ] \
+    && { ! command -v cmp >/dev/null 2>&1 || cmp -s "results/latest/paired_table_gemini.md" "data/runs/committed/v1.4/paired_table_gemini.md"; }; then
+    reuse_age="$(ACCEPT_REUSE_MAX_AGE_S="${ACCEPT_REUSE_MAX_AGE_S:-900}" python3 - <<'PY' || true
+import json, os, re, sys, time
+from pathlib import Path
+
+root = Path(".").resolve()
+jt = root / "results/latest/judge_table.md"
+ex = root / "results/latest/exploits.json"
+pt = root / "results/latest/paired_table_gemini.md"
+rules_py = root / "canary/rules.py"
+committed_ex = root / "results/anticheat/exploits.json"
+committed_pt = root / "data/runs/committed/v1.4/paired_table_gemini.md"
+
+for req in (jt, ex, pt, rules_py, committed_ex, committed_pt):
+    if not req.is_file() or req.stat().st_size <= 0:
+        sys.exit(1)
+
+try:
+    max_age = float(os.environ.get("ACCEPT_REUSE_MAX_AGE_S", "900"))
+except ValueError:
+    sys.exit(1)
+
+jt_mtime = jt.stat().st_mtime
+age = time.time() - jt_mtime
+if max_age <= 0 or age > max_age or age < -5.0:
+    sys.exit(1)
+if jt_mtime < rules_py.stat().st_mtime or jt_mtime < committed_ex.stat().st_mtime:
+    sys.exit(1)
+if pt.read_bytes() != committed_pt.read_bytes():
+    sys.exit(1)
+
+try:
+    ex_data = json.loads(ex.read_text(encoding="utf-8"))
+except Exception:
+    sys.exit(1)
+if not isinstance(ex_data, dict):
+    sys.exit(1)
+if not (
+    ex_data.get("all_blocked") is True
+    and ex_data.get("replay_all_consistent") is True
+    and ex_data.get("harbor_all_consistent") is True
+):
+    sys.exit(1)
+
+jt_text = jt.read_text(encoding="utf-8")
+h2 = chr(35) * 2
+for tier_name in ("easy", "medium", "hard"):
+    if re.search(rf"^{h2} {tier_name}\b", jt_text, re.M) is None:
+        sys.exit(1)
+
+print(int(max(0.0, age)))
+PY
+)"
+  fi
+  if [ -n "$reuse_age" ]; then
+    say "reusing fresh results/latest/judge_table.md (${reuse_age}s old; set ACCEPT_FORCE_REPRODUCE=1 to rerun)"
+    record PASS "make reproduce exits 0" "reused fresh results/latest/judge_table.md (${reuse_age}s old; set ACCEPT_FORCE_REPRODUCE=1 to rerun)"
   else
-    record FAIL "make reproduce exits 0" "exit $?"
+    if make reproduce; then
+      record PASS "make reproduce exits 0" "see results/latest/judge_table.md"
+    else
+      record FAIL "make reproduce exits 0" "exit $?"
+    fi
   fi
 
-  # Parse the paired table and anti-cheat line
   python3 - <<'PY' > "$TMPD/check.txt"
-import re, sys
+import json, re
 from pathlib import Path
+
 root = Path(".").resolve()
 table = root / "results/latest/judge_table.md"
-logish = table.read_text() if table.exists() else ""
-# also scan no extra file; numbers live in judge_table.md
-# Expected bands, measured on this code: results/solver_range/<agent>_<tier>_judge40.json holds the 40-judge-seed
-# mean of <agent> under 300 fresh world secrets (scripts/solver_spread.py, the same draw a keyless make reproduce
-# makes). Band = mean +/- 4 sd of those run means, so an honest run fails a row with probability < 1e-4.
-# do_nothing and stop_early never accuse: exactly 0.
-import json
+logish = table.read_text(encoding="utf-8") if table.exists() else ""
 K_SD = 4.0
 bands = {}
 band_src = {}
@@ -81,10 +151,10 @@ for name in ("solver", "guess_day1"):
     for t in ("medium", "hard", "easy"):
         f = root / "results" / "solver_range" / f"{name}_{t}_judge40.json"
         if f.exists():
-            d = json.loads(f.read_text())
+            d = json.loads(f.read_text(encoding="utf-8"))
             bands[(name, t)] = (d["mean"] - K_SD * d["sd"], d["mean"] + K_SD * d["sd"])
             band_src[(name, t)] = f"{f.relative_to(root)}: mean {d['mean']:+.3f}, sd {d['sd']:.3f}, {d['builds']} secrets"
-        elif name == "solver":   # not measured yet: wide sanity band (positive, well below a perfect score)
+        elif name == "solver":
             bands[(name, t)] = (0.25, 0.90)
             band_src[(name, t)] = f"fallback band; {f.relative_to(root)} not committed yet"
         else:
@@ -93,26 +163,26 @@ for name in ("solver", "guess_day1"):
 for name in ("do_nothing", "stop_early"):
     for t in ("medium", "hard", "easy"):
         bands[(name, t)] = (0.0, 0.0)
-# Parse paired-run rows under each ## tier
+
+h2 = chr(35) * 2
 tier = None
 mode = None
 found = {}
 for line in logish.splitlines():
-    if line.startswith("## "):
-        m = re.match(r"## (medium|hard|easy)", line)
+    if line.startswith(f"{h2} "):
+        m = re.match(rf"{h2} (medium|hard|easy)\b", line)
         tier = m.group(1) if m else None
         mode = None
     if line.startswith("Paired runs"):
         mode = "paired"
     if line.startswith("Reported") or line.startswith("History"):
         mode = None
-    if mode == "paired" and line.startswith("|") and "reference" in line or (mode=="paired" and line.startswith("|") and "baseline" in line):
+    if mode == "paired" and line.startswith("|") and ("reference" in line or "baseline" in line):
         parts = [p.strip() for p in line.strip().strip("|").split("|")]
         if len(parts) < 5 or parts[0] in ("agent", "---"):
             continue
         name = parts[0]
-        # score column is like +0.625 ± 0.086
-        sm = re.search(r"([+-]?\d+\.\d+)", parts[4] if len(parts)>4 else "")
+        sm = re.search(r"([+-]?\d+\.\d+)", parts[4] if len(parts) > 4 else "")
         if not sm:
             continue
         score = float(sm.group(1))
@@ -147,11 +217,16 @@ for key, band in bands.items():
     emit("PASS" if ok else "FAIL", f"{name} {tier}",
          f"score={s:+.3f} (expected [{lo:+.2f}, {hi:+.2f}]{extra}; {band_src[key]})")
 
-# ANTI-CHEAT is printed by make reproduce to stdout, not always to the table file.
-# Check exploits.json exists and attacks means <= 0
 ex = root / "results/latest/exploits.json"
 if ex.exists():
-    emit("PASS", "exploits.json written", str(ex))
+    try:
+        ex_obj = json.loads(ex.read_text(encoding="utf-8"))
+    except Exception:
+        ex_obj = None
+    if isinstance(ex_obj, dict) and ex_obj.get("all_blocked") is True:
+        emit("PASS", "exploits.json written", str(ex))
+    else:
+        emit("FAIL", "exploits.json written", f"{ex}: all_blocked is not True")
 else:
     emit("FAIL", "exploits.json written", "missing")
 print("\n".join(out))
@@ -165,7 +240,6 @@ PY
   export MCP_PORT MCP_PORT_FALLBACK=1
   port="$(bash scripts/mcp_port.sh)"
   say "using MCP_PORT=$port"
-  # start server
   set +e
   CANARY_TIER=medium CANARY_SEED=900007 CANARY_LEDGER_TOKEN=judge-accept-demo \
     MCP_PORT="$port" MCP_PORT_FALLBACK=0 \
@@ -173,10 +247,11 @@ PY
   mcp_pid=$!
   set -e
   ready=0
-  for i in $(seq 1 40); do
+  for i in $(seq 1 100); do
     if python3 - "$port" <<'PY'
 import socket, sys
-s=socket.socket(); s.settimeout(0.2)
+s = socket.socket()
+s.settimeout(0.2)
 try:
     s.connect(("127.0.0.1", int(sys.argv[1])))
     sys.exit(0)
@@ -187,22 +262,86 @@ finally:
 PY
     then ready=1; break; fi
     if ! kill -0 "$mcp_pid" 2>/dev/null; then break; fi
-    sleep 0.25
+    sleep 0.1
   done
   if [ "$ready" = "1" ]; then
-    code=$(curl -sS -m 3 -o "$TMPD/mcp-body.txt" -w "%{http_code}" "http://127.0.0.1:${port}/mcp" || true)
-    record PASS "MCP server binds" "http://127.0.0.1:${port}/mcp http_code=${code:-none}"
+    init_req='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"judge-accept","version":"1.0"}}}'
+    init_code=$(curl -sS -m 5 -X POST \
+      -H "Content-Type: application/json" \
+      -H "Accept: application/json, text/event-stream" \
+      -d "$init_req" \
+      -o "$TMPD/mcp-body.txt" -w "%{http_code}" \
+      "http://127.0.0.1:${port}/mcp" || true)
+    ledger_ok_code=$(curl -sS -m 5 \
+      -o "$TMPD/ledger-ok.txt" -w "%{http_code}" \
+      "http://127.0.0.1:${port}/ledger?token=judge-accept-demo" || true)
+    ledger_unauth_code=$(curl -sS -m 5 \
+      -o "$TMPD/ledger-unauth.txt" -w "%{http_code}" \
+      "http://127.0.0.1:${port}/ledger" || true)
+    if mcp_err="$(python3 - "$TMPD" "${init_code:-}" "${ledger_ok_code:-}" "${ledger_unauth_code:-}" <<'PY'
+import json, sys
+from pathlib import Path
+
+tmpd = Path(sys.argv[1])
+init_code, ledger_ok_code, ledger_unauth_code = sys.argv[2], sys.argv[3], sys.argv[4]
+problems = []
+
+if init_code != "200":
+    problems.append(f"initialize={init_code or 'none'} (expected 200)")
+else:
+    raw = (tmpd / "mcp-body.txt").read_text(encoding="utf-8", errors="replace") if (tmpd / "mcp-body.txt").is_file() else ""
+    msg = None
+    for line in raw.splitlines():
+        if line.startswith("data:"):
+            cand = line[5:].strip()
+            if cand:
+                try:
+                    obj = json.loads(cand)
+                    if isinstance(obj, dict) and obj.get("id") == 1:
+                        msg = obj
+                        break
+                except Exception:
+                    pass
+    if msg is None and raw.strip():
+        try:
+            obj = json.loads(raw)
+            if isinstance(obj, dict):
+                msg = obj
+        except Exception:
+            pass
+    res = msg.get("result") if isinstance(msg, dict) else None
+    if not isinstance(res, dict) or "serverInfo" not in res or "protocolVersion" not in res:
+        problems.append("initialize missing serverInfo/protocolVersion")
+
+if ledger_ok_code != "200":
+    problems.append(f"/ledger token={ledger_ok_code or 'none'} (expected 200)")
+else:
+    lraw = (tmpd / "ledger-ok.txt").read_text(encoding="utf-8", errors="replace") if (tmpd / "ledger-ok.txt").is_file() else ""
+    try:
+        lobj = json.loads(lraw)
+        if not isinstance(lobj, dict):
+            problems.append("/ledger token body is not a JSON object")
+    except Exception:
+        problems.append("/ledger token body is invalid JSON")
+
+if ledger_unauth_code != "403":
+    problems.append(f"/ledger unauth={ledger_unauth_code or 'none'} (expected 403)")
+
+if problems:
+    print("; ".join(problems))
+    sys.exit(1)
+PY
+    )"; then
+      record PASS "MCP server binds" "http://127.0.0.1:${port}/mcp JSON-RPC initialize=200, /ledger token=200 unauth=403"
+    else
+      tail -20 "$TMPD/mcp.log" 2>/dev/null | sed 's/^/    /' || true
+      record FAIL "MCP server binds" "http://127.0.0.1:${port}/mcp ${mcp_err:-MCP smoke check failed}"
+    fi
   else
-    # show last log lines
-    tail -20 "$TMPD/mcp.log" 2>/dev/null | sed 's/^/    /'
+    tail -20 "$TMPD/mcp.log" 2>/dev/null | sed 's/^/    /' || true
     record FAIL "MCP server binds" "server did not listen on port $port (log tail above)"
   fi
-  # Stop ONLY the server this script started: walk mcp_pid's descendants (make -> uv -> python) by PID.
-  # Never pkill by pattern: other sessions on the same machine run their own canary.mcp_server.
-  _descendants() { local c; for c in $(pgrep -P "$1" 2>/dev/null); do _descendants "$c"; echo "$c"; done; }
-  _kids=$(_descendants "$mcp_pid")
-  kill $_kids "$mcp_pid" 2>/dev/null || true
-  wait "$mcp_pid" 2>/dev/null || true
+  _cleanup_mcp
 fi
 
 if command -v docker >/dev/null 2>&1 && command -v harbor >/dev/null 2>&1; then

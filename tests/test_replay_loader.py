@@ -362,3 +362,59 @@ def test_real_committed_episodes_and_pairing() -> None:
     ]
     assert [p["seed"] for p in v13_codex_medium] == list(range(11))
     assert [p["seed"] for p in v13_codex_hard] == list(range(11))
+
+
+def test_seed_filtering_synthetic_and_committed_v14(tmp_path: Path) -> None:
+    _write_run(
+        tmp_path / "v1.4" / "agent-a",
+        [
+            _sample_ep(tier="hard", seed=0, agent="gemini:gemini-4-carbon", score=0.70),
+            _sample_ep(tier="hard", seed=15, agent="gemini:gemini-4-carbon", score=0.60),
+            _sample_ep(tier="hard", seed=34, agent="gemini:gemini-4-carbon", score=0.79),
+        ],
+        {"tiers_version": "v1.4", "model": "gemini-4-carbon"},
+    )
+    _write_run(
+        tmp_path / "v1.4" / "reference" / "solver-hard",
+        [
+            _sample_ep(tier="hard", seed=0, agent="solver", score=0.80),
+            _sample_ep(tier="hard", seed=15, agent="solver", score=0.75),
+            _sample_ep(tier="hard", seed=34, agent="solver", score=0.77),
+        ],
+        {"tiers_version": "v1.4", "agent": "solver"},
+    )
+
+    assert load_committed_episodes(tmp_path, seeds=()) == []
+    assert load_committed_episodes(tmp_path, seeds=range(0)) == []
+
+    gen_filtered = load_committed_episodes(tmp_path, seeds=(s for s in (0, 15)))
+    assert [(ep["seed"], ep["agent"]) for ep in gen_filtered] == [
+        (0, "gemini:gemini-4-carbon"),
+        (0, "solver"),
+        (15, "gemini:gemini-4-carbon"),
+        (15, "solver"),
+    ]
+
+    v14_root = ROOT / "data/runs/committed/v1.4"
+    v14_all = load_committed_episodes(v14_root)
+    assert len(v14_all) == 442
+    assert sum(1 for ep in v14_all if ep["provenance"]["kind"] == "real") == 152
+    assert sum(1 for ep in v14_all if ep["provenance"]["kind"] == "scripted") == 290
+    v14_all_pairs = pair_with_solver(v14_all)
+    assert len(v14_all_pairs) == 352
+    assert sum(1 for p in v14_all_pairs if p["provenance"]["kind"] == "real") == 152
+
+    v14_primary = load_committed_episodes(v14_root, seeds=range(30))
+    assert len(v14_primary) == 410
+    assert all(0 <= ep["seed"] < 30 for ep in v14_primary)
+    assert sum(1 for ep in v14_primary if ep["provenance"]["kind"] == "real") == 150
+    assert sum(1 for ep in v14_primary if ep["provenance"]["kind"] == "scripted") == 260
+    v14_primary_pairs = pair_with_solver(v14_primary)
+    assert len(v14_primary_pairs) == 350
+    assert sum(1 for p in v14_primary_pairs if p["provenance"]["kind"] == "real") == 150
+
+    v14_ext = load_committed_episodes(v14_root, seeds=range(30, 60))
+    assert len(v14_ext) == 32
+    assert [ep["seed"] for ep in v14_ext if ep["provenance"]["kind"] == "real"] == [34, 37]
+    v14_ext_pairs = pair_with_solver(v14_ext)
+    assert [p["seed"] for p in v14_ext_pairs] == [34, 37]

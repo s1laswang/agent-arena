@@ -1,0 +1,265 @@
+{
+ "tier": "hard",
+ "tiers_version": "v1.4",
+ "seeds": "0-29",
+ "rows": [
+  {
+   "name": "opencode:google/gemini-4-carbon",
+   "model": "google/gemini-4-carbon",
+   "stage": "frontier",
+   "harness": "OpenCode over MCP (judges' shape)",
+   "n": 30,
+   "score": 0.3223333333,
+   "score_ci": [
+    0.1234379611,
+    0.5212287055
+   ],
+   "pct_solver": 0.6459585838,
+   "pct_solver_ci": [
+    0.2381959126,
+    0.9833962264
+   ],
+   "luck_adjusted_score": 0.359545,
+   "luck_adjusted_pct_solver": 0.7201029448,
+   "luck_adjusted_pct_solver_ci": [
+    0.5173025973,
+    0.9120622754
+   ],
+   "compute": "Gemini API"
+  },
+  {
+   "name": "opencode:google/gemini-3.5-flash",
+   "model": "google/gemini-3.5-flash (served: gemini-3.6-flash)",
+   "stage": "frontier",
+   "harness": "OpenCode over MCP (judges' shape)",
+   "n": 30,
+   "score": 0.373,
+   "score_ci": [
+    0.1964219876,
+    0.5495780124
+   ],
+   "pct_solver": 0.74749499,
+   "pct_solver_ci": [
+    0.3586161011,
+    1.2283136711
+   ],
+   "luck_adjusted_score": 0.1098876667,
+   "luck_adjusted_pct_solver": 0.2200849195,
+   "luck_adjusted_pct_solver_ci": [
+    -0.2263170836,
+    0.6322752179
+   ],
+   "compute": "Gemini API"
+  },
+  {
+   "name": "gemini:gemini-4-carbon",
+   "model": "gemini-4-carbon",
+   "stage": "frontier",
+   "harness": "in-process (full history, thought-signature replay)",
+   "n": 30,
+   "score": 0.473,
+   "score_ci": [
+    0.355226844,
+    0.590773156
+   ],
+   "pct_solver": 0.9478957916,
+   "pct_solver_ci": [
+    0.6221281741,
+    1.4
+   ],
+   "luck_adjusted_score": 0.4210333333,
+   "luck_adjusted_pct_solver": 0.8432528423,
+   "luck_adjusted_pct_solver_ci": [
+    0.6499114602,
+    1.0577899352
+   ],
+   "compute": "Gemini API"
+  },
+  {
+   "name": "reference solver",
+   "model": "scripted:solver",
+   "stage": "solver",
+   "harness": "in-process Env",
+   "n": 30,
+   "score": 0.499,
+   "score_ci": [
+    0.3797025079,
+    0.6182974921
+   ],
+   "pct_solver": 1.0,
+   "pct_solver_ci": null,
+   "luck_adjusted_score": 0.4992966667,
+   "luck_adjusted_pct_solver": 1.0,
+   "luck_adjusted_pct_solver_ci": null,
+   "compute": "CPU (deterministic)"
+  },
+  {
+   "name": "grok_tactics",
+   "model": "scripted:grok_tactics",
+   "stage": "baseline",
+   "harness": "in-process Env",
+   "n": 30,
+   "score": 0.4316666667,
+   "score_ci": [
+    0.3466462957,
+    0.5166870377
+   ],
+   "pct_solver": 0.8650634603,
+   "pct_solver_ci": [
+    0.6683971447,
+    1.1932409012
+   ],
+   "luck_adjusted_score": 0.3843016667,
+   "luck_adjusted_pct_solver": 0.769686025,
+   "luck_adjusted_pct_solver_ci": [
+    0.609795054,
+    0.945846442
+   ],
+   "compute": "CPU (deterministic)"
+  },
+  {
+   "name": "heuristic",
+   "model": "scripted:heuristic",
+   "stage": "baseline",
+   "harness": "in-process Env",
+   "n": 30,
+   "score": 0.0856666667,
+   "score_ci": [
+    -0.1179632818,
+    0.2892966152
+   ],
+   "pct_solver": 0.1716766867,
+   "pct_solver_ci": [
+    -0.2579986385,
+    0.5969325153
+   ],
+   "luck_adjusted_score": 0.052347,
+   "luck_adjusted_pct_solver": 0.104841477,
+   "luck_adjusted_pct_solver_ci": [
+    -0.2015610441,
+    0.3739501917
+   ],
+   "compute": "CPU (deterministic)"
+  },
+  {
+   "name": "logs_only",
+   "model": "scripted:logs_only",
+   "stage": "baseline",
+   "harness": "in-process Env",
+   "n": 30,
+   "score": -1.0,
+   "score_ci": [
+    -1.0,
+    -1.0
+   ],
+   "pct_solver": -2.004008016,
+   "pct_solver_ci": [
+    -2.7075812274,
+    -1.6703786192
+   ],
+   "luck_adjusted_score": -0.9791183333,
+   "luck_adjusted_pct_solver": -1.9609951332,
+   "luck_adjusted_pct_solver_ci": [
+    -2.2535062643,
+    -1.7458027141
+   ],
+   "compute": "CPU (deterministic)"
+  },
+  {
+   "name": "random",
+   "model": "scripted:random",
+   "stage": "baseline",
+   "harness": "in-process Env",
+   "n": 30,
+   "score": -0.8666666667,
+   "score_ci": [
+    -0.9903902494,
+    -0.742943084
+   ],
+   "pct_solver": -1.7368069472,
+   "pct_solver_ci": [
+    -2.4154589372,
+    -1.3349514563
+   ],
+   "luck_adjusted_score": -0.8410816667,
+   "luck_adjusted_pct_solver": -1.6845329096,
+   "luck_adjusted_pct_solver_ci": [
+    -2.0145040197,
+    -1.3773372797
+   ],
+   "compute": "CPU (deterministic)"
+  },
+  {
+   "name": "guess_day1",
+   "model": "scripted:guess_day1",
+   "stage": "baseline",
+   "harness": "in-process Env",
+   "n": 30,
+   "score": -1.0,
+   "score_ci": [
+    -1.0,
+    -1.0
+   ],
+   "pct_solver": -2.004008016,
+   "pct_solver_ci": [
+    -2.7075812274,
+    -1.6703786192
+   ],
+   "luck_adjusted_score": -0.95,
+   "luck_adjusted_pct_solver": -1.9026764315,
+   "luck_adjusted_pct_solver_ci": [
+    -2.1847283654,
+    -1.6934287833
+   ],
+   "compute": "CPU (deterministic)"
+  },
+  {
+   "name": "stop_early",
+   "model": "scripted:stop_early",
+   "stage": "baseline",
+   "harness": "in-process Env",
+   "n": 30,
+   "score": 0.0,
+   "score_ci": [
+    0.0,
+    0.0
+   ],
+   "pct_solver": 0.0,
+   "pct_solver_ci": [
+    0.0,
+    0.0
+   ],
+   "luck_adjusted_score": 0.0,
+   "luck_adjusted_pct_solver": 0.0,
+   "luck_adjusted_pct_solver_ci": [
+    0.0,
+    0.0
+   ],
+   "compute": "CPU (deterministic)"
+  },
+  {
+   "name": "do_nothing",
+   "model": "scripted:do_nothing",
+   "stage": "baseline",
+   "harness": "in-process Env",
+   "n": 30,
+   "score": 0.0,
+   "score_ci": [
+    0.0,
+    0.0
+   ],
+   "pct_solver": 0.0,
+   "pct_solver_ci": [
+    0.0,
+    0.0
+   ],
+   "luck_adjusted_score": 0.0,
+   "luck_adjusted_pct_solver": 0.0,
+   "luck_adjusted_pct_solver_ci": [
+    0.0,
+    0.0
+   ],
+   "compute": "CPU (deterministic)"
+  }
+ ]
+}

@@ -89,6 +89,14 @@ def _assert_no_secrets(blob: str) -> None:
             raise ValueError(f"refusing to cache a response containing {env_name}")
 
 
+def _entry_label(entry: Any) -> str:
+    if isinstance(entry, dict):
+        prov = entry.get("provenance")
+        if isinstance(prov, dict):
+            return str(prov.get("label") or "")
+    return ""
+
+
 def cached_chat(
     cache_dir: str | Path | None,
     client: Any,
@@ -102,12 +110,26 @@ def cached_chat(
     messages = [{"role": "user", "content": user}]
     key = cache_key(model, system, messages, None, 0, None)
     path = resolved_dir / f"{key}.json"
-    if path.is_file():
-        return json.loads(path.read_text(encoding="utf-8"))
-    if cache_dir is None and not os.environ.get("CANARY_GEMINI_CACHE_DIR"):
-        repo_hit = REPO_COMMITTED_CACHE_DIR / f"{key}.json"
+    default_lookup = (
+        not os.environ.get("CANARY_GEMINI_CACHE_DIR")
+        and (cache_dir is None or resolved_dir == Path(DEFAULT_SHARED_CACHE_DIR))
+    )
+    if default_lookup and label == "REAL":
+        repo_hit = Path(REPO_COMMITTED_CACHE_DIR) / f"{key}.json"
         if repo_hit.is_file():
-            return json.loads(repo_hit.read_text(encoding="utf-8"))
+            repo_entry = json.loads(repo_hit.read_text(encoding="utf-8"))
+            if _entry_label(repo_entry) == "REAL":
+                return repo_entry
+    if path.is_file():
+        local_entry = json.loads(path.read_text(encoding="utf-8"))
+        if not (default_lookup and label == "REAL" and _entry_label(local_entry) == "stub"):
+            return local_entry
+    if default_lookup:
+        repo_hit = Path(REPO_COMMITTED_CACHE_DIR) / f"{key}.json"
+        if repo_hit.is_file():
+            repo_entry = json.loads(repo_hit.read_text(encoding="utf-8"))
+            if label != "REAL" or _entry_label(repo_entry) == "REAL":
+                return repo_entry
     if offline():
         raise OfflineCacheMiss(f"offline and no cached response ({key[:12]})")
     active_client = _resolve_client(client, model)

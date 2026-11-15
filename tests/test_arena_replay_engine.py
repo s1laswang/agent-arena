@@ -673,7 +673,7 @@ globalThis.self = globalThis;
 let modPack = null;
 try {
   const m = await import(pathToFileURL(packPath).href);
-  modPack = m.CANARY_DUEL_PACK || m.default || globalThis.CANARY_DUEL_PACK;
+  modPack = m.CANARY_DUEL_PACK || (m.default && m.default.CANARY_DUEL_PACK) || globalThis.CANARY_DUEL_PACK || m.default;
 } catch (_) {
   vm.runInThisContext(code, { filename: packPath });
   modPack = globalThis.CANARY_DUEL_PACK;
@@ -708,8 +708,12 @@ for (const [tier, seeds] of Object.entries(tiers)) {
       const kWorld = `${tier}:${seed}`;
       let ep = (modPack.by_agent && modPack.by_agent[k1])
         || (modPack.episodes && modPack.episodes[k1])
+        || (typeof modPack.getPreEndEpisode === "function" && modPack.getPreEndEpisode(tier, seed, agent))
+        || (typeof modPack.getEpisode === "function" && modPack.getEpisode(tier, seed, agent))
         || null;
-      let worldEntry = (modPack.episodes && (modPack.episodes[kWorld] || modPack.episodes[String(seed)])) || null;
+      let worldEntry = (modPack.by_world && (modPack.by_world[kWorld] || modPack.by_world[String(seed)]))
+        || (modPack.episodes && (modPack.episodes[kWorld] || modPack.episodes[String(seed)]))
+        || null;
       if (!ep && worldEntry) {
         if (worldEntry[agent] && Array.isArray(worldEntry[agent].steps)) {
           ep = worldEntry[agent];
@@ -865,7 +869,7 @@ if (cfg.packPath) {
   const packCode = fs.readFileSync(cfg.packPath, "utf8");
   try {
     const pm = await import(pathToFileURL(cfg.packPath).href);
-    pack = pm.CANARY_DUEL_PACK || pm.default || globalThis.CANARY_DUEL_PACK;
+    pack = pm.CANARY_DUEL_PACK || (pm.default && pm.default.CANARY_DUEL_PACK) || globalThis.CANARY_DUEL_PACK || pm.default;
   } catch (_) {
     vm.runInThisContext(packCode, { filename: cfg.packPath });
     pack = globalThis.CANARY_DUEL_PACK;

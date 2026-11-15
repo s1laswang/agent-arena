@@ -1,19 +1,28 @@
 from __future__ import annotations
 
 import ast
+import copy
 import gzip
 import io
 import json
 import os
 import shutil
 import subprocess
+import sys
 import tokenize
+from collections import defaultdict
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
 
+from canary.env import _SPECS as ENV_TOOL_SPECS
 from canary.env import Env
 from canary.gemini import outthink
+from canary.rules import tier_params_for_episode
+from canary.solver.policy import SolverPolicy
+from canary.types import Step
+from canary.world import HELDOUT_SEEDS, JUDGE_SEEDS
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = ROOT / "canary" / "gemini" / "outthink.py"
@@ -261,6 +270,286 @@ def test_cases_schema_bayesian_posteriors_and_ledger_provenance():
     assert levels_seen == {"minimal", "low", "medium", "high", "xhigh"}
 
 
+def test_deterministic_env_and_solver_step_by_step_replay():
+    payload = json.loads(JSON_PATH.read_text(encoding="utf-8"))
+    cases = payload["cases"]
+    assert len(cases) >= 4
+
+    ladder_index = outthink.load_ladder_index()
+    replayed_count = 0
+
+    for c in cases:
+        cid = c["id"]
+        tier = c["tier"]
+        seed = c["seed"]
+        d_step = c["decision_step"]
+        assert seed not in HELDOUT_SEEDS
+        assert seed not in JUDGE_SEEDS
+        assert 0 <= seed < 10_000
+
+        anchor_ep = ladder_index[(c["model"], c["anchor_level"], tier, seed)]
+        raw_steps = anchor_ep["steps"]
+        ep_steps = [
+            Step(**{k: s.get(k) for k in ("t", "day", "tool", "args", "result")})
+            for s in raw_steps
+        ]
+        assert d_step < len(ep_steps)
+        assert ep_steps[d_step].tool == "accuse"
+        assert bool((ep_steps[d_step].result or {}).get("ok")) is True
+
+        env = Env(tier, seed)
+        sp = SolverPolicy(tier_params_for_episode(tier, ep_steps))
+
+        canary_assignments: dict[str, dict[str, str]] = {}
+        latest_feed: list[dict] = []
+        seen_logs: set[tuple[int, str, str, bool]] = set()
+        after_hours_by_emp: dict[str, int] = defaultdict(int)
+
+        assert len(c["tool_steps"]) == d_step
+        for idx, (case_st, ep_st) in enumerate(zip(c["tool_steps"], ep_steps[:d_step])):
+            assert case_st["t"] == idx == ep_st.t
+            assert case_st["day"] == env.day == ep_st.day
+            assert case_st["tool"] == ep_st.tool.strip()
+
+            live_res = env.call(ep_st.tool, ep_st.args or {})
+            assert live_res.ok == bool((ep_st.result or {}).get("ok")), f"{cid} step {idx} ok mismatch"
+            sp._ingest(
+                Step(
+                    t=ep_st.t,
+                    day=ep_st.day,
+                    tool=ep_st.tool,
+                    args=ep_st.args,
+                    result=asdict(live_res),
+                )
+            )
+
+            if not live_res.ok:
+                continue
+            data = live_res.data or {}
+            tool_name = ep_st.tool.strip()
+            if tool_name == "plant_canary":
+                can_id = str(data.get("canary_id") or "")
+                if can_id:
+                    canary_assignments[can_id] = {
+                        str(k): str(v) for k, v in (ep_st.args or {}).get("assignment", {}).items()
+                    }
+            elif tool_name == "check_leak_feed":
+                latest_feed = list(data.get("items") or [])
+            elif tool_name == "read_access_logs":
+                for lg in data.get("logs") or []:
+                    log_key = (
+                        int(lg.get("day", ep_st.day)),
+                        str(lg.get("employee") or ""),
+                        str(lg.get("doc_id") or ""),
+                        bool(lg.get("after_hours", False)),
+                    )
+                    if log_key not in seen_logs and log_key[1]:
+                        seen_logs.add(log_key)
+                        if log_key[3]:
+                            after_hours_by_emp[log_key[1]] += 1
+
+        sp.seen = d_step
+        sp.obs.leak_timing_known = sp.v_drops_reveal_leaks()
+        live_post = sp.belief()
+
+        live_v = float(env.V)
+        assert c["value_at_decision"] == pytest.approx(live_v, abs=1e-4), cid
+        assert c["decision_day"] == env.day == ep_steps[d_step].day, cid
+
+        solver = c["solver"]
+        assert set(solver["posterior"].keys()) == set(env._ids), cid
+        for emp_id, live_prob in live_post.items():
+            assert solver["posterior"][emp_id] == pytest.approx(float(live_prob), abs=1e-4), f"{cid}:{emp_id}"
+
+        live_top_suspect = max(live_post, key=live_post.get)
+        live_top_prob = float(live_post[live_top_suspect])
+        live_be_prob = 1.0 / (1.0 + round(live_v, 4)) if live_v > 0 else 1.0
+        live_ev_accuse = (live_top_prob * round(live_v, 4)) - (1.0 - live_top_prob)
+
+        assert solver["top_suspect"] == live_top_suspect, cid
+        assert solver["top_prob"] == pytest.approx(live_top_prob, abs=1e-4), cid
+        assert solver["break_even_prob"] == pytest.approx(live_be_prob, abs=1e-4), cid
+        assert solver["ev_accuse_top"] == pytest.approx(live_ev_accuse, abs=1e-4), cid
+
+        live_consistent = set(env._ids)
+        for item in latest_feed:
+            doc_id = str(item.get("doc_id") or "")
+            variant = item.get("variant")
+            if variant is not None and doc_id in canary_assignments:
+                asg = canary_assignments[doc_id]
+                live_consistent &= {emp for emp, v_lbl in asg.items() if v_lbl == variant}
+            elif doc_id in env._doc_by_id:
+                recips = env._doc_by_id[doc_id].get("recipients") or []
+                if recips:
+                    live_consistent &= {str(r) for r in recips}
+
+        canary_hits_by_emp: dict[str, int] = defaultdict(int)
+        for item in latest_feed:
+            doc_id = str(item.get("doc_id") or "")
+            l_var = str(item["variant"]) if item.get("variant") is not None else None
+            if doc_id in canary_assignments and l_var is not None:
+                for emp_id, assigned_var in canary_assignments[doc_id].items():
+                    if assigned_var == l_var:
+                        canary_hits_by_emp[emp_id] += 1
+
+        for s in c["suspects"]:
+            sid = s["id"]
+            assert s["eliminated"] is (sid not in live_consistent), f"{cid}:{sid} eliminated mismatch"
+            assert s["canary_hits"] == canary_hits_by_emp[sid], f"{cid}:{sid} canary_hits mismatch"
+            assert s["after_hours_count"] == after_hours_by_emp[sid], f"{cid}:{sid} after_hours mismatch"
+
+        for st in ep_steps[d_step:]:
+            if env.done:
+                break
+            env.call(st.tool, st.args or {})
+        assert env.done is True
+        assert env._accused == anchor_ep["accused"]
+        assert float(env.score()) == pytest.approx(float(anchor_ep["score"]), abs=1e-6)
+        replayed_count += 1
+
+    assert replayed_count == len(cases) >= 4
+
+
+def test_cli_check_tamper_detection_and_roundtrip(tmp_path: Path, capsys):
+    json_out = tmp_path / "out_think_gemini.json"
+    js_out = tmp_path / "cases.js"
+
+    rc_missing_json = outthink.main(["--check", "--json-out", str(json_out), "--js-out", str(CASES_JS_PATH)])
+    err_missing_json = capsys.readouterr().err
+    assert rc_missing_json != 0
+    assert "ERROR:" in err_missing_json
+
+    rc_missing_js = outthink.main(["--check", "--json-out", str(JSON_PATH), "--js-out", str(js_out)])
+    err_missing_js = capsys.readouterr().err
+    assert rc_missing_js != 0
+    assert "ERROR:" in err_missing_js
+
+    rc_write = outthink.main(["--json-out", str(json_out), "--js-out", str(js_out)])
+    out_write = capsys.readouterr().out
+    assert rc_write == 0
+    assert "Wrote" in out_write
+    assert json_out.read_text(encoding="utf-8") == JSON_PATH.read_text(encoding="utf-8")
+    assert js_out.read_text(encoding="utf-8") == CASES_JS_PATH.read_text(encoding="utf-8")
+
+    rc_clean = outthink.main(["--check", "--json-out", str(json_out), "--js-out", str(js_out)])
+    out_clean = capsys.readouterr().out
+    assert rc_clean == 0
+    assert "OK:" in out_clean
+
+    clean_json_text = json_out.read_text(encoding="utf-8")
+    tampered_doc = json.loads(clean_json_text)
+    tampered_doc["cases"][0]["value_at_decision"] = 0.0123
+    json_out.write_text(json.dumps(tampered_doc, indent=2) + "\n", encoding="utf-8")
+
+    rc_json_drift = outthink.main(["--check", "--json-out", str(json_out), "--js-out", str(js_out)])
+    err_json_drift = capsys.readouterr().err
+    assert rc_json_drift != 0
+    assert "out of date" in err_json_drift
+
+    json_out.write_text(clean_json_text, encoding="utf-8")
+    clean_js_text = js_out.read_text(encoding="utf-8")
+    js_out.write_text(clean_js_text.replace("OUTTHINK_DATA", "OUTTHINK_DATA_TAMPERED", 1), encoding="utf-8")
+
+    rc_js_drift = outthink.main(["--check", "--json-out", str(json_out), "--js-out", str(js_out)])
+    err_js_drift = capsys.readouterr().err
+    assert rc_js_drift != 0
+    assert "out of date" in err_js_drift
+
+    base_payload = json.loads(clean_json_text)
+    assert outthink.validate_payload(base_payload) == []
+
+    bad_mole = copy.deepcopy(base_payload)
+    bad_mole["cases"][0]["true_mole"] = "e999"
+    assert any("true_mole" in e for e in outthink.validate_payload(bad_mole))
+
+    bad_post = copy.deepcopy(base_payload)
+    first_emp = next(iter(bad_post["cases"][0]["solver"]["posterior"]))
+    bad_post["cases"][0]["solver"]["posterior"][first_emp] += 0.5
+    assert any("posterior sum" in e for e in outthink.validate_payload(bad_post))
+
+    bad_step = copy.deepcopy(base_payload)
+    bad_step["cases"][0]["decision_step"] = 9999
+    assert any("decision_step" in e for e in outthink.validate_payload(bad_step))
+
+
+def test_pre_decision_leakage_guard():
+    payload = json.loads(JSON_PATH.read_text(encoding="utf-8"))
+    allowed_pre_tools = set(ENV_TOOL_SPECS.keys()) - {"accuse"}
+    forbidden_obs_keys = {"true_mole", "mole", "is_mole", "decoy", "ground_truth_mole"}
+
+    for c in payload["cases"]:
+        cid = c["id"]
+        d_day = c["decision_day"]
+        d_step = c["decision_step"]
+        assert isinstance(d_day, int) and d_day >= 1
+        assert isinstance(d_step, int) and d_step == len(c["tool_steps"]) > 0
+
+        for idx, lk in enumerate(c["leaks"]):
+            assert lk["day"] <= d_day, f"{cid} leak[{idx}] day {lk['day']} > decision_day {d_day}"
+            if "t" in lk and lk["t"] is not None:
+                assert lk["t"] < d_step, f"{cid} leak[{idx}] t {lk['t']} >= decision_step {d_step}"
+            assert forbidden_obs_keys.isdisjoint(lk.keys())
+
+        for idx, can in enumerate(c["canaries"]):
+            assert can["day_planted"] <= d_day, f"{cid} canary[{idx}] day_planted > decision_day {d_day}"
+            if "day" in can and can["day"] is not None:
+                assert can["day"] <= d_day, f"{cid} canary[{idx}] day > decision_day {d_day}"
+            if "t" in can and can["t"] is not None:
+                assert can["t"] < d_step, f"{cid} canary[{idx}] t >= decision_step {d_step}"
+            assert forbidden_obs_keys.isdisjoint(can.keys())
+            seen_recips: list[str] = []
+            for var_entry in can["variants"]:
+                assert var_entry["variant"]
+                assert isinstance(var_entry["recipients"], list) and len(var_entry["recipients"]) >= 1
+                seen_recips.extend(var_entry["recipients"])
+            assert len(seen_recips) == len(set(seen_recips)), f"{cid} canary[{idx}] duplicate recipient across variants"
+
+        for idx, lg in enumerate(c["access_logs"]):
+            assert lg["day"] <= d_day, f"{cid} access_log[{idx}] day {lg['day']} > decision_day {d_day}"
+            if "t" in lg and lg["t"] is not None:
+                assert lg["t"] < d_step, f"{cid} access_log[{idx}] t >= decision_step {d_step}"
+            assert forbidden_obs_keys.isdisjoint(lg.keys())
+
+        for idx, cm in enumerate(c["comms"]):
+            assert cm["day"] <= d_day, f"{cid} comm[{idx}] day {cm['day']} > decision_day {d_day}"
+            if "t" in cm and cm["t"] is not None:
+                assert cm["t"] < d_step, f"{cid} comm[{idx}] t >= decision_step {d_step}"
+            assert forbidden_obs_keys.isdisjoint(cm.keys())
+
+        prev_day = 1
+        for idx, st in enumerate(c["tool_steps"]):
+            assert 0 <= st["t"] < d_step, f"{cid} tool_step[{idx}] t {st['t']} >= decision_step {d_step}"
+            assert st["t"] == idx, f"{cid} tool_step[{idx}] non-contiguous t {st['t']}"
+            assert prev_day <= st["day"] <= d_day, f"{cid} tool_step[{idx}] day {st['day']} out of bounds"
+            prev_day = st["day"]
+            assert st["tool"] in allowed_pre_tools, f"{cid} tool_step[{idx}] disallowed tool {st['tool']}"
+            assert st["tool"] != "accuse"
+            assert st["tool"] != "read_document"
+            assert forbidden_obs_keys.isdisjoint(st.keys())
+
+        for s in c["suspects"]:
+            assert forbidden_obs_keys.isdisjoint(s.keys())
+
+
+def test_keyless_subprocess_check_without_api_keys():
+    clean_env = {
+        k: v
+        for k, v in os.environ.items()
+        if k not in {"GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"}
+    }
+    clean_env["PYTHONPATH"] = str(ROOT)
+    proc = subprocess.run(
+        [sys.executable, "-m", "canary.gemini.outthink", "--check"],
+        cwd=ROOT,
+        env=clean_env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert "OK:" in proc.stdout
+
+
 def test_hygiene_zero_comments_dashes_network_keys_and_protected_paths():
     self_path = Path(__file__).resolve()
     py_files = (MODULE_PATH, self_path)
@@ -296,6 +585,20 @@ def test_hygiene_zero_comments_dashes_network_keys_and_protected_paths():
         if ln.strip() and not ln.strip().startswith(HASH_CHAR)
     ]
     checked = {f.relative_to(ROOT).as_posix() for f in all_files}
+    status_proc = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    if status_proc.returncode == 0:
+        for line in status_proc.stdout.splitlines():
+            if len(line) > 3:
+                entry = line[3:].strip()
+                if " -> " in entry:
+                    entry = entry.split(" -> ", 1)[1].strip()
+                checked.add(entry)
     diff_proc = subprocess.run(
         ["git", "diff", "--name-only", "origin/justSilas..HEAD"],
         cwd=ROOT,

@@ -66,38 +66,39 @@ def _init_git_repo(
 def test_source_files_have_zero_hash_and_zero_em_en_dashes():
     for path in (SCRIPT_PATH, SELF_PATH):
         src = path.read_text(encoding="utf-8")
+        assert src.isascii(), f"non-ASCII character in {path.name}"
         assert H not in src, f"unexpected hash character in {path.name}"
-        assert "\u2014" not in src, f"unexpected em dash in {path.name}"
-        assert "\u2013" not in src, f"unexpected en dash in {path.name}"
+        assert chr(0x2014) not in src, f"unexpected em dash in {path.name}"
+        assert chr(0x2013) not in src, f"unexpected en dash in {path.name}"
 
 
 def test_real_repo_passes_cli_and_api(capsys):
+    assert hygiene.audit_repo is hygiene.audit_doc_hygiene
     api_results = hygiene.audit_doc_hygiene(ROOT)
-    alias_results = hygiene.audit_repo(ROOT)
-    assert len(api_results) == 4
+    assert len(api_results) == 5
     assert [r.name for r in api_results] == list(hygiene.CHECK_NAMES)
-    assert [r.status for r in api_results] == [r.status for r in alias_results]
     for item in api_results:
-        assert item.status != "FAIL", f"{item.name} failed: {item.details}"
+        assert item.status == "PASS", f"{item.name} not PASS: {item.details}"
 
     rc_json = hygiene.main(["--root", str(ROOT), "--json"])
     payload = json.loads(capsys.readouterr().out)
     assert rc_json == 0
     assert payload["passed"] is True
-    assert payload["elapsed_s"] < 10.0
-    assert len(payload["results"]) == 4
+    assert payload["elapsed_s"] < 5.0
+    assert len(payload["results"]) == 5
     assert payload["checks"] == payload["results"]
     by_name = {r["name"]: r for r in payload["results"]}
     assert set(by_name) == set(hygiene.CHECK_NAMES)
     assert by_name[hygiene.CHECK_ANCHORS]["status"] == "PASS"
     assert by_name[hygiene.CHECK_IMAGES]["status"] == "PASS"
-    assert by_name[hygiene.CHECK_TRACKED_TARGETS]["status"] in {"PASS", "WARN"}
+    assert by_name[hygiene.CHECK_TRACKED_TARGETS]["status"] == "PASS"
     assert by_name[hygiene.CHECK_STALE_PR41]["status"] == "PASS"
+    assert by_name[hygiene.CHECK_PORTABILITY_AND_ENCODING]["status"] == "PASS"
 
     rc_text = hygiene.main(["--root", str(ROOT)])
     text_out = capsys.readouterr().out
     assert rc_text == 0
-    assert "0 FAIL" in text_out
+    assert "5 PASS, 0 WARN, 0 FAIL" in text_out
     assert "SUMMARY:" in text_out
 
 
@@ -274,7 +275,7 @@ def test_tracked_vs_gitignored_warn_and_untracked_fail(clean_tmp: Path, capsys):
     assert any("untracked" in d and "docs/forgot_to_git_add.md" in d for d in res_untracked.details)
 
 
-def test_gitless_graceful_mode(clean_tmp: Path, capsys):
+def test_gitless_and_ceiling_graceful_mode(clean_tmp: Path, capsys, monkeypatch):
     gitless_clean = clean_tmp / "gitless_clean"
     _write_files(
         gitless_clean,
@@ -284,17 +285,39 @@ def test_gitless_graceful_mode(clean_tmp: Path, capsys):
                 f"See [walkthrough](docs/JUDGE-WALKTHROUGH.md{H}quick-card) and <img src=\"pitch/chart.png\">.\n"
             ),
             "docs/JUDGE-WALKTHROUGH.md": f"{H} Walkthrough\n{H}{H} Quick Card\n91-attacker Gemini swarm.\n",
+            "scripts/mcp_port.sh": f"{H}!/usr/bin/env bash\nset -euo pipefail\necho 8765\n",
             "pitch/chart.png": PNG_BYTES,
         },
     )
     assert not (gitless_clean / ".git").exists()
     results = hygiene.audit_doc_hygiene(gitless_clean)
-    assert [r.status for r in results] == ["PASS", "PASS", "PASS", "PASS"]
+    assert [r.status for r in results] == ["PASS", "PASS", "PASS", "PASS", "PASS"]
 
     rc_clean = hygiene.main(["--root", str(gitless_clean), "--json"])
     payload_clean = json.loads(capsys.readouterr().out)
     assert rc_clean == 0
     assert payload_clean["passed"] is True
+
+    broken_git_ceiling = clean_tmp / "broken_git_ceiling"
+    _write_files(
+        broken_git_ceiling,
+        {
+            ".git": "gitdir: /tmp/opencode/nonexistent-gitdir-w2b\n",
+            ".gitignore": "results/latest/\n*.log\n",
+            "README.md": f"{H} Canary\nSee [exploits](docs/EXPLOITS.md) and <img src=\"results/latest/plot.png\">.\n",
+            "docs/EXPLOITS.md": f"{H} Exploits\nOptional log [hunt](../results/anticheat/hunt.log).\n",
+            "results/latest/plot.png": PNG_BYTES,
+            "results/latest/bad.sh": b"echo crlf\r\n",
+        },
+    )
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(broken_git_ceiling))
+    ceiling_results = {r.name: r for r in hygiene.audit_doc_hygiene(broken_git_ceiling)}
+    assert ceiling_results[hygiene.CHECK_ANCHORS].status == "PASS"
+    assert ceiling_results[hygiene.CHECK_IMAGES].status == "WARN"
+    assert ceiling_results[hygiene.CHECK_TRACKED_TARGETS].status == "WARN"
+    assert ceiling_results[hygiene.CHECK_STALE_PR41].status == "PASS"
+    assert ceiling_results[hygiene.CHECK_PORTABILITY_AND_ENCODING].status == "PASS"
+    monkeypatch.delenv("GIT_CEILING_DIRECTORIES", raising=False)
 
     gitless_with_gitignore = clean_tmp / "gitless_archive"
     _write_files(
@@ -328,6 +351,20 @@ def test_gitless_graceful_mode(clean_tmp: Path, capsys):
         ("JUDGE_QUICKSTART.md", "Audited by a 51-agent swarm on hard.", "51-agent swarm"),
         ("docs/JUDGE-WALKTHROUGH.md", "Swarm used `35` whitebox attackers.", "35 whitebox"),
         ("docs/PEER-REVIEW-QA.md", "Executed `1,789` tool calls against MCP.", "1,789 tool calls"),
+        ("docs/REPRODUCIBILITY.md", "Timing: <PLACEHOLDER: fill linux timing>.", "<PLACEHOLDER"),
+        ("docs/DEMO.md", "WS4 table: \u27e8PLACEHOLDER: fill held-out row\u27e9.", "<PLACEHOLDER"),
+        ("docs/NUMBER-PROVENANCE-INDEX.md", "Audited by 51-attacker Gemini run.", "51-attacker"),
+        (
+            "docs/EXPLOITS.md",
+            "Residual risk 3: Three retired builds publish their signing key next to the job.",
+            "Three retired builds publish their signing key",
+        ),
+        (
+            "docs/EXPLOITS.md",
+            "ISOLATION OK in all 31 committed Harbor trials that ran solve.sh.",
+            "all 31 committed Harbor trials",
+        ),
+        ("docs/SUBMISSION.md", "OpenCode reached 68% of solver luck-adjusted.", "68% of solver luck-adjusted"),
         ("docs/gemini/SUBMISSION.md", "OpenCode reached 68% of solver luck-adjusted.", "68% of solver luck-adjusted"),
         ("pitch/GEMINI.md", "Tested 51-attacker swarm with 35 whitebox agents.", "51-attacker"),
     ],
@@ -346,6 +383,21 @@ def test_stale_pre_pr41_number_detection(
             "JUDGE_QUICKSTART.md": "91-attacker Gemini swarm, 75 whitebox, 4,325 tool calls.\n",
             "docs/JUDGE-WALKTHROUGH.md": "91-attacker swarm (`75` whitebox, `4,325` tool calls).\n",
             "docs/PEER-REVIEW-QA.md": "72% [52%, 91%] luck-adjusted on n=30 hard seeds.\n",
+            "docs/REPRODUCIBILITY.md": "61/61 solve.sh trials passed isolation; 80/80 Harbor trials consistent.\n",
+            "docs/DEMO.md": (
+                "Hint ablation: \u27e8placeholder: HEAD-AGENTS' ablation in progress; cut if uncommitted.\u27e9\n"
+            ),
+            "docs/NUMBER-PROVENANCE-INDEX.md": "80 of 80 Harbor trials; 91 primary attackers.\n",
+            "docs/EXPLOITS.md": (
+                f"{H} EXPLOITS\n"
+                "ISOLATION OK in all 61 committed Harbor trials that ran solve.sh.\n"
+                "Eight retired job directories publish their signing key.\n"
+                "| J13 | 100-attack Gemini swarm (75 whitebox + 16 blackbox, 4,325 tool calls). "
+                "Wave 1 detail: 35 whitebox attackers | 0 exploits over 1,789 tool calls |\n"
+                f"{H}{H} Full history\n"
+                "| 49 | Historical snapshot: all 31 committed Harbor trials and Three retired builds publish their signing key |\n"
+            ),
+            "docs/SUBMISSION.md": "OpenCode reaches 65% raw, 72% [52%, 91%] luck-adjusted.\n",
             "docs/gemini/SUBMISSION.md": "100 attacks: 91 attackers (75 whitebox, 16 blackbox).\n",
             "pitch/GEMINI.md": "91 attackers over 4 waves.\n",
         },
@@ -362,4 +414,276 @@ def test_stale_pre_pr41_number_detection(
     )
     res = hygiene.check_stale_pr41_numbers(stale_repo)
     assert res.status == "FAIL"
-    assert any(doc_rel in d and expected_token in d for d in res.details)
+    assert any(doc_rel in d and expected_token in d for d in res.details), res.details
+
+
+def test_exploits_placeholder_still_fails_inside_full_history(clean_tmp: Path):
+    repo = clean_tmp / "exploits_hist_placeholder"
+    _write_files(
+        repo,
+        {
+            "docs/EXPLOITS.md": (
+                f"{H} EXPLOITS\n"
+                "Eight retired job directories publish their signing key.\n"
+                f"{H}{H} Full history\n"
+                "| 49 | <PLACEHOLDER: fill hunt> |\n"
+            ),
+        },
+    )
+    res = hygiene.check_stale_pr41_numbers(repo)
+    assert res.status == "FAIL"
+    assert any("<PLACEHOLDER" in d for d in res.details)
+
+
+@pytest.mark.parametrize(
+    "sh_rel",
+    [
+        "harbor/template/tests/test.sh",
+        "scripts/judge_accept.sh",
+        "fr8/verda/run_v3.sh",
+    ],
+)
+def test_crlf_in_shell_scripts_detected(clean_tmp: Path, sh_rel: str):
+    crlf_repo = clean_tmp / f"crlf_{Path(sh_rel).stem}"
+    _init_git_repo(
+        crlf_repo,
+        {
+            "README.md": f"{H} Canary\n",
+            sh_rel: f"{H}!/usr/bin/env bash\r\nset -euo pipefail\r\necho ok\r\n".encode("utf-8"),
+        },
+    )
+    res = hygiene.check_portability_and_encoding(crlf_repo)
+    assert res.status == "FAIL"
+    assert any(sh_rel in d and "CRLF" in d for d in res.details), res.details
+
+
+@pytest.mark.parametrize(
+    ("rel_path", "bad_bytes", "expected_substr"),
+    [
+        ("docs/UTF8_BOM.md", b"\xef\xbb\xbf" + b"Canary doc\n", "UTF-8 BOM"),
+        ("scripts/bom.sh", b"\xef\xbb\xbf" + f"{H}!/usr/bin/env bash\necho ok\n".encode("utf-8"), "UTF-8 BOM"),
+        ("canary/bad_utf8.py", b"x = '\xff\xfe'\n", "invalid UTF-8"),
+        ("pyproject.toml", b"[project]\nname = 'canary\x00bad'\n", "NUL byte"),
+        (".github/workflows/ci.yml", b"\xef\xbb\xbfname: ci\n", "UTF-8 BOM"),
+    ],
+)
+def test_utf8_bom_invalid_utf8_and_nul_bytes_detected(
+    clean_tmp: Path,
+    rel_path: str,
+    bad_bytes: bytes,
+    expected_substr: str,
+):
+    bad_repo = clean_tmp / "encoding_bad"
+    _write_files(
+        bad_repo,
+        {
+            "README.md": f"{H} Canary\n",
+            rel_path: bad_bytes,
+        },
+    )
+    res = hygiene.check_portability_and_encoding(bad_repo)
+    assert res.status == "FAIL"
+    assert any(rel_path in d and expected_substr in d for d in res.details), res.details
+
+
+def test_merge_conflict_markers_outside_vs_inside_fenced_blocks(clean_tmp: Path):
+    left = "<" * 7 + " HEAD"
+    mid = "=" * 7
+    right = ">" * 7 + " branch"
+
+    fenced_ok = clean_tmp / "conflict_fenced_ok"
+    _init_git_repo(
+        fenced_ok,
+        {
+            "README.md": "\n".join(
+                [
+                    f"{H} Canary",
+                    "Example conflict inside fenced block:",
+                    "```text",
+                    left,
+                    "ours",
+                    mid,
+                    "theirs",
+                    right,
+                    "```",
+                ]
+            )
+            + "\n",
+        },
+    )
+    assert hygiene.check_portability_and_encoding(fenced_ok).status == "PASS"
+
+    prose_bad = clean_tmp / "conflict_prose_bad"
+    _init_git_repo(
+        prose_bad,
+        {
+            "README.md": "\n".join([f"{H} Canary", left, "ours", mid, "theirs", right]) + "\n",
+            "scripts/helper.py": "\n".join(["x = 1", left, "y = 2", mid, "y = 3", right]) + "\n",
+        },
+    )
+    res_bad = hygiene.check_portability_and_encoding(prose_bad)
+    assert res_bad.status == "FAIL"
+    assert any("README.md:2" in d and "merge-conflict" in d for d in res_bad.details), res_bad.details
+    assert any("scripts/helper.py:2" in d and "merge-conflict" in d for d in res_bad.details), res_bad.details
+
+
+def test_scripts_sh_shebang_pkill_and_diffutils_portability(clean_tmp: Path, capsys):
+    portable_repo = clean_tmp / "sh_portable"
+    _init_git_repo(
+        portable_repo,
+        {
+            "README.md": f"{H} Canary\n",
+            "scripts/accept.sh": "\n".join(
+                [
+                    f"{H}!/usr/bin/env bash",
+                    f"{H} never run pkill or bare cmp -s in scripts",
+                    "set -euo pipefail",
+                    'echo "never pkill; files may diff"',
+                    "git diff --quiet || true",
+                    "if { ! command -v cmp >/dev/null 2>&1 || cmp -s a.md b.md; }; then",
+                    "  echo matched",
+                    "fi",
+                    "if command -v diff >/dev/null 2>&1; then",
+                    "  diff -u a.md b.md",
+                    "else",
+                    '  python3 -c "import difflib"',
+                    "fi",
+                    "python3 - <<'PY'",
+                    "diff = 42",
+                    "pkill = 'ignored_in_heredoc'",
+                    "PY",
+                ]
+            )
+            + "\n",
+        },
+    )
+    res_ok = hygiene.check_portability_and_encoding(portable_repo)
+    assert res_ok.status == "PASS", res_ok.details
+
+    no_shebang = clean_tmp / "sh_no_shebang"
+    _write_files(
+        no_shebang,
+        {
+            "README.md": f"{H} Canary\n",
+            "scripts/no_shebang.sh": "set -euo pipefail\necho hi\n",
+        },
+    )
+    res_shebang = hygiene.check_portability_and_encoding(no_shebang)
+    assert res_shebang.status == "FAIL"
+    assert any("scripts/no_shebang.sh:1" in d and "shebang" in d for d in res_shebang.details)
+
+    bad_pkill = clean_tmp / "sh_bad_pkill"
+    _write_files(
+        bad_pkill,
+        {
+            "README.md": f"{H} Canary\n",
+            "scripts/kill_mcp.sh": f"{H}!/usr/bin/env bash\npkill -f canary.mcp_server\n",
+        },
+    )
+    res_pkill = hygiene.check_portability_and_encoding(bad_pkill)
+    assert res_pkill.status == "FAIL"
+    assert any("scripts/kill_mcp.sh:2" in d and "pkill" in d for d in res_pkill.details)
+
+    bad_cmp = clean_tmp / "sh_bad_cmp"
+    _write_files(
+        bad_cmp,
+        {
+            "README.md": f"{H} Canary\n",
+            "scripts/check_table.sh": "\n".join(
+                [
+                    f"{H}!/usr/bin/env bash",
+                    "python3 -c 'print(1)'",
+                    "if [ -f a.md ]; then",
+                    "  cmp -s a.md b.md",
+                    "else",
+                    "  python3 -c 'print(2)'",
+                    "fi",
+                    "diff -u a.md b.md",
+                ]
+            )
+            + "\n",
+        },
+    )
+    res_cmp = hygiene.check_portability_and_encoding(bad_cmp)
+    assert res_cmp.status == "FAIL"
+    assert any("scripts/check_table.sh:4" in d and "bare 'cmp'" in d for d in res_cmp.details), res_cmp.details
+    assert any("scripts/check_table.sh:8" in d and "bare 'diff'" in d for d in res_cmp.details), res_cmp.details
+
+    rc = hygiene.main(["--root", str(bad_cmp), "--json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert payload["passed"] is False
+
+
+def test_check_makefile_diffutils_portability(clean_tmp: Path):
+    unportable = clean_tmp / "mk_unportable"
+    _write_files(
+        unportable,
+        {
+            "Makefile": "\n".join(
+                [
+                    f"{H} Canary Makefile",
+                    "UV := uv run",
+                    f"reproduce: {H}{H} recompute and diff table",
+                    "\t@$(UV) python scripts/paired_gemini.py",
+                    "\t@if cmp -s results/latest/a.md data/a.md; then \\",
+                    '\t  echo "IDENTICAL"; \\',
+                    '\telse echo "MISMATCH: differs"; \\',
+                    "\t  diff results/latest/a.md data/a.md | head -20; exit 1; fi",
+                ]
+            )
+            + "\n",
+        },
+    )
+    res_bad = hygiene.check_makefile_diffutils_portability(unportable)
+    assert res_bad.status == "FAIL"
+    assert any("Makefile:5" in d and "bare 'cmp'" in d for d in res_bad.details), res_bad.details
+    assert any("Makefile:8" in d and "bare 'diff'" in d for d in res_bad.details), res_bad.details
+
+    portable_cmd_v = clean_tmp / "mk_portable_cmd_v"
+    _write_files(
+        portable_cmd_v,
+        {
+            "Makefile": "\n".join(
+                [
+                    "UV := uv run",
+                    "reproduce:",
+                    "\t@if { command -v cmp >/dev/null 2>&1 && cmp -s a.md b.md; } "
+                    "|| $(UV) python -c 'import pathlib,sys; sys.exit(0 if pathlib.Path(\"a.md\").read_bytes()==pathlib.Path(\"b.md\").read_bytes() else 1)'; then \\",
+                    '\t  echo "OK"; \\',
+                    "\telse \\",
+                    "\t  if command -v diff >/dev/null 2>&1; then diff a.md b.md | head -20; "
+                    "else $(UV) python -c 'import difflib'; fi; exit 1; fi",
+                ]
+            )
+            + "\n",
+        },
+    )
+    res_portable = hygiene.check_makefile_diffutils_portability(portable_cmd_v)
+    assert res_portable.status == "PASS", res_portable.details
+
+    pure_py = clean_tmp / "mk_pure_py"
+    _write_files(
+        pure_py,
+        {
+            "Makefile": (
+                f"reproduce: {H}{H} diff via python\n"
+                "\tgit diff --quiet || true\n"
+                "\tpython3 -c 'import difflib'\n"
+            ),
+        },
+    )
+    assert hygiene.check_makefile_diffutils_portability(pure_py).status == "PASS"
+
+    missing_mk = clean_tmp / "mk_missing"
+    missing_mk.mkdir(parents=True, exist_ok=True)
+    assert hygiene.check_makefile_diffutils_portability(missing_mk).status == "FAIL"
+
+    real_mk_text = (ROOT / "Makefile").read_text(encoding="utf-8")
+    res_real = hygiene.check_makefile_diffutils_portability(ROOT)
+    assert res_real.name == hygiene.CHECK_MAKEFILE_DIFFUTILS
+    if "\t@if cmp -s " in real_mk_text and "command -v cmp" not in real_mk_text:
+        assert res_real.status == "FAIL"
+        assert any("bare 'cmp'" in d for d in res_real.details)
+    else:
+        assert res_real.status == "PASS"

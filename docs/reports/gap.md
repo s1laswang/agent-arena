@@ -317,3 +317,7 @@ Each fix was a change to the *information or mechanics* (stated in the instructi
 | **total** | **≈ $260 est.** |
 
 That's above the $150 cap the CEO set at 03:30. All API-billed runs have stopped; more needs Silas's approval.
+
+## Final exact-tag Harbor rehearsal
+
+On `afterquery-final` (`1bc3e281`), the full Harbor/OpenCode judge path did **not reproduce the earlier MCP-only gap**. Runs 1 and 2 completed 10/10 trials; run 3 completed seven, excluded one provider-rate-limit failure and never launched two before the time limit. The valid means were +0.472, +0.585 and +0.656; paired reference ratios were 93% [20%, 371%], 116% [78%, 363%] and 153% [89%, 411%]. Oracle mean was +0.506 over all ten tasks; do-nothing and stop-early were zero. The shell-enabled harness, later wording clarification and new worlds differ from the primary MCP-only set. We do not isolate which explains the difference. [Table and build provenance](../../results/harbor/rehearsal/TABLE.md). Raw trial directories were not included with the table, which limits independent inspection.

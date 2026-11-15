@@ -8,7 +8,7 @@ Final submission package, 15 November 2026. The measured environment remains v1.
 
 **Tagline:** Catch the mole with canary traps before the value runs out.
 
-**Short description:** Canary is an RL environment over MCP. An investigator plants canary documents, reasons about delayed leaks and makes one irreversible accusation. Correct earns the value left; wrong earns −1; abstaining earns 0. A Bayesian reference uses the same public tools. Our recorded Gemini/OpenCode hard-tier runs show a decision-quality deficit, but GPT-5.5 does not: the claim is model- and harness-specific. One keyless command reproduces the results.
+**Short description:** Canary is an RL environment over MCP. An investigator plants canary documents, reasons about delayed leaks and makes one irreversible accusation. Correct earns the value left; wrong earns −1; abstaining earns 0. A Bayesian reference uses the same public tools. A Gemini deficit in MCP-only runs did not reproduce in the full Harbor judge path; GPT-5.5 also reached the reference range. We report those limits alongside the results. One keyless command reproduces the results.
 
 **Repository:** https://github.com/s1laswang/agent-arena/tree/afterquery-final-v2
 
@@ -43,7 +43,9 @@ The primary seed set was locked after the episodes were committed, not preregist
 
 ### Actual Harbor rehearsal
 
-The committed [FR8 Linux rehearsal](reports/harbor_rehearsal_fr8.md) attempted three runs of ten tasks on pre-tag build `8cd20d9e`. Only 10/30 model trials completed; 20 hit provider rate limits and are excluded as infrastructure failures. Valid-trial means were +0.647, +0.543 and +0.527 (n=3, 3 and 4). Their paired ratio intervals all include reference parity. This is an incomplete rehearsal, not evidence of a repeated robust gap. Oracle, do-nothing and stop-early each completed 10/10; the latter two scored exactly zero. The separate exact-tag rehearsal directory retains its protocol; no completed exact-tag rehearsal is claimed.
+The committed [FR8 Linux rehearsal](reports/harbor_rehearsal_fr8.md) attempted three runs of ten tasks on pre-tag build `8cd20d9e`. Only 10/30 model trials completed; 20 hit provider rate limits and are excluded as infrastructure failures. Valid-trial means were +0.647, +0.543 and +0.527 (n=3, 3 and 4). Their paired ratio intervals all include reference parity. This is an incomplete rehearsal, not evidence of a repeated robust gap. Oracle, do-nothing and stop-early each completed 10/10; the latter two scored exactly zero. A later exact-tag rehearsal is now also reported below.
+
+**Final exact-tag result:** the full judge-path rehearsal on `afterquery-final` completed 27 valid model trials (10, 10 and 7); one trial hit the provider rate limit and two never ran before the stop time. The mean scores were +0.472, +0.585 and +0.656; paired ratios to the oracle were 93% [20%, 371%], 116% [78%, 363%] and 153% [89%, 411%]. **The earlier MCP-only gap did not reproduce in this Harbor setting.** Oracle mean was +0.506 over ten tasks, and both zero-action baselines were exactly zero. [Final table](../results/harbor/rehearsal/TABLE.md). The table and build provenance are committed; the raw trial directories are not. The two rehearsals are separate builds and must not be pooled.
 
 The partial seeds-30–59 extension is reported separately, with overlap and selection disclosed: [replication report](reports/v14_seeds30to59_replication.md). It never replaces the primary n=30 result.
 

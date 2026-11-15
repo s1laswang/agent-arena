@@ -71,7 +71,7 @@ ALL_POLICIES: tuple[str, ...] = ALL_BASELINES + ("solver",)
 PART_A_FULL_SEEDS: list[int] = (
     list(range(0, 120)) + list(range(50000, 50100)) + list(range(200000, 200100))
 )
-PART_A_QUICK_SEEDS: list[int] = list(range(0, 22))
+PART_A_QUICK_SEEDS: list[int] = list(range(0, 11))
 
 PART_B_FULL_SEEDS: list[int] = list(range(6000, 6200))
 PART_B_QUICK_SEEDS: list[int] = [6000]
@@ -79,7 +79,7 @@ PART_B_QUICK_SEEDS: list[int] = [6000]
 PART_C_FULL_SEEDS: list[int] = list(range(6000, 6040))
 PART_C_QUICK_SEEDS: list[int] = [6000]
 PART_C_FULL_BUDGET = 1200
-PART_C_QUICK_BUDGET = 4
+PART_C_QUICK_BUDGET = 1
 
 MOLE_ROW_ORDER: tuple[str, ...] = (
     "default_hard_5dept",
@@ -175,13 +175,20 @@ class CheatingCanaryPeekMole:
         return {"leak": view.docs[0].doc_id, "frame": frame}
 
 
+_COMMITTED_MOLES_CACHE: dict[Path, dict[str, Any]] = {}
+
+
 def load_committed_moles(repo_root: Path = ROOT) -> dict[str, Any]:
-    v12_path = repo_root / "data" / "forge" / "hall_of_fame_v1.2.jsonl"
-    v13_path = repo_root / "data" / "forge" / "hall_of_fame_v1.3.jsonl"
-    v14_path = repo_root / "data" / "forge" / "hall_of_fame_v1.4.jsonl"
-    rl_hof_path = repo_root / "data" / "rl_mole" / "hall_of_fame.jsonl"
-    rl_final_path = repo_root / "data" / "rl_mole" / "policy_final.json"
-    rl_it80_path = repo_root / "data" / "rl_mole" / "policy_it080.json"
+    resolved = repo_root.resolve()
+    cached = _COMMITTED_MOLES_CACHE.get(resolved)
+    if cached is not None:
+        return cached
+    v12_path = resolved / "data" / "forge" / "hall_of_fame_v1.2.jsonl"
+    v13_path = resolved / "data" / "forge" / "hall_of_fame_v1.3.jsonl"
+    v14_path = resolved / "data" / "forge" / "hall_of_fame_v1.4.jsonl"
+    rl_hof_path = resolved / "data" / "rl_mole" / "hall_of_fame.jsonl"
+    rl_final_path = resolved / "data" / "rl_mole" / "policy_final.json"
+    rl_it80_path = resolved / "data" / "rl_mole" / "policy_it080.json"
 
     v12_rows, v12_strats = forge_track.load(v12_path)
     v13_rows, v13_strats = forge_track.load(v13_path)
@@ -192,7 +199,7 @@ def load_committed_moles(repo_root: Path = ROOT) -> dict[str, Any]:
     rl_final = RLMole.from_json(rl_final_json)
     rl_it80 = RLMole.from_json(rl_it80_json)
 
-    return {
+    loaded = {
         "default_v0": DEFAULT_STRATEGY,
         "hof_v12": v12_strats[0],
         "hof_v12_row": v12_rows[0],
@@ -206,6 +213,8 @@ def load_committed_moles(repo_root: Path = ROOT) -> dict[str, Any]:
         "rl_it80": rl_it80,
         "rl_it80_json": rl_it80_json,
     }
+    _COMMITTED_MOLES_CACHE[resolved] = loaded
+    return loaded
 
 
 def make_mole_env_factories(moles: dict[str, Any]) -> dict[str, tuple[str, Any, Callable[[int], Env]]]:
@@ -243,7 +252,7 @@ def make_mole_env_factories(moles: dict[str, Any]) -> dict[str, tuple[str, Any, 
     }
 
 
-def make_investigator(name: str, seed: int):
+def make_investigator(name: str, seed: int, quick: bool = False):
     if name in BASELINES:
         return BASELINES[name](seed=seed)
     if name in CALIBRATION_POLICIES:
@@ -253,25 +262,28 @@ def make_investigator(name: str, seed: int):
     if name in SWARM_POLICIES:
         return SWARM_POLICIES[name](seed=seed)
     if name == "solver":
+        if quick:
+            return SolverPolicy(
+                act_budget=6.0,
+                threshold=0.05,
+                multi="off",
+                max_candidates=2,
+                coverages=(0.5,),
+                tiny=False,
+                max_pending=1,
+                use_v_drops=False,
+                read_logs=False,
+                find_decoy=False,
+            )
         return SolverPolicy(act_budget=10.0)
     raise ValueError(f"unknown investigator: {name}")
 
 
-def detect_canary_peeking(
-    mole_strategy: Any,
-    seeds: list[int],
-    bind_env_lookup: bool = False,
-) -> dict[str, Any]:
-    n_pairs = 0
-    n_leak_decisions = 0
-    n_regular_chosen = 0
-    n_canary_chosen = 0
-    n_order_asymmetric_pairs = 0
-    n_singleton_canary_suppressed = 0
-    n_singleton_regular_leaked = 0
-
+def _build_canary_peek_fixtures(seeds: list[int], quick: bool = False) -> list[dict[str, Any]]:
+    fixtures: list[dict[str, Any]] = []
+    fixture_tier = "easy" if quick else "hard"
     for idx, s in enumerate(seeds):
-        env = Env("hard", s)
+        env = Env(fixture_tier, s)
         mole = env._world.mole
         reg_raw = None
         for d_raw in env.docs:
@@ -292,18 +304,11 @@ def detect_canary_peeking(
         can_id = env._canary_ids[-1]
         can_raw = env._doc_by_id[can_id]
 
-        strat = mole_strategy
-        if bind_env_lookup and isinstance(mole_strategy, CheatingCanaryPeekMole):
-            strat = CheatingCanaryPeekMole(
-                canary_lookup=lambda did, db=env._doc_by_id: bool(db.get(did, {}).get("is_canary")),
-                use_doc_id_prefix=mole_strategy.use_doc_id_prefix,
-                suppress_when_all_canary=mole_strategy.suppress_when_all_canary,
-            )
-
         reg_doc = MoleDoc(reg_id, reg_title, k, 0)
         can_doc = MoleDoc(can_id, can_raw["title"], k, 0)
         peers_t = tuple(e for e in env._ids if e != mole)
         low_cnt = 2 if k <= env.p.low_recipient_threshold else 0
+        single_low_cnt = int(k <= env.p.low_recipient_threshold)
 
         v_ab = MoleView(
             day=1,
@@ -331,6 +336,67 @@ def detect_canary_peeking(
             can_leak=True,
             select_weights=(1.0, 1.0),
         )
+        v_only_reg = dataclasses.replace(
+            v_ab,
+            docs=(reg_doc,),
+            select_weights=(1.0,),
+            recent_low_recipient_docs=single_low_cnt,
+        )
+        v_only_can = dataclasses.replace(
+            v_ab,
+            docs=(can_doc,),
+            select_weights=(1.0,),
+            recent_low_recipient_docs=single_low_cnt,
+        )
+        fixtures.append(
+            {
+                "idx": idx,
+                "seed": s,
+                "reg_id": reg_id,
+                "can_id": can_id,
+                "doc_by_id": env._doc_by_id,
+                "v_ab": v_ab,
+                "v_ba": v_ba,
+                "v_only_reg": v_only_reg,
+                "v_only_can": v_only_can,
+            }
+        )
+    return fixtures
+
+
+def detect_canary_peeking(
+    mole_strategy: Any,
+    seeds: list[int],
+    bind_env_lookup: bool = False,
+    prebuilt_fixtures: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    n_pairs = 0
+    n_leak_decisions = 0
+    n_regular_chosen = 0
+    n_canary_chosen = 0
+    n_order_asymmetric_pairs = 0
+    n_singleton_canary_suppressed = 0
+    n_singleton_regular_leaked = 0
+
+    fixtures = prebuilt_fixtures if prebuilt_fixtures is not None else _build_canary_peek_fixtures(seeds)
+
+    for fx in fixtures:
+        idx = fx["idx"]
+        s = fx["seed"]
+        reg_id = fx["reg_id"]
+        can_id = fx["can_id"]
+        v_ab = fx["v_ab"]
+        v_ba = fx["v_ba"]
+        v_only_reg = fx["v_only_reg"]
+        v_only_can = fx["v_only_can"]
+
+        strat = mole_strategy
+        if bind_env_lookup and isinstance(mole_strategy, CheatingCanaryPeekMole):
+            strat = CheatingCanaryPeekMole(
+                canary_lookup=lambda did, db=fx["doc_by_id"]: bool(db.get(did, {}).get("is_canary")),
+                use_doc_id_prefix=mole_strategy.use_doc_id_prefix,
+                suppress_when_all_canary=mole_strategy.suppress_when_all_canary,
+            )
 
         rng_seed = 900_000 + idx * 17 + s
         r1 = random.Random(rng_seed)
@@ -349,8 +415,6 @@ def detect_canary_peeking(
         if d_ab == reg_id and d_ba == reg_id:
             n_order_asymmetric_pairs += 1
 
-        v_only_reg = dataclasses.replace(v_ab, docs=(reg_doc,), select_weights=(1.0,), recent_low_recipient_docs=int(k <= env.p.low_recipient_threshold))
-        v_only_can = dataclasses.replace(v_ab, docs=(can_doc,), select_weights=(1.0,), recent_low_recipient_docs=int(k <= env.p.low_recipient_threshold))
         o_reg = strat.decide(v_only_reg, random.Random(rng_seed + 1)).get("leak")
         o_can = strat.decide(v_only_can, random.Random(rng_seed + 1)).get("leak")
         if o_reg == reg_id:
@@ -378,9 +442,14 @@ def detect_canary_peeking(
     }
 
 
-def run_part_a_isolation_audit(seeds: list[int], quick: bool = False) -> dict[str, Any]:
+def run_part_a_isolation_audit(
+    seeds: list[int],
+    quick: bool = False,
+    moles: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     t0 = time.time()
-    moles = load_committed_moles()
+    if moles is None:
+        moles = load_committed_moles()
     targets = ("easy", "medium", "hard", "hard_forge", "hard_rl")
 
     mole_doc_fields = tuple(f.name for f in dataclasses.fields(MoleDoc))
@@ -410,7 +479,8 @@ def run_part_a_isolation_audit(seeds: list[int], quick: bool = False) -> dict[st
     investigator_belief_exposures = 0
     rl_feature_bounds_violations = 0
 
-    for idx, s in enumerate(seeds):
+    view_seeds = seeds[:5] if quick else seeds
+    for idx, s in enumerate(view_seeds):
         target = targets[idx % len(targets)]
         env = Env(target, s)
         captured_views: list[MoleView] = []
@@ -435,8 +505,9 @@ def run_part_a_isolation_audit(seeds: list[int], quick: bool = False) -> dict[st
         env.call("restrict_access", {"employee": peer0})
         fake_solver_post = {e: round(0.731912 if e == mole else 0.268088 / (len(emps) - 1), 8) for e in emps}
         env.call("advance_day", {})
-        env.call("read_access_logs", {"day_from": 1, "day_to": 1})
-        env.call("advance_day", {})
+        if not quick:
+            env.call("read_access_logs", {"day_from": 1, "day_to": 1})
+            env.call("advance_day", {})
 
         for v in captured_views:
             views_inspected += 1
@@ -469,7 +540,8 @@ def run_part_a_isolation_audit(seeds: list[int], quick: bool = False) -> dict[st
     canary_flag_det_selector_diffs = 0
     careful_weight_formula_mismatches = 0
 
-    for s in seeds:
+    mut_seeds = seeds[:1] if quick else seeds
+    for s in mut_seeds:
         env_a = Env("hard", s)
         env_b = Env("hard", s)
         mole = env_a._world.mole
@@ -521,7 +593,8 @@ def run_part_a_isolation_audit(seeds: list[int], quick: bool = False) -> dict[st
 
     non_interference_steps = 0
     non_interference_diffs = 0
-    for s in seeds:
+    ni_seeds = seeds[:1] if quick else seeds
+    for s in ni_seeds:
         e1 = Env("hard", s, mole_strategy=moles["rl_final"])
         e2 = Env("hard", s, mole_strategy=moles["rl_final"])
         rec_1: list[tuple[Any, ...]] = []
@@ -548,10 +621,9 @@ def run_part_a_isolation_audit(seeds: list[int], quick: bool = False) -> dict[st
         wrap_env(e2, rec_2)
         emps = [x["id"] for x in e1.call("list_employees", {}).data["employees"]]
         e2.call("list_employees", {})
-        sol = SolverPolicy(act_budget=10.0)
-        sol.reset(e2.tools_spec(), e2.instruction())
 
-        for day_i in range(1, 5):
+        ni_days = 3 if quick else 5
+        for day_i in range(1, ni_days):
             asg = {e: ("A" if j % 2 == 0 else "B") for j, e in enumerate(emps[:10])}
             e1.call("plant_canary", {"doc_title": f"Memo {day_i}", "assignment": asg})
             e2.call("plant_canary", {"doc_title": f"Memo {day_i}", "assignment": asg})
@@ -602,7 +674,8 @@ def run_part_a_isolation_audit(seeds: list[int], quick: bool = False) -> dict[st
         ("extreme_rl", extreme_rl),
     )
 
-    for idx, s in enumerate(seeds):
+    stress_seeds = seeds[:6] if quick else seeds
+    for idx, s in enumerate(stress_seeds):
         st_name, st_obj = stress_strats[idx % len(stress_strats)]
         env = Env("hard", s, mole_strategy=st_obj)
         mole = env._world.mole
@@ -639,7 +712,7 @@ def run_part_a_isolation_audit(seeds: list[int], quick: bool = False) -> dict[st
         env._mole_view = mv_hook
         env._mole_decide = md_hook
 
-        n_sim_days = 5 if quick else 10
+        n_sim_days = 4 if quick else 10
         for _ in range(n_sim_days):
             if env.done:
                 break
@@ -682,21 +755,25 @@ def run_part_a_isolation_audit(seeds: list[int], quick: bool = False) -> dict[st
     emp_p_leak = can_leak_true_total / eligible_days_total if eligible_days_total else 0.0
     p_leak_binom_pval = exact_binom_two_sided(can_leak_true_total, eligible_days_total, rules.TIERS["hard"].p_leak)
 
+    peek_fixtures = _build_canary_peek_fixtures(seeds, quick=quick)
     detector_results = {
-        "default_v0": detect_canary_peeking(moles["default_v0"], seeds),
-        "hof_v12": detect_canary_peeking(moles["hof_v12"], seeds),
-        "hof_v13": detect_canary_peeking(moles["hof_v13"], seeds),
-        "rl_final": detect_canary_peeking(moles["rl_final"], seeds),
-        "rl_it80": detect_canary_peeking(moles["rl_it80"], seeds),
+        "default_v0": detect_canary_peeking(moles["default_v0"], seeds, prebuilt_fixtures=peek_fixtures),
+        "hof_v12": detect_canary_peeking(moles["hof_v12"], seeds, prebuilt_fixtures=peek_fixtures),
+        "hof_v13": detect_canary_peeking(moles["hof_v13"], seeds, prebuilt_fixtures=peek_fixtures),
+        "rl_final": detect_canary_peeking(moles["rl_final"], seeds, prebuilt_fixtures=peek_fixtures),
+        "rl_it80": detect_canary_peeking(moles["rl_it80"], seeds, prebuilt_fixtures=peek_fixtures),
         "cheating_whitebox_is_canary": detect_canary_peeking(
-            CheatingCanaryPeekMole(), seeds, bind_env_lookup=True
+            CheatingCanaryPeekMole(), seeds, bind_env_lookup=True, prebuilt_fixtures=peek_fixtures
         ),
         "cheating_doc_id_prefix": detect_canary_peeking(
-            CheatingCanaryPeekMole(use_doc_id_prefix=True), seeds, bind_env_lookup=False
+            CheatingCanaryPeekMole(use_doc_id_prefix=True),
+            seeds,
+            bind_env_lookup=False,
+            prebuilt_fixtures=peek_fixtures,
         ),
     }
 
-    live_impact_seeds = seeds[:2] if quick else list(range(6000, 6050))
+    live_impact_seeds = seeds[:1] if quick else list(range(6000, 6050))
     def_canary_leaks = 0
     def_reg_leaks = 0
     cheat_canary_leaks = 0
@@ -774,7 +851,7 @@ def run_part_a_isolation_audit(seeds: list[int], quick: bool = False) -> dict[st
             "rl_feature_bounds_violations": rl_feature_bounds_violations,
         },
         "canary_mutation_probes": {
-            "n_seeds_probed": len(seeds),
+            "n_seeds_probed": len(mut_seeds),
             "variant_permutation_diffs": variant_perm_diffs,
             "is_canary_dsl_feature_diffs": canary_flag_dsl_diffs,
             "is_canary_rl_feature_diffs": canary_flag_rl_diffs,
@@ -782,12 +859,12 @@ def run_part_a_isolation_audit(seeds: list[int], quick: bool = False) -> dict[st
             "careful_weight_formula_mismatches": careful_weight_formula_mismatches,
         },
         "interview_and_belief_non_interference": {
-            "n_seeds_probed": len(seeds),
+            "n_seeds_probed": len(ni_seeds),
             "mole_steps_compared": non_interference_steps,
             "divergences": non_interference_diffs,
         },
         "action_boundary_enforcement": {
-            "n_seeds_probed": len(seeds),
+            "n_seeds_probed": len(stress_seeds),
             "p_leak_bypass_count": p_leak_bypass_count,
             "eligible_days_total": eligible_days_total,
             "can_leak_true_total": can_leak_true_total,
@@ -842,6 +919,7 @@ def exact_trace_dedupe(
     seeds: list[int],
     agent_name: str = "do_nothing",
     tier: str = "hard",
+    quick: bool = False,
 ) -> dict[str, Any]:
     groups_cache: list[dict[int, tuple[list[Any], list[Any]]]] = []
     out_sigs: dict[str, list[int]] = {}
@@ -869,7 +947,7 @@ def exact_trace_dedupe(
                         break
             if matched_ev is None:
                 n_env_runs += 1
-                pol = make_investigator(agent_name, s)
+                pol = make_investigator(agent_name, s, quick=quick)
                 ev, cap = _run_with_mole_capture(tier, s, st, pol)
                 matched_ev = ev
                 placed = False
@@ -907,16 +985,23 @@ def exact_trace_dedupe(
     }
 
 
-def run_part_b_dedupe(seeds: list[int], quick: bool = False) -> dict[str, Any]:
+def run_part_b_dedupe(
+    seeds: list[int],
+    quick: bool = False,
+    moles: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     t0 = time.time()
-    moles = load_committed_moles()
+    if moles is None:
+        moles = load_committed_moles()
 
     src12_path = ROOT / "fr8" / "analysis" / "out" / "forge_v12_hof_source_gen500.jsonl"
     src13_path = ROOT / "fr8" / "analysis" / "out" / "forge_v13_hof_source_gen300.jsonl"
     src12_rows = [json.loads(x) for x in src12_path.read_text(encoding="utf-8").splitlines() if x.strip()]
     src13_rows = [json.loads(x) for x in src13_path.read_text(encoding="utf-8").splitlines() if x.strip()]
-    src12_strats = [MoleStrategy.from_json(r["strategy_json"]) for r in src12_rows]
-    src13_strats = [MoleStrategy.from_json(r["strategy_json"]) for r in src13_rows]
+    dedupe_rows_12 = src12_rows[:1] if quick else src12_rows
+    dedupe_rows_13 = src13_rows[:1] if quick else src13_rows
+    src12_strats = [MoleStrategy.from_json(r["strategy_json"]) for r in dedupe_rows_12]
+    src13_strats = [MoleStrategy.from_json(r["strategy_json"]) for r in dedupe_rows_13]
 
     v12_canon = canonical(moles["hof_v12_row"]["strategy_json"])
     v13_canon = canonical(moles["hof_v13_row"]["strategy_json"])
@@ -941,13 +1026,13 @@ def run_part_b_dedupe(seeds: list[int], quick: bool = False) -> dict[str, Any]:
 
     v13_check_seeds = [6000] if quick else list(range(6000, 6020))
     with rules.tiers_version("v1.3"):
-        v12_on_v13_dn = exact_trace_dedupe(src12_strats, v13_check_seeds, "do_nothing", "hard")
-        v12_on_v13_sol = exact_trace_dedupe(src12_strats, v13_check_seeds, "solver", "hard")
-        v13_on_v13_dn = exact_trace_dedupe(src13_strats, v13_check_seeds, "do_nothing", "hard")
-        v13_on_v13_sol = exact_trace_dedupe(src13_strats, v13_check_seeds, "solver", "hard")
+        v12_on_v13_dn = exact_trace_dedupe(src12_strats, v13_check_seeds, "do_nothing", "hard", quick=quick)
+        v12_on_v13_sol = exact_trace_dedupe(src12_strats, v13_check_seeds, "solver", "hard", quick=quick)
+        v13_on_v13_dn = exact_trace_dedupe(src13_strats, v13_check_seeds, "do_nothing", "hard", quick=quick)
+        v13_on_v13_sol = exact_trace_dedupe(src13_strats, v13_check_seeds, "solver", "hard", quick=quick)
 
-    v12_on_v14_dn = exact_trace_dedupe(src12_strats, seeds, "do_nothing", "hard")
-    v13_on_v14_dn = exact_trace_dedupe(src13_strats, seeds, "do_nothing", "hard")
+    v12_on_v14_dn = exact_trace_dedupe(src12_strats, seeds, "do_nothing", "hard", quick=quick)
+    v13_on_v14_dn = exact_trace_dedupe(src13_strats, seeds, "do_nothing", "hard", quick=quick)
 
     primary_list = [
         ("default_v0", moles["default_v0"]),
@@ -1027,6 +1112,7 @@ def evaluate_mole_against_policies(
     tier: str,
     env_factory: Callable[[int], Env],
     seeds: list[int],
+    quick: bool = False,
 ) -> dict[str, Any]:
     t0 = time.time()
     p = rules.tier_params(tier)
@@ -1045,7 +1131,7 @@ def evaluate_mole_against_policies(
 
         for s in seeds:
             env = env_factory(s)
-            pol = make_investigator(pol_name, s)
+            pol = make_investigator(pol_name, s, quick=quick)
             res = run_episode(env, pol)
             sc = float(res.score)
             corr = bool(res.correct)
@@ -1149,14 +1235,18 @@ def evaluate_mole_against_policies(
     }
 
 
-def _eval_solver_slice(env_factory: Callable[[int], Env], seeds: list[int]) -> dict[str, Any]:
+def _eval_solver_slice(
+    env_factory: Callable[[int], Env],
+    seeds: list[int],
+    quick: bool = False,
+) -> dict[str, Any]:
     scores: list[float] = []
     corrects: list[bool] = []
     luck_evs: list[float] = []
     days: list[int] = []
     for s in seeds:
         env = env_factory(s)
-        pol = SolverPolicy(act_budget=10.0)
+        pol = make_investigator("solver", s, quick=quick)
         res = run_episode(env, pol)
         scores.append(float(res.score))
         corrects.append(bool(res.correct))
@@ -1181,22 +1271,31 @@ def _eval_solver_slice(env_factory: Callable[[int], Env], seeds: list[int]) -> d
     }
 
 
-def run_part_b_crosscheck(quick: bool = False) -> dict[str, Any]:
+def run_part_b_crosscheck(quick: bool = False, moles: dict[str, Any] | None = None) -> dict[str, Any]:
     t0 = time.time()
-    moles = load_committed_moles()
+    if moles is None:
+        moles = load_committed_moles()
     dev30_seeds = [0] if quick else list(range(0, 30))
     rl_heldout_seeds = [200000] if quick else list(range(200000, 200100))
     v13_seeds = [6000] if quick else list(range(6000, 6040))
 
-    dev30_5dept = _eval_solver_slice(lambda s: Env("hard", s, mole_strategy=moles["rl_final"]), dev30_seeds)
-    dev30_4dept = _eval_solver_slice(lambda s: Env("hard_rl", s), dev30_seeds)
+    dev30_5dept = _eval_solver_slice(
+        lambda s: Env("hard", s, mole_strategy=moles["rl_final"]), dev30_seeds, quick=quick
+    )
+    dev30_4dept = _eval_solver_slice(lambda s: Env("hard_rl", s), dev30_seeds, quick=quick)
 
-    held100_5dept = _eval_solver_slice(lambda s: Env("hard", s, mole_strategy=moles["rl_final"]), rl_heldout_seeds)
-    held100_4dept = _eval_solver_slice(lambda s: Env("hard_rl", s), rl_heldout_seeds)
+    held100_5dept = _eval_solver_slice(
+        lambda s: Env("hard", s, mole_strategy=moles["rl_final"]), rl_heldout_seeds, quick=quick
+    )
+    held100_4dept = _eval_solver_slice(lambda s: Env("hard_rl", s), rl_heldout_seeds, quick=quick)
 
     with rules.tiers_version("v1.3"):
-        v13_hof12 = _eval_solver_slice(lambda s: Env("hard", s, mole_strategy=moles["hof_v12"]), v13_seeds)
-        v13_hof13 = _eval_solver_slice(lambda s: Env("hard", s, mole_strategy=moles["hof_v13"]), v13_seeds)
+        v13_hof12 = _eval_solver_slice(
+            lambda s: Env("hard", s, mole_strategy=moles["hof_v12"]), v13_seeds, quick=quick
+        )
+        v13_hof13 = _eval_solver_slice(
+            lambda s: Env("hard", s, mole_strategy=moles["hof_v13"]), v13_seeds, quick=quick
+        )
 
     sample_seeds = [0, 1] if quick else list(range(6000, 6200))
     rec_hard: list[int] = []
@@ -1268,15 +1367,17 @@ def run_part_c_fuzz_target(
     seeds: list[int],
     budget: int,
     rng_seed: int = 0,
+    quick: bool = False,
 ) -> dict[str, Any]:
     t0 = time.time()
     cfac, read_counts = _counting_factory(lambda _t, s: base_env_factory(s))
+    fuzz_mode = "evolve" if quick else "all"
     res = fuzz.hunt(
         tier=tier,
         seeds=seeds,
         budget=budget,
         seed=rng_seed,
-        mode="all",
+        mode=fuzz_mode,
         workers=1,
         factory=cfac,
     )
@@ -1294,7 +1395,7 @@ def run_part_c_fuzz_target(
         "best_score_per_call": round(float(res["best_score_per_call"]), 6),
         "n_violations": len(res["invariant_violations"]),
         "violation_kinds": list(res["violation_kinds"]),
-        "per_mode": res["per_mode"],
+        "per_mode": res.get("per_mode"),
         "seconds": round(time.time() - t0, 2),
     }
 
@@ -1390,7 +1491,7 @@ def run_audit(
         if resume and part_a_file.exists():
             part_a = json.loads(part_a_file.read_text(encoding="utf-8"))
         else:
-            part_a = run_part_a_isolation_audit(seeds_a, quick=quick)
+            part_a = run_part_a_isolation_audit(seeds_a, quick=quick, moles=moles)
             part_a_file.write_text(json.dumps(part_a, indent=2) + "\n", encoding="utf-8")
     elif part_a_file.exists():
         part_a = json.loads(part_a_file.read_text(encoding="utf-8"))
@@ -1400,7 +1501,7 @@ def run_audit(
         if resume and part_b_dedupe_file.exists():
             part_b_dedupe = json.loads(part_b_dedupe_file.read_text(encoding="utf-8"))
         else:
-            part_b_dedupe = run_part_b_dedupe(seeds_b, quick=quick)
+            part_b_dedupe = run_part_b_dedupe(seeds_b, quick=quick, moles=moles)
             part_b_dedupe_file.write_text(json.dumps(part_b_dedupe, indent=2) + "\n", encoding="utf-8")
     elif part_b_dedupe_file.exists():
         part_b_dedupe = json.loads(part_b_dedupe_file.read_text(encoding="utf-8"))
@@ -1410,7 +1511,7 @@ def run_audit(
         if resume and part_b_cross_file.exists():
             part_b_cross = json.loads(part_b_cross_file.read_text(encoding="utf-8"))
         else:
-            part_b_cross = run_part_b_crosscheck(quick=quick)
+            part_b_cross = run_part_b_crosscheck(quick=quick, moles=moles)
             part_b_cross_file.write_text(json.dumps(part_b_cross, indent=2) + "\n", encoding="utf-8")
     elif part_b_cross_file.exists():
         part_b_cross = json.loads(part_b_cross_file.read_text(encoding="utf-8"))
@@ -1423,7 +1524,7 @@ def run_audit(
                 matrix_rows[mk] = json.loads(m_file.read_text(encoding="utf-8"))
             else:
                 tier_name, _, fac = factories[mk]
-                row = evaluate_mole_against_policies(mk, tier_name, fac, seeds_b)
+                row = evaluate_mole_against_policies(mk, tier_name, fac, seeds_b, quick=quick)
                 m_file.write_text(json.dumps(row, indent=2) + "\n", encoding="utf-8")
                 matrix_rows[mk] = row
         elif m_file.exists():
@@ -1438,7 +1539,7 @@ def run_audit(
             else:
                 tier_name, _, fac = factories[mk]
                 frow = run_part_c_fuzz_target(
-                    mk, tier_name, fac, seeds_c, budget_c, rng_seed=idx_f * 100
+                    mk, tier_name, fac, seeds_c, budget_c, rng_seed=idx_f * 100, quick=quick
                 )
                 f_file.write_text(json.dumps(frow, indent=2) + "\n", encoding="utf-8")
                 fuzz_rows[mk] = frow

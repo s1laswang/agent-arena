@@ -62,6 +62,6 @@ make setup && make reproduce   # environment, solver, baselines (no keys)
 make lab-replay                # recorded Gemini runs, keyless
 make lab-dashboard             # usage and results dashboard
 ```
-HoldUp: see its README (server 288/288 and web 323/323 tests, 13/13 live smoke checks).
+A keyless command for every headline number above (the control, the thinking effect, the ladder, the jury, the usage total) is listed in [SUBMISSION-LONG.md](SUBMISSION-LONG.md#reproduce-every-headline-number-without-a-key). HoldUp: see its README (server 288/288 and web 323/323 tests, 13/13 live smoke checks).
 
 **Team:** Silas Wang, Momin (Momin010), Ivar (ivarakerholm-wq), Chintufp, with a Claude engineering team.

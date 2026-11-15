@@ -72,14 +72,28 @@ We answer this with substitutions we measured, and we say what is portable.
 - **Gemini teaches Gemma.** The Gemini-generated, ground-truthed label images trained a PaliGemma 2 3B LoRA: "strength visible" recall 91.4% [86.5, 94.6] vs 65.6% for YOLOv8n on n=348 held-out images. The two are not at one operating point (YOLOv8n precision 96.8% vs 89.9%). Not yet wired into the product ([`GEMMA.md`](https://github.com/s1laswang/junction-meta-glasses/blob/gemini-quote-0515/GEMMA.md)).
 - **Valio Aimo** ([`docs/GEMINI.md`](https://github.com/s1laswang/junction-aimo-agents/blob/main/docs/GEMINI.md)): the buyer agent uses function calling on gemini-3.8-flash and escalates 5/34 steps (15%) to gemini-4-hydrogen at high thinking; gemini-embedding-2 drives catalog substitution; compacting re-sent tool results cut cost per order from $0.0822 to $0.0352 (−57%); 6 of 6 demo scenarios pass.
 
-## Reproduce
+## Reproduce every headline number without a key
 ```bash
-make setup && make reproduce   # environment, solver and baselines (no keys)
-make lab-replay                # recorded Gemini runs, keyless
-make lab-dashboard             # usage and results dashboard
-python scripts/with_tiers.py v1.3 -m canary.gemini.xprov --gemini-runs results/gemini/xprov_episodes.jsonl.gz   # the cross-provider table, no API calls
+make setup && make reproduce          # environment, solver and baselines
+make lab-replay                       # recorded Gemini runs replay through a local gateway
+lab() { uv run --python 3.12 --extra dev --extra llm --extra plot "$@"; }   # works in bash and zsh
+
+# Cross-provider control: table, chart and the three checks (same roster, replay, solver)
+lab python scripts/with_tiers.py v1.3 -m canary.gemini.xprov --gemini-runs results/gemini/xprov_episodes.jsonl.gz --out /tmp/xprov
+# ...and any control episode replays from the recorded API responses (score, accusation and steps identical)
+lab python -m canary.gemini.with_gateway --replay results/gemini/xprov-replay/flash -- \
+    python scripts/with_tiers.py v1.3 -m canary.gemini.ladder --models gemini-3.5-flash --levels medium \
+    --tiers hard --seeds 0 --out /tmp/xprov-replay --run-name xprov-v13
+
+lab python -m canary.gemini.thinking_effect --out /tmp/thinking          # pooled thinking-level effect
+lab python -m canary.gemini.ladder_report --runs results/gemini/ladder_episodes.jsonl.gz \
+    --ledger results/gemini/ladder_ledger.jsonl.gz --out /tmp/ladder     # ladder table and frontier chart
+cp -R results/gemini/scale/jury /tmp/jury && lab python -m canary.gemini.jury --replay --out /tmp/jury   # jury: 6,975 judgments replayed, 0 calls
+lab python -m canary.gemini.atlas --blind --replay                      # blind atlas
+lab python -m canary.gemini.usage_union --out /tmp/usage_total.json     # the one usage total
+lab pytest -q tests/test_gemini_lab_*.py                                # all Canary Lab tests
 ```
-HoldUp: see its README.
+The red-team results are static files (`results/gemini/scale/swarm3/`); their hold-out attack sequences replay in `tests/test_gemini_lab_swarm_found.py`. HoldUp: see its README and `GEMINI.md` at tag `gemini-quote-0515`.
 
 ## Team
 Silas Wang, Momin (Momin010), Ivar (ivarakerholm-wq), Chintufp, with a Claude engineering team.

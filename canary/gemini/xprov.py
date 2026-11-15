@@ -296,6 +296,13 @@ def _money(x):
     return "–" if x is None or x != x else f"${x:.2f}"
 
 
+def _short_label(r: dict) -> str:
+    if r["provider"] == "google":
+        m = r["label"].split(" (")[0].split(" · ")[0].replace("gemini-", "")
+        return f"{m} · {r['level']}"
+    return "GPT-5.5 · same harness" if r["harness"] == SAME_HARNESS else "GPT-5.5 · Codex over MCP"
+
+
 def figure(rows: list[dict], out: Path) -> str | None:
     try:
         import matplotlib
@@ -304,29 +311,40 @@ def figure(rows: list[dict], out: Path) -> str | None:
     except ImportError:
         return None
     tiers = [t for t in TIERS if any(r["tier"] == t for r in rows)]
-    fig, axes = plt.subplots(1, len(tiers), figsize=(6.4 * len(tiers), 4.6), squeeze=False)
+    fig, axes = plt.subplots(1, len(tiers), figsize=(7.6 * len(tiers), 5.0), squeeze=False)
     for ax, tier in zip(axes[0], tiers):
-        for r in [r for r in rows if r["tier"] == tier and r["n"] >= MIN_ROW_N]:
-            if r["cost_per_ep"] != r["cost_per_ep"] or r["pct_solver"] != r["pct_solver"]:
-                continue
+        pts = [r for r in rows if r["tier"] == tier and r["n"] >= MIN_ROW_N
+               and r["cost_per_ep"] == r["cost_per_ep"] and r["pct_solver"] == r["pct_solver"]]
+        pts.sort(key=lambda r: r["cost_per_ep"])
+        for k, r in enumerate(pts):
             google = r["provider"] == "google"
-            color = "#1a73e8" if google else "#444444"
+            color = "#1a73e8" if google else "#333333"
             marker = "o" if google else ("s" if r["harness"] == SAME_HARNESS else "D")
             face = color if (google or r["harness"] == SAME_HARNESS) else "none"
             y, lo, hi = 100 * r["pct_solver"], 100 * r["pct_lo"], 100 * r["pct_hi"]
             if lo == lo and hi == hi:
-                ax.plot([r["cost_per_ep"]] * 2, [lo, hi], color=color, lw=1.2, alpha=0.6)
-            ax.scatter([r["cost_per_ep"]], [y], s=70, marker=marker, facecolors=face, edgecolors=color, zorder=3)
-            ax.annotate(f"{r['label']} (n={r['n']})", (r["cost_per_ep"], y), textcoords="offset points",
-                        xytext=(7, 5), fontsize=7.5, color=color)
+                ax.plot([r["cost_per_ep"]] * 2, [lo, hi], color=color, lw=1.3, alpha=0.55)
+            ax.scatter([r["cost_per_ep"]], [y], s=80, marker=marker, facecolors=face, edgecolors=color, zorder=3)
+            dy = 12 if k % 2 == 0 else -20                     # alternate above/below so neighbours do not collide
+            right = k >= len(pts) - 2                          # the two dearest points: label to the left
+            ax.annotate(f"{_short_label(r)}  (n={r['n']})", (r["cost_per_ep"], y), textcoords="offset points",
+                        xytext=(-7 if right else 7, dy), ha="right" if right else "left", fontsize=8.5, color=color)
         ax.axhline(100, color="#999999", lw=1, ls="--")
+        ax.text(0.99, 100, " reference solver", transform=ax.get_yaxis_transform(), ha="right", va="bottom",
+                fontsize=7.5, color="#777777")
         ax.set_xscale("log")
+        ticks = [t for t in (0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0) if pts and pts[0]["cost_per_ep"] * 0.8 <= t <= pts[-1]["cost_per_ep"] * 1.25]
+        ax.set_xticks(ticks)
+        ax.set_xticklabels([f"${t:g}" for t in ticks])
+        ax.minorticks_off()
+        if pts:
+            ax.set_xlim(pts[0]["cost_per_ep"] * 0.8, pts[-1]["cost_per_ep"] * 1.25)
         ax.set_xlabel("USD per episode (list price, log scale)")
-        ax.set_ylabel("% of the reference solver, same seeds (95% CI)")
-        ax.set_title(f"Canary v1.3 {tier}: same worlds, Gemini vs GPT-5.5", fontsize=10)
+        ax.set_ylabel("% of the reference solver on the same seeds (95% CI)")
+        ax.set_title(f"Canary v1.3 {tier}: identical worlds, Gemini vs GPT-5.5", fontsize=10.5)
         ax.grid(alpha=0.25)
-    fig.text(0.01, 0.01, "Filled square: GPT-5.5 in the same in-process harness. Hollow diamond: GPT-5.5 via Codex CLI over MCP "
-                         "(different harness). Circles: Gemini, in-process.", fontsize=7, color="#555555")
+    fig.text(0.01, 0.01, "Circles: Gemini, same in-process harness. Filled square: GPT-5.5, same harness, effort medium. "
+                         "Hollow diamond: GPT-5.5 via Codex CLI over MCP (a different harness).", fontsize=7.5, color="#555555")
     fig.tight_layout(rect=(0, 0.04, 1, 1))
     p = out / "xprov.png"
     fig.savefig(p, dpi=160)

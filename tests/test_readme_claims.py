@@ -787,7 +787,7 @@ def test_readme_rules_mcp_reproduce_harbor_and_anticheat_parity() -> None:
 
 def test_readme_commands_pass_doc_command_verifier() -> None:
     results = verify_doc_commands.verify_repo(root=ROOT, docs=(README_REL,))
-    assert len(results) == 3
+    assert len(results) == 4
     failed = [f"{r.name}: {r.status} ({r.details})" for r in results if r.status != "PASS"]
     assert not failed, f"verify_doc_commands failed on README.md: {failed}"
 

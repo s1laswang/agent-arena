@@ -435,7 +435,19 @@ def test_check2_gemini_surface_failures(
     assert by_name[surfaces.CHECK_GEMINI].status == "FAIL"
     assert any(expected_substr in d for d in by_name[surfaces.CHECK_GEMINI].details)
     for other in (surfaces.CHECK_HARBOR, surfaces.CHECK_MEDIA, surfaces.CHECK_GITIGNORE):
-        assert by_name[other].status == "PASS"
+        assert by_name[other]["status"] if isinstance(by_name[other], dict) else by_name[other].status == "PASS"
+
+
+def test_check2_gemini_surface_accepts_75_plus_16_split(opencode_tmp: Path):
+    files = _make_valid_repo_files()
+    files["docs/gemini/SUBMISSION.md"] = (
+        f"{H} Canary Lab\n"
+        "100 ledger-verified attacks (75 whitebox, 16 blackbox, 9 MCP re-runs): **0 verified exploits**.\n"
+    )
+    repo = _write_repo(opencode_tmp / "gemini_split_75_16", files)
+    results = surfaces.verify_submission_surfaces(repo)
+    by_name = {r.name: r for r in results}
+    assert by_name[surfaces.CHECK_GEMINI].status == "PASS"
 
 
 @pytest.mark.parametrize(

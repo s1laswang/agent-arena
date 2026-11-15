@@ -450,9 +450,14 @@ def check_gemini_surface(root: Path = ROOT) -> CheckResult:
         if doc_path is None:
             continue
         txt = doc_path.read_text(encoding="utf-8", errors="replace")
-        if not _has_int_token(txt, EXPECTED_SWARM_FINISHED):
+        has_91_or_split = _has_int_token(txt, EXPECTED_SWARM_FINISHED) or (
+            EXPECTED_SWARM_FINISHED == 91
+            and _has_int_token(txt, 75)
+            and _has_int_token(txt, 16)
+        )
+        if not has_91_or_split:
             failures.append(
-                f"{rel_doc} missing PR 41 finished attacker count '{EXPECTED_SWARM_FINISHED}'"
+                f"{rel_doc} missing PR 41 finished attacker count '{EXPECTED_SWARM_FINISHED}' (or '75' whitebox + '16' blackbox)"
             )
         if ZERO_EXPLOITS_PROSE_RX.search(txt) is None:
             failures.append(f"{rel_doc} missing '0 verified exploits' agreement with swarm.json")

@@ -52,6 +52,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=<key> harbor run -p harbor/dataset -a opencode -m g
 
 ## Links
 
+- **Judge walkthrough:** [JUDGE_QUICKSTART.md](JUDGE_QUICKSTART.md) (one-page card) and [docs/JUDGE-WALKTHROUGH.md](docs/JUDGE-WALKTHROUGH.md) (rubric-mapped guide).
 - **Break it:** [docs/EXPLOITS.md](docs/EXPLOITS.md) lists every attack we tried, and the regression test that guards each one. `make hunt` fuzzes it yourself, with no keys, in a few minutes.
 - **Gap report:** [docs/reports/gap.md](docs/reports/gap.md).
 - **Gemini entry:** [docs/gemini/SUBMISSION.md](docs/gemini/SUBMISSION.md).
@@ -110,19 +111,19 @@ mkdir -p /tmp/run && cp configs/opencode/opencode.json /tmp/run/ && cd /tmp/run 
 curl -s "http://127.0.0.1:8765/ledger?token=<random>"                       # the grader: score from the ledger
 ```
 
-Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium SEEDS=dev20` and `make test`.
+Other entry points: `make eval AGENT=solver|heuristic|do_nothing|... TIER=medium SEEDS=dev20`, `make lab-replay` (keyless Gemini gateway replay) and `make test` (1,000+ unit and integrity tests).
 
 ## Prerequisites
 
 | Need | For | Install |
 |---|---|---|
-| [uv](https://docs.astral.sh/uv/) | `make setup` / `make reproduce` / `make accept` | `curl -LsSf https://astral.sh/uv/install.sh \| sh`, then open a new shell. `make setup` installs Python 3.12 and every dependency. |
+| [uv](https://docs.astral.sh/uv/) | every `make` target (`make setup` / `make reproduce` / `make accept` / `make test`) | `curl -LsSf https://astral.sh/uv/install.sh \| sh`, then open a new shell. `make setup` installs Python 3.12 and every dependency. |
 | GNU make | every `make` target | Debian/Ubuntu `sudo apt-get install make`; macOS `xcode-select --install` |
 | Docker + compose | Harbor path only | [docs.docker.com](https://docs.docker.com/engine/install/); macOS: Docker Desktop or colima |
 | Harbor CLI | Harbor path only | `uv tool install harbor` (tested with 0.26.0) |
 | OpenCode | local MCP agent path only | [opencode.ai](https://opencode.ai/); Harbor installs its own copy inside the task image |
 
-No API key is needed for `make setup`, `make reproduce`, `make accept`, `make test` or `make hunt`. A key is used only to run a live frontier agent. On Windows, use WSL.
+No API key is needed for `make setup`, `make reproduce`, `make accept`, `make lab-replay`, `make test` or `make hunt`. A key is used only to run a live frontier agent. On Windows, use WSL.
 
 ## Repo map
 

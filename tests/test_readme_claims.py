@@ -30,6 +30,8 @@ EM_DASH = chr(0x2014)
 EN_DASH = chr(0x2013)
 MINUS_SIGN = chr(0x2212)
 PLUS_MINUS = chr(0x00B1)
+RIGHT_ARROW = chr(0x2192)
+DELTA_CHAR = chr(0x0394)
 ACCEPT_K_SD = 4.0
 
 FENCE_OPEN_RX = re.compile(r"^\s*(?:>\s*)*(`{3,}|~{3,})")
@@ -53,6 +55,22 @@ TABLE_SEP_CELL_RX = re.compile(r"^:?-{2,}:?$")
 TIER_HEADING_RX = re.compile(r"^\x23\x23\s+(easy|medium|hard)\b", re.IGNORECASE)
 STALE_GAP_RX = re.compile(r"gap\s*(?:is\s+|:\s*)?not\s+established", re.IGNORECASE)
 SOLVER_PM_RX = re.compile(r"([+-]\d+\.\d{3})\s*\+/-\s*(\d+\.\d{3})")
+PREREG_SEEDS_FALSE_CLAIM_RX = re.compile(
+    r"(?:seed\s+set\s+(?:was|is)\s+pre-?register\w*"
+    r"|pre-?register\w*\s+(?:dev\s+)?seeds?\s*0\s*-\s*29"
+    r"|seeds?\s*0\s*-\s*29\s+(?:were|was|are)\s+pre-?register\w*"
+    r"|pre-?register\w*\s+n\s*=\s*30"
+    r"|n\s*=\s*30\s+(?:was|is|were)\s+pre-?register\w*)",
+    re.IGNORECASE,
+)
+STALE_CLEARANCE_CLAIM_RX = re.compile(
+    r"hard\s+adds\s+clearance\s+constraints\s+and\s+fingerprint\s+noise",
+    re.IGNORECASE,
+)
+BAR_MET_FALSE_CLAIM_RX = re.compile(
+    r"bar\b[^.\n]{0,80}\bis\s+met\b",
+    re.IGNORECASE,
+)
 
 STALE_PR41_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("51-attacker", re.compile(r"(?<![0-9])51[*_`]*[-\s]+[*_`]*attacker\b", re.IGNORECASE)),
@@ -81,6 +99,8 @@ def _normalize_typography(text: str) -> str:
     out = out.replace(MINUS_SIGN, "-")
     out = out.replace(EN_DASH, "-")
     out = out.replace(EM_DASH, "-")
+    out = out.replace(RIGHT_ARROW, "->")
+    out = out.replace(DELTA_CHAR, "delta")
     return out
 
 
@@ -302,6 +322,22 @@ def _find_paired_row(
         if "alternative" in label_lower or "not the headline" in label_lower:
             continue
         return row
+    return None
+
+
+def _find_alternative_paired_row(
+    rows: list[dict[str, Any]],
+    group: str,
+    tier: str,
+) -> dict[str, Any] | None:
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if row.get("group") != group or row.get("tier") != tier:
+            continue
+        label_lower = str(row.get("label", "")).lower()
+        if "alternative" in label_lower:
+            return row
     return None
 
 
@@ -579,6 +615,505 @@ def check_readme_numbers_and_bands(root: Path) -> list[str]:
                 failures.append(
                     f"results/judge_table.md hard solver {jt_val:+.3f} outside 300-secret min/max ({sr_min:.4f}, {sr_max:.4f})"
                 )
+            if len(variation_lines) == 1:
+                var_matches = SOLVER_PM_RX.findall(variation_lines[0])
+                if var_matches and var_matches[0] != m_jt.groups():
+                    failures.append(
+                        f"README.md Run-to-run variation committed judge_table solver "
+                        f"'{var_matches[0][0]} +/- {var_matches[0][1]}' != results/judge_table.md "
+                        f"'{m_jt.group(1)} +/- {m_jt.group(2)}'"
+                    )
+
+    return failures
+
+
+def _load_valid_episodes(jsonl_path: Path) -> list[dict[str, Any]]:
+    episodes: list[dict[str, Any]] = []
+    for raw_line in jsonl_path.read_text(encoding="utf-8").splitlines():
+        if not raw_line.strip():
+            continue
+        ep = json.loads(raw_line)
+        meta = ep.get("meta") or {}
+        if meta.get("valid") is False:
+            continue
+        episodes.append(ep)
+    return episodes
+
+
+def _extract_step_error(step: dict[str, Any]) -> str | None:
+    res = step.get("result")
+    if isinstance(res, str) and res.strip().startswith("{"):
+        try:
+            res = json.loads(res)
+        except ValueError:
+            return None
+    if not isinstance(res, dict):
+        return None
+    err = res.get("error")
+    if not isinstance(err, str):
+        return None
+    stripped = err.strip()
+    if stripped.startswith("{"):
+        try:
+            inner = json.loads(stripped)
+        except ValueError:
+            return err
+        if isinstance(inner, dict) and isinstance(inner.get("error"), str):
+            return inner["error"]
+    return err
+
+
+def _parse_markdown_pipe_table(md_text: str, heading_substr: str | None = None) -> list[dict[str, str]]:
+    in_section = heading_substr is None
+    headers: list[str] | None = None
+    rows: list[dict[str, str]] = []
+    for raw_line in md_text.splitlines():
+        stripped = raw_line.strip()
+        if heading_substr is not None and stripped.startswith(HASH_CHAR * 2 + " "):
+            if heading_substr in stripped:
+                in_section = True
+                headers = None
+                continue
+            if in_section:
+                break
+        if not in_section:
+            continue
+        if not (stripped.startswith("|") and stripped.endswith("|")):
+            if headers is not None and rows:
+                break
+            continue
+        cells = [_strip_bold_and_code(_normalize_typography(c.strip())) for c in stripped[1:-1].split("|")]
+        if cells and all(TABLE_SEP_CELL_RX.match(c) for c in cells if c):
+            continue
+        if headers is None:
+            headers = [c.lower() for c in cells]
+            continue
+        if len(cells) < len(headers):
+            cells.extend([""] * (len(headers) - len(cells)))
+        rows.append(dict(zip(headers, cells)))
+    return rows
+
+
+def check_readme_dcd8c372_and_1bc3e281_claims(root: Path) -> list[str]:
+    from canary import reproduce
+    from canary.env import Env
+
+    failures: list[str] = []
+    root_resolved = root.resolve()
+    readme_file = root_resolved / README_REL
+    if not readme_file.is_file():
+        return [f"missing {README_REL}"]
+
+    required_files = {
+        "paired_primary": root_resolved / "data" / "runs" / "committed" / "v1.4" / "paired_table_gemini.json",
+        "paired_primary_md": root_resolved / "data" / "runs" / "committed" / "v1.4" / "paired_table_gemini.md",
+        "paired_pooled": (
+            root_resolved
+            / "data"
+            / "runs"
+            / "committed"
+            / "v1.4"
+            / "opencode-gemini-4-carbon-ext"
+            / "paired_table_pooled0to59.json"
+        ),
+        "oc_hard_jsonl": (
+            root_resolved / "data" / "runs" / "committed" / "v1.4" / "opencode-gemini-4-carbon" / "hard" / "episodes.jsonl"
+        ),
+        "oc_ext_jsonl": (
+            root_resolved
+            / "data"
+            / "runs"
+            / "committed"
+            / "v1.4"
+            / "opencode-gemini-4-carbon-ext"
+            / "hard"
+            / "episodes.jsonl"
+        ),
+        "sv_0_19_jsonl": (
+            root_resolved
+            / "data"
+            / "runs"
+            / "committed"
+            / "v1.4"
+            / "reference"
+            / "solver-hard-20261114-121126"
+            / "episodes.jsonl"
+        ),
+        "sv_20_29_jsonl": (
+            root_resolved
+            / "data"
+            / "runs"
+            / "committed"
+            / "v1.4"
+            / "reference"
+            / "solver-hard-seeds20to29"
+            / "episodes.jsonl"
+        ),
+        "sv_30_59_jsonl": (
+            root_resolved
+            / "data"
+            / "runs"
+            / "committed"
+            / "v1.4"
+            / "reference"
+            / "solver-hard-seeds30to59"
+            / "episodes.jsonl"
+        ),
+        "ws4_v3": root_resolved / "fr8" / "analysis" / "out" / "ws4_table_v3.md",
+        "ws4_8k": root_resolved / "fr8" / "analysis" / "out" / "ws4_table_8k_s1s2.md",
+        "ws4_whom": root_resolved / "fr8" / "analysis" / "out" / "ws4_whom_v3.md",
+        "fr8_report": root_resolved / "docs" / "reports" / "fr8.md",
+        "exploits": root_resolved / "results" / "anticheat" / "exploits.json",
+        "difficulty": root_resolved / "docs" / "DIFFICULTY.md",
+        "check_isolation": root_resolved / "harbor" / "check_isolation.sh",
+    }
+    for label, path in required_files.items():
+        if not path.is_file():
+            failures.append(f"missing required source file ({label}): {path.relative_to(root_resolved).as_posix()}")
+    rehearsal_dir = root_resolved / "results" / "harbor" / "rehearsal"
+    if not rehearsal_dir.is_dir():
+        failures.append("missing required directory: results/harbor/rehearsal")
+    if failures:
+        return failures
+
+    raw_readme = readme_file.read_text(encoding="utf-8")
+    norm_readme = _strip_bold_and_code(_normalize_typography(raw_readme))
+
+    pooled_rows = json.loads(required_files["paired_pooled"].read_text(encoding="utf-8"))
+    primary_rows = json.loads(required_files["paired_primary"].read_text(encoding="utf-8"))
+
+    oc_prim_row = _find_paired_row(pooled_rows, "v1.4/opencode-gemini-4-carbon", "hard")
+    oc_ext_row = _find_paired_row(pooled_rows, "v1.4/opencode-gemini-4-carbon-ext", "hard")
+    oc_pool_row = _find_paired_row(
+        pooled_rows,
+        "v1.4/opencode-gemini-4-carbon+v1.4/opencode-gemini-4-carbon-ext",
+        "hard",
+    )
+    sv_pool_row = _find_paired_row(pooled_rows, "v1.4/reference", "hard", agent="solver")
+    sv_prim_row = _find_paired_row(primary_rows, "v1.4/reference", "hard", agent="solver")
+    oc_prim_main = _find_paired_row(primary_rows, "v1.4/opencode-gemini-4-carbon", "hard")
+    oc_alt_hard = _find_alternative_paired_row(primary_rows, "v1.4/opencode-gemini-4-carbon", "hard")
+
+    if (
+        oc_prim_row is None
+        or oc_ext_row is None
+        or oc_pool_row is None
+        or sv_pool_row is None
+        or sv_prim_row is None
+        or oc_prim_main is None
+        or oc_alt_hard is None
+    ):
+        return failures + ["paired_table_pooled0to59.json or paired_table_gemini.json missing required hard rows"]
+
+    alt_raw_ci = (
+        f"{_pct(oc_alt_hard['ratio'])} "
+        f"[{_pct(oc_alt_hard['ratio_lo'])}, {_pct(oc_alt_hard['ratio_hi'])}]"
+    )
+    alt_la_short = (
+        f"{_pct(oc_alt_hard['post_expected_ratio'])} "
+        f"[{_pct(oc_alt_hard['post_expected_lo'])}, {_pct(oc_alt_hard['post_expected_hi'])}]"
+    )
+    alt_la_ci = f"luck-adjusted {alt_la_short}"
+    if alt_raw_ci not in norm_readme or alt_la_ci not in norm_readme:
+        failures.append(f"README.md missing infra-retries alternative hard row '{alt_raw_ci}' / '{alt_la_ci}'")
+
+    paired_md_rows = _parse_markdown_pipe_table(required_files["paired_primary_md"].read_text(encoding="utf-8"))
+    alt_md_row = next(
+        (
+            r
+            for r in paired_md_rows
+            if r.get("tier") == "hard" and "alternative" in r.get("run", "").lower()
+        ),
+        None,
+    )
+    if alt_md_row is None:
+        failures.append("paired_table_gemini.md missing hard alternative row")
+    else:
+        md_raw_col = next((v for k, v in alt_md_row.items() if "frontier / solver" in k), "")
+        md_la_col = next((v for k, v in alt_md_row.items() if "luck-adj." in k), "")
+        if md_raw_col != alt_raw_ci or md_la_col != alt_la_short:
+            failures.append(
+                f"paired_table_gemini.md hard alternative row mismatch: '{md_raw_col}' / '{md_la_col}' vs '{alt_raw_ci}' / '{alt_la_short}'"
+            )
+
+    tool_count = len(Env("easy", 0).tools_spec())
+    if f"only the {tool_count} MCP tools" not in norm_readme or not _has_token(norm_readme, f"with {tool_count} tools"):
+        failures.append(f"README.md missing '{tool_count}' MCP tool-count disclosure")
+
+    iso_checks = len(re.findall(r'\bok\s+"', required_files["check_isolation"].read_text(encoding="utf-8")))
+    if iso_checks != 11 or f"isolation check: {iso_checks}/{iso_checks}" not in norm_readme:
+        failures.append(
+            f"README.md / harbor/check_isolation.sh isolation check mismatch (expected 11/11, script has {iso_checks})"
+        )
+    if "results/harbor/rehearsal/" not in norm_readme:
+        failures.append("README.md missing 'results/harbor/rehearsal/' disclosure")
+
+    oc_prim_eps = _load_valid_episodes(required_files["oc_hard_jsonl"])
+    oc_ext_eps = _load_valid_episodes(required_files["oc_ext_jsonl"])
+    sv_0_19_eps = _load_valid_episodes(required_files["sv_0_19_jsonl"])
+    sv_20_29_eps = _load_valid_episodes(required_files["sv_20_29_jsonl"])
+    sv_30_59_eps = _load_valid_episodes(required_files["sv_30_59_jsonl"])
+
+    if len(oc_prim_eps) != int(oc_prim_row["n"]) or len(oc_ext_eps) != int(oc_ext_row["n"]):
+        failures.append(
+            f"OpenCode JSONL episode count mismatch: primary={len(oc_prim_eps)} ext={len(oc_ext_eps)}"
+        )
+    if len(oc_prim_eps) + len(oc_ext_eps) != int(oc_pool_row["n"]):
+        failures.append(
+            f"OpenCode pooled episode count mismatch: {len(oc_prim_eps)}+{len(oc_ext_eps)} != {oc_pool_row['n']}"
+        )
+
+    oc_ext_seeds = sorted(int(ep["seed"]) for ep in oc_ext_eps)
+    if oc_ext_seeds != [int(s) for s in oc_ext_row["seeds"]]:
+        failures.append(f"OpenCode ext JSONL seeds {oc_ext_seeds} != {oc_ext_row['seeds']}")
+    if len(oc_ext_seeds) == 2:
+        ext_seed_phrase = f"extension seeds {oc_ext_seeds[0]} and {oc_ext_seeds[1]}"
+        if ext_seed_phrase not in norm_readme:
+            failures.append(f"README.md missing extension seed disclosure '{ext_seed_phrase}'")
+
+    oc_prim_m, oc_prim_ci = reproduce.mean_ci([float(ep["score"]) for ep in oc_prim_eps])
+    oc_prim_fmt = f"{float(oc_prim_main['mean']):+.3f} +/- {float(oc_prim_main['ci']):.3f}"
+    if f"{oc_prim_m:+.3f} +/- {oc_prim_ci:.3f}" != oc_prim_fmt:
+        failures.append(
+            f"OpenCode primary JSONL mean_ci ({oc_prim_m:+.3f} +/- {oc_prim_ci:.3f}) != table ({oc_prim_fmt})"
+        )
+
+    oc_pool_m, oc_pool_ci = reproduce.mean_ci([float(ep["score"]) for ep in oc_prim_eps + oc_ext_eps])
+    oc_pool_fmt = f"{float(oc_pool_row['mean']):+.3f} +/- {float(oc_pool_row['ci']):.3f}"
+    if f"{oc_pool_m:+.3f} +/- {oc_pool_ci:.3f}" != oc_pool_fmt:
+        failures.append(
+            f"OpenCode pooled JSONL mean_ci ({oc_pool_m:+.3f} +/- {oc_pool_ci:.3f}) != table ({oc_pool_fmt})"
+        )
+    expected_oc_pool_prose = f"pools all {int(oc_pool_row['n'])} committed episodes ({oc_pool_fmt})"
+    if expected_oc_pool_prose not in norm_readme:
+        failures.append(f"README.md missing pooled OpenCode hard claim: '{expected_oc_pool_prose}'")
+    if "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/" not in norm_readme:
+        failures.append("README.md missing extension run dir path 'data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/'")
+
+    seeds_0_19 = [int(ep["seed"]) for ep in sv_0_19_eps]
+    seeds_20_29 = [int(ep["seed"]) for ep in sv_20_29_eps]
+    seeds_30_59 = [int(ep["seed"]) for ep in sv_30_59_eps]
+    if len(seeds_0_19) != 20 or len(set(seeds_0_19)) != 20 or set(seeds_0_19) != set(range(0, 20)):
+        failures.append(f"solver-hard-20261114-121126 seeds do not equal 0..19 cleanly: count={len(seeds_0_19)}")
+    if len(seeds_20_29) != 10 or len(set(seeds_20_29)) != 10 or set(seeds_20_29) != set(range(20, 30)):
+        failures.append(f"solver-hard-seeds20to29 seeds do not equal 20..29 cleanly: count={len(seeds_20_29)}")
+    if not set(seeds_0_19).isdisjoint(set(seeds_20_29)) or (set(seeds_0_19) | set(seeds_20_29)) != set(range(30)):
+        failures.append("20+10 solver reference dirs do not partition {0..29} cleanly")
+    if len(seeds_30_59) != 30 or len(set(seeds_30_59)) != 30 or set(seeds_30_59) != set(range(30, 60)):
+        failures.append(f"solver-hard-seeds30to59 seeds do not equal 30..59 cleanly: count={len(seeds_30_59)}")
+    if len(sv_0_19_eps) + len(sv_20_29_eps) + len(sv_30_59_eps) != int(sv_pool_row["n"]):
+        failures.append(
+            f"solver pooled episode count mismatch: 20+10+30 != {sv_pool_row['n']}"
+        )
+
+    sv_30_m, sv_30_ci = reproduce.mean_ci([float(ep["score"]) for ep in sv_0_19_eps + sv_20_29_eps])
+    sv_prim_fmt = f"{float(sv_prim_row['mean']):+.3f} +/- {float(sv_prim_row['ci']):.3f}"
+    if f"{sv_30_m:+.3f} +/- {sv_30_ci:.3f}" != sv_prim_fmt:
+        failures.append(f"20+10 solver JSONL mean_ci ({sv_30_m:+.3f} +/- {sv_30_ci:.3f}) != primary ({sv_prim_fmt})")
+
+    sv_pool_m, sv_pool_ci = reproduce.mean_ci(
+        [float(ep["score"]) for ep in sv_0_19_eps + sv_20_29_eps + sv_30_59_eps]
+    )
+    sv_pool_fmt = f"{float(sv_pool_row['mean']):+.3f} +/- {float(sv_pool_row['ci']):.3f}"
+    if f"{sv_pool_m:+.3f} +/- {sv_pool_ci:.3f}" != sv_pool_fmt:
+        failures.append(f"solver pooled JSONL mean_ci ({sv_pool_m:+.3f} +/- {sv_pool_ci:.3f}) != table ({sv_pool_fmt})")
+
+    expected_sv_pool_prose = f"pools seeds 0-59 ({sv_pool_fmt}, n={int(sv_pool_row['n'])})"
+    if expected_sv_pool_prose not in norm_readme:
+        failures.append(f"README.md missing pooled solver hard claim: '{expected_sv_pool_prose}'")
+
+    oc_raw_ci = (
+        f"{_pct(oc_prim_main['ratio'])} "
+        f"[{_pct(oc_prim_main['ratio_lo'])}, {_pct(oc_prim_main['ratio_hi'])}]"
+    )
+    oc_la_ci = (
+        f"luck-adjusted {_pct(oc_prim_main['post_expected_ratio'])} "
+        f"[{_pct(oc_prim_main['post_expected_lo'])}, {_pct(oc_prim_main['post_expected_hi'])}]"
+    )
+    expected_headline_recomp = f"HEADLINE, recomputes it: {oc_prim_m:+.3f} vs {sv_30_m:+.3f}, {oc_raw_ci}"
+    if expected_headline_recomp not in norm_readme:
+        failures.append(f"README.md missing HEADLINE recomputation claim: '{expected_headline_recomp}'")
+
+    for ref_dir_tok in (
+        "seeds 0-19 in data/runs/committed/v1.4/reference/solver-hard-20261114-121126/",
+        "seeds 20-29 in reference/solver-hard-seeds20to29/",
+        "The paired table uses all 30.",
+    ):
+        if ref_dir_tok not in norm_readme:
+            failures.append(f"README.md missing 20+10 solver reference disclosure '{ref_dir_tok}'")
+
+    posthoc_lock_phrase = "locked right after those episodes were committed (a post-hoc lock against reruns and cherry-picking)"
+    if posthoc_lock_phrase not in norm_readme:
+        failures.append(f"README.md missing Panel Fix A post-hoc lock disclosure: '{posthoc_lock_phrase}'")
+    if PREREG_SEEDS_FALSE_CLAIM_RX.search(norm_readme):
+        failures.append("README.md falsely claims dev seeds 0-29 or n=30 were pre-registered")
+
+    raw_pct_tok = _pct(oc_prim_main["ratio"])
+    la_pct_tok = _pct(oc_prim_main["post_expected_ratio"])
+    raw_pos = norm_readme.find(raw_pct_tok)
+    la_pos = norm_readme.find(la_pct_tok)
+    raw_ci_pos = norm_readme.find(oc_raw_ci)
+    la_ci_pos = norm_readme.find(oc_la_ci)
+    if raw_pos == -1 or la_pos == -1 or raw_pos >= la_pos or raw_ci_pos == -1 or la_ci_pos == -1 or raw_ci_pos >= la_ci_pos:
+        failures.append(
+            f"README.md must lead with raw {oc_raw_ci} before {oc_la_ci} (pos {raw_pos}/{raw_ci_pos} vs {la_pos}/{la_ci_pos})"
+        )
+    claim_lines = [ln for ln in norm_readme.splitlines() if ln.strip().startswith("Claim:")]
+    if not claim_lines or not _has_token(claim_lines[0], raw_pct_tok) or _has_token(claim_lines[0], la_pct_tok):
+        failures.append(f"README.md top Claim line must report raw {raw_pct_tok} without leading with {la_pct_tok}")
+
+    result_rows = _parse_readme_result_table(raw_readme)
+    oc_res_row = next((r for r in result_rows if r.get("agent") == "gemini-4-carbon, OpenCode over MCP"), None)
+    if oc_res_row is not None:
+        pct_col = oc_res_row.get("% of solver [95% ci]", "")
+        if pct_col.find(oc_raw_ci) == -1 or pct_col.find(oc_la_ci) == -1 or pct_col.find(oc_raw_ci) >= pct_col.find(oc_la_ci):
+            failures.append(f"README.md result table OpenCode row must put raw {oc_raw_ci} before {oc_la_ci}: '{pct_col}'")
+
+    if "clearance rule for canaries, but it never binds; see docs/DIFFICULTY.md W4" not in norm_readme:
+        failures.append("README.md missing Panel Fix A W4 disclosure 'clearance rule for canaries, but it never binds; see docs/DIFFICULTY.md W4'")
+    if STALE_CLEARANCE_CLAIM_RX.search(norm_readme):
+        failures.append("README.md contains stale pre-Fix-A claim 'Hard adds clearance constraints and fingerprint noise'")
+    diff_norm = _strip_bold_and_code(_normalize_typography(required_files["difficulty"].read_text(encoding="utf-8")))
+    if "W4." not in diff_norm or "never binds" not in diff_norm:
+        failures.append("docs/DIFFICULTY.md missing W4 never-binds disclosure referenced by README.md")
+
+    total_steps = sum(len(ep.get("steps", [])) for ep in oc_prim_eps)
+    inv_arg_steps = sum(
+        1
+        for ep in oc_prim_eps
+        for st in ep.get("steps", [])
+        if _extract_step_error(st) == "invalid arguments"
+    )
+    detail_tok = f"{inv_arg_steps} of the {total_steps:,} calls in the {len(oc_prim_eps)} headline episodes"
+    if "Tool errors now carry a detail field" not in norm_readme or detail_tok not in norm_readme:
+        failures.append(f"README.md missing Panel Fix D tool-error detail disclosure '{detail_tok}'")
+    if "careful mole was reworded in the medium and hard instructions" not in norm_readme:
+        failures.append("README.md missing Panel Fix D W1 careful-mole rewording disclosure")
+
+    ws4_v3_rows = _parse_markdown_pipe_table(required_files["ws4_v3"].read_text(encoding="utf-8"))
+    ws4_8k_rows = _parse_markdown_pipe_table(required_files["ws4_8k"].read_text(encoding="utf-8"))
+    ws4_whom_rows = _parse_markdown_pipe_table(required_files["ws4_whom"].read_text(encoding="utf-8"))
+    fr8_norm = _strip_bold_and_code(_normalize_typography(required_files["fr8_report"].read_text(encoding="utf-8")))
+
+    v3_all = {r["model"]: r for r in ws4_v3_rows if r.get("tier") == "all"}
+    s8k_all = {r["model"]: r for r in ws4_8k_rows if r.get("tier") == "all"}
+    whom_by_run = {r.get("run", ""): r for r in ws4_whom_rows}
+
+    if not {"base", "v2", "v3-4k-s0", "v3-8k-s2"}.issubset(v3_all):
+        return failures + ["fr8/analysis/out/ws4_table_v3.md missing required tier=all rows"]
+    if not {"base", "v2", "v3_4k_s0", "v3_8k_s2_H100_693st"}.issubset(s8k_all):
+        return failures + ["fr8/analysis/out/ws4_table_8k_s1s2.md missing required tier=all rows"]
+    if "v3-4k-s0" not in whom_by_run:
+        return failures + ["fr8/analysis/out/ws4_whom_v3.md missing v3-4k-s0 row"]
+
+    for v3_key, s8k_key in (("v2", "v2"), ("v3-4k-s0", "v3_4k_s0"), ("v3-8k-s2", "v3_8k_s2_H100_693st")):
+        if v3_all[v3_key]["n"] != s8k_all[s8k_key]["n"] or v3_all[v3_key]["score +/- 95% ci"] != s8k_all[s8k_key]["score +/- 95% ci"]:
+            failures.append(f"WS4 table mismatch between v3 and 8k_s1s2 on {v3_key}")
+    if v3_all["base"]["valid calls"] != s8k_all["base"]["valid calls"]:
+        failures.append("WS4 base valid-call share mismatch between ws4_table_v3.md and ws4_table_8k_s1s2.md")
+
+    readme_ws4_rows = _parse_markdown_pipe_table(raw_readme, "Tiebreak: a small model trained on Canary experience")
+    if len(readme_ws4_rows) != 4:
+        failures.append(f"README.md Tiebreak table expected 4 rows, found {len(readme_ws4_rows)}")
+    else:
+        base_valid_pct = f"{float(v3_all['base']['valid calls']) * 100.0:.0f}%"
+        r_base, r_v2, r_v3_4k, r_v3_8k = readme_ws4_rows
+        if (
+            not r_base.get("model", "").startswith("base")
+            or r_base.get("n") != v3_all["base"]["n"]
+            or not r_base.get("held-out score +/- 95% ci", "").startswith("0.000")
+            or f"{base_valid_pct} valid tool calls" not in r_base.get("held-out score +/- 95% ci", "")
+        ):
+            failures.append(f"README.md Tiebreak base row mismatch: {r_base}")
+        if (
+            not r_v2.get("model", "").startswith("v2")
+            or r_v2.get("n") != v3_all["v2"]["n"]
+            or r_v2.get("held-out score +/- 95% ci") != v3_all["v2"]["score +/- 95% ci"]
+        ):
+            failures.append(f"README.md Tiebreak v2 row mismatch: {r_v2}")
+        if (
+            not r_v3_4k.get("model", "").startswith("v3-4k")
+            or r_v3_4k.get("n") != v3_all["v3-4k-s0"]["n"]
+            or r_v3_4k.get("held-out score +/- 95% ci") != v3_all["v3-4k-s0"]["score +/- 95% ci"]
+        ):
+            failures.append(f"README.md Tiebreak v3-4k row mismatch: {r_v3_4k}")
+        if (
+            not r_v3_8k.get("model", "").startswith("v3-8k seed 2")
+            or r_v3_8k.get("n") != v3_all["v3-8k-s2"]["n"]
+            or r_v3_8k.get("held-out score +/- 95% ci") != v3_all["v3-8k-s2"]["score +/- 95% ci"]
+        ):
+            failures.append(f"README.md Tiebreak v3-8k seed 2 row mismatch: {r_v3_8k}")
+
+    delta_col_v3 = next((v for k, v in v3_all["v3-4k-s0"].items() if "vs v2" in k), "")
+    delta_col_8k = next((v for k, v in s8k_all["v3_4k_s0"].items() if "vs v2" in k), "")
+    m_delta_v3 = SOLVER_PM_RX.search(delta_col_v3)
+    m_delta_8k = SOLVER_PM_RX.search(delta_col_8k)
+    if m_delta_v3 is None or m_delta_8k is None or m_delta_v3.groups() != m_delta_8k.groups():
+        failures.append(f"WS4 v3-4k vs v2 delta parse/agreement failure: '{delta_col_v3}' vs '{delta_col_8k}'")
+    else:
+        delta_fmt = f"{m_delta_v3.group(1)} +/- {m_delta_v3.group(2)}"
+        recovery_tok = f"v3-4k vs v2: {delta_fmt}, two-sample"
+        if recovery_tok not in norm_readme:
+            failures.append(f"README.md Tiebreak missing recovery claim '{recovery_tok}'")
+        if delta_fmt not in fr8_norm:
+            failures.append(f"docs/reports/fr8.md missing WS4 recovery delta '{delta_fmt}'")
+
+    whom_row = whom_by_run["v3-4k-s0"]
+    first_w_cell = next((v for k, v in whom_row.items() if "first w" in k), "")
+    last_w_cell = next((v for k, v in whom_row.items() if "last w" in k), "")
+    m_first_w = re.search(r"\d+\.\d+", first_w_cell)
+    m_last_w = re.search(r"\d+\.\d+", last_w_cell)
+    if m_first_w is None or m_last_w is None:
+        failures.append(f"fr8/analysis/out/ws4_whom_v3.md unparsable v3-4k-s0 whom cells: '{first_w_cell}' / '{last_w_cell}'")
+    else:
+        whom_arrow = f"{float(m_first_w.group(0)):.2f} -> {float(m_last_w.group(0)):.2f}"
+        if f"({whom_arrow})" not in norm_readme:
+            failures.append(f"README.md Tiebreak missing training-state whom claim '({whom_arrow})'")
+        if whom_arrow not in fr8_norm:
+            failures.append(f"docs/reports/fr8.md missing training-state whom claim '{whom_arrow}'")
+
+    if "04:45 WS4 readout" not in norm_readme or "04:45 WS4" not in fr8_norm:
+        failures.append("README.md / docs/reports/fr8.md missing '04:45 WS4 readout' cross-reference")
+    for ws4_key in ("v2", "v3-4k-s0", "v3-8k-s2"):
+        sc_str = v3_all[ws4_key]["score +/- 95% ci"]
+        if sc_str not in fr8_norm:
+            failures.append(f"docs/reports/fr8.md missing WS4 {ws4_key} score '{sc_str}'")
+
+    v3_valid_pct = f"{float(v3_all['v3-4k-s0']['valid calls']) * 100.0:.0f}% valid calls"
+    if v3_valid_pct not in norm_readme:
+        failures.append(f"README.md Tiebreak missing '{v3_valid_pct}'")
+    if "not met" not in norm_readme or BAR_MET_FALSE_CLAIM_RX.search(norm_readme):
+        failures.append("README.md Tiebreak bar status must be 'not met' and never 'is met'")
+
+    exploits_data = json.loads(required_files["exploits"].read_text(encoding="utf-8"))
+    exp_tiers = exploits_data.get("tiers") or []
+    exp_rows = exploits_data.get("rows") or []
+    exp_seeds = exploits_data.get("seeds") or []
+    if len(exp_seeds) < 3 or f"committed {int(exp_seeds[2])}-seed battery" not in norm_readme:
+        failures.append("README.md / exploits.json committed anti-cheat battery seed count mismatch")
+    if "0 differences" not in norm_readme:
+        failures.append("README.md missing anti-cheat '0 differences' expectation")
+    if not exp_tiers or not exp_rows:
+        failures.append("results/anticheat/exploits.json missing tiers or rows")
+    else:
+        attack_counts = {
+            t: sum(1 for r in exp_rows if r.get("tier") == t and r.get("kind") == "attack")
+            for t in exp_tiers
+        }
+        swarm_counts = {
+            t: sum(1 for r in exp_rows if r.get("tier") == t and r.get("kind") == "swarm")
+            for t in exp_tiers
+        }
+        if len(set(attack_counts.values())) != 1 or len(set(swarm_counts.values())) != 1:
+            failures.append(f"exploits.json per-tier kind counts inconsistent: attack={attack_counts} swarm={swarm_counts}")
+        else:
+            attack_n = next(iter(attack_counts.values()))
+            swarm_n = next(iter(swarm_counts.values()))
+            attack_noun = "probe" if attack_n == 1 else "probes"
+            swarm_noun = "probe" if swarm_n == 1 else "probes"
+            probe_phrase = f"{attack_n} scripted attack {attack_noun} and {swarm_n} swarm {swarm_noun}"
+            if probe_phrase not in norm_readme:
+                failures.append(f"README.md missing anti-cheat probe count phrase '{probe_phrase}'")
 
     return failures
 
@@ -586,7 +1121,8 @@ def check_readme_numbers_and_bands(root: Path) -> list[str]:
 def audit_readme_claims(root: Path = ROOT) -> list[str]:
     link_failures, _, _ = check_readme_links_and_anchors(root)
     num_failures = check_readme_numbers_and_bands(root)
-    return link_failures + num_failures
+    ext_failures = check_readme_dcd8c372_and_1bc3e281_claims(root)
+    return link_failures + num_failures + ext_failures
 
 
 def test_self_source_hygiene_and_read_only_execution() -> None:
@@ -613,6 +1149,10 @@ def test_readme_markdown_links_anchors_and_repo_map_paths() -> None:
         "docs/gemini/SUBMISSION.md",
         "data/runs/committed/v1.4/paired_table_gemini.md",
         "docs/reports/gap.md",
+        "docs/DIFFICULTY.md",
+        "docs/SUBMISSION.md",
+        "docs/reports/fr8.md",
+        "docs/reports/failure_analysis_v1.4.md",
         "results/judge_table.md",
         "results/solver_range/guess_day1_hard_judge40.md",
         "results/solver_range/",
@@ -669,6 +1209,12 @@ def test_readme_line34_solver_variation_and_acceptance_band_explicit() -> None:
     assert macos_log.is_file()
     assert _has_token(_normalize_typography(macos_log.read_text(encoding="utf-8")), "+0.643 +/- 0.087")
 
+    linux_af_log = ROOT / "results" / "fresh_clone" / "linux_x86_64_afterquery_final_1bc3e281.log.txt"
+    assert linux_af_log.is_file()
+    linux_af_norm = _normalize_typography(linux_af_log.read_text(encoding="utf-8"))
+    assert _has_token(linux_af_norm, "+0.527 +/- 0.116")
+    assert _has_token(linux_af_norm, "+0.349 +/- 0.190")
+
     solver_sr = json.loads((ROOT / "results" / "solver_range" / "solver_hard_judge40.json").read_text(encoding="utf-8"))
     assert solver_sr["agent"] == "solver"
     assert solver_sr["tier"] == "hard"
@@ -681,7 +1227,8 @@ def test_readme_line34_solver_variation_and_acceptance_band_explicit() -> None:
     sr_max = float(solver_sr["max"])
 
     for label, candidate in (
-        ("README line 34 macOS fresh_clone (+0.643)", 0.643),
+        ("README line 38 macOS fresh_clone (+0.643)", 0.643),
+        ("afterquery-final Linux x86_64 fresh_clone (+0.527)", 0.527),
         ("results/judge_table.md committed hard solver", committed_jt_hard),
     ):
         assert band_lo < candidate < band_hi, f"{label}={candidate} not inside 4sd band ({band_lo}, {band_hi})"
@@ -786,6 +1333,88 @@ def test_readme_rules_mcp_reproduce_harbor_and_anticheat_parity() -> None:
     assert "ANTI-CHEAT: every probe blocked" in norm_readme
 
 
+def test_readme_panel_fixes_pooled_reproduce_and_ws4_tiebreak_explicit() -> None:
+    from canary import reproduce
+    from canary.env import Env
+
+    raw_readme = README_PATH.read_text(encoding="utf-8")
+    norm_readme = _strip_bold_and_code(_normalize_typography(raw_readme))
+
+    assert norm_readme.index("65% [24%, 98%]") < norm_readme.index("72% [52%, 91%]")
+    assert "locked right after those episodes were committed (a post-hoc lock against reruns and cherry-picking)" in norm_readme
+    assert "clearance rule for canaries, but it never binds; see docs/DIFFICULTY.md W4" in norm_readme
+
+    paired_rows = json.loads((ROOT / "data" / "runs" / "committed" / "v1.4" / "paired_table_gemini.json").read_text(encoding="utf-8"))
+    alt_hard = _find_alternative_paired_row(paired_rows, "v1.4/opencode-gemini-4-carbon", "hard")
+    assert alt_hard is not None
+    assert f"{_pct(alt_hard['ratio'])} [{_pct(alt_hard['ratio_lo'])}, {_pct(alt_hard['ratio_hi'])}]" == "56% [19%, 87%]"
+    assert (
+        f"{_pct(alt_hard['post_expected_ratio'])} "
+        f"[{_pct(alt_hard['post_expected_lo'])}, {_pct(alt_hard['post_expected_hi'])}]"
+    ) == "55% [34%, 77%]"
+    assert "56% [19%, 87%]" in norm_readme
+    assert "luck-adjusted 55% [34%, 77%]" in norm_readme
+
+    assert len(Env("easy", 0).tools_spec()) == 13
+    assert "isolation check: 11/11" in norm_readme
+    assert (ROOT / "results" / "harbor" / "rehearsal").is_dir()
+    iso_files = sorted((ROOT / "results" / "harbor").rglob("isolation.txt"))
+    assert iso_files, "expected committed Harbor isolation.txt artifacts"
+    assert any("ISOLATION OK: 11 checks passed, 0 findings" in p.read_text(encoding="utf-8") for p in iso_files)
+
+    oc_eps = _load_valid_episodes(
+        ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gemini-4-carbon" / "hard" / "episodes.jsonl"
+    )
+    assert len(oc_eps) == 30
+    assert sum(len(ep["steps"]) for ep in oc_eps) == 3841
+    inv_cnt = sum(
+        1
+        for ep in oc_eps
+        for st in ep["steps"]
+        if "invalid arguments" in str((st.get("result") or {}).get("error") or "")
+    )
+    assert inv_cnt == 28
+    assert "28 of the 3,841 calls in the 30 headline episodes" in norm_readme
+
+    oc_ext_eps = _load_valid_episodes(
+        ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gemini-4-carbon-ext" / "hard" / "episodes.jsonl"
+    )
+    assert [int(ep["seed"]) for ep in oc_ext_eps] == [34, 37]
+    oc_pool_m, oc_pool_ci = reproduce.mean_ci([float(ep["score"]) for ep in oc_eps + oc_ext_eps])
+    assert f"{oc_pool_m:+.3f} +/- {oc_pool_ci:.3f}" == "+0.349 +/- 0.190"
+
+    sv_0_19 = _load_valid_episodes(
+        ROOT / "data" / "runs" / "committed" / "v1.4" / "reference" / "solver-hard-20261114-121126" / "episodes.jsonl"
+    )
+    sv_20_29 = _load_valid_episodes(
+        ROOT / "data" / "runs" / "committed" / "v1.4" / "reference" / "solver-hard-seeds20to29" / "episodes.jsonl"
+    )
+    sv_30_59 = _load_valid_episodes(
+        ROOT / "data" / "runs" / "committed" / "v1.4" / "reference" / "solver-hard-seeds30to59" / "episodes.jsonl"
+    )
+    assert len(sv_0_19) == 20 and {int(ep["seed"]) for ep in sv_0_19} == set(range(0, 20))
+    assert len(sv_20_29) == 10 and {int(ep["seed"]) for ep in sv_20_29} == set(range(20, 30))
+    assert len(sv_30_59) == 30 and {int(ep["seed"]) for ep in sv_30_59} == set(range(30, 60))
+    sv_30_m, sv_30_ci = reproduce.mean_ci([float(ep["score"]) for ep in sv_0_19 + sv_20_29])
+    assert f"{sv_30_m:+.3f} +/- {sv_30_ci:.3f}" == "+0.499 +/- 0.119"
+    sv_60_m, sv_60_ci = reproduce.mean_ci([float(ep["score"]) for ep in sv_0_19 + sv_20_29 + sv_30_59])
+    assert f"{sv_60_m:+.3f} +/- {sv_60_ci:.3f}" == "+0.498 +/- 0.097"
+
+    for ws4_tok in (
+        "3% valid tool calls",
+        "-0.457 +/- 0.086",
+        "-0.147 +/- 0.063",
+        "-0.050 +/- 0.049",
+        "+0.310 +/- 0.107, two-sample",
+        "100% valid calls",
+        "(0.19 -> 0.89)",
+        "not met",
+        "14 scripted attack probes and 1 swarm probe",
+        "0 differences",
+    ):
+        assert ws4_tok in norm_readme, f"README.md missing expected WS4 / anti-cheat token '{ws4_tok}'"
+
+
 def test_readme_commands_pass_doc_command_verifier() -> None:
     results = verify_doc_commands.verify_repo(root=ROOT, docs=(README_REL,))
     assert len(results) == 4
@@ -793,7 +1422,48 @@ def test_readme_commands_pass_doc_command_verifier() -> None:
     assert not failed, f"verify_doc_commands failed on README.md: {failed}"
 
 
+def _make_jsonl(seed_scores: list[tuple[int, float]], invalid_arg_calls_on_first: int = 0) -> str:
+    lines: list[str] = []
+    for idx, (seed, score) in enumerate(seed_scores):
+        if idx == 0 and invalid_arg_calls_on_first > 0:
+            steps = [{"result": {"error": "invalid arguments"}} for _ in range(invalid_arg_calls_on_first)] + [
+                {"result": {"ok": True}}
+            ]
+        else:
+            steps = [{"result": {"ok": True}}]
+        lines.append(json.dumps({"seed": seed, "score": score, "steps": steps, "meta": {"valid": True}}))
+    return "\n".join(lines) + "\n"
+
+
 def _build_synthetic_repo(repo: Path) -> dict[str, Any]:
+    oc_prim_pairs = [
+        (0, 0.59), (1, -1.0), (2, 0.48), (3, 0.51), (4, 0.4),
+        (5, 0.16), (6, 0.73), (7, 0.69), (8, 0.35), (9, 0.6),
+        (10, 0.4), (11, 0.0), (12, 0.65), (13, 0.4), (14, 0.71),
+        (15, -1.0), (16, 0.7), (17, 0.54), (18, -1.0), (19, 0.62),
+        (20, 0.66), (21, 0.69), (22, 0.64), (23, 0.23), (24, 0.67),
+        (25, 0.72), (26, -1.0), (27, 0.46), (28, 0.64), (29, 0.43),
+    ]
+    oc_ext_pairs = [(34, 0.79), (37, 0.7)]
+    sv_0_19_pairs = [
+        (0, 0.64), (1, 0.69), (2, 0.58), (3, 0.28), (4, 0.73),
+        (5, 0.52), (6, 0.71), (7, 0.64), (8, 0.26), (9, 0.71),
+        (10, 0.21), (11, 0.62), (12, 0.48), (13, 0.34), (14, 0.23),
+        (15, -1.0), (16, 0.69), (17, 0.77), (18, 0.52), (19, 0.67),
+    ]
+    sv_20_29_pairs = [
+        (20, 0.53), (21, 0.73), (22, 0.4), (23, 0.32), (24, 0.31),
+        (25, 0.58), (26, 0.69), (27, 0.72), (28, 0.75), (29, 0.65),
+    ]
+    sv_30_59_pairs = [
+        (30, -1.0), (31, 0.52), (32, -1.0), (33, 0.53), (34, 0.7),
+        (35, 0.68), (36, 0.77), (37, 0.77), (38, 0.0), (39, 0.7),
+        (40, 0.55), (41, 0.57), (42, 0.51), (43, 0.69), (44, 0.75),
+        (45, 0.49), (46, 0.7), (47, 0.43), (48, 0.46), (49, 0.8),
+        (50, 0.78), (51, 0.72), (52, 0.66), (53, 0.62), (54, 0.5),
+        (55, 0.72), (56, 0.53), (57, 0.54), (58, 0.53), (59, 0.72),
+    ]
+
     paired = [
         {
             "label": "OpenCode + gemini-4-carbon over MCP (judges' shape)",
@@ -830,6 +1500,23 @@ def _build_synthetic_repo(repo: Path) -> dict[str, Any]:
             "post_expected_hi": 0.9120622753852026,
         },
         {
+            "label": "OpenCode, alternative (NOT the headline): empty model reply counted as 0",
+            "group": "v1.4/opencode-gemini-4-carbon",
+            "agent": "opencode:google/gemini-4-carbon",
+            "tier": "hard",
+            "n": 30,
+            "seeds": list(range(30)),
+            "mean": 0.2786666666666667,
+            "ci": 0.1804187402487618,
+            "solver_same_seeds": 0.499,
+            "ratio": 0.5584502338009352,
+            "ratio_lo": 0.18925056775170324,
+            "ratio_hi": 0.8658008658008659,
+            "post_expected_ratio": 0.5545580783635652,
+            "post_expected_lo": 0.34286842536141876,
+            "post_expected_hi": 0.7713212108249886,
+        },
+        {
             "label": "in-process gemini-4-carbon",
             "group": "v1.4/inproc-gemini-4-carbon",
             "agent": "gemini:gemini-4-carbon",
@@ -857,6 +1544,47 @@ def _build_synthetic_repo(repo: Path) -> dict[str, Any]:
             "ci": 0.11929749210686914,
             "solver_same_seeds": 0.499,
             "ratio": 1.0,
+        },
+    ]
+    paired_md = "\n".join(
+        [
+            "| tier | run | n | frontier / solver [95% CI] | luck-adj. / solver's luck-adj. [95% CI] |",
+            "|---|---|---:|---|---|",
+            "| hard | OpenCode + gemini-4-carbon over MCP | 30 | 65% [24%, 98%] | **72% [52%, 91%]** |",
+            "| hard | OpenCode, alternative (NOT the headline) | 30 | 56% [19%, 87%] | **55% [34%, 77%]** |",
+        ]
+    ) + "\n"
+    pooled = [
+        paired[1],
+        {
+            "label": "OpenCode + gemini-4-carbon over MCP, extension (seeds 30-59)",
+            "group": "v1.4/opencode-gemini-4-carbon-ext",
+            "agent": "opencode:google/gemini-4-carbon",
+            "tier": "hard",
+            "n": 2,
+            "seeds": [34, 37],
+            "mean": 0.745,
+            "ci": 0.0882,
+        },
+        {
+            "label": "OpenCode + gemini-4-carbon over MCP, pooled (primary + extension)",
+            "group": "v1.4/opencode-gemini-4-carbon+v1.4/opencode-gemini-4-carbon-ext",
+            "agent": "opencode:google/gemini-4-carbon",
+            "tier": "hard",
+            "n": 32,
+            "seeds": list(range(30)) + [34, 37],
+            "mean": 0.34875,
+            "ci": 0.18975526661907804,
+        },
+        {
+            "label": "reference solver",
+            "group": "v1.4/reference",
+            "agent": "solver",
+            "tier": "hard",
+            "n": 60,
+            "seeds": list(range(60)),
+            "mean": 0.4985,
+            "ci": 0.09740111755875758,
         },
     ]
     oracle = {
@@ -898,7 +1626,7 @@ def _build_synthetic_repo(repo: Path) -> dict[str, Any]:
             f"{HASH_CHAR}{HASH_CHAR} hard (headline)",
             "| agent | kind | n | invalid | score +/- 95% CI | / solver |",
             "|---|---|---:|---|---:|---:|",
-            "| solver | reference | 40 | 0 | +0.655 +/- 0.032 | 1.00 |",
+            "| solver | reference | 40 | 0 | +0.625 +/- 0.088 | 1.00 |",
             "| stop_early | baseline | 40 | 0 | +0.000 +/- 0.000 | 0.00 |",
             "| do_nothing | baseline | 40 | 0 | +0.000 +/- 0.000 | 0.00 |",
             "",
@@ -908,6 +1636,49 @@ def _build_synthetic_repo(repo: Path) -> dict[str, Any]:
             "| solver | reported | 30 | 0 | +0.499 +/- 0.119 | - |",
         ]
     ) + "\n"
+    ws4_v3 = "\n".join(
+        [
+            f"| model | tier | n | score {PLUS_MINUS} 95% CI | valid calls | {DELTA_CHAR} vs v2 (two-sample, n vs n) |",
+            "|---|---|---:|---:|---:|---|",
+            f"| base | all | 36 | 0.000 {PLUS_MINUS} 0.000 | 0.03 | +0.457 {PLUS_MINUS} 0.086 |",
+            f"| v2 | all | 172 | -0.457 {PLUS_MINUS} 0.086 | 0.92 | - |",
+            f"| v3-4k-s0 | all | 180 | -0.147 {PLUS_MINUS} 0.063 | 1.00 | +0.310 {PLUS_MINUS} 0.107 (180 vs 172) |",
+            f"| v3-8k-s2 | all | 90 | -0.050 {PLUS_MINUS} 0.049 | 0.96 | +0.408 {PLUS_MINUS} 0.099 (90 vs 172) |",
+        ]
+    ) + "\n"
+    ws4_8k = "\n".join(
+        [
+            f"| model | tier | n | score {PLUS_MINUS} 95% CI | valid calls | {DELTA_CHAR} vs v2 (two-sample, n vs n) |",
+            "|---|---|---:|---:|---:|---|",
+            f"| base | all | 36 | 0.000 {PLUS_MINUS} 0.000 | 0.03 | +0.457 {PLUS_MINUS} 0.086 |",
+            f"| v2 | all | 172 | -0.457 {PLUS_MINUS} 0.086 | 0.92 | - |",
+            f"| v3_4k_s0 | all | 180 | -0.147 {PLUS_MINUS} 0.063 | 1.00 | +0.310 {PLUS_MINUS} 0.107 (180 vs 172) |",
+            f"| v3_8k_s2_H100_693st | all | 90 | -0.050 {PLUS_MINUS} 0.049 | 0.96 | +0.408 {PLUS_MINUS} 0.099 (90 vs 172) |",
+        ]
+    ) + "\n"
+    ws4_whom = "\n".join(
+        [
+            "| run | train steps | forced-accuse whom-acc, first W | last W |",
+            "|---|---:|---|---|",
+            f"| v3-4k-s0 | 609 | 0.190 {PLUS_MINUS} 0.042 (W=100) | 0.892 {PLUS_MINUS} 0.030 (W=100) |",
+        ]
+    ) + "\n"
+    fr8_report = "\n".join(
+        [
+            f"{HASH_CHAR}{HASH_CHAR} 04:45 WS4 small-model tiebreaker readout: bar NOT met",
+            f"v2: -0.457 {PLUS_MINUS} 0.086, v3-4k s0: -0.147 {PLUS_MINUS} 0.063, v3-8k s2: -0.050 {PLUS_MINUS} 0.049.",
+            f"v3-4k vs v2 is +0.310 {PLUS_MINUS} 0.107; whom accuracy rose 0.19 {RIGHT_ARROW} 0.89.",
+        ]
+    ) + "\n"
+    exploits = {
+        "all_blocked": True,
+        "seeds": [900000, 900039, 40],
+        "tiers": ["easy", "medium", "hard"],
+        "rows": (
+            [{"tier": t, "kind": "attack"} for t in ("easy", "medium", "hard") for _ in range(14)]
+            + [{"tier": t, "kind": "swarm"} for t in ("easy", "medium", "hard")]
+        ),
+    }
     readme = "\n".join(
         [
             f"{HASH_CHAR} Canary: catch the mole",
@@ -919,19 +1690,69 @@ def _build_synthetic_repo(repo: Path) -> dict[str, Any]:
             f"| **gemini-4-carbon, OpenCode over MCP** | **+0.322 {PLUS_MINUS} 0.199** | **65% [24%, 98%]**; luck-adjusted 72% [52%, 91%] | 30 |",
             f"| do_nothing | +0.000 {PLUS_MINUS} 0.000 | 0% | 40 |",
             f"| stop_early (stops on day 1, no accusation) | +0.000 {PLUS_MINUS} 0.000 | 0% | 40 |",
-            f"Paired on dev seeds 0{EN_DASH}29 in [gap](docs/reports/gap.md); 40 judge seeds in [judge](results/judge_table.md).",
+            (
+                f"Paired on dev seeds 0{EN_DASH}29 in [gap](docs/reports/gap.md), locked right after those episodes "
+                "were committed (a post-hoc lock against reruns and cherry-picking); 40 judge seeds in [judge](results/judge_table.md)."
+            ),
+            (
+                "The solver reference for seeds 0-29 is two committed run dirs: seeds 0-19 in "
+                "`data/runs/committed/v1.4/reference/solver-hard-20261114-121126/` and seeds 20-29 in "
+                "`reference/solver-hard-seeds20to29/`. The paired table uses all 30."
+            ),
             f"In-process reaches 95% [62%, 140%] on hard, OpenCode reaches 111% on medium, guess_day1 averages {MINUS_SIGN}0.95.",
+            "Infra retries: alternative hard is 56% [19%, 87%] of the solver (luck-adjusted 55% [34%, 77%]).",
+            "Harness: only the 13 MCP tools; Harbor isolation check: 11/11; rehearsal in `results/harbor/rehearsal/`.",
+            (
+                "Tool errors now carry a `detail` field (28 of the 58 calls in the 30 headline episodes). "
+                "One contradictory sentence about the careful mole was reworded in the medium and hard instructions. "
+                "Details: [docs/DIFFICULTY.md](docs/DIFFICULTY.md)."
+            ),
+            f"{HASH_CHAR}{HASH_CHAR} Reproduce: one command, no API keys",
+            (
+                f"In the printed judge table the replayed OpenCode hard row pools all 32 committed episodes (+0.349 {PLUS_MINUS} 0.190): "
+                f"seeds 0{EN_DASH}29 plus the two extension seeds 34 and 37 (`data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/`). "
+                f"The replayed solver row likewise pools seeds 0{EN_DASH}59 (+0.498 {PLUS_MINUS} 0.097, n=60). "
+                "The last line, `HEADLINE`, recomputes it: +0.322 vs +0.499, 65% [24%, 98%]."
+            ),
             f"- **Run-to-run variation.** hard +0.625 {PLUS_MINUS} 0.088 in committed table, +0.643 {PLUS_MINUS} 0.087 in [fresh](results/fresh_clone/). Spread over 300 fresh secrets.",
             f"Oracle 10-task hard rerun: +0.39 to +0.68 (mean +0.569, sd 0.094) over 200 simulated builds: [harbor](harbor/README.md{HASH_CHAR}expected-oracle-range-for-a-judge-rerun).",
+            f"{HASH_CHAR}{HASH_CHAR} Tiebreak: a small model trained on Canary experience (honest result)",
+            "Full readout in [docs/reports/fr8.md](docs/reports/fr8.md) (\"04:45 WS4 readout\").",
+            f"| model | held-out score {PLUS_MINUS} 95% CI | n |",
+            "|---|---:|---:|",
+            "| base (untrained) | 0.000 (it cannot play: 3% valid tool calls) | 36 |",
+            f"| v2 (SFT on solver play) | {MINUS_SIGN}0.457 {PLUS_MINUS} 0.086 | 172 |",
+            f"| v3-4k (GRPO) | {MINUS_SIGN}0.147 {PLUS_MINUS} 0.063 | 180 |",
+            f"| v3-8k seed 2 (GRPO) | {MINUS_SIGN}0.050 {PLUS_MINUS} 0.049 | 90 |",
+            f"- Recovery (v3-4k vs v2: +0.310 {PLUS_MINUS} 0.107, two-sample), protocol (100% valid calls), whom (0.19 {RIGHT_ARROW} 0.89).",
+            "- Bar is **not met**.",
+            f"{HASH_CHAR}{HASH_CHAR} The rules, briefly",
+            "Hard also lists a clearance rule for canaries, but it never binds; see docs/DIFFICULTY.md W4.",
+            "14 scripted attack probes and 1 swarm probe; committed 40-seed battery expects `0 differences`; MCP server with 13 tools.",
         ]
     ) + "\n"
     files = {
         "README.md": readme,
         "docs/reports/gap.md": f"{HASH_CHAR} Gap\n",
+        "docs/reports/fr8.md": fr8_report,
+        "docs/DIFFICULTY.md": "W4. Clearance rule never binds.\n",
         "harbor/README.md": f"{HASH_CHAR} Harbor\n{HASH_CHAR}{HASH_CHAR} Expected oracle range for a judge rerun\n",
+        "harbor/check_isolation.sh": "\n".join(['ok "isolated"'] * 11) + "\n",
+        "results/harbor/rehearsal/README.md": f"{HASH_CHAR} Rehearsal\n",
         "results/fresh_clone/README.md": f"solver +0.643 {PLUS_MINUS} 0.087\n",
         "results/judge_table.md": judge_table,
         "data/runs/committed/v1.4/paired_table_gemini.json": json.dumps(paired),
+        "data/runs/committed/v1.4/paired_table_gemini.md": paired_md,
+        "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.json": json.dumps(pooled),
+        "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl": _make_jsonl(oc_prim_pairs, 28),
+        "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard/episodes.jsonl": _make_jsonl(oc_ext_pairs),
+        "data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl": _make_jsonl(sv_0_19_pairs),
+        "data/runs/committed/v1.4/reference/solver-hard-seeds20to29/episodes.jsonl": _make_jsonl(sv_20_29_pairs),
+        "data/runs/committed/v1.4/reference/solver-hard-seeds30to59/episodes.jsonl": _make_jsonl(sv_30_59_pairs),
+        "fr8/analysis/out/ws4_table_v3.md": ws4_v3,
+        "fr8/analysis/out/ws4_table_8k_s1s2.md": ws4_8k,
+        "fr8/analysis/out/ws4_whom_v3.md": ws4_whom,
+        "results/anticheat/exploits.json": json.dumps(exploits),
         "results/oracle_range_v1.4.json": json.dumps(oracle),
         "results/solver_range/guess_day1_hard_judge40.json": json.dumps(gd1),
         "results/solver_range/solver_hard_judge40.json": json.dumps(solver_sr),
@@ -966,6 +1787,98 @@ def test_audit_readme_claims_catches_number_link_anchor_and_band_regressions(cle
     errs_la = audit_readme_claims(la_bad)
     assert any("luck-adjusted" in e for e in errs_la)
 
+    order_bad = clean_tmp / "order_bad"
+    _build_synthetic_repo(order_bad)
+    (order_bad / "README.md").write_text(
+        base_files["README.md"].replace(
+            "**65% [24%, 98%]**; luck-adjusted 72% [52%, 91%]",
+            "luck-adjusted 72% [52%, 91%]; **65% [24%, 98%]**",
+        ),
+        encoding="utf-8",
+    )
+    errs_order = audit_readme_claims(order_bad)
+    assert any("before" in e for e in errs_order)
+
+    prereg_bad = clean_tmp / "prereg_bad"
+    _build_synthetic_repo(prereg_bad)
+    (prereg_bad / "README.md").write_text(
+        base_files["README.md"] + "Dev seeds 0-29 were pre-registered.\n",
+        encoding="utf-8",
+    )
+    errs_prereg = audit_readme_claims(prereg_bad)
+    assert any("pre-registered" in e for e in errs_prereg)
+
+    clearance_bad = clean_tmp / "clearance_bad"
+    _build_synthetic_repo(clearance_bad)
+    (clearance_bad / "README.md").write_text(
+        base_files["README.md"].replace(
+            "clearance rule for canaries, but it never binds; see docs/DIFFICULTY.md W4",
+            "Hard adds clearance constraints and fingerprint noise",
+        ),
+        encoding="utf-8",
+    )
+    errs_clear = audit_readme_claims(clearance_bad)
+    assert any("clearance" in e for e in errs_clear)
+
+    alt_bad = clean_tmp / "alt_bad"
+    _build_synthetic_repo(alt_bad)
+    (alt_bad / "README.md").write_text(
+        base_files["README.md"].replace("56% [19%, 87%]", "59% [19%, 87%]"),
+        encoding="utf-8",
+    )
+    errs_alt = audit_readme_claims(alt_bad)
+    assert any("56% [19%, 87%]" in e for e in errs_alt)
+
+    detail_bad = clean_tmp / "detail_bad"
+    _build_synthetic_repo(detail_bad)
+    (detail_bad / "README.md").write_text(
+        base_files["README.md"].replace("28 of the 58 calls", "19 of the 58 calls"),
+        encoding="utf-8",
+    )
+    errs_detail = audit_readme_claims(detail_bad)
+    assert any("28 of the 58 calls" in e for e in errs_detail)
+
+    pool_bad = clean_tmp / "pool_bad"
+    _build_synthetic_repo(pool_bad)
+    (pool_bad / "README.md").write_text(
+        base_files["README.md"].replace("+0.349", "+0.322"),
+        encoding="utf-8",
+    )
+    errs_pool = audit_readme_claims(pool_bad)
+    assert any("+0.349 +/- 0.190" in e for e in errs_pool)
+
+    sv_split_bad = clean_tmp / "sv_split_bad"
+    _build_synthetic_repo(sv_split_bad)
+    bad_sv_20_29 = [(19, 0.53)] + [
+        (21, 0.73), (22, 0.4), (23, 0.32), (24, 0.31),
+        (25, 0.58), (26, 0.69), (27, 0.72), (28, 0.75), (29, 0.65),
+    ]
+    (sv_split_bad / "data/runs/committed/v1.4/reference/solver-hard-seeds20to29/episodes.jsonl").write_text(
+        _make_jsonl(bad_sv_20_29),
+        encoding="utf-8",
+    )
+    errs_sv_split = audit_readme_claims(sv_split_bad)
+    assert any("20..29" in e or "partition" in e for e in errs_sv_split)
+
+    ws4_bad = clean_tmp / "ws4_bad"
+    _build_synthetic_repo(ws4_bad)
+    (ws4_bad / "README.md").write_text(
+        base_files["README.md"].replace("not met", "is met").replace("0.89", "0.94"),
+        encoding="utf-8",
+    )
+    errs_ws4 = audit_readme_claims(ws4_bad)
+    assert any("not met" in e for e in errs_ws4)
+    assert any("0.19 -> 0.89" in e for e in errs_ws4)
+
+    probe_bad = clean_tmp / "probe_bad"
+    _build_synthetic_repo(probe_bad)
+    (probe_bad / "README.md").write_text(
+        base_files["README.md"].replace("14 scripted attack probes", "13 scripted attack probes"),
+        encoding="utf-8",
+    )
+    errs_probe = audit_readme_claims(probe_bad)
+    assert any("14 scripted attack probes and 1 swarm probe" in e for e in errs_probe)
+
     band_bad = clean_tmp / "band_bad"
     _build_synthetic_repo(band_bad)
     (band_bad / "README.md").write_text(
@@ -978,11 +1891,12 @@ def test_audit_readme_claims_catches_number_link_anchor_and_band_regressions(cle
     jt_band_bad = clean_tmp / "jt_band_bad"
     _build_synthetic_repo(jt_band_bad)
     (jt_band_bad / "results" / "judge_table.md").write_text(
-        base_files["results/judge_table.md"].replace("+0.655", "+0.150"),
+        base_files["results/judge_table.md"].replace("+0.625", "+0.150"),
         encoding="utf-8",
     )
     errs_jt = audit_readme_claims(jt_band_bad)
     assert any("+0.150" in e and "band" in e for e in errs_jt)
+    assert any("!= results/judge_table.md" in e for e in errs_jt)
 
     link_bad = clean_tmp / "link_bad"
     _build_synthetic_repo(link_bad)

@@ -78,7 +78,9 @@ def load_committed(sub: str, label: str, harness: str, model: str = "gpt-5.5", r
                         "harness": harness, "tier": tier, "seed": int(e["seed"]), "score": float(e["score"]),
                         "correct": bool(e.get("correct")), "accused": bool(e.get("accused")),
                         "final_day": e.get("final_day"), "cost_usd": openai_cost(model, em.get("usage") or {}),
-                        "roster": roster(e), "git_sha": meta.get("git_sha"), "source": str(d.relative_to(ROOT))})
+                        "in_tok": (em.get("usage") or {}).get("in"),
+                        "cached_tok": (em.get("usage") or {}).get("cached_in"),
+                        "out_tok": (em.get("usage") or {}).get("out"), "roster": roster(e), "git_sha": meta.get("git_sha"), "source": str(d.relative_to(ROOT))})
     return out
 
 
@@ -93,7 +95,8 @@ def load_gemini(runs: list[str], expect_version: str | None = None) -> tuple[lis
                     "model": c["model"], "level": c["level"], "harness": SAME_HARNESS, "tier": c["tier"],
                     "seed": int(c["seed"]), "score": float(e["score"]), "correct": bool(e.get("correct")),
                     "accused": bool(e.get("accused")), "final_day": e.get("final_day"), "cost_usd": c.get("cost_usd"),
-                    "roster": roster(e), "git_sha": c.get("launch_git_sha"), "run_id": c.get("run_id"),
+                    "in_tok": c.get("in"), "cached_tok": c.get("cached"),
+                    "out_tok": (c.get("out") or 0) + (c.get("thinking") or 0), "roster": roster(e), "git_sha": c.get("launch_git_sha"), "run_id": c.get("run_id"),
                     "thinking": c.get("thinking"), "calls": c.get("calls"), "wall_s": c.get("wall_s"),
                     "model_versions": c.get("model_versions") or [], "_episode": e})
     if expect_version and set(versions) - {expect_version}:
@@ -161,6 +164,10 @@ def summarize(eps: list[dict], solver: dict[tuple[str, int], float], B: int = 10
                      "accused": sum(e["accused"] for e in es), "solver_same_seeds": ms,
                      "pct_solver": (mean(f) / ms) if f and ms > 0 else float("nan"), "pct_lo": lo, "pct_hi": hi,
                      "cost_per_ep": mean([e.get("cost_usd") for e in es]),
+                     "in_per_ep": mean([e.get("in_tok") for e in es]),
+                     "cached_share": (sum(e.get("cached_tok") or 0 for e in es) / sum(e.get("in_tok") or 0 for e in es))
+                     if sum(e.get("in_tok") or 0 for e in es) else float("nan"),
+                     "out_per_ep": mean([e.get("out_tok") for e in es]),
                      "thinking_per_ep": mean([e.get("thinking") for e in es]),
                      "wall_min_per_ep": mean([e.get("wall_s") for e in es]) / 60,
                      "model_versions": sorted({v for e in es for v in e.get("model_versions") or []}),
@@ -272,6 +279,10 @@ def _pct(x):
     return "–" if x != x else f"{100 * x:.0f}%"
 
 
+def _tok(x):
+    return "–" if x is None or x != x else (f"{x / 1e6:.2f}M" if x >= 1e6 else f"{x / 1e3:.0f}k")
+
+
 def _money(x):
     return "–" if x is None or x != x else f"${x:.2f}"
 
@@ -333,8 +344,12 @@ def to_md(doc: dict) -> str:
           "comparable one-to-one with the in-process rows.",
           "- **Pairing.** % of solver = mean agent score / mean reference-solver score on the same seeds "
           "(committed v1.3 reference), 95% paired bootstrap CI.",
-          "- **Cost.** Recorded token usage at list prices, cached input at the cached price. GPT-5.5: $5 / $0.50 cached / "
-          "$30 per 1M tokens (`canary/llm/pricing.py`). Gemini: the ladder's price table (`canary/gemini/ladder_report.py`).",
+          "- **Cost.** Computed from the token usage each API call reported (input, cached input, output including "
+          "reasoning/thinking tokens), priced at list prices with cached input at the cached price. GPT-5.5: $5 / $0.50 "
+          "cached / $30 per 1M tokens (`canary/llm/pricing.py`; the per-episode figure recorded with the run). Gemini: "
+          "the ladder's price table (`canary/gemini/ladder_report.py`). Token counts per episode are in the tables.",
+          "- **Effort.** GPT-5.5 ran at its default reasoning effort (medium). Gemini rows show thinking level medium "
+          "(the matched setting) and high. The two dials are not the same mechanism; treat 'medium vs medium' as nominal.",
           f"- **Checks.** Replay: {doc['checks']['replay']['replay_verified']}/{doc['checks']['replay']['n']} Gemini episodes "
           f"replay to their recorded score. Solver: {doc['checks']['solver']['reproduced']}/{doc['checks']['solver']['n']} "
           "committed reference scores reproduce in-process under v1.3.", ""]
@@ -343,10 +358,12 @@ def to_md(doc: dict) -> str:
         if not rows:
             continue
         L += [f"## {tier}", "",
-              "| agent | harness | n | mean score | correct | % of solver [95% CI] | $/episode |", "|---|---|---|---|---|---|---|"]
+              "| agent | harness | n | mean score | correct | % of solver [95% CI] | $/episode | input tok/ep (cached) | output tok/ep |",
+              "|---|---|---|---|---|---|---|---|---|"]
         for r in rows:
             L.append(f"| {r['label']} | {r['harness']} | {r['n']} | {r['score_mean']:+.3f} | {r['correct']}/{r['n']} | "
-                     f"**{_pct(r['pct_solver'])}** [{_pct(r['pct_lo'])}, {_pct(r['pct_hi'])}] | {_money(r['cost_per_ep'])} |")
+                     f"**{_pct(r['pct_solver'])}** [{_pct(r['pct_lo'])}, {_pct(r['pct_hi'])}] | {_money(r['cost_per_ep'])} | "
+                     f"{_tok(r['in_per_ep'])} ({_pct(r['cached_share'])}) | {_tok(r['out_per_ep'])} |")
         vs = [v for v in doc["versus"] if v["tier"] == tier]
         if vs:
             L += ["", f"Paired against `{GPT_SAME}` on the seeds both played:", "",

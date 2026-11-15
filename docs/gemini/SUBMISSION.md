@@ -20,7 +20,7 @@
 ## 3. What is innovative
 - **Calibrated abstention, measured at scale:** Gemini generates and ground-truths the eval set, so "never confidently wrong" is a number, not a hope.
 - **Speculative verify:** the server reads the sharpest frame while the user is still asking, so the Live tool call returns from cache.
-- **Thinking as a controlled variable:** `thinking_level` is the only factor changed, every cell is paired with the solver, and a CI gate words every headline. Pooled over 570 episodes, each step up in thinking level adds **+16.3 [+7.6, +24.4] points** of the solver's score, driven by the flash models (`results/gemini/thinking_effect.md`).
+- **Thinking as a controlled variable:** `thinking_level` is the only factor changed, every cell is paired with the solver, and a CI gate words every headline. Pooled over 570 episodes (CI clustered by world, 63 worlds), each step up in thinking level adds **+16.3 [+7.6, +24.4] points** of the solver's score, driven by the flash models (`results/gemini/thinking_effect.md`).
 - **A red team proven by a positive control:** scores come only from the server ledger, and the detector is shown to catch a reopened real exploit.
 - **A cross-provider control on identical worlds**, built from committed GPT-5.5 episodes at no extra cost.
 
@@ -52,7 +52,7 @@
 - The AfterQuery gap depends on the harness (`docs/reports/gap.md`): gemini-4-carbon on v1.4 hard scores 65% [24%, 98%] of the solver via OpenCode over MCP (n=30) and 95% [62%, 140%] in-process. Demo narration (TTS, Live commentator) is not a measurement.
 
 ## Also on Gemini
-- **Gemini teaches Gemma:** the Gemini-generated label images trained a PaliGemma 2 3B LoRA: "strength visible" recall 91.4% [86.5, 94.6] vs 65.6% for YOLOv8n (n=348 held-out; YOLOv8n precision 96.8% vs 89.9%), not yet in the product ([`GEMMA.md`](https://github.com/s1laswang/junction-meta-glasses/blob/main/GEMMA.md)).
+- **Gemini teaches Gemma:** the Gemini-generated label images trained a PaliGemma 2 3B LoRA: "strength visible" recall 91.4% [86.5, 94.6] vs 65.6% for YOLOv8n (n=348 held-out; YOLOv8n precision 96.8% vs 89.9%), not yet in the product ([`GEMMA.md`](https://github.com/s1laswang/junction-meta-glasses/blob/gemini-quote-0515/GEMMA.md)).
 - **Valio Aimo** ([`docs/GEMINI.md`](https://github.com/s1laswang/junction-aimo-agents/blob/main/docs/GEMINI.md)): a gemini-3.8-flash buyer agent escalates 5/34 steps (15%) to gemini-4-hydrogen; compaction cut cost per order from $0.0822 to $0.0352 (−57%); 6/6 scenarios pass.
 
 ## Reproduce

@@ -20,6 +20,12 @@ from .world import generate_world
 
 TOPICS = ("recent_documents", "contacts_outside", "workload", "access_needs")
 BAD = "invalid arguments"
+
+
+def _bad(detail: str) -> "ToolResult":
+    """The error string stays BAD (stable across versions and committed episodes); data.detail says what was wrong.
+    Details depend only on the arguments and public game state, never on hidden state (who the mole is)."""
+    return ToolResult(False, {"detail": detail}, BAD)
 # Contract v0.2: every error string is one of these fixed constants (never depends on the target).
 ERRORS = frozenset({BAD, "unknown tool", "daily action limit; call advance_day", "canary limit for today reached", "episode over"})
 
@@ -196,7 +202,11 @@ class Env:
             "- A rule chooses which document to leak: newest, oldest, most recipients, fewest recipients, random, or none.",
             "- A rule may also frame one colleague (the decoy, the first restricted colleague, or a random colleague). "
             "Framing adds one fake after-hours access for that colleague.",
-            f"- The mole never knows which documents are canaries. The {p.p_leak} leak probability above still applies to every leak.",
+            (f"- The mole's rules cannot see which documents are canaries. Canaries are treated differently in exactly one "
+             "place: the careful weighting stated under \"How leaks work\", which the simulation applies whenever a "
+             f"document is picked at random. The {p.p_leak} leak probability above still applies to every leak."
+             if p.careful_mole else
+             f"- The mole never knows which documents are canaries. The {p.p_leak} leak probability above still applies to every leak."),
             ("- The default mole leaks a random document and does no extra framing, exactly as described above."
              if self.tier not in TRACKS else
              ("- In this track the mole does NOT use the default strategy. It follows a policy trained by "
@@ -349,11 +359,43 @@ class Env:
             return False
         return True
 
+    def _arg_problem(self, tool: str, args: Any) -> str:
+        """Best-effort reason for a call that _check_args has ALREADY rejected. It never decides accept/reject, uses only
+        the arguments and public facts (tool schema, number of days, employee ids), and can never raise."""
+        generic = f"arguments do not match the {tool} tool schema (types, required fields, values); see tools/list"
+        try:
+            if not isinstance(args, dict):
+                return "arguments must be a JSON object"
+            _, props, req = _SPECS[tool]
+            unknown = sorted(str(k) for k in args if k not in props)
+            if unknown:
+                return f"unknown argument(s) {unknown}; {tool} accepts {sorted(props)}"
+            missing = [k for k in req if k not in args]
+            if missing:
+                return f"missing required argument(s) {missing}"
+            for k, v in args.items():
+                typ = props[k].get("type")
+                if typ == "integer" and (not isinstance(v, int) or isinstance(v, bool)):
+                    return f"{k} must be an integer"
+                if typ == "integer" and not 1 <= v <= self.p.n_days:
+                    return f"{k} must be between 1 and {self.p.n_days}"
+                if typ == "string" and not isinstance(v, str):
+                    return f"{k} must be a string"
+                if typ == "object" and not isinstance(v, dict):
+                    return f"{k} must be an object"
+            if "day_from" in args and "day_to" in args and args["day_from"] > args["day_to"]:
+                return "day_from must not be after day_to"
+            if "employee" in args and args["employee"] not in self._idset:
+                return "employee must be an id returned by list_employees"
+        except Exception:  # noqa: BLE001
+            return generic
+        return generic
+
     def _dispatch(self, tool: str, args: Any) -> ToolResult:
         if not isinstance(tool, str) or tool not in _SPECS:
             return ToolResult(False, {}, "unknown tool")
         if not self._check_args(tool, args):
-            return ToolResult(False, {}, BAD)
+            return _bad(self._arg_problem(tool, args))
         if tool in INVESTIGATIVE_TOOLS:
             if self._actions_today >= self.p.actions_per_day:
                 return ToolResult(False, {}, "daily action limit; call advance_day")
@@ -398,7 +440,7 @@ class Env:
     def _t_search_messages(self, a):
         q = a["query"].strip().lower()
         if not q or "*" in q or len(q) > 200:
-            return ToolResult(False, {}, BAD)
+            return _bad("query must be 1-200 characters and must not contain *")
         lo, hi = a.get("day_from", 1), a.get("day_to", self.p.n_days)
         out = []
         for mid in self._msg_order:
@@ -413,13 +455,13 @@ class Env:
     def _t_read_message(self, a):
         m = self._messages.get(a["id"])
         if m is None:
-            return ToolResult(False, {}, BAD)
+            return _bad("unknown message id; use an id returned by search_messages")
         return ToolResult(True, {"message": {k: (list(v) if isinstance(v, (list, tuple)) else v) for k, v in m.items()}})
 
     def _t_interview(self, a):
         emp, topic = a["employee"], a["topic"]
         if topic not in TOPICS:
-            return ToolResult(False, {}, BAD)
+            return _bad(f"topic must be one of {list(TOPICS)}")
         p_ev = self.p.p_evasive_innocent * (self.p.interview_lr if emp == self._world.mole else 1.0)
         r = random.Random(f"{self._world.world_seed}:iv:{emp}:{topic}:{self.day}")
         signal = "evasive" if r.random() < p_ev else "cooperative"
@@ -429,14 +471,14 @@ class Env:
     def _t_plant_canary(self, a):
         title, asg = a["doc_title"], a["assignment"]
         if not title.strip() or len(title) > 120 or not asg:
-            return ToolResult(False, {}, BAD)
+            return _bad("doc_title must be 1-120 non-blank characters and assignment must name at least one employee")
         for k, v in asg.items():
             if not isinstance(k, str) or k not in self._idset or k in self._restricted:
-                return ToolResult(False, {}, BAD)
+                return _bad(f"assignment key {k!r} is not an employee id that can receive documents (unknown or restricted)")
             if not isinstance(v, str) or not v.strip() or len(v) > 20:
-                return ToolResult(False, {}, BAD)
+                return _bad(f"variant label for {k!r} must be a non-blank string of at most 20 characters")
         if len(set(asg.values())) > self.p.max_variants:
-            return ToolResult(False, {}, BAD)
+            return _bad(f"at most {self.p.max_variants} distinct variant labels per canary on this tier")
         if self._canaries_today >= self.p.canaries_per_day:
             return ToolResult(False, {}, "canary limit for today reached")
         # access_constraints: canary level is 1 and clearance >= 1 always, so every employee qualifies.
@@ -461,7 +503,7 @@ class Env:
     def _t_restrict_access(self, a):
         e = a["employee"]
         if e in self._restricted:
-            return ToolResult(False, {}, BAD)
+            return _bad(f"{e} is already restricted")
         self._restricted.add(e)
         self._log("restricted", employee=e)
         return ToolResult(True, {"restricted": e})
@@ -469,7 +511,7 @@ class Env:
     def _t_unrestrict_access(self, a):
         e = a["employee"]
         if e not in self._restricted:
-            return ToolResult(False, {}, BAD)
+            return _bad(f"{e} is not restricted")
         self._restricted.discard(e)
         self._log("unrestricted", employee=e)
         return ToolResult(True, {"unrestricted": e})

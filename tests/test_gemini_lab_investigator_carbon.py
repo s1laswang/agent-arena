@@ -451,7 +451,24 @@ def test_hostile_judge_zero_sdk_imports_and_zero_protected_path_touches() -> Non
         "".join(("goo", "gle.", "gen", "ai")),
         "".join(("goo", "gle.generative", "ai")),
     )
-    for loaded_name in list(sys.modules):
+    probe_env = dict(os.environ)
+    probe_env["GEMINI_API_KEY"] = ""
+    probe_env["GOOGLE_API_KEY"] = ""
+    probe_env["GOOGLE_GENERATIVE_AI_API_KEY"] = ""
+    probe_env["PYTHONPATH"] = str(ROOT)
+    mod_probe = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import json, sys, canary.gemini.investigator_carbon; print(json.dumps(sorted(sys.modules)))",
+        ],
+        cwd=ROOT,
+        env=probe_env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    for loaded_name in json.loads(mod_probe.stdout):
         for prefix in banned_mod_prefixes:
             assert not loaded_name.startswith(prefix)
 

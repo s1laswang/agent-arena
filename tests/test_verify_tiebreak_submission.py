@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import io
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -374,9 +375,11 @@ def test_check4_claim_number_audit_tamper_rejections(tmp_path: Path) -> None:
     report_path = syn / "docs" / "reports" / "tiebreak_small_model.md"
     orig_report = report_path.read_text(encoding="utf-8")
     report_path.write_text(
-        orig_report.replace(
-            "Verified improvements passing all 4 strict gates: `1`",
-            "Verified improvements passing all 4 strict gates: `3`",
+        re.sub(
+            r"Verified improvements passing all 4 strict gates: `\d+`",
+            "Verified improvements passing all 4 strict gates: `999`",
+            orig_report,
+            count=1,
         ),
         encoding="utf-8",
     )

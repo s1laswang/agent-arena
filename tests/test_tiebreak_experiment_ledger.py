@@ -105,11 +105,14 @@ def test_historical_runs_and_clean_clone_determinism(tmp_path: Path) -> None:
     assert ledger_mod.render_markdown_report(ledger_default) == ledger_mod.render_markdown_report(ledger_clean)
 
     bare_clone = tmp_path / "bare_clone"
-    for rel in (
+    rel_paths = [
         "results/tiebreak/cal_v14_train_manifest.json",
         "results/tiebreak/cal_v14_val_manifest.json",
-        "results/tiebreak/empirical_bayes/summary.json",
-    ):
+    ] + [
+        str(p.relative_to(REPO_ROOT))
+        for p in sorted((REPO_ROOT / "results" / "tiebreak").glob("*/summary.json"))
+    ]
+    for rel in rel_paths:
         dst = bare_clone / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_text((REPO_ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8")

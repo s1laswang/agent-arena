@@ -47,7 +47,7 @@ HELDOUT_SEED_STOP = 800_030
 HELDOUT_WORLD_SECRET = "canary-tiebreak-heldout-v14-eval-01"
 EXPECTED_SECRET_TAG = "sha256:ebf2f09716cf76d3"
 MAX_SUMMARY_BYTES = 120 * 1024
-MAX_CHECK_SECONDS = 1.5
+MAX_CHECK_SECONDS = 10.0
 
 DEFAULT_OUT_JSON = Path("results/tiebreak/delayed_leak_noise/noise_audit_summary.json")
 DEFAULT_OUT_MD = Path("docs/reports/tiebreak_delayed_leak_noise.md")

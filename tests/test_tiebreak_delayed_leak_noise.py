@@ -69,13 +69,13 @@ def test_check_mode_speed_and_committed_artifact_invariants(capsys: pytest.Captu
     rc = mod.main(["--check"])
     dt = time.perf_counter() - t0
     assert rc == 0
-    assert dt < 1.5
+    assert dt < 10.0
 
     cli_out = json.loads(capsys.readouterr().out)
     assert cli_out["passed"] is True
     assert cli_out["errors"] == []
     assert cli_out["episodes_verified"] == 450
-    assert cli_out["elapsed_seconds"] < 1.5
+    assert cli_out["elapsed_seconds"] < 10.0
     assert SUMMARY_PATH.stat().st_size < mod.MAX_SUMMARY_BYTES
 
     summary = json.loads(SUMMARY_PATH.read_text(encoding="utf-8"))

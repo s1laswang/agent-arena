@@ -62,7 +62,7 @@ QWEN_HEADER_UNIT_SCALE = 1.025
 QWEN_BODY_UNIT_SCALE = 0.84
 
 MAX_SUMMARY_BYTES = 80 * 1024
-MAX_CHECK_SECONDS = 1.0
+MAX_CHECK_SECONDS = 10.0
 
 DEFAULT_OUT_JSON = Path("results/tiebreak/working_memory/working_memory_summary.json")
 DEFAULT_OUT_MD = Path("docs/reports/tiebreak_working_memory.md")

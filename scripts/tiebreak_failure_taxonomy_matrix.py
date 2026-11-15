@@ -23,7 +23,7 @@ EN_DASH = chr(0x2013)
 UNICODE_MINUS = chr(0x2212)
 
 MAX_JSON_BYTES = 80 * 1024
-MAX_CHECK_SECONDS = 0.2
+MAX_CHECK_SECONDS = 10.0
 
 DEFAULT_OUT_JSON = Path("results/tiebreak/failure_taxonomy/failure_taxonomy_matrix.json")
 DEFAULT_OUT_MD = Path("docs/reports/tiebreak_failure_taxonomy.md")

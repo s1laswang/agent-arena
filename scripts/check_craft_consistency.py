@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import functools
 import json
 import math
 import os
@@ -164,11 +165,8 @@ def _parse_gitignore_fallback_rules(root: Path) -> list[tuple[bool, bool, bool, 
     return rules
 
 
-def _gitignore_pat_matches(pat: str, rel_pos: str, name: str, anchored: bool) -> bool:
-    if not anchored:
-        return fnmatch.fnmatchcase(name, pat) or fnmatch.fnmatchcase(rel_pos, pat)
-    if "**/" in pat and _gitignore_pat_matches(pat.replace("**/", ""), rel_pos, name, True):
-        return True
+@functools.lru_cache(maxsize=512)
+def _compile_anchored_gitignore_pat(pat: str) -> re.Pattern[str]:
     parts: list[str] = []
     i = 0
     n = len(pat)
@@ -188,7 +186,15 @@ def _gitignore_pat_matches(pat: str, rel_pos: str, name: str, anchored: bool) ->
         else:
             parts.append(re.escape(pat[i]))
             i += 1
-    return re.fullmatch("".join(parts), rel_pos) is not None
+    return re.compile("".join(parts))
+
+
+def _gitignore_pat_matches(pat: str, rel_pos: str, name: str, anchored: bool) -> bool:
+    if not anchored:
+        return fnmatch.fnmatchcase(name, pat) or fnmatch.fnmatchcase(rel_pos, pat)
+    if "**/" in pat and _gitignore_pat_matches(pat.replace("**/", ""), rel_pos, name, True):
+        return True
+    return _compile_anchored_gitignore_pat(pat).fullmatch(rel_pos) is not None
 
 
 def _fallback_is_ignored(

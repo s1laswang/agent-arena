@@ -148,6 +148,37 @@ def default_runner(
     )
 
 
+_BUILTIN_DEFAULT_RUNNER = default_runner
+
+CRAFT_BATCH_PROBE = (
+    "import contextlib, importlib.util, io, json, pathlib, sys\n"
+    "scripts = json.loads(sys.argv[1])\n"
+    "cwd = pathlib.Path.cwd()\n"
+    "if str(cwd) not in sys.path:\n"
+    "    sys.path.insert(0, str(cwd))\n"
+    "out_items = []\n"
+    "for idx, rel in enumerate(scripts):\n"
+    "    buf_out, buf_err = io.StringIO(), io.StringIO()\n"
+    "    rc = 1\n"
+    "    try:\n"
+    "        spec = importlib.util.spec_from_file_location(f'_zip_craft_{idx}', cwd / rel)\n"
+    "        mod = importlib.util.module_from_spec(spec)\n"
+    "        sys.modules[spec.name] = mod\n"
+    "        with contextlib.redirect_stdout(buf_out), contextlib.redirect_stderr(buf_err):\n"
+    "            spec.loader.exec_module(mod)\n"
+    "            try:\n"
+    "                res = mod.main(['--root', str(cwd)])\n"
+    "            except SystemExit as exc:\n"
+    "                res = exc.code if isinstance(exc.code, int) else (0 if exc.code is None else 1)\n"
+    "        rc = int(res) if res is not None else 0\n"
+    "    except BaseException as exc:\n"
+    "        buf_err.write(f'{type(exc).__name__}: {exc}\\n')\n"
+    "        rc = 1\n"
+    "    out_items.append({'script': rel, 'returncode': rc, 'stdout': buf_out.getvalue(), 'stderr': buf_err.getvalue()})\n"
+    "print(json.dumps(out_items))\n"
+)
+
+
 def export_head(root: Path, export_dir: Path) -> None:
     """Export ``HEAD`` from ``root`` into ``export_dir`` via ``git archive | tar -x``."""
     if not root.is_dir():
@@ -587,16 +618,44 @@ def check_craft_verifiers(
     run_fn = runner if runner is not None else default_runner
     ceiling = str(export_dir.resolve().parent)
 
-    def _run_one(script_rel: str) -> tuple[str, subprocess.CompletedProcess[str]]:
-        proc = run_fn(
-            [sys.executable, script_rel],
+    outcomes: list[tuple[str, subprocess.CompletedProcess[str]]] = []
+    if runner is None and default_runner is _BUILTIN_DEFAULT_RUNNER:
+        batch_proc = default_runner(
+            [sys.executable, "-c", CRAFT_BATCH_PROBE, json.dumps(list(CRAFT_VERIFIER_SCRIPTS))],
             export_dir,
             {"GIT_CEILING_DIRECTORIES": ceiling},
         )
-        return script_rel, proc
+        if batch_proc.returncode == 0:
+            try:
+                batch_items = json.loads((batch_proc.stdout or "").strip())
+                if isinstance(batch_items, list) and len(batch_items) == len(CRAFT_VERIFIER_SCRIPTS):
+                    outcomes = [
+                        (
+                            str(item["script"]),
+                            subprocess.CompletedProcess(
+                                args=[sys.executable, str(item["script"])],
+                                returncode=int(item["returncode"]),
+                                stdout=str(item.get("stdout", "")),
+                                stderr=str(item.get("stderr", "")),
+                            ),
+                        )
+                        for item in batch_items
+                    ]
+            except (ValueError, KeyError, TypeError):
+                outcomes = []
 
-    with ThreadPoolExecutor(max_workers=len(CRAFT_VERIFIER_SCRIPTS)) as pool:
-        outcomes = list(pool.map(_run_one, CRAFT_VERIFIER_SCRIPTS))
+    if not outcomes:
+        def _run_one(script_rel: str) -> tuple[str, subprocess.CompletedProcess[str]]:
+            proc = run_fn(
+                [sys.executable, script_rel],
+                export_dir,
+                {"GIT_CEILING_DIRECTORIES": ceiling},
+            )
+            return script_rel, proc
+
+        max_w = min(len(CRAFT_VERIFIER_SCRIPTS), max(2, os.cpu_count() or 2))
+        with ThreadPoolExecutor(max_workers=max_w) as pool:
+            outcomes = list(pool.map(_run_one, CRAFT_VERIFIER_SCRIPTS))
 
     failures: list[str] = []
     for script_rel, proc in outcomes:
@@ -648,7 +707,8 @@ def verify_export_dir(
         lambda: check_security_tests(export_dir, runner=runner),
         lambda: check_craft_verifiers(export_dir, runner=runner),
     )
-    with ThreadPoolExecutor(max_workers=len(tasks)) as pool:
+    max_w = min(len(tasks), max(2, os.cpu_count() or 2))
+    with ThreadPoolExecutor(max_workers=max_w) as pool:
         futures = [pool.submit(fn) for fn in tasks]
         return [fut.result() for fut in futures]
 

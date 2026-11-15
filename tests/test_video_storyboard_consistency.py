@@ -228,14 +228,14 @@ def test_vo_09_small_placeholder_free_and_dry_run_processes_all_10(
 def test_scene_3_matches_judge_table_hard_paired_rows(storyboard_sections: dict[str, str]):
     scene_3 = _scene_block(storyboard_sections, 3)
     fp, rows = _parse_hard_paired_judge_rows(JUDGE_TABLE_PATH.read_text(encoding="utf-8"))
-    assert fp == "893b837616b9"
+    assert fp == "4bf5f8e8e48b"
     assert fp in scene_3
 
-    assert rows["solver"] == "+0.553 +/- 0.093"
-    assert rows["heuristic"] == "-0.051 +/- 0.187"
-    assert rows["logs_only"] == "-0.956 +/- 0.086"
-    assert rows["random"] == "-0.758 +/- 0.144"
-    assert rows["guess_day1"] == "-1.000 +/- 0.000"
+    assert rows["solver"] == "+0.513 +/- 0.120"
+    assert rows["heuristic"] == "-0.009 +/- 0.184"
+    assert rows["logs_only"] == "-0.916 +/- 0.115"
+    assert rows["random"] == "-0.825 +/- 0.119"
+    assert rows["guess_day1"] == "-0.950 +/- 0.098"
     assert rows["stop_early"].startswith("+0.000")
     assert rows["do_nothing"].startswith("+0.000")
 
@@ -246,7 +246,7 @@ def test_scene_3_matches_judge_table_hard_paired_rows(storyboard_sections: dict[
     assert "`do_nothing` **+0.000**" in scene_3
     assert "results/judge_table.md" in scene_3
 
-    for stale_tok in ("+0.547", "-0.044", "-0.754", "-0.950"):
+    for stale_tok in ("+0.547", "-0.044", "-0.754", "+0.553", "893b837616b9"):
         assert stale_tok not in scene_3
 
 

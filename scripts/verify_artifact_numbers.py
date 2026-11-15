@@ -757,9 +757,9 @@ def _verify_anticheat_exploits(root: Path, failures: list[str]) -> None:
         j_cons = rc.get("consistent")
         j_steps = rc.get("steps")
         j_diff = rc.get("step_mismatches")
-        if (j_replayed, j_total, j_cons, j_steps, j_diff) != (1021, 1031, 1021, 51814, 0):
+        if (j_replayed, j_total, j_cons, j_steps, j_diff) != (1051, 1061, 1051, 53889, 0):
             failures.append(
-                f"{json_rel}: replay_counts expected (1021, 1031, 1021, 51814, 0), got "
+                f"{json_rel}: replay_counts expected (1051, 1061, 1051, 53889, 0), got "
                 f"{(j_replayed, j_total, j_cons, j_steps, j_diff)}"
             )
         sum_rep = sum(int(x.get("replayed", 0)) for x in replay_list if isinstance(x, dict))
@@ -1138,7 +1138,7 @@ def check_companion_parity(root: Path = ROOT) -> CheckResult:
         name,
         "PASS",
         f"paired tables ({n_pt}+{n_pool} rows), oracle_range ({n_or} cells), solver_range ({n_sr} files), "
-        f"anticheat (99 probes, 1021/1031 replay, 80/80 Harbor), failure_analysis (5.30=4.19+1.11 V), "
+        f"anticheat (99 probes, 1051/1061 replay, 80/80 Harbor), failure_analysis (5.30=4.19+1.11 V), "
         f"Gemini ladder (587 eps) + swarm (91 attackers, 4325 calls, 0 exploits), and fresh_clone ({n_fc} logs incl. 1bc3e281) match",
     )
 

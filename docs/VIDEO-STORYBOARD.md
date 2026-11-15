@@ -28,7 +28,7 @@ Numbers: 13 tools `[src: canary/env.py tools_spec(); docs/reports/gap.md "The pr
 
 ## Scene 3 · 1:30–2:30 · The bar: a solver, and the baselines that fail
 **Shot:** terminal, `make reproduce` scrolling, then freeze on the hard paired table. Highlight the solver row, then the baselines.
-**On screen (hard, 40 judge seeds, fingerprint `893b837616b9`):** solver **+0.553 +/- 0.093**, heuristic **-0.051 +/- 0.187**, `logs_only` **-0.956 +/- 0.086**, `random` **-0.758 +/- 0.144**, `guess_day1` **-1.000 +/- 0.000**, `stop_early` **+0.000**, `do_nothing` **+0.000** `[src: results/judge_table.md, "## hard (headline: the Harbor judge set)" paired rows]`
+**On screen (hard, 40 judge seeds, fingerprint `4bf5f8e8e48b`):** solver **+0.513 +/- 0.120**, heuristic **-0.009 +/- 0.184**, `logs_only` **-0.916 +/- 0.115**, `random` **-0.825 +/- 0.119**, `guess_day1` **-0.950 +/- 0.098**, `stop_early` **+0.000**, `do_nothing` **+0.000** `[src: results/judge_table.md, "## hard (headline: the Harbor judge set)" paired rows]`
 
 > VO[03-bar]: A Bayesian reference solver sets the bar. One command, make reproduce, replays the whole table with no API keys. On the hard tier the solver keeps about half the company's value. The obvious shortcuts lose money: reading the logs alone, guessing on day one, or acting at random all score below zero.
 

@@ -328,14 +328,14 @@ def _build_valid_fixture(root: Path, sha: str = "035105e9e131174a2a774bd4a58bd76
         "all_blocked": True,
         "rows": ac_rows,
         "replay_counts": {
-            "replayed": 1021,
-            "n": 1031,
-            "consistent": 1021,
-            "steps": 51814,
+            "replayed": 1051,
+            "n": 1061,
+            "consistent": 1051,
+            "steps": 53889,
             "step_mismatches": 0,
         },
         "replay": [
-            {"file": "a.jsonl", "replayed": 1021, "n": 1031, "consistent": 1021, "steps": 51814}
+            {"file": "a.jsonl", "replayed": 1051, "n": 1061, "consistent": 1051, "steps": 53889}
         ],
         "harbor": harbor_items,
     }
@@ -343,7 +343,7 @@ def _build_valid_fixture(root: Path, sha: str = "035105e9e131174a2a774bd4a58bd76
     ac_md_lines.extend(
         [
             "",
-            "**Replay coverage: 1021 of 1031 committed episodes re-played, 1021 consistent; 51814 recorded tool results compared step by step, 0 differ.**",
+            "**Replay coverage: 1051 of 1061 committed episodes re-played, 1051 consistent; 53889 recorded tool results compared step by step, 0 differ.**",
             "",
             "**80 of 80 trials and 18 of 18 job summaries consistent.**",
             "",
@@ -640,7 +640,7 @@ def _build_valid_fixture(root: Path, sha: str = "035105e9e131174a2a774bd4a58bd76
         f"| Solver pooled | +0.498 +/- 0.097; n=60 | `data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.json` | `{sha[:8]}` | `make reproduce` |",
         f"| Failure total | +5.30 = +4.19 + +1.11 | `results/failure_analysis_v1.4.json` | `{sha[:8]}` | `make reproduce` |",
         f"| Failure penalty | +3.39; +0.62; +1.75; -1.69 | `results/failure_analysis_v1.4.json` | `{sha[:8]}` | `make reproduce` |",
-        f"| Anticheat rows | 99; 1021; 1031; 51814 | `results/anticheat/exploits.json` | `{sha[:8]}` | `make anticheat-verify` |",
+        f"| Anticheat rows | 99; 1051; 1061; 53889 | `results/anticheat/exploits.json` | `{sha[:8]}` | `make anticheat-verify` |",
         f"| Harbor trials | 80; 18 | `results/anticheat/exploits.json` | `{sha[:8]}` | `make anticheat-verify` |",
         f"| Oracle k10 | +0.569; 0.094 | `results/oracle_range_v1.4.json` | `{sha[:8]}` | `make reproduce` |",
         f"| Solver spread | +0.567; 300 | `results/solver_range/solver_hard_judge40.json` | `{sha[:8]}` | `make reproduce` |",
@@ -846,7 +846,7 @@ def test_tamper_anticheat_replay_and_harbor_counts(opencode_tmp: Path) -> None:
     md_path = opencode_tmp / "results/anticheat/exploits.md"
     orig = md_path.read_text(encoding="utf-8")
 
-    md_path.write_text(orig.replace("51814", "51999"), encoding="utf-8")
+    md_path.write_text(orig.replace("53889", "53999"), encoding="utf-8")
     res1 = van.check_companion_parity(opencode_tmp)
     assert res1.status == "FAIL"
     assert any("replay summary" in d for d in res1.details)

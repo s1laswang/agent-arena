@@ -173,25 +173,20 @@ def test_strict_source_hygiene() -> None:
 
 def test_real_repo_preflight_passes_fast(opencode_tmp: Path, capsys: pytest.CaptureFixture[str]) -> None:
     before_harbor = {p.name for p in opencode_tmp.glob("canary-preflight-harbor-*")}
+    has_justsilas = preflight._git_ref_exists(ROOT, "origin/justSilas")
+    cli_args = ["--root", str(ROOT)]
+    if has_justsilas:
+        cli_args.extend(["--check-protected-vs", "origin/justSilas"])
+    cli_args.extend(["--tmp-root", str(opencode_tmp), "--json"])
     t0 = time.monotonic()
-    rc = preflight.main(
-        [
-            "--root",
-            str(ROOT),
-            "--check-protected-vs",
-            "origin/justSilas",
-            "--tmp-root",
-            str(opencode_tmp),
-            "--json",
-        ]
-    )
+    rc = preflight.main(cli_args)
     wall_s = time.monotonic() - t0
     payload = json.loads(capsys.readouterr().out)
 
     assert rc == 0, payload
     assert payload["passed"] is True
     assert payload["counts"]["FAIL"] == 0
-    assert payload["check_protected_vs"] == "origin/justSilas"
+    assert payload["check_protected_vs"] == ("origin/justSilas" if has_justsilas else None)
     assert payload["elapsed_s"] < 15.0
     assert wall_s < 15.0
     gate_names = [g["name"] for g in payload["gates"]]

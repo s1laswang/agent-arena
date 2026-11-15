@@ -118,7 +118,9 @@ def main(argv=None):
                                  "worlds are keyed by a secret; these evals ran without CANARY_WORLD_SECRET, so each "
                                  "process drew its own worlds and the same seed number is a different world in each "
                                  "run (checked: all 115 world-dependent step-0 list_employees results differ across "
-                                 "runs). Seed-paired Δ would be invalid.\n"))
+                                 "runs). Seed-paired Δ would be invalid. (DEV seeds 0–9999 use the public key in "
+                                 "canary/world.py and are identical across runs, so DEV-seed comparisons such as the "
+                                 "v1.4 Gemini-vs-solver gap stay truly paired.)\n"))
     print(txt)
     if a.out:
         Path(a.out).write_text(txt)

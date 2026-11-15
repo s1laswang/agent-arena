@@ -39,5 +39,5 @@ All external pixel-art sprite sheets and UI badge icons vendored for Canary Aren
 
 ## 3. Anti-Leak Integrity Contract
 
-1. **Zero Hidden-Truth Leak Before Episode End:** `sprite_pack_manifest.json` locks `"leaking_sprite_employee": null`. All employee appearance and desk assignments depend exclusively on public roster fields (`employee_id`, `department`, `role`), never on `world.mole`, `world.decoy`, or `CANARY_WORLD_SECRET`.
+1. **Zero Hidden-Truth Leak Before Episode End:** `sprite_pack_manifest.json` locks `"leaking_sprite_employee": null`. All employee appearance and desk assignments depend exclusively on public roster fields (`employee_id`, `department`, `role`), never on `world.mole`, `world.decoy`, or the private world salt.
 2. **Offline Deterministic Loading:** Every PNG is vendored locally under `docs/arena/assets/` with zero runtime network fetches to external CDNs for art assets and graceful procedural fallback in headless tests.

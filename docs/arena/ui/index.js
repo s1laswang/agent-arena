@@ -54,3 +54,10 @@ export {
   renderEndSummaryCard,
   renderLeaderboardDialog,
 } from "./end_and_leaderboard.js";
+
+export {
+  TOUR_TOTAL_SECONDS,
+  TOUR_LIVING_GATE_B_BANNER,
+  TOUR_STEPS,
+  createGuidedTourBar,
+} from "./guided_tour.js";

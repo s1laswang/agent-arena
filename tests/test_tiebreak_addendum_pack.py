@@ -404,3 +404,105 @@ def test_unclassified_policy_and_panel_fix_a_guard(tmp_path: Path) -> None:
 
     assert pack._has_affirmative_prereg_0_29("Evaluated on pre-registered seeds 0..29.") != []
     assert pack._has_affirmative_prereg_0_29("Dev seeds 0..29 are post-hoc locked (not pre-registered).") == []
+
+
+def test_registry_mappings_with_modules_present_and_absent(tmp_path: Path) -> None:
+    syn_absent = _clone_minimal_repo(tmp_path / "absent")
+    absent_specs = [
+        ("qwen15b_dpo_dagger", "qwen15b-dpo-dagger-v14", "Qwen2.5-1.5B-Instruct DPO DAgger", "track_1", "Qwen2.5-1.5B", True),
+        ("qwen15b_compact_dagger", "qwen15b-compact-dagger-v14", "Qwen2.5-1.5B-Instruct Compact DAgger", "track_1", "Qwen2.5-1.5B", True),
+        ("compact_lora_sft", "qwen05b-compact-dagger-v14", "Qwen2.5-0.5B-Instruct Compact DAgger", "track_1", "Qwen2.5-0.5B", True),
+        ("qwen15b_raw", "qwen15b-raw-dagger-v14", "Qwen2.5-1.5B-Instruct Raw DAgger", "track_1", "Qwen2.5-1.5B", True),
+        ("frugal_raw", "frugal-raw-dagger-v14", "Frugal Raw4k LoRA DAgger", "track_1", "Qwen2.5-1.5B", True),
+        ("compact_dagger_ablation", "compact-linear-dagger-v14", "CompactLinearDAggerPolicy", "track_2", "CompactLinearDAggerPolicy", False),
+    ]
+    for folder, run_id, model_name, _, _, _ in absent_specs:
+        rdir = syn_absent / "results" / "tiebreak" / folder
+        rdir.mkdir(parents=True, exist_ok=True)
+        payload = _make_passing_qwen_summary(run_id=run_id, model=model_name, explicit_after_ci=True)
+        (rdir / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    assert pack.main(["--repo-root", str(syn_absent)]) == 0
+    assert pack.main(["--repo-root", str(syn_absent), "--check"]) == 0
+    r_abs = json.loads((syn_absent / "results" / "tiebreak" / "addendum_readiness.json").read_text(encoding="utf-8"))
+    by_id_abs = {r["run_id"]: r for r in [*r_abs["track_1_runs"], *r_abs["track_2_runs"]]}
+    for _, run_id, _, exp_track, exp_fam, exp_llm in absent_specs:
+        rec = by_id_abs[run_id]
+        assert rec["track"] == exp_track
+        assert rec["family"] == exp_fam
+        assert rec["is_open_weight_llm"] is exp_llm
+        assert rec["passed_panel_fix_e_bar"] is True
+
+    syn_present = _clone_minimal_repo(tmp_path / "present")
+    mod_Bodies = {
+        "train/qwen15b_dpo_dagger.py": (
+            "from canary.solver.policy import SolverPolicy\n"
+            "from train.compact_render import CompactHFPolicy\n"
+            "def relabel(sp):\n"
+            "    return sp.belief()\n"
+            "def build_eval_policy(name):\n"
+            "    return CompactHFPolicy(name=name)\n"
+        ),
+        "train/qwen15b_compact_dagger.py": (
+            "class Qwen15BCompactPolicy:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ok = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n"
+        ),
+        "train/compact_lora_sft.py": (
+            "class Qwen05BCompactPolicy:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ok = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n"
+        ),
+        "train/frugal_raw_dagger.py": (
+            "class FrugalRawPolicy:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ok = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n"
+        ),
+        "train/neural_mlp_tiebreak.py": (
+            "class TinyMLPPolicy:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ok = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n"
+        ),
+        "train/compact_dagger_ablation.py": (
+            "class CompactLinearDAggerPolicy:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ok = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n"
+        ),
+    }
+    for rel_m, code in mod_Bodies.items():
+        mp = syn_present / rel_m
+        mp.parent.mkdir(parents=True, exist_ok=True)
+        mp.write_text(code, encoding="utf-8")
+
+    present_specs = [
+        *absent_specs,
+        ("neural_mlp", "tiny-mlp-dagger-v14", "TinyMLPPolicy", "track_1", "TinyMLP", False),
+    ]
+    for folder, run_id, model_name, _, _, _ in present_specs:
+        rdir = syn_present / "results" / "tiebreak" / folder
+        rdir.mkdir(parents=True, exist_ok=True)
+        payload = _make_passing_qwen_summary(run_id=run_id, model=model_name, explicit_after_ci=True)
+        (rdir / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    assert pack.main(["--repo-root", str(syn_present)]) == 0
+    assert pack.main(["--repo-root", str(syn_present), "--check"]) == 0
+    r_pres = json.loads((syn_present / "results" / "tiebreak" / "addendum_readiness.json").read_text(encoding="utf-8"))
+    by_id_pres = {r["run_id"]: r for r in [*r_pres["track_1_runs"], *r_pres["track_2_runs"]]}
+
+    assert "train/qwen15b_dpo_dagger.py" in by_id_pres["qwen15b-dpo-dagger-v14"]["inference_modules_checked"]
+    assert "train/qwen15b_compact_dagger.py" in by_id_pres["qwen15b-compact-dagger-v14"]["inference_modules_checked"]
+    assert "train/compact_lora_sft.py" in by_id_pres["qwen05b-compact-dagger-v14"]["inference_modules_checked"]
+    assert "train/frugal_raw_dagger.py" in by_id_pres["qwen15b-raw-dagger-v14"]["inference_modules_checked"]
+    assert "train/frugal_raw_dagger.py" in by_id_pres["frugal-raw-dagger-v14"]["inference_modules_checked"]
+    assert by_id_pres["tiny-mlp-dagger-v14"]["inference_modules_checked"] == ["train/neural_mlp_tiebreak.py"]
+    assert by_id_pres["compact-linear-dagger-v14"]["inference_modules_checked"] == ["train/compact_dagger_ablation.py"]

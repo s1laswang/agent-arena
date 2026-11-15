@@ -546,6 +546,13 @@ def audit_inference_module_ast(rel_label: str, path: Path) -> tuple[list[str], l
                                 if isinstance(h_item, (ast.FunctionDef, ast.AsyncFunctionDef)):
                                     worklist.append(("method", helper_cls.name, h_item.name))
 
+    companion_drivers = (
+        "eval_compact_hf.py",
+        "qwen15b_dpo_dagger.py",
+        "qwen15b_compact_dagger.py",
+        "compact_lora_sft.py",
+        "frugal_raw_dagger.py",
+    )
     if rel_label.endswith("eval_compact_hf.py") and "run_compact_eval" in top_funcs:
         rce = top_funcs["run_compact_eval"]
         for inner in ast.walk(rce):
@@ -560,8 +567,20 @@ def audit_inference_module_ast(rel_label: str, path: Path) -> tuple[list[str], l
                     errors.extend(arg_leaks)
                 elif callee.endswith((".belief", ".act")):
                     errors.append(f"{rel_label}:run_compact_eval: line {inner.lineno} calls {callee} directly")
+    elif not policy_classes and rel_label.endswith(companion_drivers):
+        for fn_name, fn_node in top_funcs.items():
+            for inner in ast.walk(fn_node):
+                if isinstance(inner, ast.Call):
+                    callee = _dotted_attr_name(inner.func) or ""
+                    if callee.endswith(("CompactHFPolicy", "HFPolicy")):
+                        arg_leaks = _scan_ast_block_for_leaks(
+                            list(inner.args) + [kw.value for kw in inner.keywords],
+                            tainted_top,
+                            f"{rel_label}:{fn_name}->{callee}",
+                        )
+                        errors.extend(arg_leaks)
 
-    if not policy_classes and not rel_label.endswith("eval_compact_hf.py") and tainted_top:
+    if not policy_classes and not rel_label.endswith(companion_drivers) and tainted_top:
         errors.append(
             f"{rel_label}: top-level solver/world imports {sorted(tainted_top.values())} without isolated Policy class"
         )
@@ -602,6 +621,10 @@ def classify_policy_track(summary: dict[str, Any], summary_path: str = "") -> di
             "linear_dagger",
             "linear-dagger",
         )
+    ) or (
+        any(tok in blob for tok in ("compact_dagger_ablation", "compact-dagger-ablation"))
+        and "qwen" not in blob
+        and "mlp" not in blob
     ):
         return {
             "track": "track_2",
@@ -642,8 +665,27 @@ def classify_policy_track(summary: dict[str, Any], summary_path: str = "") -> di
             "is_open_weight_llm": False,
         }
 
-    if any(tok in blob for tok in ("qwen", "compact-hf", "compact_hf", "frugal_raw_dagger", "frugal-raw")):
-        if "0.5b" in blob or "05b" in blob:
+    if any(
+        tok in blob
+        for tok in (
+            "qwen",
+            "compact-hf",
+            "compact_hf",
+            "compact_lora_sft",
+            "compact-lora-sft",
+            "qwen15b_dpo_dagger",
+            "qwen15b-dpo-dagger",
+            "qwen15b_compact_dagger",
+            "qwen15b-compact-dagger",
+            "frugal_raw_dagger",
+            "frugal-raw-dagger",
+            "frugal-raw",
+            "frugal_raw",
+            "raw-dagger",
+            "raw_dagger",
+        )
+    ):
+        if "0.5b" in blob or "05b" in blob or "compact_lora_sft" in blob or "compact-lora-sft" in blob:
             fam = "Qwen2.5-0.5B"
         elif "1.5b" in blob or "15b" in blob:
             fam = "Qwen2.5-1.5B"
@@ -684,7 +726,17 @@ def _resolve_inference_modules(
 
     rel_candidates: list[str] = []
     if explicit_raw:
-        rel_candidates.extend(explicit_raw)
+        for exp_mod in explicit_raw:
+            norm_exp = exp_mod.replace("\\", "/")
+            if norm_exp.endswith(("qwen15b_dpo_dagger.py", "qwen15b_compact_dagger.py", "compact_lora_sft.py")):
+                for base_c in ("train/compact_render.py", "train/eval_compact_hf.py"):
+                    if (repo_root / base_c).is_file() and base_c not in rel_candidates:
+                        rel_candidates.append(base_c)
+            elif norm_exp.endswith("frugal_raw_dagger.py"):
+                if (repo_root / "train" / "eval_hf.py").is_file() and "train/eval_hf.py" not in rel_candidates:
+                    rel_candidates.append("train/eval_hf.py")
+            if exp_mod not in rel_candidates:
+                rel_candidates.append(exp_mod)
     else:
         fam = track_info["family"]
         blob = " ".join([
@@ -697,7 +749,9 @@ def _resolve_inference_modules(
         elif fam == "ScalingLogisticPolicy":
             rel_candidates.append("scripts/tiebreak_scaling_calibration.py")
         elif fam == "CompactLinearDAggerPolicy":
-            if (repo_root / "train" / "compact_linear_dagger.py").is_file():
+            if (repo_root / "train" / "compact_dagger_ablation.py").is_file():
+                rel_candidates.append("train/compact_dagger_ablation.py")
+            elif (repo_root / "train" / "compact_linear_dagger.py").is_file():
                 rel_candidates.append("train/compact_linear_dagger.py")
             else:
                 rel_candidates.append("scripts/tiebreak_scaling_calibration.py")
@@ -710,9 +764,22 @@ def _resolve_inference_modules(
                     rel_candidates.append("train/frugal_raw_dagger.py")
             else:
                 rel_candidates.extend(["train/compact_render.py", "train/eval_compact_hf.py"])
-                for opt_rel in ("train/compact_lora_sft.py", "train/qwen15b_compact_dagger.py"):
-                    stem = Path(opt_rel).stem.lower()
-                    if (repo_root / opt_rel).is_file() and (stem in blob or stem.replace("_", "-") in blob):
+                opt_specs: tuple[tuple[str, tuple[str, ...]], ...] = (
+                    (
+                        "train/qwen15b_dpo_dagger.py",
+                        ("qwen15b_dpo_dagger", "qwen15b-dpo-dagger", "dpo-dagger", "dpo_dagger"),
+                    ),
+                    (
+                        "train/qwen15b_compact_dagger.py",
+                        ("qwen15b_compact_dagger", "qwen15b-compact-dagger"),
+                    ),
+                    (
+                        "train/compact_lora_sft.py",
+                        ("compact_lora_sft", "compact-lora-sft", "qwen05b-compact-dagger", "qwen05b_compact_dagger", "05b", "0.5b"),
+                    ),
+                )
+                for opt_rel, match_tokens in opt_specs:
+                    if (repo_root / opt_rel).is_file() and any(tok in blob for tok in match_tokens):
                         rel_candidates.append(opt_rel)
 
     resolved: list[tuple[str, Path]] = []

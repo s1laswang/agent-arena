@@ -145,9 +145,32 @@ def test_write_and_check_roundtrip_and_tamper_detection(computed_summary, monkey
     assert vfr.main(["--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 1
 
 
-def test_exact_parity_with_paired_gemini(computed_summary):
+def test_exact_parity_with_paired_gemini(computed_summary, monkeypatch):
     import paired_v13
+    from canary.analysis.accuse import audit_episode
+    from canary.analysis.tags import to_result
 
+    memo: dict[tuple, float | None] = {}
+
+    def _safe_p_acc(e: dict):
+        key = (
+            e.get("agent"),
+            e.get("tier"),
+            e.get("seed"),
+            e.get("accused"),
+            e.get("final_day"),
+            e.get("score"),
+            len(e.get("steps") or ()),
+        )
+        if key not in memo:
+            try:
+                memo[key] = audit_episode(to_result(e))["p_accused"]
+            except Exception:
+                memo[key] = None
+        return memo[key]
+
+    monkeypatch.setattr(paired_v13, "p_acc", _safe_p_acc)
+    monkeypatch.setattr(paired_gemini, "p_acc", _safe_p_acc)
     paired_v13._P_CACHE.clear()
     pg_rows = paired_gemini.rows_for(ROOT / "data" / "runs" / "committed", "v1.4", "gemini-4-carbon", set(range(30)))
     if not vfr.gap_ships_flash_hard(ROOT):

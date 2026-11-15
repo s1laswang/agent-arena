@@ -81,7 +81,12 @@ def test_write_and_check_roundtrip_and_tamper_detection(computed_summary, monkey
 
 
 def test_exact_parity_with_paired_gemini(computed_summary):
+    import paired_v13
+
+    paired_v13._P_CACHE.clear()
     pg_rows = paired_gemini.rows_for(ROOT / "data" / "runs" / "committed", "v1.4", "gemini-4-carbon", set(range(30)))
+    if not vfr.gap_ships_flash_hard(ROOT):
+        pg_rows = [r for r in pg_rows if r["agent"] != "opencode:google/gemini-3.5-flash"]
     our_rows = computed_summary["primary_v14_0_29"]["rows"]
 
     def _key(r):
@@ -111,11 +116,12 @@ def test_exact_parity_with_paired_gemini(computed_summary):
         "solver_post_expected",
     )
 
-    assert len(pg_rows) >= 14
+    assert len(pg_rows) >= 13
     for pgr in pg_rows:
         k = _key(pgr)
         assert k in our_by_key, f"missing primary row {k}"
         ours = our_by_key[k]
+        assert ours["label"] == pgr["label"]
         assert ours["seeds"] == pgr["seeds"]
         for fld in numeric_fields:
             pv = pgr[fld]
@@ -135,7 +141,8 @@ def test_pre_registered_separation_and_cohorts(computed_summary):
     assert rule["pooled_n35_classification"] == "secondary_sensitivity_only"
 
     rv = computed_summary["replay_verification"]
-    assert rv["committed_v14"]["verified"] == 410
+    assert rv["committed_v14"]["verified"] == 442
+    assert rv["committed_v14"]["verified"] == rv["committed_v14"]["total"]
     assert rv["committed_v14"]["mismatches"] == 0
     assert rv["replication_v14"]["verified"] >= 305
     assert rv["replication_v14"]["verified"] == rv["replication_v14"]["total"]
@@ -173,17 +180,26 @@ def test_pre_registered_separation_and_cohorts(computed_summary):
 
     cc = computed_summary["cohort_c_flash_and_cross_model"]
     flash_med = cc["flash_medium_n29_row"]
-    flash_hard = cc["flash_hard_n30_row"]
     assert flash_med["n"] == 30
     assert cc["flash_medium_missing_seeds_in_0_29"] == []
-    assert flash_hard["n"] == 30
     assert cc["head_to_head_carbon_vs_flash"]["medium_n29"]["raw_diff"] > 0.0
-    assert cc["head_to_head_carbon_vs_flash"]["hard_n30"]["luck_adjusted_diff"] > 0.0
 
     md = (ROOT / "docs" / "reports" / "frontier_replication_v14.md").read_text(encoding="utf-8")
     assert "SECONDARY SENSITIVITY ONLY" in md
+    assert "post-hoc lock" in md
     assert "65% [24%, 98%]" in md
     assert "72% [52%, 91%]" in md
+
+    if vfr.gap_ships_flash_hard(ROOT):
+        assert cc["flash_hard_held_pending_gap_md"] is False
+        assert cc["flash_hard_n30_row"]["n"] == 30
+        assert cc["head_to_head_carbon_vs_flash"]["hard_n30"]["luck_adjusted_diff"] > 0.0
+    else:
+        assert cc["flash_hard_held_pending_gap_md"] is True
+        assert cc["flash_hard_n30_row"] is None
+        assert "hard_n30" not in cc["head_to_head_carbon_vs_flash"]
+        for unapproved_tok in ("75% [36%, 123%]", "22% [-23%, 63%]", "0.373"):
+            assert unapproved_tok not in md, f"unapproved flash hard token {unapproved_tok} in report before gap.md"
 
 
 def test_file_hygiene_no_comments_or_em_dashes():

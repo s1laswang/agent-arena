@@ -25,7 +25,7 @@ from canary.analysis.gap import load_runs, mean_ci
 from canary.baselines import GrokTactics
 from canary.env import Env
 from canary.eval import run_episode
-from paired_v13 import boot_ratio, p_acc, post_expected
+from paired_v13 import _P_CACHE, boot_ratio, p_acc, post_expected
 from verify_replay import replay_episode
 
 DEFAULT_JSON = ROOT / "results" / "frontier_replication" / "v1.4" / "replication_summary.json"
@@ -35,6 +35,18 @@ ALT_LABEL = (
     "OpenCode, alternative (NOT the headline): episodes whose first attempt ended on an empty model reply "
     "counted as 0 instead of retried"
 )
+
+LEGACY_STOP_EARLY_LABEL = (
+    "day-1 guess (recorded under the pre-2bb6729 name stop_early; "
+    "today's stop_early stops without accusing and scores 0, see results/judge_table.md)"
+)
+
+
+def gap_ships_flash_hard(root: Path = ROOT) -> bool:
+    gap_md = root / "docs" / "reports" / "gap.md"
+    if not gap_md.exists():
+        return False
+    return "gemini-3.5-flash" in gap_md.read_text(encoding="utf-8")
 
 NON_SOLVER_BASELINES_30_59 = (
     "grok_tactics",
@@ -252,6 +264,14 @@ def simulate_grok_tactics(tier: str, seeds: list[int]) -> list[dict[str, Any]]:
 
 
 def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str, Any]:
+    _P_CACHE.clear()
+    try:
+        return _compute_summary_impl(root=root, verify_replays=verify_replays)
+    finally:
+        _P_CACHE.clear()
+
+
+def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dict[str, Any]:
     os.environ.setdefault("CANARY_ALLOW_DEV", "1")
     comm_v14 = root / "data" / "runs" / "committed" / "v1.4"
     rep_v14 = root / "results" / "frontier_replication" / "v1.4"
@@ -390,11 +410,14 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
             solver_0_29,
         )
     )
+    include_flash_hard = gap_ships_flash_hard(root)
+
     for base in COMMITTED_BASELINES_0_19:
         base_med = [e for e in comm_eps if e["agent"] == base and e["tier"] == "medium" and int(e["seed"]) in seeds_0_29]
         if base_med:
+            base_label = LEGACY_STOP_EARLY_LABEL if base == "stop_early" else base
             primary_rows.append(
-                build_paired_row(base, "v1.4/reference", base, "medium", base_med, solver_0_29)
+                build_paired_row(base_label, "v1.4/reference", base, "medium", base_med, solver_0_29)
             )
 
     primary_rows.append(
@@ -429,16 +452,17 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
             solver_0_29,
         )
     )
-    primary_rows.append(
-        build_paired_row(
-            "OpenCode + gemini-3.5-flash over MCP (second Gemini family; modelVersion gemini-3.6-flash)",
-            "v1.4/opencode-gemini-3.5-flash",
-            "opencode:google/gemini-3.5-flash",
-            "hard",
-            flash_oc_hard_0_29,
-            solver_0_29,
+    if include_flash_hard:
+        primary_rows.append(
+            build_paired_row(
+                "OpenCode + gemini-3.5-flash over MCP (second Gemini family; the API reports modelVersion gemini-3.6-flash for this id)",
+                "v1.4/opencode-gemini-3.5-flash",
+                "opencode:google/gemini-3.5-flash",
+                "hard",
+                flash_oc_hard_0_29,
+                solver_0_29,
+            )
         )
-    )
     primary_rows.append(
         build_paired_row(
             "reference solver",
@@ -452,8 +476,9 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
     for base in COMMITTED_BASELINES_0_19:
         base_hard = [e for e in comm_eps if e["agent"] == base and e["tier"] == "hard" and int(e["seed"]) in seeds_0_29]
         if base_hard:
+            base_label = LEGACY_STOP_EARLY_LABEL if base == "stop_early" else base
             primary_rows.append(
-                build_paired_row(base, "v1.4/reference", base, "hard", base_hard, solver_0_29)
+                build_paired_row(base_label, "v1.4/reference", base, "hard", base_hard, solver_0_29)
             )
 
     carbon_rep_hard = sorted(
@@ -686,15 +711,18 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
             carbon_oc_hard_0_29,
             solver_0_29,
         ),
-        build_paired_row(
-            "OpenCode + gemini-3.5-flash over MCP (seeds 0-29)",
-            "v1.4/opencode-gemini-3.5-flash",
-            "opencode:google/gemini-3.5-flash",
-            "hard",
-            flash_oc_hard_0_29,
-            solver_0_29,
-        ),
     ]
+    if include_flash_hard:
+        cross_model_hard_30_rows.append(
+            build_paired_row(
+                "OpenCode + gemini-3.5-flash over MCP (seeds 0-29)",
+                "v1.4/opencode-gemini-3.5-flash",
+                "opencode:google/gemini-3.5-flash",
+                "hard",
+                flash_oc_hard_0_29,
+                solver_0_29,
+            )
+        )
 
     gt_med_30_row = build_paired_row(
         "grok_tactics (deterministic scripted policy, seeds 0-29)",
@@ -711,12 +739,14 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
         carbon_oc_med_29,
         flash_rep_med_29,
     )
-    h2h_hard = head_to_head_diff(
-        "OpenCode gemini-4-carbon minus gemini-3.5-flash on hard (shared seeds 0-29)",
-        "hard",
-        carbon_oc_hard_0_29,
-        flash_oc_hard_0_29,
-    )
+    h2h_map: dict[str, Any] = {"medium_n29": h2h_med}
+    if include_flash_hard:
+        h2h_map["hard_n30"] = head_to_head_diff(
+            "OpenCode gemini-4-carbon minus gemini-3.5-flash on hard (shared seeds 0-29)",
+            "hard",
+            carbon_oc_hard_0_29,
+            flash_oc_hard_0_29,
+        )
 
     return clean_json(
         {
@@ -728,7 +758,7 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
                 "replication_carbon_hard_seeds": rep_hard_seeds,
                 "primary_and_replication_disjoint": True,
                 "pooled_n35_classification": "secondary_sensitivity_only",
-                "source_rule": "docs/reports/gap.md (commit 671ed96)",
+                "source_rule": "docs/reports/gap.md (post-hoc seed lock 671ed96, 28 s after 8fd4dec; pre-registered extension f9fb7a4a)",
             },
             "replay_verification": {
                 "committed_v14": comm_audit,
@@ -757,16 +787,14 @@ def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str,
                 "rows": cohort_b_rows,
             },
             "cohort_c_flash_and_cross_model": {
+                "flash_hard_held_pending_gap_md": not include_flash_hard,
                 "flash_medium_n29_row": cross_model_med_29_rows[-1],
                 "flash_medium_missing_seeds_in_0_29": sorted(seeds_0_29 - flash_med_seed_set),
-                "flash_hard_n30_row": cross_model_hard_30_rows[-1],
+                "flash_hard_n30_row": cross_model_hard_30_rows[-1] if include_flash_hard else None,
                 "grok_tactics_medium_0_29_row": gt_med_30_row,
                 "cross_model_medium_same_29_seeds_rows": cross_model_med_29_rows,
                 "cross_model_hard_0_29_rows": cross_model_hard_30_rows,
-                "head_to_head_carbon_vs_flash": {
-                    "medium_n29": h2h_med,
-                    "hard_n30": h2h_hard,
-                },
+                "head_to_head_carbon_vs_flash": h2h_map,
             },
         }
     )
@@ -849,20 +877,46 @@ def render_markdown(summary: dict[str, Any]) -> str:
     c_hard_prim = prim_by_key[("opencode:google/gemini-4-carbon", "hard", "OpenCode + gemini-4-carbon over MCP (judges' shape)")]
     c_med_prim = prim_by_key[("opencode:google/gemini-4-carbon", "medium", "OpenCode + gemini-4-carbon over MCP (judges' shape)")]
     s_hard_prim = prim_by_key[("solver", "hard", "reference solver")]
+    c_ip_hard_prim = prim_by_key[("gemini:gemini-4-carbon", "hard", "in-process gemini-4-carbon (full history, thought-signature replay)")]
     f_hard_prim = cc["flash_hard_n30_row"]
+    flash_hard_held = bool(cc.get("flash_hard_held_pending_gap_md", f_hard_prim is None))
     f_med_rep = cc["flash_medium_n29_row"]
     c_med_29 = cc["cross_model_medium_same_29_seeds_rows"][0]
     gt_med_29 = cc["cross_model_medium_same_29_seeds_rows"][3]
+    gt_hard_30 = cc["cross_model_hard_0_29_rows"][2]
     c_rep_5 = ca["paired_5_seeds_rows"][0]
     s_rep_30 = ca["reference_30_59_rows"][0]
     c_pool_35 = cb["rows"][0]
     seed30_detail = ca["per_seed_detail"][0]
     h2h_med = cc["head_to_head_carbon_vs_flash"]["medium_n29"]
-    h2h_hard = cc["head_to_head_carbon_vs_flash"]["hard_n30"]
+    h2h_hard = cc["head_to_head_carbon_vs_flash"].get("hard_n30")
 
     rep_seeds_str = ", ".join(str(s) for s in ca["seeds"])
     med_seeds_str = "0-29" if not cc["flash_medium_missing_seeds_in_0_29"] else ", ".join(str(s) for s in f_med_rep["seeds"])
     rep_correct = round(c_rep_5["accuracy"] * c_rep_5["n"])
+
+    if not flash_hard_held and f_hard_prim is not None and h2h_hard is not None:
+        cross_model_bullet = (
+            f"  - **Cross-model ordering (`gemini-4-carbon` vs `gemini-3.5-flash` vs `grok_tactics` vs `solver`):** "
+            f"On medium (`n={f_med_rep['n']}` shared seeds `{med_seeds_str}`, separate FR8 replication cohort), "
+            f"`opencode:google/gemini-3.5-flash` reaches `{_ratio_cell(f_med_rep)}` raw / "
+            f"`{_luck_cell(f_med_rep, bold=False)}` luck-adjusted (`gemini-4-carbon - gemini-3.5-flash = "
+            f"{_signed(h2h_med['raw_diff'])} +/- {_num(h2h_med['raw_diff_ci'])}` V raw, "
+            f"`{_signed(h2h_med['luck_adjusted_diff'])} +/- {_num(h2h_med['luck_adjusted_diff_ci'])}` V luck-adjusted). "
+            f"On hard (`n=30`, `0-29`), `gemini-3.5-flash`'s raw `{_ratio_cell(f_hard_prim)}` reflects 7 lucky sub-break-even guesses "
+            f"(mean `P(accused) = {_num(f_hard_prim['p_accused'], 2)}`); its luck-adjusted ratio falls to **{_luck_cell(f_hard_prim, bold=False)}** "
+            f"(`gemini-4-carbon - gemini-3.5-flash = {_signed(h2h_hard['luck_adjusted_diff'])} +/- {_num(h2h_hard['luck_adjusted_diff_ci'])}` V/episode)."
+        )
+    else:
+        cross_model_bullet = (
+            f"  - **Cross-model replication (`gemini-3.5-flash` medium `n={f_med_rep['n']}`, separate FR8 replication cohort):** "
+            f"On medium (`n={f_med_rep['n']}` shared seeds `{med_seeds_str}`), `opencode:google/gemini-3.5-flash` reaches "
+            f"`{_ratio_cell(f_med_rep)}` raw / `{_luck_cell(f_med_rep, bold=False)}` luck-adjusted (`gemini-4-carbon - gemini-3.5-flash = "
+            f"{_signed(h2h_med['raw_diff'])} +/- {_num(h2h_med['raw_diff_ci'])}` V raw, "
+            f"`{_signed(h2h_med['luck_adjusted_diff'])} +/- {_num(h2h_med['luck_adjusted_diff_ci'])}` V luck-adjusted). "
+            "`docs/reports/gap.md` is the sole source for primary `hard` (`0-29`) gap rows; `opencode:google/gemini-3.5-flash` hard "
+            f"is replay-verified in `committed_v14` (`{rv['committed_v14']['verified']}/{rv['committed_v14']['total']}`) and omitted from tables here until `docs/reports/gap.md` ships it."
+        )
 
     lines: list[str] = [
         _md_heading(1, "Canary v1.4 Frontier Replication and Cross-Model Capability Report"),
@@ -877,12 +931,14 @@ def render_markdown(summary: dict[str, Any]) -> str:
         "PYTHONPATH=. python scripts/verify_frontier_replication.py --check",
         "```",
         "",
-        _md_heading(2, "1. Pre-Registered Seed Rule and Replay Audit"),
+        _md_heading(2, "1. Post-Hoc Seed Lock, Pre-Registered Extension, and Replay Audit"),
         "",
-        "- **Pre-registered seed rule (`docs/reports/gap.md`, commit `671ed96`):** The `justSilas` committed dev set "
-        "(`seeds 0-29`, `n=30` per tier in `data/runs/committed/v1.4/`) is the locked **PRIMARY** headline result. "
-        "All subsequent episodes under `results/frontier_replication/v1.4/` are evaluated and reported strictly "
-        "separately as replication or cross-model cohorts, never swapped into `data/runs/committed/v1.4/`.",
+        "- **Post-hoc seed lock and pre-registered extension (`docs/reports/gap.md`, commits `671ed96` and `f9fb7a4a`):** "
+        "The `justSilas` committed dev set (`seeds 0-29`, `n=30` per tier in `data/runs/committed/v1.4/`) is the locked "
+        "**PRIMARY** headline result (`671ed96` came 28 s after `8fd4dec`, so it is a post-hoc lock against later reruns "
+        "and cherry-picking, not a pre-registration). The `opencode-gemini-4-carbon-ext` partial extension (`seeds 34, 37`, "
+        "`n=2`, pre-registered in `f9fb7a4a`) and all FR8 episodes under `results/frontier_replication/v1.4/` are evaluated "
+        "and reported strictly separately as replication or cross-model cohorts, never swapped into the primary `0-29` set.",
         f"- **Replay verification (`scripts/verify_replay.py`):** "
         f"`{rv['committed_v14']['verified']}/{rv['committed_v14']['total']}` episodes verified in `data/runs/committed/v1.4/` "
         f"and `{rv['replication_v14']['verified']}/{rv['replication_v14']['total']}` episodes verified in "
@@ -899,21 +955,14 @@ def render_markdown(summary: dict[str, Any]) -> str:
         f"scores `{_num(c_rep_5['mean'])} +/- {_num(c_rep_5['ci'])}` ({rep_correct}/{c_rep_5['n']} correct, mean `P(accused) = {_num(c_rep_5['p_accused'], 2)}`, "
         f"luck-adjusted `{_num(c_rep_5['post_expected'])}`) vs solver `{_num(c_rep_5['solver_same_seeds'])}` raw "
         f"(luck-adjusted `{_num(c_rep_5['solver_post_expected'])}`, ratio `{_luck_cell(c_rep_5, bold=False)}`).",
-        f"  - **Secondary pooled sensitivity (`n={c_pool_35['n']}`, secondary per pre-registered rule):** Pooling primary `0-29` with "
+        f"  - **Secondary pooled sensitivity (`n={c_pool_35['n']}`, secondary under post-hoc seed lock `671ed96`):** Pooling primary `0-29` with "
         f"replication `{rep_seeds_str}` yields `{_ratio_cell(c_pool_35)}` raw and **{_luck_cell(c_pool_35, bold=False)}** "
         f"luck-adjusted, where the luck-adjusted 95% CI `[{c_pool_35['post_expected_lo']:.0%}, {c_pool_35['post_expected_hi']:.0%}]` continues to exclude parity.",
-        f"  - **Cross-model ordering (`gemini-4-carbon` vs `gemini-3.5-flash` vs `grok_tactics` vs `solver`):** "
-        f"On medium (`n={f_med_rep['n']}` shared seeds `{med_seeds_str}`), `opencode:google/gemini-3.5-flash` drops to `{_ratio_cell(f_med_rep)}` raw / "
-        f"`{_luck_cell(f_med_rep, bold=False)}` luck-adjusted (`gemini-4-carbon - gemini-3.5-flash = "
-        f"{_signed(h2h_med['raw_diff'])} +/- {_num(h2h_med['raw_diff_ci'])}` V raw, "
-        f"`{_signed(h2h_med['luck_adjusted_diff'])} +/- {_num(h2h_med['luck_adjusted_diff_ci'])}` V luck-adjusted). "
-        f"On hard (`n=30`, `0-29`), `gemini-3.5-flash`'s raw `{_ratio_cell(f_hard_prim)}` reflects 7 lucky sub-break-even guesses "
-        f"(mean `P(accused) = {_num(f_hard_prim['p_accused'], 2)}`); its luck-adjusted ratio falls to **{_luck_cell(f_hard_prim, bold=False)}** "
-        f"(`gemini-4-carbon - gemini-3.5-flash = {_signed(h2h_hard['luck_adjusted_diff'])} +/- {_num(h2h_hard['luck_adjusted_diff_ci'])}` V/episode).",
+        cross_model_bullet,
         "",
         _md_heading(2, "2. Primary Committed v1.4 Cohort (Seeds 0-29, Locked Headline)"),
         "",
-        "Exact reproduction of `data/runs/committed/v1.4/` (`scripts/paired_gemini.py --version v1.4 --seeds 0-29` and `docs/reports/gap.md`):",
+        "Exact reproduction of `docs/reports/gap.md` rows in `data/runs/committed/v1.4/` (`scripts/paired_gemini.py --version v1.4 --seeds 0-29`):",
         "",
     ]
     lines.extend(_paired_table_md(prim_rows, include_tier=True))
@@ -973,7 +1022,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
             "",
             _md_heading(2, f"4. Cohort (b): Secondary Pooled Hard Sensitivity Row (`n={c_pool_35['n']}`)"),
             "",
-            f"**SECONDARY SENSITIVITY ONLY (NOT THE HEADLINE):** Per the pre-registered seed rule (`docs/reports/gap.md`), "
+            f"**SECONDARY SENSITIVITY ONLY (NOT THE HEADLINE):** Per the post-hoc seed lock (`docs/reports/gap.md`, commit `671ed96`), "
             f"the `n={c_hard_prim['n']}` (`seeds 0-29`) result remains the primary headline (`{_ratio_cell(c_hard_prim)}` raw, "
             f"`{_luck_cell(c_hard_prim, bold=False)}` luck-adjusted). Pooling the {c_hard_prim['n']} primary episodes with the "
             f"{c_rep_5['n']} non-overlapping replication episodes (`seeds {rep_seeds_str}`, total `n={c_pool_35['n']}`) "
@@ -982,12 +1031,17 @@ def render_markdown(summary: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_paired_table_md(cb["rows"], include_tier=False))
+    sec5_title = (
+        f"5. Cohort (c): gemini-3.5-flash Medium (`n={f_med_rep['n']}`) + Hard (`n=30`) and Cross-Model Capability Ordering"
+        if not flash_hard_held
+        else f"5. Cohort (c): gemini-3.5-flash Medium Replication (`n={f_med_rep['n']}`) and Capability Ordering"
+    )
     lines.extend(
         [
             "",
-            _md_heading(2, f"5. Cohort (c): gemini-3.5-flash Medium (`n={f_med_rep['n']}`) + Hard (`n=30`) and Cross-Model Capability Ordering"),
+            _md_heading(2, sec5_title),
             "",
-            _md_heading(3, f"5.1 Cross-Model Capability Ordering on Medium (`seeds {med_seeds_str}`, `n={f_med_rep['n']}` Shared Seeds)"),
+            _md_heading(3, f"5.1 Cross-Model Capability Ordering on Medium (`seeds {med_seeds_str}`, `n={f_med_rep['n']}` Shared Seeds, FR8 Replication Cohort)"),
             "",
             f"`results/frontier_replication/v1.4/opencode-gemini-3.5-flash` contains `{f_med_rep['n']}` replay-verified medium episodes "
             f"(`seeds {med_seeds_str}`; missing seeds in `0-29`: `{cc['flash_medium_missing_seeds_in_0_29']}`). Pairing all agents on those exact "
@@ -999,44 +1053,70 @@ def render_markdown(summary: dict[str, Any]) -> str:
         ]
     )
     lines.extend(_paired_table_md(cc["cross_model_medium_same_29_seeds_rows"], include_tier=False))
+    hard_intro = (
+        "Pairing `solver`, `gemini-4-carbon` (in-process and OpenCode over MCP), `grok_tactics` (deterministic policy), "
+        "and `gemini-3.5-flash` (OpenCode over MCP) on the exact same 30 hard seeds (`0-29`):"
+        if not flash_hard_held
+        else "Pairing `docs/reports/gap.md`-approved primary runs (`solver`, in-process `gemini-4-carbon`, OpenCode `gemini-4-carbon` over MCP) "
+        "and deterministic `grok_tactics` on the exact same 30 hard seeds (`0-29`; `opencode:google/gemini-3.5-flash` hard is held pending `docs/reports/gap.md`):"
+    )
     lines.extend(
         [
             "",
-            _md_heading(3, "5.2 Cross-Model Capability Ordering on Hard (`seeds 0-29`, `n=30` Shared Seeds)"),
+            _md_heading(3, "5.2 Capability Ordering on Hard (`seeds 0-29`, `n=30` Shared Seeds)"),
             "",
-            "Pairing `solver`, `gemini-4-carbon` (in-process and OpenCode over MCP), `grok_tactics` (deterministic policy), "
-            "and `gemini-3.5-flash` (OpenCode over MCP) on the exact same 30 hard seeds (`0-29`):",
+            hard_intro,
             "",
         ]
     )
     lines.extend(_paired_table_md(cc["cross_model_hard_0_29_rows"], include_tier=False))
-    lines.extend(
-        [
-            "",
-            _md_heading(3, "5.3 Direct Paired Model Comparison (`opencode:google/gemini-4-carbon` minus `opencode:google/gemini-3.5-flash`)"),
-            "",
-            "| tier | shared seeds (n) | gemini-4-carbon raw | gemini-3.5-flash raw | paired raw diff +/- 95% CI | gemini-4-carbon luck-adj. | gemini-3.5-flash luck-adj. | paired luck-adj. diff +/- 95% CI |",
-            "|---|---:|---:|---:|---|---:|---:|---|",
-            f"| medium | {h2h_med['n']} (`{med_seeds_str}`) | {_num(h2h_med['mean_a'])} | {_num(h2h_med['mean_b'])} | "
-            f"**{_signed(h2h_med['raw_diff'])} +/- {_num(h2h_med['raw_diff_ci'])}** | {_num(h2h_med['luck_adjusted_a'])} | "
-            f"{_num(h2h_med['luck_adjusted_b'])} | **{_signed(h2h_med['luck_adjusted_diff'])} +/- {_num(h2h_med['luck_adjusted_diff_ci'])}** |",
+    h2h_lines = [
+        "",
+        _md_heading(3, "5.3 Direct Paired Model Comparison (`opencode:google/gemini-4-carbon` minus `opencode:google/gemini-3.5-flash`)"),
+        "",
+        "| tier | shared seeds (n) | gemini-4-carbon raw | gemini-3.5-flash raw | paired raw diff +/- 95% CI | gemini-4-carbon luck-adj. | gemini-3.5-flash luck-adj. | paired luck-adj. diff +/- 95% CI |",
+        "|---|---:|---:|---:|---|---:|---:|---|",
+        f"| medium | {h2h_med['n']} (`{med_seeds_str}`) | {_num(h2h_med['mean_a'])} | {_num(h2h_med['mean_b'])} | "
+        f"**{_signed(h2h_med['raw_diff'])} +/- {_num(h2h_med['raw_diff_ci'])}** | {_num(h2h_med['luck_adjusted_a'])} | "
+        f"{_num(h2h_med['luck_adjusted_b'])} | **{_signed(h2h_med['luck_adjusted_diff'])} +/- {_num(h2h_med['luck_adjusted_diff_ci'])}** |",
+    ]
+    if not flash_hard_held and h2h_hard is not None:
+        h2h_lines.append(
             f"| hard | {h2h_hard['n']} (`0-29`) | {_num(h2h_hard['mean_a'])} | {_num(h2h_hard['mean_b'])} | "
             f"{_signed(h2h_hard['raw_diff'])} +/- {_num(h2h_hard['raw_diff_ci'])} | {_num(h2h_hard['luck_adjusted_a'])} | "
-            f"{_num(h2h_hard['luck_adjusted_b'])} | **{_signed(h2h_hard['luck_adjusted_diff'])} +/- {_num(h2h_hard['luck_adjusted_diff_ci'])}** |",
-            "",
-            "Key takeaway on capability ordering (`solver` > `gemini-4-carbon` / `grok_tactics` > `gemini-3.5-flash` > `heuristic` > `do_nothing` / `stop_early`):",
-            f"- On **medium**, `gemini-4-carbon` solves `{c_med_29['n']}/{c_med_29['n']}` shared seeds at high posterior confidence "
-            f"(`mean P(accused) = {_num(c_med_29['p_accused'], 2)}`, `{c_med_29['post_expected_ratio']:.0%}` luck-adjusted of solver), "
-            f"outperforming both `grok_tactics` (`{gt_med_29['post_expected_ratio']:.0%}` luck-adjusted, `{1.0 - gt_med_29['accused_rate']:.0%}` abstention when scripted narrowing stalls) "
-            f"and `gemini-3.5-flash` (`{f_med_rep['post_expected_ratio']:.0%}` luck-adjusted, accuracy `{f_med_rep['accuracy']:.2f}`, "
-            f"`{_signed(h2h_med['raw_diff'])} +/- {_num(h2h_med['raw_diff_ci'])}` raw V/episode in favor of `gemini-4-carbon`).",
+            f"{_num(h2h_hard['luck_adjusted_b'])} | **{_signed(h2h_hard['luck_adjusted_diff'])} +/- {_num(h2h_hard['luck_adjusted_diff_ci'])}** |"
+        )
+    lines.extend(h2h_lines)
+
+    if not flash_hard_held and f_hard_prim is not None and h2h_hard is not None:
+        hard_takeaway = (
             f"- On **hard**, `gemini-3.5-flash` commits on weak evidence (`mean P(accused) = {_num(f_hard_prim['p_accused'], 2)}` vs "
             f"`gemini-4-carbon`'s `{_num(c_hard_prim['p_accused'], 2)}` and `solver`'s `{_num(s_hard_prim['p_accused'], 2)}`). "
             f"Lucky low-posterior guesses lift its raw score (`{_num(f_hard_prim['mean'])}`), but posterior-expected scoring exposes a "
             f"decision-quality drop to `{_num(f_hard_prim['post_expected'])}` (`{_luck_cell(f_hard_prim, bold=False)}` of solver), trailing "
             f"`gemini-4-carbon` (`{_num(c_hard_prim['post_expected'])}`, `{_luck_cell(c_hard_prim, bold=False)}`) by "
             f"`{_signed(h2h_hard['luck_adjusted_diff'])} +/- {_num(h2h_hard['luck_adjusted_diff_ci'])}` luck-adjusted V per episode "
-            f"while `gemini-4-carbon` itself remains significantly below the Bayesian reference `solver` (`{_num(s_hard_prim['post_expected'])}`).",
+            f"while `gemini-4-carbon` itself remains significantly below the Bayesian reference `solver` (`{_num(s_hard_prim['post_expected'])}`)."
+        )
+    else:
+        hard_takeaway = (
+            f"- On **hard**, `OpenCode + gemini-4-carbon over MCP` scores `{_num(c_hard_prim['mean'])} +/- {_num(c_hard_prim['ci'])}` raw "
+            f"(`{_ratio_cell(c_hard_prim)}`) and `{_num(c_hard_prim['post_expected'])}` luck-adjusted (`{_luck_cell(c_hard_prim, bold=False)}` of solver `{_num(s_hard_prim['post_expected'])}`), "
+            f"trailing both in-process `gemini-4-carbon` (`{_num(c_ip_hard_prim['post_expected'])}`, `{_luck_cell(c_ip_hard_prim, bold=False)}`) "
+            f"and deterministic `grok_tactics` (`{_num(gt_hard_30['post_expected'])}`, `{_luck_cell(gt_hard_30, bold=False)}`) while remaining "
+            "significantly below the Bayesian reference `solver`."
+        )
+
+    lines.extend(
+        [
+            "",
+            "Key takeaway on capability ordering:",
+            f"- On **medium**, `gemini-4-carbon` solves `{c_med_29['n']}/{c_med_29['n']}` shared seeds at high posterior confidence "
+            f"(`mean P(accused) = {_num(c_med_29['p_accused'], 2)}`, `{c_med_29['post_expected_ratio']:.0%}` luck-adjusted of solver), "
+            f"outperforming both `grok_tactics` (`{gt_med_29['post_expected_ratio']:.0%}` luck-adjusted, `{1.0 - gt_med_29['accused_rate']:.0%}` abstention when scripted narrowing stalls) "
+            f"and the FR8 `gemini-3.5-flash` medium replication cohort (`{f_med_rep['post_expected_ratio']:.0%}` luck-adjusted, accuracy `{f_med_rep['accuracy']:.2f}`, "
+            f"`{_signed(h2h_med['raw_diff'])} +/- {_num(h2h_med['raw_diff_ci'])}` raw V/episode in favor of `gemini-4-carbon`).",
+            hard_takeaway,
         ]
     )
     return "\n".join(lines) + "\n"

@@ -1,0 +1,1996 @@
+{
+  "schema": "canary.tiebreak.channel_ablation.v1",
+  "audit_id": "tiebreak-channel-ablation-voi-v14",
+  "text_provider": "TemplateProvider",
+  "world_secret_tag": "sha256:ebf2f09716cf76d3",
+  "heldout_seed_range": "800000..800029",
+  "eval_seed_range": "800000..800029",
+  "eval_seeds_per_tier": 30,
+  "episodes_per_condition": 90,
+  "tiers": [
+    "easy",
+    "medium",
+    "hard"
+  ],
+  "public_channels": [
+    "canary_traps",
+    "doc_membership",
+    "access_logs",
+    "angry_messages",
+    "interviews"
+  ],
+  "seed_isolation": {
+    "train_seed_interval": "100000..199999",
+    "heldout_seed_range": "800000..800029",
+    "judge_episodes_touched": 0,
+    "dev_episodes_rolled_out": 0,
+    "train_episodes_in_heldout_eval": 0,
+    "panel_fix_a_disclosure": "All 2,160 primary channel-ablation episodes evaluate world-paired HELDOUT_SEEDS 800000..800029 (n=90 per condition, 30 per tier across easy, medium, hard) under shared deterministic world_secret_tag sha256:ebf2f09716cf76d3, while all learned policy weights originate strictly from disjoint TRAIN_SEEDS [100000, 200000) and 0 JUDGE_SEEDS (900k+) are touched. Frontier behavioral reference numbers on DEV_SEEDS 0..29 (hard, n=30) are cited strictly from committed replay-verified artifacts and are post-hoc locked, not pre-registered (Panel Fix A)."
+  },
+  "panel_fix_e_track_separation": {
+    "open_weight_qwen25_runs_total": 19,
+    "open_weight_qwen25_runs_above_zero": 0,
+    "open_weight_qwen25_above_zero_ratio": "0 / 19",
+    "readme_qwen_addendum_status": "HOLD_README_QWEN_ADDENDUM_UNTIL_V100",
+    "audited_policies_are_open_weight_llm": false,
+    "disclosure": "Per Panel Fix E strict track separation, 0 / 19 historical open-weight Qwen2.5 runs in experiment_ledger.json beat untrained base (0.000), so the README.md Qwen addendum remains withheld (HOLD_README_QWEN_ADDENDUM_UNTIL_V100). Both policies audited here (EmpiricalBayesPolicy and CompactLinearDAggerPolicy; is_open_weight_llm = False) are non-LLM structured/parametric policies strictly separated from open-weight Qwen2.5 LoRA runs."
+  },
+  "ast_inference_isolation": {
+    "passed": true,
+    "policy_classes": [
+      "scripts/tiebreak_channel_ablation_audit.py:MaskedEmpiricalBayesPolicy",
+      "scripts/tiebreak_channel_ablation_audit.py:MaskedCompactLinearDAggerPolicy"
+    ],
+    "errors": []
+  },
+  "theoretical_channel_kl": {
+    "interview_innocent_evasive_p": 0.2,
+    "interview_stated_lr": 1.2,
+    "interview_mole_evasive_p": 0.24,
+    "interview_kl_nats_per_call": 0.00477,
+    "interview_reverse_kl_nats_per_call": 0.00457,
+    "canary_3arm_surfaced_exact_kl_nats": 1.09861,
+    "canary_3arm_planted_expected_exact_kl_nats": 0.82396,
+    "canary_3arm_surfaced_hard_fp95_kl_nats": 0.86544,
+    "canary_3arm_planted_expected_hard_fp95_kl_nats": 0.64908,
+    "kl_ratio_surfaced_exact_canary_vs_interview": 230.11,
+    "kl_ratio_planted_exact_canary_vs_interview": 172.58,
+    "kl_ratio_planted_hard_canary_vs_interview": 135.95
+  },
+  "frontier_behaviour_bridge": {
+    "opencode_gpt_5_5_hard": {
+      "agent_label": "gpt-5.5 (OpenCode over MCP)",
+      "dev_eval_seed_range": "0..29",
+      "tier": "hard",
+      "n": 30,
+      "mean_score": 0.5037,
+      "ci95": 0.0638,
+      "luck_adjusted_ev": 0.4176,
+      "canaries_planted_per_ep": 17.2,
+      "canaries_before_accuse_per_ep": 17.13,
+      "canary_slot_utilization": 0.8454,
+      "interviews_per_ep": 4.2,
+      "interview_call_share": 0.06,
+      "mean_tool_calls": 69,
+      "mean_accuse_day": 10.2,
+      "correct_count": 28,
+      "wrong_count": 0,
+      "abstain_count": 2
+    },
+    "opencode_gemini_4_carbon_hard": {
+      "agent_label": "gemini-4-carbon (OpenCode over MCP)",
+      "dev_eval_seed_range": "0..29",
+      "tier": "hard",
+      "n": 30,
+      "mean_score": 0.3223,
+      "ci95": 0.1989,
+      "luck_adjusted_ev": 0.3596,
+      "canaries_planted_per_ep": 8.5,
+      "canaries_before_accuse_per_ep": 8.47,
+      "canary_slot_utilization": 0.3151,
+      "interviews_per_ep": 68.0,
+      "interview_call_share": 0.53,
+      "stated_interview_lr": 1.2,
+      "mean_tool_calls": 128,
+      "mean_accuse_day": 13.2,
+      "correct_count": 25,
+      "wrong_count": 4,
+      "abstain_count": 1
+    }
+  },
+  "totals": {
+    "policies_audited": 2,
+    "conditions_per_policy": 12,
+    "total_episodes": 2160,
+    "fresh_env_replays_verified": 216,
+    "pooled_full_mean_score": 0.64278,
+    "pooled_no_canary_mean_score": 0.03173,
+    "pooled_canary_voi_drop": 0.61105,
+    "pooled_canary_voi_share_of_full": 0.95064,
+    "elapsed_seconds": 94.919
+  },
+  "policies": {
+    "empirical_bayes": {
+      "policy_id": "empirical_bayes",
+      "policy_class": "EmpiricalBayesPolicy",
+      "run_id": "empirical-bayes-v14",
+      "module_path": "train/empirical_bayes_policy.py",
+      "summary_path": "results/tiebreak/empirical_bayes/summary.json",
+      "param_count": 11,
+      "train_seed_range": "102000..102779",
+      "is_open_weight_llm": false,
+      "loo_voi_ranking": [
+        {
+          "channel": "canary_traps",
+          "condition_id": "loo_no_canary_traps",
+          "voi_drop": 0.58678,
+          "voi_share_of_full": 0.94287,
+          "normalized_positive_loo_share": 0.72481
+        },
+        {
+          "channel": "doc_membership",
+          "condition_id": "loo_no_doc_membership",
+          "voi_drop": 0.139,
+          "voi_share_of_full": 0.22335,
+          "normalized_positive_loo_share": 0.1717
+        },
+        {
+          "channel": "access_logs",
+          "condition_id": "loo_no_access_logs",
+          "voi_drop": 0.05144,
+          "voi_share_of_full": 0.08266,
+          "normalized_positive_loo_share": 0.06354
+        },
+        {
+          "channel": "angry_messages",
+          "condition_id": "loo_no_angry_messages",
+          "voi_drop": 0.02278,
+          "voi_share_of_full": 0.0366,
+          "normalized_positive_loo_share": 0.02814
+        },
+        {
+          "channel": "interviews",
+          "condition_id": "loo_no_interviews",
+          "voi_drop": 0.00956,
+          "voi_share_of_full": 0.01536,
+          "normalized_positive_loo_share": 0.01181
+        }
+      ],
+      "conditions": {
+        "full_all_channels": {
+          "group": "baseline",
+          "ablated_channel": "none",
+          "enabled_channels": [
+            "canary_traps",
+            "doc_membership",
+            "access_logs",
+            "angry_messages",
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.62233,
+            "ci95_low": 0.57258,
+            "ci95_high": 0.67209,
+            "ci95_half_width": 0.04975,
+            "accuracy": 0.91111,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 0.08889,
+            "correct_count": 82,
+            "wrong_count": 0,
+            "abstain_count": 8,
+            "mean_final_day": 7.9889,
+            "mean_accuse_day_when_accused": 7.4024,
+            "total_tool_calls": 5287,
+            "mean_tool_calls": 58.7444,
+            "mean_canaries_planted": 9.6667,
+            "mean_interviews": 5.1333,
+            "canary_call_share": 0.16455,
+            "interview_call_share": 0.08738,
+            "replay_verified_count": 90,
+            "trace_set_sha16": "0x275eb46bd1bf1e77"
+          },
+          "paired_vs_full": {
+            "mean_delta": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "voi_drop": 0.0,
+            "voi_share_of_full": 0.0,
+            "better_count": 0,
+            "tied_count": 90,
+            "worse_count": 0
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.72867,
+              "ci95_low": 0.64987,
+              "ci95_high": 0.80746,
+              "accuracy": 0.93333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.06667
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.56967,
+              "ci95_low": 0.4608,
+              "ci95_high": 0.67853,
+              "accuracy": 0.8,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.2
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.56867,
+              "ci95_low": 0.51884,
+              "ci95_high": 0.61849,
+              "accuracy": 1.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.0
+            }
+          },
+          "episode_scores_csv": "0.88,0.76,0.82,0.87,0.86,0.75,0.68,0.51,0,0.81,0.75,0.7,0.81,0.88,0.67,0.81,0.76,0.87,0.52,0.87,0.8,0.88,0.76,0.81,0.82,0,0.69,0.88,0.88,0.76,0.7,0,0.79,0.73,0.55,0.73,0,0.54,0.79,0.63,0.73,0.8,0,0.63,0.7,0.84,0.75,0,0.84,0.51,0.78,0.88,0.74,0,0.85,0.74,0.65,0.6,0,0.59,0.65,0.65,0.36,0.39,0.7,0.57,0.47,0.5,0.7,0.7,0.42,0.79,0.65,0.72,0.61,0.59,0.63,0.59,0.4,0.59,0.45,0.52,0.54,0.57,0.63,0.56,0.56,0.77,0.66,0.12"
+        },
+        "loo_no_canary_traps": {
+          "group": "loo",
+          "ablated_channel": "canary_traps",
+          "enabled_channels": [
+            "doc_membership",
+            "access_logs",
+            "angry_messages",
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.03556,
+            "ci95_low": 0.0026,
+            "ci95_high": 0.06851,
+            "ci95_half_width": 0.03295,
+            "accuracy": 0.05556,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 0.94444,
+            "correct_count": 5,
+            "wrong_count": 0,
+            "abstain_count": 85,
+            "mean_final_day": 16.0,
+            "mean_accuse_day_when_accused": 8.0,
+            "total_tool_calls": 10706,
+            "mean_tool_calls": 118.9556,
+            "mean_canaries_planted": 21.0,
+            "mean_interviews": 13.9556,
+            "canary_call_share": 0.17654,
+            "interview_call_share": 0.11732,
+            "replay_verified_count": 9,
+            "trace_set_sha16": "0x8daff8470dbba812"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.58678,
+            "ci95_low": -0.64007,
+            "ci95_high": -0.53348,
+            "ci95_half_width": 0.0533,
+            "voi_drop": 0.58678,
+            "voi_share_of_full": 0.94287,
+            "better_count": 0,
+            "tied_count": 10,
+            "worse_count": 80
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.091,
+              "ci95_low": -0.00081,
+              "ci95_high": 0.18281,
+              "accuracy": 0.13333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.86667
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.01567,
+              "ci95_low": -0.01504,
+              "ci95_high": 0.04637,
+              "accuracy": 0.03333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.96667
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0.22,0,0,0.87,0,0,0,0,0,0,0,0,0,0.88,0,0,0,0,0,0,0,0,0,0,0.76,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.47,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+        },
+        "loo_no_doc_membership": {
+          "group": "loo",
+          "ablated_channel": "doc_membership",
+          "enabled_channels": [
+            "canary_traps",
+            "access_logs",
+            "angry_messages",
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.48333,
+            "ci95_low": 0.41903,
+            "ci95_high": 0.54764,
+            "ci95_half_width": 0.06431,
+            "accuracy": 0.82222,
+            "wrong_accuse_rate": 0.01111,
+            "abstain_rate": 0.16667,
+            "correct_count": 74,
+            "wrong_count": 1,
+            "abstain_count": 15,
+            "mean_final_day": 9.9333,
+            "mean_accuse_day_when_accused": 8.9333,
+            "total_tool_calls": 6588,
+            "mean_tool_calls": 73.2,
+            "mean_canaries_planted": 12.4111,
+            "mean_interviews": 7.1222,
+            "canary_call_share": 0.16955,
+            "interview_call_share": 0.0973,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0x5089acc711a40dda"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.139,
+            "ci95_low": -0.19846,
+            "ci95_high": -0.07954,
+            "ci95_half_width": 0.05946,
+            "voi_drop": 0.139,
+            "voi_share_of_full": 0.22335,
+            "better_count": 11,
+            "tied_count": 18,
+            "worse_count": 61
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.68867,
+              "ci95_low": 0.64031,
+              "ci95_high": 0.73702,
+              "accuracy": 1.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.37233,
+              "ci95_low": 0.25111,
+              "ci95_high": 0.49356,
+              "accuracy": 0.56667,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.43333
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.389,
+              "ci95_low": 0.27655,
+              "ci95_high": 0.50145,
+              "accuracy": 0.9,
+              "wrong_accuse_rate": 0.03333,
+              "abstain_rate": 0.06667
+            }
+          },
+          "episode_scores_csv": "0.82,0.7,0.82,0.75,0.86,0.63,0.51,0.66,0.51,0.76,0.62,0.75,0.81,0.69,0.62,0.61,0.7,0.87,0.51,0.57,0.74,0.88,0.46,0.69,0.76,0.63,0.69,0.88,0.82,0.34,0.7,0.49,0.61,0,0,0,0,0.68,0.74,0,0.64,0.59,0,0,0.54,0,0.75,0,0.83,0.72,0.73,0.74,0.68,0.6,0,0,0.65,0.48,0,0,0.58,0.58,0.33,0.45,0.33,0,0,0.6,0.47,0.42,0.31,0.79,0.36,0.72,0.43,0.32,0.5,0.47,0.41,0.45,0.41,0.31,0.25,0.43,0.59,0.42,0.56,0.52,0.66,-1"
+        },
+        "loo_no_access_logs": {
+          "group": "loo",
+          "ablated_channel": "access_logs",
+          "enabled_channels": [
+            "canary_traps",
+            "doc_membership",
+            "angry_messages",
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.57089,
+            "ci95_low": 0.4936,
+            "ci95_high": 0.64818,
+            "ci95_half_width": 0.07729,
+            "accuracy": 0.87778,
+            "wrong_accuse_rate": 0.03333,
+            "abstain_rate": 0.08889,
+            "correct_count": 79,
+            "wrong_count": 3,
+            "abstain_count": 8,
+            "mean_final_day": 8.1667,
+            "mean_accuse_day_when_accused": 7.5122,
+            "total_tool_calls": 5416,
+            "mean_tool_calls": 60.1778,
+            "mean_canaries_planted": 10.0333,
+            "mean_interviews": 5.3111,
+            "canary_call_share": 0.16673,
+            "interview_call_share": 0.08826,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0xff7c283aedcf157a"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.05144,
+            "ci95_low": -0.11314,
+            "ci95_high": 0.01025,
+            "ci95_half_width": 0.0617,
+            "voi_drop": 0.05144,
+            "voi_share_of_full": 0.08266,
+            "better_count": 22,
+            "tied_count": 41,
+            "worse_count": 27
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.72467,
+              "ci95_low": 0.64589,
+              "ci95_high": 0.80344,
+              "accuracy": 0.93333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.06667
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.54267,
+              "ci95_low": 0.39704,
+              "ci95_high": 0.68829,
+              "accuracy": 0.8,
+              "wrong_accuse_rate": 0.03333,
+              "abstain_rate": 0.16667
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.44533,
+              "ci95_low": 0.29612,
+              "ci95_high": 0.59454,
+              "accuracy": 0.9,
+              "wrong_accuse_rate": 0.06667,
+              "abstain_rate": 0.03333
+            }
+          },
+          "episode_scores_csv": "0.88,0.76,0.82,0.87,0.86,0.75,0.68,0.51,0,0.81,0.81,0.7,0.81,0.88,0.67,0.81,0.76,0.81,0.52,0.87,0.8,0.88,0.64,0.81,0.82,0,0.69,0.88,0.88,0.76,0.67,0,0.84,0.73,0.59,0.73,0.68,0,0.79,0.69,0.74,0.59,0,0.69,0.7,0.84,0.75,0.67,0.83,0,0.78,0.79,0.85,0,0.85,0.51,0.65,0.6,-1,0.72,0.58,0.65,0.56,0.51,0.61,0.63,0.57,0.57,0.61,0.47,0.59,0.77,0.37,0.66,0.47,0.69,0.57,0.56,0.54,0.5,-1,-1,0.47,0.71,0.58,0.7,0.62,0,0.38,0.42"
+        },
+        "loo_no_angry_messages": {
+          "group": "loo",
+          "ablated_channel": "angry_messages",
+          "enabled_channels": [
+            "canary_traps",
+            "doc_membership",
+            "access_logs",
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.59956,
+            "ci95_low": 0.53377,
+            "ci95_high": 0.66534,
+            "ci95_half_width": 0.06578,
+            "accuracy": 0.92222,
+            "wrong_accuse_rate": 0.02222,
+            "abstain_rate": 0.05556,
+            "correct_count": 83,
+            "wrong_count": 2,
+            "abstain_count": 5,
+            "mean_final_day": 8.2333,
+            "mean_accuse_day_when_accused": 7.8941,
+            "total_tool_calls": 5435,
+            "mean_tool_calls": 60.3889,
+            "mean_canaries_planted": 9.8778,
+            "mean_interviews": 5.3444,
+            "canary_call_share": 0.16357,
+            "interview_call_share": 0.0885,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0x1ee4c5cf02caa59b"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.02278,
+            "ci95_low": -0.08479,
+            "ci95_high": 0.03923,
+            "ci95_half_width": 0.06201,
+            "voi_drop": 0.02278,
+            "voi_share_of_full": 0.0366,
+            "better_count": 16,
+            "tied_count": 49,
+            "worse_count": 25
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.72867,
+              "ci95_low": 0.64987,
+              "ci95_high": 0.80746,
+              "accuracy": 0.93333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.06667
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.589,
+              "ci95_low": 0.50932,
+              "ci95_high": 0.66868,
+              "accuracy": 0.9,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.1
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.481,
+              "ci95_low": 0.32869,
+              "ci95_high": 0.63331,
+              "accuracy": 0.93333,
+              "wrong_accuse_rate": 0.06667,
+              "abstain_rate": 0.0
+            }
+          },
+          "episode_scores_csv": "0.88,0.76,0.82,0.87,0.86,0.75,0.68,0.51,0,0.81,0.75,0.7,0.81,0.88,0.67,0.81,0.76,0.87,0.52,0.87,0.8,0.88,0.76,0.81,0.82,0,0.69,0.88,0.88,0.76,0.64,0.6,0.73,0.79,0.63,0.47,0.59,0.49,0.79,0.62,0.53,0.47,0.73,0.63,0.59,0.63,0.75,0,0.83,0,0.79,0.67,0.74,0.68,0.82,0.67,0.64,0.55,0,0.6,0.65,0.65,0.36,0.34,0.7,0.59,0.42,0.7,0.61,0.7,0.61,0.79,0.65,0.7,-1,0.53,0.77,0.59,0.59,0.61,0.45,-1,0.54,0.75,0.63,0.56,0.52,0.13,0.66,0.63"
+        },
+        "loo_no_interviews": {
+          "group": "loo",
+          "ablated_channel": "interviews",
+          "enabled_channels": [
+            "canary_traps",
+            "doc_membership",
+            "access_logs",
+            "angry_messages"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.61278,
+            "ci95_low": 0.56084,
+            "ci95_high": 0.66472,
+            "ci95_half_width": 0.05194,
+            "accuracy": 0.9,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 0.1,
+            "correct_count": 81,
+            "wrong_count": 0,
+            "abstain_count": 9,
+            "mean_final_day": 8.1,
+            "mean_accuse_day_when_accused": 7.4444,
+            "total_tool_calls": 5365,
+            "mean_tool_calls": 59.6111,
+            "mean_canaries_planted": 9.8556,
+            "mean_interviews": 5.2556,
+            "canary_call_share": 0.16533,
+            "interview_call_share": 0.08816,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0x77ed815a77d97139"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.00956,
+            "ci95_low": -0.02371,
+            "ci95_high": 0.0046,
+            "ci95_half_width": 0.01416,
+            "voi_drop": 0.00956,
+            "voi_share_of_full": 0.01536,
+            "better_count": 2,
+            "tied_count": 82,
+            "worse_count": 6
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.73067,
+              "ci95_low": 0.65197,
+              "ci95_high": 0.80936,
+              "accuracy": 0.93333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.06667
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.54867,
+              "ci95_low": 0.43373,
+              "ci95_high": 0.6636,
+              "accuracy": 0.76667,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.23333
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.559,
+              "ci95_low": 0.50736,
+              "ci95_high": 0.61064,
+              "accuracy": 1.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.0
+            }
+          },
+          "episode_scores_csv": "0.88,0.76,0.82,0.87,0.86,0.75,0.68,0.51,0,0.81,0.75,0.7,0.81,0.88,0.73,0.81,0.76,0.87,0.52,0.87,0.8,0.88,0.76,0.81,0.82,0,0.69,0.88,0.88,0.76,0.7,0,0.79,0.73,0.55,0.73,0,0.54,0.79,0.63,0.73,0.8,0,0,0.7,0.84,0.75,0,0.84,0.51,0.78,0.88,0.74,0,0.85,0.74,0.65,0.6,0,0.59,0.65,0.58,0.29,0.44,0.7,0.57,0.47,0.43,0.7,0.7,0.42,0.79,0.65,0.72,0.61,0.59,0.57,0.59,0.4,0.59,0.38,0.52,0.54,0.57,0.63,0.56,0.56,0.77,0.66,0.12"
+        },
+        "interviews_heavy_no_canary": {
+          "group": "counterfactual",
+          "ablated_channel": "canary_traps",
+          "enabled_channels": [
+            "doc_membership",
+            "access_logs",
+            "angry_messages",
+            "interviews"
+          ],
+          "interview_heavy": true,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.00533,
+            "ci95_low": -0.09533,
+            "ci95_high": 0.106,
+            "ci95_half_width": 0.10066,
+            "accuracy": 0.2,
+            "wrong_accuse_rate": 0.13333,
+            "abstain_rate": 0.66667,
+            "correct_count": 18,
+            "wrong_count": 12,
+            "abstain_count": 60,
+            "mean_final_day": 15.0333,
+            "mean_accuse_day_when_accused": 11.2667,
+            "total_tool_calls": 14793,
+            "mean_tool_calls": 164.3667,
+            "mean_canaries_planted": 0.0,
+            "mean_interviews": 85.2,
+            "canary_call_share": 0.0,
+            "interview_call_share": 0.51835,
+            "replay_verified_count": 9,
+            "trace_set_sha16": "0xbb243478acd694f0"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.617,
+            "ci95_low": -0.71934,
+            "ci95_high": -0.51466,
+            "ci95_half_width": 0.10234,
+            "voi_drop": 0.617,
+            "voi_share_of_full": 0.99143,
+            "better_count": 7,
+            "tied_count": 7,
+            "worse_count": 76
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.12,
+              "ci95_low": -0.10167,
+              "ci95_high": 0.34167,
+              "accuracy": 0.4,
+              "wrong_accuse_rate": 0.16667,
+              "abstain_rate": 0.43333
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": -0.05067,
+              "ci95_low": -0.20606,
+              "ci95_high": 0.10473,
+              "accuracy": 0.13333,
+              "wrong_accuse_rate": 0.13333,
+              "abstain_rate": 0.73333
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": -0.05333,
+              "ci95_low": -0.18523,
+              "ci95_high": 0.07856,
+              "accuracy": 0.06667,
+              "wrong_accuse_rate": 0.1,
+              "abstain_rate": 0.83333
+            }
+          },
+          "episode_scores_csv": "0,0.5,-1,0.9,0.85,-1,0.6,0,-1,0.7,0,-1,0.75,0.9,0.75,0,0.5,0,0,0,0,0.9,0,0,0.9,0,0,0,-1,0.35,0,0,0,0,0.64,0,0,0,0,-1,-1,0,0,0,0,0.68,0,0,0,-1,0,0,0.56,0,0.6,0,-1,0,0,0,0,0.55,0,0,0,-1,0,-1,0,0,0,0.85,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0"
+        },
+        "only_canary_traps": {
+          "group": "single_channel",
+          "ablated_channel": "all_except_canary_traps",
+          "enabled_channels": [
+            "canary_traps"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.42489,
+            "ci95_low": 0.35234,
+            "ci95_high": 0.49744,
+            "ci95_half_width": 0.07255,
+            "accuracy": 0.78889,
+            "wrong_accuse_rate": 0.02222,
+            "abstain_rate": 0.18889,
+            "correct_count": 71,
+            "wrong_count": 2,
+            "abstain_count": 17,
+            "mean_final_day": 10.9,
+            "mean_accuse_day_when_accused": 9.7945,
+            "total_tool_calls": 7258,
+            "mean_tool_calls": 80.6444,
+            "mean_canaries_planted": 14.0333,
+            "mean_interviews": 8.1111,
+            "canary_call_share": 0.17401,
+            "interview_call_share": 0.10058,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0xe0e0dd8de87ae52f"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.19744,
+            "ci95_low": -0.27492,
+            "ci95_high": -0.11997,
+            "ci95_half_width": 0.07748,
+            "voi_drop": 0.19744,
+            "voi_share_of_full": 0.31726,
+            "better_count": 14,
+            "tied_count": 10,
+            "worse_count": 66
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.561,
+              "ci95_low": 0.45917,
+              "ci95_high": 0.66283,
+              "accuracy": 0.83333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.16667
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.46733,
+              "ci95_low": 0.36089,
+              "ci95_high": 0.57378,
+              "accuracy": 0.73333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.26667
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.24633,
+              "ci95_low": 0.10546,
+              "ci95_high": 0.38721,
+              "accuracy": 0.8,
+              "wrong_accuse_rate": 0.06667,
+              "abstain_rate": 0.13333
+            }
+          },
+          "episode_scores_csv": "0.82,0.46,0.82,0.63,0.86,0.45,0.51,0.62,0.64,0.76,0,0.51,0.81,0,0,0.68,0.58,0.57,0.45,0.57,0.74,0.88,0,0.69,0.76,0.63,0.69,0.88,0.82,0,0.65,0,0.61,0,0.53,0,0.67,0.68,0.69,0.57,0.65,0.75,0,0.52,0.54,0,0.65,0,0.82,0,0.79,0.7,0.5,0,0.68,0.6,0.69,0.64,0.65,0.44,0.63,0.68,0.4,0.34,0.24,0.22,0.17,0.33,0,0.19,0.23,-1,0.47,0.66,0.63,0.36,0.39,0.36,0.43,0.11,0,0.48,0.36,0.49,-1,0.63,0,0.21,0.38,0"
+        },
+        "only_doc_membership": {
+          "group": "single_channel",
+          "ablated_channel": "all_except_doc_membership",
+          "enabled_channels": [
+            "doc_membership"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.02789,
+            "ci95_low": -0.00338,
+            "ci95_high": 0.05916,
+            "ci95_half_width": 0.03127,
+            "accuracy": 0.03333,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 0.96667,
+            "correct_count": 3,
+            "wrong_count": 0,
+            "abstain_count": 87,
+            "mean_final_day": 16.0,
+            "mean_accuse_day_when_accused": 4.0,
+            "total_tool_calls": 10708,
+            "mean_tool_calls": 118.9778,
+            "mean_canaries_planted": 21.0,
+            "mean_interviews": 13.9778,
+            "canary_call_share": 0.1765,
+            "interview_call_share": 0.11748,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0xa863cbe425fd25ac"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.59444,
+            "ci95_low": -0.64816,
+            "ci95_high": -0.54073,
+            "ci95_half_width": 0.05371,
+            "voi_drop": 0.59444,
+            "voi_share_of_full": 0.95518,
+            "better_count": 0,
+            "tied_count": 10,
+            "worse_count": 80
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.08367,
+              "ci95_low": -0.0079,
+              "ci95_high": 0.17524,
+              "accuracy": 0.1,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.9
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0.87,0,0,0,0,0,0,0,0,0,0.88,0,0,0,0,0,0,0,0,0,0,0.76,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+        },
+        "only_access_logs": {
+          "group": "single_channel",
+          "ablated_channel": "all_except_access_logs",
+          "enabled_channels": [
+            "access_logs"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "accuracy": 0.0,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 1.0,
+            "correct_count": 0,
+            "wrong_count": 0,
+            "abstain_count": 90,
+            "mean_final_day": 16.3333,
+            "mean_accuse_day_when_accused": 0.0,
+            "total_tool_calls": 10920,
+            "mean_tool_calls": 121.3333,
+            "mean_canaries_planted": 21.3333,
+            "mean_interviews": 14.3333,
+            "canary_call_share": 0.17582,
+            "interview_call_share": 0.11813,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0xa509063baf34862a"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.62233,
+            "ci95_low": -0.67209,
+            "ci95_high": -0.57258,
+            "ci95_half_width": 0.04975,
+            "voi_drop": 0.62233,
+            "voi_share_of_full": 0.99999,
+            "better_count": 0,
+            "tied_count": 8,
+            "worse_count": 82
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+        },
+        "only_angry_messages": {
+          "group": "single_channel",
+          "ablated_channel": "all_except_angry_messages",
+          "enabled_channels": [
+            "angry_messages"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "accuracy": 0.0,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 1.0,
+            "correct_count": 0,
+            "wrong_count": 0,
+            "abstain_count": 90,
+            "mean_final_day": 16.3333,
+            "mean_accuse_day_when_accused": 0.0,
+            "total_tool_calls": 10920,
+            "mean_tool_calls": 121.3333,
+            "mean_canaries_planted": 21.3333,
+            "mean_interviews": 14.3333,
+            "canary_call_share": 0.17582,
+            "interview_call_share": 0.11813,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0xb72bea77cee5c73a"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.62233,
+            "ci95_low": -0.67209,
+            "ci95_high": -0.57258,
+            "ci95_half_width": 0.04975,
+            "voi_drop": 0.62233,
+            "voi_share_of_full": 0.99999,
+            "better_count": 0,
+            "tied_count": 8,
+            "worse_count": 82
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+        },
+        "only_interviews": {
+          "group": "single_channel",
+          "ablated_channel": "all_except_interviews",
+          "enabled_channels": [
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "accuracy": 0.0,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 1.0,
+            "correct_count": 0,
+            "wrong_count": 0,
+            "abstain_count": 90,
+            "mean_final_day": 16.3333,
+            "mean_accuse_day_when_accused": 0.0,
+            "total_tool_calls": 10920,
+            "mean_tool_calls": 121.3333,
+            "mean_canaries_planted": 21.3333,
+            "mean_interviews": 14.3333,
+            "canary_call_share": 0.17582,
+            "interview_call_share": 0.11813,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0x075f7e1da5d0de70"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.62233,
+            "ci95_low": -0.67209,
+            "ci95_high": -0.57258,
+            "ci95_half_width": 0.04975,
+            "voi_drop": 0.62233,
+            "voi_share_of_full": 0.99999,
+            "better_count": 0,
+            "tied_count": 8,
+            "worse_count": 82
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+        }
+      },
+      "commitment_llr_decomposition": {
+        "n": 90,
+        "mean_canary_variant_llr": 4.20755,
+        "mean_canary_recipient_llr": 0.08802,
+        "mean_regular_doc_llr": 0.79215,
+        "mean_access_logs_llr": 0.0245,
+        "mean_angry_messages_llr": 0.0,
+        "mean_interviews_llr": 0.12606,
+        "mean_total_top_vs_second_llr": 5.23827,
+        "canary_variant_only_llr_share": 0.80323,
+        "canary_inclusive_llr_share": 0.82003
+      }
+    },
+    "compact_linear_dagger": {
+      "policy_id": "compact_linear_dagger",
+      "policy_class": "CompactLinearDAggerPolicy",
+      "run_id": "compact-linear-dagger-v14",
+      "module_path": "train/compact_dagger_ablation.py",
+      "summary_path": "results/tiebreak/dagger_ablation/summary.json",
+      "param_count": 785,
+      "train_seed_range": "109000..109509",
+      "is_open_weight_llm": false,
+      "loo_voi_ranking": [
+        {
+          "channel": "canary_traps",
+          "condition_id": "loo_no_canary_traps",
+          "voi_drop": 0.63533,
+          "voi_share_of_full": 0.95794,
+          "normalized_positive_loo_share": 0.75664
+        },
+        {
+          "channel": "doc_membership",
+          "condition_id": "loo_no_doc_membership",
+          "voi_drop": 0.13156,
+          "voi_share_of_full": 0.19836,
+          "normalized_positive_loo_share": 0.15668
+        },
+        {
+          "channel": "access_logs",
+          "condition_id": "loo_no_access_logs",
+          "voi_drop": 0.06522,
+          "voi_share_of_full": 0.09834,
+          "normalized_positive_loo_share": 0.07767
+        },
+        {
+          "channel": "angry_messages",
+          "condition_id": "loo_no_angry_messages",
+          "voi_drop": 0.00756,
+          "voi_share_of_full": 0.0114,
+          "normalized_positive_loo_share": 0.009
+        },
+        {
+          "channel": "interviews",
+          "condition_id": "loo_no_interviews",
+          "voi_drop": 0.0,
+          "voi_share_of_full": 0.0,
+          "normalized_positive_loo_share": 0.0
+        }
+      ],
+      "conditions": {
+        "full_all_channels": {
+          "group": "baseline",
+          "ablated_channel": "none",
+          "enabled_channels": [
+            "canary_traps",
+            "doc_membership",
+            "access_logs",
+            "angry_messages",
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.66322,
+            "ci95_low": 0.60708,
+            "ci95_high": 0.71937,
+            "ci95_half_width": 0.05614,
+            "accuracy": 0.96667,
+            "wrong_accuse_rate": 0.01111,
+            "abstain_rate": 0.02222,
+            "correct_count": 87,
+            "wrong_count": 1,
+            "abstain_count": 2,
+            "mean_final_day": 7.6111,
+            "mean_accuse_day_when_accused": 7.4659,
+            "total_tool_calls": 4696,
+            "mean_tool_calls": 52.1778,
+            "mean_canaries_planted": 9.4222,
+            "mean_interviews": 0.0,
+            "canary_call_share": 0.18058,
+            "interview_call_share": 0.0,
+            "replay_verified_count": 90,
+            "trace_set_sha16": "0x0e36fd16f02b846b"
+          },
+          "paired_vs_full": {
+            "mean_delta": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "voi_drop": 0.0,
+            "voi_share_of_full": 0.0,
+            "better_count": 0,
+            "tied_count": 90,
+            "worse_count": 0
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.82033,
+              "ci95_low": 0.79607,
+              "ci95_high": 0.84459,
+              "accuracy": 1.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.679,
+              "ci95_low": 0.60239,
+              "ci95_high": 0.75561,
+              "accuracy": 0.93333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.06667
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.49033,
+              "ci95_low": 0.36664,
+              "ci95_high": 0.61403,
+              "accuracy": 0.96667,
+              "wrong_accuse_rate": 0.03333,
+              "abstain_rate": 0.0
+            }
+          },
+          "episode_scores_csv": "0.82,0.82,0.88,0.87,0.86,0.82,0.81,0.88,0.88,0.76,0.75,0.69,0.82,0.82,0.82,0.82,0.76,0.87,0.88,0.87,0.88,0.88,0.76,0.81,0.82,0.81,0.57,0.82,0.88,0.88,0.71,0.58,0.85,0.49,0.85,0.78,0.63,0.83,0.89,0.85,0.55,0.85,0.69,0.72,0,0.78,0.75,0.85,0.84,0,0.72,0.64,0.63,0.74,0.74,0.78,0.51,0.75,0.78,0.59,0.78,0.78,0.64,0.34,0.02,0.47,0.76,0.27,0.62,0.53,0.37,0.69,0.21,0.68,0.33,0.62,0.76,0.62,0.46,0.71,0.65,0.68,0.24,0.78,0.62,0.42,0.46,-1,0.78,0.42"
+        },
+        "loo_no_canary_traps": {
+          "group": "loo",
+          "ablated_channel": "canary_traps",
+          "enabled_channels": [
+            "doc_membership",
+            "access_logs",
+            "angry_messages",
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.02789,
+            "ci95_low": -0.00333,
+            "ci95_high": 0.0591,
+            "ci95_half_width": 0.03122,
+            "accuracy": 0.03333,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 0.96667,
+            "correct_count": 3,
+            "wrong_count": 0,
+            "abstain_count": 87,
+            "mean_final_day": 16.0,
+            "mean_accuse_day_when_accused": 4.0,
+            "total_tool_calls": 9569,
+            "mean_tool_calls": 106.3222,
+            "mean_canaries_planted": 20.6667,
+            "mean_interviews": 0.0,
+            "canary_call_share": 0.19438,
+            "interview_call_share": 0.0,
+            "replay_verified_count": 9,
+            "trace_set_sha16": "0xf01791c3e43f5bef"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.63533,
+            "ci95_low": -0.69622,
+            "ci95_high": -0.57445,
+            "ci95_half_width": 0.06089,
+            "voi_drop": 0.63533,
+            "voi_share_of_full": 0.95794,
+            "better_count": 1,
+            "tied_count": 5,
+            "worse_count": 84
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.08367,
+              "ci95_low": -0.00773,
+              "ci95_high": 0.17506,
+              "accuracy": 0.1,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.9
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0.87,0,0,0,0,0,0,0,0,0,0.82,0,0,0,0,0,0,0,0,0,0,0.82,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+        },
+        "loo_no_doc_membership": {
+          "group": "loo",
+          "ablated_channel": "doc_membership",
+          "enabled_channels": [
+            "canary_traps",
+            "access_logs",
+            "angry_messages",
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.53167,
+            "ci95_low": 0.46467,
+            "ci95_high": 0.59866,
+            "ci95_half_width": 0.067,
+            "accuracy": 0.85556,
+            "wrong_accuse_rate": 0.01111,
+            "abstain_rate": 0.13333,
+            "correct_count": 77,
+            "wrong_count": 1,
+            "abstain_count": 12,
+            "mean_final_day": 9.3667,
+            "mean_accuse_day_when_accused": 8.5641,
+            "total_tool_calls": 5694,
+            "mean_tool_calls": 63.2667,
+            "mean_canaries_planted": 11.6556,
+            "mean_interviews": 0.0,
+            "canary_call_share": 0.18423,
+            "interview_call_share": 0.0,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0xe97976a4e14a0a47"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.13156,
+            "ci95_low": -0.19315,
+            "ci95_high": -0.06996,
+            "ci95_half_width": 0.06159,
+            "voi_drop": 0.13156,
+            "voi_share_of_full": 0.19836,
+            "better_count": 8,
+            "tied_count": 27,
+            "worse_count": 55
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.746,
+              "ci95_low": 0.69472,
+              "ci95_high": 0.79728,
+              "accuracy": 1.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.431,
+              "ci95_low": 0.30825,
+              "ci95_high": 0.55375,
+              "accuracy": 0.63333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.36667
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.418,
+              "ci95_low": 0.29763,
+              "ci95_high": 0.53837,
+              "accuracy": 0.93333,
+              "wrong_accuse_rate": 0.03333,
+              "abstain_rate": 0.03333
+            }
+          },
+          "episode_scores_csv": "0.82,0.7,0.88,0.75,0.86,0.81,0.81,0.88,0.81,0.82,0.39,0.7,0.76,0.82,0.39,0.82,0.58,0.87,0.76,0.87,0.88,0.88,0.64,0.52,0.58,0.69,0.57,0.76,0.88,0.88,0.56,0,0.72,0,0.58,0.63,0,0.83,0.74,0.65,0,0.75,0.69,0.53,0,0,0.49,0.85,0.79,0,0,0.69,0,0.74,0.74,0.58,0,0.75,0.62,0,0.62,0.78,0.62,0.4,0.02,0,0.41,0.2,0.35,0.42,0.32,0.69,0.39,0.59,-1,0.58,0.62,0.28,0.12,0.71,0.46,0.59,0.56,0.78,0.49,0.38,0.69,0.52,0.57,0.38"
+        },
+        "loo_no_access_logs": {
+          "group": "loo",
+          "ablated_channel": "access_logs",
+          "enabled_channels": [
+            "canary_traps",
+            "doc_membership",
+            "angry_messages",
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.598,
+            "ci95_low": 0.52246,
+            "ci95_high": 0.67354,
+            "ci95_half_width": 0.07554,
+            "accuracy": 0.94444,
+            "wrong_accuse_rate": 0.03333,
+            "abstain_rate": 0.02222,
+            "correct_count": 85,
+            "wrong_count": 3,
+            "abstain_count": 2,
+            "mean_final_day": 8.2889,
+            "mean_accuse_day_when_accused": 8.0795,
+            "total_tool_calls": 5111,
+            "mean_tool_calls": 56.7889,
+            "mean_canaries_planted": 10.6778,
+            "mean_interviews": 0.0,
+            "canary_call_share": 0.18803,
+            "interview_call_share": 0.0,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0xb678fe8e3ef8fd81"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.06522,
+            "ci95_low": -0.14018,
+            "ci95_high": 0.00974,
+            "ci95_half_width": 0.07496,
+            "voi_drop": 0.06522,
+            "voi_share_of_full": 0.09834,
+            "better_count": 26,
+            "tied_count": 27,
+            "worse_count": 37
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.79533,
+              "ci95_low": 0.76483,
+              "ci95_high": 0.82584,
+              "accuracy": 1.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.70133,
+              "ci95_low": 0.64155,
+              "ci95_high": 0.76111,
+              "accuracy": 0.96667,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.03333
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.29733,
+              "ci95_low": 0.12561,
+              "ci95_high": 0.46906,
+              "accuracy": 0.86667,
+              "wrong_accuse_rate": 0.1,
+              "abstain_rate": 0.03333
+            }
+          },
+          "episode_scores_csv": "0.82,0.76,0.88,0.87,0.79,0.82,0.81,0.57,0.88,0.76,0.75,0.75,0.82,0.82,0.76,0.82,0.76,0.62,0.88,0.87,0.88,0.88,0.76,0.75,0.82,0.81,0.57,0.82,0.88,0.88,0.67,0.57,0.85,0.62,0.7,0.79,0.43,0.69,0.79,0.65,0.89,0.73,0.85,0.69,0.64,0.76,0.8,0.85,0.79,0,0.64,0.66,0.67,0.76,0.85,0.63,0.7,0.84,0.83,0.7,0.4,0.54,0.55,0.44,0.48,0.55,-1,0.63,0.12,0.58,-1,0.78,0.18,0.39,0.39,0.71,0.26,0.53,0.45,0.71,0.02,0.28,0.6,0.46,0,0.58,0.37,0.3,0.62,-1"
+        },
+        "loo_no_angry_messages": {
+          "group": "loo",
+          "ablated_channel": "angry_messages",
+          "enabled_channels": [
+            "canary_traps",
+            "doc_membership",
+            "access_logs",
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.65567,
+            "ci95_low": 0.58857,
+            "ci95_high": 0.72277,
+            "ci95_half_width": 0.0671,
+            "accuracy": 0.94444,
+            "wrong_accuse_rate": 0.02222,
+            "abstain_rate": 0.03333,
+            "correct_count": 85,
+            "wrong_count": 2,
+            "abstain_count": 3,
+            "mean_final_day": 7.1889,
+            "mean_accuse_day_when_accused": 6.954,
+            "total_tool_calls": 4496,
+            "mean_tool_calls": 49.9556,
+            "mean_canaries_planted": 8.6667,
+            "mean_interviews": 0.0,
+            "canary_call_share": 0.17349,
+            "interview_call_share": 0.0,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0x28fdcad294d8bd62"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.00756,
+            "ci95_low": -0.06567,
+            "ci95_high": 0.05056,
+            "ci95_half_width": 0.05811,
+            "voi_drop": 0.00756,
+            "voi_share_of_full": 0.0114,
+            "better_count": 23,
+            "tied_count": 51,
+            "worse_count": 16
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.82033,
+              "ci95_low": 0.79607,
+              "ci95_high": 0.84459,
+              "accuracy": 1.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.67367,
+              "ci95_low": 0.58401,
+              "ci95_high": 0.76333,
+              "accuracy": 0.9,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.1
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.473,
+              "ci95_low": 0.31562,
+              "ci95_high": 0.63038,
+              "accuracy": 0.93333,
+              "wrong_accuse_rate": 0.06667,
+              "abstain_rate": 0.0
+            }
+          },
+          "episode_scores_csv": "0.82,0.82,0.88,0.87,0.86,0.82,0.81,0.88,0.88,0.76,0.75,0.69,0.82,0.82,0.82,0.82,0.76,0.87,0.88,0.87,0.88,0.88,0.76,0.81,0.82,0.81,0.57,0.82,0.88,0.88,0,0.58,0.85,0.54,0.85,0.78,0.74,0.74,0.89,0.85,0.77,0.8,0.84,0.74,0,0.78,0.48,0.85,0.84,0,0.72,0.65,0.63,0.93,0.74,0.67,0.74,0.65,0.83,0.73,0.56,0.78,0.69,-1,0.56,-1,0.62,0.44,0.57,0.53,0.3,0.69,0.07,0.54,0.66,0.74,0.76,0.71,0.48,0.71,0.72,0.64,0.14,0.78,0.66,0.6,0.51,0.26,0.78,0.69"
+        },
+        "loo_no_interviews": {
+          "group": "loo",
+          "ablated_channel": "interviews",
+          "enabled_channels": [
+            "canary_traps",
+            "doc_membership",
+            "access_logs",
+            "angry_messages"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.66322,
+            "ci95_low": 0.60708,
+            "ci95_high": 0.71937,
+            "ci95_half_width": 0.05614,
+            "accuracy": 0.96667,
+            "wrong_accuse_rate": 0.01111,
+            "abstain_rate": 0.02222,
+            "correct_count": 87,
+            "wrong_count": 1,
+            "abstain_count": 2,
+            "mean_final_day": 7.6111,
+            "mean_accuse_day_when_accused": 7.4659,
+            "total_tool_calls": 4696,
+            "mean_tool_calls": 52.1778,
+            "mean_canaries_planted": 9.4222,
+            "mean_interviews": 0.0,
+            "canary_call_share": 0.18058,
+            "interview_call_share": 0.0,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0x0e36fd16f02b846b"
+          },
+          "paired_vs_full": {
+            "mean_delta": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "voi_drop": 0.0,
+            "voi_share_of_full": 0.0,
+            "better_count": 0,
+            "tied_count": 90,
+            "worse_count": 0
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.82033,
+              "ci95_low": 0.79607,
+              "ci95_high": 0.84459,
+              "accuracy": 1.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.679,
+              "ci95_low": 0.60239,
+              "ci95_high": 0.75561,
+              "accuracy": 0.93333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.06667
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.49033,
+              "ci95_low": 0.36664,
+              "ci95_high": 0.61403,
+              "accuracy": 0.96667,
+              "wrong_accuse_rate": 0.03333,
+              "abstain_rate": 0.0
+            }
+          },
+          "episode_scores_csv": "0.82,0.82,0.88,0.87,0.86,0.82,0.81,0.88,0.88,0.76,0.75,0.69,0.82,0.82,0.82,0.82,0.76,0.87,0.88,0.87,0.88,0.88,0.76,0.81,0.82,0.81,0.57,0.82,0.88,0.88,0.71,0.58,0.85,0.49,0.85,0.78,0.63,0.83,0.89,0.85,0.55,0.85,0.69,0.72,0,0.78,0.75,0.85,0.84,0,0.72,0.64,0.63,0.74,0.74,0.78,0.51,0.75,0.78,0.59,0.78,0.78,0.64,0.34,0.02,0.47,0.76,0.27,0.62,0.53,0.37,0.69,0.21,0.68,0.33,0.62,0.76,0.62,0.46,0.71,0.65,0.68,0.24,0.78,0.62,0.42,0.46,-1,0.78,0.42"
+        },
+        "interviews_heavy_no_canary": {
+          "group": "counterfactual",
+          "ablated_channel": "canary_traps",
+          "enabled_channels": [
+            "doc_membership",
+            "access_logs",
+            "angry_messages",
+            "interviews"
+          ],
+          "interview_heavy": true,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.00444,
+            "ci95_low": -0.06539,
+            "ci95_high": 0.07428,
+            "ci95_half_width": 0.06983,
+            "accuracy": 0.12222,
+            "wrong_accuse_rate": 0.06667,
+            "abstain_rate": 0.81111,
+            "correct_count": 11,
+            "wrong_count": 6,
+            "abstain_count": 73,
+            "mean_final_day": 15.7111,
+            "mean_accuse_day_when_accused": 14.8235,
+            "total_tool_calls": 15597,
+            "mean_tool_calls": 173.3,
+            "mean_canaries_planted": 0.0,
+            "mean_interviews": 89.1667,
+            "canary_call_share": 0.0,
+            "interview_call_share": 0.51452,
+            "replay_verified_count": 9,
+            "trace_set_sha16": "0x4c6a23278704b699"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.65878,
+            "ci95_low": -0.74414,
+            "ci95_high": -0.57341,
+            "ci95_half_width": 0.08536,
+            "voi_drop": 0.65878,
+            "voi_share_of_full": 0.9933,
+            "better_count": 5,
+            "tied_count": 2,
+            "worse_count": 83
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.12167,
+              "ci95_low": 0.0179,
+              "ci95_high": 0.22543,
+              "accuracy": 0.16667,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.83333
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": -0.06667,
+              "ci95_low": -0.15745,
+              "ci95_high": 0.02412,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.06667,
+              "abstain_rate": 0.93333
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": -0.04167,
+              "ci95_low": -0.19371,
+              "ci95_high": 0.11038,
+              "accuracy": 0.2,
+              "wrong_accuse_rate": 0.13333,
+              "abstain_rate": 0.66667
+            }
+          },
+          "episode_scores_csv": "0.45,0.5,0,0.9,0,0,0,0,0,0,0,0,0,0.9,0,0,0,0,0,0,0,0,0,0,0.9,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.6,0,0,-1,-1,0,0,0.45,0,0.4,0.45,0,0,0,0,0,0,0.45,0,0,-1,0,0,0,0,0,0,-1,0.4"
+        },
+        "only_canary_traps": {
+          "group": "single_channel",
+          "ablated_channel": "all_except_canary_traps",
+          "enabled_channels": [
+            "canary_traps"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.45033,
+            "ci95_low": 0.37551,
+            "ci95_high": 0.52516,
+            "ci95_half_width": 0.07483,
+            "accuracy": 0.74444,
+            "wrong_accuse_rate": 0.01111,
+            "abstain_rate": 0.24444,
+            "correct_count": 67,
+            "wrong_count": 1,
+            "abstain_count": 22,
+            "mean_final_day": 10.4333,
+            "mean_accuse_day_when_accused": 8.7647,
+            "total_tool_calls": 6404,
+            "mean_tool_calls": 71.1556,
+            "mean_canaries_planted": 13.4778,
+            "mean_interviews": 0.0,
+            "canary_call_share": 0.18941,
+            "interview_call_share": 0.0,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0x4ac9e9412f6199f3"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.21289,
+            "ci95_low": -0.28183,
+            "ci95_high": -0.14395,
+            "ci95_half_width": 0.06894,
+            "voi_drop": 0.21289,
+            "voi_share_of_full": 0.32099,
+            "better_count": 14,
+            "tied_count": 15,
+            "worse_count": 61
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.67667,
+              "ci95_low": 0.58664,
+              "ci95_high": 0.7667,
+              "accuracy": 0.9,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.1
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.38767,
+              "ci95_low": 0.25182,
+              "ci95_high": 0.52351,
+              "accuracy": 0.53333,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.46667
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.28667,
+              "ci95_low": 0.16778,
+              "ci95_high": 0.40555,
+              "accuracy": 0.8,
+              "wrong_accuse_rate": 0.03333,
+              "abstain_rate": 0.16667
+            }
+          },
+          "episode_scores_csv": "0.52,0.76,0.88,0.74,0.67,0.69,0.81,0.63,0.81,0.82,0,0.69,0.76,0.82,0,0.82,0.64,0.62,0.88,0.87,0.88,0.88,0.58,0.74,0.76,0.69,0,0.58,0.88,0.88,0,0.6,0.7,0,0.59,0.69,0,0.69,0.79,0.4,0.84,0,0.85,0,0,0,0.8,0.85,0,0,0,0,0,0.76,0.85,0.64,0.74,0.84,0,0,0.44,0.54,0.46,0,0.31,-1,0.49,0.63,0.12,0.24,0,0.64,0.02,0.42,0,0.69,0.39,0.38,0.38,0.71,0.32,0.59,0,0.32,0.23,0.45,0.37,0,0.46,0"
+        },
+        "only_doc_membership": {
+          "group": "single_channel",
+          "ablated_channel": "all_except_doc_membership",
+          "enabled_channels": [
+            "doc_membership"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.02789,
+            "ci95_low": -0.00333,
+            "ci95_high": 0.0591,
+            "ci95_half_width": 0.03122,
+            "accuracy": 0.03333,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 0.96667,
+            "correct_count": 3,
+            "wrong_count": 0,
+            "abstain_count": 87,
+            "mean_final_day": 16.0,
+            "mean_accuse_day_when_accused": 4.0,
+            "total_tool_calls": 9627,
+            "mean_tool_calls": 106.9667,
+            "mean_canaries_planted": 20.6667,
+            "mean_interviews": 0.0,
+            "canary_call_share": 0.19321,
+            "interview_call_share": 0.0,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0xb8d913905b9e3e5d"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.63533,
+            "ci95_low": -0.69622,
+            "ci95_high": -0.57445,
+            "ci95_half_width": 0.06089,
+            "voi_drop": 0.63533,
+            "voi_share_of_full": 0.95794,
+            "better_count": 1,
+            "tied_count": 5,
+            "worse_count": 84
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.08367,
+              "ci95_low": -0.00773,
+              "ci95_high": 0.17506,
+              "accuracy": 0.1,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 0.9
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0.87,0,0,0,0,0,0,0,0,0,0.82,0,0,0,0,0,0,0,0,0,0,0.82,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+        },
+        "only_access_logs": {
+          "group": "single_channel",
+          "ablated_channel": "all_except_access_logs",
+          "enabled_channels": [
+            "access_logs"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "accuracy": 0.0,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 1.0,
+            "correct_count": 0,
+            "wrong_count": 0,
+            "abstain_count": 90,
+            "mean_final_day": 16.3333,
+            "mean_accuse_day_when_accused": 0.0,
+            "total_tool_calls": 9810,
+            "mean_tool_calls": 109.0,
+            "mean_canaries_planted": 21.0,
+            "mean_interviews": 0.0,
+            "canary_call_share": 0.19266,
+            "interview_call_share": 0.0,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0xa3c7bea002384f3d"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.66322,
+            "ci95_low": -0.71937,
+            "ci95_high": -0.60708,
+            "ci95_half_width": 0.05614,
+            "voi_drop": 0.66322,
+            "voi_share_of_full": 1.0,
+            "better_count": 1,
+            "tied_count": 2,
+            "worse_count": 87
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+        },
+        "only_angry_messages": {
+          "group": "single_channel",
+          "ablated_channel": "all_except_angry_messages",
+          "enabled_channels": [
+            "angry_messages"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "accuracy": 0.0,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 1.0,
+            "correct_count": 0,
+            "wrong_count": 0,
+            "abstain_count": 90,
+            "mean_final_day": 16.3333,
+            "mean_accuse_day_when_accused": 0.0,
+            "total_tool_calls": 9752,
+            "mean_tool_calls": 108.3556,
+            "mean_canaries_planted": 21.0,
+            "mean_interviews": 0.0,
+            "canary_call_share": 0.19381,
+            "interview_call_share": 0.0,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0xbafbfaaeb9dd4009"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.66322,
+            "ci95_low": -0.71937,
+            "ci95_high": -0.60708,
+            "ci95_half_width": 0.05614,
+            "voi_drop": 0.66322,
+            "voi_share_of_full": 1.0,
+            "better_count": 1,
+            "tied_count": 2,
+            "worse_count": 87
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+        },
+        "only_interviews": {
+          "group": "single_channel",
+          "ablated_channel": "all_except_interviews",
+          "enabled_channels": [
+            "interviews"
+          ],
+          "interview_heavy": false,
+          "overall": {
+            "n": 90,
+            "mean_score": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "accuracy": 0.0,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 1.0,
+            "correct_count": 0,
+            "wrong_count": 0,
+            "abstain_count": 90,
+            "mean_final_day": 16.3333,
+            "mean_accuse_day_when_accused": 0.0,
+            "total_tool_calls": 9810,
+            "mean_tool_calls": 109.0,
+            "mean_canaries_planted": 21.0,
+            "mean_interviews": 0.0,
+            "canary_call_share": 0.19266,
+            "interview_call_share": 0.0,
+            "replay_verified_count": 0,
+            "trace_set_sha16": "0x3de061b0745d3cca"
+          },
+          "paired_vs_full": {
+            "mean_delta": -0.66322,
+            "ci95_low": -0.71937,
+            "ci95_high": -0.60708,
+            "ci95_half_width": 0.05614,
+            "voi_drop": 0.66322,
+            "voi_share_of_full": 1.0,
+            "better_count": 1,
+            "tied_count": 2,
+            "worse_count": 87
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "ci95_low": 0.0,
+              "ci95_high": 0.0,
+              "accuracy": 0.0,
+              "wrong_accuse_rate": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+        }
+      }
+    }
+  }
+}

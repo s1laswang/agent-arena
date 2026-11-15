@@ -1,6 +1,6 @@
 # Canary Tiebreaker Judge Index (`v1.4`)
 
-Single-page map of all Canary tiebreak reports, committed JSON artifacts, policy tracks, seed/secret provenance disclosures, and offline verification gates (`0` API calls).
+Single-page map of all Canary tiebreak reports, committed JSON artifacts, policy tracks, seed/secret provenance disclosures, and `13/13` offline core verification gates (`0` API calls).
 
 ```bash
 python scripts/reproduce_tiebreak_all.py --check
@@ -47,7 +47,7 @@ Per `README.md` and `docs/agents/PANEL-0500.md` (`Fix A` and `Fix E`), open-weig
 
 | Deliverable / Focus | Markdown Report | Backing JSON Artifact | Code / Policy Module | One-Line Offline Check |
 |---|---|---|---|---|
-| Unified All-Gate Runner | `docs/reports/TIEBREAK_INDEX.md` | all `results/tiebreak/**/*.json` | `scripts/reproduce_tiebreak_all.py` | `python scripts/reproduce_tiebreak_all.py --check` |
+| Unified All-Gate Runner (`13/13` Core Gates) | `docs/reports/TIEBREAK_INDEX.md` | all `results/tiebreak/**/*.json` | `scripts/reproduce_tiebreak_all.py` | `python scripts/reproduce_tiebreak_all.py --check` |
 | Submission Provenance & AST Gate | `docs/reports/tiebreak_small_model.md` | `results/tiebreak/experiment_ledger.json` | `scripts/verify_tiebreak_submission.py` | `python scripts/verify_tiebreak_submission.py --strict` |
 | Complete 19-Run Ledger & Manifests | `docs/reports/tiebreak_small_model.md` | `results/tiebreak/experiment_ledger.json` | `scripts/tiebreak_experiment_ledger.py` | `python scripts/tiebreak_experiment_ledger.py --check` |
 | Panel Fix E 5-Gate Readiness Pack | `docs/reports/tiebreak_panel_e_addendum.md` | `results/tiebreak/addendum_readiness.json` | `scripts/tiebreak_addendum_pack.py` | `python scripts/tiebreak_addendum_pack.py --check` |
@@ -58,6 +58,12 @@ Per `README.md` and `docs/agents/PANEL-0500.md` (`Fix A` and `Fix E`), open-weig
 | Prior J4 / WS4 / Verda Forensics | `results/tiebreak/forensics_prior_runs.md` | `results/tiebreak/forensics_prior_runs.json` | `scripts/tiebreak_forensics.py` | `python scripts/tiebreak_forensics.py --verify-json results/tiebreak/forensics_prior_runs.json --verify-md results/tiebreak/forensics_prior_runs.md` |
 | Sample-Efficiency Scaling & Taxonomy | `results/tiebreak/scaling/table.md` | `results/tiebreak/scaling/scaling_summary.json` | `scripts/tiebreak_scaling_calibration.py` | `python scripts/reproduce_tiebreak_all.py --only tiebreak_scaling_calibration` |
 | TinyMLP 2-Layer Neural DAgger (`n=180`) | `docs/reports/tiebreak_neural_mlp_dagger.md` | `results/tiebreak/neural_mlp_dagger/mlp_summary.json` | `train/neural_mlp_tiebreak.py` | `python -m train.neural_mlp_tiebreak --check` |
+| Delayed-Leak & Hard Fingerprint-Noise Audit (`n=90`) | `docs/reports/tiebreak_delayed_leak_noise.md` | `results/tiebreak/delayed_leak_noise/noise_audit_summary.json` | `scripts/tiebreak_delayed_leak_noise_audit.py` | `python scripts/tiebreak_delayed_leak_noise_audit.py --check` |
+| Raw-8k vs Structured DAgger Mechanism & Cap Audit | `docs/reports/tiebreak_dagger_mechanism.md` | `results/tiebreak/dagger_mechanism/dagger_mechanism_summary.json` | `scripts/tiebreak_dagger_mechanism_audit.py` | `python scripts/tiebreak_dagger_mechanism_audit.py --check` |
+| 19-Run Open-Weight Failure Taxonomy Matrix | `docs/reports/tiebreak_failure_taxonomy.md` | `results/tiebreak/failure_taxonomy/failure_taxonomy_matrix.json` | `scripts/tiebreak_failure_taxonomy_matrix.py` | `python scripts/tiebreak_failure_taxonomy_matrix.py --check` |
+| Working-Memory & Header Token-Tax Audit (`45` TRAIN) | `docs/reports/tiebreak_working_memory.md` | `results/tiebreak/working_memory/working_memory_summary.json` | `scripts/tiebreak_working_memory_audit.py` | `python scripts/tiebreak_working_memory_audit.py --check` |
+| Standalone Offline HTML Dashboard & Manifest | `results/tiebreak/viewer/tiebreak_dashboard.html` | `results/tiebreak/viewer/viewer_manifest.json` | `scripts/build_tiebreak_viewer.py` | `python scripts/build_tiebreak_viewer.py --check` |
+| Unified Keyless Compact Policy Evaluation CLI | `docs/reports/TIEBREAK_INDEX.md` | `results/tiebreak/empirical_bayes/summary.json` | `scripts/run_tiebreak_policy.py` | `python scripts/run_tiebreak_policy.py --check` |
 | Compact Linear 4-Stage DAgger Ablation | `results/tiebreak/dagger_ablation/table.md` | `results/tiebreak/dagger_ablation/summary.json` | `train/compact_dagger_ablation.py` | `python -m pytest -q tests/test_compact_dagger_ablation.py` |
 | Empirical-Bayes Component Ablation (`n=180`) | `results/tiebreak/empirical_bayes/table.md` | `results/tiebreak/empirical_bayes/summary.json` | `train/empirical_bayes_policy.py` | `python -m pytest -q tests/test_compact_tiebreak.py` |
 | Compact Qwen2.5-0.5B/1.5B SFT+DPO+DAgger | `docs/reports/tiebreak_small_model.md` | `results/tiebreak/qwen05b_compact_dagger/export_manifest.json` | `train/compact_lora_sft.py` | `python -m pytest -q tests/test_compact_lora_sft.py` |
@@ -69,5 +75,6 @@ python scripts/reproduce_tiebreak_all.py --check
 python scripts/reproduce_tiebreak_all.py --full
 python scripts/reproduce_tiebreak_all.py --json
 python scripts/verify_tiebreak_submission.py --strict
+python scripts/run_tiebreak_policy.py --check
 python -m pytest -q tests/test_reproduce_tiebreak_all.py
 ```

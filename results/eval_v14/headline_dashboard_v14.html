@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canary v1.4 Headline Gap &amp; Judge Explorer</title>
+<style>
+:root {
+--bg: rgb(11, 15, 25);
+--panel: rgb(17, 24, 39);
+--panel-alt: rgb(30, 41, 59);
+--border: rgb(51, 65, 85);
+--text: rgb(241, 245, 249);
+--muted: rgb(148, 163, 184);
+--accent: rgb(56, 189, 248);
+--warn-bg: rgba(245, 158, 11, 0.12);
+--warn-border: rgb(245, 158, 11);
+--ok: rgb(74, 222, 128);
+--purple: rgb(167, 139, 250);
+}
+* { box-sizing: border-box; }
+body {
+margin: 0;
+padding: 20px;
+background: var(--bg);
+color: var(--text);
+font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+line-height: 1.45;
+font-size: 14px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; }
+header {
+display: flex;
+flex-wrap: wrap;
+justify-content: space-between;
+align-items: baseline;
+gap: 12px;
+border-bottom: 1px solid var(--border);
+padding-bottom: 12px;
+margin-bottom: 16px;
+}
+h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+h2 { margin: 0 0 10px 0; font-size: 16px; color: rgb(226, 232, 240); }
+h3 { margin: 0 0 6px 0; font-size: 14px; }
+.sub { color: var(--muted); font-size: 12.5px; }
+.disclosure-banner {
+background: var(--warn-bg);
+border: 1.5px solid var(--warn-border);
+border-radius: 8px;
+padding: 14px 16px;
+margin-bottom: 18px;
+}
+.disclosure-title {
+font-weight: 700;
+font-size: 14.5px;
+color: rgb(253, 224, 71);
+margin-bottom: 10px;
+}
+.disclosure-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+gap: 12px;
+}
+.disc-card {
+background: rgba(15, 23, 42, 0.85);
+border: 1px solid var(--border);
+border-radius: 6px;
+padding: 10px 12px;
+font-size: 12.8px;
+}
+.disc-card strong { color: rgb(248, 250, 252); }
+.controls {
+display: flex;
+flex-wrap: wrap;
+gap: 14px;
+align-items: center;
+background: var(--panel);
+border: 1px solid var(--border);
+border-radius: 8px;
+padding: 12px 14px;
+margin-bottom: 16px;
+}
+.ctrl-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ctrl-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-right: 4px; }
+button {
+background: var(--panel-alt);
+color: var(--text);
+border: 1px solid var(--border);
+border-radius: 5px;
+padding: 5px 10px;
+font-size: 12.5px;
+cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.active {
+background: rgb(3, 105, 161);
+border-color: var(--accent);
+font-weight: 600;
+}
+.btn-export { background: rgb(30, 58, 138); border-color: rgb(59, 130, 246); }
+.panel {
+background: var(--panel);
+border: 1px solid var(--border);
+border-radius: 8px;
+padding: 14px 16px;
+margin-bottom: 16px;
+}
+.grid-2 {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+gap: 16px;
+margin-bottom: 16px;
+}
+svg { width: 100%; height: auto; display: block; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th, td {
+padding: 7px 8px;
+border-bottom: 1px solid rgb(30, 41, 59);
+text-align: left;
+vertical-align: top;
+}
+th {
+background: rgb(15, 23, 42);
+color: rgb(203, 213, 225);
+font-weight: 600;
+position: sticky;
+top: 0;
+}
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lbl-cell { min-width: 240px; }
+.muted { color: var(--muted); font-size: 11.5px; }
+.pill {
+display: inline-block;
+padding: 1px 7px;
+border-radius: 999px;
+font-size: 11px;
+font-weight: 600;
+}
+.pill-hard { background: rgba(239, 68, 68, 0.2); color: rgb(252, 165, 165); }
+.pill-medium { background: rgba(56, 189, 248, 0.2); color: rgb(125, 211, 252); }
+.active-metric { background: rgba(56, 189, 248, 0.10); font-weight: 600; }
+details summary { cursor: pointer; font-weight: 600; color: var(--accent); padding: 6px 0; }
+code {
+font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+font-size: 12px;
+background: rgba(15, 23, 42, 0.9);
+padding: 1px 4px;
+border-radius: 3px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div>
+<h1>Canary v1.4 Paired Headline Gap &amp; Judge Explorer</h1>
+<div class="sub">100% Replay-Verified Offline Artifact | Paired Seeds 0-29 (n=30/tier) | 10,000 Paired Bootstrap Resamples | Zero External Assets</div>
+</div>
+<div class="sub">Reproduce: <code>python scripts/build_eval_dashboard_v14.py --check</code></div>
+</header>
+
+<section class="disclosure-banner" id="honest-disclosure-banner" aria-label="Honest Scope and Provenance Disclosure">
+<div class="disclosure-title">Prominent Honest Scope &amp; Provenance Disclosure (Read First)</div>
+<div class="disclosure-grid">
+<div class="disc-card">
+<strong>(1) MCP-Only gemini-4-carbon Primary Set (Not Pre-Registered):</strong><br>
+On v1.4 <code>hard</code> (13 MCP tools only, bash/python3 denied), OpenCode + <code>gemini-4-carbon</code> scores
+<strong>65% [24%, 98%]</strong> raw
+(<code>+0.322 +/- 0.199</code> vs solver <code>+0.499</code>)
+and <strong>72% [52%, 91%]</strong> luck-adjusted
+(<code>n=30</code>, paired Wilcoxon <code>p=0.0221</code>).
+Dev seeds <code>0-29</code> were <strong>post-hoc locked</strong> at commit <code>671ed96</code> (28 s after <code>8fd4dec</code>; lock against later reruns/cherry-picking, NOT pre-registered).
+Medium MCP: <code>111% [99%, 127%]</code> raw /
+<code>101% [85%, 119%]</code> LA.
+</div>
+<div class="disc-card">
+<strong>(2) Harbor 3x10 Container Judge-Path Rehearsal -- Gap Did NOT Reproduce:</strong><br>
+On tag <code>afterquery-final (1bc3e281)</code> (commits <code>aa1c679e</code> / <code>5f9b3297</code>, 10 hard judge tasks, 28/29 valid accusations correct):
+<code>opencode-1</code> <strong>+0.472</strong> (<strong>93% [20%, 371%]</strong>, n=10),
+<code>opencode-2</code> <strong>+0.585</strong> (<strong>116% [78%, 363%]</strong>, n=10),
+<code>opencode-3</code> <strong>+0.626</strong> (<strong>131% [86%, 590%]</strong> on <code>n=9</code> valid, 1 infra-excluded)
+vs oracle <strong>+0.506</strong> (<code>do_nothing</code>/<code>stop_early</code> <code>+0.000</code>, <code>0%</code>).
+Container shell was used in <strong>20/28</strong> trials -- <strong>the gap did NOT reproduce in the judge path</strong>.
+</div>
+<div class="disc-card">
+<strong>(3) Pre-Registered Second Family gpt-5.5 MCP -- Matches Solver (No Gap):</strong><br>
+Pre-registered at <code>cf394894</code> / committed <code>ca0a0dc0</code> (same 13 MCP tools, seeds <code>0-29</code>, <code>n=30</code>, 0 infra failures):
+<code>opencode:openai/gpt-5.5</code> scores <strong>+0.504 +/- 0.064</strong>,
+<strong>101% [79%, 140%]</strong> raw,
+<strong>84% [67%, 103%]</strong> LA
+(28/28 accused correct; seeds 0 and 17 wrote text without calling <code>accuse</code>, scored <code>0.0</code>).
+Plants <strong>17.2</strong> canaries vs <strong>8.5</strong> for carbon (4.1 vs 68.0 interviews).
+</div>
+</div>
+</section>
+
+<section class="controls" aria-label="Interactive Dashboard Controls">
+<div class="ctrl-group" id="tier-controls">
+<span class="ctrl-label">Tier Filter:</span>
+<button type="button" class="active" data-tier="hard">hard</button>
+<button type="button" data-tier="medium">medium</button>
+<button type="button" data-tier="all">all</button>
+</div>
+<div class="ctrl-group" id="metric-controls">
+<span class="ctrl-label">Metric Toggle:</span>
+<button type="button" class="active" data-metric="raw">Raw % Solver</button>
+<button type="button" data-metric="la">Luck-Adjusted % Solver</button>
+<button type="button" data-metric="win">Winnable %</button>
+<button type="button" data-metric="p3">Calibrated pass^3</button>
+</div>
+<div class="ctrl-group" id="sec-controls">
+<span class="ctrl-label">Scope:</span>
+<button type="button" class="active" data-sec="A">Primary n=30 (Sec A)</button>
+<button type="button" data-sec="AB1">+ n&gt;=30 Ladder/Rep (A+B1)</button>
+</div>
+<div class="ctrl-group">
+<button type="button" class="btn-export" id="export-csv-btn">Export CSV</button>
+<button type="button" class="btn-export" id="export-json-btn">Export JSON</button>
+</div>
+</section>
+
+<section class="panel">
+<h2>95% Paired Bootstrap CI Forest Plot (100% = Reference Solver Parity, 0% = Abstain Baseline)</h2>
+<div id="forest-container">
+<svg id="forest-svg" viewBox="0 0 860 414" role="img" aria-label="Paired 95% CI Forest Plot">
+<rect x="0" y="0" width="860" height="414" fill="rgb(15, 23, 42)" rx="6"/>
+<text x="14" y="24" fill="rgb(226, 232, 240)" font-size="13" font-weight="700">Primary Paired 95% CI Forest Plot -- Tier: hard | Metric: Raw % Solver (n=30, 10,000 resamples)</text>
+<line x1="322.9" y1="36" x2="322.9" y2="388" stroke="rgb(51, 65, 85)" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="322.9" y="404" fill="rgb(148, 163, 184)" font-size="11" text-anchor="middle">-200%</text>
+<line x1="437.4" y1="36" x2="437.4" y2="388" stroke="rgb(51, 65, 85)" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="437.4" y="404" fill="rgb(148, 163, 184)" font-size="11" text-anchor="middle">-100%</text>
+<line x1="551.8" y1="36" x2="551.8" y2="388" stroke="rgb(148, 163, 184)" stroke-width="1" stroke-dasharray="4,4"/>
+<text x="551.8" y="404" fill="rgb(148, 163, 184)" font-size="11" text-anchor="middle">0%</text>
+<line x1="609.1" y1="36" x2="609.1" y2="388" stroke="rgb(51, 65, 85)" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="609.1" y="404" fill="rgb(148, 163, 184)" font-size="11" text-anchor="middle">50%</text>
+<line x1="666.3" y1="36" x2="666.3" y2="388" stroke="rgb(34, 197, 94)" stroke-width="1" stroke-dasharray="5,3"/>
+<text x="666.3" y="404" fill="rgb(148, 163, 184)" font-size="11" text-anchor="middle">100%</text>
+<line x1="723.6" y1="36" x2="723.6" y2="388" stroke="rgb(51, 65, 85)" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="723.6" y="404" fill="rgb(148, 163, 184)" font-size="11" text-anchor="middle">150%</text>
+<text x="290" y="58" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">OpenCode + gemini-4-carbon over MCP (ju...</text>
+<line x1="579.1" y1="54" x2="664.4" y2="54" stroke="rgb(56, 189, 248)" stroke-width="2.2"/>
+<line x1="579.1" y1="50" x2="579.1" y2="58" stroke="rgb(56, 189, 248)" stroke-width="1.6"/>
+<line x1="664.4" y1="50" x2="664.4" y2="58" stroke="rgb(56, 189, 248)" stroke-width="1.6"/>
+<circle cx="625.8" cy="54" r="4.2" fill="rgb(56, 189, 248)"/>
+<text x="745" y="58" fill="rgb(226, 232, 240)" font-size="11">65% [24%, 98%]</text>
+<text x="290" y="84" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">OpenCode + gemini-4-carbon over MCP (0-...</text>
+<line x1="573.5" y1="80" x2="651.0" y2="80" stroke="rgb(251, 191, 36)" stroke-width="2.2"/>
+<line x1="573.5" y1="76" x2="573.5" y2="84" stroke="rgb(251, 191, 36)" stroke-width="1.6"/>
+<line x1="651.0" y1="76" x2="651.0" y2="84" stroke="rgb(251, 191, 36)" stroke-width="1.6"/>
+<circle cx="615.8" cy="80" r="4.2" fill="rgb(251, 191, 36)"/>
+<text x="745" y="84" fill="rgb(226, 232, 240)" font-size="11">56% [19%, 87%]</text>
+<text x="290" y="110" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">OpenCode + gemini-3.5-flash over MCP (s...</text>
+<line x1="592.9" y1="106" x2="692.5" y2="106" stroke="rgb(56, 189, 248)" stroke-width="2.2"/>
+<line x1="592.9" y1="102" x2="592.9" y2="110" stroke="rgb(56, 189, 248)" stroke-width="1.6"/>
+<line x1="692.5" y1="102" x2="692.5" y2="110" stroke="rgb(56, 189, 248)" stroke-width="1.6"/>
+<circle cx="637.4" cy="106" r="4.2" fill="rgb(56, 189, 248)"/>
+<text x="745" y="110" fill="rgb(226, 232, 240)" font-size="11">75% [36%, 123%]</text>
+<text x="290" y="136" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">in-process gemini-4-carbon (full histor...</text>
+<line x1="623.1" y1="132" x2="712.1" y2="132" stroke="rgb(56, 189, 248)" stroke-width="2.2"/>
+<line x1="623.1" y1="128" x2="623.1" y2="136" stroke="rgb(56, 189, 248)" stroke-width="1.6"/>
+<line x1="712.1" y1="128" x2="712.1" y2="136" stroke="rgb(56, 189, 248)" stroke-width="1.6"/>
+<circle cx="660.4" cy="132" r="4.2" fill="rgb(56, 189, 248)"/>
+<text x="745" y="136" fill="rgb(226, 232, 240)" font-size="11">95% [62%, 140%]</text>
+<text x="290" y="162" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">OpenCode + gpt-5.5 over MCP (judges&#x27; sh...</text>
+<line x1="641.8" y1="158" x2="712.4" y2="158" stroke="rgb(167, 139, 250)" stroke-width="2.2"/>
+<line x1="641.8" y1="154" x2="641.8" y2="162" stroke="rgb(167, 139, 250)" stroke-width="1.6"/>
+<line x1="712.4" y1="154" x2="712.4" y2="162" stroke="rgb(167, 139, 250)" stroke-width="1.6"/>
+<circle cx="667.4" cy="158" r="4.2" fill="rgb(167, 139, 250)"/>
+<text x="745" y="162" fill="rgb(226, 232, 240)" font-size="11">101% [79%, 140%]</text>
+<text x="290" y="188" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">reference solver</text>
+<circle cx="666.3" cy="184" r="4.2" fill="rgb(74, 222, 128)"/>
+<text x="745" y="188" fill="rgb(226, 232, 240)" font-size="11">100%</text>
+<text x="290" y="214" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">grok_tactics</text>
+<line x1="628.4" y1="210" x2="688.4" y2="210" stroke="rgb(148, 163, 184)" stroke-width="2.2"/>
+<line x1="628.4" y1="206" x2="628.4" y2="214" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<line x1="688.4" y1="206" x2="688.4" y2="214" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<circle cx="650.9" cy="210" r="4.2" fill="rgb(148, 163, 184)"/>
+<text x="745" y="214" fill="rgb(226, 232, 240)" font-size="11">87% [67%, 119%]</text>
+<text x="290" y="240" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">heuristic</text>
+<line x1="522.3" y1="236" x2="620.2" y2="236" stroke="rgb(148, 163, 184)" stroke-width="2.2"/>
+<line x1="522.3" y1="232" x2="522.3" y2="240" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<line x1="620.2" y1="232" x2="620.2" y2="240" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<circle cx="571.5" cy="236" r="4.2" fill="rgb(148, 163, 184)"/>
+<text x="745" y="240" fill="rgb(226, 232, 240)" font-size="11">17% [-26%, 60%]</text>
+<text x="290" y="266" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">logs_only</text>
+<line x1="300.0" y1="262" x2="360.6" y2="262" stroke="rgb(148, 163, 184)" stroke-width="2.2"/>
+<line x1="300.0" y1="258" x2="300.0" y2="266" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<line x1="360.6" y1="258" x2="360.6" y2="266" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<circle cx="322.4" cy="262" r="4.2" fill="rgb(148, 163, 184)"/>
+<text x="745" y="266" fill="rgb(226, 232, 240)" font-size="11">-200% [-271%, -167%]</text>
+<text x="290" y="292" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">random</text>
+<line x1="300.0" y1="288" x2="399.0" y2="288" stroke="rgb(148, 163, 184)" stroke-width="2.2"/>
+<line x1="300.0" y1="284" x2="300.0" y2="292" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<line x1="399.0" y1="284" x2="399.0" y2="292" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<circle cx="353.0" cy="288" r="4.2" fill="rgb(148, 163, 184)"/>
+<text x="745" y="292" fill="rgb(226, 232, 240)" font-size="11">-174% [-242%, -134%]</text>
+<text x="290" y="318" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">guess_day1</text>
+<line x1="300.0" y1="314" x2="360.6" y2="314" stroke="rgb(148, 163, 184)" stroke-width="2.2"/>
+<line x1="300.0" y1="310" x2="300.0" y2="318" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<line x1="360.6" y1="310" x2="360.6" y2="318" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<circle cx="322.4" cy="314" r="4.2" fill="rgb(148, 163, 184)"/>
+<text x="745" y="318" fill="rgb(226, 232, 240)" font-size="11">-200% [-271%, -167%]</text>
+<text x="290" y="344" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">stop_early</text>
+<line x1="551.8" y1="340" x2="551.8" y2="340" stroke="rgb(148, 163, 184)" stroke-width="2.2"/>
+<line x1="551.8" y1="336" x2="551.8" y2="344" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<line x1="551.8" y1="336" x2="551.8" y2="344" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<circle cx="551.8" cy="340" r="4.2" fill="rgb(148, 163, 184)"/>
+<text x="745" y="344" fill="rgb(226, 232, 240)" font-size="11">0% [0%, 0%]</text>
+<text x="290" y="370" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">do_nothing</text>
+<line x1="551.8" y1="366" x2="551.8" y2="366" stroke="rgb(148, 163, 184)" stroke-width="2.2"/>
+<line x1="551.8" y1="362" x2="551.8" y2="370" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<line x1="551.8" y1="362" x2="551.8" y2="370" stroke="rgb(148, 163, 184)" stroke-width="1.6"/>
+<circle cx="551.8" cy="366" r="4.2" fill="rgb(148, 163, 184)"/>
+<text x="745" y="370" fill="rgb(226, 232, 240)" font-size="11">0% [0%, 0%]</text>
+</svg>
+</div>
+</section>
+
+<section class="panel">
+<h2>Exact Counterfactual Loss Breakdown (Solver Score Minus Agent Score, Zero-Residual Identity)</h2>
+<div id="cf-container">
+<svg id="cf-svg" viewBox="0 0 860 242" role="img" aria-label="Counterfactual Gap Decomposition Bars">
+<rect x="0" y="0" width="860" height="242" fill="rgb(15, 23, 42)" rx="6"/>
+<text x="14" y="22" fill="rgb(226, 232, 240)" font-size="13" font-weight="700">Exact 5-Term Counterfactual Loss Decomposition (solver_score - agent_score, positive = agent loss)</text>
+<rect x="14" y="30" width="10" height="10" fill="rgb(248, 113, 113)" rx="2"/>
+<text x="28" y="39" fill="rgb(203, 213, 225)" font-size="10.5">Calibrated Wrong-Accuse</text>
+<rect x="176" y="30" width="10" height="10" fill="rgb(251, 191, 36)" rx="2"/>
+<text x="190" y="39" fill="rgb(203, 213, 225)" font-size="10.5">Missed-Catch Info Gap</text>
+<rect x="338" y="30" width="10" height="10" fill="rgb(251, 146, 60)" rx="2"/>
+<text x="352" y="39" fill="rgb(203, 213, 225)" font-size="10.5">EV Abstain Rescue</text>
+<rect x="500" y="30" width="10" height="10" fill="rgb(56, 189, 248)" rx="2"/>
+<text x="514" y="39" fill="rgb(203, 213, 225)" font-size="10.5">Timing &amp; Cost Bleed</text>
+<rect x="662" y="30" width="10" height="10" fill="rgb(74, 222, 128)" rx="2"/>
+<text x="676" y="39" fill="rgb(203, 213, 225)" font-size="10.5">Solver-Miss Offset</text>
+<line x1="340.0" y1="46" x2="340.0" y2="218" stroke="rgb(51, 65, 85)" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="340.0" y="233" fill="rgb(148, 163, 184)" font-size="10.5" text-anchor="middle">-0.10</text>
+<line x1="385.0" y1="46" x2="385.0" y2="218" stroke="rgb(51, 65, 85)" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="385.0" y="233" fill="rgb(148, 163, 184)" font-size="10.5" text-anchor="middle">-0.05</text>
+<line x1="430.0" y1="46" x2="430.0" y2="218" stroke="rgb(148, 163, 184)" stroke-width="1"/>
+<text x="430.0" y="233" fill="rgb(148, 163, 184)" font-size="10.5" text-anchor="middle">+0.00</text>
+<line x1="475.0" y1="46" x2="475.0" y2="218" stroke="rgb(51, 65, 85)" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="475.0" y="233" fill="rgb(148, 163, 184)" font-size="10.5" text-anchor="middle">+0.05</text>
+<line x1="520.0" y1="46" x2="520.0" y2="218" stroke="rgb(51, 65, 85)" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="520.0" y="233" fill="rgb(148, 163, 184)" font-size="10.5" text-anchor="middle">+0.10</text>
+<line x1="565.0" y1="46" x2="565.0" y2="218" stroke="rgb(51, 65, 85)" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="565.0" y="233" fill="rgb(148, 163, 184)" font-size="10.5" text-anchor="middle">+0.15</text>
+<line x1="610.0" y1="46" x2="610.0" y2="218" stroke="rgb(51, 65, 85)" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="610.0" y="233" fill="rgb(148, 163, 184)" font-size="10.5" text-anchor="middle">+0.20</text>
+<text x="233" y="68" fill="rgb(226, 232, 240)" font-size="11.5" text-anchor="end">opencode-gemini-4-carbon (hard)</text>
+<rect x="430.0" y="56" width="101.4" height="16" fill="rgb(248, 113, 113)" rx="1.5"/>
+<rect x="531.4" y="56" width="34.2" height="16" fill="rgb(251, 191, 36)" rx="1.5"/>
+<rect x="565.6" y="56" width="30.0" height="16" fill="rgb(251, 146, 60)" rx="1.5"/>
+<rect x="423.4" y="56" width="6.6" height="16" fill="rgb(56, 189, 248)" rx="1.5"/>
+<text x="640" y="68" fill="rgb(226, 232, 240)" font-size="11">gap +0.177 [+0.003, +0.383]</text>
+<text x="233" y="108" fill="rgb(226, 232, 240)" font-size="11.5" text-anchor="end">inproc-gemini-4-carbon (hard)</text>
+<rect x="430.0" y="96" width="42.0" height="16" fill="rgb(251, 191, 36)" rx="1.5"/>
+<rect x="472.0" y="96" width="30.0" height="16" fill="rgb(251, 146, 60)" rx="1.5"/>
+<rect x="502.0" y="96" width="0.9" height="16" fill="rgb(56, 189, 248)" rx="1.5"/>
+<rect x="380.5" y="96" width="49.5" height="16" fill="rgb(74, 222, 128)" rx="1.5"/>
+<text x="640" y="108" fill="rgb(226, 232, 240)" font-size="11">gap +0.026 [-0.154, +0.210]</text>
+<text x="233" y="148" fill="rgb(226, 232, 240)" font-size="11.5" text-anchor="end">opencode-gemini-3.5-flash (hard)</text>
+<rect x="430.0" y="136" width="48.9" height="16" fill="rgb(251, 191, 36)" rx="1.5"/>
+<rect x="478.9" y="136" width="90.0" height="16" fill="rgb(251, 146, 60)" rx="1.5"/>
+<rect x="568.9" y="136" width="25.2" height="16" fill="rgb(56, 189, 248)" rx="1.5"/>
+<rect x="379.3" y="136" width="50.7" height="16" fill="rgb(74, 222, 128)" rx="1.5"/>
+<text x="640" y="148" fill="rgb(226, 232, 240)" font-size="11">gap +0.126 [-0.092, +0.348]</text>
+<text x="233" y="188" fill="rgb(226, 232, 240)" font-size="11.5" text-anchor="end">opencode-gpt-5.5 (hard)</text>
+<rect x="430.0" y="176" width="42.3" height="16" fill="rgb(251, 191, 36)" rx="1.5"/>
+<rect x="472.3" y="176" width="0.6" height="16" fill="rgb(56, 189, 248)" rx="1.5"/>
+<rect x="382.9" y="176" width="47.1" height="16" fill="rgb(74, 222, 128)" rx="1.5"/>
+<text x="640" y="188" fill="rgb(226, 232, 240)" font-size="11">gap -0.005 [-0.153, +0.120]</text>
+</svg>
+</div>
+</section>
+
+<div class="grid-2">
+<section class="panel">
+<h2>2x2 Harness x Tier Crossover (gemini-4-carbon, Paired Seeds 0-29)</h2>
+<table>
+<thead>
+<tr>
+<th>Cell / Contrast</th>
+<th class="num">Medium (n=30)</th>
+<th class="num">Hard (n=30)</th>
+<th class="num">Tier Drop (Hard - Med)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>OpenCode MCP (Raw / LA)</strong></td>
+<td class="num">+0.713 / +0.652</td>
+<td class="num">+0.322 / +0.360</td>
+<td class="num">-0.391 / -0.292</td>
+</tr>
+<tr>
+<td><strong>In-Process (Raw / LA)</strong></td>
+<td class="num">+0.530 / +0.479</td>
+<td class="num">+0.473 / +0.421</td>
+<td class="num">-0.057 / -0.058</td>
+</tr>
+<tr>
+<td><strong>Reference Solver</strong></td>
+<td class="num">+0.645 / +0.645</td>
+<td class="num">+0.499 / +0.499</td>
+<td class="num">-0.146 / -0.146</td>
+</tr>
+<tr>
+<td><strong>Harness Contrast (OC - IP) Raw</strong></td>
+<td class="num">+0.183 [+0.059, +0.341] (p=0.0002)</td>
+<td class="num">-0.151 [-0.382, +0.070] (p=0.1824)</td>
+<td class="num"><strong>DiD -0.333</strong> [-0.659, -0.046] (p=0.0224)</td>
+</tr>
+<tr>
+<td><strong>Harness Contrast (OC - IP) LA</strong></td>
+<td class="num">+0.173 [+0.034, +0.322] (p=0.0108)</td>
+<td class="num">-0.061 [-0.202, +0.077] (p=0.3870)</td>
+<td class="num"><strong>DiD -0.234</strong> [-0.461, -0.017] (p=0.0350)</td>
+</tr>
+</tbody>
+</table>
+<p class="muted" style="margin:8px 0 0 0;">
+Hard behavioral comparison (n=30): OpenCode carbon plants <strong>8.5</strong> canaries (68.0 interviews, 4 wrong accusations);
+In-Process carbon plants <strong>8.6</strong> canaries (57.3 interviews, 1 wrong);
+OpenCode <code>gpt-5.5</code> plants <strong>17.2</strong> canaries (4.1 interviews, 0 wrong);
+Reference Solver plants <strong>14.1</strong> canaries (0.0 interviews, 1 wrong).
+</p>
+</section>
+
+<section class="panel">
+<h2>Judge Rerun Operating Characteristics (k=10 Hard Tasks, 1x10 vs 3x10 &amp; pass^3)</h2>
+<table>
+<thead>
+<tr>
+<th>Hard Cohort (n=30)</th>
+<th class="num">1-Run Acc</th>
+<th class="num">Calibrated pass^1</th>
+<th class="num">Calibrated pass^3 [95% CI]</th>
+<th class="num">Gamble (&lt;0.60) Worlds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Reference Solver</strong></td>
+<td class="num">96.7%</td>
+<td class="num">96.5%</td>
+<td class="num">90.3% [86.7%, 93.5%]</td>
+<td class="num">0</td>
+</tr>
+<tr>
+<td><strong>In-Process gemini-4-carbon</strong></td>
+<td class="num">93.3%</td>
+<td class="num">89.9%</td>
+<td class="num">80.4% [70.7%, 88.8%]</td>
+<td class="num">1</td>
+</tr>
+<tr>
+<td><strong>OpenCode gpt-5.5 (MCP)</strong></td>
+<td class="num">93.3%</td>
+<td class="num">87.7%</td>
+<td class="num">79.3%</td>
+<td class="num">0</td>
+</tr>
+<tr>
+<td><strong>OpenCode gemini-4-carbon (MCP)</strong></td>
+<td class="num">83.3%</td>
+<td class="num">85.2%</td>
+<td class="num">71.4% [60.2%, 81.9%]</td>
+<td class="num">2</td>
+</tr>
+<tr>
+<td><strong>OpenCode gemini-3.5-flash (MCP)</strong></td>
+<td class="num">90.0%</td>
+<td class="num">71.0%</td>
+<td class="num">60.1% [44.6%, 75.0%]</td>
+<td class="num">10</td>
+</tr>
+</tbody>
+</table>
+<p class="muted" style="margin:8px 0 0 0;">
+OpenCode carbon k=10 resampling (50,000 trials): Model A paired empirical <code>P(frontier &lt; oracle)</code> rises from
+<strong>85.1%</strong> (1x10 raw) to
+<strong>97.8%</strong> (3x10 raw) and
+<strong>99.8%</strong> (3x10 LA).
+Model B fixed-build posterior variance reduction from Rao-Blackwell luck adjustment is
+<strong>4.22x</strong> at 1x10 (effective n=42.2).
+</p>
+</section>
+</div>
+
+<section class="panel">
+<h2>Paired Headline Table (Section A Primary n=30 &amp; Section B1 n&gt;=30)</h2>
+<div style="overflow-x:auto;">
+<table id="headline-table">
+<thead>
+<tr>
+<th>Tier</th>
+<th>Sec</th>
+<th>Cohort / Harness &amp; Provenance</th>
+<th class="num">n</th>
+<th class="num">Mean +/- CI</th>
+<th class="num">Solver</th>
+<th class="num th-metric th-raw active-metric">Raw % Solver [95% CI]</th>
+<th class="num th-metric th-la">Luck-Adj % Solver [95% CI]</th>
+<th class="num th-metric th-win">Winnable % [95% CI]</th>
+<th class="num th-metric th-p3">Calibrated pass^3</th>
+<th class="num">Acc</th>
+<th class="num">False Acc</th>
+<th class="num">Abstain</th>
+</tr>
+</thead>
+<tbody id="headline-tbody">
+<tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>OpenCode + gemini-4-carbon over MCP (judges&#x27; shape)</strong><br><span class="muted">opencode:google/gemini-4-carbon | sha 035105e</span></td><td class="num">30</td><td class="num">+0.322 +/- 0.199</td><td class="num">+0.499</td><td class="num c-raw active-metric">65% [24%, 98%]</td><td class="num c-la">72% [52%, 91%]</td><td class="num c-win">67% [31%, 99%]</td><td class="num c-p3">71.4% [60.2%, 81.9%]</td><td class="num">83.3%</td><td class="num">13.3%</td><td class="num">3.3%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>OpenCode + gemini-4-carbon over MCP (0-imputed empty_model_response sensitivity)</strong><br><span class="muted">opencode:google/gemini-4-carbon | sha 035105e</span></td><td class="num">30</td><td class="num">+0.279 +/- 0.180</td><td class="num">+0.499</td><td class="num c-raw active-metric">56% [19%, 87%]</td><td class="num c-la">55% [34%, 77%]</td><td class="num c-win">59% [27%, 88%]</td><td class="num c-p3">57.4%</td><td class="num">70.0%</td><td class="num">10.0%</td><td class="num">20.0%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>OpenCode + gemini-3.5-flash over MCP (served as gemini-3.6-flash)</strong><br><span class="muted">opencode:google/gemini-3.5-flash | sha 035105e</span></td><td class="num">30</td><td class="num">+0.373 +/- 0.177</td><td class="num">+0.499</td><td class="num c-raw active-metric">75% [36%, 123%]</td><td class="num c-la">22% [-23%, 63%]</td><td class="num c-win">66% [31%, 96%]</td><td class="num c-p3">60.1% [44.6%, 75.0%]</td><td class="num">90.0%</td><td class="num">10.0%</td><td class="num">0.0%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>in-process gemini-4-carbon (full history, thought-signature replay)</strong><br><span class="muted">gemini:gemini-4-carbon | sha 498bccd</span></td><td class="num">30</td><td class="num">+0.473 +/- 0.118</td><td class="num">+0.499</td><td class="num c-raw active-metric">95% [62%, 140%]</td><td class="num c-la">84% [65%, 106%]</td><td class="num c-win">85% [57%, 109%]</td><td class="num c-p3">80.4% [70.7%, 88.8%]</td><td class="num">93.3%</td><td class="num">3.3%</td><td class="num">3.3%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>OpenCode + gpt-5.5 over MCP (judges&#x27; shape, pre-registered cf394894)</strong><br><span class="muted">opencode:openai/gpt-5.5 | sha cf39489</span></td><td class="num">30</td><td class="num">+0.504 +/- 0.064</td><td class="num">+0.499</td><td class="num c-raw active-metric">101% [79%, 140%]</td><td class="num c-la">84% [67%, 103%]</td><td class="num c-win">91% [75%, 109%]</td><td class="num c-p3">79.3%</td><td class="num">93.3%</td><td class="num">0.0%</td><td class="num">6.7%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>reference solver</strong><br><span class="muted">solver | sha a54c896,e4b5634</span></td><td class="num">30</td><td class="num">+0.499 +/- 0.119</td><td class="num">+0.499</td><td class="num c-raw active-metric">100%</td><td class="num c-la">100%</td><td class="num c-win">100%</td><td class="num c-p3">90.3% [86.7%, 93.5%]</td><td class="num">96.7%</td><td class="num">3.3%</td><td class="num">0.0%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>grok_tactics</strong><br><span class="muted">grok_tactics | sha deterministic-v1.4</span></td><td class="num">30</td><td class="num">+0.432 +/- 0.085</td><td class="num">+0.499</td><td class="num c-raw active-metric">87% [67%, 119%]</td><td class="num c-la">77% [61%, 95%]</td><td class="num c-win">78% [63%, 94%]</td><td class="num c-p3">83.8%</td><td class="num">93.3%</td><td class="num">0.0%</td><td class="num">6.7%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>heuristic</strong><br><span class="muted">heuristic | sha a54c896</span></td><td class="num">30</td><td class="num">+0.086 +/- 0.204</td><td class="num">+0.499</td><td class="num c-raw active-metric">17% [-26%, 60%]</td><td class="num c-la">10% [-20%, 37%]</td><td class="num c-win">13% [-26%, 49%]</td><td class="num c-p3">60.6%</td><td class="num">80.0%</td><td class="num">20.0%</td><td class="num">0.0%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>logs_only</strong><br><span class="muted">logs_only | sha deterministic-v1.4</span></td><td class="num">30</td><td class="num">-1.000 +/- 0.000</td><td class="num">+0.499</td><td class="num c-raw active-metric">-200% [-271%, -167%]</td><td class="num c-la">-196% [-225%, -175%]</td><td class="num c-win">-182% [-206%, -163%]</td><td class="num c-p3">0.0%</td><td class="num">0.0%</td><td class="num">100.0%</td><td class="num">0.0%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>random</strong><br><span class="muted">random | sha a54c896</span></td><td class="num">30</td><td class="num">-0.867 +/- 0.124</td><td class="num">+0.499</td><td class="num c-raw active-metric">-174% [-242%, -134%]</td><td class="num c-la">-168% [-201%, -138%]</td><td class="num c-win">-157% [-186%, -129%]</td><td class="num c-p3">0.0%</td><td class="num">0.0%</td><td class="num">86.7%</td><td class="num">13.3%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>guess_day1</strong><br><span class="muted">guess_day1 | sha a54c896</span></td><td class="num">30</td><td class="num">-1.000 +/- 0.000</td><td class="num">+0.499</td><td class="num c-raw active-metric">-200% [-271%, -167%]</td><td class="num c-la">-190% [-218%, -169%]</td><td class="num c-win">-182% [-206%, -163%]</td><td class="num c-p3">0.0%</td><td class="num">0.0%</td><td class="num">100.0%</td><td class="num">0.0%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>stop_early</strong><br><span class="muted">stop_early | sha deterministic-v1.4</span></td><td class="num">30</td><td class="num">+0.000 +/- 0.000</td><td class="num">+0.499</td><td class="num c-raw active-metric">0% [0%, 0%]</td><td class="num c-la">0% [0%, 0%]</td><td class="num c-win">0% [0%, 0%]</td><td class="num c-p3">0.0%</td><td class="num">0.0%</td><td class="num">0.0%</td><td class="num">100.0%</td></tr><tr data-sec="A" data-tier="hard"><td><span class="pill pill-hard">hard</span></td><td>A</td><td class="lbl-cell"><strong>do_nothing</strong><br><span class="muted">do_nothing | sha a54c896</span></td><td class="num">30</td><td class="num">+0.000 +/- 0.000</td><td class="num">+0.499</td><td class="num c-raw active-metric">0% [0%, 0%]</td><td class="num c-la">0% [0%, 0%]</td><td class="num c-win">0% [0%, 0%]</td><td class="num c-p3">0.0%</td><td class="num">0.0%</td><td class="num">0.0%</td><td class="num">100.0%</td></tr>
+</tbody>
+</table>
+</div>
+<p class="muted" style="margin:10px 0 0 0;">
+Pre-registered G1 partial extension sensitivity (<code>f9fb7a4a</code>, stopped early for rehearsal quota; <code>n=2</code> valid seeds <code>[34, 37]</code>,
+31 provider-quota attempts excluded): extension-only <code>101%</code> raw /
+<code>109%</code> LA; pooled <code>n=32</code>:
+<strong>68% [32%, 100%]</strong> raw,
+<strong>75% [56%, 93%]</strong> LA.
+</p>
+</section>
+
+<section class="panel">
+<details>
+<summary>Section B2 Directional Multi-Model Thinking Ladder (n&lt;30, 39 cells -- directional context only, never headline)</summary>
+<div style="overflow-x:auto; margin-top:8px;">
+<table id="b2-table">
+<thead>
+<tr>
+<th>Tier</th>
+<th>Model &amp; Thinking Level</th>
+<th class="num">n</th>
+<th class="num">Mean +/- CI</th>
+<th class="num">Raw % Solver [95% CI]</th>
+<th class="num">Luck-Adj % Solver [95% CI]</th>
+<th class="num">Winnable % [95% CI]</th>
+<th class="num">Calibrated pass^3</th>
+</tr>
+</thead>
+<tbody id="b2-tbody">
+
+</tbody>
+</table>
+</div>
+</details>
+</section>
+</div>
+
+<script id="eval-v14-data" type="application/json">{"b2":[["medium","gemini-3.1-flash-lite @ minimal",10,-0.805,0.3822,-1.1027,-1.5314,-0.5348,-1.1558,-1.2989,-1.0537,-1.1027,-1.5314,-0.5348,0.0015],["medium","gemini-3.1-flash-lite @ low",10,-0.243,0.6058,-0.3329,-1.0961,0.4756,-0.6275,-1.1102,0.0538,-0.3329,-1.0961,0.4756,0.202],["medium","gemini-3.1-flash-lite @ medium",10,-0.656,0.4495,-0.8986,-1.3298,-0.2159,-1.2088,-1.3514,-1.0937,-0.8986,-1.3298,-0.2159,0.0014],["medium","gemini-3.1-flash-lite @ high",10,-0.64,0.4705,-0.8767,-1.2887,-0.1612,-0.9059,-1.0841,-0.7111,-0.8767,-1.2887,-0.1612,0.0137],["medium","gemini-3.6-flash (req. 3.5-flash) @ minimal",10,0.532,0.3396,0.7288,0.2205,1.0849,0.5102,0.0296,0.9492,0.7288,0.2205,1.0849,0.7173],["medium","gemini-3.6-flash (req. 3.5-flash) @ low",10,0.021,0.5468,0.0288,-0.6892,0.7347,0.0763,-0.4275,0.6118,0.0288,-0.6892,0.7347,0.4504],["medium","gemini-3.6-flash (req. 3.5-flash) @ medium",20,0.635,0.1767,0.8856,0.6013,1.0854,0.6321,0.2233,0.9649,0.8856,0.6013,1.0854,0.801],["medium","gemini-3.6-flash (req. 3.5-flash) @ high",20,0.538,0.2363,0.7503,0.3893,1.0374,0.5819,0.2165,0.9119,0.7503,0.3893,1.0374,0.7619],["medium","gemini-3.8-flash @ low",10,-0.012,0.5287,-0.0164,-0.7695,0.6236,0.0108,-0.393,0.4113,-0.0164,-0.7695,0.6236,0.3878],["medium","gemini-3.8-flash @ medium",10,0.473,0.326,0.6479,0.1793,0.9272,-0.0146,-0.5726,0.5022,0.6479,0.1793,0.9272,0.4364],["medium","gemini-3.8-flash @ high",20,0.496,0.2285,0.6918,0.334,0.9659,0.4569,0.1102,0.7731,0.6918,0.334,0.9659,0.6939],["medium","gemini-4-hydrogen @ low",13,0.5754,0.1844,0.7775,0.5085,1.0386,0.1679,-0.2699,0.6178,0.7775,0.5085,1.0386,0.3996],["medium","gemini-4-hydrogen @ medium",9,0.4389,0.3913,0.6096,0.0454,1.0192,0.4563,0.0265,0.8878,0.6096,0.0454,1.0192,0.5924],["medium","gemini-4-hydrogen @ high",10,0.682,0.0806,0.9317,0.8418,1.0261,0.7513,0.3372,1.0179,0.9317,0.8418,1.0261,0.9007],["medium","gemini-4-hydrogen @ xhigh",10,0.642,0.1511,0.8979,0.7424,1.0167,0.7402,0.4155,0.9605,0.8979,0.7424,1.0167,0.8058],["medium","gemini-4-argon @ low",21,0.7014,0.0529,1.0272,0.8971,1.2135,0.7063,0.3383,1.0636,0.9714,0.8749,1.0839,0.81],["medium","gemini-4-argon @ medium",21,0.6333,0.0802,0.9275,0.789,1.0988,0.8026,0.5427,1.0466,0.8766,0.7628,0.9849,0.8658],["medium","gemini-4-argon @ high",14,0.4786,0.3325,0.6505,0.1633,1.0283,0.6124,0.1785,0.9945,0.6505,0.1633,1.0283,0.7908],["medium","gemini-4-carbon @ low",10,0.629,0.0996,0.8616,0.7075,1.0715,0.8142,0.5947,1.0564,0.8616,0.7075,1.0715,0.9417],["medium","gemini-4-carbon @ high",10,0.639,0.1643,0.8753,0.7201,0.9923,0.6558,0.2381,0.9748,0.8753,0.7201,0.9923,0.722],["hard","gemini-3.1-flash-lite @ minimal",10,-1.0,0.0,-1.7361,-2.1505,-1.497,-1.6583,-2.1352,-1.3384,-1.7361,-2.1505,-1.497,0.002],["hard","gemini-3.1-flash-lite @ low",10,-0.454,0.5449,-0.7882,-1.642,0.1652,-1.4202,-1.7424,-1.189,-0.7882,-1.642,0.1652,0.0124],["hard","gemini-3.1-flash-lite @ medium",10,-1.0,0.0,-1.7361,-2.1505,-1.497,-1.4541,-1.7864,-1.127,-1.7361,-2.1505,-1.497,0.0153],["hard","gemini-3.1-flash-lite @ high",10,-0.471,0.5284,-0.8177,-1.674,0.1064,-0.6694,-1.5005,0.2028,-0.8177,-1.674,0.1064,0.2918],["hard","gemini-3.6-flash (req. 3.5-flash) @ minimal",10,-0.186,0.4413,-0.3229,-1.2408,0.3417,-0.226,-1.0044,0.3513,-0.3229,-1.2408,0.3417,0.5707],["hard","gemini-3.6-flash (req. 3.5-flash) @ low",10,0.266,0.418,0.4618,-0.3668,1.0368,0.2165,-0.4776,0.8254,0.4618,-0.3668,1.0368,0.5809],["hard","gemini-3.8-flash @ low",10,0.019,0.4511,0.033,-0.8157,0.6846,0.4394,0.0889,0.7775,0.033,-0.8157,0.6846,0.648],["hard","gemini-3.8-flash @ medium",10,0.079,0.4662,0.1372,-0.7143,0.8523,0.5292,0.1576,0.9109,0.1372,-0.7143,0.8523,0.6493],["hard","gemini-3.8-flash @ high",20,0.237,0.2438,0.5102,-0.0483,1.2305,0.2482,-0.2003,0.6992,0.4052,-0.0888,0.8504,0.5871],["hard","gemini-4-hydrogen @ low",12,0.4775,0.2707,0.8695,0.3532,1.2536,-0.1708,-0.8844,0.4738,0.8695,0.3532,1.2536,0.3654],["hard","gemini-4-hydrogen @ medium",10,0.525,0.0915,1.0019,0.7598,1.3442,0.4547,-0.1427,1.0113,1.0019,0.7598,1.3442,0.6468],["hard","gemini-4-hydrogen @ high",9,0.3944,0.3511,0.6562,0.0344,0.9735,0.8886,0.7384,1.0936,0.6562,0.0344,0.9735,0.9107],["hard","gemini-4-hydrogen @ xhigh",10,0.475,0.3248,0.8962,0.2422,1.4577,1.2784,1.0013,1.7575,0.8962,0.2422,1.4577,0.9464],["hard","gemini-4-argon @ low",18,0.205,0.3114,0.4701,-0.2769,1.3849,0.5575,0.0697,0.942,0.3638,-0.2851,0.9416,0.6927],["hard","gemini-4-argon @ medium",19,0.2905,0.2662,0.5183,0.0232,0.9295,0.3553,-0.0395,0.7469,0.5183,0.0232,0.9295,0.6053],["hard","gemini-4-argon @ high",14,0.3729,0.3106,0.7026,0.0565,1.1866,0.5231,0.0771,0.8794,0.7026,0.0565,1.1866,0.5773],["hard","gemini-4-carbon @ low",10,0.463,0.0922,0.8038,0.6202,1.0664,0.7494,0.5575,1.0397,0.8038,0.6202,1.0664,0.9129],["hard","gemini-4-carbon @ high",10,0.608,0.1018,1.0556,0.9376,1.2562,0.7982,0.4533,1.1102,1.0556,0.9376,1.2562,0.7489],["hard","gemma-4-31b-it (hosted Gemma) @ default",5,-0.024,0.7811,-0.0405,-1.5525,0.9377,-1.5315,-2.3272,-1.2174,-0.0405,-1.5525,0.9377,0.0015]],"cc":["cohort","agent","tier","n","agent_mean","solver_mean","gap","gap_lo","gap_hi","la_gap","ev_rescue","cal_wrong","missed_info","timing_cost","solver_miss"],"cf":[["opencode-gemini-4-carbon","opencode:google/gemini-4-carbon","hard",30,0.3223,0.499,0.1767,0.0027,0.383,0.1397,0.0333,0.1127,0.038,-0.0073,0.0],["inproc-gemini-4-carbon","gemini:gemini-4-carbon","hard",30,0.473,0.499,0.026,-0.154,0.2103,0.0782,0.0333,0.0,0.0467,0.001,-0.055],["opencode-gemini-3.5-flash","opencode:google/gemini-3.5-flash","hard",30,0.373,0.499,0.126,-0.0917,0.3483,0.3894,0.1,0.0,0.0543,0.028,-0.0563],["opencode-gemini-4-carbon","opencode:google/gemini-4-carbon","medium",30,0.713,0.645,-0.068,-0.154,0.007,-0.0069,0.0,0.0,0.0,-0.0073,-0.0607],["inproc-gemini-4-carbon","gemini:gemini-4-carbon","medium",30,0.5303,0.645,0.1147,-0.0423,0.2923,0.1658,0.0333,0.0,0.124,0.0173,-0.06],["opencode-gemini-3.5-flash","opencode:google/gemini-3.5-flash","medium",30,0.4343,0.645,0.2107,-0.021,0.4667,0.1599,0.1667,0.0,0.1057,-0.0087,-0.053],["opencode-gpt-5.5","opencode:openai/gpt-5.5","hard",30,0.5037,0.499,-0.0047,-0.153,0.1203,0.0817,0.0,0.0,0.047,0.0007,-0.0523]],"r":[["A","medium","opencode:google/gemini-4-carbon","frontier","OpenCode + gemini-4-carbon over MCP (judges' shape)",30,0.713,0.042,0.645,1.1054,0.9933,1.2698,1.0106,0.8532,1.1864,1.0114,0.9459,1.0836,0.9236,null,null,1.0,0.0,0.0,"035105e"],["A","medium","opencode:google/gemini-4-carbon","sensitivity","OpenCode + gemini-4-carbon over MCP (0-imputed empty_model_response sensitivity)",30,0.5787,0.1103,0.645,0.8972,0.7143,1.0892,0.8648,0.6802,1.064,0.8274,0.6679,0.9685,0.7762,null,null,0.8,0.0,0.2,"035105e"],["A","medium","gemini:gemini-4-carbon","frontier","in-process gemini-4-carbon (full history, thought-signature replay)",30,0.5303,0.1383,0.645,0.8222,0.5639,1.076,0.7429,0.5174,0.9907,0.7292,0.4884,0.9235,0.7552,null,null,0.8333,0.0333,0.1333,"035105e"],["A","medium","solver","reference","reference solver",30,0.645,0.0871,0.645,1.0,null,null,1.0,null,null,1.0,null,null,0.9,null,null,0.9,0.0,0.1,"a54c896,e4b5634"],["A","medium","grok_tactics","baseline","grok_tactics",30,0.46,0.1235,0.645,0.7132,0.5093,0.9451,0.7132,0.5093,0.9451,0.6264,0.456,0.7996,0.7,null,null,0.7,0.0,0.3,"deterministic-v1.4"],["A","medium","heuristic","baseline","heuristic",30,-0.407,0.2839,0.645,-0.631,-1.0696,-0.1922,-0.0985,-0.3571,0.1756,-0.5607,-0.9572,-0.1439,0.361,null,null,0.3667,0.6333,0.0,"a54c896"],["A","medium","logs_only","baseline","logs_only",30,-1.0,0.0,0.645,-1.5504,-1.8105,-1.3838,-1.5234,-1.7816,-1.3568,-1.3953,-1.4868,-1.3222,0.0,null,null,0.0,1.0,0.0,"deterministic-v1.4"],["A","medium","random","baseline","random",30,-0.6187,0.1845,0.645,-0.9592,-1.2603,-0.67,-0.9206,-1.1906,-0.6653,-0.9075,-1.1693,-0.6372,0.0071,null,null,0.0333,0.6333,0.3333,"a54c896"],["A","medium","guess_day1","baseline","guess_day1",30,-0.9333,0.1307,0.645,-1.447,-1.7489,-1.1786,-1.3953,-1.6295,-1.2454,-1.292,-1.4516,-1.0714,0.0001,null,null,0.0333,0.9667,0.0,"a54c896"],["A","medium","stop_early","baseline","stop_early",30,0.0,0.0,0.645,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,null,null,0.0,0.0,1.0,"deterministic-v1.4"],["A","medium","do_nothing","baseline","do_nothing",30,0.0,0.0,0.645,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,null,null,0.0,0.0,1.0,"a54c896"],["A","hard","opencode:google/gemini-4-carbon","frontier","OpenCode + gemini-4-carbon over MCP (judges' shape)",30,0.3223,0.1989,0.499,0.646,0.2382,0.9834,0.7201,0.5173,0.9121,0.6681,0.311,0.9911,0.714,0.6024,0.8191,0.8333,0.1333,0.0333,"035105e"],["A","hard","opencode:google/gemini-4-carbon","sensitivity","OpenCode + gemini-4-carbon over MCP (0-imputed empty_model_response sensitivity)",30,0.2787,0.1804,0.499,0.5585,0.1893,0.8658,0.5546,0.3429,0.7713,0.5861,0.2732,0.8778,0.5743,null,null,0.7,0.1,0.2,"035105e"],["A","hard","opencode:google/gemini-3.5-flash","frontier","OpenCode + gemini-3.5-flash over MCP (served as gemini-3.6-flash)",30,0.373,0.1766,0.499,0.7475,0.3586,1.2283,0.2201,-0.2263,0.6323,0.6575,0.308,0.9619,0.6007,0.4456,0.75,0.9,0.1,0.0,"035105e"],["A","hard","gemini:gemini-4-carbon","frontier","in-process gemini-4-carbon (full history, thought-signature replay)",30,0.473,0.1178,0.499,0.9479,0.6221,1.4,0.8433,0.6499,1.0578,0.8478,0.5749,1.0876,0.8042,0.7065,0.888,0.9333,0.0333,0.0333,"498bccd"],["A","hard","opencode:openai/gpt-5.5","frontier","OpenCode + gpt-5.5 over MCP (judges' shape, pre-registered cf394894)",30,0.5037,0.0638,0.499,1.0094,0.786,1.4029,0.8367,0.6655,1.0308,0.9105,0.7487,1.0857,0.7926,null,null,0.9333,0.0,0.0667,"cf39489"],["A","hard","solver","reference","reference solver",30,0.499,0.1193,0.499,1.0,null,null,1.0,null,null,1.0,null,null,0.9028,0.8667,0.9355,0.9667,0.0333,0.0,"a54c896,e4b5634"],["A","hard","grok_tactics","baseline","grok_tactics",30,0.4317,0.085,0.499,0.8651,0.6684,1.1932,0.7697,0.6098,0.9458,0.7833,0.6343,0.9409,0.8377,null,null,0.9333,0.0,0.0667,"deterministic-v1.4"],["A","hard","heuristic","baseline","heuristic",30,0.0857,0.2036,0.499,0.1717,-0.258,0.5969,0.1048,-0.2016,0.374,0.1302,-0.2565,0.4854,0.6062,null,null,0.8,0.2,0.0,"a54c896"],["A","hard","logs_only","baseline","logs_only",30,-1.0,0.0,0.499,-2.004,-2.7076,-1.6704,-1.961,-2.2535,-1.7458,-1.8159,-2.0582,-1.6338,0.0001,null,null,0.0,1.0,0.0,"deterministic-v1.4"],["A","hard","random","baseline","random",30,-0.8667,0.1237,0.499,-1.7368,-2.4155,-1.335,-1.6845,-2.0145,-1.3773,-1.5654,-1.8592,-1.2852,0.0,null,null,0.0,0.8667,0.1333,"a54c896"],["A","hard","guess_day1","baseline","guess_day1",30,-1.0,0.0,0.499,-2.004,-2.7076,-1.6704,-1.9027,-2.1847,-1.6934,-1.8159,-2.0582,-1.6338,0.0,null,null,0.0,1.0,0.0,"a54c896"],["A","hard","stop_early","baseline","stop_early",30,0.0,0.0,0.499,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,null,null,0.0,0.0,1.0,"deterministic-v1.4"],["A","hard","do_nothing","baseline","do_nothing",30,0.0,0.0,0.499,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,null,null,0.0,0.0,1.0,"a54c896"],["B1","medium","opencode:google/gemini-3.5-flash","replication","OpenCode + gemini-3.5-flash over MCP (FR8 replication, 3 shards; seed 28 rerun)",30,0.4343,0.2356,0.645,0.6734,0.2937,1.033,0.7521,0.4487,1.0538,0.6429,0.2799,0.9487,0.8103,null,null,0.8333,0.1667,0.0,"c01f371a,55d9781c,a5d12c7e"],["B1","hard","gemini:gemini-3.5-flash@medium","ladder_n_ge_30","gemini-3.6-flash (req. 3.5-flash) @ medium",40,0.385,0.1299,0.441,0.873,0.4961,1.4695,0.1857,-0.1671,0.5459,0.6347,0.3571,0.8739,0.5904,null,null,0.925,0.075,0.0,"0e9d85a,2786c00,92f3b27,e9f58b4"],["B1","hard","gemini:gemini-3.5-flash@high","ladder_n_ge_30","gemini-3.6-flash (req. 3.5-flash) @ high",40,0.3895,0.1518,0.441,0.8832,0.5127,1.3839,0.4289,0.1143,0.7049,0.7379,0.4498,0.99,0.6542,null,null,0.9,0.1,0.0,"0e9d85a,2786c00,92f3b27,e9f58b4"]],"rc":["sec","tier","agent","kind","label","n","mean","score_ci","solver","raw","raw_lo","raw_hi","la","la_lo","la_hi","win","win_lo","win_hi","p3","p3_lo","p3_hi","acc","facc","abst","sha"]}</script>
+<script>
+(function() {
+var RAW = JSON.parse(document.getElementById("eval-v14-data").textContent);
+function unpack(cols, arr) {
+return arr.map(function(vals) {
+var obj = {};
+for (var i = 0; i < cols.length; i++) obj[cols[i]] = vals[i];
+return obj;
+});
+}
+var DATA = { rows: unpack(RAW.rc, RAW.r), b2: RAW.b2, cf: unpack(RAW.cc, RAW.cf) };
+var state = { tier: "hard", metric: "raw", sec: "A" };
+
+var METRIC_META = {
+raw: { label: "Raw % Solver", key: "raw", lo: "raw_lo", hi: "raw_hi", min: -2.2, max: 1.6, dec: 0 },
+la:  { label: "Luck-Adjusted % Solver", key: "la", lo: "la_lo", hi: "la_hi", min: -2.2, max: 1.4, dec: 0 },
+win: { label: "Winnable %", key: "win", lo: "win_lo", hi: "win_hi", min: -2.1, max: 1.3, dec: 0 },
+p3:  { label: "Calibrated pass^3", key: "p3", lo: "p3_lo", hi: "p3_hi", min: 0.0, max: 1.05, dec: 1 }
+};
+
+function escXml(s) {
+return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function fmtPct(v, dec) {
+if (v === null || v === undefined || isNaN(v)) return "--";
+var p = v * 100.0;
+return dec === 0 ? Math.round(p) + "%" : p.toFixed(dec) + "%";
+}
+
+function fmtCi(v, lo, hi, dec) {
+var p = fmtPct(v, dec);
+if (lo === null || lo === undefined || hi === null || hi === undefined) return p;
+return p + " [" + fmtPct(lo, dec) + ", " + fmtPct(hi, dec) + "]";
+}
+
+function fmtSigned(v, d) {
+if (v === null || v === undefined || isNaN(v)) return "--";
+return (v >= 0 ? "+" : "-") + Math.abs(v).toFixed(d);
+}
+
+function activeRows() {
+return DATA.rows.filter(function(r) {
+var secOk = state.sec === "AB1" ? (r.sec === "A" || r.sec === "B1") : (r.sec === "A");
+var tierOk = state.tier === "all" ? true : (r.tier === state.tier);
+return secOk && tierOk;
+});
+}
+
+function renderForest() {
+var rows = activeRows();
+var m = METRIC_META[state.metric];
+var w = 860, left = 310, right = 725, plotW = right - left, rowH = 25, top = 42;
+var h = top + rows.length * rowH + 34;
+function xPos(v) {
+var c = Math.max(m.min, Math.min(m.max, v));
+return left + ((c - m.min) / (m.max - m.min)) * plotW;
+}
+var ticks = state.metric === "p3" ? [0.0, 0.25, 0.5, 0.75, 1.0] : [-2.0, -1.0, 0.0, 0.5, 1.0, 1.5];
+var out = [];
+out.push('<svg id="forest-svg" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Paired 95% CI Forest Plot">');
+out.push('<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="rgb(15, 23, 42)" rx="6"/>');
+out.push('<text x="14" y="24" fill="rgb(226, 232, 240)" font-size="13" font-weight="700">Paired 95% CI Forest Plot -- Tier: ' + escXml(state.tier) + ' | Metric: ' + escXml(m.label) + ' (' + rows.length + ' cohorts)</text>');
+for (var t = 0; t < ticks.length; t++) {
+var tk = ticks[t];
+if (tk < m.min || tk > m.max) continue;
+var tx = xPos(tk).toFixed(1);
+var stroke = Math.abs(tk - 1.0) < 1e-6 ? "rgb(34, 197, 94)" : (Math.abs(tk) < 1e-6 ? "rgb(148, 163, 184)" : "rgb(51, 65, 85)");
+out.push('<line x1="' + tx + '" y1="' + (top - 6) + '" x2="' + tx + '" y2="' + (h - 26) + '" stroke="' + stroke + '" stroke-width="1" stroke-dasharray="4,3"/>');
+out.push('<text x="' + tx + '" y="' + (h - 10) + '" fill="rgb(148, 163, 184)" font-size="11" text-anchor="middle">' + Math.round(tk * 100) + '%</text>');
+}
+var kindCol = { frontier: "rgb(56, 189, 248)", sensitivity: "rgb(251, 191, 36)", reference: "rgb(74, 222, 128)", baseline: "rgb(148, 163, 184)", replication: "rgb(244, 114, 182)", ladder_n_ge_30: "rgb(129, 140, 248)" };
+for (var i = 0; i < rows.length; i++) {
+var r = rows[i];
+var cy = top + i * rowH + 12;
+var val = r[m.key], lo = r[m.lo], hi = r[m.hi];
+var col = r.agent === "opencode:openai/gpt-5.5" ? "rgb(167, 139, 250)" : (kindCol[r.kind] || "rgb(148, 163, 184)");
+var tag = state.tier === "all" ? "[" + r.tier[0].toUpperCase() + "] " : "";
+var lbl = tag + r.label;
+if (lbl.length > 44) lbl = lbl.slice(0, 41) + "...";
+out.push('<text x="' + (left - 10) + '" y="' + (cy + 4) + '" fill="rgb(226, 232, 240)" font-size="11" text-anchor="end">' + escXml(lbl) + '</text>');
+if (lo !== null && hi !== null && lo !== undefined && hi !== undefined) {
+var x1 = xPos(lo).toFixed(1), x2 = xPos(hi).toFixed(1);
+out.push('<line x1="' + x1 + '" y1="' + cy + '" x2="' + x2 + '" y2="' + cy + '" stroke="' + col + '" stroke-width="2.2"/>');
+out.push('<line x1="' + x1 + '" y1="' + (cy - 4) + '" x2="' + x1 + '" y2="' + (cy + 4) + '" stroke="' + col + '" stroke-width="1.5"/>');
+out.push('<line x1="' + x2 + '" y1="' + (cy - 4) + '" x2="' + x2 + '" y2="' + (cy + 4) + '" stroke="' + col + '" stroke-width="1.5"/>');
+}
+if (val !== null && val !== undefined) {
+out.push('<circle cx="' + xPos(val).toFixed(1) + '" cy="' + cy + '" r="4.2" fill="' + col + '"/>');
+}
+out.push('<text x="' + (right + 8) + '" y="' + (cy + 4) + '" fill="rgb(226, 232, 240)" font-size="11">' + escXml(fmtCi(val, lo, hi, m.dec)) + '</text>');
+}
+out.push('</svg>');
+document.getElementById("forest-container").innerHTML = out.join("");
+}
+
+function renderCf() {
+var list = DATA.cf.filter(function(c) { return state.tier === "all" ? true : c.tier === state.tier; });
+var w = 860, left = 245, zeroX = 430, scale = 820.0, rowH = 38, top = 46;
+var h = top + list.length * rowH + 34;
+var comps = [
+["cal_wrong", "Calibrated Wrong-Accuse", "rgb(248, 113, 113)"],
+["missed_info", "Missed-Catch Info Gap", "rgb(251, 191, 36)"],
+["ev_rescue", "EV Abstain Rescue", "rgb(251, 146, 60)"],
+["timing_cost", "Timing & Cost Bleed", "rgb(56, 189, 248)"],
+["solver_miss", "Solver-Miss Offset", "rgb(74, 222, 128)"]
+];
+var out = [];
+out.push('<svg id="cf-svg" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Counterfactual Gap Decomposition Bars">');
+out.push('<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="rgb(15, 23, 42)" rx="6"/>');
+out.push('<text x="14" y="22" fill="rgb(226, 232, 240)" font-size="13" font-weight="700">Exact 5-Term Counterfactual Loss Decomposition -- Tier: ' + escXml(state.tier) + ' (solver_score - agent_score)</text>');
+var lx = 14;
+for (var k = 0; k < comps.length; k++) {
+out.push('<rect x="' + lx + '" y="30" width="10" height="10" fill="' + comps[k][2] + '" rx="2"/>');
+out.push('<text x="' + (lx + 14) + '" y="39" fill="rgb(203, 213, 225)" font-size="10.5">' + escXml(comps[k][1]) + '</text>');
+lx += 162;
+}
+var ticks = [-0.15, -0.10, -0.05, 0.0, 0.05, 0.10, 0.15, 0.20, 0.25];
+for (var t = 0; t < ticks.length; t++) {
+var tx = (zeroX + ticks[t] * scale).toFixed(1);
+var st = Math.abs(ticks[t]) < 1e-6 ? "rgb(148, 163, 184)" : "rgb(51, 65, 85)";
+var ds = Math.abs(ticks[t]) < 1e-6 ? "" : ' stroke-dasharray="3,3"';
+out.push('<line x1="' + tx + '" y1="' + top + '" x2="' + tx + '" y2="' + (h - 24) + '" stroke="' + st + '" stroke-width="1"' + ds + '/>');
+out.push('<text x="' + tx + '" y="' + (h - 9) + '" fill="rgb(148, 163, 184)" font-size="10.5" text-anchor="middle">' + fmtSigned(ticks[t], 2) + '</text>');
+}
+for (var i = 0; i < list.length; i++) {
+var rec = list[i];
+var cy = top + i * rowH + 14;
+out.push('<text x="' + (left - 12) + '" y="' + (cy + 8) + '" fill="rgb(226, 232, 240)" font-size="11.5" text-anchor="end">' + escXml(rec.cohort + " (" + rec.tier + ")") + '</text>');
+var posC = zeroX, negC = zeroX;
+for (var c = 0; c < comps.length; c++) {
+var v = rec[comps[c][0]] || 0;
+var bw = Math.abs(v) * scale;
+if (bw < 0.4) continue;
+if (v >= 0) {
+out.push('<rect x="' + posC.toFixed(1) + '" y="' + (cy - 4) + '" width="' + bw.toFixed(1) + '" height="16" fill="' + comps[c][2] + '" rx="1.5"/>');
+posC += bw;
+} else {
+negC -= bw;
+out.push('<rect x="' + negC.toFixed(1) + '" y="' + (cy - 4) + '" width="' + bw.toFixed(1) + '" height="16" fill="' + comps[c][2] + '" rx="1.5"/>');
+}
+}
+out.push('<text x="645" y="' + (cy + 8) + '" fill="rgb(226, 232, 240)" font-size="11">gap ' + fmtSigned(rec.gap, 3) + ' [' + fmtSigned(rec.gap_lo, 3) + ', ' + fmtSigned(rec.gap_hi, 3) + ']</text>');
+}
+out.push('</svg>');
+document.getElementById("cf-container").innerHTML = out.join("");
+}
+
+function syncTables() {
+var rows = activeRows();
+var hOut = [];
+for (var i = 0; i < rows.length; i++) {
+var r = rows[i];
+var p3Str = r.p3_lo !== null ? fmtCi(r.p3, r.p3_lo, r.p3_hi, 1) : fmtPct(r.p3, 1);
+hOut.push(
+'<tr data-sec="' + escXml(r.sec) + '" data-tier="' + escXml(r.tier) + '">' +
+'<td><span class="pill pill-' + escXml(r.tier) + '">' + escXml(r.tier) + '</span></td>' +
+'<td>' + escXml(r.sec) + '</td>' +
+'<td class="lbl-cell"><strong>' + escXml(r.label) + '</strong><br><span class="muted">' + escXml(r.agent) + ' | sha ' + escXml(r.sha) + '</span></td>' +
+'<td class="num">' + r.n + '</td>' +
+'<td class="num">' + fmtSigned(r.mean, 3) + ' +/- ' + (r.score_ci !== null ? r.score_ci.toFixed(3) : "--") + '</td>' +
+'<td class="num">' + fmtSigned(r.solver, 3) + '</td>' +
+'<td class="num c-raw">' + escXml(fmtCi(r.raw, r.raw_lo, r.raw_hi, 0)) + '</td>' +
+'<td class="num c-la">' + escXml(fmtCi(r.la, r.la_lo, r.la_hi, 0)) + '</td>' +
+'<td class="num c-win">' + escXml(fmtCi(r.win, r.win_lo, r.win_hi, 0)) + '</td>' +
+'<td class="num c-p3">' + escXml(p3Str) + '</td>' +
+'<td class="num">' + fmtPct(r.acc, 1) + '</td>' +
+'<td class="num">' + fmtPct(r.facc, 1) + '</td>' +
+'<td class="num">' + fmtPct(r.abst, 1) + '</td></tr>'
+);
+}
+document.getElementById("headline-tbody").innerHTML = hOut.join("");
+
+var bOut = [];
+for (var j = 0; j < DATA.b2.length; j++) {
+var b = DATA.b2[j];
+if (state.tier !== "all" && b[0] !== state.tier) continue;
+bOut.push(
+'<tr><td><span class="pill pill-' + escXml(b[0]) + '">' + escXml(b[0]) + '</span></td>' +
+'<td>' + escXml(b[1]) + '</td>' +
+'<td class="num">' + b[2] + '</td>' +
+'<td class="num">' + fmtSigned(b[3], 3) + ' +/- ' + b[4].toFixed(3) + '</td>' +
+'<td class="num">' + escXml(fmtCi(b[5], b[6], b[7], 0)) + '</td>' +
+'<td class="num">' + escXml(fmtCi(b[8], b[9], b[10], 0)) + '</td>' +
+'<td class="num">' + escXml(fmtCi(b[11], b[12], b[13], 0)) + '</td>' +
+'<td class="num">' + fmtPct(b[14], 1) + '</td></tr>'
+);
+}
+document.getElementById("b2-tbody").innerHTML = bOut.join("");
+
+var metrics = ["raw", "la", "win", "p3"];
+for (var m = 0; m < metrics.length; m++) {
+var mk = metrics[m];
+var active = mk === state.metric;
+var cells = document.querySelectorAll(".c-" + mk + ", .th-" + mk);
+for (var c = 0; c < cells.length; c++) {
+if (active) cells[c].classList.add("active-metric");
+else cells[c].classList.remove("active-metric");
+}
+}
+}
+
+function updateAll() {
+renderForest();
+renderCf();
+syncTables();
+}
+
+function bindGroup(id, attr, field) {
+var box = document.getElementById(id);
+box.addEventListener("click", function(ev) {
+var btn = ev.target.closest("button");
+if (!btn || !btn.hasAttribute(attr)) return;
+state[field] = btn.getAttribute(attr);
+var btns = box.querySelectorAll("button");
+for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i] === btn);
+updateAll();
+});
+}
+
+bindGroup("tier-controls", "data-tier", "tier");
+bindGroup("metric-controls", "data-metric", "metric");
+bindGroup("sec-controls", "data-sec", "sec");
+
+function downloadBlob(filename, mime, content) {
+var blob = new Blob([content], { type: mime });
+var url = URL.createObjectURL(blob);
+var a = document.createElement("a");
+a.href = url;
+a.download = filename;
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+}
+
+document.getElementById("export-json-btn").addEventListener("click", function() {
+var out = { tier_filter: state.tier, metric: state.metric, scope: state.sec, rows: activeRows() };
+downloadBlob("canary_v14_headline_" + state.tier + "_" + state.metric + ".json", "application/json", JSON.stringify(out, null, 2));
+});
+
+document.getElementById("export-csv-btn").addEventListener("click", function() {
+var cols = ["sec", "tier", "agent", "kind", "label", "n", "mean", "score_ci", "solver", "raw", "raw_lo", "raw_hi", "la", "la_lo", "la_hi", "win", "win_lo", "win_hi", "p3", "acc", "facc", "abst", "sha"];
+var lines = [cols.join(",")];
+var rows = activeRows();
+for (var i = 0; i < rows.length; i++) {
+var r = rows[i];
+var vals = cols.map(function(k) {
+var v = r[k];
+if (v === null || v === undefined) return "";
+var s = String(v);
+return s.indexOf(",") >= 0 || s.indexOf('"') >= 0 ? '"' + s.replace(/"/g, '""') + '"' : s;
+});
+lines.push(vals.join(","));
+}
+downloadBlob("canary_v14_headline_" + state.tier + "_" + state.metric + ".csv", "text/csv", lines.join("\n"));
+});
+
+syncTables();
+})();
+</script>
+</body>
+</html>

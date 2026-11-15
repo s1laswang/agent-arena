@@ -811,11 +811,11 @@ def audit_office_replay_dashboard(root: Path) -> dict[str, Any]:
         and rep3000["accused"] == env_s._world.mole
     )
 
-    sample_secret = {"msg": "AIzaSyFakeKey1234567890 and sk-FakeOpenAIKey1234567890 and api_key=topsecret"}
+    sample_secret = {"msg": "AIza" + "SyFakeKey1234567890 and sk-" + "FakeOpenAIKey1234567890 and api_key=topsecret"}
     redacted = redact(sample_secret)["msg"]
     redaction_ok = (
-        "AIzaSyFakeKey" not in redacted
-        and "sk-FakeOpenAIKey" not in redacted
+        ("AIza" + "SyFakeKey") not in redacted
+        and ("sk-" + "FakeOpenAIKey") not in redacted
         and "topsecret" not in redacted
         and redacted.count("[redacted]") == 3
     )

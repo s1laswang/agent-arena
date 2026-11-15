@@ -9,6 +9,7 @@ import {
   TOOL_DEFS,
   DEFAULT_DUEL_SEEDS,
 } from "./dom.js";
+import { OfficeStage } from "./office_stage.js";
 
 const INTERVIEW_TOPICS = [
   "recent_documents",
@@ -138,8 +139,16 @@ export function sanitizeGeminiReplayState(rawView, humanDay, humanDone) {
     };
   }
   const gatedSteps = [];
-  let sealedDay = rawView.sealed_day ? Number(rawView.sealed_day) : null;
-  let status = rawView.status === "sealed_accusation" ? "sealed_accusation" : "hunting";
+  const finalSealed = Boolean(rawView.final && rawView.final.sealed === true);
+  let sealedDay = rawView.sealed_day
+    ? Number(rawView.sealed_day)
+    : finalSealed && rawView.final.final_day
+      ? Number(rawView.final.final_day)
+      : null;
+  let status =
+    rawView.status === "sealed_accusation" || finalSealed
+      ? "sealed_accusation"
+      : "hunting";
   for (const step of allSteps) {
     const sDay = Number(step && step.day) || 1;
     if (sDay <= dayCap) {
@@ -1220,14 +1229,25 @@ export function mountArenaUI(root, adapters = {}) {
     root.appendChild(domRefs.leaderboardDlg);
     root.appendChild(domRefs.rulesDlg);
 
-    if (adapters.OfficeStage) {
+    const StageCtor = adapters.OfficeStage || OfficeStage;
+    if (StageCtor) {
       try {
-        state.officeStage = new adapters.OfficeStage({
-          canvas: domRefs.officeCanvas,
-          mode: state.mode,
+        state.officeStage = new StageCtor(domRefs.officeCanvas, {
+          mode: state.mode === "mole" ? "mole" : "investigator",
           tier: state.tier,
           seed: state.seed,
         });
+        if (adapters.spriteManifest && typeof state.officeStage.loadSpritePack === "function") {
+          Promise.resolve(state.officeStage.loadSpritePack(adapters.spriteManifest)).then(() => {
+            if (typeof state.officeStage.getCreditsText === "function") {
+              const txt = state.officeStage.getCreditsText();
+              if (txt && domRefs.assetCredits && domRefs.assetCredits.childNodes[0]) {
+                domRefs.assetCredits.childNodes[0].textContent = txt;
+              }
+            }
+            if (typeof state.officeStage.render === "function") state.officeStage.render();
+          });
+        }
       } catch (_) {
         state.officeStage = null;
       }
@@ -1465,7 +1485,13 @@ export function mountArenaUI(root, adapters = {}) {
         ? `Mole revealed: ${state.leakingSpriteEmployee}`
         : "Pre-end leak sprite: [NONE]";
     domRefs.stageMeta.textContent = `Day ${pad2(state.day)} | ${leakStatus}`;
-    if (!state.officeStage) {
+    if (state.officeStage && typeof state.officeStage.render === "function") {
+      try {
+        state.officeStage.render();
+      } catch (_) {
+        drawProceduralOfficeFallback(domRefs.officeCanvas, state);
+      }
+    } else {
       drawProceduralOfficeFallback(domRefs.officeCanvas, state);
     }
   }

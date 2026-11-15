@@ -11,6 +11,16 @@ export {
 } from "./dom.js";
 
 export {
+  OfficeStage,
+  loadSpritePack,
+  getCreditsText,
+  setClock,
+  applyObservableEvent,
+  revealOutcome,
+  setHumanMole,
+} from "./office_stage.js";
+
+export {
   mountArenaUI,
   sanitizeStepForPreEnd,
   scrubPreEndObject,

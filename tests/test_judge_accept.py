@@ -157,11 +157,57 @@ def _create_synthetic_repo(base: Path, warm: bool = False, live_mcp: bool = Fals
                 fh.write(json.dumps({{"target": target}}) + "\\n")
 
             if target == "reproduce":
+                import subprocess
                 latest = Path.cwd() / "results" / "latest"
                 latest.mkdir(parents=True, exist_ok=True)
                 for name in ("judge_table.md", "exploits.json", "paired_table_gemini.md"):
                     shutil.copy2(PAYLOADS / name, latest / name)
-                sys.exit(0)
+                if os.environ.get("STUB_REPRODUCE_HEADLINE_DRIFT") == "1":
+                    drifted = "".join(f"| hard | drifted row {{i}} | +0.000 |\\n" for i in range(35))
+                    (latest / "paired_table_gemini.md").write_text(drifted, encoding="utf-8")
+                probe_out = os.environ.get("STUB_SHIM_PROBE_JSON", "")
+                if probe_out:
+                    probe_dir = latest / "_shim_probe"
+                    probe_dir.mkdir(parents=True, exist_ok=True)
+                    fa = probe_dir / "a.txt"
+                    fb = probe_dir / "b.txt"
+                    fc = probe_dir / "c.txt"
+                    missing = probe_dir / "missing.txt"
+                    fa.write_text("alpha\\nbeta\\n", encoding="utf-8")
+                    fb.write_text("alpha\\nbeta\\n", encoding="utf-8")
+                    fc.write_text("alpha\\ngamma\\n", encoding="utf-8")
+                    cmp_bin = shutil.which("cmp")
+                    diff_bin = shutil.which("diff")
+                    c_eq = subprocess.run(["cmp", "-s", str(fa), str(fb)], capture_output=True, text=True)
+                    c_ne = subprocess.run(["cmp", "-s", str(fa), str(fc)], capture_output=True, text=True)
+                    c_ms = subprocess.run(["cmp", "-s", str(missing), str(fa)], capture_output=True, text=True)
+                    d_eq = subprocess.run(["diff", str(fa), str(fb)], capture_output=True, text=True)
+                    d_ne = subprocess.run(["diff", str(fa), str(fc)], capture_output=True, text=True)
+                    d_ms = subprocess.run(["diff", str(missing), str(fa)], capture_output=True, text=True)
+                    Path(probe_out).write_text(
+                        json.dumps({{
+                            "cmp_bin": cmp_bin,
+                            "diff_bin": diff_bin,
+                            "cmp_eq": c_eq.returncode,
+                            "cmp_ne": c_ne.returncode,
+                            "cmp_missing": c_ms.returncode,
+                            "diff_eq": d_eq.returncode,
+                            "diff_eq_stdout": d_eq.stdout,
+                            "diff_ne": d_ne.returncode,
+                            "diff_ne_stdout": d_ne.stdout,
+                            "diff_missing": d_ms.returncode,
+                        }}),
+                        encoding="utf-8",
+                    )
+                    shutil.rmtree(probe_dir)
+                check_cmd = (
+                    "if cmp -s results/latest/paired_table_gemini.md data/runs/committed/v1.4/paired_table_gemini.md; then "
+                    "echo 'HEADLINE (README table, recomputed from committed episodes; identical to data/runs/committed/v1.4/paired_table_gemini.md):'; "
+                    "else echo 'HEADLINE MISMATCH: results/latest/paired_table_gemini.md differs from data/runs/committed/v1.4/paired_table_gemini.md'; "
+                    "diff results/latest/paired_table_gemini.md data/runs/committed/v1.4/paired_table_gemini.md | head -20; exit 1; fi"
+                )
+                rc = subprocess.call(["/bin/sh", "-c", check_cmd])
+                sys.exit(rc)
 
             if target == "mcp":
                 port = int(os.environ.get("MCP_PORT", "18765"))
@@ -515,3 +561,132 @@ def test_live_real_canary_mcp_server_smoke_and_isolated_cleanup(opencode_tmp: Pa
     finally:
         bystander.terminate()
         bystander.wait(timeout=5)
+
+
+def _build_diffutils_free_path(bin_dir: Path, tmp_base: Path) -> tuple[str, Path]:
+    sys_bin = tmp_base / "sys_bin_no_diffutils"
+    sys_bin.mkdir(parents=True, exist_ok=True)
+    empty_home = tmp_base / "empty_home"
+    empty_home.mkdir(parents=True, exist_ok=True)
+    _write_shell_executable(sys_bin / "python3", f'exec "{sys.executable}" "$@"\n')
+    needed_tools = (
+        "awk",
+        "bash",
+        "cat",
+        "curl",
+        "dirname",
+        "env",
+        "grep",
+        "head",
+        "mkdir",
+        "mktemp",
+        "pgrep",
+        "rm",
+        "sed",
+        "seq",
+        "sh",
+        "sleep",
+        "tail",
+        "tr",
+        "uname",
+    )
+    for tool in needed_tools:
+        found = shutil.which(tool)
+        if found:
+            dest = sys_bin / tool
+            if not dest.exists():
+                os.symlink(found, dest)
+    isolated_path = f"{bin_dir}:{sys_bin}"
+    assert shutil.which("cmp", path=isolated_path) is None
+    assert shutil.which("diff", path=isolated_path) is None
+    return isolated_path, empty_home
+
+
+def test_strip_container_without_cmp_or_diff_passes_cold_reproduce(opencode_tmp: Path) -> None:
+    repo, bin_dir, log_path = _create_synthetic_repo(opencode_tmp, warm=False)
+    isolated_path, empty_home = _build_diffutils_free_path(bin_dir, opencode_tmp)
+    probe_json = opencode_tmp / "shim_probe.json"
+    bash_bin = shutil.which("bash", path=isolated_path)
+    assert bash_bin is not None
+
+    port = _free_port()
+    scratch = opencode_tmp / f"scratch-strip-{port}"
+    scratch.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ)
+    for k in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
+        env.pop(k, None)
+    env["PATH"] = isolated_path
+    env["HOME"] = str(empty_home)
+    env["TMPDIR"] = str(scratch)
+    env["MCP_PORT"] = str(port)
+    env["STUB_SHIM_PROBE_JSON"] = str(probe_json)
+
+    proc = subprocess.run(
+        [bash_bin, str(repo / "scripts" / "judge_accept.sh")],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert _read_make_targets(log_path) == ["setup", "reproduce", "mcp"]
+    assert "HEADLINE (README table, recomputed from committed episodes;" in proc.stdout
+    assert "[PASS] make reproduce exits 0 - see results/latest/judge_table.md" in proc.stdout
+    assert "PASS=20  FAIL=0  SKIP=1" in proc.stdout
+    assert "RESULT: PASS" in proc.stdout
+
+    probe = json.loads(probe_json.read_text(encoding="utf-8"))
+    assert probe["cmp_bin"] is not None and "shim-bin/cmp" in probe["cmp_bin"]
+    assert probe["diff_bin"] is not None and "shim-bin/diff" in probe["diff_bin"]
+    assert probe["cmp_eq"] == 0
+    assert probe["cmp_ne"] == 1
+    assert probe["cmp_missing"] == 2
+    assert probe["diff_eq"] == 0
+    assert probe["diff_eq_stdout"] == ""
+    assert probe["diff_ne"] == 1
+    assert "--- " in probe["diff_ne_stdout"]
+    assert "+++ " in probe["diff_ne_stdout"]
+    assert "@@ " in probe["diff_ne_stdout"]
+    assert "-beta" in probe["diff_ne_stdout"]
+    assert "+gamma" in probe["diff_ne_stdout"]
+    assert probe["diff_missing"] == 2
+    assert list(scratch.glob("canary-accept.*")) == []
+
+
+def test_strip_container_headline_drift_surfaces_unified_diff_and_fails(opencode_tmp: Path) -> None:
+    repo, bin_dir, log_path = _create_synthetic_repo(opencode_tmp, warm=False)
+    isolated_path, empty_home = _build_diffutils_free_path(bin_dir, opencode_tmp)
+    bash_bin = shutil.which("bash", path=isolated_path)
+    assert bash_bin is not None
+
+    port = _free_port()
+    scratch = opencode_tmp / f"scratch-drift-{port}"
+    scratch.mkdir(parents=True, exist_ok=True)
+    env = dict(os.environ)
+    for k in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"):
+        env.pop(k, None)
+    env["PATH"] = isolated_path
+    env["HOME"] = str(empty_home)
+    env["TMPDIR"] = str(scratch)
+    env["MCP_PORT"] = str(port)
+    env["STUB_REPRODUCE_HEADLINE_DRIFT"] = "1"
+
+    proc = subprocess.run(
+        [bash_bin, str(repo / "scripts" / "judge_accept.sh")],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert _read_make_targets(log_path) == ["setup", "reproduce", "mcp"]
+    assert "HEADLINE MISMATCH: results/latest/paired_table_gemini.md differs from" in proc.stdout
+    assert "--- results/latest/paired_table_gemini.md" in proc.stdout
+    assert "+++ data/runs/committed/v1.4/paired_table_gemini.md" in proc.stdout
+    assert "@@ " in proc.stdout
+    assert "BrokenPipeError" not in proc.stderr
+    assert "[FAIL] make reproduce exits 0 - exit 1" in proc.stdout
+    assert "RESULT: FAIL" in proc.stdout
+    assert list(scratch.glob("canary-accept.*")) == []

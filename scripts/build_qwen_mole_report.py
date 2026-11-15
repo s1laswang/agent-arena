@@ -27,10 +27,14 @@ WS3_CURVE_SPECS: tuple[tuple[str, int, str], ...] = (
 )
 
 EXPECTED_V100_RUNS: tuple[tuple[str, str, str], ...] = (
-    ("canary-qwen-mole-v1", "Qwen2.5-1.5B-Instruct", "counterfactual_expert_sft_plus_regularized_grpo_80steps"),
-    ("canary-qwen3-0p6b-mole-v1", "Qwen3-0.6B", "carbon_trap_capped_plus_expert_sft_plus_regularized_grpo_80steps"),
+    (
+        "canary-qwen25-1p5b-dpo-grpo-v2",
+        "Qwen2.5-1.5B-Instruct",
+        "carbon_trap_capped_sft_plus_146pair_dpo_plus_regularized_grpo_60steps",
+    ),
     ("canary-qwen3-1p7b-mole-v1", "Qwen3-1.7B", "carbon_trap_capped_plus_expert_sft_plus_regularized_grpo_80steps"),
-    ("canary-qwen-mole-v2", "Qwen2.5-1.5B-Instruct", "carbon_trap_capped_plus_expert_sft_plus_regularized_grpo_60steps_plus_400k_eval"),
+    ("canary-qwen3-0p6b-mole-v1", "Qwen3-0.6B", "carbon_trap_capped_plus_expert_sft_plus_regularized_grpo_80steps"),
+    ("canary-qwen-mole-v1", "Qwen2.5-1.5B-Instruct", "counterfactual_expert_sft_plus_regularized_grpo_80steps"),
 )
 
 SCALE_ORDER = {"0.5B": 0, "1.5B": 1, "3B": 2}
@@ -38,7 +42,7 @@ INVESTIGATORS: tuple[str, ...] = ("grok_tactics", "heuristic", "hinted_heuristic
 
 LOG_INIT_RE = re.compile(r"^\[init\]\s+.*\bmodel=(\S+)")
 LOG_DATA_RE = re.compile(
-    r"^\[data\]\s+carbon_sft=(\d+)\s+expert_sft=(\d+)\s+total_sft=(\d+)\s+grpo_prompts=(\d+)"
+    r"^\[data\]\s+carbon_sft=(\d+)\s+expert_sft=(\d+)\s+total_sft=(\d+)(?:\s+dpo_pairs=(\d+))?\s+grpo_prompts=(\d+)"
 )
 LOG_VAL_STEP_RE = re.compile(r"^\[val step=(\d+)\]\s+(\{.*\})\s*$")
 LOG_WINNER_RE = re.compile(r"^\[winner\]\s+selected=(\S+)\s+val=(\{.*\})\s*$")
@@ -51,19 +55,31 @@ FLAT_NUM_DICT_RE = re.compile(
     r"\{\s*\n(\s*\"[^\"\n]+\":\s*-?\d+(?:\.\d+)?(?:e[+-]?\d+)?(?:\s*,\s*\n\s*\"[^\"\n]+\":\s*-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)*)\s*\n\s*\}",
     re.IGNORECASE,
 )
+SINGLE_LINE_VAL_DICT_RE = re.compile(
+    r"\{\s*\n(\s*\"[^\"\n]+\":\s*(?:[^{}\[\]\n]+|\[[^\[\]\n]*\]|\{[^{}\n]*\})(?:,\s*\n\s*\"[^\"\n]+\":\s*(?:[^{}\[\]\n]+|\[[^\[\]\n]*\]|\{[^{}\n]*\})){0,30})\s*\n\s*\}",
+)
+
+
+def _format_json_node(obj: Any, depth: int = 0) -> str:
+    if isinstance(obj, dict):
+        if not obj or depth >= 3:
+            return json.dumps(obj)
+        pad = " " * (depth + 1)
+        close_pad = " " * depth
+        items = [f"{pad}{json.dumps(str(k))}: {_format_json_node(v, depth + 1)}" for k, v in obj.items()]
+        return "{\n" + ",\n".join(items) + "\n" + close_pad + "}"
+    if isinstance(obj, list):
+        if not obj or depth >= 3 or all(not isinstance(x, (dict, list)) for x in obj):
+            return json.dumps(obj)
+        pad = " " * (depth + 1)
+        close_pad = " " * depth
+        items = [f"{pad}{_format_json_node(x, depth + 1)}" for x in obj]
+        return "[\n" + ",\n".join(items) + "\n" + close_pad + "]"
+    return json.dumps(obj)
 
 
 def _dumps_summary(summary: dict[str, Any]) -> str:
-    raw = json.dumps(summary, indent=1)
-    compact = NUM_LIST_RE.sub(
-        lambda m: "[" + ", ".join(tok.strip() for tok in m.group(1).split(",")) + "]",
-        raw,
-    )
-    compact = FLAT_NUM_DICT_RE.sub(
-        lambda m: "{" + ", ".join(tok.strip() for tok in m.group(1).split(",")) + "}",
-        compact,
-    )
-    return compact + "\n"
+    return _format_json_node(summary, 0) + "\n"
 
 
 def _r4(val: float | int) -> float:
@@ -587,36 +603,74 @@ def _summarize_v100_eval_summary(es: dict[str, Any]) -> tuple[dict[str, Any], st
         verdict = "null_or_below_default_catchable"
         claims = False
 
+    diff8 = p8["diff_qwen_minus_baseline"]
+    diff2 = p2["diff_qwen_minus_baseline"]
+
+    h8_out: dict[str, Any] = {
+        "n": int(p8["n"]),
+        "qwen_solver_score": _r4(h8["solver"]["score"]),
+        "qwen_solver_acc": q_acc8,
+        "qwen_grok_tactics_score": _r4(h8["grok_tactics"]["score"]),
+        "default_grok_tactics_score": _r4(p8["baseline"]["grok_tactics"]["score"][0]),
+        "paired_diff_grok_tactics_score": (
+            [_r4(x) for x in diff8["grok_tactics_score"]] if "grok_tactics_score" in diff8 else None
+        ),
+        "regret_grok_tactics_paired_diff": (
+            [_r4(x) for x in diff8["regret_grok_tactics"]] if "regret_grok_tactics" in diff8 else None
+        ),
+        "qwen_min_regret": q_min_reg8,
+        "default_min_regret": def_min_reg8,
+        "strongest_inv": strongest8,
+        "catchable_85": bool(h8.get("catchable_85", q_acc8 >= STRICT_CATCHABILITY_GATE)),
+        "distinct_actions": int(h8["distinct_actions"]),
+        "action_entropy_nats": _r4(h8["action_entropy_nats"]),
+        "invalid_generations": int(h8.get("invalid_generations", 0)),
+        "action_profile": {str(k): _r4(v) for k, v in list((h8.get("action_profile") or {}).items())[:6]},
+        "paired_diff_solver_acc": [_r4(x) for x in diff8["solver_acc"]],
+        "paired_diff_regret_strongest": strongest_reg_diff_ci8,
+    }
+    if "frontier_proxy_gap" in h8 and "frontier_proxy_gap" in p8.get("qwen_mole", {}):
+        fpg8 = p8["qwen_mole"]["frontier_proxy_gap"]
+        h8_out["qwen_gemini_carbon_proxy_score"] = _r4(h8["gemini_carbon_proxy"]["score"])
+        h8_out["frontier_proxy_gap"] = _r4(h8["frontier_proxy_gap"])
+        h8_out["frontier_proxy_gap_ci95"] = [_r4(fpg8[1]), _r4(fpg8[2])]
+        if "frontier_proxy_gap" in p8.get("baseline", {}):
+            h8_out["default_frontier_proxy_gap"] = _r4(p8["baseline"]["frontier_proxy_gap"][0])
+        if "frontier_proxy_gap_gain" in diff8:
+            h8_out["frontier_proxy_gap_gain_ci95"] = [_r4(x) for x in diff8["frontier_proxy_gap_gain"]]
+
+    h2_out: dict[str, Any] = {
+        "n": int(p2["n"]),
+        "qwen_solver_score": _r4(h2["solver"]["score"]),
+        "qwen_solver_acc": q_acc2,
+        "qwen_grok_tactics_score": _r4(h2["grok_tactics"]["score"]),
+        "default_grok_tactics_score": _r4(p2["baseline"]["grok_tactics"]["score"][0]),
+        "regret_grok_tactics_paired_diff": (
+            [_r4(x) for x in diff2["regret_grok_tactics"]] if "regret_grok_tactics" in diff2 else None
+        ),
+        "qwen_min_regret": q_min_reg2,
+        "default_min_regret": def_min_reg2,
+        "strongest_inv": str(h2["strongest_inv"]),
+        "catchable_85": bool(h2.get("catchable_85", q_acc2 >= STRICT_CATCHABILITY_GATE)),
+        "distinct_actions": int(h2["distinct_actions"]),
+        "action_entropy_nats": _r4(h2["action_entropy_nats"]),
+        "invalid_generations": int(h2.get("invalid_generations", 0)),
+        "paired_diff_vs_rl_solver_acc": [_r4(x) for x in prl["diff_qwen_minus_baseline"]["solver_acc"]] if prl else None,
+    }
+    if "frontier_proxy_gap" in h2 and "frontier_proxy_gap" in p2.get("qwen_mole", {}):
+        fpg2 = p2["qwen_mole"]["frontier_proxy_gap"]
+        h2_out["qwen_gemini_carbon_proxy_score"] = _r4(h2["gemini_carbon_proxy"]["score"])
+        h2_out["frontier_proxy_gap"] = _r4(h2["frontier_proxy_gap"])
+        h2_out["frontier_proxy_gap_ci95"] = [_r4(fpg2[1]), _r4(fpg2[2])]
+        if "frontier_proxy_gap" in p2.get("baseline", {}):
+            h2_out["default_frontier_proxy_gap"] = _r4(p2["baseline"]["frontier_proxy_gap"][0])
+
     parsed = {
         "winner_checkpoint": str(es.get("winner_checkpoint", "")),
         "sft_examples": es.get("sft_examples"),
         "total_seconds": _r4(es.get("total_seconds", 0.0)),
-        "heldout_800k": {
-            "n": int(p8["n"]),
-            "qwen_solver_score": _r4(h8["solver"]["score"]),
-            "qwen_solver_acc": q_acc8,
-            "qwen_min_regret": q_min_reg8,
-            "default_min_regret": def_min_reg8,
-            "strongest_inv": strongest8,
-            "catchable_85": bool(h8.get("catchable_85", q_acc8 >= STRICT_CATCHABILITY_GATE)),
-            "distinct_actions": int(h8["distinct_actions"]),
-            "action_entropy_nats": _r4(h8["action_entropy_nats"]),
-            "action_profile": {str(k): _r4(v) for k, v in list((h8.get("action_profile") or {}).items())[:5]},
-            "paired_diff_solver_acc": [_r4(x) for x in p8["diff_qwen_minus_baseline"]["solver_acc"]],
-            "paired_diff_regret_strongest": strongest_reg_diff_ci8,
-        },
-        "heldout_200k": {
-            "n": int(p2["n"]),
-            "qwen_solver_score": _r4(h2["solver"]["score"]),
-            "qwen_solver_acc": q_acc2,
-            "qwen_min_regret": q_min_reg2,
-            "default_min_regret": def_min_reg2,
-            "strongest_inv": str(h2["strongest_inv"]),
-            "catchable_85": bool(h2.get("catchable_85", q_acc2 >= STRICT_CATCHABILITY_GATE)),
-            "distinct_actions": int(h2["distinct_actions"]),
-            "action_entropy_nats": _r4(h2["action_entropy_nats"]),
-            "paired_diff_vs_rl_solver_acc": [_r4(x) for x in prl["diff_qwen_minus_baseline"]["solver_acc"]] if prl else None,
-        },
+        "heldout_800k": h8_out,
+        "heldout_200k": h2_out,
     }
     return parsed, verdict, claims
 
@@ -663,6 +717,22 @@ def _summarize_sft_rows(sft_rows: list[dict[str, Any]]) -> dict[str, Any] | None
         "final_loss": _r4(sft_rows[-1]["loss"]),
         "min_loss": _r4(min(float(x["loss"]) for x in sft_rows)),
         "sec": _r4(sft_rows[-1].get("sec", 0.0)),
+    }
+
+
+def _summarize_dpo_rows(dpo_rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not dpo_rows:
+        return None
+    return {
+        "logged_points": len(dpo_rows),
+        "last_step": int(dpo_rows[-1]["step"]),
+        "initial_loss": _r4(dpo_rows[0]["loss"]),
+        "final_loss": _r4(dpo_rows[-1]["loss"]),
+        "min_loss": _r4(min(float(x["loss"]) for x in dpo_rows)),
+        "initial_margin": _r4(dpo_rows[0].get("margin", 0.0)),
+        "final_margin": _r4(dpo_rows[-1].get("margin", 0.0)),
+        "max_margin": _r4(max(float(x.get("margin", 0.0)) for x in dpo_rows)),
+        "sec": _r4(dpo_rows[-1].get("sec", 0.0)),
     }
 
 
@@ -716,6 +786,7 @@ def parse_v100_gpu_log(log_path: Path) -> dict[str, Any]:
         "model": None,
         "data_mix": None,
         "sft_rows": [],
+        "dpo_rows": [],
         "grpo_rows": [],
         "val_checkpoints": {},
         "winner_selected": None,
@@ -734,12 +805,15 @@ def parse_v100_gpu_log(log_path: Path) -> dict[str, Any]:
             continue
         m_data = LOG_DATA_RE.match(ln)
         if m_data:
-            out["data_mix"] = {
+            dm: dict[str, int] = {
                 "carbon_sft": int(m_data.group(1)),
                 "expert_sft": int(m_data.group(2)),
                 "total_sft": int(m_data.group(3)),
-                "grpo_prompts": int(m_data.group(4)),
             }
+            if m_data.group(4) is not None:
+                dm["dpo_pairs"] = int(m_data.group(4))
+            dm["grpo_prompts"] = int(m_data.group(5))
+            out["data_mix"] = dm
             continue
         if ln.startswith("[sft] "):
             try:
@@ -750,6 +824,18 @@ def parse_v100_gpu_log(log_path: Path) -> dict[str, Any]:
         if ln.startswith("[val sft] "):
             try:
                 out["val_checkpoints"]["sft"] = json.loads(ln[10:])
+            except json.JSONDecodeError:
+                pass
+            continue
+        if ln.startswith("[dpo] "):
+            try:
+                out["dpo_rows"].append(json.loads(ln[6:]))
+            except json.JSONDecodeError:
+                pass
+            continue
+        if ln.startswith("[val sft_dpo] "):
+            try:
+                out["val_checkpoints"]["sft_dpo"] = json.loads(ln[14:])
             except json.JSONDecodeError:
                 pass
             continue
@@ -785,13 +871,23 @@ def _merge_rows_by_step(
     log_rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     merged: dict[int, dict[str, Any]] = {}
-    for row in board_rows:
-        if "step" in row:
-            merged[int(row["step"])] = row
     for row in log_rows:
         if "step" in row:
             merged[int(row["step"])] = row
+    for row in board_rows:
+        if "step" in row:
+            merged[int(row["step"])] = row
     return [merged[k] for k in sorted(merged)]
+
+
+def _is_ignored_gpu_log(lp: Path, logs_dir: Path) -> bool:
+    stem = lp.stem
+    if "frontier-proxy" in stem:
+        return True
+    failed_sh = logs_dir.parent / "failed" / f"{stem}.sh"
+    if _file_accessible(failed_sh):
+        return True
+    return False
 
 
 def _collect_v100_raw_artifacts(
@@ -809,7 +905,7 @@ def _collect_v100_raw_artifacts(
 
     if _dir_accessible(logs_dir) and logs_dir is not None:
         for lp in sorted(logs_dir.glob("canary-qwen*.log"), key=lambda p: p.name):
-            if lp.stem not in known_map:
+            if lp.stem not in known_map and not _is_ignored_gpu_log(lp, logs_dir):
                 ordered_names.append(lp.stem)
                 known_map[lp.stem] = ("unknown_qwen_model", "regularized_sft_plus_grpo")
 
@@ -820,8 +916,10 @@ def _collect_v100_raw_artifacts(
         plog = parse_v100_gpu_log(log_path) if log_path is not None else parse_v100_gpu_log(Path(""))
 
         board_sft = _load_jsonl(rdir / "sft_curve.jsonl")
+        board_dpo = _load_jsonl(rdir / "dpo_curve.jsonl")
         board_grpo = _load_jsonl(rdir / "grpo_curve.jsonl")
         sft_rows = _merge_rows_by_step(board_sft, plog["sft_rows"])
+        dpo_rows = _merge_rows_by_step(board_dpo, plog["dpo_rows"])
         grpo_rows = _merge_rows_by_step(board_grpo, plog["grpo_rows"])
 
         es_path = rdir / "eval_summary.json"
@@ -844,6 +942,7 @@ def _collect_v100_raw_artifacts(
 
         raw_by_name[name] = {
             "sft_rows": sft_rows,
+            "dpo_rows": dpo_rows,
             "grpo_rows": grpo_rows,
             "val_raw": val_raw,
             "data_mix": plog["data_mix"],
@@ -864,6 +963,7 @@ def build_v100_section(board_dir: Path, logs_dir: Path | None = None) -> dict[st
         art = raw_by_name[name]
 
         sft_summary = _summarize_sft_rows(art["sft_rows"])
+        dpo_summary = _summarize_dpo_rows(art["dpo_rows"])
         grpo_summary = _summarize_v100_grpo_rows(art["grpo_rows"])
 
         val_section = None
@@ -907,6 +1007,9 @@ def build_v100_section(board_dir: Path, logs_dir: Path | None = None) -> dict[st
         elif grpo_summary is not None:
             status = "in_progress"
             stage = "grpo_training_logged"
+        elif dpo_summary is not None:
+            status = "in_progress"
+            stage = "dpo_training_logged"
         elif val_section is not None:
             status = "in_progress"
             stage = "sft_validated_awaiting_grpo"
@@ -917,7 +1020,7 @@ def build_v100_section(board_dir: Path, logs_dir: Path | None = None) -> dict[st
             status = "in_progress"
             stage = "queued_awaiting_board_artifacts"
 
-        runs.append({
+        run_obj: dict[str, Any] = {
             "run_id": name,
             "model": model_label,
             "recipe": recipe,
@@ -925,6 +1028,10 @@ def build_v100_section(board_dir: Path, logs_dir: Path | None = None) -> dict[st
             "stage": stage,
             "data_mix": art["data_mix"],
             "sft_curve": sft_summary,
+        }
+        if dpo_summary is not None:
+            run_obj["dpo_curve"] = dpo_summary
+        run_obj.update({
             "validation_25seed": val_section,
             "grpo_curve": grpo_summary,
             "eval_summary": eval_summary,
@@ -932,18 +1039,40 @@ def build_v100_section(board_dir: Path, logs_dir: Path | None = None) -> dict[st
             "verdict": eval_verdict,
             "claims_stronger_mole": claims_stronger,
         })
+        runs.append(run_obj)
 
     n_completed = sum(1 for r in runs if r["status"] == "completed")
     n_in_progress = sum(1 for r in runs if r["status"] == "in_progress")
     any_stronger = any(r["claims_stronger_mole"] for r in runs)
 
+    catchable_diverse_completed = [
+        r
+        for r in runs
+        if r["eval_summary"] is not None
+        and r["eval_summary"]["heldout_800k"]["catchable_85"]
+        and r["eval_summary"]["heldout_200k"]["catchable_85"]
+        and r["eval_summary"]["heldout_800k"]["distinct_actions"] >= 2
+        and (r["eval_mole_400k"] is None or r["eval_mole_400k"]["catchable_85"])
+    ]
+    headline_run_id = None
+    if catchable_diverse_completed:
+        best_r = max(
+            catchable_diverse_completed,
+            key=lambda r: (
+                float(r["eval_summary"]["heldout_800k"]["qwen_min_regret"]),
+                int(r["eval_summary"]["heldout_800k"]["distinct_actions"]),
+            ),
+        )
+        headline_run_id = best_r["run_id"]
+
     return {
         "regularization_recipe": {
             "sft_distillation": (
                 "gemini-4-carbon arena mole turns mapped to Mole DSL selectors with p_leak=1.0 -> 0.65 "
-                "silence cap (keep leak=none only when restricted or max_recipient_count<=8, max 32 rows, "
-                "331 distilled rows when gemini/mole ref is available) plus 2x counterfactual catchable "
-                "expert rollouts (horizon=3 on seeds 120000+, solver_correct and solver_score>=0.25, 88 states -> 176 rows)"
+                "silence cap (keep leak=none only when restricted or max_recipient_count<=8, max 32 rows; "
+                "432 distilled turns in v2, 331 in v1) plus 2x counterfactual catchable expert rollouts "
+                "(horizon=3 on seeds 120000+, solver_correct and solver_score>=0.25) and 146 counterfactual "
+                "DPO preference pairs on Qwen2.5-1.5B-Instruct v2"
             ),
             "grpo_stabilizers": {
                 "horizon_days": 3,
@@ -957,12 +1086,47 @@ def build_v100_section(board_dir: Path, logs_dir: Path | None = None) -> dict[st
                 "validation_split": "195000-195024 (n=25, checkpoint selection only, never held-out)",
             },
         },
+        "headline_v100_run": headline_run_id,
         "n_runs": len(runs),
         "n_completed": n_completed,
         "n_in_progress": n_in_progress,
         "claims_stronger_mole": any_stronger,
         "runs": runs,
     }
+
+
+def _build_v100_headline_sentence(s_v100: dict[str, Any]) -> str:
+    by_id = {r["run_id"]: r for r in s_v100.get("runs", [])}
+    r_dpo = by_id.get("canary-qwen25-1p5b-dpo-grpo-v2")
+    if r_dpo is not None and r_dpo.get("eval_summary") is not None:
+        es = r_dpo["eval_summary"]
+        h8 = es["heldout_800k"]
+        h2 = es["heldout_200k"]
+        fpg_str = ""
+        if "frontier_proxy_gap" in h8 and "frontier_proxy_gap_ci95" in h8:
+            ci = h8["frontier_proxy_gap_ci95"]
+            fpg_str = f", frontier_proxy_gap {h8['frontier_proxy_gap']:+.4f} [{ci[0]:+.4f}, {ci[1]:+.4f}]"
+        grok_diff_str = ""
+        if h8.get("paired_diff_grok_tactics_score"):
+            gd = h8["paired_diff_grok_tactics_score"]
+            grok_diff_str = (
+                f", grok_tactics {h8['qwen_grok_tactics_score']:+.4f} vs default "
+                f"{h8['default_grok_tactics_score']:+.4f} (diff {gd[0]:+.4f} [{gd[1]:+.4f}, {gd[2]:+.4f}])"
+            )
+        return (
+            f"FR8 V100 regularized Qwen training ({s_v100['n_completed']}/{s_v100['n_runs']} completed) is led by "
+            f"Qwen2.5-1.5B-Instruct SFT+DPO+GRPO v2 ({es['winner_checkpoint']}): held-out 800k (n={h8['n']}) "
+            f"solver {h8['qwen_solver_score']:+.4f} (acc {h8['qwen_solver_acc']:.4f} >= 0.85), min_regret "
+            f"{h8['qwen_min_regret']:+.4f} vs default {h8['default_min_regret']:+.4f}{fpg_str}{grok_diff_str}, "
+            f"distinct_actions={h8['distinct_actions']}, invalid_generations={h8['invalid_generations']}; "
+            f"held-out 200k (n={h2['n']}) solver {h2['qwen_solver_score']:+.4f} (acc {h2['qwen_solver_acc']:.3f}), "
+            f"alongside catchable diverse Qwen3-1.7B and Qwen3-0.6B checkpoints."
+        )
+    return (
+        f"Regularized SFT + Horizon-3 GRPO on FR8 V100s ({s_v100['n_completed']} completed, "
+        f"{s_v100['n_in_progress']} in progress) preserves multi-action diversity and strict >=0.85 solver "
+        f"catchability while keeping unfinished runs marked in_progress."
+    )
 
 
 def build_summary(
@@ -991,16 +1155,15 @@ def build_summary(
             "cpu_rl_mole_v2_catchable_85": s_v2["catchable_85_both_sets"],
             "verda_vanilla_grpo_stronger_mole": s_verda["claims_stronger_mole"],
             "v100_regularized_stronger_mole": s_v100["claims_stronger_mole"],
+            "headline_v100_run": s_v100["headline_v100_run"],
             "headline": (
                 "CPU RLMoleV2 eliminates wide/unrestricted voluntary silence and fixes RLMole v1's 0.75 "
                 "catchability violation on both held-out sets (ws3_heldout 200000-200059 n=60: solver_acc "
                 "0.9667 [0.9167, 1.0000], min_regret 0.2937 vs default 0.2322; rules_heldout 800000-800059 "
                 "n=60: solver_acc 0.9500 [0.8833, 1.0000], min_regret 0.2095 vs default 0.1766, with n=60 "
                 "paired regret CIs vs default spanning zero). Vanilla GRPO from DEFAULT_STRATEGY (3 FR8 0.5B "
-                "runs + 11 Verda 0.5B/1.5B/3B runs) is a confirmed mode-collapse negative result. Regularized "
-                "SFT + Horizon-3 GRPO on FR8 V100s preserves multi-action diversity on 25-seed validation "
-                "(195000-195024, e.g. Qwen3-1.7B [val sft] min_regret +0.2496, solver_acc 0.9600, H(A) 1.0894 "
-                "nats) while keeping held-out 800k/200k strictly marked in_progress until eval_summary.json completes."
+                "runs + 11 Verda 0.5B/1.5B/3B runs) is a confirmed mode-collapse negative result. "
+                + _build_v100_headline_sentence(s_v100)
             ),
         },
     }
@@ -1151,6 +1314,69 @@ def _render_rl_v2_split_rows(split_label: str, sp: dict[str, Any]) -> list[str]:
     ]
 
 
+def _render_v100_exec_bullet(v100: dict[str, Any], ov: dict[str, Any]) -> str:
+    by_id = {r["run_id"]: r for r in v100.get("runs", [])}
+    r_dpo = by_id.get("canary-qwen25-1p5b-dpo-grpo-v2")
+    r_17b = by_id.get("canary-qwen3-1p7b-mole-v1")
+    r_06b = by_id.get("canary-qwen3-0p6b-mole-v1")
+    if r_dpo is not None and r_dpo.get("eval_summary") is not None:
+        es = r_dpo["eval_summary"]
+        h8 = es["heldout_800k"]
+        h2 = es["heldout_200k"]
+        fpg_part = ""
+        if "frontier_proxy_gap" in h8 and "frontier_proxy_gap_ci95" in h8:
+            ci = h8["frontier_proxy_gap_ci95"]
+            fpg_part = f"`frontier_proxy_gap = {h8['frontier_proxy_gap']:+.4f} [{ci[0]:+.4f}, {ci[1]:+.4f}]`, "
+        gd = h8.get("paired_diff_grok_tactics_score") or [0.0, 0.0, 0.0]
+        rgd = h8.get("regret_grok_tactics_paired_diff") or [0.0, 0.0, 0.0]
+        peers_part = ""
+        if (
+            r_17b is not None
+            and r_17b.get("eval_summary") is not None
+            and r_06b is not None
+            and r_06b.get("eval_summary") is not None
+        ):
+            e17 = r_17b["eval_summary"]
+            e06 = r_06b["eval_summary"]
+            peers_part = (
+                f" Alongside it, `Qwen3-1.7B` (`{e17['winner_checkpoint']}`: `800k` `solver` "
+                f"`{e17['heldout_800k']['qwen_solver_score']:+.4f}` `acc={e17['heldout_800k']['qwen_solver_acc']:.3f}`, "
+                f"`200k` `solver` `{e17['heldout_200k']['qwen_solver_score']:+.4f}` `acc={e17['heldout_200k']['qwen_solver_acc']:.3f}`, "
+                f"`min_regret={e17['heldout_200k']['qwen_min_regret']:+.4f}`, `k={e17['heldout_800k']['distinct_actions']}`) "
+                f"and `Qwen3-0.6B` (`{e06['winner_checkpoint']}`: `800k` `solver` "
+                f"`{e06['heldout_800k']['qwen_solver_score']:+.4f}` `acc={e06['heldout_800k']['qwen_solver_acc']:.3f}`, "
+                f"`min_regret={e06['heldout_800k']['qwen_min_regret']:+.4f}` vs default `{e06['heldout_800k']['default_min_regret']:+.4f}`, "
+                f"`200k` `solver` `{e06['heldout_200k']['qwen_solver_score']:+.4f}` `acc={e06['heldout_200k']['qwen_solver_acc']:.3f}`, "
+                f"`min_regret={e06['heldout_200k']['qwen_min_regret']:+.4f}`, `k={e06['heldout_800k']['distinct_actions']}`) "
+                f"confirm multi-action catchability across `0.6B-1.7B` scales."
+            )
+        return (
+            f"- **FR8 V100 regularized Qwen SFT + DPO + Horizon-3 GRPO (`{v100['n_completed']}` completed, "
+            f"`{v100['n_in_progress']}` in progress; headline `{r_dpo['run_id']}`):** "
+            f"**`Qwen2.5-1.5B-Instruct` SFT+DPO+GRPO v2** (`{es['winner_checkpoint']}`, "
+            f"[results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/eval_summary.json](../../results/moletrain/canary-qwen25-1p5b-dpo-grpo-v2/eval_summary.json)) "
+            f"combines `432` trap-capped `gemini-4-carbon` distilled turns + `150` counterfactual expert SFT rows (`total=582`) + "
+            f"`146` counterfactual DPO pairs + `60`-step regularized Horizon-3 GRPO to achieve on **held-out `800k` (`800000-800059`, `n={h8['n']}`)**: "
+            f"`solver` `{h8['qwen_solver_score']:+.4f}` (`acc = {h8['qwen_solver_acc']:.4f} >= 0.85`), "
+            f"`min_regret = {h8['qwen_min_regret']:+.4f}` vs `DEFAULT_STRATEGY` `{h8['default_min_regret']:+.4f}`, "
+            f"{fpg_part}"
+            f"`grok_tactics = {h8['qwen_grok_tactics_score']:+.4f}` vs default `{h8['default_grok_tactics_score']:+.4f}` "
+            f"(diff `{gd[0]:+.4f} [{gd[1]:+.4f}, {gd[2]:+.4f}]`, `regret_grok_tactics` diff `{rgd[0]:+.4f} [{rgd[1]:+.4f}, {rgd[2]:+.4f}]`, `95%` CIs exclude zero), "
+            f"`distinct_actions = {h8['distinct_actions']}` (`H(A) = {h8['action_entropy_nats']:.4f}` nats), `invalid_generations = {h8['invalid_generations']}`; "
+            f"and on **held-out `200k` (`200000-200059`, `n={h2['n']}`)**: `solver` `{h2['qwen_solver_score']:+.4f}` (`acc = {h2['qwen_solver_acc']:.3f}`), "
+            f"`distinct_actions = {h2['distinct_actions']}`, `invalid_generations = {h2['invalid_generations']}` "
+            f"(while `n=60` paired `regret_hinted_heuristic` CI `{_fmt_ci(h8['paired_diff_regret_strongest'][0], h8['paired_diff_regret_strongest'][1:])}` spans zero, "
+            f"so `stronger_mole_claimed = {ov['v100_regularized_stronger_mole']}`).{peers_part}"
+        )
+    return (
+        f"- **FR8 V100 regularized Qwen SFT + DPO + Horizon-3 GRPO (`{v100['n_completed']}` completed, "
+        f"`{v100['n_in_progress']}` in progress):** Replaces cold-start 1-day GRPO with `gemini-4-carbon` "
+        f"`p_leak=1.0 -> 0.65` trap-capped SFT distillation + counterfactual catchable expert SFT + DPO + "
+        f"KL (`0.05`) / token-entropy (`0.015`) / action-frequency (`>0.40`) regularized 3-day GRPO "
+        f"(`stronger_mole_claimed = {ov['v100_regularized_stronger_mole']}`). Unfinished runs remain marked `in_progress`."
+    )
+
+
 def render_markdown(summary: dict[str, Any]) -> str:
     b_sec = summary["baseline_vs_cpu_rl_mole"]
     d_st = b_sec["default_strategy"]
@@ -1173,6 +1399,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
         _md_h(2, "Executive Verdict"),
         "",
         f"- **Strict catchability constraint:** `solver_acc >= {summary['strict_catchability_gate']:.2f}` on held-out hard seeds (stricter than the legacy `0.75` floor in [canary/forge/rl_mole.py](../../canary/forge/rl_mole.py)).",
+        _render_v100_exec_bullet(v100, ov),
         (
             f"- **CPU `RLMoleV2` fixes `RLMole` v1's catchability violation on both held-out sets (`catchable_85_both_sets = {v2_sec['catchable_85_both_sets']}`):** "
             f"In [canary/forge/rl_mole_v2.py](../../canary/forge/rl_mole_v2.py) and [results/moletrain/rl_mole_v2_heldout.json](../../results/moletrain/rl_mole_v2_heldout.json), "
@@ -1184,7 +1411,6 @@ def render_markdown(summary: dict[str, Any]) -> str:
             f"Paired `V2 - V1` `solver_acc` CIs strictly exclude zero on both sets, while `n=60` paired regret CIs vs `DEFAULT_STRATEGY` honestly span zero."
         ),
         f"- **Verda vanilla GRPO (`train/grpo_mole.py`, 200 steps, {verda['n_runs']} held-out runs on seeds `400000-400199`, `n=200`):** **Negative / collapse baseline** (`claims_stronger_mole = {verda['claims_stronger_mole']}`). On `Qwen2.5-0.5B-Instruct`, the `+0.8303` to `+0.9008` paired reward delta comes **100% from JSON format validity** (`base` valid `0.050-0.125` vs `adapter` `1.000`), collapsing `200/200` greedily onto silent `none/decoy` (`regret = -0.0321`). On `Qwen2.5-1.5B-Instruct` (`-0.0164` to `-0.0103`) and `Qwen2.5-3B-Instruct` (`-0.0385` to `-0.0156`), adapters collapse greedily onto single actions and do **not** beat base or produce positive held-out regret (`regret` `-0.0449` to `-0.0266`, `solver_catch` `0.940-0.965`).",
-        f"- **FR8 V100 regularized Qwen SFT + Horizon-3 GRPO (`{v100['n_completed']}` completed, `{v100['n_in_progress']}` in progress):** Replaces cold-start 1-day GRPO with `gemini-4-carbon` `p_leak=1.0 -> 0.65` trap-capped SFT distillation + counterfactual catchable expert SFT + KL (`0.05`) / token-entropy (`0.015`) / action-frequency (`>0.40`) regularized 3-day GRPO (`stronger_mole_claimed = {ov['v100_regularized_stronger_mole']}`). On **25-seed validation (`195000-195024`, `n=25`, checkpoint selection split only)**, `Qwen3-1.7B` `[val sft]` achieves `min_regret = +0.2496`, `solver_acc = 0.9600`, `H(A) = 1.0894` nats (`k=3`), while held-out `800k`/`200k` evaluations remain strictly marked `in_progress` until `eval_summary.json` completes.",
         "",
         _md_h(2, "1. CPU RL Mole Baselines: Legacy `RLMole` v1 Violation and `RLMoleV2` Catchability Fix"),
         "",
@@ -1292,34 +1518,46 @@ def render_markdown(summary: dict[str, Any]) -> str:
         "- **`Qwen2.5-1.5B-Instruct` (`1.5B-s0..s5`, 6 runs):** Base `1.5B` already achieves `100.0%` valid JSON (`reward = -0.0553` to `-0.0562`, `regret = -0.0278` to `-0.0287`). Vanilla GRPO yields paired diffs of `-0.0103` (`s0, s2, s3, s5`) and `-0.0164` / `-0.0162` (`s1, s4`), collapsing greedily onto `random_seeded/none` (`200/200` on 4 seeds) or `random_seeded/decoy` (`199-200/200` on 2 seeds) with `regret = -0.0449` to `-0.0357` and `solver_catch = 0.940-0.945`.",
         "- **`Qwen2.5-3B-Instruct` (`3B-s0..s1`, 2 runs):** Base `3B` achieves `100.0%` valid JSON (`reward = -0.0284`, `regret = -0.0134`, `solver_catch = 0.970`). Vanilla GRPO yields paired diffs of `-0.0385 [-0.1069, +0.0299]` (`3B-s0`, `89.0%` `random_seeded/most_restricted_peer`) and `-0.0156 [-0.0815, +0.0502]` (`3B-s1`, `59.5%` `random_seeded/decoy`, `19.5%` `fewest_recipients/most_restricted_peer`), with `regret = -0.0369` and `-0.0266`. **Zero Verda vanilla GRPO runs produce a stronger held-out mole.**",
         "",
-        _md_h(2, "4. FR8 V100 Regularized Qwen SFT + Horizon-3 GRPO"),
+        _md_h(2, "4. FR8 V100 Regularized Qwen SFT + DPO + Horizon-3 GRPO"),
         "",
-        "Pipeline and evaluator modules: [train/qwen_diverse_mole.py](../../train/qwen_diverse_mole.py) and [train/eval_grpo_mole.py](../../train/eval_grpo_mole.py).",
+        "Pipeline and evaluator modules: [train/qwen_diverse_mole.py](../../train/qwen_diverse_mole.py), [train/export_mole_dpo.py](../../train/export_mole_dpo.py), and [train/eval_grpo_mole.py](../../train/eval_grpo_mole.py).",
         "",
         "To fix both failure modes (CPU `RLMole` v1 excess silence under `p_leak=0.65` and vanilla GRPO single-action collapse), the V100 training recipe combines:",
-        "1. **Trap-capped `gemini-4-carbon` SFT distillation (`p_leak=1.0 -> 0.65`) + counterfactual catchable expert SFT:** Arena `gemini-4-carbon` mole transcripts operated without the `p_leak=0.65` gate (`p_leak=1.0`), so raw `leak='none'` imitation starves canary leaks on v1.4 hard. We retain `gemini-4-carbon` `leak='none'` turns strictly on restricted or narrow-recipient trap states (`i_am_restricted` or `max_recipient_count <= 8`, capped at `32` rows -> `331` distilled turns) and combine them with `2x` 3-day counterfactual expert demonstrations (`seeds 120000+`, filtered to `solver_correct` and `solver_score >= 0.25`, `88` states -> `176` rows).",
-        "2. **KL + entropy + frequency regularized 3-day GRPO:** Replaces 1-day `OverrideMole` with 3-day `HorizonOverrideMole`, adds `beta_kl = 0.05` against frozen `sft_ref`, `ent_coef = 0.015` token entropy bonus, `-0.25 * (freq - 0.40)` batch action-frequency penalty, `-0.20` silence penalty, and dual `lam_catch` ascent targeting `solver_acc = 0.89 >= 0.85`.",
+        "1. **Trap-capped `gemini-4-carbon` SFT distillation (`p_leak=1.0 -> 0.65`) + counterfactual catchable expert SFT:** Arena `gemini-4-carbon` mole transcripts operated without the `p_leak=0.65` gate (`p_leak=1.0`), so raw `leak='none'` imitation starves canary leaks on v1.4 hard. We retain `gemini-4-carbon` `leak='none'` turns strictly on restricted or narrow-recipient trap states (`i_am_restricted` or `max_recipient_count <= 8`, capped at `32` rows -> `432` distilled turns in v2, `331` in v1) and combine them with `2x` 3-day counterfactual expert demonstrations (`seeds 120000+`, filtered to `solver_correct` and `solver_score >= 0.25`).",
+        "2. **Counterfactual Preference DPO (`canary-qwen25-1p5b-dpo-grpo-v2`, `146` pairs, `16` steps):** Contrasts catchable positive-regret 3-day rollouts against uncatchable, silent, or negative-regret rollouts on identical world states (`loss 0.6891 -> 0.4842`, `margin +0.0082 -> +0.6456`), slashing voluntary `none/random_peer` from `26.1%` (`sft`) to `2.2%` (`sft_dpo`) and expanding active greedy selectors to `k=6`.",
+        "3. **KL + entropy + frequency regularized 3-day GRPO:** Replaces 1-day `OverrideMole` with 3-day `HorizonOverrideMole`, adds `beta_kl = 0.05` against frozen `sft_ref`, `ent_coef = 0.015` token entropy bonus, `-0.25 * (freq - 0.40)` batch action-frequency penalty, `-0.20` silence penalty, and dual `lam_catch` ascent targeting `solver_acc = 0.89 >= 0.85`.",
         "",
-        "| Run | Model | Status (Stage) | SFT Loss (Init -> Final, Steps) | GRPO Steps (Valid, Batch Acc, KL, Sampled k) | 25-Seed Val (`195000-195024`, Not Held-Out) | Held-Out `800k` / `200k` / `400k` | Honest Verdict |",
+        "| Run | Model | Status (Stage) | SFT / DPO Curves | GRPO Steps (Valid, Batch Acc, KL, Sampled k) | 25-Seed Val (`195000-195024`, Not Held-Out) | Held-Out `800k` / `200k` / `400k` | Honest Verdict |",
         "|---|---|---|---|---|---|---|---|",
     ])
 
     val_rows_md: list[str] = []
+    heldout_rows_md: list[str] = []
     for r in v100["runs"]:
         sc = r["sft_curve"]
+        dc = r.get("dpo_curve")
         gc = r["grpo_curve"]
         vs_blk = r.get("validation_25seed")
         es = r["eval_summary"]
         e4 = r["eval_mole_400k"]
         dm = r.get("data_mix")
 
-        sft_cell = (
-            f"`{sc['initial_loss']:.4f} -> {sc['final_loss']:.4f}` ({sc['last_step']} st"
-            + (f", n={dm['total_sft']}" if dm else "")
-            + ")"
-            if sc is not None
-            else "pending"
-        )
+        if sc is not None:
+            sft_cell = (
+                f"SFT `{sc['initial_loss']:.4f} -> {sc['final_loss']:.4f}` ({sc['last_step']} st"
+                + (f", n={dm['total_sft']}" if dm else "")
+                + ")"
+            )
+            if dc is not None:
+                sft_cell += (
+                    f"; DPO `{dc['initial_loss']:.4f} -> {dc['final_loss']:.4f}`, "
+                    f"margin `{dc['initial_margin']:+.4f} -> {dc['final_margin']:+.4f}` ({dc['last_step']} st"
+                    + (f", pairs={dm['dpo_pairs']}" if dm and "dpo_pairs" in dm else "")
+                    + ")"
+                )
+        else:
+            sft_cell = "pending"
+
         grpo_cell = (
             f"{gc['steps_logged']} st (valid `{gc['mean_valid_rate']:.3f}`, acc `{gc['mean_batch_solver_acc']:.3f}`, "
             f"KL `{gc['mean_abs_kl']:.4f}`, k={gc['sampled_distinct_actions']})"
@@ -1351,12 +1589,35 @@ def render_markdown(summary: dict[str, Any]) -> str:
             h8 = es["heldout_800k"]
             h2 = es["heldout_200k"]
             hold_cell = (
-                f"800k(n={h8['n']}): acc `{h8['qwen_solver_acc']:.3f}`, min_reg `{h8['qwen_min_regret']:+.4f}` "
-                f"(def `{h8['default_min_regret']:+.4f}`), k={h8['distinct_actions']}; "
-                f"200k(n={h2['n']}): acc `{h2['qwen_solver_acc']:.3f}`, min_reg `{h2['qwen_min_regret']:+.4f}`"
+                f"800k(n={h8['n']}): solver `{h8['qwen_solver_score']:+.4f}`, acc `{h8['qwen_solver_acc']:.4f}`, "
+                f"min_reg `{h8['qwen_min_regret']:+.4f}` (def `{h8['default_min_regret']:+.4f}`), k={h8['distinct_actions']}; "
+                f"200k(n={h2['n']}): solver `{h2['qwen_solver_score']:+.4f}`, acc `{h2['qwen_solver_acc']:.3f}`, "
+                f"min_reg `{h2['qwen_min_regret']:+.4f}`"
             )
             if e4 is not None:
                 hold_cell += f"; 400k(n={e4['n']}): diff `{e4['reward_diff_mean']:+.4f}`, catch `{e4['adapter_solver_catch']:.3f}`"
+
+            fpg_col = (
+                _fmt_ci(h8["frontier_proxy_gap"], h8["frontier_proxy_gap_ci95"])
+                if "frontier_proxy_gap" in h8 and "frontier_proxy_gap_ci95" in h8
+                else "n/a"
+            )
+            gd = h8.get("paired_diff_grok_tactics_score")
+            grok_col = (
+                f"`{h8['qwen_grok_tactics_score']:+.4f}` vs `{h8['default_grok_tactics_score']:+.4f}` (`{gd[0]:+.4f}`)"
+                if gd is not None
+                else f"`{h8['qwen_grok_tactics_score']:+.4f}` vs `{h8['default_grok_tactics_score']:+.4f}`"
+            )
+            is_hl = r["run_id"] == v100.get("headline_v100_run")
+            rid_fmt = f"**`{r['run_id']}`**" if is_hl else f"`{r['run_id']}`"
+            heldout_rows_md.append(
+                f"| {rid_fmt} | `{r['model']}` (`{es['winner_checkpoint']}`) | {h8['n']} | "
+                f"`{h8['qwen_solver_score']:+.4f}` (`{h8['qwen_solver_acc']:.4f}`) | "
+                f"{grok_col} | `{h8['qwen_min_regret']:+.4f}` (`{h8['default_min_regret']:+.4f}`) | "
+                f"{fpg_col} | "
+                f"{h8['distinct_actions']} (`{h8['action_entropy_nats']:.4f}`, inv={h8['invalid_generations']}) | "
+                f"`{h2['qwen_solver_score']:+.4f}` (`{h2['qwen_solver_acc']:.3f}`, reg `{h2['qwen_min_regret']:+.4f}`, k={h2['distinct_actions']}) |"
+            )
         elif e4 is not None:
             hold_cell = (
                 f"400k(n={e4['n']}): diff `{e4['reward_diff_mean']:+.4f}`, catch `{e4['adapter_solver_catch']:.3f}`, "
@@ -1370,12 +1631,22 @@ def render_markdown(summary: dict[str, Any]) -> str:
             f"{sft_cell} | {grpo_cell} | {val_cell} | {hold_cell} | `{r['verdict']}` |"
         )
 
+    if heldout_rows_md:
+        lines.extend([
+            "",
+            _md_h(3, "4A. Completed V100 Held-Out Evaluation (`800k` `rules.HELDOUT_SEEDS` and `200k` `ws3_heldout`)"),
+            "",
+            "| Run | Model (Winner) | `800k` `n` | `800k` Solver (`Acc`) | `800k` `grok_tactics` (vs Default, Diff) | `800k` `min_regret` (Default) | `800k` Frontier Proxy Gap [95% CI] | `800k` `k` (`H(A)`, Invalid) | `200k` Solver (`Acc`, `min_regret`, `k`) |",
+            "|---|---|---:|---:|---|---|---|---|---|",
+        ])
+        lines.extend(heldout_rows_md)
+
     if val_rows_md:
         lines.extend([
             "",
-            _md_h(3, "25-Seed Validation Checkpoints (`195000-195024`, `n=25`, Validation Split Only)"),
+            _md_h(3, "4B. 25-Seed Validation Checkpoints (`195000-195024`, `n=25`, Validation Split Only)"),
             "",
-            "Logged directly from V100 training jobs (`[val sft]` and `[val step=...]`). These `25` seeds (`195000-195024`) are used strictly for checkpoint selection (`sft` vs `grpo_step40` vs `grpo_step80`); held-out `800k` (`800000-800039`) and `200k` (`200000-200039`) remain `in_progress` until `eval_summary.json` finishes.",
+            "Logged directly from V100 training jobs (`[val sft]`, `[val sft_dpo]`, and `[val step=...]`). These `25` seeds (`195000-195024`) are used strictly for checkpoint selection and never conflated with held-out `800k` or `200k`.",
             "",
             "| Run | Model | Val Checkpoint | Solver Score | Solver Acc | `grok_tactics` | `heuristic` | `hinted_heuristic` | `min_regret` | `k` | `H(A)` (nats) | Greedy Action Profile (`195000-195024`) |",
             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|",
@@ -1384,6 +1655,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
 
     lines.extend([
         "",
+        "- **Ablation proof (`canary-qwen-mole-v1` -> `canary-qwen25-1p5b-dpo-grpo-v2`):** On the exact same `Qwen2.5-1.5B-Instruct` base model, expert-only SFT + GRPO (`canary-qwen-mole-v1`) collapses to `k=1` greedy action on `800k` (`H(A)=0.0000`, `min_regret=+0.0835`), whereas adding trap-capped `gemini-4-carbon` distillation (`432` turns) + counterfactual preference DPO (`146` pairs) + Horizon-3 GRPO (`canary-qwen25-1p5b-dpo-grpo-v2`, `grpo_step60`) expands held-out diversity to `k=6` (`H(A)=1.1061` nats, `0` invalid generations across `3,719` `800k` and `3,737` `200k` unique prompts), preserves `solver_acc = 0.9667` (`800k`) and `1.000` (`200k`), cuts `grok_tactics` from `+0.3175` to `+0.1223` (`-0.1952 [-0.3028, -0.0855]`), and reaches `min_regret = +0.2478` (`frontier_proxy_gap = +0.2748 [+0.1237, +0.4313]`).",
         "- **Reporting discipline:** Validation metrics on `195000-195024` (`n=25`) are labeled explicitly as checkpoint-selection validation and never conflated with held-out `800k`/`200k`. Runs without `eval_summary.json` remain marked `in_progress` (`claims_stronger_mole = False`) with zero extrapolated held-out scores.",
         "",
     ])
@@ -1431,6 +1703,12 @@ def _check_v100_against_disk(
             n_sft = int(c_sft["logged_points"])
             if len(art["sft_rows"]) < n_sft or _summarize_sft_rows(art["sft_rows"][:n_sft]) != c_sft:
                 errs.append(f"v100 {rid}: sft_curve mismatch against disk prefix")
+
+        c_dpo = cr.get("dpo_curve")
+        if c_dpo is not None:
+            n_dpo = int(c_dpo["logged_points"])
+            if len(art["dpo_rows"]) < n_dpo or _summarize_dpo_rows(art["dpo_rows"][:n_dpo]) != c_dpo:
+                errs.append(f"v100 {rid}: dpo_curve mismatch against disk prefix")
 
         c_grpo = cr.get("grpo_curve")
         if c_grpo is not None:

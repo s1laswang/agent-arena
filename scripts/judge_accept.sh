@@ -58,6 +58,127 @@ fi
 if [ "$fail" -gt 0 ]; then
   say "Prerequisites missing; stopping before setup."
 else
+  need_cmp=0
+  need_diff=0
+  command -v cmp >/dev/null 2>&1 || need_cmp=1
+  command -v diff >/dev/null 2>&1 || need_diff=1
+  if [ "$need_cmp" = "1" ] || [ "$need_diff" = "1" ]; then
+    mkdir -p "$TMPD/shim-bin"
+    python3 - "$TMPD/shim-bin" "$need_cmp" "$need_diff" <<'PY'
+import sys, textwrap
+from pathlib import Path
+
+shim_dir = Path(sys.argv[1])
+need_cmp = sys.argv[2] == "1"
+need_diff = sys.argv[3] == "1"
+shebang = chr(35) + "!/usr/bin/env python3\n"
+
+if need_cmp:
+    cmp_path = shim_dir / "cmp"
+    cmp_path.write_text(
+        shebang + textwrap.dedent("""\
+        import sys
+        from pathlib import Path
+
+        quiet = False
+        files = []
+        end_opts = False
+        for arg in sys.argv[1:]:
+            if not end_opts and arg == "--":
+                end_opts = True
+            elif not end_opts and arg in ("-s", "--quiet", "--silent"):
+                quiet = True
+            elif not end_opts and arg.startswith("-") and arg != "-":
+                if not quiet:
+                    sys.stderr.write(f"cmp: unsupported option: {arg}\\n")
+                sys.exit(2)
+            else:
+                files.append(arg)
+        if len(files) != 2:
+            if not quiet:
+                sys.stderr.write("cmp: expected two file operands\\n")
+            sys.exit(2)
+        def _read(p):
+            return sys.stdin.buffer.read() if p == "-" else Path(p).read_bytes()
+        try:
+            b1 = _read(files[0])
+            b2 = _read(files[1])
+        except OSError as exc:
+            if not quiet:
+                sys.stderr.write(f"cmp: {exc}\\n")
+            sys.exit(2)
+        if b1 == b2:
+            sys.exit(0)
+        if not quiet:
+            lim = min(len(b1), len(b2))
+            idx = next((i for i in range(lim) if b1[i] != b2[i]), lim)
+            line_no = b1[:idx].count(b"\\n") + 1
+            sys.stdout.write(f"{files[0]} {files[1]} differ: byte {idx + 1}, line {line_no}\\n")
+        sys.exit(1)
+        """),
+        encoding="utf-8",
+    )
+    cmp_path.chmod(0o755)
+
+if need_diff:
+    diff_path = shim_dir / "diff"
+    diff_path.write_text(
+        shebang + textwrap.dedent("""\
+        import difflib, sys
+        from pathlib import Path
+
+        brief = False
+        files = []
+        end_opts = False
+        for arg in sys.argv[1:]:
+            if not end_opts and arg == "--":
+                end_opts = True
+            elif not end_opts and arg in ("-q", "--brief"):
+                brief = True
+            elif not end_opts and (arg in ("-u", "--unified", "-a", "--text") or arg.startswith("-U")):
+                continue
+            elif not end_opts and arg.startswith("-") and arg != "-":
+                sys.stderr.write(f"diff: unsupported option: {arg}\\n")
+                sys.exit(2)
+            else:
+                files.append(arg)
+        if len(files) != 2:
+            sys.stderr.write("diff: expected two file operands\\n")
+            sys.exit(2)
+        def _read(p):
+            return sys.stdin.buffer.read() if p == "-" else Path(p).read_bytes()
+        try:
+            b1 = _read(files[0])
+            b2 = _read(files[1])
+        except OSError as exc:
+            sys.stderr.write(f"diff: {exc}\\n")
+            sys.exit(2)
+        if b1 == b2:
+            sys.exit(0)
+        try:
+            if brief:
+                sys.stdout.write(f"Files {files[0]} and {files[1]} differ\\n")
+            else:
+                l1 = b1.decode("utf-8", errors="replace").splitlines(keepends=True)
+                l2 = b2.decode("utf-8", errors="replace").splitlines(keepends=True)
+                out = list(difflib.unified_diff(l1, l2, fromfile=files[0], tofile=files[1]))
+                if out:
+                    for line in out:
+                        sys.stdout.write(line if line.endswith("\\n") else line + "\\n")
+                else:
+                    sys.stdout.write(f"Binary files {files[0]} and {files[1]} differ\\n")
+            sys.stdout.flush()
+        except BrokenPipeError:
+            pass
+        sys.exit(1)
+        """),
+        encoding="utf-8",
+    )
+    diff_path.chmod(0o755)
+PY
+    export PATH="$TMPD/shim-bin:$PATH"
+  fi
+
   say "-- make setup --"
   if make setup; then
     record PASS "make setup" "uv sync ok"

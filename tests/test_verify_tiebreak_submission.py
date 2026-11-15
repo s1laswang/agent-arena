@@ -137,6 +137,9 @@ def test_check1_git_diff_against_base_branch_and_dirty_tree(tmp_path: Path) -> N
     repo = tmp_path / "mini_repo"
     _clone_tiebreak_surface(repo)
     (repo / "README.md").write_text("Silas baseline\n", encoding="utf-8")
+    (repo / "results" / "judge_episodes.jsonl").write_text("{\"seed\": 900000}\n", encoding="utf-8")
+    (repo / "canary").mkdir(parents=True, exist_ok=True)
+    (repo / "canary" / "env.py").write_text("ENV_BASELINE = 1\n", encoding="utf-8")
 
     git_env = {
         "GIT_AUTHOR_NAME": "test",
@@ -161,6 +164,34 @@ def test_check1_git_diff_against_base_branch_and_dirty_tree(tmp_path: Path) -> N
     dirty_res = gate.check_protected_and_frozen_paths(root=repo, base_ref="justSilas")
     assert dirty_res.passed is False
     assert any("README.md" in e for e in dirty_res.errors)
+
+    subprocess.run(["git", "checkout", "--", "README.md"], cwd=repo, env=git_env, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "checkout", "-b", "fr8/canary/main", "justSilas"],
+        cwd=repo,
+        env=git_env,
+        check=True,
+        capture_output=True,
+    )
+    (repo / "docs").mkdir(parents=True, exist_ok=True)
+    for rel_doc in ("docs/DEMO.md", "docs/EXPLOITS.md", "docs/SUBMISSION.md"):
+        (repo / rel_doc).write_text("craft update\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=repo, env=git_env, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "craft docs"], cwd=repo, env=git_env, check=True, capture_output=True)
+
+    unified_ok = gate.check_protected_and_frozen_paths(root=repo, base_ref="justSilas", strict=True)
+    assert unified_ok.passed is True
+
+    (repo / "results" / "judge_episodes.jsonl").write_text("{}\n", encoding="utf-8")
+    judge_fail = gate.check_protected_and_frozen_paths(root=repo, base_ref="justSilas", strict=True)
+    assert judge_fail.passed is False
+    assert any("results/judge_episodes.jsonl" in e for e in judge_fail.errors)
+    subprocess.run(["git", "checkout", "--", "results/judge_episodes.jsonl"], cwd=repo, env=git_env, check=True, capture_output=True)
+
+    (repo / "canary" / "env.py").write_text("tamper\n", encoding="utf-8")
+    prot_fail = gate.check_protected_and_frozen_paths(root=repo, base_ref="justSilas", strict=True)
+    assert prot_fail.passed is False
+    assert any("canary/env.py" in e for e in prot_fail.errors)
 
 
 def test_check2_ast_inference_isolation_optional_pass_and_leak_rejections(tmp_path: Path) -> None:

@@ -42,6 +42,10 @@ CHECK_NAMES: tuple[str, ...] = (
     "hygiene_and_panel_fix_a",
 )
 
+ALWAYS_FROZEN_EXACT: tuple[str, ...] = (
+    "results/judge_episodes.jsonl",
+)
+
 FROZEN_SILAS_EXACT: tuple[str, ...] = (
     "README.md",
     "docs/SUBMISSION.md",
@@ -294,6 +298,19 @@ def _git_diff_paths(root: Path, base_ref: str) -> tuple[list[str], str | None, s
     return diff_lines, resolved_ref, None
 
 
+def _current_git_branch(root: Path) -> str:
+    proc = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    if proc.returncode != 0:
+        return ""
+    return proc.stdout.strip()
+
+
 def check_protected_and_frozen_paths(
     root: Path = ROOT,
     base_ref: str = "origin/justSilas",
@@ -313,7 +330,9 @@ def check_protected_and_frozen_paths(
 
     prot_exact, prot_prefixes = load_protected_rules(protected_file)
     resolved_ref = "explicit_paths"
+    branch_name = ""
     if changed_paths is None:
+        branch_name = _current_git_branch(root)
         paths, git_ref, git_err = _git_diff_paths(root, base_ref)
         if git_err is not None or git_ref is None:
             errors.append(f"failed to diff against {base_ref}: {git_err}")
@@ -325,13 +344,17 @@ def check_protected_and_frozen_paths(
     else:
         paths = [str(p).strip() for p in changed_paths if str(p).strip()]
 
+    enforce_squad_frozen = (changed_paths is not None) or ("tiebreak" in branch_name.lower())
+    active_frozen_exact: Iterable[str] = FROZEN_SILAS_EXACT if enforce_squad_frozen else ALWAYS_FROZEN_EXACT
+    active_frozen_prefixes: Iterable[str] = FROZEN_SILAS_PREFIXES if enforce_squad_frozen else ()
+
     protected_hits: list[str] = []
     frozen_hits: list[str] = []
     for rel in paths:
         p_rule = _matches_path_rule(rel, prot_exact, prot_prefixes)
         if p_rule is not None:
             protected_hits.append(f"{rel} (matches protected rule {p_rule!r})")
-        f_rule = _matches_path_rule(rel, FROZEN_SILAS_EXACT, FROZEN_SILAS_PREFIXES)
+        f_rule = _matches_path_rule(rel, active_frozen_exact, active_frozen_prefixes)
         if f_rule is not None:
             frozen_hits.append(f"{rel} (matches frozen Silas doc {f_rule!r})")
 

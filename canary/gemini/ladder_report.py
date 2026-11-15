@@ -654,6 +654,19 @@ def model_label(row: dict) -> str:
     return requested
 
 
+def headline_verb(a: dict, b: dict) -> str:
+    """CI-gated wording: 'matches' needs both CIs to contain 100% AND both lower bounds >= 80%."""
+    has = lambda x: x["ratio_lo"] == x["ratio_lo"]  # noqa: E731
+    contains = all(has(x) and x["ratio_lo"] <= 1.0 <= x["ratio_hi"] for x in (a, b))
+    if contains and all(x["ratio_lo"] >= 0.8 for x in (a, b)):
+        return "matches the reference solver on hard"
+    if contains:
+        return "is not distinguishable from the reference solver on hard, but the CIs are wide"
+    if all(x["ratio"] >= 0.8 for x in (a, b)):
+        return "comes close to the reference solver on hard"
+    return "reaches part of the reference solver's score on hard"
+
+
 def _pc(r) -> str:
     if r["ratio"] != r["ratio"]:
         return "–"
@@ -668,21 +681,15 @@ def headline(rows: list[dict], tags: dict) -> str:
            "paired seeds per cell; 95% CIs are wide, so read them as directions)."]
     a, b = R.get(("gemini-3.5-flash", "medium", "hard")), R.get(("gemini-3.5-flash", "high", "hard"))
     if a and b:
-        within = all(x["ratio_lo"] == x["ratio_lo"] and x["ratio_lo"] <= 1.0 <= x["ratio_hi"] for x in (a, b))
-        name = "gemini-3.6-flash (requested as 3.5-flash)"
+        verb = headline_verb(a, b)
         k = sum(round(x["accuracy"] * x["n"]) for x in (a, b))
-        carbon = [r["cost_per_ep"] for (m, lv, t), r in R.items() if m == "gemini-4-carbon" and lv == "high" and t == "hard"]
+        c = R.get(("gemini-4-carbon", "high", "hard"))
         cost = f"${min(a['cost_per_ep'], b['cost_per_ep']):.2f}–{max(a['cost_per_ep'], b['cost_per_ep']):.2f} per episode"
-        if carbon:
-            cost += f", versus ${carbon[0]:.2f} for gemini-4-carbon at high thinking"
-        if within and a["n"] == b["n"]:
-            claim = f"on hard is within the CI of the solver, n={a['n']}"
-        elif within:
-            claim = f"on hard is within the CI of the solver, n={a['n']} and n={b['n']}"
-        else:
-            claim = "on hard is not within the CI of the solver"
-        out.append(f"> **{name} with medium or high thinking {claim}:** {_pc(a)} and {_pc(b)} of the solver "
-                   f"on the same seeds, {k}/{a['n'] + b['n']} correct accusations, {cost}.")
+        if c:
+            cost += (f", versus ${c['cost_per_ep']:.2f} for gemini-4-carbon at high thinking ({_pc(c)}, n={c['n']}"
+                     + ("" if c["n"] == a["n"] == b["n"] else "; different n, so the seed sets differ") + ")")
+        out.append(f"> **gemini-3.5-flash (requested ID; the API serves gemini-3.6-flash) with medium or high thinking {verb}:** {_pc(a)} and {_pc(b)} of the solver "
+                   f"on the same seeds (n={a['n']}, {b['n']}), {k}/{a['n'] + b['n']} correct accusations, {cost}.")
     lite = [r for (m, _, _), r in R.items() if m == "gemini-3.1-flash-lite"]
     if lite:
         neg = sum(r["mean"] < 0 for r in lite)

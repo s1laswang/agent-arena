@@ -14,6 +14,7 @@ Each instance runs an on-instance reaper that deletes it at its deadline; ask FR
 | 924e81d8-e82b-4980-9e51-632241b3357d | 1A100.22V (80 GB) spot | FIN-03 | 1.0794 | 15 Nov 00:49 | reaper 07:30 | Gemini J1-lite: vLLM Qwen3-14B bf16 + canary.agents.play, 10 hard + 10 medium dev seeds (fr8/verda/j1_run.sh) | running |
 | 68bbe201-dc0e-4591-83d5-cc1332ead40c | 1A100.22V (80 GB) on-demand | FIN-03 | 2.1589 | 15 Nov 01:01 | reaper 07:30 | FR8: extra held-out eval n: v2 then v3-4k s0, seeds 30-59/tier (fr8/verda/evals_run.sh) | running |
 | f4378173-9608-4361-bc6c-8f2b9e482819 | 1A100.22V (80 GB) on-demand | FIN-03 | 2.1589 | 15 Nov 01:08 | reaper 07:30 | FR8: v3-8k s3 (4th replicate; no other job ready: HF_TOKEN missing, 8k adapters not yet trained) | running |
+| 18acfa5d-b5f9-4e64-a652-0de05a9f4c15 | 1A100.22V (80 GB) on-demand | FIN-01 | 2.1589 | 15 Nov 02:17 | reaper 07:30 | FR8: backup base eval, held-out seeds 6-35/tier, 150 min (FR8 44584 unreachable: FR8 SSH down) | running |
 
 Balance: €200.00 at start → €191.71 at 00:20 (account shows €200 of credit; Silas mentions €400 total, so a teammate's credit is in another account).
 Capacity: Verda A100/A6000/L40S on-demand and spot have been near zero all night; FR8 polls and launches queued workloads as capacity appears.
@@ -36,3 +37,5 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 01:30: v3-4k s0 (H100 3bb74f5a) training DONE: 609 GRPO steps in 2.0 h (seed 1 on the FR8 V100 gets ~250 in 4 h). Its held-out eval (seeds 0–29/tier) is running on the H100; the adapter was relayed to eval box 68bbe201 for seeds 30–59 after v2 (v2 at ~11/tier after 26 min).
 
 01:37: Meta PaliGemma: no free GPU (RTX PRO 6000 + A100, spot and on-demand, all full) → Meta SHARES A100 f4378173 (v3-8k s3, the bonus replicate; 8.8/80 GB used). HF token copied to /root/.hf_token (root-only). Meta limits: ≤50 GB GPU, ≤10 workers, done by ~04:30. No extra cost; s3 will lose some steps.
+
+02:12: v2 extra-n pulled (n=90; pooled v2 n=172 −0.457 ± 0.086). 02:17: backup base eval on A100 18acfa5d. Burn €15.75/h → projected ≈ €108 by 07:30 (cap €300).

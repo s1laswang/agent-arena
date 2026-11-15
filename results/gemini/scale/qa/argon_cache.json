@@ -1,0 +1,228 @@
+{
+  "generated_at": "2026-11-15T04:29:58+02:00",
+  "git_sha": "d165e3ec0bbcb42b9b468d69b1d33ba8aaae4e89",
+  "model": "gemini-4-argon",
+  "usage": {
+    "in": 25005,
+    "out": 5741,
+    "cost_usd": 0.10742
+  },
+  "located_claims": [
+    {
+      "claim": "24,855 calls, all logged",
+      "file_line": "docs/gemini/SUBMISSION.md:5",
+      "source_file": "dashboard_html_totals / committed_ledger_live_totals",
+      "source_key_or_value": "dashboard_html_totals.calls = 24855 vs committed_ledger_live_totals.calls = 42188",
+      "suspected_mismatch": true,
+      "reason": "The doc cites the stale dashboard HTML total (24,855 calls) instead of the live committed ledger total (42,188 calls) or the ablations programme total (29,150 calls)."
+    },
+    {
+      "claim": "153 trajectories (751k tokens) in one explicit cache",
+      "file_line": "docs/gemini/SUBMISSION.md:14",
+      "source_file": "atlas_blind_corpus",
+      "source_key_or_value": "episodes = 153, tokens = 751088, cache_tokens = 751211",
+      "suspected_mismatch": false,
+      "reason": "Matches atlas_blind_corpus (153 episodes, 751,088 tokens)."
+    },
+    {
+      "claim": "cut the Atlas's corpus-scale reads from $58.56 to $21.72 (62.9% saved over 464 calls)",
+      "file_line": "docs/gemini/SUBMISSION.md:24",
+      "source_file": "ablations_explicit_cache.atlas_plus_gallery",
+      "source_key_or_value": "calls = 464, usd_if_uncached = 58.56, usd_paid = 21.72, pct_saved = 62.9",
+      "suspected_mismatch": false,
+      "reason": "Exact match to ablations_explicit_cache.atlas_plus_gallery (and by_feature.atlas)."
+    },
+    {
+      "claim": "saved 75.9% ($678.19 of $893.08) across all 29,150 ledgered calls",
+      "file_line": "docs/gemini/SUBMISSION.md:24",
+      "source_file": "ablations_explicit_cache.programme",
+      "source_key_or_value": "calls = 29150, usd_saved = 678.19, usd_if_uncached = 893.08, pct_saved = 75.9",
+      "suspected_mismatch": true,
+      "reason": "Matches ablations_explicit_cache.programme (29,150 calls), but contradicts the 24,855 calls claimed in line 5 & 37 of the same document and the 42,188 calls in committed_ledger_live_totals."
+    },
+    {
+      "claim": "in 18 of 42 ladder cells the CI excludes solver parity",
+      "file_line": "docs/gemini/SUBMISSION.md:25",
+      "source_file": "ladder_cells",
+      "source_key_or_value": "ladder_cells = 42",
+      "suspected_mismatch": false,
+      "reason": "42 ladder cells matches ladder_cells = 42."
+    },
+    {
+      "claim": "Ladder (587 paired episodes)",
+      "file_line": "docs/gemini/SUBMISSION.md:34",
+      "source_file": "ladder_episodes",
+      "source_key_or_value": "ladder_episodes = 587",
+      "suspected_mismatch": false,
+      "reason": "Exact match to ladder_episodes = 587."
+    },
+    {
+      "claim": "100 ledger-verified attacks ... 0 verified exploits, 0 invariant violations ... Best score not justified by evidence: 0.38 (hard)",
+      "file_line": "docs/gemini/SUBMISSION.md:35",
+      "source_file": "swarm_counts / swarm_per_tier.hard",
+      "source_key_or_value": "attempts = 100, ledger_verified = 100, exploits = 0, invariant_violations = 0, hard.best_unjustified = 0.38",
+      "suspected_mismatch": false,
+      "reason": "Matches swarm_counts and swarm_per_tier.hard (note: medium.best_unjustified is 0.72 in swarm_per_tier.medium prior to the w2b-008 review)."
+    },
+    {
+      "claim": "Recovers 3 of 5 code-defined failure modes and names 2 new ones; weak coverage (127 cited steps, 21% of regret)",
+      "file_line": "docs/gemini/SUBMISSION.md:36",
+      "source_file": "atlas_blind_recovery",
+      "source_key_or_value": "tags_recovered = 3, n_tags = 5, novel_modes = 2, cited_steps = 127, regret_share_covered = 0.2056",
+      "suspected_mismatch": false,
+      "reason": "Matches atlas_blind_recovery (0.2056 rounds to 21%)."
+    },
+    {
+      "claim": "24,855 calls, 85.3% of input cached, $226.34 at list price, all ledgered",
+      "file_line": "docs/gemini/SUBMISSION.md:37",
+      "source_file": "dashboard_html_totals / committed_ledger_live_totals",
+      "source_key_or_value": "dashboard_html_totals: calls=24855, cached/in=578323069/678091900 (85.29%), cost_usd=226.337 vs committed_ledger_live_totals: calls=42188, cached/in=87.95%, cost_usd=377.11",
+      "suspected_mismatch": true,
+      "reason": "Matches the frozen snapshot in dashboard_html_totals, but is out of sync with committed_ledger_live_totals (42,188 calls, 88.0% cached, $377.11) and ablations_explicit_cache.programme (29,150 calls, 86.6% cached, $214.89)."
+    },
+    {
+      "claim": "Cells have 10\u201340 paired seeds",
+      "file_line": "docs/gemini/SUBMISSION.md:40",
+      "source_file": "ladder_seed_count_range",
+      "source_key_or_value": "ladder_seed_count_range = [9, 40]",
+      "suspected_mismatch": true,
+      "reason": "The doc states cells have 10\u201340 paired seeds, whereas ladder_seed_count_range is [9, 40] (minimum is 9, not 10)."
+    },
+    {
+      "claim": "The totals are 24,855 calls, 678M input tokens of which 578M (85.3%) came from cache, 9.39M thinking tokens, and $226.34 at list price",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:20",
+      "source_file": "dashboard_html_totals / committed_ledger_live_totals",
+      "source_key_or_value": "dashboard_html_totals: calls=24855, in=678091900, cached=578323069, thinking=9391911, cost_usd=226.337 vs committed_ledger_live_totals: calls=42188, in=1257204527, cached=1105741065, thinking=16187372, cost_usd=377.1059",
+      "suspected_mismatch": true,
+      "reason": "Matches dashboard_html_totals, but contradicts the live committed ledger totals at commit d165e3ec (42,188 calls, 1.26B input tokens, 1.11B cached, 16.19M thinking, $377.11)."
+    },
+    {
+      "claim": "587 paired episodes, 42 cells (models \u00d7 thinking levels \u00d7 2 tiers)",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:24",
+      "source_file": "ladder_episodes / ladder_cells",
+      "source_key_or_value": "ladder_episodes = 587, ladder_cells = 42",
+      "suspected_mismatch": false,
+      "reason": "Exact match to ladder_episodes and ladder_cells."
+    },
+    {
+      "claim": "793k-token corpus in one explicit context cache on 3.8-flash",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:26",
+      "source_file": "roles_index.roles[1] / atlas_blind_corpus",
+      "source_key_or_value": "roles_index analyst n = '153 episodes, 792,862 tokens in one prompt' vs atlas_blind_corpus.tokens = 751088",
+      "suspected_mismatch": false,
+      "reason": "Matches the v1 Atlas prompt token count (792,862 tokens) recorded in roles_index."
+    },
+    {
+      "claim": "Each cell has 10\u201340 paired seeds",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:32",
+      "source_file": "ladder_seed_count_range",
+      "source_key_or_value": "ladder_seed_count_range = [9, 40]",
+      "suspected_mismatch": true,
+      "reason": "Minimum seed count in ladder_seed_count_range is 9, not 10."
+    },
+    {
+      "claim": "100 attacks, 0 verified exploits. 3 correct accusations were not justified by the evidence; the 2 that reached solver level",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:40",
+      "source_file": "swarm_counts",
+      "source_key_or_value": "attempts = 100, exploits = 0, lucky_correct = 3, score_candidates = 2",
+      "suspected_mismatch": false,
+      "reason": "Exact match to swarm_counts."
+    },
+    {
+      "claim": "The gemini-4-carbon mole was caught 0/4 times (solver score +0.00), against 4/4 caught (+0.63) with the default mole ... 48 leaks, 1 of them a canary",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:43-44",
+      "source_file": "roles_index.roles[4]",
+      "source_key_or_value": "roles_index mole headline: '+0.00 with the Gemini mole vs +0.63 with the default mole (paired -0.63), caught 0/4 vs 4/4, 48 leaks (1 of them canaries)'",
+      "suspected_mismatch": false,
+      "reason": "Exact match to roles_index mole entry."
+    },
+    {
+      "claim": "153 episodes, 751k tokens, one explicit cache ... recovered 3 of 5 code-defined failure modes ... named 2 modes our tags lack ... cited 127 steps, covering 21% of solver regret and 4% of high-regret steps",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:52",
+      "source_file": "atlas_blind_corpus / atlas_blind_recovery",
+      "source_key_or_value": "episodes=153, tokens=751088, tags_recovered=3, n_tags=5, novel_modes=2, cited_steps=127, regret_share_covered=0.2056, high_regret_recall=0.0371",
+      "suspected_mismatch": false,
+      "reason": "Matches atlas_blind_corpus and atlas_blind_recovery (20.56% rounds to 21%, 3.71% rounds to 4%)."
+    },
+    {
+      "claim": "cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 75.9% ($678.19 of $893.08) across all 29,150 ledgered calls",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:60",
+      "source_file": "ablations_explicit_cache",
+      "source_key_or_value": "atlas_plus_gallery: calls=464, input_tokens=64395859, cached_share=0.8476, usd_if_uncached=58.56, usd_paid=21.72, pct_saved=62.9; gallery.calls=9; programme: calls=29150, pct_saved=75.9, usd_saved=678.19, usd_if_uncached=893.08",
+      "suspected_mismatch": true,
+      "reason": "Exact match to ablations_explicit_cache, but 29,150 total calls contradicts the 24,855 calls claimed in line 20 of the same file and the 42,188 calls in committed_ledger_live_totals."
+    },
+    {
+      "claim": "587 episodes paired with the Bayesian solver ... 100 ledger-verified Gemini attacks ... 0 verified exploits ... 3 of 5 code-defined failure modes and names 2 new ones ... 24,855 Gemini calls are logged",
+      "file_line": "pitch/GEMINI.md:5-9",
+      "source_file": "ladder_episodes / swarm_counts / atlas_blind_recovery / dashboard_html_totals / committed_ledger_live_totals",
+      "source_key_or_value": "ladder_episodes=587, swarm_counts.ledger_verified=100, dashboard_html_totals.calls=24855 vs committed_ledger_live_totals.calls=42188",
+      "suspected_mismatch": true,
+      "reason": "Ladder, swarm, and atlas numbers match, but 24,855 logged calls is stale relative to committed_ledger_live_totals.calls = 42,188."
+    },
+    {
+      "claim": "VO[03-ladder]: So Gemini plays. Five models, up to four thinking levels, five hundred eighty-seven paired episodes. On hard, Gemini four Carbon on high thinking reaches one hundred six percent of the solver, interval ninety-four to one hundred twenty-six, at one dollar ninety-three per episode. Gemini three point six Flash on high thinking costs forty-five cents, more than four times cheaper, and scores eighty-eight percent, interval fifty-one to one hundred thirty-eight",
+      "file_line": "docs/gemini/VIDEO-2MIN.md:36",
+      "source_file": "narration_2min_03_ladder / ladder_episodes / ladder_models",
+      "source_key_or_value": "ladder_episodes=587, ladder_models=6 (5 Gemini + 1 hydrogen), narration_2min_03_ladder.text='...one hundred fifty-seven paired episodes. On hard, n equals eight: ninety-two percent [76, 113] at medium, and one hundred two percent [84, 129] at high... thirty-four to thirty-nine cents per episode versus one dollar thirty...'",
+      "suspected_mismatch": true,
+      "reason": "The markdown script was updated to 587 episodes and the latest ladder numbers, but the committed audio index/transcript in narration_2min_03_ladder still has the old run (157 episodes, n=8, 92%/102%, $0.34-$0.39 vs $1.30)."
+    },
+    {
+      "claim": "Across two hundred ninety-five episodes, every lost point is tagged to a decision, with nothing unexplained.",
+      "file_line": "docs/gemini/VIDEO-2MIN.md:42",
+      "source_file": "ladder_episodes / atlas_blind_corpus",
+      "source_key_or_value": "No 295 episode count in ground-truth digest (atlas_blind_corpus.episodes=153, ladder_episodes=587)",
+      "suspected_mismatch": false,
+      "reason": "Refers to docs/reports/failure_gallery.md (not in the digest, though notable as a distinct episode count)."
+    },
+    {
+      "claim": "Frontier subject (the agent under test) | ... | 016758ace5 | 157 episodes, 34 cells | gemini-4-carbon (default) reaches 66% of the solver on hard [95% CI 5%, 117%], n=10",
+      "file_line": "docs/gemini/ROLES.md:9",
+      "source_file": "roles_index.roles[0] / ladder_episodes / ladder_cells / ladder_git_sha",
+      "source_key_or_value": "roles_index.roles[0].n='157 episodes, 34 cells', commit='016758ace5' vs ladder_episodes=587, ladder_cells=42, ladder_git_sha='007802f532b1a72db91175a8a2a0b504eec8db44'",
+      "suspected_mismatch": true,
+      "reason": "Matches roles_index.roles[0] (and ablations_sweep_cells=34), but both ROLES.md and roles_index.json are stale relative to the committed `results/gemini/ladder.json` (which has 587 episodes, 42 cells, and git sha 007802f5)."
+    },
+    {
+      "claim": "Analyst (Failure Atlas) | ... | 6826010 | 153 episodes, 792,862 tokens in one prompt | Blind re-run ... recovered 3/5 code-defined failure modes and named 2 new ones; cited steps cover 21% of solver regret",
+      "file_line": "docs/gemini/ROLES.md:10",
+      "source_file": "roles_index.roles[1] / atlas_blind_recovery / atlas_blind_corpus",
+      "source_key_or_value": "roles_index.roles[1] exact match; atlas_blind_corpus.tokens=751088 (blind) vs 792862 (v1)",
+      "suspected_mismatch": false,
+      "reason": "Exact match to roles_index.roles[1] and atlas_blind_recovery."
+    },
+    {
+      "claim": "Red-team swarm | ... | af76fa091c | 100 attacks, 4325 tool calls | 0 verified exploits; best unjustified score hard +0.38 vs solver +0.53, medium: w2b-008-reward_hacker flagged in-run at +0.68 vs solver +0.49 (n=4), overturned on review (+0.16 vs +0.55, n=4); 0 invariant violations; positive control 4/4",
+      "file_line": "docs/gemini/ROLES.md:11",
+      "source_file": "roles_index.roles[2] / swarm_counts / swarm_per_tier",
+      "source_key_or_value": "swarm_counts: attempts=100, tool_calls=4325, exploits=0, invariant_violations=0; swarm_per_tier.hard: best_unjustified=0.38, solver_mean_paired=0.5284",
+      "suspected_mismatch": false,
+      "reason": "Exact match to roles_index.roles[2], swarm_counts, and swarm_per_tier.hard."
+    },
+    {
+      "claim": "World-text renderer ... | 6 dev seeds (medium) | 120 Gemini personas (0 fallbacks); lint clean on 6/6 seeds; text-only investigators named the mole 1/6 (keyword, p=0.37) and 0/6 (gemini-3.8-flash, p=1.00) vs fair bar 7%",
+      "file_line": "docs/gemini/ROLES.md:12",
+      "source_file": "roles_index.roles[3]",
+      "source_key_or_value": "roles_index.roles[3] exact match",
+      "suspected_mismatch": false,
+      "reason": "Exact match to roles_index.roles[3]."
+    },
+    {
+      "claim": "Adaptive mole ... | n=4: medium dev seeds 0\u20133, x 2 investigators | vs solver: score +0.00 with the Gemini mole vs +0.63 with the default mole (paired -0.63), caught 0/4 vs 4/4, 48 leaks (1 of them canaries); vs heuristic: score -1.00 with the Gemini mole vs -1.00 with the default mole (paired +0.00), caught 0/4 vs 0/4, 6 leaks (4 of them canaries)",
+      "file_line": "docs/gemini/ROLES.md:13",
+      "source_file": "roles_index.roles[4]",
+      "source_key_or_value": "roles_index.roles[4] exact match",
+      "suspected_mismatch": false,
+      "reason": "Exact match to roles_index.roles[4]."
+    },
+    {
+      "claim": "dashboard: 11k+ calls ... add measured cache saving (204M of 251M input tokens cached) ... Atlas tags 404 decisions and explains 61% of regret; swarm runs 100 ledger-verified attacks (4 waves); ladder runs 134+ paired episodes",
+      "file_line": "docs/gemini/PLAN.md:112-115",
+      "source_file": "atlas_blind_recovery / swarm_counts / committed_ledger_live_totals / ladder_episodes",
+      "source_key_or_value": "high_regret_steps=404, swarm_counts.attempts=100, committed_ledger_live_totals.calls=42188, in=1257204527, cached=1105741065, ladder_episodes=587",
+      "suspected_mismatch": true,
+      "reason": "404 high-regret steps and 100 swarm attacks match, while the earlier planning snapshot numbers (204M of 251M input tokens cached) do not match final committed ledger or ablation numbers."
+    }
+  ]
+}

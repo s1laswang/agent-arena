@@ -1,0 +1,194 @@
+{
+  "generated_at": "2026-11-15 04:33:00 EET",
+  "git_sha": "d165e3ec0bbcb42b9b468d69b1d33ba8aaae4e89",
+  "model": "gemini-4-argon",
+  "total_claims": 97,
+  "matched": 74,
+  "mismatches_count": 23,
+  "mismatches": [
+    {
+      "claim": "scale/ladder30/ladder.md headline uses pre-7edf2d0d gate ('within the CI of the solver', 518 eps) vs canonical ladder.md strict gate ('not distinguishable... CIs are wide', 587 eps)",
+      "file_line": "results/gemini/scale/ladder30/ladder.md:5",
+      "source_file": "results/gemini/ladder.md:5 + canary/gemini/ladder_report.py",
+      "source_value": "Canonical ladder.md (587 eps) enforces strict CI gate ('not distinguishable from the reference solver on hard, but the CIs are wide', lower CI 50%/51% < 80%)",
+      "match": "n",
+      "note": "scale/ladder30/ladder.md is an earlier 03:05 snapshot built before strict headline_verb gate was merged."
+    },
+    {
+      "claim": "ablations.md programme cache row: 29,150 calls, 860,488,544 in, 86.6% cached, paid $214.89 vs uncached $893.08",
+      "file_line": "results/gemini/ablations.md:21",
+      "source_file": "results/gemini/*ledger*.jsonl.gz + canary/gemini/dashboard.py",
+      "source_value": "Stale pre-d165e3ec ledger (29,150 vs live 42,188 committed calls) AND ablations.py omits EXTRA_PRICES for 3.5-flash/3.1-flash-lite (live dashboard repriced total=$377.11)",
+      "match": "n",
+      "note": "ablations.{json,md} was not regenerated after WS1 d165e3ec (29,150 vs 42,188 calls) and omits EXTRA_PRICES."
+    },
+    {
+      "claim": "ablations.md \u00a73 thinking sweep: '34 model x thinking-level x tier cells ... 17 of 34 cells' and 3.5-flash hard medium 78% [28, 151] (n=20)",
+      "file_line": "results/gemini/ablations.md:24",
+      "source_file": "results/gemini/ladder.json (regenerated at d165e3ec)",
+      "source_value": "ladder.json now has 42 cells (18 exclude parity) and 3.5-flash hard medium is 87% [50, 147] (n=40); ablations.md still has 34 cells",
+      "match": "n",
+      "note": "Re-run `uv run python -m canary.gemini.ablations` so ablations.{json,md} matches the 42-cell d165e3ec ladder."
+    },
+    {
+      "claim": "States ladder runs 'five Gemini models' / 'Five models' across 587 episodes",
+      "file_line": "docs/gemini/SUBMISSION.md:12",
+      "source_file": "results/gemini/ladder.json",
+      "source_value": "6 Gemini models in the 42-cell ladder: gemini-3.1-flash-lite, gemini-3.5-flash, gemini-3.8-flash, gemini-4-argon, gemini-4-carbon, gemini-4-hydrogen (WS1 added gemini-4-hydrogen)",
+      "match": "n",
+      "note": "WS1 added gemini-4-hydrogen to the canonical 42-cell ladder (6 Gemini models total); change 'five' -> 'six'."
+    },
+    {
+      "claim": "States ladder runs 'five Gemini models' / 'Five models' across 587 episodes",
+      "file_line": "docs/gemini/VIDEO-2MIN.md:36",
+      "source_file": "results/gemini/ladder.json",
+      "source_value": "6 Gemini models in the 42-cell ladder: gemini-3.1-flash-lite, gemini-3.5-flash, gemini-3.8-flash, gemini-4-argon, gemini-4-carbon, gemini-4-hydrogen (WS1 added gemini-4-hydrogen)",
+      "match": "n",
+      "note": "WS1 added gemini-4-hydrogen to the canonical 42-cell ladder (6 Gemini models total); change 'five' -> 'six'."
+    },
+    {
+      "claim": "States ladder cells have '10\u201340 paired seeds'",
+      "file_line": "docs/gemini/SUBMISSION.md:40",
+      "source_file": "results/gemini/ladder.json (and results/gemini/ladder.md:3)",
+      "source_value": "9\u201340 paired seeds per cell (gemini-4-hydrogen medium on medium and high on hard each have n=9)",
+      "match": "n",
+      "note": "Two gemini-4-hydrogen cells have n=9 (as ladder.md:3 states: '9\u201340 paired seeds per cell'); change '10\u201340' -> '9\u201340'."
+    },
+    {
+      "claim": "States ladder cells have '10\u201340 paired seeds'",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:32",
+      "source_file": "results/gemini/ladder.json (and results/gemini/ladder.md:3)",
+      "source_value": "9\u201340 paired seeds per cell (gemini-4-hydrogen medium on medium and high on hard each have n=9)",
+      "match": "n",
+      "note": "Two gemini-4-hydrogen cells have n=9 (as ladder.md:3 states: '9\u201340 paired seeds per cell'); change '10\u201340' -> '9\u201340'."
+    },
+    {
+      "claim": "Usage totals: 24,855 calls, 678M input (578M / 85.3% cached), 9.39M thinking, $226.34 list price (smaller than ladder.md's 36,164 calls alone and contradicts 29,150 calls in \u00a74)",
+      "file_line": "docs/gemini/SUBMISSION.md:5",
+      "source_file": "results/gemini/*ledger*.jsonl.gz + results/gemini/dashboard.html",
+      "source_value": "live committed ledgers (`dashboard --ledger committed`): 42,188 calls, 1.257B in (88.0% cached), 16.19M thinking, $377.11 list (dashboard.html still embeds 00:30 snapshot: 24,855 calls / $226.34)",
+      "match": "n",
+      "note": "dashboard.html has 24,855 calls, \u00a74 has 29,150 calls, ladder.md alone has 36,164 calls, and committed ledgers total 42,188 calls ($377.11)."
+    },
+    {
+      "claim": "Usage totals: 24,855 calls, 678M input (578M / 85.3% cached), 9.39M thinking, $226.34 list price (smaller than ladder.md's 36,164 calls alone and contradicts 29,150 calls in \u00a74)",
+      "file_line": "docs/gemini/SUBMISSION.md:37",
+      "source_file": "results/gemini/*ledger*.jsonl.gz + results/gemini/dashboard.html",
+      "source_value": "live committed ledgers (`dashboard --ledger committed`): 42,188 calls, 1.257B in (88.0% cached), 16.19M thinking, $377.11 list (dashboard.html still embeds 00:30 snapshot: 24,855 calls / $226.34)",
+      "match": "n",
+      "note": "dashboard.html has 24,855 calls, \u00a74 has 29,150 calls, ladder.md alone has 36,164 calls, and committed ledgers total 42,188 calls ($377.11)."
+    },
+    {
+      "claim": "Usage totals: 24,855 calls, 678M input (578M / 85.3% cached), 9.39M thinking, $226.34 list price (smaller than ladder.md's 36,164 calls alone and contradicts 29,150 calls in \u00a74)",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:7",
+      "source_file": "results/gemini/*ledger*.jsonl.gz + results/gemini/dashboard.html",
+      "source_value": "live committed ledgers (`dashboard --ledger committed`): 42,188 calls, 1.257B in (88.0% cached), 16.19M thinking, $377.11 list (dashboard.html still embeds 00:30 snapshot: 24,855 calls / $226.34)",
+      "match": "n",
+      "note": "dashboard.html has 24,855 calls, \u00a74 has 29,150 calls, ladder.md alone has 36,164 calls, and committed ledgers total 42,188 calls ($377.11)."
+    },
+    {
+      "claim": "Usage totals: 24,855 calls, 678M input (578M / 85.3% cached), 9.39M thinking, $226.34 list price (smaller than ladder.md's 36,164 calls alone and contradicts 29,150 calls in \u00a74)",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:20",
+      "source_file": "results/gemini/*ledger*.jsonl.gz + results/gemini/dashboard.html",
+      "source_value": "live committed ledgers (`dashboard --ledger committed`): 42,188 calls, 1.257B in (88.0% cached), 16.19M thinking, $377.11 list (dashboard.html still embeds 00:30 snapshot: 24,855 calls / $226.34)",
+      "match": "n",
+      "note": "dashboard.html has 24,855 calls, \u00a74 has 29,150 calls, ladder.md alone has 36,164 calls, and committed ledgers total 42,188 calls ($377.11)."
+    },
+    {
+      "claim": "Usage totals: 24,855 calls, 678M input (578M / 85.3% cached), 9.39M thinking, $226.34 list price (smaller than ladder.md's 36,164 calls alone and contradicts 29,150 calls in \u00a74)",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:49",
+      "source_file": "results/gemini/*ledger*.jsonl.gz + results/gemini/dashboard.html",
+      "source_value": "live committed ledgers (`dashboard --ledger committed`): 42,188 calls, 1.257B in (88.0% cached), 16.19M thinking, $377.11 list (dashboard.html still embeds 00:30 snapshot: 24,855 calls / $226.34)",
+      "match": "n",
+      "note": "dashboard.html has 24,855 calls, \u00a74 has 29,150 calls, ladder.md alone has 36,164 calls, and committed ledgers total 42,188 calls ($377.11)."
+    },
+    {
+      "claim": "Usage totals: 24,855 calls, 678M input (578M / 85.3% cached), 9.39M thinking, $226.34 list price (smaller than ladder.md's 36,164 calls alone and contradicts 29,150 calls in \u00a74)",
+      "file_line": "pitch/GEMINI.md:9",
+      "source_file": "results/gemini/*ledger*.jsonl.gz + results/gemini/dashboard.html",
+      "source_value": "live committed ledgers (`dashboard --ledger committed`): 42,188 calls, 1.257B in (88.0% cached), 16.19M thinking, $377.11 list (dashboard.html still embeds 00:30 snapshot: 24,855 calls / $226.34)",
+      "match": "n",
+      "note": "dashboard.html has 24,855 calls, \u00a74 has 29,150 calls, ladder.md alone has 36,164 calls, and committed ledgers total 42,188 calls ($377.11)."
+    },
+    {
+      "claim": "\u00a74 Explicit caching programme total: saved 75.9% ($678.19 of $893.08, i.e. $214.89 paid) across all 29,150 ledgered calls",
+      "file_line": "docs/gemini/SUBMISSION.md:24",
+      "source_file": "results/gemini/ablations.json vs canary/gemini/dashboard.py",
+      "source_value": "Committed ledgers at d165e3ec now hold 42,188 calls ($377.11 paid with EXTRA_PRICES); ablations.py was run at 29,150 calls AND omits EXTRA_PRICES on 12,347 Flash/Flash-Lite calls",
+      "match": "n",
+      "note": "Add EXTRA_PRICES to ablations.py:_cost_pair, rerun ablations.py + dashboard, and unify all call/cost totals."
+    },
+    {
+      "claim": "\u00a74 Explicit caching programme total: saved 75.9% ($678.19 of $893.08, i.e. $214.89 paid) across all 29,150 ledgered calls",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:60",
+      "source_file": "results/gemini/ablations.json vs canary/gemini/dashboard.py",
+      "source_value": "Committed ledgers at d165e3ec now hold 42,188 calls ($377.11 paid with EXTRA_PRICES); ablations.py was run at 29,150 calls AND omits EXTRA_PRICES on 12,347 Flash/Flash-Lite calls",
+      "match": "n",
+      "note": "Add EXTRA_PRICES to ablations.py:_cost_pair, rerun ablations.py + dashboard, and unify all call/cost totals."
+    },
+    {
+      "claim": "SUBMISSION-LONG.md \u00a7Gemini across the team (HoldUp): speculative verification cut question-to-first-audio from 5.8 s to 0.7\u20131.75 s",
+      "file_line": "docs/gemini/SUBMISSION-LONG.md:75",
+      "source_file": "s1laswang/junction-meta-glasses GEMINI.md:32",
+      "source_value": "5.8 s (1 run before) -> p50 2.1 s / p95 3.4 s across n=26 live sessions (0.7\u20131.75 s was an early 3-run spot check)",
+      "match": "n",
+      "note": "Update SUBMISSION-LONG.md:75 from '0.7\u20131.75 s' to 'p50 2.1 s / p95 3.4 s (n=26 live sessions)' to match HoldUp's GEMINI.md:32."
+    },
+    {
+      "claim": "ROLES.md Frontier subject row: commit 016758ace5, Size '157 episodes, 34 cells', Headline 'gemini-4-carbon (default) reaches 66% of the solver on hard [95% CI 5%, 117%], n=10'",
+      "file_line": "docs/gemini/ROLES.md:9",
+      "source_file": "results/gemini/ladder.json (vs stale results/gemini/roles/index.json)",
+      "source_value": "ladder.json git_sha=007802f532, episodes=587 in 42 cells (6 models); carbon default hard: n=22, 108% [62%, 189%]",
+      "match": "n",
+      "note": "ROLES.md & roles/index.json still show Sat 18:47 v1 ladder (157 eps, 34 cells); re-run `python -m canary.gemini.roles index`."
+    },
+    {
+      "claim": "ROLES.md prose (:27): 'checked with canary/text/lint.py, assert_no_truth...' (implies pass, whereas assert_no_truth_pass is 0/6 in lint_probe.json)",
+      "file_line": "docs/gemini/ROLES.md:27",
+      "source_file": "results/gemini/roles/worldtext/lint_probe.json",
+      "source_value": "assert_no_truth_pass=0/6 (template uniqueness heuristic flags 20/20 distinct LLM persona tones)",
+      "match": "n",
+      "note": "Clarify in ROLES.md:27 that lint.py is 6/6 clean while template assert_no_truth flags distinct LLM persona tones (per assert_no_truth_note)."
+    },
+    {
+      "claim": "Rendered audio docs/gemini/assets/narration-2min/03-ladder.wav + canary-lab-2min.mp4 match VIDEO-2MIN.md VO[03-ladder]",
+      "file_line": "docs/gemini/VIDEO-2MIN.md:19",
+      "source_file": "docs/gemini/assets/narration-2min/index.json + results/gemini/video_qa.json",
+      "source_value": "03-ladder.wav still speaks old n=8 text ('one hundred fifty-seven paired episodes... ninety-two percent'); video_qa.json screen shows 24,415 calls / $222",
+      "match": "n",
+      "note": "Re-run narrate --only 03-ladder,07-essential, video_cut, and video_qa at the 05:50 freeze."
+    },
+    {
+      "claim": "VIDEO.md Assets table cites `results/gemini/ladder.png` and `results/gemini/charts/*.png`",
+      "file_line": "docs/gemini/VIDEO.md:31",
+      "source_file": "results/gemini/",
+      "source_value": "Actual committed paths are `results/gemini/frontier.png` / `ladder_{heatmap,curve,cost,tags}.png` and `results/gemini/atlas_charts/*.png`",
+      "match": "n",
+      "note": "Stale asset paths in VIDEO.md:31-32."
+    },
+    {
+      "claim": "VIDEO.md VO[02-ladder]: 'paired episodes, fanned out over our cluster through one Gemini gateway'",
+      "file_line": "docs/gemini/VIDEO.md:58",
+      "source_file": "results/gemini/ladder_ledger.jsonl.gz + docs/gemini/reports/gateway.md:47",
+      "source_value": "All ladder calls ran on Mac (FR8 cluster ssh was unreachable from venue LAN per gateway.md:47 and CEO.md:85)",
+      "match": "n",
+      "note": "Overclaim in secondary 3-min VIDEO.md:58; ladder ran on the Mac."
+    },
+    {
+      "claim": "PLAN.md \u00a7Architecture & \u00a7Close claim 'Batch API for per-decision labels' and 'batch economics'",
+      "file_line": "docs/gemini/PLAN.md:64",
+      "source_file": "results/gemini/usage_ledger.jsonl.gz + docs/gemini/reports/CEO.md:40",
+      "source_value": "0 successful batch calls (all 5 batch attempts failed with RESOURCE_EXHAUSTED)",
+      "match": "n",
+      "note": "Planning doc predates Batch API removal."
+    },
+    {
+      "claim": "PLAN.md \u00a7Innovation claims: 'where thinking helps (canary design) and where it does not (commit timing)'",
+      "file_line": "docs/gemini/PLAN.md:73",
+      "source_file": "results/gemini/ladder.md:9",
+      "source_value": "Measured result is the opposite: thinking reduces premature_accusation regret (-0.16 med, -0.22 hard) while uninformative_canary is flat",
+      "match": "n",
+      "note": "Pre-experiment hypothesis in PLAN.md:73 was inverted by the empirical ladder result."
+    }
+  ]
+}

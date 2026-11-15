@@ -1,0 +1,155 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "soc_access_vision_v14_sweep",
+  "model_id": "gemini-4-carbon",
+  "commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+  "git_sha": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+  "timestamp": "2026-11-14T23:14:27+00:00",
+  "command": "CANARY_LLM_MAX_RETRIES=10 PYTHONPATH=. /tmp/fleet-root/shared/agent-arena-venv/bin/python scripts/run_access_vision_sweep.py --tiers medium,hard --medium-seeds 8,9 --hard-seeds 8,9,10,11 --thinking-level high --model gemini-4-carbon --out results/gemini_roles/multimodal_evidence/access-heatmap-v14-high-s8to11-carbon",
+  "episode_count": 6,
+  "n_worlds": 6,
+  "n_images_read_by_model": 6,
+  "tiers_version": "v1.4",
+  "tiers": [
+    "medium",
+    "hard"
+  ],
+  "tier_seeds": {
+    "medium": [
+      8,
+      9
+    ],
+    "hard": [
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "top1_mole_accuracy": 1.0,
+  "top3_mole_hit_rate": 1.0,
+  "naive_baseline_mole_accuracy": 0.0,
+  "mole_accuracy_delta_vs_naive": 1.0,
+  "top1_decoy_accuracy": 1.0,
+  "avoided_framing_trap_rate": 1.0,
+  "mean_confidence": 0.9873,
+  "brier_score": 0.000254,
+  "expected_calibration_error": 0.012667,
+  "by_tier": {
+    "medium": {
+      "n_worlds": 2,
+      "seeds": [
+        8,
+        9
+      ],
+      "top1_mole_accuracy": 1.0,
+      "top3_mole_hit_rate": 1.0,
+      "top1_decoy_accuracy": 1.0,
+      "avoided_framing_trap_rate": 1.0,
+      "naive_baseline_mole_accuracy": 0.0,
+      "mole_accuracy_delta_vs_naive": 1.0,
+      "mean_confidence": 0.99,
+      "brier_score": 0.0001,
+      "expected_calibration_error": 0.01
+    },
+    "hard": {
+      "n_worlds": 4,
+      "seeds": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "top1_mole_accuracy": 1.0,
+      "top3_mole_hit_rate": 1.0,
+      "top1_decoy_accuracy": 1.0,
+      "avoided_framing_trap_rate": 1.0,
+      "naive_baseline_mole_accuracy": 0.0,
+      "mole_accuracy_delta_vs_naive": 1.0,
+      "mean_confidence": 0.986,
+      "brier_score": 0.000332,
+      "expected_calibration_error": 0.014
+    }
+  },
+  "key_metric": "6 images (2 medium + 4 hard), mole acc 100% vs naive 0%, decoy acc 100%, Brier 0.0003",
+  "fake_env": false,
+  "smoke": false,
+  "ledger_run_id": "multimodal_evidence:soc_access_vision_v14_sweep:gemini-4-carbon:1794698067",
+  "rasters": [
+    {
+      "tier": "medium",
+      "seed": 8,
+      "path": "rasters/medium_seed_8.png",
+      "sha256": "3402081694aa4b1194d788d24ccfffe729d8ea96ecdcea7c85b167960d6fc13e",
+      "bytes": 148175,
+      "size": [
+        1880,
+        1020
+      ]
+    },
+    {
+      "tier": "medium",
+      "seed": 9,
+      "path": "rasters/medium_seed_9.png",
+      "sha256": "f70471dfc7eb0177e30bc4457f4e8a1c57e5be8c101f007798a7ceabbddb40b8",
+      "bytes": 155045,
+      "size": [
+        1880,
+        1020
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 8,
+      "path": "rasters/hard_seed_8.png",
+      "sha256": "349a454bbcca580c6ff31b1958a95eb22f97bb11957e5fd6cd5cf0baae2977e6",
+      "bytes": 292464,
+      "size": [
+        2180,
+        1660
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 9,
+      "path": "rasters/hard_seed_9.png",
+      "sha256": "048de7da7566ba307110597af4ef62e8a5be7ff38c8d3d2554716c57451676b6",
+      "bytes": 290495,
+      "size": [
+        2180,
+        1660
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 10,
+      "path": "rasters/hard_seed_10.png",
+      "sha256": "1917d25e65e9d0582ad4c38a1da59017fd1ed8d295067b813febea5fde2f1561",
+      "bytes": 289808,
+      "size": [
+        2180,
+        1660
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 11,
+      "path": "rasters/hard_seed_11.png",
+      "sha256": "0180c1f09aaad84c50d5087473ecb3043972211eda1ac035b834e6f016c56695",
+      "bytes": 287390,
+      "size": [
+        2180,
+        1660
+      ]
+    }
+  ],
+  "usage": {
+    "calls": 6,
+    "in": 12606,
+    "out": 3460,
+    "thinking": 85629,
+    "cached": 0,
+    "cost_usd": 0.916102,
+    "latency_s": 925.638
+  }
+}

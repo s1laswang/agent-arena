@@ -1,0 +1,60 @@
+{
+    "schema_version": 1,
+    "id": "436ee6d8-ad3f-4030-a34c-ce2a23429328",
+    "started_at": "2026-11-14T23:49:03.157413",
+    "updated_at": "2026-11-15T02:42:52.296100",
+    "finished_at": "2026-11-15T02:42:52.296100",
+    "n_total_trials": 10,
+    "stats": {
+        "n_completed_trials": 10,
+        "n_errored_trials": 9,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 14,
+        "evals": {
+            "opencode__google/gemini-4-carbon__dataset": {
+                "n_trials": 3,
+                "n_errors": 9,
+                "metrics": [
+                    {
+                        "mean": 0.5433333333333333
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "reward": {
+                        "0.41": [
+                            "canary-hard-900000__ePoBfBK"
+                        ],
+                        "0.6": [
+                            "canary-hard-900001__pWqHJEC"
+                        ],
+                        "0.62": [
+                            "canary-hard-900003__NVbWcaL"
+                        ]
+                    }
+                },
+                "exception_stats": {
+                    "NonZeroAgentExitCodeError": [
+                        "canary-hard-900001__pWqHJEC",
+                        "canary-hard-900003__NVbWcaL"
+                    ],
+                    "ApiRateLimitError": [
+                        "canary-hard-900002__kKM7Sq8",
+                        "canary-hard-900004__yoroPP2",
+                        "canary-hard-900005__pXhnhXN",
+                        "canary-hard-900006__jWDYtfF",
+                        "canary-hard-900007__b7oUas2",
+                        "canary-hard-900008__bNN5TZS",
+                        "canary-hard-900009__LjwCvRd"
+                    ]
+                }
+            }
+        },
+        "n_input_tokens": 21162690,
+        "n_cache_tokens": 20013564,
+        "n_output_tokens": 67498,
+        "cost_usd": 8.9314384
+    }
+}

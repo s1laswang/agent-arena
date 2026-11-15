@@ -1,10 +1,10 @@
 {
   "target_model": "gemini-4-carbon",
-  "git_head": "58b63c44",
+  "git_head": "a6270995",
   "provenance": {
     "verified": true,
-    "scanned_runs": 85,
-    "verified_runs": 85,
+    "scanned_runs": 92,
+    "verified_runs": 92,
     "secret_leaks_count": 0
   },
   "totals": {
@@ -29,17 +29,17 @@
     "n_roles_required": 6,
     "n_roles_verified": 6,
     "all_roles_verified": true,
-    "n_verified_carbon_runs": 85,
+    "n_verified_carbon_runs": 92,
     "n_canonical_runs": 6,
-    "n_supporting_runs": 79,
-    "count": 811,
-    "calls": 6529,
-    "tokens_in": 182771608,
-    "tokens_out": 2131484,
-    "thinking_tokens": 1286769,
-    "cached_tokens": 166433051,
-    "total_tokens": 186189861,
-    "cost_usd": 79.742717
+    "n_supporting_runs": 86,
+    "count": 880,
+    "calls": 6966,
+    "tokens_in": 191861104,
+    "tokens_out": 2220586,
+    "thinking_tokens": 1375438,
+    "cached_tokens": 174576067,
+    "total_tokens": 195457128,
+    "cost_usd": 84.227693
   },
   "roles": {
     "world_text": {
@@ -457,7 +457,7 @@
       "title": "Adaptive Mole & Mole Forge",
       "stage": "Adversarial Evolution",
       "verified": true,
-      "n_verified_runs": 28,
+      "n_verified_runs": 34,
       "canonical_run": {
         "role": "adaptive_mole",
         "subrole": "mole_forge",
@@ -518,6 +518,36 @@
           "cached_tokens": 0,
           "cost_usd": 0.02316,
           "headline_metric": "kept 5/6 solvable scenarios, eval solver +0.497, heuristic -1.000, n=40"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "paired_skill_designer",
+          "run_folder": "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard-s15_19",
+          "model_id": "gemini-4-carbon",
+          "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+          "count": 40,
+          "calls": 1,
+          "tokens_in": 1645,
+          "tokens_out": 1334,
+          "thinking_tokens": 143,
+          "cached_tokens": 0,
+          "cost_usd": 0.01806,
+          "headline_metric": "kept 6/6 solvable scenarios, eval solver +0.571, heuristic -1.000, n=40"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "mole_forge",
+          "run_folder": "results/gemini_roles/adaptive_mole/mole-forge-carbon-easy-deep",
+          "model_id": "gemini-4-carbon",
+          "commit": "785d21a1cb79edd061e1e34031bb04284e38c110",
+          "count": 25,
+          "calls": 34,
+          "tokens_in": 5498,
+          "tokens_out": 4832,
+          "thinking_tokens": 3203,
+          "cached_tokens": 0,
+          "cost_usd": 0.091346,
+          "headline_metric": "fitness 0.561, solver acc 75%, 25 LLM children"
         },
         {
           "role": "adaptive_mole",
@@ -822,6 +852,36 @@
         {
           "role": "adaptive_mole",
           "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed7",
+          "model_id": "gemini-4-carbon",
+          "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+          "count": 2,
+          "calls": 82,
+          "tokens_in": 1420410,
+          "tokens_out": 3341,
+          "thinking_tokens": 28466,
+          "cached_tokens": 1247399,
+          "cost_usd": 0.788832,
+          "headline_metric": "investigator +0.700 vs solver +0.350 (6d clash)"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed4",
+          "model_id": "gemini-4-carbon",
+          "commit": "d5fee698c79c4d026066ee981e7704362925ea23",
+          "count": 2,
+          "calls": 79,
+          "tokens_in": 2243533,
+          "tokens_out": 3375,
+          "thinking_tokens": 40203,
+          "cached_tokens": 2075662,
+          "cost_usd": 0.979091,
+          "headline_metric": "investigator +0.510 vs solver +0.600 (10d clash)"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
           "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed5",
           "model_id": "gemini-4-carbon",
           "commit": "9222669912afd57e53fbd3b07f0cdba985df705d",
@@ -833,6 +893,21 @@
           "cached_tokens": 817534,
           "cost_usd": 0.66069,
           "headline_metric": "investigator +0.750 vs solver +0.450 (5d clash)"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed6",
+          "model_id": "gemini-4-carbon",
+          "commit": "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
+          "count": 2,
+          "calls": 71,
+          "tokens_in": 1011467,
+          "tokens_out": 2993,
+          "thinking_tokens": 24696,
+          "cached_tokens": 816815,
+          "cost_usd": 0.747878,
+          "headline_metric": "investigator +0.750 vs solver +0.340 (5d clash)"
         },
         {
           "role": "adaptive_mole",
@@ -863,6 +938,21 @@
           "cached_tokens": 711600,
           "cost_usd": 0.628581,
           "headline_metric": "investigator +0.800 vs solver +0.000 (4d clash)"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-easy-seed0",
+          "model_id": "gemini-4-carbon",
+          "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+          "count": 2,
+          "calls": 46,
+          "tokens_in": 366514,
+          "tokens_out": 1734,
+          "thinking_tokens": 17294,
+          "cached_tokens": 270799,
+          "cost_usd": 0.408789,
+          "headline_metric": "investigator +0.830 vs solver +0.790 (3d clash)"
         },
         {
           "role": "adaptive_mole",
@@ -944,6 +1034,36 @@
         {
           "role": "adaptive_mole",
           "subrole": "paired_skill_designer",
+          "run_folder": "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard-s15_19",
+          "model_id": "gemini-4-carbon",
+          "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+          "count": 40,
+          "calls": 1,
+          "tokens_in": 1645,
+          "tokens_out": 1334,
+          "thinking_tokens": 143,
+          "cached_tokens": 0,
+          "cost_usd": 0.01806,
+          "headline_metric": "kept 6/6 solvable scenarios, eval solver +0.571, heuristic -1.000, n=40"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "mole_forge",
+          "run_folder": "results/gemini_roles/adaptive_mole/mole-forge-carbon-easy-deep",
+          "model_id": "gemini-4-carbon",
+          "commit": "785d21a1cb79edd061e1e34031bb04284e38c110",
+          "count": 25,
+          "calls": 34,
+          "tokens_in": 5498,
+          "tokens_out": 4832,
+          "thinking_tokens": 3203,
+          "cached_tokens": 0,
+          "cost_usd": 0.091346,
+          "headline_metric": "fitness 0.561, solver acc 75%, 25 LLM children"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "paired_skill_designer",
           "run_folder": "results/gemini_roles/adaptive_mole/paired-solvable-scenarios-carbon",
           "model_id": "gemini-4-carbon",
           "commit": "16f24a08e1fb57397ddf90a5b413b4359a5f16bc",
@@ -1244,6 +1364,36 @@
         {
           "role": "adaptive_mole",
           "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed7",
+          "model_id": "gemini-4-carbon",
+          "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+          "count": 2,
+          "calls": 82,
+          "tokens_in": 1420410,
+          "tokens_out": 3341,
+          "thinking_tokens": 28466,
+          "cached_tokens": 1247399,
+          "cost_usd": 0.788832,
+          "headline_metric": "investigator +0.700 vs solver +0.350 (6d clash)"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed4",
+          "model_id": "gemini-4-carbon",
+          "commit": "d5fee698c79c4d026066ee981e7704362925ea23",
+          "count": 2,
+          "calls": 79,
+          "tokens_in": 2243533,
+          "tokens_out": 3375,
+          "thinking_tokens": 40203,
+          "cached_tokens": 2075662,
+          "cost_usd": 0.979091,
+          "headline_metric": "investigator +0.510 vs solver +0.600 (10d clash)"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
           "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed5",
           "model_id": "gemini-4-carbon",
           "commit": "9222669912afd57e53fbd3b07f0cdba985df705d",
@@ -1255,6 +1405,21 @@
           "cached_tokens": 817534,
           "cost_usd": 0.66069,
           "headline_metric": "investigator +0.750 vs solver +0.450 (5d clash)"
+        },
+        {
+          "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed6",
+          "model_id": "gemini-4-carbon",
+          "commit": "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
+          "count": 2,
+          "calls": 71,
+          "tokens_in": 1011467,
+          "tokens_out": 2993,
+          "thinking_tokens": 24696,
+          "cached_tokens": 816815,
+          "cost_usd": 0.747878,
+          "headline_metric": "investigator +0.750 vs solver +0.340 (5d clash)"
         },
         {
           "role": "adaptive_mole",
@@ -1288,6 +1453,21 @@
         },
         {
           "role": "adaptive_mole",
+          "subrole": "carbon_vs_carbon_clash",
+          "run_folder": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-easy-seed0",
+          "model_id": "gemini-4-carbon",
+          "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+          "count": 2,
+          "calls": 46,
+          "tokens_in": 366514,
+          "tokens_out": 1734,
+          "thinking_tokens": 17294,
+          "cached_tokens": 270799,
+          "cost_usd": 0.408789,
+          "headline_metric": "investigator +0.830 vs solver +0.790 (3d clash)"
+        },
+        {
+          "role": "adaptive_mole",
           "subrole": "catchability_isolation_audit",
           "run_folder": "results/gemini_roles/adaptive_mole/catchability-audit-carbon",
           "model_id": "gemini-4-carbon",
@@ -1302,13 +1482,13 @@
           "headline_metric": "adaptive mole verified"
         }
       ],
-      "count": 324,
-      "calls": 1763,
-      "tokens_in": 28044684,
-      "tokens_out": 123907,
-      "thinking_tokens": 443644,
-      "cached_tokens": 25213697,
-      "cost_usd": 13.858871
+      "count": 397,
+      "calls": 2076,
+      "tokens_in": 33093751,
+      "tokens_out": 141516,
+      "thinking_tokens": 557649,
+      "cached_tokens": 29624372,
+      "cost_usd": 16.892867
     },
     "investigators": {
       "role": "investigators",
@@ -1316,7 +1496,7 @@
       "title": "Security-Lead Investigators",
       "stage": "Bayesian Investigation",
       "verified": true,
-      "n_verified_runs": 25,
+      "n_verified_runs": 27,
       "canonical_run": {
         "role": "investigators",
         "subrole": "thinking_level_ablation",
@@ -1647,6 +1827,36 @@
           "cached_tokens": 2263660,
           "cost_usd": 1.178644,
           "headline_metric": "mean +0.590 vs solver +0.520 (acc 100%, n=1)"
+        },
+        {
+          "role": "investigators",
+          "subrole": "medium-11",
+          "run_folder": "data/runs/committed/v1.4/gemini-4-carbon/medium-11",
+          "model_id": "gemini-4-carbon",
+          "commit": "ffb75e8e2684df3a8d8adbb0adb88f352022227a",
+          "count": 1,
+          "calls": 67,
+          "tokens_in": 2160182,
+          "tokens_out": 40249,
+          "thinking_tokens": 0,
+          "cached_tokens": 1987383,
+          "cost_usd": 0.946826,
+          "headline_metric": "mean +0.760 vs solver +0.840 (acc 100%, n=1)"
+        },
+        {
+          "role": "investigators",
+          "subrole": "hard-14",
+          "run_folder": "data/runs/committed/v1.4/gemini-4-carbon/hard-14",
+          "model_id": "gemini-4-carbon",
+          "commit": "ffb75e8e2684df3a8d8adbb0adb88f352022227a",
+          "count": 1,
+          "calls": 63,
+          "tokens_in": 1907302,
+          "tokens_out": 33589,
+          "thinking_tokens": 0,
+          "cached_tokens": 1744958,
+          "cost_usd": 0.835074,
+          "headline_metric": "mean +0.610 vs solver +0.230 (acc 100%, n=1)"
         },
         {
           "role": "investigators",
@@ -2027,6 +2237,36 @@
         },
         {
           "role": "investigators",
+          "subrole": "medium-11",
+          "run_folder": "data/runs/committed/v1.4/gemini-4-carbon/medium-11",
+          "model_id": "gemini-4-carbon",
+          "commit": "ffb75e8e2684df3a8d8adbb0adb88f352022227a",
+          "count": 1,
+          "calls": 67,
+          "tokens_in": 2160182,
+          "tokens_out": 40249,
+          "thinking_tokens": 0,
+          "cached_tokens": 1987383,
+          "cost_usd": 0.946826,
+          "headline_metric": "mean +0.760 vs solver +0.840 (acc 100%, n=1)"
+        },
+        {
+          "role": "investigators",
+          "subrole": "hard-14",
+          "run_folder": "data/runs/committed/v1.4/gemini-4-carbon/hard-14",
+          "model_id": "gemini-4-carbon",
+          "commit": "ffb75e8e2684df3a8d8adbb0adb88f352022227a",
+          "count": 1,
+          "calls": 63,
+          "tokens_in": 1907302,
+          "tokens_out": 33589,
+          "thinking_tokens": 0,
+          "cached_tokens": 1744958,
+          "cost_usd": 0.835074,
+          "headline_metric": "mean +0.610 vs solver +0.230 (acc 100%, n=1)"
+        },
+        {
+          "role": "investigators",
           "subrole": "hard-6",
           "run_folder": "data/runs/committed/v1.4/gemini-4-carbon/hard-6",
           "model_id": "gemini-4-carbon",
@@ -2071,13 +2311,13 @@
           "headline_metric": "mean +0.630 vs solver +0.565 (acc 100%, n=2)"
         }
       ],
-      "count": 38,
-      "calls": 3333,
-      "tokens_in": 122547175,
-      "tokens_out": 1388566,
+      "count": 40,
+      "calls": 3463,
+      "tokens_in": 126614659,
+      "tokens_out": 1462404,
       "thinking_tokens": 157797,
-      "cached_tokens": 114113778,
-      "cost_usd": 43.741797
+      "cached_tokens": 117846119,
+      "cost_usd": 45.523697
     },
     "failure_analyst": {
       "role": "failure_analyst",
@@ -2273,7 +2513,7 @@
       "title": "Multimodal Evidence & Vision Forensics",
       "stage": "Pixel & Chart Inspection",
       "verified": true,
-      "n_verified_runs": 14,
+      "n_verified_runs": 13,
       "canonical_run": {
         "role": "multimodal_evidence",
         "subrole": "visual_memo_blind_ablation",
@@ -2409,21 +2649,6 @@
           "cached_tokens": 0,
           "cost_usd": 0.384028,
           "headline_metric": "18 images, top-1 mole acc 83%, decoy acc 100%"
-        },
-        {
-          "role": "multimodal_evidence",
-          "subrole": "multi_image_incident_dossier",
-          "run_folder": "results/gemini_roles/multimodal_evidence/multi-image-dossier-med6to8-hard5to7-carbon",
-          "model_id": "gemini-4-carbon",
-          "commit": "a6b5a80e7a47d2bdf91514c57ca08834921762eb",
-          "count": 6,
-          "calls": 6,
-          "tokens_in": 27055,
-          "tokens_out": 2345,
-          "thinking_tokens": 25336,
-          "cached_tokens": 0,
-          "cost_usd": 0.33092,
-          "headline_metric": "18 images, top-1 mole acc 67%, decoy acc 83%"
         },
         {
           "role": "multimodal_evidence",
@@ -2624,21 +2849,6 @@
         },
         {
           "role": "multimodal_evidence",
-          "subrole": "multi_image_incident_dossier",
-          "run_folder": "results/gemini_roles/multimodal_evidence/multi-image-dossier-med6to8-hard5to7-carbon",
-          "model_id": "gemini-4-carbon",
-          "commit": "a6b5a80e7a47d2bdf91514c57ca08834921762eb",
-          "count": 6,
-          "calls": 6,
-          "tokens_in": 27055,
-          "tokens_out": 2345,
-          "thinking_tokens": 25336,
-          "cached_tokens": 0,
-          "cost_usd": 0.33092,
-          "headline_metric": "18 images, top-1 mole acc 67%, decoy acc 83%"
-        },
-        {
-          "role": "multimodal_evidence",
           "subrole": "belief_chart_forensics",
           "run_folder": "results/gemini_roles/multimodal_evidence/belief-chart-forensics-carbon",
           "model_id": "gemini-4-carbon",
@@ -2698,13 +2908,13 @@
           "headline_metric": "3 images (medium), top-1 mole acc 100%, decoy acc 100% (naive 0%)"
         }
       ],
-      "count": 83,
-      "calls": 175,
-      "tokens_in": 387126,
-      "tokens_out": 36407,
-      "thinking_tokens": 115542,
+      "count": 77,
+      "calls": 169,
+      "tokens_in": 360071,
+      "tokens_out": 34062,
+      "thinking_tokens": 90206,
       "cached_tokens": 0,
-      "cost_usd": 2.293742
+      "cost_usd": 1.962822
     }
   },
   "paired_solver_comparison": {
@@ -2732,7 +2942,7 @@
       },
       {
         "tier": "medium",
-        "n": 10,
+        "n": 11,
         "seeds": [
           0,
           1,
@@ -2743,23 +2953,24 @@
           6,
           7,
           8,
-          9
+          9,
+          11
         ],
-        "carbon_mean": 0.577,
-        "carbon_ci": 0.1959,
-        "solver_mean": 0.73,
-        "solver_ci": 0.0881,
-        "paired_diff": -0.153,
-        "diff_ci": 0.2333,
-        "ratio": 0.7904,
-        "carbon_accuracy": 0.8,
+        "carbon_mean": 0.5936,
+        "carbon_ci": 0.1801,
+        "solver_mean": 0.74,
+        "solver_ci": 0.0821,
+        "paired_diff": -0.1464,
+        "diff_ci": 0.2114,
+        "ratio": 0.8022,
+        "carbon_accuracy": 0.8182,
         "solver_accuracy": 1.0,
-        "carbon_accuse_day": 9.0,
-        "solver_accuse_day": 7.2
+        "carbon_accuse_day": 8.78,
+        "solver_accuse_day": 7.0
       },
       {
         "tier": "hard",
-        "n": 16,
+        "n": 17,
         "seeds": [
           0,
           1,
@@ -2774,26 +2985,27 @@
           10,
           11,
           13,
+          14,
           17,
           18,
           19
         ],
-        "carbon_mean": 0.4875,
-        "carbon_ci": 0.2022,
-        "solver_mean": 0.5556,
-        "solver_ci": 0.09,
-        "paired_diff": -0.0681,
-        "diff_ci": 0.2324,
-        "ratio": 0.8774,
-        "carbon_accuracy": 0.9375,
+        "carbon_mean": 0.4947,
+        "carbon_ci": 0.1905,
+        "solver_mean": 0.5365,
+        "solver_ci": 0.0925,
+        "paired_diff": -0.0418,
+        "diff_ci": 0.2243,
+        "ratio": 0.9221,
+        "carbon_accuracy": 0.9412,
         "solver_accuracy": 1.0,
-        "carbon_accuse_day": 11.38,
-        "solver_accuse_day": 10.69
+        "carbon_accuse_day": 11.24,
+        "solver_accuse_day": 10.94
       }
     ],
     "overall": {
       "tier": "overall",
-      "n": 30,
+      "n": 32,
       "seeds": [
         0,
         1,
@@ -2809,6 +3021,7 @@
         7,
         8,
         9,
+        11,
         0,
         1,
         2,
@@ -2822,21 +3035,22 @@
         10,
         11,
         13,
+        14,
         17,
         18,
         19
       ],
-      "carbon_mean": 0.5657,
-      "carbon_ci": 0.1309,
-      "solver_mean": 0.6463,
-      "solver_ci": 0.0663,
-      "paired_diff": -0.0807,
-      "diff_ci": 0.1453,
-      "ratio": 0.8752,
-      "carbon_accuracy": 0.9,
+      "carbon_mean": 0.5731,
+      "carbon_ci": 0.1232,
+      "solver_mean": 0.6394,
+      "solver_ci": 0.0683,
+      "paired_diff": -0.0663,
+      "diff_ci": 0.139,
+      "ratio": 0.8964,
+      "carbon_accuracy": 0.9062,
       "solver_accuracy": 1.0,
-      "carbon_accuse_day": 9.61,
-      "solver_accuse_day": 8.73
+      "carbon_accuse_day": 9.5,
+      "solver_accuse_day": 8.81
     },
     "seeds": [
       {
@@ -3022,6 +3236,19 @@
         "run_folder": "data/runs/committed/v1.4/gemini-4-carbon/medium-8-9"
       },
       {
+        "tier": "medium",
+        "seed": 11,
+        "carbon_score": 0.76,
+        "solver_score": 0.84,
+        "diff": -0.08,
+        "carbon_correct": true,
+        "solver_correct": true,
+        "carbon_accused": true,
+        "carbon_day": 7,
+        "solver_day": 5,
+        "run_folder": "data/runs/committed/v1.4/gemini-4-carbon/medium-11"
+      },
+      {
         "tier": "hard",
         "seed": 0,
         "carbon_score": 0.53,
@@ -3189,6 +3416,19 @@
         "carbon_day": 12,
         "solver_day": 17,
         "run_folder": "data/runs/committed/v1.4/gemini-4-carbon/hard-13"
+      },
+      {
+        "tier": "hard",
+        "seed": 14,
+        "carbon_score": 0.61,
+        "solver_score": 0.23,
+        "diff": 0.38,
+        "carbon_correct": true,
+        "solver_correct": true,
+        "carbon_accused": true,
+        "carbon_day": 9,
+        "solver_day": 15,
+        "run_folder": "data/runs/committed/v1.4/gemini-4-carbon/hard-14"
       },
       {
         "tier": "hard",
@@ -3435,17 +3675,6 @@
         "n_images_read": 18,
         "top1_mole_accuracy": 0.8333,
         "top1_decoy_accuracy": 1.0,
-        "naive_baseline_mole_accuracy": null
-      },
-      {
-        "run_folder": "results/gemini_roles/multimodal_evidence/multi-image-dossier-med6to8-hard5to7-carbon",
-        "subrole": "multi_image_incident_dossier",
-        "model_id": "gemini-4-carbon",
-        "commit": "a6b5a80e7a47d2bdf91514c57ca08834921762eb",
-        "tier": "unspecified",
-        "n_images_read": 18,
-        "top1_mole_accuracy": 0.6667,
-        "top1_decoy_accuracy": 0.8333,
         "naive_baseline_mole_accuracy": null
       },
       {

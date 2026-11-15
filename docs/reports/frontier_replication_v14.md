@@ -8,15 +8,15 @@ Reproduce and verify:
 PYTHONPATH=. python scripts/verify_frontier_replication.py --check
 ```
 
-## 1. Pre-Registered Seed Rule and Replay Audit
+## 1. Post-Hoc Seed Lock, Pre-Registered Extension, and Replay Audit
 
-- **Pre-registered seed rule (`docs/reports/gap.md`, commit `671ed96`):** The `justSilas` committed dev set (`seeds 0-29`, `n=30` per tier in `data/runs/committed/v1.4/`) is the locked **PRIMARY** headline result. All subsequent episodes under `results/frontier_replication/v1.4/` are evaluated and reported strictly separately as replication or cross-model cohorts, never swapped into `data/runs/committed/v1.4/`.
-- **Replay verification (`scripts/verify_replay.py`):** `410/410` episodes verified in `data/runs/committed/v1.4/` and `305/305` episodes verified in `results/frontier_replication/v1.4/` (`5` `opencode:google/gemini-4-carbon` hard, `30` `opencode:google/gemini-3.5-flash` medium, and `270` reference solver and baseline episodes on hard `seeds 30-59`), with `0` mismatches and `0` duplicate `(agent, tier, seed)` entries.
+- **Post-hoc seed lock and pre-registered extension (`docs/reports/gap.md`, commits `671ed96` and `f9fb7a4a`):** The `justSilas` committed dev set (`seeds 0-29`, `n=30` per tier in `data/runs/committed/v1.4/`) is the locked **PRIMARY** headline result (`671ed96` came 28 s after `8fd4dec`, so it is a post-hoc lock against later reruns and cherry-picking, not a pre-registration). The `opencode-gemini-4-carbon-ext` partial extension (`seeds 34, 37`, `n=2`, pre-registered in `f9fb7a4a`) and all FR8 episodes under `results/frontier_replication/v1.4/` are evaluated and reported strictly separately as replication or cross-model cohorts, never swapped into the primary `0-29` set.
+- **Replay verification (`scripts/verify_replay.py`):** `442/442` episodes verified in `data/runs/committed/v1.4/` and `305/305` episodes verified in `results/frontier_replication/v1.4/` (`5` `opencode:google/gemini-4-carbon` hard, `30` `opencode:google/gemini-3.5-flash` medium, and `270` reference solver and baseline episodes on hard `seeds 30-59`), with `0` mismatches and `0` duplicate `(agent, tier, seed)` entries.
 - **Headline summary:**
   - **Primary `0-29` (`n=30`, locked headline):** `opencode:google/gemini-4-carbon` on hard scores `0.322 +/- 0.199` vs solver `0.499`, giving **65% [24%, 98%]** raw and **72% [52%, 91%]** luck-adjusted; on medium (`n=30`) it reaches `111% [99%, 127%]` raw and `101% [85%, 119%]` luck-adjusted.
   - **Replication hard (`seeds 30, 34, 42, 45, 57`, `n=5`, separate cohort):** `opencode:google/gemini-4-carbon` scores `0.656 +/- 0.110` (5/5 correct, mean `P(accused) = 0.89`, luck-adjusted `0.472`) vs solver `0.248` raw (luck-adjusted `0.430`, ratio `110% [58%, 179%]`).
-  - **Secondary pooled sensitivity (`n=35`, secondary per pre-registered rule):** Pooling primary `0-29` with replication `30, 34, 42, 45, 57` yields `80% [42%, 124%]` raw and **77% [58%, 96%]** luck-adjusted, where the luck-adjusted 95% CI `[58%, 96%]` continues to exclude parity.
-  - **Cross-model replication (`gemini-3.5-flash` medium `n=30`, separate FR8 replication cohort):** On medium (`n=30` shared seeds `0-29`), `opencode:google/gemini-3.5-flash` reaches `67% [29%, 103%]` raw / `75% [45%, 105%]` luck-adjusted (`gemini-4-carbon - gemini-3.5-flash = +0.279 +/- 0.231` V raw, `+0.167 +/- 0.186` V luck-adjusted). `docs/reports/gap.md` is the sole source for primary `hard` (`0-29`) gap rows; `opencode:google/gemini-3.5-flash` hard is replay-verified in `committed_v14` (`410/410`) and omitted from tables here until `docs/reports/gap.md` ships it.
+  - **Secondary pooled sensitivity (`n=35`, secondary under post-hoc seed lock `671ed96`):** Pooling primary `0-29` with replication `30, 34, 42, 45, 57` yields `80% [42%, 124%]` raw and **77% [58%, 96%]** luck-adjusted, where the luck-adjusted 95% CI `[58%, 96%]` continues to exclude parity.
+  - **Cross-model replication (`gemini-3.5-flash` medium `n=30`, separate FR8 replication cohort):** On medium (`n=30` shared seeds `0-29`), `opencode:google/gemini-3.5-flash` reaches `67% [29%, 103%]` raw / `75% [45%, 105%]` luck-adjusted (`gemini-4-carbon - gemini-3.5-flash = +0.279 +/- 0.231` V raw, `+0.167 +/- 0.186` V luck-adjusted). `docs/reports/gap.md` is the sole source for primary `hard` (`0-29`) gap rows; `opencode:google/gemini-3.5-flash` hard is replay-verified in `committed_v14` (`442/442`) and omitted from tables here until `docs/reports/gap.md` ships it.
 
 ## 2. Primary Committed v1.4 Cohort (Seeds 0-29, Locked Headline)
 
@@ -92,7 +92,7 @@ Across the full 30-seed extension block (`results/frontier_replication/v1.4/refe
 
 ## 4. Cohort (b): Secondary Pooled Hard Sensitivity Row (`n=35`)
 
-**SECONDARY SENSITIVITY ONLY (NOT THE HEADLINE):** Per the pre-registered seed rule (`docs/reports/gap.md`), the `n=30` (`seeds 0-29`) result remains the primary headline (`65% [24%, 98%]` raw, `72% [52%, 91%]` luck-adjusted). Pooling the 30 primary episodes with the 5 non-overlapping replication episodes (`seeds 30, 34, 42, 45, 57`, total `n=35`) provides a secondary sensitivity check:
+**SECONDARY SENSITIVITY ONLY (NOT THE HEADLINE):** Per the post-hoc seed lock (`docs/reports/gap.md`, commit `671ed96`), the `n=30` (`seeds 0-29`) result remains the primary headline (`65% [24%, 98%]` raw, `72% [52%, 91%]` luck-adjusted). Pooling the 30 primary episodes with the 5 non-overlapping replication episodes (`seeds 30, 34, 42, 45, 57`, total `n=35`) provides a secondary sensitivity check:
 
 | run | n | score +/- 95% CI | accuracy | accused | mean accuse day | mean P(accused) | solver, same seeds | frontier / solver [95% CI] | paired diff +/- CI | luck-adjusted score | luck-adj. / solver [95% CI] |
 |---|---:|---|---:|---:|---:|---:|---:|---|---|---|---|

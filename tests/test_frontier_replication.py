@@ -141,7 +141,8 @@ def test_pre_registered_separation_and_cohorts(computed_summary):
     assert rule["pooled_n35_classification"] == "secondary_sensitivity_only"
 
     rv = computed_summary["replay_verification"]
-    assert rv["committed_v14"]["verified"] == 410
+    assert rv["committed_v14"]["verified"] == 442
+    assert rv["committed_v14"]["verified"] == rv["committed_v14"]["total"]
     assert rv["committed_v14"]["mismatches"] == 0
     assert rv["replication_v14"]["verified"] >= 305
     assert rv["replication_v14"]["verified"] == rv["replication_v14"]["total"]
@@ -185,6 +186,7 @@ def test_pre_registered_separation_and_cohorts(computed_summary):
 
     md = (ROOT / "docs" / "reports" / "frontier_replication_v14.md").read_text(encoding="utf-8")
     assert "SECONDARY SENSITIVITY ONLY" in md
+    assert "post-hoc lock" in md
     assert "65% [24%, 98%]" in md
     assert "72% [52%, 91%]" in md
 

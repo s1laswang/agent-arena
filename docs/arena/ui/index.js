@@ -29,3 +29,28 @@ export {
   computeFirstCatchLabel,
   buildCanonicalShareLine,
 } from "./arena_app.js";
+
+export {
+  INTERVIEW_TOPICS,
+  VARIANT_LABELS,
+  computeBreakEven,
+  computeAccuseEV,
+  createHumanDesk,
+} from "./human_desk.js";
+
+export {
+  MANDATORY_LIVING_BANNER,
+  sanitizeGeminiView,
+  sanitizeSolverView,
+  sanitizeLivingView,
+  createAiDuelPanel,
+} from "./ai_duel_panel.js";
+
+export {
+  LEADERBOARD_STORAGE_KEY,
+  LEADERBOARD_MAX_ENTRIES,
+  LEADERBOARD_MODES,
+  createLeaderboardStore,
+  renderEndSummaryCard,
+  renderLeaderboardDialog,
+} from "./end_and_leaderboard.js";

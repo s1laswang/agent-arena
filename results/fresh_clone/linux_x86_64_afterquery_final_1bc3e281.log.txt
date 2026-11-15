@@ -1,0 +1,357 @@
+date: 2026-11-15T03:34:22Z
+host: Linux 6.12.0-211.49.1.el10_2.x86_64 x86_64
+os: Rocky Linux 9.5 (Blue Onyx)
+cpu: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz (24 logical CPUs)
+loadavg_start: 19.42 21.61 18.97 27/4019 3525200
+python: Python 3.12.16 (/tmp/fleet-silas/shared/agent-arena-venv/bin/python)
+pytest: pytest 9.2.0
+make: GNU Make 4.3
+git: git version 2.52.0
+clean env: env -i PATH=/tmp/fleet-silas/shared/agent-arena-venv/bin:/usr/bin:/bin (+ POSIX cmp/diff shim in /tmp/opencode/home-af/bin) HOME=/tmp/opencode/home-af; UV=env; no CANARY_* env; no API keys; no .env
+=== clone: git clone --no-hardlinks --branch afterquery-final /home/silas/momin/fleet/repos/agent-arena.git /tmp/opencode/canary-af-check
+Cloning into '/tmp/opencode/canary-af-check'...
+done.
+warning: refs/tags/afterquery-final e47ddde014abf14376b6fa7051218b6ecf594d26 is not a commit!
+Note: switching to '1bc3e281dbfaa494a11e783d0c98369b41b2f675'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Updating files: 100% (3366/3366), done.
+HEAD short: 1bc3e281
+commit: 1bc3e281dbfaa494a11e783d0c98369b41b2f675
+canary_pkg: /tmp/opencode/canary-af-check/canary/__init__.py
+git status --porcelain: empty
+elapsed_s: 3.15
+=== clone: exit 0, 3 s
+=== reproduce_table: REPRO_ANTICHEAT=0 make reproduce UV=env
+env python -m canary.eval --reproduce
+# Canary judge table
+
+- seeds: 40 judge seeds per tier (900000..900039)
+- judge-world secret: statistical, sha256 fingerprint `ca0f5c61b8d1` (statistical reproduction; set CANARY_WORLD_SECRET for exact numbers)
+- git: `1bc3e281dbfa`, generated 2026-11-15T03:34:45+0000, 18.2 s
+- reward: true V at accusation if correct (V starts at 1.0 and drops with every leak, including leaks that have not surfaced yet; v1.3 `status` shows only surfaced damage), -1 if wrong, 0 if no accusation
+- accuracy = correct accusations / episodes; accused = episodes that ended in an accusation
+- `/ solver` = agent mean / solver mean on the same tier (ratio of means); `pass^k` only for agents with k repeated runs per seed
+- **paired runs**: reference and baselines played in this invocation on the same worlds (one secret). **reported agent runs**: frontier-agent episodes replayed from data/runs/committed/, played on the team's worlds, so they are NOT paired with this run; compare them by mean ± CI only
+- **v1.4 frontier vs solver, paired on the same seeds:** `data/runs/committed/v1.4/paired_table_gemini.md`, explained in `docs/reports/gap.md`. The v1.4 reported rows below replay those committed episodes (played on dev seeds under the team's secret), so they are not paired with this invocation's judge worlds.
+- reported runs are grouped by tier version and never pooled: v1.4 (current rules) first, then earlier versions as history (not comparable to the paired table; `/ solver` left blank). Builds under data/runs/committed/superseded/ are excluded
+- per-episode timeout guard: 60 s; no episode timed out
+
+## medium (secondary tier)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 40 | 0 | +0.621 ± 0.082 | 0.88 | 35/40 | 8.1 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 40 | 0 | -0.003 ± 0.243 | 0.62 | 40/40 | 11.3 | -0.00 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 40 | 0 | -0.958 ± 0.082 | 0.03 | 40/40 | 10.0 | -1.54 | – | strongest no-canary log reader |
+| random | baseline | 40 | 0 | -0.607 ± 0.175 | 0.07 | 29/40 | 4.5 | -0.98 | – | random valid tool calls |
+| guess_day1 | baseline | 40 | 0 | -0.950 ± 0.098 | 0.03 | 40/40 | 1.0 | -1.53 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | never accuses |
+
+Reported agent runs: v1.4 (current rules):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| gemini:gemini-4-carbon | reported | 30 | 0 | +0.530 ± 0.138 | 0.83 | 26/30 | 9.0 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/inproc-gemini-4-carbon/medium) |
+| opencode:google/gemini-4-carbon | reported | 30 | 0 | +0.713 ± 0.042 | 1.00 | 30/30 | 8.0 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/opencode-gemini-4-carbon/medium) |
+| restrict_all | reported | 20 | 0 | -0.950 ± 0.098 | 0.05 | 20/20 | 7.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/restrict_all-medium-20261114-121126) |
+| solver | reported | 30 | 0 | +0.645 ± 0.087 | 0.90 | 27/30 | 7.6 | – | – | replayed, NON-judge seeds, 30 seeds, git a54c896, e4b5634 (data/runs/committed/v1.4/reference/solver-medium-20261114-121126, data/runs/committed/v1.4/reference/solver-medium-seeds20to29) |
+| heuristic | reported | 20 | 0 | -0.275 ± 0.361 | 0.45 | 20/20 | 11.3 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/heuristic-medium-20261114-121126) |
+| random | reported | 20 | 0 | -0.678 ± 0.225 | 0.05 | 15/20 | 6.5 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/random-medium-20261114-121126) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/stop_early-medium-20261114-121126); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/do_nothing-medium-20261114-121126) |
+
+`/ solver` is blank for reported runs: they were played on dev seeds under the team's secret, so a ratio to this invocation's judge-world solver would mislead. The paired ratios (same seeds as the solver) are in `data/runs/committed/v1.4/paired_table_gemini.md` and `docs/reports/gap.md`.
+
+[... History v1.3/v1.2 medium reported tables (28 lines) omitted for <40 KB log cap ...]
+## hard (headline: the Harbor judge set)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 40 | 0 | +0.533 ± 0.120 | 0.93 | 39/40 | 8.6 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 40 | 0 | +0.024 ± 0.189 | 0.75 | 40/40 | 14.4 | 0.05 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 40 | 0 | -0.956 ± 0.086 | 0.03 | 40/40 | 10.0 | -1.79 | – | strongest no-canary log reader |
+| random | baseline | 40 | 0 | -0.825 ± 0.119 | 0.00 | 33/40 | 6.8 | -1.55 | – | random valid tool calls |
+| guess_day1 | baseline | 40 | 0 | -1.000 ± 0.000 | 0.00 | 40/40 | 1.0 | -1.87 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | never accuses |
+
+Reported agent runs: v1.4 (current rules):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| gemini:gemini-4-carbon | reported | 30 | 0 | +0.473 ± 0.118 | 0.93 | 29/30 | 12.7 | – | – | replayed, NON-judge seeds, 30 seeds, git 498bccd (data/runs/committed/v1.4/inproc-gemini-4-carbon/hard) |
+| opencode:google/gemini-3.5-flash | reported | 30 | 0 | +0.373 ± 0.177 | 0.90 | 30/30 | 12.7 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard) |
+| opencode:google/gemini-4-carbon | reported | 32 | 0 | +0.349 ± 0.190 | 0.84 | 31/32 | 12.7 | – | – | replayed, NON-judge seeds, 32 seeds, git 035105e, f9fb7a4 (data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard, data/runs/committed/v1.4/opencode-gemini-4-carbon/hard) |
+| restrict_all | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 9.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/restrict_all-hard-20261114-121126) |
+| solver | reported | 60 | 0 | +0.498 ± 0.097 | 0.93 | 59/60 | 9.5 | – | – | replayed, NON-judge seeds, 60 seeds, git a54c896, e4b5634, f9fb7a4 (data/runs/committed/v1.4/reference/solver-hard-20261114-121126, data/runs/committed/v1.4/reference/solver-hard-seeds20to29, data/runs/committed/v1.4/reference/solver-hard-seeds30to59) |
+| heuristic | reported | 20 | 0 | +0.186 ± 0.233 | 0.85 | 20/20 | 13.9 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/heuristic-hard-20261114-121126) |
+| random | reported | 20 | 0 | -0.850 ± 0.161 | 0.00 | 17/20 | 8.1 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/random-hard-20261114-121126) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/stop_early-hard-20261114-121126); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/do_nothing-hard-20261114-121126) |
+
+`/ solver` is blank for reported runs: they were played on dev seeds under the team's secret, so a ratio to this invocation's judge-world solver would mislead. The paired ratios (same seeds as the solver) are in `data/runs/committed/v1.4/paired_table_gemini.md` and `docs/reports/gap.md`.
+
+[... History v1.3/v1.2 hard reported tables (28 lines) omitted for <40 KB log cap ...]
+## easy (sanity tier)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 40 | 0 | +0.797 ± 0.033 | 1.00 | 40/40 | 4.8 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 40 | 0 | +0.694 ± 0.039 | 1.00 | 40/40 | 6.6 | 0.87 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 40 | 0 | -0.521 ± 0.230 | 0.30 | 40/40 | 10.0 | -0.65 | – | strongest no-canary log reader |
+| random | baseline | 40 | 0 | -0.755 ± 0.148 | 0.03 | 32/40 | 6.5 | -0.95 | – | random valid tool calls |
+| guess_day1 | baseline | 40 | 0 | -0.750 ± 0.208 | 0.12 | 40/40 | 1.0 | -0.94 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | never accuses |
+
+committed agent episode files: 63 (excluding data/runs/committed/superseded/)
+  [... 63 committed episode file paths omitted for <40 KB log cap ...]
+Statistical reproduction; set CANARY_WORLD_SECRET for exact numbers.
+No CANARY_WORLD_SECRET was set, so this invocation drew ONE fresh random judge-world secret
+(sha256 fingerprint ca0f5c61b8d1; the secret itself is never printed or written) and used it for
+every agent, so the comparison is paired. Expect each mean inside the published ± 95% CI, not
+bit-for-bit equality. For exact, repeatable numbers:
+    CANARY_WORLD_SECRET=<any string> make reproduce   # same string -> identical judge_episodes.jsonl
+(the secret behind the team's Harbor worlds stays private: it would reveal the judge-world moles).
+
+wrote /tmp/opencode/canary-af-check/results/latest/judge_table.md, /tmp/opencode/canary-af-check/results/latest/judge_episodes.jsonl, /tmp/opencode/canary-af-check/results/latest/gap_chart.png
+(the committed copies in results/ are untouched; the team refreshes them with --update-committed)
+total 19.8 s
+HEADLINE (README table, recomputed from committed episodes; identical to data/runs/committed/v1.4/paired_table_gemini.md):
+  hard, OpenCode + gemini-4-carbon over MCP: +0.322 ± 0.199 vs reference solver +0.499, paired on seeds 0-29 = 65% [24%, 98%] of the solver (luck-adjusted 72% [52%, 91%])
+git status --porcelain: empty
+elapsed_s: 27.34
+=== reproduce_table: exit 0, 27 s
+=== reproduce: make reproduce UV=env
+env python -m canary.eval --reproduce
+# Canary judge table
+
+- seeds: 40 judge seeds per tier (900000..900039)
+- judge-world secret: statistical, sha256 fingerprint `77cb352b4987` (statistical reproduction; set CANARY_WORLD_SECRET for exact numbers)
+- git: `1bc3e281dbfa`, generated 2026-11-15T03:36:25+0000, 91.1 s
+- reward: true V at accusation if correct (V starts at 1.0 and drops with every leak, including leaks that have not surfaced yet; v1.3 `status` shows only surfaced damage), -1 if wrong, 0 if no accusation
+- accuracy = correct accusations / episodes; accused = episodes that ended in an accusation
+- `/ solver` = agent mean / solver mean on the same tier (ratio of means); `pass^k` only for agents with k repeated runs per seed
+- **paired runs**: reference and baselines played in this invocation on the same worlds (one secret). **reported agent runs**: frontier-agent episodes replayed from data/runs/committed/, played on the team's worlds, so they are NOT paired with this run; compare them by mean ± CI only
+- **v1.4 frontier vs solver, paired on the same seeds:** `data/runs/committed/v1.4/paired_table_gemini.md`, explained in `docs/reports/gap.md`. The v1.4 reported rows below replay those committed episodes (played on dev seeds under the team's secret), so they are not paired with this invocation's judge worlds.
+- reported runs are grouped by tier version and never pooled: v1.4 (current rules) first, then earlier versions as history (not comparable to the paired table; `/ solver` left blank). Builds under data/runs/committed/superseded/ are excluded
+- per-episode timeout guard: 60 s; no episode timed out
+
+## medium (secondary tier)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 40 | 0 | +0.664 ± 0.063 | 0.95 | 38/40 | 8.4 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 40 | 0 | -0.072 ± 0.251 | 0.57 | 40/40 | 11.4 | -0.11 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 40 | 0 | -0.957 ± 0.084 | 0.03 | 40/40 | 10.0 | -1.44 | – | strongest no-canary log reader |
+| random | baseline | 40 | 0 | -0.636 ± 0.173 | 0.05 | 29/40 | 4.5 | -0.96 | – | random valid tool calls |
+| guess_day1 | baseline | 40 | 0 | -0.900 ± 0.137 | 0.05 | 40/40 | 1.0 | -1.36 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | never accuses |
+
+Reported agent runs: v1.4 (current rules):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| gemini:gemini-4-carbon | reported | 30 | 0 | +0.530 ± 0.138 | 0.83 | 26/30 | 9.0 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/inproc-gemini-4-carbon/medium) |
+| opencode:google/gemini-4-carbon | reported | 30 | 0 | +0.713 ± 0.042 | 1.00 | 30/30 | 8.0 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/opencode-gemini-4-carbon/medium) |
+| restrict_all | reported | 20 | 0 | -0.950 ± 0.098 | 0.05 | 20/20 | 7.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/restrict_all-medium-20261114-121126) |
+| solver | reported | 30 | 0 | +0.645 ± 0.087 | 0.90 | 27/30 | 7.6 | – | – | replayed, NON-judge seeds, 30 seeds, git a54c896, e4b5634 (data/runs/committed/v1.4/reference/solver-medium-20261114-121126, data/runs/committed/v1.4/reference/solver-medium-seeds20to29) |
+| heuristic | reported | 20 | 0 | -0.275 ± 0.361 | 0.45 | 20/20 | 11.3 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/heuristic-medium-20261114-121126) |
+| random | reported | 20 | 0 | -0.678 ± 0.225 | 0.05 | 15/20 | 6.5 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/random-medium-20261114-121126) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/stop_early-medium-20261114-121126); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/do_nothing-medium-20261114-121126) |
+
+`/ solver` is blank for reported runs: they were played on dev seeds under the team's secret, so a ratio to this invocation's judge-world solver would mislead. The paired ratios (same seeds as the solver) are in `data/runs/committed/v1.4/paired_table_gemini.md` and `docs/reports/gap.md`.
+
+[... History v1.3/v1.2 medium reported tables (28 lines) omitted for <40 KB log cap ...]
+## hard (headline: the Harbor judge set)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 40 | 0 | +0.527 ± 0.116 | 0.95 | 40/40 | 8.9 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 40 | 0 | -0.201 ± 0.208 | 0.60 | 40/40 | 14.9 | -0.38 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 40 | 0 | -1.000 ± 0.000 | 0.00 | 40/40 | 10.0 | -1.90 | – | strongest no-canary log reader |
+| random | baseline | 40 | 0 | -0.825 ± 0.119 | 0.00 | 33/40 | 6.8 | -1.57 | – | random valid tool calls |
+| guess_day1 | baseline | 40 | 0 | -0.900 ± 0.137 | 0.05 | 40/40 | 1.0 | -1.71 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | never accuses |
+
+Reported agent runs: v1.4 (current rules):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| gemini:gemini-4-carbon | reported | 30 | 0 | +0.473 ± 0.118 | 0.93 | 29/30 | 12.7 | – | – | replayed, NON-judge seeds, 30 seeds, git 498bccd (data/runs/committed/v1.4/inproc-gemini-4-carbon/hard) |
+| opencode:google/gemini-3.5-flash | reported | 30 | 0 | +0.373 ± 0.177 | 0.90 | 30/30 | 12.7 | – | – | replayed, NON-judge seeds, 30 seeds, git 035105e (data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard) |
+| opencode:google/gemini-4-carbon | reported | 32 | 0 | +0.349 ± 0.190 | 0.84 | 31/32 | 12.7 | – | – | replayed, NON-judge seeds, 32 seeds, git 035105e, f9fb7a4 (data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard, data/runs/committed/v1.4/opencode-gemini-4-carbon/hard) |
+| restrict_all | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 9.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/restrict_all-hard-20261114-121126) |
+| solver | reported | 60 | 0 | +0.498 ± 0.097 | 0.93 | 59/60 | 9.5 | – | – | replayed, NON-judge seeds, 60 seeds, git a54c896, e4b5634, f9fb7a4 (data/runs/committed/v1.4/reference/solver-hard-20261114-121126, data/runs/committed/v1.4/reference/solver-hard-seeds20to29, data/runs/committed/v1.4/reference/solver-hard-seeds30to59) |
+| heuristic | reported | 20 | 0 | +0.186 ± 0.233 | 0.85 | 20/20 | 13.9 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/heuristic-hard-20261114-121126) |
+| random | reported | 20 | 0 | -0.850 ± 0.161 | 0.00 | 17/20 | 8.1 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/random-hard-20261114-121126) |
+| stop_early | reported | 20 | 0 | -1.000 ± 0.000 | 0.00 | 20/20 | 1.0 | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/stop_early-hard-20261114-121126); these episodes accused on day 1 under the old stop_early script (that policy is now guess_day1; current stop_early scores 0) |
+| do_nothing | reported | 20 | 0 | +0.000 ± 0.000 | 0.00 | 0/20 | – | – | – | replayed, NON-judge seeds, 20 seeds, git a54c896 (data/runs/committed/v1.4/reference/do_nothing-hard-20261114-121126) |
+
+`/ solver` is blank for reported runs: they were played on dev seeds under the team's secret, so a ratio to this invocation's judge-world solver would mislead. The paired ratios (same seeds as the solver) are in `data/runs/committed/v1.4/paired_table_gemini.md` and `docs/reports/gap.md`.
+
+[... History v1.3/v1.2 hard reported tables (28 lines) omitted for <40 KB log cap ...]
+## easy (sanity tier)
+
+Paired runs (this invocation, same worlds):
+
+| agent | kind | n | invalid | score ± 95% CI | accuracy | accused | mean accuse day | / solver | pass^k | note |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---|
+| solver | reference | 40 | 0 | +0.772 ± 0.037 | 1.00 | 40/40 | 5.0 | 1.00 | – | reference: tuned Bayesian canary-trap solver |
+| heuristic | baseline | 40 | 0 | +0.669 ± 0.041 | 1.00 | 40/40 | 6.8 | 0.87 | – | canary bisection, no Bayes, no V timing |
+| logs_only | baseline | 40 | 0 | -0.480 ± 0.235 | 0.33 | 40/40 | 10.0 | -0.62 | – | strongest no-canary log reader |
+| random | baseline | 40 | 0 | -0.613 ± 0.184 | 0.12 | 32/40 | 6.5 | -0.79 | – | random valid tool calls |
+| guess_day1 | baseline | 40 | 0 | -0.700 ± 0.224 | 0.15 | 40/40 | 1.0 | -0.91 | – | random accusation on day 1 (EV < 0 by design) |
+| stop_early | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | stops on day 1 without accusing |
+| do_nothing | baseline | 40 | 0 | +0.000 ± 0.000 | 0.00 | 0/40 | – | 0.00 | – | never accuses |
+
+## Anti-cheat battery (same world secret as the judge table)
+
+| tier | probe | kind | n | mean ± 95% CI | max | episodes > 0 | blocked |
+|---|---|---|---|---|---|---|---|
+| medium | `[33 probes: all blocked=yes; solver +0.664 ± 0.062]` | summary | 40 | - | - | - | yes |
+| hard | `do_nothing` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `stop_early` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `guess_day1` | attack | 40 | -0.900 ± 0.137 | +1.000 | 2 | yes |
+| hard | `random` | attack | 40 | -0.825 ± 0.119 | +0.000 | 0 | yes |
+| hard | `restrict_all` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| hard | `accuse_decoy` | attack | 40 | -0.904 ± 0.132 | +0.950 | 2 | yes |
+| hard | `accuse_most_logs` | attack | 40 | -0.907 ± 0.127 | +0.850 | 2 | yes |
+| hard | `swarm_w2b008` | swarm | 40 | +0.378 ± 0.142 | +0.770 | 34 | yes |
+| hard | `probe_all_then_accuse` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| hard | `garbage_args` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `accuse_all_sequential` | attack | 40 | -0.900 ± 0.137 | +1.000 | 2 | yes |
+| hard | `accuse_all_parallel` | attack | 40 | -1.000 ± 0.000 | -1.000 | 0 | yes |
+| hard | `accuse_after_end` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `calls_past_cap` | attack | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `canary_per_person` | attack | 40 | -0.915 ± 0.116 | +0.700 | 2 | yes |
+| hard | `solver` | reference | 40 | +0.527 ± 0.116 | +0.790 | 38 | - |
+| hard | `solver_cut_25` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `solver_cut_50` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `solver_cut_75` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `solver_minus_accuse` | sanity | 40 | +0.000 ± 0.000 | +0.000 | 0 | yes |
+| hard | `control_solver_then_pad` | sanity | 40 | +0.527 ± 0.116 | +0.790 | 38 | yes |
+| hard | `solver_cut_25_guess` | effort | 40 | -0.904 ± 0.131 | +0.920 | 2 | yes |
+| hard | `solver_cut_50_guess` | effort | 40 | -0.591 ± 0.239 | +0.890 | 9 | yes |
+| hard | `solver_cut_75_guess` | effort | 40 | -0.228 ± 0.268 | +0.820 | 18 | yes |
+| hard | `solver_cut_90_guess` | effort | 40 | -0.133 ± 0.260 | +0.800 | 21 | yes |
+| hard | `solver_plus_restrict_others` | sanity | 40 | +0.527 ± 0.116 | +0.790 | 38 | yes |
+| hard | `solver_plus_unrestrict_spam` | sanity | 40 | +0.527 ± 0.116 | +0.790 | 38 | yes |
+| hard | `solver_plus_interview_all` | sanity | 40 | +0.527 ± 0.116 | +0.790 | 38 | yes |
+| hard | `solver_plus_read_spam` | sanity | 40 | +0.527 ± 0.116 | +0.790 | 38 | yes |
+| hard | `solver_plus_wait_a_day` | sanity | 40 | +0.497 ± 0.114 | +0.790 | 38 | yes |
+| hard | `solver_plus_restrict_others_wait` | sanity | 40 | +0.441 ± 0.111 | +0.750 | 38 | yes |
+| hard | `solver_plus_accuse_twice` | sanity | 40 | +0.527 ± 0.116 | +0.790 | 38 | yes |
+| hard | `solver_plus_bad_canary` | sanity | 40 | +0.527 ± 0.116 | +0.790 | 38 | yes |
+| easy | `[33 probes: all blocked=yes; solver +0.772 ± 0.036]` | summary | 40 | - | - | - | yes |
+
+All probes blocked: **yes** (attack mean <= 0 and below the solver; always-zero probes exactly 0 on every seed; every garbage tool reached the Env; every accusing probe accused; plus probes <= solver on every seed where they accused (an extra step that ends the episode first is an abstention and must score exactly 0); never two accepted accusations in one episode; effort ladder below the solver; plus-probe mean <= solver + 0.05; swarm-flagged policies not significantly above the solver (paired, one-sided 95%)).
+39 rows are `sanity` checks that hold by construction today (the stop-early ladder: no accusation means 0; the control and the same-day plus steps cannot change V before the accusation). They guard against regressions and are not counted as attacks.
+
+## Replay consistency (committed episodes re-played on a fresh Env and re-graded)
+
+| file | version | episodes | replayed | consistent | not replayable | replay_consistent |
+|---|---|---|---|---|---|---|
+| `[42 v1.2/v1.3 files: 40 replay_consistent=yes, 2 grok secret-keyed n/a]` | v1.2/v1.3 | 599 | 589 | 589 | 10 | yes |
+| `data/runs/committed/v1.4/inproc-gemini-4-carbon/hard/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/inproc-gemini-4-carbon/medium/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/opencode-gemini-4-carbon/medium/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard/episodes.jsonl` | v1.4 | 2 | 2 | 2 | 0 | yes |
+| `data/runs/committed/v1.4/reference/do_nothing-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/do_nothing-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/heuristic-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/heuristic-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/random-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/random-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/restrict_all-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/restrict_all-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-hard-seeds20to29/episodes.jsonl` | v1.4 | 10 | 10 | 10 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-hard-seeds30to59/episodes.jsonl` | v1.4 | 30 | 30 | 30 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/solver-medium-seeds20to29/episodes.jsonl` | v1.4 | 10 | 10 | 10 | 0 | yes |
+| `data/runs/committed/v1.4/reference/stop_early-hard-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+| `data/runs/committed/v1.4/reference/stop_early-medium-20261114-121126/episodes.jsonl` | v1.4 | 20 | 20 | 20 | 0 | yes |
+
+**Replay coverage: 1021 of 1031 committed episodes re-played, 1021 consistent; 51814 recorded tool results compared step by step, 0 differ.** Of those, 2 were cut client-side by OpenCode ("...N bytes truncated..."); for those, N is checked against the exact byte length of the replayed reply. 1 tool call OpenCode itself refused ("Model tried to call unavailable tool") never reached the server and is skipped. Not replayable: 10: secret-keyed judge/held-out seeds (the world secret is not committed).
+
+## Harbor result consistency (committed trials under results/harbor/)
+
+**80 of 80 trials and 18 of 18 job summaries consistent.** Each trial: Harbor reward = reward.txt = sidecar ledger = verifier copy; the ledger score follows from its accusation; at most one accusation; a cheat_probe trial lists no hole and scores 0; isolation OK. 19 trials also have an agent trajectory, and it names the same person (oracle and probe trials have none). Each job summary matches its trials. 0 trials without a verifier reward (infrastructure failures, not results). Verifier generation: 60 trials were graded by the signing verifier (`signature=ok`), 20 by the earlier unsigned one. 57 trials also pass an HMAC check against their build's published retired signing key (results/harbor/<job>/ledger_key). That catches an edit that was not re-signed; because the key is now public, it cannot catch a forger who re-signs. So, for every trial, this check catches files that disagree with each other and edits that were not re-signed; it cannot prove that the files are genuine.
+
+
+anti-cheat: wrote /tmp/opencode/canary-af-check/results/latest/exploits.json, /tmp/opencode/canary-af-check/results/latest/exploits.md
+committed agent episode files: 63 (excluding data/runs/committed/superseded/)
+  [... 63 committed episode file paths identical to Replay consistency table; omitted for <40 KB log cap ...]
+Statistical reproduction; set CANARY_WORLD_SECRET for exact numbers.
+No CANARY_WORLD_SECRET was set, so this invocation drew ONE fresh random judge-world secret
+(sha256 fingerprint 77cb352b4987; the secret itself is never printed or written) and used it for
+every agent, so the comparison is paired. Expect each mean inside the published ± 95% CI, not
+bit-for-bit equality. For exact, repeatable numbers:
+    CANARY_WORLD_SECRET=<any string> make reproduce   # same string -> identical judge_episodes.jsonl
+(the secret behind the team's Harbor worlds stays private: it would reveal the judge-world moles).
+
+wrote /tmp/opencode/canary-af-check/results/latest/judge_table.md, /tmp/opencode/canary-af-check/results/latest/judge_episodes.jsonl, /tmp/opencode/canary-af-check/results/latest/gap_chart.png
+(the committed copies in results/ are untouched; the team refreshes them with --update-committed)
+total 107.5 s
+ANTI-CHEAT: every probe blocked, every replayable episode and Harbor trial consistent
+HEADLINE (README table, recomputed from committed episodes; identical to data/runs/committed/v1.4/paired_table_gemini.md):
+  hard, OpenCode + gemini-4-carbon over MCP: +0.322 ± 0.199 vs reference solver +0.499, paired on seeds 0-29 = 65% [24%, 98%] of the solver (luck-adjusted 72% [52%, 91%])
+git status --porcelain: empty
+elapsed_s: 118.17
+=== reproduce: exit 0, 118 s
+=== audit: python scripts/audit_submission.py
+[PASS] Secret & Answer-Key Hygiene: scanned 3366 tracked files; 0 secrets or answer keys
+[PASS] Frozen Tier Hashes: TIERS_VERSION=v1.4 (a8f99c2537c91d72), TIERS_V13 (8df71cf570bb48bc)
+[WARN] Committed Runs Integrity: 63 files, 1031 episodes audited; 8 valid:false episode(s) flagged and verified excluded from canary.reproduce means
+       - data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl:1 (opencode:openai/gpt-5.6-sol, hard, v1.2, seed=0): mcp server died
+       - data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl:3 (opencode:openai/gpt-5.6-sol, hard, v1.2, seed=2): infra:provider_quota
+       - data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl:4 (opencode:openai/gpt-5.6-sol, hard, v1.2, seed=3): infra:provider_quota
+       - data/runs/committed/opencode-gpt-5.6-sol/hard/episodes.jsonl:5 (opencode:openai/gpt-5.6-sol, hard, v1.2, seed=4): infra:provider_quota
+       - data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl:1 (opencode:openai/gpt-5.6-sol, medium, v1.2, seed=0): infra:opencode_db_locked
+       - data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl:2 (opencode:openai/gpt-5.6-sol, medium, v1.2, seed=1): mcp server died
+       - data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl:4 (opencode:openai/gpt-5.6-sol, medium, v1.2, seed=3): infra:provider_quota
+       - data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl:5 (opencode:openai/gpt-5.6-sol, medium, v1.2, seed=4): infra:provider_quota
+[PASS] Harbor Package Static Audit: canary-hard-900000 verified (separate verifier, [[verifier.collect]], clean Dockerfile/.dockerignore, 0600 SALT/episode.json/ledger_key, 0 CANARY_* agent env vars)
+SUMMARY: 3 PASS, 1 WARN, 0 FAIL (3.81s)
+git status --porcelain: empty
+elapsed_s: 3.94
+=== audit: exit 0, 4 s
+=== test_core: python -m pytest -q tests/test_reproduce.py tests/test_env_frozen.py tests/test_harbor_ledger_sig.py tests/test_replay_tamper_guard.py
+........................................................................ [ 72%]
+............................                                             [100%]
+100 passed in 174.42s (0:02:54)
+git status --porcelain: empty
+elapsed_s: 175.20
+=== test_core: exit 0, 175 s

@@ -14,13 +14,14 @@
 **Canary Lab, the proof** (`canary/gemini/` in this repo; the Canary environment itself is our separate AfterQuery entry). One logged client drives Gemini in four roles on an insider-threat benchmark scored against a Bayesian reference solver:
 - **Player:** six Gemini models × `thinking_level`, function calling over 13 tools, paired with the solver on the same worlds.
 - **Attacker:** the whole repo (about 183k tokens) in one prompt, attacking the reward through tool calls.
-- **Analyst:** 153 trajectories (751k tokens) in one explicit cache, finding failure modes without our labels.
+- **Analyst:** three Gemini judges label every high-regret decision without seeing our labels (6,975 judgments); a one-pass read of 153 trajectories (751k tokens in one explicit cache) does blind discovery.
 - **Adversary:** Gemini plays the insider (arena mode, not the judged environment).
 
 ## 3. What is innovative
 - **Calibrated abstention, measured at scale:** Gemini generates and ground-truths the eval set, so "never confidently wrong" is a number, not a hope.
 - **Speculative verify:** the server reads the sharpest frame while the user is still asking, so the Live tool call returns from cache.
 - **Thinking as a controlled variable:** `thinking_level` is the only factor changed, every cell is paired with the solver, and a CI gate words every headline. Pooled over 570 episodes (CI clustered by world, 63 worlds), each step up in thinking level adds **+16.3 [+7.6, +24.4] points** of the solver's score, driven by the flash models (`results/gemini/thinking_effect.md`).
+- **Gemini as a measured judge:** agreement between judges and accuracy against our code's labels are computed, not assumed.
 - **A red team proven by a positive control:** scores come only from the server ledger, and the detector is shown to catch a reopened real exploit.
 - **A cross-provider control on identical worlds**, built from committed GPT-5.5 episodes at no extra cost.
 
@@ -41,13 +42,13 @@
 | **Ladder** (⟨LADDER_N⟩ paired episodes, v1.4) | Hard: gemini-4-carbon at high thinking reaches **106% [94, 126]** of the solver (n=10, $1.93/episode); 3.6-flash reaches 88% [51, 138] at high and 87% [50, 147] at medium (n=40 each, $0.42–0.45): not distinguishable from the solver, with wide CIs. 18 of 42 cells exclude parity, all below the solver. | `results/gemini/ladder.md` |
 | **Cross-provider control** (v1.3) | ⟨XPROV_ROW⟩ | `results/gemini/xprov.md` |
 | **Red team (integrity)** | 100 ledger-verified attacks: **0 verified exploits, 0 invariant violations**; positive control caught 4/4. Best score not justified by evidence: 0.38 on hard; one attempt flagged in-run was overturned on review (n=4). | `results/gemini/swarm.md` |
-| **Blind atlas** | Without our labels, Gemini recovers 3 of 5 code-defined failure modes and names 2 new ones; coverage is weak (127 cited steps, 3.7% of high-regret steps). | `results/gemini/atlas_blind.md` |
+| **Jury (analyst)** | On the 403 decisions our code tags, three blind Gemini judges agree with each other (Fleiss κ 0.885 [0.853, 0.915]) and their majority vote matches the code's label **84.9% [81.0, 88.0]** of the time; κ is 0.736 [0.711, 0.759] over all 1,423 high-regret decisions. A single one-pass read of the corpus is much weaker: 3 of 5 failure modes, 3.7% of those steps. | `results/gemini/scale/jury/jury.md`, `atlas_blind.md` |
 | **Usage** | ⟨USAGE⟩ | `results/gemini/usage_total.json` |
 
 ## Honesty notes
 - Small samples: ladder cells have 9–40 paired seeds and the control 8–11, so CIs are wide and every claim is CI-gated.
 - The control uses the earlier v1.3 rules because those are the only worlds with committed GPT-5.5 episodes; one non-Gemini frontier model, no Anthropic model. ⟨J1⟩
-- Canary's logged rows are written by our client (no API request id); 608 recorded responses used for keyless replay do carry response ids.
+- Canary's logged rows are written by our client (no API request id); the responses recorded for keyless replay do carry API response ids (⟨RECORDED⟩).
 - HoldUp's 5.8 s "before" latency was one unlogged run; its demo video is a browser simulation until the on-glasses run is logged. The PaliGemma comparison below is not at one operating point.
 - The AfterQuery gap depends on the harness (`docs/reports/gap.md`): gemini-4-carbon on v1.4 hard scores 65% [24%, 98%] of the solver via OpenCode over MCP (n=30) and 95% [62%, 140%] in-process. Demo narration (TTS, Live commentator) is not a measurement.
 

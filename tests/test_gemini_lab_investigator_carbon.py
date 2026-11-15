@@ -4,6 +4,7 @@ import ast
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -305,7 +306,64 @@ def test_cli_strict_json_and_consolidated_doc_clean(tmp_path: Path, capsys: pyte
     out_json = json.loads(capsys.readouterr().out)
     assert out_json["verified"] is True
     assert out_doc.is_file()
+    assert out_doc.read_text(encoding="utf-8") == doc_txt
     assert ic.scan_text_hygiene(out_doc.read_text(encoding="utf-8")) == []
+
+    clean_env = dict(os.environ)
+    clean_env["GEMINI_API_KEY"] = ""
+    clean_env["GOOGLE_API_KEY"] = ""
+    clean_env["GOOGLE_GENERATIVE_AI_API_KEY"] = ""
+    clean_env.pop("GEMINI_GATEWAY_URL", None)
+    clean_env["PYTHONPATH"] = str(ROOT)
+
+    sub_doc = tmp_path / "sub_investigators.md"
+    sub_proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "canary.gemini.investigator_carbon",
+            "--root",
+            str(ROOT),
+            "--strict",
+            "--json",
+            "--write-doc",
+            str(sub_doc),
+        ],
+        cwd=ROOT,
+        env=clean_env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    sub_payload = json.loads(sub_proc.stdout)
+    assert sub_payload["verified"] is True
+    assert sub_payload["totals"]["verified_runs"] == 29
+    assert sub_payload["totals"]["total_episodes"] == 42
+    assert sub_payload["totals"]["calls"] == 3649
+    assert sub_doc.read_text(encoding="utf-8") == doc_txt
+
+    empty_role = tmp_path / "empty_role_dir"
+    empty_role.mkdir()
+    missing_proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "canary.gemini.investigator_carbon",
+            "--root",
+            str(ROOT),
+            "--role-dir",
+            str(empty_role),
+            "--strict",
+            "--json",
+        ],
+        cwd=ROOT,
+        env=clean_env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert missing_proc.returncode == 1
+    assert json.loads(missing_proc.stdout)["verified"] is False
 
 
 def _extract_ast_imports(source: str) -> list[str]:

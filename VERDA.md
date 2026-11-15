@@ -102,9 +102,12 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
   - Those states were the last steps of *solver* trajectories, where the evidence was already gathered.
   - On its own held-out trajectories, whom-precision is 3/16 ≈ 0.19.
 - **8k context confirms the diagnosis rather than fixing it.**
-  - v3-8k s1 learned *whom* better in training: forced-accusation correctness .35–.46, vs ~.19 at 4k.
-  - In its own full episodes, though, it accuses almost always and early: 0.94 accused, 0.09 correct, −0.777.
-  - This is the same off-policy state gap: training states come from solver trajectories.
+  - At *matched* training steps, 8k does not learn *whom* faster (WS4 readout).
+    - Forced-accusation correctness at steps 0–99 is 4k .19 ± .04 vs 8k .35 ± .05: a head start, not a faster rate.
+    - At steps 271–370 it is 4k .37 ± .05 vs 8k .41 ± .06, which overlap.
+  - Held-out precision is 8k 8/85 = .09 vs 4k 6/38 = .16. In its own full episodes v3-8k s1 accuses almost always and early (0.94 accused, −0.777).
+  - X2's rollouts suggest the over-accusing is partly an *inference-context* effect: the 4k adapter run at 8k context accuses in 60–90% of train-seed episodes, vs ~0–3% at 4k. A shared-secret re-eval of v3-4k s0 at 8k context is testing this.
+  - Underneath is the same off-policy state gap: training states come from solver trajectories.
 - DAgger (rolling out v3 and labelling its *own* states with the solver) is the fix being tested now, on Verda.
 
 ## 5. FR8 freighter vs Verda (labelled)

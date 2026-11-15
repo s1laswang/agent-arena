@@ -65,7 +65,7 @@ harbor/
 
 - Separate containers: separate filesystem, **separate PID namespace** (no `pid: host`, no shared volumes,
   no docker socket). The server's `/proc/<pid>/environ` does not exist from the agent's point of view. This closes
-  the judge-sim finding (EXPLOITS #25) where a same-uid process read the server's environ and scored 1.0.
+  the judge-sim finding (EXPLOITS #27) where a same-uid process read the server's environ and scored 1.0.
 - Defence in depth: the server reads its episode, world secret and ledger token from 0600 files through
   `mcp_server.py`'s `CANARY_EPISODE_FILE` / `CANARY_WORLD_SECRET_FILE` / `CANARY_LEDGER_TOKEN_FILE`, so even
   inside the sidecar its environ holds no seed, tier, secret or token (checked: 0 such variables in `/proc/1/environ`).

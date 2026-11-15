@@ -1,0 +1,503 @@
+{
+  "schema": "canary.tiebreak.state_externalization.v1",
+  "audit_id": "tiebreak-state-externalization-law-v14",
+  "artifact_kind": "synthesis_audit",
+  "tiers_version": "v1.4",
+  "dev_eval_seed_range": "0..29",
+  "dev_protocol_status": "post-hoc locked",
+  "heldout_seed_range": "800000..800059",
+  "panel_fix_a_disclosure": "Where DEV_SEEDS 0..29 appear in Canary frontier comparisons, they are a post-hoc locked evaluation set; all tiebreak policy training uses disjoint TRAIN_SEEDS [100000, 200000) and held-out evaluation uses disjoint HELDOUT_SEEDS [800000, 800200).",
+  "panel_fix_e_disclosure": "Per Panel Fix E strict track separation, 0 / 19 open-weight Qwen2.5-1.5B runs beat untrained base (0.000), so the README Qwen addendum remains withheld; the 4 compact policies (EmpiricalBayesPolicy, ScalingLogisticPolicy, CompactLinearDAggerPolicy, TinyMLPPolicy; is_open_weight_llm = False) are non-LLM structured controls on the lossless public ledger and are never conflated with open-weight LLM runs.",
+  "regime_a_raw_in_context": {
+    "regime_id": "regime_a_raw_in_context",
+    "label": "Regime A: Raw In-Context State (No External Scratchpad)",
+    "open_weight_qwen25_15b": {
+      "track_label": "Open-weight Qwen2.5-1.5B (raw in-context chat transcript, no external scratchpad)",
+      "is_open_weight_llm": true,
+      "historical_runs_total": 19,
+      "historical_runs_beating_base_zero": 0,
+      "historical_above_zero_display": "0 / 19",
+      "untrained_base_mean_score": 0.0,
+      "prompt_header_tax": {
+        "slurm_44410_header_tokens": 2842,
+        "window_4k_tokens": 4096,
+        "header_share_of_4k_pct": 69.4,
+        "body_budget_4k_tokens": 1254,
+        "three_tier_mean_raw_header_tokens": 2848.0,
+        "compact_header_mean_tokens": 966.0,
+        "compact_header_reduction_pct": 66.1
+      },
+      "canary_variant_map_eviction": {
+        "verda_episodes_audited": 450,
+        "heldout_seed_range": "800000..800059",
+        "evicted_4k_range_pct": [
+          92.22,
+          97.98
+        ],
+        "evicted_4k_headline_band": "92-98%",
+        "evicted_8k_range_pct": [
+          56.73,
+          84.65
+        ],
+        "evicted_8k_headline_band": "56-85%",
+        "working_memory_train_seed_range": "106000..106044",
+        "train_hard_evicted_before_surface_4k_pct": 100.0,
+        "train_hard_evicted_before_surface_8k_pct": 96.3
+      },
+      "action_and_stopping_bottlenecks": {
+        "dagger_mechanism_train_seed_range": "108000..108044",
+        "default_max_new_tokens_cap": 96,
+        "hard_dagger_relabel_exceed_cap96_count": 133,
+        "hard_dagger_relabel_total_calls": 180,
+        "hard_dagger_relabel_exceed_cap96_pct": 73.9,
+        "raw_dagger_sft_accuse_labels": 159,
+        "raw_dagger_sft_total_examples": 4000,
+        "raw_dagger_sft_accuse_share_pct": 3.98
+      },
+      "representative_runs": {
+        "base_untrained": {
+          "run_id": "WS4-base-pooled",
+          "mean_score": 0.0,
+          "n": 36,
+          "mode": "3% valid tool calls"
+        },
+        "v2_sft_4k": {
+          "run_id": "WS4-v2-44412 + WS4-v2-off30-68bb",
+          "mean_score": -0.457,
+          "ci95": 0.086,
+          "n": 172,
+          "mode": "55% blind accuse under 4k header crowding"
+        },
+        "v3_4k_s0_grpo": {
+          "run_id": "WS4-v3-verda-s0-eval",
+          "mean_score": -0.147,
+          "ci95": 0.063,
+          "n": 180,
+          "mode": "79% abstain under 4k truncation"
+        },
+        "v3_4k_s0_eval_at_8k": {
+          "run_id": "WS4-v3-4k-s0-ctx8k",
+          "mean_score": -0.716,
+          "ci95": 0.105,
+          "n": 90,
+          "mode": "same 4k weights flip to 78% blind accuse at 8k"
+        },
+        "v3_8k_abstain_mode_s0": {
+          "run_id": "WS4-v3-8k-s0-3bb7",
+          "mean_score": -0.06,
+          "ci95": 0.054,
+          "n": 90,
+          "mode": "bimodal cautious mode (92% abstain)"
+        },
+        "v3_8k_abstain_mode_s2": {
+          "run_id": "WS4-v3-8k-s2-dbd0",
+          "mean_score": -0.05,
+          "ci95": 0.049,
+          "n": 90,
+          "mode": "bimodal cautious mode (93% abstain)"
+        },
+        "v3_8k_reckless_mode_s1": {
+          "run_id": "WS4-v3-8k-s1-ac58",
+          "mean_score": -0.777,
+          "ci95": 0.118,
+          "n": 90,
+          "mode": "bimodal reckless mode (94% accuse)"
+        },
+        "v3_8k_reckless_mode_s3": {
+          "run_id": "WS4-v3-8k-s3-f437",
+          "mean_score": -0.788,
+          "ci95": 0.117,
+          "n": 90,
+          "mode": "bimodal reckless mode (96% accuse, paired -0.073 vs 4k@8k)"
+        },
+        "dagger_r1_8k_verda_x2": {
+          "run_id": "WS4-dagger-r1-8k-verda",
+          "dagger_seed_range": "170000..170099",
+          "mean_score": -0.542,
+          "ci95": 0.214,
+          "n": 50,
+          "accused_rate": 0.92,
+          "expert_state_agreement_before": 0.43,
+          "expert_state_agreement_after": 0.68,
+          "whom_precision_before": 0.1,
+          "whom_precision_after": 0.22,
+          "mode": "honest null: 92% accuse at 8k despite 43%->68% action match"
+        },
+        "dagger_r1_4k_verda_x2": {
+          "run_id": "WS4-dagger-r1-4k-verda",
+          "dagger_seed_range": "170000..170099",
+          "mean_score": -0.101,
+          "ci95": 0.112,
+          "n": 41,
+          "abstain_rate": 0.85,
+          "mode": "honest null: 85% abstain at 4k under 92-98% canary eviction"
+        }
+      }
+    },
+    "frontier_mcp_only": {
+      "track_label": "Frontier LLMs over MCP-only (bash/python3 denied, in-context tracking only)",
+      "dev_eval_seed_range": "0..29",
+      "dev_protocol_status": "post-hoc locked",
+      "shell_scratchpad_available": false,
+      "paired_solver_hard": {
+        "n": 30,
+        "mean_score": 0.499,
+        "canaries_planted_per_ep": 14.1,
+        "interviews_per_ep": 0.0,
+        "tool_calls_per_ep": 84,
+        "mean_accuse_day": 10.6,
+        "correct_count": 29,
+        "wrong_count": 1,
+        "abstain_count": 0
+      },
+      "gemini_4_carbon_opencode_mcp_hard": {
+        "cohort_id": "opencode_gemini_4_carbon_hard",
+        "n": 30,
+        "mean_score": 0.322,
+        "mean_score_4d": 0.3223,
+        "ci95": 0.199,
+        "solver_same_seeds": 0.499,
+        "ratio_vs_solver_pct": 65,
+        "ratio_vs_solver_display": "65% [24%, 98%]",
+        "paired_diff_mean": -0.177,
+        "paired_diff_ci95": 0.194,
+        "luck_adjusted_ev": 0.36,
+        "luck_ratio_vs_solver_pct": 72,
+        "luck_ratio_vs_solver_display": "72% [52%, 91%]",
+        "canaries_planted_per_ep": 8.5,
+        "interviews_per_ep": 68.0,
+        "interview_call_share_pct": 53,
+        "tool_calls_per_ep": 128,
+        "mean_accuse_day": 13.2,
+        "correct_count": 25,
+        "wrong_count": 4,
+        "abstain_count": 1,
+        "canary_slot_utilization": 0.3151,
+        "sub_breakeven_accuse_count": 3,
+        "replay_verified_episodes": 30
+      },
+      "gpt_5_5_opencode_mcp_hard": {
+        "cohort_id": "opencode_gpt_5_5_hard",
+        "n": 30,
+        "mean_score": 0.504,
+        "mean_score_4d": 0.5037,
+        "ci95": 0.064,
+        "solver_same_seeds": 0.499,
+        "ratio_vs_solver_pct": 101,
+        "ratio_vs_solver_display": "101% [79%, 140%]",
+        "paired_diff_mean": 0.005,
+        "paired_diff_ci95": 0.141,
+        "luck_adjusted_ev": 0.418,
+        "luck_ratio_vs_solver_pct": 84,
+        "luck_ratio_vs_solver_display": "84% [67%, 103%]",
+        "canaries_planted_per_ep": 17.2,
+        "interviews_per_ep": 4.2,
+        "interview_call_share_pct": 6,
+        "tool_calls_per_ep": 69,
+        "mean_accuse_day": 10.2,
+        "correct_count": 28,
+        "wrong_count": 0,
+        "text_only_non_accusations": 2,
+        "canary_slot_utilization": 0.8454,
+        "sub_breakeven_accuse_count": 0,
+        "replay_verified_episodes": 30
+      },
+      "gemini_4_carbon_context_controls": {
+        "inproc_hard_full_history": {
+          "n": 30,
+          "mean_score": 0.473,
+          "ci95": 0.118,
+          "ratio_vs_solver_display": "95% [62%, 140%]",
+          "wrong_count": 1
+        },
+        "opencode_mcp_medium_20_suspects": {
+          "n": 30,
+          "mean_score": 0.713,
+          "ci95": 0.042,
+          "solver_same_seeds": 0.645,
+          "ratio_vs_solver_display": "111% [99%, 127%]",
+          "accuracy": 1.0
+        }
+      }
+    }
+  },
+  "regime_b_externalized_state": {
+    "regime_id": "regime_b_externalized_state",
+    "label": "Regime B: Externalized Structured State",
+    "frontier_harbor_judge_path": {
+      "harness": "Harbor 0.26.0 + OpenCode + gemini-4-carbon (container bash/python3 available)",
+      "task_tier": "hard",
+      "tasks_per_run": 10,
+      "oracle_mean_all_10": 0.506,
+      "do_nothing_mean": 0.0,
+      "stop_early_mean": 0.0,
+      "shell_used_trials": 20,
+      "shell_audited_trials": 28,
+      "shell_used_fraction": 0.7143,
+      "shell_used_display": "20/28",
+      "valid_accusations_correct": 28,
+      "valid_accusations_total": 29,
+      "valid_accusation_precision": 0.9655,
+      "valid_accusation_display": "28/29",
+      "wrong_accusations_total": 1,
+      "runs": [
+        {
+          "run_id": "opencode-1",
+          "n_valid": 10,
+          "infra_excluded": 0,
+          "correct_count": 9,
+          "accused_count": 10,
+          "mean_score": 0.472,
+          "oracle_same_tasks": 0.506,
+          "ratio_vs_oracle_pct": 93,
+          "ratio_vs_oracle_display": "93% [20%, 371%]",
+          "paired_diff_vs_oracle": -0.034
+        },
+        {
+          "run_id": "opencode-2",
+          "n_valid": 10,
+          "infra_excluded": 0,
+          "correct_count": 10,
+          "accused_count": 10,
+          "mean_score": 0.585,
+          "oracle_same_tasks": 0.506,
+          "ratio_vs_oracle_pct": 116,
+          "ratio_vs_oracle_display": "116% [78%, 363%]",
+          "paired_diff_vs_oracle": 0.079
+        },
+        {
+          "run_id": "opencode-3",
+          "n_valid": 9,
+          "infra_excluded": 1,
+          "correct_count": 9,
+          "accused_count": 9,
+          "mean_score": 0.626,
+          "oracle_all_10_reference": 0.506,
+          "ratio_vs_oracle_pct": 131,
+          "ratio_vs_oracle_display": "131% [86%, 590%]",
+          "cutoff_0830_snapshot_n_valid": 7,
+          "cutoff_0830_snapshot_mean_score": 0.656,
+          "post_cutoff_completed_valid_trials": 5
+        }
+      ],
+      "mean_of_three_final_run_means": 0.561,
+      "min_run_mean": 0.472,
+      "max_run_mean": 0.626,
+      "min_ratio_vs_oracle_pct": 93,
+      "max_ratio_vs_oracle_pct": 131,
+      "causal_caveat": "Harbor rehearsal provides container bash/python3 (used in 20/28 audited trials) and yields 28/29 correct Gemini accusations (+0.472 / +0.585 / +0.626, 93% / 116% / 131% of oracle +0.506) vs 25/29 in MCP-only (+0.322, 65% of solver +0.499); with 10 tasks per run and two disclosed 15 Nov tag updates, shell externalization, tag updates, and sampling variance are reported together without overclaiming single-factor isolation."
+    },
+    "tiebreak_compact_policies": {
+      "track_label": "Strictly separated non-LLM compact policies on lossless <=900-token / 28-dim ledger",
+      "panel_fix_e_strict_separation": true,
+      "all_policies_is_open_weight_llm": false,
+      "readme_qwen_addendum_status": "HOLD_README_QWEN_ADDENDUM_UNTIL_V100",
+      "heldout_seed_range": "800000..800059",
+      "externalized_ledger_properties": {
+        "max_state_token_budget": 900,
+        "verda_450_state_tokens_mean": 444.0,
+        "verda_450_state_tokens_max": 661,
+        "hard_21d_ref_state_tokens_max": 666,
+        "full_horizon_stress_state_tokens_max": 709,
+        "dense_feature_dim": 28,
+        "canary_map_eviction_pct": 0.0,
+        "employee_roster_eviction_pct": 0.0,
+        "ast_isolated_from_canary_solver_and_world": true
+      },
+      "solver_reference_benchmarks": {
+        "solver_n90_eval_seed_range": "800000..800029",
+        "solver_n90_mean_score": 0.6816,
+        "solver_n180_eb_and_linear_mean_score": 0.6706,
+        "solver_n180_mlp_mean_score": 0.6596
+      },
+      "ratio_vs_solver_n90_range_pct": [
+        89.1,
+        92.0
+      ],
+      "ratio_vs_solver_n90_headline_band": "89-92%",
+      "ratio_vs_paired_solver_range_pct": [
+        89.6,
+        93.5
+      ],
+      "policies_passing_all_5_panel_fix_e_gates": 4,
+      "policies_total": 4,
+      "policies": [
+        {
+          "run_id": "empirical-bayes-v14",
+          "policy_class": "EmpiricalBayesPolicy",
+          "inference_module": "train/empirical_bayes_policy.py",
+          "is_open_weight_llm": false,
+          "param_count": 11,
+          "state_representation": "lossless public ledger (6 log-LR sufficient stats + 5 EV-stopping/split scalars)",
+          "train_seed_range": "102000..102779",
+          "eval_seed_range": "800000..800059",
+          "n": 180,
+          "before_mean_score": -0.4209,
+          "after_mean_score": 0.6073,
+          "after_mean_score_3d": 0.607,
+          "paired_mean_delta": 1.0282,
+          "paired_ci95_low": 0.9152,
+          "paired_ci95_high": 1.1383,
+          "paired_solver_mean_score": 0.6706,
+          "ratio_vs_paired_solver_pct": 90.6,
+          "ratio_vs_solver_n90_ref_pct": 89.1,
+          "world_secret_tag": "sha256:ebf2f09716cf76d3",
+          "replay_verified": true,
+          "ast_isolated_from_solver_and_world": true,
+          "panel_fix_e_gates_passed": 5,
+          "panel_fix_e_gates_total": 5
+        },
+        {
+          "run_id": "scaling-logistic-v14",
+          "policy_class": "ScalingLogisticPolicy",
+          "inference_module": "scripts/tiebreak_scaling_calibration.py",
+          "is_open_weight_llm": false,
+          "param_count": 82,
+          "state_representation": "lossless public ledger features (82-param logistic softmax, N_train=900)",
+          "train_seed_range": "107000..108999",
+          "eval_seed_range": "800000..800029",
+          "n": 90,
+          "before_mean_score": 0.0,
+          "after_mean_score": 0.6107,
+          "after_mean_score_3d": 0.611,
+          "paired_mean_delta": 0.6107,
+          "paired_ci95_low": 0.542,
+          "paired_ci95_high": 0.6794,
+          "paired_solver_mean_score": 0.6816,
+          "ratio_vs_paired_solver_pct": 89.6,
+          "ratio_vs_solver_n90_ref_pct": 89.6,
+          "world_secret_tag": "sha256:ebf2f09716cf",
+          "replay_verified": true,
+          "ast_isolated_from_solver_and_world": true,
+          "panel_fix_e_gates_passed": 5,
+          "panel_fix_e_gates_total": 5
+        },
+        {
+          "run_id": "compact-linear-dagger-v14",
+          "policy_class": "CompactLinearDAggerPolicy",
+          "inference_module": "train/compact_dagger_ablation.py",
+          "is_open_weight_llm": false,
+          "param_count": 785,
+          "state_representation": "28-dim externalized ledger state + linear softmax & EV-breakeven head (DAgger r2)",
+          "train_seed_range": "109000..109509",
+          "eval_seed_range": "800000..800059",
+          "n": 180,
+          "before_mean_score": 0.0,
+          "after_mean_score": 0.6267,
+          "after_mean_score_3d": 0.627,
+          "paired_mean_delta": 0.6267,
+          "paired_ci95_low": 0.5775,
+          "paired_ci95_high": 0.6759,
+          "paired_solver_mean_score": 0.6706,
+          "ratio_vs_paired_solver_pct": 93.5,
+          "ratio_vs_solver_n90_ref_pct": 92.0,
+          "world_secret_tag": "sha256:ebf2f09716cf76d3",
+          "replay_verified": true,
+          "ast_isolated_from_solver_and_world": true,
+          "panel_fix_e_gates_passed": 5,
+          "panel_fix_e_gates_total": 5
+        },
+        {
+          "run_id": "tiny-mlp-dagger-v14",
+          "policy_class": "TinyMLPPolicy",
+          "inference_module": "train/neural_mlp_tiebreak.py",
+          "is_open_weight_llm": false,
+          "param_count": 12293,
+          "state_representation": "28-dim externalized ledger state -> 128 -> 64 -> 5 MLP (on-policy DAgger r2)",
+          "train_seed_range": "107000..107599",
+          "eval_seed_range": "800000..800059",
+          "n": 180,
+          "before_mean_score": -0.8556,
+          "after_mean_score": 0.6141,
+          "after_mean_score_3d": 0.614,
+          "paired_mean_delta": 1.4696,
+          "paired_ci95_low": 1.385,
+          "paired_ci95_high": 1.5542,
+          "paired_solver_mean_score": 0.6596,
+          "ratio_vs_paired_solver_pct": 93.1,
+          "ratio_vs_solver_n90_ref_pct": 90.1,
+          "world_secret_tag": "sha256:ebf2f09716cf76d3",
+          "replay_verified": true,
+          "ast_isolated_from_solver_and_world": true,
+          "panel_fix_e_gates_passed": 5,
+          "panel_fix_e_gates_total": 5
+        }
+      ]
+    }
+  },
+  "cross_scale_law_matrix": [
+    {
+      "cell_id": "A1_open_weight_raw_context",
+      "regime": "Regime A (Raw In-Context)",
+      "scale_class": "Open-weight 1.5B LLM (Qwen2.5-1.5B LoRA)",
+      "approx_parameters": "1.5B",
+      "external_scratchpad_or_ledger": "None (4k/8k sliding chat window, 69.4% header tax at 4k)",
+      "canary_map_eviction": "92-98% (4k), 56-85% (8k)",
+      "evaluation_scope": "HELDOUT_SEEDS 800000..800059 (19 historical runs)",
+      "headline_score_summary": "0/19 > 0.000 (v2 -0.457, v3-4k -0.147, v3-8k -0.050/-0.788, DAgger r1 -0.542/-0.101)",
+      "parity_vs_reference": "Below untrained 0.000 across all 19 runs"
+    },
+    {
+      "cell_id": "A2_frontier_mcp_only_gemini_carbon",
+      "regime": "Regime A (Raw In-Context)",
+      "scale_class": "Frontier LLM (gemini-4-carbon, OpenCode MCP-only)",
+      "approx_parameters": "Frontier (closed-weight)",
+      "external_scratchpad_or_ledger": "Denied (bash/python3 disabled; raw MCP tool history only)",
+      "canary_map_eviction": "0% window eviction, but high in-context tracking load (8.5 canaries, 68.0 interviews/ep)",
+      "evaluation_scope": "post-hoc locked dev hard 0..29 (n=30)",
+      "headline_score_summary": "+0.322 +/- 0.199 (luck-adjusted +0.360; 25 correct / 4 wrong / 1 abstain)",
+      "parity_vs_reference": "65% [24%, 98%] of paired solver +0.499 (72% luck-adjusted)"
+    },
+    {
+      "cell_id": "A3_frontier_mcp_only_gpt55",
+      "regime": "Regime A (Raw In-Context)",
+      "scale_class": "Frontier LLM (gpt-5.5, OpenCode MCP-only)",
+      "approx_parameters": "Frontier (closed-weight)",
+      "external_scratchpad_or_ledger": "Denied (internal reasoning tracks binary canary splits: 17.2 canaries, 4.2 interviews/ep)",
+      "canary_map_eviction": "0% window eviction; 84.5% canary slot utilization",
+      "evaluation_scope": "post-hoc locked dev hard 0..29 (n=30)",
+      "headline_score_summary": "+0.504 +/- 0.064 (28 correct / 0 wrong / 2 text-only non-accusations)",
+      "parity_vs_reference": "101% [79%, 140%] of paired solver +0.499 (84% luck-adjusted)"
+    },
+    {
+      "cell_id": "B1_frontier_harbor_judge_path",
+      "regime": "Regime B (Externalized State)",
+      "scale_class": "Frontier LLM (gemini-4-carbon, Harbor judge container)",
+      "approx_parameters": "Frontier (closed-weight) + container bash/python3",
+      "external_scratchpad_or_ledger": "Container shell/python3 available (used in 20/28 audited trials)",
+      "canary_map_eviction": "Externalized to container scripts/files; 28/29 valid accusations correct",
+      "evaluation_scope": "Harbor rehearsal (3 runs x 10 hard tasks; run 3 has 9 valid trials)",
+      "headline_score_summary": "+0.472 / +0.585 / +0.626 across 3 runs (mean of means +0.561)",
+      "parity_vs_reference": "93% / 116% / 131% of paired oracle +0.506"
+    },
+    {
+      "cell_id": "B2_tiebreak_compact_policies",
+      "regime": "Regime B (Externalized State)",
+      "scale_class": "Non-LLM Compact Policies (11, 82, 785, 12,293 params; Panel Fix E separated)",
+      "approx_parameters": "11 to 12,293",
+      "external_scratchpad_or_ledger": "AST-isolated <=900-token / 28-dim lossless public sufficient-statistic ledger",
+      "canary_map_eviction": "0.0% canary-map eviction, 0.0% employee-roster eviction",
+      "evaluation_scope": "World-paired HELDOUT_SEEDS 800000..800059 (n=180; n=90 for 82-param scaling)",
+      "headline_score_summary": "+0.607 (11p), +0.611 (82p), +0.627 (785p), +0.614 (12,293p); 5/5 gates PASS",
+      "parity_vs_reference": "89-92% of SolverPolicy n=90 (+0.682); 89.6-93.5% of each paired SolverPolicy"
+    }
+  ],
+  "key_quantitative_contrasts": {
+    "header_tax_tokens_4k": "2842/4096 (69.4%)",
+    "qwen_4k_canary_eviction_band": "92-98%",
+    "qwen_8k_canary_eviction_band": "56-85%",
+    "compact_ledger_canary_eviction_pct": 0.0,
+    "gemini_carbon_harbor_minus_mcp_run_means": [
+      0.15,
+      0.263,
+      0.304
+    ],
+    "gemini_carbon_precision_mcp_vs_harbor": {
+      "mcp_only_correct_over_accused": "25/29 (86.2%)",
+      "harbor_correct_over_accused": "28/29 (96.6%)"
+    },
+    "smallest_verified_policy_params": 11,
+    "smallest_policy_compression_millions_vs_qwen15b": 136.4,
+    "compact_policies_solver_parity_band": "89-92%"
+  }
+}

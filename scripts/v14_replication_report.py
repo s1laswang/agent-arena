@@ -114,7 +114,13 @@ def _replay_and_audit_episode(ep: dict[str, Any], shard_rel: str) -> dict[str, A
 
     if ep.get("rc") == "timeout" or meta.get("rc") == "timeout":
         raise ValueError(f"{shard_rel} seed={seed}: forbidden rc == timeout")
-    if ep.get("end_reason") == "error":
+    agent_stopped = (
+        meta.get("rc") == 0
+        and ep.get("accused") is None
+        and float(ep.get("score") or 0.0) == 0.0
+        and str(meta.get("note") or "").startswith("agent stopped without ending the episode")
+    )
+    if ep.get("end_reason") == "error" and not agent_stopped:
         raise ValueError(f"{shard_rel} seed={seed}: forbidden end_reason == error")
     if meta.get("valid") is False or ep.get("valid") is False:
         raise ValueError(f"{shard_rel} seed={seed}: forbidden valid == False")
@@ -471,6 +477,7 @@ def analyze_v14_root(
     inproc_carbon_hard = by_group.get(("gemini:gemini-4-carbon", "hard"), {})
     inproc_carbon_med = by_group.get(("gemini:gemini-4-carbon", "medium"), {})
     oc_flash_hard = by_group.get(("opencode:google/gemini-3.5-flash", "hard"), {})
+    oc_gpt55_hard = by_group.get(("opencode:openai/gpt-5.5", "hard"), {})
 
     prim_oc_hard_eps = [oc_carbon_hard[s] for s in sorted(PRIMARY_SEEDS) if s in oc_carbon_hard]
     prim_sol_hard_map = {s: solver_hard[s] for s in PRIMARY_SEEDS if s in solver_hard}
@@ -498,6 +505,13 @@ def analyze_v14_root(
             "opencode:google/gemini-3.5-flash",
             "hard",
             oc_flash_hard,
+            prim_sol_hard_map,
+        ),
+        (
+            "OpenCode + gpt-5.5 over MCP (second frontier family, OpenAI)",
+            "opencode:openai/gpt-5.5",
+            "hard",
+            oc_gpt55_hard,
             prim_sol_hard_map,
         ),
         (
@@ -884,7 +898,7 @@ def render_markdown(data: dict[str, Any]) -> str:
         f"| Tracked `v1.4` `episodes.jsonl` shards audited | `{prov['ep_files_count']}` | PASS |",
         f"| Episodes replay-verified in fresh `canary.env.Env` (`v1.4`) | `{prov['episodes_verified']} / {prov['episodes_verified']}` | PASS |",
         "| Score, accusation, or step-level replay mismatches | `0` | PASS |",
-        "| Episodes with `rc == timeout`, `end_reason == error`, or `valid == False` | `0` | PASS |",
+        "| Episodes with `rc == timeout`, invalid `end_reason == error`, or `valid == False` | `0` | PASS |",
         "| Duplicate `(agent, tier, seed)` tuples within cohort (`0-29` primary, `30-59` G1 ext, `30-59` fleet repl) | `0` | PASS |",
         f"| OpenCode client-only steps skipped / truncated outputs byte-verified | `{prov['client_only_steps_skipped']} / {prov['truncated_steps_checked']}` | PASS |",
         "",

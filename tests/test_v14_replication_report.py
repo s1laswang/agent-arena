@@ -260,6 +260,33 @@ def test_post_pr60_committed_ext_and_pre_detail_error_replay(tmp_path: Path) -> 
         analyze_v14_root(primary_root=primary_root, replication_root=repl_root)
 
 
+def test_clean_agent_stopped_without_accusation_allowed(tmp_path: Path) -> None:
+    primary_root, repl_root = _build_split_fixture(tmp_path)
+    stopped_ep = _make_ep("hard", 0, "opencode:openai/gpt-5.5", accuse_emp=None, plant=True)
+    stopped_ep["end_reason"] = "error"
+    stopped_ep["score"] = 0.0
+    stopped_ep["accused"] = None
+    stopped_ep["meta"] = {
+        "rc": 0,
+        "valid": True,
+        "note": "agent stopped without ending the episode (day 19)",
+        "V_final": stopped_ep["meta"]["V_final"],
+        "wall_s": 400.0,
+    }
+    _write_shard(primary_root, "opencode-gpt-5.5/hard", [stopped_ep])
+    data = analyze_v14_root(primary_root=primary_root, replication_root=repl_root)
+    gpt_row = next(r for r in data["primary_rows"] if r["agent"] == "opencode:openai/gpt-5.5")
+    assert gpt_row["n"] == 1
+    assert gpt_row["mean"] == pytest.approx(0.0)
+    assert gpt_row["accused_rate"] == pytest.approx(0.0)
+
+    bad_stopped = dict(stopped_ep)
+    bad_stopped["meta"] = {"rc": 0, "valid": True, "note": "unexpected client crash"}
+    _write_shard(primary_root, "opencode-gpt-5.5/hard", [bad_stopped])
+    with pytest.raises(ValueError):
+        analyze_v14_root(primary_root=primary_root, replication_root=repl_root)
+
+
 def test_committed_report_and_script_hygiene() -> None:
     forbidden_scratch = "/" + "local" + "scratch"
     forbidden_tmp = "/" + "tmp" + "/" + "opencode"
@@ -296,7 +323,9 @@ def test_committed_report_and_script_hygiene() -> None:
     assert "671ed96" in text and "8fd4dec" in text and "28 s" in text
     assert "f9fb7a4a" in text
     assert "opencode-gemini-4-carbon-ext" in text and "seeds 34, 37" in text
-    assert "Tracked `v1.4` `episodes.jsonl` shards audited | `36` | PASS" in text
+    assert "Tracked `v1.4` `episodes.jsonl` shards audited | `37` | PASS" in text
+    assert "749 / 749" in text
+    assert "OpenCode + gpt-5.5 over MCP" in text
     assert "+0.322 +/- 0.199" in text
     assert "65% [24%, 98%]" in text
     assert "72% [52%, 91%]" in text

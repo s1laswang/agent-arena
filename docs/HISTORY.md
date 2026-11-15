@@ -21,7 +21,7 @@ Two names changed during the night. Keep this in mind when reading older rows:
 | stop_early (stops on day 1, no accusation) | 0.00 (exact) | 0.00 (exact) | 0.00 (exact) |
 | do_nothing | 0.00 (exact) | 0.00 (exact) | 0.00 (exact) |
 
-**v1.4 frontier gap: not established.** `data/runs/committed/v1.4/` holds reference baselines only, so this band table has no frontier row. An in-process bake-off on rules v1.4, paired seeds, n=10 per tier (21:26) has gemini-4-carbon matching or beating the solver. Medium: solver +0.734±0.050, carbon +0.680±0.085. Hard: solver +0.433±0.324, carbon +0.509±0.136. Smaller Gemini models sat below the solver. That is parity, not a gap. The v1.3 rows below are an earlier hard tier (30 staff, 14 days) and are not a v1.4 gap.
+**v1.4 frontier gap: not established** *(historical; superseded, see the note at the top of this file and [docs/reports/gap.md](reports/gap.md): OpenCode + gemini-4-carbon over MCP, hard, n=30: 65% [24%, 98%] of the solver, luck-adjusted 72% [52%, 91%])*. `data/runs/committed/v1.4/` holds reference baselines only, so this band table has no frontier row. An in-process bake-off on rules v1.4, paired seeds, n=10 per tier (21:26) has gemini-4-carbon matching or beating the solver. Medium: solver +0.734±0.050, carbon +0.680±0.085. Hard: solver +0.433±0.324, carbon +0.509±0.136. Smaller Gemini models sat below the solver. That is parity, not a gap. The v1.3 rows below are an earlier hard tier (30 staff, 14 days) and are not a v1.4 gap.
 
 **Tiebreaker.** The notes gain on the flash-lite probe is the generic hint, not a learned policy: notes minus hint is −0.039±0.204. Train and eval seeds are disjoint and the weights were not updated. A change inside that CI is not evidence the model learned the task.
 

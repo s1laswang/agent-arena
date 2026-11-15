@@ -1,5 +1,16 @@
 # G5 Dashboard + demo assets: report
 
+## Sun 05:25: final build (gemini-dashboard-final, on pr2 eb7db833 + B1)
+- Merged origin/gemini-pr2 eb7db833 (no PR #9) and cherry-picked B1 (gemini-numbers 6be6ee7a, PR #63):
+  `canary.gemini.usage_union` + recursive `committed_ledgers()`, so the dashboard reads every committed ledger at any depth.
+- Usage ledger re-exported. **One total, results/gemini/usage_total.json = dashboard.html (tested): 45,692 Gemini API calls,
+  1,346M input tokens (88.0% from cache), 17.5M thinking tokens, $407.34 list.** That's 8 ledger files, 113,137 raw rows, 67,445
+  duplicates removed. 0 rows carry an API response id (ledger.py never records one), so all rows de-dup on the composite key.
+- Ladder unchanged (587 episodes, 42 cells): carbon-high 106% [94, 126] n=10; 3.6-flash high 88% [51, 138] n=40.
+- All 7 screenshots re-shot; VIDEO.md clip 05-dashboard re-narrated with the new count (Kore, 23.8 s; no --check, because
+  gemini-3.8-flash is at its daily quota). Leaderboard: still the gap.md fallback (9270883, numbers unchanged). Lab tests: see commit.
+- If more ledgers land later (xprov, final ladder), re-run usage_union → dashboard → ablations --cache-only as the last step (PR #63).
+
 ## Sun 04:00: rebuilt on the n=40 canonical ladder (pr2 d165e3ec)
 - Merged origin/gemini-pr2 d165e3ec into gemini-dashboard-final (checked: no PR #9). Ladder: 587 episodes, 42 cells.
 - Usage re-exported: **42,233 calls, 1.26B input, 87.9% cached, 16.2M thinking, $377.35 list**. The growth is real (about 16.6k

@@ -29,11 +29,67 @@ const FORBIDDEN_PRE_END_KEYS = Object.freeze([
 
 const SEALED_TARGET = "[SEALED]";
 const EMPLOYEE_ID_PATTERN = new RegExp("\\be\\d{2}\\b");
+const MAX_STATE_CACHE_ENTRIES = 256;
 
 let activePyodide = null;
 let activeTier = null;
 let activeSeed = null;
 const loadedRuntimes = new WeakSet();
+const runtimeStateCache = new WeakMap();
+
+function deepFreeze(value) {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i += 1) {
+      deepFreeze(value[i]);
+    }
+  } else {
+    const keys = Object.keys(value);
+    for (let i = 0; i < keys.length; i += 1) {
+      deepFreeze(value[keys[i]]);
+    }
+  }
+  return Object.freeze(value);
+}
+
+function cloneDeep(value) {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => cloneDeep(item));
+  }
+  const out = {};
+  const keys = Object.keys(value);
+  for (let i = 0; i < keys.length; i += 1) {
+    const k = keys[i];
+    out[k] = cloneDeep(value[k]);
+  }
+  return out;
+}
+
+function getRuntimeCacheMap(pyodide) {
+  let map = runtimeStateCache.get(pyodide);
+  if (!map) {
+    map = new Map();
+    runtimeStateCache.set(pyodide, map);
+  }
+  return map;
+}
+
+function setBoundedCacheEntry(map, key, value) {
+  if (map.has(key)) {
+    map.delete(key);
+  } else if (map.size >= MAX_STATE_CACHE_ENTRIES) {
+    const oldestKey = map.keys().next().value;
+    if (oldestKey !== undefined) {
+      map.delete(oldestKey);
+    }
+  }
+  map.set(key, value);
+}
 
 function validateTierAndSeed(tier, seed) {
   if (typeof tier !== "string" || !ALLOWED_TIERS.includes(tier)) {
@@ -42,33 +98,34 @@ function validateTierAndSeed(tier, seed) {
   if (typeof seed !== "number" || !Number.isInteger(seed)) {
     throw new RangeError("Invalid seed: expected integer in 0..29 or 3000..9999");
   }
-  const inDuel = seed >= 0 && seed <= 29;
-  const inPublicDev = seed >= 3000 && seed <= 9999;
+  const normalizedSeed = seed === 0 ? 0 : seed;
+  const inDuel = normalizedSeed >= 0 && normalizedSeed <= 29;
+  const inPublicDev = normalizedSeed >= 3000 && normalizedSeed <= 9999;
   if (!inDuel && !inPublicDev) {
     throw new RangeError("Seed out of allowed arena ranges (0..29 or 3000..9999)");
   }
-  return { tier, seed };
+  return { tier, seed: normalizedSeed };
 }
 
 function validateHumanDay(humanDay) {
   if (typeof humanDay !== "number" || !Number.isInteger(humanDay)) {
     throw new RangeError("Invalid humanDay: expected integer");
   }
-  return humanDay;
+  return humanDay === 0 ? 0 : humanDay;
 }
 
 function sanitizeSolverState(rawState, humanDone = false) {
-  if (!rawState || typeof rawState !== "object") {
+  if (!rawState || typeof rawState !== "object" || Array.isArray(rawState)) {
     throw new TypeError("Solver state must be a non-null object");
   }
   const unlocked = humanDone === true;
   if (!unlocked) {
     const clean = {};
     for (const key of PRE_END_KEYS) {
-      if (!(key in rawState)) {
+      if (!Object.prototype.hasOwnProperty.call(rawState, key)) {
         throw new Error("Missing expected pre-end telemetry field: " + key);
       }
-      clean[key] = rawState[key];
+      clean[key] = cloneDeep(rawState[key]);
     }
     if (clean.status !== "hunting" && clean.status !== "sealed_accusation") {
       throw new Error("Invalid pre-end solver status: " + String(clean.status));
@@ -82,16 +139,16 @@ function sanitizeSolverState(rawState, humanDone = false) {
     if (EMPLOYEE_ID_PATTERN.test(serialized)) {
       throw new Error("Pre-end zero-leak violation: employee identifier detected");
     }
-    return clean;
+    return deepFreeze(clean);
   }
-  const revealed = { ...rawState };
+  const revealed = cloneDeep(rawState);
   if (Array.isArray(rawState.daily_trace)) {
     revealed.daily_trace = rawState.daily_trace.map((row) => ({
-      ...row,
-      actions: Array.isArray(row.actions) ? [...row.actions] : [],
+      ...cloneDeep(row),
+      actions: Array.isArray(row && row.actions) ? cloneDeep(row.actions) : [],
     }));
   }
-  return revealed;
+  return deepFreeze(revealed);
 }
 
 function formatAccusedTarget(state, humanDone = false) {
@@ -106,11 +163,65 @@ function formatAccusedTarget(state, humanDone = false) {
     : "NONE";
 }
 
-function normalizeBaseUrl(baseUrl) {
-  if (typeof baseUrl !== "string" || baseUrl.length === 0) {
-    return "./";
+function getDefaultSolverScriptUrl() {
+  try {
+    const href = new URL("./solver_live.py", import.meta.url).href;
+    if (typeof href === "string" && href.length > 0) {
+      return href;
+    }
+  } catch (_err) {
+    return "./solver_live.py";
   }
-  return baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+  return "./solver_live.py";
+}
+
+function appendCacheBust(url, cacheBust) {
+  if (cacheBust === null || cacheBust === undefined || cacheBust === false || cacheBust === "") {
+    return url;
+  }
+  const token = cacheBust === true ? String(Date.now()) : encodeURIComponent(String(cacheBust));
+  const sep = url.indexOf("?") >= 0 ? "&" : "?";
+  return url + sep + "v=" + token;
+}
+
+function resolveSolverSourceUrl(baseUrl, cacheBust = null) {
+  if (baseUrl === undefined) {
+    return appendCacheBust(getDefaultSolverScriptUrl(), cacheBust);
+  }
+  let raw = "";
+  if (typeof baseUrl === "string") {
+    raw = baseUrl.trim();
+  } else if (typeof URL === "function" && baseUrl instanceof URL) {
+    raw = baseUrl.href;
+  }
+  const hashIdx = raw.indexOf("#");
+  const withoutHash = hashIdx >= 0 ? raw.slice(0, hashIdx) : raw;
+  const qIdx = withoutHash.indexOf("?");
+  let pathPart = qIdx >= 0 ? withoutHash.slice(0, qIdx) : withoutHash;
+  const queryPart = qIdx >= 0 ? withoutHash.slice(qIdx + 1) : "";
+  const lastSlash = pathPart.lastIndexOf("/");
+  const tail = lastSlash >= 0 ? pathPart.slice(lastSlash + 1) : pathPart;
+
+  if (pathPart.length === 0) {
+    pathPart = "./solver_live.py";
+  } else if (tail === "solver_live.py") {
+    pathPart = pathPart;
+  } else if (pathPart.endsWith("/")) {
+    pathPart = pathPart + "solver_live.py";
+  } else if (
+    tail.endsWith(".html") ||
+    tail.endsWith(".htm") ||
+    tail.endsWith(".js") ||
+    tail.endsWith(".mjs")
+  ) {
+    const dir = lastSlash >= 0 ? pathPart.slice(0, lastSlash + 1) : "./";
+    pathPart = dir + "solver_live.py";
+  } else {
+    pathPart = pathPart + "/solver_live.py";
+  }
+
+  const assembled = queryPart.length > 0 ? pathPart + "?" + queryPart : pathPart;
+  return appendCacheBust(assembled, cacheBust);
 }
 
 function ensureModuleLoadedSync(pyodide) {
@@ -138,6 +249,7 @@ function ensureModuleLoadedSync(pyodide) {
 }
 
 function installPythonSource(pyodide, pythonSource) {
+  runtimeStateCache.delete(pyodide);
   if (pyodide.FS && typeof pyodide.FS.writeFile === "function") {
     if (typeof pyodide.FS.mkdirTree === "function") {
       pyodide.FS.mkdirTree("/tmp/canary_arena_py");
@@ -170,22 +282,38 @@ function installPythonSource(pyodide, pythonSource) {
   loadedRuntimes.add(pyodide);
 }
 
-async function initSolverLive(pyodide, optionsOrBaseUrl = "./") {
+async function initSolverLive(pyodide, optionsOrBaseUrl) {
   if (!pyodide || typeof pyodide.runPython !== "function") {
     throw new TypeError("A valid Pyodide runtime with runPython() is required");
   }
   activePyodide = pyodide;
-  let baseUrl = "./";
+  let baseUrl = undefined;
   let pythonSource = null;
+  let cacheBust = null;
+  let forceReload = false;
   if (typeof optionsOrBaseUrl === "string") {
     baseUrl = optionsOrBaseUrl;
+  } else if (typeof URL === "function" && optionsOrBaseUrl instanceof URL) {
+    baseUrl = optionsOrBaseUrl.href;
   } else if (optionsOrBaseUrl && typeof optionsOrBaseUrl === "object") {
     if (typeof optionsOrBaseUrl.baseUrl === "string") {
       baseUrl = optionsOrBaseUrl.baseUrl;
+    } else if (typeof URL === "function" && optionsOrBaseUrl.baseUrl instanceof URL) {
+      baseUrl = optionsOrBaseUrl.baseUrl.href;
+    } else if (optionsOrBaseUrl.baseUrl !== undefined) {
+      baseUrl = "";
     }
     if (typeof optionsOrBaseUrl.pythonSource === "string") {
       pythonSource = optionsOrBaseUrl.pythonSource;
     }
+    if ("cacheBust" in optionsOrBaseUrl) {
+      cacheBust = optionsOrBaseUrl.cacheBust;
+    }
+    if (optionsOrBaseUrl.forceReload === true) {
+      forceReload = true;
+    }
+  } else if (optionsOrBaseUrl !== undefined) {
+    baseUrl = "";
   }
 
   if (pythonSource !== null) {
@@ -193,20 +321,59 @@ async function initSolverLive(pyodide, optionsOrBaseUrl = "./") {
     return CanarySolverLive;
   }
 
-  try {
-    ensureModuleLoadedSync(pyodide);
-    return CanarySolverLive;
-  } catch (_err) {
-    const url = normalizeBaseUrl(baseUrl) + "solver_live.py";
-    const resp = await fetch(url);
-    if (!resp || !resp.ok) {
-      const status = resp ? resp.status : "network_error";
-      throw new Error("Failed to fetch " + url + " (" + String(status) + ")");
+  if (!forceReload) {
+    try {
+      ensureModuleLoadedSync(pyodide);
+      return CanarySolverLive;
+    } catch (_err) {
+      forceReload = true;
     }
-    const text = await resp.text();
-    installPythonSource(pyodide, text);
-    return CanarySolverLive;
   }
+
+  const url = resolveSolverSourceUrl(baseUrl, cacheBust);
+  if (typeof fetch !== "function") {
+    throw new Error("Global fetch() is unavailable to load " + url);
+  }
+  const resp = await fetch(url);
+  if (!resp || !resp.ok) {
+    const status = resp ? resp.status : "network_error";
+    throw new Error("Failed to fetch " + url + " (" + String(status) + ")");
+  }
+  const text = await resp.text();
+  installPythonSource(pyodide, text);
+  return CanarySolverLive;
+}
+
+function resetSolverCache(pyodide = null) {
+  if (pyodide !== null && pyodide !== undefined) {
+    if (typeof pyodide !== "object" || typeof pyodide.runPython !== "function") {
+      throw new TypeError("A valid Pyodide runtime with runPython() is required");
+    }
+  }
+  const target = pyodide || activePyodide;
+  if (!target || target === activePyodide) {
+    activeTier = null;
+    activeSeed = null;
+  }
+  if (!target) {
+    return true;
+  }
+  runtimeStateCache.delete(target);
+  target.runPython(
+    [
+      "import sys",
+      "_sl = sys.modules.get('solver_live')",
+      "if _sl is not None:",
+      "    if hasattr(_sl, 'clear_solver_cache'):",
+      "        _sl.clear_solver_cache()",
+      "    else:",
+      "        if hasattr(_sl, '_SESSION_CACHE') and hasattr(_sl._SESSION_CACHE, 'clear'):",
+      "            _sl._SESSION_CACHE.clear()",
+      "        if hasattr(_sl, '_ACTIVE_SESSION'):",
+      "            _sl._ACTIVE_SESSION = None",
+    ].join("\n")
+  );
+  return true;
 }
 
 function queryPyodideState(pyodide, tier, seed, humanDay, humanDone) {
@@ -214,6 +381,15 @@ function queryPyodideState(pyodide, tier, seed, humanDay, humanDone) {
   const checked = validateTierAndSeed(tier, seed);
   const dayInt = validateHumanDay(humanDay);
   const unlocked = humanDone === true;
+  const cacheMap = getRuntimeCacheMap(pyodide);
+  const cacheKey =
+    checked.tier + ":" + String(checked.seed) + ":" + String(dayInt) + ":" + (unlocked ? "1" : "0");
+  if (cacheMap.has(cacheKey)) {
+    const hit = cacheMap.get(cacheKey);
+    cacheMap.delete(cacheKey);
+    cacheMap.set(cacheKey, hit);
+    return hit;
+  }
   const pyBool = unlocked ? "True" : "False";
   const expr =
     "solver_live.get_solver_day_state_json(" +
@@ -226,8 +402,15 @@ function queryPyodideState(pyodide, tier, seed, humanDay, humanDone) {
     String(checked.seed) +
     ")";
   const rawJson = pyodide.runPython(expr);
-  const parsed = typeof rawJson === "string" ? JSON.parse(rawJson) : rawJson;
-  return sanitizeSolverState(parsed, unlocked);
+  let parsed = rawJson;
+  if (typeof rawJson === "string") {
+    parsed = JSON.parse(rawJson);
+  } else if (rawJson && typeof rawJson.toJs === "function") {
+    parsed = rawJson.toJs({ dict_converter: Object.fromEntries });
+  }
+  const frozen = sanitizeSolverState(parsed, unlocked);
+  setBoundedCacheEntry(cacheMap, cacheKey, frozen);
+  return frozen;
 }
 
 function createSession(pyodide, tier, seed) {
@@ -281,12 +464,21 @@ const CanarySolverLive = Object.freeze({
   ALLOWED_TIERS,
   PRE_END_KEYS,
   SEALED_TARGET,
+  deepFreeze,
   validateTierAndSeed,
   validateHumanDay,
   sanitizeSolverState,
   formatAccusedTarget,
+  getDefaultSolverScriptUrl,
+  get_default_solver_script_url: getDefaultSolverScriptUrl,
+  resolveSolverSourceUrl,
+  resolve_solver_source_url: resolveSolverSourceUrl,
   initSolverLive,
   init_solver_live: initSolverLive,
+  resetSolverCache,
+  reset_solver_cache: resetSolverCache,
+  clearSolverCache: resetSolverCache,
+  clear_solver_cache: resetSolverCache,
   createSession,
   create_session: createSession,
   getSolverDayState,
@@ -301,11 +493,15 @@ export {
   ALLOWED_TIERS,
   PRE_END_KEYS,
   SEALED_TARGET,
+  deepFreeze,
   validateTierAndSeed,
   validateHumanDay,
   sanitizeSolverState,
   formatAccusedTarget,
+  getDefaultSolverScriptUrl,
+  resolveSolverSourceUrl,
   initSolverLive,
+  resetSolverCache,
   createSession,
   getSolverDayState,
   CanarySolverLive,

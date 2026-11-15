@@ -47,6 +47,7 @@ PROTECTED_DATA_PATTERNS: tuple[str, ...] = (
 RUN_SHARD_ROOT_PREFIXES: tuple[str, ...] = (
     "data/runs/committed/",
     "results/replication/",
+    "results/selected_fleet_replication/",
 )
 HARBOR_ROOT_PREFIXES: tuple[str, ...] = (
     "results/harbor/",
@@ -320,8 +321,10 @@ def _should_scan_dashes(path: str, raw: bytes) -> bool:
     lower = path.lower()
     if any(lower.endswith(ext) for ext in BINARY_SUFFIXES):
         return False
-    if (path.startswith("data/runs/") or path.startswith("results/replication/")) and (
-        "/transcripts/" in path or path.endswith(".jsonl")
+    if path.startswith("data/runs/") and ("/transcripts/" in path or lower.endswith(".jsonl")):
+        return False
+    if path.startswith("results/") and (
+        ("/transcripts/" in path and lower.endswith(".txt")) or lower.endswith(".jsonl")
     ):
         return False
     if path.startswith(HARBOR_ROOT_PREFIXES):
@@ -753,6 +756,7 @@ def verify_branch(
             is_v14 = (
                 p.startswith("data/runs/committed/v1.4/")
                 or p.startswith("results/replication/v1.4/")
+                or p.startswith("results/selected_fleet_replication/v1.4/")
                 or tiers_ver == "v1.4"
             )
             if not is_v14:

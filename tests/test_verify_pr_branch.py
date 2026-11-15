@@ -93,7 +93,7 @@ def test_clean_pass_and_cli_modes(tmp_path: Path, capsys: pytest.CaptureFixture[
         + "    return a + b\n"
     )
     ep = _make_episode(tier="hard", seed=30, agent="opencode:google/gemini-4-carbon")
-    shard = "results/replication/v1.4/opencode-gemini-4-carbon/hard-s30-59"
+    shard = "results/selected_fleet_replication/v1.4/opencode-gemini-4-carbon/hard-s30-59"
     meta = {
         "agent": ep["agent"],
         "tier": "hard",
@@ -348,6 +348,68 @@ def test_harbor_machine_logs_exempt_from_unicode_dashes(tmp_path: Path) -> None:
     dash_errs = _gate_map(rep_bad)["unicode_dashes"]["errors"]
     assert len(dash_errs) == 1
     assert "results/harbor/rehearsal/README.md:1" in dash_errs[0]
+
+
+def test_results_transcripts_and_jsonl_exempt_from_unicode_dashes(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "results-dash-exempt")
+    _commit_files(
+        repo,
+        {
+            "results/selected_fleet_replication/v1.4/opencode/hard-s30/transcripts/30.txt": (
+                f"assistant {EM_DASH} output {EN_DASH} trace\n"
+            ),
+            "results/custom_sweep/run1/transcripts/7.txt": f"raw {EM_DASH} log\n",
+            "results/redteam_1000/attacks.jsonl": json.dumps({"note": f"probe {EM_DASH} text"}) + "\n",
+        },
+        message="add machine transcripts and jsonl under results",
+    )
+    rep_ok = verify_branch(base="justSilas", branch="results-dash-exempt", repo=repo)
+    assert rep_ok["ok"] is True, rep_ok
+    assert _gate_map(rep_ok)["unicode_dashes"]["passed"] is True
+
+    _commit_files(
+        repo,
+        {"results/selected_fleet_replication/README.md": f"Prose {EM_DASH} forbidden\n"},
+        message="add prose markdown with dash under results",
+    )
+    rep_bad = verify_branch(base="justSilas", branch="results-dash-exempt", repo=repo)
+    assert rep_bad["ok"] is False
+    errs = _gate_map(rep_bad)["unicode_dashes"]["errors"]
+    assert len(errs) == 1
+    assert "results/selected_fleet_replication/README.md:1" in errs[0]
+
+
+def test_selected_fleet_replication_shard_gates(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "selected-fleet-bad")
+
+    ep_bad = _make_episode(tier="hard", seed=48, agent="opencode:google/gemini-4-carbon")
+    ep_bad["meta"]["rc"] = "timeout"
+    ep_bad["score"] = 0.111111
+    shard = "results/selected_fleet_replication/v1.4/opencode-gemini-4-carbon/hard-s48-51"
+    _commit_files(
+        repo,
+        {
+            f"{shard}/episodes.jsonl": json.dumps(ep_bad) + "\n",
+            f"{shard}/meta.json": json.dumps({"tiers_version": "v1.4", "seeds": [48, 49]}) + "\n",
+            f"{shard}/transcripts/48.txt": "ok\n",
+            f"{shard}/transcripts/99.txt": "orphan\n",
+        },
+        message="add malformed selected_fleet_replication shard",
+    )
+
+    rep = verify_branch(base="justSilas", branch="selected-fleet-bad", repo=repo)
+    assert rep["ok"] is False
+    gates = _gate_map(rep)
+    assert gates["protected_core"]["passed"] is True
+    assert gates["timeout_episode"]["passed"] is False
+    assert any("rc == timeout" in e for e in gates["timeout_episode"]["errors"])
+    assert gates["orphan_transcript"]["passed"] is False
+    assert any("meta['seeds']" in e for e in gates["orphan_transcript"]["errors"])
+    assert any("transcripts/99.txt" in e for e in gates["orphan_transcript"]["errors"])
+    assert gates["replay_mismatch"]["passed"] is False
+    assert len(gates["replay_mismatch"]["errors"]) == 1
 
 
 def test_co_authored_by_gate(tmp_path: Path) -> None:

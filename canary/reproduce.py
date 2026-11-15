@@ -511,7 +511,7 @@ def table_md(rows: list[Row], header: dict[str, Any]) -> str:
         reported = [r for r in rows if r.tier == tier and r.kind == "reported"]
         if not paired and not reported:
             continue
-        label = "headline" if tier in HEADLINE_TIERS else "sanity tier"
+        label = ("headline: the Harbor judge set" if tier == "hard" else "secondary tier") if tier in HEADLINE_TIERS else "sanity tier"
         out += ["", f"## {tier} ({label})"]
         if paired:
             out += ["", "Paired runs (this invocation, same worlds):", "", COLS]

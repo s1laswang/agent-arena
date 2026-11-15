@@ -6,7 +6,7 @@ agent container holds nothing that reveals the mole.
 
 ```bash
 uv tool install harbor                       # Harbor CLI (tested: 0.26.0); needs Docker with the compose plugin
-python harbor/build.py                       # THE JUDGE SET -> harbor/dataset/canary-hard-9000{00..09}/ (10 hard tasks)
+uv run python harbor/build.py                # THE JUDGE SET -> harbor/dataset/canary-hard-9000{00..09}/ (10 hard tasks)
 harbor run -p harbor/dataset -a oracle -n 4                               # reference solver over MCP
 harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=do_nothing -n 4  # do-nothing baseline (expect 0)
 harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early baseline: stops without accusing (expect exactly 0)

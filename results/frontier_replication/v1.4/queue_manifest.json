@@ -1,0 +1,1381 @@
+{
+  "schema_version": 1,
+  "tiers_version": "v1.4",
+  "replication_root": "results/frontier_replication/v1.4",
+  "runner": {
+    "module": "canary.agents.frontier.opencode_run",
+    "python": "/tmp/fleet-silas/shared/agent-arena-venv/bin/python",
+    "path_prefix": "PATH=/home/silas/momin/bin:$PATH",
+    "timeout_s": 3600,
+    "jobs_per_worker": 1,
+    "max_workers_per_wave": 3
+  },
+  "summary": {
+    "passed": true,
+    "replication_total_episodes": 305,
+    "replication_replay_verified_episodes": 305,
+    "target_frontier_episodes": 90,
+    "landed_frontier_episodes": 35,
+    "missing_frontier_episodes": 55,
+    "wave_count": 19,
+    "max_workers_in_any_wave": 3
+  },
+  "cohorts": [
+    {
+      "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+      "priority": 1,
+      "agent_dir": "opencode-gemini-4-carbon",
+      "agent": "opencode:google/gemini-4-carbon",
+      "model": "google/gemini-4-carbon",
+      "tier": "hard",
+      "seed_range": [
+        30,
+        59
+      ],
+      "target_count": 30,
+      "landed_count": 5,
+      "missing_count": 25,
+      "landed_seeds": [
+        30,
+        34,
+        42,
+        45,
+        57
+      ],
+      "missing_seeds": [
+        31,
+        32,
+        33,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        43,
+        44,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        58,
+        59
+      ],
+      "invalid_seeds": [],
+      "baseline_landed_verified": true
+    },
+    {
+      "cohort_id": "opencode-gemini-3.5-flash-medium-0-29",
+      "priority": 2,
+      "agent_dir": "opencode-gemini-3.5-flash",
+      "agent": "opencode:google/gemini-3.5-flash",
+      "model": "google/gemini-3.5-flash",
+      "tier": "medium",
+      "seed_range": [
+        0,
+        29
+      ],
+      "target_count": 30,
+      "landed_count": 30,
+      "missing_count": 0,
+      "landed_seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "missing_seeds": [],
+      "invalid_seeds": [],
+      "baseline_landed_verified": true
+    },
+    {
+      "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+      "priority": 3,
+      "agent_dir": "opencode-gemini-3.5-flash",
+      "agent": "opencode:google/gemini-3.5-flash",
+      "model": "google/gemini-3.5-flash",
+      "tier": "hard",
+      "seed_range": [
+        30,
+        59
+      ],
+      "target_count": 30,
+      "landed_count": 0,
+      "missing_count": 30,
+      "landed_seeds": [],
+      "missing_seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59
+      ],
+      "invalid_seeds": [],
+      "baseline_landed_verified": true
+    }
+  ],
+  "preflight": {
+    "passed": true,
+    "zero_live_llm_calls": true,
+    "checks": {
+      "tiers_v14_gate": {
+        "passed": true,
+        "tiers_version": "v1.4",
+        "active_tiers": [
+          "easy",
+          "hard",
+          "medium"
+        ],
+        "errors": []
+      },
+      "opencode_config_permission": {
+        "passed": true,
+        "permission": {
+          "*": "deny",
+          "canary_*": "allow"
+        },
+        "autoupdate": false,
+        "share": "disabled",
+        "errors": []
+      },
+      "child_env_isolation": {
+        "passed": true,
+        "stripped_vars_verified": [
+          "OPENAI_API_KEY",
+          "GEMINI_API_KEY",
+          "GOOGLE_API_KEY",
+          "ANTHROPIC_API_KEY",
+          "PYTHONPATH",
+          "VIRTUAL_ENV",
+          "OLDPWD",
+          "CANARY_LEDGER_TOKEN",
+          "CANARY_ADMIN_TOKEN",
+          "CANARY_WORLD_SECRET",
+          "CANARY_TOKEN",
+          "OPENCODE_CONFIG"
+        ],
+        "isolated_xdg_home_verified": true,
+        "errors": []
+      },
+      "clean_workdir_isolation": {
+        "passed": true,
+        "outside_repo_root": true,
+        "allowed_files": [
+          "opencode.json"
+        ],
+        "cleaned_up": true,
+        "errors": []
+      },
+      "transcript_redaction_infra_and_steps": {
+        "passed": true,
+        "synthetic_cases_verified": 9,
+        "real_transcripts_checked": 35,
+        "carbon_hard_step_counts": {
+          "30": 112,
+          "34": 83,
+          "42": 74,
+          "45": 156,
+          "57": 76
+        },
+        "errors": []
+      },
+      "cli_command_validation": {
+        "passed": true,
+        "commands_validated": 55,
+        "max_workers_per_wave": 3,
+        "timeout_s": 3600,
+        "jobs_per_worker": 1,
+        "errors": []
+      }
+    },
+    "errors": []
+  },
+  "waves": [
+    {
+      "wave_id": 1,
+      "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+      "cohort_wave": 1,
+      "model": "google/gemini-4-carbon",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        31,
+        32,
+        33
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 31,
+          "seeds": [
+            31
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s31",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 31 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s31",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s31"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 32,
+          "seeds": [
+            32
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s32",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 32 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s32",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s32"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 33,
+          "seeds": [
+            33
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s33",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 33 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s33",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s33"
+        }
+      ]
+    },
+    {
+      "wave_id": 2,
+      "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+      "cohort_wave": 2,
+      "model": "google/gemini-4-carbon",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        35,
+        36,
+        37
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 35,
+          "seeds": [
+            35
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s35",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 35 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s35",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s35"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 36,
+          "seeds": [
+            36
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s36",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 36 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s36",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s36"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 37,
+          "seeds": [
+            37
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s37",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 37 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s37",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s37"
+        }
+      ]
+    },
+    {
+      "wave_id": 3,
+      "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+      "cohort_wave": 3,
+      "model": "google/gemini-4-carbon",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        38,
+        39,
+        40
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 38,
+          "seeds": [
+            38
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s38",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 38 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s38",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s38"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 39,
+          "seeds": [
+            39
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s39",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 39 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s39",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s39"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 40,
+          "seeds": [
+            40
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s40",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 40 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s40",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s40"
+        }
+      ]
+    },
+    {
+      "wave_id": 4,
+      "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+      "cohort_wave": 4,
+      "model": "google/gemini-4-carbon",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        41,
+        43,
+        44
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 41,
+          "seeds": [
+            41
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s41",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 41 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s41",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s41"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 43,
+          "seeds": [
+            43
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s43",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 43 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s43",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s43"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 44,
+          "seeds": [
+            44
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s44",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 44 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s44",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s44"
+        }
+      ]
+    },
+    {
+      "wave_id": 5,
+      "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+      "cohort_wave": 5,
+      "model": "google/gemini-4-carbon",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        46,
+        47,
+        48
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 46,
+          "seeds": [
+            46
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s46",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 46 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s46",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s46"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 47,
+          "seeds": [
+            47
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s47",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 47 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s47",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s47"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 48,
+          "seeds": [
+            48
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s48",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 48 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s48",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s48"
+        }
+      ]
+    },
+    {
+      "wave_id": 6,
+      "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+      "cohort_wave": 6,
+      "model": "google/gemini-4-carbon",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        49,
+        50,
+        51
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 49,
+          "seeds": [
+            49
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s49",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 49 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s49",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s49"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 50,
+          "seeds": [
+            50
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s50",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 50 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s50",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s50"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 51,
+          "seeds": [
+            51
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s51",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 51 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s51",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s51"
+        }
+      ]
+    },
+    {
+      "wave_id": 7,
+      "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+      "cohort_wave": 7,
+      "model": "google/gemini-4-carbon",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        52,
+        53,
+        54
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 52,
+          "seeds": [
+            52
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s52",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 52 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s52",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s52"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 53,
+          "seeds": [
+            53
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s53",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 53 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s53",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s53"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 54,
+          "seeds": [
+            54
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s54",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 54 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s54",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s54"
+        }
+      ]
+    },
+    {
+      "wave_id": 8,
+      "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+      "cohort_wave": 8,
+      "model": "google/gemini-4-carbon",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        55,
+        56,
+        58
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 55,
+          "seeds": [
+            55
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s55",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 55 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s55",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s55"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 56,
+          "seeds": [
+            56
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s56",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 56 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s56",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s56"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 58,
+          "seeds": [
+            58
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s58",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 58 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s58",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s58"
+        }
+      ]
+    },
+    {
+      "wave_id": 9,
+      "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+      "cohort_wave": 9,
+      "model": "google/gemini-4-carbon",
+      "tier": "hard",
+      "worker_count": 1,
+      "ram_safe": true,
+      "seeds": [
+        59
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-4-carbon-hard-30-59",
+          "model": "google/gemini-4-carbon",
+          "tier": "hard",
+          "seed": 59,
+          "seeds": [
+            59
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s59",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-4-carbon --tier hard --seeds 59 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s59",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s59"
+        }
+      ]
+    },
+    {
+      "wave_id": 10,
+      "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+      "cohort_wave": 1,
+      "model": "google/gemini-3.5-flash",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        30,
+        31,
+        32
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 30,
+          "seeds": [
+            30
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s30",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 30 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s30",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s30"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 31,
+          "seeds": [
+            31
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s31",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 31 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s31",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s31"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 32,
+          "seeds": [
+            32
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s32",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 32 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s32",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s32"
+        }
+      ]
+    },
+    {
+      "wave_id": 11,
+      "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+      "cohort_wave": 2,
+      "model": "google/gemini-3.5-flash",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        33,
+        34,
+        35
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 33,
+          "seeds": [
+            33
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s33",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 33 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s33",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s33"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 34,
+          "seeds": [
+            34
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s34",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 34 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s34",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s34"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 35,
+          "seeds": [
+            35
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s35",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 35 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s35",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s35"
+        }
+      ]
+    },
+    {
+      "wave_id": 12,
+      "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+      "cohort_wave": 3,
+      "model": "google/gemini-3.5-flash",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        36,
+        37,
+        38
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 36,
+          "seeds": [
+            36
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s36",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 36 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s36",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s36"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 37,
+          "seeds": [
+            37
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s37",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 37 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s37",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s37"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 38,
+          "seeds": [
+            38
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s38",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 38 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s38",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s38"
+        }
+      ]
+    },
+    {
+      "wave_id": 13,
+      "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+      "cohort_wave": 4,
+      "model": "google/gemini-3.5-flash",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        39,
+        40,
+        41
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 39,
+          "seeds": [
+            39
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s39",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 39 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s39",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s39"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 40,
+          "seeds": [
+            40
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s40",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 40 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s40",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s40"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 41,
+          "seeds": [
+            41
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s41",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 41 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s41",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s41"
+        }
+      ]
+    },
+    {
+      "wave_id": 14,
+      "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+      "cohort_wave": 5,
+      "model": "google/gemini-3.5-flash",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 42,
+          "seeds": [
+            42
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s42",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 42 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s42",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s42"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 43,
+          "seeds": [
+            43
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s43",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 43 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s43",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s43"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 44,
+          "seeds": [
+            44
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s44",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 44 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s44",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s44"
+        }
+      ]
+    },
+    {
+      "wave_id": 15,
+      "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+      "cohort_wave": 6,
+      "model": "google/gemini-3.5-flash",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        45,
+        46,
+        47
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 45,
+          "seeds": [
+            45
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s45",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 45 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s45",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s45"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 46,
+          "seeds": [
+            46
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s46",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 46 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s46",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s46"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 47,
+          "seeds": [
+            47
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s47",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 47 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s47",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s47"
+        }
+      ]
+    },
+    {
+      "wave_id": 16,
+      "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+      "cohort_wave": 7,
+      "model": "google/gemini-3.5-flash",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        48,
+        49,
+        50
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 48,
+          "seeds": [
+            48
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s48",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 48 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s48",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s48"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 49,
+          "seeds": [
+            49
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s49",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 49 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s49",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s49"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 50,
+          "seeds": [
+            50
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s50",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 50 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s50",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s50"
+        }
+      ]
+    },
+    {
+      "wave_id": 17,
+      "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+      "cohort_wave": 8,
+      "model": "google/gemini-3.5-flash",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        51,
+        52,
+        53
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 51,
+          "seeds": [
+            51
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s51",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 51 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s51",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s51"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 52,
+          "seeds": [
+            52
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s52",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 52 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s52",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s52"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 53,
+          "seeds": [
+            53
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s53",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 53 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s53",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s53"
+        }
+      ]
+    },
+    {
+      "wave_id": 18,
+      "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+      "cohort_wave": 9,
+      "model": "google/gemini-3.5-flash",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        54,
+        55,
+        56
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 54,
+          "seeds": [
+            54
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s54",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 54 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s54",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s54"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 55,
+          "seeds": [
+            55
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s55",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 55 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s55",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s55"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 56,
+          "seeds": [
+            56
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s56",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 56 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s56",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s56"
+        }
+      ]
+    },
+    {
+      "wave_id": 19,
+      "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+      "cohort_wave": 10,
+      "model": "google/gemini-3.5-flash",
+      "tier": "hard",
+      "worker_count": 3,
+      "ram_safe": true,
+      "seeds": [
+        57,
+        58,
+        59
+      ],
+      "jobs": [
+        {
+          "worker_slot": 1,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 57,
+          "seeds": [
+            57
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s57",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 57 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s57",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s57"
+        },
+        {
+          "worker_slot": 2,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 58,
+          "seeds": [
+            58
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s58",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 58 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s58",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s58"
+        },
+        {
+          "worker_slot": 3,
+          "cohort_id": "opencode-gemini-3.5-flash-hard-30-59",
+          "model": "google/gemini-3.5-flash",
+          "tier": "hard",
+          "seed": 59,
+          "seeds": [
+            59
+          ],
+          "timeout_s": 3600,
+          "jobs": 1,
+          "out_dir": "results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s59",
+          "command": "PATH=/home/silas/momin/bin:$PATH PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m canary.agents.frontier.opencode_run --model google/gemini-3.5-flash --tier hard --seeds 59 --timeout 3600 --jobs 1 --out results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s59",
+          "verify_command": "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_replay.py results/frontier_replication/v1.4/opencode-gemini-3.5-flash/hard-s59"
+        }
+      ]
+    }
+  ]
+}

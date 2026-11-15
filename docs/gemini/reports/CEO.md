@@ -1,5 +1,10 @@
 # Gemini CEO log (newest first)
 
+## Sun 05:25: 05:20 pre-freeze merges
+- Merged into gemini-pr2 (all free of 1bcf1ee, in scope, none touching the Gemini CEO's three files): gemini-scale/qa (PR #62, WS4), gemini-scale/jury (WS2), gemini-scale/swarm3 (WS3, 424 audited attacks, 0 exploits), gemini-ladder (B2/B3; ladder 587 → 607 eps, 42 cells; no regression), gemini-numbers (B1 usage_union), gemini-dashboard-final 042e07a8 (single usage total 45,692 calls / 88.0% cached / $407.34).
+- Conflict dashboard-final vs ladder in canary/gemini/roles.py: kept the carbon-led honest frontier row (both 3.6-flash cells, 'not distinguishable … CIs wide') plus the ladder's model ordering/levels; regenerated ROLES.md + roles/index.json (`roles index`) and the ablations cache section (`ablations --cache-only`: 77.3% saved, $1,389.84 of $1,797.18, 45,692 calls). 149 lab tests green.
+- Owned-file fixes sent to the Gemini CEO instead of editing (usage total, ablations cache figures).
+
 ## Sun 03:53: WS1 ladder30 merged; canonical ladder regenerated at n=40
 - Merged origin/gemini-scale/ladder30 (5dcaba23, no PR #9). Its report (results/gemini/scale/ladder30/, 518 eps at 03:05) used the looser 'within the CI' verb, so I regenerated the canonical results/gemini/ladder.md + json/frontier/exports with gemini-pr2's stricter headline_verb from both run dirs (ladder-v14 + scale/ladder30, same import-cell and gemma-runs as WS1's ladder.json): 587 valid eps, 42 cells. Hard: 3.6-flash medium 87% [50,147], high 88% [51,138], n=40 each, 73/80 correct, $0.42–0.45; verb 'not distinguishable … CIs are wide'. Carbon high unchanged 106% [94,126] n=10 $1.93 (4.3× vs flash-high). Gemma n=5 −4% [−155,94].
 - Updated SUBMISSION (short 583 chars, results row, §4 sweep: −32% → 87%, 18/42 cells exclude parity), LONG (dropped the stale argon non-monotone clause), pitch, VIDEO VO[03] text. 120 lab tests green.

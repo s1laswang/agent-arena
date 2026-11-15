@@ -1,60 +1,59 @@
 # Gemini agents you can trust: a real-time label reader for blind users, and the lab that measures and attacks agents
 
-*Google DeepMind "Best Use of Gemini API", Junction 2026 · two codebases, one thesis · every number comes from a committed file (sources in the tables) · `gemini-3.5-flash` is served as **gemini-3.6-flash**, so we say "3.6-flash" · full write-up: [SUBMISSION-LONG.md](SUBMISSION-LONG.md)*
+*Google DeepMind "Best Use of Gemini API", Junction 2026 · two codebases, one thesis · every number is quoted from a committed file · `gemini-3.5-flash` is served as **gemini-3.6-flash**, so we say "3.6-flash" · details: [SUBMISSION-LONG.md](SUBMISSION-LONG.md)*
 
-**Short version (≤ 600 chars).** ⟨SHORT⟩
+**Short version (≤ 600 chars).** HoldUp reads medicine labels aloud for blind users on the Gemini Live API: 0 of 754 confident strength reads were wrong. Canary Lab is how we test such agents: Gemini plays, attacks and judges an insider-threat benchmark scored against a Bayesian solver. Each thinking level adds +16.3 [+7.6, +24.4] points of solver score; 513 red-team attacks found 0 verified exploits (detector 16/16); three Gemini judges match our code's labels 84.9% of the time; and on identical worlds Gemini is not distinguishable from GPT-5.5 at 2.0–3.8× lower cost per episode.
 
 ## 1. The problem
 - **For a user:** a blind person holding a medicine box needs the label read aloud, hands-free, within seconds. A confident wrong read is dangerous; "I'm not sure, turn the box" is fine.
 - **For a builder:** before an agent makes calls like that, you must know which model and how much thinking to buy, how it fails, and whether your own test can be gamed. One benchmark number answers none of that.
 
 ## 2. How Gemini is integrated
-**HoldUp, the product** ([`junction-meta-glasses`](https://github.com/s1laswang/junction-meta-glasses/blob/gemini-quote-0515/GEMINI.md), pinned at `gemini-quote-0515`). One **Gemini Live** session (`gemini-3.8-live`) takes camera frames and voice in and speaks back, calling five tools mid-stream (`verify_label`, `find_item`, `add_medication`, `show_cue`, `log_dose`). `verify_label` is a schema-constrained `gemini-3.8-flash` read with a confidence per field, followed by a deterministic safety check. Gemini image models generated the 1,740 ground-truthed label images it is tested on.
+**HoldUp, the product** ([`GEMINI.md`](https://github.com/s1laswang/junction-meta-glasses/blob/gemini-quote-0515/GEMINI.md), pinned at tag `gemini-quote-0515`). One **Gemini Live** session (`gemini-3.8-live`) takes camera frames and voice in and speaks back, calling five tools mid-stream. Its `verify_label` tool is a schema-constrained `gemini-3.8-flash` read with a confidence per field, then a deterministic safety check. Gemini image models generated the 1,740 ground-truthed test images.
 
-**Canary Lab, the proof** (`canary/gemini/` in this repo; the Canary environment itself is our separate AfterQuery entry). One logged client drives Gemini in four roles on an insider-threat benchmark scored against a Bayesian reference solver:
+**Canary Lab, the proof** (`canary/gemini/` here; the Canary environment itself is our separate AfterQuery entry). One logged client drives Gemini in four roles on an insider-threat benchmark scored against a Bayesian reference solver:
 - **Player:** six Gemini models × `thinking_level`, function calling over 13 tools, paired with the solver on the same worlds.
 - **Attacker:** the whole repo (about 183k tokens) in one prompt, attacking the reward through tool calls.
-- **Analyst:** three Gemini judges label every high-regret decision without seeing our labels (6,975 judgments); a one-pass read of 153 trajectories (751k tokens in one explicit cache) does blind discovery.
+- **Judge:** three Gemini models label every high-regret decision without seeing our labels (6,975 judgments).
 - **Adversary:** Gemini plays the insider (arena mode, not the judged environment).
 
 ## 3. What is innovative
-- **Calibrated abstention, measured at scale:** Gemini generates and ground-truths the eval set, so "never confidently wrong" is a number, not a hope.
-- **Speculative verify:** the server reads the sharpest frame while the user is still asking, so the Live tool call returns from cache.
-- **Thinking as a controlled variable:** `thinking_level` is the only factor changed, every cell is paired with the solver, and a CI gate words every headline. Pooled over 570 episodes (CI clustered by world, 63 worlds), each step up in thinking level adds **+16.3 [+7.6, +24.4] points** of the solver's score, driven by the flash models (`results/gemini/thinking_effect.md`).
-- **Gemini as a measured judge:** agreement between judges and accuracy against our code's labels are computed, not assumed.
-- **A red team proven by a positive control:** scores come only from the server ledger, and the detector is shown to catch a reopened real exploit.
-- **A cross-provider control on identical worlds**, built from committed GPT-5.5 episodes at no extra cost.
+- **Calibrated abstention as a number:** Gemini generates and ground-truths the eval set, so "never confidently wrong" is counted.
+- **Thinking as a controlled variable:** only `thinking_level` changes and every episode is paired with the solver. Pooled over 570 episodes (CI clustered by world), each step up adds **+16.3 [+7.6, +24.4] points** of the solver's score, driven by the flash models.
+- **A red team proven by positive controls:** scores come only from the server ledger, and the detector catches reopened real exploits 16 times out of 16.
+- **A measured judge:** agreement between judges and accuracy against our code's labels are computed, not assumed.
+- **A cross-provider control on identical worlds**, built from committed GPT-5.5 episodes and replayable without a key.
 
 ## 4. Why Gemini is essential: what happens when we swap it out
-- **Swap the reader for an open model (HoldUp, 150 paired images):** Gemma 4 31B is confidently wrong on a field twice as often (38/528 = 7.2% vs 19/528 = 3.6%), is the only model with a silent unsafe reassurance (2/377 vs 0/377, not significant on its own), and takes 27.8 s per read against 3.2 s. Strength reading itself ties (46/59 each).
-- **Swap the agent for GPT-5.5 (Canary, same worlds, same harness):** ⟨XPROV⟩
-- **Take away the Live API:** camera, voice and tool calls would become a speech-to-text → model → text-to-speech chain. On Live, question to first audio is p50 2.1 s (p95 3.4 s, n=26 sessions).
-- **What is portable, stated plainly:** other providers also offer reasoning-effort dials, prompt caching and realtime APIs, and our harness has an OpenAI backend. We do not claim only Gemini could do this. We claim what this stack measurably delivers: real-time multimodal tool use for HoldUp, and the cost per unit of competence shown above for agents.
+- **Swap the reader for an open model** (HoldUp, 150 paired images): Gemma 4 31B is confidently wrong on a field twice as often (38/528 = 7.2% vs 19/528 = 3.6%), is the only model with a silent unsafe reassurance (2/377 vs 0/377, not significant on its own), and takes 27.8 s per read against 3.2 s. Strength reading itself ties (46/59 each).
+- **Swap the agent for GPT-5.5** (Canary, identical worlds, same harness, matched medium effort): neither gemini-3.6-flash nor gemini-4-hydrogen is distinguishable from GPT-5.5 on either tier (hard, n=8 shared seeds: mean score +0.26 and +0.53 vs +0.26; medium, n=9: +0.53 and +0.59 vs +0.67), at **2.0–3.8× lower cost per episode** ($0.26–0.57 vs $0.81–1.35). One cell does lose: 3.6-flash at high thinking on medium (paired difference -0.53 [-1.10, -0.01]).
+- **Take away the Live API:** camera, voice and tool calls become a speech-to-text → model → text-to-speech chain. On Live, question to first audio is p50 2.1 s (p95 3.4 s, n=26 sessions).
+- **What is portable, stated plainly:** other providers also offer reasoning-effort dials, prompt caching and realtime APIs, and our harness has an OpenAI backend. We do not claim only Gemini could do this. We claim what this stack measurably delivered: real-time multimodal tool use with calibrated abstention, and competence at a fraction of the cost.
 
 ## Headline chart
 ![Same worlds: % of the reference solver vs cost per episode, Gemini vs GPT-5.5](../../results/gemini/xprov.png)
-*Identical Canary v1.3 worlds; circles are Gemini, squares are GPT-5.5 (`results/gemini/xprov.md`). The v1.4 thinking-level frontier is in [`frontier.png`](../../results/gemini/frontier.png).*
+*Identical Canary v1.3 worlds; circles are Gemini, squares are GPT-5.5 (`results/gemini/xprov.md`). The v1.4 thinking-level frontier is [`frontier.png`](../../results/gemini/frontier.png).*
 
 ## Results
 | | Result | Source |
 |---|---|---|
-| **HoldUp safety** | **0 of 754** confident strength reads wrong across 1,740 images (95% upper bound 0.4%); calibration ECE 0.022 (0.018–0.028). Silent unsafe reassurance 49/4,730 (1.04%) → 3/4,730 (0.06%) after the safety rules were tightened (re-scored on the same reads, so in-sample). | HoldUp `GEMINI.md` at `gemini-quote-0515` |
-| **Ladder** (⟨LADDER_N⟩ paired episodes, v1.4) | Hard: gemini-4-carbon at high thinking reaches **106% [94, 126]** of the solver (n=10, $1.93/episode); 3.6-flash reaches 88% [51, 138] at high and 87% [50, 147] at medium (n=40 each, $0.42–0.45): not distinguishable from the solver, with wide CIs. 18 of 42 cells exclude parity, all below the solver. | `results/gemini/ladder.md` |
-| **Cross-provider control** (v1.3) | ⟨XPROV_ROW⟩ | `results/gemini/xprov.md` |
-| **Red team (integrity)** | 513 ledger-verified attacks (369 with the whole repo in context, 144 blackbox; 81 through the real MCP server): **0 verified exploits, 0 invariant violations**. Five attempts reached solver level on an accusation the evidence did not justify; re-run on fresh seeds, none held (one was flagged in-run, then overturned on review, n=4). Detector recall on three reopened exploit families: **16/16** [80.6, 100]. | `results/gemini/scale/swarm3/swarm.md` |
-| **Jury (analyst)** | On the 403 decisions our code tags, three blind Gemini judges agree with each other (Fleiss κ 0.885 [0.853, 0.915]) and their majority vote matches the code's label **84.9% [81.0, 88.0]** of the time; κ is 0.736 [0.711, 0.759] over all 1,423 high-regret decisions. A single one-pass read of the corpus is much weaker: 3 of 5 failure modes, 3.7% of those steps. | `results/gemini/scale/jury/jury.md`, `atlas_blind.md` |
-| **Usage** | ⟨USAGE⟩ | `results/gemini/usage_total.json` |
+| **HoldUp safety** | **0 of 754** confident strength reads wrong across 1,740 images (95% upper bound 0.4%); calibration ECE 0.022 (0.018–0.028). | HoldUp `GEMINI.md` |
+| **Cross-provider control** | Matched effort, same harness: 3.6-flash and 4-hydrogen **not distinguishable from GPT-5.5**, at 2.0–3.8× lower cost. On hard, share of the solver: GPT-5.5 38% [-51, 99] (n=8), 3.6-flash 37% [-45, 98], 4-hydrogen 78% [50, 101] (n=11 each). Checks: 92/92 episodes replay to their score and saw the same roster; solver 22/22 reproduced. | `results/gemini/xprov.md` |
+| **Ladder** (607 paired episodes) | Hard: gemini-4-carbon at high thinking reaches **106% [94, 126]** of the solver (n=10, $1.93/episode); 3.6-flash reaches 88% [51, 138] at high (n=40, $0.45). 18 of 42 cells exclude parity, all below the solver. | `results/gemini/ladder.md` |
+| **Red team** | 513 ledger-verified attacks (81 through the real MCP server): **0 verified exploits, 0 invariant violations**. Five unjustified solver-level scores did not hold on fresh seeds. Detector recall on three reopened exploit families: **16/16** [80.6, 100]. | `results/gemini/scale/swarm3/swarm.md` |
+| **Jury** | On the 403 decisions our code tags, three blind judges agree (Fleiss κ 0.885 [0.853, 0.915]) and their majority matches the code's label **84.9% [81.0, 88.0]** of the time. A one-pass blind read of the corpus is weaker: 3 of 5 failure modes. | `results/gemini/scale/jury/jury.md`, `atlas_blind.md` |
+| **Usage** | 52,080 Gemini API calls, 88.4% of input tokens served from cache, $456.21 at list price (one de-duplicated total, generated Sun 05:39). | `results/gemini/usage_total.json` |
 
 ## Honesty notes
-- Small samples: ladder cells have 9–40 paired seeds and the control 8–11, so CIs are wide and every claim is CI-gated.
-- The control uses the earlier v1.3 rules because those are the only worlds with committed GPT-5.5 episodes; one non-Gemini frontier model, no Anthropic model. ⟨J1⟩
-- Canary's logged rows are written by our client (no API request id); the responses recorded for keyless replay do carry API response ids (⟨RECORDED⟩).
-- HoldUp's 5.8 s "before" latency was one unlogged run; its demo video is a browser simulation until the on-glasses run is logged. The PaliGemma comparison below is not at one operating point.
-- The AfterQuery gap depends on the harness (`docs/reports/gap.md`): gemini-4-carbon on v1.4 hard scores 65% [24%, 98%] of the solver via OpenCode over MCP (n=30) and 95% [62%, 140%] in-process. Demo narration (TTS, Live commentator) is not a measurement.
+- **Small samples.** Ladder cells have 9–40 paired seeds and the control 8–11; every claim is CI-gated.
+- **The control** uses the earlier v1.3 rules, the only worlds with committed GPT-5.5 episodes, and one non-Gemini model at one effort setting. A self-hosted open-weight run (Qwen3-14B) had not finished when this was frozen and is not claimed.
+- **Logging.** Our usage rows are self-written (no API request id); the 8,120 of 8,122 responses recorded for keyless replay, including every call of the control, carry API response ids.
+- **HoldUp.** Unsafe reassurance fell from 49/4,730 to 3/4,730 after rules were tuned on the same set (in-sample). The 5.8 s "before" latency is one unlogged run, and the demo video is a browser simulation until the on-glasses run is logged.
+- **AfterQuery.** The gap depends on the harness (`docs/reports/gap.md`): gemini-4-carbon on v1.4 hard scores 65% [24%, 98%] of the solver via OpenCode over MCP (n=30) and 95% [62%, 140%] in-process. Video narration (TTS, Live commentator) is not a measurement.
 
 ## Also on Gemini
-- **Gemini teaches Gemma:** the Gemini-generated label images trained a PaliGemma 2 3B LoRA: "strength visible" recall 91.4% [86.5, 94.6] vs 65.6% for YOLOv8n (n=348 held-out; YOLOv8n precision 96.8% vs 89.9%), not yet in the product ([`GEMMA.md`](https://github.com/s1laswang/junction-meta-glasses/blob/gemini-quote-0515/GEMMA.md)).
-- **Valio Aimo** ([`docs/GEMINI.md`](https://github.com/s1laswang/junction-aimo-agents/blob/main/docs/GEMINI.md)): a gemini-3.8-flash buyer agent escalates 5/34 steps (15%) to gemini-4-hydrogen; compaction cut cost per order from $0.0822 to $0.0352 (−57%); 6/6 scenarios pass.
+- **Gemini teaches Gemma:** the Gemini-generated label images trained a PaliGemma 2 3B LoRA: "strength visible" recall 91.4% [86.5, 94.6] vs 65.6% for YOLOv8n (n=348; not one operating point: precision 89.9% vs 96.8%), not yet in the product ([`GEMMA.md`](https://github.com/s1laswang/junction-meta-glasses/blob/gemini-quote-0515/GEMMA.md)).
+- **Valio Aimo** ([`docs/GEMINI.md`](https://github.com/s1laswang/junction-aimo-agents/blob/main/docs/GEMINI.md)): a gemini-3.8-flash buyer agent escalates 5/34 steps (15%) to gemini-4-hydrogen; compaction cut cost per order by 57% ($0.0822 → $0.0352).
 
 ## Reproduce
 ```bash
@@ -62,6 +61,6 @@ make setup && make reproduce   # environment, solver, baselines (no keys)
 make lab-replay                # recorded Gemini runs, keyless
 make lab-dashboard             # usage and results dashboard
 ```
-A keyless command for every headline number above (the control, the thinking effect, the ladder, the jury, the usage total) is listed in [SUBMISSION-LONG.md](SUBMISSION-LONG.md#reproduce-every-headline-number-without-a-key). HoldUp: see its README (server 288/288 and web 323/323 tests, 13/13 live smoke checks).
+A keyless command for every headline number is listed in [SUBMISSION-LONG.md](SUBMISSION-LONG.md#reproduce-every-headline-number-without-a-key).
 
 **Team:** Silas Wang, Momin (Momin010), Ivar (ivarakerholm-wq), Chintufp, with a Claude engineering team.

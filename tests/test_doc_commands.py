@@ -61,9 +61,11 @@ def test_real_repo_passes_doc_commands_verifier(capsys):
     assert "JUDGE_QUICKSTART.md" in verify_doc_commands.DEFAULT_DOCS
     assert "docs/REPRODUCIBILITY.md" in verify_doc_commands.DEFAULT_DOCS
     assert "docs/PEER-REVIEW-QA.md" in verify_doc_commands.DEFAULT_DOCS
+    assert "docs/SUBMISSION-AUDIT.md" in verify_doc_commands.DEFAULT_DOCS
     assert "JUDGE_QUICKSTART.md" in verify_doc_commands.FLAG_CHECK_DOCS
     assert "docs/REPRODUCIBILITY.md" in verify_doc_commands.FLAG_CHECK_DOCS
     assert "docs/PEER-REVIEW-QA.md" in verify_doc_commands.FLAG_CHECK_DOCS
+    assert "docs/SUBMISSION-AUDIT.md" in verify_doc_commands.FLAG_CHECK_DOCS
     assert verify_doc_commands.audit_repo is verify_doc_commands.verify_repo
 
     rc = verify_doc_commands.main(["--root", str(ROOT), "--json"])
@@ -579,4 +581,82 @@ def test_judge_quickstart_and_reproducibility_docs_discovery(opencode_tmp, capsy
     flag_qa = {r["name"]: r for r in payload_qa_fail["results"]}["CLI Long-Flag Check"]
     assert flag_qa["status"] == "FAIL"
     assert any("docs/PEER-REVIEW-QA.md" in d for d in flag_qa["details"])
+
+
+def test_accept_env_knobs_shell_flags_and_submission_verifier(opencode_tmp, capsys):
+    repo = opencode_tmp / "accept_and_sub_case"
+    (repo / "scripts").mkdir(parents=True)
+    shutil.copy2(ROOT / "scripts" / "judge_accept.sh", repo / "scripts" / "judge_accept.sh")
+    shutil.copy2(ROOT / "scripts" / "verify_submission_doc.py", repo / "scripts" / "verify_submission_doc.py")
+    _write_files(
+        repo,
+        {
+            "Makefile": ".PHONY: setup reproduce accept\nsetup:\n\t@true\nreproduce:\n\t@true\naccept:\n\t@true\n",
+            "docs/REPRODUCIBILITY.md": (
+                f"{HASH_CHAR} Reproducibility\n\n"
+                "```bash\n"
+                "ACCEPT_FORCE_REPRODUCE=1 make accept\n"
+                "ACCEPT_REUSE_MAX_AGE_S=900 bash scripts/judge_accept.sh\n"
+                "python scripts/verify_submission_doc.py --json\n"
+                "```\n"
+            ),
+        },
+    )
+    rc_ok = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_ok = json.loads(capsys.readouterr().out)
+    assert rc_ok == 0
+    assert payload_ok["passed"] is True
+
+    _write_files(
+        repo,
+        {
+            "docs/REPRODUCIBILITY.md": "`ACCEPT_NONEXISTENT_KNOB=1 make accept`\n",
+        },
+    )
+    rc_bad_knob = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_bad_knob = json.loads(capsys.readouterr().out)
+    assert rc_bad_knob == 1
+    harbor_bad = {r["name"]: r for r in payload_bad_knob["results"]}["Harbor CLI & Env-Var Check"]
+    assert harbor_bad["status"] == "FAIL"
+    assert any("ACCEPT_NONEXISTENT_KNOB" in d for d in harbor_bad["details"])
+
+    _write_files(
+        repo,
+        {
+            "docs/REPRODUCIBILITY.md": "`ACCEPT_FORCE_REPRODUCE=2 make accept`\n",
+        },
+    )
+    rc_bad_val = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_bad_val = json.loads(capsys.readouterr().out)
+    assert rc_bad_val == 1
+    harbor_val = {r["name"]: r for r in payload_bad_val["results"]}["Harbor CLI & Env-Var Check"]
+    assert harbor_val["status"] == "FAIL"
+    assert any("ACCEPT_FORCE_REPRODUCE=2" in d for d in harbor_val["details"])
+
+    _write_files(
+        repo,
+        {
+            "docs/REPRODUCIBILITY.md": "`bash scripts/judge_accept.sh --bogus-sh-flag`\n",
+        },
+    )
+    rc_bad_sh = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_bad_sh = json.loads(capsys.readouterr().out)
+    assert rc_bad_sh == 1
+    flag_bad_sh = {r["name"]: r for r in payload_bad_sh["results"]}["CLI Long-Flag Check"]
+    assert flag_bad_sh["status"] == "FAIL"
+    assert any("--bogus-sh-flag" in d for d in flag_bad_sh["details"])
+
+    _write_files(
+        repo,
+        {
+            "docs/REPRODUCIBILITY.md": "`verify_submission_doc.py --no-such-flag`\n",
+        },
+    )
+    rc_bad_sub = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_bad_sub = json.loads(capsys.readouterr().out)
+    assert rc_bad_sub == 1
+    flag_bad_sub = {r["name"]: r for r in payload_bad_sub["results"]}["CLI Long-Flag Check"]
+    assert flag_bad_sub["status"] == "FAIL"
+    assert any("--no-such-flag" in d for d in flag_bad_sub["details"])
+
 

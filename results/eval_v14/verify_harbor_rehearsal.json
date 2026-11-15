@@ -1,0 +1,723 @@
+{
+  "cheat_probe": {
+    "all_149_probes": true,
+    "all_complete": true,
+    "all_zero_reward": true,
+    "controls_failed": 0,
+    "hmac_verified_trials": 6,
+    "holes_found": 0,
+    "isolation_11of11_trials": 6,
+    "job": "results/harbor/cheat-probe",
+    "n_trials": 6,
+    "probes_per_trial": 149,
+    "total_probe_attempts": 894
+  },
+  "checks": {
+    "anticheat_harbor_consistency_parity": true,
+    "cheat_probe_6of6_zero_149_probes": true,
+    "check_isolation_11of11_passed": true,
+    "current_harbor_build_package_verified": true,
+    "do_nothing_and_stop_early_zero": true,
+    "harbor_18_jobs_consistent": true,
+    "harbor_80_trials_consistent": true,
+    "live_rehearsal_status_honest": true,
+    "negative_c1_tamper_failed_closed_zero": true,
+    "oracle_range_v14_crosschecked": true,
+    "rehearsal_dry_verified": true,
+    "retired_keys_hmac_57of57_verified": true,
+    "top_level_zero_infra_invalid": true
+  },
+  "current_package_verification": {
+    "agent_timeout_sec": 10800.0,
+    "build_command": "python harbor/build.py --out /tmp/opencode/w3_harbor_pkg",
+    "build_summary_line": "wrote 10 task(s) to /tmp/opencode/w3_harbor_pkg = the judge set (tiers=hard, verifier=separate, world secret: fresh random, baked into the sidecars only; ledger signing key: fresh, sidecar + verifier only)",
+    "default_seeds": "900000-900009",
+    "default_tiers": "hard",
+    "do_nothing_inproc_mean": 0.0,
+    "do_nothing_inproc_scores": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "ledger_key_bytes": 64,
+    "n_tasks": 10,
+    "no_secret_leak_to_agent_or_solution": true,
+    "salt_bytes": 64,
+    "scratch_dir_deleted": true,
+    "secret_and_key_permissions": "0600",
+    "sidecar_and_verifier_keys_match": true,
+    "stop_early_inproc_mean": 0.0,
+    "stop_early_inproc_scores": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "tasks": [
+      "canary-hard-900000",
+      "canary-hard-900001",
+      "canary-hard-900002",
+      "canary-hard-900003",
+      "canary-hard-900004",
+      "canary-hard-900005",
+      "canary-hard-900006",
+      "canary-hard-900007",
+      "canary-hard-900008",
+      "canary-hard-900009"
+    ],
+    "verified": true,
+    "verifier_environment_mode": "separate"
+  },
+  "harbor_dir": "results/harbor",
+  "jobs": [
+    {
+      "has_retired_ledger_key": false,
+      "hmac_verified_trials": 0,
+      "isolation_11of11_trials": 1,
+      "job": "results/harbor/c1-cheat",
+      "job_consistent": true,
+      "mean_valid_reward": -1.0,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 1,
+      "n_valid": 1,
+      "note": "signed verifier (signature=ok)",
+      "policies": [
+        "cheat"
+      ],
+      "signed_trials": 1,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 1
+    },
+    {
+      "has_retired_ledger_key": false,
+      "hmac_verified_trials": 0,
+      "isolation_11of11_trials": 1,
+      "job": "results/harbor/c1-do_nothing",
+      "job_consistent": true,
+      "mean_valid_reward": 0.0,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 1,
+      "n_valid": 1,
+      "note": "signed verifier (signature=ok)",
+      "policies": [
+        "do_nothing"
+      ],
+      "signed_trials": 1,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 1
+    },
+    {
+      "has_retired_ledger_key": false,
+      "hmac_verified_trials": 0,
+      "isolation_11of11_trials": 1,
+      "job": "results/harbor/c1-oracle",
+      "job_consistent": true,
+      "mean_valid_reward": 0.5,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 1,
+      "n_valid": 1,
+      "note": "signed verifier (signature=ok)",
+      "policies": [
+        "oracle"
+      ],
+      "signed_trials": 1,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 1
+    },
+    {
+      "has_retired_ledger_key": false,
+      "hmac_verified_trials": 0,
+      "isolation_11of11_trials": 2,
+      "job": "results/harbor/cheat",
+      "job_consistent": true,
+      "mean_valid_reward": -1.0,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 2,
+      "n_valid": 2,
+      "note": "pre-C1 unsigned verifier; ledger/reward/isolation consistent",
+      "policies": [
+        "cheat"
+      ],
+      "signed_trials": 0,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 2
+    },
+    {
+      "has_retired_ledger_key": true,
+      "hmac_verified_trials": 6,
+      "isolation_11of11_trials": 6,
+      "job": "results/harbor/cheat-probe",
+      "job_consistent": true,
+      "mean_valid_reward": 0.0,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 6,
+      "n_valid": 6,
+      "note": "signed verifier + published retired ledger_key HMAC verified",
+      "policies": [
+        "cheat_probe"
+      ],
+      "signed_trials": 6,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 6
+    },
+    {
+      "has_retired_ledger_key": false,
+      "hmac_verified_trials": 0,
+      "isolation_11of11_trials": 2,
+      "job": "results/harbor/do_nothing",
+      "job_consistent": true,
+      "mean_valid_reward": 0.0,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 2,
+      "n_valid": 2,
+      "note": "pre-C1 unsigned verifier; ledger/reward/isolation consistent",
+      "policies": [
+        "do_nothing"
+      ],
+      "signed_trials": 0,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 2
+    },
+    {
+      "has_retired_ledger_key": false,
+      "hmac_verified_trials": 0,
+      "isolation_11of11_trials": 0,
+      "job": "results/harbor/g-gemini-rest",
+      "job_consistent": true,
+      "mean_valid_reward": 0.438,
+      "models": [
+        "google/gemini-4-carbon"
+      ],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 4,
+      "n_trials": 5,
+      "n_valid": 5,
+      "note": "4/5 harmless post-game NonZeroAgentExitCodeError with clean ledger",
+      "policies": [
+        "opencode"
+      ],
+      "signed_trials": 0,
+      "trajectory_checked_trials": 5,
+      "trials_consistent": 5
+    },
+    {
+      "has_retired_ledger_key": false,
+      "hmac_verified_trials": 0,
+      "isolation_11of11_trials": 0,
+      "job": "results/harbor/g-gemini-try2",
+      "job_consistent": true,
+      "mean_valid_reward": 0.83,
+      "models": [
+        "google/gemini-4-carbon"
+      ],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 1,
+      "n_trials": 1,
+      "n_valid": 1,
+      "note": "1/1 harmless post-game NonZeroAgentExitCodeError with clean ledger",
+      "policies": [
+        "opencode"
+      ],
+      "signed_trials": 0,
+      "trajectory_checked_trials": 1,
+      "trials_consistent": 1
+    },
+    {
+      "has_retired_ledger_key": false,
+      "hmac_verified_trials": 0,
+      "isolation_11of11_trials": 6,
+      "job": "results/harbor/g-oracle",
+      "job_consistent": true,
+      "mean_valid_reward": 0.756667,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 6,
+      "n_valid": 6,
+      "note": "pre-C1 unsigned verifier; ledger/reward/isolation consistent",
+      "policies": [
+        "oracle"
+      ],
+      "signed_trials": 0,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 6
+    },
+    {
+      "has_retired_ledger_key": false,
+      "hmac_verified_trials": 0,
+      "isolation_11of11_trials": 2,
+      "job": "results/harbor/oracle",
+      "job_consistent": true,
+      "mean_valid_reward": 0.72,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 2,
+      "n_valid": 2,
+      "note": "pre-C1 unsigned verifier; ledger/reward/isolation consistent",
+      "policies": [
+        "oracle"
+      ],
+      "signed_trials": 0,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 2
+    },
+    {
+      "has_retired_ledger_key": true,
+      "hmac_verified_trials": 10,
+      "isolation_11of11_trials": 10,
+      "job": "results/harbor/rehearsal-dry/do_nothing",
+      "job_consistent": true,
+      "mean_valid_reward": 0.0,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 10,
+      "n_valid": 10,
+      "note": "signed verifier + published retired ledger_key HMAC verified",
+      "policies": [
+        "do_nothing"
+      ],
+      "signed_trials": 10,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 10
+    },
+    {
+      "has_retired_ledger_key": true,
+      "hmac_verified_trials": 10,
+      "isolation_11of11_trials": 0,
+      "job": "results/harbor/rehearsal-dry/opencode",
+      "job_consistent": true,
+      "mean_valid_reward": 0.337143,
+      "models": [
+        "google/gemini-4-carbon"
+      ],
+      "n_infra_invalid": 3,
+      "n_post_game_nonzero_exit": 7,
+      "n_trials": 10,
+      "n_valid": 7,
+      "note": "rehearsal-dry primary run: 7/10 completed + 3 infra (2 ApiRateLimitError, 1 thought_signature) rerun in opencode-infra-rerun",
+      "policies": [
+        "opencode"
+      ],
+      "signed_trials": 10,
+      "trajectory_checked_trials": 10,
+      "trials_consistent": 10
+    },
+    {
+      "has_retired_ledger_key": true,
+      "hmac_verified_trials": 3,
+      "isolation_11of11_trials": 0,
+      "job": "results/harbor/rehearsal-dry/opencode-infra-rerun",
+      "job_consistent": true,
+      "mean_valid_reward": 0.54,
+      "models": [
+        "google/gemini-4-carbon"
+      ],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 3,
+      "n_trials": 3,
+      "n_valid": 3,
+      "note": "disclosed 1x infra rerun for hard-900006, hard-900007, hard-900009 on identical retired build",
+      "policies": [
+        "opencode"
+      ],
+      "signed_trials": 3,
+      "trajectory_checked_trials": 3,
+      "trials_consistent": 3
+    },
+    {
+      "has_retired_ledger_key": true,
+      "hmac_verified_trials": 10,
+      "isolation_11of11_trials": 10,
+      "job": "results/harbor/rehearsal-dry/oracle",
+      "job_consistent": true,
+      "mean_valid_reward": 0.467,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 10,
+      "n_valid": 10,
+      "note": "signed verifier + published retired ledger_key HMAC verified",
+      "policies": [
+        "oracle"
+      ],
+      "signed_trials": 10,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 10
+    },
+    {
+      "has_retired_ledger_key": true,
+      "hmac_verified_trials": 10,
+      "isolation_11of11_trials": 10,
+      "job": "results/harbor/rehearsal-dry/stop_early",
+      "job_consistent": true,
+      "mean_valid_reward": 0.0,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 10,
+      "n_valid": 10,
+      "note": "signed verifier + published retired ledger_key HMAC verified",
+      "policies": [
+        "stop_early"
+      ],
+      "signed_trials": 10,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 10
+    },
+    {
+      "has_retired_ledger_key": true,
+      "hmac_verified_trials": 6,
+      "isolation_11of11_trials": 6,
+      "job": "results/harbor/signed-cheat",
+      "job_consistent": true,
+      "mean_valid_reward": -1.0,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 6,
+      "n_valid": 6,
+      "note": "signed verifier + published retired ledger_key HMAC verified",
+      "policies": [
+        "cheat"
+      ],
+      "signed_trials": 6,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 6
+    },
+    {
+      "has_retired_ledger_key": true,
+      "hmac_verified_trials": 2,
+      "isolation_11of11_trials": 2,
+      "job": "results/harbor/signed-stop_early",
+      "job_consistent": true,
+      "mean_valid_reward": -1.0,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 2,
+      "n_valid": 2,
+      "note": "legacy pre-PR #16 (2bb67295) day-1 random accusation (now guess_day1); current stop_early scores 0.000",
+      "policies": [
+        "stop_early"
+      ],
+      "signed_trials": 2,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 2
+    },
+    {
+      "has_retired_ledger_key": false,
+      "hmac_verified_trials": 0,
+      "isolation_11of11_trials": 2,
+      "job": "results/harbor/stop_early",
+      "job_consistent": true,
+      "mean_valid_reward": -1.0,
+      "models": [],
+      "n_infra_invalid": 0,
+      "n_post_game_nonzero_exit": 0,
+      "n_trials": 2,
+      "n_valid": 2,
+      "note": "legacy pre-PR #16 (2bb67295) day-1 random accusation (now guess_day1); current stop_early scores 0.000",
+      "policies": [
+        "stop_early"
+      ],
+      "signed_trials": 0,
+      "trajectory_checked_trials": 0,
+      "trials_consistent": 2
+    }
+  ],
+  "legacy_stop_early_audit": {
+    "explanation": "Legacy results/harbor/stop_early and results/harbor/signed-stop_early were recorded before PR #16 (commit 2bb67295), when canary.baselines named the day-1 random accusation policy stop_early (end_reason='accused' on day 1, wrong accusation -> -1.0). PR #16 renamed day-1 random accusation to guess_day1 and redefined stop_early to stop on day 1 without accusing (exact 0.000, verified across 10/10 rehearsal-dry/stop_early Harbor trials and 200/200 oracle_range_v1.4 builds).",
+    "legacy_jobs": [
+      {
+        "end_reasons": [
+          "accused",
+          "accused"
+        ],
+        "final_days": [
+          1,
+          1
+        ],
+        "hmac_verified": true,
+        "job": "results/harbor/signed-stop_early",
+        "n_trials": 2,
+        "rewards": [
+          -1.0,
+          -1.0
+        ],
+        "signed": true,
+        "tasks": [
+          "hard-900000",
+          "medium-900000"
+        ]
+      },
+      {
+        "end_reasons": [
+          "accused",
+          "accused"
+        ],
+        "final_days": [
+          1,
+          1
+        ],
+        "hmac_verified": null,
+        "job": "results/harbor/stop_early",
+        "n_trials": 2,
+        "rewards": [
+          -1.0,
+          -1.0
+        ],
+        "signed": false,
+        "tasks": [
+          "hard-900000",
+          "medium-900000"
+        ]
+      }
+    ],
+    "pr16_merge_commit": "2bb67295"
+  },
+  "live_rehearsal": {
+    "automatic_verifier_ready": true,
+    "build_txt_present": false,
+    "disclosure": "results/harbor/rehearsal/ currently holds only the pre-registered protocol (README.md, 0 executed trials); verify_rehearsal() automatically validates full 3x10 schema, HMAC, isolation, baselines, oracle band, paired CIs, and pass^3 if trials are added.",
+    "n_jobs": 0,
+    "n_trials": 0,
+    "protocol_readme_present": true,
+    "protocol_spec": {
+      "declares_3x10_opencode": true,
+      "declares_single_infra_rerun_rule": true,
+      "expected_tasks": 10,
+      "judge_seeds": "900000-900009",
+      "planned_jobs": [
+        "oracle",
+        "opencode-1",
+        "opencode-2",
+        "opencode-3",
+        "do_nothing",
+        "stop_early"
+      ],
+      "target_tag": "afterquery-final",
+      "tier": "hard"
+    },
+    "rehearsal_dir": "results/harbor/rehearsal",
+    "status": "protocol_only",
+    "status_consistent": true,
+    "table_md_present": false,
+    "verification": null
+  },
+  "mode": "audit_existing",
+  "negative_control": {
+    "failed_closed_ok": true,
+    "harbor_result_reward": 0.0,
+    "isolation_checks_passed": 11,
+    "isolation_findings": 0,
+    "job": "results/harbor_negative/c1-tamper",
+    "job_summary_consistent": true,
+    "offline_anticheat_consistent": false,
+    "present": true,
+    "tampered_ledger_score": 1.0,
+    "task": "hard-900000",
+    "trial": "canary-hard-900000__GZn8oUh",
+    "true_accusation_V": 0.5,
+    "verifier_fail_lines": [
+      "FAIL: bad ledger signature: the ledger was not written by this task's canary-server, or was edited"
+    ],
+    "verifier_reward_txt": 0.0
+  },
+  "negative_dir": "results/harbor_negative/c1-tamper",
+  "oracle_range_v14": {
+    "hard_k10": {
+      "band_90pct": [
+        0.39,
+        0.68
+      ],
+      "builds": 200,
+      "do_nothing_all_builds_zero": true,
+      "k_key": "k10",
+      "mean": 0.56938,
+      "p5": 0.393,
+      "p50": 0.6,
+      "p95": 0.67805,
+      "p_lt0": 0.0,
+      "sd": 0.094469,
+      "source": "oracle_range_v1.4.json",
+      "stop_early_all_builds_zero": true,
+      "tier": "hard"
+    },
+    "medium_k10": {
+      "band_90pct": [
+        0.47,
+        0.74
+      ],
+      "builds": 200,
+      "do_nothing_all_builds_zero": true,
+      "k_key": "k10",
+      "mean": 0.623065,
+      "p5": 0.4689,
+      "p50": 0.633,
+      "p95": 0.7422,
+      "p_lt0": 0.0,
+      "sd": 0.086137,
+      "source": "oracle_range_v1.4.json",
+      "stop_early_all_builds_zero": true,
+      "tier": "medium"
+    }
+  },
+  "overall_ok": true,
+  "paired_gemini_demo": {
+    "diff_vs_oracle": -0.253333,
+    "gemini_mean": 0.503333,
+    "hard_3task_gemini_mean": 0.526667,
+    "hard_3task_oracle_mean": 0.66,
+    "infra_invalid_trials": 0,
+    "medium_3task_gemini_mean": 0.48,
+    "medium_3task_oracle_mean": 0.853333,
+    "n_paired_tasks": 6,
+    "oracle_mean": 0.756667,
+    "post_game_nonzero_exit_trials": 5,
+    "ratio_ci95": [
+      0.353556,
+      0.897059
+    ],
+    "ratio_vs_oracle": 0.665198,
+    "tasks": [
+      "hard-900000",
+      "hard-900001",
+      "hard-900002",
+      "medium-900000",
+      "medium-900001",
+      "medium-900002"
+    ]
+  },
+  "rehearsal_dry": {
+    "checks": {
+      "anticheat_jobs_consistent": true,
+      "anticheat_trials_consistent": true,
+      "baselines_exact_zero": true,
+      "chief_data_rule_clean": true,
+      "committed_table_md_matches": true,
+      "expected_tasks_complete": true,
+      "oracle_in_90pct_band": true,
+      "required_jobs_present": true,
+      "rerun_protocol_clean": true,
+      "strict_all_trials_signed": true,
+      "strict_baseline_isolation_11of11": true
+    },
+    "classification": "1_run_harness_check_not_gap_claim",
+    "disclosed_infra_reruns": [
+      {
+        "first_infra_reason": "provider rate limit",
+        "job": "opencode",
+        "rerun_correct": true,
+        "rerun_day": 12,
+        "rerun_job": "opencode-infra-rerun",
+        "rerun_reward": 0.43,
+        "rerun_valid": true,
+        "task": "hard-900006"
+      },
+      {
+        "first_infra_reason": "provider rate limit",
+        "job": "opencode",
+        "rerun_correct": true,
+        "rerun_day": 14,
+        "rerun_job": "opencode-infra-rerun",
+        "rerun_reward": 0.66,
+        "rerun_valid": true,
+        "task": "hard-900007"
+      },
+      {
+        "first_infra_reason": "thought_signature rejected",
+        "job": "opencode",
+        "rerun_correct": true,
+        "rerun_day": 12,
+        "rerun_job": "opencode-infra-rerun",
+        "rerun_reward": 0.53,
+        "rerun_valid": true,
+        "task": "hard-900009"
+      }
+    ],
+    "do_nothing_10task_mean": 0.0,
+    "n_jobs": 5,
+    "n_raw_trials": 43,
+    "opencode_10task_mean": 0.398,
+    "opencode_accused": 10,
+    "opencode_correct": 9,
+    "opencode_diff_vs_oracle": -0.069,
+    "opencode_disclosed_infra_reruns_n": 3,
+    "opencode_primary_infra_as_zero_mean": 0.236,
+    "opencode_primary_valid_mean": 0.337143,
+    "opencode_primary_valid_n": 7,
+    "opencode_ratio_ci95": [
+      0.107884,
+      3.55
+    ],
+    "opencode_ratio_vs_oracle": 0.852248,
+    "opencode_unresolved_infra_n": 0,
+    "oracle_10task_mean": 0.467,
+    "oracle_correct": 9,
+    "oracle_in_90pct_band": true,
+    "oracle_z_vs_200builds": -1.083742,
+    "overall_ok": true,
+    "rehearsal_dir": "results/harbor/rehearsal-dry",
+    "same_build_published_key_verified": true,
+    "stop_early_10task_mean": 0.0,
+    "table_md_matches": true
+  },
+  "rules_version": "v1.4",
+  "schema_version": "verify_harbor_rehearsal_v14.v1",
+  "totals": {
+    "active_cheat_trials_nonpositive": 9,
+    "cheat_probe_probes_per_trial": 149,
+    "cheat_probe_total_attempts": 894,
+    "cheat_probe_trials": 6,
+    "current_stop_early_trials_zero": 10,
+    "do_nothing_trials_zero": 13,
+    "hmac_expected_trials": 57,
+    "hmac_verified_trials": 57,
+    "isolation_checks_per_trial": 11,
+    "isolation_harbor_11of11": 61,
+    "isolation_harbor_trials": 61,
+    "isolation_including_negative_11of11": 62,
+    "isolation_including_negative_total": 62,
+    "jobs_consistent": 18,
+    "n_jobs": 18,
+    "n_rehearsal_dry_jobs": 5,
+    "n_rehearsal_dry_trials": 43,
+    "n_top_level_jobs": 13,
+    "n_top_level_trials": 37,
+    "n_trials": 80,
+    "post_game_nonzero_exit_trials": 15,
+    "rehearsal_dry_initial_infra_trials": 3,
+    "rehearsal_dry_unresolved_infra_trials": 0,
+    "signed_trials": 60,
+    "trajectory_checked_trials": 19,
+    "trials_consistent": 80,
+    "unsigned_legacy_trials": 20
+  }
+}

@@ -5,13 +5,15 @@
 Scans judge-facing Markdown files for fenced shell code blocks and inline backtick
 command spans, then runs four fast keyless checks:
   1. Makefile Targets Check: every documented `make <target>` exists in Makefile.
-  2. Script & Module Paths Check: every `scripts/*.py`, `harbor/*.py`, `game/*.py`,
-     and `python -m canary.<mod>` resolves to an existing file on disk.
-  3. CLI Long-Flag Check: every `--long-flag` passed to `scripts/*.py`, `harbor/*.py`,
-     `game/*.py`, or `python -m canary.<mod>` is supported by that CLI's argparse options.
+  2. Script & Module Paths Check: every `scripts/*.py`, `scripts/*.sh`, `harbor/*.py`,
+     `harbor/*.sh`, `game/*.py`, and `python -m canary.<mod>` resolves to an existing file.
+  3. CLI Long-Flag Check: every `--long-flag` passed to `scripts/*.py` (including
+     `verify_submission_doc.py`), `scripts/*.sh`, `harbor/*.py`, `game/*.py`, or
+     `python -m canary.<mod>` is supported by that CLI.
   4. Harbor CLI & Env-Var Check: every `harbor run` snippet avoids `--ae CANARY_*=...`,
      forwards `GOOGLE_GENERATIVE_AI_API_KEY` on `-a opencode -m google/...`, and uses
-     only valid `ORACLE_POLICY` values.
+     only valid `ORACLE_POLICY` values; every `make accept` / `scripts/judge_accept.sh`
+     and `ACCEPT_*` env knob matches `scripts/judge_accept.sh` with valid values.
 """
 from __future__ import annotations
 
@@ -19,6 +21,7 @@ import argparse
 import ast
 import fnmatch
 import json
+import math
 import os
 import re
 import shlex
@@ -39,17 +42,84 @@ DEFAULT_DOCS: tuple[str, ...] = (
     "docs/JUDGE-WALKTHROUGH.md",
     "docs/REPRODUCIBILITY.md",
     "docs/PEER-REVIEW-QA.md",
+    "docs/SUBMISSION.md",
+    "docs/SUBMISSION-AUDIT.md",
+    "docs/gemini/SUBMISSION.md",
+    "docs/gemini/SUBMISSION-LONG.md",
+    "docs/CONTRACT.md",
     "docs/DEMO.md",
     "docs/EXPLOITS.md",
     "docs/DIFFICULTY.md",
     "docs/HISTORY.md",
     "docs/reports/gap.md",
     "docs/reports/failure_analysis_v1.4.md",
+    "docs/reports/failure_gallery.md",
     "docs/reports/reference_optimality.md",
+    "docs/reports/integrity.md",
+    "docs/reports/fr8.md",
     "harbor/README.md",
+    "HANDOFF.md",
+    "pitch/GEMINI.md",
+    "results/fresh_clone/README.md",
+    "results/harbor/rehearsal/README.md",
+    "results/harbor/rehearsal-dry/README.md",
 )
 
 FLAG_CHECK_DOCS: frozenset[str] = frozenset(DEFAULT_DOCS)
+
+BARE_CRAFT_SCRIPTS: dict[str, str] = {
+    "verify_submission_doc.py": "scripts/verify_submission_doc.py",
+    "verify_doc_commands.py": "scripts/verify_doc_commands.py",
+    "audit_doc_hygiene.py": "scripts/audit_doc_hygiene.py",
+    "check_craft_consistency.py": "scripts/check_craft_consistency.py",
+    "verify_judge_walkthrough.py": "scripts/verify_judge_walkthrough.py",
+    "verify_submission_surfaces.py": "scripts/verify_submission_surfaces.py",
+    "verify_zip_export.py": "scripts/verify_zip_export.py",
+    "audit_submission.py": "scripts/audit_submission.py",
+    "judge_hunt.py": "scripts/judge_hunt.py",
+    "judge_accept.sh": "scripts/judge_accept.sh",
+}
+
+KNOWN_SHELL_SCRIPT_FLAGS: dict[str, frozenset[str]] = {
+    "scripts/judge_accept.sh": frozenset(),
+    "scripts/mcp_port.sh": frozenset(),
+    "scripts/rehearsal_run.sh": frozenset(),
+    "harbor/check_isolation.sh": frozenset({"--oracle-run"}),
+}
+
+DEFAULT_ACCEPT_ENV_KNOBS: frozenset[str] = frozenset({
+    "ACCEPT_FORCE_REPRODUCE",
+    "ACCEPT_REUSE_MAX_AGE_S",
+})
+
+JUDGE_ACCEPT_EXTRA_ENVS: frozenset[str] = frozenset({
+    "MCP_PORT",
+    "MCP_PORT_FALLBACK",
+    "CANARY_WORLD_SECRET",
+    "REPRO_ANTICHEAT",
+    "REPRO_FAST",
+    "REPRO_SEEDS",
+    "REPRO_EPISODE_TIMEOUT",
+    "TMPDIR",
+    "UV",
+    "UV_CACHE_DIR",
+    "UV_PYTHON_INSTALL_DIR",
+    "UV_PYTHON_PREFERENCE",
+    "PYTHONPATH",
+    "PATH",
+    "HOME",
+})
+
+SKIP_WALK_DIRS: frozenset[str] = frozenset({
+    ".git",
+    ".venv",
+    "venv",
+    "node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+})
 
 PLANNING_BRIEF_PATTERNS: tuple[str, ...] = (
     "docs/agents/*.md",
@@ -98,9 +168,12 @@ NON_SHELL_FENCE_LANGS: frozenset[str] = frozenset({
 })
 
 ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=.*$")
+ACCEPT_BARE_ENV_RE = re.compile(r"^ACCEPT_[A-Z0-9_]+$")
+ACCEPT_SCRIPT_ENV_RE = re.compile(r"\b(ACCEPT_[A-Z0-9_]+)\b")
 MAKE_TARGET_TOKEN_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_-]*$")
 MAKEFILE_RULE_RE = re.compile(r"^([A-Za-z0-9_-]+)\s*:(?!=)")
 SCRIPT_PATH_RE = re.compile(r"^(?:scripts|harbor|game)/[A-Za-z0-9_./-]+\.py$")
+SHELL_SCRIPT_PATH_RE = re.compile(r"^(?:scripts|harbor|game)/[A-Za-z0-9_./-]+\.sh$")
 LONG_FLAG_RE = re.compile(r"^--[A-Za-z0-9][A-Za-z0-9_-]*$")
 HELP_LONG_FLAG_RE = re.compile(r"--[A-Za-z0-9][A-Za-z0-9_-]*")
 ANGLE_PLACEHOLDER_RE = re.compile(r"<[A-Za-z0-9_./-][^>\n]{0,80}>")
@@ -184,6 +257,15 @@ class HarborInvocation:
     model: str | None
     agent_envs: tuple[str, ...]
     api_key_names: tuple[str, ...]
+    superseded: bool
+
+
+@dataclass(frozen=True)
+class AcceptEnvInvocation:
+    doc: str
+    line: int
+    context: str
+    assignments: tuple[tuple[str, str | None], ...]
     superseded: bool
 
 
@@ -532,6 +614,46 @@ def _skip_command_prefixes(tokens: Sequence[str]) -> int:
     return idx
 
 
+def _normalize_script_token(raw_tok: str) -> str:
+    cleaned = raw_tok.strip()
+    while cleaned.startswith("./"):
+        cleaned = cleaned[2:]
+    return cleaned
+
+
+def _collect_prefix_env_assignments(tokens: Sequence[str], stop_idx: int) -> list[tuple[str, str]]:
+    assigns: list[tuple[str, str]] = []
+    i = 0
+    limit = min(stop_idx, len(tokens))
+    while i < limit:
+        tok = tokens[i]
+        if tok in SHELL_CONTROL_PREFIXES:
+            i += 1
+            continue
+        if tok == "env":
+            i += 1
+            while i < limit:
+                etok = tokens[i]
+                if etok in {"-u", "--unset"} and i + 1 < limit:
+                    i += 2
+                    continue
+                if ENV_ASSIGN_RE.match(etok):
+                    k, _, v = etok.partition("=")
+                    assigns.append((k, v))
+                    i += 1
+                    continue
+                if etok.startswith("-"):
+                    i += 1
+                    continue
+                break
+            continue
+        if ENV_ASSIGN_RE.match(tok):
+            k, _, v = tok.partition("=")
+            assigns.append((k, v))
+        i += 1
+    return assigns
+
+
 def _skip_uv_run(tokens: Sequence[str], idx: int) -> int:
     n = len(tokens)
     if idx + 1 >= n or tokens[idx] != "uv" or tokens[idx + 1] != "run":
@@ -732,16 +854,17 @@ def _parse_tokens_invocations(
                 harbor_invocations.extend(sub_h)
             return make_invocations, target_invocations, harbor_invocations
 
-        script_tok = tokens[j]
-        if not _is_placeholder_or_glob(script_tok) and SCRIPT_PATH_RE.fullmatch(script_tok):
+        script_tok = _normalize_script_token(tokens[j])
+        canonical_py = BARE_CRAFT_SCRIPTS.get(script_tok, script_tok)
+        if not _is_placeholder_or_glob(script_tok) and SCRIPT_PATH_RE.fullmatch(canonical_py):
             flags, passthrough = _extract_long_flags(tokens[j + 1 :])
             target_invocations.append(
                 TargetInvocation(
                     doc=snippet.doc,
                     line=snippet.line,
                     kind="script",
-                    display=script_tok,
-                    rel_candidates=(script_tok,),
+                    display=canonical_py,
+                    rel_candidates=(canonical_py,),
                     module_name=None,
                     long_flags=flags,
                     external_branch=ext_branch,
@@ -755,15 +878,45 @@ def _parse_tokens_invocations(
                 harbor_invocations.extend(sub_h)
         return make_invocations, target_invocations, harbor_invocations
 
-    if not _is_placeholder_or_glob(cmd) and SCRIPT_PATH_RE.fullmatch(cmd):
+    if py_name in {"bash", "sh"}:
+        j = idx + 1
+        while j < len(tokens) and tokens[j].startswith("-") and tokens[j] != "-c":
+            j += 1
+        if j < len(tokens) and tokens[j] != "-c":
+            sh_tok = _normalize_script_token(tokens[j])
+            canonical_sh = BARE_CRAFT_SCRIPTS.get(sh_tok, sh_tok)
+            if not _is_placeholder_or_glob(sh_tok) and SHELL_SCRIPT_PATH_RE.fullmatch(canonical_sh):
+                flags, passthrough = _extract_long_flags(tokens[j + 1 :])
+                target_invocations.append(
+                    TargetInvocation(
+                        doc=snippet.doc,
+                        line=snippet.line,
+                        kind="shell_script",
+                        display=canonical_sh,
+                        rel_candidates=(canonical_sh,),
+                        module_name=None,
+                        long_flags=flags,
+                        external_branch=ext_branch,
+                        superseded=superseded,
+                    )
+                )
+                if passthrough:
+                    sub_m, sub_t, sub_h = _parse_tokens_invocations(passthrough, snippet)
+                    make_invocations.extend(sub_m)
+                    target_invocations.extend(sub_t)
+                    harbor_invocations.extend(sub_h)
+        return make_invocations, target_invocations, harbor_invocations
+
+    norm_cmd = _normalize_script_token(cmd)
+    if not _is_placeholder_or_glob(norm_cmd) and SCRIPT_PATH_RE.fullmatch(norm_cmd):
         flags, passthrough = _extract_long_flags(tokens[idx + 1 :])
         target_invocations.append(
             TargetInvocation(
                 doc=snippet.doc,
                 line=snippet.line,
                 kind="script",
-                display=cmd,
-                rel_candidates=(cmd,),
+                display=norm_cmd,
+                rel_candidates=(norm_cmd,),
                 module_name=None,
                 long_flags=flags,
                 external_branch=ext_branch,
@@ -776,6 +929,53 @@ def _parse_tokens_invocations(
             target_invocations.extend(sub_t)
             harbor_invocations.extend(sub_h)
         return make_invocations, target_invocations, harbor_invocations
+
+    if not _is_placeholder_or_glob(norm_cmd) and SHELL_SCRIPT_PATH_RE.fullmatch(norm_cmd):
+        flags, passthrough = _extract_long_flags(tokens[idx + 1 :])
+        target_invocations.append(
+            TargetInvocation(
+                doc=snippet.doc,
+                line=snippet.line,
+                kind="shell_script",
+                display=norm_cmd,
+                rel_candidates=(norm_cmd,),
+                module_name=None,
+                long_flags=flags,
+                external_branch=ext_branch,
+                superseded=superseded,
+            )
+        )
+        if passthrough:
+            sub_m, sub_t, sub_h = _parse_tokens_invocations(passthrough, snippet)
+            make_invocations.extend(sub_m)
+            target_invocations.extend(sub_t)
+            harbor_invocations.extend(sub_h)
+        return make_invocations, target_invocations, harbor_invocations
+
+    if norm_cmd in BARE_CRAFT_SCRIPTS and len(tokens) > idx + 1:
+        flags, passthrough = _extract_long_flags(tokens[idx + 1 :])
+        if flags or norm_cmd in {"verify_submission_doc.py", "judge_accept.sh"}:
+            canonical_bare = BARE_CRAFT_SCRIPTS[norm_cmd]
+            bare_kind = "shell_script" if canonical_bare.endswith(".sh") else "script"
+            target_invocations.append(
+                TargetInvocation(
+                    doc=snippet.doc,
+                    line=snippet.line,
+                    kind=bare_kind,
+                    display=canonical_bare,
+                    rel_candidates=(canonical_bare,),
+                    module_name=None,
+                    long_flags=flags,
+                    external_branch=ext_branch,
+                    superseded=superseded,
+                )
+            )
+            if passthrough:
+                sub_m, sub_t, sub_h = _parse_tokens_invocations(passthrough, snippet)
+                make_invocations.extend(sub_m)
+                target_invocations.extend(sub_t)
+                harbor_invocations.extend(sub_h)
+            return make_invocations, target_invocations, harbor_invocations
 
     if snippet.kind == "inline" and cmd == "build.py" and len(tokens) > idx + 1:
         flags, _ = _extract_long_flags(tokens[idx + 1 :])
@@ -812,6 +1012,165 @@ def _parse_tokens_invocations(
             )
 
     return make_invocations, target_invocations, harbor_invocations
+
+
+def _parse_tokens_accept_envs(
+    tokens: Sequence[str],
+    snippet: DocSnippet,
+) -> list[AcceptEnvInvocation]:
+    if not tokens:
+        return []
+    superseded = _is_superseded(snippet)
+
+    if snippet.kind == "inline" and len(tokens) == 1:
+        single = tokens[0].strip().rstrip(",;:")
+        if ACCEPT_BARE_ENV_RE.fullmatch(single):
+            return [
+                AcceptEnvInvocation(
+                    doc=snippet.doc,
+                    line=snippet.line,
+                    context="inline ACCEPT_*",
+                    assignments=((single, None),),
+                    superseded=superseded,
+                )
+            ]
+
+    prefix_idx = _skip_command_prefixes(tokens)
+    prefix_assigns = _collect_prefix_env_assignments(tokens, prefix_idx)
+    idx = _skip_uv_tool_or_uvx(tokens, _skip_uv_run(tokens, prefix_idx))
+
+    if idx < len(tokens):
+        cmd = tokens[idx]
+        norm_cmd = _normalize_script_token(cmd)
+        if cmd == "make":
+            make_targets: list[str] = []
+            make_assigns: list[tuple[str, str]] = []
+            j = idx + 1
+            while j < len(tokens):
+                mtok = tokens[j]
+                if mtok in PROSE_STOP_TOKENS or mtok.startswith("("):
+                    break
+                if mtok in MAKE_TWO_ARG_FLAGS:
+                    j += 2
+                    continue
+                if mtok.startswith("-"):
+                    j += 1
+                    continue
+                if ENV_ASSIGN_RE.match(mtok):
+                    k, _, v = mtok.partition("=")
+                    make_assigns.append((k, v))
+                    j += 1
+                    continue
+                if not _is_placeholder_or_glob(mtok) and MAKE_TARGET_TOKEN_RE.fullmatch(mtok):
+                    make_targets.append(mtok)
+                j += 1
+            if "accept" in make_targets:
+                combined = tuple(prefix_assigns + make_assigns)
+                if combined:
+                    return [
+                        AcceptEnvInvocation(
+                            doc=snippet.doc,
+                            line=snippet.line,
+                            context="make accept",
+                            assignments=combined,
+                            superseded=superseded,
+                        )
+                    ]
+
+        is_judge_accept_sh = False
+        if Path(cmd).name in {"bash", "sh"}:
+            j = idx + 1
+            while j < len(tokens) and tokens[j].startswith("-") and tokens[j] != "-c":
+                j += 1
+            if j < len(tokens):
+                sh_tok = _normalize_script_token(tokens[j])
+                if BARE_CRAFT_SCRIPTS.get(sh_tok, sh_tok) == "scripts/judge_accept.sh":
+                    is_judge_accept_sh = True
+        elif BARE_CRAFT_SCRIPTS.get(norm_cmd, norm_cmd) == "scripts/judge_accept.sh":
+            is_judge_accept_sh = True
+
+        if is_judge_accept_sh and prefix_assigns:
+            return [
+                AcceptEnvInvocation(
+                    doc=snippet.doc,
+                    line=snippet.line,
+                    context="scripts/judge_accept.sh",
+                    assignments=tuple(prefix_assigns),
+                    superseded=superseded,
+                )
+            ]
+
+    standalone_accept: list[tuple[str, str | None]] = []
+    for raw_tok in tokens:
+        if raw_tok in PROSE_STOP_TOKENS or raw_tok.startswith("("):
+            break
+        cleaned = raw_tok.strip().rstrip(",;:")
+        if ENV_ASSIGN_RE.match(cleaned):
+            k, _, v = cleaned.partition("=")
+            if k.startswith("ACCEPT_"):
+                standalone_accept.append((k, v))
+    if standalone_accept:
+        return [
+            AcceptEnvInvocation(
+                doc=snippet.doc,
+                line=snippet.line,
+                context="inline ACCEPT_*",
+                assignments=tuple(standalone_accept),
+                superseded=superseded,
+            )
+        ]
+    return []
+
+
+def extract_accept_env_invocations(
+    root: Path,
+    docs: Sequence[str] = DEFAULT_DOCS,
+) -> list[AcceptEnvInvocation]:
+    out: list[AcceptEnvInvocation] = []
+    for doc_rel in docs:
+        if not (root / doc_rel).is_file():
+            continue
+        for snippet in extract_doc_snippets(root, doc_rel):
+            for seg in _split_command_segments(snippet.text):
+                tokens = _tokenize_segment(seg)
+                out.extend(_parse_tokens_accept_envs(tokens, snippet))
+    return out
+
+
+def _discover_extra_targeted_markdown_docs(root: Path, already_included: set[str]) -> list[str]:
+    extra: list[str] = []
+    root_resolved = root.resolve()
+    for cur_dir, dirnames, filenames in os.walk(root_resolved):
+        rel_dir_path = Path(cur_dir).relative_to(root_resolved)
+        rel_dir_posix = "" if str(rel_dir_path) == "." else rel_dir_path.as_posix()
+        kept_dirs: list[str] = []
+        for d in sorted(dirnames):
+            if d in SKIP_WALK_DIRS:
+                continue
+            cand_rel = f"{rel_dir_posix}/{d}" if rel_dir_posix else d
+            if cand_rel in {"results/latest", "harbor/dataset"} or cand_rel.startswith("harbor/dataset"):
+                continue
+            kept_dirs.append(d)
+        dirnames[:] = kept_dirs
+
+        for fname in sorted(filenames):
+            if not fname.lower().endswith(".md"):
+                continue
+            rel_file = f"{rel_dir_posix}/{fname}" if rel_dir_posix else fname
+            if rel_file in already_included:
+                continue
+            fpath = Path(cur_dir) / fname
+            try:
+                raw = fpath.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if (
+                "verify_submission_doc.py" in raw
+                or "judge_accept.sh" in raw
+                or "ACCEPT_" in raw
+            ):
+                extra.append(rel_file)
+    return extra
 
 
 def extract_invocations(
@@ -929,6 +1288,17 @@ class FlagInspector:
         required_flags: Sequence[str],
     ) -> tuple[list[str], set[str], str]:
         resolved = target_file.resolve()
+        if resolved.suffix == ".sh":
+            rel_posix = ""
+            try:
+                rel_posix = resolved.relative_to(self.root.resolve()).as_posix()
+            except ValueError:
+                rel_posix = resolved.name
+            supported_sh = set(KNOWN_SHELL_SCRIPT_FLAGS.get(rel_posix, frozenset()))
+            missing_sh = [fl for fl in required_flags if fl not in supported_sh]
+            note = "configured via environment variables, not CLI flags" if not supported_sh else ""
+            return missing_sh, supported_sh, note
+
         if resolved not in self._ast_cache:
             self._ast_cache[resolved] = _ast_long_flags(resolved)
         has_ast_parser, ast_flags = self._ast_cache[resolved]
@@ -1121,9 +1491,126 @@ def check_cli_long_flags(
     )
 
 
+def _extract_judge_accept_knobs(root: Path) -> frozenset[str]:
+    script_path = root / "scripts" / "judge_accept.sh"
+    if not script_path.is_file():
+        return DEFAULT_ACCEPT_ENV_KNOBS
+    try:
+        src = script_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return DEFAULT_ACCEPT_ENV_KNOBS
+    return frozenset(ACCEPT_SCRIPT_ENV_RE.findall(src))
+
+
+def _validate_accept_env_invocations(
+    root: Path,
+    accept_invocations: Sequence[AcceptEnvInvocation],
+) -> tuple[list[str], list[str]]:
+    accept_knobs = _extract_judge_accept_knobs(root)
+    allowed_all = accept_knobs | JUDGE_ACCEPT_EXTRA_ENVS
+    failures: list[str] = []
+    warnings: list[str] = []
+
+    for inv in accept_invocations:
+        inv_issues: list[str] = []
+        for key, raw_val in inv.assignments:
+            if key.startswith("ACCEPT_"):
+                if key not in accept_knobs:
+                    sup = ", ".join(sorted(accept_knobs)) if accept_knobs else "none"
+                    inv_issues.append(
+                        f"{inv.doc}:{inv.line}: {inv.context} uses unknown judge_accept.sh env knob "
+                        f"'{key}' (supported ACCEPT_* knobs: {sup})"
+                    )
+                    continue
+            else:
+                if key.upper().startswith("CANARY_") and key != "CANARY_WORLD_SECRET":
+                    inv_issues.append(
+                        f"{inv.doc}:{inv.line}: {inv.context} passes forbidden '{key}' env knob "
+                        "(only CANARY_WORLD_SECRET is valid on judge_accept.sh)"
+                    )
+                    continue
+                if key not in allowed_all:
+                    sup_accept = ", ".join(sorted(accept_knobs)) if accept_knobs else "none"
+                    inv_issues.append(
+                        f"{inv.doc}:{inv.line}: {inv.context} uses unsupported env knob '{key}' "
+                        f"(supported judge_accept.sh knobs: {sup_accept}, MCP_PORT, MCP_PORT_FALLBACK, "
+                        "CANARY_WORLD_SECRET, REPRO_*)"
+                    )
+                    continue
+
+            if raw_val is None:
+                continue
+            val = raw_val.strip()
+            if _is_placeholder_or_glob(val):
+                continue
+
+            if key in {"ACCEPT_FORCE_REPRODUCE", "MCP_PORT_FALLBACK", "REPRO_ANTICHEAT", "REPRO_FAST"}:
+                if val not in {"0", "1"}:
+                    disp = val.replace(PLACEHOLDER_TOKEN, "<placeholder>")
+                    inv_issues.append(
+                        f"{inv.doc}:{inv.line}: {inv.context} has invalid '{key}={disp}' (expected 0 or 1)"
+                    )
+            elif key == "ACCEPT_REUSE_MAX_AGE_S":
+                ok_age = False
+                if val:
+                    try:
+                        age_num = float(val)
+                        ok_age = math.isfinite(age_num) and age_num >= 0.0
+                    except ValueError:
+                        ok_age = False
+                if not ok_age:
+                    disp = val.replace(PLACEHOLDER_TOKEN, "<placeholder>")
+                    inv_issues.append(
+                        f"{inv.doc}:{inv.line}: {inv.context} has invalid '{key}={disp}' "
+                        "(expected non-negative number of seconds)"
+                    )
+            elif key == "MCP_PORT":
+                ok_port = val.isdigit() and (1 <= int(val) <= 65535)
+                if not ok_port:
+                    disp = val.replace(PLACEHOLDER_TOKEN, "<placeholder>")
+                    inv_issues.append(
+                        f"{inv.doc}:{inv.line}: {inv.context} has invalid '{key}={disp}' (expected TCP port 1..65535)"
+                    )
+            elif key == "REPRO_SEEDS":
+                ok_seeds = val.isdigit() and (1 <= int(val) <= 40)
+                if not ok_seeds:
+                    disp = val.replace(PLACEHOLDER_TOKEN, "<placeholder>")
+                    inv_issues.append(
+                        f"{inv.doc}:{inv.line}: {inv.context} has invalid '{key}={disp}' (expected integer 1..40)"
+                    )
+            elif key == "REPRO_EPISODE_TIMEOUT":
+                ok_to = False
+                if val:
+                    try:
+                        to_num = float(val)
+                        ok_to = math.isfinite(to_num) and to_num > 0.0
+                    except ValueError:
+                        ok_to = False
+                if not ok_to:
+                    disp = val.replace(PLACEHOLDER_TOKEN, "<placeholder>")
+                    inv_issues.append(
+                        f"{inv.doc}:{inv.line}: {inv.context} has invalid '{key}={disp}' (expected positive seconds)"
+                    )
+            elif key == "CANARY_WORLD_SECRET":
+                if not val:
+                    inv_issues.append(
+                        f"{inv.doc}:{inv.line}: {inv.context} has empty 'CANARY_WORLD_SECRET=' (expected non-empty string)"
+                    )
+
+        for msg in inv_issues:
+            if inv.superseded:
+                warnings.append(f"{msg} [superseded section]")
+            else:
+                failures.append(msg)
+
+    return failures, warnings
+
+
 def check_harbor_commands(
     harbor_invocations: Sequence[HarborInvocation],
     present_docs: Sequence[str] = (),
+    root: Path = ROOT,
+    accept_invocations: Sequence[AcceptEnvInvocation] = (),
 ) -> CheckResult:
     name = "Harbor CLI & Env-Var Check"
     failures: list[str] = []
@@ -1169,26 +1656,31 @@ def check_harbor_commands(
             else:
                 failures.append(msg)
 
+    acc_failures, acc_warnings = _validate_accept_env_invocations(root, accept_invocations)
+    failures.extend(acc_failures)
+    warnings.extend(acc_warnings)
+
     if failures:
         return CheckResult(
             name,
             "FAIL",
-            f"{len(failures)} Harbor CLI/env violation(s) across {len(harbor_invocations)} harbor run invocation(s)",
+            f"{len(failures)} Harbor/accept CLI or env-knob violation(s) across "
+            f"{len(harbor_invocations)} harbor run and {len(accept_invocations)} accept-env reference(s)",
             failures + warnings,
         )
     if warnings:
         return CheckResult(
             name,
             "WARN",
-            f"checked {len(harbor_invocations)} harbor run invocation(s) across {len(present_docs)} doc(s); "
-            f"{len(warnings)} superseded warning(s)",
+            f"checked {len(harbor_invocations)} harbor run and {len(accept_invocations)} accept-env reference(s) "
+            f"across {len(present_docs)} doc(s); {len(warnings)} superseded warning(s)",
             warnings,
         )
     return CheckResult(
         name,
         "PASS",
-        f"verified {len(harbor_invocations)} harbor run invocation(s) across {len(present_docs)} doc(s) "
-        "(0 CANARY_* leaks, Google OpenCode key forwarding ok, ORACLE_POLICY values valid)",
+        f"verified {len(harbor_invocations)} harbor run and {len(accept_invocations)} judge_accept.sh env reference(s) "
+        f"across {len(present_docs)} doc(s) (0 CANARY_* leaks, Google key forwarding ok, ORACLE_POLICY & ACCEPT_* valid)",
     )
 
 
@@ -1197,6 +1689,25 @@ def verify_repo(
     docs: Sequence[str] = DEFAULT_DOCS,
 ) -> list[CheckResult]:
     present_docs, make_invocations, target_invocations, harbor_invocations = extract_invocations(root, docs)
+    accept_invocations = extract_accept_env_invocations(root, present_docs)
+    flag_doc_set = set(docs)
+
+    if tuple(docs) == DEFAULT_DOCS:
+        extra_docs = _discover_extra_targeted_markdown_docs(root, set(DEFAULT_DOCS))
+        if extra_docs:
+            _, _, extra_targets, _ = extract_invocations(root, extra_docs)
+            targeted_extra = [
+                t
+                for t in extra_targets
+                if t.display in {"scripts/verify_submission_doc.py", "scripts/judge_accept.sh"}
+            ]
+            target_invocations = list(target_invocations) + targeted_extra
+            accept_invocations = list(accept_invocations) + extract_accept_env_invocations(root, extra_docs)
+            for ed in extra_docs:
+                if ed not in present_docs:
+                    present_docs.append(ed)
+                flag_doc_set.add(ed)
+
     if not present_docs:
         return [
             CheckResult(
@@ -1209,8 +1720,8 @@ def verify_repo(
     return [
         check_makefile_targets(root, present_docs, make_invocations),
         check_script_and_module_paths(root, present_docs, target_invocations),
-        check_cli_long_flags(root, target_invocations, frozenset(docs)),
-        check_harbor_commands(harbor_invocations, present_docs),
+        check_cli_long_flags(root, target_invocations, frozenset(flag_doc_set)),
+        check_harbor_commands(harbor_invocations, present_docs, root=root, accept_invocations=accept_invocations),
     ]
 
 

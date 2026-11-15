@@ -550,6 +550,664 @@ def test_keyless_subprocess_check_without_api_keys():
     assert "OK:" in proc.stdout
 
 
+def _run_cases_js_vm_e2e(demo_dir: Path) -> dict:
+    cmd_prefix, env = _resolve_js_cmd()
+    run_env = dict(env)
+    run_env["OUTTHINK_DEMO_DIR"] = str(demo_dir)
+    js_harness = r"""
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+
+const demoDir = process.env.OUTTHINK_DEMO_DIR;
+const casesPath = path.join(demoDir, "cases.js");
+const annotationsPath = path.join(demoDir, "annotations.js");
+const enginePath = path.join(demoDir, "engine.js");
+const scenePath = path.join(demoDir, "scene.js");
+const gamePath = path.join(demoDir, "game.js");
+
+const VALID_TOOLS = new Set([
+  "status",
+  "list_employees",
+  "list_documents",
+  "read_access_logs",
+  "search_messages",
+  "read_message",
+  "interview",
+  "plant_canary",
+  "check_leak_feed",
+  "restrict_access",
+  "unrestrict_access",
+  "advance_day",
+  "accuse"
+]);
+
+function round4(n) {
+  return Math.round(Number(n) * 10000) / 10000;
+}
+
+function round6(n) {
+  return Math.round(Number(n) * 1000000) / 1000000;
+}
+
+function fallbackEvaluateCall(c, call) {
+  const slv = c.solver || {};
+  const val = Number(c.value_at_decision);
+  const mole = String(c.true_mole);
+  const topProb = Number(slv.top_prob || 0);
+  const beProb = Number(slv.break_even_prob || (1 / (1 + val)));
+  const rec = String(slv.recommended_call || "hold_fire");
+  const action = call && call.action === "accuse" ? "accuse" : "hold_fire";
+  const suspectId = call && call.suspectId ? String(call.suspectId) : null;
+  if (action === "accuse") {
+    const correct = Boolean(suspectId && suspectId === mole);
+    const optimal = Boolean(correct && (rec !== "hold_fire" || topProb >= beProb));
+    const score = correct ? round4(val) : -1;
+    const verdictLabel = correct && optimal
+      ? "OPTIMAL ACCUSATION"
+      : correct
+      ? "LUCKY GUESS (BELOW BREAK-EVEN)"
+      : "FALSE ACCUSATION (-1.00)";
+    return { action, suspectId, correct, optimal, score, verdictLabel, trueMole: mole };
+  }
+  const correct = Boolean(rec === "hold_fire" || topProb < 0.95);
+  const optimal = Boolean(rec === "hold_fire");
+  let score = 0;
+  let verdictLabel = optimal ? "OPTIMAL HOLD FIRE" : "CAUTIOUS HOLD FIRE";
+  if (topProb >= 0.98 && rec !== "hold_fire") {
+    score = round4(Math.max(0, val - 0.12));
+    verdictLabel = "OVER-CAUTIOUS DELAY";
+  } else {
+    const rawHold = slv.ev_hold_fire !== undefined && slv.ev_hold_fire !== null
+      ? slv.ev_hold_fire
+      : slv.final_score || 0;
+    score = round4(Number(rawHold));
+  }
+  return { action: "hold_fire", suspectId: null, correct, optimal, score, verdictLabel, trueMole: mole };
+}
+
+function fallbackSummarize(records) {
+  const levels = ["minimal", "low", "medium", "high", "xhigh"];
+  const byLevel = {};
+  for (const lk of levels) {
+    byLevel[lk] = {
+      count: 0,
+      scoreSum: 0,
+      meanScore: 0,
+      rightCount: 0,
+      accuracy: 0,
+      totalCostUsd: 0,
+      totalThinkingTokens: 0,
+      judgeOutscoredCount: 0
+    };
+  }
+  let judgeScoreSum = 0;
+  let judgeRight = 0;
+  let judgeOptimal = 0;
+  let solverScoreSum = 0;
+  let solverRight = 0;
+  for (const r of records) {
+    const jScore = Number(r.evalRes.score);
+    judgeScoreSum += jScore;
+    if (r.evalRes.correct) judgeRight += 1;
+    if (r.evalRes.optimal) judgeOptimal += 1;
+    const slv = r.caseObj.solver || {};
+    solverScoreSum += Number(slv.final_score || 0);
+    if (slv.correct) solverRight += 1;
+    for (const lv of r.caseObj.thinking_levels || []) {
+      const b = byLevel[lv.thinking_level];
+      const lvScore = Number(lv.score);
+      b.count += 1;
+      b.scoreSum += lvScore;
+      if (lv.correct) b.rightCount += 1;
+      b.totalCostUsd += Number(lv.cost_usd);
+      b.totalThinkingTokens += Number(lv.thinking_tokens);
+      if (jScore > lvScore) b.judgeOutscoredCount += 1;
+    }
+  }
+  const n = records.length;
+  for (const lk of levels) {
+    const b = byLevel[lk];
+    b.scoreSum = round4(b.scoreSum);
+    b.meanScore = b.count > 0 ? round4(b.scoreSum / b.count) : 0;
+    b.accuracy = b.count > 0 ? round4(b.rightCount / b.count) : 0;
+    b.totalCostUsd = round6(b.totalCostUsd);
+    b.totalThinkingTokens = Math.round(b.totalThinkingTokens);
+  }
+  return {
+    casesPlayed: n,
+    judge: {
+      scoreSum: round4(judgeScoreSum),
+      meanScore: n > 0 ? round4(judgeScoreSum / n) : 0,
+      rightCount: judgeRight,
+      optimalCount: judgeOptimal,
+      accuracy: n > 0 ? round4(judgeRight / n) : 0,
+      optimalRate: n > 0 ? round4(judgeOptimal / n) : 0,
+      costUsd: 0
+    },
+    solver: {
+      scoreSum: round4(solverScoreSum),
+      meanScore: n > 0 ? round4(solverScoreSum / n) : 0,
+      rightCount: solverRight,
+      accuracy: n > 0 ? round4(solverRight / n) : 0
+    },
+    byLevel
+  };
+}
+
+function createMockDom() {
+  const elementsById = new Map();
+  function makeClassList(el) {
+    const set = new Set();
+    return {
+      syncFrom(cn) {
+        set.clear();
+        String(cn || "").split(/\s+/).filter(Boolean).forEach((c) => set.add(c));
+      },
+      syncTo() {
+        el._className = Array.from(set).join(" ");
+      },
+      add(...cls) {
+        cls.filter(Boolean).forEach((c) => set.add(c));
+        this.syncTo();
+      },
+      remove(...cls) {
+        cls.forEach((c) => set.delete(c));
+        this.syncTo();
+      },
+      toggle(c, force) {
+        const next = force !== undefined ? Boolean(force) : !set.has(c);
+        if (next) set.add(c);
+        else set.delete(c);
+        this.syncTo();
+        return next;
+      },
+      contains(c) {
+        return set.has(c);
+      }
+    };
+  }
+  function makeCanvasCtx() {
+    const ops = [];
+    return {
+      ops,
+      fillStyle: "rgb(0,0,0)",
+      strokeStyle: "rgb(0,0,0)",
+      lineWidth: 1,
+      font: "10px monospace",
+      textAlign: "left",
+      textBaseline: "alphabetic",
+      globalAlpha: 1,
+      imageSmoothingEnabled: false,
+      fillRect(x, y, w, h) { ops.push(["fillRect", x, y, w, h]); },
+      strokeRect(x, y, w, h) { ops.push(["strokeRect", x, y, w, h]); },
+      clearRect(x, y, w, h) { ops.push(["clearRect", x, y, w, h]); },
+      fillText(t, x, y) { ops.push(["fillText", String(t), x, y]); },
+      beginPath() {},
+      closePath() {},
+      moveTo() {},
+      lineTo() {},
+      arc() {},
+      fill() {},
+      stroke() {},
+      save() {},
+      restore() {},
+      translate() {},
+      scale() {},
+      drawImage() {},
+      measureText(t) { return { width: String(t || "").length * 6 }; }
+    };
+  }
+  function createElement(tag, id) {
+    const listeners = {};
+    const attrs = {};
+    const el = {
+      tagName: String(tag || "div").toUpperCase(),
+      id: id || "",
+      _className: "",
+      _textContent: "",
+      value: "",
+      type: "",
+      hidden: false,
+      disabled: false,
+      selected: false,
+      width: 0,
+      height: 0,
+      style: { cssText: "", cursor: "default" },
+      parentNode: null,
+      children: [],
+      get firstChild() {
+        return this.children.length > 0 ? this.children[0] : null;
+      },
+      get className() {
+        return this._className;
+      },
+      set className(v) {
+        this._className = String(v || "");
+        this.classList.syncFrom(this._className);
+      },
+      get textContent() {
+        if (this.children.length === 0) return this._textContent;
+        return this._textContent + this.children.map((c) => c.textContent).join("");
+      },
+      set textContent(v) {
+        this.children = [];
+        this._textContent = v == null ? "" : String(v);
+      },
+      appendChild(child) {
+        if (!child) return child;
+        if (child.parentNode) {
+          const idx = child.parentNode.children.indexOf(child);
+          if (idx >= 0) child.parentNode.children.splice(idx, 1);
+        }
+        child.parentNode = this;
+        this.children.push(child);
+        if (child.id) elementsById.set(child.id, child);
+        if (this.tagName === "SELECT" && (child.selected || this.children.length === 1)) {
+          this.value = child.value;
+        }
+        return child;
+      },
+      removeChild(child) {
+        const idx = this.children.indexOf(child);
+        if (idx >= 0) {
+          this.children.splice(idx, 1);
+          child.parentNode = null;
+        }
+        return child;
+      },
+      setAttribute(k, v) {
+        attrs[k] = String(v);
+        if (k === "id") {
+          this.id = String(v);
+          elementsById.set(this.id, this);
+        }
+      },
+      getAttribute(k) {
+        return Object.prototype.hasOwnProperty.call(attrs, k) ? attrs[k] : null;
+      },
+      addEventListener(type, fn) {
+        if (!listeners[type]) listeners[type] = [];
+        listeners[type].push(fn);
+      },
+      removeEventListener(type, fn) {
+        if (!listeners[type]) return;
+        listeners[type] = listeners[type].filter((f) => f !== fn);
+      },
+      dispatchEvent(ev) {
+        const e = Object.assign({ target: this }, ev || {});
+        for (const fn of (listeners[e.type] || []).slice()) fn.call(this, e);
+      },
+      click() {
+        if (!this.disabled) this.dispatchEvent({ type: "click", target: this });
+      },
+      closest(selector) {
+        const m = selector.match(/^\[([a-zA-Z0-9_-]+)\]$/);
+        let cur = this;
+        while (cur) {
+          if (m && cur.getAttribute(m[1]) !== null) return cur;
+          cur = cur.parentNode;
+        }
+        return null;
+      },
+      querySelectorAll(selector) {
+        const out = [];
+        const m = selector.match(/^\[([a-zA-Z0-9_-]+)\]$/);
+        const cls = selector.startsWith(".") ? selector.slice(1) : null;
+        function walk(node) {
+          for (const ch of node.children) {
+            if (m && ch.getAttribute(m[1]) !== null) out.push(ch);
+            else if (cls && ch.classList.contains(cls)) out.push(ch);
+            walk(ch);
+          }
+        }
+        walk(this);
+        return out;
+      },
+      scrollIntoView() {},
+      getBoundingClientRect() {
+        return { left: 0, top: 0, width: this.width || 960, height: this.height || 520 };
+      },
+      getContext(kind) {
+        if (kind === "2d") {
+          if (!this._ctx2d) this._ctx2d = makeCanvasCtx();
+          return this._ctx2d;
+        }
+        return null;
+      }
+    };
+    el.classList = makeClassList(el);
+    if (id) elementsById.set(id, el);
+    return el;
+  }
+  const ids = [
+    "phaser-stage", "stage-fallback", "dataset-badge", "case-select",
+    "btn-prev-case", "btn-next-case", "btn-reset-scores", "scoreboard-bar",
+    "case-tier-badge", "case-title", "case-company", "case-seed-badge",
+    "case-day-badge", "case-step-badge", "case-reward-badge", "case-status-pill",
+    "btn-highlight-suspects", "highlight-summary", "suspect-roster",
+    "dossier-clearance", "dossier-card", "btn-accuse", "btn-hold-fire",
+    "btn-filter-suspect", "evidence-cutoff-note", "evidence-tabs",
+    "evidence-list", "reveal-panel", "provenance-summary", "asset-credits-list",
+    "count-canaries", "count-leaks", "count-access", "count-comms", "count-steps"
+  ];
+  for (const id of ids) {
+    createElement(id === "case-select" ? "select" : "div", id);
+  }
+  const tabsEl = elementsById.get("evidence-tabs");
+  for (const t of ["canaries", "leaks", "access", "comms", "steps"]) {
+    const b = createElement("button");
+    b.setAttribute("data-tab", t);
+    tabsEl.appendChild(b);
+  }
+  return {
+    elementsById,
+    document: {
+      readyState: "complete",
+      createElement: (tag) => createElement(tag),
+      getElementById: (id) => elementsById.get(id) || null,
+      addEventListener() {}
+    }
+  };
+}
+
+const { document, elementsById } = createMockDom();
+const sandbox = {
+  console,
+  Date,
+  Math,
+  Number,
+  String,
+  Boolean,
+  Array,
+  Object,
+  JSON,
+  Set,
+  Map,
+  RegExp,
+  Error,
+  TypeError,
+  parseInt,
+  parseFloat,
+  isNaN,
+  isFinite,
+  performance: { now: () => 1000 },
+  requestAnimationFrame: () => 1,
+  cancelAnimationFrame: () => {},
+  document
+};
+sandbox.window = sandbox;
+sandbox.globalThis = sandbox;
+sandbox.self = sandbox;
+vm.createContext(sandbox);
+
+vm.runInContext(fs.readFileSync(casesPath, "utf8"), sandbox, { filename: "cases.js" });
+
+const hasAnnotations = fs.existsSync(annotationsPath);
+const hasEngine = fs.existsSync(enginePath);
+const hasScene = fs.existsSync(scenePath);
+const hasGame = fs.existsSync(gamePath);
+
+if (hasAnnotations) {
+  vm.runInContext(fs.readFileSync(annotationsPath, "utf8"), sandbox, { filename: "annotations.js" });
+}
+if (hasEngine) {
+  vm.runInContext(fs.readFileSync(enginePath, "utf8"), sandbox, { filename: "engine.js" });
+}
+if (hasScene) {
+  vm.runInContext(fs.readFileSync(scenePath, "utf8"), sandbox, { filename: "scene.js" });
+}
+if (hasGame) {
+  vm.runInContext(fs.readFileSync(gamePath, "utf8"), sandbox, { filename: "game.js" });
+}
+
+const rawData = sandbox.window.OUTTHINK_DATA;
+const rawCases = sandbox.window.OUTTHINK_CASES;
+const issues = [];
+if (!rawData || !Array.isArray(rawCases) || rawData.cases !== rawCases) {
+  issues.push("window.OUTTHINK_DATA or window.OUTTHINK_CASES missing in browser vm");
+}
+
+for (const rc of rawCases || []) {
+  for (const st of rc.tool_steps || []) {
+    if (!VALID_TOOLS.has(st.tool) || !(st.t < rc.decision_step) || !(st.day <= rc.decision_day)) {
+      issues.push("invalid raw tool_step on " + rc.id);
+    }
+  }
+  if (!Array.isArray(rc.cross_model_carbon) || rc.cross_model_carbon.length === 0) {
+    issues.push("missing cross_model_carbon on " + rc.id);
+  }
+  for (const lv of rc.thinking_levels || []) {
+    if (!lv.analyst_quote || !lv.source_file || typeof lv.regret_total !== "number") {
+      issues.push("missing inline forensic fields on " + rc.id + "/" + lv.thinking_level);
+    }
+    if (!lv.correct && !lv.failure_tag) {
+      issues.push("missing inline failure_tag on wrong run " + rc.id + "/" + lv.thinking_level);
+    }
+  }
+}
+
+const Engine = sandbox.window.OutThinkEngine || null;
+const ds = Engine
+  ? Engine.loadDataset()
+  : {
+      source: "data",
+      isFallback: false,
+      isBootstrapFallback: Boolean(rawData && rawData.meta && rawData.meta.isBootstrapFallback),
+      count: rawCases.length,
+      cases: rawCases,
+      meta: Object.assign({}, rawData.meta, { source: "data", count: rawCases.length })
+    };
+
+const evalFn = Engine ? (c, call) => Engine.evaluateCall(c, call) : fallbackEvaluateCall;
+const optRecords = [];
+const wrongRecords = [];
+const oppRecords = [];
+const verdictsSeen = new Set();
+const sbOpt = Engine ? Engine.createScoreboard() : null;
+const sbWrong = Engine ? Engine.createScoreboard() : null;
+const sbOpp = Engine ? Engine.createScoreboard() : null;
+
+for (const c of ds.cases) {
+  const suspectIds = c.suspects.map((s) => s.id);
+  const wrongId = suspectIds.find((id) => id !== c.true_mole);
+  const rec = c.solver.recommended_call;
+
+  const optCall = rec === "accuse"
+    ? { action: "accuse", suspectId: c.true_mole }
+    : { action: "hold_fire" };
+  const optRes = evalFn(c, optCall);
+  verdictsSeen.add(optRes.verdictLabel);
+  optRecords.push({ caseObj: c, evalRes: optRes });
+  if (sbOpt) sbOpt.record(c.id, optRes, c);
+
+  const wrongRes = evalFn(c, { action: "accuse", suspectId: wrongId });
+  verdictsSeen.add(wrongRes.verdictLabel);
+  wrongRecords.push({ caseObj: c, evalRes: wrongRes });
+  if (sbWrong) sbWrong.record(c.id, wrongRes, c);
+
+  const oppCall = rec === "accuse"
+    ? { action: "hold_fire" }
+    : { action: "accuse", suspectId: c.solver.top_suspect };
+  const oppRes = evalFn(c, oppCall);
+  verdictsSeen.add(oppRes.verdictLabel);
+  oppRecords.push({ caseObj: c, evalRes: oppRes });
+  if (sbOpp) sbOpp.record(c.id, oppRes, c);
+}
+
+let uiCheck = null;
+if (hasEngine && hasScene && hasGame) {
+  let lvCards = 0;
+  let carbonStrips = 0;
+  for (let i = 0; i < ds.cases.length; i += 1) {
+    const sel = elementsById.get("case-select");
+    sel.value = String(i);
+    sel.dispatchEvent({ type: "change" });
+    const c = ds.cases[i];
+    if (c.solver.recommended_call === "accuse") {
+      const chip = elementsById.get("suspect-roster").children.find((b) => b.textContent.startsWith(c.true_mole + " "));
+      if (chip) chip.click();
+      elementsById.get("btn-accuse").click();
+    } else {
+      elementsById.get("btn-hold-fire").click();
+    }
+    const rev = elementsById.get("reveal-panel");
+    lvCards += rev.querySelectorAll("[data-level-key]").length;
+    if (rev.querySelectorAll(".carbon-strip").length > 0) carbonStrips += 1;
+  }
+  const stageCanvas = elementsById.get("phaser-stage").children[0];
+  const sbTextBeforeReset = elementsById.get("scoreboard-bar").textContent;
+  elementsById.get("btn-reset-scores").click();
+  uiCheck = {
+    canvasDrawOps: stageCanvas && stageCanvas._ctx2d ? stageCanvas._ctx2d.ops.length : 0,
+    datasetBadge: elementsById.get("dataset-badge").textContent,
+    provenanceText: elementsById.get("provenance-summary").textContent,
+    lvCards,
+    carbonStrips,
+    sbTextBeforeReset,
+    sbTextAfterReset: elementsById.get("scoreboard-bar").textContent
+  };
+}
+
+process.stdout.write(JSON.stringify({
+  issues,
+  usedEngine: Boolean(Engine),
+  source: ds.source,
+  isFallback: ds.isFallback,
+  isBootstrapFallback: ds.isBootstrapFallback,
+  caseIds: ds.cases.map((c) => c.id),
+  worldPairs: Array.from(new Set(ds.cases.map((c) => c.tier + ":" + c.seed))).sort(),
+  meta: ds.meta,
+  verdictsSeen: Array.from(verdictsSeen).sort(),
+  optimalSummary: sbOpt ? sbOpt.getSummary() : fallbackSummarize(optRecords),
+  wrongSummary: sbWrong ? sbWrong.getSummary() : fallbackSummarize(wrongRecords),
+  oppositeSummary: sbOpp ? sbOpp.getSummary() : fallbackSummarize(oppRecords),
+  uiCheck
+}));
+"""
+    proc = subprocess.run(
+        [*cmd_prefix, js_harness],
+        cwd=ROOT,
+        env=run_env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)
+
+
+def test_cases_js_vm_e2e_scoreboard_and_ui_integration():
+    res = _run_cases_js_vm_e2e(CASES_JS_PATH.parent)
+    assert res["issues"] == []
+    assert res["source"] == "data"
+    assert res["isFallback"] is False
+    assert res["isBootstrapFallback"] is False
+    assert res["caseIds"] == [
+        "carbon-hard-1",
+        "flash-lite-hard-4",
+        "flash38-hard-7",
+        "carbon-medium-4",
+        "flash-lite-medium-1",
+        "hydrogen-hard-3",
+        "flash38-medium-9",
+        "flash35-hard-1",
+        "argon-hard-18",
+        "argon-medium-6",
+        "hydrogen-medium-2",
+        "flash35-medium-8",
+    ]
+    assert res["worldPairs"] == [
+        "hard:1",
+        "hard:18",
+        "hard:3",
+        "hard:4",
+        "hard:7",
+        "medium:1",
+        "medium:2",
+        "medium:4",
+        "medium:6",
+        "medium:8",
+        "medium:9",
+    ]
+    assert res["meta"]["total_episodes"] == 550
+    assert res["meta"]["total_cost_usd"] == pytest.approx(262.7061, abs=1e-4)
+    assert set(res["verdictsSeen"]) == {
+        "CAUTIOUS HOLD FIRE",
+        "FALSE ACCUSATION (-1.00)",
+        "LUCKY GUESS (BELOW BREAK-EVEN)",
+        "OPTIMAL ACCUSATION",
+        "OPTIMAL HOLD FIRE",
+        "OVER-CAUTIOUS DELAY",
+    }
+
+    opt = res["optimalSummary"]
+    assert opt["casesPlayed"] == 12
+    assert opt["judge"]["scoreSum"] == pytest.approx(7.8, abs=1e-4)
+    assert opt["judge"]["meanScore"] == pytest.approx(0.65, abs=1e-4)
+    assert opt["judge"]["rightCount"] == 12
+    assert opt["judge"]["optimalCount"] == 12
+    assert opt["solver"]["scoreSum"] == pytest.approx(7.9, abs=1e-4)
+    assert opt["solver"]["meanScore"] == pytest.approx(0.6583, abs=1e-4)
+    assert opt["solver"]["rightCount"] == 12
+
+    by_lv = opt["byLevel"]
+    assert by_lv["minimal"]["count"] == 4
+    assert by_lv["minimal"]["scoreSum"] == pytest.approx(-2.1, abs=1e-4)
+    assert by_lv["minimal"]["meanScore"] == pytest.approx(-0.525, abs=1e-4)
+    assert by_lv["minimal"]["rightCount"] == 1
+    assert by_lv["minimal"]["judgeOutscoredCount"] == 3
+    assert by_lv["low"]["count"] == 12
+    assert by_lv["low"]["scoreSum"] == pytest.approx(-2.84, abs=1e-4)
+    assert by_lv["low"]["meanScore"] == pytest.approx(-0.2367, abs=1e-4)
+    assert by_lv["low"]["rightCount"] == 6
+    assert by_lv["low"]["judgeOutscoredCount"] == 11
+    assert by_lv["medium"]["count"] == 10
+    assert by_lv["medium"]["scoreSum"] == pytest.approx(3.07, abs=1e-4)
+    assert by_lv["medium"]["meanScore"] == pytest.approx(0.307, abs=1e-4)
+    assert by_lv["medium"]["rightCount"] == 8
+    assert by_lv["medium"]["judgeOutscoredCount"] == 6
+    assert by_lv["high"]["count"] == 11
+    assert by_lv["high"]["scoreSum"] == pytest.approx(6.74, abs=1e-4)
+    assert by_lv["high"]["meanScore"] == pytest.approx(0.6127, abs=1e-4)
+    assert by_lv["high"]["rightCount"] == 10
+    assert by_lv["high"]["judgeOutscoredCount"] == 3
+    assert by_lv["xhigh"]["count"] == 2
+    assert by_lv["xhigh"]["scoreSum"] == pytest.approx(1.41, abs=1e-4)
+    assert by_lv["xhigh"]["meanScore"] == pytest.approx(0.705, abs=1e-4)
+    assert by_lv["xhigh"]["rightCount"] == 2
+    assert by_lv["xhigh"]["judgeOutscoredCount"] == 1
+    assert (
+        by_lv["minimal"]["meanScore"]
+        < by_lv["low"]["meanScore"]
+        < by_lv["medium"]["meanScore"]
+        < by_lv["high"]["meanScore"]
+        < by_lv["xhigh"]["meanScore"]
+    )
+
+    wrong = res["wrongSummary"]
+    assert wrong["judge"]["scoreSum"] == pytest.approx(-12.0, abs=1e-4)
+    assert wrong["judge"]["meanScore"] == pytest.approx(-1.0, abs=1e-4)
+    assert wrong["judge"]["rightCount"] == 0
+    assert wrong["judge"]["optimalCount"] == 0
+
+    opp = res["oppositeSummary"]
+    assert opp["judge"]["scoreSum"] == pytest.approx(-2.49, abs=1e-4)
+    assert opp["judge"]["meanScore"] == pytest.approx(-0.2075, abs=1e-4)
+    assert opp["judge"]["rightCount"] == 2
+    assert opp["judge"]["optimalCount"] == 0
+
+    if res["uiCheck"] is not None:
+        ui = res["uiCheck"]
+        assert ui["canvasDrawOps"] > 50
+        assert ui["datasetBadge"] == "Verified Corpus (12 Cases)"
+        assert "550 recorded ladder episodes" in ui["provenanceText"]
+        assert ui["lvCards"] == 39
+        assert ui["carbonStrips"] == 12
+        assert "+7.80" in ui["sbTextBeforeReset"]
+        assert "0/12" in ui["sbTextAfterReset"]
+
+
 def test_hygiene_zero_comments_dashes_network_keys_and_protected_paths():
     self_path = Path(__file__).resolve()
     py_files = (MODULE_PATH, self_path)

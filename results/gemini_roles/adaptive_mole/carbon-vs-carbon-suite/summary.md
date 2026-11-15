@@ -2,19 +2,19 @@
 
 - Role: `adaptive_mole`
 - Target Model ID: `gemini-4-carbon`
-- Verified `adaptive_mole` run folders consolidated: `25`
-- Total Gemini API calls: `1631`
-- Total tokens (in / out / thinking / cached): `25,562,468` / `116,889` / `383,412` / `23,015,724`
-- Total estimated cost (USD): `$12.398087`
+- Verified `adaptive_mole` run folders consolidated: `28`
+- Total Gemini API calls: `1763`
+- Total tokens (in / out / thinking / cached): `28,044,684` / `123,907` / `443,644` / `25,213,697`
+- Total estimated cost (USD): `$13.858871`
 - Provenance note: `carbon-vs-carbon-suite/` intentionally omits `meta.json` so `canary.gemini.provenance` does not double-count tokens or costs.
 
 ## 1. Head-to-Head Carbon-vs-Carbon Clash Suite (`clash_suite`)
 
 | Slice | Shards | Episodes | Investigator Acc (95% CI) | Investigator Mean (95% CI) | Solver Acc | Solver Mean (95% CI) | Solvable Rate (95% CI) | Mean Regret (95% CI) | Mole Leaks | Mole Frames | Mole Errors | Combined Tokens (in/out/think) | Inv Cost | Mole Cost | Total Cost |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: |
-| `medium` | 5 | 10 | 100.00% [56.5%, 100.0%] | +0.6760 [+0.6140, +0.7320] | 80.00% | +0.3140 [+0.1560, +0.4180] | 80.00% [37.5%, 96.4%] | -0.3620 [-0.5280, -0.2320] | 33 | 12 | 0 | `8,427,169/18,570/147,888` | $3.9437 | $0.3967 | $4.3404 |
-| `hard` | 3 | 6 | 100.00% [43.9%, 100.0%] | +0.3300 [+0.0000, +0.5000] | 66.67% | +0.3767 [+0.0000, +0.7400] | 66.67% [20.8%, 93.8%] | +0.0467 [-0.1100, +0.2500] | 35 | 8 | 0 | `16,456,827/17,816/168,301` | $4.9071 | $0.3164 | $5.2235 |
-| `overall` | 8 | 16 | 100.00% [67.6%, 100.0%] | +0.5463 [+0.3700, +0.6750] | 75.00% | +0.3375 [+0.1875, +0.4875] | 75.00% [40.9%, 92.8%] | -0.2088 [-0.3863, -0.0338] | 68 | 20 | 0 | `24,883,996/36,386/316,189` | $8.8508 | $0.7131 | $9.5639 |
+| `medium` | 6 | 12 | 100.00% [61.0%, 100.0%] | +0.6967 [+0.6333, +0.7533] | 66.67% | +0.2617 [+0.1100, +0.4050] | 66.67% [30.0%, 90.3%] | -0.4350 [-0.6233, -0.2600] | 37 | 13 | 0 | `9,274,985/21,212/173,745` | $4.4955 | $0.4735 | $4.9690 |
+| `hard` | 4 | 8 | 100.00% [51.0%, 100.0%] | +0.4075 [+0.1250, +0.6025] | 75.00% | +0.4600 [+0.1775, +0.7250] | 75.00% [30.1%, 95.4%] | +0.0525 [-0.0650, +0.1875] | 41 | 9 | 0 | `18,089,578/20,763/202,081` | $5.6611 | $0.3710 | $6.0321 |
+| `overall` | 10 | 20 | 100.00% [72.2%, 100.0%] | +0.5810 [+0.4340, +0.6920] | 70.00% | +0.3410 [+0.1840, +0.5050] | 70.00% [39.7%, 89.2%] | -0.2400 [-0.4350, -0.0500] | 78 | 22 | 0 | `27,364,563/41,975/375,826` | $10.1566 | $0.8445 | $11.0011 |
 
 ### Per-Seed Clash Shards
 
@@ -24,7 +24,9 @@
 | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed1` | `medium` | 1 | `9222669912` | +0.7300 | True | +0.3300 | True | True | -0.4000 | 6 | 2 | 0 | $0.6835 |
 | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed2` | `medium` | 2 | `9222669912` | +0.6800 | True | +0.0000 | False | False | -0.6800 | 6 | 3 | 0 | $1.0267 |
 | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed3` | `medium` | 3 | `797cc1d249` | +0.5600 | True | +0.3900 | True | True | -0.1700 | 9 | 4 | 0 | $1.0813 |
+| `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed4` | `medium` | 4 | `8425507a27` | +0.8000 | True | +0.0000 | False | False | -0.8000 | 4 | 1 | 0 | $0.6286 |
 | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed5` | `medium` | 5 | `9222669912` | +0.7500 | True | +0.4500 | True | True | -0.3000 | 5 | 2 | 0 | $0.6607 |
+| `results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed0` | `hard` | 0 | `e650291e78` | +0.6400 | True | +0.7100 | True | True | +0.0700 | 6 | 1 | 0 | $0.8087 |
 | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed1` | `hard` | 1 | `b73b62ffec` | +0.0000 | True | +0.0000 | False | False | +0.0000 | 17 | 5 | 0 | $2.6374 |
 | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed2` | `hard` | 2 | `38cd16ece1` | +0.5000 | True | +0.3900 | True | True | -0.1100 | 9 | 1 | 0 | $1.1844 |
 | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed3` | `hard` | 3 | `db9a94b0be` | +0.4900 | True | +0.7400 | True | True | +0.2500 | 9 | 2 | 0 | $1.4017 |
@@ -69,6 +71,7 @@
 | Run Folder | Tier | Subrole | Kept / Valid | Design/Kept Solver Mean | Design/Kept Heuristic Mean | Holdout Full Solver Mean | Holdout Heuristic Mean | Top Scenario | Calls | Cost (USD) |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: |
 | `results/gemini_roles/adaptive_mole/paired-designer-carbon` | `medium` | `paired_designer` | 3/4 | +0.5743 | -1.0000 | n/a | n/a | - | 1 | $0.0218 |
+| `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-med-s10_14` | `medium` | `paired_skill_designer` | 6/6 | +0.6888 | -1.0000 | +0.5921 | -1.0000 | `paced_cadence_framer` | 1 | $0.0235 |
 | `results/gemini_roles/adaptive_mole/paired-solvable-scenarios-carbon` | `medium` | `paired_skill_designer` | 3/4 | +0.7100 | -1.0000 | +0.7220 | -0.8110 | `high_tempo_frame_rotator` | 1 | $0.0176 |
 | `results/gemini_roles/adaptive_mole/paired-designer-carbon-hard` | `hard` | `paired_designer` | 6/6 | +0.6827 | -1.0000 | n/a | n/a | - | 1 | $0.0271 |
 | `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard` | `hard` | `paired_skill_designer` | 6/6 | +0.6890 | -1.0000 | +0.6280 | -1.0000 | `rotating_blame_sprinter` | 1 | $0.0233 |
@@ -92,9 +95,9 @@
 
 | Suite Slice | Verified Folders | Calls | Input Tokens | Output Tokens | Thinking Tokens | Cached Tokens | Cost (USD) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `clash_suite` | 8 | 884 | 24,883,996 | 36,386 | 316,189 | 23,015,724 | $9.563883 |
+| `clash_suite` | 10 | 1015 | 27,364,563 | 41,975 | 375,826 | 25,213,697 | $11.001129 |
 | `live_arena_suite` | 8 | 696 | 595,344 | 45,317 | 47,534 | 0 | $2.119198 |
 | `mole_forge_suite` | 3 | 39 | 23,935 | 20,771 | 10,491 | 0 | $0.360490 |
-| `paired_designer_suite` | 5 | 5 | 8,724 | 6,543 | 3,004 | 0 | $0.112918 |
+| `paired_designer_suite` | 6 | 6 | 10,373 | 7,972 | 3,599 | 0 | $0.136456 |
 | `other_verified_runs` | 1 | 7 | 50,469 | 7,872 | 6,194 | 0 | $0.241598 |
-| **total** | **25** | **1631** | **25,562,468** | **116,889** | **383,412** | **23,015,724** | **$12.398087** |
+| **total** | **28** | **1763** | **28,044,684** | **123,907** | **443,644** | **25,213,697** | **$13.858871** |

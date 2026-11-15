@@ -54,19 +54,42 @@ def parse_world_specs(worlds_spec: str | None, tier: str | None = None, seeds: s
     return [(resolved_tier, int(s)) for s in seed_list]
 
 
+def _format_worlds_provenance(worlds: list[dict[str, Any]]) -> str:
+    by_tier: dict[str, list[str]] = {}
+    for w in worlds:
+        tier_name = str(w.get("tier", "unknown"))
+        seed_str = str(w.get("seed", ""))
+        bucket = by_tier.setdefault(tier_name, [])
+        if seed_str not in bucket:
+            bucket.append(seed_str)
+    parts: list[str] = []
+    for tier_name, seeds in by_tier.items():
+        noun = "seed" if len(seeds) == 1 else "seeds"
+        parts.append(f"`{tier_name}` {noun} `{','.join(seeds)}`")
+    if not parts:
+        return "no worlds"
+    if len(parts) == 1:
+        return parts[0]
+    if len(parts) == 2:
+        return f"{parts[0]} and {parts[1]}"
+    return f"{', '.join(parts[:-1])}, and {parts[-1]}"
+
+
 def _build_summary_md(meta: dict[str, Any], results: dict[str, Any]) -> str:
     h1 = chr(35)
     h2 = chr(35) * 2
     m = results["metrics"]
     u = meta["usage"]
     n_w = results["episode_count"]
+    worlds_desc = _format_worlds_provenance(results.get("worlds", []))
+    dossier_noun = "dossier" if n_w == 1 else "dossiers"
     lines = [
         f"{h1} Role 6 ({meta['role']}) - Multi-Image Composite Incident Dossier Run",
         "",
         f"{h2} Provenance",
         f"- Role: `{meta['role']}` (`{meta['subrole']}`)",
         f"- Model: `{meta['model_id']}`",
-        f"- Tiers version: `{meta['tiers_version']}` (`{n_w}` composite dossiers across `medium` seeds `0,1,2` and `hard` seeds `0,1`)",
+        f"- Tiers version: `{meta['tiers_version']}` (`{n_w}` composite {dossier_noun} across {worlds_desc})",
         f"- Commit: `{meta['commit']}`",
         f"- Timestamp: `{meta['timestamp']}`",
         f"- Command: `{meta['command']}`",

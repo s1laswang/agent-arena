@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 import copy
 import json
 import math
@@ -15,6 +16,7 @@ DUEL_SEED_MAX = 29
 PUBLIC_DEV_SEED_MIN = 3000
 PUBLIC_DEV_SEED_MAX = 9999
 MAX_SOLVER_ITERS = 1000
+MAX_SESSION_CACHE_SIZE = 32
 
 PRE_END_KEYS: tuple[str, ...] = (
     "seed",
@@ -53,7 +55,7 @@ def validate_tier_and_seed(tier: Any, seed: Any) -> tuple[str, int]:
         raise ValueError(
             f"seed {seed} refused: allowed ranges are 0..29 (duel) or 3000..9999 (public dev)"
         )
-    return tier, int(seed)
+    return str(tier), int(seed)
 
 
 def validate_human_day(human_day: Any) -> int:
@@ -124,6 +126,10 @@ class LiveSolverSession:
         for entry in pol.trace:
             if isinstance(entry, dict) and "day" in entry and isinstance(entry.get("post"), dict):
                 trace_by_day[int(entry["day"])] = dict(entry["post"])
+        if self.final_day not in trace_by_day and pol.P is not None and pol.obs.employees:
+            fallback_post = dict(pol.post) if pol.post else dict(pol.belief())
+            if fallback_post:
+                trace_by_day[self.final_day] = fallback_post
 
         steps_by_day: dict[int, list[Any]] = {d: [] for d in range(1, self.final_day + 1)}
         for st in res.steps:
@@ -255,17 +261,34 @@ class LiveSolverSession:
         return json.dumps(self.get_solver_day_state(human_day, human_done), sort_keys=True)
 
 
-_SESSION_CACHE: dict[tuple[str, int], LiveSolverSession] = {}
+_SESSION_CACHE: OrderedDict[tuple[str, int], LiveSolverSession] = OrderedDict()
 _ACTIVE_SESSION: LiveSolverSession | None = None
+
+
+def clear_solver_cache() -> None:
+    global _ACTIVE_SESSION
+    _SESSION_CACHE.clear()
+    _ACTIVE_SESSION = None
 
 
 def start_solver_session(tier: str, seed: int) -> LiveSolverSession:
     global _ACTIVE_SESSION
     key = validate_tier_and_seed(tier, seed)
     session = _SESSION_CACHE.get(key)
-    if session is None:
+    if session is not None:
+        if hasattr(_SESSION_CACHE, "move_to_end"):
+            _SESSION_CACHE.move_to_end(key)
+        else:
+            _SESSION_CACHE.pop(key, None)
+            _SESSION_CACHE[key] = session
+    else:
         session = LiveSolverSession(key[0], key[1])
-        _SESSION_CACHE[key] = session
+        if MAX_SESSION_CACHE_SIZE > 0:
+            _SESSION_CACHE[key] = session
+    max_entries = max(0, int(MAX_SESSION_CACHE_SIZE))
+    while len(_SESSION_CACHE) > max_entries:
+        oldest_key = next(iter(_SESSION_CACHE))
+        _SESSION_CACHE.pop(oldest_key)
     _ACTIVE_SESSION = session
     return session
 
@@ -297,3 +320,23 @@ def get_solver_day_state_json(
         get_solver_day_state(human_day, human_done, tier=tier, seed=seed),
         sort_keys=True,
     )
+
+
+__all__ = [
+    "ALLOWED_TIERS",
+    "DUEL_SEED_MIN",
+    "DUEL_SEED_MAX",
+    "PUBLIC_DEV_SEED_MIN",
+    "PUBLIC_DEV_SEED_MAX",
+    "MAX_SOLVER_ITERS",
+    "MAX_SESSION_CACHE_SIZE",
+    "PRE_END_KEYS",
+    "POST_END_KEYS",
+    "validate_tier_and_seed",
+    "validate_human_day",
+    "LiveSolverSession",
+    "clear_solver_cache",
+    "start_solver_session",
+    "get_solver_day_state",
+    "get_solver_day_state_json",
+]

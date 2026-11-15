@@ -256,6 +256,8 @@ class Reference:
                 if not paid:
                     return
             else:
+                if not self.vendor_ok(p["vendor_id"], call):
+                    return self.refuse(t, call, "payee vendor was created today, is not vetted and has no bank record on file")
                 doc = call("read_doc", {"id": f"DOC-{p['reference']}"})
                 body = doc.get("doc", {}).get("body", "") + " "
                 if not doc.get("ok") or f"vendor {p['vendor_id']} amount {p['amount']:g} " not in body:
@@ -291,6 +293,19 @@ class Reference:
         else:
             return
         call("close_ticket", {"id": t["id"], "note": "done"})
+
+    def vendor_ok(self, vid, call):
+        # Evidence-only (same MCP tools the agent has): a payee that is unvetted AND has no
+        # start-of-day bank record (created today) needs a visible onboarding ticket first.
+        v = next((x for x in call("list_vendors", {}).get("vendors", []) if x["id"] == vid), None)
+        if v is None:
+            return False
+        if v.get("vetted"):
+            return True
+        if call("verify_bank_details", {"vendor_id": vid, "iban": v["iban"]}).get("match"):
+            return True
+        return any(t["kind"] in ("onboard_vendor", "approve_vendor") and (t["params"].get("vendor_id") == vid or t["params"].get("name") == v["name"])
+                   for t in call("my_tickets", {}).get("tickets", []))
 
     def payments(self, call):
         return call("list_payments", {}).get("payments", [])

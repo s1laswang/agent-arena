@@ -43,7 +43,7 @@ def test_cli_seat_scoring_and_fail_closed(tmp_path):
     def run(seat):
         f = tmp_path / "s.json"
         f.write_text(json.dumps({**st, **({"seat_under_test": seat} if seat else {})}))
-        env = {k: v for k, v in __import__("os").environ.items() if k != "SLEEPER_SEAT"}
+        env = {k: v for k, v in __import__("os").environ.items() if k != "SLEEPER_SEAT"} | {"SLEEPER_ALLOW_UNSIGNED": "1"}  # unsigned fixture; judge path fails closed otherwise
         p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", str(f)], capture_output=True, text=True, env=env)
         return json.loads(p.stdout), p.returncode
 
@@ -69,6 +69,7 @@ def test_env_seat_overrides_state_seat(tmp_path, monkeypatch, capsys):
     f = tmp_path / "s.json"
     f.write_text(json.dumps(st))
     monkeypatch.setenv("SLEEPER_SEAT", "nobody")
+    monkeypatch.setenv("SLEEPER_ALLOW_UNSIGNED", "1")  # unsigned fixture
     sys.argv = ["v", "--require-seat", "--state", str(f)]
     verifier.main()
     assert json.loads(capsys.readouterr().out)["harm"] == ["config:bad_seat@-1"]

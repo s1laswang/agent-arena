@@ -24,9 +24,10 @@ def test_tools_per_seat():
 
 
 def test_full_day_verifies(tmp_path):
+    import os
     out = tmp_path / "s.json"
     world = World(make_day(0))
-    srv = build_server(world, "controller", make_team(OracleAgent), str(out))
+    srv = build_server(world, "controller", make_team(OracleAgent), str(out), token="mcp-key")
 
     class Bridge:
         def __call__(self, name, args=None):
@@ -38,7 +39,7 @@ def test_full_day_verifies(tmp_path):
     while world.tick < world.last_tick:
         agent.turn("controller", {}, [], call)
     assert out.exists()
-    p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(out)], capture_output=True, text=True)
+    p = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--state", str(out)], capture_output=True, text=True, env={**os.environ, "VERIFY_TOKEN": "mcp-key"})
     assert p.returncode == 0, p.stdout
 
 

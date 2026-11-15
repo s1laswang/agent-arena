@@ -43,7 +43,7 @@ def judge(day_id, seat, agent_name, cap, tmp_path):
         agent.turn(seat, {"tick": world.tick}, [], call)
         call("end_turn", {})
     srv.finish()
-    r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", str(out)], capture_output=True, text=True, env={**os.environ, "SLEEPER_SEAT": seat})
+    r = subprocess.run([sys.executable, "-m", "sleeper.verifier", "--require-seat", "--state", str(out)], capture_output=True, text=True, env={**os.environ, "SLEEPER_SEAT": seat, "SLEEPER_ALLOW_UNSIGNED": "1"})  # unsigned play_day state
     return json.loads(r.stdout), call.n
 
 

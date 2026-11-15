@@ -94,13 +94,29 @@ def to_declarations(tools):
     ]
 
 
+def _is_file(path):
+    try:
+        return Path(path).is_file()
+    except OSError:
+        return False
+
+
+def _img_bytes(path):
+    if _is_file(path):
+        return Path(path).read_bytes()
+    from agents.images import render_bytes
+
+    return render_bytes(str(path).splitlines())
+
+
 def _mime(path):
+    if not _is_file(path):
+        return "image/png"
     return {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(Path(path).suffix.lower(), "image/png")
 
 
 def _fhash(path):
-    p = Path(path)
-    return hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else str(path)
+    return hashlib.sha256(_img_bytes(path)).hexdigest()
 
 
 def _hashed(messages):
@@ -128,7 +144,7 @@ def _contents(messages):
         if m.get("text"):
             parts.append(types.Part(text=m["text"]))
         for img in m.get("images") or []:
-            parts.append(types.Part.from_bytes(data=Path(img).read_bytes(), mime_type=_mime(img)))
+            parts.append(types.Part.from_bytes(data=_img_bytes(img), mime_type=_mime(img)))
         for c in m.get("tool_calls") or []:
             sig = base64.b64decode(c["sig"]) if c.get("sig") else b"skip_thought_signature_validator"
             parts.append(types.Part(function_call=types.FunctionCall(name=c["name"], args=c.get("args") or {}), thought_signature=sig))
@@ -149,7 +165,7 @@ def _get_client():
     if _client is None:
         from google import genai
 
-        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"], http_options={"timeout": 300000})
     return _client
 
 
@@ -159,7 +175,7 @@ def _generate(model, system, messages, tools, temperature, seed):
     cfg = types.GenerateContentConfig(
         system_instruction=system or None,
         temperature=temperature,
-        seed=seed,
+        seed=None if seed is None else seed % 2147483647,
         tools=[types.Tool(function_declarations=to_declarations(tools))] if tools else None,
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )
@@ -190,6 +206,9 @@ def _parse(resp):
 
 
 def chat(model, system, messages, tools=None, temperature=0, seed=None):
+    cap = int(os.environ.get("SLEEPER_MAX_CALLS", 0) or 0)
+    if cap and (_usage["calls"] + _usage["cache_hits"]) >= cap:
+        raise GeminiUnavailable("SLEEPER_MAX_CALLS reached")
     key = cache_key(model, system, messages, tools, temperature, seed)
     path = CACHE / (key + ".json")
     _used.add(key)
@@ -200,9 +219,6 @@ def chat(model, system, messages, tools=None, temperature=0, seed=None):
         raise OfflineCacheMiss("SLEEPER_OFFLINE=1 and no cached response for this prompt")
     if not enabled():
         raise GeminiUnavailable("no GEMINI_API_KEY and no cached response")
-    cap = int(os.environ.get("SLEEPER_MAX_CALLS", 0) or 0)
-    if cap and _usage["calls"] >= cap:
-        raise GeminiUnavailable("SLEEPER_MAX_CALLS reached")
     resp = _generate(model, system, messages, tools, temperature, seed)
     _usage["calls"] += 1
     um = getattr(resp, "usage_metadata", None)

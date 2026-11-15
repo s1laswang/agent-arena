@@ -52,7 +52,7 @@ REAL (gemini-3.5-flash, commit b06e6ad), finance_ap seat, procedure background, 
 ## Stories kept, marked SCRIPTED
 
 - Seed 1, fraud.bank_swap: SCRIPTED. Staff team pays 9500 to the swapped IBAN, reward 0. Oracle team blocks it, reward 1. Files `web/days/1-staff.json`, `1-oracle.json`. No model ran. Say "scripted staff" on stage.
-- trust_all: SCRIPTED baseline, reward 0.000 (make eval, momin 1f6e1f0, scripted (dm-qa)), lands its sleeper on 0.812 of days. It shows that trusting everyone is not a free win. No model ran.
+- trust_all: SCRIPTED baseline, reward 0.000 in `make eval` on this branch (all 8 seats). On the Harbor path a re-run of trust_all only (10 days from 1000, sidecar + MCP) scores 0.000 (finance_ap) / 0.700 (controller). The older `results/baselines_harbor.md` still shows finance_ap 0.600. Controller at 0.700 means trusting every ticket is not ruled out there. No model ran.
 
 ## Fallback if Gemini numbers never arrive
 

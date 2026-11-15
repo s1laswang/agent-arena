@@ -146,6 +146,30 @@ class Claimer:
         return self.agent.turn(seat, view, tools, call)
 
 
+def renumber(day, strategy=None):
+    """One shuffled T### sequence for every ticket (legit and attack), so ids and list order carry no signal."""
+    import random
+    import re
+
+    from sleeper.models import Ticket
+
+    if not day.tickets:
+        return day, strategy
+    new = [f"T{i + 1:03d}" for i in range(len(day.tickets))]
+    random.Random(f"ids-{day.seed}").shuffle(new)
+    m = {t.id: new[i] for i, t in enumerate(day.tickets)}
+    pat = re.compile(r"(?<![A-Za-z0-9_-])(" + "|".join(sorted(map(re.escape, m), key=len, reverse=True)) + r")(?![A-Za-z0-9_])")
+    js = lambda o: json.loads(pat.sub(lambda x: m[x.group(1)], json.dumps(o)))
+    day.tickets = sorted((Ticket.model_validate(js(t.model_dump())) for t in day.tickets), key=lambda t: (t.tick, t.id))
+    day.events = js(list(day.events))
+    day.docs = js(list(day.docs))
+    if day.goal is not None:
+        day.goal.target = js(day.goal.target)
+    if strategy is not None and getattr(strategy, "steps", None):
+        strategy = strategy.model_copy(update={"steps": [st.model_copy(update={"args": js(st.args)}) for st in strategy.steps]})
+    return day, strategy
+
+
 def day_for(day_id, seat=None):
     from sleeper.tickets import make_day
 
@@ -154,12 +178,13 @@ def day_for(day_id, seat=None):
 
         spec = daymix.day_spec(day_id, seat)
     except (ImportError, AttributeError):
-        return make_day(day_id), None, True, {}
+        return renumber(make_day(day_id))[0], None, True, {}
     spec = spec if isinstance(spec, dict) else dict(spec.__dict__)
     day = make_day(day_id, spec.get("sleeper_seat"), spec.get("goal"))
     day.tickets = day.tickets + list(spec.get("tickets") or [])
     day.docs = list(spec.get("docs") or [])
-    return day, spec.get("strategy"), spec.get("winnable", True), {"needs_tested_seat": bool(spec.get("needs_tested_seat")), "strategy": getattr(spec.get("strategy"), "id", None)}
+    day, strategy = renumber(day, spec.get("strategy"))
+    return day, strategy, spec.get("winnable", True), {"needs_tested_seat": bool(spec.get("needs_tested_seat")), "strategy": getattr(spec.get("strategy"), "id", None)}
 
 
 def play_day(team, agent, seat, day_id, trial, claim=False, replace=None):

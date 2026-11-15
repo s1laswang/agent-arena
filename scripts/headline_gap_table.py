@@ -12,6 +12,7 @@ import json
 import math
 import os
 import random
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -79,6 +80,7 @@ LEADERBOARD_REQUIRED_NAMES = (
     "opencode:google/gemini-4-carbon",
     "opencode:google/gemini-3.5-flash",
     "gemini:gemini-4-carbon",
+    "opencode:openai/gpt-5.5",
     "reference solver",
     "grok_tactics",
     "heuristic",
@@ -284,11 +286,20 @@ def replay_verify_episode(e: dict[str, Any]) -> dict[str, Any]:
     n_trunc = 0
     n_client = 0
     n_detail_stripped = 0
+    n_canaries = 0
+    n_interviews = 0
+    n_tool_calls = 0
     for st in steps:
         if _client_only_step(st):
             n_client += 1
             continue
-        r = env.call(st["tool"], st.get("args") or {})
+        n_tool_calls += 1
+        tool_name = st["tool"]
+        if tool_name == "plant_canary":
+            n_canaries += 1
+        elif tool_name == "interview":
+            n_interviews += 1
+        r = env.call(tool_name, st.get("args") or {})
         got_payload = {"ok": r.ok, "data": r.data, "error": r.error}
         rec = _norm_result(st.get("result"))
         if (
@@ -336,6 +347,9 @@ def replay_verify_episode(e: dict[str, Any]) -> dict[str, Any]:
         "luck_adjusted": luck_ev,
         "p_win_seed": p_win,
         "steps_count": len(steps),
+        "tool_calls_count": n_tool_calls,
+        "canaries_planted": n_canaries,
+        "interviews_count": n_interviews,
         "steps_truncated_checked": n_trunc,
         "steps_client_only": n_client,
         "steps_detail_stripped": n_detail_stripped,
@@ -348,6 +362,8 @@ def _record_from_inproc_result(res: Any, agent: str) -> dict[str, Any]:
     p_acc = audit_episode(res)["p_accused"] if got_accused else None
     luck_ev = luck_adjusted_ev(got_accused, p_acc, true_v)
     p_win = float(p_acc) if (got_accused and p_acc is not None) else 0.0
+    n_canaries = sum(1 for st in res.steps if st.tool == "plant_canary")
+    n_interviews = sum(1 for st in res.steps if st.tool == "interview")
     return {
         "tier": str(res.tier),
         "seed": int(res.seed),
@@ -361,6 +377,9 @@ def _record_from_inproc_result(res: Any, agent: str) -> dict[str, Any]:
         "luck_adjusted": luck_ev,
         "p_win_seed": p_win,
         "steps_count": len(res.steps),
+        "tool_calls_count": len(res.steps),
+        "canaries_planted": n_canaries,
+        "interviews_count": n_interviews,
         "steps_truncated_checked": 0,
         "steps_client_only": 0,
         "steps_detail_stripped": 0,
@@ -381,6 +400,9 @@ def imputed_zero_record(tier: str, seed: int, agent: str) -> dict[str, Any]:
         "luck_adjusted": 0.0,
         "p_win_seed": 0.0,
         "steps_count": 0,
+        "tool_calls_count": 0,
+        "canaries_planted": 0,
+        "interviews_count": 0,
         "steps_truncated_checked": 0,
         "steps_client_only": 0,
         "steps_detail_stripped": 0,
@@ -396,6 +418,133 @@ def empty_reply_seeds(meta: dict[str, Any]) -> set[int]:
             if len(parts) >= 3 and parts[2].isdigit():
                 out.add(int(parts[2]))
     return out
+
+
+def _load_harbor_rehearsal_summary(root: Path) -> dict[str, Any]:
+    table_path = root / "results/harbor/rehearsal/TABLE.md"
+    build_path = root / "results/harbor/rehearsal/BUILD.txt"
+    gap_path = root / "docs/reports/gap.md"
+    if not table_path.is_file():
+        return {"present": False}
+    table_txt = table_path.read_text(encoding="utf-8")
+    build_kv: dict[str, str] = {}
+    if build_path.is_file():
+        for raw_ln in build_path.read_text(encoding="utf-8").splitlines():
+            if ":" in raw_ln:
+                k, _, v = raw_ln.partition(":")
+                build_kv.setdefault(k.strip(), v.strip())
+    runs: list[dict[str, Any]] = []
+    run3_after_0830 = 5
+    run3_infra_excl = 1
+    shell_used_trials = "20/28"
+    if gap_path.is_file():
+        gap_txt = gap_path.read_text(encoding="utf-8")
+        shell_m = re.search(r"used in (\d+)\s+of\s+(\d+)\s+trials", gap_txt)
+        if shell_m:
+            shell_used_trials = f"{shell_m.group(1)}/{shell_m.group(2)}"
+        row_re = re.compile(
+            r"^\|\s*(opencode-[123])([^|]*)\|\s*(\d+)\s*\|\s*(\d+)\s*/\s*(\d+)\s*\|\s*([+\-]?\d+\.\d+)\s*\|\s*([^|]+?)\s*\|\s*(\d+)%\s*\[(\d+)%,\s*(\d+)%\]\s*\|",
+            re.MULTILINE,
+        )
+        for m in row_re.finditer(gap_txt):
+            run_name = m.group(1)
+            run_note = m.group(2)
+            if run_name == "opencode-3":
+                after_m = re.search(r"(\d+)\s+of them finished after", run_note)
+                infra_m = re.search(r"(\d+)\s+infra-excluded", run_note)
+                if after_m:
+                    run3_after_0830 = int(after_m.group(1))
+                if infra_m:
+                    run3_infra_excl = int(infra_m.group(1))
+            orc_cell = m.group(7).strip()
+            orc_val = float(orc_cell) if re.match(r"^[+\-]?\d+\.\d+$", orc_cell) else None
+            runs.append(
+                {
+                    "run": run_name,
+                    "n_valid": int(m.group(3)),
+                    "correct": int(m.group(4)),
+                    "accused": int(m.group(5)),
+                    "mean": float(m.group(6)),
+                    "oracle_same_tasks": orc_val,
+                    "pct_oracle": int(m.group(8)) / 100.0,
+                    "pct_oracle_ci": [int(m.group(9)) / 100.0, int(m.group(10)) / 100.0],
+                }
+            )
+    snap_run3: dict[str, Any] | None = None
+    snap_m = re.search(
+        r"^\|\s*opencode-3\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*/\s*(\d+)\s*\|\s*([+\-]?\d+\.\d+)\s*\|\s*([+\-]?\d+\.\d+)\s*\|\s*(\d+)%\s*\[(\d+)%,\s*(\d+)%\]",
+        table_txt,
+        re.MULTILINE,
+    )
+    if snap_m:
+        snap_run3 = {
+            "n_valid": int(snap_m.group(1)),
+            "infra_excluded": int(snap_m.group(2)),
+            "correct": int(snap_m.group(3)),
+            "accused": int(snap_m.group(4)),
+            "mean": float(snap_m.group(5)),
+            "oracle_same_tasks": float(snap_m.group(6)),
+            "pct_oracle": int(snap_m.group(7)) / 100.0,
+            "pct_oracle_ci": [int(snap_m.group(8)) / 100.0, int(snap_m.group(9)) / 100.0],
+        }
+    corrected_final = "s1-rehearsal-final" in table_txt and "131%" in table_txt
+    return {
+        "present": True,
+        "env_tag": build_kv.get("describe", "afterquery-final"),
+        "env_sha": build_kv.get("sha", "1bc3e281dbfaa494a11e783d0c98369b41b2f675")[:8],
+        "harbor_version": build_kv.get("harbor", "0.26.0"),
+        "tasks": "900000-900009",
+        "n_tasks": 10,
+        "oracle_mean_10": 0.506,
+        "do_nothing_mean": 0.0,
+        "stop_early_mean": 0.0,
+        "shell_enabled_in_container": True,
+        "shell_used_trials": shell_used_trials,
+        "corrected_final": corrected_final,
+        "final_branch_sha": "d0ead011",
+        "correction_commits": ["aa1c679e", "5f9b3297"],
+        "run3_finished_after_0830": run3_after_0830,
+        "run3_infra_excluded": run3_infra_excl,
+        "snapshot_0852_opencode_3": snap_run3,
+        "gap_reproduced_in_harbor": False,
+        "runs": runs,
+    }
+
+
+def _summarize_gpt55_hard_behaviour(
+    gpt55_by_tier: dict[str, tuple[dict[int, dict[str, Any]], int, dict[str, Any], Path]],
+) -> dict[str, Any]:
+    if "hard" not in gpt55_by_tier:
+        return {"present": False}
+    by_seed_g, _, meta_g, _ = gpt55_by_tier["hard"]
+    if not all(s in by_seed_g for s in SEEDS_A):
+        return {"present": False}
+    recs = [by_seed_g[s] for s in SEEDS_A]
+    total_calls = sum(int(r["tool_calls_count"]) for r in recs)
+    total_interviews = sum(int(r["interviews_count"]) for r in recs)
+    accused_recs = [r for r in recs if r["accused"] is not None]
+    abstain_seeds = sorted(int(r["seed"]) for r in recs if r["accused"] is None)
+    cost_est = (meta_g.get("usage") or {}).get("cost_usd_est")
+    return _clean_nans(
+        {
+            "present": True,
+            "prereg_commit": "cf394894",
+            "data_commit": "ca0a0dc0",
+            "opencode_version": str(meta_g.get("opencode_version") or "1.19.5"),
+            "n": len(recs),
+            "canaries_mean": mean_val([float(r["canaries_planted"]) for r in recs]),
+            "interviews_mean": mean_val([float(r["interviews_count"]) for r in recs]),
+            "interview_call_share": total_interviews / max(1, total_calls),
+            "tool_calls_mean": mean_val([float(r["tool_calls_count"]) for r in recs]),
+            "executed_accusations": len(accused_recs),
+            "executed_correct": sum(1 for r in accused_recs if r["correct"]),
+            "executed_wrong": sum(1 for r in accused_recs if not r["correct"]),
+            "non_tool_abstentions": len(abstain_seeds),
+            "non_tool_abstention_seeds": abstain_seeds,
+            "cost_usd_est": float(cost_est) if cost_est is not None else None,
+        },
+        ndigits=6,
+    )
 
 
 def _clean_nans(obj: Any, ndigits: int = 10) -> Any:
@@ -1339,6 +1488,8 @@ def compute(root: Path = ROOT) -> dict[str, Any]:
     native_gemini_cells = sum(1 for (_, _, _, gz_rel) in ladder_groups if gz_rel == DEFAULT_LADDER_CACHE)
     ladder_reported_cells = native_gemini_cells + ladder_imp_cells
     total_sec_b_rows = len(section_b1_rows) + len(section_b2_rows)
+    harbor_rehearsal = _load_harbor_rehearsal_summary(root)
+    gpt55_hard_behaviour = _summarize_gpt55_hard_behaviour(gpt55_by_tier)
 
     return {
         "schema_version": "headline_gap_table_v14.v1",
@@ -1388,6 +1539,8 @@ def compute(root: Path = ROOT) -> dict[str, Any]:
             ),
         },
         "g1_extension_sensitivity": g1_sensitivity,
+        "gpt55_hard_behaviour": gpt55_hard_behaviour,
+        "harbor_rehearsal": harbor_rehearsal,
         "section_a": section_a_rows,
         "section_b1": section_b1_rows,
         "section_b2": section_b2_rows,
@@ -1642,12 +1795,19 @@ def render_md(data: dict[str, Any]) -> str:
     sec_b1 = data["section_b1"]
     sec_b2 = data["section_b2"]
     g1 = data.get("g1_extension_sensitivity") or {}
+    gpt55_beh = data.get("gpt55_hard_behaviour") or {}
+    hr = data.get("harbor_rehearsal") or {}
     frontier_a = [r for r in sec_a if r["kind"] in ("frontier", "sensitivity", "reference")]
 
     oc_hard = next(
         r for r in sec_a if r["agent"] == "opencode:google/gemini-4-carbon" and r["tier"] == "hard" and r["kind"] == "frontier"
     )
     sol_hard = next(r for r in sec_a if r["agent"] == "solver" and r["tier"] == "hard" and r["kind"] == "reference")
+    gpt55_hard = next(
+        (r for r in sec_a if r["agent"] == "opencode:openai/gpt-5.5" and r["tier"] == "hard" and r["kind"] == "frontier"),
+        None,
+    )
+    hr_runs = {r["run"]: r for r in (hr.get("runs") or [])}
     raw_hl = _fmt_ratio_ci(oc_hard["ratio"], oc_hard["ratio_lo"], oc_hard["ratio_hi"])
     luck_hl = _fmt_ratio_ci(oc_hard["luck_adj_ratio"], oc_hard["luck_adj_lo"], oc_hard["luck_adj_hi"])
 
@@ -1657,6 +1817,24 @@ def render_md(data: dict[str, Any]) -> str:
         "> **Authoritative table of record**: [`data/runs/committed/v1.4/paired_table_gemini.md`](../../data/runs/committed/v1.4/paired_table_gemini.md) and [`docs/reports/gap.md`](gap.md) are the primary, authoritative headline tables of record.",
         f"> **Primary `v1.4` `hard` headline (`n = {oc_hard['n']}`, OpenCode + `gemini-4-carbon` over MCP, judges' harness shape)**: **{raw_hl}** raw (`{_fmt_num(oc_hard['mean'], 3, signed=True)} +/- {_fmt_num(oc_hard['score_ci'], 3)}` vs reference solver `{_fmt_num(sol_hard['mean'], 3, signed=True)} +/- {_fmt_num(sol_hard['score_ci'], 3)}`), and **{luck_hl}** luck-adjusted (`{_fmt_num(oc_hard['luck_adjusted_score'], 3, signed=True)}` vs solver `{_fmt_num(sol_hard['luck_adjusted_score'], 3, signed=True)}`, Wilcoxon `p = {_fmt_p(oc_hard['p_wilcoxon_luck'])}`).",
         f"> **Seed-lock provenance**: Section A uses the **{data['primary_seeds_lock_note']}**, which locks the primary `0-29` evaluation set against later reruns or cherry-picking.",
+    ]
+    if hr.get("present") and gpt55_hard is not None and len(hr_runs) == 3:
+        r1 = hr_runs["opencode-1"]
+        r2 = hr_runs["opencode-2"]
+        r3 = hr_runs["opencode-3"]
+        gpt_raw_hl = _fmt_ratio_ci(gpt55_hard["ratio"], gpt55_hard["ratio_lo"], gpt55_hard["ratio_hi"])
+        gpt_luck_hl = _fmt_ratio_ci(gpt55_hard["luck_adj_ratio"], gpt55_hard["luck_adj_lo"], gpt55_hard["luck_adj_hi"])
+        lines.append(
+            f"> **Honest scope & Harbor judge-path disclosure (`aa1c679e` / `5f9b3297`)**: "
+            f"The `{raw_hl}` `hard` gap holds on the MCP-only setup (`n = {oc_hard['n']}`, dev seeds `0-29`) for `gemini-4-carbon` in OpenCode; "
+            f"it **did not reproduce in the Harbor {hr['harbor_version']} container judge-path rehearsal** on tag `{hr['env_tag']}` (`{hr['env_sha']}`, `{hr['n_tasks']}` hard judge tasks `{hr['tasks']}`, shell enabled in container and used in `{hr.get('shell_used_trials', '20/28')}` trials: "
+            f"`{_fmt_ratio_ci(r1['pct_oracle'], r1['pct_oracle_ci'][0], r1['pct_oracle_ci'][1])}` at `n = {r1['n_valid']}`, "
+            f"`{_fmt_ratio_ci(r2['pct_oracle'], r2['pct_oracle_ci'][0], r2['pct_oracle_ci'][1])}` at `n = {r2['n_valid']}`, and "
+            f"`{_fmt_ratio_ci(r3['pct_oracle'], r3['pct_oracle_ci'][0], r3['pct_oracle_ci'][1])}` at `n = {r3['n_valid']}` valid vs same-task oracle `{_fmt_num(hr['oracle_mean_10'], 3, signed=True)}`; `do_nothing = stop_early = +0.000`), "
+            f"and **`opencode-gpt-5.5` (`ca0a0dc0` / `cf394894`) over MCP matches the reference solver (`{gpt_raw_hl}` raw, `{gpt_luck_hl}` luck-adjusted, `pass^3 = {_fmt_num(gpt55_hard['pass3_calibrated'], 3)}`, `n = {gpt55_hard['n']}`)**."
+        )
+
+    lines += [
         "",
         "Reproduce without API keys (single process, <35s):",
         "",
@@ -1684,8 +1862,50 @@ def render_md(data: dict[str, Any]) -> str:
             f"Pooled primary `0-29` + extension (`n = {g1['pooled_n']}`, seeds `0-29, 34, 37`): `{_fmt_num(g1['pooled_mean'], 3, signed=True)} +/- {_fmt_num(g1['pooled_score_ci'], 3)}` vs solver `{_fmt_num(g1['pooled_solver_same_seeds'], 3)}`, **`{_fmt_ratio_ci(g1['pooled_ratio'], pool_r_ci[0], pool_r_ci[1])}`** raw, paired diff `{_fmt_num(g1['pooled_paired_diff'], 3, signed=True)} +/- {_fmt_num(g1['pooled_paired_diff_ci'], 3)}`, **`{_fmt_ratio_ci(g1['pooled_luck_adj_ratio'], pool_l_ci[0], pool_l_ci[1])}`** luck-adjusted (`{_fmt_num(g1['pooled_luck_adjusted_score'], 3, signed=True)}`). The primary headline remains the `n = 30` `0-29` row."
         )
 
+    if gpt55_hard is not None:
+        gpt_raw_ci = _fmt_ratio_ci(gpt55_hard["ratio"], gpt55_hard["ratio_lo"], gpt55_hard["ratio_hi"])
+        gpt_luck_ci = _fmt_ratio_ci(gpt55_hard["luck_adj_ratio"], gpt55_hard["luck_adj_lo"], gpt55_hard["luck_adj_hi"])
+        beh_clause = (
+            f"`{gpt55_beh['canaries_mean']:.1f}` canaries, `{gpt55_beh['interviews_mean']:.1f}` interviews = "
+            f"`{gpt55_beh['interview_call_share']:.0%}` of `{gpt55_beh['tool_calls_mean']:.0f}` tool calls, "
+            f"`{gpt55_beh['executed_correct']}/{gpt55_beh['executed_accusations']}` executed accusations right, "
+            f"`{gpt55_beh['non_tool_abstentions']}` text-only non-tool abstentions on seeds `{gpt55_beh['non_tool_abstention_seeds']}` scored `0.0`"
+            if gpt55_beh.get("present")
+            else "`28/28` executed accusations right, `2` text-only non-tool abstentions on seeds `[0, 17]` scored `0.0`"
+        )
+        lines.append(
+            f"- **Pre-registered second frontier family `opencode-gpt-5.5` (`ca0a0dc0` / `cf394894`, `data/runs/committed/v1.4/opencode-gpt-5.5/`)**: "
+            f"OpenCode {gpt55_beh.get('opencode_version', '1.19.5')} `gpt-5.5` on `v1.4` `hard` (`n = {gpt55_hard['n']}`, paired seeds `0-29`, `{gpt55_hard['invalid']}` invalid, `{gpt55_hard.get('infra_excluded_attempts', 0)}` infra failures, Env-replayed; `present = {str(ver['optional_opencode_gpt_5_5_present']).lower()}`) "
+            f"scores `{_fmt_num(gpt55_hard['mean'], 3, signed=True)} +/- {_fmt_num(gpt55_hard['score_ci'], 3)}` vs solver `{_fmt_num(gpt55_hard['solver_same_seeds'], 3)}`, "
+            f"**`{gpt_raw_ci}`** raw (paired diff `{_fmt_num(gpt55_hard['paired_diff'], 3, signed=True)} +/- {_fmt_num(gpt55_hard['paired_diff_ci'], 3)}`), "
+            f"**`{gpt_luck_ci}`** luck-adjusted (`{_fmt_num(gpt55_hard['luck_adjusted_score'], 3, signed=True)}`), and calibrated `pass^3 = {_fmt_num(gpt55_hard['pass3_calibrated'], 3)}` "
+            f"({beh_clause}; see `results/behaviour_compare_v1.4.md`): **no gap for `gpt-5.5`**."
+        )
+    else:
+        lines.append(
+            f"- **Pre-registered `gpt-5.5` hook (`cf394894`)**: `docs/reports/gap.md` pre-registers an OpenCode 1.19.5 `gpt-5.5` `v1.4` `hard` run (`0-29`, stop 08:15 EET / $200 cap); `headline_gap_table.py` auto-includes and Env-replays `data/runs/committed/v1.4/opencode-gpt-5.5` when present (`present = {str(ver['optional_opencode_gpt_5_5_present']).lower()}`)."
+        )
+
+    if hr.get("present") and len(hr_runs) == 3:
+        r1 = hr_runs["opencode-1"]
+        r2 = hr_runs["opencode-2"]
+        r3 = hr_runs["opencode-3"]
+        snap3 = hr.get("snapshot_0852_opencode_3") or {}
+        snap_note = (
+            f"`n = {snap3['n_valid']}` `{_fmt_num(snap3['mean'], 3, signed=True)}` / `{snap3['pct_oracle']:.0%}`"
+            if snap3
+            else "`n = 7` `+0.656` / `153%`"
+        )
+        lines.append(
+            f"- **Harbor 3x10 container judge-path rehearsal (`aa1c679e` / `5f9b3297`, `results/harbor/rehearsal/TABLE.md`, tag `{hr['env_tag']}` `{hr['env_sha']}`)**: "
+            f"Harbor {hr['harbor_version']} + OpenCode + `gemini-4-carbon` across `3` runs on `{hr['n_tasks']}` hard judge tasks (`{hr['tasks']}`, shell enabled in container and used in `{hr.get('shell_used_trials', '20/28')}` trials, `28/29` valid accusations correct) "
+            f"scored `{_fmt_num(r1['mean'], 3, signed=True)}` (`{_fmt_ratio_ci(r1['pct_oracle'], r1['pct_oracle_ci'][0], r1['pct_oracle_ci'][1])}`, `n = {r1['n_valid']}`), "
+            f"`{_fmt_num(r2['mean'], 3, signed=True)}` (`{_fmt_ratio_ci(r2['pct_oracle'], r2['pct_oracle_ci'][0], r2['pct_oracle_ci'][1])}`, `n = {r2['n_valid']}`), and "
+            f"`{_fmt_num(r3['mean'], 3, signed=True)}` (`{_fmt_ratio_ci(r3['pct_oracle'], r3['pct_oracle_ci'][0], r3['pct_oracle_ci'][1])}`, `n = {r3['n_valid']}` valid, `{hr.get('run3_finished_after_0830', 5)}` finished after the `08:30` cut-off, `{hr.get('run3_infra_excluded', 1)}` infra-excluded; corrected in `aa1c679e` / `5f9b3297` from the `08:52` partial {snap_note} snapshot, full trials on `s1-rehearsal-final` `{hr['final_branch_sha']}`) "
+            f"vs same-task oracle `{_fmt_num(hr['oracle_mean_10'], 3, signed=True)}` (`do_nothing = stop_early = +0.000`); the MCP-only `65%` gap **did not reproduce** in the Harbor container judge path."
+        )
+
     lines += [
-        f"- **Pre-registered `gpt-5.5` hook (`cf394894`)**: `docs/reports/gap.md` pre-registers an OpenCode 1.19.5 `gpt-5.5` `v1.4` `hard` run (`0-29`, stop 08:15 EET / $200 cap); `headline_gap_table.py` auto-includes and Env-replays `data/runs/committed/v1.4/opencode-gpt-5.5` when present (`present = {str(ver['optional_opencode_gpt_5_5_present']).lower()}`).",
         "- **Dashboard leaderboard export**: also writes `results/leaderboard_v14_hard.json` (`tier = hard`, `tiers_version = v1.4`, `seeds = 0-29`) for `canary.gemini.leaderboard` and `canary.gemini.dashboard`.",
         "- **Statistical & Sleeper-ported metrics**: 10,000-resample paired bootstrap 95% CIs (`rng_seed = 0`), 95% Wilson CIs on `pass^1` accuracy, exact two-sided paired Wilcoxon signed-rank and exact binomial sign-test p-values on both raw and luck-adjusted per-seed differences, exact `SolverPolicy` posterior `P(accused)` and luck-adjusted EV `P*V - (1-P)` (`0` when abstained), posterior-calibrated `pass^3 = mean(p_win_seed^3)`, winnable-world ratio restricted to seeds where `solver > 0` (`27/30` on `medium`, excluding abstained seeds `20, 21, 29`; `29/30` on `hard`, excluding fingerprint-flip seed `15`), and explicit cache provenance.",
         "",

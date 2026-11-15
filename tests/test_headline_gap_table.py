@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import copy
+import io
 import json
 import math
+import subprocess
 import sys
+import tokenize
 from pathlib import Path
 
 import pytest
@@ -21,6 +24,8 @@ from canary.redteam.anticheat import _client_only_step
 HASH_CHAR = chr(35)
 EM_DASH = chr(0x2014)
 EN_DASH = chr(0x2013)
+PLUS_MINUS = chr(0x00B1)
+MINUS_SIGN = chr(0x2212)
 THIS_TEST_PATH = Path(__file__).resolve()
 PROTECTED_PATHS_FILE = ROOT / ".github" / "protected-paths.txt"
 
@@ -36,12 +41,19 @@ def test_source_and_artifact_hygiene():
     for rel in ("scripts/headline_gap_table.py", "tests/test_headline_gap_table.py"):
         py_text = (ROOT / rel).read_text(encoding="utf-8")
         assert HASH_CHAR not in py_text, f"comment char found in {rel}"
+        comments = [t for t in tokenize.generate_tokens(io.StringIO(py_text).readline) if t.type == tokenize.COMMENT]
+        assert not comments, f"tokenize.COMMENT found in {rel}"
 
     stale_phrase = "pre-registered" + " dev seeds"
+    co_authored = "Co-Authored" + "-By"
     for rel in owned_rel_paths:
         txt = (ROOT / rel).read_text(encoding="utf-8")
         assert EM_DASH not in txt, f"em dash found in {rel}"
         assert EN_DASH not in txt, f"en dash found in {rel}"
+        assert PLUS_MINUS not in txt, f"unicode plus-minus found in {rel}"
+        assert MINUS_SIGN not in txt, f"unicode minus sign found in {rel}"
+        assert all(ord(ch) < 128 for ch in txt), f"non-ASCII char found in {rel}"
+        assert co_authored.lower() not in txt.lower(), f"co-authored trailer found in {rel}"
         assert stale_phrase not in txt.lower(), f"stale {stale_phrase} phrasing in {rel}"
 
     md_text = hgt.OUT_MD.read_text(encoding="utf-8")
@@ -238,7 +250,77 @@ def test_committed_artifacts_section_a_b1_b2_g1_and_headline_numbers():
     assert round(oc_hard["ratio"] * 100) == 65
     assert round(oc_hard["luck_adj_ratio"] * 100) == 72
 
-    assert hgt.render_md(data) + "\n" == hgt.OUT_MD.read_text(encoding="utf-8")
+    assert ver["frontier_cached_episodes_replayed"] == 180
+    assert ver["optional_opencode_gpt_5_5_present"] is True
+    assert ver["optional_opencode_gpt_5_5_episodes_replayed"] == 30
+
+    gpt55_hard = next(
+        r for r in sec_a if r["agent"] == "opencode:openai/gpt-5.5" and r["tier"] == "hard" and r["kind"] == "frontier"
+    )
+    assert gpt55_hard["n"] == 30
+    assert gpt55_hard["invalid"] == 0
+    assert gpt55_hard["replay_verified"] is True
+    assert round(gpt55_hard["mean"], 3) == 0.504
+    assert round(gpt55_hard["score_ci"], 3) == 0.064
+    assert round(gpt55_hard["ratio"] * 100) == 101
+    assert [round(gpt55_hard["ratio_lo"] * 100), round(gpt55_hard["ratio_hi"] * 100)] == [79, 140]
+    assert round(gpt55_hard["paired_diff"], 3) == 0.005
+    assert round(gpt55_hard["luck_adjusted_score"], 3) == 0.418
+    assert round(gpt55_hard["luck_adj_ratio"] * 100) == 84
+    assert [round(gpt55_hard["luck_adj_lo"] * 100), round(gpt55_hard["luck_adj_hi"] * 100)] == [67, 103]
+    assert round(gpt55_hard["pass3_calibrated"], 3) == 0.793
+    assert gpt55_hard["false_accusation_rate"] == 0.0
+    assert math.isclose(gpt55_hard["abstain_rate"], 2.0 / 30.0, abs_tol=1e-9)
+
+    gpt_beh = data["gpt55_hard_behaviour"]
+    assert gpt_beh["present"] is True
+    assert gpt_beh["prereg_commit"] == "cf394894"
+    assert gpt_beh["data_commit"] == "ca0a0dc0"
+    assert gpt_beh["n"] == 30
+    assert round(gpt_beh["canaries_mean"], 1) == 17.2
+    assert round(gpt_beh["interviews_mean"], 1) == 4.2
+    assert round(gpt_beh["interview_call_share"] * 100) == 6
+    assert round(gpt_beh["tool_calls_mean"]) == 69
+    assert gpt_beh["executed_correct"] == 28
+    assert gpt_beh["executed_accusations"] == 28
+    assert gpt_beh["executed_wrong"] == 0
+    assert gpt_beh["non_tool_abstentions"] == 2
+    assert gpt_beh["non_tool_abstention_seeds"] == [0, 17]
+
+    hr = data["harbor_rehearsal"]
+    assert hr["present"] is True
+    assert hr["env_tag"] == "afterquery-final"
+    assert hr["env_sha"] == "1bc3e281"
+    assert hr["harbor_version"] == "0.26.0"
+    assert hr["shell_enabled_in_container"] is True
+    assert hr["shell_used_trials"] == "20/28"
+    assert hr["corrected_final"] is True
+    assert hr["final_branch_sha"] == "d0ead011"
+    assert hr["correction_commits"] == ["aa1c679e", "5f9b3297"]
+    assert hr["run3_finished_after_0830"] == 5
+    assert hr["run3_infra_excluded"] == 1
+    assert hr["gap_reproduced_in_harbor"] is False
+    assert math.isclose(hr["oracle_mean_10"], 0.506, abs_tol=1e-9)
+    assert hr["do_nothing_mean"] == 0.0 and hr["stop_early_mean"] == 0.0
+    snap3 = hr["snapshot_0852_opencode_3"]
+    assert snap3["n_valid"] == 7
+    assert math.isclose(snap3["mean"], 0.656, abs_tol=1e-9)
+    assert round(snap3["pct_oracle"] * 100) == 153
+    hr_runs = {r["run"]: r for r in hr["runs"]}
+    assert [hr_runs[k]["n_valid"] for k in ("opencode-1", "opencode-2", "opencode-3")] == [10, 10, 9]
+    assert [round(hr_runs[k]["mean"], 3) for k in ("opencode-1", "opencode-2", "opencode-3")] == [0.472, 0.585, 0.626]
+    assert [round(hr_runs[k]["pct_oracle"] * 100) for k in ("opencode-1", "opencode-2", "opencode-3")] == [93, 116, 131]
+
+    md_rendered = hgt.OUT_MD.read_text(encoding="utf-8")
+    assert hgt.render_md(data) + "\n" == md_rendered
+    assert "did not reproduce in the Harbor 0.26.0 container judge-path rehearsal" in md_rendered
+    assert "131% [86%, 590%]" in md_rendered
+    assert "+0.656" in md_rendered and "153%" in md_rendered
+    assert "aa1c679e" in md_rendered and "5f9b3297" in md_rendered and "d0ead011" in md_rendered
+    assert "ca0a0dc0" in md_rendered and "cf394894" in md_rendered
+    assert "17.2" in md_rendered and "4.2" in md_rendered and "6%" in md_rendered
+    assert "28/28" in md_rendered and "[0, 17]" in md_rendered
+    assert "no gap for `gpt-5.5`" in md_rendered
 
 
 def test_leaderboard_v14_hard_schema_and_dashboard_compat():
@@ -369,7 +451,16 @@ def test_replay_verify_1bc3e281_data_detail_compatibility():
         hgt.replay_verify_episode(bad_detail_ep)
 
 
-def test_direct_main_check_unmocked(capsys):
+def test_direct_main_check_unmocked_no_git_no_api_keys(capsys, monkeypatch):
+    def _forbid_subprocess(*args, **kwargs):
+        raise AssertionError(f"subprocess call forbidden in keyless shallow check: {args!r}")
+
+    monkeypatch.setattr(subprocess, "run", _forbid_subprocess)
+    monkeypatch.setattr(subprocess, "Popen", _forbid_subprocess)
+    monkeypatch.setenv("GIT_DIR", "/nonexistent/shallow-ci-git-dir")
+    for key_var in ("GOOGLE_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY", "XAI_API_KEY"):
+        monkeypatch.delenv(key_var, raising=False)
+
     assert hgt.main(["--check"]) == 0
     out = capsys.readouterr().out
     assert "headline_gap_table_v14 check OK" in out

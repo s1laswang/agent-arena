@@ -204,6 +204,7 @@ def versus(eps: list[dict], base_label: str, B: int = 10000) -> list[dict]:
 
 
 MIN_SHARED = 5   # a comparison needs at least this many shared seeds to appear in the headline
+MIN_ROW_N = 5    # cells with fewer episodes are listed as incomplete, not tabulated or plotted
 MATCHED_LEVEL = "medium"   # GPT-5.5 ran at reasoning effort medium
 
 
@@ -305,7 +306,7 @@ def figure(rows: list[dict], out: Path) -> str | None:
     tiers = [t for t in TIERS if any(r["tier"] == t for r in rows)]
     fig, axes = plt.subplots(1, len(tiers), figsize=(6.4 * len(tiers), 4.6), squeeze=False)
     for ax, tier in zip(axes[0], tiers):
-        for r in [r for r in rows if r["tier"] == tier]:
+        for r in [r for r in rows if r["tier"] == tier and r["n"] >= MIN_ROW_N]:
             if r["cost_per_ep"] != r["cost_per_ep"] or r["pct_solver"] != r["pct_solver"]:
                 continue
             google = r["provider"] == "google"
@@ -362,7 +363,9 @@ def to_md(doc: dict) -> str:
           f"replay to their recorded score. Solver: {doc['checks']['solver']['reproduced']}/{doc['checks']['solver']['n']} "
           "committed reference scores reproduce in-process under v1.3.", ""]
     for tier in TIERS:
-        rows = [r for r in doc["rows"] if r["tier"] == tier]
+        all_rows = [r for r in doc["rows"] if r["tier"] == tier]
+        rows = [r for r in all_rows if r["n"] >= MIN_ROW_N]
+        small = [r for r in all_rows if r["n"] < MIN_ROW_N]
         if not rows:
             continue
         L += [f"## {tier}", "",
@@ -372,7 +375,10 @@ def to_md(doc: dict) -> str:
             L.append(f"| {r['label']} | {r['harness']} | {r['n']} | {r['score_mean']:+.3f} | {r['correct']}/{r['n']} | "
                      f"**{_pct(r['pct_solver'])}** [{_pct(r['pct_lo'])}, {_pct(r['pct_hi'])}] | {_money(r['cost_per_ep'])} | "
                      f"{_tok(r['in_per_ep'])} ({_pct(r['cached_share'])}) | {_tok(r['out_per_ep'])} |")
-        vs = [v for v in doc["versus"] if v["tier"] == tier]
+        if small:
+            L += ["", "Incomplete cells (fewer than " + str(MIN_ROW_N) + " episodes; not tabulated or plotted): "
+                  + "; ".join(f"{r['label']} n={r['n']} (mean score {r['score_mean']:+.2f})" for r in small) + "."]
+        vs = [v for v in doc["versus"] if v["tier"] == tier and v["n"] >= MIN_ROW_N]
         if vs:
             L += ["", f"Paired against `{GPT_SAME}` on the seeds both played:", "",
                   "| Gemini agent | shared seeds | score vs GPT-5.5 | paired difference [95% CI] | verdict | cost vs GPT-5.5 |",

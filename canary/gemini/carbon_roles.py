@@ -27,6 +27,7 @@ TARGET_MODEL = "gemini-4-carbon"
 DEFAULT_ROLES_DIR = "results/gemini/roles_carbon"
 DEFAULT_ROLES_MD = "docs/gemini/ROLES_CARBON.md"
 DEFAULT_SUBMISSION_MD = "docs/gemini/SIX_ROLES_SUBMISSION.md"
+DEFAULT_PITCH_MD = "pitch/GEMINI_SIX_ROLES.md"
 SUMMARY_MAX_CHARS = 600
 
 H1 = chr(35)
@@ -75,6 +76,7 @@ ROLE_META: dict[str, dict[str, Any]] = {
         ),
         "capabilities": "Structured JSON (`response_schema`), public-facts-only isolation, live suspect interviews, 37-encoding stego audit",
         "why_essential": "Generates realistic corporate chatter, personas, and dynamic events strictly from public facts with zero ground-truth mole leaks.",
+        "pitch_what": "Synthesizes personas, biased chatter, live interviews, and mid-episode events strictly from public facts (`response_schema`, 0 mole leaks).",
     },
     "adaptive_mole": {
         "index": 2,
@@ -87,6 +89,7 @@ ROLE_META: dict[str, dict[str, Any]] = {
         ),
         "capabilities": "Evolutionary JSON DSL mutation, PAIRED solvability gate, live day-by-day mole play, catchability audit",
         "why_essential": "Raises investigator difficulty via genuine reasoning traps rather than unsolvable noise, verified against `SolverPolicy`.",
+        "pitch_what": "Evolves JSON mole DSL strategies, co-designs PAIRED scenarios under a solver catchability gate, and plays the mole live in arena mode.",
     },
     "investigators": {
         "index": 3,
@@ -99,6 +102,7 @@ ROLE_META: dict[str, dict[str, Any]] = {
         ),
         "capabilities": "13-tool function calling, controlled `thinking_level` (`low`/`high`), `thought_signature` replay, prefix caching",
         "why_essential": "Executes multi-day canary trap design and stopping calibration under budget constraints paired seed-for-seed with `SolverPolicy`.",
+        "pitch_what": "Plays head of security over 13 tools with `thought_signature` replay and `thinking_level` control (`low`/`high`), paired in-process vs `SolverPolicy` on `v1.4` dev seeds.",
     },
     "failure_analyst": {
         "index": 4,
@@ -111,6 +115,7 @@ ROLE_META: dict[str, dict[str, Any]] = {
         ),
         "capabilities": "1M-token long context, structured failure clustering, Bayesian calibration audit, verbatim quote verification",
         "why_essential": "Ingests full multi-episode trajectory corpora in unfragmented passes while every quote and regret value is verified in code.",
+        "pitch_what": "Reads full multi-episode trajectory corpora in 1M long context to cluster failures and audit calibration with 100% code-verified quotes.",
     },
     "exploit_hunter": {
         "index": 5,
@@ -122,6 +127,7 @@ ROLE_META: dict[str, dict[str, Any]] = {
         ),
         "capabilities": "Whole-repo whitebox context pack, multi-persona exploit planning, in-process `Env` + live HTTP MCP execution",
         "why_essential": "Audits reward integrity across full source packs and live MCP tool boundaries scored strictly from server-side ledgers.",
+        "pitch_what": "Packs whole-repo source to plan and execute whitebox and blackbox attacks across in-process `Env` and live HTTP MCP, server-ledger scored.",
     },
     "multimodal_evidence": {
         "index": 6,
@@ -134,6 +140,7 @@ ROLE_META: dict[str, dict[str, Any]] = {
         ),
         "capabilities": "Native PNG vision via `Part.from_bytes`, scanned watermark readout, multi-image dossiers, SOC & chart forensics",
         "why_essential": "Recovers causal canary evidence rendered exclusively in pixels and separates framed decoys from true insiders.",
+        "pitch_what": "Reads pixel-only canary watermarks (`Part.from_bytes`), fuses multi-image dossiers, and diagnoses decoy-framed SOC rasters and belief charts.",
     },
 }
 
@@ -415,6 +422,11 @@ def extract_count_flexible(run_dir: Path, meta: dict[str, Any], verified: bool) 
         "n_claims",
         "n_calibrated_episodes",
         "n_charts_analyzed",
+        "n_interviews",
+        "n_events_generated",
+        "n_messages",
+        "n_kept",
+        "n_valid_llm_children",
         "n",
     )
     for k in int_keys:
@@ -501,9 +513,10 @@ def _extract_headline_metric(
     run_dir: Path,
     meta: dict[str, Any],
 ) -> str:
-    explicit = meta.get("key_metric")
-    if isinstance(explicit, str) and explicit.strip():
-        return sanitize_text(explicit.strip())
+    for explicit_key in ("key_metric", "headline_metric", "headline"):
+        explicit = meta.get(explicit_key)
+        if isinstance(explicit, str) and explicit.strip():
+            return sanitize_text(explicit.strip())
 
     if role == "multimodal_evidence":
         if _is_num(meta.get("multimodal_mean_score")) and (
@@ -590,16 +603,29 @@ def _extract_headline_metric(
                 ent = lvl.get(k)
                 if isinstance(ent, dict) and _is_num(ent.get("mean_score")):
                     bits.append(f"{k} {float(ent['mean_score']):+.3f}")
+                elif isinstance(ent, dict) and _is_num(ent.get("score")):
+                    bits.append(f"{k} {float(ent['score']):+.3f}")
             if isinstance(sol_base, dict) and _is_num(sol_base.get("mean_score")):
                 bits.append(f"solver {float(sol_base['mean_score']):+.3f}")
+            elif _is_num(meta.get("solver_score")):
+                bits.append(f"solver {float(meta['solver_score']):+.3f}")
             if bits:
                 return sanitize_text(", ".join(bits))
+        if _is_num(meta.get("low_score")) and _is_num(meta.get("high_score")):
+            ls = float(meta["low_score"])
+            hs = float(meta["high_score"])
+            txt = f"low {ls:+.3f} -> high {hs:+.3f}"
+            if _is_num(meta.get("solver_score")):
+                txt += f" vs solver {float(meta['solver_score']):+.3f}"
+            return sanitize_text(txt)
         if _is_num(meta.get("mean_score")):
             tier = sanitize_text(meta.get("tier") or "")
-            seeds = meta.get("seeds") if isinstance(meta.get("seeds"), list) else []
-            s_lbl = _format_seed_list([int(s) for s in seeds if _is_num(s)]) if seeds else ""
+            raw_seeds = meta.get("seeds") if isinstance(meta.get("seeds"), list) else []
+            clean_seeds = [int(s) for s in raw_seeds if _is_num(s)]
+            s_lbl = _format_seed_list(clean_seeds) if clean_seeds else ""
+            s_noun = "seed" if len(clean_seeds) == 1 else "seeds"
             ms = float(meta["mean_score"])
-            segs = [f"{tier} seeds {s_lbl}".strip() if s_lbl else tier]
+            segs = [f"{tier} {s_noun} {s_lbl}".strip() if s_lbl else tier]
             if _is_num(meta.get("solver_mean_score")):
                 sm = float(meta["solver_mean_score"])
                 segs.append(f"{ms:+.3f} vs solver {sm:+.3f} (diff {ms - sm:+.3f})")
@@ -627,17 +653,34 @@ def _extract_headline_metric(
             if _is_num(meta.get("agreement_rate")):
                 segs.append(f"{float(meta['agreement_rate']) * 100.0:.1f}% solver agreement")
             return sanitize_text(", ".join(segs))
+        if _is_num(meta.get("n_claims")):
+            segs = [f"{int(meta['n_claims'])} claims audited"]
+            if _is_num(meta.get("verified_quotes_pct")):
+                segs.append(f"{_fmt_pct(float(meta['verified_quotes_pct']))} verified quotes")
+            return sanitize_text(", ".join(segs))
+        if _is_num(meta.get("verified_quotes_pct")):
+            segs = []
+            if _is_num(meta.get("n_episodes")):
+                segs.append(f"{int(meta['n_episodes'])} eps")
+            segs.append(f"{_fmt_pct(float(meta['verified_quotes_pct']))} verified quotes")
+            return sanitize_text(", ".join(segs))
 
     if role == "world_text":
         if _is_num(meta.get("carbon_biased_mean")) and _is_num(meta.get("carbon_template_mean")):
             cb = float(meta["carbon_biased_mean"])
             ct = float(meta["carbon_template_mean"])
             return sanitize_text(f"carbon {cb:+.3f} (biased) vs {ct:+.3f} (template)")
-        if _is_num(meta.get("n_worlds")):
-            segs = [f"{int(meta['n_worlds'])} worlds"]
-            if _is_num(meta.get("truth_leak_violations")):
-                segs.append(f"{int(meta['truth_leak_violations'])} truth leaks")
-            return sanitize_text(", ".join(segs))
+        for cnt_key, unit in (
+            ("n_worlds", "worlds"),
+            ("n_interviews", "interviews"),
+            ("n_events_generated", "events"),
+            ("n_messages", "messages"),
+        ):
+            if _is_num(meta.get(cnt_key)) and int(meta[cnt_key]) > 0:
+                segs = [f"{int(meta[cnt_key])} {unit}"]
+                if _is_num(meta.get("truth_leak_violations")):
+                    segs.append(f"{int(meta['truth_leak_violations'])} truth leaks")
+                return sanitize_text(", ".join(segs))
 
     if role == "adaptive_mole":
         if _is_num(meta.get("catchability_compliance_rate")):
@@ -1300,7 +1343,7 @@ def build_platform_summary(
 
 def _exploit_disclosure_line(eh: dict[str, Any]) -> str:
     if eh["total_attempts"] == 0:
-        return "No `exploit_hunter` carbon runs are populated in this tree yet."
+        return "No `exploit_hunter` carbon runs are populated in this tree yet (in-process vs HTTP MCP counts pending)."
     run_bits = []
     for info in eh["per_run"]:
         detail = (
@@ -1319,6 +1362,25 @@ def _exploit_disclosure_line(eh: dict[str, Any]) -> str:
         f"({eh['ledger_verified']}/{eh['total_attempts']} server-ledger verified, {eh['tool_calls']:,} tool calls): "
         + "; ".join(run_bits)
         + "."
+    )
+
+
+def _dev_seed_disclosure_line(report: dict[str, Any]) -> str:
+    overall = report["v14_paired"].get("overall")
+    if isinstance(overall, dict) and overall.get("n"):
+        inv_clause = (
+            f", including all `n={overall['n']}` paired `investigators` episodes, execute in-process on public `v1.4` dev seeds "
+            "(never held-out salted `900000+` Harbor/MCP judge seeds)"
+        )
+    else:
+        inv_clause = (
+            " execute in-process on public `v1.4` dev seeds "
+            "(never held-out salted `900000+` Harbor/MCP judge seeds)"
+        )
+    return (
+        f"Runs under `{report['roles_dir']}/` (apart from the explicitly counted live HTTP MCP `exploit_hunter` attacks above)"
+        f"{inv_clause}; `world_text` is a demo/research `v1.5` candidate layer and `adaptive_mole` runs in arena mode, "
+        "leaving frozen judged `v1.4` tasks untouched, while `docs/gemini/validation.md` remains reserved untouched for human labeller Ivar."
     )
 
 
@@ -1419,7 +1481,7 @@ def render_roles_carbon_md(report: dict[str, Any]) -> str:
         f"- Suite status: **{status_lbl}**",
         f"- Target model: `{TARGET_MODEL}`",
         f"- Verified roles: **{tot['verified_roles_count']} / {tot['required_roles_count']}** ({roles_inline})",
-        f"- Verified `{TARGET_MODEL}` run folders: **{tot['verified_runs']:,}** (scanned: **{tot['scanned_runs']:,}**, skipped consolidated/non-run entries: **{len(report['skipped_suite_dirs']) + len(report['skipped_non_dirs'])}**)",
+        f"- Verified `{TARGET_MODEL}` run folders: **{tot['verified_runs']:,}** (scanned: **{tot['scanned_runs']:,}**, consolidated suite dirs skipped: **{len(report['skipped_suite_dirs'])}**)",
         f"- Total verified episodes and evaluated samples: **{tot['count']:,}**",
         f"- Total Gemini API calls: **{tot['calls']:,}**",
         f"- Total tokens (input / output / thinking / cached): **{tot['tokens_in']:,} / {tot['tokens_out']:,} / {tot['thinking_tokens']:,} / {tot['cached_tokens']:,}** (**{tot['cache_hit_pct']:.1f}%** cache hit rate)",
@@ -1543,6 +1605,7 @@ def render_roles_carbon_md(report: dict[str, Any]) -> str:
         f"{H2} Scope and Honesty Disclosures",
         "",
         f"- **Exploit Hunter execution channels:** {_exploit_disclosure_line(eh)}",
+        f"- **In-process harness and dev-seed split:** {_dev_seed_disclosure_line(report)}",
         "- **Environment boundaries:** `world_text` is a demo/research layer (`v1.5` candidate) and `adaptive_mole` runs in arena mode; neither modifies the judged `v1.4` benchmark tasks.",
         "- **Human validation boundary:** `docs/gemini/validation.md` is reserved untouched for human labeller Ivar (`canary.gemini.atlas_agreement`); automated LLM or solver audits under `failure_analyst` never claim human-agreement numbers.",
         "",
@@ -1647,6 +1710,7 @@ def render_six_roles_submission_md(report: dict[str, Any]) -> str:
     lines.extend([
         "",
         f"- **Explicit `exploit_hunter` channel disclosure:** {_exploit_disclosure_line(eh)}",
+        f"- **In-process harness and dev-seed disclosure:** {_dev_seed_disclosure_line(report)}",
     ])
 
     overall = v14.get("overall")
@@ -1697,6 +1761,94 @@ def render_six_roles_submission_md(report: dict[str, Any]) -> str:
         f"{H2} Team",
         "",
         "Silas Wang, Momin (Momin010), Ivar (ivarakerholm-wq), and Chintufp.",
+        "",
+    ])
+    return "\n".join(lines)
+
+
+def render_pitch_six_roles_md(report: dict[str, Any]) -> str:
+    tot = report["totals"]
+    roles_map = report["roles"]
+    eh = report["exploit_summary"]
+    v14 = report["v14_paired"]
+    mm = report["multimodal_summary"]
+    overall = v14.get("overall")
+    pooled = mm.get("pooled_ablation")
+
+    prob_tail = ""
+    if isinstance(overall, dict) and overall.get("n"):
+        r_txt = f"{overall['ratio'] * 100.0:.1f}%" if overall.get("ratio") is not None else "n/a"
+        prob_tail = (
+            f" Across **n={overall['n']}** paired in-process `v1.4` dev-seed episodes, `{TARGET_MODEL}` reaches "
+            f"**{r_txt}** of `SolverPolicy` (`{overall['carbon_mean']:+.4f}` vs `{overall['solver_mean']:+.4f}`, "
+            f"paired diff `{overall['paired_diff']:+.4f} +/- {overall['diff_ci']:.4f}` 95% CI, "
+            f"`{overall['carbon_accuracy'] * 100.0:.1f}%` accuracy)."
+        )
+    elif isinstance(pooled, dict) and pooled.get("n_episodes"):
+        prob_tail = (
+            f" Across **n={pooled['n_episodes']}** unique redacted-memo episodes (**{pooled['n_scans']}** PNG scans via "
+            f"`Part.from_bytes`), `{TARGET_MODEL}` lifts mean score from `{pooled['blind_mean']:+.4f}` (blind) to "
+            f"`{pooled['multimodal_mean']:+.4f}` (paired lift `{pooled['paired_diff']:+.4f} +/- {pooled['diff_ci']:.4f}` "
+            f"95% CI, `{pooled['oracle_recovery'] * 100.0:.1f}%` Bayesian text-oracle recovery)."
+        )
+
+    lines: list[str] = [
+        f"{H1} Canary x Gemini: Six Essential `{TARGET_MODEL}` Roles",
+        "",
+        f"Deterministic six-role `{TARGET_MODEL}` pitch brief generated by `python -m canary.gemini.carbon_roles` from `{report['roles_dir']}/`. Main track submission: `docs/gemini/SUBMISSION.md`; full six-role write-up: `docs/gemini/SIX_ROLES_SUBMISSION.md`; provenance matrix: `docs/gemini/ROLES_CARBON.md`.",
+        "",
+        f"{H2} Platform Summary",
+        "",
+        report["platform_summary"],
+        "",
+        f"{H2} 1. The Problem and Why It Matters",
+        "",
+        f"AI agents now execute high-stakes security investigations where evidence is partial, daily budgets are tight, and company value bleeds until an irreversible accusation. Single scalar leaderboards cannot reveal where reasoning fails, what extra inference-time thinking buys, or whether the reward is gameable. Canary pairs every episode with an exact Bayesian solver (`SolverPolicy`) and puts `{TARGET_MODEL}` in six auditable roles across **{tot['verified_runs']:,} verified runs** (**{tot['verified_roles_count']}/{tot['required_roles_count']}** roles populated), **{tot['calls']:,} API calls**, **{tot['tokens_in']:,} input tokens** (**{tot['cached_tokens']:,} cached**, **{tot['cache_hit_pct']:.1f}%** hit rate), **{tot['thinking_tokens']:,} thinking tokens**, and **${tot['cost_usd']:.4f}** cache-adjusted spend (**${tot['list_cost_usd']:.4f}** uncached list USD, **{tot['secret_leaks_count']}** secret leaks).{prob_tail}",
+        "",
+        f"{H2} 2. Six Verified `{TARGET_MODEL}` Roles (One Labelled Real Run per Role)",
+        "",
+        f"| Role | What `{TARGET_MODEL}` Does | Canonical Run Folder | Model ID | Commit | Calls / Cost | Verified Result |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+
+    for role in REQUIRED_ROLES:
+        canon = roles_map[role]["canonical_run"]
+        pitch_what = ROLE_META[role]["pitch_what"]
+        outcome = _submission_role_summary(role, report)
+        if canon is None:
+            lines.append(
+                f"| `{_md_cell(role)}` | {_md_cell(pitch_what)} | none | none | none | 0 / $0.0000 | {_md_cell(outcome)} |"
+            )
+        else:
+            calls_cost = f"{canon['calls']:,} / ${canon['cost_usd']:.4f}"
+            lines.append(
+                f"| `{_md_cell(role)}` | {_md_cell(pitch_what)} | `{_md_cell(canon['run_folder'])}` | "
+                f"`{_md_cell(canon['model_id'])}` | `{_md_cell(canon['commit'])}` | {calls_cost} | {_md_cell(outcome)} |"
+            )
+
+    lines.extend([
+        "",
+        f"- **Explicit `exploit_hunter` channel disclosure:** {_exploit_disclosure_line(eh)}",
+        f"- **In-process harness and dev-seed disclosure:** {_dev_seed_disclosure_line(report)}",
+        "",
+        f"{H2} 3. What Is Innovative",
+        "",
+        "- **Difficulty by reasoning, never unfairness:** PAIRED scenario proposals and Mole Forge children are accepted only when `SolverPolicy` stays high and naive heuristics fail, guaranteeing catchable hardness.",
+        f"- **Thinking-level Bayesian regret attribution:** Controlled `low` vs `high` `thinking_level` runs on identical `{TARGET_MODEL}` weights and world seeds separate experimental-design gains from stopping conservatism.",
+        "- **Checked, not trusted:** Every `failure_analyst` quote is verified verbatim in Python, every regret tag comes from `SolverPolicy`, every `multimodal_evidence` PNG watermark readout (`Part.from_bytes`) is paired against blind and text-oracle controls, and every `exploit_hunter` score comes strictly from the server-side ledger.",
+        "",
+        f"{H2} 4. Why Gemini Is Essential",
+        "",
+        *_why_gemini_bullets(report),
+        "",
+        f"{H2} 5. Keyless Offline Reproduction",
+        "",
+        "Full provenance tables and main submission write-up: `docs/gemini/SUBMISSION.md`, `docs/gemini/SIX_ROLES_SUBMISSION.md`, and `docs/gemini/ROLES_CARBON.md`.",
+        "",
+        "```bash",
+        'GEMINI_API_KEY="" GOOGLE_GENERATIVE_AI_API_KEY="" PYTHONPATH=. python -m canary.gemini.carbon_roles --root . --check',
+        'GEMINI_API_KEY="" GOOGLE_GENERATIVE_AI_API_KEY="" PYTHONPATH=. pytest -q tests/test_gemini_lab_carbon_roles.py',
+        "```",
         "",
     ])
     return "\n".join(lines)
@@ -1806,7 +1958,13 @@ def validate_rendered_doc(
             if folder not in cited_set:
                 errors.append(f"matrix_missing_verified_run:{folder}")
 
-    if kind == "submission":
+    low_all = md_text.lower()
+    if "in-process" not in low_all:
+        errors.append("missing_inproc_disclosure")
+    if "dev seed" not in low_all and "dev-seed" not in low_all:
+        errors.append("missing_dev_seed_disclosure")
+
+    if kind in {"submission", "pitch"}:
         try:
             summary = extract_platform_summary(md_text)
             if not (100 <= len(summary) <= SUMMARY_MAX_CHARS):
@@ -1816,9 +1974,8 @@ def validate_rendered_doc(
         except ValueError as exc:
             errors.append(f"platform_summary_error:{exc}")
 
-        low = md_text.lower()
         for kw in ("why gemini is essential", "thinking_level", "thought_signature", "part.from_bytes", "caching"):
-            if kw not in low:
+            if kw not in low_all:
                 errors.append(f"missing_essential_pillar:{kw}")
 
     return errors
@@ -1839,6 +1996,7 @@ def sync_carbon_roles_docs(
     roles_dir: str | Path | None = None,
     roles_md: str | Path = DEFAULT_ROLES_MD,
     submission_md: str | Path = DEFAULT_SUBMISSION_MD,
+    pitch_md: str | Path = DEFAULT_PITCH_MD,
     out_json: str | Path | None = None,
     check: bool = False,
     strict: bool = False,
@@ -1848,17 +2006,21 @@ def sync_carbon_roles_docs(
     report = audit_carbon_roles(root_path, roles_dir=roles_dir)
     rendered_roles = render_roles_carbon_md(report)
     rendered_sub = render_six_roles_submission_md(report)
+    rendered_pitch = render_pitch_six_roles_md(report)
 
     val_errors = {
         "roles_md": validate_rendered_doc(rendered_roles, root_path, report, kind="roles"),
         "submission_md": validate_rendered_doc(rendered_sub, root_path, report, kind="submission"),
+        "pitch_md": validate_rendered_doc(rendered_pitch, root_path, report, kind="pitch"),
     }
 
     roles_md_path = _resolve_out_path(root_path, roles_md)
     sub_md_path = _resolve_out_path(root_path, submission_md)
+    pitch_md_path = _resolve_out_path(root_path, pitch_md)
     target_map = {
         "roles_md": (roles_md_path, rendered_roles),
         "submission_md": (sub_md_path, rendered_sub),
+        "pitch_md": (pitch_md_path, rendered_pitch),
     }
 
     out_of_sync: list[str] = []
@@ -1910,6 +2072,7 @@ def sync_carbon_roles_docs(
         "rendered": {
             "roles_md": rendered_roles,
             "submission_md": rendered_sub,
+            "pitch_md": rendered_pitch,
         },
         "validation_errors": val_errors,
         "out_of_sync": out_of_sync,
@@ -1918,6 +2081,7 @@ def sync_carbon_roles_docs(
         "files": {
             "roles_md": str(roles_md_path),
             "submission_md": str(sub_md_path),
+            "pitch_md": str(pitch_md_path),
         },
     }
 
@@ -1930,6 +2094,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--roles-dir", default=None, help="override roles_carbon directory")
     ap.add_argument("--roles-md", default=DEFAULT_ROLES_MD, help="output path for ROLES_CARBON.md")
     ap.add_argument("--submission-md", default=DEFAULT_SUBMISSION_MD, help="output path for SIX_ROLES_SUBMISSION.md")
+    ap.add_argument("--pitch-md", default=DEFAULT_PITCH_MD, help="output path for pitch/GEMINI_SIX_ROLES.md")
     ap.add_argument("--out-json", default=None, help="optional JSON manifest output path")
     ap.add_argument("--check", action="store_true", help="verify markdown docs and provenance without writing")
     ap.add_argument("--strict", action="store_true", help="require all 6/6 roles to have verified carbon runs")
@@ -1943,6 +2108,7 @@ def main(argv: list[str] | None = None) -> int:
             roles_dir=args.roles_dir,
             roles_md=args.roles_md,
             submission_md=args.submission_md,
+            pitch_md=args.pitch_md,
             out_json=args.out_json,
             check=args.check,
             strict=args.strict,

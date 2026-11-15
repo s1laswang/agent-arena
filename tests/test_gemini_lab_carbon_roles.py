@@ -22,6 +22,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ROLES_CARBON_DIR = REPO_ROOT / "results" / "gemini" / "roles_carbon"
 ROLES_MD_PATH = REPO_ROOT / "docs" / "gemini" / "ROLES_CARBON.md"
 SUBMISSION_MD_PATH = REPO_ROOT / "docs" / "gemini" / "SIX_ROLES_SUBMISSION.md"
+PITCH_MD_PATH = REPO_ROOT / "pitch" / "GEMINI_SIX_ROLES.md"
 VALIDATION_MD_PATH = REPO_ROOT / "docs" / "gemini" / "validation.md"
 CARBON_ROLES_PY_PATH = REPO_ROOT / "canary" / "gemini" / "carbon_roles.py"
 SELF_TEST_PY_PATH = Path(__file__).resolve()
@@ -267,11 +268,19 @@ def test_cli_check_determinism_and_committed_inventory(tmp_path: Path) -> None:
     rendered_roles_2 = cr.render_roles_carbon_md(report_2)
     rendered_sub_1 = cr.render_six_roles_submission_md(report_1)
     rendered_sub_2 = cr.render_six_roles_submission_md(report_2)
+    rendered_pitch_1 = cr.render_pitch_six_roles_md(report_1)
+    rendered_pitch_2 = cr.render_pitch_six_roles_md(report_2)
     assert rendered_roles_1 == rendered_roles_2
     assert rendered_sub_1 == rendered_sub_2
+    assert rendered_pitch_1 == rendered_pitch_2
 
     assert ROLES_MD_PATH.read_text(encoding="utf-8") == rendered_roles_1
     assert SUBMISSION_MD_PATH.read_text(encoding="utf-8") == rendered_sub_1
+    assert PITCH_MD_PATH.read_text(encoding="utf-8") == rendered_pitch_1
+    assert cr.STALE_ROLES_PREFIX not in rendered_pitch_1
+    assert "docs/gemini/SUBMISSION.md" in rendered_pitch_1
+    assert "docs/gemini/SIX_ROLES_SUBMISSION.md" in rendered_pitch_1
+    assert "docs/gemini/ROLES_CARBON.md" in rendered_pitch_1
 
     for run in report_1["runs"]:
         assert run["verified"] is True
@@ -325,10 +334,45 @@ def test_cli_check_determinism_and_committed_inventory(tmp_path: Path) -> None:
             str(ROLES_MD_PATH),
             "--submission-md",
             str(missing_sub),
+            "--pitch-md",
+            str(PITCH_MD_PATH),
             "--check",
         ]
     )
     assert rc_missing == 1
+
+    drifted_pitch = tmp_path / "PITCH_drifted.md"
+    drifted_pitch.write_text(rendered_pitch_1 + "\ndrift\n", encoding="utf-8")
+    rc_pitch_drift = cr.main(
+        [
+            "--root",
+            str(REPO_ROOT),
+            "--roles-md",
+            str(ROLES_MD_PATH),
+            "--submission-md",
+            str(SUBMISSION_MD_PATH),
+            "--pitch-md",
+            str(drifted_pitch),
+            "--check",
+        ]
+    )
+    assert rc_pitch_drift == 1
+
+    missing_pitch = tmp_path / "MISSING_PITCH.md"
+    rc_pitch_missing = cr.main(
+        [
+            "--root",
+            str(REPO_ROOT),
+            "--roles-md",
+            str(ROLES_MD_PATH),
+            "--submission-md",
+            str(SUBMISSION_MD_PATH),
+            "--pitch-md",
+            str(missing_pitch),
+            "--check",
+        ]
+    )
+    assert rc_pitch_missing == 1
 
 
 def test_six_role_strict_staged_and_hostile_rejection(tmp_path: Path) -> None:
@@ -381,6 +425,7 @@ def test_six_role_strict_staged_and_hostile_rejection(tmp_path: Path) -> None:
 
     staged_roles_md = (stage_root / "docs" / "gemini" / "ROLES_CARBON.md").read_text(encoding="utf-8")
     staged_sub_md = (stage_root / "docs" / "gemini" / "SIX_ROLES_SUBMISSION.md").read_text(encoding="utf-8")
+    staged_pitch_md = (stage_root / "pitch" / "GEMINI_SIX_ROLES.md").read_text(encoding="utf-8")
     staged_manifest = json.loads(manifest_out.read_text(encoding="utf-8"))
 
     assert staged_manifest["strict_ok"] is True
@@ -390,8 +435,37 @@ def test_six_role_strict_staged_and_hostile_rejection(tmp_path: Path) -> None:
     assert "STRICT 6/6 VERIFIED" in staged_roles_md
     assert "not populated on this branch" not in staged_roles_md
     assert "not populated on this branch" not in staged_sub_md
+    assert "not populated on this branch" not in staged_pitch_md
     assert "Paired `gemini-4-carbon` vs `SolverPolicy` Benchmark (`v1.4`)" in staged_roles_md
     assert "thinking-ladder-carbon-hard0" in staged_sub_md
+    assert "thinking-ladder-carbon-hard0" in staged_pitch_md
+
+    for role in cr.REQUIRED_ROLES:
+        _write_json(
+            stage_roles / role / "index.json",
+            {
+                "role": role,
+                "target_model": "gemini-4-carbon",
+                "verified": True,
+                "secret_hygiene_clean": True,
+            },
+        )
+    idx_rep = cr.audit_carbon_roles(stage_root)
+    assert idx_rep["strict_ok"] is True
+    assert idx_rep["invalid_runs"] == []
+    assert idx_rep["secret_leaks"] == []
+    expected_skipped_idx = {f"results/gemini/roles_carbon/{r}/index.json" for r in cr.REQUIRED_ROLES}
+    assert expected_skipped_idx.issubset(set(idx_rep["skipped_non_dirs"]))
+    assert cr.main(["--root", str(stage_root), "--strict", "--check"]) == 0
+
+    leaked_idx = stage_roles / "multimodal_evidence" / "index.json"
+    leaked_idx.write_text(json.dumps({"leak": "AI" + "za" + "SyLeakedIndexToken1234567890"}) + "\n", encoding="utf-8")
+    leak_rep = cr.audit_carbon_roles(stage_root)
+    assert leak_rep["ok"] is False
+    assert leak_rep["strict_ok"] is False
+    assert any(lk["kind"] == "google_api_key" for lk in leak_rep["secret_leaks"])
+    leaked_idx.unlink()
+    assert cr.main(["--root", str(stage_root), "--strict", "--check"]) == 0
 
     with pytest.raises(ValueError, match="meta.json"):
         cr.sync_carbon_roles_docs(stage_root, out_json="results/gemini/meta.json")
@@ -441,7 +515,10 @@ def test_six_role_strict_staged_and_hostile_rejection(tmp_path: Path) -> None:
 
 def test_platform_summary_within_600_chars_with_n_and_cis(tmp_path: Path) -> None:
     committed_sub_md = SUBMISSION_MD_PATH.read_text(encoding="utf-8")
+    committed_pitch_md = PITCH_MD_PATH.read_text(encoding="utf-8")
     summary = cr.extract_platform_summary(committed_sub_md)
+    pitch_summary = cr.extract_platform_summary(committed_pitch_md)
+    assert summary == pitch_summary
     assert 100 <= len(summary) <= 600
     assert re.search(r"\bn=[1-9]\d*\b", summary) is not None
     assert "95% CI" in summary
@@ -506,14 +583,17 @@ def test_explicit_8_of_11_inproc_vs_3_of_11_mcp_disclosure(tmp_path: Path) -> No
 
     pair_roles_md = cr.render_roles_carbon_md(pair_rep)
     pair_sub_md = cr.render_six_roles_submission_md(pair_rep)
-    for doc_txt in (pair_roles_md, pair_sub_md):
+    pair_pitch_md = cr.render_pitch_six_roles_md(pair_rep)
+    for doc_txt in (pair_roles_md, pair_sub_md, pair_pitch_md):
         assert "**8 of 11**" in doc_txt
         assert "**3 of 11**" in doc_txt
         assert "in-process against `canary.env.Env`" in doc_txt
         assert "executed over live HTTP MCP" in doc_txt
         assert "11/11 server-ledger verified" in doc_txt
+        assert "dev seeds" in doc_txt
 
     assert "suite channels: 8/11 in-process, 3/11 live HTTP MCP" in pair_sub_md
+    assert "suite channels: 8/11 in-process, 3/11 live HTTP MCP" in pair_pitch_md
 
     repo_rep = cr.audit_carbon_roles(REPO_ROOT)
     eh_repo = repo_rep["exploit_summary"]
@@ -527,11 +607,13 @@ def test_explicit_8_of_11_inproc_vs_3_of_11_mcp_disclosure(tmp_path: Path) -> No
     )
     committed_roles_md = ROLES_MD_PATH.read_text(encoding="utf-8")
     committed_sub_md = SUBMISSION_MD_PATH.read_text(encoding="utf-8")
-    assert expected_inproc_phrase in committed_roles_md
-    assert expected_mcp_phrase in committed_roles_md
-    assert expected_inproc_phrase in committed_sub_md
-    assert expected_mcp_phrase in committed_sub_md
+    committed_pitch_md = PITCH_MD_PATH.read_text(encoding="utf-8")
+    for doc_txt in (committed_roles_md, committed_sub_md, committed_pitch_md):
+        assert expected_inproc_phrase in doc_txt
+        assert expected_mcp_phrase in doc_txt
+        assert "dev seeds" in doc_txt
     assert expected_channel_ratio in committed_sub_md
+    assert expected_channel_ratio in committed_pitch_md
 
 
 def test_validation_md_untouched_and_zero_protected_paths_touches(tmp_path: Path) -> None:
@@ -559,14 +641,20 @@ def test_validation_md_untouched_and_zero_protected_paths_touches(tmp_path: Path
 
     out_roles = tmp_path / "ROLES_CARBON.md"
     out_sub = tmp_path / "SIX_ROLES_SUBMISSION.md"
+    out_pitch = tmp_path / "GEMINI_SIX_ROLES.md"
     write_res = cr.sync_carbon_roles_docs(
         REPO_ROOT,
         roles_md=out_roles,
         submission_md=out_sub,
+        pitch_md=out_pitch,
         check=False,
     )
     assert write_res["ok"] is True
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["ROLES_CARBON.md", "SIX_ROLES_SUBMISSION.md"]
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "GEMINI_SIX_ROLES.md",
+        "ROLES_CARBON.md",
+        "SIX_ROLES_SUBMISSION.md",
+    ]
 
     assert _sha256_bytes(VALIDATION_MD_PATH) == val_sha_before
     for p, expected_sha in digests_before.items():
@@ -583,7 +671,7 @@ def test_validation_md_untouched_and_zero_protected_paths_touches(tmp_path: Path
         )
         assert proc.stdout.strip() == ""
 
-    for doc_path in (ROLES_MD_PATH, SUBMISSION_MD_PATH):
+    for doc_path in (ROLES_MD_PATH, SUBMISSION_MD_PATH, PITCH_MD_PATH):
         txt = doc_path.read_text(encoding="utf-8")
         assert "docs/gemini/validation.md" in txt
         assert "Ivar" in txt
@@ -602,11 +690,12 @@ def test_zero_hash_comments_zero_unicode_dashes_and_zero_secret_leaks(tmp_path: 
         assert comment_tokens == [], f"comment tokens in {py_path}: {comment_tokens}"
         assert cr.scan_file_hygiene(py_path, REPO_ROOT) == []
 
-    doc_targets = (ROLES_MD_PATH, SUBMISSION_MD_PATH)
+    doc_targets = (ROLES_MD_PATH, SUBMISSION_MD_PATH, PITCH_MD_PATH)
     for doc_path in doc_targets:
         txt = doc_path.read_text(encoding="utf-8")
         assert EM_DASH not in txt, doc_path
         assert EN_DASH not in txt, doc_path
+        assert cr.STALE_ROLES_PREFIX not in txt, doc_path
         for dash in cr.FORBIDDEN_DASHES:
             assert dash not in txt, doc_path
         assert cr.scan_file_hygiene(doc_path, REPO_ROOT) == []
@@ -650,3 +739,65 @@ def test_zero_hash_comments_zero_unicode_dashes_and_zero_secret_leaks(tmp_path: 
     world_file = leak_dir / "900000.world.json"
     world_file.write_text(json.dumps({"tier": "medium", "mole": "e03"}), encoding="utf-8")
     assert {i["kind"] for i in cr.scan_file_hygiene(world_file, leak_dir)} == {"world_mole_answer_key"}
+
+
+def test_role_schema_fallbacks_for_worldtext_mole_investigators_and_analyst(tmp_path: Path) -> None:
+    roles_root = tmp_path / "results" / "gemini" / "roles_carbon"
+    _write_json(
+        roles_root / "world_text" / "events-run" / "meta.json",
+        {
+            "role": "world_text",
+            "model_id": "gemini-4-carbon",
+            "commit": "aaaaaaa",
+            "n_events_generated": 15,
+            "truth_leak_violations": 0,
+            "usage": {"calls": 15, "in": 20000, "out": 1500, "cost_usd": 0.12},
+        },
+    )
+    _write_json(
+        roles_root / "adaptive_mole" / "forge-run" / "meta.json",
+        {
+            "role": "adaptive_mole",
+            "model_id": "gemini-4-carbon",
+            "commit": "bbbbbbb",
+            "n_valid_llm_children": 25,
+            "best_fitness": 0.561,
+            "usage": {"calls": 34, "in": 45000, "out": 3100, "cost_usd": 0.0913},
+        },
+    )
+    _write_json(
+        roles_root / "investigators" / "ladder-run" / "meta.json",
+        {
+            "role": "investigators",
+            "model_id": "gemini-4-carbon",
+            "commit": "ccccccc",
+            "episode_count": 2,
+            "low_score": 0.78,
+            "high_score": 0.36,
+            "solver_score": 0.64,
+            "usage": {"calls": 163, "in": 6499263, "out": 5422, "thinking": 52968, "cached": 6200000, "cost_usd": 1.9892},
+        },
+    )
+    _write_json(
+        roles_root / "failure_analyst" / "claims-run" / "meta.json",
+        {
+            "role": "failure_analyst",
+            "model_id": "gemini-4-carbon",
+            "commit": "ddddddd",
+            "n_claims": 30,
+            "verified_quotes_pct": 100.0,
+            "usage": {"calls": 4, "in": 110000, "out": 4200, "cost_usd": 0.4017},
+        },
+    )
+
+    rep = cr.audit_carbon_roles(tmp_path)
+    assert rep["ok"] is True
+    assert rep["invalid_runs"] == []
+    by_role = {r["role"]: r for r in rep["runs"]}
+    assert by_role["world_text"]["count"] == 15
+    assert "15 events, 0 truth leaks" in by_role["world_text"]["headline_metric"]
+    assert by_role["adaptive_mole"]["count"] == 25
+    assert "25 valid DSL children" in by_role["adaptive_mole"]["headline_metric"]
+    assert "low +0.780 -> high +0.360 vs solver +0.640" in by_role["investigators"]["headline_metric"]
+    assert by_role["failure_analyst"]["count"] == 30
+    assert "30 claims audited, 100% verified quotes" in by_role["failure_analyst"]["headline_metric"]

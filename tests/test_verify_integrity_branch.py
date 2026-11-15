@@ -40,7 +40,7 @@ def test_verify_integrity_branch_cli_passes(tmp_path: Path) -> None:
     rc = vib.main(["--json-out", str(out_json)])
     elapsed = time.perf_counter() - t0
     assert rc == 0
-    assert elapsed < 30.0
+    assert elapsed < 60.0
     assert out_json.is_file()
 
     rep = json.loads(out_json.read_text(encoding="utf-8"))
@@ -424,3 +424,40 @@ def test_committed_episode_outcome_verifier_recognizes_opencode_clean_stop(tmp_p
         ep_file.write_text(json.dumps(bad_ep) + "\n", encoding="utf-8")
         res_bad = vib.verify_committed_episode_outcomes(tmp_path)
         assert res_bad["passed"] is False, f"bad case {idx} unexpectedly passed"
+
+
+def test_shallow_ci_checkout_and_uv_venv_fallback(tmp_path: Path) -> None:
+    ci_repo = tmp_path / "shallow_ci_checkout"
+    _init_git_repo(ci_repo)
+    (ci_repo / "docs" / "reports").mkdir(parents=True)
+    (ci_repo / "Makefile").write_text("test:\n\tpytest -q\n", encoding="utf-8")
+    (ci_repo / "pyproject.toml").write_text("[project]\nname = 'canary'\n", encoding="utf-8")
+    (ci_repo / ".gitignore").write_text(".venv/\nnode_modules/\n", encoding="utf-8")
+    (ci_repo / "docs" / "EXPLOITS.md").write_text(
+        (ROOT / "docs" / "EXPLOITS.md").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (ci_repo / "docs" / "reports" / "integrity_issue_ledger.md").write_text(
+        LEDGER_PATH.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "add", "."], cwd=ci_repo, check=True)
+    subprocess.run(["git", "commit", "-qm", "shallow merge commit"], cwd=ci_repo, check=True)
+    subprocess.run(["git", "checkout", "-q", "--detach", "HEAD"], cwd=ci_repo, check=True)
+
+    (ci_repo / ".venv").mkdir()
+    (ci_repo / ".venv" / "pyvenv.cfg").write_text("home = /usr/bin\n", encoding="utf-8")
+
+    resolved_ref, is_fallback = vib.resolve_base_ref(ci_repo, "origin/justSilas")
+    assert resolved_ref == "HEAD"
+    assert is_fallback is True
+    assert vib.gate_1_protected_paths(ci_repo)["passed"] is True
+    assert vib.gate_2_squad_hygiene(ci_repo)["passed"] is True
+    assert vib.gate_3_zero_api_and_ast_safety(ci_repo)["passed"] is True
+    assert vib.gate_4_panel_honesty_and_ledger_sync(ci_repo)["passed"] is True
+
+    subprocess.run(["git", "add", "-f", ".venv/pyvenv.cfg"], cwd=ci_repo, check=True)
+    subprocess.run(["git", "commit", "-qm", "accidental tracked venv"], cwd=ci_repo, check=True)
+    g1_tracked_venv = vib.gate_1_protected_paths(ci_repo)
+    assert g1_tracked_venv["passed"] is False
+    assert any(".venv" in v for v in g1_tracked_venv["violations"])

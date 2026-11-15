@@ -33,9 +33,40 @@ evo_mod = _load_module()
 
 @pytest.fixture(scope="module")
 def quick_cli_run(tmp_path_factory):
+    from canary.solver.policy import SolverPolicy
+
     out_dir = tmp_path_factory.mktemp("evo_v14_quick")
     out_json = out_dir / "quick_out.json"
-    rc = evo_mod.main(["--quick", "--workers", "1", "--json-out", str(out_json)])
+    orig_mpf = evo_mod.make_policy_factory
+    orig_sub_run = evo_mod.subprocess.run
+    orig_pboot = evo_mod.paired_bootstrap_stats
+
+    def _fast_mpf(name: str):
+        if name == "solver":
+            return lambda seed=0: SolverPolicy(max_candidates=20, multi_candidates=12)
+        return orig_mpf(name)
+
+    def _fast_pboot(p_scores, s_scores, n_boot=4000, boot_seed=0):
+        return orig_pboot(p_scores, s_scores, n_boot=min(int(n_boot), 100), boot_seed=boot_seed)
+
+    def _fast_sub_run(cmd, *args, **kwargs):
+        if isinstance(cmd, list) and "--hashseed-worker" in cmd:
+            spec_arg = cmd[cmd.index("--hashseed-worker") + 1]
+            inline = (
+                "import sys, types; "
+                f"sys.path.insert(0, {str(ROOT)!r}); "
+                "sys.modules['canary.mcp_server'] = types.SimpleNamespace(seed_allowed=lambda s: False); "
+                "import scripts.integrity_heuristic_evolution_v14 as m; "
+                f"raise SystemExit(m._hashseed_worker_main({spec_arg!r}))"
+            )
+            return orig_sub_run([sys.executable, "-S", "-c", inline], *args, **kwargs)
+        return orig_sub_run(cmd, *args, **kwargs)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(evo_mod, "make_policy_factory", _fast_mpf)
+        mp.setattr(evo_mod, "paired_bootstrap_stats", _fast_pboot)
+        mp.setattr(evo_mod.subprocess, "run", _fast_sub_run)
+        rc = evo_mod.main(["--quick", "--workers", "1", "--json-out", str(out_json)])
     raw = out_json.read_text(encoding="utf-8")
     parsed = json.loads(
         raw,

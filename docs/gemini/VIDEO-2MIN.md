@@ -33,7 +33,7 @@ and video_cut, then video_qa.
 
 > VO[02-problem]: Agents now make irreversible calls under uncertainty. Before you ship one, you pick a model and how hard it thinks. One benchmark number can't tell you where they fail, whether more thinking would help, or whether the score can be gamed.
 
-> VO[03-ladder]: So Gemini plays. Five models, up to four thinking levels, one hundred fifty-seven paired episodes. On hard, n equals eight: ninety-two percent, interval seventy-six to one hundred thirteen, at medium, and one hundred two percent, interval eighty-four to one hundred twenty-nine, at high. Gemini three point six Flash, requested as three point five, is within those intervals of the solver, sixteen of sixteen correct, at thirty-four to thirty-nine cents per episode versus one dollar thirty for Gemini four Carbon on high thinking.
+> VO[03-ladder]: So Gemini plays. Five models, up to four thinking levels, five hundred eighty-seven paired episodes. On hard, Gemini four Carbon on high thinking reaches one hundred six percent of the solver, interval ninety-four to one hundred twenty-six, at one dollar ninety-three per episode. Gemini three point six Flash on high thinking costs forty-five cents, more than four times cheaper, and scores eighty-eight percent, interval fifty-one to one hundred thirty-eight: not distinguishable from the solver, but less certain.
 
 > VO[04-atlas]: Then Gemini reads. All {blind_episodes} trajectories in one cached context, without our labels. Blind, it recovered {blind_recovered} of {blind_tags} failure modes our code defines and named {blind_new} new ones. Coverage is still weak: the steps it cites hold {blind_regret_covered} of all regret.
 

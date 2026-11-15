@@ -3,10 +3,10 @@
 - Scope: demo/research layer (v1.5 candidate), not part of the judged v1.4 environment
 - Role: `world_text`
 - Target Model ID: `gemini-4-carbon`
-- Verified `world_text` run folders consolidated: `15`
-- Total Gemini API calls: `1126`
-- Total tokens (in / out / thinking / cached): `27,867,443` / `525,975` / `555,696` / `25,362,601`
-- Total estimated cost (USD): `$14.751282`
+- Verified `world_text` run folders consolidated: `16`
+- Total Gemini API calls: `1637`
+- Total tokens (in / out / thinking / cached): `54,755,491` / `791,997` / `791,365` / `50,867,472`
+- Total estimated cost (USD): `$22.728348`
 - Non-leak & safety audit: `truth_leaks=0`, `prompt_leaks=0`, `lint_violations=0`, `stego_violations=0`, `fallbacks=0`, `secret_leaks=0` (`all_clean=True`)
 - Provenance note: `worldtext-carbon-suite/` intentionally omits `meta.json` so `canary.gemini.worldtext_carbon` and role scanners do not double-count tokens or costs.
 
@@ -32,19 +32,19 @@
 ## 2. Bias-Flavoured Workplace Chatter & Investigator Ablation (`biased_chatter_suite`)
 
 - Biased chatter corpus: `70` messages (`70` live LLM, `0` fallbacks) across `2` folders
-- Paired ablation episodes: `24` across `2` folders
+- Paired ablation episodes: `36` across `3` folders
 
 | Slice | Policy | Paired Seeds | Biased Mean (95% CI) | Template Mean (95% CI) | Paired Delta (95% CI) | Biased Acc | Rumor Distraction |
 | --- | --- | ---: | --- | --- | --- | ---: | ---: |
 | `medium` | `carbon` | 2 | +0.7050 [+0.6500, +0.7600] | +0.6400 [+0.6000, +0.6800] | +0.0650 [+0.0500, +0.0800] | 100.0% | 100.0% |
 | `medium` | `solver` | 2 | +0.7650 [+0.6900, +0.8400] | +0.7650 [+0.6900, +0.8400] | +0.0000 [+0.0000, +0.0000] | 100.0% | 0.0% |
 | `medium` | `obvious_heuristic` | 2 | -1.0000 [-1.0000, -1.0000] | -1.0000 [-1.0000, -1.0000] | +0.0000 [+0.0000, +0.0000] | 0.0% | 0.0% |
-| `hard` | `carbon` | 2 | +0.6200 [+0.5800, +0.6600] | +0.6450 [+0.5400, +0.7500] | -0.0250 [-0.1700, +0.1200] | 100.0% | 100.0% |
-| `hard` | `solver` | 2 | +0.6650 [+0.6400, +0.6900] | +0.6650 [+0.6400, +0.6900] | +0.0000 [+0.0000, +0.0000] | 100.0% | 0.0% |
-| `hard` | `obvious_heuristic` | 2 | -1.0000 [-1.0000, -1.0000] | -1.0000 [-1.0000, -1.0000] | +0.0000 [+0.0000, +0.0000] | 0.0% | 0.0% |
-| `overall` | `carbon` | 4 | +0.6625 [+0.6000, +0.7325] | +0.6425 [+0.5700, +0.7150] | +0.0200 [-0.1075, +0.1025] | 100.0% | 100.0% |
-| `overall` | `solver` | 4 | +0.7150 [+0.6525, +0.8025] | +0.7150 [+0.6525, +0.8025] | +0.0000 [+0.0000, +0.0000] | 100.0% | 0.0% |
-| `overall` | `obvious_heuristic` | 4 | -1.0000 [-1.0000, -1.0000] | -1.0000 [-1.0000, -1.0000] | +0.0000 [+0.0000, +0.0000] | 0.0% | 0.0% |
+| `hard` | `carbon` | 4 | +0.5675 [+0.5150, +0.6275] | +0.4825 [+0.2700, +0.6775] | +0.0850 [-0.0975, +0.2575] | 100.0% | 50.0% |
+| `hard` | `solver` | 4 | +0.5825 [+0.3825, +0.7050] | +0.5475 [+0.3700, +0.6650] | +0.0350 [+0.0000, +0.1050] | 100.0% | 0.0% |
+| `hard` | `obvious_heuristic` | 4 | -1.0000 [-1.0000, -1.0000] | -1.0000 [-1.0000, -1.0000] | +0.0000 [+0.0000, +0.0000] | 0.0% | 0.0% |
+| `overall` | `carbon` | 6 | +0.6133 [+0.5450, +0.6900] | +0.5350 [+0.3700, +0.6650] | +0.0783 [-0.0433, +0.2000] | 100.0% | 66.7% |
+| `overall` | `solver` | 6 | +0.6433 [+0.4817, +0.7567] | +0.6200 [+0.4667, +0.7400] | +0.0233 [+0.0000, +0.0700] | 100.0% | 0.0% |
+| `overall` | `obvious_heuristic` | 6 | -1.0000 [-1.0000, -1.0000] | -1.0000 [-1.0000, -1.0000] | +0.0000 [+0.0000, +0.0000] | 0.0% | 0.0% |
 
 ## 3. Persona-Conditioned Live Suspect Interviews (`persona_interviews_suite`)
 
@@ -82,12 +82,12 @@
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `biased_chatter` | 1 | 2 | 3,429 | 2,734 | 1,756 | 0 | $0.034198 |
 | `biased_chatter_hard` | 1 | 12 | 32,161 | 13,478 | 7,609 | 0 | $0.199102 |
-| `biased_chatter_investigator_ablation` | 2 | 806 | 27,351,811 | 400,343 | 352,497 | 25,358,784 | $10.525358 |
+| `biased_chatter_investigator_ablation` | 3 | 1317 | 54,239,859 | 666,365 | 588,166 | 50,863,655 | $18.502424 |
 | `company_personas_chatter` | 4 | 129 | 170,729 | 74,513 | 99,845 | 0 | $2.085038 |
 | `dynamic_mid_episode_events` | 3 | 33 | 166,943 | 11,924 | 19,720 | 3,817 | $0.650326 |
 | `persona_interviews` | 3 | 120 | 118,268 | 8,751 | 31,892 | 0 | $0.642966 |
 | `thinking_level_calibration` | 1 | 24 | 24,102 | 14,232 | 42,377 | 0 | $0.614294 |
-| **total** | **15** | **1126** | **27,867,443** | **525,975** | **555,696** | **25,362,601** | **$14.751282** |
+| **total** | **16** | **1637** | **54,755,491** | **791,997** | **791,365** | **50,867,472** | **$22.728348** |
 
 ## 7. Non-Judged Disclosure & Non-Leak Guarantee
 
@@ -101,6 +101,7 @@
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | `biased-chatter-ablation-carbon` | `biased_chatter_investigator_ablation` | `f3072908` | 12 | 399 | 12,766,963 | 208,617 | 184,085 | 11,793,550 | $5.2124 | 12 paired medium episodes (seeds 10,11), carbon +0.705 biased vs +0.640 template, solver +0.765 parity |
 | `biased-chatter-ablation-hard01` | `biased_chatter_investigator_ablation` | `c3ebb075` | 12 | 407 | 14,584,848 | 191,726 | 168,412 | 13,565,234 | $5.3130 | 12 paired hard episodes (seeds 0,1), carbon +0.620 biased vs +0.645 template, solver +0.665 parity |
+| `biased-chatter-ablation-hard23` | `biased_chatter_investigator_ablation` | `361fbab1` | 12 | 511 | 26,888,048 | 266,022 | 235,669 | 25,504,871 | $7.9771 | 12 paired hard episodes (seeds 2,3), carbon +0.515 biased vs +0.320 template, solver +0.500 vs +0.430 (100% catch) |
 | `biased-chatter-carbon` | `biased_chatter` | `12e5ab3e` | 10 | 2 | 3,429 | 2,734 | 1,756 | 0 | $0.0342 | 10 live biased workplace messages (medium seeds 10,11), 0 truth/lint leaks, 0 fallbacks |
 | `biased-chatter-hard-carbon` | `biased_chatter_hard` | `b7b28257` | 60 | 12 | 32,161 | 13,478 | 7,609 | 0 | $0.1991 | 60 live biased workplace messages (hard seeds 0..3), 0 truth/lint/stego leaks, solver +0.658 parity |
 | `carbon-v14-easy03-med789-hard46` | `company_personas_chatter` | `6104bebd` | 10 | 52 | 61,748 | 29,038 | 36,275 | 0 | $0.7766 | 10 live worlds (228 personas across easy/med/hard), 0 leaks, solver acc 100% (+0.761 vs +0.766) |

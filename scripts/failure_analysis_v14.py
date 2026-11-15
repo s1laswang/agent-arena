@@ -319,7 +319,9 @@ def compute() -> dict:
         h = load([HINT_RUN])
         data["H"] = {s: episode(h[s], with_trace=True) for s in sorted(h) if s in SEEDS}
     data["summary"] = summarize(data)
-    if data.get("H"):
+    if (HINT_RUN.parent / "meta.json").exists() and not data.get("H"):
+        data["summary"]["hint"] = {"n": 0, "seeds": []}   # attempted, nothing completed by the stop time
+    if "hint" in data["summary"]:
         mf = HINT_RUN.parent / "meta.json"
         exc = json.loads(mf.read_text()).get("infra_invalid_attempts_excluded", []) if mf.exists() else []
         per: dict[str, int] = {}

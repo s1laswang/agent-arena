@@ -388,7 +388,26 @@ def _verdict(d: dict) -> str:
     return "higher" if lo > 0 else "lower" if hi < 0 else "no detectable change"
 
 
+def _hint_infra(H: dict) -> str:
+    inv = H.get("infra_invalid") or {"total": 0, "per_seed": {}, "by_reason": {}}
+    per = ", ".join(f"seed {k}: {v}" for k, v in inv["per_seed"].items()) or "none"
+    why = ", ".join(f"{k} {v}" for k, v in inv["by_reason"].items())
+    return (f"Infra-invalid attempts excluded and retried (never scored): {inv['total']}"
+            + (f" ({why}); per seed: {per}." if inv["total"] else ".")
+            + (" *stopped_at_key_switch* = attempts we stopped, before any result existed, when the run moved between API "
+               "keys to escape a saturated quota." if "stopped_at_key_switch" in inv["by_reason"] else ""))
+
+
 def _hint_section(H: dict) -> list[str]:
+    if H["n"] == 0:
+        return ["## 10. Causal hint test (pre-registered in gap.md)", "",
+                "**Not measurable tonight.** The pre-registered run (OpenCode + `gemini-4-carbon`, v1.4 hard, `--hint gather`, "
+                "seeds in fixed order 0→29, at most 3 in parallel, hard stop 05:40 Helsinki) completed **n = 0** episodes. "
+                "Every attempt ended before its episode finished. Most were cut off by the Gemini API quota for gemini-4-carbon "
+                "(2,000,000 input tokens per minute, shared with other runs on the same project; OpenCode exits after about "
+                "75 s of 429 retries), and the rest were stopped by us when switching API keys (counts below). No hinted episode was scored, so this report makes no claim about the hint "
+                "either way. The hint code (`--hint gather`, off by default) and this analysis are in place for a rerun.",
+                "", _hint_infra(H), ""]
     h, u, s, n = H["hint"], H["unhinted"], H["solver"], H["n"]
     seeds = H["seeds"]
     rng = (f"{seeds[0]}–{seeds[-1]}" if seeds == list(range(seeds[0], seeds[-1] + 1)) else ", ".join(map(str, seeds)))
@@ -438,13 +457,7 @@ def _hint_section(H: dict) -> list[str]:
         cons = "abstained" if not r["hint_accused"] else str(r["hint_consistent"])
         L.append(f"| {r['seed']} | {r['hint']:+.2f}{mark} | {r['unhinted']:+.2f} | {r['solver']:+.2f} | {r['hint_canaries']} | "
                  f"{r['unhinted_canaries']} | {cons} |")
-    inv = H.get("infra_invalid") or {"total": 0, "per_seed": {}, "by_reason": {}}
-    per = ", ".join(f"seed {k}: {v}" for k, v in inv["per_seed"].items()) or "none"
-    why = ", ".join(f"{k} {v}" for k, v in inv["by_reason"].items())
-    L += ["", f"Infra-invalid attempts excluded and retried (never scored): {inv['total']}"
-          + (f" ({why}); per seed: {per}." if inv["total"] else ".")
-          + (" *stopped_at_key_switch* = attempts we stopped, before any result existed, when the run moved between API "
-             "keys to escape a saturated quota." if "stopped_at_key_switch" in inv["by_reason"] else "")]
+    L += ["", _hint_infra(H)]
     L += ["", f"Reproduce: `uv run python scripts/failure_analysis_v14.py` (the hinted episodes are in "
           f"`data/runs/committed/v1.4/opencode-gemini-4-carbon-hint-gather/hard/`, replay-verified). n = {n} is small: read the "
           f"CIs, not the point estimates.", ""]

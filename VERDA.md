@@ -49,6 +49,8 @@ Two things would not have fit on a laptop, and they did not fit on our V100 clus
 | 02:58 | [Verda] | X1 causal-hint runners (Gemini via OpenCode) hosted on `18acfa5d`. No Verda CPU instance was free in any region. |
 | 03:02 | [Verda] | X2 DAgger box 2: A100 40GB on-demand `e9ea8b2e`. |
 | 03:30 | [Verda] | v3-4k s0 extra held-out seeds 30–59 done on A100 `68bbe201`. Pooled **n=180: −0.147 ± 0.063, +0.310 ± 0.107 vs v2 (two-sample, 180 vs 172)**. From 03:35 `68bbe201` becomes X2 DAgger box 1. |
+| 03:49 | [Verda] | **v3-8k s1** (A100 spot `ac58df04`, 371 steps in 3.0 h) held-out eval: **−0.777 ± 0.118 (n=90)**. It accuses on 94% of episodes. `ac58df04` deleted at 03:50; **€60.77 spent**. |
+| 04:05 | [Verda] | One shared held-out world secret is placed on every box whose eval had not yet started (v3-8k s0 and s3, X2). Those rows can be compared seed-paired. |
 | 03:08 | [Verda] | Spot A100 `714d8144` (v3-4k s1) **preempted** about 30 min in: no result. Steps so far: 8k s0 167, 8k s1 370, 8k s2 619, 8k s3 211. **€46.02 spent.** |
 | 03:10 | [Verda] | J1 restarted with `--hf-overrides` for YaRN 131k. |
 | ~07:30 | [Verda] | Reapers delete every instance (the X2 box at 08:00). Final rows land in §4. |
@@ -84,7 +86,8 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | **v3-4k s0** GRPO, 609 steps | **[Verda] H100 `3bb74f5a`** | 90 [Verda] H100 + 90 [Verda] A100 `68bbe201` | 180 | **−0.147 ± 0.063** | 0.21 | 0.03 | 0.79 | **+0.310 ± 0.107 (180 vs 172)** |
 | v3-4k s1 (replicate) | [Verda] A100 spot `714d8144` | – | **lost: spot preempted ~30 min into training** | – | | | | |
 | v3-8k s0 | [Verda] H100 `3bb74f5a` | [Verda] | pending | pending | | | | |
-| v3-8k s1 / s2 | [Verda] A100 spot / H100 spot | [Verda] | pending | pending | | | | |
+| v3-8k s1 GRPO, 371 steps | [Verda] A100 spot `ac58df04` | [Verda] A100 | 90 | −0.777 ± 0.118 | 0.94 | 0.09 | 0.06 | −0.319 ± 0.146 (90 vs 172) |
+| v3-8k s2 | [Verda] H100 spot `dbd083ca` | [Verda] | pending | pending | | | | |
 | v3-8k s3 | [Verda] A100 on-demand | [Verda] | pending | pending | | | | |
 | v3 s1 (4k) | [FR8] V100 (job 44572) | [FR8] | pending | pending | | | | |
 | DAgger round 1 (from v3-4k s0) | [Verda] A100 | [Verda] | pending (`docs/reports/dagger.md`) | pending | | | | |
@@ -93,11 +96,15 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 - **v3 recovered most of v2's loss.** It is +0.310 ± 0.107 vs v2 (two-sample, 180 vs 172 held-out episodes), mostly by learning to abstain instead of accusing wrongly. On the hard tier, accusations (all wrong) fell from 0.60 to 0.03: +0.563 ± 0.136 (60 vs 57).
 - The first 90 episodes read −0.103 and the second 90 (seeds 30–59) −0.192; pooled, n=180, it is −0.147 ± 0.063. We report the pooled number.
 - **It does not yet beat the base model**, which abstains on every episode and scores 0 (n=16): −0.147 ± 0.063.
-- **Correction (04:00, FR8):** these Δs were first reported as seed-paired. The evals ran without a shared `CANARY_WORLD_SECRET`, so the same seed number is a *different* held-out world in each run; all 115 step-0 employee lists differ. Pairing was invalid. Every Δ here is now two-sample, as in the regenerated `ws4_table_*.md`. The per-model means and CIs are unchanged.
+- **Correction (04:00, FR8):** these Δs were first reported as seed-paired. The evals ran without a shared `CANARY_WORLD_SECRET`, so the same seed number is a *different* held-out world in each run; all 115 step-0 employee lists differ. Pairing was invalid. Every Δ here is now two-sample, as in the regenerated `ws4_table_*.md`. The per-model means and CIs are unchanged. From 04:05, evals that had not started (v3-8k s0 and s3, DAgger) share one world secret, so those rows can be compared seed-paired; each such row is labelled.
 - The diagnosis, from the X2 brief:
   - v3 learned *whom* to accuse on training states: forced-accusation whom-accuracy rose from 0.19 to 0.89.
   - Those states were the last steps of *solver* trajectories, where the evidence was already gathered.
   - On its own held-out trajectories, whom-precision is 3/16 ≈ 0.19.
+- **8k context confirms the diagnosis rather than fixing it.**
+  - v3-8k s1 learned *whom* better in training: forced-accusation correctness .35–.46, vs ~.19 at 4k.
+  - In its own full episodes, though, it accuses almost always and early: 0.94 accused, 0.09 correct, −0.777.
+  - This is the same off-policy state gap: training states come from solver trajectories.
 - DAgger (rolling out v3 and labelling its *own* states with the solver) is the fix being tested now, on Verda.
 
 ## 5. FR8 freighter vs Verda (labelled)
@@ -126,7 +133,8 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | start | €200.00 | – |
 | 23:37 | €195.25 | €4.75 |
 | 00:20 | €191.71 | €8.29 |
-| 03:08 | €153.98 | **€46.02** |
+| 03:08 | €153.98 | €46.02 |
+| 03:50 | €139.23 | **€60.77** |
 | after the last reaper (08:00) | pending | **pending: final total** |
 
 **Per instance.** Prices come from the Verda API at creation (€). Hours run to each reaper deadline, so they are an **upper bound** until the ledger records the actual delete times.
@@ -134,7 +142,7 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | instance | type | €/h | start → reaper | GPU-h (max) | € (max) | workloads |
 |---|---|---|---|---|---|---|
 | `3bb74f5a` | H100 80GB on-demand | 4.7421 | 22:46 → 07:30 | 8.73 | 41.41 | v3-4k s0, v3-8k s0, Meta YOLOv8n |
-| `ac58df04` | A100 80GB spot | 1.0794 | 00:00 → 07:30 | 7.50 | 8.10 | v3-8k s1 |
+| `ac58df04` | A100 80GB spot | 1.0794 | 00:00 → **03:50 (deleted)** | 3.83 | 4.13 | v3-8k s1 |
 | `dbd083ca` | H100 80GB spot | 2.3711 | 00:24 → 07:30 | 7.10 | 16.83 | v3-8k s2 |
 | `924e81d8` | A100 80GB spot | 1.0794 | 00:49 → 07:30 | 6.68 | 7.21 | Gemini J1-lite, Qwen3-14B vLLM |
 | `68bbe201` | A100 80GB on-demand | 2.1589 | 01:01 → 07:30 | 6.48 | 14.00 | extra held-out evals (v2, v3-4k s0) to 03:30, then X2 DAgger box 1 |
@@ -142,7 +150,7 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | `18acfa5d` | A100 80GB on-demand | 2.1589 | 02:17 → 07:30 | 5.22 | 11.26 | backup base eval, X1 agent runners |
 | `714d8144` | A100 80GB spot | 1.0794 | 02:39 → ~03:10 (preempted) | ~0.5 | ~0.54 | v3-4k s1 (lost) |
 | `e9ea8b2e` | A100 40GB on-demand | 1.5373 | 03:02 → 08:00 | 4.97 | 7.64 | X2 DAgger |
-| **total** | 9 instances (2 H100, 7 A100) | | | **≤ 53.5 GPU-h** | **≤ €120.7** | cap €300 |
+| **total** | 9 instances (2 H100, 7 A100) | | | **≤ 49.9 GPU-h** | **≤ €116.8** | cap €300 |
 
 **GPU-hours per workload** (upper bound, attributed from the per-instance table):
 - The Meta and X1 work shared boxes that were already running, so their *incremental* cost was €0. The share below is attributed, not extra spend.
@@ -151,12 +159,12 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 
 | workload | instances | GPU-h | € |
 |---|---|---|---|
-| **Tiebreaker** (v3 GRPO 4k + 8k seeds, held-out evals, base eval) | `3bb74f5a` (less Meta), `ac58df04`, `dbd083ca`, `68bbe201` to 03:35, `f4378173` (less Meta), `18acfa5d` to ~04:50, `714d8144` | ≤ 34.5 | ≤ 89.6 |
+| **Tiebreaker** (v3 GRPO 4k + 8k seeds, held-out evals, base eval) | `3bb74f5a` (less Meta), `ac58df04`, `dbd083ca`, `68bbe201` to 03:35, `f4378173` (less Meta), `18acfa5d` to ~04:50, `714d8144` | ≤ 30.9 | ≤ 85.6 |
 | **Gemini J1** (Qwen3-14B on self-hosted vLLM; ~1.8 h of it idle, §7) | `924e81d8` | ≤ 6.7 | ≤ 7.2 |
 | **Meta glasses** (YOLOv8n + PaliGemma 2 3B, shared) | `3bb74f5a` 0.15 h, `f4378173` 0.65 h | 0.8 | 2.1 (€0 incremental) |
 | **X1 agent hosting** (Gemini OpenCode runners on the box's CPUs) | `18acfa5d` after ~04:50 | ≤ 2.7 | ≤ 5.8 (€0 incremental before 04:50) |
 | **X2 DAgger** | `e9ea8b2e`, `68bbe201` from 03:35 | ≤ 8.9 | ≤ 16.1 |
-| **total** | | **≤ 53.5** | **≤ €120.7** |
+| **total** | | **≤ 49.9** | **≤ €116.8** |
 
 These are finalised from the ledger's delete times after the reapers.
 - **Cost per result:** the headline v3-4k s0 run cost about **€17** on the on-demand H100: 22:46 → 02:20, including setup failures, 2.0 h of training and the first 90 held-out episodes.

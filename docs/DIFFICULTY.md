@@ -58,6 +58,8 @@ The other 1.11 V of the raw gap is bad luck. Two of the four wrong accusations w
 
 **Companion:** the Gemini Failure Atlas ([`results/gemini/atlas.md`](../results/gemini/atlas.md)) covers every cohort, tagged by share of solver regret. Its top mode, premature accusation on a sub-threshold posterior, is the same as mistake #1 here.
 
+**Below-break-even spotlight:** [`docs/reports/failure_gallery_breakeven.md`](reports/failure_gallery_breakeven.md) takes the "3 had negative EV near the horizon" in mistake #1 apart, seed by seed. Break-even is P* = 1/(1+V), so it rises as V drains. On seed 5 Gemini accused at a solver posterior of 51.0% when true V was 0.16 (P* = 86.2%). On seed 23 it accused at 45.2% when V was 0.23 (P* = 81.3%). Both landed on the mole, so the raw scoreboard shows +0.16 and +0.23 and hides two negative-EV gambles. The third, seed 18 (62.7% vs P* = 68.5%), hit an innocent. The solver made 0 below-break-even accusations on the same 30 seeds. Keyless check: `python -m canary.gemini.gallery_breakeven --check`.
+
 ---
 
 ## Part 2. Instruction audit

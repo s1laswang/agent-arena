@@ -1,19 +1,23 @@
-"""Verify Makefile targets, script/module paths, and CLI long-flags across judge-facing docs.
+"""Verify Makefile targets, script/module paths, CLI flags, and Harbor commands across judge-facing docs.
 
     python scripts/verify_doc_commands.py [--root .] [--json]
 
 Scans judge-facing Markdown files for fenced shell code blocks and inline backtick
-command spans, then runs three fast keyless checks:
+command spans, then runs four fast keyless checks:
   1. Makefile Targets Check: every documented `make <target>` exists in Makefile.
   2. Script & Module Paths Check: every `scripts/*.py`, `harbor/*.py`, `game/*.py`,
      and `python -m canary.<mod>` resolves to an existing file on disk.
   3. CLI Long-Flag Check: every `--long-flag` passed to `scripts/*.py`, `harbor/*.py`,
      `game/*.py`, or `python -m canary.<mod>` is supported by that CLI's argparse options.
+  4. Harbor CLI & Env-Var Check: every `harbor run` snippet avoids `--ae CANARY_*=...`,
+     forwards `GOOGLE_GENERATIVE_AI_API_KEY` on `-a opencode -m google/...`, and uses
+     only valid `ORACLE_POLICY` values.
 """
 from __future__ import annotations
 
 import argparse
 import ast
+import fnmatch
 import json
 import os
 import re
@@ -31,7 +35,10 @@ PLACEHOLDER_TOKEN = "__DOC_PLACEHOLDER__"
 
 DEFAULT_DOCS: tuple[str, ...] = (
     "README.md",
+    "JUDGE_QUICKSTART.md",
     "docs/JUDGE-WALKTHROUGH.md",
+    "docs/REPRODUCIBILITY.md",
+    "docs/PEER-REVIEW-QA.md",
     "docs/DEMO.md",
     "docs/EXPLOITS.md",
     "docs/DIFFICULTY.md",
@@ -43,6 +50,22 @@ DEFAULT_DOCS: tuple[str, ...] = (
 )
 
 FLAG_CHECK_DOCS: frozenset[str] = frozenset(DEFAULT_DOCS)
+
+PLANNING_BRIEF_PATTERNS: tuple[str, ...] = (
+    "docs/agents/*.md",
+    "docs/gemini/sessions/*.md",
+    "docs/PLAN*.md",
+    "docs/gemini/PLAN.md",
+)
+
+VALID_HARBOR_ORACLE_POLICIES: frozenset[str] = frozenset({
+    "solver",
+    "do_nothing",
+    "stop_early",
+    "guess_day1",
+    "cheat_probe",
+    "cheat",
+})
 
 SHELL_FENCE_LANGS: frozenset[str] = frozenset({
     "",
@@ -153,6 +176,17 @@ class TargetInvocation:
     superseded: bool
 
 
+@dataclass(frozen=True)
+class HarborInvocation:
+    doc: str
+    line: int
+    agent: str | None
+    model: str | None
+    agent_envs: tuple[str, ...]
+    api_key_names: tuple[str, ...]
+    superseded: bool
+
+
 def _strip_shell_comment(line: str) -> str:
     in_single = False
     in_double = False
@@ -239,10 +273,16 @@ def _join_fenced_lines(lines: list[tuple[int, str]]) -> list[tuple[int, str]]:
     return out
 
 
+def _is_planning_brief(doc_rel: str) -> bool:
+    norm = doc_rel.replace("\\", "/").lstrip("./")
+    return any(fnmatch.fnmatch(norm, pat) for pat in PLANNING_BRIEF_PATTERNS)
+
+
 def extract_doc_snippets(root: Path, doc_rel: str) -> list[DocSnippet]:
     path = root / doc_rel
     if not path.is_file():
         return []
+    is_brief = _is_planning_brief(doc_rel)
     raw_lines = path.read_text(encoding="utf-8").splitlines()
     snippets: list[DocSnippet] = []
     in_fence = False
@@ -294,7 +334,12 @@ def extract_doc_snippets(root: Path, doc_rel: str) -> list[DocSnippet]:
                 )
         else:
             if stripped.startswith(fence_marker) and stripped.strip(fence_marker[0]) == "":
-                if fence_lang in SHELL_FENCE_LANGS and fence_lang not in NON_SHELL_FENCE_LANGS:
+                allow_shell_fence = (
+                    fence_lang in SHELL_FENCE_LANGS
+                    and fence_lang not in NON_SHELL_FENCE_LANGS
+                    and not (is_brief and fence_lang == "")
+                )
+                if allow_shell_fence:
                     active_heading = " > ".join(headings[k] for k in sorted(headings))
                     for logical_lineno, logical_text in _join_fenced_lines(fence_buf):
                         snippets.append(
@@ -457,7 +502,7 @@ def _detect_external_branch(snippet: DocSnippet) -> str | None:
 
 
 def _is_superseded(snippet: DocSnippet) -> bool:
-    return "superseded" in snippet.heading.lower()
+    return "superseded" in snippet.heading.lower() or _is_planning_brief(snippet.doc)
 
 
 def _skip_command_prefixes(tokens: Sequence[str]) -> int:
@@ -509,27 +554,117 @@ def _skip_uv_run(tokens: Sequence[str], idx: int) -> int:
     return idx
 
 
+def _skip_uv_tool_or_uvx(tokens: Sequence[str], idx: int) -> int:
+    n = len(tokens)
+    if idx + 2 < n and tokens[idx] == "uv" and tokens[idx + 1] == "tool" and tokens[idx + 2] == "run":
+        idx += 3
+        while idx < n and tokens[idx].startswith("-"):
+            if tokens[idx] == "--":
+                return idx + 1
+            idx += 1
+        return idx
+    if idx + 1 < n and tokens[idx] == "uvx":
+        idx += 1
+        while idx < n and tokens[idx].startswith("-"):
+            if tokens[idx] == "--":
+                return idx + 1
+            idx += 1
+        return idx
+    return idx
+
+
+def _parse_harbor_run_args(
+    arg_tokens: Sequence[str],
+    snippet: DocSnippet,
+    superseded: bool,
+) -> HarborInvocation:
+    agent: str | None = None
+    model: str | None = None
+    agent_envs: list[str] = []
+    api_key_names: list[str] = []
+    k = 0
+    n = len(arg_tokens)
+    while k < n:
+        raw_tok = arg_tokens[k]
+        if raw_tok == "--":
+            break
+        if raw_tok in PROSE_STOP_TOKENS or raw_tok.startswith("("):
+            break
+        tok = raw_tok.rstrip(",;:")
+        if tok in {"-a", "--agent"} and k + 1 < n:
+            agent = arg_tokens[k + 1].rstrip(",;:")
+            k += 2
+            continue
+        if tok.startswith("-a=") or tok.startswith("--agent="):
+            agent = tok.split("=", 1)[1]
+            k += 1
+            continue
+        if tok in {"-m", "--model"} and k + 1 < n:
+            model = arg_tokens[k + 1].rstrip(",;:")
+            k += 2
+            continue
+        if tok.startswith("-m=") or tok.startswith("--model="):
+            model = tok.split("=", 1)[1]
+            k += 1
+            continue
+        if tok in {"--ae", "--agent-env"} and k + 1 < n:
+            agent_envs.append(arg_tokens[k + 1].rstrip(",;:"))
+            k += 2
+            continue
+        if tok.startswith("--ae=") or tok.startswith("--agent-env="):
+            agent_envs.append(tok.split("=", 1)[1])
+            k += 1
+            continue
+        if tok == "--api-key-name" and k + 1 < n:
+            api_key_names.append(arg_tokens[k + 1].rstrip(",;:"))
+            k += 2
+            continue
+        if tok.startswith("--api-key-name="):
+            api_key_names.append(tok.split("=", 1)[1])
+            k += 1
+            continue
+        k += 1
+    return HarborInvocation(
+        doc=snippet.doc,
+        line=snippet.line,
+        agent=agent,
+        model=model,
+        agent_envs=tuple(agent_envs),
+        api_key_names=tuple(api_key_names),
+        superseded=superseded,
+    )
+
+
 def _parse_tokens_invocations(
     tokens: Sequence[str],
     snippet: DocSnippet,
-) -> tuple[list[MakeInvocation], list[TargetInvocation]]:
+) -> tuple[list[MakeInvocation], list[TargetInvocation], list[HarborInvocation]]:
     make_invocations: list[MakeInvocation] = []
     target_invocations: list[TargetInvocation] = []
+    harbor_invocations: list[HarborInvocation] = []
     if not tokens:
-        return make_invocations, target_invocations
+        return make_invocations, target_invocations, harbor_invocations
 
     superseded = _is_superseded(snippet)
     ext_branch = _detect_external_branch(snippet)
 
     idx = _skip_command_prefixes(tokens)
     if idx >= len(tokens):
-        return make_invocations, target_invocations
+        return make_invocations, target_invocations, harbor_invocations
 
     idx = _skip_uv_run(tokens, idx)
     if idx >= len(tokens):
-        return make_invocations, target_invocations
+        return make_invocations, target_invocations, harbor_invocations
+
+    idx = _skip_uv_tool_or_uvx(tokens, idx)
+    if idx >= len(tokens):
+        return make_invocations, target_invocations, harbor_invocations
 
     cmd = tokens[idx]
+
+    if Path(cmd).name == "harbor" and idx + 1 < len(tokens) and tokens[idx + 1] == "run":
+        harbor_invocations.append(_parse_harbor_run_args(tokens[idx + 2 :], snippet, superseded))
+        return make_invocations, target_invocations, harbor_invocations
 
     if cmd == "make":
         j = idx + 1
@@ -559,7 +694,7 @@ def _parse_tokens_invocations(
                     )
                 )
             j += 1
-        return make_invocations, target_invocations
+        return make_invocations, target_invocations, harbor_invocations
 
     py_name = Path(cmd).name
     if py_name in {"python", "python3"}:
@@ -567,10 +702,10 @@ def _parse_tokens_invocations(
         while j < len(tokens) and tokens[j].startswith("-") and tokens[j] not in {"-m", "-c", "-"}:
             j += 1
         if j >= len(tokens):
-            return make_invocations, target_invocations
+            return make_invocations, target_invocations, harbor_invocations
         if tokens[j] == "-m":
             if j + 1 >= len(tokens):
-                return make_invocations, target_invocations
+                return make_invocations, target_invocations, harbor_invocations
             mod_spec = tokens[j + 1]
             flags, passthrough = _extract_long_flags(tokens[j + 2 :])
             for mod_name in _expand_module_specs(mod_spec):
@@ -591,10 +726,11 @@ def _parse_tokens_invocations(
                         )
                     )
             if passthrough:
-                sub_m, sub_t = _parse_tokens_invocations(passthrough, snippet)
+                sub_m, sub_t, sub_h = _parse_tokens_invocations(passthrough, snippet)
                 make_invocations.extend(sub_m)
                 target_invocations.extend(sub_t)
-            return make_invocations, target_invocations
+                harbor_invocations.extend(sub_h)
+            return make_invocations, target_invocations, harbor_invocations
 
         script_tok = tokens[j]
         if not _is_placeholder_or_glob(script_tok) and SCRIPT_PATH_RE.fullmatch(script_tok):
@@ -613,10 +749,11 @@ def _parse_tokens_invocations(
                 )
             )
             if passthrough:
-                sub_m, sub_t = _parse_tokens_invocations(passthrough, snippet)
+                sub_m, sub_t, sub_h = _parse_tokens_invocations(passthrough, snippet)
                 make_invocations.extend(sub_m)
                 target_invocations.extend(sub_t)
-        return make_invocations, target_invocations
+                harbor_invocations.extend(sub_h)
+        return make_invocations, target_invocations, harbor_invocations
 
     if not _is_placeholder_or_glob(cmd) and SCRIPT_PATH_RE.fullmatch(cmd):
         flags, passthrough = _extract_long_flags(tokens[idx + 1 :])
@@ -634,10 +771,11 @@ def _parse_tokens_invocations(
             )
         )
         if passthrough:
-            sub_m, sub_t = _parse_tokens_invocations(passthrough, snippet)
+            sub_m, sub_t, sub_h = _parse_tokens_invocations(passthrough, snippet)
             make_invocations.extend(sub_m)
             target_invocations.extend(sub_t)
-        return make_invocations, target_invocations
+            harbor_invocations.extend(sub_h)
+        return make_invocations, target_invocations, harbor_invocations
 
     if snippet.kind == "inline" and cmd == "build.py" and len(tokens) > idx + 1:
         flags, _ = _extract_long_flags(tokens[idx + 1 :])
@@ -673,16 +811,17 @@ def _parse_tokens_invocations(
                 )
             )
 
-    return make_invocations, target_invocations
+    return make_invocations, target_invocations, harbor_invocations
 
 
 def extract_invocations(
     root: Path,
     docs: Sequence[str] = DEFAULT_DOCS,
-) -> tuple[list[str], list[MakeInvocation], list[TargetInvocation]]:
+) -> tuple[list[str], list[MakeInvocation], list[TargetInvocation], list[HarborInvocation]]:
     present_docs: list[str] = []
     all_make: list[MakeInvocation] = []
     all_targets: list[TargetInvocation] = []
+    all_harbor: list[HarborInvocation] = []
 
     for doc_rel in docs:
         if not (root / doc_rel).is_file():
@@ -691,11 +830,12 @@ def extract_invocations(
         for snippet in extract_doc_snippets(root, doc_rel):
             for seg in _split_command_segments(snippet.text):
                 tokens = _tokenize_segment(seg)
-                m_inv, t_inv = _parse_tokens_invocations(tokens, snippet)
+                m_inv, t_inv, h_inv = _parse_tokens_invocations(tokens, snippet)
                 all_make.extend(m_inv)
                 all_targets.extend(t_inv)
+                all_harbor.extend(h_inv)
 
-    return present_docs, all_make, all_targets
+    return present_docs, all_make, all_targets, all_harbor
 
 
 def _ast_long_flags(py_file: Path) -> tuple[bool, set[str]]:
@@ -981,11 +1121,82 @@ def check_cli_long_flags(
     )
 
 
+def check_harbor_commands(
+    harbor_invocations: Sequence[HarborInvocation],
+    present_docs: Sequence[str] = (),
+) -> CheckResult:
+    name = "Harbor CLI & Env-Var Check"
+    failures: list[str] = []
+    warnings: list[str] = []
+
+    for inv in harbor_invocations:
+        inv_issues: list[str] = []
+
+        for ae in inv.agent_envs:
+            raw_key, sep, raw_val = ae.partition("=")
+            env_key = raw_key.strip()
+            env_val = raw_val.strip()
+            display_ae = ae.replace(PLACEHOLDER_TOKEN, "<placeholder>")
+            if env_key.upper().startswith("CANARY_"):
+                inv_issues.append(
+                    f"{inv.doc}:{inv.line}: harbor run passes forbidden CANARY_* env var "
+                    f"'--ae {display_ae}' into agent container (check_isolation.sh fails on any CANARY_* in main)"
+                )
+            elif env_key == "ORACLE_POLICY":
+                if not sep or (
+                    not _is_placeholder_or_glob(env_val)
+                    and env_val not in VALID_HARBOR_ORACLE_POLICIES
+                ):
+                    valid_str = ", ".join(sorted(VALID_HARBOR_ORACLE_POLICIES))
+                    inv_issues.append(
+                        f"{inv.doc}:{inv.line}: harbor run has invalid '--ae {display_ae}' "
+                        f"(valid ORACLE_POLICY: {valid_str})"
+                    )
+
+        agent_val = (inv.agent or "").strip()
+        model_val = (inv.model or "").strip()
+        if agent_val == "opencode" and model_val.lower().startswith("google/"):
+            if "GOOGLE_GENERATIVE_AI_API_KEY" not in [k.strip() for k in inv.api_key_names]:
+                display_model = model_val.replace(PLACEHOLDER_TOKEN, "<placeholder>")
+                inv_issues.append(
+                    f"{inv.doc}:{inv.line}: harbor run with '-a opencode -m {display_model}' "
+                    "must include '--api-key-name GOOGLE_GENERATIVE_AI_API_KEY'"
+                )
+
+        for msg in inv_issues:
+            if inv.superseded:
+                warnings.append(f"{msg} [superseded section]")
+            else:
+                failures.append(msg)
+
+    if failures:
+        return CheckResult(
+            name,
+            "FAIL",
+            f"{len(failures)} Harbor CLI/env violation(s) across {len(harbor_invocations)} harbor run invocation(s)",
+            failures + warnings,
+        )
+    if warnings:
+        return CheckResult(
+            name,
+            "WARN",
+            f"checked {len(harbor_invocations)} harbor run invocation(s) across {len(present_docs)} doc(s); "
+            f"{len(warnings)} superseded warning(s)",
+            warnings,
+        )
+    return CheckResult(
+        name,
+        "PASS",
+        f"verified {len(harbor_invocations)} harbor run invocation(s) across {len(present_docs)} doc(s) "
+        "(0 CANARY_* leaks, Google OpenCode key forwarding ok, ORACLE_POLICY values valid)",
+    )
+
+
 def verify_repo(
     root: Path = ROOT,
     docs: Sequence[str] = DEFAULT_DOCS,
 ) -> list[CheckResult]:
-    present_docs, make_invocations, target_invocations = extract_invocations(root, docs)
+    present_docs, make_invocations, target_invocations, harbor_invocations = extract_invocations(root, docs)
     if not present_docs:
         return [
             CheckResult(
@@ -999,7 +1210,11 @@ def verify_repo(
         check_makefile_targets(root, present_docs, make_invocations),
         check_script_and_module_paths(root, present_docs, target_invocations),
         check_cli_long_flags(root, target_invocations, frozenset(docs)),
+        check_harbor_commands(harbor_invocations, present_docs),
     ]
+
+
+audit_repo = verify_repo
 
 
 def format_report(results: Sequence[CheckResult], elapsed_s: float) -> str:
@@ -1018,14 +1233,22 @@ def format_report(results: Sequence[CheckResult], elapsed_s: float) -> str:
 
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="Verify Makefile targets, script/module paths, and CLI long-flags across judge-facing docs."
+        description="Verify Makefile targets, script/module paths, CLI flags, and Harbor commands across judge-facing docs."
     )
     ap.add_argument("--root", type=Path, default=ROOT, help="Repository root to verify")
+    ap.add_argument(
+        "--doc",
+        action="append",
+        dest="docs",
+        default=None,
+        help="Relative doc path to verify (repeatable; defaults to DEFAULT_DOCS)",
+    )
     ap.add_argument("--json", action="store_true", help="Emit JSON report")
     args = ap.parse_args(argv)
 
+    target_docs: Sequence[str] = tuple(args.docs) if args.docs else DEFAULT_DOCS
     t0 = time.monotonic()
-    results = verify_repo(root=args.root.resolve())
+    results = verify_repo(root=args.root.resolve(), docs=target_docs)
     elapsed = time.monotonic() - t0
     passed = not any(r.status == "FAIL" for r in results)
 

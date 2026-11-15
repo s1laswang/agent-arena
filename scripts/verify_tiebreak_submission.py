@@ -91,6 +91,7 @@ OPTIONAL_INFERENCE_MODULES: tuple[str, ...] = (
     "scripts/tiebreak_learning_curve.py",
     "scripts/tiebreak_channel_ablation_audit.py",
     "scripts/tiebreak_canary_split_design_audit.py",
+    "scripts/tiebreak_cross_tier_transfer_audit.py",
 )
 
 MODULES_REQUIRING_POLICY_CLASS: frozenset[str] = frozenset({

@@ -119,6 +119,8 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_canary_split_design_audit.py",
         "tiebreak_byzantine_stress_audit.py",
         "tiebreak_selective_risk_coverage_audit.py",
+        "tiebreak_statistical_power_audit.py",
+        "tiebreak_compact_ensemble_gate.py",
     )
     assert rta.OPTIONAL_FILENAMES == expected_optional_files
 
@@ -202,6 +204,8 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_canary_split_design_audit.py",
         "tiebreak_byzantine_stress_audit.py",
         "tiebreak_selective_risk_coverage_audit.py",
+        "tiebreak_statistical_power_audit.py",
+        "tiebreak_compact_ensemble_gate.py",
     ]
     assert payload_ok["gates_passed"] == 3
     assert payload_ok["gates_total"] == 3

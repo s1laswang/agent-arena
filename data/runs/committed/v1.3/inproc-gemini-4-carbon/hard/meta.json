@@ -1,0 +1,58 @@
+{
+ "agent": "gemini:gemini-4-carbon",
+ "model": "gemini-4-carbon",
+ "provider": "gemini",
+ "context": "full",
+ "api": "generateContent",
+ "provider_settings": {
+  "thinking_level": "model default (not sent; gemini-4-carbon: medium)",
+  "include_thoughts": true,
+  "temperature": "not sent (API default 1.0)",
+  "thought_signature_replay": true,
+  "api": "generateContent"
+ },
+ "tier": "hard",
+ "tiers_version": "v1.3",
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "planned_seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "status": "complete",
+ "git_sha": "29beeb9c3216d52088694f1480e30c89dd59cf44",
+ "git_shas": [
+  "29beeb9c3216d52088694f1480e30c89dd59cf44"
+ ],
+ "smoke": false,
+ "hint": null,
+ "usage": {
+  "in": 49481887,
+  "cached_in": 46427306,
+  "out": 563916,
+  "cost_usd_est": 16.3911,
+  "cost_usd_upper": 104.6029
+ },
+ "pricing": "gemini-4-carbon list prices per 1M tokens: input $2.00, cached input $0.10, output (incl. thinking) $10.00 through 2026-11-30 (aistudio.google.com/docs/pricing, checked 2026-11-14). cost_usd_est bills cached input at $0.10; the upper bound bills all input at $2.00. OpenCode runs also carry OpenCode's own reported cost (models.dev prices).",
+ "provenance": "scripts/gemini_runner.py (one episode per process, resumable; infra-invalid attempts excluded and retried), merged by scripts/merge_staging.py",
+ "invalid_episodes": [],
+ "infra_invalid_attempts_excluded": []
+}

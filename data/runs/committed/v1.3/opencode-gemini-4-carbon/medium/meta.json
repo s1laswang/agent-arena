@@ -1,0 +1,66 @@
+{
+ "agent": "opencode:google/gemini-4-carbon",
+ "model": "google/gemini-4-carbon",
+ "model_id": "gemini-4-carbon",
+ "provider": "opencode",
+ "harness": "opencode-cli+mcp_server",
+ "steps_source": "agent_transcript",
+ "provider_settings": {
+  "thinking": "OpenCode default for gemini-4: includeThoughts, no thinkingLevel (model default: medium)",
+  "temperature": "OpenCode default (not set for gemini-4)"
+ },
+ "opencode_version": "1.19.5",
+ "opencode_permission": {
+  "*": "deny",
+  "canary_*": "allow"
+ },
+ "tier": "medium",
+ "tiers_version": "v1.3",
+ "seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "planned_seeds": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "status": "complete",
+ "git_sha": "0cc1822238d6bc12b947a584e1f9e33a4afa6f0f",
+ "git_shas": [
+  "0cc1822238d6bc12b947a584e1f9e33a4afa6f0f",
+  "1ae70d93a3c171a3df08ed52e974a9bfc3eee798",
+  "29beeb9c3216d52088694f1480e30c89dd59cf44"
+ ],
+ "smoke": false,
+ "hint": null,
+ "usage": {
+  "in": 27801902,
+  "cached_in": 25939545,
+  "out": 412257,
+  "cost_usd_est": 10.4412,
+  "cost_usd_upper": 59.7264
+ },
+ "pricing": "gemini-4-carbon list prices per 1M tokens: input $2.00, cached input $0.10, output (incl. thinking) $10.00 through 2026-11-30 (aistudio.google.com/docs/pricing, checked 2026-11-14). cost_usd_est bills cached input at $0.10; the upper bound bills all input at $2.00. OpenCode runs also carry OpenCode's own reported cost (models.dev prices).",
+ "provenance": "scripts/gemini_runner.py (one episode per process, resumable; infra-invalid attempts excluded and retried), merged by scripts/merge_staging.py",
+ "invalid_episodes": [],
+ "infra_invalid_attempts_excluded": [
+  "opencode-medium-0-122637: infra:empty_model_response (Gemini returned an empty reply: 0 output tokens, finish=stop; opencode exited)",
+  "opencode-medium-0-124545: infra:empty_model_response (final reply had no text and no tool call: finish=stop, output_tokens=44, reasoning_tokens=0; opencode exited)"
+ ]
+}

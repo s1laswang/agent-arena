@@ -1,0 +1,22 @@
+| tier | agent | seed | day | accused | correct | score | P(accused) | P(top) | verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| hard | gemini:gemini-4-carbon | 0 | 11 | e25 | True | 0.70 | 0.847 | 0.847 | justified |
+| hard | gemini:gemini-4-carbon | 1 | 11 | e01 | True | 0.68 | 0.677 | 0.677 | justified |
+| hard | gemini:gemini-4-carbon | 2 | 13 | e19 | True | 0.69 | 0.709 | 0.709 | justified |
+| hard | gemini:gemini-4-carbon | 3 | 12 | e26 | True | 0.72 | 0.947 | 0.947 | justified |
+| hard | gemini:gemini-4-carbon | 4 | 11 | e28 | True | 0.71 | 0.662 | 0.662 | justified |
+| hard | gemini:gemini-4-carbon | 5 | 13 | e19 | True | 0.79 | 0.797 | 0.797 | justified |
+| hard | gemini:gemini-4-carbon | 6 | 9 | e19 | True | 0.83 | 0.617 | 0.617 | justified |
+| hard | gemini:gemini-4-carbon | 7 | 12 | e03 | True | 0.79 | 0.551 | 0.551 | lucky |
+| hard | gemini:gemini-4-carbon | 8 | 13 | e13 | True | 0.76 | 0.778 | 0.778 | justified |
+| hard | gemini:gemini-4-carbon | 9 | 14 | e22 | False | -1.00 | 0.585 | 0.585 | premature-wrong |
+| medium | gemini:gemini-4-carbon | 0 | 10 | e05 | True | 0.67 | 1.0 | 1.0 | justified |
+| medium | gemini:gemini-4-carbon | 1 | 8 | e02 | True | 0.70 | 1.0 | 1.0 | justified |
+| medium | gemini:gemini-4-carbon | 2 | 5 | e09 | True | 0.84 | 1.0 | 1.0 | justified |
+| medium | gemini:gemini-4-carbon | 3 | 14 | e14 | True | 0.40 | 0.586 | 0.586 | lucky |
+| medium | gemini:gemini-4-carbon | 4 | 14 | e17 | True | 0.46 | 1.0 | 1.0 | justified |
+| medium | gemini:gemini-4-carbon | 5 | 6 | e14 | True | 0.80 | 1.0 | 1.0 | justified |
+| medium | gemini:gemini-4-carbon | 6 | 12 | e17 | True | 0.57 | 1.0 | 1.0 | justified |
+| medium | gemini:gemini-4-carbon | 7 | 14 | None | False | 0.00 | None | None | none |
+| medium | gemini:gemini-4-carbon | 8 | 10 | e02 | True | 0.63 | 1.0 | 1.0 | justified |
+| medium | gemini:gemini-4-carbon | 9 | 14 | e15 | True | 0.46 | 0.505 | 0.505 | lucky |

@@ -1,0 +1,60 @@
+{
+ "opencode:google/gemini-4-carbon": {
+  "episodes": 10,
+  "tiers": {
+   "hard": 10
+  },
+  "regret_total": 1.0589,
+  "tags": {
+   "budget_waste": {
+    "count": 11,
+    "episodes_with": 10,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 0,
+     "t": 3,
+     "day": 1,
+     "tool": "search_messages",
+     "args": {
+      "day_to": 1,
+      "day_from": 1,
+      "query": " "
+     },
+     "regret": 0.0,
+     "p_best": 0.025,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 1.0
+   },
+   "uninformative_canary": {
+    "count": 1,
+    "episodes_with": 1,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 4,
+     "t": 36,
+     "day": 4,
+     "tool": "plant_canary",
+     "args": {
+      "assignment": {
+       "e00": "B",
+       "e20": "C",
+       "e11": "A",
+       "e04": "A",
+       "e26": "C",
+       "e14": "B"
+      },
+      "doc_title": "D4-C1 Incident Report"
+     },
+     "regret": 0.0,
+     "p_best": 0.9161,
+     "why": "canary variants split the suspects poorly (low information)"
+    },
+    "rate": 0.1
+   }
+  },
+  "score_mean": 0.664
+ }
+}

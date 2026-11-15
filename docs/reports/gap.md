@@ -1,5 +1,119 @@
 # Gap report: frontier agents vs the reference solver
 
+## Gemini frontier measurement (REAL runs, 2026-11-14 12:08–19:30)
+
+> **v1.4 hard, judges' shape (OpenCode + gemini-4-carbon over MCP), n=30: Gemini scores 65% of the reference solver [95% CI 24–98%]. After removing luck it keeps 72% [52–91%] of the solver's expected value.** Gemini is **not** at ≥85% of the solver on v1.4 hard: the luck-adjusted CI excludes 85%. The raw CI reaches 98%, so a single 10-task judge run can land near parity.
+>
+> **v1.4 medium: no gap** (111% [99–127%], luck-adjusted 101%).
+>
+> On hard the gap comes from 4 wrong accusations and 1 abstention in 30 episodes. On the 25 seeds where both are correct, Gemini scores 0.547 vs the solver's 0.538. At least 2 of the 4 misses (P = 0.95 and 0.988) were luck: the canary fingerprint noise on hard is 5%. That is exactly why we lead with the luck-adjusted ratio.
+
+**What ran.**
+- **Model:** `gemini-4-carbon`. Google's model page says "Our strongest reasoning model". It is the strongest model on our key (2026-11-14); `gemini-2.5-flash` now returns 404.
+- **Thinking and temperature:** neither path sends a thinking level, so the model default applies (medium) and thoughts are included. Neither sends a temperature.
+- **Judges' shape:** `canary/agents/frontier/opencode_run.py`, OpenCode 1.18.29, model `google/gemini-4-carbon`.
+  - One `canary.mcp_server` per episode.
+  - A clean temp dir with only `opencode.json`; permission `{"*": "deny", "canary_*": "allow"}`, so the agent sees only the 13 canary tools.
+  - An isolated OpenCode home for each episode; the score comes from the server ledger.
+- **In-process:** `python -m canary.agents.play --agent gemini:gemini-4-carbon`.
+  - `LLMPolicy` with the full history.
+  - Each Gemini reply is replayed verbatim (thought signatures included).
+  - The prompt and the 13 tool specs are byte-identical to the MCP path (test `test_gemini_request_parity_with_mcp_prompt_and_tools`).
+- **Driver:** `scripts/gemini_runner.py`. It runs one episode per process and is resumable. Up to ~50 episodes ran in parallel with no 429s.
+- **Reference:** the solver and baselines at tiers v1.4 on the same dev seeds 0–29 (`data/runs/committed/v1.4/reference/`).
+- **Statistics:** frontier/solver ratio with a paired bootstrap over seeds (10,000 resamples).
+- **Verification:** **every episode is replay-verified.** A fresh `Env` replaying the recorded tool calls reproduces the ledger score: 127/127 on v1.4, 40/40 on v1.3 under `scripts/with_tiers.py v1.3`, 10/10 on v1.5-candidate.
+
+Reproduce (no keys): `SEEDS=0-29 bash scripts/gemini_finalize.sh v1.4`, which runs merge → replay-verify → `scripts/paired_gemini.py` → tags / accuse / regret. Use `SEEDS=0-9 … v1.3` for v1.3.
+
+### v1.4 paired table, dev seeds 0–29 (`data/runs/committed/v1.4/paired_table_gemini.md`)
+| tier | run | n | score ± 95% CI | accuracy | accused | mean accuse day | mean P(accused) at accusation | solver, same seeds | **Gemini / solver [95% CI]** | luck-adjusted score | **luck-adj. / solver's luck-adj. [95% CI]** |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| hard | **OpenCode + gemini-4-carbon over MCP** (judges' shape, headline) | 30 | 0.322 ± 0.199 | 0.83 | 0.97 | 13.2 | 0.88 | 0.499 | **65% [24%, 98%]** | 0.360 | **72% [52%, 91%]** |
+| hard | OpenCode, *alternative, not the headline*: empty-reply first attempts counted as 0 | 30 | 0.279 ± 0.180 | 0.70 | 0.80 | 13.2 | 0.87 | 0.499 | 56% [19%, 87%] | 0.277 | 55% [34%, 77%] |
+| hard | in-process gemini-4-carbon (second path; still running, n so far) | 22 | 0.493 ± 0.153 | 0.95 | 1.00 | 12.0 | 0.94 | 0.457 | 108% [62%, 189%] | 0.473 | 98% [75%, 123%] |
+| hard | OpenCode + gemini-3.5-flash (second family; the API reports modelVersion gemini-3.6-flash) | 30 | 0.373 ± 0.177 | 0.90 | 1.00 | 12.7 | 0.71 | 0.499 | 75% [36%, 123%] | 0.110 | **22% [−23%, 63%]** |
+| hard | reference solver | 30 | 0.499 ± 0.119 | 0.97 | 1.00 | 10.6 | 0.97 | 0.499 | – | 0.499 | – |
+| hard | heuristic / do_nothing / stop_early | 30 | 0.086 / 0.000 / −1.000 | 0.80 / 0 / 0 | 1.00 / 0 / 1.00 | | | 0.499 | 17% / 0% / −200% | | 10% / 0% / −190% |
+| medium | **OpenCode + gemini-4-carbon over MCP** | 30 | 0.713 ± 0.042 | 1.00 | 1.00 | 8.0 | 0.96 | 0.645 | **111% [99%, 127%]** | 0.652 | **101% [85%, 119%]** |
+| medium | OpenCode, *alternative*: empty-reply first attempts counted as 0 | 30 | 0.579 ± 0.110 | 0.80 | 0.80 | 7.7 | 0.99 | 0.645 | 90% [71%, 109%] | 0.558 | 86% [68%, 106%] |
+| medium | in-process gemini-4-carbon (still running, n so far) | 15 | 0.558 ± 0.155 | 0.80 | 0.80 | 8.7 | 0.96 | 0.712 | 78% [55%, 100%] | 0.500 | 70% [45%, 96%] |
+| medium | reference solver | 30 | 0.645 ± 0.087 | 0.90 | 0.90 | 7.6 | 1.00 | 0.645 | – | 0.645 | – |
+
+How to read the columns:
+- **Abstain rate** = 1 − *accused*.
+- **Luck-adjusted score:** each accusation is scored P·V − (1 − P), where P is the solver's exact posterior that the accused is the mole, given everything the agent had seen at that step. No accusation scores 0. It is paired with the solver's own luck-adjusted score on the same seeds.
+- **gemini-3.5-flash** wins 75% of the solver's raw score, but only **22%** of its expected value. 10 of its 30 accusations were premature (8.56 V lost); it was right mostly by luck. That is the failure mode the luck adjustment exists to expose.
+
+### Failure tags and the hard-tier misses (v1.4, OpenCode + gemini-4-carbon)
+Tagged with `canary.analysis.tags` and `scripts/regret_report.py`; reports in `results/regret_opencode-gemini-4-carbon-v1.4.md` and the run dirs' `tags.json`.
+- **Tags:** `premature_accusation` 3 instances, 0.96 V lost (hard 2, medium 1). `budget_waste` 64 instances, 0 V. `no_accusation` 1 (a deliberate abstention). Nothing else.
+- **Untagged loss:** most of the value lost on hard is the 4 wrong accusations.
+- **Speed:** Gemini accuses later than the solver (day 12.9 vs 10.9 on the 25 seeds both get right) and uses more tool calls (128 vs 84). On those seeds the later accusations didn't cost it: 0.547 vs 0.538.
+
+The 4 wrong accusations and the abstention (solver posterior at the accusation):
+
+| seed | accused at | P(accused) | read |
+|---|---|---|---|
+| 1 | day 19 | **0.988** | **Luck.** The last canary (c16) surfaced as variant v1, the variant given to e39. The true mole e33 had v2. That is the 5% fingerprint misread (2.5% to this particular variant). Any calibrated agent accuses here. |
+| 26 | day 10 | 0.95 | Luck at the same level. |
+| 15 | day 12 | 0.805 | The **solver also accuses wrongly on seed 15**: the evidence pointed the wrong way for both. |
+| 18 | day 18 | **0.627** | **A real decision error.** Gemini wrote "e29 logged 6 after-hours accesses out of 18 … yielding ~89% posterior probability". It trusted the after-hours log rate, which the mole's framing distorts on this tier, and so overstated its own posterior (0.89 claimed vs 0.63 actual). Regret 0.49 V, the costliest single decision. |
+| 11 | horizon, no accusation | – | **A calibrated abstention.** Gemini wrote "accusing e37 had negative expected value (0.429 × 0.20 − 0.571 = −0.485 < 0), so abstaining by closing Day 21 for a guaranteed score of 0 maximized expected score". |
+
+**Honest read.**
+1. On v1.4 hard the gap is real but moderate: 65% raw, 72% luck-adjusted, and the luck-adjusted CI excludes parity. The cleaner claim: **even after removing luck, Gemini keeps about 72% of the solver's expected value on hard.**
+2. The gap is decision quality at the margin (overconfident posteriors from framed log signals, seed 18) plus the luck that any 30-seed sample carries. Gemini does not lack the information or the tools. It computes the abstention threshold itself (seed 11) and reads canary variants correctly.
+3. Medium shows no gap (111%).
+4. The in-process path (n still growing) is near parity on hard (108%, wide CI), so the harness matters at this n.
+
+### Harness reliability: empty model replies (judges' shape only)
+In OpenCode, gemini-4-carbon sometimes ends a step with **no text and no tool call** (finish=stop; output 0 tokens, occasionally a few that surface as nothing). `opencode run` then exits without accusing. A related case: a 1-token garbage reply makes OpenCode's next request end with a model turn, which the API rejects with HTTP 400 "Requests ending with a model turn are not supported".
+- **Policy:** these are not agent decisions. They are excluded as infra-invalid and retried (raw token counts in each `INVALID.txt`; `scripts/gemini_infra_summary.py`). Every other ending counts as played: wrong accusation, no accusation, our-side timeout.
+- **Frequency on v1.4** (attempts):
+
+| tier | valid | empty reply | CLI 400 / TLS | provider unavailable | other server errors |
+|---|---|---|---|---|---|
+| hard | 30 | 6 | 13 | 6 | – |
+| medium | 30 | 6 | 6 | 1 | 2 |
+
+  In-process had no invalid attempts: `LLMPolicy` nudges past empty replies.
+- **Effect:** counted as 0 instead, hard drops from 65% to 56% (the labelled alternative rows). The headline uses the conservative, retried version.
+
+### v1.3 Gemini rows (dev seeds 0–9, n=10 each; `data/runs/committed/v1.3/paired_table_gemini.md`)
+| tier | run | Gemini / solver [95% CI] | luck-adj. ratio | accuracy |
+|---|---|---|---|---|
+| hard | OpenCode + gemini-4-carbon | 80% [26%, 111%] | 83% | 0.90 |
+| hard | in-process gemini-4-carbon | 83% [31%, 113%] | 51% | 0.90 |
+| medium | OpenCode + gemini-4-carbon | 84% [52%, 112%] | 84% | 0.80 |
+| medium | in-process gemini-4-carbon | 76% [54%, 98%] | 58% | 0.90 |
+
+For comparison, Codex gpt-5.5 on hard: 97% [89%, 107%].
+
+On v1.3 medium, 2 of the 10 OpenCode episodes ended with Gemini writing "Please continue." and stopping. Those count as played (score 0).
+
+### v1.5-candidate spot check: a labelled negative result (the biased-employee layer did not fool Gemini)
+Setup: hard, dev seeds 0–9, OpenCode + gemini-4-carbon, `data/runs/committed/v1.5-candidate/`, branch `justSilas-gemini-v15` @ 7242fc3.
+- **Result:** Gemini **0.664 vs the v1.5 solver's 0.615 = 108% [96%, 122%]**, 10/10 correct, luck-adjusted 98%, no abstentions, mean P at accusation 0.94.
+- **Same seeds on v1.4:** 61% [3%, 104%].
+- **Rumours count against the person rumoured.** Gemini identifies the most-rumoured employee as the decoy. Seed 4: "e31 … posted disgruntled messages, was targeted by seeded rumours, and received repeated framing accesses". On seeds 2 and 7 it searched "rumour" deliberately. No accusation relied on a rumour or the authority post.
+- **Validity:** replay-verified 10/10 under v1.5-candidate, but only 6/10 under v1.4, which shows the social layer was active.
+- **Decision (CEO, Gate B):** v1.5 was dropped as the judged rules; v1.4 stays.
+
+### Spend (Gemini API; gemini-4-carbon list prices $2 / $10 / cached $0.10 per 1M tokens through 2026-11-30)
+| item | estimate (cached at $0.10) |
+|---|---|
+| v1.4, all attempts incl. infra-invalid (in-process still running) | $197.56 |
+| v1.3 | $64.01 |
+| v1.5 spot check | $22.51 |
+| gemini-3.5-flash (OpenCode's own reported cost) | $26.10 |
+| smokes | $2.64 |
+| **total so far** | **≈ $313** |
+
+Upper bound with no cache discount: ≈ $1,940. Implicit caching covered 91–95% of input tokens.
+
+---
+
 ## Official v1.3 measurement (approved, 2026-11-14 10:30–11:21)
 
 > **v1.4 contingency triggered on hard (Codex 97%).** In the judges' harness shape (Codex CLI gpt-5.5 over MCP), the frontier agent scores **97% of the reference solver on hard** on the planned seeds 0–9 (95% CI 89–107%, 10/10 correct). With the one extension seed that finished it scores **106%** (n=11, CI 91–136%). So **the v1.3 gap does not hold on hard in the judges' shape.** On medium, Codex scores **50%** of the solver (n=10, CI −19% to 103%; 55% with seed 10). That gap comes entirely from 2 early wrong accusations out of 10, and the CI reaches parity, so medium is inconclusive rather than a demonstrated gap. The fixed in-process loop is **92% of the solver on medium** (n=9, CI 80–106%), which is also above the 85% line.

@@ -1,0 +1,22 @@
+| tier | agent | seed | day | accused | correct | score | P(accused) | P(top) | verdict |
+|---|---|---|---|---|---|---|---|---|---|
+| hard | opencode:google/gemini-4-carbon | 0 | 13 | e25 | True | 0.55 | 0.642 | 0.642 | justified |
+| hard | opencode:google/gemini-4-carbon | 1 | 11 | e01 | True | 0.67 | 0.968 | 0.968 | justified |
+| hard | opencode:google/gemini-4-carbon | 2 | 14 | e19 | True | 0.67 | 0.718 | 0.718 | justified |
+| hard | opencode:google/gemini-4-carbon | 3 | 11 | e26 | True | 0.82 | 0.993 | 0.993 | justified |
+| hard | opencode:google/gemini-4-carbon | 4 | 8 | e28 | True | 0.73 | 0.998 | 0.998 | justified |
+| hard | opencode:google/gemini-4-carbon | 5 | 14 | e11 | False | -1.00 | 0.265 | 0.438 | premature-wrong |
+| hard | opencode:google/gemini-4-carbon | 6 | 7 | e19 | True | 0.81 | 0.981 | 0.981 | justified |
+| hard | opencode:google/gemini-4-carbon | 7 | 8 | e03 | True | 0.84 | 0.918 | 0.918 | justified |
+| hard | opencode:google/gemini-4-carbon | 8 | 13 | e13 | True | 0.73 | 0.937 | 0.937 | justified |
+| hard | opencode:google/gemini-4-carbon | 9 | 13 | e06 | True | 0.61 | 0.582 | 0.582 | lucky |
+| medium | opencode:google/gemini-4-carbon | 0 | 10 | None | False | 0.00 | None | None | none |
+| medium | opencode:google/gemini-4-carbon | 1 | 5 | e02 | True | 0.80 | 1.0 | 1.0 | justified |
+| medium | opencode:google/gemini-4-carbon | 2 | 9 | e09 | True | 0.69 | 1.0 | 1.0 | justified |
+| medium | opencode:google/gemini-4-carbon | 3 | 7 | e14 | True | 0.79 | 1.0 | 1.0 | justified |
+| medium | opencode:google/gemini-4-carbon | 4 | 6 | e17 | True | 0.75 | 1.0 | 1.0 | justified |
+| medium | opencode:google/gemini-4-carbon | 5 | 11 | e14 | True | 0.68 | 1.0 | 1.0 | justified |
+| medium | opencode:google/gemini-4-carbon | 6 | 7 | None | False | 0.00 | None | None | none |
+| medium | opencode:google/gemini-4-carbon | 7 | 5 | e09 | True | 0.85 | 1.0 | 1.0 | justified |
+| medium | opencode:google/gemini-4-carbon | 8 | 4 | e02 | True | 0.85 | 1.0 | 1.0 | justified |
+| medium | opencode:google/gemini-4-carbon | 9 | 8 | e15 | True | 0.69 | 1.0 | 1.0 | justified |

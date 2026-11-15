@@ -47,7 +47,8 @@ Two things would not have fit on a laptop, and they did not fit on our V100 clus
 | 02:17 | [Verda] | Backup base eval on A100 `18acfa5d`, because FR8 SSH was down. |
 | 02:39 | [Verda] | v3-4k s0 held-out eval: **−0.103 ± 0.081 (n=90), +0.306 ± 0.136 vs v2 (paired)**. v3-4k seed 1 replicate starts on an A100 spot. |
 | 02:58 | [Verda] | X1 causal-hint runners (Gemini via OpenCode) hosted on `18acfa5d`. No Verda CPU instance was free in any region. |
-| 03:02 | [Verda] | X2 DAgger box: A100 40GB on-demand `e9ea8b2e`. |
+| 03:02 | [Verda] | X2 DAgger box 2: A100 40GB on-demand `e9ea8b2e`. |
+| 03:30 | [Verda] | v3-4k s0 extra held-out seeds 30–59 done on A100 `68bbe201`. Pooled **n=180: −0.147 ± 0.063, +0.315 ± 0.096 vs v2 (paired, n=172)**. From 03:35 `68bbe201` becomes X2 DAgger box 1. |
 | 03:08 | [Verda] | Spot A100 `714d8144` (v3-4k s1) **preempted** about 30 min in: no result. Steps so far: 8k s0 167, 8k s1 370, 8k s2 619, 8k s3 211. **€46.02 spent.** |
 | 03:10 | [Verda] | J1 restarted with `--hf-overrides` for YaRN 131k. |
 | ~07:30 | [Verda] | Reapers delete every instance (the X2 box at 08:00). Final rows land in §4. |
@@ -58,7 +59,7 @@ Two things would not have fit on a laptop, and they did not fit on our V100 clus
 |---|---|---|
 | **GPU instance, on-demand: H100 80GB** (1H100.80S.32V) | v3-4k s0 GRPO + held-out eval, then v3-8k s0. Shared with the Meta YOLOv8n run. | The only ≥ 40 GB card with capacity at 22:40. GRPO is generation-bound: 8 samples × 2 prompts per step. H100 = **12 s/step vs 78 s/step on the FR8 V100 (6.5×)**, same code, data and hyperparameters, 83% GPU utilisation. On-demand, so the 2 h run could not be preempted the night before the deadline. |
 | **GPU instance, spot: H100 80GB, A100 80GB** | v3-8k seeds 1 and 2, the v3-4k seed 1 replicate, and the J1 open-weight agent | Replicates and side experiments can survive a preemption: we would lose one seed, not the headline. Spot cost **€1.08/h for an A100** vs €2.16/h on-demand, and **€2.37/h for an H100** vs €4.74/h. |
-| **GPU instance, on-demand: A100 80GB / 40GB** | Extra held-out eval (n 82 → 172 for v2), backup base eval, v3-8k s3, DAgger box | Evals gate the headline numbers, so they ran on-demand. FR8 V100s were held by other jobs, and FR8 SSH went down at about 02:00. |
+| **GPU instance, on-demand: A100 80GB / 40GB** | Extra held-out evals (v2 n 82 → 172; v3-4k s0 n 90 → 180), backup base eval, v3-8k s3, two DAgger boxes | Evals gate the headline numbers, so they ran on-demand. FR8 V100s were held by other jobs, and FR8 SSH went down at about 02:00. |
 | **Self-hosted open-weight serving** (vLLM on a GPU instance) | Qwen3-14B bf16 behind an OpenAI-compatible endpoint, driving `canary.agents.play` on 10 hard + 10 medium dev seeds (`fr8/verda/j1_run.sh`) | An open-weight point next to the Gemini rows, under our control: same tool-call parser, 131k context with YaRN, prefix caching. The weights load from `/dev/shm` because the instance's 48 GB disk can't hold model + vLLM. |
 | **Agent hosting** (a GPU box used as a CPU host) | X1's Gemini OpenCode runners: node 22, opencode 1.19.5, ≤ 8 parallel | Verda CPU instances had no capacity in any region at 02:58. The base-eval A100 box has 22 vCPU and the eval uses about 1, so the runners rode along at no extra cost. |
 
@@ -80,16 +81,17 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | base Qwen2.5-1.5B-Instruct | – | [FR8] V100 (backup run on [Verda] A100 `18acfa5d`: pending) | 16 | 0.000 ± 0.000 | 0.00 | 0.00 | 1.00 | +0.625 ± 0.245 (16) |
 | v1 SFT (J4) | [FR8] V100 | [FR8] V100 | 12 | −0.250 ± 0.256 | 0.25 | 0.00 | 0.75 | +0.333 ± 0.279 (12) |
 | v2 SFT, dense windows | [FR8] V100 | 82 [FR8] V100 + 90 [Verda] A100 `68bbe201` | 172 | −0.457 ± 0.086 | 0.55 | 0.05 | 0.45 | – |
-| **v3-4k s0** GRPO, 609 steps | **[Verda] H100 `3bb74f5a`** | [Verda] H100 | 90 | **−0.103 ± 0.081** | 0.17 | 0.03 | 0.83 | **+0.306 ± 0.136 (82)** |
+| **v3-4k s0** GRPO, 609 steps | **[Verda] H100 `3bb74f5a`** | 90 [Verda] H100 + 90 [Verda] A100 `68bbe201` | 180 | **−0.147 ± 0.063** | 0.21 | 0.03 | 0.79 | **+0.315 ± 0.096 (172)** |
 | v3-4k s1 (replicate) | [Verda] A100 spot `714d8144` | – | **lost: spot preempted ~30 min into training** | – | | | | |
 | v3-8k s0 | [Verda] H100 `3bb74f5a` | [Verda] | pending | pending | | | | |
 | v3-8k s1 / s2 | [Verda] A100 spot / H100 spot | [Verda] | pending | pending | | | | |
-| v3-8k s3 | [Verda] A100 on-demand | [Verda] | stops ~05:00 to free the box for DAgger: reported as "stopped at step N", not a seed result | | | | | |
+| v3-8k s3 | [Verda] A100 on-demand | [Verda] | pending | pending | | | | |
 | v3 s1 (4k) | [FR8] V100 (job 44572) | [FR8] | pending | pending | | | | |
 | DAgger round 1 (from v3-4k s0) | [Verda] A100 | [Verda] | pending (`docs/reports/dagger.md`) | pending | | | | |
 
 **Reading it honestly:**
-- **v3 recovered most of v2's loss.** It is +0.31 vs v2 on 82 paired held-out episodes, mostly by learning to abstain instead of accusing wrongly. Hard-tier wrong accusations fell from 0.60 to 0.03.
+- **v3 recovered most of v2's loss.** It is +0.315 ± 0.096 vs v2 on 172 paired held-out episodes, mostly by learning to abstain instead of accusing wrongly. On the hard tier, accusations (all wrong) fell from 0.60 to 0.03: +0.561 ± 0.147, n=57.
+- The first 90 episodes read −0.103 and the second 90 (seeds 30–59) −0.192; pooled, n=180, it is −0.147 ± 0.063. We report the pooled number.
 - **It does not yet beat the base model**, which abstains on every episode and scores 0: −0.062 ± 0.122 paired, n=16.
 - The diagnosis, from the X2 brief:
   - v3 learned *whom* to accuse on training states: forced-accusation whom-accuracy rose from 0.19 to 0.89.
@@ -134,7 +136,7 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | `ac58df04` | A100 80GB spot | 1.0794 | 00:00 → 07:30 | 7.50 | 8.10 | v3-8k s1 |
 | `dbd083ca` | H100 80GB spot | 2.3711 | 00:24 → 07:30 | 7.10 | 16.83 | v3-8k s2 |
 | `924e81d8` | A100 80GB spot | 1.0794 | 00:49 → 07:30 | 6.68 | 7.21 | Gemini J1-lite, Qwen3-14B vLLM |
-| `68bbe201` | A100 80GB on-demand | 2.1589 | 01:01 → 07:30 | 6.48 | 14.00 | extra held-out evals (v2, v3-4k s0) |
+| `68bbe201` | A100 80GB on-demand | 2.1589 | 01:01 → 07:30 | 6.48 | 14.00 | extra held-out evals (v2, v3-4k s0) to 03:30, then X2 DAgger box 1 |
 | `f4378173` | A100 80GB on-demand | 2.1589 | 01:08 → 07:30 | 6.37 | 13.74 | v3-8k s3, Meta PaliGemma 2 |
 | `18acfa5d` | A100 80GB on-demand | 2.1589 | 02:17 → 07:30 | 5.22 | 11.26 | backup base eval, X1 agent runners |
 | `714d8144` | A100 80GB spot | 1.0794 | 02:39 → ~03:10 (preempted) | ~0.5 | ~0.54 | v3-4k s1 (lost) |
@@ -144,19 +146,19 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 **GPU-hours per workload** (upper bound, attributed from the per-instance table):
 - The Meta and X1 work shared boxes that were already running, so their *incremental* cost was €0. The share below is attributed, not extra spend.
 - `18acfa5d` is split at the base eval's end (~04:50, 150 min budget); after that it only hosts X1.
-- `f4378173` is split at ~05:00, when v3-8k s3 yields to X2.
+- `68bbe201` is split at 03:35, when its evals were done and it became X2 DAgger box 1. v3-8k s3 on `f4378173` keeps running to the reaper.
 
 | workload | instances | GPU-h | € |
 |---|---|---|---|
-| **Tiebreaker** (v3 GRPO 4k + 8k seeds, held-out evals, base eval) | `3bb74f5a` (less Meta), `ac58df04`, `dbd083ca`, `68bbe201`, `f4378173` to 05:00 (less Meta), `18acfa5d` to ~04:50, `714d8144` | ≤ 35.9 | ≤ 92.6 |
+| **Tiebreaker** (v3 GRPO 4k + 8k seeds, held-out evals, base eval) | `3bb74f5a` (less Meta), `ac58df04`, `dbd083ca`, `68bbe201` to 03:35, `f4378173` (less Meta), `18acfa5d` to ~04:50, `714d8144` | ≤ 34.5 | ≤ 89.6 |
 | **Gemini J1** (Qwen3-14B on self-hosted vLLM; ~1.8 h of it idle, §7) | `924e81d8` | ≤ 6.7 | ≤ 7.2 |
 | **Meta glasses** (YOLOv8n + PaliGemma 2 3B, shared) | `3bb74f5a` 0.15 h, `f4378173` 0.65 h | 0.8 | 2.1 (€0 incremental) |
 | **X1 agent hosting** (Gemini OpenCode runners on the box's CPUs) | `18acfa5d` after ~04:50 | ≤ 2.7 | ≤ 5.8 (€0 incremental before 04:50) |
-| **X2 DAgger** | `e9ea8b2e`, `f4378173` from ~05:00 | ≤ 7.5 | ≤ 13.0 |
+| **X2 DAgger** | `e9ea8b2e`, `68bbe201` from 03:35 | ≤ 8.9 | ≤ 16.1 |
 | **total** | | **≤ 53.5** | **≤ €120.7** |
 
 These are finalised from the ledger's delete times after the reapers.
-- **Cost per result:** the headline v3-4k s0 run cost about **€17** on the on-demand H100: 22:46 → 02:20, including setup failures, 2.0 h of training and the n=90 eval.
+- **Cost per result:** the headline v3-4k s0 run cost about **€17** on the on-demand H100: 22:46 → 02:20, including setup failures, 2.0 h of training and the first 90 held-out episodes.
 
 ## 7. What didn't work (honest log)
 

@@ -56,7 +56,7 @@ def build_cmd(workdir: Path, prompt: str, model: str, mcp_url: str) -> list[str]
 
 
 def child_env_extra(model: str):
-    """Per-episode env: an isolated OpenCode home outside the workdir, plus the provider key for google/*."""
+    """Per-episode env: an isolated OpenCode home outside the workdir, plus the provider key for google/* or openai/*."""
     def make(workdir: Path) -> tuple[dict, list[Path]]:
         home = Path(tempfile.mkdtemp(prefix="canary-oc-home-")).resolve()
         assert workdir not in home.parents and home != workdir and REPO_ROOT not in home.parents
@@ -66,6 +66,9 @@ def child_env_extra(model: str):
         if normalize_model(model).startswith("google/"):
             from canary.llm.base import require_key
             env["GOOGLE_GENERATIVE_AI_API_KEY"] = require_key("GEMINI_API_KEY")
+        elif normalize_model(model).startswith("openai/"):
+            from canary.llm.base import require_key
+            env["OPENAI_API_KEY"] = require_key("OPENAI_API_KEY")   # only the agent CLI gets it, never the MCP server
         return env, [home]
     return make
 

@@ -174,3 +174,53 @@ Steps:
 4. Write results/leaderboard_v14_hard.json (rows: agent, n, mean ± CI, accuracy, abstain rate, GPU-hours, €) and docs/reports/open7b.md (honest, a null result included). Commit episodes under data/runs/committed/v1.4/open7b-*/ and replay-verify them.
 Kill criteria are in PLAN-COMPUTE.md. Report every milestone to "Arena · CEO". Commits end with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>".
 ```
+
+---
+
+# Round X (Sun 15 Nov ~03:15): last-7-hours sessions (plan: Arena CEO; no sub-agents)
+
+## X1. CAUSAL HINT (Meaningful difficulty)
+Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/x1-hint -b x1-hint origin/justSilas`
+```
+You are the CAUSAL-HINT engineer for Canary (s1laswang/agent-arena, AfterQuery "Break the Agent"; judged rules v1.4, frozen). Work in ~/junction-aimo-team/wt/x1-hint. Do everything yourself; no sub-agents. Gemini only, never OpenAI. Never print keys (copy .env from ~/junction-aimo-team/wt/justSilas/.env). Never pkill by pattern. Commits end with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>".
+Why: docs/reports/failure_analysis_v1.4.md shows gemini-4-carbon (OpenCode, v1.4 hard) loses mostly by committing before the evidence singles out one employee, and plants 8.5 canaries vs the solver's 14.1. The rubric wants proof that "the info and tools to do better are available". A one-sentence hint stating rules already in the instruction, which moves Gemini toward the solver, is that proof. If it doesn't move, report that too.
+Steps:
+1. Read: docs/reports/failure_analysis_v1.4.md, docs/reports/gap.md (the pre-registered "causal hint" rule is already there), canary/agents (HINTS dict; `--hint ev_delay` was added at f53ae53), scripts/gemini_runner.py, canary/agents/frontier/opencode_run.py.
+2. Add hint "gather" to HINTS, default OFF, with this exact text: "Evidence first: you may plant up to the stated number of canaries every day; plant them every day, and accuse only when exactly one employee is consistent with every leak you have seen (otherwise abstain, which scores 0)." Tests: Env.instruction() unchanged on every tier; the prompt without the flag is byte-identical; with the flag = base + "\n" + text.
+3. Run gemini-4-carbon via OpenCode, v1.4 hard, dev seeds 0-29, --hint gather, into its own staging dir. Run it on the Verda CPU instance that the "fr8 relaunch gpu audit" session provides (ask it for host + access; it owns Verda). Fall back to the Mac at ≤ 4 parallel if the box isn't ready by 04:00. Use ≤ 8 parallel; infra-invalid attempts are retried, never counted; never re-run a valid seed.
+4. Merge into data/runs/committed/v1.4/opencode-gemini-4-carbon-hint-gather/hard/, replay-verify (scripts/verify_replay.py), and pair against the solver AND against the unhinted primary set on the same seeds (scripts/paired_gemini.py or scripts/gap_vs_reference.py). Report: % of solver, luck-adjusted, paired diff vs unhinted, canaries planted, premature-commit rate (reuse scripts/failure_analysis_v14.py functions).
+5. Add a short "Causal hint test" section to docs/reports/failure_analysis_v1.4.md (results only, either outcome). make test green. PR into justSilas by 06:00. STOP all Gemini calls at 06:00 (the judge rehearsal needs the quota from 06:30).
+Report milestones to "Arena · CEO" via SendMessage.
+```
+
+## X2. DAGGER TIEBREAKER (small model trained on its own states)
+Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/x2-dagger -b x2-dagger origin/justSilas-fr8`
+```
+You are the DAGGER engineer for Canary's tiebreaker ("a smaller model improves after training on the environment's experience"). Work in ~/junction-aimo-team/wt/x2-dagger. Do everything yourself; no sub-agents. GPUs come ONLY from the "fr8 relaunch gpu audit" session (it owns Verda; send it exact job specs: command, GPU, hours). Never create instances yourself, never touch FR8 Slurm jobs, never pkill by pattern. Commits end with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>".
+Diagnosis to fix: v3-4k s0 (GRPO, Qwen2.5-1.5B LoRA, Verda H100, 609 steps) learned to name the mole from evidence on TRAINING states (forced-accusation whom-accuracy 0.19 → 0.89), but held-out precision is only 0.19 (3/16). Its score is −0.10 vs base 0.00, though +0.31 vs v2. The cause: its training states were the last 6 steps of SOLVER trajectories, where the solver had already gathered the evidence. The model never learned to gather evidence in its OWN states.
+Fix (DAgger), round 1:
+1. Roll out the v3-4k s0 adapter (ask fr8 for the path) on TRAIN seeds (150000+, never judge or held-out) for ~300 episodes. Use vLLM on an A100/H100 if available, else HF generation with KV reuse (train/eval_hf).
+2. At every state the model reaches, query the reference solver for the action it would take from the SAME observation history (canary/solver policy works from the agent-visible history; replay the model's actions into a fresh Env and ask the solver at each step).
+3. Build SFT examples (state → solver action), up-weighting plant_canary and accuse/abstain decisions.
+4. LoRA SFT from v3-4k s0 at 8k context.
+5. Held-out eval n=30/tier (eval_hf, the same seeds as the other rows).
+Optional round 2 only if round 1 beats v3. Read first: train/README.md, train/grpo_investigator.py, train/eval_hf.py, fr8/analysis/ws4_table.py, fr8/verda/README.md, docs/reports/fr8.md.
+Deliver docs/reports/dagger.md and rows in the ws4 table (base / v1 / v2 / v3-4k / v3-8k / DAgger: n, mean ± CI, accused, correct, abstain, whom-precision, GPU-hours, €). Honest null if no gain. Done by 07:30; no training after 09:00. PR into justSilas; report to "Arena · CEO".
+```
+
+## X3. JUDGE SIMULATION (Craft)
+Worktree: `git -C ~/junction-aimo-team/agent-arena worktree add ../wt/x3-judgesim -b x3-judgesim origin/justSilas`
+```
+You are the JUDGE-SIMULATION lead for Canary (s1laswang/agent-arena, public; AfterQuery rubric: gap 30, meaningful difficulty 30, reward integrity 25, craft 15 = "rules make sense; ONE command from the README reproduces reported results"). Work in ~/junction-aimo-team/wt/x3-judgesim. You may launch Gemini (gemini-4-argon or hydrogen; NOT carbon) OpenCode or Gemini CLI agents as cold judges, but no Claude sub-agents. Never pkill by pattern. Never print keys. Commits end with "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>".
+1. Launch 6 Gemini judge agents. Each gets ONLY the rubric text above plus "git clone -b justSilas https://github.com/s1laswang/agent-arena /tmp/judgeN". Each follows README.md literally: make setup, make reproduce, make accept. Judge 1 also does harbor/README.md (oracle + do_nothing on 2 tasks) if Docker/colima is free; DON'T restart colima, because the s1-rehearsal session uses it from 06:30. At most 3 heavy runs at once (the Mac is loaded).
+2. Each judge logs: time to first result; every confusing sentence (file:line); every number it can't trace to a committed file; every error; a rubric score per line, with reasons.
+3. You aggregate into docs/reports/judge_sim.md: a ranked friction list.
+4. Fix cheap items yourself, in docs, README, harbor/README.md or the Makefile only: no canary/ rules/env/solver changes and no committed-data changes. Run make test + make accept green, then open a PR into justSilas by 06:00. Anything bigger goes to "Arena · CEO" as a one-line proposal.
+```
+
+## X4. VERDA (Compute Track) = S6 above, plus:
+- the Verda CPU instance hosting X1's runners (fr8 provisions it);
+- docs/reports/verda-evidence.md (Meta YOLO + PaliGemma; the v3 GPU runs);
+- Gemini J1 (Qwen3-14B self-hosted) as an open-weight point.
+
+Output: VERDA.md, PR by 08:30.

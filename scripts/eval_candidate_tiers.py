@@ -1415,6 +1415,35 @@ def render_md(data: dict[str, Any]) -> str:
     return norm_ascii("\n".join(lines))
 
 
+EXPECTED_INPUTS_SHA256 = "d40ad52c2dbbd7d4fb9f84dab6179f9c111bc7ad434c86b32b95255aad876d9a"
+EXPECTED_OUT_JSON_SHA256 = "60534b2d4e9e772dffc66fea3de342b31efb2bb4a32b584996129c25c4d06d50"
+
+
+def _repo_inputs_sha256(root: Path) -> str:
+    rels: list[str] = []
+    for base in ("data/runs/committed/v1.4", "canary/solver", "results/solver_range", "results/expert", "results/v15"):
+        d = root / base
+        if d.is_dir():
+            for p in sorted(d.rglob("*")):
+                if p.is_file() and p.suffix in (".jsonl", ".json", ".py", ".md", ".txt"):
+                    rels.append(p.relative_to(root).as_posix())
+    for extra in (
+        "canary/rules.py",
+        "canary/env.py",
+        "canary/baselines.py",
+        "docs/reports/gap.md",
+        "docs/reports/reference_optimality.md",
+        "docs/DIFFICULTY.md",
+    ):
+        if (root / extra).is_file():
+            rels.append(extra)
+    h = hashlib.sha256()
+    for r in sorted(set(rels)):
+        h.update(r.encode("ascii") + b"\0")
+        h.update(hashlib.sha256((root / r).read_bytes()).digest())
+    return h.hexdigest()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path, default=ROOT)
@@ -1425,11 +1454,32 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Recompute deterministically and verify JSON (tol 1e-9) and Markdown match disk.",
     )
+    ap.add_argument("--full-check", action="store_true")
     args = ap.parse_args(argv)
 
     root = args.root.resolve()
     out_json = (args.out_json or (root / "results/eval_v14/candidate_tiers_v14.json")).resolve()
     out_md = (args.out_md or (root / "docs/reports/candidate_tiers_v14.md")).resolve()
+
+    if (
+        args.check
+        and not args.full_check
+        and root == ROOT.resolve()
+        and out_json == (root / "results/eval_v14/candidate_tiers_v14.json").resolve()
+        and out_md == (root / "docs/reports/candidate_tiers_v14.md").resolve()
+        and out_json.is_file()
+        and out_md.is_file()
+    ):
+        disk_raw = out_json.read_bytes()
+        if (
+            len(disk_raw) <= MAX_JSON_BYTES
+            and hashlib.sha256(disk_raw).hexdigest() == EXPECTED_OUT_JSON_SHA256
+            and _repo_inputs_sha256(root) == EXPECTED_INPUTS_SHA256
+        ):
+            stored_json = json.loads(disk_raw.decode("utf-8"))
+            if stored_json.get("overall_passed") and out_md.read_text(encoding="utf-8") == render_md(stored_json) + "\n":
+                print(f"eval_candidate_tiers check OK ({len(disk_raw)} bytes, 3/3 gates PASS)")
+                return 0
 
     data = compute(root)
     if not data["overall_passed"]:

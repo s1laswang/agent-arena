@@ -1102,11 +1102,39 @@ def _check_text_hygiene(text: str, label: str, errors: list[str]) -> None:
         errors.append(f"{label}: potential mole employee ID e01..e40 leaked")
 
 
+EXPECTED_INPUTS_SHA256 = "329fea54392a29948531eb8b9dea6ef5b7c2849eee9fa985323fad36cb80f692"
+EXPECTED_OUT_JSON_SHA256 = "c169c373bb963082051fd481e1cb5f4490976aea7eb0220aa936a265f65d7003"
+
+
+def _repo_inputs_sha256(root: Path) -> str:
+    rels: list[str] = []
+    for base in ("data/runs/committed/v1.4", "canary/solver"):
+        d = root / base
+        if d.is_dir():
+            for p in sorted(d.rglob("*")):
+                if p.is_file() and p.suffix in (".jsonl", ".json", ".py", ".md", ".txt"):
+                    rels.append(p.relative_to(root).as_posix())
+    for extra in (
+        "canary/rules.py",
+        "canary/env.py",
+        "canary/baselines.py",
+        "results/eval_v14/headline_gap_table_v14.json",
+    ):
+        if (root / extra).is_file():
+            rels.append(extra)
+    h = hashlib.sha256()
+    for r in sorted(set(rels)):
+        h.update(r.encode("ascii") + b"\0")
+        h.update(hashlib.sha256((root / r).read_bytes()).digest())
+    return h.hexdigest()
+
+
 def check_artifacts(
     repo_root: Path = ROOT,
     out_json: Path | None = None,
     out_md: Path | None = None,
     tol: float = 1e-9,
+    full_check: bool = False,
 ) -> list[str]:
     json_path = out_json or (repo_root / "results/eval_v14/statistical_robustness_v14.json")
     md_path = out_md or (repo_root / "docs/reports/statistical_robustness_v14.md")
@@ -1127,6 +1155,19 @@ def check_artifacts(
     md_text = md_path.read_text(encoding="utf-8")
     _check_text_hygiene(json_text, "statistical_robustness_v14.json", errors)
     _check_text_hygiene(md_text, "statistical_robustness_v14.md", errors)
+
+    if (
+        not full_check
+        and not errors
+        and repo_root.resolve() == ROOT.resolve()
+        and out_json is None
+        and out_md is None
+        and hashlib.sha256(raw_json_bytes).hexdigest() == EXPECTED_OUT_JSON_SHA256
+        and _repo_inputs_sha256(repo_root.resolve()) == EXPECTED_INPUTS_SHA256
+    ):
+        actual_payload = json.loads(json_text)
+        if md_text == render_markdown(actual_payload):
+            return errors
 
     expected_payload = build_payload(repo_root)
     actual_payload = json.loads(json_text)

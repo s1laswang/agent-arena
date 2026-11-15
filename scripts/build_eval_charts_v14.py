@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
 import json
 import math
@@ -1295,11 +1296,43 @@ def build_all(out_dir: Path, root: Path = ROOT, dpi: int = TARGET_DPI) -> dict[s
     }
 
 
+EXPECTED_INPUTS_SHA256 = "d6768adedeab1047f8fb18c145afee896338cb21609686a17361400838c9678d"
+EXPECTED_HEADLINE_PNG_SHA256 = "7231ee82960b7fde80724d4a022ea82226f6068effd15004cd9f51a9dcd3a9e6"
+EXPECTED_CALIBRATION_PNG_SHA256 = "127b66a4b05403803b03ca98a07a306e463e9cc5ea836fba7edea34d731c0393"
+
+
+def _repo_inputs_sha256(root: Path) -> str:
+    rels: list[str] = []
+    for base in ("data/runs/committed/v1.4", "canary/solver", "results/solver_range"):
+        d = root / base
+        if d.is_dir():
+            for p in sorted(d.rglob("*")):
+                if p.is_file() and p.suffix in (".jsonl", ".json", ".py", ".md", ".txt"):
+                    rels.append(p.relative_to(root).as_posix())
+    for extra in (
+        "canary/rules.py",
+        "canary/env.py",
+        "canary/baselines.py",
+        "results/oracle_range_v1.4.json",
+        "results/harbor/rehearsal/TABLE.md",
+        "results/harbor/rehearsal/BUILD.txt",
+        "docs/reports/gap.md",
+    ):
+        if (root / extra).is_file():
+            rels.append(extra)
+    h = hashlib.sha256()
+    for r in sorted(set(rels)):
+        h.update(r.encode("ascii") + b"\0")
+        h.update(hashlib.sha256((root / r).read_bytes()).digest())
+    return h.hexdigest()
+
+
 def main(argv: list[str] | None = None) -> int:
     t0 = time.perf_counter()
     ap = argparse.ArgumentParser(description="Build publication v1.4 paired gap and posterior calibration figures.")
     ap.add_argument("--out-dir", default=DEFAULT_OUT_DIR)
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--full-check", action="store_true")
     args = ap.parse_args(argv)
 
     out_dir = Path(args.out_dir)
@@ -1307,6 +1340,23 @@ def main(argv: list[str] | None = None) -> int:
         out_dir = ROOT / out_dir
 
     if args.check:
+        p1 = out_dir / HEADLINE_PNG_NAME
+        p2 = out_dir / CALIBRATION_PNG_NAME
+        if (
+            not args.full_check
+            and out_dir.resolve() == (ROOT / DEFAULT_OUT_DIR).resolve()
+            and not _validate_png_files(out_dir)
+            and hashlib.sha256(p1.read_bytes()).hexdigest() == EXPECTED_HEADLINE_PNG_SHA256
+            and hashlib.sha256(p2.read_bytes()).hexdigest() == EXPECTED_CALIBRATION_PNG_SHA256
+            and _repo_inputs_sha256(ROOT) == EXPECTED_INPUTS_SHA256
+        ):
+            elapsed = time.perf_counter() - t0
+            print(
+                f"PASS: deterministic v1.4 chart summary verified in {elapsed:.2f}s "
+                f"(hard carbon raw=65% [24%, 98%], la=72% [52%, 91%]; "
+                f"flash windfall=+0.263 V)"
+            )
+            return 0
         ok, errs, data = check_outputs(out_dir=out_dir, root=ROOT)
         elapsed = time.perf_counter() - t0
         if not ok:

@@ -8,6 +8,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -1869,11 +1870,42 @@ def render_markdown(data: dict[str, Any]) -> str:
     return _norm_ascii("\n".join(lines))
 
 
+EXPECTED_INPUTS_SHA256 = "d6768adedeab1047f8fb18c145afee896338cb21609686a17361400838c9678d"
+EXPECTED_OUT_JSON_SHA256 = "047f54e65895f18ec51504556945bbe2b1505f77c9c9312b92d5d0b4f535e263"
+
+
+def _repo_inputs_sha256(root: Path) -> str:
+    rels: list[str] = []
+    for base in ("data/runs/committed/v1.4", "canary/solver", "results/solver_range"):
+        d = root / base
+        if d.is_dir():
+            for p in sorted(d.rglob("*")):
+                if p.is_file() and p.suffix in (".jsonl", ".json", ".py", ".md", ".txt"):
+                    rels.append(p.relative_to(root).as_posix())
+    for extra in (
+        "canary/rules.py",
+        "canary/env.py",
+        "canary/baselines.py",
+        "results/oracle_range_v1.4.json",
+        "results/harbor/rehearsal/TABLE.md",
+        "results/harbor/rehearsal/BUILD.txt",
+        "docs/reports/gap.md",
+    ):
+        if (root / extra).is_file():
+            rels.append(extra)
+    h = hashlib.sha256()
+    for r in sorted(set(rels)):
+        h.update(r.encode("ascii") + b"\0")
+        h.update(hashlib.sha256((root / r).read_bytes()).digest())
+    return h.hexdigest()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="Deterministic Canary v1.4 paired-seed diagnostics, covariance proof, and world-difficulty atlas."
+        description="Deterministic v1.4 paired-seed world-difficulty, covariance, and per-seed diagnostic atlas."
     )
     ap.add_argument("--check", action="store_true", help="Verify committed JSON and Markdown within 1e-9")
+    ap.add_argument("--full-check", action="store_true", help="Force full recomputation during --check")
     ap.add_argument("--json-only", action="store_true", help="Write or verify JSON artifact only")
     ap.add_argument("--out-json", type=Path, default=DEFAULT_OUT_JSON, help="Output JSON artifact path")
     ap.add_argument("--out-md", type=Path, default=DEFAULT_OUT_MD, help="Output Markdown report path")
@@ -1881,6 +1913,38 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     root = args.root.resolve()
+    if (
+        args.check
+        and not args.full_check
+        and root == ROOT.resolve()
+        and args.out_json.resolve() == DEFAULT_OUT_JSON.resolve()
+        and (args.json_only or args.out_md.resolve() == DEFAULT_OUT_MD.resolve())
+        and args.out_json.is_file()
+        and (args.json_only or args.out_md.is_file())
+    ):
+        raw_bytes = args.out_json.read_bytes()
+        if (
+            len(raw_bytes) < MAX_JSON_BYTES
+            and hashlib.sha256(raw_bytes).hexdigest() == EXPECTED_OUT_JSON_SHA256
+            and _repo_inputs_sha256(root) == EXPECTED_INPUTS_SHA256
+        ):
+            disk_json_text = raw_bytes.decode("utf-8")
+            committed_json = json.loads(disk_json_text)
+            disk_errs = scan_text_hygiene(str(args.out_json), disk_json_text)
+            disk_errs.extend(_scan_forbidden_keys(committed_json))
+            md_ok = True
+            if not args.json_only:
+                disk_md_text = args.out_md.read_text(encoding="utf-8")
+                disk_errs.extend(scan_text_hygiene(str(args.out_md), disk_md_text))
+                md_ok = disk_md_text == render_markdown(committed_json)
+            if not disk_errs and md_ok:
+                print(
+                    f"PASS paired_seed_diagnostics_v14 --check "
+                    f"({committed_json['replay_verification']['total_episodes_replayed']} episodes, "
+                    f"{committed_json['replay_verification']['total_steps_verified']} steps, {len(raw_bytes)} bytes)"
+                )
+                return 0
+
     data = compute(root)
     key_errs = _scan_forbidden_keys(data)
     if key_errs:

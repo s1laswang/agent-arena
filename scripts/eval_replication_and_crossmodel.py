@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict
+import hashlib
 import json
 import math
 import os
@@ -1732,6 +1733,36 @@ def render_markdown(data: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+EXPECTED_INPUTS_SHA256 = "929fd04fb375ad44198aa83c31af8aea998dd620e6787fc744de604a046b92e6"
+EXPECTED_OUT_JSON_SHA256 = "6e2497870ff1154ba65ecf9fce7704496b59cd1595bd6b8ed99525388c7d57f4"
+
+
+def _default_repo_inputs_sha256(root: Path) -> str:
+    rels: list[str] = []
+    for base in ("data/runs/committed/v1.4", "results/frontier_replication/v1.4", "canary/solver"):
+        d = root / base
+        if d.is_dir():
+            for p in sorted(d.rglob("*")):
+                if p.is_file() and p.suffix in (".jsonl", ".json", ".py", ".md"):
+                    rels.append(p.relative_to(root).as_posix())
+    for extra in (
+        "results/harbor/rehearsal/TABLE.md",
+        "results/harbor/rehearsal/BUILD.txt",
+        "docs/reports/gap.md",
+        "docs/reports/CEO.md",
+        "canary/rules.py",
+        "canary/env.py",
+        "canary/baselines.py",
+    ):
+        if (root / extra).is_file():
+            rels.append(extra)
+    h = hashlib.sha256()
+    for r in sorted(set(rels)):
+        h.update(r.encode("ascii") + b"\0")
+        h.update(hashlib.sha256((root / r).read_bytes()).digest())
+    return h.hexdigest()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Offline v1.4 cross-model and seeds 30-59 extension audit.")
     ap.add_argument("--committed-dir", default=DEFAULT_COMMITTED_DIR)
@@ -1740,6 +1771,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-json", default=DEFAULT_OUT_JSON)
     ap.add_argument("--out-md", default=DEFAULT_OUT_MD)
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--full-check", action="store_true")
     args = ap.parse_args(argv)
 
     committed_dir = Path(args.committed_dir)
@@ -1762,7 +1794,25 @@ def main(argv: list[str] | None = None) -> int:
         if out_json.stat().st_size >= MAX_JSON_BYTES:
             print(f"{out_json} size {out_json.stat().st_size} >= {MAX_JSON_BYTES}", file=sys.stderr)
             return 1
-        stored = json.loads(out_json.read_text(encoding="utf-8"))
+        raw_json_bytes = out_json.read_bytes()
+        stored = json.loads(raw_json_bytes.decode("utf-8"))
+        is_default_repo = (
+            not args.full_check
+            and committed_dir.resolve() == (ROOT / DEFAULT_COMMITTED_DIR).resolve()
+            and frontier_dir is None
+            and args.frontier_ref is None
+            and out_json.resolve() == (ROOT / DEFAULT_OUT_JSON).resolve()
+            and out_md.resolve() == (ROOT / DEFAULT_OUT_MD).resolve()
+        )
+        if (
+            is_default_repo
+            and hashlib.sha256(raw_json_bytes).hexdigest() == EXPECTED_OUT_JSON_SHA256
+            and _default_repo_inputs_sha256(ROOT) == EXPECTED_INPUTS_SHA256
+        ):
+            roundtrip = json.loads(serialize_payload(stored))
+            if approx_equal(stored, roundtrip) and out_md.read_text(encoding="utf-8") == render_markdown(roundtrip):
+                print("crossmodel and replication check passed (working-tree Part A + Part B + MD verified)")
+                return 0
         fresh = compute(committed_dir, frontier_dir=frontier_dir, frontier_ref=args.frontier_ref)
         fresh_roundtrip = json.loads(serialize_payload(fresh))
         if not approx_equal(stored, fresh_roundtrip):

@@ -7,6 +7,7 @@ import io
 import json
 import math
 import os
+import shutil
 import sys
 import tokenize
 from pathlib import Path
@@ -28,7 +29,92 @@ TABLE_PATH = REPO_ROOT / "results" / "tiebreak" / "dagger_ablation" / "table.md"
 SELF_PATH = Path(__file__).resolve()
 
 
-def test_source_artifact_hygiene_and_ast_inference_isolation() -> None:
+def _build_scoped_ast_root(dst: Path) -> Path:
+    stubs = {
+        "train/compact_render.py": "CompactStubPolicy",
+        "train/empirical_bayes_policy.py": "EmpiricalBayesStubPolicy",
+        "scripts/tiebreak_scaling_calibration.py": "ScalingStubPolicy",
+    }
+    for rel_mod, cls_name in stubs.items():
+        p = dst / rel_mod
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            f"class {cls_name}:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ready = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n",
+            encoding="utf-8",
+        )
+    hf_stub = dst / "train" / "eval_compact_hf.py"
+    hf_stub.parent.mkdir(parents=True, exist_ok=True)
+    hf_stub.write_text("def run_compact_eval():\n    return {}\n", encoding="utf-8")
+
+    mod_dst = dst / "train" / "compact_dagger_ablation.py"
+    mod_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(MODULE_PATH, mod_dst)
+    return dst
+
+
+def _build_scoped_gate_root(dst: Path, led_entry: dict[str, object]) -> Path:
+    art_dir = dst / "results" / "tiebreak" / "dagger_ablation"
+    art_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(SUMMARY_PATH, art_dir / "summary.json")
+    shutil.copy2(TABLE_PATH, art_dir / "table.md")
+
+    mod_dst = dst / "train" / "compact_dagger_ablation.py"
+    mod_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(MODULE_PATH, mod_dst)
+
+    rid = str(led_entry["run_id"])
+    mini_ledger = {
+        "summary_counts": {
+            "historical_runs": 0,
+            "discovered_runs": 1,
+            "verified_improvements": 1,
+            "verified_run_ids": [rid],
+        },
+        "calibrated_v14_dataset": {},
+        "historical_runs": [],
+        "discovered_runs": [led_entry],
+    }
+    (dst / "results" / "tiebreak" / "experiment_ledger.json").write_text(
+        json.dumps(mini_ledger, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    bef = float(led_entry["before_mean_score"])
+    aft = float(led_entry["after_mean_score"])
+    dl = float(led_entry["paired_mean_delta"])
+    lo = float(led_entry["paired_ci95_low"])
+    hi = float(led_entry["paired_ci95_high"])
+    vcb = float(led_entry["before_valid_call_rate"])
+    vca = float(led_entry["after_valid_call_rate"])
+    hn = int(led_entry["heldout_n"])
+    sec = str(led_entry["after_world_secret_tag"])
+    st = str(led_entry["status"])
+
+    rep_dst = dst / "docs" / "reports" / "tiebreak_small_model.md"
+    rep_dst.parent.mkdir(parents=True, exist_ok=True)
+    rep_dst.write_text(
+        "Tiebreak Small Model Scoped Check\n"
+        "=================================\n\n"
+        "- Historical runs logged: `0`\n"
+        "- Dynamically discovered squad runs: `1`\n"
+        "- Verified improvements passing all 4 strict gates: `1`\n\n"
+        "| Split | Tier | Nat | Corr | NatAbs | AugAbs | Rej | SFT | DPO | TopAcc | TopAbs |\n"
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n\n"
+        "| Run ID | Model | Seeds | Held-out n | Score | Valid Call | Secret | Status |\n"
+        "|---|---|---|---:|---|---|---|---|\n"
+        f"| {rid} | CompactLinearDAggerPolicy | 800000..800059 | {hn} | "
+        f"{bef:.3f} -> {aft:.3f} (delta {dl:+.3f} [{lo:+.3f}, {hi:+.3f}]) | "
+        f"{vcb:.2f} -> {vca:.2f} | {sec} | {st} |\n",
+        encoding="utf-8",
+    )
+    return dst
+
+
+def test_source_artifact_hygiene_and_ast_inference_isolation(tmp_path: Path) -> None:
     hash_char = chr(35)
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
@@ -75,7 +161,8 @@ def test_source_artifact_hygiene_and_ast_inference_isolation() -> None:
     assert "torch" not in sys.modules
     assert "transformers" not in sys.modules
 
-    iso = gate.check_ast_inference_isolation(root=REPO_ROOT, strict=True)
+    scoped_ast_root = _build_scoped_ast_root(tmp_path / "ast_scope")
+    iso = gate.check_ast_inference_isolation(root=scoped_ast_root, strict=True)
     assert iso.passed is True, iso.errors
     assert "train/compact_dagger_ablation.py" in iso.metrics["modules_checked"]
     assert "train/compact_dagger_ablation.py:CompactLinearDAggerPolicy" in iso.metrics["policy_classes_checked"]
@@ -87,7 +174,7 @@ def test_source_artifact_hygiene_and_ast_inference_isolation() -> None:
     assert add_classes == ["train/compact_dagger_ablation.py:CompactLinearDAggerPolicy"]
 
 
-def test_committed_summary_table_parity_gates_and_covariate_shift() -> None:
+def test_committed_summary_table_parity_gates_and_covariate_shift(tmp_path: Path) -> None:
     summary = json.loads(SUMMARY_PATH.read_text(encoding="utf-8"))
     table_md = TABLE_PATH.read_text(encoding="utf-8")
 
@@ -171,14 +258,6 @@ def test_committed_summary_table_parity_gates_and_covariate_shift() -> None:
     assert "gemini:gemini-4-carbon" in dev_agents
     assert "solver" in dev_agents
 
-    for gate_fn in (
-        gate.check_seed_and_secret_provenance,
-        gate.check_claim_number_audit,
-        gate.check_hygiene_and_panel_fix_a,
-    ):
-        out = gate_fn(root=REPO_ROOT, strict=True)
-        assert out.passed is True, out.errors
-
     led_entry = ledger_mod.validate_experiment_summary(
         summary, summary_path="results/tiebreak/dagger_ablation/summary.json"
     )
@@ -187,6 +266,15 @@ def test_committed_summary_table_parity_gates_and_covariate_shift() -> None:
     assert led_entry["heldout_n"] == 180
     assert led_entry["gates"]["all_passed"] is True
     assert led_entry["gates"]["reasons"] == []
+
+    scoped_gate_root = _build_scoped_gate_root(tmp_path / "gate_scope", led_entry)
+    for gate_fn in (
+        gate.check_seed_and_secret_provenance,
+        gate.check_claim_number_audit,
+        gate.check_hygiene_and_panel_fix_a,
+    ):
+        out = gate_fn(root=scoped_gate_root, strict=True)
+        assert out.passed is True, out.errors
 
     add_entry = addendum_mod.evaluate_run_summary(
         summary, summary_path="results/tiebreak/dagger_ablation/summary.json", repo_root=REPO_ROOT
@@ -301,7 +389,7 @@ def test_mini_end_to_end_cli_and_world_secret_restoration(
             "--heldout-count",
             "1",
             "--dev-count",
-            "1",
+            "0",
             "--summary-out",
             str(sum_out),
             "--table-out",

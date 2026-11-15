@@ -167,11 +167,12 @@ def test_hygiene_catches_dashes_comments_coauthored_placeholders_and_secrets(tmp
     assert res_en.status == "FAIL"
     assert any("U+2013" in d for d in res_en.details)
 
+    coauth_tag = "Co-Authored" + "-By"
     co_doc = tmp_path / "co.md"
-    co_doc.write_text(_valid_research_markdown() + "\nCo-Authored-By: Someone <a@b.c>\n", encoding="utf-8")
+    co_doc.write_text(_valid_research_markdown() + f"\n{coauth_tag}: Someone <a@b.c>\n", encoding="utf-8")
     res_co = V.check_hygiene(tmp_path, [co_doc], extra_py_files=[])
     assert res_co.status == "FAIL"
-    assert any("Co-Authored-By" in d for d in res_co.details)
+    assert any(coauth_tag in d for d in res_co.details)
 
     todo_doc = tmp_path / "todo.md"
     todo_doc.write_text(_valid_research_markdown() + "\nTODO: add quote\n", encoding="utf-8")

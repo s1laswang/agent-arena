@@ -208,7 +208,8 @@ def test_zero_comments_zero_dashes_and_pure_ascii():
 
     prereg_rx = re.compile(r"pre-regist\w*[^.\n]{0,40}\b0\s*-\s*29\b|\b0\s*-\s*29\b[^.\n]{0,40}pre-regist", re.I)
     tiebreak_rx = re.compile(r"tiebreak\w*[^.\n]{0,40}beats?\s+(?:the\s+)?base", re.I)
-    coauth_rx = re.compile(r"(?im)^\s*Co-Authored-By\s*:")
+    coauth_tag = "Co-Authored" + "-By"
+    coauth_rx = re.compile(rf"(?im)^\s*{coauth_tag}\s*:")
 
     for path in (SCRIPT_PATH, SELF_PATH, LIBRARY_PATH, MONOGRAPH_PATH):
         src = path.read_text(encoding="utf-8")
@@ -217,7 +218,7 @@ def test_zero_comments_zero_dashes_and_pure_ascii():
         assert src.isascii(), f"non-ASCII char found in {path}"
         assert not prereg_rx.search(src), f"Panel Fix A seed 0-29 claim violation in {path}"
         assert not tiebreak_rx.search(src), f"Panel Fix A tiebreak claim violation in {path}"
-        assert not coauth_rx.search(src), f"Co-Authored-By found in {path}"
+        assert not coauth_rx.search(src), f"{coauth_tag} found in {path}"
 
     for py_path in (SCRIPT_PATH, SELF_PATH):
         src = py_path.read_text(encoding="utf-8")

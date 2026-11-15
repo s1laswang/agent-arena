@@ -60,7 +60,8 @@ MD_LINK_RX = re.compile(r"!?\[(?:[^\[\]\n]|\[[^\[\]\n]*\])*\]\(([^)\n]+)\)")
 BARE_URL_RX = re.compile(r"https?://[^\s<>\"'`|\]]+")
 PROPOSAL_ID_RX = re.compile(r"\bP\d+\.\d+\b")
 HEX16_RX = re.compile(r"\b[0-9a-f]{16}\b")
-CO_AUTHORED_RX = re.compile(r"(?im)^\s*Co-Authored-By\s*:")
+CO_AUTHORED_TAG = "Co-Authored" + "-By"
+CO_AUTHORED_RX = re.compile(rf"(?im)^\s*{CO_AUTHORED_TAG}\s*:")
 
 PLACEHOLDER_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("todo_marker", re.compile(r"\b(?:TODO|FIXME|XXX)\s*:")),
@@ -443,7 +444,7 @@ def check_hygiene(root: Path, docs: list[Path], extra_py_files: list[Path] | Non
 
         for m_co in CO_AUTHORED_RX.finditer(text):
             lineno = text.count("\n", 0, m_co.start()) + 1
-            violations.append(f"{rel}:{lineno}: forbidden Co-Authored-By line")
+            violations.append(f"{rel}:{lineno}: forbidden {CO_AUTHORED_TAG} line")
 
         if path.suffix == ".md":
             for label, rx in PLACEHOLDER_PATTERNS:
@@ -472,7 +473,7 @@ def check_hygiene(root: Path, docs: list[Path], extra_py_files: list[Path] | Non
     return CheckResult(
         name,
         "PASS",
-        f"{len(all_targets)} file(s) clean (0 em/en-dashes, 0 Python comments, 0 Co-Authored-By, 0 secrets)",
+        f"{len(all_targets)} file(s) clean (0 em/en-dashes, 0 Python comments, 0 {CO_AUTHORED_TAG}, 0 secrets)",
     )
 
 

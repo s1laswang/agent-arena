@@ -664,6 +664,7 @@ GATE_COST_ESTIMATE_MS: dict[str, int] = {
     "tiebreak_experiment_ledger": 110,
     "tiebreak_context_confound_audit": 95,
     "tiebreak_action_budget_horizon_audit": 95,
+    "tiebreak_representation_bottleneck_audit": 90,
     "tiebreak_restriction_containment_audit": 90,
     "tiebreak_compact_ensemble_gate": 85,
     "tiebreak_selective_risk_coverage_audit": 80,

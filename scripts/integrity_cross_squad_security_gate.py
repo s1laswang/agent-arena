@@ -98,6 +98,19 @@ HEAVY_UNCHANGED_PREFIXES: tuple[str, ...] = (
     "results/harbor/",
     "results/frontier_replication/",
     "results/gemini/",
+    "results/redteam_1000/",
+    "results/anticheat/",
+    "docs/reports/grok-agent/",
+    "tests/fixtures/gemini_lab/ledger/",
+)
+
+HEAVY_UNCHANGED_FILES: frozenset[str] = frozenset(
+    {
+        "results/failure_analysis_v1.4.json",
+        "results/skill_ladder_v1.4.csv",
+        "results/judge_episodes.jsonl",
+        "uv.lock",
+    }
 )
 
 TEST_FIXTURE_MARKERS: tuple[str, ...] = (
@@ -370,7 +383,7 @@ def _should_skip_unchanged_blob(rel_path: str, is_delta: bool, full_base_blobs: 
         return True
     if full_base_blobs or is_delta:
         return False
-    if rel_path.startswith(HEAVY_UNCHANGED_PREFIXES):
+    if rel_path in HEAVY_UNCHANGED_FILES or rel_path.startswith(HEAVY_UNCHANGED_PREFIXES):
         return True
     return False
 
@@ -466,36 +479,45 @@ def run_cross_squad_security_gate(
     structured_issues: list[StructuredIssue] = []
 
     for branch in effective_branches:
-        b_sha = resolve_ref_sha(resolved_root, branch, short=True)
-        mb_proc = subprocess.run(
-            ["git", "merge-base", effective_base_ref, branch],
-            cwd=resolved_root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        has_merge_base = mb_proc.returncode == 0 and bool(mb_proc.stdout.strip())
-        if has_merge_base:
-            mb_full = mb_proc.stdout.strip()
-            mb_sha = mb_full[:8]
-            lr_counts = str(
-                _git_check(
-                    resolved_root,
-                    ["rev-list", "--left-right", "--count", f"{branch}...{effective_base_ref}"],
-                    text=True,
-                )
-            ).strip().split()
-            ahead_cnt = int(lr_counts[0])
-            behind_cnt = int(lr_counts[1])
-            three_dot = git_three_dot_changes(resolved_root, effective_base_ref, branch)
-        else:
-            mb_full = ""
-            mb_sha = b_sha
+        if branch == effective_base_ref:
+            b_sha = base_sha
+            has_merge_base = True
+            mb_full = base_sha
+            mb_sha = base_sha
             ahead_cnt = 0
             behind_cnt = 0
             three_dot = {}
-
-        tree_blobs = git_ls_tree_blobs(resolved_root, branch)
+            tree_blobs = base_blobs
+        else:
+            b_sha = resolve_ref_sha(resolved_root, branch, short=True)
+            mb_proc = subprocess.run(
+                ["git", "merge-base", effective_base_ref, branch],
+                cwd=resolved_root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            has_merge_base = mb_proc.returncode == 0 and bool(mb_proc.stdout.strip())
+            if has_merge_base:
+                mb_full = mb_proc.stdout.strip()
+                mb_sha = mb_full[:8]
+                lr_counts = str(
+                    _git_check(
+                        resolved_root,
+                        ["rev-list", "--left-right", "--count", f"{branch}...{effective_base_ref}"],
+                        text=True,
+                    )
+                ).strip().split()
+                ahead_cnt = int(lr_counts[0])
+                behind_cnt = int(lr_counts[1])
+                three_dot = git_three_dot_changes(resolved_root, effective_base_ref, branch)
+            else:
+                mb_full = ""
+                mb_sha = b_sha
+                ahead_cnt = 0
+                behind_cnt = 0
+                three_dot = {}
+            tree_blobs = git_ls_tree_blobs(resolved_root, branch)
         branch_trees[branch] = tree_blobs
 
         core_protected_mutations: list[str] = []

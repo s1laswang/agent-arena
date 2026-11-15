@@ -3,7 +3,7 @@
 ## 1. Executive Summary and Honesty Alignment
 
 - **Gate verdict:** `PASS` (`protected_file_mutations = 0`, `raw_api_key_leaks = 0`, `salt_files = 0`, `world_json_mole_leaks = 0`, `total_violations = 0`).
-- **Execution discipline:** `0` live Gemini / OpenAI / external LLM API calls (`live_llm_calls = 0`); direct git object-store inspection (`git ls-tree -r -z` + `git cat-file --batch`) across un-checked-out remote refs against `origin/justSilas` (`5f9b3297`, `3405` base blobs, `15` protected-path rules), with automatic `HEAD` blob-scan fallback in shallow single-branch CI checkouts; wall time `1.730s` (`< 3.0s` budget: `True`).
+- **Execution discipline:** `0` live Gemini / OpenAI / external LLM API calls (`live_llm_calls = 0`); direct git object-store inspection (`git ls-tree -r -z` + `git cat-file --batch`) across un-checked-out remote refs against `origin/justSilas` (`5f9b3297`, `3405` base blobs, `15` protected-path rules), with automatic `HEAD` blob-scan fallback in shallow single-branch CI checkouts; wall time `10.596s` (`< 3.0s` budget: `False`).
 - **Panel Fix A + D honesty alignment:** Canary `v1.4` `hard` headline numbers lead with raw `65% [24%, 98%]` (`+0.322` vs solver `+0.499`, `n=30`) before luck-adjusted `72% [52%, 91%]`; dev seeds `0-29` are disclosed as a `post-hoc lock` (locked after the primary run rather than registered beforehand), while `gpt-5.5` (`cf394894`) was locked in advance; and pre-`1bc3e281` `"invalid arguments"` steps (`data: {}`) are normalized strictly on `error == "invalid arguments"` during replay.
 - **Scope & non-interference:** Report-only cross-squad security gate (`0` edits to `origin/fr8/canary/main`, `origin/fr8/canary/arena`, or Silas-owned files).
 
@@ -19,8 +19,8 @@ PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_
 
 | Target branch | Commit SHA | Merge-base | Behind / Ahead `5f9b3297` | Tracked blobs | Delta blobs | Content-scanned paths | Core + Extended protected mutations | Raw API keys | `SALT` files | `.world.json` / mole leaks | Arena Pyodide mirror parity | Status |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
-| `origin/fr8/canary/main` | `c7d62df9` | `9225f2ad` | `2 / +515` | `3730` | `339` | `919` | `0` | `0` | `0` | `0` | `n/a` | `PASS` |
-| `origin/fr8/canary/arena` | `4b5cf5fa` | `5f9b3297` | `0 / +81` | `3529` | `124` | `705` | `0` | `0` | `0` | `0` | `14/14 exact` | `PASS` |
+| `origin/fr8/canary/main` | `c7d62df9` | `9225f2ad` | `2 / +515` | `3730` | `339` | `887` | `0` | `0` | `0` | `0` | `n/a` | `PASS` |
+| `origin/fr8/canary/arena` | `4b5cf5fa` | `5f9b3297` | `0 / +81` | `3529` | `124` | `673` | `0` | `0` | `0` | `0` | `14/14 exact` | `PASS` |
 
 ### 3.1 Core Silas-Owned Protected Surfaces Verified (`0` Mutations)
 
@@ -33,7 +33,7 @@ PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_
 
 ### 3.2 Git-Blob Secret, `SALT`, and Mole Answer-Key Verification
 
-- **Unique git blobs streamed via `git cat-file --batch`:** `1024` unique text/JSON blobs (`43,394,263` bytes) covering `100%` of squad-added/modified text and JSONL blobs on both branches plus all non-media base source/config/doc/JSON blobs.
+- **Unique git blobs streamed via `git cat-file --batch`:** `992` unique text/JSON blobs (`38,941,407` bytes) covering `100%` of squad-added/modified text and JSONL blobs on both branches plus all non-media base source/config/doc/JSON blobs.
 - **Raw API keys & tokens (`AIza*`, `sk-*`, `hf_*`, `gh[pousr]_*`, `AKIA*`, PEM private keys):** `0` leaks (`4` explicit synthetic `tests/` fixture files containing `FAKE` / `test-value` markers verified isolated under `tests/`).
 - **`SALT` / `.env` / `ledger_key` / binary weight files:** `0` tracked `SALT` files, `0` tracked live `.env` files (only `.env.example`), `0` `ledger_key` files, and `0` `.safetensors`/`.pt`/`.bin`/`.onnx`/`.gguf` weight blobs.
 - **`.world.json` & serialized mole answer-key leaks:** `0` tracked `*.world.json` or `*.mole.json` files, `0` serialized `world_seed + mole + employees` dumps, and `0` judge seeds (`>= 900000`) in `docs/arena/data/**` static bundles (`arena_integrity.js` enforces public seed bounds `3000..9999` and blocks `900000..900039` / `800000..800199`).

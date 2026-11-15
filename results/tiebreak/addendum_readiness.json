@@ -1,0 +1,191 @@
+{
+  "schema": "canary.tiebreak.panel_fix_e_addendum.v1",
+  "tiers_version": "v1.4",
+  "panel_fix_e_rule": "Per README.md and docs/agents/PANEL-0500.md (Fix E), a tiebreak run is added as a README addendum only if held-out mean_score > 0.0 with a 95% CI excluding 0.0 under one shared CANARY_WORLD_SECRET on HELDOUT_SEEDS [800000, 800200).",
+  "dev_protocol_note": "Headline frontier comparisons on dev 0..29 use a post-hoc locked set (not pre-registered); all tiebreak evaluations here use disjoint HELDOUT_SEEDS [800000, 800200).",
+  "criteria_definitions": {
+    "heldout_mean_gt_zero": "after.mean_score > 0.0 and after_ci95_low > 0.0 (from explicit after CI, after scores, nested held-out CI, or paired deltas under deterministic zero before)",
+    "paired_delta_ci95_gt_zero": "paired.ci95_low > 0.0 under identical non-placeholder world_secret_tag on HELDOUT_SEEDS [800000, 800200)",
+    "train_eval_disjoint": "train seed set strictly in [100000, 200000) and disjoint from held-out eval seed set in [800000, 800200)",
+    "replay_and_zero_errors": "n >= 30, replay_verified is True, and invalid_episodes == 0",
+    "autonomous_inference": "AST-verified zero canary.solver or canary.world imports or calls on inference paths"
+  },
+  "readiness_summary": {
+    "discovered_runs_total": 2,
+    "unclassified_runs_count": 0,
+    "track1_discovered_count": 0,
+    "track1_passing_count": 0,
+    "track1_llm_passing_count": 0,
+    "track1_neural_mlp_passing_count": 0,
+    "track1_failed_count": 0,
+    "track1_llm_dagger_status": "AWAITING_V100_COMPLETION",
+    "track1_overall_status": "AWAITING_V100_COMPLETION",
+    "readme_qwen_addendum_eligible": false,
+    "track1_any_passed": false,
+    "readme_addendum_action": "DO_NOT_APPEND_YET",
+    "promoted_track1_run_ids": [],
+    "promoted_track1_llm_run_ids": [],
+    "track2_discovered_count": 2,
+    "track2_passing_count": 2,
+    "track2_passing_run_ids": [
+      "empirical-bayes-v14",
+      "scaling-logistic-v14"
+    ],
+    "track2_separation_policy": "Compact parametric and empirical-Bayes policies are non-LLM CPU/closed-form upper-bound and ablation controls, strictly separated from Qwen2.5 LoRA."
+  },
+  "readme_published_baseline": [
+    {
+      "row_id": "base",
+      "label": "base (untrained)",
+      "architecture": "Open-weight LLM (Qwen2.5-1.5B)",
+      "mean_score": 0.0,
+      "ci95": null,
+      "n": 36,
+      "note": "cannot play: 3% valid tool calls; per-process world secret"
+    },
+    {
+      "row_id": "v2",
+      "label": "v2 (SFT on solver play)",
+      "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+      "mean_score": -0.457,
+      "ci95": 0.086,
+      "n": 172,
+      "note": "two-sample; blind accusations under 4k header crowding"
+    },
+    {
+      "row_id": "v3_4k",
+      "label": "v3-4k (GRPO on environment reward, Verda H100)",
+      "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+      "mean_score": -0.147,
+      "ci95": 0.063,
+      "n": 180,
+      "note": "two-sample; +0.310 +/- 0.107 vs v2, 100% valid calls"
+    },
+    {
+      "row_id": "v3_8k_s2",
+      "label": "v3-8k seed 2 (GRPO, 8k context, Verda H100 spot)",
+      "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+      "mean_score": -0.05,
+      "ci95": 0.049,
+      "n": 90,
+      "note": "two-sample; 93% abstention, 95% CI [-0.099, -0.001] below 0"
+    }
+  ],
+  "track_1_runs": [],
+  "track_2_runs": [
+    {
+      "run_id": "empirical-bayes-v14",
+      "summary_path": "results/tiebreak/empirical_bayes/summary.json",
+      "track": "track_2",
+      "track_label": "Track 2: Compact Parametric / Empirical-Bayes Policies",
+      "family": "EmpiricalBayesPolicy",
+      "subfamily": "compact_parametric",
+      "architecture_label": "Non-LLM parametric (EmpiricalBayesPolicy)",
+      "is_open_weight_llm": false,
+      "model": "EmpiricalBayesPolicy (likelihood + optimal stopping learned on TRAIN_SEEDS)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "n": 180,
+      "before_mean_score": -0.420889,
+      "after_mean_score": 0.607278,
+      "after_ci95_low": 0.559332,
+      "after_ci95_high": 0.648113,
+      "after_ci95_source": "nested_heldout_overall:eb_experience_opt",
+      "paired_mean_delta": 1.028167,
+      "paired_ci95_low": 0.915165,
+      "paired_ci95_high": 1.141079,
+      "before_valid_call_rate": 1.0,
+      "after_valid_call_rate": 1.0,
+      "before_world_secret_tag": "sha256:ebf2f09716cf76d3",
+      "after_world_secret_tag": "sha256:ebf2f09716cf76d3",
+      "world_secret_paired": true,
+      "replay_verified": true,
+      "zero_invalid_episodes": true,
+      "inference_modules_checked": [
+        "train/empirical_bayes_policy.py"
+      ],
+      "inference_policy_classes": [
+        "train/empirical_bayes_policy.py:EmpiricalBayesPolicy",
+        "train/empirical_bayes_policy.py:_ExplorationRolloutPolicy"
+      ],
+      "criteria": {
+        "heldout_mean_gt_zero": true,
+        "paired_delta_ci95_gt_zero": true,
+        "train_eval_disjoint": true,
+        "replay_and_zero_errors": true,
+        "autonomous_inference": true
+      },
+      "criteria_passed_count": 5,
+      "passed_panel_fix_e_bar": true,
+      "failed_criteria": [],
+      "verdict": "PASS_NON_LLM_CONTROL",
+      "gates": {
+        "reasons": []
+      },
+      "notes": "Learned log-likelihood ratios (180 eps) + optimal stopping/splits (180 eps) strictly on TRAIN_SEEDS; paired held-out n=180 (800000..800059) luck-adjusted EV delta +1.000 (n=90 subset score delta +1.008).",
+      "train_seed_range": "102000..102779",
+      "eval_seed_range": "800000..800059"
+    },
+    {
+      "run_id": "scaling-logistic-v14",
+      "summary_path": "results/tiebreak/scaling/scaling_summary.json",
+      "track": "track_2",
+      "track_label": "Track 2: Compact Parametric / Empirical-Bayes Policies",
+      "family": "ScalingLogisticPolicy",
+      "subfamily": "compact_parametric",
+      "architecture_label": "Non-LLM parametric (ScalingLogisticPolicy, 82 params)",
+      "is_open_weight_llm": false,
+      "model": "ScalingLogisticPolicy (CompactLinearPolicy, 82 params, N_train=900)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "n": 90,
+      "before_mean_score": 0.0,
+      "after_mean_score": 0.610667,
+      "after_ci95_low": 0.541958,
+      "after_ci95_high": 0.679376,
+      "after_ci95_source": "explicit_after_ci95_low",
+      "paired_mean_delta": 0.610667,
+      "paired_ci95_low": 0.541958,
+      "paired_ci95_high": 0.679376,
+      "before_valid_call_rate": 1.0,
+      "after_valid_call_rate": 1.0,
+      "before_world_secret_tag": "sha256:ebf2f09716cf",
+      "after_world_secret_tag": "sha256:ebf2f09716cf",
+      "world_secret_paired": true,
+      "replay_verified": true,
+      "zero_invalid_episodes": true,
+      "inference_modules_checked": [
+        "scripts/tiebreak_scaling_calibration.py"
+      ],
+      "inference_policy_classes": [
+        "scripts/tiebreak_scaling_calibration.py:CompactLinearPolicy"
+      ],
+      "criteria": {
+        "heldout_mean_gt_zero": true,
+        "paired_delta_ci95_gt_zero": true,
+        "train_eval_disjoint": true,
+        "replay_and_zero_errors": true,
+        "autonomous_inference": true
+      },
+      "criteria_passed_count": 5,
+      "passed_panel_fix_e_bar": true,
+      "failed_criteria": [],
+      "verdict": "PASS_NON_LLM_CONTROL",
+      "gates": {
+        "reasons": []
+      },
+      "notes": "Pure-NumPy 82-parameter linear/logistic-softmax control trained on N_train=900 TRAIN_SEEDS episodes vs N_train=0 untrained policy.",
+      "train_seed_range": "107000..108999",
+      "eval_seed_range": "800000..800029"
+    }
+  ],
+  "unclassified_runs": []
+}

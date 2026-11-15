@@ -5,7 +5,7 @@
 End-to-end multi-container judge rehearsal executed on FR8 Linux host `canary-1` (Linux `6.8.0-149-generic`, Docker `29.1.3`, Harbor `0.26.0`) against one shared default judge build (`uv run python harbor/build.py`, frozen tiers `v1.4`, tier `hard`, judge seeds `900000-900009`, 10 tasks).
 
 - **Build provenance (`results/harbor/rehearsal-fr8/BUILD.txt`):** commit `8cd20d9e0f92d88588b8a99f4d1aaa2260693f7e` (`describe: 8cd20d9e`), `built_utc: 2026-11-14T23:18:51Z`, `harbor: 0.26.0`, `agent_timeout_sec = 10800.0`.
-- **Pre-tag code equivalence:** `8cd20d9e` predates the `afterquery-final` tag (`1bc3e281`) and `origin/justSilas` (`cf394894`), with zero diff across `canary/rules.py`, `canary/world.py`, `canary/solver/`, `harbor/build.py`, `harbor/template/`, and `harbor/check_isolation.sh`.
+- **Pre-tag code equivalence and Panel Fix D disclosure:** `8cd20d9e` predates Panel Fix D (`1bc3e281`, tagged `afterquery-final`) and `origin/justSilas` (`58716742`), with zero diff through `origin/justSilas` (`58716742`) across `canary/rules.py`, `canary/world.py`, `canary/solver/`, `harbor/build.py`, `harbor/template/`, and `harbor/check_isolation.sh`. Because `8cd20d9e` predates Panel Fix D (`1bc3e281`), these rehearsal trials ran before `1bc3e281` added `data.detail` on `"invalid arguments"` in `canary/env.py` (keeping the `"invalid arguments"` error string unchanged) and reworded the W1 careful-mole sentence in `canary/env.py` and `harbor/canary-task/instruction.md` (matching the post-run disclosure in [`README.md`](../../README.md) and [`docs/DIFFICULTY.md`](../DIFFICULTY.md)).
 - **Shared world secret & separate HMAC-signed verifier:** all 7 jobs (70 trials) ran against the same build-time sidecar secret and separate verifier key, so every task `hard-900000` through `hard-900009` is strictly paired across jobs. The build directory `harbor/dataset/` (holding `SALT` and `ledger_key`) stays gitignored and uncommitted; packaged artifacts sit under `results/harbor/rehearsal-fr8/` (`results/harbor/rehearsal-fr8/TABLE.md`, `results/harbor/rehearsal-fr8/BUILD.txt`, and `results/harbor/rehearsal-fr8/<job>/`).
 
 ## Step A: Oracle, Baselines, and Anti-Cheat Probe (40/40 Valid)
@@ -60,7 +60,7 @@ Run-to-run spread over 3 OpenCode runs: run means `+0.647`, `+0.543`, `+0.527`; 
 
 ## Artifact & Consistency Verification
 
-- `canary.redteam.anticheat.harbor_consistency`: **70/70 trials and 7/7 job summaries consistent** (`reward.json` == `reward.txt` == sidecar `artifacts/ledger.json` == verifier ledger copy; 70/70 graded with `signature=ok`; 29 OpenCode trials have `agent/opencode.txt` trajectories and every accused trial names the same culprit in the trajectory and server ledger; 10/10 `cheat_probe` trials report 0 holes and score `+0.000`).
+- `canary.redteam.anticheat.harbor_consistency`: **70/70 trials and 7/7 job summaries consistent** (`reward.json` == `reward.txt` == sidecar `artifacts/ledger.json` == verifier ledger copy; 70/70 graded with `signature=ok`; 30/30 OpenCode trials have `agent/opencode.txt` logs and 29/30 have `agent/trajectory.json` checked by `harbor_consistency` and every accused trial names the same culprit in the trajectory and server ledger; 10/10 `cheat_probe` trials report 0 holes and score `+0.000`).
 - Reproduction table command once `results/harbor/rehearsal-fr8/` is present:
   ```bash
   python scripts/rehearsal_table.py results/harbor/rehearsal-fr8

@@ -319,6 +319,33 @@ class LogsOnly(LogsMinusDecoy):
     wait = 9
 
 
+class RumourFollower(ScriptedPolicy):
+    """Naive agent that trusts office gossip and unverified leadership suspicions."""
+    name = "rumour_follower"
+
+    def script(self):
+        emps = yield from self._employees()
+        yield from self._advance(6)
+        c: Counter = Counter()
+        for q, wgt in (("unverified", 3), ("rumour:", 1), ("unverified accusation:", 3), ("grudge:", 1), ("(e", 1)):
+            r = yield ("search_messages", {"query": q})
+            for m in items(r):
+                if not isinstance(m, dict):
+                    continue
+                subj = str(m.get("subject", ""))
+                if ": " in subj:
+                    tgt = subj.split(": ")[-1]
+                    if tgt in emps:
+                        c[tgt] += wgt
+                snip = str(m.get("snippet", ""))
+                for tok in emps:
+                    if f"({tok})" in snip and tok != m.get("sender"):
+                        c[tok] += wgt
+        yield ("accuse", {"employee": _argmax(c, emps, self.rng)})
+
+
+BIAS_BASELINES: dict[str, type[ScriptedPolicy]] = {"rumour_follower": RumourFollower}
+
 BASELINES: dict[str, type[ScriptedPolicy]] = {
     "do_nothing": DoNothing,
     "stop_early": StopEarlyQuit,

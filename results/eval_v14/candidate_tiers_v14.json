@@ -1,0 +1,536 @@
+{
+  "bootstrap_resamples": 10000,
+  "bootstrap_seed": 0,
+  "dropped_candidates_and_gates": {
+    "frozen_judged_env": {
+      "known_v_mode": true,
+      "shipped_tiers": [
+        "easy",
+        "hard",
+        "medium"
+      ],
+      "tier_hash": "a8f99c2537c91d72",
+      "tiers_version": "v1.4"
+    },
+    "tracks": {
+      "expert_070_fingerprint_tier": {
+        "branch": "justSilas-expert",
+        "carbon_luck_adj_ci95": [
+          0.52,
+          1.28
+        ],
+        "carbon_luck_adj_ratio": 0.84,
+        "carbon_opencode_n": 13,
+        "commit": "29ca3bc5",
+        "fingerprint_accuracy": 0.7,
+        "grok_tactics_fresh_collapse": [
+          0.36,
+          0.01
+        ],
+        "mechanism": "scripted heuristics collapsed, but gemini-4-carbon hedged noisy canary hits and CI spanned parity",
+        "ship_criterion_met": false,
+        "status": "dropped_at_ceo_gap_gate"
+      },
+      "instruction_wording_freeze_gate": {
+        "disclosed_15nov_deltas": [
+          "W1_careful_mole_clarification",
+          "invalid_arguments_data_detail"
+        ],
+        "headline_detail_error_calls": 28,
+        "headline_total_calls": 3841,
+        "p0_agent_timeout_sec": 10800,
+        "p0_commit": "512836b9",
+        "status": "p0_applied_p1_to_p12_held_frozen",
+        "tag_commit": "1bc3e281"
+      },
+      "solver_v2_reference_candidate": {
+        "best_linear_stopping_rule_gain_hard": 0.005,
+        "best_linear_stopping_rule_gain_medium": 0.004,
+        "branch": "justSilas-solver2-algo",
+        "commit": "d42055e",
+        "fresh_eval_seeds": "9000-9399",
+        "gpt55_habit_reparam_fresh_9000_9399": 0.496,
+        "gpt55_habit_reparam_seeds_0_29": 0.546,
+        "hard_paired_delta": 0.012,
+        "hard_paired_delta_ci95": 0.029,
+        "hard_solver_mean": 0.561,
+        "hard_solver_v2_mean": 0.573,
+        "medium_paired_delta": 0.019,
+        "medium_paired_delta_ci95": 0.032,
+        "medium_solver_mean": 0.617,
+        "medium_solver_v2_mean": 0.636,
+        "n_per_tier": 400,
+        "ship_bar_hard_delta": 0.08,
+        "ship_criterion_met": false,
+        "status": "dropped_reference_kept_frozen",
+        "tuning_seeds": "8000-8799"
+      },
+      "v1_5_candidate_social_layer": {
+        "gate": "Gate B (Sun 19:50 EET)",
+        "mechanism": "gemini-4-carbon treated seeded rumours as evidence against the rumoured person",
+        "n": 10,
+        "seeds": "0-9",
+        "ship_criterion_met": false,
+        "status": "dropped_at_gate_b",
+        "v14_luck_adj_ratio": 0.56,
+        "v14_raw_ci95": [
+          0.03,
+          1.04
+        ],
+        "v14_raw_ratio": 0.61,
+        "v15_accuracy": 1.0,
+        "v15_luck_adj_ratio": 0.98,
+        "v15_raw_ci95": [
+          0.96,
+          1.22
+        ],
+        "v15_raw_ratio": 1.08
+      },
+      "ws4_small_model_tiebreaker": {
+        "all_trained_below_base": true,
+        "base_mean": 0.0,
+        "base_model": "Qwen2.5-1.5B-Instruct",
+        "base_n": 36,
+        "base_valid_call_rate": 0.03,
+        "best_trained_mean": -0.05,
+        "dagger_round1": {
+          "ci95": 0.214,
+          "context": "8k",
+          "mean": -0.542,
+          "n": 50,
+          "run": "dagger_round1_8k_partial"
+        },
+        "grpo_vs_v2_gain_range": [
+          0.31,
+          0.408
+        ],
+        "reaper_lost_runs_disclosed": [
+          "qwen3_14b_j1_vllm",
+          "backup_base_eval"
+        ],
+        "shared_secret_8k_s0_minus_s3_paired": {
+          "ci95": 0.134,
+          "diff": 0.728,
+          "n": 90
+        },
+        "ship_criterion_met": false,
+        "status": "bar_not_met_honestly_disclosed",
+        "trained_runs": [
+          {
+            "ci95": 0.086,
+            "context": "4k",
+            "mean": -0.457,
+            "n": 172,
+            "run": "v2_sft_dense_4k"
+          },
+          {
+            "ci95": 0.063,
+            "context": "4k",
+            "mean": -0.147,
+            "n": 180,
+            "run": "v3_4k_s0_grpo"
+          },
+          {
+            "ci95": null,
+            "context": "4k",
+            "interim_n25_mean": -0.24,
+            "mean": -0.209,
+            "n": 25,
+            "run": "v3_4k_s1_grpo"
+          },
+          {
+            "ci95": 0.054,
+            "context": "8k",
+            "mean": -0.06,
+            "n": 90,
+            "run": "v3_8k_s0_grpo"
+          },
+          {
+            "ci95": 0.118,
+            "context": "8k",
+            "mean": -0.777,
+            "n": 90,
+            "run": "v3_8k_s1_grpo"
+          },
+          {
+            "ci95": 0.049,
+            "context": "8k",
+            "mean": -0.05,
+            "n": 90,
+            "run": "v3_8k_s2_grpo"
+          },
+          {
+            "ci95": 0.117,
+            "context": "8k",
+            "mean": -0.788,
+            "n": 90,
+            "run": "v3_8k_s3_grpo"
+          }
+        ],
+        "trained_runs_count": 7,
+        "v1_j4_run": {
+          "ci95": 0.256,
+          "context": "4k",
+          "mean": -0.25,
+          "n": 12,
+          "run": "v1_j4_sft"
+        },
+        "verda_instances_deleted": 9,
+        "verda_measured_spend_eur": 104.46
+      }
+    }
+  },
+  "float_tolerance": 1e-09,
+  "gates": [
+    {
+      "gate": "harbor_judge_rehearsal_non_reproduction",
+      "passed": true,
+      "violation_count": 0,
+      "violations": []
+    },
+    {
+      "gate": "second_frontier_family_gpt55_parity",
+      "passed": true,
+      "violation_count": 0,
+      "violations": []
+    },
+    {
+      "gate": "dropped_candidate_tracks_and_ws4_negative_gates",
+      "passed": true,
+      "violation_count": 0,
+      "violations": []
+    }
+  ],
+  "gpt55_parity_and_behaviour": {
+    "behaviour_compare_table_exact_match": true,
+    "cohorts": {
+      "gemini_4_carbon": {
+        "accuracy": 0.8333333333,
+        "accuse_day_mean": 13.1724137931,
+        "accused_rate": 0.9666666667,
+        "agent": "opencode:google/gemini-4-carbon",
+        "canaries_mean": 8.5,
+        "canaries_total": 255,
+        "ci95": 0.1988953722,
+        "detail_stripped_calls": 28,
+        "interview_share": 0.5313720385,
+        "interviews_mean": 68.0333333333,
+        "interviews_total": 2041,
+        "invalid_arg_detail_calls": 28,
+        "label": "gemini-4-carbon, OpenCode over MCP",
+        "luck_adj_ci95": [
+          0.5173025973,
+          0.9120622754
+        ],
+        "luck_adj_ratio": 0.7201029448,
+        "luck_adjusted": 0.359545,
+        "mean": 0.3223333333,
+        "n": 30,
+        "outcomes": {
+          "correct": 25,
+          "formatted": "25 / 4 / 1",
+          "no_accusation": 1,
+          "no_accusation_seeds": [
+            11
+          ],
+          "wrong": 4,
+          "wrong_seeds": [
+            1,
+            15,
+            18,
+            26
+          ]
+        },
+        "p_accused_mean": 0.8818275862,
+        "paired_diff": -0.1766666667,
+        "paired_diff_ci95": 0.1938897123,
+        "raw_ratio": 0.6459585838,
+        "raw_ratio_ci95": [
+          0.2381959126,
+          0.9833962264
+        ],
+        "solver_luck_adjusted": 0.4992966667,
+        "solver_same_seeds": 0.499,
+        "tool_calls_mean": 128.0333333333,
+        "tool_calls_total": 3841
+      },
+      "gpt_5_5": {
+        "accuracy": 0.9333333333,
+        "accuse_day_mean": 10.25,
+        "accused_rate": 0.9333333333,
+        "agent": "opencode:openai/gpt-5.5",
+        "canaries_mean": 17.1666666667,
+        "canaries_total": 515,
+        "ci95": 0.063788638,
+        "detail_stripped_calls": 0,
+        "interview_share": 0.0602409639,
+        "interviews_mean": 4.1666666667,
+        "interviews_total": 125,
+        "invalid_arg_detail_calls": 1,
+        "label": "gpt-5.5, OpenCode over MCP",
+        "luck_adj_ci95": [
+          0.6654962409,
+          1.0307646693
+        ],
+        "luck_adj_ratio": 0.8366849368,
+        "luck_adjusted": 0.417754,
+        "mean": 0.5036666667,
+        "n": 30,
+        "outcomes": {
+          "correct": 28,
+          "formatted": "28 / 0 / 2",
+          "no_accusation": 2,
+          "no_accusation_seeds": [
+            0,
+            17
+          ],
+          "wrong": 0,
+          "wrong_seeds": []
+        },
+        "p_accused_mean": 0.9398928571,
+        "paired_diff": 0.0046666667,
+        "paired_diff_ci95": 0.141496021,
+        "raw_ratio": 1.0093520374,
+        "raw_ratio_ci95": [
+          0.7860335196,
+          1.4028906956
+        ],
+        "solver_luck_adjusted": 0.4992966667,
+        "solver_same_seeds": 0.499,
+        "tool_calls_mean": 69.1666666667,
+        "tool_calls_total": 2075
+      },
+      "solver": {
+        "accuracy": 0.9666666667,
+        "accuse_day_mean": 10.6,
+        "accused_rate": 1.0,
+        "agent": "solver",
+        "canaries_mean": 14.1333333333,
+        "canaries_total": 424,
+        "ci95": 0.1192974921,
+        "detail_stripped_calls": 0,
+        "interview_share": 0.0,
+        "interviews_mean": 0.0,
+        "interviews_total": 0,
+        "invalid_arg_detail_calls": 0,
+        "label": "reference solver",
+        "luck_adj_ci95": [
+          1.0,
+          1.0
+        ],
+        "luck_adj_ratio": 1.0,
+        "luck_adjusted": 0.4992966667,
+        "mean": 0.499,
+        "n": 30,
+        "outcomes": {
+          "correct": 29,
+          "formatted": "29 / 1 / 0",
+          "no_accusation": 0,
+          "no_accusation_seeds": [],
+          "wrong": 1,
+          "wrong_seeds": [
+            15
+          ]
+        },
+        "p_accused_mean": 0.9651666667,
+        "paired_diff": 0.0,
+        "paired_diff_ci95": 0.0,
+        "raw_ratio": 1.0,
+        "raw_ratio_ci95": [
+          1.0,
+          1.0
+        ],
+        "solver_luck_adjusted": 0.4992966667,
+        "solver_same_seeds": 0.499,
+        "tool_calls_mean": 84.2666666667,
+        "tool_calls_total": 2528
+      }
+    },
+    "episodes_replayed": 90,
+    "gpt_5_5_preregistration": {
+      "commit_prefix": "cf394894",
+      "cost_usd_est": 38.908,
+      "git_sha": "cf394894dcb4bd9cf01b0d4bf635c64fb9490261",
+      "opencode_version": "1.19.5",
+      "text_only_accusation_seeds": [
+        0,
+        17
+      ],
+      "text_only_accusation_verified": true,
+      "transcript_files_verified": 30
+    },
+    "gpt_vs_carbon_contrasts": {
+      "accuse_day_diff": -2.9224137931,
+      "canaries_ratio": 2.0196078431,
+      "interview_share_diff": -0.4711310747,
+      "interviews_diff": -63.8666666667,
+      "score_diff": 0.1813333333,
+      "wrong_accusations_diff": -4
+    }
+  },
+  "harbor_rehearsal": {
+    "build": {
+      "built_utc": "2026-11-15T03:09:17Z",
+      "describe": "afterquery-final",
+      "effective_agent_timeout_sec": 10800.0,
+      "harbor_version": "0.26.0",
+      "logged_verifier_timeout_sec": 120.0,
+      "opencode_3_start_utc": "2026-11-15T05:14:15Z",
+      "retries": "--max-retries 2 --retry-include ApiRateLimitError --retry-include AgentSetupTimeoutError",
+      "schedule": "opencode-1/2 at -n 3 from the start; opencode-3 at -n 4 once runs 1+2 have <= 2 trials left",
+      "sha": "1bc3e281dbfaa494a11e783d0c98369b41b2f675",
+      "sha_short": "1bc3e281"
+    },
+    "honest_non_reproduction_disclosed": {
+      "README.md": true,
+      "docs/SUBMISSION.md": true,
+      "docs/reports/CEO.md": true,
+      "docs/reports/gap.md": true
+    },
+    "opencode_3_final": {
+      "accused": 9,
+      "correct": 9,
+      "correction_commit": "aa1c679e",
+      "mean": 0.626,
+      "mean_infra_as_0": 0.5634,
+      "n_after_0830_cutoff": 5,
+      "n_infra_excluded": 1,
+      "n_valid": 9,
+      "oracle_same_tasks": 0.4777777778,
+      "paired_diff": 0.1482222222,
+      "ratio": 1.3102325581,
+      "ratio_boot_ci95_pct": [
+        86,
+        590
+      ],
+      "ratio_formatted": "131% [86%, 590%]",
+      "ratio_pct_printed": 131,
+      "trial_archive_branch": "s1-rehearsal-final",
+      "trial_archive_commit": "d0ead011"
+    },
+    "opencode_final_spread": {
+      "mean_of_means": 0.561,
+      "n_opencode_runs": 3,
+      "pooled_valid_accused": 29,
+      "pooled_valid_correct": 28,
+      "range": 0.154,
+      "run_means": [
+        0.472,
+        0.585,
+        0.626
+      ],
+      "sample_sd": 0.0797558775
+    },
+    "opencode_spread": {
+      "mean_of_means": 0.5709047619,
+      "n_opencode_runs": 3,
+      "pooled_valid_accused": 27,
+      "pooled_valid_correct": 26,
+      "range": 0.1837142857,
+      "run_means": [
+        0.472,
+        0.585,
+        0.6557142857
+      ],
+      "sample_sd": 0.0926646723
+    },
+    "oracle_10task_mean": 0.506,
+    "oracle_correct_count": 9,
+    "summary_rows": [
+      {
+        "accused": 10,
+        "correct": 9,
+        "mean": 0.472,
+        "mean_infra_as_0": 0.472,
+        "n_infra_excluded": 0,
+        "n_not_run": 0,
+        "n_valid": 10,
+        "oracle_same_tasks": 0.506,
+        "paired_diff": -0.034,
+        "ratio": 0.9328063241,
+        "ratio_boot_ci95": [
+          0.1988071571,
+          3.7058823529
+        ],
+        "ratio_formatted": "93% [20%, 371%]",
+        "run": "opencode-1"
+      },
+      {
+        "accused": 10,
+        "correct": 10,
+        "mean": 0.585,
+        "mean_infra_as_0": 0.585,
+        "n_infra_excluded": 0,
+        "n_not_run": 0,
+        "n_valid": 10,
+        "oracle_same_tasks": 0.506,
+        "paired_diff": 0.079,
+        "ratio": 1.1561264822,
+        "ratio_boot_ci95": [
+          0.7829457364,
+          3.6325301205
+        ],
+        "ratio_formatted": "116% [78%, 363%]",
+        "run": "opencode-2"
+      },
+      {
+        "accused": 7,
+        "correct": 7,
+        "mean": 0.6557142857,
+        "mean_infra_as_0": 0.57375,
+        "n_infra_excluded": 1,
+        "n_not_run": 2,
+        "n_valid": 7,
+        "oracle_same_tasks": 0.4285714286,
+        "paired_diff": 0.2271428571,
+        "ratio": 1.53,
+        "ratio_boot_ci95": [
+          0.8948453608,
+          4.1120689655
+        ],
+        "ratio_formatted": "153% [89%, 411%]",
+        "run": "opencode-3"
+      },
+      {
+        "accused": 0,
+        "correct": 0,
+        "mean": 0.0,
+        "mean_infra_as_0": 0.0,
+        "n_infra_excluded": 0,
+        "n_not_run": 0,
+        "n_valid": 10,
+        "oracle_same_tasks": 0.506,
+        "paired_diff": -0.506,
+        "ratio": 0.0,
+        "ratio_boot_ci95": [
+          0.0,
+          0.0
+        ],
+        "ratio_formatted": "0% [0%, 0%]",
+        "run": "do_nothing"
+      },
+      {
+        "accused": 0,
+        "correct": 0,
+        "mean": 0.0,
+        "mean_infra_as_0": 0.0,
+        "n_infra_excluded": 0,
+        "n_not_run": 0,
+        "n_valid": 10,
+        "oracle_same_tasks": 0.506,
+        "paired_diff": -0.506,
+        "ratio": 0.0,
+        "ratio_boot_ci95": [
+          0.0,
+          0.0
+        ],
+        "ratio_formatted": "0% [0%, 0%]",
+        "run": "stop_early"
+      }
+    ],
+    "task_count": 10
+  },
+  "overall_passed": true,
+  "schema_version": "candidate_tiers_v14.v1",
+  "tiers_version": "v1.4"
+}

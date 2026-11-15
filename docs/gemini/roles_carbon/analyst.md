@@ -13,12 +13,12 @@ Regenerate automatically as new analyst runs land via:
 
 | Metric | Value |
 | --- | --- |
-| Verified `gemini-4-carbon` Runs | `4` (rejected: `0`, secret leaks: `0`) |
-| Corpus Scope Analyzed | `327` episode-level evaluations (`246` directly diagnosed) |
-| Verbatim Quote Verification | `115/115` (`100.0%` exact Python verification) |
-| Gemini API Calls | `6` |
-| Input / Output / Thinking Tokens | `1,078,133` in / `36,809` out / `70,034` thinking (`0` cached) |
-| Recorded Gemini API Cost | `$3.075826` USD |
+| Verified `gemini-4-carbon` Runs | `5` (rejected: `0`, secret leaks: `0`) |
+| Corpus Scope Analyzed | `327` episode-level evaluations (`246` directly diagnosed) + `30` audited atlas claims (automated LLM audit) |
+| Verbatim Quote Verification | `145/145` (`100.0%` exact Python verification) |
+| Gemini API Calls | `10` |
+| Input / Output / Thinking Tokens | `1,114,554` in / `44,068` out / `95,665` thinking (`0` cached) |
+| Recorded Gemini API Cost | `$3.477568` USD |
 
 ## Committed `failure_analyst` Carbon Runs
 
@@ -28,6 +28,7 @@ Regenerate automatically as new analyst runs land via:
 | `calibration-ev-carbon` | `bayesian_calibration_analyst` | `default` | `fdf16a71b039` | 101 episodes calibrated (20 premature diagnosed) | `35/35` (`100%`) | 1 | 83,405 / 6,623 / 10,782 | `$0.3409` | 101 episodes calibrated (ECE 0.0807, Brier 0.0708), 20 premature commits below 1/(1+V) losing 7.49 EV, 35/35 (100.0%) quotes verified |
 | `carbon-longctx-corpus` | `carbon_longctx_corpus` | `default` | `71a425530574` | 101 episodes | `16/16` (`100%`) | 2 | 237,763 / 16,390 / 14,887 | `$0.6394` | 101 episodes (261,087 chars in one prompt), 6 decision failure clusters, 16/16 (100.0%) quotes verified |
 | `chatter-bias-forensics-carbon` | `biased_chatter_decision_forensics` | `high` | `a366f947ed7f` | 24 paired episodes (12 pairs) | `47/47` (`100%`) | 1 | 160,103 / 10,605 / 31,009 | `$0.7363` | 24 paired episodes (12 pairs), quotes 100.0% verified, carbon acc 100% (biased +0.662 vs template +0.642), rumor distraction 100% vs 50% |
+| `claim-audit-carbon` | `atlas_claim_audit_carbon` | `medium` | `a366f947ed7f` | 30 claims audited (automated LLM audit) | `30/30` (`100%`) | 4 | 36,421 / 7,259 / 25,631 | `$0.4017` | 30/30 atlas claims audited (automated LLM, not human): 22 agree, 6 disagree, 2 unsure (78.6% scored agreement, 9 over-claims flagged, 100% verified quotes) |
 
 ## Per-Run Provenance & Decision Forensics Details
 
@@ -79,3 +80,14 @@ Regenerate automatically as new analyst runs land via:
 - **Labelled modes / clusters:** `Rumor-Target and Rumor-Sender Verification Delay`; `Canary Leak Confirmation Overrides Biased Chatter and Decoy Framing`; `Empty-Query Argument Errors and Vowel-Wildcard Message Search Sink`; `Exhaustive Roster Interview Sweeps and Repetitive Finalist Interrogation Drag`; `Surface Log Heuristic Collapse Onto Framed Decoys, Overlapping Rumor Targets, and Grudge Personas`; `Bayesian Solver Posterior Invariance Under Injected Workplace Chatter`
 - **Committed files:** `forensics.json`, `meta.json`, `summary.md`
 - **Synthesis:** Across 24 paired ablation episodes (4 medium and hard worlds x 3 policies x 2 text providers), injected cognitive-bias workplace chatter alters LLM investigation trajectories without corrupting final accusation accuracy. Both carbon (acc=1.00, 4/4 true moles accused) and the Bayesian solver (acc=1.00) achieve 0.00 decoy and rumor-target false accusation rates under BiasedChatterProvider and TemplateProvider alike, whereas obvious_heuristic collapses to acc=0.00 and score_mean=-1.000 in both arms (50% framed_decoy, 25% overlapping rumor_target, and 50% grudge_persona accusations) without ever querying messages (msg_calls=0). Under biased chatter, carbon reads the Day-1 unverified rumor bc1-0 in 75% of worlds (3/4), increasing rumor_distract_rate from 0.50 to 1.00, quadrupling rumor_action_share from 0.0103 to 0.0431 (+0.0328), and increasing message tool calls from 19 to 35 (+16 calls; msg_budget_share 0.1392 vs 0.0672) via initial empty-query errors and recurring single-vowel searches. Despite this distraction tax, carbon_biased achieves a slightly higher pooled score than carbon_template (+0.662 vs +0.642, score_delta=+0.020; mean_day 9.75 vs 10.75; mean_steps 84.8 vs 105.0) due to strong seed-level divergence: in hard:s0, reading bc1-0 delays canary deployment and triggers 3 rumor-target interviews plus 2 sender interviews, dragging score down by -0.170 (+0.580 on Day 11 vs +0.750 on Day 6 in template); conversely, in medium:s10 (+0.760 vs +0.680), medium:s11 (+0.650 on Day 9 vs +0.600 on Day 14), and hard:s1 (+0.660 on Day 11 vs +0.540 on Day 15), canary version leaks override biased chatter while carbon_template gets bogged down in 79- to 82-interview sweeps (143 to 146 steps). Finally, solver demonstrates near-total chatter invariance (score_mean=+0.715, score_delta=0.000, mean_day=7.25, steps_delta=+0.5, rumor_action_share=0.0000), never reading matched bc messages (msg_reads=0) and isolating moles purely through combinatorial canary splits (mean_canaries=8.25) and access-log intersections.
+
+### 5. `claim-audit-carbon` (`atlas_claim_audit_carbon`)
+- **Artifact directory:** `results/gemini/roles_carbon/failure_analyst/claim-audit-carbon`
+- **Model & thinking:** `gemini-4-carbon` (`thinking_level=medium`, `stub=False`)
+- **Commit & timestamp:** `a366f947ed7f` (`2026-11-14T23:12:35+00:00`)
+- **Scope:** 30 claims audited (automated LLM audit)
+- **Verbatim quotes:** `30/30` (`100.0%`)
+- **Gemini API usage:** `calls=4`, `in=36,421`, `out=7,259`, `thinking=25,631`, `cached=0`, `cost_usd=$0.401742`
+- **Key metric:** 30/30 atlas claims audited (automated LLM, not human): 22 agree, 6 disagree, 2 unsure (78.6% scored agreement, 9 over-claims flagged, 100% verified quotes)
+- **Audit disclosure:** `gemini-4-carbon (automated LLM audit, not human)` (`docs/gemini/validation.md` remains untouched for human labeller Ivar)
+- **Committed files:** `audit.json`, `meta.json`, `summary.md`

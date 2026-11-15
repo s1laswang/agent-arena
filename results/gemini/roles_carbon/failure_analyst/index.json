@@ -1,29 +1,29 @@
 {
   "role": "failure_analyst",
   "target_model": "gemini-4-carbon",
-  "generated_at": "2026-11-15T00:19:35+00:00",
+  "generated_at": "2026-11-15T05:18:51+00:00",
   "verified": true,
   "secret_hygiene_clean": true,
   "validation_sheet_reserved_path": "docs/gemini/validation.md",
   "validation_sheet_owner": "Ivar (human labeller via canary.gemini.atlas_agreement)",
   "validation_disclosure": "docs/gemini/validation.md is reserved untouched for human labeller Ivar (scored separately via canary.gemini.atlas_agreement). Any claim audit or solver-agreement check in this failure_analyst carbon suite (including claim-audit-carbon and stratified solver-vs-LLM checks) is explicitly disclosed as an automated LLM or deterministic solver audit, never human labelling.",
   "totals": {
-    "run_count": 4,
-    "scanned_run_count": 4,
+    "run_count": 5,
+    "scanned_run_count": 5,
     "rejected_run_count": 0,
     "episodes_analyzed": 327,
     "episodes_diagnosed": 246,
-    "claims_analyzed": 0,
-    "verified_quotes": 115,
-    "total_quotes": 115,
+    "claims_analyzed": 30,
+    "verified_quotes": 145,
+    "total_quotes": 145,
     "verified_quotes_pct": 100.0,
     "usage": {
-      "calls": 6,
-      "in": 1078133,
-      "out": 36809,
-      "thinking": 70034,
+      "calls": 10,
+      "in": 1114554,
+      "out": 44068,
+      "thinking": 95665,
       "cached": 0,
-      "cost_usd": 3.075826
+      "cost_usd": 3.477568
     }
   },
   "runs": [
@@ -220,6 +220,46 @@
       ],
       "artifacts": [
         "forensics.json",
+        "meta.json",
+        "summary.md"
+      ]
+    },
+    {
+      "run_id": "claim-audit-carbon",
+      "run_dir": "results/gemini/roles_carbon/failure_analyst/claim-audit-carbon",
+      "role": "failure_analyst",
+      "subrole": "atlas_claim_audit_carbon",
+      "model_id": "gemini-4-carbon",
+      "thinking_level": "medium",
+      "stub": false,
+      "verified": true,
+      "issues": [],
+      "secret_leaks": [],
+      "commit": "a366f947ed7f",
+      "full_commit": "a366f947ed7ff9ea549df0488268377b9b002868",
+      "timestamp": "2026-11-14T23:12:35+00:00",
+      "episodes_analyzed": 0,
+      "episodes_diagnosed": 0,
+      "claims_analyzed": 30,
+      "scope_label": "30 claims audited (automated LLM audit)",
+      "is_automated_claim_audit": true,
+      "auditor_disclosure": "gemini-4-carbon (automated LLM audit, not human)",
+      "verified_quotes": 30,
+      "total_quotes": 30,
+      "verified_quotes_pct": 100.0,
+      "usage": {
+        "calls": 4,
+        "in": 36421,
+        "out": 7259,
+        "thinking": 25631,
+        "cached": 0,
+        "cost_usd": 0.401742
+      },
+      "headline": "30/30 atlas claims audited (automated LLM, not human): 22 agree, 6 disagree, 2 unsure (78.6% scored agreement, 9 over-claims flagged, 100% verified quotes)",
+      "executive_summary": "",
+      "modes_or_clusters": [],
+      "artifacts": [
+        "audit.json",
         "meta.json",
         "summary.md"
       ]

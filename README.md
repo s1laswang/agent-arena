@@ -55,6 +55,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=<key> harbor run -p harbor/dataset -a opencode -m g
 
 - **Break it:** [docs/EXPLOITS.md](docs/EXPLOITS.md) lists every attack we tried, and the regression test that guards each one. `make hunt` fuzzes it yourself, with no keys, in a few minutes.
 - **Gap report:** [docs/reports/gap.md](docs/reports/gap.md).
+- **Submission write-up:** [docs/SUBMISSION.md](docs/SUBMISSION.md) (form fields, rubric map, judge commands, known limits).
 - **Gemini entry:** [docs/gemini/SUBMISSION.md](docs/gemini/SUBMISSION.md).
 - **Rules:** [docs/CONTRACT.md](docs/CONTRACT.md). **History** (tiers v1.2 and v1.3, earlier frontier runs, why the rules changed): [docs/HISTORY.md](docs/HISTORY.md).
 

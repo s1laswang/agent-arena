@@ -2,7 +2,7 @@
   "role": "adaptive_mole",
   "suite": "carbon-vs-carbon-suite",
   "target_model": "gemini-4-carbon",
-  "latest_run_timestamp": "2026-11-14T23:21:25Z",
+  "latest_run_timestamp": "2026-11-14T23:46:27Z",
   "source_commits": [
     "03c676c1d3cd42629994ac434c056758a75148e0",
     "c00d49189d1a4c63495d9111e11b5f13528a5093",
@@ -10,6 +10,7 @@
     "d39e88c39e8a3859e88805cd8a30156a8cfcaa49",
     "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
     "5fd627a7b18fdeb629a41917e50aa76b70085daa",
+    "cec07dc8ea61d2c129dd81e249e93dec05b76983",
     "e650291e7874f115733affd54b725ba6b9fdfafb",
     "b73b62ffec38514e28f808ce538130a996a9496e",
     "38cd16ece1cbdc52b9cf469000296a5241ed90bb",
@@ -23,7 +24,6 @@
     "370de43c38b321bf9dbc5c04220abd90c4614466",
     "0e59cc10aa43f068e5fe7c1007215df1db4d10fe",
     "94974340ae44c96fe5eb03d797c041b95d19d922",
-    "cec07dc8ea61d2c129dd81e249e93dec05b76983",
     "16f24a08e1fb57397ddf90a5b413b4359a5f16bc"
   ],
   "verified_run_dirs": [
@@ -35,6 +35,7 @@
     "results/gemini_roles/adaptive_mole/arena-live-carbon-med345",
     "results/gemini_roles/adaptive_mole/arena-live-carbon-med678",
     "results/gemini_roles/adaptive_mole/arena-live-carbon-med9_10_11",
+    "results/gemini_roles/adaptive_mole/carbon-vs-carbon-easy-seed0",
     "results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed0",
     "results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed1",
     "results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed2",
@@ -44,6 +45,7 @@
     "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed3",
     "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed4",
     "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed5",
+    "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed7",
     "results/gemini_roles/adaptive_mole/carbon-vs-carbon-seed0",
     "results/gemini_roles/adaptive_mole/catchability-audit-carbon",
     "results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep",
@@ -53,12 +55,81 @@
     "results/gemini_roles/adaptive_mole/paired-designer-carbon-hard",
     "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard",
     "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard-s10_14",
+    "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard-s15_19",
     "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-med-s10_14",
     "results/gemini_roles/adaptive_mole/paired-solvable-scenarios-carbon"
   ],
   "skipped_runs": [],
   "clash_suite": {
     "shards": [
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-easy-seed0",
+        "tier": "easy",
+        "seed": 0,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+        "investigator_score": 0.83,
+        "investigator_correct": true,
+        "investigator_accused": "e01",
+        "investigator_final_day": 4,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.79,
+        "solver_correct": true,
+        "solver_accused": "e01",
+        "solver_final_day": 8,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.04,
+        "mole_clash_days": 3,
+        "mole_clash_leaks": 3,
+        "mole_clash_frames": 1,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 7,
+        "mole_solver_leaks": 3,
+        "mole_solver_frames": 5,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 46,
+          "in": 366514,
+          "out": 1734,
+          "thinking": 17294,
+          "cached": 270799,
+          "total_tokens": 385542,
+          "cost_usd": 0.408789,
+          "latency_s": 1118.284,
+          "combined": {
+            "calls": 46,
+            "in": 366514,
+            "out": 1734,
+            "thinking": 17294,
+            "cached": 270799,
+            "total_tokens": 385542,
+            "cost_usd": 0.408789,
+            "latency_s": 1118.284
+          },
+          "clash_investigator": {
+            "calls": 36,
+            "in": 360310,
+            "out": 1088,
+            "thinking": 14604,
+            "cached": 270799,
+            "total_tokens": 376002,
+            "cost_usd": 0.363021,
+            "latency_s": 879.663
+          },
+          "clash_mole": {
+            "calls": 10,
+            "in": 6204,
+            "out": 646,
+            "thinking": 2690,
+            "cached": 0,
+            "total_tokens": 9540,
+            "cost_usd": 0.045768,
+            "latency_s": 238.621
+          }
+        }
+      },
       {
         "run_dir": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-seed0",
         "tier": "medium",
@@ -468,6 +539,74 @@
         }
       },
       {
+        "run_dir": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed7",
+        "tier": "medium",
+        "seed": 7,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+        "investigator_score": 0.7,
+        "investigator_correct": true,
+        "investigator_accused": "e09",
+        "investigator_final_day": 7,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.35,
+        "solver_correct": true,
+        "solver_accused": "e09",
+        "solver_final_day": 11,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.35,
+        "mole_clash_days": 6,
+        "mole_clash_leaks": 6,
+        "mole_clash_frames": 2,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 10,
+        "mole_solver_leaks": 10,
+        "mole_solver_frames": 6,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 82,
+          "in": 1420410,
+          "out": 3341,
+          "thinking": 28466,
+          "cached": 1247399,
+          "total_tokens": 1452217,
+          "cost_usd": 0.788832,
+          "latency_s": 1959.788,
+          "combined": {
+            "calls": 82,
+            "in": 1420410,
+            "out": 3341,
+            "thinking": 28466,
+            "cached": 1247399,
+            "total_tokens": 1452217,
+            "cost_usd": 0.788832,
+            "latency_s": 1959.788
+          },
+          "clash_investigator": {
+            "calls": 66,
+            "in": 1408814,
+            "out": 2285,
+            "thinking": 24982,
+            "cached": 1247399,
+            "total_tokens": 1436081,
+            "cost_usd": 0.72024,
+            "latency_s": 1696.532
+          },
+          "clash_mole": {
+            "calls": 16,
+            "in": 11596,
+            "out": 1056,
+            "thinking": 3484,
+            "cached": 0,
+            "total_tokens": 16136,
+            "cost_usd": 0.068592,
+            "latency_s": 263.256
+          }
+        }
+      },
+      {
         "run_dir": "results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed0",
         "tier": "hard",
         "seed": 0,
@@ -742,82 +881,83 @@
     ],
     "by_tier": {
       "medium": {
-        "n_shards": 6,
-        "n_episodes": 12,
+        "n_shards": 7,
+        "n_episodes": 14,
         "seeds": [
           0,
           1,
           2,
           3,
           4,
-          5
+          5,
+          7
         ],
         "investigator_accuracy": 1.0,
         "investigator_accuracy_ci95": [
-          0.6097,
+          0.6457,
           1.0
         ],
-        "investigator_mean_score": 0.6967,
+        "investigator_mean_score": 0.6971,
         "investigator_mean_ci95": [
-          0.6333,
-          0.7533
+          0.6429,
+          0.7457
         ],
-        "solver_accuracy": 0.6667,
+        "solver_accuracy": 0.7143,
         "solver_accuracy_ci95": [
-          0.3,
-          0.9032
+          0.3589,
+          0.9178
         ],
-        "solver_mean_score": 0.2617,
+        "solver_mean_score": 0.2743,
         "solver_mean_ci95": [
-          0.11,
-          0.405
+          0.15,
+          0.3957
         ],
-        "solvable_rate": 0.6667,
+        "solvable_rate": 0.7143,
         "solvable_rate_ci95": [
-          0.3,
-          0.9032
+          0.3589,
+          0.9178
         ],
-        "mean_regret": -0.435,
+        "mean_regret": -0.4229,
         "mean_regret_ci95": [
-          -0.6233,
-          -0.26
+          -0.5829,
+          -0.2714
         ],
-        "mole_total_leaks": 37,
-        "mole_total_frames": 13,
+        "mole_total_leaks": 43,
+        "mole_total_frames": 15,
         "mole_total_errors": 0,
-        "mole_solver_total_leaks": 51,
-        "mole_solver_total_frames": 39,
+        "mole_solver_total_leaks": 61,
+        "mole_solver_total_frames": 45,
         "mole_solver_total_errors": 0,
         "usage": {
           "combined": {
-            "calls": 533,
-            "in": 9274985,
-            "out": 21212,
-            "thinking": 173745,
-            "cached": 8173980,
-            "total_tokens": 9469942,
-            "cost_usd": 4.968987,
-            "latency_s": 15245.78
+            "calls": 615,
+            "in": 10695395,
+            "out": 24553,
+            "thinking": 202211,
+            "cached": 9421379,
+            "total_tokens": 10922159,
+            "cost_usd": 5.757819,
+            "latency_s": 17205.568
           },
           "clash_investigator": {
-            "calls": 423,
-            "in": 9198026,
-            "out": 14046,
-            "thinking": 148951,
-            "cached": 8173980,
-            "total_tokens": 9361023,
-            "cost_usd": 4.495469,
-            "latency_s": 13469.408
+            "calls": 489,
+            "in": 10606840,
+            "out": 16331,
+            "thinking": 173933,
+            "cached": 9421379,
+            "total_tokens": 10797104,
+            "cost_usd": 5.215709,
+            "latency_s": 15165.94
           },
           "clash_mole": {
-            "calls": 110,
-            "in": 76959,
-            "out": 7166,
-            "thinking": 24794,
+            "calls": 126,
+            "in": 88555,
+            "out": 8222,
+            "thinking": 28278,
             "cached": 0,
-            "total_tokens": 108919,
-            "cost_usd": 0.473518,
-            "latency_s": 1776.372
+            "total_tokens": 125055,
+            "cost_usd": 0.54211,
+            "latency_s": 2039.628
           }
         }
       },
@@ -898,18 +1038,95 @@
             "latency_s": 1079.419
           }
         }
+      },
+      "easy": {
+        "n_shards": 1,
+        "n_episodes": 2,
+        "seeds": [
+          0
+        ],
+        "investigator_accuracy": 1.0,
+        "investigator_accuracy_ci95": [
+          0.2065,
+          1.0
+        ],
+        "investigator_mean_score": 0.83,
+        "investigator_mean_ci95": [
+          0.83,
+          0.83
+        ],
+        "solver_accuracy": 1.0,
+        "solver_accuracy_ci95": [
+          0.2065,
+          1.0
+        ],
+        "solver_mean_score": 0.79,
+        "solver_mean_ci95": [
+          0.79,
+          0.79
+        ],
+        "solvable_rate": 1.0,
+        "solvable_rate_ci95": [
+          0.2065,
+          1.0
+        ],
+        "mean_regret": -0.04,
+        "mean_regret_ci95": [
+          -0.04,
+          -0.04
+        ],
+        "mole_total_leaks": 3,
+        "mole_total_frames": 1,
+        "mole_total_errors": 0,
+        "mole_solver_total_leaks": 3,
+        "mole_solver_total_frames": 5,
+        "mole_solver_total_errors": 0,
+        "usage": {
+          "combined": {
+            "calls": 46,
+            "in": 366514,
+            "out": 1734,
+            "thinking": 17294,
+            "cached": 270799,
+            "total_tokens": 385542,
+            "cost_usd": 0.408789,
+            "latency_s": 1118.284
+          },
+          "clash_investigator": {
+            "calls": 36,
+            "in": 360310,
+            "out": 1088,
+            "thinking": 14604,
+            "cached": 270799,
+            "total_tokens": 376002,
+            "cost_usd": 0.363021,
+            "latency_s": 879.663
+          },
+          "clash_mole": {
+            "calls": 10,
+            "in": 6204,
+            "out": 646,
+            "thinking": 2690,
+            "cached": 0,
+            "total_tokens": 9540,
+            "cost_usd": 0.045768,
+            "latency_s": 238.621
+          }
+        }
       }
     },
     "overall": {
-      "n_shards": 10,
-      "n_episodes": 20,
+      "n_shards": 12,
+      "n_episodes": 24,
       "seeds": [
+        0,
         0,
         1,
         2,
         3,
         4,
         5,
+        7,
         0,
         1,
         2,
@@ -917,70 +1134,70 @@
       ],
       "investigator_accuracy": 1.0,
       "investigator_accuracy_ci95": [
-        0.7225,
+        0.7575,
         1.0
       ],
-      "investigator_mean_score": 0.581,
+      "investigator_mean_score": 0.6117,
       "investigator_mean_ci95": [
-        0.434,
-        0.692
+        0.4758,
+        0.7142
       ],
-      "solver_accuracy": 0.7,
+      "solver_accuracy": 0.75,
       "solver_accuracy_ci95": [
-        0.3968,
-        0.8922
+        0.4677,
+        0.9111
       ],
-      "solver_mean_score": 0.341,
+      "solver_mean_score": 0.3792,
       "solver_mean_ci95": [
-        0.184,
-        0.505
+        0.2292,
+        0.5308
       ],
-      "solvable_rate": 0.7,
+      "solvable_rate": 0.75,
       "solvable_rate_ci95": [
-        0.3968,
-        0.8922
+        0.4677,
+        0.9111
       ],
-      "mean_regret": -0.24,
+      "mean_regret": -0.2325,
       "mean_regret_ci95": [
-        -0.435,
-        -0.05
+        -0.3992,
+        -0.0767
       ],
-      "mole_total_leaks": 78,
-      "mole_total_frames": 22,
+      "mole_total_leaks": 87,
+      "mole_total_frames": 25,
       "mole_total_errors": 0,
-      "mole_solver_total_leaks": 82,
-      "mole_solver_total_frames": 56,
+      "mole_solver_total_leaks": 95,
+      "mole_solver_total_frames": 67,
       "mole_solver_total_errors": 0,
       "usage": {
         "combined": {
-          "calls": 1015,
-          "in": 27364563,
-          "out": 41975,
-          "thinking": 375826,
-          "cached": 25213697,
-          "total_tokens": 27782364,
-          "cost_usd": 11.001129,
-          "latency_s": 23646.814
+          "calls": 1143,
+          "in": 29151487,
+          "out": 47050,
+          "thinking": 421586,
+          "cached": 26731895,
+          "total_tokens": 29620123,
+          "cost_usd": 12.19875,
+          "latency_s": 26724.886
         },
         "clash_investigator": {
-          "calls": 818,
-          "in": 27219163,
-          "out": 29305,
-          "thinking": 333123,
-          "cached": 25213697,
-          "total_tokens": 27581591,
-          "cost_usd": 10.156599,
-          "latency_s": 20791.023
+          "calls": 920,
+          "in": 28988287,
+          "out": 32678,
+          "thinking": 372709,
+          "cached": 26731895,
+          "total_tokens": 29393674,
+          "cost_usd": 11.23986,
+          "latency_s": 23367.218
         },
         "clash_mole": {
-          "calls": 197,
-          "in": 145400,
-          "out": 12670,
-          "thinking": 42703,
+          "calls": 223,
+          "in": 163200,
+          "out": 14372,
+          "thinking": 48877,
           "cached": 0,
-          "total_tokens": 200773,
-          "cost_usd": 0.84453,
-          "latency_s": 2855.791
+          "total_tokens": 226449,
+          "cost_usd": 0.95889,
+          "latency_s": 3357.668
         }
       }
     }
@@ -1741,10 +1958,10 @@
         "fresh_min_regret": 0.231,
         "default_fresh_min_regret": 0.165,
         "has_holdout_generalization": true,
-        "n_confirm_seeds": 20,
-        "top1_confirm_solver_acc": 0.85,
-        "top1_confirm_min_regret": 0.245,
-        "all_evolved_solvable_confirm": true,
+        "n_confirm_seeds": 40,
+        "top1_confirm_solver_acc": 0.8,
+        "top1_confirm_min_regret": 0.1762,
+        "all_evolved_solvable_confirm": false,
         "generations_recorded": 8,
         "hof_fitness_trajectory": [
           0.3175,
@@ -2111,10 +2328,66 @@
           "cost_usd": 0.02316,
           "latency_s": 60.519
         }
+      },
+      {
+        "run_dir": "results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard-s15_19",
+        "tier": "hard",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+        "n_llm_valid": 6,
+        "n_kept": 6,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.67,
+        "solver_mean": 0.67,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.5707,
+        "eval_heuristic_mean": -1.0,
+        "top_scenario_name": "scattered_blame_blitz",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.498,
+            "designed_mean_score": 0.5707,
+            "designed_accuracy": 0.975
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.1422,
+            "designed_mean_score": 0.3165,
+            "designed_accuracy": 0.775
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.5475,
+            "designed_mean_score": 0.556,
+            "designed_accuracy": 0.975
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -0.9602,
+            "designed_mean_score": -1.0,
+            "designed_accuracy": 0.0
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1645,
+          "out": 1334,
+          "thinking": 143,
+          "cached": 0,
+          "total_tokens": 3122,
+          "cost_usd": 0.01806,
+          "latency_s": 21.331
+        }
       }
     ],
     "overall": {
-      "n_runs": 6,
+      "n_runs": 7,
       "tiers": [
         "hard",
         "medium"
@@ -2123,23 +2396,23 @@
         "paired_designer",
         "paired_skill_designer"
       ],
-      "total_llm_valid": 32,
-      "total_kept": 29,
-      "keep_rate": 0.9062,
-      "mean_solver_score": 0.6621,
+      "total_llm_valid": 38,
+      "total_kept": 35,
+      "keep_rate": 0.9211,
+      "mean_solver_score": 0.6633,
       "mean_heuristic_score": -1.0,
-      "n_holdout_eval_runs": 4,
-      "mean_eval_full_solver": 0.6098,
-      "mean_eval_heuristic": -0.9527,
+      "n_holdout_eval_runs": 5,
+      "mean_eval_full_solver": 0.602,
+      "mean_eval_heuristic": -0.9622,
       "usage": {
-        "calls": 6,
-        "in": 10373,
-        "out": 7972,
-        "thinking": 3599,
+        "calls": 7,
+        "in": 12018,
+        "out": 9306,
+        "thinking": 3742,
         "cached": 0,
-        "total_tokens": 21944,
-        "cost_usd": 0.136456,
-        "latency_s": 242.4
+        "total_tokens": 25066,
+        "cost_usd": 0.154516,
+        "latency_s": 263.731
       }
     }
   },
@@ -2193,34 +2466,34 @@
     }
   ],
   "totals": {
-    "verified_folders": 28,
-    "n_verified_runs": 28,
-    "calls": 1763,
-    "in": 28044684,
-    "out": 123907,
-    "thinking": 443644,
-    "cached": 25213697,
-    "total_tokens": 28612235,
-    "cost_usd": 13.858871,
-    "latency_s": 31311.017,
+    "verified_folders": 31,
+    "n_verified_runs": 31,
+    "calls": 1892,
+    "in": 29833253,
+    "out": 130316,
+    "thinking": 489547,
+    "cached": 26731895,
+    "total_tokens": 30453116,
+    "cost_usd": 15.074552,
+    "latency_s": 34410.42,
     "tokens": {
-      "in": 28044684,
-      "out": 123907,
-      "thinking": 443644,
-      "cached": 25213697,
-      "total": 28612235
+      "in": 29833253,
+      "out": 130316,
+      "thinking": 489547,
+      "cached": 26731895,
+      "total": 30453116
     },
     "by_suite": {
       "clash_suite": {
-        "verified_folders": 10,
-        "calls": 1015,
-        "in": 27364563,
-        "out": 41975,
-        "thinking": 375826,
-        "cached": 25213697,
-        "total_tokens": 27782364,
-        "cost_usd": 11.001129,
-        "latency_s": 23646.814
+        "verified_folders": 12,
+        "calls": 1143,
+        "in": 29151487,
+        "out": 47050,
+        "thinking": 421586,
+        "cached": 26731895,
+        "total_tokens": 29620123,
+        "cost_usd": 12.19875,
+        "latency_s": 26724.886
       },
       "live_arena_suite": {
         "verified_folders": 8,
@@ -2245,15 +2518,15 @@
         "latency_s": 785.231
       },
       "paired_designer_suite": {
-        "verified_folders": 6,
-        "calls": 6,
-        "in": 10373,
-        "out": 7972,
-        "thinking": 3599,
+        "verified_folders": 7,
+        "calls": 7,
+        "in": 12018,
+        "out": 9306,
+        "thinking": 3742,
         "cached": 0,
-        "total_tokens": 21944,
-        "cost_usd": 0.136456,
-        "latency_s": 242.4
+        "total_tokens": 25066,
+        "cost_usd": 0.154516,
+        "latency_s": 263.731
       },
       "other_verified_runs": {
         "verified_folders": 1,

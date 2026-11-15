@@ -2,99 +2,99 @@
 
 - **Source run:** `results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep`
 - **Model:** `gemini-4-carbon`
-- **Source commit:** `9b8858381c99a4b94ea3d989fcd0d232fc5411ca` (eval commit: `98cf21667a71116f6fdc3899e8cbeb8b2d2a9179`)
-- **Timestamp:** `2026-11-14T17:40:32Z`
+- **Source commit:** `9b8858381c99a4b94ea3d989fcd0d232fc5411ca` (eval commit: `94f9d08c97f6126b5514f18ed10be37d23a1d224`)
+- **Timestamp:** `2026-11-15T00:03:42Z`
 - **Tier:** `hard` (`v1.4`, solver accuracy floor `>= 75%`)
 - **Unseen hard seeds:** `20..29` (`n=10`)
-- **Fresh confirmation seeds:** `5020..5039` (`n=20`)
-- **Top-1 unseen min regret:** `+0.1160` vs default `+0.1650` (delta `-0.0490`)
-- **Top-1 confirmation min regret:** `+0.2450` vs default `+0.1755` (delta `+0.0695`)
-- **Top-1 combined 30-seed min regret:** `+0.2527` vs default `+0.1947` (delta `+0.0580`)
-- **All evolved strategies solvable (`SolverPolicy` feasible):** unseen=`True`, confirm=`True`
+- **Fresh confirmation seeds:** `5020..5059` (`n=40`)
+- **Top-1 unseen min regret:** `+0.0490` vs default `+0.1340` (delta `-0.0850`)
+- **Top-1 confirmation min regret:** `+0.1762` vs default `+0.1500` (delta `+0.0262`)
+- **Top-1 combined 30-seed min regret:** `+0.1812` vs default `+0.1468` (delta `+0.0344`)
+- **All evolved strategies solvable (`SolverPolicy` feasible):** unseen=`False`, confirm=`False`
 
 ## Strategy Generalization Summary
 
 | Strategy | Dev Fitness | Unseen Solver Acc | Unseen Min Regret | Confirm Solver Acc | Confirm Min Regret | Combined Solver Acc | Combined Min Regret | Combined Mean Regret | Feasible (U/C/All) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| `DefaultMole` | +0.0560 | 100.00% | +0.1650 | 95.00% | +0.1755 | 96.67% | +0.1947 | +0.6439 | Y/Y/Y |
-| `HoF#1` | +0.3745 | 90.00% | +0.1160 | 85.00% | +0.2450 | 86.67% | +0.2527 | +0.5445 | Y/Y/Y |
-| `HoF#2` | +0.3685 | 90.00% | +0.1710 | 80.00% | +0.2175 | 83.33% | +0.2397 | +0.5827 | Y/Y/Y |
-| `HoF#3` | +0.3645 | 90.00% | +0.1160 | 85.00% | +0.2450 | 86.67% | +0.2527 | +0.5464 | Y/Y/Y |
+| `DefaultMole` | +0.0560 | 100.00% | +0.1340 | 97.50% | +0.1500 | 98.00% | +0.1468 | +0.6293 | Y/Y/Y |
+| `HoF#1` | +0.3745 | 70.00% | +0.0490 | 80.00% | +0.1762 | 78.00% | +0.1812 | +0.4972 | N/Y/Y |
+| `HoF#2` | +0.3685 | 80.00% | +0.1300 | 72.50% | +0.1847 | 74.00% | +0.1964 | +0.5463 | Y/N/N |
+| `HoF#3` | +0.3645 | 70.00% | +0.0490 | 80.00% | +0.1762 | 78.00% | +0.1812 | +0.4983 | N/Y/Y |
 
 ## Unseen Hard Seeds Breakdown (`20..29`, `n=10`)
 
 | Strategy | Investigator | Mean Score | Accuracy | Regret (Solver - Inv) |
 |---|---|---:|---:|---:|
-| `DefaultMole` | `SolverPolicy` | +0.5990 | 100.00% | +0.0000 |
-| `DefaultMole` | `GrokTactics` | +0.4340 | 100.00% | +0.1650 |
-| `DefaultMole` | `Heuristic` | -0.1150 | 70.00% | +0.7140 |
-| `DefaultMole` | `HintedHeuristic` | +0.3110 | 80.00% | +0.2880 |
-| `DefaultMole` | `ObviousHeuristic` | -1.0000 | 0.00% | +1.5990 |
-| `HoF#1` | `SolverPolicy` | +0.4520 | 90.00% | +0.0000 |
-| `HoF#1` | `GrokTactics` | +0.2210 | 90.00% | +0.2310 |
-| `HoF#1` | `Heuristic` | +0.3360 | 90.00% | +0.1160 |
-| `HoF#1` | `HintedHeuristic` | +0.1840 | 50.00% | +0.2680 |
-| `HoF#1` | `ObviousHeuristic` | -1.0000 | 0.00% | +1.4520 |
-| `HoF#2` | `SolverPolicy` | +0.4610 | 90.00% | +0.0000 |
-| `HoF#2` | `GrokTactics` | +0.0490 | 20.00% | +0.4120 |
-| `HoF#2` | `Heuristic` | +0.2900 | 90.00% | +0.1710 |
-| `HoF#2` | `HintedHeuristic` | +0.1770 | 40.00% | +0.2840 |
-| `HoF#2` | `ObviousHeuristic` | -1.0000 | 0.00% | +1.4610 |
-| `HoF#3` | `SolverPolicy` | +0.4520 | 90.00% | +0.0000 |
-| `HoF#3` | `GrokTactics` | +0.2210 | 90.00% | +0.2310 |
-| `HoF#3` | `Heuristic` | +0.3360 | 90.00% | +0.1160 |
-| `HoF#3` | `HintedHeuristic` | +0.1840 | 50.00% | +0.2680 |
-| `HoF#3` | `ObviousHeuristic` | -1.0000 | 0.00% | +1.4520 |
+| `DefaultMole` | `SolverPolicy` | +0.5680 | 100.00% | +0.0000 |
+| `DefaultMole` | `GrokTactics` | +0.4340 | 100.00% | +0.1340 |
+| `DefaultMole` | `Heuristic` | -0.1150 | 70.00% | +0.6830 |
+| `DefaultMole` | `HintedHeuristic` | +0.3110 | 80.00% | +0.2570 |
+| `DefaultMole` | `ObviousHeuristic` | -1.0000 | 0.00% | +1.5680 |
+| `HoF#1` | `SolverPolicy` | +0.3850 | 70.00% | +0.0000 |
+| `HoF#1` | `GrokTactics` | +0.2210 | 90.00% | +0.1640 |
+| `HoF#1` | `Heuristic` | +0.3360 | 90.00% | +0.0490 |
+| `HoF#1` | `HintedHeuristic` | +0.1840 | 50.00% | +0.2010 |
+| `HoF#1` | `ObviousHeuristic` | -1.0000 | 0.00% | +1.3850 |
+| `HoF#2` | `SolverPolicy` | +0.4200 | 80.00% | +0.0000 |
+| `HoF#2` | `GrokTactics` | +0.0490 | 20.00% | +0.3710 |
+| `HoF#2` | `Heuristic` | +0.2900 | 90.00% | +0.1300 |
+| `HoF#2` | `HintedHeuristic` | +0.1770 | 40.00% | +0.2430 |
+| `HoF#2` | `ObviousHeuristic` | -1.0000 | 0.00% | +1.4200 |
+| `HoF#3` | `SolverPolicy` | +0.3850 | 70.00% | +0.0000 |
+| `HoF#3` | `GrokTactics` | +0.2210 | 90.00% | +0.1640 |
+| `HoF#3` | `Heuristic` | +0.3360 | 90.00% | +0.0490 |
+| `HoF#3` | `HintedHeuristic` | +0.1840 | 50.00% | +0.2010 |
+| `HoF#3` | `ObviousHeuristic` | -1.0000 | 0.00% | +1.3850 |
 
-## Fresh Confirmation Seeds Breakdown (`5020..5039`, `n=20`)
-
-| Strategy | Investigator | Mean Score | Accuracy | Regret (Solver - Inv) |
-|---|---|---:|---:|---:|
-| `DefaultMole` | `SolverPolicy` | +0.5185 | 95.00% | +0.0000 |
-| `DefaultMole` | `GrokTactics` | +0.3090 | 80.00% | +0.2095 |
-| `DefaultMole` | `Heuristic` | -0.0585 | 70.00% | +0.5770 |
-| `DefaultMole` | `HintedHeuristic` | +0.3430 | 85.00% | +0.1755 |
-| `DefaultMole` | `ObviousHeuristic` | -1.0000 | 0.00% | +1.5185 |
-| `HoF#1` | `SolverPolicy` | +0.4230 | 85.00% | +0.0000 |
-| `HoF#1` | `GrokTactics` | +0.1175 | 55.00% | +0.3055 |
-| `HoF#1` | `Heuristic` | +0.0685 | 75.00% | +0.3545 |
-| `HoF#1` | `HintedHeuristic` | +0.1780 | 55.00% | +0.2450 |
-| `HoF#1` | `ObviousHeuristic` | -0.9055 | 5.00% | +1.3285 |
-| `HoF#2` | `SolverPolicy` | +0.4015 | 80.00% | +0.0000 |
-| `HoF#2` | `GrokTactics` | +0.0135 | 10.00% | +0.3880 |
-| `HoF#2` | `Heuristic` | -0.0185 | 70.00% | +0.4200 |
-| `HoF#2` | `HintedHeuristic` | +0.1840 | 55.00% | +0.2175 |
-| `HoF#2` | `ObviousHeuristic` | -0.9055 | 5.00% | +1.3070 |
-| `HoF#3` | `SolverPolicy` | +0.4230 | 85.00% | +0.0000 |
-| `HoF#3` | `GrokTactics` | +0.1060 | 45.00% | +0.3170 |
-| `HoF#3` | `Heuristic` | +0.0685 | 75.00% | +0.3545 |
-| `HoF#3` | `HintedHeuristic` | +0.1780 | 55.00% | +0.2450 |
-| `HoF#3` | `ObviousHeuristic` | -0.9055 | 5.00% | +1.3285 |
-
-## Combined Holdout Seeds Breakdown (`20,21,22,23,24,25,26,27,28,29,5020,5021,5022,5023,5024,5025,5026,5027,5028,5029,5030,5031,5032,5033,5034,5035,5036,5037,5038,5039`, `n=30`)
+## Fresh Confirmation Seeds Breakdown (`5020..5059`, `n=40`)
 
 | Strategy | Investigator | Mean Score | Accuracy | Regret (Solver - Inv) |
 |---|---|---:|---:|---:|
-| `DefaultMole` | `SolverPolicy` | +0.5453 | 96.67% | +0.0000 |
-| `DefaultMole` | `GrokTactics` | +0.3507 | 86.67% | +0.1947 |
-| `DefaultMole` | `Heuristic` | -0.0773 | 70.00% | +0.6227 |
-| `DefaultMole` | `HintedHeuristic` | +0.3323 | 83.33% | +0.2130 |
-| `DefaultMole` | `ObviousHeuristic` | -1.0000 | 0.00% | +1.5453 |
-| `HoF#1` | `SolverPolicy` | +0.4327 | 86.67% | +0.0000 |
-| `HoF#1` | `GrokTactics` | +0.1520 | 66.67% | +0.2807 |
-| `HoF#1` | `Heuristic` | +0.1577 | 80.00% | +0.2750 |
-| `HoF#1` | `HintedHeuristic` | +0.1800 | 53.33% | +0.2527 |
-| `HoF#1` | `ObviousHeuristic` | -0.9370 | 3.33% | +1.3697 |
-| `HoF#2` | `SolverPolicy` | +0.4213 | 83.33% | +0.0000 |
-| `HoF#2` | `GrokTactics` | +0.0253 | 13.33% | +0.3960 |
-| `HoF#2` | `Heuristic` | +0.0843 | 76.67% | +0.3370 |
-| `HoF#2` | `HintedHeuristic` | +0.1817 | 50.00% | +0.2397 |
-| `HoF#2` | `ObviousHeuristic` | -0.9370 | 3.33% | +1.3583 |
-| `HoF#3` | `SolverPolicy` | +0.4327 | 86.67% | +0.0000 |
-| `HoF#3` | `GrokTactics` | +0.1443 | 60.00% | +0.2883 |
-| `HoF#3` | `Heuristic` | +0.1577 | 80.00% | +0.2750 |
-| `HoF#3` | `HintedHeuristic` | +0.1800 | 53.33% | +0.2527 |
-| `HoF#3` | `ObviousHeuristic` | -0.9370 | 3.33% | +1.3697 |
+| `DefaultMole` | `SolverPolicy` | +0.5853 | 97.50% | +0.0000 |
+| `DefaultMole` | `GrokTactics` | +0.4353 | 85.00% | +0.1500 |
+| `DefaultMole` | `Heuristic` | +0.0158 | 75.00% | +0.5695 |
+| `DefaultMole` | `HintedHeuristic` | +0.3618 | 85.00% | +0.2235 |
+| `DefaultMole` | `ObviousHeuristic` | -0.9578 | 2.50% | +1.5430 |
+| `HoF#1` | `SolverPolicy` | +0.3493 | 80.00% | +0.0000 |
+| `HoF#1` | `GrokTactics` | +0.1305 | 57.50% | +0.2188 |
+| `HoF#1` | `Heuristic` | -0.0372 | 67.50% | +0.3865 |
+| `HoF#1` | `HintedHeuristic` | +0.1730 | 50.00% | +0.1762 |
+| `HoF#1` | `ObviousHeuristic` | -0.9055 | 5.00% | +1.2548 |
+| `HoF#2` | `SolverPolicy` | +0.3203 | 72.50% | +0.0000 |
+| `HoF#2` | `GrokTactics` | -0.0008 | 12.50% | +0.3210 |
+| `HoF#2` | `Heuristic` | -0.1387 | 60.00% | +0.4590 |
+| `HoF#2` | `HintedHeuristic` | +0.1355 | 47.50% | +0.1847 |
+| `HoF#2` | `ObviousHeuristic` | -0.9055 | 5.00% | +1.2258 |
+| `HoF#3` | `SolverPolicy` | +0.3493 | 80.00% | +0.0000 |
+| `HoF#3` | `GrokTactics` | +0.1247 | 52.50% | +0.2245 |
+| `HoF#3` | `Heuristic` | -0.0372 | 67.50% | +0.3865 |
+| `HoF#3` | `HintedHeuristic` | +0.1730 | 50.00% | +0.1762 |
+| `HoF#3` | `ObviousHeuristic` | -0.9055 | 5.00% | +1.2548 |
+
+## Combined Holdout Seeds Breakdown (`20,21,22,23,24,25,26,27,28,29,5020,5021,5022,5023,5024,5025,5026,5027,5028,5029,5030,5031,5032,5033,5034,5035,5036,5037,5038,5039,5040,5041,5042,5043,5044,5045,5046,5047,5048,5049,5050,5051,5052,5053,5054,5055,5056,5057,5058,5059`, `n=50`)
+
+| Strategy | Investigator | Mean Score | Accuracy | Regret (Solver - Inv) |
+|---|---|---:|---:|---:|
+| `DefaultMole` | `SolverPolicy` | +0.5818 | 98.00% | +0.0000 |
+| `DefaultMole` | `GrokTactics` | +0.4350 | 88.00% | +0.1468 |
+| `DefaultMole` | `Heuristic` | -0.0104 | 74.00% | +0.5922 |
+| `DefaultMole` | `HintedHeuristic` | +0.3516 | 84.00% | +0.2302 |
+| `DefaultMole` | `ObviousHeuristic` | -0.9662 | 2.00% | +1.5480 |
+| `HoF#1` | `SolverPolicy` | +0.3564 | 78.00% | +0.0000 |
+| `HoF#1` | `GrokTactics` | +0.1486 | 64.00% | +0.2078 |
+| `HoF#1` | `Heuristic` | +0.0374 | 72.00% | +0.3190 |
+| `HoF#1` | `HintedHeuristic` | +0.1752 | 50.00% | +0.1812 |
+| `HoF#1` | `ObviousHeuristic` | -0.9244 | 4.00% | +1.2808 |
+| `HoF#2` | `SolverPolicy` | +0.3402 | 74.00% | +0.0000 |
+| `HoF#2` | `GrokTactics` | +0.0092 | 14.00% | +0.3310 |
+| `HoF#2` | `Heuristic` | -0.0530 | 66.00% | +0.3932 |
+| `HoF#2` | `HintedHeuristic` | +0.1438 | 46.00% | +0.1964 |
+| `HoF#2` | `ObviousHeuristic` | -0.9244 | 4.00% | +1.2646 |
+| `HoF#3` | `SolverPolicy` | +0.3564 | 78.00% | +0.0000 |
+| `HoF#3` | `GrokTactics` | +0.1440 | 60.00% | +0.2124 |
+| `HoF#3` | `Heuristic` | +0.0374 | 72.00% | +0.3190 |
+| `HoF#3` | `HintedHeuristic` | +0.1752 | 50.00% | +0.1812 |
+| `HoF#3` | `ObviousHeuristic` | -0.9244 | 4.00% | +1.2808 |
 
 ## Evaluated Evolved Strategies (DSL)
 

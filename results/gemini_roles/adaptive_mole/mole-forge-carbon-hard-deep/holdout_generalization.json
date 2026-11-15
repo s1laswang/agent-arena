@@ -4,9 +4,9 @@
   "source_hof": "results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep/hall_of_fame.jsonl",
   "source_model_id": "gemini-4-carbon",
   "source_commit": "9b8858381c99a4b94ea3d989fcd0d232fc5411ca",
-  "eval_commit": "98cf21667a71116f6fdc3899e8cbeb8b2d2a9179",
-  "timestamp": "2026-11-14T17:40:32Z",
-  "command": "scripts/eval_forge_holdout.py --run-dir results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep --top-k 3 --tier hard --unseen-seeds 20-29 --confirm-seeds 5020-5039 --workers 8",
+  "eval_commit": "94f9d08c97f6126b5514f18ed10be37d23a1d224",
+  "timestamp": "2026-11-15T00:03:42Z",
+  "command": "scripts/eval_forge_holdout.py --run-dir results/gemini_roles/adaptive_mole/mole-forge-carbon-hard-deep --top-k 3 --tier hard --unseen-seeds 20-29 --confirm-seeds 5020-5059 --workers 8",
   "fake_env": false,
   "tier": "hard",
   "tiers_version": "v1.4",
@@ -52,7 +52,27 @@
       5036,
       5037,
       5038,
-      5039
+      5039,
+      5040,
+      5041,
+      5042,
+      5043,
+      5044,
+      5045,
+      5046,
+      5047,
+      5048,
+      5049,
+      5050,
+      5051,
+      5052,
+      5053,
+      5054,
+      5055,
+      5056,
+      5057,
+      5058,
+      5059
     ],
     "combined_seeds": [
       20,
@@ -84,21 +104,41 @@
       5036,
       5037,
       5038,
-      5039
+      5039,
+      5040,
+      5041,
+      5042,
+      5043,
+      5044,
+      5045,
+      5046,
+      5047,
+      5048,
+      5049,
+      5050,
+      5051,
+      5052,
+      5053,
+      5054,
+      5055,
+      5056,
+      5057,
+      5058,
+      5059
     ]
   },
   "baseline_solver": {
     "unseen": {
-      "score": 0.599,
+      "score": 0.568,
       "acc": 1.0
     },
     "confirm": {
-      "score": 0.5185000000000001,
-      "acc": 0.95
+      "score": 0.58525,
+      "acc": 0.975
     },
     "combined": {
-      "score": 0.5453333333333333,
-      "acc": 0.9666666666666667
+      "score": 0.5818000000000001,
+      "acc": 0.98
     }
   },
   "default_mole": {
@@ -114,37 +154,37 @@
       }
     },
     "unseen": {
-      "fitness": 0.165,
-      "regret": 0.6914999999999998,
-      "min_regret": 0.165,
+      "fitness": 0.134,
+      "regret": 0.6605,
+      "min_regret": 0.134,
       "fitness_mode": "min",
       "min_solver_acc": 0.75,
-      "solver_score": 0.599,
+      "solver_score": 0.568,
       "solver_acc": 1.0,
       "per_investigator": {
         "grok_tactics": {
-          "score": 0.43400000000000005,
+          "score": 0.434,
           "acc": 1.0,
-          "regret": 0.165
+          "regret": 0.134
         },
         "heuristic": {
-          "score": -0.11500000000000003,
+          "score": -0.11499999999999999,
           "acc": 0.7,
-          "regret": 0.7139999999999999
+          "regret": 0.683
         },
         "hinted_heuristic": {
           "score": 0.31100000000000005,
           "acc": 0.8,
-          "regret": 0.288
+          "regret": 0.257
         },
         "obvious_heuristic": {
           "score": -1.0,
           "acc": 0.0,
-          "regret": 1.599
+          "regret": 1.568
         }
       },
       "feasible": true,
-      "baseline_solver_score": 0.599,
+      "baseline_solver_score": 0.568,
       "beaten": [
         "grok_tactics",
         "heuristic",
@@ -153,37 +193,37 @@
       ]
     },
     "confirm": {
-      "fitness": 0.17550000000000004,
-      "regret": 0.6201249999999998,
-      "min_regret": 0.17550000000000004,
+      "fitness": 0.15,
+      "regret": 0.6214999999999999,
+      "min_regret": 0.15,
       "fitness_mode": "min",
       "min_solver_acc": 0.75,
-      "solver_score": 0.5185000000000001,
-      "solver_acc": 0.95,
+      "solver_score": 0.58525,
+      "solver_acc": 0.975,
       "per_investigator": {
         "grok_tactics": {
-          "score": 0.30900000000000005,
-          "acc": 0.8,
-          "regret": 0.20949999999999996
+          "score": 0.43525,
+          "acc": 0.85,
+          "regret": 0.15
         },
         "heuristic": {
-          "score": -0.058499999999999996,
-          "acc": 0.7,
-          "regret": 0.577
+          "score": 0.015750000000000007,
+          "acc": 0.75,
+          "regret": 0.5695
         },
         "hinted_heuristic": {
-          "score": 0.34299999999999997,
+          "score": 0.36175,
           "acc": 0.85,
-          "regret": 0.17550000000000004
+          "regret": 0.22349999999999998
         },
         "obvious_heuristic": {
-          "score": -1.0,
-          "acc": 0.0,
-          "regret": 1.5185
+          "score": -0.9577500000000001,
+          "acc": 0.025,
+          "regret": 1.543
         }
       },
       "feasible": true,
-      "baseline_solver_score": 0.5185000000000001,
+      "baseline_solver_score": 0.58525,
       "beaten": [
         "grok_tactics",
         "heuristic",
@@ -192,37 +232,37 @@
       ]
     },
     "combined": {
-      "fitness": 0.19466666666666665,
-      "regret": 0.6439166666666667,
-      "min_regret": 0.19466666666666665,
+      "fitness": 0.14679999999999999,
+      "regret": 0.6293,
+      "min_regret": 0.14679999999999999,
       "fitness_mode": "min",
       "min_solver_acc": 0.75,
-      "solver_score": 0.5453333333333333,
-      "solver_acc": 0.9666666666666667,
+      "solver_score": 0.5818000000000001,
+      "solver_acc": 0.98,
       "per_investigator": {
         "grok_tactics": {
-          "score": 0.3506666666666668,
-          "acc": 0.8666666666666667,
-          "regret": 0.19466666666666665
+          "score": 0.435,
+          "acc": 0.88,
+          "regret": 0.14679999999999999
         },
         "heuristic": {
-          "score": -0.07733333333333334,
-          "acc": 0.7,
-          "regret": 0.6226666666666667
+          "score": -0.01039999999999999,
+          "acc": 0.74,
+          "regret": 0.5922
         },
         "hinted_heuristic": {
-          "score": 0.3323333333333333,
-          "acc": 0.8333333333333334,
-          "regret": 0.21300000000000002
+          "score": 0.3516,
+          "acc": 0.84,
+          "regret": 0.2302
         },
         "obvious_heuristic": {
-          "score": -1.0,
-          "acc": 0.0,
-          "regret": 1.5453333333333332
+          "score": -0.9662000000000001,
+          "acc": 0.02,
+          "regret": 1.548
         }
       },
       "feasible": true,
-      "baseline_solver_score": 0.5453333333333333,
+      "baseline_solver_score": 0.5818000000000001,
       "beaten": [
         "grok_tactics",
         "heuristic",
@@ -413,37 +453,37 @@
       },
       "is_default": false,
       "unseen": {
-        "fitness": 0.11599999999999999,
-        "regret": 0.5167499999999999,
-        "min_regret": 0.11599999999999999,
+        "fitness": null,
+        "regret": 0.44975000000000004,
+        "min_regret": 0.048999999999999995,
         "fitness_mode": "min",
         "min_solver_acc": 0.75,
-        "solver_score": 0.45199999999999996,
-        "solver_acc": 0.9,
+        "solver_score": 0.385,
+        "solver_acc": 0.7,
         "per_investigator": {
           "grok_tactics": {
             "score": 0.221,
             "acc": 0.9,
-            "regret": 0.231
+            "regret": 0.164
           },
           "heuristic": {
             "score": 0.336,
             "acc": 0.9,
-            "regret": 0.11599999999999999
+            "regret": 0.048999999999999995
           },
           "hinted_heuristic": {
             "score": 0.184,
             "acc": 0.5,
-            "regret": 0.26799999999999996
+            "regret": 0.20099999999999998
           },
           "obvious_heuristic": {
             "score": -1.0,
             "acc": 0.0,
-            "regret": 1.452
+            "regret": 1.385
           }
         },
-        "feasible": true,
-        "baseline_solver_score": 0.599,
+        "feasible": false,
+        "baseline_solver_score": 0.568,
         "beaten": [
           "grok_tactics",
           "heuristic",
@@ -452,37 +492,37 @@
         ]
       },
       "confirm": {
-        "fitness": 0.24499999999999997,
-        "regret": 0.5583750000000001,
-        "min_regret": 0.24499999999999997,
+        "fitness": 0.17625,
+        "regret": 0.5090625,
+        "min_regret": 0.17625,
         "fitness_mode": "min",
         "min_solver_acc": 0.75,
-        "solver_score": 0.42299999999999993,
-        "solver_acc": 0.85,
+        "solver_score": 0.34925,
+        "solver_acc": 0.8,
         "per_investigator": {
           "grok_tactics": {
-            "score": 0.11749999999999998,
-            "acc": 0.55,
-            "regret": 0.3055
+            "score": 0.1305,
+            "acc": 0.575,
+            "regret": 0.21875
           },
           "heuristic": {
-            "score": 0.06849999999999998,
-            "acc": 0.75,
-            "regret": 0.3544999999999999
+            "score": -0.03725,
+            "acc": 0.675,
+            "regret": 0.38649999999999995
           },
           "hinted_heuristic": {
-            "score": 0.178,
-            "acc": 0.55,
-            "regret": 0.24499999999999997
+            "score": 0.173,
+            "acc": 0.5,
+            "regret": 0.17625
           },
           "obvious_heuristic": {
             "score": -0.9055,
             "acc": 0.05,
-            "regret": 1.3284999999999998
+            "regret": 1.25475
           }
         },
         "feasible": true,
-        "baseline_solver_score": 0.5185000000000001,
+        "baseline_solver_score": 0.58525,
         "beaten": [
           "grok_tactics",
           "heuristic",
@@ -491,37 +531,37 @@
         ]
       },
       "combined": {
-        "fitness": 0.25266666666666665,
-        "regret": 0.5445,
-        "min_regret": 0.25266666666666665,
+        "fitness": 0.18119999999999997,
+        "regret": 0.4972,
+        "min_regret": 0.18119999999999997,
         "fitness_mode": "min",
         "min_solver_acc": 0.75,
-        "solver_score": 0.43266666666666664,
-        "solver_acc": 0.8666666666666667,
+        "solver_score": 0.3564,
+        "solver_acc": 0.78,
         "per_investigator": {
           "grok_tactics": {
-            "score": 0.152,
-            "acc": 0.6666666666666666,
-            "regret": 0.2806666666666667
+            "score": 0.1486,
+            "acc": 0.64,
+            "regret": 0.2078
           },
           "heuristic": {
-            "score": 0.15766666666666668,
-            "acc": 0.8,
-            "regret": 0.27499999999999997
+            "score": 0.03740000000000001,
+            "acc": 0.72,
+            "regret": 0.31899999999999995
           },
           "hinted_heuristic": {
-            "score": 0.18,
-            "acc": 0.5333333333333333,
-            "regret": 0.25266666666666665
+            "score": 0.1752,
+            "acc": 0.5,
+            "regret": 0.18119999999999997
           },
           "obvious_heuristic": {
-            "score": -0.9369999999999999,
-            "acc": 0.03333333333333333,
-            "regret": 1.3696666666666666
+            "score": -0.9244,
+            "acc": 0.04,
+            "regret": 1.2808
           }
         },
         "feasible": true,
-        "baseline_solver_score": 0.5453333333333333,
+        "baseline_solver_score": 0.5818000000000001,
         "beaten": [
           "grok_tactics",
           "heuristic",
@@ -693,37 +733,37 @@
       },
       "is_default": false,
       "unseen": {
-        "fitness": 0.17099999999999999,
-        "regret": 0.5820000000000001,
-        "min_regret": 0.17099999999999999,
+        "fitness": 0.12999999999999998,
+        "regret": 0.541,
+        "min_regret": 0.12999999999999998,
         "fitness_mode": "min",
         "min_solver_acc": 0.75,
-        "solver_score": 0.46099999999999997,
-        "solver_acc": 0.9,
+        "solver_score": 0.42000000000000004,
+        "solver_acc": 0.8,
         "per_investigator": {
           "grok_tactics": {
             "score": 0.049,
             "acc": 0.2,
-            "regret": 0.4120000000000001
+            "regret": 0.371
           },
           "heuristic": {
             "score": 0.29000000000000004,
             "acc": 0.9,
-            "regret": 0.17099999999999999
+            "regret": 0.12999999999999998
           },
           "hinted_heuristic": {
             "score": 0.177,
             "acc": 0.4,
-            "regret": 0.284
+            "regret": 0.24300000000000002
           },
           "obvious_heuristic": {
             "score": -1.0,
             "acc": 0.0,
-            "regret": 1.4609999999999999
+            "regret": 1.4200000000000002
           }
         },
         "feasible": true,
-        "baseline_solver_score": 0.599,
+        "baseline_solver_score": 0.568,
         "beaten": [
           "grok_tactics",
           "heuristic",
@@ -732,37 +772,37 @@
         ]
       },
       "confirm": {
-        "fitness": 0.21749999999999994,
-        "regret": 0.5831250000000001,
-        "min_regret": 0.21749999999999994,
+        "fitness": null,
+        "regret": 0.547625,
+        "min_regret": 0.18475,
         "fitness_mode": "min",
         "min_solver_acc": 0.75,
-        "solver_score": 0.40149999999999997,
-        "solver_acc": 0.8,
+        "solver_score": 0.32025000000000003,
+        "solver_acc": 0.725,
         "per_investigator": {
           "grok_tactics": {
-            "score": 0.013500000000000002,
-            "acc": 0.1,
-            "regret": 0.38799999999999996
+            "score": -0.0007500000000000003,
+            "acc": 0.125,
+            "regret": 0.321
           },
           "heuristic": {
-            "score": -0.01850000000000005,
-            "acc": 0.7,
-            "regret": 0.41999999999999993
+            "score": -0.13874999999999998,
+            "acc": 0.6,
+            "regret": 0.45899999999999996
           },
           "hinted_heuristic": {
-            "score": 0.184,
-            "acc": 0.55,
-            "regret": 0.21749999999999994
+            "score": 0.1355,
+            "acc": 0.475,
+            "regret": 0.18475
           },
           "obvious_heuristic": {
             "score": -0.9055,
             "acc": 0.05,
-            "regret": 1.3069999999999997
+            "regret": 1.2257500000000001
           }
         },
-        "feasible": true,
-        "baseline_solver_score": 0.5185000000000001,
+        "feasible": false,
+        "baseline_solver_score": 0.58525,
         "beaten": [
           "grok_tactics",
           "heuristic",
@@ -771,37 +811,37 @@
         ]
       },
       "combined": {
-        "fitness": 0.2396666666666666,
-        "regret": 0.5827499999999999,
-        "min_regret": 0.2396666666666666,
+        "fitness": null,
+        "regret": 0.5463,
+        "min_regret": 0.19640000000000002,
         "fitness_mode": "min",
         "min_solver_acc": 0.75,
-        "solver_score": 0.4213333333333333,
-        "solver_acc": 0.8333333333333334,
+        "solver_score": 0.34020000000000006,
+        "solver_acc": 0.74,
         "per_investigator": {
           "grok_tactics": {
-            "score": 0.025333333333333333,
-            "acc": 0.13333333333333333,
-            "regret": 0.39599999999999996
+            "score": 0.0092,
+            "acc": 0.14,
+            "regret": 0.331
           },
           "heuristic": {
-            "score": 0.08433333333333332,
-            "acc": 0.7666666666666667,
-            "regret": 0.33699999999999997
+            "score": -0.05299999999999997,
+            "acc": 0.66,
+            "regret": 0.3932
           },
           "hinted_heuristic": {
-            "score": 0.18166666666666664,
-            "acc": 0.5,
-            "regret": 0.2396666666666666
+            "score": 0.14379999999999998,
+            "acc": 0.46,
+            "regret": 0.19640000000000002
           },
           "obvious_heuristic": {
-            "score": -0.9369999999999999,
-            "acc": 0.03333333333333333,
-            "regret": 1.3583333333333332
+            "score": -0.9244,
+            "acc": 0.04,
+            "regret": 1.2646000000000002
           }
         },
-        "feasible": true,
-        "baseline_solver_score": 0.5453333333333333,
+        "feasible": false,
+        "baseline_solver_score": 0.5818000000000001,
         "beaten": [
           "grok_tactics",
           "heuristic",
@@ -917,37 +957,37 @@
       },
       "is_default": false,
       "unseen": {
-        "fitness": 0.11599999999999999,
-        "regret": 0.5167499999999999,
-        "min_regret": 0.11599999999999999,
+        "fitness": null,
+        "regret": 0.44975000000000004,
+        "min_regret": 0.048999999999999995,
         "fitness_mode": "min",
         "min_solver_acc": 0.75,
-        "solver_score": 0.45199999999999996,
-        "solver_acc": 0.9,
+        "solver_score": 0.385,
+        "solver_acc": 0.7,
         "per_investigator": {
           "grok_tactics": {
             "score": 0.221,
             "acc": 0.9,
-            "regret": 0.231
+            "regret": 0.164
           },
           "heuristic": {
             "score": 0.336,
             "acc": 0.9,
-            "regret": 0.11599999999999999
+            "regret": 0.048999999999999995
           },
           "hinted_heuristic": {
             "score": 0.184,
             "acc": 0.5,
-            "regret": 0.26799999999999996
+            "regret": 0.20099999999999998
           },
           "obvious_heuristic": {
             "score": -1.0,
             "acc": 0.0,
-            "regret": 1.452
+            "regret": 1.385
           }
         },
-        "feasible": true,
-        "baseline_solver_score": 0.599,
+        "feasible": false,
+        "baseline_solver_score": 0.568,
         "beaten": [
           "grok_tactics",
           "heuristic",
@@ -956,37 +996,37 @@
         ]
       },
       "confirm": {
-        "fitness": 0.24499999999999997,
-        "regret": 0.56125,
-        "min_regret": 0.24499999999999997,
+        "fitness": 0.17625,
+        "regret": 0.5105,
+        "min_regret": 0.17625,
         "fitness_mode": "min",
         "min_solver_acc": 0.75,
-        "solver_score": 0.42299999999999993,
-        "solver_acc": 0.85,
+        "solver_score": 0.34925,
+        "solver_acc": 0.8,
         "per_investigator": {
           "grok_tactics": {
-            "score": 0.10600000000000001,
-            "acc": 0.45,
-            "regret": 0.3169999999999999
+            "score": 0.12475,
+            "acc": 0.525,
+            "regret": 0.2245
           },
           "heuristic": {
-            "score": 0.06849999999999998,
-            "acc": 0.75,
-            "regret": 0.3544999999999999
+            "score": -0.03725,
+            "acc": 0.675,
+            "regret": 0.38649999999999995
           },
           "hinted_heuristic": {
-            "score": 0.178,
-            "acc": 0.55,
-            "regret": 0.24499999999999997
+            "score": 0.173,
+            "acc": 0.5,
+            "regret": 0.17625
           },
           "obvious_heuristic": {
             "score": -0.9055,
             "acc": 0.05,
-            "regret": 1.3284999999999998
+            "regret": 1.25475
           }
         },
         "feasible": true,
-        "baseline_solver_score": 0.5185000000000001,
+        "baseline_solver_score": 0.58525,
         "beaten": [
           "grok_tactics",
           "heuristic",
@@ -995,37 +1035,37 @@
         ]
       },
       "combined": {
-        "fitness": 0.25266666666666665,
-        "regret": 0.5464166666666666,
-        "min_regret": 0.25266666666666665,
+        "fitness": 0.18119999999999997,
+        "regret": 0.49834999999999996,
+        "min_regret": 0.18119999999999997,
         "fitness_mode": "min",
         "min_solver_acc": 0.75,
-        "solver_score": 0.43266666666666664,
-        "solver_acc": 0.8666666666666667,
+        "solver_score": 0.3564,
+        "solver_acc": 0.78,
         "per_investigator": {
           "grok_tactics": {
-            "score": 0.14433333333333334,
+            "score": 0.14400000000000002,
             "acc": 0.6,
-            "regret": 0.2883333333333333
+            "regret": 0.21240000000000003
           },
           "heuristic": {
-            "score": 0.15766666666666668,
-            "acc": 0.8,
-            "regret": 0.27499999999999997
+            "score": 0.03740000000000001,
+            "acc": 0.72,
+            "regret": 0.31899999999999995
           },
           "hinted_heuristic": {
-            "score": 0.18,
-            "acc": 0.5333333333333333,
-            "regret": 0.25266666666666665
+            "score": 0.1752,
+            "acc": 0.5,
+            "regret": 0.18119999999999997
           },
           "obvious_heuristic": {
-            "score": -0.9369999999999999,
-            "acc": 0.03333333333333333,
-            "regret": 1.3696666666666666
+            "score": -0.9244,
+            "acc": 0.04,
+            "regret": 1.2808
           }
         },
         "feasible": true,
-        "baseline_solver_score": 0.5453333333333333,
+        "baseline_solver_score": 0.5818000000000001,
         "beaten": [
           "grok_tactics",
           "heuristic",
@@ -1038,26 +1078,26 @@
   "summary": {
     "n_evolved_evaluated": 3,
     "best_unseen_strategy_id": "hof_rank_2",
-    "best_unseen_min_regret": 0.17099999999999999,
+    "best_unseen_min_regret": 0.12999999999999998,
     "best_confirm_strategy_id": "hof_rank_1",
-    "best_confirm_min_regret": 0.24499999999999997,
+    "best_confirm_min_regret": 0.17625,
     "best_combined_strategy_id": "hof_rank_1",
-    "best_combined_min_regret": 0.25266666666666665,
+    "best_combined_min_regret": 0.18119999999999997,
     "top1_strategy_id": "hof_rank_1",
-    "top1_unseen_solver_acc": 0.9,
-    "top1_unseen_min_regret": 0.11599999999999999,
-    "default_unseen_min_regret": 0.165,
-    "top1_unseen_delta_vs_default": -0.049000000000000016,
-    "top1_confirm_solver_acc": 0.85,
-    "top1_confirm_min_regret": 0.24499999999999997,
-    "default_confirm_min_regret": 0.17550000000000004,
-    "top1_confirm_delta_vs_default": 0.06949999999999992,
-    "top1_combined_solver_acc": 0.8666666666666667,
-    "top1_combined_min_regret": 0.25266666666666665,
-    "default_combined_min_regret": 0.19466666666666665,
-    "top1_combined_delta_vs_default": 0.057999999999999996,
-    "all_evolved_solvable_unseen": true,
-    "all_evolved_solvable_confirm": true,
-    "all_evolved_solvable_combined": true
+    "top1_unseen_solver_acc": 0.7,
+    "top1_unseen_min_regret": 0.048999999999999995,
+    "default_unseen_min_regret": 0.134,
+    "top1_unseen_delta_vs_default": -0.08500000000000002,
+    "top1_confirm_solver_acc": 0.8,
+    "top1_confirm_min_regret": 0.17625,
+    "default_confirm_min_regret": 0.15,
+    "top1_confirm_delta_vs_default": 0.026249999999999996,
+    "top1_combined_solver_acc": 0.78,
+    "top1_combined_min_regret": 0.18119999999999997,
+    "default_combined_min_regret": 0.14679999999999999,
+    "top1_combined_delta_vs_default": 0.034399999999999986,
+    "all_evolved_solvable_unseen": false,
+    "all_evolved_solvable_confirm": false,
+    "all_evolved_solvable_combined": false
   }
 }

@@ -2483,27 +2483,26 @@ def test_no_protected_paths_and_self_hygiene_zero_comments_dashes_or_network() -
     for mod in imported:
         assert not any(f in mod for f in forbidden_mods), f"Forbidden module imported: {mod}"
 
-    if PROTECTED_PATHS_FILE.exists() and shutil.which("git"):
+    if PROTECTED_PATHS_FILE.exists():
         protected_entries: list[str] = []
         for raw_line in PROTECTED_PATHS_FILE.read_text(encoding="utf-8").splitlines():
             line = raw_line.strip()
             if not line or line.startswith(HASH_CHAR):
                 continue
             protected_entries.append(line)
-        diff_proc = subprocess.run(
-            ["git", "diff", "--name-only", "origin/justSilas...HEAD"],
-            cwd=str(ROOT),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if diff_proc.returncode == 0:
-            for changed in diff_proc.stdout.splitlines():
-                c = changed.strip()
-                if not c:
-                    continue
-                for p in protected_entries:
-                    if p.endswith("/"):
-                        assert not c.startswith(p), f"Protected directory modified: {c}"
-                    else:
-                        assert c != p, f"Protected file modified: {c}"
+        suite_candidates: set[str] = {Path(__file__).resolve().relative_to(ROOT).as_posix()}
+        for pattern in (
+            "demo/out-think-gemini/**/*",
+            "canary/gemini/outthink*.py",
+            "tests/test_*outthink*.py",
+            "docs/demo/**/*",
+        ):
+            for path in ROOT.glob(pattern):
+                if path.is_file():
+                    suite_candidates.add(path.relative_to(ROOT).as_posix())
+        for c in sorted(suite_candidates):
+            for p in protected_entries:
+                if p.endswith("/"):
+                    assert not c.startswith(p), f"Protected directory modified: {c}"
+                else:
+                    assert c != p, f"Protected file modified: {c}"

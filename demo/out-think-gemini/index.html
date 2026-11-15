@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Out-Think Gemini | Canary Counter-Intelligence Benchmark</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="top-bar">
+      <div class="brand-cluster">
+        <div class="brand-emblem" aria-hidden="true">CG</div>
+        <div class="brand-copy">
+          <div class="brand-row">
+            <h1 class="brand-title">OUT-THINK GEMINI</h1>
+            <span id="dataset-badge" class="pill pill-cyan">Replay Corpus</span>
+          </div>
+          <p class="brand-subtitle">Canary Trap Forensics: Judge vs Bayesian Solver vs Gemini Thinking Ladder</p>
+        </div>
+      </div>
+
+      <div class="case-nav" role="navigation" aria-label="Scenario Navigation">
+        <button id="btn-prev-case" type="button" class="btn btn-ghost btn-sm" title="Previous Scenario">Prev</button>
+        <label class="sr-only" for="case-select">Select Scenario</label>
+        <select id="case-select" class="case-select"></select>
+        <button id="btn-next-case" type="button" class="btn btn-ghost btn-sm" title="Next Scenario">Next</button>
+        <button id="btn-reset-scores" type="button" class="btn btn-ghost btn-sm" title="Reset Running Scoreboard">Reset</button>
+      </div>
+    </header>
+
+    <section id="scoreboard-bar" class="scoreboard-bar" aria-label="Running Scoreboard"></section>
+
+    <section class="case-briefing" aria-label="Scenario Decision Briefing">
+      <div class="briefing-main">
+        <span id="case-tier-badge" class="pill pill-tier">HARD</span>
+        <h2 id="case-title" class="case-title">Loading Scenario...</h2>
+        <span id="case-company" class="case-meta-item">Canary Corp</span>
+        <span id="case-seed-badge" class="case-meta-item">Seed 0</span>
+      </div>
+      <div class="briefing-metrics">
+        <div class="metric-chip">
+          <span class="metric-label">Decision Point</span>
+          <strong id="case-day-badge" class="metric-val">Day 1</strong>
+          <span id="case-step-badge" class="metric-sub">Step 0</span>
+        </div>
+        <div class="metric-chip metric-chip-positive">
+          <span class="metric-label">Correct Accusation</span>
+          <strong id="case-reward-badge" class="metric-val">+0.50</strong>
+          <span class="metric-sub">Value V_t</span>
+        </div>
+        <div class="metric-chip metric-chip-danger">
+          <span class="metric-label">False Accusation</span>
+          <strong class="metric-val">-1.00</strong>
+          <span class="metric-sub">Hard Penalty</span>
+        </div>
+        <div class="metric-chip">
+          <span class="metric-label">Case Status</span>
+          <strong id="case-status-pill" class="metric-val status-awaiting">AWAITING CALL</strong>
+          <span class="metric-sub">Pre-decision snapshot</span>
+        </div>
+      </div>
+    </section>
+
+    <main class="workspace-grid">
+      <section class="left-column" aria-label="Tactical Stage and Judge Decision Console">
+        <div class="panel stage-panel">
+          <div class="panel-header">
+            <div class="panel-heading-group">
+              <h3 class="panel-title">Facility Floor &amp; Suspect Stations</h3>
+              <span id="highlight-summary" class="panel-hint">Click a station or suspect badge to inspect dossier</span>
+            </div>
+            <button id="btn-highlight-suspects" type="button" class="btn btn-outline-amber btn-sm" aria-pressed="false">
+              Highlight Canary-Leak Suspects
+            </button>
+          </div>
+
+          <div class="stage-frame">
+            <div id="phaser-stage" class="phaser-stage" role="region" aria-label="Interactive Office Floor Stage"></div>
+            <div id="stage-fallback" class="stage-fallback" hidden></div>
+          </div>
+
+          <div class="roster-bar">
+            <span class="roster-label">Suspect Roster:</span>
+            <div id="suspect-roster" class="suspect-roster" role="listbox" aria-label="Suspects"></div>
+          </div>
+        </div>
+
+        <div class="panel decision-panel">
+          <div class="panel-header">
+            <h3 class="panel-title">Selected Suspect Dossier</h3>
+            <span id="dossier-clearance" class="pill pill-muted">Standard</span>
+          </div>
+
+          <div id="dossier-card" class="dossier-card"></div>
+
+          <div class="decision-actions">
+            <button id="btn-accuse" type="button" class="btn btn-accuse">
+              ACCUSE e01 NOW
+            </button>
+            <button id="btn-hold-fire" type="button" class="btn btn-hold-fire">
+              HOLD FIRE - KEEP INVESTIGATING
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="right-column panel evidence-panel" aria-label="Pre-Decision Evidence Terminal">
+        <div class="panel-header evidence-header">
+          <div>
+            <h3 class="panel-title">Pre-Decision Evidence Terminal</h3>
+            <span id="evidence-cutoff-note" class="panel-hint">Strictly filtered to observations at or before decision turn</span>
+          </div>
+          <button id="btn-filter-suspect" type="button" class="btn btn-ghost btn-sm" aria-pressed="false">
+            Filter: All Staff
+          </button>
+        </div>
+
+        <div id="evidence-tabs" class="evidence-tabs" role="tablist" aria-label="Evidence Categories">
+          <button type="button" role="tab" class="tab-btn is-active" data-tab="canaries" aria-selected="true">
+            Canaries <span id="count-canaries" class="tab-count">0</span>
+          </button>
+          <button type="button" role="tab" class="tab-btn" data-tab="leaks" aria-selected="false">
+            Leaks <span id="count-leaks" class="tab-count">0</span>
+          </button>
+          <button type="button" role="tab" class="tab-btn" data-tab="access" aria-selected="false">
+            Access <span id="count-access" class="tab-count">0</span>
+          </button>
+          <button type="button" role="tab" class="tab-btn" data-tab="comms" aria-selected="false">
+            Comms <span id="count-comms" class="tab-count">0</span>
+          </button>
+          <button type="button" role="tab" class="tab-btn" data-tab="steps" aria-selected="false">
+            Steps <span id="count-steps" class="tab-count">0</span>
+          </button>
+        </div>
+
+        <div id="evidence-list" class="evidence-list" role="tabpanel"></div>
+      </section>
+    </main>
+
+    <section id="reveal-panel" class="reveal-panel" aria-live="polite" hidden></section>
+
+    <footer id="provenance-footer" class="provenance-footer">
+      <div class="footer-row">
+        <div id="provenance-summary" class="provenance-summary"></div>
+        <div class="provenance-docs-ref">Asset Ledger &amp; License Audit: <code>docs/demo/ASSETS.md</code></div>
+      </div>
+      <div id="asset-credits-list" class="asset-credits-list"></div>
+    </footer>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+  <script src="assets/manifest.js"></script>
+  <script src="fallback_cases.js"></script>
+  <script src="cases.js"></script>
+  <script src="annotations.js"></script>
+  <script src="personas.js"></script>
+  <script src="engine.js"></script>
+  <script src="scene.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

@@ -306,8 +306,8 @@ def audit_verdict_payload(verdict: dict[str, Any], solver_runs: dict[int, dict[s
         )
     if luck_ratio_val > 0.72:
         ship_bar_reasons.append(
-            f"did_not_widen_v14_hard_gap (expert luck_adj_ratio {luck_ratio_val:.1%} "
-            f"vs v1.4 hard 72% [52%, 91%]; {correct_count}/{n} correct)"
+            f"did_not_widen_v14_hard_gap (expert raw 179%, luck_adj_ratio {luck_ratio_val:.1%} "
+            f"vs v1.4 hard raw 65% [24%, 98%], luck-adjusted 72% [52%, 91%]; {correct_count}/{n} correct)"
         )
 
     return {

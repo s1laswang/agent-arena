@@ -27,6 +27,7 @@ ANGRY_SNIPPETS: tuple[str, ...] = (
 COHORT_SPECS: tuple[tuple[str, str, str, str], ...] = (
     ("v1.4_gemini_opencode", "v1.4", "opencode:google/gemini-4-carbon", "Gemini-4-carbon (OpenCode MCP)"),
     ("v1.4_gemini_inproc", "v1.4", "gemini:gemini-4-carbon", "Gemini-4-carbon (In-Proc)"),
+    ("v1.4_opencode_gpt55", "v1.4", "opencode:openai/gpt-5.5", "OpenCode GPT-5.5 (MCP, v1.4)"),
     ("v1.4_solver", "v1.4", "solver", "Reference Solver (v1.4, seeds 0-29)"),
     ("v1.3_codex_gpt55", "v1.3", "codex:gpt-5.5", "Codex GPT-5.5 (MCP)"),
     ("v1.3_inproc_gpt55", "v1.3", "openai:gpt-5.5", "GPT-5.5 (In-Proc)"),
@@ -230,8 +231,13 @@ def analyze_single_episode(
 
     below_be_expected = bool(accused and p_accused is not None and p_accused < breakeven_expected)
     below_be_visible = bool(accused and p_accused is not None and p_accused < breakeven_visible)
-    horizon_gamble = bool(below_be_expected and ep.final_day >= params.n_days)
-    premature_midgame_gamble = bool(below_be_expected and ep.final_day < params.n_days)
+    effective_final_day = (
+        int(ep.final_day)
+        if int(ep.final_day) > 0
+        else max((int(st.day) for st in ep.steps), default=1)
+    )
+    horizon_gamble = bool(below_be_expected and effective_final_day >= params.n_days)
+    premature_midgame_gamble = bool(below_be_expected and effective_final_day < params.n_days)
 
     failure_mechanisms: list[str] = []
     if not ep.correct and accused:
@@ -249,7 +255,9 @@ def analyze_single_episode(
         if not failure_mechanisms and accused_canary_hits <= 1:
             failure_mechanisms.append("single_canary_hit_tie")
     elif not accused:
-        failure_mechanisms.append("horizon_abstention")
+        failure_mechanisms.append(
+            "horizon_abstention" if effective_final_day >= params.n_days else "uncalled_accuse_exit"
+        )
         if len(surfaced_canaries) == 0:
             failure_mechanisms.append("zero_surfaced_canaries")
     else:
@@ -261,7 +269,7 @@ def analyze_single_episode(
             failure_mechanisms.append("late_accusation_v_drain")
 
     canary_days = [c["day"] for c in planted_canaries]
-    active_days = max(1, int(ep.final_day))
+    active_days = max(1, effective_final_day)
     day_counts = Counter(canary_days)
     two_canary_days = sum(1 for d in range(1, active_days + 1) if day_counts.get(d, 0) >= 2)
 
@@ -272,8 +280,8 @@ def analyze_single_episode(
         "score": float(ep.score),
         "accused": accused,
         "correct": bool(ep.correct),
-        "final_day": int(ep.final_day),
-        "accuse_step_day": int(ep.steps[accuse_idx].day) if accuse_idx is not None else int(ep.final_day),
+        "final_day": effective_final_day,
+        "accuse_step_day": int(ep.steps[accuse_idx].day) if accuse_idx is not None else effective_final_day,
         "n_days": int(params.n_days),
         "end_reason": ep.end_reason,
         "fingerprint_accuracy": float(params.fingerprint_accuracy),
@@ -501,6 +509,13 @@ def aggregate_records(
 def _verify_accuse_md(recs: list[dict[str, Any]], accuse_files: dict[str, Path], agent_name: str) -> bool:
     if not recs or not accuse_files:
         return False
+    agent_txts: list[str] = []
+    for path in accuse_files.values():
+        txt = path.read_text(encoding="utf-8").strip()
+        if f"| {agent_name} |" in txt:
+            agent_txts.append(txt)
+    if not agent_txts:
+        return True
     rows: list[dict[str, Any]] = []
     for r in recs:
         has_acc = r["accused"] is not None
@@ -525,8 +540,7 @@ def _verify_accuse_md(recs: list[dict[str, Any]], accuse_files: dict[str, Path],
             "verdict": verdict,
         })
     expected_md = to_md(rows).strip()
-    for path in accuse_files.values():
-        txt = path.read_text(encoding="utf-8").strip()
+    for txt in agent_txts:
         if txt == expected_md:
             return True
         filtered_lines = [
@@ -543,6 +557,7 @@ def _build_strategy_levers(cohorts: dict[str, Any], cross: dict[str, Any]) -> li
     oc_med = cohorts.get("v1.4_gemini_opencode", {}).get("tiers", {}).get("medium", {})
     ip_hard = cohorts.get("v1.4_gemini_inproc", {}).get("tiers", {}).get("hard", {})
     ip_med = cohorts.get("v1.4_gemini_inproc", {}).get("tiers", {}).get("medium", {})
+    oc55_hard = cohorts.get("v1.4_opencode_gpt55", {}).get("tiers", {}).get("hard", {})
     sol14_hard = cohorts.get("v1.4_solver", {}).get("tiers", {}).get("hard", {})
     cx_hard = cohorts.get("v1.3_codex_gpt55", {}).get("tiers", {}).get("hard", {})
     cx_med = cohorts.get("v1.3_codex_gpt55", {}).get("tiers", {}).get("medium", {})
@@ -567,7 +582,7 @@ def _build_strategy_levers(cohorts: dict[str, Any], cross: dict[str, Any]) -> li
     ] or [0.0]
     gpt_le3 = [
         _cm(t, "canary_metrics", "recipient_bins", "le_3_share")
-        for t in (cx_hard, cx_med, g5_hard, g5_med) if t
+        for t in (oc55_hard, cx_hard, cx_med, g5_hard, g5_med) if t
     ] or [0.0]
 
     levers = [
@@ -580,6 +595,7 @@ def _build_strategy_levers(cohorts: dict[str, Any], cross: dict[str, Any]) -> li
                 f"({_fmt_pct(min(gpt_le3))}-{_fmt_pct(max(gpt_le3))} of planted canaries) to isolate 1-3 suspects."
             ),
             "empirical_evidence": {
+                "v14_opencode_gpt55_hard_le3_share": _cm(oc55_hard, "canary_metrics", "recipient_bins", "le_3_share"),
                 "codex_medium_le3_share": _cm(cx_med, "canary_metrics", "recipient_bins", "le_3_share"),
                 "codex_hard_le3_share": _cm(cx_hard, "canary_metrics", "recipient_bins", "le_3_share"),
                 "gpt55_medium_le3_share": _cm(g5_med, "canary_metrics", "recipient_bins", "le_3_share"),
@@ -758,7 +774,7 @@ def mine_committed_runs(root: str | Path = Path("data/runs/committed")) -> dict[
             if ep.get("agent") != agent_name:
                 continue
             seed = int(ep["seed"])
-            if cohort_id == "v1.4_solver" and not (0 <= seed <= 29):
+            if ver == "v1.4" and not (0 <= seed <= 29):
                 continue
             key = (str(ep["tier"]), seed)
             if key in seen_keys:
@@ -927,6 +943,7 @@ def render_report(data: dict[str, Any]) -> str:
 
     n_oc = cohorts.get("v1.4_gemini_opencode", {}).get("pooled", {}).get("n_episodes", 0)
     n_ip = cohorts.get("v1.4_gemini_inproc", {}).get("pooled", {}).get("n_episodes", 0)
+    n_oc55 = cohorts.get("v1.4_opencode_gpt55", {}).get("pooled", {}).get("n_episodes", 0)
     n_cx = cohorts.get("v1.3_codex_gpt55", {}).get("pooled", {}).get("n_episodes", 0)
     n_g5 = cohorts.get("v1.3_inproc_gpt55", {}).get("pooled", {}).get("n_episodes", 0)
     n_s14 = cohorts.get("v1.4_solver", {}).get("pooled", {}).get("n_episodes", 0)
@@ -966,6 +983,7 @@ def render_report(data: dict[str, Any]) -> str:
     ] or [0.0]
     gpt_le3 = [
         x for x in (
+            _get("v1.4_opencode_gpt55", "hard", "canary_metrics", "recipient_bins", "le_3_share"),
             _get("v1.3_codex_gpt55", "hard", "canary_metrics", "recipient_bins", "le_3_share"),
             _get("v1.3_codex_gpt55", "medium", "canary_metrics", "recipient_bins", "le_3_share"),
             _get("v1.3_inproc_gpt55", "hard", "canary_metrics", "recipient_bins", "le_3_share"),
@@ -998,6 +1016,7 @@ def render_report(data: dict[str, Any]) -> str:
         "",
         f"- **Frontier corpus audited**: {cross['frontier_episodes_total']} valid frontier episodes "
         f"({n_oc} `opencode:google/gemini-4-carbon` on v1.4, {n_ip} `gemini:gemini-4-carbon` in-proc on v1.4, "
+        f"{n_oc55} `opencode:openai/gpt-5.5` on v1.4, "
         f"{n_cx} `codex:gpt-5.5` on v1.3, {n_g5} `openai:gpt-5.5` in-proc on v1.3) paired against "
         f"{n_s14 + n_s13} reference `solver` episodes ({n_s14} on v1.4 seeds 0-29, {n_s13} on v1.3 seeds 0-19).",
         f"- **100% angry-decoy dismissal vs non-decoy framing susceptibility**: Across {cross['frontier_decoy_episodes_total']} "

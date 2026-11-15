@@ -29,6 +29,7 @@ def test_mine_committed_runs_real_corpus(mined_corpus: dict):
     expected_counts = {
         "v1.4_gemini_opencode": 60,
         "v1.4_gemini_inproc": 60,
+        "v1.4_opencode_gpt55": 30,
         "v1.4_solver": 60,
         "v1.3_codex_gpt55": 22,
         "v1.3_inproc_gpt55": 17,
@@ -46,9 +47,9 @@ def test_mine_committed_runs_real_corpus(mined_corpus: dict):
             assert vc["v1_count"] + vc["v2_count"] + vc["v3_count"] == cm["total_planted"]
 
     cross = mined_corpus["cross_model_summary"]
-    assert cross["frontier_episodes_total"] == 159
+    assert cross["frontier_episodes_total"] == 189
     assert cross["frontier_wrong_accusations_total"] == 10
-    assert cross["frontier_horizon_abstentions_total"] == 6
+    assert cross["frontier_horizon_abstentions_total"] == 8
     assert cross["frontier_decoy_accused_total"] == 0
     assert cross["frontier_decoy_restricted_total"] == 0
     assert cross["frontier_decoy_dismissal_rate"] == 1.0
@@ -56,17 +57,22 @@ def test_mine_committed_runs_real_corpus(mined_corpus: dict):
     assert cross["wrong_non_decoy_framed_tiebreak"] == 5
 
     oc_hard = cohorts["v1.4_gemini_opencode"]["tiers"]["hard"]
+    oc55_hard = cohorts["v1.4_opencode_gpt55"]["tiers"]["hard"]
     sol_hard = cohorts["v1.4_solver"]["tiers"]["hard"]
     cx_med = cohorts["v1.3_codex_gpt55"]["tiers"]["medium"]
 
     assert oc_hard["tool_budget"]["interview_mean"] > 50.0
+    assert oc55_hard["tool_budget"]["interview_mean"] < 10.0
     assert sol_hard["tool_budget"]["interview_mean"] == 0.0
     assert oc_hard["canary_metrics"]["per_day_mean"] < 1.0
+    assert 1.5 < oc55_hard["canary_metrics"]["per_day_mean"] <= 2.0
     assert sol_hard["canary_metrics"]["per_day_mean"] > 1.2
     assert oc_hard["canary_metrics"]["first_canary_day_mean"] > 2.5
+    assert oc55_hard["canary_metrics"]["first_canary_day_mean"] == 1.0
     assert sol_hard["canary_metrics"]["first_canary_day_mean"] == 1.0
     assert oc_hard["failure_anatomy"]["accuse_day_lag_vs_solver_mean"] > 2.0
     assert cx_med["canary_metrics"]["recipient_bins"]["le_3_share"] > 0.70
+    assert oc55_hard["canary_metrics"]["recipient_bins"]["le_3_share"] > 0.40
     assert oc_hard["canary_metrics"]["recipient_bins"]["le_3_share"] < 0.02
 
 

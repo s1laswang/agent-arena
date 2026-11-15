@@ -1,0 +1,813 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "multi_image_incident_dossier",
+  "model_id": "gemini-4-carbon",
+  "commit": "a6b5a80e7a47d2bdf91514c57ca08834921762eb",
+  "timestamp": "2026-11-14T23:58:33+00:00",
+  "tiers_version": "v1.4",
+  "episode_count": 6,
+  "n_images_read_by_model": 18,
+  "images_per_call": 3,
+  "metrics": {
+    "top1_mole_hits": 4,
+    "top1_mole_accuracy": 0.6667,
+    "top3_mole_hits": 5,
+    "top3_mole_hit_rate": 0.8333,
+    "top1_decoy_hits": 5,
+    "top1_decoy_accuracy": 0.8333,
+    "decoy_identified_hits": 6,
+    "decoy_identified_rate": 1.0,
+    "avoided_framing_trap_hits": 6,
+    "avoided_framing_trap_rate": 1.0,
+    "memo_scans_matched_total": 12,
+    "memo_scans_expected_total": 12,
+    "memo_scan_readout_accuracy": 1.0,
+    "suspect_dept_hits": 4,
+    "suspect_dept_accuracy": 0.6667,
+    "image1_only_mole_hits": 0,
+    "image1_only_mole_accuracy": 0.0,
+    "image1_only_decoy_traps": 5,
+    "image1_only_decoy_trap_rate": 0.8333,
+    "image2_only_mole_accuracy": 0.0,
+    "image2_only_decoy_accuracy": 0.0,
+    "image3_only_deterministic_hits": 0,
+    "image3_only_deterministic_mole_accuracy": 0.0,
+    "image3_only_uniform_prior_mean": 0.0375
+  },
+  "usage": {
+    "calls": 6,
+    "in": 27055,
+    "out": 2345,
+    "thinking": 25336,
+    "cached": 0,
+    "cost_usd": 0.33092,
+    "latency_s": 316.597
+  },
+  "worlds": [
+    {
+      "seed": 6,
+      "tier": "medium",
+      "seed_tag": "medium_6",
+      "tiers_version": "v1.4",
+      "n_images_read": 3,
+      "images": {
+        "badge_raster": {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_medium_6.png",
+          "sha256": "c55b8ee19531299a45c172f99bd769bf7bd58859a368e0b438df632697c060d3",
+          "bytes": 109867,
+          "size": [
+            1274,
+            996
+          ]
+        },
+        "leaked_memo_scans": {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_medium_6.png",
+          "sha256": "428c2ea7a816d06c9425b99c6fa5fff3006f29c8c4d0adfee2e262c61a4f5376",
+          "bytes": 84534,
+          "size": [
+            1510,
+            1126
+          ]
+        },
+        "org_canary_map": {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_medium_6.png",
+          "sha256": "6b555b05f2884f9dfe1f14a7021e2a88804a324128e303bbb6e38f769cd95986",
+          "bytes": 125746,
+          "size": [
+            1320,
+            1204
+          ]
+        }
+      },
+      "observable_summary": {
+        "n_employees": 20,
+        "closed_day": 13,
+        "total_badge_swipes": 282,
+        "total_after_hours_swipes": 43,
+        "n_canaries_planted": 12,
+        "issued_canaries_per_employee": [
+          3
+        ],
+        "n_leaked_canary_scans": 3,
+        "leaked_canary_scans": [
+          {
+            "doc_id": "c4",
+            "day_surfaced": 7,
+            "variant": "C"
+          },
+          {
+            "doc_id": "c6",
+            "day_surfaced": 7,
+            "variant": "C"
+          },
+          {
+            "doc_id": "c9",
+            "day_surfaced": 11,
+            "variant": "C"
+          }
+        ],
+        "canary_intersection_candidates": [
+          "e17"
+        ]
+      },
+      "single_image_baselines": {
+        "image1_only_naive_after_hours_pick": "e19",
+        "image1_only_mole_correct": false,
+        "image1_only_trapped_by_decoy": true,
+        "image2_only_pick": null,
+        "image2_only_mole_correct": false,
+        "image2_only_decoy_correct": false,
+        "image3_only_prior_pick": "e00",
+        "image3_only_mole_correct": false,
+        "image3_only_uniform_prior": 0.05
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e17"
+        ],
+        "suspected_decoy_ids": [
+          "e19"
+        ],
+        "confidence": 0.99,
+        "decoded_leaked_canaries": [
+          {
+            "doc_id": "c4",
+            "variant": "C"
+          },
+          {
+            "doc_id": "c6",
+            "variant": "C"
+          },
+          {
+            "doc_id": "c9",
+            "variant": "C"
+          }
+        ],
+        "suspect_department": "Engineering",
+        "cross_image_reasoning": "Exhibit 2 shows three intercepted leaked canary memos: (c4, C) surfaced Day 07, (c6, C) surfaced Day 07, and (c9, C) surfaced Day 11, each confirmed by COPY-CODE C stamps, 3 header segments, and 3/8 active footer ticks. Cross-referencing Exhibit 3's Canary Distribution Matrix and Issued Variants Roster reveals that e17 (desk ENG-05 in the Engineering zone) is the sole employee issued c4:C, c6:C, and c9:C, providing an exact 3-of-3 watermark match. Exhibit 1 corroborates e17's moderate mole swipe profile (2/11 or 18% after-hours, with vault access preceding both the Day 07 and Day 11 leaks), while exposing e19 (15/21 or 71% after-hours, flagged TOP AH SPIKE) as the framed decoy since Exhibit 3 shows e19 holds c4:B, c8:B, and c10:A and matches none of the leaked variants."
+      },
+      "ground_truth": {
+        "true_mole": "e17",
+        "true_mole_dept": "Engineering",
+        "true_decoy": "e19",
+        "true_decoy_dept": "Engineering"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "memo_scans_matched": 3,
+        "memo_scans_total": 3,
+        "memo_scans_exact_match": true,
+        "suspect_dept_correct": true
+      },
+      "usage": {
+        "in": 4478,
+        "out": 341,
+        "thinking": 1025,
+        "cached": 0,
+        "cost_usd": 0.022616,
+        "latency_s": 20.809
+      },
+      "model_version": "gemini-4-carbon"
+    },
+    {
+      "seed": 7,
+      "tier": "medium",
+      "seed_tag": "medium_7",
+      "tiers_version": "v1.4",
+      "n_images_read": 3,
+      "images": {
+        "badge_raster": {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_medium_7.png",
+          "sha256": "53f05fe146cb3eca010e0576230259e694112057c5e4a0572b84eac3f896ecaf",
+          "bytes": 111514,
+          "size": [
+            1274,
+            996
+          ]
+        },
+        "leaked_memo_scans": {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_medium_7.png",
+          "sha256": "b54052b830d7bec9555f204862be43e08c99b3f84df08fbb9efd45b4649022fd",
+          "bytes": 40654,
+          "size": [
+            1510,
+            644
+          ]
+        },
+        "org_canary_map": {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_medium_7.png",
+          "sha256": "a1a0ffdbf5f0d61b0a19dd17210864970d494e789c96b91a96b16f4432c61275",
+          "bytes": 126224,
+          "size": [
+            1320,
+            1232
+          ]
+        }
+      },
+      "observable_summary": {
+        "n_employees": 20,
+        "closed_day": 13,
+        "total_badge_swipes": 296,
+        "total_after_hours_swipes": 42,
+        "n_canaries_planted": 12,
+        "issued_canaries_per_employee": [
+          3
+        ],
+        "n_leaked_canary_scans": 0,
+        "leaked_canary_scans": [],
+        "canary_intersection_candidates": [
+          "e00",
+          "e01",
+          "e02",
+          "e03",
+          "e04",
+          "e05",
+          "e06",
+          "e07",
+          "e08",
+          "e09",
+          "e10",
+          "e11",
+          "e12",
+          "e13",
+          "e14",
+          "e15",
+          "e16",
+          "e17",
+          "e18",
+          "e19"
+        ]
+      },
+      "single_image_baselines": {
+        "image1_only_naive_after_hours_pick": "e03",
+        "image1_only_mole_correct": false,
+        "image1_only_trapped_by_decoy": true,
+        "image2_only_pick": null,
+        "image2_only_mole_correct": false,
+        "image2_only_decoy_correct": false,
+        "image3_only_prior_pick": "e00",
+        "image3_only_mole_correct": false,
+        "image3_only_uniform_prior": 0.05
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e10",
+          "e06",
+          "e18"
+        ],
+        "suspected_decoy_ids": [
+          "e03"
+        ],
+        "confidence": 0.62,
+        "decoded_leaked_canaries": [],
+        "suspect_department": "Engineering",
+        "cross_image_reasoning": "Exhibit 2 reports zero surfaced watermarked canary scans through Day 13 (DOC-ID: NONE, 0/8 active footer ticks), leaving Exhibit 3's 3-canary-per-employee roster (such as e10's c3:C, c7:C, c10:C) untriggered on the external leak feed. Cross-referencing Exhibit 1's vault telemetry separates the framed decoy from active high-volume vault users: e03 (Legal, LEG-01) exhibits the dominant TOP AH SPIKE at 10/25 swipes (40% after-hours) atop a normal 15 regular daytime swipes, matching the ~50% concentrated fake after-hours framing signature injected onto an innocent decoy. Among remaining staff, e10 (Engineering, ENG-02) has the highest total vault volume at 23 swipes across 12 of 13 days with 3/23 (13%) after-hours swipes closely matching the expected ~15% mole self-after-hours profile, outranking secondary high-volume candidate e06 (Finance, FIN-03, 22 swipes but only 1/22 or 5% after-hours) and e18 (Sales, SAL-06, 17 swipes with 3/17 or 18% after-hours)."
+      },
+      "ground_truth": {
+        "true_mole": "e09",
+        "true_mole_dept": "Finance",
+        "true_decoy": "e03",
+        "true_decoy_dept": "Legal"
+      },
+      "evaluation": {
+        "top1_mole_correct": false,
+        "top3_mole_hit": false,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "memo_scans_matched": 0,
+        "memo_scans_total": 0,
+        "memo_scans_exact_match": true,
+        "suspect_dept_correct": false
+      },
+      "usage": {
+        "in": 4488,
+        "out": 404,
+        "thinking": 5867,
+        "cached": 0,
+        "cost_usd": 0.071686,
+        "latency_s": 65.117
+      },
+      "model_version": "gemini-4-carbon"
+    },
+    {
+      "seed": 8,
+      "tier": "medium",
+      "seed_tag": "medium_8",
+      "tiers_version": "v1.4",
+      "n_images_read": 3,
+      "images": {
+        "badge_raster": {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_medium_8.png",
+          "sha256": "58b01eaf6a8ccbe452999144967256ea1e889cf030490d55f99b50502d2d90d6",
+          "bytes": 109735,
+          "size": [
+            1274,
+            996
+          ]
+        },
+        "leaked_memo_scans": {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_medium_8.png",
+          "sha256": "a5213ceac6fcdbc2e5afa41b723aa570dffb9db566fb8900e1b1c09533c9bdfd",
+          "bytes": 51511,
+          "size": [
+            1510,
+            644
+          ]
+        },
+        "org_canary_map": {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_medium_8.png",
+          "sha256": "ad7374aaad5e8e2f8e5951cde29d0817cfec5858727e0e4c40b9e5b52aea5416",
+          "bytes": 125317,
+          "size": [
+            1320,
+            1204
+          ]
+        }
+      },
+      "observable_summary": {
+        "n_employees": 20,
+        "closed_day": 13,
+        "total_badge_swipes": 251,
+        "total_after_hours_swipes": 41,
+        "n_canaries_planted": 12,
+        "issued_canaries_per_employee": [
+          3
+        ],
+        "n_leaked_canary_scans": 1,
+        "leaked_canary_scans": [
+          {
+            "doc_id": "c1",
+            "day_surfaced": 2,
+            "variant": "C"
+          }
+        ],
+        "canary_intersection_candidates": [
+          "e02"
+        ]
+      },
+      "single_image_baselines": {
+        "image1_only_naive_after_hours_pick": "e05",
+        "image1_only_mole_correct": false,
+        "image1_only_trapped_by_decoy": false,
+        "image2_only_pick": null,
+        "image2_only_mole_correct": false,
+        "image2_only_decoy_correct": false,
+        "image3_only_prior_pick": "e00",
+        "image3_only_mole_correct": false,
+        "image3_only_uniform_prior": 0.05
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e02"
+        ],
+        "suspected_decoy_ids": [
+          "e05",
+          "e01"
+        ],
+        "confidence": 0.98,
+        "decoded_leaked_canaries": [
+          {
+            "doc_id": "c1",
+            "variant": "C"
+          }
+        ],
+        "suspect_department": "Sales",
+        "cross_image_reasoning": "Exhibit 2 shows one intercepted leaked canary scan for doc_id c1 (surfaced Day 02) carrying 3 header segments, COPY-CODE C, and 3/8 active footer ticks (variant C). Intersecting (c1, C) against Exhibit 3's Static Canary Distribution Matrix uniquely identifies e02 (issued c1:C, c7:B, c10:C), who is assigned to desk SAL-01 in the Sales department zone; all other c1 holders received variants A (e00, e03) or B (e01, e04). Cross-referencing Exhibit 1 confirms e02 maintains a moderate vault swipe profile (1/10 after-hours, 10% AH, including vault access prior to the Day 02 leak is not required for static pre-issued canaries or masked by low framing), while e05 (5/12, 42% AH) and secondary spike e01 (4/11, 36% AH) exhibit heavy red after-hours framing anomalies despite holding neither c1 (for e05) nor variant C (for e01), marking e05 as the primary framed decoy."
+      },
+      "ground_truth": {
+        "true_mole": "e02",
+        "true_mole_dept": "Sales",
+        "true_decoy": "e01",
+        "true_decoy_dept": "Finance"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": false,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "memo_scans_matched": 1,
+        "memo_scans_total": 1,
+        "memo_scans_exact_match": true,
+        "suspect_dept_correct": true
+      },
+      "usage": {
+        "in": 4485,
+        "out": 342,
+        "thinking": 2474,
+        "cached": 0,
+        "cost_usd": 0.03713,
+        "latency_s": 38.022
+      },
+      "model_version": "gemini-4-carbon"
+    },
+    {
+      "seed": 5,
+      "tier": "hard",
+      "seed_tag": "hard_5",
+      "tiers_version": "v1.4",
+      "n_images_read": 3,
+      "images": {
+        "badge_raster": {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_hard_5.png",
+          "sha256": "f063b24ea5ba64211a9f5bb11024a0c007efc85b1c26f1d6988893e1a6d76875",
+          "bytes": 199538,
+          "size": [
+            1530,
+            1636
+          ]
+        },
+        "leaked_memo_scans": {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_hard_5.png",
+          "sha256": "e7479ca2bfc611a8301d413eb50e283bb1bac1763d98efb02f0a00b6134e79e0",
+          "bytes": 66526,
+          "size": [
+            1510,
+            644
+          ]
+        },
+        "org_canary_map": {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_hard_5.png",
+          "sha256": "50921b9347d745e26b12c17b7be6d4de3126c323344de1cf79133f57352c82f4",
+          "bytes": 240568,
+          "size": [
+            2144,
+            1990
+          ]
+        }
+      },
+      "observable_summary": {
+        "n_employees": 40,
+        "closed_day": 20,
+        "total_badge_swipes": 820,
+        "total_after_hours_swipes": 128,
+        "n_canaries_planted": 35,
+        "issued_canaries_per_employee": [
+          7
+        ],
+        "n_leaked_canary_scans": 2,
+        "leaked_canary_scans": [
+          {
+            "doc_id": "c12-2",
+            "day_surfaced": 17,
+            "variant": "C"
+          },
+          {
+            "doc_id": "c14-2",
+            "day_surfaced": 18,
+            "variant": "A"
+          }
+        ],
+        "canary_intersection_candidates": [
+          "e27"
+        ]
+      },
+      "single_image_baselines": {
+        "image1_only_naive_after_hours_pick": "e04",
+        "image1_only_mole_correct": false,
+        "image1_only_trapped_by_decoy": true,
+        "image2_only_pick": null,
+        "image2_only_mole_correct": false,
+        "image2_only_decoy_correct": false,
+        "image3_only_prior_pick": "e00",
+        "image3_only_mole_correct": false,
+        "image3_only_uniform_prior": 0.025
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e27",
+          "e12",
+          "e17",
+          "e22"
+        ],
+        "suspected_decoy_ids": [
+          "e04"
+        ],
+        "confidence": 0.95,
+        "decoded_leaked_canaries": [
+          {
+            "doc_id": "c12-2",
+            "variant": "C"
+          },
+          {
+            "doc_id": "c14-2",
+            "variant": "A"
+          }
+        ],
+        "suspect_department": "Finance",
+        "cross_image_reasoning": "Exhibit 2 reveals two leaked canary memos: doc c12-2 with COPY-CODE C (surfaced Day 17) and doc c14-2 with COPY-CODE A (surfaced Day 18). Intersecting these document IDs in Exhibit 3 clears 32 employees and leaves 8 staff who received both c12-2 and c14-2 (e02, e07, e12, e17, e22, e27, e32, e37). Among them, only e27 (Finance, clearance CLR-2) holds exact matching variants for both leaks (c12-2:C and c14-2:A), whereas runner-up candidates e12, e17, and e22 match only one variant each. Exhibit 1 corroborates e27 with an elevated 7/24 (29% after-hours) vault swipe profile consistent with the 30% mole baseline, while isolating e04 (19/40, 48% after-hours, flagged TOP AH SPIKE) as the primary framed decoy since Exhibit 3 confirms e04 received neither c12-2 nor c14-2."
+      },
+      "ground_truth": {
+        "true_mole": "e27",
+        "true_mole_dept": "Finance",
+        "true_decoy": "e04",
+        "true_decoy_dept": "Research"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "memo_scans_matched": 2,
+        "memo_scans_total": 2,
+        "memo_scans_exact_match": true,
+        "suspect_dept_correct": true
+      },
+      "usage": {
+        "in": 4537,
+        "out": 375,
+        "thinking": 1998,
+        "cached": 0,
+        "cost_usd": 0.032804,
+        "latency_s": 32.974
+      },
+      "model_version": "gemini-4-carbon"
+    },
+    {
+      "seed": 6,
+      "tier": "hard",
+      "seed_tag": "hard_6",
+      "tiers_version": "v1.4",
+      "n_images_read": 3,
+      "images": {
+        "badge_raster": {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_hard_6.png",
+          "sha256": "0f20cd5c63eab64f5d742870dc8b7c899000f0b39483861470d9c0e87aa0a18f",
+          "bytes": 200728,
+          "size": [
+            1530,
+            1636
+          ]
+        },
+        "leaked_memo_scans": {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_hard_6.png",
+          "sha256": "adb912adc770866fb6dbe885a6f1c12c5b24b613a3b34f5ee34b042f099e8e73",
+          "bytes": 54672,
+          "size": [
+            1510,
+            644
+          ]
+        },
+        "org_canary_map": {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_hard_6.png",
+          "sha256": "5ee0c6a98fe70b84b573cec95a9a41a5488213c97d5f7a6d78c0fe4c24d24720",
+          "bytes": 239725,
+          "size": [
+            2144,
+            1962
+          ]
+        }
+      },
+      "observable_summary": {
+        "n_employees": 40,
+        "closed_day": 20,
+        "total_badge_swipes": 842,
+        "total_after_hours_swipes": 136,
+        "n_canaries_planted": 35,
+        "issued_canaries_per_employee": [
+          7
+        ],
+        "n_leaked_canary_scans": 2,
+        "leaked_canary_scans": [
+          {
+            "doc_id": "c3",
+            "day_surfaced": 7,
+            "variant": "A"
+          },
+          {
+            "doc_id": "c9-2",
+            "day_surfaced": 11,
+            "variant": "A"
+          }
+        ],
+        "canary_intersection_candidates": [
+          "e34"
+        ]
+      },
+      "single_image_baselines": {
+        "image1_only_naive_after_hours_pick": "e20",
+        "image1_only_mole_correct": false,
+        "image1_only_trapped_by_decoy": true,
+        "image2_only_pick": null,
+        "image2_only_mole_correct": false,
+        "image2_only_decoy_correct": false,
+        "image3_only_prior_pick": "e00",
+        "image3_only_mole_correct": false,
+        "image3_only_uniform_prior": 0.025
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e34",
+          "e39"
+        ],
+        "suspected_decoy_ids": [
+          "e20",
+          "e11"
+        ],
+        "confidence": 0.98,
+        "decoded_leaked_canaries": [
+          {
+            "doc_id": "c3",
+            "variant": "A"
+          },
+          {
+            "doc_id": "c9-2",
+            "variant": "A"
+          }
+        ],
+        "suspect_department": "Research",
+        "cross_image_reasoning": "Exhibit 2 shows two intercepted leaked canary memos: DOC-ID c3 with COPY-CODE A (surfaced Day 07) and DOC-ID c9-2 with COPY-CODE A (surfaced Day 11). Intersecting c3 and c9-2 in Exhibit 3's Canary Distribution Matrix clears 38 of 40 employees, leaving only e34 (Research, CLR-2) and e39 (Engineering, CLR-3) as recipients of both documents. Between them, e34 was issued exact matching variants c3:A and c9-2:A (~38x variant likelihood advantage over e39, who held c3:C and c9-2:A). Cross-referencing Exhibit 1 confirms e34 exhibits a strong self after-hours profile (13/22 swipes, 59% AH, including after-hours vault access immediately preceding both Day 07 and Day 11 leaks) versus e39's 5/26 (19% AH). Meanwhile, e20 (16/37 swipes, 43% AH, TOP AH SPIKE) and e11 (9/27 swipes, 33% AH, ELEVATED AH) held neither c3 nor c9-2 in Exhibit 3, isolating e20 as the primary framed decoy and e11 as secondary framing scatter."
+      },
+      "ground_truth": {
+        "true_mole": "e34",
+        "true_mole_dept": "Research",
+        "true_decoy": "e20",
+        "true_decoy_dept": "Legal"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "memo_scans_matched": 2,
+        "memo_scans_total": 2,
+        "memo_scans_exact_match": true,
+        "suspect_dept_correct": true
+      },
+      "usage": {
+        "in": 4537,
+        "out": 402,
+        "thinking": 4781,
+        "cached": 0,
+        "cost_usd": 0.060904,
+        "latency_s": 61.014
+      },
+      "model_version": "gemini-4-carbon"
+    },
+    {
+      "seed": 7,
+      "tier": "hard",
+      "seed_tag": "hard_7",
+      "tiers_version": "v1.4",
+      "n_images_read": 3,
+      "images": {
+        "badge_raster": {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_hard_7.png",
+          "sha256": "ce7c8e115d5df457fa1d4a93d536fd5e868c97f1f904b97a7c27434b834b5014",
+          "bytes": 194319,
+          "size": [
+            1530,
+            1636
+          ]
+        },
+        "leaked_memo_scans": {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_hard_7.png",
+          "sha256": "e6c39dc41216cee1f8dc2c47ac79269dbecc2d4102449f33b30d02a3059cb8c6",
+          "bytes": 90109,
+          "size": [
+            1510,
+            1126
+          ]
+        },
+        "org_canary_map": {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_hard_7.png",
+          "sha256": "0c1bc955616946bd0037319e5beea120cf9ddacf0e53188ea19fb01bfc7cfad2",
+          "bytes": 240074,
+          "size": [
+            2144,
+            1962
+          ]
+        }
+      },
+      "observable_summary": {
+        "n_employees": 40,
+        "closed_day": 20,
+        "total_badge_swipes": 801,
+        "total_after_hours_swipes": 112,
+        "n_canaries_planted": 35,
+        "issued_canaries_per_employee": [
+          7
+        ],
+        "n_leaked_canary_scans": 4,
+        "leaked_canary_scans": [
+          {
+            "doc_id": "c3",
+            "day_surfaced": 6,
+            "variant": "B"
+          },
+          {
+            "doc_id": "c12-2",
+            "day_surfaced": 15,
+            "variant": "B"
+          },
+          {
+            "doc_id": "c14-2",
+            "day_surfaced": 18,
+            "variant": "B"
+          },
+          {
+            "doc_id": "c18",
+            "day_surfaced": 20,
+            "variant": "B"
+          }
+        ],
+        "canary_intersection_candidates": [
+          "e32",
+          "e37"
+        ]
+      },
+      "single_image_baselines": {
+        "image1_only_naive_after_hours_pick": "e12",
+        "image1_only_mole_correct": false,
+        "image1_only_trapped_by_decoy": true,
+        "image2_only_pick": null,
+        "image2_only_mole_correct": false,
+        "image2_only_decoy_correct": false,
+        "image3_only_prior_pick": "e00",
+        "image3_only_mole_correct": false,
+        "image3_only_uniform_prior": 0.025
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e32",
+          "e37"
+        ],
+        "suspected_decoy_ids": [
+          "e12"
+        ],
+        "confidence": 0.68,
+        "decoded_leaked_canaries": [
+          {
+            "doc_id": "c3",
+            "variant": "B"
+          },
+          {
+            "doc_id": "c12-2",
+            "variant": "B"
+          },
+          {
+            "doc_id": "c14-2",
+            "variant": "B"
+          },
+          {
+            "doc_id": "c18",
+            "variant": "B"
+          }
+        ],
+        "suspect_department": "Research",
+        "cross_image_reasoning": "Exhibit 2 shows four leaked canary scans all bearing 2-segment header bars, 2/8 active footer ticks, and COPY-CODE B: (c3, B) on Day 06, (c12-2, B) on Day 15, (c14-2, B) on Day 18, and (c18, B) on Day 20. Intersecting {c3, c12-2, c14-2, c18} against Exhibit 3's Canary Distribution Matrix eliminates 38 of 40 staff, leaving only e32 (Research, CLR-2: c3:B, c12-2:A, c14-2:B, c18:B) and e37 (Sales, CLR-1: c3:A, c12-2:B, c14-2:B, c18:B), each matching 3 of 4 leaked variants with 1 noisy flip. Cross-referencing Exhibit 1 resolves the tie in favor of e32, who shows higher vault activity and after-hours swipe rate (3/21, 14% AH across D07, D14, D20) than e37 (2/19, 11% AH on D01, D03), while isolating e12 (19/39, 49% AH, TOP AH SPIKE) as the primary framed decoy cleared by Exhibit 3 because e12 was never issued c3 and held variant C on c12-2, c14-2, and c18."
+      },
+      "ground_truth": {
+        "true_mole": "e37",
+        "true_mole_dept": "Sales",
+        "true_decoy": "e12",
+        "true_decoy_dept": "Finance"
+      },
+      "evaluation": {
+        "top1_mole_correct": false,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "memo_scans_matched": 4,
+        "memo_scans_total": 4,
+        "memo_scans_exact_match": true,
+        "suspect_dept_correct": false
+      },
+      "usage": {
+        "in": 4530,
+        "out": 481,
+        "thinking": 9191,
+        "cached": 0,
+        "cost_usd": 0.10578,
+        "latency_s": 98.661
+      },
+      "model_version": "gemini-4-carbon"
+    }
+  ]
+}

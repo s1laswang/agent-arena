@@ -4,6 +4,14 @@
 
 *Every number below names the committed file it comes from. `TODO(owner)` marks work that is not committed yet. Our Google DeepMind Gemini entry is a separate write-up: [docs/gemini/SUBMISSION.md](gemini/SUBMISSION.md).*
 
+## Final results, Sun 15 Nov 09:00 (read this first; it supersedes older lines and TODOs below)
+- **Tags.** `afterquery-final` (1bc3e281) is the code freeze: environment, solver and Harbor harness. `afterquery-submit` adds results and docs only.
+- **Judge-path rehearsal, done** (Harbor 0.26.0 + OpenCode + gemini-4-carbon on the tag; protocol committed before the run; [results/harbor/rehearsal/TABLE.md](../results/harbor/rehearsal/TABLE.md)): oracle +0.506; three Gemini runs +0.472, +0.585 and +0.656 (run 3 partial, 7 valid trials) = 93%, 116% and 153% of the oracle on the same tasks; do_nothing and stop_early exactly 0 on 10 of 10. **The 65% gap measured with MCP tools only did not reproduce in the judge path.**
+- **Second frontier family, done** (pre-registered at `cf394894`): gpt-5.5 via OpenCode, MCP tools only, hard seeds 0-29, n=30, all replay-verified: 101% [79%, 140%] of the solver. No gap for gpt-5.5. Two more Gemini models on the same seeds (PR #81, not merged): gemini-4-argon 103%, gemini-4-hydrogen 115%.
+- **What still holds.** gemini-4-carbon with MCP tools only: 65% [24%, 98%], n=30, with a decision-level explanation ([results/behaviour_compare_v1.4.md](../results/behaviour_compare_v1.4.md): 53% of its calls are interviews, 8.5 canaries to gpt-5.5's 17.2). Read together: on v1.4 hard, frontier agents land near the reference; the 65% result is one model in one harness.
+- **Integrity, done on the tag:** judge-protocol hunt 12 of 12 held; `make hunt` best non-solver 0.000; full `make reproduce` clean; 1,034-attack Gemini red-team sweep on the tag, 0 exploits (PR #74).
+- **Tiebreak:** the bar (trained small model above the untrained base) is not met; see section 7.
+
 ## Form fields (paste as is)
 
 ```text
@@ -12,13 +20,13 @@ Project name: Canary
 Tagline (58 chars):
 Catch the mole with canary traps before the value runs out
 
-Description (594 chars):
-Canary is an RL environment served over MCP. A company has one mole who leaks documents, and every leak costs value. The agent is head of security: it plants canary documents, reads a delayed, noisy leak feed and must accuse once. Correct = value left, wrong = -1, none = 0. The reference is a Bayesian solver that sees only what the agent sees. On the hard tier, gemini-4-carbon in OpenCode over MCP earns 72% of the solver's luck-adjusted score (95% CI 52-91%, n=30; raw 65%). Doing nothing scores exactly 0, and no attack we tried beats honest play. One keyless command reproduces our table.
+Description (591 chars):
+Canary is an RL environment served over MCP. A company has one mole who leaks documents, and every leak costs value. The agent is head of security: it plants canaries, reads a delayed, noisy leak feed and must accuse once. Correct = value left, wrong = -1, none = 0. The reference is a Bayesian solver that sees only what the agent sees. With MCP tools only, gemini-4-carbon earns 65% of the solver's score on hard (CI 24-98%, n=30); in the Harbor judge path that gap did not reproduce (93-153%, 3 runs), and gpt-5.5 matches the solver. Doing nothing scores 0; 1,000+ attacks found no exploit.
 
 Track: AfterQuery - Break the Agent (main track)
 Side track: Google DeepMind - Best Use of Gemini API (own write-up: docs/gemini/SUBMISSION.md)
 
-Repo: https://github.com/s1laswang/agent-arena/tree/justSilas
+Repo: https://github.com/s1laswang/agent-arena/tree/afterquery-submit
 
 Video: TODO(Ivar): video link
 ```
@@ -116,7 +124,7 @@ What to expect, and where we saw it:
 - **An "expert" tier** (hard with fingerprint accuracy 0.70): scripted heuristics collapse (grok_tactics 0.36 → 0.01), but gemini-4-carbon stays at 84% [52%, 128%] luck-adjusted (n=13, OpenCode). Not shipped; code on branch `justSilas-expert`.
 
 **What is not shown yet:**
-- **Repeated runs through Harbor itself.** The 65% / 72% runs used the OpenCode CLI against our MCP server with `bash`/`python3` denied, not the Harbor container (which allows them; README). The real judge rehearsal (3 OpenCode runs x 10 hard tasks plus oracle, `do_nothing`, `stop_early`, on the tagged SHA) is pre-registered in [results/harbor/rehearsal/README.md](../results/harbor/rehearsal/README.md) but **has not run**: that directory holds the protocol only. TODO(Silas).
+- **Repeated runs through Harbor itself (done, see the block at the top).** The 65% / 72% runs used the OpenCode CLI against our MCP server with `bash`/`python3` denied. The real judge rehearsal on the tagged SHA (3 OpenCode runs x 10 hard tasks plus oracle, `do_nothing`, `stop_early`) gave 93%, 116% and 153% (partial) of the oracle: the gap did not reproduce there ([results/harbor/rehearsal/TABLE.md](../results/harbor/rehearsal/TABLE.md)).
 - **What has run is a dry rehearsal**, one OpenCode run on 10 hard judge tasks, on an untagged build (`be435fd5`): oracle +0.467 (9/10 correct), OpenCode gemini-4-carbon +0.398 (9/10 correct; 3 tasks are infra reruns †), i.e. 85% of the oracle [11%, 355%], n=10 ([results/harbor/rehearsal-dry/TABLE.md](../results/harbor/rehearsal-dry/TABLE.md)). Its own README says it "says nothing about a gap. Treat it as a harness check."
 - **Earlier Harbor demo** (6 tasks, medium and hard, seeds 900000-900002, earlier build): Gemini 0.503 vs oracle 0.757, lower on all 6 ([harbor/README.md](../harbor/README.md)). Small; not counted as the gap.
 - **Causal hint test.** Pre-registered in [docs/reports/gap.md](reports/gap.md) (`fd8c1cb0`, one added line restating the instruction's own rules, OpenCode, hard seeds 0-29, stop 05:40). No result is committed yet. TODO(Silas): report it either way, with n.
@@ -199,7 +207,7 @@ Full list of every attack and its test: [docs/EXPLOITS.md](EXPLOITS.md) (52 numb
 
 **Doing the task well is the best way to score.** The solver is above every scripted baseline and every attack on every tier (tables above). Adding an extra step before its own accusation never beats it (the "plus probes" in [results/anticheat/exploits.md](../results/anticheat/exploits.md)).
 
-**Not done yet.** TODO(Vaishnav): a 15-minute hunt that follows the judges' protocol, plus `make hunt` and the full anti-cheat battery, on the tagged `afterquery-final` SHA. Report in [docs/reports/integrity.md](reports/integrity.md).
+**Done on the tag (15 Nov 05:10-05:25, [docs/reports/integrity.md](reports/integrity.md)):** judge-protocol hunt 12 of 12 held, `make hunt` best non-solver score 0.000 with 0 invariant violations, full `make reproduce` clean, `make anticheat-verify` 0 differences.
 
 ## 6. Rubric: Craft (15)
 

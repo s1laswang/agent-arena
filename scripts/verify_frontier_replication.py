@@ -1,4 +1,4 @@
-"""Paired and luck-adjusted evaluator for Canary v1.4 primary and replication cohorts (pure CPU, zero API calls).
+"""Paired and luck-adjusted evaluator for Canary v1.4 primary, G1, and FR8 replication cohorts (pure CPU, zero API calls).
 
     python scripts/verify_frontier_replication.py --write
     python scripts/verify_frontier_replication.py --check
@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import math
 import os
@@ -28,6 +29,8 @@ from canary.eval import run_episode
 from paired_v13 import _P_CACHE, boot_ratio, p_acc, post_expected
 from verify_replay import replay_episode
 
+MAX_JSON_BYTES = 45_000
+
 DEFAULT_JSON = ROOT / "results" / "frontier_replication" / "v1.4" / "replication_summary.json"
 DEFAULT_MD = ROOT / "docs" / "reports" / "frontier_replication_v14.md"
 
@@ -40,13 +43,6 @@ LEGACY_STOP_EARLY_LABEL = (
     "day-1 guess (recorded under the pre-2bb6729 name stop_early; "
     "today's stop_early stops without accusing and scores 0, see results/judge_table.md)"
 )
-
-
-def gap_ships_flash_hard(root: Path = ROOT) -> bool:
-    gap_md = root / "docs" / "reports" / "gap.md"
-    if not gap_md.exists():
-        return False
-    return "gemini-3.5-flash" in gap_md.read_text(encoding="utf-8")
 
 NON_SOLVER_BASELINES_30_59 = (
     "grok_tactics",
@@ -68,7 +64,14 @@ COMMITTED_BASELINES_0_19 = (
 )
 
 
-def clean_json(obj: Any) -> Any:
+def gap_ships_flash_hard(root: Path = ROOT) -> bool:
+    gap_md = root / "docs" / "reports" / "gap.md"
+    if not gap_md.exists():
+        return False
+    return "gemini-3.5-flash" in gap_md.read_text(encoding="utf-8")
+
+
+def clean_json(obj: Any, float_ndigits: int | None = None) -> Any:
     if isinstance(obj, bool) or obj is None:
         return obj
     if isinstance(obj, int):
@@ -76,12 +79,37 @@ def clean_json(obj: Any) -> Any:
     if isinstance(obj, float):
         if math.isnan(obj) or math.isinf(obj):
             return None
-        return obj
+        return round(obj, float_ndigits) if float_ndigits is not None else obj
     if isinstance(obj, dict):
-        return {str(k): clean_json(v) for k, v in obj.items()}
+        return {str(k): clean_json(v, float_ndigits) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
-        return [clean_json(v) for v in obj]
+        return [clean_json(v, float_ndigits) for v in obj]
     return obj
+
+
+def _fmt_json_compact(obj: Any, depth: int = 0, max_expand_depth: int = 1) -> str:
+    if depth >= max_expand_depth or not isinstance(obj, (dict, list)) or not obj:
+        return json.dumps(obj, sort_keys=True, allow_nan=False, separators=(",", ":"))
+    pad = " " * depth
+    inner_pad = " " * (depth + 1)
+    if isinstance(obj, list):
+        if all(not isinstance(x, (dict, list)) for x in obj):
+            return json.dumps(obj, allow_nan=False, separators=(",", ":"))
+        items = [inner_pad + _fmt_json_compact(v, depth + 1, max_expand_depth) for v in obj]
+        return "[\n" + ",\n".join(items) + "\n" + pad + "]"
+    items = [
+        f"{inner_pad}{json.dumps(k)}: {_fmt_json_compact(obj[k], depth + 1, max_expand_depth)}"
+        for k in sorted(obj.keys())
+    ]
+    return "{\n" + ",\n".join(items) + "\n" + pad + "}"
+
+
+def serialize_summary_json(summary: dict[str, Any]) -> str:
+    blob = _fmt_json_compact(summary, depth=0, max_expand_depth=1) + "\n"
+    size = len(blob.encode("utf-8"))
+    if size > MAX_JSON_BYTES:
+        raise ValueError(f"serialized replication_summary.json is {size} bytes, exceeding {MAX_JSON_BYTES}")
+    return blob
 
 
 def approx_equal(a: Any, b: Any, tol: float = 1e-9) -> bool:
@@ -114,42 +142,261 @@ def empty_reply_seeds(run_dir: Path, tier: str) -> set[int]:
     return out
 
 
+def _count_pre_1bc3e281_error_steps(episodes: list[dict[str, Any]]) -> int:
+    count = 0
+    for ep in episodes:
+        for st in ep.get("steps") or []:
+            res = st.get("result")
+            if isinstance(res, str) and '"ok": false' in res and '"detail"' not in res:
+                count += 1
+            elif isinstance(res, dict) and res.get("ok") is False and "detail" not in (res.get("data") or {}):
+                count += 1
+    return count
+
+
+@contextlib.contextmanager
+def _allow_dev_env():
+    had_key = "CANARY_ALLOW_DEV" in os.environ
+    prev_val = os.environ.get("CANARY_ALLOW_DEV")
+    if not had_key:
+        os.environ["CANARY_ALLOW_DEV"] = "1"
+    try:
+        yield
+    finally:
+        if not had_key:
+            os.environ.pop("CANARY_ALLOW_DEV", None)
+        elif prev_val is not None:
+            os.environ["CANARY_ALLOW_DEV"] = prev_val
+
+
 def verify_episode_list(episodes: list[dict[str, Any]], cohort_name: str) -> dict[str, Any]:
-    os.environ.setdefault("CANARY_ALLOW_DEV", "1")
-    seen: set[tuple[str, str, int]] = set()
-    duplicates: list[dict[str, Any]] = []
+    with _allow_dev_env():
+        seen: set[tuple[str, str, int]] = set()
+        duplicates: list[dict[str, Any]] = []
+        mismatches: list[dict[str, Any]] = []
+        for e in episodes:
+            key = (str(e["agent"]), str(e["tier"]), int(e["seed"]))
+            if key in seen:
+                duplicates.append({"cohort": cohort_name, "agent": key[0], "tier": key[1], "seed": key[2]})
+            seen.add(key)
+            rep = replay_episode(e)
+            ok = (
+                abs(float(rep["score"]) - float(e["score"])) < 1e-9
+                and rep["accused"] == e.get("accused")
+                and bool(rep["correct"]) == bool(e["correct"])
+                and int(rep["final_day"]) == int(e.get("final_day") or 0)
+            )
+            if not ok:
+                mismatches.append(
+                    {
+                        "cohort": cohort_name,
+                        "agent": e["agent"],
+                        "tier": e["tier"],
+                        "seed": e["seed"],
+                        "recorded_score": e["score"],
+                        "replay_score": rep["score"],
+                        "recorded_accused": e.get("accused"),
+                        "replay_accused": rep["accused"],
+                        "recorded_correct": e["correct"],
+                        "replay_correct": rep["correct"],
+                        "recorded_final_day": e.get("final_day"),
+                        "replay_final_day": rep["final_day"],
+                    }
+                )
+        if duplicates:
+            raise ValueError(f"duplicate episodes in {cohort_name}: {duplicates}")
+        if mismatches:
+            raise ValueError(f"replay mismatches in {cohort_name}: {mismatches}")
+        return {
+            "cohort": cohort_name,
+            "total": len(episodes),
+            "verified": len(episodes) - len(mismatches),
+            "mismatches": len(mismatches),
+            "duplicates": len(duplicates),
+            "pre_1bc3e281_error_steps": _count_pre_1bc3e281_error_steps(episodes),
+        }
+
+
+def verify_solver_30_59_parity(comm_solver_dir: Path, rep_solver_dir: Path) -> dict[str, Any]:
+    comm_eps = [
+        e for e in load_runs(comm_solver_dir)
+        if e.get("agent") == "solver" and e.get("tier") == "hard"
+    ]
+    rep_eps = [
+        e for e in load_runs(rep_solver_dir)
+        if e.get("agent") == "solver" and e.get("tier") == "hard"
+    ]
+    expected_seeds = list(range(30, 60))
+    comm_seeds = [int(e["seed"]) for e in comm_eps]
+    rep_seeds = [int(e["seed"]) for e in rep_eps]
+    if len(comm_seeds) != len(set(comm_seeds)):
+        raise ValueError(f"duplicate solver seeds in {comm_solver_dir}: {comm_seeds}")
+    if len(rep_seeds) != len(set(rep_seeds)):
+        raise ValueError(f"duplicate solver seeds in {rep_solver_dir}: {rep_seeds}")
+    if sorted(comm_seeds) != expected_seeds:
+        raise ValueError(f"committed solver 30-59 seeds mismatch: {sorted(comm_seeds)}")
+    if sorted(rep_seeds) != expected_seeds:
+        raise ValueError(f"replication solver 30-59 seeds mismatch: {sorted(rep_seeds)}")
+
+    by_comm = {int(e["seed"]): e for e in comm_eps}
+    by_rep = {int(e["seed"]): e for e in rep_eps}
     mismatches: list[dict[str, Any]] = []
-    for e in episodes:
-        key = (str(e["agent"]), str(e["tier"]), int(e["seed"]))
-        if key in seen:
-            duplicates.append({"cohort": cohort_name, "agent": key[0], "tier": key[1], "seed": key[2]})
-        seen.add(key)
-        rep = replay_episode(e)
-        ok = abs(rep["score"] - e["score"]) < 1e-9 and rep["accused"] == e.get("accused")
-        if not ok:
+    for seed in expected_seeds:
+        ce = by_comm[seed]
+        re_ = by_rep[seed]
+        same = (
+            abs(float(ce["score"]) - float(re_["score"])) < 1e-12
+            and ce.get("accused") == re_.get("accused")
+            and bool(ce["correct"]) == bool(re_["correct"])
+            and int(ce["final_day"]) == int(re_["final_day"])
+        )
+        if not same:
             mismatches.append(
                 {
-                    "cohort": cohort_name,
-                    "agent": e["agent"],
-                    "tier": e["tier"],
-                    "seed": e["seed"],
-                    "recorded_score": e["score"],
-                    "replay_score": rep["score"],
-                    "recorded_accused": e.get("accused"),
-                    "replay_accused": rep["accused"],
+                    "seed": seed,
+                    "committed": {
+                        "score": float(ce["score"]),
+                        "accused": ce.get("accused"),
+                        "correct": bool(ce["correct"]),
+                        "final_day": int(ce["final_day"]),
+                    },
+                    "replication": {
+                        "score": float(re_["score"]),
+                        "accused": re_.get("accused"),
+                        "correct": bool(re_["correct"]),
+                        "final_day": int(re_["final_day"]),
+                    },
                 }
             )
-    if duplicates:
-        raise ValueError(f"duplicate episodes in {cohort_name}: {duplicates}")
     if mismatches:
-        raise ValueError(f"replay mismatches in {cohort_name}: {mismatches}")
+        raise ValueError(f"committed vs FR8 solver 30-59 parity mismatch: {mismatches}")
     return {
-        "cohort": cohort_name,
-        "total": len(episodes),
-        "verified": len(episodes) - len(mismatches),
-        "mismatches": len(mismatches),
-        "duplicates": len(duplicates),
+        "committed_dir": "data/runs/committed/v1.4/reference/solver-hard-seeds30to59",
+        "replication_dir": "results/frontier_replication/v1.4/reference/solver-hard-seeds30to59",
+        "seeds": expected_seeds,
+        "n": len(expected_seeds),
+        "matched": len(expected_seeds),
+        "mismatches": 0,
+        "fields_verified": ["score", "accused", "correct", "final_day"],
+        "exact_parity": True,
     }
+
+
+def dedup_extension_union(
+    g1_eps: list[dict[str, Any]],
+    fr8_eps: list[dict[str, Any]],
+    solver_map: dict[tuple[str, int], dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[int, str], dict[str, Any]]:
+    g1_seeds = [int(e["seed"]) for e in g1_eps]
+    fr8_seeds = [int(e["seed"]) for e in fr8_eps]
+    if len(g1_seeds) != len(set(g1_seeds)):
+        raise ValueError(f"duplicate seeds inside G1 extension: {g1_seeds}")
+    if len(fr8_seeds) != len(set(fr8_seeds)):
+        raise ValueError(f"duplicate seeds inside FR8 replication: {fr8_seeds}")
+
+    seen: set[tuple[str, int]] = set()
+    union_eps: list[dict[str, Any]] = []
+    source_by_seed: dict[int, str] = {}
+    shared_seeds: list[int] = []
+    dropped = 0
+    for src_name, cohort_eps in (("committed_g1", g1_eps), ("fr8_replication", fr8_eps)):
+        for ep in sorted(cohort_eps, key=lambda e: int(e["seed"])):
+            key = (str(ep["tier"]), int(ep["seed"]))
+            if key not in seen:
+                seen.add(key)
+                union_eps.append(ep)
+                source_by_seed[key[1]] = src_name
+            else:
+                dropped += 1
+                shared_seeds.append(key[1])
+    union_eps.sort(key=lambda e: int(e["seed"]))
+
+    seen_alt: set[tuple[str, int]] = set()
+    alt_union_eps: list[dict[str, Any]] = []
+    for cohort_eps in (fr8_eps, g1_eps):
+        for ep in sorted(cohort_eps, key=lambda e: int(e["seed"])):
+            key = (str(ep["tier"]), int(ep["seed"]))
+            if key not in seen_alt:
+                seen_alt.add(key)
+                alt_union_eps.append(ep)
+    alt_union_eps.sort(key=lambda e: int(e["seed"]))
+
+    g1_by_seed = {int(e["seed"]): e for e in g1_eps}
+    fr8_by_seed = {int(e["seed"]): e for e in fr8_eps}
+    shared_comparisons: list[dict[str, Any]] = []
+    for seed in sorted(shared_seeds):
+        ge = g1_by_seed[seed]
+        fe = fr8_by_seed[seed]
+        se = solver_map[("hard", seed)]
+        shared_comparisons.append(
+            clean_json(
+                {
+                    "seed": seed,
+                    "selected_source": "committed_g1",
+                    "committed_g1": {
+                        "source": "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard",
+                        "score": float(ge["score"]),
+                        "correct": bool(ge["correct"]),
+                        "accused": ge.get("accused"),
+                        "final_day": int(ge["final_day"]),
+                        "p_accused": p_acc(ge),
+                        "luck_adjusted": post_expected(ge),
+                    },
+                    "fr8_replication": {
+                        "source": f"results/frontier_replication/v1.4/opencode-gemini-4-carbon/hard-s{seed}",
+                        "score": float(fe["score"]),
+                        "correct": bool(fe["correct"]),
+                        "accused": fe.get("accused"),
+                        "final_day": int(fe["final_day"]),
+                        "p_accused": p_acc(fe),
+                        "luck_adjusted": post_expected(fe),
+                    },
+                    "solver": {
+                        "source": "data/runs/committed/v1.4/reference/solver-hard-seeds30to59",
+                        "score": float(se["score"]),
+                        "correct": bool(se["correct"]),
+                        "accused": se.get("accused"),
+                        "final_day": int(se["final_day"]),
+                        "p_accused": p_acc(se),
+                        "luck_adjusted": post_expected(se),
+                    },
+                },
+                float_ndigits=8,
+            )
+        )
+
+    reconcile_meta = {
+        "dedup_rule": "committed_g1_precedes_fr8_replication_per_eb9dee54",
+        "g1_seeds": sorted(g1_seeds),
+        "fr8_seeds": sorted(fr8_seeds),
+        "g1_only_seeds": sorted(set(g1_seeds) - set(fr8_seeds)),
+        "fr8_only_seeds": sorted(set(fr8_seeds) - set(g1_seeds)),
+        "shared_seeds": sorted(shared_seeds),
+        "dropped_duplicate_episodes": dropped,
+        "shared_seed_comparisons": shared_comparisons,
+    }
+    return union_eps, alt_union_eps, source_by_seed, reconcile_meta
+
+
+def pool_disjoint_episodes(
+    primary_eps: list[dict[str, Any]],
+    ext_eps: list[dict[str, Any]],
+    pool_name: str,
+) -> list[dict[str, Any]]:
+    prim_seeds = [int(e["seed"]) for e in primary_eps]
+    ext_seeds = [int(e["seed"]) for e in ext_eps]
+    if len(prim_seeds) != len(set(prim_seeds)):
+        raise ValueError(f"duplicate seeds inside primary set for {pool_name}: {prim_seeds}")
+    if len(ext_seeds) != len(set(ext_seeds)):
+        raise ValueError(f"duplicate seeds inside extension set for {pool_name}: {ext_seeds}")
+    overlap = sorted(set(prim_seeds) & set(ext_seeds))
+    if overlap:
+        raise ValueError(f"overlapping seeds in {pool_name}: {overlap}")
+    combined = sorted(primary_eps + ext_eps, key=lambda e: int(e["seed"]))
+    combined_seeds = [int(e["seed"]) for e in combined]
+    if len(combined_seeds) != len(set(combined_seeds)):
+        raise ValueError(f"duplicate seeds after pooling {pool_name}: {combined_seeds}")
+    return combined
 
 
 def build_paired_row(
@@ -159,10 +406,15 @@ def build_paired_row(
     tier: str,
     episodes: list[dict[str, Any]],
     solver_map: dict[tuple[str, int], dict[str, Any]],
+    float_ndigits: int | None = None,
+    compact: bool = False,
 ) -> dict[str, Any]:
     es = sorted(episodes, key=lambda e: int(e["seed"]))
     if not es:
         raise ValueError(f"empty episode list for {label} ({tier})")
+    seeds = [int(e["seed"]) for e in es]
+    if len(seeds) != len(set(seeds)):
+        raise ValueError(f"duplicate seeds in paired row {label} ({tier}): {seeds}")
     paired = [e for e in es if (tier, int(e["seed"])) in solver_map]
     if len(paired) != len(es):
         missing = [int(e["seed"]) for e in es if (tier, int(e["seed"])) not in solver_map]
@@ -191,34 +443,34 @@ def build_paired_row(
         if accused_count
         else 0.0
     )
-    return clean_json(
-        {
-            "label": label,
-            "group": group,
-            "agent": agent,
-            "tier": tier,
-            "n": len(es),
-            "seeds": [int(e["seed"]) for e in es],
-            "mean": m,
-            "ci": h,
-            "accuracy": sum(bool(e["correct"]) for e in es) / len(es),
-            "accused_rate": accused_count / len(es),
-            "p_accused": (sum(ps) / len(ps)) if ps else float("nan"),
-            "n_p": len(ps),
-            "accuse_day": accuse_day,
-            "solver_same_seeds": ms,
-            "ratio": (sum(f) / len(f) / ms) if f and ms > 0 else float("nan"),
-            "ratio_lo": lo,
-            "ratio_hi": hi,
-            "diff": dm,
-            "diff_ci": dh,
-            "post_expected": (sum(pe_f) / len(pe_f)) if pe_ok else float("nan"),
-            "post_expected_ratio": pe_ratio,
-            "post_expected_lo": pe_lo,
-            "post_expected_hi": pe_hi,
-            "solver_post_expected": (sum(pe_sf) / len(pe_sf)) if pe_ok else float("nan"),
-        }
-    )
+    row: dict[str, Any] = {
+        "label": label,
+        "agent": agent,
+        "tier": tier,
+        "n": len(es),
+        "mean": m,
+        "ci": h,
+        "accuracy": sum(bool(e["correct"]) for e in es) / len(es),
+        "accused_rate": accused_count / len(es),
+        "p_accused": (sum(ps) / len(ps)) if ps else float("nan"),
+        "accuse_day": accuse_day,
+        "solver_same_seeds": ms,
+        "ratio": (sum(f) / len(f) / ms) if f and ms > 0 else float("nan"),
+        "ratio_lo": lo,
+        "ratio_hi": hi,
+        "diff": dm,
+        "diff_ci": dh,
+        "post_expected": (sum(pe_f) / len(pe_f)) if pe_ok else float("nan"),
+        "post_expected_ratio": pe_ratio,
+        "post_expected_lo": pe_lo,
+        "post_expected_hi": pe_hi,
+        "solver_post_expected": (sum(pe_sf) / len(pe_sf)) if pe_ok else float("nan"),
+    }
+    if not compact:
+        row["group"] = group
+        row["seeds"] = seeds
+        row["n_p"] = len(ps)
+    return clean_json(row, float_ndigits=float_ndigits)
 
 
 def head_to_head_diff(
@@ -226,6 +478,7 @@ def head_to_head_diff(
     tier: str,
     eps_a: list[dict[str, Any]],
     eps_b: list[dict[str, Any]],
+    float_ndigits: int | None = 10,
 ) -> dict[str, Any]:
     by_a = {int(e["seed"]): e for e in eps_a}
     by_b = {int(e["seed"]): e for e in eps_b}
@@ -250,34 +503,72 @@ def head_to_head_diff(
             "luck_adjusted_b": sum(float(post_expected(by_b[s])) for s in shared) / len(shared),
             "luck_adjusted_diff": la_m,
             "luck_adjusted_diff_ci": la_ci,
-        }
+        },
+        float_ndigits=float_ndigits,
     )
 
 
-def simulate_grok_tactics(tier: str, seeds: list[int]) -> list[dict[str, Any]]:
-    os.environ.setdefault("CANARY_ALLOW_DEV", "1")
+def _build_per_seed_detail(
+    carbon_eps: list[dict[str, Any]],
+    solver_30_59: dict[tuple[str, int], dict[str, Any]],
+    gt_30_59_by_seed: dict[int, dict[str, Any]],
+    source_by_seed: dict[int, str] | None = None,
+) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    for seed in seeds:
-        res = asdict(run_episode(Env(tier, seed), GrokTactics(seed=seed)))
-        out.append(res)
+    for e in sorted(carbon_eps, key=lambda ep: int(ep["seed"])):
+        s_seed = int(e["seed"])
+        se = solver_30_59[("hard", s_seed)]
+        ge = gt_30_59_by_seed[s_seed]
+        row: dict[str, Any] = {
+            "seed": s_seed,
+            "carbon_score": float(e["score"]),
+            "carbon_correct": bool(e["correct"]),
+            "carbon_accused": e.get("accused"),
+            "carbon_day": int(e["final_day"]),
+            "carbon_p_accused": p_acc(e),
+            "carbon_luck_adjusted": post_expected(e),
+            "solver_score": float(se["score"]),
+            "solver_correct": bool(se["correct"]),
+            "solver_accused": se.get("accused"),
+            "solver_day": int(se["final_day"]),
+            "solver_p_accused": p_acc(se),
+            "solver_luck_adjusted": post_expected(se),
+            "grok_tactics_score": float(ge["score"]),
+            "grok_tactics_luck_adjusted": post_expected(ge),
+        }
+        if source_by_seed is not None:
+            row["source"] = source_by_seed[s_seed]
+        out.append(clean_json(row, float_ndigits=4))
     return out
+
+
+def simulate_grok_tactics(tier: str, seeds: list[int]) -> list[dict[str, Any]]:
+    with _allow_dev_env():
+        out: list[dict[str, Any]] = []
+        for seed in seeds:
+            res = asdict(run_episode(Env(tier, seed), GrokTactics(seed=seed)))
+            out.append(res)
+        return out
 
 
 def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str, Any]:
     _P_CACHE.clear()
     try:
-        return _compute_summary_impl(root=root, verify_replays=verify_replays)
+        with _allow_dev_env():
+            return _compute_summary_impl(root=root, verify_replays=verify_replays)
     finally:
         _P_CACHE.clear()
 
 
 def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dict[str, Any]:
-    os.environ.setdefault("CANARY_ALLOW_DEV", "1")
     comm_v14 = root / "data" / "runs" / "committed" / "v1.4"
     rep_v14 = root / "results" / "frontier_replication" / "v1.4"
 
     comm_eps = load_runs(comm_v14)
     rep_eps = load_runs(rep_v14)
+    g1_ext_dir = comm_v14 / "opencode-gemini-4-carbon-ext" / "hard"
+    g1_dir_eps = load_runs(g1_ext_dir) if g1_ext_dir.exists() else []
+    keep_alive: list[Any] = [comm_eps, rep_eps, g1_dir_eps]
 
     if verify_replays:
         comm_audit = verify_episode_list(comm_eps, "data/runs/committed/v1.4")
@@ -289,6 +580,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "verified": 0,
             "mismatches": 0,
             "duplicates": 0,
+            "pre_1bc3e281_error_steps": _count_pre_1bc3e281_error_steps(comm_eps),
         }
         rep_audit = {
             "cohort": "results/frontier_replication/v1.4",
@@ -296,9 +588,16 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "verified": 0,
             "mismatches": 0,
             "duplicates": 0,
+            "pre_1bc3e281_error_steps": _count_pre_1bc3e281_error_steps(rep_eps),
         }
 
+    solver_30_59_parity = verify_solver_30_59_parity(
+        comm_v14 / "reference" / "solver-hard-seeds30to59",
+        rep_v14 / "reference" / "solver-hard-seeds30to59",
+    )
+
     seeds_0_29 = set(range(30))
+    seeds_30_59 = set(range(30, 60))
     solver_0_29 = {
         (str(e["tier"]), int(e["seed"])): e
         for e in comm_eps
@@ -306,8 +605,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
     }
     solver_30_59 = {
         (str(e["tier"]), int(e["seed"])): e
-        for e in rep_eps
-        if e["agent"] == "solver"
+        for e in comm_eps
+        if e["agent"] == "solver" and int(e["seed"]) in seeds_30_59
     }
     solver_pooled = {**solver_0_29, **solver_30_59}
 
@@ -320,6 +619,21 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
         e for e in comm_eps
         if e["agent"] == "opencode:google/gemini-4-carbon" and e["tier"] == "hard" and int(e["seed"]) in seeds_0_29
     ]
+    carbon_g1_ext_hard = sorted(
+        (
+            e for e in comm_eps
+            if e["agent"] == "opencode:google/gemini-4-carbon"
+            and e["tier"] == "hard"
+            and int(e["seed"]) in seeds_30_59
+        ),
+        key=lambda e: int(e["seed"]),
+    )
+    g1_dir_seeds = sorted(int(e["seed"]) for e in g1_dir_eps if e.get("agent") == "opencode:google/gemini-4-carbon" and e.get("tier") == "hard")
+    g1_hard_seeds = [int(e["seed"]) for e in carbon_g1_ext_hard]
+    if g1_dir_seeds != g1_hard_seeds:
+        raise ValueError(f"G1 extension dir seeds {g1_dir_seeds} differ from committed 30-59 carbon seeds {g1_hard_seeds}")
+    g1_hard_seed_set = set(g1_hard_seeds)
+
     carbon_ip_med_0_29 = [
         e for e in comm_eps
         if e["agent"] == "gemini:gemini-4-carbon" and e["tier"] == "medium" and int(e["seed"]) in seeds_0_29
@@ -365,7 +679,9 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                         "meta": {},
                     }
                 )
-        return sorted(out_es, key=lambda e: int(e["seed"]))
+        sorted_out = sorted(out_es, key=lambda e: int(e["seed"]))
+        keep_alive.append(sorted_out)
+        return sorted_out
 
     primary_rows: list[dict[str, Any]] = []
     primary_rows.append(
@@ -376,6 +692,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "medium",
             carbon_oc_med_0_29,
             solver_0_29,
+            float_ndigits=None,
         )
     )
     alt_med = alt_episodes(carbon_oc_med_0_29, "medium")
@@ -388,6 +705,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                 "medium",
                 alt_med,
                 solver_0_29,
+                float_ndigits=None,
             )
         )
     primary_rows.append(
@@ -398,6 +716,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "medium",
             carbon_ip_med_0_29,
             solver_0_29,
+            float_ndigits=None,
         )
     )
     primary_rows.append(
@@ -408,6 +727,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "medium",
             solver_med_0_29,
             solver_0_29,
+            float_ndigits=None,
         )
     )
     include_flash_hard = gap_ships_flash_hard(root)
@@ -417,7 +737,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
         if base_med:
             base_label = LEGACY_STOP_EARLY_LABEL if base == "stop_early" else base
             primary_rows.append(
-                build_paired_row(base_label, "v1.4/reference", base, "medium", base_med, solver_0_29)
+                build_paired_row(base_label, "v1.4/reference", base, "medium", base_med, solver_0_29, float_ndigits=None)
             )
 
     primary_rows.append(
@@ -428,6 +748,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             carbon_oc_hard_0_29,
             solver_0_29,
+            float_ndigits=None,
         )
     )
     alt_hard = alt_episodes(carbon_oc_hard_0_29, "hard")
@@ -440,6 +761,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                 "hard",
                 alt_hard,
                 solver_0_29,
+                float_ndigits=None,
             )
         )
     primary_rows.append(
@@ -450,6 +772,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             carbon_ip_hard_0_29,
             solver_0_29,
+            float_ndigits=None,
         )
     )
     if include_flash_hard:
@@ -461,6 +784,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                 "hard",
                 flash_oc_hard_0_29,
                 solver_0_29,
+                float_ndigits=None,
             )
         )
     primary_rows.append(
@@ -471,6 +795,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             solver_hard_0_29,
             solver_0_29,
+            float_ndigits=None,
         )
     )
     for base in COMMITTED_BASELINES_0_19:
@@ -478,7 +803,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
         if base_hard:
             base_label = LEGACY_STOP_EARLY_LABEL if base == "stop_early" else base
             primary_rows.append(
-                build_paired_row(base_label, "v1.4/reference", base, "hard", base_hard, solver_0_29)
+                build_paired_row(base_label, "v1.4/reference", base, "hard", base_hard, solver_0_29, float_ndigits=None)
             )
 
     carbon_rep_hard = sorted(
@@ -488,15 +813,49 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
     rep_hard_seeds = [int(e["seed"]) for e in carbon_rep_hard]
     rep_hard_seed_set = set(rep_hard_seeds)
 
-    if not set(int(e["seed"]) for e in carbon_oc_hard_0_29).isdisjoint(rep_hard_seed_set):
-        raise ValueError("primary 0-29 and replication hard seeds overlap")
+    prim_hard_seed_set = {int(e["seed"]) for e in carbon_oc_hard_0_29}
+    if not prim_hard_seed_set.isdisjoint(rep_hard_seed_set):
+        raise ValueError("primary 0-29 and FR8 replication hard seeds overlap")
+    if not prim_hard_seed_set.isdisjoint(g1_hard_seed_set):
+        raise ValueError("primary 0-29 and G1 extension hard seeds overlap")
 
     solver_rep_hard_30 = sorted(
         (e for e in rep_eps if e["agent"] == "solver" and e["tier"] == "hard"),
         key=lambda e: int(e["seed"]),
     )
-    solver_rep_hard_5 = [e for e in solver_rep_hard_30 if int(e["seed"]) in rep_hard_seed_set]
+    solver_comm_hard_30 = sorted(
+        (e for e in comm_eps if e["agent"] == "solver" and e["tier"] == "hard" and int(e["seed"]) in seeds_30_59),
+        key=lambda e: int(e["seed"]),
+    )
+    gt_30_59_by_seed = {
+        int(e["seed"]): e for e in rep_eps if e["agent"] == "grok_tactics" and e["tier"] == "hard"
+    }
 
+    solver_g1_hard_2 = [e for e in solver_comm_hard_30 if int(e["seed"]) in g1_hard_seed_set]
+    n_g1 = len(carbon_g1_ext_hard)
+    g1_rows: list[dict[str, Any]] = [
+        build_paired_row(
+            "OpenCode + gemini-4-carbon over MCP, extension (seeds 30-59)",
+            "v1.4/opencode-gemini-4-carbon-ext",
+            "opencode:google/gemini-4-carbon",
+            "hard",
+            carbon_g1_ext_hard,
+            solver_30_59,
+            float_ndigits=None,
+        ),
+        build_paired_row(
+            f"reference solver (same {n_g1} seeds)",
+            "v1.4/reference",
+            "solver",
+            "hard",
+            solver_g1_hard_2,
+            solver_30_59,
+            float_ndigits=6,
+            compact=True,
+        ),
+    ]
+
+    solver_rep_hard_5 = [e for e in solver_rep_hard_30 if int(e["seed"]) in rep_hard_seed_set]
     rep_seeds_txt = ", ".join(str(s) for s in rep_hard_seeds)
     n_rep = len(carbon_rep_hard)
     cohort_a_5_rows: list[dict[str, Any]] = [
@@ -507,6 +866,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             carbon_rep_hard,
             solver_30_59,
+            float_ndigits=6,
+            compact=True,
         ),
         build_paired_row(
             f"reference solver (same {n_rep} seeds)",
@@ -515,6 +876,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             solver_rep_hard_5,
             solver_30_59,
+            float_ndigits=6,
+            compact=True,
         ),
     ]
     for base in NON_SOLVER_BASELINES_30_59:
@@ -530,6 +893,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                 "hard",
                 base_5,
                 solver_30_59,
+                float_ndigits=6,
+                compact=True,
             )
         )
 
@@ -541,6 +906,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             solver_rep_hard_30,
             solver_30_59,
+            float_ndigits=6,
+            compact=True,
         )
     ]
     for base in NON_SOLVER_BASELINES_30_59:
@@ -553,45 +920,97 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                 "hard",
                 base_30,
                 solver_30_59,
+                float_ndigits=6,
+                compact=True,
             )
         )
 
-    gt_30_59_by_seed = {
-        int(e["seed"]): e for e in rep_eps if e["agent"] == "grok_tactics" and e["tier"] == "hard"
-    }
-    per_seed_rep_detail: list[dict[str, Any]] = []
-    for e in carbon_rep_hard:
-        s_seed = int(e["seed"])
-        se = solver_30_59[("hard", s_seed)]
-        ge = gt_30_59_by_seed[s_seed]
-        per_seed_rep_detail.append(
-            clean_json(
-                {
-                    "seed": s_seed,
-                    "carbon_score": float(e["score"]),
-                    "carbon_correct": bool(e["correct"]),
-                    "carbon_accused": e.get("accused"),
-                    "carbon_day": int(e["final_day"]),
-                    "carbon_p_accused": p_acc(e),
-                    "carbon_luck_adjusted": post_expected(e),
-                    "solver_score": float(se["score"]),
-                    "solver_correct": bool(se["correct"]),
-                    "solver_accused": se.get("accused"),
-                    "solver_day": int(se["final_day"]),
-                    "solver_p_accused": p_acc(se),
-                    "solver_luck_adjusted": post_expected(se),
-                    "grok_tactics_score": float(ge["score"]),
-                    "grok_tactics_correct": bool(ge["correct"]),
-                    "grok_tactics_accused": ge.get("accused"),
-                    "grok_tactics_day": int(ge["final_day"]),
-                    "grok_tactics_luck_adjusted": post_expected(ge),
-                }
-            )
-        )
+    per_seed_rep_detail = _build_per_seed_detail(carbon_rep_hard, solver_30_59, gt_30_59_by_seed)
 
-    pooled_carbon_35 = sorted(carbon_oc_hard_0_29 + carbon_rep_hard, key=lambda e: int(e["seed"]))
-    pooled_solver_35 = sorted(solver_hard_0_29 + solver_rep_hard_5, key=lambda e: int(e["seed"]))
-    n_pool = len(pooled_carbon_35)
+    carbon_union_hard_6, carbon_union_alt_6, union_source_by_seed, union_meta = dedup_extension_union(
+        carbon_g1_ext_hard, carbon_rep_hard, solver_30_59
+    )
+    union_hard_seeds = [int(e["seed"]) for e in carbon_union_hard_6]
+    union_hard_seed_set = set(union_hard_seeds)
+    union_seeds_txt = ", ".join(str(s) for s in union_hard_seeds)
+    n_union = len(carbon_union_hard_6)
+    solver_union_hard_6 = [e for e in solver_comm_hard_30 if int(e["seed"]) in union_hard_seed_set]
+    gt_union_hard_6 = [gt_30_59_by_seed[s] for s in union_hard_seeds]
+
+    union_rows: list[dict[str, Any]] = [
+        build_paired_row(
+            f"OpenCode + gemini-4-carbon over MCP (deduplicated union seeds {union_seeds_txt}; committed G1 on seed 34)",
+            "reconciled_30_59_union_g1_plus_fr8",
+            "opencode:google/gemini-4-carbon",
+            "hard",
+            carbon_union_hard_6,
+            solver_30_59,
+            float_ndigits=6,
+            compact=True,
+        ),
+        build_paired_row(
+            f"OpenCode + gemini-4-carbon over MCP (union sensitivity: FR8 tie-break on seed 34, seeds {union_seeds_txt})",
+            "reconciled_30_59_union_fr8_tiebreak",
+            "opencode:google/gemini-4-carbon",
+            "hard",
+            carbon_union_alt_6,
+            solver_30_59,
+            float_ndigits=6,
+            compact=True,
+        ),
+        build_paired_row(
+            f"reference solver (same {n_union} seeds)",
+            "v1.4/reference",
+            "solver",
+            "hard",
+            solver_union_hard_6,
+            solver_30_59,
+            float_ndigits=6,
+            compact=True,
+        ),
+        build_paired_row(
+            f"grok_tactics (same {n_union} seeds)",
+            "frontier_replication/v1.4/reference",
+            "grok_tactics",
+            "hard",
+            gt_union_hard_6,
+            solver_30_59,
+            float_ndigits=6,
+            compact=True,
+        ),
+    ]
+    per_seed_union_detail = _build_per_seed_detail(
+        carbon_union_hard_6, solver_30_59, gt_30_59_by_seed, source_by_seed=union_source_by_seed
+    )
+
+    pooled_carbon_32 = pool_disjoint_episodes(carbon_oc_hard_0_29, carbon_g1_ext_hard, "pooled_n32_primary_plus_g1")
+    pooled_solver_32 = pool_disjoint_episodes(solver_hard_0_29, solver_g1_hard_2, "pooled_n32_solver")
+    n_pool_32 = len(pooled_carbon_32)
+    pooled_n32_rows: list[dict[str, Any]] = [
+        build_paired_row(
+            "OpenCode + gemini-4-carbon over MCP, pooled (primary + extension)",
+            "v1.4/opencode-gemini-4-carbon+v1.4/opencode-gemini-4-carbon-ext",
+            "opencode:google/gemini-4-carbon",
+            "hard",
+            pooled_carbon_32,
+            solver_pooled,
+            float_ndigits=None,
+        ),
+        build_paired_row(
+            f"reference solver (same {n_pool_32} seeds)",
+            "secondary_pooled_0_29_plus_g1_2",
+            "solver",
+            "hard",
+            pooled_solver_32,
+            solver_pooled,
+            float_ndigits=6,
+            compact=True,
+        ),
+    ]
+
+    pooled_carbon_35 = pool_disjoint_episodes(carbon_oc_hard_0_29, carbon_rep_hard, "pooled_n35_primary_plus_fr8")
+    pooled_solver_35 = pool_disjoint_episodes(solver_hard_0_29, solver_rep_hard_5, "pooled_n35_solver")
+    n_pool_35 = len(pooled_carbon_35)
     cohort_b_rows: list[dict[str, Any]] = [
         build_paired_row(
             f"SECONDARY sensitivity: OpenCode + gemini-4-carbon hard pooled (0-29 primary + {rep_seeds_txt} replication)",
@@ -600,14 +1019,57 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             pooled_carbon_35,
             solver_pooled,
+            float_ndigits=6,
+            compact=True,
         ),
         build_paired_row(
-            f"reference solver (same {n_pool} seeds)",
+            f"reference solver (same {n_pool_35} seeds)",
             "secondary_pooled_0_29_plus_rep5",
             "solver",
             "hard",
             pooled_solver_35,
             solver_pooled,
+            float_ndigits=6,
+            compact=True,
+        ),
+    ]
+
+    pooled_carbon_36 = pool_disjoint_episodes(carbon_oc_hard_0_29, carbon_union_hard_6, "pooled_n36_primary_plus_union6")
+    pooled_carbon_36_alt = pool_disjoint_episodes(
+        carbon_oc_hard_0_29, carbon_union_alt_6, "pooled_n36_primary_plus_union6_fr8_tiebreak"
+    )
+    pooled_solver_36 = pool_disjoint_episodes(solver_hard_0_29, solver_union_hard_6, "pooled_n36_solver")
+    n_pool_36 = len(pooled_carbon_36)
+    pooled_n36_rows: list[dict[str, Any]] = [
+        build_paired_row(
+            f"SECONDARY sensitivity: OpenCode + gemini-4-carbon hard pooled (0-29 primary + deduplicated union {union_seeds_txt}; committed G1 seed 34)",
+            "secondary_pooled_0_29_plus_union6",
+            "opencode:google/gemini-4-carbon",
+            "hard",
+            pooled_carbon_36,
+            solver_pooled,
+            float_ndigits=6,
+            compact=True,
+        ),
+        build_paired_row(
+            f"SECONDARY sensitivity: OpenCode + gemini-4-carbon hard pooled (0-29 primary + union {union_seeds_txt}; FR8 seed 34 tie-break)",
+            "secondary_pooled_0_29_plus_union6_fr8_tiebreak",
+            "opencode:google/gemini-4-carbon",
+            "hard",
+            pooled_carbon_36_alt,
+            solver_pooled,
+            float_ndigits=6,
+            compact=True,
+        ),
+        build_paired_row(
+            f"reference solver (same {n_pool_36} seeds)",
+            "secondary_pooled_0_29_plus_union6",
+            "solver",
+            "hard",
+            pooled_solver_36,
+            solver_pooled,
+            float_ndigits=6,
+            compact=True,
         ),
     ]
 
@@ -627,6 +1089,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
 
     gt_med_0_29 = simulate_grok_tactics("medium", list(range(30)))
     gt_hard_0_29 = simulate_grok_tactics("hard", list(range(30)))
+    keep_alive.extend([gt_med_0_29, gt_hard_0_29])
     if verify_replays:
         verify_episode_list(gt_med_0_29 + gt_hard_0_29, "deterministic_grok_tactics_0_29")
 
@@ -643,6 +1106,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "medium",
             carbon_oc_med_29,
             solver_0_29,
+            float_ndigits=6,
+            compact=True,
         ),
         build_paired_row(
             f"reference solver (shared {flash_med_n} seeds)",
@@ -651,6 +1116,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "medium",
             solver_med_29,
             solver_0_29,
+            float_ndigits=6,
+            compact=True,
         ),
         build_paired_row(
             f"in-process gemini-4-carbon (shared {flash_med_n} seeds)",
@@ -659,6 +1126,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "medium",
             carbon_ip_med_29,
             solver_0_29,
+            float_ndigits=6,
+            compact=True,
         ),
         build_paired_row(
             f"grok_tactics (deterministic scripted policy, shared {flash_med_n} seeds)",
@@ -667,6 +1136,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "medium",
             gt_med_29,
             solver_0_29,
+            float_ndigits=6,
+            compact=True,
         ),
         build_paired_row(
             flash_med_row_label,
@@ -675,8 +1146,20 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "medium",
             flash_rep_med_29,
             solver_0_29,
+            float_ndigits=6,
+            compact=True,
         ),
     ]
+    flash_med_n29_full_row = build_paired_row(
+        flash_med_row_label,
+        "frontier_replication/v1.4/opencode-gemini-3.5-flash",
+        "opencode:google/gemini-3.5-flash",
+        "medium",
+        flash_rep_med_29,
+        solver_0_29,
+        float_ndigits=6,
+        compact=False,
+    )
 
     cross_model_hard_30_rows: list[dict[str, Any]] = [
         build_paired_row(
@@ -686,6 +1169,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             solver_hard_0_29,
             solver_0_29,
+            float_ndigits=6,
+            compact=True,
         ),
         build_paired_row(
             "in-process gemini-4-carbon (seeds 0-29)",
@@ -694,6 +1179,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             carbon_ip_hard_0_29,
             solver_0_29,
+            float_ndigits=6,
+            compact=True,
         ),
         build_paired_row(
             "grok_tactics (deterministic scripted policy, seeds 0-29)",
@@ -702,6 +1189,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             gt_hard_0_29,
             solver_0_29,
+            float_ndigits=6,
+            compact=True,
         ),
         build_paired_row(
             "OpenCode + gemini-4-carbon over MCP (primary seeds 0-29)",
@@ -710,6 +1199,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             carbon_oc_hard_0_29,
             solver_0_29,
+            float_ndigits=6,
+            compact=True,
         ),
     ]
     if include_flash_hard:
@@ -721,6 +1212,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                 "hard",
                 flash_oc_hard_0_29,
                 solver_0_29,
+                float_ndigits=6,
+                compact=True,
             )
         )
 
@@ -731,6 +1224,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
         "medium",
         gt_med_0_29,
         solver_0_29,
+        float_ndigits=6,
+        compact=True,
     )
 
     h2h_med = head_to_head_diff(
@@ -738,6 +1233,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
         "medium",
         carbon_oc_med_29,
         flash_rep_med_29,
+        float_ndigits=6,
     )
     h2h_map: dict[str, Any] = {"medium_n29": h2h_med}
     if include_flash_hard:
@@ -746,49 +1242,139 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             "hard",
             carbon_oc_hard_0_29,
             flash_oc_hard_0_29,
+            float_ndigits=6,
         )
+
+    gpt55_committed_count = sum(1 for e in comm_eps if "gpt-5.5" in str(e.get("agent") or ""))
+    all_pooled_exclude_parity = bool(
+        pooled_n32_rows[0]["post_expected_hi"] < 1.0
+        and cohort_b_rows[0]["post_expected_hi"] < 1.0
+        and pooled_n36_rows[0]["post_expected_hi"] < 1.0
+        and pooled_n36_rows[1]["post_expected_hi"] < 1.0
+    )
 
     return clean_json(
         {
-            "schema_version": "v1.4-frontier-replication-1",
+            "schema_version": "v1.4-frontier-replication-2",
             "tiers_version": "v1.4",
+            "zero_live_api_calls": True,
+            "zero_git_dependency": True,
             "pre_registered_rule": {
                 "enforced": True,
                 "primary_seeds": list(range(30)),
+                "primary_lock_classification": "post_hoc_lock",
+                "primary_episodes_commit": "8fd4dec",
+                "primary_lock_commit": "671ed96",
+                "primary_lock_delay_s": 28,
+                "g1_extension_classification": "pre_registered",
+                "g1_prereg_commit": "f9fb7a4a",
+                "g1_carbon_ext_hard_seeds": g1_hard_seeds,
+                "gpt_5_5_classification": "pre_registered",
+                "gpt_5_5_prereg_commit": "cf394894",
+                "gpt_5_5_committed_v14_episodes": gpt55_committed_count,
                 "replication_carbon_hard_seeds": rep_hard_seeds,
+                "union_dedup_hard_seeds": union_hard_seeds,
+                "shared_extension_seeds": union_meta["shared_seeds"],
+                "shared_seed_tiebreak_rule": union_meta["dedup_rule"],
                 "primary_and_replication_disjoint": True,
+                "pooled_n32_classification": "secondary_sensitivity_only",
                 "pooled_n35_classification": "secondary_sensitivity_only",
-                "source_rule": "docs/reports/gap.md (post-hoc seed lock 671ed96, 28 s after 8fd4dec; pre-registered extension f9fb7a4a)",
+                "pooled_n36_classification": "secondary_sensitivity_only",
+                "source_rule": (
+                    "docs/reports/gap.md (primary 0-29 post-hoc lock in 671ed96, 28 s after 8fd4dec, "
+                    "not pre-registered; G1 extension pre-registered in f9fb7a4a; gpt-5.5 pre-registered "
+                    "in cf394894; repeated seed deduplication per eb9dee54)"
+                ),
             },
             "replay_verification": {
                 "committed_v14": comm_audit,
                 "replication_v14": rep_audit,
+                "step_error_detail_1bc3e281_compat": True,
+                "committed_breakdown": {
+                    "opencode_gemini_4_carbon_primary_0_29": len(carbon_oc_med_0_29) + len(carbon_oc_hard_0_29),
+                    "opencode_gemini_4_carbon_g1_ext_hard": len(carbon_g1_ext_hard),
+                    "inproc_gemini_4_carbon_0_29": len(carbon_ip_med_0_29) + len(carbon_ip_hard_0_29),
+                    "opencode_gemini_3_5_flash_hard_0_29": len(flash_oc_hard_0_29),
+                    "reference_solver_0_29_and_30_59": len(solver_med_0_29) + len(solver_hard_0_29) + len(solver_comm_hard_30),
+                    "baselines_0_19": (
+                        len(comm_eps)
+                        - len(carbon_oc_med_0_29)
+                        - len(carbon_oc_hard_0_29)
+                        - len(carbon_g1_ext_hard)
+                        - len(carbon_ip_med_0_29)
+                        - len(carbon_ip_hard_0_29)
+                        - len(flash_oc_hard_0_29)
+                        - len(solver_med_0_29)
+                        - len(solver_hard_0_29)
+                        - len(solver_comm_hard_30)
+                    ),
+                },
                 "replication_breakdown": {
                     "opencode_gemini_4_carbon_hard": len(carbon_rep_hard),
                     "opencode_gemini_3_5_flash_medium": len(flash_rep_med_29),
                     "reference_and_baselines_hard_30_59": len(rep_eps) - len(carbon_rep_hard) - len(flash_rep_med_29),
                 },
             },
+            "solver_30_59_parity": solver_30_59_parity,
             "primary_v14_0_29": {
                 "classification": "primary_headline_locked",
                 "rows": primary_rows,
             },
+            "g1_committed_ext_hard_n2": {
+                "classification": "pre_registered_partial_extension",
+                "prereg_commit": "f9fb7a4a",
+                "source_dir": "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard",
+                "seeds": g1_hard_seeds,
+                "pending_seeds_in_30_59": sorted(seeds_30_59 - g1_hard_seed_set),
+                "rows": g1_rows,
+            },
             "cohort_a_carbon_hard_replication": {
                 "classification": "replication_separate",
                 "seeds": rep_hard_seeds,
-                "pending_seeds_in_30_59": sorted(set(range(30, 60)) - rep_hard_seed_set),
+                "pending_seeds_in_30_59": sorted(seeds_30_59 - rep_hard_seed_set),
                 "paired_5_seeds_rows": cohort_a_5_rows,
                 "per_seed_detail": per_seed_rep_detail,
                 "reference_30_59_rows": cohort_a_30_rows,
+            },
+            "union_dedup_hard_n6": {
+                "classification": "deduplicated_30_59_extension_union",
+                "dedup_rule": union_meta["dedup_rule"],
+                "seeds": union_hard_seeds,
+                "g1_only_seeds": union_meta["g1_only_seeds"],
+                "fr8_only_seeds": union_meta["fr8_only_seeds"],
+                "shared_seeds": union_meta["shared_seeds"],
+                "dropped_duplicate_episodes": union_meta["dropped_duplicate_episodes"],
+                "pending_seeds_in_30_59": sorted(seeds_30_59 - union_hard_seed_set),
+                "shared_seed_comparisons": union_meta["shared_seed_comparisons"],
+                "rows": union_rows,
+                "per_seed_detail": per_seed_union_detail,
             },
             "cohort_b_secondary_pooled_hard_n35": {
                 "classification": "secondary_sensitivity_only",
                 "seeds": [int(e["seed"]) for e in pooled_carbon_35],
                 "rows": cohort_b_rows,
             },
+            "secondary_pooled_hard_reconciliation": {
+                "classification": "secondary_sensitivity_only",
+                "primary_headline_n": len(carbon_oc_hard_0_29),
+                "no_duplicate_seeds_verified": True,
+                "all_luck_adjusted_95ci_exclude_parity": all_pooled_exclude_parity,
+                "n32_primary_plus_g1": {
+                    "seeds": [int(e["seed"]) for e in pooled_carbon_32],
+                    "rows": pooled_n32_rows,
+                },
+                "n35_primary_plus_fr8": {
+                    "seeds": [int(e["seed"]) for e in pooled_carbon_35],
+                    "cohort_ref": "cohort_b_secondary_pooled_hard_n35",
+                },
+                "n36_primary_plus_union6": {
+                    "seeds": [int(e["seed"]) for e in pooled_carbon_36],
+                    "rows": pooled_n36_rows,
+                },
+            },
             "cohort_c_flash_and_cross_model": {
                 "flash_hard_held_pending_gap_md": not include_flash_hard,
-                "flash_medium_n29_row": cross_model_med_29_rows[-1],
+                "flash_medium_n29_row": flash_med_n29_full_row,
                 "flash_medium_missing_seeds_in_0_29": sorted(seeds_0_29 - flash_med_seed_set),
                 "flash_hard_n30_row": cross_model_hard_30_rows[-1] if include_flash_hard else None,
                 "grok_tactics_medium_0_29_row": gt_med_30_row,
@@ -868,9 +1454,15 @@ def _md_heading(level: int, title: str) -> str:
 def render_markdown(summary: dict[str, Any]) -> str:
     rv = summary["replay_verification"]
     rb = rv["replication_breakdown"]
+    cbk = rv["committed_breakdown"]
+    sp = summary["solver_30_59_parity"]
+    rule = summary["pre_registered_rule"]
     prim_rows = summary["primary_v14_0_29"]["rows"]
+    g1 = summary["g1_committed_ext_hard_n2"]
     ca = summary["cohort_a_carbon_hard_replication"]
     cb = summary["cohort_b_secondary_pooled_hard_n35"]
+    u6 = summary["union_dedup_hard_n6"]
+    sec_pool = summary["secondary_pooled_hard_reconciliation"]
     cc = summary["cohort_c_flash_and_cross_model"]
 
     prim_by_key = {(r["agent"], r["tier"], r["label"]): r for r in prim_rows}
@@ -878,20 +1470,33 @@ def render_markdown(summary: dict[str, Any]) -> str:
     c_med_prim = prim_by_key[("opencode:google/gemini-4-carbon", "medium", "OpenCode + gemini-4-carbon over MCP (judges' shape)")]
     s_hard_prim = prim_by_key[("solver", "hard", "reference solver")]
     c_ip_hard_prim = prim_by_key[("gemini:gemini-4-carbon", "hard", "in-process gemini-4-carbon (full history, thought-signature replay)")]
+
+    c_g1_2 = g1["rows"][0]
+    c_rep_5 = ca["paired_5_seeds_rows"][0]
+    c_union_6 = u6["rows"][0]
+    c_union_6_alt = u6["rows"][1]
+    s_rep_30 = ca["reference_30_59_rows"][0]
+
+    n35_rows = sec_pool["n35_primary_plus_fr8"].get("rows") or cb["rows"]
+    c_pool_32 = sec_pool["n32_primary_plus_g1"]["rows"][0]
+    c_pool_35 = n35_rows[0]
+    c_pool_36 = sec_pool["n36_primary_plus_union6"]["rows"][0]
+    c_pool_36_alt = sec_pool["n36_primary_plus_union6"]["rows"][1]
+
     f_hard_prim = cc["flash_hard_n30_row"]
     flash_hard_held = bool(cc.get("flash_hard_held_pending_gap_md", f_hard_prim is None))
     f_med_rep = cc["flash_medium_n29_row"]
     c_med_29 = cc["cross_model_medium_same_29_seeds_rows"][0]
     gt_med_29 = cc["cross_model_medium_same_29_seeds_rows"][3]
     gt_hard_30 = cc["cross_model_hard_0_29_rows"][2]
-    c_rep_5 = ca["paired_5_seeds_rows"][0]
-    s_rep_30 = ca["reference_30_59_rows"][0]
-    c_pool_35 = cb["rows"][0]
     seed30_detail = ca["per_seed_detail"][0]
+    s34_cmp = u6["shared_seed_comparisons"][0]
     h2h_med = cc["head_to_head_carbon_vs_flash"]["medium_n29"]
     h2h_hard = cc["head_to_head_carbon_vs_flash"].get("hard_n30")
 
+    g1_seeds_str = ", ".join(str(s) for s in g1["seeds"])
     rep_seeds_str = ", ".join(str(s) for s in ca["seeds"])
+    union_seeds_str = ", ".join(str(s) for s in u6["seeds"])
     med_seeds_str = "0-29" if not cc["flash_medium_missing_seeds_in_0_29"] else ", ".join(str(s) for s in f_med_rep["seeds"])
     rep_correct = round(c_rep_5["accuracy"] * c_rep_5["n"])
 
@@ -918,12 +1523,18 @@ def render_markdown(summary: dict[str, Any]) -> str:
             f"is replay-verified in `committed_v14` (`{rv['committed_v14']['verified']}/{rv['committed_v14']['total']}`) and omitted from tables here until `docs/reports/gap.md` ships it."
         )
 
+    pooled_all_rows = (
+        sec_pool["n32_primary_plus_g1"]["rows"]
+        + n35_rows
+        + sec_pool["n36_primary_plus_union6"]["rows"]
+    )
+
     lines: list[str] = [
         _md_heading(1, "Canary v1.4 Frontier Replication and Cross-Model Capability Report"),
         "",
         "Every figure in this report is deterministically computed from replay-verified episodes by "
         "`scripts/verify_frontier_replication.py` using `canary.analysis.gap` (`load_runs`, `mean_ci`) and "
-        "`scripts/paired_v13.py` (`boot_ratio`, `p_acc`, `post_expected`), with zero live API calls.",
+        "`scripts/paired_v13.py` (`boot_ratio`, `p_acc`, `post_expected`), with zero live API calls and zero runtime `.git` calls.",
         "",
         "Reproduce and verify:",
         "",
@@ -931,38 +1542,55 @@ def render_markdown(summary: dict[str, Any]) -> str:
         "PYTHONPATH=. python scripts/verify_frontier_replication.py --check",
         "```",
         "",
-        _md_heading(2, "1. Post-Hoc Seed Lock, Pre-Registered Extension, and Replay Audit"),
+        _md_heading(2, "1. Post-Hoc Seed Lock, Pre-Registered Extensions, and Replay Audit"),
         "",
-        "- **Post-hoc seed lock and pre-registered extension (`docs/reports/gap.md`, commits `671ed96` and `f9fb7a4a`):** "
+        "- **Post-hoc seed lock and pre-registered extensions (`docs/reports/gap.md`, commits `8fd4dec`, `671ed96`, `f9fb7a4a`, `cf394894`, `eb9dee54`):** "
         "The `justSilas` committed dev set (`seeds 0-29`, `n=30` per tier in `data/runs/committed/v1.4/`) is the locked "
         "**PRIMARY** headline result (`671ed96` came 28 s after `8fd4dec`, so it is a post-hoc lock against later reruns "
-        "and cherry-picking, not a pre-registration). The `opencode-gemini-4-carbon-ext` partial extension (`seeds 34, 37`, "
-        "`n=2`, pre-registered in `f9fb7a4a`) and all FR8 episodes under `results/frontier_replication/v1.4/` are evaluated "
-        "and reported strictly separately as replication or cross-model cohorts, never swapped into the primary `0-29` set.",
-        f"- **Replay verification (`scripts/verify_replay.py`):** "
+        "and cherry-picking, not a pre-registration). By contrast, the G1 `opencode-gemini-4-carbon-ext` hard extension "
+        f"(`seeds {g1_seeds_str}`, `n={c_g1_2['n']}` completed before early quota stop, pre-registered in `f9fb7a4a`) and the second "
+        f"frontier family `gpt-5.5` (`v1.4` hard `seeds 0-29`, OpenCode `1.19.5`, pre-registered in `cf394894`, `{rule['gpt_5_5_committed_v14_episodes']}` "
+        "committed v1.4 episodes at `58716742`) were pre-registered before any episode launched. All FR8 episodes under "
+        "`results/frontier_replication/v1.4/` are evaluated separately; when G1 and FR8 `30-59` hard runs are reconciled into "
+        f"the deduplicated 6-seed union (`seeds {union_seeds_str}`, `n={c_union_6['n']}`), shared seed `34` deterministically uses committed "
+        "`opencode-gemini-4-carbon-ext` (`eb9dee54`, never double-counting a repeated `(tier, seed)`).",
+        f"- **Replay verification (`scripts/verify_replay.py`, commit `1bc3e281` compatibility) and solver `30-59` parity:** "
         f"`{rv['committed_v14']['verified']}/{rv['committed_v14']['total']}` episodes verified in `data/runs/committed/v1.4/` "
-        f"and `{rv['replication_v14']['verified']}/{rv['replication_v14']['total']}` episodes verified in "
-        f"`results/frontier_replication/v1.4/` (`{rb['opencode_gemini_4_carbon_hard']}` `opencode:google/gemini-4-carbon` hard, "
-        f"`{rb['opencode_gemini_3_5_flash_medium']}` `opencode:google/gemini-3.5-flash` medium, and "
-        f"`{rb['reference_and_baselines_hard_30_59']}` reference solver and baseline episodes on hard `seeds 30-59`), "
-        "with `0` mismatches and `0` duplicate `(agent, tier, seed)` entries.",
-        "- **Headline summary:**",
+        f"(`{cbk['opencode_gemini_4_carbon_primary_0_29']}` primary OpenCode carbon, `{cbk['opencode_gemini_4_carbon_g1_ext_hard']}` G1 carbon-ext, "
+        f"`{cbk['inproc_gemini_4_carbon_0_29']}` in-process carbon, `{cbk['opencode_gemini_3_5_flash_hard_0_29']}` OpenCode flash hard, "
+        f"`{cbk['reference_solver_0_29_and_30_59']}` solver, `{cbk['baselines_0_19']}` baselines) and "
+        f"`{rv['replication_v14']['verified']}/{rv['replication_v14']['total']}` episodes verified in `results/frontier_replication/v1.4/` "
+        f"(`{rb['opencode_gemini_4_carbon_hard']}` OpenCode carbon hard, `{rb['opencode_gemini_3_5_flash_medium']}` OpenCode flash medium, "
+        f"`{rb['reference_and_baselines_hard_30_59']}` reference solver and baselines on hard `seeds 30-59`), with `0` mismatches and `0` "
+        f"intra-cohort duplicates across all `{rv['committed_v14']['verified'] + rv['replication_v14']['verified']}` episodes "
+        f"(including `{rv['committed_v14']['pre_1bc3e281_error_steps']}` committed and `{rv['replication_v14']['pre_1bc3e281_error_steps']}` replication "
+        "pre-`1bc3e281` tool-error steps recorded before `data.detail` was added). Furthermore, `solver-hard-seeds30to59` matches "
+        f"`{sp['matched']}/{sp['n']}` (`0` mismatches on `score`, `accused`, `correct`, and `final_day`) between "
+        "`data/runs/committed/v1.4/reference/` and `results/frontier_replication/v1.4/reference/`.",
+        "- **Headline and reconciled extension summary:**",
         f"  - **Primary `0-29` (`n=30`, locked headline):** `opencode:google/gemini-4-carbon` on hard scores "
         f"`{_num(c_hard_prim['mean'])} +/- {_num(c_hard_prim['ci'])}` vs solver `{_num(c_hard_prim['solver_same_seeds'])}`, "
         f"giving **{_ratio_cell(c_hard_prim)}** raw and **{_luck_cell(c_hard_prim, bold=False)}** luck-adjusted; on medium (`n=30`) "
         f"it reaches `{_ratio_cell(c_med_prim)}` raw and `{_luck_cell(c_med_prim, bold=False)}` luck-adjusted.",
-        f"  - **Replication hard (`seeds {rep_seeds_str}`, `n={c_rep_5['n']}`, separate cohort):** `opencode:google/gemini-4-carbon` "
-        f"scores `{_num(c_rep_5['mean'])} +/- {_num(c_rep_5['ci'])}` ({rep_correct}/{c_rep_5['n']} correct, mean `P(accused) = {_num(c_rep_5['p_accused'], 2)}`, "
-        f"luck-adjusted `{_num(c_rep_5['post_expected'])}`) vs solver `{_num(c_rep_5['solver_same_seeds'])}` raw "
-        f"(luck-adjusted `{_num(c_rep_5['solver_post_expected'])}`, ratio `{_luck_cell(c_rep_5, bold=False)}`).",
-        f"  - **Secondary pooled sensitivity (`n={c_pool_35['n']}`, secondary under post-hoc seed lock `671ed96`):** Pooling primary `0-29` with "
-        f"replication `{rep_seeds_str}` yields `{_ratio_cell(c_pool_35)}` raw and **{_luck_cell(c_pool_35, bold=False)}** "
-        f"luck-adjusted, where the luck-adjusted 95% CI `[{c_pool_35['post_expected_lo']:.0%}, {c_pool_35['post_expected_hi']:.0%}]` continues to exclude parity.",
+        f"  - **Reconciled `30-59` hard extensions (`n=2` G1, `n=5` FR8, `n=6` deduplicated union, separate cohorts):** "
+        f"Committed G1 (`seeds {g1_seeds_str}`, `n={c_g1_2['n']}`) scores `{_num(c_g1_2['mean'])} +/- {_num(c_g1_2['ci'])}` vs solver "
+        f"`{_num(c_g1_2['solver_same_seeds'])}` (`{_ratio_cell(c_g1_2)}` raw, `{_luck_cell(c_g1_2, bold=False)}` luck-adjusted); "
+        f"FR8 replication (`seeds {rep_seeds_str}`, `n={c_rep_5['n']}`) scores `{_num(c_rep_5['mean'])} +/- {_num(c_rep_5['ci'])}` "
+        f"({rep_correct}/{c_rep_5['n']} correct, luck-adjusted `{_num(c_rep_5['post_expected'])}`) vs solver `{_num(c_rep_5['solver_same_seeds'])}` raw "
+        f"(`{_luck_cell(c_rep_5, bold=False)}` luck-adjusted); and the deduplicated 6-seed union (`seeds {union_seeds_str}`, `n={c_union_6['n']}`, "
+        f"committed G1 on shared seed `34`) scores `{_num(c_union_6['mean'])} +/- {_num(c_union_6['ci'])}` vs solver `{_num(c_union_6['solver_same_seeds'])}` "
+        f"(`{_ratio_cell(c_union_6)}` raw, `{_luck_cell(c_union_6, bold=False)}` luck-adjusted; FR8 seed-34 tie-break: `{_luck_cell(c_union_6_alt, bold=False)}`).",
+        f"  - **Secondary pooled hard sensitivity (`n=32`, `n=35`, `n=36`, secondary under post-hoc seed lock `671ed96`):** "
+        f"Pooling primary `0-29` with G1 (`n={c_pool_32['n']}`, matching `README.md` / `docs/reports/gap.md`) gives `{_ratio_cell(c_pool_32)}` raw and "
+        f"**{_luck_cell(c_pool_32, bold=False)}** luck-adjusted; pooling with FR8 (`n={c_pool_35['n']}`) gives `{_ratio_cell(c_pool_35)}` raw and "
+        f"**{_luck_cell(c_pool_35, bold=False)}** luck-adjusted; and pooling with the deduplicated 6-seed union (`n={c_pool_36['n']}`, `0` duplicate seeds) "
+        f"gives `{_ratio_cell(c_pool_36)}` raw and **{_luck_cell(c_pool_36, bold=False)}** luck-adjusted (`post_expected_hi = {_num(c_pool_36['post_expected_hi'])} < 1.000`; "
+        f"FR8 seed-34 tie-break: `{_luck_cell(c_pool_36_alt, bold=False)}`). Across all secondary pooled sets (`n=32`, `n=35`, `n=36`), the luck-adjusted 95% CI continues to exclude parity.",
         cross_model_bullet,
         "",
         _md_heading(2, "2. Primary Committed v1.4 Cohort (Seeds 0-29, Locked Headline)"),
         "",
-        "Exact reproduction of `docs/reports/gap.md` rows in `data/runs/committed/v1.4/` (`scripts/paired_gemini.py --version v1.4 --seeds 0-29`):",
+        "Exact reproduction of `docs/reports/gap.md` rows in `data/runs/committed/v1.4/` (`scripts/paired_gemini.py --version v1.4 --seeds 0-29`; solver `0-29` spans `solver-*-20261114-121126` for `0-19` plus `solver-*-seeds20to29` for `20-29`):",
         "",
     ]
     lines.extend(_paired_table_md(prim_rows, include_tier=True))
@@ -973,12 +1601,24 @@ def render_markdown(summary: dict[str, Any]) -> str:
             "were recorded under the earlier day-1 random accusation baseline (now named `guess_day1`), whereas current "
             "`stop_early` (`StopEarlyQuit` in `canary/baselines.py`, used in `seeds 30-59` below) stops on day 1 without accusing and scores `0.000`.",
             "",
-            _md_heading(2, f"3. Cohort (a): gemini-4-carbon Hard Replication (Seeds {rep_seeds_str}) and Seeds 30-59 Baselines"),
+            _md_heading(2, f"3. Cohort (a): Reconciled Seeds 30-59 Hard Extensions (G1 n={c_g1_2['n']}, FR8 n={c_rep_5['n']}, Deduplicated Union n={c_union_6['n']}) and Baselines"),
             "",
-            _md_heading(3, f"3.1 Paired {c_rep_5['n']}-Seed Hard Replication Cohort (`seeds {rep_seeds_str}`, `n={c_rep_5['n']}`)"),
+            _md_heading(3, f"3.1 Committed G1 Partial Hard Extension (`seeds {g1_seeds_str}`, `n={c_g1_2['n']}`, Pre-Registered in `f9fb7a4a`)"),
+            "",
+            f"`{c_g1_2['n']}` valid episodes completed in `data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard` before the run was stopped early "
+            f"to preserve shared carbon quota for the Harbor rehearsal ({len(g1['pending_seeds_in_30_59'])} seeds in `30-59` stopped on `infra:provider_quota`), "
+            f"paired on `{g1['seeds']}` against `data/runs/committed/v1.4/reference/solver-hard-seeds30to59`:",
+            "",
+        ]
+    )
+    lines.extend(_paired_table_md(g1["rows"], include_tier=False))
+    lines.extend(
+        [
+            "",
+            _md_heading(3, f"3.2 FR8 Hard Replication Cohort (`seeds {rep_seeds_str}`, `n={c_rep_5['n']}`)"),
             "",
             f"`{c_rep_5['n']}` completed `opencode:google/gemini-4-carbon` episodes in `results/frontier_replication/v1.4/opencode-gemini-4-carbon/` "
-            f"({len(ca['pending_seeds_in_30_59'])} seeds in `30-59` remain pending), paired on the exact same {c_rep_5['n']} seeds against "
+            f"({len(ca['pending_seeds_in_30_59'])} seeds in `30-59` remain pending in FR8), paired on the exact same {c_rep_5['n']} seeds against "
             "`results/frontier_replication/v1.4/reference/solver-hard-seeds30to59` and all 8 non-solver baselines:",
             "",
         ]
@@ -1007,9 +1647,53 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            _md_heading(3, "3.2 Full Hard Extension Reference and Baselines (`seeds 30-59`, `n=30`)"),
+            _md_heading(3, f"3.3 Deduplicated 6-Seed Hard Extension Union (`seeds {union_seeds_str}`, `n={c_union_6['n']}`, `eb9dee54`) and Seed-34 Comparison"),
             "",
-            f"Across the full 30-seed extension block (`results/frontier_replication/v1.4/reference/*-hard-seeds30to59`), "
+            f"Combining G1 (`seeds {g1_seeds_str}`) and FR8 (`seeds {rep_seeds_str}`) covers `{c_union_6['n']}` unique seeds in `30-59` "
+            f"(`{union_seeds_str}`, with `{len(u6['pending_seeds_in_30_59'])}` seeds in `30-59` still unplayed). Seed `{s34_cmp['seed']}` was played independently "
+            "in both G1 and FR8; per `eb9dee54` (never double-count a repeated `(tier, seed)` when pooling), the canonical union deterministically selects "
+            f"the committed G1 episode (`{u6['dropped_duplicate_episodes']}` duplicate episode dropped), with the FR8 tie-break shown alongside for sensitivity:",
+            "",
+        ]
+    )
+    lines.extend(_paired_table_md(u6["rows"], include_tier=False))
+    lines.extend(
+        [
+            "",
+            f"Side-by-side reconciliation on shared seed `{s34_cmp['seed']}` (true mole `{s34_cmp['solver']['accused']}`):",
+            "",
+            "| cohort / run | source | score | correct | accused | final day | P(accused) | luck-adjusted score |",
+            "|---|---|---:|---|---|---:|---:|---:|",
+            f"| Committed G1 (selected for union) | `{s34_cmp['committed_g1']['source']}` | {_signed(s34_cmp['committed_g1']['score'])} | "
+            f"{s34_cmp['committed_g1']['correct']} | `{s34_cmp['committed_g1']['accused']}` | {s34_cmp['committed_g1']['final_day']} | "
+            f"{_num(s34_cmp['committed_g1']['p_accused'], 3)} | {_signed(s34_cmp['committed_g1']['luck_adjusted'])} |",
+            f"| FR8 replication (tie-break sensitivity) | `{s34_cmp['fr8_replication']['source']}` | {_signed(s34_cmp['fr8_replication']['score'])} | "
+            f"{s34_cmp['fr8_replication']['correct']} | `{s34_cmp['fr8_replication']['accused']}` | {s34_cmp['fr8_replication']['final_day']} | "
+            f"{_num(s34_cmp['fr8_replication']['p_accused'], 3)} | {_signed(s34_cmp['fr8_replication']['luck_adjusted'])} |",
+            f"| Reference solver | `{s34_cmp['solver']['source']}` | {_signed(s34_cmp['solver']['score'])} | "
+            f"{s34_cmp['solver']['correct']} | `{s34_cmp['solver']['accused']}` | {s34_cmp['solver']['final_day']} | "
+            f"{_num(s34_cmp['solver']['p_accused'], 3)} | {_signed(s34_cmp['solver']['luck_adjusted'])} |",
+            "",
+            f"Per-seed breakdown across all `{c_union_6['n']}` unique seeds in the deduplicated `30-59` union:",
+            "",
+            "| seed | union source | carbon score | carbon correct | carbon day | carbon P(accused) | carbon luck-adj. | solver score | solver correct | solver day | solver luck-adj. | grok_tactics score | grok_tactics luck-adj. |",
+            "|---:|---|---:|---|---:|---:|---:|---:|---|---:|---:|---:|---:|",
+        ]
+    )
+    for d in u6["per_seed_detail"]:
+        lines.append(
+            f"| {d['seed']} | `{d['source']}` | {_signed(d['carbon_score'])} | {d['carbon_correct']} | {d['carbon_day']} | "
+            f"{_num(d['carbon_p_accused'], 3)} | {_signed(d['carbon_luck_adjusted'])} | {_signed(d['solver_score'])} | "
+            f"{d['solver_correct']} | {d['solver_day']} | {_signed(d['solver_luck_adjusted'])} | "
+            f"{_signed(d['grok_tactics_score'])} | {_signed(d['grok_tactics_luck_adjusted'])} |"
+        )
+    lines.extend(
+        [
+            "",
+            _md_heading(3, "3.4 Full Hard Extension Reference and Baselines (`seeds 30-59`, `n=30`) and Solver Parity (`30/30`)"),
+            "",
+            f"Exact `{sp['matched']}/{sp['n']}` per-seed parity (`score`, `accused`, `correct`, `final_day`) holds between "
+            f"`{sp['committed_dir']}` and `{sp['replication_dir']}`. Across all 30 extension seeds (`30-59`), "
             f"the reference solver averages `{_num(s_rep_30['mean'])} +/- {_num(s_rep_30['ci'])}` (`{_num(s_rep_30['post_expected'])}` luck-adjusted), "
             f"matching its `0-29` mean (`{_num(s_hard_prim['mean'])} +/- {_num(s_hard_prim['ci'])}`), "
             "while all 8 non-solver baselines remain well below solver parity on luck-adjusted value:",
@@ -1020,17 +1704,19 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            _md_heading(2, f"4. Cohort (b): Secondary Pooled Hard Sensitivity Row (`n={c_pool_35['n']}`)"),
+            _md_heading(2, f"4. Cohort (b): Secondary Pooled Hard Sensitivity Reconciliation (`n={c_pool_32['n']}`, `n={c_pool_35['n']}`, `n={c_pool_36['n']}`)"),
             "",
             f"**SECONDARY SENSITIVITY ONLY (NOT THE HEADLINE):** Per the post-hoc seed lock (`docs/reports/gap.md`, commit `671ed96`), "
             f"the `n={c_hard_prim['n']}` (`seeds 0-29`) result remains the primary headline (`{_ratio_cell(c_hard_prim)}` raw, "
-            f"`{_luck_cell(c_hard_prim, bold=False)}` luck-adjusted). Pooling the {c_hard_prim['n']} primary episodes with the "
-            f"{c_rep_5['n']} non-overlapping replication episodes (`seeds {rep_seeds_str}`, total `n={c_pool_35['n']}`) "
-            "provides a secondary sensitivity check:",
+            f"`{_luck_cell(c_hard_prim, bold=False)}` luck-adjusted). Reconciling all non-overlapping pooled combinations with primary `0-29` "
+            f"(`n={c_pool_32['n']}` with committed G1 `{g1_seeds_str}`, `n={c_pool_35['n']}` with FR8 `{rep_seeds_str}`, and `n={c_pool_36['n']}` "
+            f"with the deduplicated 6-seed union `{union_seeds_str}`, `0` duplicate seeds in every pool) shows that every luck-adjusted 95% CI "
+            f"continues to exclude parity (`post_expected_hi` = `{_num(c_pool_32['post_expected_hi'])}`, `{_num(c_pool_35['post_expected_hi'])}`, "
+            f"and `{_num(c_pool_36['post_expected_hi'])}`, all `< 1.000`):",
             "",
         ]
     )
-    lines.extend(_paired_table_md(cb["rows"], include_tier=False))
+    lines.extend(_paired_table_md(pooled_all_rows, include_tier=False))
     sec5_title = (
         f"5. Cohort (c): gemini-3.5-flash Medium (`n={f_med_rep['n']}`) + Hard (`n=30`) and Cross-Model Capability Ordering"
         if not flash_hard_held
@@ -1122,35 +1808,51 @@ def render_markdown(summary: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def default_json_path(root: Path = ROOT) -> Path:
+    return DEFAULT_JSON if root == ROOT else root / "results" / "frontier_replication" / "v1.4" / "replication_summary.json"
+
+
+def default_md_path(root: Path = ROOT) -> Path:
+    return DEFAULT_MD if root == ROOT else root / "docs" / "reports" / "frontier_replication_v14.md"
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description="Compute or verify paired and luck-adjusted Canary v1.4 replication tables."
     )
     ap.add_argument("--root", default=str(ROOT))
-    ap.add_argument("--out-json", default=str(DEFAULT_JSON))
-    ap.add_argument("--out-md", default=str(DEFAULT_MD))
+    ap.add_argument("--out-json", default=None)
+    ap.add_argument("--out-md", default=None)
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--stdout", action="store_true")
     args = ap.parse_args(argv)
 
     if args.write and args.check:
         ap.error("pass either --write or --check, not both")
+    if args.stdout and (args.write or args.check):
+        ap.error("pass --stdout alone, not with --write or --check")
 
-    root = Path(args.root)
-    out_json = Path(args.out_json)
-    out_md = Path(args.out_md)
+    root = Path(args.root).resolve()
+    out_json = Path(args.out_json).resolve() if args.out_json else default_json_path(root)
+    out_md = Path(args.out_md).resolve() if args.out_md else default_md_path(root)
+
+    if args.check:
+        if not out_json.is_file():
+            print(f"missing {out_json}", file=sys.stderr)
+            return 1
+        if not out_md.is_file():
+            print(f"missing {out_md}", file=sys.stderr)
+            return 1
+        if out_json.stat().st_size > MAX_JSON_BYTES:
+            print(f"{out_json} exceeds {MAX_JSON_BYTES} bytes ({out_json.stat().st_size} bytes)", file=sys.stderr)
+            return 1
 
     summary = compute_summary(root=root, verify_replays=True)
-    json_blob = json.dumps(summary, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    json_blob = serialize_summary_json(summary)
     md_blob = render_markdown(summary)
 
     if args.check:
-        if not out_json.exists():
-            print(f"missing {out_json}", file=sys.stderr)
-            return 1
-        if not out_md.exists():
-            print(f"missing {out_md}", file=sys.stderr)
-            return 1
         existing_json = json.loads(out_json.read_text(encoding="utf-8"))
         fresh_json = json.loads(json_blob)
         if not approx_equal(existing_json, fresh_json, tol=1e-9):
@@ -1160,19 +1862,28 @@ def main(argv: list[str] | None = None) -> int:
         if existing_md != md_blob:
             print(f"{out_md} differs from fresh markdown render", file=sys.stderr)
             return 1
-        print("frontier replication summary and report verified (deterministic, 1e-9 JSON tolerance)")
+        print(
+            f"frontier replication summary and report verified "
+            f"(committed={summary['replay_verification']['committed_v14']['verified']}/"
+            f"{summary['replay_verification']['committed_v14']['total']}, "
+            f"replication={summary['replay_verification']['replication_v14']['verified']}/"
+            f"{summary['replay_verification']['replication_v14']['total']}, "
+            f"union_n={len(summary['union_dedup_hard_n6']['seeds'])}, "
+            f"pooled_n36={len(summary['secondary_pooled_hard_reconciliation']['n36_primary_plus_union6']['seeds'])}, "
+            f"json_bytes={out_json.stat().st_size})"
+        )
         return 0
 
-    if args.write:
-        out_json.parent.mkdir(parents=True, exist_ok=True)
-        out_md.parent.mkdir(parents=True, exist_ok=True)
-        out_json.write_text(json_blob, encoding="utf-8")
-        out_md.write_text(md_blob, encoding="utf-8")
-        print(f"wrote {out_json}")
-        print(f"wrote {out_md}")
+    if args.stdout:
+        print(md_blob, end="")
         return 0
 
-    print(md_blob, end="")
+    out_json.parent.mkdir(parents=True, exist_ok=True)
+    out_md.parent.mkdir(parents=True, exist_ok=True)
+    out_json.write_text(json_blob, encoding="utf-8")
+    out_md.write_text(md_blob, encoding="utf-8")
+    print(f"wrote {out_json} ({len(json_blob.encode('utf-8'))} bytes)")
+    print(f"wrote {out_md}")
     return 0
 
 

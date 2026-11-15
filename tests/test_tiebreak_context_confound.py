@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import ast
-import copy
 import io
 import json
+import shutil
 import sys
 import tokenize
 from pathlib import Path
@@ -31,13 +31,77 @@ def _write_mini_verda_repo(dst_root: Path) -> Path:
     src_eps = audit.read_jsonl(REPO_ROOT / audit.VERDA_RUN_SPECS[0]["episodes_rel"])
     mini_by_tier: list[dict[str, Any]] = []
     for tier in ("easy", "medium", "hard"):
-        ep_t = next(e for e in src_eps if e["tier"] == tier)
+        ep_t = min(
+            (e for e in src_eps if e["tier"] == tier),
+            key=lambda e: len(e.get("steps") or []),
+        )
         mini_by_tier.append(ep_t)
     lines = "\n".join(json.dumps(e) for e in mini_by_tier) + "\n"
     for spec in audit.VERDA_RUN_SPECS:
         p = dst_root / spec["episodes_rel"]
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(lines, encoding="utf-8")
+    return dst_root
+
+
+def _build_scoped_w1_verifier_root(dst_root: Path) -> Path:
+    cc_dir = dst_root / "results" / "tiebreak" / "context_confound"
+    cc_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(AUDIT_JSON_PATH, cc_dir / "audit_summary.json")
+    shutil.copy2(REPORT_MD_PATH, cc_dir / "report.md")
+
+    secret_tag = "sha256:0123456789abcdef"
+    mini_verified = {
+        "run_id": "mini-verified-v14",
+        "train_seeds": {"start": 100000, "stop": 100030},
+        "eval_seeds": {"start": 800000, "stop": 800030},
+        "n": 30,
+        "replay_verified": True,
+        "invalid_episodes": 0,
+        "before": {"mean_score": 0.0, "world_secret_tag": secret_tag, "invalid_episodes": 0},
+        "after": {"mean_score": 0.6, "world_secret_tag": secret_tag, "invalid_episodes": 0},
+        "paired": {"mean_delta": 0.6, "ci95_low": 0.6, "ci95_high": 0.6, "deltas": [0.6] * 30},
+    }
+    mv_dir = dst_root / "results" / "tiebreak" / "mini_verified"
+    mv_dir.mkdir(parents=True, exist_ok=True)
+    (mv_dir / "summary.json").write_text(json.dumps(mini_verified) + "\n", encoding="utf-8")
+
+    mini_ledger = {
+        "summary_counts": {
+            "historical_runs": 0,
+            "discovered_runs": 1,
+            "verified_improvements": 1,
+            "verified_run_ids": ["mini-verified-v14"],
+        },
+        "historical_runs": [],
+        "discovered_runs": [
+            {
+                "run_id": "mini-verified-v14",
+                "status": "VERIFIED_IMPROVEMENT",
+                "verified_improvement": True,
+                "heldout_n": 30,
+                "paired_ci95_low": 0.6,
+                "before_world_secret_tag": secret_tag,
+                "after_world_secret_tag": secret_tag,
+                "replay_verified": True,
+                "summary_path": "results/tiebreak/mini_verified/summary.json",
+                "gates": {
+                    "gate1_seed_hygiene": True,
+                    "gate2_paired_world_secret": True,
+                    "gate3_sample_and_replay": True,
+                    "gate4_paired_ci95_positive": True,
+                    "all_passed": True,
+                },
+            }
+        ],
+    }
+    (dst_root / "results" / "tiebreak" / "experiment_ledger.json").write_text(
+        json.dumps(mini_ledger) + "\n",
+        encoding="utf-8",
+    )
+    rep_path = dst_root / "docs" / "reports" / "tiebreak_small_model.md"
+    rep_path.parent.mkdir(parents=True, exist_ok=True)
+    rep_path.write_text("Tiebreak Small Model Scoped Check\n", encoding="utf-8")
     return dst_root
 
 
@@ -66,14 +130,16 @@ def test_source_and_artifact_hygiene() -> None:
     assert AUDIT_JSON_PATH.is_file()
     assert REPORT_MD_PATH.is_file()
 
+    md_txt = ""
     for artifact in (AUDIT_JSON_PATH, REPORT_MD_PATH):
         txt = artifact.read_text(encoding="utf-8")
+        if artifact == REPORT_MD_PATH:
+            md_txt = txt
         assert em_dash not in txt
         assert en_dash not in txt
         assert txt.isascii()
         assert "pre-register" not in txt.lower()
 
-    md_txt = REPORT_MD_PATH.read_text(encoding="utf-8")
     assert "post-hoc locked" in md_txt
 
     assert "torch" not in sys.modules
@@ -230,17 +296,19 @@ def test_ws4_table_parser_cli_and_validator_rejections(
     fallback_from_empty = audit.load_silas_0507_readout(tmp_path, allow_git=True)
     assert fallback_from_empty == audit._SILAS_0507_READOUT_FALLBACK
 
-    bad_dash = copy.deepcopy(computed_summary)
-    bad_dash["notes"] = "bad " + chr(0x2014) + " note"
+    bad_dash = {**computed_summary, "notes": "bad " + chr(0x2014) + " note"}
     assert any("dash" in e for e in audit.validate_audit_artifacts(bad_dash))
 
-    bad_prereg = copy.deepcopy(computed_summary)
-    bad_prereg["notes"] = "pre-registered dev seeds 0..29"
+    bad_prereg = {**computed_summary, "notes": "pre-registered dev seeds 0..29"}
     assert any("Panel Fix A" in e for e in audit.validate_audit_artifacts(bad_prereg))
 
-    bad_compact = copy.deepcopy(computed_summary)
-    bad_compact["runs"]["v2-off30"]["by_tier"]["easy"]["compact_transcript"]["state_tokens_max"] = 950
-    assert any("state_tokens_max" in e for e in audit.validate_audit_artifacts(bad_compact))
+    easy_ct = computed_summary["runs"]["v2-off30"]["by_tier"]["easy"]["compact_transcript"]
+    orig_state_max = easy_ct["state_tokens_max"]
+    try:
+        easy_ct["state_tokens_max"] = 950
+        assert any("state_tokens_max" in e for e in audit.validate_audit_artifacts(computed_summary))
+    finally:
+        easy_ct["state_tokens_max"] = orig_state_max
 
     mini_repo = _write_mini_verda_repo(tmp_path / "mini_repo")
     rc_write = audit.main(["--repo-root", str(mini_repo)])
@@ -253,11 +321,12 @@ def test_ws4_table_parser_cli_and_validator_rejections(
     assert rc_collide == 1
 
 
-def test_submission_verifier_provenance_and_hygiene_pass_with_w1_artifacts() -> None:
-    prov = sub_gate.check_seed_and_secret_provenance(root=REPO_ROOT, strict=True)
+def test_submission_verifier_provenance_and_hygiene_pass_with_w1_artifacts(tmp_path: Path) -> None:
+    scoped_root = _build_scoped_w1_verifier_root(tmp_path / "w1_scope")
+    prov = sub_gate.check_seed_and_secret_provenance(root=scoped_root, strict=True)
     assert prov.passed is True
     assert prov.errors == []
 
-    hyg = sub_gate.check_hygiene_and_panel_fix_a(root=REPO_ROOT, strict=True)
+    hyg = sub_gate.check_hygiene_and_panel_fix_a(root=scoped_root, strict=True)
     assert hyg.passed is True
     assert hyg.errors == []

@@ -428,25 +428,32 @@ def _short(model: str) -> str:
     return f"{s} (served {SERVED_AS[model].replace('gemini-', '')})" if model in SERVED_AS else s
 
 
-def frontier_points(rows: list[dict], gemma_rows: list[dict] | None, tier: str) -> list[dict]:
+def frontier_points(rows: list[dict], gemma_rows: list[dict] | None, tier: str,
+                    j1_rows: list[dict] | None = None) -> list[dict]:
     """One point per cell on `tier`: % of the solver (paired, 95% CI) vs list-price $ per episode (None = no list price)."""
     pts = []
-    for r, kind in [(r, "gemini") for r in rows] + [(r, "gemma") for r in gemma_rows or []]:
+    for r, kind in [(r, "gemini") for r in rows] + [(r, "gemma") for r in gemma_rows or []] + \
+            [(r, "j1") for r in j1_rows or []]:
         if r["tier"] != tier or r["ratio"] != r["ratio"]:
             continue
-        imported = r["source"].startswith("import")
+        imported = r["source"].startswith("import") and kind == "gemini"
         cost = r["cost_per_ep"] if r["cost_per_ep"] == r["cost_per_ep"] and r["cost_per_ep"] > 0 else None
         pts.append({"model": r["model"], "level": r["level"], "tier": tier, "n": r["n"], "kind": kind,
                     "imported": imported, "cost_per_ep_usd": cost, "ratio": r["ratio"],
                     "ratio_lo": None if r["ratio_lo"] != r["ratio_lo"] else r["ratio_lo"],
                     "ratio_hi": None if r["ratio_hi"] != r["ratio_hi"] else r["ratio_hi"],
                     "served_model_versions": r.get("model_versions") or [],
+                    "cost_basis": r.get("cost_basis"),
                     "label": (f"{r['model']} via Gemini API (hosted Gemma)" if kind == "gemma" else
+                              (r.get("j1_label") or f"{r['model']} ({J1_LABEL}" + (
+                                  f", capped {r['cap_tokens']} tok/turn" if r.get("cap_tokens") else "") + ")")
+                              if kind == "j1" else
                               f"{_short(r['model'])} {r['level']}" + (" (in-process, imported)" if imported else ""))})
     return pts
 
 
-def frontier(rows: list[dict], gemma_rows: list[dict] | None, out: Path, tiers=TIERS) -> list[str]:
+def frontier(rows: list[dict], gemma_rows: list[dict] | None, out: Path, tiers=TIERS,
+             j1_rows: list[dict] | None = None) -> list[str]:
     """frontier.png (hard) [+ frontier_<tier>.png] and frontier.json: the headline competence-per-dollar chart."""
     try:
         import matplotlib
@@ -458,7 +465,7 @@ def frontier(rows: list[dict], gemma_rows: list[dict] | None, out: Path, tiers=T
     written, doc = [], {"title": {}, "x": "list-price USD per episode (log)", "y": "score / solver on the same seeds "
                         "(paired bootstrap 95% CI)", "points": {}}
     for tier in tiers:
-        pts = frontier_points(rows, gemma_rows, tier)
+        pts = frontier_points(rows, gemma_rows, tier, j1_rows)
         if not pts:
             continue
         doc["points"][tier] = pts
@@ -485,10 +492,15 @@ def frontier(rows: list[dict], gemma_rows: list[dict] | None, out: Path, tiers=T
         for p in [p for p in pts if p["imported"] and p["cost_per_ep_usd"]]:
             ax.errorbar(p["cost_per_ep_usd"], p["ratio"], yerr=err(p), fmt="D", mfc="white", color=colors.get(p["model"], "k"),
                         ms=7, capsize=2, lw=0.8, label=f"{_short(p['model'])} default (in-process measurement, imported)")
+        for p in [p for p in pts if p["kind"] == "j1" and p["cost_per_ep_usd"]]:
+            ax.errorbar(p["cost_per_ep_usd"], p["ratio"], yerr=err(p), fmt="*", color="#6a1b9a", ms=12, capsize=2,
+                        lw=0.8, label=p["label"] + " (GPU-hour cost)")
         gm = ["s", "^", "v", "P"]
         for i, p in enumerate(unpriced):
-            ax0.errorbar(i, p["ratio"], yerr=err(p), fmt=gm[i % len(gm)], color="#2e7d32", ms=8, capsize=2, lw=0.8)
-            ax.plot([], [], gm[i % len(gm)], color="#2e7d32", ms=8, label=p["label"] + " (no list price; left strip)")
+            col = "#6a1b9a" if p["kind"] == "j1" else "#2e7d32"
+            mk = "*" if p["kind"] == "j1" else gm[i % len(gm)]
+            ax0.errorbar(i, p["ratio"], yerr=err(p), fmt=mk, color=col, ms=8, capsize=2, lw=0.8)
+            ax.plot([], [], mk, color=col, ms=8, label=p["label"] + " (no cost stated; left strip)")
         ax0.set_xlim(-0.6, max(0.6, len(unpriced) - 0.4))
         ax0.set_xticks([])
         ax0.set_xlabel("no list\nprice", fontsize=7)
@@ -517,7 +529,8 @@ def frontier(rows: list[dict], gemma_rows: list[dict] | None, out: Path, tiers=T
         note = (f"n per point (paired seeds) = {', '.join(map(str, ns))} (exact n per point in frontier.json). "
                 f"Dashed line = reference solver (100%); dotted = do-nothing (0). Requested gemini-3.5-flash is served "
                 f"as gemini-3.6-flash. API-served model versions: {', '.join(served) or '–'}. Costs: list-price USD from "
-                f"token counts (PRICES in canary/gemini/ladder_report.py). Error bars clipped to the axis at ±200%.")
+                f"token counts (PRICES in canary/gemini/ladder_report.py). Error bars clipped to the axis at ±200%."
+                + "".join(f" {p['label']}: {p['cost_basis']}." for p in pts if p["kind"] == "j1" and p.get("cost_basis")))
         fig.text(0.01, -0.035, note, fontsize=6.5, wrap=True, ha="left", va="top")
         name = "frontier.png" if tier == "hard" else f"frontier_{tier}.png"
         fig.savefig(out / name, dpi=150, bbox_inches="tight")
@@ -551,7 +564,7 @@ def to_md(doc: dict) -> str:
     L = [f"# Gemini Ladder (Canary v1.4)", "", hl, ""] + chart + [
          f"Generated {doc['generated_at']} at git `{doc['git_sha'][:10]}` from `{doc['runs']}`. "
          f"{doc['episodes']} valid Gemini episodes in {len(rows)} cells; ledger: {doc['ledger']['calls']} calls, "
-         f"{doc['ledger']['run_ids']} run ids, list price ${doc['ledger']['cost_usd_priced']:.2f}.", "",
+         f"{doc['ledger']['run_ids']} run ids, list price ${doc['ledger']['cost_usd_priced']:.2f}.", ""] + models_line(doc) + [
          "Every cell is one (model, thinking level, tier) played by the in-process `LLMPolicy` (full history, "
          "thought-signature replay) through `canary.agents.play`, the frontier measurement's own runner, on v1.4 "
          "dev seeds. The solver and baselines are replayed on exactly the same worlds. "
@@ -607,6 +620,7 @@ def to_md(doc: dict) -> str:
                          + f" | {_f(delta)} |")
             L.append("")
     L += gemma_md(doc.get("gemma"))
+    L += j1_md(doc.get("j1"))
     if doc.get("probe"):
         acc = defaultdict(list)
         for r in doc["probe"]:
@@ -654,6 +668,84 @@ def gemma_md(g: dict | None) -> list[str]:
     return L
 
 
+J1_LABEL = "Verda self-hosted, vLLM"
+J1_TITLE = "Open-weight cost/portability data point (Verda self-hosted) on the same v1.4 seeds"
+
+
+def _billed_hours(spec: str | None, tiers) -> dict:
+    """'3.2' -> {'*': 3.2}; 'hard=2.1,medium=1.1' -> per tier."""
+    if not spec:
+        return {}
+    if "=" not in spec:
+        return {"*": float(spec)}
+    return {k.strip(): float(v) for k, v in (x.split("=") for x in spec.split(","))}
+
+
+def j1_block(eps: list[dict], solver: dict, a, B: int) -> dict:
+    """Self-hosted open-weight runs: replay-verified, solver-paired, costed only from the stated EUR/h x hours / n."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from verify_replay import replay_episode
+    ver = []
+    for e in eps:
+        r = replay_episode(e)
+        ok = abs(r["score"] - e["score"]) < 1e-9 and r["accused"] == e.get("accused")
+        ver.append({"tier": e["tier"], "seed": e["seed"], "ok": ok})
+    rows = cell_rows(eps, solver, B=B)
+    hours = _billed_hours(a.j1_billed_hours, TIERS)
+    n_all = len(eps)
+    for r in rows:
+        r["cost_basis"] = None
+        r["cap_tokens"] = a.j1_cap_tokens
+        r["j1_label"] = a.j1_label
+        h = hours.get(r["tier"]) if r["tier"] in hours else hours.get("*")
+        n = r["n"] if r["tier"] in hours else n_all
+        if a.j1_eur_per_hour and h and n:
+            eur = a.j1_eur_per_hour * h / n
+            r["cost_per_ep_eur"] = eur
+            r["cost_per_ep"] = eur * a.j1_eur_usd if a.j1_eur_usd else float("nan")
+            r["cost_basis"] = (f"EUR {a.j1_eur_per_hour}/h x {h} h / {n} episodes"
+                               + (f" x {a.j1_eur_usd} USD/EUR ({a.j1_fx_source or 'source not stated'})"
+                                  if a.j1_eur_usd else " (no FX rate given: not placed on the USD axis)"))
+        else:
+            r["cost_per_ep"] = float("nan")
+    return {"runs": str(a.j1_runs).replace(str(Path.home()), "~"), "model": a.j1_model, "episodes": n_all,
+            "replay_verified": sum(v["ok"] for v in ver), "replay_mismatches": [v for v in ver if not v["ok"]],
+            "eur_per_hour": a.j1_eur_per_hour, "billed_hours": hours, "eur_usd": a.j1_eur_usd,
+            "fx_source": a.j1_fx_source, "note": a.j1_note, "cap_tokens": a.j1_cap_tokens,
+            "title": a.j1_title or J1_TITLE, "label": a.j1_label, "rows": rows}
+
+
+def j1_md(j: dict | None) -> list[str]:
+    if not j or not j.get("rows"):
+        return []
+    lab = j.get("label") or f"{j['model']} ({J1_LABEL})"
+    L = [f"## {j.get('title') or J1_TITLE}", "",
+         f"`{j['model']}` self-hosted with vLLM on a Verda GPU instance (not the Gemini API), played through "
+         f"`canary.agents.play --api chat` on the same v1.4 dev seeds; ratios are paired against the solver on the same "
+         f"seeds. {j['episodes']} valid episodes from `{j['runs']}`; **{j['replay_verified']}/{j['episodes']} replay-verified** "
+         f"(`scripts/verify_replay.py`: each episode's recorded tool calls re-run in a fresh Env reproduce its score and "
+         f"accused id)" + (f"; mismatches: {j['replay_mismatches']}" if j["replay_mismatches"] else "") + ".", ""]
+    if j.get("cap_tokens"):
+        L += [f"**Asymmetry:** Gemini cells had no per-turn output cap; {j['model']} was capped at "
+              f"{j['cap_tokens']} tokens/turn for time.", ""]
+    if j.get("note"):
+        L += [j["note"], ""]
+    L += ["| tier | model | n | score ± 95% CI | acc. | solver, same seeds | **score / solver [95% CI]** | "
+          "paired diff ± CI | calls/ep | €/ep | $/ep | cost basis |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for r in j["rows"]:
+        eur = r.get("cost_per_ep_eur")
+        L.append(f"| {r['tier']} | {lab} | {r['n']} | {_f(r['mean'])} ± {_f(r['ci'], 2)} | "
+                 f"{r['accuracy']:.2f} | {_f(r['solver_same_seeds'])} | **{_pct(r, 'ratio')}** | {_f(r['diff'])} ± "
+                 f"{_f(r['diff_ci'], 2)} | {_f(r['calls_per_ep'], 0)} | {'–' if eur is None else f'{eur:.3f}'} | "
+                 f"{_f(r['cost_per_ep'], 3)} | {r.get('cost_basis') or 'not stated: not costed'} |")
+    for tier in TIERS:
+        if not any(r["tier"] == tier for r in j["rows"]):
+            L.append(f"| {tier} | {lab} | 0 | not run | | | | | | | | |")
+    L += ["", "Costs are the instance's hourly price times the hours attributed to these runs, divided by the episodes; "
+          "they are not API list prices and are not comparable token-for-token with the Gemini rows.", ""]
+    return L
+
+
 def display_id(model: str) -> str:
     """The id a reader should see. gemini-3.5-flash is served as gemini-3.6-flash."""
     if model == "gemini-3.5-flash":
@@ -668,6 +760,41 @@ def model_label(row: dict) -> str:
     if requested == "gemini-3.5-flash" and (not served or "gemini-3.6-flash" in served):
         return display_id(requested)
     return requested
+
+
+def model_inventory(rows: list[dict], gemma: dict | None, j1: dict | None) -> dict:
+    """Which models the ladder covers, with n per cell: Gemini (via the Gemini API) separately from hosted Gemma and
+    from the non-Gemini self-hosted control, so a count in the docs can be read straight off ladder.json."""
+    ms = [m for m in MODEL_ORDER if any(r["model"] == m for r in rows)] + \
+        sorted({r["model"] for r in rows} - set(MODEL_ORDER))
+    gem = [{"id": m, "display": display_id(m),
+            "served_model_versions": sorted({v for r in rows if r["model"] == m for v in r.get("model_versions") or []}),
+            "cells": [{"level": r["level"], "tier": r["tier"], "n": r["n"],
+                       "source": "imported" if r["source"].startswith("import") else "ladder"}
+                      for r in rows if r["model"] == m]} for m in ms]
+    gma = sorted({r["model"] for r in (gemma or {}).get("rows") or []})
+    ctl = [j1["model"]] if j1 and j1.get("rows") else []
+    return {"gemini_models_count": len(gem), "gemini_models": gem,
+            "gemma_models_count": len(gma), "gemma_models": [{"id": m, "served_via": "Gemini API (hosted Gemma)",
+                                                               "cells": [{"level": r["level"], "tier": r["tier"], "n": r["n"]}
+                                                                         for r in gemma["rows"] if r["model"] == m]}
+                                                              for m in gma],
+            "open_weight_data_points": [{"id": m, "served_via": "self-hosted vLLM on Verda", "cells": [
+                {"level": r["level"], "tier": r["tier"], "n": r["n"]} for r in j1["rows"]]} for m in ctl]}
+
+
+def models_line(doc: dict) -> list[str]:
+    m = doc.get("models")
+    if not m:
+        return []
+    s = (f"**Models:** {m['gemini_models_count']} Gemini models via the Gemini API "
+         f"({', '.join(x['display'] for x in m['gemini_models'])})")
+    if m["gemma_models_count"]:
+        s += f"; {m['gemma_models_count']} hosted Gemma ({', '.join(x['id'] for x in m['gemma_models'])})"
+    if m["open_weight_data_points"]:
+        s += ("; open-weight cost/portability data point (self-hosted, not Gemini): "
+              + ", ".join(x["id"] for x in m["open_weight_data_points"]))
+    return [s + ". Per-cell n: ladder.json → models.", ""]
 
 
 def headline_verb(a: dict, b: dict) -> str:
@@ -767,6 +894,18 @@ def main(argv=None) -> int:
                     help="open-weight Gemma cells (hosted Gemma via the Gemini API; a ladder dir or exported "
                     "ladder_gemma_episodes.jsonl.gz), reported in their own section against the same solver seeds")
     ap.add_argument("--gemma-ledger", action="append", default=[])
+    ap.add_argument("--j1-runs", default=None, help="open-weight model self-hosted on Verda (canary.agents.play run dir)")
+    ap.add_argument("--j1-model", default=None, help="model id as served (e.g. Qwen/Qwen3-14B)")
+    ap.add_argument("--j1-eur-per-hour", type=float, default=None, help="instance price, EUR/h (stated by the runner)")
+    ap.add_argument("--j1-billed-hours", default=None,
+                    help="instance hours attributed to the runs: total, or per tier 'hard=H,medium=H'")
+    ap.add_argument("--j1-eur-usd", type=float, default=None, help="EUR->USD rate used for the frontier x axis")
+    ap.add_argument("--j1-fx-source", default=None, help="where the EUR->USD rate comes from (stated in the report)")
+    ap.add_argument("--j1-note", default="", help="serving setup / instance / disclosures, printed in the section")
+    ap.add_argument("--j1-title", default=None, help="section title for the self-hosted open-weight data point")
+    ap.add_argument("--j1-label", default=None, help="short label for its table rows and chart point")
+    ap.add_argument("--j1-cap-tokens", type=int, default=None,
+                    help="server-side per-turn output-token cap used for the self-hosted model (stated as an asymmetry)")
     ap.add_argument("--headline", default=None,
                     help="hand-written findings block for the top of ladder.md (default: generated from the table)")
     a = ap.parse_args(argv)
@@ -789,7 +928,8 @@ def main(argv=None) -> int:
         with gzip.open(ex / "ladder_gemma_episodes.jsonl.gz", "wt") as fh:
             for e in g_eps:
                 fh.write(json.dumps({k: v for k, v in e.items() if k != "_cell"}, sort_keys=True) + "\n")
-    pairs = {(e["_cell"]["tier"], e["_cell"]["seed"]) for e in eps + g_eps}
+    j_eps = load_import(f"{a.j1_model or 'open-weight'}:default={Path(a.j1_runs).expanduser()}") if a.j1_runs else []
+    pairs = {(e["_cell"]["tier"], e["_cell"]["seed"]) for e in eps + g_eps + j_eps}
     ref = reference_episodes(pairs)
     solver = {(e["tier"], e["seed"]): e for e in ref if e["agent"] == "solver"}
     rows = cell_rows(eps, solver, B=a.bootstrap)
@@ -826,8 +966,12 @@ def main(argv=None) -> int:
                         "ledger": {"calls": len(g_led), "errors": sum(not r.get("ok", True) for r in g_led),
                                    "cost_usd_ledger": round(sum(r.get("cost_usd", 0) for r in g_led), 2),
                                    "cost_unknown_calls": sum(bool(r.get("cost_unknown")) for r in g_led)}}
+    if a.j1_runs:
+        doc["j1"] = j1_block(j_eps, solver, a, B=a.bootstrap)
+    doc["models"] = model_inventory(rows, doc.get("gemma"), doc.get("j1"))
     doc["figures"] = [] if a.no_figures else \
-        frontier(rows, (doc.get("gemma") or {}).get("rows"), out) + figures(rows, ref_rows, tags, out)
+        frontier(rows, (doc.get("gemma") or {}).get("rows"), out, j1_rows=(doc.get("j1") or {}).get("rows")) + \
+        figures(rows, ref_rows, tags, out)
     clean = _nan_to_none(json.loads(json.dumps(doc, default=str)))
     (out / "ladder.json").write_text(json.dumps(clean, indent=1) + "\n")
     (out / "ladder.md").write_text(to_md(doc))

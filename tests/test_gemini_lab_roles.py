@@ -8,6 +8,20 @@ import pytest
 
 from canary.gemini import roles
 
+
+def test_frontier_row_reads_the_current_ladder_headline_cells():
+    res = Path(__file__).resolve().parents[1] / "results" / "gemini"
+    lad = json.loads((res / "ladder.json").read_text())
+    row = next(r for r in roles.build_index(res) if r["key"] == "frontier")
+    cells = {(r["model"], r["level"], r["tier"]): r for r in lad["rows"] if not r["source"].startswith("import")}
+    for key in (("gemini-3.5-flash", "medium", "hard"), ("gemini-3.5-flash", "high", "hard"),
+                ("gemini-4-carbon", "high", "hard")):
+        r = cells[key]
+        assert f"{100 * r['ratio']:.0f}%" in row["headline"] and f"n={r['n']}" in row["headline"]
+    assert row["n"] == f"{lad['episodes']} episodes, {len(lad['rows'])} cells"
+    assert row["model"].startswith(f"{lad['models']['gemini_models_count']} Gemini models")
+    assert "gemini-3.6-flash (requested as 3.5-flash)" in row["model"]
+
 FX = Path(__file__).parent / "fixtures" / "gemini_lab"
 
 

@@ -103,7 +103,14 @@
   }
  },
  "explicit_cache": {
-  "method": "Per ledger row: paid = canary.llm.pricing.cost(...)['cost_usd_est'] (cached tokens at CACHED_PRICES; models without an entry use 10% of input); counterfactual = 'cost_usd' (all input at the full price). Batch rows at 50%. Explicit-cache storage (per token-hour) is not in the ledger and is not included. Gallery = the atlas-feature runs whose run_id the gallery_cache records.",
+  "method": "Input: the de-duplicated union of every committed ledger under results/gemini (canary.gemini.dashboard.committed_ledgers + load_ledger, the dashboard's own dedupe). Per ledger row: paid = canary.llm.pricing.cost(...)['cost_usd_est'] (cached tokens at CACHED_PRICES; models without a cached price use 10% of input); counterfactual = 'cost_usd' (all input at the full price). Models canary.llm.pricing lacks (gemini-3.5-flash, gemini-3.1-flash-lite) are priced from the dashboard's EXTRA_PRICES (the ladder_report list prices, incl. their cached-input price). Batch rows at 50%. Explicit-cache storage (per token-hour) is not in the ledger and is not included. Gallery = the atlas-feature runs whose run_id the gallery_cache records.",
+  "unpriced_by_model": {
+   "gemini-3.8-live": 17,
+   "gemini-embedding-2": 305,
+   "gemma-4-26b-a4b-it": 73,
+   "gemma-4-31b-it": 306,
+   "unknown": 1
+  },
   "atlas": {
    "calls": 455,
    "input_tokens": 64359208,
@@ -112,7 +119,8 @@
    "usd_paid": 21.6,
    "usd_if_uncached": 58.45,
    "usd_saved": 36.84,
-   "pct_saved": 63.0
+   "pct_saved": 63.0,
+   "unpriced_calls": 302
   },
   "gallery": {
    "calls": 9,
@@ -122,7 +130,8 @@
    "usd_paid": 0.12,
    "usd_if_uncached": 0.12,
    "usd_saved": 0.0,
-   "pct_saved": 0.0
+   "pct_saved": 0.0,
+   "unpriced_calls": 0
   },
   "atlas_plus_gallery": {
    "calls": 464,
@@ -132,17 +141,19 @@
    "usd_paid": 21.72,
    "usd_if_uncached": 58.56,
    "usd_saved": 36.84,
-   "pct_saved": 62.9
+   "pct_saved": 62.9,
+   "unpriced_calls": 302
   },
   "programme": {
-   "calls": 29150,
-   "input_tokens": 860488544,
-   "cached_tokens": 744897721,
-   "cached_share": 0.8657,
-   "usd_paid": 214.89,
-   "usd_if_uncached": 893.08,
-   "usd_saved": 678.19,
-   "pct_saved": 75.9
+   "calls": 44545,
+   "input_tokens": 1318343393,
+   "cached_tokens": 1160725047,
+   "cached_share": 0.8804,
+   "usd_paid": 400.01,
+   "usd_if_uncached": 1768.51,
+   "usd_saved": 1368.5,
+   "pct_saved": 77.4,
+   "unpriced_calls": 702
   },
   "by_feature": {
    "atlas": {
@@ -153,7 +164,8 @@
     "usd_paid": 21.72,
     "usd_if_uncached": 58.56,
     "usd_saved": 36.84,
-    "pct_saved": 62.9
+    "pct_saved": 62.9,
+    "unpriced_calls": 302
    },
    "commentator": {
     "calls": 17,
@@ -163,7 +175,8 @@
     "usd_paid": 0.0,
     "usd_if_uncached": 0.0,
     "usd_saved": 0.0,
-    "pct_saved": null
+    "pct_saved": null,
+    "unpriced_calls": 17
    },
    "gateway-bench": {
     "calls": 2617,
@@ -173,7 +186,8 @@
     "usd_paid": 0.56,
     "usd_if_uncached": 0.56,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "gateway-smoke": {
     "calls": 1,
@@ -183,17 +197,19 @@
     "usd_paid": 0.0,
     "usd_if_uncached": 0.0,
     "usd_saved": 0.0,
-    "pct_saved": null
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "ladder": {
-    "calls": 23564,
-    "input_tokens": 756729942,
-    "cached_tokens": 678203501,
-    "cached_share": 0.8962,
-    "usd_paid": 136.67,
-    "usd_if_uncached": 766.5,
-    "usd_saved": 629.83,
-    "pct_saved": 82.2
+    "calls": 38959,
+    "input_tokens": 1214584791,
+    "cached_tokens": 1094030827,
+    "cached_share": 0.9007,
+    "usd_paid": 321.79,
+    "usd_if_uncached": 1641.92,
+    "usd_saved": 1320.14,
+    "pct_saved": 80.4,
+    "unpriced_calls": 377
    },
    "ladder-gemma-probe": {
     "calls": 2,
@@ -203,7 +219,8 @@
     "usd_paid": 0.0,
     "usd_if_uncached": 0.0,
     "usd_saved": 0.0,
-    "pct_saved": null
+    "pct_saved": null,
+    "unpriced_calls": 2
    },
    "mole": {
     "calls": 64,
@@ -213,7 +230,8 @@
     "usd_paid": 0.31,
     "usd_if_uncached": 0.31,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "narrate": {
     "calls": 50,
@@ -223,7 +241,8 @@
     "usd_paid": 0.05,
     "usd_if_uncached": 0.05,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "showcase": {
     "calls": 15,
@@ -233,7 +252,8 @@
     "usd_paid": 0.0,
     "usd_if_uncached": 0.0,
     "usd_saved": 0.0,
-    "pct_saved": null
+    "pct_saved": 0.0,
+    "unpriced_calls": 3
    },
    "swarm": {
     "calls": 2342,
@@ -243,7 +263,8 @@
     "usd_paid": 55.32,
     "usd_if_uncached": 66.83,
     "usd_saved": 11.51,
-    "pct_saved": 17.2
+    "pct_saved": 17.2,
+    "unpriced_calls": 0
    },
    "video_qa": {
     "calls": 1,
@@ -253,7 +274,8 @@
     "usd_paid": 0.02,
     "usd_if_uncached": 0.02,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "worldtext": {
     "calls": 6,
@@ -263,7 +285,8 @@
     "usd_paid": 0.16,
     "usd_if_uncached": 0.16,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "worldtext-probe": {
     "calls": 6,
@@ -273,7 +296,8 @@
     "usd_paid": 0.09,
     "usd_if_uncached": 0.09,
     "usd_saved": 0.0,
-    "pct_saved": 0.0
+    "pct_saved": 0.0,
+    "unpriced_calls": 0
    },
    "x": {
     "calls": 1,
@@ -283,7 +307,8 @@
     "usd_paid": 0.0,
     "usd_if_uncached": 0.0,
     "usd_saved": 0.0,
-    "pct_saved": null
+    "pct_saved": null,
+    "unpriced_calls": 1
    }
   }
  },
@@ -299,6 +324,7 @@
     -53
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 0,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.033
@@ -314,6 +340,7 @@
     48
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 4290,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.044
@@ -329,6 +356,7 @@
     -22
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 1686,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.059
@@ -344,6 +372,7 @@
     -16
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 5544,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.06
@@ -359,6 +388,7 @@
     108
    ],
    "ci_excludes_100": false,
+   "ci_direction": null,
    "thinking_tokens_per_ep": 0,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.116
@@ -374,6 +404,7 @@
     73
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 7269,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.266
@@ -389,6 +420,7 @@
     109
    ],
    "ci_excludes_100": false,
+   "ci_direction": null,
    "thinking_tokens_per_ep": 15033,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.289
@@ -404,6 +436,7 @@
     104
    ],
    "ci_excludes_100": false,
+   "ci_direction": null,
    "thinking_tokens_per_ep": 21513,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.386
@@ -419,6 +452,7 @@
     62
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 0,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.122
@@ -434,6 +468,7 @@
     93
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 33837,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.549
@@ -449,54 +484,122 @@
     97
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 45240,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.618
   },
   {
+   "model": "gemini-4-hydrogen",
+   "level": "low",
+   "tier": "medium",
+   "n": 13,
+   "pct_of_solver": 78,
+   "ci95": [
+    51,
+    104
+   ],
+   "ci_excludes_100": false,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 2932,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.15
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "medium",
+   "tier": "medium",
+   "n": 11,
+   "pct_of_solver": 71,
+   "ci95": [
+    22,
+    105
+   ],
+   "ci_excludes_100": false,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 10614,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.356
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "high",
+   "tier": "medium",
+   "n": 10,
+   "pct_of_solver": 93,
+   "ci95": [
+    84,
+    103
+   ],
+   "ci_excludes_100": false,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 22876,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.633
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "xhigh",
+   "tier": "medium",
+   "n": 12,
+   "pct_of_solver": 89,
+   "ci95": [
+    76,
+    100
+   ],
+   "ci_excludes_100": true,
+   "ci_direction": "below",
+   "thinking_tokens_per_ep": 60073,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 1.126
+  },
+  {
    "model": "gemini-4-argon",
    "level": "low",
    "tier": "medium",
-   "n": 10,
-   "pct_of_solver": 102,
+   "n": 22,
+   "pct_of_solver": 96,
    "ci95": [
-    88,
-    120
+    74,
+    117
    ],
    "ci_excludes_100": false,
+   "ci_direction": null,
    "thinking_tokens_per_ep": 0,
    "thinking_is_estimate": false,
-   "usd_per_ep": 0.152
+   "usd_per_ep": 0.155
   },
   {
    "model": "gemini-4-argon",
    "level": "medium",
    "tier": "medium",
-   "n": 10,
+   "n": 22,
    "pct_of_solver": 82,
    "ci95": [
-    62,
-    100
+    55,
+    105
    ],
    "ci_excludes_100": false,
-   "thinking_tokens_per_ep": 9711,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 8042,
    "thinking_is_estimate": false,
-   "usd_per_ep": 0.37
+   "usd_per_ep": 0.295
   },
   {
    "model": "gemini-4-argon",
    "level": "high",
    "tier": "medium",
-   "n": 10,
-   "pct_of_solver": 52,
+   "n": 16,
+   "pct_of_solver": 72,
    "ci95": [
-    -17,
-    105
+    27,
+    108
    ],
    "ci_excludes_100": false,
-   "thinking_tokens_per_ep": 34846,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 32205,
    "thinking_is_estimate": false,
-   "usd_per_ep": 1.128
+   "usd_per_ep": 0.992
   },
   {
    "model": "gemini-4-carbon",
@@ -509,6 +612,7 @@
     107
    ],
    "ci_excludes_100": false,
+   "ci_direction": null,
    "thinking_tokens_per_ep": 530,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.388
@@ -524,6 +628,7 @@
     99
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 50290,
    "thinking_is_estimate": false,
    "usd_per_ep": 1.469
@@ -539,6 +644,7 @@
     100
    ],
    "ci_excludes_100": false,
+   "ci_direction": null,
    "thinking_tokens_per_ep": 36812,
    "thinking_is_estimate": true,
    "usd_per_ep": 1.14
@@ -554,6 +660,7 @@
     -150
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 0,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.03
@@ -569,6 +676,7 @@
     17
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 5543,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.056
@@ -584,6 +692,7 @@
     -150
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 1666,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.041
@@ -599,6 +708,7 @@
     11
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 5679,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.064
@@ -614,6 +724,7 @@
     34
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 0,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.248
@@ -629,6 +740,7 @@
     104
    ],
    "ci_excludes_100": false,
+   "ci_direction": null,
    "thinking_tokens_per_ep": 8531,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.275
@@ -637,31 +749,33 @@
    "model": "gemini-3.5-flash",
    "level": "medium",
    "tier": "hard",
-   "n": 20,
-   "pct_of_solver": 78,
+   "n": 40,
+   "pct_of_solver": 87,
    "ci95": [
-    28,
-    151
+    50,
+    147
    ],
    "ci_excludes_100": false,
-   "thinking_tokens_per_ep": 20151,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 20275,
    "thinking_is_estimate": false,
-   "usd_per_ep": 0.419
+   "usd_per_ep": 0.421
   },
   {
    "model": "gemini-3.5-flash",
    "level": "high",
    "tier": "hard",
-   "n": 20,
-   "pct_of_solver": 71,
+   "n": 40,
+   "pct_of_solver": 88,
    "ci95": [
-    11,
-    158
+    51,
+    138
    ],
    "ci_excludes_100": false,
-   "thinking_tokens_per_ep": 26547,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 26775,
    "thinking_is_estimate": false,
-   "usd_per_ep": 0.425
+   "usd_per_ep": 0.451
   },
   {
    "model": "gemini-3.8-flash",
@@ -674,6 +788,7 @@
     68
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 0,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.162
@@ -689,6 +804,7 @@
     85
    ],
    "ci_excludes_100": true,
+   "ci_direction": "below",
    "thinking_tokens_per_ep": 28300,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.455
@@ -704,54 +820,122 @@
     123
    ],
    "ci_excludes_100": false,
+   "ci_direction": null,
    "thinking_tokens_per_ep": 50732,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.779
   },
   {
+   "model": "gemini-4-hydrogen",
+   "level": "low",
+   "tier": "hard",
+   "n": 12,
+   "pct_of_solver": 87,
+   "ci95": [
+    35,
+    125
+   ],
+   "ci_excludes_100": false,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 3537,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.15
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "medium",
+   "tier": "hard",
+   "n": 12,
+   "pct_of_solver": 87,
+   "ci95": [
+    64,
+    118
+   ],
+   "ci_excludes_100": false,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 16120,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.473
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "high",
+   "tier": "hard",
+   "n": 10,
+   "pct_of_solver": 70,
+   "ci95": [
+    15,
+    98
+   ],
+   "ci_excludes_100": true,
+   "ci_direction": "below",
+   "thinking_tokens_per_ep": 33351,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 0.72
+  },
+  {
+   "model": "gemini-4-hydrogen",
+   "level": "xhigh",
+   "tier": "hard",
+   "n": 13,
+   "pct_of_solver": 97,
+   "ci95": [
+    46,
+    140
+   ],
+   "ci_excludes_100": false,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 65787,
+   "thinking_is_estimate": false,
+   "usd_per_ep": 1.191
+  },
+  {
    "model": "gemini-4-argon",
    "level": "low",
    "tier": "hard",
-   "n": 10,
-   "pct_of_solver": 102,
+   "n": 21,
+   "pct_of_solver": 57,
    "ci95": [
-    83,
-    130
+    -6,
+    127
    ],
    "ci_excludes_100": false,
-   "thinking_tokens_per_ep": 0,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 10,
    "thinking_is_estimate": false,
-   "usd_per_ep": 0.175
+   "usd_per_ep": 0.23
   },
   {
    "model": "gemini-4-argon",
    "level": "medium",
    "tier": "hard",
-   "n": 10,
-   "pct_of_solver": 41,
+   "n": 21,
+   "pct_of_solver": 64,
    "ci95": [
-    -35,
-    108
+    12,
+    129
    ],
    "ci_excludes_100": false,
-   "thinking_tokens_per_ep": 17346,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 10924,
    "thinking_is_estimate": false,
-   "usd_per_ep": 0.639
+   "usd_per_ep": 0.512
   },
   {
    "model": "gemini-4-argon",
    "level": "high",
    "tier": "hard",
-   "n": 10,
-   "pct_of_solver": 45,
+   "n": 15,
+   "pct_of_solver": 73,
    "ci95": [
-    -34,
-    99
+    14,
+    117
    ],
-   "ci_excludes_100": true,
-   "thinking_tokens_per_ep": 44695,
+   "ci_excludes_100": false,
+   "ci_direction": null,
+   "thinking_tokens_per_ep": 41967,
    "thinking_is_estimate": false,
-   "usd_per_ep": 1.61
+   "usd_per_ep": 1.468
   },
   {
    "model": "gemini-4-carbon",
@@ -764,6 +948,7 @@
     107
    ],
    "ci_excludes_100": false,
+   "ci_direction": null,
    "thinking_tokens_per_ep": 289,
    "thinking_is_estimate": false,
    "usd_per_ep": 0.523
@@ -779,6 +964,7 @@
     126
    ],
    "ci_excludes_100": false,
+   "ci_direction": null,
    "thinking_tokens_per_ep": 63171,
    "thinking_is_estimate": false,
    "usd_per_ep": 1.931
@@ -794,6 +980,7 @@
     189
    ],
    "ci_excludes_100": false,
+   "ci_direction": null,
    "thinking_tokens_per_ep": 48351,
    "thinking_is_estimate": true,
    "usd_per_ep": 1.501
@@ -801,7 +988,11 @@
  ],
  "section4": [
   "**Thought signatures are load-bearing:** with signature replay stripped, the API rejected the first function-call replay on 10/10 hard-tier episodes of gemini-3.8-flash (400 INVALID_ARGUMENT, \"Function call is missing a thought_signature\"; Wilson 95% CI [72.2, 100.0]), so 0 episodes were playable, versus 10/10 played with replay on (0/628 API errors, accuracy 70.0%, CI [39.7, 89.2]).",
-  "**Explicit context caching** cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 75.9% ($678.19 of $893.08) across all 29,150 ledgered calls in the programme.",
-  "**`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, gemini-3.5-flash goes from -32% [-124, 34] at minimal (n=10, 0 thinking tok, $0.25/ep) to 78% [28, 151] at medium (n=20, 20,151 thinking tok, $0.42/ep) of the solver on the same seeds, while gemini-4-argon is non-monotone (102% [83, 130] at low (n=10, 0 thinking tok, $0.17/ep) vs 45% [-34, 99] at high (n=10, 44,695 thinking tok, $1.61/ep)); across all 34 cells the 95% CI excludes solver parity in 17."
- ]
+  "**Explicit context caching** cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 77.4% ($1368.50 of $1768.51) across all 44,545 ledgered calls in the programme (list prices; 702 calls of unpriced models such as embeddings and hosted Gemma count $0).",
+  "**`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, gemini-3.6-flash (requested as 3.5-flash) goes from -32% [-124, 34] at minimal (n=10, 0 thinking tok, $0.25/ep) to 87% [50, 147] at medium (n=40, 20,275 thinking tok, $0.42/ep) of the solver on the same seeds, while gemini-4-argon rises across low \u2192 medium \u2192 high (57% \u2192 64% \u2192 73%; 57% [-6, 127] at low (n=21, 10 thinking tok, $0.23/ep) vs 73% [14, 117] at high (n=15, 41,967 thinking tok, $1.47/ep), CIs overlap); across all model x level x tier cells, 18 of 42 cells exclude parity, all below the solver (95% CIs)."
+ ],
+ "thinking_sweep_regenerated_at": "2026-11-15T04:47:20+0200",
+ "ladder_git_sha": "76097d7843032cc4068e53a9d78e934f4ab38171",
+ "thinking_sweep_parity": "18 of 42 cells exclude parity, all below the solver",
+ "explicit_cache_regenerated_at": "2026-11-15T04:55:12+0200"
 }

@@ -1,0 +1,195 @@
+{
+ "models": [
+  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-3.8-flash",
+  "gemini-4-argon",
+  "gemini-4-carbon",
+  "gemini-4-hydrogen"
+ ],
+ "n_episodes": 570,
+ "n_clusters": 63,
+ "bootstrap": {
+  "B": 10000,
+  "rng_seed": 20261115,
+  "cluster": "(tier, seed)"
+ },
+ "step_coding": {
+  "minimal": 0,
+  "low": 1,
+  "medium": 2,
+  "high": 3,
+  "xhigh": 4
+ },
+ "pooled_step": {
+  "score_pp_of_solver": {
+   "slope": 16.302306562484127,
+   "ci95": [
+    7.622881988554634,
+    24.359515874978953
+   ],
+   "n_episodes": 570,
+   "n_clusters": 63,
+   "excludes_zero": true
+  },
+  "accuracy_pp": {
+   "slope": 3.8005584191854416,
+   "ci95": [
+    1.1987382267791018,
+    6.3994633794799896
+   ],
+   "n_episodes": 570,
+   "n_clusters": 63,
+   "excludes_zero": true
+  },
+  "premature_regret_per_ep": {
+   "slope": -0.07923256977240843,
+   "ci95": [
+    -0.11130619448987143,
+    -0.047020739693258644
+   ],
+   "n_episodes": 570,
+   "n_clusters": 63,
+   "excludes_zero": true
+  }
+ },
+ "pooled_dose_per_10k_thinking_tokens": {
+  "score_pp_of_solver": {
+   "slope": 0.1696686649284097,
+   "ci95": [
+    -4.554243321417801,
+    5.104423878206763
+   ],
+   "n_episodes": 570,
+   "n_clusters": 63,
+   "excludes_zero": false
+  },
+  "accuracy_pp": {
+   "slope": -0.6502007993543237,
+   "ci95": [
+    -2.5849379397216112,
+    1.3527750563291703
+   ],
+   "n_episodes": 570,
+   "n_clusters": 63,
+   "excludes_zero": false
+  },
+  "premature_regret_per_ep": {
+   "slope": -0.0075551609199909905,
+   "ci95": [
+    -0.025535462128966385,
+    0.00914057817000959
+   ],
+   "n_episodes": 570,
+   "n_clusters": 63,
+   "excludes_zero": false
+  }
+ },
+ "per_model_step": {
+  "gemini-3.1-flash-lite": {
+   "slope": 12.428052653422185,
+   "ci95": [
+    -11.267661981901576,
+    37.585389694118156
+   ],
+   "n_episodes": 80,
+   "n_clusters": 20,
+   "excludes_zero": false,
+   "levels": [
+    "minimal",
+    "low",
+    "medium",
+    "high"
+   ]
+  },
+  "gemini-3.5-flash": {
+   "slope": 30.56104834709146,
+   "ci95": [
+    11.592794923281254,
+    49.62048101664594
+   ],
+   "n_episodes": 160,
+   "n_clusters": 60,
+   "excludes_zero": true,
+   "levels": [
+    "minimal",
+    "low",
+    "medium",
+    "high"
+   ]
+  },
+  "gemini-3.8-flash": {
+   "slope": 38.06813260630994,
+   "ci95": [
+    1.8191684206486334,
+    76.81801367503186
+   ],
+   "n_episodes": 80,
+   "n_clusters": 40,
+   "excludes_zero": true,
+   "levels": [
+    "low",
+    "medium",
+    "high"
+   ]
+  },
+  "gemini-4-argon": {
+   "slope": -3.749489135949577,
+   "ci95": [
+    -29.475308889801774,
+    21.580425483297944
+   ],
+   "n_episodes": 117,
+   "n_clusters": 45,
+   "excludes_zero": false,
+   "levels": [
+    "low",
+    "medium",
+    "high"
+   ]
+  },
+  "gemini-4-carbon": {
+   "slope": 8.601254383274084,
+   "ci95": [
+    -2.1424803730068507,
+    17.560596790661517
+   ],
+   "n_episodes": 40,
+   "n_clusters": 20,
+   "excludes_zero": false,
+   "levels": [
+    "low",
+    "high"
+   ]
+  },
+  "gemini-4-hydrogen": {
+   "slope": 3.917615622527523,
+   "ci95": [
+    -8.74861697980522,
+    15.722830040015129
+   ],
+   "n_episodes": 93,
+   "n_clusters": 27,
+   "excludes_zero": false,
+   "levels": [
+    "low",
+    "medium",
+    "high",
+    "xhigh"
+   ]
+  }
+ },
+ "headline": "Each step up in thinking_level adds +16.3 [+7.6, +24.4] pp of the solver's score (n=570 episodes, 6 Gemini models, 63 (tier, seed) worlds; OLS with model and tier fixed effects, (tier, seed)-clustered bootstrap 95% CI).",
+ "generated_at": "2026-11-15T04:51:03+0200",
+ "source": "results/gemini/ladder_episodes.jsonl.gz",
+ "ladder_git_sha": "76097d7843032cc4068e53a9d78e934f4ab38171",
+ "models_display": [
+  "gemini-3.1-flash-lite",
+  "gemini-3.6-flash (requested as 3.5-flash)",
+  "gemini-3.8-flash",
+  "gemini-4-argon",
+  "gemini-4-carbon",
+  "gemini-4-hydrogen"
+ ],
+ "figure": "thinking_effect.png"
+}

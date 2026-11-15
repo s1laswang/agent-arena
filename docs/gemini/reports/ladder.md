@@ -2,6 +2,32 @@
 
 Branch `gemini-ladder`. Newest entry first.
 
+## Sun 04:52 (`date`: Sun Nov 15 04:52 EET 2026): final refresh, B2, B3, thinking effect; all API processes stopped
+
+- **All my API processes stopped by exact PID** (each command line checked; no pattern kills):
+  - Gemma main 81634/81636/81638/81643/81651 at 04:45;
+  - earlier: carbon c20 and the Gemma smoke stack.
+  Nothing of mine calls any API now.
+- **Merged origin/gemini-pr2** (927c695e). `bin/refresh.sh` regenerates from both run dirs (ladder-v14 + scale/ladder30).
+- **Final refresh** ff6f2dd8:
+  - 607 valid Gemini episodes in 42 cells, $321.66 list price.
+  - 3.6-flash medium/high on hard: 87% [50, 147] and 88% [51, 138] (n=40), "not distinguishable, CIs wide".
+  - Gemma 31b n=5 (hosted, via the Gemini API).
+- **B3:** `ladder.json → models` lists 6 Gemini models with n per cell; Gemma and the J1 data point are listed
+  separately. ladder.md has a Models line.
+- **B2:** `ablations --sweep-only` regenerates section 3 from the canonical ladder.json:
+  - "18 of 42 cells exclude parity, all below the solver".
+  - The argon clause is now computed from the data. Argon rises 57 → 64 → 73%, so "non-monotone" was stale.
+  - Sections 1–2 are untouched (tested), and every sweep number recomputes from ladder.json (tested).
+- **Thinking effect** 37d8d629:
+  - +16.3 [+7.6, +24.4] pp of the solver's score per step (n=570, 6 models, 63 worlds; OLS with model and tier
+    fixed effects, clustered bootstrap B=10k).
+  - Accuracy +3.8 [+1.2, +6.4] pp per step; premature regret −0.079 [−0.111, −0.047] per step.
+  - The dose version (per 10k thinking tokens) is not distinguishable from zero.
+  - Per model, only the two flash models exclude zero.
+- **J1** (Qwen3-14B self-hosted, as an open-weight cost/portability data point): ingest is ready and tested
+  (`--j1-*` flags, replay-verify, cap-asymmetry sentence, "not run" tiers). Due 07:15 once fr8 delivers.
+
 ## Sun 02:35 (`date`: Sun Nov 15 02:35 EET 2026): 20-seed headline cells; headline wording tightened; carbon stopped
 
 - **Phase 5 (CEO 00:45), dev seeds 10–19:**

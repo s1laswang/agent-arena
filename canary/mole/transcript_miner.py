@@ -62,12 +62,15 @@ def _load_version_episodes(committed_root: Path, version: str) -> tuple[list[dic
     episodes: list[dict[str, Any]] = []
     accuse_files: dict[str, Path] = {}
     for md_path in sorted(ver_dir.rglob("accuse.md")):
-        if "superseded" in md_path.parts:
+        if "superseded" in md_path.parts or any(p.endswith("-ext") for p in md_path.parts):
             continue
         accuse_files[str(md_path.parent.relative_to(ver_dir))] = md_path
     for fpath in sorted(ver_dir.rglob("episodes.jsonl")):
         rel_parts = fpath.relative_to(ver_dir).parts
-        if "superseded" in rel_parts or any(part.endswith("-smoke") for part in rel_parts):
+        if (
+            "superseded" in rel_parts
+            or any(part.endswith(("-smoke", "-ext")) or "seeds30to59" in part for part in rel_parts)
+        ):
             continue
         for raw_line in fpath.read_text(encoding="utf-8").splitlines():
             line = raw_line.strip()

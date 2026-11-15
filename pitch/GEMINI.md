@@ -1,11 +1,13 @@
-# Canary × Gemini
+# Gemini: agents you can trust
 
-The Gemini write-up is **[docs/gemini/SUBMISSION.md](../docs/gemini/SUBMISSION.md)**. This page is a short pointer to it, so the two can never disagree.
+The Gemini write-up is **[docs/gemini/SUBMISSION.md](../docs/gemini/SUBMISSION.md)** (one page; details in [SUBMISSION-LONG.md](../docs/gemini/SUBMISSION-LONG.md)). This page only points to it, so the two can never disagree.
 
-- **Ladder:** Gemini's `thinking_level` is the only factor that changes, across 587 episodes paired with the Bayesian solver on the same worlds ([results/gemini/ladder.md](../results/gemini/ladder.md)).
-- **Red team:** 100 ledger-verified Gemini attacks: 91 attackers over 4 waves (75 whitebox with the whole repo in context, 16 blackbox) plus 9 re-runs through the real MCP server, with 0 verified exploits. In a positive control, the same pipeline caught a deliberately reopened exploit 4 times out of 4. That validates the detector; the attackers had a tool that runs the public generator ([results/gemini/swarm.md](../results/gemini/swarm.md)).
-- **Analyst:** blind, Gemini recovers 3 of 5 code-defined failure modes and names 2 new ones ([atlas_blind.md](../results/gemini/atlas_blind.md)). It also organises and explains the failures the code attributes. The [Failure Gallery](../docs/reports/failure_gallery.md) is an exact decomposition done in code; Gemini only names and explains its categories. Atlas v1 was not blind; see the honesty notes in the write-up.
-- **Arena mole:** playing the mole in arena mode, gemini-4-carbon found the canary trap's blind spot (arena mode: adaptive Gemini mole, not the judged environment; n=4).
-- **Usage:** 24,855 Gemini calls are logged ([results/gemini/dashboard.html](../results/gemini/dashboard.html)).
+- **HoldUp, the product** ([junction-meta-glasses `GEMINI.md`](https://github.com/s1laswang/junction-meta-glasses/blob/gemini-quote-0515/GEMINI.md)): a hands-free label reader for blind and low-vision users on the Gemini Live API. 0 of 754 confident strength reads were wrong across 1,740 Gemini-generated test images.
+- **Canary Lab, the proof** (`canary/gemini/`): Gemini plays, attacks and explains an insider-threat benchmark scored against a Bayesian solver.
+  - **Ladder:** `thinking_level` is the only factor changed; each step up adds +16.3 [+7.6, +24.4] points of the solver's score, pooled over 570 paired episodes ([thinking_effect.md](../results/gemini/thinking_effect.md), [ladder.md](../results/gemini/ladder.md)).
+  - **Cross-provider control:** Gemini against committed GPT-5.5 episodes on identical worlds ([xprov.md](../results/gemini/xprov.md)).
+  - **Red team:** 100 audited attacks, 0 verified exploits; the detector caught a reopened real exploit 4 times out of 4 ([swarm.md](../results/gemini/swarm.md)).
+  - **Analyst:** without our labels, Gemini recovers 3 of 5 code-defined failure modes and names 2 new ones ([atlas_blind.md](../results/gemini/atlas_blind.md)).
+- **Usage:** one de-duplicated total of every logged Gemini call is in [usage_total.json](../results/gemini/usage_total.json) and the [dashboard](../results/gemini/dashboard.html).
 
-The earlier Mole Forge, world-builder and scenario-designer roles have no measured results in this submission and are not claimed.
+The Canary environment itself is the team's AfterQuery entry; nothing on this page is an AfterQuery claim. The earlier Mole Forge, world-builder and scenario-designer roles have no measured results here and are not claimed.

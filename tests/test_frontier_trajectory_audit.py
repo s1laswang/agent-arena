@@ -1,7 +1,6 @@
 """Tests for scripts/frontier_trajectory_audit.py, trajectory_audit.json, and frontier_trajectory_audit_v14.md."""
 from __future__ import annotations
 
-import copy
 import importlib.util
 import json
 import math
@@ -137,7 +136,7 @@ def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypat
     monkeypatch.setattr(
         fta,
         "compute_audit",
-        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: copy.deepcopy(computed_audit),
+        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: computed_audit,
     )
     assert fta.main(["--check"]) == 0
     assert JSON_PATH.stat().st_size <= 50_000
@@ -263,7 +262,19 @@ def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypat
         assert "0.373" not in md
 
 
-def test_gap_ships_flash_hard_false_and_true(monkeypatch, tmp_path):
+@pytest.fixture(scope="module")
+def computed_audit_all_cohorts():
+    mp = pytest.MonkeyPatch()
+    _forbid_subprocess(mp)
+    _strip_keys(mp)
+    mp.setattr(fta, "gap_ships_flash_hard", lambda root=ROOT: True)
+    try:
+        return fta.compute_audit(root=ROOT, verify_replays=False, enforce_expected_counts=True)
+    finally:
+        mp.undo()
+
+
+def test_gap_ships_flash_hard_false_and_true(computed_audit_all_cohorts, monkeypatch, tmp_path):
     _forbid_subprocess(monkeypatch)
     _strip_keys(monkeypatch)
     mock_root = tmp_path / "workspace"
@@ -303,6 +314,7 @@ def test_gap_ships_flash_hard_false_and_true(monkeypatch, tmp_path):
     )
     assert fta.gap_ships_flash_hard(mock_root) is True
     audit_true = fta.compute_audit(root=mock_root, verify_replays=False, enforce_expected_counts=True)
+    assert audit_true == computed_audit_all_cohorts
     assert audit_true["flash_hard_shipped_in_gap_md"] is True
     assert audit_true["summary"]["flash_hard_held_pending_gap_md"] is False
     assert [c["cohort_id"] for c in audit_true["cohorts"]] == EXPECTED_COHORT_IDS_ALL
@@ -318,9 +330,8 @@ def test_gap_ships_flash_hard_false_and_true(monkeypatch, tmp_path):
     assert "0.373" in md_true
 
 
-def test_metric_invariants_across_all_cohorts(monkeypatch):
-    monkeypatch.setattr(fta, "gap_ships_flash_hard", lambda root=ROOT: True)
-    all_audit = fta.compute_audit(root=ROOT, verify_replays=False, enforce_expected_counts=True)
+def test_metric_invariants_across_all_cohorts(computed_audit_all_cohorts):
+    all_audit = computed_audit_all_cohorts
     cohorts = all_audit["cohorts"]
     tier_params_map = all_audit["tier_params"]
     assert len(cohorts) == 12
@@ -523,6 +534,64 @@ def test_step_result_normalization_1bc3e281_unwrap_order():
             rep_out = fta.replay_and_verify_episode(ep_doc)
             assert rep_out["ok"] is True
             assert rep_out["step_mismatches"] == 0
+
+        env2 = Env("medium", 0)
+        r_iv = env2.call("interview", {"employee": "e00", "topic": "workload"})
+        r_adv = env2.call("advance_day", {})
+        r_msg = env2.call("read_message", {"id": "m1-0"})
+        msg_ep = {
+            "tier": "medium",
+            "seed": 0,
+            "agent": "opencode:google/gemini-4-carbon",
+            "score": 0.0,
+            "correct": False,
+            "accused": None,
+            "final_day": 2,
+            "end_reason": "stop_early",
+            "steps": [
+                {
+                    "t": 0,
+                    "day": 1,
+                    "tool": "interview",
+                    "args": {"employee": "e00", "topic": "workload"},
+                    "result": {"ok": r_iv.ok, "data": r_iv.data, "error": r_iv.error},
+                },
+                {
+                    "t": 1,
+                    "day": 1,
+                    "tool": "advance_day",
+                    "args": {},
+                    "result": {"ok": r_adv.ok, "data": r_adv.data, "error": r_adv.error},
+                },
+                {
+                    "t": 2,
+                    "day": 2,
+                    "tool": "read_message",
+                    "args": {"id": "m1-0"},
+                    "result": {"ok": r_msg.ok, "data": r_msg.data, "error": r_msg.error},
+                },
+            ],
+            "meta": {},
+        }
+        assert fta.replay_and_verify_episode(msg_ep)["ok"] is True
+        tampered_iv = dict(
+            msg_ep,
+            steps=[
+                {**msg_ep["steps"][0], "result": {"ok": True, "data": {"answer": "tampered"}, "error": None}},
+                msg_ep["steps"][1],
+                msg_ep["steps"][2],
+            ],
+        )
+        assert fta.replay_and_verify_episode(tampered_iv)["ok"] is False
+        tampered_msg = dict(
+            msg_ep,
+            steps=[
+                msg_ep["steps"][0],
+                msg_ep["steps"][1],
+                {**msg_ep["steps"][2], "result": {"ok": True, "data": {"message": {}}, "error": None}},
+            ],
+        )
+        assert fta.replay_and_verify_episode(tampered_msg)["ok"] is False
     finally:
         if prev is None:
             os.environ.pop("CANARY_ALLOW_DEV", None)
@@ -562,7 +631,7 @@ def test_write_check_roundtrip_tamper_and_zero_git_dependency(computed_audit, mo
     monkeypatch.setattr(
         fta,
         "compute_audit",
-        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: copy.deepcopy(computed_audit),
+        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: computed_audit,
     )
 
     assert fta.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 1
@@ -741,4 +810,5 @@ def test_file_hygiene_no_comments_or_em_dashes():
         txt = f.read_text(encoding="utf-8")
         assert "\u2014" not in txt, f"found em dash in {f}"
         assert "\u2013" not in txt, f"found en dash in {f}"
+        assert txt.isascii(), f"found non-ASCII characters in {f}"
     assert JSON_PATH.stat().st_size <= 50_000

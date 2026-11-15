@@ -9,8 +9,10 @@ import argparse
 import json
 import math
 import os
+import random
 import re
 import sys
+import threading
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -24,8 +26,11 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from canary.analysis.gap import mean_ci
 from canary.env import Env
-from canary.rules import TIERS_VERSION, tier_params
+from canary.rules import TIERS_VERSION, TRACKS, tier_params
+from canary.text.facts import EmployeeFacts, PublicDayFacts
+from canary.text.template import SIGNALS as _IV_SIGNALS, TOPICS as _IV_TOPICS, TemplateProvider
 from canary.types import INVESTIGATIVE_TOOLS
+from canary.world import world_seed
 
 MAX_JSON_BYTES = 50_000
 EXPECTED_COMMITTED_V14_EPISODES = 472
@@ -462,6 +467,149 @@ def _step_ok(step: dict[str, Any]) -> bool:
     return bool((unwrapped or {}).get("ok"))
 
 
+_BASE_TEMPLATE_PROVIDER = TemplateProvider()
+_BASE_ENV_CACHE: dict[tuple[str, int, int], tuple[Env, tuple[EmployeeFacts, ...], str]] = {}
+_DAY_MSG_CACHE: dict[tuple[Any, ...], tuple[dict[str, Any], ...]] = {}
+_IV_ANS_CACHE: dict[tuple[Any, ...], str] = {}
+_MSG_TOOLS: frozenset[str] = frozenset({"search_messages", "read_message"})
+
+
+class _ReplayTemplateProvider:
+    name = "template"
+    __slots__ = ("need_messages", "need_interview_text")
+
+    def __init__(self, need_messages: bool = True, need_interview_text: bool = True) -> None:
+        self.need_messages = need_messages
+        self.need_interview_text = need_interview_text
+
+    def day_messages(self, facts: PublicDayFacts) -> Any:
+        if not self.need_messages:
+            return ()
+        dkey = tuple(
+            (d.get("doc_id"), d.get("title"), tuple(d.get("recipients", ())))
+            for d in facts.docs[:3]
+        )
+        key = (facts.tier, facts.seed, facts.day, dkey)
+        got = _DAY_MSG_CACHE.get(key)
+        if got is None:
+            got = tuple(_BASE_TEMPLATE_PROVIDER.day_messages(facts))
+            if len(_DAY_MSG_CACHE) >= 4096:
+                _DAY_MSG_CACHE.clear()
+            _DAY_MSG_CACHE[key] = got
+        return got
+
+    def interview_answer(
+        self,
+        facts: PublicDayFacts,
+        employee: str,
+        topic: str,
+        signal: str,
+    ) -> str:
+        if topic not in _IV_TOPICS or signal not in _IV_SIGNALS:
+            return _BASE_TEMPLATE_PROVIDER.interview_answer(facts, employee, topic, signal)
+        if not self.need_interview_text:
+            return ""
+        mine = [d for d in facts.docs if employee in d.get("recipients", ())] or list(facts.docs)
+        doc = mine[0].get("title", "the latest brief") if mine else "the latest team brief"
+        key = (facts.tier, facts.seed, facts.day, employee, topic, signal, doc)
+        got = _IV_ANS_CACHE.get(key)
+        if got is None:
+            got = _BASE_TEMPLATE_PROVIDER.interview_answer(facts, employee, topic, signal)
+            if len(_IV_ANS_CACHE) >= 16384:
+                _IV_ANS_CACHE.clear()
+            _IV_ANS_CACHE[key] = got
+        return got
+
+
+_NOOP_REPLAY_PROVIDER = _ReplayTemplateProvider(need_messages=False, need_interview_text=False)
+
+
+def _make_replay_env(tier: str, seed: int, provider: _ReplayTemplateProvider) -> Env:
+    if tier in TRACKS:
+        return Env(tier, seed, text_provider=provider)
+    ws = world_seed(tier, seed)
+    ckey = (tier, seed, ws)
+    cached = _BASE_ENV_CACHE.get(ckey)
+    if cached is None:
+        proto = Env(tier, seed, text_provider=_NOOP_REPLAY_PROVIDER)
+        emp_facts = tuple(
+            EmployeeFacts(e.id, e.name, e.dept, e.role, e.clearance)
+            for e in proto._world.employees
+        )
+        decoy_mood = "angry" if proto._world.decoy else "neutral"
+        if len(_BASE_ENV_CACHE) >= 256:
+            _BASE_ENV_CACHE.clear()
+        cached = (proto, emp_facts, decoy_mood)
+        _BASE_ENV_CACHE[ckey] = cached
+    proto, emp_facts, decoy_mood = cached
+    w = proto._world
+    env = Env.__new__(Env)
+    env.tier = tier
+    env.seed = seed
+    env.p = proto.p
+    env._world = w
+    env._dyn = random.Random(w.world_seed ^ 1)
+    env.provider = provider
+    env._ids = list(proto._ids)
+    env._idset = set(proto._idset)
+    env.day = 1
+    env.V = 1.0
+    env._costs = 0.0
+    env._done = False
+    env._end_reason = None
+    env._accused = None
+    env._correct = False
+    env._lock = threading.RLock()
+    env._actions_today = 0
+    env._canaries_today = 0
+    env._restricted = set()
+    docs = [dict(d, recipients=list(d["recipients"])) for d in proto.docs]
+    env.docs = docs
+    env._doc_by_id = {d["doc_id"]: d for d in docs}
+    env._held = {e: list(h) for e, h in proto._held.items()}
+    env._leaked = set()
+    env._feed = []
+    env._logs = []
+    env._messages = {}
+    env._msg_order = []
+    env._history = []
+    env._ledger = []
+    env._canary_ids = []
+    env._last_leak_day = 0
+
+    def _fast_facts(
+        d: int,
+        _w: Any = w,
+        _tier: str = tier,
+        _emps: tuple[EmployeeFacts, ...] = emp_facts,
+        _mood: str = decoy_mood,
+        _env: Env = env,
+    ) -> PublicDayFacts:
+        return PublicDayFacts(
+            tier=_tier,
+            seed=_w.world_seed,
+            day=d,
+            company=_w.company,
+            employees=_emps,
+            docs=tuple(
+                {
+                    "doc_id": x["doc_id"],
+                    "title": x["title"],
+                    "day": x["day"],
+                    "recipients": list(x["recipients"]),
+                }
+                for x in _env.docs
+                if x["day"] == d
+            ),
+            decoy=_w.decoy,
+            decoy_mood=_mood,
+            restricted=tuple(sorted(_env._restricted)),
+        )
+
+    env._facts = _fast_facts
+    return env
+
+
 def _replay_env_step(env: Env, tool: str, args: dict[str, Any]) -> dict[str, Any]:
     res = env._dispatch(tool, args)
     env._history.append(None)
@@ -471,14 +619,22 @@ def _replay_env_step(env: Env, tool: str, args: dict[str, Any]) -> dict[str, Any
 
 
 def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
-    env = Env(str(ep["tier"]), int(ep["seed"]))
+    steps = ep.get("steps") or []
+    last_msg_idx = -1
+    for i, st_i in enumerate(steps):
+        if st_i.get("tool") in _MSG_TOOLS:
+            last_msg_idx = i
+    prov = _ReplayTemplateProvider(need_messages=last_msg_idx >= 0, need_interview_text=True)
+    env = _make_replay_env(str(ep["tier"]), int(ep["seed"]), prov)
     step_mismatches = 0
     first_bad_step: int | None = None
     unwrapped_mcp_error_steps = 0
     detail_normalized_steps = 0
     truncated_steps_verified = 0
     client_only_steps = 0
-    for idx, st in enumerate(ep.get("steps") or []):
+    for idx, st in enumerate(steps):
+        if idx > last_msg_idx:
+            prov.need_messages = False
         if is_client_only_step(st):
             client_only_steps += 1
             continue
@@ -493,8 +649,10 @@ def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
             if first_bad_step is None:
                 first_bad_step = idx
             continue
+        raw_res = st.get("result")
+        prov.need_interview_text = raw_res is not None
         got_payload = _replay_env_step(env, tname, st.get("args") or {})
-        ok_step, flags = step_result_matches(st.get("result"), got_payload)
+        ok_step, flags = step_result_matches(raw_res, got_payload)
         if flags["unwrapped_mcp_error"]:
             unwrapped_mcp_error_steps += 1
         if flags["detail_normalized"]:

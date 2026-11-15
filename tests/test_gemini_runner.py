@@ -44,6 +44,7 @@ def test_infra_reason_classes(tmp_path):
     assert gr.infra_reason("inproc", tmp_path, {"end_reason": "error", "meta": {"error": "ClientError('429 RESOURCE_EXHAUSTED')"}})
     assert gr.infra_reason("inproc", tmp_path, {"end_reason": "horizon", "meta": {}}) is None
     assert gr.RATE.search("api: ClientError 429 RESOURCE_EXHAUSTED")
+    assert gr.RATE.search("invalid: infra:provider_quota") and gr.RATE.search("invalid: infra:provider_rate_limit")
     j = gr.Job("opencode", "hard", 3, tmp_path, "gemini-4-carbon", 3600)
     assert "google/gemini-4-carbon" in j.cmd() and "--retries" in j.cmd()
     assert "gemini:gemini-4-carbon" in gr.Job("inproc", "hard", 3, tmp_path, "gemini-4-carbon", 3600).cmd()

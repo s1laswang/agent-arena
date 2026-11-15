@@ -1,10 +1,10 @@
 {
   "target_model": "gemini-4-carbon",
-  "git_head": "a6270995",
+  "git_head": "dfb1d930",
   "provenance": {
     "verified": true,
-    "scanned_runs": 92,
-    "verified_runs": 92,
+    "scanned_runs": 96,
+    "verified_runs": 96,
     "secret_leaks_count": 0
   },
   "totals": {
@@ -29,17 +29,17 @@
     "n_roles_required": 6,
     "n_roles_verified": 6,
     "all_roles_verified": true,
-    "n_verified_carbon_runs": 92,
+    "n_verified_carbon_runs": 96,
     "n_canonical_runs": 6,
-    "n_supporting_runs": 86,
-    "count": 880,
-    "calls": 6966,
-    "tokens_in": 191861104,
-    "tokens_out": 2220586,
-    "thinking_tokens": 1375438,
+    "n_supporting_runs": 90,
+    "count": 903,
+    "calls": 7023,
+    "tokens_in": 191987627,
+    "tokens_out": 2234465,
+    "thinking_tokens": 1492077,
     "cached_tokens": 174576067,
-    "total_tokens": 195457128,
-    "cost_usd": 84.227693
+    "total_tokens": 195714169,
+    "cost_usd": 85.785919
   },
   "roles": {
     "world_text": {
@@ -2513,7 +2513,7 @@
       "title": "Multimodal Evidence & Vision Forensics",
       "stage": "Pixel & Chart Inspection",
       "verified": true,
-      "n_verified_runs": 13,
+      "n_verified_runs": 17,
       "canonical_run": {
         "role": "multimodal_evidence",
         "subrole": "visual_memo_blind_ablation",
@@ -2544,6 +2544,21 @@
           "cached_tokens": 0,
           "cost_usd": 0.127808,
           "headline_metric": "21 images, vision acc 100%, score +0.803 vs blind +0.000, 100% oracle recovery"
+        },
+        {
+          "role": "multimodal_evidence",
+          "subrole": "visual_memo_blind_ablation",
+          "run_folder": "results/gemini_roles/multimodal_evidence/memo-watermark-hard-seeds10to14-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "898dbbb4ae98f0dbf742f8e91a2557cb614a5877",
+          "count": 5,
+          "calls": 39,
+          "tokens_in": 74256,
+          "tokens_out": 4966,
+          "thinking_tokens": 3691,
+          "cached_tokens": 0,
+          "cost_usd": 0.235082,
+          "headline_metric": "39 images, vision acc 100%, score +0.376 vs blind +0.234, 100% oracle recovery"
         },
         {
           "role": "multimodal_evidence",
@@ -2649,6 +2664,51 @@
           "cached_tokens": 0,
           "cost_usd": 0.384028,
           "headline_metric": "18 images, top-1 mole acc 83%, decoy acc 100%"
+        },
+        {
+          "role": "multimodal_evidence",
+          "subrole": "multi_image_incident_dossier",
+          "run_folder": "results/gemini_roles/multimodal_evidence/multi-image-dossier-med6to8-hard5to7-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "a6b5a80e7a47d2bdf91514c57ca08834921762eb",
+          "count": 6,
+          "calls": 6,
+          "tokens_in": 27055,
+          "tokens_out": 2345,
+          "thinking_tokens": 25336,
+          "cached_tokens": 0,
+          "cost_usd": 0.33092,
+          "headline_metric": "18 images, top-1 mole acc 67%, decoy acc 83%"
+        },
+        {
+          "role": "multimodal_evidence",
+          "subrole": "soc_access_vision_v14_sweep",
+          "run_folder": "results/gemini_roles/multimodal_evidence/access-heatmap-v14-high-s8to11-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+          "count": 6,
+          "calls": 6,
+          "tokens_in": 12606,
+          "tokens_out": 3460,
+          "thinking_tokens": 85629,
+          "cached_tokens": 0,
+          "cost_usd": 0.916102,
+          "headline_metric": "6 images (2 medium + 4 hard), mole acc 100% vs naive 0%, decoy acc 100%, Brier 0.0003"
+        },
+        {
+          "role": "multimodal_evidence",
+          "subrole": "soc_access_vision_v14_sweep",
+          "run_folder": "results/gemini_roles/multimodal_evidence/access-heatmap-v14-low-s8to11-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+          "count": 6,
+          "calls": 6,
+          "tokens_in": 12606,
+          "tokens_out": 3108,
+          "thinking_tokens": 1983,
+          "cached_tokens": 0,
+          "cost_usd": 0.076122,
+          "headline_metric": "6 images (2 medium + 4 hard), mole acc 100% vs naive 0%, decoy acc 100%, Brier 0.0021"
         },
         {
           "role": "multimodal_evidence",
@@ -2745,6 +2805,21 @@
         {
           "role": "multimodal_evidence",
           "subrole": "visual_memo_blind_ablation",
+          "run_folder": "results/gemini_roles/multimodal_evidence/memo-watermark-hard-seeds10to14-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "898dbbb4ae98f0dbf742f8e91a2557cb614a5877",
+          "count": 5,
+          "calls": 39,
+          "tokens_in": 74256,
+          "tokens_out": 4966,
+          "thinking_tokens": 3691,
+          "cached_tokens": 0,
+          "cost_usd": 0.235082,
+          "headline_metric": "39 images, vision acc 100%, score +0.376 vs blind +0.234, 100% oracle recovery"
+        },
+        {
+          "role": "multimodal_evidence",
+          "subrole": "visual_memo_blind_ablation",
           "run_folder": "results/gemini_roles/multimodal_evidence/memo-watermark-hard-seeds5to9-carbon",
           "model_id": "gemini-4-carbon",
           "commit": "726f9de02be0fe1ce8493640796d3f0cb9941e5d",
@@ -2849,6 +2924,51 @@
         },
         {
           "role": "multimodal_evidence",
+          "subrole": "multi_image_incident_dossier",
+          "run_folder": "results/gemini_roles/multimodal_evidence/multi-image-dossier-med6to8-hard5to7-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "a6b5a80e7a47d2bdf91514c57ca08834921762eb",
+          "count": 6,
+          "calls": 6,
+          "tokens_in": 27055,
+          "tokens_out": 2345,
+          "thinking_tokens": 25336,
+          "cached_tokens": 0,
+          "cost_usd": 0.33092,
+          "headline_metric": "18 images, top-1 mole acc 67%, decoy acc 83%"
+        },
+        {
+          "role": "multimodal_evidence",
+          "subrole": "soc_access_vision_v14_sweep",
+          "run_folder": "results/gemini_roles/multimodal_evidence/access-heatmap-v14-high-s8to11-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+          "count": 6,
+          "calls": 6,
+          "tokens_in": 12606,
+          "tokens_out": 3460,
+          "thinking_tokens": 85629,
+          "cached_tokens": 0,
+          "cost_usd": 0.916102,
+          "headline_metric": "6 images (2 medium + 4 hard), mole acc 100% vs naive 0%, decoy acc 100%, Brier 0.0003"
+        },
+        {
+          "role": "multimodal_evidence",
+          "subrole": "soc_access_vision_v14_sweep",
+          "run_folder": "results/gemini_roles/multimodal_evidence/access-heatmap-v14-low-s8to11-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+          "count": 6,
+          "calls": 6,
+          "tokens_in": 12606,
+          "tokens_out": 3108,
+          "thinking_tokens": 1983,
+          "cached_tokens": 0,
+          "cost_usd": 0.076122,
+          "headline_metric": "6 images (2 medium + 4 hard), mole acc 100% vs naive 0%, decoy acc 100%, Brier 0.0021"
+        },
+        {
+          "role": "multimodal_evidence",
           "subrole": "belief_chart_forensics",
           "run_folder": "results/gemini_roles/multimodal_evidence/belief-chart-forensics-carbon",
           "model_id": "gemini-4-carbon",
@@ -2908,13 +3028,13 @@
           "headline_metric": "3 images (medium), top-1 mole acc 100%, decoy acc 100% (naive 0%)"
         }
       ],
-      "count": 77,
-      "calls": 169,
-      "tokens_in": 360071,
-      "tokens_out": 34062,
-      "thinking_tokens": 90206,
+      "count": 100,
+      "calls": 226,
+      "tokens_in": 486594,
+      "tokens_out": 47941,
+      "thinking_tokens": 206845,
       "cached_tokens": 0,
-      "cost_usd": 1.962822
+      "cost_usd": 3.521048
     }
   },
   "paired_solver_comparison": {
@@ -3559,6 +3679,33 @@
         "oracle_accuracy": 1.0
       },
       {
+        "run_folder": "results/gemini_roles/multimodal_evidence/memo-watermark-hard-seeds10to14-carbon",
+        "subrole": "visual_memo_blind_ablation",
+        "model_id": "gemini-4-carbon",
+        "commit": "898dbbb4ae98f0dbf742f8e91a2557cb614a5877",
+        "tier": "hard",
+        "seeds": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "n_episodes": 5,
+        "n_images_read": 39,
+        "n_canary_memos_read": 6,
+        "vision_accuracy": 1.0,
+        "canary_vision_accuracy": 1.0,
+        "multimodal_mean_score": 0.376,
+        "blind_mean_score": 0.234,
+        "vision_gain": 0.142,
+        "oracle_mean_score": 0.376,
+        "oracle_recovery_ratio": 1.0,
+        "multimodal_accuracy": 1.0,
+        "blind_accuracy": 0.6,
+        "oracle_accuracy": 1.0
+      },
+      {
         "run_folder": "results/gemini_roles/multimodal_evidence/memo-watermark-hard-seeds5to9-carbon",
         "subrole": "visual_memo_blind_ablation",
         "model_id": "gemini-4-carbon",
@@ -3639,20 +3786,20 @@
       }
     ],
     "pooled_unique_seeds": {
-      "n_episodes": 22,
+      "n_episodes": 27,
       "tiers": [
         "hard",
         "medium"
       ],
-      "n_images_read": 101,
+      "n_images_read": 140,
       "vision_accuracy": 1.0,
-      "multimodal_mean_score": 0.6832,
-      "blind_mean_score": 0.1705,
-      "vision_gain": 0.5127,
-      "oracle_mean_score": 0.6832,
+      "multimodal_mean_score": 0.6263,
+      "blind_mean_score": 0.1822,
+      "vision_gain": 0.4441,
+      "oracle_mean_score": 0.6263,
       "oracle_recovery_ratio": 1.0,
       "multimodal_accuracy": 1.0,
-      "blind_accuracy": 0.3182
+      "blind_accuracy": 0.3704
     },
     "soc_raster_runs": [
       {
@@ -3676,6 +3823,39 @@
         "top1_mole_accuracy": 0.8333,
         "top1_decoy_accuracy": 1.0,
         "naive_baseline_mole_accuracy": null
+      },
+      {
+        "run_folder": "results/gemini_roles/multimodal_evidence/multi-image-dossier-med6to8-hard5to7-carbon",
+        "subrole": "multi_image_incident_dossier",
+        "model_id": "gemini-4-carbon",
+        "commit": "a6b5a80e7a47d2bdf91514c57ca08834921762eb",
+        "tier": "unspecified",
+        "n_images_read": 18,
+        "top1_mole_accuracy": 0.6667,
+        "top1_decoy_accuracy": 0.8333,
+        "naive_baseline_mole_accuracy": null
+      },
+      {
+        "run_folder": "results/gemini_roles/multimodal_evidence/access-heatmap-v14-high-s8to11-carbon",
+        "subrole": "soc_access_vision_v14_sweep",
+        "model_id": "gemini-4-carbon",
+        "commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+        "tier": "unspecified",
+        "n_images_read": 6,
+        "top1_mole_accuracy": 1.0,
+        "top1_decoy_accuracy": 1.0,
+        "naive_baseline_mole_accuracy": 0.0
+      },
+      {
+        "run_folder": "results/gemini_roles/multimodal_evidence/access-heatmap-v14-low-s8to11-carbon",
+        "subrole": "soc_access_vision_v14_sweep",
+        "model_id": "gemini-4-carbon",
+        "commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+        "tier": "unspecified",
+        "n_images_read": 6,
+        "top1_mole_accuracy": 1.0,
+        "top1_decoy_accuracy": 1.0,
+        "naive_baseline_mole_accuracy": 0.0
       },
       {
         "run_folder": "results/gemini_roles/multimodal_evidence/multi-image-dossier-carbon",

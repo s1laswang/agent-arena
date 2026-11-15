@@ -103,7 +103,7 @@ Install Docker Engine, the Harbor CLI and OpenCode first (see Prerequisites). Th
 make setup
 # local MCP sidecar (no Docker): default ports 8000 (MCP) and 8001 (reward)
 # If a port is taken, make mcp prints the fallback (or set MCP_PORT=8800). Disable fallback: MCP_PORT_FALLBACK=0
-VERIFY_TOKEN=judge-local SLEEPER_SEED=1000 make mcp
+make mcp    # prints the reward curl line; salt and reward token are random per run
 
 # stdio smoke, no Docker:
 PYTHONPATH=. .venv/bin/python -m harbor.opencode.smoke --seat finance_ap --day 1000
@@ -114,6 +114,8 @@ uv tool install harbor
 harbor run -p harbor/tasks --agent oracle
 harbor run -p harbor/tasks --agent opencode --model <model>    # live agent, needs a model key
 ```
+
+`make mcp` runs the server as your own OS user, so a local agent with a shell shares that user. The reward is scored from the server's in-memory final state (the state file is only a copy), and the salt and token are random per run unless you pass them. For judging, use Harbor: there the server and the verifier run in their own containers. Red-team note: [docs/redteam-vaishnav.md](docs/redteam-vaishnav.md).
 
 More isolation notes: [docs/HARNESS.md](docs/HARNESS.md) and [harbor/README.md](harbor/README.md).
 

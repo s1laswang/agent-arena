@@ -182,9 +182,9 @@ def test_make_mcp_passes_secrets_file_and_strips_env_for_sidecar(tmp_path: Path)
         (
             None,
             {
-                "SLEEPER_SALT": "judge-local-salt",
+                "SLEEPER_SALT": "<random>",
                 "SLEEPER_SEED": "1000",
-                "VERIFY_TOKEN": "judge-local",
+                "VERIFY_TOKEN": "<random>",
             },
         ),
         (
@@ -214,7 +214,13 @@ def test_make_mcp_passes_secrets_file_and_strips_env_for_sidecar(tmp_path: Path)
         assert env_map["VERIFY_TOKEN"] is None
         assert payload["leaked"] is False
         assert payload["mode"] == 0o600
-        assert payload["secrets"] == expected_secrets
+        for k, want in expected_secrets.items():
+            got = payload["secrets"][k]
+            if want == "<random>":
+                assert re.fullmatch(r"[0-9a-f]{32}", got), (k, got)
+                assert got not in ("judge-local-salt", "judge-local"), (k, got)
+            else:
+                assert got == want, (k, got)
         assert env_map["SLEEPER_SECRETS_UNLINK"] == "1"
         assert env_map["SLEEPER_SEAT"] == "finance_ap"
         assert env_map["SLEEPER_OUT"] == "/tmp/sleeper-mcp-state.json"

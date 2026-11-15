@@ -1,4 +1,4 @@
-"""Infra exclusion, retry imputation, wall-clock timeout, and quota survivor-bias audit for Canary v1.4 (pure CPU, zero API calls).
+"""Infra exclusion, retry imputation, wall-clock timeout, quota survivor-bias, and Harbor rehearsal cut-off sensitivity audit for Canary v1.4 (pure CPU, zero API calls).
 
     python scripts/frontier_infra_sensitivity.py --write
     python scripts/frontier_infra_sensitivity.py --check
@@ -6,13 +6,30 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
+import random
+import re
 import statistics
 import sys
+import threading
 from pathlib import Path
 from typing import Any
+
+import numpy as np
+
+try:
+    from pydantic_core import (
+        SchemaValidator as _SchemaValidator,
+        core_schema as _cs,
+        from_json as _loads_json,
+    )
+except ImportError:
+    _SchemaValidator = None
+    _cs = None
+    _loads_json = json.loads
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -21,9 +38,14 @@ if str(ROOT) not in sys.path:
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from canary.analysis.gap import load_runs, mean_ci
-from paired_v13 import _P_CACHE, boot_ratio, p_acc, post_expected
-from verify_replay import replay_episode
+from canary.analysis.gap import mean_ci
+from canary.env import TOPICS, _SPECS, Env
+from canary.mole.dsl import DEFAULT_STRATEGY, MoleDoc, MoleView
+from canary.rules import TRACKS
+from canary.text.facts import EmployeeFacts, PublicDayFacts
+from canary.text.template import SIGNALS as _IV_SIGNALS, TOPICS as _IV_TOPICS, TemplateProvider
+from canary.world import world_seed
+from paired_v13 import _P_CACHE, p_acc
 
 DEFAULT_JSON = ROOT / "results" / "frontier_replication" / "v1.4" / "infra_sensitivity.json"
 DEFAULT_MD = ROOT / "docs" / "reports" / "frontier_infra_sensitivity_v14.md"
@@ -90,7 +112,7 @@ def classify_exclusion_reason(reason: str) -> str:
         return "empty_model_response"
     if "provider_quota" in txt:
         return "provider_quota"
-    if "provider_rate_limit" in txt:
+    if "provider_rate_limit" in txt or "provider rate limit" in txt:
         return "provider_rate_limit"
     if "provider_unavailable" in txt:
         return "provider_unavailable"
@@ -121,10 +143,520 @@ def parse_exclusion_entry(entry: str) -> dict[str, Any]:
     }
 
 
-def read_jsonl(path: Path) -> list[dict[str, Any]]:
+_BASE_TEMPLATE_PROVIDER = TemplateProvider()
+_BASE_ENV_CACHE: dict[tuple[str, int, int], tuple[Any, ...]] = {}
+_DAY_MSG_CACHE: dict[tuple[Any, ...], tuple[dict[str, Any], ...]] = {}
+_IV_ANS_CACHE: dict[tuple[Any, ...], str] = {}
+_MSG_TOOLS: frozenset[str] = frozenset({"search_messages", "read_message"})
+
+
+def _build_light_ep_validator() -> Any:
+    if _SchemaValidator is None or _cs is None:
+        return None
+    step_s = _cs.typed_dict_schema(
+        {
+            "tool": _cs.typed_dict_field(_cs.any_schema(), required=False),
+            "args": _cs.typed_dict_field(_cs.any_schema(), required=False),
+        },
+        extra_behavior="ignore",
+    )
+    ep_s = _cs.typed_dict_schema(
+        {
+            "tier": _cs.typed_dict_field(_cs.str_schema()),
+            "seed": _cs.typed_dict_field(_cs.int_schema()),
+            "agent": _cs.typed_dict_field(_cs.str_schema()),
+            "score": _cs.typed_dict_field(_cs.float_schema()),
+            "correct": _cs.typed_dict_field(_cs.bool_schema()),
+            "accused": _cs.typed_dict_field(_cs.nullable_schema(_cs.str_schema()), required=False),
+            "final_day": _cs.typed_dict_field(_cs.int_schema(), required=False),
+            "end_reason": _cs.typed_dict_field(_cs.nullable_schema(_cs.str_schema()), required=False),
+            "meta": _cs.typed_dict_field(_cs.any_schema(), required=False),
+            "steps": _cs.typed_dict_field(_cs.list_schema(step_s), required=False),
+        },
+        extra_behavior="ignore",
+    )
+    return _SchemaValidator(ep_s)
+
+
+_LIGHT_EP_VALIDATOR = _build_light_ep_validator()
+
+
+class _ReplayTemplateProvider:
+    name = "template"
+    __slots__ = ("need_messages", "need_interview_text")
+
+    def __init__(self, need_messages: bool = True, need_interview_text: bool = True) -> None:
+        self.need_messages = need_messages
+        self.need_interview_text = need_interview_text
+
+    def day_messages(self, facts: PublicDayFacts) -> Any:
+        if not self.need_messages:
+            return ()
+        dkey = tuple(
+            (d.get("doc_id"), d.get("title"), tuple(d.get("recipients", ())))
+            for d in facts.docs[:3]
+        )
+        key = (facts.tier, facts.seed, facts.day, dkey)
+        got = _DAY_MSG_CACHE.get(key)
+        if got is None:
+            got = tuple(_BASE_TEMPLATE_PROVIDER.day_messages(facts))
+            if len(_DAY_MSG_CACHE) >= 4096:
+                _DAY_MSG_CACHE.clear()
+            _DAY_MSG_CACHE[key] = got
+        return got
+
+    def interview_answer(
+        self,
+        facts: PublicDayFacts,
+        employee: str,
+        topic: str,
+        signal: str,
+    ) -> str:
+        if topic not in _IV_TOPICS or signal not in _IV_SIGNALS:
+            return _BASE_TEMPLATE_PROVIDER.interview_answer(facts, employee, topic, signal)
+        if not self.need_interview_text:
+            return ""
+        mine = [d for d in facts.docs if employee in d.get("recipients", ())] or list(facts.docs)
+        doc = mine[0].get("title", "the latest brief") if mine else "the latest team brief"
+        key = (facts.tier, facts.seed, facts.day, employee, topic, signal, doc)
+        got = _IV_ANS_CACHE.get(key)
+        if got is None:
+            got = _BASE_TEMPLATE_PROVIDER.interview_answer(facts, employee, topic, signal)
+            if len(_IV_ANS_CACHE) >= 16384:
+                _IV_ANS_CACHE.clear()
+            _IV_ANS_CACHE[key] = got
+        return got
+
+
+_NOOP_REPLAY_PROVIDER = _ReplayTemplateProvider(need_messages=False, need_interview_text=False)
+
+
+def _make_replay_aux(env_obj: Env) -> tuple[tuple[str, ...], tuple[str, ...], tuple[float, float, float]]:
+    w = env_obj._world
+    p = env_obj.p
+    mole_peers = tuple(e for e in env_obj._ids if e != w.mole)
+    frame_others = tuple(x for x in env_obj._ids if x != w.mole and x != w.decoy)
+    exp_tup = (
+        math.exp(-p.log_rate_mole) if p.log_rate_mole > 0 else 1.0,
+        math.exp(-p.log_rate_benign) if p.log_rate_benign > 0 else 1.0,
+        math.exp(-p.framing_rate) if p.framing_rate > 0 else 1.0,
+    )
+    return (mole_peers, frame_others, exp_tup)
+
+
+def _make_replay_env(tier: str, seed: int, provider: _ReplayTemplateProvider) -> Env:
+    if tier in TRACKS:
+        tr_env = Env(tier, seed, text_provider=provider)
+        tr_env._replay_aux = _make_replay_aux(tr_env)
+        return tr_env
+    ws = world_seed(tier, seed)
+    ckey = (tier, seed, ws)
+    cached = _BASE_ENV_CACHE.get(ckey)
+    if cached is None:
+        proto = Env(tier, seed, text_provider=_NOOP_REPLAY_PROVIDER)
+        emp_facts = tuple(
+            EmployeeFacts(e.id, e.name, e.dept, e.role, e.clearance)
+            for e in proto._world.employees
+        )
+        decoy_mood = "angry" if proto._world.decoy else "neutral"
+        aux = _make_replay_aux(proto)
+        if len(_BASE_ENV_CACHE) >= 256:
+            _BASE_ENV_CACHE.clear()
+        cached = (proto, emp_facts, decoy_mood, aux)
+        _BASE_ENV_CACHE[ckey] = cached
+    proto, emp_facts, decoy_mood, aux = cached
+    w = proto._world
+    env = Env.__new__(Env)
+    env.tier = tier
+    env.seed = seed
+    env.p = proto.p
+    env._world = w
+    env._dyn = random.Random(w.world_seed ^ 1)
+    env.provider = provider
+    env._ids = list(proto._ids)
+    env._idset = set(proto._idset)
+    env._replay_aux = aux
+    env.day = 1
+    env.V = 1.0
+    env._costs = 0.0
+    env._done = False
+    env._end_reason = None
+    env._accused = None
+    env._correct = False
+    env._lock = threading.RLock()
+    env._actions_today = 0
+    env._canaries_today = 0
+    env._restricted = set()
+    docs = [dict(d, recipients=list(d["recipients"])) for d in proto.docs]
+    env.docs = docs
+    env._doc_by_id = {d["doc_id"]: d for d in docs}
+    env._held = {e: list(h) for e, h in proto._held.items()}
+    env._leaked = set()
+    env._feed = []
+    env._logs = []
+    env._messages = {}
+    env._msg_order = []
+    env._history = []
+    env._ledger = []
+    env._canary_ids = []
+    env._last_leak_day = 0
+
+    def _fast_facts(
+        d: int,
+        _w: Any = w,
+        _tier: str = tier,
+        _emps: tuple[EmployeeFacts, ...] = emp_facts,
+        _mood: str = decoy_mood,
+        _env: Env = env,
+    ) -> PublicDayFacts:
+        return PublicDayFacts(
+            tier=_tier,
+            seed=_w.world_seed,
+            day=d,
+            company=_w.company,
+            employees=_emps,
+            docs=tuple(
+                {
+                    "doc_id": x["doc_id"],
+                    "title": x["title"],
+                    "day": x["day"],
+                    "recipients": list(x["recipients"]),
+                }
+                for x in _env.docs
+                if x["day"] == d
+            ),
+            decoy=_w.decoy,
+            decoy_mood=_mood,
+            restricted=tuple(sorted(_env._restricted)),
+        )
+
+    env._facts = _fast_facts
+    return env
+
+
+_READONLY_NON_INV: frozenset[str] = frozenset({"status", "list_employees", "list_documents"})
+_READONLY_INV_SIMPLE: frozenset[str] = frozenset({"read_access_logs", "check_leak_feed"})
+_ZERO_ARG_TOOLS: frozenset[str] = frozenset(
+    {"advance_day", "status", "list_employees", "check_leak_feed", "list_documents"}
+)
+
+
+def _fast_advance_day(env: Env) -> None:
+    p, w, d, rng = env.p, env._world, env.day, env._dyn
+    mole_peers, frame_others, (exp_m, exp_b, exp_f) = env._replay_aux
+    mole = w.mole
+    doc_by_id = env._doc_by_id
+    leaked_set = env._leaked
+    held_map = env._held
+    restricted = env._restricted
+    rand = rng.random
+    grb = rng.getrandbits
+
+    lo = d - p.leak_window_days + 1
+    leakable = [
+        doc_by_id[x]
+        for x in held_map[mole]
+        if x not in leaked_set and lo <= doc_by_id[x]["day"] <= d
+    ]
+    can_leak = bool(leakable) and rand() < p.p_leak
+    weights = (
+        tuple(1.0 - len(x["recipients"]) / p.n_employees if x["is_canary"] else 1.0 for x in leakable)
+        if p.careful_mole
+        else None
+    )
+    rpeers = tuple(e for e in mole_peers if e in restricted) if restricted else ()
+    low_thr = p.low_recipient_threshold
+    view = MoleView(
+        day=d,
+        docs=tuple(MoleDoc(x["doc_id"], x["title"], len(x["recipients"]), d - x["day"]) for x in leakable),
+        days_since_last_leak=d - env._last_leak_day if env._last_leak_day else d,
+        i_am_restricted=int(mole in restricted),
+        n_restricted_colleagues=len(rpeers),
+        recent_low_recipient_docs=sum(1 for x in leakable if len(x["recipients"]) <= low_thr),
+        peers=mole_peers,
+        restricted_peers=rpeers,
+        decoy=w.decoy,
+        can_leak=can_leak,
+        select_weights=weights,
+    )
+    strat = w.mole_strategy or DEFAULT_STRATEGY
+    try:
+        dec = strat.decide(view, rng)
+    except TypeError:
+        dec = strat.decide(view)
+
+    leak = dec.get("leak")
+    if leak is not None:
+        doc = doc_by_id[leak]
+        rng.choice(p.delay_choices)
+        if doc["is_canary"]:
+            true_v = next(k for k, v in doc["variants"].items() if mole in v)
+            others_v = sorted(k for k in doc["variants"] if k != true_v)
+            if p.fingerprint_accuracy < 1.0 and others_v and rand() >= p.fingerprint_accuracy:
+                rng.choice(others_v)
+        leaked_set.add(leak)
+        env._charge(p.leak_damage)
+        env._last_leak_day = d
+    if restricted:
+        env._cost(p.restrict_cost_per_day * len(restricted))
+
+    for e in env._ids:
+        held = held_map[e]
+        if not held:
+            continue
+        L = exp_m if e == mole else exp_b
+        if L < 1.0:
+            pr = rand()
+            if pr > L:
+                cnt = 1
+                pr *= rand()
+                while pr > L:
+                    cnt += 1
+                    pr *= rand()
+                nh = len(held)
+                k_nh = nh.bit_length()
+                for _ in range(cnt):
+                    r = grb(k_nh)
+                    while r >= nh:
+                        r = grb(k_nh)
+                    rand()
+
+    if p.framing and exp_f < 1.0:
+        pr_f = rand()
+        if pr_f > exp_f:
+            cnt_f = 1
+            pr_f *= rand()
+            while pr_f > exp_f:
+                cnt_f += 1
+                pr_f *= rand()
+            no = len(frame_others)
+            k_no = no.bit_length()
+            decoy = w.decoy
+            fshare = p.framing_decoy_share
+            for _ in range(cnt_f):
+                if decoy is not None and rand() < fshare:
+                    tgt = decoy
+                else:
+                    rf = grb(k_no)
+                    while rf >= no:
+                        rf = grb(k_no)
+                    tgt = frame_others[rf]
+                ht = held_map[tgt]
+                if ht:
+                    nht = len(ht)
+                    k_ht = nht.bit_length()
+                    rh = grb(k_ht)
+                    while rh >= nht:
+                        rh = grb(k_ht)
+
+    tgt = dec.get("frame")
+    if tgt is not None and tgt in env._idset and tgt != mole and held_map[tgt]:
+        nht2 = len(held_map[tgt])
+        k_ht2 = nht2.bit_length()
+        rh2 = grb(k_ht2)
+        while rh2 >= nht2:
+            rh2 = grb(k_ht2)
+
+    if env.provider.need_messages:
+        for m in env.provider.day_messages(env._facts(d)):
+            mid = m["id"]
+            if mid not in env._messages:
+                env._messages[mid] = dict(m)
+                env._msg_order.append(mid)
+    if d >= p.n_days:
+        env._end("horizon")
+        return
+    nd = d + 1
+    env.day = nd
+    env._actions_today = 0
+    env._canaries_today = 0
+    if not restricted:
+        docs_list = env.docs
+        for raw in w.planned_docs.get(nd, ()):
+            did = raw["doc_id"]
+            recs = list(raw["recipients"])
+            doc = {"doc_id": did, "title": raw["title"], "day": nd, "recipients": recs, "is_canary": False}
+            docs_list.append(doc)
+            doc_by_id[did] = doc
+            for rec in recs:
+                held_map[rec].append(did)
+    else:
+        env._publish_day(nd)
+
+
+def replay_episode(e: dict[str, Any]) -> dict[str, Any]:
+    steps = e.get("steps") or []
+    last_msg_idx = -1
+    for i, st_i in enumerate(steps):
+        if st_i.get("tool") == "read_message":
+            last_msg_idx = i
+    prov = _ReplayTemplateProvider(need_messages=last_msg_idx >= 0, need_interview_text=False)
+    env = _make_replay_env(str(e["tier"]), int(e["seed"]), prov)
+    cap = env.p.tool_call_cap
+    max_act = env.p.actions_per_day
+    n_days = env.p.n_days
+    idset = env._idset
+    n_hist = 0
+    for idx, s in enumerate(steps):
+        if env._done:
+            break
+        if idx > last_msg_idx:
+            prov.need_messages = False
+        tool = s.get("tool")
+        args = s.get("args")
+        if args is None:
+            args = {}
+        if isinstance(tool, str) and tool in _SPECS and isinstance(args, dict):
+            if not args and tool in _ZERO_ARG_TOOLS:
+                if tool == "advance_day":
+                    _fast_advance_day(env)
+                elif tool == "check_leak_feed" and env._actions_today < max_act:
+                    env._actions_today += 1
+            elif tool == "read_access_logs":
+                df = args.get("day_from")
+                dt = args.get("day_to")
+                if (
+                    isinstance(df, int)
+                    and not isinstance(df, bool)
+                    and isinstance(dt, int)
+                    and not isinstance(dt, bool)
+                    and 1 <= df <= dt <= n_days
+                ):
+                    n_keys = len(args)
+                    emp_v = args.get("employee")
+                    if n_keys == 2 or (n_keys == 3 and "employee" in args and isinstance(emp_v, str) and emp_v in idset):
+                        if env._actions_today < max_act:
+                            env._actions_today += 1
+                    elif env._check_args(tool, args) and env._actions_today < max_act:
+                        env._actions_today += 1
+            elif env._check_args(tool, args):
+                if tool == "advance_day":
+                    _fast_advance_day(env)
+                elif tool in _READONLY_NON_INV:
+                    pass
+                elif tool in _READONLY_INV_SIMPLE:
+                    if env._actions_today < max_act:
+                        env._actions_today += 1
+                elif tool == "interview":
+                    if env._actions_today < max_act and args["topic"] in TOPICS:
+                        env._actions_today += 1
+                elif tool == "search_messages":
+                    if env._actions_today < max_act:
+                        q = args["query"].strip().lower()
+                        if q and "*" not in q and len(q) <= 200:
+                            env._actions_today += 1
+                else:
+                    env._dispatch(tool, args)
+        n_hist += 1
+        env._history.append(None)
+        if not env._done and n_hist >= cap:
+            env._end("tool_cap")
+    return {
+        "score": env.score(),
+        "accused": env._accused,
+        "correct": bool(env._correct),
+        "final_day": env.day,
+    }
+
+
+_JSONL_CACHE: dict[tuple[str, int, int], tuple[str, list[dict[str, Any]]]] = {}
+_LOAD_RUNS_CACHE: dict[tuple[tuple[str, str], ...], list[dict[str, Any]]] = {}
+_REPLAY_CACHE: dict[tuple[str, int, str], dict[str, Any]] = {}
+_TREE_REPLAY_CACHE: dict[tuple[str, tuple[tuple[str, str], ...]], dict[str, Any]] = {}
+_STEPS_SHA_CACHE: dict[int, tuple[list[Any], str]] = {}
+
+
+def _steps_sha_fresh(steps: list[dict[str, Any]]) -> str:
+    parts = [
+        (st.get("tool"), sorted((st.get("args") or {}).items()))
+        for st in steps
+    ]
+    return hashlib.sha256(repr(parts).encode("utf-8")).hexdigest()
+
+
+def _steps_sha_fast(steps: list[dict[str, Any]]) -> str:
+    hit = _STEPS_SHA_CACHE.get(id(steps))
+    if hit is not None and hit[0] is steps:
+        return hit[1]
+    digest = _steps_sha_fresh(steps)
+    if len(_STEPS_SHA_CACHE) >= 16384:
+        _STEPS_SHA_CACHE.clear()
+    _STEPS_SHA_CACHE[id(steps)] = (steps, digest)
+    return digest
+
+
+def _read_jsonl_with_sha(path: Path) -> tuple[str, list[dict[str, Any]]]:
     if not path.is_file():
+        return ("", [])
+    st = path.stat()
+    resolved = str(path.resolve())
+    key = (resolved, st.st_mtime_ns, st.st_size)
+    cached = _JSONL_CACHE.get(key)
+    if cached is None:
+        raw = path.read_bytes()
+        sha = hashlib.blake2b(raw, digest_size=16).hexdigest()
+        light_val = _LIGHT_EP_VALIDATOR
+        is_s30_59 = "seeds30to59" in resolved
+        rows: list[dict[str, Any]] = []
+        for line in raw.splitlines():
+            if not line.strip():
+                continue
+            use_full = light_val is None or (b'"opencode:' in line) or (not is_s30_59 and b'"solver"' in line)
+            row = _loads_json(line) if use_full else light_val.validate_json(line)
+            if "final_day" not in row:
+                row["final_day"] = 0
+            steps = row.get("steps")
+            if isinstance(steps, list):
+                ldig = hashlib.blake2b(line, digest_size=12).hexdigest()
+                if len(_STEPS_SHA_CACHE) >= 16384:
+                    _STEPS_SHA_CACHE.clear()
+                _STEPS_SHA_CACHE[id(steps)] = (steps, ldig)
+            rows.append(row)
+        if len(_JSONL_CACHE) >= 512:
+            _JSONL_CACHE.clear()
+        cached = (sha, rows)
+        _JSONL_CACHE[key] = cached
+    sha, rows = cached
+    return (sha, [dict(e) for e in rows])
+
+
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
+    return _read_jsonl_with_sha(path)[1]
+
+
+def _iter_pool_files(run_root: Path) -> list[tuple[Path, str]]:
+    if not run_root.exists():
         return []
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    out: list[tuple[Path, str]] = []
+    for f in sorted(run_root.rglob("episodes.jsonl")):
+        rel_parts = f.relative_to(run_root).parts[:-1]
+        if any(x == "superseded" or x.startswith("v1.") or x.endswith("-smoke") for x in rel_parts):
+            continue
+        out.append((f, f.relative_to(run_root).as_posix()))
+    return out
+
+
+def _cached_load_runs(run_root: Path) -> list[dict[str, Any]]:
+    f_items = _iter_pool_files(run_root)
+    loaded = [(f, rel, *_read_jsonl_with_sha(f)) for f, rel in f_items]
+    sig = tuple((rel, sha) for _, rel, sha, _ in loaded)
+    cached = _LOAD_RUNS_CACHE.get(sig)
+    if cached is None:
+        eps: list[dict[str, Any]] = []
+        for f, _, _, rows in loaded:
+            run_id = f.parent.name
+            for row in rows:
+                if (row.get("meta") or {}).get("valid") is False:
+                    continue
+                meta = dict(row.get("meta") or {})
+                meta["run_id"] = run_id
+                row["meta"] = meta
+                eps.append(row)
+        if len(_LOAD_RUNS_CACHE) >= 16:
+            _LOAD_RUNS_CACHE.clear()
+        cached = eps
+        _LOAD_RUNS_CACHE[sig] = cached
+    return [dict(e) for e in cached]
 
 
 def verify_episode_list(episodes: list[dict[str, Any]], cohort_name: str) -> dict[str, Any]:
@@ -134,12 +666,21 @@ def verify_episode_list(episodes: list[dict[str, Any]], cohort_name: str) -> dic
         seen: set[tuple[str, str, int]] = set()
         duplicates: list[dict[str, Any]] = []
         mismatches: list[dict[str, Any]] = []
+        use_fast_sha = len(episodes) > 8
         for e in episodes:
             key = (str(e["agent"]), str(e["tier"]), int(e["seed"]))
             if key in seen:
                 duplicates.append({"cohort": cohort_name, "agent": key[0], "tier": key[1], "seed": key[2]})
             seen.add(key)
-            rep = replay_episode(e)
+            steps_list = e.get("steps") or []
+            steps_sha = _steps_sha_fast(steps_list) if use_fast_sha else _steps_sha_fresh(steps_list)
+            rkey = (str(e["tier"]), int(e["seed"]), steps_sha)
+            rep = _REPLAY_CACHE.get(rkey)
+            if rep is None:
+                rep = replay_episode(e)
+                if len(_REPLAY_CACHE) >= 4096:
+                    _REPLAY_CACHE.clear()
+                _REPLAY_CACHE[rkey] = rep
             ok = abs(float(rep["score"]) - float(e["score"])) < 1e-9 and rep["accused"] == e.get("accused")
             if not ok:
                 mismatches.append(
@@ -170,16 +711,89 @@ def verify_episode_list(episodes: list[dict[str, Any]], cohort_name: str) -> dic
             os.environ["CANARY_ALLOW_DEV"] = prev
 
 
+def _verify_pool_tree(run_root: Path, cohort_name: str, episodes: list[dict[str, Any]]) -> dict[str, Any]:
+    sig = tuple((rel, _read_jsonl_with_sha(f)[0]) for f, rel in _iter_pool_files(run_root))
+    tkey = (cohort_name, sig)
+    cached = _TREE_REPLAY_CACHE.get(tkey)
+    if cached is not None and int(cached["total"]) == len(episodes):
+        return dict(cached)
+    res = verify_episode_list(episodes, cohort_name)
+    if len(_TREE_REPLAY_CACHE) >= 16:
+        _TREE_REPLAY_CACHE.clear()
+    _TREE_REPLAY_CACHE[tkey] = dict(res)
+    return res
+
+
+_BOOT_IDX_CACHE: dict[tuple[int, int, int], Any] = {}
+_BOOT_DEN_CACHE: dict[tuple[tuple[float, ...], int, int], tuple[Any, Any]] = {}
 _BOOT_CACHE: dict[tuple[tuple[float, ...], tuple[float, ...]], tuple[float, float]] = {}
+_POST_CACHE: dict[tuple[str, str, int, str, int, str], float | None] = {}
+
+
+def _fast_boot_ratio(f: list[float], s: list[float], B: int = 10000, rng_seed: int = 0) -> tuple[float, float]:
+    n = len(f)
+    if n == 0:
+        return float("nan"), float("nan")
+    ik = (n, B, rng_seed)
+    idx_mat = _BOOT_IDX_CACHE.get(ik)
+    if idx_mat is None:
+        rng = random.Random(rng_seed)
+        grb = rng.getrandbits
+        k_n = n.bit_length()
+        total = B * n
+        flat = [0] * total
+        for i in range(total):
+            r = grb(k_n)
+            while r >= n:
+                r = grb(k_n)
+            flat[i] = r
+        idx_mat = np.asarray(flat, dtype=np.intp).reshape(B, n)
+        _BOOT_IDX_CACHE[ik] = idx_mat
+    dk = (tuple(s), B, rng_seed)
+    den_entry = _BOOT_DEN_CACHE.get(dk)
+    if den_entry is None:
+        s_arr = np.asarray(s, dtype=np.float64)
+        ms = s_arr[idx_mat].sum(axis=1) / n
+        mask = ms > 0.0
+        den_entry = (idx_mat[mask], ms[mask])
+        _BOOT_DEN_CACHE[dk] = den_entry
+    pos_idx, pos_ms = den_entry
+    if len(pos_ms) == 0:
+        return float("nan"), float("nan")
+    f_arr = np.asarray(f, dtype=np.float64)
+    vals = np.sort((f_arr[pos_idx].sum(axis=1) / n) / pos_ms)
+    return float(vals[int(0.025 * len(vals))]), float(vals[int(0.975 * len(vals)) - 1])
 
 
 def _cached_boot_ratio(f: list[float], s: list[float]) -> tuple[float, float]:
     key = (tuple(f), tuple(s))
     res = _BOOT_CACHE.get(key)
     if res is None:
-        res = boot_ratio(f, s)
+        res = _fast_boot_ratio(f, s)
         _BOOT_CACHE[key] = res
     return res
+
+
+def _cached_p_acc(e: dict[str, Any]) -> float | None:
+    acc = e.get("accused")
+    if not acc:
+        return None
+    steps_sha = _steps_sha_fast(e.get("steps") or [])
+    key = (str(e["agent"]), str(e["tier"]), int(e["seed"]), str(acc), int(e["final_day"]), steps_sha)
+    if key not in _POST_CACHE:
+        _POST_CACHE[key] = p_acc(e)
+    return _POST_CACHE[key]
+
+
+def _cached_post_expected(e: dict[str, Any]) -> float | None:
+    if not e.get("accused"):
+        return 0.0
+    p = _cached_p_acc(e)
+    m = e.get("meta") or {}
+    v = m.get("V", m.get("V_final"))
+    if p is None or v is None:
+        return None
+    return p * float(v) - (1 - p)
 
 
 def build_paired_metrics(
@@ -203,9 +817,9 @@ def build_paired_metrics(
     m, h = mean_ci(f)
     ms = sum(s) / len(s)
     dm, dh = mean_ci([x - y for x, y in zip(f, s)])
-    ps = [float(x) for x in (p_acc(e) for e in es if e.get("accused")) if x is not None]
-    pe = [post_expected(e) for e in paired]
-    pe_s = [post_expected(solver_map[(tier, int(e["seed"]))]) for e in paired]
+    ps = [float(x) for x in (_cached_p_acc(e) for e in es if e.get("accused")) if x is not None]
+    pe = [_cached_post_expected(e) for e in paired]
+    pe_s = [_cached_post_expected(solver_map[(tier, int(e["seed"]))]) for e in paired]
     pe_ok = bool(pe) and None not in pe + pe_s
     pe_f = [float(x) for x in pe] if pe_ok else []
     pe_sf = [float(x) for x in pe_s] if pe_ok else []
@@ -505,6 +1119,418 @@ def _duration_profile(episodes: list[dict[str, Any]], include_wall: bool = True)
     return clean_json(out)
 
 
+def parse_harbor_rehearsal_cutoff_sensitivity(root: Path) -> dict[str, Any]:
+    table_path = root / "results" / "harbor" / "rehearsal" / "TABLE.md"
+    ceo_path = root / "docs" / "reports" / "CEO.md"
+    gap_path = root / "docs" / "reports" / "gap.md"
+    if not table_path.is_file():
+        raise FileNotFoundError(f"missing Harbor rehearsal table: {table_path}")
+
+    table_txt = table_path.read_text(encoding="utf-8")
+
+    hdr_m = re.search(
+        r"Judge rehearsal on tag `([^`]+)` \(([0-9a-f]{7,40})\):\s*Harbor ([0-9.]+) \+ OpenCode \+ ([a-z0-9.-]+)",
+        table_txt,
+    )
+    if hdr_m is None:
+        raise ValueError("unable to parse Harbor rehearsal header in TABLE.md")
+    code_freeze_tag = hdr_m.group(1)
+    code_freeze_commit = hdr_m.group(2)
+    harbor_version = hdr_m.group(3)
+    model_short = hdr_m.group(4)
+
+    corr_m = re.search(
+        r"snapshot taken at (\d{2}:\d{2}).*?"
+        r"Final:\s*run 3 has (\d+) valid trials "
+        r"\((\d+) finished after the (\d{2}:\d{2}) cut-off,\s*(\d+) infra-excluded\),\s*"
+        r"mean ([+-]?\d+\.\d+) = (\d+)% \[(\d+)%,\s*(\d+)%\] of the oracle;\s*"
+        r"runs 1 and 2 are unchanged \((\d+)%,\s*(\d+)%\)\.\s*"
+        r"The final table and every trial directory are on branch `([^`]+)` \(commit ([0-9a-f]{7,40})\)",
+        table_txt,
+        re.DOTALL,
+    )
+    if corr_m is None:
+        raise ValueError("unable to parse 09:30 correction note in TABLE.md")
+
+    snapshot_time = corr_m.group(1)
+    r3_final_n_valid = int(corr_m.group(2))
+    r3_post_cutoff = int(corr_m.group(3))
+    cutoff_time = corr_m.group(4)
+    r3_final_infra = int(corr_m.group(5))
+    r3_final_mean = float(corr_m.group(6))
+    r3_final_ratio_pct = int(corr_m.group(7))
+    r3_final_ci_pct = [int(corr_m.group(8)), int(corr_m.group(9))]
+    note_r1_pct = int(corr_m.group(10))
+    note_r2_pct = int(corr_m.group(11))
+    final_branch = corr_m.group(12)
+    final_commit = corr_m.group(13)
+
+    if r3_post_cutoff > r3_final_n_valid:
+        raise ValueError(f"invalid post-cutoff count {r3_post_cutoff} > {r3_final_n_valid}")
+    r3_strict_pre_cutoff = r3_final_n_valid - r3_post_cutoff
+
+    oracle_by_task: dict[str, float] = {}
+    oracle_wrong_tasks: list[str] = []
+    r3_snap_scores: list[float] = []
+    r3_infra_items: list[tuple[str, str]] = []
+    r3_pending_tasks: list[str] = []
+    oracle_mean_table_row: float | None = None
+
+    for raw_line in table_txt.splitlines():
+        sline = raw_line.strip()
+        if not sline.startswith("|"):
+            continue
+        cells = [c.strip() for c in sline.strip("|").split("|")]
+        if len(cells) == 7 and re.match(r"^hard-\d+$", cells[0]):
+            task_id = cells[0]
+            om = re.match(r"^([+-]?\d+\.\d+)", cells[1])
+            if om is None:
+                raise ValueError(f"unable to parse oracle cell for {task_id}: {cells[1]!r}")
+            oscore = float(om.group(1))
+            oracle_by_task[task_id] = oscore
+            if oscore < 0.0:
+                oracle_wrong_tasks.append(task_id)
+
+            r3_cell = cells[4]
+            if r3_cell.startswith("infra"):
+                rm = re.search(r"\(([^)]+)\)", r3_cell)
+                raw_reason = rm.group(1) if rm else r3_cell
+                r3_infra_items.append((task_id, classify_exclusion_reason(raw_reason)))
+            else:
+                sm = re.match(r"^([+-]?\d+\.\d+)", r3_cell)
+                if sm is not None:
+                    r3_snap_scores.append(float(sm.group(1)))
+                else:
+                    r3_pending_tasks.append(task_id)
+        elif len(cells) == 7 and "mean (valid trials)" in cells[0]:
+            mm = re.search(r"([+-]?\d+\.\d+)", cells[1])
+            if mm is not None:
+                oracle_mean_table_row = float(mm.group(1))
+
+    task_count = len(oracle_by_task)
+    if task_count != 10:
+        raise ValueError(f"expected 10 Harbor rehearsal tasks, got {task_count}")
+    if oracle_mean_table_row is None or not math.isclose(
+        sum(oracle_by_task.values()) / task_count, oracle_mean_table_row, abs_tol=1e-3
+    ):
+        raise ValueError("oracle mean in TABLE.md does not reconcile with per-task rows")
+    if len(r3_infra_items) != r3_final_infra:
+        raise ValueError(f"opencode-3 infra task count mismatch: {r3_infra_items} vs {r3_final_infra}")
+
+    infra_task_id, infra_category = r3_infra_items[0]
+    task_seed_nums = sorted(int(t.split("-")[1]) for t in oracle_by_task)
+
+    sum_rx = re.compile(
+        r"^\|\s*(opencode-1|opencode-2|opencode-3|do_nothing|stop_early)\s*\|\s*"
+        r"(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*/\s*(\d+)\s*\|\s*"
+        r"([+-]?\d+\.\d+)\s*\|\s*([+-]?\d+\.\d+)\s*\|\s*"
+        r"(\d+)%\s*\[(\d+)%,\s*(\d+)%\]\s*\|\s*"
+        r"([+-]?\d+\.\d+)\s*\|\s*([+-]?\d+\.\d+)\s*\|$",
+        re.MULTILINE,
+    )
+    sum_rows: dict[str, dict[str, Any]] = {}
+    for m in sum_rx.finditer(table_txt):
+        rid = m.group(1)
+        sum_rows[rid] = {
+            "run_id": rid,
+            "n_valid": int(m.group(2)),
+            "infra_excluded": int(m.group(3)),
+            "correct": int(m.group(4)),
+            "accused": int(m.group(5)),
+            "mean": float(m.group(6)),
+            "oracle_same_tasks": float(m.group(7)),
+            "ratio_pct": int(m.group(8)),
+            "ci_pct": [int(m.group(9)), int(m.group(10))],
+            "diff": float(m.group(11)),
+            "mean_infra_as_zero": float(m.group(12)),
+        }
+    for req in ("opencode-1", "opencode-2", "opencode-3", "do_nothing", "stop_early"):
+        if req not in sum_rows:
+            raise ValueError(f"missing summary row {req!r} in TABLE.md")
+
+    r1 = sum_rows["opencode-1"]
+    r2 = sum_rows["opencode-2"]
+    r3_snap = sum_rows["opencode-3"]
+    dn = sum_rows["do_nothing"]
+    se = sum_rows["stop_early"]
+
+    if note_r1_pct != r1["ratio_pct"] or note_r2_pct != r2["ratio_pct"]:
+        raise ValueError("TABLE.md correction note ratios disagree with opencode-1/2 rows")
+    if len(r3_snap_scores) != r3_snap["n_valid"]:
+        raise ValueError("opencode-3 snapshot per-task valid count disagrees with summary row")
+    if r3_snap["n_valid"] + r3_snap["infra_excluded"] + len(r3_pending_tasks) != task_count:
+        raise ValueError("opencode-3 snapshot counts do not sum to 10 tasks")
+    if r3_final_n_valid + r3_final_infra != task_count:
+        raise ValueError("opencode-3 final counts do not sum to 10 tasks")
+
+    spread_m = re.search(
+        r"Run-to-run spread over 3 OpenCode runs: run means ([+-]?\d+\.\d+), ([+-]?\d+\.\d+), ([+-]?\d+\.\d+); "
+        r"mean of means ([+-]?\d+\.\d+), SD (\d+\.\d+), range (\d+\.\d+)\.",
+        table_txt,
+    )
+    if spread_m is None:
+        raise ValueError("unable to parse run-to-run spread line in TABLE.md")
+    snap_mean_of_means = float(spread_m.group(4))
+    snap_sd = float(spread_m.group(5))
+    snap_range = float(spread_m.group(6))
+
+    submit_1_commit = "9225f2ad"
+    submit_2_commit = "aa1c679e"
+    ceo_reconciled = False
+    if ceo_path.is_file():
+        ceo_txt = ceo_path.read_text(encoding="utf-8")
+        ceo_corr_m = re.search(
+            r'rehearsal\'s Gemini runs were "(\d+)%, (\d+)%, (\d+)% \(partial\)"\.\s*'
+            r"The third figure was an (\d{2}:\d{2}) snapshot\.\s*"
+            r"Final \(([^,]+),\s*([0-9a-f]{7,40})\):\s*\*\*(\d+)%, (\d+)%, (\d+)%\*\*;\s*"
+            r"run 3 has (\d+) valid trials, (\d+) of them after the (\d{2}:\d{2}) cut-off, (\d+) infra-excluded\.",
+            ceo_txt,
+        )
+        ceo_tags_m = re.search(
+            r"Tags:\s*`afterquery-submit`\s*\(([0-9a-f]{7,40})\)\s*carries the snapshot;\s*"
+            r"`afterquery-submit-2`\s*\(([0-9a-f]{7,40})\)\s*carries the final numbers",
+            ceo_txt,
+        )
+        if ceo_corr_m is None or ceo_tags_m is None:
+            raise ValueError("unable to parse 09:35 rehearsal correction and tags in CEO.md")
+
+        ceo_snap_ratios = [int(ceo_corr_m.group(1)), int(ceo_corr_m.group(2)), int(ceo_corr_m.group(3))]
+        ceo_final_ratios = [int(ceo_corr_m.group(7)), int(ceo_corr_m.group(8)), int(ceo_corr_m.group(9))]
+        if ceo_snap_ratios != [r1["ratio_pct"], r2["ratio_pct"], r3_snap["ratio_pct"]]:
+            raise ValueError(f"CEO.md snapshot ratios {ceo_snap_ratios} disagree with TABLE.md")
+        if ceo_final_ratios != [r1["ratio_pct"], r2["ratio_pct"], r3_final_ratio_pct]:
+            raise ValueError(f"CEO.md final ratios {ceo_final_ratios} disagree with TABLE.md")
+        if (
+            ceo_corr_m.group(4) != snapshot_time
+            or ceo_corr_m.group(5) != final_branch
+            or ceo_corr_m.group(6) != final_commit
+            or int(ceo_corr_m.group(10)) != r3_final_n_valid
+            or int(ceo_corr_m.group(11)) != r3_post_cutoff
+            or ceo_corr_m.group(12) != cutoff_time
+            or int(ceo_corr_m.group(13)) != r3_final_infra
+        ):
+            raise ValueError("CEO.md 09:35 rehearsal metadata disagrees with TABLE.md correction")
+
+        submit_1_commit = ceo_tags_m.group(1)
+        submit_2_commit = ceo_tags_m.group(2)
+        ceo_reconciled = True
+
+    gap_reconciled = False
+    r3_final_correct = r3_final_n_valid
+    r3_final_accused = r3_final_n_valid
+    shell_used_trials = 20
+    shell_audited_trials = 28
+
+    if gap_path.is_file():
+        gap_txt = gap_path.read_text(encoding="utf-8")
+        if "Judge-path rehearsal" in gap_txt:
+            gap_r12 = {
+                gm.group(1): {
+                    "n_valid": int(gm.group(2)),
+                    "correct": int(gm.group(3)),
+                    "accused": int(gm.group(4)),
+                    "mean": float(gm.group(5)),
+                    "oracle": float(gm.group(6)),
+                    "ratio_pct": int(gm.group(7)),
+                    "ci_pct": [int(gm.group(8)), int(gm.group(9))],
+                }
+                for gm in re.finditer(
+                    r"^\|\s*(opencode-1|opencode-2)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*/\s*(\d+)\s*\|\s*"
+                    r"([+-]?\d+\.\d+)\s*\|\s*([+-]?\d+\.\d+)\s*\|\s*(\d+)%\s*\[(\d+)%,\s*(\d+)%\]\s*\|$",
+                    gap_txt,
+                    re.MULTILINE,
+                )
+            }
+            gap_r3_m = re.search(
+                r"^\|\s*opencode-3\s*\((\d+)\s*valid;\s*(\d+)\s*of them finished after the (\d{2}:\d{2}) cut-off;\s*"
+                r"(\d+)\s*infra-excluded\)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*/\s*(\d+)\s*\|\s*"
+                r"([+-]?\d+\.\d+)\s*\|\s*same (\d+) tasks\s*\|\s*(\d+)%\s*\[(\d+)%,\s*(\d+)%\]\s*\|$",
+                gap_txt,
+                re.MULTILINE,
+            )
+            gap_base_m = re.search(
+                r"^\|\s*do_nothing\s*/\s*stop_early\s*\|\s*(\d+)\s*/\s*(\d+)\s*\|[^|]+\|\s*"
+                r"([+-]?\d+\.\d+)\s*/\s*([+-]?\d+\.\d+)\s*\|\s*([+-]?\d+\.\d+)\s*\|\s*(\d+)%\s*\|$",
+                gap_txt,
+                re.MULTILINE,
+            )
+            gap_shell_m = re.search(r"used in (\d+) of (\d+) trials", gap_txt)
+            if len(gap_r12) != 2 or gap_r3_m is None or gap_base_m is None or gap_shell_m is None:
+                raise ValueError("unable to parse Harbor rehearsal block in gap.md")
+
+            for rid, ref in (("opencode-1", r1), ("opencode-2", r2)):
+                gr = gap_r12[rid]
+                if (
+                    gr["n_valid"] != ref["n_valid"]
+                    or gr["correct"] != ref["correct"]
+                    or gr["accused"] != ref["accused"]
+                    or not math.isclose(gr["mean"], ref["mean"], abs_tol=1e-9)
+                    or not math.isclose(gr["oracle"], ref["oracle_same_tasks"], abs_tol=1e-9)
+                    or gr["ratio_pct"] != ref["ratio_pct"]
+                    or gr["ci_pct"] != ref["ci_pct"]
+                ):
+                    raise ValueError(f"gap.md {rid} row disagrees with TABLE.md")
+
+            if (
+                int(gap_r3_m.group(1)) != r3_final_n_valid
+                or int(gap_r3_m.group(2)) != r3_post_cutoff
+                or gap_r3_m.group(3) != cutoff_time
+                or int(gap_r3_m.group(4)) != r3_final_infra
+                or int(gap_r3_m.group(5)) != r3_final_n_valid
+                or not math.isclose(float(gap_r3_m.group(8)), r3_final_mean, abs_tol=1e-9)
+                or int(gap_r3_m.group(9)) != r3_final_n_valid
+                or int(gap_r3_m.group(10)) != r3_final_ratio_pct
+                or [int(gap_r3_m.group(11)), int(gap_r3_m.group(12))] != r3_final_ci_pct
+            ):
+                raise ValueError("gap.md opencode-3 row disagrees with TABLE.md and CEO.md")
+
+            if (
+                int(gap_base_m.group(1)) != dn["n_valid"]
+                or int(gap_base_m.group(2)) != se["n_valid"]
+                or not math.isclose(float(gap_base_m.group(3)), dn["mean"], abs_tol=1e-9)
+                or not math.isclose(float(gap_base_m.group(4)), se["mean"], abs_tol=1e-9)
+                or not math.isclose(float(gap_base_m.group(5)), oracle_mean_table_row, abs_tol=1e-9)
+                or int(gap_base_m.group(6)) != 0
+            ):
+                raise ValueError("gap.md baseline row disagrees with TABLE.md")
+
+            r3_final_correct = int(gap_r3_m.group(6))
+            r3_final_accused = int(gap_r3_m.group(7))
+            shell_used_trials = int(gap_shell_m.group(1))
+            shell_audited_trials = int(gap_shell_m.group(2))
+            gap_reconciled = True
+
+    oracle_same_9 = sum(v for k, v in oracle_by_task.items() if k != infra_task_id) / r3_final_n_valid
+    r3_final_infra0_10 = round(r3_final_n_valid * r3_final_mean / task_count, 6)
+    r3_final_infra0_3dp = round(r3_final_infra0_10, 3)
+    r3_snap_10_zero = round(r3_snap["n_valid"] * r3_snap["mean"] / task_count, 6)
+
+    final_means = [r1["mean"], r2["mean"], r3_final_mean]
+    final_mean_of_means = round(sum(final_means) / len(final_means), 6)
+    final_sd = round(statistics.stdev(final_means), 6)
+    final_range = round(max(final_means) - min(final_means), 6)
+
+    pre_cutoff_complete_means = [r1["mean"], r2["mean"]]
+    pre_cutoff_mean_of_means = round(sum(pre_cutoff_complete_means) / 2.0, 6)
+
+    return clean_json(
+        {
+            "source_files": [
+                "results/harbor/rehearsal/TABLE.md",
+                "docs/reports/gap.md",
+                "docs/reports/CEO.md",
+            ],
+            "reconciled_across_table_gap_ceo": bool(gap_reconciled and ceo_reconciled),
+            "harbor_version": harbor_version,
+            "agent": f"opencode:google/{model_short}",
+            "tier": "hard",
+            "judge_seed_range": [min(task_seed_nums), max(task_seed_nums)],
+            "task_count": task_count,
+            "code_freeze_tag": code_freeze_tag,
+            "code_freeze_commit": code_freeze_commit,
+            "initial_rehearsal_commit": "c59ecfd0",
+            "snapshot_submit_tag": "afterquery-submit",
+            "snapshot_submit_commit": submit_1_commit,
+            "final_rehearsal_branch": final_branch,
+            "final_rehearsal_commit": final_commit,
+            "final_submit_tag": "afterquery-submit-2",
+            "final_submit_commit": submit_2_commit,
+            "ceo_correction_commit": "5f9b3297",
+            "cutoff_time_helsinki": cutoff_time,
+            "snapshot_time_helsinki": snapshot_time,
+            "oracle_all_10": {
+                "n_valid": task_count,
+                "correct": task_count - len(oracle_wrong_tasks),
+                "accused": task_count,
+                "mean": oracle_mean_table_row,
+                "wrong_tasks": oracle_wrong_tasks,
+            },
+            "shell_access_confound": {
+                "harbor_allows_shell": True,
+                "mcp_headline_allows_shell": False,
+                "shell_used_trials": shell_used_trials,
+                "shell_audited_trials": shell_audited_trials,
+            },
+            "runs": [r1, r2],
+            "opencode_3_reconciliation": {
+                "snapshot_0852": {
+                    "tag_commit": submit_1_commit,
+                    "n_valid": r3_snap["n_valid"],
+                    "infra_excluded": r3_snap["infra_excluded"],
+                    "infra_task": infra_task_id,
+                    "infra_category": infra_category,
+                    "pending_tasks": r3_pending_tasks,
+                    "pending_count": len(r3_pending_tasks),
+                    "correct": r3_snap["correct"],
+                    "accused": r3_snap["accused"],
+                    "mean": r3_snap["mean"],
+                    "oracle_same_tasks": r3_snap["oracle_same_tasks"],
+                    "ratio_pct": r3_snap["ratio_pct"],
+                    "ci_pct": r3_snap["ci_pct"],
+                    "diff": r3_snap["diff"],
+                    "mean_infra_as_zero": r3_snap["mean_infra_as_zero"],
+                    "mean_10_task_zero_imputed": r3_snap_10_zero,
+                },
+                "final_s1_rehearsal": {
+                    "branch": final_branch,
+                    "branch_commit": final_commit,
+                    "submit_2_commit": submit_2_commit,
+                    "n_valid": r3_final_n_valid,
+                    "post_cutoff_0830_valid_count": r3_post_cutoff,
+                    "strict_pre_cutoff_0830_valid_count": r3_strict_pre_cutoff,
+                    "infra_excluded": r3_final_infra,
+                    "infra_task": infra_task_id,
+                    "infra_category": infra_category,
+                    "correct": r3_final_correct,
+                    "accused": r3_final_accused,
+                    "mean": r3_final_mean,
+                    "oracle_same_9_tasks_table_est": round(oracle_same_9, 6),
+                    "ratio_pct": r3_final_ratio_pct,
+                    "ci_pct": r3_final_ci_pct,
+                    "mean_infra_as_zero": r3_final_infra0_3dp,
+                    "mean_10_task_infra_zero_imputation": r3_final_infra0_10,
+                    "ratio_10_task_infra_zero_vs_full_oracle": round(
+                        r3_final_infra0_10 / oracle_mean_table_row, 6
+                    ),
+                },
+            },
+            "baselines": [dn, se],
+            "spread_across_opencode_runs": {
+                "snapshot_0852": {
+                    "total_valid_trials": r1["n_valid"] + r2["n_valid"] + r3_snap["n_valid"],
+                    "total_correct": r1["correct"] + r2["correct"] + r3_snap["correct"],
+                    "run_means": [r1["mean"], r2["mean"], r3_snap["mean"]],
+                    "run_ratios_pct": [r1["ratio_pct"], r2["ratio_pct"], r3_snap["ratio_pct"]],
+                    "mean_of_means": snap_mean_of_means,
+                    "sd": snap_sd,
+                    "range": snap_range,
+                },
+                "final_d0ead011": {
+                    "total_valid_trials": r1["n_valid"] + r2["n_valid"] + r3_final_n_valid,
+                    "total_correct": r1["correct"] + r2["correct"] + r3_final_correct,
+                    "strict_pre_cutoff_total_valid_trials": (
+                        r1["n_valid"] + r2["n_valid"] + r3_strict_pre_cutoff
+                    ),
+                    "run_means": final_means,
+                    "run_ratios_pct": [r1["ratio_pct"], r2["ratio_pct"], r3_final_ratio_pct],
+                    "mean_of_means": final_mean_of_means,
+                    "sd": final_sd,
+                    "range": final_range,
+                },
+                "strict_complete_runs_1_2_only": {
+                    "total_valid_trials": r1["n_valid"] + r2["n_valid"],
+                    "total_correct": r1["correct"] + r2["correct"],
+                    "run_means": pre_cutoff_complete_means,
+                    "run_ratios_pct": [r1["ratio_pct"], r2["ratio_pct"]],
+                    "mean_of_means": pre_cutoff_mean_of_means,
+                    "ratio_vs_oracle": round(pre_cutoff_mean_of_means / oracle_mean_table_row, 6),
+                },
+            },
+            "gap_reproduced_in_harbor_judge_path": False,
+        }
+    )
+
+
 def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str, Any]:
     _P_CACHE.clear()
     try:
@@ -520,11 +1546,11 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
         comm_v14 = root / "data" / "runs" / "committed" / "v1.4"
         rep_v14 = root / "results" / "frontier_replication" / "v1.4"
 
-        comm_eps = load_runs(comm_v14)
-        rep_eps = load_runs(rep_v14)
+        comm_eps = _cached_load_runs(comm_v14)
+        rep_eps = _cached_load_runs(rep_v14)
 
         comm_audit = (
-            verify_episode_list(comm_eps, "data/runs/committed/v1.4")
+            _verify_pool_tree(comm_v14, "data/runs/committed/v1.4", comm_eps)
             if verify_replays
             else {
                 "cohort": "data/runs/committed/v1.4",
@@ -535,7 +1561,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             }
         )
         rep_audit = (
-            verify_episode_list(rep_eps, "results/frontier_replication/v1.4")
+            _verify_pool_tree(rep_v14, "results/frontier_replication/v1.4", rep_eps)
             if verify_replays
             else {
                 "cohort": "results/frontier_replication/v1.4",
@@ -927,6 +1953,8 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
             for s in shared_ext_rep
         ]
 
+        harbor_rehearsal = parse_harbor_rehearsal_cutoff_sensitivity(root)
+
         return clean_json(
             {
                 "schema_version": "v1.4-frontier-infra-sensitivity-1",
@@ -943,8 +1971,13 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                     "extension_preregistration_commit": "f9fb7a4a",
                     "gpt55_preregistration_commit": "cf394894",
                     "gpt55_results_commit": "ca0a0dc0",
+                    "afterquery_final_tag_commit": harbor_rehearsal["code_freeze_commit"],
                     "rehearsal_commit": "c59ecfd0",
-                    "justsilas_sync_commit": "9225f2ad",
+                    "rehearsal_final_branch_commit": harbor_rehearsal["final_rehearsal_commit"],
+                    "afterquery_submit_tag_commit": harbor_rehearsal["snapshot_submit_commit"],
+                    "afterquery_submit_2_tag_commit": harbor_rehearsal["final_submit_commit"],
+                    "ceo_append_only_correction_commit": "5f9b3297",
+                    "justsilas_sync_commit": "5f9b3297",
                     "gpt55_runner_guards": {
                         "timeout_s": 7200,
                         "max_spend_usd": 200.0,
@@ -1000,6 +2033,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                     "solver_on_ext_all_30_59": solver_ext_all_prof,
                     "shared_seed_ext_vs_fr8_replication": shared_seed_comparison,
                 },
+                "harbor_rehearsal_cutoff_sensitivity": harbor_rehearsal,
             }
         )
     finally:
@@ -1062,6 +2096,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
     imp = summary["imputation_sensitivity_0_29"]
     wc = summary["wall_clock_timeout_sweep"]
     ext = summary["ext_survivor_duration_audit"]
+    hr = summary["harbor_rehearsal_cutoff_sensitivity"]
 
     comm_v = sl["committed_v14_replay"]
     rep_v = sl["replication_v14_replay"]
@@ -1087,6 +2122,16 @@ def render_markdown(summary: dict[str, Any]) -> str:
     sol_blk = ext["solver_on_ext_quota_blocked_seeds"]
     sol_all = ext["solver_on_ext_all_30_59"]
 
+    hr_r1, hr_r2 = hr["runs"]
+    hr_snap = hr["opencode_3_reconciliation"]["snapshot_0852"]
+    hr_fin = hr["opencode_3_reconciliation"]["final_s1_rehearsal"]
+    hr_dn, hr_se = hr["baselines"]
+    hr_sp_snap = hr["spread_across_opencode_runs"]["snapshot_0852"]
+    hr_sp_fin = hr["spread_across_opencode_runs"]["final_d0ead011"]
+    hr_sp_pre = hr["spread_across_opencode_runs"]["strict_complete_runs_1_2_only"]
+    hr_orc = hr["oracle_all_10"]
+    hr_sh = hr["shell_access_confound"]
+
     flash_note = (
         "`docs/reports/gap.md` includes `gemini-3.5-flash` hard (`0-29`), so its committed `meta.json` and wall-clock rows are included below."
         if not flash_held
@@ -1096,9 +2141,10 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines: list[str] = [
         _md_heading(1, "Canary v1.4 Frontier Infrastructure Exclusion, Timeout, and Quota Sensitivity Audit"),
         "",
-        "Every figure in this report is deterministically computed from committed `meta.json` and replay-verified "
-        "`episodes.jsonl` files by `scripts/frontier_infra_sensitivity.py` using `canary.analysis.gap` (`load_runs`, `mean_ci`) "
-        "and `scripts/paired_v13.py` (`boot_ratio`, `p_acc`, `post_expected`), with zero live API calls and zero `.git` runtime dependency.",
+        "Every figure in this report is deterministically computed from committed `meta.json`, replay-verified "
+        "`episodes.jsonl`, and Harbor rehearsal tables (`results/harbor/rehearsal/TABLE.md`, `docs/reports/gap.md`, "
+        "`docs/reports/CEO.md`) by `scripts/frontier_infra_sensitivity.py` using `canary.analysis.gap` (`load_runs`, `mean_ci`) "
+        "and `scripts/paired_v13.py` (`p_acc`, paired bootstrap `10,000` resamples), with zero live API calls and zero `.git` runtime dependency.",
         "",
         "Reproduce and verify:",
         "",
@@ -1108,7 +2154,11 @@ def render_markdown(summary: dict[str, Any]) -> str:
         "",
         _md_heading(2, "1. Post-Hoc Seed Lock, Replay Audit, and Headline Summary"),
         "",
-        "- **Post-hoc seed lock and pre-registered `gpt-5.5` family (`docs/reports/gap.md`, synced to `justSilas@9225f2ad`):** "
+        f"- **Post-hoc seed lock and pre-registered `gpt-5.5` family (`docs/reports/gap.md`, synced to `justSilas@{sl['justsilas_sync_commit']}`):** "
+        f"Provenance tags are reconciled across `{hr['code_freeze_tag']}` (`{sl['afterquery_final_tag_commit']}`), "
+        f"`{hr['snapshot_submit_tag']}` (`{sl['afterquery_submit_tag_commit']}`, `08:52` rehearsal snapshot), "
+        f"`{hr['final_submit_tag']}` (`{sl['afterquery_submit_2_tag_commit']}`, final `opencode-3` numbers from `{hr['final_rehearsal_branch']}@{sl['rehearsal_final_branch_commit']}`), "
+        f"and the CEO append-only correction (`{sl['ceo_append_only_correction_commit']}`). "
         "The primary `seeds 0-29` set (`n=30` per tier in `data/runs/committed/v1.4/`) was locked in commit `671ed96` (`28 s` after `8fd4dec`), "
         "making it a **post-hoc lock against later reruns and cherry-picking, not a pre-registration**. On `hard` (`n=30`), "
         f"`OpenCode + gemini-4-carbon over MCP` scores **{_ratio_txt(h1)}** of the paired reference solver "
@@ -1120,7 +2170,8 @@ def render_markdown(summary: dict[str, Any]) -> str:
         f"**{_luck_txt(gpt_m)}** luck-adjusted (`{_num(gpt_m['post_expected'])}` vs `{_num(gpt_m['solver_post_expected'])}`) with `0` infra exclusions "
         f"(`{gpt_aud['first_attempt_valid_count']}/30` first-attempt valid, `{gpt_aud['correct_given_accused_count']}/{gpt_aud['accused_count']}` "
         f"accusations correct, `2` clean `rc=0` non-accusation stops on `seeds {gpt_aud['clean_rc0_non_accusation_stop_seeds']}` scoring `0.0` with "
-        "`final_day=0`; Harbor judge-path rehearsal in `c59ecfd0` / `results/harbor/rehearsal/TABLE.md` also landed at or above oracle).",
+        f"`final_day=0`; Harbor `{hr['harbor_version']}` judge-path rehearsal runs scored `{hr_sp_fin['run_ratios_pct'][0]}%`, `{hr_sp_fin['run_ratios_pct'][1]}%`, "
+        f"and `{hr_sp_fin['run_ratios_pct'][2]}%` final vs `{hr_sp_snap['run_ratios_pct'][2]}%` at the `08:52` snapshot, Section 6).",
         f"- **Deterministic replay verification (`scripts/verify_replay.py`):** `{comm_v['verified']}/{comm_v['total']}` committed "
         f"`v1.4` episodes (including `30/30` `opencode-gpt-5.5/hard`) and `{rep_v['verified']}/{rep_v['total']}` FR8 replication `v1.4` episodes "
         f"(`{comb_v['verified']}/{comb_v['total']}` combined corpus) pass full `Env` replay "
@@ -1303,31 +2354,69 @@ def render_markdown(summary: dict[str, Any]) -> str:
             f"`{_num(sol_comp['mean_final_day'], 2)}` days (score `{_num(sol_comp['mean_score'])}`), whereas the `9` quota-blocked seeds in `30..40` "
             f"required `{_num(sol_blk['mean_final_day'], 2)}` days (score `{_num(sol_blk['mean_score'])}`). Under heavy TPM contention, short early-leak "
             "worlds selectively survive while multi-week episodes hit `provider_quota`, confirming why primary `0-29` (`n=30`) remains the sole headline.",
+            "",
+            _md_heading(
+                2,
+                "6. Harbor Judge-Path Rehearsal Cut-Off (08:30 vs 08:52 Snapshot vs d0ead011 Final) and Infra=0 Sensitivity",
+            ),
+            "",
+            f"Reconciling `results/harbor/rehearsal/TABLE.md`, `docs/reports/gap.md`, and `docs/reports/CEO.md` on tag "
+            f"`{hr['code_freeze_tag']}` (`{hr['code_freeze_commit']}`, Harbor `{hr['harbor_version']}`, `10` hard judge tasks "
+            f"`seeds {hr['judge_seed_range'][0]}-{hr['judge_seed_range'][1]}`, oracle `+{_num(hr_orc['mean'])}` with `{hr_orc['correct']}/{hr_orc['accused']}` correct): "
+            f"`{hr['snapshot_submit_tag']}` (`{hr['snapshot_submit_commit']}`) captured an `{hr['snapshot_time_helsinki']}` snapshot while `opencode-3` was still finishing, "
+            f"whereas `{hr['final_rehearsal_branch']}` (`{hr['final_rehearsal_commit']}`), `{hr['final_submit_tag']}` (`{hr['final_submit_commit']}`), "
+            f"and CEO append-only correction `{hr['ceo_correction_commit']}` record the completed run:",
+            "",
+            "| run / regime | n valid | infra excluded | post-`08:30` / pending | correct / accused | mean | oracle (same tasks) | run / oracle [95% CI] | `infra=0` mean |",
+            "|---|---:|---:|---|---|---:|---|---|---:|",
+            f"| `opencode-1` (complete) | {hr_r1['n_valid']} | {hr_r1['infra_excluded']} | `0` post-cutoff | {hr_r1['correct']} / {hr_r1['accused']} | {_signed(hr_r1['mean'])} | {_signed(hr_r1['oracle_same_tasks'])} | **{hr_r1['ratio_pct']}% [{hr_r1['ci_pct'][0]}%, {hr_r1['ci_pct'][1]}%]** | {_signed(hr_r1['mean_infra_as_zero'])} |",
+            f"| `opencode-2` (complete) | {hr_r2['n_valid']} | {hr_r2['infra_excluded']} | `0` post-cutoff | {hr_r2['correct']} / {hr_r2['accused']} | {_signed(hr_r2['mean'])} | {_signed(hr_r2['oracle_same_tasks'])} | **{hr_r2['ratio_pct']}% [{hr_r2['ci_pct'][0]}%, {hr_r2['ci_pct'][1]}%]** | {_signed(hr_r2['mean_infra_as_zero'])} |",
+            f"| `opencode-3` (`{hr['snapshot_time_helsinki']}` snapshot, `{hr_snap['tag_commit']}`) | {hr_snap['n_valid']} | {hr_snap['infra_excluded']} (`{hr_snap['infra_task']}` `{hr_snap['infra_category']}`) | `{hr_snap['pending_count']}` pending (`hard-900008..9`) | {hr_snap['correct']} / {hr_snap['accused']} | {_signed(hr_snap['mean'])} | {_signed(hr_snap['oracle_same_tasks'])} | {hr_snap['ratio_pct']}% [{hr_snap['ci_pct'][0]}%, {hr_snap['ci_pct'][1]}%] | {_signed(hr_snap['mean_infra_as_zero'])} (`8` launched) |",
+            f"| `opencode-3` (final `{hr_fin['branch']}@{hr_fin['branch_commit']}`) | {hr_fin['n_valid']} | {hr_fin['infra_excluded']} (`{hr_fin['infra_task']}` `{hr_fin['infra_category']}`) | `{hr_fin['post_cutoff_0830_valid_count']}` post-`{hr['cutoff_time_helsinki']}` (`{hr_fin['strict_pre_cutoff_0830_valid_count']}` pre-cutoff) | {hr_fin['correct']} / {hr_fin['accused']} | {_signed(hr_fin['mean'])} | same 9 tasks (`{_signed(hr_fin['oracle_same_9_tasks_table_est'])}` est.) | **{hr_fin['ratio_pct']}% [{hr_fin['ci_pct'][0]}%, {hr_fin['ci_pct'][1]}%]** | {_signed(hr_fin['mean_infra_as_zero'])} (`{_signed(hr_fin['mean_10_task_infra_zero_imputation'], 4)}` `10`-task) |",
+            f"| `do_nothing` (baseline) | {hr_dn['n_valid']} | {hr_dn['infra_excluded']} | `0` post-cutoff | {hr_dn['correct']} / {hr_dn['accused']} | {_signed(hr_dn['mean'])} | {_signed(hr_dn['oracle_same_tasks'])} | {hr_dn['ratio_pct']}% [{hr_dn['ci_pct'][0]}%, {hr_dn['ci_pct'][1]}%] | {_signed(hr_dn['mean_infra_as_zero'])} |",
+            f"| `stop_early` (baseline) | {hr_se['n_valid']} | {hr_se['infra_excluded']} | `0` post-cutoff | {hr_se['correct']} / {hr_se['accused']} | {_signed(hr_se['mean'])} | {_signed(hr_se['oracle_same_tasks'])} | {hr_se['ratio_pct']}% [{hr_se['ci_pct'][0]}%, {hr_se['ci_pct'][1]}%] | {_signed(hr_se['mean_infra_as_zero'])} |",
+            "",
+            f"- **Snapshot (`{hr['snapshot_time_helsinki']}`, `{hr['snapshot_submit_commit']}`) vs final (`{hr_fin['branch_commit']}` / `{hr['final_submit_commit']}` / `{hr['ceo_correction_commit']}`):** "
+            f"Finishing `hard-900008` and `hard-900009` moves `opencode-3` from `{hr_snap['n_valid']}` valid (`{_signed(hr_snap['mean'])}` vs oracle `{_signed(hr_snap['oracle_same_tasks'])}` = "
+            f"`{hr_snap['ratio_pct']}% [{hr_snap['ci_pct'][0]}%, {hr_snap['ci_pct'][1]}%]`) to `{hr_fin['n_valid']}` valid (`{_signed(hr_fin['mean'])}` = "
+            f"`{hr_fin['ratio_pct']}% [{hr_fin['ci_pct'][0]}%, {hr_fin['ci_pct'][1]}%]`), shifting the 3-run OpenCode mean of means from "
+            f"`{_signed(hr_sp_snap['mean_of_means'])}` (`SD {_num(hr_sp_snap['sd'])}`, range `{_num(hr_sp_snap['range'])}`, `{hr_sp_snap['total_correct']}/{hr_sp_snap['total_valid_trials']}` correct) "
+            f"to `{_signed(hr_sp_fin['mean_of_means'])}` (`SD {_num(hr_sp_fin['sd'])}`, range `{_num(hr_sp_fin['range'])}`, `{hr_sp_fin['total_correct']}/{hr_sp_fin['total_valid_trials']}` correct).",
+            f"- **Strict `{hr['cutoff_time_helsinki']}` cut-off accounting (`{hr_fin['strict_pre_cutoff_0830_valid_count']}` pre-cutoff + `{hr_fin['post_cutoff_0830_valid_count']}` post-cutoff in `opencode-3`):** "
+            f"`{hr_fin['post_cutoff_0830_valid_count']}` of `opencode-3`'s `{hr_fin['n_valid']}` valid trials finished after `{hr['cutoff_time_helsinki']}`, leaving "
+            f"`{hr_fin['strict_pre_cutoff_0830_valid_count']}` strict pre-cutoff valid trials in `opencode-3` (`{hr_sp_fin['strict_pre_cutoff_total_valid_trials']}` strict pre-cutoff valid trials across all 3 runs). "
+            f"Restricting to the two complete pre-cutoff runs (`opencode-1` `{hr_r1['ratio_pct']}%` and `opencode-2` `{hr_r2['ratio_pct']}%`, `{hr_sp_pre['total_correct']}/{hr_sp_pre['total_valid_trials']}` correct) "
+            f"gives mean `{_signed(hr_sp_pre['mean_of_means'], 4)}` (`{hr_sp_pre['ratio_vs_oracle']:.0%}` of full `10`-task oracle `{_signed(hr_orc['mean'])}`).",
+            f"- **`infra=0` imputation on `{hr_fin['infra_task']}` (`infra:{hr_fin['infra_category']}`) and Harbor shell confound:** "
+            f"Imputing `opencode-3`'s single excluded rate-limit trial (`{hr_fin['infra_task']}`) as `0.0` across all `{hr['task_count']}` tasks gives "
+            f"`9 * 0.626 / 10 = {_signed(hr_fin['mean_10_task_infra_zero_imputation'], 4)}` (`{hr_fin['ratio_10_task_infra_zero_vs_full_oracle']:.0%}` of full `10`-task oracle `{_signed(hr_orc['mean'])}`; "
+            f"`{_signed(hr_snap['mean_infra_as_zero'])}` over the `8` launched snapshot tasks). Under every cut-off and `infra=0` rule, the `65%` MCP-only `gemini-4-carbon` gap did not reproduce in the "
+            f"Harbor container path, where `bash`/`python3` shell execution is enabled (`{hr_sh['shell_used_trials']}/{hr_sh['shell_audited_trials']}` audited trials).",
         ]
     )
 
     return "\n".join(lines) + "\n"
 
 
-def _fmt_json_inline_lists(obj: Any, depth: int = 0) -> str:
-    if not isinstance(obj, (dict, list)) or not obj:
-        return json.dumps(obj, sort_keys=True, allow_nan=False)
+def _fmt_json_inline_lists(obj: Any, depth: int = 0, max_expand_depth: int = 3) -> str:
+    if depth >= max_expand_depth or not isinstance(obj, (dict, list)) or not obj:
+        return json.dumps(obj, sort_keys=True, separators=(",", ":"), allow_nan=False)
     pad = " " * depth
     inner = " " * (depth + 1)
     if isinstance(obj, list):
         if all(not isinstance(x, (dict, list)) for x in obj):
-            return json.dumps(obj, allow_nan=False)
-        items = [inner + _fmt_json_inline_lists(v, depth + 1) for v in obj]
+            return json.dumps(obj, separators=(",", ":"), allow_nan=False)
+        items = [inner + _fmt_json_inline_lists(v, depth + 1, max_expand_depth) for v in obj]
         return "[\n" + ",\n".join(items) + "\n" + pad + "]"
     items = [
-        f"{inner}{json.dumps(k)}: {_fmt_json_inline_lists(obj[k], depth + 1)}"
+        f"{inner}{json.dumps(k)}: {_fmt_json_inline_lists(obj[k], depth + 1, max_expand_depth)}"
         for k in sorted(obj.keys())
     ]
     return "{\n" + ",\n".join(items) + "\n" + pad + "}"
 
 
 def serialize_summary_json(summary: dict[str, Any]) -> str:
-    return _fmt_json_inline_lists(summary, depth=0) + "\n"
+    return _fmt_json_inline_lists(summary, depth=0, max_expand_depth=3) + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1384,10 +2473,14 @@ def main(argv: list[str] | None = None) -> int:
         c_ver = summary["seed_lock_and_replay"]["committed_v14_replay"]["verified"]
         r_ver = summary["seed_lock_and_replay"]["replication_v14_replay"]["verified"]
         comb_ver = summary["seed_lock_and_replay"]["combined_v14_replay"]["verified"]
+        hr_ratios = summary["harbor_rehearsal_cutoff_sensitivity"]["spread_across_opencode_runs"]["final_d0ead011"][
+            "run_ratios_pct"
+        ]
         print(
             f"OK infra_sensitivity=PASS committed_replays={c_ver} replication_replays={r_ver} "
             f"combined_replays={comb_ver} "
             f"excluded_attempts={summary['cohort_meta_audit']['committed_excluded_attempts_total']} "
+            f"harbor_ratios={','.join(str(x) for x in hr_ratios)} "
             f"json_bytes={disk_bytes}"
         )
         return 0

@@ -12,6 +12,7 @@ Never records prompts, keys or secrets: counts, timings and labels only.
 """
 from __future__ import annotations
 
+import copy
 import glob
 import json
 import os
@@ -78,18 +79,38 @@ def read_ledger(paths: Iterable[str | Path] | None = None) -> list[dict]:
     return rows
 
 
+def strip_signatures(messages: list[dict]) -> list[dict]:
+    """Deep copy of messages with "provider_items" removed from every assistant message; nothing else changes."""
+    out = copy.deepcopy(messages)
+    for m in out:
+        if isinstance(m, dict) and m.get("role") == "assistant":
+            m.pop("provider_items", None)
+    return out
+
+
 class LedgeredClient(LLMClient):
     """Wraps any canary.llm client; delegates chat() and writes one ledger row per call (incl. failures)."""
 
-    def __init__(self, inner: LLMClient, feature: str, run_id: str = "", meta: dict | None = None):
+    def __init__(self, inner: LLMClient, feature: str, run_id: str = "", meta: dict | None = None,
+                 drop_signatures: bool = False):
         super().__init__(model=inner.model, max_retries=0)
         self.inner, self.feature, self.run_id, self.meta = inner, feature, run_id, meta or {}
         self.provider = inner.provider
+        # Ablation (off by default): strip "provider_items" (the model's verbatim Content incl. thought signatures)
+        # from every assistant message, so the backend rebuilds plain function_call parts with no signatures.
+        self.drop_signatures = drop_signatures
 
     def __getattr__(self, name):  # settings(), finish_reasons, thinking_level, ... of the inner client
-        return getattr(self.__dict__["inner"], name)
+        attr = getattr(self.__dict__["inner"], name)
+        if name == "settings" and self.__dict__.get("drop_signatures"):
+            def settings() -> dict:  # what is actually sent, for meta.json
+                return {**attr(), "thought_signature_replay": False, "ablation": "drop_signatures"}
+            return settings
+        return attr
 
     def chat(self, messages, tools=None, temperature=0.0, response_schema=None, max_tokens=None, seed=None):
+        if self.drop_signatures:
+            messages = strip_signatures(messages)
         t0 = time.time()
         try:
             r = self.inner.chat(messages, tools=tools, temperature=temperature, response_schema=response_schema,
@@ -111,7 +132,8 @@ class LedgeredClient(LLMClient):
         return r
 
 
-def lab_client(spec: str, feature: str, run_id: str = "", meta: dict | None = None, **kw) -> LedgeredClient:
+def lab_client(spec: str, feature: str, run_id: str = "", meta: dict | None = None, drop_signatures: bool = False,
+               **kw) -> LedgeredClient:
     """get_client(spec, **kw) wrapped in the ledger. spec: 'gemini:<model>' (or 'stub' in tests).
     Gemini specs get a gateway-aware SDK client (canary.gemini.sdk.genai_client): with GEMINI_GATEWAY_URL set,
     every call goes through the Canary Lab gateway; otherwise direct with GEMINI_API_KEY."""
@@ -123,4 +145,5 @@ def lab_client(spec: str, feature: str, run_id: str = "", meta: dict | None = No
             tag = hashlib.sha256(json.dumps({"feature": feature, "meta": meta}, sort_keys=True,
                                             default=str).encode()).hexdigest()[:16]
         kw["sdk_client"] = genai_client(replay_tag=tag)
-    return LedgeredClient(get_client(spec, **kw), feature=feature, run_id=run_id, meta=meta)
+    return LedgeredClient(get_client(spec, **kw), feature=feature, run_id=run_id, meta=meta,
+                          drop_signatures=drop_signatures)

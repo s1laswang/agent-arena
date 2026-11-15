@@ -8,7 +8,7 @@ Full write-up: s1laswang/junction-meta-glasses main, docs/evidence/verda-fieldsp
   - strength-visible precision 96.8% (Wilson 92.1–98.8), recall 65.6% (58.5–72.0);
   - mAP@0.5 0.572 (strength 0.607, expiry 0.616, product 0.663, allergens 0.401);
   - ONNX 12.8 MB, p50 34.5 ms on CPU (≈ 29 fps).
-- **Status:** committed (web/public/models/fieldspotter.onnx); not yet wired into the live coaching loop. PaliGemma 2 was NOT done (no A100 capacity, no HF token).
+- **Status:** committed (web/public/models/fieldspotter.onnx); not yet wired into the live coaching loop. PaliGemma 2 was trained later; see the PaliGemma section below.
 - **Honest note:** it slowed the co-tenant v3 training by ~12% while running; stopped after one run.
 
 ## Canary (AfterQuery) small-model tiebreaker

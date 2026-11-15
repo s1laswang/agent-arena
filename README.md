@@ -51,6 +51,20 @@ GOOGLE_GENERATIVE_AI_API_KEY=<key> harbor run -p harbor/dataset -a opencode -m g
 
 **Oracle expected range:** a 10-task hard rerun of the oracle should land in about **+0.39 to +0.68** (90% of builds; mean +0.569, sd 0.094), and do_nothing, stop_early and cheat_probe score exactly 0 on every build. This was measured over 200 simulated builds: [harbor/README.md](harbor/README.md#expected-oracle-range-for-a-judge-rerun), [`results/oracle_range_v1.4.md`](results/oracle_range_v1.4.md). One wrong accusation (−1) moves a 10-task mean by more than 0.1. Each build draws a new secret, so nobody (us included) has seen the worlds your build serves. The reward is the game server's HMAC-signed ledger, and the agent container holds nothing that reveals the mole. Full details and the isolation proof: [harbor/README.md](harbor/README.md). If agent setup times out on a slow network or at high `-n`, add `--agent-setup-timeout-multiplier 3`: those trials are infrastructure failures, not scores.
 
+## Tiebreak: a small model trained on Canary experience (honest result)
+Qwen2.5-1.5B with LoRA, held-out seeds, the model plays every episode alone; full readout in [docs/reports/fr8.md](docs/reports/fr8.md) ("04:45 WS4 readout").
+
+| model | held-out score ± 95% CI | n |
+|---|---:|---:|
+| base (untrained) | 0.000 (it cannot play: 3% valid tool calls) | 36 |
+| v2 (SFT on solver play) | −0.457 ± 0.086 | 172 |
+| v3-4k (GRPO on the environment's reward, Verda H100) | −0.147 ± 0.063 | 180 |
+| v3-8k seed 2 (GRPO, 8k context, Verda H100 spot) | −0.050 ± 0.049 | 90 |
+
+- **What was learned:** reward training fixed v2's reckless accusations (v3-4k vs v2: +0.310 ± 0.107, two-sample). It learned to play the protocol (100% valid calls), and on training states it learned to name the mole from evidence (0.19 → 0.89).
+- **What was not:** the bar (above the untrained base, with the CI excluding 0) is **not met**. The model never learned to gather evidence in its own games: the same decision gemini-4-carbon gets wrong (fewer canaries, earlier commitment; [failure analysis](docs/reports/failure_analysis_v1.4.md)).
+- **In progress:** a DAgger run trained on the model's own states may be added as an addendum.
+
 ## Links
 
 - **Break it:** [docs/EXPLOITS.md](docs/EXPLOITS.md) lists every attack we tried, and the regression test that guards each one. `make hunt` fuzzes it yourself, with no keys, in a few minutes.

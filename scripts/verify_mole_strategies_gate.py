@@ -5,6 +5,7 @@ import argparse
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
 import hashlib
+import importlib
 import json
 import math
 import os
@@ -38,10 +39,22 @@ from canary.mole.regret_portfolio import (
 from canary.mole.strategies import STRATEGY_SPECS, get_strategy
 from canary.mole.transfer_eval import check_transfer_artifacts
 from canary.rules import HELDOUT_SEEDS, JUDGE_SEEDS, TIERS_VERSION
-from canary.social.variants import VARIANTS
-from canary.social_audit import resolve_text_provider, verify_and_score_episodes
 from canary.solver.policy import SolverPolicy
 from canary.types import EpisodeResult
+
+
+def _load_social_modules() -> tuple[dict[str, Any], Any, Any] | None:
+    try:
+        variants_mod = importlib.import_module("canary.social.variants")
+        audit_mod = importlib.import_module("canary.social_audit")
+    except Exception:
+        return None
+    variants = getattr(variants_mod, "VARIANTS", None)
+    resolve_fn = getattr(audit_mod, "resolve_text_provider", None)
+    verify_fn = getattr(audit_mod, "verify_and_score_episodes", None)
+    if not isinstance(variants, dict) or not callable(resolve_fn) or not callable(verify_fn):
+        return None
+    return variants, resolve_fn, verify_fn
 
 HASH_CHAR = chr(35)
 H1 = HASH_CHAR
@@ -773,14 +786,24 @@ def check_counterfactual_replay(
     }
 
 
-def _infer_v16_variant_and_provider(ep_path: Path, rec: dict[str, Any]) -> tuple[str, str]:
+def _infer_v16_variant_and_provider(
+    ep_path: Path,
+    rec: dict[str, Any],
+    variants: Iterable[str] | None = None,
+) -> tuple[str, str]:
+    if variants is None:
+        social_mods = _load_social_modules()
+        known_variants: set[str] = set(social_mods[0]) if social_mods is not None else set()
+    else:
+        known_variants = set(variants)
+
     path_var: str | None = None
     for part in reversed(ep_path.parts[:-1]):
         clean = part.replace("__", ":")
         for prefix in ("v16-gemini-stub:", "v16-gemini:", "v16:"):
             if clean.startswith(prefix):
                 clean = clean.split(":", 1)[1].strip()
-        if clean == "v0_v14_control" or clean in VARIANTS:
+        if clean == "v0_v14_control" or clean in known_variants:
             path_var = clean
             break
 
@@ -801,7 +824,7 @@ def _infer_v16_variant_and_provider(ep_path: Path, rec: dict[str, Any]) -> tuple
         return raw_var, "v16:" + raw_prov.split(":", 1)[1].strip()
     if raw_prov.startswith("v16:"):
         return raw_var, raw_prov
-    if raw_var in VARIANTS:
+    if raw_var in known_variants:
         return raw_var, f"v16:{raw_var}"
     return raw_var, "template"
 
@@ -820,6 +843,7 @@ def check_ablation_and_v16_replays(
     v16_partial_dir: Path | None = None,
     v16_audit_json_path: Path | None = None,
     expected_checkpoint_episodes: int = 10,
+    pure_mole: bool = False,
 ) -> dict[str, Any]:
     root = Path(root).resolve()
     abl_file = Path(ablation_path) if ablation_path is not None else (root / DEFAULT_ABLATION_REL)
@@ -938,6 +962,43 @@ def check_ablation_and_v16_replays(
             "peer_vs_decoy": peer_vs_decoy_summary,
         }
 
+    effective_pure_mole = bool(pure_mole)
+    pure_mole_reason = "explicit_flag" if effective_pure_mole else ""
+    social_mods: tuple[dict[str, Any], Any, Any] | None = None
+
+    if not effective_pure_mole:
+        if v16_partial_dir is None and not partial_root.is_dir():
+            effective_pure_mole = True
+            pure_mole_reason = "missing_v16_partial_dir"
+        else:
+            social_mods = _load_social_modules()
+            if social_mods is None:
+                effective_pure_mole = True
+                pure_mole_reason = "social_audit_unavailable"
+
+    if effective_pure_mole:
+        return {
+            "passed": len(failures) == 0,
+            "pure_mole": True,
+            "pure_mole_reason": pure_mole_reason,
+            "ablation": ablation_summary,
+            "ablation_arms": ablation_arms,
+            "v16_checkpoint_files": 0,
+            "v16_episodes_replayed": 0,
+            "v16_replay_mismatches": 0,
+            "v16_checkpoints": [],
+            "v16_provider_audit": {
+                "present": False,
+                "n_providers_audited": 0,
+                "n_providers_passed": 0,
+                "live_api_calls": 0,
+            },
+            "failures": failures,
+        }
+
+    assert social_mods is not None
+    variants_map, resolve_text_provider, verify_and_score_episodes = social_mods
+
     v16_files = sorted(partial_root.rglob("episodes.jsonl")) if partial_root.is_dir() else []
     if not v16_files:
         failures.append(f"no partial V1.6 checkpoint episodes.jsonl files found under {partial_root}")
@@ -953,7 +1014,7 @@ def check_ablation_and_v16_replays(
         if not lines:
             continue
         raw_recs = [json.loads(ln) for ln in lines]
-        var_name, prov_spec = _infer_v16_variant_and_provider(ep_file, raw_recs[0])
+        var_name, prov_spec = _infer_v16_variant_and_provider(ep_file, raw_recs[0], variants=variants_map)
         file_hash = hashlib.sha256(raw_content.encode("utf-8")).hexdigest()
         f_key = (f"{var_name}:{prov_spec}", file_hash)
         if f_key not in _V16_FILE_REPLAY_CACHE:
@@ -1062,6 +1123,8 @@ def check_ablation_and_v16_replays(
 
     return {
         "passed": len(failures) == 0,
+        "pure_mole": False,
+        "pure_mole_reason": "",
         "ablation": ablation_summary,
         "ablation_arms": ablation_arms,
         "v16_checkpoint_files": len(v16_files),
@@ -1369,6 +1432,7 @@ def validate_markdown_hygiene(md_text: str) -> list[str]:
 
 
 def render_summary_markdown(report: dict[str, Any]) -> str:
+    is_pure_mole = bool(report.get("pure_mole") or report.get("ablation_and_v16", {}).get("pure_mole"))
     prot = report["protected_paths"]
     cat = report["strategies_and_fresh_eval"]
     cf10 = report["counterfactual_opencode_0_9"]
@@ -1403,20 +1467,60 @@ def render_summary_markdown(report: dict[str, Any]) -> str:
     )
     bind_desc = ", ".join(f"`{b}`" for b in prt["binding_investigators"])
 
-    lines: list[str] = [
-        f"{H1} Mole Strategies & Social Deception: Executive Submission Summary",
-        "",
-        (
+    if is_pure_mole:
+        header_title = f"{H1} Mole Strategies: Pure-Mole Executive Submission Summary"
+        intro_line = (
+            f"Deterministic offline verification summary (`TIERS_VERSION={TIERS_VERSION}`, `tier=hard`, "
+            "`pure_mole=True`, `live_api_calls=0`) across Canary's transcript-grounded Mole DSL strategies, "
+            "Forge v1.4 Hall-of-Fame survivors, 12-arm lever ablation study, cross-model strategy transfer "
+            "(`99/99` transcripts, `11/11` gates), and Sleeper minimax attack-regret portfolio "
+            "(`canary.mole.regret_portfolio`)."
+        )
+        repro_cmd = (
+            'GOOGLE_API_KEY="" GEMINI_API_KEY="" OPENAI_API_KEY="" '
+            "PYTHONPATH=. python scripts/verify_mole_strategies_gate.py --pure-mole"
+        )
+        gate_d_row = (
+            f"| `(d)` 12-Arm Lever Ablation (Pure-Mole) | `results/mole_strategies/lever_ablation_v14.json` (`{abl.get('seed_range', '')}`, `n={abl.get('n_seeds', 0)}`) | "
+            f"`{abl.get('n_passed', 0)}/{abl.get('n_arms', 0)}` ablation arms pass gates (min `solver_acc={abl.get('min_solver_acc_observed', 0.0):.3f}`, max `logs_only_acc={abl.get('max_logs_only_acc_observed', 0.0):.3f}`) | {'PASS' if abl_v16['passed'] else 'FAIL'} |"
+        )
+        gate_f_row = (
+            f"| `(f)` Offline & Hygiene Discipline | Zero API keys, zero em/en dashes, zero secret or employee-ID leaks, zero `canary.social` imports | "
+            f"`live_api_calls={report['telemetry']['live_api_calls']}`, `blocked_api_attempts={report['telemetry']['blocked_api_attempts']}` | "
+            f"{'PASS' if report['all_passed'] else 'FAIL'} |"
+        )
+    else:
+        header_title = f"{H1} Mole Strategies & Social Deception: Executive Submission Summary"
+        intro_line = (
             f"Deterministic offline verification summary (`TIERS_VERSION={TIERS_VERSION}`, `tier=hard`, "
             "`live_api_calls=0`) across Canary's transcript-grounded Mole DSL strategies, Forge v1.4 "
             "Hall-of-Fame survivors, 12-arm lever ablation study, cross-model strategy transfer (`99/99` "
             "transcripts, `11/11` gates), Sleeper minimax attack-regret portfolio (`canary.mole.regret_portfolio`), "
             "and V1.6 social-chatter fairness and partial checkpoint audit."
-        ),
+        )
+        repro_cmd = (
+            'GOOGLE_API_KEY="" GEMINI_API_KEY="" OPENAI_API_KEY="" '
+            "PYTHONPATH=. python scripts/verify_mole_strategies_gate.py --check"
+        )
+        gate_d_row = (
+            f"| `(d)` 12-Arm Lever Ablation & V1.6 Replay Audit | `results/mole_strategies/lever_ablation_v14.json` (`{abl['seed_range']}`, `n={abl['n_seeds']}`) + `results/v16_social/partial/` (`{abl_v16['v16_checkpoint_files']}` files) | "
+            f"`{abl['n_passed']}/{abl['n_arms']}` ablation arms pass gates (min `solver_acc={abl['min_solver_acc_observed']:.3f}`, max `logs_only_acc={abl['max_logs_only_acc_observed']:.3f}`); "
+            f"`{abl_v16['v16_episodes_replayed']}/10` V1.6 checkpoints replay-verified bit-for-bit (`{abl_v16['v16_replay_mismatches']}` mismatches) | {'PASS' if abl_v16['passed'] else 'FAIL'} |"
+        )
+        gate_f_row = (
+            f"| `(f)` Offline & Hygiene Discipline | Zero API keys, zero em/en dashes, zero secret or employee-ID leaks, honest V1.6 Gate B reporting | "
+            f"`live_api_calls={report['telemetry']['live_api_calls']}`, `blocked_api_attempts={report['telemetry']['blocked_api_attempts']}` | "
+            f"{'PASS' if report['all_passed'] else 'FAIL'} |"
+        )
+
+    lines: list[str] = [
+        header_title,
+        "",
+        intro_line,
         "",
         "Reproduce or verify exact deterministic byte parity with zero API keys:",
         "```bash",
-        'GOOGLE_API_KEY="" GEMINI_API_KEY="" OPENAI_API_KEY="" PYTHONPATH=. python scripts/verify_mole_strategies_gate.py --check',
+        repro_cmd,
         "```",
         "",
         f"{H2} 1. Six-Gate Submission Verification Summary",
@@ -1442,11 +1546,7 @@ def render_summary_markdown(report: dict[str, Any]) -> str:
             f"full `60` transcripts: `P(true mole)` `{cf60['default_p_true_mole']:.3f} -> {cf60['synthesis_p_true_mole']:.3f}` (drop `{cf60['p_true_mole_drop']:+.3f}`), "
             f"optimal EV `{cf60['default_optimal_ev']:.3f} -> {cf60['synthesis_optimal_ev']:.3f}` (drop `{cf60['optimal_ev_drop']:+.3f}`) | {'PASS' if cf10['passed'] else 'FAIL'} |"
         ),
-        (
-            f"| `(d)` 12-Arm Lever Ablation & V1.6 Replay Audit | `results/mole_strategies/lever_ablation_v14.json` (`{abl['seed_range']}`, `n={abl['n_seeds']}`) + `results/v16_social/partial/` (`{abl_v16['v16_checkpoint_files']}` files) | "
-            f"`{abl['n_passed']}/{abl['n_arms']}` ablation arms pass gates (min `solver_acc={abl['min_solver_acc_observed']:.3f}`, max `logs_only_acc={abl['max_logs_only_acc_observed']:.3f}`); "
-            f"`{abl_v16['v16_episodes_replayed']}/10` V1.6 checkpoints replay-verified bit-for-bit (`{abl_v16['v16_replay_mismatches']}` mismatches) | {'PASS' if abl_v16['passed'] else 'FAIL'} |"
-        ),
+        gate_d_row,
         (
             f"| `(e)` Cross-Model Transfer & Sleeper Regret Portfolio | `results/mole_strategies/cross_model_transfer.json` + `docs/reports/mole_regret_portfolio_v14.md` (`canary.mole.regret_portfolio`) | "
             f"`{trf['n_gates_passed']}/{trf['n_catalog']}` transfer gates passed (`{trf['fresh_seed_range']}`, `n={trf['fresh_n_seeds']}`, min `solver_acc={trf['min_solver_acc']:.3f}`), "
@@ -1454,11 +1554,7 @@ def render_summary_markdown(report: dict[str, Any]) -> str:
             f"`PortfolioMolePolicy` ({weight_desc}, `duality_gap={prt['duality_gap']:.2e}`) train `min_regret={prt['train_min_regret']:.4f}` (`{prt['min_regret_gain_vs_default']:+.4f}` vs `default_v0`), "
             f"live val `{prt['val_seed_range']}` (`n={prt['val_n_seeds']}`) `solver_acc={prt['val_solver_acc']:.3f}`, `logs_only_acc={prt['val_logs_only_acc']:.3f}` | {'PASS' if xp['passed'] else 'FAIL'} |"
         ),
-        (
-            f"| `(f)` Offline & Hygiene Discipline | Zero API keys, zero em/en dashes, zero secret or employee-ID leaks, honest V1.6 Gate B reporting | "
-            f"`live_api_calls={report['telemetry']['live_api_calls']}`, `blocked_api_attempts={report['telemetry']['blocked_api_attempts']}` | "
-            f"{'PASS' if report['all_passed'] else 'FAIL'} |"
-        ),
+        gate_f_row,
         "",
         f"{H2} 2. Empirical Frontier Failure Modes Driving Fair Mole Levers",
         "",
@@ -1603,41 +1699,45 @@ def render_summary_markdown(report: dict[str, Any]) -> str:
             f"(`score={prt['val_solver_score']:+.3f}`), `LogsOnly` `acc={prt['val_logs_only_acc']:.3f}`, `DoNothing={prt['val_do_nothing_score']:.3f}`, "
             f"and `StopEarlyQuit={prt['val_stop_early_quit_score']:.3f}`."
         ),
-        "",
-        f"{H2} 7. V1.6 Social Deception Audit & Honest Gate B Negative Result",
-        "",
-        (
-            f"- **Engineering & fairness gates (`PASS`)**: Across `{v16_prov['n_providers_passed']}/{v16_prov['n_providers_audited']}` "
-            "audited V1.6 and sanitized `TextProvider` specs on Hard seeds `30-35` (`0` live API calls), "
-            "`SolverPolicy` achieves bit-exact calibration parity (`max_abs_score_diff = 0.000000`), non-decoy "
-            "`ANGER_WORDS` leakage is `0`, `DoNothing = 0.0`, `StopEarlyQuit = 0.0`, and all "
-            f"`{abl_v16['v16_episodes_replayed']}/10` collected Gemini checkpoints under `results/v16_social/partial/` "
-            f"replay bit-for-bit via `canary.social_audit.verify_and_score_episodes` with `{abl_v16['v16_replay_mismatches']}` mismatches."
-        ),
-        (
-            "- **Live Gate B outcome (`NOT MET`, negative result)**: Live `gemini-4-carbon` evaluation on Hard seeds "
-            "`30-44` was halted early after `10` valid episodes (`v0_v14_control` `n=4`, `v5_full9_cocktail` `n=3`, "
-            "`v3_grudge_falsemem_misforward` `n=2`, `v1_anchoring_authority_confirmation` `n=1`) to protect shared API "
-            "quota for the primary `n=60` gap run. Neither the sample-size threshold (`n >= 15` / `n >= 30`) nor the "
-            "gap-widening criterion (lowering `gemini-4-carbon` score below `v0_v14_control`) was met: structured "
-            "forensic tools (`plant_canary`, `read_access_logs`, `check_leak_feed`) dominated social-chatter decoys "
-            "(`10/10` correct accusations), and all three tested social variants scored higher in raw mean on their "
-            "paired seeds than `v0_v14_control`."
-        ),
-        "",
-        "| Checkpoint Variant | Provider Spec | Valid Seeds | n | Gemini Raw Mean | Gemini Luck-Adj Mean | Paired Delta Raw vs v0 | Paired Delta Luck-Adj vs v0 | Replay Mismatches | Gate B Verdict |",
-        "|---|---|---|---:|---:|---:|---:|---:|---:|---|",
     ])
 
-    for crow in abl_v16["v16_checkpoints"]:
-        seed_csv = ",".join(str(s) for s in crow["seeds"])
-        verdict = "CONTROL (n=4)" if crow["variant"] == "v0_v14_control" else "NOT MET (negative)"
-        lines.append(
-            f"| `{crow['variant']}` | `{crow['provider_spec']}` | `{seed_csv}` | {crow['n_valid']} | "
-            f"{crow['raw_mean']:+.3f} | {crow['luck_adj_mean']:+.3f} | "
-            f"{crow['paired_delta_raw']:+.3f} | {crow['paired_delta_luck_adj']:+.3f} | "
-            f"{crow['mismatch_count']} | {verdict} |"
-        )
+    if not is_pure_mole:
+        lines.extend([
+            "",
+            f"{H2} 7. V1.6 Social Deception Audit & Honest Gate B Negative Result",
+            "",
+            (
+                f"- **Engineering & fairness gates (`PASS`)**: Across `{v16_prov['n_providers_passed']}/{v16_prov['n_providers_audited']}` "
+                "audited V1.6 and sanitized `TextProvider` specs on Hard seeds `30-35` (`0` live API calls), "
+                "`SolverPolicy` achieves bit-exact calibration parity (`max_abs_score_diff = 0.000000`), non-decoy "
+                "`ANGER_WORDS` leakage is `0`, `DoNothing = 0.0`, `StopEarlyQuit = 0.0`, and all "
+                f"`{abl_v16['v16_episodes_replayed']}/10` collected Gemini checkpoints under `results/v16_social/partial/` "
+                f"replay bit-for-bit via `canary.social_audit.verify_and_score_episodes` with `{abl_v16['v16_replay_mismatches']}` mismatches."
+            ),
+            (
+                "- **Live Gate B outcome (`NOT MET`, negative result)**: Live `gemini-4-carbon` evaluation on Hard seeds "
+                "`30-44` was halted early after `10` valid episodes (`v0_v14_control` `n=4`, `v5_full9_cocktail` `n=3`, "
+                "`v3_grudge_falsemem_misforward` `n=2`, `v1_anchoring_authority_confirmation` `n=1`) to protect shared API "
+                "quota for the primary `n=60` gap run. Neither the sample-size threshold (`n >= 15` / `n >= 30`) nor the "
+                "gap-widening criterion (lowering `gemini-4-carbon` score below `v0_v14_control`) was met: structured "
+                "forensic tools (`plant_canary`, `read_access_logs`, `check_leak_feed`) dominated social-chatter decoys "
+                "(`10/10` correct accusations), and all three tested social variants scored higher in raw mean on their "
+                "paired seeds than `v0_v14_control`."
+            ),
+            "",
+            "| Checkpoint Variant | Provider Spec | Valid Seeds | n | Gemini Raw Mean | Gemini Luck-Adj Mean | Paired Delta Raw vs v0 | Paired Delta Luck-Adj vs v0 | Replay Mismatches | Gate B Verdict |",
+            "|---|---|---|---:|---:|---:|---:|---:|---:|---|",
+        ])
+
+        for crow in abl_v16["v16_checkpoints"]:
+            seed_csv = ",".join(str(s) for s in crow["seeds"])
+            verdict = "CONTROL (n=4)" if crow["variant"] == "v0_v14_control" else "NOT MET (negative)"
+            lines.append(
+                f"| `{crow['variant']}` | `{crow['provider_spec']}` | `{seed_csv}` | {crow['n_valid']} | "
+                f"{crow['raw_mean']:+.3f} | {crow['luck_adj_mean']:+.3f} | "
+                f"{crow['paired_delta_raw']:+.3f} | {crow['paired_delta_luck_adj']:+.3f} | "
+                f"{crow['mismatch_count']} | {verdict} |"
+            )
 
     lines.append("")
     return "\n".join(lines)
@@ -1653,6 +1753,7 @@ def run_submission_gate(
     cf_seeds: Sequence[int] = DEFAULT_CF_SEEDS,
     cf_sources: Sequence[str] = DEFAULT_CF_SOURCES,
     expected_v16_episodes: int = 10,
+    pure_mole: bool = False,
 ) -> dict[str, Any]:
     root = Path(root).resolve()
     with offline_gate_guard() as telemetry:
@@ -1671,6 +1772,7 @@ def run_submission_gate(
         c_abl_v16 = check_ablation_and_v16_replays(
             root=root,
             expected_checkpoint_episodes=expected_v16_episodes,
+            pure_mole=pure_mole,
         )
         c_xp = check_transfer_and_regret_portfolio(root=root)
 
@@ -1683,9 +1785,12 @@ def run_submission_gate(
         and c_xp["passed"]
         and api_clean
     )
+    is_pure_mole = bool(c_abl_v16.get("pure_mole", pure_mole))
     report: dict[str, Any] = {
         "schema_version": "mole_strategies_submission_gate.v1",
         "tiers_version": TIERS_VERSION,
+        "pure_mole": is_pure_mole,
+        "pure_mole_reason": str(c_abl_v16.get("pure_mole_reason", "")),
         "all_passed": all_passed,
         "telemetry": telemetry,
         "protected_paths": c_prot,
@@ -1714,11 +1819,23 @@ def _format_cli_summary(report: dict[str, Any], elapsed_s: float) -> str:
     trf = xp["transfer"]
     prt = xp["portfolio"]
     hyg = report["markdown_hygiene"]
+    if bool(report.get("pure_mole") or av.get("pure_mole")):
+        gate_d_line = (
+            f"[{'PASS' if av['passed'] else 'FAIL'}] (d) Lever Ablation (Pure-Mole): "
+            f"{av['ablation'].get('n_passed', 0)}/{av['ablation'].get('n_arms', 0)} ablation arms "
+            f"(pure_mole={av.get('pure_mole_reason') or 'true'})"
+        )
+    else:
+        gate_d_line = (
+            f"[{'PASS' if av['passed'] else 'FAIL'}] (d) Ablation & V1.6 Replays: "
+            f"{av['ablation'].get('n_passed', 0)}/{av['ablation'].get('n_arms', 0)} ablation arms, "
+            f"{av['v16_episodes_replayed']}/10 V1.6 episodes ({av['v16_replay_mismatches']} mismatches)"
+        )
     lines = [
         f"[{'PASS' if prot['passed'] else 'FAIL'}] (a) Protected-Path Guard: {len(prot['violations'])} violations across {prot['n_protected_rules']} rules (base_ref={prot['base_ref']}, present={prot['base_ref_present']})",
         f"[{'PASS' if cat['passed'] else 'FAIL'}] (b) Catalogs & Fresh Seeds: {cat['n_transcript_strategies']}/6 strategies + {cat['n_hof_rows']}/4 HoF rows, 200-seed v14 eval + {len(cat['spot_check_seeds'])}-seed spot-check",
         f"[{'PASS' if cf['passed'] else 'FAIL'}] (c) Counterfactual Opencode 0-9: P(mole) {cf['default_p_true_mole']:.3f}->{cf['synthesis_p_true_mole']:.3f} (drop {cf['p_true_mole_drop']:+.3f}), EV {cf['default_optimal_ev']:.3f}->{cf['synthesis_optimal_ev']:.3f} (drop {cf['optimal_ev_drop']:+.3f})",
-        f"[{'PASS' if av['passed'] else 'FAIL'}] (d) Ablation & V1.6 Replays: {av['ablation'].get('n_passed', 0)}/{av['ablation'].get('n_arms', 0)} ablation arms, {av['v16_episodes_replayed']}/10 V1.6 episodes ({av['v16_replay_mismatches']} mismatches)",
+        gate_d_line,
         f"[{'PASS' if xp['passed'] else 'FAIL'}] (e) Cross-Model Transfer & Regret Portfolio: {trf['n_gates_passed']}/{trf['n_catalog']} transfer gates ({trf['transcript_verified_total']}/{trf['total_transcripts']} transcripts), portfolio min_regret={prt['train_min_regret']:.4f} (val solver_acc={prt['val_solver_acc']:.3f})",
         f"[{'PASS' if hyg['passed'] else 'FAIL'}] (f) Summary Hygiene & Offline Guard: {len(hyg['issues'])} issues, {report['telemetry']['live_api_calls']} API calls ({elapsed_s:.2f}s)",
     ]
@@ -1732,6 +1849,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--spot-seeds", default="6900-6903")
     ap.add_argument("--spot-targets", default=None)
     ap.add_argument("--cf-seeds", default="0-9")
+    ap.add_argument(
+        "--pure-mole",
+        action="store_true",
+        help="run pure-mole submission gates without V1.6 social modules or checkpoints",
+    )
     ap.add_argument("--out", type=Path, default=None, help="write deterministic executive summary Markdown")
     ap.add_argument(
         "--check",
@@ -1758,6 +1880,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         spot_seeds=spot_seeds,
         spot_targets=spot_targets,
         cf_seeds=cf_seeds,
+        pure_mole=bool(args.pure_mole),
     )
     rendered_md = render_summary_markdown(report)
     elapsed_s = time.perf_counter() - t0

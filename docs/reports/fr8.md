@@ -186,3 +186,9 @@ Verda (ex-DataCrunch, Finland) is FR8's overflow GPU for the WS4 tiebreaker. FR8
 - On-instance reaper moved: deletes 3bb74f5a at **07:30 Helsinki** (05:30 UTC). For ~2 min during the swap no reaper was running (SSH dropped mid-command); re-armed and verified with `pgrep`.
 - `/root/chain_8k.sh` waits for s0's `~/v3/DONE`, then runs R1: `CTX=8192 TAG=verda-8k-s0 SEED=0 SKIP_SETUP=1 HOURS=3 EVAL_MIN=75` (from a copy `run_v3b.sh`, so s0's running script was never edited). ETA: start ~02:45, training to ~05:45, eval to ~07:05, pull, delete ≤ 07:30.
 - Projected total ≈ 8.75 h × €4.742 ≈ **€41.5** (cap €100). Tracked for the hypothesis: forced-accuse whom-accuracy at 4k (s0: ~.19 flat) vs 8k.
+
+## 04:00 CORRECTION: the "paired" Δs were not paired
+Found by the WS4 readout session: without CANARY_WORLD_SECRET/SALT, each `eval_hf` process draws its own held-out world secret (canary/world.py, fail-closed), so the same seed number gives a DIFFERENT world across runs (all 115 step-0 employee lists differ between runs). Every "paired vs base/v2" Δ in this report and in my messages since 22:15 was therefore mislabelled. **Means and CIs per model stand; Δs are now two-sample** (`fr8/analysis/ws4_table.py` default; `--paired` only for shared-secret runs). All tables in fr8/analysis/out/ws4_table_*.md are regenerated.
+- v3-4k s0 (n=180) vs v2 (n=172): **+0.310 ± 0.107** (was reported as +0.315 ± 0.096 "paired").
+- v3-4k s0 vs base (n=16, all 0): −0.147 ± 0.063 (below base; unchanged conclusion).
+- v2 vs base: −0.457 ± 0.086 (was "−0.625 ± 0.245 paired, n=16").

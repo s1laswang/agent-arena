@@ -56,6 +56,7 @@ Two things would not have fit on a laptop, and they did not fit on our V100 clus
 | 04:15 | [Verda] | J1 smoke test fails the 30-min-per-episode rule: thinking on, no output cap, about 46 tok/s per request, 16 calls in 30 min, 0 episodes finished. Restarted with a cap (`fr8/verda/j1_run2.sh`): max 4096 output tokens per turn, hard dev seeds 0–9 all at once. |
 | 04:20 | [Verda] | **v3-8k s2** (H100 spot `dbd083ca`, 693 steps in 3.0 h) held-out eval: **−0.050 ± 0.049 (n=90)**, +0.408 ± 0.099 vs v2. It abstains on 93% of episodes. `dbd083ca` deleted at 04:21. |
 | 04:47 | [Verda] | **DAgger round 1 SFT done** on `e9ea8b2e`: 250 steps in 55.5 min on 4,000 examples, where the solver labels the states v3-4k s0 reached itself. Same-weights check: v3-4k s0 at 8k context scores −0.716 ± 0.105 (n=90) vs −0.147 at 4k. Held-out DAgger evals at 4k and 8k start under the shared secret, ETA ~06:15. |
+| 05:05 | [Verda] | **v3-8k s3** (A100 on-demand `f4378173`, 344 steps in 3.0 h) held-out eval under the shared secret: **−0.788 ± 0.117 (n=90)**. It accuses on 96% of episodes. Paired against v3-4k s0 at 8k context on identical worlds: −0.073 ± 0.173. `f4378173` deleted at 05:08. |
 | ~07:30 | [Verda] | Reapers delete every instance (the X2 box at 08:00). Final rows land in §4. |
 
 ## 3. Verda products used, and why (Fit)
@@ -91,7 +92,7 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | v3-8k s0 | [Verda] H100 `3bb74f5a` | [Verda] | pending | pending | | | | |
 | v3-8k s1 GRPO, 371 steps | [Verda] A100 spot `ac58df04` | [Verda] A100 | 90 | −0.777 ± 0.118 | 0.94 | 0.09 | 0.06 | −0.319 ± 0.146 (90 vs 172) |
 | v3-8k s2 GRPO, 693 steps | [Verda] H100 spot `dbd083ca` | [Verda] H100 | 90 | −0.050 ± 0.049 | 0.07 | 0.01 | 0.93 | +0.408 ± 0.099 (90 vs 172) |
-| v3-8k s3 | [Verda] A100 on-demand | [Verda] | pending | pending | | | | |
+| v3-8k s3 GRPO, 344 steps | [Verda] A100 on-demand `f4378173` | [Verda] A100, shared secret | 90 | −0.788 ± 0.117 | 0.96 | 0.09 | 0.04 | −0.331 ± 0.145 (90 vs 172) |
 | v3-4k s1, 192 steps (partial) | [FR8] V100 (job 44572) | [FR8] V100 | 25 | −0.240 ± 0.171 | 0.24 | 0.00 | 0.76 | +0.217 ± 0.191 (25 vs 172) |
 | v3-4k s0 **evaluated at 8k context** (same weights; X2 run, verified by FR8 at 05:00) | [Verda] H100 | [Verda] A100 `68bbe201`, shared secret | 90 | −0.716 ± 0.105 | 0.78 | 0.03 (3/70 accusations right) | 0.22 | −0.258 ± 0.136 (90 vs 172) |
 | DAgger round 1 (SFT from v3-4k s0, 250 steps, 4,000 solver-labelled own-state examples) | [Verda] A100 40GB `e9ea8b2e` | [Verda], shared secret, at 4k and 8k context | pending (`docs/reports/dagger.md`) | pending | | | | |
@@ -114,6 +115,10 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
   - The *same* v3-4k s0 weights evaluated at 8k context score −0.716 ± 0.105 and accuse on 78% of episodes, vs −0.147 at 4k: Δ −0.568 ± 0.123.
   - So most of 8k s1's over-accusing comes from running at 8k context, not from what 8k training taught: every adapter descends from v2's 4k SFT.
   - The 8k rows can't be read as a clean test of seeing more history. DAgger is evaluated at both 4k and 8k for this reason.
+- **8k *training* adds nothing at 8k inference** (05:20, truly paired).
+  - v3-8k s3 and v3-4k s0 at 8k context ran on the same shared-secret worlds; 60/60 step-0 rosters were identical.
+  - Paired on n=90 identical worlds: 8k-trained minus 4k-trained, both at 8k inference, is **−0.073 ± 0.173**.
+- **Across the three 8k seeds**, the two ~350-step A100 seeds over-accuse (−0.777, −0.788) and the 693-step H100 seed abstains (−0.050). That is suggestive only: n=3, and step count is confounded with GPU.
 - **8k context does not fix the diagnosis.**
   - At *matched* training steps, 8k does not learn *whom* faster (WS4 readout).
     - Forced-accusation correctness at steps 0–99 is 4k .19 ± .04 vs 8k .35 ± .05: a head start, not a faster rate.
@@ -162,11 +167,11 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | `dbd083ca` | H100 80GB spot | 2.3711 | 00:24 → **04:21 (deleted)** | 3.95 | 9.37 | v3-8k s2 |
 | `924e81d8` | A100 80GB spot | 1.0794 | 00:49 → 07:30 | 6.68 | 7.21 | Gemini J1-lite, Qwen3-14B vLLM |
 | `68bbe201` | A100 80GB on-demand | 2.1589 | 01:01 → 07:30 | 6.48 | 14.00 | extra held-out evals (v2, v3-4k s0) to 03:30, then X2 DAgger box 1 |
-| `f4378173` | A100 80GB on-demand | 2.1589 | 01:08 → 07:30 | 6.37 | 13.74 | v3-8k s3, Meta PaliGemma 2 |
+| `f4378173` | A100 80GB on-demand | 2.1589 | 01:08 → **05:08 (deleted)** | 4.00 | 8.64 | v3-8k s3, Meta PaliGemma 2 |
 | `18acfa5d` | A100 80GB on-demand | 2.1589 | 02:17 → 07:30 | 5.22 | 11.26 | backup base eval, X1 agent runners |
 | `714d8144` | A100 80GB spot | 1.0794 | 02:39 → ~03:10 (preempted) | ~0.5 | ~0.54 | v3-4k s1 (lost) |
 | `e9ea8b2e` | A100 40GB on-demand | 1.5373 | 03:02 → 08:00 | 4.97 | 7.64 | X2 DAgger |
-| **total** | 9 instances (2 H100, 7 A100) | | | **≤ 46.7 GPU-h** | **≤ €109.3** | cap €300 |
+| **total** | 9 instances (2 H100, 7 A100) | | | **≤ 44.4 GPU-h** | **≤ €104.2** | cap €300 |
 
 **GPU-hours per workload** (upper bound, attributed from the per-instance table):
 - The Meta and X1 work shared boxes that were already running, so their *incremental* cost was €0. The share below is attributed, not extra spend.
@@ -175,12 +180,12 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 
 | workload | instances | GPU-h | € |
 |---|---|---|---|
-| **Tiebreaker** (v3 GRPO 4k + 8k seeds, held-out evals, base eval) | `3bb74f5a` (less Meta), `ac58df04`, `dbd083ca`, `68bbe201` to 03:35, `f4378173` (less Meta), `18acfa5d` to ~04:50, `714d8144` | ≤ 27.7 | ≤ 78.1 |
+| **Tiebreaker** (v3 GRPO 4k + 8k seeds, held-out evals, base eval) | `3bb74f5a` (less Meta), `ac58df04`, `dbd083ca`, `68bbe201` to 03:35, `f4378173` (less Meta), `18acfa5d` to ~04:50, `714d8144` | ≤ 25.3 | ≤ 73.0 |
 | **Gemini J1** (Qwen3-14B on self-hosted vLLM; ~1.8 h of it idle, §7) | `924e81d8` | ≤ 6.7 | ≤ 7.2 |
 | **Meta glasses** (YOLOv8n + PaliGemma 2 3B, shared) | `3bb74f5a` 0.15 h, `f4378173` 0.65 h | 0.8 | 2.1 (€0 incremental) |
 | **X1 agent hosting** (Gemini OpenCode runners on the box's CPUs) | `18acfa5d` after ~04:50 | ≤ 2.7 | ≤ 5.8 (€0 incremental before 04:50) |
 | **X2 DAgger** | `e9ea8b2e`, `68bbe201` from 03:35 | ≤ 8.9 | ≤ 16.1 |
-| **total** | | **≤ 46.7** | **≤ €109.3** |
+| **total** | | **≤ 44.4** | **≤ €104.2** |
 
 These are finalised from the ledger's delete times after the reapers.
 - **Cost per result:** the headline v3-4k s0 run cost about **€17** on the on-demand H100: 22:46 → 02:20, including setup failures, 2.0 h of training and the first 90 held-out episodes.

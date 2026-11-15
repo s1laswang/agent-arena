@@ -7,6 +7,8 @@ tool-call rate, and the paired difference vs each --pair reference (default base
 
     python -m fr8.analysis.ws4_table base=DIR v1=DIR[,DIR] v2=DIR v3s0=DIR ... [--pair base,v2] [--out OUT.md]
         [--info "v3s0=H100 · 250 GRPO steps" ...]   (per-model GPU / steps label; seeds column is computed)
+        [--cost "dagger=0.9,1.4" ...]                 (training GPU-hours,€ per model; appended columns, 'all' row)
+Appended columns: whom-precision (correct / accused), GPU-h, €.
 A DIR is an eval_hf run dir (contains episodes.jsonl); comma-join dirs to pool runs of one model.
 """
 from __future__ import annotations
@@ -57,7 +59,9 @@ def row(eps):
             "accused": sum(e["end_reason"] == "accused" for e in eps) / max(n, 1),
             "correct": sum(bool(e["correct"]) for e in eps) / max(n, 1),
             "abstain": sum(e["end_reason"] in ABSTAIN for e in eps) / max(n, 1),
-            "valid": 1 - inval / max(calls, 1)}
+            "valid": 1 - inval / max(calls, 1),
+            "whom": (sum(bool(e["correct"]) for e in eps if e["end_reason"] == "accused"),
+                     sum(e["end_reason"] == "accused" for e in eps))}
 
 
 def fmt(x, p=3):
@@ -70,6 +74,7 @@ def main(argv=None):
     ap.add_argument("--out", default=None)
     ap.add_argument("--pair", default="base", help="comma list of reference labels for paired Δ columns")
     ap.add_argument("--info", action="append", default=[], help="label=TEXT (GPU, steps) shown per row")
+    ap.add_argument("--cost", action="append", default=[], help="label=GPU_HOURS,EUR (training), appended columns")
     ap.add_argument("--paired", action="store_true",
                     help="seed-paired Δ. ONLY valid when every run shared one CANARY_WORLD_SECRET; without it each "
                          "eval process draws its own held-out worlds, so the default is a two-sample Δ over all n")
@@ -79,13 +84,14 @@ def main(argv=None):
         label, dirs = spec.split("=", 1)
         models[label] = load(dirs)
     info = dict(x.split("=", 1) for x in a.info)
+    cost = dict(x.split("=", 1) for x in a.cost)
     refs = [r for r in a.pair.split(",") if r in models]
     ref_scores = {r: {(e["tier"], e["seed"]): e["score"] for e in models[r]} for r in refs}
     tiers = sorted({e["tier"] for eps in models.values() for e in eps}, key=["easy", "medium", "hard"].index)
     dname = "paired n" if a.paired else "two-sample, n vs n"
     lines = ["| model | run (GPU · steps) | held-out seed idx | tier | n | score ± 95% CI | accused | correct | abstain | valid calls | "
-             + " | ".join(f"Δ vs {r} ({dname})" for r in refs) + " |",
-             "|---|---|---|---|---|---|---|---|---|---|" + "---|" * len(refs)]
+             + " | ".join(f"Δ vs {r} ({dname})" for r in refs) + (" | " if refs else "") + "whom-precision | GPU-h | € |",
+             "|---|---|---|---|---|---|---|---|---|---|" + "---|" * len(refs) + "---|---|---|"]
     for label, eps in models.items():
         for tier in tiers + ["all"]:
             sub = [e for e in eps if tier == "all" or e["tier"] == tier]
@@ -111,11 +117,14 @@ def main(argv=None):
                     continue
                 ha, hr = (0.0 if h != h else h for h in (ha, hr))   # n<2 → treat as no spread
                 deltas.append(f"{ma - mr:+.3f} ± {math.sqrt(ha * ha + hr * hr):.3f} ({len(sub)} vs {len(rsub)})")
+            k, na = r["whom"]
+            gh, eur = (cost.get(label, "–,–").split(",") + ["–"])[:2] if tier == "all" else ("", "")
+            extra = f"{k}/{na}" + (f" = {k / na:.2f}" if na else "") + f" | {gh} | {eur}"
             sd = sorted({e["seed"] for e in sub})
             seeds = f"{sd[0]}–{sd[-1]} ({len(sd)})"
             lines.append(f"| {label} | {info.get(label, '–')} | {seeds} | {tier} | {r['n']} | {fmt(r['score'])} ± {fmt(r['ci'])} | {fmt(r['accused'], 2)} | "
                          f"{fmt(r['correct'], 2)} | {fmt(r['abstain'], 2)} | {fmt(r['valid'], 2)} | "
-                         + " | ".join(deltas) + " |")
+                         + " | ".join(deltas) + (" | " if deltas else "") + extra + " |")
     txt = "\n".join(lines) + ("\n\nEval: each model plays full held-out episodes alone (train.eval_hf, greedy, "
                               "KV reuse, call cap 120). v3 TRAINING used solver rollouts for credit assignment "
                               "(decision-point GRPO); evaluation never does.\n"

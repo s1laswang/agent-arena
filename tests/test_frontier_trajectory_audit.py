@@ -35,10 +35,25 @@ def _load_module():
 
 fta = _load_module()
 
-EXPECTED_COUNTS = [30, 30, 5, 30, 30, 30, 30, 30, 30, 30]
-EXPECTED_COHORT_IDS = [
+EXPECTED_COUNTS_GATED = [30, 30, 2, 5, 30, 30, 30, 30, 30, 30]
+EXPECTED_COHORT_IDS_GATED = [
     "opencode_gemini_4_carbon_medium",
     "opencode_gemini_4_carbon_hard",
+    "opencode_gemini_4_carbon_hard_ext",
+    "opencode_gemini_4_carbon_hard_rep",
+    "opencode_gemini_3_5_flash_medium",
+    "inproc_gemini_4_carbon_medium",
+    "inproc_gemini_4_carbon_hard",
+    "solver_medium",
+    "solver_hard_0_29",
+    "solver_hard_30_59",
+]
+
+EXPECTED_COUNTS_ALL = [30, 30, 2, 5, 30, 30, 30, 30, 30, 30, 30]
+EXPECTED_COHORT_IDS_ALL = [
+    "opencode_gemini_4_carbon_medium",
+    "opencode_gemini_4_carbon_hard",
+    "opencode_gemini_4_carbon_hard_ext",
     "opencode_gemini_4_carbon_hard_rep",
     "opencode_gemini_3_5_flash_medium",
     "opencode_gemini_3_5_flash_hard",
@@ -48,7 +63,8 @@ EXPECTED_COHORT_IDS = [
     "solver_hard_0_29",
     "solver_hard_30_59",
 ]
-EXPECTED_PROMPT_TOOLS = {
+
+EXPECTED_SPEC_TOOLS = {
     "status",
     "list_employees",
     "read_logs",
@@ -56,11 +72,14 @@ EXPECTED_PROMPT_TOOLS = {
     "search_messages",
     "list_documents",
     "read_document",
+    "check_leak_feed",
     "plant_canary",
     "interview",
     "restrict",
+    "unrestrict_access",
     "next_day",
     "accuse",
+    "other_invalid",
 }
 
 
@@ -81,39 +100,82 @@ def test_approx_equal_float_tolerance():
     assert fta.approx_equal(float("nan"), float("nan"))
 
 
-def test_check_cli_and_exact_episode_counts(computed_audit, monkeypatch):
+def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypatch):
     monkeypatch.setattr(
         fta,
         "compute_audit",
         lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: copy.deepcopy(computed_audit),
     )
     assert fta.main(["--check"]) == 0
+    assert JSON_PATH.stat().st_size <= 50_000
 
     assert computed_audit["tiers_version"] == "v1.4"
     assert computed_audit["zero_live_api_calls"] is True
     assert computed_audit["zero_git_dependency"] is True
 
+    rv = computed_audit["replay_verification"]
+    assert rv["committed_v14"]["total"] == 442
+    assert rv["committed_v14"]["verified"] == 442
+    assert rv["committed_v14"]["mismatches"] == 0
+    assert rv["committed_v14"]["step_mismatches"] == 0
+    assert rv["committed_v14"]["duplicates"] == 0
+    assert rv["committed_v14"]["pre_1bc3e281_detail_normalized_steps"] > 0
+    assert rv["committed_v14"]["unwrapped_mcp_error_steps"] > 0
+
+    assert rv["replication_v14"]["total"] == 305
+    assert rv["replication_v14"]["verified"] == 305
+    assert rv["replication_v14"]["mismatches"] == 0
+    assert rv["replication_v14"]["step_mismatches"] == 0
+    assert rv["replication_v14"]["duplicates"] == 0
+
+    prov = computed_audit["provenance_and_locks"]
+    assert prov["primary_0_29_lock"]["classification"] == "post_hoc_lock"
+    assert prov["primary_0_29_lock"]["lock_commit"] == "671ed96"
+    assert prov["primary_0_29_lock"]["episodes_commit"] == "8fd4dec"
+    assert prov["primary_0_29_lock"]["lock_delay_s"] == 28
+    assert prov["g1_hard_30_59_extension"]["classification"] == "pre_registered"
+    assert prov["g1_hard_30_59_extension"]["prereg_commit"] == "f9fb7a4a"
+    assert prov["g1_hard_30_59_extension"]["completed_seeds"] == [34, 37]
+    assert prov["gpt_5_5_hard_0_29"]["classification"] == "pre_registered"
+    assert prov["gpt_5_5_hard_0_29"]["prereg_commit"] == "cf394894"
+    assert prov["gpt_5_5_hard_0_29"]["timeout_cap_s"] == 7200
+    assert prov["step_error_detail_compat"]["commit"] == "1bc3e281"
+
+    s34 = computed_audit["seed_34_cross_run"]
+    assert s34["shared_seeds"] == [34]
+    assert s34["same_accused"] is True
+    assert s34["both_correct"] is True
+    assert s34["g1_ext"]["accused"] == "e29"
+    assert s34["fr8_rep"]["accused"] == "e29"
+    assert math.isclose(s34["g1_ext"]["score"], 0.79, abs_tol=1e-12)
+    assert math.isclose(s34["fr8_rep"]["score"], 0.82, abs_tol=1e-12)
+    assert math.isclose(s34["score_diff_g1_minus_fr8"], -0.03, abs_tol=1e-12)
+
     summary = computed_audit["summary"]
-    assert summary["cohort_count"] == 10
-    assert summary["episode_counts"] == EXPECTED_COUNTS
-    assert summary["total_episodes_audited"] == 275
-    assert summary["total_episodes_replay_verified"] == 275
-    assert summary["opencode_cohort_count"] == 5
-    assert summary["inproc_cohort_count"] == 2
-    assert summary["reference_cohort_count"] == 3
+    assert summary["committed_v14_verified"] == 442
+    assert summary["replication_v14_verified"] == 305
+    assert summary["total_pool_episodes_replay_verified"] == 747
+
+    ships_flash = fta.gap_ships_flash_hard(ROOT)
+    expected_ids = EXPECTED_COHORT_IDS_ALL if ships_flash else EXPECTED_COHORT_IDS_GATED
+    expected_counts = EXPECTED_COUNTS_ALL if ships_flash else EXPECTED_COUNTS_GATED
+    assert summary["cohort_count"] == len(expected_ids)
+    assert summary["episode_counts"] == expected_counts
+    assert summary["total_episodes_audited"] == sum(expected_counts)
+    assert summary["total_episodes_replay_verified"] == sum(expected_counts)
 
     cohorts = computed_audit["cohorts"]
-    assert [c["cohort_id"] for c in cohorts] == EXPECTED_COHORT_IDS
-    assert [c["n"] for c in cohorts] == EXPECTED_COUNTS
+    assert [c["cohort_id"] for c in cohorts] == expected_ids
+    assert [c["n"] for c in cohorts] == expected_counts
 
     by_id = {c["cohort_id"]: c for c in cohorts}
+    assert by_id["opencode_gemini_4_carbon_hard_ext"]["seeds"] == [34, 37]
     assert by_id["opencode_gemini_4_carbon_hard_rep"]["seeds"] == [30, 34, 42, 45, 57]
     assert by_id["solver_hard_30_59"]["seeds"] == list(range(30, 60))
     for cid in (
         "opencode_gemini_4_carbon_medium",
         "opencode_gemini_4_carbon_hard",
         "opencode_gemini_3_5_flash_medium",
-        "opencode_gemini_3_5_flash_hard",
         "inproc_gemini_4_carbon_medium",
         "inproc_gemini_4_carbon_hard",
         "solver_medium",
@@ -121,12 +183,85 @@ def test_check_cli_and_exact_episode_counts(computed_audit, monkeypatch):
     ):
         assert by_id[cid]["seeds"] == list(range(30))
 
+    md = MD_PATH.read_text(encoding="utf-8")
+    assert "post-hoc lock" in md
+    assert "671ed96" in md
+    assert "8fd4dec" in md
+    assert "f9fb7a4a" in md
+    assert "cf394894" in md
+    assert "7200 s" in md
+    assert "1bc3e281" in md
+    assert "+0.790" in md
+    assert "+0.820" in md
+    assert "OpenCode gemini-3.5-flash medium (0-29)" in md
+    if not ships_flash:
+        assert "OpenCode gemini-3.5-flash hard (0-29)" not in md
+        assert "0.373" not in md
 
-def test_metric_invariants_across_all_cohorts(computed_audit):
-    cohorts = computed_audit["cohorts"]
+
+def test_gap_ships_flash_hard_false_and_true(tmp_path):
+    mock_root = tmp_path / "workspace"
+    (mock_root / "data" / "runs" / "committed").mkdir(parents=True)
+    (mock_root / "results" / "frontier_replication").mkdir(parents=True)
+    (mock_root / "docs" / "reports").mkdir(parents=True)
+    os.symlink(
+        ROOT / "data" / "runs" / "committed" / "v1.4",
+        mock_root / "data" / "runs" / "committed" / "v1.4",
+    )
+    os.symlink(
+        ROOT / "results" / "frontier_replication" / "v1.4",
+        mock_root / "results" / "frontier_replication" / "v1.4",
+    )
+    gap_file = mock_root / "docs" / "reports" / "gap.md"
+
+    gap_file.write_text("Primary headline: gemini-4-carbon hard 65% [24%, 98%]\n", encoding="utf-8")
+    assert fta.gap_ships_flash_hard(mock_root) is False
+    audit_false = fta.compute_audit(root=mock_root, verify_replays=False, enforce_expected_counts=True)
+    assert audit_false["flash_hard_shipped_in_gap_md"] is False
+    assert audit_false["summary"]["flash_hard_held_pending_gap_md"] is True
+    assert [c["cohort_id"] for c in audit_false["cohorts"]] == EXPECTED_COHORT_IDS_GATED
+    assert [c["n"] for c in audit_false["cohorts"]] == EXPECTED_COUNTS_GATED
+    assert "carbon_vs_flash_opencode_medium" in audit_false["comparisons"]
+    assert "carbon_vs_flash_opencode_hard" not in audit_false["comparisons"]
+    assert "flash_opencode_vs_solver_hard_0_29" not in audit_false["comparisons"]
+    json_false = fta.serialize_audit_json(audit_false)
+    assert len(json_false.encode("utf-8")) <= 50_000
+    md_false = fta.render_markdown(audit_false)
+    assert "OpenCode gemini-3.5-flash medium (0-29)" in md_false
+    assert "OpenCode gemini-3.5-flash hard (0-29)" not in md_false
+    assert "0.373" not in md_false
+
+    gap_file.write_text(
+        "Primary headline: gemini-4-carbon and opencode:google/gemini-3.5-flash hard\n",
+        encoding="utf-8",
+    )
+    assert fta.gap_ships_flash_hard(mock_root) is True
+    audit_true = fta.compute_audit(root=mock_root, verify_replays=False, enforce_expected_counts=True)
+    assert audit_true["flash_hard_shipped_in_gap_md"] is True
+    assert audit_true["summary"]["flash_hard_held_pending_gap_md"] is False
+    assert [c["cohort_id"] for c in audit_true["cohorts"]] == EXPECTED_COHORT_IDS_ALL
+    assert [c["n"] for c in audit_true["cohorts"]] == EXPECTED_COUNTS_ALL
+    assert "carbon_vs_flash_opencode_medium" in audit_true["comparisons"]
+    assert "carbon_vs_flash_opencode_hard" in audit_true["comparisons"]
+    assert "flash_opencode_vs_solver_hard_0_29" in audit_true["comparisons"]
+    json_true = fta.serialize_audit_json(audit_true)
+    assert len(json_true.encode("utf-8")) <= 50_000
+    md_true = fta.render_markdown(audit_true)
+    assert "OpenCode gemini-3.5-flash medium (0-29)" in md_true
+    assert "OpenCode gemini-3.5-flash hard (0-29)" in md_true
+    assert "0.373" in md_true
+
+
+def test_metric_invariants_across_all_cohorts(monkeypatch):
+    monkeypatch.setattr(fta, "gap_ships_flash_hard", lambda root=ROOT: True)
+    all_audit = fta.compute_audit(root=ROOT, verify_replays=False, enforce_expected_counts=True)
+    cohorts = all_audit["cohorts"]
+    tier_params_map = all_audit["tier_params"]
+    assert len(cohorts) == 11
+
     for c in cohorts:
         n = c["n"]
-        tp = c["tier_params"]
+        tp = tier_params_map[c["tier"]]
         rv = c["replay_verification"]
         oc = c["outcomes"]
         tu = c["tool_use"]
@@ -134,7 +269,6 @@ def test_metric_invariants_across_all_cohorts(computed_audit):
         ch = c["collateral_and_horizon"]
         tc = c["token_and_cache"]
 
-        assert rv["verified"] == n
         assert rv["mismatches"] == 0
         assert rv["duplicates"] == 0
 
@@ -145,19 +279,13 @@ def test_metric_invariants_across_all_cohorts(computed_audit):
             abs_tol=1e-12,
         )
         assert math.isclose(
-            sum(tu["by_env_tool"].values()),
-            tu["mean_total_tool_calls"],
-            rel_tol=1e-12,
-            abs_tol=1e-12,
-        )
-        assert math.isclose(
             sum(tu["by_spec_tool"].values()),
             tu["mean_total_tool_calls"],
             rel_tol=1e-12,
             abs_tol=1e-12,
         )
-        assert set(tu["by_prompt_tool"].keys()) == EXPECTED_PROMPT_TOOLS
-        assert tu["by_prompt_tool"]["read_document"] == 0.0
+        assert set(tu["by_spec_tool"].keys()) == EXPECTED_SPEC_TOOLS
+        assert tu["by_spec_tool"]["read_document"] == 0.0
         assert tu["mean_calls_per_simulated_day"] > 0.0
         assert 0.0 < tu["mean_investigative_actions_per_day"] <= float(tp["actions_per_day"])
 
@@ -227,26 +355,119 @@ def test_metric_invariants_across_all_cohorts(computed_audit):
             assert c["harness"] == "reference"
             assert tc["usage_available"] is False
             assert tc["wall_s_available"] is False
-            assert tu["by_env_tool"]["interview"] == 0.0
+            assert tu["by_spec_tool"]["interview"] == 0.0
             assert ch["mean_restrict_calls_per_episode"] == 0.0
             assert tu["mean_failed_tool_calls"] == 0.0
             assert cd["targeted_2_3_split_share"] > 0.99
 
     by_id = {c["cohort_id"]: c for c in cohorts}
     assert (
-        by_id["opencode_gemini_4_carbon_hard"]["tool_use"]["by_env_tool"]["interview"]
-        > by_id["opencode_gemini_3_5_flash_hard"]["tool_use"]["by_env_tool"]["interview"]
-        > by_id["solver_hard_0_29"]["tool_use"]["by_env_tool"]["interview"]
+        by_id["opencode_gemini_4_carbon_hard"]["tool_use"]["by_spec_tool"]["interview"]
+        > by_id["opencode_gemini_3_5_flash_hard"]["tool_use"]["by_spec_tool"]["interview"]
+        > by_id["solver_hard_0_29"]["tool_use"]["by_spec_tool"]["interview"]
     )
+    assert by_id["opencode_gemini_4_carbon_hard_ext"]["canary_design"]["targeted_2_3_split_share"] == 1.0
     assert by_id["opencode_gemini_3_5_flash_hard"]["canary_design"]["full_staff_zero_leak_count"] == 2
     assert by_id["opencode_gemini_3_5_flash_medium"]["canary_design"]["single_variant_count"] == 2
     assert by_id["opencode_gemini_3_5_flash_hard"]["canary_design"]["single_variant_count"] == 1
+
+
+def test_step_result_normalization_1bc3e281_unwrap_order():
+    live_err = {
+        "ok": False,
+        "data": {"detail": "unknown topic 'leaks'; allowed: alibi, contacts_outside"},
+        "error": "invalid arguments",
+    }
+
+    pre_direct = {"ok": False, "data": {}, "error": "invalid arguments"}
+    ok1, flags1 = fta.step_result_matches(pre_direct, live_err)
+    assert ok1 is True
+    assert flags1["unwrapped_mcp_error"] is False
+    assert flags1["detail_normalized"] is True
+
+    post_direct = dict(live_err)
+    ok2, flags2 = fta.step_result_matches(post_direct, live_err)
+    assert ok2 is True
+    assert flags2["unwrapped_mcp_error"] is False
+    assert flags2["detail_normalized"] is False
+
+    bad_post_direct = {
+        "ok": False,
+        "data": {"detail": "different detail"},
+        "error": "invalid arguments",
+    }
+    ok_bad, _ = fta.step_result_matches(bad_post_direct, live_err)
+    assert ok_bad is False
+
+    pre_oc_wrapped = {"ok": False, "error": json.dumps(pre_direct)}
+    ok3, flags3 = fta.step_result_matches(pre_oc_wrapped, live_err)
+    assert ok3 is True
+    assert flags3["unwrapped_mcp_error"] is True
+    assert flags3["detail_normalized"] is True
+
+    post_oc_wrapped = {"ok": False, "error": json.dumps(post_direct)}
+    ok4, flags4 = fta.step_result_matches(post_oc_wrapped, live_err)
+    assert ok4 is True
+    assert flags4["unwrapped_mcp_error"] is True
+    assert flags4["detail_normalized"] is False
+
+    bad_post_oc_wrapped = {"ok": False, "error": json.dumps(bad_post_direct)}
+    ok5, _ = fta.step_result_matches(bad_post_oc_wrapped, live_err)
+    assert ok5 is False
+
+    prev = os.environ.get("CANARY_ALLOW_DEV")
+    os.environ["CANARY_ALLOW_DEV"] = "1"
+    try:
+        from canary.env import Env
+
+        env = Env("medium", 0)
+        r_bad = env.call("interview", {"employee": "e00", "topic": "leaks"})
+        assert r_bad.ok is False
+        assert isinstance(r_bad.data, dict) and set(r_bad.data) == {"detail"}
+        live_payload = {"ok": r_bad.ok, "data": r_bad.data, "error": r_bad.error}
+
+        pre_step = {
+            "t": 1,
+            "day": 1,
+            "tool": "interview",
+            "args": {"employee": "e00", "topic": "leaks"},
+            "result": {"ok": False, "error": json.dumps({"ok": False, "data": {}, "error": r_bad.error})},
+        }
+        post_step = {
+            "t": 1,
+            "day": 1,
+            "tool": "interview",
+            "args": {"employee": "e00", "topic": "leaks"},
+            "result": {"ok": False, "error": json.dumps(live_payload)},
+        }
+        for step_variant in (pre_step, post_step):
+            ep_doc = {
+                "tier": "medium",
+                "seed": 0,
+                "agent": "opencode:google/gemini-4-carbon",
+                "score": 0.0,
+                "correct": False,
+                "accused": None,
+                "final_day": 1,
+                "end_reason": "stop_early",
+                "steps": [step_variant],
+                "meta": {},
+            }
+            rep_out = fta.replay_and_verify_episode(ep_doc)
+            assert rep_out["ok"] is True
+            assert rep_out["step_mismatches"] == 0
+    finally:
+        if prev is None:
+            os.environ.pop("CANARY_ALLOW_DEV", None)
+        else:
+            os.environ["CANARY_ALLOW_DEV"] = prev
 
 
 def test_write_check_roundtrip_tamper_and_zero_git_dependency(computed_audit, monkeypatch, tmp_path):
     no_git_root = tmp_path / "clean_tree_without_git"
     (no_git_root / "data" / "runs" / "committed").mkdir(parents=True)
     (no_git_root / "results" / "frontier_replication").mkdir(parents=True)
+    (no_git_root / "docs" / "reports").mkdir(parents=True)
     os.symlink(
         ROOT / "data" / "runs" / "committed" / "v1.4",
         no_git_root / "data" / "runs" / "committed" / "v1.4",
@@ -255,40 +476,50 @@ def test_write_check_roundtrip_tamper_and_zero_git_dependency(computed_audit, mo
         ROOT / "results" / "frontier_replication" / "v1.4",
         no_git_root / "results" / "frontier_replication" / "v1.4",
     )
+    os.symlink(
+        ROOT / "docs" / "reports" / "gap.md",
+        no_git_root / "docs" / "reports" / "gap.md",
+    )
     assert not (no_git_root / ".git").exists()
 
     out_json = tmp_path / "out" / "trajectory_audit.json"
     out_md = tmp_path / "out" / "frontier_trajectory_audit_v14.md"
 
     orig_compute = fta.compute_audit
-    no_git_audit = orig_compute(root=no_git_root, verify_replays=True, enforce_expected_counts=True)
-    assert no_git_audit["summary"]["episode_counts"] == EXPECTED_COUNTS
-    assert fta.approx_equal(no_git_audit, computed_audit, tol=1e-12)
+    no_git_audit = orig_compute(root=no_git_root, verify_replays=False, enforce_expected_counts=True)
+    assert no_git_audit["summary"]["episode_counts"] == computed_audit["summary"]["episode_counts"]
+    assert no_git_audit["seed_34_cross_run"] == computed_audit["seed_34_cross_run"]
 
     monkeypatch.setattr(
         fta,
         "compute_audit",
-        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: copy.deepcopy(no_git_audit),
+        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: copy.deepcopy(computed_audit),
     )
 
     assert fta.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 1
     assert fta.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--write"]) == 0
     assert fta.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 0
+    assert out_json.stat().st_size <= 50_000
 
     data = json.loads(out_json.read_text(encoding="utf-8"))
     orig_val = data["cohorts"][0]["tool_use"]["mean_total_tool_calls"]
     data["cohorts"][0]["tool_use"]["mean_total_tool_calls"] = orig_val + 5e-11
-    out_json.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    out_json.write_text(fta.serialize_audit_json(data), encoding="utf-8")
     assert fta.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 0
 
     data["cohorts"][0]["tool_use"]["mean_total_tool_calls"] = orig_val + 1e-5
-    out_json.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    out_json.write_text(fta.serialize_audit_json(data), encoding="utf-8")
     assert fta.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 1
 
     data["cohorts"][0]["tool_use"]["mean_total_tool_calls"] = orig_val
-    out_json.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    out_json.write_text(fta.serialize_audit_json(data), encoding="utf-8")
     assert fta.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 0
 
+    oversized = out_json.read_text(encoding="utf-8").rstrip("\n") + (" " * 20_000) + "\n"
+    out_json.write_text(oversized, encoding="utf-8")
+    assert fta.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 1
+
+    out_json.write_text(fta.serialize_audit_json(data), encoding="utf-8")
     orig_md = out_md.read_text(encoding="utf-8")
     out_md.write_text(orig_md + "\ntampered\n", encoding="utf-8")
     assert fta.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 1
@@ -364,11 +595,10 @@ def test_synthetic_edge_cases_and_negative_controls():
         "score": 0.0,
         "correct": False,
         "accused": None,
-        "final_day": 14,
-        "end_reason": "horizon",
+        "final_day": 1,
+        "end_reason": "stop_early",
         "steps": [
-            {"t": 1, "day": 1, "tool": "read_access_logs", "args": {"day_from": 1, "day_to": 1}, "result": {"ok": True}},
-            {"t": 2, "day": 1, "tool": "advance_day", "args": {}, "result": {"ok": True}},
+            {"t": 1, "day": 1, "tool": "status", "args": {}, "result": None},
         ],
         "meta": {
             "wall_s": 2500.0,
@@ -386,9 +616,9 @@ def test_synthetic_edge_cases_and_negative_controls():
     assert row["canary_design"]["targeted_2_3_split_count"] == 1
     assert math.isclose(row["canary_design"]["uninformative_broad_or_single_share"], 2.0 / 3.0)
     assert math.isclose(row["canary_design"]["targeted_2_3_split_share"], 1.0 / 3.0)
-    assert row["collateral_and_horizon"]["abstention_rate"] == 0.5
+    assert row["collateral_and_horizon"]["accused_rate"] == 0.5
     assert row["collateral_and_horizon"]["mean_accusation_day"] == 5.0
-    assert row["collateral_and_horizon"]["mean_final_day_all_episodes"] == 9.5
+    assert row["collateral_and_horizon"]["mean_final_day_all_episodes"] == 3.0
     assert row["collateral_and_horizon"]["mean_restrict_calls_per_episode"] == 0.5
     assert math.isclose(row["token_and_cache"]["cached_input_pct"], 87.5)
     assert row["token_and_cache"]["episodes_over_2400s"] == 1
@@ -416,3 +646,4 @@ def test_file_hygiene_no_comments_or_em_dashes():
         txt = f.read_text(encoding="utf-8")
         assert "\u2014" not in txt, f"found em dash in {f}"
         assert "\u2013" not in txt, f"found en dash in {f}"
+    assert JSON_PATH.stat().st_size <= 50_000

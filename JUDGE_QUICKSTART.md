@@ -9,12 +9,11 @@ On Canary's `hard` tier (`n=30` pre-registered dev seeds `0-29`, paired on ident
 | Cell (Rules v1.4) | n | Agent +/- 95% CI | Solver +/- 95% CI | Raw / Solver [95% CI] | Luck-Adj. / Solver [95% CI] |
 |---|---:|---:|---:|---:|---:|
 | **OpenCode + `google/gemini-4-carbon` over MCP (`hard`, headline)** | **30** | **`+0.322 +/- 0.199`** | **`+0.499 +/- 0.119`** | **`65% [24%, 98%]`** | **`72% [52%, 91%]`** (`+0.360`) |
-| **OpenCode + `gemini-3.5-flash` over MCP (`hard`, 2nd model)** | **30** | **`+0.373 +/- 0.177`** | **`+0.499 +/- 0.119`** | **`75% [36%, 123%]`** | **`22% [-23%, 63%]`** (`+0.110`) |
 | In-process `gemini-4-carbon` (`hard`, parity disclosure) | 30 | `+0.473 +/- 0.118` | `+0.499 +/- 0.119` | `95% [62%, 140%]` | `84% [65%, 106%]` (`+0.421`) |
 | OpenCode + `google/gemini-4-carbon` over MCP (`medium`, parity disclosure) | 30 | `+0.713 +/- 0.042` | `+0.645 +/- 0.087` | `111% [99%, 127%]` | `101% [85%, 119%]` (`+0.652`) |
 
 - **Zero & random baselines:** `do_nothing = stop_early = cheat_probe = +0.000` exact ([`results/judge_table.md`](results/judge_table.md)); day-1 random accusation `guess_day1` on `hard` averages **`-0.95`** (`-0.953`, [`guess_day1_hard_judge40.md`](results/solver_range/guess_day1_hard_judge40.md)).
-- **Why luck-adjustment matters:** Each accusation is scored by exact posterior EV `P * V - (1 - P)` (`0` if abstaining). `gemini-3.5-flash` won 7 low-posterior gambles (`P = 0.10..0.481`) by luck; removing coin-flip variance drops it from `75%` raw to `22% [-23%, 63%]`.
+- **Why luck-adjustment matters:** Each accusation is scored by exact posterior EV `P * V - (1 - P)` (`0` if abstaining) under the solver's posterior at the moment of accusation, separating decision quality from coin-flip outcome variance.
 
 ## 2. 60-Second Keyless Reproduction (No API Keys, No Docker)
 

@@ -4,6 +4,7 @@ import importlib.util
 import json
 import math
 from pathlib import Path
+import sys
 from typing import Any
 
 from canary.analysis.accuse import audit_episode
@@ -92,12 +93,16 @@ def _load_solver_hard_by_seed() -> tuple[list[Path], dict[int, dict[str, Any]]]:
 
 
 def _deduplicate_ext8(
-    committed_g1: list[dict[str, Any]],
+    committed_ext: list[dict[str, Any]],
     fleet_eps: list[dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    committed_seeds = {ep["seed"] for ep in committed_g1}
-    non_overlapping_fleet = [ep for ep in fleet_eps if ep["seed"] not in committed_seeds]
-    combined = sorted(committed_g1 + non_overlapping_fleet, key=lambda ep: ep["seed"])
+    g1_seed_set = set(COMMITTED_G1_SEEDS)
+    g1_eps = [ep for ep in committed_ext if ep["seed"] in g1_seed_set]
+    assert [ep["seed"] for ep in g1_eps] == COMMITTED_G1_SEEDS
+    non_overlapping_fleet = [ep for ep in fleet_eps if ep["seed"] not in g1_seed_set]
+    combined = sorted(g1_eps + non_overlapping_fleet, key=lambda ep: ep["seed"])
+    if len(committed_ext) == len(EXT8_SEEDS):
+        assert committed_ext == combined
     return non_overlapping_fleet, combined
 
 
@@ -200,7 +205,8 @@ def test_deterministic_loading_and_deduplication_rule(monkeypatch):
     primary_eps = _read_valid_episodes(PRIMARY_HARD_PATH)
     shard_paths, solver_by_seed = _load_solver_hard_by_seed()
 
-    assert [ep["seed"] for ep in committed_g1] == COMMITTED_G1_SEEDS
+    committed_seeds = [ep["seed"] for ep in committed_g1]
+    assert committed_seeds in (COMMITTED_G1_SEEDS, EXT8_SEEDS)
     assert [ep["seed"] for ep in fleet_eps] == FLEET_SEEDS
     assert [ep["seed"] for ep in primary_eps] == PRIMARY_SEEDS
     assert [_read_valid_episodes(p)[0]["seed"] for p in shard_paths] == [0, 20, 30]
@@ -210,7 +216,8 @@ def test_deterministic_loading_and_deduplication_rule(monkeypatch):
         assert ep["tier"] == "hard"
         assert ep["agent"] == "opencode:google/gemini-4-carbon"
 
-    overlap = sorted({ep["seed"] for ep in committed_g1} & {ep["seed"] for ep in fleet_eps})
+    g1_only = [ep for ep in committed_g1 if ep["seed"] in set(COMMITTED_G1_SEEDS)]
+    overlap = sorted({ep["seed"] for ep in g1_only} & {ep["seed"] for ep in fleet_eps})
     assert overlap == [34]
 
     non_overlapping_fleet, dedup_ext8 = _deduplicate_ext8(committed_g1, fleet_eps)
@@ -380,3 +387,20 @@ def test_exact_agreement_with_ext8_combined_and_pooled38_tables():
     assert abs(wrong_metrics["mean"] - ext8_table[0]["mean"]) > 1e-3
     assert abs(wrong_metrics["p_accused"] - ext8_table[0]["p_accused"]) > 1e-2
     assert abs(wrong_metrics["post_expected"] - ext8_table[0]["post_expected"]) > 1e-2
+
+
+def test_parity_supports_pr3_ext8_committed_layout(tmp_path: Path, monkeypatch):
+    committed_ext = _read_valid_episodes(COMMITTED_G1_PATH)
+    fleet_eps = _read_valid_episodes(FLEET_EXT_PATH)
+    _, dedup_ext8 = _deduplicate_ext8(committed_ext, fleet_eps)
+    assert [ep["seed"] for ep in dedup_ext8] == EXT8_SEEDS
+
+    sim_committed_path = tmp_path / "episodes.jsonl"
+    sim_committed_path.write_text(
+        "\n".join(json.dumps(ep) for ep in dedup_ext8) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(sys.modules[__name__], "COMMITTED_G1_PATH", sim_committed_path)
+    test_deterministic_loading_and_deduplication_rule(monkeypatch)
+    test_accuse_posteriors_and_luck_adjusted_scores_on_ext8()
+    test_exact_agreement_with_ext8_combined_and_pooled38_tables()

@@ -1,0 +1,45 @@
+{
+  "baseline_default_mole": {
+    "grok_tactics_accuracy": 1.0,
+    "grok_tactics_mean": 0.5967,
+    "heuristic_accuracy": 0.0,
+    "heuristic_mean": -1.0,
+    "solver_accuracy": 1.0,
+    "solver_mean": 0.62
+  },
+  "command": "/tmp/fleet-silas/canary-venv/bin/python scripts/run_role_adaptive_mole.py --llm gemini:gemini-4-carbon --tier hard --seeds 0 1 2 --jobs 6 --out results/gemini_roles/adaptive_mole/arena-live-carbon-hard012",
+  "commit": "03c676c1d3cd42629994ac434c056758a75148e0",
+  "environment_scope": "arena mode, not the judged v1.4 environment",
+  "grok_tactics_accuracy": 0.0,
+  "grok_tactics_mean": 0.0,
+  "heuristic_accuracy": 0.0,
+  "heuristic_mean": -1.0,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "mole_decisions_count": 97,
+  "mole_llm_errors": 0,
+  "mole_rejected_moves_count": 0,
+  "role": "adaptive_mole",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "solvability_verified": true,
+  "solver_accuracy": 1.0,
+  "solver_mean": 0.46,
+  "subrole": "live_arena_mole_hard",
+  "tier": "hard",
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T13:38:34Z",
+  "usage": {
+    "cached": 0,
+    "calls": 97,
+    "cost_usd": 0.299416,
+    "in": 86618,
+    "latency_s": 1070.002,
+    "out": 6331,
+    "thinking": 6287,
+    "total_tokens": 99236
+  }
+}

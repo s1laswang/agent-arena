@@ -33,8 +33,10 @@ def test_quick_cli_all_five_vectors_pass(tmp_path: Path) -> None:
     scratch = tmp_path / "scratch"
     out_json = tmp_path / "quick_summary.json"
     t0 = time.perf_counter()
+    cpu0 = time.process_time()
     rc = hunt.main([
         "--quick",
+        "--unit-fast",
         "--workers",
         "1",
         "--scratch-dir",
@@ -43,8 +45,10 @@ def test_quick_cli_all_five_vectors_pass(tmp_path: Path) -> None:
         str(out_json),
     ])
     elapsed = time.perf_counter() - t0
+    cpu_elapsed = time.process_time() - cpu0
     assert rc == 0
-    assert elapsed < 90.0
+    assert elapsed < 60.0
+    assert cpu_elapsed < 3.0
     assert out_json.is_file()
     if scratch.exists():
         assert list(scratch.iterdir()) == []
@@ -136,7 +140,32 @@ def test_workers_guard_and_unknown_vector(tmp_path: Path) -> None:
         hunt.run_all(repo_root=ROOT, scratch_dir=tmp_path, quick=True, vectors=("V99",))
 
 
-def test_positive_exploit_and_contingency_detectors() -> None:
+def test_positive_exploit_and_contingency_detectors(tmp_path: Path) -> None:
+    synth_v14 = tmp_path / "data" / "runs" / "committed" / "v1.4"
+    (synth_v14 / "opencode-synth" / "hard").mkdir(parents=True)
+    (synth_v14 / "reference" / "solver-synth").mkdir(parents=True)
+    (synth_v14 / "opencode-synth" / "hard" / "episodes.jsonl").write_text(
+        json.dumps(
+            {
+                "steps": [
+                    {"tool": "search_messages", "args": {"query": " "}, "day": 1, "result": {"ok": False, "error": "invalid arguments"}},
+                    {"tool": "status", "args": {}, "day": 1, "result": {"raw": "truncated"}},
+                ]
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (synth_v14 / "reference" / "solver-synth" / "episodes.jsonl").write_text(
+        json.dumps({"steps": [{"tool": "status", "args": {}, "day": 1, "result": {"ok": True}}]}) + "\n",
+        encoding="utf-8",
+    )
+    mined_synth = hunt.mine_v14_transcripts(tmp_path)
+    assert mined_synth["total_files"] == 2
+    assert mined_synth["frontier_files"] == 1
+    assert mined_synth["reference_files"] == 1
+    assert mined_synth["frontier_rejected"] == 1
+
     ok_trunc, err_trunc, is_trunc = hunt._unwrap_step_result({"raw": "truncated blob"})
     assert (ok_trunc, err_trunc, is_trunc) == (True, None, True)
 

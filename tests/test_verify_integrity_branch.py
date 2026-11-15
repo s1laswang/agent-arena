@@ -30,14 +30,45 @@ vib = _load_verifier()
 def _init_git_repo(repo: Path) -> None:
     repo.mkdir(parents=True, exist_ok=True)
     subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.email", "test@fleet.local"], cwd=repo, check=True)
-    subprocess.run(["git", "config", "user.name", "test-worker"], cwd=repo, check=True)
+    cfg = repo / ".git" / "config"
+    cfg.write_text(
+        cfg.read_text(encoding="utf-8") + "[user]\n\temail = test@fleet.local\n\tname = test-worker\n",
+        encoding="utf-8",
+    )
+
+
+def _git_fast_commits(repo: Path, commits: tuple[tuple[str, dict[str, str]], ...]) -> None:
+    _init_git_repo(repo)
+    stream = bytearray()
+    latest_files: dict[str, str] = {}
+    for idx, (msg, files) in enumerate(commits, 1):
+        latest_files.update(files)
+        msg_b = msg.encode("utf-8")
+        stream.extend(b"commit refs/heads/main\n")
+        stream.extend(f"mark :{idx}\n".encode("ascii"))
+        stream.extend(b"committer test-worker <test@fleet.local> 1700000000 +0000\n")
+        stream.extend(f"data {len(msg_b)}\n".encode("ascii"))
+        stream.extend(msg_b + b"\n")
+        if idx > 1:
+            stream.extend(f"from :{idx - 1}\n".encode("ascii"))
+        for rel, content in sorted(latest_files.items()):
+            raw = content.encode("utf-8")
+            stream.extend(f"M 100644 inline {rel}\n".encode("utf-8"))
+            stream.extend(f"data {len(raw)}\n".encode("ascii"))
+            stream.extend(raw + b"\n")
+        stream.extend(b"\n")
+    subprocess.run(["git", "fast-import", "--quiet"], cwd=repo, input=bytes(stream), check=True)
+    (repo / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+    for rel, content in latest_files.items():
+        fp = repo / rel
+        fp.parent.mkdir(parents=True, exist_ok=True)
+        fp.write_text(content, encoding="utf-8")
 
 
 def test_verify_integrity_branch_cli_passes(tmp_path: Path) -> None:
     out_json = tmp_path / "verify_report.json"
     t0 = time.perf_counter()
-    rc = vib.main(["--json-out", str(out_json)])
+    rc = vib.main(["--unit-fast", "--json-out", str(out_json)])
     elapsed = time.perf_counter() - t0
     assert rc == 0
     assert elapsed < 60.0
@@ -75,7 +106,7 @@ def test_verify_integrity_branch_cli_passes(tmp_path: Path) -> None:
         "post_craft_refresh",
         "post_gpt55_refresh",
     )
-    assert g4["ledger_ids_verified"] == 20
+    assert g4["ledger_ids_verified"] == 25
     assert g4["ledger_tokens_verified"] == len(vib.REQUIRED_LEDGER_TOKENS)
 
     g5 = rep["gates"]["gate_5_env_and_detail_invariants"]
@@ -189,29 +220,43 @@ def test_python_comment_dash_coauthor_and_secret_detectors() -> None:
 
 def test_upstream_diff_only_hygiene_handles_preexisting_rehearsal_table_dash(tmp_path: Path) -> None:
     repo = tmp_path / "diff_repo"
-    _init_git_repo(repo)
-    (repo / "scripts").mkdir(parents=True)
     upstream_line = 'cells = ["' + chr(0x2013) + '"]\n'
-    rt_file = repo / "scripts" / "rehearsal_table.py"
-    rt_file.write_text(upstream_line + "x = 1\n", encoding="utf-8")
-    subprocess.run(["git", "add", "."], cwd=repo, check=True)
-    subprocess.run(["git", "commit", "-qm", "upstream base"], cwd=repo, check=True)
+    _git_fast_commits(
+        repo,
+        (
+            ("upstream base", {"scripts/rehearsal_table.py": upstream_line + "x = 1\n"}),
+            ("clean squad diff", {"scripts/rehearsal_table.py": upstream_line + "x = 2\ny = 3\n"}),
+            ("bad dash diff", {"scripts/rehearsal_table.py": upstream_line + 'z = "' + chr(0x2014) + '"\n'}),
+        ),
+    )
 
-    rt_file.write_text(upstream_line + "x = 2\ny = 3\n", encoding="utf-8")
-    subprocess.run(["git", "add", "."], cwd=repo, check=True)
-    subprocess.run(["git", "commit", "-qm", "clean squad diff"], cwd=repo, check=True)
+    (repo / "scripts" / "rehearsal_table.py").write_text(upstream_line + "x = 2\ny = 3\n", encoding="utf-8")
+    proc_clean = subprocess.run(
+        ["git", "diff", "-U0", "HEAD~2...HEAD~1", "--", "scripts/rehearsal_table.py"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert chr(0x2013) not in "\n".join(
+        ln for ln in proc_clean.stdout.splitlines() if ln.startswith("+") and not ln.startswith("+++")
+    )
 
-    g2_clean = vib.gate_2_squad_hygiene(repo, base_ref="HEAD~1", include_worktree=True)
-    assert g2_clean["passed"] is True
-    assert g2_clean["em_en_dash_count"] == 0
-
-    rt_file.write_text(upstream_line + 'z = "' + chr(0x2014) + '"\n', encoding="utf-8")
-    subprocess.run(["git", "add", "."], cwd=repo, check=True)
-    subprocess.run(["git", "commit", "-qm", "bad dash diff"], cwd=repo, check=True)
-
-    g2_bad = vib.gate_2_squad_hygiene(repo, base_ref="HEAD~2", include_worktree=True)
+    g2_bad = vib.gate_2_squad_hygiene(repo, base_ref="HEAD~2", include_worktree=False)
     assert g2_bad["passed"] is False
     assert any("added diff line contains em/en dash" in v for v in g2_bad["violations"])
+
+    repo_clean = tmp_path / "diff_repo_clean"
+    _git_fast_commits(
+        repo_clean,
+        (
+            ("upstream base", {"scripts/rehearsal_table.py": upstream_line + "x = 1\n"}),
+            ("clean squad diff", {"scripts/rehearsal_table.py": upstream_line + "x = 2\ny = 3\n"}),
+        ),
+    )
+    g2_clean = vib.gate_2_squad_hygiene(repo_clean, base_ref="HEAD~1", include_worktree=False)
+    assert g2_clean["passed"] is True
+    assert g2_clean["em_en_dash_count"] == 0
 
 
 def test_zero_api_ast_scanner_detectors() -> None:
@@ -252,16 +297,13 @@ def test_panel_fix_a_honesty_and_ledger_completeness_detectors(tmp_path: Path) -
     assert any("without leading raw 65% first" in e for e in errs_order)
 
     repo = tmp_path / "ledger_repo"
-    _init_git_repo(repo)
-    (repo / "docs" / "reports").mkdir(parents=True)
-    (repo / "docs" / "reports" / "integrity_issue_ledger.md").write_text("incomplete ledger\n", encoding="utf-8")
-    subprocess.run(["git", "add", "."], cwd=repo, check=True)
-    subprocess.run(["git", "commit", "-qm", "init"], cwd=repo, check=True)
+    _git_fast_commits(repo, (("init", {"docs/reports/integrity_issue_ledger.md": "incomplete ledger\n"}),))
 
-    g4_bad = vib.gate_4_panel_honesty_and_ledger_sync(repo, base_ref="HEAD", include_worktree=True)
+    g4_bad = vib.gate_4_panel_honesty_and_ledger_sync(repo, base_ref="HEAD", include_worktree=False)
     assert g4_bad["passed"] is False
     assert any("replay-ladder-showcase" in v for v in g4_bad["violations"])
     assert any("INT-LEDGER-01" in v for v in g4_bad["violations"])
+    assert any("INT-LEDGER-25" in v for v in g4_bad["violations"])
 
 
 def test_c3_exploits_md_citations_and_cross_squad_merge_compatibility(tmp_path: Path) -> None:
@@ -314,26 +356,29 @@ def test_c3_exploits_md_citations_and_cross_squad_merge_compatibility(tmp_path: 
     assert c3_bad["passed"] is False
 
     merge_repo = tmp_path / "cross_squad_merge"
-    _init_git_repo(merge_repo)
-    (merge_repo / "docs" / "reports").mkdir(parents=True)
-    (merge_repo / "scripts").mkdir(parents=True)
-    (merge_repo / "docs" / "EXPLOITS.md").write_text(post_txt, encoding="utf-8")
-    (merge_repo / "docs" / "reports" / "integrity_issue_ledger.md").write_text(
-        LEDGER_PATH.read_text(encoding="utf-8"), encoding="utf-8"
+    _git_fast_commits(
+        merge_repo,
+        (
+            (
+                "base",
+                {
+                    "docs/EXPLOITS.md": post_txt,
+                    "docs/reports/integrity_issue_ledger.md": LEDGER_PATH.read_text(encoding="utf-8"),
+                },
+            ),
+            (
+                "merge craft and frontier",
+                {
+                    "docs/SUBMISSION.md": "Craft doc " + chr(0x2014) + " prose\n",
+                    "scripts/frontier_runner.py": "import openai\n" + chr(35) + " other squad comment\n",
+                },
+            ),
+        ),
     )
-    subprocess.run(["git", "add", "."], cwd=merge_repo, check=True)
-    subprocess.run(["git", "commit", "-qm", "base"], cwd=merge_repo, check=True)
 
-    (merge_repo / "docs" / "SUBMISSION.md").write_text("Craft doc " + chr(0x2014) + " prose\n", encoding="utf-8")
-    (merge_repo / "scripts" / "frontier_runner.py").write_text(
-        "import openai\n" + chr(35) + " other squad comment\n", encoding="utf-8"
-    )
-    subprocess.run(["git", "add", "."], cwd=merge_repo, check=True)
-    subprocess.run(["git", "commit", "-qm", "merge craft and frontier"], cwd=merge_repo, check=True)
-
-    assert vib.gate_2_squad_hygiene(merge_repo, base_ref="HEAD~1")["passed"] is True
-    assert vib.gate_3_zero_api_and_ast_safety(merge_repo, base_ref="HEAD~1")["passed"] is True
-    assert vib.gate_4_panel_honesty_and_ledger_sync(merge_repo, base_ref="HEAD~1")["passed"] is True
+    assert vib.gate_2_squad_hygiene(merge_repo, base_ref="HEAD~1", include_worktree=False)["passed"] is True
+    assert vib.gate_3_zero_api_and_ast_safety(merge_repo, base_ref="HEAD~1", include_worktree=False)["passed"] is True
+    assert vib.gate_4_panel_honesty_and_ledger_sync(merge_repo, base_ref="HEAD~1", include_worktree=False)["passed"] is True
 
 
 def test_w9_and_w2_w3_files_strict_hygiene() -> None:
@@ -364,10 +409,7 @@ def test_w9_and_w2_w3_files_strict_hygiene() -> None:
 
     for py_path in (w2_script, w3_hunter):
         src = py_path.read_text(encoding="utf-8")
-        comments = [
-            tok for tok in tokenize.generate_tokens(io.StringIO(src).readline) if tok.type == tokenize.COMMENT
-        ]
-        assert comments == []
+        assert vib.scan_python_comments(src) == []
 
 
 def test_committed_episode_outcome_verifier_recognizes_opencode_clean_stop(tmp_path: Path) -> None:

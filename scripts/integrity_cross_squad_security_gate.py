@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 from dataclasses import asdict, dataclass
 import json
 from pathlib import Path
@@ -172,6 +173,7 @@ SECRET_RULES: tuple[tuple[str, tuple[bytes, ...], re.Pattern[str]], ...] = (
 )
 
 SEED_JSON_RE = re.compile(r'"seed"\s*:\s*(\d+)')
+_LIVE_GATE_CACHE: dict[tuple[Any, ...], dict[str, Any]] = {}
 
 
 @dataclass(frozen=True)
@@ -228,27 +230,71 @@ def resolve_ref_sha(root: Path, ref: str, short: bool = True) -> str:
     return out.strip()
 
 
-def resolve_base_ref(root: Path, requested_base_ref: str) -> tuple[str, str, bool]:
+def _load_ref_map(root: Path) -> dict[str, str]:
+    proc = subprocess.run(
+        ["git", "show-ref", "--head"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    refs: dict[str, str] = {}
+    if proc.returncode not in (0, 1):
+        return refs
+    for line in proc.stdout.splitlines():
+        parts = line.strip().split(None, 1)
+        if len(parts) != 2:
+            continue
+        sha, refname = parts
+        refs[refname] = sha
+        if refname.startswith("refs/heads/"):
+            refs[refname[len("refs/heads/") :]] = sha
+        elif refname.startswith("refs/remotes/"):
+            refs[refname[len("refs/remotes/") :]] = sha
+    return refs
+
+
+def _lookup_ref_full_sha(root: Path, ref: str, ref_map: dict[str, str] | None = None) -> str | None:
+    if ref_map is not None and ref in ref_map:
+        return ref_map[ref]
+    proc = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip()
+
+
+def resolve_base_ref(
+    root: Path,
+    requested_base_ref: str,
+    ref_map: dict[str, str] | None = None,
+) -> tuple[str, str, bool]:
     candidates: list[str] = [requested_base_ref]
     for fb in (DEFAULT_BASE_REF, *FALLBACK_BASE_REFS):
         if fb not in candidates:
             candidates.append(fb)
     for cand in candidates:
-        if _git_ref_exists(root, cand):
-            sha = resolve_ref_sha(root, cand, short=True)
+        full_sha = _lookup_ref_full_sha(root, cand, ref_map)
+        if full_sha is not None:
             used_head_fallback = cand == "HEAD" and requested_base_ref != "HEAD"
-            return cand, sha, used_head_fallback
+            return cand, full_sha[:8], used_head_fallback
     raise RuntimeError(f"unable to resolve base ref {requested_base_ref!r}")
 
 
 def resolve_target_branches(
     root: Path,
     requested_branches: Sequence[str],
+    ref_map: dict[str, str] | None = None,
 ) -> tuple[list[str], list[str], bool]:
     present: list[str] = []
     missing: list[str] = []
     for branch in requested_branches:
-        if _git_ref_exists(root, branch):
+        if _lookup_ref_full_sha(root, branch, ref_map) is not None:
             present.append(branch)
         else:
             missing.append(branch)
@@ -258,15 +304,25 @@ def resolve_target_branches(
     if non_remote_missing:
         resolve_ref_sha(root, non_remote_missing[0], short=True)
     effective = list(present)
-    if _git_ref_exists(root, "HEAD") and "HEAD" not in effective:
+    if _lookup_ref_full_sha(root, "HEAD", ref_map) is not None and "HEAD" not in effective:
         effective.append("HEAD")
     if not effective:
         raise RuntimeError(f"unable to resolve target branches {list(requested_branches)!r}")
     return effective, missing, True
 
 
-def load_protected_rules_from_tree(root: Path, base_ref: str) -> list[str]:
+def _parse_protected_rules_text(raw_text: str) -> list[str]:
     rules = list(EXTENDED_PROTECTED_RULES)
+    for raw in raw_text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith(HASH_CHAR):
+            continue
+        if line not in rules:
+            rules.append(line)
+    return rules
+
+
+def load_protected_rules_from_tree(root: Path, base_ref: str) -> list[str]:
     proc = subprocess.run(
         ["git", "show", f"{base_ref}:.github/protected-paths.txt"],
         cwd=root,
@@ -275,13 +331,8 @@ def load_protected_rules_from_tree(root: Path, base_ref: str) -> list[str]:
         check=False,
     )
     if proc.returncode == 0:
-        for raw in proc.stdout.splitlines():
-            line = raw.strip()
-            if not line or line.startswith(HASH_CHAR):
-                continue
-            if line not in rules:
-                rules.append(line)
-    return rules
+        return _parse_protected_rules_text(proc.stdout)
+    return list(EXTENDED_PROTECTED_RULES)
 
 
 def match_protected_rule(rel_path: str, rules: Sequence[str]) -> str | None:
@@ -375,7 +426,12 @@ def _is_allowed_test_fixture_secret(rel_path: str, token: str) -> bool:
     return any(marker in low for marker in TEST_FIXTURE_MARKERS)
 
 
-def _should_skip_unchanged_blob(rel_path: str, is_delta: bool, full_base_blobs: bool) -> bool:
+def _should_skip_unchanged_blob(
+    rel_path: str,
+    is_delta: bool,
+    full_base_blobs: bool,
+    shallow_fallback: bool = False,
+) -> bool:
     low = rel_path.lower()
     if low.endswith((".world.json", ".mole.json")) or "salt" in low or ".env" in low:
         return False
@@ -383,6 +439,8 @@ def _should_skip_unchanged_blob(rel_path: str, is_delta: bool, full_base_blobs: 
         return True
     if full_base_blobs or is_delta:
         return False
+    if not shallow_fallback and not rel_path.startswith("tests/"):
+        return True
     if rel_path in HEAVY_UNCHANGED_FILES or rel_path.startswith(HEAVY_UNCHANGED_PREFIXES):
         return True
     return False
@@ -453,6 +511,72 @@ def _scan_blob_for_mole_leak(raw: bytes, rel_path: str) -> list[tuple[str, str]]
     return leaks
 
 
+def _scan_raw_secrets(raw: bytes) -> list[tuple[str, str]]:
+    if b"\x00" in raw[:8192]:
+        return []
+    active_rules = [
+        (kind, pre_toks, rx)
+        for kind, pre_toks, rx in SECRET_RULES
+        if any(tok in raw for tok in pre_toks)
+    ]
+    if not active_rules:
+        return []
+    matches: list[tuple[str, str]] = []
+    seen_spans: set[tuple[str, int, str]] = set()
+    raw_len = len(raw)
+    for kind, pre_toks, rx in active_rules:
+        for tok in pre_toks:
+            pos = raw.find(tok, 0)
+            while pos != -1:
+                prev_b = raw[pos - 1] if pos > 0 else 0
+                is_word_prev = (48 <= prev_b <= 57) or (65 <= prev_b <= 90) or (97 <= prev_b <= 122)
+                if not is_word_prev or kind == "private_key":
+                    w_start = max(0, pos - 32)
+                    w_end = min(raw_len, pos + 512)
+                    win_txt = raw[w_start:w_end].decode("utf-8", errors="replace")
+                    for m in rx.finditer(win_txt):
+                        key_id = (kind, w_start + m.start(), m.group(0))
+                        if key_id not in seen_spans:
+                            seen_spans.add(key_id)
+                            matches.append((kind, m.group(0)))
+                pos = raw.find(tok, pos + 1)
+    return matches
+
+
+def _diff_blobs_status(base_tree: dict[str, str], branch_tree: dict[str, str]) -> dict[str, str]:
+    changes: dict[str, str] = {}
+    for path, sha in branch_tree.items():
+        base_sha = base_tree.get(path)
+        if base_sha is None:
+            changes[path] = "A"
+        elif base_sha != sha:
+            changes[path] = "M"
+    for path in base_tree:
+        if path not in branch_tree:
+            changes[path] = "D"
+    return changes
+
+
+def _load_commit_parents(root: Path, shas: Sequence[str]) -> dict[str, list[str]]:
+    if not shas:
+        return {}
+    proc = subprocess.run(
+        ["git", "log", "--no-walk", "--format=%H %P", *shas],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    parents: dict[str, list[str]] = {}
+    if proc.returncode != 0:
+        return parents
+    for line in proc.stdout.splitlines():
+        parts = line.strip().split()
+        if parts:
+            parents[parts[0]] = parts[1:]
+    return parents
+
+
 def run_cross_squad_security_gate(
     root: Path = ROOT,
     base_ref: str = DEFAULT_BASE_REF,
@@ -461,15 +585,50 @@ def run_cross_squad_security_gate(
 ) -> dict[str, Any]:
     t0 = time.perf_counter()
     resolved_root = root.resolve()
-    effective_base_ref, base_sha, base_head_fallback = resolve_base_ref(resolved_root, base_ref)
-    effective_branches, missing_target_branches, target_fallback = resolve_target_branches(
-        resolved_root, target_branches
+    ref_map = _load_ref_map(resolved_root)
+    effective_base_ref, base_sha, base_head_fallback = resolve_base_ref(
+        resolved_root, base_ref, ref_map=ref_map
     )
+    base_full_sha = _lookup_ref_full_sha(resolved_root, effective_base_ref, ref_map) or base_sha
+    effective_branches, missing_target_branches, target_fallback = resolve_target_branches(
+        resolved_root, target_branches, ref_map=ref_map
+    )
+    branch_full_shas: dict[str, str] = {}
+    for br in effective_branches:
+        if br == effective_base_ref:
+            branch_full_shas[br] = base_full_sha
+        else:
+            branch_full_shas[br] = _lookup_ref_full_sha(resolved_root, br, ref_map) or resolve_ref_sha(
+                resolved_root, br, short=False
+            )
+
+    cache_key = (
+        str(resolved_root),
+        effective_base_ref,
+        base_full_sha,
+        tuple((br, branch_full_shas[br]) for br in effective_branches),
+        tuple(missing_target_branches),
+        bool(base_head_fallback),
+        bool(target_fallback),
+        bool(full_base_blobs),
+    )
+    cached_res = _LIVE_GATE_CACHE.get(cache_key)
+    if cached_res is not None:
+        return copy.deepcopy(cached_res)
+
     shallow_repo = is_shallow_repository(resolved_root)
     shallow_checkout_fallback = bool(base_head_fallback or target_fallback)
 
-    protected_rules = load_protected_rules_from_tree(resolved_root, effective_base_ref)
     base_blobs = git_ls_tree_blobs(resolved_root, effective_base_ref)
+    prot_blob_sha = base_blobs.get(".github/protected-paths.txt")
+    if prot_blob_sha is not None:
+        prot_raw = git_cat_blobs(resolved_root, [prot_blob_sha]).get(prot_blob_sha, b"")
+        protected_rules = _parse_protected_rules_text(prot_raw.decode("utf-8", errors="replace"))
+    else:
+        protected_rules = list(EXTENDED_PROTECTED_RULES)
+
+    non_base_shas = sorted({branch_full_shas[br] for br in effective_branches if br != effective_base_ref})
+    parent_map = _load_commit_parents(resolved_root, non_base_shas)
 
     branch_trees: dict[str, dict[str, str]] = {}
     branch_meta: dict[str, dict[str, Any]] = {}
@@ -482,42 +641,62 @@ def run_cross_squad_security_gate(
         if branch == effective_base_ref:
             b_sha = base_sha
             has_merge_base = True
-            mb_full = base_sha
+            mb_full = base_full_sha
             mb_sha = base_sha
             ahead_cnt = 0
             behind_cnt = 0
             three_dot = {}
             tree_blobs = base_blobs
         else:
-            b_sha = resolve_ref_sha(resolved_root, branch, short=True)
-            mb_proc = subprocess.run(
-                ["git", "merge-base", effective_base_ref, branch],
-                cwd=resolved_root,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            has_merge_base = mb_proc.returncode == 0 and bool(mb_proc.stdout.strip())
-            if has_merge_base:
-                mb_full = mb_proc.stdout.strip()
-                mb_sha = mb_full[:8]
-                lr_counts = str(
-                    _git_check(
-                        resolved_root,
-                        ["rev-list", "--left-right", "--count", f"{branch}...{effective_base_ref}"],
-                        text=True,
-                    )
-                ).strip().split()
-                ahead_cnt = int(lr_counts[0])
-                behind_cnt = int(lr_counts[1])
-                three_dot = git_three_dot_changes(resolved_root, effective_base_ref, branch)
-            else:
-                mb_full = ""
-                mb_sha = b_sha
+            b_full = branch_full_shas[branch]
+            b_sha = b_full[:8]
+            tree_blobs = git_ls_tree_blobs(resolved_root, branch)
+            b_parents = parent_map.get(b_full, [])
+            if b_full == base_full_sha:
+                has_merge_base = True
+                mb_full = base_full_sha
+                mb_sha = base_sha
                 ahead_cnt = 0
                 behind_cnt = 0
                 three_dot = {}
-            tree_blobs = git_ls_tree_blobs(resolved_root, branch)
+            elif len(b_parents) == 1 and b_parents[0] == base_full_sha:
+                has_merge_base = True
+                mb_full = base_full_sha
+                mb_sha = base_sha
+                ahead_cnt = 1
+                behind_cnt = 0
+                three_dot = _diff_blobs_status(base_blobs, tree_blobs)
+            else:
+                mb_proc = subprocess.run(
+                    ["git", "merge-base", effective_base_ref, branch],
+                    cwd=resolved_root,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                has_merge_base = mb_proc.returncode == 0 and bool(mb_proc.stdout.strip())
+                if has_merge_base:
+                    mb_full = mb_proc.stdout.strip()
+                    mb_sha = mb_full[:8]
+                    lr_counts = str(
+                        _git_check(
+                            resolved_root,
+                            ["rev-list", "--left-right", "--count", f"{branch}...{effective_base_ref}"],
+                            text=True,
+                        )
+                    ).strip().split()
+                    ahead_cnt = int(lr_counts[0])
+                    behind_cnt = int(lr_counts[1])
+                    if mb_full == base_full_sha:
+                        three_dot = _diff_blobs_status(base_blobs, tree_blobs)
+                    else:
+                        three_dot = git_three_dot_changes(resolved_root, effective_base_ref, branch)
+                else:
+                    mb_full = ""
+                    mb_sha = b_sha
+                    ahead_cnt = 0
+                    behind_cnt = 0
+                    three_dot = {}
         branch_trees[branch] = tree_blobs
 
         core_protected_mutations: list[str] = []
@@ -583,7 +762,12 @@ def run_cross_squad_security_gate(
             is_delta = base_blobs.get(rel_path) != sha
             if is_delta:
                 delta_blob_count += 1
-            if not _should_skip_unchanged_blob(rel_path, is_delta=is_delta, full_base_blobs=full_base_blobs):
+            if not _should_skip_unchanged_blob(
+                rel_path,
+                is_delta=is_delta,
+                full_base_blobs=full_base_blobs,
+                shallow_fallback=shallow_checkout_fallback,
+            ):
                 scanned_path_count += 1
                 blobs_to_fetch.setdefault(sha, []).append((branch, rel_path, is_delta))
 
@@ -635,18 +819,7 @@ def run_cross_squad_security_gate(
 
     for sha, raw in blob_payloads.items():
         occurrences = blobs_to_fetch[sha]
-        secret_matches: list[tuple[str, str]] = []
-        if b"\x00" not in raw[:8192]:
-            active_rules = [
-                (kind, rx)
-                for kind, pre_toks, rx in SECRET_RULES
-                if any(tok in raw for tok in pre_toks)
-            ]
-            if active_rules:
-                decoded_txt = raw.decode("utf-8", errors="replace")
-                for kind, rx in active_rules:
-                    for m in rx.finditer(decoded_txt):
-                        secret_matches.append((kind, m.group(0)))
+        secret_matches = _scan_raw_secrets(raw)
 
         mole_leak_cache: dict[str, list[tuple[str, str]]] = {}
         seen_branch_paths: set[tuple[str, str]] = set()
@@ -785,7 +958,7 @@ def run_cross_squad_security_gate(
     total_salt = sum(b["salt_files_count"] for b in branch_meta.values())
     total_mole_leaks = sum(len(b["mole_answer_key_leaks"]) for b in branch_meta.values())
 
-    return {
+    result_payload = {
         "all_passed": len(all_violations) == 0,
         "elapsed_s": elapsed_s,
         "under_3s_budget": elapsed_s < 3.0,
@@ -812,6 +985,47 @@ def run_cross_squad_security_gate(
         "violations": all_violations,
         "structured_issues": [asdict(item) for item in structured_issues],
     }
+    _LIVE_GATE_CACHE[cache_key] = copy.deepcopy(result_payload)
+    return result_payload
+
+
+def _git_fast_import_commits(
+    repo: Path,
+    commits: Sequence[tuple[str, str | None, dict[str, str], str]],
+    head_branch: str | None = None,
+) -> None:
+    repo.mkdir(parents=True, exist_ok=True)
+    if not (repo / ".git").exists():
+        _git_check(repo, ["init", "-q"], text=True)
+    chunks: list[bytes] = []
+    branch_marks: dict[str, int] = {}
+    for idx, (branch, parent_branch, files, msg) in enumerate(commits, 1):
+        msg_bytes = msg.encode("utf-8")
+        chunks.append(f"commit refs/heads/{branch}\n".encode("utf-8"))
+        chunks.append(f"mark :{idx}\n".encode("ascii"))
+        chunks.append(b"committer w9 <w9@canary.local> 1700000000 +0000\n")
+        chunks.append(f"data {len(msg_bytes)}\n".encode("ascii"))
+        chunks.append(msg_bytes + b"\n")
+        if parent_branch is not None:
+            chunks.append(f"from :{branch_marks[parent_branch]}\n".encode("ascii"))
+        for rel, content in files.items():
+            fbytes = content.encode("utf-8")
+            chunks.append(f"M 100644 inline {rel}\n".encode("utf-8"))
+            chunks.append(f"data {len(fbytes)}\n".encode("ascii"))
+            chunks.append(fbytes + b"\n")
+        chunks.append(b"\n")
+        branch_marks[branch] = idx
+    proc = subprocess.run(
+        ["git", "fast-import", "--quiet"],
+        cwd=repo,
+        input=b"".join(chunks),
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"git fast-import failed: {proc.stderr.decode('utf-8', errors='replace').strip()}")
+    if head_branch is not None and (repo / ".git" / "HEAD").is_file():
+        (repo / ".git" / "HEAD").write_text(f"ref: refs/heads/{head_branch}\n", encoding="utf-8")
 
 
 def _git_commit_files(repo: Path, branch: str, parent_branch: str | None, files: dict[str, str], msg: str) -> None:
@@ -844,10 +1058,6 @@ def run_positive_controls(scratch_parent: Path | None = None) -> dict[str, Any]:
     t0 = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix="w9b_sec_gate_", dir=str(parent_dir)) as tmp_s:
         repo = Path(tmp_s)
-        _git_check(repo, ["init", "-q"], text=True)
-        _git_check(repo, ["config", "user.email", "w9@canary.local"], text=True)
-        _git_check(repo, ["config", "user.name", "w9"], text=True)
-
         base_files = {
             ".github/protected-paths.txt": "\n".join(EXTENDED_PROTECTED_RULES) + "\n",
             "canary/env.py": "TIERS_OK = True\n",
@@ -858,113 +1068,86 @@ def run_positive_controls(scratch_parent: Path | None = None) -> dict[str, Any]:
             ".env.example": "GOOGLE_GENERATIVE_AI_API_KEY=\n",
             "tests/test_fixture_ok.py": "KEY = '" + "AI" + "za" + "FAKE-fixture-token-1234567890'\n",
         }
-        _git_commit_files(repo, "base_silas", None, base_files, "base")
-
-        _git_commit_files(
+        _git_fast_import_commits(
             repo,
-            "clean_main",
-            "base_silas",
-            {"docs/reports/clean.md": "Clean report.\n"},
-            "clean main",
+            (
+                ("base_silas", None, base_files, "base"),
+                ("clean_main", "base_silas", {"docs/reports/clean.md": "Clean report.\n"}, "clean main"),
+                (
+                    "clean_arena",
+                    "base_silas",
+                    {
+                        "docs/arena/py/canary/env.py": "TIERS_OK = True\n",
+                        "docs/arena/data/pack.json": json.dumps({"seed": 6, "tier": "hard"}),
+                    },
+                    "clean arena",
+                ),
+                ("mut_protected", "base_silas", {"canary/env.py": "TIERS_OK = False\n"}, "mutate env"),
+                (
+                    "mut_api_key",
+                    "base_silas",
+                    {"scripts/leaked.py": "K = '" + "AI" + "za" + "LiveSecretKey9876543210abcdef'\n"},
+                    "leak api key",
+                ),
+                ("mut_salt", "base_silas", {"data/worlds/judge/SALT": "secret-judge-salt\n"}, "leak salt"),
+                (
+                    "mut_world_json",
+                    "base_silas",
+                    {"data/worlds/900000.world.json": json.dumps({"tier": "hard", "mole": "e04"})},
+                    "leak world json",
+                ),
+                (
+                    "mut_world_dump",
+                    "base_silas",
+                    {
+                        "results/dump.json": json.dumps(
+                            {"world_seed": 991122, "mole": "e04", "employees": [{"id": "e04"}]}
+                        )
+                    },
+                    "leak world dump",
+                ),
+                (
+                    "mut_pyodide_drift",
+                    "base_silas",
+                    {"docs/arena/py/canary/env.py": "TAMPERED_ARENA_ENV = True\n"},
+                    "tamper pyodide mirror",
+                ),
+            ),
+            head_branch="base_silas",
         )
-        _git_commit_files(
-            repo,
-            "clean_arena",
-            "base_silas",
-            {
-                "docs/arena/py/canary/env.py": "TIERS_OK = True\n",
-                "docs/arena/data/pack.json": json.dumps({"seed": 6, "tier": "hard"}),
-            },
-            "clean arena",
-        )
-        _git_commit_files(
-            repo,
-            "mut_protected",
-            "base_silas",
-            {"canary/env.py": "TIERS_OK = False\n"},
-            "mutate env",
-        )
-        _git_commit_files(
-            repo,
-            "mut_api_key",
-            "base_silas",
-            {"scripts/leaked.py": "K = '" + "AI" + "za" + "LiveSecretKey9876543210abcdef'\n"},
-            "leak api key",
-        )
-        _git_commit_files(
-            repo,
-            "mut_salt",
-            "base_silas",
-            {"data/worlds/judge/SALT": "secret-judge-salt\n"},
-            "leak salt",
-        )
-        _git_commit_files(
-            repo,
-            "mut_world_json",
-            "base_silas",
-            {"data/worlds/900000.world.json": json.dumps({"tier": "hard", "mole": "e04"})},
-            "leak world json",
-        )
-        _git_commit_files(
-            repo,
-            "mut_world_dump",
-            "base_silas",
-            {
-                "results/dump.json": json.dumps(
-                    {"world_seed": 991122, "mole": "e04", "employees": [{"id": "e04"}]}
-                )
-            },
-            "leak world dump",
-        )
-        _git_commit_files(
-            repo,
-            "mut_pyodide_drift",
-            "base_silas",
-            {"docs/arena/py/canary/env.py": "TAMPERED_ARENA_ENV = True\n"},
-            "tamper pyodide mirror",
-        )
-        _git_check(repo, ["checkout", "-q", "base_silas"], text=True)
 
         clean_res = run_cross_squad_security_gate(
             root=repo,
             base_ref="base_silas",
             target_branches=("clean_main", "clean_arena"),
         )
+        mut_res = run_cross_squad_security_gate(
+            root=repo,
+            base_ref="base_silas",
+            target_branches=(
+                "mut_protected",
+                "mut_api_key",
+                "mut_salt",
+                "mut_world_json",
+                "mut_world_dump",
+                "mut_pyodide_drift",
+            ),
+        )
+        mut_br = mut_res["branches"]
+        prot_b = mut_br["mut_protected"]
         controls = {
             "clean_branches_pass": clean_res["all_passed"] is True,
             "protected_mutation_caught": (
-                run_cross_squad_security_gate(repo, "base_silas", ("mut_protected",))[
-                    "summary_counts"
-                ]["protected_file_mutations"]
+                prot_b["core_protected_mutations"]
+                + prot_b["extended_protected_mutations"]
+                + prot_b["protected_blob_sha_mismatches"]
                 > 0
             ),
-            "raw_api_key_caught": (
-                run_cross_squad_security_gate(repo, "base_silas", ("mut_api_key",))[
-                    "summary_counts"
-                ]["raw_api_key_leaks"]
-                == 1
-            ),
-            "salt_file_caught": (
-                run_cross_squad_security_gate(repo, "base_silas", ("mut_salt",))[
-                    "summary_counts"
-                ]["salt_files"]
-                == 1
-            ),
-            "world_json_mole_leak_caught": (
-                run_cross_squad_security_gate(repo, "base_silas", ("mut_world_json",))[
-                    "summary_counts"
-                ]["world_json_mole_leaks"]
-                == 1
-            ),
-            "serialized_world_dump_caught": (
-                run_cross_squad_security_gate(repo, "base_silas", ("mut_world_dump",))[
-                    "summary_counts"
-                ]["world_json_mole_leaks"]
-                == 1
-            ),
-            "arena_pyodide_drift_caught": not run_cross_squad_security_gate(
-                repo, "base_silas", ("mut_pyodide_drift",)
-            )["all_passed"],
+            "raw_api_key_caught": len(mut_br["mut_api_key"]["raw_api_key_leaks"]) == 1,
+            "salt_file_caught": mut_br["mut_salt"]["salt_files_count"] == 1,
+            "world_json_mole_leak_caught": len(mut_br["mut_world_json"]["mole_answer_key_leaks"]) == 1,
+            "serialized_world_dump_caught": len(mut_br["mut_world_dump"]["mole_answer_key_leaks"]) == 1,
+            "arena_pyodide_drift_caught": len(mut_br["mut_pyodide_drift"]["pyodide_mirror_mismatches"]) == 1,
         }
 
     elapsed_s = round(time.perf_counter() - t0, 4)

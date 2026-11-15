@@ -2,10 +2,10 @@
 
 - Role: `world_text`
 - Target Model ID: `gemini-4-carbon`
-- Verified `world_text` run folders consolidated: `13`
-- Total Gemini API calls: `1038`
-- Total tokens (in / out / thinking / cached): `27,780,671` / `519,569` / `530,761` / `25,362,601`
-- Total estimated cost (USD): `$14.264328`
+- Verified `world_text` run folders consolidated: `15`
+- Total Gemini API calls: `1126`
+- Total tokens (in / out / thinking / cached): `27,867,443` / `525,975` / `555,696` / `25,362,601`
+- Total estimated cost (USD): `$14.751282`
 - Non-leak & safety audit: `truth_leaks=0`, `prompt_leaks=0`, `lint_violations=0`, `stego_violations=0`, `fallbacks=0`, `secret_leaks=0` (`all_clean=True`)
 - Provenance note: `worldtext-carbon-suite/` intentionally omits `meta.json` so `canary.gemini.provenance` does not double-count tokens or costs.
 
@@ -37,10 +37,10 @@
 
 ## 3. Persona-Conditioned Live Suspect Interviews (`persona_interviews_suite`)
 
-- Worlds / Live interviews: `4` / `32` across `1` folders
-- Signal calibration accuracy: `100.0%` [89.3%, 100.0%]
-- Counterfactual prompt invariance: `100.0%` [96.2%, 100.0%]
-- SolverPolicy parity: `+0.6450` [+0.4800, +0.7750] vs template `+0.6425` [+0.4775, +0.7700] (delta `+0.0025` [+0.0000, +0.0075])
+- Worlds / Live interviews: `15` / `120` across `3` folders
+- Signal calibration accuracy: `100.0%` [96.9%, 100.0%]
+- Counterfactual prompt invariance: `100.0%` [98.9%, 100.0%]
+- SolverPolicy parity: `+0.6540` [+0.5513, +0.7400] vs template `+0.6440` [+0.5440, +0.7327] (delta `+0.0100` [+0.0000, +0.0287])
 
 ## 4. Dynamic Mid-Episode Corporate Incident Events (`dynamic_events_suite`)
 
@@ -67,6 +67,6 @@
 | `biased_chatter_investigator_ablation` | 2 | 806 | 27,351,811 | 400,343 | 352,497 | 25,358,784 | $10.525358 |
 | `company_personas_chatter` | 4 | 129 | 170,729 | 74,513 | 99,845 | 0 | $2.085038 |
 | `dynamic_mid_episode_events` | 3 | 33 | 166,943 | 11,924 | 19,720 | 3,817 | $0.650326 |
-| `persona_interviews` | 1 | 32 | 31,496 | 2,345 | 6,957 | 0 | $0.156012 |
+| `persona_interviews` | 3 | 120 | 118,268 | 8,751 | 31,892 | 0 | $0.642966 |
 | `thinking_level_calibration` | 1 | 24 | 24,102 | 14,232 | 42,377 | 0 | $0.614294 |
-| **total** | **13** | **1038** | **27,780,671** | **519,569** | **530,761** | **25,362,601** | **$14.264328** |
+| **total** | **15** | **1126** | **27,867,443** | **525,975** | **555,696** | **25,362,601** | **$14.751282** |

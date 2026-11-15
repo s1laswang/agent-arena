@@ -1,4 +1,4 @@
-"""Fast (<10s) unit tests for scripts/headline_gap_table.py and committed v1.4 headline artifacts."""
+"""Unit and end-to-end replay tests for scripts/headline_gap_table.py and committed v1.4 headline artifacts."""
 from __future__ import annotations
 
 import copy
@@ -14,7 +14,53 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 import headline_gap_table as hgt
+from canary.env import Env
 from canary.gemini import dashboard as gemini_dashboard
+from canary.redteam.anticheat import _client_only_step
+
+HASH_CHAR = chr(35)
+EM_DASH = chr(0x2014)
+EN_DASH = chr(0x2013)
+THIS_TEST_PATH = Path(__file__).resolve()
+PROTECTED_PATHS_FILE = ROOT / ".github" / "protected-paths.txt"
+
+
+def test_source_and_artifact_hygiene():
+    owned_rel_paths = (
+        "scripts/headline_gap_table.py",
+        "results/eval_v14/headline_gap_table_v14.json",
+        "results/leaderboard_v14_hard.json",
+        "docs/reports/headline_gap_table_v14.md",
+        "tests/test_headline_gap_table.py",
+    )
+    for rel in ("scripts/headline_gap_table.py", "tests/test_headline_gap_table.py"):
+        py_text = (ROOT / rel).read_text(encoding="utf-8")
+        assert HASH_CHAR not in py_text, f"comment char found in {rel}"
+
+    stale_phrase = "pre-registered" + " dev seeds"
+    for rel in owned_rel_paths:
+        txt = (ROOT / rel).read_text(encoding="utf-8")
+        assert EM_DASH not in txt, f"em dash found in {rel}"
+        assert EN_DASH not in txt, f"en dash found in {rel}"
+        assert stale_phrase not in txt.lower(), f"stale {stale_phrase} phrasing in {rel}"
+
+    md_text = hgt.OUT_MD.read_text(encoding="utf-8")
+    assert "post-hoc locked dev seeds 0-29" in md_text
+    assert "671ed96" in md_text and "28 s after" in md_text and "8fd4dec" in md_text
+
+    protected_prefixes: list[str] = []
+    for raw_line in PROTECTED_PATHS_FILE.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith(HASH_CHAR):
+            continue
+        protected_prefixes.append(line)
+
+    for rel_path in owned_rel_paths:
+        for prefix in protected_prefixes:
+            if prefix.endswith("/"):
+                assert not rel_path.startswith(prefix)
+            else:
+                assert rel_path != prefix
 
 
 def test_wilson_ci_bounds_and_symmetry():
@@ -90,22 +136,68 @@ def test_winnable_world_filter():
     assert w["winnable_ratio_lo"] <= w["winnable_ratio"] <= w["winnable_ratio_hi"]
 
 
-def test_committed_artifacts_section_a_invariants_and_headline_numbers():
+def test_committed_artifacts_section_a_b1_b2_g1_and_headline_numbers():
     assert hgt.OUT_JSON.exists()
     assert hgt.OUT_MD.exists()
     raw_bytes = hgt.OUT_JSON.read_bytes()
-    assert len(raw_bytes) < 100_000
+    assert len(raw_bytes) <= hgt.MAX_JSON_BYTES
 
     data = json.loads(raw_bytes.decode("utf-8"))
+    assert "post-hoc locked dev seeds 0-29" in data["primary_seeds_lock_note"]
+    assert "671ed96" in data["primary_seeds_lock_note"]
+    assert "8fd4dec" in data["primary_seeds_lock_note"]
+
     sec_a = data["section_a"]
-    sec_b = data["section_b"]
+    sec_b1 = data["section_b1"]
+    sec_b2 = data["section_b2"]
+    ver = data["verification"]
+    g1 = data["g1_extension_sensitivity"]
+
     hgt.check_section_a_invariants(sec_a, root=ROOT)
-    assert all(r["n"] >= 30 for r in sec_a)
+    hgt.check_section_b1_invariants(sec_b1, root=ROOT)
+    hgt.check_section_b2_invariants(sec_b2, root=ROOT)
+
+    assert all(r["n"] == 30 and r["seeds"] == list(range(30)) for r in sec_a)
     assert len(sec_a) == 23
-    assert len(sec_b) == 32
-    assert data["verification"]["ladder_cached_episodes_replayed"] == 320
-    assert data["verification"]["ladder_total_reported_episodes"] == 357
-    assert all(r["n"] < 30 and r["small_n_directional"] is True for r in sec_b)
+    assert len(sec_b1) == 3
+    assert len(sec_b2) == 39
+    assert ver["section_b_rows"] == 42
+    assert ver["stored_solver_episodes_replayed"] == 60
+    assert ver["stored_solver_extension_episodes_replayed"] == 30
+    assert ver["replication_cached_episodes_replayed"] == 30
+    assert ver["g1_extension_episodes_replayed"] == 2
+    assert ver["ladder_cached_episodes_replayed"] == 550
+    assert ver["ladder_gemma_episodes_replayed"] == 5
+    assert ver["ladder_imported_inproc_episodes"] == 37
+    assert ver["ladder_total_reported_episodes"] == 587
+    assert ver["ladder_total_reported_cells"] == 42
+    assert ver["pre_1bc3e281_detail_steps_stripped"] == 291
+
+    assert all(r["n"] >= 30 for r in sec_b1)
+    assert all(1 <= r["n"] < 30 and r["small_n_directional"] is True for r in sec_b2)
+
+    sol_med = next(r for r in sec_a if r["agent"] == "solver" and r["tier"] == "medium" and r["kind"] == "reference")
+    sol_hard = next(r for r in sec_a if r["agent"] == "solver" and r["tier"] == "hard" and r["kind"] == "reference")
+    assert sol_med["n"] == 30 and sol_med["seeds"] == list(range(30)) and round(sol_med["mean"], 3) == 0.645
+    assert sol_hard["n"] == 30 and sol_hard["seeds"] == list(range(30)) and round(sol_hard["mean"], 3) == 0.499
+
+    assert g1["present"] is True
+    assert g1["extension_seeds"] == [34, 37]
+    assert g1["extension_n"] == 2
+    assert g1["extension_infra_excluded"] == 31
+    assert g1["pooled_n"] == 32
+    assert round(g1["pooled_ratio"] * 100) == 68
+    assert [round(x * 100) for x in g1["pooled_ratio_ci"]] == [32, 100]
+    assert round(g1["pooled_luck_adj_ratio"] * 100) == 75
+    assert [round(x * 100) for x in g1["pooled_luck_adj_ci"]] == [56, 93]
+    assert round(g1["pooled_paired_diff"], 3) == -0.165
+    assert round(g1["pooled_paired_diff_ci"], 3) == 0.182
+
+    rep_flash_med = next(r for r in sec_b1 if r["kind"] == "replication" and r["tier"] == "medium")
+    assert rep_flash_med["n"] == 30
+    assert round(rep_flash_med["ratio"] * 100) == 67
+    assert round(rep_flash_med["luck_adj_ratio"] * 100) == 75
+    assert "seed 28" in rep_flash_med["caveat"]
 
     bad_n = copy.deepcopy(sec_a)
     bad_n[0]["n"] = 29
@@ -116,6 +208,16 @@ def test_committed_artifacts_section_a_invariants_and_headline_numbers():
     bad_cache[0]["cache_path"] = "data/runs/committed/v1.4/nonexistent/episodes.jsonl"
     with pytest.raises(ValueError, match="Missing committed cache path"):
         hgt.check_section_a_invariants(bad_cache, root=ROOT)
+
+    bad_b1 = copy.deepcopy(sec_b1)
+    bad_b1[0]["n"] = 25
+    with pytest.raises(ValueError, match="n=25 < 30"):
+        hgt.check_section_b1_invariants(bad_b1, root=ROOT)
+
+    bad_b2 = copy.deepcopy(sec_b2)
+    bad_b2[0]["n"] = 30
+    with pytest.raises(ValueError, match="outside \\[1, 29\\]"):
+        hgt.check_section_b2_invariants(bad_b2, root=ROOT)
 
     flash = next(r for r in sec_a if r["agent"] == "opencode:google/gemini-3.5-flash" and r["tier"] == "hard")
     assert flash["n"] == 30
@@ -219,6 +321,56 @@ def test_env_replay_truncated_and_tamper_detection():
         hgt.replay_verify_episode(tampered)
 
 
+def test_replay_verify_1bc3e281_data_detail_compatibility():
+    ep_path = ROOT / "data/runs/committed/v1.4/opencode-gemini-3.5-flash/hard/episodes.jsonl"
+    pre_ep = next(
+        json.loads(line)
+        for line in ep_path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and json.loads(line)["seed"] == 3
+    )
+    rec_pre = hgt.replay_verify_episode(pre_ep)
+    assert rec_pre["steps_detail_stripped"] == 2
+    assert math.isclose(rec_pre["score"], float(pre_ep["score"]), abs_tol=1e-9)
+
+    post_ep = copy.deepcopy(pre_ep)
+    mcp_wrapped_ep = copy.deepcopy(pre_ep)
+    bad_detail_ep = copy.deepcopy(pre_ep)
+    env = Env(str(pre_ep["tier"]), int(pre_ep["seed"]))
+    patched_steps = 0
+    for idx, st in enumerate(pre_ep["steps"]):
+        if _client_only_step(st):
+            continue
+        r = env.call(st["tool"], st.get("args") or {})
+        if not r.ok and isinstance(r.data, dict) and set(r.data) == {"detail"}:
+            exact_payload = {"ok": r.ok, "data": dict(r.data), "error": r.error}
+            post_ep["steps"][idx]["result"] = exact_payload
+            mcp_wrapped_ep["steps"][idx]["result"] = {"error": json.dumps(exact_payload)}
+            bad_detail_ep["steps"][idx]["result"] = {
+                "ok": r.ok,
+                "data": {"detail": "tampered_detail_mismatch"},
+                "error": r.error,
+            }
+            patched_steps += 1
+    assert patched_steps == 2
+
+    rec_post = hgt.replay_verify_episode(post_ep)
+    assert rec_post["steps_detail_stripped"] == 0
+    assert math.isclose(rec_post["score"], rec_pre["score"], abs_tol=1e-9)
+
+    rec_wrapped = hgt.replay_verify_episode(mcp_wrapped_ep)
+    assert rec_wrapped["steps_detail_stripped"] == 0
+    assert math.isclose(rec_wrapped["score"], rec_pre["score"], abs_tol=1e-9)
+
+    with pytest.raises(ValueError, match="Env replay mismatch"):
+        hgt.replay_verify_episode(bad_detail_ep)
+
+
+def test_direct_main_check_unmocked(capsys):
+    assert hgt.main(["--check"]) == 0
+    out = capsys.readouterr().out
+    assert "headline_gap_table_v14 check OK" in out
+
+
 def test_check_flag_mode_and_float_tolerance(tmp_path, monkeypatch):
     stored = json.loads(hgt.OUT_JSON.read_text(encoding="utf-8"))
     monkeypatch.setattr(hgt, "compute", lambda _root=ROOT: copy.deepcopy(stored))
@@ -234,13 +386,17 @@ def test_check_flag_mode_and_float_tolerance(tmp_path, monkeypatch):
 
     jittered = json.loads(j_path.read_text(encoding="utf-8"))
     jittered["section_a"][0]["mean"] += 1e-12
-    j_path.write_text(json.dumps(jittered), encoding="utf-8")
+    j_path.write_text(hgt._format_compact_json(jittered), encoding="utf-8")
     assert hgt.main(["--check", *out_flags]) == 0
 
     drifted = json.loads(j_path.read_text(encoding="utf-8"))
     drifted["section_a"][0]["mean"] += 1e-4
-    j_path.write_text(json.dumps(drifted), encoding="utf-8")
+    j_path.write_text(hgt._format_compact_json(drifted), encoding="utf-8")
     assert hgt.main(["--check", *out_flags]) == 1
+
+    oversize_path = tmp_path / "oversize.json"
+    oversize_path.write_text(" " * (hgt.MAX_JSON_BYTES + 10) + "{}", encoding="utf-8")
+    assert hgt.main(["--check", "--out-json", str(oversize_path), "--out-md", str(m_path), "--out-leaderboard", str(lb_path)]) == 1
 
     j_path.write_text(hgt.OUT_JSON.read_text(encoding="utf-8"), encoding="utf-8")
     drifted_lb = json.loads(lb_path.read_text(encoding="utf-8"))

@@ -15,7 +15,7 @@ pool() { local out="" d; for d in "$@"; do [[ $d == */* ]] || d=$(find_run "$d")
 ARGS=(); INFO=()
 add() { local label=$1 info=$2; shift 2; local dirs; dirs=$(pool "$@"); [ -n "$dirs" ] || return 0
         ARGS+=("$label=$dirs"); INFO+=(--info "$label=$info"); }
-add base     "V100 · Qwen2.5-1.5B-Instruct, 0 steps · 4k"          $W/ws4-base-v14
+add base     "V100 · Qwen2.5-1.5B-Instruct, 0 steps · 4k"          $W/ws4-base-v14 $W/ws4-base-v14-off6
 add v1       "V100 · J4 SFT LoRA 44397 · 4k"                        $J/eval-lora $J/eval-lora-par
 add v2       "V100 SFT LoRA 44410 (eval V100 + A100 68bbe201 off30) · 4k" $W/ws4-v2-44410 v2-off30
 add v3-4k-s0 "H100 · ${S0_STEPS:-609} GRPO steps · 4k"              v3-verda-s0 v3-4k-s0-off30

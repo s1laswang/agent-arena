@@ -1,0 +1,64 @@
+{
+    "schema_version": 1,
+    "id": "4557e984-6aba-4bbe-9101-f57417b5dc0c",
+    "started_at": "2026-11-14T23:57:53.307903",
+    "updated_at": "2026-11-15T02:35:47.037582",
+    "finished_at": "2026-11-15T02:35:47.037582",
+    "n_total_trials": 10,
+    "stats": {
+        "n_completed_trials": 10,
+        "n_errored_trials": 10,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 12,
+        "evals": {
+            "opencode__google/gemini-4-carbon__dataset": {
+                "n_trials": 4,
+                "n_errors": 10,
+                "metrics": [
+                    {
+                        "mean": 0.5275
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "reward": {
+                        "0.24": [
+                            "canary-hard-900000__qLPQAb9"
+                        ],
+                        "0.47": [
+                            "canary-hard-900001__7xAchAs"
+                        ],
+                        "0.71": [
+                            "canary-hard-900002__WQ3pUxB"
+                        ],
+                        "0.69": [
+                            "canary-hard-900003__3fuaxNK"
+                        ]
+                    }
+                },
+                "exception_stats": {
+                    "NonZeroAgentExitCodeError": [
+                        "canary-hard-900000__qLPQAb9",
+                        "canary-hard-900001__7xAchAs",
+                        "canary-hard-900002__WQ3pUxB",
+                        "canary-hard-900003__3fuaxNK"
+                    ],
+                    "ApiRateLimitError": [
+                        "canary-hard-900004__XVDeGqi",
+                        "canary-hard-900005__mBCLFjF",
+                        "canary-hard-900006__jZvw3h5",
+                        "canary-hard-900007__HmpL8hU",
+                        "canary-hard-900008__Vj7VoSo",
+                        "canary-hard-900009__UGBHcSh"
+                    ]
+                }
+            }
+        },
+        "n_input_tokens": 16690002,
+        "n_cache_tokens": 15806105,
+        "n_output_tokens": 103698,
+        "cost_usd": 7.3474544999999996
+    }
+}

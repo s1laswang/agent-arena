@@ -259,6 +259,159 @@ def _valid_ablations_md() -> str:
     )
 
 
+def _valid_verda_summary_json(run_id: str, mean_score: float) -> str:
+    return json.dumps(
+        {
+            "run_id": run_id,
+            "by_tier": {
+                "easy": {"n": 30},
+                "medium": {"n": 30},
+                "hard": {"n": 30},
+                "all": {"n": 90, "mean_score": mean_score, "ci95": 0.081},
+            },
+        }
+    )
+
+
+def _valid_ws4_table_md(underscore_names: bool = False) -> str:
+    m4k = "v3_4k_s0" if underscore_names else "v3-4k-s0"
+    m8k1 = "v3_8k_s1_A100_371st" if underscore_names else "v3-8k-s1"
+    m8k2 = "v3_8k_s2_H100_693st" if underscore_names else "v3-8k-s2"
+    return "\n".join(
+        [
+            "| model | tier | n | score |",
+            "|---|---|---|---|",
+            f"| {m4k} | all | 180 | -0.147 +/- 0.063 |",
+            f"| {m8k1} | all | 90 | -0.777 +/- 0.118 |",
+            f"| {m8k2} | all | 90 | -0.050 +/- 0.049 |",
+            "",
+        ]
+    )
+
+
+def _valid_swarm_control_json() -> str:
+    return json.dumps(
+        {
+            "counts": {
+                "attempts": 4,
+                "ledger_verified": 4,
+                "exploits": 4,
+            },
+            "attempts": [
+                {"id": f"pc-00{idx}", "exploit": True}
+                for idx in range(4)
+            ],
+        }
+    )
+
+
+def _valid_dashboard_html() -> str:
+    payload = json.dumps(
+        {
+            "usage": {
+                "totals": {
+                    "calls": 24855,
+                    "in": 678000000,
+                    "cached": 578334000,
+                    "cost_usd": 226.34,
+                }
+            }
+        }
+    )
+    return f"<!doctype html><html><body><script id=\"data\">{payload}</script></body></html>\n"
+
+
+def _valid_atlas_blind_json() -> str:
+    return json.dumps(
+        {
+            "blind": True,
+            "corpus": {"episodes": 153},
+            "recovery": {
+                "tags_recovered": ["premature_accuse", "ignored_delay", "budget_waste"],
+                "n_tags": 5,
+                "novel_modes": ["fingerprint_misattribution", "passive_waiting"],
+                "cited_steps": 127,
+                "regret_share_covered": 0.21,
+            },
+        }
+    )
+
+
+def _valid_paired_table_gemini_json() -> str:
+    return json.dumps(
+        [
+            {
+                "group": "v1.4/opencode-gemini-4-carbon",
+                "label": "OpenCode + gemini-4-carbon",
+                "tier": "hard",
+                "n": 30,
+                "ratio": 0.65,
+                "ratio_lo": 0.24,
+                "ratio_hi": 0.98,
+                "post_expected_ratio": 0.72,
+                "post_expected_lo": 0.52,
+                "post_expected_hi": 0.91,
+            },
+            {
+                "group": "v1.4/inproc-gemini-4-carbon",
+                "label": "in-process gemini-4-carbon",
+                "tier": "hard",
+                "n": 30,
+                "ratio": 0.95,
+                "ratio_lo": 0.62,
+                "ratio_hi": 1.40,
+            },
+        ]
+    )
+
+
+def _valid_gemini_submission_md(*, include_91: bool) -> str:
+    att_prefix = "91 attackers over 4 waves: " if include_91 else ""
+    return "\n".join(
+        [
+            f"{H} Canary Lab",
+            "587 paired episodes across 42 cells; in 18 of 42 ladder cells the CI excludes solver parity.",
+            "On hard, gemini-4-carbon at high thinking reaches 106% [94, 126] (n=10, $1.93/episode).",
+            "3.6-flash reaches 88% [51, 138] ($0.45) at high and 87% [50, 147] ($0.42, n=40, 73/80 correct) at medium.",
+            "3.1-flash-lite is below do-nothing in 8/8 cells.",
+            f"100 ledger-verified attacks ({att_prefix}75 whitebox, 16 blackbox, 9 MCP re-runs): **0 verified exploits**. Positive control: 4/4 caught.",
+            "Thought-signature ablation: rejected 10/10 (400 INVALID_ARGUMENT) vs 0/628 errors with replay on.",
+            "Explicit cache cut Atlas from $58.56 to $21.72 (62.9% saved over 464 calls) and saved 75.9% ($678.19 of $893.08) across 29,150 calls.",
+            "Dashboard usage: 24,855 calls, 85.3% of input cached, $226.34 at list price.",
+            "Blind atlas over 153 trajectories recovers 3 of 5 failure modes and names 2 new ones (127 cited steps, 21% of regret).",
+            "On AfterQuery v1.4 hard (n=30), OpenCode scores 65% [24%, 98%] raw (luck-adjusted 72% [52%, 91%]) vs 95% [62%, 140%] in-process.",
+            "",
+        ]
+    )
+
+
+def _valid_pitch_gemini_md() -> str:
+    return "\n".join(
+        [
+            f"{H} Canary x Gemini",
+            "Pointer to docs/gemini/SUBMISSION.md across 587 episodes.",
+            "100 ledger-verified attacks: 91 attackers over 4 waves (75 whitebox, 16 blackbox) plus 9 re-runs, with 0 verified exploits.",
+            "Positive control caught a reopened exploit 4 times out of 4.",
+            "Blind, Gemini recovers 3 of 5 failure modes and names 2 new ones; 24,855 calls logged.",
+            "",
+        ]
+    )
+
+
+def _valid_video_2min_md() -> str:
+    return "\n".join(
+        [
+            f"{H} Canary Lab: 2-minute demo video",
+            "Swarm source: 91 attackers in 4 waves + 9 MCP re-runs = 100 attempts, 75/91 whitebox.",
+            "VO[03]: five hundred eighty-seven paired episodes; one hundred six percent, interval ninety-four to one hundred twenty-six, at one dollar ninety-three; eighty-eight percent, interval fifty-one to one hundred thirty-eight, forty-five cents.",
+            "VO[04]: {blind_episodes} trajectories, recovered {blind_recovered} of {blind_tags} failure modes and named {blind_new} new ones ({blind_regret_covered} of regret).",
+            "VO[05]: One hundred attacks in four waves. Zero verified exploits. Caught four of four.",
+            "VO[07]: Thinking level, Thought signatures, and explicit cache served {cache_share} of input tokens costing {cost}.",
+            "",
+        ]
+    )
+
+
 def _make_valid_repo_files() -> dict[str, str | bytes]:
     gz_payload = gzip.compress(b'{"text": "cached gateway response"}')
     return {
@@ -292,29 +445,35 @@ def _make_valid_repo_files() -> dict[str, str | bytes]:
         "docs/SUBMISSION.md": _valid_afterquery_submission_md(),
         "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.json": _valid_pooled_ext_json(),
         "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.md": _valid_pooled_ext_md(),
+        "data/runs/committed/v1.4/paired_table_gemini.json": _valid_paired_table_gemini_json(),
         "results/eval_v14/headline_gap_paired_v14.png": PNG_BYTES,
         "results/eval_v14/posterior_calibration_v14.png": PNG_BYTES,
-        "fr8/analysis/out/ws4_table_v3.md": "| model | n | score |\n|---|---|---|\n| v3-4k-s0 | 180 | -0.147 |\n",
-        "fr8/analysis/out/ws4_table_8k_s1s2.md": "| model | n | score |\n|---|---|---|\n| v3_8k_s2 | 90 | -0.050 |\n",
+        "fr8/analysis/out/ws4_table_v3.md": _valid_ws4_table_md(underscore_names=False),
+        "fr8/analysis/out/ws4_table_8k_s1s2.md": _valid_ws4_table_md(underscore_names=True),
         "fr8/analysis/out/ws4_whom_v3.md": "| run | held-out accused |\n|---|---|\n| v3-4k-s0 | 38/180 |\n",
-        "fr8/verda/README.md": f"{H} Verda GPU queue\nInstance ledger.\n",
-        "docs/reports/verda-evidence.md": f"{H} Verda evidence\nCompute track summary.\n",
+        "fr8/verda/README.md": (
+            f"{H} Verda GPU queue\n"
+            "Instances: 3bb74f5a, ac58df04, dbd083ca, f4378173.\n"
+            "v3-8k s1: -0.777 +/- 0.118 n=90; v3-8k s2: -0.050 +/- 0.049 n=90.\n"
+        ),
+        "docs/reports/verda-evidence.md": (
+            f"{H} Verda evidence\n"
+            "Instances: 3bb74f5a, ac58df04, dbd083ca, f4378173.\n"
+        ),
+        "data/fr8/verda/a100-ac58/runs/v3-verda-8k-s1/summary.json": _valid_verda_summary_json("v3-verda-8k-s1", -0.777),
+        "data/fr8/verda/h100spot-dbd0/runs/v3-verda-8k-s2/summary.json": _valid_verda_summary_json("v3-verda-8k-s2", -0.050),
+        "data/fr8/verda/h100-3bb7/runs/v3-verda-s0/summary.json": _valid_verda_summary_json("v3-verda-s0", -0.103),
         "results/gemini/swarm.json": _valid_swarm_json(),
         "results/gemini/swarm.md": _valid_swarm_md(),
+        "results/gemini/swarm_control.json": _valid_swarm_control_json(),
         "results/gemini/swarm_control.md": f"{H} Positive control\nVerified exploits: **4**\n",
+        "results/gemini/dashboard.html": _valid_dashboard_html(),
+        "results/gemini/atlas_blind.json": _valid_atlas_blind_json(),
         "docs/reports/failure_gallery.md": f"{H} Failure gallery\n295 episodes decomposed.\n",
-        "docs/gemini/SUBMISSION.md": (
-            f"{H} Canary Lab\n91 attackers over 4 waves: **0 verified exploits**.\n"
-        ),
-        "docs/gemini/SUBMISSION-LONG.md": (
-            f"{H} Canary Lab (full write-up)\n587 paired episodes and 3 ablations.\n"
-        ),
-        "docs/gemini/VIDEO-2MIN.md": (
-            f"{H} Canary Lab: 2-minute demo video\nStoryboard and VO.\n"
-        ),
-        "pitch/GEMINI.md": (
-            f"{H} Canary x Gemini\n91 attackers over 4 waves, with 0 verified exploits.\n"
-        ),
+        "docs/gemini/SUBMISSION.md": _valid_gemini_submission_md(include_91=True),
+        "docs/gemini/SUBMISSION-LONG.md": _valid_gemini_submission_md(include_91=True),
+        "docs/gemini/VIDEO-2MIN.md": _valid_video_2min_md(),
+        "pitch/GEMINI.md": _valid_pitch_gemini_md(),
         "results/gemini/ladder.json": _valid_ladder_json(),
         "results/gemini/frontier.png": PNG_BYTES,
         "results/gemini/frontier_medium.png": PNG_BYTES,
@@ -600,10 +759,7 @@ def test_check2_gemini_surface_failures(
 
 def test_check2_gemini_surface_accepts_75_plus_16_split(opencode_tmp: Path):
     files = _make_valid_repo_files()
-    files["docs/gemini/SUBMISSION.md"] = (
-        f"{H} Canary Lab\n"
-        "100 ledger-verified attacks (75 whitebox, 16 blackbox, 9 MCP re-runs): **0 verified exploits**.\n"
-    )
+    files["docs/gemini/SUBMISSION.md"] = _valid_gemini_submission_md(include_91=False)
     repo = _write_repo(opencode_tmp / "gemini_split_75_16", files)
     results = surfaces.verify_submission_surfaces(repo)
     by_name = {r.name: r for r in results}
@@ -1037,6 +1193,202 @@ def test_check2_gemini_ladder_and_ablations_failures(
     mutator(files)
     repo = _write_repo(opencode_tmp / f"gemini_new_{case_name}", files)
 
+    results = surfaces.verify_submission_surfaces(repo)
+    by_name = {r.name: r for r in results}
+    assert by_name[surfaces.CHECK_GEMINI].status == "FAIL"
+    assert any(expected_substr in d for d in by_name[surfaces.CHECK_GEMINI].details), (
+        by_name[surfaces.CHECK_GEMINI].details
+    )
+    for other in (surfaces.CHECK_HARBOR, surfaces.CHECK_MEDIA, surfaces.CHECK_GITIGNORE):
+        assert by_name[other].status == "PASS"
+
+
+def test_check1_verda_md_optional_pass(opencode_tmp: Path):
+    files = _make_valid_repo_files()
+    files["VERDA.md"] = (
+        f"{H} Verda Compute Track\n"
+        "Instances: 3bb74f5a, ac58df04, dbd083ca, f4378173.\n"
+        "Pooled v3-4k-s0: -0.147 (n=180); v3-8k-s1: -0.777 (n=90); v3-8k-s2: -0.050 (n=90).\n"
+        "Provenance: fr8/verda/README.md and fr8/analysis/out/ws4_table_v3.md.\n"
+    )
+    repo = _write_repo(opencode_tmp / "verda_md_pass", files)
+    results = surfaces.verify_submission_surfaces(repo)
+    assert [r.status for r in results] == ["PASS", "PASS", "PASS", "PASS"]
+
+
+@pytest.mark.parametrize(
+    ("case_name", "mutator", "expected_substr"),
+    [
+        (
+            "missing_verda_summary_files",
+            lambda f: [f.pop(k) for k in list(f) if k.startswith("data/fr8/verda/")],
+            "missing data/fr8/verda/**/runs/*/summary.json",
+        ),
+        (
+            "verda_summary_wrong_mean",
+            lambda f: f.__setitem__(
+                "data/fr8/verda/a100-ac58/runs/v3-verda-8k-s1/summary.json",
+                _valid_verda_summary_json("v3-verda-8k-s1", -0.555),
+            ),
+            "expected -0.777",
+        ),
+        (
+            "verda_summary_tier_sum_mismatch",
+            lambda f: f.__setitem__(
+                "data/fr8/verda/h100spot-dbd0/runs/v3-verda-8k-s2/summary.json",
+                json.dumps(
+                    {
+                        "run_id": "v3-verda-8k-s2",
+                        "by_tier": {
+                            "easy": {"n": 20},
+                            "medium": {"n": 30},
+                            "hard": {"n": 30},
+                            "all": {"n": 90, "mean_score": -0.050, "ci95": 0.049},
+                        },
+                    }
+                ),
+            ),
+            "disagrees with by_tier.all.n=90",
+        ),
+        (
+            "ws4_table_v3_missing_s1_row",
+            lambda f: f.__setitem__(
+                "fr8/analysis/out/ws4_table_v3.md",
+                _valid_ws4_table_md().replace("-0.777", "-0.666"),
+            ),
+            "missing all-tier v3-8k-s1 row",
+        ),
+        (
+            "verda_evidence_missing_prefix",
+            lambda f: f.__setitem__(
+                "docs/reports/verda-evidence.md",
+                f"{H} Verda evidence\nInstances: 3bb74f5a, ac58df04, dbd083ca.\n",
+            ),
+            "f437",
+        ),
+        (
+            "verda_md_drift",
+            lambda f: f.__setitem__(
+                "VERDA.md",
+                f"{H} Verda\nInstances: 3bb7, ac58, dbd0, f437; -0.777 n=90; -0.050 n=90.\n",
+            ),
+            "VERDA.md missing",
+        ),
+    ],
+)
+def test_check1_w9b_verda_and_ws4_parity_failures(
+    opencode_tmp: Path,
+    case_name: str,
+    mutator,
+    expected_substr: str,
+):
+    files = _make_valid_repo_files()
+    mutator(files)
+    repo = _write_repo(opencode_tmp / f"w9b_verda_{case_name}", files)
+    results = surfaces.verify_submission_surfaces(repo)
+    by_name = {r.name: r for r in results}
+    assert by_name[surfaces.CHECK_HARBOR].status == "FAIL"
+    assert any(expected_substr in d for d in by_name[surfaces.CHECK_HARBOR].details), (
+        by_name[surfaces.CHECK_HARBOR].details
+    )
+    for other in (surfaces.CHECK_GEMINI, surfaces.CHECK_MEDIA, surfaces.CHECK_GITIGNORE):
+        assert by_name[other].status == "PASS"
+
+
+@pytest.mark.parametrize(
+    ("case_name", "mutator", "expected_substr"),
+    [
+        (
+            "swarm_json_wrong_attempts_100",
+            lambda f: f.__setitem__(
+                "results/gemini/swarm.json",
+                _valid_swarm_json().replace('"attempts": 100', '"attempts": 99'),
+            ),
+            "counts.attempts expected 100",
+        ),
+        (
+            "swarm_control_json_wrong_exploits",
+            lambda f: f.__setitem__(
+                "results/gemini/swarm_control.json",
+                _valid_swarm_control_json().replace('"exploits": 4', '"exploits": 3'),
+            ),
+            "counts.exploits expected 4",
+        ),
+        (
+            "swarm_control_md_mismatch",
+            lambda f: f.__setitem__(
+                "results/gemini/swarm_control.md",
+                f"{H} Positive control\nVerified exploits: **3**\n",
+            ),
+            "swarm_control.md expected Verified exploits: 4",
+        ),
+        (
+            "dashboard_wrong_calls",
+            lambda f: f.__setitem__(
+                "results/gemini/dashboard.html",
+                _valid_dashboard_html().replace("24855", "19999"),
+            ),
+            "usage.totals.calls expected 24855",
+        ),
+        (
+            "atlas_blind_not_blind",
+            lambda f: f.__setitem__(
+                "results/gemini/atlas_blind.json",
+                _valid_atlas_blind_json().replace('"blind": true', '"blind": false'),
+            ),
+            "expected blind=true",
+        ),
+        (
+            "paired_gemini_wrong_luck_ratio",
+            lambda f: f.__setitem__(
+                "data/runs/committed/v1.4/paired_table_gemini.json",
+                _valid_paired_table_gemini_json().replace("0.72", "0.61"),
+            ),
+            "luck-adjusted ratio expected 72%",
+        ),
+        (
+            "submission_md_wrong_dashboard_cost",
+            lambda f: f.__setitem__(
+                "docs/gemini/SUBMISSION.md",
+                _valid_gemini_submission_md(include_91=True).replace("$226.34", "$199.99"),
+            ),
+            "docs/gemini/SUBMISSION.md missing dashboard usage parity",
+        ),
+        (
+            "submission_long_missing_literal_91",
+            lambda f: f.__setitem__(
+                "docs/gemini/SUBMISSION-LONG.md",
+                _valid_gemini_submission_md(include_91=False),
+            ),
+            "docs/gemini/SUBMISSION-LONG.md missing '91'",
+        ),
+        (
+            "pitch_missing_submission_pointer",
+            lambda f: f.__setitem__(
+                "pitch/GEMINI.md",
+                _valid_pitch_gemini_md().replace("docs/gemini/SUBMISSION.md", "README.md"),
+            ),
+            "pitch/GEMINI.md missing pointer to docs/gemini/SUBMISSION.md",
+        ),
+        (
+            "video_2min_missing_ladder_106",
+            lambda f: f.__setitem__(
+                "docs/gemini/VIDEO-2MIN.md",
+                _valid_video_2min_md().replace("one hundred six percent", "ninety percent"),
+            ),
+            "docs/gemini/VIDEO-2MIN.md missing hard gemini-4-carbon high 106%",
+        ),
+    ],
+)
+def test_check2_w9b_gemini_writeup_and_artifact_parity_failures(
+    opencode_tmp: Path,
+    case_name: str,
+    mutator,
+    expected_substr: str,
+):
+    files = _make_valid_repo_files()
+    mutator(files)
+    repo = _write_repo(opencode_tmp / f"w9b_gemini_{case_name}", files)
     results = surfaces.verify_submission_surfaces(repo)
     by_name = {r.name: r for r in results}
     assert by_name[surfaces.CHECK_GEMINI].status == "FAIL"

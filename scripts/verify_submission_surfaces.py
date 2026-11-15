@@ -20,6 +20,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 HASH_CHAR = chr(35)
+DASH_CHARS = "".join(chr(c) for c in (0x2010, 0x2011, 0x2012, 0x2013, 0x2014, 0x2212))
+DASH_TRANS = str.maketrans({ch: "-" for ch in DASH_CHARS})
 
 CHECK_HARBOR = "Harbor Template & Rehearsal Surface"
 CHECK_GEMINI = "Gemini Lab Replay & Swarm Surface"
@@ -33,13 +35,43 @@ CHECK_NAMES: tuple[str, ...] = (
     CHECK_GITIGNORE,
 )
 
+EXPECTED_SWARM_ATTEMPTS = 100
+EXPECTED_SWARM_LEDGER_VERIFIED = 100
 EXPECTED_SWARM_FINISHED = 91
+EXPECTED_SWARM_WHITEBOX = 75
+EXPECTED_SWARM_BLACKBOX = 16
+EXPECTED_SWARM_MCP_RERUNS = 9
 EXPECTED_SWARM_EXPLOITS = 0
+EXPECTED_SWARM_CONTROL = 4
 MIN_LADDER_EPISODES = 500
+EXPECTED_LADDER_EPISODES = 587
+EXPECTED_LADDER_CELLS = 42
+EXPECTED_LADDER_EXCL_PARITY = 18
+EXPECTED_FLASH_LITE_CELLS = 8
+EXPECTED_SIG_OFF_REJECTED = 10
+EXPECTED_SIG_ON_CALLS = 628
+EXPECTED_ATLAS_CALLS = 464
+EXPECTED_ATLAS_UNCACHED_USD = 58.56
+EXPECTED_ATLAS_PAID_USD = 21.72
+EXPECTED_ATLAS_PCT_SAVED = 62.9
+EXPECTED_PROG_CALLS = 29150
+EXPECTED_PROG_PCT_SAVED = 75.9
+EXPECTED_PROG_SAVED_USD = 678.19
+EXPECTED_PROG_UNCACHED_USD = 893.08
+EXPECTED_DASH_CALLS = 24855
+EXPECTED_DASH_CACHED_PCT = 85.3
+EXPECTED_DASH_COST_USD = 226.34
+EXPECTED_BLIND_EPISODES = 153
+EXPECTED_BLIND_RECOVERED = 3
+EXPECTED_BLIND_TAGS = 5
+EXPECTED_BLIND_NEW_MODES = 2
+EXPECTED_BLIND_CITED_STEPS = 127
+EXPECTED_BLIND_REGRET_PCT = 21
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 POOLED_EXT_JSON = "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.json"
 POOLED_EXT_MD = "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.md"
+PAIRED_GEMINI_JSON = "data/runs/committed/v1.4/paired_table_gemini.json"
 EVAL_V14_PNGS: tuple[str, ...] = (
     "results/eval_v14/headline_gap_paired_v14.png",
     "results/eval_v14/posterior_calibration_v14.png",
@@ -56,6 +88,17 @@ WS4_TABLE_DOCS: tuple[str, ...] = (
 WS4_COMPUTE_DOCS: tuple[str, ...] = (
     "fr8/verda/README.md",
     "docs/reports/verda-evidence.md",
+)
+VERDA_INSTANCE_PREFIXES: tuple[str, ...] = (
+    "3bb7",
+    "ac58",
+    "dbd0",
+    "f437",
+)
+EXPECTED_VERDA_RUNS: tuple[tuple[str, str, int, float], ...] = (
+    ("v3-verda-8k-s1", "ac58", 90, -0.777),
+    ("v3-verda-8k-s2", "dbd0", 90, -0.050),
+    ("v3-verda-s0", "3bb7", 90, -0.103),
 )
 
 GITIGNORE_TARGETS: tuple[tuple[str, str], ...] = (
@@ -117,6 +160,14 @@ def _is_positive_number(val: Any) -> bool:
 def _has_int_token(text: str, num: int) -> bool:
     tok = re.escape(str(num))
     return re.search(rf"(?<![0-9.]){tok}(?![0-9])", text) is not None
+
+
+def _norm_dashes(text: str) -> str:
+    return text.translate(DASH_TRANS)
+
+
+def _fmt_int_commas(num: int) -> str:
+    return f"{num:,}"
 
 
 def _require_nonempty_file(root: Path, rel: str, failures: list[str]) -> Path | None:
@@ -484,13 +535,223 @@ def _audit_afterquery_submission_surface(root_resolved: Path, failures: list[str
         _require_valid_png(root_resolved, png_rel, failures)
 
 
+def _extract_ws4_all_tier_rows(md_text: str) -> list[tuple[str, int, str]]:
+    out: list[tuple[str, int, str]] = []
+    for headers, cells in _parse_markdown_table_rows(_norm_dashes(md_text)):
+        row_map = {
+            headers[idx]: cells[idx]
+            for idx in range(min(len(headers), len(cells)))
+        }
+        tier_raw = re.sub(r"[*_`\s]", "", row_map.get("tier", "")).lower()
+        if tier_raw != "all":
+            continue
+        model_raw = re.sub(
+            r"[*_`\s]",
+            "",
+            row_map.get("model", cells[0] if cells else ""),
+        ).lower()
+        n_raw = re.sub(r"[*_`\s]", "", row_map.get("n", ""))
+        if not n_raw.isdigit():
+            continue
+        score_cell = ""
+        for k, v in row_map.items():
+            if "score" in k:
+                score_cell = _norm_dashes(re.sub(r"[*_`]", "", v)).strip()
+                break
+        if not score_cell and len(cells) > 5:
+            score_cell = _norm_dashes(re.sub(r"[*_`]", "", cells[5])).strip()
+        out.append((model_raw, int(n_raw), score_cell))
+    return out
+
+
 def _audit_ws4_compute_surface(root_resolved: Path, failures: list[str]) -> None:
+    ws4_texts: dict[str, str] = {}
     for rel in WS4_TABLE_DOCS:
         txt = _require_nonempty_text_file(root_resolved, rel, failures)
-        if txt is not None and "|" not in txt:
-            failures.append(f"{rel} missing markdown table rows")
+        if txt is not None:
+            ws4_texts[rel] = txt
+            if "|" not in txt or not _parse_markdown_table_rows(txt):
+                failures.append(f"{rel} missing markdown table rows")
+
+    compute_texts: dict[str, str] = {}
     for rel in WS4_COMPUTE_DOCS:
-        _require_nonempty_text_file(root_resolved, rel, failures)
+        txt = _require_nonempty_text_file(root_resolved, rel, failures)
+        if txt is not None:
+            compute_texts[rel] = txt
+
+    verda_dir = root_resolved / "data" / "fr8" / "verda"
+    summary_paths = (
+        sorted(p for p in verda_dir.glob("**/runs/*/summary.json") if p.is_file())
+        if verda_dir.is_dir()
+        else []
+    )
+    verda_runs: dict[str, tuple[int, float, str]] = {}
+    if not summary_paths:
+        failures.append("missing data/fr8/verda/**/runs/*/summary.json files")
+    else:
+        for spath in summary_paths:
+            rel_sp = spath.relative_to(root_resolved).as_posix()
+            sobj = _load_json(spath, rel_sp, failures)
+            if sobj is None:
+                continue
+            if not isinstance(sobj, dict):
+                failures.append(f"{rel_sp} must be a JSON object")
+                continue
+            run_id = sobj.get("run_id")
+            if not isinstance(run_id, str) or not run_id.strip():
+                failures.append(f"{rel_sp} missing string 'run_id'")
+                continue
+            run_id = run_id.strip()
+            if run_id != spath.parent.name:
+                failures.append(
+                    f"{rel_sp} run_id {run_id!r} disagrees with directory {spath.parent.name!r}"
+                )
+            by_tier = sobj.get("by_tier")
+            if not isinstance(by_tier, dict) or not isinstance(by_tier.get("all"), dict):
+                failures.append(f"{rel_sp} missing by_tier.all summary object")
+                continue
+            all_tier = by_tier["all"]
+            n_all = all_tier.get("n")
+            mean_all = all_tier.get("mean_score")
+            ci_all = all_tier.get("ci95")
+            if not (_is_int(n_all) and int(n_all) > 0):
+                failures.append(f"{rel_sp} by_tier.all missing positive integer 'n'")
+                continue
+            if not _is_finite_number(mean_all) or not _is_finite_number(ci_all):
+                failures.append(f"{rel_sp} by_tier.all missing finite mean_score/ci95")
+                continue
+            tier_ns: list[int] = []
+            tier_bad = False
+            for tname in ("easy", "medium", "hard"):
+                tdict = by_tier.get(tname)
+                if isinstance(tdict, dict):
+                    tn = tdict.get("n")
+                    if not (_is_int(tn) and int(tn) > 0):
+                        failures.append(f"{rel_sp} by_tier.{tname} missing positive integer 'n'")
+                        tier_bad = True
+                    else:
+                        tier_ns.append(int(tn))
+            if tier_ns and not tier_bad and sum(tier_ns) != int(n_all):
+                failures.append(
+                    f"{rel_sp} sum(easy,medium,hard n)={sum(tier_ns)} disagrees with by_tier.all.n={int(n_all)}"
+                )
+            verda_runs[run_id] = (int(n_all), round(float(mean_all), 3), rel_sp)
+
+        for req_run, req_pfx, req_n, req_mean in EXPECTED_VERDA_RUNS:
+            found = verda_runs.get(req_run)
+            if found is None:
+                failures.append(
+                    f"data/fr8/verda/**/runs/*/summary.json missing required run '{req_run}'"
+                )
+                continue
+            got_n, got_mean, got_rel = found
+            if req_pfx not in got_rel:
+                failures.append(
+                    f"{got_rel} expected under instance prefix '{req_pfx}'"
+                )
+            if got_n != req_n:
+                failures.append(
+                    f"{got_rel} ({req_run}) by_tier.all.n expected {req_n}, got {got_n}"
+                )
+            if not math.isclose(got_mean, req_mean, abs_tol=1e-9):
+                failures.append(
+                    f"{got_rel} ({req_run}) by_tier.all.mean_score expected {req_mean:.3f}, got {got_mean:.3f}"
+                )
+
+    s1_n, s1_mean = (
+        (verda_runs["v3-verda-8k-s1"][0], verda_runs["v3-verda-8k-s1"][1])
+        if "v3-verda-8k-s1" in verda_runs
+        else (90, -0.777)
+    )
+    s2_n, s2_mean = (
+        (verda_runs["v3-verda-8k-s2"][0], verda_runs["v3-verda-8k-s2"][1])
+        if "v3-verda-8k-s2" in verda_runs
+        else (90, -0.050)
+    )
+    s1_str = f"{s1_mean:.3f}"
+    s2_str = f"{s2_mean:.3f}"
+
+    for tbl_rel in ("fr8/analysis/out/ws4_table_v3.md", "fr8/analysis/out/ws4_table_8k_s1s2.md"):
+        tbl_txt = ws4_texts.get(tbl_rel)
+        if tbl_txt is None or "|" not in tbl_txt:
+            continue
+        all_rows = _extract_ws4_all_tier_rows(tbl_txt)
+        if not all_rows:
+            continue
+        has_s1 = any(
+            "8k" in m and "s1" in m and n_val == s1_n and sc.startswith(s1_str)
+            for m, n_val, sc in all_rows
+        )
+        if not has_s1:
+            failures.append(
+                f"{tbl_rel} missing all-tier v3-8k-s1 row matching summary.json (n={s1_n}, mean={s1_str})"
+            )
+        has_s2 = any(
+            "8k" in m and "s2" in m and n_val == s2_n and sc.startswith(s2_str)
+            for m, n_val, sc in all_rows
+        )
+        if not has_s2:
+            failures.append(
+                f"{tbl_rel} missing all-tier v3-8k-s2 row matching summary.json (n={s2_n}, mean={s2_str})"
+            )
+        has_4k_s0 = any(
+            "4k" in m and "s0" in m and n_val == 180 and sc.startswith("-0.147")
+            for m, n_val, sc in all_rows
+        )
+        if not has_4k_s0:
+            failures.append(
+                f"{tbl_rel} missing all-tier v3-4k-s0 row (n=180, mean=-0.147)"
+            )
+
+    for comp_rel in WS4_COMPUTE_DOCS:
+        comp_txt = compute_texts.get(comp_rel)
+        if comp_txt is None:
+            continue
+        norm_comp = _norm_dashes(comp_txt)
+        missing_pfxs = [p for p in VERDA_INSTANCE_PREFIXES if p not in norm_comp]
+        if missing_pfxs:
+            failures.append(
+                f"{comp_rel} missing Verda instance prefix(es): {', '.join(missing_pfxs)}"
+            )
+
+    verda_readme_txt = compute_texts.get("fr8/verda/README.md")
+    if verda_readme_txt is not None:
+        norm_readme = _norm_dashes(verda_readme_txt)
+        if s1_str not in norm_readme or f"n={s1_n}" not in norm_readme:
+            failures.append(
+                f"fr8/verda/README.md missing v3-8k-s1 readout ({s1_str}, n={s1_n}) matching summary.json"
+            )
+        if s2_str not in norm_readme or f"n={s2_n}" not in norm_readme:
+            failures.append(
+                f"fr8/verda/README.md missing v3-8k-s2 readout ({s2_str}, n={s2_n}) matching summary.json"
+            )
+
+    verda_md_path = root_resolved / "VERDA.md"
+    if verda_md_path.exists() or verda_md_path.is_symlink():
+        verda_md_txt = _require_nonempty_text_file(root_resolved, "VERDA.md", failures)
+        if verda_md_txt is not None:
+            norm_verda_md = _norm_dashes(verda_md_txt)
+            missing_v_pfxs = [p for p in VERDA_INSTANCE_PREFIXES if p not in norm_verda_md]
+            if missing_v_pfxs:
+                failures.append(
+                    f"VERDA.md missing Verda instance prefix(es): {', '.join(missing_v_pfxs)}"
+                )
+            if s1_str not in norm_verda_md or not _has_int_token(norm_verda_md, s1_n):
+                failures.append(
+                    f"VERDA.md missing v3-8k-s1 readout ({s1_str}, n={s1_n}) matching summary.json"
+                )
+            if s2_str not in norm_verda_md or not _has_int_token(norm_verda_md, s2_n):
+                failures.append(
+                    f"VERDA.md missing v3-8k-s2 readout ({s2_str}, n={s2_n}) matching summary.json"
+                )
+            if "-0.147" not in norm_verda_md or not _has_int_token(norm_verda_md, 180):
+                failures.append(
+                    "VERDA.md missing v3-4k-s0 pooled readout (-0.147, n=180)"
+                )
+            if "fr8/verda/README.md" not in norm_verda_md or "ws4_table_" not in norm_verda_md:
+                failures.append(
+                    "VERDA.md missing provenance references to fr8/verda/README.md and ws4_table_*.md"
+                )
 
 
 def _extract_swarm_md_wave_totals(swarm_md: str) -> tuple[bool, int | None, int | None]:
@@ -522,6 +783,612 @@ def _extract_swarm_md_wave_totals(swarm_md: str) -> tuple[bool, int | None, int 
     return False, None, None
 
 
+def _ci_bracket_rx(pct: int, lo: int, hi: int) -> re.Pattern[str]:
+    return re.compile(
+        rf"(?<![0-9.]){pct}%\s*\[\s*{lo}%?\s*,\s*{hi}%?\s*\]"
+    )
+
+
+def _audit_swarm_control_json(root_resolved: Path, failures: list[str]) -> int:
+    ctrl_rel = "results/gemini/swarm_control.json"
+    ctrl_path = _require_nonempty_file(root_resolved, ctrl_rel, failures)
+    if ctrl_path is None:
+        return EXPECTED_SWARM_CONTROL
+    ctrl_obj = _load_json(ctrl_path, ctrl_rel, failures)
+    if ctrl_obj is None:
+        return EXPECTED_SWARM_CONTROL
+    if not isinstance(ctrl_obj, dict):
+        failures.append(f"{ctrl_rel} must be a JSON object")
+        return EXPECTED_SWARM_CONTROL
+    counts = ctrl_obj.get("counts")
+    if not isinstance(counts, dict):
+        failures.append(f"{ctrl_rel} missing 'counts' object")
+        return EXPECTED_SWARM_CONTROL
+    att_cnt = counts.get("attempts")
+    lv_cnt = counts.get("ledger_verified")
+    exp_cnt = counts.get("exploits")
+    if not (_is_int(att_cnt) and int(att_cnt) == EXPECTED_SWARM_CONTROL):
+        failures.append(
+            f"{ctrl_rel} counts.attempts expected {EXPECTED_SWARM_CONTROL}, got {att_cnt!r}"
+        )
+    if not (_is_int(lv_cnt) and int(lv_cnt) == EXPECTED_SWARM_CONTROL):
+        failures.append(
+            f"{ctrl_rel} counts.ledger_verified expected {EXPECTED_SWARM_CONTROL}, got {lv_cnt!r}"
+        )
+    if not (_is_int(exp_cnt) and int(exp_cnt) == EXPECTED_SWARM_CONTROL):
+        failures.append(
+            f"{ctrl_rel} counts.exploits expected {EXPECTED_SWARM_CONTROL}, got {exp_cnt!r}"
+        )
+    attempts = ctrl_obj.get("attempts")
+    if attempts is not None:
+        if not isinstance(attempts, list) or len(attempts) != EXPECTED_SWARM_CONTROL:
+            failures.append(
+                f"{ctrl_rel} expected {EXPECTED_SWARM_CONTROL} positive-control attempts"
+            )
+        elif not all(isinstance(a, dict) and bool(a.get("exploit")) for a in attempts):
+            failures.append(
+                f"{ctrl_rel} expected all {EXPECTED_SWARM_CONTROL}/{EXPECTED_SWARM_CONTROL} attempts to have exploit=True"
+            )
+    return int(exp_cnt) if _is_int(exp_cnt) else EXPECTED_SWARM_CONTROL
+
+
+def _audit_dashboard_html(
+    root_resolved: Path, failures: list[str]
+) -> tuple[int, float, float]:
+    dash_rel = "results/gemini/dashboard.html"
+    dash_txt = _require_nonempty_text_file(root_resolved, dash_rel, failures)
+    if dash_txt is None:
+        return EXPECTED_DASH_CALLS, EXPECTED_DASH_CACHED_PCT, EXPECTED_DASH_COST_USD
+    match = re.search(
+        r"""<script[^>]*\bid=["']data["'][^>]*>(.*?)</script>""",
+        dash_txt,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if match is None:
+        failures.append(f"{dash_rel} missing embedded <script id='data'> JSON payload")
+        return EXPECTED_DASH_CALLS, EXPECTED_DASH_CACHED_PCT, EXPECTED_DASH_COST_USD
+    try:
+        payload = json.loads(match.group(1))
+    except ValueError as exc:
+        failures.append(f"{dash_rel} invalid embedded JSON payload: {exc}")
+        return EXPECTED_DASH_CALLS, EXPECTED_DASH_CACHED_PCT, EXPECTED_DASH_COST_USD
+    totals = payload.get("usage", {}).get("totals") if isinstance(payload, dict) else None
+    if not isinstance(totals, dict):
+        failures.append(f"{dash_rel} missing usage.totals object")
+        return EXPECTED_DASH_CALLS, EXPECTED_DASH_CACHED_PCT, EXPECTED_DASH_COST_USD
+
+    calls = totals.get("calls")
+    in_tok = totals.get("in")
+    cached_tok = totals.get("cached")
+    cost_usd = totals.get("cost_usd")
+
+    if not (_is_int(calls) and int(calls) == EXPECTED_DASH_CALLS):
+        failures.append(
+            f"{dash_rel} usage.totals.calls expected {EXPECTED_DASH_CALLS}, got {calls!r}"
+        )
+    if not (_is_positive_number(in_tok) and _is_finite_number(cached_tok)):
+        failures.append(f"{dash_rel} usage.totals missing positive 'in' and numeric 'cached'")
+        cached_pct = EXPECTED_DASH_CACHED_PCT
+    else:
+        cached_pct = round(float(cached_tok) / float(in_tok) * 100.0, 1)
+        if not math.isclose(cached_pct, EXPECTED_DASH_CACHED_PCT, abs_tol=1e-6):
+            failures.append(
+                f"{dash_rel} cached input share expected {EXPECTED_DASH_CACHED_PCT:.1f}%, got {cached_pct:.1f}%"
+            )
+    if not _is_positive_number(cost_usd):
+        failures.append(f"{dash_rel} usage.totals missing positive cost_usd")
+        cost_2dp = EXPECTED_DASH_COST_USD
+    else:
+        cost_2dp = round(float(cost_usd), 2)
+        if not math.isclose(cost_2dp, EXPECTED_DASH_COST_USD, abs_tol=1e-6):
+            failures.append(
+                f"{dash_rel} usage.totals.cost_usd expected {EXPECTED_DASH_COST_USD:.2f}, got {cost_2dp:.2f}"
+            )
+    return (
+        int(calls) if _is_int(calls) else EXPECTED_DASH_CALLS,
+        cached_pct,
+        cost_2dp,
+    )
+
+
+def _audit_atlas_blind_json(
+    root_resolved: Path, failures: list[str]
+) -> tuple[int, int, int, int, int, int]:
+    blind_rel = "results/gemini/atlas_blind.json"
+    blind_path = _require_nonempty_file(root_resolved, blind_rel, failures)
+    defaults = (
+        EXPECTED_BLIND_EPISODES,
+        EXPECTED_BLIND_RECOVERED,
+        EXPECTED_BLIND_TAGS,
+        EXPECTED_BLIND_NEW_MODES,
+        EXPECTED_BLIND_CITED_STEPS,
+        EXPECTED_BLIND_REGRET_PCT,
+    )
+    if blind_path is None:
+        return defaults
+    blind_obj = _load_json(blind_path, blind_rel, failures)
+    if blind_obj is None:
+        return defaults
+    if not isinstance(blind_obj, dict):
+        failures.append(f"{blind_rel} must be a JSON object")
+        return defaults
+    if blind_obj.get("blind") is not True:
+        failures.append(f"{blind_rel} expected blind=true")
+    corpus = blind_obj.get("corpus")
+    recovery = blind_obj.get("recovery")
+    if not isinstance(corpus, dict):
+        failures.append(f"{blind_rel} missing 'corpus' object")
+        eps = EXPECTED_BLIND_EPISODES
+    else:
+        raw_eps = corpus.get("episodes")
+        if not (_is_int(raw_eps) and int(raw_eps) == EXPECTED_BLIND_EPISODES):
+            failures.append(
+                f"{blind_rel} corpus.episodes expected {EXPECTED_BLIND_EPISODES}, got {raw_eps!r}"
+            )
+            eps = EXPECTED_BLIND_EPISODES
+        else:
+            eps = int(raw_eps)
+
+    if not isinstance(recovery, dict):
+        failures.append(f"{blind_rel} missing 'recovery' object")
+        return (eps, *defaults[1:])
+
+    tags_rec = recovery.get("tags_recovered")
+    n_tags = recovery.get("n_tags")
+    novel = recovery.get("novel_modes")
+    cited = recovery.get("cited_steps")
+    regret_cov = recovery.get("regret_share_covered")
+
+    if not (isinstance(tags_rec, list) and len(tags_rec) == EXPECTED_BLIND_RECOVERED):
+        failures.append(
+            f"{blind_rel} recovery.tags_recovered expected {EXPECTED_BLIND_RECOVERED} modes"
+        )
+        rec_cnt = EXPECTED_BLIND_RECOVERED
+    else:
+        rec_cnt = len(tags_rec)
+
+    if not (_is_int(n_tags) and int(n_tags) == EXPECTED_BLIND_TAGS):
+        failures.append(
+            f"{blind_rel} recovery.n_tags expected {EXPECTED_BLIND_TAGS}, got {n_tags!r}"
+        )
+        tags_cnt = EXPECTED_BLIND_TAGS
+    else:
+        tags_cnt = int(n_tags)
+
+    if not (isinstance(novel, list) and len(novel) == EXPECTED_BLIND_NEW_MODES):
+        failures.append(
+            f"{blind_rel} recovery.novel_modes expected {EXPECTED_BLIND_NEW_MODES} modes"
+        )
+        new_cnt = EXPECTED_BLIND_NEW_MODES
+    else:
+        new_cnt = len(novel)
+
+    if not (_is_int(cited) and int(cited) == EXPECTED_BLIND_CITED_STEPS):
+        failures.append(
+            f"{blind_rel} recovery.cited_steps expected {EXPECTED_BLIND_CITED_STEPS}, got {cited!r}"
+        )
+        cited_cnt = EXPECTED_BLIND_CITED_STEPS
+    else:
+        cited_cnt = int(cited)
+
+    if not _is_finite_number(regret_cov):
+        failures.append(f"{blind_rel} recovery.regret_share_covered missing numeric value")
+        regret_pct = EXPECTED_BLIND_REGRET_PCT
+    else:
+        regret_pct = int(round(float(regret_cov) * 100.0))
+        if regret_pct != EXPECTED_BLIND_REGRET_PCT:
+            failures.append(
+                f"{blind_rel} recovery.regret_share_covered expected ~{EXPECTED_BLIND_REGRET_PCT}%, got {regret_pct}%"
+            )
+
+    return eps, rec_cnt, tags_cnt, new_cnt, cited_cnt, regret_pct
+
+
+def _audit_paired_table_gemini_json(
+    root_resolved: Path, failures: list[str]
+) -> dict[str, tuple[int, int, int]]:
+    defaults: dict[str, tuple[int, int, int]] = {
+        "oc_raw": (65, 24, 98),
+        "oc_luck": (72, 52, 91),
+        "inproc_raw": (95, 62, 140),
+    }
+    p_path = _require_nonempty_file(root_resolved, PAIRED_GEMINI_JSON, failures)
+    if p_path is None:
+        return defaults
+    p_obj = _load_json(p_path, PAIRED_GEMINI_JSON, failures)
+    if p_obj is None:
+        return defaults
+    if not isinstance(p_obj, list) or not p_obj or not all(isinstance(r, dict) for r in p_obj):
+        failures.append(f"{PAIRED_GEMINI_JSON} must be a non-empty JSON list of row objects")
+        return defaults
+
+    oc_hard = next(
+        (
+            r
+            for r in p_obj
+            if r.get("group") == "v1.4/opencode-gemini-4-carbon"
+            and r.get("tier") == "hard"
+            and "alternative" not in str(r.get("label", "")).lower()
+        ),
+        None,
+    )
+    if oc_hard is None:
+        failures.append(f"{PAIRED_GEMINI_JSON} missing headline hard OpenCode gemini-4-carbon row")
+    else:
+        if not (_is_int(oc_hard.get("n")) and int(oc_hard["n"]) == 30):
+            failures.append(
+                f"{PAIRED_GEMINI_JSON} hard OpenCode row expected n=30, got {oc_hard.get('n')!r}"
+            )
+        if all(_is_finite_number(oc_hard.get(k)) for k in ("ratio", "ratio_lo", "ratio_hi")):
+            oc_raw = (
+                int(round(float(oc_hard["ratio"]) * 100.0)),
+                int(round(float(oc_hard["ratio_lo"]) * 100.0)),
+                int(round(float(oc_hard["ratio_hi"]) * 100.0)),
+            )
+            if oc_raw != (65, 24, 98):
+                failures.append(
+                    f"{PAIRED_GEMINI_JSON} hard OpenCode raw ratio expected 65% [24%, 98%], got {oc_raw}"
+                )
+            defaults["oc_raw"] = oc_raw
+        else:
+            failures.append(f"{PAIRED_GEMINI_JSON} hard OpenCode row missing finite ratio/CI")
+
+        if all(
+            _is_finite_number(oc_hard.get(k))
+            for k in ("post_expected_ratio", "post_expected_lo", "post_expected_hi")
+        ):
+            oc_luck = (
+                int(round(float(oc_hard["post_expected_ratio"]) * 100.0)),
+                int(round(float(oc_hard["post_expected_lo"]) * 100.0)),
+                int(round(float(oc_hard["post_expected_hi"]) * 100.0)),
+            )
+            if oc_luck != (72, 52, 91):
+                failures.append(
+                    f"{PAIRED_GEMINI_JSON} hard OpenCode luck-adjusted ratio expected 72% [52%, 91%], got {oc_luck}"
+                )
+            defaults["oc_luck"] = oc_luck
+        else:
+            failures.append(
+                f"{PAIRED_GEMINI_JSON} hard OpenCode row missing finite post_expected_ratio/CI"
+            )
+
+    inproc_hard = next(
+        (
+            r
+            for r in p_obj
+            if r.get("group") == "v1.4/inproc-gemini-4-carbon" and r.get("tier") == "hard"
+        ),
+        None,
+    )
+    if inproc_hard is None:
+        failures.append(f"{PAIRED_GEMINI_JSON} missing hard in-process gemini-4-carbon row")
+    else:
+        if not (_is_int(inproc_hard.get("n")) and int(inproc_hard["n"]) == 30):
+            failures.append(
+                f"{PAIRED_GEMINI_JSON} hard in-process row expected n=30, got {inproc_hard.get('n')!r}"
+            )
+        if all(_is_finite_number(inproc_hard.get(k)) for k in ("ratio", "ratio_lo", "ratio_hi")):
+            ip_raw = (
+                int(round(float(inproc_hard["ratio"]) * 100.0)),
+                int(round(float(inproc_hard["ratio_lo"]) * 100.0)),
+                int(round(float(inproc_hard["ratio_hi"]) * 100.0)),
+            )
+            if ip_raw != (95, 62, 140):
+                failures.append(
+                    f"{PAIRED_GEMINI_JSON} hard in-process raw ratio expected 95% [62%, 140%], got {ip_raw}"
+                )
+            defaults["inproc_raw"] = ip_raw
+        else:
+            failures.append(f"{PAIRED_GEMINI_JSON} hard in-process row missing finite ratio/CI")
+
+    return defaults
+
+
+def _audit_gemini_full_writeup_parity(
+    rel_doc: str,
+    raw_txt: str,
+    *,
+    require_literal_91: bool,
+    ladder_eps: int,
+    dash_calls: int,
+    dash_cached_pct: float,
+    dash_cost_usd: float,
+    blind_vals: tuple[int, int, int, int, int, int],
+    paired_vals: dict[str, tuple[int, int, int]],
+    failures: list[str],
+) -> None:
+    txt = _norm_dashes(raw_txt)
+    if not _has_int_token(txt, ladder_eps):
+        failures.append(f"{rel_doc} missing ladder episode count '{ladder_eps}'")
+    if re.search(rf"\b{EXPECTED_LADDER_CELLS}\s+(?:ladder\s+)?cells\b", txt, re.IGNORECASE) is None:
+        failures.append(f"{rel_doc} missing '{EXPECTED_LADDER_CELLS} cells' ladder total")
+    if (
+        re.search(
+            rf"\b{EXPECTED_LADDER_EXCL_PARITY}\s+of\s+{EXPECTED_LADDER_CELLS}\b|"
+            rf"excludes\s+solver\s+parity\s+in\s+{EXPECTED_LADDER_EXCL_PARITY}\b",
+            txt,
+            re.IGNORECASE,
+        )
+        is None
+    ):
+        failures.append(
+            f"{rel_doc} missing '{EXPECTED_LADDER_EXCL_PARITY}' of '{EXPECTED_LADDER_CELLS}' cells excluding solver parity"
+        )
+    if _ci_bracket_rx(106, 94, 126).search(txt) is None or "$1.93" not in txt or re.search(r"\bn\s*=\s*10\b", txt) is None:
+        failures.append(
+            f"{rel_doc} missing hard gemini-4-carbon high 106% [94, 126] (n=10, $1.93/ep) ladder parity"
+        )
+    if (
+        _ci_bracket_rx(88, 51, 138).search(txt) is None
+        or re.search(r"\$0\.45\b|\$0\.42-0\.45\b", txt) is None
+    ):
+        failures.append(
+            f"{rel_doc} missing hard 3.6-flash high 88% [51, 138] ($0.45/ep) ladder parity"
+        )
+    if (
+        _ci_bracket_rx(87, 50, 147).search(txt) is None
+        or "$0.42" not in txt
+        or re.search(r"\bn\s*=\s*40\b", txt) is None
+        or "73/80" not in txt
+    ):
+        failures.append(
+            f"{rel_doc} missing hard 3.6-flash medium 87% [50, 147] ($0.42/ep, n=40, 73/80 correct) ladder parity"
+        )
+    if (
+        re.search(
+            rf"3\.1-flash-lite[^\n]*below\s+do[-_\s]nothing\s+in\s+(?:{EXPECTED_FLASH_LITE_CELLS}/{EXPECTED_FLASH_LITE_CELLS}|all\s+{EXPECTED_FLASH_LITE_CELLS})\b",
+            txt,
+            re.IGNORECASE,
+        )
+        is None
+    ):
+        failures.append(
+            f"{rel_doc} missing 3.1-flash-lite below do_nothing in 8/8 cells parity"
+        )
+
+    if (
+        re.search(
+            rf"\b{EXPECTED_SWARM_ATTEMPTS}\s+(?:ledger-verified\s+|gemini\s+|red-team\s+)*attacks\b",
+            txt,
+            re.IGNORECASE,
+        )
+        is None
+    ):
+        failures.append(f"{rel_doc} missing '{EXPECTED_SWARM_ATTEMPTS}' ledger-verified attacks")
+    has_split = (
+        re.search(rf"\b{EXPECTED_SWARM_WHITEBOX}\s+whitebox\b", txt, re.IGNORECASE) is not None
+        and re.search(rf"\b{EXPECTED_SWARM_BLACKBOX}\s+blackbox\b", txt, re.IGNORECASE) is not None
+        and re.search(rf"\b{EXPECTED_SWARM_MCP_RERUNS}\s+(?:mcp\s+)?re-?runs\b", txt, re.IGNORECASE) is not None
+    )
+    if (
+        require_literal_91
+        and re.search(rf"(?<![0-9.]){EXPECTED_SWARM_FINISHED}(?![0-9%])", txt) is None
+    ):
+        failures.append(
+            f"{rel_doc} missing '{EXPECTED_SWARM_FINISHED}' primary finished attacker count"
+        )
+    if not has_split:
+        failures.append(
+            f"{rel_doc} missing swarm split ({EXPECTED_SWARM_WHITEBOX} whitebox + {EXPECTED_SWARM_BLACKBOX} blackbox + {EXPECTED_SWARM_MCP_RERUNS} MCP reruns)"
+        )
+    if ZERO_EXPLOITS_PROSE_RX.search(txt) is None:
+        failures.append(f"{rel_doc} missing '0 verified exploits' agreement with swarm.json")
+    if re.search(rf"\b{EXPECTED_SWARM_CONTROL}/{EXPECTED_SWARM_CONTROL}\b", txt) is None:
+        failures.append(
+            f"{rel_doc} missing '{EXPECTED_SWARM_CONTROL}/{EXPECTED_SWARM_CONTROL}' positive-control agreement with swarm_control.json"
+        )
+
+    if (
+        f"{EXPECTED_SIG_OFF_REJECTED}/{EXPECTED_SIG_OFF_REJECTED}" not in txt
+        or "400 INVALID_ARGUMENT" not in txt
+        or f"0/{EXPECTED_SIG_ON_CALLS}" not in txt
+    ):
+        failures.append(
+            f"{rel_doc} missing 10/10 (400 INVALID_ARGUMENT) vs 0/{EXPECTED_SIG_ON_CALLS} thought-signature ablation parity"
+        )
+    if not all(
+        tok in txt
+        for tok in (
+            f"${EXPECTED_ATLAS_UNCACHED_USD:.2f}",
+            f"${EXPECTED_ATLAS_PAID_USD:.2f}",
+            f"{EXPECTED_ATLAS_PCT_SAVED:.1f}%",
+            str(EXPECTED_ATLAS_CALLS),
+        )
+    ):
+        failures.append(
+            f"{rel_doc} missing Atlas explicit-cache parity ($58.56 -> $21.72, 62.9% saved over 464 calls)"
+        )
+    if not all(
+        tok in txt
+        for tok in (
+            f"{EXPECTED_PROG_PCT_SAVED:.1f}%",
+            f"${EXPECTED_PROG_SAVED_USD:.2f}",
+            f"${EXPECTED_PROG_UNCACHED_USD:.2f}",
+            _fmt_int_commas(EXPECTED_PROG_CALLS),
+        )
+    ):
+        failures.append(
+            f"{rel_doc} missing programme cache parity (75.9%, $678.19 of $893.08 over 29,150 calls)"
+        )
+
+    dash_calls_str = _fmt_int_commas(dash_calls)
+    dash_pct_str = f"{dash_cached_pct:.1f}%"
+    dash_cost_str = f"${dash_cost_usd:.2f}"
+    if not all(tok in txt for tok in (dash_calls_str, dash_pct_str, dash_cost_str)):
+        failures.append(
+            f"{rel_doc} missing dashboard usage parity ({dash_calls_str} calls, {dash_pct_str} cached, {dash_cost_str})"
+        )
+
+    b_eps, b_rec, b_tags, b_new, b_cited, b_regret = blind_vals
+    if (
+        re.search(rf"\b{b_rec}\s+of\s+{b_tags}\b", txt, re.IGNORECASE) is None
+        or re.search(rf"\bnam(?:es|ed)\s+{b_new}\s+(?:new|modes)\b", txt, re.IGNORECASE) is None
+        or re.search(rf"\b{b_eps}\s+(?:trajectories|episodes)\b", txt, re.IGNORECASE) is None
+        or re.search(rf"\b(?:{b_cited}\s+cited\s+steps|cited\s+{b_cited}\s+steps)\b", txt, re.IGNORECASE) is None
+        or re.search(rf"\b{b_regret}%\s+of\s+(?:solver\s+|all\s+)?regret\b", txt, re.IGNORECASE) is None
+    ):
+        failures.append(
+            f"{rel_doc} missing blind Atlas parity ({b_rec} of {b_tags} modes + {b_new} new, {b_eps} episodes, {b_cited} cited steps, {b_regret}% regret)"
+        )
+
+    oc_r = paired_vals["oc_raw"]
+    oc_l = paired_vals["oc_luck"]
+    ip_r = paired_vals["inproc_raw"]
+    if (
+        _ci_bracket_rx(*oc_r).search(txt) is None
+        or _ci_bracket_rx(*oc_l).search(txt) is None
+        or _ci_bracket_rx(*ip_r).search(txt) is None
+        or "v1.4" not in txt
+        or re.search(r"\bn\s*=\s*30\b", txt) is None
+    ):
+        failures.append(
+            f"{rel_doc} missing AfterQuery v1.4 hard (n=30) harness honesty parity (65% [24%, 98%] raw / 72% [52%, 91%] luck-adj OpenCode vs 95% [62%, 140%] in-process)"
+        )
+
+
+def _audit_pitch_gemini_parity(
+    raw_txt: str,
+    *,
+    ladder_eps: int,
+    dash_calls: int,
+    blind_vals: tuple[int, int, int, int, int, int],
+    failures: list[str],
+) -> None:
+    rel_doc = "pitch/GEMINI.md"
+    txt = _norm_dashes(raw_txt)
+    if "docs/gemini/SUBMISSION.md" not in txt:
+        failures.append(f"{rel_doc} missing pointer to docs/gemini/SUBMISSION.md")
+    if not _has_int_token(txt, ladder_eps):
+        failures.append(f"{rel_doc} missing ladder episode count '{ladder_eps}'")
+    if re.search(rf"\b{EXPECTED_SWARM_ATTEMPTS}\s+ledger-verified\b", txt, re.IGNORECASE) is None:
+        failures.append(f"{rel_doc} missing '{EXPECTED_SWARM_ATTEMPTS}' ledger-verified attacks")
+    if (
+        re.search(rf"\b{EXPECTED_SWARM_WHITEBOX}\s+whitebox\b", txt, re.IGNORECASE) is None
+        or re.search(rf"\b{EXPECTED_SWARM_BLACKBOX}\s+blackbox\b", txt, re.IGNORECASE) is None
+        or re.search(rf"\b{EXPECTED_SWARM_MCP_RERUNS}\s+(?:mcp\s+)?re-?runs\b", txt, re.IGNORECASE) is None
+    ):
+        failures.append(
+            f"{rel_doc} missing swarm split ({EXPECTED_SWARM_WHITEBOX} whitebox + {EXPECTED_SWARM_BLACKBOX} blackbox + {EXPECTED_SWARM_MCP_RERUNS} reruns)"
+        )
+    if (
+        re.search(
+            rf"\b{EXPECTED_SWARM_CONTROL}/{EXPECTED_SWARM_CONTROL}\b|"
+            rf"\b{EXPECTED_SWARM_CONTROL}\s+times\s+out\s+of\s+{EXPECTED_SWARM_CONTROL}\b",
+            txt,
+            re.IGNORECASE,
+        )
+        is None
+    ):
+        failures.append(
+            f"{rel_doc} missing '{EXPECTED_SWARM_CONTROL}/{EXPECTED_SWARM_CONTROL}' positive-control parity"
+        )
+    _, b_rec, b_tags, b_new, _, _ = blind_vals
+    if (
+        re.search(rf"\b{b_rec}\s+of\s+{b_tags}\b", txt, re.IGNORECASE) is None
+        or re.search(rf"\bnam(?:es|ed)\s+{b_new}\s+new\b", txt, re.IGNORECASE) is None
+    ):
+        failures.append(
+            f"{rel_doc} missing blind Atlas '{b_rec} of {b_tags}' + '{b_new} new' parity"
+        )
+    dash_calls_str = _fmt_int_commas(dash_calls)
+    if dash_calls_str not in txt:
+        failures.append(f"{rel_doc} missing dashboard call total '{dash_calls_str}'")
+
+
+def _audit_video_2min_parity(
+    raw_txt: str,
+    *,
+    ladder_eps: int,
+    dash_cached_pct: float,
+    dash_cost_usd: float,
+    blind_vals: tuple[int, int, int, int, int, int],
+    failures: list[str],
+) -> None:
+    rel_doc = "docs/gemini/VIDEO-2MIN.md"
+    txt = _norm_dashes(raw_txt)
+    if not (
+        _has_int_token(txt, ladder_eps)
+        or re.search(r"five\s+hundred\s+eighty-?seven", txt, re.IGNORECASE) is not None
+    ):
+        failures.append(f"{rel_doc} missing ladder episode count ({ladder_eps}) in shot list or VO")
+    if (
+        re.search(r"106%|one\s+hundred\s+six\s+percent", txt, re.IGNORECASE) is None
+        or re.search(
+            r"\[\s*94%?\s*,\s*126%?\s*\]|ninety-?four\s+to\s+one\s+hundred\s+twenty-?six",
+            txt,
+            re.IGNORECASE,
+        )
+        is None
+        or re.search(r"\$1\.93\b|one\s+dollar\s+ninety-?three", txt, re.IGNORECASE) is None
+    ):
+        failures.append(
+            f"{rel_doc} missing hard gemini-4-carbon high 106% [94, 126] ($1.93/ep) VO/shot parity"
+        )
+    if (
+        re.search(r"88%|eighty-?eight\s+percent", txt, re.IGNORECASE) is None
+        or re.search(
+            r"\[\s*51%?\s*,\s*138%?\s*\]|fifty-?one\s+to\s+one\s+hundred\s+thirty-?eight",
+            txt,
+            re.IGNORECASE,
+        )
+        is None
+        or re.search(r"\$0\.45\b|forty-?five\s+cents", txt, re.IGNORECASE) is None
+    ):
+        failures.append(
+            f"{rel_doc} missing hard 3.6-flash high 88% [51, 138] ($0.45/ep) VO/shot parity"
+        )
+    if (
+        not (
+            _has_int_token(txt, EXPECTED_SWARM_ATTEMPTS)
+            or re.search(r"one\s+hundred\s+attacks", txt, re.IGNORECASE) is not None
+        )
+        or not _has_int_token(txt, EXPECTED_SWARM_FINISHED)
+        or re.search(rf"\b{EXPECTED_SWARM_WHITEBOX}(?:/{EXPECTED_SWARM_FINISHED})?\s+whitebox\b", txt, re.IGNORECASE) is None
+        or re.search(rf"\b{EXPECTED_SWARM_MCP_RERUNS}\s+(?:mcp\s+)?re-?runs\b", txt, re.IGNORECASE) is None
+        or re.search(r"(?:(?<!\d)0|zero)\s+verified\s+exploits", txt, re.IGNORECASE) is None
+        or re.search(r"\b4/4\b|four\s+of\s+four", txt, re.IGNORECASE) is None
+    ):
+        failures.append(
+            f"{rel_doc} missing swarm parity (100 attacks, 91 primary, 75 whitebox, 9 MCP reruns, 0 exploits, 4/4 control)"
+        )
+
+    b_eps, b_rec, b_tags, b_new, _, b_regret = blind_vals
+    has_blind_placeholders = all(
+        ph in txt
+        for ph in (
+            "{blind_episodes}",
+            "{blind_recovered}",
+            "{blind_tags}",
+            "{blind_new}",
+            "{blind_regret_covered}",
+        )
+    )
+    has_blind_literals = (
+        _has_int_token(txt, b_eps)
+        and re.search(rf"\b{b_rec}\s+of\s+{b_tags}\b", txt, re.IGNORECASE) is not None
+        and re.search(rf"\b{b_new}\s+new\b", txt, re.IGNORECASE) is not None
+        and re.search(rf"\b{b_regret}%|twenty-?one\s+percent", txt, re.IGNORECASE) is not None
+    )
+    if not (has_blind_placeholders or has_blind_literals):
+        failures.append(
+            f"{rel_doc} missing blind Atlas placeholders or literal {b_eps} / {b_rec} of {b_tags} / {b_new} new / {b_regret}% parity"
+        )
+
+    has_usage_placeholders = "{cache_share}" in txt and "{cost}" in txt
+    has_usage_literals = f"{dash_cached_pct:.1f}%" in txt and f"${dash_cost_usd:.2f}" in txt
+    if not (has_usage_placeholders or has_usage_literals):
+        failures.append(
+            f"{rel_doc} missing usage ledger placeholders ({{cache_share}}, {{cost}}) or literal {dash_cached_pct:.1f}% / ${dash_cost_usd:.2f}"
+        )
+    for feat_rx, feat_name in (
+        (r"thinking[-_\s]level", "thinking_level"),
+        (r"thought[-_\s]signature", "thought_signature"),
+        (r"explicit\s+cache", "explicit cache"),
+    ):
+        if re.search(feat_rx, txt, re.IGNORECASE) is None:
+            failures.append(f"{rel_doc} missing essential Gemini feature '{feat_name}'")
+
+
 def check_gemini_surface(root: Path = ROOT) -> CheckResult:
     name = CHECK_GEMINI
     root_resolved = root.resolve()
@@ -547,6 +1414,16 @@ def check_gemini_surface(root: Path = ROOT) -> CheckResult:
                 if not isinstance(counts, dict):
                     failures.append("results/gemini/swarm.json missing 'counts' object")
                 else:
+                    raw_att = counts.get("attempts")
+                    if not (_is_int(raw_att) and int(raw_att) == EXPECTED_SWARM_ATTEMPTS):
+                        failures.append(
+                            f"results/gemini/swarm.json counts.attempts expected {EXPECTED_SWARM_ATTEMPTS}, got {raw_att!r}"
+                        )
+                    raw_lv = counts.get("ledger_verified")
+                    if not (_is_int(raw_lv) and int(raw_lv) == EXPECTED_SWARM_LEDGER_VERIFIED):
+                        failures.append(
+                            f"results/gemini/swarm.json counts.ledger_verified expected {EXPECTED_SWARM_LEDGER_VERIFIED}, got {raw_lv!r}"
+                        )
                     raw_exp = counts.get("exploits")
                     if not isinstance(raw_exp, int) or isinstance(raw_exp, bool):
                         failures.append(f"results/gemini/swarm.json counts.exploits invalid: {raw_exp!r}")
@@ -653,6 +1530,19 @@ def check_gemini_surface(root: Path = ROOT) -> CheckResult:
         if ZERO_EXPLOITS_PROSE_RX.search(txt) is None:
             failures.append(f"{rel_doc} missing '0 verified exploits' agreement with swarm.json")
 
+    ctrl_exp = _audit_swarm_control_json(root_resolved, failures)
+    if swarm_ctrl_path is not None:
+        ctrl_md_txt = swarm_ctrl_path.read_text(encoding="utf-8", errors="replace")
+        ctrl_match = SWARM_VERIFIED_EXPLOITS_RX.search(ctrl_md_txt)
+        if ctrl_match is None or int(ctrl_match.group(1)) != ctrl_exp:
+            failures.append(
+                f"results/gemini/swarm_control.md expected Verified exploits: {ctrl_exp} matching swarm_control.json"
+            )
+
+    dash_calls, dash_cached_pct, dash_cost_usd = _audit_dashboard_html(root_resolved, failures)
+    blind_vals = _audit_atlas_blind_json(root_resolved, failures)
+    paired_vals = _audit_paired_table_gemini_json(root_resolved, failures)
+
     gemini_dir = root_resolved / "results" / "gemini"
     replay_dirs = sorted(p for p in gemini_dir.glob("replay*") if p.is_dir()) if gemini_dir.is_dir() else []
     if not replay_dirs:
@@ -689,7 +1579,56 @@ def check_gemini_surface(root: Path = ROOT) -> CheckResult:
                         f"{rel_rdir}: {len(empty_gz)} empty *.json.gz cache file(s) (0 bytes)"
                     )
 
-    ladder_eps = _audit_gemini_ladder_and_ablations(root_resolved, failures)
+    sub_long_txt, vid2_txt, ladder_eps = _audit_gemini_ladder_and_ablations(root_resolved, failures)
+    eff_ladder_eps = ladder_eps if ladder_eps is not None else EXPECTED_LADDER_EPISODES
+
+    if sub_path is not None:
+        sub_txt = sub_path.read_text(encoding="utf-8", errors="replace")
+        if sub_txt.strip():
+            _audit_gemini_full_writeup_parity(
+                "docs/gemini/SUBMISSION.md",
+                sub_txt,
+                require_literal_91=False,
+                ladder_eps=eff_ladder_eps,
+                dash_calls=dash_calls,
+                dash_cached_pct=dash_cached_pct,
+                dash_cost_usd=dash_cost_usd,
+                blind_vals=blind_vals,
+                paired_vals=paired_vals,
+                failures=failures,
+            )
+    if sub_long_txt is not None:
+        _audit_gemini_full_writeup_parity(
+            "docs/gemini/SUBMISSION-LONG.md",
+            sub_long_txt,
+            require_literal_91=True,
+            ladder_eps=eff_ladder_eps,
+            dash_calls=dash_calls,
+            dash_cached_pct=dash_cached_pct,
+            dash_cost_usd=dash_cost_usd,
+            blind_vals=blind_vals,
+            paired_vals=paired_vals,
+            failures=failures,
+        )
+    if pitch_path is not None:
+        pitch_txt = pitch_path.read_text(encoding="utf-8", errors="replace")
+        if pitch_txt.strip():
+            _audit_pitch_gemini_parity(
+                pitch_txt,
+                ladder_eps=eff_ladder_eps,
+                dash_calls=dash_calls,
+                blind_vals=blind_vals,
+                failures=failures,
+            )
+    if vid2_txt is not None:
+        _audit_video_2min_parity(
+            vid2_txt,
+            ladder_eps=eff_ladder_eps,
+            dash_cached_pct=dash_cached_pct,
+            dash_cost_usd=dash_cost_usd,
+            blind_vals=blind_vals,
+            failures=failures,
+        )
 
     if failures:
         return CheckResult(
@@ -701,15 +1640,19 @@ def check_gemini_surface(root: Path = ROOT) -> CheckResult:
     return CheckResult(
         name,
         "PASS",
-        f"PR 41 swarm ({EXPECTED_SWARM_FINISHED} finished attackers, {EXPECTED_SWARM_EXPLOITS} exploits), ladder ({ladder_eps} episodes), 3 ablations, frontier PNGs, submission docs, and {len(replay_dirs)} replay* cache dir(s) verified",
+        f"PR 41 swarm ({EXPECTED_SWARM_ATTEMPTS} attacks, {EXPECTED_SWARM_FINISHED} finished, {EXPECTED_SWARM_EXPLOITS} exploits, {ctrl_exp}/{ctrl_exp} control), ladder ({ladder_eps} episodes), 3 ablations, blind Atlas, dashboard ({dash_calls:,} calls), submission/pitch/video parity, and {len(replay_dirs)} replay* cache dir(s) verified",
     )
 
 
 def _audit_gemini_ladder_and_ablations(
     root_resolved: Path, failures: list[str]
-) -> int | None:
-    _require_nonempty_text_file(root_resolved, "docs/gemini/SUBMISSION-LONG.md", failures)
-    _require_nonempty_text_file(root_resolved, "docs/gemini/VIDEO-2MIN.md", failures)
+) -> tuple[str | None, str | None, int | None]:
+    sub_long_txt = _require_nonempty_text_file(
+        root_resolved, "docs/gemini/SUBMISSION-LONG.md", failures
+    )
+    vid2_txt = _require_nonempty_text_file(
+        root_resolved, "docs/gemini/VIDEO-2MIN.md", failures
+    )
 
     for png_rel in GEMINI_FRONTIER_PNGS:
         _require_valid_png(root_resolved, png_rel, failures)
@@ -916,7 +1859,7 @@ def _audit_gemini_ladder_and_ablations(
         if re.search(r"thinking[-_\s]level", abl_md_txt, re.IGNORECASE) is None:
             failures.append("results/gemini/ablations.md missing thinking-level sweep ablation")
 
-    return ladder_episodes
+    return sub_long_txt, vid2_txt, ladder_episodes
 
 
 def _audit_audio_index(

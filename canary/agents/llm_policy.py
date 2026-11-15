@@ -22,6 +22,10 @@ HINTS: dict[str, str] = {
                 "(true V, which can be below the shown V while leaks are still in transit); otherwise abstaining "
                 "(score 0) is better. Leaks reach the feed 1\u20133 days (medium) / 2\u20133 days (hard) after they "
                 "happen, uniformly.",
+    # Causal hint test (gap.md, pre-registered 15 Nov ~03:15): restates instruction rules only. Opt-in only.
+    "gather": "Evidence first: you may plant up to the stated number of canaries every day; plant them every day, "
+              "and accuse only when exactly one employee is consistent with every leak you have seen (otherwise "
+              "abstain, which scores 0).",
 }
 # v2 (hint ablation, NEXT-LEVEL HEAD-AGENTS 3): one sentence per failure mode, restating ONLY facts already on the
 # instruction page (so a tag drop shows the information suffices, not that we leaked new information).

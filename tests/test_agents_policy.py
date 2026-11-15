@@ -44,7 +44,7 @@ def test_hints():
     assert HINTS["budget_waste"] not in build_system_prompt("INSTR", None)
     with pytest.raises(ValueError):
         build_system_prompt("x", "nope")
-    assert len(HINTS) == 8  # 7 failure-mode tags + the PLAN-95 B1 ev_delay hint
+    assert len(HINTS) == 9  # 7 failure-mode tags + the PLAN-95 B1 ev_delay hint + the causal-test gather hint
 
 
 def test_nudge_then_fallback():
@@ -250,6 +250,33 @@ def test_ev_delay_hint_b1_opt_in_prompt_only():
         assert episode_prompt(tier, 0, "ev_delay") == episode_prompt(tier, 0) + "\n" + txt
     assert "after a delay of 1 or 2 or 3 day(s)" in Env("medium", 0).instruction()
     assert "after a delay of 2 or 3 day(s)" in Env("hard", 0).instruction()
+
+
+GATHER = ("Evidence first: you may plant up to the stated number of canaries every day; plant them every day, and "
+          "accuse only when exactly one employee is consistent with every leak you have seen (otherwise abstain, "
+          "which scores 0).")
+
+
+def test_gather_hint_causal_test_opt_in_prompt_only():
+    """Causal hint test (gap.md): exact text; off by default; appended to the prompt, never to the env instruction;
+    restates only rules already on the instruction page."""
+    from canary.agents.frontier.common import episode_prompt
+    from canary.env import Env
+    from canary.rules import TIERS
+    assert HINTS["gather"] == GATHER
+    for tier in TIERS:
+        ins = Env(tier, 0).instruction()
+        assert "gather" not in ins and GATHER not in ins and "Evidence first" not in ins
+        base = episode_prompt(tier, 0)
+        assert GATHER not in base and base == build_system_prompt(ins)
+        assert episode_prompt(tier, 0, "gather") == base + "\n" + GATHER
+    # the unhinted prompts are byte-identical to the ones before the hint was added (sha256 at a54f4223)
+    import hashlib
+    assert {t: hashlib.sha256(episode_prompt(t, 0).encode()).hexdigest()[:16] for t in ("easy", "medium", "hard")} == {
+        "easy": "292889efc7c6b996", "medium": "c91d807e1b4c5ab1", "hard": "6638cd42c159ace2"}
+    hard = Env("hard", 0).instruction()
+    assert "You can plant at most 2 per day" in hard
+    assert "If day 21 ends and you have not accused anyone, your score is 0" in hard
 
 
 def test_gemini_runner_passes_hint_to_both_harnesses(tmp_path):

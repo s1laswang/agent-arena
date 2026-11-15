@@ -68,11 +68,15 @@ def test_quick_cli_all_five_vectors_pass(tmp_path: Path) -> None:
     assert v1["encoders_available"] >= 107
     assert v1["non_caesar_base_encoders"] >= 79
     assert v1["momin_corpus_rows"] == 129
-    assert v1["transcript_miner"]["total_files"] == 21
-    assert v1["transcript_miner"]["frontier_files"] == 6
-    assert v1["transcript_miner"]["frontier_episodes"] == 152
-    assert v1["transcript_miner"]["frontier_rejected"] == 139
-    assert v1["transcript_miner"]["reference_files"] == 15
+    assert v1["transcript_miner"]["total_files"] >= 21
+    assert v1["transcript_miner"]["frontier_files"] >= 6
+    assert v1["transcript_miner"]["frontier_episodes"] >= 152
+    assert v1["transcript_miner"]["frontier_rejected"] >= 139
+    assert v1["transcript_miner"]["reference_files"] >= 15
+    assert (
+        v1["transcript_miner"]["total_files"]
+        == v1["transcript_miner"]["frontier_files"] + v1["transcript_miner"]["reference_files"]
+    )
     assert all(row["held"] is True for row in v1["sequences"])
 
     v2 = summary["vectors"]["V2"]

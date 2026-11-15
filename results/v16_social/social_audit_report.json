@@ -1,0 +1,2860 @@
+{
+  "all_episode_replays_passed": true,
+  "all_v16_providers_passed": true,
+  "baseline_diagnostics": {
+    "v14_template_baseline": {
+      "all_passed": false,
+      "failed_fairness_checks": [
+        "decoy_anger_preserved",
+        "non_decoy_anger_clean"
+      ],
+      "failed_social_audit_gates": [
+        "anger_words_hygiene"
+      ],
+      "mode": "v14_template_baseline",
+      "n_seeds": 6,
+      "provider": "template",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 1,
+          "min_decoy_anger_n1": 28,
+          "passed": false,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 1,
+          "non_decoy_violation_count": 8,
+          "passed": false,
+          "words_found": [
+            "recruiter"
+          ]
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 1,
+          "decoy_isolation_failure_count": 5,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 1,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 8,
+          "non_decoy_words_found": [
+            "recruiter"
+          ],
+          "passed": false,
+          "summary": "non_decoy_hits=8 (words=['recruiter']), decoy_isolated=1/6, min_n1=28, max_n2=1"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 898,
+          "passed": true,
+          "summary": "messages_linted=898, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "template",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    }
+  },
+  "blocked_api_attempts": 0,
+  "cache_dir": "/tmp/fleet-momin/shared/v16_gemini_cache",
+  "check_names": [
+    "public_facts_only",
+    "anger_words_hygiene",
+    "lint_clean",
+    "solver_calibration_parity",
+    "zero_baselines",
+    "replay_and_paired_gap"
+  ],
+  "live_api_calls": 0,
+  "n_providers_audited": 16,
+  "n_providers_passed": 16,
+  "n_seeds": 6,
+  "offline_enforced": true,
+  "overall_passed": true,
+  "provider_audits": [
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "deterministic_template",
+      "n_seeds": 6,
+      "provider": "v16:v1_anchoring_authority_confirmation",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 994,
+          "passed": true,
+          "summary": "messages_linted=994, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16:v1_anchoring_authority_confirmation",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "deterministic_template",
+      "n_seeds": 6,
+      "provider": "v16:v2_recency_bandwagon_sycophancy",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1078,
+          "passed": true,
+          "summary": "messages_linted=1078, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16:v2_recency_bandwagon_sycophancy",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "deterministic_template",
+      "n_seeds": 6,
+      "provider": "v16:v3_grudge_falsemem_misforward",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1072,
+          "passed": true,
+          "summary": "messages_linted=1072, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16:v3_grudge_falsemem_misforward",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "deterministic_template",
+      "n_seeds": 6,
+      "provider": "v16:v4_triad_authority_recency_grudge",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1060,
+          "passed": true,
+          "summary": "messages_linted=1060, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16:v4_triad_authority_recency_grudge",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "deterministic_template",
+      "n_seeds": 6,
+      "provider": "v16:v5_full9_cocktail",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1168,
+          "passed": true,
+          "summary": "messages_linted=1168, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16:v5_full9_cocktail",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "gemini_stub_fallback",
+      "n_seeds": 6,
+      "provider": "v16-gemini-stub:v1_anchoring_authority_confirmation",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 994,
+          "passed": true,
+          "summary": "messages_linted=994, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16-gemini-stub:v1_anchoring_authority_confirmation",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 349
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "gemini_stub_fallback",
+      "n_seeds": 6,
+      "provider": "v16-gemini-stub:v2_recency_bandwagon_sycophancy",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1078,
+          "passed": true,
+          "summary": "messages_linted=1078, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16-gemini-stub:v2_recency_bandwagon_sycophancy",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 421
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "gemini_stub_fallback",
+      "n_seeds": 6,
+      "provider": "v16-gemini-stub:v3_grudge_falsemem_misforward",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1072,
+          "passed": true,
+          "summary": "messages_linted=1072, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16-gemini-stub:v3_grudge_falsemem_misforward",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 442
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "gemini_stub_fallback",
+      "n_seeds": 6,
+      "provider": "v16-gemini-stub:v4_triad_authority_recency_grudge",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1060,
+          "passed": true,
+          "summary": "messages_linted=1060, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16-gemini-stub:v4_triad_authority_recency_grudge",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 421
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "gemini_stub_fallback",
+      "n_seeds": 6,
+      "provider": "v16-gemini-stub:v5_full9_cocktail",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1168,
+          "passed": true,
+          "summary": "messages_linted=1168, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16-gemini-stub:v5_full9_cocktail",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 481
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "gemini_cached_fallback",
+      "n_seeds": 6,
+      "provider": "v16-gemini:v1_anchoring_authority_confirmation",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 994,
+          "passed": true,
+          "summary": "messages_linted=994, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16-gemini:v1_anchoring_authority_confirmation",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 5,
+        "live_api_calls": 0,
+        "offline_fallbacks": 344,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "gemini_cached_fallback",
+      "n_seeds": 6,
+      "provider": "v16-gemini:v2_recency_bandwagon_sycophancy",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1078,
+          "passed": true,
+          "summary": "messages_linted=1078, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16-gemini:v2_recency_bandwagon_sycophancy",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 421,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "gemini_cached_fallback",
+      "n_seeds": 6,
+      "provider": "v16-gemini:v3_grudge_falsemem_misforward",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1072,
+          "passed": true,
+          "summary": "messages_linted=1072, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16-gemini:v3_grudge_falsemem_misforward",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 442,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "gemini_cached_fallback",
+      "n_seeds": 6,
+      "provider": "v16-gemini:v4_triad_authority_recency_grudge",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1060,
+          "passed": true,
+          "summary": "messages_linted=1060, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16-gemini:v4_triad_authority_recency_grudge",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 421,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "gemini_cached_fallback",
+      "n_seeds": 6,
+      "provider": "v16-gemini:v5_full9_cocktail",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 1168,
+          "passed": true,
+          "summary": "messages_linted=1168, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "v16-gemini:v5_full9_cocktail",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 170,
+        "live_api_calls": 0,
+        "offline_fallbacks": 311,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    },
+    {
+      "all_passed": true,
+      "failed_fairness_checks": [],
+      "failed_social_audit_gates": [],
+      "mode": "reference_sanitized_template",
+      "n_seeds": 6,
+      "provider": "sanitized_template",
+      "seeds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ],
+      "six_fairness_checks": {
+        "bit_exact_solver_parity": {
+          "exact_day_matches": 6,
+          "exact_score_matches": 6,
+          "false_decoy_ids": 0,
+          "max_abs_score_diff": 0.0,
+          "mismatches": [],
+          "n_seeds": 6,
+          "passed": true,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "decoy_anger_preserved": {
+          "isolated_count": 6,
+          "min_decoy_anger_n1": 28,
+          "passed": true,
+          "seeds_checked": 6
+        },
+        "determinism": {
+          "passed": true,
+          "repeat_day_calls_checked": 12,
+          "repeat_interview_calls_checked": 6,
+          "repeat_mismatches": 0
+        },
+        "no_mole_snoop": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "violation_count": 0
+        },
+        "non_decoy_anger_clean": {
+          "max_other_anger_n2": 0,
+          "non_decoy_violation_count": 0,
+          "passed": true,
+          "words_found": []
+        },
+        "replay_verification": {
+          "heuristic_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667
+        }
+      },
+      "social_audit_gates": {
+        "anger_words_hygiene": {
+          "decoy_isolated_count": 6,
+          "decoy_isolation_failure_count": 0,
+          "decoy_seeds_checked": 6,
+          "max_other_anger_n2": 0,
+          "min_decoy_anger_n1": 28,
+          "non_decoy_violation_count": 0,
+          "non_decoy_words_found": [],
+          "passed": true,
+          "summary": "non_decoy_hits=0 (words=[]), decoy_isolated=6/6, min_n1=28, max_n2=0"
+        },
+        "lint_clean": {
+          "errors": [],
+          "interview_error_count": 0,
+          "interviews_linted": 6584,
+          "message_error_count": 0,
+          "messages_linted": 898,
+          "passed": true,
+          "summary": "messages_linted=898, interviews_linted=6584, errors=0"
+        },
+        "public_facts_only": {
+          "day_calls_checked": 126,
+          "interview_calls_checked": 6584,
+          "passed": true,
+          "summary": "day_calls=126, interview_calls=6584, violations=0",
+          "violation_count": 0,
+          "violations": []
+        },
+        "replay_and_paired_gap": {
+          "agent_mean_score": 0.243333,
+          "luck_adjusted_gap": 0.393267,
+          "mismatch_count": 0,
+          "mismatches": [],
+          "n_paired": 6,
+          "passed": true,
+          "raw_gap": -0.171667,
+          "solver_mean_score": 0.071667,
+          "summary": "n=6, mismatches=0, agent=0.243, solver=0.072, gap=-0.172, luck_adj=0.103/0.496"
+        },
+        "solver_calibration_parity": {
+          "acc_diff": 0.0,
+          "false_decoy_ids": 0,
+          "n_seeds": 6,
+          "passed": true,
+          "score_diff": 0.0,
+          "solver_acc": 0.666667,
+          "solver_mean_score": 0.071667,
+          "summary": "solver_acc=0.667 vs template=0.667, solver_score=0.072 vs template=0.072, false_decoys=0",
+          "template_acc": 0.666667,
+          "template_mean_score": 0.071667
+        },
+        "zero_baselines": {
+          "do_nothing_max_abs_score": 0.0,
+          "do_nothing_scores_all_zero": true,
+          "fair_guess_bar": 0.0,
+          "n_seeds": 6,
+          "passed": true,
+          "stop_early_acc": 0.0,
+          "stop_early_mean_score": -1.0,
+          "stop_early_quit_max_abs_score": 0.0,
+          "stop_early_quit_scores_all_zero": true,
+          "summary": "do_nothing_zero=True, stop_early_quit_zero=True, stop_early_mean=-1.000 (bar<=0.00)"
+        }
+      },
+      "spec": "sanitized_template",
+      "telemetry": {
+        "blocked_api_attempts": 0,
+        "cache_hits": 0,
+        "live_api_calls": 0,
+        "offline_fallbacks": 0,
+        "stub_calls": 0
+      },
+      "tier": "hard"
+    }
+  ],
+  "schema_version": "v16_social_fairness_audit.v1",
+  "seeds": [
+    30,
+    31,
+    32,
+    33,
+    34,
+    35
+  ],
+  "shared_runs_replay_audit": {
+    "all_passed": true,
+    "exists": true,
+    "files": [
+      {
+        "agent_accuracy": 1.0,
+        "agent_accused_rate": 1.0,
+        "agent_luck_adjusted_mean": 0.28528,
+        "agent_mean_score": 0.4975,
+        "frontier_solver_ratio": null,
+        "lines_read": 4,
+        "luck_adjusted_gap": 0.14936,
+        "mean_accuse_day": 13.5,
+        "mean_p_accused": 0.8515,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "n_skipped": 0,
+        "n_valid": 4,
+        "paired_diff": 0.735,
+        "passed": true,
+        "per_seed": [
+          {
+            "accuse_day": 11,
+            "accused_bool": true,
+            "agent": "gemini:gemini-4-carbon",
+            "canary_count": 6,
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 11,
+            "interview_count": 38,
+            "luck_adjusted_score": 0.5169,
+            "p_accused": 0.985,
+            "p_top": 0.985,
+            "paired_diff": 1.54,
+            "raw_gap": -1.54,
+            "restrict_count": 0,
+            "score": 0.54,
+            "search_count": 3,
+            "seed": 30,
+            "solver_correct": false,
+            "solver_final_day": 18,
+            "solver_luck_adjusted_score": 0.17546,
+            "solver_score": -1.0,
+            "tier": "hard",
+            "tool_calls": 88,
+            "true_V": 0.54,
+            "verdict": "justified"
+          },
+          {
+            "accuse_day": 10,
+            "accused_bool": true,
+            "agent": "gemini:gemini-4-carbon",
+            "canary_count": 5,
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 10,
+            "interview_count": 51,
+            "luck_adjusted_score": 0.5314,
+            "p_accused": 0.988,
+            "p_top": 0.988,
+            "paired_diff": 0.03,
+            "raw_gap": -0.03,
+            "restrict_count": 0,
+            "score": 0.55,
+            "search_count": 3,
+            "seed": 31,
+            "solver_correct": true,
+            "solver_final_day": 9,
+            "solver_luck_adjusted_score": 0.52,
+            "solver_score": 0.52,
+            "tier": "hard",
+            "tool_calls": 93,
+            "true_V": 0.55,
+            "verdict": "justified"
+          },
+          {
+            "accuse_day": 13,
+            "accused_bool": true,
+            "agent": "gemini:gemini-4-carbon",
+            "canary_count": 12,
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 13,
+            "interview_count": 48,
+            "luck_adjusted_score": 0.42968,
+            "p_accused": 0.966,
+            "p_top": 0.966,
+            "paired_diff": 1.48,
+            "raw_gap": -1.48,
+            "restrict_count": 0,
+            "score": 0.48,
+            "search_count": 6,
+            "seed": 32,
+            "solver_correct": false,
+            "solver_final_day": 9,
+            "solver_luck_adjusted_score": 0.53452,
+            "solver_score": -1.0,
+            "tier": "hard",
+            "tool_calls": 116,
+            "true_V": 0.48,
+            "verdict": "justified"
+          },
+          {
+            "accuse_day": 20,
+            "accused_bool": true,
+            "agent": "gemini:gemini-4-carbon",
+            "canary_count": 13,
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 20,
+            "interview_count": 17,
+            "luck_adjusted_score": -0.33686,
+            "p_accused": 0.467,
+            "p_top": 0.467,
+            "paired_diff": -0.11,
+            "raw_gap": 0.11,
+            "restrict_count": 0,
+            "score": 0.42,
+            "search_count": 3,
+            "seed": 33,
+            "solver_correct": true,
+            "solver_final_day": 10,
+            "solver_luck_adjusted_score": 0.50858,
+            "solver_score": 0.53,
+            "tier": "hard",
+            "tool_calls": 102,
+            "true_V": 0.42,
+            "verdict": "lucky"
+          }
+        ],
+        "provider_spec": "template",
+        "raw_gap": -0.735,
+        "relative_path": "inproc/v0_v14_control/hard/episodes.jsonl",
+        "skipped_by_reason": {},
+        "solver_accuracy": 0.5,
+        "solver_luck_adjusted_mean": 0.43464,
+        "solver_mean_score": -0.2375,
+        "status": "verified",
+        "superseded_duplicates": 0,
+        "tier": "hard",
+        "valid_seeds": [
+          30,
+          31,
+          32,
+          33
+        ],
+        "variant": "v0_v14_control"
+      },
+      {
+        "agent_accuracy": 1.0,
+        "agent_accused_rate": 1.0,
+        "agent_luck_adjusted_mean": 0.5939,
+        "agent_mean_score": 0.65,
+        "frontier_solver_ratio": null,
+        "lines_read": 1,
+        "luck_adjusted_gap": -0.41844,
+        "mean_accuse_day": 9.0,
+        "mean_p_accused": 0.966,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "n_skipped": 0,
+        "n_valid": 1,
+        "paired_diff": 1.65,
+        "passed": true,
+        "per_seed": [
+          {
+            "accuse_day": 9,
+            "accused_bool": true,
+            "agent": "gemini:gemini-4-carbon",
+            "canary_count": 5,
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 9,
+            "interview_count": 47,
+            "luck_adjusted_score": 0.5939,
+            "p_accused": 0.966,
+            "p_top": 0.966,
+            "paired_diff": 1.65,
+            "raw_gap": -1.65,
+            "restrict_count": 0,
+            "score": 0.65,
+            "search_count": 5,
+            "seed": 30,
+            "solver_correct": false,
+            "solver_final_day": 18,
+            "solver_luck_adjusted_score": 0.17546,
+            "solver_score": -1.0,
+            "tier": "hard",
+            "tool_calls": 94,
+            "true_V": 0.65,
+            "verdict": "justified"
+          }
+        ],
+        "provider_spec": "v16:v1_anchoring_authority_confirmation",
+        "raw_gap": -1.65,
+        "relative_path": "w1_real/inproc/v1_anchoring_authority_confirmation/hard/episodes.jsonl",
+        "skipped_by_reason": {},
+        "solver_accuracy": 0.0,
+        "solver_luck_adjusted_mean": 0.17546,
+        "solver_mean_score": -1.0,
+        "status": "verified",
+        "superseded_duplicates": 0,
+        "tier": "hard",
+        "valid_seeds": [
+          30
+        ],
+        "variant": "v1_anchoring_authority_confirmation"
+      },
+      {
+        "agent_accuracy": 1.0,
+        "agent_accused_rate": 1.0,
+        "agent_luck_adjusted_mean": 0.604,
+        "agent_mean_score": 0.645,
+        "frontier_solver_ratio": null,
+        "lines_read": 2,
+        "luck_adjusted_gap": -0.25627,
+        "mean_accuse_day": 8.0,
+        "mean_p_accused": 0.975,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "n_skipped": 0,
+        "n_valid": 2,
+        "paired_diff": 0.885,
+        "passed": true,
+        "per_seed": [
+          {
+            "accuse_day": 8,
+            "accused_bool": true,
+            "agent": "gemini:gemini-4-carbon",
+            "canary_count": 10,
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 8,
+            "interview_count": 31,
+            "luck_adjusted_score": 0.65,
+            "p_accused": 1.0,
+            "p_top": 1.0,
+            "paired_diff": 1.65,
+            "raw_gap": -1.65,
+            "restrict_count": 0,
+            "score": 0.65,
+            "search_count": 3,
+            "seed": 30,
+            "solver_correct": false,
+            "solver_final_day": 18,
+            "solver_luck_adjusted_score": 0.17546,
+            "solver_score": -1.0,
+            "tier": "hard",
+            "tool_calls": 80,
+            "true_V": 0.65,
+            "verdict": "justified"
+          },
+          {
+            "accuse_day": 8,
+            "accused_bool": true,
+            "agent": "gemini:gemini-4-carbon",
+            "canary_count": 6,
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 8,
+            "interview_count": 33,
+            "luck_adjusted_score": 0.558,
+            "p_accused": 0.95,
+            "p_top": 0.95,
+            "paired_diff": 0.12,
+            "raw_gap": -0.12,
+            "restrict_count": 0,
+            "score": 0.64,
+            "search_count": 8,
+            "seed": 31,
+            "solver_correct": true,
+            "solver_final_day": 9,
+            "solver_luck_adjusted_score": 0.52,
+            "solver_score": 0.52,
+            "tier": "hard",
+            "tool_calls": 81,
+            "true_V": 0.64,
+            "verdict": "justified"
+          }
+        ],
+        "provider_spec": "v16:v3_grudge_falsemem_misforward",
+        "raw_gap": -0.885,
+        "relative_path": "w6_real/inproc/v3_grudge_falsemem_misforward/hard/episodes.jsonl",
+        "skipped_by_reason": {},
+        "solver_accuracy": 0.5,
+        "solver_luck_adjusted_mean": 0.34773,
+        "solver_mean_score": -0.24,
+        "status": "verified",
+        "superseded_duplicates": 0,
+        "tier": "hard",
+        "valid_seeds": [
+          30,
+          31
+        ],
+        "variant": "v3_grudge_falsemem_misforward"
+      },
+      {
+        "agent_accuracy": 1.0,
+        "agent_accused_rate": 1.0,
+        "agent_luck_adjusted_mean": 0.451567,
+        "agent_mean_score": 0.616667,
+        "frontier_solver_ratio": null,
+        "lines_read": 3,
+        "luck_adjusted_gap": -0.041573,
+        "mean_accuse_day": 9.666667,
+        "mean_p_accused": 0.900667,
+        "mismatch_count": 0,
+        "mismatches": [],
+        "n_skipped": 0,
+        "n_valid": 3,
+        "paired_diff": 1.11,
+        "passed": true,
+        "per_seed": [
+          {
+            "accuse_day": 11,
+            "accused_bool": true,
+            "agent": "gemini:gemini-4-carbon",
+            "canary_count": 10,
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 11,
+            "interview_count": 25,
+            "luck_adjusted_score": 0.4175,
+            "p_accused": 0.945,
+            "p_top": 0.945,
+            "paired_diff": 1.5,
+            "raw_gap": -1.5,
+            "restrict_count": 0,
+            "score": 0.5,
+            "search_count": 3,
+            "seed": 30,
+            "solver_correct": false,
+            "solver_final_day": 18,
+            "solver_luck_adjusted_score": 0.17546,
+            "solver_score": -1.0,
+            "tier": "hard",
+            "tool_calls": 82,
+            "true_V": 0.5,
+            "verdict": "justified"
+          },
+          {
+            "accuse_day": 8,
+            "accused_bool": true,
+            "agent": "gemini:gemini-4-carbon",
+            "canary_count": 6,
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 8,
+            "interview_count": 19,
+            "luck_adjusted_score": 0.57604,
+            "p_accused": 0.961,
+            "p_top": 0.961,
+            "paired_diff": 0.12,
+            "raw_gap": -0.12,
+            "restrict_count": 0,
+            "score": 0.64,
+            "search_count": 4,
+            "seed": 31,
+            "solver_correct": true,
+            "solver_final_day": 9,
+            "solver_luck_adjusted_score": 0.52,
+            "solver_score": 0.52,
+            "tier": "hard",
+            "tool_calls": 62,
+            "true_V": 0.64,
+            "verdict": "justified"
+          },
+          {
+            "accuse_day": 10,
+            "accused_bool": true,
+            "agent": "gemini:gemini-4-carbon",
+            "canary_count": 4,
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 10,
+            "interview_count": 55,
+            "luck_adjusted_score": 0.36116,
+            "p_accused": 0.796,
+            "p_top": 0.796,
+            "paired_diff": 1.71,
+            "raw_gap": -1.71,
+            "restrict_count": 0,
+            "score": 0.71,
+            "search_count": 4,
+            "seed": 32,
+            "solver_correct": false,
+            "solver_final_day": 9,
+            "solver_luck_adjusted_score": 0.53452,
+            "solver_score": -1.0,
+            "tier": "hard",
+            "tool_calls": 103,
+            "true_V": 0.71,
+            "verdict": "justified"
+          }
+        ],
+        "provider_spec": "v16:v5_full9_cocktail",
+        "raw_gap": -1.11,
+        "relative_path": "w7_real/inproc/v5_full9_cocktail/hard/episodes.jsonl",
+        "skipped_by_reason": {},
+        "solver_accuracy": 0.333333,
+        "solver_luck_adjusted_mean": 0.409993,
+        "solver_mean_score": -0.493333,
+        "status": "verified",
+        "superseded_duplicates": 0,
+        "tier": "hard",
+        "valid_seeds": [
+          30,
+          31,
+          32
+        ],
+        "variant": "v5_full9_cocktail"
+      }
+    ],
+    "files_discovered": 4,
+    "invalid_attempt_log_entries": 5,
+    "invalid_attempt_log_files": 5,
+    "paired_vs_control": [
+      {
+        "control_luck_adj_mean": 0.5169,
+        "control_raw_mean": 0.54,
+        "delta_luck_adj_mean": 0.077,
+        "delta_raw_mean": 0.11,
+        "n_paired": 1,
+        "paired_seeds": [
+          30
+        ],
+        "variant": "v1_anchoring_authority_confirmation",
+        "variant_luck_adj_mean": 0.5939,
+        "variant_raw_mean": 0.65
+      },
+      {
+        "control_luck_adj_mean": 0.52415,
+        "control_raw_mean": 0.545,
+        "delta_luck_adj_mean": 0.07985,
+        "delta_raw_mean": 0.1,
+        "n_paired": 2,
+        "paired_seeds": [
+          30,
+          31
+        ],
+        "variant": "v3_grudge_falsemem_misforward",
+        "variant_luck_adj_mean": 0.604,
+        "variant_raw_mean": 0.645
+      },
+      {
+        "control_luck_adj_mean": 0.49266,
+        "control_raw_mean": 0.523333,
+        "delta_luck_adj_mean": -0.041093,
+        "delta_raw_mean": 0.093333,
+        "n_paired": 3,
+        "paired_seeds": [
+          30,
+          31,
+          32
+        ],
+        "variant": "v5_full9_cocktail",
+        "variant_luck_adj_mean": 0.451567,
+        "variant_raw_mean": 0.616667
+      }
+    ],
+    "read_only": true,
+    "runs_root": "/tmp/fleet-momin/shared/v16_runs",
+    "skipped_by_reason": {},
+    "skipped_invalid_or_incomplete": 0,
+    "superseded_duplicates": 0,
+    "total_lines_read": 10,
+    "total_mismatches": 0,
+    "valid_episodes_verified": 10
+  },
+  "tier": "hard",
+  "tiers_version": "v1.4",
+  "workers": 1
+}

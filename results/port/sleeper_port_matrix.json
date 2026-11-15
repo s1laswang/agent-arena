@@ -1,0 +1,857 @@
+{
+  "schema_version": "1.0",
+  "base_branch": "origin/justSilas",
+  "base_commit": "58716742",
+  "shipped_tiers_version": "v1.4",
+  "known_v_mode": true,
+  "v16_social_files_count": 0,
+  "gemini_api_calls": 0,
+  "all_invariants_pass": true,
+  "summary": {
+    "flagship_ideas_mapped": 5,
+    "supporting_ports_mapped": 2,
+    "total_entries": 7,
+    "fairness_invariants_checked": 15,
+    "fairness_invariants_passed": 15,
+    "catchability_invariants_checked": 7,
+    "catchability_invariants_passed": 7,
+    "counterpart_files_verified": 39
+  },
+  "scope_hygiene": {
+    "shipped_tiers_version": "v1.4",
+    "known_v_mode": true,
+    "v16_social_files": [],
+    "v16_social_files_count": 0,
+    "counterpart_files_expected": 39,
+    "counterpart_files_present": 39,
+    "missing_files": [],
+    "passed": true
+  },
+  "ideas": [
+    {
+      "id": "cheat_corpus",
+      "title": "Cheat Corpus and Midpoint Foreign-Tool Injection",
+      "category": "flagship",
+      "sleeper_origin": {
+        "modules": [
+          "redteam/cheat_corpus.py",
+          "redteam/cheat_eval.py",
+          "tests/test_integrity_control_pad.py"
+        ],
+        "branches": [
+          "origin/sleeper/rw-exploit-corpus",
+          "origin/sleeper/rw-baselines-canary-probes"
+        ],
+        "mechanism": "Mined 129 distinct failed and foreign tool shapes (782 calls across 10 Sleeper seat tools) from gemini-3.5-flash transcripts and injected each at ticks // 2 to verify zero reward lift or state corruption."
+      },
+      "canary_v14_counterpart": {
+        "status": "shipped",
+        "modules": [
+          "canary/redteam/corpus.py",
+          "data/redteam/corpus.jsonl",
+          "canary/redteam/anticheat.py",
+          "canary/redteam/harbor_cheat.py"
+        ],
+        "artifacts": [
+          "results/anticheat/corpus_eval.txt",
+          "results/anticheat/exploits.json",
+          "docs/EXPLOITS.md"
+        ],
+        "mechanism": "Ports shape() normalization and midpoint SolverPolicy injection (inject_run), paired with the 33-probe x 3-tier anti-cheat battery (garbage_args, control_solver_then_pad, solver_plus_*) and Harbor cheat_probe (149 out-of-band checks)."
+      },
+      "canary_v15_counterpart": {
+        "status": "evaluated_dropped_at_gate_b",
+        "branches": [
+          "origin/justSilas-v15"
+        ],
+        "mechanism": "Identical 13-tool _SPECS allowlist and _check_args schema gate; make hunt TIER=all TV=v1.5-candidate recorded 0 invariant violations and 0.000 best non-solver score across easy, medium, hard, and hard_forge."
+      },
+      "one_agent_adaptation_rationale": "One-agent Canary has 13 security-lead MCP tools rather than 8 seat-specific operational queues; foreign seat actions (pay, quarantine, report_insider, send_email) become strict schema-rejection invariants that consume 1 global cap slot with zero V or daily-budget side effects.",
+      "fairness_invariants": [
+        {
+          "name": "corpus_schema_always_invalid",
+          "passed": true,
+          "metric": {
+            "rows": 129,
+            "always_invalid": 129,
+            "foreign_tools": 10
+          },
+          "detail": "All 129 Sleeper foreign-tool patterns in data/redteam/corpus.jsonl are unconditionally rejected by Env._dispatch / _check_args."
+        },
+        {
+          "name": "midpoint_injection_zero_perturbation",
+          "passed": true,
+          "metric": {
+            "committed_runs": 1161,
+            "live_spot_runs": 13,
+            "accepted": 0,
+            "changed": 0
+          },
+          "detail": "Injecting foreign Sleeper calls at SolverPolicy midpoint changes 0/1161 committed runs and 0/13 live spot-check runs, preserving V, day, and daily action budget."
+        },
+        {
+          "name": "anticheat_battery_and_pad_invariance",
+          "passed": true,
+          "metric": {
+            "attack_rows_blocked": "42/42",
+            "max_pad_diff": 0.0
+          },
+          "detail": "All 42 attack probe x tier cells score <= 0.0 and control_solver_then_pad matches solver to 0.0 across all tiers."
+        }
+      ],
+      "catchability_invariants": [
+        {
+          "name": "solver_dominates_all_attack_and_effort_probes",
+          "passed": true,
+          "metric": {
+            "solver_judge40_means": {
+              "easy": 0.765,
+              "medium": 0.671,
+              "hard": 0.545
+            },
+            "hard_effort_90_mean": 0.051
+          },
+          "detail": "SolverPolicy achieves +0.765 / +0.671 / +0.545 on the 40 judge seeds, strictly above every attack probe (<= 0.0) and the 90% effort cut (+0.051 on hard)."
+        }
+      ],
+      "measured_evidence": {
+        "corpus_rows": 129,
+        "foreign_tools": [
+          "add_vendor",
+          "approve_vendor",
+          "close_ticket",
+          "pay",
+          "post_chat",
+          "quarantine",
+          "report_insider",
+          "send_email",
+          "update_crm",
+          "update_vendor_bank"
+        ],
+        "historical_attempt_count": 782,
+        "committed_injection_runs": 1161,
+        "solver_judge40_means": {
+          "easy": 0.765,
+          "medium": 0.671,
+          "hard": 0.545
+        },
+        "solver_judge40_positive_seeds": {
+          "easy": 39,
+          "medium": 37,
+          "hard": 37
+        }
+      },
+      "all_pass": true
+    },
+    {
+      "id": "multi_employee_social_chains",
+      "title": "Multi-Employee Social Chains, Framing, and Human-Bias Layer",
+      "category": "flagship",
+      "sleeper_origin": {
+        "modules": [
+          "sleeper/goals/__init__.py",
+          "sleeper/goals/frame.py",
+          "sleeper/company.py",
+          "docs/gemini/SLEEPER-idea.md"
+        ],
+        "branches": [
+          "origin/momin",
+          "origin/sleeper/atk-library-ctrl"
+        ],
+        "mechanism": "8-seat company (CEO assistant, Finance AP, Controller, HR, IT admin, Procurement, Sales, Legal) with 30 multi-seat strategies requiring two-person sign-offs, chat persuasion, and colleague framing."
+      },
+      "canary_v14_counterpart": {
+        "status": "shipped",
+        "modules": [
+          "canary/world.py",
+          "canary/env.py",
+          "canary/mole/dsl.py",
+          "canary/text/template.py",
+          "canary/forge_track.py",
+          "canary/forge/rl_mole.py"
+        ],
+        "artifacts": [
+          "docs/research-biases.md",
+          "docs/FAILURE-RESEARCH.md",
+          "data/failures/cases_structural.json",
+          "data/rl_mole/heldout_paired.json"
+        ],
+        "mechanism": "Distills multi-seat social dynamics into pure deterministic one-agent mechanics: 2-department regular docs (p_single_dept_recipients=0.0), vocal innocent decoy (dept-channel anger), Poisson + Mole DSL after-hours framing (framing_rate=2.0 on hard), and guarded HR interviews grounded in 44 sourced corporate failure cases."
+      },
+      "canary_v15_counterpart": {
+        "status": "evaluated_dropped_at_gate_b",
+        "branches": [
+          "origin/justSilas-v15",
+          "origin/justSilas-v15-bias",
+          "origin/justSilas-gemini-v15"
+        ],
+        "mechanism": "Added endogenous one-agent social chatter (rumour_rate=2.0, rumour_frame_share=0.4 seeded at decoy -> LR=1.0, grudge_pairs=2, authority_day=3, p_misforward=0.15, DSL seed_rumour). Trapped rumour_follower at -0.995 (n=400), but OpenCode gemini-4-carbon jumped from 61% to 108% of solver on hard seeds 0..9 (0.664 vs 0.615), so v1.5 was dropped at Gate B."
+      },
+      "one_agent_adaptation_rationale": "Running 7 LLM background staff seats confounded benchmark difficulty with staff prompt versions and spent API quota outside the judged agent; encoding decoy chatter, framing, and multi-dept cohorts directly in Env keeps episodes 100% deterministic and keyless while testing social red-herring resistance.",
+      "fairness_invariants": [
+        {
+          "name": "public_day_facts_mole_independence_and_lint",
+          "passed": true,
+          "metric": {
+            "messages_checked": 451,
+            "counterfactual_diffs": 0,
+            "lint_violations": 0
+          },
+          "detail": "PublicDayFacts has zero mole fields; counterfactually swapping _world.mole changes 0/60 day message batches and produces 0 lint violations."
+        },
+        {
+          "name": "decoy_strictly_innocent_and_non_exploitable",
+          "passed": true,
+          "metric": {
+            "decoy_disjoint": "60/60",
+            "accuse_decoy_means": {
+              "easy": -0.81,
+              "medium": -1.0,
+              "hard": -1.0
+            }
+          },
+          "detail": "On medium and hard, decoy != mole on 60/60 seeds and accuse_decoy scores -1.000 across all 40 judge seeds."
+        }
+      ],
+      "catchability_invariants": [
+        {
+          "name": "forge_and_rl_mole_catchability_floor",
+          "passed": true,
+          "metric": {
+            "min_solver_acc_floor": 0.75,
+            "hof_solver_acc": 0.855,
+            "rl_heldout_solver_acc": 0.75,
+            "rl_heldout_solver_score": 0.3954,
+            "forge_live3_acc": 1.0
+          },
+          "detail": "Adversarial Mole DSL (hard_forge) and RL mole (hard_rl) enforce solver_acc >= 0.75; held-out RL mole n=100 keeps solver at 0.75 acc (+0.3954 score) while pushing grok_tactics to +0.1643 and heuristic to -0.2942."
+        }
+      ],
+      "measured_evidence": {
+        "sourced_corporate_failure_cases": 44,
+        "failure_cases_by_file": {
+          "cases_accidental.json": 14,
+          "cases_gaps.json": 4,
+          "cases_round3.json": 6,
+          "cases_structural.json": 20
+        },
+        "v14_hard_framing_rate": 2.0,
+        "v14_hard_interview_lr": 1.2,
+        "rl_heldout_n100": {
+          "solver_score": 0.3954,
+          "solver_acc": 0.75,
+          "grok_tactics_score": 0.1643,
+          "heuristic_score": -0.2942
+        },
+        "v15_gate_b_spotcheck_n10": {
+          "gemini_4_carbon_score": 0.664,
+          "solver_score": 0.615,
+          "ratio_vs_solver": 1.08,
+          "decision": "dropped_at_gate_b"
+        }
+      },
+      "all_pass": true
+    },
+    {
+      "id": "surface_tells_audit",
+      "title": "Surface-Tells Audit, Known-V Non-Disclosure, and Fair-Bar Bounds",
+      "category": "flagship",
+      "sleeper_origin": {
+        "modules": [
+          "sleeper/detell.py",
+          "redteam/hunt/tmplagent.py",
+          "redteam/hunt/clfagent.py",
+          "docs/generator-v2.md"
+        ],
+        "branches": [
+          "origin/vaishnav/sleeper-tells"
+        ],
+        "mechanism": "Sleeper v2 (e08b62ff) replaced legit tickets of matching (seat, kind, payment size), normalized FI IBANs/amounts/V01-V03 payees, and shuffled same-tick messages after wording-list (1.000) and ticket-counting (0.95) agents exploited v1 surface tells."
+      },
+      "canary_v14_counterpart": {
+        "status": "shipped",
+        "modules": [
+          "canary/world.py",
+          "canary/env.py",
+          "canary/rules.py",
+          "canary/redteam/text_probe.py",
+          "scripts/instruction_audit.py"
+        ],
+        "artifacts": [
+          "docs/DIFFICULTY.md",
+          "results/skill_ladder_v1.4.md",
+          "results/skill_ladder_v1.4.csv"
+        ],
+        "mechanism": "Generates all employee names, departments, roles, and clearances before drawing decoy and mole; hides unsurfaced leak drops via KNOWN_V_MODE=True; sets hard log_rate_mole=log_rate_benign=1.0; enforces mole-vs-innocent error/detail parity (1bc3e281); and bounds text-only guessing by exact binomial fair_bar(tier, k)."
+      },
+      "canary_v15_counterpart": {
+        "status": "evaluated_dropped_at_gate_b",
+        "branches": [
+          "origin/justSilas-v15"
+        ],
+        "mechanism": "Samples unseeded rumour and authority targets uniformly over all non-speaker employees (including the mole) and grudge pairs over all non-decoy employees so being targeted never acts as an innocence exclusion tell; strips forbidden confession phrases."
+      },
+      "one_agent_adaptation_rationale": "Instead of ticket-text templates across 8 seats, Canary eliminates every non-investigative shortcut (roster order, log-volume spikes, same-day V drops, error strings, and message leaks) so only active canary partitioning + Bayesian delay accounting separates the mole.",
+      "fairness_invariants": [
+        {
+          "name": "instruction_completeness_and_tool_smoke",
+          "passed": true,
+          "metric": {
+            "params_printed_per_tier": {
+              "easy": 34,
+              "medium": 34,
+              "hard": 34
+            },
+            "tool_smoke": "39/39"
+          },
+          "detail": "Every TierParams field (34/34 per tier) is printed in Env.instruction() and all 13 MCP tools pass smoke checks on easy, medium, and hard (39/39)."
+        },
+        {
+          "name": "mole_vs_innocent_error_and_accuse_parity",
+          "passed": true,
+          "metric": {
+            "parity_mismatches": 0,
+            "fixed_error_codes": 5
+          },
+          "detail": "Invalid-argument errors, Panel Fix D detail strings (modulo echoed employee id), and accuse() responses are identical for the true mole and innocent peers."
+        },
+        {
+          "name": "known_v_hides_unsurfaced_leaks_and_log_counts_carry_zero_hard_signal",
+          "passed": true,
+          "metric": {
+            "hidden_leak_states_checked": 57,
+            "hidden_leak_disclosures": 0,
+            "hard_log_rates": [
+              1.0,
+              1.0
+            ],
+            "accuse_most_logs_means": {
+              "easy": -0.641,
+              "medium": -1.0,
+              "hard": -1.0
+            },
+            "text_fair_bar_k2": {
+              "easy": 0.1394,
+              "medium": 0.0737,
+              "hard": 0.0345
+            }
+          },
+          "detail": "status and advance_day expose visible_V only (0 unsurfaced leak disclosures), and hard-tier total access counts carry zero signal (log_rate 1.0 vs 1.0; accuse_most_logs = -1.000)."
+        }
+      ],
+      "catchability_invariants": [
+        {
+          "name": "solver_catchability_without_surface_tells",
+          "passed": true,
+          "metric": {
+            "skill_ladder_n400_solver": {
+              "easy": {
+                "n": 400,
+                "mean_score": 0.7933,
+                "acc_overall": 1.0,
+                "acc_when_accusing": 1.0,
+                "abstain_rate": 0.0
+              },
+              "medium": {
+                "n": 400,
+                "mean_score": 0.6284,
+                "acc_overall": 0.87,
+                "acc_when_accusing": 1.0,
+                "abstain_rate": 0.13
+              },
+              "hard": {
+                "n": 400,
+                "mean_score": 0.5645,
+                "acc_overall": 0.9575,
+                "acc_when_accusing": 0.9647,
+                "abstain_rate": 0.0075
+              }
+            }
+          },
+          "detail": "Without any roster, wording, count, or V-drop surface tells, SolverPolicy reaches 96.5% accuracy when accusing on hard (mean +0.564, n=400) and 100.0% on medium (+0.628, n=400)."
+        }
+      ],
+      "measured_evidence": {
+        "instruction_fields_verified": {
+          "easy": 34,
+          "medium": 34,
+          "hard": 34
+        },
+        "tool_smoke_passed": "39/39",
+        "hidden_leak_states_verified": 57,
+        "text_fair_bar_k2": {
+          "easy": 0.1394,
+          "medium": 0.0737,
+          "hard": 0.0345
+        },
+        "skill_ladder_n400_solver": {
+          "easy": {
+            "n": 400,
+            "mean_score": 0.7933,
+            "acc_overall": 1.0,
+            "acc_when_accusing": 1.0,
+            "abstain_rate": 0.0
+          },
+          "medium": {
+            "n": 400,
+            "mean_score": 0.6284,
+            "acc_overall": 0.87,
+            "acc_when_accusing": 1.0,
+            "abstain_rate": 0.13
+          },
+          "hard": {
+            "n": 400,
+            "mean_score": 0.5645,
+            "acc_overall": 0.9575,
+            "acc_when_accusing": 0.9647,
+            "abstain_rate": 0.0075
+          }
+        }
+      },
+      "all_pass": true
+    },
+    {
+      "id": "failure_gallery_breakeven_spotlight",
+      "title": "Failure Gallery and Below-Break-Even Accusation Spotlight",
+      "category": "flagship",
+      "sleeper_origin": {
+        "modules": [
+          "lab/gallery.py",
+          "lab/analyse.py"
+        ],
+        "branches": [
+          "origin/sleeper/lab-analyst-gallery",
+          "origin/sleeper/lab-canary-gallery"
+        ],
+        "mechanism": "Decomposed multi-seat episode losses into deterministic harm labels (*_on_chat_request, *_without_ticket, false quarantine) with verbatim transcript excerpts in gallery.json and gallery.md."
+      },
+      "canary_v14_counterpart": {
+        "status": "shipped",
+        "modules": [
+          "canary/gemini/gallery.py",
+          "canary/gemini/gallery_breakeven.py",
+          "canary/analysis/accuse.py",
+          "canary/analysis/tags.py"
+        ],
+        "artifacts": [
+          "results/gemini/failure_gallery.json",
+          "docs/reports/failure_gallery.md",
+          "docs/reports/failure_gallery_breakeven.md",
+          "results/failure_analysis_v1.4.json"
+        ],
+        "mechanism": "Decomposes solver_score - agent_score step-by-step across 295 episodes (196 v1.4, residual 4.4e-16) and audits all 30 judged v1.4 hard seeds against the moving optimal-stopping bar P*(V) = 1 / (1 + V), isolating negative-EV horizon gambles masked by coin-flip luck."
+      },
+      "canary_v15_counterpart": {
+        "status": "evaluated_dropped_at_gate_b",
+        "branches": [
+          "origin/justSilas-gemini-v15"
+        ],
+        "mechanism": "Applies canary.analysis.accuse and canary.analysis.tags to the 10-seed v1.5-candidate OpenCode gemini-4-carbon spot-check (accuse.md, tags.json) under identical Bayesian posterior accounting."
+      },
+      "one_agent_adaptation_rationale": "In Canary's continuous-value single-accusation stopping game, the dominant frontier mistake is committing with >= 2 consistent suspects or gambling below P*(V) = 1 / (1 + V) as V drains toward 0 rather than abstaining for 0.00.",
+      "fairness_invariants": [
+        {
+          "name": "exact_additive_gap_accounting_zero_residual",
+          "passed": true,
+          "metric": {
+            "gallery_episodes": 295,
+            "gallery_net_gap": 90.795,
+            "gallery_max_residual": 4.440892098500626e-16,
+            "breakeven_30seed_max_residual": 2.220446049250313e-16
+          },
+          "detail": "Both the 295-episode failure gallery (+90.795 net gap) and the 30-seed v1.4 hard break-even spotlight (+4.1897 luck-adjusted / +5.3000 raw gap) sum with zero unexplained residual (< 1e-12)."
+        },
+        {
+          "name": "public_evidence_posterior_and_verbatim_quotes",
+          "passed": true,
+          "metric": {
+            "verified_quote_seeds": [
+              5,
+              11,
+              18,
+              23
+            ],
+            "below_breakeven_seeds": [
+              5,
+              18,
+              23
+            ],
+            "seed18_p_vs_breakeven": [
+              0.6272,
+              0.6843
+            ]
+          },
+          "detail": "Posteriors use only the agent's own public tool history; moving P*(V)=1/(1+V) catches seeds 5, 18, 23 even on visible V_known, including seed 18 (62.72% vs 68.43%) missed by fixed 0.60 cutoffs."
+        }
+      ],
+      "catchability_invariants": [
+        {
+          "name": "solver_zero_below_breakeven_stopping_discipline",
+          "passed": true,
+          "metric": {
+            "solver_below_be": 0,
+            "solver_min_margin_pp": 11.6,
+            "cohort_below_be_counts": {
+              "opencode_gemini_3_5_flash": 10,
+              "opencode_gemini_4_carbon": 3,
+              "inproc_gemini_4_carbon": 3,
+              "solver": 0
+            }
+          },
+          "detail": "On the exact same 30 v1.4 hard seeds, SolverPolicy makes 0/30 below-break-even accusations (tightest margin +11.60 pp on seed 10), vs 3 for gemini-4-carbon (-0.9348 V EV) and 10 for gemini-3.5-flash (-7.0172 V EV)."
+        }
+      ],
+      "measured_evidence": {
+        "gallery_episodes_decomposed": 295,
+        "gallery_v14_episodes": 196,
+        "gallery_v14_net_gap": 72.27,
+        "opencode_carbon_hard30": {
+          "below_breakeven_seeds": [
+            5,
+            18,
+            23
+          ],
+          "decision_ev_sum": -0.9348,
+          "luck_adjusted_sum": -0.9368,
+          "realized_luck_on_below_be": 0.3268,
+          "share_of_penalty_gap": 0.4846,
+          "abstain_counterfactual_la_gain": 0.9368
+        },
+        "solver_hard30": {
+          "below_breakeven_count": 0,
+          "min_margin_exp": 0.116,
+          "raw_mean": 0.499,
+          "luck_adjusted_mean": 0.4993
+        }
+      },
+      "all_pass": true
+    },
+    {
+      "id": "office_replay_dashboard",
+      "title": "Office Replay Dashboard, Side-by-Side CLI, and Browser Case-File Game",
+      "category": "flagship",
+      "sleeper_origin": {
+        "modules": [
+          "web/export.py",
+          "web/app.js",
+          "lab/action_replay.py"
+        ],
+        "branches": [
+          "origin/sleeper/dm-dashboard-default",
+          "origin/sleeper/dm-dashboard-office",
+          "origin/justSilas-sleeper-integration"
+        ],
+        "mechanism": "Rendered static seat-mode office replays (highlighting the judged seat, background staff chatter, ticket state, and exact harm tick) alongside offline action_replay verification."
+      },
+      "canary_v14_counterpart": {
+        "status": "shipped",
+        "modules": [
+          "scripts/demo_replay.py",
+          "scripts/verify_replay.py",
+          "game/canary_game.py",
+          "game/app.js",
+          "canary/gemini/dashboard.py",
+          "canary/gemini/lab_replay.py"
+        ],
+        "artifacts": [
+          "results/gemini/dashboard.html",
+          "results/gemini/replay-ladder-showcase/manifest.json",
+          "docs/DEMO.md",
+          "docs/reports/review-ivar-game.md"
+        ],
+        "mechanism": "Splits office replay into three zero-key surfaces: (1) scripts/demo_replay.py day-by-day solver-vs-agent V and P(mole) trace with --verify Env re-execution, (2) game/ Pyodide case-file UI with P*(V)=1/(1+V) accuse dialog on seeds 3000..9999, and (3) self-contained results/gemini/dashboard.html + lab_replay step-hash verification."
+      },
+      "canary_v15_counterpart": {
+        "status": "evaluated_dropped_at_gate_b",
+        "branches": [
+          "origin/justSilas-gemini-v15"
+        ],
+        "mechanism": "Added scripts/with_tiers.py + scripts/verify_replay.py verification confirming 10/10 v1.5-candidate episodes replay identically under v1.5 rules (and only 6/10 under v1.4, proving social misforwards/messages actively alter trajectories)."
+      },
+      "one_agent_adaptation_rationale": "With one investigator instead of 8 concurrent staff seats, the critical replay view is the side-by-side belief trajectory P(mole | observations) and visible_V decay between SolverPolicy and the frontier model on the exact same seed.",
+      "fairness_invariants": [
+        {
+          "name": "browser_game_seed_hygiene_and_truth_hiding",
+          "passed": true,
+          "metric": {
+            "allowed_dev_seed_range": [
+              3000,
+              9999
+            ],
+            "rejected_benchmark_seeds": "6/6"
+          },
+          "detail": "game/canary_game.py restricts browser play to public dev seeds 3000..9999 (refusing headline 0..29, train, held-out, and judge seeds), makes 0 hidden tool calls, and blocks reveal_json() until episode end."
+        },
+        {
+          "name": "dashboard_secret_redaction_and_self_contained_offline_html",
+          "passed": true,
+          "metric": {
+            "external_network_tags": 0,
+            "redacted_tokens": 3,
+            "lab_replay_showcase_episodes": 6
+          },
+          "detail": "canary/gemini/dashboard.py redacts key-shaped substrings, embeds zero external HTTP script/style/image URLs in dashboard.html, and pairs with keyless lab_replay step-hash stores."
+        }
+      ],
+      "catchability_invariants": [
+        {
+          "name": "deterministic_replay_and_pyodide_solver_parity",
+          "passed": true,
+          "metric": {
+            "canonical_hard_seeds_replayed": [
+              4,
+              18,
+              26
+            ],
+            "replay_mismatches": 0,
+            "game_seed3000_solver": {
+              "score": 0.79,
+              "correct": true,
+              "final_day": 6,
+              "tool_calls": 48
+            }
+          },
+          "detail": "demo_replay + verify_replay reproduce solver and Gemini step-for-step on hard seeds 4, 18, and 26 (solver +0.73, +0.52, +0.69), and canary_game.py matches CPython SolverPolicy on seed 3000 (+0.79, 48 calls, day 6)."
+        }
+      ],
+      "measured_evidence": {
+        "canonical_replays": {
+          "4": {
+            "mole": "e11",
+            "solver": {
+              "score": 0.73,
+              "final_day": 5,
+              "accused": "e11",
+              "days_tracked": 5
+            },
+            "gemini": {
+              "score": 0.4,
+              "final_day": 16,
+              "accused": "e11",
+              "days_tracked": 16
+            }
+          },
+          "18": {
+            "mole": "e27",
+            "solver": {
+              "score": 0.52,
+              "final_day": 13,
+              "accused": "e27",
+              "days_tracked": 13
+            },
+            "gemini": {
+              "score": -1.0,
+              "final_day": 18,
+              "accused": "e29",
+              "days_tracked": 18
+            }
+          },
+          "26": {
+            "mole": "e08",
+            "solver": {
+              "score": 0.69,
+              "final_day": 7,
+              "accused": "e08",
+              "days_tracked": 7
+            },
+            "gemini": {
+              "score": -1.0,
+              "final_day": 10,
+              "accused": "e04",
+              "days_tracked": 10
+            }
+          }
+        },
+        "browser_game_seed3000": {
+          "score": 0.79,
+          "correct": true,
+          "final_day": 6,
+          "tool_calls": 48
+        },
+        "dashboard_html_kb": 368.1,
+        "lab_replay_showcase_episodes": 6
+      },
+      "all_pass": true
+    },
+    {
+      "id": "salted_sidecar_and_signed_ledger",
+      "title": "Salted Judge Worlds, 0600 Secret Isolation, and Signed-Ledger Rescore",
+      "category": "supporting_port",
+      "sleeper_origin": {
+        "modules": [
+          "sleeper/secrets.py",
+          "harbor/sidecar.py",
+          "sleeper/verifier.py"
+        ],
+        "branches": [
+          "origin/fr8/sleeper/salt",
+          "origin/sleeper/rw-verifier-canary-rescore"
+        ],
+        "mechanism": "Moved SLEEPER_SALT and VERIFY_TOKEN into 0600 files inside a separate sidecar container, wiped /proc/*/environ secrets, and rejected unsigned or forged state payloads."
+      },
+      "canary_v14_counterpart": {
+        "status": "shipped",
+        "modules": [
+          "canary/world.py",
+          "canary/mcp_server.py",
+          "canary/redteam/tamper_guard.py",
+          "canary/redteam/anticheat.py"
+        ],
+        "artifacts": [
+          "results/harbor_negative/c1-tamper/result.json",
+          "results/anticheat/exploits.md",
+          "results/anticheat/judge_hunt.md"
+        ],
+        "mechanism": "Keys judge/held-out worlds with HMAC-SHA256 fail-closed secrets, loads MCP secrets from 0600 CANARY_*_FILE paths, isolates canary-server in a separate Harbor PID/fs namespace (11/11 isolation checks), and HMAC-signs /ledger."
+      },
+      "canary_v15_counterpart": {
+        "status": "evaluated_dropped_at_gate_b",
+        "branches": [
+          "origin/justSilas-v15-bias"
+        ],
+        "mechanism": "Preserved identical HMAC world seeding and kept judge worlds uncached (SHA-256 text cache keyed without world truth)."
+      },
+      "one_agent_adaptation_rationale": "Because Canary is a pure deductive game with a single hidden mole id, white-box seed regeneration or /proc environ inspection would yield an instant day-1 1.00 score without salted judge worlds and sidecar isolation.",
+      "fairness_invariants": [
+        {
+          "name": "hmac_salted_judge_worlds_and_public_dev_reproducibility",
+          "passed": true,
+          "metric": {
+            "judge_seeds_tested": 5,
+            "salted_diverged": 5,
+            "public_dev_seed42_identical": true
+          },
+          "detail": "Judge and held-out worlds derive RNG via HMAC-SHA256(secret, tier:seed) and fail closed without a secret, while dev seeds stay public-keyed for exact offline replay."
+        },
+        {
+          "name": "signed_ledger_tamper_rejection_and_harbor_consistency",
+          "passed": true,
+          "metric": {
+            "harbor_trials_consistent": "80/80",
+            "harbor_jobs_consistent": "18/18",
+            "replayed_episodes": "1021/1021",
+            "replayed_steps": 51814,
+            "step_mismatches": 0
+          },
+          "detail": "Forging score=1.0 after signing fails closed to reward 0 ('bad ledger signature'); 80/80 Harbor trials, 18/18 jobs, and 1021/1021 replayable episodes (51,814 steps) verify cleanly."
+        }
+      ],
+      "catchability_invariants": [
+        {
+          "name": "harbor_oracle_and_cheat_probe_separation",
+          "passed": true,
+          "metric": {
+            "oracle_positive": true,
+            "do_nothing_and_cheat_probe_zero": true
+          },
+          "detail": "Inside the isolated Harbor sidecar architecture, SolverPolicy (oracle) scores positively on signed ledgers while do_nothing and 149-attempt cheat_probe score 0.0."
+        }
+      ],
+      "measured_evidence": {
+        "harbor_trials_verified": 80,
+        "harbor_jobs_verified": 18,
+        "replayed_episodes_consistent": 1021,
+        "replayed_tool_steps_compared": 51814,
+        "c1_tamper_negative_control_reward": 0
+      },
+      "all_pass": true
+    },
+    {
+      "id": "catchability_constrained_mole_adversary",
+      "title": "Scripted Attack Library and Winnability Gate to Mole DSL and RL Mole",
+      "category": "supporting_port",
+      "sleeper_origin": {
+        "modules": [
+          "sleeper/goals/leak.py",
+          "sleeper/goals/sabotage.py",
+          "sleeper/daymix.py"
+        ],
+        "branches": [
+          "origin/sleeper/atk-library-fapmix",
+          "origin/sleeper/atk-regret-winnable"
+        ],
+        "mechanism": "Curated scripted sleeper strategies (slow-burn, decoy framing, accomplice gates) filtered by winnable=true so the reference/oracle team could still achieve reward=1.000."
+      },
+      "canary_v14_counterpart": {
+        "status": "shipped",
+        "modules": [
+          "canary/mole/dsl.py",
+          "canary/forge/evolve.py",
+          "canary/forge/fitness.py",
+          "canary/forge/rl_mole.py",
+          "canary/forge_track.py"
+        ],
+        "artifacts": [
+          "data/forge/hall_of_fame_v1.2.jsonl",
+          "data/rl_mole/policy_final.json",
+          "data/rl_mole/heldout_paired.json"
+        ],
+        "mechanism": "Replaces seat-specific scripts with a safe 10-feature JSON Mole DSL (hard_forge) and an MLP REINFORCE + dual-ascent Lagrangian policy (hard_rl) sharing the exact (leak_selector, frame_selector) action space under solver_acc >= 0.75."
+      },
+      "canary_v15_counterpart": {
+        "status": "evaluated_dropped_at_gate_b",
+        "branches": [
+          "origin/justSilas-v15"
+        ],
+        "mechanism": "Extended Mole DSL with optional seed_rumour framing selector while preserving MoleView's strict canary-blindness and >= 0.85 solver calibration target."
+      },
+      "one_agent_adaptation_rationale": "A mole that simply stops leaking makes catchability impossible, while an unconstrained RL mole collapses game fairness; bounding the mole to MoleView (no canary visibility) plus a >= 0.75 SolverPolicy accuracy floor guarantees every adversarial track remains solvable.",
+      "fairness_invariants": [
+        {
+          "name": "mole_view_information_barrier_and_dsl_determinism",
+          "passed": true,
+          "metric": {
+            "mole_view_fields": 11,
+            "leak_selectors": 6,
+            "frame_selectors": 4,
+            "deterministic_replay_3seeds": true
+          },
+          "detail": "MoleView exposes document recipient_count and age_days but never is_canary or variant labels; custom MoleStrategy and RLMole execute deterministically from the world RNG without arbitrary code execution."
+        }
+      ],
+      "catchability_invariants": [
+        {
+          "name": "stackelberg_lagrangian_catchability_constraint",
+          "passed": true,
+          "metric": {
+            "default_solver_acc": 0.97,
+            "rl_solver_acc": 0.75,
+            "regret_vs_grok_tactics": [
+              0.1957,
+              0.2311
+            ],
+            "regret_vs_heuristic": [
+              0.4926,
+              0.6896
+            ]
+          },
+          "detail": "Replacing Sleeper's binary winnable=true filter, Canary's Lagrangian RL mole maximizes solver_score - max_k score_k subject to solver_acc >= 0.75, widening regret on held-out seeds 200000..200099 while preserving 75% solver catchability."
+        }
+      ],
+      "measured_evidence": {
+        "dsl_max_rules": 12,
+        "leak_selectors": [
+          "newest",
+          "oldest",
+          "most_recipients",
+          "fewest_recipients",
+          "random_seeded",
+          "none"
+        ],
+        "frame_selectors": [
+          "decoy",
+          "most_restricted_peer",
+          "random_peer",
+          "none"
+        ],
+        "heldout_n100_default_vs_rl": {
+          "default_solver_score": 0.5681,
+          "rl_solver_score": 0.3954,
+          "default_heuristic_regret": 0.4926,
+          "rl_heuristic_regret": 0.6896
+        }
+      },
+      "all_pass": true
+    }
+  ]
+}

@@ -63,9 +63,7 @@ Two things would not have fit on a laptop, and they did not fit on our V100 clus
 | 03:10 | [Verda] | J1 restarted with `--hf-overrides` for YaRN 131k. |
 | 04:15 | [Verda] | J1 smoke test fails the 30-min-per-episode rule: thinking on, no output cap, about 46 tok/s per request, 16 calls in 30 min, 0 episodes finished. Restarted with a cap (`fr8/verda/j1_run2.sh`): max 4096 output tokens per turn, hard dev seeds 0–9 all at once. |
 | 04:20 | [Verda] | **v3-8k s2** (H100 spot `dbd083ca`, 693 steps in 3.0 h) held-out eval: **−0.050 ± 0.049 (n=90)**, +0.408 ± 0.099 vs v2. It abstains on 93% of episodes. `dbd083ca` deleted at 04:21. |
-| 04:47 | [Verda] | **DAgger round 1 SFT done** on `e9ea8b2e`: 250 steps in 55.5 min on 4,000 examples, where the solver labels the states v3-4k s0 reached itself. The pipeline, per X2's draft `docs/reports/dagger.md`:
-  - vLLM rolled out 300 own-policy episodes in 13 min on the A100-40;
-  - the expert relabelled 24,074 states and matches the solver on 2,603/2,603 checked steps. Same-weights check: v3-4k s0 at 8k context scores −0.716 ± 0.105 (n=90) vs −0.147 at 4k. Held-out DAgger evals at 4k and 8k start under the shared secret, ETA ~06:15. |
+| 04:47 | [Verda] | **DAgger round 1 SFT done** on `e9ea8b2e`: 250 steps in 55.5 min on 4,000 examples, where the solver labels the states v3-4k s0 reached itself. Per X2's draft `docs/reports/dagger.md`, vLLM rolled out 300 own-policy episodes in 13 min on the A100-40, and the expert relabelled 24,074 states (it matches the solver on 2,603/2,603 checked steps). Same-weights check: v3-4k s0 at 8k context scores −0.716 ± 0.105 (n=90) vs −0.147 at 4k. Held-out DAgger evals at 4k and 8k start under the shared secret, ETA ~06:15. |
 | 05:05 | [Verda] | **v3-8k s3** (A100 on-demand `f4378173`, 344 steps in 3.0 h) held-out eval under the shared secret: **−0.788 ± 0.117 (n=90)**. It accuses on 96% of episodes. Paired against v3-4k s0 at 8k context on identical worlds: −0.073 ± 0.173. `f4378173` deleted at 05:08. |
 | ~07:30 | [Verda] | Reapers delete every instance (the X2 box at 08:00). Final rows land in §4. |
 

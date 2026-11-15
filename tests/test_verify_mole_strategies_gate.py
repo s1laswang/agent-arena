@@ -1,10 +1,13 @@
 """Fast keyless tests for scripts/verify_mole_strategies_gate.py and docs/reports/mole_strategies_summary.md."""
 from __future__ import annotations
 
+import ast
+import importlib
 import io
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tokenize
 
 import pytest
@@ -33,21 +36,26 @@ def test_zero_comments_and_summary_hygiene() -> None:
     assert _count_comment_tokens(SCRIPT_PATH) == 0
     assert _count_comment_tokens(TEST_PATH) == 0
 
-    for p in (SCRIPT_PATH, TEST_PATH, SUMMARY_MD_PATH):
+    check_paths = [SCRIPT_PATH, TEST_PATH]
+    if SUMMARY_MD_PATH.is_file():
+        check_paths.append(SUMMARY_MD_PATH)
+
+    for p in check_paths:
         txt = p.read_text(encoding="utf-8")
         assert "\u2014" not in txt
         assert "\u2013" not in txt
 
-    md_text = SUMMARY_MD_PATH.read_text(encoding="utf-8")
-    assert gate.validate_markdown_hygiene(md_text) == []
-    assert "NOT MET" in md_text
-    assert "negative result" in md_text.lower()
-    assert "v5_full9_cocktail" in md_text
-    assert "cross_model_transfer.json" in md_text
-    assert "99/99" in md_text
-    assert "11/11" in md_text
-    assert "canary.mole.regret_portfolio" in md_text
-    assert "mole_regret_portfolio_v14.md" in md_text
+    if SUMMARY_MD_PATH.is_file():
+        md_text = SUMMARY_MD_PATH.read_text(encoding="utf-8")
+        assert gate.validate_markdown_hygiene(md_text) == []
+        assert "NOT MET" in md_text
+        assert "negative result" in md_text.lower()
+        assert "v5_full9_cocktail" in md_text
+        assert "cross_model_transfer.json" in md_text
+        assert "99/99" in md_text
+        assert "11/11" in md_text
+        assert "canary.mole.regret_portfolio" in md_text
+        assert "mole_regret_portfolio_v14.md" in md_text
 
 
 def test_markdown_hygiene_rejects_violations() -> None:
@@ -159,31 +167,34 @@ def test_counterfactual_opencode_0_9_and_ablation_v16_replays(tmp_path: Path) ->
     assert av["passed"] is True
     assert av["ablation"]["n_arms"] == 12
     assert av["ablation"]["n_passed"] == 12
-    assert av["v16_episodes_replayed"] == 10
-    assert av["v16_replay_mismatches"] == 0
 
-    tampered_dir = tmp_path / "partial" / "v1_anchoring_authority_confirmation" / "hard"
-    tampered_dir.mkdir(parents=True)
-    orig_line = (
-        ROOT
-        / "results"
-        / "v16_social"
-        / "partial"
-        / "v1_anchoring_authority_confirmation"
-        / "hard"
-        / "episodes.jsonl"
-    ).read_text(encoding="utf-8").splitlines()[0]
-    rec = json.loads(orig_line)
-    rec["score"] = 0.123456
-    (tampered_dir / "episodes.jsonl").write_text(json.dumps(rec) + "\n", encoding="utf-8")
+    v16_partial = ROOT / "results" / "v16_social" / "partial"
+    if v16_partial.is_dir() and gate._load_social_modules() is not None:
+        assert av["pure_mole"] is False
+        assert av["v16_episodes_replayed"] == 10
+        assert av["v16_replay_mismatches"] == 0
 
-    bad_v16 = gate.check_ablation_and_v16_replays(
-        ROOT,
-        v16_partial_dir=tmp_path / "partial",
-        expected_checkpoint_episodes=1,
-    )
-    assert bad_v16["passed"] is False
-    assert bad_v16["v16_replay_mismatches"] >= 1
+        tampered_dir = tmp_path / "partial" / "v1_anchoring_authority_confirmation" / "hard"
+        tampered_dir.mkdir(parents=True)
+        orig_line = (
+            v16_partial
+            / "v1_anchoring_authority_confirmation"
+            / "hard"
+            / "episodes.jsonl"
+        ).read_text(encoding="utf-8").splitlines()[0]
+        rec = json.loads(orig_line)
+        rec["score"] = 0.123456
+        (tampered_dir / "episodes.jsonl").write_text(json.dumps(rec) + "\n", encoding="utf-8")
+
+        bad_v16 = gate.check_ablation_and_v16_replays(
+            ROOT,
+            v16_partial_dir=tmp_path / "partial",
+            expected_checkpoint_episodes=1,
+        )
+        assert bad_v16["passed"] is False
+        assert bad_v16["v16_replay_mismatches"] >= 1
+    else:
+        assert av["pure_mole"] is True
 
 
 def test_transfer_and_regret_portfolio_and_tamper_detection(tmp_path: Path) -> None:
@@ -240,3 +251,79 @@ def test_cli_out_and_check_roundtrip(tmp_path: Path) -> None:
     out_md.write_text(out_md.read_text(encoding="utf-8") + "\nextra drift line\n", encoding="utf-8")
     rc_drift = gate.main([*cli_base, "--check", str(out_md)])
     assert rc_drift == 1
+
+
+def test_pure_mole_blocks_social_modules_and_auto_fallbacks(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    tree = ast.parse(SCRIPT_PATH.read_text(encoding="utf-8"))
+    imported_targets: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported_targets.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported_targets.append(node.module)
+    assert not any(
+        m.startswith("canary.social") or m.startswith("canary.text")
+        for m in imported_targets
+    )
+
+    for existing_mod in list(sys.modules):
+        if existing_mod.startswith("canary.social"):
+            monkeypatch.delitem(sys.modules, existing_mod, raising=False)
+
+    blocked_modules = (
+        "canary.social",
+        "canary.social.variants",
+        "canary.social.biases",
+        "canary.social.engine",
+        "canary.social.gemini_chatter",
+        "canary.social_audit",
+        "canary.text.llm_cache",
+        "canary.text.gemini",
+    )
+    for mod_name in blocked_modules:
+        monkeypatch.setitem(sys.modules, mod_name, None)
+
+    reloaded = importlib.reload(gate)
+    assert reloaded._load_social_modules() is None
+
+    pure_md = tmp_path / "pure_mole_summary.md"
+    pure_cli = [
+        "--pure-mole",
+        "--spot-seeds",
+        "6900",
+        "--spot-targets",
+        "hof_rank1_window_crowd_stale",
+        "--cf-seeds",
+        "0-9",
+    ]
+    assert reloaded.main([*pure_cli, "--out", str(pure_md)]) == 0
+    assert pure_md.is_file()
+    pure_txt = pure_md.read_text(encoding="utf-8")
+    assert reloaded.validate_markdown_hygiene(pure_txt) == []
+    assert "Pure-Mole" in pure_txt
+    assert "V1.6 Social Deception Audit" not in pure_txt
+    assert reloaded.main([*pure_cli, "--check", str(pure_md)]) == 0
+
+    for mod_name in blocked_modules:
+        assert sys.modules[mod_name] is None
+
+    fallback_blocked = reloaded.check_ablation_and_v16_replays(ROOT)
+    assert fallback_blocked["passed"] is True
+    assert fallback_blocked["pure_mole"] is True
+    assert fallback_blocked["pure_mole_reason"] == "social_audit_unavailable"
+    assert fallback_blocked["ablation"]["n_passed"] == 12
+    assert fallback_blocked["v16_episodes_replayed"] == 0
+
+    monkeypatch.setattr(
+        reloaded,
+        "DEFAULT_V16_PARTIAL_REL",
+        Path("results") / "missing_v16_social_partial_dir",
+    )
+    fallback_missing = reloaded.check_ablation_and_v16_replays(ROOT)
+    assert fallback_missing["passed"] is True
+    assert fallback_missing["pure_mole"] is True
+    assert fallback_missing["pure_mole_reason"] == "missing_v16_partial_dir"
+    assert fallback_missing["ablation"]["n_passed"] == 12

@@ -20,6 +20,7 @@ from canary.mole.distill_rl_mole import check_distilled_artifacts
 from canary.mole.dsl import MoleStrategy
 from canary.mole.regret_portfolio import check_markdown_report as check_portfolio_report
 from canary.mole.representation_pareto import check_representation_pareto_artifacts
+from canary.mole.seed_generalization import check_seed_generalization_artifacts
 from canary.mole.tier_robustness import check_tier_robustness_artifacts
 from canary.mole.transfer_eval import check_transfer_artifacts
 from canary.mole.worked_predicate import check_worked_predicate_artifacts
@@ -1176,6 +1177,11 @@ def check_mole_ledger_and_report_parity(root: Path) -> CheckResult:
         elif mp.name == "mole_representation_pareto_v14.md":
             jp = root / "results" / "mole_strategies" / "representation_pareto_v14.json"
             ok, msg = check_representation_pareto_artifacts(json_path=jp, md_path=mp)
+            if not ok:
+                failures.append(f"{rel}: {msg}")
+        elif mp.name == "mole_seed_generalization_v14.md":
+            jp = root / "results" / "mole_strategies" / "seed_generalization_v14.json"
+            ok, msg = check_seed_generalization_artifacts(json_path=jp, md_path=mp)
             if not ok:
                 failures.append(f"{rel}: {msg}")
         elif mp.name == "mole_transcript_mining.md":

@@ -2,11 +2,12 @@
 
 ## 1. Executive Summary
 
-- **Overall Verdict:** `PASS` (`0` code-freeze byte changes, `0` HMAC or reward-parity failures, `6/6` positive tamper controls caught, `0` live API calls).
+- **Overall Verdict:** `PASS` (`0` code-freeze byte changes, `0` HMAC or reward-parity failures, `7/7` positive tamper controls caught, `0` live API calls).
 - **Audited Git Lineage:** `afterquery-final` (`1bc3e281`) -> `afterquery-submit` (`9225f2ad`) -> `afterquery-submit-2` (`aa1c679e`) -> `origin/justSilas` (`5f9b3297`), plus raw rehearsal branch `s1-rehearsal-final` (`d0ead011`).
 - **Code-Freeze Invariant (`PASS`):** `0` byte changes across all `6` frozen paths (`canary/env.py`, `canary/rules.py`, `canary/world.py`, `canary/solver/`, `canary/mcp_server.py`, `harbor/template/`) across `afterquery-final..afterquery-submit-2`, `afterquery-submit-2..origin/justSilas`, `afterquery-final..origin/justSilas`, and `HEAD`. Frozen tier hashes remain `v1.4 = a8f99c2537c91d72` and `v1.3 = 8df71cf570bb48bc`.
 - **Judge Rehearsal & `CEO.md` Append-Only Consistency (`PASS`):** `BUILD.txt` pins `afterquery-final` (`1bc3e281dbfaa494a11e783d0c98369b41b2f675`) on Harbor `0.26.0` (`[verifier] timeout_sec = 120.0`, `[agent] timeout_sec = 10800.0`). Run 1 (`+0.472`, `n=10`, `9/10` correct, `93% [20%, 371%]`), Run 2 (`+0.585`, `n=10`, `10/10` correct, `116% [78%, 363%]`), and Run 3 final (`+0.626`, `n=9` valid with `5` after `08:30` Helsinki / `06:30Z` cut-off and `1` `ApiRateLimitError` infra-excluded, `9/9` correct, paired oracle `+0.478`, `131% [86%, 590%]`, infra-as-0 `+0.563`) are consistent across `TABLE.md`, `README.md`, `docs/SUBMISSION.md`, `docs/reports/gap.md`, `docs/reports/CEO.md` (`5f9b3297`, strictly append-only `+4` lines), and all `60/60` HMAC-verified raw trials on `s1-rehearsal-final` (`d0ead011`).
 - **Harbor Published-Key HMAC, 5-Way Parity & Negative Control (`PASS`):** `18/18` jobs and `80/80` trials under `results/harbor/` pass `tamper_guard.harbor_consistency`. Across all `8` published-key jobs (`57` trials, including `43` in `results/harbor/rehearsal-dry/`), `57/57` verify HMAC-SHA256 and `57/57` satisfy exact `result.json == verifier/reward.txt == verifier/reward.json == verifier/ledger.json == artifacts/ledger.json` parity. Negative control `results/harbor_negative/c1-tamper` (`score=1.0` forged over `V=0.5`) fails closed at `reward=0.0` (`FAIL: bad ledger signature`) with `verifier/ledger.json` uncopied.
+- **Evaluation Honesty Anchor (Panel Fix A):** On `v1.4` `hard`, `gemini-4-carbon` raw score ratio is `65% [24%, 98%]` and luck-adjusted ratio is `72% [52%, 91%]`; dev seeds `0-29` are not pre-registered and represent a `post-hoc lock` (locked after the primary run).
 
 ## 2. Keyless Reproduce Commands
 
@@ -83,6 +84,7 @@ PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/audit_s
 | `C04` | `reward_txt_json_ledger_desync_caught` | `True` |
 | `C05` | `negative_control_fail_open_caught` | `True` |
 | `C06` | `stale_153_snapshot_claim_in_docs_caught` | `True` |
+| `C07` | `shallow_detached_head_frozen_edit_caught` | `True` |
 
 ## 7. Structured Report-Only Issues (Zero Protected Paths, Zero Edits to Silas Docs)
 

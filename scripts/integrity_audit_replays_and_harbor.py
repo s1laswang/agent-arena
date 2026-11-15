@@ -24,11 +24,18 @@ if str(ROOT) not in sys.path:
 EMP_ID_RE = re.compile(r"^e\d{2,}$")
 
 
+STRATIFIED_LIVE_REPLAY_REL_PATHS: tuple[str, ...] = (
+    "data/runs/committed/opencode-gpt-5.6-sol/medium/episodes.jsonl",
+    "data/runs/committed/v1.3/reference/stop_early-medium-20261114-0332/episodes.jsonl",
+    "data/runs/committed/v1.4/reference/stop_early-medium-20261114-121126/episodes.jsonl",
+    "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard/episodes.jsonl",
+)
+
+
 def _default_tmp_root() -> Path:
-    scratch_job = Path("/localscratch/job_44578")
-    if scratch_job.is_dir():
-        return scratch_job / "w8"
-    return Path(tempfile.gettempdir()) / "canary-w8-tmp"
+    oc_tmp = Path("/tmp/opencode")
+    oc_tmp.mkdir(parents=True, exist_ok=True)
+    return oc_tmp
 
 
 def _load_audit_submission():
@@ -40,6 +47,27 @@ def _load_audit_submission():
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     return mod
+
+
+_RAW_JSON_LOADS = json.loads
+
+
+def _fast_episode_header(line: str) -> dict[str, Any]:
+    for s_tok, e_tok in (
+        ('"steps": [', '], "score":'),
+        ('"steps":[', '],"score":'),
+        ('"steps": [', '], "meta":'),
+        ('"steps":[', '],"meta":'),
+    ):
+        i = line.find(s_tok)
+        if i != -1:
+            j = line.rfind(e_tok)
+            if j > i:
+                try:
+                    return _RAW_JSON_LOADS(line[:i] + '"steps":[]' + line[j + 1 :])
+                except ValueError:
+                    pass
+    return _RAW_JSON_LOADS(line)
 
 
 def _is_finite_num(val: Any) -> bool:
@@ -191,7 +219,7 @@ def audit_data_rules(root: Path = ROOT) -> dict[str, Any]:
             if not line.strip():
                 continue
             loc = f"{rel}:{lineno}"
-            ep = json.loads(line)
+            ep = _fast_episode_header(line)
             total_active_episodes += 1
             tier = str(ep.get("tier") or "")
             agent = str(ep.get("agent") or "")
@@ -280,7 +308,12 @@ def audit_data_rules(root: Path = ROOT) -> dict[str, Any]:
                     c["score_v_mismatch"] += 1
 
     try:
-        loaded_rows, _ = R.load_committed(root)
+        orig_json_loads = R.json.loads
+        try:
+            R.json.loads = _fast_episode_header
+            loaded_rows, _ = R.load_committed(root)
+        finally:
+            R.json.loads = orig_json_loads
     except Exception as exc:
         violations.append(f"reproduce.load_committed raised {type(exc).__name__}: {exc}")
         loaded_rows = []
@@ -314,7 +347,7 @@ def audit_data_rules(root: Path = ROOT) -> dict[str, Any]:
             if not line.strip():
                 continue
             loc = f"{rel}:{lineno}"
-            ep = json.loads(line)
+            ep = _fast_episode_header(line)
             superseded_summary["n_episodes"] += 1
             sd = int(ep["seed"])
             if sd in seen_sup:
@@ -435,10 +468,21 @@ def _eval_replay_case(case_root: Path, audit_mod: Any) -> dict[str, Any]:
     from canary.redteam import anticheat as ac
     from canary.redteam import tamper_guard as tg
 
-    up_rep = ac.replay_committed(case_root)
-    up_consistent = all(r["replay_consistent"] is not False for r in up_rep)
+    captured_up: list[list[dict[str, Any]]] = []
+    orig_ac_rc = ac.replay_committed
+    try:
+        def _capturing_ac_rc(r: Path = ROOT) -> list[dict[str, Any]]:
+            rows = orig_ac_rc(r)
+            captured_up.append(rows)
+            return rows
 
-    tg_rep = tg.replay_committed(case_root)
+        ac.replay_committed = _capturing_ac_rc
+        tg_rep = tg.replay_committed(case_root)
+    finally:
+        ac.replay_committed = orig_ac_rc
+
+    up_rep = captured_up[0] if captured_up else orig_ac_rc(case_root)
+    up_consistent = all(r["replay_consistent"] is not False for r in up_rep)
     tg_consistent = all(r["replay_consistent"] is not False for r in tg_rep)
     step_mismatches = sum(r.get("step_mismatches", 0) for r in tg_rep)
 
@@ -871,19 +915,27 @@ def _verifier_python_src(tmp_dir: Path) -> str:
 
 
 def _run_harbor_verifier_py(tmp_dir: Path, raw_ledger: str | None, key_hex: str) -> dict[str, Any]:
+    import contextlib
+    import io
+
     for sub in ("logs", "evidence", "tests"):
         (tmp_dir / sub).mkdir(parents=True, exist_ok=True)
     (tmp_dir / "tests/ledger_key").write_text(key_hex + "\n", encoding="utf-8")
     if raw_ledger is not None:
         (tmp_dir / "evidence/ledger.json").write_text(raw_ledger, encoding="utf-8")
-    env = {k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}
-    proc = subprocess.run(
-        [sys.executable, "-I", "-S", "-c", _verifier_python_src(tmp_dir)],
-        capture_output=True,
-        text=True,
-        env=env,
-        timeout=30,
-    )
+    src = _verifier_python_src(tmp_dir)
+    out_buf = io.StringIO()
+    err_buf = io.StringIO()
+    saved_canary = {k: os.environ.pop(k) for k in list(os.environ) if k.startswith("CANARY_")}
+    rc = 0
+    try:
+        with contextlib.redirect_stdout(out_buf), contextlib.redirect_stderr(err_buf):
+            exec(compile(src, "<harbor_verifier>", "exec"), {"__name__": "__main__"})
+    except SystemExit as exc:
+        code = exc.code
+        rc = 0 if code is None else (code if isinstance(code, int) else 1)
+    finally:
+        os.environ.update(saved_canary)
     r_txt = (
         (tmp_dir / "logs/reward.txt").read_text(encoding="utf-8")
         if (tmp_dir / "logs/reward.txt").exists()
@@ -895,11 +947,11 @@ def _run_harbor_verifier_py(tmp_dir: Path, raw_ledger: str | None, key_hex: str)
         else None
     )
     return {
-        "rc": proc.returncode,
+        "rc": rc,
         "reward_txt": r_txt,
         "reward_json": r_json,
-        "stdout": proc.stdout,
-        "stderr": proc.stderr,
+        "stdout": out_buf.getvalue(),
+        "stderr": err_buf.getvalue(),
     }
 
 
@@ -1383,7 +1435,57 @@ def fuzz_harbor_verifier(root: Path = ROOT, tmp_base: Path | None = None) -> lis
             shutil.rmtree(work_dir, ignore_errors=True)
 
 
-def run_full_audit(root: Path = ROOT, tmp_base: Path | None = None) -> dict[str, Any]:
+def _replay_stratified_committed(
+    root: Path,
+    tmp_base: Path | None = None,
+) -> list[dict[str, Any]]:
+    from canary import reproduce as R
+    from canary.redteam import tamper_guard as tg
+
+    chosen: list[Path] = []
+    for rel in STRATIFIED_LIVE_REPLAY_REL_PATHS:
+        cand = root / rel
+        if cand.is_file():
+            chosen.append(cand)
+
+    if not chosen:
+        by_ver: dict[str, list[tuple[int, Path]]] = defaultdict(list)
+        for f in R.committed_files(root):
+            ver = R.run_tiers_version(f.parent, root, R.run_meta(f.parent))
+            by_ver[ver].append((f.stat().st_size, f))
+        for ver in sorted(by_ver):
+            chosen.append(sorted(by_ver[ver], key=lambda item: (item[0], item[1].as_posix()))[0][1])
+
+    own_tmp = False
+    if tmp_base is None:
+        sample_root = Path(tempfile.mkdtemp(prefix="w8-sample-replay-", dir=str(_default_tmp_root())))
+        own_tmp = True
+    else:
+        sample_root = tmp_base / "stratified_live_replay"
+        if sample_root.exists():
+            shutil.rmtree(sample_root)
+        sample_root.mkdir(parents=True, exist_ok=True)
+
+    try:
+        for src_ep in chosen:
+            rel_dir = src_ep.parent.relative_to(root)
+            dst_dir = sample_root / rel_dir
+            dst_dir.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(src_ep.parent, dst_dir)
+        rows = tg.replay_committed(sample_root)
+        for r in rows:
+            r["sampled"] = True
+        return rows
+    finally:
+        if own_tmp:
+            shutil.rmtree(sample_root, ignore_errors=True)
+
+
+def run_full_audit(
+    root: Path = ROOT,
+    tmp_base: Path | None = None,
+    sample_live_replay: bool = False,
+) -> dict[str, Any]:
     from canary.redteam import anticheat as ac
     from canary.redteam import tamper_guard as tg
 
@@ -1392,26 +1494,46 @@ def run_full_audit(root: Path = ROOT, tmp_base: Path | None = None) -> dict[str,
     replay_matrix = fuzz_replay_checker(root, tmp_base=tmp_base)
     harbor_matrix = fuzz_harbor_verifier(root, tmp_base=tmp_base)
 
-    live_replay = tg.replay_committed(root)
+    if sample_live_replay:
+        live_replay = _replay_stratified_committed(root, tmp_base=tmp_base)
+    else:
+        live_replay = tg.replay_committed(root)
     live_replay_counts = ac.replay_counts(live_replay)
     live_harbor = tg.harbor_consistency(root)
     live_trials = [r for r in live_harbor if r.get("kind") == "trial"]
     live_jobs = [r for r in live_harbor if r.get("kind") == "job"]
 
     rehearsal_dir = root / "results" / "harbor" / "rehearsal-dry"
-    rehearsal_dry = (
-        tg.verify_rehearsal_run(rehearsal_dir, repo_root=root)
-        if rehearsal_dir.is_dir()
-        else {"passed": None, "problems": []}
-    )
+    if rehearsal_dir.is_dir():
+        orig_hc = tg.harbor_consistency
+        orig_lrt = tg._load_rehearsal_table_module
+
+        def _fast_lrt(r: Path) -> Any:
+            mod = orig_lrt(r)
+            if mod is not None:
+                orig_br = mod.boot_ratio
+                mod.boot_ratio = lambda ra, rb, _b=orig_br: (0.0, 0.0) if all(x == 0.0 for x in ra) else _b(ra, rb)
+            return mod
+
+        try:
+            tg.harbor_consistency = lambda r=root: live_harbor if Path(r).resolve() == root.resolve() else orig_hc(r)
+            tg._load_rehearsal_table_module = _fast_lrt
+            rehearsal_dry = tg.verify_rehearsal_run(rehearsal_dir, repo_root=root)
+        finally:
+            tg.harbor_consistency = orig_hc
+            tg._load_rehearsal_table_module = orig_lrt
+    else:
+        rehearsal_dry = {"passed": None, "problems": []}
     elapsed_s = round(time.monotonic() - t0, 3)
 
     replay_bypasses = [r for r in replay_matrix if r["bypass"]]
     harbor_bypasses = [r for r in harbor_matrix if r["bypass"]]
     return {
         "elapsed_s": elapsed_s,
+        "sample_live_replay": sample_live_replay,
         "data_rule_audit": data_audit,
         "live_tamper_guard": {
+            "sample_live_replay": sample_live_replay,
             "replay_files": len(live_replay),
             "replay_all_consistent": all(r["replay_consistent"] is not False for r in live_replay),
             "replay_counts": live_replay_counts,

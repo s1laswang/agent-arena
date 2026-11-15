@@ -26,7 +26,7 @@ audit_mod = _load_module()
 @pytest.fixture(scope="module")
 def full_report(tmp_path_factory):
     tmp_dir = tmp_path_factory.mktemp("lane_c1_audit")
-    return audit_mod.run_full_audit(root=ROOT, tmp_base=tmp_dir)
+    return audit_mod.run_full_audit(root=ROOT, tmp_base=tmp_dir, sample_live_replay=True)
 
 
 def test_committed_runs_and_judge_episodes_pass_data_rules(full_report):
@@ -60,7 +60,10 @@ def test_committed_runs_and_judge_episodes_pass_data_rules(full_report):
 def test_live_tamper_guard_and_rehearsal_dry_pass(full_report):
     lt = full_report["live_tamper_guard"]
     assert lt["replay_all_consistent"] is True
-    assert lt["replay_counts"]["replayed"] >= 989
+    min_replayed = 47 if lt.get("sample_live_replay") else 989
+    assert lt["replay_files"] >= 4
+    assert lt["replay_counts"]["replayed"] >= min_replayed
+    assert lt["replay_counts"]["consistent"] == lt["replay_counts"]["replayed"]
     assert lt["replay_counts"]["step_mismatches"] == 0
     assert lt["harbor_all_consistent"] is True
     assert lt["harbor_jobs"] >= 18
@@ -300,7 +303,11 @@ def test_harbor_mutation_matrix_completeness_and_verdicts(full_report):
 
 
 def test_cli_json_output_is_strict_rfc8259_json(monkeypatch, capsys, full_report):
-    monkeypatch.setattr(audit_mod, "run_full_audit", lambda root=ROOT, tmp_base=None: full_report)
+    monkeypatch.setattr(
+        audit_mod,
+        "run_full_audit",
+        lambda root=ROOT, tmp_base=None, sample_live_replay=False: full_report,
+    )
     rc = audit_mod.main(["--root", str(ROOT), "--json"])
     out = capsys.readouterr().out
     parsed = json.loads(

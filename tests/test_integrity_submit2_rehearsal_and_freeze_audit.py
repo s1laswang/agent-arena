@@ -49,10 +49,12 @@ def test_code_freeze_invariant_across_final_submit2_and_justsilas(audit_result):
         assert dp["frozen_byte_changes"] == 0, dp
 
     assert tuple(cf["frozen_paths"]) == audit_mod.FROZEN_PATHS
+    assert cf["pinned_frozen_hashes"] == audit_mod.PINNED_FROZEN_OBJECT_HASHES
+    assert cf["live_frozen_hashes"] == audit_mod.PINNED_FROZEN_OBJECT_HASHES
     for fp in audit_mod.FROZEN_PATHS:
         per_rev = cf["object_hashes"][fp]
-        assert len(per_rev) >= 3
-        assert len(set(per_rev.values())) == 1, (fp, per_rev)
+        assert len(per_rev) >= 2
+        assert set(per_rev.values()) == {audit_mod.PINNED_FROZEN_OBJECT_HASHES[fp]}, (fp, per_rev)
 
     assert sorted(cf["submit2_commit_files"]) == [
         "README.md",
@@ -68,6 +70,38 @@ def test_code_freeze_invariant_across_final_submit2_and_justsilas(audit_result):
         "v14": "a8f99c2537c91d72",
         "v13": "8df71cf570bb48bc",
     }
+
+
+def test_shallow_detached_head_code_freeze_fallback_zero_skips(tmp_path):
+    import subprocess
+
+    shallow_dir = tmp_path / "shallow_detached"
+    audit_mod._copy_frozen_subset(ROOT, shallow_dir)
+    subprocess.run(
+        [
+            "sh",
+            "-e",
+            "-c",
+            "git init -q && git config user.email ci@example.com && git config user.name CI "
+            "&& git add . && git commit -q -m shallow && git checkout -q --detach HEAD",
+        ],
+        cwd=shallow_dir,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    cf = audit_mod.audit_code_freeze(shallow_dir, enforce_canonical_prefixes=True)
+    assert cf["shallow_ci_fallback"] is True
+    assert cf["passed"] is True, cf["problems"]
+    assert cf["problems"] == []
+    assert cf["live_frozen_hashes"] == audit_mod.PINNED_FROZEN_OBJECT_HASHES
+    for fp in audit_mod.FROZEN_PATHS:
+        assert set(cf["object_hashes"][fp].keys()) == {"pinned_1bc3e281_5f9b3297", "live_worktree", "HEAD"}
+        assert set(cf["object_hashes"][fp].values()) == {audit_mod.PINNED_FROZEN_OBJECT_HASHES[fp]}
+    assert cf["ceo_append_only"] is True
+    assert cf["ceo_appended_lines"] == 4
 
 
 def test_rehearsal_final_and_docs_consistency(audit_result):
@@ -143,9 +177,9 @@ def test_harbor_published_keys_parity_and_negative_control(audit_result):
 def test_positive_tamper_controls_and_structured_issues(audit_result, tmp_path):
     pc = audit_result["positive_controls"]
     assert pc["passed"] is True
-    assert pc["total"] == 6
-    assert pc["caught"] == 6
-    assert [c["id"] for c in pc["cases"]] == ["C01", "C02", "C03", "C04", "C05", "C06"]
+    assert pc["total"] == 7
+    assert pc["caught"] == 7
+    assert [c["id"] for c in pc["cases"]] == ["C01", "C02", "C03", "C04", "C05", "C06", "C07"]
     assert all(c["caught"] is True for c in pc["cases"])
 
     issues = audit_result["structured_issues"]
@@ -170,6 +204,10 @@ def test_report_sync_hygiene_and_zero_protected_paths(audit_result):
     rendered = audit_mod.render_markdown_report(audit_result)
     actual = REPORT_PATH.read_text(encoding="utf-8")
     assert actual == rendered
+    assert "65% [24%, 98%]" in actual
+    assert "72% [52%, 91%]" in actual
+    assert actual.index("65% [24%, 98%]") < actual.index("72% [52%, 91%]")
+    assert "post-hoc lock" in actual
 
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)

@@ -1,0 +1,1127 @@
+{
+  "schema": "canary.tiebreak.representation_bottleneck.v1",
+  "audit_id": "tiebreak-representation-bottleneck-v14",
+  "text_provider": "TemplateProvider",
+  "world_secret_tag": "sha256:ebf2f09716cf76d3",
+  "heldout_seed_range": "800000..800029",
+  "eval_seed_range": "800000..800029",
+  "eval_seeds_per_tier": 30,
+  "episodes_per_condition": 90,
+  "tiers": [
+    "easy",
+    "medium",
+    "hard"
+  ],
+  "bottleneck_modes": [
+    "full_28d",
+    "core_sufficient_stats",
+    "posterior_only",
+    "horizon_value_only",
+    "no_canary_aux_only"
+  ],
+  "seed_isolation": {
+    "train_seed_range": "100000..199999",
+    "heldout_seed_range": "800000..800029",
+    "judge_episodes_touched": 0,
+    "dev_episodes_rolled_out": 0,
+    "train_episodes_in_heldout_eval": 0,
+    "panel_fix_a_disclosure": "All 1,080 live representation-bottleneck episodes evaluate strictly on world-paired HELDOUT_SEEDS 800000..800029 (30 seeds x 3 tiers = 90 episodes per condition across easy, medium, hard) under shared deterministic world_secret_tag sha256:ebf2f09716cf76d3, all learned compact policy parameters originate strictly from disjoint TRAIN_SEEDS [100000, 200000), and 0 JUDGE_SEEDS (900k+) are touched. Any frontier reference cohorts on DEV_SEEDS 0..29 mentioned in Canary cross-track literature are post-hoc locked, not pre-registered (Panel Fix A)."
+  },
+  "panel_fix_e_track_separation": {
+    "open_weight_qwen25_runs_total": 19,
+    "open_weight_qwen25_runs_above_zero": 0,
+    "open_weight_qwen25_above_zero_ratio": "0 / 19",
+    "readme_qwen_addendum_status": "HOLD_README_QWEN_ADDENDUM_UNTIL_V100",
+    "compact_policies_are_open_weight_llm": false,
+    "disclosure": "Per Panel Fix E strict track separation, 0 / 19 historical open-weight Qwen2.5 runs in experiment_ledger.json exceed untrained base (0.000), with 98.0% (1162/1186) 4k sticky canary-map eviction under raw transcript truncation, so the README.md Qwen addendum remains withheld (HOLD_README_QWEN_ADDENDUM_UNTIL_V100). Non-LLM compact policies (EmpiricalBayesPolicy 11 params, ScalingLogisticPolicy 82 params, CompactLinearDAggerPolicy 785 params, TinyMLPPolicy 12,293 params; is_open_weight_llm = False) are strictly separated from open-weight Qwen2.5 LoRA runs."
+  },
+  "cross_track_qwen_contrast": {
+    "is_open_weight_llm": true,
+    "total_params_billions": 1.54,
+    "lora_trainable_params_millions": 18.46,
+    "pooled_verda_episodes": 450,
+    "pooled_450_mean_score": -0.3271,
+    "best_trained_run_id": "WS4-v3-8k-s2-dbd0",
+    "best_trained_mean_score": -0.05,
+    "raw_header_tokens_mean": 2848.0,
+    "pooled_canary_calls_total": 1186,
+    "raw_4k_canary_evicted_count": 1162,
+    "raw_4k_canary_eviction_pct": 97.98,
+    "raw_4k_canary_eviction_pct_display": "98.0%",
+    "raw_8k_canary_evicted_count": 1004,
+    "raw_8k_canary_eviction_pct": 84.65,
+    "raw_8k_canary_eviction_pct_display": "84.7%",
+    "compact_canary_evicted_count": 0,
+    "compact_canary_eviction_pct_display": "0.0%"
+  },
+  "ast_inference_isolation": {
+    "passed": true,
+    "policy_classes": [
+      "scripts/tiebreak_representation_bottleneck_audit.py:FeatureBottleneckPolicy",
+      "scripts/tiebreak_representation_bottleneck_audit.py:BottleneckCompactLinearDAggerPolicy",
+      "scripts/tiebreak_representation_bottleneck_audit.py:BottleneckTinyMLPPolicy"
+    ],
+    "errors": []
+  },
+  "sufficient_stat_baselines": {
+    "empirical_bayes": {
+      "policy_id": "empirical_bayes",
+      "policy_class": "EmpiricalBayesPolicy",
+      "run_id": "empirical-bayes-v14",
+      "module_path": "train/empirical_bayes_policy.py",
+      "summary_path": "results/tiebreak/empirical_bayes/summary.json",
+      "param_count": 11,
+      "train_seed_range": "102000..102779",
+      "native_feature_note": "6 log-likelihood + 5 stopping/split sufficient stats",
+      "is_open_weight_llm": false,
+      "overall": {
+        "n": 90,
+        "mean_score": 0.62233,
+        "ci95_low": 0.57258,
+        "ci95_high": 0.67209,
+        "ci95_half_width": 0.04975,
+        "correct_count": 82,
+        "wrong_count": 0,
+        "abstain_count": 8,
+        "accuse_count": 82,
+        "accuracy": 0.91111,
+        "accuse_rate": 0.91111,
+        "wrong_accuse_rate": 0.0,
+        "abstain_rate": 0.08889,
+        "accusation_precision": 1.0,
+        "step_matches_count": 782,
+        "step_total_count": 4696,
+        "action_agreement_rate": 0.16652,
+        "terminal_agree_count": 79,
+        "terminal_agreement_rate": 0.87778,
+        "replay_verified_count": 90,
+        "traces_digest": "h15:aa989_5cc74_b418a"
+      },
+      "paired_vs_full_28d": {
+        "mean_delta": -0.04089,
+        "ci95_low": -0.11187,
+        "ci95_high": 0.03009,
+        "ci95_half_width": 0.07098,
+        "retained_share": 0.93835,
+        "better_count": 32,
+        "tied_count": 14,
+        "worse_count": 44
+      },
+      "paired_vs_zero": {
+        "mean_delta": 0.62233,
+        "ci95_low": 0.57258,
+        "ci95_high": 0.67209,
+        "ci95_half_width": 0.04975,
+        "retained_share": 0.0,
+        "better_count": 82,
+        "tied_count": 8,
+        "worse_count": 0
+      },
+      "by_tier": {
+        "easy": {
+          "n": 30,
+          "mean_score": 0.72867,
+          "accusation_precision": 1.0,
+          "abstain_rate": 0.06667
+        },
+        "medium": {
+          "n": 30,
+          "mean_score": 0.56967,
+          "accusation_precision": 1.0,
+          "abstain_rate": 0.2
+        },
+        "hard": {
+          "n": 30,
+          "mean_score": 0.56867,
+          "accusation_precision": 1.0,
+          "abstain_rate": 0.0
+        }
+      },
+      "episode_scores_csv": "0.88,0.76,0.82,0.87,0.86,0.75,0.68,0.51,0,0.81,0.75,0.7,0.81,0.88,0.67,0.81,0.76,0.87,0.52,0.87,0.8,0.88,0.76,0.81,0.82,0,0.69,0.88,0.88,0.76,0.7,0,0.79,0.73,0.55,0.73,0,0.54,0.79,0.63,0.73,0.8,0,0.63,0.7,0.84,0.75,0,0.84,0.51,0.78,0.88,0.74,0,0.85,0.74,0.65,0.6,0,0.59,0.65,0.65,0.36,0.39,0.7,0.57,0.47,0.5,0.7,0.7,0.42,0.79,0.65,0.72,0.61,0.59,0.63,0.59,0.4,0.59,0.45,0.52,0.54,0.57,0.63,0.56,0.56,0.77,0.66,0.12",
+      "episode_outcomes_csv": "C,C,C,C,C,C,C,C,A,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,A,C,C,C,C,C,A,C,C,C,C,A,C,C,C,C,C,A,C,C,C,C,A,C,C,C,C,C,A,C,C,C,C,A,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C"
+    },
+    "scaling_logistic": {
+      "policy_id": "scaling_logistic",
+      "policy_class": "ScalingLogisticPolicy",
+      "run_id": "scaling-logistic-v14",
+      "module_path": "scripts/tiebreak_scaling_calibration.py",
+      "summary_path": "results/tiebreak/scaling/scaling_summary.json",
+      "param_count": 82,
+      "train_seed_range": "107000..108999",
+      "native_feature_note": "14 suspect + 10 commit + 6 wait + 12 tool/canary stats",
+      "is_open_weight_llm": false,
+      "overall": {
+        "n": 90,
+        "mean_score": 0.61067,
+        "ci95_low": 0.54196,
+        "ci95_high": 0.67938,
+        "ci95_half_width": 0.06871,
+        "correct_count": 83,
+        "wrong_count": 2,
+        "abstain_count": 5,
+        "accuse_count": 85,
+        "accuracy": 0.92222,
+        "accuse_rate": 0.94444,
+        "wrong_accuse_rate": 0.02222,
+        "abstain_rate": 0.05556,
+        "accusation_precision": 0.97647,
+        "step_matches_count": 2137,
+        "step_total_count": 4696,
+        "action_agreement_rate": 0.45507,
+        "terminal_agree_count": 82,
+        "terminal_agreement_rate": 0.91111,
+        "replay_verified_count": 90,
+        "traces_digest": "h15:fa9b7_ff4bd_82cc7"
+      },
+      "paired_vs_full_28d": {
+        "mean_delta": -0.05256,
+        "ci95_low": -0.12324,
+        "ci95_high": 0.01813,
+        "ci95_half_width": 0.07068,
+        "retained_share": 0.92076,
+        "better_count": 24,
+        "tied_count": 19,
+        "worse_count": 47
+      },
+      "paired_vs_zero": {
+        "mean_delta": 0.61067,
+        "ci95_low": 0.54196,
+        "ci95_high": 0.67938,
+        "ci95_half_width": 0.06871,
+        "retained_share": 0.0,
+        "better_count": 83,
+        "tied_count": 5,
+        "worse_count": 2
+      },
+      "by_tier": {
+        "easy": {
+          "n": 30,
+          "mean_score": 0.81267,
+          "accusation_precision": 1.0,
+          "abstain_rate": 0.0
+        },
+        "medium": {
+          "n": 30,
+          "mean_score": 0.55733,
+          "accusation_precision": 0.96154,
+          "abstain_rate": 0.13333
+        },
+        "hard": {
+          "n": 30,
+          "mean_score": 0.462,
+          "accusation_precision": 0.96552,
+          "abstain_rate": 0.03333
+        }
+      },
+      "episode_scores_csv": "0.82,0.7,0.88,0.87,0.79,0.76,0.81,0.82,0.88,0.82,0.69,0.82,0.82,0.82,0.81,0.82,0.76,0.81,0.88,0.81,0.88,0.82,0.82,0.76,0.82,0.81,0.76,0.82,0.88,0.82,0.71,0.83,0.85,0.8,0.7,0.48,0,0.73,0.89,0.7,0.78,-1,0.89,0.79,0.44,0.75,0.55,0.7,0.89,0,0.61,0.57,0.64,0,0.75,0.68,0.74,0.53,0.72,0,0.7,0.64,0.49,0.29,0.32,0.34,0.62,0.54,0,0.73,0.56,0.66,0.24,0.61,0.57,0.46,0.48,0.66,0.66,0.68,0.54,0.59,-1,0.73,0.38,0.57,0.31,0.55,0.77,0.17",
+      "episode_outcomes_csv": "C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,A,C,C,C,C,W,C,C,C,C,C,C,C,A,C,C,C,A,C,C,C,C,C,A,C,C,C,C,C,C,C,C,A,C,C,C,C,C,C,C,C,C,C,C,C,C,W,C,C,C,C,C,C,C"
+    }
+  },
+  "masked_policies": {
+    "compact_linear_dagger": {
+      "policy_id": "compact_linear_dagger",
+      "policy_class": "CompactLinearDAggerPolicy",
+      "run_id": "compact-linear-dagger-v14",
+      "module_path": "train/compact_dagger_ablation.py",
+      "summary_path": "results/tiebreak/dagger_ablation/summary.json",
+      "param_count": 785,
+      "train_seed_range": "109000..109509",
+      "is_open_weight_llm": false,
+      "conditions": {
+        "full_28d": {
+          "bottleneck_mode": "full_28d",
+          "description": "All 28 compact public-ledger features active (unmodified policy representation)",
+          "active_emp_features": 28,
+          "active_emp_feature_indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "overall": {
+            "n": 90,
+            "mean_score": 0.66322,
+            "ci95_low": 0.60708,
+            "ci95_high": 0.71937,
+            "ci95_half_width": 0.05614,
+            "correct_count": 87,
+            "wrong_count": 1,
+            "abstain_count": 2,
+            "accuse_count": 88,
+            "accuracy": 0.96667,
+            "accuse_rate": 0.97778,
+            "wrong_accuse_rate": 0.01111,
+            "abstain_rate": 0.02222,
+            "accusation_precision": 0.98864,
+            "step_matches_count": 4696,
+            "step_total_count": 4696,
+            "action_agreement_rate": 1.0,
+            "terminal_agree_count": 90,
+            "terminal_agreement_rate": 1.0,
+            "replay_verified_count": 90,
+            "traces_digest": "h15:01447_82add_d8e75"
+          },
+          "paired_vs_full_28d": {
+            "mean_delta": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "retained_share": 1.0,
+            "better_count": 0,
+            "tied_count": 90,
+            "worse_count": 0
+          },
+          "paired_vs_zero": {
+            "mean_delta": 0.66322,
+            "ci95_low": 0.60708,
+            "ci95_high": 0.71937,
+            "ci95_half_width": 0.05614,
+            "retained_share": 0.0,
+            "better_count": 87,
+            "tied_count": 2,
+            "worse_count": 1
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.82033,
+              "accusation_precision": 1.0,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.679,
+              "accusation_precision": 1.0,
+              "abstain_rate": 0.06667
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.49033,
+              "accusation_precision": 0.96667,
+              "abstain_rate": 0.0
+            }
+          },
+          "episode_scores_csv": "0.82,0.82,0.88,0.87,0.86,0.82,0.81,0.88,0.88,0.76,0.75,0.69,0.82,0.82,0.82,0.82,0.76,0.87,0.88,0.87,0.88,0.88,0.76,0.81,0.82,0.81,0.57,0.82,0.88,0.88,0.71,0.58,0.85,0.49,0.85,0.78,0.63,0.83,0.89,0.85,0.55,0.85,0.69,0.72,0,0.78,0.75,0.85,0.84,0,0.72,0.64,0.63,0.74,0.74,0.78,0.51,0.75,0.78,0.59,0.78,0.78,0.64,0.34,0.02,0.47,0.76,0.27,0.62,0.53,0.37,0.69,0.21,0.68,0.33,0.62,0.76,0.62,0.46,0.71,0.65,0.68,0.24,0.78,0.62,0.42,0.46,-1,0.78,0.42",
+          "episode_outcomes_csv": "C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,A,C,C,C,C,A,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,W,C,C"
+        },
+        "core_sufficient_stats": {
+          "bottleneck_mode": "core_sufficient_stats",
+          "description": "Top posterior marginals + surfaced canary hits + V_obs + day/horizon fraction (masking auxiliary logs/interviews/messages)",
+          "active_emp_features": 19,
+          "active_emp_feature_indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            16,
+            17,
+            18,
+            26
+          ],
+          "overall": {
+            "n": 90,
+            "mean_score": 0.56133,
+            "ci95_low": 0.49508,
+            "ci95_high": 0.62759,
+            "ci95_half_width": 0.06625,
+            "correct_count": 72,
+            "wrong_count": 0,
+            "abstain_count": 18,
+            "accuse_count": 72,
+            "accuracy": 0.8,
+            "accuse_rate": 0.8,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 0.2,
+            "accusation_precision": 1.0,
+            "step_matches_count": 3030,
+            "step_total_count": 4696,
+            "action_agreement_rate": 0.64523,
+            "terminal_agree_count": 71,
+            "terminal_agreement_rate": 0.78889,
+            "replay_verified_count": 90,
+            "traces_digest": "h15:45dbf_9359f_c5402"
+          },
+          "paired_vs_full_28d": {
+            "mean_delta": -0.10189,
+            "ci95_low": -0.17037,
+            "ci95_high": -0.03341,
+            "ci95_half_width": 0.06848,
+            "retained_share": 0.84637,
+            "better_count": 23,
+            "tied_count": 21,
+            "worse_count": 46
+          },
+          "paired_vs_zero": {
+            "mean_delta": 0.56133,
+            "ci95_low": 0.49508,
+            "ci95_high": 0.62759,
+            "ci95_half_width": 0.06625,
+            "retained_share": 0.0,
+            "better_count": 72,
+            "tied_count": 18,
+            "worse_count": 0
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.775,
+              "accusation_precision": 1.0,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.544,
+              "accusation_precision": 1.0,
+              "abstain_rate": 0.3
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.365,
+              "accusation_precision": 1.0,
+              "abstain_rate": 0.3
+            }
+          },
+          "episode_scores_csv": "0.82,0.76,0.88,0.87,0.73,0.82,0.81,0.57,0.88,0.43,0.63,0.75,0.82,0.82,0.76,0.82,0.76,0.81,0.88,0.87,0.88,0.88,0.4,0.75,0.82,0.81,0.7,0.76,0.88,0.88,0,0.69,0.85,0.79,0.65,0.79,0,0.69,0.79,0.65,0.89,0,0.85,0,0,0.77,0.8,0.85,0.79,0.8,0,0,0.65,0.76,0.85,0,0.74,0.84,0.83,0,0.61,0.72,0.43,0,0.27,0.36,0,0.6,0.59,0.59,0.5,0.68,0.72,0.17,0,0,0,0.46,0.52,0.68,0,0.44,0,0.7,0,0,0.45,0.2,0.63,0.63",
+          "episode_outcomes_csv": "C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,A,C,C,C,C,C,A,C,C,C,C,A,C,A,A,C,C,C,C,C,A,A,C,C,C,A,C,C,C,A,C,C,C,A,C,C,A,C,C,C,C,C,C,C,A,A,A,C,C,C,A,C,A,C,A,A,C,C,C,C"
+        },
+        "posterior_only": {
+          "bottleneck_mode": "posterior_only",
+          "description": "Suspect probability and canary-hit features only (masking V_obs, breakeven EV, and day/horizon features)",
+          "active_emp_features": 20,
+          "active_emp_feature_indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            26
+          ],
+          "overall": {
+            "n": 90,
+            "mean_score": 0.60189,
+            "ci95_low": 0.52202,
+            "ci95_high": 0.68175,
+            "ci95_half_width": 0.07987,
+            "correct_count": 85,
+            "wrong_count": 4,
+            "abstain_count": 1,
+            "accuse_count": 89,
+            "accuracy": 0.94444,
+            "accuse_rate": 0.98889,
+            "wrong_accuse_rate": 0.04444,
+            "abstain_rate": 0.01111,
+            "accusation_precision": 0.95506,
+            "step_matches_count": 3023,
+            "step_total_count": 4696,
+            "action_agreement_rate": 0.64374,
+            "terminal_agree_count": 83,
+            "terminal_agreement_rate": 0.92222,
+            "replay_verified_count": 90,
+            "traces_digest": "h15:fe916_f9e87_71bb3"
+          },
+          "paired_vs_full_28d": {
+            "mean_delta": -0.06133,
+            "ci95_low": -0.13917,
+            "ci95_high": 0.0165,
+            "ci95_half_width": 0.07784,
+            "retained_share": 0.90752,
+            "better_count": 26,
+            "tied_count": 24,
+            "worse_count": 40
+          },
+          "paired_vs_zero": {
+            "mean_delta": 0.60189,
+            "ci95_low": 0.52202,
+            "ci95_high": 0.68175,
+            "ci95_half_width": 0.07987,
+            "retained_share": 0.0,
+            "better_count": 85,
+            "tied_count": 1,
+            "worse_count": 4
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.789,
+              "accusation_precision": 1.0,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.64467,
+              "accusation_precision": 0.96552,
+              "abstain_rate": 0.03333
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.372,
+              "accusation_precision": 0.9,
+              "abstain_rate": 0.0
+            }
+          },
+          "episode_scores_csv": "0.82,0.76,0.88,0.87,0.79,0.82,0.81,0.57,0.88,0.76,0.56,0.75,0.82,0.82,0.76,0.82,0.76,0.62,0.88,0.87,0.88,0.88,0.76,0.75,0.82,0.81,0.57,0.82,0.88,0.88,0,0.65,0.85,0.62,0.7,0.79,0.49,0.69,0.79,0.65,0.89,0.52,0.85,0.69,0.64,0.76,0.8,0.85,0.79,-1,0.63,0.63,0.75,0.76,0.85,0.63,0.7,0.84,0.83,0.7,0.61,0.72,0.56,-1,0.56,0.22,0.46,0.64,0.17,-1,0.52,0.68,0.72,0.48,0.44,0.49,0.52,0.39,0.64,0.68,0.41,0.53,0.5,0.48,-1,0.52,0.57,0.39,0.63,0.63",
+          "episode_outcomes_csv": "C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,A,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,W,C,C,C,C,C,C,C,C,C,C,C,C,C,W,C,C,C,C,C,W,C,C,C,C,C,C,C,C,C,C,C,C,C,C,W,C,C,C,C,C"
+        },
+        "horizon_value_only": {
+          "bottleneck_mode": "horizon_value_only",
+          "description": "V_obs and day/horizon features only (masking all suspect/canary-hit features -> uniform 1/N posterior, collapses to blind/abstain)",
+          "active_emp_features": 0,
+          "active_emp_feature_indices": [],
+          "overall": {
+            "n": 90,
+            "mean_score": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "correct_count": 0,
+            "wrong_count": 0,
+            "abstain_count": 90,
+            "accuse_count": 0,
+            "accuracy": 0.0,
+            "accuse_rate": 0.0,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 1.0,
+            "accusation_precision": 0.0,
+            "step_matches_count": 3705,
+            "step_total_count": 4696,
+            "action_agreement_rate": 0.78897,
+            "terminal_agree_count": 2,
+            "terminal_agreement_rate": 0.02222,
+            "replay_verified_count": 90,
+            "traces_digest": "h15:50143_95f3d_43877"
+          },
+          "paired_vs_full_28d": {
+            "mean_delta": -0.66322,
+            "ci95_low": -0.71937,
+            "ci95_high": -0.60708,
+            "ci95_half_width": 0.05614,
+            "retained_share": 0.0,
+            "better_count": 1,
+            "tied_count": 2,
+            "worse_count": 87
+          },
+          "paired_vs_zero": {
+            "mean_delta": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "retained_share": 0.0,
+            "better_count": 0,
+            "tied_count": 90,
+            "worse_count": 0
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+          "episode_outcomes_csv": "A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A"
+        },
+        "no_canary_aux_only": {
+          "bottleneck_mode": "no_canary_aux_only",
+          "description": "Auxiliary access-log, interview, and message features only (masking all canary-leak and document-fingerprint features)",
+          "active_emp_features": 8,
+          "active_emp_feature_indices": [
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            27
+          ],
+          "overall": {
+            "n": 90,
+            "mean_score": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "correct_count": 0,
+            "wrong_count": 0,
+            "abstain_count": 90,
+            "accuse_count": 0,
+            "accuracy": 0.0,
+            "accuse_rate": 0.0,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 1.0,
+            "accusation_precision": 0.0,
+            "step_matches_count": 3821,
+            "step_total_count": 4696,
+            "action_agreement_rate": 0.81367,
+            "terminal_agree_count": 2,
+            "terminal_agreement_rate": 0.02222,
+            "replay_verified_count": 90,
+            "traces_digest": "h15:a0018_eb877_db774"
+          },
+          "paired_vs_full_28d": {
+            "mean_delta": -0.66322,
+            "ci95_low": -0.71937,
+            "ci95_high": -0.60708,
+            "ci95_half_width": 0.05614,
+            "retained_share": 0.0,
+            "better_count": 1,
+            "tied_count": 2,
+            "worse_count": 87
+          },
+          "paired_vs_zero": {
+            "mean_delta": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "retained_share": 0.0,
+            "better_count": 0,
+            "tied_count": 90,
+            "worse_count": 0
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+          "episode_outcomes_csv": "A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A"
+        }
+      }
+    },
+    "tiny_mlp": {
+      "policy_id": "tiny_mlp",
+      "policy_class": "TinyMLPPolicy",
+      "run_id": "tiny-mlp-dagger-v14",
+      "module_path": "train/neural_mlp_tiebreak.py",
+      "summary_path": "results/tiebreak/neural_mlp_dagger/mlp_summary.json",
+      "param_count": 12293,
+      "train_seed_range": "107000..107599",
+      "is_open_weight_llm": false,
+      "conditions": {
+        "full_28d": {
+          "bottleneck_mode": "full_28d",
+          "description": "All 28 compact public-ledger features active (unmodified policy representation)",
+          "active_emp_features": 28,
+          "active_emp_feature_indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "overall": {
+            "n": 90,
+            "mean_score": 0.62922,
+            "ci95_low": 0.56491,
+            "ci95_high": 0.69353,
+            "ci95_half_width": 0.06431,
+            "correct_count": 85,
+            "wrong_count": 2,
+            "abstain_count": 3,
+            "accuse_count": 87,
+            "accuracy": 0.94444,
+            "accuse_rate": 0.96667,
+            "wrong_accuse_rate": 0.02222,
+            "abstain_rate": 0.03333,
+            "accusation_precision": 0.97701,
+            "step_matches_count": 5009,
+            "step_total_count": 5009,
+            "action_agreement_rate": 1.0,
+            "terminal_agree_count": 90,
+            "terminal_agreement_rate": 1.0,
+            "replay_verified_count": 90,
+            "traces_digest": "h15:dd60e_2f7f2_cdaf5"
+          },
+          "paired_vs_full_28d": {
+            "mean_delta": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "retained_share": 1.0,
+            "better_count": 0,
+            "tied_count": 90,
+            "worse_count": 0
+          },
+          "paired_vs_zero": {
+            "mean_delta": 0.62922,
+            "ci95_low": 0.56491,
+            "ci95_high": 0.69353,
+            "ci95_half_width": 0.06431,
+            "retained_share": 0.0,
+            "better_count": 85,
+            "tied_count": 3,
+            "worse_count": 2
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.81067,
+              "accusation_precision": 1.0,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.584,
+              "accusation_precision": 1.0,
+              "abstain_rate": 0.1
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.493,
+              "accusation_precision": 0.93333,
+              "abstain_rate": 0.0
+            }
+          },
+          "episode_scores_csv": "0.88,0.88,0.68,0.87,0.81,0.88,0.81,0.82,0.62,0.88,0.74,0.56,0.88,0.88,0.69,0.82,0.82,0.81,0.88,0.81,0.88,0.88,0.7,0.75,0.82,0.87,0.76,0.88,0.88,0.88,0.78,0.44,0.8,0,0.54,0.7,0.76,0.44,0.67,0.75,0.59,0.8,0.84,0,0.59,0.55,0.43,0.45,0.73,0.66,0.65,0.49,0.64,0.61,0.74,0,0.84,0.55,0.69,0.79,0.77,0.72,-1,0.4,0.34,0.69,0.49,0.53,0.45,0.66,0.57,0.68,0.48,0.75,0.72,0.73,0.52,0.4,0.55,0.82,0.56,0.53,0.57,0.57,0.66,0.7,0.73,0.73,0.47,-1",
+          "episode_outcomes_csv": "C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,A,C,C,C,C,C,C,C,C,C,A,C,C,C,C,C,C,C,C,C,C,C,A,C,C,C,C,C,C,W,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,W"
+        },
+        "core_sufficient_stats": {
+          "bottleneck_mode": "core_sufficient_stats",
+          "description": "Top posterior marginals + surfaced canary hits + V_obs + day/horizon fraction (masking auxiliary logs/interviews/messages)",
+          "active_emp_features": 16,
+          "active_emp_feature_indices": [
+            0,
+            1,
+            2,
+            10,
+            12,
+            13,
+            15,
+            16,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "overall": {
+            "n": 90,
+            "mean_score": 0.65289,
+            "ci95_low": 0.58325,
+            "ci95_high": 0.72253,
+            "ci95_half_width": 0.06964,
+            "correct_count": 87,
+            "wrong_count": 3,
+            "abstain_count": 0,
+            "accuse_count": 90,
+            "accuracy": 0.96667,
+            "accuse_rate": 1.0,
+            "wrong_accuse_rate": 0.03333,
+            "abstain_rate": 0.0,
+            "accusation_precision": 0.96667,
+            "step_matches_count": 3845,
+            "step_total_count": 5009,
+            "action_agreement_rate": 0.76762,
+            "terminal_agree_count": 82,
+            "terminal_agreement_rate": 0.91111,
+            "replay_verified_count": 90,
+            "traces_digest": "h15:3a91a_864bb_d1d04"
+          },
+          "paired_vs_full_28d": {
+            "mean_delta": 0.02367,
+            "ci95_low": -0.06198,
+            "ci95_high": 0.10931,
+            "ci95_half_width": 0.08564,
+            "retained_share": 1.03761,
+            "better_count": 43,
+            "tied_count": 16,
+            "worse_count": 31
+          },
+          "paired_vs_zero": {
+            "mean_delta": 0.65289,
+            "ci95_low": 0.58325,
+            "ci95_high": 0.72253,
+            "ci95_half_width": 0.06964,
+            "retained_share": 0.0,
+            "better_count": 87,
+            "tied_count": 0,
+            "worse_count": 3
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.814,
+              "accusation_precision": 1.0,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.643,
+              "accusation_precision": 0.96667,
+              "abstain_rate": 0.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.50167,
+              "accusation_precision": 0.93333,
+              "abstain_rate": 0.0
+            }
+          },
+          "episode_scores_csv": "0.88,0.88,0.73,0.81,0.87,0.88,0.81,0.88,0.82,0.82,0.75,0.81,0.88,0.88,0.82,0.88,0.82,0.63,0.88,0.69,0.88,0.88,0.7,0.81,0.88,0.81,0.7,0.58,0.88,0.88,0.63,0.65,0.79,0.57,0.51,0.69,0.64,0.61,0.84,0.65,0.8,0.7,0.83,0.74,0.8,0.62,0.7,0.69,0.76,-1,0.88,0.62,0.48,0.72,0.79,0.83,0.75,0.51,0.69,0.8,0.82,0.75,0.45,0.61,0.43,0.41,0.75,0.48,0.45,0.56,0.79,0.54,0.68,0.56,0.77,0.77,-1,0.77,0.69,0.65,-1,0.43,0.75,0.6,0.34,0.7,0.6,0.48,0.61,0.61",
+          "episode_outcomes_csv": "C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,W,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,W,C,C,C,W,C,C,C,C,C,C,C,C,C"
+        },
+        "posterior_only": {
+          "bottleneck_mode": "posterior_only",
+          "description": "Suspect probability and canary-hit features only (masking V_obs, breakeven EV, and day/horizon features)",
+          "active_emp_features": 15,
+          "active_emp_feature_indices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            20
+          ],
+          "overall": {
+            "n": 90,
+            "mean_score": 0.47967,
+            "ci95_low": 0.36476,
+            "ci95_high": 0.59457,
+            "ci95_half_width": 0.11491,
+            "correct_count": 78,
+            "wrong_count": 10,
+            "abstain_count": 2,
+            "accuse_count": 88,
+            "accuracy": 0.86667,
+            "accuse_rate": 0.97778,
+            "wrong_accuse_rate": 0.11111,
+            "abstain_rate": 0.02222,
+            "accusation_precision": 0.88636,
+            "step_matches_count": 3872,
+            "step_total_count": 5009,
+            "action_agreement_rate": 0.77301,
+            "terminal_agree_count": 73,
+            "terminal_agreement_rate": 0.81111,
+            "replay_verified_count": 90,
+            "traces_digest": "h15:3ea52_95930_fb247"
+          },
+          "paired_vs_full_28d": {
+            "mean_delta": -0.14956,
+            "ci95_low": -0.28007,
+            "ci95_high": -0.01904,
+            "ci95_half_width": 0.13051,
+            "retained_share": 0.76232,
+            "better_count": 36,
+            "tied_count": 3,
+            "worse_count": 51
+          },
+          "paired_vs_zero": {
+            "mean_delta": 0.47967,
+            "ci95_low": 0.36476,
+            "ci95_high": 0.59457,
+            "ci95_half_width": 0.11491,
+            "retained_share": 0.0,
+            "better_count": 78,
+            "tied_count": 2,
+            "worse_count": 10
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.70667,
+              "accusation_precision": 0.96667,
+              "abstain_rate": 0.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.50033,
+              "accusation_precision": 0.89286,
+              "abstain_rate": 0.06667
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.232,
+              "accusation_precision": 0.8,
+              "abstain_rate": 0.0
+            }
+          },
+          "episode_scores_csv": "0.94,0.94,0.94,0.81,0.54,0.69,0.76,0.63,0.94,0.82,0.82,0.81,0.46,0.88,0.75,0.86,0.88,0.68,0.7,0.93,0.68,-1,0.58,0.58,0.94,0.69,0.51,0.69,0.81,0.94,0.68,0.73,0.54,0.57,0.75,0.83,0.66,0.84,0.65,-1,0.78,0,0.66,0.71,0.71,0.84,0.85,0.95,0.79,0,-1,0.58,0.59,0.78,-1,0.67,0.65,0.85,0.72,0.63,0.68,0.45,0.72,-1,-1,0.48,0.56,0.55,0.35,0.43,-1,0.43,0.41,0.37,-1,0.54,0.52,0.77,0.45,-1,0.38,0.42,0.82,-1,0.61,0.57,0.73,0.65,0.62,0.45",
+          "episode_outcomes_csv": "C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,W,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,C,W,C,A,C,C,C,C,C,C,C,A,W,C,C,C,W,C,C,C,C,C,C,C,C,W,W,C,C,C,C,C,W,C,C,C,W,C,C,C,C,W,C,C,C,W,C,C,C,C,C,C"
+        },
+        "horizon_value_only": {
+          "bottleneck_mode": "horizon_value_only",
+          "description": "V_obs and day/horizon features only (masking all suspect/canary-hit features -> uniform 1/N posterior, collapses to blind/abstain)",
+          "active_emp_features": 7,
+          "active_emp_feature_indices": [
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "overall": {
+            "n": 90,
+            "mean_score": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "correct_count": 0,
+            "wrong_count": 0,
+            "abstain_count": 90,
+            "accuse_count": 0,
+            "accuracy": 0.0,
+            "accuse_rate": 0.0,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 1.0,
+            "accusation_precision": 0.0,
+            "step_matches_count": 3685,
+            "step_total_count": 5009,
+            "action_agreement_rate": 0.73568,
+            "terminal_agree_count": 3,
+            "terminal_agreement_rate": 0.03333,
+            "replay_verified_count": 90,
+            "traces_digest": "h15:d4540_6ecff_b49bc"
+          },
+          "paired_vs_full_28d": {
+            "mean_delta": -0.62922,
+            "ci95_low": -0.69353,
+            "ci95_high": -0.56491,
+            "ci95_half_width": 0.06431,
+            "retained_share": 0.0,
+            "better_count": 2,
+            "tied_count": 3,
+            "worse_count": 85
+          },
+          "paired_vs_zero": {
+            "mean_delta": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "retained_share": 0.0,
+            "better_count": 0,
+            "tied_count": 90,
+            "worse_count": 0
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+          "episode_outcomes_csv": "A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A"
+        },
+        "no_canary_aux_only": {
+          "bottleneck_mode": "no_canary_aux_only",
+          "description": "Auxiliary access-log, interview, and message features only (masking all canary-leak and document-fingerprint features)",
+          "active_emp_features": 13,
+          "active_emp_feature_indices": [
+            5,
+            6,
+            7,
+            8,
+            9,
+            19,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "overall": {
+            "n": 90,
+            "mean_score": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "correct_count": 0,
+            "wrong_count": 0,
+            "abstain_count": 90,
+            "accuse_count": 0,
+            "accuracy": 0.0,
+            "accuse_rate": 0.0,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 1.0,
+            "accusation_precision": 0.0,
+            "step_matches_count": 3735,
+            "step_total_count": 5009,
+            "action_agreement_rate": 0.74566,
+            "terminal_agree_count": 3,
+            "terminal_agreement_rate": 0.03333,
+            "replay_verified_count": 90,
+            "traces_digest": "h15:600c9_2abd5_8844a"
+          },
+          "paired_vs_full_28d": {
+            "mean_delta": -0.62922,
+            "ci95_low": -0.69353,
+            "ci95_high": -0.56491,
+            "ci95_half_width": 0.06431,
+            "retained_share": 0.0,
+            "better_count": 2,
+            "tied_count": 3,
+            "worse_count": 85
+          },
+          "paired_vs_zero": {
+            "mean_delta": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0,
+            "ci95_half_width": 0.0,
+            "retained_share": 0.0,
+            "better_count": 0,
+            "tied_count": 90,
+            "worse_count": 0
+          },
+          "by_tier": {
+            "easy": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            },
+            "medium": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            },
+            "hard": {
+              "n": 30,
+              "mean_score": 0.0,
+              "accusation_precision": 0.0,
+              "abstain_rate": 1.0
+            }
+          },
+          "episode_scores_csv": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+          "episode_outcomes_csv": "A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A"
+        }
+      }
+    }
+  },
+  "totals": {
+    "policies_evaluated": 4,
+    "bottleneck_modes_count": 5,
+    "total_cells": 12,
+    "total_live_episodes": 1080,
+    "fresh_env_replays_verified": 1080,
+    "elapsed_seconds": 85.116
+  }
+}

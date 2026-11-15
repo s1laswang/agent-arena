@@ -2,29 +2,29 @@
 
 Canary is a Bayesian insider-threat RL benchmark where a security-lead agent investigates a simulated company bleeding value to a mole. Across the merged Canary repository, `gemini-4-carbon` is integrated into six distinct, load-bearing roles: synthesizing leak-free company worlds (`world_text`), playing and evolving catchable adversaries (`adaptive_mole`), acting as the frontier security investigator (`investigators`), diagnosing multi-episode failure modes in long context (`failure_analyst`), red-teaming the reward and MCP server (`exploit_hunter`), and reading pixel-only evidence scans and forensic rasters (`multimodal_evidence`).
 
-Every metric in this document is extracted deterministically from the 84 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
+Every metric in this document is extracted deterministically from the 92 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
 
 ## Provenance & Aggregate Ledger Summary
 
 - Provenance status: **VERIFIED** (`python -m canary.gemini.provenance --root . --strict`)
 - Target model: `gemini-4-carbon`
 - Verified roles: **6 / 6** (`world_text`, `adaptive_mole`, `investigators`, `failure_analyst`, `exploit_hunter`, `multimodal_evidence`)
-- Verified `gemini-4-carbon` run folders: **84** (6 canonical headline runs + 78 supporting runs; scanned 84 folders)
-- Total verified episodes and evaluated samples: **805**
-- Total Gemini API calls: **6,523**
-- Total tokens (input / output / thinking / cached): **182,744,553 / 2,129,139 / 1,261,433 / 166,433,051** (**91.1%** cache hit rate)
-- Total estimated API cost (USD): **$79.4118**
+- Verified `gemini-4-carbon` run folders: **92** (6 canonical headline runs + 86 supporting runs; scanned 92 folders)
+- Total verified episodes and evaluated samples: **880**
+- Total Gemini API calls: **6,966**
+- Total tokens (input / output / thinking / cached): **191,861,104 / 2,220,586 / 1,375,438 / 174,576,067** (**91.0%** cache hit rate)
+- Total estimated API cost (USD): **$84.2277**
 - Secret leaks detected: **0**
 
 | Role | Stage | Verified Runs | Episodes / Samples | API Calls | Tokens In | Tokens Out | Thinking Tokens | Cached Tokens | Cost (USD) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `world_text` | Company Construction | 13 | 133 | 1,038 | 27,780,671 | 519,569 | 530,761 | 25,362,601 | $14.2643 |
-| `adaptive_mole` | Adversarial Evolution | 28 | 324 | 1,763 | 28,044,684 | 123,907 | 443,644 | 25,213,697 | $13.8589 |
-| `investigators` | Bayesian Investigation | 25 | 38 | 3,333 | 122,547,175 | 1,388,566 | 157,797 | 114,113,778 | $43.7418 |
+| `adaptive_mole` | Adversarial Evolution | 34 | 397 | 2,076 | 33,093,751 | 141,516 | 557,649 | 29,624,372 | $16.8929 |
+| `investigators` | Bayesian Investigation | 27 | 40 | 3,463 | 126,614,659 | 1,462,404 | 157,797 | 117,846,119 | $45.5237 |
 | `failure_analyst` | Trajectory Forensics | 3 | 222 | 5 | 918,030 | 26,204 | 39,025 | 0 | $2.3395 |
 | `exploit_hunter` | Reward & Protocol Red-Team | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
 | `multimodal_evidence` | Pixel & Chart Inspection | 13 | 77 | 169 | 360,071 | 34,062 | 90,206 | 0 | $1.9628 |
-| **Total** | **All 6 Roles** | **84** | **805** | **6,523** | **182,744,553** | **2,129,139** | **1,261,433** | **166,433,051** | **$79.4118** |
+| **Total** | **All 6 Roles** | **92** | **880** | **6,966** | **191,861,104** | **2,220,586** | **1,375,438** | **174,576,067** | **$84.2277** |
 
 ## Canonical Headline Runs (One Labelled Real Run per Role)
 
@@ -65,7 +65,7 @@ Every metric in this document is extracted deterministically from the 84 committ
 ### Role 02: `adaptive_mole` - Adaptive Mole & Mole Forge
 
 - **Gemini API capabilities:** Structured JSON rule-DSL mutation and crossover (Mole Forge), PAIRED scenario + DSL co-design under a dual solvability gate, catchability/isolation auditing, and live day-by-day adversarial mole play (`mole_arena.py`) against both `SolverPolicy` and `gemini-4-carbon` investigators.
-- **Why it is essential:** Across 28 verified `gemini-4-carbon` runs (1,763 API calls, 28,044,684 input tokens), `gemini-4-carbon` evolves catchable mole DSL programs, filters PAIRED proposals so `SolverPolicy` remains high while `ObviousHeuristic` fails, and plays the insider mole live. Committed runs record 696 live arena mole decisions and 10 head-to-head `gemini-4-carbon` investigator-vs-mole clashes.
+- **Why it is essential:** Across 34 verified `gemini-4-carbon` runs (2,076 API calls, 33,093,751 input tokens), `gemini-4-carbon` evolves catchable mole DSL programs, filters PAIRED proposals so `SolverPolicy` remains high while `ObviousHeuristic` fails, and plays the insider mole live. Committed runs record 696 live arena mole decisions and 14 head-to-head `gemini-4-carbon` investigator-vs-mole clashes.
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Verified Result |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
@@ -73,6 +73,8 @@ Every metric in this document is extracted deterministically from the 84 committ
 | `mole_forge` | `results/gemini_roles/adaptive_mole/mole-forge-carbon-med-deep` | `gemini-4-carbon` | `8425507a2791d4c8fa449cb7fdcc744e3f4767ea` | 43 | 19 | 9,256 | 6,680 | 4,353 | 0 | $0.1288 | fitness 0.738, solver acc 85%, 43 LLM children |
 | `paired_skill_designer` | `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-med-s10_14` | `gemini-4-carbon` | `cec07dc8ea61d2c129dd81e249e93dec05b76983` | 40 | 1 | 1,649 | 1,429 | 595 | 0 | $0.0235 | kept 6/6 solvable scenarios, eval solver +0.592, heuristic -1.000, n=40 |
 | `paired_skill_designer` | `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard-s10_14` | `gemini-4-carbon` | `94974340ae44c96fe5eb03d797c041b95d19d922` | 40 | 1 | 1,645 | 1,348 | 639 | 0 | $0.0232 | kept 5/6 solvable scenarios, eval solver +0.497, heuristic -1.000, n=40 |
+| `paired_skill_designer` | `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard-s15_19` | `gemini-4-carbon` | `cec07dc8ea61d2c129dd81e249e93dec05b76983` | 40 | 1 | 1,645 | 1,334 | 143 | 0 | $0.0181 | kept 6/6 solvable scenarios, eval solver +0.571, heuristic -1.000, n=40 |
+| `mole_forge` | `results/gemini_roles/adaptive_mole/mole-forge-carbon-easy-deep` | `gemini-4-carbon` | `785d21a1cb79edd061e1e34031bb04284e38c110` | 25 | 34 | 5,498 | 4,832 | 3,203 | 0 | $0.0913 | fitness 0.561, solver acc 75%, 25 LLM children |
 | `paired_skill_designer` | `results/gemini_roles/adaptive_mole/paired-solvable-scenarios-carbon` | `gemini-4-carbon` | `16f24a08e1fb57397ddf90a5b413b4359a5f16bc` | 20 | 1 | 1,649 | 957 | 476 | 0 | $0.0176 | kept 3/4 solvable scenarios, eval solver +0.722, heuristic -0.811, n=20 |
 | `paired_skill_designer` | `results/gemini_roles/adaptive_mole/paired-skill-designer-carbon-hard` | `gemini-4-carbon` | `0e59cc10aa43f068e5fe7c1007215df1db4d10fe` | 20 | 1 | 1,645 | 1,459 | 540 | 0 | $0.0233 | kept 6/6 solvable scenarios, eval solver +0.628, heuristic -1.000, n=20 |
 | `mole_forge` | `results/gemini_roles/adaptive_mole/mole-forge-carbon-v14` | `gemini-4-carbon` | `99767a5d144e89cbd9522ddd9720af55bb2217eb` | 6 | 12 | 2,546 | 1,060 | 1,180 | 0 | $0.0275 | fitness 0.370, solver acc 95%, 6 LLM children |
@@ -93,15 +95,19 @@ Every metric in this document is extracted deterministically from the 84 committ
 | `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed2` | `gemini-4-carbon` | `9222669912afd57e53fbd3b07f0cdba985df705d` | 2 | 106 | 2,110,770 | 4,223 | 35,786 | 1,892,071 | $1.0267 | investigator +0.680 vs solver +0.000 (8d clash) |
 | `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-seed0` | `gemini-4-carbon` | `3bd1d1e2295aa320812f08e2eceaef5b4a8902ef` | 2 | 92 | 1,812,239 | 3,638 | 30,311 | 1,618,805 | $0.8882 | investigator +0.660 vs solver +0.400 (7d clash) |
 | `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed1` | `gemini-4-carbon` | `9222669912afd57e53fbd3b07f0cdba985df705d` | 2 | 83 | 1,025,519 | 3,216 | 23,221 | 858,900 | $0.6835 | investigator +0.730 vs solver +0.330 (6d clash) |
+| `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed7` | `gemini-4-carbon` | `cec07dc8ea61d2c129dd81e249e93dec05b76983` | 2 | 82 | 1,420,410 | 3,341 | 28,466 | 1,247,399 | $0.7888 | investigator +0.700 vs solver +0.350 (6d clash) |
+| `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed4` | `gemini-4-carbon` | `d5fee698c79c4d026066ee981e7704362925ea23` | 2 | 79 | 2,243,533 | 3,375 | 40,203 | 2,075,662 | $0.9791 | investigator +0.510 vs solver +0.600 (10d clash) |
 | `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed5` | `gemini-4-carbon` | `9222669912afd57e53fbd3b07f0cdba985df705d` | 2 | 73 | 963,578 | 2,972 | 25,713 | 817,534 | $0.6607 | investigator +0.750 vs solver +0.450 (5d clash) |
+| `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed6` | `gemini-4-carbon` | `8425507a2791d4c8fa449cb7fdcc744e3f4767ea` | 2 | 71 | 1,011,467 | 2,993 | 24,696 | 816,815 | $0.7479 | investigator +0.750 vs solver +0.340 (5d clash) |
 | `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-hard-seed0` | `gemini-4-carbon` | `e650291e7874f115733affd54b725ba6b9fdfafb` | 2 | 66 | 1,632,751 | 2,947 | 33,780 | 1,486,373 | $0.8087 | investigator +0.640 vs solver +0.710 (6d clash) |
 | `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-med-seed4` | `gemini-4-carbon` | `8425507a2791d4c8fa449cb7fdcc744e3f4767ea` | 2 | 65 | 847,816 | 2,642 | 25,857 | 711,600 | $0.6286 | investigator +0.800 vs solver +0.000 (4d clash) |
+| `carbon_vs_carbon_clash` | `results/gemini_roles/adaptive_mole/carbon-vs-carbon-easy-seed0` | `gemini-4-carbon` | `cec07dc8ea61d2c129dd81e249e93dec05b76983` | 2 | 46 | 366,514 | 1,734 | 17,294 | 270,799 | $0.4088 | investigator +0.830 vs solver +0.790 (3d clash) |
 | `catchability_isolation_audit` | `results/gemini_roles/adaptive_mole/catchability-audit-carbon` | `gemini-4-carbon` | `61575b33eb274b41d479be195679b6db26ba1af9` | 52 | 7 | 50,469 | 7,872 | 6,194 | 0 | $0.2416 | 42 strategies & 573 mole decisions audited, 45/50 (90%) catchability pass, 0 isolation leaks |
 
 ### Role 03: `investigators` - Security-Lead Investigators
 
-- **Gemini API capabilities:** Multi-turn function calling over 13 investigative tools (`plant_canary`, `check_leak_feed`, `read_access_logs`, `search_messages`, `read_message`, `interview`, `restrict_access`, `accuse`, `advance_day`, etc.), explicit `thinking_level` control (`low` vs `high`), thought-signature preservation across tool turns, and prefix caching (114,113,778 cached tokens across 3,333 calls).
-- **Why it is essential:** Across 25 verified `gemini-4-carbon` runs (3,333 calls, 122,547,175 input tokens) and `n=30` paired `v1.4` benchmark episodes, `gemini-4-carbon` achieves `+0.5657` vs `SolverPolicy` `+0.6463` (`87.5%`, paired diff `-0.0807 +/- 0.1453` 95% CI, `90%` accusation accuracy), while controlled `low` vs `high` thinking ablations isolate experimental-design regret from stopping calibration.
+- **Gemini API capabilities:** Multi-turn function calling over 13 investigative tools (`plant_canary`, `check_leak_feed`, `read_access_logs`, `search_messages`, `read_message`, `interview`, `restrict_access`, `accuse`, `advance_day`, etc.), explicit `thinking_level` control (`low` vs `high`), thought-signature preservation across tool turns, and prefix caching (117,846,119 cached tokens across 3,463 calls).
+- **Why it is essential:** Across 27 verified `gemini-4-carbon` runs (3,463 calls, 126,614,659 input tokens) and `n=32` paired `v1.4` benchmark episodes, `gemini-4-carbon` achieves `+0.5731` vs `SolverPolicy` `+0.6394` (`89.6%`, paired diff `-0.0663 +/- 0.1390` 95% CI, `91%` accusation accuracy), while controlled `low` vs `high` thinking ablations isolate experimental-design regret from stopping calibration.
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Verified Result |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
@@ -127,6 +133,8 @@ Every metric in this document is extracted deterministically from the 84 committ
 | `hard-18` | `data/runs/committed/v1.4/gemini-4-carbon/hard-18` | `gemini-4-carbon` | `a37d93f7e46fea38545ccc2aba071069ac20f632` | 1 | 74 | 2,888,736 | 43,465 | 0 | 2,692,520 | $1.0963 | mean +0.550 vs solver +0.520 (acc 100%, n=1) |
 | `hard-9` | `data/runs/committed/v1.4/gemini-4-carbon/hard-9` | `gemini-4-carbon` | `a37d93f7e46fea38545ccc2aba071069ac20f632` | 1 | 73 | 2,797,383 | 47,577 | 0 | 2,603,465 | $1.1240 | mean +0.740 vs solver +0.710 (acc 100%, n=1) |
 | `hard-5` | `data/runs/committed/v1.4/gemini-4-carbon/hard-5` | `gemini-4-carbon` | `361fbab16b9c1016f72480d4550bb200dc7f5d60` | 1 | 67 | 2,500,684 | 47,823 | 0 | 2,263,660 | $1.1786 | mean +0.590 vs solver +0.520 (acc 100%, n=1) |
+| `medium-11` | `data/runs/committed/v1.4/gemini-4-carbon/medium-11` | `gemini-4-carbon` | `ffb75e8e2684df3a8d8adbb0adb88f352022227a` | 1 | 67 | 2,160,182 | 40,249 | 0 | 1,987,383 | $0.9468 | mean +0.760 vs solver +0.840 (acc 100%, n=1) |
+| `hard-14` | `data/runs/committed/v1.4/gemini-4-carbon/hard-14` | `gemini-4-carbon` | `ffb75e8e2684df3a8d8adbb0adb88f352022227a` | 1 | 63 | 1,907,302 | 33,589 | 0 | 1,744,958 | $0.8351 | mean +0.610 vs solver +0.230 (acc 100%, n=1) |
 | `hard-6` | `data/runs/committed/v1.4/gemini-4-carbon/hard-6` | `gemini-4-carbon` | `361fbab16b9c1016f72480d4550bb200dc7f5d60` | 1 | 57 | 2,144,797 | 51,865 | 0 | 1,985,523 | $1.0357 | mean -1.000 vs solver +0.710 (acc 0%, n=1) |
 | `hard-11` | `data/runs/committed/v1.4/gemini-4-carbon/hard-11` | `gemini-4-carbon` | `54e9ed2bf412102ae21c2b8d358aefed756d2030` | 1 | 48 | 1,451,142 | 39,530 | 0 | 1,320,404 | $0.7888 | mean +0.800 vs solver +0.620 (acc 100%, n=1) |
 | `hint_ablation` | `results/gemini_roles/investigators/hint-ablation-carbon-med01` | `gemini-4-carbon` | `361fbab16b9c1016f72480d4550bb200dc7f5d60` | 2 | 173 | 4,829,333 | 70,201 | 0 | 4,413,503 | $1.9750 | mean +0.630 vs solver +0.565 (acc 100%, n=2) |
@@ -177,14 +185,14 @@ Every metric in this document is extracted deterministically from the 84 committ
 
 ## Paired `gemini-4-carbon` vs `SolverPolicy` Benchmark (`v1.4`)
 
-Across all **30** committed `v1.4` frontier episodes (`easy` seeds `0..3` (`n=4`), `medium` seeds `0..9` (`n=10`), `hard` seeds `0..11, 13, 17..19` (`n=16`)) paired on identical world seeds against the deterministic Bayesian reference (`SolverPolicy`), `gemini-4-carbon` reaches **87.5%** of `SolverPolicy` overall (`+0.5657` vs `+0.6463`, paired difference `-0.0807 +/- 0.1453` 95% CI, `90%` accusation accuracy):
+Across all **32** committed `v1.4` frontier episodes (`easy` seeds `0..3` (`n=4`), `medium` seeds `0..9, 11` (`n=11`), `hard` seeds `0..11, 13, 14, 17..19` (`n=17`)) paired on identical world seeds against the deterministic Bayesian reference (`SolverPolicy`), `gemini-4-carbon` reaches **89.6%** of `SolverPolicy` overall (`+0.5731` vs `+0.6394`, paired difference `-0.0663 +/- 0.1390` 95% CI, `91%` accusation accuracy):
 
 | Tier | Paired Seeds (n) | `gemini-4-carbon` Mean +/- 95% CI | `SolverPolicy` Mean +/- 95% CI | Score / Solver | Paired Diff +/- 95% CI | Carbon Accuracy | Solver Accuracy | Mean Accuse Day (Carbon / Solver) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | `easy` | 4 | +0.8500 +/- 0.0349 | +0.8000 +/- 0.0583 | 106.2% | +0.0500 +/- 0.0615 | 100% | 100% | 3.75 / 4.75 |
-| `medium` | 10 | +0.5770 +/- 0.1959 | +0.7300 +/- 0.0881 | 79.0% | -0.1530 +/- 0.2333 | 80% | 100% | 9.00 / 7.20 |
-| `hard` | 16 | +0.4875 +/- 0.2022 | +0.5556 +/- 0.0900 | 87.7% | -0.0681 +/- 0.2324 | 94% | 100% | 11.38 / 10.69 |
-| **Overall** | **30** | **+0.5657 +/- 0.1309** | **+0.6463 +/- 0.0663** | **87.5%** | **-0.0807 +/- 0.1453** | **90%** | **100%** | **9.61 / 8.73** |
+| `medium` | 11 | +0.5936 +/- 0.1801 | +0.7400 +/- 0.0821 | 80.2% | -0.1464 +/- 0.2114 | 82% | 100% | 8.78 / 7.00 |
+| `hard` | 17 | +0.4947 +/- 0.1905 | +0.5365 +/- 0.0925 | 92.2% | -0.0418 +/- 0.2243 | 94% | 100% | 11.24 / 10.94 |
+| **Overall** | **32** | **+0.5731 +/- 0.1232** | **+0.6394 +/- 0.0683** | **89.6%** | **-0.0663 +/- 0.1390** | **91%** | **100%** | **9.50 / 8.81** |
 
 ### Per-Seed Paired `v1.4` Investigator Ledger
 
@@ -204,6 +212,7 @@ Across all **30** committed `v1.4` frontier episodes (`easy` seeds `0..3` (`n=4`
 | `medium` | 7 | `data/runs/committed/v1.4/gemini-4-carbon/medium-6-7` | +0.0000 | +0.8200 | -0.8200 | no | yes | 14 / 7 |
 | `medium` | 8 | `data/runs/committed/v1.4/gemini-4-carbon/medium-8-9` | +0.8000 | +0.8800 | -0.0800 | yes | yes | 11 / 5 |
 | `medium` | 9 | `data/runs/committed/v1.4/gemini-4-carbon/medium-8-9` | +0.7200 | +0.8000 | -0.0800 | yes | yes | 9 / 5 |
+| `medium` | 11 | `data/runs/committed/v1.4/gemini-4-carbon/medium-11` | +0.7600 | +0.8400 | -0.0800 | yes | yes | 7 / 5 |
 | `hard` | 0 | `data/runs/committed/v1.4/gemini-4-carbon/hard-0` | +0.5300 | +0.6400 | -0.1100 | yes | yes | 11 / 9 |
 | `hard` | 1 | `data/runs/committed/v1.4/gemini-4-carbon/hard-1` | +0.6200 | +0.6900 | -0.0700 | yes | yes | 13 / 7 |
 | `hard` | 2 | `data/runs/committed/v1.4/gemini-4-carbon/hard-2` | +0.5900 | +0.5800 | +0.0100 | yes | yes | 8 / 9 |
@@ -217,13 +226,14 @@ Across all **30** committed `v1.4` frontier episodes (`easy` seeds `0..3` (`n=4`
 | `hard` | 10 | `data/runs/committed/v1.4/gemini-4-carbon/hard-10` | +0.4500 | +0.2100 | +0.2400 | yes | yes | 14 / 19 |
 | `hard` | 11 | `data/runs/committed/v1.4/gemini-4-carbon/hard-11` | +0.8000 | +0.6200 | +0.1800 | yes | yes | 6 / 9 |
 | `hard` | 13 | `data/runs/committed/v1.4/gemini-4-carbon/hard-13` | +0.4200 | +0.3400 | +0.0800 | yes | yes | 12 / 17 |
+| `hard` | 14 | `data/runs/committed/v1.4/gemini-4-carbon/hard-14` | +0.6100 | +0.2300 | +0.3800 | yes | yes | 9 / 15 |
 | `hard` | 17 | `data/runs/committed/v1.4/gemini-4-carbon/hard-17` | +0.6400 | +0.7700 | -0.1300 | yes | yes | 8 / 5 |
 | `hard` | 18 | `data/runs/committed/v1.4/gemini-4-carbon/hard-18` | +0.5500 | +0.5200 | +0.0300 | yes | yes | 12 / 13 |
 | `hard` | 19 | `data/runs/committed/v1.4/gemini-4-carbon/hard-19` | +0.3600 | +0.6700 | -0.3100 | yes | yes | 17 / 9 |
 
 ## Keyless Offline Verification Commands
 
-Judges can verify all 84 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
+Judges can verify all 92 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
 
 ```bash
 GEMINI_API_KEY="" GOOGLE_GENERATIVE_AI_API_KEY="" PYTHONPATH=. python scripts/sync_six_roles_docs.py --root . --check

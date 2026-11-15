@@ -640,7 +640,7 @@ def test_js_static_structure_xss_safe_dom_and_parity() -> None:
     assert js_rival_profiles == MR.get_mole_briefing("medium")["rival_profiles"]
 
 
-def test_js_runtime_behavior_if_node_present() -> None:
+def test_js_runtime_behavior_if_node_present(tmp_path: Path) -> None:
     node_bin = _find_node()
     if not node_bin:
         js_text = JS_FILE.read_text(encoding="utf-8")
@@ -649,14 +649,18 @@ def test_js_runtime_behavior_if_node_present() -> None:
         assert "cachedPyodide" in js_text
         return
 
+    mjs_copy = tmp_path / "mole_rivals.mjs"
+    mjs_copy.write_bytes(JS_FILE.read_bytes())
+
     sample_cmp = MR.compare_human_mole(
         "medium",
         3000,
         {"done": True, "leaks_count": 4, "days_survived": 8, "solver_score": 0.64, "caught": True},
     )
     script = (
+        "import { pathToFileURL } from 'node:url';\n"
         "globalThis.window = globalThis;\n"
-        "const mod = await import('./docs/arena/mole_rivals.js');\n"
+        f"const mod = await import(pathToFileURL({json.dumps(str(mjs_copy))}).href);\n"
         "if (window.CanaryMoleRivals !== mod.CanaryMoleRivals) throw new Error('window global mismatch');\n"
         "const b = mod.getMoleBriefing('hard');\n"
         "if (b.tier !== 'hard' || b.rules.length !== 4) throw new Error('bad static briefing');\n"
@@ -666,12 +670,6 @@ def test_js_runtime_behavior_if_node_present() -> None:
         "  if (!rejected) throw new Error('accepted bad seed ' + String(bad));\n"
         "}\n"
         "if (mod.validateSeed(3000) !== 3000 || mod.validateSeed(9999) !== 9999) throw new Error('valid boundary rejected');\n"
-        "let blocked4 = false;\n"
-        "try { mod.compareHumanMole({ runPython: () => '{}' }, 'medium', 3000, { human_done: false }); } catch (e) { blocked4 = true; }\n"
-        "if (!blocked4) throw new Error('4-arg client guard failed');\n"
-        "let blocked3 = false;\n"
-        "try { mod.compareHumanMole('medium', 3000, { done: false }); } catch (e) { blocked3 = true; }\n"
-        "if (!blocked3) throw new Error('3-arg client guard failed');\n"
         f"const sample = {json.dumps(sample_cmp)};\n"
         "const mockPy = { runPython: (code) => code.includes('get_mole_briefing_json') ? JSON.stringify(b) : JSON.stringify(sample) };\n"
         "globalThis.__pyodide = mockPy;\n"
@@ -679,6 +677,12 @@ def test_js_runtime_behavior_if_node_present() -> None:
         "if (!Array.isArray(cmpGlobal.rivals) || cmpGlobal.rivals.length !== 4) throw new Error('3-arg __pyodide rivals failed');\n"
         "if (!Array.isArray(cmpGlobal.tacticalDebrief)) throw new Error('tacticalDebrief alias missing');\n"
         "delete globalThis.__pyodide;\n"
+        "let blocked3 = false;\n"
+        "try { mod.compareHumanMole('medium', 3000, { done: false }); } catch (e) { blocked3 = true; }\n"
+        "if (!blocked3) throw new Error('3-arg client guard failed');\n"
+        "let blocked4 = false;\n"
+        "try { mod.compareHumanMole({ runPython: () => '{}' }, 'medium', 3000, { human_done: false }); } catch (e) { blocked4 = true; }\n"
+        "if (!blocked4) throw new Error('4-arg client guard failed');\n"
         "await mod.initMoleRivals(mockPy, 'def get_mole_briefing(): pass\\n');\n"
         "const b2 = mod.getMoleBriefing(mockPy, 'hard');\n"
         "if (b2.tier !== 'hard') throw new Error('pyodide briefing failed');\n"

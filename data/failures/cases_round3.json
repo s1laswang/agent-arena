@@ -1,0 +1,253 @@
+[
+ {
+  "id": "richmond_ap_duplicate_vendor_numbers_2015",
+  "name": "City of Richmond accounts payable audit: invoices paid twice under different vendor numbers for the same supplier",
+  "organisation": "City of Richmond, Virginia, Department of Finance, Accounts Payable Division",
+  "year": 2015,
+  "country": "United States",
+  "category": "accidental",
+  "subcategory": "duplicate_payment",
+  "loss": {
+   "amount": 47700,
+   "currency": "USD",
+   "description": "Approximate total of 17 confirmed duplicate payments found by the City Auditor in a sample of 66 transactions for vendors with potential duplicate vendor records (audit period of 18 months ending 31 December 2014). Only 4 of the 17 were caused by an invoice processed twice under different vendor numbers; the report does not give the dollar value of those 4 separately. About $20,400 had been recovered; there was no evidence that the remaining ~$27,300 had been recovered."
+  },
+  "what_happened": "The Richmond City Auditor's report 2016-01 (issued 8 September 2015) covered an 18-month period in which Accounts Payable made about 98,000 payments totalling more than $1.8 billion. The auditor found that a small fraction of active vendors were potential duplicates, mostly carried over from the old financial system when the new RAPIDS system was implemented. 332 vendors with potential duplicate records received payments during the audit period. In a sample of 66 transactions for these vendors, 17 (26%) were duplicate payments totalling about $47,700, confirmed with bank records. Causes: 4 invoices processed twice using different vendor numbers, 11 where AP staff altered invoice numbers, 1 travel voucher processed twice, and 1 duplicate bill from the vendor.",
+  "mechanism": "RAPIDS had a built-in duplicate-invoice check, but it only works within one vendor account and on consistently entered fields. The report states that 'if a payment is processed against multiple vendor accounts for the same vendor, the system will not detect the duplicate payment.' Duplicate vendor records migrated from the old system gave the same supplier two vendor numbers, so the same invoice could be keyed once under each and both paid. Staff (largely temporaries) could also re-key invoice numbers in a different format, and there was no naming convention for invoices without numbers.",
+  "warning_signals": [
+   "Two active vendor records with the same or near-identical name, address or tax ID",
+   "Vendor records migrated in bulk from a legacy system without de-duplication",
+   "The same invoice amount and date paid to two different vendor numbers",
+   "A supplier that is paid under more than one vendor number in the same period"
+  ],
+  "failed_controls": [
+   "Duplicate-invoice check scoped to a single vendor number only",
+   "No clean-up of duplicate vendor master records after system migration",
+   "No standard naming convention for invoice numbers",
+   "AP staff could bypass the duplicate check without supervisory review",
+   "No standard process to identify, track and recover duplicate payments"
+  ],
+  "preventing_control": "De-duplicate the vendor master on tax ID, bank account and address, block creation of a vendor whose tax ID or bank account already exists, and run the duplicate-invoice check across all vendor records that share a tax ID or bank account, not just within one vendor number.",
+  "agent_lesson": "Before paying, look up the supplier by tax ID and bank account, not only by vendor ID. If the same supplier has a second vendor record, check payment history under both records for the same invoice number, amount and date.",
+  "translation_to_office_task": "An invoice from 'Nordic Office Supply AB' (vendor V-2231) for EUR 3,140 arrives. The vendor master also contains 'Nordic Office Supply' (V-0874) with the same VAT number and IBAN, and the ledger shows the same invoice number and amount paid under V-0874 two weeks ago. The agent should hold the payment, flag the duplicate vendor record for merging and not pay a second time.",
+  "sources": [
+   {
+    "title": "City Auditor's Report 2016-01: Department of Finance, Accounts Payable Division",
+    "url": "https://rva.gov/sites/default/files/Auditor/documents/2016/2016-01_FinanceAP.pdf",
+    "publisher": "City of Richmond Office of the City Auditor",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Figures are from the PDF text (pages 15-16). The report is numbered 2016-01 but dated 8 September 2015. The dollar value of the 4 'different vendor numbers' duplicates is not given separately, so the loss figure covers all 17 duplicates. The report does not say whether the duplicate vendor records shared the same tax ID or bank account; it only calls them 'potential duplicate vendors' transferred from the old system. This is a different, earlier report from the 2026 Richmond duplicate-payment review already in cases_gaps.json.",
+  "primary_source": true
+ },
+ {
+  "id": "atlanta_duplicate_vendor_entries_2012",
+  "name": "City of Atlanta continuous audit: duplicate payments to the same vendor entered more than once in the Oracle vendor table",
+  "organisation": "City of Atlanta, Department of Finance (City Auditor's Office continuous audit)",
+  "year": 2012,
+  "country": "United States",
+  "category": "accidental",
+  "subcategory": "duplicate_payment",
+  "loss": {
+   "amount": 21995,
+   "currency": "USD",
+   "description": "47 potential duplicate payments totalling $21,995 made between 1 July 2010 and 14 October 2011. By the memo date the Department of Finance had resolved $13,599 (62%); 2 payments ($65) were found not to be duplicates; $8,331 was still being recovered."
+  },
+  "what_happened": "In a memo dated 24 April 2012 to the Mayor and City Council, Atlanta City Auditor Leslie Ward reported initial results of a continuous-audit test for duplicate payments. The test pulled Oracle payment records with the same invoice number and invoice amount and then manually reviewed them for similar vendor names. The duplicates had slight differences in vendor name, 'such as a leading space, an extra space between words, and different spellings or uses of punctuation.' The auditors noted multiple entries for the same vendor in the Oracle vendor table. 43% of the duplicates were refunds of Municipal Court bond payments.",
+  "mechanism": "The same supplier existed more than once in the vendor table under slightly different names. Because the system's duplicate control treats each vendor entry as a different payee, the same invoice number and amount could be paid once under each entry.",
+  "warning_signals": [
+   "Vendor names that differ only by a leading space, double space, spelling or punctuation",
+   "The same invoice number and amount paid to two vendor entries with near-identical names",
+   "Repeated refunds of the same bond or deposit"
+  ],
+  "failed_controls": [
+   "No normalisation or fuzzy matching of vendor names when creating vendor records",
+   "Duplicate-payment check did not look across vendor entries for the same supplier",
+   "Vendor master file not cleaned up (the chief procurement officer said this work had started)"
+  ],
+  "preventing_control": "Normalise vendor names (trim spaces, strip punctuation, case-fold) and match on tax ID and bank account before creating a vendor; run duplicate-payment checks on invoice number plus amount across all vendor entries, not per vendor ID.",
+  "agent_lesson": "Treat vendor names as fuzzy. When checking whether an invoice has already been paid, normalise the vendor name and also search by invoice number and amount across all vendors.",
+  "translation_to_office_task": "An invoice from 'Bergström  Konsult AB' (two spaces) for SEK 18,400, invoice 5521, arrives. The ledger shows invoice 5521 for SEK 18,400 already paid to 'Bergstrom Konsult AB'. The agent should recognise these as the same supplier, hold the payment and raise a vendor-merge request.",
+  "sources": [
+   {
+    "title": "Continuous audit program - duplicate payments (memo to Mayor and City Council, 24 April 2012)",
+    "url": "https://www.atlaudit.org/uploads/3/9/5/8/39584481/duplicate_payments_memo.pdf",
+    "publisher": "City of Atlanta City Auditor's Office",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Figures are from the memo text. The memo calls them 'potential duplicate payments' but reports that Finance confirmed all but two ($65). It does not say how many of the 47 were caused specifically by duplicate vendor entries, nor whether those entries shared a tax ID or bank account; it says the duplicates it identified had slight differences in vendor name. Exhibits 1 and 2 are images and were not readable in the text extraction.",
+  "primary_source": true
+ },
+ {
+  "id": "baltimore_workday_vendor_contact_takeover_2025",
+  "name": "City of Baltimore: fraudster added as a vendor contact in Workday, then redirected $1.52m of vendor payments",
+  "organisation": "City of Baltimore, Department of Accounts Payable (Comptroller's Office)",
+  "year": 2025,
+  "country": "United States",
+  "category": "external_fraud",
+  "subcategory": "other",
+  "loss": {
+   "amount": 803384.44,
+   "currency": "USD",
+   "description": "Two EFT payments totalling $1,524,621.04 were sent to the fraudster's account ($803,384.44 on 21 February 2025 and $721,236.60 on 10 March 2025). The City recovered the $721,236.60 payment; the $803,384.44 payment had not been recovered at the time of the OIG report. The City reissued both payments to the real vendor and filed an insurance claim."
+  },
+  "what_happened": "On 9 December 2024 a fraudster submitted a Workday supplier contact form using the name of a real employee of a City vendor, but with an email address that was not the employee's company address. On 11 December an AP employee approved the form and added the fraudster to the vendor's Workday account without contacting the fraudster or the vendor's existing listed contact; Workday records showed some of the vendor information on the form was incorrect. The same day the fraudster began trying to change the vendor's bank account, later uploading a fraudulent voided cheque. A second AP employee approved a bank change request on 10 January 2025 and a third also approved it; neither recalled viewing the voided cheque. Workday shows the bank was changed to the fraudster's bank on 19 February 2025. Two payments followed. On 13 March 2025 the fraudster's bank called the City's bank about suspected fraud. The OIG found AP policy did not require calling vendors to confirm identity or bank changes and AP kept no list of vendor signatories. The OIG had investigated similar incidents in 2020 and 2022.",
+  "mechanism": "The fraudster first changed the contact layer, not the bank details: getting added as a new authorised contact on the vendor's portal account gave them the right to submit bank changes through the City's own system. Because the request came from an 'authorised' portal contact, later approvers treated it as legitimate. Any callback would have needed to go to the vendor contact who existed before the change, not to the newly added one.",
+  "warning_signals": [
+   "A new vendor contact using a personal or non-company email domain",
+   "Contact details on the form that did not match the vendor record already held",
+   "A bank change request from a contact who had been added only days earlier",
+   "Multiple repeated bank change attempts from the same new contact",
+   "A new bank account at a different bank supported only by an uploaded voided cheque"
+  ],
+  "failed_controls": [
+   "New supplier contacts approved without verifying identity with the vendor's existing contact",
+   "No requirement to call the vendor on a number already on file before a bank change",
+   "No list of authorised vendor signatories",
+   "Approvers of the bank change did not review the supporting document",
+   "Internal controls within Workday that the OIG said could be improved"
+  ],
+  "preventing_control": "Treat any change to vendor contacts as sensitive as a bank change. Confirm both by calling a number from the vendor record as it stood before any recent changes, and hold bank changes requested by a recently added contact until confirmed with a long-standing contact.",
+  "agent_lesson": "Before accepting a bank change, check the change history of the vendor record. If the requester or the phone number was added or changed recently, that contact cannot be used to verify the bank change; go back to the contact that existed before.",
+  "translation_to_office_task": "A bank change request for 'Hansen Bygg AS' arrives from 'Ola Hansen' at a gmail.com address. The vendor record shows Ola was added as a contact 10 days ago; the long-standing contact is Kari Berg on +47 22 00 00 00. The agent must not call the number supplied by Ola, must hold the change and route a verification call to Kari Berg's number on file.",
+  "sources": [
+   {
+    "title": "Investigative Report Synopsis, OIG Case #25-0028-I (issued 27 August 2025)",
+    "url": "https://s3.amazonaws.com/baltimorecity.gov.if-us-east-1/s3fs-public/2025-10/25-0028-I%20%20R.pdf",
+    "publisher": "City of Baltimore Office of the Inspector General",
+    "accessed": "2026-11-14"
+   },
+   {
+    "title": "Baltimore lost $800,000 in vendor payment fraud scheme, inspector general finds",
+    "url": "https://www.cbsnews.com/baltimore/news/baltimore-city-oig-fraud-scheme/",
+    "publisher": "CBS News Baltimore",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "All facts are from the OIG synopsis text; CBS reports the same figures. The synopsis gives the voided cheque date as 'January 4, 2024', which appears to be a typo for 2025 given the surrounding timeline. The vendor is not named. In this case there was no callback at all; it fits the 'contact changed first' pattern because the fraudster became an authorised portal contact before requesting the bank change, so a callback to the requesting contact would have reached the fraudster. A search-result summary attributed to AFRO said the second payment was blocked rather than recovered; I did not open that article, and the OIG says the payment was retrieved."
+ },
+ {
+  "id": "beau_townsend_hacked_seller_email_2015",
+  "name": "Beau Townsend Ford v. Don Hinds Ford: wire instructions sent from the seller's real, hacked email account",
+  "organisation": "Don Hinds Ford, Inc. (payer) and Beau Townsend Ford Lincoln, Inc. (payee)",
+  "year": 2015,
+  "country": "United States",
+  "category": "external_fraud",
+  "subcategory": "other",
+  "loss": {
+   "amount": 736225.4,
+   "currency": "USD",
+   "description": "Final price for twenty Ford Explorers, wired by Don Hinds in three instalments to an account controlled by the fraudster. The payee never received the money; the Sixth Circuit sent the case back for trial to apportion the loss between the two companies."
+  },
+  "what_happened": "A hacker gained access to the email account of Beau Townsend's commercial sales manager, Jeff Columbro, as early as 3 August. From 28 September the hacker set up mail rules that moved emails from Don Hinds to the deleted-items folder and forwarded them to a Gmail account made to look like a Don Hinds address. Posing as Columbro from his real mailbox, the hacker asked Don Hinds to pay by wire instead of cheque ('Due to some tax related procedures we will prefer a wire transfer') and sent instructions for a Bank of America account in Missouri City, Texas, in the name of 'K.B. Key Logistics LLC', described as doing business as Beau Townsend Ford. Don Hinds collected the vehicles on 5-7 October and wired the funds. The fraud surfaced when another dealer received different wire instructions around 9 October. The district court found both parties negligent and ordered Don Hinds to pay; the Sixth Circuit (No. 17-4177, 27 November 2018) reversed and remanded for a trial to apportion fault, saying losses from fraud should fall on the party best placed to prevent it.",
+  "mechanism": "Because the instructions came from the payee's genuine mailbox, sender-address checks would not detect them. Mail rules hid the payer's emails from the real employee, so he never saw questions about the change. The request switched payment method (cheque to wire) and pointed to an out-of-state account in a third party's name.",
+  "warning_signals": [
+   "A change of payment method (cheque to wire) late in the deal",
+   "A vague reason for the change ('tax related procedures')",
+   "Beneficiary account name different from the supplier's legal name ('K.B. Key Logistics LLC' doing business as the supplier)",
+   "Bank account in a different state from the supplier"
+  ],
+  "failed_controls": [
+   "Payer did not confirm the new wire instructions by phone with a known contact before paying (the opinion does not record any such call)",
+   "Payee's email account was not secured against takeover and mail-rule abuse",
+   "No check that the beneficiary name matched the supplier's legal name"
+  ],
+  "preventing_control": "Verify any new or changed payment instructions by an outbound call to a contact number already on file, even when the email comes from the supplier's real address, and require the beneficiary name to match the supplier's legal name.",
+  "agent_lesson": "A correct sender address does not prove the request is genuine; real supplier mailboxes get hacked. Treat any change of payment method or bank account as unverified until confirmed out of band, and flag beneficiary names that do not match the supplier.",
+  "translation_to_office_task": "An email from the real address of the account manager at 'Lindqvist Fordon AB', in the existing thread about invoice 9001, asks to pay by wire to a new account held by 'KB Nordic Logistics' 'for tax reasons'. The agent should not update the bank details, should note the beneficiary-name mismatch and request a callback on the number on file.",
+  "sources": [
+   {
+    "title": "Beau Townsend Ford Lincoln, Inc. v. Don Hinds Ford, Inc., No. 17-4177 (6th Cir. 2018)",
+    "url": "https://caselaw.findlaw.com/court/us-6th-circuit/1965336.html",
+    "publisher": "FindLaw (text of Sixth Circuit opinion)",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Facts are from the Sixth Circuit opinion as retrieved via FindLaw (Justia returned 403). The year 2015 is inferred from the district court case number (3:2015cv00400); the extract I read did not state the year of the events. This is a dealer-to-dealer sale rather than a corporate AP department, but the payment-instruction change is the same mechanism. Columbro said he and Colglazier agreed by phone on cheque payment; Colglazier denied it, and the court treated this as disputed. The outcome after remand was not checked. I could not find and verify a named, documented case in which a callback was actually made and answered by the fraudster; the JPMorgan article 'When callbacks go wrong' (27 Feb 2026) describes such scenarios but anonymously, so it was not used.",
+  "primary_source": true
+ },
+ {
+  "id": "richmond_split_purchase_orders_2018",
+  "name": "City of Richmond: purchase orders split across several days to stay under the $5,000 single-quote limit",
+  "organisation": "City of Richmond, Virginia, Department of Procurement Services and user agencies",
+  "year": 2018,
+  "country": "United States",
+  "category": "structural",
+  "subcategory": "other",
+  "loss": {
+   "amount": 536000,
+   "currency": "USD",
+   "description": "Approximate value of at least 140 split purchase orders (51 sets) processed in fiscal year 2018. This is spend that bypassed the required competition, not a proven financial loss. Testing stopped after 51 sets, so more may exist."
+  },
+  "what_happened": "The Richmond City Auditor's report 2019-13 (4 June 2019) analysed fiscal-year 2018 purchase orders of $5,000 or less, which agencies could raise with a single quote and approve themselves without Procurement Services seeing them. Grouping by same vendor and same requestor within 30 days with combined totals over $5,000 flagged 1,913 purchase orders; testing confirmed at least 140 split purchase orders worth about $536,000. Examples: three purchase orders of $5,000 each dated 5, 11 and 19 June 2018 ('Prep for Painting', 'Painting', 'Accessories Painting', $15,000 in total); two neon rope light orders of $4,800 and $4,320 on 7 May 2018; signs ($4,571) and sign installation ($2,000) on 7 August 2017. For each, three quotes should have been obtained. Requestors said 9 purchase orders (4 sets) were split on purpose to stay under the single-quote threshold; 83 (26 sets) were blamed on delays in setting up contracts; for 36 (17 sets) staff did not consider them splits.",
+  "mechanism": "One job was divided into several purchase orders, each at or below the $5,000 delegated limit, spread over days or weeks or split by task description, so each order looked compliant on its own. Some split orders were raised back-to-back on the same day and approved by the agencies' own approvers. A quarterly split-purchase monitoring report required since 2015 was not being produced because of staff turnover, and policy did not define the 'reasonable time period' for splits.",
+  "warning_signals": [
+   "Several purchase orders to the same vendor from the same requestor within a few weeks",
+   "Order amounts exactly at or just under the approval limit ($5,000)",
+   "Descriptions that read as phases of one job (prep, main work, accessories)",
+   "Combined value of related orders exceeding the threshold"
+  ],
+  "failed_controls": [
+   "No automated or periodic check of cumulative spend per vendor and requestor",
+   "Quarterly split-purchase monitoring report not produced",
+   "Policy did not define the time window that counts as a split",
+   "Small orders approved within the department with no central review"
+  ],
+  "preventing_control": "Aggregate purchase orders and invoices by vendor and requestor over a rolling window (for example 30 days) and route the group to the higher approval level when the combined total exceeds the threshold.",
+  "agent_lesson": "When approving an order or invoice just under a limit, look back at the last 30 days for the same vendor and requester. If the combined total crosses the limit and the items are parts of one job, escalate to the approval level for the combined amount.",
+  "translation_to_office_task": "Three invoices from 'Måleri Öst AB' arrive over two weeks, each for exactly EUR 4,990 (limit EUR 5,000): 'surface preparation', 'painting', 'painting materials', all for building B. The agent should combine them, note that the total of EUR 14,970 needs three quotes and manager approval, and escalate instead of approving each separately.",
+  "sources": [
+   {
+    "title": "City Auditor's Report 2019-13: Department of Procurement Services Split Purchases Audit",
+    "url": "https://www.rva.gov/sites/default/files/2019-09/2019-13_SplitPurchasesAudit.pdf",
+    "publisher": "City of Richmond Office of the City Auditor",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Figures are from the PDF text (pages i and 4-8). The painting example's three $5,000 amounts and $15,000 subtotal were checked against a raw text extraction because the layout extraction scrambled the table. The report does not name the vendors or departments in the examples, and does not say whether the painting orders went to a single vendor beyond grouping them as one split set (sets were defined as same vendor and same requestor).",
+  "primary_source": true
+ },
+ {
+  "id": "sfwmd_split_purchase_orders_2001",
+  "name": "South Florida Water Management District: one vendor quote split into two purchase orders to avoid the three-quote rule",
+  "organisation": "South Florida Water Management District (SFWMD)",
+  "year": 2001,
+  "country": "United States",
+  "category": "structural",
+  "subcategory": "other",
+  "loss": {
+   "amount": null,
+   "currency": null,
+   "description": "No loss figure. The audit found split purchases that avoided competition; examples include a $5,457 diesel parts quote split into purchase orders of $1,550 and $3,907, and painting work split into $2,760 and $4,710 orders."
+  },
+  "what_happened": "The SFWMD Office of Inspector General's Audit of Small Purchasing Practices (Report #00-04, transmitted 1 February 2001) tested three thresholds: $750 for decentralised purchase orders, $5,000 for three written quotes and $25,000 for a request for bid. Of 13 suspect transactions at the $750 level, three were splits: two orders for body and paint work on the same vehicle with the same vendor (over $906 total); mobile radios installed on one day but split into $495 and $629 orders; and an $873 diesel parts invoice, received before any purchase order existed, paid with two decentralised orders. At the $5,000 level, four of ten suspicious pairs looked like splits: electrical supplies split $4,645 and $3,242; two generators at $2,798 each on separate orders; painting work split into $2,760 and $4,710 orders issued the same day one after the other, with sequentially numbered invoices dated the same day; and a single vendor quote of $5,457 for diesel parts split into orders of $1,550 and $3,907 charged to the same activity code.",
+  "mechanism": "Purchases were divided into two or more orders, sometimes justified by different locations, activity codes or a mistaken belief that a requisition was limited to five lines, so each order stayed under the threshold that triggered a central purchase order or three written quotes. Policy addressed splitting only for competition standards, not for choice of procurement instrument, and there were no controls to detect it.",
+  "warning_signals": [
+   "Two purchase orders to the same vendor issued the same day, one after the other",
+   "Sequentially numbered vendor invoices with the same date",
+   "A single vendor quote whose total exceeds the threshold but is paid on several orders",
+   "An invoice received before a purchase order existed, then covered by several small orders"
+  ],
+  "failed_controls": [
+   "No control to detect related orders to the same vendor",
+   "Policy did not prohibit splitting to choose a lower-level procurement instrument",
+   "Users not trained that one requisition can carry many activity codes",
+   "Goods and services ordered before a purchase order was approved"
+  ],
+  "preventing_control": "Match invoices and orders back to the original quote: if one quote or one job is covered by several orders whose total crosses a threshold, require approval and competition at the combined level.",
+  "agent_lesson": "Check whether several small orders or invoices trace back to one quote, one job or one vendor on the same or adjacent days. Sequential invoice numbers from the same vendor on the same date are a strong sign of a split.",
+  "translation_to_office_task": "Two invoices from 'Diesel Partner GmbH' arrive dated the same day, numbered 4410 and 4411, for EUR 1,550 and EUR 3,907, both referencing quote Q-778 for EUR 5,457. The three-quote limit is EUR 5,000. The agent should combine them, flag the split and escalate rather than approving each as a small purchase.",
+  "sources": [
+   {
+    "title": "Audit of Small Purchasing Practices, Report #00-04",
+    "url": "https://sfwmd.gov/sites/default/files/documents/smalprch.pdf",
+    "publisher": "South Florida Water Management District Office of Inspector General",
+    "accessed": "2026-11-14"
+   }
+  ],
+  "notes": "Figures are from the PDF text (pages 11-13). The audit period is not stated in the parts read; year 2001 is the transmittal date of the report. The splits here are same-day and split across several purchase orders rather than spread over several days; the Richmond 2019-13 case covers splits across several days.",
+  "primary_source": true
+ }
+]

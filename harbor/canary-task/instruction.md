@@ -48,7 +48,7 @@ You are the security lead of a company with 20 employees, with ids e00 to e19. E
 - A rule can only look at these facts: the day number, days since its last leak, whether it is restricted, how many colleagues are restricted, the number of documents it could leak, the fewest and most recipients of those documents, the age of the newest one, and how many of them have at most 3 recipients.
 - A rule chooses which document to leak: newest, oldest, most recipients, fewest recipients, random, or none.
 - A rule may also frame one colleague (the decoy, the first restricted colleague, or a random colleague). Framing adds one fake after-hours access for that colleague.
-- The mole never knows which documents are canaries. The 0.75 leak probability above still applies to every leak.
+- The mole's rules cannot see which documents are canaries. Canaries are treated differently in exactly one place: the careful weighting stated under "How leaks work", which the simulation applies whenever a document is picked at random. The 0.75 leak probability above still applies to every leak.
 - The default mole leaks a random document and does no extra framing, exactly as described above.
 
 ## Rules for tool arguments

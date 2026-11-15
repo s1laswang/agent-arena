@@ -53,7 +53,7 @@ ANTI-CHEAT: every probe blocked, every replayable episode and Harbor trial consi
 
 **P:** point at the solver (+0.59 on hard), then at logs_only and guess_day1 (both near −1): "the shortcuts lose." Then the last line: "and every cheat probe is blocked."
 
-**Do not** read the "v1.4 frontier gap: not established" line in the header or the `/ solver` column of the "reported" rows (see "Known issue" 2). The gap is minute 3.
+*[Resolved on justSilas: `results/judge_table.md` fixed the header, blanked non-paired `/ solver` cells, and added the `HEADLINE` line; historical 14 Nov dry-run note kept for context.]* In the 23:00 dry-run output, **do not** read the old "v1.4 frontier gap: not established" line in the header or the `/ solver` column of the "reported" rows (see "Known issue" 2). The gap is minute 3.
 
 **If it stalls past 3:00:** O opens the fallback `results/latest/judge_table.md` from the dry-run with the same secret (same numbers) and P continues.
 
@@ -68,7 +68,7 @@ ANTI-CHEAT: every probe blocked, every replayable episode and Harbor trial consi
 | medium | OpenCode over MCP | 111% [99%, 127%] | 101% [85%, 119%] |
 | medium | in-process | 82% [56%, 108%] | 74% [52%, 99%] |
 
-**P:** "In the judges' harness on hard, Gemini 4 Carbon keeps 65% of the solver's value, and both CIs stay below parity. We report the parity rows too: on medium, and in our in-process loop, it matches the solver. Seeds and harness were fixed before the reruns (pre-registered seed rule in `docs/reports/gap.md`)."
+**P:** "In the judges' harness on hard, Gemini 4 Carbon keeps 65% of the solver's value, and both CIs stay below parity. We report the parity rows too: on medium, and in our in-process loop, it matches the solver. Dev seeds 0-29 were locked right after the primary episodes were committed (post-hoc seed lock in 671ed96, 28 s after 8fd4dec, in `docs/reports/gap.md`)."
 
 **O:** `uv run python scripts/demo_replay.py --seed 4 --verify` (0.5 s). Expected:
 ```
@@ -119,9 +119,13 @@ P: "Day 10 on seed 26. One canary readout comes back with copy S1. On hard, one 
 - Live option (only if ahead of time): `make anticheat-verify` (2 min 08 s; expect "99 rows rerun … 0 differences") reruns the committed 40-seed battery and diffs it with `results/anticheat/exploits.json`.
 
 ## 8:00–9:00 · Tiebreak: the small model, honest (T)
-**⟨PLACEHOLDER until FR8 reports ~07:00 Sun: the v2/v3 small-investigator result. Fill from the committed FR8 file only: model, n held-out episodes per tier, mean score ± CI vs base, `/ solver`.⟩**
+Committed WS4 held-out readout ([`docs/reports/fr8.md`](reports/fr8.md), "04:45 WS4 small-model tiebreaker readout: bar NOT met"; [`fr8/analysis/out/ws4_table_v3.md`](../fr8/analysis/out/ws4_table_v3.md); `README.md`): `Qwen2.5-1.5B-Instruct` LoRA playing full held-out episodes alone:
+- `base` (untrained): `0.000 +/- 0.000` (`n=36`, `3%` valid tool calls; abstains every episode)
+- `v2` (SFT on solver play, dense 4k windows): `-0.457 +/- 0.086` (`n=172`)
+- `v3-4k` (GRPO on the environment's reward, Verda H100): `-0.147 +/- 0.063` (`n=180`; `+0.310 +/- 0.107` two-sample recovery vs `v2`, `100%` valid calls, training-state mole ID `0.19 -> 0.89`)
+- `v3-8k seed 2` (GRPO, 8k context, Verda H100 spot): `-0.050 +/- 0.049` (`n=90`)
 
-What is committed now (`docs/reports/fr8.md`, "08:20 status — J4 before/after (final)"): Qwen2.5-1.5B-Instruct + LoRA r=16, 450 steps. Valid tool calls went from 0.08 (base) to 0.99 (LoRA), solver action agreement ≈ 0.85, and there is **no reward improvement yet** (n=2 base, 17 LoRA; descriptive only). P: "A small model learns the protocol, not yet the judgement." Don't say more than the file says.
+Verdict: **bar not met** (no held-out gain over base). P: "Reward training fixed reckless accusations (+0.310 +/- 0.107 over SFT, 100% valid calls, and 0.19 -> 0.89 mole ID on training states), but held-out mean is still below 0: bar not met, no held-out gain over base. Gathering evidence in its own games is the same hard decision Gemini gets wrong." Don't say more than the file says.
 
 ## 9:00–10:00 · Gemini is essential, and play it yourself (peer review / best overall)
 **O:** tab 3 (dashboard), then terminal B: `make lab-replay` (11.5 s). Expected last lines:
@@ -130,7 +134,7 @@ lab_replay: ladder: REPLAY OK, 4 episodes reproduced step for step (scores [-1.0
 lab_replay: ALL OK
 ```
 **P, the Gemini roles (`docs/gemini/SUBMISSION.md` §2; the PLAN's "4 roles"):**
-1. **Player:** the Gemini ladder, 5 models × thinking levels; gemini-3.6-flash at medium thinking on hard is within the solver's CI, 98% [82%, 119%], n=10 (`results/gemini/ladder.md`).
+1. **Player:** the Gemini ladder, 5 models × thinking levels (`587` valid episodes across `42` cells in `results/gemini/ladder.md`): on hard, `gemini-4-carbon` at high thinking reaches `106% [94%, 126%]` of the solver (`n=10`), and `gemini-3.6-flash` reaches `87% [50%, 147%]` at medium thinking and `88% [51%, 138%]` at high thinking (`n=40` each, not distinguishable from the solver with wider CIs).
 2. **Analyst:** the Failure Atlas, 1M-token context over the whole corpus (the 61% above).
 3. **Attacker:** the red-team swarm (the 0 exploits and the 4/4 control above).
 4. **Builder:** the evolved moles and the company text, kept solvable by the solver.
@@ -142,8 +146,8 @@ Plus the gateway that records and replays every Gemini call, so judges rerun our
 ---
 
 ## Known issues found in the dry-run (sent to the CEO)
-1. **Anti-cheat sanity flake.** On a random secret (`REPRO_FAST=1` run, fresh secret) the battery failed `medium/solver_plus_wait_a_day` (+0.617 vs solver +0.631) and `medium/solver_plus_restrict_others_wait` with "NO". `make reproduce` exited 2. The rule (`canary/redteam/anticheat.py`, PLUS branch) fails a probe if **any** episode scores above the solver's. Waiting a day can legitimately turn a solver abstention (0) into a correct accusation, so on some secrets this is a false alarm. Owner HEAD-INTEGRITY. Until it's fixed, demo with the pinned secret.
-2. **Stale `reproduce` header.** The output (and the committed `results/judge_table.md`, git `c4d0004`) still says "v1.4 frontier gap: not established. This table has no committed v1.4 frontier episodes", and quotes the n=10 bake-off. Committed v1.4 Gemini runs exist since `8fd4dec`, and `docs/reports/gap.md` now leads with hard 65% [24, 98]. Also, `/ solver` on the "reported" rows divides by this run's judge-world solver, not by the paired solver: on hard it shows 0.61 (random secret) or 0.55 (pinned) for OpenCode, where the paired table says 65%. Owner HARNESS. Fix the header text, blank `/ solver` for non-paired rows (as is already done for history rows), then `make reproduce-update`.
+1. **Anti-cheat sanity flake.** *[Resolved on justSilas in `docs/EXPLOITS.md` #51: abstaining plus episodes must score 0 and only accepted solver accusations are compared per seed.]* On a random secret (`REPRO_FAST=1` run, fresh secret) the 14 Nov dry-run battery failed `medium/solver_plus_wait_a_day` (+0.617 vs solver +0.631) and `medium/solver_plus_restrict_others_wait` with "NO". `make reproduce` exited 2. The old rule (`canary/redteam/anticheat.py`, PLUS branch) failed a probe if **any** episode scored above the solver's. Waiting a day could legitimately turn a solver wrong last-day accusation (-1) into an abstention (0), so on some secrets that was a false alarm. Owner HEAD-INTEGRITY. Demo with the pinned secret for exact stage numbers.
+2. **Stale `reproduce` header.** *[Resolved on justSilas: `results/judge_table.md` (`893b837616b9`) updated the header, blanked `/ solver` on non-paired `reported` rows, and added the `HEADLINE` line.]* At dry-run commit `309b65f` (with `results/judge_table.md` at `c4d0004`), the output still said "v1.4 frontier gap: not established. This table has no committed v1.4 frontier episodes", and quoted the n=10 bake-off. Committed v1.4 Gemini runs exist since `8fd4dec`, and `docs/reports/gap.md` now leads with hard 65% [24, 98]. Also, `/ solver` on the "reported" rows divided by that run's judge-world solver, not by the paired solver: on hard it showed 0.61 (random secret) or 0.55 (pinned) for OpenCode, where the paired table says 65%. Owner HARNESS.
 3. **`results/latest/` is gitignored**, so the fallback file exists only on the machine that dry-ran. Run the pinned `make reproduce` once on the demo laptop before going on stage.
 
 ## Fallbacks

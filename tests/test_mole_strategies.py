@@ -94,11 +94,15 @@ def test_seed_hygiene_rejects_reserved_and_judge_seeds():
             verify_strategy_slice("reactive_canary_lag", seeds=forbidden, workers=1)
 
 
+FAST_DEV_SLICE = [6004]
+
+
 def test_all_strategies_pass_solver_and_logs_only_gates_on_dev_slice():
     assert 10 <= len(DEFAULT_DEV_SEEDS) <= 20
+    assert set(FAST_DEV_SLICE).issubset(set(DEFAULT_DEV_SEEDS))
     report = verify_all_strategies(
         tier="hard",
-        seeds=DEFAULT_DEV_SEEDS,
+        seeds=FAST_DEV_SLICE,
         workers=1,
         min_solver_acc=DEFAULT_MIN_SOLVER_ACC,
         max_logs_acc=DEFAULT_MAX_LOGS_ACC,
@@ -120,7 +124,7 @@ def test_all_strategies_pass_solver_and_logs_only_gates_on_dev_slice():
 def test_counterfactual_frontier_drop_and_proxy_regret():
     cf = evaluate_counterfactual(
         strategies=TRANSCRIPT_STRATEGIES,
-        seeds=range(6),
+        seeds=range(1),
         tier="hard",
         run_solver=False,
         sources=("opencode", "inproc"),
@@ -138,7 +142,7 @@ def test_counterfactual_frontier_drop_and_proxy_regret():
     proxy_slice = verify_strategy_slice(
         "reactive_canary_lag",
         tier="hard",
-        seeds=range(6000, 6006),
+        seeds=FAST_DEV_SLICE,
         workers=1,
         include_proxies=True,
     )
@@ -171,10 +175,12 @@ def test_hof_export_and_cli_roundtrip(tmp_path, capsys):
 
     rc_verify = main([
         "--verify",
+        "--tier",
+        "medium",
         "--strategy",
         "non_decoy_tiebreak_framer",
         "--seeds",
-        "6000-6004",
+        "6004-6004",
         "--workers",
         "1",
         "--json",

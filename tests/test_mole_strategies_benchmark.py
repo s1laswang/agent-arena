@@ -4,10 +4,15 @@ import ast
 import io
 import json
 from pathlib import Path
+import sys
 import tokenize
 
 import numpy as np
 import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from canary.mole.dsl import FRAME_SELECTORS, LEAK_SELECTORS
 from canary.rules import TIERS_VERSION
@@ -25,7 +30,6 @@ from scripts.benchmark_mole_strategies import (
     validate_benchmark_seeds,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts" / "benchmark_mole_strategies.py"
 JSON_PATH = ROOT / "results" / "mole_strategies" / "v14_benchmark.json"
 MD_PATH = ROOT / "docs" / "reports" / "mole_strategies_v14_benchmark.md"
@@ -105,6 +109,9 @@ def test_committed_v14_benchmark_schema_and_invariants() -> None:
     assert gates["max_logs_only_raw_score"] <= 0.0
 
     descs, v2_meta = discover_mole_strategies()
+    committed_names = {c["name"] for c in data["strategy_catalog"]}
+    discovered_names = {d["name"] for d in descs}
+    assert discovered_names - committed_names <= {"rl_mole_v2"}
     expected_catalog = [
         {
             "name": d["name"],
@@ -113,6 +120,7 @@ def test_committed_v14_benchmark_schema_and_invariants() -> None:
             "aliases": list(d.get("aliases", [])),
         }
         for d in descs
+        if d["name"] in committed_names
     ]
     assert data["strategy_catalog"] == expected_catalog
     assert data["rl_mole_v2_autodetect"]["policy_path"] == v2_meta["policy_path"]
@@ -228,7 +236,9 @@ def test_seed_hygiene_and_alias_resolution(tmp_path: Path) -> None:
         discover_mole_strategies(selected_names=["nonexistent_strategy"])
 
 
-def test_rl_mole_v2_compat_autodetect_loader(tmp_path: Path) -> None:
+def test_rl_mole_v2_compat_autodetect_loader(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     n_feat = len(_V2_FEATURE_NAMES) + 1
     hidden = 4
     params = {
@@ -255,6 +265,18 @@ def test_rl_mole_v2_compat_autodetect_loader(tmp_path: Path) -> None:
     )
     assert meta2["detected"] is True
     assert len(chosen) == 1 and chosen[0]["name"] == "rl_mole_v2"
+
+    monkeypatch.setattr(
+        bms,
+        "try_load_rl_mole_v2",
+        lambda _p=None: (
+            desc,
+            {**meta, "policy_path": "results/moletrain/rl_mole_v2_policy.json"},
+        ),
+    )
+    all_with_v2, _ = discover_mole_strategies()
+    assert any(d["name"] == "rl_mole_v2" for d in all_with_v2)
+    test_committed_v14_benchmark_schema_and_invariants()
 
 
 def test_two_seed_cli_smoke_and_check_mode(

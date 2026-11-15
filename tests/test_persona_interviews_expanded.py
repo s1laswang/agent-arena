@@ -58,6 +58,8 @@ def _verify_interview_batch(
     assert meta["llm_spec"] == f"gemini:{TARGET_MODEL}"
     assert COMMIT_RE.fullmatch(str(meta["commit"]))
     assert meta["tiers_version"] == "v1.4"
+    assert meta["environment_scope"] == "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment"
+    assert isinstance(meta["key_metric"], str) and meta["key_metric"]
     assert meta["stub"] is False
     assert meta["fake_env"] is False
     assert meta["smoke"] is False

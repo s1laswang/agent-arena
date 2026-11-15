@@ -132,21 +132,53 @@ def test_extra_secret_weight_env_and_arena_judge_seed_detectors() -> None:
         assert r_lag["branches"]["br_lagging_clean"]["behind_base_commits"] == 1
         assert any(i["issue_id"] == "ISSUE-W9B-01" for i in r_lag["structured_issues"])
 
-        gate._git_check(repo, ["checkout", "-q", "--detach", "br_lagging_clean"], text=True)
-        r_shallow_clean = gate.run_cross_squad_security_gate(repo)
-        assert r_shallow_clean["all_passed"] is True, r_shallow_clean["violations"]
-        assert r_shallow_clean["shallow_checkout_fallback"] is True
-        assert list(r_shallow_clean["branches"].keys()) == ["HEAD"]
-        assert any(i["issue_id"] == "ISSUE-W9B-SHALLOW" for i in r_shallow_clean["structured_issues"])
 
-        report_md = ROOT / "docs" / "reports" / "integrity_cross_squad_security_gate.md"
-        assert gate.main(["--root", str(repo), "--check-report", str(report_md)]) == 0
+def test_shallow_ci_detached_repo_fallback(tmp_path: Path) -> None:
+    repo = tmp_path / "shallow_detached_ci"
+    repo.mkdir(parents=True, exist_ok=True)
+    gate._git_check(repo, ["init", "-q"], text=True)
+    gate._git_check(repo, ["config", "user.email", "w9@canary.local"], text=True)
+    gate._git_check(repo, ["config", "user.name", "w9"], text=True)
 
-        gate._git_check(repo, ["checkout", "-q", "--detach", "br_sk_and_env"], text=True)
-        r_shallow_dirty = gate.run_cross_squad_security_gate(repo)
-        assert r_shallow_dirty["all_passed"] is False
-        assert r_shallow_dirty["shallow_checkout_fallback"] is True
-        assert r_shallow_dirty["summary_counts"]["raw_api_key_leaks"] == 1
+    clean_files = {
+        ".github/protected-paths.txt": "\n".join(gate.EXTENDED_PROTECTED_RULES) + "\n",
+        "canary/env.py": "ENV_V = 1\n",
+        "canary/rules.py": "TIERS_VERSION = 'v1.4'\n",
+        "canary/reproduce.py": "R_V = 1\n",
+        "canary/solver/policy.py": "S_V = 1\n",
+        "harbor/build.py": "H_V = 1\n",
+        "docs/arena/py/canary/env.py": "ENV_V = 1\n",
+        "docs/reports/squad_note.md": "Clean shallow CI checkout.\n",
+    }
+    gate._git_commit_files(repo, "ci_pr_merge", None, clean_files, "shallow pr merge commit")
+    gate._git_check(repo, ["checkout", "-q", "--detach", "HEAD"], text=True)
+    gate._git_check(repo, ["branch", "-D", "ci_pr_merge"], text=True)
+
+    r_clean = gate.run_cross_squad_security_gate(repo)
+    assert r_clean["all_passed"] is True, r_clean["violations"]
+    assert r_clean["shallow_checkout_fallback"] is True
+    assert list(r_clean["branches"].keys()) == ["HEAD"]
+    assert r_clean["branches"]["HEAD"]["pyodide_mirror_files_checked"] == 1
+    assert r_clean["branches"]["HEAD"]["pyodide_mirror_mismatches"] == []
+    assert any(i["issue_id"] == "ISSUE-W9B-SHALLOW" for i in r_clean["structured_issues"])
+
+    report_md = ROOT / "docs" / "reports" / "integrity_cross_squad_security_gate.md"
+    assert gate.main(["--root", str(repo), "--check-report", str(report_md)]) == 0
+
+    (repo / "docs" / "arena" / "py" / "canary" / "env.py").write_text("DRIFT = 1\n", encoding="utf-8")
+    (repo / "scripts").mkdir(parents=True, exist_ok=True)
+    (repo / "scripts" / "bad.py").write_text(
+        "K = '" + "AI" + "za" + "LiveSecretKey9876543210abcdef'\n",
+        encoding="utf-8",
+    )
+    gate._git_check(repo, ["add", "-A"], text=True)
+    gate._git_check(repo, ["commit", "-q", "-m", "dirty detached head"], text=True)
+
+    r_dirty = gate.run_cross_squad_security_gate(repo)
+    assert r_dirty["all_passed"] is False
+    assert r_dirty["shallow_checkout_fallback"] is True
+    assert r_dirty["summary_counts"]["raw_api_key_leaks"] == 1
+    assert len(r_dirty["branches"]["HEAD"]["pyodide_mirror_mismatches"]) == 1
 
 
 def test_cli_check_report_and_w9b_file_hygiene() -> None:
@@ -166,6 +198,7 @@ def test_cli_check_report_and_w9b_file_hygiene() -> None:
         txt = full.read_text(encoding="utf-8")
         assert vib.scan_text_hygiene(txt, rel) == []
         if rel.endswith(".py"):
+            assert chr(35) not in txt
             assert vib.scan_python_comments(txt) == []
             assert vib.scan_ast_zero_api(txt, rel) == []
         elif rel.endswith(".md"):

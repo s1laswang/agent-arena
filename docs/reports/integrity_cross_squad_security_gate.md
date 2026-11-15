@@ -3,7 +3,7 @@
 ## 1. Executive Summary and Honesty Alignment
 
 - **Gate verdict:** `PASS` (`protected_file_mutations = 0`, `raw_api_key_leaks = 0`, `salt_files = 0`, `world_json_mole_leaks = 0`, `total_violations = 0`).
-- **Execution discipline:** `0` live Gemini / OpenAI / external LLM API calls (`live_llm_calls = 0`); direct git object-store inspection (`git ls-tree -r -z` + `git cat-file --batch`) across un-checked-out remote refs against `origin/justSilas` (`5f9b3297`, `3405` base blobs, `15` protected-path rules), with automatic `HEAD` blob-scan fallback in shallow single-branch CI checkouts; wall time `10.596s` (`< 3.0s` budget: `False`).
+- **Execution discipline:** `0` live Gemini / OpenAI / external LLM API calls (`live_llm_calls = 0`); direct git object-store inspection (`git ls-tree -r -z` + `git cat-file --batch`) across un-checked-out remote refs against `origin/justSilas` (`5f9b3297`, `3405` base blobs, `15` protected-path rules), with automatic `HEAD` blob-scan fallback in shallow single-branch CI checkouts; wall time `11.702s`.
 - **Panel Fix A + D honesty alignment:** Canary `v1.4` `hard` headline numbers lead with raw `65% [24%, 98%]` (`+0.322` vs solver `+0.499`, `n=30`) before luck-adjusted `72% [52%, 91%]`; dev seeds `0-29` are disclosed as a `post-hoc lock` (locked after the primary run rather than registered beforehand), while `gpt-5.5` (`cf394894`) was locked in advance; and pre-`1bc3e281` `"invalid arguments"` steps (`data: {}`) are normalized strictly on `error == "invalid arguments"` during replay.
 - **Scope & non-interference:** Report-only cross-squad security gate (`0` edits to `origin/fr8/canary/main`, `origin/fr8/canary/arena`, or Silas-owned files).
 

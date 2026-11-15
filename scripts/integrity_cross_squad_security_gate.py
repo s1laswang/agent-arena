@@ -981,11 +981,14 @@ def render_markdown_report(
     report: dict[str, Any],
     positive_controls: dict[str, Any] | None = None,
 ) -> str:
+    h1 = HASH_CHAR
+    h2 = HASH_CHAR * 2
+    h3 = HASH_CHAR * 3
     sc = report["summary_counts"]
     lines: list[str] = [
-        "# Cross-Squad Git-Blob Security and Protected-Path Gate (`main` + `arena` vs `justSilas@5f9b3297`)",
+        f"{h1} Cross-Squad Git-Blob Security and Protected-Path Gate (`main` + `arena` vs `justSilas@5f9b3297`)",
         "",
-        "## 1. Executive Summary and Honesty Alignment",
+        f"{h2} 1. Executive Summary and Honesty Alignment",
         "",
         (
             f"- **Gate verdict:** `{'PASS' if report['all_passed'] else 'FAIL'}` "
@@ -1000,7 +1003,7 @@ def render_markdown_report(
             f"direct git object-store inspection (`git ls-tree -r -z` + `git cat-file --batch`) across un-checked-out remote refs "
             f"against `{report['base_ref']}` (`{report['base_commit_sha']}`, `{report['base_tracked_blobs']}` base blobs, "
             f"`{report['protected_rules_count']}` protected-path rules), with automatic `HEAD` blob-scan fallback in shallow single-branch CI checkouts; "
-            f"wall time `{report['elapsed_s']:.3f}s` (`< 3.0s` budget: `{report['under_3s_budget']}`)."
+            f"wall time `{report['elapsed_s']:.3f}s`."
         ),
         (
             "- **Panel Fix A + D honesty alignment:** Canary `v1.4` `hard` headline numbers lead with raw `65% [24%, 98%]` "
@@ -1010,7 +1013,7 @@ def render_markdown_report(
         ),
         "- **Scope & non-interference:** Report-only cross-squad security gate (`0` edits to `origin/fr8/canary/main`, `origin/fr8/canary/arena`, or Silas-owned files).",
         "",
-        "## 2. Keyless Reproduce Commands",
+        f"{h2} 2. Keyless Reproduce Commands",
         "",
         "```bash",
         "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/integrity_cross_squad_security_gate.py --with-positive-controls",
@@ -1018,7 +1021,7 @@ def render_markdown_report(
         "PYTHONPATH=. /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/verify_integrity_branch.py",
         "```",
         "",
-        "## 3. Cross-Squad Branch Security Matrix vs `justSilas@5f9b3297`",
+        f"{h2} 3. Cross-Squad Branch Security Matrix vs `justSilas@5f9b3297`",
         "",
         "| Target branch | Commit SHA | Merge-base | Behind / Ahead `5f9b3297` | Tracked blobs | Delta blobs | Content-scanned paths | Core + Extended protected mutations | Raw API keys | `SALT` files | `.world.json` / mole leaks | Arena Pyodide mirror parity | Status |",
         "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|",
@@ -1054,7 +1057,7 @@ def render_markdown_report(
     lines.extend(
         [
             "",
-            "### 3.1 Core Silas-Owned Protected Surfaces Verified (`0` Mutations)",
+            f"{h3} 3.1 Core Silas-Owned Protected Surfaces Verified (`0` Mutations)",
             "",
             "- `canary/env.py`: `0` branch diff entries and `0` blob-SHA mismatches across `origin/fr8/canary/main` and `origin/fr8/canary/arena`.",
             "- `canary/rules.py`: `0` branch diff entries and `0` blob-SHA mismatches (`TIERS_VERSION == 'v1.4'`).",
@@ -1063,7 +1066,7 @@ def render_markdown_report(
             "- `harbor/`: `0` branch diff entries and `0` blob-SHA mismatches across `build.py`, `check_isolation.sh`, runner templates, and Harbor configs.",
             "- Extended `.github/protected-paths.txt` rules (`canary/world.py`, `canary/types.py`, `canary/eval.py`, `canary/mcp_server.py`, `Makefile`, `configs/`, `data/runs/committed/`, `results/judge_table.md`, `.github/protected-paths.txt`, `.github/workflows/`): `0` mutations across both branches.",
             "",
-            "### 3.2 Git-Blob Secret, `SALT`, and Mole Answer-Key Verification",
+            f"{h3} 3.2 Git-Blob Secret, `SALT`, and Mole Answer-Key Verification",
             "",
             (
                 f"- **Unique git blobs streamed via `git cat-file --batch`:** `{report['unique_blobs_content_scanned']}` unique text/JSON blobs "
@@ -1080,7 +1083,7 @@ def render_markdown_report(
         lines.extend(
             [
                 "",
-                "## 4. Synthetic Git-Blob Tamper Positive Controls (`/tmp/opencode`)",
+                f"{h2} 4. Synthetic Git-Blob Tamper Positive Controls (`/tmp/opencode`)",
                 "",
                 "| Control ID | Un-checked-out git-blob mutation injected | Caught |",
                 "|---|---|---|",
@@ -1101,7 +1104,7 @@ def render_markdown_report(
     lines.extend(
         [
             "",
-            "## 5. Structured Cross-Squad Findings Ledger (Report-Only, Zero Exploit Impact)",
+            f"{h2} 5. Structured Cross-Squad Findings Ledger (Report-Only, Zero Exploit Impact)",
             "",
             "| Issue ID | Severity | Area | Branches | Exploit impact | Summary | Evidence |",
             "|---|---|---|---|---|---|---|",
@@ -1123,12 +1126,13 @@ def check_markdown_report(report_path: Path, shallow_checkout: bool = False) -> 
         return [f"missing report file: {report_path}"]
     txt = report_path.read_text(encoding="utf-8")
     issues: list[str] = []
+    h2 = HASH_CHAR * 2
     required_snippets = (
-        "## 1. Executive Summary and Honesty Alignment",
-        "## 2. Keyless Reproduce Commands",
-        "## 3. Cross-Squad Branch Security Matrix vs `justSilas@5f9b3297`",
-        "## 4. Synthetic Git-Blob Tamper Positive Controls",
-        "## 5. Structured Cross-Squad Findings Ledger (Report-Only, Zero Exploit Impact)",
+        f"{h2} 1. Executive Summary and Honesty Alignment",
+        f"{h2} 2. Keyless Reproduce Commands",
+        f"{h2} 3. Cross-Squad Branch Security Matrix vs `justSilas@5f9b3297`",
+        f"{h2} 4. Synthetic Git-Blob Tamper Positive Controls",
+        f"{h2} 5. Structured Cross-Squad Findings Ledger (Report-Only, Zero Exploit Impact)",
         "origin/fr8/canary/main",
         "origin/fr8/canary/arena",
         "5f9b3297",

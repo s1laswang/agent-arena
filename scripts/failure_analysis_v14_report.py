@@ -417,7 +417,7 @@ def _hint_section(H: dict) -> list[str]:
     small = n < 3   # no meaningful CI below 3 paired seeds
 
     def ci(x):
-        return "" if small else f"[{pct(x[0])}, {pct(x[1])}]"
+        return "" if small else f" [{pct(x[0])}, {pct(x[1])}]"
 
     def pm(m, c, fmt="{:.2f}"):
         return fmt.format(m) if small else f"{fmt.format(m)} ± {fmt.format(c)}"
@@ -440,9 +440,9 @@ def _hint_section(H: dict) -> list[str]:
          f"| same {n} seed{'s' if n != 1 else ''} | **Gemini + hint** | Gemini, no hint | reference solver |",
          "|---|---|---|---|",
          f"| mean score | {pm(h['score'], h['score_ci'])} | {pm(u['score'], u['score_ci'])} | {pm(s['score'], s['score_ci'])} |",
-         f"| % of solver{'' if small else ' [95% CI]'} | **{pct(h['pct_solver'])}** {ci(h['pct_solver_ci'])} | {pct(u['pct_solver'])} {ci(u['pct_solver_ci'])} | – |",
-         f"| luck-adjusted score (% of solver{'' if small else ' [95% CI]'}) | {f2(h['luck_adjusted'])} ({pct(h['la_pct_solver'])}{' ' + ci(h['la_pct_solver_ci']) if not small else ''}) | "
-         f"{f2(u['luck_adjusted'])} ({pct(u['la_pct_solver'])}{' ' + ci(u['la_pct_solver_ci']) if not small else ''}) | {f2(s['luck_adjusted'])} |",
+         f"| % of solver{'' if small else ' [95% CI]'} | **{pct(h['pct_solver'])}**{ci(h['pct_solver_ci'])} | {pct(u['pct_solver'])}{ci(u['pct_solver_ci'])} | – |",
+         f"| luck-adjusted score (% of solver{'' if small else ' [95% CI]'}) | {f2(h['luck_adjusted'])} ({pct(h['la_pct_solver'])}{ci(h['la_pct_solver_ci'])}) | "
+         f"{f2(u['luck_adjusted'])} ({pct(u['la_pct_solver'])}{ci(u['la_pct_solver_ci'])}) | {f2(s['luck_adjusted'])} |",
          f"| canaries planted before the accusation | **{pm(h['canaries'], h['canaries_ci'], '{:.1f}')}** | {pm(u['canaries'], u['canaries_ci'], '{:.1f}')} | {pm(s['canaries'], s['canaries_ci'], '{:.1f}')} |",
          f"| canary capacity used / days with ≥1 canary | {pct(h['capacity_used'])} / {pct(h['days_with_canary_share'])} | "
          f"{pct(u['capacity_used'])} / {pct(u['days_with_canary_share'])} | {pct(s['capacity_used'])} / {pct(s['days_with_canary_share'])} |",
@@ -467,8 +467,18 @@ def _hint_section(H: dict) -> list[str]:
         cons = "abstained" if not r["hint_accused"] else str(r["hint_consistent"])
         L.append(f"| {r['seed']} | {r['hint']:+.2f}{mark} | {r['unhinted']:+.2f} | {r['solver']:+.2f} | {r['hint_canaries']} | "
                  f"{r['unhinted_canaries']} | {cons} |")
+    uw = [r["seed"] for r in H["per_seed"] if r["unhinted"] < 0]
+    hw = [r["seed"] for r in H["per_seed"] if r["hint_accused"] and not r["hint_correct"]]
+    if uw or hw:
+        L += ["", "Wrong accusations (score −1) dominate the raw means at this n: "
+              + (f"the no-hint run's on seed{'s' if len(uw) > 1 else ''} {', '.join(map(str, uw))} (see §3 for how {'it' if len(uw) == 1 else 'each'} arose)" if uw else "")
+              + ("; " if uw and hw else "")
+              + (f"the hinted run's on seed{'s' if len(hw) > 1 else ''} {', '.join(map(str, hw))}" if hw else "")
+              + ". The luck-adjusted row prices every accusation at the solver posterior instead, so it is the fairer comparison."]
     L += ["", _hint_infra(H)]
     L += ["", f"Reproduce: `uv run python scripts/failure_analysis_v14.py` (the hinted episodes are in "
-          f"`data/runs/committed/v1.4/opencode-gemini-4-carbon-hint-gather/hard/`, replay-verified). n = {n} is small: read the "
-          f"CIs, not the point estimates.", ""]
+          f"`data/runs/committed/v1.4/opencode-gemini-4-carbon-hint-gather/hard/`, replay-verified). "
+          + (f"n = {n} is far too small to test the hint. It is reported because the pre-registration requires reporting every "
+             f"completed seed. A rerun on the full 30 seeds needs an API quota not shared with other runs." if small else
+             f"n = {n} is small: read the CIs, not the point estimates."), ""]
     return L

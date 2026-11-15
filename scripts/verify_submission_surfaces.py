@@ -35,6 +35,28 @@ CHECK_NAMES: tuple[str, ...] = (
 
 EXPECTED_SWARM_FINISHED = 91
 EXPECTED_SWARM_EXPLOITS = 0
+MIN_LADDER_EPISODES = 500
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+
+POOLED_EXT_JSON = "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.json"
+POOLED_EXT_MD = "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.md"
+EVAL_V14_PNGS: tuple[str, ...] = (
+    "results/eval_v14/headline_gap_paired_v14.png",
+    "results/eval_v14/posterior_calibration_v14.png",
+)
+GEMINI_FRONTIER_PNGS: tuple[str, ...] = (
+    "results/gemini/frontier.png",
+    "results/gemini/frontier_medium.png",
+)
+WS4_TABLE_DOCS: tuple[str, ...] = (
+    "fr8/analysis/out/ws4_table_v3.md",
+    "fr8/analysis/out/ws4_table_8k_s1s2.md",
+    "fr8/analysis/out/ws4_whom_v3.md",
+)
+WS4_COMPUTE_DOCS: tuple[str, ...] = (
+    "fr8/verda/README.md",
+    "docs/reports/verda-evidence.md",
+)
 
 GITIGNORE_TARGETS: tuple[tuple[str, str], ...] = (
     ("results/latest/", "results/latest/judge_table.md"),
@@ -76,13 +98,20 @@ class CheckResult:
     details: list[str] = field(default_factory=list)
 
 
-def _is_positive_number(val: Any) -> bool:
+def _is_int(val: Any) -> bool:
+    return isinstance(val, int) and not isinstance(val, bool)
+
+
+def _is_finite_number(val: Any) -> bool:
     return (
         isinstance(val, (int, float))
         and not isinstance(val, bool)
         and math.isfinite(float(val))
-        and float(val) > 0.0
     )
+
+
+def _is_positive_number(val: Any) -> bool:
+    return _is_finite_number(val) and float(val) > 0.0
 
 
 def _has_int_token(text: str, num: int) -> bool:
@@ -104,6 +133,55 @@ def _require_nonempty_file(root: Path, rel: str, failures: list[str]) -> Path | 
         failures.append(f"empty required file: {rel} (0 bytes)")
         return None
     return path
+
+
+def _require_nonempty_text_file(root: Path, rel: str, failures: list[str]) -> str | None:
+    path = _require_nonempty_file(root, rel, failures)
+    if path is None:
+        return None
+    try:
+        txt = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        failures.append(f"unreadable text file {rel}: {type(exc).__name__}")
+        return None
+    if not txt.strip():
+        failures.append(f"whitespace-only file: {rel}")
+        return None
+    return txt
+
+
+def _require_valid_png(root: Path, rel: str, failures: list[str]) -> Path | None:
+    path = _require_nonempty_file(root, rel, failures)
+    if path is None:
+        return None
+    try:
+        with path.open("rb") as fh:
+            head = fh.read(len(PNG_MAGIC))
+    except OSError as exc:
+        failures.append(f"unreadable PNG file {rel}: {type(exc).__name__}")
+        return None
+    if head != PNG_MAGIC:
+        failures.append(f"invalid PNG magic bytes in {rel}")
+        return None
+    return path
+
+
+def _parse_markdown_table_rows(md_text: str) -> list[tuple[list[str], list[str]]]:
+    rows: list[tuple[list[str], list[str]]] = []
+    headers: list[str] | None = None
+    for raw_line in md_text.splitlines():
+        stripped = raw_line.strip()
+        if not (stripped.startswith("|") and stripped.endswith("|")):
+            headers = None
+            continue
+        cells = [c.strip() for c in stripped[1:-1].split("|")]
+        if cells and all(TABLE_SEP_CELL_RX.match(c) for c in cells if c):
+            continue
+        if headers is None:
+            headers = [re.sub(r"[*_`]", "", c).strip().lower() for c in cells]
+            continue
+        rows.append((headers, cells))
+    return rows
 
 
 def _load_json(path: Path, rel: str, failures: list[str]) -> Any:
@@ -288,18 +366,131 @@ def check_harbor_surface(root: Path = ROOT) -> CheckResult:
                                             f"results/harbor_negative/c1-tamper/result.json {eval_name} expected mean 0.0, got {mean_val!r}"
                                         )
 
+    _audit_afterquery_submission_surface(root_resolved, failures)
+    _audit_ws4_compute_surface(root_resolved, failures)
+
     if failures:
         return CheckResult(
             name,
             "FAIL",
-            f"{len(failures)} Harbor template/rehearsal surface violation(s)",
+            f"{len(failures)} Harbor/AfterQuery/WS4 submission surface violation(s)",
             failures,
         )
     return CheckResult(
         name,
         "PASS",
-        "harbor template (separate verifier, [[verifier.collect]], timeouts, 0 CANARY_* env vars), rehearsal + dry-run + c1-tamper verified",
+        "harbor template + rehearsal + c1-tamper, AfterQuery docs/SUBMISSION.md (sections 1-9, 65%/72%), pooled n=32/n=60, eval_v14 PNGs, and WS4/Verda compute docs verified",
     )
+
+
+def _audit_afterquery_submission_surface(root_resolved: Path, failures: list[str]) -> None:
+    sub_txt = _require_nonempty_text_file(root_resolved, "docs/SUBMISSION.md", failures)
+    if sub_txt is not None:
+        if re.search(r"Project\s+name:\s*Canary\b", sub_txt, re.IGNORECASE) is None:
+            failures.append("docs/SUBMISSION.md missing form field 'Project name: Canary'")
+        if re.search(r"^\s*Tagline\b", sub_txt, re.IGNORECASE | re.MULTILINE) is None:
+            failures.append("docs/SUBMISSION.md missing form field 'Tagline'")
+        if re.search(r"^\s*Description\b", sub_txt, re.IGNORECASE | re.MULTILINE) is None:
+            failures.append("docs/SUBMISSION.md missing form field 'Description'")
+        if re.search(r"(?<![0-9.])65%", sub_txt) is None:
+            failures.append("docs/SUBMISSION.md missing headline '65%' ratio")
+        if re.search(r"(?<![0-9.])72%", sub_txt) is None:
+            failures.append("docs/SUBMISSION.md missing luck-adjusted '72%' ratio")
+
+        missing_secs: list[str] = []
+        for sec_num in range(1, 10):
+            sec_rx = rf"^\s*{HASH_CHAR}{{2,3}}\s+{sec_num}\.\s+\S"
+            if re.search(sec_rx, sub_txt, re.MULTILINE) is None:
+                missing_secs.append(str(sec_num))
+        if missing_secs:
+            failures.append(
+                f"docs/SUBMISSION.md missing rubric section heading(s): {', '.join(missing_secs)}"
+            )
+
+    pooled_json_path = _require_nonempty_file(root_resolved, POOLED_EXT_JSON, failures)
+    if pooled_json_path is not None:
+        pooled_obj = _load_json(pooled_json_path, POOLED_EXT_JSON, failures)
+        if pooled_obj is not None:
+            if not isinstance(pooled_obj, list) or not pooled_obj or not all(
+                isinstance(r, dict) for r in pooled_obj
+            ):
+                failures.append(f"{POOLED_EXT_JSON} must be a non-empty JSON list of row objects")
+            else:
+                has_hard_oc_32 = any(
+                    r.get("tier") == "hard"
+                    and (
+                        "opencode" in str(r.get("agent", "")).lower()
+                        or "opencode" in str(r.get("label", "")).lower()
+                    )
+                    and _is_int(r.get("n"))
+                    and int(r["n"]) == 32
+                    and _is_finite_number(r.get("mean"))
+                    and _is_finite_number(r.get("solver_same_seeds"))
+                    for r in pooled_obj
+                )
+                if not has_hard_oc_32:
+                    failures.append(f"{POOLED_EXT_JSON} missing hard OpenCode row with n=32")
+
+                has_hard_solver_60 = any(
+                    r.get("tier") == "hard"
+                    and (
+                        r.get("agent") == "solver"
+                        or "solver" in str(r.get("label", "")).lower()
+                    )
+                    and _is_int(r.get("n"))
+                    and int(r["n"]) == 60
+                    and _is_finite_number(r.get("mean"))
+                    for r in pooled_obj
+                )
+                if not has_hard_solver_60:
+                    failures.append(f"{POOLED_EXT_JSON} missing hard solver row with n=60")
+
+    pooled_md_txt = _require_nonempty_text_file(root_resolved, POOLED_EXT_MD, failures)
+    if pooled_md_txt is not None:
+        md_rows = _parse_markdown_table_rows(pooled_md_txt)
+        if not md_rows:
+            failures.append(f"{POOLED_EXT_MD} missing markdown table rows")
+        else:
+            md_has_oc_32 = False
+            md_has_solver_60 = False
+            for headers, cells in md_rows:
+                row_map = {
+                    headers[idx]: cells[idx]
+                    for idx in range(min(len(headers), len(cells)))
+                }
+                tier_val = re.sub(r"[*_`\s]", "", row_map.get("tier", cells[0] if cells else "")).lower()
+                run_val = (
+                    row_map.get("run")
+                    or row_map.get("label")
+                    or row_map.get("agent")
+                    or (cells[1] if len(cells) > 1 else "")
+                ).lower()
+                n_raw = re.sub(
+                    r"[*_`\s]",
+                    "",
+                    row_map.get("n", cells[2] if len(cells) > 2 else ""),
+                )
+                n_val = int(n_raw) if n_raw.isdigit() else None
+                if tier_val == "hard" and "opencode" in run_val and n_val == 32:
+                    md_has_oc_32 = True
+                if tier_val == "hard" and "solver" in run_val and n_val == 60:
+                    md_has_solver_60 = True
+            if not md_has_oc_32:
+                failures.append(f"{POOLED_EXT_MD} missing hard OpenCode row with n=32")
+            if not md_has_solver_60:
+                failures.append(f"{POOLED_EXT_MD} missing hard solver row with n=60")
+
+    for png_rel in EVAL_V14_PNGS:
+        _require_valid_png(root_resolved, png_rel, failures)
+
+
+def _audit_ws4_compute_surface(root_resolved: Path, failures: list[str]) -> None:
+    for rel in WS4_TABLE_DOCS:
+        txt = _require_nonempty_text_file(root_resolved, rel, failures)
+        if txt is not None and "|" not in txt:
+            failures.append(f"{rel} missing markdown table rows")
+    for rel in WS4_COMPUTE_DOCS:
+        _require_nonempty_text_file(root_resolved, rel, failures)
 
 
 def _extract_swarm_md_wave_totals(swarm_md: str) -> tuple[bool, int | None, int | None]:
@@ -498,18 +689,234 @@ def check_gemini_surface(root: Path = ROOT) -> CheckResult:
                         f"{rel_rdir}: {len(empty_gz)} empty *.json.gz cache file(s) (0 bytes)"
                     )
 
+    ladder_eps = _audit_gemini_ladder_and_ablations(root_resolved, failures)
+
     if failures:
         return CheckResult(
             name,
             "FAIL",
-            f"{len(failures)} Gemini Lab replay/swarm surface violation(s)",
+            f"{len(failures)} Gemini Lab replay/swarm/ladder/ablation surface violation(s)",
             failures,
         )
     return CheckResult(
         name,
         "PASS",
-        f"PR 41 swarm ({EXPECTED_SWARM_FINISHED} finished attackers, {EXPECTED_SWARM_EXPLOITS} exploits), gallery, submission docs, and {len(replay_dirs)} replay* cache dir(s) verified",
+        f"PR 41 swarm ({EXPECTED_SWARM_FINISHED} finished attackers, {EXPECTED_SWARM_EXPLOITS} exploits), ladder ({ladder_eps} episodes), 3 ablations, frontier PNGs, submission docs, and {len(replay_dirs)} replay* cache dir(s) verified",
     )
+
+
+def _audit_gemini_ladder_and_ablations(
+    root_resolved: Path, failures: list[str]
+) -> int | None:
+    _require_nonempty_text_file(root_resolved, "docs/gemini/SUBMISSION-LONG.md", failures)
+    _require_nonempty_text_file(root_resolved, "docs/gemini/VIDEO-2MIN.md", failures)
+
+    for png_rel in GEMINI_FRONTIER_PNGS:
+        _require_valid_png(root_resolved, png_rel, failures)
+
+    ladder_episodes: int | None = None
+    ladder_path = _require_nonempty_file(root_resolved, "results/gemini/ladder.json", failures)
+    if ladder_path is not None:
+        ladder_obj = _load_json(ladder_path, "results/gemini/ladder.json", failures)
+        if ladder_obj is not None:
+            if not isinstance(ladder_obj, dict):
+                failures.append("results/gemini/ladder.json must be a JSON object")
+            else:
+                raw_eps = ladder_obj.get("episodes")
+                if not _is_int(raw_eps) or int(raw_eps) < MIN_LADDER_EPISODES:
+                    failures.append(
+                        f"results/gemini/ladder.json expected integer episodes >= {MIN_LADDER_EPISODES}, got {raw_eps!r}"
+                    )
+                else:
+                    ladder_episodes = int(raw_eps)
+
+                rows = ladder_obj.get("rows")
+                if not isinstance(rows, list) or not rows:
+                    failures.append("results/gemini/ladder.json missing non-empty 'rows' list")
+                else:
+                    bad_row = False
+                    row_n_vals: list[int] = []
+                    for idx, row in enumerate(rows):
+                        if (
+                            not isinstance(row, dict)
+                            or not _is_int(row.get("n"))
+                            or int(row["n"]) <= 0
+                        ):
+                            failures.append(
+                                f"results/gemini/ladder.json rows[{idx}] missing positive integer 'n'"
+                            )
+                            bad_row = True
+                        else:
+                            row_n_vals.append(int(row["n"]))
+                    if not bad_row:
+                        total_row_n = sum(row_n_vals)
+                        if total_row_n < MIN_LADDER_EPISODES:
+                            failures.append(
+                                f"results/gemini/ladder.json sum(rows.n) expected >= {MIN_LADDER_EPISODES}, got {total_row_n}"
+                            )
+                        elif ladder_episodes is not None and total_row_n != ladder_episodes:
+                            failures.append(
+                                f"results/gemini/ladder.json sum(rows.n)={total_row_n} disagrees with episodes={ladder_episodes}"
+                            )
+
+    abl_json_path = _require_nonempty_file(root_resolved, "results/gemini/ablations.json", failures)
+    if abl_json_path is not None:
+        abl_obj = _load_json(abl_json_path, "results/gemini/ablations.json", failures)
+        if abl_obj is not None:
+            if not isinstance(abl_obj, dict):
+                failures.append("results/gemini/ablations.json must be a JSON object")
+            else:
+                ts = abl_obj.get("thought_signatures")
+                if not isinstance(ts, dict):
+                    failures.append("results/gemini/ablations.json missing 'thought_signatures' object")
+                else:
+                    off = ts.get("off")
+                    on = ts.get("on")
+                    if not isinstance(off, dict):
+                        failures.append("results/gemini/ablations.json missing thought_signatures.off")
+                    else:
+                        att = off.get("episodes_attempted")
+                        val_off = off.get("valid_episodes")
+                        errs_off = off.get("api_errors")
+                        rej_seeds = off.get("second_call_rejected_seeds")
+                        rej_rate = off.get("rejection_rate_of_function_call_turns")
+                        if not (_is_int(att) and int(att) == 10):
+                            failures.append(
+                                f"results/gemini/ablations.json thought_signatures.off.episodes_attempted expected 10, got {att!r}"
+                            )
+                        if not (_is_int(val_off) and int(val_off) == 0):
+                            failures.append(
+                                f"results/gemini/ablations.json thought_signatures.off.valid_episodes expected 0, got {val_off!r}"
+                            )
+                        if not (_is_int(errs_off) and int(errs_off) == 10):
+                            failures.append(
+                                f"results/gemini/ablations.json thought_signatures.off.api_errors expected 10, got {errs_off!r}"
+                            )
+                        if not (isinstance(rej_seeds, list) and len(rej_seeds) == 10):
+                            failures.append(
+                                "results/gemini/ablations.json thought_signatures.off expected 10 rejected seeds (10/10)"
+                            )
+                        if not (
+                            _is_finite_number(rej_rate)
+                            and math.isclose(float(rej_rate), 1.0, abs_tol=1e-6)
+                        ):
+                            failures.append(
+                                f"results/gemini/ablations.json thought_signatures.off rejection_rate expected 1.0, got {rej_rate!r}"
+                            )
+                    if not isinstance(on, dict):
+                        failures.append("results/gemini/ablations.json missing thought_signatures.on")
+                    else:
+                        val_on = on.get("valid_episodes")
+                        errs_on = on.get("api_errors")
+                        if not (_is_int(val_on) and int(val_on) == 10):
+                            failures.append(
+                                f"results/gemini/ablations.json thought_signatures.on.valid_episodes expected 10, got {val_on!r}"
+                            )
+                        if not (_is_int(errs_on) and int(errs_on) == 0):
+                            failures.append(
+                                f"results/gemini/ablations.json thought_signatures.on.api_errors expected 0, got {errs_on!r}"
+                            )
+
+                ec = abl_obj.get("explicit_cache")
+                if not isinstance(ec, dict):
+                    failures.append("results/gemini/ablations.json missing 'explicit_cache' object")
+                else:
+                    for scope_key in ("programme", "atlas_plus_gallery"):
+                        scope = ec.get(scope_key)
+                        if scope_key == "atlas_plus_gallery" and scope is None:
+                            scope = ec.get("atlas")
+                        if not isinstance(scope, dict):
+                            failures.append(
+                                f"results/gemini/ablations.json explicit_cache missing '{scope_key}' summary"
+                            )
+                            continue
+                        if not _is_positive_number(scope.get("cached_tokens")):
+                            failures.append(
+                                f"results/gemini/ablations.json explicit_cache.{scope_key} missing positive cached_tokens"
+                            )
+                        if not _is_positive_number(scope.get("usd_saved")) or not _is_positive_number(
+                            scope.get("pct_saved")
+                        ):
+                            failures.append(
+                                f"results/gemini/ablations.json explicit_cache.{scope_key} missing positive usd_saved/pct_saved"
+                            )
+                        paid = scope.get("usd_paid")
+                        uncached = scope.get("usd_if_uncached")
+                        if not (
+                            _is_positive_number(paid)
+                            and _is_positive_number(uncached)
+                            and float(paid) < float(uncached)
+                        ):
+                            failures.append(
+                                f"results/gemini/ablations.json explicit_cache.{scope_key} expected usd_paid < usd_if_uncached"
+                            )
+
+                sweep = abl_obj.get("thinking_sweep")
+                if not isinstance(sweep, list) or len(sweep) < 2:
+                    failures.append("results/gemini/ablations.json missing non-trivial 'thinking_sweep' list")
+                else:
+                    levels_by_pair: dict[tuple[str, str], set[str]] = {}
+                    for idx, cell in enumerate(sweep):
+                        if not isinstance(cell, dict):
+                            failures.append(f"results/gemini/ablations.json thinking_sweep[{idx}] must be an object")
+                            continue
+                        model_val = cell.get("model")
+                        level_val = cell.get("level")
+                        tier_val = cell.get("tier")
+                        n_val = cell.get("n")
+                        pct_val = cell.get("pct_of_solver")
+                        ci_val = cell.get("ci95")
+                        if not (
+                            isinstance(model_val, str)
+                            and model_val.strip()
+                            and isinstance(level_val, str)
+                            and level_val.strip()
+                            and isinstance(tier_val, str)
+                            and tier_val.strip()
+                        ):
+                            failures.append(
+                                f"results/gemini/ablations.json thinking_sweep[{idx}] missing model/level/tier"
+                            )
+                            continue
+                        if not (_is_int(n_val) and int(n_val) > 0):
+                            failures.append(
+                                f"results/gemini/ablations.json thinking_sweep[{idx}] missing positive integer 'n'"
+                            )
+                        if not _is_finite_number(pct_val):
+                            failures.append(
+                                f"results/gemini/ablations.json thinking_sweep[{idx}] missing numeric 'pct_of_solver'"
+                            )
+                        if not (
+                            isinstance(ci_val, list)
+                            and len(ci_val) == 2
+                            and all(_is_finite_number(v) for v in ci_val)
+                        ):
+                            failures.append(
+                                f"results/gemini/ablations.json thinking_sweep[{idx}] missing 2-element numeric 'ci95'"
+                            )
+                        levels_by_pair.setdefault((model_val.strip(), tier_val.strip()), set()).add(
+                            level_val.strip()
+                        )
+                    if not any(len(lvls) >= 2 for lvls in levels_by_pair.values()):
+                        failures.append(
+                            "results/gemini/ablations.json thinking_sweep lacks multi-level thinking sweep on any (model, tier)"
+                        )
+
+    abl_md_txt = _require_nonempty_text_file(root_resolved, "results/gemini/ablations.md", failures)
+    if abl_md_txt is not None:
+        if "10/10" not in abl_md_txt or re.search(r"thought[-_\s]signature", abl_md_txt, re.IGNORECASE) is None:
+            failures.append(
+                "results/gemini/ablations.md missing 10/10 thought-signature rejection ablation"
+            )
+        if (
+            re.search(r"explicit\s+(?:context\s+)?cach", abl_md_txt, re.IGNORECASE) is None
+            or re.search(r"\bsaved\b", abl_md_txt, re.IGNORECASE) is None
+        ):
+            failures.append("results/gemini/ablations.md missing explicit cache savings ablation")
+        if re.search(r"thinking[-_\s]level", abl_md_txt, re.IGNORECASE) is None:
+            failures.append("results/gemini/ablations.md missing thinking-level sweep ablation")
+
+    return ladder_episodes
 
 
 def _audit_audio_index(
@@ -610,6 +1017,15 @@ def check_media_surface(root: Path = ROOT) -> CheckResult:
                 continue
             if png_size <= 0:
                 failures.append(f"empty dashboard PNG asset: {rel_png} (0 bytes)")
+                continue
+            try:
+                with png_path.open("rb") as fh:
+                    head = fh.read(len(PNG_MAGIC))
+            except OSError as exc:
+                failures.append(f"unreadable dashboard asset {rel_png}: {type(exc).__name__}")
+                continue
+            if head != PNG_MAGIC:
+                failures.append(f"invalid PNG magic bytes in {rel_png}")
 
     if failures:
         return CheckResult(

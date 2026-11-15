@@ -2,16 +2,21 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import sys
+import tokenize
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from canary.env import Env
 
-ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts/hint_ablation_audit.py"
 JSON_PATH = ROOT / "results/eval_v14/hint_ablation_v14.json"
 MD_PATH = ROOT / "docs/reports/hint_ablation_v14_audit.md"
@@ -69,10 +74,12 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 
 def test_committed_json_and_markdown_offline_verification():
     data = audit.verify_committed_json(JSON_PATH, MD_PATH, ROOT / "data/runs/committed/v1.4")
-    assert JSON_PATH.stat().st_size < 80 * 1024
+    assert JSON_PATH.stat().st_size < 65 * 1024
     assert data["replay_verification"]["all_passed"] is True
     assert data["replay_verification"]["ablation_episodes_verified"] == 30
     assert data["replay_verification"]["context_episodes_verified"] == 30
+    assert data["replay_verification"]["total_steps_verified"] == 5986
+    assert data["replay_verification"]["step_mismatches"] == 0
     assert data["replay_verification"]["score_mismatches"] == 0
     assert data["replay_verification"]["errors_or_timeouts"] == 0
 
@@ -193,6 +200,10 @@ def test_synthetic_ablate_dir_end_to_end_and_tamper_detection(tmp_path: Path):
         )
 
     _write_jsonl(v14_dir / "reference/solver-hard-synth/episodes.jsonl", sol_eps)
+    _write_jsonl(
+        v14_dir / "reference/solver-hard-seeds30to59/episodes.jsonl",
+        [dict(sol_eps[0], seed=0, score=-1.0), dict(sol_eps[0], seed=30, score=0.5)],
+    )
     _write_jsonl(v14_dir / "inproc-gemini-4-carbon/hard/episodes.jsonl", inp_eps)
     _write_jsonl(v14_dir / "opencode-gemini-4-carbon/hard/episodes.jsonl", opc_eps)
 
@@ -238,6 +249,60 @@ def test_synthetic_ablate_dir_end_to_end_and_tamper_detection(tmp_path: Path):
         audit.audit_episode_replay("control", bad_ep, "hard")
 
 
+def test_panel_fix_d_detail_compat_and_reference_seed_filtering():
+    ep_post = _make_episode(
+        "hard",
+        0,
+        "gemini:gemini-4-carbon",
+        [
+            ("list_employees", {}),
+            ("interview", {"employee": "e00", "topic": "not_a_valid_topic"}),
+            ("status", {}),
+        ],
+    )
+    inv_step = ep_post["steps"][1]
+    assert inv_step["result"]["ok"] is False
+    assert inv_step["result"]["error"] == "invalid arguments"
+    assert "detail" in inv_step["result"]["data"]
+
+    row_post = audit.audit_episode_replay("control", ep_post, "hard")
+    assert row_post["invalid_calls"] >= 1
+
+    ep_pre_1bc3e281 = json.loads(json.dumps(ep_post))
+    ep_pre_1bc3e281["steps"][1]["result"] = {
+        "ok": False,
+        "data": {},
+        "error": "invalid arguments",
+    }
+    row_pre = audit.audit_episode_replay("control", ep_pre_1bc3e281, "hard")
+    assert row_pre["score"] == row_post["score"]
+
+    ep_bad_detail = json.loads(json.dumps(ep_post))
+    ep_bad_detail["steps"][1]["result"]["data"]["detail"] = "tampered wrong detail"
+    with pytest.raises(ValueError, match="replay step result mismatch"):
+        audit.audit_episode_replay("control", ep_bad_detail, "hard")
+
+    ep_bad_step_data = json.loads(json.dumps(ep_post))
+    ep_bad_step_data["steps"][0]["result"]["data"] = {"employees": []}
+    with pytest.raises(ValueError, match="replay step result mismatch"):
+        audit.audit_episode_replay("control", ep_bad_step_data, "hard")
+
+    committed_v14 = ROOT / "data/runs/committed/v1.4"
+    assert (committed_v14 / "reference/solver-hard-seeds30to59/episodes.jsonl").is_file()
+    ctx_0_9 = audit.load_context_raw(committed_v14, set(range(10)), "hard")
+    assert sorted(ctx_0_9["solver"].keys()) == list(range(10))
+    ctx_0_29 = audit.load_context_raw(committed_v14, set(range(30)), "hard")
+    assert sorted(ctx_0_29["solver"].keys()) == list(range(30))
+    assert all(0 <= s < 30 for s in ctx_0_29["solver"])
+
+    md_txt = MD_PATH.read_text(encoding="utf-8")
+    assert "671ed96" in md_txt
+    assert "fd8c1cb0" in md_txt
+    assert "1bc3e281" in md_txt
+    assert "pre-registered paired dev seeds" not in md_txt.lower()
+    assert "pre-registered seeds 0" not in md_txt.lower()
+
+
 def test_git_ref_subset_matches_committed_when_ref_present():
     if audit.git_ref_commit(ROOT, audit.DEFAULT_GIT_REF) is None:
         return
@@ -250,11 +315,16 @@ def test_git_ref_subset_matches_committed_when_ref_present():
 
 def test_style_hygiene_no_hash_comments_or_unicode_dashes():
     hash_ch = chr(35)
+    co_authored = "Co-Authored" + "-By"
     for py_path in (SCRIPT_PATH, Path(__file__)):
         txt = py_path.read_text(encoding="utf-8")
         assert hash_ch not in txt, f"unexpected hash character in {py_path}"
+        tokens = list(tokenize.generate_tokens(io.StringIO(txt).readline))
+        assert [t for t in tokens if t.type == tokenize.COMMENT] == []
         assert "\u2014" not in txt and "\u2013" not in txt
+        assert co_authored not in txt
 
     for doc_path in (JSON_PATH, MD_PATH):
         txt = doc_path.read_text(encoding="utf-8")
         assert "\u2014" not in txt and "\u2013" not in txt
+        assert co_authored not in txt

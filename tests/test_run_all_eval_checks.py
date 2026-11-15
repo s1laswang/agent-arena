@@ -13,6 +13,9 @@ from typing import Any
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 SCRIPT_PATH = ROOT / "scripts/run_all_eval_checks.py"
 INDEX_PATH = ROOT / "results/eval_v14/eval_suite_index.json"
 OVERVIEW_PATH = ROOT / "docs/reports/eval_suite_overview.md"
@@ -84,6 +87,7 @@ def test_list_mode_and_name_normalization(capsys):
     assert [o["name"] for o in payload["optional_verifiers"]] == list(suite.OPTIONAL_VERIFIER_NAMES)
     assert "version_evolution_v14" in suite.OPTIONAL_VERIFIER_NAMES
     assert "version_evolution_audit" in suite.OPTIONAL_VERIFIER_NAMES
+    assert "paired_seed_diagnostics_v14" in suite.OPTIONAL_VERIFIER_NAMES
 
 
 def test_committed_suite_index_and_overview_invariants():
@@ -96,6 +100,8 @@ def test_committed_suite_index_and_overview_invariants():
     assert data["schema_version"] == "eval_suite_index_v14.v1"
     assert data["tiers_version"] == "v1.4"
     assert data["primary_seeds"] == "0-29"
+    assert data["primary_seeds_lock"].startswith("post-hoc locked paired dev seeds 0-29 (671ed96, 28 s after 8fd4dec")
+    assert "pre-registered" not in data["primary_seeds_lock"].lower()
     assert data["n_primary_seeds_per_tier"] == 30
     assert len(data["core_verifiers"]) == 5
     assert all(v["check_passed"] is True for v in data["core_verifiers"])
@@ -124,12 +130,45 @@ def test_committed_suite_index_and_overview_invariants():
     )
     assert jrp["pass_k_hard"]["solver"]["pass_3"] > jrp["pass_k_hard"]["opencode-3.5-flash"]["pass_3"]
 
+    ha = cs["hint_ablation"]
+    assert ha["ablation_episodes_verified"] == 30
+    assert ha["context_episodes_verified"] == 30
+    assert ha["total_steps_verified"] == 5986
+    assert ha["step_mismatches"] == 0
+
+    rm = cs["repo_milestones"]
+    assert rm["seed_lock"]["commit"] == "671ed96"
+    assert rm["seed_lock"]["primary_commit"] == "8fd4dec"
+    assert rm["seed_lock"]["delay_seconds"] == 28
+    assert rm["seed_lock"]["classification"] == "post_hoc_lock_not_preregistered"
+    assert rm["replay_panel_fix_d"]["commit"] == "1bc3e281"
+    assert rm["replay_panel_fix_d"]["invalid_arguments_detail_compat"] is True
+    assert rm["g1_partial_extension"]["prereg_commit"] == "f9fb7a4a"
+    assert rm["g1_partial_extension"]["data_commit"] == "364fe657"
+    assert rm["g1_partial_extension"]["ext_only"]["seeds"] == [34, 37]
+    assert rm["g1_partial_extension"]["pooled_0_59"]["n"] == 32
+    assert rm["canonical_gemini_ladder"]["commit"] == "eb363eb9"
+    assert rm["canonical_gemini_ladder"]["episodes"] == 587
+    assert rm["canonical_gemini_ladder"]["gemma_episodes"] == 5
+    assert rm["gpt_5_5_preregistration"]["commit"] == "cf394894"
+    assert rm["gpt_5_5_preregistration"]["env_tag"] == "afterquery-final"
+
     md_text = OVERVIEW_PATH.read_text(encoding="utf-8")
     for expected_snippet in (
         "python scripts/run_all_eval_checks.py --check",
+        "post-hoc locked paired dev seeds `0-29` (`671ed96`, 28 s after `8fd4dec`",
         "version_evolution_v14.py",
+        "paired_seed_diagnostics_v14.py",
         "65% [24%, 98%]",
         "72% [52%, 91%]",
+        "eb363eb9",
+        "587",
+        "364fe657",
+        "68% [32%, 100%]",
+        "75% [56%, 93%]",
+        "1bc3e281",
+        "cf394894",
+        "fd8c1cb0",
         "-0.333 [-0.659, -0.046]",
         "-0.234 [-0.461, -0.017]",
         "3.48x",
@@ -138,6 +177,8 @@ def test_committed_suite_index_and_overview_invariants():
         "All `5/5` deterministic gates PASS",
     ):
         assert expected_snippet in md_text
+    assert "pre-registered paired dev seeds" not in md_text.lower()
+    assert "section a pre-registered" not in md_text.lower()
 
 
 def test_only_flag_fast_real_verifier_execution(capsys):
@@ -245,6 +286,53 @@ def test_tamper_tolerance_and_missing_core_detection(tmp_path: Path, capsys):
     p_missing = json.loads(capsys.readouterr().out)
     assert rc_missing == 1
     assert any("missing required core verifier script" in e for e in p_missing["errors"])
+
+
+def test_w5_posthoc_hygiene_and_optional_gpt55_cohorts(tmp_path: Path, capsys):
+    ws = _build_synthetic_workspace(tmp_path / "sync_repo")
+    cm_path = ws / "results/eval_v14/claims_manifest.json"
+    cm = json.loads(cm_path.read_text(encoding="utf-8"))
+    cm["version_hygiene"]["posthoc_locked_primary_frontier_cohorts"] = 5
+    cm["version_hygiene"]["preregistered_extension_frontier_cohorts"] = 1
+    cm["version_hygiene"]["preregistered_frontier_cohorts"] = 1
+    cm["version_hygiene"]["seed_lock_rule_verified"] = True
+    cm_path.write_text(json.dumps(cm, indent=2) + "\n", encoding="utf-8")
+
+    hgt_path = ws / "results/eval_v14/headline_gap_table_v14.json"
+    hgt = json.loads(hgt_path.read_text(encoding="utf-8"))
+    base_row = next(
+        r for r in hgt["section_a"]
+        if r["tier"] == "hard" and r["agent"] == "opencode:google/gemini-4-carbon" and r["kind"] == "frontier"
+    )
+    gpt55_row = dict(base_row, agent="opencode:openai/gpt-5.5")
+    flash_med_row = dict(base_row, tier="medium", agent="opencode:google/gemini-3.5-flash")
+    hgt["section_a"].extend([gpt55_row, flash_med_row])
+    hgt_path.write_text(json.dumps(hgt, indent=2) + "\n", encoding="utf-8")
+
+    (ws / "data/runs/committed/v1.4/opencode-gpt-5.5").mkdir(parents=True, exist_ok=True)
+    _write_stub_verifier(ws / "scripts/paired_seed_diagnostics_v14.py", exit_code=0, msg="paired_diag ok")
+
+    assert suite.main(["--root", str(ws)]) == 0
+    capsys.readouterr()
+
+    idx_file = ws / suite.DEFAULT_INDEX_REL
+    md_file = ws / suite.DEFAULT_OVERVIEW_REL
+    assert idx_file.stat().st_size < suite.MAX_INDEX_BYTES
+    idx_data = json.loads(idx_file.read_text(encoding="utf-8"))
+    cs = idx_data["core_headline_summary"]
+    assert cs["claims_and_hygiene"]["hygiene"]["primary_locked_frontier_cohorts"] == 5
+    assert cs["claims_and_hygiene"]["hygiene"]["seed_lock_rule_verified"] is True
+    assert "hard_opencode_gpt_5_5" in cs["headline_gap_table"]["cohorts"]
+    assert "medium_opencode_gemini_3_5_flash" in cs["headline_gap_table"]["cohorts"]
+    assert cs["repo_milestones"]["gpt_5_5_preregistration"]["committed_dir_present"] is True
+    assert [o["name"] for o in idx_data["present_optional_verifiers"]] == ["paired_seed_diagnostics_v14"]
+
+    md_txt = md_file.read_text(encoding="utf-8")
+    assert "OpenCode + gpt-5.5 (judges' MCP)" in md_txt
+    assert "OpenCode + gemini-3.5-flash (judges' MCP)" in md_txt
+    assert "committed directory `data/runs/committed/v1.4/opencode-gpt-5.5` present" in md_txt
+    assert suite.main(["--check", "--root", str(ws)]) == 0
+    capsys.readouterr()
 
 
 def test_hygiene_zero_comments_zero_unicode_dashes_zero_leaks():

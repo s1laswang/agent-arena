@@ -27,6 +27,7 @@ import argparse
 import json
 import math
 import os
+import random
 import sys
 from pathlib import Path
 
@@ -46,6 +47,9 @@ RUNS = {
     "solver": [V14 / "reference/solver-hard-20261114-121126/episodes.jsonl",
                V14 / "reference/solver-hard-seeds20to29/episodes.jsonl"],
 }
+# Causal hint test (gap.md, pre-registered): same harness + model with `--hint gather`; analysed on the seeds it
+# completed (fixed order 0->29, stopped at 06:00), paired with the solver and the unhinted run on those seeds.
+HINT_RUN = V14 / "opencode-gemini-4-carbon-hint-gather/hard/episodes.jsonl"
 TIER = "hard"
 SEEDS = list(range(30))
 OUT_JSON = ROOT / "results/failure_analysis_v1.4.json"
@@ -311,7 +315,26 @@ def compute() -> dict:
     S = {s: episode(eps["solver"][s], with_trace=True) for s in SEEDS}
     I = {s: episode(eps["inproc"][s], with_trace=True) for s in SEEDS}
     data = {"G": G, "S": S, "I": I}
+    if HINT_RUN.exists():
+        h = load([HINT_RUN])
+        data["H"] = {s: episode(h[s], with_trace=True) for s in sorted(h) if s in SEEDS}
     data["summary"] = summarize(data)
+    if (HINT_RUN.parent / "meta.json").exists() and not data.get("H"):
+        data["summary"]["hint"] = {"n": 0, "seeds": []}   # attempted, nothing completed by the stop time
+    if "hint" in data["summary"]:
+        mf = HINT_RUN.parent / "meta.json"
+        exc = json.loads(mf.read_text()).get("infra_invalid_attempts_excluded", []) if mf.exists() else []
+        per: dict[str, int] = {}
+        reasons: dict[str, int] = {}
+        for x in exc:   # "opencode-hard-<seed>-<HHMMSS>: <reason>"
+            sd = x.split(":", 1)[0].split("-")[2]
+            per[sd] = per.get(sd, 0) + 1
+            r = "provider_quota" if "quota" in x else "empty_model_response" if "empty_model" in x else \
+                "cli_error_event" if "cli_error" in x else "provider_unavailable" if "unavailable" in x else \
+                "stopped_at_key_switch" if "no episode written" in x else "other"
+            reasons[r] = reasons.get(r, 0) + 1
+        data["summary"]["hint"]["infra_invalid"] = {"total": len(exc), "per_seed": dict(sorted(per.items(), key=lambda kv: int(kv[0]))),
+                                                    "by_reason": dict(sorted(reasons.items()))}
     return data
 
 
@@ -330,8 +353,8 @@ def acct(r: dict) -> dict | None:
             "raw": r["score"]}
 
 
-def agent_summary(X: dict) -> dict:
-    eps = [X[str(s)] if str(s) in X else X[s] for s in SEEDS]
+def agent_summary(X: dict, seeds: list[int] = SEEDS) -> dict:
+    eps = [X[str(s)] if str(s) in X else X[s] for s in seeds]
     acc = [r for r in eps if r["accused"]]
     wrong = [r for r in acc if not r["correct"]]
     played = [r["accuse_day"] or r["final_day"] for r in eps]
@@ -382,6 +405,8 @@ def summarize(data: dict) -> dict:
     g = {s: G[s] for s in SEEDS}
     sv = {s: S[s] for s in SEEDS}
     out = {"opencode": agent_summary(g), "solver": agent_summary(sv), "inproc": agent_summary(data["I"])}
+    if data.get("H"):
+        out["hint"] = hint_summary(data["H"], g, sv)
     # exact additive decomposition of the luck-adjusted gap (solver - Gemini), summed over the 30 seeds
     comp = {"leak": 0.0, "canary": 0.0, "restrict": 0.0, "penalty": 0.0, "penalty_ev_negative": 0.0, "penalty_not_isolated": 0.0,
             "abstain": 0.0, "abstain_seeds": []}
@@ -439,6 +464,54 @@ def summarize(data: dict) -> dict:
         "solver_score": sv[s]["score"], "solver_correct": sv[s]["correct"], "solver_flip": bool(sv[s]["flips"]),
         "days_left": 21 - g[s]["accuse_day"],
     } for s in wrong]
+    return out
+
+
+def boot_ratio(f: list[float], s: list[float], B: int = 10000, rng_seed: int = 0) -> list[float]:
+    """Paired bootstrap 95% CI of mean(f)/mean(s) over seeds (same method as scripts/paired_v13.py)."""
+    rng = random.Random(rng_seed)
+    n, vals = len(f), []
+    for _ in range(B):
+        idx = [rng.randrange(n) for _ in range(n)]
+        ms = sum(s[i] for i in idx) / n
+        if ms > 0:
+            vals.append(sum(f[i] for i in idx) / n / ms)
+    vals.sort()
+    return [vals[int(0.025 * len(vals))], vals[int(0.975 * len(vals)) - 1]]
+
+
+def hint_summary(H: dict, G: dict, S: dict) -> dict:
+    """Hinted Gemini vs the solver and vs the unhinted Gemini run, on the seeds the hinted run completed."""
+    seeds = sorted(H)
+    arms = {"hint": agent_summary(H, seeds), "unhinted": agent_summary(G, seeds), "solver": agent_summary(S, seeds)}
+    X = {"hint": H, "unhinted": G, "solver": S}
+    out: dict = {"seeds": seeds, "n": len(seeds)}
+    for k, a in arms.items():
+        acc = a["accused"]
+        out[k] = {key: a[key] for key in ("score", "score_ci", "luck_adjusted", "accused", "wrong", "abstain",
+                                          "accuse_day_horizon21", "canaries", "canaries_ci", "capacity_used",
+                                          "days_with_canary_share", "first_canary_day", "interviews", "isolated",
+                                          "not_isolated", "ev_negative", "expected_wrong", "leaks_at_accusation")}
+        out[k]["premature_rate"] = len(a["not_isolated"]) / acc if acc else None
+        if k != "solver":
+            f = [X[k][s]["score"] for s in seeds]
+            fl = [X[k][s]["luck_adjusted"] for s in seeds]
+            sr = [S[s]["score"] for s in seeds]
+            sl = [S[s]["luck_adjusted"] for s in seeds]
+            out[k]["pct_solver"] = mean(f) / mean(sr)
+            out[k]["pct_solver_ci"] = boot_ratio(f, sr)
+            out[k]["la_pct_solver"] = mean(fl) / mean(sl)
+            out[k]["la_pct_solver_ci"] = boot_ratio(fl, sl)
+    for key, fn in (("score", lambda r: r["score"]), ("luck_adjusted", lambda r: r["luck_adjusted"]),
+                    ("canaries", lambda r: r["canary"]["n"]),
+                    ("accuse_day", lambda r: r["accuse_day"] or r["final_day"])):
+        d = [fn(H[s]) - fn(G[s]) for s in seeds]
+        out[f"diff_{key}"] = {"mean": mean(d), "ci": ci95(d)}
+    out["per_seed"] = [{"seed": s, "hint": H[s]["score"], "unhinted": G[s]["score"], "solver": S[s]["score"],
+                        "hint_canaries": H[s]["canary"]["n"], "unhinted_canaries": G[s]["canary"]["n"],
+                        "hint_consistent": len(H[s].get("consistent_at_accusation") or []) if H[s]["accused"] else None,
+                        "hint_correct": H[s]["correct"], "hint_accused": bool(H[s]["accused"]),
+                        "hint_day": H[s]["accuse_day"] or H[s]["final_day"]} for s in seeds]
     return out
 
 

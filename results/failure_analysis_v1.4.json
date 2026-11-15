@@ -10088,6 +10088,558 @@
    "true_V_end": 0.4299999999999996
   }
  },
+ "H": {
+  "0": {
+   "accuse_day": 10,
+   "accused": "e38",
+   "agent": "opencode:google/gemini-4-carbon+hint:gather",
+   "canary": {
+    "days_with_canary": 9,
+    "failed_calls": 0,
+    "first_day": 1,
+    "labels_mean": 3.0,
+    "n": 18,
+    "n_total": 18,
+    "recipients_mean": 13.055555555555555,
+    "staff_covered": 40,
+    "two_on_a_day": 9
+   },
+   "consistent_at_accusation": [
+    "e38"
+   ],
+   "correct": true,
+   "daily": [
+    {
+     "actions": 3,
+     "canaries": 2,
+     "day": 1,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 4,
+     "canaries": 2,
+     "day": 2,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 4,
+     "canaries": 2,
+     "day": 3,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 2,
+     "canaries": 2,
+     "day": 4,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 3,
+     "canaries": 2,
+     "day": 5,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 2,
+     "canaries": 2,
+     "day": 6,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 3,
+     "canaries": 2,
+     "day": 7,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 4,
+     "canaries": 2,
+     "day": 8,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 2,
+     "canaries": 2,
+     "day": 9,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 4,
+     "canaries": 0,
+     "day": 10,
+     "interviews": 2,
+     "limit_hit": false
+    }
+   ],
+   "decisive": null,
+   "decoy": "e14",
+   "end_reason": "accused",
+   "ev_accused": 0.5595505887323614,
+   "evidence_on_accused": {
+    "against": 0,
+    "hit_group_sizes": [
+     7,
+     4
+    ],
+    "hits": 2
+   },
+   "evidence_on_mole": {
+    "against": 0,
+    "hit_group_sizes": [
+     7,
+     4
+    ],
+    "hits": 2
+   },
+   "feed_lag": {
+    "lag_sum": 0,
+    "lagged": 0,
+    "seen": 3
+   },
+   "final_day": 10,
+   "flips": [],
+   "invalid_calls": 0,
+   "leaks": 3,
+   "luck_adjusted": 0.6064453250165261,
+   "mole": "e38",
+   "n_calls": 53,
+   "p_accused": 0.9619433083931296,
+   "p_top_at_accusation": 0.9619433083931296,
+   "restrict_calls": 0,
+   "score": 0.67,
+   "seed": 0,
+   "seen_canary_leaks_at_accusation": 2,
+   "surfaced_canary_leaks_at_accusation": 2,
+   "tools": {
+    "accuse": 1,
+    "advance_day": 9,
+    "check_leak_feed": 3,
+    "interview": 2,
+    "list_documents": 10,
+    "list_employees": 1,
+    "plant_canary": 18,
+    "read_access_logs": 6,
+    "search_messages": 2,
+    "status": 1
+   },
+   "trace": [
+    {
+     "day": 1,
+     "ev": -0.9505,
+     "fires": false,
+     "idx": 6,
+     "kind": "advance_day",
+     "n_consistent": 40,
+     "p_top": 0.025,
+     "t": 6,
+     "top": "e00",
+     "top_is_mole": false
+    },
+    {
+     "day": 2,
+     "ev": -0.9221,
+     "fires": false,
+     "idx": 12,
+     "kind": "advance_day",
+     "n_consistent": 40,
+     "p_top": 0.0404,
+     "t": 12,
+     "top": "e04",
+     "top_is_mole": false
+    },
+    {
+     "day": 3,
+     "ev": -0.6838,
+     "fires": false,
+     "idx": 18,
+     "kind": "advance_day",
+     "n_consistent": 7,
+     "p_top": 0.1717,
+     "t": 18,
+     "top": "e19",
+     "top_is_mole": false
+    },
+    {
+     "day": 4,
+     "ev": -0.6873,
+     "fires": false,
+     "idx": 22,
+     "kind": "advance_day",
+     "n_consistent": 7,
+     "p_top": 0.1717,
+     "t": 22,
+     "top": "e19",
+     "top_is_mole": false
+    },
+    {
+     "day": 5,
+     "ev": -0.4213,
+     "fires": false,
+     "idx": 27,
+     "kind": "advance_day",
+     "n_consistent": 7,
+     "p_top": 0.3213,
+     "t": 27,
+     "top": "e36",
+     "top_is_mole": false
+    },
+    {
+     "day": 6,
+     "ev": -0.4277,
+     "fires": false,
+     "idx": 31,
+     "kind": "advance_day",
+     "n_consistent": 7,
+     "p_top": 0.3213,
+     "t": 31,
+     "top": "e36",
+     "top_is_mole": false
+    },
+    {
+     "day": 7,
+     "ev": -0.191,
+     "fires": false,
+     "idx": 36,
+     "kind": "advance_day",
+     "n_consistent": 7,
+     "p_top": 0.4593,
+     "t": 36,
+     "top": "e36",
+     "top_is_mole": false
+    },
+    {
+     "day": 8,
+     "ev": -0.2224,
+     "fires": false,
+     "idx": 42,
+     "kind": "advance_day",
+     "n_consistent": 3,
+     "p_top": 0.4598,
+     "t": 42,
+     "top": "e38",
+     "top_is_mole": true
+    },
+    {
+     "day": 9,
+     "ev": -0.2373,
+     "fires": false,
+     "idx": 46,
+     "kind": "advance_day",
+     "n_consistent": 3,
+     "p_top": 0.4564,
+     "t": 46,
+     "top": "e38",
+     "top_is_mole": true
+    },
+    {
+     "accused": "e38",
+     "day": 10,
+     "ev": 0.5596,
+     "ev_accused": 0.5596,
+     "exp_true_V": 0.6213,
+     "fires": true,
+     "idx": 52,
+     "kind": "accuse",
+     "n_consistent": 1,
+     "p_accused": 0.9619,
+     "p_top": 0.9619,
+     "t": 52,
+     "top": "e38",
+     "top_is_mole": true
+    }
+   ],
+   "true_V_end": 0.6699999999999997
+  },
+  "1": {
+   "accuse_day": 10,
+   "accused": "e33",
+   "agent": "opencode:google/gemini-4-carbon+hint:gather",
+   "canary": {
+    "days_with_canary": 9,
+    "failed_calls": 0,
+    "first_day": 1,
+    "labels_mean": 1.0,
+    "n": 18,
+    "n_total": 18,
+    "recipients_mean": 11.777777777777779,
+    "staff_covered": 40,
+    "two_on_a_day": 9
+   },
+   "consistent_at_accusation": [
+    "e33"
+   ],
+   "correct": true,
+   "daily": [
+    {
+     "actions": 4,
+     "canaries": 2,
+     "day": 1,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 4,
+     "canaries": 2,
+     "day": 2,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 4,
+     "canaries": 2,
+     "day": 3,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 4,
+     "canaries": 2,
+     "day": 4,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 3,
+     "canaries": 2,
+     "day": 5,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 4,
+     "canaries": 2,
+     "day": 6,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 3,
+     "canaries": 2,
+     "day": 7,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 4,
+     "canaries": 2,
+     "day": 8,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 2,
+     "canaries": 2,
+     "day": 9,
+     "interviews": 0,
+     "limit_hit": false
+    },
+    {
+     "actions": 1,
+     "canaries": 0,
+     "day": 10,
+     "interviews": 0,
+     "limit_hit": false
+    }
+   ],
+   "decisive": {
+    "cf_score": 0.59,
+    "day": 8,
+    "days_early": 2,
+    "p_top": 0.9255,
+    "top": "e33",
+    "top_is_mole": true
+   },
+   "decoy": "e11",
+   "end_reason": "accused",
+   "ev_accused": 0.47125,
+   "evidence_on_accused": {
+    "against": 0,
+    "hit_group_sizes": [
+     8,
+     6,
+     15,
+     6
+    ],
+    "hits": 4
+   },
+   "evidence_on_mole": {
+    "against": 0,
+    "hit_group_sizes": [
+     8,
+     6,
+     15,
+     6
+    ],
+    "hits": 4
+   },
+   "feed_lag": {
+    "lag_sum": 0,
+    "lagged": 0,
+    "seen": 6
+   },
+   "final_day": 10,
+   "flips": [],
+   "invalid_calls": 1,
+   "leaks": 6,
+   "luck_adjusted": 0.5199999999999996,
+   "mole": "e33",
+   "n_calls": 56,
+   "p_accused": 1.0,
+   "p_top_at_accusation": 1.0,
+   "restrict_calls": 0,
+   "score": 0.52,
+   "seed": 1,
+   "seen_canary_leaks_at_accusation": 4,
+   "surfaced_canary_leaks_at_accusation": 4,
+   "tools": {
+    "accuse": 1,
+    "advance_day": 9,
+    "check_leak_feed": 5,
+    "list_documents": 10,
+    "list_employees": 1,
+    "plant_canary": 18,
+    "read_access_logs": 7,
+    "search_messages": 4,
+    "status": 1
+   },
+   "trace": [
+    {
+     "day": 1,
+     "ev": -0.9505,
+     "fires": false,
+     "idx": 8,
+     "kind": "advance_day",
+     "n_consistent": 40,
+     "p_top": 0.025,
+     "t": 8,
+     "top": "e00",
+     "top_is_mole": false
+    },
+    {
+     "day": 2,
+     "ev": -0.9176,
+     "fires": false,
+     "idx": 14,
+     "kind": "advance_day",
+     "n_consistent": 40,
+     "p_top": 0.0427,
+     "t": 14,
+     "top": "e09",
+     "top_is_mole": false
+    },
+    {
+     "day": 3,
+     "ev": -0.9088,
+     "fires": false,
+     "idx": 20,
+     "kind": "advance_day",
+     "n_consistent": 40,
+     "p_top": 0.0482,
+     "t": 20,
+     "top": "e02",
+     "top_is_mole": false
+    },
+    {
+     "day": 4,
+     "ev": -0.8081,
+     "fires": false,
+     "idx": 26,
+     "kind": "advance_day",
+     "n_consistent": 16,
+     "p_top": 0.1053,
+     "t": 26,
+     "top": "e09",
+     "top_is_mole": false
+    },
+    {
+     "day": 5,
+     "ev": -0.7898,
+     "fires": false,
+     "idx": 31,
+     "kind": "advance_day",
+     "n_consistent": 16,
+     "p_top": 0.1167,
+     "t": 31,
+     "top": "e09",
+     "top_is_mole": false
+    },
+    {
+     "day": 6,
+     "ev": -0.6928,
+     "fires": false,
+     "idx": 37,
+     "kind": "advance_day",
+     "n_consistent": 11,
+     "p_top": 0.1775,
+     "t": 37,
+     "top": "e09",
+     "top_is_mole": false
+    },
+    {
+     "day": 7,
+     "ev": -0.7179,
+     "fires": false,
+     "idx": 42,
+     "kind": "advance_day",
+     "n_consistent": 11,
+     "p_top": 0.1649,
+     "t": 42,
+     "top": "e09",
+     "top_is_mole": false
+    },
+    {
+     "day": 8,
+     "ev": 0.4726,
+     "fires": true,
+     "idx": 48,
+     "kind": "advance_day",
+     "n_consistent": 2,
+     "p_top": 0.9255,
+     "t": 48,
+     "top": "e33",
+     "top_is_mole": true
+    },
+    {
+     "day": 9,
+     "ev": 0.4541,
+     "fires": true,
+     "idx": 52,
+     "kind": "advance_day",
+     "n_consistent": 2,
+     "p_top": 0.9255,
+     "t": 52,
+     "top": "e33",
+     "top_is_mole": true
+    },
+    {
+     "accused": "e33",
+     "day": 10,
+     "ev": 0.4713,
+     "ev_accused": 0.4713,
+     "exp_true_V": 0.4713,
+     "fires": true,
+     "idx": 55,
+     "kind": "accuse",
+     "n_consistent": 1,
+     "p_accused": 1.0,
+     "p_top": 1.0,
+     "t": 55,
+     "top": "e33",
+     "top_is_mole": true
+    }
+   ],
+   "true_V_end": 0.5199999999999996
+  }
+ },
  "I": {
   "0": {
    "accuse_day": 12,
@@ -28345,6 +28897,154 @@
    },
    "raw_gap": 5.3,
    "restrict": 0.12000000000000036
+  },
+  "hint": {
+   "diff_accuse_day": {
+    "ci": 7.84,
+    "mean": -5.0
+   },
+   "diff_canaries": {
+    "ci": 8.82,
+    "mean": 7.5
+   },
+   "diff_luck_adjusted": {
+    "ci": 0.16669621225312098,
+    "mean": 0.1309911091103634
+   },
+   "diff_score": {
+    "ci": 1.4112,
+    "mean": 0.8
+   },
+   "hint": {
+    "abstain": 0,
+    "accuse_day_horizon21": 10.0,
+    "accused": 2,
+    "canaries": 18.0,
+    "canaries_ci": 0.0,
+    "capacity_used": 0.9,
+    "days_with_canary_share": 0.9,
+    "ev_negative": [],
+    "expected_wrong": 0.03805669160687042,
+    "first_canary_day": 1.0,
+    "interviews": 1.0,
+    "isolated": 2,
+    "la_pct_solver": 0.9229378884132687,
+    "la_pct_solver_ci": [
+     0.7822659070472936,
+     1.0911921741122683
+    ],
+    "leaks_at_accusation": 4.5,
+    "luck_adjusted": 0.5632226625082628,
+    "not_isolated": [],
+    "pct_solver": 0.894736842105263,
+    "pct_solver_ci": [
+     0.7536231884057972,
+     1.046875
+    ],
+    "premature_rate": 0.0,
+    "score": 0.595,
+    "score_ci": 0.14700000000000002,
+    "wrong": 0
+   },
+   "infra_invalid": {
+    "by_reason": {
+     "cli_error_event": 1,
+     "provider_quota": 65,
+     "stopped_at_key_switch": 3
+    },
+    "per_seed": {
+     "0": 24,
+     "1": 19,
+     "2": 23,
+     "3": 3
+    },
+    "total": 69
+   },
+   "n": 2,
+   "per_seed": [
+    {
+     "hint": 0.67,
+     "hint_accused": true,
+     "hint_canaries": 18,
+     "hint_consistent": 1,
+     "hint_correct": true,
+     "hint_day": 10,
+     "seed": 0,
+     "solver": 0.64,
+     "unhinted": 0.59,
+     "unhinted_canaries": 6
+    },
+    {
+     "hint": 0.52,
+     "hint_accused": true,
+     "hint_canaries": 18,
+     "hint_consistent": 1,
+     "hint_correct": true,
+     "hint_day": 10,
+     "seed": 1,
+     "solver": 0.69,
+     "unhinted": -1.0,
+     "unhinted_canaries": 15
+    }
+   ],
+   "seeds": [
+    0,
+    1
+   ],
+   "solver": {
+    "abstain": 0,
+    "accuse_day_horizon21": 8.0,
+    "accused": 2,
+    "canaries": 11.0,
+    "canaries_ci": 0.0,
+    "capacity_used": 0.6875,
+    "days_with_canary_share": 0.875,
+    "ev_negative": [],
+    "expected_wrong": 0.06631276290000276,
+    "first_canary_day": 1.0,
+    "interviews": 0.0,
+    "isolated": 1,
+    "leaks_at_accusation": 4.5,
+    "luck_adjusted": 0.6102498007493931,
+    "not_isolated": [
+     0
+    ],
+    "premature_rate": 0.5,
+    "score": 0.665,
+    "score_ci": 0.04899999999999993,
+    "wrong": 0
+   },
+   "unhinted": {
+    "abstain": 0,
+    "accuse_day_horizon21": 15.0,
+    "accused": 2,
+    "canaries": 10.5,
+    "canaries_ci": 8.82,
+    "capacity_used": 0.35,
+    "days_with_canary_share": 0.4666666666666667,
+    "ev_negative": [],
+    "expected_wrong": 0.03070304565374915,
+    "first_canary_day": 2.0,
+    "interviews": 73.5,
+    "isolated": 2,
+    "la_pct_solver": 0.7082862671435773,
+    "la_pct_solver_ci": [
+     0.457264213469094,
+     1.0085275513394345
+    ],
+    "leaks_at_accusation": 8.5,
+    "luck_adjusted": 0.4322315533978994,
+    "not_isolated": [],
+    "pct_solver": -0.3082706766917293,
+    "pct_solver_ci": [
+     -1.4492753623188408,
+     0.9218749999999999
+    ],
+    "premature_rate": 0.0,
+    "score": -0.20500000000000002,
+    "score_ci": 1.5581999999999998,
+    "wrong": 1
+   }
   },
   "inproc": {
    "abstain": 1,

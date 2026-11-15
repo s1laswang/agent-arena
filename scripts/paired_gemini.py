@@ -52,6 +52,9 @@ def groups(version: str, model: str) -> list[tuple[str, str, str]]:
     if version == "v1.4":
         g += [("OpenCode + gemini-3.5-flash over MCP (second Gemini family; the API reports modelVersion "
                "gemini-3.6-flash for this id)", "v1.4/opencode-gemini-3.5-flash", "opencode:google/gemini-3.5-flash")]
+        g += [("OpenCode + gpt-5.5 over MCP (second frontier family, OpenAI; pre-registered at cf394894; episodes where "
+               "the agent announced an accusation but never called accuse score 0 and are valid)",
+               "v1.4/opencode-gpt-5.5", "opencode:openai/gpt-5.5")]
     if version == "v1.3":
         g += [("Codex gpt-5.5 over MCP (earlier official run)", "v1.3/codex-gpt-5.5-full", "codex:gpt-5.5"),
               ("in-process gpt-5.5, fixed loop (earlier official run)", "v1.3/gpt-5.5-full", "openai:gpt-5.5")]

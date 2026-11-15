@@ -1,0 +1,73 @@
+{
+ "carbon_hard_30_59_reconciliation": {
+  "dedup_union_n6": {"dropped_duplicate_episodes":1,"luck_adjusted_ratio_pct":129,"mean_score":0.658333,"n":6,"post_expected":0.599262,"raw_ratio_pct":197,"remaining_unplayed_seeds_count":24,"seeds":[30,34,37,42,45,57],"shared_seed_precedence":"committed_g1_per_eb9dee54","shared_seeds":[34],"solver_same_seeds":0.335},
+  "fr8_replication": {"luck_adjusted_ratio_pct":110,"mean_score":0.656,"n":5,"post_expected":0.471692,"raw_ratio_pct":265,"seeds":[30,34,42,45,57],"solver_same_seeds":0.248},
+  "g1_committed_ext": {"luck_adjusted_ratio_pct":109,"mean_score":0.745,"n":2,"post_expected":0.710055,"provider_quota_excluded":31,"raw_ratio_pct":101,"seeds":[34,37],"solver_same_seeds":0.735},
+  "secondary_pooled_sensitivity": {"all_la_95ci_exclude_parity":true,"classification":"secondary_sensitivity_only","n32_la_ratio_pct":75,"n35_la_ratio_pct":77,"n36_la_ratio_pct":81}
+ },
+ "corpus_totals": {
+  "combined_v14_episodes": 777,
+  "committed_plus_g2_episodes": 532,
+  "committed_v14_episodes": 472,
+  "duplicate_episodes": 0,
+  "g2_cross_family_hard_episodes": 60,
+  "replay_mismatches": 0,
+  "replication_v14_episodes": 305
+ },
+ "deliverables": [
+  {"cohort_n_summary":"777 v1.4 pool (472 committed + 305 replication) + 60 G2 + 29 Harbor rehearsal trials","deliverable_id":"frontier_suite_master","json_rel":"results/frontier_replication/v1.4/suite_manifest_v14.json","max_json_bytes":25000,"report_rel":"docs/reports/frontier_master_index_v14.md","script_rel":"scripts/verify_frontier_suite.py","test_rel":"tests/test_frontier_suite_master.py","verify_cmd":"PYTHONPATH=. python scripts/verify_frontier_suite.py --check"},
+  {"cohort_n_summary":"777 pool (30 primary/tier, 30 gpt-5.5, 2 G1, 5 FR8, 6 union, 30 flash med)","deliverable_id":"frontier_replication","json_rel":"results/frontier_replication/v1.4/replication_summary.json","max_json_bytes":48000,"report_rel":"docs/reports/frontier_replication_v14.md","script_rel":"scripts/verify_frontier_replication.py","test_rel":"tests/test_frontier_replication.py","verify_cmd":"PYTHONPATH=. python scripts/verify_frontier_replication.py --check"},
+  {"cohort_n_summary":"60 G2 hard (30 argon + 30 hydrogen) + 60 carbon/solver = 120 paired (532 w/ committed)","deliverable_id":"frontier_g2_families","json_rel":"results/frontier_replication/v1.4/g2_families_audit.json","max_json_bytes":45000,"report_rel":"docs/reports/frontier_g2_families_v14.md","script_rel":"scripts/frontier_g2_families_audit.py","test_rel":"tests/test_frontier_g2_families_audit.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_g2_families_audit.py --check"},
+  {"cohort_n_summary":"777 pool (6 committed + 2 sharded cohorts, 71 infra exclusions, 5 timeout caps)","deliverable_id":"frontier_infra_sensitivity","json_rel":"results/frontier_replication/v1.4/infra_sensitivity.json","max_json_bytes":46080,"report_rel":"docs/reports/frontier_infra_sensitivity_v14.md","script_rel":"scripts/frontier_infra_sensitivity.py","test_rel":"tests/test_frontier_infra_sensitivity.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_infra_sensitivity.py --check"},
+  {"cohort_n_summary":"90 worlds (med 0-29, hard 0-29, hard 30-59), 14 cohorts (337 cohort eps in 777 pool)","deliverable_id":"frontier_mole_stratified_gap","json_rel":"results/frontier_replication/v1.4/mole_stratified_gap.json","max_json_bytes":45000,"report_rel":"docs/reports/frontier_mole_stratified_gap_v14.md","script_rel":"scripts/frontier_mole_stratified_gap.py","test_rel":"tests/test_frontier_mole_stratified_gap.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_mole_stratified_gap.py --check"},
+  {"cohort_n_summary":"777 pool (35/90 FR8 landed, 6/30 distinct carbon ext, 30/30 gpt-5.5, 8 preflight gates)","deliverable_id":"frontier_queue_preflight","json_rel":"results/frontier_replication/v1.4/queue_manifest.json","max_json_bytes":51200,"report_rel":null,"script_rel":"scripts/frontier_queue_preflight.py","test_rel":"tests/test_frontier_queue_preflight.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_queue_preflight.py --check --validate-template-waves"},
+  {"cohort_n_summary":"277 active episodes across 11 cohorts (6 OpenCode, 2 in-proc, 3 solver) in 777 pool","deliverable_id":"frontier_trajectory_audit","json_rel":"results/frontier_replication/v1.4/trajectory_audit.json","max_json_bytes":50000,"report_rel":"docs/reports/frontier_trajectory_audit_v14.md","script_rel":"scripts/frontier_trajectory_audit.py","test_rel":"tests/test_frontier_trajectory_audit.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_trajectory_audit.py --check"},
+  {"cohort_n_summary":"97+ OpenCode transcripts (5+ active cohorts, 10 forensic case dossiers) in 777 pool","deliverable_id":"frontier_transcript_forensics","json_rel":"results/frontier_replication/v1.4/transcript_forensics.json","max_json_bytes":45000,"report_rel":"docs/reports/frontier_transcript_forensics_v14.md","script_rel":"scripts/frontier_transcript_forensics.py","test_rel":"tests/test_frontier_transcript_forensics.py","verify_cmd":"PYTHONPATH=. python scripts/frontier_transcript_forensics.py --check"}
+ ],
+ "harbor_rehearsal": {
+  "do_nothing_ratio_pct": 0,
+  "final_branch_commit": "d0ead011",
+  "final_ratios_pct": [93,116,131],
+  "runs": [{"ci_pct":[20,371],"infra_excluded":0,"mean":0.472,"n_valid":10,"oracle_same_tasks":0.506,"ratio_pct":93,"run":"opencode-1"},{"ci_pct":[78,363],"infra_excluded":0,"mean":0.585,"n_valid":10,"oracle_same_tasks":0.506,"ratio_pct":116,"run":"opencode-2"},{"ci_pct":[86,590],"infra_excluded":1,"mean":0.626,"n_valid":9,"oracle_same_tasks":null,"ratio_pct":131,"run":"opencode-3","snapshot_0852_n_valid":7,"snapshot_0852_ratio_pct":153}],
+  "seed_range": [900000,900009],
+  "source_rel": "results/harbor/rehearsal/TABLE.md",
+  "stop_early_ratio_pct": 0,
+  "tag": "afterquery-final",
+  "tag_commit": "1bc3e281",
+  "tasks_count": 10,
+  "total_valid_opencode_trials": 29
+ },
+ "headline_and_cross_model": {
+  "fr8_flash_medium_0_29": {"agent":"opencode:google/gemini-3.5-flash","luck_adjusted_ratio_ci_pct":[45,105],"luck_adjusted_ratio_pct":75,"mean_score":0.434333,"n":30,"post_expected":0.485093,"raw_ratio_ci_pct":[29,103],"raw_ratio_pct":67,"tier":"medium"},
+  "g2_argon_hard_0_29": {"agent":"opencode:google/gemini-4-argon","exceed_3600s_count":0,"exceed_900s_count":30,"luck_adjusted_ratio_ci_pct":[33,85],"luck_adjusted_ratio_pct":60,"mean_score":0.512,"n":30,"post_expected":0.298992,"raw_ratio_ci_pct":[71,144],"raw_ratio_pct":103,"tier":"hard"},
+  "g2_hydrogen_hard_0_29": {"agent":"opencode:google/gemini-4-hydrogen","exceed_3600s_count":0,"exceed_900s_count":0,"luck_adjusted_ratio_ci_pct":[75,119],"luck_adjusted_ratio_pct":97,"mean_score":0.574667,"n":30,"post_expected":0.485277,"raw_ratio_ci_pct":[92,157],"raw_ratio_pct":115,"tier":"hard"},
+  "gpt_5_5_hard_0_29": {"accused_count":28,"agent":"opencode:openai/gpt-5.5","ci_score":0.063789,"clean_rc0_non_accuse_seeds":[0,17],"correct_count":28,"infra_excluded_attempts":0,"luck_adjusted_ratio_ci_pct":[67,103],"luck_adjusted_ratio_pct":84,"mean_score":0.503667,"n":30,"post_expected":0.417754,"raw_ratio_ci_pct":[79,140],"raw_ratio_pct":101,"solver_mean_score":0.499,"tier":"hard"},
+  "primary_carbon_hard_0_29": {"agent":"opencode:google/gemini-4-carbon","ci_score":0.198895,"luck_adjusted_ratio_ci_pct":[52,91],"luck_adjusted_ratio_pct":72,"mean_score":0.322333,"n":30,"post_expected":0.359545,"raw_ratio_ci_pct":[24,98],"raw_ratio_pct":65,"solver_mean_score":0.499,"solver_post_expected":0.499297,"tier":"hard"},
+  "primary_carbon_medium_0_29": {"agent":"opencode:google/gemini-4-carbon","luck_adjusted_ratio_ci_pct":[85,119],"luck_adjusted_ratio_pct":101,"mean_score":0.713,"n":30,"post_expected":0.651839,"raw_ratio_ci_pct":[99,127],"raw_ratio_pct":111,"solver_mean_score":0.645,"tier":"medium"}
+ },
+ "hygiene_and_caps": {
+  "all_json_within_byte_caps": true,
+  "suite_manifest_max_bytes": 25000,
+  "total_frontier_deliverables": 8,
+  "upstream_json_count": 7,
+  "zero_em_en_dashes_verified": true,
+  "zero_secrets_verified": true
+ },
+ "provenance_locks": {
+  "g1_and_g2_prereg_commit": "f9fb7a4a",
+  "gpt_5_5_prereg_commit": "cf394894",
+  "gpt_5_5_results_commit": "ca0a0dc0",
+  "primary_0_29_classification": "post_hoc_lock",
+  "primary_episodes_commit": "8fd4dec",
+  "primary_lock_commit": "671ed96",
+  "primary_lock_delay_s": 28,
+  "shared_seed_dedup_rule_commit": "eb9dee54",
+  "step_error_detail_compat_commit": "1bc3e281"
+ },
+ "pure_cpu_zero_api_calls": true,
+ "schema_version": "v1.4-frontier-suite-manifest-1",
+ "tiers_version": "v1.4",
+ "upstream_justsilas_sync_commit": "5f9b3297",
+ "zero_git_history_calls": true,
+ "zero_subprocesses": true
+}

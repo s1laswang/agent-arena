@@ -6,7 +6,7 @@ agent container holds nothing that reveals the mole.
 
 ```bash
 uv tool install harbor                       # Harbor CLI (tested: 0.26.0); needs Docker with the compose plugin
-python harbor/build.py                       # THE JUDGE SET -> harbor/dataset/canary-hard-9000{00..09}/ (10 hard tasks)
+uv run python harbor/build.py                # THE JUDGE SET -> harbor/dataset/canary-hard-9000{00..09}/ (10 hard tasks)
 harbor run -p harbor/dataset -a oracle -n 4                               # reference solver over MCP
 harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=do_nothing -n 4  # do-nothing baseline (expect 0)
 harbor run -p harbor/dataset -a oracle --ae ORACLE_POLICY=stop_early -n 4  # stop-early baseline: stops without accusing (expect exactly 0)
@@ -65,7 +65,7 @@ harbor/
 
 - Separate containers: separate filesystem, **separate PID namespace** (no `pid: host`, no shared volumes,
   no docker socket). The server's `/proc/<pid>/environ` does not exist from the agent's point of view. This closes
-  the judge-sim finding (EXPLOITS #25) where a same-uid process read the server's environ and scored 1.0.
+  the judge-sim finding (EXPLOITS #27) where a same-uid process read the server's environ and scored 1.0.
 - Defence in depth: the server reads its episode, world secret and ledger token from 0600 files through
   `mcp_server.py`'s `CANARY_EPISODE_FILE` / `CANARY_WORLD_SECRET_FILE` / `CANARY_LEDGER_TOKEN_FILE`, so even
   inside the sidecar its environ holds no seed, tier, secret or token (checked: 0 such variables in `/proc/1/environ`).

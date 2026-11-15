@@ -10,13 +10,13 @@ CANARY_TIER=medium CANARY_SEED=900007 CANARY_LEDGER_TOKEN=<random> make mcp
 | env var | default | meaning |
 |---|---|---|
 | `CANARY_HOST` / `CANARY_PORT` | `127.0.0.1` / `8765` | bind address; change the port to run several episodes in parallel |
-| `CANARY_TIER` / `CANARY_SEED` | `easy` / `900000` | the episode. Only judge (900000-900029) and held-out (800000-800199) seeds are served |
+| `CANARY_TIER` / `CANARY_SEED` | `easy` / `900000` | the episode. Only judge (900000-900039) and held-out (800000-800199) seeds are served |
 | `CANARY_ALLOW_DEV=1` | unset | also serve public dev/train seeds (internal testing only) |
 | `CANARY_LEDGER_TOKEN` | unset | grader token for `GET /ledger?token=...`; unset means `/ledger` always returns 403 |
 | `CANARY_ADMIN_TOKEN` | unset | enables `POST /admin/reset?token=...` with body `{"tier": ..., "seed": ...}` |
 | `CANARY_PROVIDER` | `template` | text provider (`gemini:<model>` in the morning) |
 
-**Judge runs: use secret files, not env vars (EXPLOITS #25).** A same-uid process can read the server's
+**Judge runs: use secret files, not env vars (EXPLOITS #27).** A same-uid process can read the server's
 exec-time environment (`/proc/<pid>/environ`, `ps eww`). Put the episode, world secret and tokens in 0600
 files instead; a `*_FILE` var wins over its plain counterpart, which is then not needed:
 

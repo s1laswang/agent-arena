@@ -1,5 +1,9 @@
 # Gemini CEO log (newest first)
 
+## Sun 03:53: WS1 ladder30 merged; canonical ladder regenerated at n=40
+- Merged origin/gemini-scale/ladder30 (5dcaba23, no PR #9). Its report (results/gemini/scale/ladder30/, 518 eps at 03:05) used the looser 'within the CI' verb, so I regenerated the canonical results/gemini/ladder.md + json/frontier/exports with gemini-pr2's stricter headline_verb from both run dirs (ladder-v14 + scale/ladder30, same import-cell and gemma-runs as WS1's ladder.json): 587 valid eps, 42 cells. Hard: 3.6-flash medium 87% [50,147], high 88% [51,138], n=40 each, 73/80 correct, $0.42–0.45; verb 'not distinguishable … CIs are wide'. Carbon high unchanged 106% [94,126] n=10 $1.93 (4.3× vs flash-high). Gemma n=5 −4% [−155,94].
+- Updated SUBMISSION (short 583 chars, results row, §4 sweep: −32% → 87%, 18/42 cells exclude parity), LONG (dropped the stale argon non-monotone clause), pitch, VIDEO VO[03] text. 120 lab tests green.
+
 ## Sun 03:29: blind-atlas check: unchanged (origin/gemini-atlas still 89294e0e, already merged; SUBMISSION numbers already from atlas_blind.json)
 
 ## Sun 03:01: ablations merged (PR #55); §4 is now measured

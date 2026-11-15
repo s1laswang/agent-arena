@@ -26,6 +26,8 @@ add v3-4k-s0@8k "H100 · 609 GRPO steps · trained 4k, EVAL 8k (X2, A100 68bbe20
     $X2E/v3-4k-s0-ctx8k-off0 $X2E/v3-4k-s0-ctx8k-off10 $X2E/v3-4k-s0-ctx8k-off20
 add v3-8k-s1 "${K8S1_GPU:-A100-80} · ${K8S1_STEPS:-?} GRPO steps · 8k" v3-verda-8k-s1
 add v3-8k-s2 "${K8S2_GPU:-H100} · ${K8S2_STEPS:-?} GRPO steps · 8k"    v3-verda-8k-s2
+add v3-8k-s3 "${K8S3_GPU:-A100-80} · ${K8S3_STEPS:-344} GRPO steps · 8k · shared secret 1ca0c2a64d" v3-verda-8k-s3
+add v3-8k-s0 "${K8S0_GPU:-H100} · ${K8S0_STEPS:-?} GRPO steps · 8k"    v3-verda-8k-s0
 python3 -m fr8.analysis.ws4_table "${ARGS[@]}" --pair base,v2,v3-4k-s0 "${INFO[@]}" --out "$OUT" >/dev/null
 # Bar: v3 held-out mean > 0 with the 95% CI excluding 0 (all-tier row).
 python3 - "$OUT" <<'EOF'

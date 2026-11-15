@@ -32,6 +32,10 @@
 | v3-8k-s2 | H100 spot · 693 GRPO steps · 8k | 800000–800029 (30) | medium | 30 | 0.000 ± 0.000 | 0.00 | 0.00 | 1.00 | 1.00 | +0.000 ± 0.000 (30 vs 12) | +0.039 ± 0.081 (30 vs 57) | +0.000 ± 0.000 (30 vs 60) |
 | v3-8k-s2 | H100 spot · 693 GRPO steps · 8k | 800000–800029 (30) | hard | 30 | -0.083 ± 0.116 | 0.13 | 0.03 | 0.87 | 0.96 | -0.083 ± 0.116 (30 vs 11) | +0.514 ± 0.173 (30 vs 57) | -0.049 ± 0.125 (30 vs 60) |
 | v3-8k-s2 | H100 spot · 693 GRPO steps · 8k | 800000–800029 (30) | all | 90 | -0.050 ± 0.049 | 0.07 | 0.01 | 0.93 | 0.96 | -0.050 ± 0.049 (90 vs 36) | +0.408 ± 0.099 (90 vs 172) | +0.098 ± 0.080 (90 vs 180) |
+| v3-8k-s3 | A100-80 on-demand · 344 GRPO steps · 8k · shared secret 1ca0c2a64d | 800000–800029 (30) | easy | 30 | -0.643 ± 0.249 | 0.90 | 0.13 | 0.10 | 0.82 | -0.643 ± 0.249 (30 vs 13) | +0.088 ± 0.296 (30 vs 58) | -0.234 ± 0.298 (30 vs 60) |
+| v3-8k-s3 | A100-80 on-demand · 344 GRPO steps · 8k · shared secret 1ca0c2a64d | 800000–800029 (30) | medium | 30 | -0.878 ± 0.166 | 1.00 | 0.07 | 0.00 | 1.00 | -0.878 ± 0.166 (30 vs 12) | -0.839 ± 0.184 (30 vs 57) | -0.878 ± 0.166 (30 vs 60) |
+| v3-8k-s3 | A100-80 on-demand · 344 GRPO steps · 8k · shared secret 1ca0c2a64d | 800000–800029 (30) | hard | 30 | -0.843 ± 0.178 | 0.97 | 0.07 | 0.03 | 0.96 | -0.843 ± 0.178 (30 vs 11) | -0.247 ± 0.219 (30 vs 57) | -0.810 ± 0.183 (30 vs 60) |
+| v3-8k-s3 | A100-80 on-demand · 344 GRPO steps · 8k · shared secret 1ca0c2a64d | 800000–800029 (30) | all | 90 | -0.788 ± 0.117 | 0.96 | 0.09 | 0.04 | 0.94 | -0.788 ± 0.117 (90 vs 36) | -0.331 ± 0.145 (90 vs 172) | -0.641 ± 0.132 (90 vs 180) |
 
 Eval: each model plays full held-out episodes alone (train.eval_hf, greedy, KV reuse, call cap 120). v3 TRAINING used solver rollouts for credit assignment (decision-point GRPO); evaluation never does.
 
@@ -43,3 +47,4 @@ Eval: each model plays full held-out episodes alone (train.eval_hf, greedy, KV r
 - v3-4k-s0@8k: -0.716 ± 0.105 (n=90) → bar NOT met
 - v3-8k-s1: -0.777 ± 0.118 (n=90) → bar NOT met
 - v3-8k-s2: -0.050 ± 0.049 (n=90) → bar NOT met
+- v3-8k-s3: -0.788 ± 0.117 (n=90) → bar NOT met

@@ -45,10 +45,10 @@ Two things would not have fit on a laptop, and they did not fit on our V100 clus
 | 01:30 | [Verda] | **v3-4k s0 training done: 609 GRPO steps in 2.0 h.** |
 | 01:35–02:12 (23:35–00:12Z) | [Verda] | Meta glasses PaliGemma 2 3B LoRA, shared on A100 `f4378173`. |
 | 02:17 | [Verda] | Backup base eval on A100 `18acfa5d`, because FR8 SSH was down. |
-| 02:39 | [Verda] | v3-4k s0 held-out eval: **−0.103 ± 0.081 (n=90), +0.306 ± 0.136 vs v2 (paired)**. v3-4k seed 1 replicate starts on an A100 spot. |
+| 02:39 | [Verda] | v3-4k s0 held-out eval: **−0.103 ± 0.081 (n=90), +0.354 ± 0.118 vs v2 (two-sample)**. v3-4k seed 1 replicate starts on an A100 spot. |
 | 02:58 | [Verda] | X1 causal-hint runners (Gemini via OpenCode) hosted on `18acfa5d`. No Verda CPU instance was free in any region. |
 | 03:02 | [Verda] | X2 DAgger box 2: A100 40GB on-demand `e9ea8b2e`. |
-| 03:30 | [Verda] | v3-4k s0 extra held-out seeds 30–59 done on A100 `68bbe201`. Pooled **n=180: −0.147 ± 0.063, +0.315 ± 0.096 vs v2 (paired, n=172)**. From 03:35 `68bbe201` becomes X2 DAgger box 1. |
+| 03:30 | [Verda] | v3-4k s0 extra held-out seeds 30–59 done on A100 `68bbe201`. Pooled **n=180: −0.147 ± 0.063, +0.310 ± 0.107 vs v2 (two-sample, 180 vs 172)**. From 03:35 `68bbe201` becomes X2 DAgger box 1. |
 | 03:08 | [Verda] | Spot A100 `714d8144` (v3-4k s1) **preempted** about 30 min in: no result. Steps so far: 8k s0 167, 8k s1 370, 8k s2 619, 8k s3 211. **€46.02 spent.** |
 | 03:10 | [Verda] | J1 restarted with `--hf-overrides` for YaRN 131k. |
 | ~07:30 | [Verda] | Reapers delete every instance (the X2 box at 08:00). Final rows land in §4. |
@@ -74,14 +74,14 @@ Two things would not have fit on a laptop, and they did not fit on our V100 clus
 - wrong accusation is −1;
 - abstaining is 0.
 
-GRPO training scores actions by letting the solver finish the episode; evaluation never does. Source: `fr8/analysis/out/ws4_table_v3s0.md` (justSilas-fr8).
+GRPO training scores actions by letting the solver finish the episode; evaluation never does. Source: `fr8/analysis/out/ws4_table_v3s0_n180.md` (justSilas-fr8, regenerated at 04:00 with two-sample Δ).
 
-| model | trained where | evaluated where | n (held-out episodes) | score ± 95% CI | accused | correct | abstain | Δ vs v2 (paired n) |
+| model | trained where | evaluated where | n (held-out episodes) | score ± 95% CI | accused | correct | abstain | Δ vs v2 (two-sample, n vs n) |
 |---|---|---|---|---|---|---|---|---|
-| base Qwen2.5-1.5B-Instruct | – | [FR8] V100 (backup run on [Verda] A100 `18acfa5d`: pending) | 16 | 0.000 ± 0.000 | 0.00 | 0.00 | 1.00 | +0.625 ± 0.245 (16) |
-| v1 SFT (J4) | [FR8] V100 | [FR8] V100 | 12 | −0.250 ± 0.256 | 0.25 | 0.00 | 0.75 | +0.333 ± 0.279 (12) |
+| base Qwen2.5-1.5B-Instruct | – | [FR8] V100 (backup run on [Verda] A100 `18acfa5d`: pending) | 16 | 0.000 ± 0.000 | 0.00 | 0.00 | 1.00 | +0.457 ± 0.086 (16 vs 172) |
+| v1 SFT (J4) | [FR8] V100 | [FR8] V100 | 12 | −0.250 ± 0.256 | 0.25 | 0.00 | 0.75 | +0.207 ± 0.270 (12 vs 172) |
 | v2 SFT, dense windows | [FR8] V100 | 82 [FR8] V100 + 90 [Verda] A100 `68bbe201` | 172 | −0.457 ± 0.086 | 0.55 | 0.05 | 0.45 | – |
-| **v3-4k s0** GRPO, 609 steps | **[Verda] H100 `3bb74f5a`** | 90 [Verda] H100 + 90 [Verda] A100 `68bbe201` | 180 | **−0.147 ± 0.063** | 0.21 | 0.03 | 0.79 | **+0.315 ± 0.096 (172)** |
+| **v3-4k s0** GRPO, 609 steps | **[Verda] H100 `3bb74f5a`** | 90 [Verda] H100 + 90 [Verda] A100 `68bbe201` | 180 | **−0.147 ± 0.063** | 0.21 | 0.03 | 0.79 | **+0.310 ± 0.107 (180 vs 172)** |
 | v3-4k s1 (replicate) | [Verda] A100 spot `714d8144` | – | **lost: spot preempted ~30 min into training** | – | | | | |
 | v3-8k s0 | [Verda] H100 `3bb74f5a` | [Verda] | pending | pending | | | | |
 | v3-8k s1 / s2 | [Verda] A100 spot / H100 spot | [Verda] | pending | pending | | | | |
@@ -90,9 +90,10 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | DAgger round 1 (from v3-4k s0) | [Verda] A100 | [Verda] | pending (`docs/reports/dagger.md`) | pending | | | | |
 
 **Reading it honestly:**
-- **v3 recovered most of v2's loss.** It is +0.315 ± 0.096 vs v2 on 172 paired held-out episodes, mostly by learning to abstain instead of accusing wrongly. On the hard tier, accusations (all wrong) fell from 0.60 to 0.03: +0.561 ± 0.147, n=57.
+- **v3 recovered most of v2's loss.** It is +0.310 ± 0.107 vs v2 (two-sample, 180 vs 172 held-out episodes), mostly by learning to abstain instead of accusing wrongly. On the hard tier, accusations (all wrong) fell from 0.60 to 0.03: +0.563 ± 0.136 (60 vs 57).
 - The first 90 episodes read −0.103 and the second 90 (seeds 30–59) −0.192; pooled, n=180, it is −0.147 ± 0.063. We report the pooled number.
-- **It does not yet beat the base model**, which abstains on every episode and scores 0: −0.062 ± 0.122 paired, n=16.
+- **It does not yet beat the base model**, which abstains on every episode and scores 0 (n=16): −0.147 ± 0.063.
+- **Correction (04:00, FR8):** these Δs were first reported as seed-paired. The evals ran without a shared `CANARY_WORLD_SECRET`, so the same seed number is a *different* held-out world in each run; all 115 step-0 employee lists differ. Pairing was invalid. Every Δ here is now two-sample, as in the regenerated `ws4_table_*.md`. The per-model means and CIs are unchanged.
 - The diagnosis, from the X2 brief:
   - v3 learned *whom* to accuse on training states: forced-accusation whom-accuracy rose from 0.19 to 0.89.
   - Those states were the last steps of *solver* trajectories, where the evidence was already gathered.
@@ -179,7 +180,7 @@ These are finalised from the ledger's delete times after the reapers.
 - **Disk:** the 48 GB root disk could not hold Qwen3-14B plus vLLM, so the weights load from `/dev/shm`.
 - **Reaper gap:** the laptop's memory-pressure killer took out the Mac-side reaper, so reapers now run on each instance. For about 2 minutes during a swap, no reaper was armed.
 - **Co-tenancy cost:** the Meta YOLO run slowed v3 s0 by about 12% for about 10 min. A PaliGemma batch-8 attempt OOM-exited at about 69 GB; it was capped at 0.58 of the card, and v3-8k s3 was unaffected.
-- **The result itself:** GRPO beat v2 but not the always-abstain base (§4). We report that rather than an unpaired best seed.
+- **The result itself:** GRPO beat v2 but not the always-abstain base (§4). We report that rather than the best single seed.
 
 ## 8. Path to scale
 

@@ -28,6 +28,9 @@ from canary.rules import TIERS_VERSION, TRACKS, tier_params
 from paired_v13 import _P_CACHE, post_expected
 
 MAX_JSON_BYTES = 45_000
+EXPECTED_COMMITTED_V14_EPISODES = 472
+EXPECTED_REPLICATION_V14_EPISODES = 305
+EXPECTED_COMBINED_V14_EPISODES = 777
 
 ENV_TOOLS: tuple[str, ...] = (
     "status",
@@ -236,6 +239,27 @@ def step_result_matches(raw_recorded: Any, replayed: dict[str, Any]) -> tuple[bo
     return matched, flags
 
 
+def is_clean_non_accuse_rc0_exit(ep: dict[str, Any], env_done: bool | None = None) -> bool:
+    meta = ep.get("meta") or {}
+    done_ok = True if env_done is None else (not env_done)
+    rc = meta.get("rc")
+    fday = ep.get("final_day")
+    end_reason = str(ep.get("end_reason") or "").lower()
+    return (
+        done_ok
+        and meta.get("valid") is not False
+        and not isinstance(rc, bool)
+        and rc == 0
+        and meta.get("error") is None
+        and "timeout" not in end_reason
+        and ep.get("accused") is None
+        and not bool(ep.get("correct"))
+        and abs(float(ep.get("score") if ep.get("score") is not None else 1.0)) < 1e-9
+        and not isinstance(fday, bool)
+        and fday == 0
+    )
+
+
 def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
     env = Env(str(ep["tier"]), int(ep["seed"]))
     step_mismatches = 0
@@ -249,6 +273,11 @@ def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
             client_only_steps += 1
             continue
         if env.done:
+            step_mismatches += 1
+            if first_bad_step is None:
+                first_bad_step = idx
+            continue
+        if str(st.get("tool")) not in ENV_TOOLS:
             step_mismatches += 1
             if first_bad_step is None:
                 first_bad_step = idx
@@ -267,15 +296,19 @@ def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
             if first_bad_step is None:
                 first_bad_step = idx
     res = env.result("replay")
+    rec_day = int(ep.get("final_day") or 0)
+    clean_zero_day = is_clean_non_accuse_rc0_exit(ep, env_done=env.done)
+    day_ok = (int(res.final_day) == rec_day) or clean_zero_day
     score_ok = (
         abs(float(res.score) - float(ep["score"])) < 1e-9
         and res.accused == ep.get("accused")
         and bool(res.correct) == bool(ep.get("correct"))
-        and int(res.final_day) == int(ep.get("final_day") or 0)
+        and day_ok
     )
     return {
         "ok": score_ok and step_mismatches == 0,
         "score_ok": score_ok,
+        "clean_zero_day_exit": clean_zero_day,
         "replay_score": float(res.score),
         "replay_accused": res.accused,
         "replay_correct": bool(res.correct),
@@ -298,6 +331,7 @@ def verify_episode_pool(episodes: list[dict[str, Any]], pool_name: str) -> dict[
     total_detail_norm = 0
     total_truncated = 0
     total_client_only = 0
+    clean_zero_day_seeds: list[int] = []
     for ep in episodes:
         key = (str(ep["agent"]), str(ep["tier"]), int(ep["seed"]))
         if key in seen:
@@ -309,6 +343,8 @@ def verify_episode_pool(episodes: list[dict[str, Any]], pool_name: str) -> dict[
         total_detail_norm += int(rep["detail_normalized_steps"])
         total_truncated += int(rep["truncated_steps_verified"])
         total_client_only += int(rep["client_only_steps"])
+        if rep["clean_zero_day_exit"]:
+            clean_zero_day_seeds.append(key[2])
         if not rep["ok"]:
             mismatches.append(
                 {
@@ -320,6 +356,8 @@ def verify_episode_pool(episodes: list[dict[str, Any]], pool_name: str) -> dict[
                     "replay_score": rep["replay_score"],
                     "recorded_accused": ep.get("accused"),
                     "replay_accused": rep["replay_accused"],
+                    "recorded_final_day": ep.get("final_day"),
+                    "replay_final_day": rep["replay_final_day"],
                     "step_mismatches": rep["step_mismatches"],
                     "first_bad_step": rep["first_bad_step"],
                 }
@@ -339,6 +377,7 @@ def verify_episode_pool(episodes: list[dict[str, Any]], pool_name: str) -> dict[
         "unwrapped_mcp_error_steps": total_unwrapped,
         "truncated_output_steps_verified": total_truncated,
         "client_only_steps": total_client_only,
+        "clean_rc0_non_accuse_zero_day_seeds": sorted(clean_zero_day_seeds),
     }
 
 
@@ -883,6 +922,20 @@ def compute_audit(
         comm_eps = load_runs(comm_v14)
         rep_eps = load_runs(rep_v14)
 
+        if enforce_expected_counts:
+            if len(comm_eps) != EXPECTED_COMMITTED_V14_EPISODES:
+                raise ValueError(
+                    f"committed v1.4 expected {EXPECTED_COMMITTED_V14_EPISODES} episodes, got {len(comm_eps)}"
+                )
+            if len(rep_eps) != EXPECTED_REPLICATION_V14_EPISODES:
+                raise ValueError(
+                    f"replication v1.4 expected {EXPECTED_REPLICATION_V14_EPISODES} episodes, got {len(rep_eps)}"
+                )
+            if len(comm_eps) + len(rep_eps) != EXPECTED_COMBINED_V14_EPISODES:
+                raise ValueError(
+                    f"combined v1.4 expected {EXPECTED_COMBINED_V14_EPISODES} episodes, got {len(comm_eps) + len(rep_eps)}"
+                )
+
         if verify_replays:
             comm_pool_audit = verify_episode_pool(comm_eps, "data/runs/committed/v1.4")
             rep_pool_audit = verify_episode_pool(rep_eps, "results/frontier_replication/v1.4")
@@ -898,6 +951,9 @@ def compute_audit(
                 "unwrapped_mcp_error_steps": 0,
                 "truncated_output_steps_verified": 0,
                 "client_only_steps": 0,
+                "clean_rc0_non_accuse_zero_day_seeds": sorted(
+                    int(e["seed"]) for e in comm_eps if is_clean_non_accuse_rc0_exit(e)
+                ),
             }
             rep_pool_audit = {
                 "pool": "results/frontier_replication/v1.4",
@@ -910,6 +966,9 @@ def compute_audit(
                 "unwrapped_mcp_error_steps": 0,
                 "truncated_output_steps_verified": 0,
                 "client_only_steps": 0,
+                "clean_rc0_non_accuse_zero_day_seeds": sorted(
+                    int(e["seed"]) for e in rep_eps if is_clean_non_accuse_rc0_exit(e)
+                ),
             }
 
         include_flash_hard = gap_ships_flash_hard(root)
@@ -986,6 +1045,18 @@ def compute_audit(
             "hard",
             0,
             29,
+        )
+        gpt55_hard_dir = root / "data" / "runs" / "committed" / "v1.4" / "opencode-gpt-5.5" / "hard"
+        oc_gpt55_h0 = (
+            _select(
+                "data/runs/committed/v1.4/opencode-gpt-5.5/hard",
+                "opencode:openai/gpt-5.5",
+                "hard",
+                0,
+                29,
+            )
+            if gpt55_hard_dir.is_dir() or enforce_expected_counts
+            else []
         )
         oc_f_h0 = (
             _select(
@@ -1098,6 +1169,22 @@ def compute_audit(
                 pe_memo=pe_memo,
             ),
         ]
+        if oc_gpt55_h0 or enforce_expected_counts:
+            hard_0_29_cohorts.append(
+                compute_cohort_stratification(
+                    "opencode_gpt55_hard_0_29",
+                    "OpenCode gpt-5.5 hard (0-29)",
+                    "opencode:openai/gpt-5.5",
+                    "opencode",
+                    "hard",
+                    "committed",
+                    oc_gpt55_h0,
+                    h0_profiles,
+                    sol_h0_map,
+                    expected_n=exp(30),
+                    pe_memo=pe_memo,
+                )
+            )
         if include_flash_hard:
             hard_0_29_cohorts.append(
                 compute_cohort_stratification(
@@ -1257,7 +1344,10 @@ def compute_audit(
         union_seeds = [int(e["seed"]) for e in union_ext_h30]
         union_dept_sizes = [int(h30_profiles[s]["mole_dept_size"]) for s in union_seeds]
 
-        carbon_hard_row = hard_0_29_cohorts[1]
+        h0_by_id = {c["cohort_id"]: c for c in hard_0_29_cohorts}
+        carbon_hard_row = h0_by_id["opencode_carbon_hard_0_29"]
+        gpt55_hard_row = h0_by_id.get("opencode_gpt55_hard_0_29")
+        flash_hard_row = h0_by_id.get("opencode_flash_hard_0_29")
         flash_med_row = medium_0_29_cohorts[3]
         grok_ext_row = ext_hard_30_59_cohorts[1]
         heur_ext_row = ext_hard_30_59_cohorts[2]
@@ -1316,9 +1406,13 @@ def compute_audit(
                 }
             ),
         }
-        if include_flash_hard:
+        if gpt55_hard_row is not None:
+            gap_drivers["primary_gpt55_hard_by_mole_archetype"] = _rank_gap_drivers(
+                gpt55_hard_row, "by_mole_archetype"
+            )
+        if include_flash_hard and flash_hard_row is not None:
             gap_drivers["primary_flash_hard_by_mole_archetype"] = _rank_gap_drivers(
-                hard_0_29_cohorts[3], "by_mole_archetype"
+                flash_hard_row, "by_mole_archetype"
             )
 
         solver_solvability = _build_solver_solvability_summary(
@@ -1374,11 +1468,20 @@ def compute_audit(
                     "gpt_5_5_hard_0_29": {
                         "classification": "pre_registered",
                         "prereg_commit": "cf394894",
+                        "results_commit": "ca0a0dc0",
+                        "upstream_sync_commit": "5f9b3297",
+                        "run_dir": "data/runs/committed/v1.4/opencode-gpt-5.5/hard",
                         "timeout_cap_s": 7200,
                         "spend_cap_usd": 200,
                         "opencode_version": "1.19.5",
                         "committed_v14_episodes": sum(
                             1 for e in comm_eps if "gpt-5.5" in str(e.get("agent") or "")
+                        ),
+                        "clean_rc0_non_accuse_zero_day_seeds": sorted(
+                            int(e["seed"])
+                            for e in comm_eps
+                            if "gpt-5.5" in str(e.get("agent") or "")
+                            and is_clean_non_accuse_rc0_exit(e)
                         ),
                     },
                     "step_error_detail_compat": {
@@ -1386,7 +1489,8 @@ def compute_audit(
                         "rule": (
                             "Unwrap OpenCode stringified MCP error JSON via norm_result first, then match "
                             "pre-1bc3e281 data={} against live Env.call data={'detail': ...} when 'detail' "
-                            "is absent from recorded data."
+                            "is absent from recorded data; allow final_day=0 on clean rc=0 non-accuse exits "
+                            "(is_clean_non_accuse_rc0_exit) while rejecting timeouts, rc!=0, and tampered scores."
                         ),
                     },
                 },
@@ -1575,9 +1679,11 @@ def render_markdown(audit: dict[str, Any]) -> str:
     m0_cohorts = blocks["primary_and_fr8_medium_0_29"]
     h30_cohorts = blocks["extension_hard_30_59"]
 
-    sol_h0 = h0_cohorts[0]
-    oc_c_h0 = h0_cohorts[1]
-    oc_f_h0 = h0_cohorts[3] if include_flash_hard and len(h0_cohorts) > 3 else None
+    h0_by_id = {c["cohort_id"]: c for c in h0_cohorts}
+    sol_h0 = h0_by_id["solver_hard_0_29"]
+    oc_c_h0 = h0_by_id["opencode_carbon_hard_0_29"]
+    oc_gpt55_h0 = h0_by_id.get("opencode_gpt55_hard_0_29")
+    oc_f_h0 = h0_by_id.get("opencode_flash_hard_0_29") if include_flash_hard else None
 
     sol_m0 = m0_cohorts[0]
     oc_c_m0 = m0_cohorts[1]
@@ -1610,6 +1716,23 @@ def render_markdown(audit: dict[str, Any]) -> str:
     oc_f_m0_stealth = unpack_stratum_metrics(oc_f_m0["by_mole_archetype"]["low_tempo_stealth"])
     ip_c_m0_crowd = unpack_stratum_metrics(ip_c_m0["by_dept_stratum"]["crowded_dept"])
 
+    if oc_gpt55_h0 is not None:
+        gpt_crowd = unpack_stratum_metrics(oc_gpt55_h0["by_mole_archetype"]["deep_crowd_camouflage"])
+        gpt_cdept = unpack_stratum_metrics(oc_gpt55_h0["by_dept_stratum"]["crowded_dept"])
+        gpt_stealth = unpack_stratum_metrics(oc_gpt55_h0["by_mole_archetype"]["low_tempo_stealth"])
+        gpt_contrast = (
+            f" By contrast, OpenCode `gpt-5.5` (`n={oc_gpt55_h0['n']}`, raw `{_signed(oc_gpt55_h0['overall']['raw'])}`, "
+            f"luck-adjusted `{_signed(oc_gpt55_h0['overall']['luck'])}`, `{_pct(oc_gpt55_h0['overall']['ratio'])}` of solver "
+            f"luck-adjusted, `{_pct(oc_gpt55_h0['overall']['acc'])}` accuracy) plants about 2 canaries/day and reaches "
+            f"`{_pct(gpt_crowd['acc'])}` accuracy on `deep_crowd_camouflage` (`n={gpt_crowd['n']}`, raw `{_signed(gpt_crowd['raw'])}`, "
+            f"luck-adjusted `{_signed(gpt_crowd['luck'])}`) and `{_pct(gpt_cdept['acc'])}` on `crowded_dept` (`n={gpt_cdept['n']}`, "
+            f"raw `{_signed(gpt_cdept['raw'])}`, luck-adjusted `{_signed(gpt_cdept['luck'])}`), while both of its clean `rc=0` "
+            f"non-accuse `final_day=0` prose stops (`seeds {prov['gpt_5_5_hard_0_29']['clean_rc0_non_accuse_zero_day_seeds']}`) "
+            f"occur in `low_tempo_stealth` (`n={gpt_stealth['n']}`, abstain `{_pct(gpt_stealth['abst'])}`)."
+        )
+    else:
+        gpt_contrast = ""
+
     arch_lucks = [float(hp_arch[a]["luck"]) for a in MOLE_ARCHETYPES if hp_arch[a]["luck"] is not None]
     min_arch_luck = min(arch_lucks) if arch_lucks else None
     max_arch_luck = max(arch_lucks) if arch_lucks else None
@@ -1633,6 +1756,13 @@ def render_markdown(audit: dict[str, Any]) -> str:
             "medium (`seeds 0-29`, `n=30`) is reported in full below."
         )
 
+    clean_zero_seeds = comm_rv.get("clean_rc0_non_accuse_zero_day_seeds") or []
+    clean_zero_clause = (
+        f" and verifying `{len(clean_zero_seeds)}` clean `rc=0` non-accuse `final_day=0` exits (`seeds {clean_zero_seeds}`)"
+        if clean_zero_seeds
+        else ""
+    )
+
     lines: list[str] = [
         _md_heading(1, "Canary v1.4 Mole-Archetype and Seed-Difficulty Stratified Gap Audit"),
         "",
@@ -1653,7 +1783,7 @@ def render_markdown(audit: dict[str, Any]) -> str:
             "This report addresses the orthogonal **across-seed structural and mole-archetype question**: "
             "(1) whether every mole archetype and department-anonymity stratum is reliably solvable by the "
             "Bayesian reference solver, and (2) which specific mole archetypes and world difficulty strata "
-            "drive the luck-adjusted frontier gap across `gemini-4-carbon`, `gemini-3.5-flash`, and "
+            "drive the luck-adjusted frontier gap across `gemini-4-carbon`, `gpt-5.5`, `gemini-3.5-flash`, and "
             "non-Bayesian baselines."
         ),
         "",
@@ -1666,7 +1796,7 @@ def render_markdown(audit: dict[str, Any]) -> str:
         _md_heading(2, "1. Provenance Honesty (Panel Fixes A/C/D), Replay Integrity, and Headline Findings"),
         "",
         (
-            f"- **Provenance & registration honesty (Panel Fixes A/C/D):** Primary `seeds 0-29` "
+            f"- **Provenance & registration honesty (Panel Fixes A/C/D, synced through `{prov['gpt_5_5_hard_0_29']['upstream_sync_commit']}`):** Primary `seeds 0-29` "
             f"(`data/runs/committed/v1.4/`, committed in `{prov['primary_0_29_lock']['episodes_commit']}`) "
             f"are governed by a **post-hoc lock** (`{prov['primary_0_29_lock']['lock_commit']}`, committed "
             f"`{prov['primary_0_29_lock']['lock_delay_s']} s` after `{prov['primary_0_29_lock']['episodes_commit']}`) "
@@ -1675,10 +1805,13 @@ def render_markdown(audit: dict[str, Any]) -> str:
             f"(`{prov['g1_hard_30_59_extension']['prereg_commit']}`, `opencode-gemini-4-carbon-ext/hard`, "
             f"`n={prov['g1_hard_30_59_extension']['n']}`, completed `seeds {prov['g1_hard_30_59_extension']['completed_seeds']}` "
             "before stopping to preserve shared carbon quota for the Harbor rehearsal) and the second frontier "
-            f"family `gpt-5.5` (`{prov['gpt_5_5_hard_0_29']['prereg_commit']}`, OpenCode "
+            f"family `gpt-5.5` (`{prov['gpt_5_5_hard_0_29']['prereg_commit']}`, shipped in `{prov['gpt_5_5_hard_0_29']['results_commit']}` "
+            f"at `{prov['gpt_5_5_hard_0_29']['run_dir']}`, OpenCode "
             f"`{prov['gpt_5_5_hard_0_29']['opencode_version']}`, `{prov['gpt_5_5_hard_0_29']['timeout_cap_s']} s` "
-            f"per-episode cap, `${prov['gpt_5_5_hard_0_29']['spend_cap_usd']}` spend cap, currently "
-            f"`{prov['gpt_5_5_hard_0_29']['committed_v14_episodes']}` committed `v1.4` episodes) were "
+            f"per-episode cap, `${prov['gpt_5_5_hard_0_29']['spend_cap_usd']}` spend cap, "
+            f"`{prov['gpt_5_5_hard_0_29']['committed_v14_episodes']}` committed `v1.4` episodes with `0` infra exclusions "
+            f"and `{len(prov['gpt_5_5_hard_0_29']['clean_rc0_non_accuse_zero_day_seeds'])}` clean `rc=0` non-accuse "
+            f"`final_day=0` exits on `seeds {prov['gpt_5_5_hard_0_29']['clean_rc0_non_accuse_zero_day_seeds']}`) were "
             "**pre-registered** before any episode ran."
         ),
         (
@@ -1690,7 +1823,7 @@ def render_markdown(audit: dict[str, Any]) -> str:
             f"MCP error JSON first (`{comm_rv['unwrapped_mcp_error_steps']}` committed, "
             f"`{rep_rv['unwrapped_mcp_error_steps']}` replication steps) before matching pre-`1bc3e281` "
             f"`data={{}}` against live `data={{'detail': ...}}` (`{comm_rv['pre_1bc3e281_detail_normalized_steps']}` "
-            f"committed, `{rep_rv['pre_1bc3e281_detail_normalized_steps']}` replication steps)."
+            f"committed, `{rep_rv['pre_1bc3e281_detail_normalized_steps']}` replication steps){clean_zero_clause}."
         ),
         (
             "- **Every mole archetype and department stratum is reliably solved by the reference solver:** "
@@ -1724,7 +1857,7 @@ def render_markdown(audit: dict[str, Any]) -> str:
             f"**`{c_sol_top[0]['stratum']}`** (`solver_day 9-12`, `n={c_sol_top[0]['n']}`, luck-adjusted gap "
             f"`{_signed(c_sol_top[0]['luck_adj_gap'])}`). On `decoy_entangled` (`n={oc_c_decoy['n']}`), "
             "`gemini-4-carbon` is not fooled by the angry-message decoy "
-            f"(luck-adjusted `{_signed(oc_c_decoy['luck'])}` vs solver `{_signed(sol_h0_decoy['luck'])}`)."
+            f"(luck-adjusted `{_signed(oc_c_decoy['luck'])}` vs solver `{_signed(sol_h0_decoy['luck'])}`).{gpt_contrast}"
         ),
         (
             "- **Extension hard `30-59` confirms both baseline scaling fragility and partial-cohort selection structure:** "
@@ -1930,7 +2063,8 @@ def check_outputs(root: Path = ROOT, out_json: Path | None = None, out_md: Path 
     print(
         f"OK mole_stratified_gap=PASS worlds={summ['worlds_extracted']} "
         f"committed_replays={summ['committed_v14_verified']} "
-        f"replication_replays={summ['replication_v14_verified']}"
+        f"replication_replays={summ['replication_v14_verified']} "
+        f"combined_replays={summ['total_pool_episodes_replay_verified']}"
     )
     return 0
 

@@ -91,7 +91,10 @@ def test_check_cli_offline_zero_subprocess_and_size_cap(computed_audit, monkeypa
     )
     assert fms.main(["--check"]) == 0
     out = capsys.readouterr().out
-    assert "OK mole_stratified_gap=PASS worlds=90 committed_replays=442 replication_replays=305" in out
+    assert (
+        "OK mole_stratified_gap=PASS worlds=90 committed_replays=472 "
+        "replication_replays=305 combined_replays=777"
+    ) in out
     assert fms.MAX_JSON_BYTES == 45_000
     assert JSON_PATH.stat().st_size < 45_000
     assert JSON_PATH.stat().st_size <= fms.MAX_JSON_BYTES
@@ -135,6 +138,11 @@ def test_gitless_real_compute_without_git_dir(monkeypatch, tmp_path):
         (
             "data/runs/committed/v1.4/inproc-gemini-4-carbon/hard",
             {"gemini:gemini-4-carbon"},
+            {0, 1, 2, 5},
+        ),
+        (
+            "data/runs/committed/v1.4/opencode-gpt-5.5/hard",
+            {"opencode:openai/gpt-5.5"},
             {0, 1, 2, 5},
         ),
         (
@@ -198,6 +206,7 @@ def test_gitless_real_compute_without_git_dir(monkeypatch, tmp_path):
     assert audit_no_git["zero_live_api_calls"] is True
     assert audit_no_git["summary"]["worlds_extracted"] == 10
     assert audit_no_git["replay_verification"]["committed_v14"]["mismatches"] == 0
+    assert audit_no_git["replay_verification"]["committed_v14"]["clean_rc0_non_accuse_zero_day_seeds"] == [0]
     assert audit_no_git["replay_verification"]["replication_v14"]["mismatches"] == 0
     assert len(fms.serialize_audit_json(audit_no_git).encode("utf-8")) < 45_000
     assert "Canary v1.4 Mole-Archetype" in fms.render_markdown(audit_no_git)
@@ -224,18 +233,23 @@ def test_provenance_honesty_and_replay_invariants(computed_audit):
 
     assert prov["gpt_5_5_hard_0_29"]["classification"] == "pre_registered"
     assert prov["gpt_5_5_hard_0_29"]["prereg_commit"] == "cf394894"
+    assert prov["gpt_5_5_hard_0_29"]["results_commit"] == "ca0a0dc0"
+    assert prov["gpt_5_5_hard_0_29"]["upstream_sync_commit"] == "5f9b3297"
     assert prov["gpt_5_5_hard_0_29"]["timeout_cap_s"] == 7200
     assert prov["gpt_5_5_hard_0_29"]["spend_cap_usd"] == 200
+    assert prov["gpt_5_5_hard_0_29"]["committed_v14_episodes"] == 30
+    assert prov["gpt_5_5_hard_0_29"]["clean_rc0_non_accuse_zero_day_seeds"] == [0, 17]
     assert prov["step_error_detail_compat"]["commit"] == "1bc3e281"
 
     rv = computed_audit["replay_verification"]
-    assert rv["committed_v14"]["total"] == 442
-    assert rv["committed_v14"]["verified"] == 442
+    assert rv["committed_v14"]["total"] == 472
+    assert rv["committed_v14"]["verified"] == 472
     assert rv["committed_v14"]["mismatches"] == 0
     assert rv["committed_v14"]["step_mismatches"] == 0
     assert rv["committed_v14"]["duplicates"] == 0
     assert rv["committed_v14"]["pre_1bc3e281_detail_normalized_steps"] == 321
-    assert rv["committed_v14"]["unwrapped_mcp_error_steps"] == 80
+    assert rv["committed_v14"]["unwrapped_mcp_error_steps"] == 84
+    assert rv["committed_v14"]["clean_rc0_non_accuse_zero_day_seeds"] == [0, 17]
 
     assert rv["replication_v14"]["total"] == 305
     assert rv["replication_v14"]["verified"] == 305
@@ -244,13 +258,28 @@ def test_provenance_honesty_and_replay_invariants(computed_audit):
     assert rv["replication_v14"]["duplicates"] == 0
     assert rv["replication_v14"]["pre_1bc3e281_detail_normalized_steps"] == 156
     assert rv["replication_v14"]["unwrapped_mcp_error_steps"] == 24
+    assert rv["replication_v14"]["clean_rc0_non_accuse_zero_day_seeds"] == []
 
     summ = computed_audit["summary"]
     assert summ["worlds_extracted"] == 90
-    assert summ["total_pool_episodes_replay_verified"] == 747
+    assert summ["committed_v14_total"] == 472
+    assert summ["committed_v14_verified"] == 472
+    assert summ["total_pool_episodes_replay_verified"] == 777
 
     md = MD_PATH.read_text(encoding="utf-8")
-    for required in ("post-hoc lock", "671ed96", "8fd4dec", "f9fb7a4a", "cf394894", "7200 s", "1bc3e281"):
+    for required in (
+        "post-hoc lock",
+        "671ed96",
+        "8fd4dec",
+        "f9fb7a4a",
+        "cf394894",
+        "ca0a0dc0",
+        "5f9b3297",
+        "7200 s",
+        "1bc3e281",
+        "472/472",
+        "777/777",
+    ):
         assert required in md
 
 
@@ -299,6 +328,15 @@ def test_seed_profiles_solvability_and_stratified_gap_drivers(computed_audit):
         total_n = sum(fms.unpack_stratum_metrics(oc_c[ax_key][k])["n"] for k in expected_keys)
         assert total_n == 30
 
+    oc_gpt = h0["opencode_gpt55_hard_0_29"]
+    assert round(oc_gpt["overall"]["raw"], 3) == 0.504
+    assert round(oc_gpt["overall"]["luck"], 3) == 0.418
+    assert round(oc_gpt["overall"]["acc"], 3) == 0.933
+    assert round(oc_gpt["overall"]["ratio"] * 100) == 84
+    assert fms.unpack_stratum_metrics(oc_gpt["by_mole_archetype"]["deep_crowd_camouflage"])["acc"] == 1.0
+    assert fms.unpack_stratum_metrics(oc_gpt["by_dept_stratum"]["crowded_dept"])["acc"] == 1.0
+    assert round(fms.unpack_stratum_metrics(oc_gpt["by_mole_archetype"]["low_tempo_stealth"])["abst"], 3) == 0.200
+
     drv = computed_audit["gap_drivers"]
     assert [r["stratum"] for r in drv["primary_carbon_hard_by_mole_archetype"][:2]] == [
         "deep_crowd_camouflage",
@@ -332,9 +370,11 @@ def test_gap_ships_flash_hard_false_and_true(monkeypatch, tmp_path):
     audit_false = fms.compute_audit(root=syn_root, verify_replays=False, enforce_expected_counts=True)
     assert audit_false["flash_hard_shipped_in_gap_md"] is False
     assert audit_false["summary"]["flash_hard_held_pending_gap_md"] is True
-    assert audit_false["summary"]["cohort_count"] == 13
-    assert len(audit_false["blocks"]["primary_hard_0_29"]) == 3
+    assert audit_false["summary"]["cohort_count"] == 14
+    assert len(audit_false["blocks"]["primary_hard_0_29"]) == 4
+    assert audit_false["blocks"]["primary_hard_0_29"][3]["cohort_id"] == "opencode_gpt55_hard_0_29"
     assert "primary_flash_hard_by_mole_archetype" not in audit_false["gap_drivers"]
+    assert "primary_gpt55_hard_by_mole_archetype" in audit_false["gap_drivers"]
     md_false = fms.render_markdown(audit_false)
     assert "gated out of primary hard tables" in md_false
     assert "OpenCode gemini-3.5-flash hard (0-29)" not in md_false
@@ -348,9 +388,9 @@ def test_gap_ships_flash_hard_false_and_true(monkeypatch, tmp_path):
     audit_true = fms.compute_audit(root=syn_root, verify_replays=False, enforce_expected_counts=True)
     assert audit_true["flash_hard_shipped_in_gap_md"] is True
     assert audit_true["summary"]["flash_hard_held_pending_gap_md"] is False
-    assert audit_true["summary"]["cohort_count"] == 14
-    assert len(audit_true["blocks"]["primary_hard_0_29"]) == 4
-    assert audit_true["blocks"]["primary_hard_0_29"][3]["cohort_id"] == "opencode_flash_hard_0_29"
+    assert audit_true["summary"]["cohort_count"] == 15
+    assert len(audit_true["blocks"]["primary_hard_0_29"]) == 5
+    assert audit_true["blocks"]["primary_hard_0_29"][4]["cohort_id"] == "opencode_flash_hard_0_29"
     assert "primary_flash_hard_by_mole_archetype" in audit_true["gap_drivers"]
     json_true_bytes = len(fms.serialize_audit_json(audit_true).encode("utf-8"))
     assert json_true_bytes < 45_000
@@ -443,8 +483,32 @@ def test_step_compat_classifiers_and_tamper_detection(computed_audit, monkeypatc
     assert fms.verify_episode_pool([first_ep], "unit_ok")["verified"] == 1
     with pytest.raises(ValueError, match="replay mismatches"):
         fms.verify_episode_pool([dict(first_ep, score=float(first_ep["score"]) + 0.25)], "unit_bad_score")
+    with pytest.raises(ValueError, match="replay mismatches"):
+        fms.verify_episode_pool([dict(first_ep, final_day=0)], "unit_tampered_done_zero_day")
     with pytest.raises(ValueError, match="duplicate episodes"):
         fms.verify_episode_pool([first_ep, dict(first_ep)], "unit_dup")
+
+    gpt55_path = ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gpt-5.5" / "hard" / "episodes.jsonl"
+    gpt55_s0 = json.loads(gpt55_path.read_text(encoding="utf-8").splitlines()[0])
+    assert int(gpt55_s0["seed"]) == 0
+    assert fms.is_clean_non_accuse_rc0_exit(gpt55_s0, env_done=False) is True
+    assert fms.is_clean_non_accuse_rc0_exit(gpt55_s0, env_done=True) is False
+    assert fms.verify_episode_pool([gpt55_s0], "unit_gpt55_clean_rc0")[
+        "clean_rc0_non_accuse_zero_day_seeds"
+    ] == [0]
+
+    for bad_variant in (
+        {**gpt55_s0, "meta": {**gpt55_s0["meta"], "rc": 124}},
+        {**gpt55_s0, "meta": {**gpt55_s0["meta"], "rc": False}},
+        {**gpt55_s0, "meta": {**gpt55_s0["meta"], "valid": False}},
+        {**gpt55_s0, "meta": {**gpt55_s0["meta"], "error": "timeout"}},
+        {**gpt55_s0, "end_reason": "timeout"},
+        {**gpt55_s0, "score": 0.25},
+        {**gpt55_s0, "accused": "e00"},
+        {**gpt55_s0, "final_day": 3},
+    ):
+        with pytest.raises(ValueError, match="replay mismatches"):
+            fms.verify_episode_pool([bad_variant], "unit_gpt55_tampered")
 
 
 def test_strict_hygiene_no_hash_in_py_and_no_em_en_dashes():

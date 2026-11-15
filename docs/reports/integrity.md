@@ -152,8 +152,14 @@ The canonical exploit ledger is [docs/EXPLOITS.md](../EXPLOITS.md) ("Judges: sta
 
 ### 01:40 gate: expert tier (justSilas-expert)
 
-Pending.
+Not applicable: the expert tier was not merged (gemini-4-carbon held 84% [52%, 128%] luck-adjusted on it, n=13), so there is nothing to hunt on `justSilas`. Its own hunt and battery were clean on its branch (head-agents, 00:55).
 
-### ~07:00: `afterquery-final` judge-protocol hunt
+### 05:10-05:25 Sun 15 Nov: `afterquery-final` (1bc3e281) judge-protocol hunt (run by the CEO session; S3 had closed)
 
-Pending.
+All on the tagged code, one at a time, no keys, no Docker:
+- `python scripts/judge_hunt.py --out results/anticheat/judge_hunt.md`: **12 of 12 held** on the real MCP server (52 s; exit 0).
+- `make hunt`: best non-solver score **0.000** and **0 invariant violations** in every mode (random, malformed, evolve, parallel_accuse) on every tier and track (4 min 57 s).
+- `make reproduce` (full, 40 judge seeds per tier): exit 0; `ANTI-CHEAT: every probe blocked, every replayable episode and Harbor trial consistent`; HEADLINE unchanged (65% [24%, 98%]).
+- `make anticheat-verify`: 99 rows rerun, **0 differences**. `make test`: 1,057 passed. `make accept`: PASS=20, FAIL=0.
+- New in the tag and covered by these runs: tool errors carry `data.detail`. An integrity property test (`tests/test_integrity_props.py::test_props_under_evolved_moles`) caught a first draft whose example id could coincide with the mole's id; the example was removed before the tag, and `tests/test_env.py::test_error_detail_does_not_depend_on_who_the_mole_is` now guards it.
+- Gemini red-team phase 1 (Gemini session, PR #65 into gemini-pr2): 424 ledger-verified attacks on 469338f6, 0 verified exploits. Phase 2 runs on the tag.

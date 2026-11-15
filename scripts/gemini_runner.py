@@ -35,7 +35,7 @@ import time
 from pathlib import Path
 
 UV = ["uv", "run", "--python", "3.12", "--extra", "llm", "--extra", "dev", "python", "-W", "ignore"]
-RATE = re.compile(r"RESOURCE_EXHAUSTED|\b429\b|rate.?limit|Quota exceeded", re.I)
+RATE = re.compile(r"RESOURCE_EXHAUSTED|\b429\b|rate.?limit|Quota exceeded|provider_quota|provider_rate_limit", re.I)
 INPROC_INFRA = re.compile(r"ClientError|ServerError|APIError|RESOURCE_EXHAUSTED|UNAVAILABLE|INTERNAL|\b5\d\d\b|\b429\b|"
                           r"ConnectError|ConnectTimeout|ReadTimeout|ReadError|RemoteProtocolError|Server disconnected|"
                           r"Connection|Timeout|SSLError|ssl", re.I)

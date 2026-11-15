@@ -121,8 +121,9 @@ def test_reproducibility_doc_completeness_and_sync():
     txt = REPRO_DOC_PATH.read_text(encoding="utf-8")
     required_tokens = (
         "a8f99c2537c91d72",
-        "989/999",
-        "49,549",
+        "1021/1031",
+        "51,814",
+        "442/442",
         "80/80",
         "18/18",
         "rehearsal-dry",

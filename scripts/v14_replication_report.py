@@ -23,7 +23,7 @@ PRIMARY_SEEDS = frozenset(range(0, 30))
 EXTENSION_SEEDS = frozenset(range(30, 60))
 POOLED_SEEDS = frozenset(range(0, 60))
 DEFAULT_PRIMARY_ROOT = "data/runs/committed/v1.4"
-DEFAULT_REPLICATION_ROOT = "results/replication/v1.4"
+DEFAULT_REPLICATION_ROOT = "results/selected_fleet_replication/v1.4"
 DEFAULT_OUT_MD = "docs/reports/v14_seeds30to59_replication.md"
 
 REFERENCE_AGENTS_ORDER: tuple[tuple[str, str], ...] = (
@@ -480,7 +480,7 @@ def analyze_v14_root(
     if ext_oc_hard_eps:
         extension_rows.append(
             _summarize_row(
-                "OpenCode + gemini-4-carbon over MCP (out-of-sample replication)",
+                "OpenCode + gemini-4-carbon over MCP (selected fleet replication, incomplete 30-59)",
                 "opencode:google/gemini-4-carbon",
                 "hard",
                 ext_oc_hard_eps,
@@ -491,7 +491,7 @@ def analyze_v14_root(
         if same_k_sol:
             extension_rows.append(
                 _summarize_row(
-                    f"solver-hard-seeds30to59 (paired on the {len(same_k_sol)} completed frontier seed(s))",
+                    f"solver-hard-seeds30to59 (paired on the {len(same_k_sol)} selected fleet seed(s))",
                     "solver",
                     "hard",
                     same_k_sol,
@@ -512,7 +512,7 @@ def analyze_v14_root(
     if pooled_oc_hard_eps:
         pooled_rows.append(
             _summarize_row(
-                "OpenCode + gemini-4-carbon over MCP (pooled 0-29 + verified 30-59)",
+                "OpenCode + gemini-4-carbon over MCP (exploratory pool: 0-29 + selected fleet 30-59)",
                 "opencode:google/gemini-4-carbon",
                 "hard",
                 pooled_oc_hard_eps,
@@ -641,12 +641,12 @@ def render_markdown(data: dict[str, Any]) -> str:
     ext_seeds_txt = ", ".join(str(s) for s in ext_seeds) if ext_seeds else "none"
 
     lines: list[str] = [
-        f"{H1} v1.4 Out-of-Sample Replication Report: Seeds 0-29 Primary vs Seeds 30-59 Extension",
+        f"{H1} v1.4 Selected Fleet Replication (Non-Primary, Incomplete 30-59 Cohort)",
         "",
         f"{H2} Pre-Registered Framing and Headline Summary",
         "",
-        "Per the pre-registered seed protocol in [gap.md](gap.md) (commit `671ed96`, locked before any fleet rerun landed), "
-        "Canary reports the two v1.4 `hard` evaluation cohorts strictly separately:",
+        "Per the pre-registered seed and extension rules in [gap.md](gap.md) (commits `671ed96` and `f9fb7a4a`), "
+        "Canary reports the primary `0-29` `hard` headline and this incomplete `30-59` fleet replication slice strictly separately:",
         "",
         f"1. **Pre-registered primary headline (`{prim_dir}`, dev seeds `0-29`, `n={prim_hard['n']}`):** "
         f"OpenCode + `gemini-4-carbon` over MCP (the judges' harness) scores **`{_fmt_num(prim_hard['mean'], 3, signed=True)} +/- {_fmt_num(prim_hard['ci'], 3)}`** "
@@ -654,20 +654,23 @@ def render_markdown(data: dict[str, Any]) -> str:
         f"giving **`{_fmt_ratio(prim_hard['ratio'], prim_hard['ratio_lo'], prim_hard['ratio_hi'])}` raw** (`{_fmt_num(prim_hard['diff'], 3, signed=True)} +/- {_fmt_num(prim_hard['diff_ci'], 3)}` paired diff) "
         f"and **`{_fmt_ratio(prim_hard['luck_ratio'], prim_hard['luck_lo'], prim_hard['luck_hi'])}` luck-adjusted** "
         f"(`{_fmt_num(prim_hard['luck_adjusted'], 3, signed=True)}` vs `{_fmt_num(prim_hard['solver_luck_adjusted'], 3, signed=True)}`; 10,000-resample paired bootstrap 95% CIs). "
-        "Both primary 95% CIs exclude `100%` parity. Detailed trajectory accounting is in [failure_analysis_v1.4.md](failure_analysis_v1.4.md) and "
+        "Both primary 95% CIs exclude `100%` parity, and this primary row is never replaced. Detailed trajectory accounting is in [failure_analysis_v1.4.md](failure_analysis_v1.4.md) and "
         "[paired_table_gemini.md](../../data/runs/committed/v1.4/paired_table_gemini.md).",
     ]
 
     if ext_oc is not None and pooled_oc is not None:
+        pending_n = max(0, ext_sol_full["n"] - ext_oc["n"])
         lines.extend([
-            f"2. **Out-of-sample replication / extension cohort (`{repl_dir}`, dev seeds `30-59`):** "
-            f"`{ext_oc['n']}` out-of-sample `hard` episodes (`seeds {ext_seeds_txt}`) have completed cleanly under raised OpenCode runner timeouts "
-            f"and passed deterministic step-by-step replay verification, paired against `solver-hard-seeds30to59` (`n={ext_sol_full['n']}`, full seeds `30-59` mean "
+            f"2. **Selected Fleet Replication (Non-Primary, Incomplete 30-59 Cohort; `{repl_dir}`, `n={ext_oc['n']}` of `{ext_sol_full['n']}` planned seeds):** "
+            f"`{ext_oc['n']}` `hard` episodes (`seeds {ext_seeds_txt}`; `{pending_n}/{ext_sol_full['n']}` seeds incomplete at fleet cutoff, distinct from the full `n=30` `opencode-gemini-4-carbon-ext` G1 extension in [gap.md](gap.md)) "
+            f"completed cleanly across the sequential 3-to-4-seed fleet shards under raised OpenCode runner timeouts and passed deterministic step-by-step replay verification, "
+            f"paired against `solver-hard-seeds30to59` (`n={ext_sol_full['n']}`, full seeds `30-59` mean "
             f"`{_fmt_num(ext_sol_full['mean'], 3, signed=True)} +/- {_fmt_num(ext_sol_full['ci'], 3)}`, luck-adjusted `{_fmt_num(ext_sol_full['luck_adjusted'], 3, signed=True)}`). "
-            f"On the `{ext_oc['n']}` paired extension seeds, OpenCode `gemini-4-carbon` scores `{_fmt_num(ext_oc['mean'], 3, signed=True)} +/- {_fmt_num(ext_oc['ci'], 3)}` vs "
+            "Because sequential multi-seed workers completed their shard-head seeds first (wall-clock completion selection), this incomplete slice is reported strictly as a non-primary selected fleet replication rather than an unbiased `30-59` cohort mean. "
+            f"On the `{ext_oc['n']}` paired fleet seeds, OpenCode `gemini-4-carbon` scores `{_fmt_num(ext_oc['mean'], 3, signed=True)} +/- {_fmt_num(ext_oc['ci'], 3)}` vs "
             f"same-seed solver `{_fmt_num(ext_oc['solver_same_seeds'], 3, signed=True)}` (`{_fmt_ratio(ext_oc['ratio'], ext_oc['ratio_lo'], ext_oc['ratio_hi'])}` raw; "
             f"`{_fmt_ratio(ext_oc['luck_ratio'], ext_oc['luck_lo'], ext_oc['luck_hi'])}` luck-adjusted).",
-            f"3. **Secondary pooled summary (`0-29 + verified 30-59`, `n={pooled_oc['n']}` paired `hard` seeds; never substituted for the `0-29` primary headline):** "
+            f"3. **Exploratory pooled reference (`0-29` primary + `{ext_oc['n']}` selected fleet seeds, `n={pooled_oc['n']}` paired `hard` seeds; non-primary, never substituted for the `0-29` primary headline):** "
             f"Across all `{pooled_oc['n']}` replay-verified `hard` seeds combined, OpenCode `gemini-4-carbon` scores "
             f"`{_fmt_num(pooled_oc['mean'], 3, signed=True)} +/- {_fmt_num(pooled_oc['ci'], 3)}` vs paired solver `{_fmt_num(pooled_oc['solver_same_seeds'], 3, signed=True)}` "
             f"(`{_fmt_ratio(pooled_oc['ratio'], pooled_oc['ratio_lo'], pooled_oc['ratio_hi'])}` raw, paired diff `{_fmt_num(pooled_oc['diff'], 3, signed=True)} +/- {_fmt_num(pooled_oc['diff_ci'], 3)}`) "
@@ -691,11 +694,11 @@ def render_markdown(data: dict[str, Any]) -> str:
         "",
         *_render_paired_table(data["primary_rows"]),
         "",
-        f"{H3} 1B. Out-of-Sample Replication / Extension Cohort (`{repl_dir}`, Hard Seeds `30-59`)",
+        f"{H3} 1B. Selected Fleet Replication (Non-Primary, Incomplete 30-59 Cohort; `{repl_dir}`)",
         "",
         *_render_paired_table(data["extension_rows"]),
         "",
-        f"{H3} 1C. Secondary Pooled Hard Cohort (`0-29` Primary + Verified `30-59` Extension)",
+        f"{H3} 1C. Exploratory Pooled Hard Cohort (`0-29` Primary + Selected Fleet `30-59`, Non-Primary)",
         "",
         *_render_paired_table(data["pooled_rows"]),
         "",
@@ -704,8 +707,13 @@ def render_markdown(data: dict[str, Any]) -> str:
     if per_seed and ext_oc is not None and pooled_oc is not None:
         sol_wrong_paired = [x for x in per_seed if not x["solver"]["correct"] and x["solver"]["accused"]]
         low_p_frontier = [x for x in per_seed if (x["frontier"]["p_accused"] or 0.0) < 0.85]
+        pending_count = max(0, ext_sol_full["n"] - ext_oc["n"])
         notes: list[str] = [
-            f"**Statistical reading of the `{ext_oc['n']}`-seed extension slice and `{pooled_oc['n']}`-seed pool:**",
+            f"**Statistical reading of the `{ext_oc['n']}`-seed selected fleet slice and `{pooled_oc['n']}`-seed exploratory pool:**",
+            f"- **Non-primary incomplete-cohort caveat (`{ext_oc['n']}/{ext_sol_full['n']}` completed, `{pending_count}` pending):** "
+            "Each fleet worker ran a 3-to-4-seed sequential shard (`hard-s30-33`, `hard-s34-37`, `hard-s42-44`, `hard-s45-47`, `hard-s48-51`, `hard-s57-59`), "
+            "so completed episodes represent shard-head / shorter-cumulative-wall-clock realizations rather than a complete `30`-seed sample. "
+            "Accordingly, Section 1B and Section 1C are diagnostic replication tables and do not supersede the complete `n=30` (`0-29`) primary headline.",
         ]
         if sol_wrong_paired:
             sw = ", ".join(
@@ -715,7 +723,7 @@ def render_markdown(data: dict[str, Any]) -> str:
             notes.append(
                 f"- **Why luck adjustment stabilizes small-`n` raw ratios:** Across all 30 out-of-sample seeds `30-59`, `solver-hard-seeds30to59` averages "
                 f"`{_fmt_num(ext_sol_full['mean'], 3, signed=True)} +/- {_fmt_num(ext_sol_full['ci'], 3)}` (`90%` accuracy, only 2 wrong accusations out of 30). "
-                f"However, the `{ext_oc['n']}` completed frontier seeds include {sw}. A single `-1.000` realization depresses the `{ext_oc['n']}`-seed raw solver denominator "
+                f"However, the `{ext_oc['n']}` completed fleet seeds include {sw}. A single `-1.000` realization depresses the `{ext_oc['n']}`-seed raw solver denominator "
                 f"to `{_fmt_num(ext_oc['solver_same_seeds'], 3, signed=True)}`, inflating the raw `{ext_oc['n']}`-seed ratio to `{ext_oc['ratio']:.0%}`, whereas the posterior-expected "
                 f"(luck-adjusted) solver score on those same `{ext_oc['n']}` seeds is `{_fmt_num(ext_oc['solver_luck_adjusted'], 3, signed=True)}` (`{ext_oc['luck_ratio']:.0%}` luck-adjusted ratio)."
             )
@@ -738,7 +746,7 @@ def render_markdown(data: dict[str, Any]) -> str:
         lines.extend(notes + [""])
 
     lines.extend([
-        f"{H2} 2. Replay-Verified Hard Episodes in `30-59` (Per-Seed Comparison)",
+        f"{H2} 2. Replay-Verified Hard Episodes in Selected Fleet Replication (Per-Seed Comparison)",
         "",
         "| seed | shard | Gemini score | solver score | diff (F - S) | Gemini day | solver day | Gemini accused (mole) | solver accused | canaries / interviews | Gemini P(acc) | solver P(acc) | Gemini luck-adj. | solver luck-adj. | wall_s | replay |",
         "|---:|---|---:|---:|---:|---:|---:|---|---|---|---:|---:|---:|---:|---:|---|",
@@ -763,9 +771,9 @@ def render_markdown(data: dict[str, Any]) -> str:
 
     if data["ext_shard_manifests"]:
         lines.extend([
-            f"{H3} Extension Shard Manifest Audit (`{repl_dir}`)",
+            f"{H3} Selected Fleet Shard Manifest Audit (`{repl_dir}`)",
             "",
-            "| shard | verified seeds | planned seeds | pending in-flight seeds | runner git_sha | llm_calls | est. cost (USD) |",
+            "| shard | verified seeds | planned seeds | pending incomplete seeds | runner git_sha | llm_calls | est. cost (USD) |",
             "|---|---|---|---|---|---:|---:|",
         ])
         for sm in data["ext_shard_manifests"]:
@@ -814,7 +822,7 @@ def render_markdown(data: dict[str, Any]) -> str:
         "**In-repo shard locations and keyless reproduction commands:**",
         "",
         f"- Primary (`0-29`) shards: `{prim_dir}`",
-        f"- Out-of-sample replication (`30-59`) shards: `{repl_dir}`",
+        f"- Selected fleet replication (incomplete `30-59` cohort) shards: `{repl_dir}`",
         "- Generator script: `scripts/v14_replication_report.py`",
         "",
         "```bash",

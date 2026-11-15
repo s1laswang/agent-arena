@@ -758,7 +758,7 @@ def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dic
                 "replication_carbon_hard_seeds": rep_hard_seeds,
                 "primary_and_replication_disjoint": True,
                 "pooled_n35_classification": "secondary_sensitivity_only",
-                "source_rule": "docs/reports/gap.md (commit 671ed96)",
+                "source_rule": "docs/reports/gap.md (post-hoc seed lock 671ed96, 28 s after 8fd4dec; pre-registered extension f9fb7a4a)",
             },
             "replay_verification": {
                 "committed_v14": comm_audit,
@@ -915,7 +915,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
             f"{_signed(h2h_med['raw_diff'])} +/- {_num(h2h_med['raw_diff_ci'])}` V raw, "
             f"`{_signed(h2h_med['luck_adjusted_diff'])} +/- {_num(h2h_med['luck_adjusted_diff_ci'])}` V luck-adjusted). "
             "`docs/reports/gap.md` is the sole source for primary `hard` (`0-29`) gap rows; `opencode:google/gemini-3.5-flash` hard "
-            "is replay-verified in `committed_v14` (`410/410`) and omitted from tables here until `docs/reports/gap.md` ships it."
+            f"is replay-verified in `committed_v14` (`{rv['committed_v14']['verified']}/{rv['committed_v14']['total']}`) and omitted from tables here until `docs/reports/gap.md` ships it."
         )
 
     lines: list[str] = [
@@ -931,12 +931,14 @@ def render_markdown(summary: dict[str, Any]) -> str:
         "PYTHONPATH=. python scripts/verify_frontier_replication.py --check",
         "```",
         "",
-        _md_heading(2, "1. Pre-Registered Seed Rule and Replay Audit"),
+        _md_heading(2, "1. Post-Hoc Seed Lock, Pre-Registered Extension, and Replay Audit"),
         "",
-        "- **Pre-registered seed rule (`docs/reports/gap.md`, commit `671ed96`):** The `justSilas` committed dev set "
-        "(`seeds 0-29`, `n=30` per tier in `data/runs/committed/v1.4/`) is the locked **PRIMARY** headline result. "
-        "All subsequent episodes under `results/frontier_replication/v1.4/` are evaluated and reported strictly "
-        "separately as replication or cross-model cohorts, never swapped into `data/runs/committed/v1.4/`.",
+        "- **Post-hoc seed lock and pre-registered extension (`docs/reports/gap.md`, commits `671ed96` and `f9fb7a4a`):** "
+        "The `justSilas` committed dev set (`seeds 0-29`, `n=30` per tier in `data/runs/committed/v1.4/`) is the locked "
+        "**PRIMARY** headline result (`671ed96` came 28 s after `8fd4dec`, so it is a post-hoc lock against later reruns "
+        "and cherry-picking, not a pre-registration). The `opencode-gemini-4-carbon-ext` partial extension (`seeds 34, 37`, "
+        "`n=2`, pre-registered in `f9fb7a4a`) and all FR8 episodes under `results/frontier_replication/v1.4/` are evaluated "
+        "and reported strictly separately as replication or cross-model cohorts, never swapped into the primary `0-29` set.",
         f"- **Replay verification (`scripts/verify_replay.py`):** "
         f"`{rv['committed_v14']['verified']}/{rv['committed_v14']['total']}` episodes verified in `data/runs/committed/v1.4/` "
         f"and `{rv['replication_v14']['verified']}/{rv['replication_v14']['total']}` episodes verified in "
@@ -953,7 +955,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
         f"scores `{_num(c_rep_5['mean'])} +/- {_num(c_rep_5['ci'])}` ({rep_correct}/{c_rep_5['n']} correct, mean `P(accused) = {_num(c_rep_5['p_accused'], 2)}`, "
         f"luck-adjusted `{_num(c_rep_5['post_expected'])}`) vs solver `{_num(c_rep_5['solver_same_seeds'])}` raw "
         f"(luck-adjusted `{_num(c_rep_5['solver_post_expected'])}`, ratio `{_luck_cell(c_rep_5, bold=False)}`).",
-        f"  - **Secondary pooled sensitivity (`n={c_pool_35['n']}`, secondary per pre-registered rule):** Pooling primary `0-29` with "
+        f"  - **Secondary pooled sensitivity (`n={c_pool_35['n']}`, secondary under post-hoc seed lock `671ed96`):** Pooling primary `0-29` with "
         f"replication `{rep_seeds_str}` yields `{_ratio_cell(c_pool_35)}` raw and **{_luck_cell(c_pool_35, bold=False)}** "
         f"luck-adjusted, where the luck-adjusted 95% CI `[{c_pool_35['post_expected_lo']:.0%}, {c_pool_35['post_expected_hi']:.0%}]` continues to exclude parity.",
         cross_model_bullet,
@@ -1020,7 +1022,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
             "",
             _md_heading(2, f"4. Cohort (b): Secondary Pooled Hard Sensitivity Row (`n={c_pool_35['n']}`)"),
             "",
-            f"**SECONDARY SENSITIVITY ONLY (NOT THE HEADLINE):** Per the pre-registered seed rule (`docs/reports/gap.md`), "
+            f"**SECONDARY SENSITIVITY ONLY (NOT THE HEADLINE):** Per the post-hoc seed lock (`docs/reports/gap.md`, commit `671ed96`), "
             f"the `n={c_hard_prim['n']}` (`seeds 0-29`) result remains the primary headline (`{_ratio_cell(c_hard_prim)}` raw, "
             f"`{_luck_cell(c_hard_prim, bold=False)}` luck-adjusted). Pooling the {c_hard_prim['n']} primary episodes with the "
             f"{c_rep_5['n']} non-overlapping replication episodes (`seeds {rep_seeds_str}`, total `n={c_pool_35['n']}`) "

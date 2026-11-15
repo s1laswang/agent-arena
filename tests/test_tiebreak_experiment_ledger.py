@@ -139,7 +139,8 @@ def test_historical_runs_and_clean_clone_determinism(tmp_path: Path) -> None:
         "WS4-v3-8k-s1-ac58",
         "WS4-v3-8k-s2-dbd0",
         "WS4-v3-8k-s3-f437",
-        "WS4-dagger-r1-verda",
+        "WS4-dagger-r1-8k-verda",
+        "WS4-dagger-r1-4k-verda",
         "Verda-base-backup-18ac",
     )
 
@@ -305,26 +306,47 @@ def test_historical_runs_and_clean_clone_determinism(tmp_path: Path) -> None:
     assert r_8k_s3["details"]["paired_vs_4k_ctx8k_ci95"] == 0.173
     assert r_8k_s3["details"]["matching_step0_rosters"] == 60
 
-    r_dagger = by_id["WS4-dagger-r1-verda"]
-    assert r_dagger["status"] == "NEGATIVE_DAGGER_INTERIM_BELOW_BASE"
-    assert r_dagger["context_len"] == 8192
-    assert r_dagger["heldout_n"] == 50
-    assert r_dagger["after_mean_score"] == -0.542
-    assert r_dagger["after_ci95"] == 0.214
-    assert r_dagger["after_valid_call_rate"] == 1.0
-    assert r_dagger["after_world_secret_tag"] == "1ca0c2a64d"
-    assert r_dagger["details"]["verda_train_instance"] == "e9ea8b2e"
-    assert r_dagger["details"]["verda_eval_instance"] == "68bbe201"
-    assert r_dagger["details"]["sft_steps"] == 250
-    assert r_dagger["details"]["sft_examples"] == 4000
-    assert r_dagger["details"]["vllm_rollout_episodes"] == 300
-    assert r_dagger["details"]["relabelled_states"] == 24074
-    assert r_dagger["details"]["solver_match_checked"] == 2603
-    assert r_dagger["details"]["solver_match_equal"] == 2603
-    assert r_dagger["details"]["inf8k_mean_score_short"] == -0.54
-    assert r_dagger["details"]["inf4k_mean_score_short"] == -0.10
-    assert r_dagger["details"]["inf4k_heldout_n"] == 41
-    assert r_dagger["details"]["inf4k_mean_score"] == -0.101
+    r_dagger_8k = by_id["WS4-dagger-r1-8k-verda"]
+    assert r_dagger_8k["status"] == "NEGATIVE_DAGGER_HONEST_NULL"
+    assert r_dagger_8k["context_len"] == 8192
+    assert r_dagger_8k["heldout_n"] == 50
+    assert r_dagger_8k["after_mean_score"] == -0.542
+    assert r_dagger_8k["after_ci95"] == 0.214
+    assert r_dagger_8k["after_valid_call_rate"] == 1.0
+    assert r_dagger_8k["after_world_secret_tag"] == "1ca0c2a64d"
+    assert r_dagger_8k["details"]["verda_train_instance"] == "e9ea8b2e"
+    assert r_dagger_8k["details"]["verda_eval_instance"] == "68bbe201"
+    assert r_dagger_8k["details"]["sft_steps"] == 250
+    assert r_dagger_8k["details"]["sft_examples"] == 4000
+    assert r_dagger_8k["details"]["vllm_rollout_episodes"] == 300
+    assert r_dagger_8k["details"]["relabelled_states"] == 24074
+    assert r_dagger_8k["details"]["solver_match_checked"] == 2603
+    assert r_dagger_8k["details"]["solver_match_equal"] == 2603
+    assert r_dagger_8k["details"]["max_new_tokens"] == 256
+    assert r_dagger_8k["details"]["accused_rate"] == 0.92
+    assert r_dagger_8k["details"]["accuracy"] == 0.20
+    assert r_dagger_8k["details"]["whom_precision_ratio"] == "10/46"
+    assert r_dagger_8k["details"]["abstain_rate"] == 0.08
+    assert r_dagger_8k["details"]["paired_vs_v3_4k_s0_ctx8k_cap256_mean_delta"] == 0.242
+    assert r_dagger_8k["details"]["paired_vs_v3_4k_s0_ctx8k_cap256_ci95"] == 0.304
+    assert r_dagger_8k["details"]["paired_vs_v3_4k_s0_ctx8k_cap256_n"] == 43
+
+    r_dagger_4k = by_id["WS4-dagger-r1-4k-verda"]
+    assert r_dagger_4k["status"] == "NEGATIVE_DAGGER_HONEST_NULL"
+    assert r_dagger_4k["context_len"] == 4096
+    assert r_dagger_4k["heldout_n"] == 41
+    assert r_dagger_4k["after_mean_score"] == -0.101
+    assert r_dagger_4k["after_ci95"] == 0.112
+    assert r_dagger_4k["after_valid_call_rate"] == 1.0
+    assert r_dagger_4k["after_world_secret_tag"] == "1ca0c2a64d"
+    assert r_dagger_4k["details"]["max_new_tokens"] == 256
+    assert r_dagger_4k["details"]["accused_rate"] == 0.15
+    assert r_dagger_4k["details"]["accuracy"] == 0.02
+    assert r_dagger_4k["details"]["whom_precision_ratio"] == "1/6"
+    assert r_dagger_4k["details"]["abstain_rate"] == 0.85
+    assert r_dagger_4k["details"]["paired_vs_v3_4k_s0_ctx4k_cap256_mean_delta"] == -0.031
+    assert r_dagger_4k["details"]["paired_vs_v3_4k_s0_ctx4k_cap256_ci95"] == 0.139
+    assert r_dagger_4k["details"]["paired_vs_v3_4k_s0_ctx4k_cap256_n"] == 32
 
     r_reaper = by_id["Verda-base-backup-18ac"]
     assert r_reaper["status"] == "FAILED_REAPER_DELETED"
@@ -344,8 +366,8 @@ def test_markdown_diagnosis_pillars_and_panel_fix_a() -> None:
     md = ledger_mod.render_markdown_report(ledger)
 
     for required_substr in (
-        "Historical runs logged: `18`",
-        "0 / 18",
+        "Historical runs logged: `19`",
+        "0 / 19",
         "2,842 / 4,096",
         "1,254",
         "0.19 -> 0.89",
@@ -361,8 +383,11 @@ def test_markdown_diagnosis_pillars_and_panel_fix_a() -> None:
         "1ca0c2a64d",
         "2,603/2,603",
         "24,074",
+        "10/46 = 0.22",
         "-0.542 +/- 0.214",
+        "+0.242 +/- 0.304",
         "-0.101 +/- 0.112",
+        "-0.031 +/- 0.139",
         "18acfa5d",
         "924e81d8",
         "104.46",
@@ -544,7 +569,7 @@ def test_positive_acceptance_and_dynamic_discovery(tmp_path: Path) -> None:
     ])
     assert rc_write == 0
     written = json.loads(out_json.read_text(encoding="utf-8"))
-    assert written["summary_counts"]["historical_runs"] == 18
+    assert written["summary_counts"]["historical_runs"] == 19
     assert written["summary_counts"]["discovered_runs"] == 2
     assert written["summary_counts"]["verified_improvements"] == 1
     assert written["summary_counts"]["verified_run_ids"] == ["compact-cal-0.5b-v1"]
@@ -567,7 +592,7 @@ def test_positive_acceptance_and_dynamic_discovery(tmp_path: Path) -> None:
 
 def test_committed_artifacts_check_and_tamper_detection(tmp_path: Path) -> None:
     assert ledger_mod.main(["--check"]) == 0
-    assert ledger_mod.main(["--check", "--external-data-root", str(tmp_path / "missing_ext")]) == 0
+    assert ledger_mod.main(["--external-data-root", str(tmp_path / "missing_ext"), "--check"]) == 0
 
     proc = subprocess.run(
         [sys.executable, str(SCRIPT_PATH), "--check"],
@@ -579,7 +604,7 @@ def test_committed_artifacts_check_and_tamper_detection(tmp_path: Path) -> None:
     assert proc.returncode == 0, proc.stdout + proc.stderr
     payload = json.loads(proc.stdout.strip())
     assert payload["ok"] is True
-    assert payload["historical_runs"] == 18
+    assert payload["historical_runs"] == 19
 
     tampered_json = tmp_path / "tampered_ledger.json"
     data = json.loads(LEDGER_JSON_PATH.read_text(encoding="utf-8"))

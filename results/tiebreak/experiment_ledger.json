@@ -8,9 +8,9 @@
     "gate4_paired_ci95_positive": "paired ci95_low(after - before) > 0.0"
   },
   "summary_counts": {
-    "historical_runs": 18,
+    "historical_runs": 19,
     "discovered_runs": 1,
-    "total_runs": 19,
+    "total_runs": 20,
     "verified_improvements": 1,
     "verified_run_ids": [
       "empirical-bayes-v14"
@@ -29,7 +29,7 @@
       "NEGATIVE_ABSTAIN_COLLAPSE": 2,
       "NEGATIVE_OFFPOLICY_OVERACCUSE": 1,
       "NEGATIVE_PAIRED_8K_NULL": 1,
-      "NEGATIVE_DAGGER_INTERIM_BELOW_BASE": 1,
+      "NEGATIVE_DAGGER_HONEST_NULL": 2,
       "FAILED_REAPER_DELETED": 1,
       "VERIFIED_IMPROVEMENT": 1
     }
@@ -948,7 +948,7 @@
         "gate4_paired_ci95_positive": false,
         "all_passed": false,
         "reasons": [
-          "shared secret 1ca0c2a64d is paired with WS4-v3-8k-s0-3bb7, WS4-v3-8k-s3-f437, and WS4-dagger-r1-verda, but untrained base never ran under 1ca0c2a64d",
+          "shared secret 1ca0c2a64d is paired with WS4-v3-8k-s0-3bb7, WS4-v3-8k-s3-f437, WS4-dagger-r1-8k-verda, and WS4-dagger-r1-4k-verda, but untrained base never ran under 1ca0c2a64d",
           "inference-length confound: raising eval max_ctx from 4096 to 8192 flipped medium/hard accusations from 0.00/0.03 to 0.80/0.90 (0 correct)",
           "severe held-out regression (-0.716 +/- 0.105, n=90; two-sample -0.568 +/- 0.123 vs 4k inference)"
         ]
@@ -1272,10 +1272,10 @@
       "notes": "Verda A100-80GB 344-step 8k GRPO s3 under shared secret 1ca0c2a64d scored -0.788 +/- 0.117 on held-out n=90 (valid 0.94, accused 0.96, correct 0.09); truly paired vs v3-4k-s0@8k on 60/60 matching step-0 rosters gave -0.073 +/- 0.173, and vs 637-step s0 gave -0.728 +/- 0.134."
     },
     {
-      "run_id": "WS4-dagger-r1-verda",
+      "run_id": "WS4-dagger-r1-8k-verda",
       "source": "historical",
-      "model": "Qwen2.5-1.5B-Instruct LoRA (DAgger r1, 250 SFT steps from v3-4k s0, shared secret)",
-      "method": "On-policy DAgger round 1: 300 vLLM rollouts on TRAIN 170000..170099 (24,074 relabelled states, 2,603/2,603 solver match) -> 250 SFT steps on 4,000 own-policy states at 8k ctx (Verda A100-40 e9ea8b2e + A100-80 68bbe201; max_new_tokens=256, shared secret 1ca0c2a64d)",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (DAgger r1, 250 SFT steps, inf 8k cap 256, shared secret)",
+      "method": "On-policy DAgger round 1 evaluated at max_ctx=8192, max_new_tokens=256 (cap 96 truncated plant_canary): 300 vLLM rollouts on TRAIN 170000..170099 (24,074 relabelled states, 2,603/2,603 solver match) -> 250 SFT steps on 4,000 own-policy states (Verda A100-40 e9ea8b2e + A100-80 68bbe201; shared secret 1ca0c2a64d)",
       "tiers_version": "v1.4",
       "tiers": [
         "easy",
@@ -1296,7 +1296,7 @@
       "after_world_secret_tag": "1ca0c2a64d",
       "replay_verified": false,
       "verified_improvement": false,
-      "status": "NEGATIVE_DAGGER_INTERIM_BELOW_BASE",
+      "status": "NEGATIVE_DAGGER_HONEST_NULL",
       "details": {
         "verda_train_instance": "e9ea8b2e",
         "verda_eval_instance": "68bbe201",
@@ -1315,7 +1315,10 @@
         "sft_examples": 4000,
         "sft_tokens": 25709119,
         "sft_seconds": 3331,
+        "train_context_len": 8192,
+        "eval_context_len": 8192,
         "max_new_tokens": 256,
+        "cap96_truncated_plant_canary": true,
         "shared_world_secret_tag": "1ca0c2a64d",
         "heldout_seed_range": "800000..800026",
         "by_tier_n": {
@@ -1323,31 +1326,101 @@
           "medium": 17,
           "hard": 15
         },
-        "inf8k_heldout_n": 50,
-        "inf8k_mean_score": -0.542,
-        "inf8k_mean_score_short": -0.54,
-        "inf8k_ci95": 0.214,
-        "inf8k_accused_count": 46,
-        "inf8k_accused_rate": 0.92,
-        "inf8k_correct_count": 10,
-        "inf8k_accuracy": 0.2,
-        "inf8k_precision_when_accused": 0.22,
-        "inf8k_abstain_rate": 0.08,
-        "inf4k_heldout_n": 41,
-        "inf4k_mean_score": -0.101,
-        "inf4k_mean_score_short": -0.1,
-        "inf4k_ci95": 0.112,
-        "inf4k_accused_count": 6,
-        "inf4k_accused_rate": 0.15,
-        "inf4k_correct_count": 1,
-        "inf4k_accuracy": 0.02,
-        "inf4k_abstain_rate": 0.85,
-        "paired_vs_4k_ctx8k_cap256_mean_delta": 0.242,
-        "paired_vs_4k_ctx8k_cap256_ci95": 0.304,
-        "paired_vs_4k_ctx8k_cap256_n": 43,
-        "paired_vs_4k_ctx4k_cap256_mean_delta": -0.031,
-        "paired_vs_4k_ctx4k_cap256_ci95": 0.139,
-        "paired_vs_4k_ctx4k_cap256_n": 32,
+        "accused_count": 46,
+        "accused_rate": 0.92,
+        "correct_count": 10,
+        "accuracy": 0.2,
+        "precision_when_accused": 0.22,
+        "whom_precision_ratio": "10/46",
+        "abstain_count": 4,
+        "abstain_rate": 0.08,
+        "paired_v3_4k_s0_ctx8k_cap256_mean_score": -0.754,
+        "paired_v3_4k_s0_ctx8k_cap256_ci95": 0.177,
+        "paired_vs_v3_4k_s0_ctx8k_cap256_mean_delta": 0.242,
+        "paired_vs_v3_4k_s0_ctx8k_cap256_ci95": 0.304,
+        "paired_vs_v3_4k_s0_ctx8k_cap256_n": 43,
+        "two_sample_delta_vs_v3_4k_s0_mean": -0.395,
+        "two_sample_delta_vs_v3_4k_s0_ci95": 0.223,
+        "partial_due_to_reaper_deletion": true,
+        "reaper_lost_approx_episodes": 40
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "unpaired vs untrained FR8 base; partial held-out n=50 pulled ~05:35 before 08:00 reaper deleted e9ea8b2e (~40 remaining episodes lost)",
+          "honest null below base 0.000 (-0.542 +/- 0.214, accused 0.92, correct 0.20, whom-precision 10/46 = 0.22, abstain 0.08)",
+          "paired delta vs v3-4k s0 @8k cap=256 (-0.754 +/- 0.177, n=43) under shared secret 1ca0c2a64d was +0.242 +/- 0.304 (n=43, CI includes 0)"
+        ]
+      },
+      "evidence": [
+        "README.md",
+        "VERDA.md",
+        "origin/x2-dagger:docs/reports/dagger.md",
+        "origin/x2-dagger:fr8/analysis/out/ws4_table_x2_dagger.md",
+        "origin/x2-dagger:fr8/analysis/out/x2_dagger_8k_paired.md",
+        "origin/x2-dagger:data/x2/dagger-r1/lora/dagger_summary.json"
+      ],
+      "notes": "Verda A100-40 e9ea8b2e DAgger round 1 at 8k inference (250 SFT steps on 4,000 solver-labelled own-policy states from 300 vLLM rollouts / 24,074 relabelled states, 2,603/2,603 solver match; max_new_tokens=256 since cap=96 truncated plant_canary) scored -0.542 +/- 0.214 on partial held-out n=50 under 1ca0c2a64d (accused 0.92, correct 0.20, whom 10/46 = 0.22, abstain 0.08; paired +0.242 +/- 0.304 vs v3-4k s0 @8k cap=256 -0.754 +/- 0.177 on n=43; reaper deleted remaining ~40 eps)."
+    },
+    {
+      "run_id": "WS4-dagger-r1-4k-verda",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (DAgger r1 same adapter, inf 4k cap 256, shared secret)",
+      "method": "Same 250-step DAgger round 1 adapter evaluated at max_ctx=4096, max_new_tokens=256 on Verda A100-80 68bbe201 under shared secret 1ca0c2a64d (paired against v3-4k s0 @4k cap=256)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "context_len": 4096,
+      "heldout_n": 41,
+      "before_mean_score": 0.0,
+      "after_mean_score": -0.101,
+      "after_ci95": 0.112,
+      "paired_mean_delta": -0.101,
+      "paired_ci95_low": -0.213,
+      "paired_ci95_high": 0.011,
+      "before_valid_call_rate": 0.03,
+      "after_valid_call_rate": 1.0,
+      "before_world_secret_tag": null,
+      "after_world_secret_tag": "1ca0c2a64d",
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "NEGATIVE_DAGGER_HONEST_NULL",
+      "details": {
+        "verda_train_instance": "e9ea8b2e",
+        "verda_eval_instance": "68bbe201",
+        "dagger_seed_range": "170000..170099",
+        "sft_steps": 250,
+        "sft_examples": 4000,
+        "train_context_len": 8192,
+        "eval_context_len": 4096,
+        "max_new_tokens": 256,
+        "shared_world_secret_tag": "1ca0c2a64d",
+        "heldout_seed_range": "800000..800024",
+        "by_tier_n": {
+          "easy": 15,
+          "medium": 14,
+          "hard": 12
+        },
+        "accused_count": 6,
+        "accused_rate": 0.15,
+        "correct_count": 1,
+        "accuracy": 0.02,
+        "precision_when_accused": 0.17,
+        "whom_precision_ratio": "1/6",
+        "abstain_count": 35,
+        "abstain_rate": 0.85,
+        "paired_v3_4k_s0_ctx4k_cap256_mean_score": -0.094,
+        "paired_v3_4k_s0_ctx4k_cap256_ci95": 0.103,
+        "paired_vs_v3_4k_s0_ctx4k_cap256_mean_delta": -0.031,
+        "paired_vs_v3_4k_s0_ctx4k_cap256_ci95": 0.139,
+        "paired_vs_v3_4k_s0_ctx4k_cap256_n": 32,
         "partial_due_to_reaper_deletion": true
       },
       "gates": {
@@ -1357,19 +1430,18 @@
         "gate4_paired_ci95_positive": false,
         "all_passed": false,
         "reasons": [
-          "unpaired vs untrained FR8 base; partial held-out n=50 at 8k and n=41 at 4k pulled ~05:35 before 07:30/08:00 reapers deleted 68bbe201 and e9ea8b2e",
-          "interim held-out scores remained below base 0.000 at both 8k (-0.542 +/- 0.214, ~-0.54, 92% accused) and 4k (-0.101 +/- 0.112, ~-0.10, 85% abstain)",
-          "paired deltas vs v3-4k-s0 under shared secret 1ca0c2a64d crossed zero (+0.242 +/- 0.304 on n=43 at 8k; -0.031 +/- 0.139 on n=32 at 4k)"
+          "unpaired vs untrained FR8 base; partial held-out n=41 pulled ~05:35 before 07:30 reaper deleted 68bbe201",
+          "honest null below base 0.000 (-0.101 +/- 0.112, accused 0.15, correct 0.02 = 1/6, abstain 0.85)",
+          "paired delta vs v3-4k s0 @4k cap=256 (-0.094 +/- 0.103, n=32) under shared secret 1ca0c2a64d was -0.031 +/- 0.139 (n=32, level with v3-4k)"
         ]
       },
       "evidence": [
         "README.md",
-        "VERDA.md",
         "origin/x2-dagger:docs/reports/dagger.md",
         "origin/x2-dagger:fr8/analysis/out/ws4_table_x2_dagger.md",
-        "origin/x2-dagger:data/x2/dagger-r1/lora/dagger_summary.json"
+        "origin/x2-dagger:fr8/analysis/out/x2_dagger_4k_paired.md"
       ],
-      "notes": "Verda A100-40 e9ea8b2e + A100-80 68bbe201 DAgger round 1 (250 SFT steps on 4,000 solver-labelled own-policy states from 300 vLLM rollouts / 24,074 relabelled states, 2,603/2,603 solver match) doubled 8k whom-precision (0.10 -> 0.22) and state agreement (43% -> 68%) but stayed below base under shared secret 1ca0c2a64d: interim -0.542 +/- 0.214 (-0.54, partial n=50) at 8k and -0.101 +/- 0.112 (-0.10, partial n=41) at 4k."
+      "notes": "Same DAgger r1 adapter evaluated at 4k context (max_new_tokens=256) on Verda A100-80 68bbe201 under shared secret 1ca0c2a64d scored -0.101 +/- 0.112 on partial held-out n=41 (accused 0.15, correct 0.02 = 1/6, abstain 0.85; paired -0.031 +/- 0.139 vs v3-4k s0 @4k cap=256 -0.094 +/- 0.103 on n=32)."
     },
     {
       "run_id": "Verda-base-backup-18ac",

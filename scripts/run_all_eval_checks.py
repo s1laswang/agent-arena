@@ -448,6 +448,11 @@ def _load_repo_milestones(root: Path) -> dict[str, Any]:
             "spend_cap_usd": 200,
             "committed_dir_present": (root / "data/runs/committed/v1.4/opencode-gpt-5.5").is_dir(),
         },
+        "harbor_rehearsal_final": {
+            "commit": "c59ecfd0",
+            "env_tag": "afterquery-final",
+            "table_present": (root / "results/harbor/rehearsal/TABLE.md").is_file(),
+        },
     }
 
 
@@ -984,6 +989,12 @@ def render_overview_md(core_summary: dict[str, Any]) -> str:
     lines.append(
         f"- **Pre-registered second frontier family (`{gpt55_pre.get('commit', 'cf394894')}`):** `gpt-5.5` via OpenCode 1.19.5 over MCP on `v1.4` hard seeds `{gpt55_pre.get('seeds', '0-29')}` (env tag `{gpt55_pre.get('env_tag', 'afterquery-final')}`, stop `{gpt55_pre.get('stop_time_eet', '08:15')}` Helsinki / `${gpt55_pre.get('spend_cap_usd', 200)}` cap; {gpt55_state})."
     )
+    hr_final = rm.get("harbor_rehearsal_final") or {}
+    if hr_final.get("table_present"):
+        lines.append(
+            f"- **Harbor judge-path rehearsal (`{hr_final.get('commit', 'c59ecfd0')}`, `results/harbor/rehearsal/TABLE.md`, tag `{hr_final.get('env_tag', 'afterquery-final')}` `1bc3e281`):** "
+            "Harbor 0.26.0 + OpenCode + `gemini-4-carbon` across `3` runs on `10` hard judge tasks (`900000-900009`; shell enabled in container, used in `20/28` trials) scored `+0.472` (`93%`), `+0.585` (`116%`), and `+0.656` (`153%`, partial `n = 7` valid) vs same-task oracle `+0.506` / `+0.429` (`do_nothing = stop_early = +0.000`); the `65%` MCP-only gap did **not** reproduce in the Harbor judge path."
+        )
 
     lines.extend(
         [

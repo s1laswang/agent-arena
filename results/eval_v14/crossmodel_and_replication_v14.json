@@ -76,11 +76,11 @@
   "step_error_detail_compat": "1bc3e281",
   "step_error_detail_rule": "Step-level Env tool-output replay strips data.detail on not-ok single-key detail responses when replaying pre-1bc3e281 recorded steps that lack detail, while verifying exact detail strings on post-1bc3e281 steps (Panel Fix D, commit 1bc3e281).",
   "tiers_version_required": "v1.4",
-  "total_inspected_episodes": 872,
+  "total_inspected_episodes": 902,
   "total_steps_client_only": 1,
   "total_steps_truncated_checked": 2,
-  "total_steps_verified": 42885,
-  "total_valid_replayed_episodes": 872,
+  "total_steps_verified": 44960,
+  "total_valid_replayed_episodes": 902,
   "working_tree_only": true
  },
  "primary_0_29": {
@@ -476,6 +476,36 @@
     "tier": "hard"
    },
    {
+    "abstention_rate": 0.066666666667,
+    "accuracy": 0.933333333333,
+    "accused_rate": 0.933333333333,
+    "agent": "opencode:openai/gpt-5.5",
+    "cohort": "opencode-gpt-5.5",
+    "luck_adjusted_ratio": 0.836684936811,
+    "luck_adjusted_ratio_ci95": [0.66549624089, 1.03076466933],
+    "luck_adjusted_score": 0.417754,
+    "mean_accuse_day": 10.25,
+    "mean_p_accused": 0.939892857143,
+    "mean_score": 0.503666666667,
+    "n": 30,
+    "paired_diff": 0.004666666667,
+    "paired_diff_ci95": [-0.124, 0.151333333333],
+    "paired_diff_halfwidth95": 0.141496020961,
+    "ratio_ci95": [0.786033519553, 1.402890695574],
+    "ratio_vs_solver": 1.009352037408,
+    "realized_luck": 0.085912666667,
+    "score_ci95": 0.063788638006,
+    "score_ci95_bounds": [0.43987802866, 0.567455304673],
+    "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+    "solver_luck_adjusted_score": 0.499296666667,
+    "solver_mean": 0.499,
+    "source": "committed_v1.4",
+    "sub_breakeven_gamble_count": 0,
+    "sub_breakeven_gamble_rate": 0.0,
+    "sub_breakeven_lucky_hits": 0,
+    "tier": "hard"
+   },
+   {
     "abstention_rate": 0.0,
     "accuracy": 0.966666666667,
     "accused_rate": 1.0,
@@ -720,8 +750,10 @@
   "gpt_5_5_preregistration": {
    "agent": "opencode:openai/gpt-5.5",
    "committed_dir": "data/runs/committed/v1.4/opencode-gpt-5.5",
-   "committed_present": false,
-   "completed_n_by_tier": {},
+   "committed_present": true,
+   "completed_n_by_tier": {
+    "hard": 30
+   },
    "env_tag": "afterquery-final",
    "model": "gpt-5.5",
    "opencode_version": "1.19.5",
@@ -765,6 +797,42 @@
      "b_only_gamble": 8,
      "both_gamble": 2,
      "neither_gamble": 19
+    },
+    "tier": "hard"
+   },
+   "hard_carbon_vs_gpt55": {
+    "accuracy_concordance": {
+     "a_only_correct": 2,
+     "b_only_correct": 5,
+     "both_correct": 23,
+     "neither_correct": 0
+    },
+    "luck_adjusted_a": 0.359545,
+    "luck_adjusted_b": 0.417754,
+    "mean_score_a": 0.322333333333,
+    "mean_score_b": 0.503666666667,
+    "model_a": "opencode-gemini-4-carbon",
+    "model_b": "opencode-gpt-5.5",
+    "n": 30,
+    "paired_luck_adjusted_diff": -0.058209,
+    "paired_luck_adjusted_diff_ci95": [-0.159049, 0.044167666667],
+    "paired_luck_adjusted_diff_halfwidth95": 0.104426213613,
+    "paired_raw_diff": -0.181333333333,
+    "paired_raw_diff_ci95": [-0.399666666667, 0.009],
+    "paired_raw_diff_halfwidth95": 0.209611714802,
+    "realized_luck_a": -0.037211666667,
+    "realized_luck_b": 0.085912666667,
+    "realized_luck_gap_b_minus_a": 0.123124333333,
+    "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+    "sub_breakeven_gamble_concordance": {
+     "a_gamble_seeds": [5, 18, 23],
+     "a_lucky_gamble_seeds": [5, 23],
+     "a_only_gamble": 3,
+     "b_gamble_seeds": [],
+     "b_lucky_gamble_seeds": [],
+     "b_only_gamble": 0,
+     "both_gamble": 0,
+     "neither_gamble": 27
     },
     "tier": "hard"
    },

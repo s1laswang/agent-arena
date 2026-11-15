@@ -158,7 +158,7 @@ def test_committed_artifacts_section_a_b1_b2_g1_and_headline_numbers():
     hgt.check_section_b2_invariants(sec_b2, root=ROOT)
 
     assert all(r["n"] == 30 and r["seeds"] == list(range(30)) for r in sec_a)
-    assert len(sec_a) == 23
+    assert len(sec_a) == 24
     assert len(sec_b1) == 3
     assert len(sec_b2) == 39
     assert ver["section_b_rows"] == 42
@@ -250,8 +250,12 @@ def test_leaderboard_v14_hard_schema_and_dashboard_compat():
     hgt.check_leaderboard_v14_hard(lb)
 
     rows = lb["rows"]
-    assert len(rows) == 11
+    assert len(rows) == 12
     by_name = {r["name"]: r for r in rows}
+    assert "opencode:openai/gpt-5.5" in by_name
+    assert round(by_name["opencode:openai/gpt-5.5"]["score"], 3) == 0.504
+    assert round(by_name["opencode:openai/gpt-5.5"]["pct_solver"] * 100) == 101
+    assert round(by_name["opencode:openai/gpt-5.5"]["luck_adjusted_pct_solver"] * 100) == 84
     for req in hgt.LEADERBOARD_REQUIRED_NAMES:
         assert req in by_name
         assert by_name[req]["n"] == 30

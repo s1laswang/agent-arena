@@ -82,7 +82,7 @@
    "gate_count": 5,
    "gates_passed_count": 5,
    "total_violations": 0,
-   "committed_paired_rows_verified": 15,
+   "committed_paired_rows_verified": 16,
    "oracle_hard_k10": {
     "builds": 200,
     "mean": 0.56938,
@@ -97,9 +97,9 @@
     "guess_day1_300secret_max": -0.8
    },
    "hygiene": {
-    "paired_groups_checked": 15,
-    "judge_table_v14_rows_checked": 17,
-    "v14_meta_files_checked": 21,
+    "paired_groups_checked": 16,
+    "judge_table_v14_rows_checked": 18,
+    "v14_meta_files_checked": 22,
     "primary_locked_frontier_cohorts": 5,
     "seed_lock_rule_verified": true,
     "active_docs_checked_count": 6,
@@ -113,9 +113,9 @@
    "verification": {
     "all_replay_consistent": true,
     "section_a_min_n": 30,
-    "section_a_rows": 23,
+    "section_a_rows": 24,
     "section_b_rows": 42,
-    "frontier_cached_episodes_replayed": 150,
+    "frontier_cached_episodes_replayed": 180,
     "stored_solver_episodes_replayed": 60,
     "inproc_baseline_episodes_verified": 420,
     "ladder_cached_episodes_replayed": 550,
@@ -473,6 +473,33 @@
      "winnable_n": 27,
      "winnable_ratio": 1.0,
      "winnable_ratio_ci": null
+    },
+    "hard_opencode_gpt_5_5": {
+     "tier": "hard",
+     "agent": "opencode:openai/gpt-5.5",
+     "kind": "frontier",
+     "n": 30,
+     "mean": 0.5036666667,
+     "score_ci": 0.063788638,
+     "accuracy": 0.9333333333,
+     "accuracy_wilson_ci": [0.7867618228, 0.9815233647],
+     "false_accusation_rate": 0.0,
+     "abstain_rate": 0.0666666667,
+     "mean_accuse_day": 10.25,
+     "mean_p_accused": 0.9398928571,
+     "pass3_calibrated": 0.7925645808,
+     "solver_same_seeds": 0.499,
+     "ratio": 1.0093520374,
+     "ratio_ci": [0.7860335196, 1.4028906956],
+     "luck_adjusted_score": 0.417754,
+     "solver_luck_adjusted": 0.4992966667,
+     "luck_adj_ratio": 0.8366849368,
+     "luck_adj_ci": [0.6654962409, 1.0307646693],
+     "p_wilcoxon_raw": 0.6887106188,
+     "p_wilcoxon_luck": 0.1839690935,
+     "winnable_n": 29,
+     "winnable_ratio": 0.9104571071,
+     "winnable_ratio_ci": [0.7487437186, 1.0857142857]
     }
    }
   },
@@ -731,7 +758,12 @@
     "seeds": "0-29",
     "stop_time_eet": "08:15",
     "spend_cap_usd": 200,
-    "committed_dir_present": false
+    "committed_dir_present": true
+   },
+   "harbor_rehearsal_final": {
+    "commit": "c59ecfd0",
+    "env_tag": "afterquery-final",
+    "table_present": true
    }
   }
  }

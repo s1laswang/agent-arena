@@ -175,9 +175,15 @@ def validate_and_replay_episode(
     if ep.get("valid") is False or meta.get("valid") is False:
         return False, "invalid_flag", None
     end_reason = ep.get("end_reason")
-    if end_reason in ("error", "timeout"):
-        return False, f"end_reason_{end_reason}", None
     rc = ep.get("rc") if "rc" in ep else meta.get("rc")
+    agent_stopped = (
+        rc == 0
+        and ep.get("accused") is None
+        and float(ep.get("score") or 0.0) == 0.0
+        and str(meta.get("note") or "").startswith("agent stopped without ending the episode")
+    )
+    if end_reason == "timeout" or (end_reason == "error" and not agent_stopped):
+        return False, f"end_reason_{end_reason}", None
     if rc == "timeout":
         return False, "rc_timeout", None
     if isinstance(rc, int) and not isinstance(rc, bool) and rc != 0:

@@ -141,6 +141,28 @@
       "luck_adjusted_ratio_ci": "22% [-23%, 63%]",
       "solver_same_seeds_score_ci": "+0.499 +/- 0.119",
       "in_committed_paired_table": true
+    },
+    "opencode_gpt_5_5_hard": {
+      "n": 30,
+      "mean": 0.503666666667,
+      "ci": 0.063788638006,
+      "accuracy": 0.933333333333,
+      "accused_rate": 0.933333333333,
+      "p_accused": 0.939892857143,
+      "solver_same_seeds": 0.499,
+      "ratio": 1.009352037408,
+      "ratio_lo": 0.786033519553,
+      "ratio_hi": 1.402890695574,
+      "post_expected": 0.417754,
+      "solver_post_expected": 0.499296666667,
+      "post_expected_ratio": 0.836684936811,
+      "post_expected_lo": 0.66549624089,
+      "post_expected_hi": 1.03076466933,
+      "score_ci": "+0.504 +/- 0.064",
+      "raw_ratio_ci": "101% [79%, 140%]",
+      "luck_adjusted_ratio_ci": "84% [67%, 103%]",
+      "solver_same_seeds_score_ci": "+0.499 +/- 0.119",
+      "in_committed_paired_table": true
     }
   },
   "solver_paired_reference": {
@@ -159,7 +181,7 @@
       "post_expected": 0.645
     }
   },
-  "committed_paired_rows_verified": 15,
+  "committed_paired_rows_verified": 16,
   "tiers_version_runtime": "v1.4",
   "frontier_v14_runs": [
     {
@@ -265,6 +287,23 @@
       "step_mismatches": 0,
       "replay_agreement_rate": 1.0,
       "mean_score": 0.745
+    },
+    {
+      "run_dir": "v1.4/opencode-gpt-5.5/hard",
+      "tier": "hard",
+      "agent": "opencode:openai/gpt-5.5",
+      "n_total": 30,
+      "n_valid": 30,
+      "n_invalid": 0,
+      "duplicate_seed_count": 0,
+      "valid_timeout_or_error": 0,
+      "seeds_exact_match": true,
+      "seed_min": 0,
+      "seed_max": 29,
+      "replay_matched": 30,
+      "step_mismatches": 0,
+      "replay_agreement_rate": 1.0,
+      "mean_score": 0.503667
     }
   ],
   "solver_v14_runs": [
@@ -357,11 +396,11 @@
       },
       "medium": {
         "n": 40,
-        "mean": -0.95
+        "mean": -0.9
       },
       "hard": {
         "n": 40,
-        "mean": -1.0
+        "mean": -0.95
       }
     }
   },
@@ -443,12 +482,12 @@
     "sd": "0.094"
   },
   "version_hygiene": {
-    "paired_groups_checked": 15,
-    "judge_table_v14_rows_checked": 17,
-    "v14_meta_files_checked": 21,
+    "paired_groups_checked": 16,
+    "judge_table_v14_rows_checked": 18,
+    "v14_meta_files_checked": 22,
     "posthoc_locked_primary_frontier_cohorts": 5,
-    "preregistered_extension_frontier_cohorts": 1,
-    "preregistered_frontier_cohorts": 1,
+    "preregistered_extension_frontier_cohorts": 2,
+    "preregistered_frontier_cohorts": 2,
     "seed_lock_rule_verified": true,
     "preregistered_extensions_verified": true,
     "preregistration_rule_verified": true,

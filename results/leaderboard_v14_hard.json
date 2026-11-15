@@ -76,6 +76,30 @@
    "compute": "Gemini API"
   },
   {
+   "name": "opencode:openai/gpt-5.5",
+   "model": "openai/gpt-5.5",
+   "stage": "frontier",
+   "harness": "OpenCode over MCP (judges' shape)",
+   "n": 30,
+   "score": 0.5036666667,
+   "score_ci": [
+    0.4398780287,
+    0.5674553047
+   ],
+   "pct_solver": 1.0093520374,
+   "pct_solver_ci": [
+    0.7860335196,
+    1.4028906956
+   ],
+   "luck_adjusted_score": 0.417754,
+   "luck_adjusted_pct_solver": 0.8366849368,
+   "luck_adjusted_pct_solver_ci": [
+    0.6654962409,
+    1.0307646693
+   ],
+   "compute": "OpenAI API"
+  },
+  {
    "name": "reference solver",
    "model": "scripted:solver",
    "stage": "solver",

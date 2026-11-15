@@ -92,9 +92,9 @@ def test_committed_json_and_markdown_invariants_and_exact_headline_numbers(commi
     assert "20+10" in rule["solver_reference_layout_note"]
     assert "solver-hard-seeds30to59" in rule["solver_reference_layout_note"]
     assert "access_constraints never binds" in rule["hard_access_constraints_note"]
-    assert rule["total_inspected_episodes"] == 872
-    assert rule["total_valid_replayed_episodes"] == 872
-    assert rule["total_steps_verified"] == 42885
+    assert rule["total_inspected_episodes"] == 902
+    assert rule["total_valid_replayed_episodes"] == 902
+    assert rule["total_steps_verified"] == 44960
     assert rule["total_steps_truncated_checked"] == 2
     assert rule["total_steps_client_only"] == 1
     assert rule["rejected_episodes"] == []

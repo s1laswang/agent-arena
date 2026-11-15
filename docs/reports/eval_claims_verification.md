@@ -25,7 +25,7 @@ pytest -q tests/test_verify_eval_claims.py
 
 ## Gate 1: Headline and Gap Table Numbers (Paired Seeds 0-29)
 
-Recomputed with 10,000 deterministic paired bootstrap resamples (`rng_seed=0`) over seeds 0-29 and cross-checked against `README.md`, `docs/reports/gap.md`, `data/runs/committed/v1.4/paired_table_gemini.json` (15 committed rows within `1e-9`), `paired_table_gemini.md`, and `results/judge_table.md`.
+Recomputed with 10,000 deterministic paired bootstrap resamples (`rng_seed=0`) over seeds 0-29 and cross-checked against `README.md`, `docs/reports/gap.md`, `data/runs/committed/v1.4/paired_table_gemini.json` (16 committed rows within `1e-9`), `paired_table_gemini.md`, and `results/judge_table.md`.
 
 | cohort | n | score +/- 95% CI | solver (same seeds) | frontier / solver [95% CI] | luck-adjusted / solver [95% CI] | mean P(accused) |
 |---|---:|---:|---:|---:|---:|---:|
@@ -34,12 +34,13 @@ Recomputed with 10,000 deterministic paired bootstrap resamples (`rng_seed=0`) o
 | inproc-gemini-4-carbon (hard) | 30 | +0.473 +/- 0.118 | +0.499 +/- 0.119 | 95% [62%, 140%] | 84% [65%, 106%] | 0.93 |
 | inproc-gemini-4-carbon (medium) | 30 | +0.530 +/- 0.138 | +0.645 +/- 0.087 | 82% [56%, 108%] | 74% [52%, 99%] | 0.93 |
 | opencode-gemini-3.5-flash (hard) | 30 | +0.373 +/- 0.177 | +0.499 +/- 0.119 | 75% [36%, 123%] | 22% [-23%, 63%] | 0.71 |
+| opencode-gpt-5.5 (hard) | 30 | +0.504 +/- 0.064 | +0.499 +/- 0.119 | 101% [79%, 140%] | 84% [67%, 103%] | 0.94 |
 | reference solver (hard) | 30 | +0.499 +/- 0.119 | +0.499 +/- 0.119 | 100% | 100% (EV +0.499) | -- |
 | reference solver (medium) | 30 | +0.645 +/- 0.087 | +0.645 +/- 0.087 | 100% | 100% (EV +0.645) | -- |
 
 ## Gate 2: Replay Cache Completeness and Step Consistency
 
-All **150** primary v1.4 frontier episodes (`0..29` per cohort), **2** pre-registered extension episodes (`v1.4/opencode-gemini-4-carbon-ext/hard`, `seeds=[34, 37]`), and **90** committed v1.4 solver reference episodes (`solver:medium` `0..29` `n=30`; `solver:hard` `0..59` `n=60` across `0-19`, `20-29`, `30-59`; **242** total) have complete `0..29` primary seed sets, `0` duplicate seeds per cohort, valid score invariants, `0` timeout/error episodes marked valid, and 100% tool-step and verdict replay agreement in `Env(tier, seed)` under `TIERS_VERSION == "v1.4"` (including post-`1bc3e281` `data.detail` compatibility on `invalid arguments` steps).
+All **150** primary v1.4 frontier episodes (`0..29` per cohort), **32** pre-registered extension/second-family episodes (`v1.4/opencode-gemini-4-carbon-ext/hard` (`n=2`), `v1.4/opencode-gpt-5.5/hard` (`n=30`)), and **90** committed v1.4 solver reference episodes (`solver:medium` `0..29` `n=30`; `solver:hard` `0..59` `n=60` across `0-19`, `20-29`, `30-59`; **272** total) have complete `0..29` primary seed sets, `0` duplicate seeds per cohort, valid score invariants, `0` timeout/crash episodes marked valid (`rc=0` no-accusation stops score `0.0` per `ca0a0dc0`), and 100% tool-step and verdict replay agreement in `Env(tier, seed)` under `TIERS_VERSION == "v1.4"` (including post-`1bc3e281` `data.detail` compatibility on `invalid arguments` steps).
 
 | cohort | tier | agent | valid | invalid | dup seeds | step mismatches | replay matched | mean score |
 |---|---|---|---:|---:|---:|---:|---:|---:|
@@ -49,6 +50,7 @@ All **150** primary v1.4 frontier episodes (`0..29` per cohort), **2** pre-regis
 | `v1.4/inproc-gemini-4-carbon/hard` | hard | `gemini:gemini-4-carbon` | 30 | 0 | 0 | 0 | 30/30 | +0.473000 |
 | `v1.4/opencode-gemini-3.5-flash/hard` | hard | `opencode:google/gemini-3.5-flash` | 30 | 0 | 0 | 0 | 30/30 | +0.373000 |
 | `v1.4/opencode-gemini-4-carbon-ext/hard` | hard | `opencode:google/gemini-4-carbon` | 2 | 0 | 0 | 0 | 2/2 | +0.745000 |
+| `v1.4/opencode-gpt-5.5/hard` | hard | `opencode:openai/gpt-5.5` | 30 | 0 | 0 | 0 | 30/30 | +0.503667 |
 | `v1.4/reference/solver:medium` | medium | `solver` | 30 | 0 | 0 | 0 | 30/30 | +0.645000 |
 | `v1.4/reference/solver:hard` | hard | `solver` | 60 | 0 | 0 | 0 | 60/60 | +0.498500 |
 
@@ -62,7 +64,7 @@ All **150** primary v1.4 frontier episodes (`0..29` per cohort), **2** pre-regis
 |---|---:|---:|---:|
 | `do_nothing` | +0.0000 (n=40) | +0.0000 (n=40) | +0.0000 (n=40) |
 | `stop_early` | +0.0000 (n=40) | +0.0000 (n=40) | +0.0000 (n=40) |
-| `guess_day1` | -0.7500 (n=40) | -0.9500 (n=40) | -1.0000 (n=40) |
+| `guess_day1` | -0.7500 (n=40) | -0.9000 (n=40) | -0.9500 (n=40) |
 
 ### 300-Secret Judge Spread (`results/solver_range/`)
 
@@ -76,9 +78,9 @@ All **150** primary v1.4 frontier episodes (`0..29` per cohort), **2** pre-regis
 
 ## Gate 4: Version and Pre-Registration Hygiene
 
-- Paired v1.4 rows verified free of `v1.2`, `v1.3`, and `superseded`: **15**
-- `results/judge_table.md` v1.4 reported rows verified isolated from earlier tiers and `superseded`: **17**
-- `data/runs/committed/v1.4/**/meta.json` files verified (`tiers_version == "v1.4"`): **21** (5 post-hoc locked primary frontier cohorts on dev seeds `0..29` + 1 pre-registered extension cohort(s))
+- Paired v1.4 rows verified free of `v1.2`, `v1.3`, and `superseded`: **16**
+- `results/judge_table.md` v1.4 reported rows verified isolated from earlier tiers and `superseded`: **18**
+- `data/runs/committed/v1.4/**/meta.json` files verified (`tiers_version == "v1.4"`): **22** (5 post-hoc locked primary frontier cohorts on dev seeds `0..29` + 2 pre-registered extension cohort(s))
 - Seed lock (`671ed96` post-hoc lock on `0-29`, `PRIMARY` vs `REPLICATION`) and pre-registered extensions (`f9fb7a4a` `30-59`, `cf394894` `gpt-5.5`) in `docs/reports/gap.md`: **verified**
 - Active docs scanned for unlabelled stale claims: `README.md, docs/DEMO.md, docs/DIFFICULTY.md, docs/EXPLOITS.md, docs/reports/gap.md, results/judge_table.md` (3 explicitly disclosed historical notes permitted)
 

@@ -10,13 +10,13 @@ python scripts/eval_replication_and_crossmodel.py --check
 
 - **Authoritative headline table of record:** `docs/reports/gap.md` and `data/runs/committed/v1.4/paired_table_gemini.md`.
 - **Primary `hard` headline (`opencode-gemini-4-carbon`, `n=30`, `seeds 0-29`):** raw **`65% [24%, 98%]`** (`64.6% [23.8%, 98.3%]`, `+0.322 +/- 0.199` vs solver `+0.499 +/- 0.119`, paired diff `-0.177 +/- 0.194`, bootstrap 95% CI `[-0.384, -0.008]`) first; luck-adjusted **`72% [52%, 91%]`** (`72.0% [51.7%, 91.2%]`, `+0.360` vs solver `+0.499`) second.
-- **Post-hoc seed lock vs true pre-registrations (Panel Fix A, commits `92708834` and `dcd8c372`):** Primary `seeds 0-29` were **post-hoc locked in `671ed96` (28 s after `8fd4dec`), not pre-registered** (a lock against later reruns and cherry-picking). By contrast, the `seeds 30-59` hard extension (`f9fb7a4a`), the `--hint gather` causal test (`fd8c1cb0`), and the second frontier family `gpt-5.5` OpenCode `1.19.5` `v1.4` hard run (`cf394894`, `seeds 0-29`, stop `08:15` Helsinki / `$200` cap, tag `afterquery-final`; auto-included from `data/runs/committed/v1.4/opencode-gpt-5.5` if committed) were pre-registered before any episode.
+- **Post-hoc seed lock vs true pre-registrations (Panel Fix A, commits `92708834` and `dcd8c372`):** Primary `seeds 0-29` were **post-hoc locked in `671ed96` (28 s after `8fd4dec`), not pre-registered** (a lock against later reruns and cherry-picking). By contrast, the `seeds 30-59` hard extension (`f9fb7a4a`), the `--hint gather` causal test (`fd8c1cb0`), and the second frontier family `gpt-5.5` OpenCode `1.19.5` `v1.4` hard run (`cf394894`, `seeds 0-29`, stop `08:15` Helsinki / `$200` cap, tag `afterquery-final`; committed (`n=30` on `hard`)) were pre-registered before any episode.
 
 ## Data Rule and Step-Level Replay Integrity
 
 - Rules version verified: `v1.4` (`Env(tier, seed)` step-by-step tool replay + final score tolerance `1e-09`; backward-compatible with Panel Fix D commit `1bc3e281` `invalid arguments` `data.detail` payloads).
 - Working-tree self-contained: `True` (zero reliance on unmerged or moving remote git refs).
-- Total episode records inspected and replay-verified: `872/872` valid (`42885` MCP/Env steps verified, `2` client-truncated byte lengths verified, `1` client-only unavailable-tool steps skipped, `0` rejected by DATA RULE).
+- Total episode records inspected and replay-verified: `902/902` valid (`44960` MCP/Env steps verified, `2` client-truncated byte lengths verified, `1` client-only unavailable-tool steps skipped, `0` rejected by DATA RULE).
 - Fleet shard wall-clock guard: `wall_s < 3590s` (`rc != timeout`, `end_reason != error`, `valid != False`).
 - Primary `0-29` clean completions exceeding 3590s (post-hoc locked in `671ed96`, run prior to the fleet 3600s cap, motivating Harbor's `3600s -> 10800s` bump in commit `512836b9`): `6` episodes, all `rc=0` and replay-exact.
 - Reference solver `0-29` split (`20 + 10` dirs, strictly filtered to `seeds 0-29` and never mixing committed `solver-hard-seeds30to59` `30-59` `n=30`): medium `solver-medium-20261114-121126` (`0-19`, `n=20`), `solver-medium-seeds20to29` (`20-29`, `n=10`); hard `solver-hard-20261114-121126` (`0-19`, `n=20`), `solver-hard-seeds20to29` (`20-29`, `n=10`); `30-59` extension/replication paired directly against `data/runs/committed/v1.4/reference/solver-hard-seeds30to59`.
@@ -51,6 +51,7 @@ Seeds 0-29 per tier were post-hoc locked in commit 671ed96 (28 s after 8fd4dec),
 | hard | `opencode-gemini-4-carbon` | 30 | +0.322 +/- 0.199 | 64.6% [23.8%, 98.3%] | -0.177 [-0.384, -0.008] | 0.83 | 0.97 | 13.2 | 0.88 | +0.360 | 72.0% [51.7%, 91.2%] | 3/30 (10%) | -0.037 |
 | hard | `inproc-gemini-4-carbon` | 30 | +0.473 +/- 0.118 | 94.8% [62.2%, 140.0%] | -0.026 [-0.213, +0.155] | 0.93 | 0.97 | 12.7 | 0.93 | +0.421 | 84.3% [65.0%, 105.8%] | 3/30 (10%) | +0.052 |
 | hard | `opencode-gemini-3.5-flash` | 30 | +0.373 +/- 0.177 | 74.7% [35.9%, 122.8%] | -0.126 [-0.347, +0.091] | 0.90 | 1.00 | 12.7 | 0.71 | +0.110 | 22.0% [-22.6%, 63.2%] | 10/30 (33%) | +0.263 |
+| hard | `opencode-gpt-5.5` | 30 | +0.504 +/- 0.064 | 100.9% [78.6%, 140.3%] | +0.005 [-0.124, +0.151] | 0.93 | 0.93 | 10.2 | 0.94 | +0.418 | 83.7% [66.5%, 103.1%] | 0/30 (0%) | +0.086 |
 | hard | `solver` | 30 | +0.499 +/- 0.119 | 100% | 0.000 | 0.97 | 1.00 | 10.6 | 0.97 | +0.499 | 100% | 0/30 (0%) | -0.000 |
 | hard | `grok_tactics` | 30 | +0.432 +/- 0.085 | 86.5% [66.8%, 119.3%] | -0.067 [-0.186, +0.075] | 0.93 | 0.93 | 10.4 | 0.96 | +0.384 | 77.0% [61.0%, 94.6%] | 0/30 (0%) | +0.047 |
 | hard | `heuristic` | 30 | +0.086 +/- 0.204 | 17.2% [-25.8%, 59.7%] | -0.413 [-0.666, -0.171] | 0.80 | 1.00 | 14.4 | 0.78 | +0.052 | 10.5% [-20.2%, 37.4%] | 6/30 (20%) | +0.033 |
@@ -65,6 +66,8 @@ Seeds 0-29 per tier were post-hoc locked in commit 671ed96 (28 s after 8fd4dec),
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | medium | 30 | +0.713 | +0.434 | +0.279 [+0.072, +0.519] | +0.652 | +0.485 | +0.167 [-0.006, +0.358] | 2/30 (2) | 6/30 (1) | -0.112 |
 | hard | 30 | +0.322 | +0.373 | -0.051 [-0.290, +0.182] | +0.360 | +0.110 | +0.250 [+0.038, +0.475] | 3/30 (2) | 10/30 (7) | +0.300 |
+
+- **Second frontier family (`opencode-gpt-5.5` on `hard`, `n=30`):** carbon minus `gpt-5.5` paired raw diff `-0.181` (`[-0.400, +0.009]`), paired luck-adjusted diff `-0.058` (`[-0.159, +0.044]`).
 
 ### Why `gemini-3.5-flash` Hard Raw Score (`74.7% [35.9%, 122.8%]`) Collapses Under Luck Adjustment (`22.0% [-22.6%, 63.2%]`)
 

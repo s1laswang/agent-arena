@@ -57,6 +57,7 @@ EXPECTED_HEADLINE_RATIOS_0_29: dict[str, tuple[str, str]] = {
     "inproc_gemini_4_carbon_hard": ("95% [62%, 140%]", "84% [65%, 106%]"),
     "inproc_gemini_4_carbon_medium": ("82% [56%, 108%]", "74% [52%, 99%]"),
     "opencode_gemini_3_5_flash_hard": ("75% [36%, 123%]", "22% [-23%, 63%]"),
+    "opencode_gpt_5_5_hard": ("101% [79%, 140%]", "84% [67%, 103%]"),
 }
 
 ACTIVE_DOCS: tuple[str, ...] = (
@@ -433,6 +434,7 @@ def gate1_headline_and_gap_table_numbers(
     ip_hard = by_agent_tier.get(("gemini:gemini-4-carbon", "hard"))
     ip_med = by_agent_tier.get(("gemini:gemini-4-carbon", "medium"))
     flash_hard = by_agent_tier.get(("opencode:google/gemini-3.5-flash", "hard"))
+    gpt_hard = by_agent_tier.get(("opencode:openai/gpt-5.5", "hard"))
     sol_hard = by_agent_tier.get(("solver", "hard"))
     sol_med = by_agent_tier.get(("solver", "medium"))
 
@@ -545,6 +547,21 @@ def gate1_headline_and_gap_table_numbers(
     elif expected_seeds is None:
         violations.append("missing recomputed v1.4 row for opencode:google/gemini-3.5-flash hard")
 
+    if gpt_hard is not None:
+        in_committed_gpt = any(
+            r.get("agent") == "opencode:openai/gpt-5.5" and r.get("tier") == "hard"
+            for r in committed_rows
+        )
+        headline_claims["opencode_gpt_5_5_hard"] = _build_claim_entry(
+            gpt_hard,
+            {
+                "solver_same_seeds_score_ci": want_sol_hard_score,
+                "in_committed_paired_table": in_committed_gpt,
+            },
+        )
+    elif expected_seeds is None:
+        violations.append("missing recomputed v1.4 row for opencode:openai/gpt-5.5 hard")
+
     if expected_seeds is None:
         for cohort_key, (exp_raw, exp_luck) in EXPECTED_HEADLINE_RATIOS_0_29.items():
             entry = headline_claims.get(cohort_key)
@@ -557,15 +574,35 @@ def gate1_headline_and_gap_table_numbers(
                     f"expected ({exp_raw}, {exp_luck})"
                 )
 
-        expected_jt_reported = (
-            ("hard", "opencode:google/gemini-4-carbon", int(oc_hard["n"]), want_oc_hard_score),
-            ("medium", "opencode:google/gemini-4-carbon", int(oc_med["n"]), f"{oc_med['mean']:+.3f} +/- {oc_med['ci']:.3f}"),
-            ("hard", "gemini:gemini-4-carbon", int(ip_hard["n"]), f"{ip_hard['mean']:+.3f} +/- {ip_hard['ci']:.3f}"),
-            ("medium", "gemini:gemini-4-carbon", int(ip_med["n"]), f"{ip_med['mean']:+.3f} +/- {ip_med['ci']:.3f}"),
-            ("hard", "solver", int(sol_hard["n"]), want_sol_hard_score),
-            ("medium", "solver", int(sol_med["n"]), want_sol_med_score),
-        )
-        for jt_tier, jt_agent, jt_n, jt_score in expected_jt_reported:
+        from canary import reproduce as repro_mod
+        from canary.analysis.gap import mean_ci as gap_mean_ci
+
+        repro_committed_rows, _ = repro_mod.load_committed(root)
+        repro_v14_by_ta: dict[tuple[str, str], Any] = {
+            (r.tier, r.agent): r
+            for r in repro_committed_rows
+            if r.extra.get("tiers_version") == "v1.4"
+        }
+        tracked_jt_cells: list[tuple[str, str]] = [
+            ("hard", "opencode:google/gemini-4-carbon"),
+            ("medium", "opencode:google/gemini-4-carbon"),
+            ("hard", "gemini:gemini-4-carbon"),
+            ("medium", "gemini:gemini-4-carbon"),
+            ("hard", "opencode:google/gemini-3.5-flash"),
+            ("hard", "solver"),
+            ("medium", "solver"),
+        ]
+        if gpt_hard is not None:
+            tracked_jt_cells.append(("hard", "opencode:openai/gpt-5.5"))
+
+        for jt_tier, jt_agent in tracked_jt_cells:
+            r_obj = repro_v14_by_ta.get((jt_tier, jt_agent))
+            if r_obj is None:
+                violations.append(f"load_committed missing v1.4 row for ({jt_tier}, {jt_agent})")
+                continue
+            rm, rh = gap_mean_ci(r_obj.scores)
+            jt_n = int(r_obj.n)
+            jt_score = f"{rm:+.3f} +/- {rh:.3f}"
             jrow = judge_rows.get((jt_tier, "reported", jt_agent))
             if jrow is None or jrow["n"] != str(jt_n) or jrow["score_ci"] != jt_score:
                 violations.append(
@@ -575,8 +612,9 @@ def gate1_headline_and_gap_table_numbers(
 
     readme_text = _norm_ascii(readme_path.read_text(encoding="utf-8"))
     claim_match = re.search(
-        r"Claim:.*?gemini-4-carbon earns (-?\d+%) of the reference solver's score on Canary's hard tier "
-        r"\(95% CI (-?\d+--?\d+%)\)",
+        r"(?:Claim:|What we measured on the hard tier[^*]*\*\*).*?"
+        r"gemini-4-carbon earns (-?\d+%) of the reference solver's score(?: on Canary's hard tier)?\s*"
+        r"\((?:95% )?CI (-?\d+--?\d+%)",
         readme_text,
     )
     want_claim_pct = f"{oc_hard['ratio']:.0%}"
@@ -591,7 +629,7 @@ def gate1_headline_and_gap_table_numbers(
 
     honest_match = re.search(
         r"Honest reading\..*?in-process reaches (\d+%\s*\[\s*-?\d+%,\s*-?\d+%\]).*?"
-        r"OpenCode reaches (\d+%) on medium",
+        r"(?:OpenCode reaches|through OpenCode) (\d+%) on medium",
         readme_text,
         re.DOTALL,
     )
@@ -663,20 +701,27 @@ def gate1_headline_and_gap_table_numbers(
         violations.append("docs/reports/gap.md missing 'v1.4 headline' section")
     else:
         gap_table: dict[tuple[str, str], tuple[str, str, str]] = {}
+        gpt_gap_row: list[str] | None = None
         for line in gap_v14_lines:
             cells = _parse_md_cells(line)
             if not cells or len(cells) < 5:
                 continue
             c0 = _strip_md_emph(cells[0]).lower()
-            if c0 == "harness":
+            if c0 in ("harness", "run"):
+                continue
+            if "gpt-5.5" in c0 and len(cells) >= 7:
+                gpt_gap_row = [_strip_md_emph(c) for c in cells[:7]]
+                continue
+            if len(cells) != 5 or c0.startswith("opencode-"):
                 continue
             harness_key = "opencode" if "opencode" in c0 else ("inproc" if "in-process" in c0 else c0)
             tier_key = _strip_md_emph(cells[1]).lower()
-            gap_table[(harness_key, tier_key)] = (
-                _strip_md_emph(cells[2]),
-                _strip_md_emph(cells[3]),
-                _strip_md_emph(cells[4]),
-            )
+            if (harness_key, tier_key) not in gap_table:
+                gap_table[(harness_key, tier_key)] = (
+                    _strip_md_emph(cells[2]),
+                    _strip_md_emph(cells[3]),
+                    _strip_md_emph(cells[4]),
+                )
 
         expected_gap_cells = {
             ("opencode", "hard"): (str(oc_hard["n"]), want_oc_hard_raw, want_oc_hard_luck),
@@ -688,6 +733,23 @@ def gate1_headline_and_gap_table_numbers(
             ggot = gap_table.get(gkey)
             if ggot != gwant:
                 violations.append(f"docs/reports/gap.md v1.4 table {gkey}: got {ggot}, expected {gwant}")
+
+        if expected_seeds is None and gpt_hard is not None:
+            want_gpt_raw = _fmt_pct_ci(gpt_hard["ratio"], gpt_hard["ratio_lo"], gpt_hard["ratio_hi"])
+            want_gpt_luck = _fmt_pct_ci(
+                gpt_hard["post_expected_ratio"], gpt_hard["post_expected_lo"], gpt_hard["post_expected_hi"]
+            )
+            if gpt_gap_row is None:
+                violations.append("docs/reports/gap.md missing gpt-5.5 v1.4 hard table row")
+            elif (
+                gpt_gap_row[2] != str(gpt_hard["n"])
+                or gpt_gap_row[4] != want_gpt_raw
+                or gpt_gap_row[6] != want_gpt_luck
+            ):
+                violations.append(
+                    f"docs/reports/gap.md gpt-5.5 row mismatch: got {gpt_gap_row}, "
+                    f"expected n={gpt_hard['n']}, raw={want_gpt_raw!r}, luck={want_gpt_luck!r}"
+                )
 
         v14_blob = "\n".join(gap_v14_lines)
         want_sol_means = f"solver means: hard {sol_hard['mean']:.3f}, medium {sol_med['mean']:.3f}"
@@ -777,10 +839,19 @@ def _verify_cohort_episodes(
                 violations.extend(_check_score_invariants(ep, loc, True))
                 continue
 
-            if meta.get("rc") == "timeout" or ep.get("rc") == "timeout" or ep.get("end_reason") == "error":
+            agent_stopped = (
+                meta.get("rc") == 0
+                and ep.get("accused") is None
+                and float(ep.get("score") or 0.0) == 0.0
+                and str(meta.get("note") or "").startswith("agent stopped without ending the episode")
+            )
+            if not agent_stopped and (
+                meta.get("rc") == "timeout" or ep.get("rc") == "timeout" or ep.get("end_reason") == "error"
+            ):
                 bad_valid_err += 1
+                rc_disp = meta.get("rc") if "rc" in meta else ep.get("rc")
                 violations.append(
-                    f"{loc}: DATA RULE violation: rc={meta.get('rc') or ep.get('rc')!r}, "
+                    f"{loc}: DATA RULE violation: rc={rc_disp!r}, "
                     f"end_reason={ep.get('end_reason')!r} marked valid"
                 )
 
@@ -2004,6 +2075,7 @@ def render_report(manifest: dict[str, Any]) -> str:
         ("inproc_gemini_4_carbon_hard", "inproc-gemini-4-carbon (hard)"),
         ("inproc_gemini_4_carbon_medium", "inproc-gemini-4-carbon (medium)"),
         ("opencode_gemini_3_5_flash_hard", "opencode-gemini-3.5-flash (hard)"),
+        ("opencode_gpt_5_5_hard", "opencode-gpt-5.5 (hard)"),
     )
     for ckey, clabel in cohort_order:
         c = claims.get(ckey)
@@ -2027,12 +2099,14 @@ def render_report(manifest: dict[str, Any]) -> str:
         for w in warnings:
             lines.append(f"- `{w['code']}`: {w['message']}")
 
+    ext_desc_parts = [f"`{r['run_dir']}` (`n={r['n_valid']}`)" for r in ext_runs]
+    ext_desc = ", ".join(ext_desc_parts) if ext_desc_parts else "none"
     lines.extend(
         [
             "",
             H2 + "Gate 2: Replay Cache Completeness and Step Consistency",
             "",
-            f"All **{total_frontier_eps}** primary v1.4 frontier episodes (`0..29` per cohort), **{total_ext_eps}** pre-registered extension episodes (`v1.4/opencode-gemini-4-carbon-ext/hard`, `seeds=[34, 37]`), and **{total_solver_eps}** committed v1.4 solver reference episodes (`solver:medium` `0..29` `n=30`; `solver:hard` `0..59` `n=60` across `0-19`, `20-29`, `30-59`; **{total_frontier_eps + total_ext_eps + total_solver_eps}** total) have complete `0..29` primary seed sets, `0` duplicate seeds per cohort, valid score invariants, `0` timeout/error episodes marked valid, and 100% tool-step and verdict replay agreement in `Env(tier, seed)` under `TIERS_VERSION == \"{manifest.get('tiers_version_runtime')}\"` (including post-`1bc3e281` `data.detail` compatibility on `invalid arguments` steps).",
+            f"All **{total_frontier_eps}** primary v1.4 frontier episodes (`0..29` per cohort), **{total_ext_eps}** pre-registered extension/second-family episodes ({ext_desc}), and **{total_solver_eps}** committed v1.4 solver reference episodes (`solver:medium` `0..29` `n=30`; `solver:hard` `0..59` `n=60` across `0-19`, `20-29`, `30-59`; **{total_frontier_eps + total_ext_eps + total_solver_eps}** total) have complete `0..29` primary seed sets, `0` duplicate seeds per cohort, valid score invariants, `0` timeout/crash episodes marked valid (`rc=0` no-accusation stops score `0.0` per `ca0a0dc0`), and 100% tool-step and verdict replay agreement in `Env(tier, seed)` under `TIERS_VERSION == \"{manifest.get('tiers_version_runtime')}\"` (including post-`1bc3e281` `data.detail` compatibility on `invalid arguments` steps).",
             "",
             "| cohort | tier | agent | valid | invalid | dup seeds | step mismatches | replay matched | mean score |",
             "|---|---|---|---:|---:|---:|---:|---:|---:|",

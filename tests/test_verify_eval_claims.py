@@ -211,10 +211,12 @@ def test_real_repo_check_and_json_cli(capsys):
     assert claims["inproc_gemini_4_carbon_medium"]["luck_adjusted_ratio_ci"] == "74% [52%, 99%]"
     assert claims["opencode_gemini_3_5_flash_hard"]["raw_ratio_ci"] == "75% [36%, 123%]"
     assert claims["opencode_gemini_3_5_flash_hard"]["luck_adjusted_ratio_ci"] == "22% [-23%, 63%]"
+    assert claims["opencode_gpt_5_5_hard"]["raw_ratio_ci"] == "101% [79%, 140%]"
+    assert claims["opencode_gpt_5_5_hard"]["luck_adjusted_ratio_ci"] == "84% [67%, 103%]"
 
     g2 = gates["gate2_replay_cache_completeness_and_step_consistency"]["data"]
     assert sum(r["replay_matched"] for r in g2["frontier_v14_runs"]) == 150
-    assert sum(r["replay_matched"] for r in g2["frontier_extension_v14_runs"]) == 2
+    assert sum(r["replay_matched"] for r in g2["frontier_extension_v14_runs"]) == 32
     assert sum(r["replay_matched"] for r in g2["solver_v14_runs"]) == 90
     sol_by_tier = {r["tier"]: r for r in g2["solver_v14_runs"]}
     assert sol_by_tier["medium"]["n_valid"] == 30
@@ -424,11 +426,14 @@ def test_gate4_catches_version_mixing_and_stale_claims(tmp_path):
     ext_ep_src = ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gemini-4-carbon-ext" / "hard" / "episodes.jsonl"
     ext_ep_dst = v14_dst / "opencode-gemini-4-carbon-ext" / "hard" / "episodes.jsonl"
     shutil.copyfile(ext_ep_src, ext_ep_dst)
+    gpt_ep_src = ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gpt-5.5" / "hard" / "episodes.jsonl"
+    gpt_ep_dst = v14_dst / "opencode-gpt-5.5" / "hard" / "episodes.jsonl"
+    shutil.copyfile(gpt_ep_src, gpt_ep_dst)
 
     res_init = verify.gate4_version_and_preregistration_hygiene(tmp_path)
     assert res_init.passed is True, res_init.violations
     assert res_init.data["posthoc_locked_primary_frontier_cohorts"] == 5
-    assert res_init.data["preregistered_extension_frontier_cohorts"] == 1
+    assert res_init.data["preregistered_extension_frontier_cohorts"] == 2
 
     ext_mf = v14_dst / "opencode-gemini-4-carbon-ext" / "hard" / "meta.json"
     orig_ext_mf = ext_mf.read_text(encoding="utf-8")
@@ -441,6 +446,8 @@ def test_gate4_catches_version_mixing_and_stale_claims(tmp_path):
     ext_mf.write_text(orig_ext_mf, encoding="utf-8")
 
     gpt_dir = v14_dst / "opencode-gpt-5.5" / "hard"
+    if gpt_ep_dst.is_file():
+        gpt_ep_dst.unlink()
     gpt_dir.mkdir(parents=True, exist_ok=True)
     (gpt_dir / "meta.json").write_text(json.dumps({"tiers_version": "v1.4", "seeds": [0, 1]}), encoding="utf-8")
     assert verify.gate4_version_and_preregistration_hygiene(tmp_path).passed is True
@@ -472,8 +479,8 @@ def test_gate4_catches_version_mixing_and_stale_claims(tmp_path):
     orig_jt = jt.read_text(encoding="utf-8")
     jt.write_text(
         orig_jt.replace(
-            "(data/runs/committed/v1.4/opencode-gemini-4-carbon/hard)",
-            "(data/runs/committed/superseded/opencode-gemini-4-carbon/hard)",
+            "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard",
+            "data/runs/committed/superseded/opencode-gemini-4-carbon/hard",
         ),
         encoding="utf-8",
     )

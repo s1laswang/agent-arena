@@ -295,6 +295,53 @@ def test_python_comments_gate(tmp_path: Path) -> None:
     assert any("scripts/bad.py:2" in e for e in gates["python_comments"]["errors"])
 
 
+def test_modified_py_files_scan_only_added_lines_for_python_comments(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    base_py = (
+        f"{HASH_CHAR} Legacy comment on base\n"
+        "def existing() -> int:\n"
+        f"    return 1  {HASH_CHAR} legacy inline comment\n"
+    )
+    _commit_files(
+        repo,
+        {"tests/test_legacy.py": base_py},
+        message="seed base python file with pre-existing comments",
+    )
+
+    _git(repo, "checkout", "-b", "modify-py-clean")
+    clean_mod_py = (
+        base_py
+        + "\n"
+        + "def added_helper() -> str:\n"
+        + f'    return """literal\n{HASH_CHAR} inside multiline string"""\n'
+    )
+    _commit_files(
+        repo,
+        {"tests/test_legacy.py": clean_mod_py},
+        message="modify existing python file without adding comments",
+    )
+
+    rep_clean = verify_branch(base="justSilas", branch="modify-py-clean", repo=repo)
+    assert rep_clean["ok"] is True, rep_clean
+    assert len(rep_clean["gates"]) == 11
+    assert all(g["passed"] for g in rep_clean["gates"])
+    assert _gate_map(rep_clean)["python_comments"]["passed"] is True
+
+    bad_mod_py = clean_mod_py + f"{HASH_CHAR} newly added forbidden comment\n"
+    _commit_files(
+        repo,
+        {"tests/test_legacy.py": bad_mod_py},
+        message="add new comment line to modified python file",
+    )
+
+    rep_bad = verify_branch(base="justSilas", branch="modify-py-clean", repo=repo)
+    assert rep_bad["ok"] is False
+    errs = _gate_map(rep_bad)["python_comments"]["errors"]
+    assert errs == [
+        f"tests/test_legacy.py:8: unexpected comment {HASH_CHAR} newly added forbidden comment"
+    ]
+
+
 @pytest.mark.parametrize("dash_char,label", [(EM_DASH, "em-dash"), (EN_DASH, "en-dash")])
 def test_unicode_dashes_gate(tmp_path: Path, dash_char: str, label: str) -> None:
     repo = _init_repo(tmp_path)

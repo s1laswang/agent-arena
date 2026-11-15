@@ -1,0 +1,202 @@
+{
+  "role": "adaptive_mole",
+  "subrole": "mole_forge",
+  "environment_scope": "arena mode, not the judged v1.4 environment",
+  "model_id": "gemini-4-carbon",
+  "commit": "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
+  "timestamp": "2026-11-14T22:46:35Z",
+  "command": "scripts/run_role_mole_forge.py --llm gemini:gemini-4-carbon --tier medium --gens 8 --pop 8 --children 6 --elite 2 --seeds 4000-4019 --fresh-seeds 5000-5019 --workers 8 --out results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-med-deep",
+  "usage": {
+    "calls": 19,
+    "in": 9256,
+    "out": 6680,
+    "thinking": 4353,
+    "cached": 0,
+    "cost_usd": 0.128842,
+    "latency_s": 338.506,
+    "ledger_run_id": "mole-forge-20261114-223835-0"
+  },
+  "n_valid_llm_children": 43,
+  "n_invalid_llm_children": 0,
+  "n_samples": 43,
+  "best_fitness": 0.738125,
+  "default_dev_fitness": 0.6315000000000001,
+  "fresh_solver_accuracy": 0.85,
+  "fresh_min_regret": 0.139,
+  "default_fresh_min_regret": 0.161,
+  "fake_env": false,
+  "tier": "medium",
+  "tiers_version": "v1.4",
+  "gens": 8,
+  "pop_size": 8,
+  "requested_children": 6,
+  "elite": 2,
+  "children_per_gen": 6,
+  "dev_seeds": [
+    4000,
+    4001,
+    4002,
+    4003,
+    4004,
+    4005,
+    4006,
+    4007,
+    4008,
+    4009,
+    4010,
+    4011,
+    4012,
+    4013,
+    4014,
+    4015,
+    4016,
+    4017,
+    4018,
+    4019
+  ],
+  "fresh_seeds": [
+    5000,
+    5001,
+    5002,
+    5003,
+    5004,
+    5005,
+    5006,
+    5007,
+    5008,
+    5009,
+    5010,
+    5011,
+    5012,
+    5013,
+    5014,
+    5015,
+    5016,
+    5017,
+    5018,
+    5019
+  ],
+  "fitness_mode": "mean",
+  "min_solver_acc": 0.85,
+  "hof_size": 13,
+  "top_strategy": {
+    "default": {
+      "frame": "decoy",
+      "leak": "random_seeded"
+    },
+    "rules": [
+      {
+        "if": [
+          [
+            "i_am_restricted",
+            "==",
+            1
+          ],
+          [
+            "days_since_last_leak",
+            "<",
+            3
+          ]
+        ],
+        "then": {
+          "frame": "decoy",
+          "leak": "none"
+        }
+      },
+      {
+        "if": [
+          [
+            "i_am_restricted",
+            "==",
+            1
+          ],
+          [
+            "n_restricted_colleagues",
+            ">=",
+            1
+          ]
+        ],
+        "then": {
+          "frame": "most_restricted_peer",
+          "leak": "most_recipients"
+        }
+      },
+      {
+        "if": [
+          [
+            "i_am_restricted",
+            "==",
+            1
+          ]
+        ],
+        "then": {
+          "frame": "decoy",
+          "leak": "most_recipients"
+        }
+      }
+    ]
+  },
+  "provider_settings": {
+    "thinking_level": "model default (not sent; gemini-4-carbon: medium)",
+    "include_thoughts": true,
+    "temperature": "not sent (API default 1.0)",
+    "thought_signature_replay": true,
+    "api": "generateContent"
+  },
+  "fresh_confirmation": {
+    "top_hof": {
+      "fitness": 0.8727499999999999,
+      "regret": 0.8727499999999999,
+      "min_regret": 0.139,
+      "fitness_mode": "mean",
+      "min_solver_acc": 0.85,
+      "solver_score": 0.6065,
+      "solver_acc": 0.85,
+      "per_investigator": {
+        "grok_tactics": {
+          "score": 0.46749999999999997,
+          "acc": 0.8,
+          "regret": 0.139
+        },
+        "obvious_heuristic": {
+          "score": -1.0,
+          "acc": 0.0,
+          "regret": 1.6065
+        }
+      },
+      "feasible": true,
+      "baseline_solver_score": 0.6214999999999999,
+      "beaten": [
+        "grok_tactics",
+        "obvious_heuristic"
+      ]
+    },
+    "default_mole": {
+      "fitness": 0.764,
+      "regret": 0.764,
+      "min_regret": 0.161,
+      "fitness_mode": "mean",
+      "min_solver_acc": 0.85,
+      "solver_score": 0.6214999999999999,
+      "solver_acc": 0.9,
+      "per_investigator": {
+        "grok_tactics": {
+          "score": 0.4605,
+          "acc": 0.8,
+          "regret": 0.161
+        },
+        "obvious_heuristic": {
+          "score": -0.7455,
+          "acc": 0.15,
+          "regret": 1.367
+        }
+      },
+      "feasible": true,
+      "baseline_solver_score": 0.6214999999999999,
+      "beaten": [
+        "grok_tactics",
+        "obvious_heuristic"
+      ]
+    }
+  }
+}

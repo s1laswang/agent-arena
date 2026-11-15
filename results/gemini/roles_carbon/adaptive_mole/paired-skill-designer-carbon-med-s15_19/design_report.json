@@ -1,0 +1,1075 @@
+{
+  "role": "adaptive_mole",
+  "subrole": "paired_skill_designer",
+  "model_id": "gemini-4-carbon",
+  "tiers_version": "v1.4",
+  "tier": "medium",
+  "commit": "70c1b155ddee1cac2f39c09137c00b240be4c38f",
+  "timestamp": "2026-11-15T00:12:38+00:00",
+  "design_seeds": [
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "X": 0.5,
+  "Y": 0.2,
+  "n_proposals_per_round": 6,
+  "baseline_on_design_seeds": {
+    "solver_mean": 0.672,
+    "heuristic_mean": -1.0,
+    "regret": 1.672
+  },
+  "meta": {
+    "llm_ok": true,
+    "n_llm_valid": 6,
+    "n_kept": 2,
+    "n_kept_total": 2,
+    "n_rounds": 1
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "meta": {
+        "llm_ok": true,
+        "error": null,
+        "n_llm_valid": 6
+      },
+      "n_llm_valid": 6,
+      "n_kept_llm": 2,
+      "n_kept_total": 2,
+      "rows": [
+        {
+          "round": 1,
+          "proposal_index": 0,
+          "origin": "llm",
+          "name": "decoy_amplifier_seeded",
+          "keep": false,
+          "solver": 0.404,
+          "agent": null,
+          "regret": null,
+          "why": "unsolvable (solver < X)",
+          "candidate": {
+            "name": "decoy_amplifier_seeded",
+            "rationale": "Blends into benign log traffic with log_rate_mole at 1.0 while aggressively framing the decoy early and shifting blame to restricted peers once restrictions begin. Uses random_seeded leaks to remain solvable by canary traps while punishing log-reliant investigators.",
+            "mole_strategy": {
+              "rules": [
+                {
+                  "if": [
+                    [
+                      "n_restricted_colleagues",
+                      ">=",
+                      2.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "most_restricted_peer"
+                  }
+                },
+                {
+                  "if": [
+                    [
+                      "i_am_restricted",
+                      "==",
+                      1.0
+                    ],
+                    [
+                      "days_since_last_leak",
+                      "<=",
+                      1.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": null,
+                    "frame": "decoy"
+                  }
+                },
+                {
+                  "if": [],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "decoy"
+                  }
+                }
+              ]
+            },
+            "knobs": {
+              "p_leak": 0.85,
+              "leak_damage": 0.05,
+              "log_rate_mole": 1.0,
+              "interview_lr": 1.2,
+              "decoy": true,
+              "framing": true,
+              "careful_mole": true
+            }
+          }
+        },
+        {
+          "round": 1,
+          "proposal_index": 1,
+          "origin": "llm",
+          "name": "canary_wary_scapegoater",
+          "keep": true,
+          "solver": 0.6,
+          "agent": -1.0,
+          "regret": 1.6,
+          "why": "kept",
+          "candidate": {
+            "name": "canary_wary_scapegoater",
+            "rationale": "Pauses for a single day when low-recipient canary-like docs pile up unless already silent for two days, then resumes random_seeded leaking. Constantly frames restricted peers or decoys under weak interview signals to mislead naive heuristics.",
+            "mole_strategy": {
+              "rules": [
+                {
+                  "if": [
+                    [
+                      "recent_low_recipient_docs",
+                      ">=",
+                      2.0
+                    ],
+                    [
+                      "days_since_last_leak",
+                      "<",
+                      2.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": null,
+                    "frame": "decoy"
+                  }
+                },
+                {
+                  "if": [
+                    [
+                      "n_restricted_colleagues",
+                      ">=",
+                      1.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "most_restricted_peer"
+                  }
+                },
+                {
+                  "if": [],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "decoy"
+                  }
+                }
+              ]
+            },
+            "knobs": {
+              "p_leak": 0.88,
+              "leak_damage": 0.05,
+              "log_rate_mole": 1.02,
+              "interview_lr": 1.22,
+              "decoy": true,
+              "framing": true,
+              "careful_mole": true
+            }
+          }
+        },
+        {
+          "round": 1,
+          "proposal_index": 2,
+          "origin": "llm",
+          "name": "pulse_leaker_peer_blur",
+          "keep": false,
+          "solver": 0.414,
+          "agent": null,
+          "regret": null,
+          "why": "unsolvable (solver < X)",
+          "candidate": {
+            "name": "pulse_leaker_peer_blur",
+            "rationale": "Alternates high-probability random_seeded leaks with brief cooldowns after back-to-back leak days, spreading framing across random peers early and piling onto restricted colleagues later to diffuse suspicion among non-Bayesian trackers.",
+            "mole_strategy": {
+              "rules": [
+                {
+                  "if": [
+                    [
+                      "days_since_last_leak",
+                      "==",
+                      0.0
+                    ],
+                    [
+                      "day",
+                      ">",
+                      3.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": null,
+                    "frame": "random_peer"
+                  }
+                },
+                {
+                  "if": [
+                    [
+                      "n_restricted_colleagues",
+                      ">=",
+                      1.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "most_restricted_peer"
+                  }
+                },
+                {
+                  "if": [
+                    [
+                      "day",
+                      "<=",
+                      4.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "decoy"
+                  }
+                },
+                {
+                  "if": [],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "random_peer"
+                  }
+                }
+              ]
+            },
+            "knobs": {
+              "p_leak": 0.9,
+              "leak_damage": 0.05,
+              "log_rate_mole": 1.0,
+              "interview_lr": 1.25,
+              "decoy": true,
+              "framing": true,
+              "careful_mole": true
+            }
+          }
+        },
+        {
+          "round": 1,
+          "proposal_index": 3,
+          "origin": "llm",
+          "name": "broad_opening_decoy_trap",
+          "keep": false,
+          "solver": 0.232,
+          "agent": null,
+          "regret": null,
+          "why": "unsolvable (solver < X)",
+          "candidate": {
+            "name": "broad_opening_decoy_trap",
+            "rationale": "Uses broad-audience leaks during the first two days to inflict damage without giving narrow recipient intersections, then switches to random_seeded leaks so systematic canary traps succeed while decoy framing traps impatient accusers.",
+            "mole_strategy": {
+              "rules": [
+                {
+                  "if": [
+                    [
+                      "day",
+                      "<=",
+                      2.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": "most_recipients",
+                    "frame": "decoy"
+                  }
+                },
+                {
+                  "if": [
+                    [
+                      "i_am_restricted",
+                      "==",
+                      1.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "most_restricted_peer"
+                  }
+                },
+                {
+                  "if": [],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "decoy"
+                  }
+                }
+              ]
+            },
+            "knobs": {
+              "p_leak": 0.82,
+              "leak_damage": 0.05,
+              "log_rate_mole": 1.05,
+              "interview_lr": 1.2,
+              "decoy": true,
+              "framing": true,
+              "careful_mole": true
+            }
+          }
+        },
+        {
+          "round": 1,
+          "proposal_index": 4,
+          "origin": "llm",
+          "name": "adaptive_restriction_mirror",
+          "keep": false,
+          "solver": 0.49,
+          "agent": null,
+          "regret": null,
+          "why": "unsolvable (solver < X)",
+          "candidate": {
+            "name": "adaptive_restriction_mirror",
+            "rationale": "Reacts to investigator containment: hides behind decoy framing until anyone is restricted, briefly ducks when personally restricted, and otherwise leaks via random_seeded with high damage pressure and near-zero log excess.",
+            "mole_strategy": {
+              "rules": [
+                {
+                  "if": [
+                    [
+                      "i_am_restricted",
+                      "==",
+                      1.0
+                    ],
+                    [
+                      "days_since_last_leak",
+                      "==",
+                      0.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": null,
+                    "frame": "most_restricted_peer"
+                  }
+                },
+                {
+                  "if": [
+                    [
+                      "n_restricted_colleagues",
+                      ">=",
+                      2.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "most_restricted_peer"
+                  }
+                },
+                {
+                  "if": [
+                    [
+                      "n_restricted_colleagues",
+                      "==",
+                      1.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "random_peer"
+                  }
+                },
+                {
+                  "if": [],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "decoy"
+                  }
+                }
+              ]
+            },
+            "knobs": {
+              "p_leak": 0.86,
+              "leak_damage": 0.05,
+              "log_rate_mole": 1.0,
+              "interview_lr": 1.24,
+              "decoy": true,
+              "framing": true,
+              "careful_mole": true
+            }
+          }
+        },
+        {
+          "round": 1,
+          "proposal_index": 5,
+          "origin": "llm",
+          "name": "oldest_buffer_canary_mix",
+          "keep": true,
+          "solver": 0.5076,
+          "agent": -1.0,
+          "regret": 1.5076,
+          "why": "kept",
+          "candidate": {
+            "name": "oldest_buffer_canary_mix",
+            "rationale": "Periodically leaks oldest held docs early in the episode to exploit leak-window delays before settling into steady random_seeded leaks. Pairs minimal log signature with shifting decoy and peer framing to defeat ablated solvers.",
+            "mole_strategy": {
+              "rules": [
+                {
+                  "if": [
+                    [
+                      "day",
+                      ">=",
+                      3.0
+                    ],
+                    [
+                      "day",
+                      "<=",
+                      5.0
+                    ],
+                    [
+                      "min_recipient_count",
+                      "<=",
+                      3.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": "oldest",
+                    "frame": "decoy"
+                  }
+                },
+                {
+                  "if": [
+                    [
+                      "n_restricted_colleagues",
+                      ">=",
+                      1.0
+                    ]
+                  ],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "most_restricted_peer"
+                  }
+                },
+                {
+                  "if": [],
+                  "then": {
+                    "leak": "random_seeded",
+                    "frame": "decoy"
+                  }
+                }
+              ]
+            },
+            "knobs": {
+              "p_leak": 0.8,
+              "leak_damage": 0.048,
+              "log_rate_mole": 1.03,
+              "interview_lr": 1.2,
+              "decoy": true,
+              "framing": true,
+              "careful_mole": true
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "round": 1,
+      "proposal_index": 0,
+      "origin": "llm",
+      "name": "decoy_amplifier_seeded",
+      "keep": false,
+      "solver": 0.404,
+      "agent": null,
+      "regret": null,
+      "why": "unsolvable (solver < X)",
+      "candidate": {
+        "name": "decoy_amplifier_seeded",
+        "rationale": "Blends into benign log traffic with log_rate_mole at 1.0 while aggressively framing the decoy early and shifting blame to restricted peers once restrictions begin. Uses random_seeded leaks to remain solvable by canary traps while punishing log-reliant investigators.",
+        "mole_strategy": {
+          "rules": [
+            {
+              "if": [
+                [
+                  "n_restricted_colleagues",
+                  ">=",
+                  2.0
+                ]
+              ],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "most_restricted_peer"
+              }
+            },
+            {
+              "if": [
+                [
+                  "i_am_restricted",
+                  "==",
+                  1.0
+                ],
+                [
+                  "days_since_last_leak",
+                  "<=",
+                  1.0
+                ]
+              ],
+              "then": {
+                "leak": null,
+                "frame": "decoy"
+              }
+            },
+            {
+              "if": [],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "decoy"
+              }
+            }
+          ]
+        },
+        "knobs": {
+          "p_leak": 0.85,
+          "leak_damage": 0.05,
+          "log_rate_mole": 1.0,
+          "interview_lr": 1.2,
+          "decoy": true,
+          "framing": true,
+          "careful_mole": true
+        }
+      }
+    },
+    {
+      "round": 1,
+      "proposal_index": 1,
+      "origin": "llm",
+      "name": "canary_wary_scapegoater",
+      "keep": true,
+      "solver": 0.6,
+      "agent": -1.0,
+      "regret": 1.6,
+      "why": "kept",
+      "candidate": {
+        "name": "canary_wary_scapegoater",
+        "rationale": "Pauses for a single day when low-recipient canary-like docs pile up unless already silent for two days, then resumes random_seeded leaking. Constantly frames restricted peers or decoys under weak interview signals to mislead naive heuristics.",
+        "mole_strategy": {
+          "rules": [
+            {
+              "if": [
+                [
+                  "recent_low_recipient_docs",
+                  ">=",
+                  2.0
+                ],
+                [
+                  "days_since_last_leak",
+                  "<",
+                  2.0
+                ]
+              ],
+              "then": {
+                "leak": null,
+                "frame": "decoy"
+              }
+            },
+            {
+              "if": [
+                [
+                  "n_restricted_colleagues",
+                  ">=",
+                  1.0
+                ]
+              ],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "most_restricted_peer"
+              }
+            },
+            {
+              "if": [],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "decoy"
+              }
+            }
+          ]
+        },
+        "knobs": {
+          "p_leak": 0.88,
+          "leak_damage": 0.05,
+          "log_rate_mole": 1.02,
+          "interview_lr": 1.22,
+          "decoy": true,
+          "framing": true,
+          "careful_mole": true
+        }
+      }
+    },
+    {
+      "round": 1,
+      "proposal_index": 2,
+      "origin": "llm",
+      "name": "pulse_leaker_peer_blur",
+      "keep": false,
+      "solver": 0.414,
+      "agent": null,
+      "regret": null,
+      "why": "unsolvable (solver < X)",
+      "candidate": {
+        "name": "pulse_leaker_peer_blur",
+        "rationale": "Alternates high-probability random_seeded leaks with brief cooldowns after back-to-back leak days, spreading framing across random peers early and piling onto restricted colleagues later to diffuse suspicion among non-Bayesian trackers.",
+        "mole_strategy": {
+          "rules": [
+            {
+              "if": [
+                [
+                  "days_since_last_leak",
+                  "==",
+                  0.0
+                ],
+                [
+                  "day",
+                  ">",
+                  3.0
+                ]
+              ],
+              "then": {
+                "leak": null,
+                "frame": "random_peer"
+              }
+            },
+            {
+              "if": [
+                [
+                  "n_restricted_colleagues",
+                  ">=",
+                  1.0
+                ]
+              ],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "most_restricted_peer"
+              }
+            },
+            {
+              "if": [
+                [
+                  "day",
+                  "<=",
+                  4.0
+                ]
+              ],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "decoy"
+              }
+            },
+            {
+              "if": [],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "random_peer"
+              }
+            }
+          ]
+        },
+        "knobs": {
+          "p_leak": 0.9,
+          "leak_damage": 0.05,
+          "log_rate_mole": 1.0,
+          "interview_lr": 1.25,
+          "decoy": true,
+          "framing": true,
+          "careful_mole": true
+        }
+      }
+    },
+    {
+      "round": 1,
+      "proposal_index": 3,
+      "origin": "llm",
+      "name": "broad_opening_decoy_trap",
+      "keep": false,
+      "solver": 0.232,
+      "agent": null,
+      "regret": null,
+      "why": "unsolvable (solver < X)",
+      "candidate": {
+        "name": "broad_opening_decoy_trap",
+        "rationale": "Uses broad-audience leaks during the first two days to inflict damage without giving narrow recipient intersections, then switches to random_seeded leaks so systematic canary traps succeed while decoy framing traps impatient accusers.",
+        "mole_strategy": {
+          "rules": [
+            {
+              "if": [
+                [
+                  "day",
+                  "<=",
+                  2.0
+                ]
+              ],
+              "then": {
+                "leak": "most_recipients",
+                "frame": "decoy"
+              }
+            },
+            {
+              "if": [
+                [
+                  "i_am_restricted",
+                  "==",
+                  1.0
+                ]
+              ],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "most_restricted_peer"
+              }
+            },
+            {
+              "if": [],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "decoy"
+              }
+            }
+          ]
+        },
+        "knobs": {
+          "p_leak": 0.82,
+          "leak_damage": 0.05,
+          "log_rate_mole": 1.05,
+          "interview_lr": 1.2,
+          "decoy": true,
+          "framing": true,
+          "careful_mole": true
+        }
+      }
+    },
+    {
+      "round": 1,
+      "proposal_index": 4,
+      "origin": "llm",
+      "name": "adaptive_restriction_mirror",
+      "keep": false,
+      "solver": 0.49,
+      "agent": null,
+      "regret": null,
+      "why": "unsolvable (solver < X)",
+      "candidate": {
+        "name": "adaptive_restriction_mirror",
+        "rationale": "Reacts to investigator containment: hides behind decoy framing until anyone is restricted, briefly ducks when personally restricted, and otherwise leaks via random_seeded with high damage pressure and near-zero log excess.",
+        "mole_strategy": {
+          "rules": [
+            {
+              "if": [
+                [
+                  "i_am_restricted",
+                  "==",
+                  1.0
+                ],
+                [
+                  "days_since_last_leak",
+                  "==",
+                  0.0
+                ]
+              ],
+              "then": {
+                "leak": null,
+                "frame": "most_restricted_peer"
+              }
+            },
+            {
+              "if": [
+                [
+                  "n_restricted_colleagues",
+                  ">=",
+                  2.0
+                ]
+              ],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "most_restricted_peer"
+              }
+            },
+            {
+              "if": [
+                [
+                  "n_restricted_colleagues",
+                  "==",
+                  1.0
+                ]
+              ],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "random_peer"
+              }
+            },
+            {
+              "if": [],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "decoy"
+              }
+            }
+          ]
+        },
+        "knobs": {
+          "p_leak": 0.86,
+          "leak_damage": 0.05,
+          "log_rate_mole": 1.0,
+          "interview_lr": 1.24,
+          "decoy": true,
+          "framing": true,
+          "careful_mole": true
+        }
+      }
+    },
+    {
+      "round": 1,
+      "proposal_index": 5,
+      "origin": "llm",
+      "name": "oldest_buffer_canary_mix",
+      "keep": true,
+      "solver": 0.5076,
+      "agent": -1.0,
+      "regret": 1.5076,
+      "why": "kept",
+      "candidate": {
+        "name": "oldest_buffer_canary_mix",
+        "rationale": "Periodically leaks oldest held docs early in the episode to exploit leak-window delays before settling into steady random_seeded leaks. Pairs minimal log signature with shifting decoy and peer framing to defeat ablated solvers.",
+        "mole_strategy": {
+          "rules": [
+            {
+              "if": [
+                [
+                  "day",
+                  ">=",
+                  3.0
+                ],
+                [
+                  "day",
+                  "<=",
+                  5.0
+                ],
+                [
+                  "min_recipient_count",
+                  "<=",
+                  3.0
+                ]
+              ],
+              "then": {
+                "leak": "oldest",
+                "frame": "decoy"
+              }
+            },
+            {
+              "if": [
+                [
+                  "n_restricted_colleagues",
+                  ">=",
+                  1.0
+                ]
+              ],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "most_restricted_peer"
+              }
+            },
+            {
+              "if": [],
+              "then": {
+                "leak": "random_seeded",
+                "frame": "decoy"
+              }
+            }
+          ]
+        },
+        "knobs": {
+          "p_leak": 0.8,
+          "leak_damage": 0.048,
+          "log_rate_mole": 1.03,
+          "interview_lr": 1.2,
+          "decoy": true,
+          "framing": true,
+          "careful_mole": true
+        }
+      }
+    }
+  ],
+  "kept": [
+    {
+      "name": "canary_wary_scapegoater",
+      "rationale": "Pauses for a single day when low-recipient canary-like docs pile up unless already silent for two days, then resumes random_seeded leaking. Constantly frames restricted peers or decoys under weak interview signals to mislead naive heuristics.",
+      "mole_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "recent_low_recipient_docs",
+                ">=",
+                2.0
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                2.0
+              ]
+            ],
+            "then": {
+              "leak": null,
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1.0
+              ]
+            ],
+            "then": {
+              "leak": "random_seeded",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [],
+            "then": {
+              "leak": "random_seeded",
+              "frame": "decoy"
+            }
+          }
+        ]
+      },
+      "knobs": {
+        "p_leak": 0.88,
+        "leak_damage": 0.05,
+        "log_rate_mole": 1.02,
+        "interview_lr": 1.22,
+        "decoy": true,
+        "framing": true,
+        "careful_mole": true
+      }
+    },
+    {
+      "name": "oldest_buffer_canary_mix",
+      "rationale": "Periodically leaks oldest held docs early in the episode to exploit leak-window delays before settling into steady random_seeded leaks. Pairs minimal log signature with shifting decoy and peer framing to defeat ablated solvers.",
+      "mole_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "day",
+                ">=",
+                3.0
+              ],
+              [
+                "day",
+                "<=",
+                5.0
+              ],
+              [
+                "min_recipient_count",
+                "<=",
+                3.0
+              ]
+            ],
+            "then": {
+              "leak": "oldest",
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1.0
+              ]
+            ],
+            "then": {
+              "leak": "random_seeded",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [],
+            "then": {
+              "leak": "random_seeded",
+              "frame": "decoy"
+            }
+          }
+        ]
+      },
+      "knobs": {
+        "p_leak": 0.8,
+        "leak_damage": 0.048,
+        "log_rate_mole": 1.03,
+        "interview_lr": 1.2,
+        "decoy": true,
+        "framing": true,
+        "careful_mole": true
+      }
+    }
+  ],
+  "selected_top_scenario": {
+    "round": 1,
+    "proposal_index": 1,
+    "origin": "llm",
+    "name": "canary_wary_scapegoater",
+    "keep": true,
+    "solver": 0.6,
+    "agent": -1.0,
+    "regret": 1.6,
+    "why": "kept",
+    "candidate": {
+      "name": "canary_wary_scapegoater",
+      "rationale": "Pauses for a single day when low-recipient canary-like docs pile up unless already silent for two days, then resumes random_seeded leaking. Constantly frames restricted peers or decoys under weak interview signals to mislead naive heuristics.",
+      "mole_strategy": {
+        "rules": [
+          {
+            "if": [
+              [
+                "recent_low_recipient_docs",
+                ">=",
+                2.0
+              ],
+              [
+                "days_since_last_leak",
+                "<",
+                2.0
+              ]
+            ],
+            "then": {
+              "leak": null,
+              "frame": "decoy"
+            }
+          },
+          {
+            "if": [
+              [
+                "n_restricted_colleagues",
+                ">=",
+                1.0
+              ]
+            ],
+            "then": {
+              "leak": "random_seeded",
+              "frame": "most_restricted_peer"
+            }
+          },
+          {
+            "if": [],
+            "then": {
+              "leak": "random_seeded",
+              "frame": "decoy"
+            }
+          }
+        ]
+      },
+      "knobs": {
+        "p_leak": 0.88,
+        "leak_damage": 0.05,
+        "log_rate_mole": 1.02,
+        "interview_lr": 1.22,
+        "decoy": true,
+        "framing": true,
+        "careful_mole": true
+      }
+    }
+  }
+}

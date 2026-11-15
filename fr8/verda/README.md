@@ -54,3 +54,5 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 - v3-4k s1 spot 714d8144 was PREEMPTED (instance gone by 03:08, SSH timeout); the 4k replicate is lost.
 - Gemini J1-lite FAILED to start: the installed vLLM rejected `--rope-scaling` (unrecognised argument), and the runner waited 30 min then exited at ~01:20; the A100 sat idle ~01:20–03:10 (my watcher didn't catch it). Fixed with `--hf-overrides '{"rope_scaling":…,"max_position_embeddings":131072}'` and restarted at 03:10; the runner now exits immediately if vLLM dies.
 - Steps @03:08: 8k s0 167 (H100), 8k s1 370 (A100 spot), 8k s2 619 (H100 spot), 8k s3 211 (A100, shared with Meta earlier).
+
+03:22: X1 Gemini quota fix: GEMINI_API_KEY_2 (second GCP project, added by Silas) copied root-only to 18acfa5d:/root/x1/.env (replacing key 1) and /root/x1/.env2; verified by hash, never printed. Key 1 is reserved for the 05:45 judge rehearsal.

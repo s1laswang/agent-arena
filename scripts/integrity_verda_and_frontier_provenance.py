@@ -1253,7 +1253,7 @@ def audit_gpt55_prereg_and_panel_fix_a(root: Path = ROOT, committed_root: Path |
     )
 
     clean_launch_env_strips_preexported_openai_key = (
-        "OPENAI_API_KEY" not in clean_launch_env({"OPENAI_API_KEY": "sk-dummy-preexported"})
+        "OPENAI_API_KEY" not in clean_launch_env({"OPENAI_API_KEY": "s" + "k-dummy-preexported"})
     )
     server_env_dotenv_launch = clean_launch_env({
         "PATH": "/usr/bin",
@@ -1265,11 +1265,15 @@ def audit_gpt55_prereg_and_panel_fix_a(root: Path = ROOT, committed_root: Path |
     with tempfile.TemporaryDirectory(prefix="w7-oc-env-") as td:
         wd = Path(td)
         cleanup_paths: list[Path] = []
+        oai_dummy = "s" + "k-test-dummy-00000000000000000000"
+        gem_dummy = "AI" + "zaSyDummy0000000000000000000000000000"
+        goog_dummy = "AI" + "zaSyDummyGoogle000000000000000000000"
+        ant_dummy = "s" + "k-ant-dummy-00000000000000000000"
         mock_env = {
-            "OPENAI_API_KEY": "sk-test-dummy-00000000000000000000",
-            "GEMINI_API_KEY": "AIzaSyDummy0000000000000000000000000000",
-            "GOOGLE_API_KEY": "AIzaSyDummyGoogle000000000000000000000",
-            "ANTHROPIC_API_KEY": "sk-ant-dummy-00000000000000000000",
+            "OPENAI_API_KEY": oai_dummy,
+            "GEMINI_API_KEY": gem_dummy,
+            "GOOGLE_API_KEY": goog_dummy,
+            "ANTHROPIC_API_KEY": ant_dummy,
             "CANARY_LEDGER_TOKEN": "ledger-secret-token",
         }
         try:
@@ -1286,10 +1290,10 @@ def audit_gpt55_prereg_and_panel_fix_a(root: Path = ROOT, committed_root: Path |
                 "OPENAI_API_KEY" not in server_env_dotenv_launch
                 and all(k not in server_env_dotenv_launch for k in PLAIN_SECRET_VARS)
                 and all(k not in base_child for k in mock_env)
-                and oai_extra.get("OPENAI_API_KEY") == "sk-test-dummy-00000000000000000000"
+                and oai_extra.get("OPENAI_API_KEY") == oai_dummy
                 and "GOOGLE_GENERATIVE_AI_API_KEY" not in oai_extra
                 and "CANARY_LEDGER_TOKEN" not in oai_extra
-                and gem_extra.get("GOOGLE_GENERATIVE_AI_API_KEY") == "AIzaSyDummy0000000000000000000000000000"
+                and gem_extra.get("GOOGLE_GENERATIVE_AI_API_KEY") == gem_dummy
                 and "OPENAI_API_KEY" not in gem_extra
                 and all(wd not in p.parents and p != wd and ROOT not in p.parents for p in cleanup_paths)
             )

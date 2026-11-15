@@ -23,12 +23,20 @@ from scripts.integrity_v14_v15_differential_sweep import (
     EXPECTED_V14_TIER_HASH,
     ISOLATED_V15_PKG,
     IsolatedV15Runtime,
+    _RUNTIME_CACHE as _DIFF_V15_RUNTIME_CACHE,
     compute_tier_hash,
     git_status_porcelain,
     load_v15_runtime,
     resolve_head_commit,
     try_resolve_git_commit,
 )
+
+QUICK_EMBEDDED_V15_PKG = "_canary_v15_embedded_w4"
+_HEX40_CHARS = frozenset("0123456789abcdefABCDEF")
+_CACHED_V14_META: tuple[frozenset[str], frozenset[str]] | None = None
+_CACHED_QUICK_EMBEDDED_RT: IsolatedV15Runtime | None = None
+_CACHED_POSITIVE_CONTROLS: dict[str, Any] | None = None
+_CACHED_QUICK_DIAGNOSTICS: dict[str, dict[str, Any]] = {}
 
 V14_TARGETS: tuple[str, ...] = ("easy", "medium", "hard", "hard_forge", "hard_rl")
 V15_TARGETS: tuple[str, ...] = ("easy", "medium", "hard", "hard_forge")
@@ -78,12 +86,13 @@ INTERVIEW_TOPICS: tuple[str, ...] = (
 
 
 @contextmanager
-def _ensure_forge_hof_env(repo_root: Path):
+def _ensure_forge_hof_env(repo_root: Path, rt: IsolatedV15Runtime | None = None):
     prev = os.environ.get("CANARY_FORGE_HOF")
     rel = Path("data") / "forge" / "hall_of_fame_v1.2.jsonl"
+    rt_root = getattr(getattr(rt, "finder", None), "repo_root", repo_root)
     need_override = (
         prev is None
-        and not (repo_root / rel).is_file()
+        and (not (repo_root / rel).is_file() or not (Path(rt_root) / rel).is_file())
         and (REPO_ROOT / rel).is_file()
     )
     if need_override:
@@ -114,7 +123,7 @@ def _make_v14_env(tier: str, seed: int) -> Any:
 
 
 def _make_v15_env(rt: IsolatedV15Runtime, tier: str, seed: int, repo_root: Path = REPO_ROOT) -> Any:
-    with _ensure_forge_hof_env(repo_root):
+    with _ensure_forge_hof_env(repo_root, rt=rt):
         return rt.make_env(tier, seed, social_enabled=True, misforward_enabled=True)
 
 
@@ -131,17 +140,185 @@ def _mean_ci95(vals: Sequence[float]) -> dict[str, float]:
     }
 
 
-class StepAccountingAuditor:
-    def __init__(self, env: Any, version_label: str, family: str, submode: str) -> None:
+def _get_v14_meta() -> tuple[frozenset[str], frozenset[str]]:
+    global _CACHED_V14_META
+    if _CACHED_V14_META is None:
         from canary.env import ERRORS as V14_ERRORS
         from canary.types import INVESTIGATIVE_TOOLS
+
+        _CACHED_V14_META = (frozenset(INVESTIGATIVE_TOOLS), frozenset(V14_ERRORS))
+    return _CACHED_V14_META
+
+
+def _is_hex40(val: str) -> bool:
+    return len(val) == 40 and all(c in _HEX40_CHARS for c in val)
+
+
+def _resolve_git_dirs(repo_root: Path) -> tuple[Path, Path] | None:
+    dot_git = repo_root / ".git"
+    if dot_git.is_dir():
+        git_dir = dot_git
+    elif dot_git.is_file():
+        try:
+            raw = dot_git.read_text(encoding="utf-8").strip()
+        except OSError:
+            return None
+        if not raw.startswith("gitdir:"):
+            return None
+        git_dir = (repo_root / raw.split(":", 1)[1].strip()).resolve()
+        if not git_dir.is_dir():
+            return None
+    else:
+        return None
+    commondir_file = git_dir / "commondir"
+    if commondir_file.is_file():
+        try:
+            common_dir = (git_dir / commondir_file.read_text(encoding="utf-8").strip()).resolve()
+        except OSError:
+            common_dir = git_dir
+    else:
+        common_dir = git_dir
+    return git_dir, common_dir
+
+
+def _lookup_git_ref(git_dir: Path, common_dir: Path, ref_name: str) -> str | None:
+    for base in (git_dir, common_dir):
+        cand = base / ref_name
+        if cand.is_file():
+            try:
+                val = cand.read_text(encoding="utf-8").strip()
+            except OSError:
+                val = ""
+            if _is_hex40(val):
+                return val
+    packed = common_dir / "packed-refs"
+    if packed.is_file():
+        comment_prefix = chr(35)
+        try:
+            lines = packed.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            lines = []
+        for ln in lines:
+            if not ln or ln.startswith(comment_prefix) or ln.startswith("^"):
+                continue
+            parts = ln.split(" ", 1)
+            if len(parts) == 2 and parts[1].strip() == ref_name and _is_hex40(parts[0]):
+                return parts[0]
+    return None
+
+
+def _fast_resolve_head_commit(repo_root: Path) -> str:
+    dirs = _resolve_git_dirs(repo_root)
+    if dirs is None:
+        return "nogit0000"
+    git_dir, common_dir = dirs
+    head_file = git_dir / "HEAD"
+    if head_file.is_file():
+        try:
+            raw = head_file.read_text(encoding="utf-8").strip()
+        except OSError:
+            raw = ""
+        if raw.startswith("ref:"):
+            ref_name = raw.split(":", 1)[1].strip()
+            sha = _lookup_git_ref(git_dir, common_dir, ref_name)
+            if sha is not None:
+                return sha
+        elif _is_hex40(raw):
+            return raw
+    return resolve_head_commit(repo_root)
+
+
+def _fast_resolve_v15_sha(repo_root: Path, ref: str) -> str | None:
+    dirs = _resolve_git_dirs(repo_root)
+    if dirs is None:
+        return None
+    git_dir, common_dir = dirs
+    ref_candidates: list[str] = []
+    if ref.startswith("refs/"):
+        ref_candidates.append(ref)
+    elif ref.startswith("origin/"):
+        branch = ref[len("origin/"):]
+        ref_candidates.append(f"refs/remotes/origin/{branch}")
+        ref_candidates.append(f"refs/heads/{branch}")
+    else:
+        ref_candidates.append(f"refs/heads/{ref}")
+        ref_candidates.append(f"refs/remotes/origin/{ref}")
+    found_sha: str | None = None
+    for rc in ref_candidates:
+        found_sha = _lookup_git_ref(git_dir, common_dir, rc)
+        if found_sha is not None:
+            break
+    if found_sha is None:
+        if _is_hex40(ref):
+            return try_resolve_git_commit(ref=ref, repo_root=repo_root)
+        return None
+    if (common_dir / "shallow").is_file() or (git_dir / "shallow").is_file():
+        return try_resolve_git_commit(ref=ref, repo_root=repo_root)
+    return found_sha
+
+
+def _fast_dir_fingerprint(repo_root: Path) -> str:
+    if not repo_root.exists():
+        return "missing-repo-root"
+    entries: list[str] = []
+    for child in sorted(repo_root.iterdir(), key=lambda p: p.name):
+        if child.name == ".git":
+            continue
+        try:
+            st = child.stat()
+            entries.append(f"{child.name}:{st.st_size}:{st.st_mtime_ns}")
+        except OSError:
+            entries.append(f"{child.name}:stat-error")
+    return "\n".join(entries)
+
+
+def _acquire_v15_runtime_for_sweep(
+    quick: bool,
+    v15_ref: str,
+    v15_pkg_name: str,
+    resolved_repo: Path,
+    force_embedded_v15: bool,
+) -> tuple[IsolatedV15Runtime, bool]:
+    global _CACHED_QUICK_EMBEDDED_RT
+    if quick and v15_ref == "origin/justSilas-v15" and v15_pkg_name == ISOLATED_V15_PKG:
+        git_v15_sha = None if force_embedded_v15 else _fast_resolve_v15_sha(resolved_repo, v15_ref)
+        shallow_fallback = bool(force_embedded_v15 or git_v15_sha is None)
+        if not shallow_fallback and ISOLATED_V15_PKG in sys.modules:
+            for (c_sha, p_name, _, _), cached_rt in list(_DIFF_V15_RUNTIME_CACHE.items()):
+                if p_name == ISOLATED_V15_PKG and c_sha.startswith("de9cc50e"):
+                    return cached_rt, False
+        if _CACHED_QUICK_EMBEDDED_RT is None or QUICK_EMBEDDED_V15_PKG not in sys.modules:
+            scratch_nogit = Path("/tmp/opencode")
+            non_git_anchor = scratch_nogit if scratch_nogit.is_dir() else REPO_ROOT.parent
+            _CACHED_QUICK_EMBEDDED_RT = load_v15_runtime(
+                ref="origin/justSilas-v15",
+                pkg_name=QUICK_EMBEDDED_V15_PKG,
+                repo_root=non_git_anchor,
+                force_embedded=True,
+            )
+        return _CACHED_QUICK_EMBEDDED_RT, shallow_fallback
+
+    rt15 = load_v15_runtime(
+        ref=v15_ref,
+        pkg_name=v15_pkg_name,
+        repo_root=resolved_repo,
+        force_embedded=force_embedded_v15,
+    )
+    git_v15_sha = None if force_embedded_v15 else try_resolve_git_commit(ref=v15_ref, repo_root=resolved_repo)
+    shallow_fallback = bool(rt15.used_embedded_fallback or git_v15_sha is None)
+    return rt15, shallow_fallback
+
+
+class StepAccountingAuditor:
+    def __init__(self, env: Any, version_label: str, family: str, submode: str) -> None:
+        inv_tools, allowed_errs = _get_v14_meta()
 
         self.env = env
         self.version_label = version_label
         self.family = family
         self.submode = submode
-        self.investigative_tools = frozenset(INVESTIGATIVE_TOOLS)
-        self.allowed_errors = frozenset(V14_ERRORS)
+        self.investigative_tools = inv_tools
+        self.allowed_errors = allowed_errs
         self._d_leak = Decimal(str(env.p.leak_damage))
         self._d_can = Decimal(str(env.p.canary_cost))
         self._d_rest = Decimal(str(env.p.restrict_cost_per_day))
@@ -164,6 +341,8 @@ class StepAccountingAuditor:
         self.max_rounded_v_drift = 0.0
         self.max_vis_v_drift = 0.0
         self.max_costs_drift = 0.0
+        self._cf_cache_key: tuple[int, int, int, int] | None = None
+        self._cf_cache_val: tuple[Decimal, Decimal, Decimal, int, int, float, float] | None = None
         self.violations: list[dict[str, Any]] = []
 
         self._verify_initial_state()
@@ -191,14 +370,28 @@ class StepAccountingAuditor:
         if e.score() != 0.0 or e.done is not False:
             self._record_violation("init_done_or_score", -1, f"done={e.done!r}, score={e.score()!r}")
 
-    def _closed_form_decimals(self) -> tuple[Decimal, Decimal, Decimal, int, int]:
+    def _closed_form_decimals(self) -> tuple[Decimal, Decimal, Decimal, int, int, float, float]:
         e = self.env
-        costs_dec = self._d_can * self.n_canaries_planted + self._d_rest * self.n_restrict_person_days
         total_leaks = len(e._feed)
+        key = (self.n_canaries_planted, self.n_restrict_person_days, total_leaks, int(e.day))
+        if self._cf_cache_key == key and self._cf_cache_val is not None:
+            return self._cf_cache_val
+        costs_dec = self._d_can * self.n_canaries_planted + self._d_rest * self.n_restrict_person_days
         surfaced_leaks = sum(1 for item in e._feed if item["surfaced_day"] <= e.day)
         v_true_dec = max(self._d_zero, self._d_one - self._d_leak * total_leaks - costs_dec)
         v_known_dec = max(self._d_zero, self._d_one - self._d_leak * surfaced_leaks - costs_dec)
-        return costs_dec, v_true_dec, v_known_dec, total_leaks, surfaced_leaks
+        val = (
+            costs_dec,
+            v_true_dec,
+            v_known_dec,
+            total_leaks,
+            surfaced_leaks,
+            float(round(v_true_dec, 10)),
+            float(round(v_known_dec, 10)),
+        )
+        self._cf_cache_key = key
+        self._cf_cache_val = val
+        return val
 
     def call(self, tool: Any, args: Any) -> Any:
         e = self.env
@@ -363,28 +556,40 @@ class StepAccountingAuditor:
                             f"done={e.done} end_reason={e._end_reason!r} accused={e._accused!r}",
                         )
 
+        post_v = float(e.V)
+        post_v_round = round(post_v, 10)
+        post_vis_v = float(e.visible_V())
+
         if not (1 <= e.day <= e.p.n_days):
             self._record_violation("day_out_of_bounds", step_idx, f"day={e.day} n_days={e.p.n_days}")
 
-        if not (0.0 <= e.V <= 1.0) or e.V > pre_v + 1e-15 or round(e.V, 10) > round(pre_v, 10):
+        if not (0.0 <= post_v <= 1.0) or post_v > pre_v + 1e-15 or post_v_round > round(pre_v, 10):
             self._record_violation(
                 "v_monotone_or_range_violation",
                 step_idx,
                 f"pre_v={pre_v!r} post_v={e.V!r}",
             )
 
-        if not (0.0 <= e.visible_V() <= 1.0) or e.visible_V() > pre_vis_v + 1e-12:
+        if not (0.0 <= post_vis_v <= 1.0) or post_vis_v > pre_vis_v + 1e-12:
             self._record_violation(
                 "visible_v_monotone_or_range_violation",
                 step_idx,
-                f"pre_vis={pre_vis_v!r} post_vis={e.visible_V()!r}",
+                f"pre_vis={pre_vis_v!r} post_vis={post_vis_v!r}",
             )
 
-        costs_dec, v_true_dec, v_known_dec, total_leaks, surfaced_leaks = self._closed_form_decimals()
+        (
+            costs_dec,
+            v_true_dec,
+            v_known_dec,
+            total_leaks,
+            surfaced_leaks,
+            want_true_round,
+            want_known_round,
+        ) = self._closed_form_decimals()
 
         costs_drift = abs(float(e._costs) - float(costs_dec))
-        raw_v_drift = abs(float(e.V) - float(v_true_dec))
-        rounded_v_drift = abs(round(float(e.V), 10) - float(round(v_true_dec, 10)))
+        raw_v_drift = abs(post_v - float(v_true_dec))
+        rounded_v_drift = abs(post_v_round - want_true_round)
         self.max_costs_drift = max(self.max_costs_drift, costs_drift)
         self.max_raw_v_drift = max(self.max_raw_v_drift, raw_v_drift)
         self.max_rounded_v_drift = max(self.max_rounded_v_drift, rounded_v_drift)
@@ -395,52 +600,52 @@ class StepAccountingAuditor:
             self._record_violation(
                 "closed_form_true_v_mismatch",
                 step_idx,
-                f"round(V,10)={round(e.V, 10)!r} want={float(round(v_true_dec, 10))!r}",
+                f"round(V,10)={post_v_round!r} want={want_true_round!r}",
             )
 
         vis_mode = e._visibility()
         if vis_mode == "known":
-            want_vis = float(round(v_known_dec, 10))
-            vis_drift = abs(float(e.visible_V()) - want_vis)
+            want_vis = want_known_round
+            vis_drift = abs(post_vis_v - want_vis)
             self.max_vis_v_drift = max(self.max_vis_v_drift, vis_drift)
-            if e.visible_V() != want_vis:
+            if post_vis_v != want_vis:
                 self._record_violation(
                     "visible_v_closed_form_mismatch",
                     step_idx,
-                    f"visible_V={e.visible_V()!r} want={want_vis!r}",
+                    f"visible_V={post_vis_v!r} want={want_vis!r}",
                 )
-            if e.visible_V() < round(e.V, 10):
+            if post_vis_v < post_v_round:
                 self._record_violation(
                     "visible_v_below_true_v",
                     step_idx,
-                    f"visible_V={e.visible_V()!r} true_V={round(e.V, 10)!r}",
+                    f"visible_V={post_vis_v!r} true_V={post_v_round!r}",
                 )
             if total_leaks > surfaced_leaks:
                 self.hidden_leak_steps += 1
                 if self._d_leak * surfaced_leaks + costs_dec < self._d_one:
-                    if e.visible_V() <= round(e.V, 10):
+                    if post_vis_v <= post_v_round:
                         self._record_violation(
                             "visible_v_hidden_leak_sidechannel",
                             step_idx,
-                            f"visible_V={e.visible_V()!r} leaked true_V={round(e.V, 10)!r} with {total_leaks - surfaced_leaks} unsurfaced",
+                            f"visible_V={post_vis_v!r} leaked true_V={post_v_round!r} with {total_leaks - surfaced_leaks} unsurfaced",
                         )
                     else:
                         self.hidden_leak_masked_steps += 1
         else:
-            want_vis = float(round(v_true_dec, 10))
-            vis_drift = abs(float(e.visible_V()) - want_vis)
+            want_vis = want_true_round
+            vis_drift = abs(post_vis_v - want_vis)
             self.max_vis_v_drift = max(self.max_vis_v_drift, vis_drift)
-            if e.visible_V() != want_vis or e.visible_V() != round(e.V, 10):
+            if post_vis_v != want_vis or post_vis_v != post_v_round:
                 self._record_violation(
                     "true_v_mode_visibility_mismatch",
                     step_idx,
-                    f"visible_V={e.visible_V()!r} want={want_vis!r}",
+                    f"visible_V={post_vis_v!r} want={want_vis!r}",
                 )
 
-        if res.ok and tool == "status" and res.data.get("V") != e.visible_V():
-            self._record_violation("status_v_mismatch", step_idx, f"status V={res.data.get('V')!r} != {e.visible_V()!r}")
-        if res.ok and tool == "advance_day" and "V" in res.data and res.data.get("V") != e.visible_V():
-            self._record_violation("advance_day_v_mismatch", step_idx, f"adv V={res.data.get('V')!r} != {e.visible_V()!r}")
+        if res.ok and tool == "status" and res.data.get("V") != post_vis_v:
+            self._record_violation("status_v_mismatch", step_idx, f"status V={res.data.get('V')!r} != {post_vis_v!r}")
+        if res.ok and tool == "advance_day" and "V" in res.data and res.data.get("V") != post_vis_v:
+            self._record_violation("advance_day_v_mismatch", step_idx, f"adv V={res.data.get('V')!r} != {post_vis_v!r}")
 
         if len(e.history) >= e.p.tool_call_cap and not e.done:
             self._record_violation(
@@ -457,9 +662,9 @@ class StepAccountingAuditor:
                     step_idx,
                     f"score={sc!r} accused={e._accused!r}",
                 )
-            if round(e.V, 10) == 0.0:
+            if post_v_round == 0.0:
                 self.v_zero_pre_done_steps += 1
-            if e.visible_V() == 0.0:
+            if post_vis_v == 0.0:
                 self.vis_v_zero_pre_done_steps += 1
         else:
             vd = e.verdict()
@@ -468,18 +673,18 @@ class StepAccountingAuditor:
                 if len(acc_entries) != 1:
                     self._record_violation("multiple_or_missing_ledger_accusations", step_idx, f"count={len(acc_entries)}")
                 mole_id = e._world.mole
-                want_sc = float(round(v_true_dec, 10)) if e._accused == mole_id else float(e.p.wrong_accusation_score)
+                want_sc = want_true_round if e._accused == mole_id else float(e.p.wrong_accusation_score)
                 if sc != want_sc or vd.get("score") != want_sc:
                     self._record_violation(
                         "score_contract_mismatch",
                         step_idx,
                         f"score={sc!r} verdict_score={vd.get('score')!r} want={want_sc!r}",
                     )
-                if sc > float(round(v_true_dec, 10)) + 1e-12:
+                if sc > want_true_round + 1e-12:
                     self._record_violation(
                         "score_exceeds_one_minus_loss",
                         step_idx,
-                        f"score={sc!r} > 1 - L_true={float(round(v_true_dec, 10))!r}",
+                        f"score={sc!r} > 1 - L_true={want_true_round!r}",
                     )
             else:
                 if len(acc_entries) != 0 or e._accused is not None or sc != 0.0 or vd.get("score") != 0.0:
@@ -967,6 +1172,9 @@ def _run_family_stateful_fuzz(
 
 
 def run_planted_positive_controls() -> dict[str, Any]:
+    global _CACHED_POSITIVE_CONTROLS
+    if _CACHED_POSITIVE_CONTROLS is not None:
+        return json.loads(json.dumps(_CACHED_POSITIVE_CONTROLS))
     from canary.env import BAD, Env
     from canary.types import Step, ToolResult
     from dataclasses import asdict
@@ -1091,12 +1299,14 @@ def run_planted_positive_controls() -> dict[str, Any]:
     }
 
     caught_count = sum(1 for item in results.values() if item["caught"])
-    return {
+    out_pc = {
         "controls_total": len(results),
         "controls_caught": caught_count,
         "all_caught": caught_count == len(results),
         "controls": results,
     }
+    _CACHED_POSITIVE_CONTROLS = out_pc
+    return json.loads(json.dumps(out_pc))
 
 
 def run_diagnostic_issue_probes(
@@ -1104,6 +1314,8 @@ def run_diagnostic_issue_probes(
     repo_root: Path = REPO_ROOT,
     quick: bool = False,
 ) -> dict[str, Any]:
+    if quick and rt15.commit_sha in _CACHED_QUICK_DIAGNOSTICS:
+        return json.loads(json.dumps(_CACHED_QUICK_DIAGNOSTICS[rt15.commit_sha]))
     from canary import rules as rules_v14
     from canary.env import Env as EnvV14
     from canary.solver import regret as regret_v14
@@ -1191,7 +1403,7 @@ def run_diagnostic_issue_probes(
     v14_bad = EnvV14("easy", 0).call("accuse", {"employee": "e99"})
     v15_bad = _make_v15_env(rt15, "easy", 0, repo_root=repo_root).call("accuse", {"employee": "e99"})
 
-    return {
+    out_diag = {
         "ISS-COST-01_peek_status_and_cap_boundary": {
             "v14_easy_cap": e14_easy.p.tool_call_cap,
             "v14_easy_peek_t0": peek_t0_easy,
@@ -1225,6 +1437,10 @@ def run_diagnostic_issue_probes(
             "v15_invalid_arg_has_detail": set(v15_bad.data.keys()) == {"detail"},
         },
     }
+    if quick:
+        _CACHED_QUICK_DIAGNOSTICS[rt15.commit_sha] = out_diag
+        return json.loads(json.dumps(out_diag))
+    return out_diag
 
 
 def _cell_schedule(quick: bool) -> dict[str, int]:
@@ -1256,6 +1472,7 @@ def _run_quick_cell_families(
     make_seed_env: Callable[[int], Any],
     rules_mod: Any,
     cell_index: int,
+    compact_cap: bool = False,
 ) -> list[dict[str, Any]]:
     trajectories: list[dict[str, Any]] = []
     chosen_families = (
@@ -1288,7 +1505,12 @@ def _run_quick_cell_families(
         elif fam == "tool_cap_exact_boundary":
             sm = cap_modes[cell_index % 2]
             trajectories.append(
-                _run_family_tool_cap_boundary(lambda: make_seed_env(200), version_label, sm, compact_quick=False)
+                _run_family_tool_cap_boundary(
+                    lambda: make_seed_env(200),
+                    version_label,
+                    sm,
+                    compact_quick=(compact_cap or cell_index >= 4),
+                )
             )
         elif fam == "restrict_unrestrict_toggle":
             sm = toggle_modes[cell_index % 2]
@@ -1314,9 +1536,16 @@ def _sweep_single_cell(
     sched: dict[str, int],
     cell_index: int = 0,
     quick: bool = False,
+    compact_cap: bool = False,
 ) -> dict[str, Any]:
     if quick:
-        trajectories = _run_quick_cell_families(version_label, make_seed_env, rules_mod, cell_index)
+        trajectories = _run_quick_cell_families(
+            version_label,
+            make_seed_env,
+            rules_mod,
+            cell_index,
+            compact_cap=compact_cap,
+        )
         fuzz_scores = [t["score"] for t in trajectories if t["family"] == "stateful_adversarial_fuzz"]
     else:
         trajectories = []
@@ -1438,19 +1667,19 @@ def run_cost_and_trajectory_boundary_sweep(
 
     t0 = time.perf_counter()
     resolved_repo = repo_root.resolve()
-    status_before = git_status_porcelain(resolved_repo)
+    status_before = _fast_dir_fingerprint(resolved_repo) if quick else git_status_porcelain(resolved_repo)
     v14_hash_before = compute_tier_hash(rules_v14.TIERS, rules_v14.KNOWN_V_MODE)
 
-    rt15 = load_v15_runtime(
-        ref=v15_ref,
-        pkg_name=v15_pkg_name,
-        repo_root=resolved_repo,
-        force_embedded=force_embedded_v15,
+    rt15, shallow_fallback = _acquire_v15_runtime_for_sweep(
+        quick=quick,
+        v15_ref=v15_ref,
+        v15_pkg_name=v15_pkg_name,
+        resolved_repo=resolved_repo,
+        force_embedded_v15=force_embedded_v15,
     )
-    git_v15_sha = None if force_embedded_v15 else try_resolve_git_commit(ref=v15_ref, repo_root=resolved_repo)
-    shallow_fallback = bool(rt15.used_embedded_fallback or git_v15_sha is None)
 
     sched = _cell_schedule(quick=quick)
+    compact_cap = bool(quick and (len(v14_targets) + len(v15_targets) < 9))
     cells: dict[str, dict[str, Any]] = {}
     c_idx = 0
 
@@ -1464,6 +1693,7 @@ def run_cost_and_trajectory_boundary_sweep(
             sched=sched,
             cell_index=c_idx,
             quick=quick,
+            compact_cap=compact_cap,
         )
         c_idx += 1
 
@@ -1477,6 +1707,7 @@ def run_cost_and_trajectory_boundary_sweep(
             sched=sched,
             cell_index=c_idx,
             quick=quick,
+            compact_cap=compact_cap,
         )
         c_idx += 1
 
@@ -1484,7 +1715,7 @@ def run_cost_and_trajectory_boundary_sweep(
     diagnostics = run_diagnostic_issue_probes(rt15, repo_root=resolved_repo, quick=quick)
 
     v14_hash_after = compute_tier_hash(rules_v14.TIERS, rules_v14.KNOWN_V_MODE)
-    status_after = git_status_porcelain(resolved_repo)
+    status_after = _fast_dir_fingerprint(resolved_repo) if quick else git_status_porcelain(resolved_repo)
 
     family_totals: dict[str, dict[str, Any]] = {}
     for fname in FAMILY_NAMES:
@@ -1525,7 +1756,7 @@ def run_cost_and_trajectory_boundary_sweep(
         "mode": "quick" if quick else "full",
         "wall_s": wall_s,
         "live_llm_calls": 0,
-        "v14_head_sha": resolve_head_commit(resolved_repo)[:8],
+        "v14_head_sha": (_fast_resolve_head_commit(resolved_repo) if quick else resolve_head_commit(resolved_repo))[:8],
         "v14_tiers_version": rules_v14.TIERS_VERSION,
         "v14_known_v_mode": bool(rules_v14.KNOWN_V_MODE),
         "v14_tier_hash_before": v14_hash_before,

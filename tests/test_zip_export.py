@@ -226,8 +226,11 @@ def test_individual_checks_reject_dot_git_directory(opencode_tmp: Path):
         ("pytest", verify_zip_export.CHECK_SECURITY_TESTS),
         ("scripts/audit_doc_hygiene.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
         ("scripts/check_craft_consistency.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
+        ("scripts/verify_artifact_numbers.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
+        ("scripts/verify_commit_provenance.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
         ("scripts/verify_doc_commands.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
         ("scripts/verify_judge_walkthrough.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
+        ("scripts/verify_submission_doc.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
         ("scripts/verify_submission_surfaces.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
     ],
 )
@@ -308,7 +311,11 @@ def test_content_and_permission_regressions_detected(opencode_tmp: Path):
         return subprocess.CompletedProcess(
             args=cmd,
             returncode=0,
-            stdout="verify solver recorded +0.73 replayed +0.10 -> MISMATCH\n",
+            stdout=(
+                "[PASS] check: ok\n"
+                "[WARN] advisory: make accept PASS=20 FAIL=0\n"
+                "SUMMARY: 3 PASS, 1 WARN, 0 FAIL (0.04s)\n"
+            ),
             stderr="",
         )
 
@@ -402,6 +409,20 @@ def test_real_craft_verifiers_in_gitless_archive(opencode_tmp: Path):
 
 
 def test_reproducibility_doc_afterquery_final_and_no_comments_hygiene():
+    expected_craft_verifiers = (
+        "scripts/audit_doc_hygiene.py",
+        "scripts/check_craft_consistency.py",
+        "scripts/verify_artifact_numbers.py",
+        "scripts/verify_commit_provenance.py",
+        "scripts/verify_doc_commands.py",
+        "scripts/verify_judge_walkthrough.py",
+        "scripts/verify_submission_doc.py",
+        "scripts/verify_submission_surfaces.py",
+    )
+    assert verify_zip_export.CRAFT_VERIFIER_SCRIPTS == expected_craft_verifiers
+    for rel_script in verify_zip_export.CRAFT_VERIFIER_SCRIPTS:
+        assert (ROOT / rel_script).is_file(), f"missing registered craft verifier: {rel_script}"
+
     for py_path in (SCRIPT_PATH, SELF_PATH):
         raw = py_path.read_text(encoding="utf-8")
         assert HASH_CHAR not in raw, f"unexpected hash character in {py_path.name}"

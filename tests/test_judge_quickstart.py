@@ -220,9 +220,6 @@ def test_judge_quickstart_matches_committed_json_numbers() -> None:
         f"{float(k10['sd']):.3f}",
         f"-{abs(float(gd1_data['mean'])):.2f}",
         "+0.000",
-        "+0.373 +/- 0.177",
-        "75% [36%, 123%]",
-        "22% [-23%, 63%]",
         "295 episodes",
         "0.0e+00",
         "91 finished attackers",
@@ -231,6 +228,16 @@ def test_judge_quickstart_matches_committed_json_numbers() -> None:
     ]
     missing = [tok for tok in expected_tokens if not _has_token(text, tok)]
     assert not missing, f"JUDGE_QUICKSTART.md missing expected JSON-backed tokens: {missing}"
+
+    gap_text = (ROOT / "docs" / "reports" / "gap.md").read_text(encoding="utf-8")
+    if "gemini-3.5-flash" not in gap_text:
+        walkthrough_text = (ROOT / "docs" / "JUDGE-WALKTHROUGH.md").read_text(encoding="utf-8")
+        for doc_name, doc_body in (
+            ("JUDGE_QUICKSTART.md", text),
+            ("docs/JUDGE-WALKTHROUGH.md", walkthrough_text),
+        ):
+            for unapproved_tok in ("75% [36%, 123%]", "22% [-23%, 63%]", "+0.373"):
+                assert unapproved_tok not in doc_body, f"{doc_name} quotes {unapproved_tok} before gap.md"
 
 
 def test_link_and_token_helpers_detect_regressions() -> None:

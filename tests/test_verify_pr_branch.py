@@ -976,6 +976,51 @@ def test_replay_accepts_pre_detail_invalid_arguments_steps(tmp_path: Path) -> No
     assert gates["replay_mismatch"]["passed"] is True
 
 
+def test_duplicate_tuples_scoped_per_shard_root(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "distinct-roots")
+
+    ep_a = _make_episode(tier="hard", seed=34, agent="opencode:google/gemini-4-carbon")
+    ep_b = _make_episode(tier="hard", seed=34, agent="opencode:google/gemini-4-carbon")
+    shard_sel = "results/selected_fleet_replication/v1.4/opencode-gemini-4-carbon/hard-s34-37"
+    shard_fr = "results/frontier_replication/v1.4/opencode-gemini-4-carbon-ext/hard"
+    _commit_files(
+        repo,
+        {
+            f"{shard_sel}/episodes.jsonl": json.dumps(ep_a) + "\n",
+            f"{shard_sel}/meta.json": json.dumps({"tiers_version": "v1.4", "seeds": [34]}) + "\n",
+            f"{shard_fr}/episodes.jsonl": json.dumps(ep_b) + "\n",
+            f"{shard_fr}/meta.json": json.dumps({"tiers_version": "v1.4", "seeds": [34]}) + "\n",
+        },
+        message="add same tuple across two distinct replication roots",
+    )
+
+    rep_ok = verify_branch(
+        base="justSilas", branch="distinct-roots", repo=repo, skip_replay=True
+    )
+    assert rep_ok["ok"] is True, rep_ok
+    gates_ok = _gate_map(rep_ok)
+    assert gates_ok["timeout_episode"]["summary"] == "2 episode file(s) checked, 0 episode violation(s)"
+
+    shard_fr_dup = "results/frontier_replication/v1.4/opencode-gemini-4-carbon-ext/hard-dup"
+    _commit_files(
+        repo,
+        {
+            f"{shard_fr_dup}/episodes.jsonl": json.dumps(ep_b) + "\n",
+            f"{shard_fr_dup}/meta.json": json.dumps({"tiers_version": "v1.4", "seeds": [34]}) + "\n",
+        },
+        message="add duplicate tuple within frontier_replication root",
+    )
+
+    rep_dup = verify_branch(
+        base="justSilas", branch="distinct-roots", repo=repo, skip_replay=True
+    )
+    assert rep_dup["ok"] is False
+    gates_dup = _gate_map(rep_dup)
+    assert gates_dup["timeout_episode"]["passed"] is False
+    assert any("duplicate (agent, tier, seed)" in e for e in gates_dup["timeout_episode"]["errors"])
+
+
 def test_self_hygiene_zero_comments_and_dashes() -> None:
     for py_rel in ("scripts/verify_pr_branch.py", "tests/test_verify_pr_branch.py"):
         raw = (ROOT / py_rel).read_bytes()

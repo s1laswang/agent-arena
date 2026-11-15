@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 import io
 import json
 import os
@@ -81,6 +82,15 @@ TILDE_FENCE_RE = re.compile(r"^\s*(~{3,})(.*)$")
 INLINE_CODE_RE = re.compile(r"(`+)([^`]+?)\1")
 MD_LINK_RE = re.compile(r"\[(?:[^\[\]]|\[[^\[\]]*\])*\]\(((?:[^()\s]|\([^()\s]*\)|[ \t])+)\)")
 EXCLUDED_LINK_SCHEMES = ("http://", "https://", "mailto:", "tel:", "data:", "javascript:")
+ATX_HEADING_RE = re.compile(rf"^\s{{0,3}}{HASH_CHAR}{{1,6}}[ \t]+(.+?)(?:[ \t]+{HASH_CHAR}+[ \t]*)?$")
+SETEXT_UNDERLINE_RE = re.compile(r"^\s{0,3}(?:=+|-+)\s*$")
+MD_INLINE_LINK_TEXT_RE = re.compile(r"!?\[([^\[\]]*)\]\([^)]*\)")
+HTML_TAG_RE = re.compile(r"<[^>]+>")
+HTML_ANCHOR_ID_RE = re.compile(
+    r"""<(?:a|h[1-6]|span|div)\b[^>]*?\b(?:id|name)\s*=\s*["']([^"']+)["']""",
+    re.IGNORECASE,
+)
+WORD_UNDERSCORE_EMPH_RE = re.compile(r"(?<!\w)_{1,2}([^_\s][^_]*?[^_\s]|[^_\s])_{1,2}(?!\w)")
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
@@ -94,6 +104,52 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[bytes]:
 
 def _rev_parse(repo: Path, ref: str) -> str | None:
     res = _git(repo, "rev-parse", "--verify", f"{ref}^{{commit}}")
+    if res.returncode != 0:
+        return None
+    return res.stdout.decode("utf-8", errors="replace").strip()
+
+
+def _rev_parse_tree(repo: Path, ref: str) -> str | None:
+    res = _git(repo, "rev-parse", "--verify", f"{ref}^{{tree}}")
+    if res.returncode != 0:
+        return None
+    return res.stdout.decode("utf-8", errors="replace").strip()
+
+
+def _merge_tree_result(repo: Path, *mt_args: str) -> tuple[bool, str, str]:
+    res = _git(repo, "merge-tree", "--write-tree", *mt_args)
+    mt_out = res.stdout.decode("utf-8", errors="replace").splitlines()
+    mt_err = res.stderr.decode("utf-8", errors="replace").strip()
+    if res.returncode == 0:
+        tree_oid = mt_out[0].strip() if mt_out else ""
+        return True, tree_oid, ""
+    conflict_lines = [ln.strip() for ln in mt_out[1:] if ln.strip().startswith("CONFLICT")]
+    details = conflict_lines or [ln.strip() for ln in mt_out[1:] if ln.strip()]
+    if mt_err:
+        details.append(mt_err)
+    detail_str = "; ".join(details[:5]) if details else "conflicting changes"
+    return False, "", detail_str
+
+
+def _ephemeral_squash_commit(repo: Path, tree_oid: str, parent_sha: str) -> str | None:
+    res = subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=verify-pr-branch",
+            "-c",
+            "user.email=verify@local",
+            "commit-tree",
+            tree_oid,
+            "-p",
+            parent_sha,
+            "-m",
+            "squash-check",
+        ],
+        cwd=str(repo),
+        capture_output=True,
+        check=False,
+    )
     if res.returncode != 0:
         return None
     return res.stdout.decode("utf-8", errors="replace").strip()
@@ -138,9 +194,73 @@ def _tree_paths(repo: Path, tree_ref: str) -> tuple[set[str], set[str]]:
     return files, _dirs_from_files(files)
 
 
-def _extract_relative_md_links(md_path: str, text: str) -> list[tuple[int, str, str]]:
-    """Return (line_no, target, resolved_path) for relative markdown links outside code blocks."""
-    out: list[tuple[int, str, str]] = []
+def _github_heading_slug(raw_heading: str) -> str:
+    s = INLINE_CODE_RE.sub(r"\2", raw_heading)
+    s = MD_INLINE_LINK_TEXT_RE.sub(r"\1", s)
+    s = HTML_TAG_RE.sub("", s)
+    s = WORD_UNDERSCORE_EMPH_RE.sub(r"\1", s)
+    s = s.strip().lower()
+    s = re.sub(r"[^\w\s-]", "", s)
+    s = re.sub(r"\s", "-", s)
+    return s
+
+
+def _extract_md_heading_slugs(text: str) -> set[str]:
+    slugs: set[str] = set()
+    counts: dict[str, int] = {}
+    fence: tuple[str, int] | None = None
+    prev_candidate: str | None = None
+
+    def _record_heading(heading_text: str) -> None:
+        base_slug = _github_heading_slug(heading_text)
+        if not base_slug:
+            return
+        idx = counts.get(base_slug, 0)
+        counts[base_slug] = idx + 1
+        slugs.add(base_slug if idx == 0 else f"{base_slug}-{idx}")
+
+    for line_idx, line in enumerate(text.splitlines(), start=1):
+        if fence is not None:
+            stripped = line.strip()
+            fchar, flen = fence
+            if len(stripped) >= flen and all(ch == fchar for ch in stripped):
+                fence = None
+            prev_candidate = None
+            continue
+        m_bt = BACKTICK_FENCE_RE.match(line)
+        if m_bt:
+            fence = ("`", len(m_bt.group(1)))
+            prev_candidate = None
+            continue
+        m_tl = TILDE_FENCE_RE.match(line)
+        if m_tl:
+            fence = ("~", len(m_tl.group(1)))
+            prev_candidate = None
+            continue
+        for m_id in HTML_ANCHOR_ID_RE.finditer(line):
+            anchor_id = m_id.group(1).strip()
+            if anchor_id:
+                slugs.add(anchor_id)
+                slugs.add(anchor_id.lower())
+        m_atx = ATX_HEADING_RE.match(line)
+        if m_atx:
+            _record_heading(m_atx.group(1))
+            prev_candidate = None
+            continue
+        if prev_candidate is not None and line_idx > 1 and SETEXT_UNDERLINE_RE.match(line):
+            _record_heading(prev_candidate)
+            prev_candidate = None
+            continue
+        stripped_line = line.strip()
+        if not stripped_line or stripped_line.startswith(("-", "*", "+", ">", "|")):
+            prev_candidate = None
+        else:
+            prev_candidate = stripped_line
+    return slugs
+
+
+def _extract_md_link_targets(md_path: str, text: str) -> list[tuple[int, str, str | None, str | None]]:
+    out: list[tuple[int, str, str | None, str | None]] = []
     fence: tuple[str, int] | None = None
     md_dir = posixpath.dirname(md_path)
     for idx, line in enumerate(text.splitlines(), start=1):
@@ -169,15 +289,33 @@ def _extract_relative_md_links(md_path: str, text: str) -> list[tuple[int, str, 
                 target = raw_target.split()[0]
             if not target or target.lower().startswith(EXCLUDED_LINK_SCHEMES):
                 continue
-            path_part = urllib.parse.unquote(target.split(HASH_CHAR, 1)[0].split("?", 1)[0].strip())
-            if not path_part:
+            if HASH_CHAR in target:
+                raw_path, raw_frag = target.split(HASH_CHAR, 1)
+                fragment: str | None = urllib.parse.unquote(raw_frag.split("?", 1)[0].strip()) or None
+            else:
+                raw_path = target
+                fragment = None
+            path_part = urllib.parse.unquote(raw_path.split("?", 1)[0].strip())
+            if not path_part and fragment is None:
                 continue
-            if path_part.startswith("/"):
+            resolved: str | None
+            if not path_part:
+                resolved = None
+            elif path_part.startswith("/"):
                 resolved = posixpath.normpath(path_part.lstrip("/"))
             else:
                 resolved = posixpath.normpath(posixpath.join(md_dir, path_part) if md_dir else path_part)
-            out.append((idx, target, resolved))
+            out.append((idx, target, resolved, fragment))
     return out
+
+
+def _extract_relative_md_links(md_path: str, text: str) -> list[tuple[int, str, str]]:
+    """Return (line_no, target, resolved_path) for relative markdown links outside code blocks."""
+    return [
+        (line_no, target, resolved)
+        for line_no, target, resolved, _ in _extract_md_link_targets(md_path, text)
+        if resolved is not None
+    ]
 
 
 def _replay_episode_hardened(ep: dict[str, Any], tiers_version: str = "v1.4") -> dict[str, Any]:
@@ -412,6 +550,7 @@ def verify_branch(
     allow_data: bool = False,
     skip_replay: bool = False,
     require_ff_base: bool = False,
+    with_branches: Sequence[str] = (),
 ) -> dict[str, Any]:
     repo_path = Path(repo).resolve()
     warnings: list[str] = []
@@ -586,7 +725,9 @@ def verify_branch(
     link_errors: list[str] = []
     md_files = [p for p in added_or_modified if p.lower().endswith(".md") and p in blob_cache]
     checked_links = 0
+    checked_anchors = 0
     if md_files and inspect_tree:
+        br_deleted: set[str] = set()
         if merged_tree is None and base_sha and merge_base and branch_sha:
             base_files, _ = _tree_paths(repo_path, base_sha)
             br_entries = _diff_entries(repo_path, merge_base, branch_sha)
@@ -596,27 +737,72 @@ def verify_branch(
             tree_dirs = _dirs_from_files(tree_files)
         else:
             tree_files, tree_dirs = _tree_paths(repo_path, inspect_tree)
+
+        slug_cache: dict[str, set[str] | None] = {}
+
+        def _slugs_for_md(target_md: str) -> set[str] | None:
+            if target_md in slug_cache:
+                return slug_cache[target_md]
+            raw_md = blob_cache.get(target_md)
+            if raw_md is None:
+                raw_md = _read_blob(repo_path, inspect_tree, target_md)
+            if raw_md is None and merged_tree is None and base_sha and target_md not in br_deleted:
+                raw_md = _read_blob(repo_path, base_sha, target_md)
+            if raw_md is None:
+                slug_cache[target_md] = None
+                return None
+            try:
+                decoded = raw_md.decode("utf-8")
+            except UnicodeDecodeError:
+                slug_cache[target_md] = None
+                return None
+            parsed_slugs = _extract_md_heading_slugs(decoded)
+            slug_cache[target_md] = parsed_slugs
+            return parsed_slugs
+
         for p in md_files:
             try:
                 md_text = blob_cache[p].decode("utf-8")
             except UnicodeDecodeError:
                 continue
-            for line_no, target, resolved in _extract_relative_md_links(p, md_text):
-                checked_links += 1
-                exists = (
-                    resolved != ".."
-                    and not resolved.startswith("../")
-                    and (resolved in tree_files or resolved in tree_dirs)
-                )
-                if not exists:
-                    link_errors.append(
-                        f"{p}:{line_no}: broken relative link '{target}' -> '{resolved}'"
+            for line_no, target, resolved, fragment in _extract_md_link_targets(p, md_text):
+                if resolved is not None:
+                    checked_links += 1
+                    exists = (
+                        resolved != ".."
+                        and not resolved.startswith("../")
+                        and (resolved in tree_files or resolved in tree_dirs)
                     )
+                    if not exists:
+                        link_errors.append(
+                            f"{p}:{line_no}: broken relative link '{target}' -> '{resolved}'"
+                        )
+                        continue
+                if fragment is None:
+                    continue
+                if resolved is None:
+                    anchor_md_path: str | None = p
+                elif resolved in tree_files and resolved.lower().endswith(".md"):
+                    anchor_md_path = resolved
+                elif resolved == "." and "README.md" in tree_files:
+                    anchor_md_path = "README.md"
+                elif resolved in tree_dirs and f"{resolved}/README.md" in tree_files:
+                    anchor_md_path = f"{resolved}/README.md"
+                else:
+                    anchor_md_path = None
+                if anchor_md_path is not None:
+                    checked_anchors += 1
+                    target_slugs = _slugs_for_md(anchor_md_path)
+                    if target_slugs is None or fragment not in target_slugs:
+                        link_errors.append(
+                            f"{p}:{line_no}: broken {HASH_CHAR}anchor '{target}' -> '{anchor_md_path}{HASH_CHAR}{fragment}'"
+                        )
+    anchor_note = f" ({checked_anchors} anchor(s) checked)" if checked_anchors else ""
     gates.append(
         _gate(
             "markdown_links",
             not link_errors,
-            f"{len(md_files)} .md file(s) checked, {checked_links} relative link(s), {len(link_errors)} broken",
+            f"{len(md_files)} .md file(s) checked, {checked_links} relative link(s), {len(link_errors)} broken{anchor_note}",
             link_errors,
         )
     )
@@ -891,6 +1077,67 @@ def verify_branch(
             )
         )
 
+    if with_branches:
+        sib_errors: list[str] = []
+        n_3way = 0
+        n_squash = 0
+        br_commit_tree = _rev_parse_tree(repo_path, branch_sha) if branch_sha else None
+        for sib_ref in with_branches:
+            if base_sha is None or branch_sha is None:
+                sib_errors.append(f"cannot check sibling {sib_ref}: missing base or branch ref")
+                continue
+            sib_sha = _rev_parse(repo_path, sib_ref)
+            if sib_sha is None:
+                sib_errors.append(f"unknown sibling ref: {sib_ref}")
+                continue
+            ok_3way, _, err_3way = _merge_tree_result(repo_path, sib_sha, branch_sha)
+            if ok_3way:
+                n_3way += 1
+                continue
+            ok_sib_base, sib_tree, err_sib_base = _merge_tree_result(repo_path, base_sha, sib_sha)
+            if not ok_sib_base or not sib_tree:
+                sib_errors.append(
+                    f"sibling {sib_ref} conflicts with base {base}: {err_sib_base or 'conflicting changes'}"
+                )
+                continue
+            if merged_tree is None:
+                sib_errors.append(
+                    f"branch {branch} conflicts with base {base} (cannot squash-check {sib_ref}: {err_3way})"
+                )
+                continue
+            sib_commit_tree = _rev_parse_tree(repo_path, sib_sha)
+            sib_squash_ref = (
+                sib_sha
+                if sib_tree == sib_commit_tree
+                else _ephemeral_squash_commit(repo_path, sib_tree, base_sha)
+            )
+            br_squash_ref = (
+                branch_sha
+                if merged_tree == br_commit_tree
+                else _ephemeral_squash_commit(repo_path, merged_tree, base_sha)
+            )
+            if sib_squash_ref is None or br_squash_ref is None:
+                sib_errors.append(f"unable to construct squash tree check for sibling {sib_ref}")
+                continue
+            ok_sq, _, err_sq = _merge_tree_result(
+                repo_path, f"--merge-base={base_sha}", sib_squash_ref, br_squash_ref
+            )
+            if ok_sq:
+                n_squash += 1
+            else:
+                sib_errors.append(
+                    f"post-base conflict between {branch} and {sib_ref} onto {base}: {err_sq}"
+                )
+        sib_parts: list[str] = []
+        if n_3way or (not n_squash and not sib_errors):
+            sib_parts.append(f"{n_3way} 3-way clean")
+        if n_squash:
+            sib_parts.append(f"{n_squash} squash-clean onto base")
+        if sib_errors:
+            sib_parts.append(f"{len(sib_errors)} conflict(s)")
+        sib_summary = f"{len(with_branches)} sibling(s) checked: {', '.join(sib_parts)}"
+        gates.append(_gate("sibling_compat", not sib_errors, sib_summary, sib_errors))
+
     ok = all(g["passed"] for g in gates)
     return {
         "ok": ok,
@@ -940,6 +1187,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--allow-data", action="store_true")
     ap.add_argument("--skip-replay", action="store_true")
     ap.add_argument("--require-ff-base", action="store_true")
+    ap.add_argument("--with-branch", action="append", default=[])
     args = ap.parse_args(argv)
 
     report = verify_branch(
@@ -950,6 +1198,7 @@ def main(argv: list[str] | None = None) -> int:
         allow_data=args.allow_data,
         skip_replay=args.skip_replay,
         require_ff_base=args.require_ff_base,
+        with_branches=args.with_branch,
     )
     if args.as_json:
         print(json.dumps(report, indent=2))

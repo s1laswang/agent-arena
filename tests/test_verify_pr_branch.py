@@ -6,15 +6,19 @@ import io
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tokenize
 from typing import Any
 
 import pytest
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from canary.env import Env
 from scripts.verify_pr_branch import main, verify_branch
 
-ROOT = Path(__file__).resolve().parents[1]
 HASH_CHAR = chr(35)
 EM_DASH = chr(0x2014)
 EN_DASH = chr(0x2013)
@@ -55,7 +59,7 @@ def _init_repo(tmp_path: Path) -> Path:
     _commit_files(
         repo,
         {
-            "README.md": "Canary baseline\nline two\n",
+            "README.md": f"Canary baseline\nline two\n\n{HASH_CHAR} Headline\n",
             "canary/env.py": "VALUE = 1\n",
             "canary/rules.py": "TIERS_VERSION = 'v1.4'\n",
             "canary/solver/core.py": "SOLVER = True\n",
@@ -785,6 +789,89 @@ def test_markdown_links_gate_valid_excluded_and_fences(tmp_path: Path) -> None:
     assert gates["markdown_links"]["passed"] is True
     assert gates["markdown_links"]["errors"] == []
     assert "6 relative link(s), 0 broken" in gates["markdown_links"]["summary"]
+    assert "(2 anchor(s) checked)" in gates["markdown_links"]["summary"]
+
+
+def test_markdown_links_anchor_validation_pass_and_fail(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "anchor-check")
+
+    h1 = HASH_CHAR
+    h2 = HASH_CHAR * 2
+    h3 = HASH_CHAR * 3
+    other_md = "\n".join(
+        [
+            f"{h1} Other Doc",
+            "",
+            f"{h2} Expected oracle range for a judge rerun",
+            "",
+            f"{h3} `check_isolation.sh` **Guide**",
+            "",
+        ]
+    )
+    sub_readme = f"{h1} Sub Overview\n\n{h2} Dir Section\n"
+    main_md = "\n".join(
+        [
+            f"{h1} Anchor Matrix",
+            "",
+            f"{h2} 10. Synthesis: Canary v1.4 vs. v1.5",
+            "",
+            f"{h2} Repeated Heading",
+            "",
+            f"{h2} Repeated Heading",
+            "",
+            f"- Intra Synthesis: [s10]({HASH_CHAR}10-synthesis-canary-v14-vs-v15)",
+            f"- Intra Dup 1: [d0]({HASH_CHAR}repeated-heading)",
+            f"- Intra Dup 2: [d1]({HASH_CHAR}repeated-heading-1)",
+            f"- Cross Oracle: [oracle](other.md{HASH_CHAR}expected-oracle-range-for-a-judge-rerun)",
+            f"- Cross Code Heading: [iso](other.md{HASH_CHAR}check_isolationsh-guide)",
+            f"- Dir Readme Anchor: [dir](../sub/{HASH_CHAR}dir-section)",
+            f"- Python Line Ref: [py](../canary/env.py{HASH_CHAR}L1)",
+            f"- Inline Ignored: `[bad]({HASH_CHAR}missing-inline)`",
+            "",
+            "```markdown",
+            f"{h1} Fenced Heading Should Not Count",
+            f"[fenced bad]({HASH_CHAR}missing-in-fence)",
+            "```",
+            "",
+        ]
+    )
+    _commit_files(
+        repo,
+        {
+            "docs/other.md": other_md,
+            "sub/README.md": sub_readme,
+            "docs/anchors.md": main_md,
+        },
+        message="docs: add clean intra and cross-file markdown anchors",
+    )
+
+    rep_ok = verify_branch(base="justSilas", branch="anchor-check", repo=repo)
+    assert rep_ok["ok"] is True, rep_ok
+    gates_ok = _gate_map(rep_ok)
+    assert gates_ok["markdown_links"]["passed"] is True
+    assert "(6 anchor(s) checked)" in gates_ok["markdown_links"]["summary"]
+
+    broken_md = (
+        main_md
+        + f"- Broken Intra: [bad1]({HASH_CHAR}fenced-heading-should-not-count)\n"
+        + f"- Broken Cross: [bad2](other.md{HASH_CHAR}nonexistent-slug)\n"
+    )
+    _commit_files(
+        repo,
+        {"docs/anchors.md": broken_md},
+        message="docs: add broken intra and cross-file anchors",
+    )
+
+    rep_bad = verify_branch(base="justSilas", branch="anchor-check", repo=repo)
+    assert rep_bad["ok"] is False
+    gates_bad = _gate_map(rep_bad)
+    assert gates_bad["markdown_links"]["passed"] is False
+    errs = gates_bad["markdown_links"]["errors"]
+    assert len(errs) == 2
+    joined = "\n".join(errs)
+    assert f"broken {HASH_CHAR}anchor '{HASH_CHAR}fenced-heading-should-not-count'" in joined
+    assert f"docs/other.md{HASH_CHAR}nonexistent-slug" in joined
 
 
 def test_markdown_links_gate_catches_broken_and_moved_targets(tmp_path: Path) -> None:
@@ -1021,8 +1108,168 @@ def test_duplicate_tuples_scoped_per_shard_root(tmp_path: Path) -> None:
     assert any("duplicate (agent, tier, seed)" in e for e in gates_dup["timeout_episode"]["errors"])
 
 
+def test_with_branch_three_way_clean_and_cli_repeatable(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _init_repo(tmp_path)
+    _git(repo, "checkout", "-b", "shared-fix")
+    _commit_files(repo, {"tests/test_shared.py": "SHARED_FIX = 1\n"}, message="shared ci hotfix")
+
+    _git(repo, "checkout", "-b", "sib-a", "shared-fix")
+    _commit_files(repo, {"docs/sib_a.md": "Sibling A clean doc\n"}, message="add sib_a")
+
+    _git(repo, "checkout", "-b", "sib-b", "shared-fix")
+    _commit_files(repo, {"docs/sib_b.md": "Sibling B clean doc\n"}, message="add sib_b")
+
+    _git(repo, "checkout", "-b", "candidate-pr", "shared-fix")
+    _commit_files(repo, {"scripts/cand.py": "CAND = 1\n"}, message="add candidate script")
+
+    rep_default = verify_branch(base="justSilas", branch="candidate-pr", repo=repo)
+    assert rep_default["ok"] is True
+    assert len(rep_default["gates"]) == 11
+    assert "sibling_compat" not in _gate_map(rep_default)
+
+    rc = main(
+        [
+            "--repo",
+            str(repo),
+            "--base",
+            "justSilas",
+            "--branch",
+            "candidate-pr",
+            "--with-branch",
+            "sib-a",
+            "--with-branch",
+            "sib-b",
+            "--json",
+        ]
+    )
+    out = capsys.readouterr().out
+    assert rc == 0, out
+    parsed = json.loads(out)
+    assert parsed["ok"] is True
+    assert len(parsed["gates"]) == 12
+    sib_gate = _gate_map(parsed)["sibling_compat"]
+    assert sib_gate["passed"] is True
+    assert "2 sibling(s) checked: 2 3-way clean" == sib_gate["summary"]
+
+
+def test_with_branch_pre_base_rename_squash_clean(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+
+    _git(repo, "checkout", "-b", "fleet-staging")
+    _commit_files(
+        repo,
+        {
+            "data/runs/committed/v1.4/raw/30.txt": "transcript 30 content\n",
+            "data/runs/committed/v1.4/raw/episodes.jsonl": "{}\n",
+        },
+        message="pre-base raw fleet runs",
+    )
+
+    _git(repo, "checkout", "justSilas")
+    _commit_files(repo, {"docs/base_advance.md": "justSilas advanced\n"}, message="advance base")
+
+    _git(repo, "checkout", "-b", "pr-runs", "fleet-staging")
+    _git(repo, "merge", "--no-edit", "justSilas")
+    (repo / "data" / "runs" / "committed" / "v1.4" / "ext").mkdir(parents=True, exist_ok=True)
+    _git(
+        repo,
+        "mv",
+        "data/runs/committed/v1.4/raw/30.txt",
+        "data/runs/committed/v1.4/ext/30.txt",
+    )
+    _git(repo, "rm", "data/runs/committed/v1.4/raw/episodes.jsonl")
+    _git(repo, "commit", "-m", "move 30.txt into committed ext and drop raw episodes")
+
+    _git(repo, "checkout", "-b", "pr-replication", "fleet-staging")
+    _git(repo, "merge", "--no-edit", "justSilas")
+    (repo / "results" / "frontier_replication" / "v1.4" / "ext").mkdir(parents=True, exist_ok=True)
+    (repo / "results" / "selected_fleet_replication" / "v1.4").mkdir(parents=True, exist_ok=True)
+    _git(
+        repo,
+        "mv",
+        "data/runs/committed/v1.4/raw/30.txt",
+        "results/frontier_replication/v1.4/ext/30.txt",
+    )
+    _git(
+        repo,
+        "mv",
+        "data/runs/committed/v1.4/raw/episodes.jsonl",
+        "results/selected_fleet_replication/v1.4/raw_episodes.jsonl",
+    )
+    _git(repo, "commit", "-m", "move raw runs into results replication roots")
+
+    raw_3way = subprocess.run(
+        ["git", "merge-tree", "--write-tree", "pr-runs", "pr-replication"],
+        cwd=str(repo),
+        capture_output=True,
+        check=False,
+    )
+    assert raw_3way.returncode != 0
+
+    rep = verify_branch(
+        base="justSilas",
+        branch="pr-replication",
+        repo=repo,
+        with_branches=["pr-runs"],
+    )
+    assert rep["ok"] is True, rep
+    sib_gate = _gate_map(rep)["sibling_compat"]
+    assert sib_gate["passed"] is True
+    assert "squash-clean onto base" in sib_gate["summary"]
+
+    _git(repo, "checkout", "justSilas")
+    _commit_files(repo, {"docs/base_advance_2.md": "second advance\n"}, message="advance base again")
+
+    rep_non_ff = verify_branch(
+        base="justSilas",
+        branch="pr-replication",
+        repo=repo,
+        with_branches=["pr-runs"],
+    )
+    assert rep_non_ff["ok"] is True, rep_non_ff
+    assert "squash-clean onto base" in _gate_map(rep_non_ff)["sibling_compat"]["summary"]
+
+
+def test_with_branch_post_base_conflict_and_unknown_ref(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+
+    _git(repo, "checkout", "-b", "sib-conflict")
+    _commit_files(repo, {"docs/shared_target.md": "sibling version\n"}, message="sib add")
+
+    _git(repo, "checkout", "-b", "branch-conflict", "justSilas")
+    _commit_files(repo, {"docs/shared_target.md": "branch conflicting version\n"}, message="branch add")
+
+    rep_conflict = verify_branch(
+        base="justSilas",
+        branch="branch-conflict",
+        repo=repo,
+        with_branches=["sib-conflict"],
+    )
+    assert rep_conflict["ok"] is False
+    sib_gate = _gate_map(rep_conflict)["sibling_compat"]
+    assert sib_gate["passed"] is False
+    assert any("docs/shared_target.md" in e for e in sib_gate["errors"])
+
+    rep_unknown = verify_branch(
+        base="justSilas",
+        branch="branch-conflict",
+        repo=repo,
+        with_branches=["nonexistent-branch-ref"],
+    )
+    assert rep_unknown["ok"] is False
+    assert any(
+        "unknown sibling ref: nonexistent-branch-ref" in e
+        for e in _gate_map(rep_unknown)["sibling_compat"]["errors"]
+    )
+
+
 def test_self_hygiene_zero_comments_and_dashes() -> None:
-    for py_rel in ("scripts/verify_pr_branch.py", "tests/test_verify_pr_branch.py"):
+    targets = ["scripts/verify_pr_branch.py", "tests/test_verify_pr_branch.py"]
+    if (ROOT / "tests/test_pr_bundle_ci_parity.py").exists():
+        targets.append("tests/test_pr_bundle_ci_parity.py")
+    for py_rel in targets:
         raw = (ROOT / py_rel).read_bytes()
         comments = [
             tok for tok in tokenize.tokenize(io.BytesIO(raw).readline)

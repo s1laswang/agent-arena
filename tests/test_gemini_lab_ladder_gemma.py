@@ -30,10 +30,15 @@ def test_gemma_section_separate_labelled_and_roundtrips(tmp_path, monkeypatch):
     assert a["episodes"] == 2 and [r["model"] for r in a["rows"]] == ["gemini-3.8-flash"]
     assert a["gemma"]["episodes"] == 2 and a["gemma"]["rows"][0]["model"] == "gemma-4-31b-it"
     assert a["gemma"]["ledger"]["calls"] == 4 and len(a["gemma"]["ledger_run_ids"]) == 2
+    m = a["models"]
+    assert m["gemini_models_count"] == 1 and m["gemini_models"][0]["id"] == "gemini-3.8-flash"
+    assert m["gemini_models"][0]["cells"] == [{"level": "low", "tier": "hard", "n": 2, "source": "ladder"}]
+    assert m["gemma_models_count"] == 1 and m["gemma_models"][0]["served_via"] == "Gemini API (hosted Gemma)"
+    assert "**Models:** 1 Gemini models via the Gemini API (gemini-3.8-flash); 1 hosted Gemma (gemma-4-31b-it)" in md
     assert "## Open-weight Gemma (hosted Gemma via the Gemini API)" in md
     assert "gemma-4-31b-it via Gemini API (hosted Gemma)" in md
     assert "Verda" not in md and md.count("self-hosted") == md.count("(not self-hosted)") == 1
-    assert md.index("gemma-4-31b-it") > md.index("## Open-weight Gemma")
+    assert "| gemma-4-31b-it | default |" not in md  # never a row of the Gemini tables
     # keyless round trip from the exports
     ex = tmp_path / "ex"
     assert ladder_report.main(["--runs", str(ex / "ladder_episodes.jsonl.gz"), "--ledger", str(ex / "ladder_ledger.jsonl.gz"),
@@ -85,7 +90,11 @@ def test_j1_self_hosted_section_replay_verified_and_costed(tmp_path, monkeypatch
     r = j["rows"][0]
     assert abs(r["cost_per_ep_eur"] - 1.0794 * 0.5 / 2) < 1e-9 and abs(r["cost_per_ep"] - 1.0794 * 0.25 * 1.10) < 1e-9
     md = (tmp_path / "a" / "ladder.md").read_text()
-    assert "## Open-weight comparison on Canary v1.4 (Verda self-hosted)" in md and "2/2 replay-verified" in md
+    assert "## Open-weight cost/portability data point (Verda self-hosted)" in md and "2/2 replay-verified" in md
+    assert "cross-provider" not in md and "control" not in md.split("## Open-weight cost")[1]
+    inv = doc["models"]
+    assert inv["gemini_models_count"] == 1 and inv["open_weight_data_points"][0]["id"] == "Qwen/Qwen3-14B"
+    assert inv["open_weight_data_points"][0]["cells"] == [{"level": "default", "tier": "hard", "n": 2}]
     assert "Qwen/Qwen3-14B (Verda self-hosted, vLLM)" in md
     assert ("Gemini cells had no per-turn output cap; Qwen/Qwen3-14B was capped at 4096 tokens/turn for time." in md)
     assert "| medium | Qwen/Qwen3-14B (Verda self-hosted, vLLM) | 0 | not run |" in md

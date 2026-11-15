@@ -1,0 +1,529 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "multi_image_incident_dossier",
+  "model_id": "gemini-4-carbon",
+  "commit": "a6b5a80e7a47d2bdf91514c57ca08834921762eb",
+  "git_sha": "a6b5a80e7a47d2bdf91514c57ca08834921762eb",
+  "timestamp": "2026-11-14T23:58:33+00:00",
+  "command": "CANARY_LLM_MAX_RETRIES=10 PYTHONPATH=. /tmp/fleet-root/shared/agent-arena-venv/bin/python scripts/run_incident_dossier.py --worlds medium:6,medium:7,medium:8,hard:5,hard:6,hard:7 --model gemini-4-carbon --out results/gemini/roles_carbon/multimodal_evidence/multi-image-dossier-med6to8-hard5to7-carbon",
+  "tiers_version": "v1.4",
+  "episode_count": 6,
+  "n_images_read_by_model": 18,
+  "images_per_call": 3,
+  "top1_mole_accuracy": 0.6667,
+  "top1_decoy_accuracy": 0.8333,
+  "fake_env": false,
+  "smoke": false,
+  "worlds": [
+    {
+      "tier": "medium",
+      "seed": 6,
+      "seed_tag": "medium_6"
+    },
+    {
+      "tier": "medium",
+      "seed": 7,
+      "seed_tag": "medium_7"
+    },
+    {
+      "tier": "medium",
+      "seed": 8,
+      "seed_tag": "medium_8"
+    },
+    {
+      "tier": "hard",
+      "seed": 5,
+      "seed_tag": "hard_5"
+    },
+    {
+      "tier": "hard",
+      "seed": 6,
+      "seed_tag": "hard_6"
+    },
+    {
+      "tier": "hard",
+      "seed": 7,
+      "seed_tag": "hard_7"
+    }
+  ],
+  "ledger_run_id": "multimodal_evidence:multi_image_incident_dossier:gemini-4-carbon:1794700713",
+  "dossiers": [
+    {
+      "tier": "medium",
+      "seed": 6,
+      "seed_tag": "medium_6",
+      "n_images": 3,
+      "images": [
+        {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_medium_6.png",
+          "sha256": "c55b8ee19531299a45c172f99bd769bf7bd58859a368e0b438df632697c060d3",
+          "bytes": 109867,
+          "size": [
+            1274,
+            996
+          ]
+        },
+        {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_medium_6.png",
+          "sha256": "428c2ea7a816d06c9425b99c6fa5fff3006f29c8c4d0adfee2e262c61a4f5376",
+          "bytes": 84534,
+          "size": [
+            1510,
+            1126
+          ]
+        },
+        {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_medium_6.png",
+          "sha256": "6b555b05f2884f9dfe1f14a7021e2a88804a324128e303bbb6e38f769cd95986",
+          "bytes": 125746,
+          "size": [
+            1320,
+            1204
+          ]
+        }
+      ]
+    },
+    {
+      "tier": "medium",
+      "seed": 7,
+      "seed_tag": "medium_7",
+      "n_images": 3,
+      "images": [
+        {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_medium_7.png",
+          "sha256": "53f05fe146cb3eca010e0576230259e694112057c5e4a0572b84eac3f896ecaf",
+          "bytes": 111514,
+          "size": [
+            1274,
+            996
+          ]
+        },
+        {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_medium_7.png",
+          "sha256": "b54052b830d7bec9555f204862be43e08c99b3f84df08fbb9efd45b4649022fd",
+          "bytes": 40654,
+          "size": [
+            1510,
+            644
+          ]
+        },
+        {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_medium_7.png",
+          "sha256": "a1a0ffdbf5f0d61b0a19dd17210864970d494e789c96b91a96b16f4432c61275",
+          "bytes": 126224,
+          "size": [
+            1320,
+            1232
+          ]
+        }
+      ]
+    },
+    {
+      "tier": "medium",
+      "seed": 8,
+      "seed_tag": "medium_8",
+      "n_images": 3,
+      "images": [
+        {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_medium_8.png",
+          "sha256": "58b01eaf6a8ccbe452999144967256ea1e889cf030490d55f99b50502d2d90d6",
+          "bytes": 109735,
+          "size": [
+            1274,
+            996
+          ]
+        },
+        {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_medium_8.png",
+          "sha256": "a5213ceac6fcdbc2e5afa41b723aa570dffb9db566fb8900e1b1c09533c9bdfd",
+          "bytes": 51511,
+          "size": [
+            1510,
+            644
+          ]
+        },
+        {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_medium_8.png",
+          "sha256": "ad7374aaad5e8e2f8e5951cde29d0817cfec5858727e0e4c40b9e5b52aea5416",
+          "bytes": 125317,
+          "size": [
+            1320,
+            1204
+          ]
+        }
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 5,
+      "seed_tag": "hard_5",
+      "n_images": 3,
+      "images": [
+        {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_hard_5.png",
+          "sha256": "f063b24ea5ba64211a9f5bb11024a0c007efc85b1c26f1d6988893e1a6d76875",
+          "bytes": 199538,
+          "size": [
+            1530,
+            1636
+          ]
+        },
+        {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_hard_5.png",
+          "sha256": "e7479ca2bfc611a8301d413eb50e283bb1bac1763d98efb02f0a00b6134e79e0",
+          "bytes": 66526,
+          "size": [
+            1510,
+            644
+          ]
+        },
+        {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_hard_5.png",
+          "sha256": "50921b9347d745e26b12c17b7be6d4de3126c323344de1cf79133f57352c82f4",
+          "bytes": 240568,
+          "size": [
+            2144,
+            1990
+          ]
+        }
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 6,
+      "seed_tag": "hard_6",
+      "n_images": 3,
+      "images": [
+        {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_hard_6.png",
+          "sha256": "0f20cd5c63eab64f5d742870dc8b7c899000f0b39483861470d9c0e87aa0a18f",
+          "bytes": 200728,
+          "size": [
+            1530,
+            1636
+          ]
+        },
+        {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_hard_6.png",
+          "sha256": "adb912adc770866fb6dbe885a6f1c12c5b24b613a3b34f5ee34b042f099e8e73",
+          "bytes": 54672,
+          "size": [
+            1510,
+            644
+          ]
+        },
+        {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_hard_6.png",
+          "sha256": "5ee0c6a98fe70b84b573cec95a9a41a5488213c97d5f7a6d78c0fe4c24d24720",
+          "bytes": 239725,
+          "size": [
+            2144,
+            1962
+          ]
+        }
+      ]
+    },
+    {
+      "tier": "hard",
+      "seed": 7,
+      "seed_tag": "hard_7",
+      "n_images": 3,
+      "images": [
+        {
+          "kind": "badge_raster",
+          "path": "dossiers/badge_raster_seed_hard_7.png",
+          "sha256": "ce7c8e115d5df457fa1d4a93d536fd5e868c97f1f904b97a7c27434b834b5014",
+          "bytes": 194319,
+          "size": [
+            1530,
+            1636
+          ]
+        },
+        {
+          "kind": "leaked_memo_scans",
+          "path": "dossiers/leaked_memo_scans_seed_hard_7.png",
+          "sha256": "e6c39dc41216cee1f8dc2c47ac79269dbecc2d4102449f33b30d02a3059cb8c6",
+          "bytes": 90109,
+          "size": [
+            1510,
+            1126
+          ]
+        },
+        {
+          "kind": "org_canary_map",
+          "path": "dossiers/org_canary_map_seed_hard_7.png",
+          "sha256": "0c1bc955616946bd0037319e5beea120cf9ddacf0e53188ea19fb01bfc7cfad2",
+          "bytes": 240074,
+          "size": [
+            2144,
+            1962
+          ]
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "calls": 6,
+    "in": 27055,
+    "out": 2345,
+    "thinking": 25336,
+    "cached": 0,
+    "cost_usd": 0.33092,
+    "latency_s": 316.597
+  },
+  "part_from_bytes": true,
+  "image_manifest": {
+    "count": 18,
+    "mime_type": "image/png",
+    "total_bytes": 2411361,
+    "dimensions": [
+      [
+        1274,
+        996
+      ],
+      [
+        1320,
+        1204
+      ],
+      [
+        1320,
+        1232
+      ],
+      [
+        1510,
+        644
+      ],
+      [
+        1510,
+        1126
+      ],
+      [
+        1530,
+        1636
+      ],
+      [
+        2144,
+        1962
+      ],
+      [
+        2144,
+        1990
+      ]
+    ],
+    "images": [
+      {
+        "path": "dossiers/badge_raster_seed_hard_5.png",
+        "size": [
+          1530,
+          1636
+        ],
+        "width": 1530,
+        "height": 1636,
+        "bytes": 199538,
+        "sha256": "f063b24ea5ba64211a9f5bb11024a0c007efc85b1c26f1d6988893e1a6d76875"
+      },
+      {
+        "path": "dossiers/badge_raster_seed_hard_6.png",
+        "size": [
+          1530,
+          1636
+        ],
+        "width": 1530,
+        "height": 1636,
+        "bytes": 200728,
+        "sha256": "0f20cd5c63eab64f5d742870dc8b7c899000f0b39483861470d9c0e87aa0a18f"
+      },
+      {
+        "path": "dossiers/badge_raster_seed_hard_7.png",
+        "size": [
+          1530,
+          1636
+        ],
+        "width": 1530,
+        "height": 1636,
+        "bytes": 194319,
+        "sha256": "ce7c8e115d5df457fa1d4a93d536fd5e868c97f1f904b97a7c27434b834b5014"
+      },
+      {
+        "path": "dossiers/badge_raster_seed_medium_6.png",
+        "size": [
+          1274,
+          996
+        ],
+        "width": 1274,
+        "height": 996,
+        "bytes": 109867,
+        "sha256": "c55b8ee19531299a45c172f99bd769bf7bd58859a368e0b438df632697c060d3"
+      },
+      {
+        "path": "dossiers/badge_raster_seed_medium_7.png",
+        "size": [
+          1274,
+          996
+        ],
+        "width": 1274,
+        "height": 996,
+        "bytes": 111514,
+        "sha256": "53f05fe146cb3eca010e0576230259e694112057c5e4a0572b84eac3f896ecaf"
+      },
+      {
+        "path": "dossiers/badge_raster_seed_medium_8.png",
+        "size": [
+          1274,
+          996
+        ],
+        "width": 1274,
+        "height": 996,
+        "bytes": 109735,
+        "sha256": "58b01eaf6a8ccbe452999144967256ea1e889cf030490d55f99b50502d2d90d6"
+      },
+      {
+        "path": "dossiers/leaked_memo_scans_seed_hard_5.png",
+        "size": [
+          1510,
+          644
+        ],
+        "width": 1510,
+        "height": 644,
+        "bytes": 66526,
+        "sha256": "e7479ca2bfc611a8301d413eb50e283bb1bac1763d98efb02f0a00b6134e79e0"
+      },
+      {
+        "path": "dossiers/leaked_memo_scans_seed_hard_6.png",
+        "size": [
+          1510,
+          644
+        ],
+        "width": 1510,
+        "height": 644,
+        "bytes": 54672,
+        "sha256": "adb912adc770866fb6dbe885a6f1c12c5b24b613a3b34f5ee34b042f099e8e73"
+      },
+      {
+        "path": "dossiers/leaked_memo_scans_seed_hard_7.png",
+        "size": [
+          1510,
+          1126
+        ],
+        "width": 1510,
+        "height": 1126,
+        "bytes": 90109,
+        "sha256": "e6c39dc41216cee1f8dc2c47ac79269dbecc2d4102449f33b30d02a3059cb8c6"
+      },
+      {
+        "path": "dossiers/leaked_memo_scans_seed_medium_6.png",
+        "size": [
+          1510,
+          1126
+        ],
+        "width": 1510,
+        "height": 1126,
+        "bytes": 84534,
+        "sha256": "428c2ea7a816d06c9425b99c6fa5fff3006f29c8c4d0adfee2e262c61a4f5376"
+      },
+      {
+        "path": "dossiers/leaked_memo_scans_seed_medium_7.png",
+        "size": [
+          1510,
+          644
+        ],
+        "width": 1510,
+        "height": 644,
+        "bytes": 40654,
+        "sha256": "b54052b830d7bec9555f204862be43e08c99b3f84df08fbb9efd45b4649022fd"
+      },
+      {
+        "path": "dossiers/leaked_memo_scans_seed_medium_8.png",
+        "size": [
+          1510,
+          644
+        ],
+        "width": 1510,
+        "height": 644,
+        "bytes": 51511,
+        "sha256": "a5213ceac6fcdbc2e5afa41b723aa570dffb9db566fb8900e1b1c09533c9bdfd"
+      },
+      {
+        "path": "dossiers/org_canary_map_seed_hard_5.png",
+        "size": [
+          2144,
+          1990
+        ],
+        "width": 2144,
+        "height": 1990,
+        "bytes": 240568,
+        "sha256": "50921b9347d745e26b12c17b7be6d4de3126c323344de1cf79133f57352c82f4"
+      },
+      {
+        "path": "dossiers/org_canary_map_seed_hard_6.png",
+        "size": [
+          2144,
+          1962
+        ],
+        "width": 2144,
+        "height": 1962,
+        "bytes": 239725,
+        "sha256": "5ee0c6a98fe70b84b573cec95a9a41a5488213c97d5f7a6d78c0fe4c24d24720"
+      },
+      {
+        "path": "dossiers/org_canary_map_seed_hard_7.png",
+        "size": [
+          2144,
+          1962
+        ],
+        "width": 2144,
+        "height": 1962,
+        "bytes": 240074,
+        "sha256": "0c1bc955616946bd0037319e5beea120cf9ddacf0e53188ea19fb01bfc7cfad2"
+      },
+      {
+        "path": "dossiers/org_canary_map_seed_medium_6.png",
+        "size": [
+          1320,
+          1204
+        ],
+        "width": 1320,
+        "height": 1204,
+        "bytes": 125746,
+        "sha256": "6b555b05f2884f9dfe1f14a7021e2a88804a324128e303bbb6e38f769cd95986"
+      },
+      {
+        "path": "dossiers/org_canary_map_seed_medium_7.png",
+        "size": [
+          1320,
+          1232
+        ],
+        "width": 1320,
+        "height": 1232,
+        "bytes": 126224,
+        "sha256": "a1a0ffdbf5f0d61b0a19dd17210864970d494e789c96b91a96b16f4432c61275"
+      },
+      {
+        "path": "dossiers/org_canary_map_seed_medium_8.png",
+        "size": [
+          1320,
+          1204
+        ],
+        "width": 1320,
+        "height": 1204,
+        "bytes": 125317,
+        "sha256": "ad7374aaad5e8e2f8e5951cde29d0817cfec5858727e0e4c40b9e5b52aea5416"
+      }
+    ]
+  }
+}

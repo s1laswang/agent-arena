@@ -290,3 +290,18 @@ def test_review_that_confirms_keeps_the_exploit(tmp_path):
     S.main(["--merge", str(tmp_path / "w"), "--review", _review(tmp_path, aid, rows), "--out", str(tmp_path / "m")])
     res = json.loads((tmp_path / "m" / "swarm.json").read_text())
     assert res["counts"]["exploits"] == 1 and res["reviews"][0]["confirmed"]
+
+
+def test_by_sha_and_multi_control_recall(tmp_path):
+    aid = _flagged_part(tmp_path, "c1")
+    _flagged_part(tmp_path, "c2")
+    cs = S.control_summary([f"{tmp_path / 'c1'}:ctrl1:ref1", f"{tmp_path / 'c2'}:ctrl2:ref2"])
+    assert cs["controls_planted"] == 4 and cs["controls_found"] == 2 and cs["recall"] == 0.5
+    assert len(cs["by_control"]) == 2 and cs["recall_wilson_95ci"][0] < 0.5 < cs["recall_wilson_95ci"][1]
+    rows = [{"seed": 1, "score": 0.0, "correct": False, "solver_score": 0.7, "audit": {}}]
+    rv_path = _review(tmp_path, aid, rows)
+    S.main(["--merge", f"{tmp_path / 'c1'}:w1:2", "--review", rv_path, "--out", str(tmp_path / "m1")])
+    # re-merging an already-reviewed swarm.json stays idempotent (still overturned)
+    S.main(["--merge", str(tmp_path / "m1" / "swarm.json"), "--review", rv_path, "--out", str(tmp_path / "m2")])
+    res2 = json.loads((tmp_path / "m2" / "swarm.json").read_text())
+    assert res2["by_sha"] and res2["reviews"][0]["flagged_in_run"] and not res2["reviews"][0]["confirmed"]

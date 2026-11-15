@@ -17,9 +17,13 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_PRELOADED_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
 
 import scripts.tiebreak_channel_ablation_audit as tcaa
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_channel_ablation_audit.py"
 SUMMARY_PATH = REPO_ROOT / "results" / "tiebreak" / "channel_ablation" / "channel_ablation_summary.json"
@@ -63,8 +67,7 @@ def test_source_hygiene_and_cross_test_safe_ast_isolation() -> None:
     test_toks = list(tokenize.generate_tokens(io.StringIO(SELF_PATH.read_text(encoding="utf-8")).readline))
     assert not [t for t in test_toks if t.type == tokenize.COMMENT]
 
-    newly_loaded_heavy = {m for m in ("torch", "transformers") if m in sys.modules} - set(_PRELOADED_HEAVY)
-    assert newly_loaded_heavy == set()
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
     import scripts.verify_tiebreak_submission as vts
 

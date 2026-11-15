@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canary Arena - Insider-Leak Benchmark</title>
+<meta name="description" content="Canary Arena: head-to-head insider-leak investigation benchmark (TIERS_VERSION v1.4) with committed gemini-4-carbon replays, live Bayesian solver, role-swap Mole mode, and off-by-default Living Office preview.">
+<link rel="stylesheet" href="./ui/arena.css">
+<script id="pyodideLoaderScript" src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js" async defer></script>
+</head>
+<body>
+<div id="arenaRoot">
+  <header class="arena-mast">
+    <div class="arena-brand">
+      <span class="arena-word">Canary Arena</span>
+      <span class="arena-tag">insider-leak benchmark v1.4</span>
+    </div>
+    <div class="arena-mast-right">
+      <span id="caseId" class="mono dim">seed 26 | hard | mode: duel</span>
+      <span id="pyodideStatus" class="t dim">offline / replay ready</span>
+      <button id="rulesBtn" class="ghost" type="button">Rules</button>
+      <button id="agentBtn" class="ghost" type="button" aria-pressed="false">Agent JSON</button>
+      <button id="leaderboardBtn" class="ghost" type="button">Leaderboard</button>
+    </div>
+  </header>
+
+  <main class="arena-main">
+    <nav class="mode-tabs" role="tablist" aria-label="Arena modes">
+      <button type="button" role="tab" class="mode-tab" aria-selected="true" data-mode="duel">
+        <div class="mode-tab-head">
+          <span class="mode-tab-title">Duel vs Gemini</span>
+          <span class="t hl">v1.4 hard</span>
+        </div>
+        <span class="mode-tab-desc">Head to head vs committed gemini-4-carbon transcript + live solver on the same seed</span>
+      </button>
+      <button type="button" role="tab" class="mode-tab" aria-selected="false" data-mode="solver">
+        <div class="mode-tab-head">
+          <span class="mode-tab-title">Beat the Solver</span>
+          <span class="t hl">public seeds</span>
+        </div>
+        <span class="mode-tab-desc">Race the Bayesian canary-trap solver on the same world</span>
+      </button>
+      <button type="button" role="tab" class="mode-tab" aria-selected="false" data-mode="mole">
+        <div class="mode-tab-head">
+          <span class="mode-tab-title">Be the Mole</span>
+          <span class="t hl">role swap</span>
+        </div>
+        <span class="mode-tab-desc">Pick what to leak and when while the Bayesian solver hunts you</span>
+      </button>
+      <button type="button" role="tab" class="mode-tab" aria-selected="false" data-mode="living">
+        <div class="mode-tab-head">
+          <span class="mode-tab-title">Living Office</span>
+          <span class="preview-badge">V1.6 PREVIEW - OFF BY DEFAULT</span>
+        </div>
+        <span class="mode-tab-desc">Cached office chatter, rumours, and grudges across days (preview)</span>
+      </button>
+    </nav>
+
+    <div class="seed-bar">
+      <div class="seed-group">
+        <span class="lbl">Case Selector</span>
+        <button type="button" class="seed-pill" aria-pressed="false">Seed 6</button>
+        <button type="button" class="seed-pill active" aria-pressed="true">Seed 26</button>
+      </div>
+    </div>
+
+    <section class="arena-clock-strip" aria-live="polite">
+      <div class="clock-cell">
+        <div class="cap">Day</div>
+        <div class="clock-val">01<small> / 21</small></div>
+      </div>
+      <div class="clock-cell">
+        <div class="cap">Visible Value (known V)</div>
+        <div class="clock-val">1.00</div>
+      </div>
+      <div class="clock-cell">
+        <div class="cap">Daily Actions Left</div>
+        <div class="clock-val">8<small> / 8</small></div>
+      </div>
+      <div class="clock-cell">
+        <div class="cap">Tool Calls</div>
+        <div class="clock-val">0<small> / 420</small></div>
+      </div>
+    </section>
+
+    <section class="office-stage-wrap" aria-label="Company floor live stage">
+      <div class="office-stage-head">
+        <span class="lbl">Company Floor Live Stage</span>
+        <div class="seed-group">
+          <span class="mono dim">Day 01 | Pre-end leak sprite: [NONE]</span>
+          <span class="phase-badge" data-phase="morning">MORNING</span>
+        </div>
+      </div>
+      <div class="office-canvas-frame">
+        <canvas id="officeCanvas" class="office-canvas" width="640" height="320"></canvas>
+      </div>
+      <div id="assetCredits">
+        <span>Pixel art &amp; tiles: Kenney Vleugels (Kenney.nl) - CC0 1.0 Public Domain with deterministic procedural fallback.</span>
+        <span class="mono">CC0 / Procedural Safe</span>
+      </div>
+    </section>
+
+    <section class="arena-end-card" aria-label="Episode verdict" hidden></section>
+
+    <div class="arena-split">
+      <div class="pane-human" aria-label="Human desk"></div>
+      <aside class="pane-ai" aria-label="Opponent and solver telemetry"></aside>
+    </div>
+  </main>
+
+  <dialog class="leaderboard-dlg" aria-label="Local session leaderboard" hidden></dialog>
+  <dialog id="arenaRulesDlg" class="leaderboard-dlg" aria-label="Rules" hidden></dialog>
+</div>
+<script type="module" src="./arena_boot.js"></script>
+</body>
+</html>

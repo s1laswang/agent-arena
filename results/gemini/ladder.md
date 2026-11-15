@@ -2,7 +2,7 @@
 
 > **Headline findings** (auto-generated from the table below: 10–20 paired seeds per cell; 95% CIs are wide, so read them as directions).
 >
-> **gemini-3.5-flash (requested ID; the API serves gemini-3.6-flash) with medium or high thinking matches the reference solver on hard:** 78% [28%, 151%] and 71% [11%, 158%] of the solver on the same seeds, 35/40 correct accusations, $0.42–0.43 per episode, versus $1.93 for gemini-4-carbon at high thinking.
+> **gemini-3.5-flash (requested ID; the API serves gemini-3.6-flash) with medium or high thinking is not distinguishable from the reference solver on hard, but the CIs are wide:** 78% [28%, 151%] and 71% [11%, 158%] of the solver on the same seeds (n=20, 20), 35/40 correct accusations, $0.42–0.43 per episode, versus $1.93 for gemini-4-carbon at high thinking (106% [94%, 126%], n=10; different n, so the seed sets differ).
 >
 > **gemini-3.1-flash-lite fails at every thinking level:** its mean score is below the do-nothing score (0) in 8/8 (level, tier) cells; at minimal thinking it accused the wrong employee in 19/20 episodes.
 >
@@ -12,7 +12,7 @@
 
 Hard tier. Medium tier: [frontier_medium.png](frontier_medium.png). Points and n: frontier.json.
 
-Generated 2026-11-15T02:31:09+0200 at git `0e9d85ae2a` from `~/agent-arena-data/gemini/ladder/ladder-v14`. 417 valid Gemini episodes in 34 cells; ledger: 23191 calls, 386 run ids, list price $181.17.
+Generated 2026-11-15T02:32:47+0200 at git `7edf2d0d50` from `~/agent-arena-data/gemini/ladder/ladder-v14`. 417 valid Gemini episodes in 34 cells; ledger: 23191 calls, 386 run ids, list price $181.17.
 
 Every cell is one (model, thinking level, tier) played by the in-process `LLMPolicy` (full history, thought-signature replay) through `canary.agents.play`, the frontier measurement's own runner, on v1.4 dev seeds. The solver and baselines are replayed on exactly the same worlds. **ratio** = mean score / solver's mean on the same seeds, with a paired bootstrap 95% CI over seeds; **luck-adj.** scores each accusation as P·V − (1−P) under the solver's exact posterior at that step.
 
@@ -100,7 +100,7 @@ Solver regret per episode by failure tag (`canary.solver.regret.attribute`), poo
 
 ## Open-weight Gemma (hosted Gemma via the Gemini API)
 
-Gemma 4 open-weight models served by Google's hosted Gemini API (not self-hosted), played by the same `LLMPolicy` with native function calling on the same v1.4 dev seeds; ratios are paired against the solver on the same seeds. Gemma gets no thinking config (level `default`). 4 valid episodes from `~/agent-arena-data/gemini/ladder/gemma-v14`; ledger: 265 calls, 9 errors, 11 run ids (e.g. ladder:gemma-v14:gemma-4-26b-a4b-it/default/hard/0, ladder:gemma-v14:gemma-4-26b-a4b-it/default/hard/1). $/ep is not shown: our price table has no hosted-Gemma list price.
+Gemma 4 open-weight models served by Google's hosted Gemini API (not self-hosted), played by the same `LLMPolicy` with native function calling on the same v1.4 dev seeds; ratios are paired against the solver on the same seeds. Gemma gets no thinking config (level `default`). 4 valid episodes from `~/agent-arena-data/gemini/ladder/gemma-v14`; ledger: 267 calls, 9 errors, 11 run ids (e.g. ladder:gemma-v14:gemma-4-26b-a4b-it/default/hard/0, ladder:gemma-v14:gemma-4-26b-a4b-it/default/hard/1). $/ep is not shown: our price table has no hosted-Gemma list price.
 
 **hard**
 

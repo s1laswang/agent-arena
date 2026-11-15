@@ -181,10 +181,12 @@ def test_opencode_gemini_cmd_env_isolation(monkeypatch):
     env, cleanup = opencode_run.child_env_extra("google/gemini-4-carbon")(wd)
     home = Path(env["XDG_DATA_HOME"]).parent
     assert env["GOOGLE_GENERATIVE_AI_API_KEY"] == "g-test-key" and env["OPENCODE_DISABLE_CLAUDE_CODE"] == "1"
+    assert "OPENAI_API_KEY" not in env
     assert cleanup == [home] and wd not in home.parents and REPO_ROOT not in home.parents
     assert {env["XDG_CONFIG_HOME"], env["XDG_STATE_HOME"]} == {str(home / "config"), str(home / "state")}
+    monkeypatch.setenv("OPENAI_API_KEY", "o-test-key")
     env2, _ = opencode_run.child_env_extra("openai/x")(wd)
-    assert "GOOGLE_GENERATIVE_AI_API_KEY" not in env2
+    assert "GOOGLE_GENERATIVE_AI_API_KEY" not in env2 and env2["OPENAI_API_KEY"] == "o-test-key"
 
 
 def test_run_seeds_passes_child_env_extra_and_cleans_up(tmp_path, monkeypatch):

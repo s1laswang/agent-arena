@@ -1,20 +1,21 @@
 # agent-arena: Junction 2026 entries
 
-This repo holds two hackathon entries. Each one lives on its own branch. **This `main` branch has no code for either entry.** Pick the one you are judging below.
+This repo holds our hackathon entries. Each one is pinned to a tag. **This `main` branch has no code for either entry.** Pick the one you are judging below.
 
 | Challenge | Entry | Branch | Start here |
 |---|---|---|---|
-| **AfterQuery: Break the Agent** | **Canary: catch the mole.** An RL environment where an AI head of security must find the one mole leaking documents, using canary traps, while company value bleeds away. It is scored against a Bayesian reference solver that uses the same public tools. | [`justSilas`](https://github.com/s1laswang/agent-arena/tree/justSilas) | [README → "For judges"](https://github.com/s1laswang/agent-arena/blob/justSilas/README.md) |
-| **Google DeepMind: Best Use of Gemini API** | **Canary Lab.** Gemini's thinking level used as a controlled variable on the Canary benchmark, plus a Gemini red team validated by a positive control. Every Gemini call is logged. | [`gemini-track`](https://github.com/s1laswang/agent-arena/tree/gemini-track) | [docs/gemini/SUBMISSION.md](https://github.com/s1laswang/agent-arena/blob/gemini-track/docs/gemini/SUBMISSION.md) |
+| **AfterQuery: Break the Agent** | **Canary: catch the mole.** An RL environment where an AI head of security must find the one mole leaking documents, using canary traps, while company value bleeds away. It is scored against a Bayesian reference solver that uses the same public tools. | tag [`afterquery-submit`](https://github.com/s1laswang/agent-arena/tree/afterquery-submit) (branch `justSilas`) | [README → "For judges"](https://github.com/s1laswang/agent-arena/blob/afterquery-submit/README.md) |
+| **Google DeepMind: Best Use of Gemini API** | **Canary Lab.** Gemini's thinking level used as a controlled variable on the Canary benchmark, plus a Gemini red team validated by a positive control. Every Gemini call is logged. | tag [`gemini-final-v3`](https://github.com/s1laswang/agent-arena/tree/gemini-final-v3) | [docs/gemini/SUBMISSION.md](https://github.com/s1laswang/agent-arena/blob/gemini-final-v3/docs/gemini/SUBMISSION.md) |
+| **Verda Compute Track** | Small-model training on Canary experience and open-weight runs on Verda GPUs, with every number labelled by where it ran. | tag [`afterquery-submit`](https://github.com/s1laswang/agent-arena/tree/afterquery-submit) | [VERDA.md](https://github.com/s1laswang/agent-arena/blob/afterquery-submit/VERDA.md) |
 
 ## Reproduce the AfterQuery entry (one command, no API keys)
 
 ```bash
-git clone -c core.longpaths=true -b justSilas https://github.com/s1laswang/agent-arena.git && cd agent-arena
+git clone -c core.longpaths=true -b afterquery-submit https://github.com/s1laswang/agent-arena.git && cd agent-arena
 make setup && make reproduce
 ```
 
-You need [uv](https://docs.astral.sh/uv/) and `make`. The Harbor + OpenCode/MCP instructions are in that branch's README. `-c core.longpaths=true` only matters on Windows, where some committed Harbor run folders are deeper than the default 260-character path limit; macOS and Linux ignore it.
+You need [uv](https://docs.astral.sh/uv/) and `make`. The Harbor + OpenCode/MCP instructions are in that tag's README. The tag `afterquery-final` is the code freeze the judge rehearsal ran on; `afterquery-submit` adds results and docs only. `-c core.longpaths=true` only matters on Windows, where some committed Harbor run folders are deeper than the default 260-character path limit; macOS and Linux ignore it.
 
 ## Same team, other challenges
 

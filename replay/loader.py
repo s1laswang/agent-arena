@@ -24,6 +24,11 @@ _NON_SLUG_RE = re.compile(r"[^A-Za-z0-9_-]")
 _MULTI_UNDERSCORE_RE = re.compile(r"_+")
 _VERSION_SEGMENT_RE = re.compile(r"^v\d+(\.\d+)*$")
 
+_PARSED_RUN_CACHE: dict[
+    Path,
+    tuple[tuple[int, int, int, int], dict[str, Any], list[dict[str, Any]]],
+] = {}
+
 __all__ = [
     "SCRIPTED_AGENTS",
     "agent_slug",
@@ -72,6 +77,10 @@ def infer_tiers_version(
 
 
 def _resolve_root(root: str | Path) -> Path:
+    if Path(root) == Path(DEFAULT_COMMITTED_ROOT):
+        repo_default = REPO_ROOT / DEFAULT_COMMITTED_ROOT
+        if repo_default.exists():
+            return repo_default
     candidate = Path(root)
     if not candidate.is_absolute() and not candidate.exists():
         repo_candidate = REPO_ROOT / candidate
@@ -99,6 +108,28 @@ def _format_source_path(jsonl_path: Path) -> str:
         return resolved.as_posix()
 
 
+def _load_parsed_run(jsonl_path: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    resolved = jsonl_path.resolve()
+    st = resolved.stat()
+    meta_path = resolved.with_name("meta.json")
+    if meta_path.is_file():
+        mst = meta_path.stat()
+        sig = (st.st_mtime_ns, st.st_size, mst.st_mtime_ns, mst.st_size)
+    else:
+        sig = (st.st_mtime_ns, st.st_size, -1, -1)
+    cached = _PARSED_RUN_CACHE.get(resolved)
+    if cached is not None and cached[0] == sig:
+        return cached[1], cached[2]
+    run_meta = _read_run_meta(resolved)
+    parsed_eps: list[dict[str, Any]] = []
+    for raw_line in resolved.read_text(encoding="utf-8").splitlines():
+        stripped = raw_line.strip()
+        if stripped:
+            parsed_eps.append(json.loads(stripped))
+    _PARSED_RUN_CACHE[resolved] = (sig, run_meta, parsed_eps)
+    return run_meta, parsed_eps
+
+
 def load_committed_episodes(
     root: str | Path = DEFAULT_COMMITTED_ROOT,
     include_invalid: bool = False,
@@ -116,17 +147,12 @@ def load_committed_episodes(
         rel_path = jsonl_path.relative_to(root_path)
         if "superseded" in rel_path.parts:
             continue
-        run_meta = _read_run_meta(jsonl_path)
+        run_meta, parsed_eps = _load_parsed_run(jsonl_path)
         source_path = _format_source_path(jsonl_path)
         rel_dir = rel_path.parent
         has_version_dir = any(_VERSION_SEGMENT_RE.match(part) for part in rel_dir.parts)
 
-        lines = jsonl_path.read_text(encoding="utf-8").splitlines()
-        for line_idx, raw_line in enumerate(lines):
-            stripped = raw_line.strip()
-            if not stripped:
-                continue
-            ep = json.loads(stripped)
+        for line_idx, ep in enumerate(parsed_eps):
             raw_ep_meta = ep.get("meta")
             ep_meta = dict(raw_ep_meta) if isinstance(raw_ep_meta, dict) else {}
             valid = ep_meta.get("valid") is not False

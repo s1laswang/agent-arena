@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import math
-import random
 import re
 from collections import Counter, defaultdict
 from typing import Any, Callable
+
+import numpy as np
 
 from canary.analysis.tags import WHY as TAG_WHY
 from canary.rules import (
@@ -18,8 +19,8 @@ from canary.rules import (
     tiers_version as rules_tiers_version,
 )
 from canary.solver.policy import SolverPolicy
-from canary.solver.regret import attribute as solver_attribute_regret
 from canary.types import EpisodeResult, Step
+from replay.belief_trace import _fast_attribute, _fast_sp_belief
 from replay.loader import make_episode_id, pair_with_solver
 
 SCRIPTED_AGENTS: frozenset[str] = frozenset({
@@ -64,6 +65,8 @@ TIER_SORT_ORDER: dict[str, int] = {
 
 _EM_DASH = chr(0x2014)
 _EN_DASH = chr(0x2013)
+
+_COMMITTED_LUCK_CACHE: dict[tuple[str, str, str | None], dict[str, Any]] = {}
 
 __all__ = [
     "REAL_PREFIXES",
@@ -213,9 +216,10 @@ def infer_provenance(agent: str, ep_dict: dict[str, Any] | None = None) -> dict[
     return {"kind": "scripted", "label": "SCRIPTED", "model_id": ag}
 
 
-def compute_episode_luck_stats(
+def _compute_episode_luck_stats_impl(
     ep_dict: dict[str, Any],
     tiers_version: str | None = None,
+    include_p_top: bool = True,
 ) -> dict[str, Any]:
     steps = [_to_step(s) for s in (ep_dict.get("steps") or [])]
     P = _resolve_tier_params(ep_dict, steps, tiers_version)
@@ -232,19 +236,26 @@ def compute_episode_luck_stats(
                 accused = (st.args or {}).get("employee")
             break
     limit_idx = accuse_idx if accuse_idx is not None else len(steps)
-    for prev in steps[:limit_idx]:
-        sp._ingest(prev)
-    sp.seen = limit_idx
-    post = sp.belief() if sp.obs.employees else {}
+    meta = ep_dict.get("meta") if isinstance(ep_dict.get("meta"), dict) else {}
+    v_recorded = meta.get("V") if meta.get("V") is not None else meta.get("V_final")
+    wrong_pen = abs(float(P.wrong_accusation_score))
+
+    need_post = (
+        (accused and ep_dict.get("p_accused") is None)
+        or (include_p_top and ep_dict.get("p_top") is None)
+    )
+    need_v = v_recorded is None and not (accused and bool(ep_dict.get("correct", False)) and float(ep_dict.get("score", 0.0)) > 0)
+    if need_post or need_v:
+        for prev in steps[:limit_idx]:
+            sp._ingest(prev)
+        sp.seen = limit_idx
+    post = (_fast_sp_belief(sp) if sp.obs.employees else {}) if need_post else {}
     computed_p_top = _clean_float(max(post.values())) if post else None
     p_top = (
         _clean_float(ep_dict.get("p_top"))
         if ep_dict.get("p_top") is not None
         else computed_p_top
     )
-    meta = ep_dict.get("meta") if isinstance(ep_dict.get("meta"), dict) else {}
-    v_recorded = meta.get("V") if meta.get("V") is not None else meta.get("V_final")
-    wrong_pen = abs(float(P.wrong_accusation_score))
 
     if accused:
         if accuse_day is None and ep_dict.get("final_day") is not None:
@@ -287,6 +298,13 @@ def compute_episode_luck_stats(
         "accuse_day": None,
         "v_at_accuse": float(_clean_float(v_est) or 0.0),
     }
+
+
+def compute_episode_luck_stats(
+    ep_dict: dict[str, Any],
+    tiers_version: str | None = None,
+) -> dict[str, Any]:
+    return _compute_episode_luck_stats_impl(ep_dict, tiers_version=tiers_version, include_p_top=True)
 
 
 def _infer_accuse_day(ep_dict: dict[str, Any], abstained: bool) -> int | None:
@@ -349,13 +367,30 @@ def _cached_luck_stats(
         }
         cache[key] = res
         return res
-    res = compute_episode_luck_stats(ep_dict, tiers_version=tiers_version)
+    committed_key: tuple[str, str, str | None] | None = None
+    if (
+        isinstance(ep_dict.get("source_path"), str)
+        and isinstance(ep_dict.get("episode_id"), str)
+        and ep_dict.get("p_accused") is None
+        and ep_dict.get("p_top") is None
+        and ep_dict.get("luck_adjusted_score") is None
+        and ep_dict.get("premature") is None
+        and ep_dict.get("abstained") is None
+    ):
+        committed_key = (ep_dict["source_path"], ep_dict["episode_id"], tiers_version)
+        cached_committed = _COMMITTED_LUCK_CACHE.get(committed_key)
+        if cached_committed is not None:
+            cache[key] = cached_committed
+            return cached_committed
+    res = _compute_episode_luck_stats_impl(ep_dict, tiers_version=tiers_version, include_p_top=False)
     if ep_dict.get("luck_adjusted_score") is not None:
         res = dict(res, luck_adjusted_score=float(_clean_float(ep_dict["luck_adjusted_score"]) or 0.0))
     if ep_dict.get("premature") is not None:
         res = dict(res, premature=bool(ep_dict["premature"]))
     if ep_dict.get("abstained") is not None:
         res = dict(res, abstained=bool(ep_dict["abstained"]))
+    if committed_key is not None:
+        _COMMITTED_LUCK_CACHE[committed_key] = res
     cache[key] = res
     return res
 
@@ -372,17 +407,15 @@ def bootstrap_mean_ci(
     mean_val = round(sum(clean) / n, 4)
     if n == 1 or n_boot <= 0:
         return (mean_val, mean_val, mean_val)
-    rng = random.Random(seed)
-    samples: list[float] = []
-    for _ in range(n_boot):
-        total = sum(clean[rng.randrange(n)] for _ in range(n))
-        samples.append(total / n)
-    samples.sort()
+    rng = np.random.default_rng(seed)
+    arr = np.asarray(clean, dtype=np.float64)
+    idx = rng.integers(0, n, size=(n_boot, n))
+    samples = np.sort(arr[idx].mean(axis=1))
     lo_idx = int(0.025 * len(samples))
     hi_idx = max(0, min(len(samples) - 1, int(0.975 * len(samples)) - 1))
     if hi_idx < lo_idx:
         hi_idx = lo_idx
-    return (mean_val, round(samples[lo_idx], 4), round(samples[hi_idx], 4))
+    return (mean_val, round(float(samples[lo_idx]), 4), round(float(samples[hi_idx]), 4))
 
 
 def paired_bootstrap_ratio_ci(
@@ -404,22 +437,21 @@ def paired_bootstrap_ratio_ci(
     ratio = round(sum(a_clean) / s_sum, 4)
     if n == 1 or n_boot <= 0:
         return (ratio, ratio, ratio)
-    rng = random.Random(seed)
-    samples: list[float] = []
-    for _ in range(n_boot):
-        idx = [rng.randrange(n) for _ in range(n)]
-        bs = sum(s_clean[i] for i in idx)
-        if (bs / n) > 1e-6:
-            ba = sum(a_clean[i] for i in idx)
-            samples.append(ba / bs)
-    if not samples:
+    rng = np.random.default_rng(seed)
+    a_arr = np.asarray(a_clean, dtype=np.float64)
+    s_arr = np.asarray(s_clean, dtype=np.float64)
+    idx = rng.integers(0, n, size=(n_boot, n))
+    bs = s_arr[idx].sum(axis=1)
+    mask = (bs / n) > 1e-6
+    if not bool(np.any(mask)):
         return (ratio, None, None)
-    samples.sort()
+    ba = a_arr[idx[mask]].sum(axis=1)
+    samples = np.sort(ba / bs[mask])
     lo_idx = int(0.025 * len(samples))
     hi_idx = max(0, min(len(samples) - 1, int(0.975 * len(samples)) - 1))
     if hi_idx < lo_idx:
         hi_idx = lo_idx
-    return (ratio, round(samples[lo_idx], 4), round(samples[hi_idx], 4))
+    return (ratio, round(float(samples[lo_idx]), 4), round(float(samples[hi_idx]), 4))
 
 
 def _is_valid_episode(ep_dict: dict[str, Any]) -> bool:
@@ -593,7 +625,7 @@ def attribute_episode_regret(
     attribute_fn: Callable[[EpisodeResult], list[dict[str, Any]]] | None = None,
 ) -> list[dict[str, Any]]:
     tv = str(tiers_version or infer_tiers_version(ep_dict))
-    fn = attribute_fn if attribute_fn is not None else solver_attribute_regret
+    fn = attribute_fn if attribute_fn is not None else _fast_attribute
     ep_res = _to_episode_result(ep_dict)
     if tv == TIERS_VERSION or tv in TIERS_HISTORY:
         with rules_tiers_version(tv):

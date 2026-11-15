@@ -211,7 +211,8 @@ def test_synthetic_loading_invalid_filtering_and_gemini(tmp_path: Path) -> None:
     assert len(valid_only) == 3
     assert all(REQUIRED_EPISODE_KEYS.issubset(ep.keys()) for ep in valid_only)
     assert all("superseded" not in Path(ep["source_path"]).parts for ep in valid_only)
-    assert all(Path(ep["source_path"]).is_absolute() for ep in valid_only)
+    expected_is_abs = not tmp_path.resolve().is_relative_to(ROOT.resolve())
+    assert all(Path(ep["source_path"]).is_absolute() is expected_is_abs for ep in valid_only)
 
     gemini_eps = [ep for ep in valid_only if ep["agent"] == "gemini:gemini-4-carbon"]
     assert len(gemini_eps) == 1
@@ -297,8 +298,15 @@ def test_synthetic_dedupe_preferences(tmp_path: Path) -> None:
 
 
 def test_real_committed_episodes_and_pairing() -> None:
-    episodes = load_committed_episodes()
+    all_with_invalid = load_committed_episodes(include_invalid=True)
+    episodes = [ep for ep in all_with_invalid if ep["valid"]]
     assert len(episodes) > 0
+    assert len(all_with_invalid) > len(episodes)
+    assert any(not ep["valid"] for ep in all_with_invalid)
+
+    v14_valid = load_committed_episodes(ROOT / "data/runs/committed/v1.4")
+    assert len(v14_valid) > 0
+    assert all(ep["valid"] is True for ep in v14_valid)
 
     for ep in episodes:
         assert REQUIRED_EPISODE_KEYS.issubset(ep.keys())
@@ -331,10 +339,6 @@ def test_real_committed_episodes_and_pairing() -> None:
                 "label": "SCRIPTED",
                 "model_id": scripted_agent,
             }
-
-    all_with_invalid = load_committed_episodes(include_invalid=True)
-    assert len(all_with_invalid) > len(episodes)
-    assert any(not ep["valid"] for ep in all_with_invalid)
 
     pairs = pair_with_solver(episodes)
     assert len(pairs) > 0

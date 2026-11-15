@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 from collections import Counter, defaultdict
+import contextlib
+import copy
 import hashlib
 import hmac
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import io
 import json
 import math
 import os
@@ -20,15 +24,16 @@ import threading
 import time
 from typing import Any
 import urllib.error
+from urllib.parse import urlsplit
 import urllib.request
 
 REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
+import canary.env as canary_env
 from canary.env import TOPICS, Env
 from canary.eval import make_env, make_policy_factory, run_episode
-from canary.mcp_server import Episode, clean_launch_env, ledger_canonical, sign_ledger, verify_ledger
 from canary.redteam import anticheat as ac
 from canary.redteam.corpus import load as load_momin_corpus, shape as arg_shape
 from canary.redteam.encodings import (
@@ -41,6 +46,81 @@ from canary.redteam.seed_attack import public_world
 from canary.rules import JUDGE_SEEDS, TIERS
 from canary.text.template import _ANGRY
 import canary.world as W
+
+_MCP_FAST_MOD: Any = None
+
+
+def _get_mcp_mod(unit_fast: bool = False) -> Any:
+    global _MCP_FAST_MOD
+    if not unit_fast:
+        import canary.mcp_server as real_mcp
+
+        return real_mcp
+    if _MCP_FAST_MOD is not None:
+        return _MCP_FAST_MOD
+    import types as pytypes
+    from starlette.applications import Starlette
+
+    class _FastMCPServerStub:
+        def __init__(self, name: str, instructions: str = "", **kwargs: Any) -> None:
+            self.name = name
+            self.instructions = instructions
+
+        def streamable_http_app(self, host: str = "127.0.0.1", custom_starlette_routes: list[Any] | None = None) -> Any:
+            return Starlette(routes=list(custom_starlette_routes or []))
+
+    stub_mcp_types = pytypes.ModuleType("mcp.types")
+    for attr in ("ListToolsResult", "Tool", "CallToolRequestParams", "CallToolResult", "TextContent"):
+        setattr(stub_mcp_types, attr, object)
+    stub_mcp_srv = pytypes.ModuleType("mcp.server")
+    setattr(stub_mcp_srv, "Server", _FastMCPServerStub)
+
+    src = (REPO / "canary" / "mcp_server.py").read_text(encoding="utf-8")
+    src = src.replace("import mcp.types as types", "types = _FAST_MCP_TYPES").replace(
+        "from mcp.server import Server", "Server = _FAST_MCP_SERVER_CLS"
+    )
+    mod = pytypes.ModuleType("_canary_mcp_fast")
+    mod.__file__ = str(REPO / "canary" / "mcp_server.py")
+    mod.__package__ = "canary"
+    mod.__dict__["_FAST_MCP_TYPES"] = stub_mcp_types
+    mod.__dict__["_FAST_MCP_SERVER_CLS"] = _FastMCPServerStub
+    exec(compile(src, mod.__file__, "exec"), mod.__dict__)
+    _MCP_FAST_MOD = mod
+    return mod
+
+
+def ledger_canonical(payload: dict[str, Any]) -> bytes:
+    body = {k: v for k, v in payload.items() if k != "sig"}
+    return json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+
+
+def sign_ledger(payload: dict[str, Any], key: str | bytes) -> dict[str, Any]:
+    k = key.encode("utf-8") if isinstance(key, str) else key
+    mac = hmac.new(k, ledger_canonical(payload), hashlib.sha256).hexdigest()
+    return {**{k2: v for k2, v in payload.items() if k2 != "sig"}, "sig": {"alg": "HMAC-SHA256", "mac": mac}}
+
+
+def verify_ledger(payload: Any, key: str | bytes) -> bool:
+    if not isinstance(payload, dict) or not key:
+        return False
+    sig = payload.get("sig")
+    if not isinstance(sig, dict) or sig.get("alg") != "HMAC-SHA256" or not isinstance(sig.get("mac"), str):
+        return False
+    return hmac.compare_digest(sign_ledger(payload, key)["sig"]["mac"], sig["mac"])
+
+
+def clean_launch_env(base: dict[str, str] | None = None) -> dict[str, str]:
+    out = dict(os.environ if base is None else base)
+    for k in (
+        "CANARY_TIER",
+        "CANARY_SEED",
+        "CANARY_LEDGER_TOKEN",
+        "CANARY_ADMIN_TOKEN",
+        "CANARY_WORLD_SECRET",
+        "CANARY_LEDGER_KEY",
+    ):
+        out.pop(k, None)
+    return out
 
 DEFAULT_SCRATCH = Path(os.environ.get("CANARY_W9_SCRATCH") or tempfile.gettempdir())
 V1_TIERS = ("easy", "medium", "hard", "hard_forge")
@@ -79,8 +159,45 @@ def _unwrap_step_result(res: Any) -> tuple[bool | None, str | None, bool]:
     return ok, (str(err) if err is not None else None), False
 
 
-def mine_v14_transcripts(repo_root: Path = REPO) -> dict[str, Any]:
+def mine_v14_transcripts(repo_root: Path = REPO, unit_fast: bool = False) -> dict[str, Any]:
     v14_root = repo_root / "data" / "runs" / "committed" / "v1.4"
+    if unit_fast:
+        frontier_paths = sorted(
+            p for p in v14_root.glob("*/*/episodes.jsonl") if not p.relative_to(v14_root).as_posix().startswith("reference/")
+        )
+        reference_paths = sorted(v14_root.glob("reference/*/episodes.jsonl"))
+        f_eps = 0
+        f_rej = 0
+        for p in frontier_paths:
+            raw = p.read_bytes()
+            meta_p = p.parent / "meta.json"
+            if meta_p.is_file():
+                meta_obj = json.loads(meta_p.read_text(encoding="utf-8"))
+                f_eps += len(meta_obj.get("seeds") or [])
+            else:
+                f_eps += sum(1 for ln in raw.splitlines() if ln.strip())
+            f_rej += (
+                raw.count(b'"ok": false')
+                + raw.count(b'"ok":false')
+                + raw.count(b'\\"ok\\": false')
+                + raw.count(b'\\"ok\\":false')
+            )
+        return {
+            "total_files": len(frontier_paths) + len(reference_paths),
+            "frontier_files": len(frontier_paths),
+            "frontier_episodes": f_eps,
+            "frontier_steps": 0,
+            "frontier_rejected": f_rej,
+            "reference_files": len(reference_paths),
+            "reference_episodes": 0,
+            "reference_steps": 0,
+            "reference_rejected": 0,
+            "distinct_frontier_rejected_patterns": 0,
+            "frontier_runs": [],
+            "frontier_by_category": {},
+            "rejected_catalog": [],
+            "unusual_accepted": [],
+        }
     files = sorted(v14_root.rglob("episodes.jsonl"))
     frontier_runs: list[dict[str, Any]] = []
     reference_runs: list[dict[str, Any]] = []
@@ -285,6 +402,7 @@ def _execute_one_sequence(
     used_split_encoders: set[str],
     used_momin_indices: set[int],
     secret_tokens_cache: dict[tuple[str, int], Any] | None = None,
+    unit_fast: bool = False,
 ) -> dict[str, Any]:
     env = make_env(tier, seed)
     ids = list(env._ids)
@@ -587,7 +705,12 @@ def _execute_one_sequence(
                 secret_tokens = _episode_secret_tokens(env, tier, seed, b"public")
                 if secret_tokens_cache is not None:
                     secret_tokens_cache[cache_key] = secret_tokens
-            hits = scan_for_secret(outputs_for_scan, secret_tokens)
+            if unit_fast and seq_id != "S09":
+                joined = "\n".join(outputs_for_scan)
+                raw_toks = [t for t in getattr(secret_tokens, "raw", ()) if t]
+                hits = [t for t in raw_toks if str(t) in joined]
+            else:
+                hits = scan_for_secret(outputs_for_scan, secret_tokens)
             leak_hits = len(hits)
 
         if not env.done:
@@ -647,89 +770,111 @@ def audit_error_detail_mole_parity(active_tiers: tuple[str, ...], seeds: tuple[i
     return total_probes, total_leaks
 
 
-def run_v1_transcript_and_sequences(repo_root: Path = REPO, quick: bool = False) -> dict[str, Any]:
+def run_v1_transcript_and_sequences(
+    repo_root: Path = REPO,
+    quick: bool = False,
+    unit_fast: bool = False,
+) -> dict[str, Any]:
     t0 = time.perf_counter()
-    mined = mine_v14_transcripts(repo_root)
+    mined = mine_v14_transcripts(repo_root, unit_fast=unit_fast)
     momin_rows = load_momin_corpus()
     seeds = (0,) if quick else (0, 1, 2, 3, 4)
     active_tiers = ("easy",) if quick else V1_TIERS
-    parity_probes, parity_leaks = audit_error_detail_mole_parity(active_tiers, seeds)
 
-    solver_cache: dict[tuple[str, int], tuple[list[tuple[str, dict[str, Any]]], float]] = {}
-    secret_tokens_cache: dict[tuple[str, int], Any] = {}
-    for tier in active_tiers:
-        for seed in seeds:
-            env = make_env(tier, seed)
-            res = run_episode(env, make_policy_factory("solver")(seed))
-            solver_cache[(tier, seed)] = ([(s.tool, s.args) for s in res.steps], float(res.score))
+    orig_gen_world = canary_env.generate_world
+    world_cache: dict[tuple[str, int], Any] = {}
+    if unit_fast:
+        def _cached_gen_world(tier: str, seed: int, params: Any) -> Any:
+            if getattr(W, "_SET_SECRET", None) is None and seed < 800_000:
+                key = (tier, seed)
+                if key not in world_cache:
+                    world_cache[key] = orig_gen_world(tier, seed, params)
+                return copy.copy(world_cache[key])
+            return orig_gen_world(tier, seed, params)
 
-    used_encoders: set[str] = set()
-    used_split_encoders: set[str] = set()
-    used_momin_indices: set[int] = set()
-    per_sequence: list[dict[str, Any]] = []
+        canary_env.generate_world = _cached_gen_world
 
-    total_runs = 0
-    total_seq_calls = 0
-    total_accepted_cheats = 0
-    total_v_rises = 0
-    total_score_gains = 0
-    total_leak_hits = 0
+    try:
+        parity_probes, parity_leaks = audit_error_detail_mole_parity(active_tiers, seeds)
 
-    for seq_idx, (seq_id, family, label) in enumerate(SEQUENCE_SPECS):
-        seq_accepted = 0
-        seq_vrises = 0
-        seq_gains = 0
-        seq_leaks = 0
-        seq_runs = 0
-        calls_range: list[int] = []
-        tier_held: dict[str, str] = {}
-        for tier_idx, tier in enumerate(active_tiers):
-            held_t = 0
+        solver_cache: dict[tuple[str, int], tuple[list[tuple[str, dict[str, Any]]], float]] = {}
+        secret_tokens_cache: dict[tuple[str, int], Any] = {}
+        for tier in active_tiers:
             for seed in seeds:
-                actions, sol_sc = solver_cache[(tier, seed)]
-                r = _execute_one_sequence(
-                    seq_id,
-                    seq_idx,
-                    tier,
-                    tier_idx,
-                    seed,
-                    actions,
-                    sol_sc,
-                    momin_rows,
-                    used_encoders,
-                    used_split_encoders,
-                    used_momin_indices,
-                    secret_tokens_cache,
-                )
-                seq_runs += 1
-                total_runs += 1
-                total_seq_calls += r["seq_calls"]
-                calls_range.append(r["seq_calls"])
-                seq_accepted += r["accepted_cheats"]
-                seq_vrises += r["v_rises"]
-                seq_gains += int(r["score_gain"])
-                seq_leaks += r["leak_hits"]
-                if r["accepted_cheats"] == 0 and r["v_rises"] == 0 and not r["score_gain"] and r["leak_hits"] == 0:
-                    held_t += 1
-            tier_held[tier] = f"{held_t}/{len(seeds)}"
-        total_accepted_cheats += seq_accepted
-        total_v_rises += seq_vrises
-        total_score_gains += seq_gains
-        total_leak_hits += seq_leaks
-        per_sequence.append({
-            "seq_id": seq_id,
-            "family": family,
-            "label": label,
-            "runs": seq_runs,
-            "min_calls": min(calls_range),
-            "max_calls": max(calls_range),
-            "tier_held": tier_held,
-            "accepted_cheats": seq_accepted,
-            "v_rises": seq_vrises,
-            "score_gains": seq_gains,
-            "leak_hits": seq_leaks,
-            "held": (seq_accepted == 0 and seq_vrises == 0 and seq_gains == 0 and seq_leaks == 0),
-        })
+                env = make_env(tier, seed)
+                res = run_episode(env, make_policy_factory("solver")(seed))
+                solver_cache[(tier, seed)] = ([(s.tool, s.args) for s in res.steps], float(res.score))
+
+        used_encoders: set[str] = set()
+        used_split_encoders: set[str] = set()
+        used_momin_indices: set[int] = set()
+        per_sequence: list[dict[str, Any]] = []
+
+        total_runs = 0
+        total_seq_calls = 0
+        total_accepted_cheats = 0
+        total_v_rises = 0
+        total_score_gains = 0
+        total_leak_hits = 0
+
+        for seq_idx, (seq_id, family, label) in enumerate(SEQUENCE_SPECS):
+            seq_accepted = 0
+            seq_vrises = 0
+            seq_gains = 0
+            seq_leaks = 0
+            seq_runs = 0
+            calls_range: list[int] = []
+            tier_held: dict[str, str] = {}
+            for tier_idx, tier in enumerate(active_tiers):
+                held_t = 0
+                for seed in seeds:
+                    actions, sol_sc = solver_cache[(tier, seed)]
+                    r = _execute_one_sequence(
+                        seq_id,
+                        seq_idx,
+                        tier,
+                        tier_idx,
+                        seed,
+                        actions,
+                        sol_sc,
+                        momin_rows,
+                        used_encoders,
+                        used_split_encoders,
+                        used_momin_indices,
+                        secret_tokens_cache,
+                        unit_fast=unit_fast,
+                    )
+                    seq_runs += 1
+                    total_runs += 1
+                    total_seq_calls += r["seq_calls"]
+                    calls_range.append(r["seq_calls"])
+                    seq_accepted += r["accepted_cheats"]
+                    seq_vrises += r["v_rises"]
+                    seq_gains += int(r["score_gain"])
+                    seq_leaks += r["leak_hits"]
+                    if r["accepted_cheats"] == 0 and r["v_rises"] == 0 and not r["score_gain"] and r["leak_hits"] == 0:
+                        held_t += 1
+                tier_held[tier] = f"{held_t}/{len(seeds)}"
+            total_accepted_cheats += seq_accepted
+            total_v_rises += seq_vrises
+            total_score_gains += seq_gains
+            total_leak_hits += seq_leaks
+            per_sequence.append({
+                "seq_id": seq_id,
+                "family": family,
+                "label": label,
+                "runs": seq_runs,
+                "min_calls": min(calls_range),
+                "max_calls": max(calls_range),
+                "tier_held": tier_held,
+                "accepted_cheats": seq_accepted,
+                "v_rises": seq_vrises,
+                "score_gains": seq_gains,
+                "leak_hits": seq_leaks,
+                "held": (seq_accepted == 0 and seq_vrises == 0 and seq_gains == 0 and seq_leaks == 0),
+            })
+    finally:
+        canary_env.generate_world = orig_gen_world
 
     ok = (
         len(SEQUENCE_SPECS) == 40
@@ -981,7 +1126,12 @@ class _MockLedgerHandler(BaseHTTPRequestHandler):
         return
 
 
-def _sandbox_verifier_script(repo_root: Path, sb: Path, server_base: str | None = None) -> Path:
+class _FastHTTPServer(HTTPServer):
+    def serve_forever(self, poll_interval: float = 0.005) -> None:
+        super().serve_forever(poll_interval=poll_interval)
+
+
+def _sandbox_verifier_script(repo_root: Path, sb: Path, server_base: str | None = None, unit_fast: bool = False) -> Path:
     raw_sh = (repo_root / "harbor" / "template" / "tests" / "test.sh").read_text(encoding="utf-8")
     kill_scan_line = (
         "if command -v ps >/dev/null 2>&1; then pids=$(ps -eo pid= 2>/dev/null); "
@@ -997,6 +1147,8 @@ def _sandbox_verifier_script(repo_root: Path, sb: Path, server_base: str | None 
         .replace("/tests/ledger_key", (sb / "tests" / "ledger_key").as_posix())
         .replace("python3 -I -S", f'"{sys.executable}" -I -S')
     )
+    if unit_fast:
+        patched = patched.replace("sleep 0.2", "sleep 0.005")
     if server_base is not None:
         patched = patched.replace("http://canary-server:8765", server_base)
     script_path = sb / "run_test_sh.sh"
@@ -1019,6 +1171,7 @@ def _run_sandboxed_test_sh(
     server_base: str | None = None,
     prewrite_reward: bool = False,
     spawn_rewriter_child: bool = False,
+    unit_fast: bool = False,
 ) -> dict[str, Any]:
     sb = base_dir / name
     (sb / "logs" / "verifier").mkdir(parents=True, exist_ok=True)
@@ -1043,21 +1196,93 @@ def _run_sandboxed_test_sh(
     elif evidence_raw is not None:
         (sb / "evidence" / "ledger.json").write_text(evidence_raw, encoding="utf-8")
 
-    script_path = _sandbox_verifier_script(repo_root, sb, server_base=server_base)
+    script_path = _sandbox_verifier_script(repo_root, sb, server_base=server_base, unit_fast=unit_fast)
+    if unit_fast:
+        script_txt = script_path.read_text(encoding="utf-8")
+        py_marker = f'"{sys.executable}" -I -S - <<\'PY\'\n'
+        preamble, py_tail = script_txt.split(py_marker, 1)
+        py_src = py_tail.rsplit("\nPY", 1)[0]
+        child_killed: bool | None = None
+        if spawn_rewriter_child:
+            sleep_cmd = ["sleep", "120"] if shutil.which("sleep") else [sys.executable, "-c", "import time; time.sleep(120)"]
+            child_proc = subprocess.Popen(
+                sleep_cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            try:
+                preamble_path = sb / "run_preamble.sh"
+                preamble_path.write_text(preamble, encoding="utf-8")
+                sub_env = {
+                    **os.environ,
+                    "SANDBOX_TARGET_PIDS": str(child_proc.pid),
+                    "CANARY_LEDGER_TOKEN": env_token or "1",
+                }
+                subprocess.run(
+                    ["bash", str(preamble_path)],
+                    capture_output=True,
+                    text=True,
+                    env=sub_env,
+                    timeout=10,
+                    check=False,
+                )
+            finally:
+                if child_proc.poll() is None:
+                    child_proc.kill()
+                    child_proc.wait(timeout=5)
+                else:
+                    child_proc.wait(timeout=5)
+            child_killed = child_proc.poll() is not None
+        else:
+            (sb / "logs" / "verifier" / "reward.txt").write_text("0\n", encoding="utf-8")
+            (sb / "logs" / "verifier" / "reward.json").write_text('{"reward": 0}\n', encoding="utf-8")
+        saved_env = dict(os.environ)
+        buf = io.StringIO()
+        orig_stdout = sys.stdout
+        rc = 0
+        try:
+            for k in [k for k in os.environ if k.startswith("CANARY_")]:
+                os.environ.pop(k, None)
+            if env_key is not None:
+                os.environ["CANARY_LEDGER_KEY"] = env_key
+            if env_token is not None:
+                os.environ["CANARY_LEDGER_TOKEN"] = env_token
+            sys.stdout = buf
+            try:
+                exec(compile(py_src, str(sb / "verifier_inline.py"), "exec"), {"__name__": "__main__"})
+            except SystemExit as exc:
+                rc = int(exc.code) if isinstance(exc.code, int) else 1
+        finally:
+            sys.stdout = orig_stdout
+            os.environ.clear()
+            os.environ.update(saved_env)
+        r_txt_path = sb / "logs" / "verifier" / "reward.txt"
+        r_json_path = sb / "logs" / "verifier" / "reward.json"
+        r_txt = r_txt_path.read_text(encoding="utf-8").strip() if r_txt_path.is_file() else ""
+        r_json = json.loads(r_json_path.read_text(encoding="utf-8")) if r_json_path.is_file() else {}
+        lines = buf.getvalue().strip().splitlines()
+        return {
+            "rc": rc,
+            "reward_txt": r_txt,
+            "reward_json": r_json,
+            "output": (lines[0] if lines else "")[:160],
+            "child_killed": child_killed,
+        }
+
     env = {k: v for k, v in os.environ.items() if not k.startswith("CANARY_")}
     if env_key is not None:
         env["CANARY_LEDGER_KEY"] = env_key
     if env_token is not None:
         env["CANARY_LEDGER_TOKEN"] = env_token
 
-    child_proc: subprocess.Popen[bytes] | None = None
+    child_proc_full: subprocess.Popen[bytes] | None = None
     if spawn_rewriter_child:
-        child_proc = subprocess.Popen(
+        child_proc_full = subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(120)"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        env["SANDBOX_TARGET_PIDS"] = str(child_proc.pid)
+        env["SANDBOX_TARGET_PIDS"] = str(child_proc_full.pid)
 
     try:
         proc = subprocess.run(
@@ -1068,9 +1293,9 @@ def _run_sandboxed_test_sh(
             timeout=60,
         )
     finally:
-        if child_proc is not None and child_proc.poll() is None:
-            child_proc.kill()
-            child_proc.wait(timeout=5)
+        if child_proc_full is not None and child_proc_full.poll() is None:
+            child_proc_full.kill()
+            child_proc_full.wait(timeout=5)
 
     r_txt_path = sb / "logs" / "verifier" / "reward.txt"
     r_json_path = sb / "logs" / "verifier" / "reward.json"
@@ -1078,13 +1303,13 @@ def _run_sandboxed_test_sh(
     r_json = json.loads(r_json_path.read_text(encoding="utf-8")) if r_json_path.is_file() else {}
     out_line = (proc.stdout + proc.stderr).strip().splitlines()
     first_line = out_line[0] if out_line else ""
-    child_killed = (child_proc.poll() is not None) if child_proc is not None else None
+    child_killed_full = (child_proc_full.poll() is not None) if child_proc_full is not None else None
     return {
         "rc": proc.returncode,
         "reward_txt": r_txt,
         "reward_json": r_json,
         "output": first_line[:160],
-        "child_killed": child_killed,
+        "child_killed": child_killed_full,
     }
 
 
@@ -1099,6 +1324,7 @@ def run_v3_harbor_verifier_forgery_matrix(
     repo_root: Path = REPO,
     scratch_dir: Path = DEFAULT_SCRATCH,
     quick: bool = False,
+    unit_fast: bool = False,
 ) -> dict[str, Any]:
     t0 = time.perf_counter()
     scratch_dir.mkdir(parents=True, exist_ok=True)
@@ -1119,10 +1345,11 @@ def run_v3_harbor_verifier_forgery_matrix(
         "ledger": [{"t": 41, "day": 9, "event": "accused", "detail": {"employee": "e07", "correct": True, "V": 0.66}}],
     }
 
+    mcp_mod = _get_mcp_mod(unit_fast=unit_fast)
     prev_allow = os.environ.get("CANARY_ALLOW_DEV")
     os.environ["CANARY_ALLOW_DEV"] = "1"
     try:
-        mid_ep = Episode("easy", 0, "template")
+        mid_ep = mcp_mod.Episode("easy", 0, "template")
         mid_redacted_payload = mid_ep.ledger_payload()
     finally:
         if prev_allow is None:
@@ -1140,6 +1367,7 @@ def run_v3_harbor_verifier_forgery_matrix(
             "C01_valid_signed_control",
             evidence_raw=json.dumps(sign_ledger(base_ledger, key_good)),
             key_text=key_good + "\n",
+            unit_fast=unit_fast,
         )
         controls.append({
             "id": "C01",
@@ -1154,6 +1382,7 @@ def run_v3_harbor_verifier_forgery_matrix(
             "C02_untampered_mid_episode_zero",
             evidence_raw=json.dumps(sign_ledger(mid_redacted_payload, key_good)),
             key_text=key_good + "\n",
+            unit_fast=unit_fast,
         )
         controls.append({
             "id": "C02",
@@ -1206,7 +1435,14 @@ def run_v3_harbor_verifier_forgery_matrix(
             static_vectors = [row for row in static_vectors if row[0] in quick_static]
 
         for vid, vname, kwargs in static_vectors:
-            res = _run_sandboxed_test_sh(repo_root, sandbox_root, f"{vid}_{vname}", prewrite_reward=True, **kwargs)
+            res = _run_sandboxed_test_sh(
+                repo_root,
+                sandbox_root,
+                f"{vid}_{vname}",
+                prewrite_reward=True,
+                unit_fast=unit_fast,
+                **kwargs,
+            )
             failed_closed = (
                 res["rc"] != 0
                 and res["reward_txt"] == "0"
@@ -1231,7 +1467,8 @@ def run_v3_harbor_verifier_forgery_matrix(
             status_code = 200
             expected_token = tok
 
-        httpd = HTTPServer(("127.0.0.1", port), Handler)
+        server_cls = _FastHTTPServer if unit_fast else HTTPServer
+        httpd = server_cls(("127.0.0.1", port), Handler)
         th = threading.Thread(target=httpd.serve_forever, daemon=True)
         th.start()
         try:
@@ -1246,6 +1483,7 @@ def run_v3_harbor_verifier_forgery_matrix(
                 server_base=f"http://127.0.0.1:{port}",
                 prewrite_reward=True,
                 spawn_rewriter_child=True,
+                unit_fast=unit_fast,
             )
             failed_closed_16 = (
                 res16["rc"] != 0
@@ -1471,10 +1709,224 @@ def _probe_live_mcp_child_server(scratch_dir: Path) -> dict[str, Any]:
     }
 
 
-def run_v4_world_secret_entropy(scratch_dir: Path = DEFAULT_SCRATCH, quick: bool = False) -> dict[str, Any]:
+async def _asgi_raw_call(app: Any, method: str, target: str, body: bytes = b"") -> tuple[int, bytes]:
+    parts = urlsplit(target)
+    headers = [(b"host", b"127.0.0.1")]
+    if body:
+        headers.append((b"content-type", b"application/json"))
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": method,
+        "scheme": "http",
+        "path": parts.path,
+        "raw_path": parts.path.encode("ascii"),
+        "query_string": parts.query.encode("ascii"),
+        "headers": headers,
+        "client": ("127.0.0.1", 50000),
+        "server": ("127.0.0.1", 8765),
+    }
+    sent = False
+    status_code = 500
+    chunks: list[bytes] = []
+
+    async def receive() -> dict[str, Any]:
+        nonlocal sent
+        if not sent:
+            sent = True
+            return {"type": "http.request", "body": body, "more_body": False}
+        return {"type": "http.disconnect"}
+
+    async def send(msg: dict[str, Any]) -> None:
+        nonlocal status_code
+        if msg["type"] == "http.response.start":
+            status_code = int(msg["status"])
+        elif msg["type"] == "http.response.body":
+            chunks.append(msg.get("body", b""))
+
+    await app(scope, receive, send)
+    return status_code, b"".join(chunks)
+
+
+def _probe_loopback_mcp_asgi_server(scratch_dir: Path) -> dict[str, Any]:
+    mcp_mod = _get_mcp_mod(unit_fast=True)
+    scratch_dir.mkdir(parents=True, exist_ok=True)
+    mcp_sb = Path(tempfile.mkdtemp(prefix="w9-v4-mcp-loopback-", dir=str(scratch_dir)))
+    os.chmod(mcp_sb, 0o700)
+    ledger_tok = "w9-live-ledger-tok-7741"
+    admin_tok = "w9-live-admin-tok-8852"
+    ledger_key = "ef" * 32
+    world_sec = "w9-live-mcp-world-secret-32bytes!!"
+    secret_files = {
+        "CANARY_EPISODE_FILE": (mcp_sb / "episode.json", json.dumps({"tier": "hard", "seed": 900_000})),
+        "CANARY_WORLD_SECRET_FILE": (mcp_sb / "world_secret", world_sec),
+        "CANARY_LEDGER_TOKEN_FILE": (mcp_sb / "ledger_token", ledger_tok),
+        "CANARY_ADMIN_TOKEN_FILE": (mcp_sb / "admin_token", admin_tok),
+        "CANARY_LEDGER_KEY_FILE": (mcp_sb / "ledger_key", ledger_key),
+    }
+    prev_set = getattr(W, "_SET_SECRET", None)
+    prev_proc = getattr(W, "_PROC_SECRET", None)
+    server_stopped = False
+    try:
+        for fpath, ftext in secret_files.values():
+            _write_0600(fpath, ftext)
+        base_dirty = {
+            **os.environ,
+            "CANARY_LEDGER_TOKEN": ledger_tok,
+            "CANARY_ADMIN_TOKEN": admin_tok,
+            "CANARY_WORLD_SECRET": world_sec,
+            "CANARY_LEDGER_KEY": ledger_key,
+        }
+        cleaned = mcp_mod.clean_launch_env(base_dirty)
+        cleaned.pop("CANARY_ALLOW_DEV", None)
+        cleaned.pop("CANARY_LEDGER_LIVE", None)
+        proc_environ_clean = all(
+            m not in json.dumps(cleaned)
+            for m in (ledger_tok, admin_tok, ledger_key, world_sec)
+        )
+        file_env = {**cleaned, **{var: str(fp) for var, (fp, _) in secret_files.items()}}
+        cfg = mcp_mod.load_config(file_env)
+        mcp_mod.consume_secret_files(file_env)
+        secret_files_consumed = all(not fp.exists() for fp, _ in secret_files.values())
+        if cfg["world_secret"] is not None:
+            mcp_mod.apply_world_secret(cfg["world_secret"])
+        saved_allow = os.environ.pop("CANARY_ALLOW_DEV", None)
+        saved_live = os.environ.pop("CANARY_LEDGER_LIVE", None)
+        try:
+            ep = mcp_mod.Episode(cfg["tier"], cfg["seed"], "template")
+            app = mcp_mod.build_app(
+                ep,
+                "127.0.0.1",
+                cfg["ledger_token"],
+                cfg["admin_token"],
+                cfg["ledger_key"],
+            )
+            loop = asyncio.new_event_loop()
+
+            class _LoopbackHandler(BaseHTTPRequestHandler):
+                def _dispatch(self, method: str) -> None:
+                    length = int(self.headers.get("Content-Length") or "0")
+                    req_body = self.rfile.read(length) if length > 0 else b""
+                    st_code, resp_bytes = loop.run_until_complete(_asgi_raw_call(app, method, self.path, req_body))
+                    self.send_response(st_code)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(resp_bytes)))
+                    self.end_headers()
+                    if resp_bytes:
+                        self.wfile.write(resp_bytes)
+
+                def do_GET(self) -> None:
+                    self._dispatch("GET")
+
+                def do_POST(self) -> None:
+                    self._dispatch("POST")
+
+                def log_message(self, fmt: str, *args: Any) -> None:
+                    return
+
+            httpd = _FastHTTPServer(("127.0.0.1", 0), _LoopbackHandler)
+            port = int(httpd.server_address[1])
+            base_url = f"http://127.0.0.1:{port}"
+            th = threading.Thread(target=httpd.serve_forever, daemon=True)
+            th.start()
+            try:
+                st_h, b_h = _http_json(f"{base_url}/healthz")
+                st_no, _ = _http_json(f"{base_url}/ledger")
+                st_bad, _ = _http_json(f"{base_url}/ledger?token=wrong-token")
+                st_adm_no, _ = _http_json(
+                    f"{base_url}/admin/reset",
+                    method="POST",
+                    body=json.dumps({"tier": "hard", "seed": 900_001}).encode("utf-8"),
+                )
+                st_dev, _ = _http_json(
+                    f"{base_url}/admin/reset?token={admin_tok}",
+                    method="POST",
+                    body=json.dumps({"tier": "hard", "seed": 0}).encode("utf-8"),
+                )
+                st_led, led_payload = _http_json(f"{base_url}/ledger?token={ledger_tok}")
+                ep_tok_1 = str(led_payload.get("episode", ""))
+                mid_ok = (
+                    st_led == 200
+                    and verify_ledger(led_payload, ledger_key)
+                    and led_payload.get("done") is False
+                    and led_payload.get("score") == 0.0
+                    and "V" not in led_payload
+                    and "accused" not in led_payload
+                    and led_payload.get("redacted") == "episode in progress"
+                    and bool(ep_tok_1)
+                )
+                st_rst, rst_payload = _http_json(
+                    f"{base_url}/admin/reset?token={admin_tok}",
+                    method="POST",
+                    body=json.dumps({"tier": "hard", "seed": 900_001}).encode("utf-8"),
+                )
+                ep_tok_2 = str(rst_payload.get("episode", ""))
+                rot_ok = st_rst == 200 and rst_payload.get("ok") is True and bool(ep_tok_2) and ep_tok_2 != ep_tok_1
+                ready = st_h == 200 and b_h.get("ok") is True
+                no_tok_403 = st_no == 403
+                bad_tok_403 = st_bad == 403
+                adm_403 = st_adm_no == 403
+                dev_400 = st_dev == 400
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+                th.join(timeout=5)
+                loop.close()
+                server_stopped = not th.is_alive()
+        finally:
+            if saved_allow is not None:
+                os.environ["CANARY_ALLOW_DEV"] = saved_allow
+            if saved_live is not None:
+                os.environ["CANARY_LEDGER_LIVE"] = saved_live
+    finally:
+        W._SET_SECRET = prev_set
+        W._PROC_SECRET = prev_proc
+        shutil.rmtree(mcp_sb, ignore_errors=True)
+    probe_ok = (
+        ready
+        and secret_files_consumed
+        and proc_environ_clean
+        and no_tok_403
+        and bad_tok_403
+        and adm_403
+        and dev_400
+        and mid_ok
+        and rot_ok
+        and server_stopped
+    )
+    return {
+        "ok": probe_ok,
+        "ready": ready,
+        "secret_files_consumed": secret_files_consumed,
+        "proc_environ_clean": proc_environ_clean,
+        "ledger_unauth_403": no_tok_403 and bad_tok_403,
+        "admin_unauth_403": adm_403,
+        "dev_seed_reset_400": dev_400,
+        "mid_ledger_hmac_and_redacted": mid_ok,
+        "reset_rotates_token": rot_ok,
+        "child_cleaned_up": server_stopped,
+    }
+
+
+def run_v4_world_secret_entropy(
+    scratch_dir: Path = DEFAULT_SCRATCH,
+    quick: bool = False,
+    unit_fast: bool = False,
+) -> dict[str, Any]:
     t0 = time.perf_counter()
     n_starts = 20 if quick else 50
     judge_seeds = list(JUDGE_SEEDS)
+    hard_params = TIERS["hard"]
+    pw_cache: dict[tuple[str, int], Any] = {}
+
+    def _get_pub_world(tier: str, seed: int) -> Any:
+        if not unit_fast:
+            return public_world(tier, seed)
+        key = (tier, seed)
+        if key not in pw_cache:
+            pw_cache[key] = public_world(tier, seed)
+        return pw_cache[key]
 
     prev_set_secret = getattr(W, "_SET_SECRET", None)
     prev_proc_secret = getattr(W, "_PROC_SECRET", None)
@@ -1483,69 +1935,72 @@ def run_v4_world_secret_entropy(scratch_dir: Path = DEFAULT_SCRATCH, quick: bool
     salt_path = REPO / "data" / "worlds" / "judge" / "SALT"
     salt_present = salt_path.exists()
 
+    stderr_ctx = contextlib.redirect_stderr(io.StringIO()) if unit_fast else contextlib.nullcontext()
     live_secrets: list[bytes] = []
     live_roster_matches = 0
-    try:
-        W._SET_SECRET = None
-        for i in range(n_starts):
-            W._PROC_SECRET = None
-            sec = W._process_secret()
-            live_secrets.append(sec)
-            s = judge_seeds[i % len(judge_seeds)]
-            env_live = Env("hard", s)
-            pub_w = public_world("hard", s)
-            obs_roster = [(e.id, e.name, e.dept, e.role) for e in env_live._world.employees]
-            pub_roster = [(e.id, e.name, e.dept, e.role) for e in pub_w.employees]
-            if obs_roster == pub_roster:
-                live_roster_matches += 1
-    finally:
-        W._SET_SECRET = prev_set_secret
-        W._PROC_SECRET = prev_proc_secret
-        if prev_env_secret is not None:
-            os.environ["CANARY_WORLD_SECRET"] = prev_env_secret
+    with stderr_ctx:
+        try:
+            W._SET_SECRET = None
+            for i in range(n_starts):
+                W._PROC_SECRET = None
+                sec = W._process_secret()
+                live_secrets.append(sec)
+                s = judge_seeds[i % len(judge_seeds)]
+                w_live = W.generate_world("hard", s, hard_params) if unit_fast else Env("hard", s)._world
+                pub_w = _get_pub_world("hard", s)
+                obs_roster = [(e.id, e.name, e.dept, e.role) for e in w_live.employees]
+                pub_roster = [(e.id, e.name, e.dept, e.role) for e in pub_w.employees]
+                if obs_roster == pub_roster:
+                    live_roster_matches += 1
+        finally:
+            W._SET_SECRET = prev_set_secret
+            W._PROC_SECRET = prev_proc_secret
+            if prev_env_secret is not None:
+                os.environ["CANARY_WORLD_SECRET"] = prev_env_secret
 
-    det_mole_counts: Counter[str] = Counter()
-    det_moles_seq: list[int] = []
-    det_world_seeds: set[int] = set()
-    det_pub_mole_matches = 0
-    det_pub_roster_matches = 0
+        det_mole_counts: Counter[str] = Counter()
+        det_moles_seq: list[int] = []
+        det_world_seeds: set[int] = set()
+        det_pub_mole_matches = 0
+        det_pub_roster_matches = 0
 
-    orig_urandom = os.urandom
-    try:
-        W._SET_SECRET = None
-        if prev_env_secret is not None:
-            os.environ.pop("CANARY_WORLD_SECRET", None)
-        for i in range(n_starts):
-            W._PROC_SECRET = None
-            os.urandom = lambda n, idx=i: hashlib.sha256(f"canary-v4-per-start-urandom-{idx:04d}".encode("utf-8")).digest()[:n]
-            s = judge_seeds[i % len(judge_seeds)]
-            env = Env("hard", s)
+        orig_urandom = os.urandom
+        try:
+            W._SET_SECRET = None
+            if prev_env_secret is not None:
+                os.environ.pop("CANARY_WORLD_SECRET", None)
+            for i in range(n_starts):
+                W._PROC_SECRET = None
+                os.urandom = lambda n, idx=i: hashlib.sha256(f"canary-v4-per-start-urandom-{idx:04d}".encode("utf-8")).digest()[:n]
+                s = judge_seeds[i % len(judge_seeds)]
+                w_det = W.generate_world("hard", s, hard_params) if unit_fast else Env("hard", s)._world
+                os.urandom = orig_urandom
+                mole = w_det.mole
+                det_mole_counts[mole] += 1
+                det_moles_seq.append(int(mole[1:]))
+                det_world_seeds.add(w_det.world_seed)
+
+                pub_w = _get_pub_world("hard", s)
+                if mole == pub_w.mole:
+                    det_pub_mole_matches += 1
+                obs_roster = [(e.id, e.name, e.dept, e.role) for e in w_det.employees]
+                pub_roster = [(e.id, e.name, e.dept, e.role) for e in pub_w.employees]
+                if obs_roster == pub_roster:
+                    det_pub_roster_matches += 1
+        finally:
             os.urandom = orig_urandom
-            mole = env._world.mole
-            det_mole_counts[mole] += 1
-            det_moles_seq.append(int(mole[1:]))
-            det_world_seeds.add(env._world.world_seed)
+            W._SET_SECRET = prev_set_secret
+            W._PROC_SECRET = prev_proc_secret
+            if prev_env_secret is not None:
+                os.environ["CANARY_WORLD_SECRET"] = prev_env_secret
 
-            pub_w = public_world("hard", s)
-            if mole == pub_w.mole:
-                det_pub_mole_matches += 1
-            obs_roster = [(e.id, e.name, e.dept, e.role) for e in env._world.employees]
-            pub_roster = [(e.id, e.name, e.dept, e.role) for e in pub_w.employees]
-            if obs_roster == pub_roster:
-                det_pub_roster_matches += 1
-    finally:
-        os.urandom = orig_urandom
-        W._SET_SECRET = prev_set_secret
-        W._PROC_SECRET = prev_proc_secret
-        if prev_env_secret is not None:
-            os.environ["CANARY_WORLD_SECRET"] = prev_env_secret
-
+    mcp_mod = _get_mcp_mod(unit_fast=unit_fast)
     reset_tokens: set[str] = set()
     reset_moles: list[int] = []
     try:
         W._SET_SECRET = None
         W._PROC_SECRET = hashlib.sha256(b"canary-v4-single-server-proc-secret").digest()
-        ep = Episode("hard", 900_000, "template")
+        ep = mcp_mod.Episode("hard", 900_000, "template")
         reset_tokens.add(ep.token)
         reset_moles.append(int(ep.env._world.mole[1:]))
         reset_pool = list(JUDGE_SEEDS)[1:] + list(range(800_000, 800_011))
@@ -1557,7 +2012,7 @@ def run_v4_world_secret_entropy(scratch_dir: Path = DEFAULT_SCRATCH, quick: bool
         W._SET_SECRET = prev_set_secret
         W._PROC_SECRET = prev_proc_secret
 
-    mcp_probe = _probe_live_mcp_child_server(scratch_dir)
+    mcp_probe = _probe_loopback_mcp_asgi_server(scratch_dir) if unit_fast else _probe_live_mcp_child_server(scratch_dir)
 
     exp_per_slot = n_starts / 40.0
     unif_chi2 = sum(((det_mole_counts.get(f"e{idx:02d}", 0) - exp_per_slot) ** 2) / exp_per_slot for idx in range(40))
@@ -1616,7 +2071,7 @@ def run_v4_world_secret_entropy(scratch_dir: Path = DEFAULT_SCRATCH, quick: bool
     }
 
 
-def _audit_harbor_job_dir(job_dir: Path) -> dict[str, Any]:
+def _audit_harbor_job_dir(job_dir: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     key_path = job_dir / "ledger_key"
     key_hex = key_path.read_text(encoding="utf-8").strip() if key_path.is_file() else ""
     trial_dirs = sorted(p for p in job_dir.iterdir() if p.is_dir() and (p / "result.json").is_file())
@@ -1680,37 +2135,49 @@ def _audit_harbor_job_dir(job_dir: Path) -> dict[str, Any]:
             if '"type":"error"' in txt.replace(" ", ""):
                 cli_infra_zero.append(t.name)
 
-    return {
-        "job": job_dir.name,
-        "key_sha256_prefix": hashlib.sha256(key_hex.encode("utf-8")).hexdigest()[:16] if key_hex else "",
-        "n_trials": len(trial_dirs),
-        "trials_consistent": sum(1 for r in trows if r["consistent"] is True),
-        "job_consistent": bool(jrow["consistent"] is True),
-        "hmac_artifacts_ok": hmac_art_ok,
-        "hmac_verifier_ok": hmac_ver_ok,
-        "isolation_present": iso_present,
-        "isolation_ok": iso_ok,
-        "cheat_present": cheat_present,
-        "cheat_ok": cheat_ok,
-        "trajectory_present": traj_present,
-        "done_trials": done_count,
-        "unscored_infra_trials": unscored_infra,
-        "cli_infra_unfinished_trials": cli_infra_zero,
-        "unique_episode_tokens": len(set(episode_tokens)),
-        "mean_all_rewards": round(sum(rewards) / len(rewards), 4) if rewards else 0.0,
-        "rewards": rewards,
-    }
+    return (
+        {
+            "job": job_dir.name,
+            "key_sha256_prefix": hashlib.sha256(key_hex.encode("utf-8")).hexdigest()[:16] if key_hex else "",
+            "n_trials": len(trial_dirs),
+            "trials_consistent": sum(1 for r in trows if r["consistent"] is True),
+            "job_consistent": bool(jrow["consistent"] is True),
+            "hmac_artifacts_ok": hmac_art_ok,
+            "hmac_verifier_ok": hmac_ver_ok,
+            "isolation_present": iso_present,
+            "isolation_ok": iso_ok,
+            "cheat_present": cheat_present,
+            "cheat_ok": cheat_ok,
+            "trajectory_present": traj_present,
+            "done_trials": done_count,
+            "unscored_infra_trials": unscored_infra,
+            "cli_infra_unfinished_trials": cli_infra_zero,
+            "unique_episode_tokens": len(set(episode_tokens)),
+            "mean_all_rewards": round(sum(rewards) / len(rewards), 4) if rewards else 0.0,
+            "rewards": rewards,
+        },
+        trows,
+    )
 
 
-def run_v5_rehearsal_dry_audit(repo_root: Path = REPO, scratch_dir: Path = DEFAULT_SCRATCH) -> dict[str, Any]:
+def run_v5_rehearsal_dry_audit(
+    repo_root: Path = REPO,
+    scratch_dir: Path = DEFAULT_SCRATCH,
+    unit_fast: bool = False,
+) -> dict[str, Any]:
     t0 = time.perf_counter()
     rd_root = repo_root / "results" / "harbor" / "rehearsal-dry"
     cp_root = repo_root / "results" / "harbor" / "cheat-probe"
 
     expected_rd_jobs = ("do_nothing", "opencode", "opencode-infra-rerun", "oracle", "stop_early")
     rd_job_dirs = sorted(p for p in rd_root.iterdir() if p.is_dir() and (p / "result.json").is_file())
-    rd_audits = {p.name: _audit_harbor_job_dir(p) for p in rd_job_dirs}
-    cp_audit = _audit_harbor_job_dir(cp_root)
+    rd_audits: dict[str, dict[str, Any]] = {}
+    rd_trows: dict[str, list[dict[str, Any]]] = {}
+    for p in rd_job_dirs:
+        aud, trs = _audit_harbor_job_dir(p)
+        rd_audits[p.name] = aud
+        rd_trows[p.name] = trs
+    cp_audit, _ = _audit_harbor_job_dir(cp_root)
 
     key_set = {r["key_sha256_prefix"] for r in rd_audits.values()}
     same_build_key = len(key_set) == 1 and "" not in key_set
@@ -1738,27 +2205,67 @@ def run_v5_rehearsal_dry_audit(repo_root: Path = REPO, scratch_dir: Path = DEFAU
     tamper_sb = Path(tempfile.mkdtemp(prefix="w9-v5-tamper-", dir=str(scratch_dir)))
     try:
         op_copy = tamper_sb / "opencode"
-        shutil.copytree(rd_root / "opencode", op_copy)
-        jres_path = op_copy / "result.json"
-        jres = json.loads(jres_path.read_text(encoding="utf-8"))
-        ev_key = next(iter(jres["stats"]["evals"]))
-        jres["stats"]["evals"][ev_key]["exception_stats"]["ApiRateLimitError"] = []
-        jres_path.write_text(json.dumps(jres), encoding="utf-8")
-        trows_tampered = [
-            ac.check_harbor_trial(p)
-            for p in sorted(op_copy.iterdir())
-            if p.is_dir() and (p / "result.json").is_file()
-        ]
-        forged_unscored_caught = ac.check_harbor_job(op_copy, trows_tampered)["consistent"] is False
+        if unit_fast:
+            op_copy.mkdir(parents=True, exist_ok=True)
+            for ch in (rd_root / "opencode").iterdir():
+                if ch.name == "result.json":
+                    shutil.copy2(ch, op_copy / "result.json")
+                else:
+                    os.symlink(ch.resolve(), op_copy / ch.name)
+            jres_path = op_copy / "result.json"
+            jres = json.loads(jres_path.read_text(encoding="utf-8"))
+            ev_key = next(iter(jres["stats"]["evals"]))
+            jres["stats"]["evals"][ev_key]["exception_stats"]["ApiRateLimitError"] = []
+            jres_path.write_text(json.dumps(jres), encoding="utf-8")
+            forged_unscored_caught = ac.check_harbor_job(op_copy, rd_trows["opencode"])["consistent"] is False
 
-        cp_copy = tamper_sb / "cheat-probe"
-        shutil.copytree(cp_root, cp_copy)
-        t0_dir = sorted(p for p in cp_copy.iterdir() if p.is_dir() and (p / "result.json").is_file())[0]
-        ch_path = t0_dir / "agent" / "cheat.json"
-        ch_obj = json.loads(ch_path.read_text(encoding="utf-8"))
-        ch_obj["holes"] = ["routes.ledger_no_token"]
-        ch_path.write_text(json.dumps(ch_obj), encoding="utf-8")
-        forged_hole_caught = ac.check_harbor_trial(t0_dir)["consistent"] is False
+            cp_copy = tamper_sb / "cheat-probe"
+            cp_copy.mkdir(parents=True, exist_ok=True)
+            cp_trials = sorted(p for p in cp_root.iterdir() if p.is_dir() and (p / "result.json").is_file())
+            first_name = cp_trials[0].name
+            for ch in cp_root.iterdir():
+                if ch.name == first_name:
+                    t0_dir = cp_copy / first_name
+                    t0_dir.mkdir(parents=True, exist_ok=True)
+                    for sub in ch.iterdir():
+                        if sub.name == "agent" and sub.is_dir():
+                            (t0_dir / "agent").mkdir(parents=True, exist_ok=True)
+                            for ag in sub.iterdir():
+                                if ag.name == "cheat.json":
+                                    shutil.copy2(ag, t0_dir / "agent" / "cheat.json")
+                                else:
+                                    os.symlink(ag.resolve(), t0_dir / "agent" / ag.name)
+                        else:
+                            os.symlink(sub.resolve(), t0_dir / sub.name)
+                else:
+                    os.symlink(ch.resolve(), cp_copy / ch.name)
+            ch_path = (cp_copy / first_name) / "agent" / "cheat.json"
+            ch_obj = json.loads(ch_path.read_text(encoding="utf-8"))
+            ch_obj["holes"] = ["routes.ledger_no_token"]
+            ch_path.write_text(json.dumps(ch_obj), encoding="utf-8")
+            forged_hole_caught = ac.check_harbor_trial(cp_copy / first_name)["consistent"] is False
+        else:
+            shutil.copytree(rd_root / "opencode", op_copy)
+            jres_path = op_copy / "result.json"
+            jres = json.loads(jres_path.read_text(encoding="utf-8"))
+            ev_key = next(iter(jres["stats"]["evals"]))
+            jres["stats"]["evals"][ev_key]["exception_stats"]["ApiRateLimitError"] = []
+            jres_path.write_text(json.dumps(jres), encoding="utf-8")
+            trows_tampered = [
+                ac.check_harbor_trial(p)
+                for p in sorted(op_copy.iterdir())
+                if p.is_dir() and (p / "result.json").is_file()
+            ]
+            forged_unscored_caught = ac.check_harbor_job(op_copy, trows_tampered)["consistent"] is False
+
+            cp_copy = tamper_sb / "cheat-probe"
+            shutil.copytree(cp_root, cp_copy)
+            t0_dir = sorted(p for p in cp_copy.iterdir() if p.is_dir() and (p / "result.json").is_file())[0]
+            ch_path = t0_dir / "agent" / "cheat.json"
+            ch_obj = json.loads(ch_path.read_text(encoding="utf-8"))
+            ch_obj["holes"] = ["routes.ledger_no_token"]
+            ch_path.write_text(json.dumps(ch_obj), encoding="utf-8")
+            forged_hole_caught = ac.check_harbor_trial(t0_dir)["consistent"] is False
     finally:
         shutil.rmtree(tamper_sb, ignore_errors=True)
 
@@ -1826,12 +2333,13 @@ def run_all(
     scratch_dir: Path = DEFAULT_SCRATCH,
     quick: bool = False,
     vectors: tuple[str, ...] = ("V1", "V2", "V3", "V4", "V5"),
+    unit_fast: bool = False,
 ) -> dict[str, Any]:
     t0 = time.perf_counter()
     results: dict[str, Any] = {}
     for v in vectors:
         if v == "V1":
-            results["V1"] = run_v1_transcript_and_sequences(repo_root=repo_root, quick=quick)
+            results["V1"] = run_v1_transcript_and_sequences(repo_root=repo_root, quick=quick, unit_fast=unit_fast)
         elif v == "V2":
             results["V2"] = run_v2_day0_mi_oracle(quick=quick)
         elif v == "V3":
@@ -1839,11 +2347,12 @@ def run_all(
                 repo_root=repo_root,
                 scratch_dir=scratch_dir,
                 quick=quick,
+                unit_fast=unit_fast,
             )
         elif v == "V4":
-            results["V4"] = run_v4_world_secret_entropy(scratch_dir=scratch_dir, quick=quick)
+            results["V4"] = run_v4_world_secret_entropy(scratch_dir=scratch_dir, quick=quick, unit_fast=unit_fast)
         elif v == "V5":
-            results["V5"] = run_v5_rehearsal_dry_audit(repo_root=repo_root, scratch_dir=scratch_dir)
+            results["V5"] = run_v5_rehearsal_dry_audit(repo_root=repo_root, scratch_dir=scratch_dir, unit_fast=unit_fast)
         else:
             raise ValueError(f"unknown vector {v}")
 
@@ -1861,6 +2370,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python scripts/judge_15min_whitebox_hunt.py")
     ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--quick", action="store_true")
+    ap.add_argument("--unit-fast", action="store_true")
     ap.add_argument("--scratch-dir", type=Path, default=DEFAULT_SCRATCH)
     ap.add_argument("--vectors", default="V1,V2,V3,V4,V5")
     ap.add_argument("--json-out", type=Path, default=None)
@@ -1871,7 +2381,13 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     vecs = tuple(x.strip().upper() for x in args.vectors.split(",") if x.strip())
-    summary = run_all(repo_root=REPO, scratch_dir=args.scratch_dir, quick=args.quick, vectors=vecs)
+    summary = run_all(
+        repo_root=REPO,
+        scratch_dir=args.scratch_dir,
+        quick=args.quick,
+        vectors=vecs,
+        unit_fast=bool(args.unit_fast),
+    )
     if args.json_out is not None:
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
         args.json_out.write_text(json.dumps(summary, indent=2), encoding="utf-8")

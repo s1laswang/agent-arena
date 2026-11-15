@@ -1,12 +1,12 @@
 # v1.4 Selected Fleet Replication (Non-Primary, Incomplete 30-59 Cohort)
 
-## Pre-Registered Framing and Headline Summary
+## Post-Hoc Primary Lock, Pre-Registered Extension Rule, and Headline Summary
 
-Per the pre-registered seed and extension rules in [gap.md](gap.md) (commits `671ed96` and `f9fb7a4a`), Canary reports the primary `0-29` `hard` headline and this incomplete `30-59` fleet replication slice strictly separately:
+Per the post-hoc primary seed lock (`671ed96`, committed 28 s after `8fd4dec` to prevent reruns or cherry-picking, not a pre-registration) and the pre-registered `30-59` extension rule (`f9fb7a4a`, committed before runs and stopped early at partial `n=2` `seeds 34, 37` in `opencode-gemini-4-carbon-ext`) in [gap.md](gap.md), Canary reports the post-hoc locked `0-29` `hard` primary headline and this incomplete `30-59` fleet replication slice strictly separately:
 
-1. **Pre-registered primary headline (`data/runs/committed/v1.4`, dev seeds `0-29`, `n=30`):** OpenCode + `gemini-4-carbon` over MCP (the judges' harness) scores **`+0.322 +/- 0.199`** against the paired reference solver's **`+0.499 +/- 0.119`** on the exact same 30 seeds, giving **`65% [24%, 98%]` raw** (`-0.177 +/- 0.194` paired diff) and **`72% [52%, 91%]` luck-adjusted** (`+0.360` vs `+0.499`; 10,000-resample paired bootstrap 95% CIs). Both primary 95% CIs exclude `100%` parity, and this primary row is never replaced. Detailed trajectory accounting is in [failure_analysis_v1.4.md](failure_analysis_v1.4.md) and [paired_table_gemini.md](../../data/runs/committed/v1.4/paired_table_gemini.md).
-2. **Selected Fleet Replication (Non-Primary, Incomplete 30-59 Cohort; `results/selected_fleet_replication/v1.4`, `n=7` of `30` planned seeds):** `7` `hard` episodes (`seeds 30, 34, 42, 45, 48, 57, 58`; `23/30` seeds incomplete at fleet cutoff, distinct from the full `n=30` `opencode-gemini-4-carbon-ext` G1 extension in [gap.md](gap.md)) completed cleanly across the sequential 3-to-4-seed fleet shards under raised OpenCode runner timeouts and passed deterministic step-by-step replay verification, paired against `solver-hard-seeds30to59` (`n=30`, full seeds `30-59` mean `+0.498 +/- 0.156`, luck-adjusted `+0.542`). Because sequential multi-seed workers completed their shard-head seeds first (wall-clock completion selection), this incomplete slice is reported strictly as a non-primary selected fleet replication rather than an unbiased `30-59` cohort mean. On the `7` paired fleet seeds, OpenCode `gemini-4-carbon` scores `+0.639 +/- 0.079` vs same-seed solver `+0.319` (`200% [116%, 837%]` raw; `109% [70%, 155%]` luck-adjusted).
-3. **Exploratory pooled reference (`0-29` primary + `7` selected fleet seeds, `n=37` paired `hard` seeds; non-primary, never substituted for the `0-29` primary headline):** Across all `37` replay-verified `hard` seeds combined, OpenCode `gemini-4-carbon` scores `+0.382 +/- 0.166` vs paired solver `+0.465` (`82% [46%, 124%]` raw, paired diff `-0.083 +/- 0.183`) and **`78% [60%, 97%]` luck-adjusted** (`+0.380` vs `+0.486`).
+1. **Post-hoc locked primary headline (`data/runs/committed/v1.4`, dev seeds `0-29`, `n=30`, locked in `671ed96` 28 s after `8fd4dec`):** OpenCode + `gemini-4-carbon` over MCP (the judges' harness) scores **`+0.322 +/- 0.199`** against the paired reference solver's **`+0.499 +/- 0.119`** on the exact same 30 seeds, giving **`65% [24%, 98%]` raw** (`-0.177 +/- 0.194` paired diff) and **`72% [52%, 91%]` luck-adjusted** (`+0.360` vs `+0.499`; 10,000-resample paired bootstrap 95% CIs). Both primary 95% CIs exclude `100%` parity, and this post-hoc locked primary row is never replaced. Detailed trajectory accounting is in [failure_analysis_v1.4.md](failure_analysis_v1.4.md) and [paired_table_gemini.md](../../data/runs/committed/v1.4/paired_table_gemini.md).
+2. **Selected Fleet Replication (Non-Primary, Incomplete 30-59 Cohort; `results/selected_fleet_replication/v1.4`, `n=7` of `30` planned seeds):** `7` `hard` episodes (`seeds 30, 34, 42, 45, 48, 57, 58`; `23/30` seeds incomplete at fleet cutoff, distinct from the pre-registered `opencode-gemini-4-carbon-ext` G1 extension in [gap.md](gap.md), which stopped early at partial `n=2` on `seeds 34, 37` to preserve shared quota) completed cleanly across the sequential 3-to-4-seed fleet shards under raised OpenCode runner timeouts and passed deterministic step-by-step replay verification, paired against `solver-hard-seeds30to59` (`n=30`, full seeds `30-59` mean `+0.498 +/- 0.156`, luck-adjusted `+0.542`). Because sequential multi-seed workers completed their shard-head seeds first (wall-clock completion selection), this incomplete slice is reported strictly as a non-primary selected fleet replication rather than an unbiased `30-59` cohort mean. On the `7` paired fleet seeds, OpenCode `gemini-4-carbon` scores `+0.639 +/- 0.079` vs same-seed solver `+0.319` (`200% [116%, 837%]` raw; `109% [70%, 155%]` luck-adjusted).
+3. **Exploratory pooled reference (`0-29` post-hoc locked primary + `7` selected fleet seeds, `n=37` paired `hard` seeds; non-primary, never substituted for the `0-29` primary headline, and distinct from the `n=32` `0-29 + 34, 37` G1 pool in [gap.md](gap.md)):** Across all `37` replay-verified `hard` seeds combined, OpenCode `gemini-4-carbon` scores `+0.382 +/- 0.166` vs paired solver `+0.465` (`82% [46%, 124%]` raw, paired diff `-0.083 +/- 0.183`) and **`78% [60%, 97%]` luck-adjusted** (`+0.380` vs `+0.486`).
 
 Every figure in this report is computed deterministically without API keys by [scripts/v14_replication_report.py](../../scripts/v14_replication_report.py), which replays every episode in a fresh `canary.env.Env` and aborts on any score, accusation, step-level, manifest, orphan-transcript, duplicate-seed, or timeout hygiene violation.
 
@@ -14,7 +14,7 @@ Every figure in this report is computed deterministically without API keys by [s
 
 Columns match `scripts/paired_gemini.py`: `score +/- 95% CI` uses normal-approximation half-width; `frontier / solver [95% CI]` and `luck-adj. / solver [95% CI]` use 10,000 paired bootstrap resamples (`rng_seed=0`) over shared seeds; `luck-adj. score` evaluates each accusation at `P(accused) * V - (1 - P(accused))` under `canary.analysis.accuse.audit_episode` (`0` on abstention).
 
-### 1A. Primary Pre-Registered Cohort (`data/runs/committed/v1.4`, Seeds `0-29`)
+### 1A. Post-Hoc Locked Primary Cohort (`data/runs/committed/v1.4`, Seeds `0-29`)
 
 | tier | cohort / run | n | score +/- 95% CI | accuracy | accused | mean day | mean P(accused) | solver, same seeds | frontier / solver [95% CI] | paired diff +/- CI | luck-adj. score | luck-adj. / solver [95% CI] |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|---|---:|---|
@@ -42,7 +42,7 @@ Columns match `scripts/paired_gemini.py`: `score +/- 95% CI` uses normal-approxi
 | hard | restrict_all (seeds 30-59) | 30 | -1.000 +/- 0.000 | 0.00 | 1.00 | 9.0 | 0.01 | +0.498 | -201% [-306%, -159%] | -1.498 +/- 0.156 | -0.993 | **-183% [-208%, -166%]** |
 | hard | guess_day1 (seeds 30-59) | 30 | -1.000 +/- 0.000 | 0.00 | 1.00 | 1.0 | 0.03 | +0.498 | -201% [-306%, -159%] | -1.498 +/- 0.156 | -0.950 | **-175% [-199%, -159%]** |
 
-### 1C. Exploratory Pooled Hard Cohort (`0-29` Primary + Selected Fleet `30-59`, Non-Primary)
+### 1C. Exploratory Pooled Hard Cohort (`0-29` Locked Primary + Selected Fleet `30-59`, Non-Primary)
 
 | tier | cohort / run | n | score +/- 95% CI | accuracy | accused | mean day | mean P(accused) | solver, same seeds | frontier / solver [95% CI] | paired diff +/- CI | luck-adj. score | luck-adj. / solver [95% CI] |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|---|---:|---|
@@ -51,9 +51,9 @@ Columns match `scripts/paired_gemini.py`: `score +/- 95% CI` uses normal-approxi
 | hard | reference solver (all committed hard seeds 0-59) | 60 | +0.498 +/- 0.097 | 0.93 | 0.98 | 9.5 | 0.96 | +0.498 | - | - | +0.521 | - |
 
 **Statistical reading of the `7`-seed selected fleet slice and `37`-seed exploratory pool:**
-- **Non-primary incomplete-cohort caveat (`7/30` completed, `23` pending):** Each fleet worker ran a 3-to-4-seed sequential shard (`hard-s30-33`, `hard-s34-37`, `hard-s42-44`, `hard-s45-47`, `hard-s48-51`, `hard-s57-59`), so completed episodes represent shard-head / shorter-cumulative-wall-clock realizations rather than a complete `30`-seed sample. Accordingly, Section 1B and Section 1C are diagnostic replication tables and do not supersede the complete `n=30` (`0-29`) primary headline.
+- **Non-primary incomplete-cohort caveat (`7/30` completed, `23` pending):** Each fleet worker ran a 3-to-4-seed sequential shard (`hard-s30-33`, `hard-s34-37`, `hard-s42-44`, `hard-s45-47`, `hard-s48-51`, `hard-s57-59`), so completed episodes represent shard-head / shorter-cumulative-wall-clock realizations rather than a complete `30`-seed sample. Accordingly, Section 1B and Section 1C are diagnostic replication tables and do not supersede the complete `n=30` (`0-29`) post-hoc locked primary headline.
 - **Why luck adjustment stabilizes small-`n` raw ratios:** Across all 30 out-of-sample seeds `30-59`, `solver-hard-seeds30to59` averages `+0.498 +/- 0.156` (`90%` accuracy, only 2 wrong accusations out of 30). However, the `7` completed fleet seeds include seed `30` (solver accused `e26` vs mole `e15` at `P = 0.858`, raw `-1.000`, luck-adjusted `+0.175`). A single `-1.000` realization depresses the `7`-seed raw solver denominator to `+0.319`, inflating the raw `7`-seed ratio to `200%`, whereas the posterior-expected (luck-adjusted) solver score on those same `7` seeds is `+0.427` (`109%` luck-adjusted ratio).
-- **Sub-0.85 commitment still appears out of sample:** Even among correct accusations, seed `34` (`P(accused) = 0.650` on day `8`, raw `+0.82` -> luck-adjusted `+0.183` vs solver `+0.663` at `P = 0.978`), mirroring the primary `0-29` finding that OpenCode `gemini-4-carbon` sometimes commits before canary leaks isolate a single suspect.
+- **Sub-0.85 commitment still appears out of sample:** Even among correct accusations, seed `34` (`P(accused) = 0.650` on day `8`, raw `+0.82` -> luck-adjusted `+0.183` vs solver `+0.663` at `P = 0.978`), mirroring the locked primary `0-29` finding that OpenCode `gemini-4-carbon` sometimes commits before canary leaks isolate a single suspect.
 - **Wall-clock regime (`min = 921.8s`, `max = 3775.2s`):** Every completed `hard` episode in `30-59` ran longer than `900s` (`7/7` > `900s`), confirming that early `900s` runner caps measured wall-clock timeout rather than decision quality and justifying the raised `--timeout 3600` / `10800` replication protocol.
 
 ## 2. Replay-Verified Hard Episodes in Selected Fleet Replication (Per-Seed Comparison)
@@ -118,16 +118,16 @@ Columns match `scripts/paired_gemini.py`: `score +/- 95% CI` uses normal-approxi
 
 | check | result | status |
 |---|---:|---|
-| Tracked `v1.4` `episodes.jsonl` shards audited | `34` | PASS |
-| Episodes replay-verified in fresh `canary.env.Env` (`v1.4`) | `687 / 687` | PASS |
+| Tracked `v1.4` `episodes.jsonl` shards audited | `36` | PASS |
+| Episodes replay-verified in fresh `canary.env.Env` (`v1.4`) | `719 / 719` | PASS |
 | Score, accusation, or step-level replay mismatches | `0` | PASS |
 | Episodes with `rc == timeout`, `end_reason == error`, or `valid == False` | `0` | PASS |
-| Duplicate `(agent, tier, seed)` tuples across `0-59` | `0` | PASS |
+| Duplicate `(agent, tier, seed)` tuples within cohort (`0-29` primary, `30-59` G1 ext, `30-59` fleet repl) | `0` | PASS |
 | OpenCode client-only steps skipped / truncated outputs byte-verified | `1 / 2` | PASS |
 
 **In-repo shard locations and keyless reproduction commands:**
 
-- Primary (`0-29`) shards: `data/runs/committed/v1.4`
+- Post-hoc locked primary (`0-29`) shards (plus committed `opencode-gemini-4-carbon-ext` partial `n=2` G1 extension and `reference/solver-hard-seeds30to59`): `data/runs/committed/v1.4`
 - Selected fleet replication (incomplete `30-59` cohort) shards: `results/selected_fleet_replication/v1.4`
 - Generator script: `scripts/v14_replication_report.py`
 

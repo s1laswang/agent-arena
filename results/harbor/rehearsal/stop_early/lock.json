@@ -1,0 +1,479 @@
+{
+    "schema_version": 3,
+    "created_at": "2026-11-15T03:30:59.031478Z",
+    "harbor": {
+        "version": "0.26.0",
+        "is_editable": false
+    },
+    "n_concurrent_trials": 2,
+    "retry": {
+        "max_retries": 0,
+        "exclude_exceptions": [
+            "APIResponseValidationError",
+            "AgentAuthenticationError",
+            "AgentSafetyRefusalError",
+            "AgentTimeoutError",
+            "ApiProviderResourceNotFoundError",
+            "AuthenticationError",
+            "BadRequestError",
+            "BudgetExceededError",
+            "CancelledError",
+            "ContentPolicyViolationError",
+            "ContextLengthExceededError",
+            "ContextWindowExceededError",
+            "DspyImportError",
+            "MissingExtraError",
+            "ModelNotFoundError",
+            "NonZeroAgentExitCodeError",
+            "NotFoundError",
+            "OutputLengthExceededError",
+            "OutputTokenExceededError",
+            "PermissionDeniedError",
+            "RegradeError",
+            "RewardFileEmptyError",
+            "RewardFileNotFoundError",
+            "ServiceOperationsUnsupportedError",
+            "UnprocessableEntityError",
+            "UnsupportedModelParametersError",
+            "UnsupportedParamsError",
+            "VercelScopeError",
+            "VerifierOutputParseError",
+            "VerifierTimeoutError"
+        ],
+        "wait_multiplier": 1.0,
+        "min_wait_sec": 1.0,
+        "max_wait_sec": 60.0
+    },
+    "trials": [
+        {
+            "schema_version": 2,
+            "task": {
+                "name": "canary-hard-900000",
+                "type": "local",
+                "digest": "sha256:5d61903a4c2b267bc7270202c59be1c63860b5b250acae0f51deff3995c8d66a",
+                "source": "dataset",
+                "path": "harbor/dataset/canary-hard-900000"
+            },
+            "install_only": false,
+            "timeout_multiplier": 1.0,
+            "agent": {
+                "name": "oracle",
+                "skip_model_parsing": false,
+                "skills": [],
+                "resume_trajectory": false,
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {
+                    "ORACLE_POLICY": "stop_early"
+                },
+                "mcp_servers": []
+            },
+            "bridge_inputs": {},
+            "skills": [],
+            "environment": {
+                "type": "docker",
+                "force_build": false,
+                "delete": true,
+                "stream": false,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "disable": false,
+                "environment_mode": "separate"
+            },
+            "artifacts": [],
+            "override_error_policy": {}
+        },
+        {
+            "schema_version": 2,
+            "task": {
+                "name": "canary-hard-900001",
+                "type": "local",
+                "digest": "sha256:9f8ee8aed35ae76b2f50754cb79c5b3814d2a5311960a5d19ff83175865bee8a",
+                "source": "dataset",
+                "path": "harbor/dataset/canary-hard-900001"
+            },
+            "install_only": false,
+            "timeout_multiplier": 1.0,
+            "agent": {
+                "name": "oracle",
+                "skip_model_parsing": false,
+                "skills": [],
+                "resume_trajectory": false,
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {
+                    "ORACLE_POLICY": "stop_early"
+                },
+                "mcp_servers": []
+            },
+            "bridge_inputs": {},
+            "skills": [],
+            "environment": {
+                "type": "docker",
+                "force_build": false,
+                "delete": true,
+                "stream": false,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "disable": false,
+                "environment_mode": "separate"
+            },
+            "artifacts": [],
+            "override_error_policy": {}
+        },
+        {
+            "schema_version": 2,
+            "task": {
+                "name": "canary-hard-900002",
+                "type": "local",
+                "digest": "sha256:dac52a7aaaf8d78ab4304cbf3058cf3a7d7e8f65052b037027a1a9af878431fd",
+                "source": "dataset",
+                "path": "harbor/dataset/canary-hard-900002"
+            },
+            "install_only": false,
+            "timeout_multiplier": 1.0,
+            "agent": {
+                "name": "oracle",
+                "skip_model_parsing": false,
+                "skills": [],
+                "resume_trajectory": false,
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {
+                    "ORACLE_POLICY": "stop_early"
+                },
+                "mcp_servers": []
+            },
+            "bridge_inputs": {},
+            "skills": [],
+            "environment": {
+                "type": "docker",
+                "force_build": false,
+                "delete": true,
+                "stream": false,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "disable": false,
+                "environment_mode": "separate"
+            },
+            "artifacts": [],
+            "override_error_policy": {}
+        },
+        {
+            "schema_version": 2,
+            "task": {
+                "name": "canary-hard-900003",
+                "type": "local",
+                "digest": "sha256:8cbc0050c0b6e0bf9e58396bd63097a0471436e3fb86abd7239123fcc5e27962",
+                "source": "dataset",
+                "path": "harbor/dataset/canary-hard-900003"
+            },
+            "install_only": false,
+            "timeout_multiplier": 1.0,
+            "agent": {
+                "name": "oracle",
+                "skip_model_parsing": false,
+                "skills": [],
+                "resume_trajectory": false,
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {
+                    "ORACLE_POLICY": "stop_early"
+                },
+                "mcp_servers": []
+            },
+            "bridge_inputs": {},
+            "skills": [],
+            "environment": {
+                "type": "docker",
+                "force_build": false,
+                "delete": true,
+                "stream": false,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "disable": false,
+                "environment_mode": "separate"
+            },
+            "artifacts": [],
+            "override_error_policy": {}
+        },
+        {
+            "schema_version": 2,
+            "task": {
+                "name": "canary-hard-900004",
+                "type": "local",
+                "digest": "sha256:e93ec1ad2d6337ec004d6d036948b235c4fb033c78554640068f5b006c961eeb",
+                "source": "dataset",
+                "path": "harbor/dataset/canary-hard-900004"
+            },
+            "install_only": false,
+            "timeout_multiplier": 1.0,
+            "agent": {
+                "name": "oracle",
+                "skip_model_parsing": false,
+                "skills": [],
+                "resume_trajectory": false,
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {
+                    "ORACLE_POLICY": "stop_early"
+                },
+                "mcp_servers": []
+            },
+            "bridge_inputs": {},
+            "skills": [],
+            "environment": {
+                "type": "docker",
+                "force_build": false,
+                "delete": true,
+                "stream": false,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "disable": false,
+                "environment_mode": "separate"
+            },
+            "artifacts": [],
+            "override_error_policy": {}
+        },
+        {
+            "schema_version": 2,
+            "task": {
+                "name": "canary-hard-900005",
+                "type": "local",
+                "digest": "sha256:01af1090f6517271d5373d3f5b19c337391cdc27e087a9d797272a94111fb2f1",
+                "source": "dataset",
+                "path": "harbor/dataset/canary-hard-900005"
+            },
+            "install_only": false,
+            "timeout_multiplier": 1.0,
+            "agent": {
+                "name": "oracle",
+                "skip_model_parsing": false,
+                "skills": [],
+                "resume_trajectory": false,
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {
+                    "ORACLE_POLICY": "stop_early"
+                },
+                "mcp_servers": []
+            },
+            "bridge_inputs": {},
+            "skills": [],
+            "environment": {
+                "type": "docker",
+                "force_build": false,
+                "delete": true,
+                "stream": false,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "disable": false,
+                "environment_mode": "separate"
+            },
+            "artifacts": [],
+            "override_error_policy": {}
+        },
+        {
+            "schema_version": 2,
+            "task": {
+                "name": "canary-hard-900006",
+                "type": "local",
+                "digest": "sha256:e9cbe42e95de453304250177517ab087d672fde443f8efbb3c07ba6918621bcc",
+                "source": "dataset",
+                "path": "harbor/dataset/canary-hard-900006"
+            },
+            "install_only": false,
+            "timeout_multiplier": 1.0,
+            "agent": {
+                "name": "oracle",
+                "skip_model_parsing": false,
+                "skills": [],
+                "resume_trajectory": false,
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {
+                    "ORACLE_POLICY": "stop_early"
+                },
+                "mcp_servers": []
+            },
+            "bridge_inputs": {},
+            "skills": [],
+            "environment": {
+                "type": "docker",
+                "force_build": false,
+                "delete": true,
+                "stream": false,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "disable": false,
+                "environment_mode": "separate"
+            },
+            "artifacts": [],
+            "override_error_policy": {}
+        },
+        {
+            "schema_version": 2,
+            "task": {
+                "name": "canary-hard-900007",
+                "type": "local",
+                "digest": "sha256:f3b04ff74ded84a19955c15e0a31fd576924a358a44dab00f8dd4c56cf7d6f2c",
+                "source": "dataset",
+                "path": "harbor/dataset/canary-hard-900007"
+            },
+            "install_only": false,
+            "timeout_multiplier": 1.0,
+            "agent": {
+                "name": "oracle",
+                "skip_model_parsing": false,
+                "skills": [],
+                "resume_trajectory": false,
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {
+                    "ORACLE_POLICY": "stop_early"
+                },
+                "mcp_servers": []
+            },
+            "bridge_inputs": {},
+            "skills": [],
+            "environment": {
+                "type": "docker",
+                "force_build": false,
+                "delete": true,
+                "stream": false,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "disable": false,
+                "environment_mode": "separate"
+            },
+            "artifacts": [],
+            "override_error_policy": {}
+        },
+        {
+            "schema_version": 2,
+            "task": {
+                "name": "canary-hard-900008",
+                "type": "local",
+                "digest": "sha256:6392d93bddd4dab283430cfe3b1a40cae1f0566979aa28906dd3f0b7751e98e1",
+                "source": "dataset",
+                "path": "harbor/dataset/canary-hard-900008"
+            },
+            "install_only": false,
+            "timeout_multiplier": 1.0,
+            "agent": {
+                "name": "oracle",
+                "skip_model_parsing": false,
+                "skills": [],
+                "resume_trajectory": false,
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {
+                    "ORACLE_POLICY": "stop_early"
+                },
+                "mcp_servers": []
+            },
+            "bridge_inputs": {},
+            "skills": [],
+            "environment": {
+                "type": "docker",
+                "force_build": false,
+                "delete": true,
+                "stream": false,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "disable": false,
+                "environment_mode": "separate"
+            },
+            "artifacts": [],
+            "override_error_policy": {}
+        },
+        {
+            "schema_version": 2,
+            "task": {
+                "name": "canary-hard-900009",
+                "type": "local",
+                "digest": "sha256:7ef5e77ce691834e0a7809a2b5a76654432dad989aa46dc0378e87395800faf7",
+                "source": "dataset",
+                "path": "harbor/dataset/canary-hard-900009"
+            },
+            "install_only": false,
+            "timeout_multiplier": 1.0,
+            "agent": {
+                "name": "oracle",
+                "skip_model_parsing": false,
+                "skills": [],
+                "resume_trajectory": false,
+                "extra_allowed_hosts": [],
+                "kwargs": {},
+                "env": {
+                    "ORACLE_POLICY": "stop_early"
+                },
+                "mcp_servers": []
+            },
+            "bridge_inputs": {},
+            "skills": [],
+            "environment": {
+                "type": "docker",
+                "force_build": false,
+                "delete": true,
+                "stream": false,
+                "cpu_enforcement_policy": "auto",
+                "memory_enforcement_policy": "auto",
+                "extra_docker_compose": [],
+                "kwargs": {},
+                "extra_allowed_hosts": []
+            },
+            "verifier": {
+                "disable": false,
+                "environment_mode": "separate"
+            },
+            "artifacts": [],
+            "override_error_policy": {}
+        }
+    ]
+}

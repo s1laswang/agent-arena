@@ -1,0 +1,124 @@
+{
+    "schema_version": 1,
+    "id": "f31958f3-1732-4a73-8174-c6f433856c8f",
+    "task_name": "canary/hard-900004",
+    "trial_name": "canary-hard-900004__FCETXwc",
+    "trial_uri": "file://results/harbor/rehearsal/oracle/canary-hard-900004__FCETXwc",
+    "task_id": {
+        "path": "harbor/dataset/canary-hard-900004"
+    },
+    "source": "dataset",
+    "task_checksum": "19b3b0bc10153cc1cc8fa2b7ee545e8dbe9ef74f5abdaf3e9fdaa71e34735b35",
+    "config": {
+        "schema_version": 1,
+        "task": {
+            "path": "harbor/dataset/canary-hard-900004",
+            "git_url": null,
+            "git_commit_id": null,
+            "name": null,
+            "ref": null,
+            "overwrite": false,
+            "download_dir": null,
+            "source": "dataset"
+        },
+        "trial_name": "canary-hard-900004__FCETXwc",
+        "trials_dir": "results/harbor/rehearsal/oracle",
+        "install_only": false,
+        "timeout_multiplier": 1.0,
+        "agent_timeout_multiplier": null,
+        "verifier_timeout_multiplier": null,
+        "agent_setup_timeout_multiplier": null,
+        "environment_build_timeout_multiplier": null,
+        "agent": {
+            "name": "oracle",
+            "import_path": null,
+            "model_name": null,
+            "base_url": null,
+            "model_api_key_name": null,
+            "model_api_format": null,
+            "skip_model_parsing": false,
+            "n_concurrent": null,
+            "concurrency_group": null,
+            "skills": [],
+            "override_timeout_sec": null,
+            "override_setup_timeout_sec": null,
+            "max_timeout_sec": null,
+            "resume_trajectory": false,
+            "load_trajectory": null,
+            "extra_allowed_hosts": [],
+            "kwargs": {},
+            "mcp_servers": []
+        },
+        "user_agent": null,
+        "environment": {
+            "type": "docker",
+            "import_path": null,
+            "force_build": false,
+            "delete": true,
+            "stream": false,
+            "cpu_enforcement_policy": "auto",
+            "memory_enforcement_policy": "auto",
+            "override_cpus": null,
+            "override_memory_mb": null,
+            "override_storage_mb": null,
+            "override_gpus": null,
+            "override_tpu": null,
+            "mounts": null,
+            "extra_docker_compose": [],
+            "kwargs": {},
+            "extra_allowed_hosts": []
+        },
+        "verifier": {
+            "override_timeout_sec": null,
+            "max_timeout_sec": null,
+            "disable": false
+        },
+        "override_error_policy": {},
+        "artifacts": [],
+        "extra_instruction_paths": [],
+        "extra_instructions": [],
+        "job_id": "e1888ffa-d252-436f-aec1-8a3666d3f712",
+        "source_trial": null
+    },
+    "agent_info": {
+        "name": "oracle",
+        "version": "1.0.0",
+        "model_info": null
+    },
+    "agent_result": {
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null,
+        "model_usage": null,
+        "rollout_details": null,
+        "metadata": null
+    },
+    "verifier_result": {
+        "rewards": {
+            "reward": 0.71
+        }
+    },
+    "verifier_environment_mode": "separate",
+    "exception_info": null,
+    "started_at": "2026-11-15T03:14:28.069482Z",
+    "finished_at": "2026-11-15T03:16:52.459837Z",
+    "environment_setup": {
+        "started_at": "2026-11-15T03:14:28.262449Z",
+        "finished_at": "2026-11-15T03:15:12.492209Z"
+    },
+    "agent_setup": {
+        "started_at": "2026-11-15T03:15:12.492393Z",
+        "finished_at": "2026-11-15T03:15:12.492490Z"
+    },
+    "agent_execution": {
+        "started_at": "2026-11-15T03:15:12.492843Z",
+        "finished_at": "2026-11-15T03:15:45.524483Z"
+    },
+    "verifier": {
+        "started_at": "2026-11-15T03:16:07.404931Z",
+        "finished_at": "2026-11-15T03:16:52.459531Z"
+    },
+    "step_results": null,
+    "reward_valid": true
+}

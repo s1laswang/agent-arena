@@ -39,3 +39,39 @@ The results and table are added below this protocol after the run. The protocol 
 - No other reruns and no seed swaps.
 - No exclusion of a valid trial for any reason, including a surprising score.
 - The oracle and both baselines are not retried. Any exception there is reported as is.
+
+---
+
+# Results (added after the run; the protocol above is unchanged)
+
+Code `afterquery-final` = `1bc3e281` (`BUILD.txt`). One build; every job played the same 10 hard judge worlds. Started 03:10 UTC (05:10 Helsinki).
+Full table: [`TABLE.md`](TABLE.md) (`python scripts/rehearsal_table.py results/harbor/rehearsal`).
+
+| run | n valid | infra | correct / accused | mean | vs the oracle on the same tasks |
+|---|---:|---:|---|---:|---|
+| oracle (reference solver over MCP) | 10 | 0 | 9 / 10 | **+0.506** | – |
+| OpenCode gemini-4-carbon, run 1 | 10 | 0 | 9 / 10 | **+0.472** | 93% [20%, 371%] |
+| OpenCode gemini-4-carbon, run 2 | 10 | 0 | 10 / 10 | **+0.585** | 116% [78%, 363%] |
+| OpenCode gemini-4-carbon, run 3 | 9 | 1 | 9 / 9 | **+0.626** (+0.563 with infra as 0) | 131% [86%, 590%] |
+| do_nothing | 10 | 0 | 0 / 0 | 0.000 | – |
+| stop_early | 10 | 0 | 0 / 0 | 0.000 | – |
+
+Run-to-run spread over the 3 OpenCode runs: run means +0.472, +0.585 and +0.626. The mean of means is +0.561, SD 0.080, range 0.154.
+
+**Honest reading: this rehearsal shows no gap.**
+- On these 10 judge worlds, OpenCode gemini-4-carbon matches the reference solver.
+  - Runs 2 and 3 score above the oracle.
+  - 28 of the 29 valid accusations were correct.
+  - The oracle's mean includes one wrong accusation (900007, −1.00).
+- Only run 1 is below the oracle. Its gap comes from a single wrong accusation (900002, day 14).
+- Do not claim that each run is below the oracle. The committed v1.4 OpenCode result (hard, n=30 dev seeds, 65% [24, 98]) is a different, larger sample. This rehearsal does not replicate that gap at n=10.
+- The baselines behave as specified: do_nothing and stop_early score exactly 0 on all 10 tasks.
+
+Integrity and infrastructure:
+- **Retries and infra.** One infra trial: run 3, 900002, Gemini 429 (`ApiRateLimitError`) after Harbor's retries. It is excluded from the headline and counted in the "infra as 0" column. Its one infra-rerun was **not** done: the run finished after the cut-off, with the submission deadline minutes away.
+- **Cut-off (08:30 Helsinki = 06:30 UTC), stated plainly.**
+  - Run 2 finished at 05:21 UTC and run 1 at 06:10 UTC, both complete before the cut-off.
+  - Run 3 (started 05:14 UTC) finished 5 trials before the cut-off: 900000, 900001, 900003 and 900004 valid, plus 900002 infra. The other 5 trials (900005–900009) finished between 06:31 and 07:23 UTC.
+  - Under the pre-registered rule, the cut-off report is runs 1 and 2 plus run 3's 4 valid trials. Its mean on those trials is +0.710, against the oracle's +0.690 on the same tasks. The full run 3 is shown above, labelled as finishing after the cut-off. No trial was dropped or re-run.
+- **Scans and published key.** No SALT or Gemini key in any committed file. One `AIza` substring inside a base64 thought-signature blob is not a key. Local paths were rewritten. The retired build's ledger key is published per job.
+- Harbor reports `NonZeroAgentExitCodeError` on OpenCode trials because OpenCode exits non-zero after the game has ended. When the ledger is done, the trial is valid.

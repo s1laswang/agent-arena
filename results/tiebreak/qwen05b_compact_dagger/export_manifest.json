@@ -1,0 +1,282 @@
+{
+  "tiers": [
+    "easy",
+    "medium",
+    "hard"
+  ],
+  "tail_turns": 4,
+  "workers": 1,
+  "train_seeds": [
+    100000,
+    100001,
+    100002,
+    100003,
+    100004,
+    100005,
+    100006,
+    100007,
+    100008,
+    100009,
+    100010,
+    100011,
+    100012,
+    100013,
+    100014,
+    100015,
+    100016,
+    100017,
+    100018,
+    100019,
+    100020,
+    100021,
+    100022,
+    100023,
+    100024,
+    100025,
+    100026,
+    100027,
+    100028,
+    100029,
+    100030,
+    100031,
+    100032,
+    100033,
+    100034,
+    100035,
+    100036,
+    100037,
+    100038,
+    100039,
+    100040,
+    150000,
+    150001,
+    150002,
+    150003,
+    150004,
+    150005,
+    150006,
+    150007,
+    150008,
+    150009,
+    150010,
+    150011
+  ],
+  "val_seeds": [
+    190000,
+    190001,
+    190002,
+    190003,
+    190004,
+    190005,
+    190006,
+    190007,
+    195000,
+    195001,
+    195002
+  ],
+  "splits": {
+    "train": {
+      "sft_file": "compact_sft_train.jsonl",
+      "dpo_file": "compact_dpo_train.jsonl",
+      "sft_turns": 10004,
+      "dpo_pairs": 951,
+      "sft_tool_distribution": {
+        "list_employees": 156,
+        "status": 2081,
+        "list_documents": 1051,
+        "check_leak_feed": 1051,
+        "plant_canary": 2084,
+        "advance_day": 1165,
+        "read_access_logs": 1111,
+        "accuse": 666,
+        "search_messages": 639
+      },
+      "dpo_pair_distribution": {
+        "premature_accuse": 618,
+        "wrong_target_accuse": 111,
+        "stall_when_ev_pos": 222
+      },
+      "tiers": {
+        "easy": {
+          "natural_calibrated_episodes": 40,
+          "rejected_uncalibrated_natural": 0,
+          "augmented_horizon_abstentions": 12,
+          "augmented_skips": 0,
+          "sft_turns_written": 2100,
+          "dpo_pairs_written": 326,
+          "sft_tool_distribution": {
+            "list_employees": 52,
+            "status": 464,
+            "list_documents": 240,
+            "check_leak_feed": 240,
+            "plant_canary": 338,
+            "advance_day": 260,
+            "read_access_logs": 266,
+            "accuse": 240
+          },
+          "dpo_pair_distribution": {
+            "premature_accuse": 206,
+            "wrong_target_accuse": 40,
+            "stall_when_ev_pos": 80
+          },
+          "used_seeds_min": 100000,
+          "used_seeds_max": 150011
+        },
+        "medium": {
+          "natural_calibrated_episodes": 40,
+          "rejected_uncalibrated_natural": 0,
+          "augmented_horizon_abstentions": 12,
+          "augmented_skips": 0,
+          "sft_turns_written": 3713,
+          "dpo_pairs_written": 303,
+          "sft_tool_distribution": {
+            "list_employees": 52,
+            "status": 800,
+            "list_documents": 396,
+            "check_leak_feed": 396,
+            "plant_canary": 676,
+            "advance_day": 464,
+            "search_messages": 329,
+            "read_access_logs": 408,
+            "accuse": 192
+          },
+          "dpo_pair_distribution": {
+            "premature_accuse": 207,
+            "wrong_target_accuse": 32,
+            "stall_when_ev_pos": 64
+          },
+          "used_seeds_min": 100000,
+          "used_seeds_max": 150011
+        },
+        "hard": {
+          "natural_calibrated_episodes": 40,
+          "rejected_uncalibrated_natural": 1,
+          "augmented_horizon_abstentions": 12,
+          "augmented_skips": 0,
+          "sft_turns_written": 4191,
+          "dpo_pairs_written": 322,
+          "sft_tool_distribution": {
+            "list_employees": 52,
+            "status": 817,
+            "list_documents": 415,
+            "check_leak_feed": 415,
+            "plant_canary": 1070,
+            "advance_day": 441,
+            "search_messages": 310,
+            "read_access_logs": 437,
+            "accuse": 234
+          },
+          "dpo_pair_distribution": {
+            "premature_accuse": 205,
+            "wrong_target_accuse": 39,
+            "stall_when_ev_pos": 78
+          },
+          "used_seeds_min": 100000,
+          "used_seeds_max": 150011
+        }
+      }
+    },
+    "val": {
+      "sft_file": "compact_sft_val.jsonl",
+      "dpo_file": "compact_dpo_val.jsonl",
+      "sft_turns": 1593,
+      "dpo_pairs": 200,
+      "sft_tool_distribution": {
+        "list_employees": 33,
+        "status": 401,
+        "list_documents": 212,
+        "check_leak_feed": 212,
+        "plant_canary": 210,
+        "advance_day": 189,
+        "read_access_logs": 179,
+        "accuse": 23,
+        "search_messages": 134
+      },
+      "dpo_pair_distribution": {
+        "premature_accuse": 131,
+        "wrong_target_accuse": 23,
+        "stall_when_ev_pos": 46
+      },
+      "tiers": {
+        "easy": {
+          "natural_calibrated_episodes": 8,
+          "rejected_uncalibrated_natural": 0,
+          "augmented_horizon_abstentions": 3,
+          "augmented_skips": 0,
+          "sft_turns_written": 377,
+          "dpo_pairs_written": 68,
+          "sft_tool_distribution": {
+            "list_employees": 11,
+            "status": 106,
+            "list_documents": 57,
+            "check_leak_feed": 57,
+            "plant_canary": 43,
+            "advance_day": 49,
+            "read_access_logs": 46,
+            "accuse": 8
+          },
+          "dpo_pair_distribution": {
+            "premature_accuse": 44,
+            "wrong_target_accuse": 8,
+            "stall_when_ev_pos": 16
+          },
+          "used_seeds_min": 190000,
+          "used_seeds_max": 195002
+        },
+        "medium": {
+          "natural_calibrated_episodes": 8,
+          "rejected_uncalibrated_natural": 0,
+          "augmented_horizon_abstentions": 3,
+          "augmented_skips": 0,
+          "sft_turns_written": 557,
+          "dpo_pairs_written": 67,
+          "sft_tool_distribution": {
+            "list_employees": 11,
+            "status": 138,
+            "list_documents": 73,
+            "check_leak_feed": 73,
+            "plant_canary": 59,
+            "advance_day": 65,
+            "search_messages": 68,
+            "read_access_logs": 62,
+            "accuse": 8
+          },
+          "dpo_pair_distribution": {
+            "premature_accuse": 43,
+            "wrong_target_accuse": 8,
+            "stall_when_ev_pos": 16
+          },
+          "used_seeds_min": 190000,
+          "used_seeds_max": 195002
+        },
+        "hard": {
+          "natural_calibrated_episodes": 8,
+          "rejected_uncalibrated_natural": 0,
+          "augmented_horizon_abstentions": 3,
+          "augmented_skips": 0,
+          "sft_turns_written": 659,
+          "dpo_pairs_written": 65,
+          "sft_tool_distribution": {
+            "list_employees": 11,
+            "status": 157,
+            "list_documents": 82,
+            "check_leak_feed": 82,
+            "plant_canary": 108,
+            "advance_day": 75,
+            "search_messages": 66,
+            "read_access_logs": 71,
+            "accuse": 7
+          },
+          "dpo_pair_distribution": {
+            "premature_accuse": 44,
+            "wrong_target_accuse": 7,
+            "stall_when_ev_pos": 14
+          },
+          "used_seeds_min": 190000,
+          "used_seeds_max": 195002
+        }
+      }
+    }
+  },
+  "seconds": 241.68
+}

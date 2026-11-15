@@ -1,5 +1,8 @@
 # Gemini CEO log (newest first)
 
+## Sun 02:41: SUBMISSION.md is now one page
+- Bake-off (80/100) clarity fix: SUBMISSION.md rewritten as a one-pager (~610 words body): 4 required questions, frontier.png headline chart, results table (ladder, red team, blind atlas, usage; jury row if WS2 merges), honesty notes in 5 bullets, reproduce. The previous full text moved verbatim to SUBMISSION-LONG.md. No new numbers; all re-verified (swarm hard best_unjustified 0.38, review solver mean 0.55, in-run 0.49). Did NOT adopt the grader's '3.6-flash matches the solver' headline (false at n=20).
+
 ## Sun 02:35: n=20 ladder weakens the 3.6-flash headline; text rewritten
 - Merged gemini-ladder (815de818/d35d778e): 417 eps. Hard: 3.6-flash 78% [28,151] medium / 71% [11,158] high, n=20, $0.42–0.43, 35/40 correct; gate now "not distinguishable … CIs are wide". Carbon high unchanged 106% [94,126], n=10, $1.93 (extension blocked by key saturation). Took the ladder's stricter headline_verb gate in ladder_report.py (kept justSilas's display helpers).
 - SUBMISSION short version/§1/§2/§3.1/§3.4 now lead with carbon-high ≈ solver; 3.6-flash = 4.5× cheaper, far less certain. All "matches/within the CI" claims for 3.6-flash removed. frontier.png added as headline chart. Gemma: n=4, exploratory only.

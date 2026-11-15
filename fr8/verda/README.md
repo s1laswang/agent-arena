@@ -15,6 +15,7 @@ Each instance runs an on-instance reaper that deletes it at its deadline; ask FR
 | 68bbe201-dc0e-4591-83d5-cc1332ead40c | 1A100.22V (80 GB) on-demand | FIN-03 | 2.1589 | 15 Nov 01:01 | reaper 07:30 | FR8: extra held-out eval n: v2 then v3-4k s0, seeds 30-59/tier (fr8/verda/evals_run.sh) | running |
 | f4378173-9608-4361-bc6c-8f2b9e482819 | 1A100.22V (80 GB) on-demand | FIN-03 | 2.1589 | 15 Nov 01:08 | reaper 07:30 | FR8: v3-8k s3 (4th replicate; no other job ready: HF_TOKEN missing, 8k adapters not yet trained) | running |
 | 18acfa5d-b5f9-4e64-a652-0de05a9f4c15 | 1A100.22V (80 GB) on-demand | FIN-01 | 2.1589 | 15 Nov 02:17 | reaper 07:30 | FR8: backup base eval, held-out seeds 6-35/tier, 150 min (FR8 44584 unreachable: FR8 SSH down) | running |
+| 714d8144-c036-4814-999d-a38ed192a48f | 1A100.22V (80 GB) spot | FIN-01 | 1.0794 | 15 Nov 02:39 | reaper 07:30 | FR8: v3-4k s1 (replicate of the 4k row; 2 h train + 60 min eval → ~05:50) | running |
 
 Balance: €200.00 at start → €191.71 at 00:20 (account shows €200 of credit; Silas mentions €400 total, so a teammate's credit is in another account).
 Capacity: Verda A100/A6000/L40S on-demand and spot have been near zero all night; FR8 polls and launches queued workloads as capacity appears.
@@ -39,3 +40,5 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 01:37: Meta PaliGemma: no free GPU (RTX PRO 6000 + A100, spot and on-demand, all full) → Meta SHARES A100 f4378173 (v3-8k s3, the bonus replicate; 8.8/80 GB used). HF token copied to /root/.hf_token (root-only). Meta limits: ≤50 GB GPU, ≤10 workers, done by ~04:30. No extra cost; s3 will lose some steps.
 
 02:12: v2 extra-n pulled (n=90; pooled v2 n=172 −0.457 ± 0.086). 02:17: backup base eval on A100 18acfa5d. Burn €15.75/h → projected ≈ €108 by 07:30 (cap €300).
+
+02:39: v3-4k s0 eval pulled (−0.103 ± 0.081, n=90; vs v2 +0.306 ± 0.136; vs base −0.062 ± 0.122). v3-8k s0 started on the H100 at 02:20 (chain). v3-4k s1 replicate on A100 spot 714d8144. Burn €16.83/h → projected ≈ €112 by 07:30.

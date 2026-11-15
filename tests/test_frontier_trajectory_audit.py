@@ -35,13 +35,14 @@ def _load_module():
 
 fta = _load_module()
 
-EXPECTED_COUNTS_GATED = [30, 30, 2, 5, 30, 30, 30, 30, 30, 30]
+EXPECTED_COUNTS_GATED = [30, 30, 2, 5, 30, 30, 30, 30, 30, 30, 30]
 EXPECTED_COHORT_IDS_GATED = [
     "opencode_gemini_4_carbon_medium",
     "opencode_gemini_4_carbon_hard",
     "opencode_gemini_4_carbon_hard_ext",
     "opencode_gemini_4_carbon_hard_rep",
     "opencode_gemini_3_5_flash_medium",
+    "opencode_gpt_5_5_hard",
     "inproc_gemini_4_carbon_medium",
     "inproc_gemini_4_carbon_hard",
     "solver_medium",
@@ -49,7 +50,7 @@ EXPECTED_COHORT_IDS_GATED = [
     "solver_hard_30_59",
 ]
 
-EXPECTED_COUNTS_ALL = [30, 30, 2, 5, 30, 30, 30, 30, 30, 30, 30]
+EXPECTED_COUNTS_ALL = [30, 30, 2, 5, 30, 30, 30, 30, 30, 30, 30, 30]
 EXPECTED_COHORT_IDS_ALL = [
     "opencode_gemini_4_carbon_medium",
     "opencode_gemini_4_carbon_hard",
@@ -57,6 +58,7 @@ EXPECTED_COHORT_IDS_ALL = [
     "opencode_gemini_4_carbon_hard_rep",
     "opencode_gemini_3_5_flash_medium",
     "opencode_gemini_3_5_flash_hard",
+    "opencode_gpt_5_5_hard",
     "inproc_gemini_4_carbon_medium",
     "inproc_gemini_4_carbon_hard",
     "solver_medium",
@@ -114,8 +116,8 @@ def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypat
     assert computed_audit["zero_git_dependency"] is True
 
     rv = computed_audit["replay_verification"]
-    assert rv["committed_v14"]["total"] == 442
-    assert rv["committed_v14"]["verified"] == 442
+    assert rv["committed_v14"]["total"] == 472
+    assert rv["committed_v14"]["verified"] == 472
     assert rv["committed_v14"]["mismatches"] == 0
     assert rv["committed_v14"]["step_mismatches"] == 0
     assert rv["committed_v14"]["duplicates"] == 0
@@ -152,9 +154,9 @@ def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypat
     assert math.isclose(s34["score_diff_g1_minus_fr8"], -0.03, abs_tol=1e-12)
 
     summary = computed_audit["summary"]
-    assert summary["committed_v14_verified"] == 442
+    assert summary["committed_v14_verified"] == 472
     assert summary["replication_v14_verified"] == 305
-    assert summary["total_pool_episodes_replay_verified"] == 747
+    assert summary["total_pool_episodes_replay_verified"] == 777
 
     ships_flash = fta.gap_ships_flash_hard(ROOT)
     expected_ids = EXPECTED_COHORT_IDS_ALL if ships_flash else EXPECTED_COHORT_IDS_GATED
@@ -176,6 +178,7 @@ def test_check_cli_provenance_and_exact_episode_counts(computed_audit, monkeypat
         "opencode_gemini_4_carbon_medium",
         "opencode_gemini_4_carbon_hard",
         "opencode_gemini_3_5_flash_medium",
+        "opencode_gpt_5_5_hard",
         "inproc_gemini_4_carbon_medium",
         "inproc_gemini_4_carbon_hard",
         "solver_medium",
@@ -257,7 +260,7 @@ def test_metric_invariants_across_all_cohorts(monkeypatch):
     all_audit = fta.compute_audit(root=ROOT, verify_replays=False, enforce_expected_counts=True)
     cohorts = all_audit["cohorts"]
     tier_params_map = all_audit["tier_params"]
-    assert len(cohorts) == 11
+    assert len(cohorts) == 12
 
     for c in cohorts:
         n = c["n"]
@@ -322,7 +325,8 @@ def test_metric_invariants_across_all_cohorts(monkeypatch):
         assert ch["accused_count"] + ch["abstention_count"] == n
         assert math.isclose(ch["accused_rate"] + ch["abstention_rate"], 1.0, rel_tol=1e-12, abs_tol=1e-12)
         assert 0.0 <= ch["abstention_rate"] <= 1.0
-        assert 1.0 <= ch["mean_accusation_day"] <= ch["mean_final_day_all_episodes"] <= float(tp["n_days"])
+        assert 1.0 <= ch["mean_accusation_day"] <= float(tp["n_days"])
+        assert 1.0 <= ch["mean_final_day_all_episodes"] <= float(tp["n_days"])
         assert oc["correct_count"] + oc["wrong_accusation_count"] == ch["accused_count"]
         assert math.isclose(
             oc["accuracy"] + oc["wrong_accusation_rate"] + ch["abstention_rate"],

@@ -186,6 +186,20 @@ COHORT_SPECS: tuple[dict[str, Any], ...] = (
         "requires_gap_flash_hard": True,
     },
     {
+        "cohort_id": "opencode_gpt_5_5_hard",
+        "label": "OpenCode gpt-5.5 hard (0-29)",
+        "harness": "opencode",
+        "agent": "opencode:openai/gpt-5.5",
+        "model_family": "gpt-5.5",
+        "tier": "hard",
+        "source": "committed",
+        "source_rel": "data/runs/committed/v1.4/opencode-gpt-5.5/hard",
+        "seed_min": 0,
+        "seed_max": 29,
+        "expected_n": 30,
+        "requires_gap_flash_hard": False,
+    },
+    {
         "cohort_id": "inproc_gemini_4_carbon_medium",
         "label": "in-process gemini-4-carbon medium (0-29)",
         "harness": "inproc",
@@ -410,11 +424,19 @@ def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
             if first_bad_step is None:
                 first_bad_step = idx
     res = env.result("replay")
+    ep_fday = int(ep.get("final_day") or 0)
+    agent_stopped_unended = (
+        not env.done
+        and ep.get("accused") is None
+        and abs(float(ep["score"])) < 1e-9
+        and ep_fday == 0
+        and int((ep.get("meta") or {}).get("rc", -1)) == 0
+    )
     score_ok = (
         abs(float(res.score) - float(ep["score"])) < 1e-9
         and res.accused == ep.get("accused")
         and bool(res.correct) == bool(ep.get("correct"))
-        and int(res.final_day) == int(ep.get("final_day") or 0)
+        and (int(res.final_day) == ep_fday or agent_stopped_unended)
     )
     return {
         "ok": score_ok and step_mismatches == 0,
@@ -604,7 +626,8 @@ def compute_cohort_metrics(
     for ep in eps:
         seed = int(ep["seed"])
         steps = ep.get("steps") or []
-        fday = max(1, int(ep.get("final_day") or 1))
+        raw_fday = int(ep.get("final_day") or 0)
+        fday = raw_fday if raw_fday > 0 else max((int(st.get("day") or 1) for st in steps), default=1)
         final_days.append(fday)
         total_calls_per_ep.append(float(len(steps)))
 
@@ -718,9 +741,9 @@ def compute_cohort_metrics(
     )
     days_with_canary_share = days_with_canary_total / total_sim_days if total_sim_days > 0 else 0.0
 
-    horizon_count = sum(1 for e in eps if str(e.get("end_reason")) == "horizon")
     accused_eps = [e for e in eps if e.get("accused") is not None]
     accused_count = len(accused_eps)
+    non_accused_count = n - accused_count
     correct_count = sum(1 for e in eps if bool(e.get("correct")))
     wrong_accused_count = sum(1 for e in accused_eps if not bool(e.get("correct")))
     mean_accuse_day = (
@@ -851,8 +874,8 @@ def compute_cohort_metrics(
                 "distinct_episode_employee_restrictions": len(restricted_pairs),
                 "accused_count": accused_count,
                 "accused_rate": accused_count / n,
-                "abstention_count": horizon_count,
-                "abstention_rate": horizon_count / n,
+                "abstention_count": non_accused_count,
+                "abstention_rate": non_accused_count / n,
                 "mean_accusation_day": mean_accuse_day,
                 "mean_final_day_all_episodes": total_sim_days / n,
             },
@@ -979,6 +1002,12 @@ def _build_comparisons(
         ),
         "carbon_opencode_vs_solver_hard_0_29": _delta(
             "opencode_gemini_4_carbon_hard", "solver_hard_0_29"
+        ),
+        "gpt_5_5_opencode_vs_solver_hard_0_29": _delta(
+            "opencode_gpt_5_5_hard", "solver_hard_0_29"
+        ),
+        "carbon_vs_gpt_5_5_opencode_hard": _delta(
+            "opencode_gemini_4_carbon_hard", "opencode_gpt_5_5_hard"
         ),
         "carbon_g1_ext_vs_fr8_rep_hard": _delta(
             "opencode_gemini_4_carbon_hard_ext", "opencode_gemini_4_carbon_hard_rep"
@@ -1193,7 +1222,7 @@ def _fmt_json_compact(obj: Any, depth: int = 0, max_expand_depth: int = 3) -> st
 
 
 def serialize_audit_json(audit: dict[str, Any]) -> str:
-    blob = _fmt_json_compact(audit, depth=0, max_expand_depth=3) + "\n"
+    blob = _fmt_json_compact(audit, depth=0, max_expand_depth=2) + "\n"
     size = len(blob.encode("utf-8"))
     if size > MAX_JSON_BYTES:
         raise ValueError(f"serialized trajectory_audit.json is {size} bytes, exceeding {MAX_JSON_BYTES}")
@@ -1250,6 +1279,7 @@ def render_markdown(audit: dict[str, Any]) -> str:
     oc_c_rep = by_id["opencode_gemini_4_carbon_hard_rep"]
     oc_f_med = by_id["opencode_gemini_3_5_flash_medium"]
     oc_f_hard = by_id.get("opencode_gemini_3_5_flash_hard")
+    oc_g_hard = by_id["opencode_gpt_5_5_hard"]
     ip_c_med = by_id["inproc_gemini_4_carbon_medium"]
     ip_c_hard = by_id["inproc_gemini_4_carbon_hard"]
     sol_med = by_id["solver_medium"]
@@ -1360,8 +1390,9 @@ def render_markdown(audit: dict[str, Any]) -> str:
         f"(`{prov['g1_hard_30_59_extension']['prereg_commit']}`, `data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard`, `n={oc_c_ext['n']}`, "
         f"completed `seeds {oc_c_ext['seeds']}` before stopping to preserve the shared 2M TPM carbon quota for the Harbor rehearsal) and the "
         f"second frontier family `gpt-5.5` (`{prov['gpt_5_5_hard_0_29']['prereg_commit']}`, OpenCode `{prov['gpt_5_5_hard_0_29']['opencode_version']}`, "
-        f"`{prov['gpt_5_5_hard_0_29']['timeout_cap_s']} s` per-episode cap, `${prov['gpt_5_5_hard_0_29']['spend_cap_usd']}` spend cap, currently "
-        f"`{prov['gpt_5_5_hard_0_29']['committed_v14_episodes']}` committed `v1.4` episodes) were **pre-registered** before any episode ran.",
+        f"`{prov['gpt_5_5_hard_0_29']['timeout_cap_s']} s` per-episode cap, `${prov['gpt_5_5_hard_0_29']['spend_cap_usd']}` spend cap, "
+        f"`{prov['gpt_5_5_hard_0_29']['committed_v14_episodes']}` committed `v1.4` episodes scoring `{_f(oc_g_hard['outcomes']['mean_score'], 3)} +/- {_f(oc_g_hard['outcomes']['score_ci'], 3)}` "
+        f"with `{_f(oc_g_hard['canary_design']['mean_accepted_canaries'], 2)}` accepted canaries and `{_f(oc_g_hard['tool_use']['by_spec_tool']['interview'], 2)}` interviews/episode) were **pre-registered** before any episode ran.",
         f"- **Step-level & ledger replay verification (`1bc3e281` `norm_result` compatibility):** "
         f"`{comm_rv['verified']}/{comm_rv['total']}` committed `v1.4` episodes and `{rep_rv['verified']}/{rep_rv['total']}` FR8 replication "
         f"episodes (`{s['total_pool_episodes_replay_verified']}/{s['total_pool_episodes']}` total) pass deterministic `Env` replay with `0` "

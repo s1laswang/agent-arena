@@ -133,7 +133,7 @@ def test_js_global_contract_and_schema(disk_payload: dict[str, Any]) -> None:
     assert disk_payload["default_seeds"] == [6, 26]
 
     rv = disk_payload["replay_verification"]
-    assert rv["episodes_verified"] == 410
+    assert rv["episodes_verified"] == 440
     assert rv["episode_mismatches"] == 0
     assert rv["step_mismatches"] == 0
     assert rv["compat_commit"] == "1bc3e281"

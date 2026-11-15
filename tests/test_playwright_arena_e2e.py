@@ -70,6 +70,33 @@ def test_network_firewall_classification_and_audit():
     assert len(api_res["violations"]) == 1
     assert "external API" in api_res["violations"][0]
 
+    arena_pyodide_res = audit.audit_network_requests(
+        [{"url": "http://127.0.0.1:41234/docs/arena/index.html"}, {"url": cdn_req}],
+        origins,
+        offline_bundled=True,
+        allow_aborted_pyodide_cdn=True,
+    )
+    assert arena_pyodide_res["violations"] == []
+    assert arena_pyodide_res["external_cdn_requests"] == [cdn_req]
+
+    arena_non_pyodide_cdn = audit.audit_network_requests(
+        [{"url": "https://unpkg.com/react@18/umd/react.production.min.js"}],
+        origins,
+        offline_bundled=True,
+        allow_aborted_pyodide_cdn=True,
+    )
+    assert len(arena_non_pyodide_cdn["violations"]) == 1
+    assert "external CDN" in arena_non_pyodide_cdn["violations"][0]
+
+    arena_api_blocked = audit.audit_network_requests(
+        [{"url": openai_req}],
+        origins,
+        offline_bundled=True,
+        allow_aborted_pyodide_cdn=True,
+    )
+    assert len(arena_api_blocked["violations"]) == 1
+    assert "external API" in arena_api_blocked["violations"][0]
+
 
 def test_dom_and_js_pre_end_leak_scanners_and_post_end_allow():
     origins = {"http://127.0.0.1:9999"}
@@ -184,6 +211,30 @@ def test_dom_and_js_pre_end_leak_scanners_and_post_end_allow():
         human_done=True,
     )
     assert post_end_out["passed"] is True
+
+    demo_replay_snap = {
+        "html": (
+            "<!doctype html><html><body>"
+            "<div class='post-bar-fill is-mole'>The mole was e34</div>"
+            "<script type='application/json' id='canary-replay-data'>"
+            "{\"cases\": {\"6\": {\"true_mole\": \"e34\", \"decoy\": \"e20\", "
+            "\"runs\": [{\"days\": [{\"true_v\": 0.93}]}]}}}"
+            "</script></body></html>"
+        ),
+        "storage": {},
+        "session": {},
+        "keys": [],
+        "globals": {},
+        "requests": [{"url": "http://127.0.0.1:9999/docs/demo/replay.html"}],
+        "console": [],
+        "pageerrors": [],
+    }
+    demo_replay_out = audit.inspect_browser_snapshot(
+        demo_replay_snap,
+        allowed_local_origins=origins,
+        human_done=True,
+    )
+    assert demo_replay_out["passed"] is True
 
 
 def test_offline_http_fallback_and_synthetic_arena_fixture_and_planted_leaks(tmp_path, capsys):

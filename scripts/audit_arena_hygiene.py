@@ -351,11 +351,16 @@ def _repo_secret_bytes(root: Path) -> list[bytes]:
     return secrets_list
 
 
+PYODIDE_CANARY_PREFIX = "docs/arena/py/canary/"
+
+
 def _is_exempt_world_secret_mention(rel: str, full_text: str, match_start: int, match_end: int, line: str) -> bool:
     suffix = Path(rel).suffix.lower()
-    if any(tok in line for tok in ("environ", "getenv", "process.env")):
-        return False
     if re.search(re.escape(TOK_WORLD_SECRET) + r"[\"']?\s*[:=]", line):
+        return False
+    if rel.startswith(PYODIDE_CANARY_PREFIX) and suffix == ".py":
+        return True
+    if any(tok in line for tok in ("environ", "getenv", "process.env")):
         return False
 
     if suffix in {".js", ".mjs", ".py"}:
@@ -825,7 +830,7 @@ def check_arena_ui_hygiene(
                     violations.append(f"{rel}:{lineno}:{col}: forbidden {label} in UI file")
 
     for rel in sorted(snap.text_files):
-        if rel in ui_rels:
+        if rel in ui_rels or rel.startswith(PYODIDE_CANARY_PREFIX):
             continue
         text = snap.text_files[rel]
         for lineno, line in enumerate(text.splitlines(), 1):

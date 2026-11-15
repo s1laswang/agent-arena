@@ -32,11 +32,11 @@ globalThis.CANARY_DRAMATIC_SEEDS = {
   ],
   "replay_verification": {
     "pool": "data/runs/committed/v1.4 (seeds 0..29)",
-    "episodes_verified": 410,
+    "episodes_verified": 440,
     "episode_mismatches": 0,
     "step_mismatches": 0,
     "compat_commit": "1bc3e281",
-    "unwrapped_mcp_error_steps": 79,
+    "unwrapped_mcp_error_steps": 83,
     "pre_1bc3e281_detail_normalized_steps": 320,
     "truncated_output_steps_verified": 2,
     "client_only_steps": 1

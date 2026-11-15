@@ -13,7 +13,7 @@ This presenter guide drives a tight `0:00-3:00` walkthrough of **Canary Arena** 
 
 ## Locked `v1.4` Benchmark Headline (State Verbatim)
 
-- **Primary Headline (`hard`, OpenCode + `gemini-4-carbon` over MCP, judges' harness):** **`72% [52%, 91%]`** of `SolverPolicy` luck-adjusted (**`65% [24%, 98%]`** raw; `+0.322 +/- 0.199` vs `SolverPolicy` `+0.499 +/- 0.119`, paired diff `-0.177 +/- 0.194`, `n=30` paired dev seeds `0-29`, `410/410` `seeds 0..29` episodes fresh-`Env` replay-verified with `1bc3e281` `norm_result` compatibility).
+- **Primary Headline (`hard`, OpenCode + `gemini-4-carbon` over MCP, judges' harness):** **`72% [52%, 91%]`** of `SolverPolicy` luck-adjusted (**`65% [24%, 98%]`** raw; `+0.322 +/- 0.199` vs `SolverPolicy` `+0.499 +/- 0.119`, paired diff `-0.177 +/- 0.194`, `n=30` paired dev seeds `0-29`, `440/440` `seeds 0..29` episodes fresh-`Env` replay-verified with `1bc3e281` `norm_result` compatibility).
 - **Provenance Lock Honesty:** Primary `seeds 0-29` were fixed in commit `671ed96` (`28 s` after episode commit `8fd4dec`) as a **post-hoc lock** against later reruns or cherry-picking, not a pre-registration. The pre-registered `seeds 30-59` extension (`f9fb7a4a`, `n=2` completed before stopping to preserve shared quota) pools to `75% [56%, 93%]` luck-adjusted (`68% [32%, 100%]` raw, `n=32`).
 - **Context & Parity Rows (`n=30`):** `medium` OpenCode reaches **`101% [85%, 119%]`** luck-adjusted (**`111% [99%, 127%]`** raw); `hard` in-process reaches **`84% [65%, 106%]`** luck-adjusted (**`95% [62%, 140%]`** raw); `hard` OpenCode `gemini-3.5-flash` reaches **`22% [-23%, 63%]`** luck-adjusted (**`75% [36%, 123%]`** raw).
 

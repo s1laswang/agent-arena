@@ -1,0 +1,47 @@
+{
+  "agent": "gemini:gemini-4-carbon",
+  "model": "gemini-4-carbon",
+  "provider": "gemini",
+  "git_sha": "26ab62ddd0cf5968c198cbd473e37cf707ad7a6f",
+  "tier": "medium",
+  "seeds": [
+    0,
+    1
+  ],
+  "hint": "premature_accusation,ignored_delay",
+  "usage": {
+    "in": 4829333,
+    "out": 70201,
+    "cost_usd": 10.360676,
+    "calls": 173,
+    "cached_in": 4413503,
+    "cost_usd_est": 1.9750203000000002,
+    "cached": 4413503
+  },
+  "fake_env": false,
+  "smoke": false,
+  "context": "full",
+  "reasoning_effort": null,
+  "reasoning_effort_source": null,
+  "api": "generateContent",
+  "max_turns": null,
+  "provider_settings": {
+    "thinking_level": "model default (not sent; gemini-4-carbon: medium)",
+    "include_thoughts": true,
+    "temperature": "not sent (API default 1.0)",
+    "thought_signature_replay": true,
+    "api": "generateContent"
+  },
+  "role": "investigators",
+  "subrole": "hint_ablation",
+  "model_id": "gemini-4-carbon",
+  "tiers_version": "v1.4",
+  "commit": "361fbab16b9c1016f72480d4550bb200dc7f5d60",
+  "timestamp": "2026-11-14T14:05:45Z",
+  "command": "PYTHONPATH=. CANARY_LLM_MAX_RETRIES=10 CANARY_PROGRESS=1 /tmp/fleet-silas/canary-venv/bin/python -m canary.agents.play --agent gemini:gemini-4-carbon --hint premature_accusation,ignored_delay --tier medium --seeds 0-1 --out results/gemini/roles_carbon/investigators/hint-ablation-carbon-med01",
+  "episode_count": 2,
+  "mean_score": 0.63,
+  "accuracy": 1.0,
+  "regret_total": 0.035156,
+  "stub": false
+}

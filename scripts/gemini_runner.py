@@ -35,7 +35,7 @@ import time
 from pathlib import Path
 
 UV = ["uv", "run", "--python", "3.12", "--extra", "llm", "--extra", "dev", "python", "-W", "ignore"]
-RATE = re.compile(r"RESOURCE_EXHAUSTED|\b429\b|rate.?limit|Quota exceeded", re.I)
+RATE = re.compile(r"RESOURCE_EXHAUSTED|\b429\b|rate.?limit|Quota exceeded|provider_quota|provider_rate_limit", re.I)
 INPROC_INFRA = re.compile(r"ClientError|ServerError|APIError|RESOURCE_EXHAUSTED|UNAVAILABLE|INTERNAL|\b5\d\d\b|\b429\b|"
                           r"ConnectError|ConnectTimeout|ReadTimeout|ReadError|RemoteProtocolError|Server disconnected|"
                           r"Connection|Timeout|SSLError|ssl", re.I)
@@ -46,6 +46,13 @@ def read_eps(d: Path) -> list[dict]:
     if not f.exists():
         return []
     return [json.loads(x) for x in f.read_text().splitlines() if x.strip()]
+
+
+def provider_model(model: str) -> str:
+    """OpenCode model id: an explicit provider/model is kept; gemini-* is Google; anything else is OpenAI."""
+    if "/" in model:
+        return model
+    return f"google/{model}" if model.startswith("gemini") else f"openai/{model}"
 
 
 def ep_cost(ep: dict) -> tuple[float, float]:
@@ -112,7 +119,7 @@ class Job:
 
     def _cmd(self) -> list[str]:
         if self.harness == "opencode":
-            return UV + ["-m", "canary.agents.frontier.opencode_run", "--model", f"google/{self.model}",
+            return UV + ["-m", "canary.agents.frontier.opencode_run", "--model", provider_model(self.model),
                          "--tier", self.tier, "--seeds", str(self.seed), "--jobs", "1", "--retries", "0",
                          "--timeout", str(self.timeout), "--out", str(self.dir)] + self._hint()
         return UV + ["-m", "canary.agents.play", "--agent", f"gemini:{self.model}", "--tier", self.tier,
@@ -148,6 +155,11 @@ def main(argv=None) -> int:
     ap.add_argument("--harness-first", action="store_true",
                     help="queue every job of the first harness before the second (prioritise the headline path)")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--max-spend-usd", type=float, default=None,
+                    help="stop LAUNCHING new episodes once the estimated spend reaches this (in-flight ones finish)")
+    ap.add_argument("--assume-cost-usd", type=float, default=0.0,
+                    help="cost counted toward --max-spend-usd for a finished episode that reports no cost")
+    ap.add_argument("--stop-launch-at", default=None, help="local HH:MM after which no new episode is launched")
     ap.add_argument("--hint", default=None, help="opt-in agent-prompt hint (PLAN-95 B1: ev_delay); default staging "
                     "gets a -hint-<tag> suffix so hinted runs never mix with the baseline")
     a = ap.parse_args(argv)
@@ -186,6 +198,20 @@ def main(argv=None) -> int:
         return dst
 
     backoff = {"until": 0.0, "delay": 60.0, "penalty": 0}
+
+    def launch_blocked() -> str:
+        """Why no NEW episode may start (spend cap or wall-clock stop); empty string if launching is allowed."""
+        if a.stop_launch_at and time.strftime("%H:%M") >= a.stop_launch_at:
+            return f"stop-launch-at {a.stop_launch_at}"
+        if a.max_spend_usd is not None:
+            total = 0.0
+            for f in staging.rglob("episodes.jsonl"):
+                for ep in read_eps(f.parent):
+                    e, _ = ep_cost(ep)
+                    total += e if e > 0 else a.assume_cost_usd
+            if total >= a.max_spend_usd:
+                return f"spend cap ${a.max_spend_usd:.0f} reached (est ${total:.2f})"
+        return ""
 
     def reap() -> None:
         for j in alljobs:
@@ -240,7 +266,8 @@ def main(argv=None) -> int:
         running = [j for j in alljobs if j.running()]
         queue = [j for j in alljobs if not j.running() and not read_eps(j.dir) and j.attempts() < a.max_attempts]
         slots = max(1, a.slots - backoff["penalty"])
-        while queue and len(running) < slots and time.time() >= backoff["until"]:
+        blocked = launch_blocked()
+        while queue and len(running) < slots and time.time() >= backoff["until"] and not blocked:
             j = queue.pop(0)
             if a.dry_run:
                 log(f"DRY {j.key}: {' '.join(j.cmd())}")
@@ -256,7 +283,9 @@ def main(argv=None) -> int:
             time.sleep(5)  # stagger starts
         if a.dry_run:
             break
-        if not running and not queue:
+        if not running and (not queue or blocked):
+            if blocked and queue:
+                log(f"STOPPED LAUNCHING ({blocked}); {len(queue)} seed(s) never started: {[j.key for j in queue]}")
             reap()
             break
         time.sleep(10)

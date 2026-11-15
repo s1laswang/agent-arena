@@ -658,6 +658,7 @@ GATE_COST_ESTIMATE_MS: dict[str, int] = {
     "tiebreak_byzantine_stress_audit": 140,
     "tiebreak_pareto_efficiency": 140,
     "tiebreak_canary_split_design_audit": 120,
+    "tiebreak_stopping_counterfactual_audit": 115,
     "tiebreak_dagger_mechanism_audit": 130,
     "build_tiebreak_viewer": 120,
     "tiebreak_delayed_leak_noise_audit": 115,

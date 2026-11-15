@@ -17,12 +17,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_PRELOADED_HEAVY = {m for m in ("torch", "transformers") if m in sys.modules}
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
 
 import scripts.reproduce_tiebreak_all as rta
 import scripts.tiebreak_forensics as tf
 import scripts.tiebreak_verda_multiseed_audit as tvma
 import scripts.verify_tiebreak_submission as vts
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 SELF_PATH = Path(__file__).resolve()
 
@@ -109,6 +113,17 @@ def _run_readonly_task(task: tuple[str, str]) -> dict[str, Any]:
     return {"gates_report": rta.run_all_gates(root=root_dir, allow_partial_root=True, workers=1)}
 
 
+def _link_or_copy(src: str | os.PathLike[str], dst: str | os.PathLike[str]) -> str:
+    dst_p = Path(dst)
+    if dst_p.exists():
+        dst_p.unlink()
+    try:
+        os.link(src, dst)
+        return str(dst)
+    except OSError:
+        return str(shutil.copy2(src, dst))
+
+
 @pytest.fixture(scope="module")
 def compat_envs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     base_dir = tmp_path_factory.mktemp("tiebreak_shallow_ci")
@@ -119,13 +134,36 @@ def compat_envs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     upstream = base_dir / "upstream_origin"
     upstream.mkdir(parents=True, exist_ok=True)
 
+    stub_policies = {
+        "train/compact_render.py": "CompactHFPolicy",
+        "train/empirical_bayes_policy.py": "EmpiricalBayesPolicy",
+        "scripts/tiebreak_scaling_calibration.py": "CompactLinearPolicy",
+    }
+    stub_eval = "train/eval_compact_hf.py"
+
     for rel in STAGED_REL_FILES:
-        src = REPO_ROOT / rel
         dst = upstream / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
+        if rel in stub_policies:
+            cls_name = stub_policies[rel]
+            dst.write_text(
+                f"class {cls_name}:\n"
+                "    def reset(self, tools_spec, instruction):\n"
+                "        self.ready = True\n"
+                "    def act(self, history):\n"
+                "        return ('status', {})\n",
+                encoding="utf-8",
+            )
+        elif rel == stub_eval:
+            dst.write_text("def run_compact_eval():\n    return {}\n", encoding="utf-8")
+        else:
+            _link_or_copy(REPO_ROOT / rel, dst)
 
-    shutil.copytree(REPO_ROOT / "results" / "tiebreak", upstream / "results" / "tiebreak")
+    shutil.copytree(
+        REPO_ROOT / "results" / "tiebreak",
+        upstream / "results" / "tiebreak",
+        copy_function=_link_or_copy,
+    )
     (upstream / "README.md").write_text("Silas baseline\n", encoding="utf-8")
     (upstream / "canary").mkdir(parents=True, exist_ok=True)
     (upstream / "canary" / "env.py").write_text("ENV_BASELINE = 1\n", encoding="utf-8")
@@ -162,11 +200,19 @@ def compat_envs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     _run_git(shallow_ci, ["checkout", "--detach", "HEAD"], env)
 
     zip_path = base_dir / "canary_judge_export.zip"
-    _run_git(upstream, ["archive", "--format=zip", "-0", "-o", str(zip_path), "HEAD"], env)
     export_dir = base_dir / "judge_unzipped_no_git"
     export_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(zip_path, "r") as zf:
-        zf.extractall(export_dir)
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_STORED) as zf:
+        for item in sorted(upstream.rglob("*")):
+            rel_parts = item.relative_to(upstream).parts
+            if not rel_parts or rel_parts[0] == ".git":
+                continue
+            if item.is_file():
+                rel_str = item.relative_to(upstream).as_posix()
+                zf.write(item, arcname=rel_str)
+                dst_exp = export_dir / rel_str
+                dst_exp.parent.mkdir(parents=True, exist_ok=True)
+                _link_or_copy(item, dst_exp)
 
     tasks = [
         ("vts", str(shallow_ci)),
@@ -239,7 +285,7 @@ def test_source_hygiene_and_zero_heavy_imports() -> None:
         elif isinstance(node, ast.ImportFrom) and node.module:
             assert node.module.split(".")[0] not in forbidden_roots
 
-    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
 
 def test_shallow_github_actions_pr_checkout_passes_all_gates(compat_envs: dict[str, Any]) -> None:

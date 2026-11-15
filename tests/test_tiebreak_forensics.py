@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 import scripts.tiebreak_forensics as tf
 from scripts.tiebreak_forensics import (
     MAX_JSON_BYTES,
@@ -20,6 +22,10 @@ from scripts.tiebreak_forensics import (
     main,
     render_markdown,
     validate_report,
+)
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -52,8 +58,7 @@ def test_source_and_artifact_hygiene() -> None:
                 root = node.module.split(".")[0]
                 assert root not in ("torch", "transformers")
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
     for artifact in (COMMITTED_JSON, COMMITTED_MD):
         assert artifact.exists(), f"missing committed artifact: {artifact}"

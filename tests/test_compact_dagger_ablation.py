@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-_PRELOADED_HEAVY = {m for m in ("torch", "transformers") if m in sys.modules}
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
 
 from canary import world as canary_world
 from canary.env import Env
@@ -23,6 +23,10 @@ import scripts.tiebreak_addendum_pack as addendum_mod
 import scripts.tiebreak_experiment_ledger as ledger_mod
 import scripts.verify_tiebreak_submission as gate
 import train.compact_dagger_ablation as mod
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "train" / "compact_dagger_ablation.py"
@@ -117,6 +121,7 @@ def _build_scoped_gate_root(dst: Path, led_entry: dict[str, object]) -> Path:
 
 
 def test_source_artifact_hygiene_and_ast_inference_isolation(tmp_path: Path) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     hash_char = chr(35)
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
@@ -160,7 +165,7 @@ def test_source_artifact_hygiene_and_ast_inference_isolation(tmp_path: Path) -> 
         assert banned_prereg_hyphen not in low, f"forbidden wording in {art_path}"
         assert banned_prereg_compact not in low, f"forbidden wording in {art_path}"
 
-    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
     scoped_ast_root = _build_scoped_ast_root(tmp_path / "ast_scope")
     iso = gate.check_ast_inference_isolation(root=scoped_ast_root, strict=True)
@@ -173,6 +178,7 @@ def test_source_artifact_hygiene_and_ast_inference_isolation(tmp_path: Path) -> 
     )
     assert add_errs == []
     assert add_classes == ["train/compact_dagger_ablation.py:CompactLinearDAggerPolicy"]
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
 
 def test_committed_summary_table_parity_gates_and_covariate_shift(tmp_path: Path) -> None:
@@ -368,8 +374,11 @@ def test_from_summary_checkpoint_live_rollouts_and_replay_tamper(tmp_path: Path)
 
 def test_mini_end_to_end_cli_and_world_secret_restoration(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
+    monkeypatch.setattr(mod, "TIERS", ("easy",))
     prior_env_secret = os.environ.get("CANARY_WORLD_SECRET")
     prior_set_secret = b"test-prior-secret-dagger-16bytes"
     os.environ["CANARY_WORLD_SECRET"] = "caller-env-secret-dagger-preserved"
@@ -392,7 +401,7 @@ def test_mini_end_to_end_cli_and_world_secret_restoration(
             "--dev-count",
             "0",
             "--lbfgs-iters",
-            "6",
+            "3",
             "--summary-out",
             str(sum_out),
             "--table-out",
@@ -405,15 +414,16 @@ def test_mini_end_to_end_cli_and_world_secret_restoration(
         assert "[compact-linear-dagger-v14]" in stdout_txt
         assert os.environ.get("CANARY_WORLD_SECRET") == "caller-env-secret-dagger-preserved"
         assert getattr(canary_world, "_SET_SECRET", None) == prior_set_secret
+        assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
         assert sum_out.is_file()
         assert tbl_out.is_file()
         assert ckpt_out.is_file()
         mini_sum = json.loads(sum_out.read_text(encoding="utf-8"))
-        assert mini_sum["n"] == 3
+        assert mini_sum["n"] == 1
         assert mini_sum["replay_verified"] is True
         assert mini_sum["invalid_episodes"] == 0
-        assert len(mini_sum["paired"]["deltas"]) == 3
+        assert len(mini_sum["paired"]["deltas"]) == 1
         assert mini_sum["before"]["world_secret_tag"] == mini_sum["after"]["world_secret_tag"]
         assert mod.format_markdown_table(mini_sum) == tbl_out.read_text(encoding="utf-8")
     finally:

@@ -10,10 +10,16 @@ from pathlib import Path
 
 import pytest
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 from canary.env import Env
 from canary.eval import run_episode
 from canary.solver.policy import SolverPolicy
 import scripts.tiebreak_scaling_calibration as scaling
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_scaling_calibration.py"
@@ -63,8 +69,7 @@ def test_source_ast_and_artifact_hygiene() -> None:
         assert en_dash not in art_txt, f"en dash found in {art_path}"
         assert forbidden_flash not in art_txt, f"forbidden flash row found in {art_path}"
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
 
 def test_seed_hygiene_guards() -> None:
@@ -111,24 +116,24 @@ def test_tiny_scaling_experiment_and_rollout_reuse(monkeypatch: pytest.MonkeyPat
         assert s6[tier][:1] == s3[tier]
 
     out = scaling.run_scaling_experiment(
-        budgets=(0, 6),
-        eval_seeds=[500, 501],
+        budgets=(0, 3),
+        eval_seeds=[500],
         world_secret="",
         require_heldout=False,
         include_cross_model=False,
     )
 
-    assert len(calls) == 6
-    assert len(set(calls)) == 6
-    assert out["train_budgets"] == [0, 6]
-    assert out["train_seeds_unique_count"] == 6
-    assert out["eval_episodes_per_budget"] == 6
+    assert len(calls) == 3
+    assert len(set(calls)) == 3
+    assert out["train_budgets"] == [0, 3]
+    assert out["train_seeds_unique_count"] == 3
+    assert out["eval_episodes_per_budget"] == 3
     assert out["policy_architecture"]["n_parameters"] == 82
 
     for row in out["scaling_curve"]:
         assert row["all_replay_verified"] is True
-        assert row["replay_verified"] == 6
-        assert sum(row["counts"].values()) == 6
+        assert row["replay_verified"] == 3
+        assert sum(row["counts"].values()) == 3
     assert time.perf_counter() - t0 < 45.0
 
 

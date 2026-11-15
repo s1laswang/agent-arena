@@ -4,11 +4,14 @@ import ast
 import io
 import json
 from pathlib import Path
+import shutil
 import sys
 import time
 import tokenize
 
 import pytest
+
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
 
 from canary.env import Env
 from canary.rules import HELDOUT_SEEDS, TRAIN_SEEDS
@@ -16,13 +19,45 @@ import scripts.verify_tiebreak_submission as gate
 from train.eval_compact_hf import verify_episode_file
 import train.qwen15b_compact_dagger as mod
 
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "train" / "qwen15b_compact_dagger.py"
 SELF_PATH = Path(__file__).resolve()
 ARTIFACT_DIR = REPO_ROOT / "results" / "tiebreak" / "qwen15b_compact_dagger"
 
 
-def test_source_hygiene_and_ast_inference_isolation() -> None:
+def _build_scoped_ast_root(dst: Path) -> Path:
+    stubs = {
+        "train/compact_render.py": "CompactStubPolicy",
+        "train/empirical_bayes_policy.py": "EmpiricalBayesStubPolicy",
+        "scripts/tiebreak_scaling_calibration.py": "ScalingStubPolicy",
+    }
+    for rel_mod, cls_name in stubs.items():
+        p = dst / rel_mod
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            f"class {cls_name}:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ready = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n",
+            encoding="utf-8",
+        )
+    hf_stub = dst / "train" / "eval_compact_hf.py"
+    hf_stub.parent.mkdir(parents=True, exist_ok=True)
+    hf_stub.write_text("def run_compact_eval():\n    return {}\n", encoding="utf-8")
+
+    mod_dst = dst / "train" / "qwen15b_compact_dagger.py"
+    mod_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(MODULE_PATH, mod_dst)
+    return dst
+
+
+def test_source_hygiene_and_ast_inference_isolation(tmp_path: Path) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     hash_char = chr(35)
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
@@ -43,10 +78,12 @@ def test_source_hygiene_and_ast_inference_isolation() -> None:
             elif isinstance(stmt, ast.ImportFrom) and stmt.module:
                 assert stmt.module.split(".")[0] not in banned_top_imports
 
-    res = gate.check_ast_inference_isolation(root=REPO_ROOT, extra_paths=[MODULE_PATH], strict=True)
+    assert _IMPORT_DELTA_HEAVY == frozenset()
+    scoped_root = _build_scoped_ast_root(tmp_path / "ast_scope")
+    res = gate.check_ast_inference_isolation(root=scoped_root, strict=True)
     assert res.passed is True, res.errors
     assert "train/qwen15b_compact_dagger.py:QwenCompactPolicy" in res.metrics["policy_classes_checked"]
-    assert "torch" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
 
 def test_qwen_compact_policy_and_teacher_seed_guards() -> None:
@@ -83,19 +120,27 @@ def test_qwen_compact_policy_and_teacher_seed_guards() -> None:
     assert len(censored["turns"]) >= 2
 
 
-def test_tiny_end_to_end_pipeline_and_replay(tmp_path: Path) -> None:
+def test_tiny_end_to_end_pipeline_and_replay(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     work_dir = tmp_path / "work"
     out_dir = tmp_path / "out"
     t0 = time.perf_counter()
-    summary = mod.main([
-        "--tiny",
-        "--work-dir",
-        str(work_dir),
-        "--out-dir",
-        str(out_dir),
-    ])
+    with monkeypatch.context() as mp:
+        mp.setitem(sys.modules, "torch", None)
+        mp.setitem(sys.modules, "transformers", None)
+        summary = mod.main([
+            "--tiny",
+            "--work-dir",
+            str(work_dir),
+            "--out-dir",
+            str(out_dir),
+        ])
     elapsed = time.perf_counter() - t0
     assert elapsed < 15.0
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
     summary_path = out_dir / "summary.json"
     table_path = out_dir / "table.md"

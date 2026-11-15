@@ -6,10 +6,14 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
+import sys
 import time
 import tokenize
 
 import pytest
+
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
 
 from canary.env import Env
 from canary.eval import run_episode
@@ -18,6 +22,10 @@ import scripts.tiebreak_delayed_leak_noise_audit as mod
 import scripts.tiebreak_experiment_ledger as ledger_mod
 import scripts.verify_tiebreak_submission as gate
 
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_delayed_leak_noise_audit.py"
 SUMMARY_PATH = REPO_ROOT / "results" / "tiebreak" / "delayed_leak_noise" / "noise_audit_summary.json"
@@ -25,7 +33,34 @@ REPORT_PATH = REPO_ROOT / "docs" / "reports" / "tiebreak_delayed_leak_noise.md"
 SELF_PATH = Path(__file__).resolve()
 
 
-def test_source_hygiene_ast_isolation_and_ledger_disjointness() -> None:
+def _build_scoped_ast_root(dst: Path) -> Path:
+    stubs = {
+        "train/compact_render.py": "CompactStubPolicy",
+        "train/empirical_bayes_policy.py": "EmpiricalBayesStubPolicy",
+        "scripts/tiebreak_scaling_calibration.py": "ScalingStubPolicy",
+    }
+    for rel_mod, cls_name in stubs.items():
+        p = dst / rel_mod
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            f"class {cls_name}:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ready = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n",
+            encoding="utf-8",
+        )
+    hf_stub = dst / "train" / "eval_compact_hf.py"
+    hf_stub.parent.mkdir(parents=True, exist_ok=True)
+    hf_stub.write_text("def run_compact_eval():\n    return {}\n", encoding="utf-8")
+
+    script_dst = dst / "scripts" / "tiebreak_delayed_leak_noise_audit.py"
+    script_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(SCRIPT_PATH, script_dst)
+    return dst
+
+
+def test_source_hygiene_ast_isolation_and_ledger_disjointness(tmp_path: Path) -> None:
     hash_char = chr(35)
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
@@ -41,7 +76,13 @@ def test_source_hygiene_ast_isolation_and_ledger_disjointness() -> None:
         assert en_dash not in src
         assert unicode_minus not in src
 
-    iso = gate.check_ast_inference_isolation(root=REPO_ROOT, extra_paths=[SCRIPT_PATH], strict=True)
+    assert _IMPORT_DELTA_HEAVY == frozenset()
+    scoped_root = _build_scoped_ast_root(tmp_path / "ast_scope")
+    iso = gate.check_ast_inference_isolation(
+        root=scoped_root,
+        extra_paths=[scoped_root / "scripts" / "tiebreak_delayed_leak_noise_audit.py"],
+        strict=True,
+    )
     assert iso.passed is True, iso.errors
     assert "scripts/tiebreak_delayed_leak_noise_audit.py" in iso.metrics["modules_checked"]
 

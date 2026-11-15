@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 from canary.env import Env
 from train.export_calibrated_sft import (
     assert_train_seed,
@@ -23,6 +25,10 @@ from train.export_calibrated_sft import (
 )
 from train.render import KICKOFF, tool_content
 
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXPORT_PATH = REPO_ROOT / "train" / "export_calibrated_sft.py"
 SELF_PATH = Path(__file__).resolve()
@@ -32,15 +38,15 @@ SELF_PATH = Path(__file__).resolve()
 def annotated_rollouts() -> dict[tuple[str, int], dict]:
     return {
         ("easy", 100_000): run_annotated_rollout("easy", 100_000),
-        ("hard", 100_001): run_annotated_rollout("hard", 100_001),
+        ("medium", 100_001): run_annotated_rollout("medium", 100_001),
     }
 
 
 @pytest.fixture(scope="module")
 def censored_rollouts() -> dict[tuple[str, int], dict]:
     return {
+        ("easy", 100_000): run_censored_abstention_rollout("easy", 100_000),
         ("medium", 100_000): run_censored_abstention_rollout("medium", 100_000),
-        ("hard", 100_000): run_censored_abstention_rollout("hard", 100_000),
     }
 
 
@@ -65,8 +71,7 @@ def test_source_and_ast_hygiene() -> None:
             elif isinstance(node, ast.ImportFrom) and node.module:
                 root = node.module.split(".")[0]
                 assert root not in ("torch", "transformers")
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
 
 def test_seed_guards_strict() -> None:

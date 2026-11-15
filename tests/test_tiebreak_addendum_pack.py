@@ -12,7 +12,13 @@ from typing import Any
 
 import pytest
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 import scripts.tiebreak_addendum_pack as pack
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_addendum_pack.py"
@@ -22,16 +28,33 @@ SELF_PATH = Path(__file__).resolve()
 
 
 def _clone_minimal_repo(dst_root: Path) -> Path:
-    rel_files = [
-        "train/compact_render.py",
-        "train/eval_compact_hf.py",
-        "train/eval_hf.py",
-        "train/empirical_bayes_policy.py",
-        "scripts/tiebreak_scaling_calibration.py",
+    stub_policies = {
+        "train/compact_render.py": "CompactHFPolicy",
+        "train/eval_hf.py": "HFPolicy",
+        "train/empirical_bayes_policy.py": "EmpiricalBayesPolicy",
+        "scripts/tiebreak_scaling_calibration.py": "CompactLinearPolicy",
+    }
+    for rel_mod, cls_name in stub_policies.items():
+        p = dst_root / rel_mod
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            f"class {cls_name}:\n"
+            "    def __init__(self, name='stub'):\n"
+            "        self.name = name\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ready = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n",
+            encoding="utf-8",
+        )
+    eval_stub = dst_root / "train" / "eval_compact_hf.py"
+    eval_stub.parent.mkdir(parents=True, exist_ok=True)
+    eval_stub.write_text("def run_compact_eval():\n    return {}\n", encoding="utf-8")
+
+    for rel in (
         "results/tiebreak/empirical_bayes/summary.json",
         "results/tiebreak/scaling/scaling_summary.json",
-    ]
-    for rel in rel_files:
+    ):
         src = REPO_ROOT / rel
         target = dst_root / rel
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -110,8 +133,7 @@ def test_source_and_generated_artifacts_hygiene() -> None:
             elif isinstance(node, ast.ImportFrom) and node.module:
                 assert node.module.split(".")[0] not in forbidden_imports
 
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
     for artifact in (READINESS_JSON_PATH, ADDENDUM_MD_PATH):
         assert artifact.is_file()

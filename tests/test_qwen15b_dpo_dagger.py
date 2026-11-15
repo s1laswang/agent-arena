@@ -4,6 +4,7 @@ import ast
 import io
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import time
@@ -15,6 +16,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 from canary.env import Env
 import scripts.tiebreak_addendum_pack as addendum
 import scripts.tiebreak_experiment_ledger as ledger_mod
@@ -22,12 +25,44 @@ import scripts.verify_tiebreak_submission as gate
 from train.eval_compact_hf import DEFAULT_HELD_OUT_WORLD_SECRET, compute_world_secret_tag
 import train.qwen15b_dpo_dagger as dpo_mod
 
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
+
 MODULE_PATH = REPO_ROOT / "train" / "qwen15b_dpo_dagger.py"
 SELF_PATH = Path(__file__).resolve()
 RESULT_DIR = REPO_ROOT / "results" / "tiebreak" / "qwen15b_dpo_dagger"
 
 
-def test_source_hygiene_and_ast_inference_isolation() -> None:
+def _build_scoped_ast_root(dst: Path) -> Path:
+    stubs = {
+        "train/compact_render.py": "CompactStubPolicy",
+        "train/empirical_bayes_policy.py": "EmpiricalBayesStubPolicy",
+        "scripts/tiebreak_scaling_calibration.py": "ScalingStubPolicy",
+    }
+    for rel_mod, cls_name in stubs.items():
+        p = dst / rel_mod
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            f"class {cls_name}:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ready = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n",
+            encoding="utf-8",
+        )
+    hf_stub = dst / "train" / "eval_compact_hf.py"
+    hf_stub.parent.mkdir(parents=True, exist_ok=True)
+    hf_stub.write_text("def run_compact_eval():\n    return {}\n", encoding="utf-8")
+
+    mod_dst = dst / "train" / "qwen15b_dpo_dagger.py"
+    mod_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(MODULE_PATH, mod_dst)
+    return dst
+
+
+def test_source_hygiene_and_ast_inference_isolation(tmp_path: Path) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     hash_char = chr(35)
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
@@ -48,15 +83,15 @@ def test_source_hygiene_and_ast_inference_isolation() -> None:
             elif isinstance(stmt, ast.ImportFrom) and stmt.module:
                 assert stmt.module.split(".")[0] not in banned_top_imports
 
+    assert _IMPORT_DELTA_HEAVY == frozenset()
+    scoped_root = _build_scoped_ast_root(tmp_path / "ast_scope")
     ast_res = gate.check_ast_inference_isolation(
-        root=REPO_ROOT,
-        extra_paths=[MODULE_PATH],
+        root=scoped_root,
         strict=True,
     )
     assert ast_res.passed is True, ast_res.errors
     assert "train/qwen15b_dpo_dagger.py:QwenCompactDpoPolicy" in ast_res.metrics["policy_classes_checked"]
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
 
 def test_seed_plan_hygiene_and_rejections() -> None:

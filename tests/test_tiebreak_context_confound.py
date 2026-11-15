@@ -11,10 +11,14 @@ from typing import Any
 
 import pytest
 
-_PRELOADED_HEAVY = {m for m in ("torch", "transformers") if m in sys.modules}
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
 
 import scripts.tiebreak_context_confound_audit as audit
 import scripts.verify_tiebreak_submission as sub_gate
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AUDIT_SCRIPT_PATH = REPO_ROOT / "scripts" / "tiebreak_context_confound_audit.py"
@@ -144,7 +148,7 @@ def test_source_and_artifact_hygiene() -> None:
 
     assert "post-hoc locked" in md_txt
 
-    assert ({m for m in ("torch", "transformers") if m in sys.modules} - _PRELOADED_HEAVY) == set()
+    assert _IMPORT_DELTA_HEAVY == frozenset()
 
 
 def test_offline_fallback_and_committed_byte_identity(computed_summary: dict[str, Any]) -> None:

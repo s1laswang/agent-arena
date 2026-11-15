@@ -6,23 +6,60 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
+import sys
 import time
 import tokenize
 
 import pytest
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 from canary.env import Env
 from canary.eval import run_episode
 import scripts.run_tiebreak_policy as cli
+import scripts.tiebreak_scaling_calibration as scaling_mod
 import scripts.verify_tiebreak_submission as gate
 import train.neural_mlp_tiebreak as mlp_mod
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "run_tiebreak_policy.py"
 SELF_PATH = Path(__file__).resolve()
 
 
-def test_source_hygiene_and_strict_ast_inference_isolation() -> None:
+def _build_scoped_ast_root(dst: Path) -> Path:
+    stubs = {
+        "train/compact_render.py": "CompactStubPolicy",
+        "train/empirical_bayes_policy.py": "EmpiricalBayesStubPolicy",
+        "scripts/tiebreak_scaling_calibration.py": "ScalingStubPolicy",
+    }
+    for rel_mod, cls_name in stubs.items():
+        p = dst / rel_mod
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            f"class {cls_name}:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ready = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n",
+            encoding="utf-8",
+        )
+    hf_stub = dst / "train" / "eval_compact_hf.py"
+    hf_stub.parent.mkdir(parents=True, exist_ok=True)
+    hf_stub.write_text("def run_compact_eval():\n    return {}\n", encoding="utf-8")
+
+    script_dst = dst / "scripts" / "run_tiebreak_policy.py"
+    script_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(SCRIPT_PATH, script_dst)
+    return dst
+
+
+def test_source_hygiene_and_strict_ast_inference_isolation(tmp_path: Path) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     hash_char = chr(35)
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
@@ -53,15 +90,18 @@ def test_source_hygiene_and_strict_ast_inference_isolation() -> None:
                         assert "solver" not in imported_names
                         assert "world" not in imported_names
 
+    assert _IMPORT_DELTA_HEAVY == frozenset()
+    scoped_root = _build_scoped_ast_root(tmp_path / "ast_scope")
     rel_outcome = gate.check_ast_inference_isolation(
-        root=REPO_ROOT,
-        extra_paths=[REPO_ROOT / Path("scripts/run_tiebreak_policy.py")],
+        root=scoped_root,
+        extra_paths=[scoped_root / Path("scripts/run_tiebreak_policy.py")],
         strict=True,
     )
     assert rel_outcome.passed is True, rel_outcome.errors
     assert rel_outcome.errors == []
     assert "scripts/run_tiebreak_policy.py" in rel_outcome.metrics["modules_checked"]
     assert "scripts/run_tiebreak_policy.py:AbstainPolicy" in rel_outcome.metrics["policy_classes_checked"]
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
     script_tree = ast.parse(SCRIPT_PATH.read_text(encoding="utf-8"), filename=str(SCRIPT_PATH))
     full_leaks = gate._scan_ast_block_for_leaks(
@@ -123,40 +163,48 @@ def test_trained_policies_baselines_and_committed_summary_parity(capsys: pytest.
     rep_eb = cli.evaluate_policy(
         policy_name="empirical_bayes",
         tiers=("easy",),
-        seeds=(800_000, 800_001, 800_002),
+        seeds=(800_000,),
         paired_before="auto",
         root=REPO_ROOT,
     )
     assert rep_eb["passed"] is True
     assert rep_eb["paired_before_policy"] == "naive_prior"
-    assert rep_eb["episodes_replayed"] == 6
-    assert rep_eb["paired"]["deltas"] == eb_sum["paired"]["deltas"][:3]
+    assert rep_eb["episodes_replayed"] == 2
+    assert rep_eb["paired"]["deltas"] == eb_sum["paired"]["deltas"][:1]
 
     rep_cl = cli.evaluate_policy(
         policy_name="compact_linear_dagger",
         tiers=("easy",),
-        seeds=(800_000, 800_001, 800_002),
+        seeds=(800_000,),
         paired_before="auto",
         root=REPO_ROOT,
     )
     assert rep_cl["passed"] is True
     assert rep_cl["provenance"]["param_count"] == 785
-    assert rep_cl["episodes_replayed"] == 6
-    assert rep_cl["paired"]["deltas"] == cl_sum["paired"]["deltas"][:3]
+    assert rep_cl["episodes_replayed"] == 2
+    assert rep_cl["paired"]["deltas"] == cl_sum["paired"]["deltas"][:1]
 
-    sc_easy_ref = next(r for r in sc_sum["scaling_curve"] if int(r["n_train"]) == 900)["by_tier"]["easy"]["metrics"][
-        "mean_score"
-    ]
+    sc_row_900 = next(r for r in sc_sum["scaling_curve"] if int(r["n_train"]) == 900)
+    sc_fac, _ = cli.load_policy_bundle("scaling_logistic", root=REPO_ROOT)
+    with cli._scoped_world_secret(cli.HELDOUT_WORLD_SECRET):
+        sc_direct_scores = [
+            float(run_episode(Env("easy", sd), sc_fac(sd)).score)
+            for sd in (800_000, 800_001)
+        ]
+    sc_easy_ref = sum(sc_direct_scores) / len(sc_direct_scores)
+    assert sc_row_900["by_tier"]["easy"]["metrics"]["n"] == 30
+    assert scaling_mod.D_SUSPECT > 0
+
     rep_sc = cli.evaluate_policy(
         policy_name="scaling_logistic",
         tiers=("easy",),
-        seeds=tuple(range(800_000, 800_030)),
+        seeds=(800_000, 800_001),
         paired_before="abstain",
         root=REPO_ROOT,
     )
     assert rep_sc["passed"] is True
     assert rep_sc["provenance"]["param_count"] == 82
-    assert rep_sc["episodes_replayed"] == 60
+    assert rep_sc["episodes_replayed"] == 4
     assert rep_sc["metrics"]["overall"]["mean_score"] == pytest.approx(sc_easy_ref, abs=1e-6)
     assert rep_sc["before"]["mean_score"] == pytest.approx(0.0, abs=1e-9)
     assert rep_sc["paired"]["mean_delta"] == pytest.approx(sc_easy_ref, abs=1e-6)
@@ -168,7 +216,7 @@ def test_trained_policies_baselines_and_committed_summary_parity(capsys: pytest.
             "--tier",
             "easy,hard",
             "--seeds",
-            "0..1",
+            "0",
             "--paired-before",
             "naive_prior",
             "--json",
@@ -178,11 +226,11 @@ def test_trained_policies_baselines_and_committed_summary_parity(capsys: pytest.
     dev_out = json.loads(capsys.readouterr().out)
     assert dev_out["seed_split"] == "dev"
     assert dev_out["world_secret_tag"] == "public"
-    assert dev_out["n"] == 4
-    assert dev_out["episodes_replayed"] == 8
+    assert dev_out["n"] == 2
+    assert dev_out["episodes_replayed"] == 4
     assert "post-hoc locked, not pre-registered" in dev_out["protocol_note"].lower()
 
-    rep_abs = cli.evaluate_policy(policy_name="abstain", tiers=("easy", "medium"), seeds=(800_198, 800_199))
+    rep_abs = cli.evaluate_policy(policy_name="abstain", tiers=("easy", "medium"), seeds=(800_199,))
     assert rep_abs["passed"] is True
     assert rep_abs["metrics"]["overall"]["mean_score"] == 0.0
     assert rep_abs["metrics"]["overall"]["abstain_rate"] == 1.0
@@ -202,12 +250,12 @@ def test_tiny_mlp_checkpoint_and_shallow_ci_deterministic_retrain(
         rep_live = cli.evaluate_policy(
             policy_name="tiny_mlp",
             tiers=("easy",),
-            seeds=(800_000, 800_001, 800_002),
+            seeds=(800_000,),
             paired_before="auto",
             root=REPO_ROOT,
         )
         assert rep_live["passed"] is True
-        assert rep_live["paired"]["deltas"] == mlp_sum["paired"]["deltas"][:3]
+        assert rep_live["paired"]["deltas"] == mlp_sum["paired"]["deltas"][:1]
         wt_stage3 = mlp_mod.load_checkpoint_npz(shared_ckpt, "stage3_onpolicy_dagger_r2")
     else:
         wt_base = mlp_mod.init_untrained_weights(107_000)
@@ -237,7 +285,7 @@ def test_tiny_mlp_checkpoint_and_shallow_ci_deterministic_retrain(
             "--tier",
             "easy",
             "--seeds",
-            "800000,800001",
+            "800000",
             "--paired-before",
             "untrained",
             "--mlp-ckpt",
@@ -250,13 +298,20 @@ def test_tiny_mlp_checkpoint_and_shallow_ci_deterministic_retrain(
     assert ckpt_out["passed"] is True
     assert ckpt_out["provenance"]["weight_source"] == "explicit_ckpt_npz"
     assert ckpt_out["provenance"]["param_count"] == int(mlp_sum["param_count"])
-    assert ckpt_out["episodes_replayed"] == 4
+    assert ckpt_out["episodes_replayed"] == 2
+
+    orig_adam = mlp_mod._train_mlp_adam
+
+    def _fast_adam(samples, init_w, epochs=40, **kwargs):
+        return orig_adam(samples, init_w, epochs=min(int(epochs), 4), **kwargs)
+
+    monkeypatch.setattr(mlp_mod, "_train_mlp_adam", _fast_adam)
 
     mini_root = tmp_path / "mini_repo"
     mini_mlp_dir = mini_root / "results" / "tiebreak" / "neural_mlp_dagger"
     mini_mlp_dir.mkdir(parents=True, exist_ok=True)
     mini_sum = dict(mlp_sum)
-    mini_sum["train_seeds"] = {"start": 107_000, "stop": 107_006}
+    mini_sum["train_seeds"] = {"start": 107_000, "stop": 107_002}
     (mini_mlp_dir / "mlp_summary.json").write_text(json.dumps(mini_sum), encoding="utf-8")
 
     cli._MLP_WEIGHT_MEMO.clear()

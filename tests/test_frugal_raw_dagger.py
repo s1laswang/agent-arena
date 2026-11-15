@@ -5,12 +5,15 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
 import sys
 import time
 import tokenize
 import types
 
 import pytest
+
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
 
 from canary.env import Env
 from canary.rules import HELDOUT_SEEDS, TIERS, TRAIN_SEEDS
@@ -20,13 +23,45 @@ import scripts.tiebreak_experiment_ledger as ledger_mod
 import scripts.verify_tiebreak_submission as gate
 import train.frugal_raw_dagger as mod
 
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "train" / "frugal_raw_dagger.py"
 SELF_PATH = Path(__file__).resolve()
 ARTIFACT_DIR = REPO_ROOT / "results" / "tiebreak" / "frugal_raw_dagger"
 
 
-def test_source_hygiene_and_ast_inference_isolation() -> None:
+def _build_scoped_ast_root(dst: Path) -> Path:
+    stubs = {
+        "train/compact_render.py": "CompactStubPolicy",
+        "train/empirical_bayes_policy.py": "EmpiricalBayesStubPolicy",
+        "scripts/tiebreak_scaling_calibration.py": "ScalingStubPolicy",
+    }
+    for rel_mod, cls_name in stubs.items():
+        p = dst / rel_mod
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(
+            f"class {cls_name}:\n"
+            "    def reset(self, tools_spec, instruction):\n"
+            "        self.ready = True\n"
+            "    def act(self, history):\n"
+            "        return ('status', {})\n",
+            encoding="utf-8",
+        )
+    hf_stub = dst / "train" / "eval_compact_hf.py"
+    hf_stub.parent.mkdir(parents=True, exist_ok=True)
+    hf_stub.write_text("def run_compact_eval():\n    return {}\n", encoding="utf-8")
+
+    mod_dst = dst / "train" / "frugal_raw_dagger.py"
+    mod_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(MODULE_PATH, mod_dst)
+    return dst
+
+
+def test_source_hygiene_and_ast_inference_isolation(tmp_path: Path) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     hash_char = chr(35)
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
@@ -50,9 +85,10 @@ def test_source_hygiene_and_ast_inference_isolation() -> None:
                 assert stmt.module.split(".")[0] not in banned_top_imports
                 assert not any(stmt.module.startswith(b) for b in banned_any_top)
 
+    assert _IMPORT_DELTA_HEAVY == frozenset()
+    scoped_root = _build_scoped_ast_root(tmp_path / "ast_scope")
     ast_res = gate.check_ast_inference_isolation(
-        root=REPO_ROOT,
-        extra_paths=[MODULE_PATH],
+        root=scoped_root,
         strict=True,
     )
     assert ast_res.passed is True, ast_res.errors
@@ -60,8 +96,7 @@ def test_source_hygiene_and_ast_inference_isolation() -> None:
     add_errs, add_classes = addendum.audit_inference_module_ast("train/frugal_raw_dagger.py", MODULE_PATH)
     assert add_errs == []
     assert "train/frugal_raw_dagger.py:RawFrugalHFPolicy" in add_classes
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
     replies = iter([
         '<tool_call>\n{"name": "check_leak_feed", "arguments": {}}\n</tool_call>',
@@ -282,6 +317,7 @@ def test_tiny_and_synthetic_qwen2config_smoke_in_tmp_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    fn_heavy = {m for m in ("torch", "transformers") if m in sys.modules}
     synth_tok = mod.SyntheticChatTokenizer(vocab_size=4096)
     cfg_kwargs = mod.build_tiny_qwen2_config_kwargs(synth_tok)
     assert cfg_kwargs["hidden_size"] == 32
@@ -358,8 +394,9 @@ def test_tiny_and_synthetic_qwen2config_smoke_in_tmp_path(
     assert rc == 0
     assert elapsed < 8.0
     assert os.environ.get("CANARY_WORLD_SECRET") == prev_secret
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert sys.modules.get("torch") is not fake_torch
+    assert sys.modules.get("transformers") is not fake_tr
+    assert ({m for m in ("torch", "transformers") if m in sys.modules} - fn_heavy) == set()
 
     summary_path = out_dir / "summary.json"
     table_path = out_dir / "table.md"

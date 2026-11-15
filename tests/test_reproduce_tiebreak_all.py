@@ -13,7 +13,13 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+_BEFORE_IMPORT_HEAVY = frozenset(m for m in ("torch", "transformers") if m in sys.modules)
+
 import scripts.reproduce_tiebreak_all as rta
+
+_IMPORT_DELTA_HEAVY = (
+    frozenset(m for m in ("torch", "transformers") if m in sys.modules) - _BEFORE_IMPORT_HEAVY
+)
 
 RUNNER_PATH = REPO_ROOT / "scripts" / "reproduce_tiebreak_all.py"
 INDEX_PATH = REPO_ROOT / "docs" / "reports" / "TIEBREAK_INDEX.md"
@@ -302,5 +308,4 @@ def test_source_and_doc_hygiene() -> None:
     assert em_dash not in idx_txt
     assert en_dash not in idx_txt
     assert idx_txt.isascii()
-    assert "torch" not in sys.modules
-    assert "transformers" not in sys.modules
+    assert _IMPORT_DELTA_HEAVY == frozenset()

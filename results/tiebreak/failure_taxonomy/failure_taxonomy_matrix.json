@@ -1,0 +1,993 @@
+{
+  "schema": "canary.tiebreak.failure_taxonomy_matrix.v1",
+  "tiers_version": "v1.4",
+  "train_seed_range": "108000..108044",
+  "dagger_seed_range": "170000..170099",
+  "heldout_seed_range": "800000..800059",
+  "disclosures": {
+    "panel_fix_a": "All tiebreaker training strictly uses TRAIN_SEEDS [100000, 200000) and all held-out tiebreaker evaluations use disjoint HELDOUT_SEEDS [800000, 800200) with 0 JUDGE_SEEDS (900000+) touched. Where DEV_SEEDS 0..29 appear in Canary frontier tables, they are post-hoc locked, not pre-registered. Pre-04:05 EET runs without CANARY_WORLD_SECRET used per-process os.urandom(32) world keys (reported strictly two-sample), whereas post-04:05 EET Verda runs under shared secret 1ca0c2a64d support exact world-paired deltas.",
+    "panel_fix_e": "0 / 19 open-weight Qwen2.5-1.5B-Instruct runs beat untrained base 0.000 (0 / 19 VERIFIED_IMPROVEMENT; README.md Qwen addendum remains withheld). Non-LLM structured and compact neural policies (CompactLinearDAggerPolicy, TinyMLPPolicy, EmpiricalBayesPolicy, ScalingLogisticPolicy; is_open_weight_llm=False) are strictly separated on their own track and never conflated with open-weight Qwen2.5 LoRA runs."
+  },
+  "headline_totals": {
+    "historical_open_weight_runs": 19,
+    "root_cause_bucket_count": 9,
+    "runs_beating_base_zero": 0,
+    "verified_open_weight_improvements": 0,
+    "n0_failed_or_lost_runs": 5,
+    "untrained_base_runs": 2,
+    "trained_eval_runs": 12,
+    "best_trained_open_weight_run_id": "WS4-v3-8k-s2-dbd0",
+    "best_trained_open_weight_score": -0.05,
+    "worst_trained_open_weight_run_id": "WS4-v3-8k-s3-f437",
+    "worst_trained_open_weight_score": -0.788
+  },
+  "episode_step_spend_accounting": {
+    "episodes": {
+      "raw_ledger_heldout_episodes_sum": 1039,
+      "deduplicated_unique_heldout_episodes": 1023,
+      "untrained_base_unique_episodes": 36,
+      "untrained_base_overlap_episodes_44411": 16,
+      "trained_open_weight_heldout_episodes": 987,
+      "v13_trained_heldout_episodes": 12,
+      "v14_trained_heldout_episodes": 975,
+      "verda_multiseed_belief_replayed_episodes": 712,
+      "verda_multiseed_replay_invariant_errors": 0,
+      "context_confound_verda_audited_episodes": 450,
+      "dagger_r1_vllm_train_rollout_episodes": 300,
+      "dagger_r1_relabelled_states": 24074,
+      "dagger_mechanism_train_audit_episodes": 45,
+      "reaper_and_spot_lost_planned_episodes_approx": {
+        "ws4_v3_4k_s1_spot_714d": 90,
+        "verda_base_backup_18ac": 90,
+        "ws4_dagger_r1_8k_remaining": 40,
+        "ws4_dagger_r1_4k_remaining": 49
+      }
+    },
+    "steps": {
+      "unique_sft_and_dagger_steps": 1587,
+      "j4_v1_44397_sft_steps": 450,
+      "ws4_v2_44410_sft_steps": 887,
+      "ws4_dagger_r1_sft_steps": 250,
+      "sft_and_dagger_tokens_processed": 66708973,
+      "completed_grpo_steps_6_seeds": 2846,
+      "aborted_zerovar_grpo_steps_44553": 6,
+      "precursor_cancelled_v100_44555_steps": 48,
+      "total_unique_ledger_optimizer_steps": 4439,
+      "adapter_reuse_eval_only_runs": [
+        "WS4-v2-off30-68bb",
+        "WS4-v3-4k-s0-ctx8k",
+        "WS4-dagger-r1-4k-verda"
+      ]
+    },
+    "verda_spend": {
+      "start_balance_eur": 200.0,
+      "end_balance_eur": 95.54,
+      "measured_spend_eur": 104.46,
+      "deleted_instances_count": 9,
+      "h100_instances_count": 2,
+      "a100_instances_count": 7,
+      "spot_instances_count": 4,
+      "on_demand_instances_count": 5,
+      "reaper_deleted_instances_count": 5,
+      "spot_preempted_instances_count": 1,
+      "manual_deleted_after_pull_count": 3,
+      "instance_table_max_gpu_hours_sum": 44.16,
+      "instance_table_max_cost_eur_sum": 103.92,
+      "workload_attributed_eur_approx": {
+        "tiebreaker_grpo_and_evals": 72.7,
+        "x2_dagger_r1": 16.1,
+        "j1_qwen3_14b_lost_at_reaper": 7.2,
+        "x1_agent_cpu_hosting_shared": 5.8,
+        "meta_glasses_yolo_paligemma_shared": 2.1
+      },
+      "instances": [
+        {
+          "instance_id": "3bb74f5a",
+          "gpu_spec": "H100 80GB on-demand",
+          "pricing_mode": "on-demand",
+          "eur_per_hour": 4.7421,
+          "max_gpu_hours": 8.73,
+          "max_cost_eur": 41.41,
+          "termination": "07:30 on-instance reaper",
+          "workloads": [
+            "WS4-v3-verda-s0-eval",
+            "WS4-v3-8k-s0-3bb7",
+            "shared Meta YOLOv8n (0.15h)"
+          ]
+        },
+        {
+          "instance_id": "ac58df04",
+          "gpu_spec": "A100 80GB spot",
+          "pricing_mode": "spot",
+          "eur_per_hour": 1.0794,
+          "max_gpu_hours": 3.83,
+          "max_cost_eur": 4.13,
+          "termination": "03:50 manual delete after eval pull",
+          "workloads": [
+            "WS4-v3-8k-s1-ac58"
+          ]
+        },
+        {
+          "instance_id": "dbd083ca",
+          "gpu_spec": "H100 80GB spot",
+          "pricing_mode": "spot",
+          "eur_per_hour": 2.3711,
+          "max_gpu_hours": 3.93,
+          "max_cost_eur": 9.33,
+          "termination": "04:20 manual delete after eval pull",
+          "workloads": [
+            "WS4-v3-8k-s2-dbd0"
+          ]
+        },
+        {
+          "instance_id": "924e81d8",
+          "gpu_spec": "A100 80GB spot",
+          "pricing_mode": "spot",
+          "eur_per_hour": 1.0794,
+          "max_gpu_hours": 6.68,
+          "max_cost_eur": 7.21,
+          "termination": "07:30 on-instance reaper (lost before pull)",
+          "workloads": [
+            "J1 Qwen3-14B bf16 vLLM open-weight agent (0 episodes recovered)"
+          ]
+        },
+        {
+          "instance_id": "68bbe201",
+          "gpu_spec": "A100 80GB on-demand",
+          "pricing_mode": "on-demand",
+          "eur_per_hour": 2.1589,
+          "max_gpu_hours": 6.48,
+          "max_cost_eur": 14.0,
+          "termination": "07:30 on-instance reaper (partial 4k DAgger pulled ~05:35)",
+          "workloads": [
+            "WS4-v2-off30-68bb",
+            "WS4-v3-verda-s0-eval (off30)",
+            "WS4-v3-4k-s0-ctx8k",
+            "WS4-dagger-r1-8k-verda (eval)",
+            "WS4-dagger-r1-4k-verda (eval)"
+          ]
+        },
+        {
+          "instance_id": "f4378173",
+          "gpu_spec": "A100 80GB on-demand",
+          "pricing_mode": "on-demand",
+          "eur_per_hour": 2.1589,
+          "max_gpu_hours": 3.97,
+          "max_cost_eur": 8.56,
+          "termination": "05:06 manual delete after eval pull",
+          "workloads": [
+            "WS4-v3-8k-s3-f437",
+            "shared Meta PaliGemma 2 3B (0.65h)"
+          ]
+        },
+        {
+          "instance_id": "18acfa5d",
+          "gpu_spec": "A100 80GB on-demand",
+          "pricing_mode": "on-demand",
+          "eur_per_hour": 2.1589,
+          "max_gpu_hours": 5.22,
+          "max_cost_eur": 11.26,
+          "termination": "07:30 on-instance reaper (lost before pull)",
+          "workloads": [
+            "Verda-base-backup-18ac (0 episodes recovered)",
+            "shared X1 OpenCode CPU runners"
+          ]
+        },
+        {
+          "instance_id": "714d8144",
+          "gpu_spec": "A100 80GB spot",
+          "pricing_mode": "spot",
+          "eur_per_hour": 1.0794,
+          "max_gpu_hours": 0.35,
+          "max_cost_eur": 0.38,
+          "termination": "~03:00 spot preemption (~29 min in, 0 episodes)",
+          "workloads": [
+            "WS4-v3-4k-s1-714d-spot"
+          ]
+        },
+        {
+          "instance_id": "e9ea8b2e",
+          "gpu_spec": "A100 40GB on-demand",
+          "pricing_mode": "on-demand",
+          "eur_per_hour": 1.5373,
+          "max_gpu_hours": 4.97,
+          "max_cost_eur": 7.64,
+          "termination": "08:00 on-instance reaper (partial 8k DAgger n=50 pulled ~05:35)",
+          "workloads": [
+            "WS4-dagger-r1-8k-verda (train)",
+            "WS4-dagger-r1-4k-verda (train)"
+          ]
+        }
+      ]
+    }
+  },
+  "cross_artifact_reconciliation": {
+    "backing_files_verified": [
+      "results/tiebreak/experiment_ledger.json",
+      "results/tiebreak/forensics_prior_runs.json",
+      "results/tiebreak/verda_multiseed/multiseed_summary.json",
+      "results/tiebreak/context_confound/audit_summary.json",
+      "results/tiebreak/dagger_mechanism/dagger_mechanism_summary.json"
+    ],
+    "mece_partition_verified": true,
+    "ledger_vs_forensics_verified": true,
+    "ledger_vs_multiseed_712ep_2846st_verified": true,
+    "ledger_vs_context_confound_450ep_verified": true,
+    "ledger_vs_dagger_mechanism_verified": true,
+    "key_mechanistic_numbers": {
+      "raw_4k_header_tokens_44410": 2842,
+      "raw_4k_body_budget_tokens_44410": 1254,
+      "raw_4k_header_fraction": 0.6938,
+      "verda_450_plant_canary_evicted_4k_pct": 97.98,
+      "verda_450_plant_canary_evicted_8k_pct": 84.65,
+      "compact_state_canary_evicted_pct": 0.0,
+      "pooled_v2_below_breakeven_ratio": "90/94",
+      "v3_4k_s0_train_whom_first_to_last": [
+        0.19,
+        0.892
+      ],
+      "v3_4k_s0_heldout_precision_ratio": "6/38",
+      "same_weights_4k_to_8k_two_sample_delta": -0.568,
+      "paired_8k_s0_minus_s3_delta": 0.728,
+      "paired_8k_s3_minus_4k_at_8k_delta": -0.073,
+      "paired_8k_s0_minus_4k_at_8k_delta": 0.655,
+      "high_step_8k_missed_commits_ratio": "21/167",
+      "low_step_8k_below_breakeven_ratio": "167/171",
+      "hard_dagger_cap96_truncation_ratio": "133/180",
+      "hard_dagger_cap96_truncation_rate": 0.738889,
+      "train_below_breakeven_daily_states_ratio": "250/322",
+      "dagger_r1_accuse_sft_labels_ratio": "159/4000",
+      "dagger_r1_own_state_agreement_before_after": [
+        0.43,
+        0.68
+      ],
+      "dagger_r1_8k_whom_precision_before_after": [
+        0.1,
+        0.22
+      ]
+    }
+  },
+  "non_llm_structured_contrast": {
+    "is_open_weight_llm": false,
+    "shared_world_secret_tag": "sha256:ebf2f09716cf76d3",
+    "compact_linear_dagger": {
+      "run_id": "compact-linear-dagger-v14",
+      "param_count": 785,
+      "n": 180,
+      "after_mean_score": 0.6267,
+      "paired_delta_vs_untrained": 0.6267,
+      "paired_delta_vs_calibrated_bc": 0.1505
+    },
+    "tiny_mlp_dagger": {
+      "run_id": "tiny-mlp-dagger-v14",
+      "param_count": 12293,
+      "n": 180,
+      "after_mean_score": 0.6141,
+      "paired_delta_vs_untrained": 1.4696,
+      "paired_delta_vs_uncalibrated_sft": 0.8922
+    },
+    "empirical_bayes": {
+      "run_id": "empirical-bayes-v14",
+      "param_count": 11,
+      "n": 180,
+      "after_mean_score": 0.6073,
+      "paired_delta_vs_naive": 1.0282
+    }
+  },
+  "buckets": [
+    {
+      "bucket_id": "infra_oom_zerovar_spot_reaper_n0",
+      "short_label": "n=0 Infra / OOM / Zero-Var / Spot / Reaper",
+      "title": "n=0 Infrastructure, Host/CUDA OOM, Zero-Variance Collapse, Spot Preemption, and Reaper Deletion Failures",
+      "run_count": 5,
+      "run_ids": [
+        "J4-pilot-44200",
+        "WS4-v3-44548-44550",
+        "WS4-v3-44553",
+        "WS4-v3-4k-s1-714d-spot",
+        "Verda-base-backup-18ac"
+      ],
+      "statuses": [
+        "FAILED_CUDA_OOM",
+        "FAILED_OOM",
+        "FAILED_REAPER_DELETED",
+        "FAILED_SPOT_PREEMPTED",
+        "FAILED_ZERO_VARIANCE"
+      ],
+      "raw_heldout_episodes": 0,
+      "dedup_unique_heldout_episodes": 0,
+      "unique_optimizer_steps": 6,
+      "min_mean_score": null,
+      "max_mean_score": null,
+      "runs_above_base_zero": 0,
+      "primary_bottleneck": "Host 28G cgroup RAM tokenization OOM, V100-32GB SDPA group-prefill OOM, unguided continue-only zero-variance GRPO collapse, Verda A100 spot preemption, and 07:30 on-instance reaper deletion before output sync."
+    },
+    {
+      "bucket_id": "untrained_base_protocol_stall",
+      "short_label": "Untrained Base Protocol Stalls",
+      "title": "Untrained Qwen2.5-1.5B Zero-Shot Tool-Call Protocol Stalls",
+      "run_count": 2,
+      "run_ids": [
+        "WS4-base-44411",
+        "WS4-base-pooled"
+      ],
+      "statuses": [
+        "BASELINE_CAVEATED"
+      ],
+      "raw_heldout_episodes": 52,
+      "dedup_unique_heldout_episodes": 36,
+      "unique_optimizer_steps": 0,
+      "min_mean_score": 0.0,
+      "max_mean_score": 0.0,
+      "runs_above_base_zero": 0,
+      "primary_bottleneck": "97% invalid tool-call syntax (0.03 valid call rate) stalls every episode at eval_cap=120 on Day 1 with 0 canaries planted and 0.000 passive abstention score under unpaired os.urandom(32) world keys."
+    },
+    {
+      "bucket_id": "prefix_4k_sft_v13_sparse_loss",
+      "short_label": "Prefix-4k v1.3 SFT Sparse-Loss Underfit",
+      "title": "Prefix-4k v1.3 SFT Protocol Syntax Gain with 1.57% Sparse-Loss Under-Commitment",
+      "run_count": 1,
+      "run_ids": [
+        "J4-v1-44397"
+      ],
+      "statuses": [
+        "NEGATIVE_REWARD_PROTOCOL_GAIN"
+      ],
+      "raw_heldout_episodes": 12,
+      "dedup_unique_heldout_episodes": 12,
+      "unique_optimizer_steps": 450,
+      "min_mean_score": -0.25,
+      "max_mean_score": -0.25,
+      "runs_above_base_zero": 0,
+      "primary_bottleneck": "Prefix-window 4k SFT (1.57% loss-token fraction, 5% of an epoch in 450 steps) solved tool syntax (0.08 -> 0.99 valid calls) but underfit multi-day stopping and culprit attribution (-0.250 +/- 0.256, 0/3 correct accusations on v1.3)."
+    },
+    {
+      "bucket_id": "dense_4k_sft_blind_accuse",
+      "short_label": "Dense-4k SFT Blind-Accuse Collapse",
+      "title": "Dense-4k Accuse-Only SFT Header Crowding and Blind-Accusation Collapse",
+      "run_count": 2,
+      "run_ids": [
+        "WS4-v2-44412",
+        "WS4-v2-off30-68bb"
+      ],
+      "statuses": [
+        "NEGATIVE_BLIND_ACCUSE"
+      ],
+      "raw_heldout_episodes": 172,
+      "dedup_unique_heldout_episodes": 172,
+      "unique_optimizer_steps": 887,
+      "min_mean_score": -0.514,
+      "max_mean_score": -0.395,
+      "runs_above_base_zero": 0,
+      "primary_bottleneck": "2,842 / 4,096 prompt header tokens (69.4%) leave 1,254 body tokens, evicting Day-1 rosters and 67.5%-90.0% of planted canary maps while 3x oversampled accuse-only SFT drives 95.7% (90/94) below-breakeven accusations (-0.457 +/- 0.086 pooled n=172)."
+    },
+    {
+      "bucket_id": "grpo_4k_offpolicy_evidence_shift",
+      "short_label": "4k GRPO Off-Policy Evidence Shift",
+      "title": "4k Guided Decision-Point GRPO Off-Policy Solver-State Evidence Shift",
+      "run_count": 2,
+      "run_ids": [
+        "WS4-v3-4k-s1-44572",
+        "WS4-v3-verda-s0-eval"
+      ],
+      "statuses": [
+        "NEGATIVE_4K_TRUNCATION_PERSISTS",
+        "NEGATIVE_FLAT_V100_REPLICATE"
+      ],
+      "raw_heldout_episodes": 262,
+      "dedup_unique_heldout_episodes": 262,
+      "unique_optimizer_steps": 801,
+      "min_mean_score": -0.209,
+      "max_mean_score": -0.147,
+      "runs_above_base_zero": 0,
+      "primary_bottleneck": "60% of GRPO states came from the solver's final 6 pre-commit steps (whom-accuracy 0.19 -> 0.89 on clean solver evidence), but standalone rollouts plant only 3.53 canaries/ep (100% evicted at 4k) and hit 6/38 = 0.16 precision (-0.147 +/- 0.063 on s0 n=180; -0.209 +/- 0.094 on flat 192-step V100 s1 n=82)."
+    },
+    {
+      "bucket_id": "same_weights_8k_inference_confound",
+      "short_label": "Same-Weights 8k Inference Confound",
+      "title": "Same-Weights 4k-to-8k Inference Context-Length Shift Confound",
+      "run_count": 1,
+      "run_ids": [
+        "WS4-v3-4k-s0-ctx8k"
+      ],
+      "statuses": [
+        "NEGATIVE_INFERENCE_CTX_CONFOUND"
+      ],
+      "raw_heldout_episodes": 90,
+      "dedup_unique_heldout_episodes": 90,
+      "unique_optimizer_steps": 0,
+      "min_mean_score": -0.716,
+      "max_mean_score": -0.716,
+      "runs_above_base_zero": 0,
+      "primary_bottleneck": "Evaluating the exact same 609-step 4k-trained adapter (3d0cd43b8037) at max_ctx=8192 pushes prompt lengths outside 4k SFT/GRPO support, flipping medium/hard accusations from 0.00/0.03 to 0.80/0.90 (0/51 correct; 70/70 below breakeven) and dropping score from -0.147 to -0.716 +/- 0.105 (two-sample -0.568 +/- 0.123)."
+    },
+    {
+      "bucket_id": "grpo_8k_high_step_abstention_collapse",
+      "short_label": "~650-Step 8k GRPO Abstention Collapse",
+      "title": "High-Step (~650-Step H100) 8k GRPO Global Abstention Collapse",
+      "run_count": 2,
+      "run_ids": [
+        "WS4-v3-8k-s0-3bb7",
+        "WS4-v3-8k-s2-dbd0"
+      ],
+      "statuses": [
+        "NEGATIVE_ABSTAIN_COLLAPSE"
+      ],
+      "raw_heldout_episodes": 180,
+      "dedup_unique_heldout_episodes": 180,
+      "unique_optimizer_steps": 1330,
+      "min_mean_score": -0.06,
+      "max_mean_score": -0.05,
+      "runs_above_base_zero": 0,
+      "primary_bottleneck": "Crossing ~500 GRPO steps on H100 (637 and 693 steps, mean 665.0) suppresses negative-EV 8k over-accusations (free_accuse_frac 0.08-0.12 -> 0.023-0.041, paired +0.728 +/- 0.134 over s3) by collapsing to 92.8% (167/180) global abstention, missing 21/167 positive-EV commits and still trailing 0.000 (-0.060 and -0.050)."
+    },
+    {
+      "bucket_id": "grpo_8k_low_step_over_accuse",
+      "short_label": "~350-Step 8k GRPO Over-Accuse & Paired Null",
+      "title": "Low-Step (~350-Step A100) 8k GRPO Off-Policy Over-Accusation and Paired Null",
+      "run_count": 2,
+      "run_ids": [
+        "WS4-v3-8k-s1-ac58",
+        "WS4-v3-8k-s3-f437"
+      ],
+      "statuses": [
+        "NEGATIVE_OFFPOLICY_OVERACCUSE",
+        "NEGATIVE_PAIRED_8K_NULL"
+      ],
+      "raw_heldout_episodes": 180,
+      "dedup_unique_heldout_episodes": 180,
+      "unique_optimizer_steps": 715,
+      "min_mean_score": -0.788,
+      "max_mean_score": -0.777,
+      "runs_above_base_zero": 0,
+      "primary_bottleneck": "Terminating at 371 and 344 GRPO steps in 3.0h on A100 (mean 357.5 steps) leaves free_accuse_frac at 0.108-0.118 under 4k->8k shift: 95.0% (171/180) episodes accuse early (~Day 4-5) with 97.7% (167/171) below breakeven (-0.777 and -0.788) and world-paired s3 - 4k@8k = -0.073 +/- 0.173 (60/60 rosters)."
+    },
+    {
+      "bucket_id": "verda_x2_dagger_r1_honest_null",
+      "short_label": "Verda X2 DAgger r1 8k/4k Honest Nulls",
+      "title": "Verda X2 On-Policy Raw-Transcript DAgger Round 1 Honest Nulls (8k and 4k)",
+      "run_count": 2,
+      "run_ids": [
+        "WS4-dagger-r1-8k-verda",
+        "WS4-dagger-r1-4k-verda"
+      ],
+      "statuses": [
+        "NEGATIVE_DAGGER_HONEST_NULL"
+      ],
+      "raw_heldout_episodes": 91,
+      "dedup_unique_heldout_episodes": 91,
+      "unique_optimizer_steps": 250,
+      "min_mean_score": -0.542,
+      "max_mean_score": -0.101,
+      "runs_above_base_zero": 0,
+      "primary_bottleneck": "250 SFT steps on 4,000 solver-relabelled own-policy states (cap=256 required because cap=96 truncates 73.9% of hard DAgger plant_canary relabels) raised own-state agreement 43% -> 68% and doubled 8k whom-precision 0.10 -> 0.22, but 159/4,000 implicit next-token accuse labels failed to calibrate stopping: 92% premature accuse at 8k (-0.542 +/- 0.214, n=50) vs 85% abstain at 4k (-0.101 +/- 0.112, n=41)."
+    }
+  ],
+  "runs": [
+    {
+      "order": 1,
+      "run_id": "J4-pilot-44200",
+      "bucket_id": "infra_oom_zerovar_spot_reaper_n0",
+      "status": "FAILED_OOM",
+      "tiers_version": "v1.0",
+      "context_len": 4096,
+      "stage_kind": "sft_pilot_oom",
+      "compute_target": "FR8 V100-32GB (job 44200)",
+      "unique_optimizer_steps": 0,
+      "adapter_optimizer_steps": 0,
+      "heldout_n": 0,
+      "dedup_unique_heldout_n": 0,
+      "seed_span": null,
+      "mean_score": null,
+      "ci95": null,
+      "valid_call_rate": null,
+      "accused_rate": null,
+      "abstain_rate": null,
+      "secret_provenance": "none_n0",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json"
+      ]
+    },
+    {
+      "order": 2,
+      "run_id": "J4-v1-44397",
+      "bucket_id": "prefix_4k_sft_v13_sparse_loss",
+      "status": "NEGATIVE_REWARD_PROTOCOL_GAIN",
+      "tiers_version": "v1.3",
+      "context_len": 4096,
+      "stage_kind": "sft_prefix_4k",
+      "compute_target": "FR8 V100-32GB (job 44397)",
+      "unique_optimizer_steps": 450,
+      "adapter_optimizer_steps": 450,
+      "heldout_n": 12,
+      "dedup_unique_heldout_n": 12,
+      "seed_span": "v1.3_heldout_dedup12",
+      "mean_score": -0.25,
+      "ci95": 0.256,
+      "valid_call_rate": 0.99,
+      "accused_rate": 0.25,
+      "abstain_rate": 0.75,
+      "secret_provenance": "ephemeral_unpaired_urandom",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json"
+      ]
+    },
+    {
+      "order": 3,
+      "run_id": "WS4-base-44411",
+      "bucket_id": "untrained_base_protocol_stall",
+      "status": "BASELINE_CAVEATED",
+      "tiers_version": "v1.4",
+      "context_len": 4096,
+      "stage_kind": "untrained_base",
+      "compute_target": "FR8 V100-32GB (eval 44411)",
+      "unique_optimizer_steps": 0,
+      "adapter_optimizer_steps": 0,
+      "heldout_n": 16,
+      "dedup_unique_heldout_n": 0,
+      "seed_span": "800000..800005",
+      "mean_score": 0.0,
+      "ci95": 0.0,
+      "valid_call_rate": 0.03,
+      "accused_rate": 0.0,
+      "abstain_rate": 1.0,
+      "secret_provenance": "ephemeral_unpaired_urandom",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json"
+      ]
+    },
+    {
+      "order": 4,
+      "run_id": "WS4-base-pooled",
+      "bucket_id": "untrained_base_protocol_stall",
+      "status": "BASELINE_CAVEATED",
+      "tiers_version": "v1.4",
+      "context_len": 4096,
+      "stage_kind": "untrained_base_pooled",
+      "compute_target": "FR8 V100-32GB (evals 44411 + 44584)",
+      "unique_optimizer_steps": 0,
+      "adapter_optimizer_steps": 0,
+      "heldout_n": 36,
+      "dedup_unique_heldout_n": 36,
+      "seed_span": "800000..800012",
+      "mean_score": 0.0,
+      "ci95": 0.0,
+      "valid_call_rate": 0.03,
+      "accused_rate": 0.0,
+      "abstain_rate": 1.0,
+      "secret_provenance": "ephemeral_unpaired_urandom",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json"
+      ]
+    },
+    {
+      "order": 5,
+      "run_id": "WS4-v2-44412",
+      "bucket_id": "dense_4k_sft_blind_accuse",
+      "status": "NEGATIVE_BLIND_ACCUSE",
+      "tiers_version": "v1.4",
+      "context_len": 4096,
+      "stage_kind": "sft_dense_4k",
+      "compute_target": "FR8 V100-32GB (train 44410 / eval 44412)",
+      "unique_optimizer_steps": 887,
+      "adapter_optimizer_steps": 887,
+      "heldout_n": 82,
+      "dedup_unique_heldout_n": 82,
+      "seed_span": "800000..800027",
+      "mean_score": -0.395,
+      "ci95": 0.128,
+      "valid_call_rate": 0.92,
+      "accused_rate": 0.51,
+      "abstain_rate": 0.49,
+      "secret_provenance": "ephemeral_unpaired_urandom",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json"
+      ]
+    },
+    {
+      "order": 6,
+      "run_id": "WS4-v2-off30-68bb",
+      "bucket_id": "dense_4k_sft_blind_accuse",
+      "status": "NEGATIVE_BLIND_ACCUSE",
+      "tiers_version": "v1.4",
+      "context_len": 4096,
+      "stage_kind": "sft_dense_4k_reuse",
+      "compute_target": "Verda A100-80GB 68bbe201 (adapter 44410)",
+      "unique_optimizer_steps": 0,
+      "adapter_optimizer_steps": 887,
+      "heldout_n": 90,
+      "dedup_unique_heldout_n": 90,
+      "seed_span": "800030..800059",
+      "mean_score": -0.514,
+      "ci95": 0.115,
+      "valid_call_rate": 0.92,
+      "accused_rate": 0.5778,
+      "abstain_rate": 0.4222,
+      "secret_provenance": "ephemeral_unpaired_urandom",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json",
+        "context_confound/audit_summary.json"
+      ]
+    },
+    {
+      "order": 7,
+      "run_id": "WS4-v3-44548-44550",
+      "bucket_id": "infra_oom_zerovar_spot_reaper_n0",
+      "status": "FAILED_CUDA_OOM",
+      "tiers_version": "v1.4",
+      "context_len": 4096,
+      "stage_kind": "grpo_cuda_oom",
+      "compute_target": "FR8 V100-32GB (jobs 44548, 44550)",
+      "unique_optimizer_steps": 0,
+      "adapter_optimizer_steps": 0,
+      "heldout_n": 0,
+      "dedup_unique_heldout_n": 0,
+      "seed_span": null,
+      "mean_score": null,
+      "ci95": null,
+      "valid_call_rate": null,
+      "accused_rate": null,
+      "abstain_rate": null,
+      "secret_provenance": "none_n0",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json"
+      ]
+    },
+    {
+      "order": 8,
+      "run_id": "WS4-v3-44553",
+      "bucket_id": "infra_oom_zerovar_spot_reaper_n0",
+      "status": "FAILED_ZERO_VARIANCE",
+      "tiers_version": "v1.4",
+      "context_len": 4096,
+      "stage_kind": "grpo_unguided_zerovar",
+      "compute_target": "FR8 V100-32GB (job 44553)",
+      "unique_optimizer_steps": 6,
+      "adapter_optimizer_steps": 6,
+      "heldout_n": 0,
+      "dedup_unique_heldout_n": 0,
+      "seed_span": null,
+      "mean_score": null,
+      "ci95": null,
+      "valid_call_rate": null,
+      "accused_rate": null,
+      "abstain_rate": null,
+      "secret_provenance": "none_n0",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json"
+      ]
+    },
+    {
+      "order": 9,
+      "run_id": "WS4-v3-4k-s1-714d-spot",
+      "bucket_id": "infra_oom_zerovar_spot_reaper_n0",
+      "status": "FAILED_SPOT_PREEMPTED",
+      "tiers_version": "v1.4",
+      "context_len": 4096,
+      "stage_kind": "grpo_spot_preempted",
+      "compute_target": "Verda A100-80GB spot 714d8144",
+      "unique_optimizer_steps": 0,
+      "adapter_optimizer_steps": 0,
+      "heldout_n": 0,
+      "dedup_unique_heldout_n": 0,
+      "seed_span": null,
+      "mean_score": null,
+      "ci95": null,
+      "valid_call_rate": null,
+      "accused_rate": null,
+      "abstain_rate": null,
+      "secret_provenance": "none_n0",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json",
+        "verda_multiseed/multiseed_summary.json"
+      ]
+    },
+    {
+      "order": 10,
+      "run_id": "WS4-v3-4k-s1-44572",
+      "bucket_id": "grpo_4k_offpolicy_evidence_shift",
+      "status": "NEGATIVE_FLAT_V100_REPLICATE",
+      "tiers_version": "v1.4",
+      "context_len": 4096,
+      "stage_kind": "grpo_4k",
+      "compute_target": "FR8 V100-32GB (jobs 44572 / 44573)",
+      "unique_optimizer_steps": 192,
+      "adapter_optimizer_steps": 192,
+      "heldout_n": 82,
+      "dedup_unique_heldout_n": 82,
+      "seed_span": "800000..800027",
+      "mean_score": -0.209,
+      "ci95": 0.094,
+      "valid_call_rate": 0.97,
+      "accused_rate": 0.23,
+      "abstain_rate": 0.77,
+      "secret_provenance": "ephemeral_unpaired_urandom",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json",
+        "verda_multiseed/multiseed_summary.json"
+      ]
+    },
+    {
+      "order": 11,
+      "run_id": "WS4-v3-verda-s0-eval",
+      "bucket_id": "grpo_4k_offpolicy_evidence_shift",
+      "status": "NEGATIVE_4K_TRUNCATION_PERSISTS",
+      "tiers_version": "v1.4",
+      "context_len": 4096,
+      "stage_kind": "grpo_4k",
+      "compute_target": "Verda H100 3bb74f5a + A100 68bbe201",
+      "unique_optimizer_steps": 609,
+      "adapter_optimizer_steps": 609,
+      "heldout_n": 180,
+      "dedup_unique_heldout_n": 180,
+      "seed_span": "800000..800059",
+      "mean_score": -0.147,
+      "ci95": 0.063,
+      "valid_call_rate": 1.0,
+      "accused_rate": 0.21,
+      "abstain_rate": 0.79,
+      "secret_provenance": "ephemeral_unpaired_urandom",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json",
+        "verda_multiseed/multiseed_summary.json",
+        "context_confound/audit_summary.json"
+      ]
+    },
+    {
+      "order": 12,
+      "run_id": "WS4-v3-4k-s0-ctx8k",
+      "bucket_id": "same_weights_8k_inference_confound",
+      "status": "NEGATIVE_INFERENCE_CTX_CONFOUND",
+      "tiers_version": "v1.4",
+      "context_len": 8192,
+      "stage_kind": "grpo_4k_eval_at_8k_reuse",
+      "compute_target": "Verda A100-80GB 68bbe201 (adapter 3d0cd43b8037)",
+      "unique_optimizer_steps": 0,
+      "adapter_optimizer_steps": 609,
+      "heldout_n": 90,
+      "dedup_unique_heldout_n": 90,
+      "seed_span": "800000..800029",
+      "mean_score": -0.716,
+      "ci95": 0.105,
+      "valid_call_rate": 0.99,
+      "accused_rate": 0.78,
+      "abstain_rate": 0.22,
+      "secret_provenance": "shared_verda_1ca0c2a64d_unpaired_vs_base",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json",
+        "verda_multiseed/multiseed_summary.json",
+        "context_confound/audit_summary.json"
+      ]
+    },
+    {
+      "order": 13,
+      "run_id": "WS4-v3-8k-s0-3bb7",
+      "bucket_id": "grpo_8k_high_step_abstention_collapse",
+      "status": "NEGATIVE_ABSTAIN_COLLAPSE",
+      "tiers_version": "v1.4",
+      "context_len": 8192,
+      "stage_kind": "grpo_8k_high_step",
+      "compute_target": "Verda H100-80GB on-demand 3bb74f5a",
+      "unique_optimizer_steps": 637,
+      "adapter_optimizer_steps": 637,
+      "heldout_n": 90,
+      "dedup_unique_heldout_n": 90,
+      "seed_span": "800000..800029",
+      "mean_score": -0.06,
+      "ci95": 0.054,
+      "valid_call_rate": 0.98,
+      "accused_rate": 0.08,
+      "abstain_rate": 0.92,
+      "secret_provenance": "shared_verda_1ca0c2a64d_unpaired_vs_base",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "verda_multiseed/multiseed_summary.json"
+      ]
+    },
+    {
+      "order": 14,
+      "run_id": "WS4-v3-8k-s1-ac58",
+      "bucket_id": "grpo_8k_low_step_over_accuse",
+      "status": "NEGATIVE_OFFPOLICY_OVERACCUSE",
+      "tiers_version": "v1.4",
+      "context_len": 8192,
+      "stage_kind": "grpo_8k_low_step",
+      "compute_target": "Verda A100-80GB spot ac58df04",
+      "unique_optimizer_steps": 371,
+      "adapter_optimizer_steps": 371,
+      "heldout_n": 90,
+      "dedup_unique_heldout_n": 90,
+      "seed_span": "800000..800029",
+      "mean_score": -0.777,
+      "ci95": 0.118,
+      "valid_call_rate": 0.92,
+      "accused_rate": 0.94,
+      "abstain_rate": 0.06,
+      "secret_provenance": "ephemeral_unpaired_urandom",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json",
+        "verda_multiseed/multiseed_summary.json",
+        "context_confound/audit_summary.json"
+      ]
+    },
+    {
+      "order": 15,
+      "run_id": "WS4-v3-8k-s2-dbd0",
+      "bucket_id": "grpo_8k_high_step_abstention_collapse",
+      "status": "NEGATIVE_ABSTAIN_COLLAPSE",
+      "tiers_version": "v1.4",
+      "context_len": 8192,
+      "stage_kind": "grpo_8k_high_step",
+      "compute_target": "Verda H100-80GB spot dbd083ca",
+      "unique_optimizer_steps": 693,
+      "adapter_optimizer_steps": 693,
+      "heldout_n": 90,
+      "dedup_unique_heldout_n": 90,
+      "seed_span": "800000..800029",
+      "mean_score": -0.05,
+      "ci95": 0.049,
+      "valid_call_rate": 0.96,
+      "accused_rate": 0.07,
+      "abstain_rate": 0.93,
+      "secret_provenance": "ephemeral_unpaired_urandom",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json",
+        "verda_multiseed/multiseed_summary.json",
+        "context_confound/audit_summary.json"
+      ]
+    },
+    {
+      "order": 16,
+      "run_id": "WS4-v3-8k-s3-f437",
+      "bucket_id": "grpo_8k_low_step_over_accuse",
+      "status": "NEGATIVE_PAIRED_8K_NULL",
+      "tiers_version": "v1.4",
+      "context_len": 8192,
+      "stage_kind": "grpo_8k_low_step",
+      "compute_target": "Verda A100-80GB on-demand f4378173",
+      "unique_optimizer_steps": 344,
+      "adapter_optimizer_steps": 344,
+      "heldout_n": 90,
+      "dedup_unique_heldout_n": 90,
+      "seed_span": "800000..800029",
+      "mean_score": -0.788,
+      "ci95": 0.117,
+      "valid_call_rate": 0.94,
+      "accused_rate": 0.96,
+      "abstain_rate": 0.04,
+      "secret_provenance": "shared_verda_1ca0c2a64d_unpaired_vs_base",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "forensics_prior_runs.json",
+        "verda_multiseed/multiseed_summary.json",
+        "context_confound/audit_summary.json"
+      ]
+    },
+    {
+      "order": 17,
+      "run_id": "WS4-dagger-r1-8k-verda",
+      "bucket_id": "verda_x2_dagger_r1_honest_null",
+      "status": "NEGATIVE_DAGGER_HONEST_NULL",
+      "tiers_version": "v1.4",
+      "context_len": 8192,
+      "stage_kind": "dagger_r1_sft",
+      "compute_target": "Verda A100-40GB e9ea8b2e + A100-80GB 68bbe201",
+      "unique_optimizer_steps": 250,
+      "adapter_optimizer_steps": 250,
+      "heldout_n": 50,
+      "dedup_unique_heldout_n": 50,
+      "seed_span": "800000..800026",
+      "mean_score": -0.542,
+      "ci95": 0.214,
+      "valid_call_rate": 1.0,
+      "accused_rate": 0.92,
+      "abstain_rate": 0.08,
+      "secret_provenance": "shared_verda_1ca0c2a64d_unpaired_vs_base",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "dagger_mechanism/dagger_mechanism_summary.json"
+      ]
+    },
+    {
+      "order": 18,
+      "run_id": "WS4-dagger-r1-4k-verda",
+      "bucket_id": "verda_x2_dagger_r1_honest_null",
+      "status": "NEGATIVE_DAGGER_HONEST_NULL",
+      "tiers_version": "v1.4",
+      "context_len": 4096,
+      "stage_kind": "dagger_r1_sft_reuse",
+      "compute_target": "Verda A100-80GB 68bbe201 (same DAgger r1 adapter)",
+      "unique_optimizer_steps": 0,
+      "adapter_optimizer_steps": 250,
+      "heldout_n": 41,
+      "dedup_unique_heldout_n": 41,
+      "seed_span": "800000..800024",
+      "mean_score": -0.101,
+      "ci95": 0.112,
+      "valid_call_rate": 1.0,
+      "accused_rate": 0.15,
+      "abstain_rate": 0.85,
+      "secret_provenance": "shared_verda_1ca0c2a64d_unpaired_vs_base",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json",
+        "dagger_mechanism/dagger_mechanism_summary.json"
+      ]
+    },
+    {
+      "order": 19,
+      "run_id": "Verda-base-backup-18ac",
+      "bucket_id": "infra_oom_zerovar_spot_reaper_n0",
+      "status": "FAILED_REAPER_DELETED",
+      "tiers_version": "v1.4",
+      "context_len": 4096,
+      "stage_kind": "untrained_base_reaper_lost",
+      "compute_target": "Verda A100-80GB on-demand 18acfa5d",
+      "unique_optimizer_steps": 0,
+      "adapter_optimizer_steps": 0,
+      "heldout_n": 0,
+      "dedup_unique_heldout_n": 0,
+      "seed_span": "800006..800035",
+      "mean_score": null,
+      "ci95": null,
+      "valid_call_rate": null,
+      "accused_rate": null,
+      "abstain_rate": null,
+      "secret_provenance": "none_n0",
+      "beats_base_zero": false,
+      "verified_improvement": false,
+      "backing_artifacts": [
+        "experiment_ledger.json"
+      ]
+    }
+  ]
+}

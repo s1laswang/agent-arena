@@ -40,11 +40,11 @@ One ledgered client (`canary/gemini/ledger.py`, a row per call) drives four role
 - Cells have 10–40 paired seeds, so CIs are wide; the ladder's gate calls 3.6-flash "not distinguishable from the solver on hard, but the CIs are wide". Hosted Gemma 4 (n=5) is exploratory.
 - Atlas v1 saw our regret tags; only the blind re-run counts as discovery. The Failure Gallery is a code decomposition that Gemini only names.
 - No human-agreement number is claimed.
-- The AfterQuery gap depends on the harness: per `docs/reports/gap.md` (justSilas 1bfb77d), gemini-4-carbon on v1.4 hard scores 65% [24%, 98%] of the solver via OpenCode over MCP (n=30; luck-adjusted 72% [52%, 91%]) and 95% [62%, 140%] in-process. No further gap claim.
+- The AfterQuery gap depends on the harness: per `docs/reports/gap.md` (justSilas 1bfb77d), gemini-4-carbon on v1.4 hard scores 65% [24%, 98%] of the solver via OpenCode over MCP (n=30), and 72% [52%, 91%] luck-adjusted (graded by the solver's own posterior) and 95% [62%, 140%] in-process. No further gap claim.
 - TTS and the Live API are demo only, not measurements.
 
 ## Gemini across the team
-- **Valio Aimo** ([`docs/GEMINI.md`](https://github.com/s1laswang/junction-aimo-agents/blob/main/docs/GEMINI.md)): a gemini-3.8-flash buyer agent escalates 19% of steps to gemini-4-hydrogen; compaction cut cost per order by 59%.
+- **Valio Aimo** ([`docs/GEMINI.md`](https://github.com/s1laswang/junction-aimo-agents/blob/main/docs/GEMINI.md)): a gemini-3.8-flash buyer agent escalates 5/34 steps (15%) to gemini-4-hydrogen; compaction cut cost per order from $0.0822 to $0.0352 (−57%); 6/6 montage scenarios pass.
 - **Meta glasses: HoldUp** ([`GEMINI.md`](https://github.com/s1laswang/junction-meta-glasses/blob/main/GEMINI.md)): a Live API label checker for blind and low-vision users; 0/754 confident-wrong strength reads in a 1,740-image eval. Gemini-generated, ground-truthed label images also trained a PaliGemma 2 3B LoRA: "strength visible" recall 91.4% [86.5, 94.6] vs 65.6% for YOLOv8n on n=348 held-out images; not yet wired into the live product ([`GEMMA.md`](https://github.com/s1laswang/junction-meta-glasses/blob/main/GEMMA.md)).
 
 ## Reproduce

@@ -38,7 +38,7 @@ def test_registry_complete():
 
 
 def test_baselines_deterministic_scripts():
-    p, q = BASELINES["stop_early"](seed=3), BASELINES["stop_early"](seed=3)
+    p, q = BASELINES["guess_day1"](seed=3), BASELINES["guess_day1"](seed=3)
     for x in (p, q):
         x.reset([], "")
     assert p.act([]) == q.act([]) == ("list_employees", {})
@@ -51,7 +51,7 @@ def test_do_nothing_zero(tier):
 
 def test_stop_early_about_v_over_n():
     from canary.rules import TIERS
-    m = statistics.mean(_run("stop_early"))
+    m = statistics.mean(_run("guess_day1"))
     assert m <= 3.0 / TIERS["easy"].n_employees  # ≈1/12 with loose bound over 30 seeds
 
 
@@ -61,7 +61,7 @@ def test_stop_early_about_v_over_n():
 # probe_all  0      0       0       accuse_decoy 0.087 0.029 0.032
 # accuse_most_logs 0.542 0.265 0.151   logs_minus_decoy 0.515 0.233 0.182
 # obvious_heuristic 0.387 0.148 0.139
-CHANCE_LEVEL = {"stop_early", "random", "restrict_all", "probe_all", "accuse_decoy"}
+CHANCE_LEVEL = {"stop_early", "guess_day1", "random", "restrict_all", "probe_all", "accuse_decoy"}
 CHANCE_BOUND = {"easy": 0.25, "medium": 0.15, "hard": 0.15}   # ≈ 2-3x V/N + noise margin
 # Log-based baselines currently beat chance by a lot (EXPLOITS #4). These bounds only stop it
 # getting worse; the real bar is test_log_signal_alone_near_chance (strict since ENV tiers v1).
@@ -118,8 +118,13 @@ def wrong_accusation_penalty() -> float:
 def test_stop_early_negative(tier):
     if wrong_accusation_penalty() != -1.0:
         pytest.xfail("v0 stop-early lottery (EXPLOITS #1)")
-    m = statistics.mean(_run("stop_early", tier, range(50)))
+    m = statistics.mean(_run("guess_day1", tier, range(50)))
     assert m < 0, (tier, m)
+
+
+@pytest.mark.parametrize("tier", ["easy", "medium", "hard"])
+def test_stop_early_is_exactly_zero(tier):
+    assert all(s == 0 for s in _run("stop_early", tier, range(20)))
 
 
 LOGS_ONLY_MAX_ACC = {"easy": 0.40, "medium": 2.0 / 20, "hard": 2.0 / 30}  # CEO decision 03:00

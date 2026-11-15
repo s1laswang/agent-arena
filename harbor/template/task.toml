@@ -11,6 +11,9 @@ schema_version = "1.4"
 #   localhost), copies /evidence/ledger.json out as an artifact, and the separate verifier writes
 #   ledger["score"] to /logs/verifier/reward.txt. The agent never holds the token and never touches
 #   the verifier sandbox.
+# - Defence in depth (PLAN-95 C1): the server HMAC-SHA256-signs the ledger with a build-time key that only the
+#   sidecar image and the verifier image hold (tests/ledger_key). test.sh fails closed (reward 0) on a missing
+#   or bad signature, so a ledger.json written or edited anywhere else is worthless.
 artifacts = [
     { source = "/evidence/ledger.json", service = "canary-server", destination = "ledger.json" },
 ]
@@ -37,7 +40,9 @@ command = "python /opt/canary-server/collect.py"
 timeout_sec = 60.0
 
 [agent]
-timeout_sec = 3600.0
+# 3 h: 5 of 30 committed OpenCode gemini-4-carbon hard episodes ran > 3600 s (max 6,592 s, mostly provider latency);
+# a shorter cap would cut honest agents off at score 0 (docs/DIFFICULTY.md P0).
+timeout_sec = 10800.0
 
 [environment]
 build_timeout_sec = 900.0

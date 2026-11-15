@@ -49,7 +49,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--html", default="results/gemini/dashboard.html")
     ap.add_argument("--out", default="docs/gemini/assets")
-    ap.add_argument("--panels", default="headline,usage,ladder,atlas,swarm,roles")
+    ap.add_argument("--panels", default="headline,usage,ladder,atlas,swarm,roles,leaderboard")
     ap.add_argument("--theme", default="light", choices=["light", "dark"])
     ap.add_argument("--width", type=int, default=1600)
     ap.add_argument("--height", type=int, default=3600)

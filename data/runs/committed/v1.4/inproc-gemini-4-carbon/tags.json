@@ -1,0 +1,95 @@
+{
+ "gemini:gemini-4-carbon": {
+  "episodes": 60,
+  "tiers": {
+   "hard": 30,
+   "medium": 30
+  },
+  "regret_total": 6.7426,
+  "tags": {
+   "premature_accusation": {
+    "count": 4,
+    "episodes_with": 4,
+    "regret_sum": 1.8808,
+    "worst": {
+     "run_id": "medium",
+     "seed": 2,
+     "t": 84,
+     "day": 8,
+     "tool": "accuse",
+     "args": {
+      "employee": "e09"
+     },
+     "regret": 0.8157,
+     "p_best": 0.5138,
+     "why": "accused before the evidence was decisive (solver top-suspect belief 0.51 < 0.6)"
+    },
+    "rate": 0.067
+   },
+   "budget_waste": {
+    "count": 60,
+    "episodes_with": 56,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 0,
+     "t": 3,
+     "day": 1,
+     "tool": "search_messages",
+     "args": {
+      "day_to": 1,
+      "query": " ",
+      "day_from": 1
+     },
+     "regret": 0.0,
+     "p_best": 0.025,
+     "why": "repeated or failed call that used budget without new information"
+    },
+    "rate": 0.933
+   },
+   "uninformative_canary": {
+    "count": 1,
+    "episodes_with": 1,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 19,
+     "t": 125,
+     "day": 13,
+     "tool": "plant_canary",
+     "args": {
+      "doc_title": "Board dividend policy revision",
+      "assignment": {
+       "e10": "s3",
+       "e36": "s2",
+       "e32": "s3",
+       "e09": "s1"
+      }
+     },
+     "regret": 0.0,
+     "p_best": 0.8994,
+     "why": "canary variants split the suspects poorly (low information)"
+    },
+    "rate": 0.017
+   },
+   "no_accusation": {
+    "count": 5,
+    "episodes_with": 5,
+    "regret_sum": 0.0,
+    "worst": {
+     "run_id": "hard",
+     "seed": 26,
+     "t": 212,
+     "day": 21,
+     "tool": "(no accusation)",
+     "args": {},
+     "regret": 0.0,
+     "p_best": 0.3793,
+     "why": "episode ended without an accusation (best belief 0.38)"
+    },
+    "rate": 0.083
+   }
+  },
+  "score_mean": 0.5017
+ }
+}

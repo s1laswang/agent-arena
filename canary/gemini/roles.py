@@ -392,14 +392,24 @@ def build_index(res: Path) -> list[dict]:
     if A:
         c, v, m = A.get("corpus", {}), A.get("verification", {}), (A.get("modes") or [{}])[0]
         ha = A.get("human_agreement") or {}
+        v1 = (f"top failure mode \"{m.get('name')}\" = {_pct(m.get('regret_share'))} of all solver regret; "
+              f"{v.get('quotes_verified')}/{v.get('quotes_checked')} quotes verbatim ({_pct(v.get('pass_rate'))}); "
+              f"human agreement {_pct(ha.get('score')) if ha.get('status') == 'done' else 'pending'}")
+        B = _load(res / "atlas_blind.json")
+        rc, bq = (B or {}).get("recovery") or {}, (B or {}).get("quotes") or {}
+        blind = (f"Blind re-run (atlas_blind.json, {B.get('model')}, {str(B.get('git_sha', ''))[:7]}): recovered "
+                 f"{len(rc.get('tags_recovered') or [])}/{rc.get('n_tags')} code-defined failure modes and named "
+                 f"{len(rc.get('novel_modes') or [])} new ones; cited steps cover {_pct(rc.get('regret_share_covered'))} of solver regret "
+                 f"(weak coverage); {bq.get('verified_agent_text')}/{bq.get('checked')} quotes verbatim. "
+                 f"v1 (not blind: it saw our regret tags and solver beliefs): ") if B and rc else ""
         rows.append({"role": "Analyst (Failure Atlas)", "key": "analyst",
-                     "run": "results/gemini/atlas.json (+ atlas.md, atlas_charts/)",
-                     "model": ", ".join(f"{k}: {v_}" for k, v_ in (A.get("models") or {}).items()), "thinking": "model default",
+                     "run": "results/gemini/atlas.json (+ atlas.md, atlas_charts/)" + (", atlas_blind.json (+ atlas_blind.md)" if blind else ""),
+                     # the batch slot is omitted: Batch API calls failed on our key (quota), so it did no work
+                     "model": ", ".join(f"{k}: {v_}" for k, v_ in (A.get("models") or {}).items() if k != "batch"),
+                     "thinking": "model default",
                      "commit": str(A.get("git_sha", ""))[:10], "generated_at": A.get("generated_at"),
                      "n": f"{c.get('episodes')} episodes, {c.get('tokens'):,} tokens in one prompt" if c.get("tokens") else "",
-                     "headline": (f"top failure mode \"{m.get('name')}\" = {_pct(m.get('regret_share'))} of all solver regret; "
-                                  f"{v.get('quotes_verified')}/{v.get('quotes_checked')} quotes verbatim ({_pct(v.get('pass_rate'))}); "
-                                  f"human agreement {_pct(ha.get('score')) if ha.get('status') == 'done' else 'pending'}")})
+                     "headline": blind + v1})
     S = _load(res / "swarm.json")
     if S:
         cnt = S.get("counts", {})
@@ -409,8 +419,7 @@ def build_index(res: Path) -> list[dict]:
                      "model": ", ".join(S.get("models") or []), "thinking": str(S.get("planner_thinking") or "model default"),
                      "commit": str(S.get("git_sha", ""))[:10], "generated_at": S.get("generated_at"),
                      "n": f"{cnt.get('attempts')} attacks, {cnt.get('tool_calls')} tool calls",
-                     "headline": f"{cnt.get('exploits', 0)} verified exploits; best unjustified score " +
-                                 ", ".join(f"{t} {b:+.2f} vs solver {s:+.2f}" for t, (b, s) in bu.items() if b is not None and s is not None)})
+                     "headline": _swarm_headline(S, cnt, bu)})
     W, WP = _load(res / "roles" / "worldtext" / "meta.json"), _load(res / "roles" / "worldtext" / "lint_probe.json")
     if W and WP:
         pl, ps = WP["probe_llm_gemini_text"], WP["probe_stub_gemini_text"]
@@ -432,13 +441,48 @@ def build_index(res: Path) -> list[dict]:
             parts.append(f"vs {inv}: score {s['gemini_mole_mean_score']:+.2f} with the Gemini mole vs "
                          f"{s['default_mole_mean_score']:+.2f} with the default mole (paired {s['paired_diff_mean']:+.2f}), "
                          f"caught {s['gemini_mole_caught']}/{s['n']} vs {s.get('default_mole_caught', '?')}/{s['n']}{leaks}")
-        rows.append({"role": "Adaptive mole (arena)", "key": "mole",
+        seeds = sorted(M["seeds"])
+        span = (f"{seeds[0]}\u2013{seeds[-1]}" if seeds == list(range(seeds[0], seeds[-1] + 1)) and len(seeds) > 1
+                else ", ".join(map(str, seeds)))
+        rows.append({"role": "Adaptive mole (arena mode, not the judged env)", "key": "mole",
                      "run": "results/gemini/roles/mole/ (episodes.jsonl per-day decisions, summary.json, meta.json, ledger.jsonl)",
                      "model": M["model"], "thinking": str(M.get("thinking_level")), "commit": _commit(M),
-                     "generated_at": M["finished_at"], "n": f"{len(M['seeds'])} dev seeds x {len(M['investigators'])} investigators ({M['tier']})",
+                     "generated_at": M["finished_at"],
+                     "n": f"n={len(seeds)}: {M['tier']} dev seeds {span}, x {len(M['investigators'])} investigators",
+                     "caveats": MOLE_CAVEATS,
                      "headline": "; ".join(parts)})
     return rows
 
+
+def _swarm_headline(S: dict, cnt: dict, bu: dict) -> str:
+    """Same reading as the dashboard (canary.gemini.dashboard.slim_swarm): a tier whose best unjustified attempt was
+    flagged in-run and overturned on review is reported as flagged -> overturned, never as a clean number."""
+    from canary.gemini.dashboard import slim_swarm
+    s = slim_swarm(S)
+    over = {p["tier"]: p for p in s["per_tier"] if p["overturned"]}
+    rev = {c["attempt"]: c for c in s["candidates_review"]}
+    parts = []
+    for t, (b, sol) in bu.items():
+        if b is None or sol is None:
+            continue
+        if t in over:
+            c = rev[over[t]["attempt"]]
+            parts.append(f"{t}: {c['attempt']} flagged in-run at {c['in_run']['mean']:+.2f} vs solver {c['in_run']['solver_mean']:+.2f} "
+                         f"(n={c['in_run']['n']}), overturned on review ({c['review']['mean']:+.2f} vs {c['review']['solver_mean']:+.2f}, "
+                         f"n={c['review']['n']})")
+        else:
+            parts.append(f"{t} {b:+.2f} vs solver {sol:+.2f}")
+    pc = s.get("positive_control") or {}
+    tail = (f"; {cnt.get('invariant_violations')} invariant violations" if cnt.get("invariant_violations") is not None else "") + \
+           (f"; positive control {pc.get('attackers_found')}/{pc.get('attempts')}" if pc else "")
+    return f"{cnt.get('exploits', 0)} verified exploits; best unjustified score " + ", ".join(parts) + tail
+
+
+MOLE_CAVEATS = [
+    "Leak damage is flat per leak whatever the distribution, so broad leaking is fully rewarded in our env (a simplification).",
+    "The judged v1.4 tasks use the scripted moles.",
+    "Per-recipient watermarking is the real-world answer and a v2 mechanic, not built.",
+]
 
 ROLES_MD = """# Canary Lab: one real Gemini run per role
 
@@ -467,6 +511,9 @@ How the two new runs were made (`canary/gemini/roles.py`, every call through `ca
 - **Adaptive mole**: gemini-4-carbon plays the mole day by day (`canary.agents.mole_arena.LLMMole`, arena mode, never the
   judge path) against the reference solver and the heuristic on medium, respecting the env's p_leak gate; the same seeds
   are replayed with the default mole for a paired comparison. Investigator score: lower = the mole did better.
+
+Adaptive-mole caveats (arena mode, not the judged env):
+{mole_caveats}
 """
 
 
@@ -476,7 +523,7 @@ def run_index(a) -> int:
     (res / "roles").mkdir(parents=True, exist_ok=True)
     (res / "roles" / "index.json").write_text(json.dumps({"generated_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
                                                           "roles": rows}, indent=1) + "\n")
-    md = ROLES_MD.format(when=dt.datetime.now().astimezone().strftime("%a %d %b %H:%M %Z"), rows="\n".join(
+    md = ROLES_MD.format(mole_caveats="\n".join(f"{i}. {c}" for i, c in enumerate(MOLE_CAVEATS, 1)), when=dt.datetime.now().astimezone().strftime("%a %d %b %H:%M %Z"), rows="\n".join(
         f"| {r['role']} | `{r['run']}` | {r['model']} ({r['thinking']}) | `{r['commit']}` | {r['n']} | {r['headline']} |" for r in rows))
     Path(a.md).write_text(md)
     print(md)

@@ -1,9 +1,10 @@
 """Generate the Canary Harbor dataset: one Harbor task per (tier, judge seed).
 
-    python harbor/build.py                                   # all tiers x all judge seeds -> harbor/dataset/
+    python harbor/build.py                                   # THE JUDGE SET: hard x seeds 900000-900009 (10 tasks)
     python harbor/build.py --tiers medium --seeds 900000     # one task
+    python harbor/build.py --tiers easy,medium,hard --seeds judge   # everything: 3 tiers x all 40 judge seeds
     python harbor/build.py --seeds 900000-900004 --out /tmp/canary-ds
-    python harbor/build.py --verifier shared                 # fallback for Harbor without [[verifier.collect]]
+    python harbor/build.py --verifier shared --unsafe-shared-not-for-judging   # fallback, NOT for judging
 
 Each task is self-contained (works on any compose-capable Harbor provider):
 
@@ -18,7 +19,18 @@ Each task is self-contained (works on any compose-capable Harbor provider):
                                         + episode.json {tier, seed} (0600; read via CANARY_EPISODE_FILE)
       solution/solve.sh (+ canary/)     oracle: reference solver over MCP (uploaded only for `-a oracle`)
       solution/check_isolation.sh
-      tests/Dockerfile, tests/test.sh   verifier: reward = ledger score from the sidecar
+      tests/Dockerfile, tests/test.sh   verifier: reward = ledger score from the sidecar, after the HMAC check
+      tests/ledger_key                  build-time ledger signing key (0600; verifier image only)
+
+Default = the judge set (PLAN-95 A1): tier hard, judge seeds 900000-900009. Hard is the tier where the reference
+solver keeps its EV edge over frontier agents, and these 10 seeds were fixed before any frontier run on them
+(pre-registered, not cherry-picked). --tiers / --seeds still build medium, easy and any other judge/held-out seed.
+
+Ledger signing (PLAN-95 C1, defence in depth): one random 32-byte key per build is written ONLY into each task's
+sidecar build context (canary-server/ledger_key, 0600, CANARY_LEDGER_KEY_FILE) and the verifier build context
+(tests/ledger_key). The server HMAC-SHA256-signs every /ledger payload; test.sh rejects (reward 0) a missing or bad
+signature. The agent image never sees either build context. (--verifier shared: the verifier runs in `main`, so the
+key reaches it via [verifier].env like the ledger token; weaker, see harbor/README.md.)
 
 World secret: one random 32-byte secret per build (or --secret-file, e.g. data/worlds/judge/SALT for the
 team's exact numbers) is written ONLY into each task's sidecar build context and baked into the server image as
@@ -38,6 +50,8 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+JUDGE_SET_TIERS = "hard"                 # the default build (PLAN-95 A1): pre-registered, hard only
+JUDGE_SET_SEEDS = "900000-900009"
 ROOT = HERE.parent
 TEMPLATE = HERE / "template"
 TEMPLATED = {"task.toml", "environment/docker-compose.yaml"}  # string.Template ($VAR); everything else copied verbatim
@@ -73,7 +87,13 @@ def render_instruction(tier: str) -> str:
     return PREFACE + render(tier)
 
 
-def build_task(out: Path, tier: str, seed: int, verifier: str, world_secret: bytes) -> Path:
+def write_secret(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    path.chmod(0o600)
+
+
+def build_task(out: Path, tier: str, seed: int, verifier: str, world_secret: bytes, ledger_key: bytes) -> Path:
     task_id = f"{tier}-{seed}"
     dst = out / f"canary-{task_id}"
     if dst.exists():
@@ -85,7 +105,9 @@ def build_task(out: Path, tier: str, seed: int, verifier: str, world_secret: byt
         "TASK_ID": task_id, "TIER": tier, "SEED": str(seed), "VERIFIER_MODE": verifier,
         # shared mode only: a per-build grader token, known to the sidecar (compose) and the verifier
         # (task.toml); neither file is visible inside the agent container.
-        "VERIFIER_ENV_LINE": f'env = {{ CANARY_LEDGER_TOKEN = "{token}" }}' if token else "",
+        # The ledger signing key reaches a shared verifier the same way (a separate verifier has tests/ledger_key).
+        "VERIFIER_ENV_LINE": (f'env = {{ CANARY_LEDGER_TOKEN = "{token}", CANARY_LEDGER_KEY = "{ledger_key.decode()}" }}'
+                              if token else ""),
         "LEDGER_TOKEN_LINE": f'      CANARY_LEDGER_TOKEN: "{token}"' if token else "",
     }
     for rel in TEMPLATED:
@@ -97,10 +119,12 @@ def build_task(out: Path, tier: str, seed: int, verifier: str, world_secret: byt
     (dst / "instruction.md").write_text(render_instruction(tier))
     for target in (dst / "environment" / "canary-server" / "canary", dst / "solution" / "canary"):
         shutil.copytree(ROOT / "canary", target, ignore=vendor_ignore)
-    salt = dst / "environment" / "canary-server" / "data" / "worlds" / "judge" / "SALT"
-    salt.parent.mkdir(parents=True, exist_ok=True)
-    salt.write_bytes(world_secret)
-    salt.chmod(0o600)
+    write_secret(dst / "environment" / "canary-server" / "data" / "worlds" / "judge" / "SALT", world_secret)
+    # Ledger signing key: sidecar (signs) + separate verifier (checks). Never under environment/ outside
+    # canary-server/ (the agent image's context) and never in solution/ (uploaded into main for oracle runs).
+    write_secret(dst / "environment" / "canary-server" / "ledger_key", ledger_key)
+    if verifier == "separate":
+        write_secret(dst / "tests" / "ledger_key", ledger_key)
     episode = dst / "environment" / "canary-server" / "episode.json"
     episode.write_text(json.dumps({"tier": tier, "seed": seed}))
     episode.chmod(0o600)
@@ -123,13 +147,25 @@ def parse_seeds(spec: str) -> list[int]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--tiers", default="easy,medium,hard")
-    ap.add_argument("--seeds", default="judge", help="'judge' (default), '900000', '900000-900009' or a comma list")
+    ap.add_argument("--tiers", default=JUDGE_SET_TIERS,
+                    help=f"comma list of tiers (default: {JUDGE_SET_TIERS!r}, the judge set)")
+    ap.add_argument("--seeds", default=JUDGE_SET_SEEDS,
+                    help=f"'{JUDGE_SET_SEEDS}' (default, the judge set), 'judge' (all 40 judge seeds), "
+                         "'900000' or a comma list")
     ap.add_argument("--out", default=str(HERE / "dataset"))
     ap.add_argument("--verifier", choices=["separate", "shared"], default="separate")
+    ap.add_argument("--unsafe-shared-not-for-judging", action="store_true",
+                    help="required with --verifier shared: that mode runs test.sh in the agent's container (EXPLOITS #42)")
     ap.add_argument("--secret-file", default=None,
                     help="world secret to bake into the sidecars (default: a fresh random secret per build)")
     a = ap.parse_args(argv)
+    if a.verifier == "shared":   # EXPLOITS #42
+        if not a.unsafe_shared_not_for_judging:
+            ap.error("--verifier shared is NOT for judging (test.sh then runs inside the agent's container; on our "
+                     "Harbor 0.25 / Docker Desktop host it did not run at all, so a reward file the agent leaves behind "
+                     "was all Harbor saw). Use the default separate verifier, or pass "
+                     "--unsafe-shared-not-for-judging if you really mean it.")
+        print("WARNING: building with --verifier shared: NOT for judging (EXPLOITS #42).", file=sys.stderr)
     sys.path.insert(0, str(ROOT))
     from canary.rules import HELDOUT_SEEDS, JUDGE_SEEDS, TIERS
 
@@ -149,13 +185,16 @@ def main(argv: list[str] | None = None) -> int:
             ap.error("--secret-file must hold at least 16 bytes")
     else:
         world_secret = secrets.token_hex(32).encode()
+    ledger_key = secrets.token_hex(32).encode()   # always fresh: it signs, it does not pick the world
     n = 0
     for t in tiers:
         for s in seeds:
-            build_task(out, t, s, a.verifier, world_secret)
+            build_task(out, t, s, a.verifier, world_secret, ledger_key)
             n += 1
     src = "--secret-file" if a.secret_file else "fresh random"
-    print(f"wrote {n} task(s) to {out} (verifier={a.verifier}, world secret: {src}, baked into the sidecars only)")
+    judge_set = " = the judge set" if (a.tiers, a.seeds) == (JUDGE_SET_TIERS, JUDGE_SET_SEEDS) else ""
+    print(f"wrote {n} task(s) to {out}{judge_set} (tiers={','.join(tiers)}, verifier={a.verifier}, "
+          f"world secret: {src}, baked into the sidecars only; ledger signing key: fresh, sidecar + verifier only)")
     return 0
 
 

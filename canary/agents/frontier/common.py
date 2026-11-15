@@ -35,10 +35,10 @@ from canary.types import EpisodeResult, Step
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def episode_prompt(tier: str, seed: int) -> str:
-    """Identical to LLMPolicy's system prompt without hints: Env instruction verbatim + the generic line."""
+def episode_prompt(tier: str, seed: int, hint: str | None = None) -> str:
+    """Identical to LLMPolicy's system prompt: Env instruction verbatim + the generic line (+ opt-in hint paragraph)."""
     from canary.env import Env
-    return build_system_prompt(Env(tier, seed).instruction())
+    return build_system_prompt(Env(tier, seed).instruction(), hint)
 
 
 # ---------- server lifecycle
@@ -73,7 +73,8 @@ class Server:
         from canary.mcp_server import clean_launch_env, write_secret_files
         # INTEGRITY item 2: the seed and ledger token go in 0600 files, never in the server's environment.
         env = dict(clean_launch_env(), **write_secret_files(self.tier, self.seed, self.token),
-                   CANARY_ALLOW_DEV="1", CANARY_PORT=str(self.port), CANARY_HOST="127.0.0.1")
+                   CANARY_ALLOW_DEV="1", CANARY_PORT=str(self.port), CANARY_HOST="127.0.0.1",
+                   CANARY_CONSUME_SECRET_FILES="1")
         if os.environ.get("CANARY_TIERS_OVERRIDE"):
             env["CANARY_TIERS_OVERRIDE"] = os.environ["CANARY_TIERS_OVERRIDE"]
         log = subprocess.DEVNULL
@@ -405,7 +406,7 @@ def run_one(spec: RunSpec, seed: int, build: Callable[[Path, str, str], list[str
     cleanup: list[Path] = []
     try:
         srv.start(log_dir=spec.out / "transcripts", port_dir=spec.out / "servers")
-        prompt = episode_prompt(spec.tier, seed)
+        prompt = episode_prompt(spec.tier, seed, spec.extra.get("hint"))
         wd = make_clean_workdir()
         argv = build(wd, prompt, srv.url)
         assert_clean(wd, files)
@@ -507,10 +508,11 @@ def base_args(desc: str, default_model: str) -> argparse.ArgumentParser:
     ap.add_argument("--timeout", type=int, default=2400, help="seconds per episode")
     ap.add_argument("--retries", type=int, default=1, help="retries per seed on infra errors (server died)")
     ap.add_argument("--smoke", action="store_true")
+    ap.add_argument("--hint", default=None, help="opt-in hint tag appended to the agent prompt (e.g. ev_delay)")
     ap.add_argument("--dry-run", action="store_true")
     return ap
 
 
 def spec_from(a, agent: str) -> RunSpec:
     out = Path(a.out) if a.out else REPO_ROOT / a.root / run_id(agent, a.tier)
-    return RunSpec(agent, a.tier, parse_seeds(a.seeds), out, a.timeout, a.jobs, a.retries, extra={"smoke": bool(a.smoke)})
+    return RunSpec(agent, a.tier, parse_seeds(a.seeds), out, a.timeout, a.jobs, a.retries, extra={"smoke": bool(a.smoke), "hint": a.hint})

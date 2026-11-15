@@ -94,8 +94,10 @@ def empty_final_response(stdout: str) -> bool:
 
 
 class Job:
-    def __init__(self, harness: str, tier: str, seed: int, staging: Path, model: str, timeout: int):
+    def __init__(self, harness: str, tier: str, seed: int, staging: Path, model: str, timeout: int,
+                 hint: str | None = None):
         self.harness, self.tier, self.seed, self.staging, self.model, self.timeout = harness, tier, seed, staging, model, timeout
+        self.hint = hint
         self.dir = staging / harness / tier / str(seed)
 
     @property
@@ -112,9 +114,12 @@ class Job:
         if self.harness == "opencode":
             return UV + ["-m", "canary.agents.frontier.opencode_run", "--model", f"google/{self.model}",
                          "--tier", self.tier, "--seeds", str(self.seed), "--jobs", "1", "--retries", "0",
-                         "--timeout", str(self.timeout), "--out", str(self.dir)]
+                         "--timeout", str(self.timeout), "--out", str(self.dir)] + self._hint()
         return UV + ["-m", "canary.agents.play", "--agent", f"gemini:{self.model}", "--tier", self.tier,
-                     "--seeds", str(self.seed), "--out", str(self.dir)]
+                     "--seeds", str(self.seed), "--out", str(self.dir)] + self._hint()
+
+    def _hint(self) -> list[str]:
+        return ["--hint", self.hint] if self.hint else []
 
     def running(self) -> bool:
         f = self.dir / "RUNNING.json"
@@ -143,6 +148,8 @@ def main(argv=None) -> int:
     ap.add_argument("--harness-first", action="store_true",
                     help="queue every job of the first harness before the second (prioritise the headline path)")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--hint", default=None, help="opt-in agent-prompt hint (PLAN-95 B1: ev_delay); default staging "
+                    "gets a -hint-<tag> suffix so hinted runs never mix with the baseline")
     a = ap.parse_args(argv)
     from canary.rules import TIERS_VERSION
     if TIERS_VERSION != a.tiers_version:
@@ -150,13 +157,13 @@ def main(argv=None) -> int:
         return 2
     lo, hi = (int(x) for x in a.seeds.split("-"))
     seeds = list(range(lo, hi + 1))
-    staging = Path(a.staging or f"data/runs/staging-gemini-{a.tiers_version}")
+    staging = Path(a.staging or f"data/runs/staging-gemini-{a.tiers_version}" + (f"-hint-{a.hint}" if a.hint else ""))
     (staging / "logs").mkdir(parents=True, exist_ok=True)
     ledger = staging / "spend_ledger.jsonl"
     hs = [h for h in ("opencode", "inproc") if h in a.harnesses.split(",")]
     tiers = a.tiers.split(",")
     # interleave: seed-major, then tier, then harness -> both harnesses and tiers progress together
-    alljobs = [Job(h, t, s, staging, a.model, a.timeout) for s in seeds for t in tiers for h in hs]
+    alljobs = [Job(h, t, s, staging, a.model, a.timeout, a.hint) for s in seeds for t in tiers for h in hs]
     if a.harness_first:
         alljobs.sort(key=lambda j: hs.index(j.harness))  # stable: seed/tier order kept within a harness
 

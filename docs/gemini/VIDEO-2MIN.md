@@ -17,27 +17,31 @@ uv run python -m canary.gemini.video_qa --video canary-lab-2min.mp4 --script doc
 | 1 | 0:00–0:14 | Browser game replays a Gemini episode on hard: canaries go out, the leak feed lights up, one accusation. 0:00–0:06 audio is the Gemini Live commentator clip (`assets/narration/commentator-demo.wav`), then VO. Lower third: "Live commentary: Gemini Live API" | `01-hook` | – |
 | 2 | 0:14–0:28 | Title card "Q1 · The problem" over a scroll of one long raw trajectory (JSONL in a terminal, fast) | `02-problem` | – |
 | 3 | 0:28–0:48 | "Q2 · Integration". Dashboard ladder heatmap (`assets/dashboard-ladder.png`), slow zoom from minimal to high thinking; cut to the cost frontier | `03-ladder` | `results/gemini/ladder.md` |
-| 4 | 0:48–1:04 | Atlas page: corpus tiles (episodes, tokens, cache), then failure mode 1 card with a verified quote highlighted | `04-atlas` | `results/gemini/atlas.md` |
-| 5 | 1:04–1:18 | Swarm strip plot of every attack against the solver line; then the positive-control row | `05-swarm` | `results/gemini/swarm.md`, `docs/gemini/reports/CEO.md` |
+| 4 | 0:48–1:04 | Atlas page: blind-run tiles (modes recovered, new modes, regret covered), then the blind recall table per code tag | `04-atlas` | `results/gemini/atlas_blind.md` (`{blind_*}` placeholders) |
+| 5 | 1:04–1:18 | Swarm card from the final multi-wave swarm (attempts, waves, whitebox share, 0 verified exploits); then the positive-control card (detector caught 4/4 on public dev seeds) | `05-swarm` | final `results/gemini/swarm.md` (gemini-swarm 905cdd9, via PR #21): 91 attackers in 4 waves + 9 MCP re-runs = 100 attempts, 75/91 whitebox |
 | 6 | 1:18–1:32 | "Q3 · What's innovative". Failure gallery waterfall: gap split into causes, "0 unexplained" tile | `06-innovative` | `docs/reports/failure_gallery.md` |
-| 7 | 1:32–1:52 | "Q4 · Why Gemini". Dashboard usage panel: feature × model matrix, cache savings, thinking share | `07-essential` | `docs/gemini/reports/dashboard.md`, `docs/gemini/SUBMISSION.md` |
-| 8 | 1:52–2:00 | Terminal: `make lab-replay` prints the ladder table with no key. End card: repo URL | `08-close` | – |
+| 7 | 1:32–1:52 | "Q4 · Why Gemini". Dashboard usage panel: feature × model matrix, thinking share; then a card with the three features and the ledger totals | `07-essential` | committed usage ledger: `{cache_share}`, `{cost}` (same reprice + summarize as the dashboard) |
+| 8 | 1:52–2:00 | Terminal: `make lab-replay` with no key replays recorded episodes step for step ("REPLAY OK", "ALL OK"). End card: repo URL | `08-close` | – |
 
-## Voice-over (Gemini TTS reads each VO line; 293 words, about 117 s at 150 wpm)
+The cut is assembled by `uv run python -m canary.gemini.video_cut` (keyless; dashboard panels at 2x, cards, Ken-Burns, the VO
+time-stretched by one factor to land at 2:00). After the ledger or results change, re-run narrate (`--only 04-atlas,07-essential`)
+and video_cut, then video_qa.
+
+## Voice-over (Gemini TTS reads each VO line; about 285 words, time-stretched to fit 2:00)
 
 > VO[01-hook]: One mole is leaking a company's documents. An AI head of security gets one accusation. This is Canary Lab: Gemini plays, explains and attacks its own benchmark.
 
-> VO[02-problem]: Agents now make irreversible calls under uncertainty. One benchmark number can't tell you where they fail, whether more thinking would help, or whether the score can be gamed.
+> VO[02-problem]: Agents now make irreversible calls under uncertainty. Before you ship one, you pick a model and how hard it thinks. One benchmark number can't tell you where they fail, whether more thinking would help, or whether the score can be gamed.
 
-> VO[03-ladder]: So Gemini plays. Five models, up to four thinking levels, one hundred fifty-seven paired episodes. On hard, n equals eight: ninety-two percent, interval seventy-six to one hundred thirteen, at medium, and one hundred two percent, interval eighty-four to one hundred twenty-nine, at high. Gemini three point six Flash, requested as three point five, is within those intervals of the solver, sixteen of sixteen correct, at thirty-four to thirty-nine cents per episode versus one dollar thirty for Gemini four Carbon on high thinking.
+> VO[03-ladder]: So Gemini plays. Five models, up to four thinking levels, five hundred eighty-seven paired episodes. On hard, Gemini four Carbon on high thinking reaches one hundred six percent of the solver, interval ninety-four to one hundred twenty-six, at one dollar ninety-three per episode. Gemini three point six Flash on high thinking costs forty-five cents, more than four times cheaper, and scores eighty-eight percent, interval fifty-one to one hundred thirty-eight: not distinguishable from the solver, but less certain.
 
-> VO[04-atlas]: Then Gemini reads. All one hundred fifty-three trajectories, nearly eight hundred thousand tokens, in one cached context. It names the failure modes, and code checks every quote: ninety-eight percent verbatim. The biggest mode is premature accusation, sixty-one percent of all regret.
+> VO[04-atlas]: Then Gemini reads. All {blind_episodes} trajectories in one cached context, without our labels. Blind, it recovered {blind_recovered} of {blind_tags} failure modes our code defines and named {blind_new} new ones. Coverage is still weak: the steps it cites hold {blind_regret_covered} of all regret.
 
-> VO[05-swarm]: Then Gemini attacks. Thirty-five attackers read our whole codebase. Thirty-two ran in-process and three via MCP. Zero exploits. When we reopened a closed hole, four of four found it again.
+> VO[05-swarm]: Then Gemini attacks. One hundred attacks in four waves, most with our whole codebase in context. Zero verified exploits. To test the detector, we reopened a closed hole: it caught four of four.
 
 > VO[06-innovative]: That is the innovation: a benchmark that measures, explains and audits itself. Across two hundred ninety-five episodes, every lost point is tagged to a decision, with nothing unexplained.
 
-> VO[07-essential]: Three Gemini features make this possible. Thinking level is the ladder's knob. Thought signatures keep reasoning across tool calls. The explicit cache served eighty-two point seven percent of input tokens, and the programme cost one hundred forty-six dollars and two cents. TTS and Live only narrate.
+> VO[07-essential]: Three Gemini features make this possible. Thinking level is the ladder's knob. Thought signatures keep reasoning across tool calls. The explicit cache served {cache_share} of input tokens, and the whole programme cost {cost} at list price. TTS and Live only narrate.
 
 > VO[08-close]: Recorded Gemini runs replay offline. Make lab replay. No key needed.
 

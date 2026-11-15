@@ -83,7 +83,7 @@ Fresh-seed table (`uv run --python 3.12 python scripts/fresh_table.py 1000 1400`
 - Note: hard acc honestly ~82-84% (FR8 800 seeds .841; fresh 400 seeds .815).
 
 ## 03:32 status: v1.3 MERGED (justSilas 0933805)
-- Verified: make test 469 passed (pipefail). Known V in status; solver v1.3; grok_tactics; results/fresh_table_v1.3.md. FR8 800 fresh seeds/tier: solver .779/.632/.575, acc 99.6/88.7/84.8%, solver-grok +.089/+.174/+.233.
+- Verified: make test 469 passed (pipefail). Known V in status; solver v1.3; grok_tactics; results/history/fresh_table_v1.3.md. FR8 800 fresh seeds/tier: solver .779/.632/.575, acc 99.6/88.7/84.8%, solver-grok +.089/+.174/+.233.
 - Waiting: AGENTS official gpt-5.5 v1.3 runs -> regret table. INTEGRITY fuzz on v1.3.
 
 ## 14:35 status (HEAD-ENV relaunch, NEXT-LEVEL)
@@ -106,3 +106,9 @@ Fresh-seed table (`uv run --python 3.12 python scripts/fresh_table.py 1000 1400`
 - Deviation (accepted): unseeded rumours, the authority post and grudge pairs can name the mole (otherwise being named would be proof of innocence). Only mole-seeded targets are guaranteed innocent, and the instructions say so.
 - Not done: Gemini rendering of chatter (falls back to the template renderer). v1.5 easy is hunt-only.
 - Next: stand by for the Gate B decision; the v1.5 merge happens only on the CEO's go.
+
+## 19:05 Gate B record (v1.5 NOT shipped, CEO decision)
+- The CEO's gemini-4-carbon spot check, hard seeds 0-9: **61% of the solver on v1.4 → 108% on v1.5** (10/10 correct, mean P at accusation 0.94). Gemini treated rumours as evidence *against* the rumoured person; it did not follow them.
+- So the bias layer made the frontier agent's job *easier*, not harder: the rumoured person is usually innocent, which narrows the candidates. **Negative result: "frontier agents read past social bias."** Branch `justSilas-v15` (de9cc50) stays unmerged as the record; the scripted rumour_follower baseline (−0.99) shows the trap works only against naive policies.
+- Fresh-seed numbers for the record (seeds 7000-7399, n=400): solver medium 0.641 / hard 0.571 (100% / 97% accurate when accusing); grok_tactics 0.456 / 0.371; heuristic 0.067 / 0.002; rumour_follower −0.986 / −0.995. `make hunt TIER=all` was clean on v1.5. The anti-cheat battery was NOT run on v1.5 (it wasn't needed once v1.5 was dropped). The Gemini chatter rendering was stopped part-way on `justSilas-v15-bias`.
+- The judged env stays **v1.4** (8f87ed1, hash a8f99c2537c91d72). The freeze on rules.py/env.py/solver/ starts 20:00. After that HEAD-ENV is review only (justSilas-harness3 / justSilas-integrity3).

@@ -1,0 +1,964 @@
+{
+  "schema": "canary.tiebreak.harbor_shell_bridge.v1",
+  "audit_id": "tiebreak-harbor-shell-externalization-bridge-v14",
+  "tiers_version": "v1.4",
+  "tier": "hard",
+  "heldout_seed_range": "800000..800029",
+  "eval_seed_range": "800000..800029",
+  "heldout_seeds": {
+    "start": 800000,
+    "stop": 800030
+  },
+  "dev_eval_seed_range": "0..29",
+  "eval_seeds_per_tier": 30,
+  "world_secret_tag": "sha256:ebf2f09716cf76d3",
+  "replay_verified": true,
+  "invalid_episodes": 0,
+  "seed_isolation": {
+    "heldout_world_paired": true,
+    "train_episodes_in_heldout_eval": 0,
+    "dev_episodes_rolled_out": 0,
+    "judge_episodes_touched": 0,
+    "panel_fix_a_disclosure": "Where DEV_SEEDS 0..29 appear in Canary frontier MCP-only comparisons, they are a post-hoc locked, not pre-registered evaluation set; all tiebreak policy training uses strictly disjoint TRAIN_SEEDS [100000, 200000), all paired rollouts in this bridge run strictly on HELDOUT_SEEDS 800000..800029 (n=30), and 0 judge seeds are evaluated."
+  },
+  "panel_fix_e_track_separation": {
+    "source_path": "results/tiebreak/experiment_ledger.json",
+    "open_weight_qwen25_runs_total": 19,
+    "open_weight_qwen25_runs_above_zero": 0,
+    "open_weight_qwen25_above_zero_ratio": "0 / 19",
+    "readme_qwen_addendum_status": "HOLD_README_QWEN_ADDENDUM_UNTIL_V100",
+    "non_llm_verified_run_ids": [
+      "compact-linear-dagger-v14",
+      "empirical-bayes-v14"
+    ],
+    "non_llm_policies_is_open_weight_llm": false,
+    "disclosure": "Per Panel Fix E strict track separation, 0 / 19 open-weight Qwen2.5-1.5B runs beat untrained base (0.000), so the README Qwen addendum remains withheld (HOLD_README_QWEN_ADDENDUM_UNTIL_V100); the 4 verified compact policies (EmpiricalBayesPolicy, ScalingLogisticPolicy, CompactLinearDAggerPolicy, TinyMLPPolicy; is_open_weight_llm = False) are non-LLM structured controls on the lossless public ledger and are never conflated with open-weight LLM runs."
+  },
+  "ast_inference_isolation": {
+    "passed": true,
+    "summary": "AST-audited 12 module(s) and 15 policy class(es); 0 world/solver inference leaks",
+    "errors": [],
+    "shared_dagger_ckpt_verified": true,
+    "shared_dagger_ckpt_max_abs_diff": 1e-05
+  },
+  "hard_tier_mechanics": {
+    "tier": "hard",
+    "n_employees": 40,
+    "n_days": 21,
+    "p_leak": 0.65,
+    "delay_choices": [
+      2,
+      3
+    ],
+    "leak_damage": 0.05,
+    "canary_cost": 0.01,
+    "canaries_per_day": 2,
+    "max_variants": 3,
+    "tool_call_cap": 420,
+    "fingerprint_accuracy": 0.95,
+    "framing_rate": 2.0,
+    "wrong_accusation_score": -1.0
+  },
+  "harbor_vs_mcp_frontier_reconciliation": {
+    "sources_read_only": [
+      "results/tiebreak/state_externalization/externalization_summary.json",
+      "results/harbor/rehearsal/TABLE.md",
+      "results/harbor/rehearsal/BUILD.txt"
+    ],
+    "harbor_build_meta": {
+      "tag": "afterquery-final",
+      "commit_short_hex": "0x1bc3e281",
+      "harbor_version": "0.26.0",
+      "tasks_per_run": 10,
+      "task_tier": "hard",
+      "task_id_sanitization": "Rehearsal task labels sanitized to task_idx 0..9 (0 raw 900k+ ints in JSON)"
+    },
+    "gemini_4_carbon_mcp_only_hard": {
+      "cohort_id": "opencode_gemini_4_carbon_hard",
+      "dev_eval_seed_range": "0..29",
+      "dev_protocol_status": "post-hoc locked, not pre-registered",
+      "shell_scratchpad_available": false,
+      "n": 30,
+      "mean_score": 0.322,
+      "ci95": 0.199,
+      "solver_same_seeds": 0.499,
+      "ratio_vs_solver_pct": 65,
+      "ratio_vs_solver_display": "65% [24%, 98%]",
+      "luck_adjusted_ev": 0.36,
+      "luck_ratio_vs_solver_pct": 72,
+      "correct_count": 25,
+      "wrong_count": 4,
+      "abstain_count": 1,
+      "accusation_precision": 0.86207,
+      "accusation_precision_display": "25/29",
+      "sub_breakeven_accuse_count": 3,
+      "canaries_planted_per_ep": 8.5,
+      "canary_slot_utilization": 0.3151,
+      "interviews_per_ep": 68.0,
+      "interview_call_share_pct": 53,
+      "tool_calls_per_ep": 128,
+      "mean_accuse_day": 13.2
+    },
+    "gpt_5_5_mcp_only_reference_hard": {
+      "cohort_id": "opencode_gpt_5_5_hard",
+      "dev_eval_seed_range": "0..29",
+      "dev_protocol_status": "post-hoc locked, not pre-registered",
+      "n": 30,
+      "mean_score": 0.504,
+      "ratio_vs_solver_display": "101% [79%, 140%]",
+      "luck_adjusted_ev": 0.418,
+      "correct_count": 28,
+      "wrong_count": 0,
+      "canaries_planted_per_ep": 17.2,
+      "interviews_per_ep": 4.2
+    },
+    "gemini_4_carbon_harbor_shell_hard": {
+      "harness": "Harbor 0.26.0 + OpenCode + gemini-4-carbon (container bash/python3 available)",
+      "shell_scratchpad_available": true,
+      "shell_used_trials": 20,
+      "shell_audited_trials": 28,
+      "shell_used_fraction": 0.7143,
+      "shell_used_display": "20/28",
+      "valid_accusations_correct": 28,
+      "valid_accusations_total": 29,
+      "valid_accusation_precision": 0.9655,
+      "valid_accusation_display": "28/29",
+      "wrong_accusations_total": 1,
+      "oracle_mean_all_10": 0.506,
+      "oracle_mean_on_9_wins": 0.6733,
+      "oracle_unlucky_noise_loss_tasks": [
+        "hard_task_07"
+      ],
+      "runs": [
+        {
+          "run_id": "opencode-1",
+          "n_valid": 10,
+          "infra_excluded": 0,
+          "correct_count": 9,
+          "accused_count": 10,
+          "mean_score": 0.472,
+          "oracle_same_tasks": 0.506,
+          "ratio_vs_oracle_pct": 93,
+          "ratio_vs_oracle_display": "93% [20%, 371%]",
+          "paired_diff_vs_oracle": -0.034
+        },
+        {
+          "run_id": "opencode-2",
+          "n_valid": 10,
+          "infra_excluded": 0,
+          "correct_count": 10,
+          "accused_count": 10,
+          "mean_score": 0.585,
+          "oracle_same_tasks": 0.506,
+          "ratio_vs_oracle_pct": 116,
+          "ratio_vs_oracle_display": "116% [78%, 363%]",
+          "paired_diff_vs_oracle": 0.079
+        },
+        {
+          "run_id": "opencode-3",
+          "n_valid": 9,
+          "infra_excluded": 1,
+          "correct_count": 9,
+          "accused_count": 9,
+          "mean_score": 0.626,
+          "oracle_all_10_reference": 0.506,
+          "ratio_vs_oracle_pct": 131,
+          "ratio_vs_oracle_display": "131% [86%, 590%]",
+          "cutoff_0830_snapshot_n_valid": 7,
+          "cutoff_0830_snapshot_mean_score": 0.656,
+          "post_cutoff_completed_valid_trials": 5
+        }
+      ],
+      "mean_of_three_final_run_means": 0.561,
+      "harbor_minus_mcp_run_deltas": [
+        0.15,
+        0.263,
+        0.304
+      ],
+      "harbor_mean_minus_mcp_mean": 0.239,
+      "sanitized_snapshot_tasks": [
+        {
+          "task_idx": 0,
+          "task_label": "hard_task_00",
+          "oracle": {
+            "status": "valid",
+            "score": 0.56,
+            "correct": true,
+            "day": 12
+          },
+          "opencode_1": {
+            "status": "valid",
+            "score": 0.69,
+            "correct": true,
+            "day": 7
+          },
+          "opencode_2": {
+            "status": "valid",
+            "score": 0.72,
+            "correct": true,
+            "day": 7
+          },
+          "opencode_3_snapshot_0830": {
+            "status": "valid",
+            "score": 0.79,
+            "correct": true,
+            "day": 6
+          }
+        },
+        {
+          "task_idx": 1,
+          "task_label": "hard_task_01",
+          "oracle": {
+            "status": "valid",
+            "score": 0.79,
+            "correct": true,
+            "day": 4
+          },
+          "opencode_1": {
+            "status": "valid",
+            "score": 0.8,
+            "correct": true,
+            "day": 5
+          },
+          "opencode_2": {
+            "status": "valid",
+            "score": 0.77,
+            "correct": true,
+            "day": 10
+          },
+          "opencode_3_snapshot_0830": {
+            "status": "valid",
+            "score": 0.68,
+            "correct": true,
+            "day": 8
+          }
+        },
+        {
+          "task_idx": 2,
+          "task_label": "hard_task_02",
+          "oracle": {
+            "status": "valid",
+            "score": 0.76,
+            "correct": true,
+            "day": 6
+          },
+          "opencode_1": {
+            "status": "valid",
+            "score": -1.0,
+            "correct": false,
+            "day": 14
+          },
+          "opencode_2": {
+            "status": "valid",
+            "score": 0.58,
+            "correct": true,
+            "day": 13
+          },
+          "opencode_3_snapshot_0830": {
+            "status": "infra_excluded",
+            "score": null,
+            "correct": null,
+            "day": null
+          }
+        },
+        {
+          "task_idx": 3,
+          "task_label": "hard_task_03",
+          "oracle": {
+            "status": "valid",
+            "score": 0.7,
+            "correct": true,
+            "day": 7
+          },
+          "opencode_1": {
+            "status": "valid",
+            "score": 0.59,
+            "correct": true,
+            "day": 15
+          },
+          "opencode_2": {
+            "status": "valid",
+            "score": 0.54,
+            "correct": true,
+            "day": 15
+          },
+          "opencode_3_snapshot_0830": {
+            "status": "valid",
+            "score": 0.72,
+            "correct": true,
+            "day": 11
+          }
+        },
+        {
+          "task_idx": 4,
+          "task_label": "hard_task_04",
+          "oracle": {
+            "status": "valid",
+            "score": 0.71,
+            "correct": true,
+            "day": 6
+          },
+          "opencode_1": {
+            "status": "valid",
+            "score": 0.65,
+            "correct": true,
+            "day": 7
+          },
+          "opencode_2": {
+            "status": "valid",
+            "score": 0.61,
+            "correct": true,
+            "day": 8
+          },
+          "opencode_3_snapshot_0830": {
+            "status": "valid",
+            "score": 0.65,
+            "correct": true,
+            "day": 7
+          }
+        },
+        {
+          "task_idx": 5,
+          "task_label": "hard_task_05",
+          "oracle": {
+            "status": "valid",
+            "score": 0.62,
+            "correct": true,
+            "day": 9
+          },
+          "opencode_1": {
+            "status": "valid",
+            "score": 0.45,
+            "correct": true,
+            "day": 11
+          },
+          "opencode_2": {
+            "status": "valid",
+            "score": 0.56,
+            "correct": true,
+            "day": 13
+          },
+          "opencode_3_snapshot_0830": {
+            "status": "valid",
+            "score": 0.51,
+            "correct": true,
+            "day": 13
+          }
+        },
+        {
+          "task_idx": 6,
+          "task_label": "hard_task_06",
+          "oracle": {
+            "status": "valid",
+            "score": 0.62,
+            "correct": true,
+            "day": 8
+          },
+          "opencode_1": {
+            "status": "valid",
+            "score": 0.61,
+            "correct": true,
+            "day": 10
+          },
+          "opencode_2": {
+            "status": "valid",
+            "score": 0.62,
+            "correct": true,
+            "day": 7
+          },
+          "opencode_3_snapshot_0830": {
+            "status": "valid",
+            "score": 0.59,
+            "correct": true,
+            "day": 11
+          }
+        },
+        {
+          "task_idx": 7,
+          "task_label": "hard_task_07",
+          "oracle": {
+            "status": "valid",
+            "score": -1.0,
+            "correct": false,
+            "day": 15
+          },
+          "opencode_1": {
+            "status": "valid",
+            "score": 0.66,
+            "correct": true,
+            "day": 8
+          },
+          "opencode_2": {
+            "status": "valid",
+            "score": 0.61,
+            "correct": true,
+            "day": 11
+          },
+          "opencode_3_snapshot_0830": {
+            "status": "valid",
+            "score": 0.65,
+            "correct": true,
+            "day": 10
+          }
+        },
+        {
+          "task_idx": 8,
+          "task_label": "hard_task_08",
+          "oracle": {
+            "status": "valid",
+            "score": 0.67,
+            "correct": true,
+            "day": 8
+          },
+          "opencode_1": {
+            "status": "valid",
+            "score": 0.72,
+            "correct": true,
+            "day": 9
+          },
+          "opencode_2": {
+            "status": "valid",
+            "score": 0.49,
+            "correct": true,
+            "day": 18
+          },
+          "opencode_3_snapshot_0830": {
+            "status": "pending_at_0830_snapshot",
+            "score": null,
+            "correct": null,
+            "day": null
+          }
+        },
+        {
+          "task_idx": 9,
+          "task_label": "hard_task_09",
+          "oracle": {
+            "status": "valid",
+            "score": 0.63,
+            "correct": true,
+            "day": 8
+          },
+          "opencode_1": {
+            "status": "valid",
+            "score": 0.55,
+            "correct": true,
+            "day": 9
+          },
+          "opencode_2": {
+            "status": "valid",
+            "score": 0.35,
+            "correct": true,
+            "day": 14
+          },
+          "opencode_3_snapshot_0830": {
+            "status": "pending_at_0830_snapshot",
+            "score": null,
+            "correct": null,
+            "day": null
+          }
+        }
+      ],
+      "causal_caveat": "Harbor rehearsal provides container bash/python3 (used in 20/28 audited trials) and yields 28/29 correct Gemini accusations (+0.472 / +0.585 / +0.626, 93% / 116% / 131% of oracle +0.506) vs 25/29 in MCP-only (+0.322, 65% of solver +0.499); with 10 tasks per run and two disclosed 15 Nov tag updates, shell externalization, tag updates, and sampling variance are reported together without overclaiming single-factor isolation."
+    }
+  },
+  "arms": {
+    "unexternalized_evict_k12_heuristic": {
+      "arm_id": "unexternalized_evict_k12_heuristic",
+      "label": "Arm A1: Window-Evicting K=12 + Heuristic Stopping",
+      "regime": "Regime A (Unexternalized Evicting + Heuristic)",
+      "policy_class": "WindowEvictingBayesPolicy",
+      "window_steps": 12,
+      "lossless_externalized_state": false,
+      "calibrated_bayes_ev": false,
+      "param_count": 0,
+      "is_open_weight_llm": false,
+      "training_regime": "untrained_naive_prior",
+      "frontier_or_tiebreak_analog": "Raw 4k sliding-window SFT Qwen (canary eviction + blind p>=0.50 accuse)",
+      "metrics": {
+        "n": 30,
+        "mean_score": -0.95233,
+        "ci95_low": -1.0,
+        "ci95_high": -0.857,
+        "ci95_half_width": 0.0715,
+        "calibrated_public_ev_mean": -0.95176,
+        "calibrated_public_ev_ci95_low": -0.99977,
+        "calibrated_public_ev_ci95_high": -0.85615,
+        "accuracy": 0.03333,
+        "wrong_accuse_rate": 0.96667,
+        "abstain_rate": 0.0,
+        "correct_count": 1,
+        "wrong_count": 29,
+        "abstain_count": 0,
+        "accused_count": 30,
+        "accusation_precision": 0.03333,
+        "accusation_precision_display": "1/30",
+        "sub_breakeven_accuse_count": 29,
+        "mean_calibrated_p_at_accuse": 0.03361,
+        "mean_accuse_day": 4.267,
+        "mean_final_day": 4.267,
+        "mean_tool_calls": 35.667,
+        "canaries_planted_per_ep": 6.533,
+        "surfaced_canaries_total": 13,
+        "evicted_surfaced_canaries_total": 13,
+        "surfaced_canary_eviction_rate": 1.0,
+        "traces_digest": "0x966454ad744b3598"
+      },
+      "episode_digests": [
+        "800000:w:3:26:-1.0000:4:1:1:0.0000:-1.0000:1",
+        "800001:w:3:26:-1.0000:4:0:0:0.0003:-0.9995:1",
+        "800002:w:4:33:-1.0000:6:0:0:0.0000:-1.0000:1",
+        "800003:w:12:97:-1.0000:22:2:2:0.0000:-1.0000:1",
+        "800004:w:5:41:-1.0000:8:2:2:0.0000:-1.0000:1",
+        "800005:w:3:26:-1.0000:4:0:0:0.0004:-0.9993:1",
+        "800006:w:4:33:-1.0000:6:0:0:0.0000:-1.0000:1",
+        "800007:w:3:26:-1.0000:4:0:0:0.0003:-0.9994:1",
+        "800008:w:3:26:-1.0000:4:0:0:0.0003:-0.9994:1",
+        "800009:w:3:26:-1.0000:4:0:0:0.0000:-1.0000:1",
+        "800010:c:12:97:0.4300:22:3:3:1.0000:0.4312:0",
+        "800011:w:3:26:-1.0000:4:0:0:0.0003:-0.9995:1",
+        "800012:w:4:33:-1.0000:6:0:0:0.0000:-1.0000:1",
+        "800013:w:5:41:-1.0000:8:1:1:0.0001:-0.9998:1",
+        "800014:w:3:26:-1.0000:4:0:0:0.0000:-0.9999:1",
+        "800015:w:3:26:-1.0000:4:0:0:0.0000:-1.0000:1",
+        "800016:w:3:26:-1.0000:4:0:0:0.0000:-1.0000:1",
+        "800017:w:3:26:-1.0000:4:0:0:0.0000:-0.9999:1",
+        "800018:w:4:33:-1.0000:6:0:0:0.0004:-0.9992:1",
+        "800019:w:10:81:-1.0000:18:2:2:0.0000:-1.0000:1",
+        "800020:w:6:49:-1.0000:10:0:0:0.0000:-1.0000:1",
+        "800021:w:3:26:-1.0000:4:0:0:0.0000:-0.9999:1",
+        "800022:w:4:33:-1.0000:6:0:0:0.0000:-1.0000:1",
+        "800023:w:5:41:-1.0000:8:0:0:0.0037:-0.9931:1",
+        "800024:w:3:26:-1.0000:4:1:1:0.0011:-0.9979:1",
+        "800025:w:3:26:-1.0000:4:1:1:0.0000:-1.0000:1",
+        "800026:w:3:26:-1.0000:4:0:0:0.0000:-1.0000:1",
+        "800027:w:3:26:-1.0000:4:0:0:0.0000:-0.9999:1",
+        "800028:w:3:26:-1.0000:4:0:0:0.0011:-0.9980:1",
+        "800029:w:2:16:-1.0000:2:0:0:0.0003:-0.9994:1"
+      ]
+    },
+    "unexternalized_evict_k16_bayes": {
+      "arm_id": "unexternalized_evict_k16_bayes",
+      "label": "Arm A2: Window-Evicting K=16 + Calibrated Bayes/EV",
+      "regime": "Regime A (Unexternalized Evicting + Calibrated EV)",
+      "policy_class": "WindowEvictingBayesPolicy",
+      "window_steps": 16,
+      "lossless_externalized_state": false,
+      "calibrated_bayes_ev": true,
+      "param_count": 11,
+      "train_seed_range": "102000..102779",
+      "is_open_weight_llm": false,
+      "training_regime": "train_seeds_empirical_bayes_with_k16_window_eviction",
+      "frontier_or_tiebreak_analog": "4k GRPO/DAgger Qwen cautious mode (canary maps evicted across 2-3d leak delay)",
+      "metrics": {
+        "n": 30,
+        "mean_score": 0.093,
+        "ci95_low": -0.00533,
+        "ci95_high": 0.19667,
+        "ci95_half_width": 0.101,
+        "calibrated_public_ev_mean": 0.08791,
+        "calibrated_public_ev_ci95_low": -0.01243,
+        "calibrated_public_ev_ci95_high": 0.17556,
+        "accuracy": 0.4,
+        "wrong_accuse_rate": 0.03333,
+        "abstain_rate": 0.56667,
+        "correct_count": 12,
+        "wrong_count": 1,
+        "abstain_count": 17,
+        "accused_count": 13,
+        "accusation_precision": 0.92308,
+        "accusation_precision_display": "12/13",
+        "sub_breakeven_accuse_count": 1,
+        "mean_calibrated_p_at_accuse": 0.92218,
+        "mean_accuse_day": 13.846,
+        "mean_final_day": 17.9,
+        "mean_tool_calls": 143.567,
+        "canaries_planted_per_ep": 32.6,
+        "surfaced_canaries_total": 163,
+        "evicted_surfaced_canaries_total": 152,
+        "surfaced_canary_eviction_rate": 0.93252,
+        "traces_digest": "0x3f31d8f1af593991"
+      },
+      "episode_digests": [
+        "800000:a:21:168:0.0000:38:8:8:1.0000:0.0000:0",
+        "800001:c:9:73:0.4900:16:4:4:1.0000:0.4912:0",
+        "800002:a:21:168:0.0000:38:6:6:1.0000:0.0000:0",
+        "800003:c:17:137:0.1300:32:6:5:1.0000:0.0812:0",
+        "800004:a:21:168:0.0000:38:4:4:1.0000:0.0000:0",
+        "800005:c:10:81:0.5700:18:1:0:0.9973:0.5670:0",
+        "800006:a:21:168:0.0000:38:9:9:1.0000:0.0000:0",
+        "800007:c:21:167:0.1700:38:6:6:1.0000:0.1212:0",
+        "800008:c:11:89:0.4500:20:4:3:1.0000:0.4512:0",
+        "800009:a:21:168:0.0000:38:7:7:1.0000:0.0000:0",
+        "800010:a:21:168:0.0000:38:2:2:0.9598:0.0000:0",
+        "800011:c:16:129:0.1000:30:7:6:1.0000:0.1012:0",
+        "800012:c:14:113:0.2400:26:4:3:1.0000:0.2412:0",
+        "800013:c:19:153:0.0400:36:6:5:1.0000:0.0412:0",
+        "800014:c:10:81:0.4700:18:4:3:1.0000:0.4712:0",
+        "800015:a:21:168:0.0000:38:7:7:1.0000:0.0000:0",
+        "800016:a:21:168:0.0000:38:7:7:1.0000:0.0000:0",
+        "800017:a:21:168:0.0000:38:8:8:1.0000:0.0000:0",
+        "800018:a:21:168:0.0000:38:5:5:1.0000:0.0000:0",
+        "800019:a:21:168:0.0000:38:8:8:1.0000:0.0000:0",
+        "800020:c:11:89:0.4500:20:1:0:0.9911:0.4384:0",
+        "800021:c:14:113:0.3400:26:5:4:1.0000:0.2912:0",
+        "800022:a:21:168:0.0000:38:7:7:1.0000:0.0000:0",
+        "800023:a:21:168:0.0000:38:3:3:0.9998:0.0000:0",
+        "800024:a:21:168:0.0000:38:9:9:1.0000:0.0000:0",
+        "800025:a:21:168:0.0000:38:4:4:1.0000:0.0000:0",
+        "800026:w:14:113:-1.0000:26:4:3:0.0000:-1.0000:1",
+        "800027:a:21:168:0.0000:38:6:6:1.0000:0.0000:0",
+        "800028:c:14:113:0.3400:26:5:4:1.0000:0.3412:0",
+        "800029:a:21:168:0.0000:38:6:6:1.0000:0.0000:0"
+      ]
+    },
+    "in_context_lossless_heuristic": {
+      "arm_id": "in_context_lossless_heuristic",
+      "label": "Arm A3: In-Context Lossless + Uncalibrated Heuristic",
+      "regime": "Regime A (In-Context Lossless + Uncalibrated Heuristic)",
+      "policy_class": "WindowEvictingBayesPolicy",
+      "window_steps": null,
+      "lossless_externalized_state": true,
+      "calibrated_bayes_ev": false,
+      "param_count": 0,
+      "is_open_weight_llm": false,
+      "training_regime": "untrained_naive_prior",
+      "frontier_or_tiebreak_analog": "MCP-only uncalibrated tracking (0% window eviction, no Python Bayes/EV script)",
+      "metrics": {
+        "n": 30,
+        "mean_score": -0.84667,
+        "ci95_low": -1.0,
+        "ci95_high": -0.644,
+        "ci95_half_width": 0.178,
+        "calibrated_public_ev_mean": -0.89966,
+        "calibrated_public_ev_ci95_low": -0.99939,
+        "calibrated_public_ev_ci95_high": -0.73629,
+        "accuracy": 0.1,
+        "wrong_accuse_rate": 0.9,
+        "abstain_rate": 0.0,
+        "correct_count": 3,
+        "wrong_count": 27,
+        "abstain_count": 0,
+        "accused_count": 30,
+        "accusation_precision": 0.1,
+        "accusation_precision_display": "3/30",
+        "sub_breakeven_accuse_count": 28,
+        "mean_calibrated_p_at_accuse": 0.06536,
+        "mean_accuse_day": 4.3,
+        "mean_final_day": 4.3,
+        "mean_tool_calls": 35.933,
+        "canaries_planted_per_ep": 6.6,
+        "surfaced_canaries_total": 12,
+        "evicted_surfaced_canaries_total": 0,
+        "surfaced_canary_eviction_rate": 0.0,
+        "traces_digest": "0xace946e2d42ce594"
+      },
+      "episode_digests": [
+        "800000:w:3:26:-1.0000:4:1:0:0.0000:-1.0000:1",
+        "800001:w:3:26:-1.0000:4:0:0:0.0003:-0.9995:1",
+        "800002:w:4:33:-1.0000:6:0:0:0.0000:-1.0000:1",
+        "800003:c:11:89:0.5000:20:1:0:0.2917:-0.5620:1",
+        "800004:w:8:65:-1.0000:14:2:0:0.0000:-1.0000:1",
+        "800005:w:3:26:-1.0000:4:0:0:0.0004:-0.9993:1",
+        "800006:w:4:33:-1.0000:6:0:0:0.0000:-1.0000:1",
+        "800007:w:3:26:-1.0000:4:0:0:0.0003:-0.9994:1",
+        "800008:w:3:26:-1.0000:4:0:0:0.0003:-0.9994:1",
+        "800009:w:3:26:-1.0000:4:0:0:0.0000:-1.0000:1",
+        "800010:c:8:65:0.6100:14:1:0:0.6613:0.0656:0",
+        "800011:w:3:26:-1.0000:4:0:0:0.0003:-0.9995:1",
+        "800012:w:4:33:-1.0000:6:0:0:0.0000:-1.0000:1",
+        "800013:w:9:73:-1.0000:16:2:0:0.0000:-1.0000:1",
+        "800014:w:3:26:-1.0000:4:0:0:0.0000:-0.9999:1",
+        "800015:w:3:26:-1.0000:4:0:0:0.0000:-1.0000:1",
+        "800016:w:3:26:-1.0000:4:0:0:0.0000:-1.0000:1",
+        "800017:w:3:26:-1.0000:4:0:0:0.0000:-0.9999:1",
+        "800018:w:4:33:-1.0000:6:0:0:0.0004:-0.9992:1",
+        "800019:c:9:73:0.4900:16:3:0:0.9997:0.4908:0",
+        "800020:w:6:49:-1.0000:10:0:0:0.0000:-1.0000:1",
+        "800021:w:3:26:-1.0000:4:0:0:0.0000:-0.9999:1",
+        "800022:w:4:33:-1.0000:6:0:0:0.0000:-1.0000:1",
+        "800023:w:5:41:-1.0000:8:0:0:0.0037:-0.9931:1",
+        "800024:w:3:26:-1.0000:4:1:0:0.0011:-0.9979:1",
+        "800025:w:3:26:-1.0000:4:1:0:0.0000:-1.0000:1",
+        "800026:w:3:26:-1.0000:4:0:0:0.0000:-1.0000:1",
+        "800027:w:3:26:-1.0000:4:0:0:0.0000:-0.9999:1",
+        "800028:w:3:26:-1.0000:4:0:0:0.0011:-0.9980:1",
+        "800029:w:2:16:-1.0000:2:0:0:0.0003:-0.9994:1"
+      ]
+    },
+    "externalized_empirical_bayes_11p": {
+      "arm_id": "externalized_empirical_bayes_11p",
+      "label": "Arm B1: Externalized EmpiricalBayesPolicy (11 params)",
+      "regime": "Regime B (Externalized Python-Equivalent Bayes + EV)",
+      "policy_class": "EmpiricalBayesPolicy",
+      "window_steps": null,
+      "lossless_externalized_state": true,
+      "calibrated_bayes_ev": true,
+      "param_count": 11,
+      "train_seed_range": "102000..102779",
+      "is_open_weight_llm": false,
+      "training_regime": "train_seeds_empirical_bayes_lossless",
+      "frontier_or_tiebreak_analog": "Harbor bash/python3 Bayesian tracker & EmpiricalBayesPolicy (11p)",
+      "metrics": {
+        "n": 30,
+        "mean_score": 0.56867,
+        "ci95_low": 0.51667,
+        "ci95_high": 0.61433,
+        "ci95_half_width": 0.04883,
+        "calibrated_public_ev_mean": 0.54774,
+        "calibrated_public_ev_ci95_low": 0.49767,
+        "calibrated_public_ev_ci95_high": 0.59118,
+        "accuracy": 1.0,
+        "wrong_accuse_rate": 0.0,
+        "abstain_rate": 0.0,
+        "correct_count": 30,
+        "wrong_count": 0,
+        "abstain_count": 0,
+        "accused_count": 30,
+        "accusation_precision": 1.0,
+        "accusation_precision_display": "30/30",
+        "sub_breakeven_accuse_count": 0,
+        "mean_calibrated_p_at_accuse": 0.98636,
+        "mean_accuse_day": 9.1,
+        "mean_final_day": 9.1,
+        "mean_tool_calls": 73.733,
+        "canaries_planted_per_ep": 16.133,
+        "surfaced_canaries_total": 67,
+        "evicted_surfaced_canaries_total": 0,
+        "surfaced_canary_eviction_rate": 0.0,
+        "traces_digest": "0x84549b638e5fde02"
+      },
+      "episode_digests": [
+        "800000:c:6:49:0.6500:10:2:0:0.9995:0.6503:0",
+        "800001:c:6:49:0.6500:10:2:0:0.9793:0.6661:0",
+        "800002:c:13:105:0.3600:24:3:0:0.9744:0.3752:0",
+        "800003:c:14:113:0.3900:26:2:0:0.9956:0.3852:0",
+        "800004:c:6:49:0.7000:10:2:0:1.0000:0.6512:0",
+        "800005:c:10:81:0.5700:18:1:0:0.9973:0.5670:0",
+        "800006:c:10:81:0.4700:18:2:0:0.9837:0.4472:0",
+        "800007:c:11:89:0.5000:20:4:0:0.9983:0.4488:0",
+        "800008:c:6:49:0.7000:10:2:0:0.9886:0.6819:0",
+        "800009:c:6:49:0.7000:10:2:0:0.9871:0.6793:0",
+        "800010:c:15:121:0.4200:28:2:0:0.9915:0.4091:0",
+        "800011:c:4:33:0.7900:6:2:0:0.9700:0.7376:0",
+        "800012:c:6:49:0.6500:10:1:0:0.9702:0.6505:0",
+        "800013:c:5:41:0.7200:8:2:0:0.9580:0.6969:0",
+        "800014:c:8:65:0.6100:14:2:0:0.9802:0.5794:0",
+        "800015:c:9:73:0.5900:16:3:0:0.9998:0.5909:0",
+        "800016:c:7:57:0.6300:12:3:0:0.9928:0.6195:0",
+        "800017:c:9:73:0.5900:16:2:0:0.9949:0.5831:0",
+        "800018:c:11:89:0.4000:20:3:0:0.9976:0.3979:0",
+        "800019:c:9:73:0.5900:16:2:0:0.9851:0.5183:0",
+        "800020:c:11:89:0.4500:20:1:0:0.9911:0.4384:0",
+        "800021:c:10:81:0.5200:18:2:0:0.9736:0.4812:0",
+        "800022:c:9:73:0.5400:16:2:0:0.9976:0.5874:0",
+        "800023:c:10:81:0.5700:18:2:0:0.9890:0.5045:0",
+        "800024:c:7:57:0.6300:12:2:0:0.9928:0.6195:0",
+        "800025:c:8:65:0.5600:14:4:0:0.9999:0.5610:0",
+        "800026:c:13:105:0.5600:24:3:0:0.9960:0.5550:0",
+        "800027:c:5:41:0.7700:8:1:0:0.9237:0.6361:0",
+        "800028:c:8:65:0.6600:14:4:0:1.0000:0.6112:0",
+        "800029:c:21:167:0.1200:38:2:0:0.9832:0.1024:0"
+      ]
+    },
+    "externalized_compact_linear_dagger_785p": {
+      "arm_id": "externalized_compact_linear_dagger_785p",
+      "label": "Arm B2: Externalized CompactLinearDAggerPolicy (785 params)",
+      "regime": "Regime B (Externalized 28-dim Ledger + On-Policy DAgger)",
+      "policy_class": "CompactLinearDAggerPolicy",
+      "window_steps": null,
+      "lossless_externalized_state": true,
+      "calibrated_bayes_ev": true,
+      "param_count": 785,
+      "train_seed_range": "109000..109509",
+      "is_open_weight_llm": false,
+      "training_regime": "train_seeds_onpolicy_dagger_r2_lossless",
+      "frontier_or_tiebreak_analog": "CompactLinearDAggerPolicy (785p Stage-3 DAgger r2 on 28-dim ledger)",
+      "metrics": {
+        "n": 30,
+        "mean_score": 0.49033,
+        "ci95_low": 0.338,
+        "ci95_high": 0.585,
+        "ci95_half_width": 0.1235,
+        "calibrated_public_ev_mean": 0.41843,
+        "calibrated_public_ev_ci95_low": 0.29543,
+        "calibrated_public_ev_ci95_high": 0.52512,
+        "accuracy": 0.96667,
+        "wrong_accuse_rate": 0.03333,
+        "abstain_rate": 0.0,
+        "correct_count": 29,
+        "wrong_count": 1,
+        "abstain_count": 0,
+        "accused_count": 30,
+        "accusation_precision": 0.96667,
+        "accusation_precision_display": "29/30",
+        "sub_breakeven_accuse_count": 4,
+        "mean_calibrated_p_at_accuse": 0.92711,
+        "mean_accuse_day": 10.433,
+        "mean_final_day": 10.433,
+        "mean_tool_calls": 77.5,
+        "canaries_planted_per_ep": 17.867,
+        "surfaced_canaries_total": 54,
+        "evicted_surfaced_canaries_total": 0,
+        "surfaced_canary_eviction_rate": 0.0,
+        "traces_digest": "0x37d7aef8c678e4e3"
+      },
+      "episode_digests": [
+        "800000:c:5:40:0.7800:7:1:0:0.9803:0.7461:0",
+        "800001:c:5:40:0.7800:7:2:0:0.9815:0.7484:0",
+        "800002:c:7:53:0.6400:11:3:0:1.0000:0.6412:0",
+        "800003:c:14:105:0.3400:26:1:0:0.4604:-0.3779:1",
+        "800004:c:18:131:0.0200:33:1:0:0.9898:0.0603:0",
+        "800005:c:13:96:0.4700:23:1:0:0.9939:0.4622:0",
+        "800006:c:6:47:0.7600:9:1:0:0.9832:0.6826:0",
+        "800007:c:13:94:0.2700:23:3:0:0.9952:0.3150:0",
+        "800008:c:8:61:0.6200:13:1:0:0.9714:0.5263:0",
+        "800009:c:10:75:0.5300:17:1:0:0.4969:-0.2142:1",
+        "800010:c:13:96:0.3700:23:3:0:1.0000:0.3712:0",
+        "800011:c:7:54:0.6900:11:2:0:0.9952:0.6832:0",
+        "800012:c:16:116:0.2100:29:3:0:1.0000:0.1612:0",
+        "800013:c:10:75:0.6800:17:1:0:0.9915:0.6173:0",
+        "800014:c:12:89:0.3300:22:3:0:0.5908:-0.1780:1",
+        "800015:c:8:59:0.6200:13:2:0:0.9927:0.6094:0",
+        "800016:c:6:47:0.7600:9:1:0:0.9826:0.7307:0",
+        "800017:c:8:59:0.6200:13:1:0:0.9824:0.5927:0",
+        "800018:c:11:82:0.4600:19:2:0:0.9946:0.4036:0",
+        "800019:c:6:47:0.7100:9:2:0:0.9892:0.7421:0",
+        "800020:c:9:68:0.6500:15:1:0:0.9822:0.5727:0",
+        "800021:c:10:75:0.6800:17:1:0:0.9802:0.5989:0",
+        "800022:c:17:124:0.2400:31:3:0:0.9952:0.1856:0",
+        "800023:c:5:40:0.7800:7:2:0:0.9823:0.7497:0",
+        "800024:c:8:60:0.6200:13:1:0:0.9804:0.5895:0",
+        "800025:c:18:128:0.4200:33:2:0:0.9925:0.3610:0",
+        "800026:c:11:80:0.4600:19:2:0:0.9932:0.5009:0",
+        "800027:w:21:150:-1.0000:37:4:0:0.9939:0.1741:0",
+        "800028:c:5:40:0.7800:7:2:0:0.9867:0.7082:0",
+        "800029:c:13:94:0.4200:23:1:0:0.5550:-0.2112:1"
+      ]
+    }
+  },
+  "paired_contrasts": {
+    "shell_bayes_vs_evict_heuristic": {
+      "arm_a": "externalized_empirical_bayes_11p",
+      "arm_b": "unexternalized_evict_k12_heuristic",
+      "description": "Full externalized Python Bayes/EV (11p) minus window-evicting K=12 heuristic",
+      "n": 30,
+      "mean_score_delta": 1.521,
+      "ci95_low": 1.396,
+      "ci95_high": 1.61067,
+      "ci95_half_width": 0.10733,
+      "calibrated_ev_delta_mean": 1.4995,
+      "calibrated_ev_delta_ci95_low": 1.35784,
+      "calibrated_ev_delta_ci95_high": 1.58153,
+      "a_wins": 29,
+      "b_wins": 1,
+      "ties": 0,
+      "wrong_accuse_delta": -29
+    },
+    "pure_state_externalization_effect_under_bayes": {
+      "arm_a": "externalized_empirical_bayes_11p",
+      "arm_b": "unexternalized_evict_k16_bayes",
+      "description": "Pure state-retention effect holding 11p Bayes/EV fixed (lossless minus K=16 eviction)",
+      "n": 30,
+      "mean_score_delta": 0.47567,
+      "ci95_low": 0.36267,
+      "ci95_high": 0.595,
+      "ci95_half_width": 0.11617,
+      "calibrated_ev_delta_mean": 0.45982,
+      "calibrated_ev_delta_ci95_low": 0.36374,
+      "calibrated_ev_delta_ci95_high": 0.56379,
+      "a_wins": 28,
+      "b_wins": 0,
+      "ties": 2,
+      "wrong_accuse_delta": -1
+    },
+    "pure_arithmetic_bayes_ev_effect_under_lossless": {
+      "arm_a": "externalized_empirical_bayes_11p",
+      "arm_b": "in_context_lossless_heuristic",
+      "description": "Pure calibrated Bayes + 1/(1+V) EV stopping effect holding lossless state fixed",
+      "n": 30,
+      "mean_score_delta": 1.41533,
+      "ci95_low": 1.22633,
+      "ci95_high": 1.588,
+      "ci95_half_width": 0.18083,
+      "calibrated_ev_delta_mean": 1.4474,
+      "calibrated_ev_delta_ci95_low": 1.31719,
+      "calibrated_ev_delta_ci95_high": 1.58358,
+      "a_wins": 28,
+      "b_wins": 2,
+      "ties": 0,
+      "wrong_accuse_delta": -27
+    },
+    "compact_dagger_vs_evict_heuristic": {
+      "arm_a": "externalized_compact_linear_dagger_785p",
+      "arm_b": "unexternalized_evict_k12_heuristic",
+      "description": "Externalized CompactLinearDAggerPolicy (785p) minus window-evicting K=12 heuristic",
+      "n": 30,
+      "mean_score_delta": 1.44267,
+      "ci95_low": 1.27467,
+      "ci95_high": 1.58667,
+      "ci95_half_width": 0.156,
+      "calibrated_ev_delta_mean": 1.37019,
+      "calibrated_ev_delta_ci95_low": 1.19355,
+      "calibrated_ev_delta_ci95_high": 1.51589,
+      "a_wins": 28,
+      "b_wins": 1,
+      "ties": 1,
+      "wrong_accuse_delta": -28
+    },
+    "compact_dagger_vs_lossless_heuristic": {
+      "arm_a": "externalized_compact_linear_dagger_785p",
+      "arm_b": "in_context_lossless_heuristic",
+      "description": "Externalized CompactLinearDAggerPolicy (785p) minus lossless uncalibrated heuristic",
+      "n": 30,
+      "mean_score_delta": 1.337,
+      "ci95_low": 1.116,
+      "ci95_high": 1.527,
+      "ci95_half_width": 0.2055,
+      "calibrated_ev_delta_mean": 1.31809,
+      "calibrated_ev_delta_ci95_low": 1.13232,
+      "calibrated_ev_delta_ci95_high": 1.4603,
+      "a_wins": 27,
+      "b_wins": 2,
+      "ties": 1,
+      "wrong_accuse_delta": -26
+    },
+    "shell_bayes_vs_compact_dagger": {
+      "arm_a": "externalized_empirical_bayes_11p",
+      "arm_b": "externalized_compact_linear_dagger_785p",
+      "description": "11p Python-equivalent EmpiricalBayesPolicy minus 785p CompactLinearDAggerPolicy",
+      "n": 30,
+      "mean_score_delta": 0.07833,
+      "ci95_low": -0.03867,
+      "ci95_high": 0.233,
+      "ci95_half_width": 0.13583,
+      "calibrated_ev_delta_mean": 0.12931,
+      "calibrated_ev_delta_ci95_low": 0.03464,
+      "calibrated_ev_delta_ci95_high": 0.241,
+      "a_wins": 16,
+      "b_wins": 14,
+      "ties": 0,
+      "wrong_accuse_delta": -1
+    }
+  },
+  "factorial_2x2_synergy": {
+    "n": 30,
+    "cell_evict_heuristic_mean": -0.95233,
+    "cell_evict_bayes_mean": 0.093,
+    "cell_lossless_heuristic_mean": -0.84667,
+    "cell_lossless_bayes_mean": 0.56867,
+    "interaction_synergy_mean": 0.37,
+    "interaction_ci95_low": 0.214,
+    "interaction_ci95_high": 0.53367,
+    "interaction_ci95_half_width": 0.15983,
+    "interpretation": "Super-additive synergy: calibrated Bayes/EV alone under K=16 window eviction collapses to cautious abstention because 2-3 day delayed canary variant maps are evicted before surfacing, while lossless state alone without calibrated Bayes/EV suffers premature -1.0 wrong accusations under 5% fingerprint noise and framing; combining externalized state + calibrated Bayes/EV unlocks +0.5687 (30/30 correct)."
+  },
+  "totals": {
+    "arms_audited": 5,
+    "seeds_per_arm": 30,
+    "total_paired_episodes": 150,
+    "fresh_env_replays_verified": 150,
+    "solver_policy_invocations": 0,
+    "api_calls": 0,
+    "elapsed_seconds": 8.014
+  }
+}

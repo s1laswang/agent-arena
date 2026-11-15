@@ -133,13 +133,15 @@ Every number below is extracted programmatically from committed run files with z
 ### 04. `failure_analyst` - Long-Context Failure Analyst (VERIFIED)
 
 - Stage: Trajectory Forensics
-- Verified `gemini-4-carbon` runs: **3** (count: 222, calls: 5, in: 918,030, out: 26,204, thinking: 39,025, cached: 0, cost: $2.3395)
+- Verified `gemini-4-carbon` runs: **5** (count: 276, calls: 10, in: 1,114,554, out: 44,068, thinking: 95,665, cached: 0, cost: $3.4776)
 - Canonical headline run: `results/gemini_roles/failure_analyst/atlas-carbon` (`failure_atlas_carbon`, commit `26ab62d`, count=101, calls=2, cost=$1.3592) - 101 eps, 6 modes, 100% verified quotes, 93% solver agreement
-- Supporting verified runs: **2**
+- Supporting verified runs: **4**
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Headline Metric |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | `carbon-longctx-corpus` | `results/gemini_roles/failure_analyst/carbon-longctx-corpus` | `gemini-4-carbon` | `71a425530574aecd282e53a13f022be25fe4f292` | 101 | 2 | 237,763 | 16,390 | 14,887 | 0 | $0.6394 | 101 eps packed, 6 clusters, 100% verified quotes |
+| `atlas_claim_audit_carbon` | `results/gemini_roles/failure_analyst/claim-audit-carbon` | `gemini-4-carbon` | `a366f947ed7ff9ea549df0488268377b9b002868` | 30 | 4 | 36,421 | 7,259 | 25,631 | 0 | $0.4017 | 30/30 atlas claims audited (automated LLM, not human): 22 agree, 6 disagree, 2 unsure (78.6% scored agreement, 9 over-claims flagged, 100% verified quotes) |
+| `biased_chatter_decision_forensics` | `results/gemini_roles/failure_analyst/chatter-bias-forensics-carbon` | `gemini-4-carbon` | `a366f947ed7ff9ea549df0488268377b9b002868` | 24 | 1 | 160,103 | 10,605 | 31,009 | 0 | $0.7363 | 24 paired episodes (12 pairs), quotes 100.0% verified, carbon acc 100% (biased +0.662 vs template +0.642), rumor distraction 100% vs 50% |
 | `bayesian_calibration_analyst` | `results/gemini_roles/failure_analyst/calibration-ev-carbon` | `gemini-4-carbon` | `fdf16a71b0395c788b33957e6a91a2589224f8df` | 20 | 1 | 83,405 | 6,623 | 10,782 | 0 | $0.3409 | 101 calibrated eps, ECE 0.081, 100% verified quotes |
 
 ### 05. `exploit_hunter` - Whitebox & MCP Exploit Hunter (VERIFIED)

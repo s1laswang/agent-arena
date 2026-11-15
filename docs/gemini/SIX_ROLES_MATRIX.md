@@ -142,12 +142,14 @@ Every metric in this document is extracted deterministically from the 92 committ
 ### Role 04: `failure_analyst` - Long-Context Failure Analyst
 
 - **Gemini API capabilities:** 1M-token long-context window ingesting multi-day frontier agent trajectories and deterministic Bayesian solver regret tags in a single unfragmented prompt, structured JSON failure clustering, calibration auditing, and programmatic verbatim quote verification.
-- **Why it is essential:** Across 3 verified `gemini-4-carbon` runs (5 calls, 918,030 input tokens, 39,025 thinking tokens), `gemini-4-carbon` clusters multi-episode failure modes and audits posterior calibration with **100% code-verified verbatim transcript quotes** while every regret number comes strictly from `canary.solver.regret`.
+- **Why it is essential:** Across 5 verified `gemini-4-carbon` runs (10 calls, 1,114,554 input tokens, 95,665 thinking tokens), `gemini-4-carbon` clusters multi-episode failure modes and audits posterior calibration with **100% code-verified verbatim transcript quotes** while every regret number comes strictly from `canary.solver.regret`.
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Verified Result |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | `failure_atlas_carbon` | `results/gemini_roles/failure_analyst/atlas-carbon` | `gemini-4-carbon` | `26ab62d` | 101 | 2 | 596,862 | 3,191 | 13,356 | 0 | $1.3592 | 101 eps, 6 modes, 100% verified quotes, 93% solver agreement |
 | `carbon-longctx-corpus` | `results/gemini_roles/failure_analyst/carbon-longctx-corpus` | `gemini-4-carbon` | `71a425530574aecd282e53a13f022be25fe4f292` | 101 | 2 | 237,763 | 16,390 | 14,887 | 0 | $0.6394 | 101 eps packed, 6 clusters, 100% verified quotes |
+| `atlas_claim_audit_carbon` | `results/gemini_roles/failure_analyst/claim-audit-carbon` | `gemini-4-carbon` | `a366f947ed7ff9ea549df0488268377b9b002868` | 30 | 4 | 36,421 | 7,259 | 25,631 | 0 | $0.4017 | 30/30 atlas claims audited (automated LLM, not human): 22 agree, 6 disagree, 2 unsure (78.6% scored agreement, 9 over-claims flagged, 100% verified quotes) |
+| `biased_chatter_decision_forensics` | `results/gemini_roles/failure_analyst/chatter-bias-forensics-carbon` | `gemini-4-carbon` | `a366f947ed7ff9ea549df0488268377b9b002868` | 24 | 1 | 160,103 | 10,605 | 31,009 | 0 | $0.7363 | 24 paired episodes (12 pairs), quotes 100.0% verified, carbon acc 100% (biased +0.662 vs template +0.642), rumor distraction 100% vs 50% |
 | `bayesian_calibration_analyst` | `results/gemini_roles/failure_analyst/calibration-ev-carbon` | `gemini-4-carbon` | `fdf16a71b0395c788b33957e6a91a2589224f8df` | 20 | 1 | 83,405 | 6,623 | 10,782 | 0 | $0.3409 | 101 calibrated eps, ECE 0.081, 100% verified quotes |
 
 ### Role 05: `exploit_hunter` - Whitebox & MCP Exploit Hunter

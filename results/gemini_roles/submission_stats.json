@@ -2325,7 +2325,7 @@
       "title": "Long-Context Failure Analyst",
       "stage": "Trajectory Forensics",
       "verified": true,
-      "n_verified_runs": 3,
+      "n_verified_runs": 5,
       "canonical_run": {
         "role": "failure_analyst",
         "subrole": "failure_atlas_carbon",
@@ -2356,6 +2356,36 @@
           "cached_tokens": 0,
           "cost_usd": 0.639426,
           "headline_metric": "101 eps packed, 6 clusters, 100% verified quotes"
+        },
+        {
+          "role": "failure_analyst",
+          "subrole": "atlas_claim_audit_carbon",
+          "run_folder": "results/gemini_roles/failure_analyst/claim-audit-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "a366f947ed7ff9ea549df0488268377b9b002868",
+          "count": 30,
+          "calls": 4,
+          "tokens_in": 36421,
+          "tokens_out": 7259,
+          "thinking_tokens": 25631,
+          "cached_tokens": 0,
+          "cost_usd": 0.401742,
+          "headline_metric": "30/30 atlas claims audited (automated LLM, not human): 22 agree, 6 disagree, 2 unsure (78.6% scored agreement, 9 over-claims flagged, 100% verified quotes)"
+        },
+        {
+          "role": "failure_analyst",
+          "subrole": "biased_chatter_decision_forensics",
+          "run_folder": "results/gemini_roles/failure_analyst/chatter-bias-forensics-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "a366f947ed7ff9ea549df0488268377b9b002868",
+          "count": 24,
+          "calls": 1,
+          "tokens_in": 160103,
+          "tokens_out": 10605,
+          "thinking_tokens": 31009,
+          "cached_tokens": 0,
+          "cost_usd": 0.736346,
+          "headline_metric": "24 paired episodes (12 pairs), quotes 100.0% verified, carbon acc 100% (biased +0.662 vs template +0.642), rumor distraction 100% vs 50%"
         },
         {
           "role": "failure_analyst",
@@ -2406,6 +2436,36 @@
         },
         {
           "role": "failure_analyst",
+          "subrole": "atlas_claim_audit_carbon",
+          "run_folder": "results/gemini_roles/failure_analyst/claim-audit-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "a366f947ed7ff9ea549df0488268377b9b002868",
+          "count": 30,
+          "calls": 4,
+          "tokens_in": 36421,
+          "tokens_out": 7259,
+          "thinking_tokens": 25631,
+          "cached_tokens": 0,
+          "cost_usd": 0.401742,
+          "headline_metric": "30/30 atlas claims audited (automated LLM, not human): 22 agree, 6 disagree, 2 unsure (78.6% scored agreement, 9 over-claims flagged, 100% verified quotes)"
+        },
+        {
+          "role": "failure_analyst",
+          "subrole": "biased_chatter_decision_forensics",
+          "run_folder": "results/gemini_roles/failure_analyst/chatter-bias-forensics-carbon",
+          "model_id": "gemini-4-carbon",
+          "commit": "a366f947ed7ff9ea549df0488268377b9b002868",
+          "count": 24,
+          "calls": 1,
+          "tokens_in": 160103,
+          "tokens_out": 10605,
+          "thinking_tokens": 31009,
+          "cached_tokens": 0,
+          "cost_usd": 0.736346,
+          "headline_metric": "24 paired episodes (12 pairs), quotes 100.0% verified, carbon acc 100% (biased +0.662 vs template +0.642), rumor distraction 100% vs 50%"
+        },
+        {
+          "role": "failure_analyst",
           "subrole": "bayesian_calibration_analyst",
           "run_folder": "results/gemini_roles/failure_analyst/calibration-ev-carbon",
           "model_id": "gemini-4-carbon",
@@ -2420,13 +2480,13 @@
           "headline_metric": "101 calibrated eps, ECE 0.081, 100% verified quotes"
         }
       ],
-      "count": 222,
-      "calls": 5,
-      "tokens_in": 918030,
-      "tokens_out": 26204,
-      "thinking_tokens": 39025,
+      "count": 276,
+      "calls": 10,
+      "tokens_in": 1114554,
+      "tokens_out": 44068,
+      "thinking_tokens": 95665,
       "cached_tokens": 0,
-      "cost_usd": 2.33948
+      "cost_usd": 3.477568
     },
     "exploit_hunter": {
       "role": "exploit_hunter",

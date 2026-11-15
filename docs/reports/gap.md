@@ -16,6 +16,14 @@ Honest reading: a gap on hard in the judges' harness (both the raw and the luck-
 
 **Pre-registered extension (written Sun 15 Nov ~02:05 Helsinki, before any run):** gemini-4-carbon via OpenCode on v1.4 hard seeds 30-59 will be run as an EXTENSION and reported (a) on its own and (b) pooled with seeds 0-29, in a separate directory (`opencode-gemini-4-carbon-ext`). The primary n=30 row above is never replaced. Valid episodes are never re-run; infra-invalid attempts are retried and excluded.
 
+**Extension (seeds 30-59; partial set stopped at 03:22 Helsinki to preserve the shared 2M token/min carbon quota for the judge rehearsal; tables: `data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_{ext30to59,pooled0to59}.md`):**
+2 valid OpenCode episodes completed before the stop (`seeds=[34, 37]`, scores +0.790 and +0.700, both replay-verified; 31 attempts on other seeds hit `infra:provider_quota` and were excluded; reference solver on all 30 extension seeds 30-59: 0.498 ± 0.156, n=30, in `data/runs/committed/v1.4/reference/solver-hard-seeds30to59/`):
+
+| set (OpenCode over MCP, gemini-4-carbon, hard) | seeds | n | score ± 95% CI | solver, same seeds | frontier / solver [95% CI] | paired diff ± CI | luck-adjusted / solver [95% CI] |
+|---|---|---|---|---|---|---|---|
+| (a) extension alone | 34, 37 | 2 | 0.745 ± 0.088 | 0.735 | 101% [91%, 113%] | +0.010 ± 0.157 | 109% [105%, 114%] |
+| (b) pooled (primary 0-29 + extension) | 0-29, 34, 37 | 32 | 0.349 ± 0.190 | 0.514 | **68% [32%, 100%]** | −0.165 ± 0.182 | **75% [56%, 93%]** |
+
 **What we tried that did NOT widen the gap (all reported, none shipped):**
 - **v1.5 biased employees** (rumours, grudges, authority, misforwards): gemini-4-carbon went from 61% to 108% of the solver on the same hard seeds 0-9, because it treats rumours as evidence against the person rumoured. Dropped at Gate B; data in data/runs/committed/v1.5-candidate/.
 - **A stronger reference (solver_v2):** +0.012 ± 0.029 on fresh hard seeds 9000-9399 (n=400), below the +0.08 bar. The v1 solver is calibrated and near the information limit (docs/reports/reference_optimality.md).

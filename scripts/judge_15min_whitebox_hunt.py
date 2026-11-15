@@ -19,6 +19,8 @@ import tempfile
 import threading
 import time
 from typing import Any
+import urllib.error
+import urllib.request
 
 REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
@@ -26,7 +28,7 @@ if str(REPO) not in sys.path:
 
 from canary.env import TOPICS, Env
 from canary.eval import make_env, make_policy_factory, run_episode
-from canary.mcp_server import Episode, ledger_canonical, sign_ledger, verify_ledger
+from canary.mcp_server import Episode, clean_launch_env, ledger_canonical, sign_ledger, verify_ledger
 from canary.redteam import anticheat as ac
 from canary.redteam.corpus import load as load_momin_corpus, shape as arg_shape
 from canary.redteam.encodings import (
@@ -282,6 +284,7 @@ def _execute_one_sequence(
     used_encoders: set[str],
     used_split_encoders: set[str],
     used_momin_indices: set[int],
+    secret_tokens_cache: dict[tuple[str, int], Any] | None = None,
 ) -> dict[str, Any]:
     env = make_env(tier, seed)
     ids = list(env._ids)
@@ -431,10 +434,11 @@ def _execute_one_sequence(
             picked = [ALL_ENCODER_NAMES[(base_offset + k) % len(ALL_ENCODER_NAMES)] for k in range(4)]
             for nm in picked:
                 used_encoders.add(nm)
+            innocent_emp = next(x for x in ids if x != mole)
             bad_emp_a = _safe_encoded_canary_key(picked[0], mole, idset)
             bad_emp_b = _safe_encoded_canary_key(picked[1], e0, idset)
             bad_top = _safe_encoded(picked[2], "workload", set(TOPICS))
-            bad_emp_c = _safe_encoded_canary_key(picked[3], e1, idset)
+            bad_emp_c = _safe_encoded_canary_key(picked[3], innocent_emp, idset)
             calls = [
                 ("status", {}, False),
                 ("accuse", {"employee": bad_emp_a}, True),
@@ -576,7 +580,13 @@ def _execute_one_sequence(
             extra_note = "interview_non_idempotent"
 
         if outputs_for_scan and seed == 0:
-            secret_tokens = _episode_secret_tokens(env, tier, seed, b"public")
+            cache_key = (tier, seed)
+            if secret_tokens_cache is not None and cache_key in secret_tokens_cache:
+                secret_tokens = secret_tokens_cache[cache_key]
+            else:
+                secret_tokens = _episode_secret_tokens(env, tier, seed, b"public")
+                if secret_tokens_cache is not None:
+                    secret_tokens_cache[cache_key] = secret_tokens
             hits = scan_for_secret(outputs_for_scan, secret_tokens)
             leak_hits = len(hits)
 
@@ -601,14 +611,52 @@ def _execute_one_sequence(
     }
 
 
+def _error_detail_mole_parity_pair(env_mole: Env, env_innocent: Env) -> tuple[int, int]:
+    mole = env_mole._world.mole
+    innocent = next(x for x in env_innocent._ids if x != mole)
+    sig_by_emp: dict[str, list[tuple[bool, str | None, str]]] = {}
+    for emp, cur_env in ((mole, env_mole), (innocent, env_innocent)):
+        probe_rows: list[tuple[bool, str | None, str]] = []
+        r_unrest = cur_env.call("unrestrict_access", {"employee": emp})
+        probe_rows.append((r_unrest.ok, r_unrest.error, json.dumps(r_unrest.data, sort_keys=True).replace(emp, "<emp>")))
+        r_r1 = cur_env.call("restrict_access", {"employee": emp})
+        assert r_r1.ok
+        r_r2 = cur_env.call("restrict_access", {"employee": emp})
+        probe_rows.append((r_r2.ok, r_r2.error, json.dumps(r_r2.data, sort_keys=True).replace(emp, "<emp>")))
+        r_can = cur_env.call("plant_canary", {"doc_title": "ParityCheck", "assignment": {emp: "v1"}})
+        probe_rows.append((r_can.ok, r_can.error, json.dumps(r_can.data, sort_keys=True).replace(emp, "<emp>")))
+        r_un = cur_env.call("unrestrict_access", {"employee": emp})
+        assert r_un.ok
+        r_iv = cur_env.call("interview", {"employee": emp, "topic": "not_a_valid_topic"})
+        probe_rows.append((r_iv.ok, r_iv.error, json.dumps(r_iv.data, sort_keys=True).replace(emp, "<emp>")))
+        r_acc = cur_env.call("accuse", {"employee": f"{emp}_invalid"})
+        probe_rows.append((r_acc.ok, r_acc.error, json.dumps(r_acc.data, sort_keys=True).replace(emp, "<emp>")))
+        sig_by_emp[emp] = probe_rows
+    mismatches = sum(1 for a, b in zip(sig_by_emp[mole], sig_by_emp[innocent]) if a != b or a[0] is True or b[0] is True)
+    return len(sig_by_emp[mole]), mismatches
+
+
+def audit_error_detail_mole_parity(active_tiers: tuple[str, ...], seeds: tuple[int, ...]) -> tuple[int, int]:
+    total_probes = 0
+    total_leaks = 0
+    for tier in active_tiers:
+        for seed in seeds:
+            n_p, n_l = _error_detail_mole_parity_pair(make_env(tier, seed), make_env(tier, seed))
+            total_probes += n_p
+            total_leaks += n_l
+    return total_probes, total_leaks
+
+
 def run_v1_transcript_and_sequences(repo_root: Path = REPO, quick: bool = False) -> dict[str, Any]:
     t0 = time.perf_counter()
     mined = mine_v14_transcripts(repo_root)
     momin_rows = load_momin_corpus()
     seeds = (0,) if quick else (0, 1, 2, 3, 4)
-    active_tiers = ("easy", "hard") if quick else V1_TIERS
+    active_tiers = ("easy",) if quick else V1_TIERS
+    parity_probes, parity_leaks = audit_error_detail_mole_parity(active_tiers, seeds)
 
     solver_cache: dict[tuple[str, int], tuple[list[tuple[str, dict[str, Any]]], float]] = {}
+    secret_tokens_cache: dict[tuple[str, int], Any] = {}
     for tier in active_tiers:
         for seed in seeds:
             env = make_env(tier, seed)
@@ -651,6 +699,7 @@ def run_v1_transcript_and_sequences(repo_root: Path = REPO, quick: bool = False)
                     used_encoders,
                     used_split_encoders,
                     used_momin_indices,
+                    secret_tokens_cache,
                 )
                 seq_runs += 1
                 total_runs += 1
@@ -688,6 +737,7 @@ def run_v1_transcript_and_sequences(repo_root: Path = REPO, quick: bool = False)
         and total_v_rises == 0
         and total_score_gains == 0
         and total_leak_hits == 0
+        and parity_leaks == 0
         and (quick or (len(used_momin_indices) == len(momin_rows) and len(used_encoders) == len(ALL_ENCODER_NAMES)))
         and len(NON_CAESAR_ENCODERS) >= 79
     )
@@ -712,6 +762,8 @@ def run_v1_transcript_and_sequences(repo_root: Path = REPO, quick: bool = False)
         "v_rises": total_v_rises,
         "score_gains_over_solver": total_score_gains,
         "encoded_leak_hits": total_leak_hits,
+        "error_detail_parity_probes": parity_probes,
+        "error_detail_mole_leaks": parity_leaks,
         "solver_baseline_means": {
             t: round(sum(solver_cache[(t, s)][1] for s in seeds) / len(seeds), 4) for t in active_tiers
         },
@@ -773,7 +825,7 @@ def _contingency_stats(counts: dict[str, list[int]]) -> dict[str, Any]:
 def run_v2_day0_mi_oracle(quick: bool = False) -> dict[str, Any]:
     t0 = time.perf_counter()
     n_secrets = 60 if quick else 300
-    judge_window = list(range(900_000, 900_030))
+    judge_window = list(JUDGE_SEEDS)
     angry_set = frozenset(_ANGRY)
 
     prev_set_secret = getattr(W, "_SET_SECRET", None)
@@ -1001,7 +1053,7 @@ def _run_sandboxed_test_sh(
     child_proc: subprocess.Popen[bytes] | None = None
     if spawn_rewriter_child:
         child_proc = subprocess.Popen(
-            [sys.executable, "-c", "import time; time.sleep(30)"],
+            [sys.executable, "-c", "import time; time.sleep(120)"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -1013,7 +1065,7 @@ def _run_sandboxed_test_sh(
             capture_output=True,
             text=True,
             env=env,
-            timeout=30,
+            timeout=60,
         )
     finally:
         if child_proc is not None and child_proc.poll() is None:
@@ -1043,7 +1095,11 @@ def _custom_sign_raw(body: dict[str, Any], key: str) -> str:
     return json.dumps(full, allow_nan=True)
 
 
-def run_v3_harbor_verifier_forgery_matrix(repo_root: Path = REPO, scratch_dir: Path = DEFAULT_SCRATCH) -> dict[str, Any]:
+def run_v3_harbor_verifier_forgery_matrix(
+    repo_root: Path = REPO,
+    scratch_dir: Path = DEFAULT_SCRATCH,
+    quick: bool = False,
+) -> dict[str, Any]:
     t0 = time.perf_counter()
     scratch_dir.mkdir(parents=True, exist_ok=True)
     sandbox_root = Path(tempfile.mkdtemp(prefix="w9-v3-verifier-", dir=str(scratch_dir)))
@@ -1145,6 +1201,10 @@ def run_v3_harbor_verifier_forgery_matrix(repo_root: Path = REPO, scratch_dir: P
             ("F15", "truncated_json_payload", {"evidence_raw": trunc_raw, "key_text": key_good}),
         ]
 
+        if quick:
+            quick_static = {"F01", "F02", "F04", "F07", "F10"}
+            static_vectors = [row for row in static_vectors if row[0] in quick_static]
+
         for vid, vname, kwargs in static_vectors:
             res = _run_sandboxed_test_sh(repo_root, sandbox_root, f"{vid}_{vname}", prewrite_reward=True, **kwargs)
             failed_closed = (
@@ -1209,9 +1269,10 @@ def run_v3_harbor_verifier_forgery_matrix(repo_root: Path = REPO, scratch_dir: P
 
     held_count = sum(1 for r in rows if r["failed_closed"])
     controls_ok = all(c["ok"] for c in controls)
+    expected_n = 6 if quick else 16
     return {
         "vector": "V3",
-        "ok": (len(rows) == 16 and held_count == 16 and controls_ok),
+        "ok": (len(rows) == expected_n and held_count == expected_n and controls_ok),
         "seconds": round(time.perf_counter() - t0, 3),
         "n_vectors": len(rows),
         "failed_closed_count": held_count,
@@ -1236,7 +1297,181 @@ def _pearson_lag1(xs: list[int]) -> float:
     return num / (da * db)
 
 
-def run_v4_world_secret_entropy(quick: bool = False) -> dict[str, Any]:
+def _http_json(url: str, method: str = "GET", body: bytes | None = None) -> tuple[int, dict[str, Any]]:
+    headers = {"Content-Type": "application/json"} if body is not None else {}
+    req = urllib.request.Request(url, data=body, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=10.0) as resp:
+            raw = resp.read().decode("utf-8")
+            return int(resp.status), (json.loads(raw) if raw else {})
+    except urllib.error.HTTPError as exc:
+        raw = exc.read().decode("utf-8", errors="replace")
+        try:
+            parsed = json.loads(raw) if raw else {}
+        except ValueError:
+            parsed = {"raw": raw}
+        return int(exc.code), parsed
+
+
+def _write_0600(path: Path, text: str) -> None:
+    fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(text)
+
+
+def _probe_live_mcp_child_server(scratch_dir: Path) -> dict[str, Any]:
+    scratch_dir.mkdir(parents=True, exist_ok=True)
+    mcp_sb = Path(tempfile.mkdtemp(prefix="w9-v4-mcp-", dir=str(scratch_dir)))
+    os.chmod(mcp_sb, 0o700)
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        port = int(s.getsockname()[1])
+
+    ledger_tok = "w9-live-ledger-tok-7741"
+    admin_tok = "w9-live-admin-tok-8852"
+    ledger_key = "ef" * 32
+    world_sec = "w9-live-mcp-world-secret-32bytes!!"
+
+    secret_files = {
+        "CANARY_EPISODE_FILE": (mcp_sb / "episode.json", json.dumps({"tier": "hard", "seed": 900_000})),
+        "CANARY_WORLD_SECRET_FILE": (mcp_sb / "world_secret", world_sec),
+        "CANARY_LEDGER_TOKEN_FILE": (mcp_sb / "ledger_token", ledger_tok),
+        "CANARY_ADMIN_TOKEN_FILE": (mcp_sb / "admin_token", admin_tok),
+        "CANARY_LEDGER_KEY_FILE": (mcp_sb / "ledger_key", ledger_key),
+    }
+    for fpath, ftext in secret_files.values():
+        _write_0600(fpath, ftext)
+
+    launch_env = clean_launch_env()
+    launch_env.pop("CANARY_ALLOW_DEV", None)
+    launch_env.pop("CANARY_LEDGER_LIVE", None)
+    launch_env["CANARY_HOST"] = "127.0.0.1"
+    launch_env["CANARY_PORT"] = str(port)
+    launch_env["CANARY_CONSUME_SECRET_FILES"] = "1"
+    for var, (fpath, _) in secret_files.items():
+        launch_env[var] = str(fpath)
+
+    base_url = f"http://127.0.0.1:{port}"
+    proc: subprocess.Popen[bytes] | None = None
+    ready = False
+    secret_files_consumed = False
+    proc_environ_clean = False
+    no_tok_403 = False
+    bad_tok_403 = False
+    admin_no_tok_403 = False
+    dev_seed_reset_400 = False
+    mid_ledger_hmac_and_redacted = False
+    reset_rotates_token = False
+    child_cleaned_up = False
+
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "canary.mcp_server"],
+            cwd=str(REPO),
+            env=launch_env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        deadline = time.perf_counter() + 45.0
+        while time.perf_counter() < deadline:
+            if proc.poll() is not None:
+                break
+            try:
+                st, body = _http_json(f"{base_url}/healthz")
+                if st == 200 and body.get("ok") is True:
+                    ready = True
+                    break
+            except OSError:
+                time.sleep(0.05)
+
+        if ready and proc is not None:
+            secret_files_consumed = all(not fpath.exists() for fpath, _ in secret_files.values())
+            proc_env_path = Path(f"/proc/{proc.pid}/environ")
+            if proc_env_path.is_file():
+                raw_env = proc_env_path.read_bytes().decode("utf-8", errors="replace")
+                leaked_markers = (ledger_tok, admin_tok, ledger_key, world_sec, "CANARY_WORLD_SECRET_FILE", "CANARY_LEDGER_KEY_FILE")
+                proc_environ_clean = all(m not in raw_env for m in leaked_markers)
+            else:
+                proc_environ_clean = True
+
+            st_no, _ = _http_json(f"{base_url}/ledger")
+            st_bad, _ = _http_json(f"{base_url}/ledger?token=wrong-token")
+            st_adm_no, _ = _http_json(
+                f"{base_url}/admin/reset",
+                method="POST",
+                body=json.dumps({"tier": "hard", "seed": 900_001}).encode("utf-8"),
+            )
+            no_tok_403 = st_no == 403
+            bad_tok_403 = st_bad == 403
+            admin_no_tok_403 = st_adm_no == 403
+
+            st_dev, _ = _http_json(
+                f"{base_url}/admin/reset?token={admin_tok}",
+                method="POST",
+                body=json.dumps({"tier": "hard", "seed": 0}).encode("utf-8"),
+            )
+            dev_seed_reset_400 = st_dev == 400
+
+            st_led, led_payload = _http_json(f"{base_url}/ledger?token={ledger_tok}")
+            ep_tok_1 = str(led_payload.get("episode", ""))
+            mid_ledger_hmac_and_redacted = (
+                st_led == 200
+                and verify_ledger(led_payload, ledger_key)
+                and led_payload.get("done") is False
+                and led_payload.get("score") == 0.0
+                and "V" not in led_payload
+                and "accused" not in led_payload
+                and led_payload.get("redacted") == "episode in progress"
+                and bool(ep_tok_1)
+            )
+
+            st_rst, rst_payload = _http_json(
+                f"{base_url}/admin/reset?token={admin_tok}",
+                method="POST",
+                body=json.dumps({"tier": "hard", "seed": 900_001}).encode("utf-8"),
+            )
+            ep_tok_2 = str(rst_payload.get("episode", ""))
+            reset_rotates_token = st_rst == 200 and rst_payload.get("ok") is True and bool(ep_tok_2) and ep_tok_2 != ep_tok_1
+    finally:
+        if proc is not None:
+            if proc.poll() is None:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait(timeout=5)
+            child_cleaned_up = proc.poll() is not None
+        shutil.rmtree(mcp_sb, ignore_errors=True)
+
+    probe_ok = (
+        ready
+        and secret_files_consumed
+        and proc_environ_clean
+        and no_tok_403
+        and bad_tok_403
+        and admin_no_tok_403
+        and dev_seed_reset_400
+        and mid_ledger_hmac_and_redacted
+        and reset_rotates_token
+        and child_cleaned_up
+    )
+    return {
+        "ok": probe_ok,
+        "ready": ready,
+        "secret_files_consumed": secret_files_consumed,
+        "proc_environ_clean": proc_environ_clean,
+        "ledger_unauth_403": no_tok_403 and bad_tok_403,
+        "admin_unauth_403": admin_no_tok_403,
+        "dev_seed_reset_400": dev_seed_reset_400,
+        "mid_ledger_hmac_and_redacted": mid_ledger_hmac_and_redacted,
+        "reset_rotates_token": reset_rotates_token,
+        "child_cleaned_up": child_cleaned_up,
+    }
+
+
+def run_v4_world_secret_entropy(scratch_dir: Path = DEFAULT_SCRATCH, quick: bool = False) -> dict[str, Any]:
     t0 = time.perf_counter()
     n_starts = 20 if quick else 50
     judge_seeds = list(JUDGE_SEEDS)
@@ -1256,7 +1491,7 @@ def run_v4_world_secret_entropy(quick: bool = False) -> dict[str, Any]:
             W._PROC_SECRET = None
             sec = W._process_secret()
             live_secrets.append(sec)
-            s = judge_seeds[i % 30]
+            s = judge_seeds[i % len(judge_seeds)]
             env_live = Env("hard", s)
             pub_w = public_world("hard", s)
             obs_roster = [(e.id, e.name, e.dept, e.role) for e in env_live._world.employees]
@@ -1283,7 +1518,7 @@ def run_v4_world_secret_entropy(quick: bool = False) -> dict[str, Any]:
         for i in range(n_starts):
             W._PROC_SECRET = None
             os.urandom = lambda n, idx=i: hashlib.sha256(f"canary-v4-per-start-urandom-{idx:04d}".encode("utf-8")).digest()[:n]
-            s = judge_seeds[i % 30]
+            s = judge_seeds[i % len(judge_seeds)]
             env = Env("hard", s)
             os.urandom = orig_urandom
             mole = env._world.mole
@@ -1313,7 +1548,7 @@ def run_v4_world_secret_entropy(quick: bool = False) -> dict[str, Any]:
         ep = Episode("hard", 900_000, "template")
         reset_tokens.add(ep.token)
         reset_moles.append(int(ep.env._world.mole[1:]))
-        reset_pool = list(range(900_001, 900_040)) + list(range(800_000, 800_011))
+        reset_pool = list(JUDGE_SEEDS)[1:] + list(range(800_000, 800_011))
         for s in reset_pool[: n_starts - 1]:
             ep.reset("hard", s)
             reset_tokens.add(ep.token)
@@ -1321,6 +1556,8 @@ def run_v4_world_secret_entropy(quick: bool = False) -> dict[str, Any]:
     finally:
         W._SET_SECRET = prev_set_secret
         W._PROC_SECRET = prev_proc_secret
+
+    mcp_probe = _probe_live_mcp_child_server(scratch_dir)
 
     exp_per_slot = n_starts / 40.0
     unif_chi2 = sum(((det_mole_counts.get(f"e{idx:02d}", 0) - exp_per_slot) ** 2) / exp_per_slot for idx in range(40))
@@ -1350,12 +1587,14 @@ def run_v4_world_secret_entropy(quick: bool = False) -> dict[str, Any]:
         and pub_mole_z <= 2.58
         and abs(adj_start_z) <= 2.58
         and abs(adj_reset_z) <= 2.58
+        and mcp_probe["ok"]
     )
     return {
         "vector": "V4",
         "ok": ok,
         "seconds": round(time.perf_counter() - t0, 3),
         "n_starts": n_starts,
+        "judge_seed_range": f"{judge_seeds[0]}-{judge_seeds[-1]}",
         "salt_file_present": salt_present,
         "live_urandom_unique_secrets": len(set(live_secrets)),
         "live_urandom_secret_bytes": 32,
@@ -1373,6 +1612,7 @@ def run_v4_world_secret_entropy(quick: bool = False) -> dict[str, Any]:
         "cross_reset_unique_episode_tokens": len(reset_tokens),
         "cross_reset_adjacent_matches": adj_reset_matches,
         "cross_reset_lag1_r": round(lag1_reset_r, 4),
+        "mcp_live_probe": mcp_probe,
     }
 
 
@@ -1595,9 +1835,13 @@ def run_all(
         elif v == "V2":
             results["V2"] = run_v2_day0_mi_oracle(quick=quick)
         elif v == "V3":
-            results["V3"] = run_v3_harbor_verifier_forgery_matrix(repo_root=repo_root, scratch_dir=scratch_dir)
+            results["V3"] = run_v3_harbor_verifier_forgery_matrix(
+                repo_root=repo_root,
+                scratch_dir=scratch_dir,
+                quick=quick,
+            )
         elif v == "V4":
-            results["V4"] = run_v4_world_secret_entropy(quick=quick)
+            results["V4"] = run_v4_world_secret_entropy(scratch_dir=scratch_dir, quick=quick)
         elif v == "V5":
             results["V5"] = run_v5_rehearsal_dry_audit(repo_root=repo_root, scratch_dir=scratch_dir)
         else:

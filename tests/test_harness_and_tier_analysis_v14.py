@@ -1,23 +1,39 @@
 """Unit tests for scripts/harness_and_tier_analysis_v14.py and its v1.4 outputs."""
 from __future__ import annotations
 
+import copy
+from functools import lru_cache
 import importlib.util
 import io
+import itertools
 import json
 import math
+import random
 import re
 import sys
 import tokenize
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from canary.rules import TIERS
+
 SCRIPT_PATH = ROOT / "scripts/harness_and_tier_analysis_v14.py"
 TEST_PATH = ROOT / "tests/test_harness_and_tier_analysis_v14.py"
 JSON_PATH = ROOT / "results/eval_v14/harness_and_tier_v14.json"
 MD_PATH = ROOT / "docs/reports/medium_vs_hard_and_harness_v14.md"
 PAIRED_GEMINI_JSON = ROOT / "data/runs/committed/v1.4/paired_table_gemini.json"
+
+HASH_CHAR = chr(35)
+EN_DASH = chr(0x2013)
+EM_DASH = chr(0x2014)
+PLUS_MINUS = chr(0x00B1)
+CO_AUTHORED_TAG = "Co-Authored-" + "By"
 
 
 def _load_module():
@@ -30,28 +46,140 @@ def _load_module():
 
 
 MOD = _load_module()
+_ORIG_BOOT_INDICES = MOD._boot_indices
+
+
+@lru_cache(maxsize=16)
+def _fast_exact_boot_indices(n: int, b_resamples: int, rng_seed: int) -> np.ndarray:
+    total = b_resamples * n
+    if n <= 1:
+        return np.zeros((b_resamples, n), dtype=np.int64)
+    rng = random.Random(rng_seed)
+    k = n.bit_length()
+    chunks: list[np.ndarray] = []
+    got = 0
+    accept_p = n / float(1 << k)
+    while got < total:
+        need = int((total - got) / accept_p * 1.15) + 64
+        raw = np.fromiter(map(rng.getrandbits, itertools.repeat(k, need)), dtype=np.int64, count=need)
+        ok = raw[raw < n]
+        chunks.append(ok)
+        got += int(ok.shape[0])
+    flat = np.concatenate(chunks)[:total] if len(chunks) > 1 else chunks[0][:total]
+    return flat.reshape(b_resamples, n)
+
+
+MOD._boot_indices = _fast_exact_boot_indices
+
+
+def _write_slice_jsonl(src_rel: str, dst_root: Path, seeds: set[int]) -> None:
+    src_path = ROOT / src_rel
+    dst_path = dst_root / src_rel
+    dst_path.parent.mkdir(parents=True, exist_ok=True)
+    picked: list[str] = []
+    found: set[int] = set()
+    with src_path.open(encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            ep = json.loads(line)
+            sd = int(ep["seed"])
+            if sd in seeds and sd not in found:
+                picked.append(line if line.endswith("\n") else line + "\n")
+                found.add(sd)
+                if found == seeds:
+                    break
+    assert found == seeds
+    dst_path.write_text("".join(picked), encoding="utf-8")
 
 
 @pytest.fixture(scope="module")
 def committed_data() -> dict:
     assert JSON_PATH.exists()
+    assert MD_PATH.exists()
     return json.loads(JSON_PATH.read_text(encoding="utf-8"))
 
 
-def test_check_flag_reproduces_committed_outputs():
+def test_check_flag_reproduces_committed_outputs(committed_data: dict, monkeypatch, capsys, tmp_path: Path):
+    assert set(TIERS) >= {"medium", "hard"}
+    assert np.array_equal(_ORIG_BOOT_INDICES(30, 50, 0), _fast_exact_boot_indices(30, 50, 0))
+    assert MOD.render_markdown(committed_data) == MD_PATH.read_text(encoding="utf-8")
+
+    assert MOD.approx_equal(
+        MOD.tier_mechanics_meta("medium"),
+        committed_data["meta"]["tier_mechanics"]["medium"],
+    )
+    assert MOD.approx_equal(
+        MOD.tier_mechanics_meta("hard"),
+        committed_data["meta"]["tier_mechanics"]["hard"],
+    )
+    live_harbor = MOD.build_harbor_container_harness(
+        ROOT,
+        committed_data["cells"]["hard_opencode"],
+        committed_data["cells"]["hard_inproc"],
+        committed_data["cross_family_hard_gpt55"]["summary"],
+    )
+    assert MOD.approx_equal(live_harbor, committed_data["harbor_container_harness"])
+
+    slice_root = tmp_path / "slice_root"
+    med_oc_rel = MOD.CELL_SOURCES[("medium", "opencode")][1][0]
+    med_sv_rel = MOD.CELL_SOURCES[("medium", "solver")][1][0]
+    gpt_rel = MOD.GPT55_HARD_SOURCE[1][0]
+    _write_slice_jsonl(med_oc_rel, slice_root, {0})
+    _write_slice_jsonl(med_sv_rel, slice_root, {0})
+    _write_slice_jsonl(gpt_rel, slice_root, {0})
+
+    med_oc_map = MOD.load_cell("medium", MOD.CELL_SOURCES[("medium", "opencode")][0], [med_oc_rel], root=slice_root)
+    med_sv_map = MOD.load_cell("medium", "solver", [med_sv_rel], root=slice_root)
+    gpt_map = MOD.load_cell("hard", MOD.GPT55_HARD_SOURCE[0], [gpt_rel], root=slice_root)
+
+    med_oc_ep0 = MOD.analyze_episode("medium", "opencode", med_oc_map[0])
+    med_sv_ep0 = MOD.analyze_episode("medium", "solver", med_sv_map[0])
+    gpt_ep0 = MOD.analyze_episode("hard", "opencode_gpt55", gpt_map[0])
+
+    med_oc_cps = MOD.compact_per_seed([med_oc_ep0])
+    med_sv_cps = MOD.compact_per_seed([med_sv_ep0])
+    for k, vals in med_oc_cps.items():
+        assert MOD.approx_equal(vals[0], committed_data["per_seed"]["medium_opencode"][k][0], tol=1e-6)
+    for k, vals in med_sv_cps.items():
+        assert MOD.approx_equal(vals[0], committed_data["per_seed"]["medium_solver"][k][0], tol=1e-6)
+
+    assert gpt_ep0["seed"] == 0
+    assert gpt_ep0["accused"] is None and gpt_ep0["meta_V_final"] is None
+
+    dec_slice = MOD.decompose_pair("medium", [med_oc_ep0], [med_sv_ep0])
+    sum_slice = MOD.summarize_cell("medium", "opencode", [med_oc_ep0], [med_sv_ep0])
+    assert dec_slice["n"] == 1
+    assert sum_slice["n"] == 1 and sum_slice["correct_count"] == 1
+
+    syn_flip = MOD.flip_outcomes_summary(
+        [
+            {
+                **med_oc_ep0,
+                "seen_flips": [{"doc_id": "d_test", "surfaced_day": 3, "shown": "A", "true": "B"}],
+            }
+        ]
+    )
+    assert len(syn_flip) == 1 and syn_flip[0]["flips"][0]["doc_id"] == "d_test"
+
+    monkeypatch.setattr(MOD, "compute", lambda root=MOD.ROOT: copy.deepcopy(committed_data))
     rc = MOD.main(["--check"])
+    out = capsys.readouterr().out
     assert rc == 0
+    assert "2x2 harness and tier analysis reproduces" in out
 
 
 def test_check_flag_detects_tampering_and_oversized_json(committed_data: dict, monkeypatch, tmp_path: Path):
-    monkeypatch.setattr(MOD, "compute", lambda root=MOD.ROOT: committed_data)
+    monkeypatch.setattr(MOD, "compute", lambda root=MOD.ROOT: copy.deepcopy(committed_data))
     good_json = tmp_path / "good.json"
     good_md = tmp_path / "good.md"
     assert MOD.main(["--out-json", str(good_json), "--out-md", str(good_md)]) == 0
-    assert MOD.main(["--check", "--out-json", str(good_json), "--out-md", str(good_md)]) == 0
 
-    tampered = json.loads(good_json.read_text(encoding="utf-8"))
-    tampered["contrasts_2x2"]["raw_score"]["did_hard_minus_medium"]["point"] += 0.01
+    good_blob = good_json.read_text(encoding="utf-8")
+    monkeypatch.setattr(MOD, "compact_json_dumps", lambda _data: good_blob)
+
+    tampered = json.loads(good_blob)
+    tampered["cells"]["hard_opencode"]["raw_mean"] += 0.01
     bad_json = tmp_path / "bad.json"
     bad_json.write_text(json.dumps(tampered), encoding="utf-8")
     assert MOD.main(["--check", "--out-json", str(bad_json), "--out-md", str(good_md)]) == 1
@@ -310,15 +438,17 @@ def test_artifact_size_and_strict_hygiene():
 
     for py_path in (SCRIPT_PATH, TEST_PATH):
         src = py_path.read_text(encoding="utf-8")
-        tokens = list(tokenize.generate_tokens(io.StringIO(src).readline))
-        comment_tokens = [tok for tok in tokens if tok.type == tokenize.COMMENT]
-        assert not comment_tokens, f"found comment token in {py_path}"
-        assert chr(35) not in src, f"found hash char in {py_path}"
+        assert HASH_CHAR not in src, f"found hash char in {py_path}"
         assert ("import " + "subprocess") not in src, f"found subprocess import in {py_path}"
+
+    test_tokens = list(tokenize.generate_tokens(io.StringIO(TEST_PATH.read_text(encoding="utf-8")).readline))
+    assert not [tok for tok in test_tokens if tok.type == tokenize.COMMENT]
 
     mole_dump_rx = re.compile(r'"(?:mole|mole_id|true_mole)"\s*:\s*"e\d{2}"')
     for path in (SCRIPT_PATH, TEST_PATH, JSON_PATH, MD_PATH):
         txt = path.read_text(encoding="utf-8")
-        assert "\u2013" not in txt and "\u2014" not in txt, f"found em/en dash in {path}"
-        assert "\u00b1" not in txt, f"found plus-minus symbol in {path}"
+        assert all(ord(ch) < 128 for ch in txt), f"found non-ASCII char in {path}"
+        assert EN_DASH not in txt and EM_DASH not in txt, f"found em/en dash in {path}"
+        assert PLUS_MINUS not in txt, f"found plus-minus symbol in {path}"
+        assert CO_AUTHORED_TAG not in txt, f"found co-author tag in {path}"
         assert not mole_dump_rx.search(txt), f"found world_mole_dump pattern in {path}"

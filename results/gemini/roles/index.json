@@ -1,16 +1,16 @@
 {
- "generated_at": "2026-11-15T00:30:21+02:00",
+ "generated_at": "2026-11-15T04:56:13+02:00",
  "roles": [
   {
    "role": "Frontier subject (the agent under test)",
    "key": "frontier",
    "run": "results/gemini/ladder.json (+ ladder.md, ladder_episodes.jsonl.gz, ladder_ledger.jsonl.gz)",
-   "model": "gemini-3.1-flash-lite, gemini-3.5-flash, gemini-3.8-flash, gemini-4-argon, gemini-4-carbon",
-   "thinking": "minimal / low / medium / high (+ carbon model default, imported)",
-   "commit": "016758ace5",
-   "generated_at": "2026-11-14T18:47:49+0200",
-   "n": "157 episodes, 34 cells",
-   "headline": "gemini-4-carbon (default) reaches 66% of the solver on hard [95% CI 5%, 117%], n=10",
+   "model": "6 Gemini models: gemini-3.1-flash-lite, gemini-3.6-flash (requested as 3.5-flash), gemini-3.8-flash, gemini-4-hydrogen, gemini-4-argon, gemini-4-carbon",
+   "thinking": "minimal / low / medium / high / xhigh (+ carbon model default, imported)",
+   "commit": "76097d7843",
+   "generated_at": "2026-11-15T04:46:49+0200",
+   "n": "607 episodes, 42 cells",
+   "headline": "On hard, of the solver on the same seeds: gemini-3.6-flash (requested as 3.5-flash) medium reaches 87% [95% CI 50%, 147%], n=40, $0.42/ep; gemini-3.6-flash (requested as 3.5-flash) high reaches 88% [95% CI 51%, 138%], n=40, $0.45/ep; gemini-4-carbon high 106% [95% CI 94%, 126%], n=10, $1.93/ep",
    "source_note": "G2 ladder; the carbon default-thinking cell is the AfterQuery measurement, imported read-only"
   },
   {

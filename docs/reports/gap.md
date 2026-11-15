@@ -12,6 +12,17 @@ gemini-4-carbon, rules v1.4, dev seeds 0-29 per tier, every episode replay-verif
 
 The solver is paired on all 30 seeds per tier (solver means: hard 0.499, medium 0.645). An earlier version of this table (8fd4dec) divided by the solver mean on seeds 0-19 only (60% [1, 103]); that is superseded.
 
+**Judge-path rehearsal on the final tag (protocol pre-registered in `results/harbor/rehearsal/README.md`; run 05:09-08:31 on 15 Nov; table `results/harbor/rehearsal/TABLE.md`):** Harbor 0.26.0 + OpenCode + gemini-4-carbon, 10 hard judge tasks, three runs on one build.
+
+| run | n valid | correct / accused | mean | oracle on the same tasks | run / oracle |
+|---|---:|---|---:|---:|---:|
+| opencode-1 | 10 | 9 / 10 | +0.472 | +0.506 | 93% [20%, 371%] |
+| opencode-2 | 10 | 10 / 10 | +0.585 | +0.506 | 116% [78%, 363%] |
+| opencode-3 (9 valid; 5 of them finished after the 08:30 cut-off; 1 infra-excluded) | 9 | 9 / 9 | +0.626 | same 9 tasks | 131% [86%, 590%] |
+| do_nothing / stop_early | 10 / 10 | – | +0.000 / +0.000 | +0.506 | 0% |
+
+**The gap did not reproduce in the judge path.** The 65% headline above was measured with MCP tools only on dev seeds; in Harbor the agent also has a shell (used in 20 of 28 trials), and the tag carries the two disclosed 15 Nov changes. We cannot separate those causes from chance with this n. Other models on the MCP-only setup, seeds 0-29: gpt-5.5 101% (below); gemini-4-argon 103% [71%, 144%] and gemini-4-hydrogen 115% [92%, 157%] (PR #81, replay-verified by its authors, not merged before the deadline). The honest summary: on v1.4 hard, frontier agents land near the reference; the 65% result is one model in one harness.
+
 **Second frontier family, gpt-5.5 (pre-registered at cf394894, 05:11 on 15 Nov; run 05:11-05:29; 30 of 30 episodes valid, 0 infra failures, all replay-verified; `data/runs/committed/v1.4/opencode-gpt-5.5/`):**
 
 | harness | tier | n | score ± 95% CI | frontier / solver [95% CI] | paired diff ± CI | luck-adjusted / solver [95% CI] |

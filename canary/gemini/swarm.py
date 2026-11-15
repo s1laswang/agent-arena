@@ -1003,14 +1003,15 @@ def mcp_replay_audit(spec: AttackerSpec, backend: Backend, led: dict) -> dict:
 
 def confirm_candidate(att: dict, personas: dict, planner: Planner, cfg: dict, n_seeds: int) -> dict:
     """Re-run the same plan (fresh executor) on n new seeds; exploit only if the paired mean holds up."""
-    rows = []
-    for k in range(n_seeds):
-        from canary.rules import HELDOUT_SEEDS
-        # same seed family as the attempt: held-out (secret-keyed) stays held-out; a public-seed control stays public
-        seed = (800000 + ((190 - k * 7 - (att["seed"] % 5)) % 200)) if att["seed"] in HELDOUT_SEEDS else att["seed"] + 1000 + k
-        spec = AttackerSpec(id=f"{att['id']}-confirm{k}", idx=-1, persona=att["persona"], model=att["model"],
-                            tier=att["tier"], seed=seed, mode=att.get("mode", "whitebox"), channel="inproc")
-        rows.append(run_attempt(spec, personas[att["persona"]], planner, cfg, plan=att["plan"]))
+    from canary.rules import HELDOUT_SEEDS
+    cspecs = [AttackerSpec(id=f"{att['id']}-confirm{k}", idx=-1, persona=att["persona"], model=att["model"],
+                           tier=att["tier"],
+                           seed=(800000 + ((190 - k * 7 - (att["seed"] % 5)) % 200)) if att["seed"] in HELDOUT_SEEDS
+                           else att["seed"] + 1000 + k,
+                           mode=att.get("mode", "whitebox"), channel="inproc")
+              for k in range(n_seeds)]
+    with cf.ThreadPoolExecutor(max(1, min(len(cspecs), 4))) as ex:
+        rows = list(ex.map(lambda sp: run_attempt(sp, personas[att["persona"]], planner, cfg, plan=att["plan"]), cspecs))
     xs = [att["score"]] + [r["score"] or 0 for r in rows]
     ss = [att["solver_score"]] + [r["solver_score"] for r in rows]
     mean, smean = sum(xs) / len(xs), sum(ss) / len(ss)
@@ -1552,10 +1553,13 @@ def run_swarm(a) -> dict:
                 with cf.ThreadPoolExecutor(max(1, min(a.concurrency, 4))) as ex:
                     attempts += list(ex.map(lambda sp: _mcp_one(sp, pmap, planner, cfg, one_writer=(jl, lock)), mspecs))
             confirmations = {}
+            by_base: dict[str, dict] = {}
             cands = sorted([x for x in attempts if x.get("score_candidate") and not x["exploit"]],
                            key=lambda x: -(x["score"] or 0))[:a.confirm_top]
             for c in cands:
-                cr = confirm_candidate(c, pmap, planner, cfg, a.confirm_seeds)
+                base_id = c["id"].removesuffix("-mcp")
+                cr = by_base.get(base_id) or confirm_candidate(c, pmap, planner, cfg, a.confirm_seeds)
+                by_base[base_id] = cr
                 confirmations[c["id"]] = cr
                 if cr["confirmed"]:
                     c["exploit"] = True

@@ -70,6 +70,8 @@ def test_ladder_cli_flag_sets_and_records(monkeypatch):
         seen["flag"] = ladder.NO_SIGNATURES
 
     monkeypatch.setenv("CANARY_GEMINI_LEDGER", "/tmp/_never_used_ablation.jsonl")
+    monkeypatch.setenv("CANARY_LLM_MAX_RETRIES", "5")
+    monkeypatch.delenv("CANARY_LLM_MAX_RETRIES")
     monkeypatch.setattr(ladder, "run_grid", fake_run_grid)
     monkeypatch.setattr(ladder, "NO_SIGNATURES", False)
     ladder.main(["--models", "gemini-3.8-flash", "--levels", "medium", "--tiers", "hard", "--seeds", "0",

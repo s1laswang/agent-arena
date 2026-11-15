@@ -1,0 +1,432 @@
+{
+  "schema": "moletrain_submission_gate_v1",
+  "tiers_version": "v1.4",
+  "all_passed": true,
+  "gates_passed": 4,
+  "gates_total": 4,
+  "gates": {
+    "gate_1_protected_paths": {
+      "gate": "gate_1_protected_paths",
+      "name": "Protected Paths",
+      "passed": true,
+      "mode": "git_diff:origin/justSilas...HEAD",
+      "protected_rules_count": 15,
+      "changed_files_count": 42,
+      "protected_hits": [],
+      "violations": []
+    },
+    "gate_2_hygiene": {
+      "gate": "gate_2_hygiene",
+      "name": "Code & Artifact Hygiene",
+      "passed": true,
+      "checked_py_files": [
+        "canary/forge/rl_mole_v2.py",
+        "canary/mole/distill_dsl.py",
+        "train/qwen_diverse_mole.py",
+        "train/batched_mole_eval.py",
+        "train/export_mole_dpo.py",
+        "train/eval_grpo_mole.py",
+        "scripts/audit_verda_and_ws3_moles.py",
+        "scripts/build_qwen_mole_report.py",
+        "scripts/eval_mole_vs_frontier_proxy.py",
+        "scripts/verify_moletrain_submission.py",
+        "tests/test_rl_mole_v2.py",
+        "tests/test_distill_dsl.py",
+        "tests/test_qwen_diverse_mole.py",
+        "tests/test_batched_mole_eval.py",
+        "tests/test_eval_mole.py",
+        "tests/test_eval_grpo_mole.py",
+        "tests/test_verda_mole_audit.py",
+        "tests/test_qwen_mole_report.py",
+        "tests/test_eval_mole_vs_frontier_proxy.py",
+        "tests/test_verify_moletrain_submission.py",
+        "train/eval_mole.py"
+      ],
+      "auto_discovered_py_files": [
+        "train/eval_mole.py"
+      ],
+      "silas_preexisting_exempt": [
+        "train/grpo_mole.py",
+        "canary/forge/rl_mole.py"
+      ],
+      "checked_moletrain_artifacts": [
+        {
+          "path": "results/moletrain/canary-qwen-mole-v1/eval_summary.json",
+          "bytes": 12675
+        },
+        {
+          "path": "results/moletrain/canary-qwen-mole-v1/grpo_curve.jsonl",
+          "bytes": 7922
+        },
+        {
+          "path": "results/moletrain/canary-qwen-mole-v1/sft_curve.jsonl",
+          "bytes": 269
+        },
+        {
+          "path": "results/moletrain/canary-qwen3-0p6b-mole-v1/eval_summary.json",
+          "bytes": 13264
+        },
+        {
+          "path": "results/moletrain/canary-qwen3-0p6b-mole-v1/grpo_curve.jsonl",
+          "bytes": 25174
+        },
+        {
+          "path": "results/moletrain/canary-qwen3-0p6b-mole-v1/sft_curve.jsonl",
+          "bytes": 704
+        },
+        {
+          "path": "results/moletrain/canary-qwen3-1p7b-mole-v1/eval_summary.json",
+          "bytes": 13172
+        },
+        {
+          "path": "results/moletrain/canary-qwen3-1p7b-mole-v1/grpo_curve.jsonl",
+          "bytes": 25291
+        },
+        {
+          "path": "results/moletrain/canary-qwen3-1p7b-mole-v1/sft_curve.jsonl",
+          "bytes": 712
+        },
+        {
+          "path": "results/moletrain/carbon_distilled_dsl_eval.json",
+          "bytes": 25750
+        },
+        {
+          "path": "results/moletrain/frontier_proxy_mole_matrix.json",
+          "bytes": 41338
+        },
+        {
+          "path": "results/moletrain/mole_dpo_stats.json",
+          "bytes": 3035
+        },
+        {
+          "path": "results/moletrain/qwen_mole_summary.json",
+          "bytes": 42299
+        },
+        {
+          "path": "results/moletrain/rl_mole_v2_heldout.json",
+          "bytes": 14734
+        },
+        {
+          "path": "results/moletrain/rl_mole_v2_policy.json",
+          "bytes": 11941
+        },
+        {
+          "path": "results/moletrain/verda_ws3_forensics.json",
+          "bytes": 43313
+        }
+      ],
+      "checked_report_markdowns": [
+        "docs/reports/moletrain_submission_brief.md",
+        "docs/reports/moletrain_verda_audit.md",
+        "docs/reports/qwen_mole_training.md"
+      ],
+      "forbidden_weight_files_found": [],
+      "max_artifact_bytes": 102400,
+      "violations": []
+    },
+    "gate_3_seed_disjointness": {
+      "gate": "gate_3_seed_disjointness",
+      "name": "Seed Disjointness",
+      "passed": true,
+      "partitions": {
+        "rules_dev": [
+          [
+            0,
+            9999
+          ]
+        ],
+        "train_counterfactual": [
+          [
+            100000,
+            189999
+          ],
+          [
+            300000,
+            399999
+          ]
+        ],
+        "validation": [
+          [
+            190000,
+            199999
+          ]
+        ],
+        "ws3_heldout": [
+          [
+            200000,
+            299999
+          ]
+        ],
+        "eval_mole_heldout": [
+          [
+            400000,
+            499999
+          ]
+        ],
+        "rules_heldout": [
+          [
+            800000,
+            899999
+          ]
+        ],
+        "rules_judge": [
+          [
+            900000,
+            900039
+          ]
+        ]
+      },
+      "pairwise_partition_checks": 21,
+      "module_seed_bindings": {
+        "rl_mole_v2": {
+          "train": [
+            160000,
+            189999
+          ],
+          "val": [
+            190000,
+            190049
+          ],
+          "ws3_heldout": [
+            200000,
+            200099
+          ],
+          "rules_heldout": [
+            800000,
+            800099
+          ]
+        },
+        "qwen_diverse_mole": {
+          "counterfactual_seed_base": 120000,
+          "val_seed_base": 195000
+        },
+        "grpo_mole": {
+          "prompt_seed_base": 300000
+        },
+        "eval_grpo_mole": {
+          "heldout_sample": [
+            800000,
+            800049
+          ],
+          "ws3_sample": [
+            200000,
+            200049
+          ],
+          "dev_sample": [
+            0,
+            49
+          ]
+        },
+        "eval_mole": {
+          "heldout_seed_base": 400000
+        }
+      },
+      "artifact_seed_range_checks": 5,
+      "violations": []
+    },
+    "gate_4_catchability_and_provenance": {
+      "gate": "gate_4_catchability_and_provenance",
+      "name": "Catchability & CI Provenance",
+      "passed": true,
+      "min_solver_acc_threshold": 0.85,
+      "artifacts_inspected": [
+        {
+          "path": "results/moletrain/canary-qwen-mole-v1/eval_summary.json",
+          "bytes": 12675,
+          "sha256_16": "5c2ac34879400b86"
+        },
+        {
+          "path": "results/moletrain/canary-qwen3-0p6b-mole-v1/eval_summary.json",
+          "bytes": 13264,
+          "sha256_16": "c1b866fc20a13931"
+        },
+        {
+          "path": "results/moletrain/canary-qwen3-1p7b-mole-v1/eval_summary.json",
+          "bytes": 13172,
+          "sha256_16": "7100cd2151ff02f9"
+        },
+        {
+          "path": "results/moletrain/carbon_distilled_dsl_eval.json",
+          "bytes": 25750,
+          "sha256_16": "47ea29b4aa5ac3c0"
+        },
+        {
+          "path": "results/moletrain/frontier_proxy_mole_matrix.json",
+          "bytes": 41338,
+          "sha256_16": "531a7426245bac47"
+        },
+        {
+          "path": "results/moletrain/mole_dpo_stats.json",
+          "bytes": 3035,
+          "sha256_16": "702e52c33ae34a2e"
+        },
+        {
+          "path": "results/moletrain/qwen_mole_summary.json",
+          "bytes": 42299,
+          "sha256_16": "0d4f22be76afe8d3"
+        },
+        {
+          "path": "results/moletrain/rl_mole_v2_heldout.json",
+          "bytes": 14734,
+          "sha256_16": "0d5ab7d7aa14db56"
+        },
+        {
+          "path": "results/moletrain/rl_mole_v2_policy.json",
+          "bytes": 11941,
+          "sha256_16": "e34d5f9b829aadbf"
+        },
+        {
+          "path": "results/moletrain/verda_ws3_forensics.json",
+          "bytes": 43313,
+          "sha256_16": "f2eb19d4613c362d"
+        }
+      ],
+      "bootstrap_cis_checked": 1239,
+      "verified_catchable_models": [
+        {
+          "location": "results/moletrain/canary-qwen-mole-v1/eval_summary.json.heldout_800k_summary",
+          "solver_acc": 0.925,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen-mole-v1/eval_summary.json.heldout_200k_summary",
+          "solver_acc": 1.0,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen-mole-v1/eval_summary.json.paired_800k_vs_default.qwen_mole",
+          "solver_acc": 0.925,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen-mole-v1/eval_summary.json.paired_200k_vs_default.qwen_mole",
+          "solver_acc": 1.0,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen-mole-v1/eval_summary.json.paired_200k_vs_rl_mole.qwen_mole",
+          "solver_acc": 1.0,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen3-0p6b-mole-v1/eval_summary.json.heldout_800k_summary",
+          "solver_acc": 0.975,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen3-0p6b-mole-v1/eval_summary.json.heldout_200k_summary",
+          "solver_acc": 0.95,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen3-0p6b-mole-v1/eval_summary.json.paired_800k_vs_default.qwen_mole",
+          "solver_acc": 0.975,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen3-0p6b-mole-v1/eval_summary.json.paired_200k_vs_default.qwen_mole",
+          "solver_acc": 0.95,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen3-0p6b-mole-v1/eval_summary.json.paired_200k_vs_rl_mole.qwen_mole",
+          "solver_acc": 0.95,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen3-1p7b-mole-v1/eval_summary.json.heldout_800k_summary",
+          "solver_acc": 0.975,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen3-1p7b-mole-v1/eval_summary.json.heldout_200k_summary",
+          "solver_acc": 0.95,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen3-1p7b-mole-v1/eval_summary.json.paired_800k_vs_default.qwen_mole",
+          "solver_acc": 0.975,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen3-1p7b-mole-v1/eval_summary.json.paired_200k_vs_default.qwen_mole",
+          "solver_acc": 0.95,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/canary-qwen3-1p7b-mole-v1/eval_summary.json.paired_200k_vs_rl_mole.qwen_mole",
+          "solver_acc": 0.95,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/rl_mole_v2_heldout.json.ws3_heldout.rl_mole_v2",
+          "solver_acc": 0.9667,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/rl_mole_v2_heldout.json.rules_heldout.rl_mole_v2",
+          "solver_acc": 0.95,
+          "catchable_85": true
+        }
+      ],
+      "v100_eval_summaries_checked": [
+        {
+          "run_id": "canary-qwen-mole-v1",
+          "winner_checkpoint": "sft",
+          "acc_800k": 0.925,
+          "acc_200k": 1.0,
+          "min_regret_800k": 0.0835,
+          "min_regret_200k": 0.22,
+          "distinct_800k": 1,
+          "distinct_200k": 3,
+          "catchable_85_both": true
+        },
+        {
+          "run_id": "canary-qwen3-0p6b-mole-v1",
+          "winner_checkpoint": "grpo_step80",
+          "acc_800k": 0.975,
+          "acc_200k": 0.95,
+          "min_regret_800k": 0.1333,
+          "min_regret_200k": 0.3695,
+          "distinct_800k": 5,
+          "distinct_200k": 5,
+          "catchable_85_both": true
+        },
+        {
+          "run_id": "canary-qwen3-1p7b-mole-v1",
+          "winner_checkpoint": "grpo_step80",
+          "acc_800k": 0.975,
+          "acc_200k": 0.95,
+          "min_regret_800k": 0.1905,
+          "min_regret_200k": 0.4559,
+          "distinct_800k": 4,
+          "distinct_200k": 4,
+          "catchable_85_both": true
+        }
+      ],
+      "rl_mole_v2_replay": [
+        {
+          "tier": "easy",
+          "seed": 200000,
+          "score": 0.82,
+          "correct": true,
+          "accused": "e11",
+          "final_day": 4,
+          "mole_decisions": 3,
+          "reproducible": true
+        },
+        {
+          "tier": "easy",
+          "seed": 200001,
+          "score": 0.88,
+          "correct": true,
+          "accused": "e06",
+          "final_day": 3,
+          "mole_decisions": 2,
+          "reproducible": true
+        }
+      ],
+      "violations": []
+    }
+  }
+}

@@ -1,0 +1,718 @@
+{
+  "name": "canary-qwen3-0p6b-mole-v1",
+  "model": "/home/silas/momin/fleet/board/sleeper/moletrain_runs/models/Qwen3-0.6B",
+  "smoke_tiny": false,
+  "winner_checkpoint": "grpo_step80",
+  "total_seconds": 16587.0,
+  "sft_examples": {
+    "carbon_transcripts": 331,
+    "counterfactual_expert": 88,
+    "total": 507
+  },
+  "val_candidates": {
+    "sft": {
+      "solver": {
+        "score": 0.456,
+        "acc": 0.88
+      },
+      "grok_tactics": {
+        "score": 0.0,
+        "acc": 0.0
+      },
+      "heuristic": {
+        "score": 0.1036,
+        "acc": 0.8
+      },
+      "hinted_heuristic": {
+        "score": 0.3048,
+        "acc": 0.72
+      },
+      "min_regret": 0.1512,
+      "strongest_inv": "hinted_heuristic",
+      "catchable_85": true,
+      "distinct_actions": 4,
+      "action_entropy_nats": 1.0999,
+      "action_profile": {
+        "none/random_peer": 0.3776,
+        "most_recipients/random_peer": 0.3649,
+        "random_seeded/most_restricted_peer": 0.2549,
+        "newest/random_peer": 0.0027
+      },
+      "unique_prompts_generated": 1448,
+      "invalid_generations": 0,
+      "eval_sec": 3236.1
+    },
+    "grpo_step40": {
+      "solver": {
+        "score": 0.5648,
+        "acc": 0.96
+      },
+      "grok_tactics": {
+        "score": 0.0,
+        "acc": 0.0
+      },
+      "heuristic": {
+        "score": -0.1348,
+        "acc": 0.64
+      },
+      "hinted_heuristic": {
+        "score": 0.476,
+        "acc": 1.0
+      },
+      "min_regret": 0.0888,
+      "strongest_inv": "hinted_heuristic",
+      "catchable_85": true,
+      "distinct_actions": 4,
+      "action_entropy_nats": 1.0289,
+      "action_profile": {
+        "random_seeded/decoy": 0.4576,
+        "none/random_peer": 0.3757,
+        "most_recipients/random_peer": 0.1659,
+        "newest/random_peer": 0.0007
+      },
+      "unique_prompts_generated": 1307,
+      "invalid_generations": 0,
+      "eval_sec": 2831.5
+    },
+    "grpo_step80": {
+      "solver": {
+        "score": 0.5552,
+        "acc": 0.92
+      },
+      "grok_tactics": {
+        "score": 0.0,
+        "acc": 0.0
+      },
+      "heuristic": {
+        "score": 0.0236,
+        "acc": 0.72
+      },
+      "hinted_heuristic": {
+        "score": 0.2824,
+        "acc": 0.84
+      },
+      "min_regret": 0.2728,
+      "strongest_inv": "hinted_heuristic",
+      "catchable_85": true,
+      "distinct_actions": 5,
+      "action_entropy_nats": 1.0466,
+      "action_profile": {
+        "random_seeded/most_restricted_peer": 0.4307,
+        "none/random_peer": 0.3999,
+        "most_recipients/random_peer": 0.1665,
+        "newest/random_peer": 0.0022,
+        "random_seeded/decoy": 0.0007
+      },
+      "unique_prompts_generated": 1325,
+      "invalid_generations": 0,
+      "eval_sec": 3338.3
+    }
+  },
+  "heldout_800k_summary": {
+    "solver": {
+      "score": 0.5523,
+      "acc": 0.975
+    },
+    "grok_tactics": {
+      "score": 0.0,
+      "acc": 0.0
+    },
+    "heuristic": {
+      "score": -0.0485,
+      "acc": 0.725
+    },
+    "hinted_heuristic": {
+      "score": 0.419,
+      "acc": 0.85
+    },
+    "min_regret": 0.1333,
+    "strongest_inv": "hinted_heuristic",
+    "catchable_85": true,
+    "distinct_actions": 5,
+    "action_entropy_nats": 1.0501,
+    "action_profile": {
+      "random_seeded/most_restricted_peer": 0.4626,
+      "none/random_peer": 0.3614,
+      "most_recipients/random_peer": 0.1724,
+      "newest/random_peer": 0.0022,
+      "random_seeded/decoy": 0.0013
+    },
+    "unique_prompts_generated": 2144,
+    "invalid_generations": 0,
+    "eval_sec": 2965.5
+  },
+  "heldout_200k_summary": {
+    "solver": {
+      "score": 0.5865,
+      "acc": 0.95
+    },
+    "grok_tactics": {
+      "score": 0.0,
+      "acc": 0.0
+    },
+    "heuristic": {
+      "score": -0.0348,
+      "acc": 0.725
+    },
+    "hinted_heuristic": {
+      "score": 0.217,
+      "acc": 0.8
+    },
+    "min_regret": 0.3695,
+    "strongest_inv": "hinted_heuristic",
+    "catchable_85": true,
+    "distinct_actions": 5,
+    "action_entropy_nats": 1.0399,
+    "action_profile": {
+      "random_seeded/most_restricted_peer": 0.4636,
+      "none/random_peer": 0.3783,
+      "most_recipients/random_peer": 0.1532,
+      "random_seeded/decoy": 0.0035,
+      "newest/random_peer": 0.0013
+    },
+    "unique_prompts_generated": 2198,
+    "invalid_generations": 0,
+    "eval_sec": 2790.2
+  },
+  "paired_800k_vs_default": {
+    "comparison": "qwen_vs_default_800k",
+    "n": 40,
+    "qwen_mole": {
+      "solver": {
+        "score": [
+          0.5523,
+          0.463,
+          0.6255
+        ],
+        "acc": [
+          0.975,
+          0.925,
+          1.0
+        ]
+      },
+      "grok_tactics": {
+        "score": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "acc": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "heuristic": {
+        "score": [
+          -0.0485,
+          -0.2397,
+          0.1355
+        ],
+        "acc": [
+          0.725,
+          0.575,
+          0.85
+        ]
+      },
+      "hinted_heuristic": {
+        "score": [
+          0.419,
+          0.317,
+          0.51
+        ],
+        "acc": [
+          0.85,
+          0.725,
+          0.95
+        ]
+      },
+      "regret": {
+        "grok_tactics": [
+          0.5523,
+          0.463,
+          0.6255
+        ],
+        "heuristic": [
+          0.6008,
+          0.4002,
+          0.8078
+        ],
+        "hinted_heuristic": [
+          0.1333,
+          0.0525,
+          0.2175
+        ]
+      }
+    },
+    "baseline": {
+      "solver": {
+        "score": [
+          0.4445,
+          0.2802,
+          0.592
+        ],
+        "acc": [
+          0.85,
+          0.725,
+          0.95
+        ]
+      },
+      "grok_tactics": {
+        "score": [
+          0.4073,
+          0.295,
+          0.5052
+        ],
+        "acc": [
+          0.9,
+          0.8,
+          0.975
+        ]
+      },
+      "heuristic": {
+        "score": [
+          0.0728,
+          -0.106,
+          0.2365
+        ],
+        "acc": [
+          0.8,
+          0.675,
+          0.925
+        ]
+      },
+      "hinted_heuristic": {
+        "score": [
+          0.3372,
+          0.195,
+          0.4647
+        ],
+        "acc": [
+          0.825,
+          0.7,
+          0.925
+        ]
+      },
+      "regret": {
+        "grok_tactics": [
+          0.0373,
+          -0.1805,
+          0.2468
+        ],
+        "heuristic": [
+          0.3717,
+          0.1302,
+          0.626
+        ],
+        "hinted_heuristic": [
+          0.1073,
+          -0.1055,
+          0.3085
+        ]
+      }
+    },
+    "diff_qwen_minus_baseline": {
+      "solver_score": [
+        0.1077,
+        -0.023,
+        0.2555
+      ],
+      "grok_tactics_score": [
+        -0.4073,
+        -0.5045,
+        -0.2945
+      ],
+      "heuristic_score": [
+        -0.1213,
+        -0.3482,
+        0.1093
+      ],
+      "hinted_heuristic_score": [
+        0.0818,
+        -0.0163,
+        0.2055
+      ],
+      "solver_acc": [
+        0.125,
+        0.025,
+        0.225
+      ],
+      "regret_grok_tactics": [
+        0.515,
+        0.3325,
+        0.7097
+      ],
+      "regret_heuristic": [
+        0.229,
+        -0.0442,
+        0.527
+      ],
+      "regret_hinted_heuristic": [
+        0.026,
+        -0.1652,
+        0.2193
+      ]
+    }
+  },
+  "paired_200k_vs_default": {
+    "comparison": "qwen_vs_default_200k",
+    "n": 40,
+    "qwen_mole": {
+      "solver": {
+        "score": [
+          0.5865,
+          0.531,
+          0.6388
+        ],
+        "acc": [
+          0.95,
+          0.875,
+          1.0
+        ]
+      },
+      "grok_tactics": {
+        "score": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "acc": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "heuristic": {
+        "score": [
+          -0.0348,
+          -0.2252,
+          0.1403
+        ],
+        "acc": [
+          0.725,
+          0.575,
+          0.85
+        ]
+      },
+      "hinted_heuristic": {
+        "score": [
+          0.217,
+          0.0458,
+          0.375
+        ],
+        "acc": [
+          0.8,
+          0.675,
+          0.925
+        ]
+      },
+      "regret": {
+        "grok_tactics": [
+          0.5865,
+          0.531,
+          0.6388
+        ],
+        "heuristic": [
+          0.6212,
+          0.4193,
+          0.8303
+        ],
+        "hinted_heuristic": [
+          0.3695,
+          0.2082,
+          0.539
+        ]
+      }
+    },
+    "baseline": {
+      "solver": {
+        "score": [
+          0.6053,
+          0.561,
+          0.6475
+        ],
+        "acc": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "grok_tactics": {
+        "score": [
+          0.3703,
+          0.2515,
+          0.477
+        ],
+        "acc": [
+          0.8,
+          0.675,
+          0.925
+        ]
+      },
+      "heuristic": {
+        "score": [
+          0.109,
+          -0.0577,
+          0.264
+        ],
+        "acc": [
+          0.825,
+          0.7,
+          0.95
+        ]
+      },
+      "hinted_heuristic": {
+        "score": [
+          0.367,
+          0.2195,
+          0.498
+        ],
+        "acc": [
+          0.8,
+          0.675,
+          0.925
+        ]
+      },
+      "regret": {
+        "grok_tactics": [
+          0.235,
+          0.1237,
+          0.3675
+        ],
+        "heuristic": [
+          0.4962,
+          0.34,
+          0.6728
+        ],
+        "hinted_heuristic": [
+          0.2382,
+          0.1053,
+          0.3907
+        ]
+      }
+    },
+    "diff_qwen_minus_baseline": {
+      "solver_score": [
+        -0.0187,
+        -0.0703,
+        0.0295
+      ],
+      "grok_tactics_score": [
+        -0.3703,
+        -0.4757,
+        -0.2513
+      ],
+      "heuristic_score": [
+        -0.1437,
+        -0.3688,
+        0.0797
+      ],
+      "hinted_heuristic_score": [
+        -0.15,
+        -0.3578,
+        0.0495
+      ],
+      "solver_acc": [
+        -0.05,
+        -0.125,
+        0.0
+      ],
+      "regret_grok_tactics": [
+        0.3515,
+        0.2207,
+        0.477
+      ],
+      "regret_heuristic": [
+        0.125,
+        -0.1008,
+        0.363
+      ],
+      "regret_hinted_heuristic": [
+        0.1313,
+        -0.0897,
+        0.3583
+      ]
+    }
+  },
+  "paired_200k_vs_rl_mole": {
+    "comparison": "qwen_vs_rl_mole_200k",
+    "n": 40,
+    "qwen_mole": {
+      "solver": {
+        "score": [
+          0.5865,
+          0.531,
+          0.6388
+        ],
+        "acc": [
+          0.95,
+          0.875,
+          1.0
+        ]
+      },
+      "grok_tactics": {
+        "score": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "acc": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "heuristic": {
+        "score": [
+          -0.0348,
+          -0.2252,
+          0.1403
+        ],
+        "acc": [
+          0.725,
+          0.575,
+          0.85
+        ]
+      },
+      "hinted_heuristic": {
+        "score": [
+          0.217,
+          0.0458,
+          0.375
+        ],
+        "acc": [
+          0.8,
+          0.675,
+          0.925
+        ]
+      },
+      "regret": {
+        "grok_tactics": [
+          0.5865,
+          0.531,
+          0.6388
+        ],
+        "heuristic": [
+          0.6212,
+          0.4193,
+          0.8303
+        ],
+        "hinted_heuristic": [
+          0.3695,
+          0.2082,
+          0.539
+        ]
+      }
+    },
+    "baseline": {
+      "solver": {
+        "score": [
+          0.4135,
+          0.2758,
+          0.5385
+        ],
+        "acc": [
+          0.725,
+          0.575,
+          0.85
+        ]
+      },
+      "grok_tactics": {
+        "score": [
+          0.149,
+          0.006,
+          0.2943
+        ],
+        "acc": [
+          0.45,
+          0.3,
+          0.6
+        ]
+      },
+      "heuristic": {
+        "score": [
+          -0.34,
+          -0.5458,
+          -0.11
+        ],
+        "acc": [
+          0.475,
+          0.325,
+          0.625
+        ]
+      },
+      "hinted_heuristic": {
+        "score": [
+          0.2165,
+          0.1143,
+          0.3155
+        ],
+        "acc": [
+          0.525,
+          0.375,
+          0.675
+        ]
+      },
+      "regret": {
+        "grok_tactics": [
+          0.2645,
+          0.098,
+          0.4335
+        ],
+        "heuristic": [
+          0.7535,
+          0.5172,
+          0.9727
+        ],
+        "hinted_heuristic": [
+          0.197,
+          0.0402,
+          0.362
+        ]
+      }
+    },
+    "diff_qwen_minus_baseline": {
+      "solver_score": [
+        0.173,
+        0.0395,
+        0.3243
+      ],
+      "grok_tactics_score": [
+        -0.149,
+        -0.2937,
+        -0.0043
+      ],
+      "heuristic_score": [
+        0.3052,
+        -0.0025,
+        0.6135
+      ],
+      "hinted_heuristic_score": [
+        0.0005,
+        -0.1903,
+        0.197
+      ],
+      "solver_acc": [
+        0.225,
+        0.075,
+        0.375
+      ],
+      "regret_grok_tactics": [
+        0.322,
+        0.1423,
+        0.5057
+      ],
+      "regret_heuristic": [
+        -0.1323,
+        -0.445,
+        0.191
+      ],
+      "regret_hinted_heuristic": [
+        0.1725,
+        -0.0725,
+        0.4132
+      ]
+    }
+  },
+  "adapter_dir": "/tmp/fleet-silas/shared/moletrain/canary-qwen3-0p6b-mole-v1/adapter"
+}

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import copy
-import importlib.util
 import json
 import os
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from canary.agents.frontier import common, opencode_run
+from scripts import frontier_queue_preflight as preflight
 SCRIPT_PATH = ROOT / "scripts" / "frontier_queue_preflight.py"
 MANIFEST_PATH = ROOT / "results" / "frontier_replication" / "v1.4" / "queue_manifest.json"
 HASH_CHAR = chr(35)
@@ -22,21 +23,23 @@ EM_DASH = "\u2014"
 EN_DASH = "\u2013"
 
 
-def _load_preflight():
-    spec = importlib.util.spec_from_file_location("frontier_queue_preflight", SCRIPT_PATH)
-    assert spec is not None and spec.loader is not None
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    spec.loader.exec_module(mod)
-    return mod
+def _forbid_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _fail(*args, **kwargs):
+        raise AssertionError(f"subprocess call forbidden at runtime: {args}")
 
-
-preflight = _load_preflight()
+    monkeypatch.setattr(subprocess, "run", _fail)
+    monkeypatch.setattr(subprocess, "Popen", _fail)
+    monkeypatch.setattr(subprocess, "check_call", _fail)
+    monkeypatch.setattr(subprocess, "check_output", _fail)
 
 
 @pytest.fixture(scope="module")
 def repo_manifest() -> dict:
-    assert preflight.main(["--check", "--validate-template-waves"]) == 0
+    with pytest.MonkeyPatch.context() as mp:
+        _forbid_subprocess(mp)
+        for key in (*preflight.PROVIDER_KEY_VARS, "GOOGLE_GENERATIVE_AI_API_KEY"):
+            mp.delenv(key, raising=False)
+        assert preflight.main(["--check", "--validate-template-waves"]) == 0
     assert MANIFEST_PATH.stat().st_size <= 50 * 1024
     return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
 
@@ -429,13 +432,16 @@ def test_carbon_quota_blackout_boundaries_and_exempt_families():
 
 
 def test_security_and_isolation_preflight_controls(monkeypatch):
+    monkeypatch.setenv("CANARY_ALLOW_DEV", "1")
     env_before = dict(os.environ)
     assert preflight.check_tiers_gate()["passed"] is True
     assert preflight.check_opencode_config_isolation()["passed"] is True
     assert preflight.check_child_env_stripping()["passed"] is True
     assert dict(os.environ) == env_before
+    assert os.environ.get("CANARY_ALLOW_DEV") == "1"
     assert preflight.check_workdir_isolation(ROOT)["passed"] is True
     assert preflight.check_carbon_quota_blackout_guard()["passed"] is True
+    assert preflight._corpus_inputs_sha256(ROOT) == preflight.EXPECTED_CORPUS_SHA256
 
     monkeypatch.setattr(opencode_run, "PERMISSION", {"*": "allow"})
     res_perm = preflight.check_opencode_config_isolation()
@@ -462,7 +468,7 @@ def test_all_transcripts_g1_ext_and_zip_export_safety(repo_manifest, tmp_path):
         assert tr_check["carbon_hard_step_counts"][k] == v
 
     src_dir = ROOT / "results" / "frontier_replication" / "v1.4" / "opencode-gemini-4-carbon" / "hard-s30"
-    ep = json.loads((src_dir / "episodes.jsonl").read_text(encoding="utf-8").splitlines()[0])
+    ep = preflight._load_episode_file(src_dir / "episodes.jsonl")[0][1]
     tr_txt = (src_dir / "transcripts" / "30.txt").read_text(encoding="utf-8")
 
     zip_export_root = tmp_path / "zip_exported_repo"
@@ -489,7 +495,8 @@ def test_all_transcripts_g1_ext_and_zip_export_safety(repo_manifest, tmp_path):
     assert any("unredacted thoughtSignature" in e for e in chk_unredacted["errors"])
 
 
-def test_write_check_roundtrip_and_replay_filtering(tmp_path):
+def test_write_check_roundtrip_and_replay_filtering(tmp_path, monkeypatch):
+    _forbid_subprocess(monkeypatch)
     src_ep_file = (
         ROOT
         / "results"
@@ -499,7 +506,7 @@ def test_write_check_roundtrip_and_replay_filtering(tmp_path):
         / "hard-s30"
         / "episodes.jsonl"
     )
-    ep_valid = json.loads(src_ep_file.read_text(encoding="utf-8").splitlines()[0])
+    ep_valid = preflight._load_episode_file(src_ep_file)[0][1]
     ep_invalid = {
         "tier": "hard",
         "seed": 31,
@@ -547,42 +554,38 @@ def test_write_check_roundtrip_and_replay_filtering(tmp_path):
 
 def test_gpt55_clean_unended_replay_verification():
     gpt55_ep_path = ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gpt-5.5" / "hard" / "episodes.jsonl"
-    eps = [json.loads(line) for line in gpt55_ep_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    assert len(eps) == 30
-    by_seed = {int(e["seed"]): e for e in eps}
+    rows = preflight._load_episode_file(gpt55_ep_path)
+    assert len(rows) == 30
+    by_seed = {int(ep["seed"]): (ep, sig) for _, ep, sig in rows}
     for s in (0, 17):
-        ep = by_seed[s]
+        ep, sig = by_seed[s]
         assert ep["accused"] is None
         assert float(ep["score"]) == 0.0
         assert int(ep["final_day"]) == 0
         assert ep["meta"]["rc"] == 0
-        assert preflight.verify_episode_replay(ep) is True
+        assert preflight.verify_episode_replay(ep, steps_key=sig) is True
 
-        bad_timeout = copy.deepcopy(ep)
-        bad_timeout["meta"]["rc"] = "timeout"
-        assert preflight.verify_episode_replay(bad_timeout) is False
+        bad_timeout = {**ep, "meta": {**ep["meta"], "rc": "timeout"}}
+        assert preflight.verify_episode_replay(bad_timeout, steps_key=sig) is False
 
-        bad_rc = copy.deepcopy(ep)
-        bad_rc["meta"]["rc"] = 1
-        assert preflight.verify_episode_replay(bad_rc) is False
+        bad_rc = {**ep, "meta": {**ep["meta"], "rc": 1}}
+        assert preflight.verify_episode_replay(bad_rc, steps_key=sig) is False
 
-        bad_bool = copy.deepcopy(ep)
-        bad_bool["meta"]["rc"] = False
-        assert preflight.verify_episode_replay(bad_bool) is False
+        bad_bool = {**ep, "meta": {**ep["meta"], "rc": False}}
+        assert preflight.verify_episode_replay(bad_bool, steps_key=sig) is False
 
-        bad_day = copy.deepcopy(ep)
-        bad_day["final_day"] = 1
-        assert preflight.verify_episode_replay(bad_day) is False
+        bad_day = {**ep, "final_day": 1}
+        assert preflight.verify_episode_replay(bad_day, steps_key=sig) is False
 
-        bad_score = copy.deepcopy(ep)
-        bad_score["score"] = 0.25
-        assert preflight.verify_episode_replay(bad_score) is False
+        bad_score = {**ep, "score": 0.25}
+        assert preflight.verify_episode_replay(bad_score, steps_key=sig) is False
 
 
 def test_task_w3_files_have_zero_comments_zero_em_dashes_and_size_cap():
     assert MANIFEST_PATH.stat().st_size <= 50 * 1024
     for path in (SCRIPT_PATH, Path(__file__).resolve(), MANIFEST_PATH):
         txt = path.read_text(encoding="utf-8")
+        assert txt.isascii(), f"non-ASCII char in {path}"
         assert HASH_CHAR not in txt, f"found hash comment char in {path}"
         assert EM_DASH not in txt, f"found em dash in {path}"
         assert EN_DASH not in txt, f"found en dash in {path}"

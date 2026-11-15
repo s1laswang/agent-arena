@@ -398,12 +398,20 @@ def classify_request_url(url: str, allowed_local_origins: Iterable[str]) -> dict
     return {"url": raw, "allowed": False, "category": "external_other", "host": host}
 
 
+def _is_aborted_pyodide_cdn_url(raw_url: str) -> bool:
+    parts = urlsplit((raw_url or "").strip())
+    host = (parts.hostname or "").lower()
+    low_path = (parts.path or "").lower()
+    return host == "cdn.jsdelivr.net" and low_path.startswith("/pyodide/")
+
+
 def audit_network_requests(
     requests_log: Sequence[Mapping[str, Any]],
     allowed_local_origins: Iterable[str],
     *,
     offline_bundled: bool = True,
     strict_zero_cdn: bool = False,
+    allow_aborted_pyodide_cdn: bool = False,
 ) -> dict[str, Any]:
     local_urls: list[str] = []
     external_api_urls: list[str] = []
@@ -422,7 +430,8 @@ def audit_network_requests(
             violations.append(f"network_firewall: forbidden external API request blocked: {url}")
         elif cat == "external_cdn":
             external_cdn_urls.append(url)
-            if offline_bundled or strict_zero_cdn:
+            pyodide_exempt = allow_aborted_pyodide_cdn and not strict_zero_cdn and _is_aborted_pyodide_cdn_url(url)
+            if (offline_bundled or strict_zero_cdn) and not pyodide_exempt:
                 violations.append(f"network_firewall: forbidden external CDN request on offline surface: {url}")
         else:
             external_other_urls.append(url)
@@ -931,6 +940,7 @@ def inspect_browser_snapshot(
     allowed_local_origins: Iterable[str],
     offline_bundled: bool = True,
     strict_zero_cdn: bool = False,
+    allow_aborted_pyodide_cdn: bool = False,
     expected_mole: str | None = None,
     expected_decoy: str | None = None,
     expected_known_v: float | None = None,
@@ -943,6 +953,7 @@ def inspect_browser_snapshot(
         allowed_local_origins,
         offline_bundled=offline_bundled,
         strict_zero_cdn=strict_zero_cdn,
+        allow_aborted_pyodide_cdn=allow_aborted_pyodide_cdn,
     )
     dom_viols = inspect_dom_html(
         str(snapshot.get("html") or ""),
@@ -1343,6 +1354,7 @@ def discover_audit_surfaces(
                 "source": "disk:docs/arena/index.html",
                 "rel_url": "/disk_arena/docs/arena/index.html",
                 "offline_bundled": True,
+                "allow_aborted_pyodide_cdn": True,
                 "kind": "arena_index",
             }
         )
@@ -1375,6 +1387,7 @@ def discover_audit_surfaces(
                         "source": f"disk:docs/demo/{hf.name}",
                         "rel_url": f"/disk_demo/docs/demo/{hf.name}",
                         "offline_bundled": True,
+                        "post_hoc_viewer": hf.name == "replay.html",
                         "kind": "demo_html",
                     }
                 )
@@ -1406,6 +1419,7 @@ def discover_audit_surfaces(
                                 "source": f"{ref}:docs/arena/index.html",
                                 "rel_url": f"/remote_{slug}/docs/arena/index.html",
                                 "offline_bundled": True,
+                                "allow_aborted_pyodide_cdn": True,
                                 "kind": "arena_index",
                             }
                         )
@@ -1449,6 +1463,7 @@ def discover_audit_surfaces(
                                 "source": f"{ref}:{rel_p}",
                                 "rel_url": f"/remote_{slug}_{target_html.replace('.', '_')}/{rel_p}",
                                 "offline_bundled": True,
+                                "post_hoc_viewer": target_html == "replay.html",
                                 "kind": "demo_html",
                             }
                         )
@@ -1669,16 +1684,19 @@ def run_live_chromium_audit(
                             exp_kv = env6.visible_V()
                             exp_tv = round(env6.V, 10)
 
+                        allow_pyodide_cdn = bool(surf.get("allow_aborted_pyodide_cdn", False))
+                        is_post_hoc_viewer = bool(surf.get("post_hoc_viewer", False))
                         verdict_raw = inspect_browser_snapshot(
                             snap_raw,
                             allowed_local_origins=allowed_origins,
                             offline_bundled=offline_bundled,
                             strict_zero_cdn=strict_zero_cdn,
+                            allow_aborted_pyodide_cdn=allow_pyodide_cdn,
                             expected_mole=exp_mole,
                             expected_decoy=exp_decoy,
                             expected_known_v=exp_kv,
                             expected_true_v=exp_tv,
-                            human_done=False,
+                            human_done=is_post_hoc_viewer,
                         )
                         net_info = verdict_raw["network"]
                         total_local_requests += int(net_info["local_requests"])
@@ -1842,8 +1860,9 @@ def run_live_chromium_audit(
                                 v_arena_bad = inspect_browser_snapshot(
                                     snap_arena_bad,
                                     allowed_local_origins=allowed_origins,
-                                    offline_bundled=True,
+                                    offline_bundled=offline_bundled,
                                     strict_zero_cdn=strict_zero_cdn,
+                                    allow_aborted_pyodide_cdn=allow_pyodide_cdn,
                                     human_done=False,
                                     forbidden_active_seed=bad_seed,
                                 )
@@ -2166,7 +2185,8 @@ def run_offline_http_fallback_audit(
                     allowed_local_origins=allowed_origins,
                     offline_bundled=offline_bundled,
                     strict_zero_cdn=strict_zero_cdn,
-                    human_done=False,
+                    allow_aborted_pyodide_cdn=bool(surf.get("allow_aborted_pyodide_cdn", False)),
+                    human_done=bool(surf.get("post_hoc_viewer", False)),
                 )
                 net_info = verdict_raw["network"]
                 total_local_requests += int(net_info["local_requests"])

@@ -1,0 +1,76 @@
+{
+  "command": "PYTHONPATH=. python -m canary.gemini.interview_interrogator --llm gemini:gemini-4-carbon --specs medium:0,medium:1,medium:2,hard:0 --jobs 6 --out results/gemini_roles/world_text/persona-interviews-carbon",
+  "commit": "dbe9569fcc44abf8bc0665e0533dd1d1b677c6e9",
+  "count": 32,
+  "counterfactual_prompt_invariance_rate": 1.0,
+  "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+  "fake_env": false,
+  "fallback_count": 0,
+  "key_metric": "32 live interviews (4 worlds), 0 leaks, signal acc 100%, solver +0.645 vs +0.642",
+  "ledger_run_id": "persona-interviews-20261114T171302Z",
+  "lint_violations": 0,
+  "llm_ok_count": 32,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "n_interviews_generated": 32,
+  "n_samples": 32,
+  "n_worlds": 4,
+  "pairwise_signal_ordering_rate": 1.0,
+  "prompt_truth_leak_violations": 0,
+  "raw_llm_violations": 0,
+  "role": "world_text",
+  "sample_count": 32,
+  "signal_calibration_accuracy": 1.0,
+  "signal_calibration_ok": true,
+  "signals_covered": [
+    "evasive",
+    "cooperative"
+  ],
+  "smoke": false,
+  "solver_accuracy": 1.0,
+  "solver_mean_score": 0.645,
+  "solver_parity_ok": true,
+  "solver_score_delta": 0.0025,
+  "stego_leak_violations": 0,
+  "stub": false,
+  "subrole": "persona_interviews",
+  "template_baseline_accuracy": 1.0,
+  "template_baseline_mean_score": 0.6425,
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T17:14:28+00:00",
+  "topics_covered": [
+    "recent_documents",
+    "contacts_outside",
+    "workload",
+    "access_needs"
+  ],
+  "truth_leak_violations": 0,
+  "usage": {
+    "cached": 0,
+    "calls": 32,
+    "cost_usd": 0.156012,
+    "in": 31496,
+    "latency_s": 85.5,
+    "out": 2345,
+    "thinking": 6957,
+    "total_tokens": 40798
+  },
+  "world_specs": [
+    {
+      "seed": 0,
+      "tier": "medium"
+    },
+    {
+      "seed": 1,
+      "tier": "medium"
+    },
+    {
+      "seed": 2,
+      "tier": "medium"
+    },
+    {
+      "seed": 0,
+      "tier": "hard"
+    }
+  ]
+}

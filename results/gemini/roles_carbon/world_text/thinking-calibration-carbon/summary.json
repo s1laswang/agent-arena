@@ -1,0 +1,194 @@
+{
+  "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+  "levels_summary": {
+    "high": {
+      "cost_usd": 0.455378,
+      "distinct_bigrams": 1750,
+      "fallback_count": 0,
+      "latency_s": 555.94,
+      "llm_ok_rate": 1.0,
+      "n_llm_personas_over_20": "20/20",
+      "output_tokens": 5257,
+      "solver_accuracy": 1.0,
+      "solver_mean_score": 0.78,
+      "thinking_tokens": 38674,
+      "tone_shannon_entropy": 2.795462,
+      "type_token_ratio": 0.554344
+    },
+    "low": {
+      "cost_usd": 0.062748,
+      "distinct_bigrams": 1178,
+      "fallback_count": 0,
+      "latency_s": 127.078,
+      "llm_ok_rate": 1.0,
+      "n_llm_personas_over_20": "20/20",
+      "output_tokens": 4668,
+      "solver_accuracy": 1.0,
+      "solver_mean_score": 0.78,
+      "thinking_tokens": 0,
+      "tone_shannon_entropy": 2.795462,
+      "type_token_ratio": 0.660211
+    },
+    "medium": {
+      "cost_usd": 0.096168,
+      "distinct_bigrams": 1124,
+      "fallback_count": 0,
+      "latency_s": 183.107,
+      "llm_ok_rate": 1.0,
+      "n_llm_personas_over_20": "20/20",
+      "output_tokens": 4307,
+      "solver_accuracy": 1.0,
+      "solver_mean_score": 0.78,
+      "thinking_tokens": 3703,
+      "tone_shannon_entropy": 2.795462,
+      "type_token_ratio": 0.667087
+    }
+  },
+  "model_id": "gemini-4-carbon",
+  "non_leak_summary": {
+    "assert_no_truth_violations": 0,
+    "leak_encodings_violations": 0,
+    "lint_messages_violations": 0,
+    "lint_text_violations": 0,
+    "ok": true,
+    "supported_encodings_count": 37
+  },
+  "role": "world_text",
+  "seeds": [
+    6,
+    7
+  ],
+  "solver_parity": {
+    "arms": {
+      "TemplateProvider": {
+        "accuracy": 1.0,
+        "accuracy_diff_vs_template": 0.0,
+        "mean_score": 0.805,
+        "parity_ok": true,
+        "score_diff_vs_template": 0.0
+      },
+      "high": {
+        "accuracy": 1.0,
+        "accuracy_diff_vs_template": 0.0,
+        "mean_score": 0.78,
+        "parity_ok": true,
+        "score_diff_vs_template": -0.025
+      },
+      "low": {
+        "accuracy": 1.0,
+        "accuracy_diff_vs_template": 0.0,
+        "mean_score": 0.78,
+        "parity_ok": true,
+        "score_diff_vs_template": -0.025
+      },
+      "medium": {
+        "accuracy": 1.0,
+        "accuracy_diff_vs_template": 0.0,
+        "mean_score": 0.78,
+        "parity_ok": true,
+        "score_diff_vs_template": -0.025
+      }
+    },
+    "cross_level_accuracy_spread": 0.0,
+    "cross_level_score_spread": 0.0,
+    "max_accuracy_diff": 0.0,
+    "max_score_diff": 0.1,
+    "ok": true,
+    "per_seed": [
+      {
+        "TemplateProvider": {
+          "accused": "e17",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 6,
+          "score": 0.79
+        },
+        "levels": {
+          "high": {
+            "accused": "e17",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 6,
+            "score": 0.79,
+            "score_diff_vs_template": 0.0
+          },
+          "low": {
+            "accused": "e17",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 6,
+            "score": 0.79,
+            "score_diff_vs_template": 0.0
+          },
+          "medium": {
+            "accused": "e17",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 6,
+            "score": 0.79,
+            "score_diff_vs_template": 0.0
+          }
+        },
+        "max_score_spread": 0.0,
+        "same_accused_across_all": true,
+        "seed": 6
+      },
+      {
+        "TemplateProvider": {
+          "accused": "e09",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 7,
+          "score": 0.82
+        },
+        "levels": {
+          "high": {
+            "accused": "e09",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 8,
+            "score": 0.77,
+            "score_diff_vs_template": -0.05
+          },
+          "low": {
+            "accused": "e09",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 8,
+            "score": 0.77,
+            "score_diff_vs_template": -0.05
+          },
+          "medium": {
+            "accused": "e09",
+            "correct": true,
+            "end_reason": "accused",
+            "final_day": 8,
+            "score": 0.77,
+            "score_diff_vs_template": -0.05
+          }
+        },
+        "max_score_spread": 0.05,
+        "same_accused_across_all": true,
+        "seed": 7
+      }
+    ],
+    "seeds": [
+      6,
+      7
+    ],
+    "thinking_levels": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "tier": "medium"
+  },
+  "subrole": "thinking_level_calibration",
+  "thinking_levels": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "tier": "medium",
+  "tiers_version": "v1.4"
+}

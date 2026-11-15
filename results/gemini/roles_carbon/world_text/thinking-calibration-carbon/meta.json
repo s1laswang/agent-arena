@@ -1,0 +1,90 @@
+{
+  "command": "PYTHONPATH=. python -m canary.gemini.worldtext_thinking_eval --llm gemini:gemini-4-carbon --tier medium --seeds 6,7 --levels low,medium,high --jobs 6 --require-live --out results/gemini_roles/world_text/thinking-calibration-carbon",
+  "commit": "dbe9569fcc44abf8bc0665e0533dd1d1b677c6e9",
+  "count": 6,
+  "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+  "fake_env": false,
+  "fallback_count": 0,
+  "feature": "worldtext_thinking",
+  "key_metric": "6 worlds (2 seeds x 3 levels), 0 leaks, thinking tok low:0 -> medium:3703 -> high:38674, solver parity ok",
+  "leak_encoding_violations": 0,
+  "levels_summary": {
+    "high": {
+      "cost_usd": 0.455378,
+      "distinct_bigrams": 1750,
+      "fallback_count": 0,
+      "latency_s": 555.94,
+      "llm_ok_rate": 1.0,
+      "n_llm_personas_over_20": "20/20",
+      "output_tokens": 5257,
+      "solver_accuracy": 1.0,
+      "solver_mean_score": 0.78,
+      "thinking_tokens": 38674,
+      "tone_shannon_entropy": 2.795462,
+      "type_token_ratio": 0.554344
+    },
+    "low": {
+      "cost_usd": 0.062748,
+      "distinct_bigrams": 1178,
+      "fallback_count": 0,
+      "latency_s": 127.078,
+      "llm_ok_rate": 1.0,
+      "n_llm_personas_over_20": "20/20",
+      "output_tokens": 4668,
+      "solver_accuracy": 1.0,
+      "solver_mean_score": 0.78,
+      "thinking_tokens": 0,
+      "tone_shannon_entropy": 2.795462,
+      "type_token_ratio": 0.660211
+    },
+    "medium": {
+      "cost_usd": 0.096168,
+      "distinct_bigrams": 1124,
+      "fallback_count": 0,
+      "latency_s": 183.107,
+      "llm_ok_rate": 1.0,
+      "n_llm_personas_over_20": "20/20",
+      "output_tokens": 4307,
+      "solver_accuracy": 1.0,
+      "solver_mean_score": 0.78,
+      "thinking_tokens": 3703,
+      "tone_shannon_entropy": 2.795462,
+      "type_token_ratio": 0.667087
+    }
+  },
+  "lint_violations": 0,
+  "llm_ok_count": 6,
+  "llm_ok_rate": 1.0,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "n_supported_encodings_checked": 37,
+  "n_worlds": 6,
+  "role": "world_text",
+  "sample_count": 6,
+  "seeds": [
+    6,
+    7
+  ],
+  "smoke": false,
+  "solver_parity_ok": true,
+  "subrole": "thinking_level_calibration",
+  "thinking_levels": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "tier": "medium",
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T17:15:57Z",
+  "truth_leak_violations": 0,
+  "usage": {
+    "cached": 0,
+    "calls": 24,
+    "cost_usd": 0.614294,
+    "in": 24102,
+    "latency_s": 866.125,
+    "out": 14232,
+    "thinking": 42377,
+    "total_tokens": 80711
+  }
+}

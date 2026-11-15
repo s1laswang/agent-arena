@@ -1,0 +1,203 @@
+{
+  "bias_patterns": [
+    "unverified_rumour",
+    "grudge_bickering",
+    "authority_bias",
+    "unplanned_doc_forward"
+  ],
+  "days": [
+    1,
+    4,
+    8
+  ],
+  "encoding_scan_violations": 0,
+  "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+  "lint_violations": 0,
+  "model_id": "gemini-4-carbon",
+  "n_fallback_messages": 0,
+  "n_llm_messages": 60,
+  "n_messages": 60,
+  "role": "world_text",
+  "seeds": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "solver_parity": {
+    "biased_chatter_obvious_heuristic_catch_rate": 0.0,
+    "biased_chatter_obvious_heuristic_mean_score": -1.0,
+    "biased_chatter_solver_catch_rate": 1.0,
+    "biased_chatter_solver_mean_score": 0.6575,
+    "cached_sampled_day_hits": 34,
+    "do_nothing_all_zero": true,
+    "extra_api_calls_during_rollout": 0,
+    "n_days": 21,
+    "n_employees": 40,
+    "obvious_heuristic_mean_score_delta": 0.0,
+    "parity_ok": true,
+    "per_seed": [
+      {
+        "biased_chatter_do_nothing_score": 0.0,
+        "biased_chatter_obvious_heuristic": {
+          "accused": "e14",
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "biased_chatter_solver": {
+          "accused": "e38",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 9,
+          "score": 0.64
+        },
+        "biased_messages_delivered": 15,
+        "seed": 0,
+        "template_obvious_heuristic": {
+          "accused": "e14",
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "accused": "e38",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 9,
+          "score": 0.64
+        },
+        "total_horizon_messages": 168
+      },
+      {
+        "biased_chatter_do_nothing_score": 0.0,
+        "biased_chatter_obvious_heuristic": {
+          "accused": "e11",
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "biased_chatter_solver": {
+          "accused": "e33",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 7,
+          "score": 0.69
+        },
+        "biased_messages_delivered": 15,
+        "seed": 1,
+        "template_obvious_heuristic": {
+          "accused": "e11",
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "accused": "e33",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 7,
+          "score": 0.69
+        },
+        "total_horizon_messages": 170
+      },
+      {
+        "biased_chatter_do_nothing_score": 0.0,
+        "biased_chatter_obvious_heuristic": {
+          "accused": "e31",
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "biased_chatter_solver": {
+          "accused": "e25",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 9,
+          "score": 0.58
+        },
+        "biased_messages_delivered": 15,
+        "seed": 2,
+        "template_obvious_heuristic": {
+          "accused": "e31",
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "accused": "e25",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 9,
+          "score": 0.58
+        },
+        "total_horizon_messages": 168
+      },
+      {
+        "biased_chatter_do_nothing_score": 0.0,
+        "biased_chatter_obvious_heuristic": {
+          "accused": "e12",
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "biased_chatter_solver": {
+          "accused": "e29",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 5,
+          "score": 0.72
+        },
+        "biased_messages_delivered": 15,
+        "seed": 3,
+        "template_obvious_heuristic": {
+          "accused": "e12",
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "accused": "e29",
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 5,
+          "score": 0.72
+        },
+        "total_horizon_messages": 156
+      }
+    ],
+    "sampled_days": [
+      1,
+      4,
+      8
+    ],
+    "seeds": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "solver_catch_rate_delta": 0.0,
+    "solver_mean_score_delta": 0.0,
+    "solver_vs_obvious_gap": 1.6575,
+    "template_fallback_day_hits": 116,
+    "template_obvious_heuristic_catch_rate": 0.0,
+    "template_obvious_heuristic_mean_score": -1.0,
+    "template_solver_catch_rate": 1.0,
+    "template_solver_mean_score": 0.6575,
+    "tier": "hard",
+    "tiers_version": "v1.4"
+  },
+  "subrole": "biased_chatter_hard",
+  "tier": "hard",
+  "tiers_version": "v1.4",
+  "truth_leak_violations": 0
+}

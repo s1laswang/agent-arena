@@ -1,0 +1,64 @@
+{
+  "command": "/tmp/fleet-silas/canary-venv/bin/python scripts/run_role_world_text.py --llm gemini:gemini-4-carbon --specs medium:3,medium:4,medium:5,medium:6,hard:2,hard:3 --jobs 4 --out results/gemini_roles/world_text/carbon-v14-seeds3456-hard23",
+  "commit": "dbe9569fcc44abf8bc0665e0533dd1d1b677c6e9",
+  "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+  "gemini_provider_fallbacks": 0,
+  "key_metric": "6 live worlds (160 personas, med 3..6 + hard 2..3), 0 leaks, solver +0.618 vs +0.695",
+  "lint_violations": 0,
+  "llm_ok_count": 6,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "n_day_messages_generated": 84,
+  "n_departments_generated": 26,
+  "n_interviews_generated": 12,
+  "n_llm_personas": 160,
+  "n_personas_generated": 160,
+  "n_worlds": 6,
+  "role": "world_text",
+  "sample_count": 6,
+  "solver_accuracy": 0.8333,
+  "solver_all_clean": true,
+  "solver_episodes_verified": 6,
+  "solver_mean_score": 0.6183,
+  "subrole": "company_personas_chatter",
+  "template_baseline_mean_score": 0.695,
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T17:01:34Z",
+  "truth_leak_violations": 0,
+  "usage": {
+    "cached": 0,
+    "calls": 31,
+    "cost_usd": 0.509728,
+    "in": 40314,
+    "latency_s": 840.204,
+    "out": 18379,
+    "thinking": 24531,
+    "total_tokens": 83224
+  },
+  "world_specs": [
+    {
+      "seed": 3,
+      "tier": "medium"
+    },
+    {
+      "seed": 4,
+      "tier": "medium"
+    },
+    {
+      "seed": 5,
+      "tier": "medium"
+    },
+    {
+      "seed": 6,
+      "tier": "medium"
+    },
+    {
+      "seed": 2,
+      "tier": "hard"
+    },
+    {
+      "seed": 3,
+      "tier": "hard"
+    }
+  ]
+}

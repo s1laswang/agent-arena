@@ -1,0 +1,73 @@
+{
+  "carbon_biased_accuracy": 1.0,
+  "carbon_biased_distraction_rate": 1.0,
+  "carbon_biased_mean": 0.62,
+  "carbon_episode_count": 4,
+  "carbon_template_accuracy": 1.0,
+  "carbon_template_distraction_rate": 0.0,
+  "carbon_template_mean": 0.645,
+  "command": "python scripts/run_biased_chatter_ablation.py --tier hard --seeds 0,1 --model gemini-4-carbon --thinking-level medium --samples-cache results/gemini_roles/world_text/biased-chatter-hard-carbon/chatter_samples.json --concurrency 4 --out results/gemini_roles/world_text/biased-chatter-ablation-hard01",
+  "commit": "c3ebb075397b09cb837375b079836c020aed779e",
+  "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+  "episode_count": 12,
+  "fake_env": false,
+  "key_metric": "12 paired hard episodes (seeds 0,1), carbon +0.620 biased vs +0.645 template, solver +0.665 parity",
+  "ledger_run_id": "biased_chatter_ablation:gemini-4-carbon:2026-11-14T17:31:57Z",
+  "model_id": "gemini-4-carbon",
+  "obvious_biased_distraction_rate": 0.0,
+  "obvious_biased_mean": -1.0,
+  "obvious_template_distraction_rate": 0.0,
+  "obvious_template_mean": -1.0,
+  "role": "world_text",
+  "seeds": [
+    0,
+    1
+  ],
+  "smoke": false,
+  "solver_biased_distraction_rate": 0.0,
+  "solver_biased_mean": 0.665,
+  "solver_template_distraction_rate": 0.0,
+  "solver_template_mean": 0.665,
+  "stub": false,
+  "subrole": "biased_chatter_investigator_ablation",
+  "tier": "hard",
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T17:31:57Z",
+  "usage": {
+    "cached": 13565234,
+    "cached_tokens": 13565234,
+    "calls": 407,
+    "cost_usd": 5.313006,
+    "in": 14584848,
+    "input_tokens": 14584848,
+    "out": 191726,
+    "output_tokens": 23314,
+    "thinking": 168412,
+    "thinking_tokens": 168412,
+    "total_tokens": 14776574
+  },
+  "usage_breakdown": {
+    "investigator": {
+      "cached_tokens": 13563757,
+      "calls": 385,
+      "cost_usd": 4.933566,
+      "in": 14526260,
+      "input_tokens": 14526260,
+      "out": 165219,
+      "output_tokens": 12633,
+      "thinking_tokens": 152586,
+      "total_tokens": 14691479
+    },
+    "world_text": {
+      "cached_tokens": 1477,
+      "calls": 22,
+      "cost_usd": 0.37944,
+      "in": 58588,
+      "input_tokens": 58588,
+      "out": 26507,
+      "output_tokens": 10681,
+      "thinking_tokens": 15826,
+      "total_tokens": 85095
+    }
+  }
+}

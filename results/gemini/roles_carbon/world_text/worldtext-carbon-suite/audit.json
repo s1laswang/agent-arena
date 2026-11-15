@@ -1,0 +1,261 @@
+{
+  "dynamic_events_hard37_probe": {
+    "accuracy": 0.0,
+    "backend": "stub",
+    "chance": 0.025,
+    "ci95": [
+      0.0,
+      0.434491
+    ],
+    "correct": 0,
+    "fair_bar": 0.034535,
+    "interviews_per_employee": 2,
+    "n": 5,
+    "p_value_vs_bar": 1.0,
+    "p_value_vs_chance": 1.0,
+    "text_leak": false
+  },
+  "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+  "leak_and_safety_audit": {
+    "all_clean": true,
+    "fallback_count": 0,
+    "lint_violations": 0,
+    "prompt_truth_leak_violations": 0,
+    "secret_leaks_detected": 0,
+    "stego_encoding_violations": 0,
+    "truth_leak_violations": 0,
+    "verified_folders_audited": 14
+  },
+  "model_id": "gemini-4-carbon",
+  "persona_interviews_audit": {
+    "batches_audited": 2,
+    "counterfactual_checks": 192,
+    "counterfactual_invariance_rate": 1.0,
+    "encodings_checked": 37,
+    "env_surface_stego_violations": 0,
+    "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+    "lint_violations": 0,
+    "model_id": "gemini-4-carbon",
+    "prompt_truth_leak_violations": 0,
+    "role": "world_text",
+    "signal_calibration_ok": true,
+    "solver_parity_ok": true,
+    "stego_leak_violations": 0,
+    "subrole": "persona_interviews",
+    "truth_leak_violations": 0
+  },
+  "role": "world_text",
+  "tiers_version": "v1.4",
+  "v14_multi_tier_parity_and_probe_audit": {
+    "by_tier": {
+      "easy": {
+        "leak_encodings_ok": true,
+        "n_personas": 48,
+        "n_worlds": 4,
+        "non_leak": {
+          "n_interviews_checked": 384,
+          "n_lint_violations": 0,
+          "n_messages_checked": 318,
+          "n_truth_violations": 0,
+          "ok": true,
+          "text_probe": {
+            "accuracy": 0.0,
+            "alpha": 0.01,
+            "backend": "stub",
+            "chance": 0.083333,
+            "ci95": [
+              0.0,
+              0.4899
+            ],
+            "correct": 0,
+            "fair_bar": 0.170325,
+            "interviews_per_employee": 4,
+            "n": 4,
+            "p_value_vs_bar": 1.0,
+            "p_value_vs_chance": 1.0,
+            "text_leak": false
+          }
+        },
+        "passed": true,
+        "seeds": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "solver_parity": {
+          "catch_rate_diff": 0.0,
+          "exact_match_rate": 1.0,
+          "max_catch_diff": 0.25,
+          "max_score_diff": 0.1625,
+          "mean_score_diff": 0.0,
+          "n": 4,
+          "ok": true,
+          "score_diff_ci95": [
+            0.0,
+            0.0
+          ],
+          "template_catch_rate": 1.0,
+          "template_mean_score": 0.8,
+          "world_catch_rate": 1.0,
+          "world_mean_score": 0.8
+        }
+      },
+      "hard": {
+        "leak_encodings_ok": true,
+        "n_personas": 400,
+        "n_worlds": 10,
+        "non_leak": {
+          "n_interviews_checked": 3200,
+          "n_lint_violations": 0,
+          "n_messages_checked": 1465,
+          "n_truth_violations": 0,
+          "ok": true,
+          "text_probe": {
+            "accuracy": 0.0,
+            "alpha": 0.01,
+            "backend": "stub",
+            "chance": 0.025,
+            "ci95": [
+              0.0,
+              0.27754
+            ],
+            "correct": 0,
+            "fair_bar": 0.034535,
+            "interviews_per_employee": 2,
+            "n": 10,
+            "p_value_vs_bar": 1.0,
+            "p_value_vs_chance": 1.0,
+            "text_leak": false
+          }
+        },
+        "passed": true,
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "solver_parity": {
+          "catch_rate_diff": 0.0,
+          "exact_match_rate": 0.9,
+          "max_catch_diff": 0.15,
+          "max_score_diff": 0.15,
+          "mean_score_diff": 0.014,
+          "n": 10,
+          "ok": true,
+          "score_diff_ci95": [
+            -0.01344,
+            0.04144
+          ],
+          "template_catch_rate": 1.0,
+          "template_mean_score": 0.62,
+          "world_catch_rate": 1.0,
+          "world_mean_score": 0.634
+        }
+      },
+      "medium": {
+        "leak_encodings_ok": true,
+        "n_personas": 200,
+        "n_worlds": 10,
+        "non_leak": {
+          "n_interviews_checked": 1600,
+          "n_lint_violations": 0,
+          "n_messages_checked": 1008,
+          "n_truth_violations": 0,
+          "ok": true,
+          "text_probe": {
+            "accuracy": 0.1,
+            "alpha": 0.01,
+            "backend": "stub",
+            "chance": 0.05,
+            "ci95": [
+              0.017876,
+              0.404156
+            ],
+            "correct": 1,
+            "fair_bar": 0.073724,
+            "interviews_per_employee": 2,
+            "n": 10,
+            "p_value_vs_bar": 0.535052,
+            "p_value_vs_chance": 0.401263,
+            "text_leak": false
+          }
+        },
+        "passed": true,
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "solver_parity": {
+          "catch_rate_diff": -0.1,
+          "exact_match_rate": 0.7,
+          "max_catch_diff": 0.15,
+          "max_score_diff": 0.15,
+          "mean_score_diff": -0.064,
+          "n": 10,
+          "ok": true,
+          "score_diff_ci95": [
+            -0.181171,
+            0.053171
+          ],
+          "template_catch_rate": 1.0,
+          "template_mean_score": 0.73,
+          "world_catch_rate": 0.9,
+          "world_mean_score": 0.666
+        }
+      }
+    },
+    "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+    "leak_encodings": {
+      "n_personas_scanned": 648,
+      "n_supported_encodings": 37,
+      "n_violations": 0,
+      "n_worlds_scanned": 24,
+      "ok": true
+    },
+    "llm_ok_worlds": 24,
+    "model_id": "gemini-4-carbon",
+    "n_personas_total": 648,
+    "n_worlds": 24,
+    "non_leak": {
+      "missing_files": [],
+      "n_interviews_checked": 5184,
+      "n_leak_encoding_violations": 0,
+      "n_lint_violations": 0,
+      "n_messages_checked": 2791,
+      "n_truth_violations": 0,
+      "ok": true,
+      "text_leak_any": false
+    },
+    "ok": true,
+    "passed": true,
+    "role": "world_text",
+    "solver_parity": {
+      "catch_rate_diff": -0.041667,
+      "exact_match_rate": 0.833333,
+      "mean_score_diff": -0.020833,
+      "n": 24,
+      "ok": true,
+      "template_catch_rate": 1.0,
+      "template_mean_score": 0.695833,
+      "world_catch_rate": 0.958333,
+      "world_mean_score": 0.675
+    },
+    "tiers_version": "v1.4"
+  }
+}

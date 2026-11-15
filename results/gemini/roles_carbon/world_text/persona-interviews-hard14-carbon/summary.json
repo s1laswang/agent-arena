@@ -1,0 +1,234 @@
+{
+  "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+  "model_id": "gemini-4-carbon",
+  "n_interviews": 32,
+  "n_worlds": 4,
+  "role": "world_text",
+  "signal_calibration": {
+    "by_topic": {
+      "access_needs": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 6.5,
+        "mean_evasive_score": -6.75,
+        "n": 8
+      },
+      "contacts_outside": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 6.5,
+        "mean_evasive_score": -6.0,
+        "n": 8
+      },
+      "recent_documents": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 6.0,
+        "mean_evasive_score": -6.5,
+        "n": 8
+      },
+      "workload": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 4.25,
+        "mean_evasive_score": -6.25,
+        "n": 8
+      }
+    },
+    "calibration_ok": true,
+    "cooperative_hedging_rate": 0.0,
+    "cooperative_mean_words": 49.44,
+    "cooperative_specificity_rate": 1.0,
+    "distinct_tones_seen": [
+      "blunt",
+      "chatty",
+      "dry",
+      "formal",
+      "terse",
+      "upbeat",
+      "warm"
+    ],
+    "evasive_hedging_rate": 1.0,
+    "evasive_mean_words": 24.94,
+    "evasive_specificity_rate": 0.0,
+    "mean_calibration_margin": 12.1875,
+    "mean_cooperative_score": 5.8125,
+    "mean_evasive_score": -6.375,
+    "n_cooperative": 16,
+    "n_evasive": 16,
+    "n_topic_pairs": 16,
+    "n_total": 32,
+    "pairwise_ordering_rate": 1.0,
+    "signal_classification_accuracy": 1.0,
+    "unique_answers_ratio": 1.0
+  },
+  "solver_parity": {
+    "by_tier": {
+      "hard": {
+        "n": 4,
+        "persona_obvious_heuristic_mean_score": -1.0,
+        "persona_solver_accuracy": 1.0,
+        "persona_solver_mean_score": 0.605,
+        "solver_score_delta": 0.035,
+        "solver_vs_obvious_gap": 1.605,
+        "template_obvious_heuristic_mean_score": -1.0,
+        "template_solver_accuracy": 1.0,
+        "template_solver_mean_score": 0.57
+      }
+    },
+    "do_nothing_all_zero": true,
+    "env_stego_violations": 0,
+    "n": 4,
+    "parity_ok": true,
+    "per_world": [
+      {
+        "do_nothing_score": 0.0,
+        "env_interviews_executed": 4,
+        "env_stego_violations": 0,
+        "persona_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "persona_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 7,
+          "score": 0.69
+        },
+        "seed": 1,
+        "template_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 7,
+          "score": 0.69
+        },
+        "tier": "hard"
+      },
+      {
+        "do_nothing_score": 0.0,
+        "env_interviews_executed": 4,
+        "env_stego_violations": 0,
+        "persona_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "persona_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 5,
+          "score": 0.72
+        },
+        "seed": 2,
+        "template_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 9,
+          "score": 0.58
+        },
+        "tier": "hard"
+      },
+      {
+        "do_nothing_score": 0.0,
+        "env_interviews_executed": 4,
+        "env_stego_violations": 0,
+        "persona_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "persona_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 18,
+          "score": 0.28
+        },
+        "seed": 3,
+        "template_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 18,
+          "score": 0.28
+        },
+        "tier": "hard"
+      },
+      {
+        "do_nothing_score": 0.0,
+        "env_interviews_executed": 4,
+        "env_stego_violations": 0,
+        "persona_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "persona_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 5,
+          "score": 0.73
+        },
+        "seed": 4,
+        "template_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 5,
+          "score": 0.73
+        },
+        "tier": "hard"
+      }
+    ],
+    "persona_obvious_heuristic_mean_score": -1.0,
+    "persona_solver_accuracy": 1.0,
+    "persona_solver_mean_score": 0.605,
+    "solver_score_delta": 0.035,
+    "solver_vs_obvious_gap": 1.605,
+    "template_obvious_heuristic_mean_score": -1.0,
+    "template_solver_accuracy": 1.0,
+    "template_solver_mean_score": 0.57,
+    "world_specs": [
+      {
+        "seed": 1,
+        "tier": "hard"
+      },
+      {
+        "seed": 2,
+        "tier": "hard"
+      },
+      {
+        "seed": 3,
+        "tier": "hard"
+      },
+      {
+        "seed": 4,
+        "tier": "hard"
+      }
+    ]
+  },
+  "subrole": "persona_interviews",
+  "tiers_version": "v1.4"
+}

@@ -653,7 +653,16 @@ def test_readme_markdown_links_anchors_and_repo_map_paths() -> None:
 def test_readme_line34_solver_variation_and_acceptance_band_explicit() -> None:
     raw_readme = README_PATH.read_text(encoding="utf-8")
     norm_readme = _strip_bold_and_code(_normalize_typography(raw_readme))
-    assert _has_token(norm_readme, "+0.625 +/- 0.088")
+
+    judge_rows = _parse_judge_table_rows((ROOT / "results" / "judge_table.md").read_text(encoding="utf-8"))
+    jt_sv = judge_rows[("hard", "reference", "solver")]
+    score_cell = next(v for k, v in jt_sv.items() if k.startswith("score"))
+    m_jt = SOLVER_PM_RX.search(score_cell)
+    assert m_jt is not None
+    committed_jt_token = f"{m_jt.group(1)} +/- {m_jt.group(2)}"
+    committed_jt_hard = float(m_jt.group(1))
+
+    assert _has_token(norm_readme, committed_jt_token)
     assert _has_token(norm_readme, "+0.643 +/- 0.087")
 
     macos_log = ROOT / "results" / "fresh_clone" / "macos_justSilas_09e7363.log.txt"
@@ -671,15 +680,7 @@ def test_readme_line34_solver_variation_and_acceptance_band_explicit() -> None:
     sr_min = float(solver_sr["min"])
     sr_max = float(solver_sr["max"])
 
-    judge_rows = _parse_judge_table_rows((ROOT / "results" / "judge_table.md").read_text(encoding="utf-8"))
-    jt_sv = judge_rows[("hard", "reference", "solver")]
-    score_cell = next(v for k, v in jt_sv.items() if k.startswith("score"))
-    m_jt = SOLVER_PM_RX.search(score_cell)
-    assert m_jt is not None
-    committed_jt_hard = float(m_jt.group(1))
-
     for label, candidate in (
-        ("README line 34 historical judge_table (+0.625)", 0.625),
         ("README line 34 macOS fresh_clone (+0.643)", 0.643),
         ("results/judge_table.md committed hard solver", committed_jt_hard),
     ):
@@ -787,7 +788,7 @@ def test_readme_rules_mcp_reproduce_harbor_and_anticheat_parity() -> None:
 
 def test_readme_commands_pass_doc_command_verifier() -> None:
     results = verify_doc_commands.verify_repo(root=ROOT, docs=(README_REL,))
-    assert len(results) == 3
+    assert len(results) == 4
     failed = [f"{r.name}: {r.status} ({r.details})" for r in results if r.status != "PASS"]
     assert not failed, f"verify_doc_commands failed on README.md: {failed}"
 

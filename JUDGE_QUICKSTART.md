@@ -4,7 +4,7 @@
 
 ## 1. Headline Claim & Honest Disclosures (Rules v1.4, Paired Dev Seeds 0-29)
 
-On Canary's `hard` tier (`n=30` pre-registered dev seeds `0-29`, paired on identical worlds with the Bayesian reference solver, 100% replay-verified in [`paired_table_gemini.md`](data/runs/committed/v1.4/paired_table_gemini.md)):
+On Canary's `hard` tier (`n=30` locked dev seeds `0-29`, post-hoc lock in `671ed96` 28 s after `8fd4dec`, paired on identical worlds with the Bayesian reference solver, 100% replay-verified in [`paired_table_gemini.md`](data/runs/committed/v1.4/paired_table_gemini.md)):
 
 | Cell (Rules v1.4) | n | Agent +/- 95% CI | Solver +/- 95% CI | Raw / Solver [95% CI] | Luck-Adj. / Solver [95% CI] |
 |---|---:|---:|---:|---:|---:|
@@ -29,7 +29,7 @@ make anticheat-verify
 make game-serve
 ```
 
-- `make setup && make reproduce` (`~1 min`): replays committed frontier runs (`+0.322 +/- 0.199` hard), plays solver + 6 baselines on 40 judge seeds (`900000-900039`), and runs the anti-cheat gate (`REPRO_ANTICHEAT=0 make reproduce` runs table-only in `~10s`; `CANARY_WORLD_SECRET=<str> make reproduce` gives bit-identical output).
+- `make setup && make reproduce` (`~1 min`): replays committed runs (table pools `n=32` hard OpenCode `+0.349 +/- 0.190` and `n=60` solver `+0.498 +/- 0.097`), plays solver + 6 baselines on 40 judge seeds (`900000-900039`), runs the anti-cheat gate, and prints `HEADLINE` recomputing `n=30` (`+0.322 +/- 0.199` vs `+0.499`, `65% [24%, 98%]`; `REPRO_ANTICHEAT=0` table-only; `CANARY_WORLD_SECRET=<str>` bit-identical).
 - `make accept` (`~2 min -> RESULT: PASS`): asserts `do_nothing` and `stop_early` = `+0.000`, checks `solver` and `guess_day1` against 300-secret `+/- 4 SD` bands, and runs a live HTTP MCP smoke test.
 - `uv run python scripts/paired_gemini.py --version v1.4 --seeds 0-29` (`~14s`): recomputes the v1.4 paired 10,000-resample bootstrap gap table from committed trajectories.
 - `uv run python scripts/demo_replay.py --seed 4 --verify` (`<1s`): replays hard seed `4` in a fresh `Env` (`solver +0.73 -> MATCH` day 5 vs `gemini +0.40 -> MATCH` day 16).
@@ -58,7 +58,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=<key> harbor run -p harbor/dataset -a opencode -m g
 | Rubric Pillar | Key Evidence & Metrics | Committed Docs |
 |---|---|---|
 | **Walkthrough (All Pillars)** | 2-min keyless card + 10-min peer-review rubric walkthrough | [`docs/JUDGE-WALKTHROUGH.md`](docs/JUDGE-WALKTHROUGH.md) |
-| **Frontier Gap (30 pts)** | Paired v1.4 `n=30` tables, pre-registration, Harbor oracle spread | [`docs/reports/gap.md`](docs/reports/gap.md), [`results/oracle_range_v1.4.md`](results/oracle_range_v1.4.md) |
-| **Difficulty & Causal (30 pts)** | Exact `5.30 V` accounting; **295 episodes, `0.0e+00` unexplained**; W1-W3 audit | [`docs/reports/failure_analysis_v1.4.md`](docs/reports/failure_analysis_v1.4.md), [`docs/reports/failure_gallery.md`](docs/reports/failure_gallery.md), [`docs/DIFFICULTY.md`](docs/DIFFICULTY.md) |
+| **Frontier Gap (30 pts)** | Paired v1.4 `n=30` tables, post-hoc seed lock, Harbor oracle spread | [`docs/reports/gap.md`](docs/reports/gap.md), [`docs/SUBMISSION.md`](docs/SUBMISSION.md), [`results/oracle_range_v1.4.md`](results/oracle_range_v1.4.md) |
+| **Difficulty & Causal (30 pts)** | Exact `5.30 V` accounting; **295 episodes, `0.0e+00` unexplained**; W1-W4 audit | [`docs/reports/failure_analysis_v1.4.md`](docs/reports/failure_analysis_v1.4.md), [`docs/reports/failure_gallery.md`](docs/reports/failure_gallery.md), [`docs/DIFFICULTY.md`](docs/DIFFICULTY.md) |
 | **Reward Integrity (25 pts)** | 52 logged entries (`43+` attacks); **91 finished attackers, 4,325 calls, 0 exploits** | [`docs/EXPLOITS.md`](docs/EXPLOITS.md), [`results/gemini/swarm.md`](results/gemini/swarm.md) |
-| **Craft, Tiebreak & Lab (15 pts)** | Clean-tree keyless reproduce, LoRA SFT/GRPO status, thinking ladder + cache replay | [`docs/gemini/SUBMISSION.md`](docs/gemini/SUBMISSION.md), [`README.md`](README.md) |
+| **Craft, Tiebreak & Lab (15 pts)** | Clean-tree keyless reproduce, honest WS4 LoRA/GRPO tiebreak readout, thinking ladder + cache replay | [`docs/gemini/SUBMISSION.md`](docs/gemini/SUBMISSION.md), [`README.md`](README.md) |

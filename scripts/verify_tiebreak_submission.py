@@ -1461,112 +1461,130 @@ def _audit_empirical_bayes_table(table_path: Path, summary_path: Path, errors: l
             checked += 1
 
     params = summary.get("parameters") or {}
-    for row in tables[0][1]:
-        st = row[0]
-        if st not in params:
-            errors.append(f"empirical_bayes/table.md params: unknown stage {st!r}")
+    heldout_main = summary.get("heldout") or {}
+    heldout_n90 = summary.get("heldout_n90") or {}
+    dev_agents = (summary.get("dev_hard") or {}).get("agents") or {}
+    search_ledger = ((summary.get("training") or {}).get("stage3") or {}).get("search_ledger") or []
+
+    for headers, rows in tables:
+        if not headers or not rows:
             continue
-        p = params[st]
-        for idx, pk in enumerate(
-            ("w_canary_hit", "w_canary_miss", "w_doc_hit", "w_after_hours", "w_evasive", "w_angry_msg"),
-            start=1,
-        ):
-            if not _approx_eq(float(row[idx]), float(p[pk]), 0.002):
-                errors.append(f"empirical_bayes/table.md {st}.{pk}: {row[idx]} != {p[pk]}")
-            else:
-                checked += 1
+        col_idx = {h.strip(): i for i, h in enumerate(headers)}
 
-    overall = (summary.get("heldout") or {}).get("overall") or {}
-    for row in tables[1][1]:
-        ag = row[0]
-        if ag not in overall:
-            errors.append(f"empirical_bayes/table.md overall: unknown agent {ag!r}")
-            continue
-        ref = overall[ag]
-        sc_nums = _extract_floats(row[2])
-        ev_nums = _extract_floats(row[3])
-        if int(row[1]) != int(ref["n"]):
-            errors.append(f"empirical_bayes/table.md overall {ag}: n {row[1]} != {ref['n']}")
-        elif len(sc_nums) < 3 or not (
-            _approx_eq(sc_nums[0], ref["score"]["mean"], 0.002)
-            and _approx_eq(sc_nums[1], ref["score"]["ci95_low"], 0.002)
-            and _approx_eq(sc_nums[2], ref["score"]["ci95_high"], 0.002)
-        ):
-            errors.append(f"empirical_bayes/table.md overall {ag}: score cell {row[2]!r} mismatch")
-        elif len(ev_nums) < 3 or not (
-            _approx_eq(ev_nums[0], ref["luck_adjusted_ev"]["mean"], 0.002)
-            and _approx_eq(ev_nums[1], ref["luck_adjusted_ev"]["ci95_low"], 0.002)
-            and _approx_eq(ev_nums[2], ref["luck_adjusted_ev"]["ci95_high"], 0.002)
-        ):
-            errors.append(f"empirical_bayes/table.md overall {ag}: EV cell {row[3]!r} mismatch")
-        elif not _approx_eq(float(row[4]), ref["accuracy"], 0.002):
-            errors.append(f"empirical_bayes/table.md overall {ag}: accuracy {row[4]} != {ref['accuracy']}")
-        else:
-            checked += 7
-
-    by_tier = (summary.get("heldout") or {}).get("by_tier") or {}
-    for row in tables[2][1]:
-        tier, ag = row[0], row[1]
-        ref = (by_tier.get(tier) or {}).get(ag)
-        if not isinstance(ref, dict):
-            errors.append(f"empirical_bayes/table.md by_tier: missing ({tier}, {ag}) in summary.json")
-            continue
-        sc_nums = _extract_floats(row[3])
-        if int(row[2]) != int(ref["n"]) or len(sc_nums) < 3 or not _approx_eq(sc_nums[0], ref["score"]["mean"], 0.002):
-            errors.append(f"empirical_bayes/table.md by_tier ({tier}, {ag}): cell {row[3]!r} mismatch")
-        else:
-            checked += 2
-
-    p_deltas = (summary.get("heldout") or {}).get("paired_deltas") or {}
-    for row in tables[3][1]:
-        scope_cell, cmp_cell = row[0], row[1]
-        cmp_key = cmp_cell.replace(" - ", "_minus_").strip()
-        if scope_cell.startswith("overall"):
-            ref_d = (p_deltas.get("overall") or {}).get(cmp_key)
-        else:
-            tier_name = scope_cell.split()[0].strip()
-            ref_d = ((p_deltas.get("by_tier") or {}).get(tier_name) or {}).get(cmp_key)
-        if not isinstance(ref_d, dict):
-            errors.append(f"empirical_bayes/table.md paired_deltas: missing ({scope_cell}, {cmp_key})")
-            continue
-        sd_nums = _extract_floats(row[2])
-        ed_nums = _extract_floats(row[3])
-        if len(sd_nums) < 3 or not (
-            _approx_eq(sd_nums[0], ref_d["score_delta"]["mean"], 0.002)
-            and _approx_eq(sd_nums[1], ref_d["score_delta"]["ci95_low"], 0.002)
-            and _approx_eq(sd_nums[2], ref_d["score_delta"]["ci95_high"], 0.002)
-        ):
-            errors.append(f"empirical_bayes/table.md paired_deltas ({scope_cell}, {cmp_cell}): score delta mismatch")
-        elif len(ed_nums) < 3 or not _approx_eq(ed_nums[0], ref_d["luck_adjusted_delta"]["mean"], 0.002):
-            errors.append(f"empirical_bayes/table.md paired_deltas ({scope_cell}, {cmp_cell}): EV delta mismatch")
-        else:
-            checked += 4
-
-    if len(tables) >= 7:
-        dev_agents = ((summary.get("dev_hard") or {}).get("agents") or {})
-        for row in tables[4][1]:
-            ag = row[0]
-            if ag not in dev_agents:
-                errors.append(f"empirical_bayes/table.md dev_hard: unknown agent {ag!r}")
-                continue
-            ref_a = dev_agents[ag]
-            sc_nums = _extract_floats(row[2])
-            if int(row[1]) != int(ref_a["n"]) or len(sc_nums) < 3 or not _approx_eq(sc_nums[0], ref_a["score"]["mean"], 0.002):
-                errors.append(f"empirical_bayes/table.md dev_hard {ag}: score cell mismatch")
-            else:
-                checked += 2
-
-        search_ledger = ((summary.get("training") or {}).get("stage3") or {}).get("search_ledger") or []
-        if len(tables[6][1]) != len(search_ledger):
-            errors.append(
-                f"empirical_bayes/table.md stage3 search_ledger: {len(tables[6][1])} rows != {len(search_ledger)}"
-            )
-        else:
-            for row, sref in zip(tables[6][1], search_ledger):
-                if row[0] != sref["phase"] or not _approx_eq(float(row[6]), sref["mean_score"], 0.002):
-                    errors.append(f"empirical_bayes/table.md stage3 search_ledger {row[0]}: score mismatch")
+        if "w_canary_hit" in col_idx:
+            for row in rows:
+                st = row[0]
+                if st not in params:
+                    errors.append(f"empirical_bayes/table.md params: unknown stage {st!r}")
+                    continue
+                p = params[st]
+                for pk in ("w_canary_hit", "w_canary_miss", "w_doc_hit", "w_after_hours", "w_evasive", "w_angry_msg"):
+                    idx = col_idx[pk]
+                    if not _approx_eq(float(row[idx]), float(p[pk]), 0.002):
+                        errors.append(f"empirical_bayes/table.md {st}.{pk}: {row[idx]} != {p[pk]}")
+                    else:
+                        checked += 1
+        elif headers[0] == "Tier" and "n" in col_idx and "Score [95% Bootstrap CI]" in col_idx:
+            n_col = col_idx["n"]
+            sc_col = col_idx["Score [95% Bootstrap CI]"]
+            for row in rows:
+                tier, ag = row[0], row[1]
+                row_n = int(row[n_col])
+                bt_src = (
+                    (heldout_n90.get("by_tier") or {})
+                    if (row_n == 30 and heldout_n90 and heldout_main.get("n_per_tier") != 30)
+                    else (heldout_main.get("by_tier") or {})
+                )
+                ref = (bt_src.get(tier) or {}).get(ag)
+                if not isinstance(ref, dict):
+                    errors.append(f"empirical_bayes/table.md by_tier: missing ({tier}, {ag}) for n={row_n}")
+                    continue
+                sc_nums = _extract_floats(row[sc_col])
+                if row_n != int(ref["n"]) or len(sc_nums) < 3 or not _approx_eq(sc_nums[0], ref["score"]["mean"], 0.002):
+                    errors.append(f"empirical_bayes/table.md by_tier ({tier}, {ag}): cell {row[sc_col]!r} mismatch")
                 else:
                     checked += 2
+        elif headers[0] == "Scope" and "Comparison (After - Before)" in col_idx:
+            sd_col = col_idx["Score Delta [95% CI]"]
+            ed_col = col_idx["Luck-Adjusted EV Delta [95% CI]"]
+            for row in rows:
+                scope_cell, cmp_cell = row[0], row[1]
+                cmp_key = cmp_cell.replace(" - ", "_minus_").strip()
+                use_n90 = scope_cell.startswith("subset") or (
+                    "(n=30)" in scope_cell and bool(heldout_n90) and heldout_main.get("n_per_tier") != 30
+                )
+                p_deltas = (heldout_n90 if use_n90 else heldout_main).get("paired_deltas") or {}
+                if scope_cell.startswith(("overall", "subset")):
+                    ref_d = (p_deltas.get("overall") or {}).get(cmp_key)
+                else:
+                    tier_name = scope_cell.split()[0].strip()
+                    ref_d = ((p_deltas.get("by_tier") or {}).get(tier_name) or {}).get(cmp_key)
+                if not isinstance(ref_d, dict):
+                    errors.append(f"empirical_bayes/table.md paired_deltas: missing ({scope_cell}, {cmp_key})")
+                    continue
+                sd_nums = _extract_floats(row[sd_col])
+                ed_nums = _extract_floats(row[ed_col])
+                if len(sd_nums) < 3 or not (
+                    _approx_eq(sd_nums[0], ref_d["score_delta"]["mean"], 0.002)
+                    and _approx_eq(sd_nums[1], ref_d["score_delta"]["ci95_low"], 0.002)
+                    and _approx_eq(sd_nums[2], ref_d["score_delta"]["ci95_high"], 0.002)
+                ):
+                    errors.append(f"empirical_bayes/table.md paired_deltas ({scope_cell}, {cmp_cell}): score delta mismatch")
+                elif len(ed_nums) < 3 or not _approx_eq(ed_nums[0], ref_d["luck_adjusted_delta"]["mean"], 0.002):
+                    errors.append(f"empirical_bayes/table.md paired_deltas ({scope_cell}, {cmp_cell}): EV delta mismatch")
+                else:
+                    checked += 4
+        elif headers[0] == "Phase" and "Train Mean Score" in col_idx:
+            sc_col = col_idx["Train Mean Score"]
+            if len(rows) != len(search_ledger):
+                errors.append(f"empirical_bayes/table.md stage3 search_ledger: {len(rows)} rows != {len(search_ledger)}")
+            else:
+                for row, sref in zip(rows, search_ledger):
+                    if row[0] != sref["phase"] or not _approx_eq(float(row[sc_col]), sref["mean_score"], 0.002):
+                        errors.append(f"empirical_bayes/table.md stage3 search_ledger {row[0]}: score mismatch")
+                    else:
+                        checked += 2
+        elif headers[0].startswith(("Agent", "Stage")) and "n" in col_idx and "Score [95% Bootstrap CI]" in col_idx:
+            n_col = col_idx["n"]
+            sc_col = col_idx["Score [95% Bootstrap CI]"]
+            ev_col = col_idx["Luck-Adjusted EV [95% CI]"]
+            acc_col = col_idx["Accuracy"]
+            sample_n = int(rows[0][n_col])
+            if sample_n == 30 and dev_agents:
+                src_map = dev_agents
+                scope_tag = "dev_hard"
+            elif sample_n == 90 and heldout_n90 and heldout_main.get("n_total_per_agent") != 90:
+                src_map = heldout_n90.get("overall") or {}
+                scope_tag = "heldout_n90"
+            else:
+                src_map = heldout_main.get("overall") or {}
+                scope_tag = "overall"
+            for row in rows:
+                ag = row[0]
+                if ag not in src_map:
+                    errors.append(f"empirical_bayes/table.md {scope_tag}: unknown agent {ag!r}")
+                    continue
+                ref = src_map[ag]
+                sc_nums = _extract_floats(row[sc_col])
+                ev_nums = _extract_floats(row[ev_col])
+                if int(row[n_col]) != int(ref["n"]):
+                    errors.append(f"empirical_bayes/table.md {scope_tag} {ag}: n {row[n_col]} != {ref['n']}")
+                elif len(sc_nums) < 3 or not (
+                    _approx_eq(sc_nums[0], ref["score"]["mean"], 0.002)
+                    and _approx_eq(sc_nums[1], ref["score"]["ci95_low"], 0.002)
+                    and _approx_eq(sc_nums[2], ref["score"]["ci95_high"], 0.002)
+                ):
+                    errors.append(f"empirical_bayes/table.md {scope_tag} {ag}: score cell {row[sc_col]!r} mismatch")
+                elif len(ev_nums) < 3 or not (
+                    _approx_eq(ev_nums[0], ref["luck_adjusted_ev"]["mean"], 0.002)
+                    and _approx_eq(ev_nums[1], ref["luck_adjusted_ev"]["ci95_low"], 0.002)
+                    and _approx_eq(ev_nums[2], ref["luck_adjusted_ev"]["ci95_high"], 0.002)
+                ):
+                    errors.append(f"empirical_bayes/table.md {scope_tag} {ag}: EV cell {row[ev_col]!r} mismatch")
+                elif not _approx_eq(float(row[acc_col]), ref["accuracy"], 0.002):
+                    errors.append(f"empirical_bayes/table.md {scope_tag} {ag}: accuracy {row[acc_col]} != {ref['accuracy']}")
+                else:
+                    checked += 7
 
     return checked
 

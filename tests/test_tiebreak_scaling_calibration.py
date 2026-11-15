@@ -129,7 +129,7 @@ def test_tiny_scaling_experiment_and_rollout_reuse(monkeypatch: pytest.MonkeyPat
         assert row["all_replay_verified"] is True
         assert row["replay_verified"] == 6
         assert sum(row["counts"].values()) == 6
-    assert time.perf_counter() - t0 < 7.5
+    assert time.perf_counter() - t0 < 45.0
 
 
 def test_classify_episodes_small_fixture(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

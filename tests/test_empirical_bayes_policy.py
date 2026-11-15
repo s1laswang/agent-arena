@@ -18,16 +18,20 @@ from canary import world as canary_world
 from canary.env import Env
 from canary.eval import run_episode
 from train.empirical_bayes_policy import (
+    ABLATION_VARIANTS,
     DEFAULT_CHECKPOINT_DIR,
     HELDOUT_SECRET_TAG,
     EmpiricalBayesParams,
     EmpiricalBayesPolicy,
     assert_strict_train_seed,
     bootstrap_ci,
+    build_ablation_variant_params,
     format_markdown_report,
     luck_adjusted_ev,
     main,
+    make_ev_stop_only_params,
     make_naive_prior_params,
+    make_no_canary_planting_params,
     paired_bootstrap_delta,
     replay_verify_episode,
     run_full_pipeline,
@@ -52,12 +56,15 @@ def test_source_and_artifact_hygiene() -> None:
     em_dash = chr(0x2014)
     en_dash = chr(0x2013)
     banned_flash = "gemini-" + "3.5" + "-flash"
+    banned_prereg_hyphen = "pre-" + "regist"
+    banned_prereg_compact = "prere" + "gist"
     forbidden_imports = {"torch", "transformers", "peft", "mlx", "mlx_lm", "google", "genai"}
 
-    assert DEFAULT_CHECKPOINT_DIR == "/localscratch/fleet-silas/tiebreak-shared/empirical_bayes"
+    assert DEFAULT_CHECKPOINT_DIR == "/tmp/fleet-silas/shared/tiebreak/empirical_bayes"
 
     for py_path in (MODULE_PATH, SELF_PATH):
         src = py_path.read_text(encoding="utf-8")
+        low = src.lower()
         tree = ast.parse(src, filename=str(py_path))
         tokens = list(tokenize.generate_tokens(io.StringIO(src).readline))
         comments = [tok for tok in tokens if tok.type == tokenize.COMMENT]
@@ -65,7 +72,9 @@ def test_source_and_artifact_hygiene() -> None:
         assert hash_char not in src, f"hash char found in {py_path}"
         assert em_dash not in src, f"em dash found in {py_path}"
         assert en_dash not in src, f"en dash found in {py_path}"
-        assert banned_flash not in src.lower(), f"forbidden flash reference in {py_path}"
+        assert banned_flash not in low, f"forbidden flash reference in {py_path}"
+        assert banned_prereg_hyphen not in low, f"forbidden wording in {py_path}"
+        assert banned_prereg_compact not in low, f"forbidden wording in {py_path}"
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -77,16 +86,19 @@ def test_source_and_artifact_hygiene() -> None:
     for art_path in (SUMMARY_PATH, TABLE_PATH):
         assert art_path.is_file(), f"missing artifact: {art_path}"
         txt = art_path.read_text(encoding="utf-8")
+        low = txt.lower()
         assert hash_char not in txt, f"hash char found in {art_path}"
         assert em_dash not in txt, f"em dash found in {art_path}"
         assert en_dash not in txt, f"en dash found in {art_path}"
-        assert banned_flash not in txt.lower(), f"forbidden flash row in {art_path}"
+        assert banned_flash not in low, f"forbidden flash row in {art_path}"
+        assert banned_prereg_hyphen not in low, f"forbidden wording in {art_path}"
+        assert banned_prereg_compact not in low, f"forbidden wording in {art_path}"
 
     assert "torch" not in sys.modules
     assert "transformers" not in sys.modules
 
 
-def test_committed_summary_passes_all_four_ledger_gates() -> None:
+def test_committed_summary_n180_n90_ablations_and_panel_fix_a() -> None:
     summary = json.loads(SUMMARY_PATH.read_text(encoding="utf-8"))
     table_md = TABLE_PATH.read_text(encoding="utf-8")
 
@@ -96,15 +108,18 @@ def test_committed_summary_passes_all_four_ledger_gates() -> None:
     assert summary["model"] == "EmpiricalBayesPolicy (likelihood + optimal stopping learned on TRAIN_SEEDS)"
     assert summary["tiers_version"] == "v1.4"
     assert summary["tiers"] == ["easy", "medium", "hard"]
-    assert summary["n"] == 90
+    assert summary["n"] == 180
     assert summary["train_seeds"] == {"start": 102000, "stop": 102780}
-    assert summary["eval_seeds"] == {"start": 800000, "stop": 800030}
+    assert summary["eval_seeds"] == {"start": 800000, "stop": 800060}
+    assert summary["eval_seed_range"] == "800000..800059"
+    assert summary["eval_n90_seed_range"] == "800000..800029"
     assert summary["replay_verified"] is True
     assert summary["invalid_episodes"] == 0
+    assert summary["total_episodes_replayed"] == 1530
 
     for side_key in ("before", "after"):
         side = summary[side_key]
-        assert side["n"] == 90
+        assert side["n"] == 180
         assert side["valid_call_rate"] == 1.0
         assert side["world_secret_tag"] == expected_sha_tag
         assert side["replay_verified"] is True
@@ -118,11 +133,48 @@ def test_committed_summary_passes_all_four_ledger_gates() -> None:
     )
 
     paired = summary["paired"]
-    assert isinstance(paired["deltas"], list) and len(paired["deltas"]) == 90
-    assert paired["mean_delta"] == pytest.approx(sum(paired["deltas"]) / 90.0, abs=1e-5)
-    assert paired["mean_delta"] > 0.5
-    assert paired["ci95_low"] > 0.5
+    assert isinstance(paired["deltas"], list) and len(paired["deltas"]) == 180
+    assert paired["mean_delta"] == pytest.approx(sum(paired["deltas"]) / 180.0, abs=1e-5)
+    assert paired["mean_delta"] > 0.9
+    assert paired["ci95_low"] > 0.8
     assert paired["ci95_high"] > paired["mean_delta"]
+
+    ho = summary["heldout"]
+    assert ho["n_per_tier"] == 60
+    assert ho["n_total_per_agent"] == 180
+    assert ho["eval_seed_range"] == "800000..800059"
+    assert ho["episodes_replayed"] == 1260
+
+    ho90 = summary["heldout_n90"]
+    assert ho90["n_per_tier"] == 30
+    assert ho90["n_total_per_agent"] == 90
+    assert ho90["eval_seed_range"] == "800000..800029"
+    assert len(ho90["before_after_gate"]["paired_episode_deltas"]) == 90
+    assert ho90["before_after_gate"]["paired_mean_delta"] > 0.8
+    assert ho90["before_after_gate"]["paired_ci95_low"] > 0.7
+
+    ab = summary["component_ablation_matrix"]
+    assert ab["eval_seed_range"] == "800000..800059"
+    assert ab["n_per_tier"] == 60
+    assert ab["n_total_per_variant"] == 180
+    assert ab["world_secret_tag"] == HELDOUT_SECRET_TAG
+    assert ab["replay_verified"] is True
+    assert ab["episodes_replayed"] == 900
+    assert tuple(v["variant"] for v in ab["variants"]) == ABLATION_VARIANTS
+
+    ab_by_name = {v["variant"]: v for v in ab["variants"]}
+    assert ab_by_name["eb_ev_stop_only"]["negative_ablation"] is True
+    assert ab_by_name["eb_ev_stop_only"]["n180_overall"]["score"]["mean"] < 0.0
+    assert ab_by_name["eb_no_canary_planting"]["negative_ablation"] is True
+    assert ab_by_name["eb_no_canary_planting"]["n180_overall"]["total_canaries_planted"] == 0
+    assert ab_by_name["eb_no_canary_planting"]["n180_overall"]["mean_canaries_planted"] == 0.0
+    assert ab_by_name["eb_no_canary_planting"]["n180_overall"]["abstain_rate"] > 0.80
+
+    pd_ov = ho["paired_deltas"]["overall"]
+    assert pd_ov["eb_likelihood_only_minus_eb_naive_prior"]["score_delta"]["ci95_low"] > 0.5
+    assert pd_ov["eb_experience_opt_minus_eb_no_canary_planting"]["score_delta"]["ci95_low"] > 0.45
+    assert pd_ov["eb_experience_opt_minus_eb_likelihood_only"]["score_delta"]["ci95_low"] > 0.10
+    assert pd_ov["eb_experience_opt_minus_heuristic"]["score_delta"]["ci95_low"] > 0.20
 
     validated = ledger_mod.validate_experiment_summary(
         summary,
@@ -130,6 +182,7 @@ def test_committed_summary_passes_all_four_ledger_gates() -> None:
     )
     assert validated["verified_improvement"] is True
     assert validated["status"] == "VERIFIED_IMPROVEMENT"
+    assert validated["heldout_n"] == 180
     assert validated["gates"]["gate1_seed_hygiene"] is True
     assert validated["gates"]["gate2_paired_world_secret"] is True
     assert validated["gates"]["gate3_sample_and_replay"] is True
@@ -137,8 +190,14 @@ def test_committed_summary_passes_all_four_ledger_gates() -> None:
     assert validated["gates"]["all_passed"] is True
     assert validated["gates"]["reasons"] == []
 
+    assert summary["dev_protocol_label"] == "post-hoc locked dev hard 0..29"
+    assert summary["dev_hard"]["protocol_label"] == "post-hoc locked dev hard 0..29"
+    assert "post-hoc locked dev hard 0..29" in table_md
+    assert "5. Keyless Reference Comparison on Post-Hoc Locked Dev Hard 0..29" in table_md
+
     assert format_markdown_report(summary) == table_md
     dev_agents = set(summary["dev_hard"]["agents"].keys())
+    assert set(ABLATION_VARIANTS).issubset(dev_agents)
     assert "opencode:google/gemini-4-carbon" in dev_agents
     assert "gemini:gemini-4-carbon" in dev_agents
     assert "solver" in dev_agents
@@ -183,9 +242,23 @@ def test_posterior_stopping_and_replay_verification() -> None:
     }
 
     naive_params = make_naive_prior_params()
+    like_params = EmpiricalBayesParams.from_dict(summary["parameters"]["eb_likelihood_only"])
+    ev_only_params = make_ev_stop_only_params()
+    no_can_params = make_no_canary_planting_params(like_params, opt_params)
+    built = build_ablation_variant_params(naive_params, like_params, opt_params)
+    assert tuple(built.keys()) == ABLATION_VARIANTS
+
     assert naive_params.use_ev_stopping is False
+    assert like_params.use_ev_stopping is False
+    assert ev_only_params.use_ev_stopping is True
+    assert ev_only_params.w_angry_msg > 0.0
+    assert no_can_params.canary_coverage == 0.0
     assert opt_params.use_ev_stopping is True
     assert opt_params.w_angry_msg < 0.0
+
+    no_can_ep = run_episode(Env("medium", 102_001), EmpiricalBayesPolicy(no_can_params, seed=102_001))
+    assert replay_verify_episode(no_can_ep) is True
+    assert all(st.tool != "plant_canary" for st in no_can_ep.steps)
 
     for tier, seed in (("easy", 102_000), ("medium", 102_001), ("hard", 102_002)):
         pol = EmpiricalBayesPolicy(opt_params, seed=seed)

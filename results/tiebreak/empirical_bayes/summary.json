@@ -7,37 +7,37 @@
     "medium",
     "hard"
   ],
-  "n": 90,
+  "n": 180,
   "train_seeds": {
     "start": 102000,
     "stop": 102780
   },
   "eval_seeds": {
     "start": 800000,
-    "stop": 800030
+    "stop": 800060
   },
   "replay_verified": true,
   "invalid_episodes": 0,
   "before": {
-    "n": 90,
-    "mean_score": -0.385667,
+    "n": 180,
+    "mean_score": -0.420889,
     "valid_call_rate": 1.0,
     "world_secret_tag": "sha256:ebf2f09716cf76d3",
     "replay_verified": true,
     "invalid_episodes": 0
   },
   "after": {
-    "n": 90,
-    "mean_score": 0.622333,
+    "n": 180,
+    "mean_score": 0.607278,
     "valid_call_rate": 1.0,
     "world_secret_tag": "sha256:ebf2f09716cf76d3",
     "replay_verified": true,
     "invalid_episodes": 0
   },
   "paired": {
-    "mean_delta": 1.008,
-    "ci95_low": 0.843889,
-    "ci95_high": 1.169889,
+    "mean_delta": 1.028167,
+    "ci95_low": 0.915165,
+    "ci95_high": 1.138278,
     "deltas": [
       0.06,
       0.06,
@@ -69,6 +69,36 @@
       0.2,
       0.0,
       -0.12,
+      0.06,
+      0.0,
+      0.18,
+      0.06,
+      0.0,
+      0.06,
+      0.01,
+      -0.14,
+      0.06,
+      0.06,
+      0.01,
+      1.63,
+      1.76,
+      -0.05,
+      -0.05,
+      -0.37,
+      0.06,
+      -0.14,
+      0.24,
+      0.25,
+      0.13,
+      -0.25,
+      -0.06,
+      0.48,
+      -0.06,
+      0.12,
+      -0.06,
+      0.2,
+      1.76,
+      -0.01,
       1.7,
       1.0,
       1.79,
@@ -99,6 +129,36 @@
       1.6,
       1.0,
       1.59,
+      1.75,
+      1.6,
+      0.0,
+      0.0,
+      1.0,
+      1.78,
+      1.66,
+      1.64,
+      1.75,
+      1.8,
+      1.77,
+      0.75,
+      1.64,
+      1.79,
+      1.0,
+      1.7,
+      1.6,
+      1.73,
+      1.72,
+      1.84,
+      1.75,
+      1.69,
+      1.0,
+      1.63,
+      1.75,
+      1.8,
+      1.58,
+      1.47,
+      0.68,
+      1.75,
       1.65,
       1.65,
       1.36,
@@ -128,19 +188,51 @@
       1.56,
       1.77,
       1.66,
-      1.12
+      1.12,
+      1.6,
+      1.51,
+      1.3,
+      1.7,
+      1.48,
+      1.54,
+      1.7,
+      1.65,
+      1.65,
+      1.61,
+      1.61,
+      1.72,
+      1.4,
+      1.41,
+      1.65,
+      1.52,
+      1.66,
+      1.54,
+      1.38,
+      1.65,
+      1.46,
+      1.33,
+      0.0,
+      1.38,
+      1.75,
+      1.26,
+      1.55,
+      1.59,
+      1.54,
+      1.65
     ]
   },
-  "notes": "Learned log-likelihood ratios (180 eps) + optimal stopping/splits (180 eps) strictly on TRAIN_SEEDS; paired held-out luck-adjusted EV delta +0.970.",
+  "notes": "Learned log-likelihood ratios (180 eps) + optimal stopping/splits (180 eps) strictly on TRAIN_SEEDS; paired held-out n=180 (800000..800059) luck-adjusted EV delta +1.000 (n=90 subset score delta +1.008).",
   "world_secret_tag": "canary-tiebreak-heldout-v14-eval-01",
   "train_seed_range": "102000..102779",
   "stage2_seed_range": "102000..102179",
   "stage3_seed_range": "102600..102779",
-  "eval_seed_range": "800000..800029",
+  "eval_seed_range": "800000..800059",
+  "eval_n90_seed_range": "800000..800029",
   "dev_eval_seed_range": "0..29",
-  "total_episodes_replayed": 660,
+  "dev_protocol_label": "post-hoc locked dev hard 0..29",
+  "total_episodes_replayed": 1530,
   "workers": 1,
-  "elapsed_seconds": 59.06,
+  "elapsed_seconds": 158.47,
   "parameters": {
     "eb_naive_prior": {
       "w_canary_hit": 1.0,
@@ -157,7 +249,7 @@
       "naive_p_threshold": 0.5,
       "stage": "eb_naive_prior"
     },
-    "eb_likelihood_learned": {
+    "eb_likelihood_only": {
       "w_canary_hit": 1.316224,
       "w_canary_miss": -3.783276,
       "w_doc_hit": 7.921455,
@@ -170,7 +262,37 @@
       "tiny_pool_size": 0,
       "use_ev_stopping": false,
       "naive_p_threshold": 0.5,
-      "stage": "eb_likelihood_learned"
+      "stage": "eb_likelihood_only"
+    },
+    "eb_ev_stop_only": {
+      "w_canary_hit": 1.0,
+      "w_canary_miss": -0.8,
+      "w_doc_hit": 0.6,
+      "w_after_hours": 0.8,
+      "w_evasive": 0.4,
+      "w_angry_msg": 1.2,
+      "tau_margin": 0.0,
+      "unsurfaced_v_discount": 0.0,
+      "canary_coverage": 0.9,
+      "tiny_pool_size": 0,
+      "use_ev_stopping": true,
+      "naive_p_threshold": 0.5,
+      "stage": "eb_ev_stop_only"
+    },
+    "eb_no_canary_planting": {
+      "w_canary_hit": 1.316224,
+      "w_canary_miss": -3.783276,
+      "w_doc_hit": 7.921455,
+      "w_after_hours": 0.122482,
+      "w_evasive": 0.343812,
+      "w_angry_msg": -2.362232,
+      "tau_margin": 0.5,
+      "unsurfaced_v_discount": 1.0,
+      "canary_coverage": 0.0,
+      "tiny_pool_size": 0,
+      "use_ev_stopping": true,
+      "naive_p_threshold": 0.5,
+      "stage": "eb_no_canary_planting"
     },
     "eb_experience_opt": {
       "w_canary_hit": 1.316224,
@@ -186,6 +308,21 @@
       "use_ev_stopping": true,
       "naive_p_threshold": 0.5,
       "stage": "eb_experience_opt"
+    },
+    "eb_likelihood_learned": {
+      "w_canary_hit": 1.316224,
+      "w_canary_miss": -3.783276,
+      "w_doc_hit": 7.921455,
+      "w_after_hours": 0.122482,
+      "w_evasive": 0.343812,
+      "w_angry_msg": -2.362232,
+      "tau_margin": 0.0,
+      "unsurfaced_v_discount": 0.0,
+      "canary_coverage": 0.9,
+      "tiny_pool_size": 0,
+      "use_ev_stopping": false,
+      "naive_p_threshold": 0.5,
+      "stage": "eb_likelihood_only"
     }
   },
   "learned_theta": {
@@ -197,7 +334,23 @@
       "w_evasive": 0.4,
       "w_angry_msg": 1.2
     },
-    "eb_likelihood_learned": {
+    "eb_likelihood_only": {
+      "w_canary_hit": 1.316224,
+      "w_canary_miss": -3.783276,
+      "w_doc_hit": 7.921455,
+      "w_after_hours": 0.122482,
+      "w_evasive": 0.343812,
+      "w_angry_msg": -2.362232
+    },
+    "eb_ev_stop_only": {
+      "w_canary_hit": 1.0,
+      "w_canary_miss": -0.8,
+      "w_doc_hit": 0.6,
+      "w_after_hours": 0.8,
+      "w_evasive": 0.4,
+      "w_angry_msg": 1.2
+    },
+    "eb_no_canary_planting": {
       "w_canary_hit": 1.316224,
       "w_canary_miss": -3.783276,
       "w_doc_hit": 7.921455,
@@ -212,13 +365,883 @@
       "w_after_hours": 0.122482,
       "w_evasive": 0.343812,
       "w_angry_msg": -2.362232
+    },
+    "eb_likelihood_learned": {
+      "w_canary_hit": 1.316224,
+      "w_canary_miss": -3.783276,
+      "w_doc_hit": 7.921455,
+      "w_after_hours": 0.122482,
+      "w_evasive": 0.343812,
+      "w_angry_msg": -2.362232
     }
   },
   "headline_heldout_improvement": {
+    "mean": 1.028167,
+    "ci95_low": 0.915165,
+    "ci95_high": 1.138278,
+    "ci95_halfwidth": 0.111556
+  },
+  "headline_heldout_n90_improvement": {
     "mean": 1.008,
     "ci95_low": 0.843889,
     "ci95_high": 1.169889,
     "ci95_halfwidth": 0.163
+  },
+  "component_ablation_matrix": {
+    "eval_seed_range": "800000..800059",
+    "n_per_tier": 60,
+    "n_total_per_variant": 180,
+    "world_secret_tag": "canary-tiebreak-heldout-v14-eval-01",
+    "world_secret_sha256_12": "ebf2f09716cf",
+    "replay_verified": true,
+    "episodes_replayed": 900,
+    "variants": [
+      {
+        "variant": "eb_naive_prior",
+        "mechanism": "Untrained prior + uncalibrated p>=0.50 stopping + default 0.90 splits",
+        "learned_likelihoods": false,
+        "ev_stopping": false,
+        "active_canary_planting": true,
+        "learned_split_and_margin": false,
+        "negative_ablation": true,
+        "parameters": {
+          "w_canary_hit": 1.0,
+          "w_canary_miss": -0.8,
+          "w_doc_hit": 0.6,
+          "w_after_hours": 0.8,
+          "w_evasive": 0.4,
+          "w_angry_msg": 1.2,
+          "tau_margin": 0.0,
+          "unsurfaced_v_discount": 0.0,
+          "canary_coverage": 0.9,
+          "tiny_pool_size": 0,
+          "use_ev_stopping": false,
+          "naive_p_threshold": 0.5,
+          "stage": "eb_naive_prior"
+        },
+        "n180_overall": {
+          "n": 180,
+          "score": {
+            "mean": -0.420889,
+            "ci95_low": -0.537668,
+            "ci95_high": -0.301221,
+            "ci95_halfwidth": 0.118224
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.395498,
+            "ci95_low": -0.505672,
+            "ci95_high": -0.28148,
+            "ci95_halfwidth": 0.112096
+          },
+          "accuracy": 0.327778,
+          "wrong_accuse_rate": 0.661111,
+          "abstain_rate": 0.011111,
+          "accused_rate": 0.988889,
+          "mean_accuse_day": 4.6517,
+          "mean_canaries_planted": 4.8944,
+          "total_canaries_planted": 881,
+          "correct_count": 59,
+          "wrong_count": 119,
+          "abstain_count": 2
+        },
+        "n180_by_tier": {
+          "easy": {
+            "n": 60,
+            "score": {
+              "mean": 0.599833,
+              "ci95_low": 0.461833,
+              "ci95_high": 0.712333,
+              "ci95_halfwidth": 0.12525
+            },
+            "luck_adjusted_ev": {
+              "mean": 0.616977,
+              "ci95_low": 0.542679,
+              "ci95_high": 0.683344,
+              "ci95_halfwidth": 0.070333
+            },
+            "accuracy": 0.916667,
+            "wrong_accuse_rate": 0.083333,
+            "abstain_rate": 0.0,
+            "accused_rate": 1.0,
+            "mean_accuse_day": 5.5167,
+            "mean_canaries_planted": 4.5167,
+            "total_canaries_planted": 271,
+            "correct_count": 55,
+            "wrong_count": 5,
+            "abstain_count": 0
+          },
+          "medium": {
+            "n": 60,
+            "score": {
+              "mean": -0.939167,
+              "ci95_low": -1.0,
+              "ci95_high": -0.861667,
+              "ci95_halfwidth": 0.069167
+            },
+            "luck_adjusted_ev": {
+              "mean": -0.899752,
+              "ci95_low": -0.955416,
+              "ci95_high": -0.834416,
+              "ci95_halfwidth": 0.0605
+            },
+            "accuracy": 0.016667,
+            "wrong_accuse_rate": 0.95,
+            "abstain_rate": 0.033333,
+            "accused_rate": 0.966667,
+            "mean_accuse_day": 4.0345,
+            "mean_canaries_planted": 3.4,
+            "total_canaries_planted": 204,
+            "correct_count": 1,
+            "wrong_count": 57,
+            "abstain_count": 2
+          },
+          "hard": {
+            "n": 60,
+            "score": {
+              "mean": -0.923333,
+              "ci95_low": -1.0,
+              "ci95_high": -0.823333,
+              "ci95_halfwidth": 0.088333
+            },
+            "luck_adjusted_ev": {
+              "mean": -0.903718,
+              "ci95_low": -0.963707,
+              "ci95_high": -0.827956,
+              "ci95_halfwidth": 0.067875
+            },
+            "accuracy": 0.05,
+            "wrong_accuse_rate": 0.95,
+            "abstain_rate": 0.0,
+            "accused_rate": 1.0,
+            "mean_accuse_day": 4.3833,
+            "mean_canaries_planted": 6.7667,
+            "total_canaries_planted": 406,
+            "correct_count": 3,
+            "wrong_count": 57,
+            "abstain_count": 0
+          }
+        },
+        "n90_overall": {
+          "n": 90,
+          "score": {
+            "mean": -0.385667,
+            "ci95_low": -0.558006,
+            "ci95_high": -0.209222,
+            "ci95_halfwidth": 0.174392
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.365197,
+            "ci95_low": -0.527716,
+            "ci95_high": -0.200121,
+            "ci95_halfwidth": 0.163798
+          },
+          "accuracy": 0.355556,
+          "wrong_accuse_rate": 0.644444,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 4.7,
+          "mean_canaries_planted": 4.8,
+          "total_canaries_planted": 432,
+          "correct_count": 32,
+          "wrong_count": 58,
+          "abstain_count": 0
+        },
+        "paired_score_delta_vs_naive_prior": {
+          "mean": 0.0,
+          "ci95_low": 0.0,
+          "ci95_high": 0.0,
+          "ci95_halfwidth": 0.0
+        },
+        "paired_luck_delta_vs_naive_prior": {
+          "mean": 0.0,
+          "ci95_low": 0.0,
+          "ci95_high": 0.0,
+          "ci95_halfwidth": 0.0
+        },
+        "paired_score_delta_vs_experience_opt": {
+          "mean": -1.028167,
+          "ci95_low": -1.138278,
+          "ci95_high": -0.915165,
+          "ci95_halfwidth": 0.111556
+        }
+      },
+      {
+        "variant": "eb_likelihood_only",
+        "mechanism": "Learned log-likelihoods on TRAIN_SEEDS, no EV-stopping, default 0.90 splits",
+        "learned_likelihoods": true,
+        "ev_stopping": false,
+        "active_canary_planting": true,
+        "learned_split_and_margin": false,
+        "negative_ablation": false,
+        "parameters": {
+          "w_canary_hit": 1.316224,
+          "w_canary_miss": -3.783276,
+          "w_doc_hit": 7.921455,
+          "w_after_hours": 0.122482,
+          "w_evasive": 0.343812,
+          "w_angry_msg": -2.362232,
+          "tau_margin": 0.0,
+          "unsurfaced_v_discount": 0.0,
+          "canary_coverage": 0.9,
+          "tiny_pool_size": 0,
+          "use_ev_stopping": false,
+          "naive_p_threshold": 0.5,
+          "stage": "eb_likelihood_only"
+        },
+        "n180_overall": {
+          "n": 180,
+          "score": {
+            "mean": 0.358222,
+            "ci95_low": 0.259442,
+            "ci95_high": 0.455058,
+            "ci95_halfwidth": 0.097808
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.327522,
+            "ci95_low": 0.263877,
+            "ci95_high": 0.38949,
+            "ci95_halfwidth": 0.062806
+          },
+          "accuracy": 0.783333,
+          "wrong_accuse_rate": 0.188889,
+          "abstain_rate": 0.027778,
+          "accused_rate": 0.972222,
+          "mean_accuse_day": 7.2743,
+          "mean_canaries_planted": 9.3167,
+          "total_canaries_planted": 1677,
+          "correct_count": 141,
+          "wrong_count": 34,
+          "abstain_count": 5
+        },
+        "n180_by_tier": {
+          "easy": {
+            "n": 60,
+            "score": {
+              "mean": 0.674833,
+              "ci95_low": 0.549162,
+              "ci95_high": 0.775671,
+              "ci95_halfwidth": 0.113254
+            },
+            "luck_adjusted_ev": {
+              "mean": 0.607705,
+              "ci95_low": 0.522878,
+              "ci95_high": 0.686818,
+              "ci95_halfwidth": 0.08197
+            },
+            "accuracy": 0.933333,
+            "wrong_accuse_rate": 0.066667,
+            "abstain_rate": 0.0,
+            "accused_rate": 1.0,
+            "mean_accuse_day": 4.6333,
+            "mean_canaries_planted": 3.6333,
+            "total_canaries_planted": 218,
+            "correct_count": 56,
+            "wrong_count": 4,
+            "abstain_count": 0
+          },
+          "medium": {
+            "n": 60,
+            "score": {
+              "mean": 0.260833,
+              "ci95_low": 0.067333,
+              "ci95_high": 0.436337,
+              "ci95_halfwidth": 0.184502
+            },
+            "luck_adjusted_ev": {
+              "mean": 0.236732,
+              "ci95_low": 0.130822,
+              "ci95_high": 0.343275,
+              "ci95_halfwidth": 0.106226
+            },
+            "accuracy": 0.683333,
+            "wrong_accuse_rate": 0.233333,
+            "abstain_rate": 0.083333,
+            "accused_rate": 0.916667,
+            "mean_accuse_day": 7.7455,
+            "mean_canaries_planted": 7.35,
+            "total_canaries_planted": 441,
+            "correct_count": 41,
+            "wrong_count": 14,
+            "abstain_count": 5
+          },
+          "hard": {
+            "n": 60,
+            "score": {
+              "mean": 0.139,
+              "ci95_low": -0.046025,
+              "ci95_high": 0.311171,
+              "ci95_halfwidth": 0.178598
+            },
+            "luck_adjusted_ev": {
+              "mean": 0.138128,
+              "ci95_low": 0.032608,
+              "ci95_high": 0.240432,
+              "ci95_halfwidth": 0.103912
+            },
+            "accuracy": 0.733333,
+            "wrong_accuse_rate": 0.266667,
+            "abstain_rate": 0.0,
+            "accused_rate": 1.0,
+            "mean_accuse_day": 9.4833,
+            "mean_canaries_planted": 16.9667,
+            "total_canaries_planted": 1018,
+            "correct_count": 44,
+            "wrong_count": 16,
+            "abstain_count": 0
+          }
+        },
+        "n90_overall": {
+          "n": 90,
+          "score": {
+            "mean": 0.340556,
+            "ci95_low": 0.192889,
+            "ci95_high": 0.480225,
+            "ci95_halfwidth": 0.143668
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.36806,
+            "ci95_low": 0.272085,
+            "ci95_high": 0.460245,
+            "ci95_halfwidth": 0.09408
+          },
+          "accuracy": 0.766667,
+          "wrong_accuse_rate": 0.2,
+          "abstain_rate": 0.033333,
+          "accused_rate": 0.966667,
+          "mean_accuse_day": 7.1264,
+          "mean_canaries_planted": 8.9222,
+          "total_canaries_planted": 803,
+          "correct_count": 69,
+          "wrong_count": 18,
+          "abstain_count": 3
+        },
+        "paired_score_delta_vs_naive_prior": {
+          "mean": 0.779111,
+          "ci95_low": 0.648494,
+          "ci95_high": 0.907557,
+          "ci95_halfwidth": 0.129531
+        },
+        "paired_luck_delta_vs_naive_prior": {
+          "mean": 0.723019,
+          "ci95_low": 0.620203,
+          "ci95_high": 0.823475,
+          "ci95_halfwidth": 0.101636
+        },
+        "paired_score_delta_vs_experience_opt": {
+          "mean": -0.249056,
+          "ci95_low": -0.35739,
+          "ci95_high": -0.140056,
+          "ci95_halfwidth": 0.108667
+        }
+      },
+      {
+        "variant": "eb_ev_stop_only",
+        "mechanism": "Naive prior + 1/(1+V) EV-stopping without learned likelihoods (negative ablation)",
+        "learned_likelihoods": false,
+        "ev_stopping": true,
+        "active_canary_planting": true,
+        "learned_split_and_margin": false,
+        "negative_ablation": true,
+        "parameters": {
+          "w_canary_hit": 1.0,
+          "w_canary_miss": -0.8,
+          "w_doc_hit": 0.6,
+          "w_after_hours": 0.8,
+          "w_evasive": 0.4,
+          "w_angry_msg": 1.2,
+          "tau_margin": 0.0,
+          "unsurfaced_v_discount": 0.0,
+          "canary_coverage": 0.9,
+          "tiny_pool_size": 0,
+          "use_ev_stopping": true,
+          "naive_p_threshold": 0.5,
+          "stage": "eb_ev_stop_only"
+        },
+        "n180_overall": {
+          "n": 180,
+          "score": {
+            "mean": -0.420556,
+            "ci95_low": -0.536169,
+            "ci95_high": -0.303167,
+            "ci95_halfwidth": 0.116501
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.394852,
+            "ci95_low": -0.504389,
+            "ci95_high": -0.281513,
+            "ci95_halfwidth": 0.111438
+          },
+          "accuracy": 0.333333,
+          "wrong_accuse_rate": 0.655556,
+          "abstain_rate": 0.011111,
+          "accused_rate": 0.988889,
+          "mean_accuse_day": 4.8989,
+          "mean_canaries_planted": 5.2278,
+          "total_canaries_planted": 941,
+          "correct_count": 60,
+          "wrong_count": 118,
+          "abstain_count": 2
+        },
+        "n180_by_tier": {
+          "easy": {
+            "n": 60,
+            "score": {
+              "mean": 0.583333,
+              "ci95_low": 0.446667,
+              "ci95_high": 0.695671,
+              "ci95_halfwidth": 0.124502
+            },
+            "luck_adjusted_ev": {
+              "mean": 0.61331,
+              "ci95_low": 0.542632,
+              "ci95_high": 0.67742,
+              "ci95_halfwidth": 0.067394
+            },
+            "accuracy": 0.916667,
+            "wrong_accuse_rate": 0.083333,
+            "abstain_rate": 0.0,
+            "accused_rate": 1.0,
+            "mean_accuse_day": 5.8333,
+            "mean_canaries_planted": 4.8333,
+            "total_canaries_planted": 290,
+            "correct_count": 55,
+            "wrong_count": 5,
+            "abstain_count": 0
+          },
+          "medium": {
+            "n": 60,
+            "score": {
+              "mean": -0.94,
+              "ci95_low": -1.0,
+              "ci95_high": -0.863333,
+              "ci95_halfwidth": 0.068333
+            },
+            "luck_adjusted_ev": {
+              "mean": -0.904497,
+              "ci95_low": -0.960044,
+              "ci95_high": -0.839882,
+              "ci95_halfwidth": 0.060081
+            },
+            "accuracy": 0.016667,
+            "wrong_accuse_rate": 0.95,
+            "abstain_rate": 0.033333,
+            "accused_rate": 0.966667,
+            "mean_accuse_day": 4.1552,
+            "mean_canaries_planted": 3.4833,
+            "total_canaries_planted": 209,
+            "correct_count": 1,
+            "wrong_count": 57,
+            "abstain_count": 2
+          },
+          "hard": {
+            "n": 60,
+            "score": {
+              "mean": -0.905,
+              "ci95_low": -0.978167,
+              "ci95_high": -0.808,
+              "ci95_halfwidth": 0.085083
+            },
+            "luck_adjusted_ev": {
+              "mean": -0.893371,
+              "ci95_low": -0.960826,
+              "ci95_high": -0.810155,
+              "ci95_halfwidth": 0.075335
+            },
+            "accuracy": 0.066667,
+            "wrong_accuse_rate": 0.933333,
+            "abstain_rate": 0.0,
+            "accused_rate": 1.0,
+            "mean_accuse_day": 4.6833,
+            "mean_canaries_planted": 7.3667,
+            "total_canaries_planted": 442,
+            "correct_count": 4,
+            "wrong_count": 56,
+            "abstain_count": 0
+          }
+        },
+        "n90_overall": {
+          "n": 90,
+          "score": {
+            "mean": -0.394667,
+            "ci95_low": -0.564114,
+            "ci95_high": -0.219994,
+            "ci95_halfwidth": 0.17206
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.374273,
+            "ci95_low": -0.536095,
+            "ci95_high": -0.210845,
+            "ci95_halfwidth": 0.162625
+          },
+          "accuracy": 0.355556,
+          "wrong_accuse_rate": 0.644444,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 4.9556,
+          "mean_canaries_planted": 5.1444,
+          "total_canaries_planted": 463,
+          "correct_count": 32,
+          "wrong_count": 58,
+          "abstain_count": 0
+        },
+        "paired_score_delta_vs_naive_prior": {
+          "mean": 0.000333,
+          "ci95_low": -0.010501,
+          "ci95_high": 0.017944,
+          "ci95_halfwidth": 0.014223
+        },
+        "paired_luck_delta_vs_naive_prior": {
+          "mean": 0.000645,
+          "ci95_low": -0.00973,
+          "ci95_high": 0.013557,
+          "ci95_halfwidth": 0.011644
+        },
+        "paired_score_delta_vs_experience_opt": {
+          "mean": -1.027833,
+          "ci95_low": -1.136335,
+          "ci95_high": -0.915886,
+          "ci95_halfwidth": 0.110224
+        }
+      },
+      {
+        "variant": "eb_no_canary_planting",
+        "mechanism": "Learned likelihoods + EV-stopping, canary_cov=0.0 passive logs/messages/docs only (negative ablation)",
+        "learned_likelihoods": true,
+        "ev_stopping": true,
+        "active_canary_planting": false,
+        "learned_split_and_margin": false,
+        "negative_ablation": true,
+        "parameters": {
+          "w_canary_hit": 1.316224,
+          "w_canary_miss": -3.783276,
+          "w_doc_hit": 7.921455,
+          "w_after_hours": 0.122482,
+          "w_evasive": 0.343812,
+          "w_angry_msg": -2.362232,
+          "tau_margin": 0.5,
+          "unsurfaced_v_discount": 1.0,
+          "canary_coverage": 0.0,
+          "tiny_pool_size": 0,
+          "use_ev_stopping": true,
+          "naive_p_threshold": 0.5,
+          "stage": "eb_no_canary_planting"
+        },
+        "n180_overall": {
+          "n": 180,
+          "score": {
+            "mean": 0.028667,
+            "ci95_low": -0.005778,
+            "ci95_high": 0.062112,
+            "ci95_halfwidth": 0.033945
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.008214,
+            "ci95_low": -0.033277,
+            "ci95_high": 0.017039,
+            "ci95_halfwidth": 0.025158
+          },
+          "accuracy": 0.088889,
+          "wrong_accuse_rate": 0.022222,
+          "abstain_rate": 0.888889,
+          "accused_rate": 0.111111,
+          "mean_accuse_day": 13.45,
+          "mean_canaries_planted": 0.0,
+          "total_canaries_planted": 0,
+          "correct_count": 16,
+          "wrong_count": 4,
+          "abstain_count": 160
+        },
+        "n180_by_tier": {
+          "easy": {
+            "n": 60,
+            "score": {
+              "mean": 0.108333,
+              "ci95_low": 0.051667,
+              "ci95_high": 0.173354,
+              "ci95_halfwidth": 0.060844
+            },
+            "luck_adjusted_ev": {
+              "mean": 0.013953,
+              "ci95_low": -0.042933,
+              "ci95_high": 0.080986,
+              "ci95_halfwidth": 0.06196
+            },
+            "accuracy": 0.183333,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 0.816667,
+            "accused_rate": 0.183333,
+            "mean_accuse_day": 11.0909,
+            "mean_canaries_planted": 0.0,
+            "total_canaries_planted": 0,
+            "correct_count": 11,
+            "wrong_count": 0,
+            "abstain_count": 49
+          },
+          "medium": {
+            "n": 60,
+            "score": {
+              "mean": -0.020667,
+              "ci95_low": -0.090667,
+              "ci95_high": 0.040683,
+              "ci95_halfwidth": 0.065675
+            },
+            "luck_adjusted_ev": {
+              "mean": -0.046662,
+              "ci95_low": -0.092377,
+              "ci95_high": -0.011389,
+              "ci95_halfwidth": 0.040494
+            },
+            "accuracy": 0.05,
+            "wrong_accuse_rate": 0.05,
+            "abstain_rate": 0.9,
+            "accused_rate": 0.1,
+            "mean_accuse_day": 14.0,
+            "mean_canaries_planted": 0.0,
+            "total_canaries_planted": 0,
+            "correct_count": 3,
+            "wrong_count": 3,
+            "abstain_count": 54
+          },
+          "hard": {
+            "n": 60,
+            "score": {
+              "mean": -0.001667,
+              "ci95_low": -0.044167,
+              "ci95_high": 0.033333,
+              "ci95_halfwidth": 0.03875
+            },
+            "luck_adjusted_ev": {
+              "mean": 0.008067,
+              "ci95_low": 0.0,
+              "ci95_high": 0.020662,
+              "ci95_halfwidth": 0.010331
+            },
+            "accuracy": 0.033333,
+            "wrong_accuse_rate": 0.016667,
+            "abstain_rate": 0.95,
+            "accused_rate": 0.05,
+            "mean_accuse_day": 21.0,
+            "mean_canaries_planted": 0.0,
+            "total_canaries_planted": 0,
+            "correct_count": 2,
+            "wrong_count": 1,
+            "abstain_count": 57
+          }
+        },
+        "n90_overall": {
+          "n": 90,
+          "score": {
+            "mean": 0.022889,
+            "ci95_low": -0.033889,
+            "ci95_high": 0.078669,
+            "ci95_halfwidth": 0.056279
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.020263,
+            "ci95_low": -0.015757,
+            "ci95_high": 0.062238,
+            "ci95_halfwidth": 0.038997
+          },
+          "accuracy": 0.088889,
+          "wrong_accuse_rate": 0.033333,
+          "abstain_rate": 0.877778,
+          "accused_rate": 0.122222,
+          "mean_accuse_day": 13.0,
+          "mean_canaries_planted": 0.0,
+          "total_canaries_planted": 0,
+          "correct_count": 8,
+          "wrong_count": 3,
+          "abstain_count": 79
+        },
+        "paired_score_delta_vs_naive_prior": {
+          "mean": 0.449556,
+          "ci95_low": 0.333276,
+          "ci95_high": 0.562779,
+          "ci95_halfwidth": 0.114751
+        },
+        "paired_luck_delta_vs_naive_prior": {
+          "mean": 0.387284,
+          "ci95_low": 0.273316,
+          "ci95_high": 0.495899,
+          "ci95_halfwidth": 0.111292
+        },
+        "paired_score_delta_vs_experience_opt": {
+          "mean": -0.578611,
+          "ci95_low": -0.631667,
+          "ci95_high": -0.520778,
+          "ci95_halfwidth": 0.055444
+        }
+      },
+      {
+        "variant": "eb_experience_opt",
+        "mechanism": "Full learned likelihoods + learned canary-split sizing + learned tau_margin EV-stopping",
+        "learned_likelihoods": true,
+        "ev_stopping": true,
+        "active_canary_planting": true,
+        "learned_split_and_margin": true,
+        "negative_ablation": false,
+        "parameters": {
+          "w_canary_hit": 1.316224,
+          "w_canary_miss": -3.783276,
+          "w_doc_hit": 7.921455,
+          "w_after_hours": 0.122482,
+          "w_evasive": 0.343812,
+          "w_angry_msg": -2.362232,
+          "tau_margin": 0.5,
+          "unsurfaced_v_discount": 1.0,
+          "canary_coverage": 0.65,
+          "tiny_pool_size": 3,
+          "use_ev_stopping": true,
+          "naive_p_threshold": 0.5,
+          "stage": "eb_experience_opt"
+        },
+        "n180_overall": {
+          "n": 180,
+          "score": {
+            "mean": 0.607278,
+            "ci95_low": 0.559332,
+            "ci95_high": 0.648113,
+            "ci95_halfwidth": 0.04439
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.60495,
+            "ci95_low": 0.566523,
+            "ci95_high": 0.639434,
+            "ci95_halfwidth": 0.036456
+          },
+          "accuracy": 0.922222,
+          "wrong_accuse_rate": 0.016667,
+          "abstain_rate": 0.061111,
+          "accused_rate": 0.938889,
+          "mean_accuse_day": 7.5621,
+          "mean_canaries_planted": 9.7056,
+          "total_canaries_planted": 1747,
+          "correct_count": 166,
+          "wrong_count": 3,
+          "abstain_count": 11
+        },
+        "n180_by_tier": {
+          "easy": {
+            "n": 60,
+            "score": {
+              "mean": 0.745833,
+              "ci95_low": 0.698,
+              "ci95_high": 0.784671,
+              "ci95_halfwidth": 0.043335
+            },
+            "luck_adjusted_ev": {
+              "mean": 0.745833,
+              "ci95_low": 0.698,
+              "ci95_high": 0.784671,
+              "ci95_halfwidth": 0.043335
+            },
+            "accuracy": 0.966667,
+            "wrong_accuse_rate": 0.0,
+            "abstain_rate": 0.033333,
+            "accused_rate": 0.966667,
+            "mean_accuse_day": 5.2241,
+            "mean_canaries_planted": 4.5167,
+            "total_canaries_planted": 271,
+            "correct_count": 58,
+            "wrong_count": 0,
+            "abstain_count": 2
+          },
+          "medium": {
+            "n": 60,
+            "score": {
+              "mean": 0.545167,
+              "ci95_low": 0.438996,
+              "ci95_high": 0.635167,
+              "ci95_halfwidth": 0.098085
+            },
+            "luck_adjusted_ev": {
+              "mean": 0.564292,
+              "ci95_low": 0.47725,
+              "ci95_high": 0.641541,
+              "ci95_halfwidth": 0.082145
+            },
+            "accuracy": 0.816667,
+            "wrong_accuse_rate": 0.033333,
+            "abstain_rate": 0.15,
+            "accused_rate": 0.85,
+            "mean_accuse_day": 8.1961,
+            "mean_canaries_planted": 8.0667,
+            "total_canaries_planted": 484,
+            "correct_count": 49,
+            "wrong_count": 2,
+            "abstain_count": 9
+          },
+          "hard": {
+            "n": 60,
+            "score": {
+              "mean": 0.530833,
+              "ci95_low": 0.462333,
+              "ci95_high": 0.582171,
+              "ci95_halfwidth": 0.059919
+            },
+            "luck_adjusted_ev": {
+              "mean": 0.504725,
+              "ci95_low": 0.469998,
+              "ci95_high": 0.537703,
+              "ci95_halfwidth": 0.033852
+            },
+            "accuracy": 0.983333,
+            "wrong_accuse_rate": 0.016667,
+            "abstain_rate": 0.0,
+            "accused_rate": 1.0,
+            "mean_accuse_day": 9.2833,
+            "mean_canaries_planted": 16.5333,
+            "total_canaries_planted": 992,
+            "correct_count": 59,
+            "wrong_count": 1,
+            "abstain_count": 0
+          }
+        },
+        "n90_overall": {
+          "n": 90,
+          "score": {
+            "mean": 0.622333,
+            "ci95_low": 0.570778,
+            "ci95_high": 0.670669,
+            "ci95_halfwidth": 0.049946
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.60471,
+            "ci95_low": 0.552025,
+            "ci95_high": 0.654337,
+            "ci95_halfwidth": 0.051156
+          },
+          "accuracy": 0.911111,
+          "wrong_accuse_rate": 0.0,
+          "abstain_rate": 0.088889,
+          "accused_rate": 0.911111,
+          "mean_accuse_day": 7.4024,
+          "mean_canaries_planted": 9.6667,
+          "total_canaries_planted": 870,
+          "correct_count": 82,
+          "wrong_count": 0,
+          "abstain_count": 8
+        },
+        "paired_score_delta_vs_naive_prior": {
+          "mean": 1.028167,
+          "ci95_low": 0.915165,
+          "ci95_high": 1.138278,
+          "ci95_halfwidth": 0.111556
+        },
+        "paired_luck_delta_vs_naive_prior": {
+          "mean": 1.000448,
+          "ci95_low": 0.895676,
+          "ci95_high": 1.101079,
+          "ci95_halfwidth": 0.102701
+        },
+        "paired_score_delta_vs_experience_opt": {
+          "mean": 0.0,
+          "ci95_low": 0.0,
+          "ci95_high": 0.0,
+          "ci95_halfwidth": 0.0
+        }
+      }
+    ]
   },
   "training": {
     "stage2": {
@@ -290,6 +1313,7 @@
         ]
       },
       "train_mean_score_eb_naive_prior": -0.430833,
+      "train_mean_score_eb_likelihood_only": 0.419278,
       "train_mean_score_eb_likelihood_learned": 0.419278
     },
     "stage3": {
@@ -524,7 +1548,1255 @@
   "heldout": {
     "world_secret_tag": "canary-tiebreak-heldout-v14-eval-01",
     "world_secret_sha256_12": "ebf2f09716cf",
+    "eval_seed_range": "800000..800059",
+    "eval_seeds": {
+      "start": 800000,
+      "stop": 800060
+    },
+    "tiers": [
+      "easy",
+      "medium",
+      "hard"
+    ],
+    "n_per_tier": 60,
+    "n_total_per_agent": 180,
+    "episodes_replayed": 1260,
+    "replay_verified": true,
+    "by_tier": {
+      "easy": {
+        "eb_naive_prior": {
+          "n": 60,
+          "score": {
+            "mean": 0.599833,
+            "ci95_low": 0.461833,
+            "ci95_high": 0.712333,
+            "ci95_halfwidth": 0.12525
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.616977,
+            "ci95_low": 0.542679,
+            "ci95_high": 0.683344,
+            "ci95_halfwidth": 0.070333
+          },
+          "accuracy": 0.916667,
+          "wrong_accuse_rate": 0.083333,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 5.5167,
+          "mean_canaries_planted": 4.5167,
+          "total_canaries_planted": 271,
+          "correct_count": 55,
+          "wrong_count": 5,
+          "abstain_count": 0
+        },
+        "eb_likelihood_only": {
+          "n": 60,
+          "score": {
+            "mean": 0.674833,
+            "ci95_low": 0.549162,
+            "ci95_high": 0.775671,
+            "ci95_halfwidth": 0.113254
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.607705,
+            "ci95_low": 0.522878,
+            "ci95_high": 0.686818,
+            "ci95_halfwidth": 0.08197
+          },
+          "accuracy": 0.933333,
+          "wrong_accuse_rate": 0.066667,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 4.6333,
+          "mean_canaries_planted": 3.6333,
+          "total_canaries_planted": 218,
+          "correct_count": 56,
+          "wrong_count": 4,
+          "abstain_count": 0
+        },
+        "eb_ev_stop_only": {
+          "n": 60,
+          "score": {
+            "mean": 0.583333,
+            "ci95_low": 0.446667,
+            "ci95_high": 0.695671,
+            "ci95_halfwidth": 0.124502
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.61331,
+            "ci95_low": 0.542632,
+            "ci95_high": 0.67742,
+            "ci95_halfwidth": 0.067394
+          },
+          "accuracy": 0.916667,
+          "wrong_accuse_rate": 0.083333,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 5.8333,
+          "mean_canaries_planted": 4.8333,
+          "total_canaries_planted": 290,
+          "correct_count": 55,
+          "wrong_count": 5,
+          "abstain_count": 0
+        },
+        "eb_no_canary_planting": {
+          "n": 60,
+          "score": {
+            "mean": 0.108333,
+            "ci95_low": 0.051667,
+            "ci95_high": 0.173354,
+            "ci95_halfwidth": 0.060844
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.013953,
+            "ci95_low": -0.042933,
+            "ci95_high": 0.080986,
+            "ci95_halfwidth": 0.06196
+          },
+          "accuracy": 0.183333,
+          "wrong_accuse_rate": 0.0,
+          "abstain_rate": 0.816667,
+          "accused_rate": 0.183333,
+          "mean_accuse_day": 11.0909,
+          "mean_canaries_planted": 0.0,
+          "total_canaries_planted": 0,
+          "correct_count": 11,
+          "wrong_count": 0,
+          "abstain_count": 49
+        },
+        "eb_experience_opt": {
+          "n": 60,
+          "score": {
+            "mean": 0.745833,
+            "ci95_low": 0.698,
+            "ci95_high": 0.784671,
+            "ci95_halfwidth": 0.043335
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.745833,
+            "ci95_low": 0.698,
+            "ci95_high": 0.784671,
+            "ci95_halfwidth": 0.043335
+          },
+          "accuracy": 0.966667,
+          "wrong_accuse_rate": 0.0,
+          "abstain_rate": 0.033333,
+          "accused_rate": 0.966667,
+          "mean_accuse_day": 5.2241,
+          "mean_canaries_planted": 4.5167,
+          "total_canaries_planted": 271,
+          "correct_count": 58,
+          "wrong_count": 0,
+          "abstain_count": 2
+        },
+        "heuristic": {
+          "n": 60,
+          "score": {
+            "mean": 0.677333,
+            "ci95_low": 0.650167,
+            "ci95_high": 0.704333,
+            "ci95_halfwidth": 0.027083
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.677333,
+            "ci95_low": 0.650167,
+            "ci95_high": 0.704333,
+            "ci95_halfwidth": 0.027083
+          },
+          "accuracy": 1.0,
+          "wrong_accuse_rate": 0.0,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 6.85,
+          "mean_canaries_planted": 5.85,
+          "total_canaries_planted": 351,
+          "correct_count": 60,
+          "wrong_count": 0,
+          "abstain_count": 0
+        },
+        "solver": {
+          "n": 60,
+          "score": {
+            "mean": 0.797,
+            "ci95_low": 0.771,
+            "ci95_high": 0.819171,
+            "ci95_halfwidth": 0.024085
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.793964,
+            "ci95_low": 0.764066,
+            "ci95_high": 0.8185,
+            "ci95_halfwidth": 0.027217
+          },
+          "accuracy": 1.0,
+          "wrong_accuse_rate": 0.0,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 4.7167,
+          "mean_canaries_planted": 3.7167,
+          "total_canaries_planted": 223,
+          "correct_count": 60,
+          "wrong_count": 0,
+          "abstain_count": 0
+        }
+      },
+      "medium": {
+        "eb_naive_prior": {
+          "n": 60,
+          "score": {
+            "mean": -0.939167,
+            "ci95_low": -1.0,
+            "ci95_high": -0.861667,
+            "ci95_halfwidth": 0.069167
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.899752,
+            "ci95_low": -0.955416,
+            "ci95_high": -0.834416,
+            "ci95_halfwidth": 0.0605
+          },
+          "accuracy": 0.016667,
+          "wrong_accuse_rate": 0.95,
+          "abstain_rate": 0.033333,
+          "accused_rate": 0.966667,
+          "mean_accuse_day": 4.0345,
+          "mean_canaries_planted": 3.4,
+          "total_canaries_planted": 204,
+          "correct_count": 1,
+          "wrong_count": 57,
+          "abstain_count": 2
+        },
+        "eb_likelihood_only": {
+          "n": 60,
+          "score": {
+            "mean": 0.260833,
+            "ci95_low": 0.067333,
+            "ci95_high": 0.436337,
+            "ci95_halfwidth": 0.184502
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.236732,
+            "ci95_low": 0.130822,
+            "ci95_high": 0.343275,
+            "ci95_halfwidth": 0.106226
+          },
+          "accuracy": 0.683333,
+          "wrong_accuse_rate": 0.233333,
+          "abstain_rate": 0.083333,
+          "accused_rate": 0.916667,
+          "mean_accuse_day": 7.7455,
+          "mean_canaries_planted": 7.35,
+          "total_canaries_planted": 441,
+          "correct_count": 41,
+          "wrong_count": 14,
+          "abstain_count": 5
+        },
+        "eb_ev_stop_only": {
+          "n": 60,
+          "score": {
+            "mean": -0.94,
+            "ci95_low": -1.0,
+            "ci95_high": -0.863333,
+            "ci95_halfwidth": 0.068333
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.904497,
+            "ci95_low": -0.960044,
+            "ci95_high": -0.839882,
+            "ci95_halfwidth": 0.060081
+          },
+          "accuracy": 0.016667,
+          "wrong_accuse_rate": 0.95,
+          "abstain_rate": 0.033333,
+          "accused_rate": 0.966667,
+          "mean_accuse_day": 4.1552,
+          "mean_canaries_planted": 3.4833,
+          "total_canaries_planted": 209,
+          "correct_count": 1,
+          "wrong_count": 57,
+          "abstain_count": 2
+        },
+        "eb_no_canary_planting": {
+          "n": 60,
+          "score": {
+            "mean": -0.020667,
+            "ci95_low": -0.090667,
+            "ci95_high": 0.040683,
+            "ci95_halfwidth": 0.065675
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.046662,
+            "ci95_low": -0.092377,
+            "ci95_high": -0.011389,
+            "ci95_halfwidth": 0.040494
+          },
+          "accuracy": 0.05,
+          "wrong_accuse_rate": 0.05,
+          "abstain_rate": 0.9,
+          "accused_rate": 0.1,
+          "mean_accuse_day": 14.0,
+          "mean_canaries_planted": 0.0,
+          "total_canaries_planted": 0,
+          "correct_count": 3,
+          "wrong_count": 3,
+          "abstain_count": 54
+        },
+        "eb_experience_opt": {
+          "n": 60,
+          "score": {
+            "mean": 0.545167,
+            "ci95_low": 0.438996,
+            "ci95_high": 0.635167,
+            "ci95_halfwidth": 0.098085
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.564292,
+            "ci95_low": 0.47725,
+            "ci95_high": 0.641541,
+            "ci95_halfwidth": 0.082145
+          },
+          "accuracy": 0.816667,
+          "wrong_accuse_rate": 0.033333,
+          "abstain_rate": 0.15,
+          "accused_rate": 0.85,
+          "mean_accuse_day": 8.1961,
+          "mean_canaries_planted": 8.0667,
+          "total_canaries_planted": 484,
+          "correct_count": 49,
+          "wrong_count": 2,
+          "abstain_count": 9
+        },
+        "heuristic": {
+          "n": 60,
+          "score": {
+            "mean": -0.014,
+            "ci95_low": -0.215175,
+            "ci95_high": 0.182667,
+            "ci95_halfwidth": 0.198921
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.082726,
+            "ci95_low": -0.215876,
+            "ci95_high": 0.052158,
+            "ci95_halfwidth": 0.134017
+          },
+          "accuracy": 0.616667,
+          "wrong_accuse_rate": 0.383333,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 11.2167,
+          "mean_canaries_planted": 10.2167,
+          "total_canaries_planted": 613,
+          "correct_count": 37,
+          "wrong_count": 23,
+          "abstain_count": 0
+        },
+        "solver": {
+          "n": 60,
+          "score": {
+            "mean": 0.616833,
+            "ci95_low": 0.546333,
+            "ci95_high": 0.6805,
+            "ci95_halfwidth": 0.067083
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.616833,
+            "ci95_low": 0.546333,
+            "ci95_high": 0.6805,
+            "ci95_halfwidth": 0.067083
+          },
+          "accuracy": 0.866667,
+          "wrong_accuse_rate": 0.0,
+          "abstain_rate": 0.133333,
+          "accused_rate": 0.866667,
+          "mean_accuse_day": 8.2115,
+          "mean_canaries_planted": 8.1167,
+          "total_canaries_planted": 487,
+          "correct_count": 52,
+          "wrong_count": 0,
+          "abstain_count": 8
+        }
+      },
+      "hard": {
+        "eb_naive_prior": {
+          "n": 60,
+          "score": {
+            "mean": -0.923333,
+            "ci95_low": -1.0,
+            "ci95_high": -0.823333,
+            "ci95_halfwidth": 0.088333
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.903718,
+            "ci95_low": -0.963707,
+            "ci95_high": -0.827956,
+            "ci95_halfwidth": 0.067875
+          },
+          "accuracy": 0.05,
+          "wrong_accuse_rate": 0.95,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 4.3833,
+          "mean_canaries_planted": 6.7667,
+          "total_canaries_planted": 406,
+          "correct_count": 3,
+          "wrong_count": 57,
+          "abstain_count": 0
+        },
+        "eb_likelihood_only": {
+          "n": 60,
+          "score": {
+            "mean": 0.139,
+            "ci95_low": -0.046025,
+            "ci95_high": 0.311171,
+            "ci95_halfwidth": 0.178598
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.138128,
+            "ci95_low": 0.032608,
+            "ci95_high": 0.240432,
+            "ci95_halfwidth": 0.103912
+          },
+          "accuracy": 0.733333,
+          "wrong_accuse_rate": 0.266667,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 9.4833,
+          "mean_canaries_planted": 16.9667,
+          "total_canaries_planted": 1018,
+          "correct_count": 44,
+          "wrong_count": 16,
+          "abstain_count": 0
+        },
+        "eb_ev_stop_only": {
+          "n": 60,
+          "score": {
+            "mean": -0.905,
+            "ci95_low": -0.978167,
+            "ci95_high": -0.808,
+            "ci95_halfwidth": 0.085083
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.893371,
+            "ci95_low": -0.960826,
+            "ci95_high": -0.810155,
+            "ci95_halfwidth": 0.075335
+          },
+          "accuracy": 0.066667,
+          "wrong_accuse_rate": 0.933333,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 4.6833,
+          "mean_canaries_planted": 7.3667,
+          "total_canaries_planted": 442,
+          "correct_count": 4,
+          "wrong_count": 56,
+          "abstain_count": 0
+        },
+        "eb_no_canary_planting": {
+          "n": 60,
+          "score": {
+            "mean": -0.001667,
+            "ci95_low": -0.044167,
+            "ci95_high": 0.033333,
+            "ci95_halfwidth": 0.03875
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.008067,
+            "ci95_low": 0.0,
+            "ci95_high": 0.020662,
+            "ci95_halfwidth": 0.010331
+          },
+          "accuracy": 0.033333,
+          "wrong_accuse_rate": 0.016667,
+          "abstain_rate": 0.95,
+          "accused_rate": 0.05,
+          "mean_accuse_day": 21.0,
+          "mean_canaries_planted": 0.0,
+          "total_canaries_planted": 0,
+          "correct_count": 2,
+          "wrong_count": 1,
+          "abstain_count": 57
+        },
+        "eb_experience_opt": {
+          "n": 60,
+          "score": {
+            "mean": 0.530833,
+            "ci95_low": 0.462333,
+            "ci95_high": 0.582171,
+            "ci95_halfwidth": 0.059919
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.504725,
+            "ci95_low": 0.469998,
+            "ci95_high": 0.537703,
+            "ci95_halfwidth": 0.033852
+          },
+          "accuracy": 0.983333,
+          "wrong_accuse_rate": 0.016667,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 9.2833,
+          "mean_canaries_planted": 16.5333,
+          "total_canaries_planted": 992,
+          "correct_count": 59,
+          "wrong_count": 1,
+          "abstain_count": 0
+        },
+        "heuristic": {
+          "n": 60,
+          "score": {
+            "mean": 0.013167,
+            "ci95_low": -0.145004,
+            "ci95_high": 0.162833,
+            "ci95_halfwidth": 0.153919
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.029329,
+            "ci95_low": -0.068951,
+            "ci95_high": 0.123653,
+            "ci95_halfwidth": 0.096302
+          },
+          "accuracy": 0.75,
+          "wrong_accuse_rate": 0.25,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 15.3333,
+          "mean_canaries_planted": 24.9167,
+          "total_canaries_planted": 1495,
+          "correct_count": 45,
+          "wrong_count": 15,
+          "abstain_count": 0
+        },
+        "solver": {
+          "n": 60,
+          "score": {
+            "mean": 0.597833,
+            "ci95_low": 0.525,
+            "ci95_high": 0.653167,
+            "ci95_halfwidth": 0.064083
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.56534,
+            "ci95_low": 0.526901,
+            "ci95_high": 0.601942,
+            "ci95_halfwidth": 0.03752
+          },
+          "accuracy": 0.966667,
+          "wrong_accuse_rate": 0.016667,
+          "abstain_rate": 0.016667,
+          "accused_rate": 0.983333,
+          "mean_accuse_day": 8.5085,
+          "mean_canaries_planted": 11.9667,
+          "total_canaries_planted": 718,
+          "correct_count": 58,
+          "wrong_count": 1,
+          "abstain_count": 1
+        }
+      }
+    },
+    "overall": {
+      "eb_naive_prior": {
+        "n": 180,
+        "score": {
+          "mean": -0.420889,
+          "ci95_low": -0.537668,
+          "ci95_high": -0.301221,
+          "ci95_halfwidth": 0.118224
+        },
+        "luck_adjusted_ev": {
+          "mean": -0.395498,
+          "ci95_low": -0.505672,
+          "ci95_high": -0.28148,
+          "ci95_halfwidth": 0.112096
+        },
+        "accuracy": 0.327778,
+        "wrong_accuse_rate": 0.661111,
+        "abstain_rate": 0.011111,
+        "accused_rate": 0.988889,
+        "mean_accuse_day": 4.6517,
+        "mean_canaries_planted": 4.8944,
+        "total_canaries_planted": 881,
+        "correct_count": 59,
+        "wrong_count": 119,
+        "abstain_count": 2
+      },
+      "eb_likelihood_only": {
+        "n": 180,
+        "score": {
+          "mean": 0.358222,
+          "ci95_low": 0.259442,
+          "ci95_high": 0.455058,
+          "ci95_halfwidth": 0.097808
+        },
+        "luck_adjusted_ev": {
+          "mean": 0.327522,
+          "ci95_low": 0.263877,
+          "ci95_high": 0.38949,
+          "ci95_halfwidth": 0.062806
+        },
+        "accuracy": 0.783333,
+        "wrong_accuse_rate": 0.188889,
+        "abstain_rate": 0.027778,
+        "accused_rate": 0.972222,
+        "mean_accuse_day": 7.2743,
+        "mean_canaries_planted": 9.3167,
+        "total_canaries_planted": 1677,
+        "correct_count": 141,
+        "wrong_count": 34,
+        "abstain_count": 5
+      },
+      "eb_ev_stop_only": {
+        "n": 180,
+        "score": {
+          "mean": -0.420556,
+          "ci95_low": -0.536169,
+          "ci95_high": -0.303167,
+          "ci95_halfwidth": 0.116501
+        },
+        "luck_adjusted_ev": {
+          "mean": -0.394852,
+          "ci95_low": -0.504389,
+          "ci95_high": -0.281513,
+          "ci95_halfwidth": 0.111438
+        },
+        "accuracy": 0.333333,
+        "wrong_accuse_rate": 0.655556,
+        "abstain_rate": 0.011111,
+        "accused_rate": 0.988889,
+        "mean_accuse_day": 4.8989,
+        "mean_canaries_planted": 5.2278,
+        "total_canaries_planted": 941,
+        "correct_count": 60,
+        "wrong_count": 118,
+        "abstain_count": 2
+      },
+      "eb_no_canary_planting": {
+        "n": 180,
+        "score": {
+          "mean": 0.028667,
+          "ci95_low": -0.005778,
+          "ci95_high": 0.062112,
+          "ci95_halfwidth": 0.033945
+        },
+        "luck_adjusted_ev": {
+          "mean": -0.008214,
+          "ci95_low": -0.033277,
+          "ci95_high": 0.017039,
+          "ci95_halfwidth": 0.025158
+        },
+        "accuracy": 0.088889,
+        "wrong_accuse_rate": 0.022222,
+        "abstain_rate": 0.888889,
+        "accused_rate": 0.111111,
+        "mean_accuse_day": 13.45,
+        "mean_canaries_planted": 0.0,
+        "total_canaries_planted": 0,
+        "correct_count": 16,
+        "wrong_count": 4,
+        "abstain_count": 160
+      },
+      "eb_experience_opt": {
+        "n": 180,
+        "score": {
+          "mean": 0.607278,
+          "ci95_low": 0.559332,
+          "ci95_high": 0.648113,
+          "ci95_halfwidth": 0.04439
+        },
+        "luck_adjusted_ev": {
+          "mean": 0.60495,
+          "ci95_low": 0.566523,
+          "ci95_high": 0.639434,
+          "ci95_halfwidth": 0.036456
+        },
+        "accuracy": 0.922222,
+        "wrong_accuse_rate": 0.016667,
+        "abstain_rate": 0.061111,
+        "accused_rate": 0.938889,
+        "mean_accuse_day": 7.5621,
+        "mean_canaries_planted": 9.7056,
+        "total_canaries_planted": 1747,
+        "correct_count": 166,
+        "wrong_count": 3,
+        "abstain_count": 11
+      },
+      "heuristic": {
+        "n": 180,
+        "score": {
+          "mean": 0.2255,
+          "ci95_low": 0.128832,
+          "ci95_high": 0.320889,
+          "ci95_halfwidth": 0.096028
+        },
+        "luck_adjusted_ev": {
+          "mean": 0.207979,
+          "ci95_low": 0.132478,
+          "ci95_high": 0.281967,
+          "ci95_halfwidth": 0.074744
+        },
+        "accuracy": 0.788889,
+        "wrong_accuse_rate": 0.211111,
+        "abstain_rate": 0.0,
+        "accused_rate": 1.0,
+        "mean_accuse_day": 11.1333,
+        "mean_canaries_planted": 13.6611,
+        "total_canaries_planted": 2459,
+        "correct_count": 142,
+        "wrong_count": 38,
+        "abstain_count": 0
+      },
+      "solver": {
+        "n": 180,
+        "score": {
+          "mean": 0.670556,
+          "ci95_low": 0.634721,
+          "ci95_high": 0.702444,
+          "ci95_halfwidth": 0.033862
+        },
+        "luck_adjusted_ev": {
+          "mean": 0.658712,
+          "ci95_low": 0.627746,
+          "ci95_high": 0.687877,
+          "ci95_halfwidth": 0.030065
+        },
+        "accuracy": 0.944444,
+        "wrong_accuse_rate": 0.005556,
+        "abstain_rate": 0.05,
+        "accused_rate": 0.95,
+        "mean_accuse_day": 7.0877,
+        "mean_canaries_planted": 7.9333,
+        "total_canaries_planted": 1428,
+        "correct_count": 170,
+        "wrong_count": 1,
+        "abstain_count": 9
+      }
+    },
+    "paired_deltas": {
+      "by_tier": {
+        "easy": {
+          "eb_likelihood_only_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": 0.075,
+              "ci95_low": -0.094671,
+              "ci95_high": 0.246004,
+              "ci95_halfwidth": 0.170337
+            },
+            "luck_adjusted_delta": {
+              "mean": -0.009272,
+              "ci95_low": -0.119277,
+              "ci95_high": 0.099128,
+              "ci95_halfwidth": 0.109203
+            }
+          },
+          "eb_ev_stop_only_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": -0.0165,
+              "ci95_low": -0.0295,
+              "ci95_high": -0.005667,
+              "ci95_halfwidth": 0.011917
+            },
+            "luck_adjusted_delta": {
+              "mean": -0.003667,
+              "ci95_low": -0.025333,
+              "ci95_high": 0.026667,
+              "ci95_halfwidth": 0.026
+            }
+          },
+          "eb_no_canary_planting_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": -0.4915,
+              "ci95_low": -0.613667,
+              "ci95_high": -0.348663,
+              "ci95_halfwidth": 0.132502
+            },
+            "luck_adjusted_delta": {
+              "mean": -0.603023,
+              "ci95_low": -0.689072,
+              "ci95_high": -0.507406,
+              "ci95_halfwidth": 0.090833
+            }
+          },
+          "eb_experience_opt_minus_eb_no_canary_planting": {
+            "score_delta": {
+              "mean": 0.6375,
+              "ci95_low": 0.565,
+              "ci95_high": 0.705167,
+              "ci95_halfwidth": 0.070083
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.73188,
+              "ci95_low": 0.66125,
+              "ci95_high": 0.797609,
+              "ci95_halfwidth": 0.06818
+            }
+          },
+          "eb_experience_opt_minus_eb_ev_stop_only": {
+            "score_delta": {
+              "mean": 0.1625,
+              "ci95_low": 0.048496,
+              "ci95_high": 0.293004,
+              "ci95_halfwidth": 0.122254
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.132523,
+              "ci95_low": 0.060825,
+              "ci95_high": 0.209507,
+              "ci95_halfwidth": 0.074341
+            }
+          },
+          "eb_experience_opt_minus_eb_likelihood_only": {
+            "score_delta": {
+              "mean": 0.071,
+              "ci95_low": -0.040338,
+              "ci95_high": 0.201837,
+              "ci95_halfwidth": 0.121087
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.138128,
+              "ci95_low": 0.049147,
+              "ci95_high": 0.23149,
+              "ci95_halfwidth": 0.091172
+            }
+          },
+          "eb_experience_opt_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": 0.146,
+              "ci95_low": 0.033,
+              "ci95_high": 0.276504,
+              "ci95_halfwidth": 0.121752
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.128857,
+              "ci95_low": 0.056385,
+              "ci95_high": 0.207317,
+              "ci95_halfwidth": 0.075466
+            }
+          },
+          "eb_experience_opt_minus_heuristic": {
+            "score_delta": {
+              "mean": 0.0685,
+              "ci95_low": 0.016667,
+              "ci95_high": 0.114171,
+              "ci95_halfwidth": 0.048752
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.0685,
+              "ci95_low": 0.016667,
+              "ci95_high": 0.114171,
+              "ci95_halfwidth": 0.048752
+            }
+          },
+          "eb_experience_opt_minus_solver": {
+            "score_delta": {
+              "mean": -0.051167,
+              "ci95_low": -0.104667,
+              "ci95_high": -0.003667,
+              "ci95_halfwidth": 0.0505
+            },
+            "luck_adjusted_delta": {
+              "mean": -0.048131,
+              "ci95_low": -0.102853,
+              "ci95_high": 0.001636,
+              "ci95_halfwidth": 0.052244
+            }
+          }
+        },
+        "medium": {
+          "eb_likelihood_only_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": 1.2,
+              "ci95_low": 0.995658,
+              "ci95_high": 1.387671,
+              "ci95_halfwidth": 0.196006
+            },
+            "luck_adjusted_delta": {
+              "mean": 1.136484,
+              "ci95_low": 1.012213,
+              "ci95_high": 1.258906,
+              "ci95_halfwidth": 0.123347
+            }
+          },
+          "eb_ev_stop_only_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": -0.000833,
+              "ci95_low": -0.0025,
+              "ci95_high": 0.0,
+              "ci95_halfwidth": 0.00125
+            },
+            "luck_adjusted_delta": {
+              "mean": -0.004745,
+              "ci95_low": -0.013828,
+              "ci95_high": 0.0,
+              "ci95_halfwidth": 0.006914
+            }
+          },
+          "eb_no_canary_planting_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": 0.9185,
+              "ci95_low": 0.8165,
+              "ci95_high": 1.006679,
+              "ci95_halfwidth": 0.09509
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.853089,
+              "ci95_low": 0.777633,
+              "ci95_high": 0.918665,
+              "ci95_halfwidth": 0.070516
+            }
+          },
+          "eb_experience_opt_minus_eb_no_canary_planting": {
+            "score_delta": {
+              "mean": 0.565833,
+              "ci95_low": 0.431329,
+              "ci95_high": 0.692171,
+              "ci95_halfwidth": 0.130421
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.610954,
+              "ci95_low": 0.522163,
+              "ci95_high": 0.694283,
+              "ci95_halfwidth": 0.08606
+            }
+          },
+          "eb_experience_opt_minus_eb_ev_stop_only": {
+            "score_delta": {
+              "mean": 1.485167,
+              "ci95_low": 1.3645,
+              "ci95_high": 1.591671,
+              "ci95_halfwidth": 0.113585
+            },
+            "luck_adjusted_delta": {
+              "mean": 1.468788,
+              "ci95_low": 1.369815,
+              "ci95_high": 1.560651,
+              "ci95_halfwidth": 0.095418
+            }
+          },
+          "eb_experience_opt_minus_eb_likelihood_only": {
+            "score_delta": {
+              "mean": 0.284333,
+              "ci95_low": 0.065329,
+              "ci95_high": 0.518171,
+              "ci95_halfwidth": 0.226421
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.32756,
+              "ci95_low": 0.182576,
+              "ci95_high": 0.467733,
+              "ci95_halfwidth": 0.142579
+            }
+          },
+          "eb_experience_opt_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": 1.484333,
+              "ci95_low": 1.362833,
+              "ci95_high": 1.5915,
+              "ci95_halfwidth": 0.114333
+            },
+            "luck_adjusted_delta": {
+              "mean": 1.464043,
+              "ci95_low": 1.36496,
+              "ci95_high": 1.555476,
+              "ci95_halfwidth": 0.095258
+            }
+          },
+          "eb_experience_opt_minus_heuristic": {
+            "score_delta": {
+              "mean": 0.559167,
+              "ci95_low": 0.346825,
+              "ci95_high": 0.767171,
+              "ci95_halfwidth": 0.210173
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.647018,
+              "ci95_low": 0.511646,
+              "ci95_high": 0.782059,
+              "ci95_halfwidth": 0.135207
+            }
+          },
+          "eb_experience_opt_minus_solver": {
+            "score_delta": {
+              "mean": -0.071667,
+              "ci95_low": -0.196671,
+              "ci95_high": 0.042833,
+              "ci95_halfwidth": 0.119752
+            },
+            "luck_adjusted_delta": {
+              "mean": -0.052541,
+              "ci95_low": -0.15743,
+              "ci95_high": 0.048834,
+              "ci95_halfwidth": 0.103132
+            }
+          }
+        },
+        "hard": {
+          "eb_likelihood_only_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": 1.062333,
+              "ci95_low": 0.869325,
+              "ci95_high": 1.245337,
+              "ci95_halfwidth": 0.188006
+            },
+            "luck_adjusted_delta": {
+              "mean": 1.041846,
+              "ci95_low": 0.92244,
+              "ci95_high": 1.157917,
+              "ci95_halfwidth": 0.117739
+            }
+          },
+          "eb_ev_stop_only_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": 0.018333,
+              "ci95_low": -0.008167,
+              "ci95_high": 0.0655,
+              "ci95_halfwidth": 0.036833
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.010347,
+              "ci95_low": -0.005908,
+              "ci95_high": 0.035412,
+              "ci95_halfwidth": 0.02066
+            }
+          },
+          "eb_no_canary_planting_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": 0.921667,
+              "ci95_low": 0.819667,
+              "ci95_high": 1.005833,
+              "ci95_halfwidth": 0.093083
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.911785,
+              "ci95_low": 0.835352,
+              "ci95_high": 0.973623,
+              "ci95_halfwidth": 0.069135
+            }
+          },
+          "eb_experience_opt_minus_eb_no_canary_planting": {
+            "score_delta": {
+              "mean": 0.5325,
+              "ci95_low": 0.459329,
+              "ci95_high": 0.598667,
+              "ci95_halfwidth": 0.069669
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.496658,
+              "ci95_low": 0.463357,
+              "ci95_high": 0.528504,
+              "ci95_halfwidth": 0.032573
+            }
+          },
+          "eb_experience_opt_minus_eb_ev_stop_only": {
+            "score_delta": {
+              "mean": 1.435833,
+              "ci95_low": 1.3155,
+              "ci95_high": 1.534838,
+              "ci95_halfwidth": 0.109669
+            },
+            "luck_adjusted_delta": {
+              "mean": 1.398096,
+              "ci95_low": 1.306147,
+              "ci95_high": 1.476805,
+              "ci95_halfwidth": 0.085329
+            }
+          },
+          "eb_experience_opt_minus_eb_likelihood_only": {
+            "score_delta": {
+              "mean": 0.391833,
+              "ci95_low": 0.203492,
+              "ci95_high": 0.5925,
+              "ci95_halfwidth": 0.194504
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.366597,
+              "ci95_low": 0.259557,
+              "ci95_high": 0.477382,
+              "ci95_halfwidth": 0.108913
+            }
+          },
+          "eb_experience_opt_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": 1.454167,
+              "ci95_low": 1.335829,
+              "ci95_high": 1.549504,
+              "ci95_halfwidth": 0.106838
+            },
+            "luck_adjusted_delta": {
+              "mean": 1.408443,
+              "ci95_low": 1.324639,
+              "ci95_high": 1.478983,
+              "ci95_halfwidth": 0.077172
+            }
+          },
+          "eb_experience_opt_minus_heuristic": {
+            "score_delta": {
+              "mean": 0.517667,
+              "ci95_low": 0.359167,
+              "ci95_high": 0.6855,
+              "ci95_halfwidth": 0.163167
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.475397,
+              "ci95_low": 0.378102,
+              "ci95_high": 0.576635,
+              "ci95_halfwidth": 0.099267
+            }
+          },
+          "eb_experience_opt_minus_solver": {
+            "score_delta": {
+              "mean": -0.067,
+              "ci95_low": -0.1485,
+              "ci95_high": 0.017333,
+              "ci95_halfwidth": 0.082917
+            },
+            "luck_adjusted_delta": {
+              "mean": -0.060615,
+              "ci95_low": -0.104003,
+              "ci95_high": -0.017554,
+              "ci95_halfwidth": 0.043225
+            }
+          }
+        }
+      },
+      "overall": {
+        "eb_likelihood_only_minus_eb_naive_prior": {
+          "score_delta": {
+            "mean": 0.779111,
+            "ci95_low": 0.648494,
+            "ci95_high": 0.907557,
+            "ci95_halfwidth": 0.129531
+          },
+          "luck_adjusted_delta": {
+            "mean": 0.723019,
+            "ci95_low": 0.620203,
+            "ci95_high": 0.823475,
+            "ci95_halfwidth": 0.101636
+          }
+        },
+        "eb_ev_stop_only_minus_eb_naive_prior": {
+          "score_delta": {
+            "mean": 0.000333,
+            "ci95_low": -0.010501,
+            "ci95_high": 0.017944,
+            "ci95_halfwidth": 0.014223
+          },
+          "luck_adjusted_delta": {
+            "mean": 0.000645,
+            "ci95_low": -0.00973,
+            "ci95_high": 0.013557,
+            "ci95_halfwidth": 0.011644
+          }
+        },
+        "eb_no_canary_planting_minus_eb_naive_prior": {
+          "score_delta": {
+            "mean": 0.449556,
+            "ci95_low": 0.333276,
+            "ci95_high": 0.562779,
+            "ci95_halfwidth": 0.114751
+          },
+          "luck_adjusted_delta": {
+            "mean": 0.387284,
+            "ci95_low": 0.273316,
+            "ci95_high": 0.495899,
+            "ci95_halfwidth": 0.111292
+          }
+        },
+        "eb_experience_opt_minus_eb_no_canary_planting": {
+          "score_delta": {
+            "mean": 0.578611,
+            "ci95_low": 0.520778,
+            "ci95_high": 0.631667,
+            "ci95_halfwidth": 0.055444
+          },
+          "luck_adjusted_delta": {
+            "mean": 0.613164,
+            "ci95_low": 0.571457,
+            "ci95_high": 0.654255,
+            "ci95_halfwidth": 0.041399
+          }
+        },
+        "eb_experience_opt_minus_eb_ev_stop_only": {
+          "score_delta": {
+            "mean": 1.027833,
+            "ci95_low": 0.915886,
+            "ci95_high": 1.136335,
+            "ci95_halfwidth": 0.110224
+          },
+          "luck_adjusted_delta": {
+            "mean": 0.999803,
+            "ci95_low": 0.895669,
+            "ci95_high": 1.100165,
+            "ci95_halfwidth": 0.102248
+          }
+        },
+        "eb_experience_opt_minus_eb_likelihood_only": {
+          "score_delta": {
+            "mean": 0.249056,
+            "ci95_low": 0.140056,
+            "ci95_high": 0.35739,
+            "ci95_halfwidth": 0.108667
+          },
+          "luck_adjusted_delta": {
+            "mean": 0.277428,
+            "ci95_low": 0.210482,
+            "ci95_high": 0.346757,
+            "ci95_halfwidth": 0.068137
+          }
+        },
+        "eb_experience_opt_minus_eb_naive_prior": {
+          "score_delta": {
+            "mean": 1.028167,
+            "ci95_low": 0.915165,
+            "ci95_high": 1.138278,
+            "ci95_halfwidth": 0.111556
+          },
+          "luck_adjusted_delta": {
+            "mean": 1.000448,
+            "ci95_low": 0.895676,
+            "ci95_high": 1.101079,
+            "ci95_halfwidth": 0.102701
+          }
+        },
+        "eb_experience_opt_minus_heuristic": {
+          "score_delta": {
+            "mean": 0.381778,
+            "ci95_low": 0.286389,
+            "ci95_high": 0.477501,
+            "ci95_halfwidth": 0.095556
+          },
+          "luck_adjusted_delta": {
+            "mean": 0.396971,
+            "ci95_low": 0.328195,
+            "ci95_high": 0.465123,
+            "ci95_halfwidth": 0.068464
+          }
+        },
+        "eb_experience_opt_minus_solver": {
+          "score_delta": {
+            "mean": -0.063278,
+            "ci95_low": -0.11639,
+            "ci95_high": -0.013056,
+            "ci95_halfwidth": 0.051667
+          },
+          "luck_adjusted_delta": {
+            "mean": -0.053762,
+            "ci95_low": -0.096743,
+            "ci95_high": -0.012686,
+            "ci95_halfwidth": 0.042029
+          }
+        }
+      }
+    }
+  },
+  "heldout_n90": {
+    "world_secret_tag": "canary-tiebreak-heldout-v14-eval-01",
+    "world_secret_sha256_12": "ebf2f09716cf",
     "eval_seed_range": "800000..800029",
+    "eval_seeds": {
+      "start": 800000,
+      "stop": 800030
+    },
     "tiers": [
       "easy",
       "medium",
@@ -532,7 +2804,8 @@
     ],
     "n_per_tier": 30,
     "n_total_per_agent": 90,
-    "episodes_replayed": 450,
+    "episodes_replayed": 630,
+    "replay_verified": true,
     "by_tier": {
       "easy": {
         "eb_naive_prior": {
@@ -554,11 +2827,13 @@
           "abstain_rate": 0.0,
           "accused_rate": 1.0,
           "mean_accuse_day": 5.5,
+          "mean_canaries_planted": 4.5,
+          "total_canaries_planted": 135,
           "correct_count": 28,
           "wrong_count": 2,
           "abstain_count": 0
         },
-        "eb_likelihood_learned": {
+        "eb_likelihood_only": {
           "n": 30,
           "score": {
             "mean": 0.667333,
@@ -577,9 +2852,61 @@
           "abstain_rate": 0.0,
           "accused_rate": 1.0,
           "mean_accuse_day": 4.7667,
+          "mean_canaries_planted": 3.7667,
+          "total_canaries_planted": 113,
           "correct_count": 28,
           "wrong_count": 2,
           "abstain_count": 0
+        },
+        "eb_ev_stop_only": {
+          "n": 30,
+          "score": {
+            "mean": 0.616333,
+            "ci95_low": 0.438333,
+            "ci95_high": 0.746333,
+            "ci95_halfwidth": 0.154
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.646287,
+            "ci95_low": 0.547203,
+            "ci95_high": 0.730915,
+            "ci95_halfwidth": 0.091856
+          },
+          "accuracy": 0.933333,
+          "wrong_accuse_rate": 0.066667,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 5.8333,
+          "mean_canaries_planted": 4.8333,
+          "total_canaries_planted": 145,
+          "correct_count": 28,
+          "wrong_count": 2,
+          "abstain_count": 0
+        },
+        "eb_no_canary_planting": {
+          "n": 30,
+          "score": {
+            "mean": 0.12,
+            "ci95_low": 0.03,
+            "ci95_high": 0.226667,
+            "ci95_halfwidth": 0.098333
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.082627,
+            "ci95_low": -0.00524,
+            "ci95_high": 0.19952,
+            "ci95_halfwidth": 0.10238
+          },
+          "accuracy": 0.166667,
+          "wrong_accuse_rate": 0.0,
+          "abstain_rate": 0.833333,
+          "accused_rate": 0.166667,
+          "mean_accuse_day": 7.6,
+          "mean_canaries_planted": 0.0,
+          "total_canaries_planted": 0,
+          "correct_count": 5,
+          "wrong_count": 0,
+          "abstain_count": 25
         },
         "eb_experience_opt": {
           "n": 30,
@@ -600,6 +2927,8 @@
           "abstain_rate": 0.066667,
           "accused_rate": 0.933333,
           "mean_accuse_day": 5.25,
+          "mean_canaries_planted": 4.8333,
+          "total_canaries_planted": 145,
           "correct_count": 28,
           "wrong_count": 0,
           "abstain_count": 2
@@ -623,6 +2952,8 @@
           "abstain_rate": 0.0,
           "accused_rate": 1.0,
           "mean_accuse_day": 6.5,
+          "mean_canaries_planted": 5.5,
+          "total_canaries_planted": 165,
           "correct_count": 30,
           "wrong_count": 0,
           "abstain_count": 0
@@ -646,6 +2977,8 @@
           "abstain_rate": 0.0,
           "accused_rate": 1.0,
           "mean_accuse_day": 4.7333,
+          "mean_canaries_planted": 3.7333,
+          "total_canaries_planted": 112,
           "correct_count": 30,
           "wrong_count": 0,
           "abstain_count": 0
@@ -671,11 +3004,13 @@
           "abstain_rate": 0.0,
           "accused_rate": 1.0,
           "mean_accuse_day": 4.3,
+          "mean_canaries_planted": 3.3,
+          "total_canaries_planted": 99,
           "correct_count": 1,
           "wrong_count": 29,
           "abstain_count": 0
         },
-        "eb_likelihood_learned": {
+        "eb_likelihood_only": {
           "n": 30,
           "score": {
             "mean": 0.347,
@@ -694,9 +3029,61 @@
           "abstain_rate": 0.1,
           "accused_rate": 0.9,
           "mean_accuse_day": 8.1111,
+          "mean_canaries_planted": 7.8,
+          "total_canaries_planted": 234,
           "correct_count": 22,
           "wrong_count": 5,
           "abstain_count": 3
+        },
+        "eb_ev_stop_only": {
+          "n": 30,
+          "score": {
+            "mean": -0.946667,
+            "ci95_low": -1.0,
+            "ci95_high": -0.84,
+            "ci95_halfwidth": 0.08
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.914638,
+            "ci95_low": -0.983941,
+            "ci95_high": -0.826181,
+            "ci95_halfwidth": 0.07888
+          },
+          "accuracy": 0.033333,
+          "wrong_accuse_rate": 0.966667,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 4.4667,
+          "mean_canaries_planted": 3.4667,
+          "total_canaries_planted": 104,
+          "correct_count": 1,
+          "wrong_count": 29,
+          "abstain_count": 0
+        },
+        "eb_no_canary_planting": {
+          "n": 30,
+          "score": {
+            "mean": -0.048,
+            "ci95_low": -0.166667,
+            "ci95_high": 0.037333,
+            "ci95_halfwidth": 0.102
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.037971,
+            "ci95_low": -0.093452,
+            "ci95_high": 0.0,
+            "ci95_halfwidth": 0.046726
+          },
+          "accuracy": 0.033333,
+          "wrong_accuse_rate": 0.066667,
+          "abstain_rate": 0.9,
+          "accused_rate": 0.1,
+          "mean_accuse_day": 14.0,
+          "mean_canaries_planted": 0.0,
+          "total_canaries_planted": 0,
+          "correct_count": 1,
+          "wrong_count": 2,
+          "abstain_count": 27
         },
         "eb_experience_opt": {
           "n": 30,
@@ -717,6 +3104,8 @@
           "abstain_rate": 0.2,
           "accused_rate": 0.8,
           "mean_accuse_day": 7.7917,
+          "mean_canaries_planted": 8.0333,
+          "total_canaries_planted": 241,
           "correct_count": 24,
           "wrong_count": 0,
           "abstain_count": 6
@@ -740,6 +3129,8 @@
           "abstain_rate": 0.0,
           "accused_rate": 1.0,
           "mean_accuse_day": 11.1,
+          "mean_canaries_planted": 10.1,
+          "total_canaries_planted": 303,
           "correct_count": 19,
           "wrong_count": 11,
           "abstain_count": 0
@@ -763,6 +3154,8 @@
           "abstain_rate": 0.1,
           "accused_rate": 0.9,
           "mean_accuse_day": 7.7778,
+          "mean_canaries_planted": 7.5,
+          "total_canaries_planted": 225,
           "correct_count": 27,
           "wrong_count": 0,
           "abstain_count": 3
@@ -788,11 +3181,13 @@
           "abstain_rate": 0.0,
           "accused_rate": 1.0,
           "mean_accuse_day": 4.3,
+          "mean_canaries_planted": 6.6,
+          "total_canaries_planted": 198,
           "correct_count": 3,
           "wrong_count": 27,
           "abstain_count": 0
         },
-        "eb_likelihood_learned": {
+        "eb_likelihood_only": {
           "n": 30,
           "score": {
             "mean": 0.007333,
@@ -811,9 +3206,61 @@
           "abstain_rate": 0.0,
           "accused_rate": 1.0,
           "mean_accuse_day": 8.6,
+          "mean_canaries_planted": 15.2,
+          "total_canaries_planted": 456,
           "correct_count": 19,
           "wrong_count": 11,
           "abstain_count": 0
+        },
+        "eb_ev_stop_only": {
+          "n": 30,
+          "score": {
+            "mean": -0.853667,
+            "ci95_low": -1.0,
+            "ci95_high": -0.683892,
+            "ci95_halfwidth": 0.158054
+          },
+          "luck_adjusted_ev": {
+            "mean": -0.854468,
+            "ci95_low": -0.97146,
+            "ci95_high": -0.713034,
+            "ci95_halfwidth": 0.129213
+          },
+          "accuracy": 0.1,
+          "wrong_accuse_rate": 0.9,
+          "abstain_rate": 0.0,
+          "accused_rate": 1.0,
+          "mean_accuse_day": 4.5667,
+          "mean_canaries_planted": 7.1333,
+          "total_canaries_planted": 214,
+          "correct_count": 3,
+          "wrong_count": 27,
+          "abstain_count": 0
+        },
+        "eb_no_canary_planting": {
+          "n": 30,
+          "score": {
+            "mean": -0.003333,
+            "ci95_low": -0.088333,
+            "ci95_high": 0.066667,
+            "ci95_halfwidth": 0.0775
+          },
+          "luck_adjusted_ev": {
+            "mean": 0.016133,
+            "ci95_low": 0.0,
+            "ci95_high": 0.040697,
+            "ci95_halfwidth": 0.020348
+          },
+          "accuracy": 0.066667,
+          "wrong_accuse_rate": 0.033333,
+          "abstain_rate": 0.9,
+          "accused_rate": 0.1,
+          "mean_accuse_day": 21.0,
+          "mean_canaries_planted": 0.0,
+          "total_canaries_planted": 0,
+          "correct_count": 2,
+          "wrong_count": 1,
+          "abstain_count": 27
         },
         "eb_experience_opt": {
           "n": 30,
@@ -834,6 +3281,8 @@
           "abstain_rate": 0.0,
           "accused_rate": 1.0,
           "mean_accuse_day": 9.1,
+          "mean_canaries_planted": 16.1333,
+          "total_canaries_planted": 484,
           "correct_count": 30,
           "wrong_count": 0,
           "abstain_count": 0
@@ -857,6 +3306,8 @@
           "abstain_rate": 0.0,
           "accused_rate": 1.0,
           "mean_accuse_day": 15.4667,
+          "mean_canaries_planted": 25.0667,
+          "total_canaries_planted": 752,
           "correct_count": 19,
           "wrong_count": 11,
           "abstain_count": 0
@@ -880,6 +3331,8 @@
           "abstain_rate": 0.0,
           "accused_rate": 1.0,
           "mean_accuse_day": 8.2333,
+          "mean_canaries_planted": 11.6,
+          "total_canaries_planted": 348,
           "correct_count": 29,
           "wrong_count": 1,
           "abstain_count": 0
@@ -906,11 +3359,13 @@
         "abstain_rate": 0.0,
         "accused_rate": 1.0,
         "mean_accuse_day": 4.7,
+        "mean_canaries_planted": 4.8,
+        "total_canaries_planted": 432,
         "correct_count": 32,
         "wrong_count": 58,
         "abstain_count": 0
       },
-      "eb_likelihood_learned": {
+      "eb_likelihood_only": {
         "n": 90,
         "score": {
           "mean": 0.340556,
@@ -929,9 +3384,61 @@
         "abstain_rate": 0.033333,
         "accused_rate": 0.966667,
         "mean_accuse_day": 7.1264,
+        "mean_canaries_planted": 8.9222,
+        "total_canaries_planted": 803,
         "correct_count": 69,
         "wrong_count": 18,
         "abstain_count": 3
+      },
+      "eb_ev_stop_only": {
+        "n": 90,
+        "score": {
+          "mean": -0.394667,
+          "ci95_low": -0.564114,
+          "ci95_high": -0.219994,
+          "ci95_halfwidth": 0.17206
+        },
+        "luck_adjusted_ev": {
+          "mean": -0.374273,
+          "ci95_low": -0.536095,
+          "ci95_high": -0.210845,
+          "ci95_halfwidth": 0.162625
+        },
+        "accuracy": 0.355556,
+        "wrong_accuse_rate": 0.644444,
+        "abstain_rate": 0.0,
+        "accused_rate": 1.0,
+        "mean_accuse_day": 4.9556,
+        "mean_canaries_planted": 5.1444,
+        "total_canaries_planted": 463,
+        "correct_count": 32,
+        "wrong_count": 58,
+        "abstain_count": 0
+      },
+      "eb_no_canary_planting": {
+        "n": 90,
+        "score": {
+          "mean": 0.022889,
+          "ci95_low": -0.033889,
+          "ci95_high": 0.078669,
+          "ci95_halfwidth": 0.056279
+        },
+        "luck_adjusted_ev": {
+          "mean": 0.020263,
+          "ci95_low": -0.015757,
+          "ci95_high": 0.062238,
+          "ci95_halfwidth": 0.038997
+        },
+        "accuracy": 0.088889,
+        "wrong_accuse_rate": 0.033333,
+        "abstain_rate": 0.877778,
+        "accused_rate": 0.122222,
+        "mean_accuse_day": 13.0,
+        "mean_canaries_planted": 0.0,
+        "total_canaries_planted": 0,
+        "correct_count": 8,
+        "wrong_count": 3,
+        "abstain_count": 79
       },
       "eb_experience_opt": {
         "n": 90,
@@ -952,6 +3459,8 @@
         "abstain_rate": 0.088889,
         "accused_rate": 0.911111,
         "mean_accuse_day": 7.4024,
+        "mean_canaries_planted": 9.6667,
+        "total_canaries_planted": 870,
         "correct_count": 82,
         "wrong_count": 0,
         "abstain_count": 8
@@ -975,6 +3484,8 @@
         "abstain_rate": 0.0,
         "accused_rate": 1.0,
         "mean_accuse_day": 11.0222,
+        "mean_canaries_planted": 13.5556,
+        "total_canaries_planted": 1220,
         "correct_count": 68,
         "wrong_count": 22,
         "abstain_count": 0
@@ -998,6 +3509,8 @@
         "abstain_rate": 0.033333,
         "accused_rate": 0.966667,
         "mean_accuse_day": 6.8851,
+        "mean_canaries_planted": 7.6111,
+        "total_canaries_planted": 685,
         "correct_count": 86,
         "wrong_count": 1,
         "abstain_count": 3
@@ -1006,7 +3519,7 @@
     "paired_deltas": {
       "by_tier": {
         "easy": {
-          "eb_likelihood_learned_minus_eb_naive_prior": {
+          "eb_likelihood_only_minus_eb_naive_prior": {
             "score_delta": {
               "mean": 0.032667,
               "ci95_low": -0.202,
@@ -1020,7 +3533,63 @@
               "ci95_halfwidth": 0.145116
             }
           },
-          "eb_experience_opt_minus_eb_likelihood_learned": {
+          "eb_ev_stop_only_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": -0.018333,
+              "ci95_low": -0.036333,
+              "ci95_high": -0.004,
+              "ci95_halfwidth": 0.016167
+            },
+            "luck_adjusted_delta": {
+              "mean": -0.018333,
+              "ci95_low": -0.036333,
+              "ci95_high": -0.004,
+              "ci95_halfwidth": 0.016167
+            }
+          },
+          "eb_no_canary_planting_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": -0.514667,
+              "ci95_low": -0.674675,
+              "ci95_high": -0.314667,
+              "ci95_halfwidth": 0.180004
+            },
+            "luck_adjusted_delta": {
+              "mean": -0.581993,
+              "ci95_low": -0.704204,
+              "ci95_high": -0.443016,
+              "ci95_halfwidth": 0.130594
+            }
+          },
+          "eb_experience_opt_minus_eb_no_canary_planting": {
+            "score_delta": {
+              "mean": 0.608667,
+              "ci95_low": 0.488,
+              "ci95_high": 0.715333,
+              "ci95_halfwidth": 0.113667
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.64604,
+              "ci95_low": 0.524035,
+              "ci95_high": 0.751613,
+              "ci95_halfwidth": 0.113789
+            }
+          },
+          "eb_experience_opt_minus_eb_ev_stop_only": {
+            "score_delta": {
+              "mean": 0.112333,
+              "ci95_low": -0.018333,
+              "ci95_high": 0.276333,
+              "ci95_halfwidth": 0.147333
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.08238,
+              "ci95_low": -0.009287,
+              "ci95_high": 0.188704,
+              "ci95_halfwidth": 0.098996
+            }
+          },
+          "eb_experience_opt_minus_eb_likelihood_only": {
             "score_delta": {
               "mean": 0.061333,
               "ci95_low": -0.094333,
@@ -1078,7 +3647,7 @@
           }
         },
         "medium": {
-          "eb_likelihood_learned_minus_eb_naive_prior": {
+          "eb_likelihood_only_minus_eb_naive_prior": {
             "score_delta": {
               "mean": 1.292,
               "ci95_low": 1.013333,
@@ -1092,7 +3661,63 @@
               "ci95_halfwidth": 0.156704
             }
           },
-          "eb_experience_opt_minus_eb_likelihood_learned": {
+          "eb_ev_stop_only_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": -0.001667,
+              "ci95_low": -0.005,
+              "ci95_high": 0.0,
+              "ci95_halfwidth": 0.0025
+            },
+            "luck_adjusted_delta": {
+              "mean": -0.00949,
+              "ci95_low": -0.027657,
+              "ci95_high": 0.0,
+              "ci95_halfwidth": 0.013828
+            }
+          },
+          "eb_no_canary_planting_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": 0.897,
+              "ci95_low": 0.742,
+              "ci95_high": 1.018667,
+              "ci95_halfwidth": 0.138333
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.867178,
+              "ci95_low": 0.771546,
+              "ci95_high": 0.946353,
+              "ci95_halfwidth": 0.087403
+            }
+          },
+          "eb_experience_opt_minus_eb_no_canary_planting": {
+            "score_delta": {
+              "mean": 0.617667,
+              "ci95_low": 0.469333,
+              "ci95_high": 0.770333,
+              "ci95_halfwidth": 0.1505
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.607637,
+              "ci95_low": 0.483345,
+              "ci95_high": 0.726118,
+              "ci95_halfwidth": 0.121386
+            }
+          },
+          "eb_experience_opt_minus_eb_ev_stop_only": {
+            "score_delta": {
+              "mean": 1.516333,
+              "ci95_low": 1.367325,
+              "ci95_high": 1.644667,
+              "ci95_halfwidth": 0.138671
+            },
+            "luck_adjusted_delta": {
+              "mean": 1.484305,
+              "ci95_low": 1.354802,
+              "ci95_high": 1.601102,
+              "ci95_halfwidth": 0.12315
+            }
+          },
+          "eb_experience_opt_minus_eb_likelihood_only": {
             "score_delta": {
               "mean": 0.222667,
               "ci95_low": -0.035675,
@@ -1150,7 +3775,7 @@
           }
         },
         "hard": {
-          "eb_likelihood_learned_minus_eb_naive_prior": {
+          "eb_likelihood_only_minus_eb_naive_prior": {
             "score_delta": {
               "mean": 0.854,
               "ci95_low": 0.560992,
@@ -1164,7 +3789,63 @@
               "ci95_halfwidth": 0.182781
             }
           },
-          "eb_experience_opt_minus_eb_likelihood_learned": {
+          "eb_ev_stop_only_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": -0.007,
+              "ci95_low": -0.018667,
+              "ci95_high": 0.0,
+              "ci95_halfwidth": 0.009333
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.000593,
+              "ci95_low": -0.016483,
+              "ci95_high": 0.020745,
+              "ci95_halfwidth": 0.018614
+            }
+          },
+          "eb_no_canary_planting_minus_eb_naive_prior": {
+            "score_delta": {
+              "mean": 0.843333,
+              "ci95_low": 0.646667,
+              "ci95_high": 1.006333,
+              "ci95_halfwidth": 0.179833
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.871195,
+              "ci95_low": 0.727964,
+              "ci95_high": 0.984638,
+              "ci95_halfwidth": 0.128337
+            }
+          },
+          "eb_experience_opt_minus_eb_no_canary_planting": {
+            "score_delta": {
+              "mean": 0.572,
+              "ci95_low": 0.491667,
+              "ci95_high": 0.666333,
+              "ci95_halfwidth": 0.087333
+            },
+            "luck_adjusted_delta": {
+              "mean": 0.499663,
+              "ci95_low": 0.451088,
+              "ci95_high": 0.543852,
+              "ci95_halfwidth": 0.046382
+            }
+          },
+          "eb_experience_opt_minus_eb_ev_stop_only": {
+            "score_delta": {
+              "mean": 1.422333,
+              "ci95_low": 1.227333,
+              "ci95_high": 1.577675,
+              "ci95_halfwidth": 0.175171
+            },
+            "luck_adjusted_delta": {
+              "mean": 1.370265,
+              "ci95_low": 1.210079,
+              "ci95_high": 1.501044,
+              "ci95_halfwidth": 0.145482
+            }
+          },
+          "eb_experience_opt_minus_eb_likelihood_only": {
             "score_delta": {
               "mean": 0.561333,
               "ci95_low": 0.27365,
@@ -1223,7 +3904,7 @@
         }
       },
       "overall": {
-        "eb_likelihood_learned_minus_eb_naive_prior": {
+        "eb_likelihood_only_minus_eb_naive_prior": {
           "score_delta": {
             "mean": 0.726222,
             "ci95_low": 0.537442,
@@ -1237,7 +3918,63 @@
             "ci95_halfwidth": 0.146685
           }
         },
-        "eb_experience_opt_minus_eb_likelihood_learned": {
+        "eb_ev_stop_only_minus_eb_naive_prior": {
+          "score_delta": {
+            "mean": -0.009,
+            "ci95_low": -0.016111,
+            "ci95_high": -0.003331,
+            "ci95_halfwidth": 0.00639
+          },
+          "luck_adjusted_delta": {
+            "mean": -0.009077,
+            "ci95_low": -0.019168,
+            "ci95_high": 0.00062,
+            "ci95_halfwidth": 0.009894
+          }
+        },
+        "eb_no_canary_planting_minus_eb_naive_prior": {
+          "score_delta": {
+            "mean": 0.408556,
+            "ci95_low": 0.236886,
+            "ci95_high": 0.575558,
+            "ci95_halfwidth": 0.169336
+          },
+          "luck_adjusted_delta": {
+            "mean": 0.38546,
+            "ci95_low": 0.225646,
+            "ci95_high": 0.540899,
+            "ci95_halfwidth": 0.157627
+          }
+        },
+        "eb_experience_opt_minus_eb_no_canary_planting": {
+          "score_delta": {
+            "mean": 0.599444,
+            "ci95_low": 0.530775,
+            "ci95_high": 0.670781,
+            "ci95_halfwidth": 0.070003
+          },
+          "luck_adjusted_delta": {
+            "mean": 0.584447,
+            "ci95_low": 0.522006,
+            "ci95_high": 0.642949,
+            "ci95_halfwidth": 0.060471
+          }
+        },
+        "eb_experience_opt_minus_eb_ev_stop_only": {
+          "score_delta": {
+            "mean": 1.017,
+            "ci95_low": 0.855,
+            "ci95_high": 1.177006,
+            "ci95_halfwidth": 0.161003
+          },
+          "luck_adjusted_delta": {
+            "mean": 0.978983,
+            "ci95_low": 0.827497,
+            "ci95_high": 1.129184,
+            "ci95_halfwidth": 0.150843
+          }
+        },
+        "eb_experience_opt_minus_eb_likelihood_only": {
           "score_delta": {
             "mean": 0.281778,
             "ci95_low": 0.132772,
@@ -1294,10 +4031,115 @@
           }
         }
       }
+    },
+    "before_after_gate": {
+      "n": 90,
+      "before_mean_score": -0.385667,
+      "after_mean_score": 0.622333,
+      "before_valid_call_rate": 1.0,
+      "after_valid_call_rate": 1.0,
+      "before_invalid_episodes": 0,
+      "after_invalid_episodes": 0,
+      "paired_mean_delta": 1.008,
+      "paired_ci95_low": 0.843889,
+      "paired_ci95_high": 1.169889,
+      "paired_episode_deltas": [
+        0.06,
+        0.06,
+        0.13,
+        0.06,
+        1.86,
+        0.0,
+        -0.07,
+        -0.31,
+        -0.76,
+        -0.01,
+        0.0,
+        0.12,
+        -0.07,
+        0.25,
+        -0.02,
+        0.05,
+        0.0,
+        0.25,
+        -0.18,
+        0.12,
+        -0.08,
+        0.06,
+        0.18,
+        0.05,
+        0.06,
+        1.0,
+        -0.07,
+        0.2,
+        0.0,
+        -0.12,
+        1.7,
+        1.0,
+        1.79,
+        1.73,
+        1.55,
+        1.73,
+        1.0,
+        1.54,
+        1.79,
+        1.63,
+        1.73,
+        1.8,
+        1.0,
+        1.63,
+        1.7,
+        1.84,
+        0.1,
+        1.0,
+        1.84,
+        1.51,
+        1.78,
+        1.88,
+        1.74,
+        1.0,
+        1.85,
+        1.74,
+        1.65,
+        1.6,
+        1.0,
+        1.59,
+        1.65,
+        1.65,
+        1.36,
+        -0.11,
+        1.7,
+        1.57,
+        1.47,
+        1.5,
+        1.7,
+        1.7,
+        -0.19,
+        1.79,
+        1.65,
+        1.72,
+        1.61,
+        1.59,
+        1.63,
+        1.59,
+        1.4,
+        0.1,
+        1.45,
+        1.52,
+        1.54,
+        1.57,
+        1.63,
+        1.56,
+        1.56,
+        1.77,
+        1.66,
+        1.12
+      ]
     }
   },
   "dev_hard": {
-    "episodes_replayed": 210,
+    "episodes_replayed": 270,
+    "protocol_label": "post-hoc locked dev hard 0..29",
     "tier": "hard",
     "world_key": "public",
     "eval_seed_range": "0..29",
@@ -1322,11 +4164,13 @@
         "abstain_rate": 0.0,
         "accused_rate": 1.0,
         "mean_accuse_day": 3.9667,
+        "mean_canaries_planted": 5.9333,
+        "total_canaries_planted": 178,
         "correct_count": 3,
         "wrong_count": 27,
         "abstain_count": 0
       },
-      "eb_likelihood_learned": {
+      "eb_likelihood_only": {
         "n": 30,
         "score": {
           "mean": 0.413667,
@@ -1345,9 +4189,61 @@
         "abstain_rate": 0.0,
         "accused_rate": 1.0,
         "mean_accuse_day": 9.2667,
+        "mean_canaries_planted": 16.5333,
+        "total_canaries_planted": 496,
         "correct_count": 27,
         "wrong_count": 3,
         "abstain_count": 0
+      },
+      "eb_ev_stop_only": {
+        "n": 30,
+        "score": {
+          "mean": -0.859333,
+          "ci95_low": -1.0,
+          "ci95_high": -0.685333,
+          "ci95_halfwidth": 0.157333
+        },
+        "luck_adjusted_ev": {
+          "mean": -0.847735,
+          "ci95_low": -0.969503,
+          "ci95_high": -0.695379,
+          "ci95_halfwidth": 0.137062
+        },
+        "accuracy": 0.066667,
+        "wrong_accuse_rate": 0.9,
+        "abstain_rate": 0.033333,
+        "accused_rate": 0.966667,
+        "mean_accuse_day": 3.8276,
+        "mean_canaries_planted": 6.7333,
+        "total_canaries_planted": 202,
+        "correct_count": 2,
+        "wrong_count": 27,
+        "abstain_count": 1
+      },
+      "eb_no_canary_planting": {
+        "n": 30,
+        "score": {
+          "mean": 0.01,
+          "ci95_low": 0.0,
+          "ci95_high": 0.03,
+          "ci95_halfwidth": 0.015
+        },
+        "luck_adjusted_ev": {
+          "mean": -0.01912,
+          "ci95_low": -0.05736,
+          "ci95_high": 0.0,
+          "ci95_halfwidth": 0.02868
+        },
+        "accuracy": 0.033333,
+        "wrong_accuse_rate": 0.0,
+        "abstain_rate": 0.966667,
+        "accused_rate": 0.033333,
+        "mean_accuse_day": 21.0,
+        "mean_canaries_planted": 0.0,
+        "total_canaries_planted": 0,
+        "correct_count": 1,
+        "wrong_count": 0,
+        "abstain_count": 29
       },
       "eb_experience_opt": {
         "n": 30,
@@ -1368,6 +4264,8 @@
         "abstain_rate": 0.0,
         "accused_rate": 1.0,
         "mean_accuse_day": 9.5667,
+        "mean_canaries_planted": 17.1333,
+        "total_canaries_planted": 514,
         "correct_count": 30,
         "wrong_count": 0,
         "abstain_count": 0
@@ -1391,6 +4289,8 @@
         "abstain_rate": 0.0,
         "accused_rate": 1.0,
         "mean_accuse_day": 14.3667,
+        "mean_canaries_planted": 23.0,
+        "total_canaries_planted": 690,
         "correct_count": 24,
         "wrong_count": 6,
         "abstain_count": 0
@@ -1414,6 +4314,8 @@
         "abstain_rate": 0.033333,
         "accused_rate": 0.966667,
         "mean_accuse_day": 13.1724,
+        "mean_canaries_planted": 8.4667,
+        "total_canaries_planted": 254,
         "correct_count": 25,
         "wrong_count": 4,
         "abstain_count": 1
@@ -1437,6 +4339,8 @@
         "abstain_rate": 0.033333,
         "accused_rate": 0.966667,
         "mean_accuse_day": 12.6897,
+        "mean_canaries_planted": 8.5667,
+        "total_canaries_planted": 257,
         "correct_count": 28,
         "wrong_count": 1,
         "abstain_count": 1
@@ -1460,13 +4364,15 @@
         "abstain_rate": 0.0,
         "accused_rate": 1.0,
         "mean_accuse_day": 10.6,
+        "mean_canaries_planted": 14.1333,
+        "total_canaries_planted": 424,
         "correct_count": 29,
         "wrong_count": 1,
         "abstain_count": 0
       }
     },
     "paired_deltas": {
-      "eb_likelihood_learned_minus_eb_naive_prior": {
+      "eb_likelihood_only_minus_eb_naive_prior": {
         "score_delta": {
           "mean": 1.259667,
           "ci95_low": 1.018333,
@@ -1480,7 +4386,63 @@
           "ci95_halfwidth": 0.168148
         }
       },
-      "eb_experience_opt_minus_eb_likelihood_learned": {
+      "eb_ev_stop_only_minus_eb_naive_prior": {
+        "score_delta": {
+          "mean": -0.013333,
+          "ci95_low": -0.04,
+          "ci95_high": 0.0,
+          "ci95_halfwidth": 0.02
+        },
+        "luck_adjusted_delta": {
+          "mean": -0.012447,
+          "ci95_low": -0.03734,
+          "ci95_high": 0.0,
+          "ci95_halfwidth": 0.01867
+        }
+      },
+      "eb_no_canary_planting_minus_eb_naive_prior": {
+        "score_delta": {
+          "mean": 0.856,
+          "ci95_low": 0.672,
+          "ci95_high": 1.01,
+          "ci95_halfwidth": 0.169
+        },
+        "luck_adjusted_delta": {
+          "mean": 0.816169,
+          "ci95_low": 0.651567,
+          "ci95_high": 0.949206,
+          "ci95_halfwidth": 0.14882
+        }
+      },
+      "eb_experience_opt_minus_eb_no_canary_planting": {
+        "score_delta": {
+          "mean": 0.540333,
+          "ci95_low": 0.483992,
+          "ci95_high": 0.593333,
+          "ci95_halfwidth": 0.054671
+        },
+        "luck_adjusted_delta": {
+          "mean": 0.499671,
+          "ci95_low": 0.449413,
+          "ci95_high": 0.546724,
+          "ci95_halfwidth": 0.048656
+        }
+      },
+      "eb_experience_opt_minus_eb_ev_stop_only": {
+        "score_delta": {
+          "mean": 1.409667,
+          "ci95_low": 1.238,
+          "ci95_high": 1.545667,
+          "ci95_halfwidth": 0.153833
+        },
+        "luck_adjusted_delta": {
+          "mean": 1.328286,
+          "ci95_low": 1.182496,
+          "ci95_high": 1.448835,
+          "ci95_halfwidth": 0.13317
+        }
+      },
+      "eb_experience_opt_minus_eb_likelihood_only": {
         "score_delta": {
           "mean": 0.136667,
           "ci95_low": -0.011675,

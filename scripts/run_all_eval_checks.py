@@ -99,6 +99,7 @@ OPTIONAL_VERIFIER_NAMES: tuple[str, ...] = (
     "paired_seed_diagnostics_v14",
     "eval_statistical_robustness_v14",
     "eval_decision_forensics_v14",
+    "canary_information_efficiency_v14",
 )
 
 SECRET_AND_LEAK_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (

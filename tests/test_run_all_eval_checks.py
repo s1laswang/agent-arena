@@ -88,6 +88,7 @@ def test_list_mode_and_name_normalization(capsys):
     assert "version_evolution_v14" in suite.OPTIONAL_VERIFIER_NAMES
     assert "version_evolution_audit" in suite.OPTIONAL_VERIFIER_NAMES
     assert "paired_seed_diagnostics_v14" in suite.OPTIONAL_VERIFIER_NAMES
+    assert "canary_information_efficiency_v14" in suite.OPTIONAL_VERIFIER_NAMES
 
 
 def test_committed_suite_index_and_overview_invariants():
@@ -200,7 +201,7 @@ def test_only_flag_fast_real_verifier_execution(capsys):
 def test_wave2_optional_discovery_and_deterministic_check_resilience(tmp_path: Path, capsys):
     ws = _build_synthetic_workspace(tmp_path / "repo")
 
-    rc_gen = suite.main(["--root", str(ws)])
+    rc_gen = suite.main(["--artifacts-only", "--root", str(ws)])
     capsys.readouterr()
     assert rc_gen == 0
 
@@ -215,7 +216,7 @@ def test_wave2_optional_discovery_and_deterministic_check_resilience(tmp_path: P
     _write_stub_verifier(ws / "scripts/version_evolution_v14.py", exit_code=0, msg="version_evo ok")
     (ws / "results/eval_v14/ladder_pareto_v14.json").write_text('{"ok": true}\n', encoding="utf-8")
 
-    rc_check_before_regen = suite.main(["--check", "--jobs", "3", "--root", str(ws), "--json"])
+    rc_check_before_regen = suite.main(["--check", "--jobs", "8", "--root", str(ws), "--json"])
     check_payload = json.loads(capsys.readouterr().out)
     assert rc_check_before_regen == 0
     assert check_payload["passed"] is True
@@ -225,18 +226,18 @@ def test_wave2_optional_discovery_and_deterministic_check_resilience(tmp_path: P
     assert "harbor_luck_adjusted_v14" in ran_names
     assert "version_evolution_v14" in ran_names
     assert len(ran_names) == 8
-    assert suite.main(["--check", "--jobs", "1", "--root", str(ws)]) == 0
+    assert suite.main(["--check", "--only", "ladder_pareto_v14", "--jobs", "1", "--root", str(ws)]) == 0
     capsys.readouterr()
 
     _write_stub_verifier(ws / "scripts/harbor_luck_adjusted_v14.py", exit_code=1, msg="broken optional")
-    rc_opt_fail = suite.main(["--check", "--root", str(ws), "--json"])
+    rc_opt_fail = suite.main(["--check", "--only", "harbor_luck_adjusted_v14", "--root", str(ws), "--json"])
     fail_payload = json.loads(capsys.readouterr().out)
     assert rc_opt_fail == 1
     assert fail_payload["passed"] is False
     assert any("harbor_luck_adjusted_v14.py" in e for e in fail_payload["errors"])
 
     _write_stub_verifier(ws / "scripts/harbor_luck_adjusted_v14.py", exit_code=0, msg="harbor_la fixed")
-    rc_refresh = suite.main(["--root", str(ws)])
+    rc_refresh = suite.main(["--artifacts-only", "--root", str(ws)])
     capsys.readouterr()
     assert rc_refresh == 0
     refreshed_idx = json.loads(idx_file.read_text(encoding="utf-8"))
@@ -246,13 +247,13 @@ def test_wave2_optional_discovery_and_deterministic_check_resilience(tmp_path: P
         "version_evolution_v14",
     ]
     assert "results/eval_v14/ladder_pareto_v14.json" in refreshed_idx["present_eval_v14_artifacts"]
-    assert suite.main(["--check", "--root", str(ws)]) == 0
+    assert suite.main(["--check", "--artifacts-only", "--root", str(ws)]) == 0
     capsys.readouterr()
 
 
 def test_tamper_tolerance_and_missing_core_detection(tmp_path: Path, capsys):
     ws = _build_synthetic_workspace(tmp_path / "tamper_repo")
-    assert suite.main(["--root", str(ws)]) == 0
+    assert suite.main(["--artifacts-only", "--root", str(ws)]) == 0
     capsys.readouterr()
 
     idx_file = ws / suite.DEFAULT_INDEX_REL
@@ -261,27 +262,27 @@ def test_tamper_tolerance_and_missing_core_detection(tmp_path: Path, capsys):
     tiny_eps: dict[str, Any] = json.loads(idx_file.read_text(encoding="utf-8"))
     tiny_eps["core_headline_summary"]["headline_gap_table"]["cohorts"]["hard_opencode_gemini_4_carbon"]["ratio"] += 1e-12
     idx_file.write_text(json.dumps(tiny_eps, indent=1) + "\n", encoding="utf-8")
-    assert suite.main(["--check", "--root", str(ws)]) == 0
+    assert suite.main(["--check", "--artifacts-only", "--root", str(ws)]) == 0
     capsys.readouterr()
 
     bad_idx: dict[str, Any] = json.loads(idx_file.read_text(encoding="utf-8"))
     bad_idx["core_headline_summary"]["headline_gap_table"]["cohorts"]["hard_opencode_gemini_4_carbon"]["ratio"] = 0.99
     idx_file.write_text(json.dumps(bad_idx, indent=1) + "\n", encoding="utf-8")
-    rc_bad_idx = suite.main(["--check", "--root", str(ws), "--json"])
+    rc_bad_idx = suite.main(["--check", "--artifacts-only", "--root", str(ws), "--json"])
     p_bad_idx = json.loads(capsys.readouterr().out)
     assert rc_bad_idx == 1
     assert any("core_headline_summary differs" in e for e in p_bad_idx["errors"])
 
-    assert suite.main(["--root", str(ws)]) == 0
+    assert suite.main(["--artifacts-only", "--root", str(ws)]) == 0
     capsys.readouterr()
 
     md_file.write_text(md_file.read_text(encoding="utf-8").replace("65% [24%, 98%]", "99% [98%, 100%]"), encoding="utf-8")
-    rc_bad_md = suite.main(["--check", "--root", str(ws), "--json"])
+    rc_bad_md = suite.main(["--check", "--artifacts-only", "--root", str(ws), "--json"])
     p_bad_md = json.loads(capsys.readouterr().out)
     assert rc_bad_md == 1
     assert any("render_overview_md" in e for e in p_bad_md["errors"])
 
-    assert suite.main(["--root", str(ws)]) == 0
+    assert suite.main(["--artifacts-only", "--root", str(ws)]) == 0
     capsys.readouterr()
 
     (ws / "scripts/hint_ablation_audit.py").unlink()
@@ -315,7 +316,7 @@ def test_w5_posthoc_hygiene_and_optional_gpt55_cohorts(tmp_path: Path, capsys):
     (ws / "data/runs/committed/v1.4/opencode-gpt-5.5").mkdir(parents=True, exist_ok=True)
     _write_stub_verifier(ws / "scripts/paired_seed_diagnostics_v14.py", exit_code=0, msg="paired_diag ok")
 
-    assert suite.main(["--root", str(ws)]) == 0
+    assert suite.main(["--artifacts-only", "--root", str(ws)]) == 0
     capsys.readouterr()
 
     idx_file = ws / suite.DEFAULT_INDEX_REL
@@ -334,7 +335,7 @@ def test_w5_posthoc_hygiene_and_optional_gpt55_cohorts(tmp_path: Path, capsys):
     assert "OpenCode + gpt-5.5 (judges' MCP)" in md_txt
     assert "OpenCode + gemini-3.5-flash (judges' MCP)" in md_txt
     assert "committed directory `data/runs/committed/v1.4/opencode-gpt-5.5` present" in md_txt
-    assert suite.main(["--check", "--root", str(ws)]) == 0
+    assert suite.main(["--check", "--artifacts-only", "--root", str(ws)]) == 0
     capsys.readouterr()
 
 

@@ -18,7 +18,7 @@ The solver is paired on all 30 seeds per tier (solver means: hard 0.499, medium 
 |---|---:|---|---:|---:|---:|
 | opencode-1 | 10 | 9 / 10 | +0.472 | +0.506 | 93% [20%, 371%] |
 | opencode-2 | 10 | 10 / 10 | +0.585 | +0.506 | 116% [78%, 363%] |
-| opencode-3 (partial: cut off at 08:30; 1 infra-excluded) | 7 | 7 / 7 | +0.656 | +0.429 | 153% [89%, 411%] |
+| opencode-3 (9 valid; 5 of them finished after the 08:30 cut-off; 1 infra-excluded) | 9 | 9 / 9 | +0.626 | same 9 tasks | 131% [86%, 590%] |
 | do_nothing / stop_early | 10 / 10 | – | +0.000 / +0.000 | +0.506 | 0% |
 
 **The gap did not reproduce in the judge path.** The 65% headline above was measured with MCP tools only on dev seeds; in Harbor the agent also has a shell (used in 20 of 28 trials), and the tag carries the two disclosed 15 Nov changes. We cannot separate those causes from chance with this n. Other models on the MCP-only setup, seeds 0-29: gpt-5.5 101% (below); gemini-4-argon 103% [71%, 144%] and gemini-4-hydrogen 115% [92%, 157%] (PR #81, replay-verified by its authors, not merged before the deadline). The honest summary: on v1.4 hard, frontier agents land near the reference; the 65% result is one model in one harness.

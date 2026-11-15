@@ -1,15 +1,19 @@
-"""Assemble the 2-minute Canary Lab demo video (docs/gemini/VIDEO-2MIN.md) from stills, cards and the Gemini TTS clips.
+"""Assemble the 2-minute Gemini demo video (docs/gemini/VIDEO-2MIN.md): HoldUp opening, then the Canary Lab proof.
 
     python -m canary.gemini.video_cut [--out docs/gemini/assets/canary-lab-2min.mp4] [--build data/gemini/video-build]
-                                      [--ladder-html PATH] [--html PATH] [--no-capture] [--height 1080]
+                                      [--html PATH] [--ladder-html PATH] [--no-capture] [--no-xprov] [--plan] [--preview]
 
 Keyless and local: no Gemini calls. Inputs are committed files only:
+  - shot 0: docs/gemini/assets/holdup-demo-20s.mp4, two 10 s stretches (11-21 s, 44.25-54.25 s) of
+    docs/demo/holdup-mock-demo.mp4 at s1laswang/junction-meta-glasses tag gemini-quote-0515, scaled 1.2x with its yellow
+    simulation banner kept in frame (see VIDEO-2MIN.md for the fetch + cut command);
   - dashboard panels, captured with headless Chrome at 2x (same `?panel=` focus mode as canary.gemini.shoot);
-    --html defaults to the committed results/gemini/dashboard.html (ledger totals quoted in SUBMISSION.md), and
-    --ladder-html can point at a rebuild whose ladder panel reads the current results/gemini/ladder.json;
   - narration clips docs/gemini/assets/narration-2min/<id>.wav and the Live commentator clip;
-  - numbers on cards are parsed from, or cited to, committed result files (source line on every caption).
-The VO is time-stretched (atempo, pitch kept) by one factor so the cut lands at exactly 2:00; the factor is printed.
+  - numbers on cards are parsed from, or cited to, committed result files (source line on every caption);
+  - optional: results/gemini/xprov.png (cross-provider control), used only if it and the clip 03b-xprov.wav exist.
+The timeline is data-driven (`shots_v2`): each shot lasts lead + clip/tempo + tail (shot 0 at least 20 s). The VO tempo
+is 1.0 unless the cut would exceed --max-total (140 s), then the slowest atempo factor that fits (pitch kept) is used.
+The v1 cut (fixed 2:00, eight clips) is the gemini-pr2 version of this file in git history.
 Frames are rendered in Python (sub-pixel Ken-Burns pans, no zoompan jitter) and piped to ffmpeg (libx264, AAC).
 """
 from __future__ import annotations
@@ -29,13 +33,17 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
 W, H, FPS = 1920, 1080, 30
-TOTAL = 120.0
+MAX_TOTAL = 139.5               # v2 spec: <= 2:20 (0.5 s margin for container rounding)
 NARR = ROOT / "docs/gemini/assets/narration-2min"
 COMMENTATOR = ROOT / "docs/gemini/assets/narration/commentator-demo.wav"
 COMMENTATOR_CUT = 5.45          # natural pause in the commentator clip (silencedetect 5.25-5.60 s)
-VO_IDS = ["01-hook", "02-problem", "03-ladder", "04-atlas", "05-swarm", "06-innovative", "07-essential", "08-close"]
-GAP = 0.45                      # silence between VO clips
-END_HOLD = 2.2                 # end card after the last line
+END_HOLD = 2.2                  # end card after the last line
+HOLDUP_CLIP = ROOT / "docs/gemini/assets/holdup-demo-20s.mp4"
+HOLDUP_SECONDS = 20.0
+HOLDUP_SCALE = 1.2              # 1280x720 -> 1536x864 at top-left; captions use the freed right column and bottom band
+HOLDUP_BG = (9, 15, 22)         # the HoldUp page background, so the scaled frame sits seamlessly
+XPROV_PNG = ROOT / "results/gemini/xprov.png"
+LADDER_FRONTIER_BOX = (186, 714, 1416, 1142)   # cost-frontier region of the ladder panel (1x page coords)
 REPO_URL = "github.com/s1laswang/agent-arena"
 
 # palette (dashboard light theme + canary accent)
@@ -111,20 +119,18 @@ def card_intro() -> Image.Image:
     d.ellipse((160, 380, 260, 480), fill=ACCENT)
     d.polygon([(255, 420), (300, 432), (255, 444)], fill=(230, 120, 20))
     d.text((300, 340), "Canary Lab", font=font("serif", 150), fill=DARK_INK)
-    d.text((306, 530), "A mole is leaking documents. Gemini runs the investigation.", font=font("sans", 44), fill=DARK_MUTED)
+    d.text((306, 530), "Gemini plays, attacks and explains", font=font("sans", 50), fill=DARK_INK)
+    d.text((306, 600), "an insider-threat benchmark.", font=font("sans", 50), fill=DARK_MUTED)
     kicker(d, (306, 300), "GOOGLE DEEPMIND · BEST USE OF GEMINI API", DARK_MUTED)
     return im
 
 
 def card_hook() -> Image.Image:
     im, d = canvas(DARK)
-    f = font("serif", 84)
-    d.text((160, 300), "One mole is leaking", font=f, fill=DARK_INK)
-    d.text((160, 400), "a company's documents.", font=f, fill=DARK_INK)
-    d.text((160, 560), "An AI head of security gets", font=f, fill=DARK_INK)
-    x = 160
-    d.text((x, 660), "one accusation.", font=font("serif_b", 84), fill=ACCENT)
-    kicker(d, (164, 240), "CANARY LAB", DARK_MUTED)
+    f = font("serif", 96)
+    d.text((160, 380), "How do you earn", font=f, fill=DARK_INK)
+    d.text((160, 500), "trust in an agent?", font=font("serif_b", 96), fill=ACCENT)
+    kicker(d, (164, 320), "HOLDUP IS THE PRODUCT · CANARY LAB IS THE PROOF", DARK_MUTED)
     return im
 
 
@@ -440,79 +446,236 @@ def wav_seconds(p: Path) -> float:
         return w.getnframes() / w.getframerate()
 
 
-def timeline(shots: dict[str, Path], replay_lines: list[str], tempo: float, starts: list[float], ends: list[float],
-             swarm_md: Path = ROOT / "results/gemini/swarm.md") -> list[Seg]:
-    S, E = starts, ends
-    rel = lambda i, t: S[i] + snap(VO_IDS[i], t) / tempo    # clip-relative estimate -> nearest pause, absolute
-    B = [0.0] + [E[i] + 0.22 for i in range(7)] + [TOTAL]   # shot boundaries
-    img = {k: Image.open(v) for k, v in shots.items()}
+@dataclass
+class Shot:
+    """One beat of the cut. Its length comes from its narration clip: lead + clip/tempo + tail (at least min_dur);
+    a shot without a clip has a fixed length. `audio` is a non-VO clip played from the shot start, untempo'd."""
+    key: str
+    vo: str | None = None
+    lead: float = 0.23
+    tail: float = 0.22
+    min_dur: float = 0.0
+    fixed: float = 0.0
+    audio: tuple[Path, float] | None = None       # (wav, trim seconds)
+
+
+@dataclass
+class Slot:
+    shot: Shot
+    t0: float
+    t1: float
+    vs: float = 0.0          # VO start (absolute)
+    ve: float = 0.0          # VO end (absolute)
+
+
+def shots_v2(xprov: bool = False) -> list[Shot]:
+    s = [Shot("holdup", "00-holdup", lead=0.5, min_dur=HOLDUP_SECONDS),
+         Shot("hook", "01-hook"),
+         Shot("live", fixed=COMMENTATOR_CUT + 0.45, audio=(COMMENTATOR, COMMENTATOR_CUT)),
+         Shot("ladder", "03-ladder")]
+    if xprov:
+        s.append(Shot("xprov", "03b-xprov"))
+    s += [Shot("atlas", "04-atlas"), Shot("swarm", "05-swarm"), Shot("innovative", "06-innovative"),
+          Shot("essential", "07-essential"), Shot("close", "08-close", tail=END_HOLD)]
+    return s
+
+
+def layout(shots: list[Shot], tempo: float, durs: dict[str, float]) -> list[Slot]:
+    slots, t = [], 0.0
+    for sh in shots:
+        if sh.vo:
+            vs = t + sh.lead
+            ve = vs + durs[sh.vo] / tempo
+            t1 = max(t + sh.min_dur, ve + sh.tail)
+        else:
+            vs = ve = t
+            t1 = t + sh.fixed
+        slots.append(Slot(sh, t, t1, vs, ve))
+        t = t1
+    return slots
+
+
+def plan(shots: list[Shot] | None = None, max_total: float = MAX_TOTAL, narr: Path | None = None) -> tuple[float, list[Slot]]:
+    """Slowest VO tempo (>= 1, pitch kept) at which the whole cut fits in max_total; shot lengths follow the clips."""
+    shots = shots if shots is not None else shots_v2(xprov_available())
+    narr = narr or NARR
+    durs = {sh.vo: wav_seconds(narr / f"{sh.vo}.wav") for sh in shots if sh.vo}
+    total = lambda k: layout(shots, k, durs)[-1].t1
+    tempo = 1.0
+    if total(1.0) > max_total:
+        lo, hi = 1.0, 3.0
+        for _ in range(50):
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if total(mid) > max_total else (lo, mid)
+        tempo = hi
+    return tempo, layout(shots, tempo, durs)
+
+
+def xprov_available() -> bool:
+    return XPROV_PNG.exists() and (NARR / "03b-xprov.wav").exists()
+
+
+def ladder_numbers(md_path: Path = ROOT / "results/gemini/ladder.md") -> dict:
+    """Hard-tier cells quoted in VO[03] (carbon high, 3.6-flash high) and the episode count, from ladder.md."""
+    md = md_path.read_text()
+    hard = md.split("## hard", 1)[1]
+    def cell(model: str, level: str) -> dict:
+        m = re.search(rf"^\| {re.escape(model)} \| {level} \| (\d+) \|.*?\*\*([-\d]+% \[[^\]]+\])\*\*.*\| ([\d.]+) \| [\d.]+ \|$", hard, re.M)
+        return {"n": int(m.group(1)), "ratio": m.group(2), "usd": float(m.group(3))}
+    return {"episodes": int(re.search(r"(\d+) valid Gemini episodes", md).group(1)),
+            "carbon": cell("gemini-4-carbon", "high"), "flash": cell("gemini-3.6-flash (requested as 3.5-flash)", "high")}
+
+
+class HoldupFrames:
+    """The committed 20 s HoldUp segment, decoded once to JPEGs at the cut's frame rate and HOLDUP_SCALE."""
+    def __init__(self, src: Path, build: Path):
+        self.dir = build / "holdup"
+        self.size = (round(1280 * HOLDUP_SCALE), round(720 * HOLDUP_SCALE))
+        stamp = self.dir / f".src-{src.stat().st_size}-{self.size[0]}"
+        if not stamp.exists():
+            self.dir.mkdir(parents=True, exist_ok=True)
+            for old in self.dir.glob("*.jpg"):
+                old.unlink()
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-vf",
+                            f"fps={FPS},scale={self.size[0]}:{self.size[1]}:flags=lanczos", "-q:v", "2",
+                            str(self.dir / "%04d.jpg")], check=True)
+            stamp.touch()
+        self.n = len(list(self.dir.glob("*.jpg")))
+
+    def at(self, t: float) -> Image.Image:
+        k = min(self.n, max(1, int(t * FPS) + 1))   # holds the last frame if the shot outlasts the clip
+        return Image.open(self.dir / f"{k:04d}.jpg").convert("RGB")
+
+
+def side_caption(title: str, source: str = "", y: int = 120, x: int = 1430, maxw: int = 440, size: int = 36) -> Image.Image:
+    """Caption box for the empty right column next to the scaled HoldUp frame."""
+    ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
+    ft, fs = sans_b(size), font("mono", 19)
+    tl = wrap(d, title, ft, maxw)
+    sl = wrap(d, source, fs, maxw) if source else []
+    h = 30 + int(size * 1.3) * len(tl) + 26 * len(sl) + (10 if sl else 0) + 18
+    d.rounded_rectangle((x - 30, y, x + maxw + 24, y + h), 16, fill=(24, 27, 33, 240))
+    d.rectangle((x - 30, y + 14, x - 22, y + h - 14), fill=ACCENT + (255,))
+    for i, t in enumerate(tl):
+        d.text((x, y + 22 + i * int(size * 1.3)), t, font=ft, fill=(250, 248, 240, 255))
+    for i, t in enumerate(sl):
+        d.text((x, y + 32 + int(size * 1.3) * len(tl) + i * 26), t, font=fs, fill=(170, 170, 165, 255))
+    return ov
+
+
+def holdup_render(frames: HoldupFrames, dur: float) -> Callable[[float], Image.Image]:
+    def f(u: float) -> Image.Image:
+        im = Image.new("RGB", (W, H), HOLDUP_BG)
+        im.paste(frames.at(u * dur), (0, 0))       # top-left: the yellow SIMULATION banner stays in frame
+        return im
+    return f
+
+
+def timeline(slots: list[Slot], shots_png: dict[str, Path], replay_lines: list[str], tempo: float,
+             swarm_md: Path = ROOT / "results/gemini/swarm.md", holdup: HoldupFrames | None = None) -> list[Seg]:
+    by = {s.shot.key: s for s in slots}
+    img = {k: Image.open(v) for k, v in shots_png.items()}
+    total = slots[-1].t1
     segs: list[Seg] = []
 
-    # 1 hook
-    segs.append(Seg(0, S[0], still(card_intro(), 1.0, 1.03),
-                    [(0.3, S[0], caption("Live commentary: Gemini Live API", "assets/narration/commentator-demo.wav · gemini-3.8-live"))], "1 intro"))
-    t_lab = rel(0, 6.82)
-    segs.append(Seg(S[0], t_lab, still(card_hook(), 1.0, 1.04), label="1 hook"))
-    segs.append(Seg(t_lab, B[1], pan(img["headline"], (150, 0, 1300), (160, 10, 1000)), label="1 headline"))
+    def at(key: str, frac: float) -> float:
+        """Absolute time of a word fraction of the shot's clip, snapped to the nearest real pause."""
+        s = by[key]
+        clip = s.shot.vo
+        return s.vs + snap(clip, wav_seconds(NARR / f"{clip}.wav") * frac) / tempo
 
-    # 2 problem
-    q1 = B[1] + 2.4
-    segs.append(Seg(B[1], q1, still(card_section("Q1", "The problem", "Agents now make irreversible calls under uncertainty."), 1.0, 1.03), label="2 card"))
-    traj = ROOT / "data/runs/committed/gpt-5.5/hard-15-19/episodes.jsonl"
-    segs.append(Seg(q1, B[2], scroll(jsonl_scroll(traj)),
-                    [(rel(1, wav_seconds(NARR / f"{VO_IDS[1]}.wav") * 21 / 41), B[2], caption("One score can't say where an agent fails, whether more thinking helps, or whether it can be gamed."))],
-                    "2 trajectory"))
+    # 0 HoldUp (browser simulation of the glasses flow; its own yellow banner stays visible)
+    s = by["holdup"]
+    hsrc = "github.com/s1laswang/junction-meta-glasses · docs/demo/holdup-mock-demo.mp4 @ gemini-quote-0515"
+    t_live, t_754 = at("holdup", 8 / 43), at("holdup", 33 / 43)
+    segs.append(Seg(s.t0, s.t1, holdup_render(holdup, s.t1 - s.t0),
+                    [(s.t0, s.t1, side_caption("HoldUp: browser simulation of the glasses flow", hsrc, y=110)),
+                     (t_live, s.t1, side_caption("Product: Gemini Live API · camera + voice in, speech out", y=470, size=32)),
+                     (t_754, s.t1, caption("0 of 754 confident strength reads were wrong (1,740 images, 95% upper bound 0.4%)",
+                                           "junction-meta-glasses GEMINI.md @ gemini-quote-0515 (offline eval, not this simulation)"))],
+                    "0 holdup"))
 
-    # 3 ladder
-    q2 = B[2] + 2.2
-    segs.append(Seg(B[2], q2, still(card_section("Q2", "Gemini integration", "Gemini plays: five models, up to four thinking levels, paired with a Bayesian solver."), 1.0, 1.03), label="3 card"))
-    t_cost = rel(2, 26.35)
+    # 1 hook: the trust question, then the Canary Lab title
+    s = by["hook"]
+    t_lab = at("hook", 8 / 19)
+    segs.append(Seg(s.t0, t_lab, still(card_hook(), 1.0, 1.04), label="1 hook"))
+    segs.append(Seg(t_lab, s.t1, still(card_intro(), 1.0, 1.03), label="1 title"))
+
+    # 1b Gemini Live commentator over the game headline panel
+    s = by["live"]
+    segs.append(Seg(s.t0, s.t1, pan(img["headline"], (150, 0, 1300), (160, 10, 1000)),
+                    [(s.t0 + 0.3, s.t1, caption("Live commentary: Gemini Live API", "assets/narration/commentator-demo.wav · gemini-3.8-live"))],
+                    "1 live commentary"))
+
+    # 3 ladder (numbers parsed from results/gemini/ladder.md)
+    s = by["ladder"]
+    L = ladder_numbers()
     src = "results/gemini/ladder.md"
+    q2 = s.t0 + 2.2
+    t_hard, t_cost = at("ladder", 15 / 77), at("ladder", 44 / 77)
+    c, fl = L["carbon"], L["flash"]
+    segs.append(Seg(s.t0, q2, still(card_section("Q2", "Gemini integration", "Gemini plays: five models, up to four thinking levels, paired with a Bayesian solver."), 1.0, 1.03), label="3 card"))
     segs.append(Seg(q2, t_cost, pan(img["ladder"], (150, 130, 1300), (195, 255, 540)),
-                    [(q2 + 0.2, rel(2, 7.77), caption("5 models · up to 4 thinking levels · 157 paired episodes", src)),
-                     (rel(2, 7.77), t_cost, caption("Hard, n = 8 · gemini-3.5-flash: 92% [76%, 113%] at medium · 102% [84%, 129%] at high", src))],
+                    [(q2 + 0.2, t_hard, caption(f"5 models · up to 4 thinking levels · {L['episodes']} paired episodes", src)),
+                     (t_hard, t_cost, caption(f"Hard · gemini-4-carbon, high thinking: {c['ratio']} of the solver · ${c['usd']:.2f} per episode (n = {c['n']})", src))],
                     "3 heatmap"))
-    segs.append(Seg(t_cost, B[3], still(focus(img["ladder"], (186, 714, 1416, 1142), fill=0.94), 1.0, 1.06),
-                    [(t_cost, B[3], caption("API serves 3.5-flash as gemini-3.6-flash · 16/16 correct · $0.34–0.39 per episode vs $1.30 for gemini-4-carbon (high)", src))],
+    segs.append(Seg(t_cost, s.t1, still(focus(img["ladder"], LADDER_FRONTIER_BOX, fill=0.94), 1.0, 1.06),
+                    [(t_cost, s.t1, caption(f"Hard · gemini-3.6-flash (requested as 3.5-flash), high thinking: {fl['ratio']} of the solver · "
+                                            f"${fl['usd']:.2f} per episode (n = {fl['n']}) · not distinguishable, wider CI", src))],
                     "3 cost frontier"))
 
+    # 3b cross-provider control (optional)
+    if "xprov" in by:
+        s = by["xprov"]
+        xp = Image.open(XPROV_PNG).convert("RGB")
+        k = min(W * 0.92 / xp.width, (H - 200) * 0.95 / xp.height)
+        xp = xp.resize((round(xp.width * k), round(xp.height * k)), Image.LANCZOS)
+        im, _ = canvas(BG)
+        im.paste(xp, ((W - xp.width) // 2, max(30, (H - 200 - xp.height) // 2)))
+        segs.append(Seg(s.t0, s.t1, still(im, 1.0, 1.03),
+                        [(s.t0 + 0.2, s.t1, caption("Cross-provider control", "results/gemini/xprov.md · results/gemini/xprov.png"))], "3b xprov"))
+
     # 4 atlas (blind re-run: Gemini never saw our labels)
+    s = by["atlas"]
     bn = blind_numbers()
-    d4 = wav_seconds(NARR / f"{VO_IDS[3]}.wav")
-    t_blind, t_table = rel(3, d4 * 13 / 42), rel(3, d4 * 28 / 42)
+    t_blind, t_table = at("atlas", 13 / 42), at("atlas", 28 / 42)
     src = "results/gemini/atlas_blind.md"
-    segs.append(Seg(B[3], t_table, still(focus(img["atlas"], (128, 128, 1432, 360), fill=0.94), 1.0, 1.06),
-                    [(B[3] + 0.2, t_blind, caption(f"All {bn['eps']} trajectories in one cached context · no labels, no regret, no solver", src)),
+    segs.append(Seg(s.t0, t_table, still(focus(img["atlas"], (128, 128, 1432, 360), fill=0.94), 1.0, 1.06),
+                    [(s.t0 + 0.2, t_blind, caption(f"All {bn['eps']} trajectories in one cached context · no labels, no regret, no solver", src)),
                      (t_blind, t_table, caption(f"Blind: {bn['rec']} of {bn['tags']} code-defined failure modes recovered · {bn['new']} new modes named", src))],
                     "4 blind tiles"))
-    segs.append(Seg(t_table, B[4], still(focus(img["atlas"], (185, 385, 1420, 680)), 1.0, 1.05),
-                    [(t_table, B[4], caption(f"Coverage is weak: the steps Gemini cites hold {bn['cov']}% of all solver regret", src))],
+    segs.append(Seg(t_table, s.t1, still(focus(img["atlas"], (185, 385, 1420, 680)), 1.0, 1.05),
+                    [(t_table, s.t1, caption(f"Coverage is weak: the steps Gemini cites hold {bn['cov']}% of all solver regret", src))],
                     "4 blind recall"))
 
     # 5 swarm (final multi-wave swarm.md)
+    s = by["swarm"]
     sw = swarm_numbers(swarm_md)
-    d5 = wav_seconds(NARR / f"{VO_IDS[4]}.wav")
-    t_pc = rel(4, d5 * 19 / 33)
+    t_pc = at("swarm", 19 / 33)
     src = "results/gemini/swarm.md (final, all waves)"
-    segs.append(Seg(B[4], t_pc, still(card_swarm(sw, src), 1.0, 1.04), label="5 swarm"))
-    segs.append(Seg(t_pc, B[5], still(card_positive_control(sw, src), 1.0, 1.035), label="5 positive control"))
+    segs.append(Seg(s.t0, t_pc, still(card_swarm(sw, src), 1.0, 1.04), label="5 swarm"))
+    segs.append(Seg(t_pc, s.t1, still(card_positive_control(sw, src), 1.0, 1.035), label="5 positive control"))
 
     # 6 innovative
-    q3 = B[5] + 2.4
-    segs.append(Seg(B[5], q3, still(card_section("Q3", "What's innovative", "A benchmark that measures, explains and audits itself."), 1.0, 1.03), label="6 card"))
-    segs.append(Seg(q3, B[6], still(card_gallery(gallery_numbers()), 1.0, 1.05), label="6 gallery"))
+    s = by["innovative"]
+    q3 = s.t0 + 2.4
+    segs.append(Seg(s.t0, q3, still(card_section("Q3", "What's innovative", "A benchmark that measures, explains and audits itself."), 1.0, 1.03), label="6 card"))
+    segs.append(Seg(q3, s.t1, still(card_gallery(gallery_numbers()), 1.0, 1.05), label="6 gallery"))
 
     # 7 essential
-    q4 = B[6] + 2.2
-    t_feat = rel(6, 8.78)
-    segs.append(Seg(B[6], q4, still(card_section("Q4", "Why Gemini is essential", "Three API features the lab cannot run without."), 1.0, 1.03), label="7 card"))
+    s = by["essential"]
+    q4 = s.t0 + 2.2
+    t_feat = at("essential", 19 / 43)
+    segs.append(Seg(s.t0, q4, still(card_section("Q4", "Why Gemini is essential", "Three API features the lab cannot run without."), 1.0, 1.03), label="7 card"))
     segs.append(Seg(q4, t_feat, pan(img["usage"], (150, 120, 1300), (180, 225, 1080)),
-                    [(max(q4, rel(6, 2.9)), rel(6, 5.12), caption("thinking_level: the ladder's knob")),
-                     (rel(6, 5.12), t_feat, caption("thought signatures: reasoning kept across tool calls"))], "7 usage"))
-    segs.append(Seg(t_feat, B[7], still(card_features(usage_numbers()), 1.0, 1.03), label="7 features"))
+                    [(max(q4, at("essential", 6 / 43)), at("essential", 12 / 43), caption("thinking_level: the ladder's knob")),
+                     (at("essential", 12 / 43), t_feat, caption("thought signatures: reasoning kept across tool calls"))], "7 usage"))
+    segs.append(Seg(t_feat, s.t1, still(card_features(usage_numbers()), 1.0, 1.03), label="7 features"))
 
     # 8 close
-    t_end = E[7] + 0.35
+    s = by["close"]
+    t_end = s.ve + 0.35
     n = len(replay_lines)
 
     def term(u: float, _cache={}):
@@ -520,8 +683,8 @@ def timeline(shots: dict[str, Path], replay_lines: list[str], tempo: float, star
         if k not in _cache:
             _cache[k] = terminal_card(replay_lines, k)
         return _cache[k]
-    segs.append(Seg(B[7], t_end, term, label="8 replay"))
-    segs.append(Seg(t_end, TOTAL, still(card_end(), 1.0, 1.02), label="8 end card"))
+    segs.append(Seg(s.t0, t_end, term, label="8 replay"))
+    segs.append(Seg(t_end, total, still(card_end(), 1.0, 1.02), label="8 end card"))
     return segs
 
 
@@ -560,7 +723,7 @@ def frame_bytes(fi: int) -> bytes:
     return frame.convert("RGB").tobytes()
 
 
-def render(segs: list[Seg], audio_args: list[str], out: Path, height: int, crf: int, workers: int = 6) -> None:
+def render(segs: list[Seg], audio_args: list[str], out: Path, height: int, crf: int, total: float, workers: int = 6) -> None:
     """Frames are rendered by a fork pool (segments are inherited, not pickled) and streamed to ffmpeg in order."""
     import multiprocessing as mp
     global _SEGS
@@ -572,7 +735,7 @@ def render(segs: list[Seg], audio_args: list[str], out: Path, height: int, crf: 
            *audio_args, *vf, "-c:v", "libx264", "-preset", "medium", "-crf", str(crf), "-pix_fmt", "yuv420p",
            "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", "-shortest", str(out)]
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    n = int(round(TOTAL * FPS))
+    n = int(round(total * FPS))
     with mp.get_context("fork").Pool(workers) as pool:
         for fi, b in enumerate(pool.imap(frame_bytes, range(n), chunksize=12)):
             p.stdin.write(b)
@@ -583,34 +746,42 @@ def render(segs: list[Seg], audio_args: list[str], out: Path, height: int, crf: 
         raise SystemExit("ffmpeg failed")
 
 
-def audio_inputs(tempo: float, starts: list[float]) -> list[str]:
-    args = ["-i", str(COMMENTATOR)] + sum((["-i", str(NARR / f"{i}.wav")] for i in VO_IDS), [])
-    fc = [f"[1:a]atrim=0:{COMMENTATOR_CUT},afade=t=out:st={COMMENTATOR_CUT - 0.25}:d=0.25,aresample=48000,volume=0.9[c]"]
-    for k, s in enumerate(starts):
-        fc.append(f"[{k + 2}:a]atempo={tempo:.4f},aresample=48000,adelay={int(s * 1000)}:all=1[v{k}]")
-    mix = "[c]" + "".join(f"[v{k}]" for k in range(len(starts)))
-    fc.append(f"{mix}amix=inputs={len(starts) + 1}:normalize=0:duration=longest,apad,atrim=0:{TOTAL},"
+def audio_inputs(tempo: float, slots: list[Slot]) -> list[str]:
+    """Every VO clip at its slot's start (one tempo), plus untempo'd shot audio (the Live commentator), mixed and loudnormed."""
+    args, fc, labels = [], [], []
+    k = 1                                   # input 0 is the raw video pipe
+    total = slots[-1].t1
+    for s in slots:
+        if s.shot.audio:
+            wav, trim = s.shot.audio
+            args += ["-i", str(wav)]
+            fc.append(f"[{k}:a]atrim=0:{trim},afade=t=out:st={trim - 0.25}:d=0.25,aresample=48000,volume=0.9,"
+                      f"adelay={int(s.t0 * 1000)}:all=1[a{k}]")
+            labels.append(f"[a{k}]")
+            k += 1
+        if s.shot.vo:
+            args += ["-i", str(NARR / f"{s.shot.vo}.wav")]
+            fc.append(f"[{k}:a]atempo={tempo:.4f},aresample=48000,adelay={int(s.vs * 1000)}:all=1[a{k}]")
+            labels.append(f"[a{k}]")
+            k += 1
+    fc.append(f"{''.join(labels)}amix=inputs={len(labels)}:normalize=0:duration=longest,apad,atrim=0:{total},"
               f"loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[a]")
     return args + ["-filter_complex", ";".join(fc), "-map", "0:v", "-map", "[a]"]
 
 
-def plan(vo_start: float = COMMENTATOR_CUT + 0.45) -> tuple[float, list[float], list[float]]:
-    durs = [wav_seconds(NARR / f"{i}.wav") for i in VO_IDS]
-    avail = TOTAL - vo_start - GAP * (len(durs) - 1) - END_HOLD
-    tempo = max(1.0, sum(durs) / avail)
-    starts, ends, t = [], [], vo_start
-    for d in durs:
-        starts.append(t)
-        ends.append(t + d / tempo)
-        t = ends[-1] + GAP
-    return tempo, starts, ends
-
-
 def resolved_script(script: Path, out: Path) -> Path:
-    """Copy of the script whose VO lines are the exact spoken text (narration index.json), for video_qa."""
+    """Copy of the script whose VO lines are the exact spoken text (narration index.json), for video_qa.
+    Lines whose clip is not in the cut (e.g. the optional VO[03b-xprov] before it is narrated) are dropped."""
     text = {k: v["text"] for k, v in json.loads((NARR / "index.json").read_text()).items()}
-    s = re.sub(r"^(>\s*VO\[(?P<id>[\w.-]+)\]:\s*).+$", lambda m: m.group(1) + text[m.group("id")], script.read_text(), flags=re.M)
-    out.write_text(s)
+    lines = []
+    for line in script.read_text().splitlines(keepends=True):
+        m = re.match(r"^(>\s*VO\[(?P<id>[\w.-]+)\]:\s*).+$", line.rstrip("\n"))
+        if m:
+            if m.group("id") not in text or not (NARR / f"{m.group('id')}.wav").exists():
+                continue
+            line = m.group(1) + text[m.group("id")] + "\n"
+        lines.append(line)
+    out.write_text("".join(lines))
     return out
 
 
@@ -622,6 +793,9 @@ def main(argv=None) -> int:
     ap.add_argument("--ladder-html", type=Path, default=None, help="dashboard build whose ladder panel to use")
     ap.add_argument("--replay-log", type=Path, default=None, help="captured `make lab-replay` output")
     ap.add_argument("--swarm-md", type=Path, default=ROOT / "results/gemini/swarm.md", help="final multi-wave swarm report")
+    ap.add_argument("--holdup", type=Path, default=HOLDUP_CLIP, help="20 s HoldUp segment (shot 0)")
+    ap.add_argument("--no-xprov", action="store_true", help="skip the optional cross-provider shot even if its inputs exist")
+    ap.add_argument("--max-total", type=float, default=MAX_TOTAL)
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--no-capture", action="store_true", help="reuse <build>/shots/*@2x.png")
     ap.add_argument("--height", type=int, default=1080)
@@ -630,7 +804,8 @@ def main(argv=None) -> int:
     ap.add_argument("--preview", action="store_true", help="write one mid-segment frame per segment to <build>/preview")
     a = ap.parse_args(argv)
 
-    tempo, starts, ends = plan()
+    tempo, slots = plan(shots_v2(xprov_available() and not a.no_xprov), a.max_total)
+    total = slots[-1].t1
     shots_dir = a.build / "shots"
     panels = ["headline", "atlas", "swarm", "usage"]
     if not a.no_capture and not a.plan:
@@ -638,11 +813,12 @@ def main(argv=None) -> int:
         capture_panels(a.ladder_html or a.html, ["ladder"], shots_dir)
     shots = {p: shots_dir / f"{p}@2x.png" for p in panels + ["ladder"]}
     lines = replay_excerpt(a.replay_log or (a.build / "replay.txt"))
+    print(f"VO tempo x{tempo:.3f}; total {total:.2f} s")
+    for s in slots:
+        print(f"  shot {s.shot.key:10s} {s.t0:6.2f}-{s.t1:6.2f}" + (f"  VO {s.shot.vo} {s.vs:.2f}-{s.ve:.2f}" if s.shot.vo else ""))
     if a.plan and not all(p.exists() for p in shots.values()):
-        segs = []
-    else:
-        segs = timeline(shots, lines, tempo, starts, ends, a.swarm_md)
-    print(f"VO tempo x{tempo:.3f}; VO starts " + ", ".join(f"{i}@{s:.1f}s" for i, s in zip(VO_IDS, starts)) + f"; last line ends {ends[-1]:.1f}s")
+        return 0
+    segs = timeline(slots, shots, lines, tempo, a.swarm_md, HoldupFrames(a.holdup, a.build))
     for s in segs:
         print(f"  {s.start:6.2f}-{s.end:6.2f}  {s.label}")
     if a.plan:
@@ -651,16 +827,16 @@ def main(argv=None) -> int:
         pv = a.build / "preview"
         pv.mkdir(parents=True, exist_ok=True)
         for k, s in enumerate(segs):
-            fr = s.render(0.5).convert("RGBA")
+            tm = s.end - 0.5 if s.end - s.start > 1.2 else (s.start + s.end) / 2
+            fr = s.render((tm - s.start) / max(1e-6, s.end - s.start)).convert("RGBA")
             for c0, c1, ov in s.captions:
-                if c0 <= (s.start + s.end) / 2 < c1 or (c1 > s.start and c0 < s.end and not any(c0 <= (s.start + s.end) / 2 < c1 for c0, c1, _ in s.captions)):
+                if c0 <= tm < c1:
                     fr.alpha_composite(ov)
-                    break
             fr.convert("RGB").resize((960, 540), Image.LANCZOS).save(pv / f"{k:02d}.jpg", quality=85)
         print(f"previews in {pv}")
         return 0
-    render(segs, audio_inputs(tempo, starts), a.out, a.height, a.crf, a.workers)
-    print(f"wrote {a.out} ({a.out.stat().st_size / 1e6:.1f} MB)")
+    render(segs, audio_inputs(tempo, slots), a.out, a.height, a.crf, total, a.workers)
+    print(f"wrote {a.out} ({a.out.stat().st_size / 1e6:.1f} MB, {total:.2f} s)")
     qa = resolved_script(ROOT / "docs/gemini/VIDEO-2MIN.md", a.build / "VIDEO-2MIN.resolved.md")
     print(f"QA script (spoken text): {qa}")
     return 0

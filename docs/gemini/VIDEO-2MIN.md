@@ -29,9 +29,9 @@ and video_cut, then video_qa.
 
 ## Voice-over (Gemini TTS reads each VO line; about 285 words, time-stretched to fit 2:00)
 
-> VO[01-hook]: One mole is leaking a company's documents. An AI head of security gets one accusation. This is Canary Lab: Gemini plays, explains and attacks its own benchmark.
+> VO[00-holdup]: A blind user holds up a medicine box. HoldUp runs on the Gemini Live API: camera and voice in, speech out. It reads the strength aloud and says when it is not sure. Zero of seven hundred fifty-four confident strength reads were wrong.
 
-> VO[02-problem]: Agents now make irreversible calls under uncertainty. Before you ship one, you pick a model and how hard it thinks. One benchmark number can't tell you where they fail, whether more thinking would help, or whether the score can be gamed.
+> VO[01-hook]: How do you earn that trust in an agent? Canary Lab: Gemini plays, attacks and explains an insider-threat benchmark.
 
 > VO[03-ladder]: So Gemini plays. Five models, up to four thinking levels, five hundred eighty-seven paired episodes. On hard, Gemini four Carbon on high thinking reaches one hundred six percent of the solver, interval ninety-four to one hundred twenty-six, at one dollar ninety-three per episode. Gemini three point six Flash on high thinking costs forty-five cents, more than four times cheaper, and scores eighty-eight percent, interval fifty-one to one hundred thirty-eight: not distinguishable from the solver, but less certain.
 

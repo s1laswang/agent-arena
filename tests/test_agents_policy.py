@@ -283,3 +283,16 @@ def test_gemini_runner_passes_hint_to_both_harnesses(tmp_path):
         cmd = gr.Job(h, "hard", 3, tmp_path, "gemini-4-carbon", 60, "ev_delay")._cmd()
         assert cmd[-2:] == ["--hint", "ev_delay"]
         assert "--hint" not in gr.Job(h, "hard", 3, tmp_path, "gemini-4-carbon", 60)._cmd()
+
+
+def test_committed_hint_run_never_pools_with_unhinted():
+    """A hinted run is a different agent: its committed episodes carry a +hint:<tag> label (merge_staging)."""
+    import json, pathlib
+    root = pathlib.Path(__file__).parent.parent / "data/runs/committed/v1.4"
+    hint = root / "opencode-gemini-4-carbon-hint-gather/hard/episodes.jsonl"
+    base = root / "opencode-gemini-4-carbon/hard/episodes.jsonl"
+    if not hint.exists():
+        return
+    agents = {json.loads(x)["agent"] for x in hint.read_text().splitlines() if x.strip()}
+    base_agents = {json.loads(x)["agent"] for x in base.read_text().splitlines() if x.strip()}
+    assert agents == {"opencode:google/gemini-4-carbon+hint:gather"} and not agents & base_agents

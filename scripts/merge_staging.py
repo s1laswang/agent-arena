@@ -56,6 +56,11 @@ def main(argv=None) -> int:
                 metas.append(json.loads((d / "meta.json").read_text()) if (d / "meta.json").exists() else {})
             if not eps:
                 continue
+            hint = metas[0].get("hint") if metas else None
+            if hint:   # hinted runs are a different agent: never pool them with the unhinted run of the same model
+                for e in eps:
+                    e.setdefault("agent_base", e["agent"])
+                    e["agent"] = f"{e['agent_base']}+hint:{hint}"
             out = root / target / tier
             (out / "transcripts").mkdir(parents=True, exist_ok=True)
             for e in eps:
@@ -83,6 +88,9 @@ def main(argv=None) -> int:
             meta = {k: m0.get(k) for k in ("agent", "model", "model_id", "provider", "harness", "steps_source", "context",
                                            "reasoning_effort", "reasoning_effort_source", "api", "provider_settings",
                                            "opencode_version", "opencode_permission") if m0.get(k) is not None}
+            if hint:
+                meta["agent"] = eps[0]["agent"]
+                meta["agent_base"] = eps[0]["agent_base"]
             meta.update({"tier": tier, "tiers_version": a.tiers_version, "seeds": seeds, "planned_seeds": planned,
                          "status": ("complete" if not missing else f"INCOMPLETE: seeds {missing} have no valid episode")
                          + (f"; extension seeds {ext[0]}-{ext[-1]} as budget allowed: ran {[s for s in seeds if s in ext]}"

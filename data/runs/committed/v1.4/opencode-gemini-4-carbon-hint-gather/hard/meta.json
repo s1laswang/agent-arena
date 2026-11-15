@@ -1,5 +1,5 @@
 {
- "agent": "opencode:google/gemini-4-carbon",
+ "agent": "opencode:google/gemini-4-carbon+hint:gather",
  "model": "google/gemini-4-carbon",
  "model_id": "gemini-4-carbon",
  "provider": "opencode",
@@ -14,6 +14,7 @@
   "*": "deny",
   "canary_*": "allow"
  },
+ "agent_base": "opencode:google/gemini-4-carbon",
  "tier": "hard",
  "tiers_version": "v1.4",
  "seeds": [
@@ -67,7 +68,7 @@
   "cost_usd_upper": 14.7031
  },
  "pricing": "gemini-4-carbon list prices per 1M tokens: input $2.00, cached input $0.10, output (incl. thinking) $10.00 through 2026-11-30 (aistudio.google.com/docs/pricing, checked 2026-11-14). cost_usd_est bills cached input at $0.10; the upper bound bills all input at $2.00. OpenCode runs also carry OpenCode's own reported cost (models.dev prices).",
- "provenance": "scripts/gemini_runner.py --hint gather (one episode per process; infra-invalid attempts excluded and retried; seeds in fixed order 0->29, <=3 parallel, hard stop 05:40 Helsinki on 2026-11-15; seeds 2, 3, 4 were in flight at the stop and were killed and dropped unscored), merged by scripts/merge_staging.py",
+ "provenance": "scripts/gemini_runner.py --hint gather (one episode per process; infra-invalid attempts excluded and retried; seeds in fixed order 0->29, <=3 parallel, hard stop 05:40 Helsinki on 2026-11-15; seeds 2, 3, 4 were in flight at the stop and were killed and dropped unscored), merged by scripts/merge_staging.py; agent relabelled +hint:gather so it never pools with the unhinted run",
  "invalid_episodes": [],
  "infra_invalid_attempts_excluded": [
   "opencode-hard-0-011232: invalid: infra:provider_quota",

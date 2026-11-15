@@ -28,14 +28,14 @@ Numbers: 13 tools `[src: canary/env.py tools_spec(); docs/reports/gap.md "The pr
 
 ## Scene 3 · 1:30–2:30 · The bar: a solver, and the baselines that fail
 **Shot:** terminal, `make reproduce` scrolling, then freeze on the hard paired table. Highlight the solver row, then the baselines.
-**On screen (hard, 40 judge seeds):** solver **+0.547**, heuristic **−0.044**, logs-only **−1.000**, random **−0.754**, guess on day 1 **−0.950**, do nothing **0.000** `[src: results/judge_table.md, "## hard (headline)" paired rows]`
+**On screen (hard, 40 judge seeds, fingerprint `893b837616b9`):** solver **+0.553 +/- 0.093**, heuristic **-0.051 +/- 0.187**, `logs_only` **-0.956 +/- 0.086**, `random` **-0.758 +/- 0.144**, `guess_day1` **-1.000 +/- 0.000**, `stop_early` **+0.000**, `do_nothing` **+0.000** `[src: results/judge_table.md, "## hard (headline: the Harbor judge set)" paired rows]`
 
 > VO[03-bar]: A Bayesian reference solver sets the bar. One command, make reproduce, replays the whole table with no API keys. On the hard tier the solver keeps about half the company's value. The obvious shortcuts lose money: reading the logs alone, guessing on day one, or acting at random all score below zero.
 
 ## Scene 4 · 2:30–3:40 · The gap: Gemini in the judges' harness
-**Shot:** `data/runs/committed/v1.4/paired_table_gemini.md` rendered as a slide: two bars per tier (solver vs gemini-4-carbon), CI whiskers.
+**Shot:** `results/eval_v14/headline_gap_paired_v14.png` and `data/runs/committed/v1.4/paired_table_gemini.md` rendered as a slide: two bars per tier (solver vs gemini-4-carbon), CI whiskers.
 **On screen:**
-- hard, OpenCode + gemini-4-carbon over MCP, n=30: **65% of the solver [95% CI 24%, 98%]**; luck-adjusted **72% [52%, 91%]** `[src: data/runs/committed/v1.4/paired_table_gemini.md, hard OpenCode row]`
+- hard, OpenCode + gemini-4-carbon over MCP, n=30 (dev seeds 0-29, post-hoc seed lock in `671ed96`, 28 s after `8fd4dec`): **65% of the solver [95% CI 24%, 98%]**; luck-adjusted **72% [52%, 91%]** `[src: data/runs/committed/v1.4/paired_table_gemini.md, hard OpenCode row; docs/reports/gap.md]`
 - accuracy **0.83** vs solver **0.97**; mean accusation day **13.2** vs **10.6** `[src: same file, same rows]`
 - footnote: in-process gemini-4-carbon on hard **95% [62%, 140%]** (parity); OpenCode on medium **111% [99%, 127%]** `[src: same file]`
 
@@ -64,25 +64,26 @@ Then fast-forward to day 16: Gemini accuses the same e11. **Score 0.73 vs 0.40 (
 ## Scene 8 · 6:40–7:50 · Can you cheat it?
 **Shot:** scroll `docs/EXPLOITS.md` on GitHub (fast), then the Harbor cheat result, then `results/gemini/swarm.md` scoreboard.
 **On screen:**
-- **43 attacks logged**, each with its fix and a regression test `[src: docs/EXPLOITS.md, rows #0–#42]`
-- Harbor reward-hack agent that accuses everyone: **−1.0 on 6/6 trials** `[src: results/harbor/signed-cheat/result.json "mean": -1.0]`; the probe that never accuses: **0.0 on 6/6** `[src: docs/EXPLOITS.md row #41]`
-- Gemini red-team swarm: **35 whitebox + 18 blackbox attackers, 0 verified exploits** `[src: results/gemini/swarm.md "Verified exploits: 0"; results/gemini/swarm_blackbox.md "Verified exploits: 0"]`
-- positive control: **4 of 4** attackers re-find a deliberately reopened exploit `[src: results/gemini/swarm_control.md "Verified exploits: 4"]`
+- **52 numbered rows (`#0` to `#51`, plus `J1-J15`)**, each with its fix and a regression test `[src: docs/EXPLOITS.md]`
+- Harbor reward-hack `cheat` agent that accuses everyone: **-1.0 on 6/6 trials** `[src: results/harbor/signed-cheat/result.json "mean": -1.0]`; `cheat_probe` that never accuses: **0.0 on 6/6** (**80/80** Harbor trials consistent) `[src: docs/EXPLOITS.md row #41, J7, J12]`
+- Gemini red-team swarm: **100 ledger-verified attacks** (**75 whitebox + 16 blackbox + 9 MCP reruns, 0 verified exploits**) `[src: results/gemini/swarm.md, results/gemini/swarm.json]`
+- positive control: **4/4** (**4 of 4** attackers re-find a deliberately reopened exploit) `[src: results/gemini/swarm.md, results/gemini/swarm_control.md]`
 
 > VO[08-integrity]: A benchmark is only worth something if you can't game it. We logged every attack we tried on our own reward, forty-three of them, each with a fix and a regression test. A Harbor agent that accuses everyone scores minus one on every trial. Then we let Gemini attack it: fifty-three attackers, most of them reading the entire codebase. Zero verified exploits. To prove the detector works, we reopened one old hole on purpose, and four out of four attackers found it.
 
-## Scene 9 · 7:50–8:10 · Small models (tiebreak)
-**Shot:** a two-row table, then the training curve if FR8 commits one.
-**On screen (now):** Qwen2.5-1.5B + LoRA: valid tool calls **0.08 → 0.99**; **no reward gain yet** `[src: docs/reports/fr8.md "## 08:20 status — J4 before/after (final)"]`
-**Placeholder:** ⟨v2/v3 result, FR8 report ~07:00 Sun: model, n, score ± CI vs base, file path⟩. If the v3 result shows no reward gain, keep the honest line.
+*Editor note: `08-integrity.mp3` was recorded at Sat 23:17 wave-1 counts (`43` rows / `53` attackers); keep the updated on-screen numbers above if retaining the Sat 23:17 audio clip.*
 
-> VO[09-small]: ⟨placeholder until the FR8 report: one sentence, the committed v3 number, or "a small model learns the protocol but not yet the judgement"⟩
+## Scene 9 · 7:50–8:10 · Small models (tiebreak)
+**Shot:** the committed WS4 held-out table (`fr8/analysis/out/ws4_table_v3.md`, `README.md`).
+**On screen (held-out episodes, model plays alone):** `Qwen2.5-1.5B-Instruct` LoRA: `base` **0.000 +/- 0.000** (`n=36`, **3%** valid calls), `v2` **-0.457 +/- 0.086** (`n=172`), `v3-4k` **-0.147 +/- 0.063** (`n=180`, **+0.310 +/- 0.107** vs `v2`, **100%** valid calls, training-state mole ID **0.19 -> 0.89**), `v3-8k seed 2` **-0.050 +/- 0.049** (`n=90`); **bar not met**, no held-out gain over base `[src: fr8/analysis/out/ws4_table_v3.md, docs/reports/fr8.md, README.md]`
+
+> VO[09-small]: For the tiebreak we trained Qwen 2.5 1.5B with LoRA and reward training. Valid tool calls rose from three percent to one hundred percent and reckless accusations dropped, but held-out scores stayed below zero: bar not met, no gain over base.
 
 ## Scene 10 · 8:10–8:40 · Gemini runs the lab, and you can play it
 **Shot:** `results/gemini/dashboard.html` (usage panel), then `make lab-replay` ending in "ALL OK", then the game's "case closed" reveal comparing the player with the solver.
 **On screen:**
 - Gemini roles: player (ladder) · analyst (atlas) · attacker (swarm) · builder · gateway `[src: docs/gemini/SUBMISSION.md §2]`
-- **11,187 Gemini calls, $88.75** at list price, as of Sat 18:23 `[src: docs/gemini/SUBMISSION.md §2; refresh from results/gemini/dashboard.html before export]`
+- **24,855 Gemini calls, 85.3% cached, $226.34 at list price**, all ledgered `[src: docs/gemini/SUBMISSION.md, results/gemini/dashboard.html]`
 - `make lab-replay`: **4 episodes reproduced step for step, no key** `[src: make lab-replay output; recorded store results/gemini/replay-ladder/]`
 - "Beat the solver: ⟨game URL⟩"
 
@@ -95,12 +96,12 @@ Then fast-forward to day 16: Gemini accuses the same e11. **Score 0.73 vs 0.40 (
 |---|---|---|---|
 | 1, 2, 10 | browser game, seed 3000 | `make game-serve`, open http://localhost:8000/?seed=3000 | ready (dry-run 23:10 Sat) |
 | 3 | terminal `make reproduce` | record live; 2 min 23 s on the Mac, cut to 20 s | ready |
-| 4 | gap bar chart | from `data/runs/committed/v1.4/paired_table_gemini.json` | to make (slide) |
+| 4 | gap bar chart | `results/eval_v14/headline_gap_paired_v14.png` (`data/runs/committed/v1.4/paired_table_gemini.json`) | ready |
 | 5, 6 | terminal `scripts/demo_replay.py --seed 4` / `--seed 26` | record live, 0.5 s per run | ready |
 | 6 | Gemini's final message, seed 26 | `transcripts/26.txt`, last `"type":"text"` line | ready |
 | 7 | atlas table and chart | `results/gemini/atlas.md`, `results/gemini/atlas_charts/` | ready |
 | 8 | EXPLOITS, Harbor, swarm | GitHub file view; `results/harbor/signed-cheat/result.json`; `results/gemini/swarm.md` | ready |
-| 9 | small-model table | FR8 report | **placeholder** |
+| 9 | small-model table | `fr8/analysis/out/ws4_table_v3.md`; `docs/reports/fr8.md` | ready |
 | 10 | dashboard + lab-replay | `results/gemini/dashboard.html`; `make lab-replay` (11.5 s) | ready |
 
 ## Do not say

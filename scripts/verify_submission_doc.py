@@ -6,7 +6,7 @@ Runs four fast (<2s) read-only checks with zero API calls and zero mutations:
   1. AfterQuery SUBMISSION.md Structure & Form Bounds
   2. AfterQuery SUBMISSION.md Numeric Provenance
   3. Gemini SUBMISSION.md Provenance
-  4. Post-edd4fe6d Completed TODO Advisory (WARN only; exit code stays 0)
+  4. Post-edd4fe6d Refresh & Cross-Doc Sync
 """
 from __future__ import annotations
 
@@ -35,13 +35,14 @@ PLUS_MINUS = chr(0x00B1)
 CHECK_AQ_STRUCTURE = "AfterQuery SUBMISSION.md Structure & Form Bounds"
 CHECK_AQ_NUMBERS = "AfterQuery SUBMISSION.md Numeric Provenance"
 CHECK_GEMINI_PROV = "Gemini SUBMISSION.md Provenance"
-CHECK_POST_EDD4_ADVISORY = "Post-edd4fe6d Completed TODO Advisory"
+CHECK_POST_EDD4_SYNC = "Post-edd4fe6d Refresh & Cross-Doc Sync"
+CHECK_POST_EDD4_ADVISORY = CHECK_POST_EDD4_SYNC
 
 CHECK_NAMES: tuple[str, ...] = (
     CHECK_AQ_STRUCTURE,
     CHECK_AQ_NUMBERS,
     CHECK_GEMINI_PROV,
-    CHECK_POST_EDD4_ADVISORY,
+    CHECK_POST_EDD4_SYNC,
 )
 
 MAX_TAGLINE_CHARS = 120
@@ -1043,10 +1044,13 @@ def check_afterquery_provenance(
     assert ws4_txt is not None
     ws4_rows = _parse_ws4_all_rows(ws4_txt)
     for model_id, label in (
+        ("base", "WS4 base"),
         ("v1", "WS4 v1 SFT"),
         ("v2", "WS4 v2 SFT"),
         ("v3-4k-s0", "WS4 v3-4k-s0 GRPO"),
+        ("v3-4k-s1", "WS4 v3-4k-s1 GRPO partial"),
         ("v3-8k-s1", "WS4 v3-8k-s1 GRPO"),
+        ("v3-8k-s2", "WS4 v3-8k-s2 GRPO"),
     ):
         wrow = ws4_rows.get(model_id)
         if wrow is None:
@@ -1356,92 +1360,240 @@ def check_gemini_provenance(
     )
 
 
-def check_post_edd4fe6d_advisories(root: Path = ROOT) -> CheckResult:
-    name = CHECK_POST_EDD4_ADVISORY
-    sub_path = root / "docs" / "SUBMISSION.md"
-    if not sub_path.is_file():
-        return CheckResult(name, "WARN", "docs/SUBMISSION.md absent (covered by Check 1)")
+def check_post_edd4fe6d_sync(root: Path = ROOT) -> CheckResult:
+    name = CHECK_POST_EDD4_SYNC
+    failures: list[str] = []
+    doc_rel = "docs/SUBMISSION.md"
+    sub_txt = _read_text(root, doc_rel, failures)
+    if sub_txt is None:
+        return CheckResult(name, "FAIL", f"missing or unreadable {doc_rel}", failures)
 
-    try:
-        sub_txt = sub_path.read_text(encoding="utf-8")
-    except OSError as exc:
-        return CheckResult(name, "WARN", f"unable to read docs/SUBMISSION.md: {type(exc).__name__}")
+    if EM_DASH in sub_txt:
+        failures.append(f"{doc_rel}: contains forbidden em dash character")
+    if EN_DASH in sub_txt:
+        failures.append(f"{doc_rel}: contains forbidden en dash character")
 
     sub_norm = _normalize_numeric_text(sub_txt)
-    advisories: list[str] = []
+    header_block = "\n".join(sub_txt.splitlines()[:6])
+
+    if "against `justSilas` at `edd4fe6d`" in header_block:
+        failures.append(
+            f"{doc_rel}: header refresh stamp still pinned to stale edd4fe6d instead of 58716742"
+        )
+    for hdr_tok in ("58716742", "afterquery-final", "1bc3e281"):
+        if hdr_tok not in header_block:
+            failures.append(f"{doc_rel}: header refresh stamp missing '{hdr_tok}'")
+
+    for stale_sub, reason in (
+        ("no tag exists yet", "1bc3e281: stale 'no tag exists yet' claim still present"),
+        (
+            "TODO(Silas): tag `afterquery-final`",
+            "1bc3e281: stale 'TODO(Silas): tag afterquery-final' still present",
+        ),
+        (
+            "Tag `afterquery-final`; real judge rehearsal",
+            "1bc3e281: Open TODOs row still treats afterquery-final as untagged",
+        ),
+        (
+            "disclosed as W1-W4, not fixed",
+            "1bc3e281: stale 'disclosed as W1-W4, not fixed' contradicts DIFFICULTY.md",
+        ),
+        (
+            "Known wording issues W1-W4 are disclosed, not fixed",
+            "1bc3e281: stale Known-limits W1-W4 claim contradicts DIFFICULTY.md",
+        ),
+    ):
+        if stale_sub in sub_txt:
+            failures.append(f"{doc_rel}: {reason}")
+
+    for desc, tok in (
+        ("Panel Fix D commit SHA", "1bc3e281"),
+        ("annotated tag name", "afterquery-final"),
+        ("W1 careful-mole fix note", "0 W1 losses"),
+        ("careful-mole verification script", "scripts/careful_mole_check.py"),
+        ("tool error detail field", "data.detail"),
+        ("tool error count on hard", "28 of 3,841"),
+        ("tool error share on hard", "0.7%"),
+        ("remaining disclosed wording items", "W2-W4"),
+        ("live Harbor rehearsal directory", "results/harbor/rehearsal/"),
+    ):
+        _require_token(sub_norm, f"{doc_rel} (1bc3e281)", desc, tok, failures)
 
     diff_path = root / "docs" / "DIFFICULTY.md"
-    diff_txt = diff_path.read_text(encoding="utf-8", errors="replace") if diff_path.is_file() else ""
-    if ("W1 is fixed in the instruction" in diff_txt or "data.detail" in diff_txt) and (
-        "1bc3e281" not in sub_norm
-        or "no tag exists yet" in sub_norm
-        or "TODO(Silas): tag `afterquery-final`" in sub_txt
-        or "data.detail" not in sub_norm
-    ):
-        advisories.append(
-            "1bc3e281 (tag afterquery-final + Panel Fix D): annotated tag afterquery-final landed at 1bc3e281 "
-            "with specific tool error data.detail (28/3,841 hard calls; 1,021/1,031 step replay preserved) "
-            "and W1 careful-mole wording fixed in medium/hard instructions (docs/SUBMISSION.md lines 29, 152, 214, 245, 271)"
-        )
-
-    gap_path = root / "docs" / "reports" / "gap.md"
-    gap_txt = gap_path.read_text(encoding="utf-8", errors="replace") if gap_path.is_file() else ""
-    if "Pre-registered second frontier family: gpt-5.5" in gap_txt and (
-        "cf394894" not in sub_norm and "1.19.5" not in sub_norm
-    ):
-        advisories.append(
-            "cf394894 (gpt-5.5 v1.4 hard pre-registration): docs/reports/gap.md records pre-registered "
-            "OpenCode 1.19.5 gpt-5.5 run on v1.4 hard seeds 0-29 at tag afterquery-final ($200 cap, 08:15/08:45 stop; "
-            "docs/SUBMISSION.md lines 111, 239)"
-        )
-
-    integ_path = root / "docs" / "reports" / "integrity.md"
-    integ_txt = integ_path.read_text(encoding="utf-8", errors="replace") if integ_path.is_file() else ""
-    if "05:10-05:25 Sun 15 Nov" in integ_txt and (
-        "TODO(Vaishnav)" in sub_txt or ("58716742" not in sub_norm and "1,057" not in sub_norm)
-    ):
-        advisories.append(
-            "58716742 (final judge-protocol hunt on afterquery-final): docs/reports/integrity.md logs "
-            "judge_hunt.py 12/12 held (52 s), make hunt 0.000 / 0 violations (4 min 57 s), make anticheat-verify "
-            "99 rows 0 diffs, make test 1,057 passed, make accept PASS=20 FAIL=0, and 424 phase-1 Gemini red-team attacks "
-            "(resolves TODO(Vaishnav) at docs/SUBMISSION.md lines 202, 275)"
-        )
-
-    ws4_path = root / "fr8" / "analysis" / "out" / "ws4_table_v3.md"
-    if ws4_path.is_file():
-        ws4_rows = _parse_ws4_all_rows(ws4_path.read_text(encoding="utf-8", errors="replace"))
-        if ("v3-8k-s2" in ws4_rows or ws4_rows.get("base", {}).get("n") == "36") and (
-            "-0.050 +/- 0.049" not in sub_norm or "| base | 16 |" in sub_norm
+    if diff_path.is_file():
+        diff_norm = _normalize_numeric_text(diff_path.read_text(encoding="utf-8", errors="replace"))
+        for desc, tok in (
+            ("DIFFICULTY.md W1 fix header", "W1 is fixed in the instruction"),
+            ("DIFFICULTY.md data.detail", "data.detail"),
+            ("DIFFICULTY.md 28 of 3,841 calls", "28 of 3,841"),
         ):
-            advisories.append(
-                "266bca3b (WS4 tiebreaker table update in fr8/analysis/out/ws4_table_v3.md): base expanded to n=36 "
-                "(0.000 +/- 0.000, 0.03 valid calls), v3-8k s2 landed at -0.050 +/- 0.049 (n=90, H100 spot), and "
-                "v3-4k s1 partial at -0.240 +/- 0.171 (n=25); bar still NOT met (docs/SUBMISSION.md lines 221-234, 276)"
+            _require_token(diff_norm, "docs/DIFFICULTY.md", desc, tok, failures)
+
+    for stale_cf, reason in (
+        (
+            "Only Gemini-family models were run on rules v1.4",
+            "cf394894: unqualified 'Only Gemini-family models were run on rules v1.4' omits pre-registered gpt-5.5 run",
+        ),
+        (
+            "Only Gemini-family models were run on v1.4.",
+            "cf394894: unqualified Known-limits 'Only Gemini-family models were run on v1.4' omits pre-registered gpt-5.5 run",
+        ),
+    ):
+        if stale_cf in sub_txt:
+            failures.append(f"{doc_rel}: {reason}")
+
+    for desc, tok in (
+        ("gpt-5.5 pre-registration SHA", "cf394894"),
+        ("pre-registered second frontier family", "gpt-5.5"),
+        ("OpenCode 1.19.5 version", "1.19.5"),
+        ("v1.4 hard seed lock range", "seeds 0-29"),
+        ("spend cap $200", "$200"),
+        ("launch stop 08:15", "08:15"),
+        ("hard stop 08:45", "08:45"),
+        ("panel decision ledger reference", "PANEL-0500.md"),
+        ("committed v1.4 Gemini-family scope", "Gemini-family"),
+    ):
+        _require_token(sub_norm, f"{doc_rel} (cf394894)", desc, tok, failures)
+
+    if "TODO(Vaishnav)" in sub_txt:
+        failures.append(f"{doc_rel}: 58716742: stale 'TODO(Vaishnav)' still present")
+    if "| Vaishnav | 15-minute judge-protocol hunt" in sub_txt:
+        failures.append(f"{doc_rel}: 58716742: completed Vaishnav hunt row still in Open TODOs")
+
+    for desc, cands in (
+        ("final integrity hunt commit SHA", ("58716742",)),
+        ("judge_hunt script", ("scripts/judge_hunt.py",)),
+        ("judge_hunt 12/12 held", ("12/12", "12 of 12")),
+        ("judge_hunt 52 s runtime", ("52 s",)),
+        ("make hunt 0.000 best non-solver", ("0.000",)),
+        ("make hunt 4 modes x 4 tracks", ("4 modes x 4 tracks",)),
+        ("make hunt 4 min 57 s runtime", ("4 min 57 s",)),
+        ("anticheat-verify 99 rows", ("99 rows",)),
+        ("anticheat-verify 0 differences", ("0 differences",)),
+        ("make test 1,057 passed", ("1,057",)),
+        ("make accept PASS=20, FAIL=0", ("PASS=20, FAIL=0",)),
+        ("Gemini phase-1 red-team 424 attacks", ("424",)),
+        ("Gemini phase-1 red-team SHA 469338f6", ("469338f6",)),
+    ):
+        _require_any_token(sub_norm, f"{doc_rel} (58716742)", desc, cands, failures)
+
+    for stale_fc, reason in (
+        (
+            "the committed one is `09e7363`",
+            "eadf970a: stale 'the committed one is 09e7363' omits Linux x86_64 fresh clone on 1bc3e281",
+        ),
+        (
+            "TODO(Silas): fresh-clone log",
+            "eadf970a: stale 'TODO(Silas): fresh-clone log' still present",
+        ),
+        (
+            "| Silas | Fresh-clone log on the submit commit",
+            "eadf970a: completed fresh-clone log row still in Open TODOs",
+        ),
+        (
+            "TODO(Silas): the tiebreak slot in [docs/DEMO.md](DEMO.md) should match",
+            "DEMO.md: stale DEMO.md tiebreak sync TODO still present",
+        ),
+    ):
+        if stale_fc in sub_txt:
+            failures.append(f"{doc_rel}: {reason}")
+
+    for desc, cands in (
+        ("fresh-clone commit SHA", ("eadf970a",)),
+        (
+            "Linux x86_64 fresh-clone log filename",
+            ("linux_x86_64_afterquery_final_1bc3e281.log.txt",),
+        ),
+        ("macOS fresh-clone SHA 09e7363", ("09e7363",)),
+        ("submission audit script", ("scripts/audit_submission.py",)),
+        ("fresh-clone test_core summary", ("100 passed in 175 s",)),
+    ):
+        _require_any_token(sub_norm, f"{doc_rel} (eadf970a)", desc, cands, failures)
+
+    steps_rel = "results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.steps.txt"
+    steps_path = root / steps_rel
+    if steps_path.is_file():
+        steps_txt = steps_path.read_text(encoding="utf-8", errors="replace")
+        for step_m in re.finditer(r"^([A-Za-z0-9_]+)\s+exit=(\d+)\s+seconds=(\d+)\s*$", steps_txt, re.MULTILINE):
+            step_name, exit_code, sec_val = step_m.group(1), int(step_m.group(2)), int(step_m.group(3))
+            if exit_code != 0:
+                failures.append(f"{steps_rel}: step '{step_name}' recorded non-zero exit={exit_code}")
+            _require_token(
+                sub_norm,
+                f"{doc_rel} (eadf970a)",
+                f"fresh-clone {step_name} timing",
+                f"{sec_val} s",
+                failures,
             )
 
-    fc_log_rel = "results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.log.txt"
-    if (root / fc_log_rel).is_file() and (
-        "linux_x86_64_afterquery_final_1bc3e281" not in sub_txt
-        or "the committed one is `09e7363`" in sub_txt
+    demo_path = root / "docs" / "DEMO.md"
+    if demo_path.is_file():
+        demo_txt = demo_path.read_text(encoding="utf-8", errors="replace")
+        if "bar not met" not in demo_txt.lower():
+            failures.append("docs/DEMO.md: missing synced WS4 'bar not met' tiebreak verdict")
+
+    for stale_ws4, reason in (
+        (
+            "justSilas-fr8",
+            "266bca3b: external branch reference 'justSilas-fr8' still present in Section 7",
+        ),
+        (
+            "ws4_table_v3s0_n180.md",
+            "266bca3b: superseded 'ws4_table_v3s0_n180.md' reference still present instead of ws4_table_v3.md",
+        ),
+        (
+            "on branch `s6-verda`",
+            "266bca3b: stale external branch reference 's6-verda' still present",
+        ),
+        (
+            "| base | 16 |",
+            "266bca3b: stale '| base | 16 |' row still present instead of n=36",
+        ),
     ):
-        advisories.append(
-            f"eadf970a (fresh-clone log on afterquery-final 1bc3e281): {fc_log_rel} and results/fresh_clone/README.md "
-            "record clean-env Linux x86_64 timings on 1bc3e281 (clone 3 s, table 27 s, full reproduce 118 s, "
-            "audit 4 s 0 FAIL, test_core 100 passed in 175 s; resolves TODO(Silas) at docs/SUBMISSION.md lines 213, 273)"
+        if stale_ws4 in sub_txt:
+            failures.append(f"{doc_rel}: {reason}")
+
+    if "(reports/fr8.md)" not in sub_txt:
+        failures.append(f"{doc_rel}: 266bca3b: missing local relative link '(reports/fr8.md)'")
+    if "(../fr8/analysis/out/ws4_table_v3.md)" not in sub_txt:
+        failures.append(
+            f"{doc_rel}: 266bca3b: missing local relative link '(../fr8/analysis/out/ws4_table_v3.md)'"
         )
 
-    if advisories:
+    for desc, tok in (
+        ("WS4 table commit SHA", "266bca3b"),
+        ("README tiebreak commit SHA", "66a26f5c"),
+        ("base 3% valid tool calls", "3% valid tool calls"),
+        ("v3-8k s2 H100 spot", "H100 spot"),
+        ("WS4 bar not met verdict", "bar not met"),
+        ("pending DAgger note", "DAgger"),
+    ):
+        _require_token(sub_norm, f"{doc_rel} (266bca3b)", desc, tok, failures)
+
+    if re.search(r"\|\s*base\b[^|\n]*\|\s*36\s*\|\s*0\.000\s*\+/-\s*0\.000\b", sub_norm) is None:
+        failures.append(f"{doc_rel}: 266bca3b: missing Section 7 table row for base n=36 (0.000 +/- 0.000)")
+    if re.search(r"\|\s*v3-8k\s+s2\b[^|\n]*\|\s*90\s*\|\s*-0\.050\s*\+/-\s*0\.049\b", sub_norm) is None:
+        failures.append(
+            f"{doc_rel}: 266bca3b: missing Section 7 table row for v3-8k s2 n=90 (-0.050 +/- 0.049)"
+        )
+
+    if failures:
         return CheckResult(
             name,
-            "WARN",
-            f"{len(advisories)} post-edd4fe6d completed item(s) ready for surgical refresh in docs/SUBMISSION.md (see docs/SUBMISSION-AUDIT.md)",
-            advisories,
+            "FAIL",
+            f"{len(failures)} post-edd4fe6d refresh/sync regression(s) in {doc_rel}",
+            failures,
         )
     return CheckResult(
         name,
         "PASS",
-        "all tracked post-edd4fe6d updates are reflected in docs/SUBMISSION.md",
+        "verified all 5 post-edd4fe6d updates (1bc3e281 Panel Fix D, cf394894 gpt-5.5 pre-reg, "
+        "58716742 integrity hunt, eadf970a Linux fresh clone + DEMO sync, 266bca3b/66a26f5c WS4 table) "
+        "with 0 contradictions and 0 em/en dashes",
     )
+
+
+check_post_edd4fe6d_advisories = check_post_edd4fe6d_sync
 
 
 def verify_repo(root: Path = ROOT) -> list[CheckResult]:
@@ -1451,7 +1603,7 @@ def verify_repo(root: Path = ROOT) -> list[CheckResult]:
         check_afterquery_structure(resolved),
         check_afterquery_provenance(resolved, _json_cache=json_cache),
         check_gemini_provenance(resolved, _json_cache=json_cache),
-        check_post_edd4fe6d_advisories(resolved),
+        check_post_edd4fe6d_sync(resolved),
     ]
 
 

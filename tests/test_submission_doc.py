@@ -88,6 +88,7 @@ def test_source_hygiene_zero_hash_and_zero_em_en_dashes():
     verifier_src = VERIFIER_PATH.read_text(encoding="utf-8")
     self_src = SELF_PATH.read_text(encoding="utf-8")
     audit_md = AUDIT_DOC_PATH.read_text(encoding="utf-8")
+    sub_md = SUBMISSION_DOC_PATH.read_text(encoding="utf-8")
 
     assert H not in verifier_src, f"unexpected {H!r} character in {VERIFIER_PATH.name}"
     assert H not in self_src, f"unexpected {H!r} character in {SELF_PATH.name}"
@@ -96,6 +97,7 @@ def test_source_hygiene_zero_hash_and_zero_em_en_dashes():
         ("scripts/verify_submission_doc.py", verifier_src),
         ("tests/test_submission_doc.py", self_src),
         ("docs/SUBMISSION-AUDIT.md", audit_md),
+        ("docs/SUBMISSION.md", sub_md),
     ):
         assert EM_DASH not in text, f"unexpected em dash in {label}"
         assert EN_DASH not in text, f"unexpected en dash in {label}"
@@ -103,6 +105,7 @@ def test_source_hygiene_zero_hash_and_zero_em_en_dashes():
 
 def test_real_repo_passes_cli_and_programmatic_api(capsys):
     assert verifier.audit_repo is verifier.verify_repo
+    assert verifier.CHECK_POST_EDD4_ADVISORY == verifier.CHECK_POST_EDD4_SYNC
 
     results = verifier.verify_repo(ROOT)
     assert len(results) == 4
@@ -111,12 +114,8 @@ def test_real_repo_passes_cli_and_programmatic_api(capsys):
     assert by_name[verifier.CHECK_AQ_STRUCTURE].status == "PASS"
     assert by_name[verifier.CHECK_AQ_NUMBERS].status == "PASS"
     assert by_name[verifier.CHECK_GEMINI_PROV].status == "PASS"
-    assert by_name[verifier.CHECK_POST_EDD4_ADVISORY].status in {"WARN", "PASS"}
-
-    advisory_joined = "\n".join(by_name[verifier.CHECK_POST_EDD4_ADVISORY].details)
-    if by_name[verifier.CHECK_POST_EDD4_ADVISORY].status == "WARN":
-        for sha in ("1bc3e281", "cf394894", "58716742", "266bca3b", "eadf970a"):
-            assert sha in advisory_joined, f"missing post-edd4fe6d advisory SHA {sha}"
+    assert by_name[verifier.CHECK_POST_EDD4_SYNC].status == "PASS"
+    assert by_name[verifier.CHECK_POST_EDD4_SYNC].details == []
 
     rc_json = verifier.main(["--root", str(ROOT), "--json"])
     out_json = capsys.readouterr().out
@@ -124,12 +123,12 @@ def test_real_repo_passes_cli_and_programmatic_api(capsys):
     assert rc_json == 0
     assert payload["passed"] is True
     assert payload["elapsed_s"] < 2.0
-    assert all(item["status"] != "FAIL" for item in payload["results"])
+    assert all(item["status"] == "PASS" for item in payload["results"])
 
     rc_txt = verifier.main(["--root", str(ROOT)])
     out_txt = capsys.readouterr().out
     assert rc_txt == 0
-    assert "0 FAIL" in out_txt
+    assert "SUMMARY: 4 PASS, 0 WARN, 0 FAIL" in out_txt
 
 
 def test_submission_audit_doc_links_commands_and_refresh_ledger():
@@ -175,9 +174,9 @@ def test_submission_audit_doc_links_commands_and_refresh_ledger():
         assert resolved.exists(), f"broken link in docs/SUBMISSION-AUDIT.md: {raw_target}"
     assert link_count >= 25
 
-    cmd_results = doc_cmd_mod.verify_repo(ROOT, docs=("docs/SUBMISSION-AUDIT.md",))
+    cmd_results = doc_cmd_mod.verify_repo(ROOT, docs=("docs/SUBMISSION-AUDIT.md", "docs/SUBMISSION.md"))
     failed_cmd = [r for r in cmd_results if r.status == "FAIL"]
-    assert not failed_cmd, f"verify_doc_commands failed on docs/SUBMISSION-AUDIT.md: {failed_cmd}"
+    assert not failed_cmd, f"verify_doc_commands failed on submission docs: {failed_cmd}"
 
 
 @pytest.mark.parametrize(
@@ -349,26 +348,139 @@ def test_tamper_gemini_submission_provenance_fails(
     assert payload["passed"] is False
 
 
-def test_post_edd4fe6d_advisory_turns_pass_when_refreshed(opencode_tmp: Path, capsys):
-    orig = SUBMISSION_DOC_PATH.read_text(encoding="utf-8")
-    refreshed = (
-        orig.replace("no tag exists yet", "tagged at 1bc3e281")
-        .replace("TODO(Silas): tag `afterquery-final`.", "Tagged `afterquery-final` at `1bc3e281` (`data.detail`).")
-        .replace("TODO(Vaishnav):", "Done in 58716742 (1,057 passed):")
-        .replace("| base | 16 |", "| base | 36 |")
-        .replace(
+@pytest.mark.parametrize(
+    ("case_id", "old_str", "new_str", "expected_detail_substr"),
+    [
+        (
+            "regress_header_edd4fe6d",
+            "against `justSilas` at `58716742`",
+            "against `justSilas` at `edd4fe6d`",
+            "edd4fe6d",
+        ),
+        (
+            "regress_1bc3e281_no_tag",
+            "annotated tag `afterquery-final` points at `1bc3e281`",
+            "once `afterquery-final` is tagged (no tag exists yet)",
+            "1bc3e281",
+        ),
+        (
+            "regress_1bc3e281_drop_data_detail",
+            "data.detail",
+            "data.reason",
+            "data.detail",
+        ),
+        (
+            "regress_1bc3e281_stale_w1_w4",
+            "`W2-W4` remain disclosed",
+            "disclosed as W1-W4, not fixed",
+            "1bc3e281",
+        ),
+        (
+            "regress_cf394894_unqualified_gemini_only",
+            "All committed `v1.4` episodes are Gemini-family models",
+            "Only Gemini-family models were run on rules v1.4",
+            "cf394894",
+        ),
+        (
+            "regress_cf394894_drop_prereg_sha",
+            "cf394894",
+            "00000000",
+            "cf394894",
+        ),
+        (
+            "regress_58716742_todo_vaishnav",
+            "Final judge-protocol hunt on `afterquery-final`",
+            "TODO(Vaishnav): Final judge-protocol hunt",
+            "58716742",
+        ),
+        (
+            "regress_58716742_drop_1057_tests",
+            "1,057",
+            "1,040",
+            "1,057",
+        ),
+        (
+            "regress_58716742_drop_424_attacks",
+            "424 attacks",
+            "300 attacks",
+            "424",
+        ),
+        (
+            "regress_eadf970a_stale_09e7363_only",
+            "alongside `09e7363`",
             "the committed one is `09e7363`",
-            "committed at linux_x86_64_afterquery_final_1bc3e281.log.txt",
-        )
-        + "\nRefreshed notes: cf394894 OpenCode 1.19.5; 266bca3b v3-8k-s2 -0.050 +/- 0.049 n=90.\n"
-    )
-    synth = _make_overlay_root(opencode_tmp, "refreshed_advisory", {"docs/SUBMISSION.md": refreshed})
+            "eadf970a",
+        ),
+        (
+            "regress_eadf970a_drop_linux_log",
+            "linux_x86_64_afterquery_final_1bc3e281.log.txt",
+            "macos_justSilas_09e7363.log.txt",
+            "linux_x86_64_afterquery_final_1bc3e281.log.txt",
+        ),
+        (
+            "regress_eadf970a_stale_demo_todo",
+            "Demo tiebreak slot resolved:",
+            "TODO(Silas): the tiebreak slot in [docs/DEMO.md](DEMO.md) should match",
+            "DEMO.md",
+        ),
+        (
+            "regress_266bca3b_external_justsilas_fr8",
+            "[docs/reports/fr8.md](reports/fr8.md)",
+            "[docs/reports/fr8.md](https://github.com/s1laswang/agent-arena/blob/justSilas-fr8/docs/reports/fr8.md)",
+            "justSilas-fr8",
+        ),
+        (
+            "regress_266bca3b_base_n16",
+            "| base (untrained) | 36 |",
+            "| base | 16 |",
+            "base",
+        ),
+        (
+            "regress_266bca3b_drop_8k_s2",
+            "v3-8k s2",
+            "v3-8k x9",
+            "v3-8k s2",
+        ),
+        (
+            "regress_em_dash",
+            "Track: AfterQuery - Break the Agent",
+            f"Track: AfterQuery {EM_DASH} Break the Agent",
+            "em dash",
+        ),
+    ],
+)
+def test_post_edd4fe6d_sync_fails_on_synthetic_regressions(
+    opencode_tmp: Path,
+    capsys,
+    case_id: str,
+    old_str: str,
+    new_str: str,
+    expected_detail_substr: str,
+):
+    orig = SUBMISSION_DOC_PATH.read_text(encoding="utf-8")
+    assert old_str in orig
+    tampered = orig.replace(old_str, new_str)
+    synth = _make_overlay_root(opencode_tmp, case_id, {"docs/SUBMISSION.md": tampered})
 
-    res = verifier.check_post_edd4fe6d_advisories(synth)
-    assert res.status == "PASS"
-    assert res.details == []
+    res = verifier.check_post_edd4fe6d_sync(synth)
+    assert res.status == "FAIL"
+    assert any(expected_detail_substr in d for d in res.details), res.details
 
     rc = verifier.main(["--root", str(synth), "--json"])
     payload = json.loads(capsys.readouterr().out)
-    assert rc == 0
-    assert payload["passed"] is True
+    assert rc == 1
+    assert payload["passed"] is False
+
+
+def test_post_edd4fe6d_sync_fails_if_demo_md_loses_bar_not_met(opencode_tmp: Path, capsys):
+    demo_orig = (ROOT / "docs" / "DEMO.md").read_text(encoding="utf-8")
+    demo_tampered = demo_orig.replace("bar not met", "tiebreak solved").replace("bar NOT met", "tiebreak SOLVED")
+    synth = _make_overlay_root(opencode_tmp, "regress_demo_tiebreak", {"docs/DEMO.md": demo_tampered})
+
+    res = verifier.check_post_edd4fe6d_sync(synth)
+    assert res.status == "FAIL"
+    assert any("DEMO.md" in d for d in res.details), res.details
+
+    rc = verifier.main(["--root", str(synth)])
+    capsys.readouterr()
+    assert rc == 1

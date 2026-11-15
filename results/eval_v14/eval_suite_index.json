@@ -60,6 +60,11 @@
   },
   {
    "check_passed": true,
+   "name": "verify_harbor_rehearsal",
+   "script": "scripts/verify_harbor_rehearsal.py"
+  },
+  {
+   "check_passed": true,
    "name": "build_eval_charts_v14",
    "script": "scripts/build_eval_charts_v14.py"
   },
@@ -69,7 +74,7 @@
    "script": "scripts/harbor_luck_adjusted_v14.py"
   }
  ],
- "present_eval_v14_artifacts": ["results/eval_v14/README.md", "results/eval_v14/claims_manifest.json", "results/eval_v14/crossmodel_and_replication_v14.json", "results/eval_v14/harbor_rehearsal_dry_posteriors.json", "results/eval_v14/harness_and_tier_v14.json", "results/eval_v14/headline_gap_paired_v14.png", "results/eval_v14/headline_gap_table_v14.json", "results/eval_v14/hint_ablation_v14.json", "results/eval_v14/judge_rerun_power_v14.json", "results/eval_v14/posterior_calibration_v14.png"],
+ "present_eval_v14_artifacts": ["results/eval_v14/README.md", "results/eval_v14/claims_manifest.json", "results/eval_v14/crossmodel_and_replication_v14.json", "results/eval_v14/harbor_rehearsal_dry_posteriors.json", "results/eval_v14/harness_and_tier_v14.json", "results/eval_v14/headline_gap_paired_v14.png", "results/eval_v14/headline_gap_table_v14.json", "results/eval_v14/hint_ablation_v14.json", "results/eval_v14/judge_rerun_power_v14.json", "results/eval_v14/posterior_calibration_v14.png", "results/eval_v14/verify_harbor_rehearsal.json"],
  "core_headline_summary": {
   "claims_and_hygiene": {
    "schema_version": "eval_claims_manifest_v2",
@@ -77,7 +82,7 @@
    "gate_count": 5,
    "gates_passed_count": 5,
    "total_violations": 0,
-   "committed_paired_rows_verified": 14,
+   "committed_paired_rows_verified": 15,
    "oracle_hard_k10": {
     "builds": 200,
     "mean": 0.56938,
@@ -92,9 +97,9 @@
     "guess_day1_300secret_max": -0.8
    },
    "hygiene": {
-    "paired_groups_checked": 14,
+    "paired_groups_checked": 15,
     "judge_table_v14_rows_checked": 17,
-    "v14_meta_files_checked": 19,
+    "v14_meta_files_checked": 21,
     "primary_locked_frontier_cohorts": 5,
     "seed_lock_rule_verified": true,
     "active_docs_checked_count": 6,

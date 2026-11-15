@@ -1,0 +1,2902 @@
+{
+  "role": "adaptive_mole",
+  "suite": "carbon-vs-carbon-suite",
+  "environment_scope": "arena mode, not the judged v1.4 environment",
+  "target_model": "gemini-4-carbon",
+  "latest_run_timestamp": "2026-11-15T00:18:28+00:00",
+  "source_commits": [
+    "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+    "e650291e7874f115733affd54b725ba6b9fdfafb",
+    "b73b62ffec38514e28f808ce538130a996a9496e",
+    "38cd16ece1cbdc52b9cf469000296a5241ed90bb",
+    "db9a94b0be86ec58859472a194d0db9c7c98d44f",
+    "d5fee698c79c4d026066ee981e7704362925ea23",
+    "9222669912afd57e53fbd3b07f0cdba985df705d",
+    "797cc1d249f83d127138466470d83e48df8615d0",
+    "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
+    "632b258f19b3653a51ab00ffb385904209e199e6",
+    "3bd1d1e2295aa320812f08e2eceaef5b4a8902ef",
+    "785d21a1cb79edd061e1e34031bb04284e38c110",
+    "9b8858381c99a4b94ea3d989fcd0d232fc5411ca",
+    "99767a5d144e89cbd9522ddd9720af55bb2217eb",
+    "370de43c38b321bf9dbc5c04220abd90c4614466",
+    "70c1b155ddee1cac2f39c09137c00b240be4c38f",
+    "67132908d1c300d75834e1d1a0b70632e757b65d",
+    "0e59cc10aa43f068e5fe7c1007215df1db4d10fe",
+    "94974340ae44c96fe5eb03d797c041b95d19d922",
+    "16f24a08e1fb57397ddf90a5b413b4359a5f16bc"
+  ],
+  "verified_run_dirs": [
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-easy-seed0",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-hard-seed0",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-hard-seed1",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-hard-seed2",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-hard-seed3",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-hard-seed4",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed1",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed2",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed3",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed4",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed5",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed6",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed7",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed8",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed9",
+    "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-seed0",
+    "results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-easy-deep",
+    "results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-hard-deep",
+    "results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-med-deep",
+    "results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-v14",
+    "results/gemini/roles_carbon/adaptive_mole/paired-designer-carbon",
+    "results/gemini/roles_carbon/adaptive_mole/paired-designer-carbon-hard",
+    "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-easy-s10_14",
+    "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-easy-s15_19",
+    "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-hard",
+    "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-hard-s10_14",
+    "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-hard-s15_19",
+    "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-med-s10_14",
+    "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-med-s15_19",
+    "results/gemini/roles_carbon/adaptive_mole/paired-solvable-scenarios-carbon"
+  ],
+  "skipped_runs": [],
+  "clash_suite": {
+    "shards": [
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-easy-seed0",
+        "tier": "easy",
+        "seed": 0,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+        "investigator_score": 0.83,
+        "investigator_correct": true,
+        "investigator_accused": "e01",
+        "investigator_final_day": 4,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.79,
+        "solver_correct": true,
+        "solver_accused": "e01",
+        "solver_final_day": 8,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.04,
+        "mole_clash_days": 3,
+        "mole_clash_leaks": 3,
+        "mole_clash_frames": 1,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 7,
+        "mole_solver_leaks": 3,
+        "mole_solver_frames": 5,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 46,
+          "in": 366514,
+          "out": 1734,
+          "thinking": 17294,
+          "cached": 270799,
+          "total_tokens": 385542,
+          "cost_usd": 0.408789,
+          "latency_s": 1118.284,
+          "combined": {
+            "calls": 46,
+            "in": 366514,
+            "out": 1734,
+            "thinking": 17294,
+            "cached": 270799,
+            "total_tokens": 385542,
+            "cost_usd": 0.408789,
+            "latency_s": 1118.284
+          },
+          "clash_investigator": {
+            "calls": 36,
+            "in": 360310,
+            "out": 1088,
+            "thinking": 14604,
+            "cached": 270799,
+            "total_tokens": 376002,
+            "cost_usd": 0.363021,
+            "latency_s": 879.663
+          },
+          "clash_mole": {
+            "calls": 10,
+            "in": 6204,
+            "out": 646,
+            "thinking": 2690,
+            "cached": 0,
+            "total_tokens": 9540,
+            "cost_usd": 0.045768,
+            "latency_s": 238.621
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-seed0",
+        "tier": "medium",
+        "seed": 0,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "3bd1d1e2295aa320812f08e2eceaef5b4a8902ef",
+        "investigator_score": 0.66,
+        "investigator_correct": true,
+        "investigator_accused": "e05",
+        "investigator_final_day": 8,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.4,
+        "solver_correct": true,
+        "solver_accused": "e05",
+        "solver_final_day": 10,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.26,
+        "mole_clash_days": 7,
+        "mole_clash_leaks": 7,
+        "mole_clash_frames": 1,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 9,
+        "mole_solver_leaks": 9,
+        "mole_solver_frames": 3,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 92,
+          "in": 1812239,
+          "out": 3638,
+          "thinking": 30311,
+          "cached": 1618805,
+          "total_tokens": 1846188,
+          "cost_usd": 0.888241,
+          "latency_s": 3707.423,
+          "combined": {
+            "calls": 92,
+            "in": 1812239,
+            "out": 3638,
+            "thinking": 30311,
+            "cached": 1618805,
+            "total_tokens": 1846188,
+            "cost_usd": 0.888241,
+            "latency_s": 3707.423
+          },
+          "clash_investigator": {
+            "calls": 76,
+            "in": 1800631,
+            "out": 2581,
+            "thinking": 27015,
+            "cached": 1618805,
+            "total_tokens": 1830227,
+            "cost_usd": 0.821495,
+            "latency_s": 3473.951
+          },
+          "clash_mole": {
+            "calls": 16,
+            "in": 11608,
+            "out": 1057,
+            "thinking": 3296,
+            "cached": 0,
+            "total_tokens": 15961,
+            "cost_usd": 0.066746,
+            "latency_s": 233.472
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed1",
+        "tier": "medium",
+        "seed": 1,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "9222669912afd57e53fbd3b07f0cdba985df705d",
+        "investigator_score": 0.73,
+        "investigator_correct": true,
+        "investigator_accused": "e02",
+        "investigator_final_day": 7,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.33,
+        "solver_correct": true,
+        "solver_accused": "e02",
+        "solver_final_day": 13,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.4,
+        "mole_clash_days": 6,
+        "mole_clash_leaks": 6,
+        "mole_clash_frames": 2,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 12,
+        "mole_solver_leaks": 11,
+        "mole_solver_frames": 6,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 83,
+          "in": 1025519,
+          "out": 3216,
+          "thinking": 23221,
+          "cached": 858900,
+          "total_tokens": 1051956,
+          "cost_usd": 0.683504,
+          "latency_s": 2222.841,
+          "combined": {
+            "calls": 83,
+            "in": 1025519,
+            "out": 3216,
+            "thinking": 23221,
+            "cached": 858900,
+            "total_tokens": 1051956,
+            "cost_usd": 0.683504,
+            "latency_s": 2222.841
+          },
+          "clash_investigator": {
+            "calls": 65,
+            "in": 1012771,
+            "out": 2020,
+            "thinking": 19114,
+            "cached": 858900,
+            "total_tokens": 1033905,
+            "cost_usd": 0.604978,
+            "latency_s": 1905.472
+          },
+          "clash_mole": {
+            "calls": 18,
+            "in": 12748,
+            "out": 1196,
+            "thinking": 4107,
+            "cached": 0,
+            "total_tokens": 18051,
+            "cost_usd": 0.078526,
+            "latency_s": 317.369
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed2",
+        "tier": "medium",
+        "seed": 2,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "9222669912afd57e53fbd3b07f0cdba985df705d",
+        "investigator_score": 0.68,
+        "investigator_correct": true,
+        "investigator_accused": "e09",
+        "investigator_final_day": 9,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.0,
+        "solver_correct": false,
+        "solver_accused": null,
+        "solver_final_day": 14,
+        "solver_end_reason": "horizon",
+        "solvable": false,
+        "regret": -0.68,
+        "mole_clash_days": 8,
+        "mole_clash_leaks": 6,
+        "mole_clash_frames": 3,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 14,
+        "mole_solver_leaks": 6,
+        "mole_solver_frames": 9,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 106,
+          "in": 2110770,
+          "out": 4223,
+          "thinking": 35786,
+          "cached": 1892071,
+          "total_tokens": 2150779,
+          "cost_usd": 1.026696,
+          "latency_s": 2756.621,
+          "combined": {
+            "calls": 106,
+            "in": 2110770,
+            "out": 4223,
+            "thinking": 35786,
+            "cached": 1892071,
+            "total_tokens": 2150779,
+            "cost_usd": 1.026696,
+            "latency_s": 2756.621
+          },
+          "clash_investigator": {
+            "calls": 84,
+            "in": 2096202,
+            "out": 2838,
+            "thinking": 30741,
+            "cached": 1892071,
+            "total_tokens": 2129781,
+            "cost_usd": 0.93326,
+            "latency_s": 2439.169
+          },
+          "clash_mole": {
+            "calls": 22,
+            "in": 14568,
+            "out": 1385,
+            "thinking": 5045,
+            "cached": 0,
+            "total_tokens": 20998,
+            "cost_usd": 0.093436,
+            "latency_s": 317.452
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed3",
+        "tier": "medium",
+        "seed": 3,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "797cc1d249f83d127138466470d83e48df8615d0",
+        "investigator_score": 0.56,
+        "investigator_correct": true,
+        "investigator_accused": "e14",
+        "investigator_final_day": 10,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.39,
+        "solver_correct": true,
+        "solver_accused": "e14",
+        "solver_final_day": 11,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.17,
+        "mole_clash_days": 9,
+        "mole_clash_leaks": 9,
+        "mole_clash_frames": 4,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 10,
+        "mole_solver_leaks": 10,
+        "mole_solver_frames": 8,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 114,
+          "in": 2515063,
+          "out": 4521,
+          "thinking": 32857,
+          "cached": 2275070,
+          "total_tokens": 2552441,
+          "cost_usd": 1.081275,
+          "latency_s": 2916.771,
+          "combined": {
+            "calls": 114,
+            "in": 2515063,
+            "out": 4521,
+            "thinking": 32857,
+            "cached": 2275070,
+            "total_tokens": 2552441,
+            "cost_usd": 1.081275,
+            "latency_s": 2916.771
+          },
+          "clash_investigator": {
+            "calls": 95,
+            "in": 2500989,
+            "out": 3203,
+            "thinking": 28625,
+            "cached": 2275070,
+            "total_tokens": 2532817,
+            "cost_usd": 0.997627,
+            "latency_s": 2643.133
+          },
+          "clash_mole": {
+            "calls": 19,
+            "in": 14074,
+            "out": 1318,
+            "thinking": 4232,
+            "cached": 0,
+            "total_tokens": 19624,
+            "cost_usd": 0.083648,
+            "latency_s": 273.638
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed4",
+        "tier": "medium",
+        "seed": 4,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
+        "investigator_score": 0.8,
+        "investigator_correct": true,
+        "investigator_accused": "e17",
+        "investigator_final_day": 5,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.0,
+        "solver_correct": false,
+        "solver_accused": null,
+        "solver_final_day": 14,
+        "solver_end_reason": "horizon",
+        "solvable": false,
+        "regret": -0.8,
+        "mole_clash_days": 4,
+        "mole_clash_leaks": 4,
+        "mole_clash_frames": 1,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 14,
+        "mole_solver_leaks": 6,
+        "mole_solver_frames": 8,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 65,
+          "in": 847816,
+          "out": 2642,
+          "thinking": 25857,
+          "cached": 711600,
+          "total_tokens": 876315,
+          "cost_usd": 0.628581,
+          "latency_s": 1523.554,
+          "combined": {
+            "calls": 65,
+            "in": 847816,
+            "out": 2642,
+            "thinking": 25857,
+            "cached": 711600,
+            "total_tokens": 876315,
+            "cost_usd": 0.628581,
+            "latency_s": 1523.554
+          },
+          "clash_investigator": {
+            "calls": 47,
+            "in": 835880,
+            "out": 1508,
+            "thinking": 21696,
+            "cached": 711600,
+            "total_tokens": 859084,
+            "cost_usd": 0.551759,
+            "latency_s": 1106.37
+          },
+          "clash_mole": {
+            "calls": 18,
+            "in": 11936,
+            "out": 1134,
+            "thinking": 4161,
+            "cached": 0,
+            "total_tokens": 17231,
+            "cost_usd": 0.076822,
+            "latency_s": 417.184
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed5",
+        "tier": "medium",
+        "seed": 5,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "9222669912afd57e53fbd3b07f0cdba985df705d",
+        "investigator_score": 0.75,
+        "investigator_correct": true,
+        "investigator_accused": "e14",
+        "investigator_final_day": 6,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.45,
+        "solver_correct": true,
+        "solver_accused": "e14",
+        "solver_final_day": 13,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.3,
+        "mole_clash_days": 5,
+        "mole_clash_leaks": 5,
+        "mole_clash_frames": 2,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 12,
+        "mole_solver_leaks": 9,
+        "mole_solver_frames": 5,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 73,
+          "in": 963578,
+          "out": 2972,
+          "thinking": 25713,
+          "cached": 817534,
+          "total_tokens": 992263,
+          "cost_usd": 0.66069,
+          "latency_s": 2118.57,
+          "combined": {
+            "calls": 73,
+            "in": 963578,
+            "out": 2972,
+            "thinking": 25713,
+            "cached": 817534,
+            "total_tokens": 992263,
+            "cost_usd": 0.66069,
+            "latency_s": 2118.57
+          },
+          "clash_investigator": {
+            "calls": 56,
+            "in": 951553,
+            "out": 1896,
+            "thinking": 21760,
+            "cached": 817534,
+            "total_tokens": 975209,
+            "cost_usd": 0.58635,
+            "latency_s": 1901.313
+          },
+          "clash_mole": {
+            "calls": 17,
+            "in": 12025,
+            "out": 1076,
+            "thinking": 3953,
+            "cached": 0,
+            "total_tokens": 17054,
+            "cost_usd": 0.07434,
+            "latency_s": 217.257
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed6",
+        "tier": "medium",
+        "seed": 6,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
+        "investigator_score": 0.75,
+        "investigator_correct": true,
+        "investigator_accused": "e17",
+        "investigator_final_day": 6,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.34,
+        "solver_correct": true,
+        "solver_accused": "e17",
+        "solver_final_day": 12,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.41,
+        "mole_clash_days": 5,
+        "mole_clash_leaks": 5,
+        "mole_clash_frames": 1,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 11,
+        "mole_solver_leaks": 11,
+        "mole_solver_frames": 6,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 71,
+          "in": 1011467,
+          "out": 2993,
+          "thinking": 24696,
+          "cached": 816815,
+          "total_tokens": 1039156,
+          "cost_usd": 0.747878,
+          "latency_s": 1646.918,
+          "combined": {
+            "calls": 71,
+            "in": 1011467,
+            "out": 2993,
+            "thinking": 24696,
+            "cached": 816815,
+            "total_tokens": 1039156,
+            "cost_usd": 0.747878,
+            "latency_s": 1646.918
+          },
+          "clash_investigator": {
+            "calls": 55,
+            "in": 999864,
+            "out": 1918,
+            "thinking": 20705,
+            "cached": 816815,
+            "total_tokens": 1022487,
+            "cost_usd": 0.674012,
+            "latency_s": 1278.825
+          },
+          "clash_mole": {
+            "calls": 16,
+            "in": 11603,
+            "out": 1075,
+            "thinking": 3991,
+            "cached": 0,
+            "total_tokens": 16669,
+            "cost_usd": 0.073866,
+            "latency_s": 368.093
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed7",
+        "tier": "medium",
+        "seed": 7,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+        "investigator_score": 0.7,
+        "investigator_correct": true,
+        "investigator_accused": "e09",
+        "investigator_final_day": 7,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.35,
+        "solver_correct": true,
+        "solver_accused": "e09",
+        "solver_final_day": 11,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.35,
+        "mole_clash_days": 6,
+        "mole_clash_leaks": 6,
+        "mole_clash_frames": 2,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 10,
+        "mole_solver_leaks": 10,
+        "mole_solver_frames": 6,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 82,
+          "in": 1420410,
+          "out": 3341,
+          "thinking": 28466,
+          "cached": 1247399,
+          "total_tokens": 1452217,
+          "cost_usd": 0.788832,
+          "latency_s": 1959.788,
+          "combined": {
+            "calls": 82,
+            "in": 1420410,
+            "out": 3341,
+            "thinking": 28466,
+            "cached": 1247399,
+            "total_tokens": 1452217,
+            "cost_usd": 0.788832,
+            "latency_s": 1959.788
+          },
+          "clash_investigator": {
+            "calls": 66,
+            "in": 1408814,
+            "out": 2285,
+            "thinking": 24982,
+            "cached": 1247399,
+            "total_tokens": 1436081,
+            "cost_usd": 0.72024,
+            "latency_s": 1696.532
+          },
+          "clash_mole": {
+            "calls": 16,
+            "in": 11596,
+            "out": 1056,
+            "thinking": 3484,
+            "cached": 0,
+            "total_tokens": 16136,
+            "cost_usd": 0.068592,
+            "latency_s": 263.256
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed8",
+        "tier": "medium",
+        "seed": 8,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "632b258f19b3653a51ab00ffb385904209e199e6",
+        "investigator_score": 0.8,
+        "investigator_correct": true,
+        "investigator_accused": "e02",
+        "investigator_final_day": 7,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.73,
+        "solver_correct": true,
+        "solver_accused": "e02",
+        "solver_final_day": 12,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.07,
+        "mole_clash_days": 6,
+        "mole_clash_leaks": 4,
+        "mole_clash_frames": 2,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 11,
+        "mole_solver_leaks": 3,
+        "mole_solver_frames": 7,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 83,
+          "in": 1607826,
+          "out": 3099,
+          "thinking": 34420,
+          "cached": 1385650,
+          "total_tokens": 1645345,
+          "cost_usd": 0.958103,
+          "latency_s": 1996.816,
+          "combined": {
+            "calls": 83,
+            "in": 1607826,
+            "out": 3099,
+            "thinking": 34420,
+            "cached": 1385650,
+            "total_tokens": 1645345,
+            "cost_usd": 0.958103,
+            "latency_s": 1996.816
+          },
+          "clash_investigator": {
+            "calls": 66,
+            "in": 1595896,
+            "out": 2060,
+            "thinking": 31584,
+            "cached": 1385650,
+            "total_tokens": 1629540,
+            "cost_usd": 0.895493,
+            "latency_s": 1665.974
+          },
+          "clash_mole": {
+            "calls": 17,
+            "in": 11930,
+            "out": 1039,
+            "thinking": 2836,
+            "cached": 0,
+            "total_tokens": 15805,
+            "cost_usd": 0.06261,
+            "latency_s": 330.842
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-med-seed9",
+        "tier": "medium",
+        "seed": 9,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "632b258f19b3653a51ab00ffb385904209e199e6",
+        "investigator_score": 0.64,
+        "investigator_correct": true,
+        "investigator_accused": "e15",
+        "investigator_final_day": 8,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.71,
+        "solver_correct": true,
+        "solver_accused": "e15",
+        "solver_final_day": 11,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": 0.07,
+        "mole_clash_days": 7,
+        "mole_clash_leaks": 7,
+        "mole_clash_frames": 0,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 10,
+        "mole_solver_leaks": 5,
+        "mole_solver_frames": 7,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 95,
+          "in": 2327063,
+          "out": 3605,
+          "thinking": 47429,
+          "cached": 2015709,
+          "total_tokens": 2378097,
+          "cost_usd": 1.334617,
+          "latency_s": 2590.299,
+          "combined": {
+            "calls": 95,
+            "in": 2327063,
+            "out": 3605,
+            "thinking": 47429,
+            "cached": 2015709,
+            "total_tokens": 2378097,
+            "cost_usd": 1.334617,
+            "latency_s": 2590.299
+          },
+          "clash_investigator": {
+            "calls": 78,
+            "in": 2315742,
+            "out": 2559,
+            "thinking": 42955,
+            "cached": 2015709,
+            "total_tokens": 2361256,
+            "cost_usd": 1.256775,
+            "latency_s": 2197.862
+          },
+          "clash_mole": {
+            "calls": 17,
+            "in": 11321,
+            "out": 1046,
+            "thinking": 4474,
+            "cached": 0,
+            "total_tokens": 16841,
+            "cost_usd": 0.077842,
+            "latency_s": 392.437
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-hard-seed0",
+        "tier": "hard",
+        "seed": 0,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "e650291e7874f115733affd54b725ba6b9fdfafb",
+        "investigator_score": 0.64,
+        "investigator_correct": true,
+        "investigator_accused": "e38",
+        "investigator_final_day": 7,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.71,
+        "solver_correct": true,
+        "solver_accused": "e38",
+        "solver_final_day": 6,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": 0.07,
+        "mole_clash_days": 6,
+        "mole_clash_leaks": 6,
+        "mole_clash_frames": 1,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 5,
+        "mole_solver_leaks": 4,
+        "mole_solver_frames": 1,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 66,
+          "in": 1632751,
+          "out": 2947,
+          "thinking": 33780,
+          "cached": 1486373,
+          "total_tokens": 1669478,
+          "cost_usd": 0.808665,
+          "latency_s": 2499.767,
+          "combined": {
+            "calls": 66,
+            "in": 1632751,
+            "out": 2947,
+            "thinking": 33780,
+            "cached": 1486373,
+            "total_tokens": 1669478,
+            "cost_usd": 0.808665,
+            "latency_s": 2499.767
+          },
+          "clash_investigator": {
+            "calls": 55,
+            "in": 1623895,
+            "out": 2259,
+            "thinking": 30779,
+            "cached": 1486373,
+            "total_tokens": 1656933,
+            "cost_usd": 0.754063,
+            "latency_s": 2222.099
+          },
+          "clash_mole": {
+            "calls": 11,
+            "in": 8856,
+            "out": 688,
+            "thinking": 3001,
+            "cached": 0,
+            "total_tokens": 12545,
+            "cost_usd": 0.054602,
+            "latency_s": 277.668
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-hard-seed1",
+        "tier": "hard",
+        "seed": 1,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "b73b62ffec38514e28f808ce538130a996a9496e",
+        "investigator_score": 0.0,
+        "investigator_correct": true,
+        "investigator_accused": "e33",
+        "investigator_final_day": 20,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.0,
+        "solver_correct": false,
+        "solver_accused": null,
+        "solver_final_day": 21,
+        "solver_end_reason": "horizon",
+        "solvable": false,
+        "regret": 0.0,
+        "mole_clash_days": 19,
+        "mole_clash_leaks": 17,
+        "mole_clash_frames": 5,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 21,
+        "mole_solver_leaks": 17,
+        "mole_solver_frames": 8,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 188,
+          "in": 9858241,
+          "out": 8833,
+          "thinking": 80543,
+          "cached": 9459410,
+          "total_tokens": 9947617,
+          "cost_usd": 2.637368,
+          "latency_s": 2782.451,
+          "combined": {
+            "calls": 188,
+            "in": 9858241,
+            "out": 8833,
+            "thinking": 80543,
+            "cached": 9459410,
+            "total_tokens": 9947617,
+            "cost_usd": 2.637368,
+            "latency_s": 2782.451
+          },
+          "clash_investigator": {
+            "calls": 148,
+            "in": 9826440,
+            "out": 6280,
+            "thinking": 72801,
+            "cached": 9459410,
+            "total_tokens": 9905521,
+            "cost_usd": 2.470816,
+            "latency_s": 2401.047
+          },
+          "clash_mole": {
+            "calls": 40,
+            "in": 31801,
+            "out": 2553,
+            "thinking": 7742,
+            "cached": 0,
+            "total_tokens": 42096,
+            "cost_usd": 0.166552,
+            "latency_s": 381.404
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-hard-seed2",
+        "tier": "hard",
+        "seed": 2,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "38cd16ece1cbdc52b9cf469000296a5241ed90bb",
+        "investigator_score": 0.5,
+        "investigator_correct": true,
+        "investigator_accused": "e25",
+        "investigator_final_day": 10,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.39,
+        "solver_correct": true,
+        "solver_accused": "e25",
+        "solver_final_day": 14,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": -0.11,
+        "mole_clash_days": 9,
+        "mole_clash_leaks": 9,
+        "mole_clash_frames": 1,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 13,
+        "mole_solver_leaks": 7,
+        "mole_solver_frames": 5,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 118,
+          "in": 2907031,
+          "out": 4783,
+          "thinking": 37206,
+          "cached": 2657634,
+          "total_tokens": 2949020,
+          "cost_usd": 1.184448,
+          "latency_s": 1579.961,
+          "combined": {
+            "calls": 118,
+            "in": 2907031,
+            "out": 4783,
+            "thinking": 37206,
+            "cached": 2657634,
+            "total_tokens": 2949020,
+            "cost_usd": 1.184448,
+            "latency_s": 1579.961
+          },
+          "clash_investigator": {
+            "calls": 96,
+            "in": 2890360,
+            "out": 3385,
+            "thinking": 32891,
+            "cached": 2657634,
+            "total_tokens": 2926636,
+            "cost_usd": 1.093976,
+            "latency_s": 1318.535
+          },
+          "clash_mole": {
+            "calls": 22,
+            "in": 16671,
+            "out": 1398,
+            "thinking": 4315,
+            "cached": 0,
+            "total_tokens": 22384,
+            "cost_usd": 0.090472,
+            "latency_s": 261.426
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-hard-seed3",
+        "tier": "hard",
+        "seed": 3,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "db9a94b0be86ec58859472a194d0db9c7c98d44f",
+        "investigator_score": 0.49,
+        "investigator_correct": true,
+        "investigator_accused": "e29",
+        "investigator_final_day": 10,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.74,
+        "solver_correct": true,
+        "solver_accused": "e29",
+        "solver_final_day": 6,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": 0.25,
+        "mole_clash_days": 9,
+        "mole_clash_leaks": 9,
+        "mole_clash_frames": 2,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 5,
+        "mole_solver_leaks": 3,
+        "mole_solver_frames": 3,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 110,
+          "in": 3691555,
+          "out": 4200,
+          "thinking": 50552,
+          "cached": 3436300,
+          "total_tokens": 3746307,
+          "cost_usd": 1.401661,
+          "latency_s": 1538.855,
+          "combined": {
+            "calls": 110,
+            "in": 3691555,
+            "out": 4200,
+            "thinking": 50552,
+            "cached": 3436300,
+            "total_tokens": 3746307,
+            "cost_usd": 1.401661,
+            "latency_s": 1538.855
+          },
+          "clash_investigator": {
+            "calls": 96,
+            "in": 3680442,
+            "out": 3335,
+            "thinking": 47701,
+            "cached": 3436300,
+            "total_tokens": 3731478,
+            "cost_usd": 1.342275,
+            "latency_s": 1379.934
+          },
+          "clash_mole": {
+            "calls": 14,
+            "in": 11113,
+            "out": 865,
+            "thinking": 2851,
+            "cached": 0,
+            "total_tokens": 14829,
+            "cost_usd": 0.059386,
+            "latency_s": 158.921
+          }
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/carbon-vs-carbon-hard-seed4",
+        "tier": "hard",
+        "seed": 4,
+        "episode_count": 2,
+        "model_id": "gemini-4-carbon",
+        "commit": "d5fee698c79c4d026066ee981e7704362925ea23",
+        "investigator_score": 0.51,
+        "investigator_correct": true,
+        "investigator_accused": "e11",
+        "investigator_final_day": 11,
+        "investigator_end_reason": "accused",
+        "solver_score": 0.6,
+        "solver_correct": true,
+        "solver_accused": "e11",
+        "solver_final_day": 10,
+        "solver_end_reason": "accused",
+        "solvable": true,
+        "regret": 0.09,
+        "mole_clash_days": 10,
+        "mole_clash_leaks": 9,
+        "mole_clash_frames": 4,
+        "mole_clash_errors": 0,
+        "mole_solver_days": 9,
+        "mole_solver_leaks": 5,
+        "mole_solver_frames": 5,
+        "mole_solver_errors": 0,
+        "usage": {
+          "calls": 79,
+          "in": 2243533,
+          "out": 3375,
+          "thinking": 40203,
+          "cached": 2075662,
+          "total_tokens": 2287111,
+          "cost_usd": 0.979091,
+          "latency_s": 3267.482,
+          "combined": {
+            "calls": 79,
+            "in": 2243533,
+            "out": 3375,
+            "thinking": 40203,
+            "cached": 2075662,
+            "total_tokens": 2287111,
+            "cost_usd": 0.979091,
+            "latency_s": 3267.482
+          },
+          "clash_investigator": {
+            "calls": 60,
+            "in": 2228616,
+            "out": 2169,
+            "thinking": 36495,
+            "cached": 2075662,
+            "total_tokens": 2267280,
+            "cost_usd": 0.900117,
+            "latency_s": 2887.85
+          },
+          "clash_mole": {
+            "calls": 19,
+            "in": 14917,
+            "out": 1206,
+            "thinking": 3708,
+            "cached": 0,
+            "total_tokens": 19831,
+            "cost_usd": 0.078974,
+            "latency_s": 379.632
+          }
+        }
+      }
+    ],
+    "by_tier": {
+      "easy": {
+        "n_shards": 1,
+        "n_episodes": 2,
+        "seeds": [
+          0
+        ],
+        "investigator_accuracy": 1.0,
+        "investigator_accuracy_ci95": [
+          0.2065,
+          1.0
+        ],
+        "investigator_mean_score": 0.83,
+        "investigator_mean_ci95": [
+          0.83,
+          0.83
+        ],
+        "solver_accuracy": 1.0,
+        "solver_accuracy_ci95": [
+          0.2065,
+          1.0
+        ],
+        "solver_mean_score": 0.79,
+        "solver_mean_ci95": [
+          0.79,
+          0.79
+        ],
+        "solvable_rate": 1.0,
+        "solvable_rate_ci95": [
+          0.2065,
+          1.0
+        ],
+        "mean_regret": -0.04,
+        "mean_regret_ci95": [
+          -0.04,
+          -0.04
+        ],
+        "mole_total_leaks": 3,
+        "mole_total_frames": 1,
+        "mole_total_errors": 0,
+        "mole_solver_total_leaks": 3,
+        "mole_solver_total_frames": 5,
+        "mole_solver_total_errors": 0,
+        "usage": {
+          "combined": {
+            "calls": 46,
+            "in": 366514,
+            "out": 1734,
+            "thinking": 17294,
+            "cached": 270799,
+            "total_tokens": 385542,
+            "cost_usd": 0.408789,
+            "latency_s": 1118.284
+          },
+          "clash_investigator": {
+            "calls": 36,
+            "in": 360310,
+            "out": 1088,
+            "thinking": 14604,
+            "cached": 270799,
+            "total_tokens": 376002,
+            "cost_usd": 0.363021,
+            "latency_s": 879.663
+          },
+          "clash_mole": {
+            "calls": 10,
+            "in": 6204,
+            "out": 646,
+            "thinking": 2690,
+            "cached": 0,
+            "total_tokens": 9540,
+            "cost_usd": 0.045768,
+            "latency_s": 238.621
+          }
+        }
+      },
+      "medium": {
+        "n_shards": 10,
+        "n_episodes": 20,
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "investigator_accuracy": 1.0,
+        "investigator_accuracy_ci95": [
+          0.7225,
+          1.0
+        ],
+        "investigator_mean_score": 0.707,
+        "investigator_mean_ci95": [
+          0.66,
+          0.749
+        ],
+        "solver_accuracy": 0.8,
+        "solver_accuracy_ci95": [
+          0.4902,
+          0.9433
+        ],
+        "solver_mean_score": 0.37,
+        "solver_mean_ci95": [
+          0.229,
+          0.513
+        ],
+        "solvable_rate": 0.8,
+        "solvable_rate_ci95": [
+          0.4902,
+          0.9433
+        ],
+        "mean_regret": -0.337,
+        "mean_regret_ci95": [
+          -0.49,
+          -0.191
+        ],
+        "mole_total_leaks": 59,
+        "mole_total_frames": 18,
+        "mole_total_errors": 0,
+        "mole_solver_total_leaks": 80,
+        "mole_solver_total_frames": 65,
+        "mole_solver_total_errors": 0,
+        "usage": {
+          "combined": {
+            "calls": 864,
+            "in": 15641751,
+            "out": 34250,
+            "thinking": 308756,
+            "cached": 13639553,
+            "total_tokens": 15984757,
+            "cost_usd": 8.798417,
+            "latency_s": 23439.601
+          },
+          "clash_investigator": {
+            "calls": 688,
+            "in": 15518342,
+            "out": 22868,
+            "thinking": 269177,
+            "cached": 13639553,
+            "total_tokens": 15810387,
+            "cost_usd": 8.041989,
+            "latency_s": 20308.601
+          },
+          "clash_mole": {
+            "calls": 176,
+            "in": 123409,
+            "out": 11382,
+            "thinking": 39579,
+            "cached": 0,
+            "total_tokens": 174370,
+            "cost_usd": 0.756428,
+            "latency_s": 3131.0
+          }
+        }
+      },
+      "hard": {
+        "n_shards": 5,
+        "n_episodes": 10,
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "investigator_accuracy": 1.0,
+        "investigator_accuracy_ci95": [
+          0.5655,
+          1.0
+        ],
+        "investigator_mean_score": 0.428,
+        "investigator_mean_ci95": [
+          0.202,
+          0.584
+        ],
+        "solver_accuracy": 0.8,
+        "solver_accuracy_ci95": [
+          0.3755,
+          0.9638
+        ],
+        "solver_mean_score": 0.488,
+        "solver_mean_ci95": [
+          0.226,
+          0.7
+        ],
+        "solvable_rate": 0.8,
+        "solvable_rate_ci95": [
+          0.3755,
+          0.9638
+        ],
+        "mean_regret": 0.06,
+        "mean_regret_ci95": [
+          -0.044,
+          0.168
+        ],
+        "mole_total_leaks": 50,
+        "mole_total_frames": 13,
+        "mole_total_errors": 0,
+        "mole_solver_total_leaks": 36,
+        "mole_solver_total_frames": 22,
+        "mole_solver_total_errors": 0,
+        "usage": {
+          "combined": {
+            "calls": 561,
+            "in": 20333111,
+            "out": 24138,
+            "thinking": 242284,
+            "cached": 19115379,
+            "total_tokens": 20599533,
+            "cost_usd": 7.011233,
+            "latency_s": 11668.516
+          },
+          "clash_investigator": {
+            "calls": 455,
+            "in": 20249753,
+            "out": 17428,
+            "thinking": 220667,
+            "cached": 19115379,
+            "total_tokens": 20487848,
+            "cost_usd": 6.561247,
+            "latency_s": 10209.465
+          },
+          "clash_mole": {
+            "calls": 106,
+            "in": 83358,
+            "out": 6710,
+            "thinking": 21617,
+            "cached": 0,
+            "total_tokens": 111685,
+            "cost_usd": 0.449986,
+            "latency_s": 1459.051
+          }
+        }
+      }
+    },
+    "overall": {
+      "n_shards": 16,
+      "n_episodes": 32,
+      "seeds": [
+        0,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "investigator_accuracy": 1.0,
+      "investigator_accuracy_ci95": [
+        0.8064,
+        1.0
+      ],
+      "investigator_mean_score": 0.6275,
+      "investigator_mean_ci95": [
+        0.5256,
+        0.7075
+      ],
+      "solver_accuracy": 0.8125,
+      "solver_accuracy_ci95": [
+        0.5699,
+        0.9341
+      ],
+      "solver_mean_score": 0.4331,
+      "solver_mean_ci95": [
+        0.3088,
+        0.5569
+      ],
+      "solvable_rate": 0.8125,
+      "solvable_rate_ci95": [
+        0.5699,
+        0.9341
+      ],
+      "mean_regret": -0.1944,
+      "mean_regret_ci95": [
+        -0.3369,
+        -0.0625
+      ],
+      "mole_total_leaks": 112,
+      "mole_total_frames": 32,
+      "mole_total_errors": 0,
+      "mole_solver_total_leaks": 119,
+      "mole_solver_total_frames": 92,
+      "mole_solver_total_errors": 0,
+      "usage": {
+        "combined": {
+          "calls": 1471,
+          "in": 36341376,
+          "out": 60122,
+          "thinking": 568334,
+          "cached": 33025731,
+          "total_tokens": 36969832,
+          "cost_usd": 16.218439,
+          "latency_s": 36226.401
+        },
+        "clash_investigator": {
+          "calls": 1179,
+          "in": 36128405,
+          "out": 41384,
+          "thinking": 504448,
+          "cached": 33025731,
+          "total_tokens": 36674237,
+          "cost_usd": 14.966257,
+          "latency_s": 31397.729
+        },
+        "clash_mole": {
+          "calls": 292,
+          "in": 212971,
+          "out": 18738,
+          "thinking": 63886,
+          "cached": 0,
+          "total_tokens": 295595,
+          "cost_usd": 1.252182,
+          "latency_s": 4828.672
+        }
+      }
+    }
+  },
+  "live_arena_suite": {
+    "runs": [],
+    "by_tier": {
+      "easy": {
+        "n_runs": 0,
+        "seeds": [],
+        "n_adaptive_episodes": 0,
+        "n_default_episodes": 0,
+        "by_investigator": {
+          "solver": {
+            "adaptive_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "default_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "n_paired": 0,
+            "delta_mean": 0.0,
+            "delta_mean_ci95": [
+              0.0,
+              0.0
+            ],
+            "delta_accuracy": 0.0
+          },
+          "grok_tactics": {
+            "adaptive_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "default_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "n_paired": 0,
+            "delta_mean": 0.0,
+            "delta_mean_ci95": [
+              0.0,
+              0.0
+            ],
+            "delta_accuracy": 0.0
+          },
+          "obvious_heuristic": {
+            "adaptive_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "default_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "n_paired": 0,
+            "delta_mean": 0.0,
+            "delta_mean_ci95": [
+              0.0,
+              0.0
+            ],
+            "delta_accuracy": 0.0
+          }
+        },
+        "solvable": false,
+        "mole_decisions": 0,
+        "mole_leaks": 0,
+        "mole_frames": 0,
+        "mole_llm_errors": 0,
+        "mole_rejected_moves": 0,
+        "usage": {
+          "calls": 0,
+          "in": 0,
+          "out": 0,
+          "thinking": 0,
+          "cached": 0,
+          "total_tokens": 0,
+          "cost_usd": 0.0,
+          "latency_s": 0.0
+        }
+      },
+      "medium": {
+        "n_runs": 0,
+        "seeds": [],
+        "n_adaptive_episodes": 0,
+        "n_default_episodes": 0,
+        "by_investigator": {
+          "solver": {
+            "adaptive_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "default_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "n_paired": 0,
+            "delta_mean": 0.0,
+            "delta_mean_ci95": [
+              0.0,
+              0.0
+            ],
+            "delta_accuracy": 0.0
+          },
+          "grok_tactics": {
+            "adaptive_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "default_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "n_paired": 0,
+            "delta_mean": 0.0,
+            "delta_mean_ci95": [
+              0.0,
+              0.0
+            ],
+            "delta_accuracy": 0.0
+          },
+          "obvious_heuristic": {
+            "adaptive_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "default_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "n_paired": 0,
+            "delta_mean": 0.0,
+            "delta_mean_ci95": [
+              0.0,
+              0.0
+            ],
+            "delta_accuracy": 0.0
+          }
+        },
+        "solvable": false,
+        "mole_decisions": 0,
+        "mole_leaks": 0,
+        "mole_frames": 0,
+        "mole_llm_errors": 0,
+        "mole_rejected_moves": 0,
+        "usage": {
+          "calls": 0,
+          "in": 0,
+          "out": 0,
+          "thinking": 0,
+          "cached": 0,
+          "total_tokens": 0,
+          "cost_usd": 0.0,
+          "latency_s": 0.0
+        }
+      },
+      "hard": {
+        "n_runs": 0,
+        "seeds": [],
+        "n_adaptive_episodes": 0,
+        "n_default_episodes": 0,
+        "by_investigator": {
+          "solver": {
+            "adaptive_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "default_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "n_paired": 0,
+            "delta_mean": 0.0,
+            "delta_mean_ci95": [
+              0.0,
+              0.0
+            ],
+            "delta_accuracy": 0.0
+          },
+          "grok_tactics": {
+            "adaptive_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "default_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "n_paired": 0,
+            "delta_mean": 0.0,
+            "delta_mean_ci95": [
+              0.0,
+              0.0
+            ],
+            "delta_accuracy": 0.0
+          },
+          "obvious_heuristic": {
+            "adaptive_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "default_mole": {
+              "n": 0,
+              "mean_score": 0.0,
+              "mean_score_ci95": [
+                0.0,
+                0.0
+              ],
+              "accuracy": 0.0,
+              "accuracy_ci95": [
+                0.0,
+                0.0
+              ],
+              "mean_day": 0.0
+            },
+            "n_paired": 0,
+            "delta_mean": 0.0,
+            "delta_mean_ci95": [
+              0.0,
+              0.0
+            ],
+            "delta_accuracy": 0.0
+          }
+        },
+        "solvable": false,
+        "mole_decisions": 0,
+        "mole_leaks": 0,
+        "mole_frames": 0,
+        "mole_llm_errors": 0,
+        "mole_rejected_moves": 0,
+        "usage": {
+          "calls": 0,
+          "in": 0,
+          "out": 0,
+          "thinking": 0,
+          "cached": 0,
+          "total_tokens": 0,
+          "cost_usd": 0.0,
+          "latency_s": 0.0
+        }
+      }
+    },
+    "overall": {
+      "n_runs": 0,
+      "seeds": [],
+      "n_adaptive_episodes": 0,
+      "n_default_episodes": 0,
+      "by_investigator": {
+        "solver": {
+          "adaptive_mole": {
+            "n": 0,
+            "mean_score": 0.0,
+            "mean_score_ci95": [
+              0.0,
+              0.0
+            ],
+            "accuracy": 0.0,
+            "accuracy_ci95": [
+              0.0,
+              0.0
+            ],
+            "mean_day": 0.0
+          },
+          "default_mole": {
+            "n": 0,
+            "mean_score": 0.0,
+            "mean_score_ci95": [
+              0.0,
+              0.0
+            ],
+            "accuracy": 0.0,
+            "accuracy_ci95": [
+              0.0,
+              0.0
+            ],
+            "mean_day": 0.0
+          },
+          "n_paired": 0,
+          "delta_mean": 0.0,
+          "delta_mean_ci95": [
+            0.0,
+            0.0
+          ],
+          "delta_accuracy": 0.0
+        },
+        "grok_tactics": {
+          "adaptive_mole": {
+            "n": 0,
+            "mean_score": 0.0,
+            "mean_score_ci95": [
+              0.0,
+              0.0
+            ],
+            "accuracy": 0.0,
+            "accuracy_ci95": [
+              0.0,
+              0.0
+            ],
+            "mean_day": 0.0
+          },
+          "default_mole": {
+            "n": 0,
+            "mean_score": 0.0,
+            "mean_score_ci95": [
+              0.0,
+              0.0
+            ],
+            "accuracy": 0.0,
+            "accuracy_ci95": [
+              0.0,
+              0.0
+            ],
+            "mean_day": 0.0
+          },
+          "n_paired": 0,
+          "delta_mean": 0.0,
+          "delta_mean_ci95": [
+            0.0,
+            0.0
+          ],
+          "delta_accuracy": 0.0
+        },
+        "obvious_heuristic": {
+          "adaptive_mole": {
+            "n": 0,
+            "mean_score": 0.0,
+            "mean_score_ci95": [
+              0.0,
+              0.0
+            ],
+            "accuracy": 0.0,
+            "accuracy_ci95": [
+              0.0,
+              0.0
+            ],
+            "mean_day": 0.0
+          },
+          "default_mole": {
+            "n": 0,
+            "mean_score": 0.0,
+            "mean_score_ci95": [
+              0.0,
+              0.0
+            ],
+            "accuracy": 0.0,
+            "accuracy_ci95": [
+              0.0,
+              0.0
+            ],
+            "mean_day": 0.0
+          },
+          "n_paired": 0,
+          "delta_mean": 0.0,
+          "delta_mean_ci95": [
+            0.0,
+            0.0
+          ],
+          "delta_accuracy": 0.0
+        }
+      },
+      "solvable": false,
+      "mole_decisions": 0,
+      "mole_leaks": 0,
+      "mole_frames": 0,
+      "mole_llm_errors": 0,
+      "mole_rejected_moves": 0,
+      "usage": {
+        "calls": 0,
+        "in": 0,
+        "out": 0,
+        "thinking": 0,
+        "cached": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0,
+        "latency_s": 0.0
+      }
+    }
+  },
+  "mole_forge_suite": {
+    "runs": [
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-easy-deep",
+        "tier": "easy",
+        "model_id": "gemini-4-carbon",
+        "commit": "785d21a1cb79edd061e1e34031bb04284e38c110",
+        "gens": 6,
+        "n_valid_llm_children": 25,
+        "n_invalid_llm_children": 0,
+        "best_fitness": 0.5613,
+        "default_dev_fitness": 0.3412,
+        "dev_fitness_gain": 0.2201,
+        "fresh_solver_accuracy": 0.75,
+        "fresh_min_regret": 0.1595,
+        "default_fresh_min_regret": 0.06,
+        "has_holdout_generalization": true,
+        "n_confirm_seeds": 40,
+        "top1_confirm_solver_acc": 0.65,
+        "top1_confirm_min_regret": 0.247,
+        "all_evolved_solvable_confirm": false,
+        "generations_recorded": 6,
+        "hof_fitness_trajectory": [
+          0.5605,
+          0.5605,
+          0.5613,
+          0.5613,
+          0.5613,
+          0.5613
+        ],
+        "usage": {
+          "calls": 34,
+          "in": 5498,
+          "out": 4832,
+          "thinking": 3203,
+          "cached": 0,
+          "total_tokens": 13533,
+          "cost_usd": 0.091346,
+          "latency_s": 1417.949
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-med-deep",
+        "tier": "medium",
+        "model_id": "gemini-4-carbon",
+        "commit": "8425507a2791d4c8fa449cb7fdcc744e3f4767ea",
+        "gens": 8,
+        "n_valid_llm_children": 43,
+        "n_invalid_llm_children": 0,
+        "best_fitness": 0.7381,
+        "default_dev_fitness": 0.6315,
+        "dev_fitness_gain": 0.1066,
+        "fresh_solver_accuracy": 0.85,
+        "fresh_min_regret": 0.139,
+        "default_fresh_min_regret": 0.161,
+        "has_holdout_generalization": true,
+        "n_confirm_seeds": 40,
+        "top1_confirm_solver_acc": 0.9,
+        "top1_confirm_min_regret": 0.1202,
+        "all_evolved_solvable_confirm": true,
+        "generations_recorded": 8,
+        "hof_fitness_trajectory": [
+          0.6315,
+          0.6315,
+          0.6678,
+          0.7223,
+          0.7381,
+          0.7381,
+          0.7381,
+          0.7381
+        ],
+        "usage": {
+          "calls": 19,
+          "in": 9256,
+          "out": 6680,
+          "thinking": 4353,
+          "cached": 0,
+          "total_tokens": 20289,
+          "cost_usd": 0.128842,
+          "latency_s": 338.506
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-hard-deep",
+        "tier": "hard",
+        "model_id": "gemini-4-carbon",
+        "commit": "9b8858381c99a4b94ea3d989fcd0d232fc5411ca",
+        "gens": 8,
+        "n_valid_llm_children": 49,
+        "n_invalid_llm_children": 0,
+        "best_fitness": 0.3745,
+        "default_dev_fitness": 0.056,
+        "dev_fitness_gain": 0.3185,
+        "fresh_solver_accuracy": 0.9,
+        "fresh_min_regret": 0.231,
+        "default_fresh_min_regret": 0.165,
+        "has_holdout_generalization": true,
+        "n_confirm_seeds": 40,
+        "top1_confirm_solver_acc": 0.8,
+        "top1_confirm_min_regret": 0.1762,
+        "all_evolved_solvable_confirm": false,
+        "generations_recorded": 8,
+        "hof_fitness_trajectory": [
+          0.3175,
+          0.3175,
+          0.3175,
+          0.3645,
+          0.3645,
+          0.3645,
+          0.3745,
+          0.3745
+        ],
+        "usage": {
+          "calls": 8,
+          "in": 12133,
+          "out": 13031,
+          "thinking": 4958,
+          "cached": 0,
+          "total_tokens": 30122,
+          "cost_usd": 0.204156,
+          "latency_s": 312.872
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/mole-forge-carbon-v14",
+        "tier": "hard",
+        "model_id": "gemini-4-carbon",
+        "commit": "99767a5d144e89cbd9522ddd9720af55bb2217eb",
+        "gens": 3,
+        "n_valid_llm_children": 6,
+        "n_invalid_llm_children": 0,
+        "best_fitness": 0.37,
+        "default_dev_fitness": 0.245,
+        "dev_fitness_gain": 0.125,
+        "fresh_solver_accuracy": 0.95,
+        "fresh_min_regret": 0.2395,
+        "default_fresh_min_regret": 0.242,
+        "has_holdout_generalization": true,
+        "n_confirm_seeds": 40,
+        "top1_confirm_solver_acc": 0.9,
+        "top1_confirm_min_regret": 0.1675,
+        "all_evolved_solvable_confirm": true,
+        "generations_recorded": 3,
+        "hof_fitness_trajectory": [
+          0.313,
+          0.313,
+          0.37
+        ],
+        "usage": {
+          "calls": 12,
+          "in": 2546,
+          "out": 1060,
+          "thinking": 1180,
+          "cached": 0,
+          "total_tokens": 4786,
+          "cost_usd": 0.027492,
+          "latency_s": 133.853
+        }
+      }
+    ],
+    "overall": {
+      "n_runs": 4,
+      "tiers": [
+        "easy",
+        "hard",
+        "medium"
+      ],
+      "total_gens": 25,
+      "total_valid_llm_children": 123,
+      "max_best_fitness": 0.7381,
+      "mean_fresh_solver_accuracy": 0.8625,
+      "usage": {
+        "calls": 73,
+        "in": 29433,
+        "out": 25603,
+        "thinking": 13694,
+        "cached": 0,
+        "total_tokens": 68730,
+        "cost_usd": 0.451836,
+        "latency_s": 2203.18
+      }
+    }
+  },
+  "paired_designer_suite": {
+    "runs": [
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-easy-s10_14",
+        "tier": "easy",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "70c1b155ddee1cac2f39c09137c00b240be4c38f",
+        "n_llm_valid": 6,
+        "n_kept": 6,
+        "n_eval_episodes": 40,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.875,
+        "solver_mean": 0.875,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.7775,
+        "eval_heuristic_mean": -0.7094,
+        "top_scenario_name": "patient_frame_rotator",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.7625,
+            "designed_mean_score": 0.7775,
+            "designed_accuracy": 1.0
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.0412,
+            "designed_mean_score": -0.0196,
+            "designed_accuracy": 0.525
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.724,
+            "designed_mean_score": 0.7497,
+            "designed_accuracy": 0.975
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -0.3347,
+            "designed_mean_score": -0.7094,
+            "designed_accuracy": 0.15
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1641,
+          "out": 1253,
+          "thinking": 826,
+          "cached": 0,
+          "total_tokens": 3720,
+          "cost_usd": 0.024072,
+          "latency_s": 62.582
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-easy-s15_19",
+        "tier": "easy",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "67132908d1c300d75834e1d1a0b70632e757b65d",
+        "n_llm_valid": 6,
+        "n_kept": 6,
+        "n_eval_episodes": 40,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.812,
+        "solver_mean": 0.812,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.7505,
+        "eval_heuristic_mean": -1.0,
+        "top_scenario_name": "canary_cautious_framer",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.7823,
+            "designed_mean_score": 0.7505,
+            "designed_accuracy": 1.0
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": -0.11,
+            "designed_mean_score": 0.449,
+            "designed_accuracy": 0.8
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.6807,
+            "designed_mean_score": 0.7408,
+            "designed_accuracy": 0.975
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -0.4742,
+            "designed_mean_score": -1.0,
+            "designed_accuracy": 0.0
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1641,
+          "out": 1257,
+          "thinking": 338,
+          "cached": 0,
+          "total_tokens": 3236,
+          "cost_usd": 0.019232,
+          "latency_s": 25.666
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/paired-designer-carbon",
+        "tier": "medium",
+        "subrole": "paired_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "370de43c38b321bf9dbc5c04220abd90c4614466",
+        "n_llm_valid": 4,
+        "n_kept": 3,
+        "n_eval_episodes": 0,
+        "kept_solver_mean": 0.5743,
+        "design_solver_mean": null,
+        "solver_mean": 0.5743,
+        "kept_heuristic_mean": -1.0,
+        "design_heuristic_mean": null,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.5165,
+        "eval_heuristic_mean": -1.0,
+        "top_scenario_name": "pile-on-restricted-peers",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.6195,
+            "designed_mean_score": 0.5165,
+            "designed_accuracy": 0.725
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": -0.003,
+            "designed_mean_score": 0.1187,
+            "designed_accuracy": 0.625
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.4902,
+            "designed_mean_score": 0.364,
+            "designed_accuracy": 0.55
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -0.9572,
+            "designed_mean_score": -1.0,
+            "designed_accuracy": 0.0
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1896,
+          "out": 1120,
+          "thinking": 680,
+          "cached": 0,
+          "total_tokens": 3696,
+          "cost_usd": 0.021792,
+          "latency_s": 31.236
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-med-s10_14",
+        "tier": "medium",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+        "n_llm_valid": 6,
+        "n_kept": 6,
+        "n_eval_episodes": 40,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.6888,
+        "solver_mean": 0.6888,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.5921,
+        "eval_heuristic_mean": -1.0,
+        "top_scenario_name": "paced_cadence_framer",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.602,
+            "designed_mean_score": 0.5921,
+            "designed_accuracy": 0.875
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.2532,
+            "designed_mean_score": 0.4094,
+            "designed_accuracy": 0.825
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.4487,
+            "designed_mean_score": 0.5159,
+            "designed_accuracy": 0.775
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -0.9165,
+            "designed_mean_score": -1.0,
+            "designed_accuracy": 0.0
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1649,
+          "out": 1429,
+          "thinking": 595,
+          "cached": 0,
+          "total_tokens": 3673,
+          "cost_usd": 0.023538,
+          "latency_s": 25.312
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-med-s15_19",
+        "tier": "medium",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "70c1b155ddee1cac2f39c09137c00b240be4c38f",
+        "n_llm_valid": 6,
+        "n_kept": 2,
+        "n_eval_episodes": 40,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.6,
+        "solver_mean": 0.6,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.5527,
+        "eval_heuristic_mean": -1.0,
+        "top_scenario_name": "canary_wary_scapegoater",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.5973,
+            "designed_mean_score": 0.5527,
+            "designed_accuracy": 0.825
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.2898,
+            "designed_mean_score": -0.0217,
+            "designed_accuracy": 0.575
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.5425,
+            "designed_mean_score": 0.461,
+            "designed_accuracy": 0.75
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -1.0,
+            "designed_mean_score": -1.0,
+            "designed_accuracy": 0.0
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1649,
+          "out": 1360,
+          "thinking": 552,
+          "cached": 0,
+          "total_tokens": 3561,
+          "cost_usd": 0.022418,
+          "latency_s": 59.797
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/paired-solvable-scenarios-carbon",
+        "tier": "medium",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "16f24a08e1fb57397ddf90a5b413b4359a5f16bc",
+        "n_llm_valid": 4,
+        "n_kept": 3,
+        "n_eval_episodes": 20,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.71,
+        "solver_mean": 0.71,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.722,
+        "eval_heuristic_mean": -0.811,
+        "top_scenario_name": "high_tempo_frame_rotator",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.706,
+            "designed_mean_score": 0.722,
+            "designed_accuracy": 1.0
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.6155,
+            "designed_mean_score": 0.508,
+            "designed_accuracy": 0.85
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.6265,
+            "designed_mean_score": 0.533,
+            "designed_accuracy": 0.9
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -0.9185,
+            "designed_mean_score": -0.811,
+            "designed_accuracy": 0.1
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1649,
+          "out": 957,
+          "thinking": 476,
+          "cached": 0,
+          "total_tokens": 3082,
+          "cost_usd": 0.017628,
+          "latency_s": 21.969
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/paired-designer-carbon-hard",
+        "tier": "hard",
+        "subrole": "paired_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "9222669912afd57e53fbd3b07f0cdba985df705d",
+        "n_llm_valid": 6,
+        "n_kept": 6,
+        "n_eval_episodes": 0,
+        "kept_solver_mean": 0.6827,
+        "design_solver_mean": null,
+        "solver_mean": 0.6827,
+        "kept_heuristic_mean": -1.0,
+        "design_heuristic_mean": null,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.507,
+        "eval_heuristic_mean": -1.0,
+        "top_scenario_name": "phased-frame-shift-seeded",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.5935,
+            "designed_mean_score": 0.507,
+            "designed_accuracy": 0.9
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.4645,
+            "designed_mean_score": 0.154,
+            "designed_accuracy": 0.65
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.5912,
+            "designed_mean_score": 0.4902,
+            "designed_accuracy": 0.825
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -1.0,
+            "designed_mean_score": -1.0,
+            "designed_accuracy": 0.0
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1889,
+          "out": 1659,
+          "thinking": 669,
+          "cached": 0,
+          "total_tokens": 4217,
+          "cost_usd": 0.027058,
+          "latency_s": 30.887
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-hard",
+        "tier": "hard",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "0e59cc10aa43f068e5fe7c1007215df1db4d10fe",
+        "n_llm_valid": 6,
+        "n_kept": 6,
+        "n_eval_episodes": 20,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.689,
+        "solver_mean": 0.689,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.628,
+        "eval_heuristic_mean": -1.0,
+        "top_scenario_name": "rotating_blame_sprinter",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.433,
+            "designed_mean_score": 0.628,
+            "designed_accuracy": 1.0
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.366,
+            "designed_mean_score": 0.2585,
+            "designed_accuracy": 0.75
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.5415,
+            "designed_mean_score": 0.5005,
+            "designed_accuracy": 0.95
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -1.0,
+            "designed_mean_score": -1.0,
+            "designed_accuracy": 0.0
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1645,
+          "out": 1459,
+          "thinking": 540,
+          "cached": 0,
+          "total_tokens": 3644,
+          "cost_usd": 0.02328,
+          "latency_s": 72.477
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-hard-s10_14",
+        "tier": "hard",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "94974340ae44c96fe5eb03d797c041b95d19d922",
+        "n_llm_valid": 6,
+        "n_kept": 5,
+        "n_eval_episodes": 40,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.628,
+        "solver_mean": 0.628,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.497,
+        "eval_heuristic_mean": -1.0,
+        "top_scenario_name": "adaptive_heat_deflector",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.5875,
+            "designed_mean_score": 0.497,
+            "designed_accuracy": 0.925
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.4265,
+            "designed_mean_score": 0.3394,
+            "designed_accuracy": 0.775
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.5315,
+            "designed_mean_score": 0.597,
+            "designed_accuracy": 1.0
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -0.9602,
+            "designed_mean_score": -1.0,
+            "designed_accuracy": 0.0
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1645,
+          "out": 1348,
+          "thinking": 639,
+          "cached": 0,
+          "total_tokens": 3632,
+          "cost_usd": 0.02316,
+          "latency_s": 60.519
+        }
+      },
+      {
+        "run_dir": "results/gemini/roles_carbon/adaptive_mole/paired-skill-designer-carbon-hard-s15_19",
+        "tier": "hard",
+        "subrole": "paired_skill_designer",
+        "model_id": "gemini-4-carbon",
+        "commit": "cec07dc8ea61d2c129dd81e249e93dec05b76983",
+        "n_llm_valid": 6,
+        "n_kept": 6,
+        "n_eval_episodes": 40,
+        "kept_solver_mean": null,
+        "design_solver_mean": 0.67,
+        "solver_mean": 0.67,
+        "kept_heuristic_mean": null,
+        "design_heuristic_mean": -1.0,
+        "heuristic_mean": -1.0,
+        "eval_full_solver_mean": 0.5707,
+        "eval_heuristic_mean": -1.0,
+        "top_scenario_name": "scattered_blame_blitz",
+        "has_skill_gap": true,
+        "skill_gap_rungs": {
+          "full_solver": {
+            "baseline_mean_score": 0.498,
+            "designed_mean_score": 0.5707,
+            "designed_accuracy": 0.975
+          },
+          "no_ev_commit": {
+            "baseline_mean_score": 0.1422,
+            "designed_mean_score": 0.3165,
+            "designed_accuracy": 0.775
+          },
+          "binary_canary_only": {
+            "baseline_mean_score": 0.5475,
+            "designed_mean_score": 0.556,
+            "designed_accuracy": 0.975
+          },
+          "heuristic_bisection": {
+            "baseline_mean_score": -0.9602,
+            "designed_mean_score": -1.0,
+            "designed_accuracy": 0.0
+          },
+          "do_nothing": {
+            "baseline_mean_score": 0.0,
+            "designed_mean_score": 0.0,
+            "designed_accuracy": 0.0
+          }
+        },
+        "usage": {
+          "calls": 1,
+          "in": 1645,
+          "out": 1334,
+          "thinking": 143,
+          "cached": 0,
+          "total_tokens": 3122,
+          "cost_usd": 0.01806,
+          "latency_s": 21.331
+        }
+      }
+    ],
+    "overall": {
+      "n_runs": 10,
+      "tiers": [
+        "easy",
+        "hard",
+        "medium"
+      ],
+      "subroles": [
+        "paired_designer",
+        "paired_skill_designer"
+      ],
+      "total_llm_valid": 56,
+      "total_kept": 49,
+      "keep_rate": 0.875,
+      "mean_solver_score": 0.693,
+      "mean_heuristic_score": -1.0,
+      "n_holdout_eval_runs": 10,
+      "mean_eval_full_solver": 0.6114,
+      "mean_eval_heuristic": -0.952,
+      "usage": {
+        "calls": 10,
+        "in": 16949,
+        "out": 13176,
+        "thinking": 5458,
+        "cached": 0,
+        "total_tokens": 35583,
+        "cost_usd": 0.220238,
+        "latency_s": 411.776
+      }
+    }
+  },
+  "catchability_audit": null,
+  "repo_isolation_audit": {
+    "passed": true,
+    "decisions_checked": 292,
+    "views_checked": 0,
+    "strategies_checked": 57,
+    "isolation_violations": 0,
+    "secret_leaks": 0
+  },
+  "other_verified_runs": [],
+  "totals": {
+    "verified_folders": 30,
+    "n_verified_runs": 30,
+    "calls": 1554,
+    "in": 36387758,
+    "out": 98901,
+    "thinking": 587486,
+    "cached": 33025731,
+    "total_tokens": 37074145,
+    "cost_usd": 16.890513,
+    "latency_s": 38841.357,
+    "tokens": {
+      "in": 36387758,
+      "out": 98901,
+      "thinking": 587486,
+      "cached": 33025731,
+      "total": 37074145
+    },
+    "by_suite": {
+      "clash_suite": {
+        "verified_folders": 16,
+        "calls": 1471,
+        "in": 36341376,
+        "out": 60122,
+        "thinking": 568334,
+        "cached": 33025731,
+        "total_tokens": 36969832,
+        "cost_usd": 16.218439,
+        "latency_s": 36226.401
+      },
+      "live_arena_suite": {
+        "verified_folders": 0,
+        "calls": 0,
+        "in": 0,
+        "out": 0,
+        "thinking": 0,
+        "cached": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0,
+        "latency_s": 0.0
+      },
+      "mole_forge_suite": {
+        "verified_folders": 4,
+        "calls": 73,
+        "in": 29433,
+        "out": 25603,
+        "thinking": 13694,
+        "cached": 0,
+        "total_tokens": 68730,
+        "cost_usd": 0.451836,
+        "latency_s": 2203.18
+      },
+      "paired_designer_suite": {
+        "verified_folders": 10,
+        "calls": 10,
+        "in": 16949,
+        "out": 13176,
+        "thinking": 5458,
+        "cached": 0,
+        "total_tokens": 35583,
+        "cost_usd": 0.220238,
+        "latency_s": 411.776
+      },
+      "other_verified_runs": {
+        "verified_folders": 0,
+        "calls": 0,
+        "in": 0,
+        "out": 0,
+        "thinking": 0,
+        "cached": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0,
+        "latency_s": 0.0
+      }
+    }
+  }
+}

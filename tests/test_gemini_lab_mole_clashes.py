@@ -105,9 +105,13 @@ def _scan_secrets(text: str) -> list[str]:
 def test_clash_directory_inventory_and_compact_layout() -> None:
     assert ADAPTIVE_MOLE_ROOT.is_dir()
     found_clash_dirs = sorted(
-        p.name for p in ADAPTIVE_MOLE_ROOT.iterdir() if p.is_dir() and p.name.startswith("carbon-vs-carbon-")
+        p.name
+        for p in ADAPTIVE_MOLE_ROOT.iterdir()
+        if p.is_dir() and p.name.startswith("carbon-vs-carbon-") and p.name != "carbon-vs-carbon-suite"
     )
-    assert "carbon-vs-carbon-suite" not in found_clash_dirs
+    suite_dir = ADAPTIVE_MOLE_ROOT / "carbon-vs-carbon-suite"
+    if suite_dir.is_dir():
+        assert not (suite_dir / "meta.json").exists()
     assert found_clash_dirs == sorted(EXPECTED_CLASH_RUNS)
     assert len(found_clash_dirs) == 16
 

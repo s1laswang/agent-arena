@@ -12,6 +12,16 @@ gemini-4-carbon, rules v1.4, dev seeds 0-29 per tier, every episode replay-verif
 
 The solver is paired on all 30 seeds per tier (solver means: hard 0.499, medium 0.645). An earlier version of this table (8fd4dec) divided by the solver mean on seeds 0-19 only (60% [1, 103]); that is superseded.
 
+**Second frontier family, gpt-5.5 (pre-registered at cf394894, 05:11 on 15 Nov; run 05:11-05:29; 30 of 30 episodes valid, 0 infra failures, all replay-verified; `data/runs/committed/v1.4/opencode-gpt-5.5/`):**
+
+| harness | tier | n | score ± 95% CI | frontier / solver [95% CI] | paired diff ± CI | luck-adjusted / solver [95% CI] |
+|---|---|---|---|---|---|---|
+| gpt-5.5, OpenCode over MCP | hard | 30 | 0.504 ± 0.064 | **101% [79%, 140%]** | +0.005 ± 0.141 | 84% [67%, 103%] |
+
+gpt-5.5 matches the reference: **no gap for this agent.** It was correct in 28 of 28 accusations; in 2 episodes (seeds 0 and 17) it wrote "Accusing e.." as its final answer and never called `accuse`, so the episode scored 0 (valid under the pre-registered rule: the runner's infra check passed). OpenCode-reported cost: $38.91 for 30 episodes. How it plays next to the solver and gemini-4-carbon: `results/behaviour_compare_v1.4.md` (`python scripts/behaviour_compare_v14.py`).
+
+**Consequence for the claim.** The gap on hard is specific to gemini-4-carbon in the OpenCode harness. gpt-5.5 received exactly the same tools and instruction and matched the reference, so the information and tools are sufficient; gemini-4-carbon's shortfall comes from its decisions (53% of its calls are interviews with a stated likelihood ratio of 1.2; it plants 8.5 canaries to gpt-5.5's 17.2). A judge who reruns with a GPT-class agent should expect parity. Also checked on 15 Nov: re-parameterising the reference to copy gpt-5.5's habits (no access-log evidence, always two canaries a day) looked better on seeds 0-29 (0.546 vs 0.499) but is worse on 400 fresh hard seeds 9000-9399 (0.496 ± 0.036 vs 0.561 ± 0.032), so the reference was left unchanged; seeds 0-29 are a below-average draw for the reference.
+
 Honest reading: a gap on hard in the judges' harness (both the raw and the luck-adjusted CI exclude parity); parity in-process on hard and in OpenCode on medium. Infra-invalid attempts (CLI error events, empty model replies, provider unavailable) were excluded and retried; the table's "alternative" rows count them as 0 instead.
 
 **Pre-registered extension (committed Sun 15 Nov 02:00 Helsinki in f9fb7a4a, before any run):** gemini-4-carbon via OpenCode on v1.4 hard seeds 30-59 will be run as an EXTENSION and reported (a) on its own and (b) pooled with seeds 0-29, in a separate directory (`opencode-gemini-4-carbon-ext`). The primary n=30 row above is never replaced. Valid episodes are never re-run; infra-invalid attempts are retried and excluded.

@@ -264,8 +264,15 @@ def simulate_grok_tactics(tier: str, seeds: list[int]) -> list[dict[str, Any]]:
 
 
 def compute_summary(root: Path = ROOT, verify_replays: bool = True) -> dict[str, Any]:
-    os.environ.setdefault("CANARY_ALLOW_DEV", "1")
     _P_CACHE.clear()
+    try:
+        return _compute_summary_impl(root=root, verify_replays=verify_replays)
+    finally:
+        _P_CACHE.clear()
+
+
+def _compute_summary_impl(root: Path = ROOT, verify_replays: bool = True) -> dict[str, Any]:
+    os.environ.setdefault("CANARY_ALLOW_DEV", "1")
     comm_v14 = root / "data" / "runs" / "committed" / "v1.4"
     rep_v14 = root / "results" / "frontier_replication" / "v1.4"
 

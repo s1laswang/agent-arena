@@ -27,6 +27,7 @@ PYTHONPATH=. pytest -q tests/test_frontier_suite_master.py
 | `frontier_trajectory_audit` | `scripts/frontier_trajectory_audit.py` | `results/frontier_replication/v1.4/trajectory_audit.json` (`<=50000` B) | `docs/reports/frontier_trajectory_audit_v14.md` | 277 active episodes across 11 cohorts (6 OpenCode, 2 in-proc, 3 solver) in 777 pool | `PYTHONPATH=. python scripts/frontier_trajectory_audit.py --check` |
 | `frontier_transcript_forensics` | `scripts/frontier_transcript_forensics.py` | `results/frontier_replication/v1.4/transcript_forensics.json` (`<=45000` B) | `docs/reports/frontier_transcript_forensics_v14.md` | 97+ OpenCode transcripts (5+ active cohorts, 10 forensic case dossiers) in 777 pool | `PYTHONPATH=. python scripts/frontier_transcript_forensics.py --check` |
 | `frontier_stopping_counterfactual` | `scripts/frontier_stopping_counterfactual_v14.py` | `results/frontier_replication/v1.4/stopping_counterfactual_v14.json` (`<=35000` B) | `docs/reports/frontier_stopping_counterfactual_v14.md` | 246 episodes across 9 v1.4 cohorts (Bayes break-even abstention and EV decomposition) | `PYTHONPATH=. python scripts/frontier_stopping_counterfactual_v14.py --check` |
+| `frontier_gpt55_vs_carbon_forensics` | `scripts/frontier_gpt55_vs_carbon_forensics.py` | `results/frontier_replication/v1.4/gpt55_vs_carbon_forensics.json` (`<=38000` B) | `docs/reports/frontier_gpt55_vs_carbon_forensics_v14.md` | 90 paired hard episodes (30 gpt-5.5 + 30 carbon + 30 solver, 7 divergence seeds) | `PYTHONPATH=. python scripts/frontier_gpt55_vs_carbon_forensics.py --check` |
 
 ## 3. Cross-Artifact Headline, Cross-Model, Extension, and Harbor Rehearsal Summary
 
@@ -55,5 +56,5 @@ PYTHONPATH=. pytest -q tests/test_frontier_suite_master.py
 ```bash
 PYTHONPATH=. python scripts/verify_frontier_suite.py --check
 PYTHONPATH=. python scripts/verify_replay.py data/runs/committed/v1.4 results/frontier_replication/v1.4
-PYTHONPATH=. pytest -q tests/test_frontier_suite_master.py tests/test_frontier_replication.py tests/test_frontier_g2_families_audit.py tests/test_frontier_infra_sensitivity.py tests/test_frontier_mole_stratified_gap.py tests/test_frontier_queue_preflight.py tests/test_frontier_trajectory_audit.py tests/test_frontier_transcript_forensics.py tests/test_frontier_stopping_counterfactual_v14.py
+PYTHONPATH=. pytest -q tests/test_frontier_suite_master.py tests/test_frontier_replication.py tests/test_frontier_g2_families_audit.py tests/test_frontier_infra_sensitivity.py tests/test_frontier_mole_stratified_gap.py tests/test_frontier_queue_preflight.py tests/test_frontier_trajectory_audit.py tests/test_frontier_transcript_forensics.py tests/test_frontier_stopping_counterfactual_v14.py tests/test_frontier_gpt55_vs_carbon_forensics.py
 ```

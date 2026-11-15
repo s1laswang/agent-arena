@@ -152,6 +152,16 @@ UPSTREAM_JSON_SPECS: tuple[dict[str, Any], ...] = (
         "cohort_n_summary": "246 episodes across 9 v1.4 cohorts (Bayes break-even abstention and EV decomposition)",
         "verify_cmd": "PYTHONPATH=. python scripts/frontier_stopping_counterfactual_v14.py --check",
     },
+    {
+        "deliverable_id": "frontier_gpt55_vs_carbon_forensics",
+        "json_rel": "results/frontier_replication/v1.4/gpt55_vs_carbon_forensics.json",
+        "max_bytes": 38_000,
+        "script_rel": "scripts/frontier_gpt55_vs_carbon_forensics.py",
+        "report_rel": "docs/reports/frontier_gpt55_vs_carbon_forensics_v14.md",
+        "test_rel": "tests/test_frontier_gpt55_vs_carbon_forensics.py",
+        "cohort_n_summary": "90 paired hard episodes (30 gpt-5.5 + 30 carbon + 30 solver, 7 divergence seeds)",
+        "verify_cmd": "PYTHONPATH=. python scripts/frontier_gpt55_vs_carbon_forensics.py --check",
+    },
 )
 
 MASTER_SUITE_SPEC: dict[str, Any] = {
@@ -465,6 +475,7 @@ def compute_suite_manifest(root: Path = ROOT) -> dict[str, Any]:
     trj = loaded_jsons["frontier_trajectory_audit"]
     fsc = loaded_jsons["frontier_transcript_forensics"]
     stp = loaded_jsons["frontier_stopping_counterfactual"]
+    gcf = loaded_jsons["frontier_gpt55_vs_carbon_forensics"]
 
     corpus_checks = (
         ("replication_summary.committed", rep["replay_verification"]["committed_v14"]["total"], EXPECTED_COMMITTED_EPISODES),
@@ -506,6 +517,14 @@ def compute_suite_manifest(root: Path = ROOT) -> dict[str, Any]:
         ("stopping.g1_seeds", stp["provenance"]["g1_seeds"], EXPECTED_G1_SEEDS),
         ("stopping.fr8_seeds", stp["provenance"]["fr8_rep_seeds"], EXPECTED_FR8_SEEDS),
         ("stopping.union6_seeds", stp["provenance"]["carbon_hard_30_59_dedup_union_seeds"], EXPECTED_UNION_SEEDS),
+        ("gpt55_vs_carbon.verified", gcf["replay_verification"]["total_episodes_verified"], 90),
+        ("gpt55_vs_carbon.mismatches", gcf["replay_verification"]["mismatches"], 0),
+        ("gpt55_vs_carbon.non_accuse", gcf["divergence_forensics"]["gpt55_non_accuse_prose_exit_seeds"], EXPECTED_GPT55_NON_ACCUSE_SEEDS),
+        (
+            "gpt55_vs_carbon.harbor_ratios",
+            gcf["provenance_and_locks"]["upstream_justsilas_sync"]["harbor_rehearsal"]["final_ratios_pct"],
+            EXPECTED_HARBOR_RATIOS_PCT,
+        ),
     )
     for lbl, got, exp in corpus_checks:
         _assert_eq(got, exp, lbl)
@@ -641,6 +660,7 @@ def compute_suite_manifest(root: Path = ROOT) -> dict[str, Any]:
         ("inf.gpt55.mean", inf_gpt["regime_metrics"]["mean"]),
         ("mol.gpt55.raw", mol_gpt["raw"]),
         ("trj.gpt55.mean", trj_gpt["outcomes"]["mean_score"]),
+        ("gcf.gpt55.mean", gcf["cohort_summaries"]["gpt_5_5"]["mean_score"]),
     ):
         _assert_close(val, ptg_gpt_hard["mean"], 1e-4, lbl)
 
@@ -649,6 +669,7 @@ def compute_suite_manifest(root: Path = ROOT) -> dict[str, Any]:
         ("g2.gpt55.pe", g2_gpt["paired_vs_solver"]["mean_post_expected"]),
         ("inf.gpt55.pe", inf_gpt["regime_metrics"]["post_expected"]),
         ("mol.gpt55.luck", mol_gpt["luck"]),
+        ("gcf.gpt55.pe", gcf["cohort_summaries"]["gpt_5_5"]["mean_post_expected"]),
     ):
         _assert_close(val, ptg_gpt_hard["post_expected"], 1e-4, lbl)
 

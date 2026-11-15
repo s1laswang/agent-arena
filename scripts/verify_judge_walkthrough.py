@@ -23,6 +23,7 @@ import scripts.verify_doc_commands as verify_doc_commands
 from canary.redteam.anticheat import harbor_consistency
 
 WALKTHROUGH_REL = "docs/JUDGE-WALKTHROUGH.md"
+QUICKSTART_REL = "JUDGE_QUICKSTART.md"
 HASH_CHAR = chr(35)
 EM_DASH = chr(0x2014)
 EN_DASH = chr(0x2013)
@@ -190,12 +191,13 @@ def _strip_code_preserving_lines(md_text: str) -> list[str]:
     return out
 
 
-def _check_relative_links(root: Path, doc_rel: str, md_text: str) -> tuple[int, list[str]]:
+def _check_relative_links_with_targets(root: Path, doc_rel: str, md_text: str) -> tuple[int, list[str], set[str]]:
     root_norm = os.path.normpath(os.path.abspath(str(root)))
     doc_norm = os.path.normpath(os.path.join(root_norm, doc_rel))
     doc_dir = os.path.dirname(doc_norm)
     checked = 0
     broken: list[str] = []
+    resolved_targets: set[str] = set()
 
     for lineno, line in enumerate(_strip_code_preserving_lines(md_text), 1):
         for match in MD_LINK_RX.finditer(line):
@@ -220,10 +222,146 @@ def _check_relative_links(root: Path, doc_rel: str, md_text: str) -> tuple[int, 
             if os.path.commonpath([root_norm, cand_norm]) != root_norm:
                 broken.append(f"{doc_rel}:{lineno}: link '{target}' escapes repository root")
                 continue
+            rel_path = os.path.relpath(cand_norm, root_norm).replace(os.sep, "/")
             if not os.path.exists(cand_norm):
-                rel_missing = os.path.relpath(cand_norm, root_norm).replace(os.sep, "/")
-                broken.append(f"{doc_rel}:{lineno}: link '{target}' -> missing {rel_missing}")
+                broken.append(f"{doc_rel}:{lineno}: link '{target}' -> missing {rel_path}")
+                continue
+            resolved_targets.add(rel_path)
+    return checked, broken, resolved_targets
+
+
+def _check_relative_links(root: Path, doc_rel: str, md_text: str) -> tuple[int, list[str]]:
+    checked, broken, _ = _check_relative_links_with_targets(root, doc_rel, md_text)
     return checked, broken
+
+
+def _parse_hard_meta_infra_attempts(root: Path, failures: list[str]) -> dict[str, Any] | None:
+    meta_rel = "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/meta.json"
+    meta_obj = _read_json(root / meta_rel, failures, meta_rel)
+    if not isinstance(meta_obj, dict):
+        return None
+    invalid_eps = meta_obj.get("invalid_episodes")
+    excluded = meta_obj.get("infra_invalid_attempts_excluded")
+    if not isinstance(invalid_eps, list) or invalid_eps:
+        failures.append(f"{meta_rel}: expected invalid_episodes == [], got {invalid_eps!r}")
+        return None
+    if not isinstance(excluded, list) or not excluded:
+        failures.append(f"{meta_rel}: missing or empty infra_invalid_attempts_excluded list")
+        return None
+
+    seeds_seen: set[int] = set()
+    cat_counts: dict[str, int] = {}
+    for entry in excluded:
+        if not isinstance(entry, str):
+            failures.append(f"{meta_rel}: non-string excluded entry {entry!r}")
+            return None
+        m_seed = re.match(r"^opencode-hard-(\d+)-\d+:", entry)
+        m_cat = re.search(r"\b(infra:[a-z0-9_]+)\b", entry)
+        if m_seed is None or m_cat is None:
+            failures.append(f"{meta_rel}: malformed infra_invalid_attempts_excluded entry '{entry}'")
+            return None
+        seeds_seen.add(int(m_seed.group(1)))
+        cat = m_cat.group(1)
+        cat_counts[cat] = cat_counts.get(cat, 0) + 1
+
+    expected_cats = {
+        "infra:cli_error_event",
+        "infra:empty_model_response",
+        "infra:provider_unavailable",
+    }
+    if set(cat_counts.keys()) != expected_cats:
+        failures.append(
+            f"{meta_rel}: unexpected infra categories {sorted(cat_counts.keys())} != {sorted(expected_cats)}"
+        )
+        return None
+
+    filter_test = root / "tests" / "test_integrity_valid_filter.py"
+    if not filter_test.is_file():
+        failures.append("missing required tamper-proof infra filter test tests/test_integrity_valid_filter.py")
+
+    return {
+        "total": len(excluded),
+        "unique_seeds": len(seeds_seen),
+        "cli_error_event": cat_counts["infra:cli_error_event"],
+        "empty_model_response": cat_counts["infra:empty_model_response"],
+        "provider_unavailable": cat_counts["infra:provider_unavailable"],
+    }
+
+
+def _parse_integrity_final_hunt(root: Path, failures: list[str]) -> dict[str, Any] | None:
+    integ_rel = "docs/reports/integrity.md"
+    integ_text = _read_text(root / integ_rel, failures, integ_rel)
+    if integ_text is None:
+        return None
+
+    m_hdr = re.search(r"`afterquery-final`\s*\(([0-9a-f]{7,40})\)\s*judge-protocol\s+hunt", integ_text)
+    if m_hdr is None:
+        failures.append(f"{integ_rel}: missing afterquery-final judge-protocol hunt section")
+        return None
+
+    sec = integ_text[m_hdr.start() :]
+    m_jh = re.search(r"judge_hunt\.py[^\n]*?\*\*(\d+)\s+of\s+(\d+)\s+held\*\*[^\n]*?\((\d+\s*s)", sec)
+    m_mh = re.search(
+        r"`make hunt`:[^\n]*?best non-solver score\s+\*\*([0-9.]+)\*\*\s+and\s+\*\*(\d+)\s+invariant violations\*\*[^\n]*?\((\d+\s*min\s*\d+\s*s)\)",
+        sec,
+    )
+    m_ac = re.search(r"`make anticheat-verify`:\s*(\d+)\s+rows\s+rerun,\s*\*\*(\d+)\s+differences\*\*", sec)
+    m_mt = re.search(r"`make test`:\s*([0-9,]+)\s+passed", sec)
+    m_ma = re.search(r"`make accept`:\s*PASS=(\d+),\s*FAIL=(\d+)", sec)
+    m_p1 = re.search(
+        r"Gemini red-team phase 1[^\n]*?:\s*(\d+)\s+ledger-verified attacks on\s+([0-9a-f]{7,40}),\s*(\d+)\s+verified exploits",
+        sec,
+    )
+    if not (m_jh and m_mh and m_ac and m_mt and m_ma and m_p1):
+        failures.append(f"{integ_rel}: missing or malformed afterquery-final hunt metrics")
+        return None
+
+    jh_held = int(m_jh.group(1))
+    jh_total = int(m_jh.group(2))
+    jh_sec = " ".join(m_jh.group(3).split())
+    mh_best = m_mh.group(1)
+    mh_viol = int(m_mh.group(2))
+    mh_dur = " ".join(m_mh.group(3).split())
+    ac_rows = int(m_ac.group(1))
+    ac_diffs = int(m_ac.group(2))
+    mt_passed = m_mt.group(1)
+    ma_pass = int(m_ma.group(1))
+    ma_fail = int(m_ma.group(2))
+    p1_attacks = int(m_p1.group(1))
+    p1_sha = m_p1.group(2)
+    p1_exploits = int(m_p1.group(3))
+
+    if (
+        jh_held != jh_total
+        or abs(float(mh_best)) > 1e-12
+        or mh_viol != 0
+        or ac_diffs != 0
+        or ma_pass <= 0
+        or ma_fail != 0
+        or p1_exploits != 0
+    ):
+        failures.append(
+            f"{integ_rel}: final hunt invariant failed (held={jh_held}/{jh_total}, hunt={mh_best}/{mh_viol}, diffs={ac_diffs}, accept={ma_pass}/{ma_fail}, p1_exploits={p1_exploits})"
+        )
+        return None
+
+    return {
+        "tag_sha": m_hdr.group(1),
+        "jh_held": jh_held,
+        "jh_total": jh_total,
+        "jh_sec": jh_sec,
+        "mh_best": mh_best,
+        "mh_viol": mh_viol,
+        "mh_dur": mh_dur,
+        "ac_rows": ac_rows,
+        "ac_diffs": ac_diffs,
+        "mt_passed": mt_passed,
+        "ma_pass": ma_pass,
+        "ma_fail": ma_fail,
+        "p1_attacks": p1_attacks,
+        "p1_sha": p1_sha,
+        "p1_exploits": p1_exploits,
+    }
 
 
 def _read_json(path: Path, failures: list[str], label: str) -> Any | None:
@@ -307,6 +445,7 @@ def check_pillar1_frontier_gap(
 ) -> CheckResult:
     name = CHECK_PILLAR_1
     failures: list[str] = []
+    explicit_doc = doc_text is not None
     if doc_text is None:
         doc_text = _read_text(root / WALKTHROUGH_REL, failures, WALKTHROUGH_REL)
         if doc_text is None:
@@ -397,6 +536,31 @@ def check_pillar1_frontier_gap(
             if float(dn_hard["mean"]) != 0.0:
                 failures.append(f"paired_table_gemini do_nothing hard mean={dn_hard['mean']} (expected 0.0)")
 
+            raw_hl = f"{_pct(oc_hard['ratio'])} [{_pct(oc_hard['ratio_lo'])}, {_pct(oc_hard['ratio_hi'])}]"
+            la_hl = (
+                f"{_pct(oc_hard['post_expected_ratio'])} "
+                f"[{_pct(oc_hard['post_expected_lo'])}, {_pct(oc_hard['post_expected_hi'])}]"
+            )
+            clean_wt_p1 = doc_text.replace("`", "").replace("**", "")
+            raw_idx = clean_wt_p1.find(raw_hl)
+            la_idx = clean_wt_p1.find(la_hl)
+            if raw_idx == -1 or la_idx == -1 or raw_idx > la_idx:
+                failures.append(
+                    f"docs/JUDGE-WALKTHROUGH.md must lead with raw '{raw_hl}' before luck-adjusted '{la_hl}'"
+                )
+            for prov_tok in (
+                "671ed96",
+                "8fd4dec",
+                "28 s",
+                "solver-hard-20261114-121126/",
+                "solver-hard-seeds20to29/",
+                "1bc3e281",
+                "afterquery-final",
+                "cf394894",
+            ):
+                if prov_tok not in clean_wt_p1:
+                    failures.append(f"docs/JUDGE-WALKTHROUGH.md missing Pillar 1 provenance token '{prov_tok}'")
+
             for f_row in (oc_hard, oc_med, ip_hard, ip_med):
                 gap_frontier_tokens.append(
                     f"{_pct(f_row['ratio'])} [{_pct(f_row['ratio_lo'])}, {_pct(f_row['ratio_hi'])}]"
@@ -405,6 +569,28 @@ def check_pillar1_frontier_gap(
                     f"{_pct(f_row['post_expected_ratio'])} "
                     f"[{_pct(f_row['post_expected_lo'])}, {_pct(f_row['post_expected_hi'])}]"
                 )
+
+    infra_info = _parse_hard_meta_infra_attempts(root, failures)
+    if infra_info is not None:
+        clean_wt_infra = doc_text.replace("`", "").replace("**", "")
+        infra_tokens = (
+            f"{infra_info['total']} excluded infra-invalid attempts",
+            f"{infra_info['unique_seeds']} unique seeds",
+            f"{infra_info['cli_error_event']} infra:cli_error_event",
+            f"{infra_info['empty_model_response']} infra:empty_model_response",
+            f"{infra_info['provider_unavailable']} infra:provider_unavailable",
+            "test_integrity_valid_filter.py",
+        )
+        for tok in infra_tokens:
+            if not _has_token(clean_wt_infra, tok):
+                failures.append(f"hard/meta.json infra claim '{tok}' missing from docs/JUDGE-WALKTHROUGH.md")
+        if not explicit_doc and (root / QUICKSTART_REL).is_file():
+            qs_p1 = _read_text(root / QUICKSTART_REL, failures, QUICKSTART_REL)
+            if qs_p1 is not None:
+                clean_qs_p1 = qs_p1.replace("`", "").replace("**", "")
+                for tok in infra_tokens:
+                    if not _has_token(clean_qs_p1, tok):
+                        failures.append(f"hard/meta.json infra claim '{tok}' missing from JUDGE_QUICKSTART.md")
 
     oracle_obj = _read_json(root / "results" / "oracle_range_v1.4.json", failures, "results/oracle_range_v1.4.json")
     if isinstance(oracle_obj, dict) and isinstance(oracle_obj.get("rows"), list):
@@ -539,7 +725,7 @@ def check_pillar1_frontier_gap(
     return CheckResult(
         name,
         "PASS",
-        "verified all 5 paired v1.4 rows, gap.md alignment, oracle range, guess_day1, rehearsal-dry, and negative ablations",
+        "verified all 5 paired v1.4 rows, 25 hard/meta.json infra attempts, gap.md alignment, oracle range, guess_day1, rehearsal-dry, and negative ablations",
     )
 
 
@@ -708,6 +894,7 @@ def check_pillar2_failure_and_fairness(
 def check_pillar3_reward_integrity(root: Path = ROOT, doc_text: str | None = None) -> CheckResult:
     name = CHECK_PILLAR_3
     failures: list[str] = []
+    explicit_doc = doc_text is not None
     if doc_text is None:
         doc_text = _read_text(root / WALKTHROUGH_REL, failures, WALKTHROUGH_REL)
         if doc_text is None:
@@ -914,12 +1101,46 @@ def check_pillar3_reward_integrity(root: Path = ROOT, doc_text: str | None = Non
             if not _has_token(clean_doc, hunt_tok):
                 failures.append(f"judge_hunt.md token '{hunt_tok}' missing from docs/JUDGE-WALKTHROUGH.md")
 
+    integ_info = _parse_integrity_final_hunt(root, failures)
+    if integ_info is not None:
+        if isinstance(ex_obj, dict) and isinstance(ex_obj.get("rows"), list):
+            if integ_info["ac_rows"] != len(ex_obj["rows"]):
+                failures.append(
+                    f"integrity.md anticheat rows={integ_info['ac_rows']} != exploits.json rows={len(ex_obj['rows'])}"
+                )
+        integ_tokens = (
+            "58716742",
+            integ_info["tag_sha"],
+            f"{integ_info['jh_held']}/{integ_info['jh_total']}",
+            f"held in {integ_info['jh_sec']}",
+            integ_info["mh_best"],
+            f"{integ_info['mh_viol']} invariant violations",
+            integ_info["mh_dur"],
+            f"{integ_info['ac_rows']} rows",
+            f"{integ_info['ac_diffs']} differences",
+            f"{integ_info['mt_passed']} passed",
+            f"PASS={integ_info['ma_pass']}",
+            f"FAIL={integ_info['ma_fail']}",
+            f"{integ_info['p1_attacks']} ledger-verified attacks",
+            integ_info["p1_sha"],
+        )
+        for tok in integ_tokens:
+            if not _has_token(clean_doc, tok):
+                failures.append(f"integrity.md final hunt token '{tok}' missing from docs/JUDGE-WALKTHROUGH.md")
+        if not explicit_doc and (root / QUICKSTART_REL).is_file():
+            qs_p3 = _read_text(root / QUICKSTART_REL, failures, QUICKSTART_REL)
+            if qs_p3 is not None:
+                clean_qs_p3 = qs_p3.replace("`", "").replace("**", "")
+                for tok in integ_tokens:
+                    if not _has_token(clean_qs_p3, tok):
+                        failures.append(f"integrity.md final hunt token '{tok}' missing from JUDGE_QUICKSTART.md")
+
     if failures:
         return CheckResult(name, "FAIL", f"{len(failures)} Pillar 3 claim mismatch(es)", failures)
     return CheckResult(
         name,
         "PASS",
-        "verified 99x40 exploits.json, 61/61 isolation.txt, 80/80 Harbor trials (18/18 jobs), 91-attacker swarm, 1,161 corpus runs, and 12/12 judge_hunt",
+        "verified 99x40 exploits.json, 61/61 isolation.txt, 80/80 Harbor trials (18/18 jobs), 91-attacker swarm, 1,161 corpus runs, 12/12 judge_hunt, and 58716742 integrity.md hunt",
     )
 
 
@@ -955,6 +1176,7 @@ def _compute_tier_hash(tiers: dict[str, Any], known_v_mode: bool) -> str:
 def check_pillar4_craft_and_commands(root: Path = ROOT, doc_text: str | None = None) -> CheckResult:
     name = CHECK_PILLAR_4
     failures: list[str] = []
+    explicit_doc = doc_text is not None
     if doc_text is None:
         doc_text = _read_text(root / WALKTHROUGH_REL, failures, WALKTHROUGH_REL)
         if doc_text is None:
@@ -963,8 +1185,22 @@ def check_pillar4_craft_and_commands(root: Path = ROOT, doc_text: str | None = N
     if EM_DASH in doc_text or EN_DASH in doc_text:
         failures.append("docs/JUDGE-WALKTHROUGH.md contains em or en dash characters")
 
-    _, broken_links = _check_relative_links(root, WALKTHROUGH_REL, doc_text)
+    _, broken_links, wt_targets = _check_relative_links_with_targets(root, WALKTHROUGH_REL, doc_text)
     failures.extend(broken_links)
+
+    required_wt_links = (
+        "JUDGE_QUICKSTART.md",
+        "docs/PEER-REVIEW-QA.md",
+        "docs/REPRODUCIBILITY.md",
+        "docs/reports/integrity.md",
+        "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/meta.json",
+        "tests/test_integrity_valid_filter.py",
+        "results/fresh_clone/README.md",
+        "results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.log.txt",
+    )
+    for req_link in required_wt_links:
+        if req_link not in wt_targets:
+            failures.append(f"docs/JUDGE-WALKTHROUGH.md missing required relative link to '{req_link}'")
 
     try:
         rules_mod = _load_rules_module(root)
@@ -985,11 +1221,19 @@ def check_pillar4_craft_and_commands(root: Path = ROOT, doc_text: str | None = N
         if not _has_token(doc_text, v13_hash):
             failures.append(f"docs/JUDGE-WALKTHROUGH.md missing v1.3 tier hash '{v13_hash}'")
 
+    af_fc_tokens: tuple[str, ...] = ()
     fc_text = _read_text(
         root / "results" / "fresh_clone" / "README.md",
         failures,
         "results/fresh_clone/README.md",
     )
+    for af_artifact in (
+        "results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.log.txt",
+        "results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.steps.txt",
+    ):
+        if not (root / af_artifact).is_file():
+            failures.append(f"missing fresh_clone artifact {af_artifact}")
+
     if fc_text is not None:
         fc_tables = _parse_md_tables(fc_text)
         mac_tbl = _find_table_by_header_prefix(fc_tables, ("run", "commit", "clone", "setup", "reproduce"))
@@ -997,20 +1241,56 @@ def check_pillar4_craft_and_commands(root: Path = ROOT, doc_text: str | None = N
             fc_tables,
             ("run", "commit", "clone", "reproduce_fast (repro_fast=1)", "reproduce (40 seeds)"),
         )
+        af_tbl = _find_table_by_header_prefix(
+            fc_tables,
+            ("run", "commit", "clone", "reproduce_table (repro_anticheat=0)"),
+        )
         m_cold = re.search(r"make setup`\s+took\s+\*\*([0-9.]+\s*s)\*\*", fc_text)
-        if mac_tbl is None or lin_tbl is None or m_cold is None:
-            failures.append("results/fresh_clone/README.md missing macOS/Linux timing tables or cold setup timing")
+        if mac_tbl is None or lin_tbl is None or af_tbl is None or m_cold is None:
+            failures.append("results/fresh_clone/README.md missing macOS/Linux/afterquery-final timing tables or cold setup timing")
         else:
             mac_row = mac_tbl[1]
             lin_row = lin_tbl[1]
+            af_row = af_tbl[1]
             m_mac_setup = re.search(r"\b(\d+\s*s)\b", mac_row[3])
             m_mac_repro = re.search(r"\b(\d+\s*s)\b", mac_row[4])
             m_mac_accept = re.search(r"\b(\d+\s*s)\b", mac_row[5])
             m_mac_passed = re.search(r"\b(\d+\s+passed)\b", mac_row[6])
             m_lin_repro = re.search(r"\b(\d+\s*s)\b", lin_row[4])
-            if not (m_mac_setup and m_mac_repro and m_mac_accept and m_mac_passed and m_lin_repro):
-                failures.append("results/fresh_clone/README.md malformed timing cells in macOS/Linux tables")
+            af_commit = af_row[1].strip()
+            m_af_clone = re.search(r"\b(\d+\s*s)\b", af_row[2])
+            m_af_table = re.search(r"\b(\d+\s*s)\b", af_row[3])
+            m_af_repro = re.search(r"\b(\d+\s*s)\b", af_row[4])
+            m_af_audit = re.search(r"\b(\d+\s*s)\b", af_row[5])
+            m_af_summary = re.search(r"(\d+\s+PASS,\s*\d+\s+WARN,\s*\d+\s+FAIL)", af_row[5])
+            m_af_test_s = re.search(r"\b(\d+\s*s)\b", af_row[6])
+            m_af_test_p = re.search(r"\b(\d+\s+passed)\b", af_row[6])
+            if not (
+                m_mac_setup
+                and m_mac_repro
+                and m_mac_accept
+                and m_mac_passed
+                and m_lin_repro
+                and af_commit
+                and m_af_clone
+                and m_af_table
+                and m_af_repro
+                and m_af_audit
+                and m_af_summary
+                and m_af_test_s
+                and m_af_test_p
+            ):
+                failures.append("results/fresh_clone/README.md malformed timing cells in macOS/Linux/afterquery-final tables")
             else:
+                af_fc_tokens = (
+                    af_commit,
+                    f"clone {m_af_clone.group(1)}",
+                    f"reproduce_table {m_af_table.group(1)}",
+                    f"reproduce {m_af_repro.group(1)}",
+                    f"audit_submission {m_af_audit.group(1)}",
+                    m_af_summary.group(1),
+                    f"test_core {m_af_test_p.group(1)} in {m_af_test_s.group(1)}",
+                )
                 clean_doc = doc_text.replace("`", "").replace("**", "")
                 for tok in (
                     m_mac_setup.group(1),
@@ -1020,13 +1300,49 @@ def check_pillar4_craft_and_commands(root: Path = ROOT, doc_text: str | None = N
                     m_mac_passed.group(1),
                     f"make reproduce {m_lin_repro.group(1)}",
                     "0 FAIL",
+                    *af_fc_tokens,
                 ):
                     if not _has_token(clean_doc, tok):
                         failures.append(
                             f"fresh_clone/README.md token '{tok}' missing from docs/JUDGE-WALKTHROUGH.md"
                         )
 
-    cmd_results = verify_doc_commands.verify_repo(root=root, docs=(WALKTHROUGH_REL,))
+    docs_to_check: tuple[str, ...] = (WALKTHROUGH_REL,) if explicit_doc else (WALKTHROUGH_REL, QUICKSTART_REL)
+    if not explicit_doc:
+        qs_text = _read_text(root / QUICKSTART_REL, failures, QUICKSTART_REL)
+        if qs_text is not None:
+            if EM_DASH in qs_text or EN_DASH in qs_text:
+                failures.append("JUDGE_QUICKSTART.md contains em or en dash characters")
+            _, qs_broken, qs_targets = _check_relative_links_with_targets(root, QUICKSTART_REL, qs_text)
+            failures.extend(qs_broken)
+            for req_qs in (
+                "docs/JUDGE-WALKTHROUGH.md",
+                "docs/PEER-REVIEW-QA.md",
+                "docs/REPRODUCIBILITY.md",
+                "docs/reports/integrity.md",
+                "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/meta.json",
+                "tests/test_integrity_valid_filter.py",
+                "results/fresh_clone/README.md",
+            ):
+                if req_qs not in qs_targets:
+                    failures.append(f"JUDGE_QUICKSTART.md missing required link to '{req_qs}'")
+            clean_qs = qs_text.replace("`", "").replace("**", "")
+            gap_path = root / "docs" / "reports" / "gap.md"
+            if gap_path.is_file():
+                gap_body = gap_path.read_text(encoding="utf-8", errors="replace")
+                if "gemini-3.5-flash" not in gap_body.lower() and UNAPPROVED_FLASH_GAP_RX.search(clean_qs):
+                    failures.append(
+                        "JUDGE_QUICKSTART.md cites OpenCode gemini-3.5-flash gap claim not present in docs/reports/gap.md"
+                    )
+            raw_qs = clean_qs.find("65% [24%, 98%]")
+            la_qs = clean_qs.find("72% [52%, 91%]")
+            if raw_qs == -1 or la_qs == -1 or raw_qs > la_qs:
+                failures.append("JUDGE_QUICKSTART.md must lead with raw '65% [24%, 98%]' before luck-adjusted '72% [52%, 91%]'")
+            for tok in af_fc_tokens:
+                if not _has_token(clean_qs, tok):
+                    failures.append(f"fresh_clone/README.md token '{tok}' missing from JUDGE_QUICKSTART.md")
+
+    cmd_results = verify_doc_commands.verify_repo(root=root, docs=docs_to_check)
     if not cmd_results:
         failures.append("verify_doc_commands returned no results for docs/JUDGE-WALKTHROUGH.md")
     for res in cmd_results:
@@ -1039,7 +1355,7 @@ def check_pillar4_craft_and_commands(root: Path = ROOT, doc_text: str | None = N
     return CheckResult(
         name,
         "PASS",
-        "verified frozen tier hashes, macOS/Linux fresh-clone timings (52 s / 159 s), links, and CLI commands",
+        "verified frozen tier hashes, 1bc3e281/macOS/Linux fresh-clone timings (118 s / 52 s / 159 s), companion links, and CLI commands",
     )
 
 

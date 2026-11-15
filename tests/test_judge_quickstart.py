@@ -98,6 +98,7 @@ def _find_paired_row(
     group: str,
     tier: str,
     agent: str | None = None,
+    alternative: bool = False,
 ) -> dict[str, Any]:
     for row in rows:
         if row.get("group") != group or row.get("tier") != tier:
@@ -105,10 +106,11 @@ def _find_paired_row(
         if agent is not None and row.get("agent") != agent:
             continue
         label_lower = str(row.get("label", "")).lower()
-        if "alternative" in label_lower or "not the headline" in label_lower:
+        is_alt = "alternative" in label_lower or "not the headline" in label_lower
+        if is_alt != alternative:
             continue
         return row
-    raise AssertionError(f"missing row for group={group} tier={tier} agent={agent}")
+    raise AssertionError(f"missing row for group={group} tier={tier} agent={agent} alt={alternative}")
 
 
 def test_judge_quickstart_exists_line_limit_and_ascii() -> None:
@@ -132,12 +134,21 @@ def test_judge_quickstart_markdown_links() -> None:
     assert not broken, f"broken relative markdown links: {broken}"
     required_targets = {
         "docs/JUDGE-WALKTHROUGH.md",
+        "docs/PEER-REVIEW-QA.md",
+        "docs/REPRODUCIBILITY.md",
         "docs/reports/gap.md",
         "docs/reports/failure_analysis_v1.4.md",
         "docs/reports/failure_gallery.md",
         "docs/DIFFICULTY.md",
         "docs/EXPLOITS.md",
+        "docs/reports/integrity.md",
+        "results/anticheat/judge_hunt.md",
         "results/gemini/swarm.md",
+        "results/fresh_clone/README.md",
+        "docs/reports/fr8.md",
+        "fr8/analysis/out/ws4_table_v3.md",
+        "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/meta.json",
+        "tests/test_integrity_valid_filter.py",
         "docs/gemini/SUBMISSION.md",
         "results/harbor/rehearsal/README.md",
     }
@@ -186,10 +197,42 @@ def test_judge_quickstart_matches_committed_json_numbers() -> None:
     assert tier_hash in text
 
     oc_hard = _find_paired_row(paired_rows, "v1.4/opencode-gemini-4-carbon", "hard")
+    oc_hard_alt = _find_paired_row(paired_rows, "v1.4/opencode-gemini-4-carbon", "hard", alternative=True)
     oc_med = _find_paired_row(paired_rows, "v1.4/opencode-gemini-4-carbon", "medium")
     ip_hard = _find_paired_row(paired_rows, "v1.4/inproc-gemini-4-carbon", "hard")
     sv_hard = _find_paired_row(paired_rows, "v1.4/reference", "hard", agent="solver")
     sv_med = _find_paired_row(paired_rows, "v1.4/reference", "medium", agent="solver")
+
+    hard_meta = json.loads(
+        (ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gemini-4-carbon" / "hard" / "meta.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    excluded = hard_meta["infra_invalid_attempts_excluded"]
+    assert hard_meta["invalid_episodes"] == []
+    assert len(excluded) == 25
+    infra_seeds = {
+        int(m.group(1))
+        for item in excluded
+        for m in [re.match(r"^opencode-hard-(\d+)-\d+:", item)]
+        if m is not None
+    }
+    assert len(infra_seeds) == 11
+    cli_err_n = sum(1 for item in excluded if "infra:cli_error_event" in item)
+    empty_n = sum(1 for item in excluded if "infra:empty_model_response" in item)
+    unavail_n = sum(1 for item in excluded if "infra:provider_unavailable" in item)
+    assert (cli_err_n, empty_n, unavail_n) == (13, 6, 6)
+
+    integ_text = (ROOT / "docs" / "reports" / "integrity.md").read_text(encoding="utf-8")
+    assert "`afterquery-final` (1bc3e281) judge-protocol hunt" in integ_text
+    assert "**12 of 12 held** on the real MCP server (52 s" in integ_text
+    assert "4 min 57 s" in integ_text
+    assert "1,057 passed" in integ_text
+    assert "PASS=20, FAIL=0" in integ_text
+    assert "424 ledger-verified attacks on 469338f6, 0 verified exploits" in integ_text
+
+    fc_text = (ROOT / "results" / "fresh_clone" / "README.md").read_text(encoding="utf-8")
+    assert "linux_x86_64_afterquery_final_1bc3e281.log.txt" in fc_text
 
     oracle_solver_hard = next(
         r for r in oracle_data["rows"] if r.get("agent") == "solver" and r.get("tier") == "hard"
@@ -202,13 +245,37 @@ def test_judge_quickstart_matches_committed_json_numbers() -> None:
         )
         assert float(b_row["k10"]["mean"]) == 0.0
 
+    raw_ratio_tok = f"{_pct(oc_hard['ratio'])} [{_pct(oc_hard['ratio_lo'])}, {_pct(oc_hard['ratio_hi'])}]"
+    la_ratio_tok = (
+        f"{_pct(oc_hard['post_expected_ratio'])} "
+        f"[{_pct(oc_hard['post_expected_lo'])}, {_pct(oc_hard['post_expected_hi'])}]"
+    )
+    clean_text = text.replace("`", "").replace("**", "")
+    assert clean_text.find(raw_ratio_tok) < clean_text.find(la_ratio_tok)
+
+    for prov_str in (
+        "671ed96",
+        "8fd4dec",
+        "28 s",
+        "solver-hard-20261114-121126/",
+        "solver-hard-seeds20to29/",
+        "cf394894",
+        "1bc3e281",
+        "58716742",
+        "469338f6",
+    ):
+        assert prov_str in clean_text, f"missing provenance token in JUDGE_QUICKSTART.md: {prov_str}"
+
     expected_tokens = [
         f"n={int(oc_hard['n'])}",
         f"{float(oc_hard['mean']):+.3f} +/- {float(oc_hard['ci']):.3f}",
         f"{float(oc_hard['solver_same_seeds']):+.3f} +/- {float(sv_hard['ci']):.3f}",
-        f"{_pct(oc_hard['ratio'])} [{_pct(oc_hard['ratio_lo'])}, {_pct(oc_hard['ratio_hi'])}]",
-        f"{_pct(oc_hard['post_expected_ratio'])} [{_pct(oc_hard['post_expected_lo'])}, {_pct(oc_hard['post_expected_hi'])}]",
+        raw_ratio_tok,
+        la_ratio_tok,
         f"{float(oc_hard['post_expected']):+.3f}",
+        f"{float(oc_hard_alt['mean']):+.3f} +/- {float(oc_hard_alt['ci']):.3f}",
+        f"{_pct(oc_hard_alt['ratio'])} [{_pct(oc_hard_alt['ratio_lo'])}, {_pct(oc_hard_alt['ratio_hi'])}]",
+        f"{_pct(oc_hard_alt['post_expected_ratio'])} [{_pct(oc_hard_alt['post_expected_lo'])}, {_pct(oc_hard_alt['post_expected_hi'])}]",
         f"{float(ip_hard['mean']):+.3f} +/- {float(ip_hard['ci']):.3f}",
         f"{_pct(ip_hard['ratio'])} [{_pct(ip_hard['ratio_lo'])}, {_pct(ip_hard['ratio_hi'])}]",
         f"{float(oc_med['mean']):+.3f} +/- {float(oc_med['ci']):.3f}",
@@ -225,8 +292,28 @@ def test_judge_quickstart_matches_committed_json_numbers() -> None:
         "91 finished attackers",
         "4,325 calls",
         "0 exploits",
+        f"{len(excluded)} excluded infra-invalid attempts",
+        f"{len(infra_seeds)} unique seeds",
+        f"{cli_err_n} infra:cli_error_event",
+        f"{empty_n} infra:empty_model_response",
+        f"{unavail_n} infra:provider_unavailable",
+        "12/12 held in 52 s",
+        "4 min 57 s",
+        "99 rows",
+        "0 differences",
+        "1,057 passed",
+        "PASS=20 FAIL=0",
+        "424 ledger-verified attacks",
+        "clone 3 s",
+        "reproduce_table 27 s",
+        "reproduce 118 s",
+        "audit_submission 4 s",
+        "3 PASS, 1 WARN, 0 FAIL",
+        "test_core 100 passed in 175 s",
+        "make reproduce 52 s",
+        "make accept 142 s",
     ]
-    missing = [tok for tok in expected_tokens if not _has_token(text, tok)]
+    missing = [tok for tok in expected_tokens if not _has_token(clean_text, tok)]
     assert not missing, f"JUDGE_QUICKSTART.md missing expected JSON-backed tokens: {missing}"
 
     gap_text = (ROOT / "docs" / "reports" / "gap.md").read_text(encoding="utf-8")
@@ -271,4 +358,44 @@ def test_link_and_token_helpers_detect_regressions() -> None:
     assert _has_token("score +0.322 +/- 0.199", "+0.322 +/- 0.199")
     assert not _has_token("score +0.3225 +/- 0.199", "+0.322")
     assert not _has_token("score 165%", "65%")
+
+
+def test_judge_quickstart_tamper_detection_against_verifier() -> None:
+    import scripts.verify_judge_walkthrough as vjw
+
+    tmp_root = Path("/tmp/opencode")
+    tmp_root.mkdir(parents=True, exist_ok=True)
+    orig_qs = QUICKSTART_PATH.read_text(encoding="utf-8")
+
+    with tempfile.TemporaryDirectory(dir=str(tmp_root), prefix="quickstart-tamper-") as tmp_str:
+        base = Path(tmp_str)
+        for child in ROOT.iterdir():
+            if child.name in {".git", QUICKSTART_REL}:
+                continue
+            (base / child.name).symlink_to(child)
+
+        (base / QUICKSTART_REL).write_text(
+            orig_qs.replace("25` excluded infra-invalid attempts", "19` excluded infra-invalid attempts", 1),
+            encoding="utf-8",
+        )
+        res_p1 = vjw.check_pillar1_frontier_gap(base)
+        assert res_p1.status == "FAIL"
+        assert any("JUDGE_QUICKSTART.md" in d and "hard/meta.json" in d for d in res_p1.details)
+
+        (base / QUICKSTART_REL).write_text(
+            orig_qs.replace("424` ledger-verified attacks", "399` ledger-verified attacks", 1),
+            encoding="utf-8",
+        )
+        res_p3 = vjw.check_pillar3_reward_integrity(base)
+        assert res_p3.status == "FAIL"
+        assert any("JUDGE_QUICKSTART.md" in d and "integrity.md" in d for d in res_p3.details)
+
+        (base / QUICKSTART_REL).write_text(
+            orig_qs.replace("reproduce 118 s", "reproduce 209 s", 1).replace("docs/PEER-REVIEW-QA.md", "docs/SUBMISSION.md"),
+            encoding="utf-8",
+        )
+        res_p4 = vjw.check_pillar4_craft_and_commands(base)
+        assert res_p4.status == "FAIL"
+        assert any("JUDGE_QUICKSTART.md" in d and "reproduce 118 s" in d for d in res_p4.details)
+        assert any("JUDGE_QUICKSTART.md" in d and "docs/PEER-REVIEW-QA.md" in d for d in res_p4.details)
 

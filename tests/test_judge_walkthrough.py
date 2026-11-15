@@ -82,7 +82,8 @@ def _make_synthetic_repo(base: Path, overrides: dict[str, str | bytes | None]) -
 
 
 def test_source_files_have_zero_hash_and_zero_em_en_dashes() -> None:
-    for path in (SCRIPT_PATH, SELF_PATH):
+    qs_test_path = ROOT / "tests" / "test_judge_quickstart.py"
+    for path in (SCRIPT_PATH, SELF_PATH, qs_test_path):
         src = path.read_text(encoding="utf-8")
         assert H not in src, f"unexpected hash character in {path.name}"
         assert EM_DASH not in src, f"unexpected em dash in {path.name}"
@@ -347,3 +348,111 @@ def test_pillar4_doc_commands_and_walkthrough_mutations_fail(clean_tmp: Path) ->
     assert res_link.status == "FAIL"
     assert any("does_not_exist.md" in d for d in res_link.details)
     assert any("dash" in d for d in res_link.details)
+
+
+def test_pillar1_hard_meta_infra_and_headline_order_mutations_fail(clean_tmp: Path) -> None:
+    meta_rel = "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard/meta.json"
+    meta_obj = json.loads((ROOT / meta_rel).read_text(encoding="utf-8"))
+    meta_drop = dict(meta_obj)
+    meta_drop["infra_invalid_attempts_excluded"] = list(meta_obj["infra_invalid_attempts_excluded"][:-1])
+    res_drop = vjw.check_pillar1_frontier_gap(
+        _make_synthetic_repo(clean_tmp / "p1_meta_drop", {meta_rel: json.dumps(meta_drop)})
+    )
+    assert res_drop.status == "FAIL"
+    assert any("hard/meta.json" in d for d in res_drop.details)
+
+    meta_cat = dict(meta_obj)
+    tampered_entries = list(meta_obj["infra_invalid_attempts_excluded"])
+    tampered_entries[0] = tampered_entries[0].replace("infra:cli_error_event", "infra:provider_unavailable")
+    meta_cat["infra_invalid_attempts_excluded"] = tampered_entries
+    res_cat = vjw.check_pillar1_frontier_gap(
+        _make_synthetic_repo(clean_tmp / "p1_meta_cat", {meta_rel: json.dumps(meta_cat)})
+    )
+    assert res_cat.status == "FAIL"
+    assert any("hard/meta.json" in d for d in res_cat.details)
+
+    meta_inv = dict(meta_obj)
+    meta_inv["invalid_episodes"] = ["seed-99"]
+    res_inv = vjw.check_pillar1_frontier_gap(
+        _make_synthetic_repo(clean_tmp / "p1_meta_inv", {meta_rel: json.dumps(meta_inv)})
+    )
+    assert res_inv.status == "FAIL"
+    assert any("invalid_episodes" in d for d in res_inv.details)
+
+    orig_wt = (ROOT / "docs" / "JUDGE-WALKTHROUGH.md").read_text(encoding="utf-8")
+    swapped_wt = "Lead: 72% [52%, 91%] luck-adjusted before 65% [24%, 98%] raw.\n" + orig_wt
+    res_order = vjw.check_pillar1_frontier_gap(ROOT, doc_text=swapped_wt)
+    assert res_order.status == "FAIL"
+    assert any("must lead with raw" in d for d in res_order.details)
+
+    missing_prov_wt = orig_wt.replace("solver-hard-seeds20to29/", "solver-hard-other/")
+    res_prov = vjw.check_pillar1_frontier_gap(ROOT, doc_text=missing_prov_wt)
+    assert res_prov.status == "FAIL"
+    assert any("solver-hard-seeds20to29/" in d for d in res_prov.details)
+
+
+def test_pillar3_integrity_final_hunt_mutations_fail(clean_tmp: Path) -> None:
+    integ_rel = "docs/reports/integrity.md"
+    orig_integ = (ROOT / integ_rel).read_text(encoding="utf-8")
+
+    integ_tests_mut = orig_integ.replace("1,057 passed", "1,049 passed", 1)
+    res_tests = vjw.check_pillar3_reward_integrity(
+        _make_synthetic_repo(clean_tmp / "p3_integ_tests", {integ_rel: integ_tests_mut})
+    )
+    assert res_tests.status == "FAIL"
+    assert any("integrity.md" in d for d in res_tests.details)
+
+    integ_p1_mut = orig_integ.replace("424 ledger-verified attacks", "411 ledger-verified attacks", 1)
+    res_p1 = vjw.check_pillar3_reward_integrity(
+        _make_synthetic_repo(clean_tmp / "p3_integ_p1", {integ_rel: integ_p1_mut})
+    )
+    assert res_p1.status == "FAIL"
+    assert any("integrity.md" in d for d in res_p1.details)
+
+    integ_fail_mut = orig_integ.replace("PASS=20, FAIL=0", "PASS=19, FAIL=1", 1)
+    res_accept = vjw.check_pillar3_reward_integrity(
+        _make_synthetic_repo(clean_tmp / "p3_integ_accept", {integ_rel: integ_fail_mut})
+    )
+    assert res_accept.status == "FAIL"
+    assert any("integrity.md" in d for d in res_accept.details)
+
+
+def test_pillar4_afterquery_final_fresh_clone_and_companion_links_fail(clean_tmp: Path) -> None:
+    fc_rel = "results/fresh_clone/README.md"
+    orig_fc = (ROOT / fc_rel).read_text(encoding="utf-8")
+
+    fc_af_mut = orig_fc.replace("118 s, ok", "204 s, ok", 1)
+    res_af = vjw.check_pillar4_craft_and_commands(
+        _make_synthetic_repo(clean_tmp / "p4_fc_af", {fc_rel: fc_af_mut})
+    )
+    assert res_af.status == "FAIL"
+    assert any("fresh_clone/README.md" in d for d in res_af.details)
+
+    log_rel = "results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.log.txt"
+    res_missing_log = vjw.check_pillar4_craft_and_commands(
+        _make_synthetic_repo(clean_tmp / "p4_no_af_log", {log_rel: None})
+    )
+    assert res_missing_log.status == "FAIL"
+    assert any("linux_x86_64_afterquery_final_1bc3e281.log.txt" in d for d in res_missing_log.details)
+
+    doc_rel = "docs/JUDGE-WALKTHROUGH.md"
+    wt_no_qa = (ROOT / doc_rel).read_text(encoding="utf-8").replace("PEER-REVIEW-QA.md", "SUBMISSION.md")
+    res_no_qa = vjw.check_pillar4_craft_and_commands(
+        _make_synthetic_repo(clean_tmp / "p4_no_qa", {doc_rel: wt_no_qa})
+    )
+    assert res_no_qa.status == "FAIL"
+    assert any("docs/PEER-REVIEW-QA.md" in d for d in res_no_qa.details)
+
+    qs_rel = "JUDGE_QUICKSTART.md"
+    orig_qs = (ROOT / qs_rel).read_text(encoding="utf-8")
+    qs_tampered = (
+        "Lead: 72% [52%, 91%] before 65% [24%, 98%]; OpenCode + `gemini-3.5-flash` over MCP.\n"
+        + orig_qs.replace("docs/REPRODUCIBILITY.md", "docs/SUBMISSION.md")
+    )
+    res_qs = vjw.check_pillar4_craft_and_commands(
+        _make_synthetic_repo(clean_tmp / "p4_qs_tamper", {qs_rel: qs_tampered})
+    )
+    assert res_qs.status == "FAIL"
+    assert any("docs/REPRODUCIBILITY.md" in d for d in res_qs.details)
+    assert any("gemini-3.5-flash" in d for d in res_qs.details)
+    assert any("must lead with raw" in d for d in res_qs.details)

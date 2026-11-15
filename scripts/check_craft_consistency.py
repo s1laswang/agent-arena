@@ -4,6 +4,7 @@ import argparse
 import fnmatch
 import json
 import math
+import os
 import re
 import subprocess
 import sys
@@ -24,13 +25,42 @@ MD_LINK_RX = re.compile(r"!?\[(?:[^\[\]\n]|\[[^\[\]\n]*\])*\]\(([^)\n]+)\)")
 STALE_GAP_RX = re.compile(r"gap\s*(?:is\s+|:\s*)?not\s+established", re.IGNORECASE)
 TIER_HEADING_RX = re.compile(r"^\x23\x23\s+(easy|medium|hard)\b", re.IGNORECASE)
 TABLE_SEP_CELL_RX = re.compile(r"^:?-{2,}:?$")
+FALSE_PREREG_0_29_RX = re.compile(
+    r"(?:"
+    r"(?:primary\s+)?seed\s+set\s+(?:was|is|were)\s+pre-?register\w*"
+    r"|pre-?register\w*\s+(?:the\s+)?(?:locked\s+|primary\s+)?(?:dev\s+)?seeds?\s*0\s*(?:-|\.\.)\s*29\b"
+    r"|(?:dev\s+)?seeds?\s*0\s*(?:-|\.\.)\s*29\s+(?:were|was|are|is)\s+pre-?register\w*"
+    r"|pre-?register\w*\s+(?:the\s+)?(?:primary\s+|headline\s+)?n\s*=\s*30\b"
+    r"|\bn\s*=\s*30\s+(?:headline\s+|primary\s+|set\s+|row\s+)?(?:was|is|were|are)\s+pre-?register\w*"
+    r")",
+    re.IGNORECASE,
+)
+FALSE_TIEBREAK_BAR_MET_RX = re.compile(
+    r"(?:"
+    r"\bbar\b[^.\n?!]{0,90}\b(?:is|was)\s+(?:fully\s+|clearly\s+)?met\b"
+    r"|\bmet\s+the\s+(?:ws4\s+|small-model\s+)?tiebreak(?:er)?\s+bar\b"
+    r"|\btiebreak(?:er)?\s+bar\s*:\s*met\b"
+    r"|(?<!\bno\s)(?<!\bnot\s)\bclaim\s+a\s+(?:held-out\s+)?(?:tiebreak(?:er)?\s+)?(?:reward\s+)?gain\b"
+    r"|(?<!\bno\s)(?<!\bwithout\s)\bheld-out\s+(?:reward\s+)?gain\s+over\s+(?:the\s+)?base\b"
+    r")",
+    re.IGNORECASE,
+)
+POOLED_MENTION_RX = re.compile(
+    r"(?:\bpooled\b|\bn\s*=\s*32\b|\bn\s*=\s*60\b|opencode-gemini-4-carbon-ext|paired_table_pooled0to59)",
+    re.IGNORECASE,
+)
+STEP_EXIT_RX = re.compile(r"\bexit=(-?\d+)\b")
 
 ACTIVE_HEADLINE_DOCS: tuple[str, ...] = (
     "README.md",
+    "JUDGE_QUICKSTART.md",
     "docs/CONTRACT.md",
     "docs/EXPLOITS.md",
     "docs/DIFFICULTY.md",
     "docs/JUDGE-WALKTHROUGH.md",
+    "docs/REPRODUCIBILITY.md",
+    "docs/PEER-REVIEW-QA.md",
+    "docs/SUBMISSION.md",
     "docs/reports/gap.md",
     "docs/reports/failure_analysis_v1.4.md",
     "docs/reports/reference_optimality.md",
@@ -49,8 +79,14 @@ EXEMPT_GAP_PATTERNS: tuple[str, ...] = (
     "docs/HISTORY.md",
     "docs/PLAN*.md",
     "docs/DEMO.md",
+    "docs/reports/judge_sim.md",
+    "docs/reports/number_audit.md",
     "results/fresh_clone/*.log.txt",
 )
+
+FRESH_CLONE_AF_STEPS_REL = "results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.steps.txt"
+FRESH_CLONE_AF_LOG_REL = "results/fresh_clone/linux_x86_64_afterquery_final_1bc3e281.log.txt"
+FRESH_CLONE_README_REL = "results/fresh_clone/README.md"
 
 LEGACY_RESULTS_PATTERNS: tuple[str, ...] = (
     "regret_*-v1.json",
@@ -70,47 +106,176 @@ class CheckResult:
     details: list[str] = field(default_factory=list)
 
 
+def _has_dot_git(root: Path) -> bool:
+    dot_git = root / ".git"
+    return dot_git.exists() or dot_git.is_symlink()
+
+
+def _git_env(root: Path) -> dict[str, str]:
+    env = dict(os.environ)
+    ceiling = str(root.resolve().parent)
+    existing = env.get("GIT_CEILING_DIRECTORIES", "")
+    env["GIT_CEILING_DIRECTORIES"] = f"{ceiling}{os.pathsep}{existing}" if existing else ceiling
+    return env
+
+
 def _git_ls_files(root: Path) -> list[str] | None:
-    if not (root / ".git").exists():
+    if not _has_dot_git(root):
         return None
-    proc = subprocess.run(
-        ["git", "ls-files", "-z"],
-        cwd=root,
-        capture_output=True,
-        timeout=15,
-    )
+    try:
+        proc = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=root,
+            env=_git_env(root),
+            capture_output=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
     if proc.returncode != 0:
         return None
     raw = proc.stdout.decode("utf-8", errors="replace")
     return [entry for entry in raw.split("\0") if entry]
 
 
-def _git_is_ignored(root: Path, rel_path: str) -> bool:
-    if not (root / ".git").exists():
+def _parse_gitignore_fallback_rules(root: Path) -> list[tuple[bool, bool, bool, str]]:
+    gi_path = root / ".gitignore"
+    if not gi_path.is_file():
+        return []
+    try:
+        lines = gi_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    rules: list[tuple[bool, bool, bool, str]] = []
+    for raw in lines:
+        stripped = raw.strip()
+        if not stripped or stripped.startswith(HASH_CHAR):
+            continue
+        negated = stripped.startswith("!")
+        body = stripped[1:].strip() if negated else stripped
+        if not body:
+            continue
+        dir_only = body.endswith("/")
+        pat = body.strip("/")
+        if not pat:
+            continue
+        anchored = ("/" in pat) or raw.lstrip(" !").startswith("/")
+        rules.append((negated, dir_only, anchored, pat))
+    return rules
+
+
+def _gitignore_pat_matches(pat: str, rel_pos: str, name: str, anchored: bool) -> bool:
+    if not anchored:
+        return fnmatch.fnmatchcase(name, pat) or fnmatch.fnmatchcase(rel_pos, pat)
+    if "**/" in pat and _gitignore_pat_matches(pat.replace("**/", ""), rel_pos, name, True):
+        return True
+    parts: list[str] = []
+    i = 0
+    n = len(pat)
+    while i < n:
+        if pat[i : i + 3] == "**/":
+            parts.append("(?:.+/)?")
+            i += 3
+        elif pat[i : i + 2] == "**":
+            parts.append(".*")
+            i += 2
+        elif pat[i] == "*":
+            parts.append("[^/]*")
+            i += 1
+        elif pat[i] == "?":
+            parts.append("[^/]")
+            i += 1
+        else:
+            parts.append(re.escape(pat[i]))
+            i += 1
+    return re.fullmatch("".join(parts), rel_pos) is not None
+
+
+def _fallback_is_ignored(
+    rules: list[tuple[bool, bool, bool, str]],
+    rel_path: str,
+    is_dir: bool = False,
+) -> bool:
+    if not rules:
         return False
-    proc = subprocess.run(
-        ["git", "check-ignore", "-q", rel_path],
-        cwd=root,
-        capture_output=True,
-        timeout=15,
-    )
+    clean = rel_path.strip("/")
+    if not clean or clean == ".":
+        return False
+    segments = clean.split("/")
+    total = len(segments)
+    for depth in range(1, total + 1):
+        sub = "/".join(segments[:depth])
+        sub_name = segments[depth - 1]
+        sub_is_dir = True if depth < total else is_dir
+        ignored = False
+        for negated, dir_only, anchored, pat in rules:
+            if dir_only and not sub_is_dir:
+                continue
+            if _gitignore_pat_matches(pat, sub, sub_name, anchored):
+                ignored = not negated
+        if ignored and depth < total:
+            return True
+        if depth == total:
+            return ignored
+    return False
+
+
+def _git_is_ignored(root: Path, rel_path: str) -> bool:
+    if not _has_dot_git(root):
+        rules = _parse_gitignore_fallback_rules(root)
+        return _fallback_is_ignored(rules, rel_path, is_dir=rel_path.endswith("/"))
+    try:
+        proc = subprocess.run(
+            ["git", "check-ignore", "-q", rel_path],
+            cwd=root,
+            env=_git_env(root),
+            capture_output=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError):
+        rules = _parse_gitignore_fallback_rules(root)
+        return _fallback_is_ignored(rules, rel_path, is_dir=rel_path.endswith("/"))
+    if proc.returncode not in (0, 1):
+        rules = _parse_gitignore_fallback_rules(root)
+        return _fallback_is_ignored(rules, rel_path, is_dir=rel_path.endswith("/"))
     return proc.returncode == 0
 
 
 def _git_ignored_batch(root: Path, rel_paths: list[str]) -> set[str]:
-    if not rel_paths or not (root / ".git").exists():
+    if not rel_paths:
         return set()
     unique_paths = sorted(set(rel_paths))
-    proc = subprocess.run(
-        ["git", "check-ignore", "--stdin"],
-        cwd=root,
-        input="\n".join(unique_paths) + "\n",
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
+    if not _has_dot_git(root):
+        rules = _parse_gitignore_fallback_rules(root)
+        return {
+            p
+            for p in unique_paths
+            if _fallback_is_ignored(rules, p, is_dir=p.endswith("/"))
+        }
+    try:
+        proc = subprocess.run(
+            ["git", "check-ignore", "--stdin"],
+            cwd=root,
+            env=_git_env(root),
+            input="\n".join(unique_paths) + "\n",
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError):
+        rules = _parse_gitignore_fallback_rules(root)
+        return {
+            p
+            for p in unique_paths
+            if _fallback_is_ignored(rules, p, is_dir=p.endswith("/"))
+        }
     if proc.returncode not in (0, 1):
-        return {p for p in unique_paths if _git_is_ignored(root, p)}
+        rules = _parse_gitignore_fallback_rules(root)
+        return {
+            p
+            for p in unique_paths
+            if _fallback_is_ignored(rules, p, is_dir=p.endswith("/"))
+        }
     return {ln for ln in proc.stdout.splitlines() if ln}
 
 
@@ -154,6 +319,8 @@ def _collect_markdown_files(root: Path) -> list[Path]:
             ordered.append(p)
 
     _add(root / "README.md")
+    _add(root / "JUDGE_QUICKSTART.md")
+    _add(root / "HANDOFF.md")
     _add(root / "docs" / "JUDGE-WALKTHROUGH.md")
     docs_dir = root / "docs"
     if docs_dir.is_dir():
@@ -310,6 +477,47 @@ def _require_tokens(text: str, doc_label: str, items: list[tuple[str, str]], fai
     for desc, tok in items:
         if not _has_token(text, tok):
             failures.append(f"{doc_label} missing {desc} '{tok}'")
+
+
+def _normalize_doc_text(text: str) -> str:
+    norm = (
+        text.replace("\u00b1", "+/-")
+        .replace("\u2212", "-")
+        .replace("\u2013", "-")
+        .replace("\u2014", "-")
+    )
+    return norm.replace("**", "").replace("`", "")
+
+
+def _has_pos_number(text: str, abs_tok: str) -> bool:
+    pattern = r"(?<![0-9\-\u2212])(?<!\d\.)\+?" + re.escape(abs_tok) + r"(?![0-9])(?!\.\d)"
+    return re.search(pattern, text) is not None
+
+
+def _has_pm_ci(text: str, ci_tok: str) -> bool:
+    pattern = r"\+/-\s*" + re.escape(ci_tok) + r"(?![0-9])(?!\.\d)"
+    return re.search(pattern, text) is not None
+
+
+def _has_int_count(text: str, val: int) -> bool:
+    for cand in {str(val), f"{val:,}"}:
+        pattern = r"(?<![0-9])(?<!\d\.)(?<!\d,)" + re.escape(cand) + r"(?![0-9])(?!\.\d)(?!,\d)"
+        if re.search(pattern, text) is not None:
+            return True
+    return False
+
+
+def _check_panel_fix_a_honesty(norm_text: str, doc_label: str, failures: list[str]) -> None:
+    m_prereg = FALSE_PREREG_0_29_RX.search(norm_text)
+    if m_prereg:
+        failures.append(
+            f"{doc_label} falsely claims dev seeds 0-29 / primary n=30 were pre-registered ('{m_prereg.group(0)}')"
+        )
+    m_bar = FALSE_TIEBREAK_BAR_MET_RX.search(norm_text)
+    if m_bar:
+        failures.append(
+            f"{doc_label} falsely claims WS4 tiebreak bar is met ('{m_bar.group(0)}')"
+        )
 
 
 def check_headline_numbers(root: Path) -> CheckResult:
@@ -510,20 +718,166 @@ def check_headline_numbers(root: Path) -> CheckResult:
     )
 
     checked_docs = ["README.md", "docs/reports/gap.md", "docs/reports/failure_analysis_v1.4.md"]
-    if walkthrough_path.is_file():
-        checked_docs.append("docs/JUDGE-WALKTHROUGH.md")
-        wt_txt = walkthrough_path.read_text(encoding="utf-8", errors="replace")
+    readme_norm = _normalize_doc_text(readme_txt)
+    _check_panel_fix_a_honesty(readme_norm, "README.md", failures)
+
+    optional_headline_docs: tuple[tuple[str, Path], ...] = (
+        ("docs/JUDGE-WALKTHROUGH.md", walkthrough_path),
+        ("JUDGE_QUICKSTART.md", root / "JUDGE_QUICKSTART.md"),
+        ("docs/REPRODUCIBILITY.md", root / "docs" / "REPRODUCIBILITY.md"),
+        ("docs/PEER-REVIEW-QA.md", root / "docs" / "PEER-REVIEW-QA.md"),
+        ("docs/SUBMISSION.md", root / "docs" / "SUBMISSION.md"),
+    )
+    loaded_optional_docs: dict[str, str] = {}
+    for doc_rel, doc_path in optional_headline_docs:
+        if not doc_path.is_file():
+            continue
+        checked_docs.append(doc_rel)
+        raw_doc = doc_path.read_text(encoding="utf-8", errors="replace")
+        norm_doc = _normalize_doc_text(raw_doc)
+        loaded_optional_docs[doc_rel] = norm_doc
         _require_tokens(
-            wt_txt,
-            "docs/JUDGE-WALKTHROUGH.md",
+            norm_doc,
+            doc_rel,
             [
                 ("OpenCode hard raw ratio", oc_ratio),
                 ("OpenCode hard luck-adjusted ratio", oc_la_ratio),
-                ("OpenCode hard mean", oc_mean_abs),
-                ("solver hard mean", sv_same_abs),
             ],
             failures,
         )
+        if not _has_pos_number(norm_doc, oc_mean_abs):
+            failures.append(f"{doc_rel} missing OpenCode hard mean '{oc_mean_pos}' / '{oc_mean_abs}'")
+        if not _has_pos_number(norm_doc, sv_same_abs):
+            failures.append(f"{doc_rel} missing solver hard mean '{sv_same_pos}' / '{sv_same_abs}'")
+        _check_panel_fix_a_honesty(norm_doc, doc_rel, failures)
+
+    pooled_rel = "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.json"
+    pooled_path = root / pooled_rel
+    if pooled_path.is_file():
+        pooled_data = _load_json_file(pooled_path, pooled_rel, failures)
+        if not isinstance(pooled_data, list):
+            failures.append(f"{pooled_rel}: expected JSON list")
+        else:
+            oc_pool = _find_paired_row(
+                pooled_data,
+                "v1.4/opencode-gemini-4-carbon+v1.4/opencode-gemini-4-carbon-ext",
+                "hard",
+                primary=True,
+            )
+            if oc_pool is None:
+                oc_pool = next(
+                    (
+                        r
+                        for r in pooled_data
+                        if isinstance(r, dict)
+                        and r.get("tier") == "hard"
+                        and r.get("agent") == "opencode:google/gemini-4-carbon"
+                        and "pooled" in str(r.get("label", "")).lower()
+                    ),
+                    None,
+                )
+            sv_pool = _find_paired_row(pooled_data, "v1.4/reference", "hard", primary=True, agent="solver")
+            if oc_pool is None:
+                failures.append(f"{pooled_rel} missing pooled hard OpenCode row")
+            if sv_pool is None:
+                failures.append(f"{pooled_rel} missing pooled hard reference solver row")
+            if oc_pool is not None and sv_pool is not None:
+                try:
+                    oc_pool_n = int(oc_pool["n"])
+                    sv_pool_n = int(sv_pool["n"])
+                    if oc_pool_n != 32:
+                        failures.append(f"{pooled_rel}: pooled OpenCode hard n expected 32, got {oc_pool_n}")
+                    if sv_pool_n != 60:
+                        failures.append(f"{pooled_rel}: pooled solver hard n expected 60, got {sv_pool_n}")
+                    oc_pool_pos = f"{float(oc_pool['mean']):+.3f}"
+                    oc_pool_abs = f"{float(oc_pool['mean']):.3f}"
+                    oc_pool_ci = f"{float(oc_pool['ci']):.3f}"
+                    sv_pool_pos = f"{float(sv_pool['mean']):+.3f}"
+                    sv_pool_abs = f"{float(sv_pool['mean']):.3f}"
+                    sv_pool_ci = f"{float(sv_pool['ci']):.3f}"
+                except (KeyError, TypeError, ValueError) as exc:
+                    failures.append(f"{pooled_rel}: malformed pooled numeric field ({exc})")
+                else:
+                    pooled_targets: list[tuple[str, str]] = [("README.md", readme_norm)]
+                    for opt_rel in ("JUDGE_QUICKSTART.md", "docs/PEER-REVIEW-QA.md"):
+                        if opt_rel in loaded_optional_docs:
+                            pooled_targets.append((opt_rel, loaded_optional_docs[opt_rel]))
+                    repro_norm = loaded_optional_docs.get("docs/REPRODUCIBILITY.md")
+                    if repro_norm is not None and POOLED_MENTION_RX.search(repro_norm):
+                        pooled_targets.append(("docs/REPRODUCIBILITY.md", repro_norm))
+
+                    for target_rel, target_norm in pooled_targets:
+                        if not _has_int_count(target_norm, oc_pool_n):
+                            failures.append(f"{target_rel} missing pooled OpenCode n='{oc_pool_n}'")
+                        if not _has_pos_number(target_norm, oc_pool_abs):
+                            failures.append(
+                                f"{target_rel} missing pooled OpenCode hard mean '{oc_pool_pos}' / '{oc_pool_abs}'"
+                            )
+                        if not _has_pm_ci(target_norm, oc_pool_ci):
+                            failures.append(f"{target_rel} missing pooled OpenCode hard CI '+/- {oc_pool_ci}'")
+                        if not _has_int_count(target_norm, sv_pool_n):
+                            failures.append(f"{target_rel} missing pooled solver n='{sv_pool_n}'")
+                        if not _has_pos_number(target_norm, sv_pool_abs):
+                            failures.append(
+                                f"{target_rel} missing pooled solver hard mean '{sv_pool_pos}' / '{sv_pool_abs}'"
+                            )
+                        if not _has_pm_ci(target_norm, sv_pool_ci):
+                            failures.append(f"{target_rel} missing pooled solver hard CI '+/- {sv_pool_ci}'")
+
+    exploits_rel = "results/anticheat/exploits.json"
+    exploits_path = root / exploits_rel
+    if exploits_path.is_file():
+        exploits_data = _load_json_file(exploits_path, exploits_rel, failures)
+        if not isinstance(exploits_data, dict):
+            failures.append(f"{exploits_rel}: expected JSON object")
+        else:
+            rc_obj = exploits_data.get("replay_counts")
+            harbor_list = exploits_data.get("harbor")
+            rows_list = exploits_data.get("rows")
+            if not isinstance(rc_obj, dict) or not isinstance(harbor_list, list) or not isinstance(rows_list, list):
+                failures.append(f"{exploits_rel}: missing replay_counts/harbor/rows sections")
+            else:
+                try:
+                    replayed_cnt = int(rc_obj["replayed"])
+                    consistent_cnt = int(rc_obj["consistent"])
+                    total_eps_cnt = int(rc_obj["n"])
+                    steps_cnt = int(rc_obj["steps"])
+                    harbor_trials_cnt = sum(
+                        1 for item in harbor_list if isinstance(item, dict) and item.get("kind") == "trial"
+                    )
+                    harbor_jobs_cnt = sum(
+                        1 for item in harbor_list if isinstance(item, dict) and item.get("kind") == "job"
+                    )
+                    battery_rows_cnt = len(rows_list)
+                except (KeyError, TypeError, ValueError) as exc:
+                    failures.append(f"{exploits_rel}: malformed count field ({exc})")
+                else:
+                    if consistent_cnt != replayed_cnt or exploits_data.get("replay_all_consistent") is not True:
+                        failures.append(
+                            f"{exploits_rel}: replay consistency failed (consistent={consistent_cnt}, replayed={replayed_cnt})"
+                        )
+                    if exploits_data.get("harbor_all_consistent") is not True:
+                        failures.append(f"{exploits_rel}: harbor_all_consistent is not true")
+                    if exploits_data.get("all_blocked") is not True:
+                        failures.append(f"{exploits_rel}: all_blocked is not true")
+
+                    count_specs = [
+                        ("replayed episodes count", replayed_cnt),
+                        ("total committed episodes count", total_eps_cnt),
+                        ("replayed tool steps count", steps_cnt),
+                        ("Harbor trials count", harbor_trials_cnt),
+                        ("Harbor job summaries count", harbor_jobs_cnt),
+                        ("anti-cheat battery rows count", battery_rows_cnt),
+                    ]
+                    for exp_doc_rel in ("docs/REPRODUCIBILITY.md", "docs/PEER-REVIEW-QA.md"):
+                        exp_norm = loaded_optional_docs.get(exp_doc_rel)
+                        if exp_norm is None:
+                            continue
+                        for desc, cnt_val in count_specs:
+                            if not _has_int_count(exp_norm, cnt_val):
+                                failures.append(
+                                    f"{exp_doc_rel} missing {desc} '{cnt_val}' (or '{cnt_val:,}') from {exploits_rel}"
+                                )
 
     if failures:
         return CheckResult(
@@ -686,7 +1040,7 @@ def check_results_hygiene(root: Path) -> CheckResult:
     name = "Results & Judge Table Hygiene"
     failures: list[str] = []
 
-    if (root / ".git").exists():
+    if _has_dot_git(root):
         tracked = _git_ls_files(root)
         if tracked is None:
             failures.append("git ls-files failed")
@@ -694,6 +1048,9 @@ def check_results_hygiene(root: Path) -> CheckResult:
             for rel in tracked:
                 if rel == "results/latest" or rel.startswith("results/latest/"):
                     failures.append(f"git-tracked file under results/latest/: {rel}")
+        if not _git_is_ignored(root, "results/latest/judge_table.md"):
+            failures.append("results/latest/judge_table.md is not gitignored")
+    elif (root / ".gitignore").is_file():
         if not _git_is_ignored(root, "results/latest/judge_table.md"):
             failures.append("results/latest/judge_table.md is not gitignored")
 
@@ -730,6 +1087,43 @@ def check_results_hygiene(root: Path) -> CheckResult:
         failures.append("missing results/judge_table.md")
     else:
         _audit_judge_table(judge_table_path, failures)
+
+    af_steps_path = root / FRESH_CLONE_AF_STEPS_REL
+    af_log_path = root / FRESH_CLONE_AF_LOG_REL
+    if af_steps_path.is_file() or af_log_path.is_file():
+        if not af_steps_path.is_file():
+            failures.append(f"missing fresh-clone steps file: {FRESH_CLONE_AF_STEPS_REL}")
+        else:
+            steps_txt = af_steps_path.read_text(encoding="utf-8", errors="replace")
+            step_lines = [ln.strip() for ln in steps_txt.splitlines() if ln.strip()]
+            if not step_lines:
+                failures.append(f"empty fresh-clone steps file: {FRESH_CLONE_AF_STEPS_REL}")
+            else:
+                for idx, step_ln in enumerate(step_lines, 1):
+                    m_exit = STEP_EXIT_RX.search(step_ln)
+                    if m_exit is None:
+                        failures.append(
+                            f"{FRESH_CLONE_AF_STEPS_REL}:{idx}: missing exit=<int> in '{step_ln}'"
+                        )
+                    elif int(m_exit.group(1)) != 0:
+                        failures.append(
+                            f"{FRESH_CLONE_AF_STEPS_REL}:{idx}: non-zero exit code {m_exit.group(1)} in '{step_ln}'"
+                        )
+
+        if not af_log_path.is_file():
+            failures.append(f"missing fresh-clone log file: {FRESH_CLONE_AF_LOG_REL}")
+        else:
+            log_txt = af_log_path.read_text(encoding="utf-8", errors="replace")
+            if not log_txt.strip():
+                failures.append(f"empty fresh-clone log file: {FRESH_CLONE_AF_LOG_REL}")
+
+        fc_readme_path = root / FRESH_CLONE_README_REL
+        if fc_readme_path.is_file():
+            fc_readme_txt = fc_readme_path.read_text(encoding="utf-8", errors="replace")
+            if "1bc3e281" not in fc_readme_txt:
+                failures.append(f"{FRESH_CLONE_README_REL} missing commit citation '1bc3e281'")
+            if "afterquery-final" not in fc_readme_txt:
+                failures.append(f"{FRESH_CLONE_README_REL} missing tag citation 'afterquery-final'")
 
     if failures:
         return CheckResult(

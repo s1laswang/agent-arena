@@ -55,6 +55,7 @@ Two things would not have fit on a laptop, and they did not fit on our V100 clus
 | 03:10 | [Verda] | J1 restarted with `--hf-overrides` for YaRN 131k. |
 | 04:15 | [Verda] | J1 smoke test fails the 30-min-per-episode rule: thinking on, no output cap, about 46 tok/s per request, 16 calls in 30 min, 0 episodes finished. Restarted with a cap (`fr8/verda/j1_run2.sh`): max 4096 output tokens per turn, hard dev seeds 0–9 all at once. |
 | 04:20 | [Verda] | **v3-8k s2** (H100 spot `dbd083ca`, 693 steps in 3.0 h) held-out eval: **−0.050 ± 0.049 (n=90)**, +0.408 ± 0.099 vs v2. It abstains on 93% of episodes. `dbd083ca` deleted at 04:21. |
+| 04:47 | [Verda] | **DAgger round 1 SFT done** on `e9ea8b2e`: 250 steps in 55.5 min on 4,000 examples, where the solver labels the states v3-4k s0 reached itself. Same-weights check: v3-4k s0 at 8k context scores −0.716 ± 0.105 (n=90) vs −0.147 at 4k. Held-out DAgger evals at 4k and 8k start under the shared secret, ETA ~06:15. |
 | ~07:30 | [Verda] | Reapers delete every instance (the X2 box at 08:00). Final rows land in §4. |
 
 ## 3. Verda products used, and why (Fit)
@@ -82,7 +83,7 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 
 | model | trained where | evaluated where | n (held-out episodes) | score ± 95% CI | accused | correct | abstain | Δ vs v2 (two-sample, n vs n) |
 |---|---|---|---|---|---|---|---|---|
-| base Qwen2.5-1.5B-Instruct | – | [FR8] V100 (backup run on [Verda] A100 `18acfa5d`: pending) | 16 | 0.000 ± 0.000 | 0.00 | 0.00 | 1.00 | +0.457 ± 0.086 (16 vs 172) |
+| base Qwen2.5-1.5B-Instruct | – | [FR8] V100 (jobs 44412 + 44584; the backup run on [Verda] A100 `18acfa5d` is pending) | 36 | 0.000 ± 0.000 | 0.00 | 0.00 | 1.00 | +0.457 ± 0.086 (36 vs 172) |
 | v1 SFT (J4) | [FR8] V100 | [FR8] V100 | 12 | −0.250 ± 0.256 | 0.25 | 0.00 | 0.75 | +0.207 ± 0.270 (12 vs 172) |
 | v2 SFT, dense windows | [FR8] V100 | 82 [FR8] V100 + 90 [Verda] A100 `68bbe201` | 172 | −0.457 ± 0.086 | 0.55 | 0.05 | 0.45 | – |
 | **v3-4k s0** GRPO, 609 steps | **[Verda] H100 `3bb74f5a`** | 90 [Verda] H100 + 90 [Verda] A100 `68bbe201` | 180 | **−0.147 ± 0.063** | 0.21 | 0.03 | 0.79 | **+0.310 ± 0.107 (180 vs 172)** |
@@ -91,8 +92,9 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | v3-8k s1 GRPO, 371 steps | [Verda] A100 spot `ac58df04` | [Verda] A100 | 90 | −0.777 ± 0.118 | 0.94 | 0.09 | 0.06 | −0.319 ± 0.146 (90 vs 172) |
 | v3-8k s2 GRPO, 693 steps | [Verda] H100 spot `dbd083ca` | [Verda] H100 | 90 | −0.050 ± 0.049 | 0.07 | 0.01 | 0.93 | +0.408 ± 0.099 (90 vs 172) |
 | v3-8k s3 | [Verda] A100 on-demand | [Verda] | pending | pending | | | | |
-| v3 s1 (4k) | [FR8] V100 (job 44572) | [FR8] | pending | pending | | | | |
-| DAgger round 1 (from v3-4k s0) | [Verda] A100 | [Verda] | pending (`docs/reports/dagger.md`) | pending | | | | |
+| v3-4k s1, 192 steps (partial) | [FR8] V100 (job 44572) | [FR8] V100 | 25 | −0.240 ± 0.171 | 0.24 | 0.00 | 0.76 | +0.217 ± 0.191 (25 vs 172) |
+| v3-4k s0 **evaluated at 8k context** (same weights; reported by X2, not yet verified by FR8) | [Verda] H100 | [Verda] A100 `68bbe201`, shared secret | 90 | −0.716 ± 0.105 | 0.78 | 0.03 (3/70 accusations right) | 0.22 | −0.259 ± 0.136 (90 vs 172) |
+| DAgger round 1 (SFT from v3-4k s0, 250 steps, 4,000 solver-labelled own-state examples) | [Verda] A100 40GB `e9ea8b2e` | [Verda], shared secret, at 4k and 8k context | pending (`docs/reports/dagger.md`) | pending | | | | |
 
 **Reading it honestly:**
 - **v3 recovered most of v2's loss.** It is +0.310 ± 0.107 vs v2 (two-sample, 180 vs 172 held-out episodes), mostly by learning to abstain instead of accusing wrongly. On the hard tier, accusations (all wrong) fell from 0.60 to 0.03: +0.563 ± 0.136 (60 vs 57).
@@ -108,6 +110,10 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
   - s1 (A100, 371 steps) scores −0.777 by over-accusing.
   - Seed and step count both differ, so the cause can't be identified from two runs.
   - On the same 3 h budget and 8k context, the H100 did 693 steps vs 371 on the A100 (1.9×).
+- **The 8k rows are confounded by inference context** (X2, 04:47, not yet verified by FR8).
+  - The *same* v3-4k s0 weights evaluated at 8k context score −0.716 ± 0.105 and accuse on 78% of episodes, vs −0.147 at 4k.
+  - So most of 8k s1's over-accusing comes from running at 8k context, not from what 8k training taught: every adapter descends from v2's 4k SFT.
+  - The 8k rows can't be read as a clean test of seeing more history. DAgger is evaluated at both 4k and 8k for this reason.
 - **8k context does not fix the diagnosis.**
   - At *matched* training steps, 8k does not learn *whom* faster (WS4 readout).
     - Forced-accusation correctness at steps 0–99 is 4k .19 ± .04 vs 8k .35 ± .05: a head start, not a faster rate.

@@ -1,0 +1,52 @@
+{
+  "X": 0.5,
+  "Y": 0.25,
+  "baseline_default_scenario": {
+    "heuristic_accuracy": 0.0,
+    "heuristic_mean": -1.0,
+    "regret": 1.644,
+    "solver_accuracy": 1.0,
+    "solver_mean": 0.644
+  },
+  "command": "/tmp/fleet-silas/canary-venv/bin/python scripts/run_role_designer.py --llm gemini:gemini-4-carbon --tier medium --seeds 0 1 2 3 4 --n 4 --X 0.50 --Y 0.25",
+  "commit": "370de43c38b321bf9dbc5c04220abd90c4614466",
+  "kept_heuristic_mean": -1.0,
+  "kept_regret_mean": 1.5743,
+  "kept_solver_mean": 0.5743,
+  "llm_ok": true,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "n_episodes_evaluated": 45,
+  "n_kept": 3,
+  "n_kept_llm": 3,
+  "n_llm_valid": 4,
+  "n_proposals": 4,
+  "role": "adaptive_mole",
+  "rounds_executed": 1,
+  "sample_count": 4,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "subrole": "paired_designer",
+  "tier": "medium",
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-14T13:59:29Z",
+  "usage": {
+    "cached": 0,
+    "calls": 1,
+    "cost_usd": 0.021792,
+    "in": 1896,
+    "latency_s": 31.236,
+    "out": 1120,
+    "thinking": 680,
+    "total_tokens": 3696
+  },
+  "top_scenario_name": "pile-on-restricted-peers",
+  "eval_full_solver_mean": 0.5165,
+  "eval_heuristic_mean": -1.0,
+  "environment_scope": "arena mode, not the judged v1.4 environment"
+}

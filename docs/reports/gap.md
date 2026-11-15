@@ -33,7 +33,7 @@ Caveat: n=2 is not an estimate. Under quota pressure, episodes that complete may
 - **A stronger reference (solver_v2):** +0.012 ± 0.029 on fresh hard seeds 9000-9399 (n=400), below the +0.08 bar. The v1 solver is calibrated and near the information limit (docs/reports/reference_optimality.md).
 - **An "expert" tier** (hard with canary fingerprint accuracy 0.70): scripted heuristics collapse (grok_tactics 0.36 → 0.01 on fresh seeds), but gemini-4-carbon stays at 84% [52%, 128%] luck-adjusted (n=13, OpenCode; results/expert_verdict.json on justSilas-expert 29ca3bc5). Gemini does not over-trust single canary hits. Not shipped; code on branch justSilas-expert.
 
-**Pre-registered seed rule (committed Sat 14 Nov 22:41 Helsinki in 671ed96, before any rerun landed):** the set above (seeds 0-29, staged by the measurement engineer) is the PRIMARY result. Any later OpenCode reruns on the same seeds (e.g. the fleet's `--timeout 3600` reruns) are reported separately as a REPLICATION, never swapped in or cherry-picked. Fleet PR #3 episodes that timed out at 900 s were never part of this set.
+**Seed lock (committed Sat 14 Nov 22:41 Helsinki in 671ed96, 28 s AFTER the primary episodes were committed in 8fd4dec, so this is a post-hoc lock against later reruns and cherry-picking, not a pre-registration of the primary set):** the set above (seeds 0-29, staged by the measurement engineer) is the PRIMARY result. Any later OpenCode reruns on the same seeds (e.g. the fleet's `--timeout 3600` reruns) are reported separately as a REPLICATION, never swapped in or cherry-picked. Fleet PR #3 episodes that timed out at 900 s were never part of this set.
 
 
 ## Official v1.3 measurement (approved, 2026-11-14 10:30–11:21)

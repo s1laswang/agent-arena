@@ -867,11 +867,14 @@ def test_live_artifact_canary_demo_mp4_container_codec_duration_and_frames():
     assert not VIDEO_PATH.is_symlink()
     raw = VIDEO_PATH.read_bytes()
     assert not raw.startswith(b"version https://git-lfs.github.com/spec/"), "MP4 must not be a Git LFS pointer"
-    assert 150_000 <= len(raw) <= 25 * 1024 * 1024, f"unexpected MP4 byte size {len(raw)}"
+    assert 100_000 <= len(raw) <= 12 * 1024 * 1024, f"MP4 size {len(raw)} outside [100 KB, 12 MB]"
 
     info = inspect_mp4_bytes(raw)
     errors = validate_demo_mp4_info(info)
     assert errors == [], f"MP4 spec violations: {errors}"
+    sync_count = info["video"].get("sync_sample_count")
+    if sync_count is not None:
+        assert int(sync_count) >= 1, "expected at least one keyframe in stss"
 
     ffmpeg_exe = _find_ffmpeg_exe()
     if ffmpeg_exe is not None:

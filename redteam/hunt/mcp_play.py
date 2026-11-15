@@ -41,7 +41,7 @@ def wait_port(p, t=60):
 def make_agent(name, seat):
     if name == "reference":
         from agents.reference import Reference
-        return Reference(seat)
+        return Reference(seat, check_requesters=True)  # judge days are v2 (sleeper/detell.py)
     if name == "tmplonly":
         import tmplagent
         return tmplagent.TmplOnly(seat)

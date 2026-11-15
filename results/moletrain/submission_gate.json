@@ -11,7 +11,7 @@
       "passed": true,
       "mode": "git_diff:origin/justSilas...HEAD",
       "protected_rules_count": 15,
-      "changed_files_count": 12,
+      "changed_files_count": 32,
       "protected_hits": [],
       "violations": []
     },
@@ -21,12 +21,24 @@
       "passed": true,
       "checked_py_files": [
         "canary/forge/rl_mole_v2.py",
+        "canary/mole/distill_dsl.py",
         "train/qwen_diverse_mole.py",
+        "train/batched_mole_eval.py",
+        "train/export_mole_dpo.py",
         "train/eval_grpo_mole.py",
-        "tests/test_rl_mole_v2.py",
-        "tests/test_qwen_diverse_mole.py",
-        "tests/test_eval_grpo_mole.py",
+        "scripts/audit_verda_and_ws3_moles.py",
+        "scripts/build_qwen_mole_report.py",
+        "scripts/eval_mole_vs_frontier_proxy.py",
         "scripts/verify_moletrain_submission.py",
+        "tests/test_rl_mole_v2.py",
+        "tests/test_distill_dsl.py",
+        "tests/test_qwen_diverse_mole.py",
+        "tests/test_batched_mole_eval.py",
+        "tests/test_eval_mole.py",
+        "tests/test_eval_grpo_mole.py",
+        "tests/test_verda_mole_audit.py",
+        "tests/test_qwen_mole_report.py",
+        "tests/test_eval_mole_vs_frontier_proxy.py",
         "tests/test_verify_moletrain_submission.py"
       ],
       "silas_preexisting_exempt": [
@@ -36,15 +48,38 @@
       ],
       "checked_moletrain_artifacts": [
         {
+          "path": "results/moletrain/carbon_distilled_dsl_eval.json",
+          "bytes": 25750
+        },
+        {
+          "path": "results/moletrain/frontier_proxy_mole_matrix.json",
+          "bytes": 41338
+        },
+        {
+          "path": "results/moletrain/mole_dpo_stats.json",
+          "bytes": 3035
+        },
+        {
+          "path": "results/moletrain/qwen_mole_summary.json",
+          "bytes": 37745
+        },
+        {
           "path": "results/moletrain/rl_mole_v2_heldout.json",
           "bytes": 14734
         },
         {
           "path": "results/moletrain/rl_mole_v2_policy.json",
           "bytes": 11941
+        },
+        {
+          "path": "results/moletrain/verda_ws3_forensics.json",
+          "bytes": 43313
         }
       ],
-      "checked_report_markdowns": [],
+      "checked_report_markdowns": [
+        "docs/reports/moletrain_verda_audit.md",
+        "docs/reports/qwen_mole_training.md"
+      ],
       "max_artifact_bytes": 102400,
       "violations": []
     },
@@ -155,6 +190,26 @@
       "min_solver_acc_threshold": 0.85,
       "artifacts_inspected": [
         {
+          "path": "results/moletrain/carbon_distilled_dsl_eval.json",
+          "bytes": 25750,
+          "sha256_16": "47ea29b4aa5ac3c0"
+        },
+        {
+          "path": "results/moletrain/frontier_proxy_mole_matrix.json",
+          "bytes": 41338,
+          "sha256_16": "531a7426245bac47"
+        },
+        {
+          "path": "results/moletrain/mole_dpo_stats.json",
+          "bytes": 3035,
+          "sha256_16": "702e52c33ae34a2e"
+        },
+        {
+          "path": "results/moletrain/qwen_mole_summary.json",
+          "bytes": 37745,
+          "sha256_16": "aa8bf20dda3ec48b"
+        },
+        {
           "path": "results/moletrain/rl_mole_v2_heldout.json",
           "bytes": 14734,
           "sha256_16": "0d5ab7d7aa14db56"
@@ -163,9 +218,14 @@
           "path": "results/moletrain/rl_mole_v2_policy.json",
           "bytes": 11941,
           "sha256_16": "e34d5f9b829aadbf"
+        },
+        {
+          "path": "results/moletrain/verda_ws3_forensics.json",
+          "bytes": 43313,
+          "sha256_16": "f2eb19d4613c362d"
         }
       ],
-      "bootstrap_cis_checked": 98,
+      "bootstrap_cis_checked": 963,
       "verified_catchable_models": [
         {
           "location": "results/moletrain/rl_mole_v2_heldout.json.ws3_heldout.rl_mole_v2",

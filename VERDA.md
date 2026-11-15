@@ -53,6 +53,7 @@ Two things would not have fit on a laptop, and they did not fit on our V100 clus
 | 04:05 | [Verda] | One shared held-out world secret is placed on every box whose eval had not yet started (v3-8k s0 and s3, X2). Those rows can be compared seed-paired. |
 | 03:08 | [Verda] | Spot A100 `714d8144` (v3-4k s1) **preempted** about 30 min in: no result. Steps so far: 8k s0 167, 8k s1 370, 8k s2 619, 8k s3 211. **€46.02 spent.** |
 | 03:10 | [Verda] | J1 restarted with `--hf-overrides` for YaRN 131k. |
+| 04:15 | [Verda] | J1 smoke test fails the 30-min-per-episode rule: thinking on, no output cap, about 46 tok/s per request, 16 calls in 30 min, 0 episodes finished. Restarted with a cap (`fr8/verda/j1_run2.sh`): max 4096 output tokens per turn, hard dev seeds 0–9 all at once. |
 | ~07:30 | [Verda] | Reapers delete every instance (the X2 box at 08:00). Final rows land in §4. |
 
 ## 3. Verda products used, and why (Fit)
@@ -123,7 +124,7 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | Difficulty recalibration (J1) | [Mac] local, plus a bonus copy on [FR8] (job 43872, 306 tasks) | CPU | 153k episodes |
 | SFT data (J3) | [Mac] | CPU | 20k train + 2k val solver episodes |
 | Frontier agent runs (Gemini, GPT, Grok) | [Mac] (API calls; FR8 compute nodes have no internet) | API | **1,057 replay-verified episodes** committed in `data/runs/committed/`, including references |
-| Open-weight agent (Qwen3-14B, vLLM) | **[Verda]** A100 80GB spot | A100 | 10 hard + 10 medium dev seeds; result pending from FR8 |
+| Open-weight agent (Qwen3-14B, thinking on, max 4096 output tokens per turn, vLLM) | **[Verda]** A100 80GB spot | A100 | hard dev seeds 0–9 (medium only if time allows); result pending |
 | Meta glasses YOLOv8n | **[Verda]** H100, shared | H100 | 80 epochs in 513 s, ≈ 0.15 GPU-h; mAP@0.5 0.572, strength precision 96.8% (n=348) |
 | Meta glasses PaliGemma 2 3B LoRA | **[Verda]** A100, shared | A100 | 2 epochs in 29 min, ≈ 0.65 GPU-h; strength recall 91.4% vs YOLO 65.6% (n=348) |
 
@@ -180,6 +181,7 @@ These are finalised from the ledger's delete times after the reapers.
   - A V100 for the Meta glasses YOLO run failed to create (no spot or on-demand capacity), so Meta shared the H100 instead.
 - **Spot preemption:** A100 spot `714d8144` (the v3-4k seed 1 replicate) was reclaimed about 30 min in, so the 4k row has one seed. This is the trade we chose: replicates go on spot, headline runs on on-demand.
 - **vLLM flag drift (about 1 h 50 min idle on a paid A100):** the freshly installed vLLM rejected `--rope-scaling`. The J1 runner waited 30 min, then exited around 01:20, and our watcher didn't notice until 03:10. Fixed with `--hf-overrides`; the runner now exits as soon as vLLM dies. Cost about €2.
+- **Uncapped reasoning was too slow for the episode budget:** Qwen3-14B with thinking on and no `max_tokens` made 16 tool calls in 30 min, about 46 tok/s per request. We restarted it capped at 4096 output tokens per turn, hard tier only. The aborted uncapped runs are kept separately and not counted.
   - No CPU instance was free in any region for agent hosting; X1's runners ride on an A100 box.
   - The planned open 7B (S7) was dropped for lack of capacity.
 - **Setup failures on the first H100**, about 50 of its first 60 minutes idle or failed (≈ €4):

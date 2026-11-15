@@ -58,7 +58,7 @@ from scripts.demo_replay import RUNS as DEMO_RUNS, load as load_demo_episode, pe
 from scripts.verify_replay import replay_episode
 
 BASE_BRANCH = "origin/justSilas"
-BASE_COMMIT = "58716742"
+BASE_COMMIT = "5f9b3297"
 MAX_JSON_BYTES = 40960
 DEFAULT_JSON_OUT = ROOT / "results" / "port" / "sleeper_port_matrix.json"
 DEFAULT_MD_OUT = ROOT / "docs" / "reports" / "sleeper_to_canary_port_matrix.md"
@@ -935,7 +935,7 @@ def audit_salted_sidecar_and_signed_ledger(root: Path, exploits_data: dict[str, 
                 "replayed_steps": rc["steps"],
                 "step_mismatches": rc["step_mismatches"],
             },
-            "Forging score=1.0 after signing fails closed to reward 0 ('bad ledger signature'); 80/80 Harbor trials, 18/18 jobs, and 1021/1021 replayable episodes (51,814 steps) verify cleanly.",
+            f"Forging score=1.0 after signing fails closed to reward 0 ('bad ledger signature'); {len(harbor_trials)}/{len(harbor_trials)} Harbor trials, {len(harbor_jobs)}/{len(harbor_jobs)} jobs, and {rc['consistent']}/{rc['replayed']} replayable episodes ({rc['steps']:,} steps) verify cleanly.",
         ),
     ]
     catchability_invariants = [

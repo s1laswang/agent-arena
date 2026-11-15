@@ -1,6 +1,6 @@
-# Sleeper-to-Canary Port Matrix and Invariant Audit (`58716742`)
+# Sleeper-to-Canary Port Matrix and Invariant Audit (`5f9b3297`)
 
-*Reproduce offline with zero API keys: `python scripts/sleeper_port_audit.py --check`. Audits `origin/justSilas@58716742` (`TIERS_VERSION = v1.4`, `KNOWN_V_MODE = True`, `0` v1.6 social files) and verifies machine-checked fairness and `SolverPolicy` catchability invariants across every ported Sleeper idea.*
+*Reproduce offline with zero API keys: `python scripts/sleeper_port_audit.py --check`. Audits `origin/justSilas@5f9b3297` (`TIERS_VERSION = v1.4`, `KNOWN_V_MODE = True`, `0` v1.6 social files) and verifies machine-checked fairness and `SolverPolicy` catchability invariants across every ported Sleeper idea.*
 
 ## 1. Executive Summary
 
@@ -62,7 +62,7 @@ The 8-seat multi-agent **Sleeper** prototype (`origin/momin`) and the one-agent 
 
 ### 3.6 Supporting Infrastructure and Adversary Ports (`salted_sidecar_and_signed_ledger`, `catchability_constrained_mole_adversary`)
 
-- **Salted judge worlds & signed-ledger rescore:** Ports `sleeper/secrets.py`, `harbor/sidecar.py`, and `sleeper/verifier.py` into `canary/world.py` (HMAC-SHA256 fail-closed judge/held-out worlds), `canary/mcp_server.py` (0600 `CANARY_*_FILE` secret loading), and `canary/redteam/tamper_guard.py` (HMAC-signed `/ledger`, `80/80` Harbor trials, `18/18` jobs, `1021` replayed episodes across `51814` steps with `0` mismatches; forged `c1-tamper` negative control graded `0`).
+- **Salted judge worlds & signed-ledger rescore:** Ports `sleeper/secrets.py`, `harbor/sidecar.py`, and `sleeper/verifier.py` into `canary/world.py` (HMAC-SHA256 fail-closed judge/held-out worlds), `canary/mcp_server.py` (0600 `CANARY_*_FILE` secret loading), and `canary/redteam/tamper_guard.py` (HMAC-signed `/ledger`, `80/80` Harbor trials, `18/18` jobs, `1051` replayed episodes across `53889` steps with `0` mismatches; forged `c1-tamper` negative control graded `0`).
 - **Catchability-constrained mole adversary:** Ports Sleeper's scripted strategy library and `winnable=true` gate into the safe `12`-rule JSON `MoleStrategy` DSL (`canary/mole/dsl.py`, blind to `is_canary` and `variants`) and Lagrangian `RLMole` (`canary/forge/rl_mole.py`, dual ascent on `solver_acc >= 0.75`, raising held-out heuristic regret from `+0.4926` to `+0.6896` while preserving `75%` solver accuracy).
 
 ## 4. Complete Invariant Ledger
@@ -87,7 +87,7 @@ The 8-seat multi-agent **Sleeper** prototype (`origin/momin`) and the one-agent 
 | `office_replay_dashboard` | `dashboard_secret_redaction_and_self_contained_offline_html` | fairness | `{"external_network_tags": 0, "lab_replay_showcase_episodes": 6, "redacted_tokens": 3}` | **PASS** |
 | `office_replay_dashboard` | `deterministic_replay_and_pyodide_solver_parity` | catchability | `{"canonical_hard_seeds_replayed": [4, 18, 26], "game_seed3000_solver": {"correct": true, "final_day": 6, "score": 0.79, "tool_calls": 48}, "replay_mismatches": 0}` | **PASS** |
 | `salted_sidecar_and_signed_ledger` | `hmac_salted_judge_worlds_and_public_dev_reproducibility` | fairness | `{"judge_seeds_tested": 5, "public_dev_seed42_identical": true, "salted_diverged": 5}` | **PASS** |
-| `salted_sidecar_and_signed_ledger` | `signed_ledger_tamper_rejection_and_harbor_consistency` | fairness | `{"harbor_jobs_consistent": "18/18", "harbor_trials_consistent": "80/80", "replayed_episodes": "1021/1021", "replayed_steps": 51814, "step_mismatches": 0}` | **PASS** |
+| `salted_sidecar_and_signed_ledger` | `signed_ledger_tamper_rejection_and_harbor_consistency` | fairness | `{"harbor_jobs_consistent": "18/18", "harbor_trials_consistent": "80/80", "replayed_episodes": "1051/1051", "replayed_steps": 53889, "step_mismatches": 0}` | **PASS** |
 | `salted_sidecar_and_signed_ledger` | `harbor_oracle_and_cheat_probe_separation` | catchability | `{"do_nothing_and_cheat_probe_zero": true, "oracle_positive": true}` | **PASS** |
 | `catchability_constrained_mole_adversary` | `mole_view_information_barrier_and_dsl_determinism` | fairness | `{"deterministic_replay_3seeds": true, "frame_selectors": 4, "leak_selectors": 6, "mole_view_fields": 11}` | **PASS** |
 | `catchability_constrained_mole_adversary` | `stackelberg_lagrangian_catchability_constraint` | catchability | `{"default_solver_acc": 0.97, "regret_vs_grok_tactics": [0.1957, 0.2311], "regret_vs_heuristic": [0.4926, 0.6896], "rl_solver_acc": 0.75}` | **PASS** |

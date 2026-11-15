@@ -36,7 +36,7 @@ def audit_payload():
 
 def test_scope_hygiene_and_file_manifest(audit_payload):
     assert audit_payload["base_branch"] == "origin/justSilas"
-    assert audit_payload["base_commit"] == BASE_COMMIT == "58716742"
+    assert audit_payload["base_commit"] == BASE_COMMIT == "5f9b3297"
     assert audit_payload["shipped_tiers_version"] == "v1.4"
     assert audit_payload["known_v_mode"] is True
     assert audit_payload["v16_social_files_count"] == 0
@@ -132,8 +132,8 @@ def test_fairness_and_catchability_numerical_invariants(audit_payload):
     salt = ideas["salted_sidecar_and_signed_ledger"]["measured_evidence"]
     assert salt["harbor_trials_verified"] == 80
     assert salt["harbor_jobs_verified"] == 18
-    assert salt["replayed_episodes_consistent"] == 1021
-    assert salt["replayed_tool_steps_compared"] == 51814
+    assert salt["replayed_episodes_consistent"] == 1051
+    assert salt["replayed_tool_steps_compared"] == 53889
     assert salt["c1_tamper_negative_control_reward"] == 0
 
     mole = ideas["catchability_constrained_mole_adversary"]["measured_evidence"]

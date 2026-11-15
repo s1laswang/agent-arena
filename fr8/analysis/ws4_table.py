@@ -20,7 +20,7 @@ ABSTAIN = {"horizon", "tool_cap", "eval_cap"}
 
 
 def load(dirs: str) -> list[dict]:
-    eps, seen = [], set()
+    eps, seen, dropped = [], set(), 0
     for d in dirs.split(","):
         for line in (Path(d) / "episodes.jsonl").read_text().splitlines():
             e = json.loads(line)
@@ -28,6 +28,12 @@ def load(dirs: str) -> list[dict]:
             if k not in seen:            # pooled runs: first episode per (tier, seed) wins
                 seen.add(k)
                 eps.append(e)
+            else:
+                dropped += 1
+    if dropped:                          # held-out worlds differ per eval process, so these were real episodes
+        import sys
+        print(f"[ws4_table] WARNING {dirs}: dropped {dropped} episodes with a repeated (tier, seed); "
+              "pool only disjoint seed ranges", file=sys.stderr)
     return eps
 
 

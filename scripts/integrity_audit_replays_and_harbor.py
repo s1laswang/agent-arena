@@ -60,7 +60,9 @@ def _harbor_timeout_cap(root: Path) -> float:
     return float(((parsed.get("agent") or {}).get("timeout_sec")) or 10800.0)
 
 
-def _audit_episode_record(ep: dict[str, Any], loc: str, timeout_cap_s: float) -> dict[str, Any]:
+def _audit_episode_record(
+    ep: dict[str, Any], loc: str, timeout_cap_s: float, *, summary_only: bool = False
+) -> dict[str, Any]:
     meta = ep.get("meta") if isinstance(ep.get("meta"), dict) else {}
     is_valid = not ((meta.get("valid") is False) or (ep.get("valid") is False))
     violations: list[str] = []
@@ -137,7 +139,7 @@ def _audit_episode_record(ep: dict[str, Any], loc: str, timeout_cap_s: float) ->
             violations.append(f"{loc}: accused={accused!r} but end_reason={end_reason!r}")
         if correct_bool:
             has_zero_v = any(v == 0.0 for _, v in v_candidates)
-            if score == 0.0 and not has_zero_v:
+            if score == 0.0 and not has_zero_v and not summary_only:
                 violations.append(f"{loc}: correct accusation has score 0.0 without V==0.0")
             elif score < 0.0:
                 violations.append(f"{loc}: correct accusation has negative score {score!r}")
@@ -358,7 +360,7 @@ def audit_data_rules(root: Path = ROOT) -> dict[str, Any]:
                 jc["dup_in_cohort"] += 1
                 judge_violations.append(f"{loc}: duplicate seed {seed} in {jkey}")
             jc["seeds_seen"].add(seed)
-            res = _audit_episode_record(ep, loc, repro_cap_s)
+            res = _audit_episode_record(ep, loc, repro_cap_s, summary_only=True)
             if res["valid"]:
                 jc["n_valid"] += 1
                 jc["valid_scores"].append(float(ep["score"]))

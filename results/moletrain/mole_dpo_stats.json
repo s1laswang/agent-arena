@@ -1,0 +1,126 @@
+{
+  "n_states": 60,
+  "states_with_pairs": 49,
+  "n_pairs": 155,
+  "tiers": [
+    "hard",
+    "medium"
+  ],
+  "horizon_days": 3,
+  "min_margin": 0.1,
+  "min_solver_score": 0.25,
+  "investigators": [
+    "grok_tactics",
+    "heuristic",
+    "hinted_heuristic"
+  ],
+  "seed_range": [
+    130000,
+    130059
+  ],
+  "allowed_seed_window": [
+    130000,
+    145000
+  ],
+  "mean_chosen_regret": 0.2499,
+  "mean_rejected_regret": -0.2166,
+  "mean_margin": 0.4665,
+  "min_observed_margin": 0.1,
+  "chosen_solver_acc": 1.0,
+  "min_chosen_solver_score": 0.4,
+  "mean_chosen_solver_score": 0.6911,
+  "rejected_solver_acc": 0.7742,
+  "mean_rejected_solver_score": 0.4045,
+  "chosen_action_profile": {
+    "random_seeded/none": 0.1677,
+    "most_recipients/most_restricted_peer": 0.1419,
+    "newest/decoy": 0.1226,
+    "fewest_recipients/decoy": 0.1226,
+    "oldest/random_peer": 0.1032,
+    "newest/random_peer": 0.0968,
+    "newest/most_restricted_peer": 0.0774,
+    "oldest/decoy": 0.0581,
+    "fewest_recipients/none": 0.0516,
+    "most_recipients/random_peer": 0.0323,
+    "most_recipients/decoy": 0.0258
+  },
+  "rejected_action_profile": {
+    "none/none": 0.2129,
+    "most_recipients/most_restricted_peer": 0.0968,
+    "oldest/decoy": 0.0903,
+    "most_recipients/random_peer": 0.0903,
+    "oldest/random_peer": 0.0903,
+    "newest/most_restricted_peer": 0.0839,
+    "newest/decoy": 0.0774,
+    "most_recipients/decoy": 0.071,
+    "newest/random_peer": 0.0645,
+    "fewest_recipients/decoy": 0.0452,
+    "fewest_recipients/none": 0.0323,
+    "random_seeded/most_restricted_peer": 0.0258,
+    "random_seeded/none": 0.0194
+  },
+  "chosen_selector_marginals": {
+    "leak": {
+      "newest": 0.2968,
+      "most_recipients": 0.2,
+      "fewest_recipients": 0.1742,
+      "random_seeded": 0.1677,
+      "oldest": 0.1613
+    },
+    "frame": {
+      "decoy": 0.329,
+      "random_peer": 0.2323,
+      "none": 0.2194,
+      "most_restricted_peer": 0.2194
+    }
+  },
+  "rejected_selector_marginals": {
+    "leak": {
+      "most_recipients": 0.2581,
+      "newest": 0.2258,
+      "none": 0.2129,
+      "oldest": 0.1806,
+      "fewest_recipients": 0.0774,
+      "random_seeded": 0.0452
+    },
+    "frame": {
+      "decoy": 0.2839,
+      "none": 0.2645,
+      "random_peer": 0.2452,
+      "most_restricted_peer": 0.2065
+    }
+  },
+  "rejected_reason_profile": {
+    "negative_regret": 0.5742,
+    "uncatchable": 0.2387,
+    "silent_none": 0.1871
+  },
+  "by_tier": {
+    "hard": {
+      "n_states": 30,
+      "states_with_pairs": 25,
+      "n_pairs": 76,
+      "seed_range": [
+        130000,
+        130029
+      ],
+      "mean_chosen_regret": 0.2638,
+      "mean_rejected_regret": -0.1866,
+      "mean_margin": 0.4504
+    },
+    "medium": {
+      "n_states": 30,
+      "states_with_pairs": 24,
+      "n_pairs": 79,
+      "seed_range": [
+        130030,
+        130059
+      ],
+      "mean_chosen_regret": 0.2365,
+      "mean_rejected_regret": -0.2454,
+      "mean_margin": 0.4819
+    }
+  },
+  "n_candidates_per_state": 13,
+  "elapsed_sec": 238.72
+}

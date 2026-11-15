@@ -1,0 +1,67 @@
+# Gemini ablations (generated 2026-11-15T02:44:46+0200 by `python -m canary.gemini.ablations`)
+
+All numbers come from committed files under results/gemini/. 95% CIs: Wilson for rates, t-normal for means, paired bootstrap from ladder.json for % of solver.
+
+## 1. Thought-signature replay: OFF vs ON
+gemini-3.8-flash, thinking_level medium, hard tier, dev seeds 0-9. OFF strips `provider_items` (the model's own Content, signatures included) from every assistant turn before each call (`LedgeredClient(drop_signatures=True)`, `ladder --no-thought-signatures`). With signatures ON the agent plays all 10 episodes: 0/628 API errors (0.0%, CI [0.0, 0.6]), 0/628 invalid tool calls (0.0%, CI [0.0, 0.6]), accuracy 70.0% (CI [39.7, 89.2]), mean score 0.079 (CI -0.39 to 0.55), 14% of the solver on the same seeds (CI [-71.4, 85.2]). With signatures OFF the API rejects the first request that replays a model function call on 10/10 seeds (Wilson CI [72.2, 100.0]): `google.genai.errors.ClientError 400 INVALID_ARGUMENT`: "Function call is missing a thought_signature in functionCall parts. This is required for tools to work correctly, and missing thought_signature may lead to degraded model performance. Additional data, function call `default_api:status` , position 2. Please refer to https://aistudio.google.com/docs/thought-signatures for more details." 10/20 calls failed (every first call succeeded, every second call was rejected), so 0 episodes are playable and accuracy, score and % of solver are undefined, not zero. All 10 OFF episodes are infra-invalid and unscored. The finding: on Gemini 3.x, multi-turn function calling does not work at all without thought-signature replay; it is a hard requirement of the API, not an optimisation.
+
+| arm | valid eps | API errors | invalid tool calls | accuracy | mean score | % of solver |
+|---|---|---|---|---|---|---|
+| ON | 10 | 0/628 [0.0, 0.6] | 0/628 [0.0, 0.6] | 70.0% [39.7, 89.2] | 0.079 [-0.39, 0.55] | 14% [-71.4, 85.2] |
+| OFF | 0 (10 infra-invalid) | 10/20 [29.9, 70.1] | n/a | n/a | n/a | n/a |
+
+## 2. Explicit context cache: cost delta (no new calls)
+Per ledger row: paid = canary.llm.pricing.cost(...)['cost_usd_est'] (cached tokens at CACHED_PRICES; models without an entry use 10% of input); counterfactual = 'cost_usd' (all input at the full price). Batch rows at 50%. Explicit-cache storage (per token-hour) is not in the ledger and is not included. Gallery = the atlas-feature runs whose run_id the gallery_cache records. Atlas + gallery: 54,584,568 of 64,395,859 input tokens cached (84.8%); paid $21.72 vs $58.56 uncached, saving $36.84 (62.9%). Atlas alone: $21.60 vs $58.45 (63.0% saved); gallery alone: $0.12 vs $0.12 (0.0% saved). Whole programme (all 29,150 ledgered calls, mostly implicit caching on ladder episodes): 86.6% of 860,488,544 input tokens cached; $214.89 paid vs $893.08, saving $678.19 (75.9%). These are exact accounting deltas over every ledgered call, not samples, so no CI applies.
+
+| scope | calls | input tok | cached | paid $ | uncached $ | saved $ | saved % |
+|---|---|---|---|---|---|---|---|
+| atlas | 455 | 64,359,208 | 84.8% | 21.60 | 58.45 | 36.84 | 63.0 |
+| gallery | 9 | 36,651 | 0.0% | 0.12 | 0.12 | 0.00 | 0.0 |
+| atlas_plus_gallery | 464 | 64,395,859 | 84.8% | 21.72 | 58.56 | 36.84 | 62.9 |
+| programme | 29,150 | 860,488,544 | 86.6% | 214.89 | 893.08 | 678.19 | 75.9 |
+
+## 3. Thinking-level sweep (no new calls)
+From results/gemini/ladder.json: 34 model x thinking-level x tier cells. % of solver is paired on the same seeds. **Bold** = the 95% CI excludes 100% (17 of 34 cells). Thinking tokens marked * are estimates.
+
+| tier | model | level | n | % of solver [95% CI] | thinking tok/ep | USD/ep |
+|---|---|---|---|---|---|---|
+| hard | gemini-3.1-flash-lite | minimal | 10 | **-174% [-215, -150]** | 0 | 0.030 |
+| hard | gemini-3.1-flash-lite | low | 10 | **-79% [-164, 17]** | 5,543 | 0.056 |
+| hard | gemini-3.1-flash-lite | medium | 10 | **-174% [-215, -150]** | 1,666 | 0.041 |
+| hard | gemini-3.1-flash-lite | high | 10 | **-82% [-167, 11]** | 5,679 | 0.064 |
+| hard | gemini-3.5-flash | minimal | 10 | **-32% [-124, 34]** | 0 | 0.248 |
+| hard | gemini-3.5-flash | low | 10 | 46% [-37, 104] | 8,531 | 0.275 |
+| hard | gemini-3.5-flash | medium | 20 | 78% [28, 151] | 20,151 | 0.419 |
+| hard | gemini-3.5-flash | high | 20 | 71% [11, 158] | 26,547 | 0.425 |
+| hard | gemini-3.8-flash | low | 10 | **3% [-82, 68]** | 0 | 0.162 |
+| hard | gemini-3.8-flash | medium | 10 | **14% [-71, 85]** | 28,300 | 0.455 |
+| hard | gemini-3.8-flash | high | 20 | 51% [-5, 123] | 50,732 | 0.779 |
+| hard | gemini-4-argon | low | 10 | 102% [83, 130] | 0 | 0.175 |
+| hard | gemini-4-argon | medium | 10 | 41% [-35, 108] | 17,346 | 0.639 |
+| hard | gemini-4-argon | high | 10 | **45% [-34, 99]** | 44,695 | 1.610 |
+| hard | gemini-4-carbon | low | 10 | 80% [62, 107] | 289 | 0.523 |
+| hard | gemini-4-carbon | high | 10 | 106% [94, 126] | 63,171 | 1.931 |
+| hard | gemini-4-carbon | default | 22 | 108% [62, 189] | 48,351* | 1.501 |
+| medium | gemini-3.1-flash-lite | minimal | 10 | **-110% [-153, -53]** | 0 | 0.033 |
+| medium | gemini-3.1-flash-lite | low | 10 | **-33% [-110, 48]** | 4,290 | 0.044 |
+| medium | gemini-3.1-flash-lite | medium | 10 | **-90% [-133, -22]** | 1,686 | 0.059 |
+| medium | gemini-3.1-flash-lite | high | 10 | **-88% [-129, -16]** | 5,544 | 0.060 |
+| medium | gemini-3.5-flash | minimal | 10 | 73% [22, 108] | 0 | 0.116 |
+| medium | gemini-3.5-flash | low | 10 | **3% [-69, 73]** | 7,269 | 0.266 |
+| medium | gemini-3.5-flash | medium | 20 | 89% [60, 109] | 15,033 | 0.289 |
+| medium | gemini-3.5-flash | high | 20 | 75% [39, 104] | 21,513 | 0.386 |
+| medium | gemini-3.8-flash | low | 10 | **-2% [-77, 62]** | 0 | 0.122 |
+| medium | gemini-3.8-flash | medium | 10 | **65% [18, 93]** | 33,837 | 0.549 |
+| medium | gemini-3.8-flash | high | 20 | **69% [33, 97]** | 45,240 | 0.618 |
+| medium | gemini-4-argon | low | 10 | 102% [88, 120] | 0 | 0.152 |
+| medium | gemini-4-argon | medium | 10 | 82% [62, 100] | 9,711 | 0.370 |
+| medium | gemini-4-argon | high | 10 | 52% [-17, 105] | 34,846 | 1.128 |
+| medium | gemini-4-carbon | low | 10 | 86% [71, 107] | 530 | 0.388 |
+| medium | gemini-4-carbon | high | 10 | **88% [72, 99]** | 50,290 | 1.469 |
+| medium | gemini-4-carbon | default | 15 | 78% [55, 100] | 36,812* | 1.140 |
+
+## §4 replacement (3 sentences)
+
+> **Thought signatures are load-bearing:** with signature replay stripped, the API rejected the first function-call replay on 10/10 hard-tier episodes of gemini-3.8-flash (400 INVALID_ARGUMENT, "Function call is missing a thought_signature"; Wilson 95% CI [72.2, 100.0]), so 0 episodes were playable, versus 10/10 played with replay on (0/628 API errors, accuracy 70.0%, CI [39.7, 89.2]).
+> **Explicit context caching** cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 75.9% ($678.19 of $893.08) across all 29,150 ledgered calls in the programme.
+> **`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, gemini-3.5-flash goes from -32% [-124, 34] at minimal (n=10, 0 thinking tok, $0.25/ep) to 78% [28, 151] at medium (n=20, 20,151 thinking tok, $0.42/ep) of the solver on the same seeds, while gemini-4-argon is non-monotone (102% [83, 130] at low (n=10, 0 thinking tok, $0.17/ep) vs 45% [-34, 99] at high (n=10, 44,695 thinking tok, $1.61/ep)); across all 34 cells the 95% CI excludes solver parity in 17.

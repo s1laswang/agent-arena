@@ -313,7 +313,7 @@ def _extra_calls(name: str, ids: list[str], target: str | None) -> list[tuple[st
     if name == "solver_plus_unrestrict_spam":
         return [("unrestrict_access", {"employee": e}) for e in ids]
     if name == "solver_plus_interview_all":
-        return [("interview", {"employee": e, "topic": "leaks"}) for e in ids]
+        return [("interview", {"employee": e, "topic": "contacts_outside"}) for e in ids]
     if name == "solver_plus_read_spam":
         return [("status", {}), ("list_employees", {}), ("check_leak_feed", {}),
                 ("list_documents", {"day_from": 1, "day_to": 1}), ("read_access_logs", {"day_from": 1, "day_to": 1}),

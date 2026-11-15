@@ -69,6 +69,34 @@ def test_headline_verb_is_ci_gated():
     assert ladder_report.headline_verb(r(.5, .3, .7), r(.6, .4, .8)).startswith("reaches part")
 
 
+def test_j1_self_hosted_section_replay_verified_and_costed(tmp_path, monkeypatch):
+    from canary.agents import play
+    _grid(tmp_path / "gem", ["gemini-3.8-flash"], "low", monkeypatch)
+    j1 = tmp_path / "j1"
+    play.main(["--agent", "stub", "--tier", "hard", "--seeds", "0-1", "--out", str(j1)])
+    args = ["--runs", str(tmp_path / "gem"), "--out", str(tmp_path / "a"), "--bootstrap", "100",
+            "--probe", str(tmp_path / "none.json"), "--no-tags", "--j1-runs", str(j1), "--j1-model", "Qwen/Qwen3-14B",
+            "--j1-eur-per-hour", "1.0794", "--j1-billed-hours", "hard=0.5", "--j1-eur-usd", "1.10",
+            "--j1-fx-source", "test rate"]
+    assert ladder_report.main(args) == 0
+    doc = json.loads((tmp_path / "a" / "ladder.json").read_text())
+    j = doc["j1"]
+    assert j["episodes"] == 2 and j["replay_verified"] == 2 and not j["replay_mismatches"]
+    r = j["rows"][0]
+    assert abs(r["cost_per_ep_eur"] - 1.0794 * 0.5 / 2) < 1e-9 and abs(r["cost_per_ep"] - 1.0794 * 0.25 * 1.10) < 1e-9
+    md = (tmp_path / "a" / "ladder.md").read_text()
+    assert "## Open-weight comparison on Canary v1.4 (Verda self-hosted)" in md and "2/2 replay-verified" in md
+    assert "Qwen/Qwen3-14B (Verda self-hosted, vLLM)" in md
+    assert doc["episodes"] == 2 and [x["model"] for x in doc["rows"]] == ["gemini-3.8-flash"]  # Gemini table untouched
+    fr = json.loads((tmp_path / "a" / "frontier.json").read_text())
+    p = [x for x in fr["points"]["hard"] if x["kind"] == "j1"][0]
+    assert p["cost_per_ep_usd"] and "EUR 1.0794/h" in p["cost_basis"] and not p["imported"]
+    # without cost inputs the points are never placed at an invented cost
+    assert ladder_report.main(args[:-8] + ["--out", str(tmp_path / "b")]) == 0
+    fb = json.loads((tmp_path / "b" / "frontier.json").read_text())
+    assert [x for x in fb["points"]["hard"] if x["kind"] == "j1"][0]["cost_per_ep_usd"] is None
+
+
 def test_no_gemma_section_without_gemma_runs(tmp_path, monkeypatch):
     _grid(tmp_path / "gem", ["gemini-3.8-flash"], "low", monkeypatch)
     assert ladder_report.main(["--runs", str(tmp_path / "gem"), "--out", str(tmp_path / "a"), "--bootstrap", "100",

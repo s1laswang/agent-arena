@@ -145,14 +145,14 @@
    "unpriced_calls": 302
   },
   "programme": {
-   "calls": 45692,
-   "input_tokens": 1346251331,
-   "cached_tokens": 1185094329,
-   "cached_share": 0.8803,
-   "usd_paid": 407.34,
-   "usd_if_uncached": 1797.18,
-   "usd_saved": 1389.84,
-   "pct_saved": 77.3,
+   "calls": 52080,
+   "input_tokens": 1553415277,
+   "cached_tokens": 1374038289,
+   "cached_share": 0.8845,
+   "usd_paid": 456.21,
+   "usd_if_uncached": 2055.47,
+   "usd_saved": 1599.26,
+   "pct_saved": 77.8,
    "unpriced_calls": 702
   },
   "by_feature": {
@@ -201,14 +201,14 @@
     "unpriced_calls": 0
    },
    "ladder": {
-    "calls": 40093,
-    "input_tokens": 1242491838,
-    "cached_tokens": 1118400109,
-    "cached_share": 0.9001,
-    "usd_paid": 329.09,
-    "usd_if_uncached": 1670.57,
-    "usd_saved": 1341.48,
-    "pct_saved": 80.3,
+    "calls": 46481,
+    "input_tokens": 1449655784,
+    "cached_tokens": 1307344069,
+    "cached_share": 0.9018,
+    "usd_paid": 377.95,
+    "usd_if_uncached": 1928.86,
+    "usd_saved": 1550.91,
+    "pct_saved": 80.4,
     "unpriced_calls": 377
    },
    "ladder-gemma-probe": {
@@ -988,11 +988,11 @@
  ],
  "section4": [
   "**Thought signatures are load-bearing:** with signature replay stripped, the API rejected the first function-call replay on 10/10 hard-tier episodes of gemini-3.8-flash (400 INVALID_ARGUMENT, \"Function call is missing a thought_signature\"; Wilson 95% CI [72.2, 100.0]), so 0 episodes were playable, versus 10/10 played with replay on (0/628 API errors, accuracy 70.0%, CI [39.7, 89.2]).",
-  "**Explicit context caching** cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 77.3% ($1389.84 of $1797.18) across all 45,692 ledgered calls in the programme (list prices; 702 calls of unpriced models such as embeddings and hosted Gemma count $0).",
+  "**Explicit context caching** cut the corpus-scale Atlas reads from $58.56 to $21.72 (62.9% saved over all 464 ledgered atlas/gallery calls; 84.8% of 64.4M input tokens cached; the 9 gallery calls used no cache), and caching overall saved 77.8% ($1599.26 of $2055.47) across all 52,080 ledgered calls in the programme (list prices; 702 calls of unpriced models such as embeddings and hosted Gemma count $0).",
   "**`thinking_level` turns compute into a controlled variable on one model:** on the hard tier, gemini-3.6-flash (requested as 3.5-flash) goes from -32% [-124, 34] at minimal (n=10, 0 thinking tok, $0.25/ep) to 87% [50, 147] at medium (n=40, 20,275 thinking tok, $0.42/ep) of the solver on the same seeds, while gemini-4-argon rises across low \u2192 medium \u2192 high (57% \u2192 64% \u2192 73%; 57% [-6, 127] at low (n=21, 10 thinking tok, $0.23/ep) vs 73% [14, 117] at high (n=15, 41,967 thinking tok, $1.47/ep), CIs overlap); across all model x level x tier cells, 18 of 42 cells exclude parity, all below the solver (95% CIs)."
  ],
  "thinking_sweep_regenerated_at": "2026-11-15T04:47:20+0200",
  "ladder_git_sha": "76097d7843032cc4068e53a9d78e934f4ab38171",
  "thinking_sweep_parity": "18 of 42 cells exclude parity, all below the solver",
- "explicit_cache_regenerated_at": "2026-11-15T05:23:40+0200"
+ "explicit_cache_regenerated_at": "2026-11-15T05:39:44+0200"
 }

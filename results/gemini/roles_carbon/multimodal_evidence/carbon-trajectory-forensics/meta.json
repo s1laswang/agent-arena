@@ -1,0 +1,124 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "carbon_v14_trajectory_forensics",
+  "model_id": "gemini-4-carbon",
+  "commit": "44b700f1b8d03f46eb90bc99142f4ffc221563cf",
+  "git_sha": "44b700f1b8d03f46eb90bc99142f4ffc221563cf",
+  "source_runs_dir": "data/runs/committed/v1.4",
+  "source_runs_branch": "fr8/gemini/main",
+  "source_runs_commit": "a37d93f7",
+  "timestamp": "2026-11-14T17:49:49+00:00",
+  "command": "CANARY_LLM_MAX_RETRIES=10 PYTHONPATH=. /tmp/fleet-silas/canary-venv/bin/python scripts/run_carbon_trajectory_forensics.py --source-branch fr8/gemini/main --source-commit a37d93f7",
+  "tiers_version": "v1.4",
+  "ledger_run_id": "carbon-trajectory-forensics-20261114T174949Z",
+  "fake_env": false,
+  "smoke": false,
+  "n_charts_analyzed": 7,
+  "n_images_read_by_model": 7,
+  "visual_threshold_accuracy": 1.0,
+  "accuse_day_within_1_accuracy": 1.0,
+  "accuse_day_exact_accuracy": 1.0,
+  "hidden_bleed_gap_accuracy": 1.0,
+  "entropy_lag_accuracy": 1.0,
+  "outcome_pattern_accuracy": 1.0,
+  "usage": {
+    "calls": 7,
+    "in": 16093,
+    "out": 2340,
+    "thinking": 5041,
+    "cached": 0,
+    "cost_usd": 0.105996,
+    "latency_s": 127.204
+  },
+  "part_from_bytes": true,
+  "image_manifest": {
+    "count": 7,
+    "mime_type": "image/png",
+    "total_bytes": 2833495,
+    "dimensions": [
+      [
+        2208,
+        2624
+      ]
+    ],
+    "images": [
+      {
+        "path": "charts/ep_0_hard_seed6.png",
+        "size": [
+          2208,
+          2624
+        ],
+        "width": 2208,
+        "height": 2624,
+        "bytes": 421334,
+        "sha256": "991e4cdd20766457c8cd72c057aa9d033187427f7ebab7395bbf96876a9510fd"
+      },
+      {
+        "path": "charts/ep_1_medium_seed7.png",
+        "size": [
+          2208,
+          2624
+        ],
+        "width": 2208,
+        "height": 2624,
+        "bytes": 400852,
+        "sha256": "b9aa3a5f576e4dc7f2bdd20db10f9530868538d8a0d36d8e712fb61fc0dbe511"
+      },
+      {
+        "path": "charts/ep_2_medium_seed5.png",
+        "size": [
+          2208,
+          2624
+        ],
+        "width": 2208,
+        "height": 2624,
+        "bytes": 403825,
+        "sha256": "f98ac6dd3ea7c151a830322ff89b23f0360c81da9a541ef89adef31ce2d5a661"
+      },
+      {
+        "path": "charts/ep_3_hard_seed7.png",
+        "size": [
+          2208,
+          2624
+        ],
+        "width": 2208,
+        "height": 2624,
+        "bytes": 427328,
+        "sha256": "be39abddcc8b38373ace3a205a35e4e757af27e5e3e0be0ec23645ee19bad34f"
+      },
+      {
+        "path": "charts/ep_4_hard_seed8.png",
+        "size": [
+          2208,
+          2624
+        ],
+        "width": 2208,
+        "height": 2624,
+        "bytes": 419078,
+        "sha256": "264c8af65fd8b184190bdc741538e2eae05e1361f85cca85ea98eb09ddd0f277"
+      },
+      {
+        "path": "charts/ep_5_medium_seed8.png",
+        "size": [
+          2208,
+          2624
+        ],
+        "width": 2208,
+        "height": 2624,
+        "bytes": 396245,
+        "sha256": "f263b845c6e9e00ba6d6548dbeb2ec59a28749635d13d755bee3e8d2e9c14e53"
+      },
+      {
+        "path": "charts/ep_6_medium_seed1.png",
+        "size": [
+          2208,
+          2624
+        ],
+        "width": 2208,
+        "height": 2624,
+        "bytes": 364833,
+        "sha256": "5682d64c80c3ae2c450634eaed1c3ee22caf550aac20a7554a354749acf8c34b"
+      }
+    ]
+  }
+}

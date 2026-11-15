@@ -1,0 +1,105 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "belief_chart_forensics",
+  "model_id": "gemini-4-carbon",
+  "commit": "42341129d027e54e5bf58e44f3e64690295b75c5",
+  "timestamp": "2026-11-14T13:22:00+00:00",
+  "command": "CANARY_LLM_MAX_RETRIES=10 PYTHONPATH=. /tmp/fleet-silas/canary-venv/bin/python scripts/run_multimodal_forensics.py",
+  "tiers_version": "v1.3",
+  "ledger_run_id": "multimodal-forensics-20261114T132200Z",
+  "n_charts_analyzed": 6,
+  "visual_threshold_accuracy": 1.0,
+  "accuse_day_within_1_accuracy": 1.0,
+  "accuse_day_exact_accuracy": 1.0,
+  "hidden_bleed_gap_accuracy": 1.0,
+  "usage": {
+    "calls": 6,
+    "in": 10812,
+    "out": 1295,
+    "thinking": 2065,
+    "cached": 0,
+    "cost_usd": 0.055224,
+    "latency_s": 114.71
+  },
+  "n_images_read_by_model": 6,
+  "part_from_bytes": true,
+  "image_manifest": {
+    "count": 6,
+    "mime_type": "image/png",
+    "total_bytes": 1448245,
+    "dimensions": [
+      [
+        1984,
+        1792
+      ]
+    ],
+    "images": [
+      {
+        "path": "charts/ep_0.png",
+        "size": [
+          1984,
+          1792
+        ],
+        "width": 1984,
+        "height": 1792,
+        "bytes": 231021,
+        "sha256": "f14646d8d63999f5de097fbb1444f03311c6a4f399d7c8d40aab6a8f10e88134"
+      },
+      {
+        "path": "charts/ep_1.png",
+        "size": [
+          1984,
+          1792
+        ],
+        "width": 1984,
+        "height": 1792,
+        "bytes": 252404,
+        "sha256": "a4dfa5b890a31c003c110ca56173d4d922737f2ac06c2c6ae5a099faebe8a9f1"
+      },
+      {
+        "path": "charts/ep_2.png",
+        "size": [
+          1984,
+          1792
+        ],
+        "width": 1984,
+        "height": 1792,
+        "bytes": 264679,
+        "sha256": "5b2644a81f5b24286dc37826d6a1104e00d3f8a8c6ae0b60feef68c484d1b854"
+      },
+      {
+        "path": "charts/ep_3.png",
+        "size": [
+          1984,
+          1792
+        ],
+        "width": 1984,
+        "height": 1792,
+        "bytes": 224933,
+        "sha256": "a0007e3663d056e2ffe6e151ad24fe867de3785656635c074d531aca9a52e8d7"
+      },
+      {
+        "path": "charts/ep_4.png",
+        "size": [
+          1984,
+          1792
+        ],
+        "width": 1984,
+        "height": 1792,
+        "bytes": 226845,
+        "sha256": "b435a7645b0cdbfdb2ade7e4b0dfbad9aa11097973c7d2b025f14c5647fb68a6"
+      },
+      {
+        "path": "charts/ep_5.png",
+        "size": [
+          1984,
+          1792
+        ],
+        "width": 1984,
+        "height": 1792,
+        "bytes": 248363,
+        "sha256": "6a283bd72543317edc68c6191d8514a92dd45cc8b981cf5383a0433bd553e7da"
+      }
+    ]
+  }
+}

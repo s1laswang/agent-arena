@@ -116,6 +116,9 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_cross_tier_transfer_audit.py",
         "tiebreak_harbor_shell_bridge.py",
         "tiebreak_stopping_counterfactual_audit.py",
+        "tiebreak_canary_split_design_audit.py",
+        "tiebreak_byzantine_stress_audit.py",
+        "tiebreak_selective_risk_coverage_audit.py",
     )
     assert rta.OPTIONAL_FILENAMES == expected_optional_files
 
@@ -196,6 +199,9 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_cross_tier_transfer_audit.py",
         "tiebreak_harbor_shell_bridge.py",
         "tiebreak_stopping_counterfactual_audit.py",
+        "tiebreak_canary_split_design_audit.py",
+        "tiebreak_byzantine_stress_audit.py",
+        "tiebreak_selective_risk_coverage_audit.py",
     ]
     assert payload_ok["gates_passed"] == 3
     assert payload_ok["gates_total"] == 3

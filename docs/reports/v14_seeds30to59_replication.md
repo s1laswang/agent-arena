@@ -21,6 +21,7 @@ Columns match `scripts/paired_gemini.py`: `score +/- 95% CI` uses normal-approxi
 | hard | OpenCode + gemini-4-carbon over MCP (judges' harness, PRIMARY) | 30 | +0.322 +/- 0.199 | 0.83 | 0.97 | 13.2 | 0.88 | +0.499 | 65% [24%, 98%] | -0.177 +/- 0.194 | +0.360 | **72% [52%, 91%]** |
 | hard | in-process gemini-4-carbon (full history, thought-signature replay) | 30 | +0.473 +/- 0.118 | 0.93 | 0.97 | 12.7 | 0.93 | +0.499 | 95% [62%, 140%] | -0.026 +/- 0.184 | +0.421 | **84% [65%, 106%]** |
 | hard | OpenCode + gemini-3.5-flash over MCP (second Gemini family) | 30 | +0.373 +/- 0.177 | 0.90 | 1.00 | 12.7 | 0.71 | +0.499 | 75% [36%, 123%] | -0.126 +/- 0.221 | +0.110 | **22% [-23%, 63%]** |
+| hard | OpenCode + gpt-5.5 over MCP (second frontier family, OpenAI) | 30 | +0.504 +/- 0.064 | 0.93 | 0.93 | 10.2 | 0.94 | +0.499 | 101% [79%, 140%] | +0.005 +/- 0.141 | +0.418 | **84% [67%, 103%]** |
 | hard | reference solver (seeds 0-29) | 30 | +0.499 +/- 0.119 | 0.97 | 1.00 | 10.6 | 0.97 | +0.499 | - | - | +0.499 | - |
 | medium | OpenCode + gemini-4-carbon over MCP (judges' harness, medium context) | 30 | +0.713 +/- 0.042 | 1.00 | 1.00 | 8.0 | 0.96 | +0.645 | 111% [99%, 127%] | +0.068 +/- 0.080 | +0.652 | **101% [85%, 119%]** |
 | medium | in-process gemini-4-carbon (medium context) | 30 | +0.530 +/- 0.138 | 0.83 | 0.87 | 9.0 | 0.93 | +0.645 | 82% [56%, 108%] | -0.115 +/- 0.170 | +0.479 | **74% [52%, 99%]** |
@@ -118,10 +119,10 @@ Columns match `scripts/paired_gemini.py`: `score +/- 95% CI` uses normal-approxi
 
 | check | result | status |
 |---|---:|---|
-| Tracked `v1.4` `episodes.jsonl` shards audited | `36` | PASS |
-| Episodes replay-verified in fresh `canary.env.Env` (`v1.4`) | `719 / 719` | PASS |
+| Tracked `v1.4` `episodes.jsonl` shards audited | `37` | PASS |
+| Episodes replay-verified in fresh `canary.env.Env` (`v1.4`) | `749 / 749` | PASS |
 | Score, accusation, or step-level replay mismatches | `0` | PASS |
-| Episodes with `rc == timeout`, `end_reason == error`, or `valid == False` | `0` | PASS |
+| Episodes with `rc == timeout`, invalid `end_reason == error`, or `valid == False` | `0` | PASS |
 | Duplicate `(agent, tier, seed)` tuples within cohort (`0-29` primary, `30-59` G1 ext, `30-59` fleet repl) | `0` | PASS |
 | OpenCode client-only steps skipped / truncated outputs byte-verified | `1 / 2` | PASS |
 

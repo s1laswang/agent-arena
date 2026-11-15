@@ -1,0 +1,573 @@
+{
+  "schema_version": "1.0",
+  "tiers_version_target": "v1.4",
+  "strict_gates": {
+    "gate1_seed_hygiene": "train_seeds strictly in [100000, 200000) and disjoint from eval_seeds",
+    "gate2_paired_world_secret": "identical non-empty world_secret_tag between before and after on HELDOUT_SEEDS [800000, 800200)",
+    "gate3_sample_and_replay": "n >= 30, replay_verified is True, and 0 invalid/error episodes counted as 0",
+    "gate4_paired_ci95_positive": "paired ci95_low(after - before) > 0.0"
+  },
+  "summary_counts": {
+    "historical_runs": 7,
+    "discovered_runs": 0,
+    "total_runs": 7,
+    "verified_improvements": 0,
+    "verified_run_ids": [],
+    "by_status": {
+      "FAILED_OOM": 1,
+      "NEGATIVE_REWARD_PROTOCOL_GAIN": 1,
+      "BASELINE_CAVEATED": 1,
+      "NEGATIVE_BLIND_ACCUSE": 1,
+      "FAILED_CUDA_OOM": 1,
+      "FAILED_ZERO_VARIANCE": 1,
+      "IN_PROGRESS_PARTIAL": 1
+    }
+  },
+  "calibrated_v14_dataset": {
+    "shared_scratch_dir": "/tmp/fleet-silas/shared/tiebreak/cal_v14",
+    "train_manifest_path": "results/tiebreak/cal_v14_train_manifest.json",
+    "val_manifest_path": "results/tiebreak/cal_v14_val_manifest.json",
+    "train": {
+      "split": "train",
+      "seed_offset": 0,
+      "keep_calibrated": true,
+      "abstain_oversample": 2,
+      "augment_abstentions_per_tier": 35,
+      "dpo_enabled": true,
+      "correct_accusations": 398,
+      "natural_abstentions": 19,
+      "augmented_abstentions": 105,
+      "rejected_wrong_accusations": 3,
+      "sft_records_written": 646,
+      "dpo_pairs": 2480,
+      "mean_top_p_at_accuse": 0.987601,
+      "mean_top_p_at_abstain": 0.415042,
+      "tiers": {
+        "easy": {
+          "natural_episodes": 140,
+          "correct_accusations": 140,
+          "natural_abstentions": 0,
+          "augmented_abstentions": 35,
+          "rejected_wrong_accusations": 0,
+          "sft_unique_episodes": 175,
+          "abstain_oversample": 2,
+          "sft_records_written": 210,
+          "dpo_pairs": 805,
+          "mean_top_p_at_accuse": 0.997284,
+          "mean_top_p_at_abstain": 0.486064,
+          "mean_breakeven_p_at_accuse": 0.564167,
+          "mean_breakeven_p_at_abstain": 0.703746,
+          "mean_score_natural": 0.779643
+        },
+        "medium": {
+          "natural_episodes": 140,
+          "correct_accusations": 125,
+          "natural_abstentions": 15,
+          "augmented_abstentions": 35,
+          "rejected_wrong_accusations": 0,
+          "sft_unique_episodes": 175,
+          "abstain_oversample": 2,
+          "sft_records_written": 225,
+          "dpo_pairs": 855,
+          "mean_top_p_at_accuse": 0.999258,
+          "mean_top_p_at_abstain": 0.346786,
+          "mean_breakeven_p_at_accuse": 0.577703,
+          "mean_breakeven_p_at_abstain": 0.620692,
+          "mean_score_natural": 0.642071
+        },
+        "hard": {
+          "natural_episodes": 140,
+          "correct_accusations": 133,
+          "natural_abstentions": 4,
+          "augmented_abstentions": 35,
+          "rejected_wrong_accusations": 3,
+          "sft_unique_episodes": 172,
+          "abstain_oversample": 2,
+          "sft_records_written": 211,
+          "dpo_pairs": 820,
+          "mean_top_p_at_accuse": 0.966453,
+          "mean_top_p_at_abstain": 0.438811,
+          "mean_breakeven_p_at_accuse": 0.605942,
+          "mean_breakeven_p_at_abstain": 0.71811,
+          "mean_score_natural": 0.568
+        }
+      },
+      "files": [
+        "sft-train-easy.jsonl",
+        "dpo-train-easy.jsonl",
+        "sft-train-medium.jsonl",
+        "dpo-train-medium.jsonl",
+        "sft-train-hard.jsonl",
+        "dpo-train-hard.jsonl"
+      ],
+      "seconds": 179.73
+    },
+    "val": {
+      "split": "val",
+      "seed_offset": 0,
+      "keep_calibrated": true,
+      "abstain_oversample": 1,
+      "augment_abstentions_per_tier": 10,
+      "dpo_enabled": true,
+      "correct_accusations": 73,
+      "natural_abstentions": 2,
+      "augmented_abstentions": 30,
+      "rejected_wrong_accusations": 0,
+      "sft_records_written": 105,
+      "dpo_pairs": 492,
+      "mean_top_p_at_accuse": 0.989013,
+      "mean_top_p_at_abstain": 0.393933,
+      "tiers": {
+        "easy": {
+          "natural_episodes": 25,
+          "correct_accusations": 25,
+          "natural_abstentions": 0,
+          "augmented_abstentions": 10,
+          "rejected_wrong_accusations": 0,
+          "sft_unique_episodes": 35,
+          "abstain_oversample": 1,
+          "sft_records_written": 35,
+          "dpo_pairs": 156,
+          "mean_top_p_at_accuse": 1.0,
+          "mean_top_p_at_abstain": 0.497854,
+          "mean_breakeven_p_at_accuse": 0.564306,
+          "mean_breakeven_p_at_abstain": 0.706944,
+          "mean_score_natural": 0.7788
+        },
+        "medium": {
+          "natural_episodes": 25,
+          "correct_accusations": 25,
+          "natural_abstentions": 0,
+          "augmented_abstentions": 10,
+          "rejected_wrong_accusations": 0,
+          "sft_unique_episodes": 35,
+          "abstain_oversample": 1,
+          "sft_records_written": 35,
+          "dpo_pairs": 166,
+          "mean_top_p_at_accuse": 1.0,
+          "mean_top_p_at_abstain": 0.321761,
+          "mean_breakeven_p_at_accuse": 0.578718,
+          "mean_breakeven_p_at_abstain": 0.62459,
+          "mean_score_natural": 0.7192
+        },
+        "hard": {
+          "natural_episodes": 25,
+          "correct_accusations": 23,
+          "natural_abstentions": 2,
+          "augmented_abstentions": 10,
+          "rejected_wrong_accusations": 0,
+          "sft_unique_episodes": 35,
+          "abstain_oversample": 1,
+          "sft_records_written": 35,
+          "dpo_pairs": 170,
+          "mean_top_p_at_accuse": 0.96513,
+          "mean_top_p_at_abstain": 0.367475,
+          "mean_breakeven_p_at_accuse": 0.591689,
+          "mean_breakeven_p_at_abstain": 0.713168,
+          "mean_score_natural": 0.6148
+        }
+      },
+      "files": [
+        "sft-val-easy.jsonl",
+        "dpo-val-easy.jsonl",
+        "sft-val-medium.jsonl",
+        "dpo-val-medium.jsonl",
+        "sft-val-hard.jsonl",
+        "dpo-val-hard.jsonl"
+      ],
+      "seconds": 30.79
+    }
+  },
+  "historical_runs": [
+    {
+      "run_id": "J4-pilot-44200",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA r=16 (pilot)",
+      "method": "SFT prefix 4k pilot tokenization on 20k J3 episodes",
+      "tiers_version": "v1.0",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "context_len": 4096,
+      "heldout_n": 0,
+      "before_mean_score": null,
+      "after_mean_score": null,
+      "after_ci95": null,
+      "paired_mean_delta": null,
+      "paired_ci95_low": null,
+      "paired_ci95_high": null,
+      "before_valid_call_rate": null,
+      "after_valid_call_rate": null,
+      "before_world_secret_tag": null,
+      "after_world_secret_tag": null,
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "FAILED_OOM",
+      "details": {
+        "slurm_job_id": 44200,
+        "gpu": "Tesla V100-PCIE-32GB",
+        "ram_limit_gb": 28,
+        "pilot_episodes": 20000,
+        "est_tokens_per_episode": 102000,
+        "oom_killed": true
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "OOM-killed at 28 GB RAM while tokenizing 20,000 prefix-window episodes held as Python int lists",
+          "heldout_n=0 < 30; training never started"
+        ]
+      },
+      "evidence": [
+        "docs/reports/fr8.md",
+        "/home/silas/agent-arena-data/j4/slurm-44200.out"
+      ],
+      "notes": "28G Slurm cgroup OOM during single-core pilot tokenization of 20k J3 prefix episodes (~102k tokens/ep)."
+    },
+    {
+      "run_id": "J4-v1-44397",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA r=16",
+      "method": "SFT prefix 4k windows (450 steps, 14.3M tokens on J3v2 v1.3)",
+      "tiers_version": "v1.3",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "context_len": 4096,
+      "heldout_n": 12,
+      "before_mean_score": 0.0,
+      "after_mean_score": -0.25,
+      "after_ci95": 0.256,
+      "paired_mean_delta": -0.25,
+      "paired_ci95_low": -0.506,
+      "paired_ci95_high": 0.006,
+      "before_valid_call_rate": 0.08,
+      "after_valid_call_rate": 0.99,
+      "before_world_secret_tag": "58518f46a669f563",
+      "after_world_secret_tag": "7a134382b86e76ca",
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "NEGATIVE_REWARD_PROTOCOL_GAIN",
+      "details": {
+        "slurm_job_id": 44397,
+        "train_steps": 450,
+        "tokens_trained": 14313726,
+        "dataset_tokens": 287036155,
+        "dataset_loss_tokens": 4506686,
+        "loss_token_fraction": 0.0157,
+        "base_heldout_n": 2,
+        "base_valid_call_rate_exact": 0.0817,
+        "dedup_heldout_n": 12,
+        "dedup_accused": 3,
+        "dedup_correct": 0,
+        "pooled_heldout_n": 17,
+        "pooled_mean_score": -0.1479,
+        "pooled_accused": 4,
+        "pooled_correct": 1,
+        "solver_action_agreement_reported": 0.85
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "unpaired per-process world secrets (58518f46a669f563 vs 7a134382b86e76ca)",
+          "dedup held-out n=12 < 30 (base n=2); evaluated on v1.3 before KV-cache fix",
+          "negative reward delta (-0.250 +/- 0.256 vs base 0.000)"
+        ]
+      },
+      "evidence": [
+        "docs/reports/fr8.md",
+        "data/fr8/j4/slurm-44397.out",
+        "data/fr8/j4/run-44397/runs/eval-base/episodes.jsonl",
+        "data/fr8/j4/run-44397/runs/eval-lora/episodes.jsonl",
+        "data/fr8/j4/run-44397/runs/eval-lora-par/episodes.jsonl"
+      ],
+      "notes": "Protocol syntax jumped from 0.08 to 0.99 valid calls (~0.85 solver action-type agreement), but prefix 4k SFT (1.57% loss tokens) rarely committed and missed when accusing: dedup held-out n=12 scored -0.250 +/- 0.256 vs base 0.000."
+    },
+    {
+      "run_id": "WS4-base-44411",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct (base)",
+      "method": "Zero-shot base evaluation at 4k context (max_calls=120)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "context_len": 4096,
+      "heldout_n": 16,
+      "before_mean_score": 0.0,
+      "after_mean_score": null,
+      "after_ci95": 0.0,
+      "paired_mean_delta": null,
+      "paired_ci95_low": null,
+      "paired_ci95_high": null,
+      "before_valid_call_rate": 0.03,
+      "after_valid_call_rate": null,
+      "before_world_secret_tag": "f272803cdb679dbe",
+      "after_world_secret_tag": null,
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "BASELINE_CAVEATED",
+      "details": {
+        "slurm_job_id": 44411,
+        "world_secret_tag": "f272803cdb679dbe",
+        "counterpart_44412_secret_tag": "c86b9c8a54f8b269",
+        "unpaired_urandom_secret_caveat": true,
+        "invalid_call_rate": 0.9703,
+        "valid_call_rate_exact": 0.0297,
+        "eval_cap_rate": 1.0,
+        "mean_final_day": 1.0
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "baseline-only run; fresh os.urandom(32) secret (f272803cdb679dbe) unpaired with 44412 (c86b9c8a54f8b269)",
+          "heldout_n=16 < 30; 16/16 episodes hit eval_cap=120 on Day 1"
+        ]
+      },
+      "evidence": [
+        "docs/reports/CEO.md",
+        "/home/silas/agent-arena-data/j4/eval-44411.out",
+        "/home/silas/agent-arena-data/j4/runs/ws4-base-v14/summary.json"
+      ],
+      "notes": "Qwen2.5-1.5B base v1.4 held-out n=16 scored 0.000 (valid call rate 0.03, never leaves Day 1); ran without CANARY_WORLD_SECRET so os.urandom(32) world key f272803cdb679dbe is unpaired vs 44412."
+    },
+    {
+      "run_id": "WS4-v2-44412",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA r=16 (dense v2)",
+      "method": "SFT dense 4k windows + oversample-endings 3 (887 steps on J3v14)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium",
+        "hard"
+      ],
+      "context_len": 4096,
+      "heldout_n": 82,
+      "before_mean_score": 0.0,
+      "after_mean_score": -0.395,
+      "after_ci95": 0.128,
+      "paired_mean_delta": -0.395,
+      "paired_ci95_low": -0.523,
+      "paired_ci95_high": -0.267,
+      "before_valid_call_rate": 0.03,
+      "after_valid_call_rate": 0.92,
+      "before_world_secret_tag": "f272803cdb679dbe",
+      "after_world_secret_tag": "c86b9c8a54f8b269",
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "NEGATIVE_BLIND_ACCUSE",
+      "details": {
+        "train_slurm_job_id": 44410,
+        "eval_slurm_job_id": 44412,
+        "train_episodes": 800,
+        "windows": 14176,
+        "train_steps": 887,
+        "oversample_endings": 3,
+        "header_tokens": 2842,
+        "body_budget_tokens": 1254,
+        "ci95_exact": 0.1283,
+        "accused_count": 42,
+        "accused_rate": 0.51,
+        "accused_rate_exact": 0.5122,
+        "eval_cap_count": 40,
+        "accuracy": 0.06,
+        "accuracy_exact": 0.061,
+        "hard_accuracy": 0.0,
+        "valid_call_rate_exact": 0.9222
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "unpaired os.urandom(32) world secret vs base 44411 (f272803cdb679dbe != c86b9c8a54f8b269)",
+          "40/82 episodes hit eval_cap=120; not paired replay-verified",
+          "severe score regression (-0.395 +/- 0.128) from blind accusations under 4k truncation"
+        ]
+      },
+      "evidence": [
+        "docs/reports/CEO.md",
+        "/home/silas/agent-arena-data/j4/slurm-44410.out",
+        "/home/silas/agent-arena-data/j4/eval-44412.out",
+        "/home/silas/agent-arena-data/j4/runs/ws4-v2-44410/summary.json"
+      ],
+      "notes": "Dense 4k + oversample-endings 3 on 100% accuse-only SFT caused blind accusations: held-out n=82 scored -0.395 +/- 0.128 (accused 0.51, correct 0.06; 0/27 correct on hard) because the 2,842-token header left only 1,254 body tokens and evicted employee/canary mappings."
+    },
+    {
+      "run_id": "WS4-v3-44548-44550",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (v3 GRPO init from 44410)",
+      "method": "Decision-point GRPO on 2,000 TRAIN states (150000+/151000+)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium"
+      ],
+      "context_len": 4096,
+      "heldout_n": 0,
+      "before_mean_score": null,
+      "after_mean_score": null,
+      "after_ci95": null,
+      "paired_mean_delta": null,
+      "paired_ci95_low": null,
+      "paired_ci95_high": null,
+      "before_valid_call_rate": null,
+      "after_valid_call_rate": null,
+      "before_world_secret_tag": null,
+      "after_world_secret_tag": null,
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "FAILED_CUDA_OOM",
+      "details": {
+        "slurm_job_ids": [
+          44548,
+          44550
+        ],
+        "n_states": 2000,
+        "gpu_total_gib": 31.73,
+        "failed_alloc_gib_44548": 5.49,
+        "failed_alloc_gib_44550": 5.52
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "CUDA OOM on V100-32GB during batched group generation / full-logit sampling at step 0",
+          "heldout_n=0 < 30"
+        ]
+      },
+      "evidence": [
+        "/home/silas/agent-arena-data/v3/slurm-44548.out",
+        "/home/silas/agent-arena-data/v3/slurm-44550.out"
+      ],
+      "notes": "Decision-point GRPO OOMed V100-32GB (tried to allocate 5.49-5.52 GiB above ~26.5 GiB reserved) during unchunked group prefill and full-logit sampling."
+    },
+    {
+      "run_id": "WS4-v3-44553",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (v3 GRPO unguided)",
+      "method": "Decision-point GRPO with gradient checkpointing, unguided sampling",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium"
+      ],
+      "context_len": 4096,
+      "heldout_n": 0,
+      "before_mean_score": null,
+      "after_mean_score": null,
+      "after_ci95": null,
+      "paired_mean_delta": null,
+      "paired_ci95_low": null,
+      "paired_ci95_high": null,
+      "before_valid_call_rate": null,
+      "after_valid_call_rate": null,
+      "before_world_secret_tag": null,
+      "after_world_secret_tag": null,
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "FAILED_ZERO_VARIANCE",
+      "details": {
+        "slurm_job_id": 44553,
+        "steps_logged": 6,
+        "zero_variance_groups_first_10": 8,
+        "groups_first_window": 10,
+        "zero_variance_groups_all_12": 10
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "8/10 GRPO groups had zero reward variance (continue_frac=1.0, accuse_frac=0.0)",
+          "terminated at step 5 to add guided forced-accuse exploration; heldout_n=0"
+        ]
+      },
+      "evidence": [
+        "docs/reports/CEO.md",
+        "/home/silas/agent-arena-data/v3/slurm-44553.out",
+        "/home/silas/agent-arena-data/v3/run-44553/curve.jsonl"
+      ],
+      "notes": "Unguided GRPO collapsed to continue_frac=1.0 (8/10 groups zero variance in first 5 steps; 10/12 across 6 steps) before guided forced-accuse exploration was introduced."
+    },
+    {
+      "run_id": "WS4-v3-verda-s0-44572",
+      "source": "historical",
+      "model": "Qwen2.5-1.5B-Instruct LoRA (v3 guided GRPO 4k)",
+      "method": "Guided decision-point GRPO (Verda H100 s0 + FR8 V100 job 44572 s1)",
+      "tiers_version": "v1.4",
+      "tiers": [
+        "easy",
+        "medium"
+      ],
+      "context_len": 4096,
+      "heldout_n": 0,
+      "before_mean_score": null,
+      "after_mean_score": null,
+      "after_ci95": null,
+      "paired_mean_delta": null,
+      "paired_ci95_low": null,
+      "paired_ci95_high": null,
+      "before_valid_call_rate": null,
+      "after_valid_call_rate": null,
+      "before_world_secret_tag": null,
+      "after_world_secret_tag": null,
+      "replay_verified": false,
+      "verified_improvement": false,
+      "status": "IN_PROGRESS_PARTIAL",
+      "details": {
+        "verda_instance": "3bb74f5a",
+        "fr8_slurm_job_id": 44572,
+        "n_states": 2000,
+        "s1_train_seed_start": 151000,
+        "step_milestone": 140,
+        "valid_only_gain_vs_solver": 0.091,
+        "forced_accuse_whom_accuracy": 0.19
+      },
+      "gates": {
+        "gate1_seed_hygiene": true,
+        "gate2_paired_world_secret": false,
+        "gate3_sample_and_replay": false,
+        "gate4_paired_ci95_positive": false,
+        "all_passed": false,
+        "reasons": [
+          "training-time decision-point metric only; no completed n>=30 paired held-out evaluation",
+          "forced-accuse whom-accuracy remained flat (~0.19) at 4k raw context due to recipient truncation"
+        ]
+      },
+      "evidence": [
+        "docs/reports/CEO.md",
+        "docs/reports/verda-evidence.md",
+        "/home/silas/agent-arena-data/v3/slurm-44572.out"
+      ],
+      "notes": "Guided GRPO reached +0.091 valid-only gain at step 140 without tool collapse, but forced-accuse whom-accuracy stayed flat around ~0.19 at 4k context because raw transcripts still drop early canary-to-recipient assignments."
+    }
+  ],
+  "discovered_runs": []
+}

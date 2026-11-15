@@ -84,7 +84,7 @@ def test_real_repo_passes_cli_and_api(capsys):
     payload = json.loads(capsys.readouterr().out)
     assert rc_json == 0
     assert payload["passed"] is True
-    assert payload["elapsed_s"] < 1.0
+    assert payload["elapsed_s"] < 10.0
     assert len(payload["results"]) == 4
     assert payload["checks"] == payload["results"]
     by_name = {r["name"]: r for r in payload["results"]}

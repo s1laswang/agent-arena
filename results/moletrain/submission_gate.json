@@ -1,0 +1,206 @@
+{
+  "schema": "moletrain_submission_gate_v1",
+  "tiers_version": "v1.4",
+  "all_passed": true,
+  "gates_passed": 4,
+  "gates_total": 4,
+  "gates": {
+    "gate_1_protected_paths": {
+      "gate": "gate_1_protected_paths",
+      "name": "Protected Paths",
+      "passed": true,
+      "mode": "git_diff:origin/justSilas...HEAD",
+      "protected_rules_count": 15,
+      "changed_files_count": 12,
+      "protected_hits": [],
+      "violations": []
+    },
+    "gate_2_hygiene": {
+      "gate": "gate_2_hygiene",
+      "name": "Code & Artifact Hygiene",
+      "passed": true,
+      "checked_py_files": [
+        "canary/forge/rl_mole_v2.py",
+        "train/qwen_diverse_mole.py",
+        "train/eval_grpo_mole.py",
+        "tests/test_rl_mole_v2.py",
+        "tests/test_qwen_diverse_mole.py",
+        "tests/test_eval_grpo_mole.py",
+        "scripts/verify_moletrain_submission.py",
+        "tests/test_verify_moletrain_submission.py"
+      ],
+      "silas_preexisting_exempt": [
+        "train/grpo_mole.py",
+        "train/eval_mole.py",
+        "canary/forge/rl_mole.py"
+      ],
+      "checked_moletrain_artifacts": [
+        {
+          "path": "results/moletrain/rl_mole_v2_heldout.json",
+          "bytes": 14734
+        },
+        {
+          "path": "results/moletrain/rl_mole_v2_policy.json",
+          "bytes": 11941
+        }
+      ],
+      "checked_report_markdowns": [],
+      "max_artifact_bytes": 102400,
+      "violations": []
+    },
+    "gate_3_seed_disjointness": {
+      "gate": "gate_3_seed_disjointness",
+      "name": "Seed Disjointness",
+      "passed": true,
+      "partitions": {
+        "rules_dev": [
+          [
+            0,
+            9999
+          ]
+        ],
+        "train_counterfactual": [
+          [
+            100000,
+            189999
+          ],
+          [
+            300000,
+            399999
+          ]
+        ],
+        "validation": [
+          [
+            190000,
+            199999
+          ]
+        ],
+        "ws3_heldout": [
+          [
+            200000,
+            299999
+          ]
+        ],
+        "eval_mole_heldout": [
+          [
+            400000,
+            499999
+          ]
+        ],
+        "rules_heldout": [
+          [
+            800000,
+            899999
+          ]
+        ],
+        "rules_judge": [
+          [
+            900000,
+            900039
+          ]
+        ]
+      },
+      "pairwise_partition_checks": 21,
+      "module_seed_bindings": {
+        "rl_mole_v2": {
+          "train": [
+            160000,
+            189999
+          ],
+          "val": [
+            190000,
+            190049
+          ],
+          "ws3_heldout": [
+            200000,
+            200099
+          ],
+          "rules_heldout": [
+            800000,
+            800099
+          ]
+        },
+        "qwen_diverse_mole": {
+          "counterfactual_seed_base": 120000,
+          "val_seed_base": 195000
+        },
+        "grpo_mole": {
+          "prompt_seed_base": 300000
+        },
+        "eval_grpo_mole": {
+          "heldout_sample": [
+            800000,
+            800049
+          ],
+          "ws3_sample": [
+            200000,
+            200049
+          ],
+          "dev_sample": [
+            0,
+            49
+          ]
+        },
+        "eval_mole": {
+          "heldout_seed_base": 400000
+        }
+      },
+      "artifact_seed_range_checks": 5,
+      "violations": []
+    },
+    "gate_4_catchability_and_provenance": {
+      "gate": "gate_4_catchability_and_provenance",
+      "name": "Catchability & CI Provenance",
+      "passed": true,
+      "min_solver_acc_threshold": 0.85,
+      "artifacts_inspected": [
+        {
+          "path": "results/moletrain/rl_mole_v2_heldout.json",
+          "bytes": 14734,
+          "sha256_16": "0d5ab7d7aa14db56"
+        },
+        {
+          "path": "results/moletrain/rl_mole_v2_policy.json",
+          "bytes": 11941,
+          "sha256_16": "e34d5f9b829aadbf"
+        }
+      ],
+      "bootstrap_cis_checked": 98,
+      "verified_catchable_models": [
+        {
+          "location": "results/moletrain/rl_mole_v2_heldout.json.ws3_heldout.rl_mole_v2",
+          "solver_acc": 0.9667,
+          "catchable_85": true
+        },
+        {
+          "location": "results/moletrain/rl_mole_v2_heldout.json.rules_heldout.rl_mole_v2",
+          "solver_acc": 0.95,
+          "catchable_85": true
+        }
+      ],
+      "rl_mole_v2_replay": [
+        {
+          "tier": "easy",
+          "seed": 200000,
+          "score": 0.82,
+          "correct": true,
+          "accused": "e11",
+          "final_day": 4,
+          "mole_decisions": 3,
+          "reproducible": true
+        },
+        {
+          "tier": "easy",
+          "seed": 200001,
+          "score": 0.88,
+          "correct": true,
+          "accused": "e06",
+          "final_day": 3,
+          "mole_decisions": 2,
+          "reproducible": true
+        }
+      ],
+      "violations": []
+    }
+  }
+}

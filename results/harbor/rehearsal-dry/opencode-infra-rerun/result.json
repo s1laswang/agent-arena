@@ -1,0 +1,52 @@
+{
+    "schema_version": 1,
+    "id": "6e59d607-93c1-493d-9dab-ab457ec9ce5a",
+    "started_at": "2026-11-15T00:51:00.190593",
+    "updated_at": "2026-11-15T01:32:49.353709",
+    "finished_at": "2026-11-15T01:32:49.353709",
+    "n_total_trials": 3,
+    "stats": {
+        "n_completed_trials": 3,
+        "n_errored_trials": 3,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 1,
+        "evals": {
+            "opencode__google/gemini-4-carbon__dataset": {
+                "n_trials": 3,
+                "n_errors": 3,
+                "metrics": [
+                    {
+                        "mean": 0.54
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "reward": {
+                        "0.43": [
+                            "canary-hard-900006__bYTW5gp"
+                        ],
+                        "0.66": [
+                            "canary-hard-900007__XbFnGtk"
+                        ],
+                        "0.53": [
+                            "canary-hard-900009__JFKdg5S"
+                        ]
+                    }
+                },
+                "exception_stats": {
+                    "NonZeroAgentExitCodeError": [
+                        "canary-hard-900006__bYTW5gp",
+                        "canary-hard-900007__XbFnGtk",
+                        "canary-hard-900009__JFKdg5S"
+                    ]
+                }
+            }
+        },
+        "n_input_tokens": 10819276,
+        "n_cache_tokens": 10326119,
+        "n_output_tokens": 33272,
+        "cost_usd": 3.0354880999999994
+    }
+}

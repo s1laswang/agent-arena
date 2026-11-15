@@ -44,3 +44,5 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 02:39: v3-4k s0 eval pulled (−0.103 ± 0.081, n=90; vs v2 +0.306 ± 0.136; vs base −0.062 ± 0.122). v3-8k s0 started on the H100 at 02:20 (chain). v3-4k s1 replicate on A100 spot 714d8144. Burn €16.83/h → projected ≈ €112 by 07:30.
 
 02:45: Meta PaliGemma 2 3B LoRA DONE on shared A100 f4378173: train 23:35:34Z → 00:12:18Z incl. eval (1,766 s training, 2 epochs), peak ~15.5 GB (capped at 0.58 of the card); an earlier batch-8 attempt OOM-exited (~69 GB) without affecting v3-8k s3. Results copied off by Meta; nothing of theirs is running. No extra cost.
+
+02:58: X1 (causal hint test) hosted on 18acfa5d in /root/x1 (no CPU instances free in any region; the box has 22 vCPU, base eval uses ~1): node 22 + opencode 1.19.5 + uv, repo justSilas @a54f4223, only GEMINI_API_KEY in root-only /root/x1/.env. X2: v3-8k s3 (f4378173) yields to X2 when x2 sends a ready spec (CEO YES); box 2 = new capacity or 68bbe201 after ~04:15. v3-4k s0 adapter for X2: data/fr8/verda/v3-4k-s0-lora/ (weights gitignored) and on 68bbe201:/root/v3s0-lora.

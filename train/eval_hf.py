@@ -219,6 +219,7 @@ def main(argv=None):
     ap.add_argument("--tiers", default="easy,medium,hard")
     ap.add_argument("--seeds", choices=["heldout", "dev"], default="heldout")
     ap.add_argument("--n", type=int, default=200)
+    ap.add_argument("--seed-offset", type=int, default=0, help="skip the first K seeds of the pool")
     ap.add_argument("--out", default="data/runs")
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--max-ctx", type=int, default=4096)
@@ -243,7 +244,7 @@ def main(argv=None):
     else:
         from canary import rules
         pool = list(rules.HELDOUT_SEEDS if a.seeds == "heldout" else rules.DEV_SEEDS)
-        seed_list = pool[:a.n]
+        seed_list = pool[a.seed_offset:a.seed_offset + a.n]   # offset: extra-n runs pool cleanly
     run_id = a.run_id or f"{name.replace(':', '-').replace('/', '_')}-{'+'.join(tiers)}-" \
                          f"{time.strftime('%Y%m%d-%H%M')}"
     rdir = os.path.join(a.out, run_id)
@@ -254,7 +255,7 @@ def main(argv=None):
     except OSError:
         sha = ""
     json.dump({"agent": name, "model": a.model, "provider": "hf", "git_sha": sha,
-               "tiers": tiers, "seeds": a.seeds, "n": a.n}, open(os.path.join(rdir, "meta.json"), "w"))
+               "tiers": tiers, "seeds": a.seeds, "n": a.n, "seed_offset": a.seed_offset}, open(os.path.join(rdir, "meta.json"), "w"))
 
     t0, eps = time.time(), []
     with open(os.path.join(rdir, "episodes.jsonl"), "w") as f:

@@ -15,7 +15,7 @@ Each instance runs an on-instance reaper that deletes it at its deadline; ask FR
 | 68bbe201-dc0e-4591-83d5-cc1332ead40c | 1A100.22V (80 GB) on-demand | FIN-03 | 2.1589 | 15 Nov 01:01 | reaper 07:30 | FR8: extra held-out eval n: v2 then v3-4k s0, seeds 30-59/tier (fr8/verda/evals_run.sh) | running |
 | f4378173-9608-4361-bc6c-8f2b9e482819 | 1A100.22V (80 GB) on-demand | FIN-03 | 2.1589 | 15 Nov 01:08 | reaper 07:30 | FR8: v3-8k s3 (4th replicate; no other job ready: HF_TOKEN missing, 8k adapters not yet trained) | running |
 | 18acfa5d-b5f9-4e64-a652-0de05a9f4c15 | 1A100.22V (80 GB) on-demand | FIN-01 | 2.1589 | 15 Nov 02:17 | reaper 07:30 | FR8: backup base eval, held-out seeds 6-35/tier, 150 min (FR8 44584 unreachable: FR8 SSH down) | running |
-| 714d8144-c036-4814-999d-a38ed192a48f | 1A100.22V (80 GB) spot | FIN-01 | 1.0794 | 15 Nov 02:39 | reaper 07:30 | FR8: v3-4k s1 (replicate of the 4k row; 2 h train + 60 min eval → ~05:50) | running |
+| 714d8144-c036-4814-999d-a38ed192a48f | 1A100.22V (80 GB) spot | FIN-01 | 1.0794 | 15 Nov 02:39 | reaper 07:30 | FR8: v3-4k s1 (replicate of the 4k row) | **PREEMPTED** (spot; gone from the instance list by 03:08, ~30 min into training; no result) |
 | e9ea8b2e-ed28-4325-b2c7-0345f6af3bd1 | 1A100.40S.22V (40 GB) on-demand | FIN-02 | 1.5373 | 15 Nov 03:02 | reaper 08:00 | X2 DAgger box 2: x2-dagger-a6 (vLLM rollouts of v3-4k s0 → solver relabel → LoRA SFT 8k → held-out eval) | running |
 
 Balance: €200.00 at start → €191.71 at 00:20 (account shows €200 of credit; Silas mentions €400 total, so a teammate's credit is in another account).
@@ -49,3 +49,8 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 02:58: X1 (causal hint test) hosted on 18acfa5d in /root/x1 (no CPU instances free in any region; the box has 22 vCPU, base eval uses ~1): node 22 + opencode 1.19.5 + uv, repo justSilas @a54f4223, only GEMINI_API_KEY in root-only /root/x1/.env. X2: v3-8k s3 (f4378173) yields to X2 when x2 sends a ready spec (CEO YES); box 2 = new capacity or 68bbe201 after ~04:15. v3-4k s0 adapter for X2: data/fr8/verda/v3-4k-s0-lora/ (weights gitignored) and on 68bbe201:/root/v3s0-lora.
 
 03:02: X2 box 2 = A100-40G e9ea8b2e (FIN-02). Burn €18.37/h → projected ≈ €120 by 07:30.
+
+03:08 status (CLI capture data/fr8/verda/instances-0308.txt): balance €153.98 → **€46.02 spent** so far.
+- v3-4k s1 spot 714d8144 was PREEMPTED (instance gone by 03:08, SSH timeout); the 4k replicate is lost.
+- Gemini J1-lite FAILED to start: the installed vLLM rejected `--rope-scaling` (unrecognised argument), and the runner waited 30 min then exited at ~01:20; the A100 sat idle ~01:20–03:10 (my watcher didn't catch it). Fixed with `--hf-overrides '{"rope_scaling":…,"max_position_embeddings":131072}'` and restarted at 03:10; the runner now exits immediately if vLLM dies.
+- Steps @03:08: 8k s0 167 (H100), 8k s1 370 (A100 spot), 8k s2 619 (H100 spot), 8k s3 211 (A100, shared with Meta earlier).

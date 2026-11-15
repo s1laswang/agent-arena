@@ -8,15 +8,15 @@ date -u +"start %FT%TZ" > /root/j1/times.txt
 command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
 [ -d agent-arena ] || git clone -q https://github.com/s1laswang/agent-arena
 cd agent-arena && git fetch -q origin gemini-ladder && git checkout -q origin/gemini-ladder && git log --oneline -1
-uv venv -q --clear --python 3.12 /root/vllm-env && uv pip install -q --python /root/vllm-env/bin/python vllm
+[ -x /root/vllm-env/bin/vllm ] || { uv venv -q --clear --python 3.12 /root/vllm-env && uv pip install -q --python /root/vllm-env/bin/python vllm; }
 uv sync -q --extra llm --extra dev
 /root/vllm-env/bin/vllm serve $M --port 8000 --max-model-len 131072 \
-  --rope-scaling '{"rope_type":"yarn","factor":4.0,"original_max_position_embeddings":32768}' \
+  --hf-overrides '{"rope_scaling":{"rope_type":"yarn","factor":4.0,"original_max_position_embeddings":32768},"max_position_embeddings":131072}' \
   --enable-auto-tool-choice --tool-call-parser hermes --reasoning-parser qwen3 \
   --enable-prefix-caching --gpu-memory-utilization 0.92 > /root/j1/vllm.log 2>&1 &
 echo $! > /root/j1/vllm.pid
-for i in $(seq 1 120); do curl -sf localhost:8000/v1/models >/dev/null && break; sleep 15; done
-curl -sf localhost:8000/v1/models >/dev/null || { echo "vLLM did not come up"; exit 2; }
+for i in $(seq 1 120); do curl -sf localhost:8000/v1/models >/dev/null && break; kill -0 $(cat /root/j1/vllm.pid) 2>/dev/null || break; sleep 15; done
+curl -sf localhost:8000/v1/models >/dev/null || { echo "vLLM did not come up"; tail -5 /root/j1/vllm.log; exit 2; }
 date -u +"vllm_up %FT%TZ" >> /root/j1/times.txt
 export OPENAI_BASE_URL=http://localhost:8000/v1 OPENAI_API_KEY=EMPTY
 mkdir -p logs runs

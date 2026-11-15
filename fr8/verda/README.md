@@ -56,3 +56,5 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 - Steps @03:08: 8k s0 167 (H100), 8k s1 370 (A100 spot), 8k s2 619 (H100 spot), 8k s3 211 (A100, shared with Meta earlier).
 
 03:22: X1 Gemini quota fix: GEMINI_API_KEY_2 (second GCP project, added by Silas) copied root-only to 18acfa5d:/root/x1/.env (replacing key 1) and /root/x1/.env2; verified by hash, never printed. Key 1 is reserved for the 05:45 judge rehearsal.
+
+03:40: X1 key swapped again: Silas replaced GEMINI_API_KEY_2 with a key from a genuinely separate GCP project (the first key 2 shared key 1 quota bucket); new value copied root-only to 18acfa5d:/root/x1/.env, verified by hash, never printed.

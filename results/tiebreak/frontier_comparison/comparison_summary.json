@@ -75,6 +75,78 @@
         "wrong_rate": 0.1333
       },
       {
+        "abstain_count": 2,
+        "abstain_rate": 0.0667,
+        "accuracy": 0.9333,
+        "accused_count": 28,
+        "accused_rate": 0.9333,
+        "canary_diagnostics": {
+          "canary_slot_utilization": 0.8454,
+          "isolated_at_accuse_count": 22,
+          "isolated_at_accuse_rate": 0.7857,
+          "mean_canaries_before_accuse": 17.13,
+          "mean_canaries_planted": 17.13,
+          "mean_consistent_suspects_at_accuse": 1.25,
+          "mean_diagnostic_canaries_before_accuse": 16.4,
+          "mean_diagnostic_variants_planted": 48.1,
+          "mean_interviews_per_episode": 4.13,
+          "mean_variants_per_canary": 2.86
+        },
+        "ci95": 0.0638,
+        "cohort_id": "opencode_gpt_5_5_hard",
+        "commitment_calibration": {
+          "accused_episodes": 28,
+          "accused_is_argmax_count": 28,
+          "accused_is_argmax_rate": 1.0,
+          "mean_breakeven_p": 0.6305,
+          "mean_known_v_at_accuse": 0.5932,
+          "mean_p_accused": 0.9398,
+          "mean_top_p_at_accuse": 0.9398,
+          "mean_unsurfaced_v_gap_at_accuse": 0.0487,
+          "negative_expected_true_ev_count": 1,
+          "negative_expected_true_ev_rate": 0.0357,
+          "p_accused_below_breakeven_count": 0,
+          "p_accused_below_breakeven_rate": 0.0,
+          "sub_solver_threshold_85_count": 3,
+          "sub_solver_threshold_85_rate": 0.1071,
+          "top_p_below_breakeven_count": 0,
+          "top_p_below_breakeven_rate": 0.0
+        },
+        "correct_count": 28,
+        "delayed_leak_abstention": {
+          "abstain_episodes": 2,
+          "calibrated_abstain_count": 0,
+          "calibrated_abstain_rate": 0.0,
+          "cap_stall_abstain_count": 0,
+          "horizon_abstain_count": 0,
+          "mean_breakeven_at_abstain": 0.5883,
+          "mean_top_p_at_abstain": 0.9561,
+          "mean_unsurfaced_pending_canaries": 1.33,
+          "missed_positive_ev_abstain_count": 2,
+          "missed_positive_ev_abstain_rate": 1.0
+        },
+        "family": "Frontier LLM (MCP)",
+        "label": "gpt-5.5 (OpenCode over MCP)",
+        "luck_adjusted_ci95": 0.0729,
+        "luck_adjusted_ev": 0.4176,
+        "mean_accuse_day": 10.25,
+        "mean_final_day": 10.13,
+        "mean_score": 0.5037,
+        "n": 30,
+        "precision_when_accused": 1.0,
+        "replay_verification": {
+          "env_replay_attempted": 30,
+          "env_replay_pass_rate": 1.0,
+          "env_replay_verified": 30,
+          "protocol_consistent_count": 30,
+          "protocol_consistent_rate": 1.0
+        },
+        "tier": "hard",
+        "valid_call_rate": 0.9981,
+        "wrong_count": 0,
+        "wrong_rate": 0.0
+      },
+      {
         "abstain_count": 1,
         "abstain_rate": 0.0333,
         "accuracy": 0.9333,
@@ -449,6 +521,14 @@
       "gemini_4_carbon_opencode_minus_solver": {
         "ci95": 0.1939,
         "mean_delta": -0.1767
+      },
+      "gpt_5_5_opencode_minus_gemini_4_carbon_opencode": {
+        "ci95": 0.2096,
+        "mean_delta": 0.1813
+      },
+      "gpt_5_5_opencode_minus_solver": {
+        "ci95": 0.1415,
+        "mean_delta": 0.0047
       }
     },
     "protocol_status": "post-hoc locked, not pre-registered",
@@ -2668,10 +2748,10 @@
   "panel_fix_a_disclosure": "Committed frontier vs reference solver comparisons on DEV_SEEDS 0..29 use a post-hoc locked set locked immediately after episode commitment, not pre-registered (Panel Fix A). All tiebreaker training strictly uses TRAIN_SEEDS [100000, 200000) and all tiebreaker held-out evaluations strictly use disjoint HELDOUT_SEEDS [800000, 800200).",
   "replay_audit_totals": {
     "fresh_env_mismatches": 0,
-    "fresh_env_step_replayed_episodes": 510,
-    "fresh_env_step_verified_episodes": 510,
+    "fresh_env_step_replayed_episodes": 540,
+    "fresh_env_step_verified_episodes": 540,
     "solver_heldout_reference_verified_episodes": 90,
-    "total_trajectories_audited": 960,
+    "total_trajectories_audited": 990,
     "verda_transcript_belief_replayed_episodes": 450,
     "verda_transcript_protocol_verified_episodes": 450
   },
@@ -2684,6 +2764,8 @@
       "eb_uncalibrated_heldout_abstain_count": 0,
       "gemini_4_carbon_hard_dev_abstain_count": 1,
       "gemini_4_carbon_hard_dev_calibrated_abstain_count": 1,
+      "gpt_5_5_hard_dev_abstain_count": 2,
+      "gpt_5_5_hard_dev_missed_pos_ev_abstain_count": 2,
       "qwen15b_v3_4k_pooled_abstain_count": 142,
       "qwen15b_v3_4k_pooled_missed_pos_ev_abstain_count": 28,
       "qwen15b_v3_8k_s2_abstain_rate": 0.9333,
@@ -2696,6 +2778,9 @@
       "eb_uncalibrated_heldout_top_p_below_breakeven_rate": 0.6444,
       "gemini_4_carbon_hard_dev_sub_085_rate": 0.3448,
       "gemini_4_carbon_hard_dev_top_p_below_breakeven_rate": 0.1034,
+      "gpt_5_5_hard_dev_p_accused_below_breakeven_rate": 0.0,
+      "gpt_5_5_hard_dev_sub_085_rate": 0.1071,
+      "gpt_5_5_hard_dev_top_p_below_breakeven_rate": 0.0,
       "qwen15b_v2_off30_p_accused_below_breakeven_rate": 0.9615,
       "qwen15b_v2_off30_top_p_below_breakeven_rate": 0.9038,
       "qwen15b_v2_pooled_172_p_accused_below_breakeven_rate": 0.9574,
@@ -2716,6 +2801,10 @@
       "gemini_4_carbon_hard_dev_diagnostic_variants": 25.4,
       "gemini_4_carbon_hard_dev_interviews": 67.97,
       "gemini_4_carbon_hard_dev_slot_utilization": 0.3151,
+      "gpt_5_5_hard_dev_canaries_before_accuse": 17.13,
+      "gpt_5_5_hard_dev_diagnostic_variants": 48.1,
+      "gpt_5_5_hard_dev_interviews": 4.13,
+      "gpt_5_5_hard_dev_slot_utilization": 0.8454,
       "qwen15b_v2_off30_canaries_before_accuse": 2.11,
       "qwen15b_v2_off30_diagnostic_variants": 6.24,
       "qwen15b_v3_4k_pooled_canaries_before_accuse": 3.53,

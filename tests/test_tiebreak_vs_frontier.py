@@ -79,16 +79,26 @@ def test_committed_json_and_markdown_deterministic_parity() -> None:
     assert summary["dev_medium_panel"]["protocol_status"] == "post-hoc locked, not pre-registered"
 
     rat = summary["replay_audit_totals"]
-    assert rat["fresh_env_step_replayed_episodes"] == 510
-    assert rat["fresh_env_step_verified_episodes"] == 510
+    assert rat["fresh_env_step_replayed_episodes"] == 540
+    assert rat["fresh_env_step_verified_episodes"] == 540
     assert rat["fresh_env_mismatches"] == 0
     assert rat["solver_heldout_reference_verified_episodes"] == 90
     assert rat["verda_transcript_belief_replayed_episodes"] == 450
     assert rat["verda_transcript_protocol_verified_episodes"] == 450
-    assert rat["total_trajectories_audited"] == 960
+    assert rat["total_trajectories_audited"] == 990
+
+    hard_by_id = {c["cohort_id"]: c for c in summary["dev_hard_panel"]["cohorts"]}
+    assert "opencode_gpt_5_5_hard" in hard_by_id
+    gpt55_row = hard_by_id["opencode_gpt_5_5_hard"]
+    assert gpt55_row["n"] == 30
+    assert abs(gpt55_row["mean_score"] - 0.5037) < 0.001
+    assert gpt55_row["replay_verification"]["env_replay_verified"] == 30
+    assert gpt55_row["commitment_calibration"]["top_p_below_breakeven_rate"] == 0.0
 
     tc = summary["thesis_convergence"]
     ue = tc["under_exploration_canary_deficit"]
+    assert ue["gpt_5_5_hard_dev_canaries_before_accuse"] > ue["solver_hard_dev_canaries_before_accuse"]
+    assert ue["gpt_5_5_hard_dev_interviews"] < 5.0
     assert ue["gemini_4_carbon_hard_dev_canaries_before_accuse"] < ue["solver_hard_dev_canaries_before_accuse"]
     assert ue["gemini_4_carbon_hard_dev_diagnostic_variants"] < ue["solver_hard_dev_diagnostic_variants"]
     assert ue["qwen15b_v2_off30_canaries_before_accuse"] < ue["solver_hard_dev_canaries_before_accuse"]
@@ -97,6 +107,7 @@ def test_committed_json_and_markdown_deterministic_parity() -> None:
 
     pc = tc["premature_commitment_below_breakeven"]
     assert pc["solver_hard_dev_top_p_below_breakeven_rate"] == 0.0
+    assert pc["gpt_5_5_hard_dev_top_p_below_breakeven_rate"] == 0.0
     assert pc["gemini_4_carbon_hard_dev_top_p_below_breakeven_rate"] > 0.0
     assert pc["qwen15b_v2_pooled_172_p_accused_below_breakeven_rate"] > 0.90
     assert pc["qwen15b_v3_4k_pooled_p_accused_below_breakeven_rate"] > 0.90
@@ -121,6 +132,17 @@ def test_single_episode_fresh_env_and_belief_replay_unit() -> None:
     rec_gem = cmp_mod.analyze_single_episode(gem_eps[0], verify_with_env=True, world_secret=None)
     assert rec_gem["env_replay_verified"] is True
     assert rec_gem["protocol_consistent"] is True
+
+    gpt_eps = cmp_mod._load_valid_episodes(
+        REPO_ROOT,
+        ("data/runs/committed/v1.4/opencode-gpt-5.5/hard/episodes.jsonl",),
+        tier_filter="hard",
+    )
+    assert len(gpt_eps) == 30
+    rec_gpt0 = cmp_mod.analyze_single_episode(gpt_eps[0], verify_with_env=True, world_secret=None)
+    assert rec_gpt0["env_replay_verified"] is True
+    assert rec_gpt0["did_accuse"] is False
+    assert rec_gpt0["final_day"] == 8
 
     tampered_gem = copy.deepcopy(gem_eps[0])
     tampered_gem["score"] = float(tampered_gem["score"]) + 0.25

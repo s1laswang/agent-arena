@@ -103,6 +103,48 @@ def valid_truncated_step(
     return len(full_json.encode("utf-8")) == int(m.group(1))
 
 
+def _is_valid_mcp_error_wrapper(
+    want_raw: Any,
+    want_norm: Any,
+    episode: dict[str, Any] | None = None,
+    run_meta: dict[str, Any] | None = None,
+) -> bool:
+    if want_norm is want_raw:
+        return True
+    if run_meta is not None and str(run_meta.get("harness") or "").strip().lower() == "inproc":
+        return False
+    return (
+        isinstance(want_raw, dict)
+        and set(want_raw) <= {"ok", "data", "error"}
+        and want_raw.get("ok") is False
+        and want_raw.get("data") in (None, {})
+        and isinstance(want_raw.get("error"), str)
+        and want_raw["error"].startswith("{")
+    )
+
+
+def _is_opencode_post_1bc_detail_step(
+    want_raw: Any,
+    want_norm: Any,
+    r: Any,
+    episode: dict[str, Any],
+    run_meta: dict[str, Any],
+) -> bool:
+    if want_norm is want_raw or not allows_opencode_quirks(episode, run_meta):
+        return False
+    if not _is_valid_mcp_error_wrapper(want_raw, want_norm, episode, run_meta):
+        return False
+    if not (not r.ok and isinstance(r.data, dict) and set(r.data) == {"detail"}):
+        return False
+    return (
+        isinstance(want_norm, dict)
+        and set(want_norm) == {"ok", "data", "error"}
+        and want_norm.get("ok") is False
+        and isinstance(want_norm.get("data"), dict)
+        and set(want_norm["data"]) == {"detail"}
+    )
+
+
 def check_companion_transcript(
     run_dir: Path,
     seed: int,
@@ -197,6 +239,11 @@ def check_episode_tamper(
     emeta = episode.get("meta") if isinstance(episode.get("meta"), dict) else {}
     is_invalid = (emeta.get("valid") is False) or (episode.get("valid") is False)
     killed_note = str(emeta.get("note") or "").startswith("agent_killed_server:")
+    stopped_note = (
+        emeta.get("rc") == 0
+        and episode.get("accused") is None
+        and str(emeta.get("note") or "").startswith("agent stopped without ending the episode")
+    )
     er = episode.get("end_reason")
 
     raw_score = episode.get("score")
@@ -236,7 +283,7 @@ def check_episode_tamper(
             probs.append(
                 f"end_reason='tool_cap' mismatch (done={env.done}, env_end={vrd.get('end_reason')!r}, accused={acc!r})"
             )
-    elif er == "error" and killed_note:
+    elif er == "error" and (killed_note or stopped_note):
         if not (not env.done and acc is None and math.isfinite(score_val) and abs(score_val) <= 1e-9):
             probs.append("agent_killed_server episode state mismatch")
     else:
@@ -304,6 +351,7 @@ def replay_committed(root: Path = ROOT) -> list[dict[str, Any]]:
             "not_replayable": 0,
             "mismatches": [],
         }
+        discounted_base_seeds: set[int] = set()
 
         for line in f.read_text(encoding="utf-8").splitlines():
             if not line.strip():
@@ -334,7 +382,7 @@ def replay_committed(root: Path = ROOT) -> list[dict[str, Any]]:
                 )
                 continue
 
-            step_bad, first_bad, n_trunc, n_client = 0, None, 0, 0
+            step_bad, first_bad, n_trunc, n_client, n_oc_post_1bc_detail = 0, None, 0, 0, 0
             with rules.tiers_version(version):
                 env = Env(tier, seed)
                 for i, st in enumerate(e.get("steps", [])):
@@ -371,7 +419,13 @@ def replay_committed(root: Path = ROOT) -> list[dict[str, Any]]:
                         n_trunc += 1
                         ok = valid_truncated_step(want_raw, got_payload, e, meta)
                     else:
-                        ok = want_norm is not None and ac._canon(got_payload) == ac._canon(want_norm)
+                        ok = (
+                            want_norm is not None
+                            and _is_valid_mcp_error_wrapper(want_raw, want_norm, e, meta)
+                            and ac._canon(got_payload) == ac._canon(want_norm)
+                        )
+                        if ok and _is_opencode_post_1bc_detail_step(want_raw, want_norm, r, e, meta):
+                            n_oc_post_1bc_detail += 1
                     if not ok:
                         step_bad += 1
                         first_bad = i if first_bad is None else first_bad
@@ -392,6 +446,19 @@ def replay_committed(root: Path = ROOT) -> list[dict[str, Any]]:
                 and math.isfinite(float(score_raw))
                 and abs(got - float(score_raw)) < 1e-6
             )
+            upstream_mism = base_mism_by_seed.get(seed)
+            discount_upstream = (
+                upstream_mism is not None
+                and step_bad == 0
+                and score_ok
+                and acc == e.get("accused")
+                and not tamper_probs
+                and n_oc_post_1bc_detail > 0
+                and int(upstream_mism.get("step_mismatches") or 0) == n_oc_post_1bc_detail
+            )
+            if discount_upstream:
+                discounted_base_seeds.add(seed)
+                base_mism_by_seed.pop(seed, None)
             upstream_failed = seed in base_mism_by_seed
             if score_ok and acc == e.get("accused") and not step_bad and not tamper_probs and not upstream_failed:
                 row["consistent"] += 1
@@ -415,8 +482,16 @@ def replay_committed(root: Path = ROOT) -> list[dict[str, Any]]:
                     mism["tamper"] = tamper_probs
                 row["mismatches"].append(mism)
 
-        if base.get("replay_consistent") is False and not row["mismatches"]:
-            row["mismatches"] = list(base.get("mismatches") or [{"tamper": ["upstream anticheat mismatch"]}])
+        rem_base_mism = [
+            m
+            for m in (base.get("mismatches") or [])
+            if not (isinstance(m, dict) and "seed" in m and int(m["seed"]) in discounted_base_seeds)
+        ]
+        base_failed = (base.get("replay_consistent") is False) and bool(
+            rem_base_mism or not (base.get("mismatches") and discounted_base_seeds)
+        )
+        if base_failed and not row["mismatches"]:
+            row["mismatches"] = list(rem_base_mism or [{"tamper": ["upstream anticheat mismatch"]}])
         row["replay_consistent"] = False if row["mismatches"] else (None if row["replayed"] == 0 else True)
         out.append(row)
     return out

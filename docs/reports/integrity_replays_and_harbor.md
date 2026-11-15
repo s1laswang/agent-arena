@@ -1,29 +1,30 @@
-# Replay, DATA-RULE, and Harbor Tamper-Resistance Audit (`justSilas@fad43d07`)
+# Replay, DATA-RULE, and Harbor Tamper-Resistance Audit (`justSilas@58716742`)
 
 ## 1. Headline Summary
 
-- **Target:** Committed episode logs (`data/runs/committed/`), judge table (`results/judge_episodes.jsonl`), committed Harbor runs (`results/harbor/`, including PR #43 dry judge rehearsal `results/harbor/rehearsal-dry/`), `canary.redteam.anticheat` (`fad43d07`), and standalone wrapper `canary.redteam.tamper_guard`.
-- **Path isolation:** Zero edits to `canary/env.py`, `canary/rules.py`, `canary/solver/`, `canary/reproduce.py`, `harbor/`, `canary/redteam/anticheat.py`, or `tests/test_anticheat.py`. All transcript cross-checks, strict truncation/refusal checks, Harbor artifact checks, retired `ledger_key` re-sign notices, and `results/harbor/rehearsal-dry` verifiers live in standalone `canary/redteam/tamper_guard.py`, wrapping `anticheat.replay_committed`, `anticheat.check_harbor_trial`, and `anticheat.harbor_consistency`.
+- **Target:** Committed episode logs (`data/runs/committed/`), judge table (`results/judge_episodes.jsonl`), committed Harbor runs (`results/harbor/`, including PR #43 dry judge rehearsal `results/harbor/rehearsal-dry/`), `canary.redteam.anticheat` (`justSilas@58716742`, including Panel Fix D `1bc3e281`), and standalone wrapper `canary.redteam.tamper_guard`.
+- **Path isolation & Panel Fix A/D honesty:** Zero edits to `canary/env.py`, `canary/rules.py`, `canary/solver/`, `canary/reproduce.py`, `harbor/`, `canary/redteam/anticheat.py`, or `tests/test_anticheat.py`. Consistent with Panel Fix A/D disclosures (`README.md`, `docs/DIFFICULTY.md`), Canary's `v1.4` `hard` headline gap is led by raw `65% [24%, 98%]` before luck-adjusted `72% [52%, 91%]`, dev seeds `0-29` are disclosed as a post-hoc lock (`30+` and `900000+` serve as out-of-sample checks), `hard` canary clearance (`W4`) is non-binding, and `1bc3e281`'s `ToolResult` `data.detail` field was added after the committed frontier runs. All transcript cross-checks, strict truncation/refusal checks, post-`1bc3e281` OpenCode MCP-wrapped `data.detail` replay handling, Harbor artifact checks, retired `ledger_key` re-sign notices, and `results/harbor/rehearsal-dry` verifiers live in standalone `canary/redteam/tamper_guard.py`.
 - **DATA-RULE Audit (`PASS`, `0` violations):**
-  - **Active committed runs:** `61` files across `53` `(tiers_version, tier, agent)` cohorts (`v1.2`: `20` cohorts / `310` episodes; `v1.3`: `16` cohorts / `279` episodes; `v1.4`: `17` cohorts / `410` episodes), totaling **`999` episodes** (`991` valid, `8` invalid in `v1.2` `opencode:openai/gpt-5.6-sol` medium/hard). `0` duplicate seeds within files or cohorts, `0` invalid score domains, `0` `V` mismatches, `0` silent timeouts or `end_reason == 'error'` marked valid.
+  - **Active committed runs:** `63` files across `53` `(tiers_version, tier, agent)` cohorts (`v1.2`: `20` cohorts / `310` episodes; `v1.3`: `16` cohorts / `279` episodes; `v1.4`: `17` cohorts / `442` episodes), totaling **`1,031` episodes** (`1,023` valid, `8` invalid in `v1.2` `opencode:openai/gpt-5.6-sol` medium/hard). `0` duplicate seeds within files or cohorts, `0` invalid score domains, `0` `V` mismatches, `0` silent timeouts or `end_reason == 'error'` marked valid.
   - **Superseded runs & judge episodes:** `13` superseded files (`58` episodes, `58` valid, `0` violations) and `results/judge_episodes.jsonl` (`840` episodes across `21` cohorts x `40` distinct judge seeds, `0` violations).
 - **Live `tamper_guard` Verification (`PASS`, `0` false positives):**
-  - **Committed replay:** `989/999` episodes replayed (`10` secret-keyed judge seeds skipped), **`989/989` consistent**, **`49,549` tool steps** checked (`2` OpenCode client-truncated steps and `1` OpenCode client-refused step strictly validated), `21` companion `transcripts/` directories cross-checked step-for-step, `0` mismatches.
+  - **Committed replay:** `1,021/1,031` episodes replayed (`10` secret-keyed judge seeds skipped), **`1,021/1,021` consistent**, **`51,814` tool steps** checked (`2` OpenCode client-truncated steps and `1` OpenCode client-refused step strictly validated), `22` companion `transcripts/` directories cross-checked step-for-step, `0` mismatches.
+  - **Fix-D (`1bc3e281`) OpenCode MCP-wrapped `data.detail` parity:** Verified across pre-`1bc3e281` clean/tampered, post-`1bc3e281` OpenCode MCP-wrapped clean, and post-`1bc3e281` tampered (`detail` edit, outer `ok=True` wrapper spoof, score/verdict tamper, non-OpenCode `inproc` spoof, and mixed multi-seed JSONL) cases (`22/22` tests in `tests/test_replay_tamper_guard.py`).
   - **Harbor consistency:** **`18/18` jobs** (`13` top-level + `5` nested under `results/harbor/rehearsal-dry/`) and **`80/80` trials** consistent; `57` trials under retired builds with published `ledger_key` carry explicit `retired_key_resign_notice`.
   - **Dry judge rehearsal (`results/harbor/rehearsal-dry/`):** **`PASS`** across all `5` nested jobs (`oracle`, `opencode`, `opencode-infra-rerun`, `do_nothing`, `stop_early`) and `43` trials (`43/43` HMAC verified under `1` shared retired `ledger_key`, `13/13` OpenCode trajectories checked, `10/10` task checksums identical across jobs, `3/3` `opencode-infra-rerun` tasks verified as genuine `done=False` infrastructure failures in `opencode`, `TABLE.md` byte-for-byte identical to `scripts/rehearsal_table.py`).
-- **31-Class Mutation Fuzzing (`17` Replay + `14` Harbor in `25.86s`):**
-  - **Replay (`R01`-`R17`):** Upstream `anticheat.replay_committed` (`fad43d07`) catches `6/17`; standalone `tamper_guard.replay_committed` catches **`15/17`** (`100%` of adversarial tamper classes outside the documented `1e-6` float rounding tolerance `R10`; `R11` `+1e-12` is a benign rounding probe).
-  - **Harbor (`H01`-`H14`):** Upstream `anticheat` (`fad43d07`) catches `6/14`; standalone `tamper_guard` catches **`13/14`** (**`0` bypasses**; `H04` benign trailing whitespace accepted cleanly).
+- **31-Class Mutation Fuzzing (`17` Replay + `14` Harbor in `31.82s`):**
+  - **Replay (`R01`-`R17`):** Upstream `anticheat.replay_committed` (`58716742`) catches `6/17`; standalone `tamper_guard.replay_committed` catches **`15/17`** (`100%` of adversarial tamper classes outside the documented `1e-6` float rounding tolerance `R10`; `R11` `+1e-12` is a benign rounding probe).
+  - **Harbor (`H01`-`H14`):** Upstream `anticheat` (`58716742`) catches `6/14`; standalone `tamper_guard` catches **`13/14`** (**`0` bypasses**; `H04` benign trailing whitespace accepted cleanly).
 
 ## 2. Reproduce Commands (Keyless, Zero LLM Calls)
 
 ```bash
-TMPDIR=/localscratch/job_44578/w8 python -m pytest -p no:cacheprovider -q \
+TMPDIR=/tmp/opencode /tmp/fleet-silas/shared/agent-arena-venv/bin/python -m pytest -p no:cacheprovider -q \
   tests/test_replay_tamper_guard.py tests/test_integrity_replays_and_harbor.py
 
-TMPDIR=/localscratch/job_44578/w8 python scripts/integrity_audit_replays_and_harbor.py
+TMPDIR=/tmp/opencode /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/integrity_audit_replays_and_harbor.py
 
-TMPDIR=/localscratch/job_44578/w8 python scripts/integrity_audit_replays_and_harbor.py --json
+TMPDIR=/tmp/opencode /tmp/fleet-silas/shared/agent-arena-venv/bin/python scripts/integrity_audit_replays_and_harbor.py --json
 ```
 
 ## 3. DATA-RULE and Dry Rehearsal (`results/harbor/rehearsal-dry/`) Audit
@@ -32,7 +33,7 @@ TMPDIR=/localscratch/job_44578/w8 python scripts/integrity_audit_replays_and_har
 
 | Dataset | Files / Cohorts | Episodes | Valid | Invalid | Duplicate Seeds | Rule Violations | Verdict |
 |---|---:|---:|---:|---:|---:|---:|---|
-| Active `data/runs/committed` | `61` files / `53` cohorts | `999` | `991` | `8` | `0` | `0` | PASS |
+| Active `data/runs/committed` | `63` files / `53` cohorts | `1,031` | `1,023` | `8` | `0` | `0` | PASS |
 | Superseded `data/runs/committed` | `13` files | `58` | `58` | `0` | `0` | `0` | PASS |
 | `results/judge_episodes.jsonl` | `1` file / `21` cohorts | `840` | `840` | `0` | `0` | `0` | PASS |
 
@@ -51,9 +52,15 @@ TMPDIR=/localscratch/job_44578/w8 python scripts/integrity_audit_replays_and_har
 | `TABLE.md` exact recomputation (`scripts/rehearsal_table.py`) | `oracle=+0.467`, `opencode=+0.398`, `do_nothing=+0.000`, `stop_early=+0.000` (`table_md_matches=True`) | PASS |
 | Retired `ledger_key` re-sign notice | Emitted on all `43/43` trials (`57/80` across all `results/harbor/` trials) | PASS |
 
-## 4. Replay Checker Mutation Matrix (`R01`-`R17`)
+## 4. Replay Checker Mutation Matrix (`R01`-`R17`) and Fix-D (`1bc3e281`) OpenCode Parity
 
-Each mutation writes a synthetic run on `/localscratch` and evaluates unmodified `anticheat.replay_committed` (`fad43d07`), standalone `tamper_guard.replay_committed`, and `scripts/audit_submission.py`.
+Each mutation writes a synthetic run on scratch storage and evaluates unmodified `anticheat.replay_committed` (`58716742`), standalone `tamper_guard.replay_committed`, and `scripts/audit_submission.py`.
+
+### 4.1 Post-`1bc3e281` OpenCode MCP-Wrapped `data.detail` Replay Handling
+
+In `justSilas@1bc3e281` (Panel Fix D), invalid-argument calls return `ToolResult(False, {"detail": detail}, "invalid arguments")`. When OpenCode runs against `canary.mcp_server` (`is_error=True`), `steps_from_events` (`canary/agents/frontier/common.py:201`) records `{"ok": False, "error": json.dumps(payload)}`. In `canary/redteam/anticheat.py:554-565`, `rec = st.get("result")` is inspected for `"detail" in rec["data"]` *before* `_norm_result(st.get("result"))` unwraps `rec["error"]`: on a post-`1bc3e281` OpenCode MCP-wrapped step, `anticheat.replay_committed` strips `got_payload["data"]` to `{}` and then compares it against unwrapped `want` containing `data.detail`, producing a false-positive step mismatch.
+
+In `canary/redteam/tamper_guard.py`, `want_norm = ac._norm_result(want_raw)` is unwrapped before checking `"detail"`, outer MCP wrappers are validated via `_is_valid_mcp_error_wrapper` (`set(want_raw) <= {"ok", "data", "error"}` and `want_raw.get("ok") is False`), and `base_mism_by_seed` + `base["mismatches"]` are discounted **only** when `step_bad == 0 and score_ok and acc == e.get("accused") and not tamper_probs`, `allows_opencode_quirks(e, meta)` holds, and `int(upstream_mism["step_mismatches"]) == n_oc_post_1bc_detail > 0`. Pre-`1bc3e281` episodes, tampered `data.detail` payloads, forged outer `ok=True` wrappers, score/verdict edits, non-OpenCode (`inproc`) wrapper spoofs, and tampered sibling episodes in the same JSONL all fail closed (`test_fix_d_pre_1bc3e281_and_post_1bc3e281_opencode_error_detail_replay`).
 
 | ID | Mutation | Category | Upstream `anticheat` | `tamper_guard` | `audit_submission` | Bad Steps | Residual Bypass | Mechanism / Guard |
 |---|---|---|---|---|---|---:|---|---|
@@ -113,5 +120,6 @@ Per squad rules, neither `canary/redteam/anticheat.py` nor `harbor/` was modifie
 2. **Optional `harbor/template/tests/test.sh` defense-in-depth (`H02`, `H05`):**
    - Pass a duplicate-key `object_pairs_hook` to `json.loads` in `test.sh:95` and write canonical re-serialized JSON rather than `shutil.copyfile(src, "/logs/verifier/ledger.json")` (`test.sh:118`) so prepended duplicate keys (`H02`) cannot survive in raw `/logs/verifier/ledger.json`.
    - Unlink `/logs/verifier/reward.txt` and `/logs/verifier/reward.json` (or open with `O_NOFOLLOW`) before writing rewards in `test.sh:41,119-120` (`H05`).
-3. **Optional replay score tolerance tightening (`R10`):**
-   - Tightening `abs(got - float(e["score"])) < 1e-6` (`canary/redteam/anticheat.py:571`) to `1e-9` eliminates the `+-5e-7` tolerance band (`R10`) while still passing all `989/989` committed episodes (`round(V, 10)`).
+3. **Optional replay score tolerance tightening (`R10`) & 1-line Fix-D OpenCode unwrap (`anticheat.py:554,576`):**
+   - Calling `rec = _norm_result(st.get("result"))` at `canary/redteam/anticheat.py:554` (before checking `"detail" in rec["data"]`) makes upstream `anticheat.replay_committed` natively accept post-`1bc3e281` OpenCode MCP-wrapped `data.detail` steps while keeping pre-`1bc3e281` normalization intact.
+   - Tightening `abs(got - float(e["score"])) < 1e-6` (`canary/redteam/anticheat.py:576`) to `1e-9` eliminates the `+-5e-7` tolerance band (`R10`) while still passing all `1,021/1,021` committed episodes (`round(V, 10)`).

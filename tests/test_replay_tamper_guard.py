@@ -9,7 +9,9 @@ from typing import Any
 import pytest
 
 from canary import rules
+from canary.env import Env
 from canary.mcp_server import sign_ledger
+from canary.redteam import anticheat as ac
 from canary.redteam import tamper_guard as tg
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -391,3 +393,108 @@ def test_rehearsal_dry_verification_and_rerun_anti_cherrypick(tmp_path: Path):
     rerun_job_row = next(r for r in hb_rows if r["trial"] == "results/harbor/rehearsal-dry/opencode-infra-rerun/ (job)")
     assert rerun_job_row["consistent"] is False, rerun_job_row
     assert any("replaces non-infra trial" in p for p in rerun_job_row["problems"]), rerun_job_row
+
+
+def _build_post_1bc3e281_opencode_episode() -> tuple[dict[str, Any], dict[str, Any], int, str]:
+    src_dir = ROOT / "data/runs/committed/v1.4/opencode-gemini-4-carbon/medium"
+    ep = copy.deepcopy(_pick_episode("data/runs/committed/v1.4/opencode-gemini-4-carbon/medium/episodes.jsonl", 0))
+    meta = json.loads((src_dir / "meta.json").read_text(encoding="utf-8"))
+    with rules.tiers_version("v1.4"):
+        env = Env(ep["tier"], int(ep["seed"]))
+        target_idx = -1
+        target_detail = ""
+        for idx, st in enumerate(ep["steps"]):
+            r = env.call(st["tool"], st["args"])
+            if not r.ok and isinstance(r.data, dict) and set(r.data) == {"detail"}:
+                inner = {"ok": False, "data": {"detail": r.data["detail"]}, "error": r.error}
+                ep["steps"][idx]["result"] = {"ok": False, "error": json.dumps(inner)}
+                if target_idx < 0:
+                    target_idx = idx
+                    target_detail = str(r.data["detail"])
+    assert target_idx >= 0 and target_detail
+    return ep, meta, target_idx, target_detail
+
+
+def test_fix_d_pre_1bc3e281_and_post_1bc3e281_opencode_error_detail_replay(tmp_path: Path):
+    src_dir = ROOT / "data/runs/committed/v1.4/opencode-gemini-4-carbon/medium"
+    pre_ep = _pick_episode("data/runs/committed/v1.4/opencode-gemini-4-carbon/medium/episodes.jsonl", 0)
+    meta = json.loads((src_dir / "meta.json").read_text(encoding="utf-8"))
+
+    _write_run(tmp_path / "pre_clean", "v1.4/opencode-carbon/medium", [pre_ep], meta)
+    row_pre = tg.replay_committed(tmp_path / "pre_clean")[0]
+    assert row_pre["replay_consistent"] is True, row_pre
+    assert row_pre["consistent"] == 1
+    assert row_pre["step_mismatches"] == 0
+    assert row_pre["mismatches"] == []
+
+    pre_bad = copy.deepcopy(pre_ep)
+    pre_bad["steps"][3]["result"] = {
+        "ok": False,
+        "error": json.dumps({"ok": False, "data": {}, "error": "unknown tool"}),
+    }
+    _write_run(tmp_path / "pre_tampered", "v1.4/opencode-carbon/medium", [pre_bad], meta)
+    row_pre_bad = tg.replay_committed(tmp_path / "pre_tampered")[0]
+    assert row_pre_bad["replay_consistent"] is False, row_pre_bad
+    assert row_pre_bad["step_mismatches"] >= 1
+
+    post_ep, post_meta, err_idx, real_detail = _build_post_1bc3e281_opencode_episode()
+    _write_run(tmp_path / "post_clean", "v1.4/opencode-carbon/medium", [post_ep], post_meta)
+    upstream_row = ac.replay_committed(tmp_path / "post_clean")[0]
+    assert upstream_row["replay_consistent"] is True
+    assert upstream_row["step_mismatches"] == 0
+    row_post = tg.replay_committed(tmp_path / "post_clean")[0]
+    assert row_post["replay_consistent"] is True, row_post
+    assert row_post["consistent"] == 1
+    assert row_post["step_mismatches"] == 0
+    assert row_post["mismatches"] == []
+
+    forged_detail_ep = copy.deepcopy(post_ep)
+    forged_detail_ep["steps"][err_idx]["result"] = {
+        "ok": False,
+        "error": json.dumps({"ok": False, "data": {"detail": real_detail + " forged"}, "error": "invalid arguments"}),
+    }
+    _write_run(tmp_path / "post_forged_detail", "v1.4/opencode-carbon/medium", [forged_detail_ep], post_meta)
+    row_forged_detail = tg.replay_committed(tmp_path / "post_forged_detail")[0]
+    assert row_forged_detail["replay_consistent"] is False, row_forged_detail
+    assert row_forged_detail["step_mismatches"] >= 1
+
+    forged_outer_ep = copy.deepcopy(post_ep)
+    forged_outer_ep["steps"][err_idx]["result"] = {
+        "ok": True,
+        "error": json.dumps({"ok": False, "data": {"detail": real_detail}, "error": "invalid arguments"}),
+    }
+    _write_run(tmp_path / "post_forged_outer", "v1.4/opencode-carbon/medium", [forged_outer_ep], post_meta)
+    row_forged_outer = tg.replay_committed(tmp_path / "post_forged_outer")[0]
+    assert row_forged_outer["replay_consistent"] is False, row_forged_outer
+    assert row_forged_outer["step_mismatches"] >= 1
+
+    forged_score_ep = copy.deepcopy(post_ep)
+    forged_score_ep["score"] = round(float(forged_score_ep["score"]) + 0.05, 6)
+    _write_run(tmp_path / "post_forged_score", "v1.4/opencode-carbon/medium", [forged_score_ep], post_meta)
+    row_forged_score = tg.replay_committed(tmp_path / "post_forged_score")[0]
+    assert row_forged_score["replay_consistent"] is False, row_forged_score
+    assert len(row_forged_score["mismatches"]) == 1
+
+    forged_verdict_ep = copy.deepcopy(post_ep)
+    forged_verdict_ep["correct"] = not bool(forged_verdict_ep["correct"])
+    _write_run(tmp_path / "post_forged_verdict", "v1.4/opencode-carbon/medium", [forged_verdict_ep], post_meta)
+    row_forged_verdict = tg.replay_committed(tmp_path / "post_forged_verdict")[0]
+    assert row_forged_verdict["replay_consistent"] is False, row_forged_verdict
+    assert any("correct=" in p for p in row_forged_verdict["mismatches"][0].get("tamper", []))
+
+    non_oc_ep = copy.deepcopy(post_ep)
+    non_oc_ep["agent"] = "gemini:gemini-4-carbon"
+    non_oc_meta = {"tiers_version": "v1.4", "provider": "gemini", "harness": "inproc"}
+    _write_run(tmp_path / "post_spoof_inproc", "v1.4/inproc-carbon/medium", [non_oc_ep], non_oc_meta)
+    row_spoof_inproc = tg.replay_committed(tmp_path / "post_spoof_inproc")[0]
+    assert row_spoof_inproc["replay_consistent"] is False, row_spoof_inproc
+
+    ep_seed1_tampered = copy.deepcopy(
+        _pick_episode("data/runs/committed/v1.4/opencode-gemini-4-carbon/medium/episodes.jsonl", 1)
+    )
+    ep_seed1_tampered["score"] = 0.99
+    _write_run(tmp_path / "post_mixed_two", "v1.4/opencode-carbon/medium", [post_ep, ep_seed1_tampered], post_meta)
+    row_mixed = tg.replay_committed(tmp_path / "post_mixed_two")[0]
+    assert row_mixed["replay_consistent"] is False, row_mixed
+    assert row_mixed["consistent"] == 1
+    assert [m["seed"] for m in row_mixed["mismatches"]] == [1]

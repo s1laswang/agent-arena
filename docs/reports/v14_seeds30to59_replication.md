@@ -129,6 +129,7 @@ Columns match `scripts/paired_gemini.py`: `score +/- 95% CI` uses normal-approxi
 
 - Post-hoc locked primary (`0-29`) shards (plus committed `opencode-gemini-4-carbon-ext` partial `n=2` G1 extension and `reference/solver-hard-seeds30to59`): `data/runs/committed/v1.4`
 - Selected fleet replication (incomplete `30-59` cohort) shards: `results/selected_fleet_replication/v1.4`
+- Consolidated `opencode-gemini-4-carbon-ext` shard and paired bootstrap tables (`fleet7` `n=7`, deduplicated `ext8` `n=8` keeping committed `[34, 37]`, and exploratory `pooled38` `n=38`): `results/frontier_replication/v1.4/opencode-gemini-4-carbon-ext/` ([README.md](../../results/frontier_replication/v1.4/opencode-gemini-4-carbon-ext/README.md))
 - Generator script: `scripts/v14_replication_report.py`
 
 ```bash

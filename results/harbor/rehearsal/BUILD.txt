@@ -1,0 +1,9 @@
+sha: 1bc3e281dbfaa494a11e783d0c98369b41b2f675
+describe: afterquery-final
+built_utc: 2026-11-15T03:09:17Z
+harbor: 0.26.0
+agent_timeout_sec = 120.0
+schedule: opencode-1/2 at -n 3 from the start; opencode-3 at -n 4 once runs 1+2 have <= 2 trials left
+retries: --max-retries 2 --retry-include ApiRateLimitError --retry-include AgentSetupTimeoutError
+correction: the agent_timeout_sec line above is the [verifier] timeout_sec (the launcher's grep took the first match); [agent] timeout_sec = 10800.0
+opencode-3 start: 2026-11-15T05:14:15Z

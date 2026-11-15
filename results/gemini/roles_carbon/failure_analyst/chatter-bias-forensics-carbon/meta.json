@@ -1,0 +1,34 @@
+{
+  "role": "failure_analyst",
+  "subrole": "biased_chatter_decision_forensics",
+  "model_id": "gemini-4-carbon",
+  "thinking_level": "high",
+  "commit": "a366f947ed7ff9ea549df0488268377b9b002868",
+  "git_sha": "a366f947ed7ff9ea549df0488268377b9b002868",
+  "timestamp": "2026-11-14T23:38:45+00:00",
+  "command": "PYTHONPATH=. /tmp/fleet-root/shared/agent-arena-venv/bin/python -m canary.gemini.analyst_chatter_bias --out results/gemini/roles_carbon/failure_analyst/chatter-bias-forensics-carbon --model gemini-4-carbon",
+  "ledger_run_id": "chatter_bias_forensics:gemini-4-carbon:20261114T233845Z",
+  "ablation_dirs": [
+    "results/gemini/roles_carbon/world_text/biased-chatter-ablation-carbon",
+    "results/gemini/roles_carbon/world_text/biased-chatter-ablation-hard01"
+  ],
+  "n_episodes": 24,
+  "n_episodes_packed": 24,
+  "n_pairs": 12,
+  "total_quotes": 47,
+  "verified_quotes": 47,
+  "verified_quotes_pct": 100.0,
+  "key_metric": "24 paired episodes (12 pairs), quotes 100.0% verified, carbon acc 100% (biased +0.662 vs template +0.642), rumor distraction 100% vs 50%",
+  "fake_env": false,
+  "smoke": false,
+  "stub": false,
+  "usage": {
+    "calls": 1,
+    "in": 160103,
+    "out": 10605,
+    "thinking": 31009,
+    "cached": 0,
+    "cost_usd": 0.736346,
+    "latency_s": 419.37
+  }
+}

@@ -7,13 +7,13 @@ Every number below is extracted programmatically from committed run files with z
 
 - Provenance status: **VERIFIED**
 - Target model: `gemini-4-carbon`
-- Repository HEAD at build: `a6270995`
+- Repository HEAD at build: `6426f31a`
 - Verified roles: **6 / 6** (missing: none)
-- Verified `gemini-4-carbon` run folders: **92** (6 canonical headline + 86 supporting; scanned 92 folders)
-- Total verified episodes / samples: **880**
-- Total Gemini API calls: **6,966**
-- Total tokens (in / out / thinking / cached): **191,861,104 / 2,220,586 / 1,375,438 / 174,576,067**
-- Total estimated API cost (USD): **$84.2277**
+- Verified `gemini-4-carbon` run folders: **96** (6 canonical headline + 90 supporting; scanned 96 folders)
+- Total verified episodes / samples: **941**
+- Total Gemini API calls: **7,079**
+- Total tokens (in / out / thinking / cached): **195,437,028 / 2,280,807 / 1,457,414 / 177,682,115**
+- Total estimated API cost (USD): **$86.9000**
 - Secret leaks detected: **0**
 
 ## 1. Canonical Headline Runs (One Labelled Real Run per Role)
@@ -97,9 +97,9 @@ Every number below is extracted programmatically from committed run files with z
 ### 03. `investigators` - Security-Lead Investigators (VERIFIED)
 
 - Stage: Bayesian Investigation
-- Verified `gemini-4-carbon` runs: **27** (count: 40, calls: 3,463, in: 126,614,659, out: 1,462,404, thinking: 157,797, cached: 117,846,119, cost: $45.5237)
+- Verified `gemini-4-carbon` runs: **28** (count: 41, calls: 3,565, in: 129,967,004, out: 1,502,416, thinking: 157,797, cached: 120,952,167, cost: $46.7270)
 - Canonical headline run: `results/gemini_roles/investigators/thinking-ladder-carbon-med01` (`thinking_level_ablation`, commit `2cb207f51c44d3069e2101c4849a21965b606f92`, count=4, calls=318, cost=$3.5394) - low +0.655 -> high +0.655 (vs solver +0.565, n=4)
-- Supporting verified runs: **26**
+- Supporting verified runs: **27**
 
 | Subrole | Run Folder | Model ID | Commit | Count | Calls | Tokens In | Tokens Out | Thinking | Cached | Cost (USD) | Headline Metric |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
@@ -118,6 +118,7 @@ Every number below is extracted programmatically from committed run files with z
 | `hard-13` | `data/runs/committed/v1.4/gemini-4-carbon/hard-13` | `gemini-4-carbon` | `a37d93f7e46fea38545ccc2aba071069ac20f632` | 1 | 116 | 6,496,251 | 70,774 | 0 | 6,191,082 | $1.9372 | mean +0.420 vs solver +0.340 (acc 100%, n=1) |
 | `hard-0` | `data/runs/committed/v1.4/gemini-4-carbon/hard-0` | `gemini-4-carbon` | `361fbab16b9c1016f72480d4550bb200dc7f5d60` | 1 | 112 | 4,362,422 | 44,812 | 0 | 4,090,963 | $1.4001 | mean +0.530 vs solver +0.640 (acc 100%, n=1) |
 | `hard-10` | `data/runs/committed/v1.4/gemini-4-carbon/hard-10` | `gemini-4-carbon` | `a37d93f7e46fea38545ccc2aba071069ac20f632` | 1 | 106 | 5,105,883 | 52,484 | 0 | 4,839,236 | $1.5421 | mean +0.450 vs solver +0.210 (acc 100%, n=1) |
+| `hard-12` | `data/runs/committed/v1.4/gemini-4-carbon/hard-12` | `gemini-4-carbon` | `d373079ead260116bfa5d07deabf53cbcbdf2875` | 1 | 102 | 3,352,345 | 40,012 | 0 | 3,106,048 | $1.2033 | mean +0.690 vs solver +0.480 (acc 100%, n=1) |
 | `hard-8` | `data/runs/committed/v1.4/gemini-4-carbon/hard-8` | `gemini-4-carbon` | `361fbab16b9c1016f72480d4550bb200dc7f5d60` | 1 | 96 | 3,557,523 | 46,233 | 0 | 3,283,687 | $1.3384 | mean +0.630 vs solver +0.260 (acc 100%, n=1) |
 | `hard-17` | `data/runs/committed/v1.4/gemini-4-carbon/hard-17` | `gemini-4-carbon` | `a37d93f7e46fea38545ccc2aba071069ac20f632` | 1 | 82 | 2,363,734 | 36,628 | 0 | 2,163,578 | $0.9829 | mean +0.640 vs solver +0.770 (acc 100%, n=1) |
 | `hard-2` | `data/runs/committed/v1.4/gemini-4-carbon/hard-2` | `gemini-4-carbon` | `4c1ff4742438281a453c5ec353a1468fbe7933f4` | 1 | 76 | 2,018,060 | 30,619 | 0 | 1,796,222 | $0.9295 | mean +0.590 vs solver +0.580 (acc 100%, n=1) |
@@ -184,8 +185,8 @@ Every number below is extracted programmatically from committed run files with z
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | easy | 4 | +0.8500 | +0.8000 | 106.2% | +0.0500 +/- 0.0615 | 100% | 100% | 3.75 / 4.75 |
 | medium | 11 | +0.5936 | +0.7400 | 80.2% | -0.1464 +/- 0.2114 | 82% | 100% | 8.78 / 7.00 |
-| hard | 17 | +0.4947 | +0.5365 | 92.2% | -0.0418 +/- 0.2243 | 94% | 100% | 11.24 / 10.94 |
-| overall | 32 | +0.5731 | +0.6394 | 89.6% | -0.0663 +/- 0.1390 | 91% | 100% | 9.50 / 8.81 |
+| hard | 18 | +0.5056 | +0.5333 | 94.8% | -0.0278 +/- 0.2132 | 94% | 100% | 11.17 / 11.00 |
+| overall | 33 | +0.5767 | +0.6345 | 90.9% | -0.0579 +/- 0.1357 | 91% | 100% | 9.52 / 8.91 |
 
 ### Per-Seed Paired Investigator Ledger
 
@@ -218,6 +219,7 @@ Every number below is extracted programmatically from committed run files with z
 | hard | 9 | `data/runs/committed/v1.4/gemini-4-carbon/hard-9` | +0.7400 | +0.7100 | +0.0300 | yes | yes | 11 / 6 |
 | hard | 10 | `data/runs/committed/v1.4/gemini-4-carbon/hard-10` | +0.4500 | +0.2100 | +0.2400 | yes | yes | 14 / 19 |
 | hard | 11 | `data/runs/committed/v1.4/gemini-4-carbon/hard-11` | +0.8000 | +0.6200 | +0.1800 | yes | yes | 6 / 9 |
+| hard | 12 | `data/runs/committed/v1.4/gemini-4-carbon/hard-12` | +0.6900 | +0.4800 | +0.2100 | yes | yes | 10 / 12 |
 | hard | 13 | `data/runs/committed/v1.4/gemini-4-carbon/hard-13` | +0.4200 | +0.3400 | +0.0800 | yes | yes | 12 / 17 |
 | hard | 14 | `data/runs/committed/v1.4/gemini-4-carbon/hard-14` | +0.6100 | +0.2300 | +0.3800 | yes | yes | 9 / 15 |
 | hard | 17 | `data/runs/committed/v1.4/gemini-4-carbon/hard-17` | +0.6400 | +0.7700 | -0.1300 | yes | yes | 8 / 5 |
@@ -255,11 +257,11 @@ In-game leaked-memo pixel watermark ablation: text `variant` fields are redacted
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | `world_text` | 13 | 133 | 1,038 | 27,780,671 | 519,569 | 530,761 | 25,362,601 | $14.2643 |
 | `adaptive_mole` | 34 | 397 | 2,076 | 33,093,751 | 141,516 | 557,649 | 29,624,372 | $16.8929 |
-| `investigators` | 27 | 40 | 3,463 | 126,614,659 | 1,462,404 | 157,797 | 117,846,119 | $45.5237 |
-| `failure_analyst` | 3 | 222 | 5 | 918,030 | 26,204 | 39,025 | 0 | $2.3395 |
+| `investigators` | 28 | 41 | 3,565 | 129,967,004 | 1,502,416 | 157,797 | 120,952,167 | $46.7270 |
+| `failure_analyst` | 5 | 276 | 10 | 1,114,554 | 44,068 | 95,665 | 0 | $3.4776 |
 | `exploit_hunter` | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
-| `multimodal_evidence` | 13 | 77 | 169 | 360,071 | 34,062 | 90,206 | 0 | $1.9628 |
-| **total** | **92** | **880** | **6,966** | **191,861,104** | **2,220,586** | **1,375,438** | **174,576,067** | **$84.2277** |
+| `multimodal_evidence` | 14 | 83 | 175 | 387,126 | 36,407 | 115,542 | 0 | $2.2937 |
+| **total** | **96** | **941** | **7,079** | **195,437,028** | **2,280,807** | **1,457,414** | **177,682,115** | **$86.9000** |
 
 ## 6. Keyless Offline Verification
 

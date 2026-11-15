@@ -63,6 +63,8 @@ REQUIRED_AUDIT_TOKENS = (
     "docs/arena/share_card.js",
     "scripts/verify_arena_bundle.py",
     "tests/test_arena_share_and_bundle.py",
+    "origin/g2-families",
+    "8911130e",
 )
 
 

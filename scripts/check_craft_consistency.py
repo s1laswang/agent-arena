@@ -85,30 +85,132 @@ def _git_ls_files(root: Path) -> list[str] | None:
     return [entry for entry in raw.split("\0") if entry]
 
 
+def _parse_gitignore_fallback_rules(root: Path) -> list[tuple[bool, bool, bool, str]]:
+    gi_path = root / ".gitignore"
+    if not gi_path.is_file():
+        return []
+    try:
+        lines = gi_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    rules: list[tuple[bool, bool, bool, str]] = []
+    for raw in lines:
+        stripped = raw.strip()
+        if not stripped or stripped.startswith(HASH_CHAR):
+            continue
+        negated = stripped.startswith("!")
+        body = stripped[1:].strip() if negated else stripped
+        if not body:
+            continue
+        dir_only = body.endswith("/")
+        pat = body.strip("/")
+        if not pat:
+            continue
+        anchored = ("/" in pat) or raw.lstrip(" !").startswith("/")
+        rules.append((negated, dir_only, anchored, pat))
+    return rules
+
+
+def _gitignore_pat_matches(pat: str, rel_pos: str, name: str, anchored: bool) -> bool:
+    if not anchored:
+        return fnmatch.fnmatchcase(name, pat) or fnmatch.fnmatchcase(rel_pos, pat)
+    if "**/" in pat and _gitignore_pat_matches(pat.replace("**/", ""), rel_pos, name, True):
+        return True
+    parts: list[str] = []
+    i = 0
+    n = len(pat)
+    while i < n:
+        if pat[i : i + 3] == "**/":
+            parts.append("(?:.+/)?")
+            i += 3
+        elif pat[i : i + 2] == "**":
+            parts.append(".*")
+            i += 2
+        elif pat[i] == "*":
+            parts.append("[^/]*")
+            i += 1
+        elif pat[i] == "?":
+            parts.append("[^/]")
+            i += 1
+        else:
+            parts.append(re.escape(pat[i]))
+            i += 1
+    return re.fullmatch("".join(parts), rel_pos) is not None
+
+
+def _fallback_is_ignored(
+    rules: list[tuple[bool, bool, bool, str]],
+    rel_path: str,
+    is_dir: bool = False,
+) -> bool:
+    if not rules:
+        return False
+    clean = rel_path.strip("/")
+    if not clean or clean == ".":
+        return False
+    segments = clean.split("/")
+    total = len(segments)
+    for depth in range(1, total + 1):
+        sub = "/".join(segments[:depth])
+        sub_name = segments[depth - 1]
+        sub_is_dir = True if depth < total else is_dir
+        ignored = False
+        for negated, dir_only, anchored, pat in rules:
+            if dir_only and not sub_is_dir:
+                continue
+            if _gitignore_pat_matches(pat, sub, sub_name, anchored):
+                ignored = not negated
+        if ignored and depth < total:
+            return True
+        if depth == total:
+            return ignored
+    return False
+
+
 def _git_is_ignored(root: Path, rel_path: str) -> bool:
     if not (root / ".git").exists():
-        return False
-    proc = subprocess.run(
-        ["git", "check-ignore", "-q", rel_path],
-        cwd=root,
-        capture_output=True,
-        timeout=15,
-    )
+        rules = _parse_gitignore_fallback_rules(root)
+        return _fallback_is_ignored(rules, rel_path, is_dir=rel_path.endswith("/"))
+    try:
+        proc = subprocess.run(
+            ["git", "check-ignore", "-q", rel_path],
+            cwd=root,
+            capture_output=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError):
+        rules = _parse_gitignore_fallback_rules(root)
+        return _fallback_is_ignored(rules, rel_path, is_dir=rel_path.endswith("/"))
     return proc.returncode == 0
 
 
 def _git_ignored_batch(root: Path, rel_paths: list[str]) -> set[str]:
-    if not rel_paths or not (root / ".git").exists():
+    if not rel_paths:
         return set()
     unique_paths = sorted(set(rel_paths))
-    proc = subprocess.run(
-        ["git", "check-ignore", "--stdin"],
-        cwd=root,
-        input="\n".join(unique_paths) + "\n",
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
+    if not (root / ".git").exists():
+        rules = _parse_gitignore_fallback_rules(root)
+        return {
+            p
+            for p in unique_paths
+            if _fallback_is_ignored(rules, p, is_dir=p.endswith("/"))
+        }
+    try:
+        proc = subprocess.run(
+            ["git", "check-ignore", "--stdin"],
+            cwd=root,
+            input="\n".join(unique_paths) + "\n",
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError):
+        rules = _parse_gitignore_fallback_rules(root)
+        return {
+            p
+            for p in unique_paths
+            if _fallback_is_ignored(rules, p, is_dir=p.endswith("/"))
+        }
     if proc.returncode not in (0, 1):
         return {p for p in unique_paths if _git_is_ignored(root, p)}
     return {ln for ln in proc.stdout.splitlines() if ln}
@@ -694,6 +796,9 @@ def check_results_hygiene(root: Path) -> CheckResult:
             for rel in tracked:
                 if rel == "results/latest" or rel.startswith("results/latest/"):
                     failures.append(f"git-tracked file under results/latest/: {rel}")
+        if not _git_is_ignored(root, "results/latest/judge_table.md"):
+            failures.append("results/latest/judge_table.md is not gitignored")
+    elif (root / ".gitignore").is_file():
         if not _git_is_ignored(root, "results/latest/judge_table.md"):
             failures.append("results/latest/judge_table.md is not gitignored")
 

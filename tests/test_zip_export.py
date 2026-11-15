@@ -13,7 +13,10 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts" / "verify_zip_export.py"
+REPRO_DOC_PATH = ROOT / "docs" / "REPRODUCIBILITY.md"
+SELF_PATH = Path(__file__).resolve()
 OPENCODE_TMP = Path("/tmp/opencode")
+HASH_CHAR = chr(35)
 
 
 def _load_verifier():
@@ -127,6 +130,12 @@ def _make_synthetic_good_runner():
         if "pytest" in joined:
             return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="4 passed\n", stderr="")
 
+        for craft_script in verify_zip_export.CRAFT_VERIFIER_SCRIPTS:
+            if craft_script in cmd:
+                assert env_overrides.get("GIT_CEILING_DIRECTORIES") == str(cwd.resolve().parent)
+                out = f"[PASS] {craft_script}: ok\nSUMMARY: 4 PASS, 0 WARN, 0 FAIL (0.05s)\n"
+                return subprocess.CompletedProcess(args=cmd, returncode=0, stdout=out, stderr="")
+
         raise AssertionError(f"unexpected runner command: {cmd}")
 
     return _runner
@@ -140,7 +149,7 @@ def test_real_repo_zip_export_passes(opencode_tmp: Path, capsys):
 
     assert rc == 0
     assert payload["passed"] is True
-    assert len(payload["results"]) == 5
+    assert len(payload["results"]) == 6
     assert payload["checks"] == payload["results"]
     assert [r["name"] for r in payload["results"]] == list(verify_zip_export.CHECK_NAMES)
     for item in payload["results"]:
@@ -183,7 +192,7 @@ def test_dot_git_unexpectedly_exists_in_archive_target_fails(
     assert rc == 1
     assert payload["passed"] is False
     assert runner_called is False
-    assert len(payload["results"]) == 5
+    assert len(payload["results"]) == 6
     for item in payload["results"]:
         assert item["status"] == "FAIL"
         assert ".git" in item["summary"]
@@ -200,6 +209,7 @@ def test_individual_checks_reject_dot_git_directory(opencode_tmp: Path):
         verify_zip_export.check_judge_analysis_scripts(contaminated),
         verify_zip_export.check_frozen_tier_hash(contaminated),
         verify_zip_export.check_security_tests(contaminated),
+        verify_zip_export.check_craft_verifiers(contaminated),
     ]
     for res in results:
         assert res.status == "FAIL"
@@ -214,6 +224,11 @@ def test_individual_checks_reject_dot_git_directory(opencode_tmp: Path):
         ("scripts/demo_replay.py", verify_zip_export.CHECK_JUDGE_SCRIPTS),
         (" -c ", verify_zip_export.CHECK_FROZEN_TIER_HASH),
         ("pytest", verify_zip_export.CHECK_SECURITY_TESTS),
+        ("scripts/audit_doc_hygiene.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
+        ("scripts/check_craft_consistency.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
+        ("scripts/verify_doc_commands.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
+        ("scripts/verify_judge_walkthrough.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
+        ("scripts/verify_submission_surfaces.py", verify_zip_export.CHECK_CRAFT_VERIFIERS),
     ],
 )
 def test_runner_failure_detected_for_each_check(
@@ -325,4 +340,113 @@ def test_non_git_root_and_text_report(opencode_tmp: Path, monkeypatch: pytest.Mo
 
     assert rc == 1
     assert "[FAIL]" in out
-    assert "SUMMARY: 0 PASS, 0 WARN, 5 FAIL" in out
+    assert "SUMMARY: 0 PASS, 0 WARN, 6 FAIL" in out
+
+
+def test_craft_verifiers_mocked_unit_behavior(opencode_tmp: Path):
+    export_dir = opencode_tmp / "mocked_craft_export"
+    export_dir.mkdir(parents=True, exist_ok=True)
+    assert verify_zip_export.has_dot_git(export_dir) is False
+
+    seen_scripts: list[str] = []
+    seen_ceilings: set[str] = set()
+
+    def _recording_good_runner(cmd: list[str], cwd: Path, env_overrides: dict[str, str]):
+        assert cwd == export_dir
+        seen_ceilings.add(env_overrides.get("GIT_CEILING_DIRECTORIES", ""))
+        seen_scripts.append(cmd[1])
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="[PASS] check: ok\nSUMMARY: 4 PASS, 0 WARN, 0 FAIL (0.04s)\n",
+            stderr="",
+        )
+
+    res_ok = verify_zip_export.check_craft_verifiers(export_dir, runner=_recording_good_runner)
+    assert res_ok.status == "PASS"
+    assert "0 FAIL" in res_ok.summary
+    assert sorted(seen_scripts) == sorted(verify_zip_export.CRAFT_VERIFIER_SCRIPTS)
+    assert seen_ceilings == {str(export_dir.resolve().parent)}
+
+    def _silent_fail_summary_runner(cmd: list[str], _cwd: Path, _env: dict[str, str]):
+        if cmd[1] == "scripts/verify_submission_surfaces.py":
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=0,
+                stdout="[FAIL] Surface: broken\nSUMMARY: 3 PASS, 0 WARN, 1 FAIL (0.04s)\n",
+                stderr="",
+            )
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="[PASS] check: ok\nSUMMARY: 4 PASS, 0 WARN, 0 FAIL (0.04s)\n",
+            stderr="",
+        )
+
+    res_bad_summary = verify_zip_export.check_craft_verifiers(
+        export_dir,
+        runner=_silent_fail_summary_runner,
+    )
+    assert res_bad_summary.status == "FAIL"
+    assert any("scripts/verify_submission_surfaces.py" in d for d in res_bad_summary.details)
+
+
+def test_real_craft_verifiers_in_gitless_archive(opencode_tmp: Path):
+    export_dir = opencode_tmp / "real_gitless_craft"
+    verify_zip_export.export_head(ROOT, export_dir)
+    assert verify_zip_export.has_dot_git(export_dir) is False
+
+    res = verify_zip_export.check_craft_verifiers(export_dir)
+    assert res.status == "PASS", res.details
+    assert "0 FAIL" in res.summary
+
+
+def test_reproducibility_doc_afterquery_final_and_no_comments_hygiene():
+    for py_path in (SCRIPT_PATH, SELF_PATH):
+        raw = py_path.read_text(encoding="utf-8")
+        assert HASH_CHAR not in raw, f"unexpected hash character in {py_path.name}"
+        assert chr(0x2014) not in raw, f"unexpected em dash in {py_path.name}"
+        assert chr(0x2013) not in raw, f"unexpected en dash in {py_path.name}"
+
+    doc = REPRO_DOC_PATH.read_text(encoding="utf-8")
+    assert chr(0x2014) not in doc, "unexpected em dash in docs/REPRODUCIBILITY.md"
+    assert chr(0x2013) not in doc, "unexpected en dash in docs/REPRODUCIBILITY.md"
+
+    expected_tokens = (
+        "afterquery-final",
+        "1bc3e281",
+        "data.detail",
+        "28",
+        "3,841",
+        "invalid arguments",
+        "canary.redteam.anticheat",
+        "canary.gemini.gallery",
+        "1,021/1,031",
+        "51,814",
+        "58716742",
+        "judge_hunt.py",
+        "12/12",
+        "52 s",
+        "make hunt",
+        "4 min 57 s",
+        "make anticheat-verify",
+        "1,057 passed",
+        "PASS=20",
+        "FAIL=0",
+        "424",
+        "469338f6",
+        "25",
+        "13",
+        "infra:cli_error_event",
+        "infra:empty_model_response",
+        "infra:provider_unavailable",
+        "cf394894",
+        "gpt-5.5",
+        "clone 3 s",
+        "reproduce_table 27 s",
+        "reproduce 118 s",
+        "audit_submission 4 s",
+        "test_core 100 passed in 175 s",
+    )
+    for token in expected_tokens:
+        assert token in doc, f"docs/REPRODUCIBILITY.md missing expected token: {token}"

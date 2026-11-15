@@ -12,8 +12,17 @@ from pathlib import Path
 from typing import Any, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+_ROOT_STR = str(ROOT)
+if sys.path[:1] != [_ROOT_STR]:
+    if _ROOT_STR in sys.path:
+        sys.path.remove(_ROOT_STR)
+    sys.path.insert(0, _ROOT_STR)
+for _mod_name in [
+    k for k in list(sys.modules) if k in {"canary", "train"} or k.startswith(("canary.", "train."))
+]:
+    _mod_file = str(getattr(sys.modules[_mod_name], "__file__", "") or "")
+    if not _mod_file.startswith(_ROOT_STR):
+        sys.modules.pop(_mod_name, None)
 
 HASH_CHAR = chr(35)
 EM_DASH = chr(0x2014)
@@ -69,6 +78,48 @@ MOLETRAIN_PY_FILES: tuple[str, ...] = (
 PREEXISTING_SILAS_FILES: tuple[str, ...] = (
     "train/grpo_mole.py",
     "canary/forge/rl_mole.py",
+)
+
+CROSS_SQUAD_PY_PREFIXES: tuple[str, ...] = (
+    "frontier_",
+    "test_frontier_",
+    "integrity_",
+    "test_integrity_",
+    "tiebreak_",
+    "test_tiebreak_",
+    "craft_",
+    "test_craft_",
+    "sleeper_",
+    "test_sleeper_",
+    "v15_",
+    "test_v15_",
+    "v16_",
+    "test_v16_",
+    "arena_",
+    "test_arena_",
+)
+
+CROSS_SQUAD_PY_SUBSTRINGS: tuple[str, ...] = (
+    "research",
+    "strategies",
+    "tiebreak",
+    "dagger",
+    "staffai",
+    "sleeper",
+    "arena",
+    "transcript_miner",
+    "mole_adaptive",
+    "mole_beatability",
+    "mole_counterfactual",
+    "mole_fairness",
+    "mole_trap",
+    "mole_hof",
+    "mole_evolve",
+    "mole_ladder",
+    "mole_grudge",
+    "fr8_grudge",
+    "hof_v14",
+    "evolve_v14",
 )
 
 SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -246,13 +297,31 @@ def is_moletrain_scoped_py(rel_path: str) -> bool:
     norm = rel_path.replace("\\", "/").strip().lstrip("./")
     if not norm.endswith(".py"):
         return False
-    if norm.startswith(("canary/forge/", "canary/mole/", "train/")):
+    if norm in PREEXISTING_SILAS_FILES:
+        return False
+    if norm in MOLETRAIN_PY_FILES:
         return True
-    name = Path(norm).name
-    if norm.startswith("scripts/") and (fnmatchcase(norm, "scripts/*mole*.py") or "mole" in name):
-        return True
-    if norm.startswith("tests/") and (fnmatchcase(norm, "tests/test_*mole*.py") or fnmatchcase(name, "test_*mole*.py")):
-        return True
+    p = Path(norm)
+    parent = p.parent.as_posix()
+    name = p.name
+    if name.startswith(CROSS_SQUAD_PY_PREFIXES):
+        return False
+    if any(tok in name for tok in CROSS_SQUAD_PY_SUBSTRINGS):
+        return False
+    if parent == "canary/forge":
+        return fnmatchcase(name, "rl_mole_*.py") or fnmatchcase(name, "*moletrain*.py")
+    if parent == "canary/mole":
+        return fnmatchcase(name, "distill_*.py") or fnmatchcase(name, "*moletrain*.py")
+    if parent == "train":
+        return fnmatchcase(name, "*mole*.py")
+    if parent == "scripts":
+        return fnmatchcase(name, "*mole*.py")
+    if parent == "tests":
+        return (
+            fnmatchcase(name, "test_*mole*.py")
+            or fnmatchcase(name, "test_*qwen*mole*.py")
+            or name == "test_qwen25_dpo_grpo_v2.py"
+        )
     return False
 
 
@@ -552,7 +621,10 @@ def check_gate2_hygiene(
 
     reports_dir = root / "docs" / "reports"
     if reports_dir.is_dir():
-        report_paths = set(reports_dir.glob("*mole*.md"))
+        report_paths = (
+            set(reports_dir.glob("moletrain_*.md"))
+            | set(reports_dir.glob("*qwen*mole*.md"))
+        )
         qwen_rep = reports_dir / "qwen_mole_training.md"
         if qwen_rep.is_file():
             report_paths.add(qwen_rep)

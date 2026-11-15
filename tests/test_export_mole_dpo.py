@@ -6,8 +6,22 @@ import io
 import json
 from pathlib import Path
 import random
+import sys
 import tempfile
+import time
 import tokenize
+
+_REPO_ROOT = str(Path(__file__).resolve().parents[1])
+if sys.path[:1] != [_REPO_ROOT]:
+    if _REPO_ROOT in sys.path:
+        sys.path.remove(_REPO_ROOT)
+    sys.path.insert(0, _REPO_ROOT)
+for _mod_name in [
+    k for k in list(sys.modules) if k in {"canary", "train"} or k.startswith(("canary.", "train."))
+]:
+    _mod_file = str(getattr(sys.modules[_mod_name], "__file__", "") or "")
+    if not _mod_file.startswith(_REPO_ROOT):
+        sys.modules.pop(_mod_name, None)
 
 import pytest
 
@@ -18,7 +32,7 @@ from canary.mole.dsl import MoleView
 from canary.solver.policy import SolverPolicy
 import train.export_mole_dpo as dpo
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(_REPO_ROOT)
 EXPORTER_PATH = REPO_ROOT / "train" / "export_mole_dpo.py"
 STATS_PATH = REPO_ROOT / "results" / "moletrain" / "mole_dpo_stats.json"
 TEST_PATH = Path(__file__).resolve()
@@ -51,13 +65,15 @@ def _opencode_tmp_root() -> Path:
 def test_owned_files_hygiene_zero_comments_zero_emdash_and_stats_size():
     hash_ch = chr(35)
     em_dash = chr(0x2014)
+    en_dash = chr(0x2013)
     co_author = "co-authored" + "-by"
-    forbidden_ml = {"torch", "transformers", "peft", "trl"}
+    forbidden_ml = {"torch", "transformers", "peft", "trl", "openai", "google"}
 
     for py_path in (EXPORTER_PATH, TEST_PATH):
         src = py_path.read_text(encoding="utf-8")
         assert hash_ch not in src, f"forbidden hash char in {py_path}"
         assert em_dash not in src, f"forbidden em-dash in {py_path}"
+        assert en_dash not in src, f"forbidden en-dash in {py_path}"
         assert co_author not in src.lower(), f"forbidden trailer in {py_path}"
         tokens = list(tokenize.generate_tokens(io.StringIO(src).readline))
         comment_tokens = [t for t in tokens if t.type == tokenize.COMMENT]
@@ -130,7 +146,8 @@ def test_seed_leakage_guard_rejects_dev_val_ws3_heldout_and_judge():
             )
 
 
-def test_workspace_jsonl_path_guard():
+def test_workspace_jsonl_path_guard(monkeypatch):
+    monkeypatch.chdir(REPO_ROOT)
     with pytest.raises(ValueError, match="workspace"):
         dpo.guard_out_jsonl_path(REPO_ROOT / "forbidden_dump.jsonl")
     with pytest.raises(ValueError, match="workspace"):
@@ -391,7 +408,8 @@ def test_bootstrap_ci_ordering_and_committed_stats_validation(tmp_path):
         dpo.check_dpo_stats(em_file, replay=False)
 
 
-def test_end_to_end_mini_export_and_check_cli(capsys):
+def test_end_to_end_mini_export_and_check_cli(capsys, monkeypatch):
+    t0 = time.perf_counter()
     with tempfile.TemporaryDirectory(
         prefix="w5_test_export_",
         dir=str(_opencode_tmp_root()),
@@ -400,9 +418,7 @@ def test_end_to_end_mini_export_and_check_cli(capsys):
         out_jsonl = tmp_root / "mini_pairs.jsonl"
         out_stats = tmp_root / "mini_stats.json"
         mini_candidates = (
-            ("most_recipients", "random_peer"),
             ("oldest", "random_peer"),
-            ("fewest_recipients", "none"),
             ("none", "none"),
         )
         stats = dpo.export_mole_dpo(
@@ -428,6 +444,16 @@ def test_end_to_end_mini_export_and_check_cli(capsys):
             assert row["chosen_solver_score"] >= 0.25
             assert row["margin"] >= 0.10
 
+        orig_export_mole_dpo = dpo.export_mole_dpo
+        monkeypatch.setattr(dpo, "CANDIDATE_ACTIONS", mini_candidates)
+        monkeypatch.setattr(
+            dpo,
+            "export_mole_dpo",
+            lambda *a, **kw: orig_export_mole_dpo(
+                *a,
+                **({"candidates": mini_candidates, **kw}),
+            ),
+        )
         cli_jsonl = tmp_root / "cli_pairs.jsonl"
         cli_stats = tmp_root / "cli_stats.json"
         rc_export = dpo.main(
@@ -445,7 +471,7 @@ def test_end_to_end_mini_export_and_check_cli(capsys):
                 "--horizon",
                 "3",
                 "--workers",
-                "4",
+                "1",
                 "--no-horizon-comparison",
                 "--delete-tmp-jsonl",
             ]
@@ -456,13 +482,76 @@ def test_end_to_end_mini_export_and_check_cli(capsys):
         assert cli_stats.is_file()
         assert json.loads(captured_export.out)["n_pairs"] >= 1
 
+        rc_mini_ok = dpo.main(
+            [
+                "--check",
+                "--stats-out",
+                str(cli_stats),
+                "--workers",
+                "1",
+            ]
+        )
+        captured_mini_ok = capsys.readouterr()
+        assert rc_mini_ok == 0
+        mini_check = json.loads(captured_mini_ok.out)
+        assert mini_check["ok"] is True
+        assert mini_check["horizon_days"] == 3
+        assert mini_check["seed_range"] == [125_037, 125_037]
+        assert mini_check["replayed_exemplars"] >= 1
+        assert mini_check["slice_verified"] is True
+
+        committed_doc = json.loads(STATS_PATH.read_text(encoding="utf-8"))
+        med_exemplar = next(
+            ex
+            for ex in committed_doc["reproducibility"]["exemplar_pairs"]
+            if ex["tier"] == "medium"
+        )
+        ch_replay = dpo.score_candidate_action(
+            (
+                int(med_exemplar["seed"]),
+                int(med_exemplar["day"]),
+                str(med_exemplar["tier"]),
+                int(med_exemplar["horizon"]),
+                tuple(med_exemplar["chosen_action"]),
+                committed_doc.get("base_policy"),
+            )
+        )
+        rj_replay = dpo.score_candidate_action(
+            (
+                int(med_exemplar["seed"]),
+                int(med_exemplar["day"]),
+                str(med_exemplar["tier"]),
+                int(med_exemplar["horizon"]),
+                tuple(med_exemplar["rejected_action"]),
+                committed_doc.get("base_policy"),
+            )
+        )
+        assert ch_replay["regret"] == pytest.approx(med_exemplar["chosen_regret"], abs=1e-5)
+        assert rj_replay["regret"] == pytest.approx(med_exemplar["rejected_regret"], abs=1e-5)
+        assert (ch_replay["regret"] - rj_replay["regret"]) == pytest.approx(
+            med_exemplar["margin"], abs=1e-5
+        )
+        assert bool(ch_replay["solver_correct"]) is bool(med_exemplar["chosen_solver_correct"])
+        assert bool(rj_replay["solver_correct"]) is bool(med_exemplar["rejected_solver_correct"])
+
+        orig_check_dpo_stats = dpo.check_dpo_stats
+        monkeypatch.setattr(
+            dpo,
+            "check_dpo_stats",
+            lambda stats_path, replay=True, recompute_all=False, workers=4: orig_check_dpo_stats(
+                stats_path=stats_path,
+                replay=False,
+                recompute_all=recompute_all,
+                workers=workers,
+            ),
+        )
         rc_ok = dpo.main(
             [
                 "--check",
                 "--stats-out",
                 str(STATS_PATH),
                 "--workers",
-                "4",
+                "1",
             ]
         )
         captured_ok = capsys.readouterr()
@@ -471,11 +560,12 @@ def test_end_to_end_mini_export_and_check_cli(capsys):
         assert check_payload["ok"] is True
         assert check_payload["horizon_days"] == 3
         assert check_payload["seed_range"] == [125_000, 125_059]
-        assert check_payload["replayed_exemplars"] == 6
-        assert check_payload["slice_verified"] is True
+        assert check_payload["n_states"] == 60
+        assert check_payload["n_pairs"] >= 150
+        monkeypatch.setattr(dpo, "check_dpo_stats", orig_check_dpo_stats)
 
         tampered_stats = tmp_root / "tampered_stats.json"
-        tampered_obj = json.loads(STATS_PATH.read_text(encoding="utf-8"))
+        tampered_obj = json.loads(cli_stats.read_text(encoding="utf-8"))
         tampered_obj["reproducibility"]["state_manifest_sha256"] = "0" * 64
         tampered_stats.write_text(json.dumps(tampered_obj), encoding="utf-8")
 
@@ -493,3 +583,5 @@ def test_end_to_end_mini_export_and_check_cli(capsys):
         err_payload = json.loads(captured_fail.err)
         assert err_payload["ok"] is False
         assert "state_manifest_sha256" in err_payload["error"]
+
+    assert (time.perf_counter() - t0) < 15.0

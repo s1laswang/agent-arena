@@ -16,13 +16,13 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from canary.gemini import claim_audit_carbon as rcac
 from canary.gemini import lab_client
 from canary.llm import register_script
-from scripts import run_claim_audit_carbon as rcac
 
 SHEET_PATH = REPO_ROOT / "docs" / "gemini" / "validation.md"
 CONTEXT_PATH = REPO_ROOT / "docs" / "gemini" / "validation_context.md"
-ARTIFACT_DIR = REPO_ROOT / "results" / "gemini_roles" / "failure_analyst" / "claim-audit-carbon"
+ARTIFACT_DIR = REPO_ROOT / "results" / "gemini" / "roles_carbon" / "failure_analyst" / "claim-audit-carbon"
 COMMIT_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
 
 
@@ -192,6 +192,7 @@ def test_cli_stub_end_to_end_keyless_never_mutates_inputs(
     assert meta["role"] == "failure_analyst"
     assert meta["subrole"] == "atlas_claim_audit_carbon"
     assert meta["stub"] is True
+    assert meta["n_samples"] == 30
     assert meta["n_claims"] == 30
     assert meta["n_episodes_packed"] == 30
     assert meta["agree"] + meta["disagree"] + meta["unsure"] == 30
@@ -243,8 +244,11 @@ def test_committed_claim_audit_carbon_artifact_provenance_and_reverification() -
     assert meta["source"] == "llm"
     assert meta["auditor"] == "gemini-4-carbon (automated LLM audit, not human)"
     assert meta["thinking_level"] in ("low", "medium", "high")
+    assert meta["n_samples"] == 30
     assert meta["n_episodes_packed"] == 30
     assert meta["n_claims"] == 30
+    assert "canary.gemini.claim_audit_carbon" in meta["command"]
+    assert "results/gemini/roles_carbon/failure_analyst/claim-audit-carbon" in meta["command"]
     assert isinstance(meta["agree"], int)
     assert isinstance(meta["disagree"], int)
     assert isinstance(meta["unsure"], int)
@@ -280,7 +284,7 @@ def test_committed_claim_audit_carbon_artifact_provenance_and_reverification() -
 
 def test_owned_files_have_no_comments_unicode_dashes_or_secrets() -> None:
     py_targets = [
-        REPO_ROOT / "scripts" / "run_claim_audit_carbon.py",
+        REPO_ROOT / "canary" / "gemini" / "claim_audit_carbon.py",
         REPO_ROOT / "tests" / "test_gemini_lab_claim_audit_carbon.py",
     ]
     for path in py_targets:

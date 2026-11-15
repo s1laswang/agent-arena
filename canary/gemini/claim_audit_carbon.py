@@ -13,7 +13,7 @@ import sys
 import time
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -32,7 +32,7 @@ AUDITOR_LABEL = "gemini-4-carbon (automated LLM audit, not human)"
 
 DEFAULT_SHEET_PATH = Path("docs/gemini/validation.md")
 DEFAULT_CONTEXT_PATH = Path("docs/gemini/validation_context.md")
-DEFAULT_OUT_DIR = Path("results/gemini_roles/failure_analyst/claim-audit-carbon")
+DEFAULT_OUT_DIR = Path("results/gemini/roles_carbon/failure_analyst/claim-audit-carbon")
 
 H1 = chr(35)
 H2 = chr(35) * 2
@@ -1287,6 +1287,7 @@ def run_claim_audit(
         "thinking_level": effective_thinking,
         "validation_sheet": sheet_rel,
         "validation_context": ctx_rel,
+        "n_samples": cnt["n_claims"],
         "n_episodes_packed": cnt["n_claims"],
         "n_claims": cnt["n_claims"],
         "agree": cnt["agree"],
@@ -1371,7 +1372,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     raw_argv = argv if argv is not None else sys.argv[1:]
-    cmd_parts = ["PYTHONPATH=.", shlex.quote(sys.executable), "scripts/run_claim_audit_carbon.py"] + [
+    cmd_parts = ["PYTHONPATH=.", shlex.quote(sys.executable), "-m", "canary.gemini.claim_audit_carbon"] + [
         shlex.quote(x) for x in raw_argv
     ]
     cmd_str = " ".join(cmd_parts)

@@ -64,3 +64,5 @@ Arena CEO decision 00:25: keep R2 (v3-8k second seed); S7's 7B gets A100s only a
 03:35: X2 box 1 = 68bbe201 (freed after its evals; CEO OK). v3-8k s3 on f4378173 keeps running and is NOT stopped for X2.
 
 03:45: X1 switched back to Gemini KEY 1 (sha256[:10] 33b86305b3) in 18acfa5d:/root/x1/.env (CEO: key 1 carbon idle, key 2 has its own low limit); root-only, verified by hash, never printed. X1 stops 05:40; key 1 then reserved for the judge rehearsal.
+
+03:50: X2 DAgger started (session "DAgger round 1 for Canary tiebreaker"): box 1 = 68bbe201 (vLLM + v3-4k s0 rollout at 4k on TRAIN seeds as a pipeline check, then half of the DAgger held-out eval ~05:00–06:30); box 2 = e9ea8b2e (v3-4k s0 rollouts at 8k, 300 eps, TRAIN seeds 170000+, then relabel + SFT). f4378173 NOT needed; v3-8k s3 keeps running. X2 copies off by 07:15.

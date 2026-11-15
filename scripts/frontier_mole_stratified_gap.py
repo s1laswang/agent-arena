@@ -9,8 +9,10 @@ import argparse
 import json
 import math
 import os
+import random
 import re
 import sys
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -21,11 +23,768 @@ if str(ROOT) not in sys.path:
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from canary.analysis.gap import load_runs, mean_ci
+try:
+    from pydantic_core import from_json as _fast_json_loads
+except ImportError:
+    _fast_json_loads = json.loads
+
+import canary
+from canary.analysis.gap import mean_ci
 from canary.env import Env
 from canary.mole.dsl import DEFAULT_STRATEGY
-from canary.rules import TIERS_VERSION, TRACKS, tier_params
-from paired_v13 import _P_CACHE, post_expected
+from canary.rules import TIERS_VERSION, TRACKS, tier_params, tier_params_for_episode
+from canary.solver.belief import Doc, _fallback, behaviour_logliks, leak_loglik
+from canary.solver.policy import SolverPolicy
+from canary.text.facts import EmployeeFacts, PublicDayFacts
+from canary.text.template import (
+    SIGNALS as _IV_SIGNALS,
+    TOPICS as _IV_TOPICS,
+    TemplateProvider,
+    _ANSWERS as _IV_ANSWERS,
+    _fill as _iv_fill,
+)
+from canary.types import ToolResult
+from canary.world import world_seed
+
+_SHARED_CACHE: dict[str, dict[Any, Any]] = vars(canary).setdefault("_frontier_v14_cache", {})
+_BASE_ENV_CACHE: dict[
+    tuple[str, int, int],
+    tuple[
+        Env,
+        tuple[EmployeeFacts, ...],
+        ToolResult,
+        dict[str, str],
+        str,
+        tuple[str, ...],
+        tuple[float, float, float],
+        Any,
+    ],
+] = _SHARED_CACHE.setdefault("base_env_proto_v5", {})
+_DAY_MSG_CACHE: dict[tuple[Any, ...], tuple[dict[str, Any], ...]] = _SHARED_CACHE.setdefault(
+    "day_messages", {}
+)
+_IV_ANS_CACHE: dict[tuple[Any, ...], str] = _SHARED_CACHE.setdefault("iv_answers", {})
+_IV_RES_CACHE: dict[tuple[Any, ...], ToolResult] = _SHARED_CACHE.setdefault("iv_results", {})
+_POOL_CACHE: dict[
+    tuple[str, str, tuple[tuple[str, int, int], ...]],
+    list[tuple[str, dict[str, Any]]],
+] = _SHARED_CACHE.setdefault("indexed_pools", {})
+_WORLD_PASSIVE_CACHE: dict[tuple[str, str, int], dict[str, Any]] = _SHARED_CACHE.setdefault(
+    "world_passive_profiles", {}
+)
+_POSTERIOR_BY_STEPS: dict[int, tuple[object, float | None]] = _SHARED_CACHE.setdefault(
+    "posterior_by_steps", {}
+)
+
+_BASE_TEMPLATE_PROVIDER = TemplateProvider()
+_MSG_TOOLS: frozenset[str] = frozenset({"search_messages", "read_message"})
+_DUMMY_FACTS = PublicDayFacts("hard", 0, 1, None, (), (), None, "neutral", ())
+
+
+def _noop_log(*_args: Any, **_kwargs: Any) -> None:
+    return None
+
+
+class _ReplayTemplateProvider:
+    name = "template"
+    __slots__ = (
+        "need_messages",
+        "need_interview_text",
+        "need_logs",
+        "need_future_rng",
+        "count_mole_logs_only",
+    )
+
+    def __init__(
+        self,
+        need_messages: bool = True,
+        need_interview_text: bool = True,
+        need_logs: bool = True,
+        need_future_rng: bool = True,
+        count_mole_logs_only: bool = False,
+    ) -> None:
+        self.need_messages = need_messages
+        self.need_interview_text = need_interview_text
+        self.need_logs = need_logs
+        self.need_future_rng = need_future_rng
+        self.count_mole_logs_only = count_mole_logs_only
+
+    def day_messages(self, facts: PublicDayFacts) -> Any:
+        if not self.need_messages:
+            return ()
+        dkey = tuple(
+            (d.get("doc_id"), d.get("title"), tuple(d.get("recipients", ())))
+            for d in facts.docs[:3]
+        )
+        key = (facts.tier, facts.seed, facts.day, dkey)
+        got = _DAY_MSG_CACHE.get(key)
+        if got is None:
+            got = tuple(_BASE_TEMPLATE_PROVIDER.day_messages(facts))
+            if len(_DAY_MSG_CACHE) >= 4096:
+                _DAY_MSG_CACHE.clear()
+            _DAY_MSG_CACHE[key] = got
+        return got
+
+    def interview_answer(
+        self,
+        facts: PublicDayFacts,
+        employee: str,
+        topic: str,
+        signal: str,
+    ) -> str:
+        if not self.need_interview_text:
+            return ""
+        if topic not in _IV_TOPICS or signal not in _IV_SIGNALS:
+            return _BASE_TEMPLATE_PROVIDER.interview_answer(facts, employee, topic, signal)
+        mine = [d for d in facts.docs if employee in d.get("recipients", ())] or list(facts.docs)
+        doc = mine[0].get("title", "the latest brief") if mine else "the latest team brief"
+        key = (facts.tier, facts.seed, facts.day, employee, topic, signal, doc)
+        got = _IV_ANS_CACHE.get(key)
+        if got is None:
+            got = _BASE_TEMPLATE_PROVIDER.interview_answer(facts, employee, topic, signal)
+            if len(_IV_ANS_CACHE) >= 16384:
+                _IV_ANS_CACHE.clear()
+            _IV_ANS_CACHE[key] = got
+        return got
+
+
+_NOOP_REPLAY_PROVIDER = _ReplayTemplateProvider(
+    need_messages=False,
+    need_interview_text=False,
+    need_logs=False,
+    need_future_rng=False,
+    count_mole_logs_only=False,
+)
+
+
+def _make_replay_env(tier: str, seed: int, provider: _ReplayTemplateProvider) -> Env:
+    if tier in TRACKS:
+        return Env(tier, seed, text_provider=provider)
+    ws = world_seed(tier, seed)
+    ckey = (tier, seed, ws)
+    cached = _BASE_ENV_CACHE.get(ckey)
+    if cached is None:
+        proto = Env(tier, seed, text_provider=_NOOP_REPLAY_PROVIDER)
+        emp_facts = tuple(
+            EmployeeFacts(e.id, e.name, e.dept, e.role, e.clearance)
+            for e in proto._world.employees
+        )
+        emp_list_out = []
+        for e in proto._world.employees:
+            ed = {"id": e.id, "name": e.name, "dept": e.dept, "role": e.role}
+            if e.clearance is not None:
+                ed["clearance"] = e.clearance
+            emp_list_out.append(ed)
+        emp_list_res = ToolResult(True, {"employees": emp_list_out})
+        emp_dept_map = {e.id: e.dept for e in proto._world.employees}
+        decoy_mood = "angry" if proto._world.decoy else "neutral"
+        others_base = tuple(
+            x
+            for x in proto._ids
+            if x != proto._world.mole and x != proto._world.decoy
+        )
+        tp0 = proto.p
+        exp_consts = (
+            math.exp(-tp0.log_rate_mole) if tp0.log_rate_mole > 0 else 1.0,
+            math.exp(-tp0.log_rate_benign) if tp0.log_rate_benign > 0 else 1.0,
+            math.exp(-tp0.framing_rate) if (tp0.framing and tp0.framing_rate > 0) else 1.0,
+        )
+        if len(_BASE_ENV_CACHE) >= 256:
+            _BASE_ENV_CACHE.clear()
+        cached = (proto, emp_facts, emp_list_res, emp_dept_map, decoy_mood, others_base, exp_consts, None)
+        _BASE_ENV_CACHE[ckey] = cached
+        if proto._world.mole_strategy is None:
+            pdays: dict[int, tuple[Any, ...]] = {}
+            sim_box: list[Any] = [None, 0]
+            mole_id = proto._world.mole
+
+            def _get_passive_day(
+                target_d: int,
+                _tier: str = tier,
+                _seed: int = seed,
+                _pdays: dict[int, tuple[Any, ...]] = pdays,
+                _box: list[Any] = sim_box,
+                _mole: str = mole_id,
+            ) -> tuple[Any, ...]:
+                got_p = _pdays.get(target_d)
+                if got_p is not None:
+                    return got_p
+                s_env = _box[0]
+                if s_env is None:
+                    s_prov = _ReplayTemplateProvider(
+                        need_messages=False,
+                        need_interview_text=False,
+                        need_logs=True,
+                        need_future_rng=True,
+                    )
+                    s_env = _make_replay_env(_tier, _seed, s_prov)
+                    s_env._world_diverged = True
+                    _box[0] = s_env
+                cur_done = int(_box[1])
+                while cur_done < target_d:
+                    d_sim = cur_done + 1
+                    b_docs = len(s_env.docs)
+                    b_feed = len(s_env._feed)
+                    s_env._t_advance_day({})
+                    lk = dict(s_env._feed[-1]) if len(s_env._feed) > b_feed else None
+                    lgs = tuple(s_env._by_day_ref.get(d_sim, ()))
+                    mlc = sum(1 for r in lgs if r["employee"] == _mole)
+                    rst = s_env._dyn.getstate()
+                    ndocs = tuple(
+                        dict(x, recipients=list(x["recipients"])) for x in s_env.docs[b_docs:]
+                    )
+                    ndids = tuple(x["doc_id"] for x in ndocs)
+                    _pdays[d_sim] = (lk, lgs, mlc, rst, ndocs, ndids)
+                    cur_done = d_sim
+                _box[1] = cur_done
+                return _pdays[target_d]
+
+            cached = (
+                proto,
+                emp_facts,
+                emp_list_res,
+                emp_dept_map,
+                decoy_mood,
+                others_base,
+                exp_consts,
+                _get_passive_day,
+            )
+            _BASE_ENV_CACHE[ckey] = cached
+    proto, emp_facts, emp_list_res, emp_dept_map, decoy_mood, others_base, exp_consts, get_passive_day = cached
+    w = proto._world
+    env = Env.__new__(Env)
+    env.tier = tier
+    env.seed = seed
+    env.p = proto.p
+    env._world = w
+    env._dyn = random.Random(w.world_seed ^ 1)
+    env.provider = provider
+    env._ids = list(proto._ids)
+    env._idset = proto._idset
+    env.day = 1
+    env.V = 1.0
+    env._costs = 0.0
+    env._done = False
+    env._end_reason = None
+    env._accused = None
+    env._correct = False
+    env._lock = threading.RLock()
+    env._actions_today = 0
+    env._canaries_today = 0
+    env._restricted = set()
+    docs = [dict(d, recipients=list(d["recipients"])) for d in proto.docs]
+    env.docs = docs
+    env._doc_by_id = {d["doc_id"]: d for d in docs}
+    env._held = {e: list(h) for e, h in proto._held.items()}
+    env._leaked = set()
+    env._feed = []
+    env._logs = []
+    logs_by_day: dict[int, Any] = {}
+    env._by_day_ref = logs_by_day
+    env._mole_log_count = 0
+    env._world_diverged = get_passive_day is None
+    env._passive_rng_day = 0
+    env._messages = {}
+    env._msg_order = []
+    env._history = []
+    env._ledger = []
+    env._canary_ids = []
+    env._last_leak_day = 0
+    env._log = _noop_log
+    exp_m_m, exp_m_b, exp_m_f = exp_consts
+    n_others = len(others_base)
+    k_others = n_others.bit_length()
+
+    def _fast_facts(
+        d: int,
+        _w: Any = w,
+        _tier: str = tier,
+        _emps: tuple[EmployeeFacts, ...] = emp_facts,
+        _mood: str = decoy_mood,
+        _env: Env = env,
+        _prov: _ReplayTemplateProvider = provider,
+    ) -> PublicDayFacts:
+        if not _prov.need_messages and not _prov.need_interview_text:
+            return _DUMMY_FACTS
+        return PublicDayFacts(
+            tier=_tier,
+            seed=_w.world_seed,
+            day=d,
+            company=_w.company,
+            employees=_emps,
+            docs=tuple(
+                {
+                    "doc_id": x["doc_id"],
+                    "title": x["title"],
+                    "day": x["day"],
+                    "recipients": list(x["recipients"]),
+                }
+                for x in _env.docs
+                if x["day"] == d
+            ),
+            decoy=_w.decoy,
+            decoy_mood=_mood,
+            restricted=tuple(sorted(_env._restricted)),
+        )
+
+    def _fast_list_employees(_a: dict[str, Any], _res: ToolResult = emp_list_res) -> ToolResult:
+        return _res
+
+    def _fast_list_documents(a: dict[str, Any], _env: Env = env) -> ToolResult:
+        lo, hi = a.get("day_from", 1), a.get("day_to", _env.day)
+        return ToolResult(True, {"documents": [x for x in _env.docs if lo <= x["day"] <= hi]})
+
+    def _fast_read_access_logs(
+        a: dict[str, Any],
+        _by_day: dict[int, list[dict[str, Any]]] = logs_by_day,
+    ) -> ToolResult:
+        emp = a.get("employee")
+        lo, hi = a["day_from"], a["day_to"]
+        if lo == hi:
+            day_logs = _by_day.get(lo)
+            if not day_logs:
+                return ToolResult(True, {"logs": []})
+            if emp is None:
+                return ToolResult(True, {"logs": list(day_logs)})
+            return ToolResult(True, {"logs": [r for r in day_logs if r["employee"] == emp]})
+        out: list[dict[str, Any]] = []
+        for d_i in range(lo, hi + 1):
+            day_logs = _by_day.get(d_i)
+            if day_logs:
+                if emp is None:
+                    out.extend(day_logs)
+                else:
+                    out.extend(r for r in day_logs if r["employee"] == emp)
+        return ToolResult(True, {"logs": out})
+
+    def _fast_check_leak_feed(_a: dict[str, Any], _env: Env = env) -> ToolResult:
+        d_now = _env.day
+        return ToolResult(True, {"items": [f for f in _env._feed if f["surfaced_day"] <= d_now]})
+
+    def _fast_interview(
+        a: dict[str, Any],
+        _env: Env = env,
+        _prov: _ReplayTemplateProvider = provider,
+        _tier: str = tier,
+        _w: Any = w,
+        _depts: dict[str, str] = emp_dept_map,
+    ) -> ToolResult:
+        emp, topic = a["employee"], a["topic"]
+        if topic not in _IV_TOPICS:
+            return ToolResult(False, {"detail": f"topic must be one of {list(_IV_TOPICS)}"}, "invalid arguments")
+        if not _prov.need_interview_text:
+            return ToolResult(True, {"employee": emp, "topic": topic, "answer": ""})
+        d_now = _env.day
+        first_any: str | None = None
+        doc_title: str | None = None
+        docs_now = _env.docs
+        i_doc = len(docs_now) - 1
+        while i_doc >= 0 and docs_now[i_doc]["day"] == d_now:
+            i_doc -= 1
+        for j_doc in range(i_doc + 1, len(docs_now)):
+            x = docs_now[j_doc]
+            if first_any is None:
+                first_any = x["title"]
+            if emp in x["recipients"]:
+                doc_title = x["title"]
+                break
+        if doc_title is None:
+            doc_title = first_any if first_any is not None else "the latest team brief"
+        is_m = emp == _w.mole
+        ikey = (_tier, _w.world_seed, d_now, emp, topic, is_m, doc_title)
+        got = _IV_RES_CACHE.get(ikey)
+        if got is None:
+            p_ev = _env.p.p_evasive_innocent * (_env.p.interview_lr if is_m else 1.0)
+            r = random.Random(f"{_w.world_seed}:iv:{emp}:{topic}:{d_now}")
+            signal = "evasive" if r.random() < p_ev else "cooperative"
+            trng = random.Random(f"text:{_tier}:{_w.world_seed}:{d_now}:{emp}:{topic}")
+            ans = _iv_fill(
+                trng,
+                trng.choice(_IV_ANSWERS[(topic, signal)]),
+                doc=doc_title,
+                dept=_depts.get(emp, "my team"),
+            )
+            got = ToolResult(True, {"employee": emp, "topic": topic, "answer": ans})
+            if len(_IV_RES_CACHE) >= 16384:
+                _IV_RES_CACHE.clear()
+            _IV_RES_CACHE[ikey] = got
+        return got
+
+    def _fast_advance_day(
+        _args: dict[str, Any],
+        _env: Env = env,
+        _prov: _ReplayTemplateProvider = provider,
+        _others: tuple[str, ...] = others_base,
+        _by_day: dict[int, Any] = logs_by_day,
+        _lm: float = exp_m_m,
+        _lb: float = exp_m_b,
+        _lf: float = exp_m_f,
+        _no: int = n_others,
+        _ko: int = k_others,
+        _get_pday: Any = get_passive_day,
+    ) -> ToolResult:
+        p, w_obj, d = _env.p, _env._world, _env.day
+        held_map = _env._held
+        doc_by_id = _env._doc_by_id
+        if not _env._world_diverged and _get_pday is not None:
+            lk_item, lgs_d, mlc_d, _rst, ndocs_d, ndids_d = _get_pday(d)
+            if lk_item is not None:
+                _env._leaked.add(lk_item["doc_id"])
+                _env._feed.append(dict(lk_item))
+                _env._charge(p.leak_damage)
+                _env._last_leak_day = d
+            if _prov.need_logs:
+                _by_day[d] = lgs_d
+                _env._logs.extend(lgs_d)
+            elif _prov.count_mole_logs_only:
+                _env._mole_log_count += mlc_d
+            _env._passive_rng_day = d
+            if _prov.need_messages:
+                for m in _prov.day_messages(_env._facts(d)):
+                    m_copy = dict(m)
+                    if m_copy["id"] not in _env._messages:
+                        _env._messages[m_copy["id"]] = m_copy
+                        _env._msg_order.append(m_copy["id"])
+            if d >= p.n_days:
+                _env._end("horizon")
+                return ToolResult(True, {"closed_day": d, "episode_over": True})
+            next_d = d + 1
+            _env.day = next_d
+            _env._actions_today = 0
+            _env._canaries_today = 0
+            docs_list = _env.docs
+            for nd in ndocs_d:
+                nd_copy = dict(nd, recipients=list(nd["recipients"]))
+                docs_list.append(nd_copy)
+                doc_by_id[nd_copy["doc_id"]] = nd_copy
+                for r in nd_copy["recipients"]:
+                    held_map[r].append(nd_copy["doc_id"])
+            return ToolResult(
+                True,
+                {
+                    "closed_day": d,
+                    "day": next_d,
+                    "V": _env.visible_V(),
+                    "new_documents": list(ndids_d),
+                },
+            )
+        rng = _env._dyn
+        rand = rng.random
+        gb = rng.getrandbits
+        mole = w_obj.mole
+        decoy = w_obj.decoy
+        if w_obj.mole_strategy is None:
+            lo = d - p.leak_window_days + 1
+            leaked_set = _env._leaked
+            leakable = [
+                doc_by_id[x]
+                for x in held_map[mole]
+                if x not in leaked_set and lo <= doc_by_id[x]["day"] <= d
+            ]
+            leak: str | None = None
+            if leakable and rand() < p.p_leak:
+                if p.careful_mole:
+                    n_emp = p.n_employees
+                    w_sel = [
+                        1.0 - len(x["recipients"]) / n_emp if x["is_canary"] else 1.0
+                        for x in leakable
+                    ]
+                    if sum(w_sel) > 0:
+                        leak = rng.choices([x["doc_id"] for x in leakable], weights=w_sel)[0]
+                else:
+                    leak = rng.choices([x["doc_id"] for x in leakable], weights=[1.0] * len(leakable))[0]
+            frame_tgt: str | None = None
+        else:
+            dec = _env._mole_decide(_env._mole_view(d))
+            leak = dec.get("leak")
+            frame_tgt = dec.get("frame")
+        if leak is not None:
+            doc = doc_by_id[leak]
+            delta = rng.choice(p.delay_choices)
+            item: dict[str, Any] = {"surfaced_day": d + delta, "doc_id": leak, "title": doc["title"]}
+            if doc["is_canary"]:
+                true_v = next(k for k, v in doc["variants"].items() if mole in v)
+                others_v = sorted(k for k in doc["variants"] if k != true_v)
+                if p.fingerprint_accuracy < 1.0 and others_v and rand() >= p.fingerprint_accuracy:
+                    item["variant"] = rng.choice(others_v)
+                else:
+                    item["variant"] = true_v
+            _env._leaked.add(leak)
+            _env._feed.append(item)
+            _env._charge(p.leak_damage)
+            _env._last_leak_day = d
+        if _env._restricted:
+            _env._cost(p.restrict_cost_per_day * len(_env._restricted))
+        if _prov.need_logs:
+            ah_m, ah_b = p.p_after_hours_mole, p.p_after_hours_benign
+            logs: list[dict[str, Any]] = []
+            for emp_id in _env._ids:
+                held = held_map[emp_id]
+                nh = len(held)
+                if not nh:
+                    continue
+                is_m = emp_id == mole
+                L = _lm if is_m else _lb
+                if L < 1.0:
+                    prod = rand()
+                    cnt = 0
+                    while prod > L:
+                        cnt += 1
+                        prod *= rand()
+                    if cnt:
+                        p_ah = ah_m if is_m else ah_b
+                        kh = nh.bit_length()
+                        for _ in range(cnt):
+                            ri = gb(kh)
+                            while ri >= nh:
+                                ri = gb(kh)
+                            logs.append(
+                                {
+                                    "day": d,
+                                    "employee": emp_id,
+                                    "doc_id": held[ri],
+                                    "after_hours": rand() < p_ah,
+                                }
+                            )
+            if p.framing and _lf < 1.0:
+                f_share = p.framing_decoy_share
+                prod = rand()
+                fcnt = 0
+                while prod > _lf:
+                    fcnt += 1
+                    prod *= rand()
+                for _ in range(fcnt):
+                    if decoy is not None and rand() < f_share:
+                        tgt = decoy
+                    else:
+                        ri = gb(_ko)
+                        while ri >= _no:
+                            ri = gb(_ko)
+                        tgt = _others[ri]
+                    th = held_map[tgt]
+                    nth = len(th)
+                    if nth:
+                        kth = nth.bit_length()
+                        ri = gb(kth)
+                        while ri >= nth:
+                            ri = gb(kth)
+                        logs.append(
+                            {
+                                "day": d,
+                                "employee": tgt,
+                                "doc_id": th[ri],
+                                "after_hours": True,
+                            }
+                        )
+            tgt = frame_tgt
+            if tgt is not None and tgt in _env._idset and tgt != mole and held_map[tgt]:
+                th = held_map[tgt]
+                nth = len(th)
+                kth = nth.bit_length()
+                ri = gb(kth)
+                while ri >= nth:
+                    ri = gb(kth)
+                logs.append(
+                    {
+                        "day": d,
+                        "employee": tgt,
+                        "doc_id": th[ri],
+                        "after_hours": True,
+                    }
+                )
+            logs.sort(key=lambda r: (r["employee"], r["doc_id"], r["after_hours"]))
+            _by_day[d] = logs
+            _env._logs.extend(logs)
+        elif _prov.need_future_rng or _prov.count_mole_logs_only:
+            count_mole = _prov.count_mole_logs_only
+            for emp_id in _env._ids:
+                held = held_map[emp_id]
+                nh = len(held)
+                if not nh:
+                    continue
+                is_m = emp_id == mole
+                L = _lm if is_m else _lb
+                if L < 1.0:
+                    prod = rand()
+                    cnt = 0
+                    while prod > L:
+                        cnt += 1
+                        prod *= rand()
+                    if cnt:
+                        kh = nh.bit_length()
+                        for _ in range(cnt):
+                            ri = gb(kh)
+                            while ri >= nh:
+                                ri = gb(kh)
+                            rand()
+                        if count_mole and is_m:
+                            _env._mole_log_count += cnt
+            if p.framing and _lf < 1.0:
+                f_share = p.framing_decoy_share
+                prod = rand()
+                fcnt = 0
+                while prod > _lf:
+                    fcnt += 1
+                    prod *= rand()
+                for _ in range(fcnt):
+                    if decoy is not None and rand() < f_share:
+                        tgt = decoy
+                    else:
+                        ri = gb(_ko)
+                        while ri >= _no:
+                            ri = gb(_ko)
+                        tgt = _others[ri]
+                    nth = len(held_map[tgt])
+                    if nth:
+                        kth = nth.bit_length()
+                        ri = gb(kth)
+                        while ri >= nth:
+                            ri = gb(kth)
+            tgt = frame_tgt
+            if tgt is not None and tgt in _env._idset and tgt != mole:
+                nth = len(held_map[tgt])
+                if nth:
+                    kth = nth.bit_length()
+                    ri = gb(kth)
+                    while ri >= nth:
+                        ri = gb(kth)
+        if _prov.need_messages:
+            for m in _prov.day_messages(_env._facts(d)):
+                m_copy = dict(m)
+                if m_copy["id"] not in _env._messages:
+                    _env._messages[m_copy["id"]] = m_copy
+                    _env._msg_order.append(m_copy["id"])
+        if d >= p.n_days:
+            _env._end("horizon")
+            return ToolResult(True, {"closed_day": d, "episode_over": True})
+        next_d = d + 1
+        _env.day = next_d
+        _env._actions_today = 0
+        _env._canaries_today = 0
+        restr = _env._restricted
+        new_doc_ids: list[str] = []
+        docs_list = _env.docs
+        for raw in w_obj.planned_docs.get(next_d, ()):
+            did = raw["doc_id"]
+            recips = [r for r in raw["recipients"] if r not in restr] if restr else list(raw["recipients"])
+            ndoc = {
+                "doc_id": did,
+                "title": raw["title"],
+                "day": next_d,
+                "recipients": recips,
+                "is_canary": False,
+            }
+            docs_list.append(ndoc)
+            doc_by_id[did] = ndoc
+            for r in recips:
+                held_map[r].append(did)
+            new_doc_ids.append(did)
+        return ToolResult(
+            True,
+            {
+                "closed_day": d,
+                "day": next_d,
+                "V": _env.visible_V(),
+                "new_documents": new_doc_ids,
+            },
+        )
+
+    def _sync_diverged_rng(
+        _env: Env = env,
+        _get_pday: Any = get_passive_day,
+    ) -> None:
+        _env._world_diverged = True
+        pday_idx = _env._passive_rng_day
+        if pday_idx > 0 and _get_pday is not None:
+            _env._dyn.setstate(_get_pday(pday_idx)[3])
+
+    env._sync_diverged_rng = _sync_diverged_rng
+    env._facts = _fast_facts
+    env._t_list_employees = _fast_list_employees
+    env._t_list_documents = _fast_list_documents
+    env._t_read_access_logs = _fast_read_access_logs
+    env._t_check_leak_feed = _fast_check_leak_feed
+    env._t_interview = _fast_interview
+    env._t_advance_day = _fast_advance_day
+    return env
+
+
+def _replay_env_step(env: Env, tool: str, args: dict[str, Any]) -> dict[str, Any]:
+    if not getattr(env, "_world_diverged", True) and (
+        tool == "plant_canary" or tool == "restrict_access"
+    ):
+        env._sync_diverged_rng()
+    if args.__class__ is dict and not args:
+        if tool == "advance_day":
+            res = env._t_advance_day(args)
+        elif tool == "status":
+            res = env._t_status(args)
+        elif tool == "list_employees":
+            res = env._t_list_employees(args)
+        elif tool == "list_documents":
+            res = env._t_list_documents(args)
+        elif tool == "check_leak_feed" and env._actions_today < env.p.actions_per_day:
+            res = env._t_check_leak_feed(args)
+            env._actions_today += 1
+        else:
+            res = env._dispatch(tool, args)
+    else:
+        res = env._dispatch(tool, args)
+    env._history.append(None)
+    if not env.done and len(env._history) >= env.p.tool_call_cap:
+        env._end("tool_cap")
+    return {"ok": res.ok, "data": res.data, "error": res.error}
+
+
+def _load_indexed_pool(
+    pool_dir: Path,
+    pool_rel_prefix: str,
+) -> list[tuple[str, dict[str, Any]]]:
+    if not pool_dir.exists():
+        return []
+    resolved = pool_dir.resolve()
+    files: list[tuple[Path, tuple[str, ...]]] = []
+    for f in sorted(resolved.rglob("episodes.jsonl")):
+        rel_parts = f.relative_to(resolved).parts[:-1]
+        if any(x == "superseded" or x.startswith("v1.") or x.endswith("-smoke") for x in rel_parts):
+            continue
+        files.append((f, rel_parts))
+    sig = tuple(
+        (str(f), st.st_mtime_ns, st.st_size)
+        for f, _ in files
+        for st in (f.stat(),)
+    )
+    cache_key = (str(resolved), pool_rel_prefix, sig)
+    cached = _POOL_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    rows: list[tuple[str, dict[str, Any]]] = []
+    for f, rel_parts in files:
+        rel_dir = "/".join((pool_rel_prefix, *rel_parts)) if rel_parts else pool_rel_prefix
+        run_id = f.parent.name
+        nonempty = [ln for ln in f.read_bytes().splitlines() if ln.strip()]
+        if not nonempty:
+            continue
+        try:
+            parsed_eps = _fast_json_loads(b"[" + b",".join(nonempty) + b"]")
+        except ValueError:
+            parsed_eps = [_fast_json_loads(ln) for ln in nonempty]
+        for ep in parsed_eps:
+            meta = ep.get("meta") or {}
+            if meta.get("valid") is False:
+                continue
+            ep["meta"] = {**meta, "run_id": run_id}
+            rows.append((rel_dir, ep))
+    if len(_POOL_CACHE) >= 12:
+        _POOL_CACHE.clear()
+    _POOL_CACHE[cache_key] = rows
+    return rows
+
+
+def load_runs(root: str | Path = "data/runs") -> list[dict[str, Any]]:
+    root_path = Path(root)
+    return [ep for _, ep in _load_indexed_pool(root_path, "")]
 
 MAX_JSON_BYTES = 45_000
 EXPECTED_COMMITTED_V14_EPISODES = 472
@@ -261,14 +1020,41 @@ def is_clean_non_accuse_rc0_exit(ep: dict[str, Any], env_done: bool | None = Non
 
 
 def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
-    env = Env(str(ep["tier"]), int(ep["seed"]))
+    steps = ep.get("steps") or []
+    last_msg_idx = -1
+    last_log_idx = -1
+    last_adv_idx = -1
+    for i, st_i in enumerate(steps):
+        tl = st_i.get("tool")
+        if tl == "read_message":
+            last_msg_idx = i
+        elif tl == "search_messages" and st_i.get("result") is not None:
+            last_msg_idx = i
+        elif tl == "read_access_logs" and st_i.get("result") is not None:
+            last_log_idx = i
+        elif tl == "advance_day":
+            last_adv_idx = i
+    prov = _ReplayTemplateProvider(
+        need_messages=last_msg_idx >= 0,
+        need_interview_text=True,
+        need_logs=last_log_idx >= 0,
+        need_future_rng=last_adv_idx >= 0,
+    )
+    env = _make_replay_env(str(ep["tier"]), int(ep["seed"]), prov)
     step_mismatches = 0
     first_bad_step: int | None = None
     unwrapped_mcp_error_steps = 0
     detail_normalized_steps = 0
     truncated_steps_verified = 0
     client_only_steps = 0
-    for idx, st in enumerate(ep.get("steps") or []):
+    for idx, st in enumerate(steps):
+        if idx > last_msg_idx:
+            prov.need_messages = False
+        if idx > last_log_idx:
+            prov.need_logs = False
+        prov.need_future_rng = idx < last_adv_idx
+        raw_res = st.get("result")
+        prov.need_interview_text = raw_res is not None
         if is_client_only_step(st):
             client_only_steps += 1
             continue
@@ -277,20 +1063,25 @@ def replay_and_verify_episode(ep: dict[str, Any]) -> dict[str, Any]:
             if first_bad_step is None:
                 first_bad_step = idx
             continue
-        if str(st.get("tool")) not in ENV_TOOLS:
+        tname = str(st.get("tool"))
+        if tname not in ENV_TOOLS:
             step_mismatches += 1
             if first_bad_step is None:
                 first_bad_step = idx
             continue
-        r = env.call(str(st["tool"]), st.get("args") or {})
-        got_payload = {"ok": r.ok, "data": r.data, "error": r.error}
-        ok_step, flags = step_result_matches(st.get("result"), got_payload)
-        if flags["unwrapped_mcp_error"]:
-            unwrapped_mcp_error_steps += 1
-        if flags["detail_normalized"]:
-            detail_normalized_steps += 1
-        if flags["truncated_checked"] and ok_step:
-            truncated_steps_verified += 1
+        got_payload = _replay_env_step(env, tname, st.get("args") or {})
+        if raw_res is None:
+            ok_step = True
+        elif isinstance(raw_res, dict) and raw_res.get("ok") is True:
+            ok_step = raw_res == got_payload or _canon(got_payload) == _canon(raw_res)
+        else:
+            ok_step, flags = step_result_matches(raw_res, got_payload)
+            if flags["unwrapped_mcp_error"]:
+                unwrapped_mcp_error_steps += 1
+            if flags["detail_normalized"]:
+                detail_normalized_steps += 1
+            if flags["truncated_checked"] and ok_step:
+                truncated_steps_verified += 1
         if not ok_step:
             step_mismatches += 1
             if first_bad_step is None:
@@ -467,13 +1258,20 @@ def classify_solver_difficulty(tier: str, solver_final_day: int) -> str:
     return "late_or_stalled_isolation"
 
 
-def extract_seed_profile(
-    tier: str,
-    seed: int,
-    solver_ep: dict[str, Any],
-    pe_memo: dict[int, float] | None = None,
-) -> dict[str, Any]:
-    env = Env(tier, seed)
+def _extract_passive_world_profile(tier: str, seed: int) -> dict[str, Any]:
+    wkey = (TIERS_VERSION, str(tier), int(seed))
+    cached = _WORLD_PASSIVE_CACHE.get(wkey)
+    if cached is not None:
+        return cached
+
+    prov = _ReplayTemplateProvider(
+        need_messages=False,
+        need_interview_text=False,
+        need_logs=False,
+        need_future_rng=True,
+        count_mole_logs_only=True,
+    )
+    env = _make_replay_env(str(tier), int(seed), prov)
     w = env._world
     tp = env.p
     strat_obj = w.mole_strategy if w.mole_strategy is not None else DEFAULT_STRATEGY
@@ -504,9 +1302,9 @@ def extract_seed_profile(
     mole_doc_share = (len(mole_docs) / len(all_docs)) if all_docs else 0.0
 
     while not env.done:
-        env.call("advance_day", {})
+        _replay_env_step(env, "advance_day", {})
 
-    mole_log_count = sum(1 for lg in env._logs if lg["employee"] == w.mole)
+    mole_log_count = int(env._mole_log_count)
     realized_doc_access_density = float(mole_log_count) / float(tp.n_days)
     passive_leak_count = len(env._feed)
 
@@ -520,13 +1318,6 @@ def extract_seed_profile(
             dept_narrow_day = d
             break
 
-    sol_accused = solver_ep.get("accused")
-    sol_final_day = int(solver_ep["final_day"])
-    sol_accuse_day = sol_final_day if sol_accused is not None else None
-    sol_score = float(solver_ep["score"])
-    sol_pe = _eval_post_expected(solver_ep, pe_memo)
-    sol_correct = bool(solver_ep.get("correct"))
-
     mole_arch = classify_mole_archetype(
         tier=tier,
         same_dept_decoy=same_dept_decoy,
@@ -534,45 +1325,245 @@ def extract_seed_profile(
         passive_leak_count=passive_leak_count,
     )
     dept_stratum = classify_dept_stratum(tier=tier, mole_dept_size=mole_dept_size)
-    sol_stratum = classify_solver_difficulty(tier=tier, solver_final_day=sol_final_day)
+    base_prof = {
+        "seed": int(seed),
+        "mole_policy": mole_policy,
+        "mole_id": str(w.mole),
+        "decoy_id": str(w.decoy) if w.decoy is not None else None,
+        "mole_dept": str(m_emp.dept),
+        "mole_dept_size": mole_dept_size,
+        "mole_clearance": mole_clearance,
+        "clearance_peer_count": clearance_peer_count,
+        "same_dept_decoy": same_dept_decoy,
+        "decoy_doc_overlap_count": decoy_overlap,
+        "decoy_doc_overlap_share": decoy_overlap_share,
+        "mole_planned_docs": len(mole_docs),
+        "mole_doc_share": mole_doc_share,
+        "realized_doc_access_density": realized_doc_access_density,
+        "passive_leak_count": passive_leak_count,
+        "dept_narrow_day": dept_narrow_day,
+        "mole_archetype": mole_arch,
+        "dept_stratum": dept_stratum,
+    }
+    _WORLD_PASSIVE_CACHE[wkey] = base_prof
+    return base_prof
 
+
+def extract_seed_profile(
+    tier: str,
+    seed: int,
+    solver_ep: dict[str, Any],
+    pe_memo: dict[int, float] | None = None,
+) -> dict[str, Any]:
+    sol_accused = solver_ep.get("accused")
+    sol_final_day = int(solver_ep["final_day"])
+    sol_accuse_day = sol_final_day if sol_accused is not None else None
+    sol_score = float(solver_ep["score"])
+    sol_pe = _eval_post_expected(solver_ep, pe_memo)
+    sol_correct = bool(solver_ep.get("correct"))
+
+    base_prof = _extract_passive_world_profile(tier, seed)
+    sol_stratum = classify_solver_difficulty(tier=tier, solver_final_day=sol_final_day)
     return clean_json(
         {
-            "seed": int(seed),
-            "mole_policy": mole_policy,
-            "mole_id": str(w.mole),
-            "decoy_id": str(w.decoy) if w.decoy is not None else None,
-            "mole_dept": str(m_emp.dept),
-            "mole_dept_size": mole_dept_size,
-            "mole_clearance": mole_clearance,
-            "clearance_peer_count": clearance_peer_count,
-            "same_dept_decoy": same_dept_decoy,
-            "decoy_doc_overlap_count": decoy_overlap,
-            "decoy_doc_overlap_share": decoy_overlap_share,
-            "mole_planned_docs": len(mole_docs),
-            "mole_doc_share": mole_doc_share,
-            "realized_doc_access_density": realized_doc_access_density,
-            "passive_leak_count": passive_leak_count,
-            "dept_narrow_day": dept_narrow_day,
+            **base_prof,
             "solver_accuse_day": sol_accuse_day,
             "solver_final_day": sol_final_day,
             "solver_score": sol_score,
             "solver_post_expected": sol_pe,
             "solver_correct": sol_correct,
-            "mole_archetype": mole_arch,
-            "dept_stratum": dept_stratum,
             "solver_difficulty_stratum": sol_stratum,
         }
     )
 
 
+class _StepView:
+    __slots__ = ("tool", "day", "args", "result")
+
+    def __init__(self, d: dict[str, Any]) -> None:
+        self.tool = d.get("tool", "")
+        self.day = d.get("day", 0)
+        self.args = d.get("args") or {}
+        self.result = d.get("result")
+
+
+def _fast_p_accused(ep: dict[str, Any]) -> float | None:
+    steps = ep.get("steps") or []
+    acc_idx = -1
+    acc_emp: Any = None
+    last_feed_idx = -1
+    for i, st in enumerate(steps):
+        tl = st.get("tool")
+        if tl == "accuse":
+            acc_idx = i
+            acc_emp = (st.get("args") or {}).get("employee")
+            break
+        if tl == "check_leak_feed" and (st.get("result") or {}).get("ok", True):
+            last_feed_idx = i
+    if acc_idx < 0:
+        return None
+    sp = SolverPolicy(tier_params_for_episode(ep["tier"], steps[: acc_idx + 1]))
+    obs = sp.obs
+    o_docs = obs.docs
+    beh_steps: list[dict[str, Any]] = []
+    for i in range(acc_idx):
+        s = steps[i]
+        r = s.get("result") or {}
+        if not r.get("ok", True):
+            continue
+        tl = s.get("tool")
+        if tl == "check_leak_feed":
+            if i == last_feed_idx:
+                sp._ingest(_StepView(s))
+            continue
+        if tl == "read_access_logs":
+            if obs.employees:
+                beh_steps.append(s)
+            else:
+                sp._ingest(_StepView(s))
+            continue
+        if tl == "interview":
+            beh_steps.append(s)
+            continue
+        if tl == "list_documents":
+            data = r.get("data") or {}
+            docs_raw = data.get("documents")
+            if docs_raw is None:
+                docs_raw = data.get("docs") or ()
+            if isinstance(docs_raw, list):
+                for d in docs_raw:
+                    did = d["doc_id"]
+                    is_can = bool(d.get("is_canary"))
+                    if did in o_docs and not is_can:
+                        continue
+                    var = d.get("variants")
+                    if isinstance(var, dict) and var and all(isinstance(v, list) for v in var.values()):
+                        var = {e: lab for lab, es in var.items() for e in es}
+                    prev_var = o_docs[did].variants if did in o_docs else None
+                    o_docs[did] = Doc(
+                        did,
+                        int(d["day"]),
+                        frozenset(d.get("recipients", ())),
+                        is_can,
+                        dict(var) if isinstance(var, dict) else prev_var,
+                    )
+            else:
+                sp._ingest(_StepView(s))
+            continue
+        sp._ingest(_StepView(s))
+    if not obs.employees:
+        return None
+    obs.leak_timing_known = sp.v_drops_reveal_leaks()
+    P = sp.P
+    bt, ct, nt = sp.behaviour_temper, sp.choice_temper, sp.noleak_temper
+    emps = obs.employees
+    decoy = obs.decoy
+
+    seen_f: set[str] = set()
+    uniq_items = []
+    for it in sorted(obs.feed, key=lambda x: (x.surfaced_day, x.doc_id)):
+        if it.doc_id not in seen_f:
+            seen_f.add(it.doc_id)
+            uniq_items.append(it)
+
+    possible = set(emps)
+    if decoy is not None:
+        possible.discard(decoy)
+    fp_acc = getattr(P, "fingerprint_accuracy", 1.0)
+    surf_var_docs = []
+    for it in uniq_items:
+        doc = o_docs.get(it.doc_id)
+        if doc is None:
+            possible.clear()
+            break
+        possible &= doc.recipients
+        if it.variant and doc.variants:
+            surf_var_docs.append((it.doc_id, doc.variants))
+            k = len(set(doc.variants.values()))
+            if k <= 1 or fp_acc >= 1.0:
+                possible = {s for s in possible if doc.variants.get(s) == it.variant}
+            else:
+                possible = {s for s in possible if doc.variants.get(s) is not None}
+
+    if not possible:
+        post = _fallback(obs)
+        return round(post.get(acc_emp, 0.0), 3)
+
+    if len(possible) == 1:
+        only_s = next(iter(possible))
+        if leak_loglik(obs, only_s, P, ct, nt) == -math.inf:
+            post = _fallback(obs)
+            return round(post.get(acc_emp, 0.0), 3)
+        return 1.0 if only_s == acc_emp else 0.0
+
+    if bt > 0 and beh_steps:
+        for bs in beh_steps:
+            sp._ingest(_StepView(bs))
+
+    beh = behaviour_logliks(obs, P) if bt > 0 else {}
+    iv_ll: dict[str, float] = {}
+    if bt > 0 and obs.interviews:
+        pe = P.p_evasive_innocent
+        pm = min(0.999, pe * P.interview_lr)
+        l_ev = math.log(pm / pe)
+        l_co = math.log((1.0 - pm) / (1.0 - pe))
+        for who, ev in obs.interviews:
+            iv_ll[who] = iv_ll.get(who, 0.0) + (l_ev if ev else l_co)
+
+    docs_list = list(o_docs.items())
+    ll_cache: dict[Any, float] = {}
+    logs: dict[str, float] = {}
+    for s in emps:
+        if s not in possible:
+            logs[s] = -math.inf
+            continue
+        sig = (
+            tuple(did for did, doc in docs_list if s in doc.recipients),
+            tuple((did, vm.get(s)) for did, vm in surf_var_docs),
+        )
+        lp = ll_cache.get(sig)
+        if lp is None:
+            lp = leak_loglik(obs, s, P, ct, nt)
+            ll_cache[sig] = lp
+        if bt > 0 and lp > -math.inf:
+            lp += bt * (beh[s] + iv_ll.get(s, 0.0))
+        logs[s] = lp
+    m = max(logs.values()) if logs else -math.inf
+    if m == -math.inf:
+        post = _fallback(obs)
+    else:
+        z = sum(math.exp(v - m) for v in logs.values())
+        post = {s: math.exp(v - m) / z for s, v in logs.items()}
+    return round(post.get(acc_emp, 0.0), 3)
+
+
 def _eval_post_expected(ep: dict[str, Any], pe_memo: dict[int, float] | None = None) -> float:
     if pe_memo is not None and id(ep) in pe_memo:
         return pe_memo[id(ep)]
-    raw = post_expected(ep)
-    if raw is None:
+    if not ep.get("accused"):
+        if pe_memo is not None:
+            pe_memo[id(ep)] = 0.0
+        return 0.0
+    meta = ep.get("meta") or {}
+    v_val = meta.get("V", meta.get("V_final"))
+    if v_val is None:
+        raise ValueError(f"missing V in meta on ({ep.get('tier')}, {ep.get('seed')})")
+    steps = ep.get("steps")
+    p_val: float | None
+    if isinstance(steps, list):
+        hit = _POSTERIOR_BY_STEPS.get(id(steps))
+        if hit is not None and hit[0] is steps:
+            p_val = hit[1]
+        else:
+            p_val = _fast_p_accused(ep)
+            if len(_POSTERIOR_BY_STEPS) >= 4096:
+                _POSTERIOR_BY_STEPS.clear()
+            _POSTERIOR_BY_STEPS[id(steps)] = (steps, p_val)
+    else:
+        p_val = _fast_p_accused(ep)
+    if p_val is None:
         raise ValueError(f"post_expected returned None on ({ep.get('tier')}, {ep.get('seed')})")
-    val = float(raw)
+    val = float(p_val) * float(v_val) - (1.0 - float(p_val))
     if pe_memo is not None:
         pe_memo[id(ep)] = val
     return val
@@ -614,15 +1605,13 @@ def pack_seed_profiles(profiles: list[dict[str, Any]]) -> dict[str, Any]:
             "mole_archetype_counts": arch_counts,
             "dept_stratum_counts": dept_counts,
             "solver_difficulty_counts": sol_counts,
-            "enums": {k: list(v) for k, v in SEED_PROFILE_ENUMS.items()},
-            "columns": list(SEED_PROFILE_COLUMNS),
             "rows": rows,
         }
     )
 
 
 def unpack_seed_profiles(packed: dict[str, Any]) -> list[dict[str, Any]]:
-    cols = packed["columns"]
+    cols = packed.get("columns") or SEED_PROFILE_COLUMNS
     pol = packed.get("mole_policy", "default_v0")
     enums = packed.get("enums") or {k: list(v) for k, v in SEED_PROFILE_ENUMS.items()}
     out: list[dict[str, Any]] = []
@@ -914,13 +1903,14 @@ def compute_audit(
 ) -> dict[str, Any]:
     prev_allow = os.environ.get("CANARY_ALLOW_DEV")
     os.environ["CANARY_ALLOW_DEV"] = "1"
-    _P_CACHE.clear()
     try:
         comm_v14 = root / "data" / "runs" / "committed" / "v1.4"
         rep_v14 = root / "results" / "frontier_replication" / "v1.4"
 
-        comm_eps = load_runs(comm_v14)
-        rep_eps = load_runs(rep_v14)
+        comm_indexed = _load_indexed_pool(comm_v14, "data/runs/committed/v1.4")
+        rep_indexed = _load_indexed_pool(rep_v14, "results/frontier_replication/v1.4")
+        comm_eps = [ep for _, ep in comm_indexed]
+        rep_eps = [ep for _, ep in rep_indexed]
 
         if enforce_expected_counts:
             if len(comm_eps) != EXPECTED_COMMITTED_V14_EPISODES:
@@ -972,7 +1962,6 @@ def compute_audit(
             }
 
         include_flash_hard = gap_ships_flash_hard(root)
-        runs_cache: dict[str, list[dict[str, Any]]] = {}
         pe_memo: dict[int, float] = {}
 
         def _select(
@@ -982,14 +1971,18 @@ def compute_audit(
             s_min: int,
             s_max: int,
         ) -> list[dict[str, Any]]:
-            if rel_dir not in runs_cache:
-                runs_cache[rel_dir] = load_runs(root / rel_dir)
-            sub = runs_cache[rel_dir]
+            pool_rows = (
+                comm_indexed
+                if rel_dir.startswith("data/runs/committed/v1.4")
+                else rep_indexed
+            )
+            prefix = rel_dir + "/"
             return sorted(
                 (
                     e
-                    for e in sub
-                    if e.get("agent") == agent
+                    for rdir, e in pool_rows
+                    if (rdir == rel_dir or rdir.startswith(prefix))
+                    and e.get("agent") == agent
                     and e.get("tier") == tier
                     and s_min <= int(e["seed"]) <= s_max
                 ),
@@ -1440,11 +2433,30 @@ def compute_audit(
             {
                 "schema_version": "v1.4-frontier-mole-stratified-gap-1",
                 "tiers_version": TIERS_VERSION,
+                "upstream_justsilas_sync_commit": "5f9b3297",
                 "zero_live_api_calls": True,
                 "zero_git_dependency": True,
+                "zero_subprocesses": True,
                 "flash_hard_shipped_in_gap_md": include_flash_hard,
+                "seed_profile_columns": list(SEED_PROFILE_COLUMNS),
+                "seed_profile_enums": {k: list(v) for k, v in SEED_PROFILE_ENUMS.items()},
                 "stratum_metric_columns": list(STRATUM_METRIC_COLUMNS),
                 "provenance_and_locks": {
+                    "upstream_justsilas_sync": {
+                        "head_commit": "5f9b3297",
+                        "code_freeze_tag": "afterquery-final",
+                        "code_freeze_commit": "1bc3e281",
+                        "afterquery_submit_tag": "afterquery-submit",
+                        "afterquery_submit_commit": "9225f2ad",
+                        "afterquery_submit_2_tag": "afterquery-submit-2",
+                        "afterquery_submit_2_commit": "aa1c679e",
+                        "ceo_correction_commit": "5f9b3297",
+                        "rehearsal_final_branch_commit": "d0ead011",
+                        "rehearsal_snapshot_0852_ratio_pct": 153,
+                        "rehearsal_snapshot_0852_valid_trials": 7,
+                        "harbor_rehearsal_ratios_pct": [93, 116, 131],
+                        "harbor_rehearsal_valid_trials": [10, 10, 9],
+                    },
                     "primary_0_29_lock": {
                         "classification": "post_hoc_lock",
                         "episodes_commit": "8fd4dec",
@@ -1573,7 +2585,6 @@ def compute_audit(
             }
         )
     finally:
-        _P_CACHE.clear()
         if prev_allow is None:
             os.environ.pop("CANARY_ALLOW_DEV", None)
         else:
@@ -1598,7 +2609,7 @@ def _fmt_json_compact(obj: Any, depth: int = 0, max_expand_depth: int = 2) -> st
 
 
 def serialize_audit_json(audit: dict[str, Any]) -> str:
-    blob = _fmt_json_compact(audit, depth=0, max_expand_depth=2) + "\n"
+    blob = _fmt_json_compact(audit, depth=0, max_expand_depth=1) + "\n"
     size = len(blob.encode("utf-8"))
     if size > MAX_JSON_BYTES:
         raise ValueError(
@@ -1773,7 +2784,8 @@ def render_markdown(audit: dict[str, Any]) -> str:
             f"`{s['cohort_count']}` stratified cohorts after full step-and-ledger replay verification "
             f"of `{comm_rv['verified']}/{comm_rv['total']}` committed `v1.4` episodes and "
             f"`{rep_rv['verified']}/{rep_rv['total']}` FR8 replication episodes "
-            "(`0` live API calls, `0` `.git` runtime dependency)."
+            f"(synced through `justSilas@{audit['upstream_justsilas_sync_commit']}`, `0` live API calls, "
+            "`0` `.git` or subprocess runtime dependency)."
         ),
         "",
         (
@@ -1796,7 +2808,7 @@ def render_markdown(audit: dict[str, Any]) -> str:
         _md_heading(2, "1. Provenance Honesty (Panel Fixes A/C/D), Replay Integrity, and Headline Findings"),
         "",
         (
-            f"- **Provenance & registration honesty (Panel Fixes A/C/D, synced through `{prov['gpt_5_5_hard_0_29']['upstream_sync_commit']}`):** Primary `seeds 0-29` "
+            f"- **Provenance & registration honesty (Panel Fixes A/C/D, synced to `justSilas@{prov['upstream_justsilas_sync']['head_commit']}`):** Primary `seeds 0-29` "
             f"(`data/runs/committed/v1.4/`, committed in `{prov['primary_0_29_lock']['episodes_commit']}`) "
             f"are governed by a **post-hoc lock** (`{prov['primary_0_29_lock']['lock_commit']}`, committed "
             f"`{prov['primary_0_29_lock']['lock_delay_s']} s` after `{prov['primary_0_29_lock']['episodes_commit']}`) "
@@ -1812,7 +2824,15 @@ def render_markdown(audit: dict[str, Any]) -> str:
             f"`{prov['gpt_5_5_hard_0_29']['committed_v14_episodes']}` committed `v1.4` episodes with `0` infra exclusions "
             f"and `{len(prov['gpt_5_5_hard_0_29']['clean_rc0_non_accuse_zero_day_seeds'])}` clean `rc=0` non-accuse "
             f"`final_day=0` exits on `seeds {prov['gpt_5_5_hard_0_29']['clean_rc0_non_accuse_zero_day_seeds']}`) were "
-            "**pre-registered** before any episode ran."
+            "**pre-registered** before any episode ran. Upstream submission tags: "
+            f"`{prov['upstream_justsilas_sync']['code_freeze_tag']}` (`{prov['upstream_justsilas_sync']['code_freeze_commit']}` code freeze), "
+            f"`{prov['upstream_justsilas_sync']['afterquery_submit_tag']}` (`{prov['upstream_justsilas_sync']['afterquery_submit_commit']}` "
+            f"08:52 `{prov['upstream_justsilas_sync']['rehearsal_snapshot_0852_ratio_pct']}%` snapshot on "
+            f"`{prov['upstream_justsilas_sync']['rehearsal_snapshot_0852_valid_trials']}` trials), and "
+            f"`{prov['upstream_justsilas_sync']['afterquery_submit_2_tag']}` (`{prov['upstream_justsilas_sync']['afterquery_submit_2_commit']}`) "
+            f"plus append-only CEO correction `{prov['upstream_justsilas_sync']['ceo_correction_commit']}` recording final Harbor rehearsal "
+            "ratios `93%, 116%, 131%` across `10, 10, 9` valid trials (`s1-rehearsal-final` "
+            f"`{prov['upstream_justsilas_sync']['rehearsal_final_branch_commit']}`, run 3 final `131%` on `9` valid trials superseding the 08:52 `153%` snapshot)."
         ),
         (
             f"- **100% replay integrity (`{prov['step_error_detail_compat']['commit']}` `norm_result` order):** "

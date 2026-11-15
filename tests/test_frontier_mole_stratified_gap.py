@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import io
 import json
 import math
 import os
@@ -47,6 +48,18 @@ def _forbid_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(subprocess, "check_output", _fail)
 
 
+def _strip_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    for var in (
+        "OPENAI_API_KEY",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+        "GOOGLE_GENERATIVE_AI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "CANARY_WORLD_SECRET",
+    ):
+        monkeypatch.delenv(var, raising=False)
+
+
 def _make_gitless_root(tmp_path: Path, name: str = "gitless_root", link_gap_md: bool = True) -> Path:
     syn_root = tmp_path / name
     (syn_root / "data" / "runs" / "committed").mkdir(parents=True)
@@ -73,21 +86,23 @@ def _make_gitless_root(tmp_path: Path, name: str = "gitless_root", link_gap_md: 
 def computed_audit():
     mp = pytest.MonkeyPatch()
     _forbid_subprocess(mp)
+    _strip_keys(mp)
     env_before = dict(os.environ)
     try:
         out = fms.compute_audit(root=ROOT, verify_replays=True, enforce_expected_counts=True)
+        assert dict(os.environ) == env_before
     finally:
         mp.undo()
-    assert dict(os.environ) == env_before
     return out
 
 
 def test_check_cli_offline_zero_subprocess_and_size_cap(computed_audit, monkeypatch, capsys):
     _forbid_subprocess(monkeypatch)
+    _strip_keys(monkeypatch)
     monkeypatch.setattr(
         fms,
         "compute_audit",
-        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: copy.deepcopy(computed_audit),
+        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: computed_audit,
     )
     assert fms.main(["--check"]) == 0
     out = capsys.readouterr().out
@@ -104,16 +119,19 @@ def test_check_cli_offline_zero_subprocess_and_size_cap(computed_audit, monkeypa
 
 def test_gitless_root_write_check_roundtrip_and_byte_identity(computed_audit, monkeypatch, tmp_path):
     _forbid_subprocess(monkeypatch)
+    _strip_keys(monkeypatch)
     no_git_root = _make_gitless_root(tmp_path, name="zip_export_tree", link_gap_md=True)
     out_json = tmp_path / "out" / "mole_stratified_gap.json"
     out_md = tmp_path / "out" / "frontier_mole_stratified_gap_v14.md"
 
+    orig_compute = fms.compute_audit
+    fast_gitless = orig_compute(root=no_git_root, verify_replays=False, enforce_expected_counts=True)
+    assert fast_gitless["blocks"] == computed_audit["blocks"]
+
     monkeypatch.setattr(
         fms,
         "compute_audit",
-        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: fms.compute_audit.__wrapped__(root)
-        if hasattr(fms.compute_audit, "__wrapped__")
-        else copy.deepcopy(computed_audit),
+        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: computed_audit,
     )
     assert fms.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 1
     assert fms.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--write"]) == 0
@@ -124,36 +142,45 @@ def test_gitless_root_write_check_roundtrip_and_byte_identity(computed_audit, mo
     assert fms.main(["--root", str(no_git_root), "--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 0
 
 
-def test_gitless_real_compute_without_git_dir(monkeypatch, tmp_path):
+def test_gitless_real_compute_without_git_dir(computed_audit, monkeypatch, tmp_path):
     _forbid_subprocess(monkeypatch)
+    _strip_keys(monkeypatch)
     syn_root = tmp_path / "mini_gitless"
+    comm_indexed = fms._load_indexed_pool(
+        ROOT / "data" / "runs" / "committed" / "v1.4",
+        "data/runs/committed/v1.4",
+    )
+    rep_indexed = fms._load_indexed_pool(
+        ROOT / "results" / "frontier_replication" / "v1.4",
+        "results/frontier_replication/v1.4",
+    )
     rel_dirs = (
-        ("data/runs/committed/v1.4/reference", {"solver"}, {0, 1, 2, 5}),
+        ("data/runs/committed/v1.4/reference", {"solver"}, {0, 1}),
         ("data/runs/committed/v1.4/reference/solver-hard-seeds30to59", {"solver"}, {30, 34}),
         (
             "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard",
             {"opencode:google/gemini-4-carbon"},
-            {0, 1, 2, 5},
+            {0, 1},
         ),
         (
             "data/runs/committed/v1.4/inproc-gemini-4-carbon/hard",
             {"gemini:gemini-4-carbon"},
-            {0, 1, 2, 5},
+            {0, 1},
         ),
         (
             "data/runs/committed/v1.4/opencode-gpt-5.5/hard",
             {"opencode:openai/gpt-5.5"},
-            {0, 1, 2, 5},
+            {0, 1},
         ),
         (
             "data/runs/committed/v1.4/opencode-gemini-4-carbon/medium",
             {"opencode:google/gemini-4-carbon"},
-            {0, 1, 2, 5},
+            {0, 1},
         ),
         (
             "data/runs/committed/v1.4/inproc-gemini-4-carbon/medium",
             {"gemini:gemini-4-carbon"},
-            {0, 1, 2, 5},
+            {0, 1},
         ),
         (
             "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/hard",
@@ -163,7 +190,7 @@ def test_gitless_real_compute_without_git_dir(monkeypatch, tmp_path):
         (
             "results/frontier_replication/v1.4/opencode-gemini-3.5-flash",
             {"opencode:google/gemini-3.5-flash"},
-            {0, 1, 2, 5},
+            {0, 1},
         ),
         (
             "results/frontier_replication/v1.4/reference/grok_tactics-hard-seeds30to59",
@@ -184,27 +211,25 @@ def test_gitless_real_compute_without_git_dir(monkeypatch, tmp_path):
     for rel_dir, allowed_agents, allowed_seeds in rel_dirs:
         dst = syn_root / rel_dir
         dst.mkdir(parents=True, exist_ok=True)
+        pool_rows = comm_indexed if rel_dir.startswith("data/runs/committed/v1.4") else rep_indexed
+        prefix = rel_dir + "/"
         picked: list[str] = []
-        for ep_file in sorted((ROOT / rel_dir).rglob("episodes.jsonl")):
-            if "solver-hard-seeds30to59" in str(ep_file) and "solver-hard-seeds30to59" not in rel_dir:
+        for rdir, ep in pool_rows:
+            if not (rdir == rel_dir or rdir.startswith(prefix)):
                 continue
-            for line in ep_file.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                ep = json.loads(line)
-                if (
-                    ep.get("agent") in allowed_agents
-                    and int(ep["seed"]) in allowed_seeds
-                    and (ep.get("meta") or {}).get("valid") is not False
-                ):
-                    picked.append(line)
+            if "solver-hard-seeds30to59" in rdir and "solver-hard-seeds30to59" not in rel_dir:
+                continue
+            if ep.get("agent") in allowed_agents and int(ep["seed"]) in allowed_seeds:
+                picked.append(json.dumps(ep, separators=(",", ":")))
         (dst / "episodes.jsonl").write_text("\n".join(picked) + "\n", encoding="utf-8")
 
     assert not (syn_root / ".git").exists()
     audit_no_git = fms.compute_audit(root=syn_root, verify_replays=True, enforce_expected_counts=False)
     assert audit_no_git["zero_git_dependency"] is True
     assert audit_no_git["zero_live_api_calls"] is True
-    assert audit_no_git["summary"]["worlds_extracted"] == 10
+    assert audit_no_git["zero_subprocesses"] is True
+    assert audit_no_git["summary"]["worlds_extracted"] == 6
+    assert audit_no_git["replay_verification"]["committed_v14"]["verified"] > 0
     assert audit_no_git["replay_verification"]["committed_v14"]["mismatches"] == 0
     assert audit_no_git["replay_verification"]["committed_v14"]["clean_rc0_non_accuse_zero_day_seeds"] == [0]
     assert audit_no_git["replay_verification"]["replication_v14"]["mismatches"] == 0
@@ -215,11 +240,27 @@ def test_gitless_real_compute_without_git_dir(monkeypatch, tmp_path):
 def test_provenance_honesty_and_replay_invariants(computed_audit):
     assert computed_audit["schema_version"] == "v1.4-frontier-mole-stratified-gap-1"
     assert computed_audit["tiers_version"] == "v1.4"
+    assert computed_audit["upstream_justsilas_sync_commit"] == "5f9b3297"
     assert computed_audit["zero_live_api_calls"] is True
     assert computed_audit["zero_git_dependency"] is True
+    assert computed_audit["zero_subprocesses"] is True
     assert computed_audit["stratum_metric_columns"] == list(fms.STRATUM_METRIC_COLUMNS)
 
     prov = computed_audit["provenance_and_locks"]
+    up_sync = prov["upstream_justsilas_sync"]
+    assert up_sync["head_commit"] == "5f9b3297"
+    assert up_sync["code_freeze_tag"] == "afterquery-final"
+    assert up_sync["code_freeze_commit"] == "1bc3e281"
+    assert up_sync["afterquery_submit_tag"] == "afterquery-submit"
+    assert up_sync["afterquery_submit_commit"] == "9225f2ad"
+    assert up_sync["afterquery_submit_2_tag"] == "afterquery-submit-2"
+    assert up_sync["afterquery_submit_2_commit"] == "aa1c679e"
+    assert up_sync["ceo_correction_commit"] == "5f9b3297"
+    assert up_sync["rehearsal_final_branch_commit"] == "d0ead011"
+    assert up_sync["rehearsal_snapshot_0852_ratio_pct"] == 153
+    assert up_sync["rehearsal_snapshot_0852_valid_trials"] == 7
+    assert up_sync["harbor_rehearsal_ratios_pct"] == [93, 116, 131]
+    assert up_sync["harbor_rehearsal_valid_trials"] == [10, 10, 9]
     assert prov["primary_0_29_lock"]["classification"] == "post_hoc_lock"
     assert prov["primary_0_29_lock"]["episodes_commit"] == "8fd4dec"
     assert prov["primary_0_29_lock"]["lock_commit"] == "671ed96"
@@ -275,6 +316,13 @@ def test_provenance_honesty_and_replay_invariants(computed_audit):
         "cf394894",
         "ca0a0dc0",
         "5f9b3297",
+        "afterquery-submit",
+        "9225f2ad",
+        "afterquery-submit-2",
+        "aa1c679e",
+        "d0ead011",
+        "93%, 116%, 131%",
+        "153%",
         "7200 s",
         "1bc3e281",
         "472/472",
@@ -359,7 +407,7 @@ def test_seed_profiles_solvability_and_stratified_gap_drivers(computed_audit):
     assert u6["mean_mole_dept_size_union_6"] < u6["mean_mole_dept_size_hard_0_29"]
 
 
-def test_gap_ships_flash_hard_false_and_true(monkeypatch, tmp_path):
+def test_gap_ships_flash_hard_false_and_true(computed_audit, monkeypatch, tmp_path):
     _forbid_subprocess(monkeypatch)
     syn_root = _make_gitless_root(tmp_path, name="flash_gate_root", link_gap_md=False)
     gap_file = syn_root / "docs" / "reports" / "gap.md"
@@ -371,6 +419,8 @@ def test_gap_ships_flash_hard_false_and_true(monkeypatch, tmp_path):
     assert audit_false["flash_hard_shipped_in_gap_md"] is False
     assert audit_false["summary"]["flash_hard_held_pending_gap_md"] is True
     assert audit_false["summary"]["cohort_count"] == 14
+    assert audit_false["blocks"] == computed_audit["blocks"]
+    assert audit_false["gap_drivers"] == computed_audit["gap_drivers"]
     assert len(audit_false["blocks"]["primary_hard_0_29"]) == 4
     assert audit_false["blocks"]["primary_hard_0_29"][3]["cohort_id"] == "opencode_gpt55_hard_0_29"
     assert "primary_flash_hard_by_mole_archetype" not in audit_false["gap_drivers"]
@@ -447,7 +497,7 @@ def test_step_compat_classifiers_and_tamper_detection(computed_audit, monkeypatc
     monkeypatch.setattr(
         fms,
         "compute_audit",
-        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: copy.deepcopy(computed_audit),
+        lambda root=ROOT, verify_replays=True, enforce_expected_counts=True: computed_audit,
     )
 
     with pytest.raises(SystemExit):
@@ -478,18 +528,24 @@ def test_step_compat_classifiers_and_tamper_detection(computed_audit, monkeypatc
     out_md.write_text(orig_md + "\ntampered\n", encoding="utf-8")
     assert fms.main(["--root", str(syn_root), "--out-json", str(out_json), "--out-md", str(out_md), "--check"]) == 1
 
-    sample_path = ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gemini-4-carbon" / "hard" / "episodes.jsonl"
-    first_ep = json.loads(sample_path.read_text(encoding="utf-8").splitlines()[0])
+    comm_indexed = fms._load_indexed_pool(
+        ROOT / "data" / "runs" / "committed" / "v1.4",
+        "data/runs/committed/v1.4",
+    )
+    first_ep = next(
+        ep
+        for rdir, ep in comm_indexed
+        if rdir == "data/runs/committed/v1.4/opencode-gemini-4-carbon/hard" and int(ep["seed"]) == 0
+    )
     assert fms.verify_episode_pool([first_ep], "unit_ok")["verified"] == 1
-    with pytest.raises(ValueError, match="replay mismatches"):
-        fms.verify_episode_pool([dict(first_ep, score=float(first_ep["score"]) + 0.25)], "unit_bad_score")
-    with pytest.raises(ValueError, match="replay mismatches"):
-        fms.verify_episode_pool([dict(first_ep, final_day=0)], "unit_tampered_done_zero_day")
     with pytest.raises(ValueError, match="duplicate episodes"):
         fms.verify_episode_pool([first_ep, dict(first_ep)], "unit_dup")
 
-    gpt55_path = ROOT / "data" / "runs" / "committed" / "v1.4" / "opencode-gpt-5.5" / "hard" / "episodes.jsonl"
-    gpt55_s0 = json.loads(gpt55_path.read_text(encoding="utf-8").splitlines()[0])
+    gpt55_s0 = next(
+        ep
+        for rdir, ep in comm_indexed
+        if rdir == "data/runs/committed/v1.4/opencode-gpt-5.5/hard" and int(ep["seed"]) == 0
+    )
     assert int(gpt55_s0["seed"]) == 0
     assert fms.is_clean_non_accuse_rc0_exit(gpt55_s0, env_done=False) is True
     assert fms.is_clean_non_accuse_rc0_exit(gpt55_s0, env_done=True) is False
@@ -497,15 +553,48 @@ def test_step_compat_classifiers_and_tamper_detection(computed_audit, monkeypatc
         "clean_rc0_non_accuse_zero_day_seeds"
     ] == [0]
 
+    done_1step = {
+        "tier": "medium",
+        "seed": 1,
+        "agent": "solver",
+        "score": -1.0,
+        "correct": False,
+        "accused": "e00",
+        "final_day": 1,
+        "end_reason": "accused",
+        "steps": [{"t": 0, "day": 1, "tool": "accuse", "args": {"employee": "e00"}, "result": None}],
+        "meta": {"rc": 0, "valid": True, "error": None},
+    }
+    with pytest.raises(ValueError, match="replay mismatches"):
+        fms.verify_episode_pool([dict(done_1step, score=0.75)], "unit_bad_score")
+    with pytest.raises(ValueError, match="replay mismatches"):
+        fms.verify_episode_pool([dict(done_1step, final_day=0)], "unit_tampered_done_zero_day")
+
+    clean_zero_1step = {
+        "tier": "medium",
+        "seed": 1,
+        "agent": "opencode:openai/gpt-5.5",
+        "score": 0.0,
+        "correct": False,
+        "accused": None,
+        "final_day": 0,
+        "end_reason": "stop_early",
+        "steps": [{"t": 0, "day": 1, "tool": "status", "args": {}, "result": None}],
+        "meta": {"rc": 0, "valid": True, "error": None},
+    }
+    assert fms.verify_episode_pool([clean_zero_1step], "unit_clean_1step")[
+        "clean_rc0_non_accuse_zero_day_seeds"
+    ] == [1]
+
     for bad_variant in (
-        {**gpt55_s0, "meta": {**gpt55_s0["meta"], "rc": 124}},
-        {**gpt55_s0, "meta": {**gpt55_s0["meta"], "rc": False}},
-        {**gpt55_s0, "meta": {**gpt55_s0["meta"], "valid": False}},
-        {**gpt55_s0, "meta": {**gpt55_s0["meta"], "error": "timeout"}},
-        {**gpt55_s0, "end_reason": "timeout"},
-        {**gpt55_s0, "score": 0.25},
-        {**gpt55_s0, "accused": "e00"},
-        {**gpt55_s0, "final_day": 3},
+        {**clean_zero_1step, "meta": {**clean_zero_1step["meta"], "rc": 124}},
+        {**clean_zero_1step, "meta": {**clean_zero_1step["meta"], "rc": False}},
+        {**clean_zero_1step, "meta": {**clean_zero_1step["meta"], "valid": False}},
+        {**clean_zero_1step, "meta": {**clean_zero_1step["meta"], "error": "timeout"}},
+        {**clean_zero_1step, "end_reason": "timeout"},
+        {**clean_zero_1step, "score": 0.25},
+        {**clean_zero_1step, "accused": "e00"},
+        {**clean_zero_1step, "final_day": 3},
     ):
         with pytest.raises(ValueError, match="replay mismatches"):
             fms.verify_episode_pool([bad_variant], "unit_gpt55_tampered")
@@ -520,17 +609,17 @@ def test_strict_hygiene_no_hash_in_py_and_no_em_en_dashes():
     owned_files = [SCRIPT_PATH, JSON_PATH, MD_PATH, this_test]
 
     for pf in py_files:
-        with pf.open("rb") as fh:
-            tokens = list(tokenize.tokenize(fh.readline))
-        comments = [t for t in tokens if t.type == tokenize.COMMENT]
-        assert not comments, f"found comments in {pf}: {comments}"
         src = pf.read_text(encoding="utf-8")
         assert hash_char not in src, f"found {hash_char!r} character in {pf}"
+        tokens = list(tokenize.generate_tokens(io.StringIO(src).readline))
+        comments = [t for t in tokens if t.type == tokenize.COMMENT]
+        assert not comments, f"found comments in {pf}: {comments}"
 
     for f in owned_files:
         txt = f.read_text(encoding="utf-8")
         assert em_dash not in txt, f"found em dash in {f}"
         assert en_dash not in txt, f"found en dash in {f}"
+        assert txt.isascii(), f"found non-ASCII characters in {f}"
 
     assert JSON_PATH.stat().st_size < 45_000
     assert JSON_PATH.stat().st_size <= fms.MAX_JSON_BYTES

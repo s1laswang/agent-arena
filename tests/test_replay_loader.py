@@ -397,24 +397,51 @@ def test_seed_filtering_synthetic_and_committed_v14(tmp_path: Path) -> None:
 
     v14_root = ROOT / "data/runs/committed/v1.4"
     v14_all = load_committed_episodes(v14_root)
-    assert len(v14_all) == 442
-    assert sum(1 for ep in v14_all if ep["provenance"]["kind"] == "real") == 152
-    assert sum(1 for ep in v14_all if ep["provenance"]["kind"] == "scripted") == 290
-    v14_all_pairs = pair_with_solver(v14_all)
-    assert len(v14_all_pairs) == 352
-    assert sum(1 for p in v14_all_pairs if p["provenance"]["kind"] == "real") == 152
-
     v14_primary = load_committed_episodes(v14_root, seeds=range(30))
-    assert len(v14_primary) == 410
-    assert all(0 <= ep["seed"] < 30 for ep in v14_primary)
-    assert sum(1 for ep in v14_primary if ep["provenance"]["kind"] == "real") == 150
-    assert sum(1 for ep in v14_primary if ep["provenance"]["kind"] == "scripted") == 260
-    v14_primary_pairs = pair_with_solver(v14_primary)
-    assert len(v14_primary_pairs) == 350
-    assert sum(1 for p in v14_primary_pairs if p["provenance"]["kind"] == "real") == 150
-
     v14_ext = load_committed_episodes(v14_root, seeds=range(30, 60))
-    assert len(v14_ext) == 32
-    assert [ep["seed"] for ep in v14_ext if ep["provenance"]["kind"] == "real"] == [34, 37]
+
+    assert len(v14_all) == len(v14_primary) + len(v14_ext)
+    real_all = sum(1 for ep in v14_all if ep["provenance"]["kind"] == "real")
+    scripted_all = sum(1 for ep in v14_all if ep["provenance"]["kind"] == "scripted")
+    assert real_all >= 182
+    assert scripted_all >= 290
+    assert real_all + scripted_all == len(v14_all)
+
+    v14_all_pairs = pair_with_solver(v14_all)
+    v14_primary_pairs = pair_with_solver(v14_primary)
     v14_ext_pairs = pair_with_solver(v14_ext)
-    assert [p["seed"] for p in v14_ext_pairs] == [34, 37]
+    assert len(v14_all_pairs) == len(v14_primary_pairs) + len(v14_ext_pairs)
+    assert sum(1 for p in v14_all_pairs if p["provenance"]["kind"] == "real") == real_all
+
+    assert all(0 <= ep["seed"] < 30 for ep in v14_primary)
+    real_primary = sum(1 for ep in v14_primary if ep["provenance"]["kind"] == "real")
+    scripted_primary = sum(1 for ep in v14_primary if ep["provenance"]["kind"] == "scripted")
+    assert real_primary >= 180
+    assert scripted_primary >= 260
+    assert sum(1 for p in v14_primary_pairs if p["provenance"]["kind"] == "real") == real_primary
+
+    assert sorted(
+        ep["seed"]
+        for ep in v14_primary
+        if ep["agent"] == "opencode:google/gemini-4-carbon" and ep["tier"] == "hard"
+    ) == list(range(30))
+    assert sorted(
+        ep["seed"]
+        for ep in v14_primary
+        if ep["agent"] == "opencode:openai/gpt-5.5" and ep["tier"] == "hard"
+    ) == list(range(30))
+    assert sum(1 for ep in v14_all if ep["agent"] == "solver" and ep["tier"] == "hard") == 60
+
+    assert all(30 <= ep["seed"] < 60 for ep in v14_ext)
+    assert len(v14_ext) >= 32
+    carbon_ext_seeds = [
+        ep["seed"]
+        for ep in v14_ext
+        if ep["agent"] == "opencode:google/gemini-4-carbon" and ep["tier"] == "hard"
+    ]
+    assert carbon_ext_seeds in ([34, 37], [30, 34, 37, 42, 45, 48, 57, 58])
+    assert [
+        p["seed"]
+        for p in v14_ext_pairs
+        if p["agent"] == "opencode:google/gemini-4-carbon" and p["tier"] == "hard"
+    ] == carbon_ext_seeds

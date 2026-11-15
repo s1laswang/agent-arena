@@ -2,29 +2,29 @@
 
 Canary is a Bayesian insider-threat RL benchmark where a security-lead agent investigates a simulated company bleeding value to a mole. Across the merged Canary repository, `gemini-4-carbon` is integrated into six distinct, load-bearing roles: synthesizing leak-free company worlds (`world_text`), playing and evolving catchable adversaries (`adaptive_mole`), acting as the frontier security investigator (`investigators`), diagnosing multi-episode failure modes in long context (`failure_analyst`), red-teaming the reward and MCP server (`exploit_hunter`), and reading pixel-only evidence scans and forensic rasters (`multimodal_evidence`).
 
-Every metric in this document is extracted deterministically from the 99 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
+Every metric in this document is extracted deterministically from the 101 committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance --root . --strict` and `canary.gemini.submission_stats`.
 
 ## Provenance & Aggregate Ledger Summary
 
 - Provenance status: **VERIFIED** (`python -m canary.gemini.provenance --root . --strict`)
 - Target model: `gemini-4-carbon`
 - Verified roles: **6 / 6** (`world_text`, `adaptive_mole`, `investigators`, `failure_analyst`, `exploit_hunter`, `multimodal_evidence`)
-- Verified `gemini-4-carbon` run folders: **99** (6 canonical headline runs + 93 supporting runs; scanned 99 folders)
-- Total verified episodes and evaluated samples: **958**
-- Total Gemini API calls: **7,130**
-- Total tokens (input / output / thinking / cached): **195,536,496 / 2,292,341 / 1,548,717 / 177,682,115** (**90.9%** cache hit rate)
-- Total estimated API cost (USD): **$88.1273**
+- Verified `gemini-4-carbon` run folders: **101** (6 canonical headline runs + 95 supporting runs; scanned 101 folders)
+- Total verified episodes and evaluated samples: **1,046**
+- Total Gemini API calls: **7,218**
+- Total tokens (input / output / thinking / cached): **195,623,268 / 2,298,747 / 1,573,652 / 177,682,115** (**90.8%** cache hit rate)
+- Total estimated API cost (USD): **$88.6143**
 - Secret leaks detected: **0**
 
 | Role | Stage | Verified Runs | Episodes / Samples | API Calls | Tokens In | Tokens Out | Thinking Tokens | Cached Tokens | Cost (USD) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `world_text` | Company Construction | 13 | 133 | 1,038 | 27,780,671 | 519,569 | 530,761 | 25,362,601 | $14.2643 |
+| `world_text` | Company Construction | 15 | 221 | 1,126 | 27,867,443 | 525,975 | 555,696 | 25,362,601 | $14.7513 |
 | `adaptive_mole` | Adversarial Evolution | 34 | 397 | 2,076 | 33,093,751 | 141,516 | 557,649 | 29,624,372 | $16.8929 |
 | `investigators` | Bayesian Investigation | 28 | 41 | 3,565 | 129,967,004 | 1,502,416 | 157,797 | 120,952,167 | $46.7270 |
 | `failure_analyst` | Trajectory Forensics | 5 | 276 | 10 | 1,114,554 | 44,068 | 95,665 | 0 | $3.4776 |
 | `exploit_hunter` | Reward & Protocol Red-Team | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
 | `multimodal_evidence` | Pixel & Chart Inspection | 17 | 100 | 226 | 486,594 | 47,941 | 206,845 | 0 | $3.5210 |
-| **Total** | **All 6 Roles** | **99** | **958** | **7,130** | **195,536,496** | **2,292,341** | **1,548,717** | **177,682,115** | **$88.1273** |
+| **Total** | **All 6 Roles** | **101** | **1,046** | **7,218** | **195,623,268** | **2,298,747** | **1,573,652** | **177,682,115** | **$88.6143** |
 
 ## Canonical Headline Runs (One Labelled Real Run per Role)
 
@@ -243,7 +243,7 @@ Across all **33** committed `v1.4` frontier episodes (`easy` seeds `0..3` (`n=4`
 
 ## Keyless Offline Verification Commands
 
-Judges can verify all 99 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
+Judges can verify all 101 `gemini-4-carbon` run folders, token ledgers, replay transcripts, stats reports, and dashboard outputs offline without any API key:
 
 ```bash
 GEMINI_API_KEY="" GOOGLE_GENERATIVE_AI_API_KEY="" PYTHONPATH=. python scripts/sync_six_roles_docs.py --root . --check

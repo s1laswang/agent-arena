@@ -140,6 +140,17 @@ def test_blind_atlas_slimmed_from_committed_json():
     assert dash.slim_atlas_blind(None) is None and dash.slim_atlas_blind({"x": 1}) is None
 
 
+def test_latest_campaign_selected_with_legacy_fallback(tmp_path):
+    import json
+    (tmp_path / "swarm.json").write_text(json.dumps({"attempts": [{"id": "old", "score": 0}]}))
+    latest = tmp_path / "scale" / "swarm3"
+    latest.mkdir(parents=True)
+    (latest / "swarm.json").write_text(json.dumps({"attempts": [{"id": "final", "score": 0}]}))
+    assert dash.load_results(tmp_path)["swarm"]["attempts"][0]["id"] == "final"
+    (latest / "swarm.json").write_text("{}")
+    assert dash.load_results(tmp_path)["swarm"]["attempts"][0]["id"] == "old"
+
+
 def test_swarm_overturned_flag_is_never_the_headline():
     """A score candidate overturned on review is shown as flagged -> overturned, not as the best unjustified score."""
     att = [{"id": "m1", "persona": "p", "tier": "medium", "score": 0.72, "correct": True, "ledger_verified": True},

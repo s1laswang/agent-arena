@@ -4,7 +4,7 @@
 *Google DeepMind "Best Use of Gemini API", Junction 2026. Two codebases: HoldUp ([`junction-meta-glasses`](https://github.com/s1laswang/junction-meta-glasses), quoted at tag `gemini-quote-0515`) and Canary Lab (`canary/gemini/` in this repo). Model ids are as listed by the Gemini API on our key on 14–15 Nov 2026. When we request `gemini-3.5-flash`, the API serves **`gemini-3.6-flash`** (recorded per call), so this text says "3.6-flash".*
 
 ## Short version (≤ 600 chars)
-HoldUp reads medicine labels aloud for blind users on the Gemini Live API: 0 of 754 confident strength reads were wrong. Canary Lab is how we test such agents: Gemini plays, attacks and judges an insider-threat benchmark scored against a Bayesian solver. Each thinking level adds +16.3 [+7.6, +24.4] points of solver score; 513 red-team attacks found 0 verified exploits (detector 16/16); three Gemini judges match our code's labels 84.9% of the time; and on identical worlds Gemini is not distinguishable from GPT-5.5 at 2.0–3.8× lower cost per episode.
+HoldUp uses Gemini Live to read labels aloud, with uncertainty checks: on 1,060 fresh synthetic images, 1 of 536 confident strength reads was wrong. Canary Lab measures agent decisions using a Bayesian reference, thinking-level experiments and three blind Gemini judges. It records 1,034 benchmark attacks with no verified exploit and 16/16 positive-control detections. In a small paired v1.3 control, medium-thinking Gemini costs 2.0–3.8× less per episode than GPT-5.5; wide intervals leave score differences unresolved.
 
 ## 1. The problem
 **For a user.** A blind or low-vision person holding a medicine box needs the label read aloud, hands-free, within seconds. The worst outcome is a confident wrong read; "I'm not sure, turn the box" is acceptable. That is a real-time, multimodal, safety-critical agent.
@@ -29,7 +29,7 @@ The Canary environment (an insider-threat RL environment scored against a Bayesi
 | Role | Gemini capability used | Result (committed) |
 |---|---|---|
 | **Player: the Ladder** (`ladder.py`) | `thinking_level` as the only changed factor; function calling over 13 tools with thought-signature replay | 607 paired episodes, 42 cells (6 models × thinking levels × 2 tiers), same worlds as the solver (`results/gemini/ladder.md`) |
-| **Attacker: the Red-team Swarm** (`swarm.py`) | The whole repo in one long-context prompt (about 183k tokens), function calling against the env | 513 ledger-verified attacks (369 whitebox, 144 blackbox; 81 through the real MCP server): **0 verified exploits**. Detector recall on three reopened exploit families: 16/16 (`results/gemini/scale/swarm3/swarm.md`) |
+| **Attacker: the Red-team Swarm** (`swarm.py`) | The whole repo in one long-context prompt (about 183k tokens), function calling against the env | 1,034 ledger-verified attacks (564 whitebox, 470 blackbox; 158 through the real MCP server): **0 verified exploits**. Detector recall on three reopened exploit families: 16/16 (`results/gemini/scale/swarm3/swarm.md`) |
 | **Analyst: Jury, Atlas and Gallery** (`jury.py`, `atlas.py`, `gallery.py`) | Three models as independent blind judges with structured output; a 751k-token corpus in one explicit context cache; multimodal belief charts; embeddings | 6,975 blind judgments over 1,423 high-regret decisions: Fleiss κ 0.736, and 84.9% majority-vote agreement with the code's labels on the 403 tagged decisions (`results/gemini/scale/jury/jury.md`). One-pass blind discovery recovers 3 of 5 code-defined failure modes (`atlas_blind.md`). Explains the code-attributed failures (`atlas.md`, `docs/reports/failure_gallery.md`) |
 | **Adversary: the arena mole** (`roles.py`) | gemini-4-carbon plays the mole live | Finds the canary trap's blind spot (§3.7) |
 | **Infrastructure** (`gateway.py`) | Token-gated relay; record/replay | The showcase and 4 ladder episodes replay keyless (`make lab-replay`); the cross-provider control was recorded through it |
@@ -62,7 +62,7 @@ We answer this with substitutions we measured, and we say what is portable.
 
 ## Honesty notes
 - **Small samples.** Ladder cells have 9–40 paired seeds and the cross-provider control 8–11; every headline is worded by a CI gate.
-- **The control uses the earlier v1.3 rules**, because those are the only worlds with committed GPT-5.5 episodes. It compares one non-Gemini frontier model at its default effort; no Anthropic model was run.
+- **The control uses the earlier v1.3 rules**, because those are the worlds selected for this matched in-process control. It compares one non-Gemini frontier model at its default effort; no Anthropic model was run.
 - **Logging.** Canary's usage rows are written by our own client and carry no API request id; the responses recorded for keyless replay do carry API response ids (8,120 of 8,122 recorded responses, including every call of the cross-provider control).
 - **Atlas v1 is not blind.** Its corpus showed Gemini our code-computed regret tags, so only the blind re-run counts as discovery: 3 of 5 code-defined modes recovered (premature accusation 44%, ignored delay 2 of 2, budget waste 46%; uninformative canary and over-restriction 0%), 2 new modes named, 127 cited steps covering 21% of solver regret and 3.7% of high-regret steps, 12 of 16 quotes verbatim (`results/gemini/atlas_blind.md`). The Failure Gallery is an exact code decomposition; Gemini only names its categories. No human-agreement number is claimed.
 - **HoldUp limits.** The 5.8 s "before" latency is one unlogged run. Its demo video is a browser simulation until the on-glasses run is logged. The in-sample re-scores above are not held-out results.
@@ -97,3 +97,8 @@ The red-team results are static files (`results/gemini/scale/swarm3/`); their ho
 
 ## Team
 Silas Wang, Momin (Momin010), Ivar (ivarakerholm-wq), Chintufp, with a Claude engineering team.
+
+## Final evidence update (15 Nov, morning)
+The completed campaign contains 1,034 attacks across multiple recorded code revisions, including 521 on `afterquery-final`; zero verified exploits is an observed result, not proof of security. The usage total remains the explicitly dated 05:39 committed-ledger snapshot. The scenario designer completed 500 proposals, with 65/481 accepted in its fully evaluated prefix; see [designer report](../../results/gemini/scale/designer/designer.md).
+
+HoldUp's fresh held-out synthetic evaluation records 1/536 confident strength errors across 1,060 images and 4/3,033 silently over-reassuring answers. The earlier 0/754 result belongs to the earlier set. [Held-out evidence](https://github.com/s1laswang/junction-meta-glasses/blob/dee4a93/docs/EVAL.md).

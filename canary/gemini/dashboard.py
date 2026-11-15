@@ -574,7 +574,9 @@ def load_results(results_dir: Path) -> dict:
     atlas = load_json(results_dir / "atlas.json")
     out["atlas"] = redact(slim_atlas(atlas, results_dir)) if atlas else None
     out["atlas_blind"] = redact(slim_atlas_blind(load_json(results_dir / "atlas_blind.json")))
-    swarm = load_json(results_dir / "swarm.json")
+    swarm = load_json(results_dir / "scale" / "swarm3" / "swarm.json")
+    if not swarm or not swarm.get("attempts"):
+        swarm = load_json(results_dir / "swarm.json")
     out["swarm"] = redact(slim_swarm(swarm)) if swarm else None
     gb = load_json(results_dir / "gateway_bench.json")
     if gb and isinstance(gb.get("rows"), list):

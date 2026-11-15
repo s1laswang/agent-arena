@@ -523,11 +523,18 @@ def verify_branch(
     py_files = [p for p in added_or_modified if p.endswith(".py") and p in blob_cache]
     for p in py_files:
         raw = blob_cache[p]
+        added_line_nos: set[int] | None = None
+        if status_by_path.get(p) == "M" and diff_from and inspect_tree:
+            added_lines = _added_diff_lines(repo_path, diff_from, inspect_tree, p)
+            if added_lines is not None:
+                added_line_nos = {ln for ln, _ in added_lines}
         try:
             for tok in tokenize.tokenize(io.BytesIO(raw).readline):
                 if tok.type == tokenize.COMMENT:
                     line_no, col_no = tok.start
                     if line_no == 1 and col_no == 0 and tok.string.startswith(SHEBANG_PREFIX):
+                        continue
+                    if added_line_nos is not None and line_no not in added_line_nos:
                         continue
                     snippet = tok.string.strip()[:80]
                     comment_errors.append(f"{p}:{line_no}: unexpected comment {snippet}")

@@ -1,0 +1,642 @@
+{
+  "role": "multimodal_evidence",
+  "subrole": "soc_access_vision_v14_sweep",
+  "model_id": "gemini-4-carbon",
+  "thinking_level": "low",
+  "commit": "c89f0fc1edbd01af0fef76a42231feab5b2f165f",
+  "timestamp": "2026-11-14T23:02:38+00:00",
+  "tiers_version": "v1.4",
+  "tiers": [
+    "medium",
+    "hard"
+  ],
+  "tier_seeds": {
+    "medium": [
+      8,
+      9
+    ],
+    "hard": [
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "episode_count": 6,
+  "n_worlds": 6,
+  "n_images_read_by_model": 6,
+  "metrics": {
+    "n_worlds": 6,
+    "seeds": [
+      8,
+      9,
+      8,
+      9,
+      10,
+      11
+    ],
+    "top1_mole_hits": 6,
+    "top1_mole_accuracy": 1.0,
+    "top3_mole_hits": 6,
+    "top3_mole_hit_rate": 1.0,
+    "top1_decoy_hits": 6,
+    "top1_decoy_accuracy": 1.0,
+    "decoy_identified_hits": 6,
+    "decoy_identified_rate": 1.0,
+    "avoided_framing_trap_hits": 6,
+    "avoided_framing_trap_rate": 1.0,
+    "naive_baseline_mole_hits": 0,
+    "naive_baseline_mole_accuracy": 0.0,
+    "naive_after_hours_baseline_mole_accuracy": 0.0,
+    "naive_baseline_decoy_traps": 6,
+    "naive_baseline_decoy_trap_rate": 1.0,
+    "naive_after_hours_baseline_decoy_trap_rate": 1.0,
+    "naive_baseline_avoided_trap_hits": 0,
+    "naive_baseline_avoided_trap_rate": 0.0,
+    "mole_accuracy_delta_vs_naive": 1.0,
+    "avoided_trap_delta_vs_naive": 1.0,
+    "head_to_head_wins_vs_naive": 6,
+    "head_to_head_ties_vs_naive": 0,
+    "head_to_head_losses_vs_naive": 0,
+    "mean_confidence": 0.9747,
+    "mean_confidence_when_correct": 0.9747,
+    "mean_confidence_when_wrong": null,
+    "brier_score": 0.002117,
+    "expected_calibration_error": 0.025333,
+    "mean_calibration_gap": 0.025333,
+    "signed_calibration_gap": -0.025333,
+    "usage": {
+      "calls": 6,
+      "in": 12606,
+      "out": 3108,
+      "thinking": 1983,
+      "cached": 0,
+      "cost_usd": 0.076122,
+      "latency_s": 75.485
+    }
+  },
+  "by_tier": {
+    "medium": {
+      "n_worlds": 2,
+      "seeds": [
+        8,
+        9
+      ],
+      "top1_mole_hits": 2,
+      "top1_mole_accuracy": 1.0,
+      "top3_mole_hits": 2,
+      "top3_mole_hit_rate": 1.0,
+      "top1_decoy_hits": 2,
+      "top1_decoy_accuracy": 1.0,
+      "decoy_identified_hits": 2,
+      "decoy_identified_rate": 1.0,
+      "avoided_framing_trap_hits": 2,
+      "avoided_framing_trap_rate": 1.0,
+      "naive_baseline_mole_hits": 0,
+      "naive_baseline_mole_accuracy": 0.0,
+      "naive_after_hours_baseline_mole_accuracy": 0.0,
+      "naive_baseline_decoy_traps": 2,
+      "naive_baseline_decoy_trap_rate": 1.0,
+      "naive_after_hours_baseline_decoy_trap_rate": 1.0,
+      "naive_baseline_avoided_trap_hits": 0,
+      "naive_baseline_avoided_trap_rate": 0.0,
+      "mole_accuracy_delta_vs_naive": 1.0,
+      "avoided_trap_delta_vs_naive": 1.0,
+      "head_to_head_wins_vs_naive": 2,
+      "head_to_head_ties_vs_naive": 0,
+      "head_to_head_losses_vs_naive": 0,
+      "mean_confidence": 0.99,
+      "mean_confidence_when_correct": 0.99,
+      "mean_confidence_when_wrong": null,
+      "brier_score": 0.0001,
+      "expected_calibration_error": 0.01,
+      "mean_calibration_gap": 0.01,
+      "signed_calibration_gap": -0.01,
+      "usage": {
+        "calls": 2,
+        "in": 4002,
+        "out": 797,
+        "thinking": 295,
+        "cached": 0,
+        "cost_usd": 0.018924,
+        "latency_s": 18.172
+      }
+    },
+    "hard": {
+      "n_worlds": 4,
+      "seeds": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "top1_mole_hits": 4,
+      "top1_mole_accuracy": 1.0,
+      "top3_mole_hits": 4,
+      "top3_mole_hit_rate": 1.0,
+      "top1_decoy_hits": 4,
+      "top1_decoy_accuracy": 1.0,
+      "decoy_identified_hits": 4,
+      "decoy_identified_rate": 1.0,
+      "avoided_framing_trap_hits": 4,
+      "avoided_framing_trap_rate": 1.0,
+      "naive_baseline_mole_hits": 0,
+      "naive_baseline_mole_accuracy": 0.0,
+      "naive_after_hours_baseline_mole_accuracy": 0.0,
+      "naive_baseline_decoy_traps": 4,
+      "naive_baseline_decoy_trap_rate": 1.0,
+      "naive_after_hours_baseline_decoy_trap_rate": 1.0,
+      "naive_baseline_avoided_trap_hits": 0,
+      "naive_baseline_avoided_trap_rate": 0.0,
+      "mole_accuracy_delta_vs_naive": 1.0,
+      "avoided_trap_delta_vs_naive": 1.0,
+      "head_to_head_wins_vs_naive": 4,
+      "head_to_head_ties_vs_naive": 0,
+      "head_to_head_losses_vs_naive": 0,
+      "mean_confidence": 0.967,
+      "mean_confidence_when_correct": 0.967,
+      "mean_confidence_when_wrong": null,
+      "brier_score": 0.003125,
+      "expected_calibration_error": 0.033,
+      "mean_calibration_gap": 0.033,
+      "signed_calibration_gap": -0.033,
+      "usage": {
+        "calls": 4,
+        "in": 8604,
+        "out": 2311,
+        "thinking": 1688,
+        "cached": 0,
+        "cost_usd": 0.057198,
+        "latency_s": 57.313
+      }
+    }
+  },
+  "calibration_bins": [
+    {
+      "bin_index": 0,
+      "lo": 0.0,
+      "hi": 0.2,
+      "count": 0,
+      "mean_confidence": null,
+      "empirical_accuracy": null,
+      "calibration_gap": null,
+      "signed_gap": null
+    },
+    {
+      "bin_index": 1,
+      "lo": 0.2,
+      "hi": 0.4,
+      "count": 0,
+      "mean_confidence": null,
+      "empirical_accuracy": null,
+      "calibration_gap": null,
+      "signed_gap": null
+    },
+    {
+      "bin_index": 2,
+      "lo": 0.4,
+      "hi": 0.6,
+      "count": 0,
+      "mean_confidence": null,
+      "empirical_accuracy": null,
+      "calibration_gap": null,
+      "signed_gap": null
+    },
+    {
+      "bin_index": 3,
+      "lo": 0.6,
+      "hi": 0.8,
+      "count": 0,
+      "mean_confidence": null,
+      "empirical_accuracy": null,
+      "calibration_gap": null,
+      "signed_gap": null
+    },
+    {
+      "bin_index": 4,
+      "lo": 0.8,
+      "hi": 1.0,
+      "count": 6,
+      "mean_confidence": 0.974667,
+      "empirical_accuracy": 1.0,
+      "calibration_gap": 0.025333,
+      "signed_gap": -0.025333
+    }
+  ],
+  "usage": {
+    "calls": 6,
+    "in": 12606,
+    "out": 3108,
+    "thinking": 1983,
+    "cached": 0,
+    "cost_usd": 0.076122,
+    "latency_s": 75.485
+  },
+  "worlds": [
+    {
+      "seed": 8,
+      "tier": "medium",
+      "tiers_version": "v1.4",
+      "raster_sha256": "3402081694aa4b1194d788d24ccfffe729d8ea96ecdcea7c85b167960d6fc13e",
+      "raster_bytes": 148175,
+      "raster_size": [
+        1880,
+        1020
+      ],
+      "observable_summary": {
+        "n_employees": 20,
+        "closed_day": 13,
+        "total_access_events": 261,
+        "total_after_hours_events": 47,
+        "n_canaries_planted": 12,
+        "n_surfaced_canary_leaks": 6,
+        "n_surfaced_regular_leaks": 4,
+        "canary_narrowed_candidates": [
+          "e02"
+        ],
+        "naive_most_after_hours_id": "e01"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e02",
+          "e05",
+          "e08"
+        ],
+        "suspected_decoy_ids": [
+          "e01",
+          "e19",
+          "e06",
+          "e04"
+        ],
+        "confidence": 0.99,
+        "canary_leak_summary": "Six of the twelve planted canaries surfaced in the leak feed: c1 (=C!), c2 (=A!), c4 (=A!), c6 (=A!), c8 (=A!), and c11 (=A!). Employee e02 (SAL) is the sole staff member matching ALL 6/6 surfaced canary variants ([C] on c1 and [A] on c2, c4, c6, c8, c11). Only two other employees matched even a single surfaced canary: e05 and e08 each held [C] on c1 (1/6) but were cleared on c2 through c11, while all remaining employees scored 0/6.",
+        "visual_reasoning": "Panel A displays a severe after-hours spike on e01 (9/16 red events, 56%) alongside secondary spikes on e19 (6/18), e06 (5/20), and e04 (4/15). However, Panel B proves these high-spike accounts are framed decoys because e01, e19, e06, and e04 all have 0/6 canary matches on exact medium-tier fingerprinting. Conversely, e02 (SAL) exhibits a modest 2/5 after-hours profile in Panel A, matches ALL 6/6 surfaced canary variants in Panel B, and shows department-level exposure (L0 D2/4, bronze D tiles on d7-1 and d10-2) in Panel C, uniquely identifying e02 as the true mole and e01 as the primary framed decoy."
+      },
+      "ground_truth": {
+        "true_mole": "e02",
+        "true_decoy": "e01"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true,
+        "brier_score": 0.0001,
+        "calibration_error": 0.01,
+        "signed_confidence_gap": -0.01,
+        "mole_delta_vs_naive": 1
+      },
+      "usage": {
+        "in": 2001,
+        "out": 412,
+        "thinking": 295,
+        "cached": 0,
+        "cost_usd": 0.011072,
+        "latency_s": 9.709
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/medium_seed_8.png"
+    },
+    {
+      "seed": 9,
+      "tier": "medium",
+      "tiers_version": "v1.4",
+      "raster_sha256": "f70471dfc7eb0177e30bc4457f4e8a1c57e5be8c101f007798a7ceabbddb40b8",
+      "raster_bytes": 155045,
+      "raster_size": [
+        1880,
+        1020
+      ],
+      "observable_summary": {
+        "n_employees": 20,
+        "closed_day": 13,
+        "total_access_events": 275,
+        "total_after_hours_events": 42,
+        "n_canaries_planted": 12,
+        "n_surfaced_canary_leaks": 3,
+        "n_surfaced_regular_leaks": 5,
+        "canary_narrowed_candidates": [
+          "e15"
+        ],
+        "naive_most_after_hours_id": "e13"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e15"
+        ],
+        "suspected_decoy_ids": [
+          "e13",
+          "e17"
+        ],
+        "confidence": 0.99,
+        "canary_leak_summary": "Three planted canaries surfaced in the leak feed: c2 (=C!), c5 (=B!), and c6 (=B!). Employee e15 is the sole staff member matching all three surfaced variants (ALL 3/3: [C] at c2, [B] at c5, [B] at c6). Employees e12 and e18 matched only c2 ([C], 1/3) and were cleared on c5 and c6, while all other employees matched 0/3.",
+        "visual_reasoning": "In Panel B, exact medium-tier canary fingerprinting isolates e15 (LEG) as the unique 3/3 match across surfaced columns c2, c5, and c6. Panel C reinforces this with e15 showing direct access or departmental exposure to 4 of 5 leaked regular documents (L4 on d1-1, L1 on d9-1, and D on d3-1 and d8-2, CORR L2 D4/5) and moderate after-hours activity (4/16, 25%) in Panel A consistent with mole behavior. By contrast, e13 exhibits the largest after-hours spike in Panel A (7/17, 41% red bar) alongside e17 (4/11, 36%), yet both score 0/3 on surfaced canary variants in Panel B - the classic signature of innocent decoys absorbing injected framing logs."
+      },
+      "ground_truth": {
+        "true_mole": "e15",
+        "true_decoy": "e13"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true,
+        "brier_score": 0.0001,
+        "calibration_error": 0.01,
+        "signed_confidence_gap": -0.01,
+        "mole_delta_vs_naive": 1
+      },
+      "usage": {
+        "in": 2001,
+        "out": 385,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.007852,
+        "latency_s": 8.463
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/medium_seed_9.png"
+    },
+    {
+      "seed": 8,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "raster_sha256": "349a454bbcca580c6ff31b1958a95eb22f97bb11957e5fd6cd5cf0baae2977e6",
+      "raster_bytes": 292464,
+      "raster_size": [
+        2180,
+        1660
+      ],
+      "observable_summary": {
+        "n_employees": 40,
+        "closed_day": 20,
+        "total_access_events": 846,
+        "total_after_hours_events": 119,
+        "n_canaries_planted": 38,
+        "n_surfaced_canary_leaks": 7,
+        "n_surfaced_regular_leaks": 6,
+        "canary_narrowed_candidates": [
+          "e06"
+        ],
+        "naive_most_after_hours_id": "e04"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e06",
+          "e03",
+          "e00"
+        ],
+        "suspected_decoy_ids": [
+          "e04",
+          "e18",
+          "e27",
+          "e31",
+          "e03",
+          "e20",
+          "e22"
+        ],
+        "confidence": 0.999,
+        "canary_leak_summary": "7 surfaced canaries: c4 (=A!), c5 (=A!), c7 (=C!), c10 (=A!), c13 (=A!), c15 (=A!), and c17 (=A!). Only 3 employees held all 7 surfaced canaries (H7/7): e06 matched all 7/7 variants (ALL 7/7 H7), e03 matched 3/7 (H7/7), and e00 matched 2/7 (H7/7). All other 37 employees missed at least 3 surfaced canaries (H<=4/7) and are 100% cleared.",
+        "visual_reasoning": "In Panel B, e06 (ENG) is the sole standout candidate, holding all 7 surfaced canaries and achieving a perfect 7/7 variant match (ALL 7/7 H7), whereas the only other H7/7 holders e03 (LEG, 3/7 matches) and e00 (ENG, 2/7 matches) require 4 and 5 simultaneous 5% variant-flip errors respectively. Panel C strongly corroborates e06, showing direct access opens on 4 of 6 surfaced regular leaks (L4 D5/6: L1 on d1-4, d2-3, d12-3 and L2 on d2-4) versus L0 D0/6 for e03 and L2 D5/6 for e00. In Panel A, e06 exhibits the expected moderate mole self after-hours profile (7/23 = 30.4%, ~1.15 logs/day), while e04 (RES) shows an extreme red after-hours spike (17/27 = 63.0%) despite being 100% cleared in Panel B (1/7 H3/7, missing c13, c15, c17), identifying e04 as the primary framed decoy alongside secondary noise spikes on cleared employees like e18 (7/18, H3/7) and e27 (6/31, H0/7)."
+      },
+      "ground_truth": {
+        "true_mole": "e06",
+        "true_decoy": "e04"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true,
+        "brier_score": 1e-06,
+        "calibration_error": 0.001,
+        "signed_confidence_gap": -0.001,
+        "mole_delta_vs_naive": 1
+      },
+      "usage": {
+        "in": 2151,
+        "out": 604,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.010342,
+        "latency_s": 8.85
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/hard_seed_8.png"
+    },
+    {
+      "seed": 9,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "raster_sha256": "048de7da7566ba307110597af4ef62e8a5be7ff38c8d3d2554716c57451676b6",
+      "raster_bytes": 290495,
+      "raster_size": [
+        2180,
+        1660
+      ],
+      "observable_summary": {
+        "n_employees": 40,
+        "closed_day": 20,
+        "total_access_events": 802,
+        "total_after_hours_events": 119,
+        "n_canaries_planted": 38,
+        "n_surfaced_canary_leaks": 3,
+        "n_surfaced_regular_leaks": 9,
+        "canary_narrowed_candidates": [
+          "e08",
+          "e11"
+        ],
+        "naive_most_after_hours_id": "e31"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e08",
+          "e11",
+          "e02",
+          "e05"
+        ],
+        "suspected_decoy_ids": [
+          "e31",
+          "e30",
+          "e33"
+        ],
+        "confidence": 0.89,
+        "canary_leak_summary": "Three surfaced canaries: c1 (=C!), c2 (=B!), and c11 (=A!). Only e08 and e11 held all 3/3 surfaced canaries and matched all 3/3 variants (ALL 3/3 H3: [C], [B], [A]). Rows e02 and e05 held 3/3 and matched 2/3 ([C], ~A, [A]). Rows e07, e09, e10, e12, e13, and e14 held 3/3 and matched 1/3. Rows e20-e39 held 0/3 surfaced canaries and are 100% cleared.",
+        "visual_reasoning": "In Panel B, e08 and e11 are tied with perfect ALL 3/3 H3 canary variant matches ([C] on c1, [B] on c2, [A] on c11), giving them ~38x higher canary likelihood than 2/3 H3/3 runners-up e02 and e05. Panel C breaks the tie decisively in favor of e08: e08 has L4 D6/8 regular-leak correlation (direct opens on d1-2, d4-3, d5-3, and d14-2 plus department exposure on d9-2 and d12-2), whereas e11 only has L1 D4/8 (single direct open on d7-2). Panel A further corroborates e08 with a mole-consistent 33% after-hours rate (6/18) versus e11 at 17% (4/24). Meanwhile, e31 exhibits a massive anomalous after-hours framing spike in Panel A (22/36 after-hours logs across 12 days) while being 100% cleared in Panel B (0/3 H0/3, crossed-out '-' on c1, c2, and c11), making e31 the primary framed decoy alongside secondary noise targets e30 (7/27, H0/3) and e33 (5/16, H0/3)."
+      },
+      "ground_truth": {
+        "true_mole": "e08",
+        "true_decoy": "e31"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true,
+        "brier_score": 0.0121,
+        "calibration_error": 0.11,
+        "signed_confidence_gap": -0.11,
+        "mole_delta_vs_naive": 1
+      },
+      "usage": {
+        "in": 2151,
+        "out": 597,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.010272,
+        "latency_s": 10.292
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/hard_seed_9.png"
+    },
+    {
+      "seed": 10,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "raster_sha256": "1917d25e65e9d0582ad4c38a1da59017fd1ed8d295067b813febea5fde2f1561",
+      "raster_bytes": 289808,
+      "raster_size": [
+        2180,
+        1660
+      ],
+      "observable_summary": {
+        "n_employees": 40,
+        "closed_day": 20,
+        "total_access_events": 830,
+        "total_after_hours_events": 129,
+        "n_canaries_planted": 38,
+        "n_surfaced_canary_leaks": 6,
+        "n_surfaced_regular_leaks": 4,
+        "canary_narrowed_candidates": [
+          "e10"
+        ],
+        "naive_most_after_hours_id": "e00"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e10",
+          "e01",
+          "e04"
+        ],
+        "suspected_decoy_ids": [
+          "e00",
+          "e35",
+          "e22",
+          "e29",
+          "e26"
+        ],
+        "confidence": 0.999,
+        "canary_leak_summary": "Six canaries surfaced: c1 (=B!), c3 (=C!), c5 (=A!), c8 (=A!), c11 (=A!), and c15 (=A!). Only three employees held all 6 surfaced canaries (H6/6): e10 matched ALL 6/6 variants ([B], [C], [A], [A], [A], [A]), e01 matched 4/6 (mismatched ~A on c3 and ~B on c15), and e04 matched 2/6 (matched c1 and c5; mismatched ~B, ~B, ~B, ~C). All other 37 employees held fewer than 6 surfaced canaries (H0/6 to H5/6) and are 100% cleared.",
+        "visual_reasoning": "In Panel B, e10 is the sole employee holding all 6 surfaced canaries with a perfect 6/6 variant match (ALL 6/6 H6), giving overwhelming odds (~38^2 = 1444x over second-place e01 at 4/6 H6/6, and ~38^4 over e04 at 2/6 H6/6). Panel C strongly corroborates e10 (ENG), showing department access to all 4 leaked regular documents (D4/4) and direct opens on two of them (d8-1 and d11-2, L2 D4/4), whereas e01 (FIN) has zero regular-leak exposure (L0 D0/4). Meanwhile, Panel A exposes e00 as the primary framed decoy: e00 exhibits a massive red after-hours framing spike (21/34 after-hours logs across 12 days) despite being 100% cleared in Panel B (0/6 H2/6, missing c5, c8, c11, and c15). Secondary framing noise appears as smaller after-hours elevations (5 after-hours events) on cleared rows like e35, e22, e29, and e26."
+      },
+      "ground_truth": {
+        "true_mole": "e10",
+        "true_decoy": "e00"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true,
+        "brier_score": 1e-06,
+        "calibration_error": 0.001,
+        "signed_confidence_gap": -0.001,
+        "mole_delta_vs_naive": 1
+      },
+      "usage": {
+        "in": 2151,
+        "out": 582,
+        "thinking": 0,
+        "cached": 0,
+        "cost_usd": 0.010122,
+        "latency_s": 9.655
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/hard_seed_10.png"
+    },
+    {
+      "seed": 11,
+      "tier": "hard",
+      "tiers_version": "v1.4",
+      "raster_sha256": "0180c1f09aaad84c50d5087473ecb3043972211eda1ac035b834e6f016c56695",
+      "raster_bytes": 287390,
+      "raster_size": [
+        2180,
+        1660
+      ],
+      "observable_summary": {
+        "n_employees": 40,
+        "closed_day": 20,
+        "total_access_events": 828,
+        "total_after_hours_events": 119,
+        "n_canaries_planted": 38,
+        "n_surfaced_canary_leaks": 2,
+        "n_surfaced_regular_leaks": 6,
+        "canary_narrowed_candidates": [
+          "e09",
+          "e12"
+        ],
+        "naive_most_after_hours_id": "e32"
+      },
+      "model_output": {
+        "top_suspect_ids": [
+          "e09",
+          "e12",
+          "e03"
+        ],
+        "suspected_decoy_ids": [
+          "e32",
+          "e04",
+          "e05",
+          "e30",
+          "e31"
+        ],
+        "confidence": 0.98,
+        "canary_leak_summary": "Two canary columns surfaced: c2 (=B!) and c4 (=A!). Employees e20-e39 held neither canary (0/2 H0/2, crossed-out tiles) and are 100% cleared, while e00-e19 held both (H2/2). Only e09 and e12 matched both surfaced variants (ALL 2/2 H2 with green [B] in c2 and [A] in c4), whereas ten employees (e00, e03, e06, e07, e08, e10, e11, e13, e15, e18) matched 1/2 H2/2 with one amber noisy mismatch.",
+        "visual_reasoning": "In Panel A, e32 exhibits an extreme after-hours spike of 17/33 logs (51.5%) across D01-D20, yet Panel B shows e32 never received either surfaced canary (0/2 H0/2), identifying e32 as the primary framed decoy alongside minor noise spikes on cleared/non-matching staff (e04 at 6/20, e05 at 6/22, e30 at 5/16, e31 at 5/19). In Panel B, only e09 (LEG) and e12 (FIN) achieve full ALL 2/2 H2 canary variant matches ([B] on c2 and [A] on c4). Panel C and Panel A decisively break this tie: e09 has strong regular-leak correlation (L3 D5/6, directly opening three leaked docs with department exposure on five of six) and a mole-consistent 8/19 (42%) after-hours rate, whereas e12 has zero regular-leak exposure (L0 D0/6) and a benign 2/19 (10.5%) after-hours rate."
+      },
+      "ground_truth": {
+        "true_mole": "e09",
+        "true_decoy": "e32"
+      },
+      "evaluation": {
+        "top1_mole_correct": true,
+        "top3_mole_hit": true,
+        "top1_decoy_correct": true,
+        "decoy_identified": true,
+        "avoided_framing_trap": true,
+        "naive_baseline_mole_correct": false,
+        "naive_baseline_trapped_by_decoy": true,
+        "brier_score": 0.0004,
+        "calibration_error": 0.02,
+        "signed_confidence_gap": -0.02,
+        "mole_delta_vs_naive": 1
+      },
+      "usage": {
+        "in": 2151,
+        "out": 528,
+        "thinking": 1688,
+        "cached": 0,
+        "cost_usd": 0.026462,
+        "latency_s": 28.516
+      },
+      "model_version": "gemini-4-carbon",
+      "raster_path": "rasters/hard_seed_11.png"
+    }
+  ]
+}

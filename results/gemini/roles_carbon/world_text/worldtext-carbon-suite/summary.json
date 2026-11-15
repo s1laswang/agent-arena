@@ -441,12 +441,12 @@
     },
     "persona_interviews": {
       "cached": 0,
-      "calls": 64,
-      "cost_usd": 0.332088,
-      "in": 63104,
-      "out": 4721,
-      "thinking": 15867,
-      "verified_folders": 2
+      "calls": 120,
+      "cost_usd": 0.642966,
+      "in": 118268,
+      "out": 8751,
+      "thinking": 31892,
+      "verified_folders": 3
     },
     "thinking_level_calibration": {
       "cached": 0,
@@ -830,7 +830,7 @@
     "secret_leaks_detected": 0,
     "stego_encoding_violations": 0,
     "truth_leak_violations": 0,
-    "verified_folders_audited": 14
+    "verified_folders_audited": 15
   },
   "model_id": "gemini-4-carbon",
   "persona_interviews_suite": {
@@ -857,6 +857,27 @@
         }
       },
       {
+        "commit": "3567c70ebc",
+        "counterfactual_invariance_rate": 1.0,
+        "n_interviews": 56,
+        "n_worlds": 7,
+        "pairwise_ordering_rate": 1.0,
+        "run_dir": "results/gemini/roles_carbon/world_text/persona-interviews-easy03-hard79-carbon",
+        "signal_calibration_accuracy": 1.0,
+        "solver_mean_score": 0.6871,
+        "stego_leaks": 0,
+        "template_mean_score": 0.6871,
+        "truth_leaks": 0,
+        "usage": {
+          "cached": 0,
+          "calls": 56,
+          "cost_usd": 0.310878,
+          "in": 55164,
+          "out": 4030,
+          "thinking": 16025
+        }
+      },
+      {
         "commit": "e742ebe31e",
         "counterfactual_invariance_rate": 1.0,
         "n_interviews": 32,
@@ -879,28 +900,51 @@
       }
     ],
     "by_tier": {
-      "hard": {
-        "n_worlds": 5,
+      "easy": {
+        "n_worlds": 4,
         "paired_delta_ci95": [
           0.0,
-          0.084
+          0.0
         ],
-        "paired_delta_mean": 0.028,
+        "paired_delta_mean": 0.0,
         "persona_solver_accuracy": 1.0,
         "persona_solver_accuracy_ci95": [
-          0.5655,
+          0.5101,
           1.0
         ],
         "persona_solver_ci95": [
-          0.442,
-          0.718
+          0.755,
+          0.85
         ],
-        "persona_solver_mean": 0.612,
+        "persona_solver_mean": 0.8,
+        "template_solver_ci95": [
+          0.755,
+          0.85
+        ],
+        "template_solver_mean": 0.8
+      },
+      "hard": {
+        "n_worlds": 8,
+        "paired_delta_ci95": [
+          0.0,
+          0.0525
+        ],
+        "paired_delta_mean": 0.0175,
+        "persona_solver_accuracy": 1.0,
+        "persona_solver_accuracy_ci95": [
+          0.6756,
+          1.0
+        ],
+        "persona_solver_ci95": [
+          0.4363,
+          0.6987
+        ],
+        "persona_solver_mean": 0.5837,
         "template_solver_ci95": [
           0.43,
-          0.696
+          0.6787
         ],
-        "template_solver_mean": 0.584
+        "template_solver_mean": 0.5663
       },
       "medium": {
         "n_worlds": 3,
@@ -926,63 +970,63 @@
         "template_solver_mean": 0.6433
       },
       "overall": {
-        "n_worlds": 8,
+        "n_worlds": 15,
         "paired_delta_ci95": [
           0.0,
-          0.0538
+          0.0287
         ],
-        "paired_delta_mean": 0.0188,
+        "paired_delta_mean": 0.01,
         "persona_solver_accuracy": 1.0,
         "persona_solver_accuracy_ci95": [
-          0.6756,
+          0.7961,
           1.0
         ],
         "persona_solver_ci95": [
-          0.4938,
-          0.735
+          0.5513,
+          0.74
         ],
-        "persona_solver_mean": 0.625,
+        "persona_solver_mean": 0.654,
         "template_solver_ci95": [
-          0.4838,
-          0.7175
+          0.544,
+          0.7327
         ],
-        "template_solver_mean": 0.6062
+        "template_solver_mean": 0.644
       }
     },
-    "counterfactual_checks_total": 192,
+    "counterfactual_checks_total": 360,
     "counterfactual_invariance_ci95": [
-      0.9804,
+      0.9894,
       1.0
     ],
     "counterfactual_invariance_rate": 1.0,
-    "n_batches": 2,
+    "n_batches": 3,
     "paired_delta_ci95": [
       0.0,
-      0.0538
+      0.0287
     ],
-    "paired_delta_mean": 0.0188,
+    "paired_delta_mean": 0.01,
     "persona_solver_accuracy": 1.0,
     "persona_solver_accuracy_ci95": [
-      0.6756,
+      0.7961,
       1.0
     ],
     "persona_solver_ci95": [
-      0.4938,
-      0.735
+      0.5513,
+      0.74
     ],
-    "persona_solver_mean": 0.625,
+    "persona_solver_mean": 0.654,
     "signal_calibration_accuracy": 1.0,
     "signal_calibration_ci95": [
-      0.9434,
+      0.969,
       1.0
     ],
     "template_solver_ci95": [
-      0.4838,
-      0.7175
+      0.544,
+      0.7327
     ],
-    "template_solver_mean": 0.6062,
-    "total_interviews": 64,
-    "unique_worlds": 8
+    "template_solver_mean": 0.644,
+    "total_interviews": 120,
+    "unique_worlds": 15
   },
   "role": "world_text",
   "thinking_calibration_suite": {
@@ -1041,12 +1085,12 @@
   },
   "totals": {
     "cached": 25362601,
-    "calls": 1070,
-    "cost_usd": 14.440404,
-    "in": 27812279,
-    "out": 521945,
-    "thinking": 539671,
-    "verified_folders": 14
+    "calls": 1126,
+    "cost_usd": 14.751282,
+    "in": 27867443,
+    "out": 525975,
+    "thinking": 555696,
+    "verified_folders": 15
   },
   "verified_run_folders": [
     "results/gemini/roles_carbon/world_text/biased-chatter-ablation-carbon",
@@ -1061,6 +1105,7 @@
     "results/gemini/roles_carbon/world_text/dynamic-events-hard-carbon",
     "results/gemini/roles_carbon/world_text/dynamic-events-hard37-carbon",
     "results/gemini/roles_carbon/world_text/persona-interviews-carbon",
+    "results/gemini/roles_carbon/world_text/persona-interviews-easy03-hard79-carbon",
     "results/gemini/roles_carbon/world_text/persona-interviews-hard14-carbon",
     "results/gemini/roles_carbon/world_text/thinking-calibration-carbon"
   ]

@@ -1,0 +1,88 @@
+{
+  "command": "PYTHONPATH=. python -m canary.gemini.interview_interrogator --llm gemini:gemini-4-carbon --specs easy:0,easy:1,easy:2,easy:3,hard:7,hard:8,hard:9 --worlds-dir /tmp/opencode/w1-worlds --jobs 6 --out results/gemini_roles/world_text/persona-interviews-easy03-hard79-carbon",
+  "commit": "3567c70ebcff5fe5c296b5978c39d4a7fe2d04da",
+  "count": 56,
+  "counterfactual_prompt_invariance_rate": 1.0,
+  "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+  "fake_env": false,
+  "fallback_count": 0,
+  "key_metric": "56 live interviews (7 worlds), 0 leaks, signal acc 100%, solver +0.687 vs +0.687",
+  "ledger_run_id": "persona-interviews-20261115T000223Z",
+  "lint_violations": 0,
+  "llm_ok_count": 56,
+  "llm_spec": "gemini:gemini-4-carbon",
+  "model_id": "gemini-4-carbon",
+  "n_interviews_generated": 56,
+  "n_samples": 56,
+  "n_worlds": 7,
+  "pairwise_signal_ordering_rate": 1.0,
+  "prompt_truth_leak_violations": 0,
+  "raw_llm_violations": 0,
+  "role": "world_text",
+  "sample_count": 56,
+  "signal_calibration_accuracy": 1.0,
+  "signal_calibration_ok": true,
+  "signals_covered": [
+    "evasive",
+    "cooperative"
+  ],
+  "smoke": false,
+  "solver_accuracy": 1.0,
+  "solver_mean_score": 0.6871,
+  "solver_parity_ok": true,
+  "solver_score_delta": 0.0,
+  "stego_leak_violations": 0,
+  "stub": false,
+  "subrole": "persona_interviews",
+  "template_baseline_accuracy": 1.0,
+  "template_baseline_mean_score": 0.6871,
+  "tiers_version": "v1.4",
+  "timestamp": "2026-11-15T00:06:04+00:00",
+  "topics_covered": [
+    "recent_documents",
+    "contacts_outside",
+    "workload",
+    "access_needs"
+  ],
+  "truth_leak_violations": 0,
+  "usage": {
+    "cached": 0,
+    "calls": 56,
+    "cost_usd": 0.310878,
+    "in": 55164,
+    "latency_s": 220.32,
+    "out": 4030,
+    "thinking": 16025,
+    "total_tokens": 75219
+  },
+  "world_specs": [
+    {
+      "seed": 0,
+      "tier": "easy"
+    },
+    {
+      "seed": 1,
+      "tier": "easy"
+    },
+    {
+      "seed": 2,
+      "tier": "easy"
+    },
+    {
+      "seed": 3,
+      "tier": "easy"
+    },
+    {
+      "seed": 7,
+      "tier": "hard"
+    },
+    {
+      "seed": 8,
+      "tier": "hard"
+    },
+    {
+      "seed": 9,
+      "tier": "hard"
+    }
+  ]
+}

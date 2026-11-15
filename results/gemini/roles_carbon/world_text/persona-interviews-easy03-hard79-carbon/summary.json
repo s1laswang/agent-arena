@@ -1,0 +1,350 @@
+{
+  "environment_scope": "demo/research layer (v1.5 candidate), not part of the judged v1.4 environment",
+  "model_id": "gemini-4-carbon",
+  "n_interviews": 56,
+  "n_worlds": 7,
+  "role": "world_text",
+  "signal_calibration": {
+    "by_topic": {
+      "access_needs": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 7.1429,
+        "mean_evasive_score": -7.4286,
+        "n": 14
+      },
+      "contacts_outside": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 6.5714,
+        "mean_evasive_score": -6.4286,
+        "n": 14
+      },
+      "recent_documents": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 4.8571,
+        "mean_evasive_score": -6.8571,
+        "n": 14
+      },
+      "workload": {
+        "accuracy": 1.0,
+        "mean_cooperative_score": 5.1429,
+        "mean_evasive_score": -7.8571,
+        "n": 14
+      }
+    },
+    "calibration_ok": true,
+    "cooperative_hedging_rate": 0.0,
+    "cooperative_mean_words": 46.29,
+    "cooperative_specificity_rate": 1.0,
+    "distinct_tones_seen": [
+      "blunt",
+      "chatty",
+      "dry",
+      "formal",
+      "terse",
+      "upbeat",
+      "warm"
+    ],
+    "evasive_hedging_rate": 1.0,
+    "evasive_mean_words": 23.64,
+    "evasive_specificity_rate": 0.0,
+    "mean_calibration_margin": 13.0714,
+    "mean_cooperative_score": 5.9286,
+    "mean_evasive_score": -7.1429,
+    "n_cooperative": 28,
+    "n_evasive": 28,
+    "n_topic_pairs": 28,
+    "n_total": 56,
+    "pairwise_ordering_rate": 1.0,
+    "signal_classification_accuracy": 1.0,
+    "unique_answers_ratio": 1.0
+  },
+  "solver_parity": {
+    "by_tier": {
+      "easy": {
+        "n": 4,
+        "persona_obvious_heuristic_mean_score": -0.515,
+        "persona_solver_accuracy": 1.0,
+        "persona_solver_mean_score": 0.8,
+        "solver_score_delta": 0.0,
+        "solver_vs_obvious_gap": 1.315,
+        "template_obvious_heuristic_mean_score": -0.515,
+        "template_solver_accuracy": 1.0,
+        "template_solver_mean_score": 0.8
+      },
+      "hard": {
+        "n": 3,
+        "persona_obvious_heuristic_mean_score": -1.0,
+        "persona_solver_accuracy": 1.0,
+        "persona_solver_mean_score": 0.5367,
+        "solver_score_delta": 0.0,
+        "solver_vs_obvious_gap": 1.5367,
+        "template_obvious_heuristic_mean_score": -1.0,
+        "template_solver_accuracy": 1.0,
+        "template_solver_mean_score": 0.5367
+      }
+    },
+    "do_nothing_all_zero": true,
+    "env_stego_violations": 0,
+    "n": 7,
+    "parity_ok": true,
+    "per_world": [
+      {
+        "do_nothing_score": 0.0,
+        "env_interviews_executed": 4,
+        "env_stego_violations": 0,
+        "persona_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 4,
+          "score": -1.0
+        },
+        "persona_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 5,
+          "score": 0.76
+        },
+        "seed": 0,
+        "template_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 4,
+          "score": -1.0
+        },
+        "template_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 5,
+          "score": 0.76
+        },
+        "tier": "easy"
+      },
+      {
+        "do_nothing_score": 0.0,
+        "env_interviews_executed": 4,
+        "env_stego_violations": 0,
+        "persona_obvious_heuristic": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 2,
+          "score": 0.94
+        },
+        "persona_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 5,
+          "score": 0.81
+        },
+        "seed": 1,
+        "template_obvious_heuristic": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 2,
+          "score": 0.94
+        },
+        "template_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 5,
+          "score": 0.81
+        },
+        "tier": "easy"
+      },
+      {
+        "do_nothing_score": 0.0,
+        "env_interviews_executed": 4,
+        "env_stego_violations": 0,
+        "persona_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 2,
+          "score": -1.0
+        },
+        "persona_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 6,
+          "score": 0.75
+        },
+        "seed": 2,
+        "template_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 2,
+          "score": -1.0
+        },
+        "template_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 6,
+          "score": 0.75
+        },
+        "tier": "easy"
+      },
+      {
+        "do_nothing_score": 0.0,
+        "env_interviews_executed": 4,
+        "env_stego_violations": 0,
+        "persona_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "persona_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 3,
+          "score": 0.88
+        },
+        "seed": 3,
+        "template_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 3,
+          "score": 0.88
+        },
+        "tier": "easy"
+      },
+      {
+        "do_nothing_score": 0.0,
+        "env_interviews_executed": 4,
+        "env_stego_violations": 0,
+        "persona_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "persona_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 9,
+          "score": 0.64
+        },
+        "seed": 7,
+        "template_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 9,
+          "score": 0.64
+        },
+        "tier": "hard"
+      },
+      {
+        "do_nothing_score": 0.0,
+        "env_interviews_executed": 4,
+        "env_stego_violations": 0,
+        "persona_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "persona_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 21,
+          "score": 0.26
+        },
+        "seed": 8,
+        "template_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 21,
+          "score": 0.26
+        },
+        "tier": "hard"
+      },
+      {
+        "do_nothing_score": 0.0,
+        "env_interviews_executed": 4,
+        "env_stego_violations": 0,
+        "persona_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "persona_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 6,
+          "score": 0.71
+        },
+        "seed": 9,
+        "template_obvious_heuristic": {
+          "correct": false,
+          "end_reason": "accused",
+          "final_day": 11,
+          "score": -1.0
+        },
+        "template_solver": {
+          "correct": true,
+          "end_reason": "accused",
+          "final_day": 6,
+          "score": 0.71
+        },
+        "tier": "hard"
+      }
+    ],
+    "persona_obvious_heuristic_mean_score": -0.7229,
+    "persona_solver_accuracy": 1.0,
+    "persona_solver_mean_score": 0.6871,
+    "solver_score_delta": 0.0,
+    "solver_vs_obvious_gap": 1.41,
+    "template_obvious_heuristic_mean_score": -0.7229,
+    "template_solver_accuracy": 1.0,
+    "template_solver_mean_score": 0.6871,
+    "world_specs": [
+      {
+        "seed": 0,
+        "tier": "easy"
+      },
+      {
+        "seed": 1,
+        "tier": "easy"
+      },
+      {
+        "seed": 2,
+        "tier": "easy"
+      },
+      {
+        "seed": 3,
+        "tier": "easy"
+      },
+      {
+        "seed": 7,
+        "tier": "hard"
+      },
+      {
+        "seed": 8,
+        "tier": "hard"
+      },
+      {
+        "seed": 9,
+        "tier": "hard"
+      }
+    ]
+  },
+  "subrole": "persona_interviews",
+  "tiers_version": "v1.4"
+}

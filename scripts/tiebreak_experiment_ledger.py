@@ -28,9 +28,11 @@ HISTORICAL_RUN_IDS: tuple[str, ...] = (
     "J4-v1-44397",
     "WS4-base-44411",
     "WS4-v2-44412",
+    "WS4-v2-off30-68bb",
     "WS4-v3-44548-44550",
     "WS4-v3-44553",
     "WS4-v3-verda-s0-44572",
+    "WS4-v3-verda-s0-eval",
 )
 
 FORBIDDEN_SECRET_PLACEHOLDERS = frozenset({
@@ -1131,6 +1133,137 @@ def _load_ws4_v3_verda_44572(external_data_root: Path) -> dict[str, Any]:
     }
 
 
+def _load_ws4_v2_off30() -> dict[str, Any]:
+    return {
+        "run_id": "WS4-v2-off30-68bb",
+        "source": "historical",
+        "model": "Qwen2.5-1.5B-Instruct LoRA r=16 (dense v2, off30)",
+        "method": "SFT dense 4k + oversample-endings 3 evaluated on held-out seeds 800030..800059 (Verda A100 68bbe201)",
+        "tiers_version": "v1.4",
+        "tiers": ["easy", "medium", "hard"],
+        "context_len": 4096,
+        "heldout_n": 90,
+        "before_mean_score": 0.0,
+        "after_mean_score": -0.514,
+        "after_ci95": 0.115,
+        "paired_mean_delta": -0.514,
+        "paired_ci95_low": -0.629,
+        "paired_ci95_high": -0.399,
+        "before_valid_call_rate": 0.03,
+        "after_valid_call_rate": 0.92,
+        "before_world_secret_tag": None,
+        "after_world_secret_tag": None,
+        "replay_verified": False,
+        "verified_improvement": False,
+        "status": "NEGATIVE_BLIND_ACCUSE",
+        "details": {
+            "verda_instance": "68bbe201",
+            "heldout_seed_range": "800030..800059",
+            "mean_score_exact": -0.5142,
+            "ci95_exact": 0.1152,
+            "accused_count": 52,
+            "eval_cap_count": 38,
+            "accuracy_exact": 0.0333,
+            "hard_accuracy": 0.0,
+            "invalid_call_rate": 0.0825,
+            "pooled_v2_n": 172,
+            "pooled_v2_mean_score": -0.457,
+            "pooled_v2_ci95": 0.086,
+        },
+        "gates": {
+            "gate1_seed_hygiene": True,
+            "gate2_paired_world_secret": False,
+            "gate3_sample_and_replay": False,
+            "gate4_paired_ci95_positive": False,
+            "all_passed": False,
+            "reasons": [
+                "unpaired per-process world secret on Verda evalbox 68bbe201",
+                "38/90 episodes hit eval_cap=120",
+                "negative held-out score (-0.514 +/- 0.115 on off30 n=90; pooled v2 n=172 is -0.457 +/- 0.086)",
+            ],
+        },
+        "evidence": [
+            "origin/justSilas-fr8@3f5de3de:data/fr8/verda/evalbox-68bb/v2-off30/summary.json",
+            "origin/justSilas-fr8@e649e288:fr8/analysis/out/ws4_table_v3s0.md",
+        ],
+        "notes": (
+            "Verda A100 extra held-out n=90 (800030..800059) confirmed v2 blind-accusation collapse: "
+            "-0.514 +/- 0.115 (52/90 accused, 3/90 correct, 0/30 on hard); pooled v2 n=172 is -0.457 +/- 0.086."
+        ),
+    }
+
+
+def _load_ws4_v3_verda_s0_eval() -> dict[str, Any]:
+    return {
+        "run_id": "WS4-v3-verda-s0-eval",
+        "source": "historical",
+        "model": "Qwen2.5-1.5B-Instruct LoRA (v3-4k s0, 609 GRPO steps)",
+        "method": "Guided decision-point GRPO on Verda H100 3bb74f5a (2.0h, 609 steps, max_ctx=4096)",
+        "tiers_version": "v1.4",
+        "tiers": ["easy", "medium", "hard"],
+        "context_len": 4096,
+        "heldout_n": 90,
+        "before_mean_score": 0.0,
+        "after_mean_score": -0.103,
+        "after_ci95": 0.081,
+        "paired_mean_delta": -0.062,
+        "paired_ci95_low": -0.184,
+        "paired_ci95_high": 0.060,
+        "before_valid_call_rate": 0.03,
+        "after_valid_call_rate": 1.00,
+        "before_world_secret_tag": None,
+        "after_world_secret_tag": None,
+        "replay_verified": False,
+        "verified_improvement": False,
+        "status": "NEGATIVE_4K_TRUNCATION_PERSISTS",
+        "details": {
+            "verda_instance": "3bb74f5a",
+            "grpo_steps": 609,
+            "train_hours": 2.0,
+            "heldout_seed_range": "800000..800029",
+            "mean_score_exact": -0.103,
+            "ci95_exact": 0.0806,
+            "accused_count": 15,
+            "eval_cap_count": 75,
+            "accuracy_exact": 0.0333,
+            "easy_score": -0.2757,
+            "medium_score": 0.0,
+            "hard_score": -0.0333,
+            "medium_accuracy": 0.0,
+            "hard_accuracy": 0.0,
+            "invalid_call_rate": 0.0019,
+            "delta_vs_v2_mean": 0.306,
+            "delta_vs_v2_ci95": 0.136,
+            "delta_vs_v2_paired_n": 82,
+            "delta_vs_base_mean": -0.062,
+            "delta_vs_base_ci95": 0.122,
+            "delta_vs_base_paired_n": 16,
+        },
+        "gates": {
+            "gate1_seed_hygiene": True,
+            "gate2_paired_world_secret": False,
+            "gate3_sample_and_replay": False,
+            "gate4_paired_ci95_positive": False,
+            "all_passed": False,
+            "reasons": [
+                "unpaired per-process world secret across Verda H100 eval vs FR8 base 44411",
+                "75/90 episodes hit eval_cap=120",
+                "held-out score remained negative (-0.103 +/- 0.081, n=90; -0.062 +/- 0.122 vs base n=16) despite +0.306 +/- 0.136 stopping gain over v2",
+            ],
+        },
+        "evidence": [
+            "origin/justSilas-fr8@e649e288:data/fr8/verda/h100-3bb7/runs/v3-verda-s0/summary.json",
+            "origin/justSilas-fr8@e649e288:data/fr8/verda/h100-3bb7/run-verda-s0/lora/train_summary.json",
+            "origin/justSilas-fr8@e649e288:fr8/analysis/out/ws4_table_v3s0.md",
+        ],
+        "notes": (
+            "Verda H100 609-step GRPO (max_ctx=4096) cured blind accusations vs v2 (+0.306 +/- 0.136, valid 1.00, "
+            "accused 15/90), but still scored -0.103 +/- 0.081 on held-out n=90 (-0.062 +/- 0.122 vs base; 3/90 "
+            "correct, 0/60 on medium+hard) because 4k raw context still truncates canary-to-recipient tables."
+        ),
+    }
+
+
 def load_historical_runs(
     repo_root: Path = ROOT,
     external_data_root: Path = DEFAULT_EXTERNAL_DATA_ROOT,
@@ -1140,9 +1273,11 @@ def load_historical_runs(
         _load_j4_44397(repo_root),
         _load_ws4_base_44411(external_data_root),
         _load_ws4_v2_44412(external_data_root),
+        _load_ws4_v2_off30(),
         _load_ws4_v3_oom(external_data_root),
         _load_ws4_v3_44553(external_data_root),
         _load_ws4_v3_verda_44572(external_data_root),
+        _load_ws4_v3_verda_s0_eval(),
     ]
 
 
@@ -1372,17 +1507,21 @@ def render_markdown_report(ledger: dict[str, Any]) -> str:
         "- In `WS4-v2-44412` (`dense` 4k windows + `--oversample-endings 3`), oversampling `accuse` endings 4x "
         "forced the model to accuse on `51%` (`42/82`) of held-out episodes while `1,254`-token truncation hid "
         "who received each canary variant. Accuracy collapsed to `6.1%` (`5/82` overall, `0/27` on hard), "
-        "driving mean score down to `-0.395 +/- 0.128`.",
+        "driving mean score down to `-0.395 +/- 0.128` (`-0.514 +/- 0.115` on `WS4-v2-off30-68bb` `n=90`; "
+        "pooled `v2` `n=172` `-0.457 +/- 0.086`).",
         "",
-        f"{h3} 1.3 Decision-Point GRPO Bottlenecks at 4k Context (`44548-44572`)",
+        f"{h3} 1.3 Decision-Point GRPO Bottlenecks at 4k Context (`44548-44572` and Verda H100 `v3-4k-s0`)",
         "",
         "- `WS4-v3-44548-44550`: unchunked group prefill and full-logit sampling OOMed V100-32GB (`5.49-5.52 GiB` "
         "allocation failure above `~26.5 GiB` reserved).",
         "- `WS4-v3-44553`: after enabling gradient checkpointing, unguided sampling hit `8/10` zero-variance "
         "groups (`continue_frac=1.0`, `accuse_frac=0.0`) because avoiding `-1.0` dominates uninformed guesses.",
         "- `WS4-v3-verda-s0-44572`: guided forced-accuse exploration lifted step-140 valid-only decision gain to "
-        "`+0.091` without single-tool collapse, but forced-accuse target (`whom`) accuracy remained flat at "
-        "`~0.19` under 4k raw context because recipient assignments were still truncated.",
+        "`+0.091` without single-tool collapse, while FR8 V100 replicate `44572` continued training.",
+        "- `WS4-v3-verda-s0-eval`: after completing `609` GRPO steps (`2.0h` on Verda H100 `3bb74f5a`), held-out "
+        "evaluation (`n=90`, `800000..800029`) improved over `v2` by `+0.306 +/- 0.136` (`valid=1.00`, blind "
+        "accusations cut to `15/90`), yet still scored `-0.103 +/- 0.081` (`-0.062 +/- 0.122` vs `base`, `3/90` "
+        "correct, `0/60` on medium+hard) because `4,096`-token raw transcripts still evict recipient maps.",
         "",
         f"{h3} 1.4 Paired World-Secret Hygiene (`44411` vs `44412` Caveat)",
         "",

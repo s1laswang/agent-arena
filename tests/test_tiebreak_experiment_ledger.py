@@ -110,9 +110,11 @@ def test_historical_runs_and_clean_clone_determinism(tmp_path: Path) -> None:
         "J4-v1-44397",
         "WS4-base-44411",
         "WS4-v2-44412",
+        "WS4-v2-off30-68bb",
         "WS4-v3-44548-44550",
         "WS4-v3-44553",
         "WS4-v3-verda-s0-44572",
+        "WS4-v3-verda-s0-eval",
     )
 
     assert by_id["J4-pilot-44200"]["status"] == "FAILED_OOM"
@@ -154,6 +156,22 @@ def test_historical_runs_and_clean_clone_determinism(tmp_path: Path) -> None:
     assert r_v3["details"]["step_milestone"] == 140
     assert r_v3["details"]["valid_only_gain_vs_solver"] == 0.091
     assert r_v3["details"]["forced_accuse_whom_accuracy"] == 0.19
+
+    r_v2_off30 = by_id["WS4-v2-off30-68bb"]
+    assert r_v2_off30["status"] == "NEGATIVE_BLIND_ACCUSE"
+    assert r_v2_off30["heldout_n"] == 90
+    assert r_v2_off30["after_mean_score"] == -0.514
+    assert r_v2_off30["details"]["pooled_v2_n"] == 172
+    assert r_v2_off30["details"]["pooled_v2_mean_score"] == -0.457
+
+    r_v3_eval = by_id["WS4-v3-verda-s0-eval"]
+    assert r_v3_eval["status"] == "NEGATIVE_4K_TRUNCATION_PERSISTS"
+    assert r_v3_eval["heldout_n"] == 90
+    assert r_v3_eval["after_mean_score"] == -0.103
+    assert r_v3_eval["after_ci95"] == 0.081
+    assert r_v3_eval["details"]["grpo_steps"] == 609
+    assert r_v3_eval["details"]["delta_vs_v2_mean"] == 0.306
+    assert r_v3_eval["details"]["delta_vs_base_mean"] == -0.062
 
     for r in by_id.values():
         assert r["verified_improvement"] is False
@@ -326,7 +344,7 @@ def test_positive_acceptance_and_dynamic_discovery(tmp_path: Path) -> None:
     ])
     assert rc_write == 0
     written = json.loads(out_json.read_text(encoding="utf-8"))
-    assert written["summary_counts"]["historical_runs"] == 7
+    assert written["summary_counts"]["historical_runs"] == 9
     assert written["summary_counts"]["discovered_runs"] == 2
     assert written["summary_counts"]["verified_improvements"] == 1
     assert written["summary_counts"]["verified_run_ids"] == ["compact-cal-0.5b-v1"]
@@ -360,7 +378,7 @@ def test_committed_artifacts_check_and_tamper_detection(tmp_path: Path) -> None:
     assert proc.returncode == 0, proc.stdout + proc.stderr
     payload = json.loads(proc.stdout.strip())
     assert payload["ok"] is True
-    assert payload["historical_runs"] == 7
+    assert payload["historical_runs"] == 9
 
     tampered_json = tmp_path / "tampered_ledger.json"
     data = json.loads(LEDGER_JSON_PATH.read_text(encoding="utf-8"))

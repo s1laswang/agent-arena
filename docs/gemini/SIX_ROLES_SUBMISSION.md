@@ -1,10 +1,10 @@
 # Canary: Six Load-Bearing `gemini-4-carbon` Roles in One Self-Auditing RL Benchmark
 
-Google DeepMind "Best Use of Gemini API" submission, Junction 2026. Repository: `github.com/s1laswang/agent-arena` (`canary/gemini/`). Every claim below is backed by a committed `gemini-4-carbon` run folder, `model_id`, and commit SHA verified by `canary.gemini.provenance --root . --strict` across all **96** verified run folders (**7,079** API calls, **$86.9000** USD).
+Google DeepMind "Best Use of Gemini API" submission, Junction 2026. Repository: `github.com/s1laswang/agent-arena` (`canary/gemini/`). Every claim below is backed by a committed `gemini-4-carbon` run folder, `model_id`, and commit SHA verified by `canary.gemini.provenance --root . --strict` across all **99** verified run folders (**7,130** API calls, **$88.1273** USD).
 
 ## Platform Summary
 
-Canary is a Bayesian insider-threat RL benchmark where an AI security lead plants canary traps to catch a mole before company value bleeds away. Across 96 verified gemini-4-carbon runs (7,079 API calls, $86.90 USD), Gemini powers six essential roles: leak-free world text, solvability-gated adaptive moles, 13-tool frontier investigators (paired v1.4 n=33: 90.9% of SolverPolicy, diff -0.0579 +/- 0.1357 95% CI), 1M-context failure analysis (100% verified quotes), whole-repo/MCP exploit hunting, and Part.from_bytes scan vision. Replays offline with no API key.
+Canary is a Bayesian insider-threat RL benchmark where an AI security lead plants canary traps to catch a mole before company value bleeds away. Across 99 verified gemini-4-carbon runs (7,130 API calls, $88.13 USD), Gemini powers six essential roles: leak-free world text, solvability-gated adaptive moles, 13-tool frontier investigators (paired v1.4 n=33: 90.9% of SolverPolicy, diff -0.0579 +/- 0.1357 95% CI), 1M-context failure analysis (100% verified quotes), whole-repo/MCP exploit hunting, and Part.from_bytes scan vision. Replays offline with no API key.
 
 ## 1. The Problem and Why It Matters
 
@@ -19,7 +19,7 @@ Canary automates the entire scientific loop on a single frontier model, `gemini-
 
 ## 2. How the Gemini API Is Integrated Across Six Essential Roles
 
-All Gemini calls route through unified, ledgered clients (`canary/llm/` and `canary/gemini/`) with structured output schemas (`response_schema`), Pydantic validation, prefix and explicit context caching, thought-signature preservation across multi-turn tool calls, and keyless record/replay verification. Across the **96** committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance`, Canary records **7,079 API calls**, **195,437,028 input tokens** (**177,682,115 served from cache**, a **90.9%** cache hit rate), **2,280,807 output tokens**, and **1,457,414 thinking tokens** across **941 verified episodes and samples** for **$86.9000** (**$86.90 USD**, **0** secret leaks).
+All Gemini calls route through unified, ledgered clients (`canary/llm/` and `canary/gemini/`) with structured output schemas (`response_schema`), Pydantic validation, prefix and explicit context caching, thought-signature preservation across multi-turn tool calls, and keyless record/replay verification. Across the **99** committed `gemini-4-carbon` run folders audited by `canary.gemini.provenance`, Canary records **7,130 API calls**, **195,536,496 input tokens** (**177,682,115 served from cache**, a **90.9%** cache hit rate), **2,292,341 output tokens**, and **1,548,717 thinking tokens** across **958 verified episodes and samples** for **$88.1273** (**$88.13 USD**, **0** secret leaks).
 
 | Role | Gemini API Capabilities Used | Canonical Verified Run Folder | Model ID | Commit | Usage (Calls / In / Out / Think / Cost) | Verified Quantitative Outcome |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -47,7 +47,7 @@ Removing `gemini-4-carbon` or its Gemini-native API controls from any of the six
 
 - **Explicit `thinking_level` control:** On `hard` seed `0` (`results/gemini_roles/investigators/thinking-ladder-carbon-hard0`, commit `3df4d2b65bd05a67f2d94ef18d967da05c0e90d7`), scaling from `0` (`low`) to `52,968` (`high`) thinking tokens cuts Bayesian step regret from `0.1623` to `0.0298` (`81.6%` reduction), while `results/gemini_roles/world_text/thinking-calibration-carbon` (commit `dbe9569fcc44abf8bc0665e0533dd1d1b677c6e9`) calibrates world-synthesis thinking tokens `0 -> 3,703 -> 38,674` across `low/medium/high`.
 - **Thought signatures (`thought_signature`) across tool turns:** Preserving Gemini cryptographic `thought_signature` tokens across multi-turn 13-tool episodes (`3,565` investigator calls) keeps latent Bayesian hypothesis state intact across days and enables exact keyless trajectory replay (`scripts/verify_replay.py`).
-- **Explicit and prefix context caching:** Serving **177,682,115** of **195,437,028** input tokens from explicit and prefix cache (**90.9%** cache hit rate across **7,079** calls and **96** runs) keeps the entire six-role benchmark suite at **$86.9000** (**$86.90 USD**) instead of roughly 4x list cost.
+- **Explicit and prefix context caching:** Serving **177,682,115** of **195,536,496** input tokens from explicit and prefix cache (**90.9%** cache hit rate across **7,130** calls and **99** runs) keeps the entire six-role benchmark suite at **$88.1273** (**$88.13 USD**) instead of roughly 4x list cost.
 - **1M-token long context:** Ingests multi-episode trajectory corpora (`596,862` tokens across `101` episodes) and whole-repository whitebox security packs (`104` files, `203,463` tokens) in a single unfragmented pass, avoiding lossy RAG chunking while maintaining `100%` code-verified quotes.
 - **Native multimodal vision (`Part.from_bytes`):** Ingests `260` rendered PNG scans, multi-image dossiers, SOC rasters, and trajectory charts via `Part.from_bytes(mime_type="image/png")`; removing vision on `27` unique redacted-memo episodes drops score from `+0.6263` to `+0.1822` (`100.0%` watermark accuracy, `100.0%` Bayesian text-oracle recovery), while naive log heuristics score `0%` on decoy-framed SOC rasters.
 

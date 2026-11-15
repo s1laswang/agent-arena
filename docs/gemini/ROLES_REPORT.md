@@ -7,13 +7,13 @@ Every number below is extracted programmatically from committed run files with z
 
 - Provenance status: **VERIFIED**
 - Target model: `gemini-4-carbon`
-- Repository HEAD at build: `6426f31a`
+- Repository HEAD at build: `68840110`
 - Verified roles: **6 / 6** (missing: none)
-- Verified `gemini-4-carbon` run folders: **96** (6 canonical headline + 90 supporting; scanned 96 folders)
-- Total verified episodes / samples: **941**
-- Total Gemini API calls: **7,079**
-- Total tokens (in / out / thinking / cached): **195,437,028 / 2,280,807 / 1,457,414 / 177,682,115**
-- Total estimated API cost (USD): **$86.9000**
+- Verified `gemini-4-carbon` run folders: **99** (6 canonical headline + 93 supporting; scanned 99 folders)
+- Total verified episodes / samples: **958**
+- Total Gemini API calls: **7,130**
+- Total tokens (in / out / thinking / cached): **195,536,496 / 2,292,341 / 1,548,717 / 177,682,115**
+- Total estimated API cost (USD): **$88.1273**
 - Secret leaks detected: **0**
 
 ## 1. Canonical Headline Runs (One Labelled Real Run per Role)
@@ -266,8 +266,8 @@ In-game leaked-memo pixel watermark ablation: text `variant` fields are redacted
 | `investigators` | 28 | 41 | 3,565 | 129,967,004 | 1,502,416 | 157,797 | 120,952,167 | $46.7270 |
 | `failure_analyst` | 5 | 276 | 10 | 1,114,554 | 44,068 | 95,665 | 0 | $3.4776 |
 | `exploit_hunter` | 2 | 11 | 215 | 3,093,922 | 36,831 | 0 | 1,742,975 | $3.2445 |
-| `multimodal_evidence` | 14 | 83 | 175 | 387,126 | 36,407 | 115,542 | 0 | $2.2937 |
-| **total** | **96** | **941** | **7,079** | **195,437,028** | **2,280,807** | **1,457,414** | **177,682,115** | **$86.9000** |
+| `multimodal_evidence` | 17 | 100 | 226 | 486,594 | 47,941 | 206,845 | 0 | $3.5210 |
+| **total** | **99** | **958** | **7,130** | **195,536,496** | **2,292,341** | **1,548,717** | **177,682,115** | **$88.1273** |
 
 ## 6. Keyless Offline Verification
 

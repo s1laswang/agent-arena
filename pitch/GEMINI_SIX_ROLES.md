@@ -2,11 +2,11 @@
 
 ## Platform Summary
 
-Canary is a Bayesian insider-threat RL benchmark where an AI security lead plants canary traps to catch a mole before company value bleeds away. Across 96 verified gemini-4-carbon runs (7,079 API calls, $86.90 USD), Gemini powers six essential roles: leak-free world text, solvability-gated adaptive moles, 13-tool frontier investigators (paired v1.4 n=33: 90.9% of SolverPolicy, diff -0.0579 +/- 0.1357 95% CI), 1M-context failure analysis (100% verified quotes), whole-repo/MCP exploit hunting, and Part.from_bytes scan vision. Replays offline with no API key.
+Canary is a Bayesian insider-threat RL benchmark where an AI security lead plants canary traps to catch a mole before company value bleeds away. Across 99 verified gemini-4-carbon runs (7,130 API calls, $88.13 USD), Gemini powers six essential roles: leak-free world text, solvability-gated adaptive moles, 13-tool frontier investigators (paired v1.4 n=33: 90.9% of SolverPolicy, diff -0.0579 +/- 0.1357 95% CI), 1M-context failure analysis (100% verified quotes), whole-repo/MCP exploit hunting, and Part.from_bytes scan vision. Replays offline with no API key.
 
 ## 1. The Problem and Why It Matters
 
-AI agents now execute high-stakes security investigations where evidence is partial, daily budgets are tight, and company value bleeds until an irreversible accusation. Single scalar leaderboards cannot reveal *where* reasoning fails, *what extra thinking buys*, or *whether the reward is gameable*. Canary pairs every episode with an exact Bayesian solver (`SolverPolicy`) and puts `gemini-4-carbon` in six load-bearing roles across **96 verified runs**, **7,079 API calls**, **195,437,028 input tokens** (**177,682,115 cached**, **90.9%** hit rate), **1,457,414 thinking tokens**, and **$86.9000** (**$86.90 USD**, **0** secret leaks). Across **n=33** paired `v1.4` episodes, `gemini-4-carbon` reaches **90.9%** of `SolverPolicy` (`+0.5767` vs `+0.6345`, paired diff `-0.0579 +/- 0.1357` 95% CI, `91%` accuracy).
+AI agents now execute high-stakes security investigations where evidence is partial, daily budgets are tight, and company value bleeds until an irreversible accusation. Single scalar leaderboards cannot reveal *where* reasoning fails, *what extra thinking buys*, or *whether the reward is gameable*. Canary pairs every episode with an exact Bayesian solver (`SolverPolicy`) and puts `gemini-4-carbon` in six load-bearing roles across **99 verified runs**, **7,130 API calls**, **195,536,496 input tokens** (**177,682,115 cached**, **90.9%** hit rate), **1,548,717 thinking tokens**, and **$88.1273** (**$88.13 USD**, **0** secret leaks). Across **n=33** paired `v1.4` episodes, `gemini-4-carbon` reaches **90.9%** of `SolverPolicy` (`+0.5767` vs `+0.6345`, paired diff `-0.0579 +/- 0.1357` 95% CI, `91%` accuracy).
 
 ## 2. Six Verified `gemini-4-carbon` Roles (One Labelled Real Run per Role)
 
@@ -31,11 +31,11 @@ AI agents now execute high-stakes security investigations where evidence is part
 
 - **Explicit `thinking_level` control:** On `hard` seed `0` (`results/gemini_roles/investigators/thinking-ladder-carbon-hard0`, commit `3df4d2b65bd05a67f2d94ef18d967da05c0e90d7`), scaling from `0` (`low`) to `52,968` (`high`) thinking tokens cuts Bayesian step regret from `0.1623` to `0.0298` (`81.6%` reduction).
 - **Thought signatures (`thought_signature`) across tool turns:** Preserving Gemini cryptographic `thought_signature` tokens across multi-turn 13-tool episodes (`3,565` investigator calls) keeps latent Bayesian hypothesis state intact across days and enables exact keyless trajectory replay (`scripts/verify_replay.py`).
-- **Explicit and prefix context caching:** Serving **177,682,115** of **195,437,028** input tokens from explicit and prefix cache (**90.9%** cache hit rate across **7,079** calls and **96** runs) keeps the entire six-role benchmark suite at **$86.9000** (**$86.90 USD**) instead of roughly 4x list cost.
+- **Explicit and prefix context caching:** Serving **177,682,115** of **195,536,496** input tokens from explicit and prefix cache (**90.9%** cache hit rate across **7,130** calls and **99** runs) keeps the entire six-role benchmark suite at **$88.1273** (**$88.13 USD**) instead of roughly 4x list cost.
 - **1M-token long context:** Ingests multi-episode trajectory corpora (`596,862` tokens across `101` episodes) and whole-repository whitebox security packs (`104` files, `203,463` tokens) in a single unfragmented pass, avoiding lossy RAG chunking while maintaining `100%` code-verified quotes.
 - **Native multimodal vision (`Part.from_bytes`):** Ingests `260` rendered PNG scans, multi-image dossiers, SOC rasters, and trajectory charts via `Part.from_bytes(mime_type="image/png")`; removing vision on `27` unique redacted-memo episodes drops score from `+0.6263` to `+0.1822` (`100.0%` watermark accuracy, `100.0%` Bayesian text-oracle recovery), while naive log heuristics score `0%` on decoy-framed SOC rasters.
 
-Full provenance tables and all 96 verified runs: `docs/gemini/SIX_ROLES_SUBMISSION.md`, `docs/gemini/SIX_ROLES_MATRIX.md`, and `docs/gemini/ROLES_REPORT.md`.
+Full provenance tables and all 99 verified runs: `docs/gemini/SIX_ROLES_SUBMISSION.md`, `docs/gemini/SIX_ROLES_MATRIX.md`, and `docs/gemini/ROLES_REPORT.md`.
 
 ```bash
 GEMINI_API_KEY="" GOOGLE_GENERATIVE_AI_API_KEY="" PYTHONPATH=. python scripts/sync_six_roles_docs.py --root . --check

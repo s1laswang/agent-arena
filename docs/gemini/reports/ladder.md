@@ -1,6 +1,24 @@
+DONE 08:52 (Sun Nov 15 EET 2026)
+
 # G2 report: the Gemini Ladder
 
 Branch `gemini-ladder`. Newest entry first.
+
+## Sun 08:52 (`date`: Sun Nov 15 08:52 EET 2026): done; J1 never delivered
+
+- **J1 (self-hosted Qwen3-14B on Verda) was not ingested.** `~/agent-arena-data/gemini/j1` was never created, no
+  Qwen/J1 data exists under `~/agent-arena-data`, and no message from fr8 arrived. The 07:15 deadline passed. No
+  J1 numbers appear in any committed file.
+  - The ingest is ready if the data turns up: `ladder_report --j1-runs DIR --j1-model … --j1-eur-per-hour …
+    --j1-billed-hours hard=H --j1-eur-usd R --j1-fx-source … --j1-cap-tokens 4096 --j1-title … --j1-label …`
+    (tested: replay-verify, solver pairing, cap-asymmetry sentence, "not run" tiers).
+- **04:58, numbers-QA fixes** (e676679b, f7cb4de0):
+  - ablations §2 is recomputed over the de-duplicated union of all committed ledgers (44,545 calls). Flash calls
+    are priced from EXTRA_PRICES, and unpriced models are disclosed. Programme-wide saving 77.4%; Atlas unchanged
+    at 62.9%.
+  - The ROLES frontier row reads the n=40 cells.
+- **State:** no canary.gemini ladder, gateway or with_gateway processes are running. 133 tests pass. Branch in sync
+  with origin.
 
 ## Sun 04:52 (`date`: Sun Nov 15 04:52 EET 2026): final refresh, B2, B3, thinking effect; all API processes stopped
 

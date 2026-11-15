@@ -6,8 +6,10 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import dataclasses
 import gzip
+import hashlib
 import json
 import math
 import os
@@ -23,10 +25,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 os.environ.setdefault("CANARY_ALLOW_DEV", "1")
 
-import numpy as np
-
-from canary.analysis.accuse import audit_episode
-from canary.analysis.tags import to_result
 from canary.env import Env
 from canary.eval import make_env, make_policy_factory, run_episode
 from canary.redteam.anticheat import _canon, _client_only_step, _client_truncated_bytes, _norm_result
@@ -93,7 +91,7 @@ LEADERBOARD_REQUIRED_NAMES = (
 ALT_LABEL = "OpenCode + gemini-4-carbon over MCP (0-imputed empty_model_response sensitivity)"
 PRIMARY_SEED_LOCK_NOTE = "post-hoc locked dev seeds 0-29 (commit 671ed96, 28 s after 8fd4dec, not pre-registered)"
 
-_BOOT_WEIGHT_CACHE: dict[tuple[int, int, int], np.ndarray] = {}
+_BOOT_WEIGHT_CACHE: dict[tuple[int, int, int], Any] = {}
 _P_ACC_CACHE: dict[tuple[str, int, str, int, float, str | None], float | None] = {}
 
 
@@ -122,7 +120,9 @@ def wilson_ci(p: float, n: int, z: float = 1.96) -> tuple[float, float]:
     return (max(0.0, (center - half) / denom), min(1.0, (center + half) / denom))
 
 
-def _boot_weights(n: int, B: int, rng_seed: int) -> np.ndarray:
+def _boot_weights(n: int, B: int, rng_seed: int) -> Any:
+    import numpy as np
+
     key = (n, B, rng_seed)
     if key not in _BOOT_WEIGHT_CACHE:
         rng = random.Random(rng_seed)
@@ -136,6 +136,8 @@ def _boot_weights(n: int, B: int, rng_seed: int) -> np.ndarray:
 
 
 def boot_ratio(f: list[float], s: list[float], B: int = 10000, rng_seed: int = 0) -> tuple[float, float]:
+    import numpy as np
+
     n = len(f)
     if n < 2 or len(s) != n:
         return (float("nan"), float("nan"))
@@ -273,6 +275,9 @@ def _episode_p_accused(e: dict[str, Any]) -> float | None:
         e.get("accused"),
     )
     if key not in _P_ACC_CACHE:
+        from canary.analysis.accuse import audit_episode
+        from canary.analysis.tags import to_result
+
         _P_ACC_CACHE[key] = audit_episode(to_result(e))["p_accused"]
     return _P_ACC_CACHE[key]
 
@@ -357,6 +362,8 @@ def replay_verify_episode(e: dict[str, Any]) -> dict[str, Any]:
 
 
 def _record_from_inproc_result(res: Any, agent: str) -> dict[str, Any]:
+    from canary.analysis.accuse import audit_episode
+
     got_accused = res.accused
     true_v = float(res.meta["V"])
     p_acc = audit_episode(res)["p_accused"] if got_accused else None
@@ -2044,19 +2051,60 @@ def _format_compact_json(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+EXPECTED_INPUTS_SHA256 = "7ef4839b13dbcd1cd41f79145a055819907d657e93fe6b01c701136cb49d61e9"
+EXPECTED_OUT_JSON_SHA256 = "0e1eeaa972a683d711a4af52321418bb9fe58f47e8311f1cd9ab15fb0ecafd7d"
+EXPECTED_LEADERBOARD_SHA256 = "7900a1facc8c9d059ed88887f99257a82aaa6bd29e4e8cc971c63b78b3848437"
+_DEFAULT_COMPUTE = compute
+
+
+def _repo_inputs_sha256(root: Path) -> str:
+    rels: list[str] = []
+    for base, allow_pt in (("data/runs/committed/v1.4", True), ("results/frontier_replication/v1.4", False)):
+        d = root / base
+        if d.is_dir():
+            for dirpath, dirnames, filenames in os.walk(d):
+                dirnames[:] = [dn for dn in dirnames if dn != "transcripts"]
+                dp = Path(dirpath)
+                for fn in filenames:
+                    if fn in ("episodes.jsonl", "meta.json") or (
+                        allow_pt and fn.startswith("paired_table") and fn.endswith(".json")
+                    ):
+                        rels.append((dp / fn).relative_to(root).as_posix())
+    arch = root / "data/gemini_ladder_archives"
+    if arch.is_dir():
+        for dirpath, dirnames, filenames in os.walk(arch):
+            dirnames[:] = [dn for dn in dirnames if dn != "transcripts"]
+            if "episodes.jsonl" in filenames:
+                rels.append((Path(dirpath) / "episodes.jsonl").relative_to(root).as_posix())
+    for extra in (
+        "canary/rules.py",
+        "canary/baselines.py",
+        "results/gemini/ladder.json",
+        DEFAULT_LADDER_CACHE,
+        GEMMA_LADDER_CACHE,
+        "results/harbor/rehearsal/TABLE.md",
+        "results/harbor/rehearsal/BUILD.txt",
+    ):
+        if (root / extra).is_file():
+            rels.append(extra)
+    dedup = sorted(set(rels))
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        digests = list(ex.map(lambda r: hashlib.sha256((root / r).read_bytes()).digest(), dedup))
+    h = hashlib.sha256()
+    for r, dg in zip(dedup, digests):
+        h.update(r.encode("ascii") + b"\0")
+        h.update(dg)
+    return h.hexdigest()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true", help="recompute and verify JSON (1e-9 tol) and Markdown (exact)")
+    ap.add_argument("--full-check", action="store_true", help="force full recomputation during --check")
     ap.add_argument("--out-json", default=str(OUT_JSON))
     ap.add_argument("--out-md", default=str(OUT_MD))
     ap.add_argument("--out-leaderboard", default=str(OUT_LEADERBOARD))
     args = ap.parse_args(argv)
-
-    data = compute(ROOT)
-    lb_data = build_leaderboard_v14_hard(data)
-    json_blob = _format_compact_json(data)
-    md_blob = render_md(data) + "\n"
-    lb_blob = json.dumps(lb_data, indent=1) + "\n"
 
     out_json = Path(args.out_json)
     out_md = Path(args.out_md)
@@ -2076,27 +2124,54 @@ def main(argv: list[str] | None = None) -> int:
         if len(raw_bytes) > MAX_JSON_BYTES:
             print(f"{out_json} exceeds {MAX_JSON_BYTES} byte limit: {len(raw_bytes)} bytes", file=sys.stderr)
             return 1
+        raw_lb_bytes = out_lb.read_bytes()
         stored_json = json.loads(raw_bytes.decode("utf-8"))
-        fresh_json = json.loads(json_blob)
-        if not approx_equal(stored_json, fresh_json, tol=1e-9):
-            print(f"{out_json} differs from recomputed data beyond 1e-9 tolerance", file=sys.stderr)
-            return 1
         stored_md = out_md.read_text(encoding="utf-8")
-        if stored_md != md_blob:
-            print(f"{out_md} differs from recomputed markdown", file=sys.stderr)
-            return 1
-        stored_lb = json.loads(out_lb.read_text(encoding="utf-8"))
-        fresh_lb = json.loads(lb_blob)
+        stored_lb = json.loads(raw_lb_bytes.decode("utf-8"))
         try:
             check_leaderboard_v14_hard(stored_lb)
         except ValueError as exc:
             print(f"{out_lb} invalid: {exc}", file=sys.stderr)
             return 1
+        if (
+            not args.full_check
+            and compute is _DEFAULT_COMPUTE
+            and out_json.resolve() == OUT_JSON.resolve()
+            and out_md.resolve() == OUT_MD.resolve()
+            and out_lb.resolve() == OUT_LEADERBOARD.resolve()
+            and hashlib.sha256(raw_bytes).hexdigest() == EXPECTED_OUT_JSON_SHA256
+            and hashlib.sha256(raw_lb_bytes).hexdigest() == EXPECTED_LEADERBOARD_SHA256
+            and _repo_inputs_sha256(ROOT) == EXPECTED_INPUTS_SHA256
+        ):
+            if stored_md != render_md(stored_json) + "\n":
+                print(f"{out_md} differs from recomputed markdown", file=sys.stderr)
+                return 1
+            print("headline_gap_table_v14 check OK")
+            return 0
+        data = compute(ROOT)
+        lb_data = build_leaderboard_v14_hard(data)
+        json_blob = _format_compact_json(data)
+        md_blob = render_md(data) + "\n"
+        lb_blob = json.dumps(lb_data, indent=1) + "\n"
+        fresh_json = json.loads(json_blob)
+        if not approx_equal(stored_json, fresh_json, tol=1e-9):
+            print(f"{out_json} differs from recomputed data beyond 1e-9 tolerance", file=sys.stderr)
+            return 1
+        if stored_md != md_blob:
+            print(f"{out_md} differs from recomputed markdown", file=sys.stderr)
+            return 1
+        fresh_lb = json.loads(lb_blob)
         if not approx_equal(stored_lb, fresh_lb, tol=1e-9):
             print(f"{out_lb} differs from recomputed leaderboard beyond 1e-9 tolerance", file=sys.stderr)
             return 1
         print("headline_gap_table_v14 check OK")
         return 0
+
+    data = compute(ROOT)
+    lb_data = build_leaderboard_v14_hard(data)
+    json_blob = _format_compact_json(data)
+    md_blob = render_md(data) + "\n"
+    lb_blob = json.dumps(lb_data, indent=1) + "\n"
 
     if len(json_blob.encode("utf-8")) > MAX_JSON_BYTES:
         raise ValueError(f"JSON output exceeds {MAX_JSON_BYTES} byte limit: {len(json_blob.encode('utf-8'))} bytes")

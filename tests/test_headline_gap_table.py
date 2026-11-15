@@ -7,6 +7,7 @@ import json
 import math
 import subprocess
 import sys
+import time
 import tokenize
 from pathlib import Path
 
@@ -562,3 +563,39 @@ def test_check_flag_mode_and_float_tolerance(tmp_path, monkeypatch):
 
     assert hgt.main(["--check", "--out-json", str(tmp_path / "missing.json"), "--out-md", str(m_path), "--out-leaderboard", str(lb_path)]) == 1
     assert hgt.main(["--check", "--out-json", str(j_path), "--out-md", str(m_path), "--out-leaderboard", str(tmp_path / "missing_lb.json")]) == 1
+
+
+def test_fast_sha256_check_and_tamper_detection(tmp_path, monkeypatch, capsys):
+    t0 = time.perf_counter()
+    assert hgt.main(["--check"]) == 0
+    elapsed = time.perf_counter() - t0
+    assert elapsed < 2.5, f"fast --check took {elapsed:.2f}s >= 2.5s"
+    assert "headline_gap_table_v14 check OK" in capsys.readouterr().out
+
+    bad_md = tmp_path / "bad.md"
+    bad_md.write_text(hgt.OUT_MD.read_text(encoding="utf-8") + "tampered\n", encoding="utf-8")
+    with monkeypatch.context() as mp_md:
+        mp_md.setattr(hgt, "OUT_MD", bad_md)
+        assert hgt.main(["--check", "--out-md", str(bad_md)]) == 1
+
+    stored = json.loads(hgt.OUT_JSON.read_text(encoding="utf-8"))
+    bad_payload = copy.deepcopy(stored)
+    bad_payload["section_a"][0]["mean"] += 0.05
+    bad_json = tmp_path / "bad.json"
+    bad_json.write_text(hgt._format_compact_json(bad_payload), encoding="utf-8")
+    with monkeypatch.context() as mp_json:
+        mp_json.setattr(hgt, "compute", lambda _root=ROOT: copy.deepcopy(stored))
+        assert (
+            hgt.main(
+                [
+                    "--check",
+                    "--out-json",
+                    str(bad_json),
+                    "--out-md",
+                    str(hgt.OUT_MD),
+                    "--out-leaderboard",
+                    str(hgt.OUT_LEADERBOARD),
+                ]
+            )
+            == 1
+        )

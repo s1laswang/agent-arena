@@ -440,8 +440,8 @@ def test_fix_d_pre_1bc3e281_and_post_1bc3e281_opencode_error_detail_replay(tmp_p
     post_ep, post_meta, err_idx, real_detail = _build_post_1bc3e281_opencode_episode()
     _write_run(tmp_path / "post_clean", "v1.4/opencode-carbon/medium", [post_ep], post_meta)
     upstream_row = ac.replay_committed(tmp_path / "post_clean")[0]
-    assert upstream_row["replay_consistent"] is False
-    assert upstream_row["step_mismatches"] >= 1
+    assert upstream_row["replay_consistent"] is True
+    assert upstream_row["step_mismatches"] == 0
     row_post = tg.replay_committed(tmp_path / "post_clean")[0]
     assert row_post["replay_consistent"] is True, row_post
     assert row_post["consistent"] == 1

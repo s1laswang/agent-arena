@@ -64,34 +64,130 @@ README_PUBLISHED_BASELINE: tuple[dict[str, Any], ...] = (
         "mean_score": 0.000,
         "ci95": None,
         "n": 36,
+        "paired_delta_display": "two-sample / n/a",
+        "world_secret_display": "per-process (unpaired)",
+        "status_badge": "PUBLISHED_BASELINE",
         "note": "cannot play: 3% valid tool calls; per-process world secret",
     },
     {
+        "row_id": "v1",
+        "label": "v1 (J4 SFT on solver episodes, FR8 V100)",
+        "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+        "mean_score": -0.250,
+        "ci95": 0.256,
+        "n": 12,
+        "paired_delta_display": "two-sample (+0.207 +/- 0.270 vs v2)",
+        "world_secret_display": "per-process (unpaired)",
+        "status_badge": "PUBLISHED_BASELINE",
+        "note": "two-sample; 450 steps (5% epoch), 25% accuse rate, 0% correct",
+    },
+    {
         "row_id": "v2",
-        "label": "v2 (SFT on solver play)",
+        "label": "v2 (SFT on solver play, FR8 V100)",
         "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
         "mean_score": -0.457,
         "ci95": 0.086,
         "n": 172,
-        "note": "two-sample; blind accusations under 4k header crowding",
+        "paired_delta_display": "two-sample (-0.457 +/- 0.086 vs base)",
+        "world_secret_display": "per-process (unpaired)",
+        "status_badge": "PUBLISHED_BASELINE",
+        "note": "two-sample; blind accusations (55% accuse, 8/94 = 0.09 precision) under 4k header crowding",
     },
     {
-        "row_id": "v3_4k",
-        "label": "v3-4k (GRPO on environment reward, Verda H100)",
+        "row_id": "v3_4k_s0",
+        "label": "v3-4k s0 (GRPO, 609 steps, Verda H100)",
         "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
         "mean_score": -0.147,
         "ci95": 0.063,
         "n": 180,
-        "note": "two-sample; +0.310 +/- 0.107 vs v2, 100% valid calls",
+        "paired_delta_display": "two-sample (+0.310 +/- 0.107 vs v2)",
+        "world_secret_display": "per-process (unpaired)",
+        "status_badge": "PUBLISHED_BASELINE",
+        "note": "two-sample; +0.310 +/- 0.107 vs v2, 100% valid calls, 79% abstain",
+    },
+    {
+        "row_id": "v3_4k_s1",
+        "label": "v3-4k s1 (GRPO, FR8 V100)",
+        "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+        "mean_score": -0.209,
+        "ci95": 0.094,
+        "n": 82,
+        "paired_delta_display": "two-sample (+0.249 +/- 0.127 vs v2)",
+        "world_secret_display": "per-process (unpaired)",
+        "status_badge": "PUBLISHED_BASELINE",
+        "note": "two-sample; +0.249 +/- 0.127 vs v2, 97% valid calls, 77% abstain",
+    },
+    {
+        "row_id": "v3_8k_s0",
+        "label": "v3-8k s0 (GRPO, 8k ctx, 637 steps, Verda H100)",
+        "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+        "mean_score": -0.060,
+        "ci95": 0.054,
+        "n": 90,
+        "paired_delta_display": "+0.728 +/- 0.134 (paired vs v3-8k s3)",
+        "world_secret_display": "shared (1ca0c2a64d)",
+        "status_badge": "PUBLISHED_BASELINE",
+        "note": "shared secret 1ca0c2a64d; paired +0.728 +/- 0.134 vs s3, 92% abstain",
+    },
+    {
+        "row_id": "v3_8k_s1",
+        "label": "v3-8k s1 (GRPO, 8k ctx, 371 steps, Verda A100 spot)",
+        "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+        "mean_score": -0.777,
+        "ci95": 0.118,
+        "n": 90,
+        "paired_delta_display": "two-sample (-0.319 +/- 0.146 vs v2)",
+        "world_secret_display": "per-process (unpaired)",
+        "status_badge": "PUBLISHED_BASELINE",
+        "note": "two-sample; 94% accuse rate (8k context over-accusing)",
     },
     {
         "row_id": "v3_8k_s2",
-        "label": "v3-8k seed 2 (GRPO, 8k context, Verda H100 spot)",
+        "label": "v3-8k s2 (GRPO, 8k ctx, 693 steps, Verda H100 spot)",
         "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
         "mean_score": -0.050,
         "ci95": 0.049,
         "n": 90,
+        "paired_delta_display": "two-sample (+0.408 +/- 0.099 vs v2)",
+        "world_secret_display": "per-process (unpaired)",
+        "status_badge": "PUBLISHED_BASELINE",
         "note": "two-sample; 93% abstention, 95% CI [-0.099, -0.001] below 0",
+    },
+    {
+        "row_id": "v3_8k_s3",
+        "label": "v3-8k s3 (GRPO, 8k ctx, 344 steps, Verda A100)",
+        "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+        "mean_score": -0.788,
+        "ci95": 0.117,
+        "n": 90,
+        "paired_delta_display": "-0.073 +/- 0.173 (paired vs v3-4k s0 @8k)",
+        "world_secret_display": "shared (1ca0c2a64d)",
+        "status_badge": "PUBLISHED_BASELINE",
+        "note": "shared secret 1ca0c2a64d; paired -0.073 +/- 0.173 vs 4k@8k, 96% accuse rate",
+    },
+    {
+        "row_id": "dagger_r1_8k",
+        "label": "DAgger r1 @8k (Verda X2, cap 256, partial n=50, honest null)",
+        "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+        "mean_score": -0.542,
+        "ci95": 0.214,
+        "n": 50,
+        "paired_delta_display": "+0.242 +/- 0.304 (paired n=43 vs v3-4k s0 @8k)",
+        "world_secret_display": "shared (1ca0c2a64d)",
+        "status_badge": "PUBLISHED_HONEST_NULL",
+        "note": "partial n=50 (box reaper); shared secret 1ca0c2a64d, paired +0.242 +/- 0.304 (n=43) vs v3-4k s0 @8k (-0.754 +/- 0.177)",
+    },
+    {
+        "row_id": "dagger_r1_4k",
+        "label": "DAgger r1 @4k (Verda X2, cap 256, partial n=41, honest null)",
+        "architecture": "Open-weight LLM (Qwen2.5-1.5B LoRA)",
+        "mean_score": -0.101,
+        "ci95": 0.112,
+        "n": 41,
+        "paired_delta_display": "-0.031 +/- 0.139 (paired n=32 vs v3-4k s0 @4k)",
+        "world_secret_display": "shared (1ca0c2a64d)",
+        "status_badge": "PUBLISHED_HONEST_NULL",
+        "note": "partial n=41 (box reaper); shared secret 1ca0c2a64d, paired -0.031 +/- 0.139 (n=32) vs v3-4k s0 @4k (-0.094 +/- 0.103)",
     },
 )
 
@@ -661,7 +757,7 @@ def classify_policy_track(summary: dict[str, Any], summary_path: str = "") -> di
             "track_label": "Track 1: Open-Weight LLM / Neural Policies",
             "family": "TinyMLP",
             "subfamily": "neural_mlp",
-            "architecture_label": "Compact neural MLP (non-LLM)",
+            "architecture_label": "Compact neural MLP (TinyMLPPolicy, non-LLM)",
             "is_open_weight_llm": False,
         }
 
@@ -1546,6 +1642,7 @@ def discover_run_summaries(
     summary_glob: str = "results/tiebreak/*/summary.json",
     extra_globs: list[str] | None = None,
     include_scaling_summary: bool = True,
+    include_mlp_summary: bool = True,
 ) -> list[dict[str, Any]]:
     patterns: list[str] = []
     p_main = Path(summary_glob)
@@ -1573,6 +1670,11 @@ def discover_run_summaries(
         if scaling_path.is_file() and scaling_path.parent not in covered_dirs and scaling_path not in matched_files:
             matched_files[scaling_path] = str(scaling_path.relative_to(repo_root.resolve()))
 
+    if include_mlp_summary and summary_glob == "results/tiebreak/*/summary.json":
+        mlp_path = (repo_root / "results" / "tiebreak" / "neural_mlp_dagger" / "mlp_summary.json").resolve()
+        if mlp_path.is_file() and mlp_path.parent not in covered_dirs and mlp_path not in matched_files:
+            matched_files[mlp_path] = str(mlp_path.relative_to(repo_root.resolve()))
+
     evaluated: list[dict[str, Any]] = []
     for hp in sorted(matched_files, key=lambda p: matched_files[p]):
         disp = matched_files[hp]
@@ -1586,12 +1688,14 @@ def build_addendum_readiness(
     summary_glob: str = "results/tiebreak/*/summary.json",
     extra_globs: list[str] | None = None,
     include_scaling_summary: bool = True,
+    include_mlp_summary: bool = True,
 ) -> dict[str, Any]:
     runs = discover_run_summaries(
         repo_root=repo_root,
         summary_glob=summary_glob,
         extra_globs=extra_globs,
         include_scaling_summary=include_scaling_summary,
+        include_mlp_summary=include_mlp_summary,
     )
 
     track1_runs = [r for r in runs if r["track"] == "track_1"]
@@ -1734,9 +1838,12 @@ def render_addendum_markdown(readiness: dict[str, Any]) -> str:
             sc_txt = f"{base_row['mean_score']:.3f} ({base_row['note']})"
         else:
             sc_txt = f"{base_row['mean_score']:+.3f} +/- {base_row['ci95']:.3f}"
+        paired_disp = str(base_row.get("paired_delta_display") or "two-sample / n/a")
+        sec_disp = str(base_row.get("world_secret_display") or "per-process (unpaired)")
+        badge_disp = str(base_row.get("status_badge") or "PUBLISHED_BASELINE")
         lines.append(
-            f"| {base_row['label']} | {base_row['architecture']} | {sc_txt} | two-sample / n/a | "
-            f"{base_row['n']} | per-process (unpaired) | `PUBLISHED_BASELINE` |"
+            f"| {base_row['label']} | {base_row['architecture']} | {sc_txt} | {paired_disp} | "
+            f"{base_row['n']} | {sec_disp} | `{badge_disp}` |"
         )
 
     ordered_t1 = sorted(t1_runs, key=lambda r: (not r["passed_panel_fix_e_bar"], not r["is_open_weight_llm"], r["run_id"]))
@@ -1790,10 +1897,13 @@ def render_addendum_markdown(readiness: dict[str, Any]) -> str:
         )
 
     bullet_2 = (
-        "**Published Raw-Context Qwen2.5-1.5B Progression**: reward training fixed `v2`'s blind accusations "
-        "(`v3-4k` `-0.147 +/- 0.063`, `n=180` vs `v2` `-0.457 +/- 0.086`, `n=172`; `+0.310 +/- 0.107` two-sample, "
-        "`100%` valid tool calls) and `v3-8k seed 2` reached `-0.050 +/- 0.049` (`n=90`), but `2,842`-token prompt "
-        "headers and off-policy states prevented positive held-out score without on-policy DAgger / compact working memory."
+        "**Published Raw-Context Qwen2.5-1.5B Progression (`README.md`, `justSilas-fr8`, Verda X2)**: "
+        "reward training beat `v2` (`-0.457 +/- 0.086`, `n=172`) across `v3-4k s0` (`-0.147 +/- 0.063`, `n=180`), "
+        "`v3-4k s1` (`-0.209 +/- 0.094`, `n=82`), and 600+ step 8k GRPO (`v3-8k s0` `-0.060 +/- 0.054` with paired "
+        "`+0.728 +/- 0.134` vs `s3` `-0.788 +/- 0.117` under shared secret `1ca0c2a64d`; `v3-8k s2` `-0.050 +/- 0.049`, "
+        "`v3-8k s1` `-0.777 +/- 0.118`), while Verda X2 `DAgger r1` ended as an honest null (`-0.542 +/- 0.214` at 8k "
+        "`n=50` partial, paired `+0.242 +/- 0.304` `n=43` vs `v3-4k s0 @8k`; `-0.101 +/- 0.112` at 4k `n=41` partial, "
+        "paired `-0.031 +/- 0.139` `n=32`), with none above `base` (`0.000`, `n=36`)."
     )
 
     bullet_3 = (
@@ -1971,6 +2081,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     ap.add_argument("--summary-glob", default="results/tiebreak/*/summary.json")
     ap.add_argument("--extra-glob", action="append", default=[])
     ap.add_argument("--no-scaling-summary", action="store_true")
+    ap.add_argument("--no-mlp-summary", action="store_true")
     ap.add_argument("--out-json", type=Path, default=None)
     ap.add_argument("--out-md", type=Path, default=None)
     ap.add_argument("--check", action="store_true")
@@ -1988,6 +2099,7 @@ def main(argv: list[str] | None = None) -> int:
         summary_glob=args.summary_glob,
         extra_globs=list(args.extra_glob),
         include_scaling_summary=not args.no_scaling_summary,
+        include_mlp_summary=not args.no_mlp_summary,
     )
     md_text = render_addendum_markdown(readiness)
 

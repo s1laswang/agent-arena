@@ -131,12 +131,60 @@ def test_live_repo_check_mode_and_latency(capsys: pytest.CaptureFixture[str]) ->
     out = json.loads(capsys.readouterr().out)
     assert out["ok"] is True
     assert out["track1_llm_dagger_status"] == "AWAITING_V100_COMPLETION"
+    assert out["track1_passing_count"] >= 1
     assert out["readme_qwen_addendum_eligible"] is False
     assert out["track2_passing_count"] >= 2
 
     readiness = json.loads(READINESS_JSON_PATH.read_text(encoding="utf-8"))
     rs = readiness["readiness_summary"]
     assert rs["unclassified_runs_count"] == 0
+    assert rs["track1_neural_mlp_passing_count"] >= 1
+    assert rs["track1_llm_passing_count"] == 0
+    assert rs["track1_overall_status"] == "PASS_NEURAL_MLP_AWAITING_V100_LLM"
+    assert rs["readme_addendum_action"] == "HOLD_README_QWEN_ADDENDUM_UNTIL_V100"
+    assert "tiny-mlp-dagger-v14" in rs["promoted_track1_run_ids"]
+    assert rs["promoted_track1_llm_run_ids"] == []
+
+    by_t1 = {r["run_id"]: r for r in readiness["track_1_runs"]}
+    mlp_rec = by_t1["tiny-mlp-dagger-v14"]
+    assert mlp_rec["summary_path"] == "results/tiebreak/neural_mlp_dagger/mlp_summary.json"
+    assert mlp_rec["is_open_weight_llm"] is False
+    assert mlp_rec["verdict"] == "PROMOTED_TRACK1_NEURAL"
+    assert mlp_rec["passed_panel_fix_e_bar"] is True
+    assert mlp_rec["criteria_passed_count"] == 5
+    assert mlp_rec["inference_modules_checked"] == ["train/neural_mlp_tiebreak.py"]
+    assert "train/neural_mlp_tiebreak.py:TinyMLPPolicy" in mlp_rec["inference_policy_classes"]
+
+    base_by_id = {row["row_id"]: row for row in readiness["readme_published_baseline"]}
+    expected_baseline = {
+        "base": (0.000, None, 36),
+        "v1": (-0.250, 0.256, 12),
+        "v2": (-0.457, 0.086, 172),
+        "v3_4k_s0": (-0.147, 0.063, 180),
+        "v3_4k_s1": (-0.209, 0.094, 82),
+        "v3_8k_s0": (-0.060, 0.054, 90),
+        "v3_8k_s1": (-0.777, 0.118, 90),
+        "v3_8k_s2": (-0.050, 0.049, 90),
+        "v3_8k_s3": (-0.788, 0.117, 90),
+        "dagger_r1_8k": (-0.542, 0.214, 50),
+        "dagger_r1_4k": (-0.101, 0.112, 41),
+    }
+    assert set(base_by_id) == set(expected_baseline)
+    for rid, (exp_mean, exp_ci, exp_n) in expected_baseline.items():
+        row = base_by_id[rid]
+        assert row["mean_score"] == pytest.approx(exp_mean)
+        if exp_ci is None:
+            assert row["ci95"] is None
+        else:
+            assert row["ci95"] == pytest.approx(exp_ci)
+        assert row["n"] == exp_n
+    assert "1ca0c2a64d" in base_by_id["v3_8k_s0"]["world_secret_display"]
+    assert "+0.728 +/- 0.134" in base_by_id["v3_8k_s0"]["paired_delta_display"]
+    assert "1ca0c2a64d" in base_by_id["v3_8k_s3"]["world_secret_display"]
+    assert "-0.073 +/- 0.173" in base_by_id["v3_8k_s3"]["paired_delta_display"]
+    assert "+0.242 +/- 0.304" in base_by_id["dagger_r1_8k"]["paired_delta_display"]
+    assert "-0.031 +/- 0.139" in base_by_id["dagger_r1_4k"]["paired_delta_display"]
+
     assert "empirical-bayes-v14" in rs["track2_passing_run_ids"]
     assert "scaling-logistic-v14" in rs["track2_passing_run_ids"]
     for t2 in readiness["track_2_runs"]:
@@ -150,9 +198,32 @@ def test_stale_artifacts_rejected_in_check_mode(tmp_path: Path) -> None:
     assert pack.main(["--repo-root", str(syn)]) == 0
     assert pack.main(["--repo-root", str(syn), "--check"]) == 0
 
+    syn_readiness = json.loads((syn / "results" / "tiebreak" / "addendum_readiness.json").read_text(encoding="utf-8"))
+    assert syn_readiness["readiness_summary"]["track1_discovered_count"] == 0
+    assert syn_readiness["readiness_summary"]["readme_addendum_action"] == "DO_NOT_APPEND_YET"
+
     md_path = syn / "docs" / "reports" / "tiebreak_panel_e_addendum.md"
     md_path.write_text(md_path.read_text(encoding="utf-8") + "\nextra stale line\n", encoding="utf-8")
     assert pack.main(["--repo-root", str(syn), "--check"]) == 1
+
+    for rel in (
+        "train/neural_mlp_tiebreak.py",
+        "results/tiebreak/neural_mlp_dagger/mlp_summary.json",
+    ):
+        dst = syn / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REPO_ROOT / rel, dst)
+
+    assert pack.main(["--repo-root", str(syn)]) == 0
+    assert pack.main(["--repo-root", str(syn), "--check"]) == 0
+    with_mlp = json.loads((syn / "results" / "tiebreak" / "addendum_readiness.json").read_text(encoding="utf-8"))
+    assert with_mlp["readiness_summary"]["promoted_track1_run_ids"] == ["tiny-mlp-dagger-v14"]
+    assert with_mlp["readiness_summary"]["readme_qwen_addendum_eligible"] is False
+
+    assert pack.main(["--repo-root", str(syn), "--no-mlp-summary"]) == 0
+    assert pack.main(["--repo-root", str(syn), "--no-mlp-summary", "--check"]) == 0
+    without_mlp = json.loads((syn / "results" / "tiebreak" / "addendum_readiness.json").read_text(encoding="utf-8"))
+    assert without_mlp["readiness_summary"]["track1_discovered_count"] == 0
 
 
 def test_synthetic_passing_track1_qwen_dagger_auto_promotes(tmp_path: Path) -> None:

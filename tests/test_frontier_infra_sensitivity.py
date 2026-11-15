@@ -91,7 +91,7 @@ def test_check_cli_offline_zero_subprocess_and_size_cap(computed_summary, monkey
     )
     assert fis.main(["--check"]) == 0
     out = capsys.readouterr().out
-    assert "OK infra_sensitivity=PASS committed_replays=442 replication_replays=305 excluded_attempts=71" in out
+    assert "OK infra_sensitivity=PASS committed_replays=472 replication_replays=305 excluded_attempts=71" in out
     assert JSON_PATH.stat().st_size <= fis.MAX_JSON_BYTES
     assert fis.MAX_JSON_BYTES == 45 * 1024
     assert JSON_PATH.read_bytes() == fis.serialize_summary_json(computed_summary).encode("utf-8")
@@ -145,8 +145,8 @@ def test_replay_provenance_and_meta_exclusion_invariants(computed_summary):
     comm_rep = sl["committed_v14_replay"]
     assert comm_rep == {
         "cohort": "data/runs/committed/v1.4",
-        "total": 442,
-        "verified": 442,
+        "total": 472,
+        "verified": 472,
         "mismatches": 0,
         "duplicates": 0,
     }

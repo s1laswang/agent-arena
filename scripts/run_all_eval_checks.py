@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
 import math
 import os
@@ -1177,6 +1178,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out-md", default=None, help="Override path to eval_suite_overview.md")
     ap.add_argument("--python", default=None, help="Python interpreter for child --check scripts")
     ap.add_argument("--timeout", type=int, default=300, help="Per-verifier timeout in seconds")
+    ap.add_argument(
+        "--jobs",
+        type=int,
+        default=min(4, os.cpu_count() or 1),
+        help="Max parallel verifier subprocesses (default min(4, cpu_count); use 1 for sequential)",
+    )
     ap.add_argument("--json", action="store_true", help="Print JSON summary to stdout")
     args = ap.parse_args(argv)
 
@@ -1210,9 +1217,23 @@ def main(argv: list[str] | None = None) -> int:
         selected, sel_errors = select_verifiers(core_items, optional_items, only_names)
         errors.extend(sel_errors)
         if not errors:
-            for item in selected:
-                res = run_verifier_check(root, item, python_exe=args.python, timeout_s=args.timeout)
-                run_results.append(res)
+            max_jobs = max(1, int(args.jobs))
+            if max_jobs <= 1 or len(selected) <= 1:
+                run_results = [
+                    run_verifier_check(root, item, python_exe=args.python, timeout_s=args.timeout)
+                    for item in selected
+                ]
+            else:
+                with ThreadPoolExecutor(max_workers=min(max_jobs, len(selected))) as pool:
+                    run_results = list(
+                        pool.map(
+                            lambda it: run_verifier_check(
+                                root, it, python_exe=args.python, timeout_s=args.timeout
+                            ),
+                            selected,
+                        )
+                    )
+            for res in run_results:
                 if not res["passed"]:
                     errors.append(
                         f"verifier failed (rc={res['returncode']}): {res['script']} --check"

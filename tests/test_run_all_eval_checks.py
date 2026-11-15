@@ -182,12 +182,12 @@ def test_committed_suite_index_and_overview_invariants():
 
 
 def test_only_flag_fast_real_verifier_execution(capsys):
-    rc = suite.main(["--check", "--only", "harness_and_tier_analysis_v14", "--json"])
+    rc = suite.main(["--check", "--only", "build_eval_dashboard_v14", "--skip-artifact-check", "--json"])
     payload = json.loads(capsys.readouterr().out)
     assert rc == 0
     assert payload["passed"] is True
     assert len(payload["verifiers_ran"]) == 1
-    assert payload["verifiers_ran"][0]["name"] == "harness_and_tier_analysis_v14"
+    assert payload["verifiers_ran"][0]["name"] == "build_eval_dashboard_v14"
     assert payload["verifiers_ran"][0]["passed"] is True
 
     rc_unknown = suite.main(["--check", "--only", "unknown_nonexistent_module", "--json"])
@@ -215,15 +215,18 @@ def test_wave2_optional_discovery_and_deterministic_check_resilience(tmp_path: P
     _write_stub_verifier(ws / "scripts/version_evolution_v14.py", exit_code=0, msg="version_evo ok")
     (ws / "results/eval_v14/ladder_pareto_v14.json").write_text('{"ok": true}\n', encoding="utf-8")
 
-    rc_check_before_regen = suite.main(["--check", "--root", str(ws), "--json"])
+    rc_check_before_regen = suite.main(["--check", "--jobs", "3", "--root", str(ws), "--json"])
     check_payload = json.loads(capsys.readouterr().out)
     assert rc_check_before_regen == 0
     assert check_payload["passed"] is True
     ran_names = [r["name"] for r in check_payload["verifiers_ran"]]
+    assert ran_names[:5] == [c["name"] for c in suite.CORE_VERIFIERS]
     assert "ladder_pareto_v14" in ran_names
     assert "harbor_luck_adjusted_v14" in ran_names
     assert "version_evolution_v14" in ran_names
     assert len(ran_names) == 8
+    assert suite.main(["--check", "--jobs", "1", "--root", str(ws)]) == 0
+    capsys.readouterr()
 
     _write_stub_verifier(ws / "scripts/harbor_luck_adjusted_v14.py", exit_code=1, msg="broken optional")
     rc_opt_fail = suite.main(["--check", "--root", str(ws), "--json"])

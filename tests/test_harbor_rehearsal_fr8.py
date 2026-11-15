@@ -54,6 +54,21 @@ def test_harbor_rehearsal_fr8_layout_and_build_provenance():
     assert "results/harbor/rehearsal-fr8" in report_content
 
 
+def test_harbor_rehearsal_fr8_panel_fix_d_and_trajectory_counts():
+    report_content = REPORT_PATH.read_text(encoding="utf-8")
+    assert "Panel Fix D" in report_content
+    assert "1bc3e281" in report_content
+    assert "58716742" in report_content
+    assert "data.detail" in report_content
+    assert "30/30 OpenCode trials have `agent/opencode.txt` logs" in report_content
+    assert "29/30 have `agent/trajectory.json`" in report_content
+
+    opencode_logs = sorted(REHEARSAL_DIR.glob("opencode-*/canary-hard-*/agent/opencode.txt"))
+    opencode_trajs = sorted(REHEARSAL_DIR.glob("opencode-*/canary-hard-*/agent/trajectory.json"))
+    assert len(opencode_logs) == 30
+    assert len(opencode_trajs) == 29
+
+
 def test_harbor_rehearsal_fr8_consistency_and_table():
     prefix = "results/harbor/rehearsal-fr8/"
     rows = [r for r in harbor_consistency(ROOT) if str(r.get("trial") or "").startswith(prefix)]

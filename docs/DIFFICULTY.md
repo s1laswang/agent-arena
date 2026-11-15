@@ -9,10 +9,14 @@ This page has two parts:
 
 Nothing on this page changes a rule or the instruction text. **CEO decision (before the 07:00 tag): the judged text stays identical to the text every committed frontier run played, so none of P1–P12 is applied.** P0 is a Harbor config change and has been applied (512836b9: agent timeout 3,600 s → 10,800 s).
 
-> ### Known wording issues (disclosed, not fixed)
-> The judged text is frozen, so these stay as written. Each one is answered here so that a reader who spots it finds the answer.
+> ### Known wording issues
+> **Changed on Sun 15 Nov, after every committed frontier run (see the commit that added this line):**
+> - **W1 is fixed in the instruction.** On tiers with the careful mole (medium, hard) the sentence "The mole never knows which documents are canaries" now reads: "The mole's rules cannot see which documents are canaries. Canaries are treated differently in exactly one place: the careful weighting stated under 'How leaks work', which the simulation applies whenever a document is picked at random." The committed runs saw the old sentence; the analysis below shows no measured Gemini loss hinges on it. The "Exact parameters" block is unchanged.
+> - **Tool errors now say what was wrong.** The error string is still `invalid arguments` (so every committed episode replays), and a new `data.detail` field names the problem (for example the allowed interview topics). Details use only the call's arguments and public state. In the 30 headline OpenCode hard episodes, 28 of 3,841 tool calls (0.7%) hit this error, so the committed scores are not sensitive to it.
 >
-> **W1. "The mole never knows which documents are canaries" vs the careful-mole weight** (medium and hard; D3, P3). Read side by side, these sentences contradict each other: how can a mole that never knows down-weight canaries? What the code does:
+> The other items below stay as written and are answered here, so that a reader who spots one finds the answer.
+>
+> **W1 (fixed 15 Nov; history). "The mole never knows which documents are canaries" vs the careful-mole weight** (medium and hard; D3, P3). Read side by side, the old sentences contradicted each other: how can a mole that never knows down-weight canaries? What the code does:
 > - **What the mole knows.** Its decision inputs (`MoleView` in `canary/mole/dsl.py`) list each leakable document by id, title, recipient count and age. There is no canary flag, so no mole rule can condition on whether a document is a canary.
 > - **What the env does.** The careful weight is applied by the env, not the mole, and only in the default random pick (`env._mole_view` → `dsl._select_leak`). After the p_leak gate passes, every eligible document has weight 1, a canary has weight 1 − (share of all staff who received any variant of it), and one document is drawn in proportion to the weights. If every weight is 0, nothing leaks. So "the mole never knows" is true of the mole's *rules*, and the careful sentence describes a *tier mechanic*. The numbers an agent needs (the multiplier, p_leak, the leak window) are all printed.
 > - **Does any measured Gemini loss hinge on it? No.** All numbers below come from `scripts/careful_mole_check.py` over the 30 OpenCode hard episodes (seeds 0–29) and the solver on the same seeds.

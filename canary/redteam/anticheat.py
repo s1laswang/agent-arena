@@ -551,6 +551,11 @@ def replay_committed(root: Path = ROOT) -> list[dict]:
                         continue
                     r = env.call(st["tool"], st["args"])
                     got_payload = {"ok": r.ok, "data": r.data, "error": r.error}
+                    rec = st.get("result")
+                    if (not r.ok and isinstance(r.data, dict) and set(r.data) == {"detail"}
+                            and not (isinstance(rec, dict) and isinstance(rec.get("data"), dict) and "detail" in rec["data"])):
+                        # episodes recorded before error details existed (15 Nov): compare without the new detail field
+                        got_payload = {"ok": r.ok, "data": {}, "error": r.error}
                     trunc = _client_truncated_bytes(st.get("result"))
                     if trunc is not None:          # OpenCode kept only "...N bytes truncated...": check N
                         n_trunc += 1

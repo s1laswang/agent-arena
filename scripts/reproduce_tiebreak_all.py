@@ -82,6 +82,8 @@ OPTIONAL_FILENAMES: tuple[str, ...] = (
     "tiebreak_restriction_containment_audit.py",
     "tiebreak_covariate_shift_audit.py",
     "tiebreak_prior_sensitivity_audit.py",
+    "tiebreak_leak_timing_survival_audit.py",
+    "tiebreak_interview_vs_canary_ev_audit.py",
 )
 
 PREREG_RE = re.compile(r"\bpre[-\s]?regist(?:er(?:ed|ing|s)?|ration)\b", re.IGNORECASE)
@@ -648,6 +650,7 @@ GATE_COST_ESTIMATE_MS: dict[str, int] = {
     "tiebreak_delayed_leak_noise_audit": 115,
     "tiebreak_experiment_ledger": 110,
     "tiebreak_context_confound_audit": 95,
+    "tiebreak_statistical_power_audit": 60,
     "tiebreak_failure_taxonomy_matrix": 45,
     "tiebreak_verda_multiseed_audit": 40,
     "tiebreak_vs_frontier_comparison": 30,

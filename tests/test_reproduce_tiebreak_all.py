@@ -126,6 +126,8 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_restriction_containment_audit.py",
         "tiebreak_covariate_shift_audit.py",
         "tiebreak_prior_sensitivity_audit.py",
+        "tiebreak_leak_timing_survival_audit.py",
+        "tiebreak_interview_vs_canary_ev_audit.py",
     )
     assert rta.OPTIONAL_FILENAMES == expected_optional_files
 
@@ -216,6 +218,8 @@ def test_optional_module_handling_and_failure_exit(
         "tiebreak_restriction_containment_audit.py",
         "tiebreak_covariate_shift_audit.py",
         "tiebreak_prior_sensitivity_audit.py",
+        "tiebreak_leak_timing_survival_audit.py",
+        "tiebreak_interview_vs_canary_ev_audit.py",
     ]
     assert payload_ok["gates_passed"] == 3
     assert payload_ok["gates_total"] == 3

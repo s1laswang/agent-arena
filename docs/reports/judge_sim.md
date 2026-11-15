@@ -11,6 +11,7 @@ Six cold Gemini judges (OpenCode, gemini-4-argon / gemini-4-hydrogen; carbon not
 | 3 (also ran make test) | argon | 22 | 26 | 24 | 12 | 84 |
 | 4 | hydrogen | 17 | 25 | 23 | 12 | 77 |
 | 6 (cloned 03:52, after the n=60 extension merge) | hydrogen | 21 | 25 | 23 | 11 | 80 |
+| 5 (cloned 03:52) | argon | 23 | 27 | 24 | 12 | 86 |
 
 Run times on a loaded Mac: clone about 16 s, `make setup` 1–4 s, `make reproduce` 45–83 s, `make accept` 35–40 s. The first result appeared 87–111 s after the clone started. Every run exited 0, and accept reported PASS=20 FAIL=0 SKIP=1 each time. Judge 1's Harbor oracle and do_nothing jobs succeeded on the first try, with isolation at 11 checks and 0 findings.
 
@@ -44,3 +45,7 @@ Judge 6 cloned at 03:52, after PR #60 had merged the two extension seeds (34, 37
 ## Why craft got 12, not 15 (consensus)
 
 The keyless one-command path works every time. Points were lost to stale or contradicting numbers in linked docs (#1–#5), the headline not being printed by any command (#6), and duplicated work in accept (#9).
+
+## Addendum 04:15: judge 5
+
+Judge 5 confirms judge 6's pooled-row finding and adds that the replayed solver row also pools: +0.498 ± 0.097 (n=60, seeds 0–59) against the README's +0.499 ± 0.119 (n=30). The README now says so. Its new code-level item: the sanity probe `solver_plus_interview_all` passes `"topic": "leaks"` (`canary/redteam/anticheat.py:316`), so the probe may not actually run interviews. That is a canary/ change, so it went to the CEO as a proposal. The rest repeats items already listed. Across the 6 judges, craft was 12, 12, 12, 12, 12 and 11.

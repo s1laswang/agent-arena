@@ -1,5 +1,17 @@
 # Gemini CEO log (newest first)
 
+## Sun 03:53: WS1 ladder30 merged; canonical ladder regenerated at n=40
+- Merged origin/gemini-scale/ladder30 (5dcaba23, no PR #9). Its report (results/gemini/scale/ladder30/, 518 eps at 03:05) used the looser 'within the CI' verb, so I regenerated the canonical results/gemini/ladder.md + json/frontier/exports with gemini-pr2's stricter headline_verb from both run dirs (ladder-v14 + scale/ladder30, same import-cell and gemma-runs as WS1's ladder.json): 587 valid eps, 42 cells. Hard: 3.6-flash medium 87% [50,147], high 88% [51,138], n=40 each, 73/80 correct, $0.42–0.45; verb 'not distinguishable … CIs are wide'. Carbon high unchanged 106% [94,126] n=10 $1.93 (4.3× vs flash-high). Gemma n=5 −4% [−155,94].
+- Updated SUBMISSION (short 583 chars, results row, §4 sweep: −32% → 87%, 18/42 cells exclude parity), LONG (dropped the stale argon non-monotone clause), pitch, VIDEO VO[03] text. 120 lab tests green.
+
+## Sun 03:29: blind-atlas check: unchanged (origin/gemini-atlas still 89294e0e, already merged; SUBMISSION numbers already from atlas_blind.json)
+
+## Sun 03:01: ablations merged (PR #55); §4 is now measured
+- Merged origin/gemini-ablations (b4dc1e68): no PR #9; code changes are an opt-in --no-thought-signatures flag (default off). Every §4 number verified in results/gemini/ablations.md/json: signatures OFF → 10/10 episodes rejected (Wilson [72.2, 100]), ON → 0/628 errors; caching $58.56 → $21.72 on 464 atlas calls (62.9%), 75.9% ($678.19 of $893.08) over 29,150 calls (storage cost not ledgered); thinking sweep −32% → 78% for 3.6-flash on hard, 17/34 cells exclude parity. One-pager §4 = 3 compact sentences; LONG §4 = full sentences + caveat.
+
+## Sun 02:41: SUBMISSION.md is now one page
+- Bake-off (80/100) clarity fix: SUBMISSION.md rewritten as a one-pager (~610 words body): 4 required questions, frontier.png headline chart, results table (ladder, red team, blind atlas, usage; jury row if WS2 merges), honesty notes in 5 bullets, reproduce. The previous full text moved verbatim to SUBMISSION-LONG.md. No new numbers; all re-verified (swarm hard best_unjustified 0.38, review solver mean 0.55, in-run 0.49). Did NOT adopt the grader's '3.6-flash matches the solver' headline (false at n=20).
+
 ## Sun 02:35: n=20 ladder weakens the 3.6-flash headline; text rewritten
 - Merged gemini-ladder (815de818/d35d778e): 417 eps. Hard: 3.6-flash 78% [28,151] medium / 71% [11,158] high, n=20, $0.42–0.43, 35/40 correct; gate now "not distinguishable … CIs are wide". Carbon high unchanged 106% [94,126], n=10, $1.93 (extension blocked by key saturation). Took the ladder's stricter headline_verb gate in ladder_report.py (kept justSilas's display helpers).
 - SUBMISSION short version/§1/§2/§3.1/§3.4 now lead with carbon-high ≈ solver; 3.6-flash = 4.5× cheaper, far less certain. All "matches/within the CI" claims for 3.6-flash removed. frontier.png added as headline chart. Gemma: n=4, exploratory only.

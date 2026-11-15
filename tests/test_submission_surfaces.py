@@ -16,6 +16,7 @@ SCRIPT_PATH = ROOT / "scripts" / "verify_submission_surfaces.py"
 SELF_PATH = Path(__file__).resolve()
 OPENCODE_TMP = Path("/tmp/opencode")
 H = chr(35)
+H2 = H * 2
 EM_DASH = chr(0x2014)
 EN_DASH = chr(0x2013)
 PNG_BYTES = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
@@ -120,6 +121,144 @@ def _valid_swarm_md() -> str:
     )
 
 
+def _valid_afterquery_submission_md() -> str:
+    sections = [
+        f"{H2} 1. What Canary is\nInsider-threat environment.\n",
+        f"{H2} 2. Judges: run this\nmake setup && make reproduce\n",
+        f"{H2} 3. Rubric: The gap (30)\nRaw 65% [24%, 98%], luck-adjusted 72% [52%, 91%].\n",
+        f"{H2} 4. Rubric: Meaningful difficulty (30)\nSkill ladder.\n",
+        f"{H2} 5. Rubric: Reward integrity (25)\nAnti-cheat battery.\n",
+        f"{H2} 6. Rubric: Craft (15)\nReproducible.\n",
+        f"{H2} 7. Tiebreak: does a small model improve after training on Canary?\nHonest readout.\n",
+        f"{H2} 8. Known limits\nDisclosed limits.\n",
+        f"{H2} 9. Team and roles\nTeam table.\n",
+    ]
+    return "\n".join(
+        [
+            f"{H} Canary: AfterQuery submission",
+            "",
+            "Project name: Canary",
+            "Tagline (58 chars): Catch the mole with canary traps",
+            "Description (594 chars): On hard, raw 65% and luck-adjusted 72% of the solver.",
+            "",
+            *sections,
+        ]
+    )
+
+
+def _valid_pooled_ext_json() -> str:
+    return json.dumps(
+        [
+            {
+                "label": "OpenCode + gemini-4-carbon over MCP, pooled (primary + extension)",
+                "agent": "opencode:google/gemini-4-carbon",
+                "tier": "hard",
+                "n": 32,
+                "mean": 0.34875,
+                "solver_same_seeds": 0.51375,
+            },
+            {
+                "label": "reference solver",
+                "agent": "solver",
+                "tier": "hard",
+                "n": 60,
+                "mean": 0.4985,
+                "solver_same_seeds": 0.4985,
+            },
+        ]
+    )
+
+
+def _valid_pooled_ext_md() -> str:
+    return "\n".join(
+        [
+            "| tier | run | n | score |",
+            "|---|---|---|---|",
+            "| hard | OpenCode + gemini-4-carbon over MCP, pooled (primary + extension) | 32 | 0.349 |",
+            "| hard | reference solver | 60 | 0.498 |",
+            "",
+        ]
+    )
+
+
+def _valid_ladder_json() -> str:
+    return json.dumps(
+        {
+            "episodes": 587,
+            "rows": [
+                {"model": "gemini-3.5-flash", "level": "minimal", "tier": "hard", "n": 287},
+                {"model": "gemini-3.5-flash", "level": "high", "tier": "hard", "n": 300},
+            ],
+        }
+    )
+
+
+def _valid_ablations_json() -> str:
+    return json.dumps(
+        {
+            "thought_signatures": {
+                "on": {"valid_episodes": 10, "api_errors": 0},
+                "off": {
+                    "episodes_attempted": 10,
+                    "valid_episodes": 0,
+                    "api_errors": 10,
+                    "second_call_rejected_seeds": list(range(10)),
+                    "rejection_rate_of_function_call_turns": 1.0,
+                },
+            },
+            "explicit_cache": {
+                "atlas_plus_gallery": {
+                    "cached_tokens": 54584568,
+                    "usd_paid": 21.72,
+                    "usd_if_uncached": 58.56,
+                    "usd_saved": 36.84,
+                    "pct_saved": 62.9,
+                },
+                "programme": {
+                    "cached_tokens": 744897721,
+                    "usd_paid": 214.89,
+                    "usd_if_uncached": 893.08,
+                    "usd_saved": 678.19,
+                    "pct_saved": 75.9,
+                },
+            },
+            "thinking_sweep": [
+                {
+                    "model": "gemini-3.5-flash",
+                    "level": "minimal",
+                    "tier": "hard",
+                    "n": 10,
+                    "pct_of_solver": -32,
+                    "ci95": [-124, 34],
+                },
+                {
+                    "model": "gemini-3.5-flash",
+                    "level": "medium",
+                    "tier": "hard",
+                    "n": 20,
+                    "pct_of_solver": 78,
+                    "ci95": [28, 151],
+                },
+            ],
+        }
+    )
+
+
+def _valid_ablations_md() -> str:
+    return "\n".join(
+        [
+            f"{H} Gemini ablations",
+            f"{H2} 1. Thought-signature replay: OFF vs ON",
+            "Rejected on 10/10 seeds without thought_signature replay.",
+            f"{H2} 2. Explicit context cache: cost delta",
+            "Explicit context caching saved $678.19 (75.9%) across the programme.",
+            f"{H2} 3. Thinking-level sweep",
+            "Varying thinking_level on one model shifts % of solver.",
+            "",
+        ]
+    )
+
+
 def _make_valid_repo_files() -> dict[str, str | bytes]:
     gz_payload = gzip.compress(b'{"text": "cached gateway response"}')
     return {
@@ -150,6 +289,16 @@ def _make_valid_repo_files() -> dict[str, str | bytes]:
                 },
             }
         ),
+        "docs/SUBMISSION.md": _valid_afterquery_submission_md(),
+        "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.json": _valid_pooled_ext_json(),
+        "data/runs/committed/v1.4/opencode-gemini-4-carbon-ext/paired_table_pooled0to59.md": _valid_pooled_ext_md(),
+        "results/eval_v14/headline_gap_paired_v14.png": PNG_BYTES,
+        "results/eval_v14/posterior_calibration_v14.png": PNG_BYTES,
+        "fr8/analysis/out/ws4_table_v3.md": "| model | n | score |\n|---|---|---|\n| v3-4k-s0 | 180 | -0.147 |\n",
+        "fr8/analysis/out/ws4_table_8k_s1s2.md": "| model | n | score |\n|---|---|---|\n| v3_8k_s2 | 90 | -0.050 |\n",
+        "fr8/analysis/out/ws4_whom_v3.md": "| run | held-out accused |\n|---|---|\n| v3-4k-s0 | 38/180 |\n",
+        "fr8/verda/README.md": f"{H} Verda GPU queue\nInstance ledger.\n",
+        "docs/reports/verda-evidence.md": f"{H} Verda evidence\nCompute track summary.\n",
         "results/gemini/swarm.json": _valid_swarm_json(),
         "results/gemini/swarm.md": _valid_swarm_md(),
         "results/gemini/swarm_control.md": f"{H} Positive control\nVerified exploits: **4**\n",
@@ -157,9 +306,20 @@ def _make_valid_repo_files() -> dict[str, str | bytes]:
         "docs/gemini/SUBMISSION.md": (
             f"{H} Canary Lab\n91 attackers over 4 waves: **0 verified exploits**.\n"
         ),
+        "docs/gemini/SUBMISSION-LONG.md": (
+            f"{H} Canary Lab (full write-up)\n587 paired episodes and 3 ablations.\n"
+        ),
+        "docs/gemini/VIDEO-2MIN.md": (
+            f"{H} Canary Lab: 2-minute demo video\nStoryboard and VO.\n"
+        ),
         "pitch/GEMINI.md": (
             f"{H} Canary x Gemini\n91 attackers over 4 waves, with 0 verified exploits.\n"
         ),
+        "results/gemini/ladder.json": _valid_ladder_json(),
+        "results/gemini/frontier.png": PNG_BYTES,
+        "results/gemini/frontier_medium.png": PNG_BYTES,
+        "results/gemini/ablations.json": _valid_ablations_json(),
+        "results/gemini/ablations.md": _valid_ablations_md(),
         "results/gemini/replay/showcase.json": json.dumps({"model": "gemini-3.1-flash-lite", "steps": [{"step": "ok"}]}),
         "results/gemini/replay/aa/resp1.json.gz": gz_payload,
         "results/gemini/replay-ladder/manifest.json": json.dumps(
@@ -487,6 +647,11 @@ def test_check2_gemini_surface_accepts_75_plus_16_split(opencode_tmp: Path):
             lambda f: f.__setitem__("docs/gemini/assets/dashboard-swarm.png", b""),
             "dashboard-swarm.png",
         ),
+        (
+            "corrupt_dashboard_png_magic",
+            lambda f: f.__setitem__("docs/gemini/assets/dashboard-swarm.png", b"NOT_PNG_BYTES"),
+            "invalid PNG magic bytes",
+        ),
     ],
 )
 def test_check3_media_surface_failures(
@@ -581,3 +746,302 @@ def test_check4_git_tracked_scratch_isolation_and_gitignore_rules(opencode_tmp: 
     res_no_env = surfaces.check_gitignore_surface(missing_env_git)
     assert res_no_env.status == "FAIL"
     assert any(".env" in d for d in res_no_env.details)
+
+
+@pytest.mark.parametrize(
+    ("case_name", "mutator", "expected_substr"),
+    [
+        (
+            "missing_docs_submission",
+            lambda f: f.pop("docs/SUBMISSION.md"),
+            "docs/SUBMISSION.md",
+        ),
+        (
+            "submission_missing_project_name",
+            lambda f: f.__setitem__(
+                "docs/SUBMISSION.md",
+                _valid_afterquery_submission_md().replace("Project name: Canary", "Project name: Other"),
+            ),
+            "Project name: Canary",
+        ),
+        (
+            "submission_missing_tagline",
+            lambda f: f.__setitem__(
+                "docs/SUBMISSION.md",
+                _valid_afterquery_submission_md().replace("Tagline", "Subtitle"),
+            ),
+            "Tagline",
+        ),
+        (
+            "submission_missing_description",
+            lambda f: f.__setitem__(
+                "docs/SUBMISSION.md",
+                _valid_afterquery_submission_md().replace("Description", "Summary"),
+            ),
+            "Description",
+        ),
+        (
+            "submission_missing_65_pct",
+            lambda f: f.__setitem__(
+                "docs/SUBMISSION.md",
+                _valid_afterquery_submission_md().replace("65%", "55%"),
+            ),
+            "65%",
+        ),
+        (
+            "submission_missing_72_pct",
+            lambda f: f.__setitem__(
+                "docs/SUBMISSION.md",
+                _valid_afterquery_submission_md().replace("72%", "62%"),
+            ),
+            "72%",
+        ),
+        (
+            "submission_missing_rubric_section_7",
+            lambda f: f.__setitem__(
+                "docs/SUBMISSION.md",
+                _valid_afterquery_submission_md().replace(f"{H2} 7. Tiebreak", f"{H2} Tiebreak"),
+            ),
+            "missing rubric section heading(s): 7",
+        ),
+        (
+            "missing_pooled_ext_json",
+            lambda f: f.pop(surfaces.POOLED_EXT_JSON),
+            surfaces.POOLED_EXT_JSON,
+        ),
+        (
+            "corrupt_pooled_ext_json",
+            lambda f: f.__setitem__(surfaces.POOLED_EXT_JSON, "{broken_json"),
+            "invalid JSON",
+        ),
+        (
+            "pooled_json_wrong_opencode_n",
+            lambda f: f.__setitem__(
+                surfaces.POOLED_EXT_JSON,
+                _valid_pooled_ext_json().replace('"n": 32', '"n": 30'),
+            ),
+            "missing hard OpenCode row with n=32",
+        ),
+        (
+            "pooled_json_wrong_solver_n",
+            lambda f: f.__setitem__(
+                surfaces.POOLED_EXT_JSON,
+                _valid_pooled_ext_json().replace('"n": 60', '"n": 30'),
+            ),
+            "missing hard solver row with n=60",
+        ),
+        (
+            "pooled_md_missing_n32",
+            lambda f: f.__setitem__(
+                surfaces.POOLED_EXT_MD,
+                _valid_pooled_ext_md().replace("| 32 |", "| 30 |"),
+            ),
+            "missing hard OpenCode row with n=32",
+        ),
+        (
+            "pooled_md_missing_n60",
+            lambda f: f.__setitem__(
+                surfaces.POOLED_EXT_MD,
+                _valid_pooled_ext_md().replace("| 60 |", "| 30 |"),
+            ),
+            "missing hard solver row with n=60",
+        ),
+        (
+            "missing_headline_gap_png",
+            lambda f: f.pop("results/eval_v14/headline_gap_paired_v14.png"),
+            "headline_gap_paired_v14.png",
+        ),
+        (
+            "corrupt_posterior_calibration_png",
+            lambda f: f.__setitem__(
+                "results/eval_v14/posterior_calibration_v14.png",
+                b"NOT_A_VALID_PNG",
+            ),
+            "invalid PNG magic bytes in results/eval_v14/posterior_calibration_v14.png",
+        ),
+        (
+            "missing_ws4_table_v3",
+            lambda f: f.pop("fr8/analysis/out/ws4_table_v3.md"),
+            "ws4_table_v3.md",
+        ),
+        (
+            "corrupt_ws4_table_8k_no_table",
+            lambda f: f.__setitem__(
+                "fr8/analysis/out/ws4_table_8k_s1s2.md",
+                "plain prose without pipe table\n",
+            ),
+            "ws4_table_8k_s1s2.md missing markdown table rows",
+        ),
+        (
+            "empty_ws4_whom_v3",
+            lambda f: f.__setitem__("fr8/analysis/out/ws4_whom_v3.md", ""),
+            "ws4_whom_v3.md",
+        ),
+        (
+            "missing_fr8_verda_readme",
+            lambda f: f.pop("fr8/verda/README.md"),
+            "fr8/verda/README.md",
+        ),
+        (
+            "whitespace_verda_evidence",
+            lambda f: f.__setitem__("docs/reports/verda-evidence.md", "   \n\t\n"),
+            "whitespace-only file: docs/reports/verda-evidence.md",
+        ),
+    ],
+)
+def test_check1_afterquery_and_ws4_surface_failures(
+    opencode_tmp: Path,
+    case_name: str,
+    mutator,
+    expected_substr: str,
+):
+    files = _make_valid_repo_files()
+    mutator(files)
+    repo = _write_repo(opencode_tmp / f"aq_ws4_{case_name}", files)
+
+    results = surfaces.verify_submission_surfaces(repo)
+    by_name = {r.name: r for r in results}
+    assert by_name[surfaces.CHECK_HARBOR].status == "FAIL"
+    assert any(expected_substr in d for d in by_name[surfaces.CHECK_HARBOR].details), (
+        by_name[surfaces.CHECK_HARBOR].details
+    )
+    for other in (surfaces.CHECK_GEMINI, surfaces.CHECK_MEDIA, surfaces.CHECK_GITIGNORE):
+        assert by_name[other].status == "PASS"
+
+
+@pytest.mark.parametrize(
+    ("case_name", "mutator", "expected_substr"),
+    [
+        (
+            "missing_submission_long_md",
+            lambda f: f.pop("docs/gemini/SUBMISSION-LONG.md"),
+            "docs/gemini/SUBMISSION-LONG.md",
+        ),
+        (
+            "missing_video_2min_md",
+            lambda f: f.pop("docs/gemini/VIDEO-2MIN.md"),
+            "docs/gemini/VIDEO-2MIN.md",
+        ),
+        (
+            "missing_ladder_json",
+            lambda f: f.pop("results/gemini/ladder.json"),
+            "results/gemini/ladder.json",
+        ),
+        (
+            "corrupt_ladder_json",
+            lambda f: f.__setitem__("results/gemini/ladder.json", "{bad_json"),
+            "invalid JSON in results/gemini/ladder.json",
+        ),
+        (
+            "ladder_below_500_episodes",
+            lambda f: f.__setitem__(
+                "results/gemini/ladder.json",
+                json.dumps(
+                    {
+                        "episodes": 412,
+                        "rows": [
+                            {"model": "gemini-3.5-flash", "level": "high", "tier": "hard", "n": 412}
+                        ],
+                    }
+                ),
+            ),
+            "episodes >= 500",
+        ),
+        (
+            "ladder_row_sum_disagrees",
+            lambda f: f.__setitem__(
+                "results/gemini/ladder.json",
+                json.dumps(
+                    {
+                        "episodes": 587,
+                        "rows": [
+                            {"model": "gemini-3.5-flash", "level": "high", "tier": "hard", "n": 520}
+                        ],
+                    }
+                ),
+            ),
+            "disagrees with episodes=587",
+        ),
+        (
+            "corrupt_frontier_png_magic",
+            lambda f: f.__setitem__("results/gemini/frontier.png", b"BAD_PNG_HEADER"),
+            "invalid PNG magic bytes in results/gemini/frontier.png",
+        ),
+        (
+            "missing_frontier_medium_png",
+            lambda f: f.pop("results/gemini/frontier_medium.png"),
+            "results/gemini/frontier_medium.png",
+        ),
+        (
+            "missing_ablations_json",
+            lambda f: f.pop("results/gemini/ablations.json"),
+            "results/gemini/ablations.json",
+        ),
+        (
+            "ablation_sig_off_not_10_of_10",
+            lambda f: f.__setitem__(
+                "results/gemini/ablations.json",
+                _valid_ablations_json().replace('"api_errors": 10', '"api_errors": 8'),
+            ),
+            "thought_signatures.off.api_errors expected 10",
+        ),
+        (
+            "ablation_explicit_cache_zero_savings",
+            lambda f: f.__setitem__(
+                "results/gemini/ablations.json",
+                _valid_ablations_json().replace('"usd_saved": 678.19', '"usd_saved": 0.0'),
+            ),
+            "explicit_cache.programme missing positive usd_saved/pct_saved",
+        ),
+        (
+            "ablation_thinking_sweep_not_multi_level",
+            lambda f: f.__setitem__(
+                "results/gemini/ablations.json",
+                _valid_ablations_json().replace('"level": "medium"', '"level": "minimal"'),
+            ),
+            "thinking_sweep lacks multi-level thinking sweep",
+        ),
+        (
+            "ablations_md_missing_10_of_10",
+            lambda f: f.__setitem__(
+                "results/gemini/ablations.md",
+                _valid_ablations_md().replace("10/10", "9/10"),
+            ),
+            "missing 10/10 thought-signature rejection ablation",
+        ),
+        (
+            "ablations_md_missing_cache_savings",
+            lambda f: f.__setitem__(
+                "results/gemini/ablations.md",
+                _valid_ablations_md().replace("saved", "recorded"),
+            ),
+            "missing explicit cache savings ablation",
+        ),
+        (
+            "ablations_md_missing_thinking_sweep",
+            lambda f: f.__setitem__(
+                "results/gemini/ablations.md",
+                _valid_ablations_md().replace("Thinking-level", "Model").replace("thinking_level", "model_id"),
+            ),
+            "missing thinking-level sweep ablation",
+        ),
+    ],
+)
+def test_check2_gemini_ladder_and_ablations_failures(
+    opencode_tmp: Path,
+    case_name: str,
+    mutator,
+    expected_substr: str,
+):
+    files = _make_valid_repo_files()
+    mutator(files)
+    repo = _write_repo(opencode_tmp / f"gemini_new_{case_name}", files)
+
+    results = surfaces.verify_submission_surfaces(repo)
+    by_name = {r.name: r for r in results}
+    assert by_name[surfaces.CHECK_GEMINI].status == "FAIL"
+    assert any(expected_substr in d for d in by_name[surfaces.CHECK_GEMINI].details), (
+        by_name[surfaces.CHECK_GEMINI].details
+    )
+    for other in (surfaces.CHECK_HARBOR, surfaces.CHECK_MEDIA, surfaces.CHECK_GITIGNORE):
+        assert by_name[other].status == "PASS"

@@ -5,10 +5,17 @@ import importlib.util
 import json
 import shutil
 import sys
+import tempfile
 from pathlib import Path
+from typing import Iterator
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = ROOT / "scripts" / "verify_doc_commands.py"
+REPRO_DOC_PATH = ROOT / "docs" / "REPRODUCIBILITY.md"
+SELF_PATH = Path(__file__).resolve()
+OPENCODE_TMP = Path("/tmp/opencode")
 HASH_CHAR = chr(35)
 
 
@@ -24,6 +31,13 @@ def _load_verifier():
 verify_doc_commands = _load_verifier()
 
 
+@pytest.fixture()
+def opencode_tmp() -> Iterator[Path]:
+    OPENCODE_TMP.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=str(OPENCODE_TMP), prefix="test-doc-commands-") as tmp_str:
+        yield Path(tmp_str)
+
+
 def _write_files(base: Path, files: dict[str, str]) -> None:
     for rel, content in files.items():
         p = base / rel
@@ -31,11 +45,26 @@ def _write_files(base: Path, files: dict[str, str]) -> None:
         p.write_text(content, encoding="utf-8")
 
 
+def test_owned_files_hygiene():
+    for py_path in (SCRIPT_PATH, SELF_PATH):
+        src = py_path.read_text(encoding="utf-8")
+        assert HASH_CHAR not in src, f"unexpected hash character in {py_path.name}"
+        assert "\u2014" not in src, f"unexpected em dash in {py_path.name}"
+        assert "\u2013" not in src, f"unexpected en dash in {py_path.name}"
+
+    doc_src = REPRO_DOC_PATH.read_text(encoding="utf-8")
+    assert "\u2014" not in doc_src, "unexpected em dash in docs/REPRODUCIBILITY.md"
+    assert "\u2013" not in doc_src, "unexpected en dash in docs/REPRODUCIBILITY.md"
+
+
 def test_real_repo_passes_doc_commands_verifier(capsys):
     assert "JUDGE_QUICKSTART.md" in verify_doc_commands.DEFAULT_DOCS
     assert "docs/REPRODUCIBILITY.md" in verify_doc_commands.DEFAULT_DOCS
+    assert "docs/PEER-REVIEW-QA.md" in verify_doc_commands.DEFAULT_DOCS
     assert "JUDGE_QUICKSTART.md" in verify_doc_commands.FLAG_CHECK_DOCS
     assert "docs/REPRODUCIBILITY.md" in verify_doc_commands.FLAG_CHECK_DOCS
+    assert "docs/PEER-REVIEW-QA.md" in verify_doc_commands.FLAG_CHECK_DOCS
+    assert verify_doc_commands.audit_repo is verify_doc_commands.verify_repo
 
     rc = verify_doc_commands.main(["--root", str(ROOT), "--json"])
     out = capsys.readouterr().out
@@ -50,9 +79,77 @@ def test_real_repo_passes_doc_commands_verifier(capsys):
     assert by_name["Harbor CLI & Env-Var Check"]["status"] == "PASS"
 
 
-def test_fails_on_nonexistent_makefile_target(tmp_path, capsys):
+def test_gemini_sessions_planning_brief_never_false_fails(opencode_tmp, capsys):
+    gemini_sessions = ROOT / "docs" / "agents" / "GEMINI-SESSIONS.md"
+    assert gemini_sessions.is_file()
+
+    rc_single = verify_doc_commands.main(
+        ["--root", str(ROOT), "--doc", "docs/agents/GEMINI-SESSIONS.md", "--json"]
+    )
+    payload_single = json.loads(capsys.readouterr().out)
+    assert rc_single == 0
+    assert payload_single["passed"] is True
+    assert all(r["status"] != "FAIL" for r in payload_single["results"])
+
+    combined_docs = list(verify_doc_commands.DEFAULT_DOCS) + ["docs/agents/GEMINI-SESSIONS.md"]
+    combined_res = verify_doc_commands.verify_repo(ROOT, combined_docs)
+    assert all(r.status != "FAIL" for r in combined_res)
+
+    repo = opencode_tmp / "brief_case"
     _write_files(
-        tmp_path,
+        repo,
+        {
+            "Makefile": ".PHONY: setup test\nsetup:\n\t@true\ntest:\n\t@true\n",
+            "docs/agents/GEMINI-SESSIONS.md": (
+                f"{HASH_CHAR} Briefs\n\n"
+                "```\n"
+                "Verify: every episode replay-verified; make test green; numbers reproduce.\n"
+                "```\n\n"
+                "Illustrative future script: `python scripts/future_session_helper.py --planned`.\n"
+            ),
+        },
+    )
+    rc_synth = verify_doc_commands.main(
+        ["--root", str(repo), "--doc", "docs/agents/GEMINI-SESSIONS.md", "--json"]
+    )
+    payload_synth = json.loads(capsys.readouterr().out)
+    assert rc_synth == 0
+    assert payload_synth["passed"] is True
+
+
+def test_reproducibility_doc_completeness_and_sync():
+    txt = REPRO_DOC_PATH.read_text(encoding="utf-8")
+    required_tokens = (
+        "a8f99c2537c91d72",
+        "989/999",
+        "49,549",
+        "80/80",
+        "18/18",
+        "rehearsal-dry",
+        "91",
+        "75",
+        "16",
+        "4,325",
+        "99",
+        "3,960",
+        "REPRO_ANTICHEAT=0",
+        "~10 s",
+        "CANARY_WORLD_SECRET=<str>",
+        "300",
+        "200",
+        "+0.39",
+        "+0.68",
+        "git: `unknown`",
+    )
+    for tok in required_tokens:
+        assert tok in txt, f"docs/REPRODUCIBILITY.md missing required token: {tok}"
+    for forbidden in ("gemini-3.5-flash", "+0.373", "75% [36%, 123%]", "22% [-23%, 63%]"):
+        assert forbidden not in txt, f"docs/REPRODUCIBILITY.md contains forbidden gap token: {forbidden}"
+
+
+def test_fails_on_nonexistent_makefile_target(opencode_tmp, capsys):
+    _write_files(
+        opencode_tmp,
         {
             "Makefile": ".PHONY: setup reproduce\nsetup:\n\t@true\nreproduce:\n\t@true\n",
             "README.md": (
@@ -63,7 +160,7 @@ def test_fails_on_nonexistent_makefile_target(tmp_path, capsys):
             ),
         },
     )
-    rc = verify_doc_commands.main(["--root", str(tmp_path), "--json"])
+    rc = verify_doc_commands.main(["--root", str(opencode_tmp), "--json"])
     payload = json.loads(capsys.readouterr().out)
     assert rc == 1
     assert payload["passed"] is False
@@ -73,9 +170,9 @@ def test_fails_on_nonexistent_makefile_target(tmp_path, capsys):
     assert any("nonexistent-target" in d for d in make_res["details"])
 
 
-def test_fails_on_missing_script_in_readme(tmp_path, capsys):
+def test_fails_on_missing_script_in_readme(opencode_tmp, capsys):
     _write_files(
-        tmp_path,
+        opencode_tmp,
         {
             "Makefile": ".PHONY: setup\nsetup:\n\t@true\n",
             "README.md": (
@@ -84,7 +181,7 @@ def test_fails_on_missing_script_in_readme(tmp_path, capsys):
             ),
         },
     )
-    rc = verify_doc_commands.main(["--root", str(tmp_path), "--json"])
+    rc = verify_doc_commands.main(["--root", str(opencode_tmp), "--json"])
     payload = json.loads(capsys.readouterr().out)
     assert rc == 1
     assert payload["passed"] is False
@@ -94,8 +191,8 @@ def test_fails_on_missing_script_in_readme(tmp_path, capsys):
     assert any("scripts/missing_script.py" in d for d in path_res["details"])
 
 
-def test_fails_on_missing_canary_module_and_package_without_main(tmp_path, capsys):
-    mod_case = tmp_path / "missing_mod"
+def test_fails_on_missing_canary_module_and_package_without_main(opencode_tmp, capsys):
+    mod_case = opencode_tmp / "missing_mod"
     _write_files(
         mod_case,
         {
@@ -115,7 +212,7 @@ def test_fails_on_missing_canary_module_and_package_without_main(tmp_path, capsy
     assert by_name["Script & Module Paths Check"]["status"] == "FAIL"
     assert any("canary.no_such_mod" in d for d in by_name["Script & Module Paths Check"]["details"])
 
-    pkg_no_main = tmp_path / "pkg_no_main"
+    pkg_no_main = opencode_tmp / "pkg_no_main"
     _write_files(
         pkg_no_main,
         {
@@ -133,8 +230,8 @@ def test_fails_on_missing_canary_module_and_package_without_main(tmp_path, capsy
     capsys.readouterr()
 
 
-def test_fails_on_bogus_flag_for_demo_replay_and_modules(tmp_path, capsys):
-    repo = tmp_path / "flag_case"
+def test_fails_on_bogus_flag_for_demo_replay_and_modules(opencode_tmp, capsys):
+    repo = opencode_tmp / "flag_case"
     (repo / "scripts").mkdir(parents=True)
     shutil.copy2(ROOT / "scripts" / "demo_replay.py", repo / "scripts" / "demo_replay.py")
     _write_files(
@@ -173,9 +270,9 @@ def test_fails_on_bogus_flag_for_demo_replay_and_modules(tmp_path, capsys):
     assert payload_ok["passed"] is True
 
 
-def test_judge_walkthrough_and_dynamic_help_fallback(tmp_path, capsys):
+def test_judge_walkthrough_and_dynamic_help_fallback(opencode_tmp, capsys):
     _write_files(
-        tmp_path,
+        opencode_tmp,
         {
             "Makefile": ".PHONY: reproduce\nreproduce:\n\t@true\n",
             "scripts/dyn_cli.py": (
@@ -188,17 +285,17 @@ def test_judge_walkthrough_and_dynamic_help_fallback(tmp_path, capsys):
             "docs/JUDGE-WALKTHROUGH.md": "`python scripts/dyn_cli.py --dynamic-flag 42`\n",
         },
     )
-    rc_pass = verify_doc_commands.main(["--root", str(tmp_path), "--json"])
+    rc_pass = verify_doc_commands.main(["--root", str(opencode_tmp), "--json"])
     capsys.readouterr()
     assert rc_pass == 0
 
     _write_files(
-        tmp_path,
+        opencode_tmp,
         {
             "docs/JUDGE-WALKTHROUGH.md": "`python scripts/dyn_cli.py --drifted-flag 42`\n",
         },
     )
-    rc_fail = verify_doc_commands.main(["--root", str(tmp_path), "--json"])
+    rc_fail = verify_doc_commands.main(["--root", str(opencode_tmp), "--json"])
     payload_fail = json.loads(capsys.readouterr().out)
     assert rc_fail == 1
     by_name = {r["name"]: r for r in payload_fail["results"]}
@@ -206,8 +303,8 @@ def test_judge_walkthrough_and_dynamic_help_fallback(tmp_path, capsys):
     assert any("--drifted-flag" in d for d in by_name["CLI Long-Flag Check"]["details"])
 
 
-def test_module_flag_checks_equals_syntax_and_external_branch_warn(tmp_path, capsys):
-    repo = tmp_path / "mod_flags"
+def test_module_flag_checks_equals_syntax_and_external_branch_warn(opencode_tmp, capsys):
+    repo = opencode_tmp / "mod_flags"
     _write_files(
         repo,
         {
@@ -254,8 +351,8 @@ def test_module_flag_checks_equals_syntax_and_external_branch_warn(tmp_path, cap
     assert any("--no-such-eval-flag" in d for d in by_name["CLI Long-Flag Check"]["details"])
 
 
-def test_harbor_rule_a_forbids_canary_env_in_agent_container(tmp_path, capsys):
-    repo = tmp_path / "harbor_rule_a"
+def test_harbor_rule_a_forbids_canary_env_in_agent_container(opencode_tmp, capsys):
+    repo = opencode_tmp / "harbor_rule_a"
     _write_files(
         repo,
         {
@@ -305,8 +402,8 @@ def test_harbor_rule_a_forbids_canary_env_in_agent_container(tmp_path, capsys):
     assert any("CANARY_SEED" in d for d in harbor_res_eq["details"])
 
 
-def test_harbor_rule_b_requires_google_api_key_name_for_opencode_google(tmp_path, capsys):
-    repo = tmp_path / "harbor_rule_b"
+def test_harbor_rule_b_requires_google_api_key_name_for_opencode_google(opencode_tmp, capsys):
+    repo = opencode_tmp / "harbor_rule_b"
     _write_files(
         repo,
         {
@@ -346,7 +443,7 @@ def test_harbor_rule_b_requires_google_api_key_name_for_opencode_google(tmp_path
         repo,
         {
             "README.md": (
-                "`harbor run -p harbor/dataset --agent=opencode --model=google/gemini-3.5-flash "
+                "`harbor run -p harbor/dataset --agent=opencode --model=google/gemini-4-carbon "
                 "--api-key-name=GEMINI_API_KEY`\n"
             ),
         },
@@ -359,8 +456,8 @@ def test_harbor_rule_b_requires_google_api_key_name_for_opencode_google(tmp_path
     assert any("GOOGLE_GENERATIVE_AI_API_KEY" in d for d in res_wrong["details"])
 
 
-def test_harbor_rule_c_validates_oracle_policy_and_ignores_placeholders(tmp_path, capsys):
-    repo = tmp_path / "harbor_rule_c"
+def test_harbor_rule_c_validates_oracle_policy_and_ignores_placeholders(opencode_tmp, capsys):
+    repo = opencode_tmp / "harbor_rule_c"
     _write_files(
         repo,
         {
@@ -407,8 +504,8 @@ def test_harbor_rule_c_validates_oracle_policy_and_ignores_placeholders(tmp_path
     assert rc_empty == 1
 
 
-def test_judge_quickstart_and_reproducibility_docs_discovery(tmp_path, capsys):
-    repo = tmp_path / "quickstart_discovery"
+def test_judge_quickstart_and_reproducibility_docs_discovery(opencode_tmp, capsys):
+    repo = opencode_tmp / "quickstart_discovery"
     _write_files(
         repo,
         {
@@ -467,4 +564,18 @@ def test_judge_quickstart_and_reproducibility_docs_discovery(tmp_path, capsys):
     flag_repro = {r["name"]: r for r in payload_repro_fail["results"]}["CLI Long-Flag Check"]
     assert flag_repro["status"] == "FAIL"
     assert any("docs/REPRODUCIBILITY.md" in d for d in flag_repro["details"])
+
+    _write_files(
+        repo,
+        {
+            "docs/REPRODUCIBILITY.md": "`python scripts/check_tool.py --check`\n",
+            "docs/PEER-REVIEW-QA.md": "`python scripts/check_tool.py --drifted-qa-flag`\n",
+        },
+    )
+    rc_qa_fail = verify_doc_commands.main(["--root", str(repo), "--json"])
+    payload_qa_fail = json.loads(capsys.readouterr().out)
+    assert rc_qa_fail == 1
+    flag_qa = {r["name"]: r for r in payload_qa_fail["results"]}["CLI Long-Flag Check"]
+    assert flag_qa["status"] == "FAIL"
+    assert any("docs/PEER-REVIEW-QA.md" in d for d in flag_qa["details"])
 

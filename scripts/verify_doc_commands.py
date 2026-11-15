@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import fnmatch
 import json
 import os
 import re
@@ -37,6 +38,7 @@ DEFAULT_DOCS: tuple[str, ...] = (
     "JUDGE_QUICKSTART.md",
     "docs/JUDGE-WALKTHROUGH.md",
     "docs/REPRODUCIBILITY.md",
+    "docs/PEER-REVIEW-QA.md",
     "docs/DEMO.md",
     "docs/EXPLOITS.md",
     "docs/DIFFICULTY.md",
@@ -48,6 +50,13 @@ DEFAULT_DOCS: tuple[str, ...] = (
 )
 
 FLAG_CHECK_DOCS: frozenset[str] = frozenset(DEFAULT_DOCS)
+
+PLANNING_BRIEF_PATTERNS: tuple[str, ...] = (
+    "docs/agents/*.md",
+    "docs/gemini/sessions/*.md",
+    "docs/PLAN*.md",
+    "docs/gemini/PLAN.md",
+)
 
 VALID_HARBOR_ORACLE_POLICIES: frozenset[str] = frozenset({
     "solver",
@@ -264,10 +273,16 @@ def _join_fenced_lines(lines: list[tuple[int, str]]) -> list[tuple[int, str]]:
     return out
 
 
+def _is_planning_brief(doc_rel: str) -> bool:
+    norm = doc_rel.replace("\\", "/").lstrip("./")
+    return any(fnmatch.fnmatch(norm, pat) for pat in PLANNING_BRIEF_PATTERNS)
+
+
 def extract_doc_snippets(root: Path, doc_rel: str) -> list[DocSnippet]:
     path = root / doc_rel
     if not path.is_file():
         return []
+    is_brief = _is_planning_brief(doc_rel)
     raw_lines = path.read_text(encoding="utf-8").splitlines()
     snippets: list[DocSnippet] = []
     in_fence = False
@@ -319,7 +334,12 @@ def extract_doc_snippets(root: Path, doc_rel: str) -> list[DocSnippet]:
                 )
         else:
             if stripped.startswith(fence_marker) and stripped.strip(fence_marker[0]) == "":
-                if fence_lang in SHELL_FENCE_LANGS and fence_lang not in NON_SHELL_FENCE_LANGS:
+                allow_shell_fence = (
+                    fence_lang in SHELL_FENCE_LANGS
+                    and fence_lang not in NON_SHELL_FENCE_LANGS
+                    and not (is_brief and fence_lang == "")
+                )
+                if allow_shell_fence:
                     active_heading = " > ".join(headings[k] for k in sorted(headings))
                     for logical_lineno, logical_text in _join_fenced_lines(fence_buf):
                         snippets.append(
@@ -482,7 +502,7 @@ def _detect_external_branch(snippet: DocSnippet) -> str | None:
 
 
 def _is_superseded(snippet: DocSnippet) -> bool:
-    return "superseded" in snippet.heading.lower()
+    return "superseded" in snippet.heading.lower() or _is_planning_brief(snippet.doc)
 
 
 def _skip_command_prefixes(tokens: Sequence[str]) -> int:
@@ -1194,6 +1214,9 @@ def verify_repo(
     ]
 
 
+audit_repo = verify_repo
+
+
 def format_report(results: Sequence[CheckResult], elapsed_s: float) -> str:
     lines: list[str] = []
     counts = {"PASS": 0, "WARN": 0, "FAIL": 0}
@@ -1213,11 +1236,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         description="Verify Makefile targets, script/module paths, CLI flags, and Harbor commands across judge-facing docs."
     )
     ap.add_argument("--root", type=Path, default=ROOT, help="Repository root to verify")
+    ap.add_argument(
+        "--doc",
+        action="append",
+        dest="docs",
+        default=None,
+        help="Relative doc path to verify (repeatable; defaults to DEFAULT_DOCS)",
+    )
     ap.add_argument("--json", action="store_true", help="Emit JSON report")
     args = ap.parse_args(argv)
 
+    target_docs: Sequence[str] = tuple(args.docs) if args.docs else DEFAULT_DOCS
     t0 = time.monotonic()
-    results = verify_repo(root=args.root.resolve())
+    results = verify_repo(root=args.root.resolve(), docs=target_docs)
     elapsed = time.monotonic() - t0
     passed = not any(r.status == "FAIL" for r in results)
 

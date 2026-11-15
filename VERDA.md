@@ -10,6 +10,14 @@
 
 Times are Helsinki time (EET), Sat 14 → Sun 15 Nov 2026, unless they end in Z.
 
+**Status at write-up (Sun 08:50).** Every result in the ledger up to 05:08 is included. Four items had not been reported to the ledger by 08:50 and are marked *not reported*:
+- v3-8k s0;
+- DAgger's held-out scores;
+- the Qwen3-14B episodes;
+- the final balance after the reapers.
+
+Their final numbers go to `fr8/verda/README.md` (justSilas-fr8) and `docs/reports/dagger.md`; this page claims nothing beyond them.
+
 ---
 
 ## 1. What compute bought us (Ambition)
@@ -55,7 +63,9 @@ Two things would not have fit on a laptop, and they did not fit on our V100 clus
 | 03:10 | [Verda] | J1 restarted with `--hf-overrides` for YaRN 131k. |
 | 04:15 | [Verda] | J1 smoke test fails the 30-min-per-episode rule: thinking on, no output cap, about 46 tok/s per request, 16 calls in 30 min, 0 episodes finished. Restarted with a cap (`fr8/verda/j1_run2.sh`): max 4096 output tokens per turn, hard dev seeds 0–9 all at once. |
 | 04:20 | [Verda] | **v3-8k s2** (H100 spot `dbd083ca`, 693 steps in 3.0 h) held-out eval: **−0.050 ± 0.049 (n=90)**, +0.408 ± 0.099 vs v2. It abstains on 93% of episodes. `dbd083ca` deleted at 04:21. |
-| 04:47 | [Verda] | **DAgger round 1 SFT done** on `e9ea8b2e`: 250 steps in 55.5 min on 4,000 examples, where the solver labels the states v3-4k s0 reached itself. Same-weights check: v3-4k s0 at 8k context scores −0.716 ± 0.105 (n=90) vs −0.147 at 4k. Held-out DAgger evals at 4k and 8k start under the shared secret, ETA ~06:15. |
+| 04:47 | [Verda] | **DAgger round 1 SFT done** on `e9ea8b2e`: 250 steps in 55.5 min on 4,000 examples, where the solver labels the states v3-4k s0 reached itself. The pipeline, per X2's draft `docs/reports/dagger.md`:
+  - vLLM rolled out 300 own-policy episodes in 13 min on the A100-40;
+  - the expert relabelled 24,074 states and matches the solver on 2,603/2,603 checked steps. Same-weights check: v3-4k s0 at 8k context scores −0.716 ± 0.105 (n=90) vs −0.147 at 4k. Held-out DAgger evals at 4k and 8k start under the shared secret, ETA ~06:15. |
 | 05:05 | [Verda] | **v3-8k s3** (A100 on-demand `f4378173`, 344 steps in 3.0 h) held-out eval under the shared secret: **−0.788 ± 0.117 (n=90)**. It accuses on 96% of episodes. Paired against v3-4k s0 at 8k context on identical worlds: −0.073 ± 0.173. `f4378173` deleted at 05:08. |
 | ~07:30 | [Verda] | Reapers delete every instance (the X2 box at 08:00). Final rows land in §4. |
 
@@ -84,18 +94,18 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 
 | model | trained where | evaluated where | n (held-out episodes) | score ± 95% CI | accused | correct | abstain | Δ vs v2 (two-sample, n vs n) |
 |---|---|---|---|---|---|---|---|---|
-| base Qwen2.5-1.5B-Instruct | – | [FR8] V100 (jobs 44412 + 44584; the backup run on [Verda] A100 `18acfa5d` is pending) | 36 | 0.000 ± 0.000 | 0.00 | 0.00 | 1.00 | +0.457 ± 0.086 (36 vs 172) |
+| base Qwen2.5-1.5B-Instruct | – | [FR8] V100 (jobs 44412 + 44584; the backup run on [Verda] A100 `18acfa5d` was not reported) | 36 | 0.000 ± 0.000 | 0.00 | 0.00 | 1.00 | +0.457 ± 0.086 (36 vs 172) |
 | v1 SFT (J4) | [FR8] V100 | [FR8] V100 | 12 | −0.250 ± 0.256 | 0.25 | 0.00 | 0.75 | +0.207 ± 0.270 (12 vs 172) |
 | v2 SFT, dense windows | [FR8] V100 | 82 [FR8] V100 + 90 [Verda] A100 `68bbe201` | 172 | −0.457 ± 0.086 | 0.55 | 0.05 | 0.45 | – |
 | **v3-4k s0** GRPO, 609 steps | **[Verda] H100 `3bb74f5a`** | 90 [Verda] H100 + 90 [Verda] A100 `68bbe201` | 180 | **−0.147 ± 0.063** | 0.21 | 0.03 | 0.79 | **+0.310 ± 0.107 (180 vs 172)** |
 | v3-4k s1 (replicate) | [Verda] A100 spot `714d8144` | – | **lost: spot preempted ~30 min into training** | – | | | | |
-| v3-8k s0 | [Verda] H100 `3bb74f5a` | [Verda] | pending | pending | | | | |
+| v3-8k s0 | [Verda] H100 `3bb74f5a` | [Verda], shared secret | not reported by 08:50 | – | | | | |
 | v3-8k s1 GRPO, 371 steps | [Verda] A100 spot `ac58df04` | [Verda] A100 | 90 | −0.777 ± 0.118 | 0.94 | 0.09 | 0.06 | −0.319 ± 0.146 (90 vs 172) |
 | v3-8k s2 GRPO, 693 steps | [Verda] H100 spot `dbd083ca` | [Verda] H100 | 90 | −0.050 ± 0.049 | 0.07 | 0.01 | 0.93 | +0.408 ± 0.099 (90 vs 172) |
 | v3-8k s3 GRPO, 344 steps | [Verda] A100 on-demand `f4378173` | [Verda] A100, shared secret | 90 | −0.788 ± 0.117 | 0.96 | 0.09 | 0.04 | −0.331 ± 0.145 (90 vs 172) |
 | v3-4k s1, 192 steps (partial) | [FR8] V100 (job 44572) | [FR8] V100 | 25 | −0.240 ± 0.171 | 0.24 | 0.00 | 0.76 | +0.217 ± 0.191 (25 vs 172) |
 | v3-4k s0 **evaluated at 8k context** (same weights; X2 run, verified by FR8 at 05:00) | [Verda] H100 | [Verda] A100 `68bbe201`, shared secret | 90 | −0.716 ± 0.105 | 0.78 | 0.03 (3/70 accusations right) | 0.22 | −0.258 ± 0.136 (90 vs 172) |
-| DAgger round 1 (SFT from v3-4k s0, 250 steps, 4,000 solver-labelled own-state examples) | [Verda] A100 40GB `e9ea8b2e` | [Verda], shared secret, at 4k and 8k context | pending (`docs/reports/dagger.md`) | pending | | | | |
+| DAgger round 1 (SFT from v3-4k s0, 250 steps, 4,000 solver-labelled own-state examples) | [Verda] A100 40GB `e9ea8b2e` | [Verda], shared secret, at 4k and 8k context | not reported by 08:50 (`docs/reports/dagger.md`) | – | | | | |
 
 **Reading it honestly:**
 - **v3 recovered most of v2's loss.** It is +0.310 ± 0.107 vs v2 (two-sample, 180 vs 172 held-out episodes), mostly by learning to abstain instead of accusing wrongly. On the hard tier, accusations (all wrong) fell from 0.60 to 0.03: +0.563 ± 0.136 (60 vs 57).
@@ -141,7 +151,7 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | Difficulty recalibration (J1) | [Mac] local, plus a bonus copy on [FR8] (job 43872, 306 tasks) | CPU | 153k episodes |
 | SFT data (J3) | [Mac] | CPU | 20k train + 2k val solver episodes |
 | Frontier agent runs (Gemini, GPT, Grok) | [Mac] (API calls; FR8 compute nodes have no internet) | API | **1,057 replay-verified episodes** committed in `data/runs/committed/`, including references |
-| Open-weight agent (Qwen3-14B, thinking on, max 4096 output tokens per turn, vLLM) | **[Verda]** A100 80GB spot | A100 | hard dev seeds 0–9 (medium only if time allows); result pending |
+| Open-weight agent (Qwen3-14B, thinking on, max 4096 output tokens per turn, vLLM) | **[Verda]** A100 80GB spot | A100 | hard dev seeds 0–9 started 04:15; no episodes reported by 08:50 |
 | Meta glasses YOLOv8n | **[Verda]** H100, shared | H100 | 80 epochs in 513 s, ≈ 0.15 GPU-h; mAP@0.5 0.572, strength precision 96.8% (n=348) |
 | Meta glasses PaliGemma 2 3B LoRA | **[Verda]** A100, shared | A100 | 2 epochs in 29 min, ≈ 0.65 GPU-h; strength recall 91.4% vs YOLO 65.6% (n=348) |
 
@@ -156,7 +166,7 @@ GRPO training scores actions by letting the solver finish the episode; evaluatio
 | 00:20 | €191.71 | €8.29 |
 | 03:08 | €153.98 | €46.02 |
 | 03:50 | €139.23 | **€60.77** |
-| after the last reaper (08:00) | pending | **pending: final total** |
+| after the last reaper (08:00) | not reported by 08:50 | final total goes to the ledger |
 
 **Per instance.** Prices come from the Verda API at creation (€). Hours run to each reaper deadline, so they are an **upper bound** until the ledger records the actual delete times.
 

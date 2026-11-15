@@ -341,3 +341,15 @@ B1 hint wording fixed (head-env, verified against instruction() v1.4) and sent t
 - X4 VERDA.md: by 08:30.
 - Human baseline: Silas + 2 teammates.
 - Bake-off 73/100: A3/A4/A5 fixed (41f7b3d5, bddc0ff9); A1/A2/A6 covered by G1, the rehearsal and G4.
+
+## 09:00 Sun 15 Nov: final state before the submit tag
+- 05:08 tag `afterquery-final` (1bc3e281): fix D (tool error details, W1 wording), all green. Final hunt on the tag: judge_hunt 12/12, make hunt 0.000, reproduce clean.
+- 05:11-05:29 gpt-5.5 (pre-registered cf394894): n=30, 101% [79, 140] of the solver; $38.91. No gap for gpt-5.5. A re-parameterised solver copying its habits was worse on 400 fresh seeds, so the reference is unchanged.
+- 05:09-08:31 judge rehearsal on the tag (s1-rehearsal): oracle +0.506; gemini-4-carbon runs 93%, 116%, 153% (partial) of the oracle; baselines 0. The 65% MCP-only gap did NOT reproduce in the judge path. Reported as measured in README, gap.md, SUBMISSION.md.
+- Tiebreak final (FR8 08:55): no trained small model above the base; Verda spend €104.46, all instances deleted.
+- Merged: #57, #88 (VERDA.md), #74 (1,034-attack red-team sweep, 0 exploits), #68 (key-less test fix). Not merged before the deadline: #81 (argon 103%, hydrogen 115%; cited), #92 (causal hint n=2), fleet PRs.
+- The CEO session was stalled by a usage limit from ~05:50 to 08:50.
+
+## 09:35 Sun 15 Nov: correction to the 09:00 entry (this log is append-only)
+- The 09:00 entry says the rehearsal's Gemini runs were "93%, 116%, 153% (partial)". The third figure was an 08:52 snapshot. Final (s1-rehearsal-final, d0ead011): **93%, 116%, 131%**; run 3 has 9 valid trials, 5 of them after the 08:30 cut-off, 1 infra-excluded. No gap in the judge path, as before.
+- Tags: `afterquery-submit` (9225f2ad) carries the snapshot; `afterquery-submit-2` (aa1c679e) carries the final numbers and is what main's landing page pins.

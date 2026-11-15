@@ -4,9 +4,11 @@
 
 [![CI](https://github.com/s1laswang/agent-arena/actions/workflows/ci.yml/badge.svg?branch=justSilas)](https://github.com/s1laswang/agent-arena/actions/workflows/ci.yml)
 
-**Claim: in the judges' own harness (OpenCode over MCP), gemini-4-carbon earns 65% of the reference solver's score on Canary's hard tier (95% CI 24–98%), while doing nothing or stopping early scores exactly 0.**
+**What we measured on the hard tier (rules v1.4), stated plainly.** (1) With only the 13 MCP tools (OpenCode), gemini-4-carbon earns 65% of the reference solver's score (95% CI 24–98%, n=30). (2) In the full judge path (Harbor container, where the agent also has a shell) that gap **did not reproduce**: three runs on the final tag scored 93%, 116% and 131% of the reference ([`results/harbor/rehearsal/TABLE.md`](results/harbor/rehearsal/TABLE.md)). (3) gpt-5.5 with MCP tools only matches the reference (101%, CI 79–140%). (4) Doing nothing or stopping early scores exactly 0 in every setting. So: expect a frontier agent in your rerun to land near the reference, not clearly below it.**
 
 A simulated company has one **mole** who leaks documents to a rival. Every leak costs company value V, which starts at 1.0. The agent is the head of security: it reads access logs and messages, interviews staff, restricts access and sets **canary traps**, sending different variants of a document to different groups and watching which variant leaks. It must accuse exactly once. A correct accusation scores the V that is left, a wrong one scores −1 and no accusation scores 0. The reference is a Bayesian canary-trap solver that uses the same public tools.
+
+**Tags.** `afterquery-final` (1bc3e281) is the code freeze: the judge rehearsal ran on exactly that commit. `afterquery-submit` (what you are reading) adds results and docs, plus fixes to measurement tooling only (the OpenCode runner, the replay check, the submission audit, two table scripts). `git diff afterquery-final..afterquery-submit -- canary/env.py canary/rules.py canary/solver canary/mcp_server.py canary/world.py canary/mole canary/text harbor` is empty.
 
 ## Result (rules v1.4, hard tier)
 
@@ -14,6 +16,8 @@ A simulated company has one **mole** who leaks documents to a rival. Every leak 
 |---|---:|---:|---:|
 | reference solver | +0.499 ± 0.119 | 100% | 30 |
 | **gemini-4-carbon, OpenCode over MCP** | **+0.322 ± 0.199** | **65% [24%, 98%]**; luck-adjusted 72% [52%, 91%] | 30 |
+| gpt-5.5, OpenCode over MCP (second frontier family) | +0.504 ± 0.064 | 101% [79%, 140%]; luck-adjusted 84% [67%, 103%] | 30 |
+| gemini-4-carbon, **Harbor judge path** (3 runs × 10 judge tasks on the tag; run 3: 9 valid, 5 of them after the 08:30 cut-off) | +0.472 / +0.585 / +0.626 | 93% / 116% / 131% of the oracle on the same tasks (oracle +0.506 on all 10) | 10 / 10 / 9 |
 | do_nothing | +0.000 ± 0.000 | 0% | 40 |
 | stop_early (stops on day 1, no accusation) | +0.000 ± 0.000 | 0% | 40 |
 
@@ -22,7 +26,8 @@ A simulated company has one **mole** who leaks documents to a rival. Every leak 
   - do_nothing and stop_early: 40 judge seeds, [`results/judge_table.md`](results/judge_table.md).
   - The solver reference for seeds 0-29 is two committed run dirs: seeds 0-19 in `data/runs/committed/v1.4/reference/solver-hard-20261114-121126/` and seeds 20-29 in `reference/solver-hard-seeds20to29/`. The paired table uses all 30.
   - *Luck-adjusted* scores each accusation by its expected value under the solver's posterior, so it separates decisions from luck.
-- **Honest reading.** The same model run in-process reaches 95% [62%, 140%] on hard, and OpenCode reaches 111% on medium. The gap is on hard, in the judges' harness. A random accusation on day 1 (`guess_day1`) averages −0.95 on hard ([`results/solver_range/guess_day1_hard_judge40.md`](results/solver_range/guess_day1_hard_judge40.md)).
+- **Honest reading.** The 65% gap was measured with MCP tools only, on dev seeds. It did not reproduce in the Harbor judge-path rehearsal (protocol committed before the run; 28 of 29 valid Gemini accusations correct, against 25 of 29 in the MCP-only set). We do not know how much of that difference is the shell the Harbor agent has (it used it in 20 of 28 trials), the two disclosed changes of 15 Nov, or chance. There is also no gap for gpt-5.5 (pre-registered run, reported as measured). If you rerun with a GPT-class agent, expect parity with the reference. gemini-4-carbon run in-process reaches 95% [62%, 140%] on hard, and through OpenCode 111% on medium.
+- **Why the two agents differ** ([`results/behaviour_compare_v1.4.md`](results/behaviour_compare_v1.4.md), same 30 seeds): gpt-5.5 plants 17.2 canaries and runs 4 interviews per episode (6% of its calls) and accuses on day 10.2, like the reference (14.1 canaries, day 10.6). gemini-4-carbon plants 8.5 canaries, runs 68 interviews (53% of its calls; an interview's stated likelihood ratio is 1.2) and accuses on day 13.2, with 4 wrong accusations to gpt-5.5's 0. gpt-5.5's own failure: in 2 of 30 episodes it announced its accusation in text and never called `accuse`, which scores 0. A random accusation on day 1 (`guess_day1`) averages −0.95 on hard ([`results/solver_range/guess_day1_hard_judge40.md`](results/solver_range/guess_day1_hard_judge40.md)).
 - **Infra retries, disclosed.** Some OpenCode attempts ended on an empty model reply (a Gemini/OpenCode client failure, not a decision). Those attempts were retried and never counted. If they are instead scored 0, OpenCode hard is 56% [19%, 87%] of the solver (luck-adjusted 55% [34%, 77%]): the gap widens, so retrying is the conservative choice. Source: the "alternative" row in the paired table.
 - **Harness difference, disclosed.** The committed headline runs used OpenCode with only the 13 MCP tools: `bash`/`python3` were denied. The Harbor template's agent container allows `bash` and `python3`, which cannot reach the world, the seed or the ledger (isolation check: 11/11). So in a Harbor rerun the agent may also compute with Python. The judge rehearsal (`results/harbor/rehearsal/`) uses the Harbor setting, so it measures exactly what you will run.
 - **Two changes after the committed runs (15 Nov), disclosed.** Tool errors now carry a `detail` field saying what was wrong (the error string is unchanged, so every committed episode still replays; 28 of the 3,841 calls in the 30 headline episodes hit that error). One contradictory sentence about the careful mole was reworded in the medium and hard instructions. Details: [docs/DIFFICULTY.md](docs/DIFFICULTY.md).
@@ -65,7 +70,7 @@ Qwen2.5-1.5B with LoRA, held-out seeds, the model plays every episode alone; ful
 
 - **What was learned:** reward training fixed v2's reckless accusations (v3-4k vs v2: +0.310 ± 0.107, two-sample). It learned to play the protocol (100% valid calls), and on training states it learned to name the mole from evidence (0.19 → 0.89).
 - **What was not:** the bar (above the untrained base, with the CI excluding 0) is **not met**. The model never learned to gather evidence in its own games: the same decision gemini-4-carbon gets wrong (fewer canaries, earlier commitment; [failure analysis](docs/reports/failure_analysis_v1.4.md)).
-- **In progress:** a DAgger run trained on the model's own states may be added as an addendum.
+- **Final (08:55 on 15 Nov, `fr8/analysis/out/ws4_table_final.md` on branch `justSilas-fr8`):** seven trained runs, none above the base. v3-4k: −0.147 and −0.209; v3-8k: −0.060, −0.777, −0.050, −0.788 (the two ~650-step runs abstain, the two ~350-step runs over-accuse). Reward training (GRPO) beats imitation (v2) by +0.31 to +0.41. A DAgger round trained on the model's own states ended as an honest null (PR #90, not merged before the deadline): −0.542 ± 0.214 at 8k context (n=50, partial), level with v3-4k at 4k context; not above the base either.
 
 ## Links
 

@@ -111,3 +111,99 @@
   - **No reward improvement yet**; a clear protocol/behaviour improvement.
 - **Artifacts:** `data/fr8/j4/run-44397/runs/` (episodes + summaries, committed); the adapter is on the Mac at `data/fr8/j4/run-44397/lora` (gitignored, 91 MB) and on FR8. MLX demo path: `train/README.md`.
 - **Saturday v2:** dense 4k windows + `--oversample-endings 3` on J3 v2 (code merged; needs `make fr8-sync`, then submit; command in `train/README.md`). Also needed: a faster eval (KV cache or MLX) so held-out n ≥ 30 per tier.
+
+## 14:xx status (FR8 relaunch, GPU authorisation)
+- **Blocker: freighter is unreachable from the Mac.** `ssh freighter` → port 22 timeout (3 attempts); `nc -z freighter.fr8.so 22` closed; DNS resolves (194.157.9.46), and general internet works. No jobs submitted, nothing touched. Is it the FR8 VPN/firewall or is the host down? Silas/Momin to check.
+- **Done (untested on FR8, `bash -n` only): WS4 one-shot** `fr8/ws4_submit.sh`: sync, then 3 jobs, each logged in OURS.txt:
+  - train: `j4_train.sbatch`, STAGES=train, j3v14 shards, `--window-mode dense --max-len 4096 --oversample-endings 3`, 800 episodes, 5 h, `--time=07:00:00`;
+  - base eval: `j4_eval.sbatch` (KV reuse), n=30/tier held-out, `--time=03:00:00`, starts immediately;
+  - v2 eval: same, `--dependency=afterok:<train>`, adapter `j4/run-<train>/lora`.
+- **Done (untested): WS3 prep** `fr8/ws3_trl_setup.sh` (TRL into `~/agent-arena-data/pylib-trl` with `--no-deps`, login node) and `fr8/ws3_grpo.sbatch` (1 GPU, fp16, `--time` 6 h, `CHECK_ONLY=1` mode). **`train/grpo_mole.py` is not on any branch yet**; the sbatch assumes `python -m train.grpo_mole --model --out --seed --fp16 --workers N [GRPO_ARGS]`. AGENTS/Momin: please match this or tell me.
+- **Next:** when port 22 opens and Momin confirms sky paused → `bash fr8/ws4_submit.sh`, message the CEO with ids; then TRL setup + `CHECK_ONLY=1` GPU job.
+
+## 14:35 status
+- Freighter came back at 14:31. `squeue -p gpu`: no sky jobs (Momin paused them; Silas confirmed via the CEO). FR8 touched no other job.
+- **WS4 submitted** (`fr8/ws4_submit.sh`; first attempt submitted nothing because `ls` on an unmatched glob tripped pipefail, fixed with `|| true`):
+  - **44410** canary-ws4-train: RUNNING on compute03, `--time 7h`, j3v14, dense 4k + `--oversample-endings 3`, 800 episodes, 5 h of training.
+  - **44411** canary-ws4-evalbase: RUNNING on compute03, `--time 3h`, base model, n=30/tier held-out (KV-reuse eval).
+  - **44412** canary-ws4-evalv2: PENDING with afterok:44410, `--time 3h`, adapter `j4/run-44410/lora`.
+  - All three are logged in OURS.txt. FR8 data: 8.6 GB of 10.
+- **WS3:** waiting for AGENTS' `train/grpo_mole.py` (CLI contract passed on by the CEO); then the TRL setup, a `CHECK_ONLY=1` job and up to 3 GRPO jobs.
+- 14:36 (verified in slurm-44410.out): v2 data = 800 episodes → 14,176 dense windows, 53.3M tokens, 1.46M loss tokens (**2.7%**, up from J4's 1.6%; below the 6–10% estimate because the header is 2,842 of the 4,096 tokens). Accuse-turn share of the loss is 5.0% with oversample-endings 3. At J4's 1.41k tok/s, 5 h ≈ 25M tokens ≈ 0.47 epoch. 44411 base eval is loading the model.
+
+## 15:10 status
+- **WS3 smoke = 44423 COMPLETED** (verified: slurm log + `ws3/run-44423/curve.jsonl`): Qwen2.5-0.5B, torch GRPO backend, fp16 on a V100; transformers 5.16.1 / peft 0.20.0 in pytorch-volta. Real env rewards: step0 −1.0 (valid 0), step1 −0.84 (valid .125), ~3 s/step; LoRA saved.
+- **WS3 submitted:** **44424 / 44425 / 44426** = canary-ws3-grpo-s0/1/2 (0.5B, 400 steps, group 8 × 4 prompts, lr 1e-5, save every 100, 6 cores each, `--time 2h`), PENDING (Priority) at 15:10. Logged in OURS.txt.
+- **WS4:** 44410 train and 44411 base eval running; 44412 waits for 44410 to finish OK.
+- **Disk (needs Silas):** after the 0.5B download, `~/agent-arena-data` = 11 GB (cap 10), /home 97%. The CEO-requested `rm` of `j3/` (unused, 1.1 GB) + J4 ckpt-200/400 (142 MB) was **denied by the session's permission classifier**, so nothing was deleted. sbatch suggests `/data/<user>`, but `/data/silas` is absent on the login node.
+- Fleet jobs (`fleet-*`) are Momin's; untouched.
+
+## 15:55 status — v3 prepared (not submitted)
+- **`train/grpo_investigator.py`** (decision-point GRPO from the v2 LoRA). Each prompt is one decision point of a solver episode on easy+medium **TRAIN** seeds (150000+; held-out/judge asserted untouched). The model samples 8 next tool calls; reward = **Env score** after the solver finishes the episode from there (invalid −1). Anti-collapse: group ≥ 8 (enforced), entropy bonus .01, k3 KL to the frozen v2 adapter .04, zero-variance groups masked, advantage std floor .1. 60% of states fall in the last 6 steps before the solver's accusation (the commit decision v2/J4 fails at).
+  - Verified (CPU dry run, 400 states): replay is exact (400/400 reproduce the solver score); reward: solver's own call .758, accuse-right-now .816, accuse-wrong −1.0, invalid −1.0.
+  - Verified (CPU, tiny random Qwen2 + LoRA): 2 GRPO steps end to end, adapters saved in the eval_hf layout.
+  - Untested on GPU. Estimate: ~35–45 s/step on a V100 → ~450–550 steps in 5.5 h.
+- **`fr8/v3_grpo.sbatch` + `fr8/v3_submit.sh`:** 2 jobs (seeds 0/1, 1 GPU each, `--time 7h`, training capped at 5.5 h), each with an afterok held-out fast eval n=30/tier (`--time 3h`). Submitted at 22:00 → training ends ~03:45 → evals done ~06:45.
+- **Gate (Silas via CEO):** submit only if the v2 eval 44412 shows no reward gain over base, after posting the plan to the CEO.
+- 16:10: `fr8/analysis/ws4_table.py`: base / v1 / v2 / v3 side by side (n, score ± CI, accused, correct, abstain, valid calls, paired Δ vs base). The eval is always the model playing full held-out episodes alone (`eval_hf` → `run_capped(env, policy)`); v3 training uses solver rollouts for credit assignment, and the table footer says so. **Correction:** J4/v1 deduplicated by (tier, seed) is n=12, −0.25 ± 0.26 (`fr8/analysis/out/ws4_table_v1.md`); the earlier "≈ −0.15, n=17" double-counted seeds played by both parallel eval runs.
+- 16:25 (CEO, WS3 lesson): v3 now logs **reward_valid**, **gain_vs_solver_valid** (valid reward minus the solver's own score at the same states; this is what must rise), per-state **action_entropy** (nats over 8 samples), **accuse_frac / continue_frac**, and the valid rate. `fr8/analysis/v3_watch.py` gives a verdict at step ~100: FLAT (valid-only gain moved < 1 pooled SE), COLLAPSED (entropy < .15), IMPROVING or WORSENING. FLAT/COLLAPSED → I kill our own v3 job (OURS.txt id) and resubmit adjusted (lr ×2 or ent .02) if there's time, otherwise report it as a null result. Verified: CPU smoke logs the fields; the watcher returns FLAT on a synthetic curve where only the invalid share falls.
+
+## 22:40 status — v3 running
+- **v2 eval (44412) DONE, no gain** (held-out, the model plays alone): base n=16 0.000 ± 0.000; v1 n=12 −0.250 ± 0.256; **v2 n=82 −0.395 ± 0.128** (accused .51, correct .06, abstain .49, valid .92). v2 learned WHEN to accuse, not WHOM. Table: `fr8/analysis/out/ws4_table_v2.md`. This met Silas's gate, so v3 was submitted.
+- v3 attempt 1 (44548/44550): CUDA OOM at the first sampling step → fixed (2-at-a-time generation, completion-only logits). Attempt 2 (44553): 8 of 10 groups had zero reward variance (v2 is near-deterministic) → cancelled (ours) and **guided exploration** added (3 of 8 samples are forced to start an accuse call; the model picks whom; slightly off-policy, stated).
+- **Now:** 44555 v3-s1 RUNNING with the fix: 1 of 10 zero-variance groups, forced accusations right 17–50%, valid-only gain vs solver −0.3 to −1.0 (start), ~80 s/step. 44558 v3-s0 PENDING for an FR8 GPU (fleet holds the rest) → planned to move to Verda (cloud GPU, credentials added by Silas, ~$15; CEO informed). Evals 44556/44559 afterok.
+
+## Verda
+Verda (ex-DataCrunch, Finland) is FR8's overflow GPU for the WS4 tiebreaker. FR8 is the only Verda owner; one instance at a time; Silas's cap is $30. A hard-stop reaper deletes the instance at start + 4.6 h (03:23 Helsinki).
+
+**Instance** (one instance in total; all restarts ran on it), from the CLI capture `data/fr8/verda/instances-2337.txt`:
+
+| id | hostname | type | region | €/h | created (Helsinki) | status @23:37 |
+|---|---|---|---|---|---|---|
+| 3bb74f5a-ae5f-492d-b805-daf2de7d9ebd | fr8-v3-s0 | 1H100.80S.32V (1× H100 80GB HBM3, 32 vCPU, 167 GB RAM) | FIN-02 | 4.7421 | 22:46 | running |
+
+**Why the H100:** at 22:40 no A100 80GB, A6000, RTX6000 Ada or L40S had on-demand capacity in FIN-01/02/03 (API `is_available` + failed creates). The only options were a 16 GB V100 (v3 uses ~11 GB on FR8, OOM risk, and V100 speed misses 08:00), a preemptible A100 40GB spot, or the H100.
+
+**Timeline / setup failures** (honest log):
+- 22:46 created; 22:50 code + v2 LoRA uploaded (one upload went to a local dir because of a zsh `$IP:a` modifier; fixed with `${IP}`).
+- 22:51 fail 1: transformers 4.57 could not read the v2 tokenizer saved by 5.16 → pinned FR8's exact stack (torch 2.5.1, transformers 5.16.1, peft 0.20.0).
+- 22:55 fail 2: `uv venv` refused to overwrite the venv (my watcher missed it: case-sensitive grep) → `--clear`; ~20 min idle.
+- 23:18 training started; 23:28 fail 3: the solver continuation crashed on an off-distribution state (empty posterior) at step 55 → reward made crash-proof (commit 0f397ce).
+- 23:32 restarted: 2.0 h training + held-out eval (60-min budget).
+- Spend at 23:37: €200.00 → €195.25 balance (**€4.75**, ≈1 h, about 50 min of it idle or failed).
+
+**Throughput:** H100 ≈ **12 s/GRPO step** vs FR8 V100 ≈ 78 s/step (**6.5×**), same code, data and hyperparameters (group 8 × 2 prompts, max_ctx 4096, fp16 AMP). GPU at 83% utilisation, 8.5 GB used.
+
+(Final steps, eval table, stop time, deletion confirmation and total cost are appended when the run ends.)
+
+## 00:05 status
+- **v3 s0 (Verda H100) step-140 verdict: IMPROVING** (`fr8/analysis/v3_watch.py`, windows of 30): gain_vs_solver_valid −0.647 → −0.556 (+0.091, pooled SE .050), entropy flat at 1.10 (no collapse), free accuse rate ~6%, 0 fallbacks. Caveat: forced-accuse correctness is flat at ~.19 (WHOM not learned yet). Curve copy: `data/fr8/verda/run-verda-s0/curve.jsonl`.
+- v3 s1 = **44572** (FR8 V100) step 20, no errors; eval 44573 afterok.
+- Cost reaper now runs ON the Verda instance (the laptop's memory-pressure reaper killed the Mac-side one); deletes at 03:23.
+- **CEO GPU requests prepared, NOT launched** (above the $30 cap until Silas's yes is relayed): R1 v3-8k on the same H100 after s0's eval: `CTX=8192 TAG=verda-8k-s0 SKIP_SETUP=1 HOURS=3 EVAL_MIN=60 bash fr8/verda/run_v3.sh` + extend the reaper (`REAP_AT_UTC`). R2 only if a ≥40 GB GPU appears (none now). R3 waits on s6-verda.
+
+### Verda 00:15: cap raised to €100 (Silas via CEO); R1 v3-8k chained
+- On-instance reaper moved: deletes 3bb74f5a at **07:30 Helsinki** (05:30 UTC). For ~2 min during the swap no reaper was running (SSH dropped mid-command); re-armed and verified with `pgrep`.
+- `/root/chain_8k.sh` waits for s0's `~/v3/DONE`, then runs R1: `CTX=8192 TAG=verda-8k-s0 SEED=0 SKIP_SETUP=1 HOURS=3 EVAL_MIN=75` (from a copy `run_v3b.sh`, so s0's running script was never edited). ETA: start ~02:45, training to ~05:45, eval to ~07:05, pull, delete ≤ 07:30.
+- Projected total ≈ 8.75 h × €4.742 ≈ **€41.5** (cap €100). Tracked for the hypothesis: forced-accuse whom-accuracy at 4k (s0: ~.19 flat) vs 8k.
+
+## 04:00 CORRECTION: the "paired" Δs were not paired
+Found by the WS4 readout session: without CANARY_WORLD_SECRET/SALT, each `eval_hf` process draws its own held-out world secret (canary/world.py, fail-closed), so the same seed number gives a DIFFERENT world across runs (all 115 step-0 employee lists differ between runs). Every "paired vs base/v2" Δ in this report and in my messages since 22:15 was therefore mislabelled. **Means and CIs per model stand; Δs are now two-sample** (`fr8/analysis/ws4_table.py` default; `--paired` only for shared-secret runs). All tables in fr8/analysis/out/ws4_table_*.md are regenerated.
+- v3-4k s0 (n=180) vs v2 (n=172): **+0.310 ± 0.107** (was reported as +0.315 ± 0.096 "paired").
+- v3-4k s0 vs base (n=16, all 0): −0.147 ± 0.063 (below base; unchanged conclusion).
+- v2 vs base: −0.457 ± 0.086 (was "−0.625 ± 0.245 paired, n=16").
+
+## 04:45 WS4 small-model tiebreaker readout: bar NOT met
+**Tiebreaker paragraph (AfterQuery entry):**
+1. **Verdict: format and timing learned, identity not learned.** The bar was a v3 held-out mean > 0 with a 95% CI excluding 0. No v3 run meets it: v3-4k s0 −0.147 ± 0.063 (n=180), v3-8k s2 −0.050 ± 0.049 (n=90), v3-8k s1 −0.777 ± 0.118 (n=90), and v3-4k s1 (FR8 V100, 192 steps, partial) −0.240 ± 0.171 (n=25).
+2. **Reward training on environment experience fixed v2's reckless accusations.** v3-4k vs v2 is +0.310 ± 0.107 (two-sample); the accusation rate fell 0.55 → 0.21 and valid tool calls rose 0.92 → 1.00. The policy converged toward the safe one. The base scores exactly 0 only because it can't play: valid tool calls 0.03, and it never reaches an accusation.
+3. **It did not learn WHOM to accuse at 4k context.** On training decision states, v3-4k s0's forced-accusation accuracy rose 0.19 → 0.89. That came from 1,218 draws, about 0.6 of the 2,000-state pool, so it isn't memorization. Held-out, its accusations are right only 6/38 = 0.16 (v2: 8/94 = 0.09). The states are the solver's last 6 steps, where the evidence is already gathered and in view. The model learned to read the culprit off evidence, not to gather it. That's the same skill gemini-4-carbon lacks: it plants 8.5 canaries before accusing vs the solver's 14.1 (failure_analysis_v1.4.md on justSilas). Identifying the mole from evidence is learnable; gathering the evidence is the hard decision this environment measures.
+4. **8k context tests visibility, not evidence gathering, and doesn't close the gap.** At matched steps, 8k gives a head start on whom (steps 0–99: 0.35 vs 0.19) but doesn't learn faster (steps 271–370: 0.41 vs 0.37; 8k s2 reaches only 0.46 after 693 steps). In held-out play the two 8k seeds split to the extremes: s1 accuses 94% of the time at precision 0.09, while s2 abstains 93%.
+5. **Why, and next.** First, 4k windows with a 2,842-token header leave about 1.2k tokens of history, so early canary evidence scrolls out. Second, training imitates the solver's actions without its belief state. Third, v2 started near-deterministic: 8 of 10 GRPO groups had zero reward variance before guided exploration. The fix that targets the gap is on-policy labels at the model's own states (X2 DAgger; addendum ~07:30).
+
+**Table:** `fr8/analysis/out/ws4_table_v3.md` (every row has its GPU · steps · context, held-out seed indices and n; Δs are two-sample). **Whom table:** `fr8/analysis/out/ws4_whom_v3.md`. Pooled over all v3 runs, held-out precision is 15/135 = 0.11.
+- Held-out vs DEV seeds: held-out seeds are secret-keyed, so every eval process drew its own worlds and only two-sample comparisons are valid. DEV seeds 0–9999 use the public key, so the v1.4 Gemini-vs-solver gap (DEV seeds 0–29, replay-verified) stays truly paired.
+- v3-4k s1 (FR8 44572 → eval 44573) is a FLAT replicate: the steps 0–99 watch shows gain vs solver −0.51 → −0.53, with training whom-accuracy 0.22 → 0.27 over 192 V100 steps (vs s0's 609 on an H100). Its eval is still running; the row has n=25 at 04:25.
+- Base n=36: 44410-era n=16 plus 44584 (n=20, seeds 6–12, all 0). v1 keeps its published pooling (eval-lora + eval-lora-par, first per seed; 5 repeats dropped).
+- Not yet in: v3-8k s0 and s3 (Verda, ~06:00–06:40) and X2 DAgger (~07:30).
+- Reproduce: `FR8_S1_DIR=data/fr8/ws4/v3-s1-44572 S1_STEPS=192 K8S1_GPU="A100-80 spot" K8S1_STEPS=371 K8S2_GPU="H100 spot" K8S2_STEPS=693 bash fr8/analysis/ws4_v3_readout.sh` (inputs are local, gitignored `data/fr8/**/*.jsonl`).

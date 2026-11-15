@@ -6,7 +6,7 @@
 Environment variables:
     CANARY_HOST / CANARY_PORT   bind address (default 127.0.0.1:8765)
     CANARY_TIER / CANARY_SEED   the episode (default easy / 900000). The seed never appears in any tool output.
-                                Only judge (900000-900029) or held-out (800000-800199) seeds are served;
+                                Only judge (900000-900039) or held-out (800000-800199) seeds are served;
                                 dev/train seeds are public, so they need CANARY_ALLOW_DEV=1 (internal testing).
     CANARY_PROVIDER             text provider (default template)
     CANARY_LEDGER_TOKEN         token for GET /ledger?token=... (grader). Unset => /ledger always 403.
@@ -14,7 +14,7 @@ Environment variables:
     CANARY_LEDGER_KEY           HMAC-SHA256 key: when set, every /ledger payload carries
                                 "sig": {"alg": "HMAC-SHA256", "mac": <hex>} over its canonical JSON (sign_ledger).
 
-Secret files (EXPLOITS #25: a same-uid process can read the exec-time environment via /proc/<pid>/environ
+Secret files (EXPLOITS #27: a same-uid process can read the exec-time environment via /proc/<pid>/environ
 or `ps eww`, so judge runs must not put the seed, world secret or tokens in env vars). Each names a 0600 file
 read once at startup; a *_FILE var wins over its plain counterpart, which is then not needed:
     CANARY_EPISODE_FILE         JSON {"tier": ..., "seed": ...}

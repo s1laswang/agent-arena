@@ -82,11 +82,21 @@ def _ladder_lines(runs: Path):
             yield model, level, tier, seed, line
 
 
-def load_ladder(runs: Path) -> list[dict]:
-    """Valid ladder episodes, each tagged e['_cell'] = {model, level, tier, seed, source}."""
-    out = []
-    for model, level, tier, seed, line in _ladder_lines(runs):
-        if True:
+def _iter_run_paths(runs: Path | str | list[Path | str]) -> list[Path]:
+    items = [str(runs)] if isinstance(runs, (str, Path)) else [str(x) for x in runs]
+    out: list[Path] = []
+    for it in items:
+        for part in it.split(","):
+            if part.strip():
+                out.append(Path(part.strip()).expanduser())
+    return out
+
+
+def load_ladder(runs: Path | str | list[Path | str]) -> list[dict]:
+    """Valid ladder episodes across one or more run dirs/exports, deduplicated per (model, level, tier, seed)."""
+    by_cell: dict[tuple[str, str, str, int], dict] = {}
+    for rpath in _iter_run_paths(runs):
+        for model, level, tier, seed, line in _ladder_lines(rpath):
             if not line.strip():
                 continue
             e = json.loads(line)
@@ -94,7 +104,8 @@ def load_ladder(runs: Path) -> list[dict]:
                 continue
             lad = (e.get("meta") or {}).get("ladder") or {}
             tok = lad.get("tokens") or {}
-            e["_cell"] = {"model": model, "level": level, "tier": tier, "seed": int(seed), "source": "ladder",
+            s_int = int(seed)
+            e["_cell"] = {"model": model, "level": level, "tier": tier, "seed": s_int, "source": "ladder",
                           "run_id": lad.get("run_id"), "thinking": tok.get("thinking"), "calls": tok.get("calls"),
                           "in": tok.get("in"), "out": tok.get("out"), "cached": tok.get("cached"),
                           "wall_s": lad.get("wall_s"), "thinking_is_estimate": False,
@@ -103,8 +114,10 @@ def load_ladder(runs: Path) -> list[dict]:
                           "model_versions": sorted((tok.get("model_versions") or {}).keys())}
             t = e["_cell"]
             t["cost_usd"] = price(model, t["in"] or 0, (t["out"] or 0) + (t["thinking"] or 0), t["cached"] or 0)
-            out.append(e)
-    return out
+            key = (model, level, tier, s_int)
+            if key not in by_cell:
+                by_cell[key] = e
+    return list(by_cell.values())
 
 
 def load_import(spec: str) -> list[dict]:
@@ -147,9 +160,12 @@ def reference_episodes(pairs: set[tuple[str, int]], agents=REFERENCE_AGENTS) -> 
     return out
 
 
-def load_ledger(runs: Path, extra: list[str]) -> list[dict]:
+def load_ledger(runs: Path | str | list[Path | str], extra: list[str]) -> list[dict]:
     import gzip
-    files = glob.glob(str(Path(runs) / "_ledger" / "*.jsonl")) if Path(runs).is_dir() else []
+    files: list[str] = []
+    for rp in _iter_run_paths(runs):
+        if rp.is_dir():
+            files += glob.glob(str(rp / "_ledger" / "*.jsonl"))
     for x in extra or []:
         p = Path(x).expanduser()
         files += glob.glob(str(p / "**" / "*.jsonl"), recursive=True) if p.is_dir() else [str(p)]
@@ -654,6 +670,19 @@ def model_label(row: dict) -> str:
     return requested
 
 
+def headline_verb(a: dict, b: dict) -> str:
+    """CI-gated wording: 'matches' needs both CIs to contain 100% AND both lower bounds >= 80%."""
+    has = lambda x: x["ratio_lo"] == x["ratio_lo"]  # noqa: E731
+    contains = all(has(x) and x["ratio_lo"] <= 1.0 <= x["ratio_hi"] for x in (a, b))
+    if contains and all(x["ratio_lo"] >= 0.8 for x in (a, b)):
+        return "matches the reference solver on hard"
+    if contains:
+        return "is not distinguishable from the reference solver on hard, but the CIs are wide"
+    if all(x["ratio"] >= 0.8 for x in (a, b)):
+        return "comes close to the reference solver on hard"
+    return "reaches part of the reference solver's score on hard"
+
+
 def _pc(r) -> str:
     if r["ratio"] != r["ratio"]:
         return "–"
@@ -668,21 +697,15 @@ def headline(rows: list[dict], tags: dict) -> str:
            "paired seeds per cell; 95% CIs are wide, so read them as directions)."]
     a, b = R.get(("gemini-3.5-flash", "medium", "hard")), R.get(("gemini-3.5-flash", "high", "hard"))
     if a and b:
-        within = all(x["ratio_lo"] == x["ratio_lo"] and x["ratio_lo"] <= 1.0 <= x["ratio_hi"] for x in (a, b))
-        name = "gemini-3.6-flash (requested as 3.5-flash)"
+        verb = headline_verb(a, b)
         k = sum(round(x["accuracy"] * x["n"]) for x in (a, b))
-        carbon = [r["cost_per_ep"] for (m, lv, t), r in R.items() if m == "gemini-4-carbon" and lv == "high" and t == "hard"]
+        c = R.get(("gemini-4-carbon", "high", "hard"))
         cost = f"${min(a['cost_per_ep'], b['cost_per_ep']):.2f}–{max(a['cost_per_ep'], b['cost_per_ep']):.2f} per episode"
-        if carbon:
-            cost += f", versus ${carbon[0]:.2f} for gemini-4-carbon at high thinking"
-        if within and a["n"] == b["n"]:
-            claim = f"on hard is within the CI of the solver, n={a['n']}"
-        elif within:
-            claim = f"on hard is within the CI of the solver, n={a['n']} and n={b['n']}"
-        else:
-            claim = "on hard is not within the CI of the solver"
-        out.append(f"> **{name} with medium or high thinking {claim}:** {_pc(a)} and {_pc(b)} of the solver "
-                   f"on the same seeds, {k}/{a['n'] + b['n']} correct accusations, {cost}.")
+        if c:
+            cost += (f", versus ${c['cost_per_ep']:.2f} for gemini-4-carbon at high thinking ({_pc(c)}, n={c['n']}"
+                     + ("" if c["n"] == a["n"] == b["n"] else "; different n, so the seed sets differ") + ")")
+        out.append(f"> **gemini-3.5-flash (requested ID; the API serves gemini-3.6-flash) with medium or high thinking {verb}:** {_pc(a)} and {_pc(b)} of the solver "
+                   f"on the same seeds (n={a['n']}, {b['n']}), {k}/{a['n'] + b['n']} correct accusations, {cost}.")
     lite = [r for (m, _, _), r in R.items() if m == "gemini-3.1-flash-lite"]
     if lite:
         neg = sum(r["mean"] < 0 for r in lite)
@@ -729,7 +752,8 @@ def _nan_to_none(x):
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m canary.gemini.ladder_report", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--runs", required=True)
+    ap.add_argument("--runs", action="append", required=True,
+                    help="ladder run dir(s) or exported jsonl.gz (repeatable or comma-separated)")
     ap.add_argument("--import-cell", action="append", default=[], help="<model>:<level>=<data/runs dir> (read-only)")
     ap.add_argument("--ledger", action="append", default=[])
     ap.add_argument("--probe", default=str(ROOT / "results" / "gemini" / "ladder_probe.json"))
@@ -746,10 +770,10 @@ def main(argv=None) -> int:
     ap.add_argument("--headline", default=None,
                     help="hand-written findings block for the top of ladder.md (default: generated from the table)")
     a = ap.parse_args(argv)
-    runs = Path(a.runs).expanduser()
+    run_paths = _iter_run_paths(a.runs)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    eps = load_ladder(runs)
+    eps = load_ladder(run_paths)
     if a.export:
         import gzip
         ex = Path(a.export)
@@ -771,7 +795,7 @@ def main(argv=None) -> int:
     rows = cell_rows(eps, solver, B=a.bootstrap)
     ref_rows = reference_rows(ref, pairs)
     tags = {} if a.no_tags or not eps else tag_tables(eps)
-    led = load_ledger(runs, a.ledger)
+    led = load_ledger(run_paths, a.ledger)
     if a.export:
         with gzip.open(Path(a.export) / "ladder_ledger.jsonl.gz", "wt") as fh:
             for r in led:
@@ -786,7 +810,8 @@ def main(argv=None) -> int:
     probe = None
     if Path(a.probe).exists():
         probe = json.loads(Path(a.probe).read_text()).get("rows")
-    doc = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "git_sha": git_sha(), "runs": str(a.runs).replace(str(Path.home()), "~"),
+    runs_label = ", ".join(str(p).replace(str(Path.home()), "~") for p in run_paths)
+    doc = {"generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "git_sha": git_sha(), "runs": runs_label,
            "imports": [x.replace(str(Path.home()), "~") for x in a.import_cell], "ledger_run_ids": run_ids, "ledger": led_sum, "prices_usd_per_1m": PRICES,
            "episodes": len(eps), "headline_file": a.headline, "rows": rows, "reference": ref_rows, "tags": tags, "probe": probe, "figures": []}
     if g_runs:

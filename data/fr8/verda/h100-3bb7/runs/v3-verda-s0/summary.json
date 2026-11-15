@@ -1,0 +1,82 @@
+{
+  "run_id": "v3-verda-s0",
+  "agent": "hf-lora:lora",
+  "seconds": 3046.7,
+  "by_tier": {
+    "easy": {
+      "n": 30,
+      "mean_score": -0.2757,
+      "ci95": 0.2225,
+      "accuracy": 0.1,
+      "mean_final_day": 3.6,
+      "end_reasons": {
+        "eval_cap": 16,
+        "accused": 14
+      },
+      "eval_cap_rate": 0.5333,
+      "invalid_call_rate": 0.0081,
+      "regret_tags": {
+        "budget_waste": 30,
+        "premature_accusation": 30,
+        "no_accusation": 16,
+        "uninformative_canary": 8
+      }
+    },
+    "hard": {
+      "n": 30,
+      "mean_score": -0.0333,
+      "ci95": 0.0653,
+      "accuracy": 0.0,
+      "mean_final_day": 9.0,
+      "end_reasons": {
+        "eval_cap": 29,
+        "accused": 1
+      },
+      "eval_cap_rate": 0.9667,
+      "invalid_call_rate": 0.0,
+      "regret_tags": {
+        "no_accusation": 29,
+        "budget_waste": 6,
+        "uninformative_canary": 5,
+        "premature_accusation": 2
+      }
+    },
+    "medium": {
+      "n": 30,
+      "mean_score": 0.0,
+      "ci95": 0.0,
+      "accuracy": 0.0,
+      "mean_final_day": 4.4,
+      "end_reasons": {
+        "eval_cap": 30
+      },
+      "eval_cap_rate": 1.0,
+      "invalid_call_rate": 0.0,
+      "regret_tags": {
+        "budget_waste": 30,
+        "no_accusation": 30,
+        "uninformative_canary": 30,
+        "premature_accusation": 3
+      }
+    },
+    "all": {
+      "n": 90,
+      "mean_score": -0.103,
+      "ci95": 0.0806,
+      "accuracy": 0.0333,
+      "mean_final_day": 5.67,
+      "end_reasons": {
+        "eval_cap": 75,
+        "accused": 15
+      },
+      "eval_cap_rate": 0.8333,
+      "invalid_call_rate": 0.0019,
+      "regret_tags": {
+        "no_accusation": 75,
+        "budget_waste": 66,
+        "uninformative_canary": 43,
+        "premature_accusation": 35
+      }
+    }
+  }
+}
